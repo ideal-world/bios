@@ -160,6 +160,11 @@ pub struct FlowStateAggResp {
     pub transitions: Vec<FlowTransitionDetailResp>,
 }
 
+#[derive(Serialize, Deserialize, Debug, Default, poem_openapi::Object)]
+pub struct FlowModelAddStateReq {
+    pub state_id: String,
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, sea_orm::strum::EnumIter, sea_orm::DeriveActiveEnum)]
 #[sea_orm(rs_type = "String", db_type = "String(Some(255))")]
 pub enum FlowTagKind {

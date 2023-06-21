@@ -6,7 +6,7 @@ use bios_mw_flow::dto::flow_inst_dto::{
     FlowInstFindNextTransitionResp, FlowInstFindNextTransitionsReq, FlowInstFindStateAndTransitionsReq, FlowInstFindStateAndTransitionsResp, FlowInstStartReq, FlowInstTransferReq,
     FlowInstTransferResp,
 };
-use bios_mw_flow::dto::flow_model_dto::{FlowModelAddReq, FlowModelAggResp, FlowModelModifyReq, FlowTagKind};
+use bios_mw_flow::dto::flow_model_dto::{FlowModelAddReq, FlowModelModifyReq, FlowTagKind, FlowModelAggResp, FlowModelAddStateReq};
 use bios_mw_flow::dto::flow_state_dto::{FlowStateAddReq, FlowStateSummaryResp, FlowSysStateKind};
 use bios_mw_flow::dto::flow_transition_dto::FlowTransitionAddReq;
 use bios_mw_flow::dto::flow_var_dto::FlowVarInfo;
@@ -169,6 +169,15 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
         .await;
     // Add some transitions
     let _: Void = client
+        .post(
+            &format!("/cc/model/{}/add_state", model_id),
+            &FlowModelAddStateReq {
+                state_id: state_init_id.clone(),
+            }
+        )
+        .await;
+    // Add some transitions
+    let _: Void = client
         .patch(
             &format!("/cc/model/{}", model_id),
             &FlowModelModifyReq {
@@ -182,6 +191,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
                         transfer_by_timer: None,
                         guard_by_creator: None,
                         guard_by_his_operators: None,
+                        guard_by_assigned: None,
                         guard_by_spec_account_ids: None,
                         guard_by_other_conds: None,
                         vars_collect: None,
@@ -219,6 +229,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
                         transfer_by_timer: None,
                         guard_by_creator: None,
                         guard_by_his_operators: None,
+                        guard_by_assigned: None,
                         guard_by_spec_account_ids: None,
                         guard_by_other_conds: None,
                         action_by_pre_callback: None,
@@ -233,6 +244,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
                         transfer_by_timer: None,
                         guard_by_creator: None,
                         guard_by_his_operators: None,
+                        guard_by_assigned: None,
                         guard_by_spec_account_ids: None,
                         guard_by_other_conds: None,
                         vars_collect: None,
@@ -247,6 +259,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
                         transfer_by_auto: None,
                         transfer_by_timer: None,
                         guard_by_creator: None,
+                        guard_by_assigned: None,
                         guard_by_spec_account_ids: None,
                         guard_by_spec_role_ids: None,
                         guard_by_other_conds: None,
@@ -262,6 +275,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
                         transfer_by_auto: None,
                         transfer_by_timer: None,
                         guard_by_creator: None,
+                        guard_by_assigned: None,
                         guard_by_spec_account_ids: None,
                         guard_by_spec_role_ids: None,
                         guard_by_other_conds: None,
@@ -293,6 +307,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
             &FlowInstStartReq {
                 tag: FlowTagKind::Project,
                 create_vars: None,
+                rel_business_obj_id:"".to_string(),
             },
         )
         .await;

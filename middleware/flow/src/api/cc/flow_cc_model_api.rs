@@ -6,7 +6,7 @@ use tardis::web::poem_openapi::param::{Path, Query};
 use tardis::web::poem_openapi::payload::Json;
 use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 
-use crate::dto::flow_model_dto::{FlowModelAddReq, FlowModelAggResp, FlowModelFilterReq, FlowModelModifyReq, FlowModelSummaryResp, FlowTagKind};
+use crate::dto::flow_model_dto::{FlowModelAddReq, FlowModelAggResp, FlowModelFilterReq, FlowModelModifyReq, FlowModelSummaryResp, FlowTagKind, FlowModelAddStateReq};
 use crate::flow_constants;
 use crate::serv::flow_model_serv::FlowModelServ;
 use crate::serv::flow_rel_serv::{FlowRelKind, FlowRelServ};
@@ -98,11 +98,11 @@ impl FlowCcModelApi {
     }
 
     /// Add State By Model Id / 添加状态
-    #[oai(path = "/:flow_model_id/:state_id", method = "post")]
-    async fn add_state(&self, flow_model_id: Path<String>, state_id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+    #[oai(path = "/:flow_model_id/add_state", method = "post")]
+    async fn add_state(&self, flow_model_id: Path<String>, add_req: Json<FlowModelAddStateReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = flow_constants::get_tardis_inst();
         funs.begin().await?;
-        FlowRelServ::add_simple_rel(&FlowRelKind::FlowModelState, &flow_model_id.0, &state_id.0, None, None, false, false, &funs, &ctx.0).await?;
+        FlowModelServ::add_state(&FlowRelKind::FlowModelState, &flow_model_id.0, &add_req.0.state_id, None, None, false, false, &funs, &ctx.0).await?;
         funs.commit().await?;
         TardisResp::ok(Void {})
     }
