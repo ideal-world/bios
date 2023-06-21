@@ -223,7 +223,7 @@ impl FlowModelServ {
                 kind_conf: None,
                 template: None,
                 rel_state_id: None,
-                tags: Some(vec![FlowTagKind::Ticket.to_string()]),
+                tags: Some(vec!["ticket_states".to_string()]),
                 scope_level: None,
                 disabled: None,
             },
@@ -242,7 +242,7 @@ impl FlowModelServ {
                 kind_conf: None,
                 template: None,
                 rel_state_id: None,
-                tags: Some(vec![FlowTagKind::Ticket.to_string()]),
+                tags: Some(vec!["ticket_states".to_string()]),
                 scope_level: None,
                 disabled: None,
             },
@@ -261,7 +261,7 @@ impl FlowModelServ {
                 kind_conf: None,
                 template: None,
                 rel_state_id: None,
-                tags: Some(vec![FlowTagKind::Ticket.to_string()]),
+                tags: Some(vec!["ticket_states".to_string()]),
                 scope_level: None,
                 disabled: None,
             },
@@ -280,7 +280,7 @@ impl FlowModelServ {
                 kind_conf: None,
                 template: None,
                 rel_state_id: None,
-                tags: Some(vec![FlowTagKind::Ticket.to_string()]),
+                tags: Some(vec!["ticket_states".to_string()]),
                 scope_level: None,
                 disabled: None,
             },
@@ -299,7 +299,7 @@ impl FlowModelServ {
                 kind_conf: None,
                 template: None,
                 rel_state_id: None,
-                tags: Some(vec![FlowTagKind::Ticket.to_string()]),
+                tags: Some(vec!["ticket_states".to_string()]),
                 scope_level: None,
                 disabled: None,
             },
@@ -804,7 +804,7 @@ impl FlowModelServ {
         Ok(result)
     }
 
-    pub async fn add_state(
+    pub async fn bind_state(
         flow_rel_kind: &FlowRelKind,
         flow_model_id: &str,
         flow_state_id: &str,
@@ -835,6 +835,38 @@ impl FlowModelServ {
         } else {
             let model_id = Self::add_or_modify_model(flow_model_id, &mut FlowModelModifyReq::default(), funs, ctx).await?;
             FlowRelServ::add_simple_rel(flow_rel_kind, &model_id, flow_state_id, start_timestamp, end_timestamp, ignore_exist_error, to_is_outside, funs, ctx).await?;
+            result = model_id;
+        }
+        Ok(result)
+    }
+
+    pub async fn unbind_state(
+        flow_rel_kind: &FlowRelKind,
+        flow_model_id: &str,
+        flow_state_id: &str,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<String> {
+        let mut result = "".to_string();
+        let current_model = Self::get_item(
+            flow_model_id,
+            &FlowModelFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?;
+        if current_model.own_paths == ctx.own_paths {
+            FlowRelServ::delete_simple_rel(flow_rel_kind, flow_model_id, flow_state_id, funs, ctx).await?;
+            result = flow_model_id.to_string();
+        } else {
+            let model_id = Self::add_or_modify_model(flow_model_id, &mut FlowModelModifyReq::default(), funs, ctx).await?;
+            FlowRelServ::delete_simple_rel(flow_rel_kind, &model_id, flow_state_id, funs, ctx).await?;
             result = model_id;
         }
         Ok(result)

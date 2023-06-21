@@ -161,7 +161,12 @@ pub struct FlowStateAggResp {
 }
 
 #[derive(Serialize, Deserialize, Debug, Default, poem_openapi::Object)]
-pub struct FlowModelAddStateReq {
+pub struct FlowModelBindStateReq {
+    pub state_id: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, poem_openapi::Object)]
+pub struct FlowModelUnbindStateReq {
     pub state_id: String,
 }
 
