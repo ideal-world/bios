@@ -465,6 +465,7 @@ impl FlowModelServ {
 
                 guard_by_creator: Set(req.guard_by_creator.unwrap_or(false)),
                 guard_by_his_operators: Set(req.guard_by_his_operators.unwrap_or(false)),
+                guard_by_assigned: Set(req.guard_by_assigned.unwrap_or(false)),
                 guard_by_spec_account_ids: Set(req.guard_by_spec_account_ids.as_ref().unwrap_or(&vec![]).clone()),
                 guard_by_spec_role_ids: Set(req.guard_by_spec_role_ids.as_ref().unwrap_or(&vec![]).clone()),
                 guard_by_other_conds: Set(req.guard_by_other_conds.as_ref().map(|conds| TardisFuns::json.obj_to_json(conds).unwrap()).unwrap_or(json!({}))),
@@ -563,6 +564,9 @@ impl FlowModelServ {
             }
             if let Some(guard_by_his_operators) = req.guard_by_his_operators {
                 flow_transition.guard_by_his_operators = Set(guard_by_his_operators);
+            }
+            if let Some(guard_by_assigned) = req.guard_by_assigned {
+                flow_transition.guard_by_assigned = Set(guard_by_assigned);
             }
             if let Some(guard_by_spec_account_ids) = &req.guard_by_spec_account_ids {
                 flow_transition.guard_by_spec_account_ids = Set(guard_by_spec_account_ids.clone());
