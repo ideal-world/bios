@@ -38,6 +38,26 @@ impl PluginKindServ {
             }
             bs_rel_resp = PluginBsServ::get_bs_rel_agg(&add_req.bs_id, &add_req.app_tenant_id, funs, ctx).await;
         }
+        if RbumRelServ::count_rbums(
+            &RbumRelFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                tag: Some(PluginAppBindRelKind::PluginAppBindKind.to_string()),
+                from_rbum_kind: Some(RbumRelFromKind::Item),
+                from_rbum_id: Some(bing_item_id.clone()),
+                ext_eq: Some(add_req.kind_id.clone()),
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?
+            > 0
+        {
+            return Err(funs.err().conflict("plugin_kind", "add_rel", "plugin bs kind mismatch", ""));
+        }
         let bs_rel = bs_rel_resp?;
         PluginRelServ::add_simple_rel(
             &PluginAppBindRelKind::PluginAppBindKind,
@@ -54,8 +74,28 @@ impl PluginKindServ {
         Ok(())
     }
 
+    pub async fn delete_kind_agg_rel(kind_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let bing_item_id = rbum_scope_helper::get_max_level_id_by_context(ctx).unwrap_or_default();
+        for rel_bind in PluginRelServ::find_from_simple_rels(
+            &PluginAppBindRelKind::PluginAppBindKind,
+            &RbumRelFromKind::Item,
+            &bing_item_id,
+            Some(kind_id.to_string()),
+            true,
+            None,
+            None,
+            funs,
+            ctx,
+        )
+        .await?
+        {
+            PluginRelServ::delete_simple_rel(&PluginAppBindRelKind::PluginAppBindKind, &bing_item_id, &rel_bind.rel_id, funs, ctx).await?;
+        }
+        Ok(())
+    }
+
     pub async fn find_kind_agg(app_tenant_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<PluginKindAggResp>> {
-        let kinds = RbumKindServ::find_rbums(
+        let kinds = RbumKindServ::find_detail_rbums(
             &RbumKindFilterReq {
                 basic: RbumBasicFilterReq {
                     with_sub_own_paths: true,
