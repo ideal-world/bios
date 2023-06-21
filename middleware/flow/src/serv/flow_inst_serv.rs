@@ -548,6 +548,7 @@ impl FlowInstServ {
                 {
                     return false;
                 }
+                // TODO guard_by_assigned is not implement
                 if let Some(guard_by_other_conds) = model_transition.guard_by_other_conds() {
                     let mut check_vars: HashMap<String, Value> = HashMap::new();
                     if let Some(current_vars) = &flow_inst.current_vars {
