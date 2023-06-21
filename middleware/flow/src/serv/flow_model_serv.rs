@@ -8,11 +8,10 @@ use bios_basic::rbum::{
     rbum_enumeration::RbumScopeLevelKind,
     serv::{
         rbum_crud_serv::{ID_FIELD, NAME_FIELD, REL_DOMAIN_ID_FIELD, REL_KIND_ID_FIELD},
-        rbum_item_serv::{RbumItemCrudOperation, RBUM_ITEM_TABLE},
+        rbum_item_serv::{self, RbumItemCrudOperation, RBUM_ITEM_TABLE},
     },
 };
 use itertools::Itertools;
-use serde_json::Value;
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
     chrono::Utc,
@@ -28,8 +27,8 @@ use tardis::{
 use crate::{
     domain::{flow_model, flow_transition},
     dto::{
-        flow_model_dto::{FlowModelAddReq, FlowModelAggResp, FlowModelDetailResp, FlowModelFilterReq, FlowModelModifyReq, FlowModelSummaryResp, FlowStateAggResp},
-        flow_state_dto::FlowStateFilterReq,
+        flow_model_dto::{FlowModelAddReq, FlowModelAggResp, FlowModelDetailResp, FlowModelFilterReq, FlowModelModifyReq, FlowModelSummaryResp, FlowStateAggResp, FlowTagKind},
+        flow_state_dto::{FlowStateAddReq, FlowStateFilterReq, FlowSysStateKind},
         flow_transition_dto::{FlowTransitionAddReq, FlowTransitionDetailResp, FlowTransitionModifyReq},
     },
     flow_config::FlowBasicInfoManager,
@@ -70,11 +69,36 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
             icon: Set(add_req.icon.as_ref().unwrap_or(&"".to_string()).to_string()),
             info: Set(add_req.info.as_ref().unwrap_or(&"".to_string()).to_string()),
             init_state_id: Set(add_req.init_state_id.to_string()),
-            tag: Set(add_req.tag.as_ref().unwrap_or(&"".to_string()).to_string()),
+            tag: Set(add_req.tag.clone()),
             rel_model_id: Set(add_req.rel_model_id.as_ref().unwrap_or(&"".to_string()).to_string()),
             template: Set(add_req.template),
             ..Default::default()
         })
+    }
+
+    async fn before_add_item(add_req: &mut FlowModelAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        if FlowModelServ::find_one_item(
+            &FlowModelFilterReq {
+                basic: RbumBasicFilterReq {
+                    own_paths: Some(ctx.own_paths.clone()),
+                    ..Default::default()
+                },
+                tag: add_req.tag.clone(),
+            },
+            funs,
+            ctx,
+        )
+        .await?
+        .is_some()
+        {
+            return Err(funs.err().internal_error(
+                "flow_model_serv",
+                "before_add_item",
+                "There can only be one model under the same tag and own_paths",
+                "500-mx-flow-internal-error",
+            ));
+        }
+        Ok(())
     }
 
     async fn after_add_item(flow_model_id: &str, add_req: &mut FlowModelAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
@@ -114,7 +138,7 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
             flow_model.init_state_id = Set(init_state_id.to_string());
         }
         if let Some(tag) = &modify_req.tag {
-            flow_model.tag = Set(tag.to_string());
+            flow_model.tag = Set(Some(tag.clone()));
         }
         Ok(Some(flow_model))
     }
@@ -138,8 +162,8 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
         query.column((flow_model::Entity, flow_model::Column::InitStateId));
         query.column((flow_model::Entity, flow_model::Column::Tag));
         query.expr_as(Expr::val(json! {()}), Alias::new("transitions"));
-        if let Some(tag) = &filter.tag {
-            query.and_where(Expr::col(flow_model::Column::Tag).eq(tag.as_str()));
+        if let Some(tag) = filter.tag.clone() {
+            query.and_where(Expr::col(flow_model::Column::Tag).eq(tag));
         }
         Ok(())
     }
@@ -185,17 +209,220 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
 }
 
 impl FlowModelServ {
-    pub async fn init_model(_funs: &TardisFunsInst, _ctx: &TardisContext) -> TardisResult<()> {
-        // Self::add_item(&mut FlowModelAddReq {
-        //     name: "基础流程".into(),
-        //     init_state_id: "".to_string(),
-        //     icon: None,
-        //     info: None,
-        //     transitions: None,
-        //     tag: None,
-        //     scope_level: None,
-        //     disabled: None,
-        // }, funs, ctx).await?;
+    pub async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        // Work Order
+        // add state
+        let pending_state_id = FlowStateServ::add_item(
+            &mut FlowStateAddReq {
+                id_prefix: None,
+                name: Some("待处理".into()),
+                icon: None,
+                sys_state: FlowSysStateKind::Start,
+                info: None,
+                state_kind: None,
+                kind_conf: None,
+                template: None,
+                rel_state_id: None,
+                tags: Some(vec![FlowTagKind::Ticket.to_string()]),
+                scope_level: None,
+                disabled: None,
+            },
+            funs,
+            ctx,
+        )
+        .await?;
+        let handling_state_id = FlowStateServ::add_item(
+            &mut FlowStateAddReq {
+                id_prefix: None,
+                name: Some("处理中".into()),
+                icon: None,
+                sys_state: FlowSysStateKind::Progress,
+                info: None,
+                state_kind: None,
+                kind_conf: None,
+                template: None,
+                rel_state_id: None,
+                tags: Some(vec![FlowTagKind::Ticket.to_string()]),
+                scope_level: None,
+                disabled: None,
+            },
+            funs,
+            ctx,
+        )
+        .await?;
+        let confirmed_state_id = FlowStateServ::add_item(
+            &mut FlowStateAddReq {
+                id_prefix: None,
+                name: Some("待确认".into()),
+                icon: None,
+                sys_state: FlowSysStateKind::Progress,
+                info: None,
+                state_kind: None,
+                kind_conf: None,
+                template: None,
+                rel_state_id: None,
+                tags: Some(vec![FlowTagKind::Ticket.to_string()]),
+                scope_level: None,
+                disabled: None,
+            },
+            funs,
+            ctx,
+        )
+        .await?;
+        let closed_state_id = FlowStateServ::add_item(
+            &mut FlowStateAddReq {
+                id_prefix: None,
+                name: Some("已关闭".into()),
+                icon: None,
+                sys_state: FlowSysStateKind::Finish,
+                info: None,
+                state_kind: None,
+                kind_conf: None,
+                template: None,
+                rel_state_id: None,
+                tags: Some(vec![FlowTagKind::Ticket.to_string()]),
+                scope_level: None,
+                disabled: None,
+            },
+            funs,
+            ctx,
+        )
+        .await?;
+        let revoked_state_id = FlowStateServ::add_item(
+            &mut FlowStateAddReq {
+                id_prefix: None,
+                name: Some("已撤销".into()),
+                icon: None,
+                sys_state: FlowSysStateKind::Finish,
+                info: None,
+                state_kind: None,
+                kind_conf: None,
+                template: None,
+                rel_state_id: None,
+                tags: Some(vec![FlowTagKind::Ticket.to_string()]),
+                scope_level: None,
+                disabled: None,
+            },
+            funs,
+            ctx,
+        )
+        .await?;
+        // add model
+        let model_id = Self::add_item(
+            &mut FlowModelAddReq {
+                name: "默认工单流程".into(),
+                init_state_id: pending_state_id.clone(),
+                icon: None,
+                info: None,
+                transitions: Some(vec![
+                    FlowTransitionAddReq {
+                        from_flow_state_id: pending_state_id.clone(),
+                        to_flow_state_id: handling_state_id.clone(),
+                        name: Some("立即处理".into()),
+                        transfer_by_auto: None,
+                        transfer_by_timer: None,
+                        guard_by_creator: Some(true),
+                        guard_by_his_operators: None,
+                        guard_by_spec_account_ids: None,
+                        guard_by_spec_role_ids: None,
+                        guard_by_other_conds: None,
+                        vars_collect: None,
+                        action_by_pre_callback: None,
+                        action_by_post_callback: None,
+                    },
+                    FlowTransitionAddReq {
+                        from_flow_state_id: pending_state_id.clone(),
+                        to_flow_state_id: revoked_state_id.clone(),
+                        name: Some("撤销".into()),
+                        transfer_by_auto: None,
+                        transfer_by_timer: None,
+                        guard_by_creator: Some(true),
+                        guard_by_his_operators: None,
+                        guard_by_spec_account_ids: None,
+                        guard_by_spec_role_ids: None,
+                        guard_by_other_conds: None,
+                        vars_collect: None,
+                        action_by_pre_callback: None,
+                        action_by_post_callback: None,
+                    },
+                    FlowTransitionAddReq {
+                        from_flow_state_id: handling_state_id.clone(),
+                        to_flow_state_id: confirmed_state_id.clone(),
+                        name: Some("处理完成".into()),
+                        transfer_by_auto: None,
+                        transfer_by_timer: None,
+                        guard_by_creator: None,
+                        guard_by_his_operators: Some(true),
+                        guard_by_spec_account_ids: None,
+                        guard_by_spec_role_ids: None,
+                        guard_by_other_conds: None,
+                        vars_collect: None,
+                        action_by_pre_callback: None,
+                        action_by_post_callback: None,
+                    },
+                    FlowTransitionAddReq {
+                        from_flow_state_id: handling_state_id.clone(),
+                        to_flow_state_id: closed_state_id.clone(),
+                        name: Some("关闭".into()),
+                        transfer_by_auto: None,
+                        transfer_by_timer: None,
+                        guard_by_creator: Some(true),
+                        guard_by_his_operators: None,
+                        guard_by_spec_account_ids: None,
+                        guard_by_spec_role_ids: None,
+                        guard_by_other_conds: None,
+                        vars_collect: None,
+                        action_by_pre_callback: None,
+                        action_by_post_callback: None,
+                    },
+                    FlowTransitionAddReq {
+                        from_flow_state_id: confirmed_state_id.clone(),
+                        to_flow_state_id: closed_state_id.clone(),
+                        name: Some("确认解决".into()),
+                        transfer_by_auto: None,
+                        transfer_by_timer: None,
+                        guard_by_creator: Some(true),
+                        guard_by_his_operators: None,
+                        guard_by_spec_account_ids: None,
+                        guard_by_spec_role_ids: None,
+                        guard_by_other_conds: None,
+                        vars_collect: None,
+                        action_by_pre_callback: None,
+                        action_by_post_callback: None,
+                    },
+                    FlowTransitionAddReq {
+                        from_flow_state_id: confirmed_state_id.clone(),
+                        to_flow_state_id: handling_state_id.clone(),
+                        name: Some("未解决".into()),
+                        transfer_by_auto: None,
+                        transfer_by_timer: None,
+                        guard_by_creator: Some(true),
+                        guard_by_his_operators: None,
+                        guard_by_spec_account_ids: None,
+                        guard_by_spec_role_ids: None,
+                        guard_by_other_conds: None,
+                        vars_collect: None,
+                        action_by_pre_callback: None,
+                        action_by_post_callback: None,
+                    },
+                ]),
+                tag: Some(FlowTagKind::Ticket),
+                scope_level: None,
+                disabled: None,
+                template: true,
+                rel_model_id: None,
+            },
+            funs,
+            ctx,
+        )
+        .await?;
+        // add rel
+        FlowRelServ::add_simple_rel(&FlowRelKind::FlowModelState, &model_id, &pending_state_id, None, None, false, false, funs, ctx).await?;
+        FlowRelServ::add_simple_rel(&FlowRelKind::FlowModelState, &model_id, &handling_state_id, None, None, false, false, funs, ctx).await?;
+        FlowRelServ::add_simple_rel(&FlowRelKind::FlowModelState, &model_id, &confirmed_state_id, None, None, false, false, funs, ctx).await?;
+        FlowRelServ::add_simple_rel(&FlowRelKind::FlowModelState, &model_id, &closed_state_id, None, None, false, false, funs, ctx).await?;
+        FlowRelServ::add_simple_rel(&FlowRelKind::FlowModelState, &model_id, &revoked_state_id, None, None, false, false, funs, ctx).await?;
+
         Ok(())
     }
 
@@ -530,8 +757,8 @@ impl FlowModelServ {
                         guard_by_creator: false,
                         guard_by_his_operators: false,
                         guard_by_spec_account_ids: vec![],
-                        guard_by_other_conds: TardisFuns::json.str_to_json("")?,
-                        vars_collect: TardisFuns::json.str_to_json("")?,
+                        guard_by_other_conds: TardisFuns::json.str_to_json("{}")?,
+                        vars_collect: TardisFuns::json.str_to_json("{}")?,
                         action_by_pre_callback: "".to_string(),
                         action_by_post_callback: "".to_string(),
                     },
@@ -548,8 +775,8 @@ impl FlowModelServ {
                         guard_by_creator: false,
                         guard_by_his_operators: false,
                         guard_by_spec_account_ids: vec![],
-                        guard_by_other_conds: TardisFuns::json.str_to_json("")?,
-                        vars_collect: TardisFuns::json.str_to_json("")?,
+                        guard_by_other_conds: TardisFuns::json.str_to_json("{}")?,
+                        vars_collect: TardisFuns::json.str_to_json("{}")?,
                         action_by_pre_callback: "".to_string(),
                         action_by_post_callback: "".to_string(),
                     },
@@ -575,8 +802,8 @@ impl FlowModelServ {
                     guard_by_creator: false,
                     guard_by_his_operators: false,
                     guard_by_spec_account_ids: vec![],
-                    guard_by_other_conds: TardisFuns::json.str_to_json("")?,
-                    vars_collect: TardisFuns::json.str_to_json("")?,
+                    guard_by_other_conds: TardisFuns::json.str_to_json("{}")?,
+                    vars_collect: TardisFuns::json.str_to_json("{}")?,
                     action_by_pre_callback: "".to_string(),
                     action_by_post_callback: "".to_string(),
                 }],
@@ -610,8 +837,8 @@ impl FlowModelServ {
                     guard_by_creator: false,
                     guard_by_his_operators: false,
                     guard_by_spec_account_ids: vec![],
-                    guard_by_other_conds: TardisFuns::json.str_to_json("")?,
-                    vars_collect: TardisFuns::json.str_to_json("")?,
+                    guard_by_other_conds: TardisFuns::json.str_to_json("{}")?,
+                    vars_collect: TardisFuns::json.str_to_json("{}")?,
                     action_by_pre_callback: "".to_string(),
                     action_by_post_callback: "".to_string(),
                 }],
@@ -636,8 +863,8 @@ impl FlowModelServ {
                     guard_by_creator: false,
                     guard_by_his_operators: false,
                     guard_by_spec_account_ids: vec![],
-                    guard_by_other_conds: TardisFuns::json.str_to_json("")?,
-                    vars_collect: TardisFuns::json.str_to_json("")?,
+                    guard_by_other_conds: TardisFuns::json.str_to_json("{}")?,
+                    vars_collect: TardisFuns::json.str_to_json("{}")?,
                     action_by_pre_callback: "".to_string(),
                     action_by_post_callback: "".to_string(),
                 }],
