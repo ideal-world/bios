@@ -3,9 +3,13 @@ use tardis::web::web_server::TardisWebServer;
 
 mod ci;
 use ci::*;
+mod nacos;
 
+use nacos::*;
 use crate::conf_constants;
 
+pub type ConfApi = (ConfCiApi, ConfNacosApi);
+
 pub async fn init_api(web_server: &TardisWebServer) {
-    web_server.add_module(conf_constants::DOMAIN_CODE, (SpiCiBsApi, ConfCiConfigServiceApi, ConfCiNamespaceApi), None).await;
+    web_server.add_module(conf_constants::DOMAIN_CODE, (SpiCiBsApi, ConfApi::default()), None).await;
 }

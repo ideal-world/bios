@@ -1,4 +1,5 @@
 pub const DOMAIN_CODE: &str = "spi-conf";
+pub const DOMAIN_CODE_NACOS: &str = "spi-conf-nacos";
 pub mod error {
     macro_rules! def_error_code {
         (

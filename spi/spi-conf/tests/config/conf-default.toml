@@ -1,6 +1,9 @@
 [cs]
 [csm.spi-reldb]
 [csm.spi-conf]
+token_ttl = 18000
+auth_username = "nacosmocker"
+auth_password = "nacosmocker"
 
 [fw.web_server]
 enabled = true
@@ -63,3 +66,4 @@ FZygs8miAhWPzqnpmgTj1cPiU1M=
 [fw.web_server.modules.spi-conf]
 title = "配置服务"
 doc_urls = [["test env", "http://localhost:8080/"]]
+uniform_error = false
