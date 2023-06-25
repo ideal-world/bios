@@ -90,7 +90,6 @@ pub struct Model {
 
     /// TODO Vec<FlowTransitionActionByStateChangeInfo>
     // pub action_by_post_state_changes: Json,
-
     pub rel_flow_model_id: String,
 
     #[fill_ctx(own_paths)]

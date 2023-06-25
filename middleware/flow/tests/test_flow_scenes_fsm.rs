@@ -6,15 +6,16 @@ use bios_mw_flow::dto::flow_inst_dto::{
     FlowInstFindNextTransitionResp, FlowInstFindNextTransitionsReq, FlowInstFindStateAndTransitionsReq, FlowInstFindStateAndTransitionsResp, FlowInstStartReq, FlowInstTransferReq,
     FlowInstTransferResp,
 };
-use bios_mw_flow::dto::flow_model_dto::{FlowModelAddReq, FlowModelModifyReq, FlowTagKind, FlowModelAggResp, FlowModelSummaryResp, FlowModelUnbindStateReq, FlowModelBindStateReq};
+use bios_mw_flow::dto::flow_model_dto::{FlowModelAddReq, FlowModelAggResp, FlowModelBindStateReq, FlowModelModifyReq, FlowModelSummaryResp, FlowModelUnbindStateReq, FlowTagKind};
 use bios_mw_flow::dto::flow_state_dto::{FlowStateAddReq, FlowStateSummaryResp, FlowSysStateKind};
-use bios_mw_flow::dto::flow_transition_dto::FlowTransitionAddReq;
+use bios_mw_flow::dto::flow_transition_dto::{FlowTransitionAddReq, FlowTransitionModifyReq};
 use bios_mw_flow::dto::flow_var_dto::FlowVarInfo;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 use tardis::log::info;
 use tardis::serde_json::json;
+use tardis::web::poem_openapi::types::Type;
 use tardis::web::web_resp::{TardisPage, Void};
 use tardis::TardisFuns;
 
@@ -33,7 +34,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
     client.set_auth(&ctx)?;
 
     // find default model
-    let mut models:TardisPage<FlowModelSummaryResp> = client.get("/cc/model/?tag=Ticket&page_number=1&page_size=100").await;
+    let mut models: TardisPage<FlowModelSummaryResp> = client.get("/cc/model/?tag=Ticket&page_number=1&page_size=100").await;
     let init_model = models.records.pop().unwrap();
     info!("models: {:?}", init_model);
     assert_eq!(&init_model.name, "默认工单流程");
@@ -43,28 +44,56 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
     client.set_auth(&ctx)?;
     // Get states list
     let states: TardisPage<FlowStateSummaryResp> = client.get("/cc/state?tag=ticket_states&is_global=true&enabled=true&page_number=1&page_size=100").await;
+    let init_state_id = states.records[0].id.clone();
 
-    let mut model_id = "".to_string();
+    let mut model_id = init_model.id.clone();
     // Delete and add some transitions
     for state in states.records {
-        let _: Void = client
-            .post(
-                &format!("/cc/model/{}/unbind_state", &init_model.id),
-                &FlowModelUnbindStateReq {
-                    state_id: state.id.clone(),
-                }
-            )
-            .await;
-        let model_id: Void = client
-            .post(
-                &format!("/cc/model/{}/bind_state", &init_model.id),
-                &FlowModelBindStateReq {
-                    state_id: state.id.clone(),
-                }
-            )
-            .await;
+        model_id = client.post(&format!("/cc/model/{}/unbind_state", &model_id), &FlowModelUnbindStateReq { state_id: state.id.clone() }).await;
+        model_id = client.post(&format!("/cc/model/{}/bind_state", &model_id), &FlowModelBindStateReq { state_id: state.id.clone() }).await;
     }
-    
+    // get model detail
+    let model_agg_old: FlowModelAggResp = client.get(&format!("/cc/model/{}", model_id)).await;
+    // Set initial state
+    let _: Void = client
+        .patch(
+            &format!("/cc/model/{}", model_id),
+            &FlowModelModifyReq {
+                init_state_id: Some(init_state_id.clone()),
+                ..Default::default()
+            },
+        )
+        .await;
+    // modify transitions
+    let trans_modify = model_agg_old.states.get(&init_state_id).unwrap().transitions[0].clone();
+    let _: Void = client
+        .patch(
+            &format!("/cc/model/{}", model_id),
+            &FlowModelModifyReq {
+                modify_transitions: Some(vec![FlowTransitionModifyReq {
+                    id: trans_modify.id.clone().into(),
+                    name: Some(format!("{}-modify", &trans_modify.id).into()),
+                    from_flow_state_id: None,
+                    to_flow_state_id: None,
+                    transfer_by_auto: Some(true),
+                    transfer_by_timer: None,
+                    guard_by_creator: None,
+                    guard_by_his_operators: None,
+                    guard_by_assigned: None,
+                    guard_by_spec_account_ids: None,
+                    guard_by_spec_role_ids: None,
+                    guard_by_other_conds: None,
+                    vars_collect: None,
+                    action_by_pre_callback: None,
+                    action_by_post_callback: None,
+                }]),
+                ..Default::default()
+            },
+        )
+        .await;
+    let mut model_agg_new: FlowModelAggResp = client.get(&format!("/cc/model/{}", model_id)).await;
+    assert!(!model_agg_new.states.get_mut(&init_state_id).unwrap().transitions.iter_mut().any(|trans| trans.transfer_by_auto).is_empty());
+
     // // Add some transitions
     // let _: Void = client
     //     .patch(
@@ -247,5 +276,16 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
     //     )
     //     .await;
     // assert_eq!(transfer.new_flow_state_id, state_rejected_id);
+
+    let _: Void = client
+        .patch(
+            &format!("/cc/model/{}", model_id),
+            &FlowModelModifyReq {
+                delete_transitions: Some(vec![trans_modify.id.clone()]),
+                ..Default::default()
+            },
+        )
+        .await;
+
     Ok(())
 }

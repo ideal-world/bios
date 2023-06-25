@@ -6,7 +6,9 @@ use tardis::web::poem_openapi::param::{Path, Query};
 use tardis::web::poem_openapi::payload::Json;
 use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 
-use crate::dto::flow_model_dto::{FlowModelAddReq, FlowModelAggResp, FlowModelFilterReq, FlowModelModifyReq, FlowModelSummaryResp, FlowTagKind, FlowModelBindStateReq, FlowModelUnbindStateReq};
+use crate::dto::flow_model_dto::{
+    FlowModelAddReq, FlowModelAggResp, FlowModelBindStateReq, FlowModelFilterReq, FlowModelModifyReq, FlowModelSummaryResp, FlowModelUnbindStateReq, FlowTagKind,
+};
 use crate::flow_constants;
 use crate::serv::flow_model_serv::FlowModelServ;
 use crate::serv::flow_rel_serv::{FlowRelKind, FlowRelServ};
@@ -99,21 +101,21 @@ impl FlowCcModelApi {
 
     /// Bind State By Model Id / 绑定状态
     #[oai(path = "/:flow_model_id/bind_state", method = "post")]
-    async fn bind_state(&self, flow_model_id: Path<String>, req: Json<FlowModelBindStateReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+    async fn bind_state(&self, flow_model_id: Path<String>, req: Json<FlowModelBindStateReq>, ctx: TardisContextExtractor) -> TardisApiResult<String> {
         let mut funs = flow_constants::get_tardis_inst();
         funs.begin().await?;
-        FlowModelServ::bind_state(&FlowRelKind::FlowModelState, &flow_model_id.0, &req.0.state_id, None, None, false, false, &funs, &ctx.0).await?;
+        let reuslt = FlowModelServ::bind_state(&FlowRelKind::FlowModelState, &flow_model_id.0, &req.0.state_id, None, None, false, true, &funs, &ctx.0).await?;
         funs.commit().await?;
-        TardisResp::ok(Void {})
+        TardisResp::ok(reuslt)
     }
 
     /// Unbind State By Model Id / 解绑状态
     #[oai(path = "/:flow_model_id/unbind_state", method = "post")]
-    async fn unbind_state(&self, flow_model_id: Path<String>, req: Json<FlowModelUnbindStateReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+    async fn unbind_state(&self, flow_model_id: Path<String>, req: Json<FlowModelUnbindStateReq>, ctx: TardisContextExtractor) -> TardisApiResult<String> {
         let mut funs = flow_constants::get_tardis_inst();
         funs.begin().await?;
-        FlowModelServ::unbind_state(&FlowRelKind::FlowModelState, &flow_model_id.0, &req.0.state_id, &funs, &ctx.0).await?;
+        let reuslt = FlowModelServ::unbind_state(&FlowRelKind::FlowModelState, &flow_model_id.0, &req.0.state_id, &funs, &ctx.0).await?;
         funs.commit().await?;
-        TardisResp::ok(Void {})
+        TardisResp::ok(reuslt)
     }
 }
