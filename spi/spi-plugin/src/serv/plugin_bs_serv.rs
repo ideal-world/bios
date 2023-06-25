@@ -28,10 +28,7 @@ use tardis::{
 };
 
 use crate::{
-    dto::{
-        plugin_bs_dto::{PluginBsAddReq, PluginBsCertInfoResp, PluginBsInfoResp},
-        plugin_kind_dto::PluginKindAggResp,
-    },
+    dto::plugin_bs_dto::{PluginBsAddReq, PluginBsCertInfoResp, PluginBsInfoResp},
     plugin_enumeration::PluginAppBindRelKind,
 };
 
@@ -52,7 +49,11 @@ impl PluginBsServ {
         let bs = SpiBsServ::peek_item(bs_id, &SpiBsFilterReq::default(), funs, ctx).await?;
         if SpiBsServ::count_items(
             &SpiBsFilterReq {
-                basic: RbumBasicFilterReq { ..Default::default() },
+                basic: RbumBasicFilterReq {
+                    ids: Some(vec![bs_id.to_string()]),
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
                 rel: Some(RbumItemRelFilterReq {
                     rel_by_from: true,
                     tag: Some(spi_constants::SPI_IDENT_REL_TAG.to_string()),
@@ -60,7 +61,6 @@ impl PluginBsServ {
                     rel_item_id: Some(app_tenant_id.to_owned()),
                     ..Default::default()
                 }),
-                kind_id: Some(bs.kind_id.to_string()),
                 ..Default::default()
             },
             funs,

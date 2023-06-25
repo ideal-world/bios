@@ -34,7 +34,9 @@ use crate::{
 };
 use async_trait::async_trait;
 
-use super::flow_rel_serv::{FlowRelKind, FlowRelServ};
+use super::{
+    flow_rel_serv::{FlowRelKind, FlowRelServ},
+};
 
 pub struct FlowModelServ;
 
