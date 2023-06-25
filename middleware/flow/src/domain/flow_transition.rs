@@ -86,10 +86,10 @@ pub struct Model {
     pub action_by_post_callback: String,
 
     /// TODO Vec<FlowTransitionActionByVarChangeInfo>
-    pub action_by_post_var_changes: Json,
+    // pub action_by_post_var_changes: Json,
 
     /// TODO Vec<FlowTransitionActionByStateChangeInfo>
-    pub action_by_post_state_changes: Json,
+    // pub action_by_post_state_changes: Json,
 
     pub rel_flow_model_id: String,
 

@@ -146,7 +146,7 @@ pub struct FlowModelAggResp {
     pub create_time: DateTime<Utc>,
     pub update_time: DateTime<Utc>,
 
-    pub tag: String,
+    pub tag: FlowTagKind,
 
     pub scope_level: RbumScopeLevelKind,
     pub disabled: bool,

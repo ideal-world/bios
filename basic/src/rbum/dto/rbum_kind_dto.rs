@@ -65,7 +65,7 @@ pub struct RbumKindSummaryResp {
     pub scope_level: RbumScopeLevelKind,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[cfg_attr(feature = "default", derive(poem_openapi::Object, sea_orm::FromQueryResult))]
 pub struct RbumKindDetailResp {
     pub id: String,
