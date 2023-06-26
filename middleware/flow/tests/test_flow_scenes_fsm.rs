@@ -54,7 +54,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
         model_id = client.post(&format!("/cc/model/{}/bind_state", &model_id), &FlowModelBindStateReq { state_id: state.id.clone() }).await;
     }
     // get model detail
-    let model_agg_old: FlowModelAggResp = client.get(&format!("/cc/model/{}", init_model.id.clone())).await;
+    let model_agg_old: FlowModelAggResp = client.get(&format!("/cc/model/{}", model_id.to_string())).await;
     // Set initial state
     let _: Void = client
         .patch(
