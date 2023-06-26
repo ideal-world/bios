@@ -19,7 +19,7 @@ use crate::{
 
 use super::{auth_crypto_serv, auth_mgr_serv, auth_res_serv};
 
-pub(crate) async fn auth(req: &mut AuthReq, is_mix_req: bool) -> TardisResult<AuthResp> {
+pub async fn auth(req: &mut AuthReq, is_mix_req: bool) -> TardisResult<AuthResp> {
     trace!("[Auth] Request auth: {:?}", req);
     let config = TardisFuns::cs_config::<AuthConfig>(DOMAIN_CODE);
     match check(req) {
