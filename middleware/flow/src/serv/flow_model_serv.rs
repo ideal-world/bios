@@ -25,7 +25,7 @@ use tardis::{
 use crate::{
     domain::{flow_model, flow_transition},
     dto::{
-        flow_model_dto::{FlowModelAddReq, FlowModelAggResp, FlowModelDetailResp, FlowModelFilterReq, FlowModelModifyReq, FlowModelSummaryResp, FlowStateAggResp, FlowTagKind},
+        flow_model_dto::{FlowModelAddReq, FlowModelAggResp, FlowModelDetailResp, FlowModelFilterReq, FlowModelModifyReq, FlowModelSummaryResp, FlowStateAggResp, FlowTagKind, FlowTemplateModelResp},
         flow_state_dto::{FlowStateAddReq, FlowStateFilterReq, FlowSysStateKind},
         flow_transition_dto::{FlowTransitionAddReq, FlowTransitionDetailResp, FlowTransitionModifyReq},
     },
@@ -103,6 +103,10 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
         if let Some(transitions) = &add_req.transitions {
             Self::add_transitions(flow_model_id, transitions, funs, ctx).await?;
         }
+        if let Some(rel_template_id) = &add_req.rel_template_id {
+            FlowRelServ::add_simple_rel(&FlowRelKind::FlowTemplateModel, rel_template_id, flow_model_id, None, None, false, false, funs, ctx).await?;
+        }
+        
         Ok(())
     }
 
@@ -221,7 +225,7 @@ impl FlowModelServ {
                 kind_conf: None,
                 template: None,
                 rel_state_id: None,
-                tags: Some(vec!["ticket_states".to_string()]),
+                tags: Some(vec!["TICKET".to_string()]),
                 scope_level: None,
                 disabled: None,
             },
@@ -240,7 +244,7 @@ impl FlowModelServ {
                 kind_conf: None,
                 template: None,
                 rel_state_id: None,
-                tags: Some(vec!["ticket_states".to_string()]),
+                tags: Some(vec!["TICKET".to_string()]),
                 scope_level: None,
                 disabled: None,
             },
@@ -259,7 +263,7 @@ impl FlowModelServ {
                 kind_conf: None,
                 template: None,
                 rel_state_id: None,
-                tags: Some(vec!["ticket_states".to_string()]),
+                tags: Some(vec!["TICKET".to_string()]),
                 scope_level: None,
                 disabled: None,
             },
@@ -278,7 +282,7 @@ impl FlowModelServ {
                 kind_conf: None,
                 template: None,
                 rel_state_id: None,
-                tags: Some(vec!["ticket_states".to_string()]),
+                tags: Some(vec!["TICKET".to_string()]),
                 scope_level: None,
                 disabled: None,
             },
@@ -297,7 +301,7 @@ impl FlowModelServ {
                 kind_conf: None,
                 template: None,
                 rel_state_id: None,
-                tags: Some(vec!["ticket_states".to_string()]),
+                tags: Some(vec!["TICKET".to_string()]),
                 scope_level: None,
                 disabled: None,
             },
@@ -310,6 +314,7 @@ impl FlowModelServ {
             &mut FlowModelAddReq {
                 name: "默认工单流程".into(),
                 init_state_id: pending_state_id.clone(),
+                rel_template_id: None,
                 icon: None,
                 info: None,
                 transitions: Some(vec![
@@ -410,7 +415,7 @@ impl FlowModelServ {
                         action_by_post_callback: None,
                     },
                 ]),
-                tag: Some(FlowTagKind::Ticket),
+                tag: Some(FlowTagKind::TICKET),
                 scope_level: None,
                 disabled: None,
                 template: true,
@@ -749,14 +754,67 @@ impl FlowModelServ {
     }
 
     // Find model by tag and template id
-    pub async fn get_models(tags: Vec<&str>, template_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<HashMap<String, FlowModelSummaryResp>> {
-        let result = HashMap::new();
+    pub async fn get_models(tags: Vec<&str>, template_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<HashMap<String, FlowTemplateModelResp>> {
+        let mut result = HashMap::new();
         // TODO 提测暂时先用全局own_paths,后面以scope_level做判断
-        // let mock_ctx = TardisContext {
-        //     own_paths: "".to_string(),
-        //     ..ctx.clone()
-        // };
-        // let model_ids_by_temp_id = FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowTemplateModel, template_id, None, None, funs, &mock_ctx).await?.iter().map(|rel| rel.rel_id.clone()).collect::<Vec<_>>();
+        let mock_ctx = TardisContext {
+            own_paths: "".to_string(),
+            ..ctx.clone()
+        };
+        let model_ids_by_temp_id = FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowTemplateModel, template_id, None, None, funs, &mock_ctx).await?.iter().map(|rel| rel.rel_id.clone()).collect::<Vec<_>>();
+        let models = FlowModelServ::paginate_items(
+            &FlowModelFilterReq {
+                basic: RbumBasicFilterReq {
+                    ids: Some(model_ids_by_temp_id),
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            1,
+            20,
+            None,
+            None,
+            funs,
+            &mock_ctx,
+        )
+        .await?;
+
+        // First iterate over the models
+        for model in models.records {
+            if tags.contains(&model.tag.as_str()) {
+                result.insert(model.tag.clone(), FlowTemplateModelResp {
+                    id:model.id,
+                    name:model.name,
+                    create_time:model.create_time,
+                    update_time:model.update_time,
+                });
+            }
+        }
+
+        // Iterate over the tag based on the existing result and get the default model
+        for tag in tags {
+            if !result.contains_key(tag) {
+                let default_model = Self::paginate_items(
+                    &FlowModelFilterReq {
+                        tag: Some(tag.try_into()?),
+                        ..Default::default()
+                    },
+                    1,
+                    1,
+                    None,
+                    None,
+                    funs,
+                    &mock_ctx,
+                )
+                .await?.records.pop().ok_or_else(|| funs.err().internal_error("flow_model_serv", "get_models", "default model is not exist", "404-default-model-mot-exist"))?;
+                result.insert(default_model.tag.clone(), FlowTemplateModelResp {
+                    id:default_model.id,
+                    name:default_model.name,
+                    create_time:default_model.create_time,
+                    update_time:default_model.update_time,
+                });
+            }
+        }
 
         Ok(result)
     }
@@ -787,7 +845,6 @@ impl FlowModelServ {
                     own_paths: Some("".to_string()),
                     ..Default::default()
                 },
-                ..Default::default()
             },
             1,
             10,
@@ -813,6 +870,7 @@ impl FlowModelServ {
                     icon: modify_req.icon.clone().map_or(Some(current_model.icon), Some),
                     info: modify_req.info.clone().map_or(Some(current_model.info), Some),
                     init_state_id: modify_req.init_state_id.clone().map_or(current_model.init_state_id, |init_state_id| init_state_id),
+                    rel_template_id:modify_req.rel_template_id.clone(),
                     transitions: modify_req.add_transitions.clone().map_or(Some(transitions.into_iter().map(|trans| trans.into()).collect_vec()), Some),
                     template: false,
                     rel_model_id: Some(flow_model_id.to_string()),
@@ -831,7 +889,7 @@ impl FlowModelServ {
                 .map(|rel| rel.rel_id.clone())
                 .collect::<Vec<_>>()
             {
-                FlowRelServ::add_simple_rel(&FlowRelKind::FlowModelState, &model_id, &state_id, None, None, false, false, funs, ctx).await?;
+                FlowRelServ::add_simple_rel(&FlowRelKind::FlowModelState, &model_id, &state_id, None, None, false, true, funs, ctx).await?;
             }
             let mock_ctx = TardisContext {
                 own_paths: "".to_string(),
