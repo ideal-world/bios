@@ -21,7 +21,8 @@ spacegate-kernel = { version = "0.1.0-alpha.2", features = [
     "cache",
     "k8s",
     "web",
-], path = "../../../spacegate/kernel" }
+] }
+# spacegate-kernel = { path = "../../../spacegate/kernel" }
 bios-auth = { path = "../../support/auth" }
 tardis = { workspace = true, features = ["web-server", "web-client"] }
 
