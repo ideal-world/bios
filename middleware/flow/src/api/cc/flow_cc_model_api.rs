@@ -10,6 +10,7 @@ use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 
 use crate::dto::flow_model_dto::{
     FlowModelAddReq, FlowModelAggResp, FlowModelBindStateReq, FlowModelFilterReq, FlowModelModifyReq, FlowModelSummaryResp, FlowModelUnbindStateReq, FlowTagKind,
+    FlowTemplateModelResp,
 };
 use crate::flow_constants;
 use crate::serv::flow_model_serv::FlowModelServ;
@@ -75,7 +76,6 @@ impl FlowCcModelApi {
                     ..Default::default()
                 },
                 tag: tag.0,
-                ..Default::default()
             },
             page_number.0,
             page_size.0,
@@ -89,8 +89,8 @@ impl FlowCcModelApi {
     }
 
     /// Get Models By Tag And Template Id / 通过Tag和模板Id获取模型
-    #[oai(path = "/get_model_ids/:temp_id", method = "get")]
-    async fn get_models(&self, tag_ids: Query<String>, temp_id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<HashMap<String, FlowModelSummaryResp>> {
+    #[oai(path = "/get_models/:temp_id", method = "get")]
+    async fn get_models(&self, tag_ids: Query<String>, temp_id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<HashMap<String, FlowTemplateModelResp>> {
         let mut funs = flow_constants::get_tardis_inst();
         funs.begin().await?;
         let tag_ids: Vec<_> = tag_ids.split(',').collect();
