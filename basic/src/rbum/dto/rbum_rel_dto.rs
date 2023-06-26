@@ -70,7 +70,7 @@ pub struct RbumRelFindReq {
     pub to_rbum_own_paths: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[cfg_attr(feature = "default", derive(poem_openapi::Object, sea_orm::FromQueryResult))]
 pub struct RbumRelBoneResp {
     pub tag: String,

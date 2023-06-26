@@ -8,6 +8,7 @@ use crate::dto::flow_inst_dto::{
     FlowInstAbortReq, FlowInstDetailResp, FlowInstFindNextTransitionResp, FlowInstFindNextTransitionsReq, FlowInstFindStateAndTransitionsReq, FlowInstFindStateAndTransitionsResp,
     FlowInstStartReq, FlowInstSummaryResp, FlowInstTransferReq, FlowInstTransferResp,
 };
+use crate::dto::flow_model_dto::FlowTagKind;
 use crate::flow_constants;
 use crate::serv::flow_inst_serv::FlowInstServ;
 
@@ -49,6 +50,7 @@ impl FlowCcInstApi {
     async fn paginate(
         &self,
         flow_model_id: Query<Option<String>>,
+        tag: Query<Option<FlowTagKind>>,
         finish: Query<Option<bool>>,
         with_sub: Query<Option<bool>>,
         page_number: Query<u32>,
@@ -56,7 +58,7 @@ impl FlowCcInstApi {
         ctx: TardisContextExtractor,
     ) -> TardisApiResult<TardisPage<FlowInstSummaryResp>> {
         let funs = flow_constants::get_tardis_inst();
-        let result = FlowInstServ::paginate(flow_model_id.0, finish.0, with_sub.0, page_number.0, page_size.0, &funs, &ctx.0).await?;
+        let result = FlowInstServ::paginate(flow_model_id.0, tag.0, finish.0, with_sub.0, page_number.0, page_size.0, &funs, &ctx.0).await?;
         TardisResp::ok(result)
     }
 

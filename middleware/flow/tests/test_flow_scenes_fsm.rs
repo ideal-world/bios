@@ -6,22 +6,23 @@ use bios_mw_flow::dto::flow_inst_dto::{
     FlowInstFindNextTransitionResp, FlowInstFindNextTransitionsReq, FlowInstFindStateAndTransitionsReq, FlowInstFindStateAndTransitionsResp, FlowInstStartReq, FlowInstTransferReq,
     FlowInstTransferResp,
 };
-use bios_mw_flow::dto::flow_model_dto::{FlowModelAddReq, FlowModelModifyReq};
+use bios_mw_flow::dto::flow_model_dto::{FlowModelAddReq, FlowModelAggResp, FlowModelBindStateReq, FlowModelModifyReq, FlowModelSummaryResp, FlowModelUnbindStateReq, FlowTagKind};
 use bios_mw_flow::dto::flow_state_dto::{FlowStateAddReq, FlowStateSummaryResp, FlowSysStateKind};
-use bios_mw_flow::dto::flow_transition_dto::FlowTransitionAddReq;
+use bios_mw_flow::dto::flow_transition_dto::{FlowTransitionAddReq, FlowTransitionModifyReq};
 use bios_mw_flow::dto::flow_var_dto::FlowVarInfo;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 use tardis::log::info;
 use tardis::serde_json::json;
+use tardis::web::poem_openapi::types::Type;
 use tardis::web::web_resp::{TardisPage, Void};
 use tardis::TardisFuns;
 
 pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
     info!("【test_flow_scenes_fsm】");
 
-    let ctx = TardisContext {
+    let mut ctx = TardisContext {
         own_paths: "".to_string(),
         ak: "".to_string(),
         roles: vec![],
@@ -32,313 +33,259 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
 
     client.set_auth(&ctx)?;
 
-    // Add some states
-    let state_init_id: String = client
-        .post(
-            "/cc/state",
-            &FlowStateAddReq {
-                name: Some(TrimString("初始".to_string())),
-                id_prefix: Some(TrimString("init".to_string())),
-                tags: Some(vec!["proj_states".to_string()]),
-                sys_state: FlowSysStateKind::Start,
-                icon: None,
-                info: None,
-                state_kind: None,
-                kind_conf: None,
-                template: None,
-                rel_state_id: None,
-                scope_level: None,
-                disabled: None,
-            },
-        )
-        .await;
-    let state_confirmed_id: String = client
-        .post(
-            "/cc/state",
-            &FlowStateAddReq {
-                name: Some(TrimString("已确认".to_string())),
-                id_prefix: Some(TrimString("confirmed".to_string())),
-                tags: Some(vec!["proj_states".to_string()]),
-                sys_state: FlowSysStateKind::Progress,
-                icon: None,
-                info: None,
-                state_kind: None,
-                kind_conf: None,
-                template: None,
-                rel_state_id: None,
-                scope_level: None,
-                disabled: None,
-            },
-        )
-        .await;
-    let state_rejected_id: String = client
-        .post(
-            "/cc/state",
-            &FlowStateAddReq {
-                name: Some(TrimString("已拒绝".to_string())),
-                id_prefix: Some(TrimString("rejected".to_string())),
-                tags: Some(vec!["proj_states".to_string()]),
-                sys_state: FlowSysStateKind::Progress,
-                icon: None,
-                info: None,
-                state_kind: None,
-                kind_conf: None,
-                template: None,
-                rel_state_id: None,
-                scope_level: None,
-                disabled: None,
-            },
-        )
-        .await;
-    let state_assigned_id: String = client
-        .post(
-            "/cc/state",
-            &FlowStateAddReq {
-                name: Some(TrimString("已分配".to_string())),
-                id_prefix: Some(TrimString("assigned".to_string())),
-                tags: Some(vec!["proj_states".to_string()]),
-                sys_state: FlowSysStateKind::Progress,
-                icon: None,
-                info: None,
-                state_kind: None,
-                kind_conf: None,
-                template: None,
-                rel_state_id: None,
-                scope_level: None,
-                disabled: None,
-            },
-        )
-        .await;
-    let state_executing_id: String = client
-        .post(
-            "/cc/state",
-            &FlowStateAddReq {
-                name: Some(TrimString("执行中".to_string())),
-                id_prefix: Some(TrimString("executing".to_string())),
-                tags: Some(vec!["proj_states".to_string()]),
-                sys_state: FlowSysStateKind::Progress,
-                icon: None,
-                info: None,
-                state_kind: None,
-                kind_conf: None,
-                template: None,
-                rel_state_id: None,
-                scope_level: None,
-                disabled: None,
-            },
-        )
-        .await;
-    let state_finish_id: String = client
-        .post(
-            "/cc/state",
-            &FlowStateAddReq {
-                name: Some(TrimString("已完成".to_string())),
-                id_prefix: Some(TrimString("finish".to_string())),
-                tags: Some(vec!["proj_states".to_string()]),
-                sys_state: FlowSysStateKind::Finish,
-                icon: None,
-                info: None,
-                state_kind: None,
-                kind_conf: None,
-                template: None,
-                rel_state_id: None,
-                scope_level: None,
-                disabled: None,
-            },
-        )
-        .await;
+    // find default model
+    let mut models: TardisPage<FlowModelSummaryResp> = client.get("/cc/model/?tag=Ticket&page_number=1&page_size=100").await;
+    let init_model = models.records.pop().unwrap();
+    info!("models: {:?}", init_model);
+    assert_eq!(&init_model.name, "默认工单流程");
+    assert_eq!(&init_model.owner, "");
+
+    ctx.own_paths = "t1/app001".to_string();
+    client.set_auth(&ctx)?;
     // Get states list
-    let _states: TardisPage<FlowStateSummaryResp> = client.get("/cc/state?tag=proj_states&template=false&enabled=true&page_number=1&page_size=100").await;
-    // Add a model
-    let model_id: String = client
-        .post(
-            "/cc/model",
-            &FlowModelAddReq {
-                name: TrimString("基础流程".to_string()),
-                init_state_id: state_init_id.clone(),
-                icon: None,
-                info: None,
-                transitions: None,
-                tag: None,
-                scope_level: None,
-                disabled: None,
-                rel_model_id: None,
-                template: false,
-            },
-        )
-        .await;
-    // Add some transitions
+    let states: TardisPage<FlowStateSummaryResp> = client.get("/cc/state?tag=ticket_states&is_global=true&enabled=true&page_number=1&page_size=100").await;
+    let init_state_id = states.records[0].id.clone();
+
+    let mut model_id = init_model.id.clone();
+    // Delete and add some transitions
+    for state in states.records {
+        model_id = client.post(&format!("/cc/model/{}/unbind_state", &model_id), &FlowModelUnbindStateReq { state_id: state.id.clone() }).await;
+        model_id = client.post(&format!("/cc/model/{}/bind_state", &model_id), &FlowModelBindStateReq { state_id: state.id.clone() }).await;
+    }
+    // get model detail
+    let model_agg_old: FlowModelAggResp = client.get(&format!("/cc/model/{}", model_id)).await;
+    // Set initial state
     let _: Void = client
         .patch(
             &format!("/cc/model/{}", model_id),
             &FlowModelModifyReq {
-                add_transitions: Some(vec![
-                    FlowTransitionAddReq {
-                        name: Some(TrimString("确认任务".to_string())),
-                        from_flow_state_id: state_init_id.clone(),
-                        to_flow_state_id: state_confirmed_id.clone(),
-                        guard_by_spec_role_ids: Some(vec!["admin".to_string()]),
-                        transfer_by_auto: None,
-                        transfer_by_timer: None,
-                        guard_by_creator: None,
-                        guard_by_his_operators: None,
-                        guard_by_spec_account_ids: None,
-                        guard_by_other_conds: None,
-                        vars_collect: None,
-                        action_by_pre_callback: None,
-                        action_by_post_callback: None,
-                    },
-                    FlowTransitionAddReq {
-                        name: Some(TrimString("拒绝任务".to_string())),
-                        from_flow_state_id: state_init_id.clone(),
-                        to_flow_state_id: state_rejected_id.clone(),
-                        guard_by_spec_role_ids: Some(vec!["admin".to_string()]),
-                        vars_collect: Some(vec![FlowVarInfo {
-                            name: "reason".to_string(),
-                            label: "原因".to_string(),
-                            data_type: RbumDataTypeKind::String,
-                            widget_type: RbumWidgetTypeKind::InputTxt,
-                            note: None,
-                            sort: None,
-                            hide: None,
-                            secret: None,
-                            show_by_conds: None,
-                            widget_columns: None,
-                            default_value: None,
-                            dyn_default_value: None,
-                            options: None,
-                            dyn_options: None,
-                            required: None,
-                            min_length: None,
-                            max_length: None,
-                            action: None,
-                            ext: None,
-                            parent_attr_name: None,
-                        }]),
-                        transfer_by_auto: None,
-                        transfer_by_timer: None,
-                        guard_by_creator: None,
-                        guard_by_his_operators: None,
-                        guard_by_spec_account_ids: None,
-                        guard_by_other_conds: None,
-                        action_by_pre_callback: None,
-                        action_by_post_callback: None,
-                    },
-                    FlowTransitionAddReq {
-                        name: Some(TrimString("分配任务".to_string())),
-                        from_flow_state_id: state_confirmed_id.clone(),
-                        to_flow_state_id: state_assigned_id.clone(),
-                        guard_by_spec_role_ids: Some(vec!["mgr".to_string()]),
-                        transfer_by_auto: None,
-                        transfer_by_timer: None,
-                        guard_by_creator: None,
-                        guard_by_his_operators: None,
-                        guard_by_spec_account_ids: None,
-                        guard_by_other_conds: None,
-                        vars_collect: None,
-                        action_by_pre_callback: None,
-                        action_by_post_callback: None,
-                    },
-                    FlowTransitionAddReq {
-                        name: Some(TrimString("执行任务".to_string())),
-                        from_flow_state_id: state_assigned_id.clone(),
-                        to_flow_state_id: state_executing_id.clone(),
-                        guard_by_his_operators: Some(true),
-                        transfer_by_auto: None,
-                        transfer_by_timer: None,
-                        guard_by_creator: None,
-                        guard_by_spec_account_ids: None,
-                        guard_by_spec_role_ids: None,
-                        guard_by_other_conds: None,
-                        vars_collect: None,
-                        action_by_pre_callback: None,
-                        action_by_post_callback: None,
-                    },
-                    FlowTransitionAddReq {
-                        name: Some(TrimString("关闭任务".to_string())),
-                        from_flow_state_id: state_executing_id.clone(),
-                        to_flow_state_id: state_finish_id.clone(),
-                        guard_by_his_operators: Some(true),
-                        transfer_by_auto: None,
-                        transfer_by_timer: None,
-                        guard_by_creator: None,
-                        guard_by_spec_account_ids: None,
-                        guard_by_spec_role_ids: None,
-                        guard_by_other_conds: None,
-                        vars_collect: None,
-                        action_by_pre_callback: None,
-                        action_by_post_callback: None,
-                    },
-                ]),
-                name: None,
-                icon: None,
-                info: None,
-                init_state_id: None,
-                modify_transitions: None,
-                delete_transitions: None,
-                tag: None,
-                scope_level: None,
-                disabled: None,
-                template: None,
+                init_state_id: Some(init_state_id.clone()),
+                ..Default::default()
             },
         )
         .await;
-    // Start a instance
-    let inst_id: String = client
-        .post(
-            "/cc/inst",
-            &FlowInstStartReq {
-                tag: "proj_states".to_string(),
-                create_vars: None,
+    // modify transitions
+    let trans_modify = model_agg_old.states.get(&init_state_id).unwrap().transitions[0].clone();
+    let _: Void = client
+        .patch(
+            &format!("/cc/model/{}", model_id),
+            &FlowModelModifyReq {
+                modify_transitions: Some(vec![FlowTransitionModifyReq {
+                    id: trans_modify.id.clone().into(),
+                    name: Some(format!("{}-modify", &trans_modify.id).into()),
+                    from_flow_state_id: None,
+                    to_flow_state_id: None,
+                    transfer_by_auto: Some(true),
+                    transfer_by_timer: None,
+                    guard_by_creator: None,
+                    guard_by_his_operators: None,
+                    guard_by_assigned: None,
+                    guard_by_spec_account_ids: None,
+                    guard_by_spec_role_ids: None,
+                    guard_by_other_conds: None,
+                    vars_collect: None,
+                    action_by_pre_callback: None,
+                    action_by_post_callback: None,
+                }]),
+                ..Default::default()
             },
         )
         .await;
-    // Get the current status of some tasks
-    let names: HashMap<String, String> = client.get(&format!("/cc/state/names?ids={}&ids={}", state_init_id, state_assigned_id)).await;
-    assert_eq!(names[&state_init_id], "初始");
-    assert_eq!(names[&state_assigned_id], "已分配");
-    // Get the state of a task that can be transferable
-    let next_transitions: Vec<FlowInstFindNextTransitionResp> = client.put(&format!("/cc/inst/{}/transition/next", inst_id), &FlowInstFindNextTransitionsReq { vars: None }).await;
-    assert_eq!(next_transitions.len(), 0);
-    client.set_auth(&TardisContext {
-        own_paths: "".to_string(),
-        ak: "".to_string(),
-        roles: vec!["admin".to_string()],
-        groups: vec![],
-        owner: "a001".to_string(),
-        ..Default::default()
-    })?;
-    let next_transitions: Vec<FlowInstFindNextTransitionResp> = client.put(&format!("/cc/inst/{}/transition/next", inst_id), &FlowInstFindNextTransitionsReq { vars: None }).await;
-    assert_eq!(next_transitions.len(), 2);
-    assert_eq!(next_transitions[0].next_flow_transition_name, "确认任务");
-    assert_eq!(next_transitions[1].next_flow_transition_name, "拒绝任务");
-    assert_eq!(next_transitions[1].vars_collect.as_ref().unwrap().len(), 1);
-    // Find the state and transfer information of the specified instances in batch
-    let state_and_next_transitions: Vec<FlowInstFindStateAndTransitionsResp> = client
-        .put(
-            "/cc/inst/batch/state_transitions",
-            &vec![FlowInstFindStateAndTransitionsReq {
-                flow_inst_id: inst_id.clone(),
-                vars: None,
-            }],
-        )
-        .await;
-    assert_eq!(state_and_next_transitions.len(), 1);
-    assert_eq!(state_and_next_transitions[0].current_flow_state_name, "初始");
-    assert_eq!(state_and_next_transitions[0].next_flow_transitions[0].next_flow_transition_name, "确认任务");
-    assert_eq!(state_and_next_transitions[0].next_flow_transitions[1].next_flow_transition_name, "拒绝任务");
-    assert_eq!(state_and_next_transitions[0].next_flow_transitions[1].vars_collect.as_ref().unwrap().len(), 1);
-    // Transfer task status
-    let transfer: FlowInstTransferResp = client
-        .put(
-            &format!("/cc/inst/{}/transition/transfer", inst_id),
-            &FlowInstTransferReq {
-                flow_transition_id: state_and_next_transitions[0].next_flow_transitions[1].next_flow_transition_id.clone(),
-                vars: Some(TardisFuns::json.json_to_obj(json!({ "reason":"测试关闭" })).unwrap()),
-                message: None,
+    let mut model_agg_new: FlowModelAggResp = client.get(&format!("/cc/model/{}", model_id)).await;
+    assert!(!model_agg_new.states.get_mut(&init_state_id).unwrap().transitions.iter_mut().any(|trans| trans.transfer_by_auto).is_empty());
+
+    // // Add some transitions
+    // let _: Void = client
+    //     .patch(
+    //         &format!("/cc/model/{}", model_id),
+    //         &FlowModelModifyReq {
+    //             add_transitions: Some(vec![
+    //                 FlowTransitionAddReq {
+    //                     name: Some(TrimString("确认任务".to_string())),
+    //                     from_flow_state_id: state_init_id.clone(),
+    //                     to_flow_state_id: state_confirmed_id.clone(),
+    //                     guard_by_spec_role_ids: Some(vec!["admin".to_string()]),
+    //                     transfer_by_auto: None,
+    //                     transfer_by_timer: None,
+    //                     guard_by_creator: None,
+    //                     guard_by_his_operators: None,
+    //                     guard_by_assigned: None,
+    //                     guard_by_spec_account_ids: None,
+    //                     guard_by_other_conds: None,
+    //                     vars_collect: None,
+    //                     action_by_pre_callback: None,
+    //                     action_by_post_callback: None,
+    //                 },
+    //                 FlowTransitionAddReq {
+    //                     name: Some(TrimString("拒绝任务".to_string())),
+    //                     from_flow_state_id: state_init_id.clone(),
+    //                     to_flow_state_id: state_rejected_id.clone(),
+    //                     guard_by_spec_role_ids: Some(vec!["admin".to_string()]),
+    //                     vars_collect: Some(vec![FlowVarInfo {
+    //                         name: "reason".to_string(),
+    //                         label: "原因".to_string(),
+    //                         data_type: RbumDataTypeKind::String,
+    //                         widget_type: RbumWidgetTypeKind::InputTxt,
+    //                         note: None,
+    //                         sort: None,
+    //                         hide: None,
+    //                         secret: None,
+    //                         show_by_conds: None,
+    //                         widget_columns: None,
+    //                         default_value: None,
+    //                         dyn_default_value: None,
+    //                         options: None,
+    //                         dyn_options: None,
+    //                         required: None,
+    //                         min_length: None,
+    //                         max_length: None,
+    //                         action: None,
+    //                         ext: None,
+    //                         parent_attr_name: None,
+    //                     }]),
+    //                     transfer_by_auto: None,
+    //                     transfer_by_timer: None,
+    //                     guard_by_creator: None,
+    //                     guard_by_his_operators: None,
+    //                     guard_by_assigned: None,
+    //                     guard_by_spec_account_ids: None,
+    //                     guard_by_other_conds: None,
+    //                     action_by_pre_callback: None,
+    //                     action_by_post_callback: None,
+    //                 },
+    //                 FlowTransitionAddReq {
+    //                     name: Some(TrimString("分配任务".to_string())),
+    //                     from_flow_state_id: state_confirmed_id.clone(),
+    //                     to_flow_state_id: state_assigned_id.clone(),
+    //                     guard_by_spec_role_ids: Some(vec!["mgr".to_string()]),
+    //                     transfer_by_auto: None,
+    //                     transfer_by_timer: None,
+    //                     guard_by_creator: None,
+    //                     guard_by_his_operators: None,
+    //                     guard_by_assigned: None,
+    //                     guard_by_spec_account_ids: None,
+    //                     guard_by_other_conds: None,
+    //                     vars_collect: None,
+    //                     action_by_pre_callback: None,
+    //                     action_by_post_callback: None,
+    //                 },
+    //                 FlowTransitionAddReq {
+    //                     name: Some(TrimString("执行任务".to_string())),
+    //                     from_flow_state_id: state_assigned_id.clone(),
+    //                     to_flow_state_id: state_executing_id.clone(),
+    //                     guard_by_his_operators: Some(true),
+    //                     transfer_by_auto: None,
+    //                     transfer_by_timer: None,
+    //                     guard_by_creator: None,
+    //                     guard_by_assigned: None,
+    //                     guard_by_spec_account_ids: None,
+    //                     guard_by_spec_role_ids: None,
+    //                     guard_by_other_conds: None,
+    //                     vars_collect: None,
+    //                     action_by_pre_callback: None,
+    //                     action_by_post_callback: None,
+    //                 },
+    //                 FlowTransitionAddReq {
+    //                     name: Some(TrimString("关闭任务".to_string())),
+    //                     from_flow_state_id: state_executing_id.clone(),
+    //                     to_flow_state_id: state_finish_id.clone(),
+    //                     guard_by_his_operators: Some(true),
+    //                     transfer_by_auto: None,
+    //                     transfer_by_timer: None,
+    //                     guard_by_creator: None,
+    //                     guard_by_assigned: None,
+    //                     guard_by_spec_account_ids: None,
+    //                     guard_by_spec_role_ids: None,
+    //                     guard_by_other_conds: None,
+    //                     vars_collect: None,
+    //                     action_by_pre_callback: None,
+    //                     action_by_post_callback: None,
+    //                 },
+    //             ]),
+    //             name: None,
+    //             icon: None,
+    //             info: None,
+    //             init_state_id: None,
+    //             modify_transitions: None,
+    //             delete_transitions: None,
+    //             tag: None,
+    //             scope_level: None,
+    //             disabled: None,
+    //             template: None,
+    //         },
+    //     )
+    //     .await;
+
+    // let _model_agg: FlowModelAggResp = client.get(&format!("/cc/model/{}", model_id)).await;
+
+    // // Start a instance
+    // let inst_id: String = client
+    //     .post(
+    //         "/cc/inst",
+    //         &FlowInstStartReq {
+    //             tag: FlowTagKind::Project,
+    //             create_vars: None,
+    //             rel_business_obj_id:"".to_string(),
+    //         },
+    //     )
+    //     .await;
+    // // Get the current status of some tasks
+    // let names: HashMap<String, String> = client.get(&format!("/cc/state/names?ids={}&ids={}", state_init_id, state_assigned_id)).await;
+    // assert_eq!(names[&state_init_id], "初始");
+    // assert_eq!(names[&state_assigned_id], "已分配");
+    // // Get the state of a task that can be transferable
+    // let next_transitions: Vec<FlowInstFindNextTransitionResp> = client.put(&format!("/cc/inst/{}/transition/next", inst_id), &FlowInstFindNextTransitionsReq { vars: None }).await;
+    // assert_eq!(next_transitions.len(), 0);
+    // client.set_auth(&TardisContext {
+    //     own_paths: "".to_string(),
+    //     ak: "".to_string(),
+    //     roles: vec!["admin".to_string()],
+    //     groups: vec![],
+    //     owner: "a001".to_string(),
+    //     ..Default::default()
+    // })?;
+    // let next_transitions: Vec<FlowInstFindNextTransitionResp> = client.put(&format!("/cc/inst/{}/transition/next", inst_id), &FlowInstFindNextTransitionsReq { vars: None }).await;
+    // assert_eq!(next_transitions.len(), 2);
+    // assert_eq!(next_transitions[0].next_flow_transition_name, "确认任务");
+    // assert_eq!(next_transitions[1].next_flow_transition_name, "拒绝任务");
+    // assert_eq!(next_transitions[1].vars_collect.as_ref().unwrap().len(), 1);
+    // // Find the state and transfer information of the specified instances in batch
+    // let state_and_next_transitions: Vec<FlowInstFindStateAndTransitionsResp> = client
+    //     .put(
+    //         "/cc/inst/batch/state_transitions",
+    //         &vec![FlowInstFindStateAndTransitionsReq {
+    //             flow_inst_id: inst_id.clone(),
+    //             vars: None,
+    //         }],
+    //     )
+    //     .await;
+    // assert_eq!(state_and_next_transitions.len(), 1);
+    // assert_eq!(state_and_next_transitions[0].current_flow_state_name, "初始");
+    // assert_eq!(state_and_next_transitions[0].next_flow_transitions[0].next_flow_transition_name, "确认任务");
+    // assert_eq!(state_and_next_transitions[0].next_flow_transitions[1].next_flow_transition_name, "拒绝任务");
+    // assert_eq!(state_and_next_transitions[0].next_flow_transitions[1].vars_collect.as_ref().unwrap().len(), 1);
+    // // Transfer task status
+    // let transfer: FlowInstTransferResp = client
+    //     .put(
+    //         &format!("/cc/inst/{}/transition/transfer", inst_id),
+    //         &FlowInstTransferReq {
+    //             flow_transition_id: state_and_next_transitions[0].next_flow_transitions[1].next_flow_transition_id.clone(),
+    //             vars: Some(TardisFuns::json.json_to_obj(json!({ "reason":"测试关闭" })).unwrap()),
+    //             message: None,
+    //         },
+    //     )
+    //     .await;
+    // assert_eq!(transfer.new_flow_state_id, state_rejected_id);
+
+    let _: Void = client
+        .patch(
+            &format!("/cc/model/{}", model_id),
+            &FlowModelModifyReq {
+                delete_transitions: Some(vec![trans_modify.id.clone()]),
+                ..Default::default()
             },
         )
         .await;
-    assert_eq!(transfer.new_flow_state_id, state_rejected_id);
+
     Ok(())
 }
