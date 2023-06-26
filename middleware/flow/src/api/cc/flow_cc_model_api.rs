@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use tardis::web::context_extractor::TardisContextExtractor;
@@ -73,6 +75,7 @@ impl FlowCcModelApi {
                     ..Default::default()
                 },
                 tag: tag.0,
+                ..Default::default()
             },
             page_number.0,
             page_size.0,
@@ -82,6 +85,17 @@ impl FlowCcModelApi {
             &ctx.0,
         )
         .await?;
+        TardisResp::ok(result)
+    }
+
+    /// Find Model Id By Tag And Template Id / 通过Tag和模板Id查找模型 Id
+    #[oai(path = "/get_model_ids/:temp_id", method = "get")]
+    async fn get_model_ids(&self, tag_ids: Query<String>, temp_id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<HashMap<String, String>> {
+        let mut funs = flow_constants::get_tardis_inst();
+        funs.begin().await?;
+        let tag_ids: Vec<_> = tag_ids.split(',').collect();
+        let result = FlowModelServ::get_model_ids(tag_ids, &temp_id.0, &funs, &ctx.0).await?;
+        funs.commit().await?;
         TardisResp::ok(result)
     }
 
