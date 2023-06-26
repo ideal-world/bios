@@ -90,233 +90,198 @@ mod tests {
 
     #[test]
     fn test_check_or_and_conds() -> TardisResult<()> {
-        assert_eq!(BasicQueryCondInfo::check_or_and_conds(&vec![vec![]], &HashMap::new())?, true);
-        assert_eq!(
-            BasicQueryCondInfo::check_or_and_conds(
+        assert!(BasicQueryCondInfo::check_or_and_conds(&vec![vec![]], &HashMap::new())?);
+        assert!(
+            !(BasicQueryCondInfo::check_or_and_conds(
                 &vec![vec![BasicQueryCondInfo {
                     field: "name".to_string(),
                     op: BasicQueryOpKind::Eq,
                     value: json!("gdxr")
                 }]],
                 &HashMap::new()
-            )?,
-            false
+            )?)
         );
         // eq
-        assert_eq!(
-            BasicQueryCondInfo::check_or_and_conds(
-                &vec![vec![BasicQueryCondInfo {
-                    field: "name".to_string(),
-                    op: BasicQueryOpKind::Eq,
-                    value: json!("gdxr")
-                }]],
-                &HashMap::from([("name".to_string(), json!("gdxr"))])
-            )?,
-            true
-        );
+        assert!(BasicQueryCondInfo::check_or_and_conds(
+            &vec![vec![BasicQueryCondInfo {
+                field: "name".to_string(),
+                op: BasicQueryOpKind::Eq,
+                value: json!("gdxr")
+            }]],
+            &HashMap::from([("name".to_string(), json!("gdxr"))])
+        )?);
         // gt
-        assert_eq!(
-            BasicQueryCondInfo::check_or_and_conds(
-                &vec![vec![BasicQueryCondInfo {
-                    field: "gt".to_string(),
-                    op: BasicQueryOpKind::Gt,
-                    value: json!(0)
-                }]],
-                &HashMap::from([("gt".to_string(), json!(1))])
-            )?,
-            true
-        );
-        assert_eq!(
-            BasicQueryCondInfo::check_or_and_conds(
+        assert!(BasicQueryCondInfo::check_or_and_conds(
+            &vec![vec![BasicQueryCondInfo {
+                field: "gt".to_string(),
+                op: BasicQueryOpKind::Gt,
+                value: json!(0)
+            }]],
+            &HashMap::from([("gt".to_string(), json!(1))])
+        )?);
+        assert!(
+            !(BasicQueryCondInfo::check_or_and_conds(
                 &vec![vec![BasicQueryCondInfo {
                     field: "gt".to_string(),
                     op: BasicQueryOpKind::Gt,
                     value: json!(0)
                 }]],
                 &HashMap::from([("gt".to_string(), json!(-1))])
-            )?,
-            false
+            )?)
         );
         // ge
-        assert_eq!(
-            BasicQueryCondInfo::check_or_and_conds(
-                &vec![vec![BasicQueryCondInfo {
-                    field: "ge".to_string(),
-                    op: BasicQueryOpKind::Ge,
-                    value: json!(0)
-                }]],
-                &HashMap::from([("ge".to_string(), json!(0))])
-            )?,
-            true
-        );
-        assert_eq!(
-            BasicQueryCondInfo::check_or_and_conds(
+        assert!(BasicQueryCondInfo::check_or_and_conds(
+            &vec![vec![BasicQueryCondInfo {
+                field: "ge".to_string(),
+                op: BasicQueryOpKind::Ge,
+                value: json!(0)
+            }]],
+            &HashMap::from([("ge".to_string(), json!(0))])
+        )?);
+        assert!(
+            !(BasicQueryCondInfo::check_or_and_conds(
                 &vec![vec![BasicQueryCondInfo {
                     field: "ge".to_string(),
                     op: BasicQueryOpKind::Ge,
                     value: json!(0)
                 }]],
                 &HashMap::from([("ge".to_string(), json!(-1))])
-            )?,
-            false
+            )?)
         );
         // lt
-        assert_eq!(
-            BasicQueryCondInfo::check_or_and_conds(
-                &vec![vec![BasicQueryCondInfo {
-                    field: "lt".to_string(),
-                    op: BasicQueryOpKind::Lt,
-                    value: json!(0)
-                }]],
-                &HashMap::from([("lt".to_string(), json!(-1))])
-            )?,
-            true
-        );
-        assert_eq!(
-            BasicQueryCondInfo::check_or_and_conds(
+        assert!(BasicQueryCondInfo::check_or_and_conds(
+            &vec![vec![BasicQueryCondInfo {
+                field: "lt".to_string(),
+                op: BasicQueryOpKind::Lt,
+                value: json!(0)
+            }]],
+            &HashMap::from([("lt".to_string(), json!(-1))])
+        )?);
+        assert!(
+            !(BasicQueryCondInfo::check_or_and_conds(
                 &vec![vec![BasicQueryCondInfo {
                     field: "lt".to_string(),
                     op: BasicQueryOpKind::Lt,
                     value: json!(0)
                 }]],
                 &HashMap::from([("lt".to_string(), json!(1))])
-            )?,
-            false
+            )?)
         );
         // le
-        assert_eq!(
-            BasicQueryCondInfo::check_or_and_conds(
-                &vec![vec![BasicQueryCondInfo {
-                    field: "le".to_string(),
-                    op: BasicQueryOpKind::Le,
-                    value: json!(0)
-                }]],
-                &HashMap::from([("le".to_string(), json!(0))])
-            )?,
-            true
-        );
-        assert_eq!(
-            BasicQueryCondInfo::check_or_and_conds(
+        assert!(BasicQueryCondInfo::check_or_and_conds(
+            &vec![vec![BasicQueryCondInfo {
+                field: "le".to_string(),
+                op: BasicQueryOpKind::Le,
+                value: json!(0)
+            }]],
+            &HashMap::from([("le".to_string(), json!(0))])
+        )?);
+        assert!(
+            !(BasicQueryCondInfo::check_or_and_conds(
                 &vec![vec![BasicQueryCondInfo {
                     field: "le".to_string(),
                     op: BasicQueryOpKind::Le,
                     value: json!(0)
                 }]],
                 &HashMap::from([("le".to_string(), json!(1))])
-            )?,
-            false
+            )?)
         );
-        assert_eq!(
-            BasicQueryCondInfo::check_or_and_conds(
+        assert!(
+            !(BasicQueryCondInfo::check_or_and_conds(
                 &vec![vec![BasicQueryCondInfo {
                     field: "le".to_string(),
                     op: BasicQueryOpKind::Le,
                     value: json!("ssss".to_string())
                 }]],
                 &HashMap::from([("le".to_string(), json!(1))])
-            )?,
-            false
+            )?)
         );
         // like
-        assert_eq!(
-            BasicQueryCondInfo::check_or_and_conds(
-                &vec![vec![BasicQueryCondInfo {
-                    field: "like".to_string(),
-                    op: BasicQueryOpKind::Like,
-                    value: json!("dx")
-                }]],
-                &HashMap::from([("like".to_string(), json!("gdxr"))])
-            )?,
-            true
-        );
-        assert_eq!(
-            BasicQueryCondInfo::check_or_and_conds(
+        assert!(BasicQueryCondInfo::check_or_and_conds(
+            &vec![vec![BasicQueryCondInfo {
+                field: "like".to_string(),
+                op: BasicQueryOpKind::Like,
+                value: json!("dx")
+            }]],
+            &HashMap::from([("like".to_string(), json!("gdxr"))])
+        )?);
+        assert!(
+            !(BasicQueryCondInfo::check_or_and_conds(
                 &vec![vec![BasicQueryCondInfo {
                     field: "like".to_string(),
                     op: BasicQueryOpKind::Like,
                     value: json!("ddd")
                 }]],
                 &HashMap::from([("like".to_string(), json!("gdxr"))])
-            )?,
-            false
+            )?)
         );
-        assert_eq!(
-            BasicQueryCondInfo::check_or_and_conds(
+        assert!(
+            !(BasicQueryCondInfo::check_or_and_conds(
                 &vec![vec![BasicQueryCondInfo {
                     field: "like".to_string(),
                     op: BasicQueryOpKind::Like,
                     value: json!(111)
                 }]],
                 &HashMap::from([("like".to_string(), json!("dx"))])
-            )?,
-            false
+            )?)
         );
-        assert_eq!(
-            BasicQueryCondInfo::check_or_and_conds(
+        assert!(
+            !(BasicQueryCondInfo::check_or_and_conds(
                 &vec![vec![BasicQueryCondInfo {
                     field: "like".to_string(),
                     op: BasicQueryOpKind::Like,
                     value: json!("gdxr")
                 }]],
                 &HashMap::from([("like".to_string(), json!(1))])
-            )?,
-            false
+            )?)
         );
         // In
-        assert_eq!(
-            BasicQueryCondInfo::check_or_and_conds(
-                &vec![vec![BasicQueryCondInfo {
-                    field: "in".to_string(),
-                    op: BasicQueryOpKind::In,
-                    value: json!("gdxr")
-                }]],
-                &HashMap::from([("in".to_string(), json!(["gdxr", "ddd"]))])
-            )?,
-            true
-        );
-        assert_eq!(
-            BasicQueryCondInfo::check_or_and_conds(
+        assert!(BasicQueryCondInfo::check_or_and_conds(
+            &vec![vec![BasicQueryCondInfo {
+                field: "in".to_string(),
+                op: BasicQueryOpKind::In,
+                value: json!("gdxr")
+            }]],
+            &HashMap::from([("in".to_string(), json!(["gdxr", "ddd"]))])
+        )?);
+        assert!(
+            !(BasicQueryCondInfo::check_or_and_conds(
                 &vec![vec![BasicQueryCondInfo {
                     field: "in".to_string(),
                     op: BasicQueryOpKind::In,
                     value: json!("gdxr")
                 }]],
                 &HashMap::from([("in".to_string(), json!("gdxr"))])
-            )?,
-            false
+            )?)
         );
-        assert_eq!(
-            BasicQueryCondInfo::check_or_and_conds(
+        assert!(
+            !(BasicQueryCondInfo::check_or_and_conds(
                 &vec![vec![BasicQueryCondInfo {
                     field: "in".to_string(),
                     op: BasicQueryOpKind::In,
                     value: json!(["gdxr"])
                 }]],
                 &HashMap::from([("in".to_string(), json!("gdxr"))])
-            )?,
-            false
+            )?)
         );
         // and
-        assert_eq!(
-            BasicQueryCondInfo::check_or_and_conds(
-                &vec![vec![
-                    BasicQueryCondInfo {
-                        field: "in".to_string(),
-                        op: BasicQueryOpKind::In,
-                        value: json!("gdxr")
-                    },
-                    BasicQueryCondInfo {
-                        field: "like".to_string(),
-                        op: BasicQueryOpKind::Like,
-                        value: json!("dx")
-                    }
-                ]],
-                &HashMap::from([("in".to_string(), json!(["gdxr"])), ("like".to_string(), json!("gdxr"))])
-            )?,
-            true
-        );
-        assert_eq!(
-            BasicQueryCondInfo::check_or_and_conds(
+        assert!(BasicQueryCondInfo::check_or_and_conds(
+            &vec![vec![
+                BasicQueryCondInfo {
+                    field: "in".to_string(),
+                    op: BasicQueryOpKind::In,
+                    value: json!("gdxr")
+                },
+                BasicQueryCondInfo {
+                    field: "like".to_string(),
+                    op: BasicQueryOpKind::Like,
+                    value: json!("dx")
+                }
+            ]],
+            &HashMap::from([("in".to_string(), json!(["gdxr"])), ("like".to_string(), json!("gdxr"))])
+        )?);
+        assert!(
+            !(BasicQueryCondInfo::check_or_and_conds(
                 &vec![vec![
                     BasicQueryCondInfo {
                         field: "in".to_string(),
@@ -330,11 +295,10 @@ mod tests {
                     }
                 ]],
                 &HashMap::from([("in".to_string(), json!(["gdxr"]))])
-            )?,
-            false
+            )?)
         );
-        assert_eq!(
-            BasicQueryCondInfo::check_or_and_conds(
+        assert!(
+            !(BasicQueryCondInfo::check_or_and_conds(
                 &vec![vec![
                     BasicQueryCondInfo {
                         field: "in".to_string(),
@@ -348,66 +312,56 @@ mod tests {
                     }
                 ]],
                 &HashMap::from([("in".to_string(), json!(["gdxr"])), ("like".to_string(), json!("gdxr"))])
-            )?,
-            false
+            )?)
         );
         // or
-        assert_eq!(
-            BasicQueryCondInfo::check_or_and_conds(
-                &vec![
-                    vec![BasicQueryCondInfo {
-                        field: "in".to_string(),
-                        op: BasicQueryOpKind::In,
-                        value: json!("gdxr")
-                    }],
-                    vec![BasicQueryCondInfo {
-                        field: "like".to_string(),
-                        op: BasicQueryOpKind::Like,
-                        value: json!("dx")
-                    }]
-                ],
-                &HashMap::from([("in".to_string(), json!(["gdxr"])), ("like".to_string(), json!("gdxr"))])
-            )?,
-            true
-        );
-        assert_eq!(
-            BasicQueryCondInfo::check_or_and_conds(
-                &vec![
-                    vec![BasicQueryCondInfo {
-                        field: "in".to_string(),
-                        op: BasicQueryOpKind::In,
-                        value: json!("gdxr")
-                    }],
-                    vec![BasicQueryCondInfo {
-                        field: "like".to_string(),
-                        op: BasicQueryOpKind::Like,
-                        value: json!("dx")
-                    }]
-                ],
-                &HashMap::from([("in".to_string(), json!(["gdxr"]))])
-            )?,
-            true
-        );
-        assert_eq!(
-            BasicQueryCondInfo::check_or_and_conds(
-                &vec![
-                    vec![BasicQueryCondInfo {
-                        field: "in".to_string(),
-                        op: BasicQueryOpKind::In,
-                        value: json!(["gdxr"])
-                    }],
-                    vec![BasicQueryCondInfo {
-                        field: "like".to_string(),
-                        op: BasicQueryOpKind::Like,
-                        value: json!("dx")
-                    }]
-                ],
-                &HashMap::from([("in".to_string(), json!(["gdxr"])), ("like".to_string(), json!("gdxr"))])
-            )?,
-            true
-        );
-        assert_eq!(
-            BasicQueryCondInfo::check_or_and_conds(
+        assert!(BasicQueryCondInfo::check_or_and_conds(
+            &vec![
+                vec![BasicQueryCondInfo {
+                    field: "in".to_string(),
+                    op: BasicQueryOpKind::In,
+                    value: json!("gdxr")
+                }],
+                vec![BasicQueryCondInfo {
+                    field: "like".to_string(),
+                    op: BasicQueryOpKind::Like,
+                    value: json!("dx")
+                }]
+            ],
+            &HashMap::from([("in".to_string(), json!(["gdxr"])), ("like".to_string(), json!("gdxr"))])
+        )?);
+        assert!(BasicQueryCondInfo::check_or_and_conds(
+            &vec![
+                vec![BasicQueryCondInfo {
+                    field: "in".to_string(),
+                    op: BasicQueryOpKind::In,
+                    value: json!("gdxr")
+                }],
+                vec![BasicQueryCondInfo {
+                    field: "like".to_string(),
+                    op: BasicQueryOpKind::Like,
+                    value: json!("dx")
+                }]
+            ],
+            &HashMap::from([("in".to_string(), json!(["gdxr"]))])
+        )?);
+        assert!(BasicQueryCondInfo::check_or_and_conds(
+            &vec![
+                vec![BasicQueryCondInfo {
+                    field: "in".to_string(),
+                    op: BasicQueryOpKind::In,
+                    value: json!(["gdxr"])
+                }],
+                vec![BasicQueryCondInfo {
+                    field: "like".to_string(),
+                    op: BasicQueryOpKind::Like,
+                    value: json!("dx")
+                }]
+            ],
+            &HashMap::from([("in".to_string(), json!(["gdxr"])), ("like".to_string(), json!("gdxr"))])
+        )?);
+        assert!(
+            !(BasicQueryCondInfo::check_or_and_conds(
                 &vec![
                     vec![BasicQueryCondInfo {
                         field: "in".to_string(),
@@ -421,8 +375,7 @@ mod tests {
                     }]
                 ],
                 &HashMap::from([("in".to_string(), json!(["gdxr"]))])
-            )?,
-            false
+            )?)
         );
         Ok(())
     }

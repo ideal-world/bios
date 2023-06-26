@@ -11,11 +11,11 @@ use tardis::web::web_resp::TardisPage;
 use bios_basic::rbum::dto::rbum_set_dto::RbumSetTreeResp;
 use bios_iam::basic::dto::iam_account_dto::{IamAccountAddByLdapResp, IamAccountAggAddReq, IamAccountBoneResp, IamAccountExtSysBatchAddReq, IamAccountExtSysResp};
 use bios_iam::basic::dto::iam_app_dto::IamAppAggAddReq;
-use bios_iam::basic::dto::iam_cert_conf_dto::{IamCertConfLdapAddOrModifyReq, IamCertConfUserPwdAddOrModifyReq};
+use bios_iam::basic::dto::iam_cert_conf_dto::IamCertConfLdapAddOrModifyReq;
 use bios_iam::basic::dto::iam_role_dto::IamRoleBoneResp;
 use bios_iam::basic::dto::iam_set_dto::{IamSetCateAddReq, IamSetItemWithDefaultSetAddReq};
 use bios_iam::basic::dto::iam_tenant_dto::IamTenantAggAddReq;
-use bios_iam::basic::serv::iam_cert_ldap_serv::{AccountFieldMap, OrgFieldMap};
+use bios_iam::basic::serv::iam_cert_ldap_serv::AccountFieldMap;
 use bios_iam::iam_constants::RBUM_SCOPE_LEVEL_TENANT;
 use bios_iam::iam_test_helper::BIOSWebTestClient;
 
@@ -209,7 +209,7 @@ pub async fn common_console_by_ldap(client: &mut BIOSWebTestClient, tenant_id: &
         )
         .await;
 
-    assert!(account_add_by_ldap_resp.result.len() > 0);
+    assert!(!account_add_by_ldap_resp.result.is_empty());
 
     Ok(())
 }

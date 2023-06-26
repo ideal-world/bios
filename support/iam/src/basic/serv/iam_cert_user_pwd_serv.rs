@@ -340,7 +340,7 @@ impl IamCertUserPwdServ {
         }
     }
 
-    pub async fn reset_sk_for_pending_status(
+    pub async fn reset_sk_to_enable_status(
         modify_req: &IamCertUserPwdRestReq,
         rel_iam_item_id: &str,
         rel_rbum_cert_conf_id: &str,
@@ -364,43 +364,34 @@ impl IamCertUserPwdServ {
         )
         .await?;
         if let Some(cert) = cert {
-            if cert.status.eq(&RbumCertStatusKind::Pending) {
-                RbumCertServ::reset_sk(&cert.id, &new_sk, true, &RbumCertFilterReq::default(), funs, ctx).await?;
-                IamCertPhoneVCodeServ::send_pwd(rel_iam_item_id, &new_sk, funs, ctx).await?;
-                IamCertMailVCodeServ::send_pwd(rel_iam_item_id, &new_sk, funs, ctx).await?;
-                RbumCertServ::modify_rbum(
-                    &cert.id,
-                    &mut RbumCertModifyReq {
-                        ak: None,
-                        sk: None,
-                        is_ignore_check_sk: false,
-                        ext: None,
-                        start_time: None,
-                        end_time: None,
-                        conn_uri: None,
-                        status: RbumCertStatusKind::Enabled.into(),
-                    },
-                    funs,
-                    ctx,
-                )
-                .await?;
+            RbumCertServ::reset_sk(&cert.id, &new_sk, true, &RbumCertFilterReq::default(), funs, ctx).await?;
+            IamCertPhoneVCodeServ::send_pwd(rel_iam_item_id, &new_sk, funs, ctx).await?;
+            IamCertMailVCodeServ::send_pwd(rel_iam_item_id, &new_sk, funs, ctx).await?;
+            RbumCertServ::modify_rbum(
+                &cert.id,
+                &mut RbumCertModifyReq {
+                    ak: None,
+                    sk: None,
+                    is_ignore_check_sk: false,
+                    ext: None,
+                    start_time: None,
+                    end_time: None,
+                    conn_uri: None,
+                    status: RbumCertStatusKind::Enabled.into(),
+                },
+                funs,
+                ctx,
+            )
+            .await?;
 
-                let _ = SpiLogClient::add_ctx_task(
-                    LogParamTag::IamAccount,
-                    Some(rel_iam_item_id.to_string()),
-                    "重置账号密码".to_string(),
-                    Some("ResetAccountPassword".to_string()),
-                    ctx,
-                )
-                .await;
-            } else {
-                return Err(funs.err().bad_request(
-                    "iam_cert_user_pwd",
-                    "reset_sk_for_pending_status",
-                    "user can not reset password",
-                    "403-operation_not_allowed",
-                ));
-            }
+            let _ = SpiLogClient::add_ctx_task(
+                LogParamTag::IamAccount,
+                Some(rel_iam_item_id.to_string()),
+                "重置账号密码".to_string(),
+                Some("ResetAccountPassword".to_string()),
+                ctx,
+            )
+            .await;
         } else {
             return Err(funs.err().not_found(
                 "iam_cert_user_pwd",

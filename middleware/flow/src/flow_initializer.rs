@@ -17,6 +17,7 @@ use crate::{
     domain::{flow_inst, flow_model, flow_state, flow_transition},
     flow_config::{BasicInfo, FlowBasicInfoManager, FlowConfig},
     flow_constants,
+    serv::flow_model_serv::FlowModelServ,
 };
 
 pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
@@ -59,6 +60,7 @@ pub async fn init_db(mut funs: TardisFunsInst) -> TardisResult<()> {
         funs.db().init(flow_transition::ActiveModel::init(db_kind, None, compatible_type.clone())).await?;
         funs.db().init(flow_inst::ActiveModel::init(db_kind, None, compatible_type.clone())).await?;
         init_rbum_data(&funs, &ctx).await?;
+        FlowModelServ::init_model(&funs, &ctx).await?;
     };
     funs.commit().await?;
     Ok(())

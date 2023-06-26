@@ -8,7 +8,7 @@ use tardis::tokio::time::sleep;
 
 use bios_iam::basic::dto::iam_account_dto::IamAccountAggAddReq;
 use bios_iam::basic::dto::iam_app_dto::IamAppAggAddReq;
-use bios_iam::basic::dto::iam_cert_conf_dto::IamCertConfUserPwdAddOrModifyReq;
+
 use bios_iam::basic::dto::iam_cert_dto::IamContextFetchReq;
 use bios_iam::basic::dto::iam_tenant_dto::IamTenantAggAddReq;
 use bios_iam::basic::serv::iam_account_serv::IamAccountServ;
@@ -25,7 +25,7 @@ pub async fn test(_context: &TardisContext) -> TardisResult<(TardisContext, Tard
     funs.begin().await?;
 
     info!("【test_ca】 : Prepare : IamCsTenantServ::add_tenant");
-    let (tenant_id, tenant_admin_pwd, tenant_audit_pwd) = IamTenantServ::add_tenant_agg(
+    let (tenant_id, tenant_admin_pwd, _tenant_audit_pwd) = IamTenantServ::add_tenant_agg(
         &mut IamTenantAggAddReq {
             name: TrimString("测试租户1".to_string()),
             icon: None,

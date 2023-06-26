@@ -50,9 +50,7 @@ pub(crate) async fn decrypt_req(
     need_crypto_resp: bool,
     config: &AuthConfig,
 ) -> TardisResult<(Option<String>, Option<HashMap<String, String>>)> {
-    let input_keys = if let Some(r) = headers.get(&config.head_key_crypto) {
-        r
-    } else if let Some(r) = headers.get(&config.head_key_crypto.to_lowercase()) {
+    let input_keys = if let Some(r) = headers.get(&config.head_key_crypto).or_else(|| headers.get(&config.head_key_crypto.to_lowercase())) {
         r
     } else {
         return Err(TardisError::bad_request(
@@ -135,11 +133,9 @@ pub(crate) async fn decrypt_req(
     }
 }
 
-pub(crate) async fn encrypt_body(req: &AuthEncryptReq) -> TardisResult<AuthEncryptResp> {
+pub async fn encrypt_body(req: &AuthEncryptReq) -> TardisResult<AuthEncryptResp> {
     let config = TardisFuns::cs_config::<AuthConfig>(DOMAIN_CODE);
-    let pub_key = if let Some(r) = req.headers.get(&config.head_key_crypto) {
-        r
-    } else if let Some(r) = req.headers.get(&config.head_key_crypto.to_lowercase()) {
+    let pub_key = if let Some(r) = req.headers.get(&config.head_key_crypto).or_else(|| req.headers.get(&config.head_key_crypto.to_lowercase())) {
         r
     } else {
         return Err(TardisError::bad_request(

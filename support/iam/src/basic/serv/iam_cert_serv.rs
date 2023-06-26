@@ -887,6 +887,38 @@ impl IamCertServ {
         Ok(result)
     }
 
+    pub async fn find_global_cert_conf_id_by_kind(kind: &str, tenant_id: Option<String>, funs: &TardisFunsInst) -> TardisResult<Vec<String>> {
+        let mut cert_conf_ids = Vec::new();
+        let global_rbum_cert_conf_id = IamCertServ::get_cert_conf_id_by_kind(kind, None, funs).await?;
+        cert_conf_ids.push(global_rbum_cert_conf_id);
+        if let Some(tenant_id) = tenant_id {
+            let rbum_cert_conf_id = IamCertServ::get_cert_conf_id_by_kind(kind, Some(tenant_id.to_owned()), funs).await?;
+            cert_conf_ids.push(rbum_cert_conf_id);
+        }
+        Ok(cert_conf_ids)
+    }
+
+    pub async fn count_cert_ak_by_kind(kind: &str, ak: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<u64> {
+        let cert_conf_ids = Self::find_global_cert_conf_id_by_kind(kind, rbum_scope_helper::get_path_item(RBUM_SCOPE_LEVEL_TENANT.to_int(), &ctx.own_paths), funs).await?;
+        let count = RbumCertServ::count_rbums(
+            &RbumCertFilterReq {
+                basic: RbumBasicFilterReq {
+                    own_paths: Some("".to_string()),
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                ak: Some(ak.to_string()),
+                rel_rbum_kind: Some(RbumCertRelKind::Item),
+                rel_rbum_cert_conf_ids: Some(cert_conf_ids),
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?;
+        Ok(count)
+    }
+
     pub async fn get_cert_conf_id_by_kind(kind: &str, rel_iam_item_id: Option<String>, funs: &TardisFunsInst) -> TardisResult<String> {
         Self::get_cert_conf_id_and_ext_by_kind_supplier(kind, "", rel_iam_item_id, funs).await.map(|r| r.id)
     }

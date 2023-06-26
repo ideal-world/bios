@@ -1,12 +1,12 @@
-400-spi-invalid-tardis-ctx  无效的Tardis上下文
+400-spi-invalid-tardis-ctx	无效的Tardis上下文
 404-spi-bs-not-exist	找不到对应的后端服务
 501-spi-bs-not-exist	后端服务类型不存在或SPI特性未启用
 400-spi-graph-key-require	[from_key]与[to_key]至少有一个不能为空
-500-spi-object-s3-cannot-get-bucket-name    无法获取bucket名称
-400-spi-stats-invalid-request 无效的请求
-400-spi-stats-fail-to-get-dim-config-key  缺失维度配置key
-409-spi-stats-fail-to-get-dim-config      无法获取维度配置
-409-spi-stats-miss-mes-data-type    缺少字段mes-data-type
+500-spi-object-s3-cannot-get-bucket-name	无法获取bucket名称
+400-spi-stats-invalid-request	无效的请求
+400-spi-stats-fail-to-get-dim-config-key	缺失维度配置key
+409-spi-stats-fail-to-get-dim-config	无法获取维度配置
+409-spi-stats-miss-mes-data-type	缺少字段mes-data-type
 409-spi-stats-dim-conf-exist	维度配置已存在
 409-spi-stats-dim-inst-exist	维度实例已存在
 409-spi-stats-dim-inst-record-exist	维度实例记录已存在
@@ -32,3 +32,4 @@
 404-spi-search-op-not-legal	搜索操作不合法
 404-spi-search-item-not-exist	搜索内容不存在
 404-spi-conf-namespace-not-exist	命名空间不存在
+409-spi-plugin-kind-mismatch	插件类型不匹配

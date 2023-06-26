@@ -50,7 +50,7 @@ async fn test_single_level(context: &TardisContext, account_name: &str, another_
         context,
     )
     .await?;
-    let role_id2 = IamRoleServ::add_item(
+    let _role_id2 = IamRoleServ::add_item(
         &mut IamRoleAddReq {
             code: Some(TrimString("role2".to_string())),
             name: TrimString("角色2".to_string()),
@@ -336,7 +336,7 @@ pub async fn test_multi_level_by_sys_context(
     let mut funs = iam_constants::get_tardis_inst();
     funs.begin().await?;
 
-    let (role_sys_id, role_sys_global_id, role_t1_id, role_t2_id, role_t2_tenant_id, role_t2_a1_id, role_t2_a2_id) =
+    let (role_sys_id, role_sys_global_id, role_t1_id, role_t2_id, role_t2_tenant_id, role_t2_a1_id, _role_t2_a2_id) =
         test_multi_level_add(sys_context, t1_context, t2_context, t2_a1_context, t2_a2_context, &funs).await?;
 
     info!("【test_cc_role】 : test_multi_level : Modify Role By sys_context");
@@ -487,7 +487,7 @@ pub async fn test_multi_level_by_tenant_context(
     let mut funs = iam_constants::get_tardis_inst();
     funs.begin().await?;
 
-    let (role_sys_id, role_sys_global_id, role_t1_id, role_t2_id, role_t2_tenant_id, role_t2_a1_id, role_t2_a2_id) =
+    let (role_sys_id, role_sys_global_id, role_t1_id, role_t2_id, role_t2_tenant_id, role_t2_a1_id, _role_t2_a2_id) =
         test_multi_level_add(sys_context, t1_context, t2_context, t2_a1_context, t2_a2_context, &funs).await?;
 
     info!("【test_cc_role】 : test_multi_level : Modify Role By tenant_context");

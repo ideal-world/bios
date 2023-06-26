@@ -1,6 +1,6 @@
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use tardis::basic::dto::TardisContext;
-use tardis::basic::error::TardisError;
+
 use tardis::basic::result::TardisResult;
 use tardis::{TardisFuns, TardisFunsInst};
 

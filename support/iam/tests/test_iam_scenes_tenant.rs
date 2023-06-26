@@ -14,7 +14,7 @@ use bios_basic::rbum::rbum_enumeration::{RbumDataTypeKind, RbumWidgetTypeKind};
 use bios_iam::basic::dto::iam_account_dto::{IamAccountAggAddReq, IamAccountAggModifyReq, IamAccountDetailAggResp, IamAccountSummaryAggResp};
 use bios_iam::basic::dto::iam_app_dto::IamAppAggAddReq;
 use bios_iam::basic::dto::iam_attr_dto::IamKindAttrAddReq;
-use bios_iam::basic::dto::iam_cert_conf_dto::IamCertConfUserPwdAddOrModifyReq;
+
 use bios_iam::basic::dto::iam_cert_dto::IamCertUserPwdRestReq;
 use bios_iam::basic::dto::iam_role_dto::{IamRoleAddReq, IamRoleAggAddReq, IamRoleAggModifyReq, IamRoleDetailResp, IamRoleModifyReq, IamRoleSummaryResp};
 use bios_iam::basic::dto::iam_set_dto::{IamSetCateAddReq, IamSetCateModifyReq, IamSetItemWithDefaultSetAddReq};
@@ -843,8 +843,8 @@ pub async fn tenant_console_app_set_mgr_page(client: &mut BIOSWebTestClient) -> 
     // Find App Set Cates By Current Tenant
     let app_tree: RbumSetTreeResp = client.get("/ct/apps/tree").await;
     assert_eq!(app_tree.main.len(), 4);
-    assert!(app_tree.main.iter().any(|cate| cate.name == "xx事业部" && cate.pid == None && app_tree.ext.as_ref().unwrap().items[&cate.id].is_empty()));
-    assert!(app_tree.main.iter().any(|cate| cate.name == "yy事业部" && cate.pid == None && app_tree.ext.as_ref().unwrap().items[&cate.id].len() == 3));
+    assert!(app_tree.main.iter().any(|cate| cate.name == "xx事业部" && cate.pid.is_none() && app_tree.ext.as_ref().unwrap().items[&cate.id].is_empty()));
+    assert!(app_tree.main.iter().any(|cate| cate.name == "yy事业部" && cate.pid.is_none() && app_tree.ext.as_ref().unwrap().items[&cate.id].len() == 3));
     assert!(app_tree.main.iter().any(|cate| cate.name == "yy事业部aa中心" && cate.pid == Some(cate_node2_id.clone()) && app_tree.ext.as_ref().unwrap().items[&cate.id].len() == 2));
     assert!(app_tree
         .main
@@ -852,7 +852,7 @@ pub async fn tenant_console_app_set_mgr_page(client: &mut BIOSWebTestClient) -> 
         .any(|cate| cate.name == "yy事业部aa中心bb组" && cate.pid == Some(cate_node2_1_id.clone()) && app_tree.ext.as_ref().unwrap().items[&cate.id].len() == 2));
     let app_tree: RbumSetTreeResp = client.get("/ct/apps/tree?only_related=true").await;
     assert_eq!(app_tree.main.len(), 3);
-    assert!(app_tree.main.iter().any(|cate| cate.name == "yy事业部" && cate.pid == None && app_tree.ext.as_ref().unwrap().items[&cate.id].len() == 3));
+    assert!(app_tree.main.iter().any(|cate| cate.name == "yy事业部" && cate.pid.is_none() && app_tree.ext.as_ref().unwrap().items[&cate.id].len() == 3));
     assert!(app_tree.main.iter().any(|cate| cate.name == "yy事业部aa中心" && cate.pid == Some(cate_node2_id.clone()) && app_tree.ext.as_ref().unwrap().items[&cate.id].len() == 2));
     assert!(app_tree
         .main

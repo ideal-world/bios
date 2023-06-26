@@ -65,6 +65,7 @@ fn do_match_res(res_action: &str, res_container: &ResContainerNode, res_items: &
 
 fn parse_uri(res_uri: &str) -> TardisResult<Vec<String>> {
     let res_uri = if let Some(res_uri) = res_uri.strip_prefix('/') { res_uri } else { res_uri };
+    let res_uri = res_uri.split('?').collect::<Vec<_>>()[0];
     let mut res_uri = res_uri.split('/').map(|i| i.to_string()).collect::<Vec<String>>();
     res_uri.push("$".to_string());
     Ok(res_uri)

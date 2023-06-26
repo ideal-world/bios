@@ -145,8 +145,6 @@ impl RbumItemCrudOperation<iam_account::ActiveModel, IamAccountAddReq, IamAccoun
         }
 
         let mut tasks = vec![];
-        let mut op_describe = String::new();
-        let mut op_kind = String::new();
         if modify_req.status == Some(IamAccountStatusKind::Logout) {
             tasks.push(("注销账号".to_string(), "Logout".to_string()));
         }
@@ -712,7 +710,7 @@ impl IamAccountServ {
                 } else {
                     account.lock_status.clone()
                 };
-                lock_accounts.push(format!("{},{}", id, lock_status.to_string()));
+                lock_accounts.push(format!("{},{}", id, lock_status));
             } else {
                 continue;
             }

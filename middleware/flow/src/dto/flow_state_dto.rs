@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use tardis::{
     basic::field::TrimString,
     chrono::{DateTime, Utc},
-    db::sea_orm::{self},
+    db::sea_orm,
     serde_json::Value,
     web::poem_openapi,
 };

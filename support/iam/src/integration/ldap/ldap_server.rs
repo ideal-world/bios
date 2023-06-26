@@ -217,13 +217,7 @@ impl LdapSession {
 fn extract_cn(dn: &str) -> Option<String> {
     match CN_R.captures(dn) {
         None => None,
-        Some(cap) => {
-            if let Some(cn) = cap.get(2) {
-                Some(cn.as_str().to_string())
-            } else {
-                None
-            }
-        }
+        Some(cap) => cap.get(2).map(|cn| cn.as_str().to_string()),
     }
 }
 
@@ -255,6 +249,10 @@ async fn handle_client(socket: TcpStream, _addr: net::SocketAddr, config: &IamLd
                 return;
             }
             ServerOps::Whoami(req) => vec![session.do_whoami(&req)],
+            ServerOps::Compare(_) => {
+                // No need to notify on Compare (per rfc4511)
+                return;
+            }
         };
 
         for rmsg in result.into_iter() {
