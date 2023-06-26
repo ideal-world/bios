@@ -34,9 +34,7 @@ use crate::{
 };
 use async_trait::async_trait;
 
-use super::{
-    flow_rel_serv::{FlowRelKind, FlowRelServ},
-};
+use super::flow_rel_serv::{FlowRelKind, FlowRelServ};
 
 pub struct FlowModelServ;
 
@@ -79,11 +77,12 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
     async fn before_add_item(add_req: &mut FlowModelAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let result = FlowModelServ::find_one_item(
             &FlowModelFilterReq {
+                tag: add_req.tag.clone(),
                 basic: RbumBasicFilterReq {
                     own_paths: Some(ctx.own_paths.clone()),
                     ..Default::default()
                 },
-                tag: add_req.tag.clone(),
+                ..Default::default()
             },
             funs,
             ctx,
@@ -705,6 +704,7 @@ impl FlowModelServ {
             &FlowModelFilterReq {
                 basic: RbumBasicFilterReq {
                     with_sub_own_paths: true,
+                    own_paths: Some("".to_string()),
                     ..Default::default()
                 },
                 ..Default::default()
@@ -748,6 +748,19 @@ impl FlowModelServ {
         })
     }
 
+    // Find model id by tag and template id
+    pub async fn get_model_ids(tags: Vec<&str>, template_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<HashMap<String, String>> {
+        let result = HashMap::new();
+        // TODO 提测暂时先用全局own_paths,后面以scope_level做判断
+        // let mock_ctx = TardisContext {
+        //     own_paths: "".to_string(),
+        //     ..ctx.clone()
+        // };
+        // let model_ids_by_temp_id = FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowTemplateModel, template_id, None, None, funs, mock_ctx).await?.iter().map(|rel| rel.rel_id.clone()).collect::<Vec<_>>();
+
+        Ok(result)
+    }
+
     // add or modify model by own_paths
     pub async fn add_or_modify_model(flow_model_id: &str, modify_req: &mut FlowModelModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
         let tag = Self::get_item(
@@ -774,6 +787,7 @@ impl FlowModelServ {
                     own_paths: Some("".to_string()),
                     ..Default::default()
                 },
+                ..Default::default()
             },
             1,
             10,

@@ -40,6 +40,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
     assert_eq!(&init_model.name, "默认工单流程");
     assert_eq!(&init_model.owner, "");
 
+    // mock tenant content
     ctx.own_paths = "t1/app001".to_string();
     client.set_auth(&ctx)?;
     // Get states list
@@ -53,7 +54,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
         model_id = client.post(&format!("/cc/model/{}/bind_state", &model_id), &FlowModelBindStateReq { state_id: state.id.clone() }).await;
     }
     // get model detail
-    let model_agg_old: FlowModelAggResp = client.get(&format!("/cc/model/{}", model_id)).await;
+    let model_agg_old: FlowModelAggResp = client.get(&format!("/cc/model/{}", init_model.id.clone())).await;
     // Set initial state
     let _: Void = client
         .patch(
