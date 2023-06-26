@@ -145,7 +145,20 @@ impl PluginBsServ {
 
     pub async fn get_bs(bs_id: &str, app_tenant_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<PluginBsInfoResp> {
         let rel_agg = Self::get_bs_rel_agg(bs_id, app_tenant_id, funs, ctx).await?;
-        let bs = SpiBsServ::peek_item(bs_id, &SpiBsFilterReq::default(), funs, ctx).await?;
+        let bs = SpiBsServ::peek_item(
+            bs_id,
+            &SpiBsFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    own_paths: Some("".to_string()),
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?;
         Ok(PluginBsInfoResp {
             id: bs.id,
             name: bs.name,

@@ -166,6 +166,7 @@ impl PluginRelServ {
         let filter = RbumRelFilterReq {
             basic: RbumBasicFilterReq {
                 with_sub_own_paths: true,
+                own_paths: Some("".to_string()),
                 ..Default::default()
             },
             ..Default::default()
