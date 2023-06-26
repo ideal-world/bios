@@ -180,6 +180,8 @@ impl FlowInstServ {
             pub transitions: Option<Value>,
 
             pub own_paths: String,
+
+            pub rel_business_obj_id: String,
         }
         let rel_state_table = Alias::new("rel_state");
         let rel_model_table = Alias::new("rel_model");
@@ -243,7 +245,7 @@ impl FlowInstServ {
                 current_state_id: inst.current_state_id,
                 current_state_name: inst.current_state_name,
                 current_vars: inst.current_vars.map(|current_vars| TardisFuns::json.json_to_obj(current_vars).unwrap()),
-                rel_business_obj_id: todo!(),
+                rel_business_obj_id: inst.rel_business_obj_id,
             })
             .collect_vec())
     }

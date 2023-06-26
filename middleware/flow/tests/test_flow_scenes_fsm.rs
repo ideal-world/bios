@@ -43,7 +43,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
     assert_eq!(&init_model.owner, "");
 
     // mock tenant content
-    ctx.own_paths = "t1/app001".to_string();
+    ctx.own_paths = "t1".to_string();
     client.set_auth(&ctx)?;
     // Get states list
     let states: TardisPage<FlowStateSummaryResp> = client.get("/cc/state?tag=TICKET&is_global=true&enabled=true&page_number=1&page_size=100").await;
@@ -51,17 +51,28 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
 
     let temp_id = "mock_temp_id";
     // 1.Get model based on template id
-    let _result: HashMap<String, FlowTemplateModelResp> = client.get(&format!("/cc/model/get_models/{}?tag_ids=TICKET", temp_id)).await;
+    let _result: HashMap<String, FlowTemplateModelResp> = client.get(&format!("/cc/model/get_models?temp_id={}&tag_ids=TICKET", temp_id)).await;
 
     let mut model_id = init_model.id.clone();
     // Delete and add some transitions
     model_id = client
         .post(
             &format!("/cc/model/{}/unbind_state", &model_id),
-            &FlowModelUnbindStateReq { state_id: init_state_id.clone() },
+            &FlowModelUnbindStateReq {
+                state_id: init_state_id.clone(),
+                rel_template_id: Some(temp_id.to_string()),
+            },
         )
         .await;
-    model_id = client.post(&format!("/cc/model/{}/bind_state", &model_id), &FlowModelBindStateReq { state_id: init_state_id.clone() }).await;
+    model_id = client
+        .post(
+            &format!("/cc/model/{}/bind_state", &model_id),
+            &FlowModelBindStateReq {
+                state_id: init_state_id.clone(),
+                rel_template_id: Some(temp_id.to_string()),
+            },
+        )
+        .await;
     // get model detail
     let model_agg_old: FlowModelAggResp = client.get(&format!("/cc/model/{}", &model_id)).await;
     // Set initial state
