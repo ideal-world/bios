@@ -757,14 +757,14 @@ impl FlowModelServ {
     }
 
     // Find model by tag and template id
-    pub async fn get_models(tags: Vec<&str>, template_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<HashMap<String, FlowTemplateModelResp>> {
+    pub async fn get_models(tags: Vec<&str>, template_id: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<HashMap<String, FlowTemplateModelResp>> {
         let mut result = HashMap::new();
         // TODO 提测暂时先用全局own_paths,后面以scope_level做判断
         let mut mock_ctx = TardisContext {
             own_paths: "".to_string(),
             ..ctx.clone()
         };
-        let flow_model_filter = if !template_id.is_empty() {
+        let models = if let Some(template_id) = &template_id {
             // Since the default template is not bound to an association, you can use empty down_paths to find the association through the rel table 
             // 因为默认模板没有绑定关联关系，所以通过rel表查找关联关系可以使用空own_paths
             let model_ids_by_temp_id = FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowTemplateModel, template_id, None, None, funs, &mock_ctx)
@@ -772,34 +772,42 @@ impl FlowModelServ {
                 .iter()
                 .map(|rel| rel.rel_id.clone())
                 .collect::<Vec<_>>();
-            FlowModelFilterReq {
-                basic: RbumBasicFilterReq {
-                    ids: Some(model_ids_by_temp_id),
+            FlowModelServ::paginate_items(
+                &FlowModelFilterReq {
+                    basic: RbumBasicFilterReq {
+                        ids: Some(model_ids_by_temp_id),
+                        ..Default::default()
+                    },
                     ..Default::default()
                 },
-                ..Default::default()
-            }
+                1,
+                20,
+                None,
+                None,
+                funs,
+                &mock_ctx,
+            )
+            .await?
         } else {
             // If no template_id is passed, the real own_paths are used
-            mock_ctx.own_paths = ctx.own_paths.clone();
-            FlowModelFilterReq {
-                basic: RbumBasicFilterReq {
-                    ..Default::default()
+            FlowModelServ::paginate_items(
+                &FlowModelFilterReq {
+                    basic: RbumBasicFilterReq {
+                        ..Default::default()
+                    },
+                    tag: Some(tags[0].try_into()?),
                 },
-                tag: Some(tags[0].try_into()?),
-            }
+                1,
+                20,
+                None,
+                None,
+                funs,
+                &ctx,
+            )
+            .await?
         };
 
-        let models = FlowModelServ::paginate_items(
-            &flow_model_filter,
-            1,
-            20,
-            None,
-            None,
-            funs,
-            &mock_ctx,
-        )
-        .await?;
+        
 
         // First iterate over the models
         for model in models.records {
@@ -838,7 +846,7 @@ impl FlowModelServ {
                 .pop()
                 .ok_or_else(|| funs.err().internal_error("flow_model_serv", "get_models", "default model is not exist", "404-default-model-mot-exist"))?.id;
                 // copy custom model
-                let model_id = Self::copy_custom_model(&default_model_id, template_id, funs, ctx).await?;
+                let model_id = Self::copy_custom_model(&default_model_id, template_id.clone(), funs, ctx).await?;
                 let custom_model = Self::get_item(&model_id, &FlowModelFilterReq {
                     basic: RbumBasicFilterReq {
                         own_paths: Some("".to_string()),
@@ -862,7 +870,7 @@ impl FlowModelServ {
     }
 
     // copy custom model
-    async fn copy_custom_model(default_model_id: &str, rel_template_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
+    async fn copy_custom_model(default_model_id: &str, rel_template_id: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
         let default_model = Self::get_item(default_model_id, &FlowModelFilterReq {
             basic: RbumBasicFilterReq {
                 own_paths: Some("".to_string()),
@@ -878,7 +886,7 @@ impl FlowModelServ {
                 icon: Some(default_model.icon),
                 info: Some(default_model.info),
                 init_state_id: default_model.init_state_id,
-                rel_template_id: Some(rel_template_id.to_string()),
+                rel_template_id: rel_template_id,
                 transitions: Some(transitions.into_iter().map(|trans| trans.into()).collect_vec()),
                 template: false,
                 rel_model_id: Some(default_model_id.to_string()),
@@ -953,7 +961,6 @@ impl FlowModelServ {
         flow_rel_kind: &FlowRelKind,
         flow_model_id: &str,
         flow_state_id: &str,
-        rel_template_id: Option<String>,
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<()> {
@@ -988,7 +995,6 @@ impl FlowModelServ {
         flow_rel_kind: &FlowRelKind,
         flow_model_id: &str,
         flow_state_id: &str,
-        rel_template_id: Option<String>,
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<()> {

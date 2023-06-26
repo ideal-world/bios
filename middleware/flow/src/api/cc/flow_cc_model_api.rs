@@ -90,11 +90,11 @@ impl FlowCcModelApi {
 
     /// Get Models By Tag And Template Id / 通过Tag和模板Id获取模型
     #[oai(path = "/get_models", method = "get")]
-    async fn get_models(&self, tag_ids: Query<String>, temp_id: Query<String>, ctx: TardisContextExtractor) -> TardisApiResult<HashMap<String, FlowTemplateModelResp>> {
+    async fn get_models(&self, tag_ids: Query<String>, temp_id: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<HashMap<String, FlowTemplateModelResp>> {
         let mut funs = flow_constants::get_tardis_inst();
         funs.begin().await?;
         let tag_ids: Vec<_> = tag_ids.split(',').collect();
-        let result = FlowModelServ::get_models(tag_ids, &temp_id.0, &funs, &ctx.0).await?;
+        let result = FlowModelServ::get_models(tag_ids, temp_id.0, &funs, &ctx.0).await?;
         funs.commit().await?;
         TardisResp::ok(result)
     }
@@ -118,7 +118,7 @@ impl FlowCcModelApi {
     async fn bind_state(&self, flow_model_id: Path<String>, req: Json<FlowModelBindStateReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = flow_constants::get_tardis_inst();
         funs.begin().await?;
-        FlowModelServ::bind_state(&FlowRelKind::FlowModelState, &flow_model_id.0, &req.0.state_id, req.0.rel_template_id, &funs, &ctx.0).await?;
+        FlowModelServ::bind_state(&FlowRelKind::FlowModelState, &flow_model_id.0, &req.0.state_id, &funs, &ctx.0).await?;
         funs.commit().await?;
         TardisResp::ok(Void {})
     }
@@ -128,7 +128,7 @@ impl FlowCcModelApi {
     async fn unbind_state(&self, flow_model_id: Path<String>, req: Json<FlowModelUnbindStateReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = flow_constants::get_tardis_inst();
         funs.begin().await?;
-        FlowModelServ::unbind_state(&FlowRelKind::FlowModelState, &flow_model_id.0, &req.0.state_id, req.0.rel_template_id, &funs, &ctx.0).await?;
+        FlowModelServ::unbind_state(&FlowRelKind::FlowModelState, &flow_model_id.0, &req.0.state_id, &funs, &ctx.0).await?;
         funs.commit().await?;
         TardisResp::ok(Void {})
     }

@@ -175,13 +175,11 @@ pub struct FlowTemplateModelResp {
 #[derive(Serialize, Deserialize, Debug, Default, poem_openapi::Object)]
 pub struct FlowModelBindStateReq {
     pub state_id: String,
-    pub rel_template_id: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Default, poem_openapi::Object)]
 pub struct FlowModelUnbindStateReq {
     pub state_id: String,
-    pub rel_template_id: Option<String>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, sea_orm::strum::EnumIter, sea_orm::DeriveActiveEnum)]
