@@ -92,6 +92,7 @@ impl FlowInstServ {
                     ..Default::default()
                 },
                 tag: Some(tag.clone()),
+                ..Default::default()
             },
             funs,
             ctx,
@@ -106,6 +107,7 @@ impl FlowInstServ {
                         ..Default::default()
                     },
                     tag: Some(tag.clone()),
+                    ..Default::default()
                 },
                 funs,
                 ctx,

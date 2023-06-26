@@ -748,15 +748,15 @@ impl FlowModelServ {
         })
     }
 
-    // Find model id by tag and template id
-    pub async fn get_model_ids(tags: Vec<&str>, template_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<HashMap<String, String>> {
+    // Find model by tag and template id
+    pub async fn get_models(tags: Vec<&str>, template_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<HashMap<String, FlowModelSummaryResp>> {
         let result = HashMap::new();
         // TODO 提测暂时先用全局own_paths,后面以scope_level做判断
         // let mock_ctx = TardisContext {
         //     own_paths: "".to_string(),
         //     ..ctx.clone()
         // };
-        // let model_ids_by_temp_id = FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowTemplateModel, template_id, None, None, funs, mock_ctx).await?.iter().map(|rel| rel.rel_id.clone()).collect::<Vec<_>>();
+        // let model_ids_by_temp_id = FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowTemplateModel, template_id, None, None, funs, &mock_ctx).await?.iter().map(|rel| rel.rel_id.clone()).collect::<Vec<_>>();
 
         Ok(result)
     }
