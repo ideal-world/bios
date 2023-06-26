@@ -913,10 +913,10 @@ impl IamCertServ {
                 ..Default::default()
             },
             funs,
-            &ctx,
+            ctx,
         )
         .await?;
-        return Ok(count);
+        Ok(count)
     }
 
     pub async fn get_cert_conf_id_by_kind(kind: &str, rel_iam_item_id: Option<String>, funs: &TardisFunsInst) -> TardisResult<String> {
