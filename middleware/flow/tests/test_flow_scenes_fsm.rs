@@ -6,7 +6,9 @@ use bios_mw_flow::dto::flow_inst_dto::{
     FlowInstFindNextTransitionResp, FlowInstFindNextTransitionsReq, FlowInstFindStateAndTransitionsReq, FlowInstFindStateAndTransitionsResp, FlowInstStartReq, FlowInstTransferReq,
     FlowInstTransferResp,
 };
-use bios_mw_flow::dto::flow_model_dto::{FlowModelAddReq, FlowModelAggResp, FlowModelBindStateReq, FlowModelModifyReq, FlowModelSummaryResp, FlowModelUnbindStateReq, FlowTagKind, FlowTemplateModelResp};
+use bios_mw_flow::dto::flow_model_dto::{
+    FlowModelAddReq, FlowModelAggResp, FlowModelBindStateReq, FlowModelModifyReq, FlowModelSummaryResp, FlowModelUnbindStateReq, FlowTagKind, FlowTemplateModelResp,
+};
 use bios_mw_flow::dto::flow_state_dto::{FlowStateAddReq, FlowStateSummaryResp, FlowSysStateKind};
 use bios_mw_flow::dto::flow_transition_dto::{FlowTransitionAddReq, FlowTransitionModifyReq};
 use bios_mw_flow::dto::flow_var_dto::FlowVarInfo;
@@ -53,7 +55,12 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
 
     let mut model_id = init_model.id.clone();
     // Delete and add some transitions
-    model_id = client.post(&format!("/cc/model/{}/unbind_state", &model_id), &FlowModelUnbindStateReq { state_id: init_state_id.clone() }).await;
+    model_id = client
+        .post(
+            &format!("/cc/model/{}/unbind_state", &model_id),
+            &FlowModelUnbindStateReq { state_id: init_state_id.clone() },
+        )
+        .await;
     model_id = client.post(&format!("/cc/model/{}/bind_state", &model_id), &FlowModelBindStateReq { state_id: init_state_id.clone() }).await;
     // get model detail
     let model_agg_old: FlowModelAggResp = client.get(&format!("/cc/model/{}", &model_id)).await;

@@ -6,7 +6,7 @@ use bios_basic::rbum::{
 };
 use serde::{Deserialize, Serialize};
 use tardis::{
-    basic::{field::TrimString, error::TardisError, result::TardisResult},
+    basic::{error::TardisError, field::TrimString, result::TardisResult},
     chrono::{DateTime, Utc},
     db::sea_orm,
     serde_json::Value,
@@ -26,9 +26,9 @@ pub struct FlowModelAddReq {
     pub info: Option<String>,
 
     pub init_state_id: String,
-    
+
     pub rel_template_id: Option<String>,
-    
+
     pub transitions: Option<Vec<FlowTransitionAddReq>>,
 
     pub template: bool,
@@ -58,7 +58,7 @@ pub struct FlowModelModifyReq {
     pub add_transitions: Option<Vec<FlowTransitionAddReq>>,
     pub modify_transitions: Option<Vec<FlowTransitionModifyReq>>,
     pub delete_transitions: Option<Vec<String>>,
-    
+
     pub tag: Option<FlowTagKind>,
 
     pub scope_level: Option<RbumScopeLevelKind>,
@@ -206,7 +206,7 @@ impl TryFrom<&str> for FlowTagKind {
             "MILESTONE" => Ok(Self::MILESTONE),
             "ITER" => Ok(Self::ITER),
             "REQ" => Ok(Self::REQ),
-            _ => Err(TardisError::not_found("tag is not exist", "404-flow-tag-not-exist"))
+            _ => Err(TardisError::not_found("tag is not exist", "404-flow-tag-not-exist")),
         }
     }
 }

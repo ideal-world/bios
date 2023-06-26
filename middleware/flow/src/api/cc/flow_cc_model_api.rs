@@ -9,7 +9,8 @@ use tardis::web::poem_openapi::payload::Json;
 use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 
 use crate::dto::flow_model_dto::{
-    FlowModelAddReq, FlowModelAggResp, FlowModelBindStateReq, FlowModelFilterReq, FlowModelModifyReq, FlowModelSummaryResp, FlowModelUnbindStateReq, FlowTagKind, FlowTemplateModelResp,
+    FlowModelAddReq, FlowModelAggResp, FlowModelBindStateReq, FlowModelFilterReq, FlowModelModifyReq, FlowModelSummaryResp, FlowModelUnbindStateReq, FlowTagKind,
+    FlowTemplateModelResp,
 };
 use crate::flow_constants;
 use crate::serv::flow_model_serv::FlowModelServ;

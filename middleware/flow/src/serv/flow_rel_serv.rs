@@ -148,7 +148,7 @@ impl FlowRelServ {
         RbumRelServ::find_from_simple_rels(
             &flow_rel_kind.to_string(),
             &RbumRelFromKind::Item,
-            false,
+            true,
             flow_model_id,
             desc_sort_by_create,
             desc_sort_by_update,

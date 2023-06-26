@@ -25,7 +25,10 @@ use tardis::{
 use crate::{
     domain::{flow_model, flow_transition},
     dto::{
-        flow_model_dto::{FlowModelAddReq, FlowModelAggResp, FlowModelDetailResp, FlowModelFilterReq, FlowModelModifyReq, FlowModelSummaryResp, FlowStateAggResp, FlowTagKind, FlowTemplateModelResp},
+        flow_model_dto::{
+            FlowModelAddReq, FlowModelAggResp, FlowModelDetailResp, FlowModelFilterReq, FlowModelModifyReq, FlowModelSummaryResp, FlowStateAggResp, FlowTagKind,
+            FlowTemplateModelResp,
+        },
         flow_state_dto::{FlowStateAddReq, FlowStateFilterReq, FlowSysStateKind},
         flow_transition_dto::{FlowTransitionAddReq, FlowTransitionDetailResp, FlowTransitionModifyReq},
     },
@@ -106,7 +109,7 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
         if let Some(rel_template_id) = &add_req.rel_template_id {
             FlowRelServ::add_simple_rel(&FlowRelKind::FlowTemplateModel, rel_template_id, flow_model_id, None, None, false, false, funs, ctx).await?;
         }
-        
+
         Ok(())
     }
 
@@ -761,7 +764,11 @@ impl FlowModelServ {
             own_paths: "".to_string(),
             ..ctx.clone()
         };
-        let model_ids_by_temp_id = FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowTemplateModel, template_id, None, None, funs, &mock_ctx).await?.iter().map(|rel| rel.rel_id.clone()).collect::<Vec<_>>();
+        let model_ids_by_temp_id = FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowTemplateModel, template_id, None, None, funs, &mock_ctx)
+            .await?
+            .iter()
+            .map(|rel| rel.rel_id.clone())
+            .collect::<Vec<_>>();
         let models = FlowModelServ::paginate_items(
             &FlowModelFilterReq {
                 basic: RbumBasicFilterReq {
@@ -782,12 +789,15 @@ impl FlowModelServ {
         // First iterate over the models
         for model in models.records {
             if tags.contains(&model.tag.as_str()) {
-                result.insert(model.tag.clone(), FlowTemplateModelResp {
-                    id:model.id,
-                    name:model.name,
-                    create_time:model.create_time,
-                    update_time:model.update_time,
-                });
+                result.insert(
+                    model.tag.clone(),
+                    FlowTemplateModelResp {
+                        id: model.id,
+                        name: model.name,
+                        create_time: model.create_time,
+                        update_time: model.update_time,
+                    },
+                );
             }
         }
 
@@ -806,13 +816,19 @@ impl FlowModelServ {
                     funs,
                     &mock_ctx,
                 )
-                .await?.records.pop().ok_or_else(|| funs.err().internal_error("flow_model_serv", "get_models", "default model is not exist", "404-default-model-mot-exist"))?;
-                result.insert(default_model.tag.clone(), FlowTemplateModelResp {
-                    id:default_model.id,
-                    name:default_model.name,
-                    create_time:default_model.create_time,
-                    update_time:default_model.update_time,
-                });
+                .await?
+                .records
+                .pop()
+                .ok_or_else(|| funs.err().internal_error("flow_model_serv", "get_models", "default model is not exist", "404-default-model-mot-exist"))?;
+                result.insert(
+                    default_model.tag.clone(),
+                    FlowTemplateModelResp {
+                        id: default_model.id,
+                        name: default_model.name,
+                        create_time: default_model.create_time,
+                        update_time: default_model.update_time,
+                    },
+                );
             }
         }
 
@@ -870,7 +886,7 @@ impl FlowModelServ {
                     icon: modify_req.icon.clone().map_or(Some(current_model.icon), Some),
                     info: modify_req.info.clone().map_or(Some(current_model.info), Some),
                     init_state_id: modify_req.init_state_id.clone().map_or(current_model.init_state_id, |init_state_id| init_state_id),
-                    rel_template_id:modify_req.rel_template_id.clone(),
+                    rel_template_id: modify_req.rel_template_id.clone(),
                     transitions: modify_req.add_transitions.clone().map_or(Some(transitions.into_iter().map(|trans| trans.into()).collect_vec()), Some),
                     template: false,
                     rel_model_id: Some(flow_model_id.to_string()),
