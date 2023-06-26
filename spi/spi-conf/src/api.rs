@@ -5,8 +5,8 @@ mod ci;
 use ci::*;
 mod nacos;
 
-use nacos::*;
 use crate::conf_constants;
+use nacos::*;
 
 pub type ConfApi = (ConfCiApi, ConfNacosApi);
 

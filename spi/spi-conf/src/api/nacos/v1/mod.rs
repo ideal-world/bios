@@ -5,8 +5,9 @@ use std::str::FromStr;
 
 pub use auth::ConfNacosV1AuthApi;
 pub use config_service::ConfNacosV1CsApi;
+pub use namespace::ConfNacosV1NamespaceApi;
 use tardis::{basic::error::TardisError, web::poem};
-pub type ConfNacosV1Api = (ConfNacosV1AuthApi, ConfNacosV1CsApi);
+pub type ConfNacosV1Api = (ConfNacosV1AuthApi, ConfNacosV1CsApi, ConfNacosV1NamespaceApi);
 pub use tardis::web::reqwest::StatusCode;
 
 fn tardis_err_to_poem_err(e: TardisError) -> poem::Error {

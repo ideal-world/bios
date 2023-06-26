@@ -1,7 +1,14 @@
+use std::{collections::BTreeMap, sync::Arc};
+
 use bios_basic::spi::{spi_constants, spi_funs::SpiBsInstExtractor};
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
-    db::sea_orm::{prelude::Uuid, sea_query::token},
+    db::sea_orm::prelude::Uuid,
+    tokio::{
+        sync::OnceCell,
+        time::{interval, Duration, Instant},
+    },
+    tokio::{sync::RwLock, task::JoinHandle},
     web::{poem, reqwest::StatusCode},
     TardisFunsInst,
 };
@@ -71,34 +78,60 @@ dispatch_servive! {
     find_previous_history(descriptor: &mut ConfigDescriptor, id: &Uuid) -> TardisResult<ConfigItem>;
 }
 
+lazy_static::lazy_static! {
+    static ref TOKEN_CTX_MAP: Arc<RwLock<BTreeMap<String, (TardisContext, Instant)>>> = Default::default();
+    static ref MAP_CLEANER_TASK: OnceCell<JoinHandle<()>> = Default::default();
+}
+
 pub fn auth(username: &str, password: &str, funs: &TardisFunsInst) -> bool {
     let cfg = funs.conf::<ConfConfig>();
     cfg.auth_username == username && cfg.auth_password == password
 }
 
-pub fn jwt_sign(funs: &TardisFunsInst) -> poem::Result<String> {
+async fn bind_token_ctx(token: &str, ttl: u64, ctx: &TardisContext) {
+    TOKEN_CTX_MAP.write().await.insert(token.to_string(), (ctx.clone(), Instant::now() + Duration::from_secs(ttl)));
+}
+
+async fn get_ctx_by_token(token: &str) -> Option<TardisContext> {
+    TOKEN_CTX_MAP.read().await.get(token).map(|(ctx, _exp)| ctx.clone())
+}
+
+async fn init_map_cleaner_task() -> JoinHandle<()> {
+    tardis::tokio::spawn(async move {
+        let mut tick = interval(Duration::from_secs(1800));
+        loop {
+            let time = tick.tick().await;
+            TOKEN_CTX_MAP.write().await.retain(|_, (_, exp)| *exp > time);
+        }
+    })
+}
+
+pub async fn jwt_sign(funs: &TardisFunsInst, ctx: &TardisContext) -> poem::Result<String> {
     use jsonwebtoken::*;
     let cfg = funs.conf::<ConfConfig>();
-    let claim = NacosJwtClaim::gen(cfg.token_ttl as u64, &cfg.auth_username);
-
+    let ttl = cfg.token_ttl as u64;
+    let claim = NacosJwtClaim::gen(ttl, &cfg.auth_username);
+    MAP_CLEANER_TASK.get_or_init(init_map_cleaner_task).await;
     let key =
         EncodingKey::from_base64_secret(&cfg.auth_key).map_err(|_| poem::Error::from_string("spi-conf nacosmocker using an invalid authkey", StatusCode::INTERNAL_SERVER_ERROR))?;
 
-    let token = encode(&Header::new(Algorithm::HS256), &claim, &key).map_err(|e| {
-        dbg!(e);
-        poem::Error::from_string("spi-conf nacosmocker fail to encode auth token", StatusCode::INTERNAL_SERVER_ERROR)
-    })?;
-
+    let token = encode(&Header::new(Algorithm::HS256), &claim, &key)
+        .map_err(|_| poem::Error::from_string("spi-conf nacosmocker fail to encode auth token", StatusCode::INTERNAL_SERVER_ERROR))?;
+    bind_token_ctx(&token, ttl, ctx).await;
     Ok(token)
 }
 
-pub fn jwt_validate(token: &str, funs: &TardisFunsInst) -> poem::Result<NacosJwtClaim> {
+pub async fn jwt_validate(token: &str, funs: &TardisFunsInst) -> poem::Result<TardisContext> {
     use jsonwebtoken::*;
     let cfg = funs.conf::<ConfConfig>();
     let mut validation = Validation::new(Algorithm::HS256);
     validation.sub = Some(cfg.auth_username.clone());
     let key =
         DecodingKey::from_base64_secret(&cfg.auth_key).map_err(|_| poem::Error::from_string("spi-conf nacosmocker using an invalid authkey", StatusCode::INTERNAL_SERVER_ERROR))?;
-    let token_data = decode::<NacosJwtClaim>(token, &key, &validation).map_err(|e| poem::Error::from_string(e.to_string(), StatusCode::FORBIDDEN))?;
-    Ok(token_data.claims)
+    let _ = decode::<NacosJwtClaim>(token, &key, &validation).map_err(|e| poem::Error::from_string(e.to_string(), StatusCode::FORBIDDEN))?;
+    if let Some(ctx) = get_ctx_by_token(token).await {
+        Ok(ctx)
+    } else {
+        Err(poem::Error::from_string("Unknown token", StatusCode::FORBIDDEN))
+    }
 }

@@ -1,20 +1,14 @@
-use std::{
-    collections::HashMap,
-    env,
-    sync::{atomic::AtomicUsize, Arc},
-};
+use std::{collections::HashMap, env};
 
 use bios_basic::{
     rbum::serv::rbum_kind_serv::RbumKindServ,
     spi::{dto::spi_bs_dto::SpiBsAddReq, spi_constants},
     test::{init_rbum_test_container, test_http_client::TestHttpClient},
 };
-use bios_spi_conf::{conf_constants::DOMAIN_CODE, dto::conf_config_dto::ConfigDescriptor};
+use bios_spi_conf::conf_constants::DOMAIN_CODE;
 use tardis::{
     basic::{dto::TardisContext, field::TrimString, result::TardisResult},
-    log::{self, debug},
-    rand,
-    serde_json::json,
+    log,
     testcontainers, tokio,
     web::web_resp::Void,
     TardisFuns,
@@ -65,7 +59,7 @@ async fn spi_conf_namespace_test() -> TardisResult<()> {
     Ok(())
 }
 
-async fn test_tardis_compatibility(client: &TestHttpClient) -> TardisResult<()> {
+async fn test_tardis_compatibility(_client: &TestHttpClient) -> TardisResult<()> {
     use tardis::config::config_nacos::nacos_client::*;
     let ctx = TardisContext {
         own_paths: "t1/app001".to_string(),
@@ -116,5 +110,53 @@ async fn test_tardis_compatibility(client: &TestHttpClient) -> TardisResult<()> 
     assert!(success);
     let changed = nacos_client.listen_config(&config_descriptor).await.unwrap();
     assert!(changed);
+
+    // namespace api
+    log::info!("test namespace api");
+
+    let login_url = "https://localhost:8080/spi-conf/nacos/v1/auth/login";
+    let mut form = HashMap::new();
+    form.insert("password", "nacosmocker");
+    form.insert("username", "nacosmocker");
+    let resp = nacos_client.post(login_url).form(&form).send().await?;
+    log::info!("response: {resp:#?}");
+
+    let value = resp.json::<tardis::serde_json::Value>().await?;
+    let token = value.get("accessToken").expect("missing accessToken").as_str().expect("access_token should be string");
+    let namespace_url = "https://localhost:8080/spi-conf/nacos/v1/console/namespaces";
+    let mut form = HashMap::new();
+    form.insert("customNamespaceId", "test-namespace-1");
+    form.insert("namespaceName", "测试命名空间1");
+    // publish
+    let resp = nacos_client.post(namespace_url).query(&[("accessToken", token)]).form(&form).send().await?;
+    log::info!("response: {resp:#?}");
+    let success = resp.json::<bool>().await?;
+    assert!(success);
+    // edit
+    let mut form = HashMap::new();
+    form.insert("namespace", "test-namespace-1");
+    form.insert("namespaceShowName", "测试命名空间1-修改");
+    let resp = nacos_client.put(namespace_url).query(&[("accessToken", token)]).form(&form).send().await?;
+    // let info = resp.text().await?;
+    // log::info!("response: {info}");
+    let success = resp.json::<bool>().await?;
+    assert!(success);
+
+    // delete
+    let mut form = HashMap::new();
+    form.insert("namespaceId", "test-namespace-1");
+    let resp = nacos_client.delete(namespace_url).query(&[("accessToken", token)]).form(&form).send().await?;
+    // let info = resp.text().await?;
+    // log::info!("response: {info}");
+    let success = resp.json::<bool>().await?;
+    assert!(success);
+    wait_press_enter();
     Ok(())
+}
+
+fn wait_press_enter() {
+    use std::io::*;
+    let mut buf = String::new();
+    println!("Press 'Enter' to continue");
+    stdin().read_line(&mut buf).unwrap();
 }

@@ -4,14 +4,12 @@ use tardis::{
     db::sea_orm::prelude::Uuid,
     serde_json::{self, Value},
     web::{
-        context_extractor::TardisContextExtractor,
         poem::{self, web::Form, Request},
         poem_openapi::{
             self,
             param::Query,
             payload::{Json, PlainText},
         },
-        web_resp::{TardisApiResult, TardisResp},
     },
 };
 
@@ -38,7 +36,6 @@ impl ConfNacosV1CsApi {
         #[oai(name = "dataId")]
         data_id: Query<String>,
         #[oai(name = "accessToken")] access_token: Query<String>,
-        ctx: TardisContextExtractor,
         request: &Request,
     ) -> poem::Result<PlainText<String>> {
         let namespace_id = namespace_id.0.or(tenant.0).unwrap_or("public".into());
@@ -49,8 +46,8 @@ impl ConfNacosV1CsApi {
             ..Default::default()
         };
         let funs = request.tardis_fun_inst();
-        jwt_validate(&access_token.0, &funs)?;
-        let content = get_config(&mut descriptor, &funs, &ctx.0).await.map_err(tardis_err_to_poem_err)?;
+        let ctx = jwt_validate(&access_token.0, &funs).await?;
+        let content = get_config(&mut descriptor, &funs, &ctx).await.map_err(tardis_err_to_poem_err)?;
         Ok(PlainText(content))
     }
     #[oai(path = "/configs", method = "post")]
@@ -66,12 +63,12 @@ impl ConfNacosV1CsApi {
         #[oai(name = "accessToken")] access_token: Query<String>,
         form: Form<PublishConfigForm>,
         r#type: Query<Option<String>>,
-        ctx: TardisContextExtractor,
         request: &Request,
     ) -> poem::Result<Json<bool>> {
         let funs = request.tardis_fun_inst();
         let namespace_id = namespace_id.0.or(tenant.0).unwrap_or("public".into());
-        let username = jwt_validate(&access_token.0, &funs)?.sub;
+        let ctx = jwt_validate(&access_token.0, &funs).await?;
+        let src_user = &ctx.owner;
         let descriptor = ConfigDescriptor {
             namespace_id,
             group: group.0,
@@ -82,10 +79,10 @@ impl ConfNacosV1CsApi {
             descriptor,
             schema: r#type.0,
             content: form.0.content,
-            src_user: Some(username),
+            src_user: Some(src_user.clone()),
             ..Default::default()
         };
-        let success = publish_config(&mut publish_request, &funs, &ctx.0).await?;
+        let success = publish_config(&mut publish_request, &funs, &ctx).await?;
         Ok(Json(success))
     }
     #[oai(path = "/configs", method = "delete")]
@@ -99,7 +96,6 @@ impl ConfNacosV1CsApi {
         #[oai(name = "dataId")]
         data_id: Query<String>,
         #[oai(name = "accessToken")] access_token: Query<String>,
-        ctx: TardisContextExtractor,
         request: &Request,
     ) -> poem::Result<Json<bool>> {
         let namespace_id = namespace_id.0.or(tenant.0).unwrap_or("public".into());
@@ -110,8 +106,8 @@ impl ConfNacosV1CsApi {
             ..Default::default()
         };
         let funs = request.tardis_fun_inst();
-        jwt_validate(&access_token.0, &funs)?;
-        let success = delete_config(&mut descriptor, &funs, &ctx.0).await?;
+        let ctx = jwt_validate(&access_token.0, &funs).await?;
+        let success = delete_config(&mut descriptor, &funs, &ctx).await?;
         Ok(Json(success))
     }
     #[oai(path = "/configs/listener", method = "post")]
@@ -121,12 +117,11 @@ impl ConfNacosV1CsApi {
         // Listening-Configs
         #[oai(name = "Listening-Configs")] listening_configs: Query<String>,
         #[oai(name = "accessToken")] access_token: Query<String>,
-        ctx: TardisContextExtractor,
         request: &Request,
     ) -> poem::Result<PlainText<String>> {
         let listening_configs = listening_configs.0;
         let funs = request.tardis_fun_inst();
-        jwt_validate(&access_token.0, &funs)?;
+        let ctx = jwt_validate(&access_token.0, &funs).await?;
         let err_missing = |msg: &str| poem::Error::from_string(format!("missing field {msg}"), poem::http::StatusCode::BAD_REQUEST);
         let mut config_fields = listening_configs.trim_end_matches(1 as char).split(2 as char);
         let data_id = config_fields.next().ok_or(err_missing("data_id"))?;
@@ -139,7 +134,7 @@ impl ConfNacosV1CsApi {
             data_id: data_id.to_owned(),
             ..Default::default()
         };
-        let config = if md5.is_empty() || md5 != get_md5(&mut descriptor, &funs, &ctx.0).await? {
+        let config = if md5.is_empty() || md5 != get_md5(&mut descriptor, &funs, &ctx).await? {
             // if md5 is empty or changed, return listening_configs
             listening_configs
         } else {
@@ -167,7 +162,6 @@ impl ConfNacosV1CsApi {
         #[oai(name = "pageSize")]
         page_size: Query<Option<u32>>,
         #[oai(name = "accessToken")] access_token: Query<String>,
-        ctx: TardisContextExtractor,
         request: &Request,
     ) -> poem::Result<Json<Value>> {
         let mut namespace_id = tenant.0.unwrap_or("public".into());
@@ -181,16 +175,16 @@ impl ConfNacosV1CsApi {
             ..Default::default()
         };
         let funs = request.tardis_fun_inst();
-        jwt_validate(&access_token.0, &funs)?;
+        let ctx = jwt_validate(&access_token.0, &funs).await?;
         if let Some("accurate") = search.0.as_deref() {
             let page_size = page_size.0.unwrap_or(100).min(500).max(1);
             let page_no = page_no.0.unwrap_or(1).max(0);
             let mut request = ConfigHistoryListRequest { descriptor, page_no, page_size };
-            let response = get_history_list_by_namespace(&mut request, &funs, &ctx.0).await?;
+            let response = get_history_list_by_namespace(&mut request, &funs, &ctx).await?;
             Ok(Json(serde_json::to_value(response).expect("fail to convert ConfigListResponse to json value")))
         } else {
             let id = Uuid::parse_str(&nid.0).map_err(|e| TardisError::bad_request(&e.to_string(), error::INVALID_UUID))?;
-            let config = find_history(&mut descriptor, &id, &funs, &ctx.0).await?;
+            let config = find_history(&mut descriptor, &id, &funs, &ctx).await?;
             Ok(Json(serde_json::to_value(config).expect("fail to convert ConfigItem to json value")))
         }
     }
@@ -207,7 +201,6 @@ impl ConfNacosV1CsApi {
         data_id: Query<String>,
         id: Query<String>,
         #[oai(name = "accessToken")] access_token: Query<String>,
-        ctx: TardisContextExtractor,
         request: &Request,
     ) -> poem::Result<Json<ConfigItem>> {
         let mut namespace_id = namespace_id.0.or(tenant.0).unwrap_or("public".into());
@@ -222,8 +215,8 @@ impl ConfNacosV1CsApi {
             ..Default::default()
         };
         let funs = request.tardis_fun_inst();
-        jwt_validate(&access_token.0, &funs)?;
-        let config = find_previous_history(&mut descriptor, &id, &funs, &ctx.0).await?;
+        let ctx = jwt_validate(&access_token.0, &funs).await?;
+        let config = find_previous_history(&mut descriptor, &id, &funs, &ctx).await?;
         Ok(Json(config))
     }
     #[oai(path = "/history/configs", method = "get")]
@@ -232,7 +225,6 @@ impl ConfNacosV1CsApi {
         namespace_id: Query<Option<NamespaceId>>,
         tenant: Query<Option<NamespaceId>>,
         #[oai(name = "accessToken")] access_token: Query<String>,
-        ctx: TardisContextExtractor,
         request: &Request,
     ) -> poem::Result<Json<Vec<ConfigItemDigest>>> {
         let mut namespace_id = namespace_id.0.or(tenant.0).unwrap_or("public".into());
@@ -240,8 +232,8 @@ impl ConfNacosV1CsApi {
             namespace_id = "public".into();
         }
         let funs = request.tardis_fun_inst();
-        jwt_validate(&access_token.0, &funs)?;
-        let config = get_configs_by_namespace(&namespace_id, &funs, &ctx.0).await?;
+        let ctx = jwt_validate(&access_token.0, &funs).await?;
+        let config = get_configs_by_namespace(&namespace_id, &funs, &ctx).await?;
         Ok(Json(config))
     }
 }

@@ -10,7 +10,6 @@ pub struct ConfConfig {
     pub auth_key: String,
     pub auth_username: String,
     pub auth_password: String,
-
 }
 
 impl Default for ConfConfig {
