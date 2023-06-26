@@ -146,9 +146,16 @@ impl SgPluginFilter for SgFilterAuth {
     }
 
     async fn resp_filter(&self, _: &str, mut ctx: SgRoutePluginContext, _: Option<&SgHttpRouteMatchInst>) -> TardisResult<(bool, SgRoutePluginContext)> {
-        if ctx.get_resp_headers().get(&self.auth_config.head_key_crypto).is_none() {
+        let head_key_crypto = self.auth_config.head_key_crypto.clone();
+        if ctx.get_req_headers().get(&head_key_crypto).is_none() {
             return Ok((true, ctx));
         }
+        let crypto_value = ctx.get_req_headers().get(&head_key_crypto).expect("").clone();
+        let ctx_resp_headers = ctx.get_resp_headers_mut();
+        ctx_resp_headers.insert(
+            HeaderName::try_from(head_key_crypto.clone()).map_err(|e| TardisError::internal_error(&format!("[Plugin.Auth] get header error: {e:?}"), ""))?,
+            crypto_value,
+        );
         let encrypt_resp = auth_crypto_serv::encrypt_body(&ctx_to_auth_encrypt_req(&mut ctx).await?).await?;
         ctx.set_resp_headers(hashmap_header_to_headermap(encrypt_resp.headers)?);
         ctx.set_resp_body(encrypt_resp.body.into_bytes())?;
@@ -190,7 +197,7 @@ async fn ctx_to_auth_req(ctx: &mut SgRoutePluginContext) -> TardisResult<(AuthRe
 fn success_auth_resp_to_ctx(auth_resp: AuthResp, old_req_body: Vec<u8>, mut ctx: SgRoutePluginContext) -> TardisResult<SgRoutePluginContext> {
     let new_headers = hashmap_header_to_headermap(auth_resp.headers.clone())?;
 
-    ctx.set_resp_headers(new_headers);
+    ctx.set_req_headers(new_headers);
     if let Some(new_body) = auth_resp.body {
         ctx.set_req_body(new_body.into_bytes())?;
     } else {
@@ -235,7 +242,8 @@ mod tests {
     use std::env;
 
     use spacegate_kernel::http::{Method, Uri, Version};
-    use spacegate_kernel::hyper::Body;
+    use spacegate_kernel::hyper::{Body, StatusCode};
+    use tardis::crypto::crypto_sm2_4::{TardisCryptoSm2, TardisCryptoSm2PrivateKey};
     use tardis::{
         test::test_container::TardisTestContainer,
         testcontainers::{self, clients::Cli, images::redis::Redis, Container},
@@ -264,6 +272,13 @@ mod tests {
         let apis = apis.unwrap();
         assert!(apis.code == 200.to_string());
         assert!(apis.data.is_some());
+        let data = apis.data.unwrap();
+        let pub_key = data["pub_key"].as_str().unwrap();
+        let server_sm2 = TardisCryptoSm2 {};
+        let server_public_key = server_sm2.new_public_key_from_public_key(pub_key).unwrap();
+
+        let front_pri_key = TardisFuns::crypto.sm2.new_private_key().unwrap();
+        let front_pub_key = TardisFuns::crypto.sm2.new_public_key(&front_pri_key).unwrap();
 
         let test_body_value = r##"test_body_value!@#$%^&*():"中文测试"##;
         //dont need to decrypt
@@ -284,15 +299,93 @@ mod tests {
         assert!(req_body.is_some());
         let req_body = req_body.unwrap();
         let req_body = String::from_utf8(req_body).unwrap();
-        println!("req_body:{req_body} test_body_value:{test_body_value}");
         assert_eq!(req_body, test_body_value.to_string());
 
-        //TODO 
-        
+        //=========request============
+        let mut header = HeaderMap::new();
+        let (crypto_data, bios_crypto_value) = crypto_req(
+            test_body_value,
+            server_public_key.serialize().unwrap().as_ref(),
+            front_pub_key.serialize().unwrap().as_ref(),
+            true,
+        );
+        header.insert("Bios-Crypto", bios_crypto_value.parse().unwrap());
+        let ctx = SgRoutePluginContext::new(
+            Method::POST,
+            Uri::from_static("http://sg.idealworld.group/test1"),
+            Version::HTTP_11,
+            header,
+            Body::from(crypto_data),
+            "127.0.0.1:8080".parse().unwrap(),
+            "".to_string(),
+            None,
+        );
+        let (is_ok, mut before_filter_ctx) = filter_auth.req_filter("", ctx, None).await.unwrap();
+        assert!(is_ok);
+        let req_body = before_filter_ctx.pop_req_body().await.unwrap();
+        assert!(req_body.is_some());
+        let req_body = req_body.unwrap();
+        let req_body = String::from_utf8(req_body).unwrap();
+        assert_eq!(req_body, test_body_value.to_string());
+
+        //======response============
+        let mock_resp = r##"mock_resp:test_body_value!@#$%^&*():"中文测试"##;
+        let mut header = HeaderMap::new();
+        header.insert("Test_Header", "test_header".parse().unwrap());
+        let ctx = before_filter_ctx.resp(StatusCode::OK, header, Body::from(mock_resp));
+
+        let (is_ok, mut before_filter_ctx) = filter_auth.resp_filter("", ctx, None).await.unwrap();
+        assert!(is_ok);
+        let resp_body = before_filter_ctx.pop_resp_body().await.unwrap();
+        assert!(resp_body.is_some());
+        let resp_body = resp_body.unwrap();
+        let resp_body = String::from_utf8(resp_body).unwrap();
+        let resp_body = crypto_resp(
+            &resp_body,
+            &before_filter_ctx.get_resp_headers().get("Bios-Crypto").unwrap().to_str().unwrap(),
+            &front_pri_key,
+        );
+        println!("req_body:{req_body} mock_resp:{mock_resp}");
+        assert_eq!(resp_body, mock_resp.to_string());
+
         filter_auth.destroy().await.unwrap();
 
         let test_result = TardisFuns::web_client().get_to_str(&format!("http://127.0.0.1:{}/auth/auth/apis", filter_auth.port), None).await;
         assert!(test_result.is_err() || test_result.unwrap().code == 502);
+    }
+
+    fn crypto_req(body: &str, serv_pub_key: &str, front_pub_key: &str, need_crypto_resp: bool) -> (String, String) {
+        let pub_key = TardisFuns::crypto.sm2.new_public_key_from_public_key(serv_pub_key).unwrap();
+
+        let sm4_key = TardisFuns::crypto.key.rand_16_hex().unwrap();
+        let sm4_iv = TardisFuns::crypto.key.rand_16_hex().unwrap();
+
+        let data = TardisFuns::crypto.sm4.encrypt_cbc(body, &sm4_key, &sm4_iv).unwrap();
+        let sign_data = TardisFuns::crypto.digest.sm3(&data).unwrap();
+
+        let sm4_encrypt = if need_crypto_resp {
+            pub_key.encrypt(&format!("{sign_data} {sm4_key} {sm4_iv} {front_pub_key}",)).unwrap()
+        } else {
+            pub_key.encrypt(&format!("{sign_data} {sm4_key} {sm4_iv}",)).unwrap()
+        };
+        let base64_encrypt = TardisFuns::crypto.base64.encode(&sm4_encrypt);
+        (data, base64_encrypt)
+    }
+
+    fn crypto_resp(body: &str, crypto_header: &str, front_pri_key: &TardisCryptoSm2PrivateKey) -> String {
+        let decode_base64 = TardisFuns::crypto.base64.decode(crypto_header).unwrap();
+        let decrypt_key = front_pri_key.decrypt(&decode_base64).unwrap();
+        let splits: Vec<_> = decrypt_key.split(' ').collect();
+        if splits.len() != 3 {
+            panic!("splits:{:?}", splits);
+        }
+
+        let sign_data = splits[0];
+        let sm4_key = splits[1];
+        let sm4_iv = splits[2];
+        let gen_sign_data = TardisFuns::crypto.digest.sm3(&body).unwrap();
+        assert_eq!(sign_data, gen_sign_data);
+        TardisFuns::crypto.sm4.decrypt_cbc(&body, sm4_key, sm4_iv).unwrap()
     }
 
     pub struct LifeHold<'a> {
