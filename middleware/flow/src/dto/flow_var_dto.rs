@@ -39,23 +39,24 @@ pub struct FlowVarInfo {
     pub parent_attr_name: Option<String>,
 }
 
+// In order to adapt to the JAVA program, the corresponding kind in rbum is changed to uppercase format (only here for the time being, the subsequent can be placed in the public module)
+// 为了和JAVA程序适配，此处把rbum中对应的kind改为大写格式（暂时只有此处需要，后续可以放置到公共模块）
 #[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 #[derive(poem_openapi::Enum, sea_orm::strum::EnumString)]
-#[serde(rename_all = "UPPERCASE")]
 pub enum RbumDataTypeKind {
-    String,
-    Number,
-    Boolean,
-    Date,
-    DateTime,
-    Json,
-    Strings,
-    Numbers,
-    Booleans,
-    Dates,
-    DateTimes,
-    Array,
-    Label,
+    STRING,
+    NUMBER,
+    BOOLEAN,
+    DATE,
+    DATETIME,
+    JSON,
+    STRINGS,
+    NUMBERS,
+    BOOLEANS,
+    DATES,
+    DATETIMES,
+    ARRAY,
+    LABEL,
 }
 
 impl TryGetable for RbumDataTypeKind {
@@ -71,27 +72,26 @@ impl TryGetable for RbumDataTypeKind {
 
 #[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 #[derive(poem_openapi::Enum, sea_orm::strum::EnumString)]
-#[serde(rename_all = "UPPERCASE")]
 pub enum RbumWidgetTypeKind {
-    Input,
-    InputTxt,
-    InputNum,
-    Textarea,
-    Number,
-    Date,
-    DateTime,
-    Upload,
-    Radio,
-    Button,
-    Checkbox,
-    Switch,
-    Select,
-    MultiSelect,
-    Link,
-    CodeEditor,
-    Container, // Display group subtitles, datatype = String, value is empty
-    Control,   // Json fields : all parent_attr_name = current attribute, datatype = Json
-    Group,     // Sub fields : all parent_attr_name = current attribute, datatype = Array, The value of the json array is stored to the current field.
+    INPUT,
+    INPUTTXT,
+    INPUTNUM,
+    TEXTAREA,
+    NUMBER,
+    DATE,
+    DATETIME,
+    UPLOAD,
+    RADIO,
+    BUTTON,
+    CHECKBOX,
+    SWITCH,
+    SELECT,
+    MULTISELECT,
+    LINK,
+    CODEEDITOR,
+    CONTAINER, // Display group subtitles, datatype = String, value is empty
+    CONTROL,   // Json fields : all parent_attr_name = current attribute, datatype = Json
+    GROUP,     // Sub fields : all parent_attr_name = current attribute, datatype = Array, The value of the json array is stored to the current field.
 }
 
 impl TryGetable for RbumWidgetTypeKind {
