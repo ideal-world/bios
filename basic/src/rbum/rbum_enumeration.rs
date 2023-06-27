@@ -239,7 +239,7 @@ impl TryGetable for RbumRelEnvKind {
 
 #[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 #[cfg_attr(feature = "default", derive(poem_openapi::Enum, sea_orm::strum::EnumString))]
-#[serde(rename_all = "PascalCase")]
+#[serde(rename_all = "UPPERCASE")]
 pub enum RbumDataTypeKind {
     String,
     Number,
@@ -270,7 +270,7 @@ impl TryGetable for RbumDataTypeKind {
 
 #[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 #[cfg_attr(feature = "default", derive(poem_openapi::Enum, sea_orm::strum::EnumString))]
-#[serde(rename_all = "PascalCase")]
+#[serde(rename_all = "UPPERCASE")]
 pub enum RbumWidgetTypeKind {
     Input,
     InputTxt,
