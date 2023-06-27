@@ -15,7 +15,6 @@ pub struct FlowTransitionAddReq {
     pub name: Option<TrimString>,
 
     pub transfer_by_auto: Option<bool>,
-    #[oai(validator(min_length = "2", max_length = "200"))]
     pub transfer_by_timer: Option<String>,
 
     pub guard_by_creator: Option<bool>,
