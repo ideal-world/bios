@@ -58,19 +58,10 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
     let _: Void = client
         .post(
             &format!("/cc/model/{}/unbind_state", &model_id),
-            &FlowModelUnbindStateReq {
-                state_id: init_state_id.clone(),
-            },
+            &FlowModelUnbindStateReq { state_id: init_state_id.clone() },
         )
         .await;
-    let _: Void = client
-        .post(
-            &format!("/cc/model/{}/bind_state", &model_id),
-            &FlowModelBindStateReq {
-                state_id: init_state_id.clone(),
-            },
-        )
-        .await;
+    let _: Void = client.post(&format!("/cc/model/{}/bind_state", &model_id), &FlowModelBindStateReq { state_id: init_state_id.clone() }).await;
     // get model detail
     let model_agg_old: FlowModelAggResp = client.get(&format!("/cc/model/{}", &model_id)).await;
     // Set initial state
@@ -84,7 +75,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
         )
         .await;
     // modify transitions
-    let trans_modify = model_agg_old.states.get(&init_state_id).unwrap().transitions[0].clone();
+    let trans_modify = model_agg_old.states.first().unwrap().transitions[0].clone();
     let _: Void = client
         .patch(
             &format!("/cc/model/{}", model_id),
@@ -111,7 +102,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
         )
         .await;
     let mut model_agg_new: FlowModelAggResp = client.get(&format!("/cc/model/{}", model_id)).await;
-    assert!(!model_agg_new.states.get_mut(&init_state_id).unwrap().transitions.iter_mut().any(|trans| trans.transfer_by_auto).is_empty());
+    assert!(!model_agg_new.states.first_mut().unwrap().transitions.iter_mut().any(|trans| trans.transfer_by_auto).is_empty());
 
     // // Add some transitions
     // let _: Void = client
