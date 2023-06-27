@@ -70,6 +70,7 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
             icon: Set(add_req.icon.as_ref().unwrap_or(&"".to_string()).to_string()),
             info: Set(add_req.info.as_ref().unwrap_or(&"".to_string()).to_string()),
             init_state_id: Set(add_req.init_state_id.to_string()),
+            rel_template_id: Set(add_req.rel_template_id.as_ref().unwrap_or(&"".to_string()).to_string()),
             tag: Set(add_req.tag.clone()),
             rel_model_id: Set(add_req.rel_model_id.as_ref().unwrap_or(&"".to_string()).to_string()),
             template: Set(add_req.template),
@@ -77,16 +78,13 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
         })
     }
 
-    async fn before_add_item(add_req: &mut FlowModelAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    async fn before_add_item(_add_req: &mut FlowModelAddReq, _funs: &TardisFunsInst, _ctx: &TardisContext) -> TardisResult<()> {
         Ok(())
     }
 
     async fn after_add_item(flow_model_id: &str, add_req: &mut FlowModelAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         if let Some(transitions) = &add_req.transitions {
             Self::add_transitions(flow_model_id, transitions, funs, ctx).await?;
-        }
-        if let Some(rel_template_id) = &add_req.rel_template_id {
-            FlowRelServ::add_simple_rel(&FlowRelKind::FlowTemplateModel, rel_template_id, flow_model_id, None, None, false, true, funs, ctx).await?;
         }
 
         Ok(())
@@ -145,6 +143,7 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
         query.column((flow_model::Entity, flow_model::Column::Info));
         query.column((flow_model::Entity, flow_model::Column::InitStateId));
         query.column((flow_model::Entity, flow_model::Column::Tag));
+        query.column((flow_model::Entity, flow_model::Column::RelTemplateId));
         query.expr_as(Expr::val(json! {()}), Alias::new("transitions"));
         if let Some(tag) = filter.tag.clone() {
             query.and_where(Expr::col(flow_model::Column::Tag).eq(tag));
@@ -724,6 +723,7 @@ impl FlowModelServ {
             icon: model_detail.icon,
             info: model_detail.info,
             init_state_id: model_detail.init_state_id,
+            rel_template_id: model_detail.rel_template_id,
             states,
             own_paths: model_detail.own_paths,
             owner: model_detail.owner,
@@ -744,19 +744,14 @@ impl FlowModelServ {
             ..ctx.clone()
         };
         let models = if let Some(template_id) = &template_id {
-            // Since the default template is not bound to an association, you can use empty down_paths to find the association through the rel table 
-            // 因为默认模板没有绑定关联关系，所以通过rel表查找关联关系可以使用空own_paths
-            let model_ids_by_temp_id = FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowTemplateModel, template_id, None, None, funs, &global_ctx)
-                .await?
-                .iter()
-                .map(|rel| rel.rel_id.clone())
-                .collect::<Vec<_>>();
+            // Since the default template is not bound to model, you can use global_ctx to find the association through the template_id
+            // 因为默认模板没有绑定模型，所以通过template_id查找模型可以使用global_ctx
             FlowModelServ::paginate_items(
                 &FlowModelFilterReq {
                     basic: RbumBasicFilterReq {
-                        ids: Some(model_ids_by_temp_id),
                         ..Default::default()
                     },
+                    rel_template_id:Some(template_id.clone()),
                     ..Default::default()
                 },
                 1,
@@ -764,7 +759,7 @@ impl FlowModelServ {
                 None,
                 None,
                 funs,
-                &global_ctx,
+                ctx,
             )
             .await?
         } else {
@@ -775,13 +770,14 @@ impl FlowModelServ {
                         ..Default::default()
                     },
                     tag: Some(tags[0].try_into()?),
+                    ..Default::default()
                 },
                 1,
                 20,
                 None,
                 None,
                 funs,
-                &ctx,
+                ctx,
             )
             .await?
         };
@@ -812,6 +808,7 @@ impl FlowModelServ {
                             own_paths: Some("".to_string()),
                             ..Default::default()
                         },
+                        ..Default::default()
                     },
                     1,
                     1,

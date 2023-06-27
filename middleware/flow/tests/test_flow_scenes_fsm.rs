@@ -49,8 +49,9 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
     let states: TardisPage<FlowStateSummaryResp> = client.get("/cc/state?tag=TICKET&is_global=true&enabled=true&page_number=1&page_size=100").await;
     let init_state_id = states.records[0].id.clone();
 
+    let template_id = "mock_template_id".to_string();
     // 1.Get model based on template id
-    let result: HashMap<String, FlowTemplateModelResp> = client.get("/cc/model/get_models?tag_ids=TICKET").await;
+    let result: HashMap<String, FlowTemplateModelResp> = client.get(&format!("/cc/model/get_models?tag_ids=TICKET&temp_id={}", template_id)).await;
 
     let model_id = result.get("TICKET").unwrap().id.clone();
     // Delete and add some transitions
