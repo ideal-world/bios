@@ -90,7 +90,7 @@ pub struct FlowModelDetailResp {
 
     pub init_state_id: String,
     pub rel_template_id: String,
-    
+
     // TODO
     pub transitions: Option<Value>,
 
@@ -144,7 +144,7 @@ pub struct FlowModelAggResp {
     pub init_state_id: String,
     pub rel_template_id: String,
 
-    pub states: HashMap<String, FlowStateAggResp>,
+    pub states: Vec<FlowStateAggResp>,
 
     pub own_paths: String,
     pub owner: String,

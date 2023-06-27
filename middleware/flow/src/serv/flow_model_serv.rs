@@ -5,6 +5,7 @@ use bios_basic::rbum::{
         rbum_filer_dto::RbumBasicFilterReq,
         rbum_item_dto::{RbumItemKernelAddReq, RbumItemKernelModifyReq},
     },
+    rbum_enumeration::{RbumDataTypeKind, RbumWidgetTypeKind},
     serv::{
         rbum_crud_serv::{ID_FIELD, NAME_FIELD, REL_DOMAIN_ID_FIELD, REL_KIND_ID_FIELD},
         rbum_item_serv::{RbumItemCrudOperation, RBUM_ITEM_TABLE},
@@ -31,6 +32,7 @@ use crate::{
         },
         flow_state_dto::{FlowStateAddReq, FlowStateFilterReq, FlowSysStateKind},
         flow_transition_dto::{FlowTransitionAddReq, FlowTransitionDetailResp, FlowTransitionModifyReq},
+        flow_var_dto::FlowVarInfo,
     },
     flow_config::FlowBasicInfoManager,
     serv::flow_state_serv::FlowStateServ,
@@ -147,6 +149,9 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
         query.expr_as(Expr::val(json! {()}), Alias::new("transitions"));
         if let Some(tag) = filter.tag.clone() {
             query.and_where(Expr::col(flow_model::Column::Tag).eq(tag));
+        }
+        if let Some(rel_template_id) = filter.rel_template_id.clone() {
+            query.and_where(Expr::col(flow_model::Column::RelTemplateId).eq(rel_template_id));
         }
         Ok(())
     }
@@ -397,6 +402,244 @@ impl FlowModelServ {
                     },
                 ]),
                 tag: Some(FlowTagKind::TICKET),
+                scope_level: None,
+                disabled: None,
+                template: true,
+                rel_model_id: None,
+            },
+            funs,
+            ctx,
+        )
+        .await?;
+        // add rel
+        FlowRelServ::add_simple_rel(&FlowRelKind::FlowModelState, &model_id, &pending_state_id, None, None, false, false, funs, ctx).await?;
+        FlowRelServ::add_simple_rel(&FlowRelKind::FlowModelState, &model_id, &handling_state_id, None, None, false, false, funs, ctx).await?;
+        FlowRelServ::add_simple_rel(&FlowRelKind::FlowModelState, &model_id, &confirmed_state_id, None, None, false, false, funs, ctx).await?;
+        FlowRelServ::add_simple_rel(&FlowRelKind::FlowModelState, &model_id, &closed_state_id, None, None, false, false, funs, ctx).await?;
+        FlowRelServ::add_simple_rel(&FlowRelKind::FlowModelState, &model_id, &revoked_state_id, None, None, false, false, funs, ctx).await?;
+
+        // REQ / 需求工作流
+        // add state
+        let pending_state_id = FlowStateServ::add_item(
+            &mut FlowStateAddReq {
+                id_prefix: None,
+                name: Some("待开始".into()),
+                icon: None,
+                sys_state: FlowSysStateKind::Start,
+                info: None,
+                state_kind: None,
+                kind_conf: None,
+                template: None,
+                rel_state_id: None,
+                tags: Some(vec!["TICKET".to_string()]),
+                scope_level: None,
+                disabled: None,
+            },
+            funs,
+            ctx,
+        )
+        .await?;
+        let handling_state_id = FlowStateServ::add_item(
+            &mut FlowStateAddReq {
+                id_prefix: None,
+                name: Some("进行中".into()),
+                icon: None,
+                sys_state: FlowSysStateKind::Progress,
+                info: None,
+                state_kind: None,
+                kind_conf: None,
+                template: None,
+                rel_state_id: None,
+                tags: Some(vec!["REQ".to_string()]),
+                scope_level: None,
+                disabled: None,
+            },
+            funs,
+            ctx,
+        )
+        .await?;
+        let closed_state_id = FlowStateServ::add_item(
+            &mut FlowStateAddReq {
+                id_prefix: None,
+                name: Some("已关闭".into()),
+                icon: None,
+                sys_state: FlowSysStateKind::Finish,
+                info: None,
+                state_kind: None,
+                kind_conf: None,
+                template: None,
+                rel_state_id: None,
+                tags: Some(vec!["REQ".to_string()]),
+                scope_level: None,
+                disabled: None,
+            },
+            funs,
+            ctx,
+        )
+        .await?;
+        let finished_state_id = FlowStateServ::add_item(
+            &mut FlowStateAddReq {
+                id_prefix: None,
+                name: Some("已完成".into()),
+                icon: None,
+                sys_state: FlowSysStateKind::Finish,
+                info: None,
+                state_kind: None,
+                kind_conf: None,
+                template: None,
+                rel_state_id: None,
+                tags: Some(vec!["REQ".to_string()]),
+                scope_level: None,
+                disabled: None,
+            },
+            funs,
+            ctx,
+        )
+        .await?;
+        // add model
+        let model_id = Self::add_item(
+            &mut FlowModelAddReq {
+                name: "默认需求流程".into(),
+                init_state_id: pending_state_id.clone(),
+                rel_template_id: None,
+                icon: None,
+                info: None,
+                transitions: Some(vec![
+                    FlowTransitionAddReq {
+                        from_flow_state_id: pending_state_id.clone(),
+                        to_flow_state_id: handling_state_id.clone(),
+                        name: Some("开始".into()),
+                        transfer_by_auto: None,
+                        transfer_by_timer: None,
+                        guard_by_creator: None,
+                        guard_by_his_operators: None,
+                        guard_by_assigned: Some(true),
+                        guard_by_spec_account_ids: None,
+                        guard_by_spec_role_ids: None,
+                        guard_by_other_conds: None,
+                        vars_collect: Some(vec![FlowVarInfo {
+                            name: "负责人".to_string(),
+                            label: "负责人".to_string(),
+                            data_type: RbumDataTypeKind::String,
+                            widget_type: RbumWidgetTypeKind::Select,
+                            note: None,
+                            sort: None,
+                            hide: None,
+                            secret: None,
+                            show_by_conds: None,
+                            widget_columns: None,
+                            default_value: None,
+                            dyn_default_value: None,
+                            options: None,
+                            dyn_options: None,
+                            required: None,
+                            min_length: None,
+                            max_length: None,
+                            action: None,
+                            ext: None,
+                            parent_attr_name: None,
+                        }]),
+                        action_by_pre_callback: None,
+                        action_by_post_callback: None,
+                    },
+                    FlowTransitionAddReq {
+                        from_flow_state_id: pending_state_id.clone(),
+                        to_flow_state_id: closed_state_id.clone(),
+                        name: Some("关闭".into()),
+                        transfer_by_auto: None,
+                        transfer_by_timer: None,
+                        guard_by_creator: None,
+                        guard_by_his_operators: None,
+                        guard_by_assigned: Some(true),
+                        guard_by_spec_account_ids: None,
+                        guard_by_spec_role_ids: None,
+                        guard_by_other_conds: None,
+                        vars_collect: None,
+                        action_by_pre_callback: None,
+                        action_by_post_callback: None,
+                    },
+                    FlowTransitionAddReq {
+                        from_flow_state_id: handling_state_id.clone(),
+                        to_flow_state_id: finished_state_id.clone(),
+                        name: Some("完成".into()),
+                        transfer_by_auto: None,
+                        transfer_by_timer: None,
+                        guard_by_creator: None,
+                        guard_by_his_operators: None,
+                        guard_by_assigned: Some(true),
+                        guard_by_spec_account_ids: None,
+                        guard_by_spec_role_ids: None,
+                        guard_by_other_conds: None,
+                        vars_collect: None,
+                        action_by_pre_callback: None,
+                        action_by_post_callback: None,
+                    },
+                    FlowTransitionAddReq {
+                        from_flow_state_id: handling_state_id.clone(),
+                        to_flow_state_id: closed_state_id.clone(),
+                        name: Some("关闭".into()),
+                        transfer_by_auto: None,
+                        transfer_by_timer: None,
+                        guard_by_creator: None,
+                        guard_by_his_operators: None,
+                        guard_by_assigned: Some(true),
+                        guard_by_spec_account_ids: None,
+                        guard_by_spec_role_ids: None,
+                        guard_by_other_conds: None,
+                        vars_collect: None,
+                        action_by_pre_callback: None,
+                        action_by_post_callback: None,
+                    },
+                    FlowTransitionAddReq {
+                        from_flow_state_id: finished_state_id.clone(),
+                        to_flow_state_id: handling_state_id.clone(),
+                        name: Some("重新处理".into()),
+                        transfer_by_auto: None,
+                        transfer_by_timer: None,
+                        guard_by_creator: None,
+                        guard_by_his_operators: None,
+                        guard_by_assigned: Some(true),
+                        guard_by_spec_account_ids: None,
+                        guard_by_spec_role_ids: None,
+                        guard_by_other_conds: None,
+                        vars_collect: None,
+                        action_by_pre_callback: None,
+                        action_by_post_callback: None,
+                    },
+                    FlowTransitionAddReq {
+                        from_flow_state_id: finished_state_id.clone(),
+                        to_flow_state_id: closed_state_id.clone(),
+                        name: Some("关闭".into()),
+                        transfer_by_auto: None,
+                        transfer_by_timer: None,
+                        guard_by_creator: None,
+                        guard_by_his_operators: None,
+                        guard_by_assigned: Some(true),
+                        guard_by_spec_account_ids: None,
+                        guard_by_spec_role_ids: None,
+                        guard_by_other_conds: None,
+                        vars_collect: None,
+                        action_by_pre_callback: None,
+                        action_by_post_callback: None,
+                    },
+                    FlowTransitionAddReq {
+                        from_flow_state_id: closed_state_id.clone(),
+                        to_flow_state_id: pending_state_id.clone(),
+                        name: Some("激活".into()),
+                        transfer_by_auto: None,
+                        transfer_by_timer: None,
+                        guard_by_creator: None,
+                        guard_by_his_operators: None,
+                        guard_by_assigned: Some(true),
+                        guard_by_spec_account_ids: None,
+                        guard_by_spec_role_ids: None,
+                        guard_by_other_conds: None,
+                        vars_collect: None,
+                        action_by_pre_callback: None,
+                        action_by_post_callback: None,
+                    },
+                ]),
+                tag: Some(FlowTagKind::REQ),
                 scope_level: None,
                 disabled: None,
                 template: true,
@@ -706,7 +949,7 @@ impl FlowModelServ {
             .iter()
             .map(|rel| (rel.rel_id.clone(), rel.rel_name.clone()))
             .collect::<Vec<_>>();
-        let mut states = HashMap::new();
+        let mut states = Vec::new();
         for (state_id, state_name) in state_ids {
             let state_detail = FlowStateAggResp {
                 id: state_id.clone(),
@@ -714,7 +957,7 @@ impl FlowModelServ {
                 is_init: model_detail.init_state_id == state_id,
                 transitions: model_detail.transitions().into_iter().filter(|transition| transition.from_flow_state_id == state_id.clone()).collect_vec(),
             };
-            states.insert(state_id, state_detail);
+            states.push(state_detail);
         }
 
         Ok(FlowModelAggResp {
@@ -748,10 +991,8 @@ impl FlowModelServ {
             // 因为默认模板没有绑定模型，所以通过template_id查找模型可以使用global_ctx
             FlowModelServ::paginate_items(
                 &FlowModelFilterReq {
-                    basic: RbumBasicFilterReq {
-                        ..Default::default()
-                    },
-                    rel_template_id:Some(template_id.clone()),
+                    basic: RbumBasicFilterReq { ..Default::default() },
+                    rel_template_id: Some(template_id.clone()),
                     ..Default::default()
                 },
                 1,
@@ -766,9 +1007,7 @@ impl FlowModelServ {
             // If no template_id is passed, the real own_paths are used
             FlowModelServ::paginate_items(
                 &FlowModelFilterReq {
-                    basic: RbumBasicFilterReq {
-                        ..Default::default()
-                    },
+                    basic: RbumBasicFilterReq { ..Default::default() },
                     tag: Some(tags[0].try_into()?),
                     ..Default::default()
                 },
@@ -781,8 +1020,6 @@ impl FlowModelServ {
             )
             .await?
         };
-
-        
 
         // First iterate over the models
         for model in models.records {
@@ -820,15 +1057,20 @@ impl FlowModelServ {
                 .await?
                 .records
                 .pop()
-                .ok_or_else(|| funs.err().internal_error("flow_model_serv", "get_models", "default model is not exist", "404-default-model-mot-exist"))?.id;
+                .ok_or_else(|| funs.err().internal_error("flow_model_serv", "get_models", "default model is not exist", "404-default-model-mot-exist"))?
+                .id;
                 // copy custom model
                 let model_id = Self::copy_custom_model(&default_model_id, template_id.clone(), funs, ctx).await?;
-                let custom_model = Self::get_item(&model_id, &FlowModelFilterReq {
-                    basic: RbumBasicFilterReq {
+                let custom_model = Self::get_item(
+                    &model_id,
+                    &FlowModelFilterReq {
+                        basic: RbumBasicFilterReq { ..Default::default() },
                         ..Default::default()
                     },
-                    ..Default::default()
-                }, funs, ctx).await?;
+                    funs,
+                    ctx,
+                )
+                .await?;
                 result.insert(
                     tag.to_string(),
                     FlowTemplateModelResp {
@@ -850,13 +1092,19 @@ impl FlowModelServ {
             own_paths: "".to_string(),
             ..ctx.clone()
         };
-        let default_model = Self::get_item(default_model_id, &FlowModelFilterReq {
-            basic: RbumBasicFilterReq {
-                own_paths: Some("".to_string()),
+        let default_model = Self::get_item(
+            default_model_id,
+            &FlowModelFilterReq {
+                basic: RbumBasicFilterReq {
+                    own_paths: Some("".to_string()),
+                    ..Default::default()
+                },
                 ..Default::default()
             },
-            ..Default::default()
-        }, funs, &global_ctx).await?;
+            funs,
+            &global_ctx,
+        )
+        .await?;
         // add model
         let transitions = default_model.transitions();
         let model_id = Self::add_item(
@@ -928,17 +1176,11 @@ impl FlowModelServ {
 
         // modify
         Self::modify_item(&current_model.id, modify_req, funs, ctx).await?;
-        
+
         Ok(())
     }
 
-    pub async fn bind_state(
-        flow_rel_kind: &FlowRelKind,
-        flow_model_id: &str,
-        flow_state_id: &str,
-        funs: &TardisFunsInst,
-        ctx: &TardisContext,
-    ) -> TardisResult<()> {
+    pub async fn bind_state(flow_rel_kind: &FlowRelKind, flow_model_id: &str, flow_state_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let current_model = Self::get_item(
             flow_model_id,
             &FlowModelFilterReq {
@@ -966,13 +1208,7 @@ impl FlowModelServ {
         Ok(())
     }
 
-    pub async fn unbind_state(
-        flow_rel_kind: &FlowRelKind,
-        flow_model_id: &str,
-        flow_state_id: &str,
-        funs: &TardisFunsInst,
-        ctx: &TardisContext,
-    ) -> TardisResult<()> {
+    pub async fn unbind_state(flow_rel_kind: &FlowRelKind, flow_model_id: &str, flow_state_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let current_model = Self::get_item(
             flow_model_id,
             &FlowModelFilterReq {
@@ -994,7 +1230,7 @@ impl FlowModelServ {
                 "The own_paths of current mode isn't the own_paths of ctx",
                 "500-mx-flow-internal-error",
             ));
-        } 
+        }
         FlowRelServ::delete_simple_rel(flow_rel_kind, flow_model_id, flow_state_id, funs, ctx).await?;
         Ok(())
     }

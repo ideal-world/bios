@@ -17,7 +17,6 @@ pub struct FlowVarInfo {
     pub name: String,
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub label: String,
-    #[oai(validator(min_length = "2", max_length = "2000"))]
     pub note: Option<String>,
     pub sort: Option<i64>,
     pub hide: Option<bool>,
