@@ -90,7 +90,6 @@ pub struct FlowModelDetailResp {
 
     pub init_state_id: String,
     pub rel_template_id: String,
-
     // TODO
     pub transitions: Option<Value>,
 
