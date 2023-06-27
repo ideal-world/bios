@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 
-use bios_basic::rbum::rbum_enumeration::{RbumDataTypeKind, RbumWidgetTypeKind};
 use bios_basic::test::test_http_client::TestHttpClient;
 use bios_mw_flow::dto::flow_inst_dto::{
     FlowInstFindNextTransitionResp, FlowInstFindNextTransitionsReq, FlowInstFindStateAndTransitionsReq, FlowInstFindStateAndTransitionsResp, FlowInstStartReq, FlowInstTransferReq,
@@ -36,24 +35,24 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
     client.set_auth(&ctx)?;
 
     // find default model
-    let mut models: TardisPage<FlowModelSummaryResp> = client.get("/cc/model/?tag=TICKET&page_number=1&page_size=100").await;
+    let mut models: TardisPage<FlowModelSummaryResp> = client.get("/cc/model/?tag=REQ&page_number=1&page_size=100").await;
     let init_model = models.records.pop().unwrap();
     info!("models: {:?}", init_model);
-    assert_eq!(&init_model.name, "默认工单模板");
+    assert_eq!(&init_model.name, "默认需求模板");
     assert_eq!(&init_model.owner, "");
 
     // mock tenant content
     ctx.own_paths = "t1".to_string();
     client.set_auth(&ctx)?;
     // Get states list
-    let states: TardisPage<FlowStateSummaryResp> = client.get("/cc/state?tag=TICKET&is_global=true&enabled=true&page_number=1&page_size=100").await;
+    let states: TardisPage<FlowStateSummaryResp> = client.get("/cc/state?tag=REQ&is_global=true&enabled=true&page_number=1&page_size=100").await;
     let init_state_id = states.records[0].id.clone();
 
     let template_id = "mock_template_id".to_string();
     // 1.Get model based on template id
-    let result: HashMap<String, FlowTemplateModelResp> = client.get(&format!("/cc/model/get_models?tag_ids=TICKET&temp_id={}", template_id)).await;
+    let result: HashMap<String, FlowTemplateModelResp> = client.get(&format!("/cc/model/get_models?tag_ids=REQ&temp_id={}", template_id)).await;
 
-    let model_id = result.get("TICKET").unwrap().id.clone();
+    let model_id = result.get("REQ").unwrap().id.clone();
     // Delete and add some transitions
     let _: Void = client
         .post(
