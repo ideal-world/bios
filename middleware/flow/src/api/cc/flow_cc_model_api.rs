@@ -14,7 +14,7 @@ use crate::dto::flow_model_dto::{
 };
 use crate::flow_constants;
 use crate::serv::flow_model_serv::FlowModelServ;
-use crate::serv::flow_rel_serv::{FlowRelKind, FlowRelServ};
+use crate::serv::flow_rel_serv::FlowRelKind;
 
 pub struct FlowCcModelApi;
 

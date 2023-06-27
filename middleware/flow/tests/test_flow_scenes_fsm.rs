@@ -39,7 +39,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
     let mut models: TardisPage<FlowModelSummaryResp> = client.get("/cc/model/?tag=TICKET&page_number=1&page_size=100").await;
     let init_model = models.records.pop().unwrap();
     info!("models: {:?}", init_model);
-    assert_eq!(&init_model.name, "默认工单流程");
+    assert_eq!(&init_model.name, "默认工单模板");
     assert_eq!(&init_model.owner, "");
 
     // mock tenant content

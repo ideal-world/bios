@@ -5,7 +5,7 @@ use bios_basic::rbum::{
         rbum_filer_dto::RbumBasicFilterReq,
         rbum_item_dto::{RbumItemKernelAddReq, RbumItemKernelModifyReq},
     },
-    rbum_enumeration::{RbumDataTypeKind, RbumWidgetTypeKind},
+    rbum_enumeration::{RbumDataTypeKind, RbumWidgetTypeKind, RbumScopeLevelKind},
     serv::{
         rbum_crud_serv::{ID_FIELD, NAME_FIELD, REL_DOMAIN_ID_FIELD, REL_KIND_ID_FIELD},
         rbum_item_serv::{RbumItemCrudOperation, RBUM_ITEM_TABLE},
@@ -31,7 +31,7 @@ use crate::{
             FlowTemplateModelResp,
         },
         flow_state_dto::{FlowStateAddReq, FlowStateFilterReq, FlowSysStateKind},
-        flow_transition_dto::{FlowTransitionAddReq, FlowTransitionDetailResp, FlowTransitionModifyReq},
+        flow_transition_dto::{FlowTransitionAddReq, FlowTransitionDetailResp, FlowTransitionInitInfo, FlowTransitionModifyReq},
         flow_var_dto::FlowVarInfo,
     },
     flow_config::FlowBasicInfoManager,
@@ -197,211 +197,76 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
 }
 
 impl FlowModelServ {
-    pub async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        // Work Order
-        // add state
-        let pending_state_id = FlowStateServ::add_item(
-            &mut FlowStateAddReq {
-                id_prefix: None,
-                name: Some("待处理".into()),
-                icon: None,
-                sys_state: FlowSysStateKind::Start,
-                info: None,
-                state_kind: None,
-                kind_conf: None,
-                template: None,
-                rel_state_id: None,
-                tags: Some(vec!["TICKET".to_string()]),
-                scope_level: None,
-                disabled: None,
-            },
-            funs,
-            ctx,
-        )
-        .await?;
-        let handling_state_id = FlowStateServ::add_item(
-            &mut FlowStateAddReq {
-                id_prefix: None,
-                name: Some("处理中".into()),
-                icon: None,
-                sys_state: FlowSysStateKind::Progress,
-                info: None,
-                state_kind: None,
-                kind_conf: None,
-                template: None,
-                rel_state_id: None,
-                tags: Some(vec!["TICKET".to_string()]),
-                scope_level: None,
-                disabled: None,
-            },
-            funs,
-            ctx,
-        )
-        .await?;
-        let confirmed_state_id = FlowStateServ::add_item(
-            &mut FlowStateAddReq {
-                id_prefix: None,
-                name: Some("待确认".into()),
-                icon: None,
-                sys_state: FlowSysStateKind::Progress,
-                info: None,
-                state_kind: None,
-                kind_conf: None,
-                template: None,
-                rel_state_id: None,
-                tags: Some(vec!["TICKET".to_string()]),
-                scope_level: None,
-                disabled: None,
-            },
-            funs,
-            ctx,
-        )
-        .await?;
-        let closed_state_id = FlowStateServ::add_item(
-            &mut FlowStateAddReq {
-                id_prefix: None,
-                name: Some("已关闭".into()),
-                icon: None,
-                sys_state: FlowSysStateKind::Finish,
-                info: None,
-                state_kind: None,
-                kind_conf: None,
-                template: None,
-                rel_state_id: None,
-                tags: Some(vec!["TICKET".to_string()]),
-                scope_level: None,
-                disabled: None,
-            },
-            funs,
-            ctx,
-        )
-        .await?;
-        let revoked_state_id = FlowStateServ::add_item(
-            &mut FlowStateAddReq {
-                id_prefix: None,
-                name: Some("已撤销".into()),
-                icon: None,
-                sys_state: FlowSysStateKind::Finish,
-                info: None,
-                state_kind: None,
-                kind_conf: None,
-                template: None,
-                rel_state_id: None,
-                tags: Some(vec!["TICKET".to_string()]),
-                scope_level: None,
-                disabled: None,
-            },
-            funs,
-            ctx,
-        )
-        .await?;
+    pub async fn init_model(
+        tag: &str,
+        states: Vec<(&str, FlowSysStateKind)>,
+        model_name: &str,
+        transitions: Vec<FlowTransitionInitInfo>,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<()> {
+        let mut states_map = HashMap::new();
+        let mut init_state_id = "".to_string();
+        for (state_name, sys_state) in states.clone() {
+            let state_id = FlowStateServ::add_item(
+                &mut FlowStateAddReq {
+                    id_prefix: None,
+                    name: Some(state_name.into()),
+                    icon: None,
+                    sys_state,
+                    info: None,
+                    state_kind: None,
+                    kind_conf: None,
+                    template: None,
+                    rel_state_id: None,
+                    tags: Some(vec![tag.to_string()]),
+                    scope_level: Some(RbumScopeLevelKind::Root),
+                    disabled: None,
+                },
+                funs,
+                ctx,
+            )
+            .await?;
+            if init_state_id.is_empty() {
+                init_state_id = state_id.clone();
+            }
+            states_map.insert(state_name, state_id);
+        }
+        let mut add_transitions = vec![];
+        for transition in transitions {
+            add_transitions.push(FlowTransitionAddReq {
+                from_flow_state_id: states_map
+                    .get(transition.from_flow_state_name.as_str())
+                    .ok_or_else(|| funs.err().internal_error("flow_model_serv", "init_model", "from_flow_state_name is illegal", "500-flow-state-illegal"))?
+                    .to_string(),
+                to_flow_state_id: states_map
+                    .get(transition.to_flow_state_name.as_str())
+                    .ok_or_else(|| funs.err().internal_error("flow_model_serv", "init_model", "to_flow_state_name is illegal", "500-flow-state-illegal"))?
+                    .to_string(),
+                name: Some(transition.name.into()),
+                transfer_by_auto: transition.transfer_by_auto,
+                transfer_by_timer: transition.transfer_by_timer,
+                guard_by_creator: transition.guard_by_creator,
+                guard_by_his_operators: transition.guard_by_his_operators,
+                guard_by_assigned: transition.guard_by_assigned,
+                guard_by_spec_account_ids: transition.guard_by_spec_account_ids,
+                guard_by_spec_role_ids: transition.guard_by_spec_role_ids,
+                guard_by_other_conds: transition.guard_by_other_conds,
+                vars_collect: transition.vars_collect,
+                action_by_pre_callback: transition.action_by_pre_callback,
+                action_by_post_callback: transition.action_by_post_callback,
+            });
+        }
         // add model
         let model_id = Self::add_item(
             &mut FlowModelAddReq {
-                name: "默认工单流程".into(),
-                init_state_id: pending_state_id.clone(),
+                name: model_name.into(),
+                init_state_id: init_state_id.clone(),
                 rel_template_id: None,
                 icon: None,
                 info: None,
-                transitions: Some(vec![
-                    FlowTransitionAddReq {
-                        from_flow_state_id: pending_state_id.clone(),
-                        to_flow_state_id: handling_state_id.clone(),
-                        name: Some("立即处理".into()),
-                        transfer_by_auto: None,
-                        transfer_by_timer: None,
-                        guard_by_creator: Some(true),
-                        guard_by_his_operators: None,
-                        guard_by_assigned: None,
-                        guard_by_spec_account_ids: None,
-                        guard_by_spec_role_ids: None,
-                        guard_by_other_conds: None,
-                        vars_collect: None,
-                        action_by_pre_callback: None,
-                        action_by_post_callback: None,
-                    },
-                    FlowTransitionAddReq {
-                        from_flow_state_id: pending_state_id.clone(),
-                        to_flow_state_id: revoked_state_id.clone(),
-                        name: Some("撤销".into()),
-                        transfer_by_auto: None,
-                        transfer_by_timer: None,
-                        guard_by_creator: Some(true),
-                        guard_by_his_operators: None,
-                        guard_by_assigned: None,
-                        guard_by_spec_account_ids: None,
-                        guard_by_spec_role_ids: None,
-                        guard_by_other_conds: None,
-                        vars_collect: None,
-                        action_by_pre_callback: None,
-                        action_by_post_callback: None,
-                    },
-                    FlowTransitionAddReq {
-                        from_flow_state_id: handling_state_id.clone(),
-                        to_flow_state_id: confirmed_state_id.clone(),
-                        name: Some("处理完成".into()),
-                        transfer_by_auto: None,
-                        transfer_by_timer: None,
-                        guard_by_creator: None,
-                        guard_by_his_operators: Some(true),
-                        guard_by_assigned: None,
-                        guard_by_spec_account_ids: None,
-                        guard_by_spec_role_ids: None,
-                        guard_by_other_conds: None,
-                        vars_collect: None,
-                        action_by_pre_callback: None,
-                        action_by_post_callback: None,
-                    },
-                    FlowTransitionAddReq {
-                        from_flow_state_id: handling_state_id.clone(),
-                        to_flow_state_id: closed_state_id.clone(),
-                        name: Some("关闭".into()),
-                        transfer_by_auto: None,
-                        transfer_by_timer: None,
-                        guard_by_creator: Some(true),
-                        guard_by_his_operators: None,
-                        guard_by_assigned: None,
-                        guard_by_spec_account_ids: None,
-                        guard_by_spec_role_ids: None,
-                        guard_by_other_conds: None,
-                        vars_collect: None,
-                        action_by_pre_callback: None,
-                        action_by_post_callback: None,
-                    },
-                    FlowTransitionAddReq {
-                        from_flow_state_id: confirmed_state_id.clone(),
-                        to_flow_state_id: closed_state_id.clone(),
-                        name: Some("确认解决".into()),
-                        transfer_by_auto: None,
-                        transfer_by_timer: None,
-                        guard_by_creator: Some(true),
-                        guard_by_his_operators: None,
-                        guard_by_assigned: None,
-                        guard_by_spec_account_ids: None,
-                        guard_by_spec_role_ids: None,
-                        guard_by_other_conds: None,
-                        vars_collect: None,
-                        action_by_pre_callback: None,
-                        action_by_post_callback: None,
-                    },
-                    FlowTransitionAddReq {
-                        from_flow_state_id: confirmed_state_id.clone(),
-                        to_flow_state_id: handling_state_id.clone(),
-                        name: Some("未解决".into()),
-                        transfer_by_auto: None,
-                        transfer_by_timer: None,
-                        guard_by_creator: Some(true),
-                        guard_by_his_operators: None,
-                        guard_by_assigned: None,
-                        guard_by_spec_account_ids: None,
-                        guard_by_spec_role_ids: None,
-                        guard_by_other_conds: None,
-                        vars_collect: None,
-                        action_by_pre_callback: None,
-                        action_by_post_callback: None,
-                    },
-                ]),
-                tag: Some(FlowTagKind::TICKET),
+                transitions: Some(add_transitions),
+                tag: Some(tag.try_into()?),
                 scope_level: None,
                 disabled: None,
                 template: true,
@@ -411,250 +276,260 @@ impl FlowModelServ {
             ctx,
         )
         .await?;
+
         // add rel
-        FlowRelServ::add_simple_rel(&FlowRelKind::FlowModelState, &model_id, &pending_state_id, None, None, false, false, funs, ctx).await?;
-        FlowRelServ::add_simple_rel(&FlowRelKind::FlowModelState, &model_id, &handling_state_id, None, None, false, false, funs, ctx).await?;
-        FlowRelServ::add_simple_rel(&FlowRelKind::FlowModelState, &model_id, &confirmed_state_id, None, None, false, false, funs, ctx).await?;
-        FlowRelServ::add_simple_rel(&FlowRelKind::FlowModelState, &model_id, &closed_state_id, None, None, false, false, funs, ctx).await?;
-        FlowRelServ::add_simple_rel(&FlowRelKind::FlowModelState, &model_id, &revoked_state_id, None, None, false, false, funs, ctx).await?;
+        for (state_name, _) in states {
+            FlowRelServ::add_simple_rel(
+                &FlowRelKind::FlowModelState,
+                &model_id,
+                states_map.get(state_name).ok_or_else(|| funs.err().internal_error("flow_model_serv", "init_model", "to_flow_state_name is illegal", "500-flow-state-illegal"))?,
+                None,
+                None,
+                false,
+                false,
+                funs,
+                ctx,
+            )
+            .await?;
+        }
 
         // REQ / 需求工作流
         // add state
-        let pending_state_id = FlowStateServ::add_item(
-            &mut FlowStateAddReq {
-                id_prefix: None,
-                name: Some("待开始".into()),
-                icon: None,
-                sys_state: FlowSysStateKind::Start,
-                info: None,
-                state_kind: None,
-                kind_conf: None,
-                template: None,
-                rel_state_id: None,
-                tags: Some(vec!["TICKET".to_string()]),
-                scope_level: None,
-                disabled: None,
-            },
-            funs,
-            ctx,
-        )
-        .await?;
-        let handling_state_id = FlowStateServ::add_item(
-            &mut FlowStateAddReq {
-                id_prefix: None,
-                name: Some("进行中".into()),
-                icon: None,
-                sys_state: FlowSysStateKind::Progress,
-                info: None,
-                state_kind: None,
-                kind_conf: None,
-                template: None,
-                rel_state_id: None,
-                tags: Some(vec!["REQ".to_string()]),
-                scope_level: None,
-                disabled: None,
-            },
-            funs,
-            ctx,
-        )
-        .await?;
-        let closed_state_id = FlowStateServ::add_item(
-            &mut FlowStateAddReq {
-                id_prefix: None,
-                name: Some("已关闭".into()),
-                icon: None,
-                sys_state: FlowSysStateKind::Finish,
-                info: None,
-                state_kind: None,
-                kind_conf: None,
-                template: None,
-                rel_state_id: None,
-                tags: Some(vec!["REQ".to_string()]),
-                scope_level: None,
-                disabled: None,
-            },
-            funs,
-            ctx,
-        )
-        .await?;
-        let finished_state_id = FlowStateServ::add_item(
-            &mut FlowStateAddReq {
-                id_prefix: None,
-                name: Some("已完成".into()),
-                icon: None,
-                sys_state: FlowSysStateKind::Finish,
-                info: None,
-                state_kind: None,
-                kind_conf: None,
-                template: None,
-                rel_state_id: None,
-                tags: Some(vec!["REQ".to_string()]),
-                scope_level: None,
-                disabled: None,
-            },
-            funs,
-            ctx,
-        )
-        .await?;
-        // add model
-        let model_id = Self::add_item(
-            &mut FlowModelAddReq {
-                name: "默认需求流程".into(),
-                init_state_id: pending_state_id.clone(),
-                rel_template_id: None,
-                icon: None,
-                info: None,
-                transitions: Some(vec![
-                    FlowTransitionAddReq {
-                        from_flow_state_id: pending_state_id.clone(),
-                        to_flow_state_id: handling_state_id.clone(),
-                        name: Some("开始".into()),
-                        transfer_by_auto: None,
-                        transfer_by_timer: None,
-                        guard_by_creator: None,
-                        guard_by_his_operators: None,
-                        guard_by_assigned: Some(true),
-                        guard_by_spec_account_ids: None,
-                        guard_by_spec_role_ids: None,
-                        guard_by_other_conds: None,
-                        vars_collect: Some(vec![FlowVarInfo {
-                            name: "负责人".to_string(),
-                            label: "负责人".to_string(),
-                            data_type: RbumDataTypeKind::String,
-                            widget_type: RbumWidgetTypeKind::Select,
-                            note: None,
-                            sort: None,
-                            hide: None,
-                            secret: None,
-                            show_by_conds: None,
-                            widget_columns: None,
-                            default_value: None,
-                            dyn_default_value: None,
-                            options: None,
-                            dyn_options: None,
-                            required: None,
-                            min_length: None,
-                            max_length: None,
-                            action: None,
-                            ext: None,
-                            parent_attr_name: None,
-                        }]),
-                        action_by_pre_callback: None,
-                        action_by_post_callback: None,
-                    },
-                    FlowTransitionAddReq {
-                        from_flow_state_id: pending_state_id.clone(),
-                        to_flow_state_id: closed_state_id.clone(),
-                        name: Some("关闭".into()),
-                        transfer_by_auto: None,
-                        transfer_by_timer: None,
-                        guard_by_creator: None,
-                        guard_by_his_operators: None,
-                        guard_by_assigned: Some(true),
-                        guard_by_spec_account_ids: None,
-                        guard_by_spec_role_ids: None,
-                        guard_by_other_conds: None,
-                        vars_collect: None,
-                        action_by_pre_callback: None,
-                        action_by_post_callback: None,
-                    },
-                    FlowTransitionAddReq {
-                        from_flow_state_id: handling_state_id.clone(),
-                        to_flow_state_id: finished_state_id.clone(),
-                        name: Some("完成".into()),
-                        transfer_by_auto: None,
-                        transfer_by_timer: None,
-                        guard_by_creator: None,
-                        guard_by_his_operators: None,
-                        guard_by_assigned: Some(true),
-                        guard_by_spec_account_ids: None,
-                        guard_by_spec_role_ids: None,
-                        guard_by_other_conds: None,
-                        vars_collect: None,
-                        action_by_pre_callback: None,
-                        action_by_post_callback: None,
-                    },
-                    FlowTransitionAddReq {
-                        from_flow_state_id: handling_state_id.clone(),
-                        to_flow_state_id: closed_state_id.clone(),
-                        name: Some("关闭".into()),
-                        transfer_by_auto: None,
-                        transfer_by_timer: None,
-                        guard_by_creator: None,
-                        guard_by_his_operators: None,
-                        guard_by_assigned: Some(true),
-                        guard_by_spec_account_ids: None,
-                        guard_by_spec_role_ids: None,
-                        guard_by_other_conds: None,
-                        vars_collect: None,
-                        action_by_pre_callback: None,
-                        action_by_post_callback: None,
-                    },
-                    FlowTransitionAddReq {
-                        from_flow_state_id: finished_state_id.clone(),
-                        to_flow_state_id: handling_state_id.clone(),
-                        name: Some("重新处理".into()),
-                        transfer_by_auto: None,
-                        transfer_by_timer: None,
-                        guard_by_creator: None,
-                        guard_by_his_operators: None,
-                        guard_by_assigned: Some(true),
-                        guard_by_spec_account_ids: None,
-                        guard_by_spec_role_ids: None,
-                        guard_by_other_conds: None,
-                        vars_collect: None,
-                        action_by_pre_callback: None,
-                        action_by_post_callback: None,
-                    },
-                    FlowTransitionAddReq {
-                        from_flow_state_id: finished_state_id.clone(),
-                        to_flow_state_id: closed_state_id.clone(),
-                        name: Some("关闭".into()),
-                        transfer_by_auto: None,
-                        transfer_by_timer: None,
-                        guard_by_creator: None,
-                        guard_by_his_operators: None,
-                        guard_by_assigned: Some(true),
-                        guard_by_spec_account_ids: None,
-                        guard_by_spec_role_ids: None,
-                        guard_by_other_conds: None,
-                        vars_collect: None,
-                        action_by_pre_callback: None,
-                        action_by_post_callback: None,
-                    },
-                    FlowTransitionAddReq {
-                        from_flow_state_id: closed_state_id.clone(),
-                        to_flow_state_id: pending_state_id.clone(),
-                        name: Some("激活".into()),
-                        transfer_by_auto: None,
-                        transfer_by_timer: None,
-                        guard_by_creator: None,
-                        guard_by_his_operators: None,
-                        guard_by_assigned: Some(true),
-                        guard_by_spec_account_ids: None,
-                        guard_by_spec_role_ids: None,
-                        guard_by_other_conds: None,
-                        vars_collect: None,
-                        action_by_pre_callback: None,
-                        action_by_post_callback: None,
-                    },
-                ]),
-                tag: Some(FlowTagKind::REQ),
-                scope_level: None,
-                disabled: None,
-                template: true,
-                rel_model_id: None,
-            },
-            funs,
-            ctx,
-        )
-        .await?;
-        // add rel
-        FlowRelServ::add_simple_rel(&FlowRelKind::FlowModelState, &model_id, &pending_state_id, None, None, false, false, funs, ctx).await?;
-        FlowRelServ::add_simple_rel(&FlowRelKind::FlowModelState, &model_id, &handling_state_id, None, None, false, false, funs, ctx).await?;
-        FlowRelServ::add_simple_rel(&FlowRelKind::FlowModelState, &model_id, &confirmed_state_id, None, None, false, false, funs, ctx).await?;
-        FlowRelServ::add_simple_rel(&FlowRelKind::FlowModelState, &model_id, &closed_state_id, None, None, false, false, funs, ctx).await?;
-        FlowRelServ::add_simple_rel(&FlowRelKind::FlowModelState, &model_id, &revoked_state_id, None, None, false, false, funs, ctx).await?;
+        // let pending_state_id = FlowStateServ::add_item(
+        //     &mut FlowStateAddReq {
+        //         id_prefix: None,
+        //         name: Some("待开始".into()),
+        //         icon: None,
+        //         sys_state: FlowSysStateKind::Start,
+        //         info: None,
+        //         state_kind: None,
+        //         kind_conf: None,
+        //         template: None,
+        //         rel_state_id: None,
+        //         tags: Some(vec!["TICKET".to_string()]),
+        //         scope_level: None,
+        //         disabled: None,
+        //     },
+        //     funs,
+        //     ctx,
+        // )
+        // .await?;
+        // let handling_state_id = FlowStateServ::add_item(
+        //     &mut FlowStateAddReq {
+        //         id_prefix: None,
+        //         name: Some("进行中".into()),
+        //         icon: None,
+        //         sys_state: FlowSysStateKind::Progress,
+        //         info: None,
+        //         state_kind: None,
+        //         kind_conf: None,
+        //         template: None,
+        //         rel_state_id: None,
+        //         tags: Some(vec!["REQ".to_string()]),
+        //         scope_level: None,
+        //         disabled: None,
+        //     },
+        //     funs,
+        //     ctx,
+        // )
+        // .await?;
+        // let closed_state_id = FlowStateServ::add_item(
+        //     &mut FlowStateAddReq {
+        //         id_prefix: None,
+        //         name: Some("已关闭".into()),
+        //         icon: None,
+        //         sys_state: FlowSysStateKind::Finish,
+        //         info: None,
+        //         state_kind: None,
+        //         kind_conf: None,
+        //         template: None,
+        //         rel_state_id: None,
+        //         tags: Some(vec!["REQ".to_string()]),
+        //         scope_level: None,
+        //         disabled: None,
+        //     },
+        //     funs,
+        //     ctx,
+        // )
+        // .await?;
+        // let finished_state_id = FlowStateServ::add_item(
+        //     &mut FlowStateAddReq {
+        //         id_prefix: None,
+        //         name: Some("已完成".into()),
+        //         icon: None,
+        //         sys_state: FlowSysStateKind::Finish,
+        //         info: None,
+        //         state_kind: None,
+        //         kind_conf: None,
+        //         template: None,
+        //         rel_state_id: None,
+        //         tags: Some(vec!["REQ".to_string()]),
+        //         scope_level: None,
+        //         disabled: None,
+        //     },
+        //     funs,
+        //     ctx,
+        // )
+        // .await?;
+        // // add model
+        // let model_id = Self::add_item(
+        //     &mut FlowModelAddReq {
+        //         name: "默认需求流程".into(),
+        //         init_state_id: pending_state_id.clone(),
+        //         rel_template_id: None,
+        //         icon: None,
+        //         info: None,
+        //         transitions: Some(vec![
+        //             FlowTransitionAddReq {
+        //                 from_flow_state_id: pending_state_id.clone(),
+        //                 to_flow_state_id: handling_state_id.clone(),
+        //                 name: Some("开始".into()),
+        //                 transfer_by_auto: None,
+        //                 transfer_by_timer: None,
+        //                 guard_by_creator: None,
+        //                 guard_by_his_operators: None,
+        //                 guard_by_assigned: Some(true),
+        //                 guard_by_spec_account_ids: None,
+        //                 guard_by_spec_role_ids: None,
+        //                 guard_by_other_conds: None,
+        //                 vars_collect: Some(vec![FlowVarInfo {
+        //                     name: "负责人".to_string(),
+        //                     label: "负责人".to_string(),
+        //                     data_type: RbumDataTypeKind::String,
+        //                     widget_type: RbumWidgetTypeKind::Select,
+        //                     note: None,
+        //                     sort: None,
+        //                     hide: None,
+        //                     secret: None,
+        //                     show_by_conds: None,
+        //                     widget_columns: None,
+        //                     default_value: None,
+        //                     dyn_default_value: None,
+        //                     options: None,
+        //                     dyn_options: None,
+        //                     required: None,
+        //                     min_length: None,
+        //                     max_length: None,
+        //                     action: None,
+        //                     ext: None,
+        //                     parent_attr_name: None,
+        //                 }]),
+        //                 action_by_pre_callback: None,
+        //                 action_by_post_callback: None,
+        //             },
+        //             FlowTransitionAddReq {
+        //                 from_flow_state_id: pending_state_id.clone(),
+        //                 to_flow_state_id: closed_state_id.clone(),
+        //                 name: Some("关闭".into()),
+        //                 transfer_by_auto: None,
+        //                 transfer_by_timer: None,
+        //                 guard_by_creator: None,
+        //                 guard_by_his_operators: None,
+        //                 guard_by_assigned: Some(true),
+        //                 guard_by_spec_account_ids: None,
+        //                 guard_by_spec_role_ids: None,
+        //                 guard_by_other_conds: None,
+        //                 vars_collect: None,
+        //                 action_by_pre_callback: None,
+        //                 action_by_post_callback: None,
+        //             },
+        //             FlowTransitionAddReq {
+        //                 from_flow_state_id: handling_state_id.clone(),
+        //                 to_flow_state_id: finished_state_id.clone(),
+        //                 name: Some("完成".into()),
+        //                 transfer_by_auto: None,
+        //                 transfer_by_timer: None,
+        //                 guard_by_creator: None,
+        //                 guard_by_his_operators: None,
+        //                 guard_by_assigned: Some(true),
+        //                 guard_by_spec_account_ids: None,
+        //                 guard_by_spec_role_ids: None,
+        //                 guard_by_other_conds: None,
+        //                 vars_collect: None,
+        //                 action_by_pre_callback: None,
+        //                 action_by_post_callback: None,
+        //             },
+        //             FlowTransitionAddReq {
+        //                 from_flow_state_id: handling_state_id.clone(),
+        //                 to_flow_state_id: closed_state_id.clone(),
+        //                 name: Some("关闭".into()),
+        //                 transfer_by_auto: None,
+        //                 transfer_by_timer: None,
+        //                 guard_by_creator: None,
+        //                 guard_by_his_operators: None,
+        //                 guard_by_assigned: Some(true),
+        //                 guard_by_spec_account_ids: None,
+        //                 guard_by_spec_role_ids: None,
+        //                 guard_by_other_conds: None,
+        //                 vars_collect: None,
+        //                 action_by_pre_callback: None,
+        //                 action_by_post_callback: None,
+        //             },
+        //             FlowTransitionAddReq {
+        //                 from_flow_state_id: finished_state_id.clone(),
+        //                 to_flow_state_id: handling_state_id.clone(),
+        //                 name: Some("重新处理".into()),
+        //                 transfer_by_auto: None,
+        //                 transfer_by_timer: None,
+        //                 guard_by_creator: None,
+        //                 guard_by_his_operators: None,
+        //                 guard_by_assigned: Some(true),
+        //                 guard_by_spec_account_ids: None,
+        //                 guard_by_spec_role_ids: None,
+        //                 guard_by_other_conds: None,
+        //                 vars_collect: None,
+        //                 action_by_pre_callback: None,
+        //                 action_by_post_callback: None,
+        //             },
+        //             FlowTransitionAddReq {
+        //                 from_flow_state_id: finished_state_id.clone(),
+        //                 to_flow_state_id: closed_state_id.clone(),
+        //                 name: Some("关闭".into()),
+        //                 transfer_by_auto: None,
+        //                 transfer_by_timer: None,
+        //                 guard_by_creator: None,
+        //                 guard_by_his_operators: None,
+        //                 guard_by_assigned: Some(true),
+        //                 guard_by_spec_account_ids: None,
+        //                 guard_by_spec_role_ids: None,
+        //                 guard_by_other_conds: None,
+        //                 vars_collect: None,
+        //                 action_by_pre_callback: None,
+        //                 action_by_post_callback: None,
+        //             },
+        //             FlowTransitionAddReq {
+        //                 from_flow_state_id: closed_state_id.clone(),
+        //                 to_flow_state_id: pending_state_id.clone(),
+        //                 name: Some("激活".into()),
+        //                 transfer_by_auto: None,
+        //                 transfer_by_timer: None,
+        //                 guard_by_creator: None,
+        //                 guard_by_his_operators: None,
+        //                 guard_by_assigned: Some(true),
+        //                 guard_by_spec_account_ids: None,
+        //                 guard_by_spec_role_ids: None,
+        //                 guard_by_other_conds: None,
+        //                 vars_collect: None,
+        //                 action_by_pre_callback: None,
+        //                 action_by_post_callback: None,
+        //             },
+        //         ]),
+        //         tag: Some(FlowTagKind::REQ),
+        //         scope_level: None,
+        //         disabled: None,
+        //         template: true,
+        //         rel_model_id: None,
+        //     },
+        //     funs,
+        //     ctx,
+        // )
+        // .await?;
+        // // add rel
+        // FlowRelServ::add_simple_rel(&FlowRelKind::FlowModelState, &model_id, &pending_state_id, None, None, false, false, funs, ctx).await?;
+        // FlowRelServ::add_simple_rel(&FlowRelKind::FlowModelState, &model_id, &handling_state_id, None, None, false, false, funs, ctx).await?;
+        // FlowRelServ::add_simple_rel(&FlowRelKind::FlowModelState, &model_id, &confirmed_state_id, None, None, false, false, funs, ctx).await?;
+        // FlowRelServ::add_simple_rel(&FlowRelKind::FlowModelState, &model_id, &closed_state_id, None, None, false, false, funs, ctx).await?;
+        // FlowRelServ::add_simple_rel(&FlowRelKind::FlowModelState, &model_id, &revoked_state_id, None, None, false, false, funs, ctx).await?;
 
         Ok(())
     }
@@ -959,7 +834,8 @@ impl FlowModelServ {
             };
             states.push(state_detail);
         }
-
+        states.reverse();
+        
         Ok(FlowModelAggResp {
             id: model_detail.id,
             name: model_detail.name,
