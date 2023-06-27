@@ -1,6 +1,6 @@
-use bios_basic::rbum::rbum_enumeration::{RbumDataTypeKind, RbumWidgetTypeKind};
 use serde::{Deserialize, Serialize};
-use tardis::{serde_json::Value, web::poem_openapi};
+use tardis::{serde_json::Value, web::poem_openapi, db::sea_orm::{self, strum::Display, TryGetable, QueryResult, TryGetError, DbErr}};
+use std::str::FromStr;
 
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
 pub struct FlowVarSimpleInfo {
@@ -37,4 +37,70 @@ pub struct FlowVarInfo {
     #[oai(validator(min_length = "2", max_length = "2000"))]
     pub ext: Option<String>,
     pub parent_attr_name: Option<String>,
+}
+
+#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[derive(poem_openapi::Enum, sea_orm::strum::EnumString)]
+#[serde(rename_all = "UPPERCASE")]
+pub enum RbumDataTypeKind {
+    String,
+    Number,
+    Boolean,
+    Date,
+    DateTime,
+    Json,
+    Strings,
+    Numbers,
+    Booleans,
+    Dates,
+    DateTimes,
+    Array,
+    Label,
+}
+
+impl TryGetable for RbumDataTypeKind {
+    fn try_get(res: &QueryResult, pre: &str, col: &str) -> Result<Self, TryGetError> {
+        let s = String::try_get(res, pre, col)?;
+        RbumDataTypeKind::from_str(&s).map_err(|_| TryGetError::DbErr(DbErr::RecordNotFound(format!("{pre}:{col}"))))
+    }
+
+    fn try_get_by<I: sea_orm::ColIdx>(_res: &QueryResult, _index: I) -> Result<Self, TryGetError> {
+        panic!("not implemented")
+    }
+}
+
+#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[derive(poem_openapi::Enum, sea_orm::strum::EnumString)]
+#[serde(rename_all = "UPPERCASE")]
+pub enum RbumWidgetTypeKind {
+    Input,
+    InputTxt,
+    InputNum,
+    Textarea,
+    Number,
+    Date,
+    DateTime,
+    Upload,
+    Radio,
+    Button,
+    Checkbox,
+    Switch,
+    Select,
+    MultiSelect,
+    Link,
+    CodeEditor,
+    Container, // Display group subtitles, datatype = String, value is empty
+    Control,   // Json fields : all parent_attr_name = current attribute, datatype = Json
+    Group,     // Sub fields : all parent_attr_name = current attribute, datatype = Array, The value of the json array is stored to the current field.
+}
+
+impl TryGetable for RbumWidgetTypeKind {
+    fn try_get(res: &QueryResult, pre: &str, col: &str) -> Result<Self, TryGetError> {
+        let s = String::try_get(res, pre, col)?;
+        RbumWidgetTypeKind::from_str(&s).map_err(|_| TryGetError::DbErr(DbErr::RecordNotFound(format!("{pre}:{col}"))))
+    }
+
+    fn try_get_by<I: sea_orm::ColIdx>(_res: &QueryResult, _index: I) -> Result<Self, TryGetError> {
+        panic!("not implemented")
+    }
 }
