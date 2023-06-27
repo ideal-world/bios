@@ -50,11 +50,11 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
     let init_state_id = states.records[0].id.clone();
 
     // 1.Get model based on template id
-    let _result: HashMap<String, FlowTemplateModelResp> = client.get("/cc/model/get_models?tag_ids=TICKET").await;
+    let result: HashMap<String, FlowTemplateModelResp> = client.get("/cc/model/get_models?tag_ids=TICKET").await;
 
-    let mut model_id = init_model.id.clone();
+    let model_id = result.get("TICKET").unwrap().id.clone();
     // Delete and add some transitions
-    model_id = client
+    let _: Void = client
         .post(
             &format!("/cc/model/{}/unbind_state", &model_id),
             &FlowModelUnbindStateReq {
@@ -62,7 +62,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
             },
         )
         .await;
-    model_id = client
+    let _: Void = client
         .post(
             &format!("/cc/model/{}/bind_state", &model_id),
             &FlowModelBindStateReq {
