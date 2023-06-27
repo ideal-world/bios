@@ -51,8 +51,6 @@ pub struct FlowModelModifyReq {
 
     pub init_state_id: Option<String>,
 
-    pub rel_template_id: Option<String>,
-
     pub template: Option<bool>,
 
     pub add_transitions: Option<Vec<FlowTransitionAddReq>>,
@@ -91,7 +89,8 @@ pub struct FlowModelDetailResp {
     pub info: String,
 
     pub init_state_id: String,
-
+    pub rel_template_id: String,
+    
     // TODO
     pub transitions: Option<Value>,
 
@@ -120,6 +119,7 @@ impl FlowModelDetailResp {
 pub struct FlowModelFilterReq {
     pub basic: RbumBasicFilterReq,
     pub tag: Option<FlowTagKind>,
+    pub rel_template_id: Option<String>,
 }
 
 impl RbumItemFilterFetcher for FlowModelFilterReq {
@@ -142,6 +142,7 @@ pub struct FlowModelAggResp {
     pub info: String,
 
     pub init_state_id: String,
+    pub rel_template_id: String,
 
     pub states: HashMap<String, FlowStateAggResp>,
 

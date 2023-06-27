@@ -76,6 +76,7 @@ impl FlowCcModelApi {
                     ..Default::default()
                 },
                 tag: tag.0,
+                ..Default::default()
             },
             page_number.0,
             page_size.0,
