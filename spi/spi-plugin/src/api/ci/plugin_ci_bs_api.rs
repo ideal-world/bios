@@ -131,7 +131,7 @@ impl PluginCiBsApi {
         TardisResp::ok(result)
     }
 
-    /// Get Plugin Service Rel App/Tenant Support empty
+    /// Exist Plugin Service Rel App/Tenant Support empty
     #[oai(path = "/:id/rel/exist/:app_tenant_id/empty", method = "get")]
     async fn exist_empty_bs_rel_agg(&self, id: Path<String>, app_tenant_id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<bool> {
         let funs = request.tardis_fun_inst();

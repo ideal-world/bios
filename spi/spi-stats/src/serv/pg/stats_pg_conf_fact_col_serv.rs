@@ -64,6 +64,10 @@ pub(crate) async fn add(fact_conf_key: &str, add_req: &StatsConfFactColAddReq, f
         params.push(Value::from(dim_multi_values));
         sql_fields.push("dim_multi_values");
     }
+    if let Some(mes_data_distinct) = add_req.mes_data_distinct {
+        params.push(Value::from(mes_data_distinct));
+        sql_fields.push("mes_data_distinct");
+    }
     if let Some(mes_data_type) = &add_req.mes_data_type {
         params.push(Value::from(mes_data_type.to_string()));
         sql_fields.push("mes_data_type");
@@ -131,6 +135,10 @@ pub(crate) async fn modify(fact_conf_key: &str, fact_col_conf_key: &str, modify_
     if let Some(dim_multi_values) = modify_req.dim_multi_values {
         sql_sets.push(format!("dim_multi_values = ${}", params.len() + 1));
         params.push(Value::from(dim_multi_values));
+    }
+    if let Some(mes_data_distinct) = modify_req.mes_data_distinct {
+        sql_sets.push(format!("mes_data_distinct = ${}", params.len() + 1));
+        params.push(Value::from(mes_data_distinct));
     }
     if let Some(mes_data_type) = &modify_req.mes_data_type {
         sql_sets.push(format!("mes_data_type = ${}", params.len() + 1));
@@ -256,7 +264,7 @@ async fn do_paginate(
     let result = conn
         .query_all(
             &format!(
-                r#"SELECT key, show_name, kind, remark, dim_rel_conf_dim_key, dim_multi_values, mes_data_type, mes_frequency, mes_act_by_dim_conf_keys, rel_conf_fact_and_col_key, create_time, update_time, count(*) OVER() AS total
+                r#"SELECT key, show_name, kind, remark, dim_rel_conf_dim_key, dim_multi_values, mes_data_distinct, mes_data_type, mes_frequency, mes_act_by_dim_conf_keys, rel_conf_fact_and_col_key, create_time, update_time, count(*) OVER() AS total
 FROM {table_name}
 WHERE 
     {}
@@ -285,6 +293,7 @@ WHERE
                 kind: item.try_get("", "kind")?,
                 dim_rel_conf_dim_key: item.try_get("", "dim_rel_conf_dim_key")?,
                 dim_multi_values: item.try_get("", "dim_multi_values")?,
+                mes_data_distinct: item.try_get("", "mes_data_distinct")?,
                 mes_data_type: if item.try_get::<Option<String>>("", "mes_data_type")?.is_none() {
                     None
                 } else {
