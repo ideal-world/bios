@@ -260,7 +260,7 @@ impl IamCpCertApi {
     async fn send_login_mail(&self, login_req: Json<IamCpMailVCodeLoginGenVCodeReq>) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        IamCertMailVCodeServ::send_login_mail(&login_req.0.mail, &login_req.0.tenant_id, &funs).await?;
+        IamCertMailVCodeServ::send_login_mail(&login_req.0.mail, &login_req.0.tenant_id.unwrap_or("".to_string()), &funs).await?;
         funs.commit().await?;
         TardisResp::ok(Void {})
     }
@@ -312,7 +312,7 @@ impl IamCpCertApi {
     async fn send_login_phone(&self, login_req: Json<IamCpPhoneVCodeLoginGenVCodeReq>) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        IamCertPhoneVCodeServ::send_login_phone(&login_req.0.phone, &login_req.0.tenant_id, &funs).await?;
+        IamCertPhoneVCodeServ::send_login_phone(&login_req.0.phone, &login_req.0.tenant_id.unwrap_or("".to_string()), &funs).await?;
         funs.commit().await?;
         TardisResp::ok(Void {})
     }
