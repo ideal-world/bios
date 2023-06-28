@@ -31,6 +31,15 @@ pub async fn delete(tag: &str, key: &str, funs: &TardisFunsInst, ctx: &TardisCon
     panic!("not implemented")
 }
 
-pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<TardisPage<SearchItemSearchResp>> {
+    // let client = funs.bs(ctx).await?.inst::<TardisSearchClient>().0;
+    // let a = client.raw_search(&search_req.tag, r#"{}"#).await?;
+
+    // Ok(TardisPage {
+    //     page_size: search_req.page.size as u64,
+    //     page_number: search_req.page.number as u64,
+    //     total_size: total_size as u64,
+    //     records: result,
+    // })
     todo!()
 }
