@@ -29,6 +29,12 @@ pub struct Model {
     /// 定义每个模块的初始状态
     pub init_state_id: String,
 
+    ///  Associated template / 关联模板
+    ///
+    /// his function is used to associate this template with other templates, e.g. if the template refers to a template, then this association corresponds to the Id of the template
+    /// 此功能用于将该模型与模板关联，比如该模型引用于某个模板，则此关联对应于模板的Id
+    pub rel_template_id: String,
+
     /// Whether it is a template / 是否是模板
     ///
     /// Used as a model for the model to be reused in the process
@@ -39,7 +45,7 @@ pub struct Model {
     ///  Associated model / 关联模型
     ///
     /// his function is used to associate this model with other models, e.g. if the model refers to a template, then this association corresponds to the Id of the template
-    /// 此功能用于将该模型与其他模型关联，比如该模型引用于某个模板，则此关联对应于模板的Id
+    /// 此功能用于将该模型与其他模型关联，比如该模型引用于某个模型，则此关联对应于模型的Id
     #[index]
     pub rel_model_id: String,
     /// Tags / 标签

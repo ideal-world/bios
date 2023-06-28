@@ -29,15 +29,10 @@ impl PluginKindServ {
         if bs.kind_id != add_req.kind_id {
             return Err(funs.err().conflict("plugin_kind", "add_rel", "plugin bs kind mismatch", ""));
         }
-        let mut bs_rel_resp = PluginBsServ::get_bs_rel_agg(&add_req.bs_id, &add_req.app_tenant_id, funs, ctx).await;
-        if bs_rel_resp.is_err() {
-            if let Some(bs_rel) = add_req.bs_rel.clone() {
-                PluginBsServ::add_or_modify_plugin_rel_agg(&add_req.bs_id, &add_req.app_tenant_id, &mut bs_rel.clone(), funs, ctx).await?;
-            } else {
-                return Err(funs.err().conflict("plugin_kind", "add_rel", "plugin bs kind mismatch", ""));
-            }
-            bs_rel_resp = PluginBsServ::get_bs_rel_agg(&add_req.bs_id, &add_req.app_tenant_id, funs, ctx).await;
+        if let Some(bs_rel) = add_req.bs_rel.clone() {
+            PluginBsServ::add_or_modify_plugin_rel_agg(&add_req.bs_id, &add_req.app_tenant_id, &mut bs_rel.clone(), funs, ctx).await?;
         }
+        let bs_rel = PluginBsServ::get_bs_rel_agg(&add_req.bs_id, &add_req.app_tenant_id, funs, ctx).await?;
         if RbumRelServ::count_rbums(
             &RbumRelFilterReq {
                 basic: RbumBasicFilterReq {
@@ -54,23 +49,21 @@ impl PluginKindServ {
             ctx,
         )
         .await?
-            > 0
+            == 0
         {
-            return Err(funs.err().conflict("plugin_kind", "add_rel", "plugin bs kind mismatch", ""));
+            PluginRelServ::add_simple_rel(
+                &PluginAppBindRelKind::PluginAppBindKind,
+                &bing_item_id,
+                &bs_rel.rel.id,
+                None,
+                Some(add_req.kind_id.clone()),
+                false,
+                true,
+                funs,
+                ctx,
+            )
+            .await?;
         }
-        let bs_rel = bs_rel_resp?;
-        PluginRelServ::add_simple_rel(
-            &PluginAppBindRelKind::PluginAppBindKind,
-            &bing_item_id,
-            &bs_rel.rel.id,
-            None,
-            Some(add_req.kind_id.clone()),
-            false,
-            true,
-            funs,
-            ctx,
-        )
-        .await?;
         Ok(())
     }
 

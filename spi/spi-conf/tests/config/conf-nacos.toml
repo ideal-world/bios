@@ -2,6 +2,8 @@
 [csm.spi-reldb]
 [csm.spi-conf]
 token_ttl = 18000
+auth_username = "nacosmocker"
+auth_password = "nacosmocker"
 
 [fw.web_server]
 enabled = true

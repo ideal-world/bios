@@ -1,12 +1,13 @@
 use std::collections::HashMap;
 
-use bios_basic::rbum::rbum_enumeration::{RbumDataTypeKind, RbumWidgetTypeKind};
 use bios_basic::test::test_http_client::TestHttpClient;
 use bios_mw_flow::dto::flow_inst_dto::{
     FlowInstFindNextTransitionResp, FlowInstFindNextTransitionsReq, FlowInstFindStateAndTransitionsReq, FlowInstFindStateAndTransitionsResp, FlowInstStartReq, FlowInstTransferReq,
     FlowInstTransferResp,
 };
-use bios_mw_flow::dto::flow_model_dto::{FlowModelAddReq, FlowModelAggResp, FlowModelBindStateReq, FlowModelModifyReq, FlowModelSummaryResp, FlowModelUnbindStateReq, FlowTagKind};
+use bios_mw_flow::dto::flow_model_dto::{
+    FlowModelAddReq, FlowModelAggResp, FlowModelBindStateReq, FlowModelModifyReq, FlowModelSummaryResp, FlowModelUnbindStateReq, FlowTagKind, FlowTemplateModelResp,
+};
 use bios_mw_flow::dto::flow_state_dto::{FlowStateAddReq, FlowStateSummaryResp, FlowSysStateKind};
 use bios_mw_flow::dto::flow_transition_dto::{FlowTransitionAddReq, FlowTransitionModifyReq};
 use bios_mw_flow::dto::flow_var_dto::FlowVarInfo;
@@ -34,27 +35,34 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
     client.set_auth(&ctx)?;
 
     // find default model
-    let mut models: TardisPage<FlowModelSummaryResp> = client.get("/cc/model/?tag=Ticket&page_number=1&page_size=100").await;
+    let mut models: TardisPage<FlowModelSummaryResp> = client.get("/cc/model/?tag=REQ&page_number=1&page_size=100").await;
     let init_model = models.records.pop().unwrap();
     info!("models: {:?}", init_model);
-    assert_eq!(&init_model.name, "默认工单流程");
+    assert_eq!(&init_model.name, "默认需求模板");
     assert_eq!(&init_model.owner, "");
 
     // mock tenant content
-    ctx.own_paths = "t1/app001".to_string();
+    ctx.own_paths = "t1".to_string();
     client.set_auth(&ctx)?;
     // Get states list
-    let states: TardisPage<FlowStateSummaryResp> = client.get("/cc/state?tag=ticket_states&is_global=true&enabled=true&page_number=1&page_size=100").await;
+    let states: TardisPage<FlowStateSummaryResp> = client.get("/cc/state?tag=REQ&is_global=true&enabled=true&page_number=1&page_size=100").await;
     let init_state_id = states.records[0].id.clone();
 
-    let mut model_id = init_model.id.clone();
+    let template_id = "mock_template_id".to_string();
+    // 1.Get model based on template id
+    let result: HashMap<String, FlowTemplateModelResp> = client.get(&format!("/cc/model/get_models?tag_ids=REQ&temp_id={}", template_id)).await;
+
+    let model_id = result.get("REQ").unwrap().id.clone();
     // Delete and add some transitions
-    for state in states.records {
-        model_id = client.post(&format!("/cc/model/{}/unbind_state", &model_id), &FlowModelUnbindStateReq { state_id: state.id.clone() }).await;
-        model_id = client.post(&format!("/cc/model/{}/bind_state", &model_id), &FlowModelBindStateReq { state_id: state.id.clone() }).await;
-    }
+    let _: Void = client
+        .post(
+            &format!("/cc/model/{}/unbind_state", &model_id),
+            &FlowModelUnbindStateReq { state_id: init_state_id.clone() },
+        )
+        .await;
+    let _: Void = client.post(&format!("/cc/model/{}/bind_state", &model_id), &FlowModelBindStateReq { state_id: init_state_id.clone() }).await;
     // get model detail
-    let model_agg_old: FlowModelAggResp = client.get(&format!("/cc/model/{}", model_id.to_string())).await;
+    let model_agg_old: FlowModelAggResp = client.get(&format!("/cc/model/{}", &model_id)).await;
     // Set initial state
     let _: Void = client
         .patch(
@@ -66,7 +74,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
         )
         .await;
     // modify transitions
-    let trans_modify = model_agg_old.states.get(&init_state_id).unwrap().transitions[0].clone();
+    let trans_modify = model_agg_old.states.first().unwrap().transitions[0].clone();
     let _: Void = client
         .patch(
             &format!("/cc/model/{}", model_id),
@@ -93,8 +101,62 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
         )
         .await;
     let mut model_agg_new: FlowModelAggResp = client.get(&format!("/cc/model/{}", model_id)).await;
-    assert!(!model_agg_new.states.get_mut(&init_state_id).unwrap().transitions.iter_mut().any(|trans| trans.transfer_by_auto).is_empty());
+    assert!(!model_agg_new.states.first_mut().unwrap().transitions.iter_mut().any(|trans| trans.transfer_by_auto).is_empty());
 
+    // Start a instance
+    let inst_id: String = client
+        .post(
+            "/cc/inst",
+            &FlowInstStartReq {
+                tag: FlowTagKind::TICKET,
+                create_vars: None,
+                rel_business_obj_id:"".to_string(),
+            },
+        )
+        .await;
+    // Get the state of a task that can be transferable
+    let next_transitions: Vec<FlowInstFindNextTransitionResp> = client.put(&format!("/cc/inst/{}/transition/next", inst_id), &FlowInstFindNextTransitionsReq { vars: None }).await;
+    assert_eq!(next_transitions.len(), 0);
+    client.set_auth(&TardisContext {
+        own_paths: "".to_string(),
+        ak: "".to_string(),
+        roles: vec!["admin".to_string()],
+        groups: vec![],
+        owner: "a001".to_string(),
+        ..Default::default()
+    })?;
+    let next_transitions: Vec<FlowInstFindNextTransitionResp> = client.put(&format!("/cc/inst/{}/transition/next", inst_id), &FlowInstFindNextTransitionsReq { vars: None }).await;
+    assert_eq!(next_transitions.len(), 2);
+    assert_eq!(next_transitions[0].next_flow_transition_name, "确认任务");
+    assert_eq!(next_transitions[1].next_flow_transition_name, "拒绝任务");
+    assert_eq!(next_transitions[1].vars_collect.as_ref().unwrap().len(), 1);
+    // Find the state and transfer information of the specified instances in batch
+    let state_and_next_transitions: Vec<FlowInstFindStateAndTransitionsResp> = client
+        .put(
+            "/cc/inst/batch/state_transitions",
+            &vec![FlowInstFindStateAndTransitionsReq {
+                flow_inst_id: inst_id.clone(),
+                vars: None,
+            }],
+        )
+        .await;
+    assert_eq!(state_and_next_transitions.len(), 1);
+    assert_eq!(state_and_next_transitions[0].current_flow_state_name, "初始");
+    assert_eq!(state_and_next_transitions[0].next_flow_transitions[0].next_flow_transition_name, "确认任务");
+    assert_eq!(state_and_next_transitions[0].next_flow_transitions[1].next_flow_transition_name, "拒绝任务");
+    assert_eq!(state_and_next_transitions[0].next_flow_transitions[1].vars_collect.as_ref().unwrap().len(), 1);
+    // Transfer task status
+    let transfer: FlowInstTransferResp = client
+        .put(
+            &format!("/cc/inst/{}/transition/transfer", inst_id),
+            &FlowInstTransferReq {
+                flow_transition_id: state_and_next_transitions[0].next_flow_transitions[1].next_flow_transition_id.clone(),
+                vars: Some(TardisFuns::json.json_to_obj(json!({ "reason":"测试关闭" })).unwrap()),
+                message: None,
+            },
+        )
+        .await;
+    // assert_eq!(transfer.new_flow_state_id, state_rejected_id);
     // // Add some transitions
     // let _: Void = client
     //     .patch(
@@ -234,59 +296,6 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
     // let names: HashMap<String, String> = client.get(&format!("/cc/state/names?ids={}&ids={}", state_init_id, state_assigned_id)).await;
     // assert_eq!(names[&state_init_id], "初始");
     // assert_eq!(names[&state_assigned_id], "已分配");
-    // // Get the state of a task that can be transferable
-    // let next_transitions: Vec<FlowInstFindNextTransitionResp> = client.put(&format!("/cc/inst/{}/transition/next", inst_id), &FlowInstFindNextTransitionsReq { vars: None }).await;
-    // assert_eq!(next_transitions.len(), 0);
-    // client.set_auth(&TardisContext {
-    //     own_paths: "".to_string(),
-    //     ak: "".to_string(),
-    //     roles: vec!["admin".to_string()],
-    //     groups: vec![],
-    //     owner: "a001".to_string(),
-    //     ..Default::default()
-    // })?;
-    // let next_transitions: Vec<FlowInstFindNextTransitionResp> = client.put(&format!("/cc/inst/{}/transition/next", inst_id), &FlowInstFindNextTransitionsReq { vars: None }).await;
-    // assert_eq!(next_transitions.len(), 2);
-    // assert_eq!(next_transitions[0].next_flow_transition_name, "确认任务");
-    // assert_eq!(next_transitions[1].next_flow_transition_name, "拒绝任务");
-    // assert_eq!(next_transitions[1].vars_collect.as_ref().unwrap().len(), 1);
-    // // Find the state and transfer information of the specified instances in batch
-    // let state_and_next_transitions: Vec<FlowInstFindStateAndTransitionsResp> = client
-    //     .put(
-    //         "/cc/inst/batch/state_transitions",
-    //         &vec![FlowInstFindStateAndTransitionsReq {
-    //             flow_inst_id: inst_id.clone(),
-    //             vars: None,
-    //         }],
-    //     )
-    //     .await;
-    // assert_eq!(state_and_next_transitions.len(), 1);
-    // assert_eq!(state_and_next_transitions[0].current_flow_state_name, "初始");
-    // assert_eq!(state_and_next_transitions[0].next_flow_transitions[0].next_flow_transition_name, "确认任务");
-    // assert_eq!(state_and_next_transitions[0].next_flow_transitions[1].next_flow_transition_name, "拒绝任务");
-    // assert_eq!(state_and_next_transitions[0].next_flow_transitions[1].vars_collect.as_ref().unwrap().len(), 1);
-    // // Transfer task status
-    // let transfer: FlowInstTransferResp = client
-    //     .put(
-    //         &format!("/cc/inst/{}/transition/transfer", inst_id),
-    //         &FlowInstTransferReq {
-    //             flow_transition_id: state_and_next_transitions[0].next_flow_transitions[1].next_flow_transition_id.clone(),
-    //             vars: Some(TardisFuns::json.json_to_obj(json!({ "reason":"测试关闭" })).unwrap()),
-    //             message: None,
-    //         },
-    //     )
-    //     .await;
-    // assert_eq!(transfer.new_flow_state_id, state_rejected_id);
-
-    let _: Void = client
-        .patch(
-            &format!("/cc/model/{}", model_id),
-            &FlowModelModifyReq {
-                delete_transitions: Some(vec![trans_modify.id.clone()]),
-                ..Default::default()
-            },
-        )
-        .await;
 
     Ok(())
 }

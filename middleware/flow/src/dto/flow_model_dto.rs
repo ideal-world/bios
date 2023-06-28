@@ -1,12 +1,10 @@
-use std::collections::HashMap;
-
 use bios_basic::rbum::{
     dto::rbum_filer_dto::{RbumBasicFilterReq, RbumItemFilterFetcher, RbumItemRelFilterReq},
     rbum_enumeration::RbumScopeLevelKind,
 };
 use serde::{Deserialize, Serialize};
 use tardis::{
-    basic::field::TrimString,
+    basic::{error::TardisError, field::TrimString, result::TardisResult},
     chrono::{DateTime, Utc},
     db::sea_orm,
     serde_json::Value,
@@ -26,6 +24,8 @@ pub struct FlowModelAddReq {
     pub info: Option<String>,
 
     pub init_state_id: String,
+
+    pub rel_template_id: Option<String>,
 
     pub transitions: Option<Vec<FlowTransitionAddReq>>,
 
@@ -87,7 +87,7 @@ pub struct FlowModelDetailResp {
     pub info: String,
 
     pub init_state_id: String,
-
+    pub rel_template_id: String,
     // TODO
     pub transitions: Option<Value>,
 
@@ -116,7 +116,7 @@ impl FlowModelDetailResp {
 pub struct FlowModelFilterReq {
     pub basic: RbumBasicFilterReq,
     pub tag: Option<FlowTagKind>,
-    pub tags: Option<Vec<String>>,
+    pub rel_template_id: Option<String>,
 }
 
 impl RbumItemFilterFetcher for FlowModelFilterReq {
@@ -139,8 +139,9 @@ pub struct FlowModelAggResp {
     pub info: String,
 
     pub init_state_id: String,
+    pub rel_template_id: String,
 
-    pub states: HashMap<String, FlowStateAggResp>,
+    pub states: Vec<FlowStateAggResp>,
 
     pub own_paths: String,
     pub owner: String,
@@ -161,6 +162,14 @@ pub struct FlowStateAggResp {
     pub transitions: Vec<FlowTransitionDetailResp>,
 }
 
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct FlowTemplateModelResp {
+    pub id: String,
+    pub name: String,
+    pub create_time: DateTime<Utc>,
+    pub update_time: DateTime<Utc>,
+}
+
 #[derive(Serialize, Deserialize, Debug, Default, poem_openapi::Object)]
 pub struct FlowModelBindStateReq {
     pub state_id: String,
@@ -174,12 +183,28 @@ pub struct FlowModelUnbindStateReq {
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, sea_orm::strum::EnumIter, sea_orm::DeriveActiveEnum)]
 #[sea_orm(rs_type = "String", db_type = "String(Some(255))")]
 pub enum FlowTagKind {
-    #[sea_orm(string_value = "ticket_states")]
-    Ticket,
-    #[sea_orm(string_value = "proj_states")]
-    Project,
-    #[sea_orm(string_value = "milestone_states")]
-    Milestone,
-    #[sea_orm(string_value = "iter_states")]
-    Iter,
+    #[sea_orm(string_value = "TICKET")]
+    TICKET,
+    #[sea_orm(string_value = "PROJECT")]
+    PROJECT,
+    #[sea_orm(string_value = "MILESTONE")]
+    MILESTONE,
+    #[sea_orm(string_value = "ITER")]
+    ITER,
+    #[sea_orm(string_value = "REQ")]
+    REQ,
+}
+
+impl TryFrom<&str> for FlowTagKind {
+    type Error = TardisError;
+    fn try_from(value: &str) -> TardisResult<Self> {
+        match value {
+            "TICKET" => Ok(Self::TICKET),
+            "PROJECT" => Ok(Self::PROJECT),
+            "MILESTONE" => Ok(Self::MILESTONE),
+            "ITER" => Ok(Self::ITER),
+            "REQ" => Ok(Self::REQ),
+            _ => Err(TardisError::not_found("tag is not exist", "404-flow-tag-not-exist")),
+        }
+    }
 }

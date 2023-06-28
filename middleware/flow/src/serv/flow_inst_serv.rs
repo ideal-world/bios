@@ -50,6 +50,7 @@ impl FlowInstServ {
             &FlowModelFilterReq {
                 basic: RbumBasicFilterReq {
                     with_sub_own_paths: true,
+                    own_paths:Some("".to_string()),
                     ..Default::default()
                 },
                 ..Default::default()
@@ -62,6 +63,7 @@ impl FlowInstServ {
         let flow_inst: flow_inst::ActiveModel = flow_inst::ActiveModel {
             id: Set(id.clone()),
             rel_flow_model_id: Set(flow_model_id.to_string()),
+            rel_business_obj_id: Set(start_req.rel_business_obj_id.to_string()),
 
             current_state_id: Set(flow_model.init_state_id.clone()),
 
@@ -180,6 +182,8 @@ impl FlowInstServ {
             pub transitions: Option<Value>,
 
             pub own_paths: String,
+
+            pub rel_business_obj_id: String,
         }
         let rel_state_table = Alias::new("rel_state");
         let rel_model_table = Alias::new("rel_model");
@@ -188,6 +192,7 @@ impl FlowInstServ {
             .columns([
                 (flow_inst::Entity, flow_inst::Column::Id),
                 (flow_inst::Entity, flow_inst::Column::RelFlowModelId),
+                (flow_inst::Entity, flow_inst::Column::RelBusinessObjId),
                 (flow_inst::Entity, flow_inst::Column::CurrentStateId),
                 (flow_inst::Entity, flow_inst::Column::CurrentVars),
                 (flow_inst::Entity, flow_inst::Column::CreateVars),
@@ -243,7 +248,7 @@ impl FlowInstServ {
                 current_state_id: inst.current_state_id,
                 current_state_name: inst.current_state_name,
                 current_vars: inst.current_vars.map(|current_vars| TardisFuns::json.json_to_obj(current_vars).unwrap()),
-                rel_business_obj_id: todo!(),
+                rel_business_obj_id: inst.rel_business_obj_id,
             })
             .collect_vec())
     }
@@ -265,6 +270,7 @@ impl FlowInstServ {
             pub rel_flow_model_name: String,
 
             pub current_state_id: String,
+            pub rel_business_obj_id: String,
 
             pub create_ctx: Value,
             pub create_time: DateTime<Utc>,
@@ -338,7 +344,7 @@ impl FlowInstServ {
                     output_message: inst.output_message,
                     own_paths: inst.own_paths,
                     current_state_id: inst.current_state_id,
-                    rel_business_obj_id: todo!(),
+                    rel_business_obj_id: inst.rel_business_obj_id,
                 })
                 .collect_vec(),
         })
@@ -358,6 +364,7 @@ impl FlowInstServ {
                 basic: RbumBasicFilterReq {
                     ids: Some(flow_insts.iter().map(|inst| inst.rel_flow_model_id.to_string()).collect_vec()),
                     with_sub_own_paths: true,
+                    own_paths: Some("".to_string()),
                     ..Default::default()
                 },
                 ..Default::default()
@@ -368,14 +375,6 @@ impl FlowInstServ {
             ctx,
         )
         .await?;
-        if flow_insts.len() != flow_models.len() {
-            return Err(funs.err().not_found(
-                "flow_inst",
-                "find_state_and_next_transitions",
-                "some flow models not found",
-                "404-flow-inst-rel-model-not-found",
-            ));
-        }
         let state_and_next_transitions = join_all(
             flow_insts
                 .iter()
@@ -402,6 +401,7 @@ impl FlowInstServ {
             &FlowModelFilterReq {
                 basic: RbumBasicFilterReq {
                     with_sub_own_paths: true,
+                    own_paths:Some("".to_string()),
                     ..Default::default()
                 },
                 ..Default::default()
@@ -422,6 +422,7 @@ impl FlowInstServ {
             &FlowModelFilterReq {
                 basic: RbumBasicFilterReq {
                     with_sub_own_paths: true,
+                    own_paths:Some("".to_string()),
                     ..Default::default()
                 },
                 ..Default::default()
@@ -576,7 +577,7 @@ impl FlowInstServ {
                 next_flow_transition_name: model_transition.name.to_string(),
                 vars_collect: model_transition.vars_collect(),
                 next_flow_state_id: model_transition.to_flow_state_id.to_string(),
-                next_flow_state_name: model_transition.from_flow_state_name.to_string(),
+                next_flow_state_name: model_transition.to_flow_state_name.to_string(),
             })
             .collect_vec();
         let state_and_next_transitions = FlowInstFindStateAndTransitionsResp {

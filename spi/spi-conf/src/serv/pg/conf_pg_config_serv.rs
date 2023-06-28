@@ -92,26 +92,23 @@ WHERE c.namespace_id=$1 AND c.grp=$2 AND c.data_id=$3"#,
         .ok_or_else(|| TardisError::not_found("config not found", error::NAMESPACE_NOTFOUND))?;
     get!(qry_result => {
         id: Uuid,
-        data_id: String,
-        namespace_id: String,
         md5: String,
         content: String,
         created_time: DateTimeUtc,
         modified_time: DateTimeUtc,
-        grp: String,
         src_user: Option<String>,
         tags: Option<String>,
     });
     let config_tags = tags.map(|tags| tags.split(',').filter(|s| !s.is_empty()).map(String::from).collect()).unwrap_or_default();
     Ok(ConfigItem {
+        data_id: data_id.clone(),
+        namespace: namespace.clone(),
+        group: group.clone(),
         id: id.to_string(),
-        data_id,
-        namespace: namespace_id,
         md5,
         content,
         created_time,
         last_modified_time: modified_time,
-        group: grp,
         config_tags,
         src_user,
         ..Default::default()

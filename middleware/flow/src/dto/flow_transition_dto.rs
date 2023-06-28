@@ -15,7 +15,6 @@ pub struct FlowTransitionAddReq {
     pub name: Option<TrimString>,
 
     pub transfer_by_auto: Option<bool>,
-    #[oai(validator(min_length = "2", max_length = "200"))]
     pub transfer_by_timer: Option<String>,
 
     pub guard_by_creator: Option<bool>,
@@ -43,7 +42,6 @@ pub struct FlowTransitionModifyReq {
     pub to_flow_state_id: Option<String>,
 
     pub transfer_by_auto: Option<bool>,
-    #[oai(validator(min_length = "2", max_length = "200"))]
     pub transfer_by_timer: Option<String>,
 
     pub guard_by_creator: Option<bool>,
@@ -140,4 +138,24 @@ pub struct FlowTransitionActionByStateChangeInfo {
     pub obj_tag: String,
     pub obj_state_ids: Vec<String>,
     pub changed_state_id: String,
+}
+
+pub struct FlowTransitionInitInfo {
+    pub from_flow_state_name: String,
+    pub to_flow_state_name: String,
+    pub name: String,
+    pub transfer_by_auto: Option<bool>,
+    pub transfer_by_timer: Option<String>,
+
+    pub guard_by_creator: Option<bool>,
+    pub guard_by_his_operators: Option<bool>,
+    pub guard_by_assigned: Option<bool>,
+    pub guard_by_spec_account_ids: Option<Vec<String>>,
+    pub guard_by_spec_role_ids: Option<Vec<String>>,
+    pub guard_by_other_conds: Option<Vec<Vec<BasicQueryCondInfo>>>,
+
+    pub vars_collect: Option<Vec<FlowVarInfo>>,
+
+    pub action_by_pre_callback: Option<String>,
+    pub action_by_post_callback: Option<String>,
 }
