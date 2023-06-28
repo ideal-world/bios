@@ -1,3 +1,5 @@
+use std::collections::linked_list::IterMut;
+
 use bios_basic::{basic_enumeration::BasicQueryOpKind, helper::db_helper, spi::spi_funs::SpiBsInstExtractor};
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
@@ -32,14 +34,17 @@ pub async fn delete(tag: &str, key: &str, funs: &TardisFunsInst, ctx: &TardisCon
 }
 
 pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<TardisPage<SearchItemSearchResp>> {
-    // let client = funs.bs(ctx).await?.inst::<TardisSearchClient>().0;
-    // let a = client.raw_search(&search_req.tag, r#"{}"#).await?;
+    let client = funs.bs(ctx).await?.inst::<TardisSearchClient>().0;
+    let result = client.raw_search(&search_req.tag, r#"{}"#).await?
+    .iter()
+    .map(|item| TardisFuns::json.str_to_obj::<SearchItemSearchResp>(item))
+    .collect::<Result<Vec<_>, _>>()?;
 
-    // Ok(TardisPage {
-    //     page_size: search_req.page.size as u64,
-    //     page_number: search_req.page.number as u64,
-    //     total_size: total_size as u64,
-    //     records: result,
-    // })
-    todo!()
+    Ok(TardisPage {
+        page_size: search_req.page.size as u64,
+        page_number: search_req.page.number as u64,
+        total_size: 1 as u64,
+        records: result,
+    })
+    // todo!()
 }

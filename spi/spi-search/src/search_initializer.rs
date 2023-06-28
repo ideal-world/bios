@@ -18,7 +18,10 @@ pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
 }
 
 async fn init_db(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    #[cfg(feature = "spi-pg")]
     spi_initializer::add_kind(spi_constants::SPI_PG_KIND_CODE, funs, ctx).await?;
+    #[cfg(feature = "spi-es")]
+    spi_initializer::add_kind(spi_constants::SPI_ES_KIND_CODE, funs, ctx).await?;
     Ok(())
 }
 

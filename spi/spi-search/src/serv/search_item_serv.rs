@@ -19,7 +19,7 @@ pub async fn add(add_req: &mut SearchItemAddReq, funs: &TardisFunsInst, ctx: &Ta
         spi_constants::SPI_PG_KIND_CODE => pg::search_pg_item_serv::add(add_req, funs, ctx).await,
         #[cfg(feature = "spi-es")]
         spi_constants::SPI_ES_KIND_CODE => es::search_es_item_serv::add(add_req, funs, ctx).await,
-        kind_code => Err(funs.bs_not_implemented(kind_code)),
+        kind_code => Err(funs.bs_not_implemented("111")),
     }
 }
 
@@ -43,6 +43,8 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
     match funs.init(ctx, true, search_initializer::init_fun).await?.as_str() {
         #[cfg(feature = "spi-pg")]
         spi_constants::SPI_PG_KIND_CODE => pg::search_pg_item_serv::search(search_req, funs, ctx).await,
+        #[cfg(feature = "spi-es")]
+        spi_constants::SPI_ES_KIND_CODE => es::search_es_item_serv::search(search_req, funs, ctx).await,
         kind_code => Err(funs.bs_not_implemented(kind_code)),
     }
 }
