@@ -375,14 +375,6 @@ impl FlowInstServ {
             ctx,
         )
         .await?;
-        if flow_insts.len() != flow_models.len() {
-            return Err(funs.err().not_found(
-                "flow_inst",
-                "find_state_and_next_transitions",
-                "some flow models not found",
-                "404-flow-inst-rel-model-not-found",
-            ));
-        }
         let state_and_next_transitions = join_all(
             flow_insts
                 .iter()
