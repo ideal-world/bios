@@ -364,6 +364,7 @@ impl FlowInstServ {
                 basic: RbumBasicFilterReq {
                     ids: Some(flow_insts.iter().map(|inst| inst.rel_flow_model_id.to_string()).collect_vec()),
                     with_sub_own_paths: true,
+                    own_paths: Some("".to_string()),
                     ..Default::default()
                 },
                 ..Default::default()
