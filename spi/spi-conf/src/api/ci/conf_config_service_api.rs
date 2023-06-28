@@ -13,6 +13,7 @@ use tardis::{
 use crate::dto::{conf_config_dto::*, conf_namespace_dto::*};
 use crate::{conf_constants::error, serv::*};
 
+#[derive(Default)]
 pub struct ConfCiConfigServiceApi;
 
 /// Interface Console config server API

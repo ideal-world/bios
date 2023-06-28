@@ -15,11 +15,11 @@ pub struct FlowTransitionAddReq {
     pub name: Option<TrimString>,
 
     pub transfer_by_auto: Option<bool>,
-    #[oai(validator(min_length = "2", max_length = "200"))]
     pub transfer_by_timer: Option<String>,
 
     pub guard_by_creator: Option<bool>,
     pub guard_by_his_operators: Option<bool>,
+    pub guard_by_assigned: Option<bool>,
     pub guard_by_spec_account_ids: Option<Vec<String>>,
     pub guard_by_spec_role_ids: Option<Vec<String>>,
     pub guard_by_other_conds: Option<Vec<Vec<BasicQueryCondInfo>>>,
@@ -42,11 +42,11 @@ pub struct FlowTransitionModifyReq {
     pub to_flow_state_id: Option<String>,
 
     pub transfer_by_auto: Option<bool>,
-    #[oai(validator(min_length = "2", max_length = "200"))]
     pub transfer_by_timer: Option<String>,
 
     pub guard_by_creator: Option<bool>,
     pub guard_by_his_operators: Option<bool>,
+    pub guard_by_assigned: Option<bool>,
     pub guard_by_spec_account_ids: Option<Vec<String>>,
     pub guard_by_spec_role_ids: Option<Vec<String>>,
     pub guard_by_other_conds: Option<Vec<Vec<BasicQueryCondInfo>>>,
@@ -72,6 +72,7 @@ pub struct FlowTransitionDetailResp {
 
     pub guard_by_creator: bool,
     pub guard_by_his_operators: bool,
+    pub guard_by_assigned: bool,
     pub guard_by_spec_account_ids: Vec<String>,
     pub guard_by_spec_role_ids: Vec<String>,
     // TODO
@@ -113,6 +114,7 @@ impl From<FlowTransitionDetailResp> for FlowTransitionAddReq {
             transfer_by_timer: Some(value.transfer_by_timer),
             guard_by_creator: Some(value.guard_by_creator),
             guard_by_his_operators: Some(value.guard_by_his_operators),
+            guard_by_assigned: Some(value.guard_by_assigned),
             guard_by_spec_account_ids: Some(value.guard_by_spec_account_ids),
             guard_by_spec_role_ids: Some(value.guard_by_spec_role_ids),
             guard_by_other_conds,
@@ -121,4 +123,39 @@ impl From<FlowTransitionDetailResp> for FlowTransitionAddReq {
             action_by_post_callback: Some(value.action_by_post_callback),
         }
     }
+}
+
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug, poem_openapi::Object, sea_orm::FromJsonQueryResult)]
+pub struct FlowTransitionActionByVarChangeInfo {
+    pub current: bool,
+    pub obj_tag: Option<String>,
+    pub var_name: String,
+    pub changed_val: Value,
+}
+
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug, poem_openapi::Object, sea_orm::FromJsonQueryResult)]
+pub struct FlowTransitionActionByStateChangeInfo {
+    pub obj_tag: String,
+    pub obj_state_ids: Vec<String>,
+    pub changed_state_id: String,
+}
+
+pub struct FlowTransitionInitInfo {
+    pub from_flow_state_name: String,
+    pub to_flow_state_name: String,
+    pub name: String,
+    pub transfer_by_auto: Option<bool>,
+    pub transfer_by_timer: Option<String>,
+
+    pub guard_by_creator: Option<bool>,
+    pub guard_by_his_operators: Option<bool>,
+    pub guard_by_assigned: Option<bool>,
+    pub guard_by_spec_account_ids: Option<Vec<String>>,
+    pub guard_by_spec_role_ids: Option<Vec<String>>,
+    pub guard_by_other_conds: Option<Vec<Vec<BasicQueryCondInfo>>>,
+
+    pub vars_collect: Option<Vec<FlowVarInfo>>,
+
+    pub action_by_pre_callback: Option<String>,
+    pub action_by_post_callback: Option<String>,
 }

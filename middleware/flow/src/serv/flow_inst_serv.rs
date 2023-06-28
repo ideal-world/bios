@@ -32,7 +32,7 @@ use crate::{
             FlowInstAbortReq, FlowInstDetailResp, FlowInstFindNextTransitionResp, FlowInstFindNextTransitionsReq, FlowInstFindStateAndTransitionsReq,
             FlowInstFindStateAndTransitionsResp, FlowInstStartReq, FlowInstSummaryResp, FlowInstTransferReq, FlowInstTransferResp, FlowInstTransitionInfo, FlowOperationContext,
         },
-        flow_model_dto::{FlowModelDetailResp, FlowModelFilterReq},
+        flow_model_dto::{FlowModelDetailResp, FlowModelFilterReq, FlowTagKind},
         flow_state_dto::{FlowStateFilterReq, FlowSysStateKind},
         flow_transition_dto::FlowTransitionDetailResp,
     },
@@ -50,6 +50,7 @@ impl FlowInstServ {
             &FlowModelFilterReq {
                 basic: RbumBasicFilterReq {
                     with_sub_own_paths: true,
+                    own_paths:Some("".to_string()),
                     ..Default::default()
                 },
                 ..Default::default()
@@ -62,6 +63,7 @@ impl FlowInstServ {
         let flow_inst: flow_inst::ActiveModel = flow_inst::ActiveModel {
             id: Set(id.clone()),
             rel_flow_model_id: Set(flow_model_id.to_string()),
+            rel_business_obj_id: Set(start_req.rel_business_obj_id.to_string()),
 
             current_state_id: Set(flow_model.init_state_id.clone()),
 
@@ -82,7 +84,7 @@ impl FlowInstServ {
         Ok(id)
     }
 
-    async fn get_model_id_by_own_paths(tag: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
+    pub async fn get_model_id_by_own_paths(tag: &FlowTagKind, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
         let mut result = None;
         // try get model in app path
         result = FlowModelServ::find_one_item(
@@ -91,7 +93,8 @@ impl FlowInstServ {
                     own_paths: Some(ctx.own_paths.clone()),
                     ..Default::default()
                 },
-                tag: Some(tag.to_string()),
+                tag: Some(tag.clone()),
+                ..Default::default()
             },
             funs,
             ctx,
@@ -105,7 +108,8 @@ impl FlowInstServ {
                         own_paths: Some(ctx.own_paths.split_once('/').unwrap_or_default().0.to_string()),
                         ..Default::default()
                     },
-                    tag: Some(tag.to_string()),
+                    tag: Some(tag.clone()),
+                    ..Default::default()
                 },
                 funs,
                 ctx,
@@ -178,6 +182,8 @@ impl FlowInstServ {
             pub transitions: Option<Value>,
 
             pub own_paths: String,
+
+            pub rel_business_obj_id: String,
         }
         let rel_state_table = Alias::new("rel_state");
         let rel_model_table = Alias::new("rel_model");
@@ -186,6 +192,7 @@ impl FlowInstServ {
             .columns([
                 (flow_inst::Entity, flow_inst::Column::Id),
                 (flow_inst::Entity, flow_inst::Column::RelFlowModelId),
+                (flow_inst::Entity, flow_inst::Column::RelBusinessObjId),
                 (flow_inst::Entity, flow_inst::Column::CurrentStateId),
                 (flow_inst::Entity, flow_inst::Column::CurrentVars),
                 (flow_inst::Entity, flow_inst::Column::CreateVars),
@@ -241,12 +248,14 @@ impl FlowInstServ {
                 current_state_id: inst.current_state_id,
                 current_state_name: inst.current_state_name,
                 current_vars: inst.current_vars.map(|current_vars| TardisFuns::json.json_to_obj(current_vars).unwrap()),
+                rel_business_obj_id: inst.rel_business_obj_id,
             })
             .collect_vec())
     }
 
     pub async fn paginate(
-        tag: Option<String>,
+        flow_model_id: Option<String>,
+        tag: Option<FlowTagKind>,
         finish: Option<bool>,
         with_sub: Option<bool>,
         page_number: u32,
@@ -297,8 +306,15 @@ impl FlowInstServ {
         } else {
             query.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::OwnPaths)).eq(ctx.own_paths.as_str()));
         }
-        if let Some(tag) = tag {
-            let flow_model_id = Self::get_model_id_by_own_paths(&tag, funs, ctx).await?;
+        if let Some(flow_model_id) = flow_model_id {
+            query.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::RelFlowModelId)).eq(flow_model_id));
+        }
+        if let Some(tag) = &tag {
+            let flow_model_id = Self::get_model_id_by_own_paths(tag, funs, ctx).await?;
+            query.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::RelFlowModelId)).eq(flow_model_id));
+        }
+        if let Some(tag) = &tag {
+            let flow_model_id = Self::get_model_id_by_own_paths(tag, funs, ctx).await?;
             query.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::RelFlowModelId)).eq(flow_model_id));
         }
         if let Some(finish) = finish {
@@ -327,6 +343,7 @@ impl FlowInstServ {
                     output_message: inst.output_message,
                     own_paths: inst.own_paths,
                     current_state_id: inst.current_state_id,
+                    rel_business_obj_id: todo!(),
                 })
                 .collect_vec(),
         })
@@ -390,6 +407,7 @@ impl FlowInstServ {
             &FlowModelFilterReq {
                 basic: RbumBasicFilterReq {
                     with_sub_own_paths: true,
+                    own_paths:Some("".to_string()),
                     ..Default::default()
                 },
                 ..Default::default()
@@ -410,6 +428,7 @@ impl FlowInstServ {
             &FlowModelFilterReq {
                 basic: RbumBasicFilterReq {
                     with_sub_own_paths: true,
+                    own_paths:Some("".to_string()),
                     ..Default::default()
                 },
                 ..Default::default()
@@ -544,6 +563,7 @@ impl FlowInstServ {
                 {
                     return false;
                 }
+                // TODO guard_by_assigned is not implement
                 if let Some(guard_by_other_conds) = model_transition.guard_by_other_conds() {
                     let mut check_vars: HashMap<String, Value> = HashMap::new();
                     if let Some(current_vars) = &flow_inst.current_vars {

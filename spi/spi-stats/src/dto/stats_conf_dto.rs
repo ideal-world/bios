@@ -138,6 +138,8 @@ pub struct StatsConfFactColAddReq {
     /// valid when kind = Dimension, whether to allow multiple values.
     /// When true, the corresponding data format is an array type, and uses the gin type index
     pub dim_multi_values: Option<bool>,
+    /// Valid when kind = Measure, Whether to carry out weight distinct
+    pub mes_data_distinct: Option<bool>,
     /// Valid when kind = Measure, Used to specify the data type
     pub mes_data_type: Option<StatsDataTypeKind>,
     /// Valid when kind = Measure, Used to specify the data update frequency.
@@ -163,6 +165,8 @@ pub struct StatsConfFactColModifyReq {
     pub kind: Option<StatsFactColKind>,
     /// Valid when kind = Dimension, used to specify the associated dimension configuration table
     pub dim_rel_conf_dim_key: Option<String>,
+    /// Valid when kind = Measure, Whether to carry out weight distinct
+    pub mes_data_distinct: Option<bool>,
     /// valid when kind = Dimension, whether to allow multiple values.
     /// When true, the corresponding data format is an array type, and uses the gin type index
     pub dim_multi_values: Option<bool>,
@@ -197,6 +201,8 @@ pub struct StatsConfFactColInfoResp {
     /// valid when kind = Dimension, whether to allow multiple values.
     /// When true, the corresponding data format is an array type, and uses the gin type index
     pub dim_multi_values: Option<bool>,
+    /// Valid when kind = Measure, Whether to carry out weight distinct
+    pub mes_data_distinct: Option<bool>,
     /// Valid when kind = Measure, Used to specify the data type
     pub mes_data_type: Option<StatsDataTypeKind>,
     /// Valid when kind = Measure, Used to specify the data update frequency.

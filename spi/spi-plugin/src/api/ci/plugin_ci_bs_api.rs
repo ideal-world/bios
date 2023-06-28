@@ -1,7 +1,9 @@
-use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
+use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumItemRelFilterReq};
+use bios_basic::rbum::rbum_enumeration::RbumRelFromKind;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use bios_basic::spi::dto::spi_bs_dto::{SpiBsAddReq, SpiBsDetailResp, SpiBsFilterReq, SpiBsModifyReq, SpiBsSummaryResp};
 use bios_basic::spi::serv::spi_bs_serv::SpiBsServ;
+use bios_basic::spi::spi_constants;
 use bios_basic::TardisFunInstExtractor;
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem::Request;
@@ -54,6 +56,7 @@ impl PluginCiBsApi {
         name: Query<Option<String>>,
         kind_id: Query<Option<String>>,
         kind_code: Query<Option<String>>,
+        app_tenant_id: Query<Option<String>>,
         page_number: Query<u32>,
         page_size: Query<u32>,
         desc_by_create: Query<Option<bool>>,
@@ -62,6 +65,13 @@ impl PluginCiBsApi {
         request: &Request,
     ) -> TardisApiResult<TardisPage<SpiBsSummaryResp>> {
         let funs = request.tardis_fun_inst();
+        let rel = app_tenant_id.0.map(|app_tenant_id| RbumItemRelFilterReq {
+            rel_by_from: true,
+            tag: Some(spi_constants::SPI_IDENT_REL_TAG.to_string()),
+            from_rbum_kind: Some(RbumRelFromKind::Item),
+            rel_item_id: Some(app_tenant_id),
+            ..Default::default()
+        });
         let result = SpiBsServ::paginate_items(
             &SpiBsFilterReq {
                 basic: RbumBasicFilterReq {
@@ -72,6 +82,7 @@ impl PluginCiBsApi {
                 kind_id: kind_id.0,
                 kind_code: kind_code.0,
                 domain_code: Some(funs.module_code().to_string()),
+                rel,
                 ..Default::default()
             },
             page_number.0,
@@ -120,6 +131,14 @@ impl PluginCiBsApi {
         TardisResp::ok(result)
     }
 
+    /// Exist Plugin Service Rel App/Tenant Support empty
+    #[oai(path = "/:id/rel/exist/:app_tenant_id/empty", method = "get")]
+    async fn exist_empty_bs_rel_agg(&self, id: Path<String>, app_tenant_id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<bool> {
+        let funs = request.tardis_fun_inst();
+        let result = PluginBsServ::exist_bs(&id.0, &app_tenant_id.0, &funs, &ctx.0).await?;
+        TardisResp::ok(result)
+    }
+
     /// Get Plugin Service Rel App/Tenant
     #[oai(path = "/:id/rel/:app_tenant_id", method = "get")]
     async fn get_bs_rel_agg(&self, id: Path<String>, app_tenant_id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<PluginBsInfoResp> {
@@ -129,10 +148,10 @@ impl PluginCiBsApi {
     }
 
     /// Find Plugin Services rel App/Tenant
-    #[oai(path = "/rel/:app_tenant_id", method = "get")]
+    #[oai(path = "/rel", method = "get")]
     async fn paginate_bs_rel_agg(
         &self,
-        app_tenant_id: Path<String>,
+        app_tenant_id: Query<String>,
         page_number: Query<u32>,
         page_size: Query<u32>,
         desc_by_create: Query<Option<bool>>,

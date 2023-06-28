@@ -4,6 +4,7 @@ members = [
     "basic",
     "spi/*",
     "gateway/test",
+    # "gateway/spacegateway",
     "middleware/*",
     "support/iam",
     "support/auth",
@@ -47,3 +48,4 @@ run_script = { version = "0.10" }
 # tardis
 tardis = { version = "=0.1.0-beta.10" }
 # tardis = { paths = "../tardis/tardis" }
+# tardis = { git = "https://github.com/ideal-world/tardis.git" }

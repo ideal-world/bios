@@ -32,3 +32,4 @@
 404-spi-search-op-not-legal	搜索操作不合法
 404-spi-search-item-not-exist	搜索内容不存在
 404-spi-conf-namespace-not-exist	命名空间不存在
+409-spi-plugin-kind-mismatch	插件类型不匹配

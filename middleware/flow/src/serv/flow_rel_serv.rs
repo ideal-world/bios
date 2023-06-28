@@ -125,6 +125,35 @@ impl FlowRelServ {
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<Vec<RbumRelBoneResp>> {
-        RbumRelServ::find_to_simple_rels(&flow_rel_kind.to_string(), flow_model_id, desc_sort_by_create, desc_sort_by_update, funs, ctx).await
+        let mock_ctx = TardisContext {
+            own_paths: "".to_string(),
+            ..ctx.clone()
+        };
+        RbumRelServ::find_to_simple_rels(&flow_rel_kind.to_string(), flow_model_id, desc_sort_by_create, desc_sort_by_update, funs, &mock_ctx).await
+    }
+
+    pub async fn find_from_simple_rels(
+        flow_rel_kind: &FlowRelKind,
+        flow_model_id: &str,
+        desc_sort_by_create: Option<bool>,
+        desc_sort_by_update: Option<bool>,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<Vec<RbumRelBoneResp>> {
+        let mock_ctx = TardisContext {
+            own_paths: "".to_string(),
+            ..ctx.clone()
+        };
+        RbumRelServ::find_from_simple_rels(
+            &flow_rel_kind.to_string(),
+            &RbumRelFromKind::Item,
+            true,
+            flow_model_id,
+            desc_sort_by_create,
+            desc_sort_by_update,
+            funs,
+            &mock_ctx,
+        )
+        .await
     }
 }

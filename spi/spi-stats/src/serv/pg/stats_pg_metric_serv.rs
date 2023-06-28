@@ -115,6 +115,7 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
     col.show_name as show_name,
     col.kind as col_kind,
     col.dim_multi_values as dim_multi_values,
+    col.mes_data_distinct as mes_data_distinct,
     col.mes_data_type as mes_data_type,
     dim.data_type as dim_data_type,
     fact.query_limit as query_limit
@@ -138,6 +139,7 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
                 show_name: item.try_get("", "show_name")?,
                 col_kind: item.try_get("", "col_kind")?,
                 dim_multi_values: item.try_get("", "dim_multi_values")?,
+                mes_data_distinct: item.try_get("", "mes_data_distinct")?,
                 mes_data_type: if item.try_get::<Option<String>>("", "mes_data_type")?.is_none() {
                     None
                 } else {
@@ -170,6 +172,7 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
         show_name: "主键".to_string(),
         col_kind: StatsFactColKind::Measure,
         dim_multi_values: Some(false),
+        mes_data_distinct: Some(true),
         mes_data_type: Some(StatsDataTypeKind::String),
         dim_data_type: None,
         query_limit,
@@ -179,6 +182,7 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
         show_name: "创建时间".to_string(),
         col_kind: StatsFactColKind::Dimension,
         dim_multi_values: Some(false),
+        mes_data_distinct: Some(true),
         mes_data_type: None,
         dim_data_type: Some(StatsDataTypeKind::DateTime),
         query_limit,
@@ -188,6 +192,7 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
         show_name: "虚构计算数".to_string(),
         col_kind: StatsFactColKind::Measure,
         dim_multi_values: Some(false),
+        mes_data_distinct: Some(true),
         mes_data_type: Some(StatsDataTypeKind::Int),
         dim_data_type: None,
         query_limit,
@@ -224,6 +229,12 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
             "404-spi-stats-metric-dim-mea-not-exist",
         ));
     }
+    let mes_distinct = query_req.select.iter().any(|i| {
+        if let Some(conf) = conf_info.get(&i.code) {
+            return conf.mes_data_distinct.unwrap_or(false);
+        }
+        return false;
+    });
 
     let mut params = vec![
         Value::from(format!("{}%", ctx.own_paths)),
@@ -488,9 +499,21 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
         if query_req.ignore_distinct.unwrap_or(false) {
             ""
         } else {
-            "DISTINCT ON (fact.key) fact.key AS _key,"
+            if mes_distinct {
+                "DISTINCT ON (fact.key) fact.key AS _key,"
+            } else {
+                ""
+            }
         },
-        if query_req.ignore_distinct.unwrap_or(false) { "" } else { "_key," },
+        if query_req.ignore_distinct.unwrap_or(false) {
+            ""
+        } else {
+            if mes_distinct {
+                "_key,"
+            } else {
+                ""
+            }
+        },
         if sql_part_groups.is_empty() {
             "".to_string()
         } else {
@@ -580,6 +603,7 @@ struct StatsConfInfo {
     pub show_name: String,
     pub col_kind: StatsFactColKind,
     pub dim_multi_values: Option<bool>,
+    pub mes_data_distinct: Option<bool>,
     pub mes_data_type: Option<StatsDataTypeKind>,
     pub dim_data_type: Option<StatsDataTypeKind>,
     pub query_limit: i32,

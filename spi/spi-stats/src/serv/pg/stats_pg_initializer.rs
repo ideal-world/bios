@@ -73,6 +73,7 @@ pub async fn init_conf_fact_col_table_and_conn(
     dim_rel_conf_dim_key character varying,
     dim_multi_values boolean,
     dim_exclusive_rec boolean,
+    mes_data_distinct boolean,
     mes_data_type character varying,
     mes_frequency character varying,
     mes_act_by_dim_conf_keys character varying[],
