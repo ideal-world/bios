@@ -213,7 +213,7 @@ impl FlowModelServ {
                     id_prefix: None,
                     name: Some(state_name.into()),
                     icon: None,
-                    sys_state,
+                    sys_state: sys_state.clone(),
                     info: None,
                     state_kind: None,
                     kind_conf: None,
@@ -227,7 +227,7 @@ impl FlowModelServ {
                 ctx,
             )
             .await?;
-            if init_state_id.is_empty() {
+            if sys_state == FlowSysStateKind::Start {
                 init_state_id = state_id.clone();
             }
             states_map.insert(state_name, state_id);
@@ -597,7 +597,7 @@ impl FlowModelServ {
             states.push(state_detail);
         }
         states.reverse();
-        
+
         Ok(FlowModelAggResp {
             id: model_detail.id,
             name: model_detail.name,
