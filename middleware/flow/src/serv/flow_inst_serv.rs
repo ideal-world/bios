@@ -50,7 +50,7 @@ impl FlowInstServ {
             &FlowModelFilterReq {
                 basic: RbumBasicFilterReq {
                     with_sub_own_paths: true,
-                    own_paths:Some("".to_string()),
+                    own_paths: Some("".to_string()),
                     ..Default::default()
                 },
                 ..Default::default()
@@ -270,6 +270,7 @@ impl FlowInstServ {
             pub rel_flow_model_name: String,
 
             pub current_state_id: String,
+            pub rel_business_obj_id: String,
 
             pub create_ctx: Value,
             pub create_time: DateTime<Utc>,
@@ -343,7 +344,7 @@ impl FlowInstServ {
                     output_message: inst.output_message,
                     own_paths: inst.own_paths,
                     current_state_id: inst.current_state_id,
-                    rel_business_obj_id: todo!(),
+                    rel_business_obj_id: inst.rel_business_obj_id,
                 })
                 .collect_vec(),
         })
@@ -407,7 +408,7 @@ impl FlowInstServ {
             &FlowModelFilterReq {
                 basic: RbumBasicFilterReq {
                     with_sub_own_paths: true,
-                    own_paths:Some("".to_string()),
+                    own_paths: Some("".to_string()),
                     ..Default::default()
                 },
                 ..Default::default()
@@ -428,7 +429,7 @@ impl FlowInstServ {
             &FlowModelFilterReq {
                 basic: RbumBasicFilterReq {
                     with_sub_own_paths: true,
-                    own_paths:Some("".to_string()),
+                    own_paths: Some("".to_string()),
                     ..Default::default()
                 },
                 ..Default::default()
@@ -583,7 +584,7 @@ impl FlowInstServ {
                 next_flow_transition_name: model_transition.name.to_string(),
                 vars_collect: model_transition.vars_collect(),
                 next_flow_state_id: model_transition.to_flow_state_id.to_string(),
-                next_flow_state_name: model_transition.from_flow_state_name.to_string(),
+                next_flow_state_name: model_transition.to_flow_state_name.to_string(),
             })
             .collect_vec();
         let state_and_next_transitions = FlowInstFindStateAndTransitionsResp {

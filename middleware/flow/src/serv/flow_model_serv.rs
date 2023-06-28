@@ -597,7 +597,7 @@ impl FlowModelServ {
             states.push(state_detail);
         }
         states.reverse();
-        
+
         Ok(FlowModelAggResp {
             id: model_detail.id,
             name: model_detail.name,
