@@ -725,7 +725,7 @@ impl FlowModelServ {
     }
 
     // copy custom model
-    async fn copy_custom_model(default_model_id: &str, rel_template_id: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
+    pub(crate) async fn copy_custom_model(default_model_id: &str, rel_template_id: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
         let global_ctx = TardisContext {
             own_paths: "".to_string(),
             ..ctx.clone()

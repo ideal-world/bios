@@ -50,6 +50,7 @@ impl FlowInstServ {
             &FlowModelFilterReq {
                 basic: RbumBasicFilterReq {
                     with_sub_own_paths: true,
+                    own_paths:Some("".to_string()),
                     ..Default::default()
                 },
                 ..Default::default()
@@ -62,6 +63,7 @@ impl FlowInstServ {
         let flow_inst: flow_inst::ActiveModel = flow_inst::ActiveModel {
             id: Set(id.clone()),
             rel_flow_model_id: Set(flow_model_id.to_string()),
+            rel_business_obj_id: Set(start_req.rel_business_obj_id.to_string()),
 
             current_state_id: Set(flow_model.init_state_id.clone()),
 
@@ -190,6 +192,7 @@ impl FlowInstServ {
             .columns([
                 (flow_inst::Entity, flow_inst::Column::Id),
                 (flow_inst::Entity, flow_inst::Column::RelFlowModelId),
+                (flow_inst::Entity, flow_inst::Column::RelBusinessObjId),
                 (flow_inst::Entity, flow_inst::Column::CurrentStateId),
                 (flow_inst::Entity, flow_inst::Column::CurrentVars),
                 (flow_inst::Entity, flow_inst::Column::CreateVars),
@@ -404,6 +407,7 @@ impl FlowInstServ {
             &FlowModelFilterReq {
                 basic: RbumBasicFilterReq {
                     with_sub_own_paths: true,
+                    own_paths:Some("".to_string()),
                     ..Default::default()
                 },
                 ..Default::default()
@@ -424,6 +428,7 @@ impl FlowInstServ {
             &FlowModelFilterReq {
                 basic: RbumBasicFilterReq {
                     with_sub_own_paths: true,
+                    own_paths:Some("".to_string()),
                     ..Default::default()
                 },
                 ..Default::default()
