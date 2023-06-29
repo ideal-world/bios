@@ -1,6 +1,10 @@
 use serde::{Deserialize, Serialize};
-use tardis::{serde_json::Value, web::poem_openapi, db::sea_orm::{self, strum::Display, TryGetable, QueryResult, TryGetError, DbErr}};
 use std::str::FromStr;
+use tardis::{
+    db::sea_orm::{self, strum::Display, DbErr, QueryResult, TryGetError, TryGetable},
+    serde_json::Value,
+    web::poem_openapi,
+};
 
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
 pub struct FlowVarSimpleInfo {
@@ -41,8 +45,7 @@ pub struct FlowVarInfo {
 
 // In order to adapt to the JAVA program, the corresponding kind in rbum is changed to uppercase format (only here for the time being, the subsequent can be placed in the public module)
 // 为了和JAVA程序适配，此处把rbum中对应的kind改为大写格式（暂时只有此处需要，后续可以放置到公共模块）
-#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
-#[derive(poem_openapi::Enum, sea_orm::strum::EnumString)]
+#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, sea_orm::strum::EnumString)]
 pub enum RbumDataTypeKind {
     STRING,
     NUMBER,
@@ -70,8 +73,7 @@ impl TryGetable for RbumDataTypeKind {
     }
 }
 
-#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
-#[derive(poem_openapi::Enum, sea_orm::strum::EnumString)]
+#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, sea_orm::strum::EnumString)]
 pub enum RbumWidgetTypeKind {
     INPUT,
     INPUTTXT,

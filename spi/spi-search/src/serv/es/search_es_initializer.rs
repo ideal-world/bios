@@ -1,8 +1,9 @@
 use std::collections::HashMap;
 
-use bios_basic::spi::{spi_funs::SpiBsInst, dto::spi_bs_dto::SpiBsCertResp, spi_initializer};
+use bios_basic::spi::{dto::spi_bs_dto::SpiBsCertResp, spi_funs::SpiBsInst, spi_initializer};
 use tardis::{
-    basic::{result::TardisResult, dto::TardisContext}, search::search_client::TardisSearchClient,
+    basic::{dto::TardisContext, result::TardisResult},
+    search::search_client::TardisSearchClient,
 };
 
 pub async fn init(bs_cert: &SpiBsCertResp, ctx: &TardisContext, mgr: bool) -> TardisResult<SpiBsInst> {

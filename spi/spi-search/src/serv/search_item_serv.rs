@@ -8,10 +8,10 @@ use tardis::TardisFunsInst;
 use crate::dto::search_item_dto::{SearchItemAddReq, SearchItemModifyReq, SearchItemSearchReq, SearchItemSearchResp};
 use crate::search_initializer;
 
-#[cfg(feature = "spi-pg")]
-use super::pg;
 #[cfg(feature = "spi-es")]
 use super::es;
+#[cfg(feature = "spi-pg")]
+use super::pg;
 
 pub async fn add(add_req: &mut SearchItemAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
     match funs.init(ctx, true, search_initializer::init_fun).await?.as_str() {
@@ -19,7 +19,7 @@ pub async fn add(add_req: &mut SearchItemAddReq, funs: &TardisFunsInst, ctx: &Ta
         spi_constants::SPI_PG_KIND_CODE => pg::search_pg_item_serv::add(add_req, funs, ctx).await,
         #[cfg(feature = "spi-es")]
         spi_constants::SPI_ES_KIND_CODE => es::search_es_item_serv::add(add_req, funs, ctx).await,
-        kind_code => Err(funs.bs_not_implemented("111")),
+        kind_code => Err(funs.bs_not_implemented(kind_code)),
     }
 }
 
