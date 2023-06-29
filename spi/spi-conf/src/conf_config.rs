@@ -1,6 +1,8 @@
 use bios_basic::rbum::rbum_config::RbumConfig;
 use serde::{Deserialize, Serialize};
 
+use crate::dto::conf_auth_dto::RegisterRequest;
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(default)]
 pub struct ConfConfig {
@@ -12,6 +14,14 @@ pub struct ConfConfig {
     pub auth_password: String,
 }
 
+impl ConfConfig {
+    pub(crate) fn get_admin_account(&self) -> RegisterRequest {
+        RegisterRequest {
+            username: Some(self.auth_username.clone().into()),
+            password: Some(self.auth_password.clone().into()),
+        }
+    }
+}
 impl Default for ConfConfig {
     fn default() -> Self {
         use tardis::crypto::*;

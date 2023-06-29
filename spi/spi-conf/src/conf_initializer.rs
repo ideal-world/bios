@@ -1,6 +1,7 @@
 use bios_basic::spi::{dto::spi_bs_dto::SpiBsCertResp, spi_constants, spi_funs::SpiBsInst, spi_initializer};
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
+    log,
     web::web_server::TardisWebServer,
     TardisFuns, TardisFunsInst,
 };
@@ -28,5 +29,20 @@ pub async fn init_fun(bs_cert: SpiBsCertResp, ctx: &TardisContext, mgr: bool) ->
         #[cfg(feature = "spi-pg")]
         spi_constants::SPI_PG_KIND_CODE => spi_initializer::common_pg::init(&bs_cert, ctx, mgr).await,
         _ => Err(bs_cert.bs_not_implemented())?,
+    }
+}
+
+#[allow(dead_code)]
+/// init spi-conf's admin cert
+pub async fn init_admin_cert(funs: &TardisFunsInst, ctx: &TardisContext) {
+    let cfg = funs.conf::<ConfConfig>();
+    let req = cfg.get_admin_account();
+    match crate::serv::register(req, funs, ctx).await {
+        Ok(_) => {
+            log::info!("[spi-conf] admin account registered");
+        }
+        Err(e) => {
+            log::error!("[spi-conf] encounter an error when trying to register admin account: {e}");
+        }
     }
 }

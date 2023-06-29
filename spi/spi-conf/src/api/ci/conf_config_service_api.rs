@@ -52,7 +52,6 @@ impl ConfCiConfigServiceApi {
     #[oai(path = "/config/detail", method = "get")]
     async fn get_config_detail(
         &self,
-        // mut descriptor: Query<ConfigDescriptor>,
         tenant: Query<Option<NamespaceId>>,
         namespace_id: Query<Option<NamespaceId>>,
         /// 配置分组名
@@ -76,8 +75,8 @@ impl ConfCiConfigServiceApi {
             tp: r#type.0,
         };
         let funs = request.tardis_fun_inst();
-        let content = get_config_detail(&mut descriptor, &funs, &ctx.0).await?;
-        TardisResp::ok(content)
+        let config_item = get_config_detail(&mut descriptor, &funs, &ctx.0).await?;
+        TardisResp::ok(config_item)
     }
     #[oai(path = "/config", method = "post")]
     async fn publish_config(&self, mut publish_request: Json<ConfigPublishRequest>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<bool> {
