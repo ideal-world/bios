@@ -73,7 +73,8 @@ macro_rules! service_call {
         }
     };
 }
-macro_rules! dispatch_function {
+
+macro_rules! dispatch_backend {
     (
         $service:ident,
         $funs:ident, $ctx:ident, $inst:ident,
@@ -95,6 +96,7 @@ macro_rules! dispatch_function {
 
     };
 }
+
 macro_rules! dispatch_service2 {
     (
         // mgr
@@ -109,13 +111,12 @@ macro_rules! dispatch_service2 {
                 $service:ident($($arg: ident: $type: ty),*) -> $ret:ty;
             )*
         }
-
     ) => {
         $(
             $(#[$attr])*
             pub async fn $service($($arg: $type,)* funs: &TardisFunsInst, ctx: &TardisContext) -> $ret {
                 let inst = funs.init(ctx, $mgr, $init).await?;
-                dispatch_function!($service, funs, ctx, inst, @dispatch: $dispatch, @args: {$($arg),*})
+                dispatch_backend!($service, funs, ctx, inst, @dispatch: $dispatch, @args: {$($arg),*})
             }
         )*
     };
