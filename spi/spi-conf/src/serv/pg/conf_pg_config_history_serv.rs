@@ -1,4 +1,4 @@
-use bios_basic::spi::spi_funs::SpiBsInstExtractor;
+use bios_basic::spi::spi_funs::{SpiBsInstExtractor, SpiBsInst};
 use tardis::{
     basic::{dto::TardisContext, error::TardisError, result::TardisResult},
     db::{
@@ -54,7 +54,7 @@ macro_rules! get {
     };
 }
 
-pub async fn get_history_list_by_namespace(req: &mut ConfigHistoryListRequest, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<ConfigListResponse> {
+pub async fn get_history_list_by_namespace(req: &mut ConfigHistoryListRequest, funs: &TardisFunsInst, ctx: &TardisContext, bs_inst: &SpiBsInst) -> TardisResult<ConfigListResponse> {
     // query config history list by a ConfigDescriptor
     let ConfigHistoryListRequest { descriptor, page_no, page_size } = req;
     descriptor.fix_namespace_id();
@@ -64,7 +64,7 @@ pub async fn get_history_list_by_namespace(req: &mut ConfigHistoryListRequest, f
     let data_id = &descriptor.data_id;
     let group = &descriptor.group;
     let namespace_id = &descriptor.namespace_id;
-    let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
+    let bs_inst = bs_inst.inst::<TardisRelDBClient>();
     let conns = conf_pg_initializer::init_table_and_conn(bs_inst, ctx, true).await?;
     let (conn, table_name) = conns.config_history;
     let qry_result_list = conn
@@ -121,13 +121,13 @@ OFFSET {offset}
     })
 }
 
-pub async fn find_history(descriptor: &mut ConfigDescriptor, id: &Uuid, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<ConfigItem> {
+pub async fn find_history(descriptor: &mut ConfigDescriptor, id: &Uuid, funs: &TardisFunsInst, ctx: &TardisContext, bs_inst: &SpiBsInst) -> TardisResult<ConfigItem> {
     descriptor.fix_namespace_id();
     let data_id = &descriptor.data_id;
     let group = &descriptor.group;
     let namespace_id = &descriptor.namespace_id;
-    let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
-    let conns = conf_pg_initializer::init_table_and_conn(bs_inst, ctx, true).await?;
+    let typed_inst = bs_inst.inst::<TardisRelDBClient>();
+    let conns = conf_pg_initializer::init_table_and_conn(typed_inst, ctx, true).await?;
     let (conn, table_name) = conns.config_history;
     let qry_result = conn
         .query_one(
@@ -169,15 +169,15 @@ ORDER BY created_time DESC"#,
     })
 }
 
-pub async fn find_previous_history(descriptor: &mut ConfigDescriptor, id: &Uuid, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<ConfigItem> {
+pub async fn find_previous_history(descriptor: &mut ConfigDescriptor, id: &Uuid, funs: &TardisFunsInst, ctx: &TardisContext, bs_inst: &SpiBsInst) -> TardisResult<ConfigItem> {
     descriptor.fix_namespace_id();
     // find previous config by id
     // 1. find previous id
     let data_id = &descriptor.data_id;
     let group = &descriptor.group;
     let namespace_id = &descriptor.namespace_id;
-    let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
-    let conns = conf_pg_initializer::init_table_and_conn(bs_inst, ctx, true).await?;
+    let typed_inst = bs_inst.inst::<TardisRelDBClient>();
+    let conns = conf_pg_initializer::init_table_and_conn(typed_inst, ctx, true).await?;
     let (conn, table_name) = conns.config_history;
     let qry_result = conn
         .query_one(
@@ -199,12 +199,12 @@ WHERE T.id = $4
     get!(qry_result => { prev_id: Option<Uuid>, });
     if let Some(prev_id) = prev_id {
         // 2. find config by id
-        self::find_history(descriptor, &prev_id, funs, ctx).await
+        self::find_history(descriptor, &prev_id, funs, ctx, bs_inst).await
     } else {
         Err(TardisError::not_found("history config not found", error::CONF_NOTFOUND))
     }
 }
-pub async fn add_history(param: HistoryInsertParams<'_>, op_type: OpType, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<bool> {
+pub async fn add_history(param: HistoryInsertParams<'_>, op_type: OpType, funs: &TardisFunsInst, ctx: &TardisContext, bs_inst: &SpiBsInst) -> TardisResult<bool> {
     let HistoryInsertParams {
         data_id,
         group,
@@ -229,8 +229,8 @@ pub async fn add_history(param: HistoryInsertParams<'_>, op_type: OpType, funs: 
         ("src_user", Value::from(src_user)),
         ("config_tags", Value::from(config_tags.join(","))),
     ];
-    let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
-    let conns = conf_pg_initializer::init_table_and_conn(bs_inst, ctx, true).await?;
+    let typed_inst = bs_inst.inst::<TardisRelDBClient>();
+    let conns = conf_pg_initializer::init_table_and_conn(typed_inst, ctx, true).await?;
     let (mut conn, table_name) = conns.config_history;
     conn.begin().await?;
     let (fields, placeholders, values) = super::gen_insert_sql_stmt(params);

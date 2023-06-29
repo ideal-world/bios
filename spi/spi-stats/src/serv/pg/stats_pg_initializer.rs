@@ -7,7 +7,7 @@ use tardis::{
 };
 
 pub async fn init_conf_dim_table_and_conn(
-    bs_inst: (&TardisRelDBClient, &HashMap<String, String>, String),
+    bs_inst: TypedSpiBsInst<'_, TardisRelDBClient>,
     ctx: &TardisContext,
     mgr: bool,
 ) -> TardisResult<(TardisRelDBlConnection, String)> {
@@ -33,7 +33,7 @@ pub async fn init_conf_dim_table_and_conn(
 }
 
 pub async fn init_conf_fact_table_and_conn(
-    bs_inst: (&TardisRelDBClient, &HashMap<String, String>, String),
+    bs_inst: TypedSpiBsInst<'_, TardisRelDBClient>,
     ctx: &TardisContext,
     mgr: bool,
 ) -> TardisResult<(TardisRelDBlConnection, String)> {
@@ -57,7 +57,7 @@ pub async fn init_conf_fact_table_and_conn(
 }
 
 pub async fn init_conf_fact_col_table_and_conn(
-    bs_inst: (&TardisRelDBClient, &HashMap<String, String>, String),
+    bs_inst: TypedSpiBsInst<'_, TardisRelDBClient>,
     ctx: &TardisContext,
     mgr: bool,
 ) -> TardisResult<(TardisRelDBlConnection, String)> {

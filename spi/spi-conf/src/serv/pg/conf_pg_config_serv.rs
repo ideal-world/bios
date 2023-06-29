@@ -3,7 +3,7 @@ use std::{
     time::Duration,
 };
 
-use bios_basic::spi::spi_funs::SpiBsInstExtractor;
+use bios_basic::spi::spi_funs::{SpiBsInstExtractor, SpiBsInst};
 use tardis::{
     basic::{dto::TardisContext, error::TardisError, result::TardisResult},
     db::{
@@ -42,13 +42,13 @@ fn md5(content: &str) -> String {
     md5.result_str()
 }
 
-pub async fn get_config(descriptor: &mut ConfigDescriptor, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
+pub async fn get_config(descriptor: &mut ConfigDescriptor, funs: &TardisFunsInst, ctx: &TardisContext, bs_inst: &SpiBsInst) -> TardisResult<String> {
     descriptor.fix_namespace_id();
     let data_id = &descriptor.data_id;
     let group = &descriptor.group;
     let namespace = &descriptor.namespace_id;
-    let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
-    let conns = conf_pg_initializer::init_table_and_conn(bs_inst, ctx, true).await?;
+    let typed_inst = bs_inst.inst::<TardisRelDBClient>();
+    let conns = conf_pg_initializer::init_table_and_conn(typed_inst, ctx, true).await?;
     let (conn, table_name) = conns.config;
     let qry_result = conn
         .query_one(
@@ -65,13 +65,13 @@ WHERE cc.namespace_id=$1 AND cc.grp=$2 AND cc.data_id=$3
     Ok(content)
 }
 
-pub async fn get_config_detail(descriptor: &mut ConfigDescriptor, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<ConfigItem> {
+pub async fn get_config_detail(descriptor: &mut ConfigDescriptor, funs: &TardisFunsInst, ctx: &TardisContext, bs_inst: &SpiBsInst) -> TardisResult<ConfigItem> {
     descriptor.fix_namespace_id();
     let data_id = &descriptor.data_id;
     let group = &descriptor.group;
     let namespace = &descriptor.namespace_id;
-    let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
-    let conns = conf_pg_initializer::init_table_and_conn(bs_inst, ctx, true).await?;
+    let typed_inst = bs_inst.inst::<TardisRelDBClient>();
+    let conns = conf_pg_initializer::init_table_and_conn(typed_inst, ctx, true).await?;
     let (conn, table_name) = conns.config;
     let config_tag_rel_table_name = conns.config_tag_rel.1;
 
@@ -114,7 +114,7 @@ WHERE c.namespace_id=$1 AND c.grp=$2 AND c.data_id=$3"#,
         ..Default::default()
     })
 }
-pub async fn get_md5(descriptor: &mut ConfigDescriptor, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
+pub async fn get_md5(descriptor: &mut ConfigDescriptor, funs: &TardisFunsInst, ctx: &TardisContext, bs_inst: &SpiBsInst) -> TardisResult<String> {
     descriptor.fix_namespace_id();
     const EXPIRE: Duration = Duration::from_secs(1);
     // try get from cache
@@ -128,8 +128,8 @@ pub async fn get_md5(descriptor: &mut ConfigDescriptor, funs: &TardisFunsInst, c
     let data_id = &descriptor.data_id;
     let group = &descriptor.group;
     let namespace = &descriptor.namespace_id;
-    let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
-    let conns = conf_pg_initializer::init_table_and_conn(bs_inst, ctx, true).await?;
+    let typed_inst = bs_inst.inst::<TardisRelDBClient>();
+    let conns = conf_pg_initializer::init_table_and_conn(typed_inst, ctx, true).await?;
     let (conn, table_name) = conns.config;
     let qry_result = conn
         .query_one(
@@ -150,7 +150,7 @@ WHERE cc.namespace_id='{namespace}' AND cc.grp='{group}' AND cc.data_id='{data_i
     Ok(md5)
 }
 
-pub async fn publish_config(req: &mut ConfigPublishRequest, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<bool> {
+pub async fn publish_config(req: &mut ConfigPublishRequest, funs: &TardisFunsInst, ctx: &TardisContext, bs_inst: &SpiBsInst) -> TardisResult<bool> {
     // clear cache
     req.descriptor.fix_namespace_id();
     {
@@ -185,8 +185,8 @@ pub async fn publish_config(req: &mut ConfigPublishRequest, funs: &TardisFunsIns
     ];
 
     let key_params = vec![("data_id", Value::from(data_id)), ("grp", Value::from(group)), ("namespace_id", Value::from(namespace))];
-    let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
-    let conns = conf_pg_initializer::init_table_and_conn(bs_inst, ctx, true).await?;
+    let typed_inst = bs_inst.inst::<TardisRelDBClient>();
+    let conns = conf_pg_initializer::init_table_and_conn(typed_inst, ctx, true).await?;
     let (mut conn, config_table_name) = conns.config;
     let (_, tag_table_name) = conns.tag;
     let (_, config_tag_rel_table_name) = conns.config_tag_rel;
@@ -220,7 +220,7 @@ WHERE cc.grp=$1 AND cc.namespace_id=$2 AND cc.data_id=$3"#,
         // if exists, update
         op_type = OpType::Update;
         let (set_caluse, where_caluse, values) = super::gen_update_sql_stmt(params, key_params);
-        add_history(history, op_type, funs, ctx).await?;
+        add_history(history, op_type, funs, ctx, bs_inst).await?;
         conn.execute_one(
             &format!(
                 r#"UPDATE {config_table_name} 
@@ -234,7 +234,7 @@ WHERE {where_caluse}"#,
     } else {
         // if not exists, insert
         op_type = OpType::Insert;
-        add_history(history, op_type, funs, ctx).await?;
+        add_history(history, op_type, funs, ctx, bs_inst).await?;
         let mut fields_and_values = params;
         fields_and_values.extend(key_params);
         let (fields, placeholders, values) = super::gen_insert_sql_stmt(fields_and_values);
@@ -315,7 +315,7 @@ WHERE {where_caluse}"#,
     Ok(true)
 }
 
-pub async fn delete_config(descriptor: &mut ConfigDescriptor, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<bool> {
+pub async fn delete_config(descriptor: &mut ConfigDescriptor, funs: &TardisFunsInst, ctx: &TardisContext, bs_inst: &SpiBsInst) -> TardisResult<bool> {
     descriptor.fix_namespace_id();
     // clear cache
     {
@@ -325,8 +325,8 @@ pub async fn delete_config(descriptor: &mut ConfigDescriptor, funs: &TardisFunsI
     let data_id = &descriptor.data_id;
     let group = &descriptor.group;
     let namespace = &descriptor.namespace_id;
-    let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
-    let conns = conf_pg_initializer::init_table_and_conn(bs_inst, ctx, true).await?;
+    let typed_inst = bs_inst.inst::<TardisRelDBClient>();
+    let conns = conf_pg_initializer::init_table_and_conn(typed_inst, ctx, true).await?;
     let history = HistoryInsertParams {
         data_id,
         group,
@@ -335,7 +335,7 @@ pub async fn delete_config(descriptor: &mut ConfigDescriptor, funs: &TardisFunsI
     };
     let (mut conn, table_name) = conns.config;
     conn.begin().await?;
-    add_history(history, OpType::Delete, funs, ctx).await?;
+    add_history(history, OpType::Delete, funs, ctx, bs_inst).await?;
     conn.execute_one(
         &format!(
             r#"DELETE FROM {table_name} cc
@@ -349,11 +349,11 @@ WHERE cc.namespace_id='{namespace}' AND cc.grp='{group}' AND cc.data_id='{data_i
     Ok(true)
 }
 
-pub async fn get_configs_by_namespace(namespace_id: &NamespaceId, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<ConfigItemDigest>> {
+pub async fn get_configs_by_namespace(namespace_id: &NamespaceId, funs: &TardisFunsInst, ctx: &TardisContext, bs_inst: &SpiBsInst) -> TardisResult<Vec<ConfigItemDigest>> {
     let namespace_id = if namespace_id.is_empty() { "public" } else { namespace_id };
 
-    let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
-    let conns = conf_pg_initializer::init_table_and_conn(bs_inst, ctx, true).await?;
+    let typed_inst = bs_inst.inst::<TardisRelDBClient>();
+    let conns = conf_pg_initializer::init_table_and_conn(typed_inst, ctx, true).await?;
     let (conn, table_name) = conns.config;
     let qry_result = conn
         .query_all(
@@ -388,7 +388,7 @@ ORDER BY created_time DESC
     Ok(list)
 }
 
-pub async fn get_configs(req: ConfigListRequest, mode: SearchMode, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<ConfigListResponse> {
+pub async fn get_configs(req: ConfigListRequest, mode: SearchMode, funs: &TardisFunsInst, ctx: &TardisContext, bs_inst: &SpiBsInst) -> TardisResult<ConfigListResponse> {
     // query config history list by a ConfigDescriptor
     let ConfigListRequest {
         page_no,
@@ -412,8 +412,8 @@ pub async fn get_configs(req: ConfigListRequest, mode: SearchMode, funs: &Tardis
     keys.extend(group.as_deref().map(|group| ("grp", op, Value::from(group))));
     keys.extend(tp.as_deref().map(|tp| ("tp", op, Value::from(tp))));
     let (where_clause, mut values) = gen_select_sql_stmt(keys);
-    let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
-    let conns = conf_pg_initializer::init_table_and_conn(bs_inst, ctx, true).await?;
+    let typed_inst = bs_inst.inst::<TardisRelDBClient>();
+    let conns = conf_pg_initializer::init_table_and_conn(typed_inst, ctx, true).await?;
     let (conn, config_table_name) = conns.config;
     let (_, config_tag_rel_table_name) = conns.config_tag_rel;
     let tag_condition_clause = if !tags.is_empty() {

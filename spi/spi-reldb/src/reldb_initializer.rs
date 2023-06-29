@@ -74,7 +74,7 @@ pub async fn init_fun(bs_cert: SpiBsCertResp, ctx: &TardisContext, _: bool) -> T
     Ok(SpiBsInst { client: Box::new(client), ext })
 }
 
-pub async fn inst_conn(bs_inst: (&TardisRelDBClient, &HashMap<String, String>, String)) -> TardisResult<TardisRelDBlConnection> {
+pub async fn inst_conn(bs_inst: TypedSpiBsInst<'_, TardisRelDBClient>) -> TardisResult<TardisRelDBlConnection> {
     let conn = bs_inst.0.conn();
     match bs_inst.2.as_str() {
         #[cfg(feature = "spi-pg")]

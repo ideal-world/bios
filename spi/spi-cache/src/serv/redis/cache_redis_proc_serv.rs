@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use bios_basic::spi::{spi_funs::SpiBsInstExtractor, spi_initializer::common};
+use bios_basic::spi::{spi_funs::{SpiBsInstExtractor, TypedSpiBsInst, SpiBsInst}, spi_initializer::common};
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
     cache::cache_client::TardisCacheClient,
@@ -9,7 +9,7 @@ use tardis::{
 
 use crate::dto::cache_proc_dto::{ExpReq, KIncrReq, KReq, KbRagngeReq, KbReq, KbvReq, KfIncrReq, KfReq, KfvReq, KvReq, KvWithExReq};
 
-fn format_key(req_key: &str, ext: &HashMap<String, String>) -> String {
+pub(crate) fn format_key(req_key: &str, ext: &HashMap<String, String>) -> String {
     if let Some(key_prefix) = common::get_isolation_flag_from_ext(ext) {
         format!("{key_prefix}{req_key}")
     } else {
@@ -17,8 +17,8 @@ fn format_key(req_key: &str, ext: &HashMap<String, String>) -> String {
     }
 }
 
-pub async fn set(req: &KvReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-    let bs_inst = funs.bs(ctx).await?.inst::<TardisCacheClient>();
+pub async fn set(req: &KvReq, funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
+    let bs_inst = inst.inst::<TardisCacheClient>();
     Ok(bs_inst.0.set(&format_key(&req.key, bs_inst.1), &req.value).await?)
 }
 

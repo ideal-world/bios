@@ -16,26 +16,33 @@ use super::serv::spi_bs_serv::SpiBsServ;
 use super::spi_constants;
 
 pub struct SpiBsInst {
-    pub client: Box<dyn Any + Send>,
+    pub client: Box<dyn Any + Send + Sync>,
     pub ext: HashMap<String, String>,
 }
 
+pub type TypedSpiBsInst<'a, T> = (&'a T, &'a HashMap<String, String>, &'a str);
+
 impl SpiBsInst {
-    pub fn inst<T>(&'static self) -> (&'static T, &'static HashMap<String, String>, String) {
+    pub fn inst<T>(&self) -> TypedSpiBsInst<'_, T>
+    // T is 'static meaning it's an owned type or only holds static references
+    // dyn Any + Send + Sync ==downcast==> T: 'static + Send + Sync
+    where T: 'static
+    {
         let c = self.client.as_ref().downcast_ref::<T>().unwrap();
         (c, &self.ext, self.kind_code())
     }
 
-    pub fn kind_code(&self) -> String {
-        self.ext.get(spi_constants::SPI_KIND_CODE_FLAG).unwrap().to_string()
+    pub fn kind_code(&self) -> &str {
+        self.ext.get(spi_constants::SPI_KIND_CODE_FLAG).unwrap()
     }
 }
+
 
 static mut SPI_BS_CACHES: Option<HashMap<String, SpiBsInst>> = None;
 
 #[async_trait]
 pub trait SpiBsInstExtractor {
-    async fn init<'a, F, T>(&self, ctx: &'a TardisContext, mgr: bool, init_funs: F) -> TardisResult<String>
+    async fn init<'a, F, T>(&self, ctx: &'a TardisContext, mgr: bool, init_funs: F) -> TardisResult<&SpiBsInst>
     where
         F: Fn(SpiBsCertResp, &'a TardisContext, bool) -> T + Send + Sync,
         T: Future<Output = TardisResult<SpiBsInst>> + Send;
@@ -64,7 +71,7 @@ impl SpiBsInstExtractor for TardisFunsInst {
     ///
     /// the backend service instance kind
     /// ```
-    async fn init<'a, F, T>(&self, ctx: &'a TardisContext, mgr: bool, init_fun: F) -> TardisResult<String>
+    async fn init<'a, F, T>(&self, ctx: &'a TardisContext, mgr: bool, init_fun: F) -> TardisResult<&SpiBsInst>
     where
         F: Fn(SpiBsCertResp, &'a TardisContext, bool) -> T + Send + Sync,
         T: Future<Output = TardisResult<SpiBsInst>> + Send,
@@ -89,7 +96,7 @@ impl SpiBsInstExtractor for TardisFunsInst {
                         spi_bs_inst.ext.insert(spi_constants::SPI_KIND_CODE_FLAG.to_string(), kind_code);
                         caches.insert(cache_key.clone(), spi_bs_inst);
                     }
-                    Ok(caches.get(&cache_key).unwrap().kind_code())
+                    Ok(caches.get(&cache_key).unwrap())
                 }
             }
         }

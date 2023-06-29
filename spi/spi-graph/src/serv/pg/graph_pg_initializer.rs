@@ -7,7 +7,7 @@ use tardis::{
 };
 
 pub async fn init_table_and_conn(
-    bs_inst: (&TardisRelDBClient, &HashMap<String, String>, String),
+    bs_inst: TypedSpiBsInst<'_, TardisRelDBClient>,
     ctx: &TardisContext,
     mgr: bool,
 ) -> TardisResult<(TardisRelDBlConnection, String)> {

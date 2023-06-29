@@ -11,9 +11,10 @@ use crate::{cache_constants, cache_initializer};
 use super::redis;
 
 pub async fn set(req: &KvReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-    match funs.init(ctx, true, cache_initializer::init_fun).await?.as_str() {
+    let bs_inst = funs.init(ctx, true, cache_initializer::init_fun).await?;
+    match bs_inst.kind_code() {
         #[cfg(feature = "spi-redis")]
-        cache_constants::SPI_REDIS_KIND_CODE => redis::cache_redis_proc_serv::set(req, funs, ctx).await,
+        cache_constants::SPI_REDIS_KIND_CODE => redis::cache_redis_proc_serv::set(req, funs, ctx, bs_inst).await,
         kind_code => Err(funs.bs_not_implemented(kind_code)),
     }
 }

@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use bios_basic::spi::spi_initializer;
+use bios_basic::spi::{spi_initializer, spi_funs::TypedSpiBsInst};
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
     db::reldb_client::{TardisRelDBClient, TardisRelDBlConnection},
@@ -13,7 +13,7 @@ pub struct SpiConfTableAndConns {
     pub config_tag_rel: (TardisRelDBlConnection, String),
 }
 pub async fn init_table_and_conn_namespace(
-    bs_inst: (&TardisRelDBClient, &HashMap<String, String>, String),
+    bs_inst: TypedSpiBsInst<'_, TardisRelDBClient>,
     ctx: &TardisContext,
     mgr: bool,
 ) -> TardisResult<(TardisRelDBlConnection, String)> {
@@ -41,7 +41,7 @@ pub async fn init_table_and_conn_namespace(
 }
 
 pub async fn init_table_and_conn_config(
-    bs_inst: (&TardisRelDBClient, &HashMap<String, String>, String),
+    bs_inst: TypedSpiBsInst<'_, TardisRelDBClient>,
     namespace_table_name: &str,
     ctx: &TardisContext,
     mgr: bool,
@@ -75,7 +75,7 @@ tp character varying"#
 }
 
 pub async fn init_table_and_conn_history(
-    bs_inst: (&TardisRelDBClient, &HashMap<String, String>, String),
+    bs_inst: TypedSpiBsInst<'_, TardisRelDBClient>,
     namespace_table_name: &str,
     ctx: &TardisContext,
     mgr: bool,
@@ -111,7 +111,7 @@ tp character varying"#
 }
 
 pub async fn init_table_and_conn_tag(
-    bs_inst: (&TardisRelDBClient, &HashMap<String, String>, String),
+    bs_inst: TypedSpiBsInst<'_, TardisRelDBClient>,
     ctx: &TardisContext,
     mgr: bool,
 ) -> TardisResult<(TardisRelDBlConnection, String)> {
@@ -119,7 +119,7 @@ pub async fn init_table_and_conn_tag(
 }
 
 pub async fn init_table_and_conn_tag_config_rel(
-    bs_inst: (&TardisRelDBClient, &HashMap<String, String>, String),
+    bs_inst: TypedSpiBsInst<'_, TardisRelDBClient>,
     config_table_name: &str,
     tag_table_name: &str,
     ctx: &TardisContext,
@@ -143,7 +143,7 @@ config_id uuid NOT NULL REFERENCES {config_table_name} ON DELETE CASCADE"#
     .await
 }
 
-pub async fn init_table_and_conn(bs_inst: (&TardisRelDBClient, &HashMap<String, String>, String), ctx: &TardisContext, mgr: bool) -> TardisResult<SpiConfTableAndConns> {
+pub async fn init_table_and_conn(bs_inst: TypedSpiBsInst<'_, TardisRelDBClient>, ctx: &TardisContext, mgr: bool) -> TardisResult<SpiConfTableAndConns> {
     let (name_space_conn, namespace_table_name) = init_table_and_conn_namespace(bs_inst.clone(), ctx, mgr).await?;
     let (config_conn, config_table_name) = init_table_and_conn_config(bs_inst.clone(), namespace_table_name.as_str(), ctx, mgr).await?;
     let (config_history_conn, history_table_name) = init_table_and_conn_history(bs_inst.clone(), namespace_table_name.as_str(), ctx, mgr).await?;

@@ -1,4 +1,4 @@
-use bios_basic::spi::spi_funs::SpiBsInstExtractor;
+use bios_basic::spi::spi_funs::{SpiBsInstExtractor, SpiBsInst};
 use tardis::{
     basic::{dto::TardisContext, error::TardisError, result::TardisResult},
     db::{reldb_client::TardisRelDBClient, sea_orm::Value},
@@ -6,9 +6,9 @@ use tardis::{
 };
 
 use crate::{conf_constants::error, dto::conf_namespace_dto::*, serv::pg::conf_pg_initializer};
-pub async fn get_namespace(discriptor: &mut NamespaceDescriptor, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<NamespaceItem> {
-    let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
-    let conns = conf_pg_initializer::init_table_and_conn(bs_inst, ctx, true).await?;
+pub async fn get_namespace(discriptor: &mut NamespaceDescriptor, funs: &TardisFunsInst, ctx: &TardisContext, bs_inst: &SpiBsInst) -> TardisResult<NamespaceItem> {
+    let typed_inst = bs_inst.inst::<TardisRelDBClient>();
+    let conns = conf_pg_initializer::init_table_and_conn(typed_inst, ctx, true).await?;
     let (conn, table_name_namespace) = conns.namespace;
     let (_, table_name_config) = conns.config;
     let namespace = conn
@@ -43,11 +43,11 @@ WHERE id = $1"#,
     namespace_item.config_count = count as u32;
     Ok(namespace_item)
 }
-pub async fn create_namespace(attribute: &mut NamespaceAttribute, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+pub async fn create_namespace(attribute: &mut NamespaceAttribute, funs: &TardisFunsInst, ctx: &TardisContext, bs_inst: &SpiBsInst) -> TardisResult<()> {
     let mut params = vec![Value::from(&attribute.namespace), Value::from(&attribute.namespace_show_name)];
     params.extend(attribute.namespace_desc.as_ref().map(Value::from));
-    let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
-    let (mut conn, table_name) = conf_pg_initializer::init_table_and_conn_namespace(bs_inst, ctx, true).await?;
+    let typed_inst = bs_inst.inst::<TardisRelDBClient>();
+    let (mut conn, table_name) = conf_pg_initializer::init_table_and_conn_namespace(typed_inst, ctx, true).await?;
     conn.begin().await?;
     conn.execute_one(
         &format!(
@@ -65,11 +65,11 @@ VALUES
     conn.commit().await?;
     Ok(())
 }
-pub async fn edit_namespace(attribute: &mut NamespaceAttribute, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+pub async fn edit_namespace(attribute: &mut NamespaceAttribute, funs: &TardisFunsInst, ctx: &TardisContext, bs_inst: &SpiBsInst) -> TardisResult<()> {
     let mut params = vec![Value::from(&attribute.namespace), Value::from(&attribute.namespace_show_name)];
     params.extend(attribute.namespace_desc.as_ref().map(Value::from));
-    let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
-    let (mut conn, table_name) = conf_pg_initializer::init_table_and_conn_namespace(bs_inst, ctx, true).await?;
+    let typed_inst = bs_inst.inst::<TardisRelDBClient>();
+    let (mut conn, table_name) = conf_pg_initializer::init_table_and_conn_namespace(typed_inst, ctx, true).await?;
     conn.begin().await?;
     conn.execute_one(
         &format!(
@@ -87,9 +87,9 @@ WHERE
     Ok(())
 }
 
-pub async fn delete_namespace(discriptor: &mut NamespaceDescriptor, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-    let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
-    let (mut conn, table_name) = conf_pg_initializer::init_table_and_conn_namespace(bs_inst, ctx, true).await?;
+pub async fn delete_namespace(discriptor: &mut NamespaceDescriptor, funs: &TardisFunsInst, ctx: &TardisContext, bs_inst: &SpiBsInst) -> TardisResult<()> {
+    let typed_inst = bs_inst.inst::<TardisRelDBClient>();
+    let (mut conn, table_name) = conf_pg_initializer::init_table_and_conn_namespace(typed_inst, ctx, true).await?;
     if discriptor.namespace_id.is_empty() || discriptor.namespace_id == "public" {
         return Err(TardisError::bad_request(
             "default namespace(public) can not be deleted",
@@ -113,9 +113,9 @@ WHERE
 }
 
 // this could be slow
-pub async fn get_namespace_list(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<NamespaceItem>> {
-    let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
-    let conns = conf_pg_initializer::init_table_and_conn(bs_inst, ctx, true).await?;
+pub async fn get_namespace_list(funs: &TardisFunsInst, ctx: &TardisContext, bs_inst: &SpiBsInst) -> TardisResult<Vec<NamespaceItem>> {
+    let typed_inst = bs_inst.inst::<TardisRelDBClient>();
+    let conns = conf_pg_initializer::init_table_and_conn(typed_inst, ctx, true).await?;
     let (conn, table_name_namespace) = conns.namespace;
     let (_, table_name_config) = conns.config;
     let namespaces = conn
