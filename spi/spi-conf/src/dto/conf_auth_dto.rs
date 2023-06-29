@@ -9,7 +9,10 @@ pub struct RegisterResponse {
 
 impl RegisterResponse {
     pub fn new(username: impl Into<String>, password: impl Into<String>) -> Self {
-        Self { username: username.into(), password: password.into() }
+        Self {
+            username: username.into(),
+            password: password.into(),
+        }
     }
 }
 

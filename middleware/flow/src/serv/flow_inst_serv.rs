@@ -50,7 +50,7 @@ impl FlowInstServ {
             &FlowModelFilterReq {
                 basic: RbumBasicFilterReq {
                     with_sub_own_paths: true,
-                    own_paths:Some("".to_string()),
+                    own_paths: Some("".to_string()),
                     ..Default::default()
                 },
                 ..Default::default()
@@ -401,7 +401,7 @@ impl FlowInstServ {
             &FlowModelFilterReq {
                 basic: RbumBasicFilterReq {
                     with_sub_own_paths: true,
-                    own_paths:Some("".to_string()),
+                    own_paths: Some("".to_string()),
                     ..Default::default()
                 },
                 ..Default::default()
@@ -422,7 +422,7 @@ impl FlowInstServ {
             &FlowModelFilterReq {
                 basic: RbumBasicFilterReq {
                     with_sub_own_paths: true,
-                    own_paths:Some("".to_string()),
+                    own_paths: Some("".to_string()),
                     ..Default::default()
                 },
                 ..Default::default()
