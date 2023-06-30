@@ -209,7 +209,7 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                 action_by_post_callback: None,
             },
             FlowTransitionInitInfo {
-                from_flow_state_name: "处理中".to_string(),
+                from_flow_state_name: "待处理".to_string(),
                 to_flow_state_name: "待确认".to_string(),
                 name: "处理完成".to_string(),
                 transfer_by_auto: None,
@@ -225,7 +225,7 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                 action_by_post_callback: None,
             },
             FlowTransitionInitInfo {
-                from_flow_state_name: "处理中".to_string(),
+                from_flow_state_name: "待处理".to_string(),
                 to_flow_state_name: "已关闭".to_string(),
                 name: "关闭".to_string(),
                 transfer_by_auto: None,

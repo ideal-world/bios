@@ -116,7 +116,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
         .await;
     // Get the state of a task that can be transferable
     let next_transitions: Vec<FlowInstFindNextTransitionResp> = client.put(&format!("/cc/inst/{}/transition/next", inst_id), &FlowInstFindNextTransitionsReq { vars: None }).await;
-    assert_eq!(next_transitions.len(), 4);
+    assert_eq!(next_transitions.len(), 0);
     client.set_auth(&TardisContext {
         own_paths: "".to_string(),
         ak: "".to_string(),
@@ -126,9 +126,10 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
         ..Default::default()
     })?;
     let next_transitions: Vec<FlowInstFindNextTransitionResp> = client.put(&format!("/cc/inst/{}/transition/next", inst_id), &FlowInstFindNextTransitionsReq { vars: None }).await;
-    assert_eq!(next_transitions.len(), 1);
-    assert_eq!(next_transitions[0].next_flow_transition_name, "处理完成");
-    // assert_eq!(next_transitions[0].vars_collect.as_ref().unwrap().len(), 1);
+    assert_eq!(next_transitions.len(), 2);
+    assert_eq!(next_transitions[0].next_flow_transition_name, "确认任务");
+    assert_eq!(next_transitions[1].next_flow_transition_name, "拒绝任务");
+    assert_eq!(next_transitions[1].vars_collect.as_ref().unwrap().len(), 1);
     // Find the state and transfer information of the specified instances in batch
     let state_and_next_transitions: Vec<FlowInstFindStateAndTransitionsResp> = client
         .put(
@@ -140,18 +141,18 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
         )
         .await;
     assert_eq!(state_and_next_transitions.len(), 1);
-    assert_eq!(state_and_next_transitions[0].current_flow_state_name, "待处理");
-    assert_eq!(state_and_next_transitions[0].next_flow_transitions[0].next_flow_transition_name, "处理完成");
-    // assert_eq!(state_and_next_transitions[0].next_flow_transitions[0].vars_collect.as_ref().unwrap().len(), 1);
+    assert_eq!(state_and_next_transitions[0].current_flow_state_name, "初始");
+    assert_eq!(state_and_next_transitions[0].next_flow_transitions[0].next_flow_transition_name, "确认任务");
+    assert_eq!(state_and_next_transitions[0].next_flow_transitions[1].next_flow_transition_name, "拒绝任务");
+    assert_eq!(state_and_next_transitions[0].next_flow_transitions[1].vars_collect.as_ref().unwrap().len(), 1);
     // Transfer task status
     let transfer: FlowInstTransferResp = client
         .put(
             &format!("/cc/inst/{}/transition/transfer", inst_id),
             &FlowInstTransferReq {
-                flow_transition_id: state_and_next_transitions[0].next_flow_transitions[0].next_flow_transition_id.clone(),
-                // vars: Some(TardisFuns::json.json_to_obj(json!({ "reason":"测试关闭" })).unwrap()),
+                flow_transition_id: state_and_next_transitions[0].next_flow_transitions[1].next_flow_transition_id.clone(),
+                vars: Some(TardisFuns::json.json_to_obj(json!({ "reason":"测试关闭" })).unwrap()),
                 message: None,
-                vars: None,
             },
         )
         .await;
