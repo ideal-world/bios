@@ -1,6 +1,5 @@
-use bios_basic::TardisFunInstExtractor;
 use tardis::web::context_extractor::TardisContextExtractor;
-use tardis::web::poem::Request;
+
 use tardis::web::poem_openapi;
 use tardis::web::poem_openapi::payload::Json;
 use tardis::web::web_resp::{TardisApiResult, TardisResp};
@@ -15,8 +14,8 @@ pub struct StatsCiMetricApi;
 impl StatsCiMetricApi {
     /// Query Metrics
     #[oai(path = "/", method = "put")]
-    async fn query_metrics(&self, query_req: Json<StatsQueryMetricsReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<StatsQueryMetricsResp> {
-        let funs = request.tardis_fun_inst();
+    async fn query_metrics(&self, query_req: Json<StatsQueryMetricsReq>, ctx: TardisContextExtractor) -> TardisApiResult<StatsQueryMetricsResp> {
+        let funs = crate::get_tardis_inst();
         let resp = stats_metric_serv::query_metrics(&query_req.0, &funs, &ctx.0).await?;
         TardisResp::ok(resp)
     }

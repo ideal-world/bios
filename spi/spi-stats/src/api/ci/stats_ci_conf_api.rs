@@ -1,6 +1,5 @@
-use bios_basic::TardisFunInstExtractor;
 use tardis::web::context_extractor::TardisContextExtractor;
-use tardis::web::poem::Request;
+
 use tardis::web::poem_openapi;
 use tardis::web::poem_openapi::param::{Path, Query};
 use tardis::web::poem_openapi::payload::Json;
@@ -19,24 +18,24 @@ pub struct StatsCiConfApi;
 impl StatsCiConfApi {
     /// Add Dimension Configuration
     #[oai(path = "/dim", method = "put")]
-    async fn dim_add(&self, add_req: Json<StatsConfDimAddReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
-        let funs = request.tardis_fun_inst();
+    async fn dim_add(&self, add_req: Json<StatsConfDimAddReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+        let funs = crate::get_tardis_inst();
         stats_conf_serv::dim_add(&add_req.0, &funs, &ctx.0).await?;
         TardisResp::ok(Void {})
     }
 
     /// Modify Dimension Configuration
     #[oai(path = "/dim/:dim_key", method = "patch")]
-    async fn dim_modify(&self, dim_key: Path<String>, modify_req: Json<StatsConfDimModifyReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
-        let funs = request.tardis_fun_inst();
+    async fn dim_modify(&self, dim_key: Path<String>, modify_req: Json<StatsConfDimModifyReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+        let funs = crate::get_tardis_inst();
         stats_conf_serv::dim_modify(&dim_key.0, &modify_req.0, &funs, &ctx.0).await?;
         TardisResp::ok(Void {})
     }
 
     /// Delete Dimension Configuration
     #[oai(path = "/dim/:dim_key", method = "delete")]
-    async fn dim_delete(&self, dim_key: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
-        let funs = request.tardis_fun_inst();
+    async fn dim_delete(&self, dim_key: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+        let funs = crate::get_tardis_inst();
         stats_conf_serv::dim_delete(&dim_key.0, &funs, &ctx.0).await?;
         TardisResp::ok(Void {})
     }
@@ -52,33 +51,32 @@ impl StatsCiConfApi {
         desc_by_create: Query<Option<bool>>,
         desc_by_update: Query<Option<bool>>,
         ctx: TardisContextExtractor,
-        request: &Request,
     ) -> TardisApiResult<TardisPage<StatsConfDimInfoResp>> {
-        let funs = request.tardis_fun_inst();
+        let funs = crate::get_tardis_inst();
         let resp = stats_conf_serv::dim_paginate(key.0, show_name.0, page_number.0, page_size.0, desc_by_create.0, desc_by_update.0, &funs, &ctx.0).await?;
         TardisResp::ok(resp)
     }
 
     /// Add Fact Configuration
     #[oai(path = "/fact", method = "put")]
-    async fn fact_add(&self, add_req: Json<StatsConfFactAddReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
-        let funs = request.tardis_fun_inst();
+    async fn fact_add(&self, add_req: Json<StatsConfFactAddReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+        let funs = crate::get_tardis_inst();
         stats_conf_serv::fact_add(&add_req.0, &funs, &ctx.0).await?;
         TardisResp::ok(Void {})
     }
 
     /// Modify Fact Configuration
     #[oai(path = "/fact/:fact_key", method = "patch")]
-    async fn fact_modify(&self, fact_key: Path<String>, modify_req: Json<StatsConfFactModifyReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
-        let funs = request.tardis_fun_inst();
+    async fn fact_modify(&self, fact_key: Path<String>, modify_req: Json<StatsConfFactModifyReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+        let funs = crate::get_tardis_inst();
         stats_conf_serv::fact_modify(&fact_key.0, &modify_req.0, &funs, &ctx.0).await?;
         TardisResp::ok(Void {})
     }
 
     /// Delete Fact Configuration
     #[oai(path = "/fact/:fact_key", method = "delete")]
-    async fn fact_delete(&self, fact_key: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
-        let funs = request.tardis_fun_inst();
+    async fn fact_delete(&self, fact_key: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+        let funs = crate::get_tardis_inst();
         stats_conf_serv::fact_delete(&fact_key.0, &funs, &ctx.0).await?;
         TardisResp::ok(Void {})
     }
@@ -94,17 +92,16 @@ impl StatsCiConfApi {
         desc_by_create: Query<Option<bool>>,
         desc_by_update: Query<Option<bool>>,
         ctx: TardisContextExtractor,
-        request: &Request,
     ) -> TardisApiResult<TardisPage<StatsConfFactInfoResp>> {
-        let funs = request.tardis_fun_inst();
+        let funs = crate::get_tardis_inst();
         let resp = stats_conf_serv::fact_paginate(key.0, show_name.0, page_number.0, page_size.0, desc_by_create.0, desc_by_update.0, &funs, &ctx.0).await?;
         TardisResp::ok(resp)
     }
 
     /// Add Fact Column Configuration
     #[oai(path = "/fact/:fact_key/col", method = "put")]
-    async fn fact_col_add(&self, fact_key: Path<String>, add_req: Json<StatsConfFactColAddReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
-        let funs = request.tardis_fun_inst();
+    async fn fact_col_add(&self, fact_key: Path<String>, add_req: Json<StatsConfFactColAddReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+        let funs = crate::get_tardis_inst();
         stats_conf_serv::fact_col_add(&fact_key.0, &add_req.0, &funs, &ctx.0).await?;
         TardisResp::ok(Void {})
     }
@@ -117,17 +114,16 @@ impl StatsCiConfApi {
         fact_col_key: Path<String>,
         modify_req: Json<StatsConfFactColModifyReq>,
         ctx: TardisContextExtractor,
-        request: &Request,
     ) -> TardisApiResult<Void> {
-        let funs = request.tardis_fun_inst();
+        let funs = crate::get_tardis_inst();
         stats_conf_serv::fact_col_modify(&fact_key.0, &fact_col_key.0, &modify_req.0, &funs, &ctx.0).await?;
         TardisResp::ok(Void {})
     }
 
     /// Delete Fact Column Configuration
     #[oai(path = "/fact/:fact_key/col/:fact_col_key", method = "delete")]
-    async fn fact_col_delete(&self, fact_key: Path<String>, fact_col_key: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
-        let funs = request.tardis_fun_inst();
+    async fn fact_col_delete(&self, fact_key: Path<String>, fact_col_key: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+        let funs = crate::get_tardis_inst();
         stats_conf_serv::fact_col_delete(&fact_key.0, &fact_col_key.0, &funs, &ctx.0).await?;
         TardisResp::ok(Void {})
     }
@@ -144,9 +140,8 @@ impl StatsCiConfApi {
         desc_by_create: Query<Option<bool>>,
         desc_by_update: Query<Option<bool>>,
         ctx: TardisContextExtractor,
-        request: &Request,
     ) -> TardisApiResult<TardisPage<StatsConfFactColInfoResp>> {
-        let funs = request.tardis_fun_inst();
+        let funs = crate::get_tardis_inst();
         let resp = stats_conf_serv::fact_col_paginate(
             fact_key.0,
             key.0,
@@ -164,16 +159,16 @@ impl StatsCiConfApi {
 
     /// Online dimension configuration
     #[oai(path = "/dim/:dim_key/online", method = "put")]
-    async fn dim_online(&self, dim_key: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
-        let funs = request.tardis_fun_inst();
+    async fn dim_online(&self, dim_key: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+        let funs = crate::get_tardis_inst();
         stats_conf_serv::dim_online(&dim_key.0, &funs, &ctx.0).await?;
         TardisResp::ok(Void {})
     }
 
     /// Online Fact Configuration
     #[oai(path = "/fact/:fact_key/online", method = "put")]
-    async fn fact_online(&self, fact_key: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
-        let funs = request.tardis_fun_inst();
+    async fn fact_online(&self, fact_key: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+        let funs = crate::get_tardis_inst();
         stats_conf_serv::fact_online(&fact_key.0, &funs, &ctx.0).await?;
         TardisResp::ok(Void {})
     }

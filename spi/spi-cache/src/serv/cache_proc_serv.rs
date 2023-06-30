@@ -4,7 +4,7 @@ use bios_basic::spi::spi_funs::SpiBsInstExtractor;
 
 use tardis::basic::result::TardisResult;
 
-use crate::dto::cache_proc_dto::{ExpReq, KIncrReq, KReq, KbRagngeReq, KbReq, KbvReq, KfIncrReq, KfReq, KfvReq, KvReq, KvWithExReq};
+use crate::dto::cache_proc_dto::*;
 use crate::{cache_constants, cache_initializer};
 use bios_basic::spi_dispatch_service;
 

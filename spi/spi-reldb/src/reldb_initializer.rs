@@ -21,7 +21,7 @@ use crate::{
 };
 
 pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
-    let mut funs = TardisFuns::inst_with_db_conn(DOMAIN_CODE.to_string(), None);
+    let mut funs = crate::get_tardis_inst();
     let clean_interval_sec = funs.conf::<ReldbConfig>().tx_clean_interval_sec;
     bios_basic::rbum::rbum_initializer::init(funs.module_code(), funs.conf::<ReldbConfig>().rbum.clone()).await?;
     funs.begin().await?;
@@ -81,4 +81,9 @@ pub async fn inst_conn(bs_inst: TypedSpiBsInst<'_, TardisRelDBClient>) -> Tardis
         reldb_constants::SPI_MYSQL_KIND_CODE => serv::mysql::reldb_mysql_initializer::init_conn(conn, bs_inst.1).await,
         kind_code => Err(spi_funs::bs_not_implemented(kind_code))?,
     }
+}
+
+#[inline]
+pub(crate) fn get_tardis_inst() -> TardisFunsInst {
+    TardisFuns::inst_with_db_conn(DOMAIN_CODE.to_string(), None)
 }

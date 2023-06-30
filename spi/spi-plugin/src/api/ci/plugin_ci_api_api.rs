@@ -1,9 +1,9 @@
 use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
-use bios_basic::TardisFunInstExtractor;
+
 use tardis::chrono::{self, Utc};
 use tardis::web::context_extractor::TardisContextExtractor;
-use tardis::web::poem::Request;
+
 use tardis::web::poem_openapi;
 use tardis::web::poem_openapi::param::{Path, Query};
 use tardis::web::poem_openapi::payload::Json;
@@ -19,8 +19,8 @@ pub struct PluginApiApi;
 impl PluginApiApi {
     /// Add or modify Plugin Api
     #[oai(path = "/", method = "put")]
-    async fn add(&self, mut add_or_modify_req: Json<PluginApiAddOrModifyReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<String> {
-        let mut funs = request.tardis_fun_inst();
+    async fn add(&self, mut add_or_modify_req: Json<PluginApiAddOrModifyReq>, ctx: TardisContextExtractor) -> TardisApiResult<String> {
+        let mut funs = crate::get_tardis_inst();
         funs.begin().await?;
         let id = PluginApiServ::add_or_modify_item(&mut add_or_modify_req.0, &funs, &ctx.0).await?;
         funs.commit().await?;
@@ -29,8 +29,8 @@ impl PluginApiApi {
 
     /// Delete Plugin Api
     #[oai(path = "/:code", method = "delete")]
-    async fn delete(&self, code: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
-        let funs = request.tardis_fun_inst();
+    async fn delete(&self, code: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+        let funs = crate::get_tardis_inst();
         PluginApiServ::delete_by_code(&code.0, &funs, &ctx.0).await?;
         TardisResp::ok(Void {})
     }
@@ -46,9 +46,8 @@ impl PluginApiApi {
         page_number: Query<u32>,
         page_size: Query<u32>,
         ctx: TardisContextExtractor,
-        request: &Request,
     ) -> TardisApiResult<TardisPage<PluginApiSummaryResp>> {
-        let funs = request.tardis_fun_inst();
+        let funs = crate::get_tardis_inst();
         let result = PluginApiServ::paginate_items(
             &PluginApiFilterReq {
                 basic: RbumBasicFilterReq {
