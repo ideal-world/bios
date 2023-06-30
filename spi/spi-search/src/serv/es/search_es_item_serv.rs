@@ -11,7 +11,7 @@ use tardis::{
     search::search_client::TardisSearchClient,
     serde_json::{self, json},
     web::web_resp::TardisPage,
-    TardisFuns, TardisFunsInst,
+    TardisFuns, TardisFunsInst, log::debug,
 };
 
 use crate::dto::search_item_dto::{SearchItemAddReq, SearchItemModifyReq, SearchItemSearchQScopeKind, SearchItemSearchReq, SearchItemSearchResp};
@@ -232,7 +232,7 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
     }
     if let (Some(update_time_start), Some(update_time_end)) = (&search_req.query.update_time_start, &search_req.query.update_time_end) {
         filter_q.push(json!({
-            "range": {"create_time": {"gte": update_time_start, "lt": update_time_end}},
+            "range": {"update_time": {"gte": update_time_start, "lt": update_time_end}},
         }));
     }
     if let Some(ext) = &search_req.query.ext {
@@ -246,21 +246,23 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
     let q = json!({
         "query": {
             "bool": {
-                "must":must_q,
-                "should":should_q,
+                "must":if must_q.is_empty() {json!({})} else {json!(must_q)},
+                "should":if should_q.is_empty() {json!({})} else {json!(should_q)},
+                "filter": if filter_q.is_empty() {json!({})} else {json!(filter_q)},
             }
         },
-        "filter":filter_q,
-        "sort": sort_q,
+        "sort": if sort_q.is_empty() {json!({})} else {json!(sort_q)},
     });
+    debug!("q: {:?}", q.to_string());
     let client = funs.bs(ctx).await?.inst::<TardisSearchClient>().0;
     let result = client.raw_search(&search_req.tag, &q.to_string(), Some(search_req.page.size as i32), Some((search_req.page.number * search_req.page.size as u32) as i32)).await?;
+    debug!("raw_search[result]: {:?}", result);
+
     let mut total_size: i64 = 0;
     if search_req.page.fetch_total && total_size == 0 {
         total_size = result.hits.total.value as i64;
     }
     let records = result.hits.hits.iter().map(|item| TardisFuns::json.str_to_obj::<SearchItemSearchResp>(&item._source.clone().to_string())).collect::<Result<Vec<_>, _>>()?;
-    //     client.raw_search(&search_req.tag, &q.to_string()).await?.iter().map(|item| TardisFuns::json.str_to_obj::<SearchItemSearchResp>(item)).collect::<Result<Vec<_>, _>>()?;
 
     Ok(TardisPage {
         page_size: search_req.page.size as u64,
