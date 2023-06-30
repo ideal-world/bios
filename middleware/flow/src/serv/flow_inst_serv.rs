@@ -537,14 +537,16 @@ impl FlowInstServ {
                     && (spec_flow_transition_id.is_none() || &model_transition.id == spec_flow_transition_id.as_ref().unwrap())
             })
             .filter(|model_transition| {
+                let mut is_filter = true;
+
                 if model_transition.guard_by_creator && (flow_inst.create_ctx.own_paths != ctx.own_paths || flow_inst.create_ctx.owner != ctx.owner) {
-                    return false;
+                    is_filter = false;
                 }
                 if !model_transition.guard_by_spec_account_ids.is_empty() && !model_transition.guard_by_spec_account_ids.contains(&ctx.owner) {
-                    return false;
+                    is_filter = false;
                 }
                 if !model_transition.guard_by_spec_role_ids.is_empty() && !model_transition.guard_by_spec_role_ids.iter().any(|role_ids| ctx.roles.contains(role_ids)) {
-                    return false;
+                    is_filter = false;
                 }
                 if model_transition.guard_by_his_operators
                     && flow_inst
@@ -555,9 +557,12 @@ impl FlowInstServ {
                         })
                         .unwrap_or(false)
                 {
-                    return false;
+                    is_filter = false;
                 }
                 // TODO guard_by_assigned is not implement
+                if model_transition.guard_by_assigned {
+
+                }
                 if let Some(guard_by_other_conds) = model_transition.guard_by_other_conds() {
                     let mut check_vars: HashMap<String, Value> = HashMap::new();
                     if let Some(current_vars) = &flow_inst.current_vars {
@@ -567,10 +572,10 @@ impl FlowInstServ {
                         check_vars.extend(req_vars.clone());
                     }
                     if !BasicQueryCondInfo::check_or_and_conds(&guard_by_other_conds, &check_vars).unwrap() {
-                        return false;
+                        is_filter = false;
                     }
                 }
-                true
+                is_filter
             })
             .map(|model_transition| FlowInstFindNextTransitionResp {
                 next_flow_transition_id: model_transition.id.to_string(),
