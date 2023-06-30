@@ -209,11 +209,11 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
     if let Some(kinds) = &search_req.query.kinds {
         if !kinds.is_empty() {
             where_fragments.push(format!(
-                "kind LIKE ANY (ARRAY[{}])",
+                "kind = ANY (ARRAY[{}])",
                 (0..kinds.len()).map(|idx| format!("${}", sql_vals.len() + idx + 1)).collect::<Vec<String>>().join(",")
             ));
             for kind in kinds {
-                sql_vals.push(Value::from(format!("{kind}%")));
+                sql_vals.push(Value::from(format!("{kind}")));
             }
         }
     }
