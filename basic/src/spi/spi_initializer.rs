@@ -111,7 +111,11 @@ pub mod common_pg {
         TardisFuns,
     };
 
-    use crate::spi::{dto::spi_bs_dto::SpiBsCertResp, spi_constants::GLOBAL_STORAGE_FLAG, spi_funs::{SpiBsInst, TypedSpiBsInst}};
+    use crate::spi::{
+        dto::spi_bs_dto::SpiBsCertResp,
+        spi_constants::GLOBAL_STORAGE_FLAG,
+        spi_funs::{SpiBsInst, TypedSpiBsInst},
+    };
 
     use super::common;
 

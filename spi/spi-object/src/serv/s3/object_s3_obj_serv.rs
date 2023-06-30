@@ -1,4 +1,4 @@
-use bios_basic::spi::{serv::spi_bs_serv::SpiBsServ, spi_funs::SpiBsInstExtractor, spi_initializer::common};
+use bios_basic::spi::{serv::spi_bs_serv::SpiBsServ, spi_funs::SpiBsInst, spi_initializer::common};
 use tardis::{
     basic::{dto::TardisContext, error::TardisError, result::TardisResult},
     os::os_client::TardisOSClient,
@@ -16,8 +16,9 @@ pub async fn presign_obj_url(
     private: bool,
     funs: &TardisFunsInst,
     ctx: &TardisContext,
+    inst: &SpiBsInst,
 ) -> TardisResult<String> {
-    let bs_inst = funs.bs(ctx).await?.inst::<TardisOSClient>();
+    let bs_inst = inst.inst::<TardisOSClient>();
     let spi_bs = SpiBsServ::get_bs_by_rel(&ctx.owner, None, funs, ctx).await?;
     let client = bs_inst.0;
     let bucket_name = common::get_isolation_flag_from_ext(bs_inst.1).map(|bucket_name_prefix| format!("{}-{}", bucket_name_prefix, if private { "pri" } else { "pub" }));

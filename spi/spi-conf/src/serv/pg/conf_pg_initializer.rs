@@ -1,6 +1,4 @@
-use std::collections::HashMap;
-
-use bios_basic::spi::{spi_initializer, spi_funs::TypedSpiBsInst};
+use bios_basic::spi::{spi_funs::TypedSpiBsInst, spi_initializer};
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
     db::reldb_client::{TardisRelDBClient, TardisRelDBlConnection},
@@ -12,11 +10,7 @@ pub struct SpiConfTableAndConns {
     pub tag: (TardisRelDBlConnection, String),
     pub config_tag_rel: (TardisRelDBlConnection, String),
 }
-pub async fn init_table_and_conn_namespace(
-    bs_inst: TypedSpiBsInst<'_, TardisRelDBClient>,
-    ctx: &TardisContext,
-    mgr: bool,
-) -> TardisResult<(TardisRelDBlConnection, String)> {
+pub async fn init_table_and_conn_namespace(bs_inst: TypedSpiBsInst<'_, TardisRelDBClient>, ctx: &TardisContext, mgr: bool) -> TardisResult<(TardisRelDBlConnection, String)> {
     let (conn, table_name) = spi_initializer::common_pg::init_table_and_conn(
         bs_inst,
         ctx,
@@ -110,11 +104,7 @@ tp character varying"#
     .await
 }
 
-pub async fn init_table_and_conn_tag(
-    bs_inst: TypedSpiBsInst<'_, TardisRelDBClient>,
-    ctx: &TardisContext,
-    mgr: bool,
-) -> TardisResult<(TardisRelDBlConnection, String)> {
+pub async fn init_table_and_conn_tag(bs_inst: TypedSpiBsInst<'_, TardisRelDBClient>, ctx: &TardisContext, mgr: bool) -> TardisResult<(TardisRelDBlConnection, String)> {
     spi_initializer::common_pg::init_table_and_conn(bs_inst, ctx, mgr, None, "conf_tag", r#"id character varying PRIMARY KEY"#, vec![], None, None).await
 }
 
@@ -144,10 +134,10 @@ config_id uuid NOT NULL REFERENCES {config_table_name} ON DELETE CASCADE"#
 }
 
 pub async fn init_table_and_conn(bs_inst: TypedSpiBsInst<'_, TardisRelDBClient>, ctx: &TardisContext, mgr: bool) -> TardisResult<SpiConfTableAndConns> {
-    let (name_space_conn, namespace_table_name) = init_table_and_conn_namespace(bs_inst.clone(), ctx, mgr).await?;
-    let (config_conn, config_table_name) = init_table_and_conn_config(bs_inst.clone(), namespace_table_name.as_str(), ctx, mgr).await?;
-    let (config_history_conn, history_table_name) = init_table_and_conn_history(bs_inst.clone(), namespace_table_name.as_str(), ctx, mgr).await?;
-    let (tag_conn, tag_table_name) = init_table_and_conn_tag(bs_inst.clone(), ctx, mgr).await?;
+    let (name_space_conn, namespace_table_name) = init_table_and_conn_namespace(bs_inst, ctx, mgr).await?;
+    let (config_conn, config_table_name) = init_table_and_conn_config(bs_inst, namespace_table_name.as_str(), ctx, mgr).await?;
+    let (config_history_conn, history_table_name) = init_table_and_conn_history(bs_inst, namespace_table_name.as_str(), ctx, mgr).await?;
+    let (tag_conn, tag_table_name) = init_table_and_conn_tag(bs_inst, ctx, mgr).await?;
     let (config_tag_rel_conn, config_tag_rel_table_name) = init_table_and_conn_tag_config_rel(bs_inst, &config_table_name, &tag_table_name, ctx, mgr).await?;
     Ok(SpiConfTableAndConns {
         namespace: (name_space_conn, namespace_table_name),

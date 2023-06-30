@@ -6,13 +6,13 @@ use bios_mw_flow::dto::flow_inst_dto::{
     FlowInstTransferResp,
 };
 use bios_mw_flow::dto::flow_model_dto::{
-    FlowModelAddReq, FlowModelAggResp, FlowModelBindStateReq, FlowModelModifyReq, FlowModelSummaryResp, FlowModelUnbindStateReq, FlowTagKind, FlowTemplateModelResp,
+    FlowModelAggResp, FlowModelBindStateReq, FlowModelModifyReq, FlowModelSummaryResp, FlowModelUnbindStateReq, FlowTagKind, FlowTemplateModelResp,
 };
-use bios_mw_flow::dto::flow_state_dto::{FlowStateAddReq, FlowStateSummaryResp, FlowSysStateKind};
-use bios_mw_flow::dto::flow_transition_dto::{FlowTransitionAddReq, FlowTransitionModifyReq};
-use bios_mw_flow::dto::flow_var_dto::FlowVarInfo;
+use bios_mw_flow::dto::flow_state_dto::FlowStateSummaryResp;
+use bios_mw_flow::dto::flow_transition_dto::FlowTransitionModifyReq;
+
 use tardis::basic::dto::TardisContext;
-use tardis::basic::field::TrimString;
+
 use tardis::basic::result::TardisResult;
 use tardis::log::info;
 use tardis::serde_json::json;
@@ -146,7 +146,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
     assert_eq!(state_and_next_transitions[0].next_flow_transitions[1].next_flow_transition_name, "拒绝任务");
     assert_eq!(state_and_next_transitions[0].next_flow_transitions[1].vars_collect.as_ref().unwrap().len(), 1);
     // Transfer task status
-    let transfer: FlowInstTransferResp = client
+    let _transfer: FlowInstTransferResp = client
         .put(
             &format!("/cc/inst/{}/transition/transfer", inst_id),
             &FlowInstTransferReq {

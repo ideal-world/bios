@@ -1,5 +1,5 @@
 use bios_basic::spi::{
-    spi_funs::SpiBsInstExtractor,
+    spi_funs::SpiBsInst,
     spi_initializer::common_pg::{self, package_table_name},
 };
 use itertools::Itertools;
@@ -22,15 +22,22 @@ use crate::{
 
 use super::{stats_pg_conf_dim_serv, stats_pg_conf_fact_col_serv, stats_pg_conf_fact_serv};
 
-pub(crate) async fn fact_record_load(fact_conf_key: &str, fact_record_key: &str, add_req: StatsFactRecordLoadReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-    let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
+pub(crate) async fn fact_record_load(
+    fact_conf_key: &str,
+    fact_record_key: &str,
+    add_req: StatsFactRecordLoadReq,
+    funs: &TardisFunsInst,
+    ctx: &TardisContext,
+    inst: &SpiBsInst,
+) -> TardisResult<()> {
+    let bs_inst = inst.inst::<TardisRelDBClient>();
     let (mut conn, _) = common_pg::init_conn(bs_inst).await?;
     conn.begin().await?;
     if !stats_pg_conf_fact_serv::online(fact_conf_key, &conn, ctx).await? {
         return Err(funs.err().conflict("fact_record", "load", "The fact config not online.", "409-spi-stats-fact-conf-not-online"));
     }
 
-    let fact_col_conf_set = stats_pg_conf_fact_col_serv::find_by_fact_conf_key(fact_conf_key, &conn, ctx).await?;
+    let fact_col_conf_set = stats_pg_conf_fact_col_serv::find_by_fact_conf_key(fact_conf_key, &conn, ctx, inst).await?;
 
     let mut fields = vec!["key".to_string(), "own_paths".to_string(), "ct".to_string()];
     let mut values = vec![Value::from(fact_record_key), Value::from(add_req.own_paths), Value::from(add_req.ct)];
@@ -61,7 +68,7 @@ pub(crate) async fn fact_record_load(fact_conf_key: &str, fact_record_key: &str,
                     "400-spi-stats-fail-to-get-dim-config-key",
                 ))
             };
-            let Some(dim_conf) = stats_pg_conf_dim_serv::get(key, &conn, ctx).await? else {
+            let Some(dim_conf) = stats_pg_conf_dim_serv::get(key, &conn, ctx, inst).await? else {
                 return Err(funs.err().not_found(
                     "fact_record",
                     "load",
@@ -109,7 +116,7 @@ pub(crate) async fn fact_record_load(fact_conf_key: &str, fact_record_key: &str,
                     let Some(dim_rel_conf_dim_key) = &fact_col_conf.dim_rel_conf_dim_key else {
                         return Err(funs.err().internal_error("fact_record", "load", "dim_rel_conf_dim_key unexpectedly being empty", "500-spi-stats-internal-error"))
                     };
-                    let Some(dim_conf) = stats_pg_conf_dim_serv::get(dim_rel_conf_dim_key, &conn, ctx).await? else {
+                    let Some(dim_conf) = stats_pg_conf_dim_serv::get(dim_rel_conf_dim_key, &conn, ctx, inst).await? else {
                         return Err(funs.err().internal_error("fact_record", "load", &format!("key [{dim_rel_conf_dim_key}] missing corresponding config "), "500-spi-stats-internal-error"))
                     };
                     if fact_col_conf.dim_multi_values.unwrap_or(false) {
@@ -148,15 +155,21 @@ VALUES
     Ok(())
 }
 
-pub(crate) async fn fact_records_load(fact_conf_key: &str, add_req_set: Vec<StatsFactRecordsLoadReq>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-    let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
+pub(crate) async fn fact_records_load(
+    fact_conf_key: &str,
+    add_req_set: Vec<StatsFactRecordsLoadReq>,
+    funs: &TardisFunsInst,
+    ctx: &TardisContext,
+    inst: &SpiBsInst,
+) -> TardisResult<()> {
+    let bs_inst = inst.inst::<TardisRelDBClient>();
     let (mut conn, _) = common_pg::init_conn(bs_inst).await?;
     conn.begin().await?;
     if !stats_pg_conf_fact_serv::online(fact_conf_key, &conn, ctx).await? {
         return Err(funs.err().conflict("fact_record", "load_set", "The fact config not online.", "409-spi-stats-fact-conf-not-online"));
     }
 
-    let fact_col_conf_set = stats_pg_conf_fact_col_serv::find_by_fact_conf_key(fact_conf_key, &conn, ctx).await?;
+    let fact_col_conf_set = stats_pg_conf_fact_col_serv::find_by_fact_conf_key(fact_conf_key, &conn, ctx, inst).await?;
 
     let mut has_fields_init = false;
     let mut fields = vec!["key".to_string(), "own_paths".to_string(), "ct".to_string()];
@@ -193,7 +206,7 @@ pub(crate) async fn fact_records_load(fact_conf_key: &str, add_req_set: Vec<Stat
                         "400-spi-stats-fail-to-get-dim-config-key",
                     ))
                 };
-                let Some(dim_conf) = stats_pg_conf_dim_serv::get(key, &conn, ctx).await? else {
+                let Some(dim_conf) = stats_pg_conf_dim_serv::get(key, &conn, ctx, inst).await? else {
                     return Err(funs.err().not_found(
                         "fact_record",
                         "load_set",
@@ -246,8 +259,8 @@ pub(crate) async fn fact_records_load(fact_conf_key: &str, add_req_set: Vec<Stat
     Ok(())
 }
 
-pub(crate) async fn fact_record_delete(fact_conf_key: &str, fact_record_key: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-    let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
+pub(crate) async fn fact_record_delete(fact_conf_key: &str, fact_record_key: &str, funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
+    let bs_inst = inst.inst::<TardisRelDBClient>();
     let (mut conn, _) = common_pg::init_conn(bs_inst).await?;
     conn.begin().await?;
     if !stats_pg_conf_fact_serv::online(fact_conf_key, &conn, ctx).await? {
@@ -270,8 +283,8 @@ VALUES
     Ok(())
 }
 
-pub(crate) async fn fact_records_delete(fact_conf_key: &str, fact_record_delete_keys: &[String], funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-    let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
+pub(crate) async fn fact_records_delete(fact_conf_key: &str, fact_record_delete_keys: &[String], funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
+    let bs_inst = inst.inst::<TardisRelDBClient>();
     let (mut conn, _) = common_pg::init_conn(bs_inst).await?;
     conn.begin().await?;
     if !stats_pg_conf_fact_serv::online(fact_conf_key, &conn, ctx).await? {
@@ -302,14 +315,15 @@ pub(crate) async fn fact_records_delete_by_dim_key(
     dim_record_key: Option<serde_json::Value>,
     funs: &TardisFunsInst,
     ctx: &TardisContext,
+    inst: &SpiBsInst,
 ) -> TardisResult<()> {
-    let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
+    let bs_inst = inst.inst::<TardisRelDBClient>();
     let (mut conn, _) = common_pg::init_conn(bs_inst).await?;
     conn.begin().await?;
     if !stats_pg_conf_fact_serv::online(fact_conf_key, &conn, ctx).await? {
         return Err(funs.err().conflict("fact_record", "delete_set", "The fact config not online.", "409-spi-stats-fact-conf-not-online"));
     }
-    let fact_record_delete_keys = self::find_fact_record_key(fact_conf_key.to_owned(), dim_conf_key.to_owned(), dim_record_key, &conn, funs, ctx).await?;
+    let fact_record_delete_keys = self::find_fact_record_key(fact_conf_key.to_owned(), dim_conf_key.to_owned(), dim_record_key, &conn, funs, ctx, inst).await?;
     if fact_record_delete_keys.is_empty() {
         return Ok(());
     }
@@ -338,11 +352,12 @@ async fn find_fact_record_key(
     conn: &TardisRelDBlConnection,
     funs: &TardisFunsInst,
     ctx: &TardisContext,
+    inst: &SpiBsInst,
 ) -> TardisResult<Vec<String>> {
-    let dim_conf = stats_pg_conf_dim_serv::get(&dim_conf_key, conn, ctx)
+    let dim_conf = stats_pg_conf_dim_serv::get(&dim_conf_key, conn, ctx, inst)
         .await?
         .ok_or_else(|| funs.err().not_found("fact_record", "find", "The dimension config does not exist.", "404-spi-stats-dim-conf-not-exist"))?;
-    let fact_conf_col_key = stats_pg_conf_fact_col_serv::find_by_fact_conf_key(&fact_conf_key, conn, ctx)
+    let fact_conf_col_key = stats_pg_conf_fact_col_serv::find_by_fact_conf_key(&fact_conf_key, conn, ctx, inst)
         .await?
         .into_iter()
         .find_or_first(|r| r.dim_rel_conf_dim_key.clone().unwrap_or("".to_string()) == dim_conf_key)
@@ -376,8 +391,8 @@ WHERE
     Ok(final_result)
 }
 
-pub(crate) async fn fact_records_clean(fact_conf_key: &str, before_ct: Option<DateTime<Utc>>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-    let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
+pub(crate) async fn fact_records_clean(fact_conf_key: &str, before_ct: Option<DateTime<Utc>>, funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
+    let bs_inst = inst.inst::<TardisRelDBClient>();
     let (mut conn, _) = common_pg::init_conn(bs_inst).await?;
     conn.begin().await?;
     if !stats_pg_conf_fact_serv::online(fact_conf_key, &conn, ctx).await? {
@@ -394,14 +409,14 @@ pub(crate) async fn fact_records_clean(fact_conf_key: &str, before_ct: Option<Da
     Ok(())
 }
 
-pub(crate) async fn dim_record_add(dim_conf_key: String, add_req: StatsDimRecordAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-    let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
+pub(crate) async fn dim_record_add(dim_conf_key: String, add_req: StatsDimRecordAddReq, funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
+    let bs_inst = inst.inst::<TardisRelDBClient>();
     let (mut conn, _) = common_pg::init_conn(bs_inst).await?;
     conn.begin().await?;
     if !stats_pg_conf_dim_serv::online(&dim_conf_key, &conn, ctx).await? {
         return Err(funs.err().conflict("dim_record", "add", "The dimension config not online.", "409-spi-stats-dim-conf-not-online"));
     }
-    let dim_conf = stats_pg_conf_dim_serv::get(&dim_conf_key, &conn, ctx).await?.expect("Fail to get dim_conf");
+    let dim_conf = stats_pg_conf_dim_serv::get(&dim_conf_key, &conn, ctx, inst).await?.expect("Fail to get dim_conf");
     if !dim_conf.stable_ds {
         return Err(funs.err().bad_request(
             "dim_record",
@@ -433,7 +448,7 @@ pub(crate) async fn dim_record_add(dim_conf_key: String, add_req: StatsDimRecord
     let mut params = vec![dim_record_key_value.clone(), Value::from(add_req.show_name.clone())];
 
     if let Some(parent_key) = add_req.parent_key {
-        let parent_record = dim_record_get(&dim_conf_key, parent_key.clone(), &conn, funs, ctx).await?.ok_or_else(|| {
+        let parent_record = dim_record_get(&dim_conf_key, parent_key.clone(), &conn, funs, ctx, inst).await?.ok_or_else(|| {
             funs.err().not_found(
                 "dim_record",
                 "add",
@@ -493,8 +508,9 @@ pub(in crate::serv::pg) async fn dim_record_get(
     conn: &TardisRelDBlConnection,
     funs: &TardisFunsInst,
     ctx: &TardisContext,
+    inst: &SpiBsInst,
 ) -> TardisResult<Option<serde_json::Value>> {
-    dim_do_record_paginate(dim_conf_key.to_string(), Some(dim_record_key), None, 1, 1, None, None, conn, funs, ctx).await.map(|page| page.records.into_iter().next())
+    dim_do_record_paginate(dim_conf_key.to_string(), Some(dim_record_key), None, 1, 1, None, None, conn, funs, ctx, inst).await.map(|page| page.records.into_iter().next())
 }
 
 pub(crate) async fn dim_record_paginate(
@@ -507,8 +523,9 @@ pub(crate) async fn dim_record_paginate(
     desc_by_update: Option<bool>,
     funs: &TardisFunsInst,
     ctx: &TardisContext,
+    inst: &SpiBsInst,
 ) -> TardisResult<TardisPage<serde_json::Value>> {
-    let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
+    let bs_inst = inst.inst::<TardisRelDBClient>();
     let (conn, _) = common_pg::init_conn(bs_inst).await?;
     dim_do_record_paginate(
         dim_conf_key,
@@ -521,6 +538,7 @@ pub(crate) async fn dim_record_paginate(
         &conn,
         funs,
         ctx,
+        inst,
     )
     .await
 }
@@ -536,8 +554,9 @@ async fn dim_do_record_paginate(
     conn: &TardisRelDBlConnection,
     funs: &TardisFunsInst,
     ctx: &TardisContext,
+    inst: &SpiBsInst,
 ) -> TardisResult<TardisPage<serde_json::Value>> {
-    let dim_conf = stats_pg_conf_dim_serv::get(&dim_conf_key, conn, ctx)
+    let dim_conf = stats_pg_conf_dim_serv::get(&dim_conf_key, conn, ctx, inst)
         .await?
         .ok_or_else(|| funs.err().not_found("dim_record", "find", "The dimension config does not exist.", "404-spi-stats-dim-conf-not-exist"))?;
 
@@ -597,14 +616,14 @@ LIMIT $1 OFFSET $2
     })
 }
 
-pub(crate) async fn dim_record_delete(dim_conf_key: String, dim_record_key: serde_json::Value, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-    let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
+pub(crate) async fn dim_record_delete(dim_conf_key: String, dim_record_key: serde_json::Value, funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
+    let bs_inst = inst.inst::<TardisRelDBClient>();
     let (mut conn, _) = common_pg::init_conn(bs_inst).await?;
     conn.begin().await?;
     if !stats_pg_conf_dim_serv::online(&dim_conf_key, &conn, ctx).await? {
         return Err(funs.err().conflict("dim_record", "delete", "The dimension config not online.", "409-spi-stats-dim-conf-not-online"));
     }
-    let dim_conf = stats_pg_conf_dim_serv::get(&dim_conf_key, &conn, ctx).await?.expect("Fail to get dim_conf");
+    let dim_conf = stats_pg_conf_dim_serv::get(&dim_conf_key, &conn, ctx, inst).await?.expect("Fail to get dim_conf");
 
     let table_name = package_table_name(&format!("stats_inst_dim_{}", dim_conf.key), ctx);
     let values = vec![dim_conf.data_type.json_to_sea_orm_value(&dim_record_key, false)?];

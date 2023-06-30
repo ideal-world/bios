@@ -3,7 +3,7 @@ use std::{
     time::Duration,
 };
 
-use bios_basic::spi::spi_funs::{SpiBsInstExtractor, SpiBsInst};
+use bios_basic::spi::spi_funs::SpiBsInst;
 use tardis::{
     basic::{dto::TardisContext, error::TardisError, result::TardisResult},
     db::{
@@ -42,7 +42,7 @@ fn md5(content: &str) -> String {
     md5.result_str()
 }
 
-pub async fn get_config(descriptor: &mut ConfigDescriptor, funs: &TardisFunsInst, ctx: &TardisContext, bs_inst: &SpiBsInst) -> TardisResult<String> {
+pub async fn get_config(descriptor: &mut ConfigDescriptor, _funs: &TardisFunsInst, ctx: &TardisContext, bs_inst: &SpiBsInst) -> TardisResult<String> {
     descriptor.fix_namespace_id();
     let data_id = &descriptor.data_id;
     let group = &descriptor.group;
@@ -65,7 +65,7 @@ WHERE cc.namespace_id=$1 AND cc.grp=$2 AND cc.data_id=$3
     Ok(content)
 }
 
-pub async fn get_config_detail(descriptor: &mut ConfigDescriptor, funs: &TardisFunsInst, ctx: &TardisContext, bs_inst: &SpiBsInst) -> TardisResult<ConfigItem> {
+pub async fn get_config_detail(descriptor: &mut ConfigDescriptor, _funs: &TardisFunsInst, ctx: &TardisContext, bs_inst: &SpiBsInst) -> TardisResult<ConfigItem> {
     descriptor.fix_namespace_id();
     let data_id = &descriptor.data_id;
     let group = &descriptor.group;
@@ -114,7 +114,7 @@ WHERE c.namespace_id=$1 AND c.grp=$2 AND c.data_id=$3"#,
         ..Default::default()
     })
 }
-pub async fn get_md5(descriptor: &mut ConfigDescriptor, funs: &TardisFunsInst, ctx: &TardisContext, bs_inst: &SpiBsInst) -> TardisResult<String> {
+pub async fn get_md5(descriptor: &mut ConfigDescriptor, _funs: &TardisFunsInst, ctx: &TardisContext, bs_inst: &SpiBsInst) -> TardisResult<String> {
     descriptor.fix_namespace_id();
     const EXPIRE: Duration = Duration::from_secs(1);
     // try get from cache
@@ -349,7 +349,7 @@ WHERE cc.namespace_id='{namespace}' AND cc.grp='{group}' AND cc.data_id='{data_i
     Ok(true)
 }
 
-pub async fn get_configs_by_namespace(namespace_id: &NamespaceId, funs: &TardisFunsInst, ctx: &TardisContext, bs_inst: &SpiBsInst) -> TardisResult<Vec<ConfigItemDigest>> {
+pub async fn get_configs_by_namespace(namespace_id: &NamespaceId, _funs: &TardisFunsInst, ctx: &TardisContext, bs_inst: &SpiBsInst) -> TardisResult<Vec<ConfigItemDigest>> {
     let namespace_id = if namespace_id.is_empty() { "public" } else { namespace_id };
 
     let typed_inst = bs_inst.inst::<TardisRelDBClient>();
@@ -388,7 +388,7 @@ ORDER BY created_time DESC
     Ok(list)
 }
 
-pub async fn get_configs(req: ConfigListRequest, mode: SearchMode, funs: &TardisFunsInst, ctx: &TardisContext, bs_inst: &SpiBsInst) -> TardisResult<ConfigListResponse> {
+pub async fn get_configs(req: ConfigListRequest, mode: SearchMode, _funs: &TardisFunsInst, ctx: &TardisContext, bs_inst: &SpiBsInst) -> TardisResult<ConfigListResponse> {
     // query config history list by a ConfigDescriptor
     let ConfigListRequest {
         page_no,

@@ -26,7 +26,8 @@ impl SpiBsInst {
     pub fn inst<T>(&self) -> TypedSpiBsInst<'_, T>
     // T is 'static meaning it's an owned type or only holds static references
     // dyn Any + Send + Sync ==downcast==> T: 'static + Send + Sync
-    where T: 'static
+    where
+        T: 'static,
     {
         let c = self.client.as_ref().downcast_ref::<T>().unwrap();
         (c, &self.ext, self.kind_code())
@@ -36,7 +37,6 @@ impl SpiBsInst {
         self.ext.get(spi_constants::SPI_KIND_CODE_FLAG).unwrap()
     }
 }
-
 
 static mut SPI_BS_CACHES: Option<HashMap<String, SpiBsInst>> = None;
 

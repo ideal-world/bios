@@ -27,7 +27,7 @@ impl StatsCiRecordApi {
         request: &Request,
     ) -> TardisApiResult<Void> {
         let funs = request.tardis_fun_inst();
-        stats_record_serv::fact_record_load(fact_key.0, record_key.0, add_req.0, &funs, &ctx.0).await?;
+        stats_record_serv::fact_record_load(&fact_key.0, &record_key.0, add_req.0, &funs, &ctx.0).await?;
         TardisResp::ok(Void {})
     }
 
@@ -35,7 +35,7 @@ impl StatsCiRecordApi {
     #[oai(path = "/fact/:fact_key/:record_key", method = "delete")]
     async fn fact_record_delete(&self, fact_key: Path<String>, record_key: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         let funs = request.tardis_fun_inst();
-        stats_record_serv::fact_record_delete(fact_key.0, record_key.0, &funs, &ctx.0).await?;
+        stats_record_serv::fact_record_delete(&fact_key.0, &record_key.0, &funs, &ctx.0).await?;
         TardisResp::ok(Void {})
     }
 
@@ -49,7 +49,7 @@ impl StatsCiRecordApi {
         request: &Request,
     ) -> TardisApiResult<Void> {
         let funs = request.tardis_fun_inst();
-        stats_record_serv::fact_records_load(fact_key.0, add_req.0, &funs, &ctx.0).await?;
+        stats_record_serv::fact_records_load(&fact_key.0, add_req.0, &funs, &ctx.0).await?;
         TardisResp::ok(Void {})
     }
 
@@ -57,7 +57,7 @@ impl StatsCiRecordApi {
     #[oai(path = "/fact/:fact_key/batch/remove", method = "put")]
     async fn fact_records_delete(&self, fact_key: Path<String>, delete_req: Json<Vec<String>>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         let funs = request.tardis_fun_inst();
-        stats_record_serv::fact_records_delete(fact_key.0, delete_req.0, &funs, &ctx.0).await?;
+        stats_record_serv::fact_records_delete(&fact_key.0, &delete_req.0, &funs, &ctx.0).await?;
         TardisResp::ok(Void {})
     }
 
@@ -72,7 +72,7 @@ impl StatsCiRecordApi {
         request: &Request,
     ) -> TardisApiResult<Void> {
         let funs = request.tardis_fun_inst();
-        stats_record_serv::fact_records_delete_by_dim_key(fact_key.0, dim_conf_key.0, Some(delete_req.0.key), &funs, &ctx.0).await?;
+        stats_record_serv::fact_records_delete_by_dim_key(&fact_key.0, &dim_conf_key.0, Some(delete_req.0.key), &funs, &ctx.0).await?;
         TardisResp::ok(Void {})
     }
 
@@ -82,7 +82,7 @@ impl StatsCiRecordApi {
     #[oai(path = "/fact/:fact_key/batch/clean", method = "delete")]
     async fn fact_records_clean(&self, fact_key: Path<String>, before_ct: Query<Option<DateTime<Utc>>>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         let funs = request.tardis_fun_inst();
-        stats_record_serv::fact_records_clean(fact_key.0, before_ct.0, &funs, &ctx.0).await?;
+        stats_record_serv::fact_records_clean(&fact_key.0, before_ct.0, &funs, &ctx.0).await?;
         TardisResp::ok(Void {})
     }
 

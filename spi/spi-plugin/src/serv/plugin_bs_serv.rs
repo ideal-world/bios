@@ -22,7 +22,6 @@ use bios_basic::{
 };
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
-    log::info,
     web::web_resp::TardisPage,
     TardisFunsInst,
 };

@@ -1,4 +1,4 @@
-use bios_basic::spi::spi_funs::{SpiBsInstExtractor, SpiBsInst};
+use bios_basic::spi::spi_funs::SpiBsInst;
 use tardis::{
     basic::{dto::TardisContext, error::TardisError, result::TardisResult},
     db::{
@@ -54,7 +54,12 @@ macro_rules! get {
     };
 }
 
-pub async fn get_history_list_by_namespace(req: &mut ConfigHistoryListRequest, funs: &TardisFunsInst, ctx: &TardisContext, bs_inst: &SpiBsInst) -> TardisResult<ConfigListResponse> {
+pub async fn get_history_list_by_namespace(
+    req: &mut ConfigHistoryListRequest,
+    _funs: &TardisFunsInst,
+    ctx: &TardisContext,
+    bs_inst: &SpiBsInst,
+) -> TardisResult<ConfigListResponse> {
     // query config history list by a ConfigDescriptor
     let ConfigHistoryListRequest { descriptor, page_no, page_size } = req;
     descriptor.fix_namespace_id();
@@ -121,7 +126,7 @@ OFFSET {offset}
     })
 }
 
-pub async fn find_history(descriptor: &mut ConfigDescriptor, id: &Uuid, funs: &TardisFunsInst, ctx: &TardisContext, bs_inst: &SpiBsInst) -> TardisResult<ConfigItem> {
+pub async fn find_history(descriptor: &mut ConfigDescriptor, id: &Uuid, _funs: &TardisFunsInst, ctx: &TardisContext, bs_inst: &SpiBsInst) -> TardisResult<ConfigItem> {
     descriptor.fix_namespace_id();
     let data_id = &descriptor.data_id;
     let group = &descriptor.group;
@@ -204,7 +209,7 @@ WHERE T.id = $4
         Err(TardisError::not_found("history config not found", error::CONF_NOTFOUND))
     }
 }
-pub async fn add_history(param: HistoryInsertParams<'_>, op_type: OpType, funs: &TardisFunsInst, ctx: &TardisContext, bs_inst: &SpiBsInst) -> TardisResult<bool> {
+pub async fn add_history(param: HistoryInsertParams<'_>, op_type: OpType, _funs: &TardisFunsInst, ctx: &TardisContext, bs_inst: &SpiBsInst) -> TardisResult<bool> {
     let HistoryInsertParams {
         data_id,
         group,

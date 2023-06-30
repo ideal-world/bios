@@ -1,10 +1,8 @@
-use std::collections::HashMap;
-
 use bios_basic::spi::{
     api::spi_ci_bs_api,
     dto::spi_bs_dto::SpiBsCertResp,
     spi_constants,
-    spi_funs::{self, SpiBsInst},
+    spi_funs::{self, SpiBsInst, TypedSpiBsInst},
     spi_initializer,
 };
 use tardis::{
@@ -76,7 +74,7 @@ pub async fn init_fun(bs_cert: SpiBsCertResp, ctx: &TardisContext, _: bool) -> T
 
 pub async fn inst_conn(bs_inst: TypedSpiBsInst<'_, TardisRelDBClient>) -> TardisResult<TardisRelDBlConnection> {
     let conn = bs_inst.0.conn();
-    match bs_inst.2.as_str() {
+    match bs_inst.2 {
         #[cfg(feature = "spi-pg")]
         spi_constants::SPI_PG_KIND_CODE => serv::pg::reldb_pg_initializer::init_conn(conn, bs_inst.1).await,
         #[cfg(feature = "spi-mysql")]

@@ -15,6 +15,7 @@ use bios_basic::{
         spi_constants::{self, SPI_IDENT_REL_TAG},
         spi_funs::SpiBsInstExtractor,
     },
+    spi_dispatch_service,
 };
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
@@ -64,15 +65,18 @@ macro_rules! dispatch_service {
     };
 }
 
-macro_rules! call {
-    ($fun:ident, $funs:ident, $ctx:ident, $inst:ident, @args: {$($args: ident),*}) => {
-        $fun($($arg,)* $funs, $ctx, $inst).await
+macro_rules! service_call {
+    ($mod:path, $fun:ident, $funs:ident, $ctx:ident, $inst:ident, @args: {$($args: ident),*}) => {
+        {
+            use $mod::*;
+            $fun($($args,)* $funs, $ctx, $inst).await
+        }
     };
 }
 macro_rules! dispatch_function {
     (
         $service:ident,
-        $funs:ident, $ctx:ident, $inst:ident, 
+        $funs:ident, $ctx:ident, $inst:ident,
         @dispatch: {
             $(
                 $(#[$attr:meta])*
@@ -84,19 +88,19 @@ macro_rules! dispatch_function {
         match $inst.kind_code() {
             $(
                 $(#[$attr])*
-                $code => call!($mod::$service, $funs, $ctx, $inst, @args: $args)),
+                $code => service_call!($mod, $service, $funs, $ctx, $inst, @args: $args),
             )*
             kind_code => Err($funs.bs_not_implemented(kind_code)),
         }
-        
+
     };
 }
 macro_rules! dispatch_service2 {
     (
         // mgr
-        $mgr: expr,
+        @mgr: $mgr: expr,
         // init fun
-        $init: expr,
+        @init: $init: expr,
         // dispacher
         @dispatch: $dispatch:tt,
         @method: {
@@ -117,9 +121,9 @@ macro_rules! dispatch_service2 {
     };
 }
 
-dispatch_service2! {
-    true,
-    conf_initializer::init_fun,
+spi_dispatch_service! {
+    @mgr: true,
+    @init: conf_initializer::init_fun,
     @dispatch: {
         #[cfg(feature = "spi-pg")]
         spi_constants::SPI_PG_KIND_CODE => pg,
