@@ -27,6 +27,8 @@ pub async fn modify(tag: &str, key: &str, modify_req: &mut SearchItemModifyReq, 
     match funs.init(ctx, true, search_initializer::init_fun).await?.as_str() {
         #[cfg(feature = "spi-pg")]
         spi_constants::SPI_PG_KIND_CODE => pg::search_pg_item_serv::modify(tag, key, modify_req, funs, ctx).await,
+        #[cfg(feature = "spi-es")]
+        spi_constants::SPI_ES_KIND_CODE => es::search_es_item_serv::modify(tag, key, modify_req, funs, ctx).await,
         kind_code => Err(funs.bs_not_implemented(kind_code)),
     }
 }
@@ -35,6 +37,8 @@ pub async fn delete(tag: &str, key: &str, funs: &TardisFunsInst, ctx: &TardisCon
     match funs.init(ctx, true, search_initializer::init_fun).await?.as_str() {
         #[cfg(feature = "spi-pg")]
         spi_constants::SPI_PG_KIND_CODE => pg::search_pg_item_serv::delete(tag, key, funs, ctx).await,
+        #[cfg(feature = "spi-es")]
+        spi_constants::SPI_ES_KIND_CODE => es::search_es_item_serv::delete(tag, key, funs, ctx).await,
         kind_code => Err(funs.bs_not_implemented(kind_code)),
     }
 }

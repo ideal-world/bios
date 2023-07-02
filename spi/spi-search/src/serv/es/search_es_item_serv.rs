@@ -1,4 +1,4 @@
-use std::collections::linked_list::IterMut;
+use std::collections::{linked_list::IterMut, HashMap};
 
 use bios_basic::{basic_enumeration::BasicQueryOpKind, helper::db_helper, spi::spi_funs::SpiBsInstExtractor};
 use tardis::{
@@ -8,34 +8,184 @@ use tardis::{
         reldb_client::{TardisRelDBClient, TardisRelDBlConnection},
         sea_orm::Value,
     },
+    log::debug,
     search::search_client::TardisSearchClient,
     serde_json::{self, json},
     web::web_resp::TardisPage,
-    TardisFuns, TardisFunsInst, log::debug,
+    TardisFuns, TardisFunsInst,
 };
 
-use crate::dto::search_item_dto::{SearchItemAddReq, SearchItemModifyReq, SearchItemSearchQScopeKind, SearchItemSearchReq, SearchItemSearchResp};
+use crate::dto::search_item_dto::{SearchItemAddReq, SearchItemModifyReq, SearchItemQueryReq, SearchItemSearchQScopeKind, SearchItemSearchReq, SearchItemSearchResp, SearchItemSearchCtxReq, SearchItemSearchPageReq};
 
 use super::search_es_initializer;
 
 pub async fn add(add_req: &mut SearchItemAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-    let data = format!(r#"{{"data": {}}}"#, TardisFuns::json.obj_to_string(add_req)?);
+    let data = TardisFuns::json.obj_to_string(add_req)?;
     let client = funs.bs(ctx).await?.inst::<TardisSearchClient>().0;
     search_es_initializer::init_index(client, &add_req.tag).await?;
+    if !search(
+        &mut SearchItemSearchReq {
+            tag: add_req.tag.clone(),
+            ctx: SearchItemSearchCtxReq {
+                accounts:None,
+                apps:None,
+                tenants:None,
+                roles:None,
+                groups:None,
+                cond_by_or:None,
+            },
+            query: SearchItemQueryReq {
+                keys: Some(vec![add_req.key.clone()]),
+                own_paths:if let Some(own_paths) = &add_req.own_paths {Some(vec![own_paths.clone()])} else { None},
+                ..Default::default()
+            },
+            sort: None,
+            page: SearchItemSearchPageReq {
+                number:1,
+                size:1,
+                fetch_total:false,
+            },
+        },
+        funs,
+        ctx,
+    )
+    .await?
+    .records
+    .is_empty()
+    {
+        return Err(funs.err().conflict("search_es_item_serv", "add", "record already exists", "409-search-already-exist"));
+    }
     client.create_record(&add_req.tag, &data).await?;
+
     Ok(())
 }
 
 pub async fn modify(tag: &str, key: &str, modify_req: &mut SearchItemModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-    panic!("not implemented")
+    let client = funs.bs(ctx).await?.inst::<TardisSearchClient>().0;
+    // find id by this key
+    let q = gen_query_dsl(&SearchItemSearchReq {
+        tag: tag.to_string(),
+        ctx: SearchItemSearchCtxReq {
+            accounts:None,
+            apps:None,
+            tenants:None,
+            roles:None,
+            groups:None,
+            cond_by_or:None,
+        },
+        query: SearchItemQueryReq {
+            keys: Some(vec![key.to_string().into()]),
+            // own_paths: Some(vec![ctx.own_paths.clone()]),
+            ..Default::default()
+        },
+        sort: None,
+        page: SearchItemSearchPageReq {
+            number:1,
+            size:1,
+            fetch_total:false,
+        },
+    })?;
+    let search_result = client.raw_search(tag, &q, Some(1), Some(0)).await?;
+    if search_result.hits.hits.is_empty() {
+        return Err(funs.err().conflict("search_es_item_serv", "modify", "not found record", "404-not-found-record"));
+    }
+    let id = search_result.hits.hits[0]._id.clone();
+    let orginal_data = TardisFuns::json.str_to_obj::<SearchItemAddReq>(&client.get_record(tag, &id).await?)?;
+    client.delete_by_query(tag, &q).await?;
+    add(&mut SearchItemAddReq {
+        tag:tag.to_string(),
+        kind:if let Some(kind) = &modify_req.kind { kind.clone() } else {orginal_data.kind.clone()},
+        key: orginal_data.key.clone(),
+        title:if let Some(title) = &modify_req.title { title.clone() } else {orginal_data.title.clone()},
+        content:if let Some(content) = &modify_req.content { content.clone() } else {orginal_data.content.clone()},
+        owner:if let Some(owner) = &modify_req.owner { Some(owner.clone()) } else { orginal_data.owner.clone()},
+        own_paths:if let Some(own_paths) = &modify_req.own_paths { Some(own_paths.clone()) } else {orginal_data.own_paths.clone()},
+        create_time:if let Some(create_time) = &modify_req.create_time { Some(*create_time) } else {orginal_data.create_time},
+        update_time:if let Some(update_time) = &modify_req.update_time { Some(*update_time) } else {orginal_data.update_time},
+        ext:if let Some(ext) = &modify_req.ext { Some(ext.clone()) } else {orginal_data.ext.clone()},
+        visit_keys:if let Some(visit_keys) = &modify_req.visit_keys { Some(visit_keys.clone()) } else {orginal_data.visit_keys.clone()},
+    }, funs, ctx).await?;
+
+    Ok(())
 }
 
 pub async fn delete(tag: &str, key: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-    panic!("not implemented")
+    let client = funs.bs(ctx).await?.inst::<TardisSearchClient>().0;
+    let q = gen_query_dsl(&SearchItemSearchReq {
+        tag: tag.to_string(),
+        ctx: SearchItemSearchCtxReq {
+            accounts:None,
+            apps:None,
+            tenants:None,
+            roles:Some(ctx.roles.clone()),
+            groups:Some(ctx.groups.clone()),
+            cond_by_or:None,
+        },
+        query: SearchItemQueryReq {
+            keys: Some(vec![key.to_string().into()]),
+            ..Default::default()
+        },
+        sort: None,
+        page: SearchItemSearchPageReq {
+            number:1,
+            size:1,
+            fetch_total:false,
+        },
+    })?;
+    client.delete_by_query(tag, &q).await?;
+
+    Ok(())
 }
 
 pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<TardisPage<SearchItemSearchResp>> {
+    let q = gen_query_dsl(search_req)?;
+    debug!("q: {:?}", q.to_string());
+    let client = funs.bs(ctx).await?.inst::<TardisSearchClient>().0;
+    let result = client
+        .raw_search(
+            &search_req.tag,
+            &q.to_string(),
+            Some(search_req.page.size as i32),
+            Some(((search_req.page.number - 1) * search_req.page.size as u32) as i32),
+        )
+        .await?;
+    debug!("raw_search[result]: {:?}", result);
+
+    let mut total_size: i64 = 0;
+    if search_req.page.fetch_total && total_size == 0 {
+        total_size = result.hits.total.value as i64;
+    }
+    let records = result
+        .hits
+        .hits
+        .iter()
+        .map(|item| TardisFuns::json.str_to_obj::<SearchItemAddReq>(&item._source.clone().to_string()))
+        .collect::<Result<Vec<_>, _>>()?
+        .iter()
+        .map(|item| SearchItemSearchResp {
+            kind: item.kind.clone(),
+            key: item.key.to_string(),
+            title: item.title.clone(),
+            owner: item.owner.clone().unwrap_or_default(),
+            own_paths: item.own_paths.clone().unwrap_or_default(),
+            create_time: item.create_time.unwrap_or_default(),
+            update_time: item.update_time.unwrap_or_default(),
+            ext: item.ext.clone().unwrap_or_default(),
+            rank_title: 0.0,
+            rank_content: 0.0,
+        })
+        .collect::<Vec<_>>();
+    Ok(TardisPage {
+        page_size: search_req.page.size as u64,
+        page_number: search_req.page.number as u64,
+        total_size: total_size as u64,
+        records,
+    })
+}
+
+fn gen_query_dsl(search_req: &SearchItemSearchReq) -> TardisResult<String> {
     let mut must_q = vec![];
+    let mut must_not_q = vec![];
     let mut should_q = vec![];
     let mut filter_q = vec![];
     let mut sort_q = vec![];
@@ -192,35 +342,28 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
     }
     if let Some(kinds) = &search_req.query.kinds {
         for kind in kinds {
-            should_q.push(json!({
+            must_q.push(json!({
                 "term": {"kind": kind},
             }));
         }
     }
     if let Some(keys) = &search_req.query.keys {
         for key in keys {
-            should_q.push(json!({
+            must_q.push(json!({
                 "term": {"key": key.to_string()},
             }));
         }
     }
     if let Some(owners) = &search_req.query.owners {
         for owner in owners {
-            should_q.push(json!({
+            must_q.push(json!({
                 "term": {"owner": owner},
             }));
         }
     }
     if let Some(own_paths) = &search_req.query.own_paths {
         for own_path in own_paths {
-            should_q.push(json!({
-                "term": {"own_path": own_path},
-            }));
-        }
-    }
-    if let Some(own_paths) = &search_req.query.own_paths {
-        for own_path in own_paths {
-            should_q.push(json!({
+            must_q.push(json!({
                 "term": {"own_path": own_path},
             }));
         }
@@ -236,38 +379,78 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
         }));
     }
     if let Some(ext) = &search_req.query.ext {
-        // TODO
+        for cond_info in ext {
+            match cond_info.op {
+                BasicQueryOpKind::Eq => {
+                    let field = format!("ext.{}", cond_info.field.clone());
+                    must_q.push(json!({
+                        "term": {field: cond_info.value.clone()}
+                    }));
+                },
+                BasicQueryOpKind::Ne => {
+                    let field = format!("ext.{}", cond_info.field.clone());
+                    must_not_q.push(json!({
+                        "term": { field: cond_info.value.clone()}
+                    }));
+                },
+                BasicQueryOpKind::Gt => {
+                    let field = format!("ext.{}", cond_info.field.clone());
+                    filter_q.push(json!({
+                        "range": {field: {"gt": cond_info.value.clone()}},
+                    }));
+                },
+                BasicQueryOpKind::Ge => {
+                    let field = format!("ext.{}", cond_info.field.clone());
+                    filter_q.push(json!({
+                        "range": {field: {"gte": cond_info.value.clone()}},
+                    }));
+                },
+                BasicQueryOpKind::Lt => {
+                    let field = format!("ext.{}", cond_info.field.clone());
+                    filter_q.push(json!({
+                        "range": {field: {"lt": cond_info.value.clone()}},
+                    }));
+                },
+                BasicQueryOpKind::Le => {
+                    let field = format!("ext.{}", cond_info.field.clone());
+                    filter_q.push(json!({
+                        "range": {field: {"lte": cond_info.value.clone()}},
+                    }));
+                },
+                BasicQueryOpKind::Like => {
+                    let field = format!("ext.{}", cond_info.field.clone());
+                    must_q.push(json!({
+                        "match": {field: cond_info.value.clone()}
+                    }));
+                },
+                BasicQueryOpKind::In => {
+                    let field = format!("ext.{}", cond_info.field.clone());
+                    must_q.push(json!({
+                        "terms": {
+                            field: cond_info.value.clone()
+                        }
+                    }));
+                },
+            }
+        }
     }
     if let Some(sorts) = &search_req.sort {
         for sort in sorts {
             sort_q.push(json!({sort.field.clone(): { "order": sort.order.to_sql() }}));
         }
+    } else {
+        sort_q.push(json!({"create_time": { "order": "asc", "unmapped_type": "date"}}));
     }
     let q = json!({
         "query": {
             "bool": {
-                "must":if must_q.is_empty() {json!({})} else {json!(must_q)},
-                "should":if should_q.is_empty() {json!({})} else {json!(should_q)},
-                "filter": if filter_q.is_empty() {json!({})} else {json!(filter_q)},
+                "must":must_q,
+                "must_not":must_not_q,
+                "should":should_q,
+                "filter": filter_q,
             }
         },
-        "sort": if sort_q.is_empty() {json!({})} else {json!(sort_q)},
+        "sort": sort_q,
     });
-    debug!("q: {:?}", q.to_string());
-    let client = funs.bs(ctx).await?.inst::<TardisSearchClient>().0;
-    let result = client.raw_search(&search_req.tag, &q.to_string(), Some(search_req.page.size as i32), Some((search_req.page.number * search_req.page.size as u32) as i32)).await?;
-    debug!("raw_search[result]: {:?}", result);
-
-    let mut total_size: i64 = 0;
-    if search_req.page.fetch_total && total_size == 0 {
-        total_size = result.hits.total.value as i64;
-    }
-    let records = result.hits.hits.iter().map(|item| TardisFuns::json.str_to_obj::<SearchItemSearchResp>(&item._source.clone().to_string())).collect::<Result<Vec<_>, _>>()?;
-
-    Ok(TardisPage {
-        page_size: search_req.page.size as u64,
-        page_number: search_req.page.number as u64,
-        total_size: total_size as u64,
-        records,
-    })
+    Ok(q.to_string())
 }

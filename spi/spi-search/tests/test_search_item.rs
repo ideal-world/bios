@@ -3,6 +3,7 @@ use bios_spi_search::dto::search_item_dto::SearchItemSearchResp;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::result::TardisResult;
 use tardis::serde_json::json;
+use tardis::tokio::time::sleep;
 use tardis::web::web_resp::{TardisPage, TardisResp, Void};
 
 pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
@@ -26,25 +27,13 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
                 "content": "在xxx。",
                 "owner":"account001",
                 "own_paths":"t001",
-                "create_time":"2022-11-26T23:23:59.000Z",
+                "create_time":"2022-11-26T23:23:55.000Z",
                 "update_time": "2022-11-27T01:20:20.000Z",
                 "ext":{"version":"1.1","xxx":0}
             }),
         )
         .await;
-
-    // es not implemented
-    // let _: Void = client
-    //     .put(
-    //         "/ci/item/feed/001",
-    //         &json!({
-    //             "title": "全局#号搜索",
-    //             "content": "在任意信息流（FEED，包含需求、任务、缺陷、文档等）中输入#号时出现一个跟随光标的快捷搜索小窗口，可以输入编号或内容模糊匹配对应的数据，如果存在，则可以选中对应的数据并显示在文本中。",
-    //             "ext":{"start_time":"2022-11-25T14:23:20.000Z","end_time":"2022-11-30T14:23:20.000Z","rel_accounts":["acc01","acc02"],"version":"1.x"}
-    //         }),
-    //     )
-    //     .await;
-
+    sleep(std::time::Duration::from_secs(1)).await;
     let _: Void = client
         .put(
             "/ci/item",
@@ -56,14 +45,14 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
                 "content": "账号登录 登录名：默认提示：用户名/手机号/邮箱，输入类型不限，最多输入30个字 密码：默认提示：密码，输入类型不限，最多输入30个字； 登录：1、点击判断用户名和密码是否已填写，如果没有则在每个必填项下提示：****不能为空；2、判断校验是否正确，没有则提示：用户名或密码不正确；3、没有选择租户，则按登录平台逻辑进行处理；则继续判断该账号是否全局账号，非全局账号则提示：请选择租户登录；是全局账号并校验成功则登录平台；4、选择租户后，密码校验成功后登录对应的租户",
                 "owner":"account002",
                 "own_paths":"t001/a001",
-                "create_time":"2022-09-26T23:23:59.000Z",
+                "create_time":"2022-09-26T23:23:56.000Z",
                 "update_time": "2022-09-27T01:20:20.000Z",
                 "ext":{"start_time":"2022-10-25T14:23:20.000Z","end_time":"2022-10-30T14:23:20.000Z","rel_accounts":["acc01","acc03"],"version":"1.3"},
                 "visit_keys":{"apps":["003"],"tenants":["001"],"roles":["sys"]}
             }),
         )
         .await;
-
+    sleep(std::time::Duration::from_secs(1)).await;
     let _: Void = client
         .put(
             "/ci/item",
@@ -82,6 +71,18 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
             }),
         )
         .await;
+    sleep(std::time::Duration::from_secs(2)).await;
+    let _: Void = client
+        .put(
+            "/ci/item/feed/001",
+            &json!({
+                "title": "全局#号搜索",
+                "content": "在任意信息流（FEED，包含需求、任务、缺陷、文档等）中输入#号时出现一个跟随光标的快捷搜索小窗口，可以输入编号或内容模糊匹配对应的数据，如果存在，则可以选中对应的数据并显示在文本中。",
+                "ext":{"start_time":"2022-11-25T14:23:20.000Z","end_time":"2022-11-30T14:23:20.000Z","rel_accounts":["acc01","acc02"],"version":"1.x"}
+            }),
+        )
+        .await;
+    sleep(std::time::Duration::from_secs(2)).await;
 
     // Search without conditions
     let search_result: TardisResp<TardisPage<SearchItemSearchResp>> = client
@@ -109,9 +110,9 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
         )
         .await;
     assert_eq!(search_result.total_size, 3);
-    assert_eq!(search_result.records[0].key, "001");
-    assert_eq!(search_result.records[0].ext.get("xxx").unwrap().as_i64().unwrap(), 0);
-    assert_eq!(search_result.records[0].ext.get("version").unwrap().as_str().unwrap(), "1.x");
+    assert_eq!(search_result.records[2].key, "001");
+    assert_eq!(search_result.records[2].ext.get("xxx").unwrap().as_i64().unwrap(), 0);
+    assert_eq!(search_result.records[2].ext.get("version").unwrap().as_str().unwrap(), "1.x");
 
     // Basic search
     let search_result: TardisPage<SearchItemSearchResp> = client
