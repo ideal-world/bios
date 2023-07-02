@@ -110,9 +110,9 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
         )
         .await;
     assert_eq!(search_result.total_size, 3);
-    assert_eq!(search_result.records[2].key, "001");
-    assert_eq!(search_result.records[2].ext.get("xxx").unwrap().as_i64().unwrap(), 0);
-    assert_eq!(search_result.records[2].ext.get("version").unwrap().as_str().unwrap(), "1.x");
+    assert_eq!(search_result.records[0].key, "001");
+    assert_eq!(search_result.records[0].ext.get("xxx").unwrap().as_i64().unwrap(), 0);
+    assert_eq!(search_result.records[0].ext.get("version").unwrap().as_str().unwrap(), "1.x");
 
     // Basic search
     let search_result: TardisPage<SearchItemSearchResp> = client

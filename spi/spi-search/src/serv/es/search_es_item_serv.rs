@@ -15,7 +15,10 @@ use tardis::{
     TardisFuns, TardisFunsInst,
 };
 
-use crate::dto::search_item_dto::{SearchItemAddReq, SearchItemModifyReq, SearchItemQueryReq, SearchItemSearchQScopeKind, SearchItemSearchReq, SearchItemSearchResp, SearchItemSearchCtxReq, SearchItemSearchPageReq};
+use crate::dto::search_item_dto::{
+    SearchItemAddReq, SearchItemModifyReq, SearchItemQueryReq, SearchItemSearchCtxReq, SearchItemSearchPageReq, SearchItemSearchQScopeKind, SearchItemSearchReq,
+    SearchItemSearchResp,
+};
 
 use super::search_es_initializer;
 
@@ -27,23 +30,27 @@ pub async fn add(add_req: &mut SearchItemAddReq, funs: &TardisFunsInst, ctx: &Ta
         &mut SearchItemSearchReq {
             tag: add_req.tag.clone(),
             ctx: SearchItemSearchCtxReq {
-                accounts:None,
-                apps:None,
-                tenants:None,
-                roles:None,
-                groups:None,
-                cond_by_or:None,
+                accounts: None,
+                apps: None,
+                tenants: None,
+                roles: None,
+                groups: None,
+                cond_by_or: None,
             },
             query: SearchItemQueryReq {
                 keys: Some(vec![add_req.key.clone()]),
-                own_paths:if let Some(own_paths) = &add_req.own_paths {Some(vec![own_paths.clone()])} else { None},
+                own_paths: if let Some(own_paths) = &add_req.own_paths {
+                    Some(vec![own_paths.clone()])
+                } else {
+                    None
+                },
                 ..Default::default()
             },
             sort: None,
             page: SearchItemSearchPageReq {
-                number:1,
-                size:1,
-                fetch_total:false,
+                number: 1,
+                size: 1,
+                fetch_total: false,
             },
         },
         funs,
@@ -66,12 +73,12 @@ pub async fn modify(tag: &str, key: &str, modify_req: &mut SearchItemModifyReq, 
     let q = gen_query_dsl(&SearchItemSearchReq {
         tag: tag.to_string(),
         ctx: SearchItemSearchCtxReq {
-            accounts:None,
-            apps:None,
-            tenants:None,
-            roles:None,
-            groups:None,
-            cond_by_or:None,
+            accounts: None,
+            apps: None,
+            tenants: None,
+            roles: None,
+            groups: None,
+            cond_by_or: None,
         },
         query: SearchItemQueryReq {
             keys: Some(vec![key.to_string().into()]),
@@ -80,9 +87,9 @@ pub async fn modify(tag: &str, key: &str, modify_req: &mut SearchItemModifyReq, 
         },
         sort: None,
         page: SearchItemSearchPageReq {
-            number:1,
-            size:1,
-            fetch_total:false,
+            number: 1,
+            size: 1,
+            fetch_total: false,
         },
     })?;
     let search_result = client.raw_search(tag, &q, Some(1), Some(0)).await?;
@@ -92,19 +99,52 @@ pub async fn modify(tag: &str, key: &str, modify_req: &mut SearchItemModifyReq, 
     let id = search_result.hits.hits[0]._id.clone();
     let orginal_data = TardisFuns::json.str_to_obj::<SearchItemAddReq>(&client.get_record(tag, &id).await?)?;
     client.delete_by_query(tag, &q).await?;
-    add(&mut SearchItemAddReq {
-        tag:tag.to_string(),
-        kind:if let Some(kind) = &modify_req.kind { kind.clone() } else {orginal_data.kind.clone()},
-        key: orginal_data.key.clone(),
-        title:if let Some(title) = &modify_req.title { title.clone() } else {orginal_data.title.clone()},
-        content:if let Some(content) = &modify_req.content { content.clone() } else {orginal_data.content.clone()},
-        owner:if let Some(owner) = &modify_req.owner { Some(owner.clone()) } else { orginal_data.owner.clone()},
-        own_paths:if let Some(own_paths) = &modify_req.own_paths { Some(own_paths.clone()) } else {orginal_data.own_paths.clone()},
-        create_time:if let Some(create_time) = &modify_req.create_time { Some(*create_time) } else {orginal_data.create_time},
-        update_time:if let Some(update_time) = &modify_req.update_time { Some(*update_time) } else {orginal_data.update_time},
-        ext:if let Some(ext) = &modify_req.ext { Some(ext.clone()) } else {orginal_data.ext.clone()},
-        visit_keys:if let Some(visit_keys) = &modify_req.visit_keys { Some(visit_keys.clone()) } else {orginal_data.visit_keys.clone()},
-    }, funs, ctx).await?;
+    add(
+        &mut SearchItemAddReq {
+            tag: tag.to_string(),
+            kind: if let Some(kind) = &modify_req.kind { kind.clone() } else { orginal_data.kind.clone() },
+            key: orginal_data.key.clone(),
+            title: if let Some(title) = &modify_req.title {
+                title.clone()
+            } else {
+                orginal_data.title.clone()
+            },
+            content: if let Some(content) = &modify_req.content {
+                content.clone()
+            } else {
+                orginal_data.content.clone()
+            },
+            owner: if let Some(owner) = &modify_req.owner {
+                Some(owner.clone())
+            } else {
+                orginal_data.owner.clone()
+            },
+            own_paths: if let Some(own_paths) = &modify_req.own_paths {
+                Some(own_paths.clone())
+            } else {
+                orginal_data.own_paths.clone()
+            },
+            create_time: if let Some(create_time) = &modify_req.create_time {
+                Some(*create_time)
+            } else {
+                orginal_data.create_time
+            },
+            update_time: if let Some(update_time) = &modify_req.update_time {
+                Some(*update_time)
+            } else {
+                orginal_data.update_time
+            },
+            ext: if let Some(ext) = &modify_req.ext { Some(ext.clone()) } else { orginal_data.ext.clone() },
+            visit_keys: if let Some(visit_keys) = &modify_req.visit_keys {
+                Some(visit_keys.clone())
+            } else {
+                orginal_data.visit_keys.clone()
+            },
+        },
+        funs,
+        ctx,
+    )
+    .await?;
 
     Ok(())
 }
@@ -114,12 +154,12 @@ pub async fn delete(tag: &str, key: &str, funs: &TardisFunsInst, ctx: &TardisCon
     let q = gen_query_dsl(&SearchItemSearchReq {
         tag: tag.to_string(),
         ctx: SearchItemSearchCtxReq {
-            accounts:None,
-            apps:None,
-            tenants:None,
-            roles:Some(ctx.roles.clone()),
-            groups:Some(ctx.groups.clone()),
-            cond_by_or:None,
+            accounts: None,
+            apps: None,
+            tenants: None,
+            roles: Some(ctx.roles.clone()),
+            groups: Some(ctx.groups.clone()),
+            cond_by_or: None,
         },
         query: SearchItemQueryReq {
             keys: Some(vec![key.to_string().into()]),
@@ -127,9 +167,9 @@ pub async fn delete(tag: &str, key: &str, funs: &TardisFunsInst, ctx: &TardisCon
         },
         sort: None,
         page: SearchItemSearchPageReq {
-            number:1,
-            size:1,
-            fetch_total:false,
+            number: 1,
+            size: 1,
+            fetch_total: false,
         },
     })?;
     client.delete_by_query(tag, &q).await?;
@@ -386,43 +426,43 @@ fn gen_query_dsl(search_req: &SearchItemSearchReq) -> TardisResult<String> {
                     must_q.push(json!({
                         "term": {field: cond_info.value.clone()}
                     }));
-                },
+                }
                 BasicQueryOpKind::Ne => {
                     let field = format!("ext.{}", cond_info.field.clone());
                     must_not_q.push(json!({
                         "term": { field: cond_info.value.clone()}
                     }));
-                },
+                }
                 BasicQueryOpKind::Gt => {
                     let field = format!("ext.{}", cond_info.field.clone());
                     filter_q.push(json!({
                         "range": {field: {"gt": cond_info.value.clone()}},
                     }));
-                },
+                }
                 BasicQueryOpKind::Ge => {
                     let field = format!("ext.{}", cond_info.field.clone());
                     filter_q.push(json!({
                         "range": {field: {"gte": cond_info.value.clone()}},
                     }));
-                },
+                }
                 BasicQueryOpKind::Lt => {
                     let field = format!("ext.{}", cond_info.field.clone());
                     filter_q.push(json!({
                         "range": {field: {"lt": cond_info.value.clone()}},
                     }));
-                },
+                }
                 BasicQueryOpKind::Le => {
                     let field = format!("ext.{}", cond_info.field.clone());
                     filter_q.push(json!({
                         "range": {field: {"lte": cond_info.value.clone()}},
                     }));
-                },
+                }
                 BasicQueryOpKind::Like => {
                     let field = format!("ext.{}", cond_info.field.clone());
                     must_q.push(json!({
                         "match": {field: cond_info.value.clone()}
                     }));
-                },
+                }
                 BasicQueryOpKind::In => {
                     let field = format!("ext.{}", cond_info.field.clone());
                     must_q.push(json!({
@@ -430,7 +470,7 @@ fn gen_query_dsl(search_req: &SearchItemSearchReq) -> TardisResult<String> {
                             field: cond_info.value.clone()
                         }
                     }));
-                },
+                }
             }
         }
     }
