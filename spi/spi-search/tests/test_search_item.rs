@@ -490,8 +490,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
         )
         .await;
     assert_eq!(search_result.total_size, 1);
-    /// es not implemented
-    // client.delete(&format!("/ci/item/{}/{}", "feed", "001")).await;
+    client.delete(&format!("/ci/item/{}/{}", "feed", "001")).await;
     let search_result: TardisPage<SearchItemSearchResp> = client
         .put(
             "/ci/item/search",

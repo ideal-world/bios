@@ -23,7 +23,6 @@ use crate::dto::search_item_dto::{
 use super::search_es_initializer;
 
 pub async fn add(add_req: &mut SearchItemAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-    let data = TardisFuns::json.obj_to_string(add_req)?;
     let client = funs.bs(ctx).await?.inst::<TardisSearchClient>().0;
     search_es_initializer::init_index(client, &add_req.tag).await?;
     if !search(
@@ -62,6 +61,7 @@ pub async fn add(add_req: &mut SearchItemAddReq, funs: &TardisFunsInst, ctx: &Ta
     {
         return Err(funs.err().conflict("search_es_item_serv", "add", "record already exists", "409-search-already-exist"));
     }
+    let data = TardisFuns::json.obj_to_string(add_req)?;
     client.create_record(&add_req.tag, &data).await?;
 
     Ok(())
@@ -82,7 +82,7 @@ pub async fn modify(tag: &str, key: &str, modify_req: &mut SearchItemModifyReq, 
         },
         query: SearchItemQueryReq {
             keys: Some(vec![key.to_string().into()]),
-            // own_paths: Some(vec![ctx.own_paths.clone()]),
+            own_paths: Some(vec![ctx.own_paths.clone()]),
             ..Default::default()
         },
         sort: None,
@@ -97,55 +97,40 @@ pub async fn modify(tag: &str, key: &str, modify_req: &mut SearchItemModifyReq, 
         return Err(funs.err().conflict("search_es_item_serv", "modify", "not found record", "404-not-found-record"));
     }
     let id = search_result.hits.hits[0]._id.clone();
-    let orginal_data = TardisFuns::json.str_to_obj::<SearchItemAddReq>(&client.get_record(tag, &id).await?)?;
-    client.delete_by_query(tag, &q).await?;
-    add(
-        &mut SearchItemAddReq {
-            tag: tag.to_string(),
-            kind: if let Some(kind) = &modify_req.kind { kind.clone() } else { orginal_data.kind.clone() },
-            key: orginal_data.key.clone(),
-            title: if let Some(title) = &modify_req.title {
-                title.clone()
-            } else {
-                orginal_data.title.clone()
-            },
-            content: if let Some(content) = &modify_req.content {
-                content.clone()
-            } else {
-                orginal_data.content.clone()
-            },
-            owner: if let Some(owner) = &modify_req.owner {
-                Some(owner.clone())
-            } else {
-                orginal_data.owner.clone()
-            },
-            own_paths: if let Some(own_paths) = &modify_req.own_paths {
-                Some(own_paths.clone())
-            } else {
-                orginal_data.own_paths.clone()
-            },
-            create_time: if let Some(create_time) = &modify_req.create_time {
-                Some(*create_time)
-            } else {
-                orginal_data.create_time
-            },
-            update_time: if let Some(update_time) = &modify_req.update_time {
-                Some(*update_time)
-            } else {
-                orginal_data.update_time
-            },
-            ext: if let Some(ext) = &modify_req.ext { Some(ext.clone()) } else { orginal_data.ext.clone() },
-            visit_keys: if let Some(visit_keys) = &modify_req.visit_keys {
-                Some(visit_keys.clone())
-            } else {
-                orginal_data.visit_keys.clone()
-            },
-        },
-        funs,
-        ctx,
-    )
-    .await?;
-
+    let mut query = HashMap::new();
+    if let Some(kind) = &modify_req.kind {
+        query.insert("kind", kind.clone());
+    }
+    if let Some(title) = &modify_req.title {
+        query.insert("title", title.clone());
+    }
+    if let Some(content) = &modify_req.content {
+        query.insert("content", content.clone());
+    }
+    if let Some(owner) = &modify_req.owner {
+        query.insert("owner", owner.clone());
+    }
+    if let Some(own_paths) = &modify_req.own_paths {
+        query.insert("own_paths", own_paths.clone());
+    }
+    if let Some(create_time) = &modify_req.create_time {
+        query.insert("create_time", create_time.to_rfc3339());
+    }
+    if let Some(update_time) = &modify_req.update_time {
+        query.insert("update_time", update_time.to_rfc3339());
+    }
+    if let Some(ext) = &modify_req.ext {
+        let mut ext = ext.clone();
+        if !modify_req.ext_override.unwrap_or(false) {
+            let storage_ext = TardisFuns::json.str_to_obj::<SearchItemAddReq>(&client.get_record(tag, &id).await?)?.ext.unwrap_or_default();
+            merge(&mut ext, storage_ext);
+        }
+        for (key, value) in ext.as_object().ok_or_else(|| funs.err().internal_error("search_es_item_serv", "modify", "ext is not object", "500-search-internal-error")) {
+            query.insert(&format!("ext.{}", key), value.clone());
+        }
+    }
+    client.update(tag, &id, query).await?;
+    
     Ok(())
 }
 
@@ -493,4 +478,17 @@ fn gen_query_dsl(search_req: &SearchItemSearchReq) -> TardisResult<String> {
         "sort": sort_q,
     });
     Ok(q.to_string())
+}
+
+fn merge(a: &mut serde_json::Value, b: serde_json::Value) {
+    match (a, b) {
+        (a @ &mut serde_json::Value::Object(_), serde_json::Value::Object(b)) => {
+            if let Some(a) = a.as_object_mut() {
+                for (k, v) in b {
+                    merge(a.entry(k).or_insert(serde_json::Value::Null), v);
+                }
+            }
+        }
+        (a, b) => *a = b,
+    }
 }
