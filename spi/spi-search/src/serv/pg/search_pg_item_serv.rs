@@ -213,7 +213,7 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
                 (0..kinds.len()).map(|idx| format!("${}", sql_vals.len() + idx + 1)).collect::<Vec<String>>().join(",")
             ));
             for kind in kinds {
-                sql_vals.push(Value::from(format!("{kind}")));
+                sql_vals.push(Value::from(kind.to_string()));
             }
         }
     }
