@@ -6,7 +6,7 @@ use tardis::web::{
 use crate::serv::*;
 use crate::{conf_config::ConfConfig, dto::conf_config_nacos_dto::*};
 
-#[derive(Default, Clone, Debug)]
+#[derive(Default, Clone, Copy, Debug)]
 pub struct ConfNacosV1AuthApi;
 
 /// Interface Console config server API
