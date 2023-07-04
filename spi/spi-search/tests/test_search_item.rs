@@ -27,9 +27,10 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
                 "content": "在xxx。",
                 "owner":"account001",
                 "own_paths":"t001",
-                "create_time":"2022-11-26T23:23:55.000Z",
-                "update_time": "2022-11-27T01:20:20.000Z",
-                "ext":{"version":"1.1","xxx":0}
+                "create_time":"2022-08-26T23:23:55.000Z",
+                "update_time": "2022-08-27T01:20:20.000Z",
+                "ext":{"version":"1.1","xxx":0},
+                "visit_keys":{}
             }),
         )
         .await;
@@ -78,7 +79,8 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
             &json!({
                 "title": "全局#号搜索",
                 "content": "在任意信息流（FEED，包含需求、任务、缺陷、文档等）中输入#号时出现一个跟随光标的快捷搜索小窗口，可以输入编号或内容模糊匹配对应的数据，如果存在，则可以选中对应的数据并显示在文本中。",
-                "ext":{"start_time":"2022-11-25T14:23:20.000Z","end_time":"2022-11-30T14:23:20.000Z","rel_accounts":["acc01","acc02"],"version":"1.x"}
+                "ext":{"start_time":"2022-11-25T14:23:20.000Z","end_time":"2022-11-30T14:23:20.000Z","rel_accounts":["acc01","acc02"],"version":"1.x"},
+                "visit_keys":{"apps":["003"]}
             }),
         )
         .await;

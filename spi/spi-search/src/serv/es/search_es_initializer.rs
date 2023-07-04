@@ -16,11 +16,11 @@ pub async fn init(bs_cert: &SpiBsCertResp, ctx: &TardisContext, mgr: bool) -> Ta
     Ok(SpiBsInst { client: Box::new(client), ext })
 }
 
-pub async fn init_index(client: &TardisSearchClient, tag: &str) -> TardisResult<()> {
-    if client.check_index_exist(tag).await? {
+pub async fn init_index(client: &TardisSearchClient, index: &str, mappings: Option<&str>) -> TardisResult<()> {
+    if client.check_index_exist(index).await? {
         return Ok(());
     } else {
-        client.create_index(tag).await?
+        client.create_index(index, mappings).await?
     }
     Ok(())
 }

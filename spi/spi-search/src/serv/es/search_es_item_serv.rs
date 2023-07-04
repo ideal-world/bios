@@ -1,6 +1,6 @@
 use std::collections::{linked_list::IterMut, HashMap};
 
-use bios_basic::{basic_enumeration::BasicQueryOpKind, helper::db_helper, spi::spi_funs::SpiBsInstExtractor};
+use bios_basic::{basic_enumeration::BasicQueryOpKind, helper::db_helper, spi::{spi_funs::SpiBsInstExtractor, spi_initializer::common}};
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
     chrono::Utc,
@@ -22,9 +22,46 @@ use crate::dto::search_item_dto::{
 
 use super::search_es_initializer;
 
+fn format_index(req_index: &str, ext: &HashMap<String, String>) -> String {
+    if let Some(key_prefix) = common::get_isolation_flag_from_ext(ext) {
+        format!("{key_prefix}{req_index}")
+    } else {
+        req_index.to_string()
+    }
+}
+
+fn gen_data_mappings() -> String {
+    r#"{
+        "mappings": {
+            "properties": {
+                "tag":{"type": "keyword"},
+                "kind":{"type": "keyword"},
+                "key":{"type": "keyword"},
+                "title":{"type": "text"},
+                "content":{"type": "text"},
+                "owner":{"type": "keyword"},
+                "own_paths":{"type": "keyword"},
+                "create_time":{"type": "date"},
+                "update_time":{"type": "date"},
+                "ext":{"type": "object"},
+                "visit_keys":{
+                    "properties": {
+                        "accounts": { "type": "keyword" },
+                        "apps": { "type": "keyword" },
+                        "tenants": { "type": "keyword" },
+                        "roles": { "type": "keyword" },
+                        "groups": { "type": "keyword" }
+                      }
+                }
+            }
+        }
+    }"#.to_string()
+}
+
 pub async fn add(add_req: &mut SearchItemAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-    let client = funs.bs(ctx).await?.inst::<TardisSearchClient>().0;
-    search_es_initializer::init_index(client, &add_req.tag).await?;
+    let (client, ext, _) = funs.bs(ctx).await?.inst::<TardisSearchClient>();
+    let index = format_index(&add_req.tag, ext);
+    search_es_initializer::init_index(client, &index, Some(&gen_data_mappings())).await?;
     if !search(
         &mut SearchItemSearchReq {
             tag: add_req.tag.clone(),
@@ -38,11 +75,7 @@ pub async fn add(add_req: &mut SearchItemAddReq, funs: &TardisFunsInst, ctx: &Ta
             },
             query: SearchItemQueryReq {
                 keys: Some(vec![add_req.key.clone()]),
-                own_paths: if let Some(own_paths) = &add_req.own_paths {
-                    Some(vec![own_paths.clone()])
-                } else {
-                    None
-                },
+                // own_paths: add_req.own_paths.as_ref().map(|own_paths| vec![own_paths.clone()]),
                 ..Default::default()
             },
             sort: None,
@@ -62,13 +95,14 @@ pub async fn add(add_req: &mut SearchItemAddReq, funs: &TardisFunsInst, ctx: &Ta
         return Err(funs.err().conflict("search_es_item_serv", "add", "record already exists", "409-search-already-exist"));
     }
     let data = TardisFuns::json.obj_to_string(add_req)?;
-    client.create_record(&add_req.tag, &data).await?;
+    client.create_record(&index, &data).await?;
 
     Ok(())
 }
 
 pub async fn modify(tag: &str, key: &str, modify_req: &mut SearchItemModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-    let client = funs.bs(ctx).await?.inst::<TardisSearchClient>().0;
+    let (client, ext, _) = funs.bs(ctx).await?.inst::<TardisSearchClient>();
+    let index = format_index(tag, ext);
     // find id by this key
     let q = gen_query_dsl(&SearchItemSearchReq {
         tag: tag.to_string(),
@@ -82,7 +116,6 @@ pub async fn modify(tag: &str, key: &str, modify_req: &mut SearchItemModifyReq, 
         },
         query: SearchItemQueryReq {
             keys: Some(vec![key.to_string().into()]),
-            own_paths: Some(vec![ctx.own_paths.clone()]),
             ..Default::default()
         },
         sort: None,
@@ -92,50 +125,72 @@ pub async fn modify(tag: &str, key: &str, modify_req: &mut SearchItemModifyReq, 
             fetch_total: false,
         },
     })?;
-    let search_result = client.raw_search(tag, &q, Some(1), Some(0)).await?;
+    let search_result = client.raw_search(&index, &q, Some(1), Some(0)).await?;
     if search_result.hits.hits.is_empty() {
         return Err(funs.err().conflict("search_es_item_serv", "modify", "not found record", "404-not-found-record"));
     }
     let id = search_result.hits.hits[0]._id.clone();
     let mut query = HashMap::new();
     if let Some(kind) = &modify_req.kind {
-        query.insert("kind", kind.clone());
+        query.insert("kind".to_string(), json!(kind.clone()).to_string());
     }
     if let Some(title) = &modify_req.title {
-        query.insert("title", title.clone());
+        query.insert("title".to_string(), json!(title.clone()).to_string());
     }
     if let Some(content) = &modify_req.content {
-        query.insert("content", content.clone());
+        query.insert("content".to_string(), json!(content.clone()).to_string());
     }
     if let Some(owner) = &modify_req.owner {
-        query.insert("owner", owner.clone());
+        query.insert("owner".to_string(), json!(owner.clone()).to_string());
     }
     if let Some(own_paths) = &modify_req.own_paths {
-        query.insert("own_paths", own_paths.clone());
+        query.insert("own_paths".to_string(), json!(own_paths.clone()).to_string());
     }
     if let Some(create_time) = &modify_req.create_time {
-        query.insert("create_time", create_time.to_rfc3339());
+        query.insert("create_time".to_string(), create_time.to_rfc3339());
     }
     if let Some(update_time) = &modify_req.update_time {
-        query.insert("update_time", update_time.to_rfc3339());
+        query.insert("update_time".to_string(), update_time.to_rfc3339());
     }
     if let Some(ext) = &modify_req.ext {
         let mut ext = ext.clone();
         if !modify_req.ext_override.unwrap_or(false) {
-            let storage_ext = TardisFuns::json.str_to_obj::<SearchItemAddReq>(&client.get_record(tag, &id).await?)?.ext.unwrap_or_default();
-            merge(&mut ext, storage_ext);
+            let mut storage_ext = TardisFuns::json.str_to_obj::<SearchItemAddReq>(&client.get_record(&index, &id).await?)?.ext.unwrap_or_default();
+            merge(&mut storage_ext, ext);
+            ext = storage_ext;
         }
-        for (key, value) in ext.as_object().ok_or_else(|| funs.err().internal_error("search_es_item_serv", "modify", "ext is not object", "500-search-internal-error")) {
-            query.insert(&format!("ext.{}", key), value.clone());
+        if let Some(ext) = ext.as_object() {
+            for (key, value) in ext {
+                query.insert(format!("ext.{}", key), value.to_string());
+            }
         }
     }
-    client.update(tag, &id, query).await?;
+    if let Some(visit_keys) = &modify_req.visit_keys {
+        if let Some(accounts) = &visit_keys.accounts {
+            query.insert("visit_keys.accounts".to_string(), json!(accounts.clone()).to_string());
+        }
+        if let Some(apps) = &visit_keys.apps {
+            query.insert("visit_keys.apps".to_string(), json!(apps.clone()).to_string());
+        }
+        if let Some(tenants) = &visit_keys.tenants {
+            query.insert("visit_keys.tenants".to_string(), json!(tenants.clone()).to_string());
+        }
+        if let Some(roles) = &visit_keys.roles {
+            query.insert("visit_keys.roles".to_string(), json!(roles.clone()).to_string());
+        }
+        if let Some(groups) = &visit_keys.groups {
+            query.insert("visit_keys.groups".to_string(), json!(groups.clone()).to_string());
+        }
+    }
+
+    client.update(&index, &id, query).await?;
     
     Ok(())
 }
 
 pub async fn delete(tag: &str, key: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-    let client = funs.bs(ctx).await?.inst::<TardisSearchClient>().0;
+    let (client, ext, _) = funs.bs(ctx).await?.inst::<TardisSearchClient>();
+    let index = format_index(tag, ext);
     let q = gen_query_dsl(&SearchItemSearchReq {
         tag: tag.to_string(),
         ctx: SearchItemSearchCtxReq {
@@ -157,19 +212,20 @@ pub async fn delete(tag: &str, key: &str, funs: &TardisFunsInst, ctx: &TardisCon
             fetch_total: false,
         },
     })?;
-    client.delete_by_query(tag, &q).await?;
+    client.delete_by_query(&index, &q).await?;
 
     Ok(())
 }
 
 pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<TardisPage<SearchItemSearchResp>> {
     let q = gen_query_dsl(search_req)?;
-    debug!("q: {:?}", q.to_string());
-    let client = funs.bs(ctx).await?.inst::<TardisSearchClient>().0;
+    debug!("raw_search[q]: {}", q);
+    let (client, ext, _) = funs.bs(ctx).await?.inst::<TardisSearchClient>();
+    let index = format_index(&search_req.tag, ext);
     let result = client
         .raw_search(
-            &search_req.tag,
-            &q.to_string(),
+            &index,
+            &q,
             Some(search_req.page.size as i32),
             Some(((search_req.page.number - 1) * search_req.page.size as u32) as i32),
         )
@@ -366,32 +422,56 @@ fn gen_query_dsl(search_req: &SearchItemSearchReq) -> TardisResult<String> {
         }
     }
     if let Some(kinds) = &search_req.query.kinds {
+        let mut kinds_q = vec![];
         for kind in kinds {
-            must_q.push(json!({
+            kinds_q.push(json!({
                 "term": {"kind": kind},
             }));
         }
+        must_q.push(json!({
+            "bool": {
+                "should": kinds_q,
+            }
+        }));
     }
     if let Some(keys) = &search_req.query.keys {
+        let mut keys_q = vec![];
         for key in keys {
-            must_q.push(json!({
+            keys_q.push(json!({
                 "term": {"key": key.to_string()},
             }));
         }
+        must_q.push(json!({
+            "bool": {
+                "should": keys_q,
+            }
+        }));
     }
     if let Some(owners) = &search_req.query.owners {
+        let mut owners_q = vec![];
         for owner in owners {
-            must_q.push(json!({
+            owners_q.push(json!({
                 "term": {"owner": owner},
             }));
         }
+        must_q.push(json!({
+            "bool": {
+                "should": owners_q,
+            }
+        }));
     }
     if let Some(own_paths) = &search_req.query.own_paths {
+        let mut own_paths_q = vec![];
         for own_path in own_paths {
-            must_q.push(json!({
+            own_paths_q.push(json!({
                 "term": {"own_path": own_path},
             }));
         }
+        must_q.push(json!({
+            "bool": {
+                "should": own_paths_q,
+            }
+        }));
     }
     if let (Some(create_time_start), Some(create_time_end)) = (&search_req.query.create_time_start, &search_req.query.create_time_end) {
         filter_q.push(json!({
@@ -460,8 +540,19 @@ fn gen_query_dsl(search_req: &SearchItemSearchReq) -> TardisResult<String> {
         }
     }
     if let Some(sorts) = &search_req.sort {
-        for sort in sorts {
-            sort_q.push(json!({sort.field.clone(): { "order": sort.order.to_sql() }}));
+        for sort_item in sorts {
+            if sort_item.field.to_lowercase() == "key"
+                || sort_item.field.to_lowercase() == "title"
+                || sort_item.field.to_lowercase() == "owner"
+                || sort_item.field.to_lowercase() == "own_paths"
+                || sort_item.field.to_lowercase() == "create_time"
+                || sort_item.field.to_lowercase() == "update_time"
+            {
+                sort_q.push(json!({sort_item.field.clone(): { "order": sort_item.order.to_sql() }}));
+            } else {
+                let sort_ket = format!("ext.{}", sort_item.field.clone());
+                sort_q.push(json!({sort_ket: { "order": sort_item.order.to_sql() }}));
+            }
         }
     } else {
         sort_q.push(json!({"create_time": { "order": "asc", "unmapped_type": "date"}}));
