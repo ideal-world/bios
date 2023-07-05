@@ -9,7 +9,7 @@ use tardis::{
 use crate::{api::init_api, conf_config::ConfConfig, conf_constants::DOMAIN_CODE};
 
 pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
-    let mut funs = TardisFuns::inst_with_db_conn(DOMAIN_CODE.to_string(), None);
+    let mut funs = crate::get_tardis_inst();
     bios_basic::rbum::rbum_initializer::init(funs.module_code(), funs.conf::<ConfConfig>().rbum.clone()).await?;
     funs.begin().await?;
     let ctx = spi_initializer::init(DOMAIN_CODE, &funs).await?;
@@ -45,4 +45,9 @@ pub async fn init_admin_cert(funs: &TardisFunsInst, ctx: &TardisContext) {
             log::error!("[spi-conf] encounter an error when trying to register admin account: {e}");
         }
     }
+}
+
+#[inline]
+pub(crate) fn get_tardis_inst() -> TardisFunsInst {
+    TardisFuns::inst_with_db_conn(DOMAIN_CODE.to_string(), None)
 }

@@ -1,6 +1,5 @@
-use bios_basic::TardisFunInstExtractor;
 use tardis::web::{
-    poem::{self, web::Form, Request},
+    poem::{self, web::Form},
     poem_openapi::{self, payload::Json},
 };
 
@@ -14,10 +13,10 @@ pub struct ConfNacosV1AuthApi;
 #[poem_openapi::OpenApi(prefix_path = "/nacos/v1/auth", tag = "bios_basic::ApiTag::Interface")]
 impl ConfNacosV1AuthApi {
     #[oai(path = "/login", method = "post")]
-    async fn login(&self, form: Form<LoginRequest>, request: &Request) -> poem::Result<Json<LoginResponse>> {
+    async fn login(&self, form: Form<LoginRequest>) -> poem::Result<Json<LoginResponse>> {
         let username = form.0.username;
         let password = form.0.password;
-        let funs = request.tardis_fun_inst();
+        let funs = crate::get_tardis_inst();
         let ctx = auth(&username, &password, &funs).await?;
         let token = jwt_sign(&funs, &ctx).await?;
         let cfg = funs.conf::<ConfConfig>();

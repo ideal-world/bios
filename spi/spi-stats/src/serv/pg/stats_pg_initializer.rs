@@ -1,16 +1,10 @@
-use std::collections::HashMap;
-
-use bios_basic::spi::spi_initializer;
+use bios_basic::spi::{spi_funs::TypedSpiBsInst, spi_initializer};
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
     db::reldb_client::{TardisRelDBClient, TardisRelDBlConnection},
 };
 
-pub async fn init_conf_dim_table_and_conn(
-    bs_inst: (&TardisRelDBClient, &HashMap<String, String>, String),
-    ctx: &TardisContext,
-    mgr: bool,
-) -> TardisResult<(TardisRelDBlConnection, String)> {
+pub async fn init_conf_dim_table_and_conn(bs_inst: TypedSpiBsInst<'_, TardisRelDBClient>, ctx: &TardisContext, mgr: bool) -> TardisResult<(TardisRelDBlConnection, String)> {
     spi_initializer::common_pg::init_table_and_conn(
         bs_inst,
         ctx,
@@ -32,11 +26,7 @@ pub async fn init_conf_dim_table_and_conn(
     .await
 }
 
-pub async fn init_conf_fact_table_and_conn(
-    bs_inst: (&TardisRelDBClient, &HashMap<String, String>, String),
-    ctx: &TardisContext,
-    mgr: bool,
-) -> TardisResult<(TardisRelDBlConnection, String)> {
+pub async fn init_conf_fact_table_and_conn(bs_inst: TypedSpiBsInst<'_, TardisRelDBClient>, ctx: &TardisContext, mgr: bool) -> TardisResult<(TardisRelDBlConnection, String)> {
     spi_initializer::common_pg::init_table_and_conn(
         bs_inst,
         ctx,
@@ -56,11 +46,7 @@ pub async fn init_conf_fact_table_and_conn(
     .await
 }
 
-pub async fn init_conf_fact_col_table_and_conn(
-    bs_inst: (&TardisRelDBClient, &HashMap<String, String>, String),
-    ctx: &TardisContext,
-    mgr: bool,
-) -> TardisResult<(TardisRelDBlConnection, String)> {
+pub async fn init_conf_fact_col_table_and_conn(bs_inst: TypedSpiBsInst<'_, TardisRelDBClient>, ctx: &TardisContext, mgr: bool) -> TardisResult<(TardisRelDBlConnection, String)> {
     spi_initializer::common_pg::init_table_and_conn(
         bs_inst,
         ctx,
