@@ -53,6 +53,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
     let result: HashMap<String, FlowTemplateModelResp> = client.get(&format!("/cc/model/get_models?tag_ids=REQ&temp_id={}", template_id)).await;
 
     let model_id = result.get("REQ").unwrap().id.clone();
+    // 2.modify model
     // Delete and add some transitions
     let _: Void = client
         .post(
@@ -81,7 +82,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
             &FlowModelModifyReq {
                 modify_transitions: Some(vec![FlowTransitionModifyReq {
                     id: trans_modify.id.clone().into(),
-                    name: Some(format!("{}-modify", &trans_modify.id).into()),
+                    name: Some(format!("{}-modify", &trans_modify.name).into()),
                     from_flow_state_id: None,
                     to_flow_state_id: None,
                     transfer_by_auto: Some(true),
@@ -102,13 +103,13 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
         .await;
     let mut model_agg_new: FlowModelAggResp = client.get(&format!("/cc/model/{}", model_id)).await;
     assert!(!model_agg_new.states.first_mut().unwrap().transitions.iter_mut().any(|trans| trans.transfer_by_auto).is_empty());
-
-    // Start a instance
+    info!("model_agg_new: {:?}", model_agg_new);
+    // 3.Start a instance
     let inst_id: String = client
         .post(
             "/cc/inst",
             &FlowInstStartReq {
-                tag: FlowTagKind::TICKET,
+                tag: FlowTagKind::REQ,
                 create_vars: None,
                 rel_business_obj_id: "".to_string(),
             },
@@ -116,7 +117,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
         .await;
     // Get the state of a task that can be transferable
     let next_transitions: Vec<FlowInstFindNextTransitionResp> = client.put(&format!("/cc/inst/{}/transition/next", inst_id), &FlowInstFindNextTransitionsReq { vars: None }).await;
-    assert_eq!(next_transitions.len(), 0);
+    assert_eq!(next_transitions.len(), 2);
     client.set_auth(&TardisContext {
         own_paths: "".to_string(),
         ak: "".to_string(),
@@ -127,9 +128,9 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
     })?;
     let next_transitions: Vec<FlowInstFindNextTransitionResp> = client.put(&format!("/cc/inst/{}/transition/next", inst_id), &FlowInstFindNextTransitionsReq { vars: None }).await;
     assert_eq!(next_transitions.len(), 2);
-    assert_eq!(next_transitions[0].next_flow_transition_name, "确认任务");
-    assert_eq!(next_transitions[1].next_flow_transition_name, "拒绝任务");
-    assert_eq!(next_transitions[1].vars_collect.as_ref().unwrap().len(), 1);
+    assert_eq!(next_transitions[0].next_flow_transition_name, "关闭");
+    assert_eq!(next_transitions[1].next_flow_transition_name, "开始-modify");
+    assert_eq!(next_transitions[1].vars_collect.as_ref().unwrap().len(), 2);
     // Find the state and transfer information of the specified instances in batch
     let state_and_next_transitions: Vec<FlowInstFindStateAndTransitionsResp> = client
         .put(
@@ -141,10 +142,10 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
         )
         .await;
     assert_eq!(state_and_next_transitions.len(), 1);
-    assert_eq!(state_and_next_transitions[0].current_flow_state_name, "初始");
-    assert_eq!(state_and_next_transitions[0].next_flow_transitions[0].next_flow_transition_name, "确认任务");
-    assert_eq!(state_and_next_transitions[0].next_flow_transitions[1].next_flow_transition_name, "拒绝任务");
-    assert_eq!(state_and_next_transitions[0].next_flow_transitions[1].vars_collect.as_ref().unwrap().len(), 1);
+    assert_eq!(state_and_next_transitions[0].current_flow_state_name, "待开始");
+    assert_eq!(state_and_next_transitions[0].next_flow_transitions[0].next_flow_transition_name, "关闭");
+    assert_eq!(state_and_next_transitions[0].next_flow_transitions[1].next_flow_transition_name, "开始-modify");
+    assert_eq!(state_and_next_transitions[0].next_flow_transitions[1].vars_collect.as_ref().unwrap().len(), 2);
     // Transfer task status
     let _transfer: FlowInstTransferResp = client
         .put(
