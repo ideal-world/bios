@@ -470,12 +470,12 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
                     "field":"rank_content",
                     "order":"desc"
                 }],
-                "page":{"number":2,"size":1,"fetch_total":true}
+                "page":{"number":1,"size":2,"fetch_total":true}
             }),
         )
         .await;
     assert_eq!(search_result.total_size, 2);
-    assert_eq!(search_result.records[0].key, "002");
+    assert_eq!(search_result.records[0].key, "003");
 
     // Delete
     let search_result: TardisPage<SearchItemSearchResp> = client
@@ -492,7 +492,9 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
         )
         .await;
     assert_eq!(search_result.total_size, 1);
+
     client.delete(&format!("/ci/item/{}/{}", "feed", "001")).await;
+    sleep(std::time::Duration::from_secs(1)).await;
     let search_result: TardisPage<SearchItemSearchResp> = client
         .put(
             "/ci/item/search",

@@ -1,6 +1,10 @@
 use std::collections::{linked_list::IterMut, HashMap};
 
-use bios_basic::{basic_enumeration::BasicQueryOpKind, helper::db_helper, spi::{spi_funs::SpiBsInstExtractor, spi_initializer::common}};
+use bios_basic::{
+    basic_enumeration::BasicQueryOpKind,
+    helper::db_helper,
+    spi::{spi_funs::SpiBsInstExtractor, spi_initializer::common},
+};
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
     chrono::Utc,
@@ -40,7 +44,7 @@ fn gen_data_mappings() -> String {
                 "title":{"type": "text"},
                 "content":{"type": "text"},
                 "owner":{"type": "keyword"},
-                "own_paths":{"type": "keyword"},
+                "own_paths":{"type": "text"},
                 "create_time":{"type": "date"},
                 "update_time":{"type": "date"},
                 "ext":{"type": "object"},
@@ -55,7 +59,8 @@ fn gen_data_mappings() -> String {
                 }
             }
         }
-    }"#.to_string()
+    }"#
+    .to_string()
 }
 
 pub async fn add(add_req: &mut SearchItemAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
@@ -125,7 +130,7 @@ pub async fn modify(tag: &str, key: &str, modify_req: &mut SearchItemModifyReq, 
             fetch_total: false,
         },
     })?;
-    let search_result = client.raw_search(&index, &q, Some(1), Some(0)).await?;
+    let search_result = client.raw_search(&index, &q, Some(1), Some(0), None).await?;
     if search_result.hits.hits.is_empty() {
         return Err(funs.err().conflict("search_es_item_serv", "modify", "not found record", "404-not-found-record"));
     }
@@ -184,7 +189,7 @@ pub async fn modify(tag: &str, key: &str, modify_req: &mut SearchItemModifyReq, 
     }
 
     client.update(&index, &id, query).await?;
-    
+
     Ok(())
 }
 
@@ -197,8 +202,8 @@ pub async fn delete(tag: &str, key: &str, funs: &TardisFunsInst, ctx: &TardisCon
             accounts: None,
             apps: None,
             tenants: None,
-            roles: Some(ctx.roles.clone()),
-            groups: Some(ctx.groups.clone()),
+            roles: None,
+            groups: None,
             cond_by_or: None,
         },
         query: SearchItemQueryReq {
@@ -219,6 +224,12 @@ pub async fn delete(tag: &str, key: &str, funs: &TardisFunsInst, ctx: &TardisCon
 
 pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<TardisPage<SearchItemSearchResp>> {
     let q = gen_query_dsl(search_req)?;
+    let mut track_scores = None;
+    if let Some(sorts) = &search_req.sort {
+        if sorts.iter().any(|sort| sort.field == "rank_title" || sort.field == "rank_content") {
+            track_scores = Some(true);
+        }
+    }
     debug!("raw_search[q]: {}", q);
     let (client, ext, _) = funs.bs(ctx).await?.inst::<TardisSearchClient>();
     let index = format_index(&search_req.tag, ext);
@@ -228,6 +239,7 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
             &q,
             Some(search_req.page.size as i32),
             Some(((search_req.page.number - 1) * search_req.page.size as u32) as i32),
+            track_scores,
         )
         .await?;
     debug!("raw_search[result]: {:?}", result);
@@ -240,22 +252,25 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
         .hits
         .hits
         .iter()
-        .map(|item| TardisFuns::json.str_to_obj::<SearchItemAddReq>(&item._source.clone().to_string()))
-        .collect::<Result<Vec<_>, _>>()?
-        .iter()
-        .map(|item| SearchItemSearchResp {
-            kind: item.kind.clone(),
-            key: item.key.to_string(),
-            title: item.title.clone(),
-            owner: item.owner.clone().unwrap_or_default(),
-            own_paths: item.own_paths.clone().unwrap_or_default(),
-            create_time: item.create_time.unwrap_or_default(),
-            update_time: item.update_time.unwrap_or_default(),
-            ext: item.ext.clone().unwrap_or_default(),
-            rank_title: 0.0,
-            rank_content: 0.0,
+        .map(|raw_item| {
+            if let Ok(item) = TardisFuns::json.str_to_obj::<SearchItemAddReq>(&raw_item._source.clone().to_string()) {
+                Ok(SearchItemSearchResp {
+                    kind: item.kind.clone(),
+                    key: item.key.to_string(),
+                    title: item.title.clone(),
+                    owner: item.owner.clone().unwrap_or_default(),
+                    own_paths: item.own_paths.clone().unwrap_or_default(),
+                    create_time: item.create_time.unwrap_or_default(),
+                    update_time: item.update_time.unwrap_or_default(),
+                    ext: item.ext.unwrap_or_default(),
+                    rank_title: raw_item._score.unwrap_or_default(),
+                    rank_content: raw_item._score.unwrap_or_default(),
+                })
+            } else {
+                Err(funs.err().format_error("search_es_item_serv", "search", "search result format error", "500-result-format-error"))
+            }
         })
-        .collect::<Vec<_>>();
+        .collect::<Result<Vec<_>, _>>()?;
     Ok(TardisPage {
         page_size: search_req.page.size as u64,
         page_number: search_req.page.number as u64,
@@ -464,7 +479,7 @@ fn gen_query_dsl(search_req: &SearchItemSearchReq) -> TardisResult<String> {
         let mut own_paths_q = vec![];
         for own_path in own_paths {
             own_paths_q.push(json!({
-                "term": {"own_path": own_path},
+                "prefix": {"own_paths": own_path},
             }));
         }
         must_q.push(json!({
@@ -549,6 +564,8 @@ fn gen_query_dsl(search_req: &SearchItemSearchReq) -> TardisResult<String> {
                 || sort_item.field.to_lowercase() == "update_time"
             {
                 sort_q.push(json!({sort_item.field.clone(): { "order": sort_item.order.to_sql() }}));
+            } else if sort_item.field.to_lowercase() == "rank_title" || sort_item.field.to_lowercase() == "rank_content" {
+                sort_q.push(json!({"_score": { "order": sort_item.order.to_sql() }}));
             } else {
                 let sort_ket = format!("ext.{}", sort_item.field.clone());
                 sort_q.push(json!({sort_ket: { "order": sort_item.order.to_sql() }}));
