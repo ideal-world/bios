@@ -54,7 +54,7 @@ impl IamCpCertMailVCodeServ {
                 result?
             };
             let resp = IamCertServ::package_tardis_context_and_resp(Some(tenant_id.to_string()), &rbum_item_id, login_req.flag.clone(), None, funs).await?;
-            return Ok(resp);
+            Ok(resp)
         } else {
             let (_, _, rbum_item_id) = IamCertServ::validate_by_ak_and_sk(
                 &login_req.mail,
@@ -68,7 +68,7 @@ impl IamCpCertMailVCodeServ {
             )
             .await?;
             let resp = IamCertServ::package_tardis_context_and_resp(None, &rbum_item_id, login_req.flag.clone(), None, funs).await?;
-            return Ok(resp);
+            Ok(resp)
         }
     }
 }

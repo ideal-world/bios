@@ -1,4 +1,3 @@
-use bios_basic::TardisFunInstExtractor;
 use tardis::log::info;
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem::web::Json;
@@ -17,15 +16,8 @@ pub struct PluginExecApi;
 impl PluginExecApi {
     /// Put Plugin exec
     #[oai(path = "/:kind_code/api/:api_code/exec", method = "put")]
-    async fn plugin_exec(
-        &self,
-        kind_code: Path<String>,
-        api_code: Path<String>,
-        exec_req: Json<PluginExecReq>,
-        ctx: TardisContextExtractor,
-        request: &Request,
-    ) -> TardisApiResult<PluginExecResp> {
-        let funs = request.tardis_fun_inst();
+    async fn plugin_exec(&self, kind_code: Path<String>, api_code: Path<String>, exec_req: Json<PluginExecReq>, ctx: TardisContextExtractor) -> TardisApiResult<PluginExecResp> {
+        let funs = crate::get_tardis_inst();
         let result = PluginExecServ::exec(&kind_code.0, &api_code.0, exec_req.0, &funs, &ctx.0).await?;
         TardisResp::ok(PluginExecResp {
             code: result.code,

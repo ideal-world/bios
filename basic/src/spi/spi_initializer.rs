@@ -111,7 +111,11 @@ pub mod common_pg {
         TardisFuns,
     };
 
-    use crate::spi::{dto::spi_bs_dto::SpiBsCertResp, spi_constants::GLOBAL_STORAGE_FLAG, spi_funs::SpiBsInst};
+    use crate::spi::{
+        dto::spi_bs_dto::SpiBsCertResp,
+        spi_constants::GLOBAL_STORAGE_FLAG,
+        spi_funs::{SpiBsInst, TypedSpiBsInst},
+    };
 
     use super::common;
 
@@ -191,7 +195,7 @@ pub mod common_pg {
 
     /// return db connection and table name
     pub async fn init_table_and_conn(
-        bs_inst: (&TardisRelDBClient, &HashMap<String, String>, String),
+        bs_inst: TypedSpiBsInst<'_, TardisRelDBClient>,
         ctx: &TardisContext,
         mgr: bool,
         tag: Option<&str>,
@@ -215,7 +219,7 @@ pub mod common_pg {
     }
 
     /// return db connection and schema name
-    pub async fn init_conn(bs_inst: (&TardisRelDBClient, &HashMap<String, String>, String)) -> TardisResult<(TardisRelDBlConnection, String)> {
+    pub async fn init_conn(bs_inst: TypedSpiBsInst<'_, TardisRelDBClient>) -> TardisResult<(TardisRelDBlConnection, String)> {
         let conn = bs_inst.0.conn();
         let schema_name = get_schema_name_from_ext(bs_inst.1).unwrap();
         Ok((conn, schema_name))

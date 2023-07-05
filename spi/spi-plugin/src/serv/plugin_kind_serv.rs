@@ -99,8 +99,8 @@ impl PluginKindServ {
             },
             None,
             None,
-            &funs,
-            &ctx,
+            funs,
+            ctx,
         )
         .await?;
         let mut kind_aggs = Vec::new();
