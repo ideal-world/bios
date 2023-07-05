@@ -27,12 +27,10 @@ use crate::{
     domain::{flow_model, flow_transition},
     dto::{
         flow_model_dto::{
-            FlowModelAddReq, FlowModelAggResp, FlowModelDetailResp, FlowModelFilterReq, FlowModelModifyReq, FlowModelSummaryResp, FlowStateAggResp, FlowTagKind,
-            FlowTemplateModelResp,
+            FlowModelAddReq, FlowModelAggResp, FlowModelDetailResp, FlowModelFilterReq, FlowModelModifyReq, FlowModelSummaryResp, FlowStateAggResp, FlowTemplateModelResp,
         },
         flow_state_dto::{FlowStateAddReq, FlowStateFilterReq, FlowSysStateKind},
         flow_transition_dto::{FlowTransitionAddReq, FlowTransitionDetailResp, FlowTransitionInitInfo, FlowTransitionModifyReq},
-        flow_var_dto::FlowVarInfo,
     },
     flow_config::FlowBasicInfoManager,
     serv::flow_state_serv::FlowStateServ,

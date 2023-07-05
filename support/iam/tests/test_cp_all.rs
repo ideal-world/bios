@@ -383,7 +383,7 @@ pub async fn test(sysadmin_info: (&str, &str), system_admin_context: &TardisCont
         &IamCpMailVCodeLoginReq {
             mail: "i@sunisle.org".to_string(),
             vcode: TrimString(vcode.unwrap()),
-            tenant_id: tenant_admin_context.own_paths.clone(),
+            tenant_id: Some(tenant_admin_context.own_paths.clone()),
             flag: None,
         },
         &funs,
@@ -433,7 +433,7 @@ pub async fn test(sysadmin_info: (&str, &str), system_admin_context: &TardisCont
         &IamCpMailVCodeLoginReq {
             mail: "i@sunisle.org".to_string(),
             vcode: TrimString(vcode.unwrap()),
-            tenant_id: tenant_admin_context.own_paths.clone(),
+            tenant_id: Some(tenant_admin_context.own_paths.clone()),
             flag: None,
         },
         &funs,

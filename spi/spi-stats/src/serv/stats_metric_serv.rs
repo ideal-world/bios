@@ -10,9 +10,10 @@ use crate::stats_initializer;
 use super::pg;
 
 pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<StatsQueryMetricsResp> {
-    match funs.init(ctx, true, stats_initializer::init_fun).await?.as_str() {
+    let inst = funs.init(ctx, true, stats_initializer::init_fun).await?;
+    match inst.kind_code() {
         #[cfg(feature = "spi-pg")]
-        spi_constants::SPI_PG_KIND_CODE => pg::stats_pg_metric_serv::query_metrics(query_req, funs, ctx).await,
+        spi_constants::SPI_PG_KIND_CODE => pg::stats_pg_metric_serv::query_metrics(query_req, funs, ctx, inst).await,
         kind_code => Err(funs.bs_not_implemented(kind_code)),
     }
 }

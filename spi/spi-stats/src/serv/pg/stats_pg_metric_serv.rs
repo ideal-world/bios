@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use bios_basic::spi::{
-    spi_funs::SpiBsInstExtractor,
+    spi_funs::SpiBsInst,
     spi_initializer::common_pg::{self, package_table_name},
 };
 
@@ -96,8 +96,8 @@ const FUNCTION_SUFFIX_FLAG: &str = "__";
 /// -- Length limit after grouping, optional
 ///   2
 /// ```
-pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<StatsQueryMetricsResp> {
-    let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
+pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<StatsQueryMetricsResp> {
+    let bs_inst = inst.inst::<TardisRelDBClient>();
     let (conn, _) = common_pg::init_conn(bs_inst).await?;
 
     let fact_conf_table_name = package_table_name("stats_conf_fact", ctx);
@@ -233,7 +233,7 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
         if let Some(conf) = conf_info.get(&i.code) {
             return conf.mes_data_distinct.unwrap_or(false);
         }
-        return false;
+        false
     });
 
     let mut params = vec![
@@ -498,21 +498,17 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
     {query_limit}"#,
         if query_req.ignore_distinct.unwrap_or(false) {
             ""
+        } else if mes_distinct {
+            "DISTINCT ON (fact.key) fact.key AS _key,"
         } else {
-            if mes_distinct {
-                "DISTINCT ON (fact.key) fact.key AS _key,"
-            } else {
-                ""
-            }
+            ""
         },
         if query_req.ignore_distinct.unwrap_or(false) {
             ""
+        } else if mes_distinct {
+            "_key,"
         } else {
-            if mes_distinct {
-                "_key,"
-            } else {
-                ""
-            }
+            ""
         },
         if sql_part_groups.is_empty() {
             "".to_string()

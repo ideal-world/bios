@@ -1,4 +1,4 @@
-use bios_basic::spi::{spi_funs::SpiBsInstExtractor, spi_initializer};
+use bios_basic::spi::{spi_funs::SpiBsInst, spi_initializer};
 use itertools::Itertools;
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
@@ -13,8 +13,8 @@ use crate::dto::graph_dto::{GraphNodeVersionResp, GraphRelAddReq, GraphRelDetail
 
 use super::graph_pg_initializer;
 
-pub async fn add_rel(add_req: &GraphRelAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-    let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
+pub async fn add_rel(add_req: &GraphRelAddReq, _funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
+    let bs_inst = inst.inst::<TardisRelDBClient>();
     let (mut conn, table_name) = graph_pg_initializer::init_table_and_conn(bs_inst, ctx, true).await?;
     conn.begin().await?;
     conn.execute_one(
@@ -55,7 +55,7 @@ pub async fn add_rel(add_req: &GraphRelAddReq, funs: &TardisFunsInst, ctx: &Tard
     Ok(())
 }
 
-pub async fn upgrade_version(upgrade_version_req: &GraphRelUpgardeVersionReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+pub async fn upgrade_version(upgrade_version_req: &GraphRelUpgardeVersionReq, _funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
     let mut where_fragments: Vec<String> = Vec::new();
     let mut sql_vals: Vec<Value> = vec![];
     sql_vals.push(Value::from(upgrade_version_req.new_version.to_string()));
@@ -83,7 +83,7 @@ pub async fn upgrade_version(upgrade_version_req: &GraphRelUpgardeVersionReq, fu
         format!("AND NOT ({})", where_fragments.join(" OR "))
     };
 
-    let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
+    let bs_inst = inst.inst::<TardisRelDBClient>();
     let (mut conn, table_name) = graph_pg_initializer::init_table_and_conn(bs_inst, ctx, false).await?;
     conn.begin().await?;
     conn.execute_one(
@@ -114,8 +114,8 @@ WHERE to_key = $2 AND to_version = $3 {}"#,
     Ok(())
 }
 
-pub async fn find_versions(tag: String, key: String, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<GraphNodeVersionResp>> {
-    let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
+pub async fn find_versions(tag: String, key: String, _funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<Vec<GraphNodeVersionResp>> {
+    let bs_inst = inst.inst::<TardisRelDBClient>();
     let (conn, table_name) = graph_pg_initializer::init_table_and_conn(bs_inst, ctx, true).await?;
     let result = conn
         .find_dtos_by_sql(
@@ -131,8 +131,15 @@ pub async fn find_versions(tag: String, key: String, funs: &TardisFunsInst, ctx:
     Ok(result)
 }
 
-pub async fn find_rels(from_key: String, from_version: String, depth: Option<u8>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<GraphRelDetailResp> {
-    let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
+pub async fn find_rels(
+    from_key: String,
+    from_version: String,
+    depth: Option<u8>,
+    _funs: &TardisFunsInst,
+    ctx: &TardisContext,
+    inst: &SpiBsInst,
+) -> TardisResult<GraphRelDetailResp> {
+    let bs_inst = inst.inst::<TardisRelDBClient>();
     let mut sql_vals: Vec<Value> = vec![];
     if let Some(schema_name) = spi_initializer::common_pg::get_schema_name_from_ext(bs_inst.1) {
         sql_vals.push(Value::from(schema_name));
@@ -190,8 +197,9 @@ pub async fn delete_rels(
     to_key: Option<String>,
     from_version: Option<String>,
     to_version: Option<String>,
-    funs: &TardisFunsInst,
+    _funs: &TardisFunsInst,
     ctx: &TardisContext,
+    inst: &SpiBsInst,
 ) -> TardisResult<()> {
     let mut where_fragments: Vec<String> = Vec::new();
     let mut sql_vals: Vec<Value> = vec![];
@@ -216,7 +224,7 @@ pub async fn delete_rels(
         where_fragments.push(format!("version2 = ${}", sql_vals.len()));
     }
 
-    let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
+    let bs_inst = inst.inst::<TardisRelDBClient>();
     let (mut conn, table_name) = graph_pg_initializer::init_table_and_conn(bs_inst, ctx, false).await?;
     conn.begin().await?;
     conn.execute_one(

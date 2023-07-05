@@ -1,5 +1,5 @@
 use bios_basic::spi::{
-    spi_funs::SpiBsInstExtractor,
+    spi_funs::SpiBsInst,
     spi_initializer::common_pg::{self, package_table_name},
 };
 use tardis::{
@@ -16,8 +16,8 @@ use crate::dto::stats_conf_dto::{StatsConfFactColAddReq, StatsConfFactColInfoRes
 
 use super::{stats_pg_conf_dim_serv, stats_pg_conf_fact_serv, stats_pg_initializer};
 
-pub(crate) async fn add(fact_conf_key: &str, add_req: &StatsConfFactColAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-    let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
+pub(crate) async fn add(fact_conf_key: &str, add_req: &StatsConfFactColAddReq, funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
+    let bs_inst = inst.inst::<TardisRelDBClient>();
     let (mut conn, table_name) = stats_pg_initializer::init_conf_fact_col_table_and_conn(bs_inst, ctx, true).await?;
     conn.begin().await?;
     if stats_pg_conf_fact_serv::online(fact_conf_key, &conn, ctx).await? {
@@ -106,8 +106,15 @@ VALUES
     Ok(())
 }
 
-pub(crate) async fn modify(fact_conf_key: &str, fact_col_conf_key: &str, modify_req: &StatsConfFactColModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-    let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
+pub(crate) async fn modify(
+    fact_conf_key: &str,
+    fact_col_conf_key: &str,
+    modify_req: &StatsConfFactColModifyReq,
+    funs: &TardisFunsInst,
+    ctx: &TardisContext,
+    inst: &SpiBsInst,
+) -> TardisResult<()> {
+    let bs_inst = inst.inst::<TardisRelDBClient>();
     let (mut conn, table_name) = stats_pg_initializer::init_conf_fact_col_table_and_conn(bs_inst, ctx, true).await?;
     conn.begin().await?;
     if stats_pg_conf_fact_serv::online(fact_conf_key, &conn, ctx).await? {
@@ -175,8 +182,8 @@ WHERE key = $1 AND rel_conf_fact_key = $2
     Ok(())
 }
 
-pub(crate) async fn delete(fact_conf_key: &str, fact_col_conf_key: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-    let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
+pub(crate) async fn delete(fact_conf_key: &str, fact_col_conf_key: &str, funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
+    let bs_inst = inst.inst::<TardisRelDBClient>();
     let (mut conn, table_name) = stats_pg_initializer::init_conf_fact_col_table_and_conn(bs_inst, ctx, true).await?;
     conn.begin().await?;
     if stats_pg_conf_fact_serv::online(fact_conf_key, &conn, ctx).await? {
@@ -196,7 +203,12 @@ pub(crate) async fn delete(fact_conf_key: &str, fact_col_conf_key: &str, funs: &
     Ok(())
 }
 
-pub(in crate::serv::pg) async fn find_by_fact_conf_key(fact_conf_key: &str, conn: &TardisRelDBlConnection, ctx: &TardisContext) -> TardisResult<Vec<StatsConfFactColInfoResp>> {
+pub(in crate::serv::pg) async fn find_by_fact_conf_key(
+    fact_conf_key: &str,
+    conn: &TardisRelDBlConnection,
+    ctx: &TardisContext,
+    _inst: &SpiBsInst,
+) -> TardisResult<Vec<StatsConfFactColInfoResp>> {
     if !common_pg::check_table_exit("stats_conf_fact_col", conn, ctx).await? {
         return Ok(vec![]);
     }
@@ -211,10 +223,11 @@ pub(crate) async fn paginate(
     page_size: u32,
     desc_by_create: Option<bool>,
     desc_by_update: Option<bool>,
-    funs: &TardisFunsInst,
+    _funs: &TardisFunsInst,
     ctx: &TardisContext,
+    inst: &SpiBsInst,
 ) -> TardisResult<TardisPage<StatsConfFactColInfoResp>> {
-    let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
+    let bs_inst = inst.inst::<TardisRelDBClient>();
     let (conn, _) = stats_pg_initializer::init_conf_fact_col_table_and_conn(bs_inst, ctx, true).await?;
 
     do_paginate(

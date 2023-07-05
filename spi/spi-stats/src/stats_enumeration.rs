@@ -241,16 +241,14 @@ impl StatsDataTypeKind {
 
     pub(crate) fn to_pg_group(&self, column_name: &str, multi_values: bool, time_window_fun: &Option<StatsQueryTimeWindowKind>) -> Option<String> {
         if multi_values {
-            Some(format!("unnest({})", column_name.to_string()))
-        } else {
-            if let Some(time_window_fun) = time_window_fun {
-                if self != &StatsDataTypeKind::Date && self != &StatsDataTypeKind::DateTime {
-                    return None;
-                }
-                Some(time_window_fun.to_sql(column_name, self == &StatsDataTypeKind::DateTime))
-            } else {
-                Some(column_name.to_string())
+            Some(format!("unnest({})", column_name))
+        } else if let Some(time_window_fun) = time_window_fun {
+            if self != &StatsDataTypeKind::Date && self != &StatsDataTypeKind::DateTime {
+                return None;
             }
+            Some(time_window_fun.to_sql(column_name, self == &StatsDataTypeKind::DateTime))
+        } else {
+            Some(column_name.to_string())
         }
     }
 

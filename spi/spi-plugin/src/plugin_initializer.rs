@@ -9,7 +9,7 @@ use crate::{
 };
 
 pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
-    let mut funs = TardisFuns::inst_with_db_conn(DOMAIN_CODE.to_string(), None);
+    let mut funs = crate::get_tardis_inst();
     bios_basic::rbum::rbum_initializer::init(funs.module_code(), funs.conf::<PluginConfig>().rbum.clone()).await?;
     funs.begin().await?;
     init_db(DOMAIN_CODE.to_string(), &funs).await?;
@@ -41,4 +41,9 @@ async fn init_api(web_server: &TardisWebServer) -> TardisResult<()> {
         )
         .await;
     Ok(())
+}
+
+#[inline]
+pub(crate) fn get_tardis_inst() -> TardisFunsInst {
+    TardisFuns::inst_with_db_conn(DOMAIN_CODE.to_string(), None)
 }

@@ -12,7 +12,6 @@ use bios_basic::rbum::{
 };
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
-    log::Id,
     TardisFunsInst,
 };
 

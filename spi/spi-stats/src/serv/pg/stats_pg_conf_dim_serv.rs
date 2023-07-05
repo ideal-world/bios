@@ -1,5 +1,5 @@
 use bios_basic::spi::{
-    spi_funs::SpiBsInstExtractor,
+    spi_funs::SpiBsInst,
     spi_initializer::common_pg::{self, package_table_name},
 };
 use tardis::{
@@ -22,8 +22,8 @@ pub async fn online(dim_conf_key: &str, conn: &TardisRelDBlConnection, ctx: &Tar
     common_pg::check_table_exit(&format!("stats_inst_dim_{dim_conf_key}"), conn, ctx).await
 }
 
-pub(crate) async fn add(add_req: &StatsConfDimAddReq, funs: &&TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-    let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
+pub(crate) async fn add(add_req: &StatsConfDimAddReq, funs: &&TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
+    let bs_inst = inst.inst::<TardisRelDBClient>();
     let (mut conn, table_name) = stats_pg_initializer::init_conf_dim_table_and_conn(bs_inst, ctx, true).await?;
     conn.begin().await?;
     if conn.count_by_sql(&format!("SELECT 1 FROM {table_name} WHERE key = $1"), vec![Value::from(&add_req.key)]).await? != 0 {
@@ -58,8 +58,8 @@ VALUES
     Ok(())
 }
 
-pub(crate) async fn modify(dim_conf_key: &str, modify_req: &StatsConfDimModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-    let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
+pub(crate) async fn modify(dim_conf_key: &str, modify_req: &StatsConfDimModifyReq, funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
+    let bs_inst = inst.inst::<TardisRelDBClient>();
     let (mut conn, table_name) = stats_pg_initializer::init_conf_dim_table_and_conn(bs_inst, ctx, true).await?;
     conn.begin().await?;
     if online(dim_conf_key, &conn, ctx).await? {
@@ -106,8 +106,8 @@ WHERE key = $1"#,
     Ok(())
 }
 
-pub(crate) async fn delete(dim_conf_key: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-    let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
+pub(crate) async fn delete(dim_conf_key: &str, _funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
+    let bs_inst = inst.inst::<TardisRelDBClient>();
     let (mut conn, table_name) = stats_pg_initializer::init_conf_dim_table_and_conn(bs_inst, ctx, true).await?;
     conn.begin().await?;
     conn.execute_one(&format!("DELETE FROM {table_name} WHERE key = $1"), vec![Value::from(dim_conf_key)]).await?;
@@ -118,8 +118,8 @@ pub(crate) async fn delete(dim_conf_key: &str, funs: &TardisFunsInst, ctx: &Tard
     Ok(())
 }
 
-pub(in crate::serv::pg) async fn get(dim_conf_key: &str, conn: &TardisRelDBlConnection, ctx: &TardisContext) -> TardisResult<Option<StatsConfDimInfoResp>> {
-    do_paginate(Some(dim_conf_key.to_string()), None, 1, 1, None, None, conn, ctx).await.map(|page| page.records.into_iter().next())
+pub(in crate::serv::pg) async fn get(dim_conf_key: &str, conn: &TardisRelDBlConnection, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<Option<StatsConfDimInfoResp>> {
+    do_paginate(Some(dim_conf_key.to_string()), None, 1, 1, None, None, conn, ctx, inst).await.map(|page| page.records.into_iter().next())
 }
 
 pub(crate) async fn paginate(
@@ -129,12 +129,13 @@ pub(crate) async fn paginate(
     page_size: u32,
     desc_by_create: Option<bool>,
     desc_by_update: Option<bool>,
-    funs: &TardisFunsInst,
+    _funs: &TardisFunsInst,
     ctx: &TardisContext,
+    inst: &SpiBsInst,
 ) -> TardisResult<TardisPage<StatsConfDimInfoResp>> {
-    let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
+    let bs_inst = inst.inst();
     let (conn, _) = stats_pg_initializer::init_conf_dim_table_and_conn(bs_inst, ctx, true).await?;
-    do_paginate(dim_conf_key, show_name, page_number, page_size, desc_by_create, desc_by_update, &conn, ctx).await
+    do_paginate(dim_conf_key, show_name, page_number, page_size, desc_by_create, desc_by_update, &conn, ctx, inst).await
 }
 
 async fn do_paginate(
@@ -146,6 +147,7 @@ async fn do_paginate(
     desc_by_update: Option<bool>,
     conn: &TardisRelDBlConnection,
     ctx: &TardisContext,
+    _inst: &SpiBsInst,
 ) -> TardisResult<TardisPage<StatsConfDimInfoResp>> {
     let table_name = package_table_name("stats_conf_dim", ctx);
     let mut sql_where = vec!["1 = 1".to_string()];
@@ -236,12 +238,12 @@ WHERE
 ///  et timestamp with time zone
 /// )
 /// ```
-pub(crate) async fn create_inst(dim_conf_key: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-    let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
+pub(crate) async fn create_inst(dim_conf_key: &str, funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
+    let bs_inst = inst.inst::<TardisRelDBClient>();
     let (mut conn, _) = common_pg::init_conn(bs_inst).await?;
     conn.begin().await?;
 
-    let dim_conf = get(dim_conf_key, &conn, ctx)
+    let dim_conf = get(dim_conf_key, &conn, ctx, inst)
         .await?
         .ok_or_else(|| funs.err().not_found("fact_conf", "create_inst", "The dimension config does not exist.", "404-spi-stats-dim-conf-not-exist"))?;
 

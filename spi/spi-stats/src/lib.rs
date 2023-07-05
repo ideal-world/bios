@@ -9,3 +9,4 @@ pub mod stats_config;
 pub mod stats_constants;
 pub mod stats_enumeration;
 pub mod stats_initializer;
+pub(crate) use crate::stats_initializer::get_tardis_inst;
