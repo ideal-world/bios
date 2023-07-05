@@ -19,7 +19,7 @@ spi_dispatch_service! {
     @dispatch: {
         #[cfg(feature = "spi-pg")]
         spi_constants::SPI_PG_KIND_CODE => pg::search_pg_item_serv,
-        #[cfg(feature = "spi-pg")]
+        #[cfg(feature = "spi-es")]
         spi_constants::SPI_ES_KIND_CODE => es::search_es_item_serv,
     },
     @method: {
