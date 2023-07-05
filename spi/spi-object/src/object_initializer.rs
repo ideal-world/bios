@@ -13,7 +13,7 @@ use crate::{
 };
 
 pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
-    let mut funs = TardisFuns::inst_with_db_conn(DOMAIN_CODE.to_string(), None);
+    let mut funs = crate::get_tardis_inst();
     bios_basic::rbum::rbum_initializer::init(funs.module_code(), funs.conf::<ObjectConfig>().rbum.clone()).await?;
     funs.begin().await?;
     let ctx = spi_initializer::init(DOMAIN_CODE, &funs).await?;
@@ -38,4 +38,9 @@ pub async fn init_fun(bs_cert: SpiBsCertResp, ctx: &TardisContext, mgr: bool) ->
         object_constants::SPI_S3_KIND_CODE => serv::s3::object_s3_initializer::init(&bs_cert, ctx, mgr).await,
         _ => Err(bs_cert.bs_not_implemented())?,
     }
+}
+
+#[inline]
+pub(crate) fn get_tardis_inst() -> TardisFunsInst {
+    TardisFuns::inst_with_db_conn(DOMAIN_CODE.to_string(), None)
 }

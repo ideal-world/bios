@@ -1,4 +1,4 @@
-use bios_basic::spi::spi_funs::SpiBsInstExtractor;
+use bios_basic::spi::spi_funs::{SpiBsInst, SpiBsInstExtractor};
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
     db::{reldb_client::TardisRelDBClient, sea_orm::Value},
@@ -10,7 +10,7 @@ use crate::dto::kv_item_dto::{KvItemAddOrModifyReq, KvItemDetailResp, KvItemMatc
 
 use super::kv_pg_initializer;
 
-pub async fn add_or_modify_item(add_or_modify_req: &KvItemAddOrModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+pub async fn add_or_modify_item(add_or_modify_req: &KvItemAddOrModifyReq, _funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
     let params = vec![
         Value::from(add_or_modify_req.key.to_string()),
         Value::from(add_or_modify_req.value.clone()),
@@ -21,7 +21,7 @@ pub async fn add_or_modify_item(add_or_modify_req: &KvItemAddOrModifyReq, funs: 
     if add_or_modify_req.info.is_some() {
         update_opt_fragments.push("info = $3");
     }
-    let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
+    let bs_inst = inst.inst::<TardisRelDBClient>();
     let (mut conn, table_name) = kv_pg_initializer::init_table_and_conn(bs_inst, ctx, true).await?;
     conn.begin().await?;
     conn.execute_one(
@@ -44,8 +44,8 @@ DO UPDATE SET
     Ok(())
 }
 
-pub async fn get_item(key: String, extract: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<KvItemDetailResp>> {
-    let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
+pub async fn get_item(key: String, extract: Option<String>, _funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<Option<KvItemDetailResp>> {
+    let bs_inst = inst.inst::<TardisRelDBClient>();
     let (conn, table_name) = kv_pg_initializer::init_table_and_conn(bs_inst, ctx, true).await?;
     let result = conn
         .get_dto_by_sql(
@@ -63,7 +63,7 @@ WHERE
     Ok(result)
 }
 
-pub async fn find_items(keys: Vec<String>, extract: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<KvItemSummaryResp>> {
+pub async fn find_items(keys: Vec<String>, extract: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext, _inst: &SpiBsInst) -> TardisResult<Vec<KvItemSummaryResp>> {
     let mut sql_vals: Vec<Value> = vec![];
     let place_holder = keys
         .iter()
@@ -92,7 +92,7 @@ WHERE
     Ok(result)
 }
 
-pub async fn match_items(match_req: KvItemMatchReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<TardisPage<KvItemSummaryResp>> {
+pub async fn match_items(match_req: KvItemMatchReq, _funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<TardisPage<KvItemSummaryResp>> {
     let mut where_fragments: Vec<String> = Vec::new();
     let mut sql_vals: Vec<Value> = vec![];
     sql_vals.push(Value::from(format!("{}%", match_req.key_prefix)));
@@ -135,7 +135,7 @@ pub async fn match_items(match_req: KvItemMatchReq, funs: &TardisFunsInst, ctx: 
     sql_vals.push(Value::from((match_req.page_number - 1) * match_req.page_size as u32));
     let page_fragments = format!("LIMIT ${} OFFSET ${}", sql_vals.len() - 1, sql_vals.len());
 
-    let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
+    let bs_inst = inst.inst::<TardisRelDBClient>();
     let (conn, table_name) = kv_pg_initializer::init_table_and_conn(bs_inst, ctx, true).await?;
     let result = conn
         .query_all(
@@ -183,8 +183,8 @@ WHERE
     })
 }
 
-pub async fn delete_item(key: String, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-    let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
+pub async fn delete_item(key: String, _funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
+    let bs_inst = inst.inst::<TardisRelDBClient>();
     let (mut conn, table_name) = kv_pg_initializer::init_table_and_conn(bs_inst, ctx, true).await?;
     conn.begin().await?;
     conn.execute_one(&format!("DELETE FROM {table_name} WHERE k = $1"), vec![Value::from(key)]).await?;

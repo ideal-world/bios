@@ -270,6 +270,7 @@ impl FlowInstServ {
             pub rel_flow_model_name: String,
 
             pub current_state_id: String,
+            pub rel_business_obj_id: String,
 
             pub create_ctx: Value,
             pub create_time: DateTime<Utc>,
@@ -343,7 +344,7 @@ impl FlowInstServ {
                     output_message: inst.output_message,
                     own_paths: inst.own_paths,
                     current_state_id: inst.current_state_id,
-                    rel_business_obj_id: todo!(),
+                    rel_business_obj_id: inst.rel_business_obj_id,
                 })
                 .collect_vec(),
         })
@@ -363,6 +364,7 @@ impl FlowInstServ {
                 basic: RbumBasicFilterReq {
                     ids: Some(flow_insts.iter().map(|inst| inst.rel_flow_model_id.to_string()).collect_vec()),
                     with_sub_own_paths: true,
+                    own_paths: Some("".to_string()),
                     ..Default::default()
                 },
                 ..Default::default()
@@ -373,14 +375,6 @@ impl FlowInstServ {
             ctx,
         )
         .await?;
-        if flow_insts.len() != flow_models.len() {
-            return Err(funs.err().not_found(
-                "flow_inst",
-                "find_state_and_next_transitions",
-                "some flow models not found",
-                "404-flow-inst-rel-model-not-found",
-            ));
-        }
         let state_and_next_transitions = join_all(
             flow_insts
                 .iter()
@@ -543,27 +537,34 @@ impl FlowInstServ {
                     && (spec_flow_transition_id.is_none() || &model_transition.id == spec_flow_transition_id.as_ref().unwrap())
             })
             .filter(|model_transition| {
-                if model_transition.guard_by_creator && (flow_inst.create_ctx.own_paths != ctx.own_paths || flow_inst.create_ctx.owner != ctx.owner) {
-                    return false;
+                if !model_transition.guard_by_creator
+                && model_transition.guard_by_spec_account_ids.is_empty()
+                && model_transition.guard_by_spec_role_ids.is_empty()
+                && !model_transition.guard_by_his_operators {
+                    return true;
                 }
-                if !model_transition.guard_by_spec_account_ids.is_empty() && !model_transition.guard_by_spec_account_ids.contains(&ctx.owner) {
-                    return false;
+                if model_transition.guard_by_creator && !(flow_inst.create_ctx.own_paths != ctx.own_paths || flow_inst.create_ctx.owner != ctx.owner) {
+                    return true;
                 }
-                if !model_transition.guard_by_spec_role_ids.is_empty() && !model_transition.guard_by_spec_role_ids.iter().any(|role_ids| ctx.roles.contains(role_ids)) {
-                    return false;
+                if !model_transition.guard_by_spec_account_ids.is_empty() && model_transition.guard_by_spec_account_ids.contains(&ctx.owner) {
+                    return true;
+                }
+                if !model_transition.guard_by_spec_role_ids.is_empty() && model_transition.guard_by_spec_role_ids.iter().any(|role_ids| ctx.roles.contains(role_ids)) {
+                    return true;
                 }
                 if model_transition.guard_by_his_operators
                     && flow_inst
                         .transitions
                         .as_ref()
                         .map(|inst_transitions| {
-                            !inst_transitions.iter().any(|inst_transition| inst_transition.op_ctx.own_paths == ctx.own_paths && inst_transition.op_ctx.owner == ctx.owner)
+                            inst_transitions.iter().any(|inst_transition| inst_transition.op_ctx.own_paths == ctx.own_paths && inst_transition.op_ctx.owner == ctx.owner)
                         })
                         .unwrap_or(false)
                 {
-                    return false;
+                    return true;
                 }
                 // TODO guard_by_assigned is not implement
+                if model_transition.guard_by_assigned {}
                 if let Some(guard_by_other_conds) = model_transition.guard_by_other_conds() {
                     let mut check_vars: HashMap<String, Value> = HashMap::new();
                     if let Some(current_vars) = &flow_inst.current_vars {
@@ -583,7 +584,7 @@ impl FlowInstServ {
                 next_flow_transition_name: model_transition.name.to_string(),
                 vars_collect: model_transition.vars_collect(),
                 next_flow_state_id: model_transition.to_flow_state_id.to_string(),
-                next_flow_state_name: model_transition.from_flow_state_name.to_string(),
+                next_flow_state_name: model_transition.to_flow_state_name.to_string(),
             })
             .collect_vec();
         let state_and_next_transitions = FlowInstFindStateAndTransitionsResp {

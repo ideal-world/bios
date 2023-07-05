@@ -1,10 +1,8 @@
-use bios_basic::TardisFunInstExtractor;
 use tardis::{
     basic::error::TardisError,
     db::sea_orm::prelude::Uuid,
     web::{
         context_extractor::TardisContextExtractor,
-        poem::Request,
         poem_openapi::{self, param::Query, payload::Json},
         web_resp::{TardisApiResult, TardisResp, Void},
     },
@@ -34,7 +32,6 @@ impl ConfCiConfigServiceApi {
         /// 配置类型
         r#type: Query<Option<String>>,
         ctx: TardisContextExtractor,
-        request: &Request,
     ) -> TardisApiResult<String> {
         let namespace_id = namespace_id.0.or(tenant.0).unwrap_or("public".into());
         let tags = tag.0.unwrap_or_default().split(',').map(str::trim).map(String::from).collect();
@@ -45,14 +42,13 @@ impl ConfCiConfigServiceApi {
             tags,
             tp: r#type.0,
         };
-        let funs = request.tardis_fun_inst();
+        let funs = crate::get_tardis_inst();
         let content = get_config(&mut descriptor, &funs, &ctx.0).await?;
         TardisResp::ok(content)
     }
     #[oai(path = "/config/detail", method = "get")]
     async fn get_config_detail(
         &self,
-        // mut descriptor: Query<ConfigDescriptor>,
         tenant: Query<Option<NamespaceId>>,
         namespace_id: Query<Option<NamespaceId>>,
         /// 配置分组名
@@ -64,7 +60,6 @@ impl ConfCiConfigServiceApi {
         /// 配置类型
         r#type: Query<Option<String>>,
         ctx: TardisContextExtractor,
-        request: &Request,
     ) -> TardisApiResult<ConfigItem> {
         let namespace_id = namespace_id.0.or(tenant.0).unwrap_or("public".into());
         let tags = tag.0.unwrap_or_default().split(',').map(str::trim).map(String::from).collect();
@@ -75,13 +70,13 @@ impl ConfCiConfigServiceApi {
             tags,
             tp: r#type.0,
         };
-        let funs = request.tardis_fun_inst();
-        let content = get_config_detail(&mut descriptor, &funs, &ctx.0).await?;
-        TardisResp::ok(content)
+        let funs = crate::get_tardis_inst();
+        let config_item = get_config_detail(&mut descriptor, &funs, &ctx.0).await?;
+        TardisResp::ok(config_item)
     }
     #[oai(path = "/config", method = "post")]
-    async fn publish_config(&self, mut publish_request: Json<ConfigPublishRequest>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<bool> {
-        let funs = request.tardis_fun_inst();
+    async fn publish_config(&self, mut publish_request: Json<ConfigPublishRequest>, ctx: TardisContextExtractor) -> TardisApiResult<bool> {
+        let funs = crate::get_tardis_inst();
         let item = publish_config(&mut publish_request.0, &funs, &ctx.0).await?;
         TardisResp::ok(item)
     }
@@ -96,7 +91,6 @@ impl ConfCiConfigServiceApi {
         /// 配置名
         data_id: Query<String>,
         ctx: TardisContextExtractor,
-        request: &Request,
     ) -> TardisApiResult<Void> {
         let namespace_id = namespace_id.0.or(tenant.0).unwrap_or("public".into());
         let mut descriptor = ConfigDescriptor {
@@ -105,7 +99,7 @@ impl ConfCiConfigServiceApi {
             data_id: data_id.0,
             ..Default::default()
         };
-        let funs = request.tardis_fun_inst();
+        let funs = crate::get_tardis_inst();
         delete_config(&mut descriptor, &funs, &ctx.0).await?;
         TardisResp::ok(Void {})
     }
@@ -121,7 +115,6 @@ impl ConfCiConfigServiceApi {
         data_id: Query<String>,
         md5: Query<Option<String>>,
         ctx: TardisContextExtractor,
-        request: &Request,
     ) -> TardisApiResult<Option<ConfigDescriptor>> {
         let mut namespace_id = namespace_id.0.or(tenant.0).unwrap_or("public".into());
         if namespace_id.is_empty() {
@@ -134,7 +127,7 @@ impl ConfCiConfigServiceApi {
             ..Default::default()
         };
         let md5 = md5.0.unwrap_or_default();
-        let funs = request.tardis_fun_inst();
+        let funs = crate::get_tardis_inst();
         let config = if md5.is_empty() || md5 != get_md5(&mut descriptor, &funs, &ctx.0).await? {
             // if md5 is empty or changed, return descriptor
             Some(descriptor)
@@ -161,9 +154,8 @@ impl ConfCiConfigServiceApi {
         page_size: Query<Option<u32>>,
         mode: Query<Option<String>>,
         ctx: TardisContextExtractor,
-        request: &Request,
     ) -> TardisApiResult<ConfigListResponse> {
-        let funs = request.tardis_fun_inst();
+        let funs = crate::get_tardis_inst();
         let page_size = page_size.0.unwrap_or(100).min(500).max(1);
         let page_number = page_no.0.unwrap_or(1).max(0);
         let mode = mode.0.as_deref().unwrap_or_default().into();
@@ -196,7 +188,6 @@ impl ConfCiConfigServiceApi {
         /// 每页大小
         page_size: Query<Option<u32>>,
         ctx: TardisContextExtractor,
-        request: &Request,
     ) -> TardisApiResult<ConfigListResponse> {
         let mut namespace_id = namespace_id.0.or(tenant.0).unwrap_or("public".into());
         if namespace_id.is_empty() {
@@ -208,7 +199,7 @@ impl ConfCiConfigServiceApi {
             data_id: data_id.0,
             ..Default::default()
         };
-        let funs = request.tardis_fun_inst();
+        let funs = crate::get_tardis_inst();
         let page_size = page_size.0.unwrap_or(100).min(500).max(1);
         let page_number = page_no.0.unwrap_or(1).max(0);
         let mut request = ConfigHistoryListRequest {
@@ -232,7 +223,6 @@ impl ConfCiConfigServiceApi {
         data_id: Query<String>,
         id: Query<String>,
         ctx: TardisContextExtractor,
-        request: &Request,
     ) -> TardisApiResult<ConfigItem> {
         let mut namespace_id = namespace_id.0.or(tenant.0).unwrap_or("public".into());
         if namespace_id.is_empty() {
@@ -246,7 +236,7 @@ impl ConfCiConfigServiceApi {
         };
         let id = Uuid::parse_str(&id.0).map_err(|e| TardisError::bad_request(&e.to_string(), error::INVALID_UUID))?;
 
-        let funs = request.tardis_fun_inst();
+        let funs = crate::get_tardis_inst();
         let config = find_history(&mut descriptor, &id, &funs, &ctx.0).await?;
         TardisResp::ok(config)
     }
@@ -263,7 +253,6 @@ impl ConfCiConfigServiceApi {
         data_id: Query<String>,
         id: Query<String>,
         ctx: TardisContextExtractor,
-        request: &Request,
     ) -> TardisApiResult<ConfigItem> {
         let mut namespace_id = namespace_id.0.or(tenant.0).unwrap_or("public".into());
         if namespace_id.is_empty() {
@@ -276,7 +265,7 @@ impl ConfCiConfigServiceApi {
             data_id: data_id.0,
             ..Default::default()
         };
-        let funs = request.tardis_fun_inst();
+        let funs = crate::get_tardis_inst();
         let config = find_previous_history(&mut descriptor, &id, &funs, &ctx.0).await?;
         TardisResp::ok(config)
     }
@@ -286,13 +275,12 @@ impl ConfCiConfigServiceApi {
         namespace_id: Query<Option<NamespaceId>>,
         tenant: Query<Option<NamespaceId>>,
         ctx: TardisContextExtractor,
-        request: &Request,
     ) -> TardisApiResult<Vec<ConfigItemDigest>> {
         let mut namespace_id = namespace_id.0.or(tenant.0).unwrap_or("public".into());
         if namespace_id.is_empty() {
             namespace_id = "public".into();
         }
-        let funs = request.tardis_fun_inst();
+        let funs = crate::get_tardis_inst();
         let config = get_configs_by_namespace(&namespace_id, &funs, &ctx.0).await?;
         TardisResp::ok(config)
     }

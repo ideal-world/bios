@@ -20,19 +20,55 @@ impl IamCpCertMailVCodeServ {
     }
 
     pub async fn login_by_mail_vocde(login_req: &IamCpMailVCodeLoginReq, funs: &TardisFunsInst) -> TardisResult<IamAccountInfoResp> {
-        let rbum_cert_conf_id = IamCertServ::get_cert_conf_id_by_kind(&IamCertKernelKind::MailVCode.to_string(), Some(login_req.tenant_id.clone()), funs).await?;
-        let (_, _, rbum_item_id) = IamCertServ::validate_by_ak_and_sk(
-            &login_req.mail,
-            &login_req.vcode.0,
-            Some(&rbum_cert_conf_id),
-            None,
-            false,
-            Some(login_req.tenant_id.clone()),
-            None,
-            funs,
-        )
-        .await?;
-        let resp = IamCertServ::package_tardis_context_and_resp(Some(login_req.tenant_id.clone()), &rbum_item_id, login_req.flag.clone(), None, funs).await?;
-        Ok(resp)
+        let global_rbum_cert_conf_id = IamCertServ::get_cert_conf_id_by_kind(&IamCertKernelKind::MailVCode.to_string(), None, funs).await?;
+        if let Some(tenant_id) = &login_req.tenant_id {
+            let rbum_cert_conf_id = IamCertServ::get_cert_conf_id_by_kind(&IamCertKernelKind::MailVCode.to_string(), Some(tenant_id.clone()), funs).await?;
+            let result = IamCertServ::validate_by_ak_and_sk(
+                &login_req.mail,
+                &login_req.vcode.0,
+                Some(&rbum_cert_conf_id),
+                None,
+                false,
+                Some(tenant_id.clone()),
+                None,
+                funs,
+            )
+            .await;
+            let (_, _, rbum_item_id) = if let Some(e) = result.clone().err() {
+                if e.code == "401-iam-cert-valid" {
+                    IamCertServ::validate_by_ak_and_sk(
+                        &login_req.mail,
+                        &login_req.vcode.0,
+                        Some(&global_rbum_cert_conf_id),
+                        None,
+                        false,
+                        Some("".to_string()),
+                        None,
+                        funs,
+                    )
+                    .await?
+                } else {
+                    result?
+                }
+            } else {
+                result?
+            };
+            let resp = IamCertServ::package_tardis_context_and_resp(Some(tenant_id.to_string()), &rbum_item_id, login_req.flag.clone(), None, funs).await?;
+            Ok(resp)
+        } else {
+            let (_, _, rbum_item_id) = IamCertServ::validate_by_ak_and_sk(
+                &login_req.mail,
+                &login_req.vcode.0,
+                Some(&global_rbum_cert_conf_id),
+                None,
+                false,
+                Some("".to_string()),
+                None,
+                funs,
+            )
+            .await?;
+            let resp = IamCertServ::package_tardis_context_and_resp(None, &rbum_item_id, login_req.flag.clone(), None, funs).await?;
+            Ok(resp)
+        }
     }
 }

@@ -1,4 +1,4 @@
-use bios_basic::{basic_enumeration::BasicQueryOpKind, dto::BasicQueryCondInfo, helper::db_helper, spi::spi_funs::SpiBsInstExtractor};
+use bios_basic::{basic_enumeration::BasicQueryOpKind, dto::BasicQueryCondInfo, helper::db_helper, spi::spi_funs::SpiBsInst};
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
     chrono::Utc,
@@ -15,7 +15,7 @@ use crate::dto::search_item_dto::{SearchItemAddReq, SearchItemModifyReq, SearchI
 
 use super::search_pg_initializer;
 
-pub async fn add(add_req: &mut SearchItemAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+pub async fn add(add_req: &mut SearchItemAddReq, _funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
     let mut params = Vec::new();
     params.push(Value::from(add_req.kind.to_string()));
     params.push(Value::from(add_req.key.to_string()));
@@ -35,7 +35,7 @@ pub async fn add(add_req: &mut SearchItemAddReq, funs: &TardisFunsInst, ctx: &Ta
         params.push(Value::from(visit_keys.to_sql()));
     };
 
-    let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
+    let bs_inst = inst.inst::<TardisRelDBClient>();
     let (mut conn, table_name) = search_pg_initializer::init_table_and_conn(bs_inst, &add_req.tag, ctx, true).await?;
     conn.begin().await?;
     conn.execute_one(
@@ -53,8 +53,8 @@ VALUES
     Ok(())
 }
 
-pub async fn modify(tag: &str, key: &str, modify_req: &mut SearchItemModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-    let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
+pub async fn modify(tag: &str, key: &str, modify_req: &mut SearchItemModifyReq, funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
+    let bs_inst = inst.inst::<TardisRelDBClient>();
     let (mut conn, table_name) = search_pg_initializer::init_table_and_conn(bs_inst, tag, ctx, true).await?;
 
     let mut params = Vec::new();
@@ -95,7 +95,7 @@ pub async fn modify(tag: &str, key: &str, modify_req: &mut SearchItemModifyReq, 
         sql_sets.push(format!("ext = ${}", params.len() + 1));
         let ext = ext.clone();
         if !modify_req.ext_override.unwrap_or(false) {
-            let mut storage_ext = get_ext(tag, key, &table_name, &conn, funs).await?;
+            let mut storage_ext = get_ext(tag, key, &table_name, &conn, funs, inst).await?;
             merge(&mut storage_ext, ext);
             params.push(Value::from(storage_ext.clone()));
         } else {
@@ -123,8 +123,8 @@ WHERE key = $1
     Ok(())
 }
 
-pub async fn delete(tag: &str, key: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-    let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
+pub async fn delete(tag: &str, key: &str, _funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
+    let bs_inst = inst.inst::<TardisRelDBClient>();
     let (mut conn, table_name) = search_pg_initializer::init_table_and_conn(bs_inst, tag, ctx, false).await?;
     conn.begin().await?;
     conn.execute_one(&format!("DELETE FROM {table_name} WHERE key = $1"), vec![Value::from(key)]).await?;
@@ -132,7 +132,7 @@ pub async fn delete(tag: &str, key: &str, funs: &TardisFunsInst, ctx: &TardisCon
     Ok(())
 }
 
-async fn get_ext(tag: &str, key: &str, table_name: &str, conn: &TardisRelDBlConnection, funs: &TardisFunsInst) -> TardisResult<serde_json::Value> {
+async fn get_ext(tag: &str, key: &str, table_name: &str, conn: &TardisRelDBlConnection, funs: &TardisFunsInst, _inst: &SpiBsInst) -> TardisResult<serde_json::Value> {
     let result = conn
         .query_one(&format!("SELECT ext FROM {table_name} WHERE key = $1"), vec![Value::from(key)])
         .await?
@@ -140,7 +140,7 @@ async fn get_ext(tag: &str, key: &str, table_name: &str, conn: &TardisRelDBlConn
     Ok(result.try_get("", "ext")?)
 }
 
-pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<TardisPage<SearchItemSearchResp>> {
+pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<TardisPage<SearchItemSearchResp>> {
     let select_fragments;
     let mut from_fragments = "".to_string();
     let mut where_fragments: Vec<String> = vec!["1=1".to_string()];
@@ -209,11 +209,11 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
     if let Some(kinds) = &search_req.query.kinds {
         if !kinds.is_empty() {
             where_fragments.push(format!(
-                "kind LIKE ANY (ARRAY[{}])",
+                "kind = ANY (ARRAY[{}])",
                 (0..kinds.len()).map(|idx| format!("${}", sql_vals.len() + idx + 1)).collect::<Vec<String>>().join(",")
             ));
             for kind in kinds {
-                sql_vals.push(Value::from(format!("{kind}%")));
+                sql_vals.push(Value::from(kind.to_string()));
             }
         }
     }
@@ -356,7 +356,7 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
     sql_vals.push(Value::from((search_req.page.number - 1) * search_req.page.size as u32));
     let page_fragments = format!("LIMIT ${} OFFSET ${}", sql_vals.len() - 1, sql_vals.len());
 
-    let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
+    let bs_inst = inst.inst::<TardisRelDBClient>();
     let (conn, table_name) = search_pg_initializer::init_table_and_conn(bs_inst, &search_req.tag, ctx, false).await?;
     let result = conn
         .query_all(

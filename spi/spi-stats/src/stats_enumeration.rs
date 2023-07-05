@@ -144,8 +144,17 @@ impl StatsDataTypeKind {
             {
                 None
             } else if multi_values {
-                // TODO Not supported yet
-                return Err(TardisError::internal_error("json_to_sea_orm_value result is empty", "spi-stats-inaternal-error"));
+                let mut index = 0;
+                let param_sql = value
+                    .iter()
+                    .map(|_| {
+                        let param_idx = param_idx + index;
+                        index += 1;
+                        format!("${} = any({column_name})", param_idx)
+                    })
+                    .collect::<Vec<_>>();
+
+                Some((format!("({})", param_sql.join(" or ")), value))
             } else if let Some(time_window_fun) = time_window_fun {
                 value.pop().map(|value| {
                     (
@@ -200,8 +209,16 @@ impl StatsDataTypeKind {
             {
                 None
             } else if multi_values {
-                // TODO Not supported yet
-                return Err(TardisError::internal_error("to_pg_having: multi_values not supported yet", "spi-stats-inaternal-error"));
+                let mut index = 0;
+                let param_sql = value
+                    .iter()
+                    .map(|_| {
+                        let param_idx = param_idx + index;
+                        index += 1;
+                        format!("${} = any({column_name})", param_idx)
+                    })
+                    .collect::<Vec<_>>();
+                Some((format!("({})", param_sql.join(" or ")), value))
             } else if let Some(fun) = fun {
                 value.pop().map(|value| (format!("{} {} ${param_idx}", fun.to_sql(column_name), op.to_sql()), vec![value]))
             } else if op == &BasicQueryOpKind::In {
@@ -222,8 +239,10 @@ impl StatsDataTypeKind {
         )
     }
 
-    pub(crate) fn to_pg_group(&self, column_name: &str, time_window_fun: &Option<StatsQueryTimeWindowKind>) -> Option<String> {
-        if let Some(time_window_fun) = time_window_fun {
+    pub(crate) fn to_pg_group(&self, column_name: &str, multi_values: bool, time_window_fun: &Option<StatsQueryTimeWindowKind>) -> Option<String> {
+        if multi_values {
+            Some(format!("unnest({})", column_name))
+        } else if let Some(time_window_fun) = time_window_fun {
             if self != &StatsDataTypeKind::Date && self != &StatsDataTypeKind::DateTime {
                 return None;
             }

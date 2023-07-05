@@ -1,18 +1,11 @@
-use std::collections::{linked_list::IterMut, HashMap};
+use std::collections::{HashMap};
 
 use bios_basic::{
     basic_enumeration::BasicQueryOpKind,
-    helper::db_helper,
-    spi::{spi_funs::SpiBsInstExtractor, spi_initializer::common},
+    spi::{spi_funs::{SpiBsInstExtractor, SpiBsInst}, spi_initializer::common},
 };
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
-    chrono::Utc,
-    db::{
-        reldb_client::{TardisRelDBClient, TardisRelDBlConnection},
-        sea_orm::Value,
-    },
-    log::debug,
     search::search_client::TardisSearchClient,
     serde_json::{self, json},
     web::web_resp::TardisPage,
@@ -63,8 +56,8 @@ fn gen_data_mappings() -> String {
     .to_string()
 }
 
-pub async fn add(add_req: &mut SearchItemAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-    let (client, ext, _) = funs.bs(ctx).await?.inst::<TardisSearchClient>();
+pub async fn add(add_req: &mut SearchItemAddReq, funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
+    let (client, ext, _) = inst.inst::<TardisSearchClient>();
     let index = format_index(&add_req.tag, ext);
     search_es_initializer::init_index(client, &index, Some(&gen_data_mappings())).await?;
     if !search(
@@ -92,6 +85,7 @@ pub async fn add(add_req: &mut SearchItemAddReq, funs: &TardisFunsInst, ctx: &Ta
         },
         funs,
         ctx,
+        inst
     )
     .await?
     .records
@@ -105,8 +99,8 @@ pub async fn add(add_req: &mut SearchItemAddReq, funs: &TardisFunsInst, ctx: &Ta
     Ok(())
 }
 
-pub async fn modify(tag: &str, key: &str, modify_req: &mut SearchItemModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-    let (client, ext, _) = funs.bs(ctx).await?.inst::<TardisSearchClient>();
+pub async fn modify(tag: &str, key: &str, modify_req: &mut SearchItemModifyReq, funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
+    let (client, ext, _) = inst.inst::<TardisSearchClient>();
     let index = format_index(tag, ext);
     // find id by this key
     let q = gen_query_dsl(&SearchItemSearchReq {
@@ -193,8 +187,8 @@ pub async fn modify(tag: &str, key: &str, modify_req: &mut SearchItemModifyReq, 
     Ok(())
 }
 
-pub async fn delete(tag: &str, key: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-    let (client, ext, _) = funs.bs(ctx).await?.inst::<TardisSearchClient>();
+pub async fn delete(tag: &str, key: &str, funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
+    let (client, ext, _) = inst.inst::<TardisSearchClient>();
     let index = format_index(tag, ext);
     let q = gen_query_dsl(&SearchItemSearchReq {
         tag: tag.to_string(),
@@ -222,7 +216,7 @@ pub async fn delete(tag: &str, key: &str, funs: &TardisFunsInst, ctx: &TardisCon
     Ok(())
 }
 
-pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<TardisPage<SearchItemSearchResp>> {
+pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<TardisPage<SearchItemSearchResp>> {
     let q = gen_query_dsl(search_req)?;
     let mut track_scores = None;
     if let Some(sorts) = &search_req.sort {
@@ -230,8 +224,7 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
             track_scores = Some(true);
         }
     }
-    debug!("raw_search[q]: {}", q);
-    let (client, ext, _) = funs.bs(ctx).await?.inst::<TardisSearchClient>();
+    let (client, ext, _) = inst.inst::<TardisSearchClient>();
     let index = format_index(&search_req.tag, ext);
     let result = client
         .raw_search(
@@ -242,7 +235,6 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
             track_scores,
         )
         .await?;
-    debug!("raw_search[result]: {:?}", result);
 
     let mut total_size: i64 = 0;
     if search_req.page.fetch_total && total_size == 0 {

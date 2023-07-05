@@ -8,7 +8,7 @@ use tardis::{
 use crate::{api::ci::search_ci_item_api, search_config::SearchConfig, search_constants::DOMAIN_CODE, serv};
 
 pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
-    let mut funs = TardisFuns::inst_with_db_conn(DOMAIN_CODE.to_string(), None);
+    let mut funs = crate::get_tardis_inst();
     bios_basic::rbum::rbum_initializer::init(funs.module_code(), funs.conf::<SearchConfig>().rbum.clone()).await?;
     funs.begin().await?;
     let ctx = spi_initializer::init(DOMAIN_CODE, &funs).await?;
@@ -38,4 +38,9 @@ pub async fn init_fun(bs_cert: SpiBsCertResp, ctx: &TardisContext, mgr: bool) ->
         spi_constants::SPI_ES_KIND_CODE => serv::es::search_es_initializer::init(&bs_cert, ctx, mgr).await,
         _ => Err(bs_cert.bs_not_implemented())?,
     }
+}
+
+#[inline]
+pub(crate) fn get_tardis_inst() -> TardisFunsInst {
+    TardisFuns::inst_with_db_conn(DOMAIN_CODE.to_string(), None)
 }

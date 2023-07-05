@@ -1,5 +1,6 @@
 use bios_basic::spi::spi_constants;
 use bios_basic::spi::spi_funs::SpiBsInstExtractor;
+use bios_basic::spi_dispatch_service;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::result::TardisResult;
 use tardis::serde_json::json;
@@ -12,44 +13,19 @@ use crate::dto::kv_item_dto::{
 use crate::{kv_constants, kv_initializer};
 
 use super::pg;
-
-pub async fn add_or_modify_item(add_or_modify_req: &mut KvItemAddOrModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-    match funs.init(ctx, true, kv_initializer::init_fun).await?.as_str() {
+spi_dispatch_service! {
+    @mgr: true,
+    @init: kv_initializer::init_fun,
+    @dispatch: {
         #[cfg(feature = "spi-pg")]
-        spi_constants::SPI_PG_KIND_CODE => pg::kv_pg_item_serv::add_or_modify_item(add_or_modify_req, funs, ctx).await,
-        kind_code => Err(funs.bs_not_implemented(kind_code)),
-    }
-}
-
-pub async fn get_item(key: String, extract: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<KvItemDetailResp>> {
-    match funs.init(ctx, true, kv_initializer::init_fun).await?.as_str() {
-        #[cfg(feature = "spi-pg")]
-        spi_constants::SPI_PG_KIND_CODE => pg::kv_pg_item_serv::get_item(key, extract, funs, ctx).await,
-        kind_code => Err(funs.bs_not_implemented(kind_code)),
-    }
-}
-
-pub async fn find_items(keys: Vec<String>, extract: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<KvItemSummaryResp>> {
-    match funs.init(ctx, true, kv_initializer::init_fun).await?.as_str() {
-        #[cfg(feature = "spi-pg")]
-        spi_constants::SPI_PG_KIND_CODE => pg::kv_pg_item_serv::find_items(keys, extract, funs, ctx).await,
-        kind_code => Err(funs.bs_not_implemented(kind_code)),
-    }
-}
-
-pub async fn match_items(match_req: KvItemMatchReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<TardisPage<KvItemSummaryResp>> {
-    match funs.init(ctx, true, kv_initializer::init_fun).await?.as_str() {
-        #[cfg(feature = "spi-pg")]
-        spi_constants::SPI_PG_KIND_CODE => pg::kv_pg_item_serv::match_items(match_req, funs, ctx).await,
-        kind_code => Err(funs.bs_not_implemented(kind_code)),
-    }
-}
-
-pub async fn delete_item(key: String, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-    match funs.init(ctx, true, kv_initializer::init_fun).await?.as_str() {
-        #[cfg(feature = "spi-pg")]
-        spi_constants::SPI_PG_KIND_CODE => pg::kv_pg_item_serv::delete_item(key, funs, ctx).await,
-        kind_code => Err(funs.bs_not_implemented(kind_code)),
+        spi_constants::SPI_PG_KIND_CODE => pg::kv_pg_item_serv,
+    },
+    @method: {
+        add_or_modify_item(add_or_modify_req: &mut KvItemAddOrModifyReq) -> TardisResult<()>;
+        get_item(key: String, extract: Option<String>) -> TardisResult<Option<KvItemDetailResp>>;
+        find_items(keys: Vec<String>, extract: Option<String>) -> TardisResult<Vec<KvItemSummaryResp>>;
+        match_items(match_req: KvItemMatchReq) -> TardisResult<TardisPage<KvItemSummaryResp>>;
+        delete_item(key: String) -> TardisResult<()>;
     }
 }
 
@@ -59,18 +35,20 @@ pub async fn add_or_modify_key_name(add_or_modify_req: &mut KvNameAddOrModifyReq
         value: json!(add_or_modify_req.name),
         info: None,
     };
-    match funs.init(ctx, true, kv_initializer::init_fun).await?.as_str() {
+    let inst = funs.init(ctx, true, kv_initializer::init_fun).await?;
+    match inst.kind_code() {
         #[cfg(feature = "spi-pg")]
-        spi_constants::SPI_PG_KIND_CODE => pg::kv_pg_item_serv::add_or_modify_item(&req, funs, ctx).await,
+        spi_constants::SPI_PG_KIND_CODE => pg::kv_pg_item_serv::add_or_modify_item(&req, funs, ctx, inst).await,
         kind_code => Err(funs.bs_not_implemented(kind_code)),
     }
 }
 
 pub async fn find_key_names(keys: Vec<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<KvNameFindResp>> {
     let keys = keys.into_iter().map(|key| format!("{}{}", kv_constants::KEY_PREFIX_BY_KEY_NAME, key)).collect();
-    match funs.init(ctx, true, kv_initializer::init_fun).await?.as_str() {
+    let inst = funs.init(ctx, true, kv_initializer::init_fun).await?;
+    match inst.kind_code() {
         #[cfg(feature = "spi-pg")]
-        spi_constants::SPI_PG_KIND_CODE => pg::kv_pg_item_serv::find_items(keys, None, funs, ctx).await,
+        spi_constants::SPI_PG_KIND_CODE => pg::kv_pg_item_serv::find_items(keys, None, funs, ctx, inst).await,
         kind_code => Err(funs.bs_not_implemented(kind_code)),
     }
     .and_then(|items| {
@@ -94,16 +72,18 @@ pub async fn add_or_modify_tag(add_or_modify_req: &mut KvTagAddOrModifyReq, funs
         value: TardisFuns::json.obj_to_json(&add_or_modify_req.items)?,
         info: None,
     };
-    match funs.init(ctx, true, kv_initializer::init_fun).await?.as_str() {
+    let inst = funs.init(ctx, true, kv_initializer::init_fun).await?;
+    match inst.kind_code() {
         #[cfg(feature = "spi-pg")]
-        spi_constants::SPI_PG_KIND_CODE => pg::kv_pg_item_serv::add_or_modify_item(&req, funs, ctx).await,
+        spi_constants::SPI_PG_KIND_CODE => pg::kv_pg_item_serv::add_or_modify_item(&req, funs, ctx, inst).await,
         kind_code => Err(funs.bs_not_implemented(kind_code)),
     }
 }
 
 pub async fn find_tags(key_prefix: String, page_number: u32, page_size: u16, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<TardisPage<KvTagFindResp>> {
     let key_prefix = format!("{}{}", kv_constants::KEY_PREFIX_BY_TAG, key_prefix);
-    match funs.init(ctx, true, kv_initializer::init_fun).await?.as_str() {
+    let inst = funs.init(ctx, true, kv_initializer::init_fun).await?;
+    match inst.kind_code() {
         #[cfg(feature = "spi-pg")]
         spi_constants::SPI_PG_KIND_CODE => {
             pg::kv_pg_item_serv::match_items(
@@ -115,6 +95,7 @@ pub async fn find_tags(key_prefix: String, page_number: u32, page_size: u16, fun
                 },
                 funs,
                 ctx,
+                inst,
             )
             .await
         }
