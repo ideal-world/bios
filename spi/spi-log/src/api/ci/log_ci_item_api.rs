@@ -8,7 +8,6 @@ use crate::dto::log_item_dto::{LogItemAddReq, LogItemFindReq, LogItemFindResp};
 use crate::serv::log_item_serv;
 
 #[derive(Clone)]
-
 pub struct LogCiItemApi;
 
 /// Interface Console Log API
