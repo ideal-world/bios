@@ -12,8 +12,8 @@ use tardis::{
     TardisFuns,
 };
 pub struct Holder<'d> {
-    pg: Container<'d, GenericImage>,
-    redis: Container<'d, Redis>,
+    pub pg: Container<'d, GenericImage>,
+    pub redis: Container<'d, Redis>,
 }
 #[allow(dead_code)]
 pub async fn init_tardis(docker: &Cli) -> TardisResult<Holder> {

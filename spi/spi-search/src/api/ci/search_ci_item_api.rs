@@ -8,6 +8,7 @@ use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 use crate::dto::search_item_dto::{SearchItemAddReq, SearchItemModifyReq, SearchItemSearchReq, SearchItemSearchResp};
 use crate::serv::search_item_serv;
 
+#[derive(Clone)]
 pub struct SearchCiItemApi;
 
 /// Interface Console Search API

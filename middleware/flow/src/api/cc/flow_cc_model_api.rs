@@ -15,7 +15,7 @@ use crate::dto::flow_model_dto::{
 use crate::flow_constants;
 use crate::serv::flow_model_serv::FlowModelServ;
 use crate::serv::flow_rel_serv::FlowRelKind;
-
+#[derive(Clone)]
 pub struct FlowCcModelApi;
 
 /// Flow model process API

@@ -22,7 +22,7 @@ pub struct TestAddReq {
     pub description: String,
     pub done: bool,
 }
-
+#[derive(Clone)]
 pub struct TestApi;
 
 #[poem_openapi::OpenApi(prefix_path = "/echo")]

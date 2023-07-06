@@ -28,7 +28,7 @@ async fn init_db(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()>
 }
 
 async fn init_api(web_server: &TardisWebServer) -> TardisResult<()> {
-    web_server.add_module(DOMAIN_CODE, (spi_ci_bs_api::SpiCiBsApi, cache_ci_proc_api::CacheCiProcApi), None).await;
+    web_server.add_module(DOMAIN_CODE, (spi_ci_bs_api::SpiCiBsApi, cache_ci_proc_api::CacheCiProcApi)).await;
     Ok(())
 }
 

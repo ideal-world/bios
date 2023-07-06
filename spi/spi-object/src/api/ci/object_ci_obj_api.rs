@@ -6,7 +6,7 @@ use tardis::web::web_resp::{TardisApiResult, TardisResp};
 
 use crate::dto::object_dto::ObjectObjPresignKind;
 use crate::serv::object_obj_serv;
-
+#[derive(Clone)]
 pub struct ObjectCiObjApi;
 
 /// Interface Console Object API

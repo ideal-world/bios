@@ -14,6 +14,7 @@ use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 
 use crate::dto::plugin_bs_dto::{PluginBsAddReq, PluginBsInfoResp};
 use crate::serv::plugin_bs_serv::PluginBsServ;
+#[derive(Clone)]
 
 pub struct PluginCiBsApi;
 

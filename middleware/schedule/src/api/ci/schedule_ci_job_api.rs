@@ -11,6 +11,7 @@ use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 use crate::dto::schedule_job_dto::{ScheduleJobAddOrModifyReq, ScheduleJobInfoResp, ScheduleTaskInfoResp};
 use crate::serv::schedule_job_serv;
 
+#[derive(Clone)]
 pub struct ScheduleCiJobApi;
 
 /// Interface Console schedule API

@@ -3,13 +3,12 @@ use std::{collections::HashMap, env};
 use bios_basic::{
     rbum::serv::rbum_kind_serv::RbumKindServ,
     spi::{dto::spi_bs_dto::SpiBsAddReq, spi_constants},
-    test::{init_rbum_test_container, test_http_client::TestHttpClient},
+    test::test_http_client::TestHttpClient,
 };
 use bios_spi_conf::{
     conf_constants::DOMAIN_CODE,
     dto::conf_auth_dto::{RegisterRequest, RegisterResponse},
 };
-use reqwest::{Request, Method, RequestBuilder};
 use tardis::{
     basic::{dto::TardisContext, field::TrimString, result::TardisResult},
     log, testcontainers, tokio,
@@ -152,9 +151,7 @@ async fn test_tardis_compatibility(_test_client: &TestHttpClient) -> TardisResul
     form.insert("customNamespaceId", "test-namespace-1");
     form.insert("namespaceName", "测试命名空间1");
     // publish
-    let reqwest_client = nacos_client.reqwest_client.clone();
-    let req = reqwest_client.post(namespace_url).form(&form).build()?;
-    let resp = nacos_client.reqwest_execute(req).await?;
+    let resp = nacos_client.reqwest_execute(|c| c.post(namespace_url).form(&form)).await?;
     log::info!("response: {resp:#?}");
     let success = resp.json::<bool>().await?;
     assert!(success);

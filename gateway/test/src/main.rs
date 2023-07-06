@@ -19,7 +19,7 @@ async fn main() -> TardisResult<()> {
     env::set_var("RUST_LOG", "info,tardis=trace");
     // Prepare
     log::info!("Init http server");
-    tokio::spawn(async move { start_serv().await });
+    start_serv().await?;
     log::info!("Init gateway server");
     let docker = testcontainers::clients::Cli::default();
     let (gateway_url, _life_hold) = init_apisix::init(&docker).await?;
@@ -86,7 +86,7 @@ async fn main() -> TardisResult<()> {
 
     Ok(())
 }
-
+#[derive(Clone, Default)]
 pub struct AuthApi;
 
 /// Auth API
@@ -169,7 +169,7 @@ async fn start_serv() -> TardisResult<()> {
         },
     })
     .await?;
-    TardisFuns::web_server().add_module("auth", AuthApi, None).await.add_module("test", TestApi, None).await.start().await
+    TardisFuns::web_server().add_module("auth", AuthApi).await.add_module("test", TestApi).await.start().await
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]

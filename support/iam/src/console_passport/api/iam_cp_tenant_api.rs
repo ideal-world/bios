@@ -10,6 +10,7 @@ use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_tenant_serv::IamTenantServ;
 use crate::iam_constants;
 
+#[derive(Clone, Default)]
 pub struct IamCpTenantApi;
 
 /// Passport Console Tenant API
