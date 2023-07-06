@@ -36,7 +36,7 @@ pub struct IamResAddReq {
     pub crypto_resp: Option<bool>,
     pub double_auth: Option<bool>,
     pub double_auth_msg: Option<String>,
-    pub need_login:  Option<bool>,
+    pub need_login: Option<bool>,
     pub disabled: Option<bool>,
 }
 
@@ -71,7 +71,7 @@ pub struct IamResModifyReq {
     pub crypto_resp: Option<bool>,
     pub double_auth: Option<bool>,
     pub double_auth_msg: Option<String>,
-    pub need_login:  Option<bool>,
+    pub need_login: Option<bool>,
 }
 
 #[derive(poem_openapi::Object, sea_orm::FromQueryResult, Serialize, Deserialize, Debug)]
@@ -98,7 +98,7 @@ pub struct IamResSummaryResp {
     pub crypto_resp: bool,
     pub double_auth: bool,
     pub double_auth_msg: String,
-    pub need_login:  bool,
+    pub need_login: bool,
 }
 
 impl IamResSummaryResp {
@@ -134,7 +134,7 @@ pub struct IamResDetailResp {
     pub crypto_resp: bool,
     pub double_auth: bool,
     pub double_auth_msg: String,
-    pub need_login:  bool,
+    pub need_login: bool,
 }
 
 impl IamResDetailResp {

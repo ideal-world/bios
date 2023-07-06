@@ -282,6 +282,7 @@ impl RbumItemCrudOperation<iam_res::ActiveModel, IamResAddReq, IamResModifyReq, 
         query.column((iam_res::Entity, iam_res::Column::CryptoResp));
         query.column((iam_res::Entity, iam_res::Column::DoubleAuth));
         query.column((iam_res::Entity, iam_res::Column::DoubleAuthMsg));
+        query.column((iam_res::Entity, iam_res::Column::NeedLogin));
         if let Some(kind) = &filter.kind {
             query.and_where(Expr::col(iam_res::Column::Kind).eq(kind.to_int()));
         }
