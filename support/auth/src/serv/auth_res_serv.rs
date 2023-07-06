@@ -100,7 +100,15 @@ pub fn init_res() -> TardisResult<()> {
 
 /// # add resource
 /// **attention!!**: Before calling this method, init_res() must be called first
-pub fn add_res(res_action: &str, res_uri: &str, auth_info: Option<ResAuthInfo>, need_crypto_req: bool, need_crypto_resp: bool, need_double_auth: bool) -> TardisResult<()> {
+pub fn add_res(
+    res_action: &str,
+    res_uri: &str,
+    auth_info: Option<ResAuthInfo>,
+    need_crypto_req: bool,
+    need_crypto_resp: bool,
+    need_double_auth: bool,
+    need_login: bool,
+) -> TardisResult<()> {
     let res_action = res_action.to_lowercase();
     info!("[Auth] Add resource [{}][{}]", res_action, res_uri);
     let res_items = parse_uri(res_uri)?;
@@ -119,7 +127,16 @@ pub fn add_res(res_action: &str, res_uri: &str, auth_info: Option<ResAuthInfo>, 
         }
         res_container_node = res_container_node.get_child_mut(&res_item);
         if res_item == "$" {
-            res_container_node.insert_leaf(&res_action, &res_action, res_uri, auth_info.clone(), need_crypto_req, need_crypto_resp, need_double_auth);
+            res_container_node.insert_leaf(
+                &res_action,
+                &res_action,
+                res_uri,
+                auth_info.clone(),
+                need_crypto_req,
+                need_crypto_resp,
+                need_double_auth,
+                need_login,
+            );
             let res_uris: Vec<&str> = res_uri.split("://").collect();
             if res_uris.len() == 2 {
                 res_apis.as_mut().expect("[Auth] res_apis got none").insert(
@@ -130,6 +147,7 @@ pub fn add_res(res_action: &str, res_uri: &str, auth_info: Option<ResAuthInfo>, 
                         need_crypto_req,
                         need_crypto_resp,
                         need_double_auth,
+                        need_login,
                     },
                 );
             }

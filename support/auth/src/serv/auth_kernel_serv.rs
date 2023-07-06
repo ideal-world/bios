@@ -201,7 +201,7 @@ async fn ident(req: &AuthReq, config: &AuthConfig, cache_client: &TardisCacheCli
             }
             cache_own_paths = format!("{cache_tenant_id}/{app_id}")
         }
-        if own_paths.contains((&cache_own_paths)) {
+        if own_paths.contains(&cache_own_paths) {
             let own_paths_split = own_paths.split('/').collect::<Vec<_>>();
             let tenant_id = if own_paths.is_empty() { None } else { Some(own_paths_split[0].to_string()) };
             let app_id = if own_paths_split.len() > 1 { Some(own_paths_split[1].to_string()) } else { None };
@@ -223,6 +223,17 @@ async fn ident(req: &AuthReq, config: &AuthConfig, cache_client: &TardisCacheCli
             ))
         }
     } else {
+        let matched_res = auth_res_serv::match_res(&rbum_action, &rbum_uri)?;
+        for res in matched_res {
+            if res.auth.is_none() {
+                if res.need_login {
+                    return Err(TardisError::unauthorized(
+                        &format!("[Auth] need is not legal from head [{}]", config.head_key_token),
+                        "401-auth-req-token-not-exist",
+                    ));
+                }
+            }
+        }
         // public
         Ok(AuthContext {
             rbum_uri,

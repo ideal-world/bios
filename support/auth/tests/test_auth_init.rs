@@ -10,35 +10,35 @@ pub async fn test_init() -> TardisResult<()> {
         .hset(
             &config.cache_key_res_info,
             "iam-res://iam-serv/p1?a=1##get",
-            r###"{"auth":{"accounts":"#acc1#"},"need_crypto_req":false,"need_crypto_resp":false,"need_double_auth":false}"###,
+            r###"{"auth":{"accounts":"#acc1#"},"need_crypto_req":false,"need_crypto_resp":false,"need_double_auth":false,"need_login":false}"###,
         )
         .await?;
     cache_client
         .hset(
             &config.cache_key_res_info,
             "iam-res://iam-serv/p1?a=2##get",
-            r###"{"auth":{"accounts":"#acc2#"},"need_crypto_req":false,"need_crypto_resp":false,"need_double_auth":false}"###,
+            r###"{"auth":{"accounts":"#acc2#"},"need_crypto_req":false,"need_crypto_resp":false,"need_double_auth":false,"need_login":false}"###,
         )
         .await?;
     cache_client
         .hset(
             &config.cache_key_res_info,
             "iam-res://iam-serv/p1?a=3##get",
-            r###"{"auth":{"accounts":"#acc3#"},"need_crypto_req":false,"need_crypto_resp":false,"need_double_auth":false}"###,
+            r###"{"auth":{"accounts":"#acc3#"},"need_crypto_req":false,"need_crypto_resp":false,"need_double_auth":false,"need_login":false}"###,
         )
         .await?;
     cache_client
         .hset(
             &config.cache_key_res_info,
             "iam-res://iam-serv/p1?a=4##get",
-            r###"{"auth":{"accounts":"#acc4#"},"need_crypto_req":false,"need_crypto_resp":false,"need_double_auth":false}"###,
+            r###"{"auth":{"accounts":"#acc4#"},"need_crypto_req":false,"need_crypto_resp":false,"need_double_auth":false,"need_login":false}"###,
         )
         .await?;
     cache_client
         .hset(
             &config.cache_key_res_info,
             "iam-res://iam-serv/p1?a=5##get",
-            r###"{"auth":{"accounts":"#acc5#"},"need_crypto_req":false,"need_crypto_resp":false,"need_double_auth":false}"###,
+            r###"{"auth":{"accounts":"#acc5#"},"need_crypto_req":false,"need_crypto_resp":false,"need_double_auth":false,"need_login":false}"###,
         )
         .await?;
 
@@ -46,35 +46,35 @@ pub async fn test_init() -> TardisResult<()> {
         .hset(
             &config.cache_key_res_info,
             "iam-res://iam-serv/need_double_auth?a=1##get",
-            r###"{"auth":{"accounts":"#acc5#"},"need_crypto_req":false,"need_crypto_resp":false,"need_double_auth":true}"###,
+            r###"{"auth":{"accounts":"#acc5#"},"need_crypto_req":false,"need_crypto_resp":false,"need_double_auth":true,"need_login":false}"###,
         )
         .await?;
     cache_client
         .hset(
             &config.cache_key_res_info,
             "iam-res://iam-serv/p1?a=6##get",
-            r###"{"auth":{"accounts":"#acc6#"},"need_crypto_req":false,"need_crypto_resp":false,"need_double_auth":false}"###,
+            r###"{"auth":{"accounts":"#acc6#"},"need_crypto_req":false,"need_crypto_resp":false,"need_double_auth":false,"need_login":false}"###,
         )
         .await?;
     cache_client
         .hset(
             &config.cache_key_res_info,
             "iam-res://iam-serv/p2?a=1##get",
-            r###"{"auth":null,"need_crypto_req":true,"need_crypto_resp":true,"need_double_auth":true}"###,
+            r###"{"auth":null,"need_crypto_req":true,"need_crypto_resp":true,"need_double_auth":true,"need_login":false}"###,
         )
         .await?;
     cache_client
         .hset(
             &config.cache_key_res_info,
             "iam-res://iam-serv/p2?a=1##*",
-            r###"{"auth":null,"need_crypto_req":true,"need_crypto_resp":false,"need_double_auth":true}"###,
+            r###"{"auth":null,"need_crypto_req":true,"need_crypto_resp":false,"need_double_auth":true,"need_login":false}"###,
         )
         .await?;
     cache_client
         .hset(
             &config.cache_key_res_info,
             "iam-res://iam-serv/p2?a=2##get",
-            r###"{"auth":{"tenant":"#*#","st":1685407354,"et":2685407354},"need_crypto_req":true,"need_crypto_resp":true,"need_double_auth":true}"###,
+            r###"{"auth":{"tenant":"#*#","st":1685407354,"et":2685407354},"need_crypto_req":true,"need_crypto_resp":true,"need_double_auth":true,"need_login":false}"###,
         )
         .await?;
 
@@ -111,6 +111,7 @@ pub async fn test_init() -> TardisResult<()> {
                 && a["need_crypto_req"].as_bool().unwrap()
                 && a["need_crypto_resp"].as_bool().unwrap()
                 && a["need_double_auth"].as_bool().unwrap()
+                && !a["need_login"].as_bool().unwrap()
         })
         .collect::<Vec<_>>();
     assert!(url.len() == 1);
@@ -123,6 +124,7 @@ pub async fn test_init() -> TardisResult<()> {
                 && a["need_crypto_req"].as_bool().unwrap()
                 && !a["need_crypto_resp"].as_bool().unwrap()
                 && a["need_double_auth"].as_bool().unwrap()
+                && !a["need_login"].as_bool().unwrap()
         })
         .collect::<Vec<_>>();
     assert!(url.len() == 1);
@@ -132,14 +134,14 @@ pub async fn test_init() -> TardisResult<()> {
         .hset(
             &config.cache_key_res_info,
             "iam-res://iam-serv/p1?a=6##get",
-            r###"{"auth":{"accounts":"#acc6#"},"need_crypto_req":true,"need_crypto_resp":false,"need_double_auth":false}"###,
+            r###"{"auth":{"accounts":"#acc6#"},"need_crypto_req":true,"need_crypto_resp":false,"need_double_auth":false,"need_login":false}"###,
         )
         .await?;
     cache_client
         .hset(
             &config.cache_key_res_info,
             "iam-res://iam-serv/p1?a=7##get",
-            r###"{"auth":{"accounts":"#acc7#"},"need_crypto_req":false,"need_crypto_resp":false,"need_double_auth":false}"###,
+            r###"{"auth":{"accounts":"#acc7#"},"need_crypto_req":false,"need_crypto_resp":false,"need_double_auth":false,"need_login":false}"###,
         )
         .await?;
     cache_client.set(&format!("{}iam-res://iam-serv/p1?a=1##get", config.cache_key_res_changed_info), "").await?;
@@ -176,6 +178,7 @@ pub async fn test_init() -> TardisResult<()> {
                 && !a["need_crypto_req"].as_bool().unwrap()
                 && !a["need_crypto_resp"].as_bool().unwrap()
                 && !a["need_double_auth"].as_bool().unwrap()
+                && !a["need_login"].as_bool().unwrap()
         })
         .collect::<Vec<_>>();
     assert!(url.len() == 1);
