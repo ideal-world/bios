@@ -1,8 +1,11 @@
-use std::collections::{HashMap};
+use std::collections::HashMap;
 
 use bios_basic::{
     basic_enumeration::BasicQueryOpKind,
-    spi::{spi_funs::{SpiBsInstExtractor, SpiBsInst}, spi_initializer::common},
+    spi::{
+        spi_funs::{SpiBsInst, SpiBsInstExtractor},
+        spi_initializer::common,
+    },
 };
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
@@ -59,7 +62,10 @@ fn gen_data_mappings() -> String {
 pub async fn add(add_req: &mut SearchItemAddReq, funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
     let (client, ext, _) = inst.inst::<TardisSearchClient>();
     let index = format_index(&add_req.tag, ext);
-    search_es_initializer::init_index(client, &index, Some(&gen_data_mappings())).await?;
+
+    if search_es_initializer::init_index(client, &index, Some(&gen_data_mappings())).await.is_err() {
+        return Err(funs.err().bad_request("search_es_item_serv", "add", "index not exist", "400-search-index-not-exist"));
+    }
     if !search(
         &mut SearchItemSearchReq {
             tag: add_req.tag.clone(),
@@ -85,7 +91,7 @@ pub async fn add(add_req: &mut SearchItemAddReq, funs: &TardisFunsInst, ctx: &Ta
         },
         funs,
         ctx,
-        inst
+        inst,
     )
     .await?
     .records
@@ -102,6 +108,9 @@ pub async fn add(add_req: &mut SearchItemAddReq, funs: &TardisFunsInst, ctx: &Ta
 pub async fn modify(tag: &str, key: &str, modify_req: &mut SearchItemModifyReq, funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
     let (client, ext, _) = inst.inst::<TardisSearchClient>();
     let index = format_index(tag, ext);
+    if !client.check_index_exist(&index).await? {
+        return Err(funs.err().bad_request("search_es_item_serv", "add", "index not exist", "400-search-index-not-exist"));
+    }
     // find id by this key
     let q = gen_query_dsl(&SearchItemSearchReq {
         tag: tag.to_string(),
@@ -190,6 +199,9 @@ pub async fn modify(tag: &str, key: &str, modify_req: &mut SearchItemModifyReq, 
 pub async fn delete(tag: &str, key: &str, funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
     let (client, ext, _) = inst.inst::<TardisSearchClient>();
     let index = format_index(tag, ext);
+    if !client.check_index_exist(&index).await? {
+        return Err(funs.err().bad_request("search_es_item_serv", "add", "index not exist", "400-search-index-not-exist"));
+    }
     let q = gen_query_dsl(&SearchItemSearchReq {
         tag: tag.to_string(),
         ctx: SearchItemSearchCtxReq {
@@ -226,6 +238,10 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
     }
     let (client, ext, _) = inst.inst::<TardisSearchClient>();
     let index = format_index(&search_req.tag, ext);
+    if !client.check_index_exist(&index).await? {
+        return Err(funs.err().bad_request("search_es_item_serv", "add", "index not exist", "400-search-index-not-exist"));
+    }
+
     let result = client
         .raw_search(
             &index,
