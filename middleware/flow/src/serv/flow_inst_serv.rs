@@ -577,7 +577,7 @@ impl FlowInstServ {
                         return false;
                     }
                 }
-                true
+                false
             })
             .map(|model_transition| FlowInstFindNextTransitionResp {
                 next_flow_transition_id: model_transition.id.to_string(),
