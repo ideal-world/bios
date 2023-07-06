@@ -29,6 +29,13 @@ impl PluginKindApi {
         TardisResp::ok(Void {})
     }
 
+    /// exist Plugin kind rel
+    #[oai(path = "/exist/:kind_code", method = "get")]
+    async fn exist_rel(&self, kind_code: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<bool> {
+        let funs = crate::get_tardis_inst();
+        TardisResp::ok(PluginKindServ::exist_kind_rel_by_kind_code(&kind_code.0, &funs, &ctx.0).await?)
+    }
+
     /// delete Plugin kind rel
     #[oai(path = "/:kind_id", method = "delete")]
     async fn delete_rel(&self, kind_id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {

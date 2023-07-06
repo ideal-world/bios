@@ -129,7 +129,7 @@ impl IamCertAkSkServ {
                 rel_rbum_cert_conf_id: Some(rel_rbum_cert_conf_id.to_string()),
                 rel_rbum_kind: RbumCertRelKind::Item,
                 rel_rbum_id: rel_rbum_id.clone(),
-                is_outside: false,
+                is_outside: true,
                 is_ignore_check_sk: false,
             },
             funs,
