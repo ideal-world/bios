@@ -61,7 +61,13 @@ async fn ident(req: &AuthReq, config: &AuthConfig, cache_client: &TardisCacheCli
     } else {
         "iam-res".to_string()
     };
-    let app_id = if let Some(app_id) = req.headers.get(&config.head_key_app).or_else(|| req.headers.get(&config.head_key_app.to_lowercase())) {
+    let app_id = if let Some(app_id) = req
+        .headers
+        .get(&config.head_key_app)
+        .or_else(|| req.headers.get(&config.head_key_app.to_lowercase()))
+        .or_else(|| req.query.get(&config.head_key_app))
+        .or_else(|| req.query.get(&config.head_key_app.to_lowercase()))
+    {
         app_id.to_string()
     } else {
         "".to_string()
@@ -70,7 +76,13 @@ async fn ident(req: &AuthReq, config: &AuthConfig, cache_client: &TardisCacheCli
     let rbum_uri = format!("{}://{}", rbum_kind, req.path);
     let rbum_action = req.method.to_lowercase();
 
-    if let Some(token) = req.headers.get(&config.head_key_token).or_else(|| req.headers.get(&config.head_key_token.to_lowercase())) {
+    if let Some(token) = req
+        .headers
+        .get(&config.head_key_token)
+        .or_else(|| req.headers.get(&config.head_key_token.to_lowercase()))
+        .or_else(|| req.query.get(&config.head_key_token))
+        .or_else(|| req.query.get(&config.head_key_token.to_lowercase()))
+    {
         let account_id = if let Some(token_value) = cache_client.get(&format!("{}{}", config.cache_key_token_info, token)).await? {
             trace!("Token info: {}", token_value);
             let account_info: Vec<&str> = token_value.split(',').collect::<Vec<_>>();
@@ -119,14 +131,9 @@ async fn ident(req: &AuthReq, config: &AuthConfig, cache_client: &TardisCacheCli
             ak: Some(context.ak),
         })
     } else if let Some(ak_authorization) = get_ak_key(req, config) {
-        let req_date = if let Some(req_date) = req.headers.get(&config.head_key_date_flag).or_else(|| req.headers.get(&config.head_key_date_flag.to_lowercase())) {
-            req_date
-        } else {
-            return Err(TardisError::unauthorized(
-                &format!("[Auth] Request is not legal, missing header [{}]", config.head_key_date_flag),
-                "401-auth-req-ak-not-exist",
-            ));
-        };
+        let (req_date, ak, signature) = self::parsing_base_ak(&ak_authorization, req, config).await?;
+        let (cache_sk, cache_tenant_id, cache_appid) = self::get_cache_ak(&ak, config, cache_client).await?;
+        self::check_ak_signature(&ak, &cache_sk, &signature, &req_date, req).await?;
         let bios_ctx = if let Some(bios_ctx) = req.headers.get(&config.head_key_bios_ctx).or_else(|| req.headers.get(&config.head_key_bios_ctx.to_lowercase())) {
             TardisFuns::json.str_to_obj::<TardisContext>(&TardisFuns::crypto.base64.decode(bios_ctx)?)?
         } else {
@@ -135,43 +142,6 @@ async fn ident(req: &AuthReq, config: &AuthConfig, cache_client: &TardisCacheCli
                 "401-auth-req-ak-not-exist",
             ));
         };
-        if !ak_authorization.contains(':') {
-            return Err(TardisError::unauthorized(
-                &format!("[Auth] Ak-Authorization [{ak_authorization}] is not legal",),
-                "401-auth-req-ak-not-exist",
-            ));
-        }
-        let req_head_time = if let Ok(date_time) = Utc.datetime_from_str(req_date, &config.head_date_format) {
-            date_time.timestamp_millis()
-        } else {
-            return Err(TardisError::bad_request("[Auth] bad date format", "401-auth-req-date-incorrect"));
-        };
-        let now = Utc::now().timestamp_millis();
-        if now - req_head_time > config.head_date_interval_millsec as i64 {
-            return Err(TardisError::unauthorized(
-                "[Auth] The request has already been made or the client's time is incorrect. Please try again.",
-                "401-auth-req-date-incorrect",
-            ));
-        }
-        let ak_authorizations = ak_authorization.split(':').collect::<Vec<_>>();
-        let ak = ak_authorizations[0];
-        let signature = ak_authorizations[1];
-        let (cache_sk, cache_tenant_id, cache_appid) = if let Some(ak_info) = cache_client.get(&format!("{}{}", config.cache_key_aksk_info, ak)).await? {
-            let ak_vec = ak_info.split(',').collect::<Vec<_>>();
-            (ak_vec[0].to_string(), ak_vec[1].to_string(), ak_vec[2].to_string())
-        } else {
-            return Err(TardisError::unauthorized(&format!("[Auth] Ak [{ak}] is not legal"), "401-auth-req-ak-not-exist"));
-        };
-
-        let sorted_req_query = auth_common_helper::sort_hashmap_query(req.query.clone());
-        let calc_signature = TardisFuns::crypto
-            .base64
-            .encode(&TardisFuns::crypto.digest.hmac_sha256(&format!("{}\n{}\n{}\n{}", req.method, req_date, req.path, sorted_req_query).to_lowercase(), &cache_sk)?);
-
-        if calc_signature != signature {
-            return Err(TardisError::unauthorized(&format!("Ak [{ak}] authentication failed"), "401-auth-req-authenticate-fail"));
-        }
-
         let mut own_paths = cache_tenant_id.clone();
         if !app_id.is_empty() {
             if app_id != cache_appid {
@@ -201,6 +171,57 @@ async fn ident(req: &AuthReq, config: &AuthConfig, cache_client: &TardisCacheCli
                 "403-auth-req-permission-denied",
             ))
         }
+    } else if let Some(ak_authorization) = get_webhook_ak_key(req, config) {
+        let (req_date, ak, signature) = self::parsing_base_ak(&ak_authorization, req, config).await?;
+        let (cache_sk, cache_tenant_id, cache_appid) = self::get_cache_ak(&ak, config, cache_client).await?;
+        let owner = if let Some(owner) = req.query.get(&config.query_owner).or_else(|| req.query.get(&config.query_owner.to_lowercase())) {
+            owner
+        } else {
+            return Err(TardisError::unauthorized(
+                &format!("[Auth] Request is not legal, missing query [{}]", config.query_owner),
+                "401-auth-req-ak-not-exist",
+            ));
+        };
+        let own_paths = if let Some(own_paths) = req.query.get(&config.query_own_paths).or_else(|| req.query.get(&config.query_own_paths.to_lowercase())) {
+            own_paths
+        } else {
+            return Err(TardisError::unauthorized(
+                &format!("[Auth] Request is not legal, missing query [{}]", config.query_own_paths),
+                "401-auth-req-ak-not-exist",
+            ));
+        };
+        self::check_webhook_ak_signature(owner, own_paths, &ak, &cache_sk, &signature, &req_date, req, config).await?;
+        let mut cache_own_paths = cache_tenant_id.clone();
+        if !cache_appid.is_empty() {
+            if app_id != cache_appid {
+                return Err(TardisError::unauthorized(
+                    &format!("Ak [{ak}]  with App [{app_id}] is not legal"),
+                    "401-auth-req-ak-or-app-not-exist",
+                ));
+            }
+            cache_own_paths = format!("{cache_tenant_id}/{app_id}")
+        }
+        if own_paths.contains((&cache_own_paths)) {
+            let own_paths_split = own_paths.split('/').collect::<Vec<_>>();
+            let tenant_id = if own_paths.is_empty() { None } else { Some(own_paths_split[0].to_string()) };
+            let app_id = if own_paths_split.len() > 1 { Some(own_paths_split[1].to_string()) } else { None };
+            Ok(AuthContext {
+                rbum_uri,
+                rbum_action,
+                app_id,
+                tenant_id,
+                account_id: Some(owner.to_string()),
+                roles: None,
+                groups: None,
+                own_paths: Some(own_paths.to_string()),
+                ak: Some(ak_authorization.to_string()),
+            })
+        } else {
+            Err(TardisError::forbidden(
+                &format!("[Auth] Request is not legal from head [{}]", config.query_own_paths),
+                "403-auth-req-permission-denied",
+            ))
+        }
     } else {
         // public
         Ok(AuthContext {
@@ -217,15 +238,97 @@ async fn ident(req: &AuthReq, config: &AuthConfig, cache_client: &TardisCacheCli
     }
 }
 
+async fn parsing_base_ak(ak_authorization: &str, req: &AuthReq, config: &AuthConfig) -> TardisResult<(String, String, String)> {
+    let req_date = if let Some(req_date) = req
+        .headers
+        .get(&config.head_key_date_flag)
+        .or_else(|| req.headers.get(&config.head_key_date_flag.to_lowercase()))
+        .or_else(|| req.query.get(&config.head_key_date_flag))
+        .or_else(|| req.query.get(&config.head_key_date_flag.to_lowercase()))
+    {
+        req_date
+    } else {
+        return Err(TardisError::unauthorized(
+            &format!("[Auth] Request is not legal, missing header [{}]", config.head_key_date_flag),
+            "401-auth-req-ak-not-exist",
+        ));
+    };
+    if !ak_authorization.contains(':') {
+        return Err(TardisError::unauthorized(
+            &format!("[Auth] Ak-Authorization [{ak_authorization}] is not legal",),
+            "401-auth-req-ak-not-exist",
+        ));
+    }
+    let req_head_time = if let Ok(date_time) = Utc.datetime_from_str(req_date, &config.head_date_format) {
+        date_time.timestamp_millis()
+    } else {
+        return Err(TardisError::bad_request("[Auth] bad date format", "401-auth-req-date-incorrect"));
+    };
+    let now = Utc::now().timestamp_millis();
+    if now - req_head_time > config.head_date_interval_millsec as i64 {
+        return Err(TardisError::unauthorized(
+            "[Auth] The request has already been made or the client's time is incorrect. Please try again.",
+            "401-auth-req-date-incorrect",
+        ));
+    }
+    let ak_authorizations = ak_authorization.split(':').collect::<Vec<_>>();
+    let ak = ak_authorizations[0];
+    let signature = ak_authorizations[1];
+    Ok((req_date.to_string(), ak.to_string(), signature.to_string()))
+}
+
+async fn get_cache_ak(ak: &str, config: &AuthConfig, cache_client: &TardisCacheClient) -> TardisResult<(String, String, String)> {
+    let (cache_sk, cache_tenant_id, cache_appid) = if let Some(ak_info) = cache_client.get(&format!("{}{}", config.cache_key_aksk_info, ak)).await? {
+        let ak_vec = ak_info.split(',').collect::<Vec<_>>();
+        (ak_vec[0].to_string(), ak_vec[1].to_string(), ak_vec[2].to_string())
+    } else {
+        return Err(TardisError::unauthorized(&format!("[Auth] Ak [{ak}] is not legal"), "401-auth-req-ak-not-exist"));
+    };
+    Ok((cache_sk, cache_tenant_id, cache_appid))
+}
+
+async fn check_ak_signature(ak: &str, cache_sk: &str, signature: &str, req_date: &str, req: &AuthReq) -> TardisResult<()> {
+    let sorted_req_query = auth_common_helper::sort_hashmap_query(req.query.clone());
+    let calc_signature = TardisFuns::crypto
+        .base64
+        .encode(&TardisFuns::crypto.digest.hmac_sha256(&format!("{}\n{}\n{}\n{}", req.method, req_date, req.path, sorted_req_query).to_lowercase(), &cache_sk)?);
+    if calc_signature != signature {
+        return Err(TardisError::unauthorized(&format!("Ak [{ak}] authentication failed"), "401-auth-req-authenticate-fail"));
+    }
+    Ok(())
+}
+
+async fn check_webhook_ak_signature(
+    onwer: &str,
+    onwer_path: &str,
+    ak: &str,
+    cache_sk: &str,
+    signature: &str,
+    req_date: &str,
+    req: &AuthReq,
+    config: &AuthConfig,
+) -> TardisResult<()> {
+    let mut query = req.query.clone();
+    query.remove(&config.head_key_ak_authorization);
+    let sorted_req_query = auth_common_helper::sort_hashmap_query(query);
+    let calc_signature = TardisFuns::crypto.base64.encode(&TardisFuns::crypto.digest.hmac_sha256(
+        &format!("{}\n{}\n{}\n{}\n{}\n{}", onwer, onwer_path, req.method, req_date, req.path, sorted_req_query).to_lowercase(),
+        &cache_sk,
+    )?);
+    if calc_signature != signature {
+        return Err(TardisError::unauthorized(&format!("Ak [{ak}] authentication failed"), "401-auth-req-authenticate-fail"));
+    }
+    Ok(())
+}
+
 fn get_ak_key(req: &AuthReq, config: &AuthConfig) -> Option<String> {
     let lowercase_key = config.head_key_ak_authorization.to_lowercase();
+    req.headers.get(&config.head_key_ak_authorization).or_else(|| req.headers.get(&lowercase_key)).cloned()
+}
 
-    req.headers
-        .get(&config.head_key_ak_authorization)
-        .or_else(|| req.headers.get(&lowercase_key))
-        .or_else(|| req.query.get(&config.head_key_ak_authorization))
-        .or_else(|| req.query.get(&lowercase_key))
-        .cloned()
+fn get_webhook_ak_key(req: &AuthReq, config: &AuthConfig) -> Option<String> {
+    let lowercase_key = config.head_key_ak_authorization.to_lowercase();
+    req.query.get(&config.head_key_ak_authorization).or_else(|| req.query.get(&lowercase_key)).cloned()
 }
 
 pub async fn do_auth(ctx: &AuthContext) -> TardisResult<Option<ResContainerLeafInfo>> {

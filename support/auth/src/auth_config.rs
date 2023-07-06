@@ -17,6 +17,9 @@ pub struct AuthConfig {
 
     pub query_key_secret: String,
 
+    pub query_owner: String,
+    pub query_own_paths: String,
+
     pub cache_key_token_info: String,
     pub cache_key_account_info: String,
     pub cache_key_aksk_info: String,
@@ -75,6 +78,8 @@ impl Default for AuthConfig {
             extra_api: ApiConfig::default(),
             default_resp_crypto: false,
             query_key_secret: "secret".to_string(),
+            query_owner: "owner".to_string(),
+            query_own_paths: "own_paths".to_string(),
 
             spi: IamSpiConfig::default(),
         }
