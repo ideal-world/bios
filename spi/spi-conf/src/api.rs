@@ -8,8 +8,6 @@ mod nacos;
 use crate::conf_constants;
 use nacos::*;
 
-pub type ConfApi = (ConfCiApi, ConfNacosApi);
-
 pub async fn init_api(web_server: &TardisWebServer) {
     web_server.add_module(conf_constants::DOMAIN_CODE, (SpiCiBsApi, ConfCiApi::default())).await;
     let mut nacos_module = WebServerModule::new(ConfNacosApi::default());
