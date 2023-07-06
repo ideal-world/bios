@@ -15,7 +15,7 @@ name = "bios_spi_search"
 path = "src/lib.rs"
 
 [features]
-default = ["spi-es"]
+default = ["spi-pg"]
 spi-pg = ["tardis/reldb-postgres"]
 spi-es = ["tardis/web-client"]
 
