@@ -5,7 +5,7 @@ use tardis::web::poem_openapi;
 use tardis::web::poem_openapi::param::{Path, Query};
 
 use crate::serv::event_proc_serv;
-
+#[derive(Clone)]
 pub struct EventProcApi;
 
 /// Event Process API

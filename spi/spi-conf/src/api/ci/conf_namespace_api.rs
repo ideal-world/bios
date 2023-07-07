@@ -6,7 +6,8 @@ use tardis::web::{
 
 use crate::dto::conf_namespace_dto::*;
 use crate::serv::*;
-#[derive(Default)]
+#[derive(Default, Clone, Copy, Debug)]
+
 pub struct ConfCiNamespaceApi;
 
 /// Interface Console config server API

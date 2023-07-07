@@ -15,7 +15,9 @@ use tardis::web::poem_openapi;
 use tardis::web::poem_openapi::{param::Path, param::Query, payload::Json};
 use tardis::web::web_resp::{TardisApiResult, TardisResp, Void};
 
+#[derive(Clone, Default)]
 pub struct IamCsOrgApi;
+#[derive(Clone, Default)]
 pub struct IamCsOrgItemApi;
 
 /// System Console Org API

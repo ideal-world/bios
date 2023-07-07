@@ -16,7 +16,6 @@ use bios_spi_kv::kv_initializer;
 use bios_spi_log::log_initializer;
 use tardis::{
     basic::{dto::TardisContext, field::TrimString, result::TardisResult},
-    tokio,
     web::{
         poem_openapi,
         web_resp::{TardisApiResult, TardisResp, Void},
@@ -28,7 +27,7 @@ pub struct TestEnv {
     pub counter: Arc<AtomicUsize>,
 }
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct CallbackApi {
     counter: Arc<AtomicUsize>,
 }
@@ -59,7 +58,7 @@ pub async fn mock_webserver() -> TardisResult<Arc<AtomicUsize>> {
     println!("mock logger started");
     let cb_api = CallbackApi::default();
     let cb_counter = Arc::clone(&cb_api.counter);
-    tokio::spawn(TardisFuns::web_server().add_route(cb_api).await.start());
+    TardisFuns::web_server().add_route(cb_api).await.start().await?;
     Ok(cb_counter)
 }
 #[allow(dead_code)]

@@ -7,6 +7,7 @@ use crate::basic::dto::iam_platform_dto::{IamPlatformConfigReq, IamPlatformConfi
 use crate::basic::serv::iam_platform_serv::IamPlatformServ;
 use crate::iam_constants;
 
+#[derive(Clone, Default)]
 pub struct IamCsPlatformApi;
 
 /// System Console Platform API

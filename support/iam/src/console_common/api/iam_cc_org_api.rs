@@ -11,6 +11,7 @@ use bios_basic::rbum::rbum_enumeration::RbumSetCateLevelQueryKind;
 use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::iam_constants;
 
+#[derive(Clone, Default)]
 pub struct IamCcOrgApi;
 
 /// Common Console Org API

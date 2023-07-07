@@ -6,6 +6,7 @@ use tardis::web::web_resp::{TardisApiResult, TardisResp};
 use crate::basic::serv::iam_tenant_serv::IamTenantServ;
 use crate::iam_constants;
 
+#[derive(Clone, Default)]
 pub struct IamCcTenantApi;
 
 /// Common Console Tenant API

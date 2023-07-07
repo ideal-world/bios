@@ -22,6 +22,7 @@ use bios_basic::{
 };
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
+    log::info,
     web::web_resp::TardisPage,
     TardisFunsInst,
 };
@@ -223,7 +224,6 @@ impl PluginBsServ {
 
     pub async fn get_bs_by_rel_up(kind_code: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<PluginBsCertInfoResp> {
         let kind_id = RbumKindServ::get_rbum_kind_id_by_code(&kind_code.clone().unwrap_or_default(), funs).await?;
-
         if let Some(kind_id) = kind_id {
             if let Some(rel_bind) = PluginRelServ::find_from_simple_rels(
                 &PluginAppBindRelKind::PluginAppBindKind,
@@ -241,6 +241,18 @@ impl PluginBsServ {
             {
                 let rel = PluginRelServ::get_rel(&rel_bind.rel_id, funs, ctx).await?;
                 return Self::get_cert_bs(&rel.from_rbum_id, &rel.to_rbum_item_id, funs, ctx).await;
+            } else {
+                let own_paths = Self::get_parent_own_paths(ctx.own_paths.as_str())?;
+                for own_path in own_paths {
+                    let resp = Self::get_bs_by_rel(kind_code.clone(), own_path.as_str(), funs, ctx).await;
+                    info!("【get_bs_by_rel_up】 {}: {}", own_path, resp.is_ok());
+                    if resp.is_ok() {
+                        match resp {
+                            Ok(bs) => return Ok(bs),
+                            Err(_) => return Err(funs.err().not_found(&SpiBsServ::get_obj_name(), "get_bs_by_rel_up", "not found backend service", "404-spi-bs-not-exist")),
+                        }
+                    }
+                }
             }
         }
         Err(funs.err().not_found(&SpiBsServ::get_obj_name(), "get_bs_by_rel_up", "not found backend service", "404-spi-bs-not-exist"))

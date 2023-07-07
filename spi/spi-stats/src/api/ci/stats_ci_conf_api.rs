@@ -11,6 +11,7 @@ use crate::dto::stats_conf_dto::{
 };
 use crate::serv::stats_conf_serv;
 
+#[derive(Clone)]
 pub struct StatsCiConfApi;
 
 /// Interface Console Statistics Configuration API

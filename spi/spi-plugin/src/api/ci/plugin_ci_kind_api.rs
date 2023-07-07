@@ -15,6 +15,7 @@ use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 use crate::dto::plugin_kind_dto::{PluginKindAddAggReq, PluginKindAggResp};
 use crate::plugin_constants::KIND_MODULE_CODE;
 use crate::serv::plugin_kind_serv::PluginKindServ;
+#[derive(Clone)]
 
 pub struct PluginKindApi;
 
@@ -27,6 +28,13 @@ impl PluginKindApi {
         let funs = crate::get_tardis_inst();
         PluginKindServ::add_kind_agg_rel(&add_req.0, &funs, &ctx.0).await?;
         TardisResp::ok(Void {})
+    }
+
+    /// exist Plugin kind rel
+    #[oai(path = "/exist/:kind_code", method = "get")]
+    async fn exist_rel(&self, kind_code: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<bool> {
+        let funs = crate::get_tardis_inst();
+        TardisResp::ok(PluginKindServ::exist_kind_rel_by_kind_code(&kind_code.0, &funs, &ctx.0).await?)
     }
 
     /// delete Plugin kind rel

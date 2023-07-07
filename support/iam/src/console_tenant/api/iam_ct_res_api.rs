@@ -10,6 +10,7 @@ use crate::basic::serv::iam_res_serv::IamResServ;
 use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::iam_constants;
 use crate::iam_enumeration::{IamRelKind, IamSetKind};
+#[derive(Clone, Default)]
 pub struct IamCtResApi;
 
 /// Tenant Console Res API

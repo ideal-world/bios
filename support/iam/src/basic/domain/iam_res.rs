@@ -26,6 +26,8 @@ pub struct Model {
     pub double_auth: bool,
     // 二次认证消息
     pub double_auth_msg: String,
+    // 是否需要验证登陆
+    pub need_login: bool,
 
     pub own_paths: String,
 }

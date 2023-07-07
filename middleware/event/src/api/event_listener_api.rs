@@ -7,7 +7,7 @@ use tardis::web::web_resp::{TardisApiResult, TardisResp, Void};
 
 use crate::dto::event_dto::{EventListenerRegisterReq, EventListenerRegisterResp};
 use crate::serv::event_listener_serv;
-
+#[derive(Clone)]
 pub struct EventListenerApi;
 
 /// Event Listener API

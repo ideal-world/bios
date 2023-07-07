@@ -18,6 +18,7 @@ use crate::iam_constants;
 use crate::iam_constants::RBUM_SCOPE_LEVEL_APP;
 use crate::iam_enumeration::{IamRelKind, IamRoleKind};
 
+#[derive(Clone, Default)]
 pub struct IamCaRoleApi;
 
 /// App Console Role API

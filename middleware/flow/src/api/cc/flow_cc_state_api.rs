@@ -11,7 +11,7 @@ use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 use crate::dto::flow_state_dto::{FlowStateAddReq, FlowStateDetailResp, FlowStateFilterReq, FlowStateKind, FlowStateModifyReq, FlowStateSummaryResp, FlowSysStateKind};
 use crate::flow_constants;
 use crate::serv::flow_state_serv::FlowStateServ;
-
+#[derive(Clone)]
 pub struct FlowCcStateApi;
 
 /// Flow state process API

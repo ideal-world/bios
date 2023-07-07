@@ -12,6 +12,7 @@ use crate::iam_constants;
 use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
+#[derive(Clone, Default)]
 pub struct IamCsTenantApi;
 
 /// System Console Tenant API

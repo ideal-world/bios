@@ -8,6 +8,7 @@ use tardis::web::web_resp::{TardisApiResult, TardisResp};
 
 use crate::dto::plugin_exec_dto::{PluginExecReq, PluginExecResp};
 use crate::serv::plugin_exec_serv::PluginExecServ;
+#[derive(Clone)]
 
 pub struct PluginExecApi;
 

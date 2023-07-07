@@ -6,6 +6,7 @@ use tardis::web::poem_openapi;
 use tardis::web::poem_openapi::param::Path;
 use tardis::web::web_resp::{TardisApiResult, TardisResp, Void};
 
+#[derive(Clone, Default)]
 pub struct IamCiRoleApi;
 
 /// # Interface Console Manage Cert API

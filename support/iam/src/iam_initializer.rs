@@ -5,7 +5,7 @@ use tardis::basic::result::TardisResult;
 use tardis::db::reldb_client::TardisActiveModel;
 use tardis::db::sea_orm::sea_query::Table;
 use tardis::log::info;
-use tardis::web::web_server::TardisWebServer;
+use tardis::web::web_server::{TardisWebServer, WebServerModule};
 use tardis::{TardisFuns, TardisFunsInst};
 
 use bios_basic::rbum::dto::rbum_domain_dto::RbumDomainAddReq;
@@ -56,7 +56,7 @@ async fn init_api(web_server: &TardisWebServer) -> TardisResult<()> {
     web_server
         .add_module(
             iam_constants::COMPONENT_CODE,
-            (
+            WebServerModule::from((
                 (
                     iam_cc_account_api::IamCcAccountApi,
                     iam_cc_app_api::IamCcAppApi,
@@ -117,8 +117,8 @@ async fn init_api(web_server: &TardisWebServer) -> TardisResult<()> {
                     iam_ci_role_api::IamCiRoleApi,
                     iam_ci_account_api::IamCiAccountApi,
                 ),
-            ),
-            vec![EncryptMW::boxed()],
+            ))
+            .middleware(EncryptMW),
         )
         .await;
     Ok(())
@@ -640,6 +640,7 @@ async fn add_res<'a>(
                 crypto_resp: None,
                 double_auth: None,
                 double_auth_msg: None,
+                need_login: None,
             },
             set: IamSetItemAggAddReq {
                 set_cate_id: cate_menu_id.to_string(),
@@ -667,6 +668,7 @@ async fn add_res<'a>(
                 crypto_resp: Some(false),
                 double_auth: Some(false),
                 double_auth_msg: None,
+                need_login: None,
             },
             set: IamSetItemAggAddReq {
                 set_cate_id: cate_api_id.to_string(),

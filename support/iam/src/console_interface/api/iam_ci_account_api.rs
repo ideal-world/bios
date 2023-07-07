@@ -7,6 +7,7 @@ use tardis::TardisFuns;
 use crate::basic::serv::iam_key_cache_serv::IamIdentCacheServ;
 use crate::iam_constants;
 
+#[derive(Clone, Default)]
 pub struct IamCiAccountApi;
 
 /// Interface Console Account API

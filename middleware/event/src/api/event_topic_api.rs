@@ -10,7 +10,7 @@ use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 
 use crate::dto::event_dto::{EventTopicAddOrModifyReq, EventTopicFilterReq, EventTopicInfoResp};
 use crate::serv::event_topic_serv::EventDefServ;
-
+#[derive(Clone)]
 pub struct EventTopicApi;
 
 /// Event Topic API
