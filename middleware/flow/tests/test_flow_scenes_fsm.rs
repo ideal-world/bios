@@ -128,8 +128,8 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
     })?;
     let next_transitions: Vec<FlowInstFindNextTransitionResp> = client.put(&format!("/cc/inst/{}/transition/next", inst_id), &FlowInstFindNextTransitionsReq { vars: None }).await;
     assert_eq!(next_transitions.len(), 2);
-    assert_eq!(next_transitions[0].next_flow_transition_name, "关闭-modify");
-    assert_eq!(next_transitions[1].next_flow_transition_name, "开始");
+    assert_eq!(next_transitions[0].next_flow_transition_name, "关闭");
+    assert_eq!(next_transitions[1].next_flow_transition_name, "开始-modify");
     assert_eq!(next_transitions[1].vars_collect.as_ref().unwrap().len(), 2);
     // Find the state and transfer information of the specified instances in batch
     let state_and_next_transitions: Vec<FlowInstFindStateAndTransitionsResp> = client
@@ -143,8 +143,8 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
         .await;
     assert_eq!(state_and_next_transitions.len(), 1);
     assert_eq!(state_and_next_transitions[0].current_flow_state_name, "待开始");
-    assert_eq!(state_and_next_transitions[0].next_flow_transitions[0].next_flow_transition_name, "关闭-modify");
-    assert_eq!(state_and_next_transitions[0].next_flow_transitions[1].next_flow_transition_name, "开始");
+    assert_eq!(state_and_next_transitions[0].next_flow_transitions[0].next_flow_transition_name, "关闭");
+    assert_eq!(state_and_next_transitions[0].next_flow_transitions[1].next_flow_transition_name, "开始-modify");
     assert_eq!(state_and_next_transitions[0].next_flow_transitions[1].vars_collect.as_ref().unwrap().len(), 2);
     // Transfer task status
     let transfer: FlowInstTransferResp = client
