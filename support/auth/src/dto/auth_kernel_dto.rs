@@ -242,3 +242,14 @@ pub struct MixRequestBody {
     pub headers: HashMap<String, String>,
     pub ts: f64,
 }
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
+pub struct SignWebHookReq {
+    pub ak: String,
+    pub onwer: String,
+    pub own_paths: String,
+    pub path: String,
+    pub query: HashMap<String, String>,
+    pub method: String,
+    pub req_date: String,
+}

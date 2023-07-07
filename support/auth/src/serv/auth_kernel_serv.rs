@@ -9,7 +9,7 @@ use tardis::{
     TardisFuns,
 };
 
-use crate::dto::auth_kernel_dto::{MixAuthResp, MixRequestBody, ResContainerLeafInfo};
+use crate::dto::auth_kernel_dto::{MixAuthResp, MixRequestBody, ResContainerLeafInfo, SignWebHookReq};
 use crate::helper::auth_common_helper;
 use crate::{
     auth_config::AuthConfig,
@@ -311,7 +311,7 @@ async fn check_ak_signature(ak: &str, cache_sk: &str, signature: &str, req_date:
 
 async fn check_webhook_ak_signature(
     onwer: &str,
-    onwer_path: &str,
+    own_paths: &str,
     ak: &str,
     cache_sk: &str,
     signature: &str,
@@ -323,7 +323,7 @@ async fn check_webhook_ak_signature(
     query.remove(&config.head_key_ak_authorization);
     let sorted_req_query = auth_common_helper::sort_hashmap_query(query);
     let calc_signature = TardisFuns::crypto.base64.encode(&TardisFuns::crypto.digest.hmac_sha256(
-        &format!("{}\n{}\n{}\n{}\n{}\n{}", onwer, onwer_path, req.method, req_date, req.path, sorted_req_query).to_lowercase(),
+        &format!("{}\n{}\n{}\n{}\n{}\n{}", onwer, own_paths, req.method, req_date, req.path, sorted_req_query).to_lowercase(),
         &cache_sk,
     )?);
     if calc_signature != signature {
@@ -340,6 +340,34 @@ fn get_ak_key(req: &AuthReq, config: &AuthConfig) -> Option<String> {
 fn get_webhook_ak_key(req: &AuthReq, config: &AuthConfig) -> Option<String> {
     let lowercase_key = config.head_key_ak_authorization.to_lowercase();
     req.query.get(&config.head_key_ak_authorization).or_else(|| req.query.get(&lowercase_key)).cloned()
+}
+
+pub async fn sign_webhook_ak(sign_req: &SignWebHookReq) -> TardisResult<String> {
+    let config = TardisFuns::cs_config::<AuthConfig>(DOMAIN_CODE);
+    let cache_client = TardisFuns::cache_by_module_or_default(DOMAIN_CODE);
+    let (cache_sk, cache_tenant_id, cache_appid) = self::get_cache_ak(&sign_req.ak, config, cache_client).await?;
+    let mut cache_own_paths = cache_tenant_id.clone();
+    if !cache_appid.is_empty() {
+        cache_own_paths = format!("{cache_tenant_id}/{cache_appid}")
+    }
+    if sign_req.own_paths.contains(&cache_own_paths) {
+        let sorted_req_query = auth_common_helper::sort_hashmap_query(sign_req.query.clone());
+        let calc_signature = TardisFuns::crypto.base64.encode(
+            &TardisFuns::crypto.digest.hmac_sha256(
+                &format!(
+                    "{}\n{}\n{}\n{}\n{}\n{}",
+                    sign_req.onwer, sign_req.own_paths, sign_req.method, sign_req.req_date, sign_req.path, sorted_req_query
+                )
+                .to_lowercase(),
+                &cache_sk,
+            )?,
+        );
+        return Ok(calc_signature);
+    }
+    Err(TardisError::forbidden(
+        "[Auth] Signing the webhook permission denied. ",
+        "500-auth-sign-webhook-permission-denied",
+    ))
 }
 
 pub async fn do_auth(ctx: &AuthContext) -> TardisResult<Option<ResContainerLeafInfo>> {
