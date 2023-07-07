@@ -16,11 +16,11 @@ use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
     db::sea_orm::{
         sea_query::{Alias, Cond, Expr, Query, SelectStatement},
-        EntityName, EntityTrait, JoinType, QueryFilter, Set,
+        EntityName, EntityTrait, JoinType, QueryFilter, Set, Order,
     },
     serde_json::json,
     web::web_resp::TardisPage,
-    TardisFuns, TardisFunsInst,
+    TardisFuns, TardisFunsInst, chrono::Utc,
 };
 
 use crate::{
@@ -458,6 +458,7 @@ impl FlowModelServ {
             if let Some(action_by_post_callback) = &req.action_by_post_callback {
                 flow_transition.action_by_post_callback = Set(action_by_post_callback.to_string());
             }
+            flow_transition.update_time = Set(Utc::now());
             funs.db().update_one(flow_transition, ctx).await?;
         }
         Ok(())
@@ -536,7 +537,8 @@ impl FlowModelServ {
                     .add(Expr::col((to_state_table.clone(), REL_KIND_ID_FIELD.clone())).eq(FlowStateServ::get_rbum_kind_id().unwrap()))
                     .add(Expr::col((to_state_table.clone(), REL_DOMAIN_ID_FIELD.clone())).eq(Self::get_rbum_domain_id().unwrap())),
             )
-            .and_where(Expr::col((flow_transition::Entity, flow_transition::Column::RelFlowModelId)).eq(flow_model_id));
+            .and_where(Expr::col((flow_transition::Entity, flow_transition::Column::RelFlowModelId)).eq(flow_model_id))
+            .order_by((flow_transition::Entity, flow_transition::Column::Id), Order::Asc);
         let flow_transitions: Vec<FlowTransitionDetailResp> = funs.db().find_dtos(&query).await?;
         Ok(flow_transitions)
     }

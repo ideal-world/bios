@@ -1,7 +1,8 @@
+use tardis::chrono::Utc;
 use tardis::db::sea_orm;
 use tardis::db::sea_orm::prelude::Json;
 use tardis::db::sea_orm::*;
-use tardis::{TardisCreateEntity, TardisEmptyBehavior, TardisEmptyRelation};
+use tardis::{chrono, TardisCreateEntity, TardisEmptyBehavior, TardisEmptyRelation};
 
 /// Transfer / 流转
 ///
@@ -94,4 +95,14 @@ pub struct Model {
 
     #[fill_ctx(own_paths)]
     pub own_paths: String,
+
+    /// Creation time / 创建时间
+    #[index]
+    #[sea_orm(extra = "DEFAULT CURRENT_TIMESTAMP")]
+    pub create_time: chrono::DateTime<Utc>,
+
+    /// Updated time / 更新时间
+    #[index]
+    #[sea_orm(extra = "DEFAULT CURRENT_TIMESTAMP")]
+    pub update_time: chrono::DateTime<Utc>,
 }
