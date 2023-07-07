@@ -527,9 +527,17 @@ impl IamResCacheServ {
                 for tenant in &delete_req.tenants {
                     auth.tenants = auth.tenants.replace(&format!("#{tenant}#"), "#");
                 }
-                res_dto.auth = Some(auth);
+                if (auth.accounts == "#" || auth.accounts == "##")
+                    && (auth.roles == "#" || auth.roles == "##")
+                    && (auth.groups == "#" || auth.groups == "##")
+                    && (auth.apps == "#" || auth.apps == "##")
+                    && (auth.tenants == "#" || auth.tenants == "##")
+                {
+                    res_dto.auth = None;
+                } else {
+                    res_dto.auth = Some(auth);
+                }
             }
-
             funs.cache().hset(&funs.conf::<IamConfig>().cache_key_res_info, &uri_mixed, &TardisFuns::json.obj_to_string(&res_dto)?).await?;
             return Self::add_change_trigger(&uri_mixed, funs).await;
         }
