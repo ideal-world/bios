@@ -12,6 +12,7 @@ use crate::console_passport::dto::iam_cp_account_dto::IamCpAccountInfoResp;
 use crate::console_passport::serv::iam_cp_account_serv::IamCpAccountServ;
 use crate::iam_constants;
 
+#[derive(Clone, Default)]
 pub struct IamCpAccountApi;
 
 /// Passport Console Account API

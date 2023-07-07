@@ -7,6 +7,7 @@ use tardis::web::web_resp::{TardisApiResult, TardisResp};
 use crate::dto::stats_query_dto::{StatsQueryMetricsReq, StatsQueryMetricsResp};
 use crate::serv::stats_metric_serv;
 
+#[derive(Clone)]
 pub struct StatsCiMetricApi;
 
 /// Interface Console Statistics Metric API

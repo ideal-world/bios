@@ -9,7 +9,7 @@ use crate::dto::{
 };
 use crate::serv::*;
 
-#[derive(Default)]
+#[derive(Default, Clone, Copy, Debug)]
 pub struct ConfNacosV1NamespaceApi;
 
 /// Interface Console config server API

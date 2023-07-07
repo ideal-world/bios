@@ -8,7 +8,7 @@ use tardis::web::web_resp::{TardisApiResult, TardisResp, Void};
 
 use crate::dto::cache_proc_dto::{ExpReq, KIncrReq, KReq, KbRagngeReq, KbReq, KbvReq, KfIncrReq, KfReq, KfvReq, KvReq, KvWithExReq};
 use crate::serv::cache_proc_serv;
-
+#[derive(Clone)]
 pub struct CacheCiProcApi;
 
 /// Interface Console Cache API

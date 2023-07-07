@@ -11,6 +11,7 @@ use crate::basic::dto::iam_filer_dto::IamAppFilterReq;
 use crate::basic::serv::iam_app_serv::IamAppServ;
 use crate::iam_constants;
 
+#[derive(Clone, Default)]
 pub struct IamCcAppApi;
 
 /// Common Console App API

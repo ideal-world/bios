@@ -12,6 +12,7 @@ use crate::basic::serv::iam_attr_serv::IamAttrServ;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::iam_constants;
 
+#[derive(Clone, Default)]
 pub struct IamCsAccountAttrApi;
 
 /// System Console Account Attr API

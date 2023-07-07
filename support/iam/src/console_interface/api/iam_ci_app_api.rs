@@ -9,6 +9,7 @@ use tardis::web::poem_openapi;
 use tardis::web::poem_openapi::payload::Json;
 use tardis::web::web_resp::{TardisApiResult, TardisResp};
 
+#[derive(Clone, Default)]
 pub struct IamCiAppApi;
 
 /// # Interface Console Manage Cert API

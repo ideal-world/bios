@@ -11,6 +11,7 @@ use tardis::web::poem_openapi;
 use tardis::web::poem_openapi::param::Query;
 use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp};
 
+#[derive(Clone, Default)]
 pub struct IamCpAppApi;
 
 /// Passport Console App API

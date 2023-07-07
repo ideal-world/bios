@@ -15,6 +15,7 @@ use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 use crate::dto::plugin_kind_dto::{PluginKindAddAggReq, PluginKindAggResp};
 use crate::plugin_constants::KIND_MODULE_CODE;
 use crate::serv::plugin_kind_serv::PluginKindServ;
+#[derive(Clone)]
 
 pub struct PluginKindApi;
 

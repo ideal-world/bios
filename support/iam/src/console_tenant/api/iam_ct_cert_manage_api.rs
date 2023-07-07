@@ -12,6 +12,7 @@ use crate::basic::dto::iam_cert_dto::{IamCertManageAddReq, IamCertManageModifyRe
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::iam_constants;
 use crate::iam_enumeration::IamCertExtKind;
+#[derive(Clone, Default)]
 pub struct IamCtCertManageApi;
 
 /// Tenant Console Cert manage API

@@ -11,6 +11,7 @@ use crate::basic::dto::iam_attr_dto::IamKindAttrAddReq;
 use crate::basic::serv::iam_attr_serv::IamAttrServ;
 use crate::iam_constants;
 
+#[derive(Clone, Default)]
 pub struct IamCtAccountAttrApi;
 
 /// Tenant Console Account Attr API

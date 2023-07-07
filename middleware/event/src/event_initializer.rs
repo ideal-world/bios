@@ -83,7 +83,6 @@ async fn init_api(web_server: &TardisWebServer) -> TardisResult<()> {
         .add_module(
             DOMAIN_CODE,
             (event_topic_api::EventTopicApi, event_proc_api::EventProcApi, event_listener_api::EventListenerApi),
-            None,
         )
         .await;
     Ok(())

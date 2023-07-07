@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use bios_auth::{auth_config::AuthConfig, auth_constants::DOMAIN_CODE, auth_initializer, serv::auth_res_serv};
-use tardis::{basic::result::TardisResult, chrono::Utc, tokio::time::sleep, web::poem_openapi::types::Type, TardisFuns};
+use tardis::{basic::result::TardisResult, chrono::Utc, tokio::time::sleep, TardisFuns};
 
 pub async fn test_init() -> TardisResult<()> {
     let config = TardisFuns::cs_config::<AuthConfig>(DOMAIN_CODE);

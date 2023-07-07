@@ -12,6 +12,7 @@ use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_cert_user_pwd_serv::IamCertUserPwdServ;
 use crate::iam_constants;
 use crate::iam_enumeration::IamCertKernelKind;
+#[derive(Clone, Default)]
 pub struct IamCtCertApi;
 
 /// Tenant Console Cert API

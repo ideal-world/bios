@@ -9,6 +9,7 @@ use bios_basic::rbum::dto::rbum_rel_dto::RbumRelBoneResp;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::iam_constants;
 
+#[derive(Clone, Default)]
 pub struct IamCaCertManageApi;
 
 /// Tenant Console Cert manage API

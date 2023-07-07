@@ -8,6 +8,7 @@ use crate::basic::dto::iam_filer_dto::IamTenantFilterReq;
 use crate::basic::dto::iam_tenant_dto::{IamTenantAggDetailResp, IamTenantAggModifyReq, IamTenantConfigReq, IamTenantConfigResp};
 use crate::basic::serv::iam_tenant_serv::IamTenantServ;
 use crate::iam_constants;
+#[derive(Clone, Default)]
 pub struct IamCtTenantApi;
 
 /// Tenant Console Tenant API

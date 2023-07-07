@@ -14,6 +14,7 @@ use crate::basic::serv::iam_role_serv::IamRoleServ;
 use crate::iam_constants;
 use crate::iam_enumeration::IamRoleKind;
 
+#[derive(Clone, Default)]
 pub struct IamCcRoleApi;
 
 /// Common Console Role API

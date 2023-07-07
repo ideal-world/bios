@@ -36,7 +36,9 @@ use crate::console_passport::serv::iam_cp_cert_user_pwd_serv::IamCpCertUserPwdSe
 use crate::iam_constants;
 use crate::iam_enumeration::{IamCertKernelKind, IamCertOAuth2Supplier};
 
+#[derive(Clone, Default)]
 pub struct IamCpCertApi;
+#[derive(Clone, Default)]
 pub struct IamCpCertLdapApi;
 
 /// Passport Console Cert API

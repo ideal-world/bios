@@ -8,6 +8,7 @@ use crate::dto::auth_crypto_dto::{AuthEncryptReq, AuthEncryptResp};
 use crate::serv::auth_crypto_serv;
 use crate::serv::clients::spi_log_client::{LogParamContent, SpiLogClient};
 
+#[derive(Clone)]
 pub struct CryptoApi;
 
 /// Crypto API

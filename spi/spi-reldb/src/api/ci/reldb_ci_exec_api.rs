@@ -9,6 +9,7 @@ use tardis::web::web_resp::{TardisApiResult, TardisResp, Void};
 use crate::dto::reldb_exec_dto::{ReldbDdlReq, ReldbDmlReq, ReldbDmlResp, ReldbDqlReq, ReldbTxResp};
 use crate::serv::reldb_exec_serv;
 
+#[derive(Clone)]
 pub struct ReldbCiExecApi;
 
 /// Interface Console RelDB Execute API

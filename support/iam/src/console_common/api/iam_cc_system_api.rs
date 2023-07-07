@@ -6,6 +6,7 @@ use tardis::web::web_resp::{TardisApiResult, TardisResp};
 use crate::iam_config::IamConfig;
 use crate::iam_constants;
 
+#[derive(Clone, Default)]
 pub struct IamCcSystemApi;
 
 /// Common Console System API

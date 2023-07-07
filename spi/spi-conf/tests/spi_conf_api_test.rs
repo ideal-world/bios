@@ -3,7 +3,7 @@ use std::env;
 use bios_basic::{
     rbum::serv::rbum_kind_serv::RbumKindServ,
     spi::{dto::spi_bs_dto::SpiBsAddReq, spi_constants},
-    test::{init_rbum_test_container, test_http_client::TestHttpClient},
+    test::test_http_client::TestHttpClient,
 };
 use bios_spi_conf::{
     conf_constants::DOMAIN_CODE,
@@ -28,8 +28,7 @@ use spi_conf_test_common::*;
 async fn spi_conf_namespace_test() -> TardisResult<()> {
     std::env::set_var("RUST_LOG", "info,sqlx=off,sea_orm=debug,spi_conf_namespace_test=DEBUG,bios_spi_conf=TRACE");
     let docker = testcontainers::clients::Cli::default();
-    let container_hold = init_rbum_test_container::init(&docker, None).await?;
-    init_tardis().await?;
+    let container_hold = init_tardis(&docker).await?;
     let _web_server_hanlde = start_web_server();
     let tardis_ctx = TardisContext::default();
     let mut client = TestHttpClient::new("https://localhost:8080/spi-conf".to_string());
