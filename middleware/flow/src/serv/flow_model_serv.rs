@@ -538,7 +538,7 @@ impl FlowModelServ {
                     .add(Expr::col((to_state_table.clone(), REL_DOMAIN_ID_FIELD.clone())).eq(Self::get_rbum_domain_id().unwrap())),
             )
             .and_where(Expr::col((flow_transition::Entity, flow_transition::Column::RelFlowModelId)).eq(flow_model_id))
-            .order_by((flow_transition::Entity, flow_transition::Column::Id), Order::Asc);
+            .order_by((flow_transition::Entity, flow_transition::Column::CreateTime), Order::Asc);
         let flow_transitions: Vec<FlowTransitionDetailResp> = funs.db().find_dtos(&query).await?;
         Ok(flow_transitions)
     }
