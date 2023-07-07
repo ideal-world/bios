@@ -39,9 +39,9 @@
 409-rbum-cert-sk-expire	凭证密钥已过期
 404-rbum-cert-conf-not-exist	找不到对应的凭证配置
 404-rbum-cert-not-exist	找不到对应的凭证
-401-rbum-cert-valid-error	凭证不合法
+401-rbum-cert-valid-error	身份验证失败
 401-rbum-usrpwd-cert-valid-error	用户名或密码不正确
-401-rbum-cert-ori-sk-not-match	当前凭证密钥输入错误
+401-rbum-cert-ori-sk-not-match	密码不符合要求，请重新输入
 400-rbum-cert-ak-duplicate	新的凭证名不能等于现有凭证名
 400-rbum-cert-sk-require	凭证密钥不能为空
 400-rbum-cert-sk-need-empty	动态密钥模式下凭证密钥不用填写
