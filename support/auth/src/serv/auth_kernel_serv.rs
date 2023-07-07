@@ -99,31 +99,15 @@ async fn ident(req: &AuthReq, config: &AuthConfig, cache_client: &TardisCacheCli
         } else {
             return Err(TardisError::unauthorized(&format!("[Auth] Token [{token}] is not legal"), "401-auth-req-token-not-exist"));
         };
-        let mut context = if let Some(context) = cache_client.hget(&format!("{}{}", config.cache_key_account_info, account_id), &app_id).await? {
-            TardisFuns::json.str_to_obj::<TardisContext>(&context)?
-        } else {
-            return Err(TardisError::unauthorized(
-                &format!("[Auth] Token [{token}] with App [{app_id}] is not legal"),
-                "401-auth-req-token-or-app-not-exist",
-            ));
-        };
-        if !app_id.is_empty() {
-            if let Some(tenant_context) = cache_client.hget(&format!("{}{}", config.cache_key_account_info, account_id), "").await? {
-                let tenant_context = TardisFuns::json.str_to_obj::<TardisContext>(&tenant_context)?;
-                if !tenant_context.roles.is_empty() {
-                    context.roles.extend(tenant_context.roles);
-                }
-                if !tenant_context.groups.is_empty() {
-                    context.groups.extend(tenant_context.groups);
-                }
-            }
-        }
-        let own_paths = context.own_paths.split('/').collect::<Vec<_>>();
+        let context = self::get_account_context(token, &account_id, &app_id, config, cache_client).await?;
+        let own_paths_split = context.own_paths.split('/').collect::<Vec<_>>();
+        let tenant_id = if context.own_paths.is_empty() { None } else { Some(own_paths_split[0].to_string()) };
+        let app_id = if own_paths_split.len() > 1 { Some(own_paths_split[1].to_string()) } else { None };
         Ok(AuthContext {
             rbum_uri,
             rbum_action,
-            app_id: if own_paths.len() > 1 { Some(own_paths[1].to_string()) } else { None },
-            tenant_id: if context.own_paths.is_empty() { None } else { Some(own_paths[0].to_string()) },
+            app_id,
+            tenant_id,
             account_id: Some(context.owner),
             roles: Some(context.roles),
             groups: Some(context.groups),
@@ -202,6 +186,7 @@ async fn ident(req: &AuthReq, config: &AuthConfig, cache_client: &TardisCacheCli
             cache_own_paths = format!("{cache_tenant_id}/{app_id}")
         }
         if own_paths.contains(&cache_own_paths) {
+            let context = self::get_account_context(&ak_authorization, &owner, &app_id, config, cache_client).await?;
             let own_paths_split = own_paths.split('/').collect::<Vec<_>>();
             let tenant_id = if own_paths.is_empty() { None } else { Some(own_paths_split[0].to_string()) };
             let app_id = if own_paths_split.len() > 1 { Some(own_paths_split[1].to_string()) } else { None };
@@ -211,8 +196,8 @@ async fn ident(req: &AuthReq, config: &AuthConfig, cache_client: &TardisCacheCli
                 app_id,
                 tenant_id,
                 account_id: Some(owner.to_string()),
-                roles: None,
-                groups: None,
+                roles: Some(context.roles),
+                groups: Some(context.groups),
                 own_paths: Some(own_paths.to_string()),
                 ak: Some(ak_authorization.to_string()),
             })
@@ -247,6 +232,29 @@ async fn ident(req: &AuthReq, config: &AuthConfig, cache_client: &TardisCacheCli
             ak: None,
         })
     }
+}
+
+async fn get_account_context(token: &str, account_id: &str, app_id: &str, config: &AuthConfig, cache_client: &TardisCacheClient) -> TardisResult<TardisContext> {
+    let mut context: TardisContext = if let Some(context) = cache_client.hget(&format!("{}{}", config.cache_key_account_info, account_id), &app_id).await? {
+        TardisFuns::json.str_to_obj::<TardisContext>(&context)?
+    } else {
+        return Err(TardisError::unauthorized(
+            &format!("[Auth] Token [{token}] with App [{app_id}] is not legal"),
+            "401-auth-req-token-or-app-not-exist",
+        ));
+    };
+    if !app_id.is_empty() {
+        if let Some(tenant_context) = cache_client.hget(&format!("{}{}", config.cache_key_account_info, account_id), "").await? {
+            let tenant_context = TardisFuns::json.str_to_obj::<TardisContext>(&tenant_context)?;
+            if !tenant_context.roles.is_empty() {
+                context.roles.extend(tenant_context.roles);
+            }
+            if !tenant_context.groups.is_empty() {
+                context.groups.extend(tenant_context.groups);
+            }
+        }
+    }
+    Ok(context)
 }
 
 async fn parsing_base_ak(ak_authorization: &str, req: &AuthReq, config: &AuthConfig) -> TardisResult<(String, String, String)> {
