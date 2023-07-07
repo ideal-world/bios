@@ -10,6 +10,7 @@ use crate::dto::kv_item_dto::{
 };
 use crate::serv::kv_item_serv;
 
+#[derive(Clone)]
 pub struct KvCiItemApi;
 
 /// Interface Console KV API

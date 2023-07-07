@@ -10,6 +10,7 @@ use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 use crate::dto::stats_record_dto::{StatsDimRecordAddReq, StatsDimRecordDeleteReq, StatsFactRecordLoadReq, StatsFactRecordsLoadReq};
 use crate::serv::stats_record_serv;
 
+#[derive(Clone)]
 pub struct StatsCiRecordApi;
 
 /// Interface Console Statistics Record API

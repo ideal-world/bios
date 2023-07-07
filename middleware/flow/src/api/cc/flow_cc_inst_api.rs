@@ -11,7 +11,7 @@ use crate::dto::flow_inst_dto::{
 use crate::dto::flow_model_dto::FlowTagKind;
 use crate::flow_constants;
 use crate::serv::flow_inst_serv::FlowInstServ;
-
+#[derive(Clone)]
 pub struct FlowCcInstApi;
 
 /// Flow instance process API

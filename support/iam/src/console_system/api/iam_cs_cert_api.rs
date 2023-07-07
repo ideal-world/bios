@@ -18,6 +18,7 @@ use crate::basic::serv::iam_cert_user_pwd_serv::IamCertUserPwdServ;
 use crate::iam_constants;
 use crate::iam_enumeration::{IamCertExtKind, IamCertKernelKind};
 
+#[derive(Clone, Default)]
 pub struct IamCsCertApi;
 
 /// System Console Cert API
@@ -148,6 +149,7 @@ impl IamCsCertApi {
     }
 }
 
+#[derive(Clone, Default)]
 pub struct IamCsCertConfigLdapApi;
 /// System Console Cert Config LDAP API
 #[cfg(feature = "ldap_client")]

@@ -201,7 +201,7 @@ async fn ident(req: &AuthReq, config: &AuthConfig, cache_client: &TardisCacheCli
             }
             cache_own_paths = format!("{cache_tenant_id}/{app_id}")
         }
-        if own_paths.contains((&cache_own_paths)) {
+        if own_paths.contains(&cache_own_paths) {
             let own_paths_split = own_paths.split('/').collect::<Vec<_>>();
             let tenant_id = if own_paths.is_empty() { None } else { Some(own_paths_split[0].to_string()) };
             let app_id = if own_paths_split.len() > 1 { Some(own_paths_split[1].to_string()) } else { None };
@@ -223,6 +223,17 @@ async fn ident(req: &AuthReq, config: &AuthConfig, cache_client: &TardisCacheCli
             ))
         }
     } else {
+        let matched_res = auth_res_serv::match_res(&rbum_action, &rbum_uri)?;
+        for res in matched_res {
+            if res.auth.is_none() {
+                if res.need_login {
+                    return Err(TardisError::unauthorized(
+                        &format!("[Auth] need is not legal from head [{}]", config.head_key_token),
+                        "401-auth-req-token-not-exist",
+                    ));
+                }
+            }
+        }
         // public
         Ok(AuthContext {
             rbum_uri,
@@ -291,7 +302,7 @@ async fn check_ak_signature(ak: &str, cache_sk: &str, signature: &str, req_date:
     let sorted_req_query = auth_common_helper::sort_hashmap_query(req.query.clone());
     let calc_signature = TardisFuns::crypto
         .base64
-        .encode(&TardisFuns::crypto.digest.hmac_sha256(&format!("{}\n{}\n{}\n{}", req.method, req_date, req.path, sorted_req_query).to_lowercase(), &cache_sk)?);
+        .encode(&TardisFuns::crypto.digest.hmac_sha256(&format!("{}\n{}\n{}\n{}", req.method, req_date, req.path, sorted_req_query).to_lowercase(), cache_sk)?);
     if calc_signature != signature {
         return Err(TardisError::unauthorized(&format!("Ak [{ak}] authentication failed"), "401-auth-req-authenticate-fail"));
     }
@@ -313,7 +324,7 @@ async fn check_webhook_ak_signature(
     let sorted_req_query = auth_common_helper::sort_hashmap_query(query);
     let calc_signature = TardisFuns::crypto.base64.encode(&TardisFuns::crypto.digest.hmac_sha256(
         &format!("{}\n{}\n{}\n{}\n{}\n{}", onwer, onwer_path, req.method, req_date, req.path, sorted_req_query).to_lowercase(),
-        &cache_sk,
+        cache_sk,
     )?);
     if calc_signature != signature {
         return Err(TardisError::unauthorized(&format!("Ak [{ak}] authentication failed"), "401-auth-req-authenticate-fail"));

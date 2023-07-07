@@ -80,6 +80,7 @@ impl RbumItemCrudOperation<iam_res::ActiveModel, IamResAddReq, IamResModifyReq, 
             crypto_resp: Set(add_req.crypto_resp.unwrap_or(false)),
             double_auth: Set(add_req.double_auth.unwrap_or(false)),
             double_auth_msg: Set(add_req.double_auth_msg.as_ref().unwrap_or(&"".to_string()).to_string()),
+            need_login: Set(add_req.need_login.unwrap_or(false)),
             ..Default::default()
         })
     }
@@ -104,7 +105,7 @@ impl RbumItemCrudOperation<iam_res::ActiveModel, IamResAddReq, IamResModifyReq, 
         )
         .await?;
         if res.kind == IamResKind::Api {
-            IamResCacheServ::add_res(&res.code, &res.method, res.crypto_req, res.crypto_resp, res.double_auth, funs).await?;
+            IamResCacheServ::add_res(&res.code, &res.method, res.crypto_req, res.crypto_resp, res.double_auth, res.need_login, funs).await?;
         }
         let (op_describe, op_kind) = match res.kind {
             IamResKind::Menu => ("添加目录页面".to_string(), "AddContentPageaspersonal".to_string()),
@@ -169,6 +170,9 @@ impl RbumItemCrudOperation<iam_res::ActiveModel, IamResAddReq, IamResModifyReq, 
         if let Some(double_auth_msg) = &modify_req.double_auth_msg {
             iam_res.double_auth_msg = Set(double_auth_msg.to_string());
         }
+        if let Some(need_login) = modify_req.need_login {
+            iam_res.need_login = Set(need_login);
+        }
         Ok(Some(iam_res))
     }
 
@@ -201,6 +205,7 @@ impl RbumItemCrudOperation<iam_res::ActiveModel, IamResAddReq, IamResModifyReq, 
                     need_crypto_req: modify_req.crypto_req,
                     need_crypto_resp: modify_req.crypto_resp,
                     need_double_auth: modify_req.double_auth,
+                    need_login: modify_req.need_login,
                 },
                 funs,
             )
@@ -211,7 +216,7 @@ impl RbumItemCrudOperation<iam_res::ActiveModel, IamResAddReq, IamResModifyReq, 
                 if disabled {
                     IamResCacheServ::delete_res(&res.code, &res.method, funs).await?;
                 } else {
-                    IamResCacheServ::add_res(&res.code, &res.method, res.crypto_req, res.crypto_resp, res.double_auth, funs).await?;
+                    IamResCacheServ::add_res(&res.code, &res.method, res.crypto_req, res.crypto_resp, res.double_auth, res.need_login, funs).await?;
                 }
             }
         }
@@ -277,6 +282,7 @@ impl RbumItemCrudOperation<iam_res::ActiveModel, IamResAddReq, IamResModifyReq, 
         query.column((iam_res::Entity, iam_res::Column::CryptoResp));
         query.column((iam_res::Entity, iam_res::Column::DoubleAuth));
         query.column((iam_res::Entity, iam_res::Column::DoubleAuthMsg));
+        query.column((iam_res::Entity, iam_res::Column::NeedLogin));
         if let Some(kind) = &filter.kind {
             query.and_where(Expr::col(iam_res::Column::Kind).eq(kind.to_int()));
         }
@@ -616,6 +622,7 @@ impl IamMenuServ {
                     crypto_resp: None,
                     double_auth: None,
                     double_auth_msg: None,
+                    need_login: None,
                 },
                 set: IamSetItemAggAddReq {
                     set_cate_id: cate_menu_id.to_string(),
@@ -646,6 +653,7 @@ impl IamMenuServ {
                     crypto_resp: None,
                     double_auth: None,
                     double_auth_msg: None,
+                    need_login: None,
                 },
                 set: IamSetItemAggAddReq {
                     set_cate_id: cate_menu_id.to_string(),

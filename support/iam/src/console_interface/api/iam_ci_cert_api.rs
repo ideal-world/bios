@@ -16,8 +16,11 @@ use tardis::web::poem_openapi::param::{Path, Query};
 use tardis::web::poem_openapi::payload::Json;
 use tardis::web::web_resp::{TardisApiResult, TardisResp, Void};
 
+#[derive(Clone, Default)]
 pub struct IamCiCertManageApi;
+#[derive(Clone, Default)]
 pub struct IamCiCertApi;
+#[derive(Clone, Default)]
 pub struct IamCiLdapCertApi;
 
 /// # Interface Console Manage Cert API

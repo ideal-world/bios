@@ -36,7 +36,6 @@ async fn init_api(web_server: &TardisWebServer) -> TardisResult<()> {
         .add_module(
             flow_constants::DOMAIN_CODE,
             (flow_cc_state_api::FlowCcStateApi, flow_cc_model_api::FlowCcModelApi, flow_cc_inst_api::FlowCcInstApi),
-            Vec::new(),
         )
         .await;
     Ok(())

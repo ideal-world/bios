@@ -538,9 +538,10 @@ impl FlowInstServ {
             })
             .filter(|model_transition| {
                 if !model_transition.guard_by_creator
-                && model_transition.guard_by_spec_account_ids.is_empty()
-                && model_transition.guard_by_spec_role_ids.is_empty()
-                && !model_transition.guard_by_his_operators {
+                    && model_transition.guard_by_spec_account_ids.is_empty()
+                    && model_transition.guard_by_spec_role_ids.is_empty()
+                    && !model_transition.guard_by_his_operators
+                {
                     return true;
                 }
                 if model_transition.guard_by_creator && !(flow_inst.create_ctx.own_paths != ctx.own_paths || flow_inst.create_ctx.owner != ctx.owner) {

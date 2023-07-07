@@ -380,13 +380,14 @@ impl IamIdentCacheServ {
 pub struct IamResCacheServ;
 
 impl IamResCacheServ {
-    pub async fn add_res(item_code: &str, action: &str, crypto_req: bool, crypto_resp: bool, double_auth: bool, funs: &TardisFunsInst) -> TardisResult<()> {
+    pub async fn add_res(item_code: &str, action: &str, crypto_req: bool, crypto_resp: bool, double_auth: bool, need_login: bool, funs: &TardisFunsInst) -> TardisResult<()> {
         let uri_mixed = Self::package_uri_mixed(item_code, action);
         log::trace!("add res: uri_mixed={}", uri_mixed);
         let add_res_dto = IamCacheResRelAddOrModifyDto {
             need_crypto_req: crypto_req,
             need_crypto_resp: crypto_resp,
             need_double_auth: double_auth,
+            need_login,
             ..Default::default()
         };
         funs.cache().hset(&funs.conf::<IamConfig>().cache_key_res_info, &uri_mixed, &TardisFuns::json.obj_to_string(&add_res_dto)?).await?;
@@ -413,6 +414,7 @@ impl IamResCacheServ {
             need_crypto_req: false,
             need_crypto_resp: false,
             need_double_auth: false,
+            need_login: false,
         };
         let uri_mixed = Self::package_uri_mixed(item_code, action);
         let rels = funs.cache().hget(&funs.conf::<IamConfig>().cache_key_res_info, &uri_mixed).await?;
@@ -421,6 +423,7 @@ impl IamResCacheServ {
             res_dto.need_crypto_req = old_res_dto.need_crypto_req;
             res_dto.need_crypto_resp = old_res_dto.need_crypto_resp;
             res_dto.need_double_auth = old_res_dto.need_double_auth;
+            res_dto.need_login = old_res_dto.need_login;
         }
         funs.cache().hset(&funs.conf::<IamConfig>().cache_key_res_info, &uri_mixed, &TardisFuns::json.obj_to_string(&res_dto)?).await?;
         Self::add_change_trigger(&uri_mixed, funs).await
@@ -444,6 +447,7 @@ impl IamResCacheServ {
             need_crypto_req: false,
             need_crypto_resp: false,
             need_double_auth: false,
+            need_login: false,
         };
         let uri_mixed = Self::package_uri_mixed(item_code, action);
         log::trace!("add or modify res rel: uri_mixed={}", uri_mixed);
@@ -472,6 +476,11 @@ impl IamResCacheServ {
                 res_dto.need_double_auth = need_double_auth
             } else {
                 res_dto.need_double_auth = old_res_dto.need_double_auth
+            }
+            if let Some(need_login) = add_or_modify_req.need_login {
+                res_dto.need_login = need_login
+            } else {
+                res_dto.need_login = old_res_dto.need_login
             }
         }
         res_auth.accounts = res_auth.accounts.replace("##", "#");
@@ -559,6 +568,7 @@ struct IamCacheResRelAddOrModifyDto {
     pub need_crypto_req: bool,
     pub need_crypto_resp: bool,
     pub need_double_auth: bool,
+    pub need_login: bool,
 }
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
 #[serde(default)]
@@ -583,6 +593,7 @@ pub struct IamCacheResRelAddOrModifyReq {
     pub need_crypto_req: Option<bool>,
     pub need_crypto_resp: Option<bool>,
     pub need_double_auth: Option<bool>,
+    pub need_login: Option<bool>,
 }
 
 #[derive(Deserialize, Serialize, Clone, Debug)]

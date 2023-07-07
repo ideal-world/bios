@@ -16,7 +16,9 @@ use crate::basic::serv::iam_cert_ldap_serv::IamCertLdapServ;
 use crate::iam_constants;
 use crate::iam_enumeration::IamRelKind;
 
+#[derive(Clone, Default)]
 pub struct IamCcAccountApi;
+#[derive(Clone, Default)]
 pub struct IamCcAccountLdapApi;
 
 /// Common Console Account API

@@ -17,7 +17,7 @@ use crate::{conf_constants::error, serv::*};
 
 use super::tardis_err_to_poem_err;
 
-#[derive(Default)]
+#[derive(Default, Clone, Copy, Debug)]
 pub struct ConfNacosV1CsApi;
 
 /// Interface Console config server API

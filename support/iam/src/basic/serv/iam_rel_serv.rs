@@ -147,6 +147,7 @@ impl IamRelServ {
                         need_crypto_req: None,
                         need_crypto_resp: None,
                         need_double_auth: None,
+                        need_login: None,
                     },
                     funs,
                 )
@@ -188,6 +189,7 @@ impl IamRelServ {
                             need_crypto_req: None,
                             need_crypto_resp: None,
                             need_double_auth: None,
+                            need_login: None,
                         },
                         funs,
                     )
@@ -232,6 +234,7 @@ impl IamRelServ {
                     need_crypto_req: None,
                     need_crypto_resp: None,
                     need_double_auth: None,
+                    need_login: None,
                 },
                 funs,
             )

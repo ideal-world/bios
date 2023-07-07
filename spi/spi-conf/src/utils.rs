@@ -19,3 +19,19 @@ pub(crate) fn random_ak() -> String {
 pub(crate) fn random_sk() -> String {
     crate::utils::random_string(12, CHARSET_AK)
 }
+
+pub(crate) fn parse_tags(tags: &str) -> Vec<String> {
+    let mut v = tags
+        .split(',')
+        .filter_map(|t| {
+            let t = t.trim();
+            if t.is_empty() {
+                None
+            } else {
+                Some(t.to_string())
+            }
+        })
+        .collect::<Vec<_>>();
+    v.dedup();
+    v
+}
