@@ -6,7 +6,7 @@ use tardis::web::poem_openapi;
 use tardis::web::poem_openapi::payload::Json;
 use tardis::web::web_resp::{TardisApiResult, TardisResp};
 
-use crate::dto::auth_kernel_dto::{AuthReq, AuthResp, MixAuthResp};
+use crate::dto::auth_kernel_dto::{AuthReq, AuthResp, MixAuthResp, SignWebHookReq};
 use crate::serv::clients::spi_log_client::{LogParamContent, SpiLogClient};
 use crate::serv::{auth_kernel_serv, auth_res_serv};
 
@@ -74,6 +74,13 @@ impl AuthApi {
             &TardisContext::default(),
         )
         .await;
+        TardisResp::ok(result)
+    }
+
+    /// sign webhook
+    #[oai(path = "/sign/webhook", method = "put")]
+    async fn sign_webhook(&self, req: Json<SignWebHookReq>) -> TardisApiResult<String> {
+        let result = auth_kernel_serv::sign_webhook_ak(&req.0).await?;
         TardisResp::ok(result)
     }
 }
