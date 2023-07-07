@@ -7,7 +7,8 @@ use tardis::web::{
 use crate::dto::conf_auth_dto::*;
 use crate::serv::*;
 
-#[derive(Default)]
+#[derive(Default, Clone, Copy, Debug)]
+
 pub struct ConfCiAuthApi;
 
 #[poem_openapi::OpenApi(prefix_path = "/ci/auth", tag = "bios_basic::ApiTag::Interface")]

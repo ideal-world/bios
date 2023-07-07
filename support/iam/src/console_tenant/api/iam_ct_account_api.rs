@@ -16,6 +16,7 @@ use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::iam_constants;
 use crate::iam_enumeration::{IamAccountLockStateKind, IamAccountStatusKind, IamRelKind};
+#[derive(Clone, Default)]
 pub struct IamCtAccountApi;
 
 /// Tenant Console Account API

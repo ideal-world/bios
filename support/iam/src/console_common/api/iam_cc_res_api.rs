@@ -13,6 +13,7 @@ use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::iam_constants;
 use crate::iam_enumeration::IamSetKind;
 
+#[derive(Clone, Default)]
 pub struct IamCcResApi;
 
 /// Common Console Res API

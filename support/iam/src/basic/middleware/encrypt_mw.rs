@@ -14,7 +14,7 @@ use tardis::{
 };
 
 use crate::{iam_config::IamConfig, iam_constants};
-
+#[derive(Clone, Debug)]
 pub struct EncryptMW;
 
 impl EncryptMW {

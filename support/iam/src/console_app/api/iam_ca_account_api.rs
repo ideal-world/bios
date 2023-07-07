@@ -14,6 +14,7 @@ use crate::basic::serv::iam_app_serv::IamAppServ;
 use crate::iam_constants;
 use crate::iam_enumeration::IamRelKind;
 
+#[derive(Clone, Default)]
 pub struct IamCaAccountApi;
 
 /// App Console Account API

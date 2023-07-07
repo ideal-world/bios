@@ -34,7 +34,6 @@ async fn init_api(web_server: &TardisWebServer) -> TardisResult<()> {
                 stats_ci_record_api::StatsCiRecordApi,
                 stats_ci_metric_api::StatsCiMetricApi,
             ),
-            None,
         )
         .await;
     Ok(())

@@ -7,7 +7,7 @@ use tardis::web::web_resp::{TardisApiResult, TardisResp, Void};
 
 use crate::dto::graph_dto::{GraphNodeVersionResp, GraphRelAddReq, GraphRelDetailResp, GraphRelUpgardeVersionReq};
 use crate::serv::graph_basic_serv;
-
+#[derive(Clone)]
 pub struct GraphCiRelApi;
 
 /// Interface Console Graph API

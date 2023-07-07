@@ -15,6 +15,7 @@ use crate::basic::dto::iam_set_dto::{IamSetCateAddReq, IamSetCateModifyReq, IamS
 use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::iam_constants;
 use crate::iam_enumeration::{IamRelKind, IamSetKind};
+#[derive(Clone, Default)]
 pub struct IamCtOrgApi;
 
 /// Tenant Console Org API

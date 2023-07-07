@@ -15,6 +15,7 @@ use crate::basic::serv::iam_role_serv::IamRoleServ;
 use crate::iam_constants;
 use crate::iam_constants::RBUM_SCOPE_LEVEL_TENANT;
 use crate::iam_enumeration::IamRoleKind;
+#[derive(Clone, Default)]
 pub struct IamCtRoleApi;
 
 /// Tenant Console Role API

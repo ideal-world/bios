@@ -10,6 +10,7 @@ use crate::dto::auth_kernel_dto::{AuthReq, AuthResp, MixAuthResp, SignWebHookReq
 use crate::serv::clients::spi_log_client::{LogParamContent, SpiLogClient};
 use crate::serv::{auth_kernel_serv, auth_res_serv};
 
+#[derive(Clone)]
 pub struct AuthApi;
 
 /// Auth API

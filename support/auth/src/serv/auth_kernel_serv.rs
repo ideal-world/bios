@@ -302,7 +302,7 @@ async fn check_ak_signature(ak: &str, cache_sk: &str, signature: &str, req_date:
     let sorted_req_query = auth_common_helper::sort_hashmap_query(req.query.clone());
     let calc_signature = TardisFuns::crypto
         .base64
-        .encode(&TardisFuns::crypto.digest.hmac_sha256(&format!("{}\n{}\n{}\n{}", req.method, req_date, req.path, sorted_req_query).to_lowercase(), &cache_sk)?);
+        .encode(&TardisFuns::crypto.digest.hmac_sha256(&format!("{}\n{}\n{}\n{}", req.method, req_date, req.path, sorted_req_query).to_lowercase(), cache_sk)?);
     if calc_signature != signature {
         return Err(TardisError::unauthorized(&format!("Ak [{ak}] authentication failed"), "401-auth-req-authenticate-fail"));
     }

@@ -1,5 +1,6 @@
 use tardis::web::poem_openapi;
 
+#[derive(Clone)]
 pub struct MgrApi;
 
 /// Management API

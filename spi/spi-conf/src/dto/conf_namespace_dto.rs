@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use tardis::web::poem_openapi;
+use tardis::web::poem_openapi::{self};
 pub type NamespaceId = String;
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Default)]
