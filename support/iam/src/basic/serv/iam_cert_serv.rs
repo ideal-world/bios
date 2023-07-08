@@ -222,6 +222,11 @@ impl IamCertServ {
         let rel_rbum_cert_conf_id = Self::get_cert_conf_id_by_kind(rel_iam_cert_kind.to_string().as_str(), Some(ctx.clone().own_paths), funs).await?;
         let cert_detail = RbumCertServ::find_one_detail_rbum(
             &RbumCertFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    own_paths: Some("".to_string()),
+                    ..Default::default()
+                },
                 rel_rbum_id: Some(account_id.to_string()),
                 rel_rbum_cert_conf_ids: Some(vec![rel_rbum_cert_conf_id]),
                 ..Default::default()
