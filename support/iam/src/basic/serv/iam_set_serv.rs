@@ -212,8 +212,22 @@ impl IamSetServ {
         )
         .await;
         if result.is_ok() {
-            let set_cate_item = RbumSetCateServ::get_rbum(set_cate_id, &RbumSetCateFilterReq::default(), funs, ctx).await?;
-            let item = RbumSetServ::get_rbum(&set_cate_item.rel_rbum_set_id, &RbumSetFilterReq::default(), funs, ctx).await?;
+            let set_cate_item = RbumSetCateServ::get_rbum(set_cate_id, &RbumSetCateFilterReq{
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    own_paths: Some(ctx.own_paths.to_string()),
+                    ..Default::default()
+                },
+                ..Default::default()
+            }, funs, ctx).await?;
+            let item = RbumSetServ::get_rbum(&set_cate_item.rel_rbum_set_id, &RbumSetFilterReq{
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    own_paths: Some(ctx.own_paths.to_string()),
+                    ..Default::default()
+                },
+                ..Default::default()
+            }, funs, ctx).await?;
             let mut kind = item.kind;
             kind.make_ascii_lowercase();
             match kind.as_str() {
@@ -247,8 +261,22 @@ impl IamSetServ {
     }
 
     pub async fn delete_set_cate(set_cate_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<u64> {
-        let set_cate_item = RbumSetCateServ::get_rbum(set_cate_id, &RbumSetCateFilterReq::default(), funs, ctx).await?;
-        let item = RbumSetServ::get_rbum(&set_cate_item.rel_rbum_set_id, &RbumSetFilterReq::default(), funs, ctx).await?;
+        let set_cate_item = RbumSetCateServ::get_rbum(set_cate_id, &RbumSetCateFilterReq{
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    own_paths: Some(ctx.own_paths.to_string()),
+                    ..Default::default()
+                },
+                ..Default::default()
+            }, funs, ctx).await?;
+        let item = RbumSetServ::get_rbum(&set_cate_item.rel_rbum_set_id, &RbumSetFilterReq{
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    own_paths: Some(ctx.own_paths.to_string()),
+                    ..Default::default()
+                },
+                ..Default::default()
+            }, funs, ctx).await?;
 
         let result = RbumSetCateServ::delete_rbum(set_cate_id, funs, ctx).await;
 
