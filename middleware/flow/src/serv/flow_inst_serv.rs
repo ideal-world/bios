@@ -558,8 +558,11 @@ impl FlowInstServ {
                         .transitions
                         .as_ref()
                         .map(|inst_transitions| {
-                            // except creator 
-                            inst_transitions.iter().filter(|inst_transition|inst_transition.op_ctx.owner != flow_inst.create_ctx.owner).any(|inst_transition| inst_transition.op_ctx.own_paths == ctx.own_paths && inst_transition.op_ctx.owner == ctx.owner)
+                            // except creator
+                            inst_transitions
+                                .iter()
+                                .filter(|inst_transition| inst_transition.op_ctx.owner != flow_inst.create_ctx.owner)
+                                .any(|inst_transition| inst_transition.op_ctx.own_paths == ctx.own_paths && inst_transition.op_ctx.owner == ctx.owner)
                         })
                         .unwrap_or(false)
                 {

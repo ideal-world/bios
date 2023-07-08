@@ -157,7 +157,10 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
             },
         )
         .await;
-    assert_eq!(transfer.new_flow_state_id, state_and_next_transitions[0].next_flow_transitions[1].next_flow_state_id.clone());
+    assert_eq!(
+        transfer.new_flow_state_id,
+        state_and_next_transitions[0].next_flow_transitions[1].next_flow_state_id.clone()
+    );
     // // Add some transitions
     // let _: Void = client
     //     .patch(
