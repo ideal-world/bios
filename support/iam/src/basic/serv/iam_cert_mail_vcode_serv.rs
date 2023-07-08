@@ -234,7 +234,7 @@ impl IamCertMailVCodeServ {
         .await?
             > 0
         {
-            return Err(funs.err().unauthorized("iam_cert_mail_vcode", "activate", "email already exist", "401-iam-cert-valid"));
+            return Err(funs.err().unauthorized("iam_cert_mail_vcode", "activate", "email already exist", "404-iam-cert-email-not-exist"));
         }
         let vcode = Self::get_vcode();
         let account_name = IamAccountServ::peek_item(&ctx.owner, &IamAccountFilterReq::default(), funs, &ctx).await?.name;

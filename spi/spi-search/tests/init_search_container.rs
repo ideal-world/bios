@@ -12,6 +12,7 @@ use tardis::TardisFuns;
 pub struct LifeHold<'a> {
     pub search: Container<'a, GenericImage>,
     pub redis: Container<'a, Redis>,
+    pub es: Container<'a, GenericImage>,
 }
 
 pub async fn init(docker: &Cli) -> TardisResult<LifeHold<'_>> {
@@ -29,11 +30,17 @@ pub async fn init(docker: &Cli) -> TardisResult<LifeHold<'_>> {
     let url = format!("redis://127.0.0.1:{}/0", port);
     env::set_var("TARDIS_FW.CACHE.URL", url);
 
+    let es_container = TardisTestContainer::es_custom(docker);
+    let port = es_container.get_host_port_ipv4(9200);
+    let url = format!("https://elastic:123456@127.0.0.1:{}", port);
+    env::set_var("TARDIS_FW.ES.URL", url);
+
     TardisFuns::init(Some(&format!("{}tests/config", root_path))).await?;
 
     Ok(LifeHold {
         search: reldb_container,
         redis: redis_container,
+        es: es_container,
     })
 }
 
