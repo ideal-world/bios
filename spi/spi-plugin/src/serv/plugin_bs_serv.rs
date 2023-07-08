@@ -77,13 +77,9 @@ impl PluginBsServ {
     }
 
     pub async fn delete_plugin_rel(bs_id: &str, app_tenant_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        if PluginRelServ::exist_rels(&PluginAppBindRelKind::PluginAppBindKind, app_tenant_id, bs_id, funs, ctx).await? {
-            return Err(funs.err().unauthorized(
-                "spi_bs",
-                "add_or_modify_plugin_rel_agg",
-                &format!("plugin binding rel unauthorized {}.{} by {}", bs_id, app_tenant_id, ctx.own_paths),
-                "401-plugin-ownership-illegal",
-            ));
+        let rel_agg = Self::get_bs_rel_agg(bs_id, app_tenant_id, funs, ctx).await?;
+        if PluginRelServ::exist_rels(&PluginAppBindRelKind::PluginAppBindKind, app_tenant_id, &rel_agg.rel.id, funs, ctx).await? {
+            return Err(funs.err().unauthorized("spi_bs", "delete_plugin_rel", &format!("The pluging exists bound"), "401-spi-plugin-bind-exist"));
         }
         SpiBsServ::delete_rel(bs_id, app_tenant_id, &funs, &ctx).await?;
         Ok(())
