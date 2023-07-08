@@ -1,3 +1,4 @@
+
 pub mod rbum_cert_conf_dto;
 pub mod rbum_cert_dto;
 pub mod rbum_domain_dto;
@@ -13,3 +14,4 @@ pub mod rbum_rel_env_dto;
 pub mod rbum_set_cate_dto;
 pub mod rbum_set_dto;
 pub mod rbum_set_item_dto;
+pub mod rbum_safe_dto;
