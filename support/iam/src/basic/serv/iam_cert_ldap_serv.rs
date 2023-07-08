@@ -438,7 +438,7 @@ impl IamCertLdapServ {
             dn
         } else {
             ldap_client.unbind().await?;
-            return Err(funs.err().unauthorized("rbum_cert", "get_or_add_account", "validation error", "401-rbum-cert-ori-sk-not-match"));
+            return Err(funs.err().unauthorized("rbum_cert", "get_or_add_account", "validation error", "401-rbum-usrpwd-cert-valid-error"));
         };
         ldap_client.unbind().await?;
         if let Some(account_id) = Self::get_cert_rel_account_by_dn(&dn, &cert_conf_id, funs, &mock_ctx).await? {
