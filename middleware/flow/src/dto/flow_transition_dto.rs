@@ -28,6 +28,8 @@ pub struct FlowTransitionAddReq {
 
     pub action_by_pre_callback: Option<String>,
     pub action_by_post_callback: Option<String>,
+
+    pub action_by_post_changes: Vec<FlowTransitionActionChangeInfo>,
 }
 
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
@@ -55,6 +57,8 @@ pub struct FlowTransitionModifyReq {
 
     pub action_by_pre_callback: Option<String>,
     pub action_by_post_callback: Option<String>,
+
+    pub action_by_post_changes: Option<Vec<FlowTransitionActionChangeInfo>>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, poem_openapi::Object, sea_orm::FromQueryResult)]
@@ -82,12 +86,14 @@ pub struct FlowTransitionDetailResp {
 
     pub action_by_pre_callback: String,
     pub action_by_post_callback: String,
+
+    pub action_by_post_changes: Value,
 }
 
 impl FlowTransitionDetailResp {
     pub fn guard_by_other_conds(&self) -> Option<Vec<Vec<BasicQueryCondInfo>>> {
         if self.guard_by_other_conds.is_array() && !&self.guard_by_other_conds.as_array().unwrap().is_empty() {
-            Some(TardisFuns::json.json_to_obj(self.guard_by_other_conds.clone()).unwrap())
+            Some(TardisFuns::json.json_to_obj(self.guard_by_other_conds.clone()).unwrap_or_default())
         } else {
             None
         }
@@ -95,9 +101,17 @@ impl FlowTransitionDetailResp {
 
     pub fn vars_collect(&self) -> Option<Vec<FlowVarInfo>> {
         if self.vars_collect.is_array() && !&self.vars_collect.as_array().unwrap().is_empty() {
-            Some(TardisFuns::json.json_to_obj(self.vars_collect.clone()).unwrap())
+            Some(TardisFuns::json.json_to_obj(self.vars_collect.clone()).unwrap_or_default())
         } else {
             None
+        }
+    }
+
+    pub fn action_by_post_changes(&self) -> Vec<FlowTransitionActionChangeInfo> {
+        if self.action_by_post_changes.is_array() && !&self.action_by_post_changes.as_array().unwrap().is_empty() {
+            TardisFuns::json.json_to_obj(self.action_by_post_changes.clone()).unwrap_or_default()
+        } else {
+            vec![]
         }
     }
 }
@@ -106,6 +120,7 @@ impl From<FlowTransitionDetailResp> for FlowTransitionAddReq {
     fn from(value: FlowTransitionDetailResp) -> Self {
         let guard_by_other_conds = value.guard_by_other_conds();
         let vars_collect = value.vars_collect();
+        let action_by_post_changes = value.action_by_post_changes();
         FlowTransitionAddReq {
             from_flow_state_id: value.from_flow_state_id,
             to_flow_state_id: value.to_flow_state_id,
@@ -121,13 +136,21 @@ impl From<FlowTransitionDetailResp> for FlowTransitionAddReq {
             vars_collect,
             action_by_pre_callback: Some(value.action_by_pre_callback),
             action_by_post_callback: Some(value.action_by_post_callback),
+            action_by_post_changes,
         }
     }
+}
+
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug, poem_openapi::Union)]
+pub enum FlowTransitionActionChangeInfo {
+    Var(FlowTransitionActionByVarChangeInfo),
+    State(FlowTransitionActionByStateChangeInfo),
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug, poem_openapi::Object, sea_orm::FromJsonQueryResult)]
 pub struct FlowTransitionActionByVarChangeInfo {
     pub current: bool,
+    pub describe: String,
     pub obj_tag: Option<String>,
     pub var_name: String,
     pub changed_val: Value,
@@ -136,8 +159,25 @@ pub struct FlowTransitionActionByVarChangeInfo {
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug, poem_openapi::Object, sea_orm::FromJsonQueryResult)]
 pub struct FlowTransitionActionByStateChangeInfo {
     pub obj_tag: String,
-    pub obj_state_ids: Vec<String>,
+    pub describe: String,
+    pub change_conditions: Option<Vec<StateChangeCondition>>,
     pub changed_state_id: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug, poem_openapi::Object, sea_orm::FromJsonQueryResult)]
+pub struct StateChangeCondition {
+    pub current: bool,
+    pub obj_tag: Option<String>,
+    pub state_id: String,
+    pub op: StateChangeConditionOp,
+}
+
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug, poem_openapi::Enum)]
+pub enum StateChangeConditionOp {
+    And,
+    Or,
+    Eq,
+    Neq,
 }
 
 pub struct FlowTransitionInitInfo {
@@ -158,4 +198,6 @@ pub struct FlowTransitionInitInfo {
 
     pub action_by_pre_callback: Option<String>,
     pub action_by_post_callback: Option<String>,
+
+    pub action_by_post_changes: Vec<FlowTransitionActionChangeInfo>,
 }

@@ -254,6 +254,7 @@ impl FlowModelServ {
                 vars_collect: transition.vars_collect,
                 action_by_pre_callback: transition.action_by_pre_callback,
                 action_by_post_callback: transition.action_by_post_callback,
+                action_by_post_changes:transition.action_by_post_changes,
             });
         }
         // add model
@@ -345,6 +346,8 @@ impl FlowModelServ {
 
                 action_by_pre_callback: Set(req.action_by_pre_callback.as_ref().unwrap_or(&"".to_string()).to_string()),
                 action_by_post_callback: Set(req.action_by_post_callback.as_ref().unwrap_or(&"".to_string()).to_string()),
+
+                action_by_post_changes: Set(TardisFuns::json.obj_to_json(&req.action_by_post_changes).unwrap_or(json!([]))),
 
                 rel_flow_model_id: Set(flow_model_id.to_string()),
                 ..Default::default()
@@ -459,6 +462,9 @@ impl FlowModelServ {
             if let Some(action_by_post_callback) = &req.action_by_post_callback {
                 flow_transition.action_by_post_callback = Set(action_by_post_callback.to_string());
             }
+            if let Some(action_by_post_changes) = &req.action_by_post_changes {
+                flow_transition.action_by_post_changes = Set(TardisFuns::json.obj_to_json(action_by_post_changes)?);
+            }
             flow_transition.update_time = Set(Utc::now());
             funs.db().update_one(flow_transition, ctx).await?;
         }
@@ -516,6 +522,7 @@ impl FlowModelServ {
                 (flow_transition::Entity, flow_transition::Column::VarsCollect),
                 (flow_transition::Entity, flow_transition::Column::ActionByPreCallback),
                 (flow_transition::Entity, flow_transition::Column::ActionByPostCallback),
+                (flow_transition::Entity, flow_transition::Column::ActionByPostChanges),
             ])
             .expr_as(Expr::col((form_state_table.clone(), NAME_FIELD.clone())).if_null(""), Alias::new("from_flow_state_name"))
             .expr_as(Expr::col((to_state_table.clone(), NAME_FIELD.clone())).if_null(""), Alias::new("to_flow_state_name"))

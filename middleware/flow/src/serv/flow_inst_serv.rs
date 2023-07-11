@@ -34,7 +34,7 @@ use crate::{
         },
         flow_model_dto::{FlowModelDetailResp, FlowModelFilterReq, FlowTagKind},
         flow_state_dto::{FlowStateFilterReq, FlowSysStateKind},
-        flow_transition_dto::FlowTransitionDetailResp,
+        flow_transition_dto::{FlowTransitionDetailResp, FlowTransitionActionChangeInfo},
     },
     serv::{flow_model_serv::FlowModelServ, flow_state_serv::FlowStateServ},
 };
@@ -462,6 +462,7 @@ impl FlowInstServ {
         if let Some(transitions) = flow_inst.transitions {
             new_transitions.extend(transitions);
         }
+        let from_transition_id = new_transitions.last().map(|from_transition| from_transition.id.clone());
         new_transitions.push(FlowInstTransitionInfo {
             id: next_flow_transition.next_flow_transition_id.to_string(),
             start_time: Utc::now(),
@@ -485,12 +486,14 @@ impl FlowInstServ {
 
         funs.db().update_one(flow_inst, ctx).await?;
 
+        let model_transition = flow_model.transitions();
         Self::do_request_webhook(
-            flow_model.transitions().iter().filter(|model_transition| model_transition.to_flow_state_id == current_state_id).collect_vec().pop(),
-            flow_model.transitions().iter().filter(|model_transition| model_transition.to_flow_state_id == next_flow_state.id).collect_vec().pop(),
+            from_transition_id.and_then(|id: String| model_transition.iter().find(|model_transition| model_transition.id == id)),
+            model_transition.iter().find(|model_transition| model_transition.id == next_flow_transition.next_flow_transition_id),
         )
         .await?;
 
+        Self::do_post_change(&flow_model, model_transition.iter().find(|model_transition| model_transition.id == next_flow_transition.next_flow_transition_id), ctx, funs).await?;
         Ok(FlowInstTransferResp {
             new_flow_state_id: next_flow_transition.next_flow_state_id,
             new_flow_state_name: next_flow_transition.next_flow_state_name,
@@ -498,21 +501,40 @@ impl FlowInstServ {
         })
     }
 
+    /// handling post change when the transition occurs
+    async fn do_post_change(current_model: &FlowModelDetailResp, transition_detail: Option<&FlowTransitionDetailResp>, ctx: &TardisContext, funs: &TardisFunsInst) -> TardisResult<()> {
+        if let Some(transition_detail) = transition_detail {
+            let post_changes = transition_detail.action_by_post_changes();
+            for post_change in post_changes {
+                    match post_change {
+                        FlowTransitionActionChangeInfo::Var(change_info) => {
+                            
+                        },
+                        FlowTransitionActionChangeInfo::State(change_info) => {
+
+                        },
+                    }
+            }
+        }
+
+        Ok(())
+    }
+
     /// request webhook when the transition occurs
-    async fn do_request_webhook(from_transion_detail: Option<&FlowTransitionDetailResp>, to_transion_detail: Option<&FlowTransitionDetailResp>) -> TardisResult<()> {
-        if let Some(from_transion_detail) = from_transion_detail {
-            if !from_transion_detail.action_by_post_callback.is_empty() {
+    async fn do_request_webhook(from_transition_detail: Option<&FlowTransitionDetailResp>, to_transition_detail: Option<&FlowTransitionDetailResp>) -> TardisResult<()> {
+        if let Some(from_transition_detail) = from_transition_detail {
+            if !from_transition_detail.action_by_post_callback.is_empty() {
                 let callback_url = format!(
                     "{}?transion={}",
-                    from_transion_detail.action_by_post_callback.as_str(),
-                    from_transion_detail.to_flow_state_name
+                    from_transition_detail.action_by_post_callback.as_str(),
+                    from_transition_detail.to_flow_state_name
                 );
                 let _ = TardisFuns::web_client().get_to_str(&callback_url, None).await?;
             }
         }
-        if let Some(to_transion_detail) = to_transion_detail {
-            if !to_transion_detail.action_by_pre_callback.is_empty() {
-                let callback_url = format!("{}?transion={}", to_transion_detail.action_by_pre_callback.as_str(), to_transion_detail.to_flow_state_name);
+        if let Some(to_transition_detail) = to_transition_detail {
+            if !to_transition_detail.action_by_pre_callback.is_empty() {
+                let callback_url = format!("{}?transion={}", to_transition_detail.action_by_pre_callback.as_str(), to_transition_detail.to_flow_state_name);
                 let _ = TardisFuns::web_client().get_to_str(&callback_url, None).await?;
             }
         }

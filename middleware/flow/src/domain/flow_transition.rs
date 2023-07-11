@@ -86,11 +86,9 @@ pub struct Model {
     /// action similar to `Event` in BPMN
     pub action_by_post_callback: String,
 
-    /// TODO Vec<FlowTransitionActionByVarChangeInfo>
-    // pub action_by_post_var_changes: Json,
+    /// TODO Vec<FlowTransitionActionChangeInfo>
+    pub action_by_post_changes: Json,
 
-    /// TODO Vec<FlowTransitionActionByStateChangeInfo>
-    // pub action_by_post_state_changes: Json,
     pub rel_flow_model_id: String,
 
     #[fill_ctx(own_paths)]
