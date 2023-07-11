@@ -193,3 +193,7 @@
      }
  } */
  
+
+pub struct MailClient {
+    
+}

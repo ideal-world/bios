@@ -155,8 +155,9 @@ public class ReachMsgSignatureDto {
 
 // convert from java
 
-use bios_basic::rbum::dto::rbum_safe_dto::{RbumSafeSummaryResp, RbumSafeDetailResp};
-use tardis::web::poem_openapi;
+use bios_basic::rbum::dto::{rbum_safe_dto::{RbumSafeSummaryResp, RbumSafeDetailResp}, rbum_filer_dto::RbumBasicFilterReq};
+use serde::Serialize;
+use tardis::{web::poem_openapi, db::sea_orm::{FromQueryResult, self}, chrono::{DateTime, Utc}};
 
 use crate::dto::*;
 /// 添加用户触达签名请求
@@ -164,63 +165,73 @@ use crate::dto::*;
 pub struct ReachMsgSignatureAddReq {
     /// 名称
     #[oai(validator(max_length = "255"))]
-    name: String,
+    pub name: String,
     /// 说明
     #[oai(validator(max_length = "2000"))]
-    note: String,
+    pub note: String,
     /// 内容
     #[oai(validator(max_length = "2000"))]
-    content: String,
+    pub content: String,
     /// 来源
     #[oai(validator(max_length = "255"))]
-    source: String,
-    rel_reach_channel: ReachChannelKind,
+    pub source: String,
+    pub rel_reach_channel: ReachChannelKind,
 }
 /// 修改用户触达签名请求
 #[derive(Debug, poem_openapi::Object)]
 pub struct ReachMsgSignatureModifyReq {
     /// 名称
     #[oai(validator(max_length = "255"))]
-    name: String,
+    pub name: Option<String>,
     /// 说明
     #[oai(validator(max_length = "2000"))]
-    note: String,
+    pub note: Option<String>,
     /// 内容
     #[oai(validator(max_length = "2000"))]
-    content: String,
+    pub content: Option<String>,
     /// 来源
     #[oai(validator(max_length = "255"))]
-    source: String,
-    rel_reach_channel: ReachChannelKind,
+    pub source: Option<String>,
+    pub rel_reach_channel: Option<ReachChannelKind>,
 }
 
 /// 用户触达签名过滤请求
 #[derive(Debug, poem_openapi::Object)]
 pub struct ReachMsgSignatureFilterReq {
+    #[oai(flatten)]
+    pub base_filter: RbumBasicFilterReq,
     /// 名称
-    name: String,
+    #[oai(validator(min_length = "1", max_length = "255"))]
+    pub name: String,
     /// 关联的触达通道
-    rel_reach_channel: ReachChannelKind,
+    pub rel_reach_channel: Option<ReachChannelKind>,
 }
 
-#[derive(Debug, poem_openapi::Object)]
+#[derive(Debug, poem_openapi::Object, sea_orm::FromQueryResult, Serialize)]
 pub struct ReachMsgSignatureSummaryResp {
-    #[oai(flatten)]
-    rbum_safe_summary_resp: RbumSafeSummaryResp,
-    name: String,
-    note: String,
-    content: String,
-    source: String,
-    rel_reach_channel: ReachChannelKind,
+    pub id: String,
+    pub own_paths: String,
+    pub owner: String,
+    pub create_time: DateTime<Utc>,
+    pub update_time: DateTime<Utc>,
+    pub name: String,
+    pub note: String,
+    pub content: String,
+    pub source: String,
+    pub rel_reach_channel: ReachChannelKind,
 }
 
-#[derive(Debug, poem_openapi::Object)]
+#[derive(Debug, poem_openapi::Object, sea_orm::FromQueryResult, Serialize)]
 pub struct ReachMsgSignatureDetailResp {
-    #[oai(flatten)]
-    rbum_safe_detail_resp: RbumSafeDetailResp,
-    name: String,
-    note: String,
-    content: String,
-    source: String,
-    rel_reach_channel: ReachChannelKind,
+    pub id: String,
+    pub own_paths: String,
+    pub owner: String,
+    pub owner_name: String,
+    pub create_time: DateTime<Utc>,
+    pub update_time: DateTime<Utc>,
+    pub name: String,
+    pub note: String,
+    pub content: String,
+    pub source: String,
+    pub rel_reach_channel: ReachChannelKind,
 }

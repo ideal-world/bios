@@ -1,7 +1,11 @@
 mod log;
+pub use log::*;
 mod send_req;
+pub use send_req::*;
 mod signature;
+pub use signature::*;
 mod template;
+pub use template::*;
 use std::collections::HashMap;
 
 use bios_basic::rbum::dto::{
@@ -9,7 +13,8 @@ use bios_basic::rbum::dto::{
     rbum_item_dto::RbumItemAddReq,
     rbum_safe_dto::{RbumSafeDetailResp, RbumSafeSummaryResp},
 };
-use tardis::{regex::Regex, web::poem_openapi};
+use serde::Serialize;
+use tardis::{regex::Regex, web::poem_openapi, db::sea_orm::{self, TryGetable}, chrono::{DateTime, Utc}, basic::result::TardisResult};
 
 use super::*;
 
@@ -39,27 +44,27 @@ fn content_replace<const MAXLEN: usize>(content: &str, values: &HashMap<String, 
 #[derive(Debug, poem_openapi::Object)]
 pub struct ReachMessageAddReq {
     #[oai(flatten)]
-    rbum_item_add_req: RbumItemAddReq,
+    pub rbum_item_add_req: RbumItemAddReq,
     /// 发件人
     #[oai(validator(max_length = "2000"))]
-    from_res: String,
+    pub from_res: String,
     /// 关联的触达通道
-    rel_reach_channel: ReachChannelKind,
+    pub rel_reach_channel: ReachChannelKind,
     /// 用户触达接收类型
-    receive_kind: ReachReceiveKind,
+    pub receive_kind: ReachReceiveKind,
     #[oai(validator(max_length = "2000"))]
     /// 接收主体，分号分隔
-    to_res_ids: String,
+    pub to_res_ids: String,
     #[oai(validator(max_length = "255"))]
     /// 用户触达签名Id
-    rel_reach_msg_signature_id: String,
+    pub rel_reach_msg_signature_id: String,
     #[oai(validator(max_length = "255"))]
     /// 用户触达模板Id
-    rel_reach_msg_template_id: String,
+    pub rel_reach_msg_template_id: String,
     /// 触达状态
-    reach_status: ReachStatusKind,
+    pub reach_status: ReachStatusKind,
     /// 触达状态
-    content_replace: HashMap<String, String>,
+    pub content_replace: String,
 }
 
 #[derive(Debug, poem_openapi::Object)]
@@ -92,40 +97,40 @@ pub struct ReachMessageFilterReq {
     reach_status: Option<ReachStatusKind>,
 }
 
-#[derive(Debug, poem_openapi::Object)]
+#[derive(Debug, poem_openapi::Object, Serialize, sea_orm::FromQueryResult)]
 pub struct ReachMessageSummaryResp {
-    // #[oai(flatten)]
-    rbum_safe_summary_resp: RbumSafeSummaryResp,
+    pub id: String,
+    pub own_paths: String,
+    pub owner: String,
+    pub create_time: DateTime<Utc>,
+    pub update_time: DateTime<Utc>,
+    // pub rbum_safe_summary_resp: RbumSafeSummaryResp,
     #[oai(validator(max_length = "2000"))]
-    from_res: String,
-    rel_reach_channel: ReachChannelKind,
-    receive_kind: ReachReceiveKind,
+    pub from_res: String,
+    pub rel_reach_channel: ReachChannelKind,
+    pub receive_kind: ReachReceiveKind,
     #[oai(validator(max_length = "2000"))]
-    to_res_ids: String,
+    pub to_res_ids: String,
     #[oai(validator(max_length = "255"))]
-    rel_reach_msg_signature_id: String,
+    pub rel_reach_msg_signature_id: String,
     #[oai(validator(max_length = "255"))]
-    rel_reach_msg_template_id: String,
-    reach_status: ReachStatusKind,
-    content_replace: HashMap<String, String>,
-    template_content: String,
-    template_name: String,
+    pub rel_reach_msg_template_id: String,
+    pub reach_status: ReachStatusKind,
+    pub content_replace: String,
+    pub template_content: String,
+    pub template_name: String,
 }
 
-impl ReachMessageSummaryResp {
-    pub fn get_final_content(&self) -> String {
-        if self.content_replace.is_empty() || self.template_content.is_empty() {
-            String::new()
-        } else {
-            content_replace::<DEFUALT_MAXLEN>(&self.template_content, &self.content_replace)
-        }
-    }
-}
 
-#[derive(Debug, poem_openapi::Object)]
+
+#[derive(Debug, poem_openapi::Object, Serialize, sea_orm::FromQueryResult)]
 pub struct ReachMessageDetailResp {
-    #[oai(flatten)]
-    rbum_safe_detail_resp: RbumSafeDetailResp,
+    pub id: String,
+    pub own_paths: String,
+    pub owner: String,
+    pub owner_name: String,
+    pub create_time: DateTime<Utc>,
+    pub update_time: DateTime<Utc>,
     #[oai(validator(max_length = "2000"))]
     from_res: String,
     rel_reach_channel: ReachChannelKind,
@@ -138,7 +143,7 @@ pub struct ReachMessageDetailResp {
     #[oai(validator(max_length = "255"))]
     rel_reach_msg_template_id: String,
     reach_status: ReachStatusKind,
-    content_replace: HashMap<String, String>,
+    content_replace: String,
     template_content: String,
     template_name: String,
 }

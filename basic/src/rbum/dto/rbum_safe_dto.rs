@@ -1,9 +1,12 @@
+use serde::{Serialize, Deserialize};
 use tardis::{
     chrono::{DateTime, Utc},
     web::poem_openapi,
 };
-
-#[derive(Debug, poem_openapi::Object, Clone, Default)]
+#[cfg(feature = "default")]
+use tardis::db::sea_orm;
+#[derive(Debug, Clone, Default, Serialize)]
+#[cfg_attr(feature = "default", derive(poem_openapi::Object, sea_orm::FromQueryResult))]
 pub struct RbumSafeSummaryResp {
     pub id: String,
     pub own_paths: String,
@@ -25,7 +28,8 @@ impl RbumSafeSummaryResp {
     }
 }
 
-#[derive(Debug, poem_openapi::Object, Clone, Default)]
+#[derive(Debug, Clone, Serialize)]
+#[cfg_attr(feature = "default", derive(poem_openapi::Object, sea_orm::FromQueryResult))]
 pub struct RbumSafeDetailResp {
     pub id: String,
     pub own_paths: String,
