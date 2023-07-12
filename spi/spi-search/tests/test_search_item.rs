@@ -245,7 +245,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
                     "ext": [{
                         "field":"rel_accounts",
                         "op":"in",
-                        "value":["acc01","acc02"]
+                        "value":"acc01"
                     }]
                 },
                 "page":{"number":1,"size":10,"fetch_total":true}
