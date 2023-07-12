@@ -1,2 +1,0 @@
-mod sms;
-mod email;
