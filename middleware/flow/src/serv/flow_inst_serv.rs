@@ -11,6 +11,7 @@ use bios_basic::{
     },
 };
 use itertools::Itertools;
+use serde_json::json;
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
     chrono::{DateTime, Utc},
@@ -34,7 +35,7 @@ use crate::{
         },
         flow_model_dto::{FlowModelDetailResp, FlowModelFilterReq, FlowTagKind},
         flow_state_dto::{FlowStateFilterReq, FlowSysStateKind},
-        flow_transition_dto::{FlowTransitionDetailResp, FlowTransitionActionChangeInfo},
+        flow_transition_dto::{FlowTransitionActionChangeInfo, FlowTransitionDetailResp},
     },
     serv::{flow_model_serv::FlowModelServ, flow_state_serv::FlowStateServ},
 };
@@ -493,7 +494,13 @@ impl FlowInstServ {
         )
         .await?;
 
-        Self::do_post_change(&flow_model, model_transition.iter().find(|model_transition| model_transition.id == next_flow_transition.next_flow_transition_id), ctx, funs).await?;
+        Self::do_post_change(
+            &flow_model,
+            model_transition.iter().find(|model_transition| model_transition.id == next_flow_transition.next_flow_transition_id),
+            ctx,
+            funs,
+        )
+        .await?;
         Ok(FlowInstTransferResp {
             new_flow_state_id: next_flow_transition.next_flow_state_id,
             new_flow_state_name: next_flow_transition.next_flow_state_name,
@@ -502,18 +509,23 @@ impl FlowInstServ {
     }
 
     /// handling post change when the transition occurs
-    async fn do_post_change(current_model: &FlowModelDetailResp, transition_detail: Option<&FlowTransitionDetailResp>, ctx: &TardisContext, funs: &TardisFunsInst) -> TardisResult<()> {
+    async fn do_post_change(
+        current_model: &FlowModelDetailResp,
+        transition_detail: Option<&FlowTransitionDetailResp>,
+        ctx: &TardisContext,
+        funs: &TardisFunsInst,
+    ) -> TardisResult<()> {
         if let Some(transition_detail) = transition_detail {
             let post_changes = transition_detail.action_by_post_changes();
             for post_change in post_changes {
-                    match post_change {
-                        FlowTransitionActionChangeInfo::Var(change_info) => {
-                            
-                        },
-                        FlowTransitionActionChangeInfo::State(change_info) => {
-
-                        },
+                match post_change {
+                    FlowTransitionActionChangeInfo::Var(change_info) => {
+                        let _ = TardisFuns::web_client().post_obj_to_str("", &json!({}), None).await?;
                     }
+                    FlowTransitionActionChangeInfo::State(change_info) => {
+                        let _ = TardisFuns::web_client().post_obj_to_str("", &json!({}), None).await?;
+                    }
+                }
             }
         }
 
@@ -534,7 +546,11 @@ impl FlowInstServ {
         }
         if let Some(to_transition_detail) = to_transition_detail {
             if !to_transition_detail.action_by_pre_callback.is_empty() {
-                let callback_url = format!("{}?transion={}", to_transition_detail.action_by_pre_callback.as_str(), to_transition_detail.to_flow_state_name);
+                let callback_url = format!(
+                    "{}?transion={}",
+                    to_transition_detail.action_by_pre_callback.as_str(),
+                    to_transition_detail.to_flow_state_name
+                );
                 let _ = TardisFuns::web_client().get_to_str(&callback_url, None).await?;
             }
         }

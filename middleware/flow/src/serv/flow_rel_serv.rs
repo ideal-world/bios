@@ -33,6 +33,7 @@ impl FlowRelServ {
         end_timestamp: Option<i64>,
         ignore_exist_error: bool,
         to_is_outside: bool,
+        sort: Option<i64>,
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<()> {
@@ -54,7 +55,7 @@ impl FlowRelServ {
                 to_rbum_item_id: flow_state_id.to_string(),
                 to_own_paths: ctx.own_paths.to_string(),
                 to_is_outside,
-                ext: None,
+                ext: sort.map(|sort| sort.to_string()),
             },
             attrs: vec![],
             envs: if start_timestamp.is_some() || end_timestamp.is_some() {

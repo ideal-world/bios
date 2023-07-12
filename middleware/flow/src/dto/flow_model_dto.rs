@@ -173,6 +173,7 @@ pub struct FlowTemplateModelResp {
 #[derive(Serialize, Deserialize, Debug, Default, poem_openapi::Object)]
 pub struct FlowModelBindStateReq {
     pub state_id: String,
+    pub sort: i64,
 }
 
 #[derive(Serialize, Deserialize, Debug, Default, poem_openapi::Object)]

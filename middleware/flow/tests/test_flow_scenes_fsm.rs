@@ -61,7 +61,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
             &FlowModelUnbindStateReq { state_id: init_state_id.clone() },
         )
         .await;
-    let _: Void = client.post(&format!("/cc/model/{}/bind_state", &model_id), &FlowModelBindStateReq { state_id: init_state_id.clone() }).await;
+    let _: Void = client.post(&format!("/cc/model/{}/bind_state", &model_id), &FlowModelBindStateReq { state_id: init_state_id.clone(), sort:10 }).await;
     // get model detail
     let model_agg_old: FlowModelAggResp = client.get(&format!("/cc/model/{}", &model_id)).await;
     // Set initial state
@@ -96,7 +96,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
                     vars_collect: None,
                     action_by_pre_callback: None,
                     action_by_post_callback: None,
-                    action_by_post_changes:None,
+                    action_by_post_changes: None,
                 }]),
                 ..Default::default()
             },

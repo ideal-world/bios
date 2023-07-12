@@ -254,7 +254,7 @@ impl FlowModelServ {
                 vars_collect: transition.vars_collect,
                 action_by_pre_callback: transition.action_by_pre_callback,
                 action_by_post_callback: transition.action_by_post_callback,
-                action_by_post_changes:transition.action_by_post_changes,
+                action_by_post_changes: transition.action_by_post_changes,
             });
         }
         // add model
@@ -278,7 +278,8 @@ impl FlowModelServ {
         .await?;
 
         // add rel
-        for (state_name, _) in states {
+        for i in 0..states.len() {
+            let state_name = states[i].0;
             FlowRelServ::add_simple_rel(
                 &FlowRelKind::FlowModelState,
                 &model_id,
@@ -287,6 +288,7 @@ impl FlowModelServ {
                 None,
                 false,
                 false,
+                Some(i as i64),
                 funs,
                 ctx,
             )
@@ -589,9 +591,10 @@ impl FlowModelServ {
         .await?;
 
         // find rel state
-        let state_ids = FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelState, flow_model_id, Some(false), None, funs, ctx)
+        let state_ids = FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelState, flow_model_id, None, None, funs, ctx)
             .await?
             .iter()
+            .sorted_by_key(|rel| rel.ext.as_str().parse::<i64>().unwrap_or_default())
             .map(|rel| (rel.rel_id.clone(), rel.rel_name.clone()))
             .collect::<Vec<_>>();
         let mut states = Vec::new();
@@ -626,7 +629,6 @@ impl FlowModelServ {
     // Find model by tag and template id
     pub async fn get_models(tags: Vec<&str>, template_id: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<HashMap<String, FlowTemplateModelResp>> {
         let mut result = HashMap::new();
-        // TODO 提测暂时先用全局own_paths,后面以scope_level做判断
         let global_ctx = TardisContext {
             own_paths: "".to_string(),
             ..ctx.clone()
@@ -771,13 +773,14 @@ impl FlowModelServ {
         )
         .await?;
         // bind states
-        for state_id in FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelState, default_model_id, None, None, funs, &global_ctx)
+        let states = FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelState, default_model_id, None, None, funs, &global_ctx)
             .await?
             .iter()
             .map(|rel| rel.rel_id.clone())
-            .collect::<Vec<_>>()
-        {
-            FlowRelServ::add_simple_rel(&FlowRelKind::FlowModelState, &model_id, &state_id, None, None, false, true, funs, ctx).await?;
+            .collect::<Vec<_>>();
+        for i in 0..states.len() {
+            let state_id = &states[i];
+            FlowRelServ::add_simple_rel(&FlowRelKind::FlowModelState, &model_id, state_id, None, None, false, true, Some(i as i64), funs, ctx).await?;
         }
 
         Self::modify_item(
@@ -820,12 +823,17 @@ impl FlowModelServ {
         }
 
         // modify
-        Self::modify_item(&current_model.id, modify_req, funs, ctx).await?;
+        let mut modify_ctx = ctx.clone();
+        if current_model.scope_level == RbumScopeLevelKind::Root {
+            modify_ctx.own_paths = "".to_string();
+            modify_ctx.owner = "".to_string();
+        }
+        Self::modify_item(&current_model.id, modify_req, funs, &modify_ctx).await?;
 
         Ok(())
     }
 
-    pub async fn bind_state(flow_rel_kind: &FlowRelKind, flow_model_id: &str, flow_state_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    pub async fn bind_state(flow_rel_kind: &FlowRelKind, flow_model_id: &str, flow_state_id: &str, sort: i64, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let current_model = Self::get_item(
             flow_model_id,
             &FlowModelFilterReq {
@@ -848,7 +856,7 @@ impl FlowModelServ {
                 "500-mx-flow-internal-error",
             ));
         }
-        FlowRelServ::add_simple_rel(flow_rel_kind, flow_model_id, flow_state_id, None, None, false, true, funs, ctx).await?;
+        FlowRelServ::add_simple_rel(flow_rel_kind, flow_model_id, flow_state_id, None, None, false, true, Some(sort), funs, ctx).await?;
 
         Ok(())
     }
