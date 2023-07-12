@@ -6,7 +6,8 @@ use bios_mw_flow::dto::flow_inst_dto::{
     FlowInstTransferResp,
 };
 use bios_mw_flow::dto::flow_model_dto::{
-    FlowModelAggResp, FlowModelBindStateReq, FlowModelModifyReq, FlowModelSummaryResp, FlowModelUnbindStateReq, FlowTagKind, FlowTemplateModelResp,
+    FlowModelAggResp, FlowModelBindStateReq, FlowModelModifyReq, FlowModelSortStateInfoReq, FlowModelSortStatesReq, FlowModelSummaryResp, FlowModelUnbindStateReq, FlowTagKind,
+    FlowTemplateModelResp,
 };
 use bios_mw_flow::dto::flow_state_dto::FlowStateSummaryResp;
 use bios_mw_flow::dto::flow_transition_dto::FlowTransitionModifyReq;
@@ -61,7 +62,24 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
             &FlowModelUnbindStateReq { state_id: init_state_id.clone() },
         )
         .await;
-    let _: Void = client.post(&format!("/cc/model/{}/bind_state", &model_id), &FlowModelBindStateReq { state_id: init_state_id.clone(), sort:10 }).await;
+    let _: Void = client
+        .post(
+            &format!("/cc/model/{}/bind_state", &model_id),
+            &FlowModelBindStateReq {
+                state_id: init_state_id.clone(),
+                sort: 10,
+            },
+        )
+        .await;
+    // resort state
+    let mut sort_states = vec![];
+    for (i, state) in states.records.iter().enumerate() {
+        sort_states.push(FlowModelSortStateInfoReq {
+            state_id: state.id.clone(),
+            sort: i as i64 + 1,
+        });
+    }
+    let _: Void = client.post(&format!("/cc/model/{}/resort_state", &model_id), &FlowModelSortStatesReq { sort_states }).await;
     // get model detail
     let model_agg_old: FlowModelAggResp = client.get(&format!("/cc/model/{}", &model_id)).await;
     // Set initial state
@@ -75,7 +93,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
         )
         .await;
     // modify transitions
-    let trans_modify = model_agg_old.states.last().unwrap().transitions[0].clone();
+    let trans_modify = model_agg_old.states.first().unwrap().transitions[0].clone();
     let _: Void = client
         .patch(
             &format!("/cc/model/{}", model_id),

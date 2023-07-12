@@ -1,3 +1,4 @@
+use bios_basic::rbum::dto::rbum_rel_dto::RbumRelModifyReq;
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use bios_basic::rbum::{
     dto::{
@@ -156,5 +157,35 @@ impl FlowRelServ {
             &mock_ctx,
         )
         .await
+    }
+
+    pub async fn modify_simple_rel(
+        flow_rel_kind: &FlowRelKind,
+        flow_model_id: &str,
+        flow_state_id: &str,
+        modify_req: &mut RbumRelModifyReq,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<()> {
+        let rel_id = RbumRelServ::find_rel_ids(
+            &RbumRelFindReq {
+                tag: Some(flow_rel_kind.to_string()),
+                from_rbum_kind: Some(RbumRelFromKind::Item),
+                from_rbum_id: Some(flow_model_id.to_string()),
+                to_rbum_item_id: Some(flow_state_id.to_string()),
+                from_own_paths: None,
+                to_rbum_own_paths: None,
+            },
+            funs,
+            ctx,
+        )
+        .await?
+        .pop();
+        if let Some(rel_id) = rel_id {
+            RbumRelServ::modify_rbum(&rel_id, modify_req, funs, ctx).await?;
+        } else {
+            return Err(funs.err().conflict(&flow_rel_kind.to_string(), "modify_simple_rel", "rel not found", "404-rel-not-found"));
+        }
+        Ok(())
     }
 }

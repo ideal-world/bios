@@ -4,6 +4,7 @@ use bios_basic::rbum::{
     dto::{
         rbum_filer_dto::RbumBasicFilterReq,
         rbum_item_dto::{RbumItemKernelAddReq, RbumItemKernelModifyReq},
+        rbum_rel_dto::RbumRelModifyReq,
     },
     rbum_enumeration::RbumScopeLevelKind,
     serv::{
@@ -28,7 +29,8 @@ use crate::{
     domain::{flow_model, flow_transition},
     dto::{
         flow_model_dto::{
-            FlowModelAddReq, FlowModelAggResp, FlowModelDetailResp, FlowModelFilterReq, FlowModelModifyReq, FlowModelSummaryResp, FlowStateAggResp, FlowTemplateModelResp,
+            FlowModelAddReq, FlowModelAggResp, FlowModelDetailResp, FlowModelFilterReq, FlowModelModifyReq, FlowModelSortStatesReq, FlowModelSummaryResp, FlowStateAggResp,
+            FlowTemplateModelResp,
         },
         flow_state_dto::{FlowStateAddReq, FlowStateFilterReq, FlowSysStateKind},
         flow_transition_dto::{FlowTransitionAddReq, FlowTransitionDetailResp, FlowTransitionInitInfo, FlowTransitionModifyReq},
@@ -278,8 +280,7 @@ impl FlowModelServ {
         .await?;
 
         // add rel
-        for i in 0..states.len() {
-            let state_name = states[i].0;
+        for (i, (state_name, _)) in states.iter().enumerate() {
             FlowRelServ::add_simple_rel(
                 &FlowRelKind::FlowModelState,
                 &model_id,
@@ -595,13 +596,14 @@ impl FlowModelServ {
             .await?
             .iter()
             .sorted_by_key(|rel| rel.ext.as_str().parse::<i64>().unwrap_or_default())
-            .map(|rel| (rel.rel_id.clone(), rel.rel_name.clone()))
+            .map(|rel| (rel.rel_id.clone(), rel.rel_name.clone(), rel.ext.as_str().parse::<i64>().unwrap_or_default()))
             .collect::<Vec<_>>();
         let mut states = Vec::new();
-        for (state_id, state_name) in state_ids {
+        for (state_id, state_name, sort) in state_ids {
             let state_detail = FlowStateAggResp {
                 id: state_id.clone(),
                 name: state_name,
+                sort,
                 is_init: model_detail.init_state_id == state_id,
                 transitions: model_detail.transitions().into_iter().filter(|transition| transition.from_flow_state_id == state_id.clone()).collect_vec(),
             };
@@ -776,10 +778,10 @@ impl FlowModelServ {
         let states = FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelState, default_model_id, None, None, funs, &global_ctx)
             .await?
             .iter()
+            .sorted_by_key(|rel| rel.ext.as_str().parse::<i64>().unwrap_or_default())
             .map(|rel| rel.rel_id.clone())
             .collect::<Vec<_>>();
-        for i in 0..states.len() {
-            let state_id = &states[i];
+        for (i, state_id) in states.iter().enumerate() {
             FlowRelServ::add_simple_rel(&FlowRelKind::FlowModelState, &model_id, state_id, None, None, false, true, Some(i as i64), funs, ctx).await?;
         }
 
@@ -885,6 +887,26 @@ impl FlowModelServ {
             ));
         }
         FlowRelServ::delete_simple_rel(flow_rel_kind, flow_model_id, flow_state_id, funs, ctx).await?;
+        Ok(())
+    }
+
+    pub async fn resort_state(flow_rel_kind: &FlowRelKind, flow_model_id: &str, sort_req: &FlowModelSortStatesReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let sort_states = &sort_req.sort_states;
+        for sort_state in sort_states {
+            FlowRelServ::modify_simple_rel(
+                flow_rel_kind,
+                flow_model_id,
+                &sort_state.state_id,
+                &mut RbumRelModifyReq {
+                    tag: None,
+                    note: None,
+                    ext: Some(sort_state.sort.to_string()),
+                },
+                funs,
+                ctx,
+            )
+            .await?;
+        }
         Ok(())
     }
 }
