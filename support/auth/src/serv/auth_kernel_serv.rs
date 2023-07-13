@@ -257,9 +257,13 @@ async fn get_account_context(token: &str, account_id: &str, app_id: &str, config
             if !tenant_context.groups.is_empty() {
                 context.groups.extend(tenant_context.groups);
             }
+            if !context.own_paths.contains(&tenant_context.own_paths) {
+                return Err(TardisError::unauthorized(
+                    &format!("[Auth] Token [{token}] with App [{app_id}] is not legal"),
+                    "401-auth-req-token-or-app-not-exist",
+                ));
+            }
         }
-		// todo need to check?
-		// The own_paths of the App may not contain the own_paths of tenant.
     }
     Ok(context)
 }
