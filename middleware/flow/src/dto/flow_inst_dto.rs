@@ -9,7 +9,7 @@ use tardis::{
     web::poem_openapi,
 };
 
-use super::{flow_model_dto::FlowTagKind, flow_var_dto::FlowVarInfo};
+use super::{flow_model_dto::FlowTagKind, flow_var_dto::FlowVarInfo, flow_transition_dto::FlowTransitionDoubleCheckInfo};
 
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
 pub struct FlowInstStartReq {
@@ -110,6 +110,8 @@ pub struct FlowInstFindNextTransitionResp {
     pub next_flow_state_name: String,
 
     pub vars_collect: Option<Vec<FlowVarInfo>>,
+
+    pub double_check: Option<FlowTransitionDoubleCheckInfo>,
 }
 
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]

@@ -30,6 +30,8 @@ pub struct FlowTransitionAddReq {
     pub action_by_post_callback: Option<String>,
 
     pub action_by_post_changes: Vec<FlowTransitionActionChangeInfo>,
+
+    pub double_check: Option<FlowTransitionDoubleCheckInfo>,
 }
 
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
@@ -59,6 +61,8 @@ pub struct FlowTransitionModifyReq {
     pub action_by_post_callback: Option<String>,
 
     pub action_by_post_changes: Option<Vec<FlowTransitionActionChangeInfo>>,
+
+    pub double_check: Option<FlowTransitionDoubleCheckInfo>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, poem_openapi::Object, sea_orm::FromQueryResult)]
@@ -88,6 +92,8 @@ pub struct FlowTransitionDetailResp {
     pub action_by_post_callback: String,
 
     pub action_by_post_changes: Value,
+
+    pub double_check: Value,
 }
 
 impl FlowTransitionDetailResp {
@@ -114,6 +120,14 @@ impl FlowTransitionDetailResp {
             vec![]
         }
     }
+
+    pub fn double_check(&self) -> Option<FlowTransitionDoubleCheckInfo> {
+        if self.double_check.is_object() {
+            Some(TardisFuns::json.json_to_obj(self.double_check.clone()).unwrap_or_default())
+        } else {
+            None
+        }
+    }
 }
 
 impl From<FlowTransitionDetailResp> for FlowTransitionAddReq {
@@ -121,6 +135,7 @@ impl From<FlowTransitionDetailResp> for FlowTransitionAddReq {
         let guard_by_other_conds = value.guard_by_other_conds();
         let vars_collect = value.vars_collect();
         let action_by_post_changes = value.action_by_post_changes();
+        let double_check = value.double_check();
         FlowTransitionAddReq {
             from_flow_state_id: value.from_flow_state_id,
             to_flow_state_id: value.to_flow_state_id,
@@ -137,8 +152,15 @@ impl From<FlowTransitionDetailResp> for FlowTransitionAddReq {
             action_by_pre_callback: Some(value.action_by_pre_callback),
             action_by_post_callback: Some(value.action_by_post_callback),
             action_by_post_changes,
+            double_check,
         }
     }
+}
+
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug, Default, poem_openapi::Object)]
+pub struct FlowTransitionDoubleCheckInfo {
+    pub is_open: bool,
+    pub content: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug, poem_openapi::Union)]
@@ -160,7 +182,8 @@ pub struct FlowTransitionActionByVarChangeInfo {
 pub struct FlowTransitionActionByStateChangeInfo {
     pub obj_tag: String,
     pub describe: String,
-    pub change_conditions: Option<Vec<StateChangeCondition>>,
+    pub obj_current_state_id: Option<String>,
+    pub change_conditions: Option<StateChangeCondition>,
     pub changed_state_id: String,
 }
 
@@ -200,4 +223,6 @@ pub struct FlowTransitionInitInfo {
     pub action_by_post_callback: Option<String>,
 
     pub action_by_post_changes: Vec<FlowTransitionActionChangeInfo>,
+
+    pub double_check: Option<FlowTransitionDoubleCheckInfo>,
 }

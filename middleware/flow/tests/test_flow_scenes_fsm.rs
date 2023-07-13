@@ -10,7 +10,7 @@ use bios_mw_flow::dto::flow_model_dto::{
     FlowTemplateModelResp,
 };
 use bios_mw_flow::dto::flow_state_dto::FlowStateSummaryResp;
-use bios_mw_flow::dto::flow_transition_dto::FlowTransitionModifyReq;
+use bios_mw_flow::dto::flow_transition_dto::{FlowTransitionModifyReq, FlowTransitionDoubleCheckInfo};
 
 use tardis::basic::dto::TardisContext;
 
@@ -115,6 +115,10 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
                     action_by_pre_callback: None,
                     action_by_post_callback: None,
                     action_by_post_changes: None,
+                    double_check: Some(FlowTransitionDoubleCheckInfo {
+                        is_open: true,
+                        content: Some("再次确认该操作生效".to_string()),
+                    }),
                 }]),
                 ..Default::default()
             },

@@ -625,9 +625,10 @@ impl FlowInstServ {
             .map(|model_transition| FlowInstFindNextTransitionResp {
                 next_flow_transition_id: model_transition.id.to_string(),
                 next_flow_transition_name: model_transition.name.to_string(),
-                vars_collect: model_transition.vars_collect(),
                 next_flow_state_id: model_transition.to_flow_state_id.to_string(),
                 next_flow_state_name: model_transition.to_flow_state_name.to_string(),
+                vars_collect: model_transition.vars_collect(),
+                double_check: model_transition.double_check(),
             })
             .collect_vec();
         let state_and_next_transitions = FlowInstFindStateAndTransitionsResp {

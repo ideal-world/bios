@@ -71,10 +71,6 @@ pub struct Model {
     /// TODO Vec<FlowVarInfo>
     pub vars_collect: Json,
 
-    /// rear action config / 关于后置动作的配置
-    /// TODO FlowRearActionInfo
-    // pub rear_action: Json,
-
     /// External interface to be called when entering this transition
     /// 进入此流转时，需要调用的外部接口
     ///
@@ -88,6 +84,10 @@ pub struct Model {
 
     /// TODO Vec<FlowTransitionActionChangeInfo>
     pub action_by_post_changes: Json,
+
+    /// Secondary confirmation pop-up / 关于二次确认弹窗的配置
+    /// TODO FlowTransitionDoubleCheckInfo
+    pub double_check: Json,
 
     pub rel_flow_model_id: String,
 
