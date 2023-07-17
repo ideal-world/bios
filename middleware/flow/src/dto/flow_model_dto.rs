@@ -159,6 +159,7 @@ pub struct FlowStateAggResp {
     pub id: String,
     pub name: String,
     pub is_init: bool,
+    pub sort: i64,
     pub transitions: Vec<FlowTransitionDetailResp>,
 }
 
@@ -173,11 +174,23 @@ pub struct FlowTemplateModelResp {
 #[derive(Serialize, Deserialize, Debug, Default, poem_openapi::Object)]
 pub struct FlowModelBindStateReq {
     pub state_id: String,
+    pub sort: i64,
 }
 
 #[derive(Serialize, Deserialize, Debug, Default, poem_openapi::Object)]
 pub struct FlowModelUnbindStateReq {
     pub state_id: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, poem_openapi::Object)]
+pub struct FlowModelSortStatesReq {
+    pub sort_states: Vec<FlowModelSortStateInfoReq>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, poem_openapi::Object)]
+pub struct FlowModelSortStateInfoReq {
+    pub state_id: String,
+    pub sort: i64,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, sea_orm::strum::EnumIter, sea_orm::DeriveActiveEnum)]

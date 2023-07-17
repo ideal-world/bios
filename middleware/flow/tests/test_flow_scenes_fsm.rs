@@ -6,10 +6,11 @@ use bios_mw_flow::dto::flow_inst_dto::{
     FlowInstTransferResp,
 };
 use bios_mw_flow::dto::flow_model_dto::{
-    FlowModelAggResp, FlowModelBindStateReq, FlowModelModifyReq, FlowModelSummaryResp, FlowModelUnbindStateReq, FlowTagKind, FlowTemplateModelResp,
+    FlowModelAggResp, FlowModelBindStateReq, FlowModelModifyReq, FlowModelSortStateInfoReq, FlowModelSortStatesReq, FlowModelSummaryResp, FlowModelUnbindStateReq, FlowTagKind,
+    FlowTemplateModelResp,
 };
 use bios_mw_flow::dto::flow_state_dto::FlowStateSummaryResp;
-use bios_mw_flow::dto::flow_transition_dto::FlowTransitionModifyReq;
+use bios_mw_flow::dto::flow_transition_dto::{FlowTransitionModifyReq, FlowTransitionDoubleCheckInfo};
 
 use tardis::basic::dto::TardisContext;
 
@@ -61,7 +62,24 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
             &FlowModelUnbindStateReq { state_id: init_state_id.clone() },
         )
         .await;
-    let _: Void = client.post(&format!("/cc/model/{}/bind_state", &model_id), &FlowModelBindStateReq { state_id: init_state_id.clone() }).await;
+    let _: Void = client
+        .post(
+            &format!("/cc/model/{}/bind_state", &model_id),
+            &FlowModelBindStateReq {
+                state_id: init_state_id.clone(),
+                sort: 10,
+            },
+        )
+        .await;
+    // resort state
+    let mut sort_states = vec![];
+    for (i, state) in states.records.iter().enumerate() {
+        sort_states.push(FlowModelSortStateInfoReq {
+            state_id: state.id.clone(),
+            sort: i as i64 + 1,
+        });
+    }
+    let _: Void = client.post(&format!("/cc/model/{}/resort_state", &model_id), &FlowModelSortStatesReq { sort_states }).await;
     // get model detail
     let model_agg_old: FlowModelAggResp = client.get(&format!("/cc/model/{}", &model_id)).await;
     // Set initial state
@@ -75,7 +93,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
         )
         .await;
     // modify transitions
-    let trans_modify = model_agg_old.states.last().unwrap().transitions[0].clone();
+    let trans_modify = model_agg_old.states.first().unwrap().transitions[0].clone();
     let _: Void = client
         .patch(
             &format!("/cc/model/{}", model_id),
@@ -96,6 +114,11 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
                     vars_collect: None,
                     action_by_pre_callback: None,
                     action_by_post_callback: None,
+                    action_by_post_changes: None,
+                    double_check: Some(FlowTransitionDoubleCheckInfo {
+                        is_open: true,
+                        content: Some("再次确认该操作生效".to_string()),
+                    }),
                 }]),
                 ..Default::default()
             },
@@ -128,8 +151,8 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
     })?;
     let next_transitions: Vec<FlowInstFindNextTransitionResp> = client.put(&format!("/cc/inst/{}/transition/next", inst_id), &FlowInstFindNextTransitionsReq { vars: None }).await;
     assert_eq!(next_transitions.len(), 2);
-    assert_eq!(next_transitions[0].next_flow_transition_name, "关闭-modify");
-    assert_eq!(next_transitions[1].next_flow_transition_name, "开始");
+    assert_eq!(next_transitions[0].next_flow_transition_name, "关闭");
+    assert_eq!(next_transitions[1].next_flow_transition_name, "开始-modify");
     assert_eq!(next_transitions[1].vars_collect.as_ref().unwrap().len(), 2);
     // Find the state and transfer information of the specified instances in batch
     let state_and_next_transitions: Vec<FlowInstFindStateAndTransitionsResp> = client
@@ -143,8 +166,8 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
         .await;
     assert_eq!(state_and_next_transitions.len(), 1);
     assert_eq!(state_and_next_transitions[0].current_flow_state_name, "待开始");
-    assert_eq!(state_and_next_transitions[0].next_flow_transitions[0].next_flow_transition_name, "关闭-modify");
-    assert_eq!(state_and_next_transitions[0].next_flow_transitions[1].next_flow_transition_name, "开始");
+    assert_eq!(state_and_next_transitions[0].next_flow_transitions[0].next_flow_transition_name, "关闭");
+    assert_eq!(state_and_next_transitions[0].next_flow_transitions[1].next_flow_transition_name, "开始-modify");
     assert_eq!(state_and_next_transitions[0].next_flow_transitions[1].vars_collect.as_ref().unwrap().len(), 2);
     // Transfer task status
     let transfer: FlowInstTransferResp = client

@@ -1,3 +1,4 @@
+use bios_basic::rbum::dto::rbum_rel_dto::RbumRelModifyReq;
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use bios_basic::rbum::{
     dto::{
@@ -33,6 +34,7 @@ impl FlowRelServ {
         end_timestamp: Option<i64>,
         ignore_exist_error: bool,
         to_is_outside: bool,
+        sort: Option<i64>,
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<()> {
@@ -54,7 +56,7 @@ impl FlowRelServ {
                 to_rbum_item_id: flow_state_id.to_string(),
                 to_own_paths: ctx.own_paths.to_string(),
                 to_is_outside,
-                ext: None,
+                ext: sort.map(|sort| sort.to_string()),
             },
             attrs: vec![],
             envs: if start_timestamp.is_some() || end_timestamp.is_some() {
@@ -155,5 +157,35 @@ impl FlowRelServ {
             &mock_ctx,
         )
         .await
+    }
+
+    pub async fn modify_simple_rel(
+        flow_rel_kind: &FlowRelKind,
+        flow_model_id: &str,
+        flow_state_id: &str,
+        modify_req: &mut RbumRelModifyReq,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<()> {
+        let rel_id = RbumRelServ::find_rel_ids(
+            &RbumRelFindReq {
+                tag: Some(flow_rel_kind.to_string()),
+                from_rbum_kind: Some(RbumRelFromKind::Item),
+                from_rbum_id: Some(flow_model_id.to_string()),
+                to_rbum_item_id: Some(flow_state_id.to_string()),
+                from_own_paths: None,
+                to_rbum_own_paths: None,
+            },
+            funs,
+            ctx,
+        )
+        .await?
+        .pop();
+        if let Some(rel_id) = rel_id {
+            RbumRelServ::modify_rbum(&rel_id, modify_req, funs, ctx).await?;
+        } else {
+            return Err(funs.err().conflict(&flow_rel_kind.to_string(), "modify_simple_rel", "rel not found", "404-rel-not-found"));
+        }
+        Ok(())
     }
 }
