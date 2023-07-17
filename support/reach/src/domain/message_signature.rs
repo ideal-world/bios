@@ -1,10 +1,10 @@
-use crate::dto::{ReachMsgSignatureAddReq, ReachMsgSignatureModifyReq, ReachStatusKind};
+use crate::dto::{ReachMsgSignatureAddReq, ReachMsgSignatureModifyReq};
 use tardis::basic::dto::TardisContext;
 use tardis::chrono::{self, DateTime, Utc};
 use tardis::db::reldb_client::TardisActiveModel;
 use tardis::db::sea_orm;
-use tardis::db::sea_orm::prelude::Uuid;
-use tardis::db::sea_orm::sea_query::{ColumnDef, Index, IndexCreateStatement, Table, TableCreateStatement};
+
+use tardis::db::sea_orm::sea_query::{ColumnDef, Table, TableCreateStatement};
 use tardis::db::sea_orm::*;
 
 use crate::dto::ReachChannelKind;

@@ -26,9 +26,9 @@ public class ReachMsgSendReq {
     }
 } */
 
+use super::*;
 use std::collections::HashMap;
 use tardis::web::poem_openapi;
-use super::*;
 
 /// 用户触达消息发送请求
 #[derive(Debug, poem_openapi::Object)]

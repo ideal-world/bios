@@ -1,14 +1,12 @@
-use bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind;
-
 use tardis::basic::dto::TardisContext;
 use tardis::chrono::{DateTime, Utc};
 use tardis::db::reldb_client::TardisActiveModel;
 use tardis::db::sea_orm;
-use tardis::db::sea_orm::prelude::Uuid;
-use tardis::db::sea_orm::sea_query::{ColumnDef, Index, IndexCreateStatement, Table, TableCreateStatement};
+
+use tardis::db::sea_orm::sea_query::{ColumnDef, Table, TableCreateStatement};
 use tardis::db::sea_orm::*;
 
-use crate::dto::{ReachChannelKind, ReachLevelKind, ReachMessageTemplateAddReq, ReachMessageTemplateModifyReq, ReachReceiveKind, ReachTemplateKind, ReachTimeoutStrategyKind};
+use crate::dto::{ReachChannelKind, ReachLevelKind, ReachMessageTemplateAddReq, ReachMessageTemplateModifyReq, ReachTemplateKind, ReachTimeoutStrategyKind};
 use crate::fill_by_mod_req;
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
 #[sea_orm(table_name = "reach_msg_template")]
@@ -166,11 +164,9 @@ impl TardisActiveModel for ActiveModel {
         builder
             .table(Entity.table_ref())
             .if_not_exists()
-            .col(ColumnDef::new(Column::Id).not_null().uuid().primary_key())
+            .col(ColumnDef::new(Column::Id).not_null().string().primary_key())
             .col(ColumnDef::new(Column::OwnPaths).not_null().string())
             .col(ColumnDef::new(Column::Owner).not_null().string())
-            .col(ColumnDef::new(Column::CreateTime).timestamp())
-            .col(ColumnDef::new(Column::UpdateTime).timestamp())
             .col(ColumnDef::new(Column::ScopeLevel).not_null().small_integer())
             .col(ColumnDef::new(Column::Code).not_null().string())
             .col(ColumnDef::new(Column::Name).not_null().string())

@@ -1,41 +1,29 @@
-use crate::domain::reach_message;
+use crate::domain::{message, message_template};
 use crate::dto::*;
 use crate::serv::message_signature::ReachMessageSignatureServ;
 use crate::serv::message_template::ReachMessageTemplateServ;
-use bios_basic::rbum::dto::rbum_domain_dto::RbumDomainDetailResp;
-use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
+use bios_basic::rbum::serv::rbum_crud_serv::{RbumCrudOperation, RbumCrudQueryPackage};
 use tardis::async_trait::async_trait;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::result::TardisResult;
-use tardis::db::sea_orm::sea_query::SelectStatement;
+use tardis::db::reldb_client::TardisActiveModel;
+use tardis::db::sea_orm::sea_query::{Expr, Query, SelectStatement};
 use tardis::db::sea_orm::*;
 use tardis::TardisFunsInst;
-use tardis::{log, TardisFuns};
-
-use bios_basic::rbum::dto::rbum_cert_conf_dto::{RbumCertConfAddReq, RbumCertConfDetailResp, RbumCertConfIdAndExtResp, RbumCertConfModifyReq, RbumCertConfSummaryResp};
-use bios_basic::rbum::dto::rbum_cert_dto::{RbumCertAddReq, RbumCertDetailResp, RbumCertModifyReq, RbumCertSummaryResp};
-use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumCertConfFilterReq, RbumCertFilterReq};
-use bios_basic::rbum::rbum_config::RbumConfigApi;
-use bios_basic::rbum::rbum_enumeration::{RbumCertConfStatusKind, RbumCertRelKind, RbumCertStatusKind};
-use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudQueryPackage;
-use bios_basic::rbum::serv::rbum_domain_serv::RbumDomainServ;
-use bios_basic::rbum::serv::rbum_item_serv::RbumItemServ;
-use bios_basic::rbum::serv::rbum_rel_serv::RbumRelServ;
-use bios_basic::rbum::serv::rbum_set_serv::RbumSetServ;
 
 pub struct ReachMessageServ;
 #[async_trait]
-impl RbumCrudOperation<reach_message::ActiveModel, ReachMessageAddReq, ReachMessageModifyReq, ReachMessageSummaryResp, ReachMessageDetailResp, ReachMessageFilterReq>
+impl RbumCrudOperation<message::ActiveModel, ReachMessageAddReq, ReachMessageModifyReq, ReachMessageSummaryResp, ReachMessageDetailResp, ReachMessageFilterReq>
     for ReachMessageServ
 {
     fn get_table_name() -> &'static str {
-        reach_message::Entity.table_name()
+        message::Entity.table_name()
     }
-    async fn package_add(add_req: &ReachMessageAddReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<reach_message::ActiveModel> {
-        Ok(reach_message::ActiveModel {
+    async fn package_add(add_req: &ReachMessageAddReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<message::ActiveModel> {
+        Ok(message::ActiveModel {
             from_res: Set(add_req.from_res.to_string()),
-            rel_reach_channel: Set(add_req.rel_reach_channel.to_string()),
-            receive_kind: Set(add_req.receive_kind.to_string()),
+            rel_reach_channel: Set(add_req.rel_reach_channel),
+            receive_kind: Set(add_req.receive_kind),
             to_res_ids: Set(add_req.to_res_ids.to_string()),
             rel_reach_msg_signature_id: Set(add_req.rel_reach_msg_signature_id.to_string()),
             rel_reach_msg_template_id: Set(add_req.rel_reach_msg_template_id.to_string()),
@@ -51,12 +39,35 @@ impl RbumCrudOperation<reach_message::ActiveModel, ReachMessageAddReq, ReachMess
         Ok(())
     }
 
-    async fn package_modify(id: &str, modify_req: &ReachMessageModifyReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<reach_message::ActiveModel> {
-        todo!();
+    async fn package_modify(id: &str, modify_req: &ReachMessageModifyReq, _: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<message::ActiveModel> {
+        let mut model = message::ActiveModel::from(modify_req);
+        model.id = Set(id.to_string());
+        model.fill_ctx(ctx, true);
+        Ok(model)
     }
 
     async fn package_query(is_detail: bool, filter: &ReachMessageFilterReq, _: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<SelectStatement> {
-        todo!();
-    }
+        let mut query = Query::select();
 
+        query.left_join(
+            message_template::Entity,
+            Expr::col((message_template::Entity, message_template::Column::Id)).equals((message::Entity, message::Column::RelReachMsgTemplateId)),
+        );
+        if let Some(status) = filter.reach_status {
+            query.and_where(message::Column::ReachStatus.eq(status));
+        }
+        query.with_filter(Self::get_table_name(), &filter.rbum_item_basic_filter_req.basic, is_detail, false, ctx);
+        Ok(query)
+    }
+}
+
+impl ReachMessageServ {
+    pub async fn resend(id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let mut modify_req = ReachMessageModifyReq {
+            reach_status: Some(ReachStatusKind::Pending),
+            ..Default::default()
+        };
+        Self::modify_rbum(id, &mut modify_req, funs, ctx).await?;
+        Ok(())
+    }
 }

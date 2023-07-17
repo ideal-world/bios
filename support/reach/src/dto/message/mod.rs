@@ -6,44 +6,23 @@ mod signature;
 pub use signature::*;
 mod template;
 pub use template::*;
-use std::collections::HashMap;
 
-use bios_basic::rbum::dto::{
-    rbum_filer_dto::RbumItemBasicFilterReq,
-    rbum_item_dto::RbumItemAddReq,
-    rbum_safe_dto::{RbumSafeDetailResp, RbumSafeSummaryResp},
+use bios_basic::rbum::dto::{rbum_filer_dto::RbumItemBasicFilterReq, rbum_item_dto::RbumItemAddReq};
+use serde::{Deserialize, Serialize};
+use tardis::{
+    chrono::{DateTime, Utc},
+    db::sea_orm,
+    web::poem_openapi,
 };
-use serde::Serialize;
-use tardis::{regex::Regex, web::poem_openapi, db::sea_orm::{self, TryGetable}, chrono::{DateTime, Utc}, basic::result::TardisResult};
 
 use super::*;
 
-lazy_static::lazy_static! {
-    static ref EXTRACT_R: Regex = Regex::new(r"(\[^}]+?})").unwrap();
-}
-const DEFUALT_MAXLEN: usize = 20;
-fn content_replace<const MAXLEN: usize>(content: &str, values: &HashMap<String, String>) -> String {
-    let mut new_content = content.to_string();
-    let matcher = EXTRACT_R.find_iter(content);
-    for mat in matcher {
-        let key = &content[mat.start() + 1..mat.end() - 1];
-        if let Some(value) = values.get(key) {
-            let replace_value = if value.len() > MAXLEN {
-                format!("{}...", &value[(MAXLEN - 3)..])
-            } else {
-                value.to_string()
-            };
-            new_content = new_content.replacen(mat.as_str(), &replace_value, 1);
-        }
-    }
-    new_content
-}
-
 // Request
 
-#[derive(Debug, poem_openapi::Object)]
+#[derive(Debug, poem_openapi::Object, Deserialize)]
 pub struct ReachMessageAddReq {
     #[oai(flatten)]
+    #[serde(flatten)]
     pub rbum_item_add_req: RbumItemAddReq,
     /// 发件人
     #[oai(validator(max_length = "2000"))]
@@ -67,34 +46,34 @@ pub struct ReachMessageAddReq {
     pub content_replace: String,
 }
 
-#[derive(Debug, poem_openapi::Object)]
+#[derive(Debug, poem_openapi::Object, Default)]
 pub struct ReachMessageModifyReq {
     /// 发件人
     #[oai(validator(max_length = "2000"))]
-    from_res: String,
+    pub from_res: Option<String>,
     /// 关联的触达通道
-    rel_reach_channel: Option<ReachChannelKind>,
+    pub rel_reach_channel: Option<ReachChannelKind>,
     /// 用户触达接收类型
-    receive_kind: ReachReceiveKind,
+    pub receive_kind: Option<ReachReceiveKind>,
     /// 接收主体，分号分隔
     #[oai(validator(max_length = "2000"))]
-    to_res_ids: String,
+    pub to_res_ids: Option<String>,
     /// 用户触达签名Id
     #[oai(validator(max_length = "255"))]
-    rel_reach_msg_signature_id: String,
+    pub rel_reach_msg_signature_id: Option<String>,
     /// 用户触达模板Id
     #[oai(validator(max_length = "255"))]
-    rel_reach_msg_template_id: String,
+    pub rel_reach_msg_template_id: Option<String>,
     /// 触达状态
-    reach_status: ReachStatusKind,
+    pub reach_status: Option<ReachStatusKind>,
     /// 触达状态
-    content_replace: HashMap<String, String>,
+    pub content_replace: Option<String>,
 }
-#[derive(Debug, poem_openapi::Object)]
+#[derive(Debug, poem_openapi::Object, Default)]
 pub struct ReachMessageFilterReq {
     #[oai(flatten)]
-    rbum_item_basic_filter_req: RbumItemBasicFilterReq,
-    reach_status: Option<ReachStatusKind>,
+    pub rbum_item_basic_filter_req: RbumItemBasicFilterReq,
+    pub reach_status: Option<ReachStatusKind>,
 }
 
 #[derive(Debug, poem_openapi::Object, Serialize, sea_orm::FromQueryResult)]
@@ -120,8 +99,6 @@ pub struct ReachMessageSummaryResp {
     pub template_content: String,
     pub template_name: String,
 }
-
-
 
 #[derive(Debug, poem_openapi::Object, Serialize, sea_orm::FromQueryResult)]
 pub struct ReachMessageDetailResp {

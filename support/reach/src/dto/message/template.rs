@@ -1,8 +1,5 @@
-use bios_basic::rbum::dto::{
-    rbum_filer_dto::RbumBasicFilterReq,
-    rbum_safe_dto::{RbumSafeDetailResp, RbumSafeSummaryResp},
-};
-use serde::Serialize;
+use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
+use serde::{Deserialize, Serialize};
 use tardis::{
     basic::{error::TardisError, result::TardisResult},
     chrono::{DateTime, Utc},
@@ -10,12 +7,9 @@ use tardis::{
     web::poem_openapi,
 };
 
-use crate::{
-    client::sms::{SendSmsRequest, SmsContent},
-    dto::*,
-};
+use crate::{client::sms::SendSmsRequest, dto::*};
 
-#[derive(Debug, poem_openapi::Object)]
+#[derive(Debug, poem_openapi::Object, Deserialize)]
 pub struct ReachMessageTemplateAddReq {
     pub own_paths: String,
     pub owner: String,
@@ -77,7 +71,7 @@ pub struct ReachMessageTemplateAddReq {
     pub sms_from: String,
 }
 
-#[derive(Debug, poem_openapi::Object)]
+#[derive(Debug, poem_openapi::Object, Deserialize)]
 pub struct ReachMessageTemplateModifyReq {
     /// 用户触达等级类型
     pub scope_level: Option<i16>,
@@ -139,6 +133,7 @@ pub struct ReachMessageTemplateFilterReq {
     pub rel_reach_channel: Option<ReachChannelKind>,
     pub level_kind: Option<ReachLevelKind>,
     pub kind: Option<ReachTemplateKind>,
+    pub rel_reach_verify_code_strategy_id: Option<String>,
 }
 
 #[derive(Debug, poem_openapi::Object, Serialize, sea_orm::FromQueryResult)]
@@ -257,6 +252,7 @@ pub struct ReachMessageTemplateDetailResp {
     #[oai(validator(max_length = "255"))]
     pub sms_from: Option<String>,
 }
+
 impl ReachMessageTemplateDetailResp {
     pub fn create_send_sms_request<'a>(&'a self, to: &'a str, content: &'a ContentReplace) -> TardisResult<SendSmsRequest<'a>> {
         Ok(SendSmsRequest {

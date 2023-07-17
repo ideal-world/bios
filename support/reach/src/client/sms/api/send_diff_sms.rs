@@ -1,5 +1,9 @@
 use serde::Serialize;
-use tardis::{basic::result::TardisResult, web::reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION}};
+use tardis::{
+    basic::result::TardisResult,
+    url::Url,
+    web::reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION},
+};
 
 use crate::client::sms::{model::*, SmsClient};
 
@@ -15,17 +19,15 @@ pub struct SmsClientBatchDiffSendRequest<'r> {
 
 impl<'r> SmsClientBatchDiffSendRequest<'r> {
     pub fn new(from: &'r str) -> Self {
-        Self {
-            from,
-            ..Default::default()
-        }
+        Self { from, ..Default::default() }
     }
 }
 
 impl SmsClient {
-    pub async fn send_diff_sms(&self, request: SmsClientBatchDiffSendRequest<'_>) -> TardisResult<SmsResponse<Vec<SmsId>>> {
+    pub async fn send_diff_sms(&self, mut request: SmsClientBatchDiffSendRequest<'_>) -> TardisResult<SmsResponse<Vec<SmsId>>> {
         const PATH: &str = "sms/batchSendDiffSms/v1";
         let mut headers = HeaderMap::new();
+        request.status_callback = request.status_callback.or(self.status_callback.as_ref().map(Url::as_str));
         headers.insert(AUTHORIZATION, HeaderValue::from_static(Self::AUTH_WSSE_HEADER_VALUE));
         self.add_wsse_headers_to(&mut headers)?;
         let mut url = self.base_url.clone();

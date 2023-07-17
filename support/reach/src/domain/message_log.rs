@@ -1,67 +1,13 @@
-/* /**
- * 用户触达消息日志
- *
- * TO ES
- *
- * @author gudaoxuri
- */
-@Entity
-@Table(name = "reach_msg_log")
-@Data
-@SuperBuilder
-@NoArgsConstructor
-@AllArgsConstructor
-public class ReachMsgLog extends RbumBasicEntity {
-
-    @Column(nullable = false, columnDefinition = "varchar(255) comment '关联接收人Id'")
-    private String relAccountId;
-
-    @Column(nullable = false, columnDefinition = "varchar(255) comment '免扰时间，HH::MM-HH:MM'")
-    private String dndTime;
-
-    @Column(nullable = false, columnDefinition = "varchar(255) comment '免扰策略'")
-    @Enumerated(EnumType.STRING)
-    private ReachDndStrategyKind dndStrategy;
-
-    /**
-     * 对于 {@link ReachChannelKind#INBOX} 类型，在开始时间之前不会显示，
-     * 对其它类型而言如存在开始时间且视为定时消息的发送时间
-     */
-    @Column(columnDefinition = "timestamp null comment '开始时间'")
-    private Date startTime;
-
-    /**
-     * 对于 {@link ReachChannelKind#INBOX} 类型，在结束时间之后不会显示
-     */
-    @Column(columnDefinition = "timestamp null comment '结束时间'")
-    private Date endTime;
-
-    @Column(columnDefinition = "timestamp default CURRENT_TIMESTAMP comment '完成时间'",
-            insertable = false, updatable = false)
-    protected Date finishTime;
-
-    @Column(nullable = false, columnDefinition = "tinyint(1) comment '是否失败'")
-    private Boolean failure;
-
-    @Column(nullable = false, columnDefinition = "varchar(2000) comment '失败原因'")
-    private String failMessage;
-
-    @Column(nullable = false,
-            columnDefinition = "varchar(255) comment '用户触达消息Id'")
-    private String relReachMessageId;
-
-} */
-
 use tardis::basic::dto::TardisContext;
 use tardis::chrono::{self, DateTime, Utc};
 use tardis::db::reldb_client::TardisActiveModel;
 use tardis::db::sea_orm;
-use tardis::db::sea_orm::prelude::Uuid;
-use tardis::db::sea_orm::sea_query::{ColumnDef, Index, IndexCreateStatement, Table, TableCreateStatement};
+
+use tardis::db::sea_orm::sea_query::{ColumnDef, Table, TableCreateStatement};
 use tardis::db::sea_orm::*;
 
-use crate::dto::{ReachMsgLogAddReq, ReachStatusKind, ReachDndStrategyKind, ReachMsgLogModifyReq};
-use crate::{fill_by_add_req, fill_by_mod_req};
+use crate::dto::{ReachDndStrategyKind, ReachMsgLogAddReq, ReachMsgLogModifyReq};
+use crate::fill_by_add_req;
 #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]
 #[sea_orm(table_name = "reach_msg_log")]
 pub struct Model {
@@ -118,6 +64,7 @@ impl From<&ReachMsgLogAddReq> for ActiveModel {
                 rel_reach_message_id,
             } model
         );
+
         model
     }
 }

@@ -5,7 +5,7 @@ use std::ops::{Deref, DerefMut};
 use std::str::FromStr;
 
 use tardis::basic::error::TardisError;
-use tardis::basic::result::TardisResult;
+
 use tardis::regex::Regex;
 
 /// ContentReplace

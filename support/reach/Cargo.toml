@@ -19,10 +19,8 @@ path = "src/lib.rs"
 [dependencies]
 serde.workspace = true
 lazy_static.workspace = true
-tardis = { workspace = true, features = ["reldb-postgres", "web-server"] }
+tardis = { workspace = true, features = ["reldb-postgres", "web-server", "mail"] }
 bios-basic = { path = "../../basic", features = ["default"] }
-strum = "0.25"
-strum_macros = "0.25"
 [dev-dependencies]
 tardis = { workspace = true, features = ["test"] }
 

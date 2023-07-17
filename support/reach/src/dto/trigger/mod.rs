@@ -1,5 +1,10 @@
 mod global_config_agg;
+pub use global_config_agg::*;
 mod global_config;
+pub use global_config::*;
 mod instance_config_agg;
+pub use instance_config_agg::*;
 mod instance_config;
+pub use instance_config::*;
 mod scene;
+pub use scene::*;

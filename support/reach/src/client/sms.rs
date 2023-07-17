@@ -1,23 +1,12 @@
-use std::{
-    collections::{HashMap, HashSet},
-    marker::PhantomData,
-    time::SystemTime,
-};
-
-use serde::{Deserialize, Serialize};
 use tardis::{
-    basic::{error::TardisError, result::TardisResult},
+    basic::result::TardisResult,
     chrono::Utc,
-    log,
     rand::random,
-    regex::Regex,
-    serde_json,
     url::Url,
     web::reqwest::{
-        header::{HeaderMap, HeaderValue, AUTHORIZATION, CONTENT_TYPE},
+        header::{HeaderMap, HeaderValue, AUTHORIZATION},
         Client,
     },
-    TardisFuns,
 };
 mod api;
 pub use api::*;
@@ -29,6 +18,7 @@ pub struct SmsClient {
     pub app_key: String,
     pub app_secret: String,
     pub base_url: Url,
+    pub status_callback: Option<Url>,
 }
 
 impl SmsClient {
@@ -56,19 +46,16 @@ impl SmsClient {
         new_url.set_path(&new_path);
         new_url
     }
-    pub fn new(base_url: Url, app_key: impl Into<String>, app_secret: impl Into<String>) -> TardisResult<Self> {
+    pub fn new(base_url: Url, app_key: impl Into<String>, app_secret: impl Into<String>, status_callback: Option<Url>) -> Self {
         let app_key: String = app_key.into();
         let app_secret: String = app_secret.into();
-        let client = SmsClient {
+
+        SmsClient {
             inner: Default::default(),
             base_url,
             app_key,
             app_secret,
-        };
-        Ok(client)
+            status_callback,
+        }
     }
 }
-
-
-
-

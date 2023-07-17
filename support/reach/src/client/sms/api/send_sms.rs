@@ -1,9 +1,5 @@
 use serde::Serialize;
-use tardis::{
-    basic::result::TardisResult,
-    serde_json,
-    web::reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION},
-};
+use tardis::{basic::result::TardisResult, serde_json, url::Url, web::reqwest::header::HeaderMap};
 
 use crate::client::sms::{model::*, SmsClient};
 
@@ -34,8 +30,9 @@ impl<'r> SendSmsRequest<'r> {
 }
 
 impl SmsClient {
-    pub async fn send_sms(&self, request: SendSmsRequest<'_>) -> TardisResult<SmsResponse<Vec<SmsId>>> {
+    pub async fn send_sms(&self, mut request: SendSmsRequest<'_>) -> TardisResult<SmsResponse<Vec<SmsId>>> {
         const PATH: &str = "sms/batchSendSms/v1";
+        request.status_callback = request.status_callback.or(self.status_callback.as_ref().map(Url::as_str));
         let mut headers = HeaderMap::new();
         self.add_wsse_headers_to(&mut headers)?;
         let url = self.get_url(PATH);

@@ -1,8 +1,11 @@
-pub mod reach_message;
-pub mod reach_message_log;
-pub mod reach_message_signature;
-pub mod reach_message_template;
-pub mod reach_trigger_global_config;
+pub mod message;
+pub mod message_log;
+pub mod message_signature;
+pub mod message_template;
+pub mod reach_vcode_strategy;
+pub mod trigger_global_config;
+pub mod trigger_instance_config;
+pub mod trigger_scene;
 #[macro_export]
 macro_rules! fill_by_mod_req {
     ($req:expr => {
@@ -17,8 +20,8 @@ macro_rules! fill_by_mod_req {
     };
     /*
         clone or copy a reference value
-    */ 
-    // deref to copy 
+    */
+    // deref to copy
     (@clone $value: expr, Copy) => {
         *$value
     };
@@ -44,8 +47,8 @@ macro_rules! fill_by_add_req {
     };
     /*
         clone or copy a reference value
-    */ 
-    // deref to copy 
+    */
+    // deref to copy
     (@clone $value: expr, Copy) => {
         *$value
     };

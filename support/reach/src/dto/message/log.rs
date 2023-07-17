@@ -1,13 +1,10 @@
-use bios_basic::rbum::{
-    dto::{rbum_item_dto::{RbumItemAddReq, RbumItemKernelAddReq}, rbum_filer_dto::RbumItemBasicFilterReq, rbum_safe_dto::RbumSafeSummaryResp},
-    rbum_enumeration::RbumScopeLevelKind,
-};
+use bios_basic::rbum::dto::{rbum_filer_dto::RbumItemBasicFilterReq, rbum_item_dto::RbumItemAddReq};
 
 use serde::Serialize;
 use tardis::{
-    basic::field::TrimString,
     chrono::{DateTime, Utc},
-    web::poem_openapi, db::sea_orm,
+    db::sea_orm,
+    web::poem_openapi,
 };
 
 #[derive(Debug, poem_openapi::Object)]
@@ -23,10 +20,9 @@ pub struct ReachMsgLogAddReq {
     pub fail_message: String,
     pub rel_reach_message_id: String,
 }
-use tardis::chrono::NaiveTime;
 
-use super::{ReachStatusKind, ReachDndStrategyKind};
-#[derive(Debug, poem_openapi::Object)]
+use super::ReachDndStrategyKind;
+#[derive(Debug, poem_openapi::Object, Default)]
 pub struct ReachMsgLogFilterReq {
     #[oai(flatten)]
     pub base_filter: RbumItemBasicFilterReq,
