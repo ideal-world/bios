@@ -553,9 +553,10 @@ fn gen_query_dsl(search_req: &SearchItemSearchReq) -> TardisResult<String> {
                 }
                 BasicQueryOpKind::In => {
                     let field = format!("ext.{}", cond_info.field.clone());
+                    let value = if cond_info.value.is_array() { cond_info.value.clone() } else { json!(vec![cond_info.value.clone()]) };
                     must_q.push(json!({
                         "terms": {
-                            field: cond_info.value.clone()
+                            field: value
                         }
                     }));
                 }
