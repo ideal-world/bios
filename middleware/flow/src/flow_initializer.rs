@@ -190,6 +190,8 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                 vars_collect: None,
                 action_by_pre_callback: None,
                 action_by_post_callback: None,
+                action_by_post_changes: vec![],
+                double_check: None,
             },
             FlowTransitionInitInfo {
                 from_flow_state_name: "待处理".to_string(),
@@ -206,6 +208,8 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                 vars_collect: None,
                 action_by_pre_callback: None,
                 action_by_post_callback: None,
+                action_by_post_changes: vec![],
+                double_check: None,
             },
             FlowTransitionInitInfo {
                 from_flow_state_name: "待处理".to_string(),
@@ -222,6 +226,8 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                 vars_collect: None,
                 action_by_pre_callback: None,
                 action_by_post_callback: None,
+                action_by_post_changes: vec![],
+                double_check: None,
             },
             FlowTransitionInitInfo {
                 from_flow_state_name: "待处理".to_string(),
@@ -238,6 +244,8 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                 vars_collect: None,
                 action_by_pre_callback: None,
                 action_by_post_callback: None,
+                action_by_post_changes: vec![],
+                double_check: None,
             },
             FlowTransitionInitInfo {
                 from_flow_state_name: "待确认".to_string(),
@@ -254,6 +262,8 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                 vars_collect: None,
                 action_by_pre_callback: None,
                 action_by_post_callback: None,
+                action_by_post_changes: vec![],
+                double_check: None,
             },
             FlowTransitionInitInfo {
                 from_flow_state_name: "待确认".to_string(),
@@ -270,6 +280,8 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                 vars_collect: None,
                 action_by_pre_callback: None,
                 action_by_post_callback: None,
+                action_by_post_changes: vec![],
+                double_check: None,
             },
         ],
         funs,
@@ -347,6 +359,8 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                 ]),
                 action_by_pre_callback: None,
                 action_by_post_callback: None,
+                action_by_post_changes: vec![],
+                double_check: None,
             },
             FlowTransitionInitInfo {
                 from_flow_state_name: "待开始".to_string(),
@@ -363,6 +377,8 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                 vars_collect: None,
                 action_by_pre_callback: None,
                 action_by_post_callback: None,
+                action_by_post_changes: vec![],
+                double_check: None,
             },
             FlowTransitionInitInfo {
                 from_flow_state_name: "进行中".to_string(),
@@ -424,6 +440,8 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                 ]),
                 action_by_pre_callback: None,
                 action_by_post_callback: None,
+                action_by_post_changes: vec![],
+                double_check: None,
             },
             FlowTransitionInitInfo {
                 from_flow_state_name: "进行中".to_string(),
@@ -440,6 +458,8 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                 vars_collect: None,
                 action_by_pre_callback: None,
                 action_by_post_callback: None,
+                action_by_post_changes: vec![],
+                double_check: None,
             },
             FlowTransitionInitInfo {
                 from_flow_state_name: "已完成".to_string(),
@@ -501,6 +521,8 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                 ]),
                 action_by_pre_callback: None,
                 action_by_post_callback: None,
+                action_by_post_changes: vec![],
+                double_check: None,
             },
             FlowTransitionInitInfo {
                 from_flow_state_name: "已完成".to_string(),
@@ -517,6 +539,8 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                 vars_collect: None,
                 action_by_pre_callback: None,
                 action_by_post_callback: None,
+                action_by_post_changes: vec![],
+                double_check: None,
             },
             FlowTransitionInitInfo {
                 from_flow_state_name: "已关闭".to_string(),
@@ -533,6 +557,8 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                 vars_collect: None,
                 action_by_pre_callback: None,
                 action_by_post_callback: None,
+                action_by_post_changes: vec![],
+                double_check: None,
             },
         ],
         funs,

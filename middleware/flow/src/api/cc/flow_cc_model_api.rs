@@ -9,8 +9,8 @@ use tardis::web::poem_openapi::payload::Json;
 use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 
 use crate::dto::flow_model_dto::{
-    FlowModelAddReq, FlowModelAggResp, FlowModelBindStateReq, FlowModelFilterReq, FlowModelModifyReq, FlowModelSummaryResp, FlowModelUnbindStateReq, FlowTagKind,
-    FlowTemplateModelResp,
+    FlowModelAddReq, FlowModelAggResp, FlowModelBindStateReq, FlowModelFilterReq, FlowModelModifyReq, FlowModelSortStatesReq, FlowModelSummaryResp, FlowModelUnbindStateReq,
+    FlowTagKind, FlowTemplateModelResp,
 };
 use crate::flow_constants;
 use crate::serv::flow_model_serv::FlowModelServ;
@@ -119,7 +119,7 @@ impl FlowCcModelApi {
     async fn bind_state(&self, flow_model_id: Path<String>, req: Json<FlowModelBindStateReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = flow_constants::get_tardis_inst();
         funs.begin().await?;
-        FlowModelServ::bind_state(&FlowRelKind::FlowModelState, &flow_model_id.0, &req.0.state_id, &funs, &ctx.0).await?;
+        FlowModelServ::bind_state(&FlowRelKind::FlowModelState, &flow_model_id.0, &req.0.state_id, req.0.sort, &funs, &ctx.0).await?;
         funs.commit().await?;
         TardisResp::ok(Void {})
     }
@@ -130,6 +130,16 @@ impl FlowCcModelApi {
         let mut funs = flow_constants::get_tardis_inst();
         funs.begin().await?;
         FlowModelServ::unbind_state(&FlowRelKind::FlowModelState, &flow_model_id.0, &req.0.state_id, &funs, &ctx.0).await?;
+        funs.commit().await?;
+        TardisResp::ok(Void {})
+    }
+
+    /// Resort state / 状态重新排序
+    #[oai(path = "/:flow_model_id/resort_state", method = "post")]
+    async fn resort_state(&self, flow_model_id: Path<String>, req: Json<FlowModelSortStatesReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+        let mut funs = flow_constants::get_tardis_inst();
+        funs.begin().await?;
+        FlowModelServ::resort_state(&FlowRelKind::FlowModelState, &flow_model_id.0, &req.0, &funs, &ctx.0).await?;
         funs.commit().await?;
         TardisResp::ok(Void {})
     }
