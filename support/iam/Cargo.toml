@@ -36,6 +36,7 @@ tardis = { workspace = true, features = [
     "mail",
 ] }
 bios-basic = { path = "../../basic", features = ["default", "with-mq"] }
+bios-sdk-invoke = { path = "../../sdk/invoke", features = ["default"] }
 
 # ldap
 ldap3_proto = { version = "0.3", optional = true }
@@ -46,3 +47,4 @@ nanoid = { version = "0.4" }
 [dev-dependencies]
 tardis = { workspace = true, features = ["test"] }
 bios-basic = { path = "../../basic", features = ["default", "test"] }
+bios-sdk-invoke = { path = "../../sdk/invoke", features = ["default"] }

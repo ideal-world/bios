@@ -2,6 +2,7 @@ use async_trait::async_trait;
 use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
 use bios_basic::rbum::rbum_enumeration::RbumCertStatusKind;
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
+use bios_sdk_invoke::clients::spi_kv_client::SpiKvClient;
 use std::collections::HashMap;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
@@ -24,8 +25,6 @@ use crate::basic::dto::iam_tenant_dto::{
     IamTenantAddReq, IamTenantAggAddReq, IamTenantAggDetailResp, IamTenantAggModifyReq, IamTenantConfigReq, IamTenantConfigResp, IamTenantDetailResp, IamTenantModifyReq,
     IamTenantSummaryResp,
 };
-#[cfg(feature = "spi_kv")]
-use crate::basic::serv::clients::spi_kv_client::SpiKvClient;
 use crate::basic::serv::iam_account_serv::IamAccountServ;
 use crate::basic::serv::iam_cert_ldap_serv::IamCertLdapServ;
 use crate::basic::serv::iam_cert_mail_vcode_serv::IamCertMailVCodeServ;
@@ -39,7 +38,7 @@ use crate::iam_constants;
 use crate::iam_constants::{RBUM_ITEM_ID_TENANT_LEN, RBUM_SCOPE_LEVEL_TENANT};
 use crate::iam_enumeration::{IamCertExtKind, IamCertKernelKind, IamCertOAuth2Supplier, IamConfigDataTypeKind, IamConfigKind, IamSetKind};
 
-use super::clients::spi_log_client::{LogParamTag, SpiLogClient};
+use super::clients::iam_log_client::{IamLogClient, LogParamTag};
 use super::iam_cert_oauth2_serv::IamCertOAuth2Serv;
 use super::iam_config_serv::IamConfigServ;
 use super::iam_platform_serv::IamPlatformServ;
@@ -123,7 +122,7 @@ impl RbumItemCrudOperation<iam_tenant::ActiveModel, IamTenantAddReq, IamTenantMo
     async fn after_add_item(id: &str, _: &mut IamTenantAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         #[cfg(feature = "spi_kv")]
         Self::add_or_modify_tenant_kv(id, funs, ctx).await?;
-        let _ = SpiLogClient::add_ctx_task(LogParamTag::IamTenant, Some(id.to_string()), "添加租户".to_string(), Some("Add".to_string()), ctx).await;
+        let _ = IamLogClient::add_ctx_task(LogParamTag::IamTenant, Some(id.to_string()), "添加租户".to_string(), Some("Add".to_string()), ctx).await;
 
         Ok(())
     }
@@ -143,7 +142,7 @@ impl RbumItemCrudOperation<iam_tenant::ActiveModel, IamTenantAddReq, IamTenantMo
             op_describe = "启用租户".to_string();
             op_kind = "Enabled".to_string();
         }
-        let _ = SpiLogClient::add_ctx_task(LogParamTag::IamTenant, Some(id.to_string()), op_describe, Some(op_kind), ctx).await;
+        let _ = IamLogClient::add_ctx_task(LogParamTag::IamTenant, Some(id.to_string()), op_describe, Some(op_kind), ctx).await;
 
         Ok(())
     }
@@ -399,7 +398,7 @@ impl IamTenantServ {
             log_tasks.push(("修改认证方式为邮箱".to_string(), "ModifyCertifiedWay".to_string()));
         }
         for (op_describe, op_kind) in log_tasks {
-            let _ = SpiLogClient::add_ctx_task(LogParamTag::SecurityAlarm, None, op_describe, Some(op_kind), ctx).await;
+            let _ = IamLogClient::add_ctx_task(LogParamTag::SecurityAlarm, None, op_describe, Some(op_kind), ctx).await;
         }
         // Init cert conf
         let cert_confs = IamCertServ::find_cert_conf(true, Some(id.to_string()), None, None, funs, ctx).await?;
@@ -623,7 +622,6 @@ impl IamTenantServ {
         .await
         .map(|r| r.into_iter().map(|r| format!("{},{}", r.id, r.name)).collect())
     }
-    #[cfg(feature = "spi_kv")]
     async fn add_or_modify_tenant_kv(tenant_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let tenant = IamTenantServ::get_item(
             tenant_id,

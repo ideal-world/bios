@@ -17,7 +17,7 @@ use bios_basic::rbum::serv::rbum_item_serv::{RbumItemCrudOperation, RbumItemServ
 use crate::basic::dto::iam_account_dto::IamAccountInfoResp;
 use crate::basic::dto::iam_cert_dto::IamContextFetchReq;
 use crate::basic::dto::iam_filer_dto::{IamAccountFilterReq, IamAppFilterReq};
-use crate::basic::serv::clients::spi_log_client::{LogParamTag, SpiLogClient};
+use crate::basic::serv::clients::iam_log_client::{IamLogClient, LogParamTag};
 use crate::basic::serv::iam_account_serv::IamAccountServ;
 use crate::basic::serv::iam_app_serv::IamAppServ;
 use crate::basic::serv::iam_rel_serv::IamRelServ;
@@ -113,7 +113,7 @@ impl IamIdentCacheServ {
                 mock_ctx.own_paths = own_paths;
             }
 
-            let _ = SpiLogClient::add_ctx_task(
+            let _ = IamLogClient::add_ctx_task(
                 LogParamTag::IamAccount,
                 Some(iam_item_id.to_string()),
                 "下线账号".to_string(),
@@ -121,7 +121,7 @@ impl IamIdentCacheServ {
                 &mock_ctx,
             )
             .await;
-            let _ = SpiLogClient::add_ctx_task(
+            let _ = IamLogClient::add_ctx_task(
                 LogParamTag::SecurityVisit,
                 Some(iam_item_id.to_string()),
                 "退出".to_string(),
@@ -225,7 +225,7 @@ impl IamIdentCacheServ {
         funs.cache().del(format!("{}{}", funs.conf::<IamConfig>().cache_key_account_info_, account_id).as_str()).await?;
 
         let mock_ctx = TardisContext { ..Default::default() };
-        let _ = SpiLogClient::add_ctx_task(
+        let _ = IamLogClient::add_ctx_task(
             LogParamTag::IamAccount,
             Some(account_id.to_string()),
             "下线账号".to_string(),
