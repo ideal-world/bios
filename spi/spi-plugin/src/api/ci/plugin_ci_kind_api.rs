@@ -38,7 +38,7 @@ impl PluginKindApi {
     }
 
     /// delete Plugin kind rel
-    #[oai(path = "/:kind_id", method = "delete")]
+    #[oai(path = "/:kind_id/rel", method = "delete")]
     async fn delete_rel(&self, kind_id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let funs = crate::get_tardis_inst();
         PluginKindServ::delete_kind_agg_rel(&kind_id.0, &funs, &ctx.0).await?;
