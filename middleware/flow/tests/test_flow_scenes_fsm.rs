@@ -10,7 +10,7 @@ use bios_mw_flow::dto::flow_model_dto::{
     FlowTemplateModelResp,
 };
 use bios_mw_flow::dto::flow_state_dto::FlowStateSummaryResp;
-use bios_mw_flow::dto::flow_transition_dto::{FlowTransitionModifyReq, FlowTransitionDoubleCheckInfo};
+use bios_mw_flow::dto::flow_transition_dto::{FlowTransitionDoubleCheckInfo, FlowTransitionModifyReq};
 
 use tardis::basic::dto::TardisContext;
 
