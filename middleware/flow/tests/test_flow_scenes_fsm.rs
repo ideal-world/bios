@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use bios_basic::test::test_http_client::TestHttpClient;
-use bios_mw_flow::dto::flow_config_dto::{FlowConfigSummaryResp, FlowConfigModifyReq};
+use bios_mw_flow::dto::flow_config_dto::FlowConfigEditReq;
 use bios_mw_flow::dto::flow_inst_dto::{
     FlowInstFindNextTransitionResp, FlowInstFindNextTransitionsReq, FlowInstFindStateAndTransitionsReq, FlowInstFindStateAndTransitionsResp, FlowInstStartReq, FlowInstTransferReq,
     FlowInstTransferResp,
@@ -13,6 +13,7 @@ use bios_mw_flow::dto::flow_model_dto::{
 use bios_mw_flow::dto::flow_state_dto::FlowStateSummaryResp;
 use bios_mw_flow::dto::flow_transition_dto::{FlowTransitionModifyReq, FlowTransitionDoubleCheckInfo};
 
+use bios_sdk_invoke::clients::spi_kv_client::KvItemSummaryResp;
 use tardis::basic::dto::TardisContext;
 
 use tardis::basic::result::TardisResult;
@@ -186,20 +187,27 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
         state_and_next_transitions[0].next_flow_transitions[1].next_flow_state_id.clone()
     );
     // 4. set config
-    let configs: Vec<FlowConfigSummaryResp> = client.get("/cs/config").await;
-    debug!("configs_old: {:?}", configs);
     let mut modify_configs = vec![];
-    for config in configs {
-        modify_configs.push(FlowConfigModifyReq {
-            code: config.code.clone(),
-            value: format!("www.xxx.com/{}", config.code),
+    let codes = vec![
+        "exchange_data_url_req",
+        "exchange_data_url_milestone",
+        "exchange_data_url_project",
+        "exchange_data_url_iter",
+        "exchange_data_url_ticket",
+        "exchange_data_url_test_job",
+        "exchange_data_url_test_stage",
+    ];
+    for code in codes {
+        modify_configs.push(FlowConfigEditReq {
+            code: code.to_string(),
+            value: format!("www.xxx.com/{}", code),
         });
     }
     let _: Void = client.post(
         "/cs/config",
         &modify_configs,
     ).await;
-    let configs: Vec<FlowConfigSummaryResp> = client.get("/cs/config").await;
+    let configs: Option<TardisPage<KvItemSummaryResp>> = client.get("/cs/config").await;
     debug!("configs_new: {:?}", configs);
 
     Ok(())

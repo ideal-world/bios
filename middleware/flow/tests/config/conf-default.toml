@@ -3,6 +3,9 @@
 [csm]
 [csm.flow]
 
+[csm.flow.invoke]
+spi_app_id = ""
+
 [fw.web_server]
 port = 8080
 tls_key = """

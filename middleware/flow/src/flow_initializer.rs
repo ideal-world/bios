@@ -18,11 +18,11 @@ use crate::{
     dto::{
         flow_state_dto::FlowSysStateKind,
         flow_transition_dto::FlowTransitionInitInfo,
-        flow_var_dto::{FlowVarInfo, RbumDataTypeKind, RbumWidgetTypeKind}, flow_config_dto::FlowConfigAddReq,
+        flow_var_dto::{FlowVarInfo, RbumDataTypeKind, RbumWidgetTypeKind},
     },
     flow_config::{BasicInfo, FlowBasicInfoManager, FlowConfig},
     flow_constants,
-    serv::{flow_model_serv::FlowModelServ, flow_config_serv::FlowConfigServ},
+    serv::flow_model_serv::FlowModelServ,
 };
 
 pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
@@ -66,7 +66,6 @@ pub async fn init_db(mut funs: TardisFunsInst) -> TardisResult<()> {
         funs.db().init(flow_config::ActiveModel::init(db_kind, None, compatible_type.clone())).await?;
         init_rbum_data(&funs, &ctx).await?;
         init_model(&funs, &ctx).await?;
-        init_config(&funs, &ctx).await?;
     };
     funs.commit().await?;
     Ok(())
@@ -161,27 +160,6 @@ pub async fn truncate_data<'a>(funs: &TardisFunsInst) -> TardisResult<()> {
     funs.db().execute(Table::truncate().table(flow_model::Entity)).await?;
     funs.db().execute(Table::truncate().table(flow_transition::Entity)).await?;
     funs.cache().flushdb().await?;
-    Ok(())
-}
-
-async fn init_config(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-    let config_data = vec![
-        ("exchange_data_url_req", "需求", ""),
-        ("exchange_data_url_milestone", "里程碑", ""),
-        ("exchange_data_url_project", "项目", ""),
-        ("exchange_data_url_iter", "迭代", ""),
-        ("exchange_data_url_ticket", "工单", ""),
-        ("exchange_data_url_test_job", "测试计划", ""),
-        ("exchange_data_url_test_stage", "测试阶段", ""),
-    ];
-    for (code, name, value) in config_data {
-        FlowConfigServ::add(&FlowConfigAddReq{
-            code: code.to_string(),
-            name: name.to_string(),
-            value: value.to_string(),
-        }, funs, ctx).await?;
-    }
-
     Ok(())
 }
 
