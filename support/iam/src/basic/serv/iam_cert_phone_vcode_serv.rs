@@ -1,4 +1,5 @@
-use bios_basic::rbum::dto::rbum_filer_dto::{RbumCertConfFilterReq, RbumCertFilterReq};
+use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumCertConfFilterReq, RbumCertFilterReq};
+use bios_basic::rbum::helper::rbum_scope_helper;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
@@ -274,23 +275,9 @@ impl IamCertPhoneVCodeServ {
 
     pub async fn send_bind_phone(phone: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let ctx = IamAccountServ::new_context_if_account_is_global(ctx, funs).await?;
-        if RbumCertServ::count_rbums(
-            &RbumCertFilterReq {
-                ak: Some(phone.to_string()),
-                rel_rbum_kind: Some(RbumCertRelKind::Item),
-                rel_rbum_cert_conf_ids: Some(vec![
-                    IamCertServ::get_cert_conf_id_by_kind(IamCertKernelKind::PhoneVCode.to_string().as_str(), Some(IamTenantServ::get_id_by_ctx(&ctx, funs)?), funs).await?,
-                ]),
-                ..Default::default()
-            },
-            funs,
-            &ctx,
-        )
-        .await?
-            > 0
-        {
-            return Err(funs.err().unauthorized("iam_cert_phone_vcode", "activate", "phone already exist", "404-iam-cert-phone-not-exist"));
-        }
+        let rel_rbum_cert_conf_id =
+            IamCertServ::get_cert_conf_id_by_kind(IamCertKernelKind::PhoneVCode.to_string().as_str(), Some(IamTenantServ::get_id_by_ctx(&ctx, funs)?), funs).await?;
+        Self::check_bind_phone(phone, vec![rel_rbum_cert_conf_id], &ctx.owner.clone(), funs, &ctx).await?;
         let vcode = Self::get_vcode();
         RbumCertServ::add_vcode_to_cache(phone, &vcode, &ctx.own_paths, funs).await?;
         SmsClient::send_vcode(phone, &vcode, funs, &ctx).await
@@ -302,6 +289,7 @@ impl IamCertPhoneVCodeServ {
             if cached_vcode == input_vcode {
                 let rel_rbum_cert_conf_id =
                     IamCertServ::get_cert_conf_id_by_kind(IamCertKernelKind::PhoneVCode.to_string().as_str(), Some(IamTenantServ::get_id_by_ctx(&ctx, funs)?), funs).await?;
+                Self::check_bind_phone(phone, vec![rel_rbum_cert_conf_id.clone()], &ctx.owner.clone(), funs, &ctx).await?;
                 let id = RbumCertServ::add_rbum(
                     &mut RbumCertAddReq {
                         ak: TrimString(phone.trim().to_string()),
@@ -324,13 +312,58 @@ impl IamCertPhoneVCodeServ {
                     &ctx,
                 )
                 .await?;
-
                 let op_describe = format!("绑定手机号为{}", phone);
                 let _ = IamLogClient::add_ctx_task(LogParamTag::IamAccount, Some(ctx.owner.to_string()), op_describe, Some("BindPhone".to_string()), &ctx).await;
                 return Ok(id);
             }
         }
-        Err(funs.err().unauthorized("iam_cert_phone_vcode", "activate", "phone or verification code error", "401-iam-cert-valid"))
+        Err(funs.err().unauthorized("iam_cert_phone_vcode", "bind", "phone or verification code error", "401-iam-cert-valid"))
+    }
+
+    pub async fn check_bind_phone(phone: &str, rel_rbum_cert_conf_ids: Vec<String>, rel_rbum_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        // check bind or not
+        if RbumCertServ::count_rbums(
+            &RbumCertFilterReq {
+                basic: RbumBasicFilterReq {
+                    own_paths: Some("".to_string()),
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                rel_rbum_id: Some(rel_rbum_id.to_owned()),
+                rel_rbum_kind: Some(RbumCertRelKind::Item),
+                rel_rbum_cert_conf_ids: Some(rel_rbum_cert_conf_ids.clone()),
+                ..Default::default()
+            },
+            funs,
+            &ctx,
+        )
+        .await?
+            > 0
+        {
+            return Err(funs.err().conflict("iam_cert_phone_vcode", "bind", "phone already exist bind", "409-iam-cert-phone-bind-already-exist"));
+        }
+        // check existence or not
+        if RbumCertServ::count_rbums(
+            &RbumCertFilterReq {
+                basic: RbumBasicFilterReq {
+                    own_paths: Some("".to_string()),
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                ak: Some(phone.to_string()),
+                rel_rbum_kind: Some(RbumCertRelKind::Item),
+                rel_rbum_cert_conf_ids: Some(rel_rbum_cert_conf_ids),
+                ..Default::default()
+            },
+            funs,
+            &ctx,
+        )
+        .await?
+            > 0
+        {
+            return Err(funs.err().unauthorized("iam_cert_phone_vcode", "activate", "phone already exist", "404-iam-cert-phone-not-exist"));
+        }
+        Ok(())
     }
 
     pub async fn send_login_phone(phone: &str, tenant_id: &str, funs: &TardisFunsInst) -> TardisResult<()> {
@@ -339,12 +372,54 @@ impl IamCertPhoneVCodeServ {
             own_paths: own_paths.to_string(),
             ..Default::default()
         };
-        if IamCertServ::count_cert_ak_by_kind(&IamCertKernelKind::PhoneVCode.to_string(), phone, funs, &mock_ctx).await? == 0 {
-            return Err(funs.err().not_found("iam_cert_phone_vcode", "send", "phone not find", "404-iam-cert-phone-not-exist"));
+        let global_rbum_cert_conf_id = IamCertServ::get_cert_conf_id_by_kind(&IamCertKernelKind::PhoneVCode.to_string(), None, funs).await?;
+        let tenant_rbum_cert_conf_id = IamCertServ::get_cert_conf_id_by_kind(&IamCertKernelKind::PhoneVCode.to_string(), Some(tenant_id.to_owned()), funs).await?;
+        if RbumCertServ::count_rbums(
+            &RbumCertFilterReq {
+                basic: RbumBasicFilterReq {
+                    own_paths: Some("".to_string()),
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                ak: Some(phone.to_string()),
+                rel_rbum_kind: Some(RbumCertRelKind::Item),
+                rel_rbum_cert_conf_ids: Some(vec![tenant_rbum_cert_conf_id]),
+                ..Default::default()
+            },
+            funs,
+            &mock_ctx,
+        )
+        .await?
+            > 0
+        {
+            let vcode = Self::get_vcode();
+            RbumCertServ::add_vcode_to_cache(phone, &vcode, &own_paths, funs).await?;
+            return SmsClient::send_vcode(phone, &vcode, funs, &mock_ctx).await;
         }
-        let vcode = Self::get_vcode();
-        RbumCertServ::add_vcode_to_cache(phone, &vcode, &own_paths, funs).await?;
-        SmsClient::send_vcode(phone, &vcode, funs, &mock_ctx).await
+
+        if RbumCertServ::count_rbums(
+            &RbumCertFilterReq {
+                basic: RbumBasicFilterReq {
+                    own_paths: Some("".to_string()),
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                ak: Some(phone.to_string()),
+                rel_rbum_kind: Some(RbumCertRelKind::Item),
+                rel_rbum_cert_conf_ids: Some(vec![global_rbum_cert_conf_id]),
+                ..Default::default()
+            },
+            funs,
+            &mock_ctx,
+        )
+        .await?
+            > 0
+        {
+            let vcode = Self::get_vcode();
+            RbumCertServ::add_vcode_to_cache(phone, &vcode, "", funs).await?;
+            return SmsClient::send_vcode(phone, &vcode, funs, &mock_ctx).await;
+        }
+        return Err(funs.err().not_found("iam_cert_phone_vcode", "send", "phone not find", "404-iam-cert-phone-not-exist"));
     }
 
     fn get_vcode() -> String {
