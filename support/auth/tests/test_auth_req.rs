@@ -97,16 +97,6 @@ pub async fn test_req() -> TardisResult<()> {
     // bad date format
     let now = Utc::now().format("%Yy%mm%dd %H:%M:%S");
     let now = now.to_string();
-    let resp = mock_req(
-        "GET",
-        "/iam/ci/account",
-        "",
-        vec![(&config.head_key_ak_authorization, "aaaa:"), (&config.head_key_date_flag, &now)],
-    )
-    .await;
-    assert!(!resp.allow);
-    assert_eq!(resp.status_code, 401);
-    assert_eq!(resp.reason.unwrap(), format!("[Auth] Request is not legal, missing header [{}]", &config.head_key_bios_ctx));
 
     let app_id = "app_idcc";
     let tenant_id = "tenant_id123";

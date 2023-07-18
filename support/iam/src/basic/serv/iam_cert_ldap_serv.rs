@@ -3,7 +3,7 @@ use ldap3::log::{error, warn};
 use std::collections::HashMap;
 
 use self::ldap::LdapClient;
-use super::clients::spi_log_client::{LogParamTag, SpiLogClient};
+use super::clients::iam_log_client::{IamLogClient, LogParamTag};
 use super::iam_cert_phone_vcode_serv::IamCertPhoneVCodeServ;
 use super::{iam_account_serv::IamAccountServ, iam_cert_serv::IamCertServ, iam_tenant_serv::IamTenantServ};
 use crate::basic::dto::iam_account_dto::{IamAccountAddByLdapResp, IamAccountAggModifyReq, IamAccountExtSysAddReq, IamAccountExtSysBatchAddReq};
@@ -86,7 +86,7 @@ impl IamCertLdapServ {
         .await;
 
         if result.is_ok() {
-            let _ = SpiLogClient::add_ctx_task(
+            let _ = IamLogClient::add_ctx_task(
                 LogParamTag::IamAccount,
                 Some(ctx.owner.clone()),
                 "绑定5A账号".to_string(),
@@ -129,7 +129,7 @@ impl IamCertLdapServ {
         )
         .await;
         if result.is_ok() {
-            let _ = SpiLogClient::add_ctx_task(
+            let _ = IamLogClient::add_ctx_task(
                 LogParamTag::IamAccount,
                 Some(ctx.owner.clone()),
                 "绑定5A账号".to_string(),
