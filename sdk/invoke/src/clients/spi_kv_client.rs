@@ -55,7 +55,11 @@ impl SpiKvClient {
     pub async fn match_items_by_key_prefix(key_prefix: String,extract: Option<String>,page_number: u32,page_size: u16, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<TardisPage<KvItemSummaryResp>>> {
         let kv_url = BaseSpiClient::module_url(InvokeModuleKind::Kv, funs).await?;
         let headers = BaseSpiClient::headers(None, funs, ctx).await?;
-        let resp = funs.web_client().get::<TardisResp<TardisPage<KvItemSummaryResp>>>(&format!("{kv_url}/ci/item/match?=key_prefix={key_prefix}&extract={:?}&page_number={page_number}&page_size={page_size}", extract), headers.clone()).await?;
+        let mut url = format!("{kv_url}/ci/item/match?key_prefix={key_prefix}&page_number={page_number}&page_size={page_size}");
+        if let Some(extract) = extract {
+            url = format!("{url}&={}", extract);
+        }
+        let resp = funs.web_client().get::<TardisResp<TardisPage<KvItemSummaryResp>>>(&url, headers.clone()).await?;
         BaseSpiClient::package_resp(resp)
     }
 }
