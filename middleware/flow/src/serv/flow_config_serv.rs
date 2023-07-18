@@ -10,7 +10,6 @@ pub struct FlowConfigServ;
 
 impl FlowConfigServ {
     pub async fn edit_config(edit_req: &Vec<FlowConfigEditReq>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        let configs = Self::get_config(funs, ctx).await?;
         for req in edit_req {
             SpiKvClient::add_or_modify_item(&format!("{}:{}", flow_constants::DOMAIN_CODE, req.code.clone()), &req.value, None, funs, ctx).await?;
         }

@@ -4,6 +4,8 @@ use bios_basic::rbum::{
     rbum_initializer,
     serv::{rbum_crud_serv::RbumCrudOperation, rbum_domain_serv::RbumDomainServ, rbum_kind_serv::RbumKindServ},
 };
+use bios_sdk_invoke::invoke_initializer;
+
 use tardis::{
     basic::{dto::TardisContext, field::TrimString, result::TardisResult},
     db::{reldb_client::TardisActiveModel, sea_orm::sea_query::Table},
@@ -43,7 +45,7 @@ async fn init_api(web_server: &TardisWebServer) -> TardisResult<()> {
 
 pub async fn init_db(mut funs: TardisFunsInst) -> TardisResult<()> {
     bios_basic::rbum::rbum_initializer::init(funs.module_code(), funs.conf::<FlowConfig>().rbum.clone()).await?;
-
+    invoke_initializer::init(funs.module_code(), funs.conf::<FlowConfig>().invoke.clone())?;
     let ctx = TardisContext {
         own_paths: "".to_string(),
         ak: "".to_string(),
