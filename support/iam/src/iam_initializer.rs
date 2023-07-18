@@ -127,7 +127,7 @@ async fn init_api(web_server: &TardisWebServer) -> TardisResult<()> {
 
 pub async fn init_db(mut funs: TardisFunsInst) -> TardisResult<Option<(String, String)>> {
     bios_basic::rbum::rbum_initializer::init(funs.module_code(), funs.conf::<IamConfig>().rbum.clone()).await?;
-    invoke_initializer::init(funs.module_code(), funs.conf::<IamConfig>().invoke.clone()).await?;
+    invoke_initializer::init(funs.module_code(), funs.conf::<IamConfig>().invoke.clone())?;
     funs.begin().await?;
     let ctx = get_first_account_context(iam_constants::RBUM_KIND_CODE_IAM_ACCOUNT, iam_constants::COMPONENT_CODE, &funs).await?;
     let sysadmin_info = if let Some(ctx) = ctx {
