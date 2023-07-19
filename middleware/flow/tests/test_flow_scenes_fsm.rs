@@ -7,7 +7,7 @@ use bios_mw_flow::dto::flow_inst_dto::{
     FlowInstTransferResp,
 };
 use bios_mw_flow::dto::flow_model_dto::{
-    FlowModelAggResp, FlowModelBindStateReq, FlowModelModifyReq, FlowModelSortStateInfoReq, FlowModelSortStatesReq, FlowModelSummaryResp, FlowModelUnbindStateReq, FlowTagKind,
+    FlowModelAggResp, FlowModelBindStateReq, FlowModelModifyReq, FlowModelSortStateInfoReq, FlowModelSortStatesReq, FlowModelSummaryResp, FlowModelUnbindStateReq,
     FlowTemplateModelResp,
 };
 use bios_mw_flow::dto::flow_state_dto::FlowStateSummaryResp;
@@ -134,7 +134,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
         .post(
             "/cc/inst",
             &FlowInstStartReq {
-                tag: FlowTagKind::REQ,
+                tag: "REQ".to_string(),
                 create_vars: None,
                 rel_business_obj_id: "".to_string(),
             },

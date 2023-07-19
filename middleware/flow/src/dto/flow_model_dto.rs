@@ -32,7 +32,7 @@ pub struct FlowModelAddReq {
     pub template: bool,
     pub rel_model_id: Option<String>,
 
-    pub tag: Option<FlowTagKind>,
+    pub tag: Option<String>,
 
     pub scope_level: Option<RbumScopeLevelKind>,
     pub disabled: Option<bool>,
@@ -55,7 +55,7 @@ pub struct FlowModelModifyReq {
     pub modify_transitions: Option<Vec<FlowTransitionModifyReq>>,
     pub delete_transitions: Option<Vec<String>>,
 
-    pub tag: Option<FlowTagKind>,
+    pub tag: Option<String>,
 
     pub scope_level: Option<RbumScopeLevelKind>,
     pub disabled: Option<bool>,
@@ -96,7 +96,7 @@ pub struct FlowModelDetailResp {
     pub create_time: DateTime<Utc>,
     pub update_time: DateTime<Utc>,
 
-    pub tag: FlowTagKind,
+    pub tag: String,
 
     pub scope_level: RbumScopeLevelKind,
     pub disabled: bool,
@@ -115,7 +115,7 @@ impl FlowModelDetailResp {
 #[serde(default)]
 pub struct FlowModelFilterReq {
     pub basic: RbumBasicFilterReq,
-    pub tag: Option<FlowTagKind>,
+    pub tag: Option<String>,
     pub rel_template_id: Option<String>,
 }
 
@@ -148,7 +148,7 @@ pub struct FlowModelAggResp {
     pub create_time: DateTime<Utc>,
     pub update_time: DateTime<Utc>,
 
-    pub tag: FlowTagKind,
+    pub tag: String,
 
     pub scope_level: RbumScopeLevelKind,
     pub disabled: bool,
@@ -191,33 +191,4 @@ pub struct FlowModelSortStatesReq {
 pub struct FlowModelSortStateInfoReq {
     pub state_id: String,
     pub sort: i64,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, sea_orm::strum::EnumIter, sea_orm::DeriveActiveEnum)]
-#[sea_orm(rs_type = "String", db_type = "String(Some(255))")]
-pub enum FlowTagKind {
-    #[sea_orm(string_value = "TICKET")]
-    TICKET,
-    #[sea_orm(string_value = "PROJECT")]
-    PROJECT,
-    #[sea_orm(string_value = "MILESTONE")]
-    MILESTONE,
-    #[sea_orm(string_value = "ITER")]
-    ITER,
-    #[sea_orm(string_value = "REQ")]
-    REQ,
-}
-
-impl TryFrom<&str> for FlowTagKind {
-    type Error = TardisError;
-    fn try_from(value: &str) -> TardisResult<Self> {
-        match value {
-            "TICKET" => Ok(Self::TICKET),
-            "PROJECT" => Ok(Self::PROJECT),
-            "MILESTONE" => Ok(Self::MILESTONE),
-            "ITER" => Ok(Self::ITER),
-            "REQ" => Ok(Self::REQ),
-            _ => Err(TardisError::not_found("tag is not exist", "404-flow-tag-not-exist")),
-        }
-    }
 }

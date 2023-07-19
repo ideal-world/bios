@@ -10,7 +10,7 @@ use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 
 use crate::dto::flow_model_dto::{
     FlowModelAddReq, FlowModelAggResp, FlowModelBindStateReq, FlowModelFilterReq, FlowModelModifyReq, FlowModelSortStatesReq, FlowModelSummaryResp, FlowModelUnbindStateReq,
-    FlowTagKind, FlowTemplateModelResp,
+    FlowTemplateModelResp,
 };
 use crate::flow_constants;
 use crate::serv::flow_model_serv::FlowModelServ;
@@ -56,7 +56,7 @@ impl FlowCcModelApi {
         &self,
         flow_model_ids: Query<Option<String>>,
         name: Query<Option<String>>,
-        tag: Query<Option<FlowTagKind>>,
+        tag: Query<Option<String>>,
         enabled: Query<Option<bool>>,
         with_sub: Query<Option<bool>>,
         page_number: Query<u32>,
