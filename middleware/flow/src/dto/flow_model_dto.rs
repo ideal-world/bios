@@ -4,7 +4,7 @@ use bios_basic::rbum::{
 };
 use serde::{Deserialize, Serialize};
 use tardis::{
-    basic::{error::TardisError, field::TrimString, result::TardisResult},
+    basic::field::TrimString,
     chrono::{DateTime, Utc},
     db::sea_orm,
     serde_json::Value,

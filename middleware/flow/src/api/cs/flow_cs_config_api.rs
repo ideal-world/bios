@@ -4,7 +4,7 @@ use tardis::web::poem_openapi;
 use tardis::web::poem_openapi::payload::Json;
 use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 
-use crate::dto::flow_config_dto::FlowConfigEditReq;
+use crate::dto::flow_config_dto::FlowConfigModifyReq;
 
 use crate::flow_constants;
 use crate::serv::flow_config_serv::FlowConfigServ;
@@ -14,12 +14,12 @@ pub struct FlowCsConfigApi;
 /// Flow Config process API
 #[poem_openapi::OpenApi(prefix_path = "/cs/config")]
 impl FlowCsConfigApi {
-    /// Edit Config / 编辑配置
+    /// Modify Config / 编辑配置
     #[oai(path = "/", method = "post")]
-    async fn edit_config(&self, req: Json<Vec<FlowConfigEditReq>>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+    async fn modify_config(&self, req: Json<Vec<FlowConfigModifyReq>>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = flow_constants::get_tardis_inst();
         funs.begin().await?;
-        FlowConfigServ::edit_config(&req.0, &funs, &ctx.0).await?;
+        FlowConfigServ::modify_config(&req.0, &funs, &ctx.0).await?;
         funs.commit().await?;
         TardisResp::ok(Void {})
     }
