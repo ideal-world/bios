@@ -9,7 +9,7 @@ use tardis::{
     web::poem_openapi,
 };
 
-use super::{flow_var_dto::FlowVarInfo, flow_transition_dto::FlowTransitionDoubleCheckInfo};
+use super::{flow_transition_dto::FlowTransitionDoubleCheckInfo, flow_var_dto::FlowVarInfo};
 
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
 pub struct FlowInstStartReq {

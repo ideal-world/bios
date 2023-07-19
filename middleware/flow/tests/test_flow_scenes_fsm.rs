@@ -11,13 +11,13 @@ use bios_mw_flow::dto::flow_model_dto::{
     FlowTemplateModelResp,
 };
 use bios_mw_flow::dto::flow_state_dto::FlowStateSummaryResp;
-use bios_mw_flow::dto::flow_transition_dto::{FlowTransitionModifyReq, FlowTransitionDoubleCheckInfo};
+use bios_mw_flow::dto::flow_transition_dto::{FlowTransitionDoubleCheckInfo, FlowTransitionModifyReq};
 
 use bios_sdk_invoke::clients::spi_kv_client::KvItemSummaryResp;
 use tardis::basic::dto::TardisContext;
 
 use tardis::basic::result::TardisResult;
-use tardis::log::{info, debug};
+use tardis::log::{debug, info};
 use tardis::serde_json::json;
 use tardis::web::poem_openapi::types::Type;
 use tardis::web::web_resp::{TardisPage, Void};
@@ -203,10 +203,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
             value: format!("www.xxx.com/{}", code),
         });
     }
-    let _: Void = client.post(
-        "/cs/config",
-        &modify_configs,
-    ).await;
+    let _: Void = client.post("/cs/config", &modify_configs).await;
     let configs: Option<TardisPage<KvItemSummaryResp>> = client.get("/cs/config").await;
     debug!("configs_new: {:?}", configs);
 

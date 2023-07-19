@@ -3,9 +3,9 @@ use tardis::basic::dto::TardisContext;
 use tardis::basic::result::TardisResult;
 use tardis::chrono::{DateTime, Utc};
 use tardis::serde_json::{json, Value};
-use tardis::TardisFunsInst;
 use tardis::web::web_resp::TardisResp;
-use tardis::web::{poem_openapi,web_resp::TardisPage};
+use tardis::web::{poem_openapi, web_resp::TardisPage};
+use tardis::TardisFunsInst;
 
 use crate::invoke_enumeration::InvokeModuleKind;
 
@@ -52,7 +52,14 @@ impl SpiKvClient {
         Ok(())
     }
 
-    pub async fn match_items_by_key_prefix(key_prefix: String,extract: Option<String>,page_number: u32,page_size: u16, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<TardisPage<KvItemSummaryResp>>> {
+    pub async fn match_items_by_key_prefix(
+        key_prefix: String,
+        extract: Option<String>,
+        page_number: u32,
+        page_size: u16,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<Option<TardisPage<KvItemSummaryResp>>> {
         let kv_url = BaseSpiClient::module_url(InvokeModuleKind::Kv, funs).await?;
         let headers = BaseSpiClient::headers(None, funs, ctx).await?;
         let mut url = format!("{kv_url}/ci/item/match?key_prefix={key_prefix}&page_number={page_number}&page_size={page_size}");

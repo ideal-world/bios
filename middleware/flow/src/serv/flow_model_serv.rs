@@ -29,8 +29,8 @@ use crate::{
     domain::{flow_model, flow_transition},
     dto::{
         flow_model_dto::{
-            FlowModelAddReq, FlowModelAggResp, FlowModelDetailResp, FlowModelFilterReq, FlowModelModifyReq, FlowModelSortStatesReq, FlowModelSummaryResp, FlowStateAggResp,
-            FlowTemplateModelResp, FlowModelBindStateReq, FlowModelUnbindStateReq,
+            FlowModelAddReq, FlowModelAggResp, FlowModelBindStateReq, FlowModelDetailResp, FlowModelFilterReq, FlowModelModifyReq, FlowModelSortStatesReq, FlowModelSummaryResp,
+            FlowModelUnbindStateReq, FlowStateAggResp, FlowTemplateModelResp,
         },
         flow_state_dto::{FlowStateAddReq, FlowStateFilterReq, FlowSysStateKind},
         flow_transition_dto::{FlowTransitionAddReq, FlowTransitionDetailResp, FlowTransitionDoubleCheckInfo, FlowTransitionInitInfo, FlowTransitionModifyReq},

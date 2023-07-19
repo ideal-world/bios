@@ -15,8 +15,11 @@ use tardis::{
 };
 
 use crate::{
-    api::{cc::{flow_cc_inst_api, flow_cc_model_api, flow_cc_state_api}, cs::flow_cs_config_api},
-    domain::{flow_inst, flow_model, flow_state, flow_transition, flow_config},
+    api::{
+        cc::{flow_cc_inst_api, flow_cc_model_api, flow_cc_state_api},
+        cs::flow_cs_config_api,
+    },
+    domain::{flow_config, flow_inst, flow_model, flow_state, flow_transition},
     dto::{
         flow_state_dto::FlowSysStateKind,
         flow_transition_dto::FlowTransitionInitInfo,
@@ -37,7 +40,12 @@ async fn init_api(web_server: &TardisWebServer) -> TardisResult<()> {
     web_server
         .add_module(
             flow_constants::DOMAIN_CODE,
-            (flow_cc_state_api::FlowCcStateApi, flow_cc_model_api::FlowCcModelApi, flow_cc_inst_api::FlowCcInstApi, flow_cs_config_api::FlowCsConfigApi),
+            (
+                flow_cc_state_api::FlowCcStateApi,
+                flow_cc_model_api::FlowCcModelApi,
+                flow_cc_inst_api::FlowCcInstApi,
+                flow_cs_config_api::FlowCsConfigApi,
+            ),
         )
         .await;
     Ok(())

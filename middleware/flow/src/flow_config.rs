@@ -21,7 +21,7 @@ impl Default for FlowConfig {
     fn default() -> Self {
         FlowConfig {
             rbum: Default::default(),
-            invoke:Default::default(),
+            invoke: Default::default(),
             app_key: Default::default(),
             search_url: "http://127.0.0.1:8080/spi-search".to_string(),
             log_url: "http://127.0.0.1:8080/spi-log".to_string(),
