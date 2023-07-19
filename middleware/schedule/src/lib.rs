@@ -1,3 +1,4 @@
+#![warn(clippy::unwrap_used, clippy::dbg_macro)]
 mod api;
 pub mod dto;
 pub mod schedule_config;
