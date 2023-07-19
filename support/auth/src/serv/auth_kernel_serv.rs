@@ -99,7 +99,7 @@ async fn ident(req: &AuthReq, config: &AuthConfig, cache_client: &TardisCacheCli
             ak: Some(context.ak),
         })
     } else if let Some(ak_authorization) = get_ak_key(req, config) {
-        let (req_date, ak, signature) = self::parsing_base_ak(&ak_authorization, req, config).await?;
+        let (req_date, ak, signature) = self::parsing_base_ak(&ak_authorization, req, config, false).await?;
         let (cache_sk, cache_tenant_id, cache_appid) = self::get_cache_ak(&ak, config, cache_client).await?;
         self::check_ak_signature(&ak, &cache_sk, &signature, &req_date, req).await?;
         let bios_ctx = if let Some(bios_ctx) = req.headers.get(&config.head_key_bios_ctx).or_else(|| req.headers.get(&config.head_key_bios_ctx.to_lowercase())) {
@@ -140,7 +140,7 @@ async fn ident(req: &AuthReq, config: &AuthConfig, cache_client: &TardisCacheCli
             ))
         }
     } else if let Some(ak_authorization) = get_webhook_ak_key(req, config) {
-        let (req_date, ak, signature) = self::parsing_base_ak(&ak_authorization, req, config).await?;
+        let (req_date, ak, signature) = self::parsing_base_ak(&ak_authorization, req, config, true).await?;
         let (cache_sk, cache_tenant_id, cache_appid) = self::get_cache_ak(&ak, config, cache_client).await?;
         let owner = if let Some(owner) = req.query.get(&config.query_owner).or_else(|| req.query.get(&config.query_owner.to_lowercase())) {
             owner
@@ -268,7 +268,7 @@ async fn get_account_context(token: &str, account_id: &str, app_id: &str, config
     Ok(context)
 }
 
-async fn parsing_base_ak(ak_authorization: &str, req: &AuthReq, config: &AuthConfig) -> TardisResult<(String, String, String)> {
+async fn parsing_base_ak(ak_authorization: &str, req: &AuthReq, config: &AuthConfig, is_webhook: bool) -> TardisResult<(String, String, String)> {
     let req_date = if let Some(req_date) = req
         .headers
         .get(&config.head_key_date_flag)
@@ -295,11 +295,20 @@ async fn parsing_base_ak(ak_authorization: &str, req: &AuthReq, config: &AuthCon
         return Err(TardisError::bad_request("[Auth] bad date format", "401-auth-req-date-incorrect"));
     };
     let now = Utc::now().timestamp_millis();
-    if now - req_head_time > config.head_date_interval_millsec as i64 {
-        return Err(TardisError::unauthorized(
-            "[Auth] The request has already been made or the client's time is incorrect. Please try again.",
-            "401-auth-req-date-incorrect",
-        ));
+    if is_webhook {
+        if req_head_time > now {
+            return Err(TardisError::unauthorized(
+                "[Auth] The webhook interface time has expired. Procedure.",
+                "401-auth-req-date-incorrect",
+            ));
+        }
+    } else {
+        if now - req_head_time > config.head_date_interval_millsec as i64 {
+            return Err(TardisError::unauthorized(
+                "[Auth] The request has already been made or the client's time is incorrect. Please try again.",
+                "401-auth-req-date-incorrect",
+            ));
+        }
     }
     let ak_authorizations = ak_authorization.split(':').collect::<Vec<_>>();
     let ak = ak_authorizations[0];
