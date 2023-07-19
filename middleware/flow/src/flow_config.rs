@@ -1,4 +1,5 @@
 use bios_basic::{process::ci_processor::AppKeyConfig, rbum::rbum_config::RbumConfig};
+use bios_sdk_invoke::invoke_config::InvokeConfig;
 use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
 use std::{fmt::Debug, sync::Mutex};
@@ -10,6 +11,7 @@ use tardis::{
 #[serde(default)]
 pub struct FlowConfig {
     pub rbum: RbumConfig,
+    pub invoke: InvokeConfig,
     pub app_key: AppKeyConfig,
     pub search_url: String,
     pub log_url: String,
@@ -19,6 +21,7 @@ impl Default for FlowConfig {
     fn default() -> Self {
         FlowConfig {
             rbum: Default::default(),
+            invoke: Default::default(),
             app_key: Default::default(),
             search_url: "http://127.0.0.1:8080/spi-search".to_string(),
             log_url: "http://127.0.0.1:8080/spi-log".to_string(),

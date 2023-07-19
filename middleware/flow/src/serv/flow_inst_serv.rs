@@ -33,7 +33,7 @@ use crate::{
             FlowInstAbortReq, FlowInstDetailResp, FlowInstFindNextTransitionResp, FlowInstFindNextTransitionsReq, FlowInstFindStateAndTransitionsReq,
             FlowInstFindStateAndTransitionsResp, FlowInstStartReq, FlowInstSummaryResp, FlowInstTransferReq, FlowInstTransferResp, FlowInstTransitionInfo, FlowOperationContext,
         },
-        flow_model_dto::{FlowModelDetailResp, FlowModelFilterReq, FlowTagKind},
+        flow_model_dto::{FlowModelDetailResp, FlowModelFilterReq},
         flow_state_dto::{FlowStateFilterReq, FlowSysStateKind},
         flow_transition_dto::{FlowTransitionActionChangeInfo, FlowTransitionDetailResp},
     },
@@ -85,7 +85,7 @@ impl FlowInstServ {
         Ok(id)
     }
 
-    pub async fn get_model_id_by_own_paths(tag: &FlowTagKind, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
+    pub async fn get_model_id_by_own_paths(tag: &String, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
         let mut result = None;
         // try get model in app path
         result = FlowModelServ::find_one_item(
@@ -256,7 +256,7 @@ impl FlowInstServ {
 
     pub async fn paginate(
         flow_model_id: Option<String>,
-        tag: Option<FlowTagKind>,
+        tag: Option<String>,
         finish: Option<bool>,
         with_sub: Option<bool>,
         page_number: u32,

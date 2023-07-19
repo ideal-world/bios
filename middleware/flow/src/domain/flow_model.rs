@@ -3,8 +3,6 @@ use tardis::db::sea_orm::prelude::Json;
 use tardis::db::sea_orm::*;
 use tardis::{TardisCreateEntity, TardisEmptyBehavior, TardisEmptyRelation};
 
-use crate::dto::flow_model_dto::FlowTagKind;
-
 /// Model / 模型
 ///
 /// Used to define processes, each process contains one or more transitions (associated with `flow_transition`)
@@ -54,7 +52,7 @@ pub struct Model {
     /// 用于模型分类
     #[index]
     #[tardis_entity(custom_type = "String")]
-    pub tag: Option<FlowTagKind>,
+    pub tag: Option<String>,
 
     /// External Data Interaction Interface / 外部的数据交互接口
     ///

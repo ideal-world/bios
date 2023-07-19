@@ -29,8 +29,8 @@ use crate::{
     domain::{flow_model, flow_transition},
     dto::{
         flow_model_dto::{
-            FlowModelAddReq, FlowModelAggResp, FlowModelDetailResp, FlowModelFilterReq, FlowModelModifyReq, FlowModelSortStatesReq, FlowModelSummaryResp, FlowStateAggResp,
-            FlowTemplateModelResp,
+            FlowModelAddReq, FlowModelAggResp, FlowModelBindStateReq, FlowModelDetailResp, FlowModelFilterReq, FlowModelModifyReq, FlowModelSortStatesReq, FlowModelSummaryResp,
+            FlowModelUnbindStateReq, FlowStateAggResp, FlowTemplateModelResp,
         },
         flow_state_dto::{FlowStateAddReq, FlowStateFilterReq, FlowSysStateKind},
         flow_transition_dto::{FlowTransitionAddReq, FlowTransitionDetailResp, FlowTransitionDoubleCheckInfo, FlowTransitionInitInfo, FlowTransitionModifyReq},
@@ -256,7 +256,7 @@ impl FlowModelServ {
                 vars_collect: transition.vars_collect,
                 action_by_pre_callback: transition.action_by_pre_callback,
                 action_by_post_callback: transition.action_by_post_callback,
-                action_by_post_changes: transition.action_by_post_changes,
+                action_by_post_changes: Some(transition.action_by_post_changes),
                 double_check: transition.double_check,
             });
         }
@@ -269,7 +269,7 @@ impl FlowModelServ {
                 icon: None,
                 info: None,
                 transitions: Some(add_transitions),
-                tag: Some(tag.try_into()?),
+                tag: Some(tag.to_string()),
                 scope_level: None,
                 disabled: None,
                 template: true,
@@ -664,7 +664,7 @@ impl FlowModelServ {
             FlowModelServ::paginate_items(
                 &FlowModelFilterReq {
                     basic: RbumBasicFilterReq { ..Default::default() },
-                    tag: Some(tags[0].try_into()?),
+                    tag: Some(tags[0].to_string()),
                     ..Default::default()
                 },
                 1,
@@ -696,7 +696,7 @@ impl FlowModelServ {
             if !result.contains_key(tag) {
                 let default_model_id = Self::paginate_items(
                     &FlowModelFilterReq {
-                        tag: Some(tag.try_into()?),
+                        tag: Some(tag.to_string()),
                         basic: RbumBasicFilterReq {
                             own_paths: Some("".to_string()),
                             ..Default::default()
@@ -842,7 +842,9 @@ impl FlowModelServ {
         Ok(())
     }
 
-    pub async fn bind_state(flow_rel_kind: &FlowRelKind, flow_model_id: &str, flow_state_id: &str, sort: i64, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    pub async fn bind_state(flow_rel_kind: &FlowRelKind, flow_model_id: &str, req: &FlowModelBindStateReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let flow_state_id = &req.state_id;
+        let sort = req.sort;
         let current_model = Self::get_item(
             flow_model_id,
             &FlowModelFilterReq {
@@ -870,7 +872,8 @@ impl FlowModelServ {
         Ok(())
     }
 
-    pub async fn unbind_state(flow_rel_kind: &FlowRelKind, flow_model_id: &str, flow_state_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    pub async fn unbind_state(flow_rel_kind: &FlowRelKind, flow_model_id: &str, req: &FlowModelUnbindStateReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let flow_state_id = &req.state_id;
         let current_model = Self::get_item(
             flow_model_id,
             &FlowModelFilterReq {
