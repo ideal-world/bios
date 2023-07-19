@@ -39,7 +39,7 @@ impl StatsDataTypeKind {
         match self {
             StatsDataTypeKind::String => "character varying",
             StatsDataTypeKind::Int => "integer",
-            StatsDataTypeKind::Float => "real",
+            StatsDataTypeKind::Float => "double precision",
             StatsDataTypeKind::Boolean => "boolean",
             StatsDataTypeKind::Date => "date",
             StatsDataTypeKind::DateTime => "timestamp with time zone",

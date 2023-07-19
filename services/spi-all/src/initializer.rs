@@ -1,6 +1,7 @@
 use bios_basic::rbum::rbum_config::RbumConfig;
 use bios_basic::rbum::rbum_initializer;
 use bios_spi_cache::cache_initializer;
+use bios_spi_conf::conf_initializer;
 use bios_spi_kv::kv_initializer;
 use bios_spi_log::log_initializer;
 use bios_spi_object::object_initializer;
@@ -21,5 +22,6 @@ pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
     reldb_initializer::init(web_server).await?;
     search_initializer::init(web_server).await?;
     stats_initializer::init(web_server).await?;
+    conf_initializer::init(web_server).await?;
     Ok(())
 }
