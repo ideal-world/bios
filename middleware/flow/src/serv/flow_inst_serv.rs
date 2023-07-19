@@ -382,7 +382,7 @@ impl FlowInstServ {
                 .map(|flow_inst| async {
                     let req = find_req.iter().find(|req| req.flow_inst_id == flow_inst.id).unwrap();
                     let flow_model = flow_models.iter().find(|model| model.id == flow_inst.rel_flow_model_id).unwrap();
-                    Self::do_find_next_transitions(flow_inst, flow_model, None, &req.vars, ctx).await.unwrap()
+                    Self::do_find_next_transitions(flow_inst, flow_model, None, &req.vars, funs, ctx).await.unwrap()
                 })
                 .collect_vec(),
         )
@@ -411,7 +411,7 @@ impl FlowInstServ {
             ctx,
         )
         .await?;
-        let state_and_next_transitions = Self::do_find_next_transitions(&flow_inst, &flow_model, None, &next_req.vars, ctx).await?;
+        let state_and_next_transitions = Self::do_find_next_transitions(&flow_inst, &flow_model, None, &next_req.vars, funs, ctx).await?;
         Ok(state_and_next_transitions.next_flow_transitions)
     }
 
@@ -432,8 +432,10 @@ impl FlowInstServ {
             ctx,
         )
         .await?;
-        let next_flow_transition =
-            Self::do_find_next_transitions(&flow_inst, &flow_model, Some(transfer_req.flow_transition_id.to_string()), &transfer_req.vars, ctx).await?.next_flow_transitions.pop();
+        let next_flow_transition = Self::do_find_next_transitions(&flow_inst, &flow_model, Some(transfer_req.flow_transition_id.to_string()), &transfer_req.vars, funs, ctx)
+            .await?
+            .next_flow_transitions
+            .pop();
         if next_flow_transition.is_none() {
             return Err(funs.err().not_found("flow_inst", "transfer", "no transferable state", "404-flow-inst-transfer-state-not-found"));
         }
@@ -474,8 +476,8 @@ impl FlowInstServ {
         let mut flow_inst = flow_inst::ActiveModel {
             id: Set(flow_inst_id.to_string()),
             current_state_id: Set(next_flow_state.id.to_string()),
-            current_vars: Set(Some(TardisFuns::json.obj_to_json(&new_vars).unwrap())),
-            transitions: Set(Some(TardisFuns::json.obj_to_json(&new_transitions).unwrap())),
+            current_vars: Set(Some(TardisFuns::json.obj_to_json(&new_vars)?)),
+            transitions: Set(Some(TardisFuns::json.obj_to_json(&new_transitions)?)),
             ..Default::default()
         };
         if next_flow_state.sys_state == FlowSysStateKind::Finish {
@@ -564,6 +566,7 @@ impl FlowInstServ {
         flow_model: &FlowModelDetailResp,
         spec_flow_transition_id: Option<String>,
         req_vars: &Option<HashMap<String, Value>>,
+        funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<FlowInstFindStateAndTransitionsResp> {
         let flow_model_transitions = flow_model.transitions();
@@ -631,9 +634,33 @@ impl FlowInstServ {
                 double_check: model_transition.double_check(),
             })
             .collect_vec();
+        let current_flow_state_sys_state = if let Some(state) = FlowStateServ::find_one_item(
+            &FlowStateFilterReq {
+                basic: RbumBasicFilterReq {
+                    ids: Some(vec![flow_inst.current_state_id.to_string()]),
+                    with_sub_own_paths: true,
+                    own_paths: Some("".to_string()),
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?
+        {
+            state.sys_state.to_string()
+        } else {
+            FlowSysStateKind::Finish.to_string()
+        };
         let state_and_next_transitions = FlowInstFindStateAndTransitionsResp {
             flow_inst_id: flow_inst.id.to_string(),
             current_flow_state_name: flow_inst.current_state_name.as_ref().unwrap_or(&"".to_string()).to_string(),
+            current_flow_state_kind: format!(
+                "{}{}",
+                current_flow_state_sys_state[1..2].to_ascii_uppercase(),
+                &current_flow_state_sys_state[2..current_flow_state_sys_state.len() - 1]
+            ),
             next_flow_transitions: next_transitions,
         };
         Ok(state_and_next_transitions)

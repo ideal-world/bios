@@ -124,6 +124,7 @@ pub struct FlowInstFindStateAndTransitionsReq {
 pub struct FlowInstFindStateAndTransitionsResp {
     pub flow_inst_id: String,
     pub current_flow_state_name: String,
+    pub current_flow_state_kind: String,
     pub next_flow_transitions: Vec<FlowInstFindNextTransitionResp>,
 }
 
