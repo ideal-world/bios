@@ -186,26 +186,6 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
         transfer.new_flow_state_id,
         state_and_next_transitions[0].next_flow_transitions[1].next_flow_state_id.clone()
     );
-    // 4. set config
-    let mut modify_configs = vec![];
-    let codes = vec![
-        "exchange_data_url_req",
-        "exchange_data_url_milestone",
-        "exchange_data_url_project",
-        "exchange_data_url_iter",
-        "exchange_data_url_ticket",
-        "exchange_data_url_test_job",
-        "exchange_data_url_test_stage",
-    ];
-    for code in codes {
-        modify_configs.push(FlowConfigEditReq {
-            code: code.to_string(),
-            value: format!("www.xxx.com/{}", code),
-        });
-    }
-    let _: Void = client.post("/cs/config", &modify_configs).await;
-    let configs: Option<TardisPage<KvItemSummaryResp>> = client.get("/cs/config").await;
-    debug!("configs_new: {:?}", configs);
 
     Ok(())
 }

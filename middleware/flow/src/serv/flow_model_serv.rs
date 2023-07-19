@@ -269,7 +269,7 @@ impl FlowModelServ {
                 icon: None,
                 info: None,
                 transitions: Some(add_transitions),
-                tag: Some(tag.try_into()?),
+                tag: Some(tag.to_string()),
                 scope_level: None,
                 disabled: None,
                 template: true,
@@ -664,7 +664,7 @@ impl FlowModelServ {
             FlowModelServ::paginate_items(
                 &FlowModelFilterReq {
                     basic: RbumBasicFilterReq { ..Default::default() },
-                    tag: Some(tags[0].try_into()?),
+                    tag: Some(tags[0].to_string()),
                     ..Default::default()
                 },
                 1,
@@ -696,7 +696,7 @@ impl FlowModelServ {
             if !result.contains_key(tag) {
                 let default_model_id = Self::paginate_items(
                     &FlowModelFilterReq {
-                        tag: Some(tag.try_into()?),
+                        tag: Some(tag.to_string()),
                         basic: RbumBasicFilterReq {
                             own_paths: Some("".to_string()),
                             ..Default::default()
