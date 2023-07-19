@@ -17,7 +17,7 @@ use bios_sdk_invoke::clients::spi_kv_client::KvItemSummaryResp;
 use tardis::basic::dto::TardisContext;
 
 use tardis::basic::result::TardisResult;
-use tardis::log::{info, debug};
+use tardis::log::{debug, info};
 use tardis::serde_json::json;
 use tardis::web::poem_openapi::types::Type;
 use tardis::web::web_resp::{TardisPage, Void};
