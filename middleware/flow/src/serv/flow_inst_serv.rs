@@ -649,18 +649,14 @@ impl FlowInstServ {
         )
         .await?
         {
-            state.sys_state.to_string()
+            state.sys_state
         } else {
-            FlowSysStateKind::Finish.to_string()
+            FlowSysStateKind::Finish
         };
         let state_and_next_transitions = FlowInstFindStateAndTransitionsResp {
             flow_inst_id: flow_inst.id.to_string(),
             current_flow_state_name: flow_inst.current_state_name.as_ref().unwrap_or(&"".to_string()).to_string(),
-            current_flow_state_kind: format!(
-                "{}{}",
-                current_flow_state_sys_state[1..2].to_ascii_uppercase(),
-                &current_flow_state_sys_state[2..current_flow_state_sys_state.len() - 1]
-            ),
+            current_flow_state_kind: current_flow_state_sys_state,
             next_flow_transitions: next_transitions,
         };
         Ok(state_and_next_transitions)
