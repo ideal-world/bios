@@ -20,7 +20,6 @@ spacegate-kernel = { version = "0.1.0-alpha.2", features = [
     "ws",
     "cache",
     "k8s",
-    "web",
 ] }
 # spacegate-kernel = { path = "../../../spacegate/kernel" }
 bios-auth = { path = "../../support/auth" }

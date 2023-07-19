@@ -18,7 +18,7 @@ use spacegate_kernel::{
     http::{self, HeaderMap, HeaderName, HeaderValue},
     plugins::{
         context::{SgRouteFilterRequestAction, SgRoutePluginContext},
-        filters::{BoxSgPluginFilter, SgPluginFilter, SgPluginFilterDef, SgPluginFilterKind},
+        filters::{BoxSgPluginFilter, SgPluginFilter, SgPluginFilterDef, SgPluginFilterKind, SgPluginFilterAccept},
     },
 };
 use tardis::{
@@ -65,8 +65,8 @@ impl Default for SgFilterAuth {
 
 #[async_trait]
 impl SgPluginFilter for SgFilterAuth {
-    fn kind(&self) -> SgPluginFilterKind {
-        SgPluginFilterKind::Http
+    fn accept(&self) -> SgPluginFilterAccept {
+        SgPluginFilterAccept::default()
     }
 
     async fn init(&self, _: &[SgHttpRouteRule]) -> TardisResult<()> {
@@ -283,7 +283,7 @@ mod tests {
         let test_body_value = r##"test_body_value!@#$%^&*():"中文测试"##;
         //dont need to decrypt
         let header = HeaderMap::new();
-        let ctx = SgRoutePluginContext::new(
+        let ctx = SgRoutePluginContext::new_http(
             Method::POST,
             Uri::from_static("http://sg.idealworld.group/test1"),
             Version::HTTP_11,
@@ -310,7 +310,7 @@ mod tests {
             true,
         );
         header.insert("Bios-Crypto", bios_crypto_value.parse().unwrap());
-        let ctx = SgRoutePluginContext::new(
+        let ctx = SgRoutePluginContext::new_http(
             Method::POST,
             Uri::from_static("http://sg.idealworld.group/test1"),
             Version::HTTP_11,

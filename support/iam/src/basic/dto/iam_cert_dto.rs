@@ -144,6 +144,12 @@ pub struct IamThirdIntegrationConfigDto {
     // pub org_rel_account: bool,
 }
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct IamThirdIntegrationSyncStatusDto {
+    pub total: usize,
+    pub success: u64,
+    pub failed: u64,
+}
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct IamCertManageAddReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub ak: String,
