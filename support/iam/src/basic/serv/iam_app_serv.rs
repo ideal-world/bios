@@ -3,6 +3,7 @@ use std::collections::HashSet;
 use async_trait::async_trait;
 use bios_basic::rbum::dto::rbum_rel_dto::RbumRelBoneResp;
 use bios_basic::rbum::serv::rbum_rel_serv::RbumRelServ;
+use bios_sdk_invoke::clients::spi_kv_client::SpiKvClient;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
@@ -20,7 +21,6 @@ use crate::basic::domain::iam_app;
 use crate::basic::dto::iam_app_dto::{IamAppAddReq, IamAppAggAddReq, IamAppAggModifyReq, IamAppDetailResp, IamAppModifyReq, IamAppSummaryResp};
 use crate::basic::dto::iam_filer_dto::IamAppFilterReq;
 #[cfg(feature = "spi_kv")]
-use crate::basic::serv::clients::spi_kv_client::SpiKvClient;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_key_cache_serv::IamIdentCacheServ;
 use crate::basic::serv::iam_rel_serv::IamRelServ;
@@ -266,7 +266,6 @@ impl IamAppServ {
         IamAppServ::find_items(&filter, None, None, funs, ctx).await.map(|r| r.into_iter().map(|r| format!("{},{},{}", r.id, r.name, r.icon)).collect())
     }
 
-    #[cfg(feature = "spi_kv")]
     async fn add_or_modify_app_kv(app_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let app = Self::get_item(
             app_id,

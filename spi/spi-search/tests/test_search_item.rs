@@ -265,6 +265,28 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
                 },
                 "query":{
                     "ext": [{
+                        "field":"rel_accounts",
+                        "op":"in",
+                        "value":"acc01"
+                    }]
+                },
+                "page":{"number":1,"size":10,"fetch_total":true}
+            }),
+        )
+        .await;
+    assert_eq!(search_result.total_size, 2);
+    assert_eq!(search_result.records[0].key, "001");
+    assert_eq!(search_result.records[1].key, "002");
+    let search_result: TardisPage<SearchItemSearchResp> = client
+        .put(
+            "/ci/item/search",
+            &json!({
+                "tag":"feed",
+                "ctx":{
+                    "apps":["003"]
+                },
+                "query":{
+                    "ext": [{
                         "field":"end_time",
                         "op":"<=",
                         "value":"2022-10-30T14:23:20.000Z"

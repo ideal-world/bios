@@ -2,6 +2,7 @@ use crate::basic::dto::iam_filer_dto::{IamAccountFilterReq, IamAppFilterReq, Iam
 use bios_basic::process::task_processor::TaskProcessor;
 use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
+use bios_sdk_invoke::clients::spi_kv_client::SpiKvClient;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::result::TardisResult;
 use tardis::web::context_extractor::TardisContextExtractor;
@@ -9,8 +10,6 @@ use tardis::web::poem_openapi;
 use tardis::web::web_resp::{TardisApiResult, TardisResp};
 use tardis::TardisFunsInst;
 
-#[cfg(feature = "spi_kv")]
-use crate::basic::serv::clients::spi_kv_client::SpiKvClient;
 use crate::basic::serv::iam_account_serv::IamAccountServ;
 use crate::basic::serv::iam_app_serv::IamAppServ;
 use crate::basic::serv::iam_tenant_serv::IamTenantServ;

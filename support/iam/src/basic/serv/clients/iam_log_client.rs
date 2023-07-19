@@ -2,6 +2,7 @@ use bios_basic::rbum::{
     dto::rbum_filer_dto::{RbumBasicFilterReq, RbumSetCateFilterReq},
     serv::{rbum_crud_serv::RbumCrudOperation, rbum_item_serv::RbumItemCrudOperation, rbum_set_serv::RbumSetCateServ},
 };
+use bios_sdk_invoke::clients::spi_log_client::SpiLogClient;
 use serde::Serialize;
 
 use tardis::{
@@ -20,7 +21,7 @@ use crate::{
     iam_constants,
     iam_enumeration::IamCertKernelKind,
 };
-pub struct SpiLogClient;
+pub struct IamLogClient;
 
 #[derive(Serialize, Default, Debug, Clone)]
 pub struct LogParamContent {
@@ -62,14 +63,14 @@ impl From<LogParamTag> for String {
     }
 }
 
-impl SpiLogClient {
+impl IamLogClient {
     pub async fn add_ctx_task(tag: LogParamTag, key: Option<String>, op_describe: String, op_kind: Option<String>, ctx: &TardisContext) -> TardisResult<()> {
         let ctx_clone = ctx.clone();
         ctx.add_async_task(Box::new(|| {
             Box::pin(async move {
                 let task_handle = tokio::spawn(async move {
                     let funs = iam_constants::get_tardis_inst();
-                    SpiLogClient::add_item(
+                    IamLogClient::add_item(
                         tag,
                         LogParamContent {
                             op: op_describe,
@@ -106,18 +107,6 @@ impl SpiLogClient {
         ctx: &TardisContext,
     ) -> TardisResult<()> {
         let mut content = content.clone();
-        let log_url = funs.conf::<IamConfig>().spi.log_url.clone();
-        if log_url.is_empty() {
-            return Ok(());
-        }
-        let spi_ctx = TardisContext {
-            owner: funs.conf::<IamConfig>().spi.owner.clone(),
-            ..ctx.clone()
-        };
-        let headers = Some(vec![(
-            "Tardis-Context".to_string(),
-            TardisFuns::crypto.base64.encode(&TardisFuns::json.obj_to_string(&spi_ctx)?),
-        )]);
         // find operater info
         if let Ok(cert) = IamCertServ::get_cert_detail_by_id_and_kind(ctx.owner.as_str(), &IamCertKernelKind::UserPwd, funs, ctx).await {
             content.ak = cert.ak;
@@ -125,7 +114,6 @@ impl SpiLogClient {
         }
         // get ext name
         content.key_name = Self::get_key_name(&tag, content.key.as_deref(), funs, ctx).await;
-
         // create search_ext
         let search_ext = json!({
             "name":content.name,
@@ -135,25 +123,25 @@ impl SpiLogClient {
             "ts":ts,
             "op":op,
         });
-
         // generate log item
         let tag: String = tag.into();
         let own_paths = if ctx.own_paths.len() < 2 { None } else { Some(ctx.own_paths.clone()) };
         let owner = if ctx.owner.len() < 2 { None } else { Some(ctx.owner.clone()) };
-        let body = json!({
-            "tag": tag,
-            "content": TardisFuns::json.obj_to_string(&content)?,
-            "owner": owner,
-            "own_paths":own_paths,
-            "kind": kind,
-            "ext": search_ext,
-            "key": key,
-            "op": op,
-            "rel_key": rel_key,
-            "ts": ts,
-        });
-        log::info!("body: {}", body.to_string());
-        funs.web_client().post_obj_to_str(&format!("{log_url}/ci/item"), &body, headers.clone()).await?;
+        SpiLogClient::add(
+            &tag,
+            &TardisFuns::json.obj_to_string(&content)?,
+            Some(search_ext),
+            kind,
+            key,
+            op,
+            rel_key,
+            ts,
+            owner,
+            own_paths,
+            funs,
+            ctx,
+        )
+        .await?;
         Ok(())
     }
 
