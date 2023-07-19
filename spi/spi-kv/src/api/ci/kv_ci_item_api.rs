@@ -29,7 +29,6 @@ impl KvCiItemApi {
     async fn get_item(&self, key: Query<String>, extract: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<Option<KvItemDetailResp>> {
         let funs = crate::get_tardis_inst();
         let resp = kv_item_serv::get_item(key.0, extract.0, &funs, &ctx.0).await?;
-        dbg!(&resp);
         TardisResp::ok(resp)
     }
 
