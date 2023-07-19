@@ -1,10 +1,23 @@
 use serde::{Deserialize, Serialize};
 use tardis::{
-    basic::field::TrimString,
+    basic::{error::TardisError, field::TrimString},
     chrono::{self, DateTime, Utc},
+    db::sea_orm,
     serde_json::Value,
     web::poem_openapi,
 };
+
+use crate::schedule_constants::KV_KEY_CODE;
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, sea_orm::FromQueryResult)]
+pub(crate) struct KvItemSummaryResp {
+    #[oai(validator(min_length = "2"))]
+    pub key: String,
+    pub value: Value,
+    pub info: String,
+    pub create_time: DateTime<Utc>,
+    pub update_time: DateTime<Utc>,
+}
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Clone, Debug)]
 pub struct ScheduleJobAddOrModifyReq {
@@ -41,6 +54,25 @@ pub(crate) struct KvSchedualJobItemDetailResp {
     pub info: String,
     pub create_time: DateTime<Utc>,
     pub update_time: DateTime<Utc>,
+}
+
+impl TryFrom<KvItemSummaryResp> for KvSchedualJobItemDetailResp {
+    type Error = TardisError;
+
+    fn try_from(resp: KvItemSummaryResp) -> Result<Self, Self::Error> {
+        let Some(s) = &resp.value.as_str() else {
+            return Err(TardisError::internal_error("value are expected to be a string", "schedule-409-bad-schedule-job"))
+        };
+        let req: ScheduleJobAddOrModifyReq =
+            tardis::serde_json::from_str(s).map_err(|e| TardisError::internal_error(&format!("can't parse schedule job json body: {e}"), "schedule-409-bad-schedule-job"))?;
+        Ok(Self {
+            key: resp.key.trim_start_matches(KV_KEY_CODE).to_string(),
+            value: req,
+            info: resp.info,
+            create_time: resp.create_time,
+            update_time: resp.update_time,
+        })
+    }
 }
 
 impl ScheduleJobInfoResp {
