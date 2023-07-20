@@ -55,6 +55,7 @@ impl TardisActiveModel for ActiveModel {
             .col(ColumnDef::new(Column::CryptoResp).not_null().boolean())
             .col(ColumnDef::new(Column::DoubleAuth).not_null().boolean())
             .col(ColumnDef::new(Column::DoubleAuthMsg).not_null().string())
+            .col(ColumnDef::new(Column::NeedLogin).not_null().boolean())
             .col(ColumnDef::new(Column::OwnPaths).not_null().string());
         if db == DatabaseBackend::MySql {
             builder.engine("InnoDB").character_set("utf8mb4").collate("utf8mb4_0900_as_cs");

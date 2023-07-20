@@ -18,7 +18,7 @@ use spacegate_kernel::{
     http::{self, HeaderMap, HeaderName, HeaderValue},
     plugins::{
         context::{SgRouteFilterRequestAction, SgRoutePluginContext},
-        filters::{BoxSgPluginFilter, SgPluginFilter, SgPluginFilterDef, SgPluginFilterKind, SgPluginFilterAccept},
+        filters::{BoxSgPluginFilter, SgPluginFilter, SgPluginFilterAccept, SgPluginFilterDef},
     },
 };
 use tardis::{

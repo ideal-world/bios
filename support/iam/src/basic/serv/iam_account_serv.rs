@@ -5,7 +5,6 @@ use bios_sdk_invoke::clients::spi_search_client::SpiSearchClient;
 use bios_sdk_invoke::dto::search_item_dto::{SearchItemAddReq, SearchItemModifyReq, SearchItemVisitKeysReq};
 use itertools::Itertools;
 
-
 use std::collections::{HashMap, HashSet};
 
 use tardis::basic::dto::TardisContext;

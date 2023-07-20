@@ -1,7 +1,7 @@
 use bios_basic::rbum::dto::rbum_cert_dto::RbumCertSummaryResp;
 use ldap3::log::{error, warn};
 use std::collections::HashMap;
-use tardis::tokio::sync::{oneshot, watch};
+use tardis::tokio::sync::watch;
 
 use self::ldap::LdapClient;
 use super::clients::iam_log_client::{IamLogClient, LogParamTag};
@@ -40,6 +40,7 @@ use bios_basic::rbum::{
     },
 };
 use serde::{Deserialize, Serialize};
+
 use tardis::regex::Regex;
 use tardis::web::poem_openapi;
 use tardis::{
@@ -848,12 +849,13 @@ impl IamCertLdapServ {
             } else {
                 total += 1;
                 //ldap没有 iam有的 需要同步删除
-                match sync_config.account_way_to_delete {
+                let delete_result = match sync_config.account_way_to_delete {
                     WayToDelete::DoNotDelete => {
-                        continue;
+                        success += 1;
+                        Ok(())
                     }
                     WayToDelete::DeleteCert => {
-                        match RbumCertServ::modify_rbum(
+                        RbumCertServ::modify_rbum(
                             &cert.id,
                             &mut RbumCertModifyReq {
                                 ak: None,
@@ -869,12 +871,6 @@ impl IamCertLdapServ {
                             ctx,
                         )
                         .await
-                        {
-                            Ok(_) => todo!(),
-                            Err(_) => {
-                                failed += 1;
-                            }
-                        };
                     }
                     WayToDelete::Disable => {
                         IamAccountServ::modify_account_agg(
@@ -894,15 +890,19 @@ impl IamCertLdapServ {
                             &funs,
                             ctx,
                         )
-                        .await?;
+                        .await
                     }
-                    WayToDelete::DeleteAccount => {
-                        IamAccountServ::delete_item_with_all_rels(&cert.rel_rbum_id, &funs, ctx).await?;
+                    WayToDelete::DeleteAccount => IamAccountServ::delete_item_with_all_rels(&cert.rel_rbum_id, &funs, ctx).await.map(|_| ()),
+                };
+                match delete_result {
+                    Ok(_) => success += 1,
+                    Err(_) => {
+                        failed += 1;
                     }
                 }
                 match tx.as_ref() {
                     Some(tx) => {
-                        tx.send(IamThirdIntegrationSyncStatusDto { total, success, failed });
+                        let _ = tx.send(IamThirdIntegrationSyncStatusDto { total, success, failed });
                     }
                     None => {}
                 }
@@ -979,7 +979,16 @@ impl IamCertLdapServ {
                 tardis::log::error!("{}", err_msg);
                 msg = format!("{msg}{err_msg}\n");
                 funs.rollback().await?;
+                failed += 1;
                 continue;
+            } else {
+                success += 1;
+            }
+            match tx.as_ref() {
+                Some(tx) => {
+                    let _ = tx.send(IamThirdIntegrationSyncStatusDto { total, success, failed });
+                }
+                None => {}
             }
             funs.commit().await?;
             mock_ctx.execute_task().await?;

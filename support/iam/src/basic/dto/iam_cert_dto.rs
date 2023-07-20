@@ -143,7 +143,7 @@ pub struct IamThirdIntegrationConfigDto {
     // ///组织关联账号
     // pub org_rel_account: bool,
 }
-#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
 pub struct IamThirdIntegrationSyncStatusDto {
     pub total: usize,
     pub success: u64,

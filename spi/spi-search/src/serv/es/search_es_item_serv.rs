@@ -2,10 +2,7 @@ use std::collections::HashMap;
 
 use bios_basic::{
     basic_enumeration::BasicQueryOpKind,
-    spi::{
-        spi_funs::{SpiBsInst},
-        spi_initializer::common,
-    },
+    spi::{spi_funs::SpiBsInst, spi_initializer::common},
 };
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
