@@ -137,6 +137,8 @@ pub struct LoginResponse {
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Default)]
 pub struct PublishConfigForm {
+    pub(crate) username: Option<String>,
+    pub(crate) password: Option<String>,
     pub content: String,
 }
 
@@ -195,9 +197,13 @@ impl From<PublishConfigFormV2> for ConfigPublishRequest {
         }
     }
 }
+
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Default)]
 #[allow(non_snake_case)]
+#[oai(rename_all = "camelCase")]
 pub struct NacosCreateNamespaceRequest {
+    pub(crate) username: Option<String>,
+    pub(crate) password: Option<String>,
     customNamespaceId: String,
     namespaceName: String,
     namespaceDesc: Option<String>,
@@ -205,7 +211,10 @@ pub struct NacosCreateNamespaceRequest {
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Default)]
 #[allow(non_snake_case)]
+#[oai(rename_all = "camelCase")]
 pub struct NacosEditNamespaceRequest {
+    pub(crate) username: Option<String>,
+    pub(crate) password: Option<String>,
     namespace: String,
     namespaceShowName: String,
     namespaceDesc: Option<String>,
@@ -214,6 +223,8 @@ pub struct NacosEditNamespaceRequest {
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Default)]
 #[allow(non_snake_case)]
 pub struct NacosDeleteNamespaceRequest {
+    pub(crate) username: Option<String>,
+    pub(crate) password: Option<String>,
     pub(crate) namespaceId: String,
 }
 

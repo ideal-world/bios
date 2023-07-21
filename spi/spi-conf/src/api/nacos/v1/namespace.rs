@@ -3,7 +3,6 @@ use tardis::web::{
     poem_openapi::{self, payload::Json},
 };
 
-use crate::serv::*;
 use crate::{
     api::nacos::extract_context,
     dto::{
@@ -11,6 +10,7 @@ use crate::{
         conf_namespace_dto::*,
     },
 };
+use crate::{api::nacos::extract_context_from_body, serv::*};
 
 #[derive(Default, Clone, Copy, Debug)]
 pub struct ConfNacosV1NamespaceApi;
@@ -29,7 +29,7 @@ impl ConfNacosV1NamespaceApi {
     #[oai(path = "/", method = "post")]
     async fn create_namespace(&self, form: Form<NacosCreateNamespaceRequest>, request: &Request) -> poem::Result<Json<bool>> {
         let funs = crate::get_tardis_inst();
-        let ctx = extract_context(request).await?;
+        let ctx = extract_context_from_body(&form.0).await.unwrap_or(extract_context(request).await)?;
         let mut attribute = form.0.into();
         create_namespace(&mut attribute, &funs, &ctx).await?;
         Ok(Json(true))
@@ -37,7 +37,7 @@ impl ConfNacosV1NamespaceApi {
     #[oai(path = "/", method = "put")]
     async fn edit_namespace(&self, form: Form<NacosEditNamespaceRequest>, request: &Request) -> poem::Result<Json<bool>> {
         let funs = crate::get_tardis_inst();
-        let ctx = extract_context(request).await?;
+        let ctx = extract_context_from_body(&form.0).await.unwrap_or(extract_context(request).await)?;
         let mut attribute = form.0.into();
         edit_namespace(&mut attribute, &funs, &ctx).await?;
         Ok(Json(true))
@@ -45,7 +45,7 @@ impl ConfNacosV1NamespaceApi {
     #[oai(path = "/", method = "delete")]
     async fn delete_namespace(&self, form: Form<NacosDeleteNamespaceRequest>, request: &Request) -> poem::Result<Json<bool>> {
         let funs = crate::get_tardis_inst();
-        let ctx = extract_context(request).await?;
+        let ctx = extract_context_from_body(&form.0).await.unwrap_or(extract_context(request).await)?;
         let mut descriptor = NamespaceDescriptor { namespace_id: form.0.namespaceId };
         delete_namespace(&mut descriptor, &funs, &ctx).await?;
         Ok(Json(true))
