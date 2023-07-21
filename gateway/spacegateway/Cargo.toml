@@ -24,7 +24,7 @@ spacegate-kernel = { version = "0.1.0-alpha.3", features = [
 # spacegate-kernel = { path = "../../../spacegate/kernel" }
 bios-auth = { path = "../../support/auth" }
 tardis = { workspace = true, features = ["web-server", "web-client"] }
-
+ipnet = "2.8.0"
 [dev-dependencies]
 tardis = { workspace = true, features = ["test", "web-client"] }
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
