@@ -18,7 +18,7 @@ impl RegisterResponse {
 
 #[derive(Debug, Serialize, Deserialize, poem_openapi::Object, Default)]
 pub struct RegisterRequest {
-    #[oai(validator(pattern = r"^[a-zA-Z\d_]{6,16}$"))]
+    #[oai(validator(pattern = r"^[a-zA-Z\d_]{5,16}$"))]
     pub username: Option<TrimString>,
     #[oai(validator(pattern = r"^[a-zA-Z\d~!@#$%^&*\(\)_+]{8,16}$"))]
     pub password: Option<TrimString>,
