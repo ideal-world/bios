@@ -23,10 +23,16 @@ pub struct TaskProcessor;
 
 impl TaskProcessor {
     pub async fn subscribe_task(funs: &TardisFunsInst) -> TardisResult<()> {
+        //todo Use node id to differentiate nodes
         funs.mq()
             .subscribe(&funs.rbum_conf_task_mq_topic_event(), |(_, msg)| async move {
-                //todo 处理消息
-                Self::do_stop_task().awit?;
+                let task_msg = TardisFuns::json.str_to_obj::<TaskEventMessage>(&msg)?;
+                match task_msg.operate {
+                    TaskOperate::Stop => {
+                        Self::do_stop_task(task_msg.task_id).await?;
+                    }
+                    _ => {}
+                }
                 Ok(())
             })
             .await?;
@@ -34,6 +40,7 @@ impl TaskProcessor {
     }
 
     pub async fn init_task(cache_key: &str, cache_client: &TardisCacheClient) -> TardisResult<i64> {
+        //todo change to SnowFlake or other distributed ID generator
         let task_id = Local::now().timestamp_nanos();
         let max: i64 = u32::MAX.into();
         let task_id_split1: usize = (task_id / max).try_into()?;
@@ -102,8 +109,16 @@ impl TaskProcessor {
     }
 
     pub async fn stop_task(task_id: i64, funs: &TardisFunsInst) -> TardisResult<()> {
-        //todo 发布消息
-        funs.mq().publish(&funs.rbum_conf_task_mq_topic_event(), "".to_string(), &HashMap::new()).await?;
+        funs.mq()
+            .publish(
+                &funs.rbum_conf_task_mq_topic_event(),
+                TardisFuns::json.obj_to_string(&TaskEventMessage {
+                    task_id,
+                    operate: TaskOperate::Stop,
+                })?,
+                &HashMap::new(),
+            )
+            .await?;
         Ok(())
     }
 
@@ -154,4 +169,16 @@ pub struct NotifyEventMessage {
     pub table_name: String,
     pub operate: String,
     pub record_id: String,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct TaskEventMessage {
+    pub task_id: i64,
+    pub operate: TaskOperate,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub enum TaskOperate {
+    Start,
+    Stop,
 }

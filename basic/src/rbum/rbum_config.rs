@@ -110,12 +110,12 @@ impl RbumConfigApi for TardisFunsInst {
         RbumConfigManager::get_config(self.module_code(), |conf| conf.mq_topic_event.to_string())
     }
 
-    fn rbum_conf_mq_header_name_operator(&self) -> String {
-        RbumConfigManager::get_config(self.module_code(), |conf| conf.mq_header_name_operator.to_string())
-    }
-
     fn rbum_conf_task_mq_topic_event(&self) -> String {
         RbumConfigManager::get_config(self.module_code(), |conf| conf.task_mq_topic_event.to_string())
+    }
+
+    fn rbum_conf_mq_header_name_operator(&self) -> String {
+        RbumConfigManager::get_config(self.module_code(), |conf| conf.mq_header_name_operator.to_string())
     }
 
     fn rbum_conf_cache_key_cert_vcode_info_(&self) -> String {
