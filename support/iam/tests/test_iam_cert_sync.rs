@@ -36,7 +36,7 @@ pub async fn test(ldap_account_num: u64, conf_ldap_add_or_modify_req: IamCertCon
     )
     .await
     .unwrap();
-    let account_offset =account_page.records.len();
+    let account_offset = account_page.records.len();
 
     //不能开启事务 iam_sync_ldap_user_to_iam 这个方法里有自己的事务
     info!("【test ldap conf curd】");
@@ -112,7 +112,8 @@ pub async fn test(ldap_account_num: u64, conf_ldap_add_or_modify_req: IamCertCon
         &funs,
         admin_ctx,
     )
-        .await.is_err());
+    .await
+    .is_err());
 
     //wait for sync task done;
     sleep(Duration::from_millis(500)).await;
