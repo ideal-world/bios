@@ -15,6 +15,7 @@ pub struct RbumConfig {
     pub mq_topic_entity_deleted: String,
     pub mq_topic_event: String,
     pub mq_header_name_operator: String,
+    pub task_mq_topic_event: String,
     // own_paths:ak -> vcode
     pub cache_key_cert_vcode_info_: String,
     pub cache_key_cert_vcode_expire_sec: usize,
@@ -38,6 +39,7 @@ impl Default for RbumConfig {
             mq_topic_entity_deleted: "rbum::entity_deleted".to_string(),
             mq_topic_event: "rbum::event".to_string(),
             mq_header_name_operator: "OP".to_string(),
+            task_mq_topic_event: "rbum::task::event".to_string(),
             cache_key_cert_vcode_info_: "rbum:cache:cert:vcode:".to_string(),
             cache_key_cert_vcode_expire_sec: 300,
             cache_key_cert_code_: "rbum:cache:cert:code:".to_string(),
@@ -82,6 +84,7 @@ pub trait RbumConfigApi {
     fn rbum_conf_set_cate_sys_code_node_len(&self) -> usize;
     fn rbum_conf_mq_topic_entity_deleted(&self) -> String;
     fn rbum_conf_mq_topic_event(&self) -> String;
+    fn rbum_conf_task_mq_topic_event(&self) -> String;
     fn rbum_conf_mq_header_name_operator(&self) -> String;
     fn rbum_conf_cache_key_cert_vcode_info_(&self) -> String;
     fn rbum_conf_cache_key_cert_vcode_expire_sec(&self) -> usize;
@@ -109,6 +112,10 @@ impl RbumConfigApi for TardisFunsInst {
 
     fn rbum_conf_mq_header_name_operator(&self) -> String {
         RbumConfigManager::get_config(self.module_code(), |conf| conf.mq_header_name_operator.to_string())
+    }
+
+    fn rbum_conf_task_mq_topic_event(&self) -> String {
+        RbumConfigManager::get_config(self.module_code(), |conf| conf.task_mq_topic_event.to_string())
     }
 
     fn rbum_conf_cache_key_cert_vcode_info_(&self) -> String {

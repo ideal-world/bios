@@ -24,6 +24,8 @@ use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
 use super::clients::iam_log_client::{IamLogClient, LogParamTag};
 use super::iam_rel_serv::IamRelServ;
+use super::iam_res_serv::IamResServ;
+use super::iam_role_serv::IamRoleServ;
 use crate::basic::dto::iam_account_dto::IamAccountInfoResp;
 use crate::basic::dto::iam_cert_conf_dto::{
     IamCertConfLdapAddOrModifyReq, IamCertConfMailVCodeAddOrModifyReq, IamCertConfPhoneVCodeAddOrModifyReq, IamCertConfTokenAddReq, IamCertConfUserPwdAddOrModifyReq,
@@ -31,7 +33,7 @@ use crate::basic::dto::iam_cert_conf_dto::{
 use crate::basic::dto::iam_cert_dto::{
     IamCertManageAddReq, IamCertManageModifyReq, IamThirdIntegrationConfigDto, IamThirdIntegrationSyncAddReq, IamThirdIntegrationSyncStatusDto, IamThirdPartyCertExtAddReq,
 };
-use crate::basic::dto::iam_filer_dto::IamAccountFilterReq;
+use crate::basic::dto::iam_filer_dto::{IamAccountFilterReq, IamResFilterReq, IamRoleFilterReq};
 use crate::basic::serv::iam_account_serv::IamAccountServ;
 use crate::basic::serv::iam_cert_ldap_serv::IamCertLdapServ;
 use crate::basic::serv::iam_cert_mail_vcode_serv::IamCertMailVCodeServ;
@@ -41,7 +43,7 @@ use crate::basic::serv::iam_cert_user_pwd_serv::IamCertUserPwdServ;
 use crate::basic::serv::iam_key_cache_serv::IamIdentCacheServ;
 use crate::iam_config::{IamBasicConfigApi, IamConfig};
 use crate::iam_constants::{self, RBUM_SCOPE_LEVEL_TENANT};
-use crate::iam_enumeration::{IamAccountLockStateKind, IamCertExtKind, IamCertKernelKind, IamCertTokenKind, IamRelKind};
+use crate::iam_enumeration::{IamAccountLockStateKind, IamCertExtKind, IamCertKernelKind, IamCertTokenKind, IamRelKind, IamResKind};
 
 lazy_static! {
     static ref SYNC_LOCK: Arc<RwLock<Option<tardis::tokio::sync::watch::Receiver<IamThirdIntegrationSyncStatusDto>>>> = Arc::new(RwLock::new(None));
@@ -1173,13 +1175,50 @@ impl IamCertServ {
         .await
     }
 
+    /// 获取手动同步按钮的操作角色和资源
+    async fn find_sync_ele_role_res(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<(String, String)> {
+        if let Some(res_sum) = IamResServ::find_one_item(
+            &IamResFilterReq {
+                basic: RbumBasicFilterReq {
+                    code: Some("2/*/account*client*sync".to_string()),
+                    ..Default::default()
+                },
+                kind: Some(IamResKind::Ele),
+                method: Some("*".to_string()),
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?
+        {
+            let role_sys_admin_id = IamRoleServ::find_one_item(
+                &IamRoleFilterReq {
+                    basic: RbumBasicFilterReq {
+                        code: Some(String::from(iam_constants::RBUM_ITEM_NAME_SYS_ADMIN_ROLE)),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                funs,
+                ctx,
+            )
+            .await?
+            .map(|r| r.id.clone())
+            .ok_or_else(|| funs.err().not_found("iam", "init", "not found sys admin role", ""))?;
+            Ok((role_sys_admin_id, res_sum.id))
+        } else {
+            Err(funs.err().not_found("third_integration_config", "enable", "sync element should be add first", "404-sync-element-not-found-error"))
+        }
+    }
+
     pub async fn add_or_modify_sync_third_integration_config(reqs: Vec<IamThirdIntegrationSyncAddReq>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let headers = Some(vec![(
             "Tardis-Context".to_string(),
             TardisFuns::crypto.base64.encode(&TardisFuns::json.obj_to_string(&ctx)?),
         )]);
         let schedule_url = funs.conf::<IamConfig>().spi.schedule_url.clone();
-
+        let mut delete_ele_flag = true;
         for req in &reqs {
             if let Some(sync_cron) = req.account_sync_cron.clone() {
                 if schedule_url.is_empty() {
@@ -1198,8 +1237,19 @@ impl IamCertServ {
                         )
                         .await?;
                 }
+            } else {
+                delete_ele_flag = false;
+                // 添加手动同步按钮权限
+                let (role_sys_admin_id, res_id) = Self::find_sync_ele_role_res(funs, ctx).await?;
+                let _ = IamRoleServ::add_rel_res(&role_sys_admin_id, &res_id, &funs, &ctx).await;
             }
         }
+
+        if delete_ele_flag {
+            let (role_sys_admin_id, res_id) = Self::find_sync_ele_role_res(funs, ctx).await?;
+            let _ = IamRoleServ::delete_rel_res(&role_sys_admin_id, &res_id, &funs, &ctx).await;
+        }
+
         let values = reqs
             .into_iter()
             .map(|req| IamThirdIntegrationConfigDto {

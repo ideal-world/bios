@@ -1,19 +1,38 @@
-use std::future::Future;
+use std::{collections::HashMap, future::Future, sync::Arc};
 
+use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
 use tardis::{
-    basic::{dto::TardisContext, result::TardisResult},
+    basic::{dto::TardisContext, error::TardisError, result::TardisResult},
     cache::cache_client::TardisCacheClient,
     chrono::Local,
-    log, TardisFuns, TardisFunsInst,
+    log,
+    tokio::{sync::RwLock, task::JoinHandle},
+    TardisFuns, TardisFunsInst,
 };
 
+use crate::rbum::rbum_config::RbumConfigApi;
+
+lazy_static! {
+    static ref TASK_HANDLE: Arc<RwLock<HashMap<i64, JoinHandle<()>>>> = Arc::new(RwLock::new(HashMap::new()));
+}
 const TASK_IN_CTX_FLAG: &str = "task_id";
 const NOTIFY_EVENT_IN_CTX_FLAG: &str = "notify";
 
 pub struct TaskProcessor;
 
 impl TaskProcessor {
+    pub async fn subscribe_task(funs: &TardisFunsInst) -> TardisResult<()> {
+        funs.mq()
+            .subscribe(&funs.rbum_conf_task_mq_topic_event(), |(_, msg)| async move {
+                //todo 处理消息
+                Self::do_stop_task().awit?;
+                Ok(())
+            })
+            .await?;
+        Ok(())
+    }
+
     pub async fn init_task(cache_key: &str, cache_client: &TardisCacheClient) -> TardisResult<i64> {
         let task_id = Local::now().timestamp_nanos();
         let max: i64 = u32::MAX.into();
@@ -50,18 +69,22 @@ impl TaskProcessor {
         let task_id = TaskProcessor::init_task(cache_key, funs.cache()).await?;
         let cache_client = funs.cache();
         let cache_key = cache_key.to_string();
-        tardis::tokio::spawn(async move {
+        let handle = tardis::tokio::spawn(async move {
             let result = process().await;
             match result {
-                Ok(_) => match TaskProcessor::set_status(&cache_key, task_id, true, cache_client).await {
-                    Ok(_) => {}
-                    Err(e) => log::error!("Asynchronous task [{}] process error:{:?}", task_id, e),
-                },
+                Ok(_) => {
+                    TASK_HANDLE.write().await.remove(&task_id);
+                    match TaskProcessor::set_status(&cache_key, task_id, true, cache_client).await {
+                        Ok(_) => {}
+                        Err(e) => log::error!("Asynchronous task [{}] process error:{:?}", task_id, e),
+                    }
+                }
                 Err(e) => {
                     log::error!("Asynchronous task [{}] process error:{:?}", task_id, e);
                 }
             }
         });
+        TASK_HANDLE.write().await.insert(task_id, handle);
         Ok(task_id)
     }
 
@@ -75,6 +98,23 @@ impl TaskProcessor {
             ctx.add_ext(TASK_IN_CTX_FLAG, &format!("{exist_task_ids},{task_id}")).await
         } else {
             ctx.add_ext(TASK_IN_CTX_FLAG, &task_id.to_string()).await
+        }
+    }
+
+    pub async fn stop_task(task_id: i64, funs: &TardisFunsInst) -> TardisResult<()> {
+        //todo 发布消息
+        funs.mq().publish(&funs.rbum_conf_task_mq_topic_event(), "".to_string(), &HashMap::new()).await?;
+        Ok(())
+    }
+
+    pub async fn do_stop_task(task_id: i64) -> TardisResult<()> {
+        match TASK_HANDLE.write().await.get(&task_id) {
+            Some(handle) => {
+                handle.abort();
+                TASK_HANDLE.write().await.remove(&task_id);
+                Ok(())
+            }
+            None => Err(TardisError::bad_request("task not found,may task is end", "400-stop-task-error")),
         }
     }
 
