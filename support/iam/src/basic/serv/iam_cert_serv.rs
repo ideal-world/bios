@@ -1049,22 +1049,29 @@ impl IamCertServ {
     }
 
     pub async fn use_global_account_ctx(mut ctx: TardisContext, account_id: &str, funs: &TardisFunsInst) -> TardisResult<TardisContext> {
-        let mock_ctx = TardisContext { ..Default::default() };
-        let account = IamAccountServ::get_item(
+        let account: crate::basic::dto::iam_account_dto::IamAccountDetailResp = IamAccountServ::get_item(
             account_id,
             &IamAccountFilterReq {
-                basic: Default::default(),
-                rel: None,
-                rel2: None,
-                set_rel: None,
-                icon: None,
-                status: None,
+                basic: RbumBasicFilterReq {
+                    own_paths: Some("".to_string()),
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                ..Default::default()
             },
             funs,
-            &mock_ctx,
+            &ctx,
         )
         .await?;
-        ctx.own_paths = account.own_paths;
+        match account.scope_level {
+            bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind::Private => {}
+            bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind::Root => {
+                ctx.own_paths = "".to_string();
+            }
+            bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind::L1 => {}
+            bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind::L2 => {}
+            bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind::L3 => {}
+        }
         Ok(ctx)
     }
 
