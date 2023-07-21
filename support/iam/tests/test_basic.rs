@@ -107,7 +107,7 @@ pub fn gen_test_ldap_conf() -> IamCertConfLdapAddOrModifyReq {
         name: "testLdap".to_string(),
         conn_uri: env::var("TARDIS_FW.LDAP.URL").unwrap(),
         is_tls: false,
-        principal: TrimString(env::var("TARDIS_FW.LDAP.ADMIN_CN").unwrap()),
+        principal: TrimString(env::var("TARDIS_FW.LDAP.ADMIN_DN").unwrap()),
         credentials: TrimString(env::var("TARDIS_FW.LDAP.ADMIN_PASSWORD").unwrap()),
         base_dn: env::var("TARDIS_FW.LDAP.BASE_DN").unwrap_or("".to_string()),
         port: Some(env::var("TARDIS_FW.LDAP.PORT").unwrap().parse().unwrap()),

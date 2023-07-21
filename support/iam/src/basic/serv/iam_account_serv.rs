@@ -5,9 +5,8 @@ use bios_sdk_invoke::clients::spi_search_client::SpiSearchClient;
 use bios_sdk_invoke::dto::search_item_dto::{SearchItemAddReq, SearchItemModifyReq, SearchItemVisitKeysReq};
 use itertools::Itertools;
 
-use ldap3::tokio::time::sleep;
 use std::collections::{HashMap, HashSet};
-use std::time::Duration;
+
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
@@ -17,7 +16,7 @@ use tardis::db::sea_orm::*;
 
 use tardis::serde_json::json;
 use tardis::web::web_resp::{TardisPage, Void};
-use tardis::{serde_json, tokio, TardisFuns, TardisFunsInst};
+use tardis::{tokio, TardisFunsInst};
 
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumCertFilterReq, RbumItemRelFilterReq};
 use bios_basic::rbum::dto::rbum_item_dto::{RbumItemKernelAddReq, RbumItemKernelModifyReq};
@@ -844,7 +843,7 @@ impl IamAccountServ {
         .await
     }
 
-    pub async fn async_delete_account_search(account_id: String, funs: &TardisFunsInst, ctx: TardisContext) -> TardisResult<()> {
+    pub async fn async_delete_account_search(account_id: String, _funs: &TardisFunsInst, ctx: TardisContext) -> TardisResult<()> {
         let ctx_clone = ctx.clone();
         ctx.add_async_task(Box::new(|| {
             Box::pin(async move {

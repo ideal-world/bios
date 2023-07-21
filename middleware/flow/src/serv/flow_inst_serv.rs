@@ -417,7 +417,7 @@ impl FlowInstServ {
 
     pub async fn transfer(flow_inst_id: &str, transfer_req: &FlowInstTransferReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<FlowInstTransferResp> {
         let flow_inst = Self::get(flow_inst_id, funs, ctx).await?;
-        let current_state_id = flow_inst.current_state_id.clone();
+        let _current_state_id = flow_inst.current_state_id.clone();
         let flow_model = FlowModelServ::get_item(
             &flow_inst.rel_flow_model_id,
             &FlowModelFilterReq {
@@ -512,19 +512,19 @@ impl FlowInstServ {
 
     /// handling post change when the transition occurs
     async fn do_post_change(
-        current_model: &FlowModelDetailResp,
+        _current_model: &FlowModelDetailResp,
         transition_detail: Option<&FlowTransitionDetailResp>,
-        ctx: &TardisContext,
-        funs: &TardisFunsInst,
+        _ctx: &TardisContext,
+        _funs: &TardisFunsInst,
     ) -> TardisResult<()> {
         if let Some(transition_detail) = transition_detail {
             let post_changes = transition_detail.action_by_post_changes();
             for post_change in post_changes {
                 match post_change {
-                    FlowTransitionActionChangeInfo::Var(change_info) => {
+                    FlowTransitionActionChangeInfo::Var(_change_info) => {
                         let _ = TardisFuns::web_client().post_obj_to_str("", &json!({}), None).await?;
                     }
-                    FlowTransitionActionChangeInfo::State(change_info) => {
+                    FlowTransitionActionChangeInfo::State(_change_info) => {
                         let _ = TardisFuns::web_client().post_obj_to_str("", &json!({}), None).await?;
                     }
                 }

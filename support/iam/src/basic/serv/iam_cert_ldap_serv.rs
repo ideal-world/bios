@@ -1,13 +1,14 @@
 use bios_basic::rbum::dto::rbum_cert_dto::RbumCertSummaryResp;
 use ldap3::log::{error, warn};
 use std::collections::HashMap;
+use tardis::tokio::sync::watch;
 
 use self::ldap::LdapClient;
 use super::clients::iam_log_client::{IamLogClient, LogParamTag};
 use super::iam_cert_phone_vcode_serv::IamCertPhoneVCodeServ;
 use super::{iam_account_serv::IamAccountServ, iam_cert_serv::IamCertServ, iam_tenant_serv::IamTenantServ};
 use crate::basic::dto::iam_account_dto::{IamAccountAddByLdapResp, IamAccountAggModifyReq, IamAccountExtSysAddReq, IamAccountExtSysBatchAddReq};
-use crate::basic::dto::iam_cert_dto::{IamCertPhoneVCodeAddReq, IamThirdIntegrationConfigDto};
+use crate::basic::dto::iam_cert_dto::{IamCertPhoneVCodeAddReq, IamThirdIntegrationConfigDto, IamThirdIntegrationSyncStatusDto};
 use crate::basic::serv::iam_cert_user_pwd_serv::IamCertUserPwdServ;
 use crate::console_passport::dto::iam_cp_cert_dto::IamCpUserPwdBindWithLdapReq;
 use crate::console_passport::serv::iam_cp_cert_user_pwd_serv::IamCpCertUserPwdServ;
@@ -39,6 +40,7 @@ use bios_basic::rbum::{
     },
 };
 use serde::{Deserialize, Serialize};
+
 use tardis::regex::Regex;
 use tardis::web::poem_openapi;
 use tardis::{
@@ -686,7 +688,12 @@ impl IamCertLdapServ {
     }
 
     //同步ldap人员到iam
-    pub async fn iam_sync_ldap_user_to_iam(sync_config: IamThirdIntegrationConfigDto, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
+    pub async fn iam_sync_ldap_user_to_iam(
+        sync_config: IamThirdIntegrationConfigDto,
+        tx: Option<watch::Sender<IamThirdIntegrationSyncStatusDto>>,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<String> {
         let mut msg = "".to_string();
         let (mut ldap_client, cert_conf, cert_conf_id) = Self::get_ldap_client(Some(ctx.own_paths.clone()), "", funs, ctx).await?;
         if ldap_client.bind_by_dn(&cert_conf.principal, &cert_conf.credentials).await?.is_none() {
@@ -708,7 +715,15 @@ impl IamCertLdapServ {
             ldap_id_to_account_map.insert(r.account_id.clone(), r);
         });
 
-        ldap_client.unbind().await?;
+        let (mut total, mut success, mut failed) = (ldap_account.len(), 0, 0);
+
+        match tx.as_ref() {
+            Some(tx) => {
+                let _ = tx.send(IamThirdIntegrationSyncStatusDto { total, success, failed });
+            }
+            None => {}
+        }
+        let _ = ldap_client.unbind().await;
 
         let certs = IamCertServ::find_certs(
             &RbumCertFilterReq {
@@ -817,15 +832,27 @@ impl IamCertLdapServ {
                         let err_msg = format!("add phone phone:{} failed:{}", iam_account_ext_sys_resp.mobile.clone(), e);
                         tardis::log::error!("{}", err_msg);
                         msg = format!("{msg}{err_msg}\n");
+                        failed += 1;
+                        ldap_id_to_account_map.remove(&local_ldap_id);
+                        continue;
                     }
                 }
 
                 ldap_id_to_account_map.remove(&local_ldap_id);
+                success += 1;
+                match tx.as_ref() {
+                    Some(tx) => {
+                        let _ = tx.send(IamThirdIntegrationSyncStatusDto { total, success, failed });
+                    }
+                    None => {}
+                }
             } else {
+                total += 1;
                 //ldap没有 iam有的 需要同步删除
-                match sync_config.account_way_to_delete {
+                let delete_result = match sync_config.account_way_to_delete {
                     WayToDelete::DoNotDelete => {
-                        continue;
+                        success += 1;
+                        Ok(())
                     }
                     WayToDelete::DeleteCert => {
                         RbumCertServ::modify_rbum(
@@ -843,7 +870,7 @@ impl IamCertLdapServ {
                             &funs,
                             ctx,
                         )
-                        .await?;
+                        .await
                     }
                     WayToDelete::Disable => {
                         IamAccountServ::modify_account_agg(
@@ -863,11 +890,21 @@ impl IamCertLdapServ {
                             &funs,
                             ctx,
                         )
-                        .await?;
+                        .await
                     }
-                    WayToDelete::DeleteAccount => {
-                        IamAccountServ::delete_item_with_all_rels(&cert.rel_rbum_id, &funs, ctx).await?;
+                    WayToDelete::DeleteAccount => IamAccountServ::delete_item_with_all_rels(&cert.rel_rbum_id, &funs, ctx).await.map(|_| ()),
+                };
+                match delete_result {
+                    Ok(_) => success += 1,
+                    Err(_) => {
+                        failed += 1;
                     }
+                }
+                match tx.as_ref() {
+                    Some(tx) => {
+                        let _ = tx.send(IamThirdIntegrationSyncStatusDto { total, success, failed });
+                    }
+                    None => {}
                 }
             };
             funs.commit().await?;
@@ -942,7 +979,16 @@ impl IamCertLdapServ {
                 tardis::log::error!("{}", err_msg);
                 msg = format!("{msg}{err_msg}\n");
                 funs.rollback().await?;
+                failed += 1;
                 continue;
+            } else {
+                success += 1;
+            }
+            match tx.as_ref() {
+                Some(tx) => {
+                    let _ = tx.send(IamThirdIntegrationSyncStatusDto { total, success, failed });
+                }
+                None => {}
             }
             funs.commit().await?;
             mock_ctx.execute_task().await?;

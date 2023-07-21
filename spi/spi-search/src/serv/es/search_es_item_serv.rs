@@ -2,10 +2,7 @@ use std::collections::HashMap;
 
 use bios_basic::{
     basic_enumeration::BasicQueryOpKind,
-    spi::{
-        spi_funs::{SpiBsInst, SpiBsInstExtractor},
-        spi_initializer::common,
-    },
+    spi::{spi_funs::SpiBsInst, spi_initializer::common},
 };
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
@@ -105,7 +102,7 @@ pub async fn add(add_req: &mut SearchItemAddReq, funs: &TardisFunsInst, ctx: &Ta
     Ok(())
 }
 
-pub async fn modify(tag: &str, key: &str, modify_req: &mut SearchItemModifyReq, funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
+pub async fn modify(tag: &str, key: &str, modify_req: &mut SearchItemModifyReq, funs: &TardisFunsInst, _ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
     let (client, ext, _) = inst.inst::<TardisSearchClient>();
     let index = format_index(tag, ext);
     if !client.check_index_exist(&index).await? {
@@ -196,7 +193,7 @@ pub async fn modify(tag: &str, key: &str, modify_req: &mut SearchItemModifyReq, 
     Ok(())
 }
 
-pub async fn delete(tag: &str, key: &str, funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
+pub async fn delete(tag: &str, key: &str, funs: &TardisFunsInst, _ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
     let (client, ext, _) = inst.inst::<TardisSearchClient>();
     let index = format_index(tag, ext);
     if !client.check_index_exist(&index).await? {
@@ -228,7 +225,7 @@ pub async fn delete(tag: &str, key: &str, funs: &TardisFunsInst, ctx: &TardisCon
     Ok(())
 }
 
-pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<TardisPage<SearchItemSearchResp>> {
+pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst, _ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<TardisPage<SearchItemSearchResp>> {
     let q = gen_query_dsl(search_req)?;
     let mut track_scores = None;
     if let Some(sorts) = &search_req.sort {
