@@ -161,7 +161,7 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
             })
             .collect::<String>();
         sql_vals.push(Value::from(q.as_str()));
-        from_fragments = format!(", to_tsquery('public.chinese_zh', ${}) AS query", sql_vals.len());
+        from_fragments = format!(", plainto_tsquery('public.chinese_zh', ${}) AS query", sql_vals.len());
         match search_req.query.q_scope.as_ref().unwrap_or(&SearchItemSearchQScopeKind::Title) {
             SearchItemSearchQScopeKind::Title => {
                 select_fragments = ", COALESCE(ts_rank(title_tsv, query), 0::float4) AS rank_title, 0::float4 AS rank_content".to_string();
