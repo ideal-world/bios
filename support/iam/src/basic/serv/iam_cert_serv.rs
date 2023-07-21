@@ -19,7 +19,7 @@ use bios_basic::rbum::serv::rbum_cert_serv::{RbumCertConfServ, RbumCertServ};
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
-use super::clients::spi_log_client::{LogParamTag, SpiLogClient};
+use super::clients::iam_log_client::{IamLogClient, LogParamTag};
 use super::iam_rel_serv::IamRelServ;
 use crate::basic::dto::iam_account_dto::IamAccountInfoResp;
 use crate::basic::dto::iam_cert_conf_dto::{
@@ -1285,7 +1285,7 @@ impl IamCertServ {
                 if let Some(own_paths) = own_paths {
                     mock_ctx.own_paths = own_paths;
                 }
-                let _ = SpiLogClient::add_ctx_task(
+                let _ = IamLogClient::add_ctx_task(
                     LogParamTag::IamAccount,
                     None,
                     "密码锁定账号".to_string(),
@@ -1293,7 +1293,7 @@ impl IamCertServ {
                     &mock_ctx,
                 )
                 .await;
-                let _ = SpiLogClient::add_ctx_task(
+                let _ = IamLogClient::add_ctx_task(
                     LogParamTag::SecurityVisit,
                     None,
                     "连续登录失败".to_string(),

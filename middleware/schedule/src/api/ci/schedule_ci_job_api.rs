@@ -69,7 +69,7 @@ impl ScheduleCiJobApi {
     #[oai(path = "/test/exec/:msg", method = "get")]
     async fn test_exec(&self, msg: Path<String>, _ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<String> {
         for (k, v) in request.headers() {
-            info!("{}: {}", k, v.to_str().unwrap());
+            info!("{}: {}", k, v.to_str().expect("not as str"));
         }
         TardisResp::ok(msg.0)
     }

@@ -18,7 +18,7 @@ use crate::basic::serv::iam_key_cache_serv::{IamCacheResRelAddOrModifyReq, IamCa
 use crate::basic::serv::iam_res_serv::IamResServ;
 use crate::iam_enumeration::{IamRelKind, IamResKind};
 
-use super::clients::spi_log_client::{LogParamTag, SpiLogClient};
+use super::clients::iam_log_client::{IamLogClient, LogParamTag};
 use super::iam_account_serv::IamAccountServ;
 
 pub struct IamRelServ;
@@ -76,7 +76,7 @@ impl IamRelServ {
         RbumRelServ::add_rel(req, funs, ctx).await?;
 
         if rel_kind == &IamRelKind::IamAccountRole {
-            let _ = SpiLogClient::add_ctx_task(
+            let _ = IamLogClient::add_ctx_task(
                 LogParamTag::IamAccount,
                 Some(from_iam_item_id.to_string()),
                 "增加账号租户角色为管理员".to_string(),
@@ -100,7 +100,7 @@ impl IamRelServ {
             )
             .await?
             .name;
-            let _ = SpiLogClient::add_ctx_task(
+            let _ = IamLogClient::add_ctx_task(
                 LogParamTag::IamRole,
                 Some(to_iam_item_id.to_string()),
                 format!("添加角色人员{}", account_name),
@@ -240,7 +240,7 @@ impl IamRelServ {
             )
             .await?;
 
-            let _ = SpiLogClient::add_ctx_task(
+            let _ = IamLogClient::add_ctx_task(
                 LogParamTag::IamRes,
                 Some(from_iam_item_id.to_string()),
                 "添加目录页面API".to_string(),
@@ -429,7 +429,7 @@ impl IamRelServ {
                 )
                 .await?;
 
-                let _ = SpiLogClient::add_ctx_task(
+                let _ = IamLogClient::add_ctx_task(
                     LogParamTag::IamRes,
                     Some(from_iam_item_id.to_string()),
                     "移除目录页面API".to_string(),
@@ -440,7 +440,7 @@ impl IamRelServ {
             }
             IamRelKind::IamAccountRole => {
                 IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(from_iam_item_id, funs).await?;
-                let _ = SpiLogClient::add_ctx_task(
+                let _ = IamLogClient::add_ctx_task(
                     LogParamTag::IamAccount,
                     Some(from_iam_item_id.to_string()),
                     "移除账号租户角色为管理员".to_string(),
@@ -464,7 +464,7 @@ impl IamRelServ {
                 )
                 .await?
                 .name;
-                let _ = SpiLogClient::add_ctx_task(
+                let _ = IamLogClient::add_ctx_task(
                     LogParamTag::IamRole,
                     Some(to_iam_item_id.to_string()),
                     format!("移除角色人员{}", account_name),

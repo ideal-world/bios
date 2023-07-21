@@ -29,7 +29,6 @@ async fn test_basic_schedual_service() -> TardisResult<()> {
 async fn test_add_delete(config: &ScheduleConfig, test_env: &TestEnv) {
     let code = "print-hello";
     ScheduleTaskServ::add(
-        "https://127.0.0.1:8080/spi-log",
         ScheduleJobAddOrModifyReq {
             code: code.into(),
             // do every 2 seconds
@@ -78,7 +77,7 @@ async fn test_random_ops(config: &ScheduleConfig, test_env: &TestEnv) {
             };
             let cfg: ScheduleConfig = config.clone();
             tasks.push_back(code.clone());
-            join_set.spawn(async move { ScheduleTaskServ::add("https://127.0.0.1:8080/spi-log", new_task(&code), &cfg).await });
+            join_set.spawn(async move { ScheduleTaskServ::add(new_task(&code), &cfg).await });
         }
         counter -= 1;
         if counter == 0 {

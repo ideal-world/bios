@@ -16,7 +16,7 @@ use crate::basic::serv::iam_key_cache_serv::IamIdentCacheServ;
 use crate::iam_config::IamBasicConfigApi;
 use crate::iam_enumeration::IamCertKernelKind;
 
-use super::clients::spi_log_client::{LogParamTag, SpiLogClient};
+use super::clients::iam_log_client::{IamLogClient, LogParamTag};
 use super::iam_account_serv::IamAccountServ;
 use super::iam_cert_mail_vcode_serv::IamCertMailVCodeServ;
 use super::iam_cert_phone_vcode_serv::IamCertPhoneVCodeServ;
@@ -96,7 +96,7 @@ impl IamCertUserPwdServ {
             ));
         }
         for (op_describe, op_kind) in log_tasks {
-            let _ = SpiLogClient::add_ctx_task(LogParamTag::SecurityAlarm, None, op_describe, Some(op_kind), ctx).await;
+            let _ = IamLogClient::add_ctx_task(LogParamTag::SecurityAlarm, None, op_describe, Some(op_kind), ctx).await;
         }
 
         RbumCertConfServ::modify_rbum(
@@ -205,7 +205,7 @@ impl IamCertUserPwdServ {
             )
             .await?;
 
-            let _ = SpiLogClient::add_ctx_task(
+            let _ = IamLogClient::add_ctx_task(
                 LogParamTag::IamAccount,
                 Some(ctx.owner.clone()),
                 "修改密码".to_string(),
@@ -320,7 +320,7 @@ impl IamCertUserPwdServ {
             .await?;
             let result = IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(rel_iam_item_id, funs).await;
 
-            let _ = SpiLogClient::add_ctx_task(
+            let _ = IamLogClient::add_ctx_task(
                 LogParamTag::IamAccount,
                 Some(rel_iam_item_id.to_string()),
                 "重置账号密码".to_string(),
@@ -384,7 +384,7 @@ impl IamCertUserPwdServ {
             )
             .await?;
 
-            let _ = SpiLogClient::add_ctx_task(
+            let _ = IamLogClient::add_ctx_task(
                 LogParamTag::IamAccount,
                 Some(rel_iam_item_id.to_string()),
                 "重置账号密码".to_string(),

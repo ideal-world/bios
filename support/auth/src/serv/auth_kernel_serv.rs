@@ -83,23 +83,7 @@ async fn ident(req: &AuthReq, config: &AuthConfig, cache_client: &TardisCacheCli
         .or_else(|| req.query.get(&config.head_key_token))
         .or_else(|| req.query.get(&config.head_key_token.to_lowercase()))
     {
-        let account_id = if let Some(token_value) = cache_client.get(&format!("{}{}", config.cache_key_token_info, token)).await? {
-            trace!("Token info: {}", token_value);
-            let account_info: Vec<&str> = token_value.split(',').collect::<Vec<_>>();
-            if account_info.len() > 2 {
-                cache_client
-                    .set_ex(
-                        &format!("{}{}", config.cache_key_token_info, token),
-                        &token_value,
-                        account_info[2].parse().map_err(|e| TardisError::internal_error(&format!("[Auth] account_info ex_sec parse error {}", e), ""))?,
-                    )
-                    .await?;
-            }
-            account_info[1].to_string()
-        } else {
-            return Err(TardisError::unauthorized(&format!("[Auth] Token [{token}] is not legal"), "401-auth-req-token-not-exist"));
-        };
-        let context = self::get_account_context(token, &account_id, &app_id, config, cache_client).await?;
+        let context = self::get_token_context(token, &app_id, config, cache_client).await?;
         let own_paths_split = context.own_paths.split('/').collect::<Vec<_>>();
         let tenant_id = if context.own_paths.is_empty() { None } else { Some(own_paths_split[0].to_string()) };
         let app_id = if own_paths_split.len() > 1 { Some(own_paths_split[1].to_string()) } else { None };
@@ -115,7 +99,7 @@ async fn ident(req: &AuthReq, config: &AuthConfig, cache_client: &TardisCacheCli
             ak: Some(context.ak),
         })
     } else if let Some(ak_authorization) = get_ak_key(req, config) {
-        let (req_date, ak, signature) = self::parsing_base_ak(&ak_authorization, req, config).await?;
+        let (req_date, ak, signature) = self::parsing_base_ak(&ak_authorization, req, config, false).await?;
         let (cache_sk, cache_tenant_id, cache_appid) = self::get_cache_ak(&ak, config, cache_client).await?;
         self::check_ak_signature(&ak, &cache_sk, &signature, &req_date, req).await?;
         let bios_ctx = if let Some(bios_ctx) = req.headers.get(&config.head_key_bios_ctx).or_else(|| req.headers.get(&config.head_key_bios_ctx.to_lowercase())) {
@@ -156,7 +140,7 @@ async fn ident(req: &AuthReq, config: &AuthConfig, cache_client: &TardisCacheCli
             ))
         }
     } else if let Some(ak_authorization) = get_webhook_ak_key(req, config) {
-        let (req_date, ak, signature) = self::parsing_base_ak(&ak_authorization, req, config).await?;
+        let (req_date, ak, signature) = self::parsing_base_ak(&ak_authorization, req, config, true).await?;
         let (cache_sk, cache_tenant_id, cache_appid) = self::get_cache_ak(&ak, config, cache_client).await?;
         let owner = if let Some(owner) = req.query.get(&config.query_owner).or_else(|| req.query.get(&config.query_owner.to_lowercase())) {
             owner
@@ -234,6 +218,27 @@ async fn ident(req: &AuthReq, config: &AuthConfig, cache_client: &TardisCacheCli
     }
 }
 
+pub async fn get_token_context(token: &str, app_id: &str, config: &AuthConfig, cache_client: &TardisCacheClient) -> TardisResult<TardisContext> {
+    let account_id = if let Some(token_value) = cache_client.get(&format!("{}{}", config.cache_key_token_info, token)).await? {
+        trace!("Token info: {}", token_value);
+        let account_info: Vec<&str> = token_value.split(',').collect::<Vec<_>>();
+        if account_info.len() > 2 {
+            cache_client
+                .set_ex(
+                    &format!("{}{}", config.cache_key_token_info, token),
+                    &token_value,
+                    account_info[2].parse().map_err(|e| TardisError::internal_error(&format!("[Auth] account_info ex_sec parse error {}", e), ""))?,
+                )
+                .await?;
+        }
+        account_info[1].to_string()
+    } else {
+        return Err(TardisError::unauthorized(&format!("[Auth] Token [{token}] is not legal"), "401-auth-req-token-not-exist"));
+    };
+    let context = self::get_account_context(token, &account_id, &app_id, config, cache_client).await?;
+    Ok(context)
+}
+
 async fn get_account_context(token: &str, account_id: &str, app_id: &str, config: &AuthConfig, cache_client: &TardisCacheClient) -> TardisResult<TardisContext> {
     let mut context: TardisContext = if let Some(context) = cache_client.hget(&format!("{}{}", config.cache_key_account_info, account_id), &app_id).await? {
         TardisFuns::json.str_to_obj::<TardisContext>(&context)?
@@ -252,12 +257,18 @@ async fn get_account_context(token: &str, account_id: &str, app_id: &str, config
             if !tenant_context.groups.is_empty() {
                 context.groups.extend(tenant_context.groups);
             }
+            if !context.own_paths.contains(&tenant_context.own_paths) {
+                return Err(TardisError::unauthorized(
+                    &format!("[Auth] Token [{token}] with App [{app_id}] is not legal"),
+                    "401-auth-req-token-or-app-not-exist",
+                ));
+            }
         }
     }
     Ok(context)
 }
 
-async fn parsing_base_ak(ak_authorization: &str, req: &AuthReq, config: &AuthConfig) -> TardisResult<(String, String, String)> {
+async fn parsing_base_ak(ak_authorization: &str, req: &AuthReq, config: &AuthConfig, is_webhook: bool) -> TardisResult<(String, String, String)> {
     let req_date = if let Some(req_date) = req
         .headers
         .get(&config.head_key_date_flag)
@@ -284,11 +295,20 @@ async fn parsing_base_ak(ak_authorization: &str, req: &AuthReq, config: &AuthCon
         return Err(TardisError::bad_request("[Auth] bad date format", "401-auth-req-date-incorrect"));
     };
     let now = Utc::now().timestamp_millis();
-    if now - req_head_time > config.head_date_interval_millsec as i64 {
-        return Err(TardisError::unauthorized(
-            "[Auth] The request has already been made or the client's time is incorrect. Please try again.",
-            "401-auth-req-date-incorrect",
-        ));
+    if is_webhook {
+        if req_head_time > now {
+            return Err(TardisError::unauthorized(
+                "[Auth] The webhook interface time has expired. Procedure.",
+                "401-auth-req-date-incorrect",
+            ));
+        }
+    } else {
+        if now - req_head_time > config.head_date_interval_millsec as i64 {
+            return Err(TardisError::unauthorized(
+                "[Auth] The request has already been made or the client's time is incorrect. Please try again.",
+                "401-auth-req-date-incorrect",
+            ));
+        }
     }
     let ak_authorizations = ak_authorization.split(':').collect::<Vec<_>>();
     let ak = ak_authorizations[0];

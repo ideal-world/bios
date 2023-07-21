@@ -15,10 +15,10 @@ name = "bios_sdk_invoke"
 path = "src/lib.rs"
 
 [features]
-default = ["spi-kv", "spi-log", "spi-search"]
-spi-kv = []
-spi-log = []
-spi-search = []
+default = ["spi_kv", "spi_log", "spi_search"]
+spi_kv = []
+spi_log = []
+spi_search = []
 
 [dependencies]
 serde.workspace = true

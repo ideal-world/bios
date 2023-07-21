@@ -16,7 +16,7 @@ use crate::basic::serv::iam_key_cache_serv::IamIdentCacheServ;
 use crate::iam_config::IamBasicConfigApi;
 use crate::iam_enumeration::{IamCertTokenKind, IamConfigDataTypeKind, IamConfigKind};
 
-use super::clients::spi_log_client::{LogParamTag, SpiLogClient};
+use super::clients::iam_log_client::{IamLogClient, LogParamTag};
 use super::iam_config_serv::IamConfigServ;
 
 pub struct IamCertTokenServ;
@@ -131,8 +131,8 @@ impl IamCertTokenServ {
         }
         IamIdentCacheServ::add_token(token, token_kind, rel_iam_item_id, None, cert_conf.expire_sec, cert_conf.coexist_num, funs).await?;
 
-        let _ = SpiLogClient::add_ctx_task(LogParamTag::Token, Some(token.to_string()), "add token".to_string(), None, ctx).await;
-        let _ = SpiLogClient::add_ctx_task(LogParamTag::SecurityVisit, Some(token.to_string()), "登录".to_string(), Some("Login".to_string()), ctx).await;
+        let _ = IamLogClient::add_ctx_task(LogParamTag::Token, Some(token.to_string()), "add token".to_string(), None, ctx).await;
+        let _ = IamLogClient::add_ctx_task(LogParamTag::SecurityVisit, Some(token.to_string()), "登录".to_string(), Some("Login".to_string()), ctx).await;
 
         Ok(())
     }
