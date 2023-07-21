@@ -40,7 +40,7 @@ impl InvokeConfigManager {
     }
 
     pub fn match_module_url(code: &str, module_url: &str) -> bool {
-        Self::get_config(code, |conf| conf.module_urls.iter().any(|(k, v)| module_url.eq(k)))
+        Self::get_config(code, |conf| conf.module_urls.iter().any(|(k, _v)| module_url.eq(k)))
     }
 
     pub fn get_config<F, T>(code: &str, fun: F) -> T

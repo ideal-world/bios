@@ -16,11 +16,10 @@ publish.workspace = true
 serde.workspace = true
 lazy_static.workspace = true
 
-spacegate-kernel = { version = "0.1.0-alpha.2", features = [
+spacegate-kernel = { version = "0.1.0-alpha.3", features = [
     "ws",
     "cache",
     "k8s",
-    "web",
 ] }
 # spacegate-kernel = { path = "../../../spacegate/kernel" }
 bios-auth = { path = "../../support/auth" }
