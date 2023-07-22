@@ -10,6 +10,7 @@ use bios_auth::{
     },
     serv::{auth_crypto_serv, auth_kernel_serv},
 };
+use bios_sdk_invoke::invoke_initializer;
 use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
 use spacegate_kernel::{
@@ -18,7 +19,7 @@ use spacegate_kernel::{
     http::{self, HeaderMap, HeaderName, HeaderValue},
     plugins::{
         context::{SgRouteFilterRequestAction, SgRoutePluginContext},
-        filters::{BoxSgPluginFilter, SgPluginFilter, SgPluginFilterAccept, SgPluginFilterDef},
+        filters::{BoxSgPluginFilter, SgPluginFilter, SgPluginFilterAccept, SgPluginFilterDef, SgPluginFilterInitDto},
     },
 };
 use tardis::{
@@ -31,33 +32,37 @@ use tardis::{
     TardisFuns,
 };
 
-pub const CODE: &str = "anti_replay";
-pub struct SgFilterAntiReplayDef;
+pub const CODE: &str = "audit_log";
+pub struct SgFilterAuditLogDef;
 
-impl SgPluginFilterDef for SgFilterAntiReplayDef {
+impl SgPluginFilterDef for SgFilterAuditLogDef {
     fn inst(&self, spec: serde_json::Value) -> TardisResult<BoxSgPluginFilter> {
-        let filter = TardisFuns::json.json_to_obj::<SgFilterAntiReplay>(spec)?;
+        let filter = TardisFuns::json.json_to_obj::<SgFilterAuditLog>(spec)?;
         Ok(filter.boxed())
     }
 }
 
 #[derive(Serialize, Deserialize)]
 #[serde(default)]
-pub struct SgFilterAntiReplay {}
+pub struct SgFilterAuditLog {
+    pub log_url: String,
+}
 
-impl Default for SgFilterAntiReplay {
+impl Default for SgFilterAuditLog {
     fn default() -> Self {
-        Self {}
+        Self {log_url:"".to_string()}
     }
 }
 
 #[async_trait]
-impl SgPluginFilter for SgFilterAntiReplay {
+impl SgPluginFilter for SgFilterAuditLog {
     fn accept(&self) -> SgPluginFilterAccept {
         SgPluginFilterAccept::default()
     }
 
     async fn init(&self, _: &SgPluginFilterInitDto) -> TardisResult<()> {
+
+        invoke_initializer::init(funs.module_code(), funs.conf::<IamConfig>().invoke.clone())?;
         Ok(())
     }
 
