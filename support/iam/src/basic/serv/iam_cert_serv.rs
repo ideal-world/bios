@@ -1297,12 +1297,12 @@ impl IamCertServ {
         let mut sync =
             SYNC_LOCK.try_write().map_err(|_| funs.err().conflict("third_integration_config", "sync", "The last synchronization has not ended yet", "iam-sync-not-ended"))?;
 
+        let (tx, rx) = tardis::tokio::sync::watch::channel(IamThirdIntegrationSyncStatusDto { total: 0, success: 0, failed: 0 });
+        *sync = Some(rx);
         TaskProcessor::execute_task_with_ctx(
             &funs.conf::<IamConfig>().cache_key_async_task_status,
             move || async move {
                 let funs = iam_constants::get_tardis_inst();
-                let (tx, rx) = tardis::tokio::sync::watch::channel(IamThirdIntegrationSyncStatusDto { total: 0, success: 0, failed: 0 });
-                *sync = Some(rx);
 
                 let sync_config = if let Some(sync_config) = sync_config {
                     sync_config
