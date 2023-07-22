@@ -1218,12 +1218,12 @@ impl IamCertServ {
             TardisFuns::crypto.base64.encode(&TardisFuns::json.obj_to_string(&ctx)?),
         )]);
         let schedule_url = funs.conf::<IamConfig>().spi.schedule_url.clone();
-        let mut delete_ele_flag = true;
-        for req in &reqs {
-            if let Some(sync_cron) = req.account_sync_cron.clone() {
-                if schedule_url.is_empty() {
-                    return Err(funs.err().not_implemented("third_integration_config", "add_or_modify", "schedule is not impl!", "501-iam-schedule_not_impl_error"));
-                };
+        if schedule_url.is_empty() {
+            return Err(funs.err().not_implemented("third_integration_config", "add_or_modify", "schedule is not impl!", "501-iam-schedule_not_impl_error"));
+        };
+
+        match reqs.iter().find(|req| req.account_sync_cron.is_some()).and_then(|req| req.account_sync_cron.clone()) {
+            Some(sync_cron) => {
                 if !sync_cron.is_empty() {
                     funs.web_client()
                         .put_obj_to_str(
@@ -1237,17 +1237,26 @@ impl IamCertServ {
                         )
                         .await?;
                 }
-            } else {
-                delete_ele_flag = false;
-                // 添加手动同步按钮权限
-                let (role_sys_admin_id, res_id) = Self::find_sync_ele_role_res(funs, ctx).await?;
-                let _ = IamRoleServ::add_rel_res(&role_sys_admin_id, &res_id, &funs, &ctx).await;
+            }
+            None => {
+                funs.web_client()
+                    .delete_to_void(
+                        &format!("{schedule_url}/ci/schedule/jobs/{}", funs.conf::<IamConfig>().third_integration_schedule_code.clone()),
+                        headers.clone(),
+                    )
+                    .await?;
             }
         }
 
-        if delete_ele_flag {
-            let (role_sys_admin_id, res_id) = Self::find_sync_ele_role_res(funs, ctx).await?;
-            let _ = IamRoleServ::delete_rel_res(&role_sys_admin_id, &res_id, &funs, &ctx).await;
+        let (role_sys_admin_id, res_id) = Self::find_sync_ele_role_res(funs, ctx).await?;
+        match reqs.iter().find(|req| req.account_sync_cron.is_none()) {
+            Some(_) => {
+                // 添加手动同步按钮权限
+                let _ = IamRoleServ::add_rel_res(&role_sys_admin_id, &res_id, &funs, &ctx).await;
+            }
+            None => {
+                let _ = IamRoleServ::delete_rel_res(&role_sys_admin_id, &res_id, &funs, &ctx).await;
+            }
         }
 
         let values = reqs
