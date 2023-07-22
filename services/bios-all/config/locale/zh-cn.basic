@@ -50,3 +50,4 @@
 409-rbum-cert-ak-duplicate	平台已存在相同用户名
 
 400-basic-cond-check-format-err	条件检查时存在格式错误
+400-stop-task-error	任务可能已经结束

@@ -132,6 +132,7 @@ impl IamCsCertApi {
         let result = IamCertServ::get_third_intg_sync_status().await?;
         TardisResp::ok(result)
     }
+
     ///Manual sync
     ///
     /// 手动触发第三方集成同步，如果有其他同步正在进行中，那么就会返回错误。

@@ -3,7 +3,7 @@ use tardis::web::poem_openapi;
 
 use tardis::web::web_resp::{TardisApiResult, TardisResp};
 
-use crate::basic::dto::iam_platform_dto::{IamPlatformConfigResp};
+use crate::basic::dto::iam_platform_dto::IamPlatformConfigResp;
 use crate::basic::serv::iam_platform_serv::IamPlatformServ;
 use crate::iam_constants;
 
