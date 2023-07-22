@@ -24,6 +24,8 @@ use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
 use super::clients::iam_log_client::{IamLogClient, LogParamTag};
 use super::iam_rel_serv::IamRelServ;
+use super::iam_res_serv::IamResServ;
+use super::iam_role_serv::IamRoleServ;
 use crate::basic::dto::iam_account_dto::IamAccountInfoResp;
 use crate::basic::dto::iam_cert_conf_dto::{
     IamCertConfLdapAddOrModifyReq, IamCertConfMailVCodeAddOrModifyReq, IamCertConfPhoneVCodeAddOrModifyReq, IamCertConfTokenAddReq, IamCertConfUserPwdAddOrModifyReq,
@@ -31,7 +33,7 @@ use crate::basic::dto::iam_cert_conf_dto::{
 use crate::basic::dto::iam_cert_dto::{
     IamCertManageAddReq, IamCertManageModifyReq, IamThirdIntegrationConfigDto, IamThirdIntegrationSyncAddReq, IamThirdIntegrationSyncStatusDto, IamThirdPartyCertExtAddReq,
 };
-use crate::basic::dto::iam_filer_dto::IamAccountFilterReq;
+use crate::basic::dto::iam_filer_dto::{IamAccountFilterReq, IamResFilterReq, IamRoleFilterReq};
 use crate::basic::serv::iam_account_serv::IamAccountServ;
 use crate::basic::serv::iam_cert_ldap_serv::IamCertLdapServ;
 use crate::basic::serv::iam_cert_mail_vcode_serv::IamCertMailVCodeServ;
@@ -41,7 +43,7 @@ use crate::basic::serv::iam_cert_user_pwd_serv::IamCertUserPwdServ;
 use crate::basic::serv::iam_key_cache_serv::IamIdentCacheServ;
 use crate::iam_config::{IamBasicConfigApi, IamConfig};
 use crate::iam_constants::{self, RBUM_SCOPE_LEVEL_TENANT};
-use crate::iam_enumeration::{IamAccountLockStateKind, IamCertExtKind, IamCertKernelKind, IamCertTokenKind, IamRelKind};
+use crate::iam_enumeration::{IamAccountLockStateKind, IamCertExtKind, IamCertKernelKind, IamCertTokenKind, IamRelKind, IamResKind};
 
 lazy_static! {
     static ref SYNC_LOCK: Arc<RwLock<Option<tardis::tokio::sync::watch::Receiver<IamThirdIntegrationSyncStatusDto>>>> = Arc::new(RwLock::new(None));
@@ -1173,52 +1175,100 @@ impl IamCertServ {
         .await
     }
 
-    pub async fn add_or_modify_sync_third_integration_config(req: IamThirdIntegrationSyncAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    /// 获取手动同步按钮的操作角色和资源
+    async fn find_sync_ele_role_res(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<(String, String)> {
+        if let Some(res_sum) = IamResServ::find_one_item(
+            &IamResFilterReq {
+                basic: RbumBasicFilterReq {
+                    code: Some("2/*/account*client*sync".to_string()),
+                    ..Default::default()
+                },
+                kind: Some(IamResKind::Ele),
+                method: Some("*".to_string()),
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?
+        {
+            let role_sys_admin_id = IamRoleServ::find_one_item(
+                &IamRoleFilterReq {
+                    basic: RbumBasicFilterReq {
+                        code: Some(String::from(iam_constants::RBUM_ITEM_NAME_SYS_ADMIN_ROLE)),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                funs,
+                ctx,
+            )
+            .await?
+            .map(|r| r.id.clone())
+            .ok_or_else(|| funs.err().not_found("iam", "init", "not found sys admin role", ""))?;
+            Ok((role_sys_admin_id, res_sum.id))
+        } else {
+            Err(funs.err().not_found("third_integration_config", "enable", "sync element should be add first", "404-sync-element-not-found-error"))
+        }
+    }
+
+    pub async fn add_or_modify_sync_third_integration_config(reqs: Vec<IamThirdIntegrationSyncAddReq>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let headers = Some(vec![(
             "Tardis-Context".to_string(),
             TardisFuns::crypto.base64.encode(&TardisFuns::json.obj_to_string(&ctx)?),
         )]);
         let schedule_url = funs.conf::<IamConfig>().spi.schedule_url.clone();
-
-        if let Some(sync_cron) = req.account_sync_cron.clone() {
-            if schedule_url.is_empty() {
-                return Err(funs.err().not_implemented("third_integration_config", "add_or_modify", "schedule is not impl!", "501-iam-schedule_not_impl_error"));
-            };
-            if !sync_cron.is_empty() {
-                funs.web_client()
-                    .put_obj_to_str(
-                        &format!("{schedule_url}/ci/schedule/jobs"),
-                        &HashMap::from([
-                            ("code", funs.conf::<IamConfig>().third_integration_schedule_code.clone()),
-                            ("cron", sync_cron),
-                            ("callback_url", format!("{}/ci/cert/sync", funs.conf::<IamConfig>().iam_base_url,)),
-                        ]),
-                        headers.clone(),
-                    )
-                    .await?;
+        let mut delete_ele_flag = true;
+        for req in &reqs {
+            if let Some(sync_cron) = req.account_sync_cron.clone() {
+                if schedule_url.is_empty() {
+                    return Err(funs.err().not_implemented("third_integration_config", "add_or_modify", "schedule is not impl!", "501-iam-schedule_not_impl_error"));
+                };
+                if !sync_cron.is_empty() {
+                    funs.web_client()
+                        .put_obj_to_str(
+                            &format!("{schedule_url}/ci/schedule/jobs"),
+                            &HashMap::from([
+                                ("code", funs.conf::<IamConfig>().third_integration_schedule_code.clone()),
+                                ("cron", sync_cron),
+                                ("callback_url", format!("{}/ci/cert/sync", funs.conf::<IamConfig>().iam_base_url,)),
+                            ]),
+                            headers.clone(),
+                        )
+                        .await?;
+                }
+            } else {
+                delete_ele_flag = false;
+                // 添加手动同步按钮权限
+                let (role_sys_admin_id, res_id) = Self::find_sync_ele_role_res(funs, ctx).await?;
+                let _ = IamRoleServ::add_rel_res(&role_sys_admin_id, &res_id, &funs, &ctx).await;
             }
         }
 
+        if delete_ele_flag {
+            let (role_sys_admin_id, res_id) = Self::find_sync_ele_role_res(funs, ctx).await?;
+            let _ = IamRoleServ::delete_rel_res(&role_sys_admin_id, &res_id, &funs, &ctx).await;
+        }
+
+        let values = reqs
+            .into_iter()
+            .map(|req| IamThirdIntegrationConfigDto {
+                account_sync_from: req.account_sync_from,
+                account_sync_cron: req.account_sync_cron,
+                account_way_to_add: req.account_way_to_add.unwrap_or_default(),
+                account_way_to_delete: req.account_way_to_delete.unwrap_or_default(),
+            })
+            .collect::<Vec<IamThirdIntegrationConfigDto>>();
         //将来切换到spi-kv里
         let third_integration_config_key = funs.conf::<IamConfig>().third_integration_config_key.clone();
-        funs.cache()
-            .set(
-                &format!("{third_integration_config_key}:{}", ctx.own_paths),
-                &TardisFuns::json.obj_to_string(&IamThirdIntegrationConfigDto {
-                    account_sync_from: req.account_sync_from,
-                    account_sync_cron: req.account_sync_cron,
-                    account_way_to_add: req.account_way_to_add.unwrap_or_default(),
-                    account_way_to_delete: req.account_way_to_delete.unwrap_or_default(),
-                })?,
-            )
-            .await?;
+        funs.cache().set(&format!("{third_integration_config_key}:{}", ctx.own_paths), &TardisFuns::json.obj_to_string(&values)?).await?;
         Ok(())
     }
 
-    pub async fn get_sync_third_integration_config(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<IamThirdIntegrationConfigDto>> {
+    pub async fn get_sync_third_integration_config(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<Vec<IamThirdIntegrationConfigDto>>> {
         let conf = funs.conf::<IamConfig>();
         if let Some(iam_third_integration_sync_add_req_string) = funs.cache().get(&format!("{}:{}", conf.third_integration_config_key, ctx.own_paths)).await? {
-            let result = TardisFuns::json.str_to_obj::<IamThirdIntegrationConfigDto>(&iam_third_integration_sync_add_req_string)?;
+            let result = TardisFuns::json.str_to_obj::<Vec<IamThirdIntegrationConfigDto>>(&iam_third_integration_sync_add_req_string)?;
             Ok(Some(result))
         } else {
             Ok(None)
@@ -1235,7 +1285,8 @@ impl IamCertServ {
     /// 如果手动导入,那么third_integration_config必须Some
     pub async fn third_integration_sync(sync_config: Option<IamThirdIntegrationConfigDto>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let task_ctx = ctx.clone();
-        let mut sync = SYNC_LOCK.try_write().map_err(|_| funs.err().conflict("third_integration_config", "sync", "The last synchronization has not ended yet", "iam-sync-not-ended"))?;
+        let mut sync =
+            SYNC_LOCK.try_write().map_err(|_| funs.err().conflict("third_integration_config", "sync", "The last synchronization has not ended yet", "iam-sync-not-ended"))?;
 
         TaskProcessor::execute_task_with_ctx(
             &funs.conf::<IamConfig>().cache_key_async_task_status,
@@ -1247,7 +1298,14 @@ impl IamCertServ {
                 let sync_config = if let Some(sync_config) = sync_config {
                     sync_config
                 } else if let Some(sync_config) = IamCertServ::get_sync_third_integration_config(&funs, &task_ctx).await? {
-                    sync_config
+                    if sync_config.len() == 1 {
+                        sync_config.into_iter().last().expect("")
+                    } else {
+                        match sync_config.into_iter().find(|sync_config| sync_config.account_sync_cron.is_none()) {
+                            Some(config) => config,
+                            None => return Err(funs.err().conflict("ldap_account", "sync", "should have sync config!", "iam-not-found-sync-config")),
+                        }
+                    }
                 } else {
                     return Err(funs.err().conflict("ldap_account", "sync", "should have sync config!", "iam-not-found-sync-config"));
                 };
@@ -1268,7 +1326,10 @@ impl IamCertServ {
 
     pub async fn third_integration_sync_without_config(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
         let sync_config = if let Some(sync_config) = IamCertServ::get_sync_third_integration_config(funs, ctx).await? {
-            sync_config
+            match sync_config.into_iter().find(|sync_config| sync_config.account_sync_cron.is_some()) {
+                Some(config) => config,
+                None => return Err(funs.err().conflict("ldap_account", "sync", "should have sync config!", "iam-not-found-sync-config")),
+            }
         } else {
             return Err(funs.err().conflict("ldap_account", "sync", "should have sync config!", "iam-not-found-sync-config"));
         };

@@ -61,7 +61,7 @@ created_time timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
 modified_time timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
 tp character varying"#
         ),
-        vec![("data_id", "btree"), ("grp", "btree"), ("namespace_id", "btree"), ("md5", "btree"), ("app_name", "btree")],
+        vec![("data_id", "btree"), ("grp", "btree"), ("md5", "btree"), ("app_name", "btree")],
         None,
         Some("modified_time"),
     )
@@ -97,7 +97,7 @@ op_type character(1) NOT NULL DEFAULT 'I',
 config_tags text NOT NULL DEFAULT '',
 tp character varying"#
         ),
-        vec![("data_id", "btree"), ("grp", "btree"), ("namespace_id", "btree"), ("md5", "btree"), ("app_name", "btree")],
+        vec![("data_id", "btree"), ("grp", "btree"), ("md5", "btree"), ("app_name", "btree")],
         None,
         Some("modified_time"),
     )
@@ -126,7 +126,7 @@ pub async fn init_table_and_conn_tag_config_rel(
 tag_id character varying NOT NULL REFERENCES {tag_table_name} ON DELETE CASCADE,
 config_id uuid NOT NULL REFERENCES {config_table_name} ON DELETE CASCADE"#
         ),
-        vec![("tag_id", "btree"), ("config_id", "btree")],
+        vec![],
         None,
         None,
     )
