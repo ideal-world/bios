@@ -1,3 +1,4 @@
+use bios_basic::process::task_processor::TaskProcessor;
 use bios_basic::rbum::rbum_enumeration::{RbumCertStatusKind, RbumScopeLevelKind};
 use bios_sdk_invoke::invoke_initializer;
 use tardis::basic::dto::TardisContext;
@@ -49,6 +50,7 @@ use crate::iam_enumeration::{IamResKind, IamRoleKind, IamSetKind};
 
 pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
     let funs = iam_constants::get_tardis_inst();
+    TaskProcessor::subscribe_task(&funs).await?;
     init_db(funs).await?;
     init_api(web_server).await
 }
