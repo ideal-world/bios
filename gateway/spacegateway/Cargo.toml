@@ -17,16 +17,16 @@ serde.workspace = true
 lazy_static.workspace = true
 bios-sdk-invoke = { path = "../../sdk/invoke", features = ["spi_log"] }
 
-# spacegate-kernel = { version = "0.1.0-alpha.3", features = [
-#     "ws",
-#     "cache",
-#     "k8s",
-# ] }
-spacegate-kernel = { path = "../../../spacegate/kernel", features = [
-    "ws",
-    "cache",
-    "k8s",
-] }
+ spacegate-kernel = { version = "0.1.0-alpha.3", features = [
+     "ws",
+     "cache",
+     "k8s",
+ ] }
+#spacegate-kernel = { path = "../../../spacegate/kernel", features = [
+#    "ws",
+#    "cache",
+#    "k8s",
+#] }
 
 bios-auth = { path = "../../support/auth" }
 tardis = { workspace = true, features = ["web-server", "web-client"] }
