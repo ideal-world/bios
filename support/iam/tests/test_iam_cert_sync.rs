@@ -90,7 +90,7 @@ pub async fn test(ldap_account_num: u64, conf_ldap_add_or_modify_req: IamCertCon
 
     tokio::spawn(async {
         loop {
-            let a = IamCertServ::get_third_intg_sync_status().await.unwrap();
+            let a = IamCertServ::get_third_intg_sync_status(&funs).await.unwrap();
             info!("get_third_intg_sync_status:{:?}", a);
             if a.is_some() {
                 let a = a.unwrap();
@@ -194,7 +194,6 @@ pub async fn test(ldap_account_num: u64, conf_ldap_add_or_modify_req: IamCertCon
             account_way_to_add: WayToAdd::default(),
             account_way_to_delete: WayToDelete::default(),
         },
-        None,
         &funs,
         admin_ctx,
     )

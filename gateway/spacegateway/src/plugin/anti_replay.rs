@@ -1,4 +1,5 @@
 use std::{collections::HashMap, mem, str::FromStr, sync::Arc};
+use std::time::Duration;
 
 use async_trait::async_trait;
 use bios_auth::{
@@ -12,6 +13,7 @@ use bios_auth::{
 };
 use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
+use spacegate_kernel::plugins::filters::SgPluginFilterInitDto;
 use spacegate_kernel::{
     config::http_route_dto::SgHttpRouteRule,
     functions::http_route::SgHttpRouteMatchInst,
@@ -21,6 +23,8 @@ use spacegate_kernel::{
         filters::{BoxSgPluginFilter, SgPluginFilter, SgPluginFilterAccept, SgPluginFilterDef},
     },
 };
+use tardis::cache::cache_client::TardisCacheClient;
+use tardis::crypto::crypto_hex::TardisCryptoHex;
 use tardis::{
     async_trait,
     basic::{error::TardisError, result::TardisResult},
@@ -43,11 +47,18 @@ impl SgPluginFilterDef for SgFilterAntiReplayDef {
 
 #[derive(Serialize, Deserialize)]
 #[serde(default)]
-pub struct SgFilterAntiReplay {}
+pub struct SgFilterAntiReplay {
+    cache_key: String,
+    // millisecond
+    time:u64,
+}
 
 impl Default for SgFilterAntiReplay {
     fn default() -> Self {
-        Self {}
+        Self {
+            cache_key: "spacegate:cache:plugin:anti_replay".to_string(),
+            time: 5000,
+        }
     }
 }
 
@@ -66,10 +77,52 @@ impl SgPluginFilter for SgFilterAntiReplay {
     }
 
     async fn req_filter(&self, _: &str, mut ctx: SgRoutePluginContext, _matched_match_inst: Option<&SgHttpRouteMatchInst>) -> TardisResult<(bool, SgRoutePluginContext)> {
-        return Ok((true, ctx));
+        let md5=get_md5(&mut ctx)?;
+        if get_status(md5.clone(),&self.cache_key,ctx.cache()?).await?{
+            Err(TardisError::forbidden("[SG.Plugin.Anti_Replay] Request denied due to replay attack. Please refresh and resubmit the request.", ""))
+        }
+        else {
+            set_status(md5,&self.cache_key,true,ctx.cache()?).await?;
+            Ok((true, ctx))
+        }
+
     }
 
     async fn resp_filter(&self, _: &str, mut ctx: SgRoutePluginContext, _: Option<&SgHttpRouteMatchInst>) -> TardisResult<(bool, SgRoutePluginContext)> {
+        let md5=get_md5(&mut ctx)?;
+        let cache_client= ctx.cache()?;
+        tokio::spawn(async move{
+            tokio::time::sleep(Duration::from_millis(self.time)).await;
+            let _=set_status(md5,&self.cache_key,true,cache_client).await;
+        });
         Ok((true, ctx))
     }
+}
+
+fn get_md5(ctx: &mut SgRoutePluginContext) -> TardisResult<String> {
+    let data = format!(
+        "{}{}{}",
+        ctx.get_req_uri_raw(),
+        ctx.get_req_method_raw(),
+        ctx.get_req_headers_raw().iter().map(|h| h.0.as_str().to_owned() + h.1.to_str().unwrap_or_default()).collect::<Vec<String>>().join(""),
+    );
+    tardis::crypto::crypto_digest::TardisCryptoDigest {}.md5(&data)
+}
+
+async fn set_status(md5: String, cache_key: &str,status:bool, cache_client: &TardisCacheClient) -> TardisResult<()> {
+    let (split1, split2) = md5.split_at(16);
+    let split1 = u128::from_str_radix(split1, 16)? as u32;
+    let split2 = u128::from_str_radix(split2, 16)? as u32;
+    cache_client.setbit(&format!("{cache_key}:1"), split1 as usize, status).await?;
+    cache_client.setbit(&format!("{cache_key}:2"), split2 as usize, status).await?;
+    Ok(())
+}
+
+async fn get_status(md5: String, cache_key: &str, cache_client: &TardisCacheClient) -> TardisResult<bool> {
+    let (split1, split2) = md5.split_at(16);
+    let split1 = u128::from_str_radix(split1, 16)? as u32;
+    let split2 = u128::from_str_radix(split2, 16)? as u32;
+    let status1 = cache_client.getbit(&format!("{cache_key}:1"), split1 as usize).await?;
+    let status2 = cache_client.getbit(&format!("{cache_key}:2"), split2 as usize).await?;
+    Ok(status1 && status2)
 }

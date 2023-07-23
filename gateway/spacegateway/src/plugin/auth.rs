@@ -12,6 +12,7 @@ use bios_auth::{
 };
 use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
+use spacegate_kernel::plugins::filters::SgPluginFilterInitDto;
 use spacegate_kernel::{
     config::http_route_dto::SgHttpRouteRule,
     functions::http_route::SgHttpRouteMatchInst,
@@ -58,7 +59,7 @@ impl Default for SgFilterAuth {
         Self {
             auth_config: Default::default(),
             port: 8080,
-            cache_url: "redis://127.0.0.1:6379".to_string(),
+            cache_url: "".to_string(),
         }
     }
 }
@@ -69,7 +70,7 @@ impl SgPluginFilter for SgFilterAuth {
         SgPluginFilterAccept::default()
     }
 
-    async fn init(&self, _: &[SgHttpRouteRule]) -> TardisResult<()> {
+    async fn init(&self, initDto: &SgPluginFilterInitDto) -> TardisResult<()> {
         let mut cs = HashMap::<String, Value>::new();
         cs.insert(
             bios_auth::auth_constants::DOMAIN_CODE.to_string(),
@@ -91,7 +92,15 @@ impl SgPluginFilter for SgFilterAuth {
                 },
                 cache: CacheConfig {
                     enabled: true,
-                    url: self.cache_url.clone(),
+                    url: if self.cache_url.is_empty() {
+                        if let Some(redis_url) = initDto.gateway_parameters.redis_url.clone() {
+                            redis_url
+                        } else {
+                            "redis://127.0.0.1:6379".to_string()
+                        }
+                    } else {
+                        self.cache_url.clone()
+                    },
                     ..Default::default()
                 },
                 ..Default::default()

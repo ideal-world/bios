@@ -1,5 +1,5 @@
 #![warn(clippy::unwrap_used)]
-use plugin::{auth, anti_replay, audit_log};
+use plugin::{anti_replay, audit_log, auth};
 use tardis::{basic::result::TardisResult, tokio, TardisFuns};
 
 mod plugin;
