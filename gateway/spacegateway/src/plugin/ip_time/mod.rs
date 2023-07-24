@@ -53,7 +53,6 @@ impl From<SgFilterIpTimeConfig> for SgFilterIpTime {
         SgFilterIpTime { rules }
     }
 }
-
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SgFilterIpTimeConfigRule {
     pub ip_list: Vec<String>,
@@ -62,6 +61,12 @@ pub struct SgFilterIpTimeConfigRule {
 
 #[derive(Debug)]
 pub struct SgFilterIpTime {
+    /// # enhancement: 
+    /// should be a time segment list
+    /// - segment list
+    ///     - ban: Set {}
+    ///     - allow: Set {}
+    /// - pointer to the lastest segment
     pub rules: Vec<(IpNet, IpTimeRule)>,
 }
 
