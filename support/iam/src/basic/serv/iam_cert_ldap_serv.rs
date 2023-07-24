@@ -1,7 +1,7 @@
 use bios_basic::rbum::dto::rbum_cert_dto::RbumCertSummaryResp;
 use ldap3::log::{error, warn};
 use std::collections::HashMap;
-use tardis::tokio::sync::watch;
+
 
 use self::ldap::LdapClient;
 use super::clients::iam_log_client::{IamLogClient, LogParamTag};
@@ -41,6 +41,7 @@ use bios_basic::rbum::{
 };
 use serde::{Deserialize, Serialize};
 
+use crate::iam_config::IamConfig;
 use tardis::regex::Regex;
 use tardis::web::poem_openapi;
 use tardis::{
@@ -688,12 +689,7 @@ impl IamCertLdapServ {
     }
 
     //同步ldap人员到iam
-    pub async fn iam_sync_ldap_user_to_iam(
-        sync_config: IamThirdIntegrationConfigDto,
-        tx: Option<watch::Sender<IamThirdIntegrationSyncStatusDto>>,
-        funs: &TardisFunsInst,
-        ctx: &TardisContext,
-    ) -> TardisResult<String> {
+    pub async fn iam_sync_ldap_user_to_iam(sync_config: IamThirdIntegrationConfigDto, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
         let mut msg = "".to_string();
         let (mut ldap_client, cert_conf, cert_conf_id) = Self::get_ldap_client(Some(ctx.own_paths.clone()), "", funs, ctx).await?;
         if ldap_client.bind_by_dn(&cert_conf.principal, &cert_conf.credentials).await?.is_none() {
@@ -717,12 +713,13 @@ impl IamCertLdapServ {
 
         let (mut total, mut success, mut failed) = (ldap_account.len(), 0, 0);
 
-        match tx.as_ref() {
-            Some(tx) => {
-                let _ = tx.send(IamThirdIntegrationSyncStatusDto { total, success, failed });
-            }
-            None => {}
-        }
+        let _ = funs
+            .cache()
+            .set(
+                &funs.conf::<IamConfig>().cache_key_sync_ldap_status,
+                &TardisFuns::json.obj_to_string(&IamThirdIntegrationSyncStatusDto { total, success, failed })?,
+            )
+            .await;
         let _ = ldap_client.unbind().await;
 
         let certs = IamCertServ::find_certs(
@@ -840,12 +837,13 @@ impl IamCertLdapServ {
 
                 ldap_id_to_account_map.remove(&local_ldap_id);
                 success += 1;
-                match tx.as_ref() {
-                    Some(tx) => {
-                        let _ = tx.send(IamThirdIntegrationSyncStatusDto { total, success, failed });
-                    }
-                    None => {}
-                }
+                let _ = funs
+                    .cache()
+                    .set(
+                        &funs.conf::<IamConfig>().cache_key_sync_ldap_status,
+                        &TardisFuns::json.obj_to_string(&IamThirdIntegrationSyncStatusDto { total, success, failed })?,
+                    )
+                    .await;
             } else {
                 total += 1;
                 //ldap没有 iam有的 需要同步删除
@@ -900,12 +898,13 @@ impl IamCertLdapServ {
                         failed += 1;
                     }
                 }
-                match tx.as_ref() {
-                    Some(tx) => {
-                        let _ = tx.send(IamThirdIntegrationSyncStatusDto { total, success, failed });
-                    }
-                    None => {}
-                }
+                let _ = funs
+                    .cache()
+                    .set(
+                        &funs.conf::<IamConfig>().cache_key_sync_ldap_status,
+                        &TardisFuns::json.obj_to_string(&IamThirdIntegrationSyncStatusDto { total, success, failed })?,
+                    )
+                    .await;
             };
             funs.commit().await?;
         }
@@ -984,12 +983,13 @@ impl IamCertLdapServ {
             } else {
                 success += 1;
             }
-            match tx.as_ref() {
-                Some(tx) => {
-                    let _ = tx.send(IamThirdIntegrationSyncStatusDto { total, success, failed });
-                }
-                None => {}
-            }
+            let _ = funs
+                .cache()
+                .set(
+                    &funs.conf::<IamConfig>().cache_key_sync_ldap_status,
+                    &TardisFuns::json.obj_to_string(&IamThirdIntegrationSyncStatusDto { total, success, failed })?,
+                )
+                .await;
             funs.commit().await?;
             mock_ctx.execute_task().await?;
         }
