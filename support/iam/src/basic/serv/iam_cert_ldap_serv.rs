@@ -2,7 +2,6 @@ use bios_basic::rbum::dto::rbum_cert_dto::RbumCertSummaryResp;
 use ldap3::log::{error, warn};
 use std::collections::HashMap;
 
-
 use self::ldap::LdapClient;
 use super::clients::iam_log_client::{IamLogClient, LogParamTag};
 use super::iam_cert_phone_vcode_serv::IamCertPhoneVCodeServ;
