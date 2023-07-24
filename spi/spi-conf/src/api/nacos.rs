@@ -16,15 +16,21 @@ pub type ConfNacosApi = (ConfNacosV1Api, ConfNacosV2Api);
 
 pub async fn extract_context(request: &poem::Request) -> poem::Result<TardisContext> {
     #[derive(serde::Deserialize)]
-    #[serde(rename_all = "camelCase")]
-    struct AccessToken {
-        access_token: String,
+    #[serde(untagged)]
+    enum Auth {
+        #[serde(rename_all = "camelCase")]
+        AccessToken { access_token: String },
+        #[serde(rename_all = "camelCase")]
+        UsernamePassword { username: String, password: String },
     }
     let funs = crate::get_tardis_inst();
     if let Ok(basic_auth) = poem_openapi::auth::Basic::from_request(request) {
         auth(&basic_auth.username, &basic_auth.password, &funs).await.map_err(|e| poem::Error::from_string(e.message, StatusCode::FORBIDDEN))
-    } else if let Ok(AccessToken { access_token }) = request.params::<AccessToken>() {
-        jwt_validate(&access_token, &funs).await
+    } else if let Ok(param_auth) = request.params::<Auth>() {
+        match param_auth {
+            Auth::AccessToken { access_token } => jwt_validate(&access_token, &funs).await,
+            Auth::UsernamePassword { username, password } => auth(&username, &password, &funs).await.map_err(|e| poem::Error::from_string(e.message, StatusCode::FORBIDDEN)),
+        }
     } else {
         // extract from from body:
         Err(poem::Error::from_status(StatusCode::NON_AUTHORITATIVE_INFORMATION))
