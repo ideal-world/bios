@@ -1,6 +1,7 @@
 use bios_basic::process::task_processor::TaskProcessor;
 use bios_basic::rbum::dto::rbum_rel_agg_dto::RbumRelAggAddReq;
 use bios_basic::rbum::serv::rbum_rel_serv::RbumRelServ;
+use ldap3::log::info;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tardis::basic::dto::TardisContext;
@@ -1327,6 +1328,7 @@ impl IamCertServ {
             ctx,
         )
         .await?;
+        info!("end of third_integration_sync");
         Ok(())
     }
 
