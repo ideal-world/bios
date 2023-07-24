@@ -1,37 +1,25 @@
-use std::{collections::HashMap, mem, str::FromStr, sync::Arc};
+
 use std::time::Duration;
 
 use async_trait::async_trait;
-use bios_auth::{
-    auth_config::AuthConfig,
-    auth_initializer,
-    dto::{
-        auth_crypto_dto::AuthEncryptReq,
-        auth_kernel_dto::{AuthReq, AuthResp},
-    },
-    serv::{auth_crypto_serv, auth_kernel_serv},
-};
-use lazy_static::lazy_static;
+
+
 use serde::{Deserialize, Serialize};
 use spacegate_kernel::plugins::filters::SgPluginFilterInitDto;
 use spacegate_kernel::{
-    config::http_route_dto::SgHttpRouteRule,
     functions::http_route::SgHttpRouteMatchInst,
-    http::{self, HeaderMap, HeaderName, HeaderValue},
     plugins::{
-        context::{SgRouteFilterRequestAction, SgRoutePluginContext},
+        context::{SgRoutePluginContext},
         filters::{BoxSgPluginFilter, SgPluginFilter, SgPluginFilterAccept, SgPluginFilterDef},
     },
 };
 use tardis::cache::cache_client::TardisCacheClient;
-use tardis::crypto::crypto_hex::TardisCryptoHex;
+
 use tardis::{
     async_trait,
     basic::{error::TardisError, result::TardisResult},
-    config::config_dto::{AppConfig, CacheConfig, FrameworkConfig, TardisConfig, WebServerConfig, WebServerModuleConfig},
-    log,
-    serde_json::{self, Value},
-    tokio::{self, sync::Mutex, task::JoinHandle},
+    serde_json::{self},
+    tokio::{self},
     TardisFuns,
 };
 
@@ -68,7 +56,7 @@ impl SgPluginFilter for SgFilterAntiReplay {
         SgPluginFilterAccept::default()
     }
 
-    async fn init(&self, _: &SgPluginFilterInitDto) -> TardisResult<()> {
+    async fn init(&mut self, _: &SgPluginFilterInitDto) -> TardisResult<()> {
         Ok(())
     }
 
@@ -90,11 +78,14 @@ impl SgPluginFilter for SgFilterAntiReplay {
 
     async fn resp_filter(&self, _: &str, mut ctx: SgRoutePluginContext, _: Option<&SgHttpRouteMatchInst>) -> TardisResult<(bool, SgRoutePluginContext)> {
         let md5=get_md5(&mut ctx)?;
-        let cache_client= ctx.cache()?;
-        tokio::spawn(async move{
-            tokio::time::sleep(Duration::from_millis(self.time)).await;
-            let _=set_status(md5,&self.cache_key,true,cache_client).await;
-        });
+        let cache_key= self.cache_key.clone();
+        let name=ctx.get_gateway_name();
+        let time =self.time;
+        let _ = tokio::spawn(async move{
+            tokio::time::sleep(Duration::from_millis(time)).await;
+            let cache_client= spacegate_kernel::functions::cache_client::get(&name).unwrap();
+            let _=set_status(md5,&cache_key,false,cache_client).await;
+        }).await;
         Ok((true, ctx))
     }
 }

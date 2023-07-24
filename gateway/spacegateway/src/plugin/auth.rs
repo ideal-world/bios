@@ -14,7 +14,6 @@ use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
 use spacegate_kernel::plugins::filters::SgPluginFilterInitDto;
 use spacegate_kernel::{
-    config::http_route_dto::SgHttpRouteRule,
     functions::http_route::SgHttpRouteMatchInst,
     http::{self, HeaderMap, HeaderName, HeaderValue},
     plugins::{
@@ -70,7 +69,7 @@ impl SgPluginFilter for SgFilterAuth {
         SgPluginFilterAccept::default()
     }
 
-    async fn init(&self, initDto: &SgPluginFilterInitDto) -> TardisResult<()> {
+    async fn init(&mut self, init_dto: &SgPluginFilterInitDto) -> TardisResult<()> {
         let mut cs = HashMap::<String, Value>::new();
         cs.insert(
             bios_auth::auth_constants::DOMAIN_CODE.to_string(),
@@ -93,7 +92,7 @@ impl SgPluginFilter for SgFilterAuth {
                 cache: CacheConfig {
                     enabled: true,
                     url: if self.cache_url.is_empty() {
-                        if let Some(redis_url) = initDto.gateway_parameters.redis_url.clone() {
+                        if let Some(redis_url) = init_dto.gateway_parameters.redis_url.clone() {
                             redis_url
                         } else {
                             "redis://127.0.0.1:6379".to_string()
@@ -250,6 +249,7 @@ fn headermap_header_to_hashmap(old_headers: HeaderMap) -> TardisResult<HashMap<S
 mod tests {
     use std::env;
 
+    use spacegate_kernel::config::gateway_dto::SgParameters;
     use spacegate_kernel::http::{Method, Uri, Version};
     use spacegate_kernel::hyper::{Body, StatusCode};
     use tardis::crypto::crypto_sm2_4::{TardisCryptoSm2, TardisCryptoSm2PrivateKey};
@@ -269,12 +269,12 @@ mod tests {
         let docker = testcontainers::clients::Cli::default();
         let _x = docker_init(&docker).await.unwrap();
 
-        let filter_auth = SgFilterAuth {
+        let mut filter_auth = SgFilterAuth {
             cache_url: env::var("TARDIS_FW.CACHE.URL").unwrap(),
             ..Default::default()
         };
 
-        filter_auth.init(&[]).await.unwrap();
+        filter_auth.init(&SgPluginFilterInitDto{ gateway_parameters: SgParameters{ redis_url: None, log_level: None, lang: None }, http_route_rules: vec![] }).await.unwrap();
 
         let apis = TardisFuns::web_client().get::<TardisResp<Value>>(&format!("http://127.0.0.1:{}/auth/auth/apis", filter_auth.port), None).await.unwrap().body;
         assert!(apis.is_some());

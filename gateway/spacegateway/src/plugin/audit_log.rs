@@ -1,41 +1,29 @@
-use std::{collections::HashMap, mem, str::FromStr, sync::Arc};
+use std::{collections::HashMap};
 
 use async_trait::async_trait;
-use bios_auth::{
-    auth_config::AuthConfig,
-    auth_initializer,
-    dto::{
-        auth_crypto_dto::AuthEncryptReq,
-        auth_kernel_dto::{AuthReq, AuthResp},
-    },
-    serv::{auth_crypto_serv, auth_kernel_serv},
-};
+
 use bios_sdk_invoke::clients::spi_log_client;
 use bios_sdk_invoke::invoke_config::InvokeConfig;
 use bios_sdk_invoke::invoke_enumeration::InvokeModuleKind;
 use bios_sdk_invoke::invoke_initializer;
-use lazy_static::lazy_static;
+
 use serde::{Deserialize, Serialize};
 use spacegate_kernel::plugins::context::SGRoleInfo;
-use spacegate_kernel::plugins::filters::SgPluginFilter;
 use spacegate_kernel::{
-    config::http_route_dto::SgHttpRouteRule,
     functions::http_route::SgHttpRouteMatchInst,
-    http::{self, HeaderMap, HeaderName, HeaderValue},
     plugins::{
-        context::{SgRouteFilterRequestAction, SgRoutePluginContext},
-        filters::{BoxSgPluginFilter, SgPluginFilterAccept, SgPluginFilterDef, SgPluginFilterInitDto},
+        context::{SgRoutePluginContext},
+        filters::{BoxSgPluginFilter,SgPluginFilter,SgPluginFilterAccept, SgPluginFilterDef, SgPluginFilterInitDto},
     },
 };
 use tardis::basic::dto::TardisContext;
 use tardis::serde_json::json;
 use tardis::{
     async_trait,
-    basic::{error::TardisError, result::TardisResult},
-    config::config_dto::{AppConfig, CacheConfig, FrameworkConfig, TardisConfig, WebServerConfig, WebServerModuleConfig},
+    basic::{result::TardisResult},
     log,
-    serde_json::{self, Value},
-    tokio::{self, sync::Mutex, task::JoinHandle},
+    serde_json::{self},
+    tokio::{self},
     TardisFuns, TardisFunsInst,
 };
 
@@ -137,8 +125,8 @@ impl SgPluginFilter for SgFilterAuditLog {
         });
         tokio::spawn(async move {
             match spi_log_client::SpiLogClient::add(
-                tag: &str,
-                &TardisFuns::json.obj_to_string(&content)?,
+                "tag",
+                &TardisFuns::json.obj_to_string(&content).unwrap(),
                 Some(log_ext),
                 None,
                 None,
