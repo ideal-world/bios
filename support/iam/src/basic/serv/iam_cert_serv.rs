@@ -1297,8 +1297,8 @@ impl IamCertServ {
 
         TaskProcessor::execute_task_with_ctx(
             &funs.conf::<IamConfig>().cache_key_async_task_status,
-            move || async move {
-                let _ = sync;
+            || async move {
+                // let _ = sync;
                 let funs = iam_constants::get_tardis_inst();
 
                 let sync_config = if let Some(sync_config) = sync_config {
