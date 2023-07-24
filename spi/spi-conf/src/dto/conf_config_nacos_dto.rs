@@ -136,7 +136,7 @@ pub struct LoginResponse {
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Default)]
-#[oai(rename_all="camelCase")]
+#[oai(rename_all = "camelCase")]
 #[allow(non_snake_case)]
 pub struct PublishConfigForm {
     pub(crate) username: Option<String>,

@@ -1,4 +1,5 @@
 use bios_basic::{rbum::serv::rbum_domain_serv::RbumDomainServ, spi::spi_initializer};
+use bios_sdk_invoke::invoke_initializer;
 use tardis::{basic::result::TardisResult, db::reldb_client::TardisActiveModel, web::web_server::TardisWebServer, TardisFuns, TardisFunsInst};
 
 use crate::{
@@ -11,6 +12,7 @@ use crate::{
 pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
     let mut funs = crate::get_tardis_inst();
     bios_basic::rbum::rbum_initializer::init(funs.module_code(), funs.conf::<PluginConfig>().rbum.clone()).await?;
+    invoke_initializer::init(funs.module_code(), funs.conf::<PluginConfig>().invoke.clone())?;
     funs.begin().await?;
     init_db(DOMAIN_CODE.to_string(), &funs).await?;
     spi_initializer::init(DOMAIN_CODE, &funs).await?;

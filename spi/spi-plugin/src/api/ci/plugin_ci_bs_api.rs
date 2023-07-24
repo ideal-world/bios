@@ -113,6 +113,7 @@ impl PluginCiBsApi {
         funs.begin().await?;
         let result = PluginBsServ::add_or_modify_plugin_rel_agg(&id.0, &app_tenant_id.0, &mut add_req.0, &funs, &ctx.0).await?;
         funs.commit().await?;
+        ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
 
@@ -163,6 +164,7 @@ impl PluginCiBsApi {
         funs.begin().await?;
         PluginBsServ::delete_plugin_rel(&id.0, &app_tenant_id.0, &funs, &ctx.0).await?;
         funs.commit().await?;
+        ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
     }
 }
