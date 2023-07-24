@@ -1,4 +1,5 @@
-use std::{collections::HashMap};
+use std::collections::HashMap;
+use std::str::FromStr;
 
 use async_trait::async_trait;
 
@@ -7,20 +8,22 @@ use bios_sdk_invoke::invoke_config::InvokeConfig;
 use bios_sdk_invoke::invoke_enumeration::InvokeModuleKind;
 use bios_sdk_invoke::invoke_initializer;
 
+use jsonpath_rust::{JsonPathInst, JsonPathQuery};
 use serde::{Deserialize, Serialize};
 use spacegate_kernel::plugins::context::SGRoleInfo;
 use spacegate_kernel::{
     functions::http_route::SgHttpRouteMatchInst,
     plugins::{
-        context::{SgRoutePluginContext},
-        filters::{BoxSgPluginFilter,SgPluginFilter,SgPluginFilterAccept, SgPluginFilterDef, SgPluginFilterInitDto},
+        context::SgRoutePluginContext,
+        filters::{BoxSgPluginFilter, SgPluginFilter, SgPluginFilterAccept, SgPluginFilterDef, SgPluginFilterInitDto},
     },
 };
 use tardis::basic::dto::TardisContext;
-use tardis::serde_json::json;
+use tardis::serde_json::{json, Value};
+
 use tardis::{
     async_trait,
-    basic::{result::TardisResult},
+    basic::result::TardisResult,
     log,
     serde_json::{self},
     tokio::{self},
@@ -45,7 +48,7 @@ pub struct SgFilterAuditLog {
     tag: String,
     header_token_name: String,
     success_json_path: String,
-
+    success_json_path_values: Vec<String>,
     enabled: bool,
 }
 
@@ -56,8 +59,9 @@ impl Default for SgFilterAuditLog {
             spi_app_id: "".to_string(),
             tag: "gateway".to_string(),
             header_token_name: "Bios-Token".to_string(),
-            success_json_path: "".to_string(),
+            success_json_path: "$.code".to_string(),
             enabled: false,
+            success_json_path_values: vec!["200".to_string(), "201".to_string()],
         }
     }
 }
@@ -73,6 +77,10 @@ impl SgPluginFilter for SgFilterAuditLog {
 
     async fn init(&mut self, _: &SgPluginFilterInitDto) -> TardisResult<()> {
         if !self.log_url.is_empty() && !self.spi_app_id.is_empty() {
+            if JsonPathInst::from_str(&self.success_json_path).map_err(|e| log::error!("[[Plugin.AuditLog]] invalid json path:{e}")).is_err() {
+                self.enabled = false;
+                return Ok(());
+            };
             self.enabled = true;
             invoke_initializer::init(
                 CODE,
@@ -81,6 +89,8 @@ impl SgPluginFilter for SgFilterAuditLog {
                     module_urls: HashMap::from([(InvokeModuleKind::Log.to_string(), self.log_url.clone())]),
                 },
             )?;
+        } else {
+            self.enabled = false;
         }
         Ok(())
     }
@@ -95,61 +105,94 @@ impl SgPluginFilter for SgFilterAuditLog {
     }
 
     async fn resp_filter(&self, _: &str, mut ctx: SgRoutePluginContext, _: Option<&SgHttpRouteMatchInst>) -> TardisResult<(bool, SgRoutePluginContext)> {
-        let funs = get_tardis_inst();
-        let start_time = ctx.get_ext(&get_start_time_ext_code()).and_then(|time| time.parse::<i64>().ok());
-        let end_time = tardis::chrono::Utc::now().timestamp_millis();
-        let spi_ctx = TardisContext {
-            owner: ctx.get_cert_info().map(|info| info.account_id.clone()).unwrap_or_default(),
-            roles: ctx.get_cert_info().map(|info| info.roles.clone().into_iter().map(|r| r.id).collect()).unwrap_or_default(),
-            ..Default::default()
-        };
-        let op = ctx.get_req_method().to_string();
-        let content = LogParamContent {
-            op: op.clone(),
-            key: None,
-            name: ctx.get_cert_info().and_then(|info| info.account_name.clone()).unwrap_or_default(),
-            user_id: ctx.get_cert_info().map(|info| info.account_id.clone()),
-            role: ctx.get_cert_info().map(|info| info.roles.clone()).unwrap_or_default(),
-            ip: ctx.get_req_remote_addr().ip().to_string(),
-            token: ctx.get_req_headers().get(&self.header_token_name).and_then(|v| v.to_str().ok().map(|v| v.to_string())),
-            server_timing: start_time.map(|st| end_time - st),
-            //todo
-            success: false,
-        };
-        let log_ext = json!({
-            "name":content.name,
-            "id":content.user_id,
-            "ip":content.ip,
-            "op":op.clone(),
-            "success":content.success,
-        });
-        tokio::spawn(async move {
-            match spi_log_client::SpiLogClient::add(
-                "tag",
-                &TardisFuns::json.obj_to_string(&content).unwrap(),
-                Some(log_ext),
-                None,
-                None,
-                Some(op),
-                None,
-                Some(tardis::chrono::Utc::now().to_rfc3339()),
-                content.user_id,
-                None,
-                &funs,
-                &spi_ctx,
-            )
-            .await
-            {
-                Ok(_) => {
-                    log::trace!("[Plugin.AuditLog] add log success")
-                }
-                Err(e) => {
-                    log::trace!("[Plugin.AuditLog] failed to add log:{e}")
-                }
+        if self.enabled {
+            let funs = get_tardis_inst();
+            let start_time = ctx.get_ext(&get_start_time_ext_code()).and_then(|time| time.parse::<i64>().ok());
+            let end_time = tardis::chrono::Utc::now().timestamp_millis();
+            let spi_ctx = TardisContext {
+                owner: ctx.get_cert_info().map(|info| info.account_id.clone()).unwrap_or_default(),
+                roles: ctx.get_cert_info().map(|info| info.roles.clone().into_iter().map(|r| r.id).collect()).unwrap_or_default(),
+                ..Default::default()
             };
-        });
+            let op = ctx.get_req_method().to_string();
+            let resp_body = ctx.pop_resp_body().await?;
+            let success = match resp_body {
+                Some(body) => {
+                    let body_string = String::from_utf8_lossy(&body).to_string();
+                    let result = match serde_json::from_str::<Value>(&body_string) {
+                        Ok(json) => {
+                            if let Ok(matching_value) = json.path(&self.success_json_path) {
+                                if matching_value.is_number() && matching_value.is_string() {
+                                    let mut is_match = false;
+                                    for value in self.success_json_path_values.clone() {
+                                        if value == matching_value {
+                                            is_match = true;
+                                            break;
+                                        }
+                                    }
+                                    is_match
+                                } else {
+                                    false
+                                }
+                            } else {
+                                false
+                            }
+                        }
+                        Err(_) => false,
+                    };
+                    ctx.set_resp_body(body)?;
+                    result
+                }
+                None => false,
+            };
+            let content = LogParamContent {
+                op: op.clone(),
+                key: None,
+                name: ctx.get_cert_info().and_then(|info| info.account_name.clone()).unwrap_or_default(),
+                user_id: ctx.get_cert_info().map(|info| info.account_id.clone()),
+                role: ctx.get_cert_info().map(|info| info.roles.clone()).unwrap_or_default(),
+                ip: ctx.get_req_remote_addr().ip().to_string(),
+                token: ctx.get_req_headers().get(&self.header_token_name).and_then(|v| v.to_str().ok().map(|v| v.to_string())),
+                server_timing: start_time.map(|st| end_time - st),
+                success,
+            };
+            let log_ext = json!({
+                "name":content.name,
+                "id":content.user_id,
+                "ip":content.ip,
+                "op":op.clone(),
+                "success":content.success,
+            });
+            tokio::spawn(async move {
+                match spi_log_client::SpiLogClient::add(
+                    "tag",
+                    &TardisFuns::json.obj_to_string(&content).unwrap_or_default(),
+                    Some(log_ext),
+                    None,
+                    None,
+                    Some(op),
+                    None,
+                    Some(tardis::chrono::Utc::now().to_rfc3339()),
+                    content.user_id,
+                    None,
+                    &funs,
+                    &spi_ctx,
+                )
+                .await
+                {
+                    Ok(_) => {
+                        log::trace!("[Plugin.AuditLog] add log success")
+                    }
+                    Err(e) => {
+                        log::trace!("[Plugin.AuditLog] failed to add log:{e}")
+                    }
+                };
+            });
 
-        Ok((true, ctx))
+            Ok((true, ctx))
+        } else {
+            Ok((true, ctx))
+        }
     }
 }
 

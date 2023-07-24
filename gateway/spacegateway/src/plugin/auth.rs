@@ -246,6 +246,7 @@ fn headermap_header_to_hashmap(old_headers: HeaderMap) -> TardisResult<HashMap<S
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use std::env;
 
@@ -274,7 +275,17 @@ mod tests {
             ..Default::default()
         };
 
-        filter_auth.init(&SgPluginFilterInitDto{ gateway_parameters: SgParameters{ redis_url: None, log_level: None, lang: None }, http_route_rules: vec![] }).await.unwrap();
+        filter_auth
+            .init(&SgPluginFilterInitDto {
+                gateway_parameters: SgParameters {
+                    redis_url: None,
+                    log_level: None,
+                    lang: None,
+                },
+                http_route_rules: vec![],
+            })
+            .await
+            .unwrap();
 
         let apis = TardisFuns::web_client().get::<TardisResp<Value>>(&format!("http://127.0.0.1:{}/auth/auth/apis", filter_auth.port), None).await.unwrap().body;
         assert!(apis.is_some());
@@ -351,7 +362,7 @@ mod tests {
         let resp_body = String::from_utf8(resp_body).unwrap();
         let resp_body = crypto_resp(
             &resp_body,
-            &before_filter_ctx.get_resp_headers().get("Bios-Crypto").unwrap().to_str().unwrap(),
+            before_filter_ctx.get_resp_headers().get("Bios-Crypto").unwrap().to_str().unwrap(),
             &front_pri_key,
         );
         println!("req_body:{req_body} mock_resp:{mock_resp}");
@@ -392,9 +403,9 @@ mod tests {
         let sign_data = splits[0];
         let sm4_key = splits[1];
         let sm4_iv = splits[2];
-        let gen_sign_data = TardisFuns::crypto.digest.sm3(&body).unwrap();
+        let gen_sign_data = TardisFuns::crypto.digest.sm3(body).unwrap();
         assert_eq!(sign_data, gen_sign_data);
-        TardisFuns::crypto.sm4.decrypt_cbc(&body, sm4_key, sm4_iv).unwrap()
+        TardisFuns::crypto.sm4.decrypt_cbc(body, sm4_key, sm4_iv).unwrap()
     }
 
     pub struct LifeHold<'a> {

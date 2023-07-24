@@ -19,6 +19,7 @@ default = ["spi_kv", "spi_log", "spi_search"]
 spi_kv = []
 spi_log = []
 spi_search = []
+reldb-core=["tardis/reldb-core"]
 
 [dependencies]
 serde.workspace = true
