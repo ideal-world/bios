@@ -106,7 +106,7 @@ impl TaskProcessor {
     }
 
     pub async fn stop_task(cache_key: &str, task_id: i64, funs: &TardisFunsInst) -> TardisResult<()> {
-        if TaskProcessor::check_status(cache_key, task_id, funs).await? {
+        if TaskProcessor::check_status(cache_key, task_id, funs.cache()).await? {
             TASK_HANDLE.write().await.remove(&task_id);
         } else {
             funs.mq()
