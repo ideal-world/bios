@@ -1,4 +1,5 @@
 pub mod flow_config_dto;
+pub mod flow_external_dto;
 pub mod flow_inst_dto;
 pub mod flow_model_dto;
 pub mod flow_state_dto;

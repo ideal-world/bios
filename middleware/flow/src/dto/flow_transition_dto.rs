@@ -169,21 +169,32 @@ pub enum FlowTransitionActionChangeInfo {
     State(FlowTransitionActionByStateChangeInfo),
 }
 
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, sea_orm::strum::EnumIter, sea_orm::DeriveActiveEnum)]
+#[sea_orm(rs_type = "String", db_type = "String(Some(255))")]
+pub enum FlowTransitionActionChangeKind {
+    #[sea_orm(string_value = "var")]
+    Var,
+    #[sea_orm(string_value = "progress")]
+    State,
+}
+
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug, poem_openapi::Object, sea_orm::FromJsonQueryResult)]
 pub struct FlowTransitionActionByVarChangeInfo {
+    pub kind: FlowTransitionActionChangeKind,
     pub current: bool,
     pub describe: String,
     pub obj_tag: Option<String>,
     pub var_name: String,
-    pub changed_val: Value,
+    pub changed_val: Option<Value>,
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug, poem_openapi::Object, sea_orm::FromJsonQueryResult)]
 pub struct FlowTransitionActionByStateChangeInfo {
+    pub kind: FlowTransitionActionChangeKind,
     pub obj_tag: String,
     pub describe: String,
     pub obj_current_state_id: Option<String>,
-    pub change_conditions: Option<StateChangeCondition>,
+    pub change_condition: Option<StateChangeCondition>,
     pub changed_state_id: String,
 }
 
