@@ -77,7 +77,7 @@ impl ConfNacosV1CsApi {
         let descriptor = ConfigDescriptor {
             namespace_id,
             group: form.as_ref().and_then(|f| f.0.group.clone()).or(group.0).ok_or_else(|| missing_param("group"))?,
-            data_id: form.as_ref().and_then(|f| f.0.data_id.clone()).or(data_id.0).ok_or_else(|| missing_param("data_id"))?,
+            data_id: form.as_ref().and_then(|f| f.0.dataId.clone()).or(data_id.0).ok_or_else(|| missing_param("data_id"))?,
             ..Default::default()
         };
         let mut publish_request = ConfigPublishRequest {
