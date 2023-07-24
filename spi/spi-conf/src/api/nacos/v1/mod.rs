@@ -14,3 +14,7 @@ fn tardis_err_to_poem_err(e: TardisError) -> poem::Error {
     let status: StatusCode = StatusCode::from_str(&e.code).unwrap_or(StatusCode::INTERNAL_SERVER_ERROR);
     poem::Error::from_string(e.message, status)
 }
+
+fn missing_param(name: &str) -> poem::Error {
+    poem::Error::from_string(format!("missing param {name}"), StatusCode::BAD_REQUEST)
+}

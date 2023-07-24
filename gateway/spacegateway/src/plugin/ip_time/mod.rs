@@ -1,23 +1,15 @@
-use std::{
-    collections::{BTreeMap, HashMap},
-    hash::Hash,
-    net::{IpAddr, SocketAddr},
-};
+use std::net::IpAddr;
 
-use ipnet::{IpNet, Ipv4Net, Ipv6Net};
+use ipnet::IpNet;
 use serde::{Deserialize, Serialize};
-use spacegate_kernel::functions::http_route::SgHttpRouteMatchInst;
-use spacegate_kernel::{
-    config::http_route_dto::SgHttpRouteRule,
-    plugins::{
-        context::SgRoutePluginContext,
-        filters::{BoxSgPluginFilter, SgPluginFilter, SgPluginFilterDef},
-    },
+use spacegate_kernel::plugins::{
+    context::SgRoutePluginContext,
+    filters::{BoxSgPluginFilter, SgPluginFilter, SgPluginFilterDef},
 };
-use std::net::{Ipv4Addr, Ipv6Addr};
-use std::str::FromStr;
+use spacegate_kernel::{functions::http_route::SgHttpRouteMatchInst, plugins::filters::SgPluginFilterInitDto};
+
 use tardis::{async_trait::async_trait, basic::result::TardisResult, log, serde_json, TardisFuns};
-pub const CODE: &str = "ip-time";
+pub const CODE: &str = "ip_time";
 pub struct SgFilterIpTimeDef;
 
 mod ip_time_rule;
@@ -75,7 +67,7 @@ pub struct SgFilterIpTime {
 
 #[async_trait]
 impl SgPluginFilter for SgFilterIpTime {
-    async fn init(&self, _http_route_rule: &[SgHttpRouteRule]) -> TardisResult<()> {
+    async fn init(&mut self, _http_route_rule: &SgPluginFilterInitDto) -> TardisResult<()> {
         return Ok(());
     }
 
@@ -84,14 +76,14 @@ impl SgPluginFilter for SgFilterIpTime {
     }
 
     /// white list is prior
-    async fn req_filter(&self, id: &str, mut ctx: SgRoutePluginContext, matched_match_inst: Option<&SgHttpRouteMatchInst>) -> TardisResult<(bool, SgRoutePluginContext)> {
+    async fn req_filter(&self, _id: &str, ctx: SgRoutePluginContext, _matched_match_inst: Option<&SgHttpRouteMatchInst>) -> TardisResult<(bool, SgRoutePluginContext)> {
         let socket_addr = ctx.get_req_remote_addr();
         let ip = socket_addr.ip();
         let pass = self.rules.iter().any(|(net, rule)| net.contains(&ip) && rule.check_by_now());
         Ok((pass, ctx))
     }
 
-    async fn resp_filter(&self, id: &str, mut ctx: SgRoutePluginContext, matched_match_inst: Option<&SgHttpRouteMatchInst>) -> TardisResult<(bool, SgRoutePluginContext)> {
+    async fn resp_filter(&self, _id: &str, ctx: SgRoutePluginContext, _matched_match_inst: Option<&SgHttpRouteMatchInst>) -> TardisResult<(bool, SgRoutePluginContext)> {
         return Ok((true, ctx));
     }
 }

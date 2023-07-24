@@ -1,7 +1,7 @@
-use std::{default, ops::Range, time::SystemTime};
+use std::ops::Range;
 
 use serde::{Deserialize, Serialize};
-use tardis::chrono::{Local, NaiveTime, Utc};
+use tardis::chrono::{Local, NaiveTime};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(tag = "mode", rename_all = "snake_case")]
