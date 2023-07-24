@@ -60,7 +60,7 @@ impl PluginBsServ {
                             &LogDynamicContentReq {
                                 details: None,
                                 sub_kind: None,
-                                content: Some(format!("编辑了 插件 {}", bs.name)),
+                                content: Some(format!("插件 {}", bs.name)),
                             },
                             None,
                             Some("dynamic_log_plugin_manage".to_string()),
@@ -109,7 +109,7 @@ impl PluginBsServ {
                             &LogDynamicContentReq {
                                 details: None,
                                 sub_kind: None,
-                                content: Some(format!("新增了 插件 {}", bs.name)),
+                                content: Some(format!("插件 {}", bs.name)),
                             },
                             None,
                             Some("dynamic_log_plugin_manage".to_string()),
@@ -144,7 +144,7 @@ impl PluginBsServ {
             &LogDynamicContentReq {
                 details: None,
                 sub_kind: None,
-                content: Some(format!("删除了 插件 {}", bs.name)),
+                content: Some(format!("插件 {}", bs.name)),
             },
             None,
             Some("dynamic_log_plugin_manage".to_string()),

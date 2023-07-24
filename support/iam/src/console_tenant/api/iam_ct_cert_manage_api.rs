@@ -47,7 +47,7 @@ impl IamCtCertManageApi {
             &LogDynamicContentReq {
                 details: None,
                 sub_kind: None,
-                content: Some(format!("创建了 凭证 {}", add_req.0.ak)),
+                content: Some(format!("凭证 {}", add_req.0.ak)),
             },
             None,
             Some("dynamic_log_cert_manage".to_string()),
@@ -74,7 +74,7 @@ impl IamCtCertManageApi {
             &LogDynamicContentReq {
                 details: None,
                 sub_kind: None,
-                content: Some(format!("编辑了 凭证 {}", modify_req.0.ak)),
+                content: Some(format!("凭证 {}", modify_req.0.ak)),
             },
             None,
             Some("dynamic_log_cert_manage".to_string()),
@@ -123,7 +123,7 @@ impl IamCtCertManageApi {
             &LogDynamicContentReq {
                 details: None,
                 sub_kind: None,
-                content: Some(format!("删除了 凭证 {}", cert.ak)),
+                content: Some(format!("凭证 {}", cert.ak)),
             },
             None,
             Some("dynamic_log_cert_manage".to_string()),
