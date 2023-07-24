@@ -28,6 +28,7 @@ spacegate-kernel = { path = "../../../spacegate/kernel", features = [
    "k8s",
 ] }
 
+jsonpath-rust = "0.3.1"
 bios-auth = { path = "../../support/auth" }
 tardis = { workspace = true, features = ["web-server", "web-client"] }
 
