@@ -689,6 +689,13 @@ impl IamCertLdapServ {
 
     //同步ldap人员到iam
     pub async fn iam_sync_ldap_user_to_iam(sync_config: IamThirdIntegrationConfigDto, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
+        let _ = funs
+            .cache()
+            .set(
+                &funs.conf::<IamConfig>().cache_key_sync_ldap_status,
+                &TardisFuns::json.obj_to_string(&IamThirdIntegrationSyncStatusDto { total: 0, success: 0, failed: 0 })?,
+            )
+            .await;
         let mut msg = "".to_string();
         let (mut ldap_client, cert_conf, cert_conf_id) = Self::get_ldap_client(Some(ctx.own_paths.clone()), "", funs, ctx).await?;
         if ldap_client.bind_by_dn(&cert_conf.principal, &cert_conf.credentials).await?.is_none() {
@@ -847,9 +854,7 @@ impl IamCertLdapServ {
                 total += 1;
                 //ldap没有 iam有的 需要同步删除
                 let delete_result = match sync_config.account_way_to_delete {
-                    WayToDelete::DoNotDelete => {
-                        Ok(())
-                    }
+                    WayToDelete::DoNotDelete => Ok(()),
                     WayToDelete::DeleteCert => {
                         RbumCertServ::modify_rbum(
                             &cert.id,
