@@ -13,12 +13,12 @@ use tardis::{
 };
 
 use crate::{
-    api::nacos::extract_context,
+    api::nacos::{extract_context, extract_context_from_body},
     dto::{conf_config_dto::*, conf_config_nacos_dto::PublishConfigForm, conf_namespace_dto::*},
 };
 use crate::{conf_constants::error, serv::*};
 
-use super::tardis_err_to_poem_err;
+use super::{missing_param, tardis_err_to_poem_err};
 
 #[derive(Default, Clone, Copy, Debug)]
 pub struct ConfNacosV1CsApi;
@@ -61,13 +61,14 @@ impl ConfNacosV1CsApi {
         /// 配置名
         #[oai(name = "dataId")]
         data_id: Query<String>,
-        form: Form<PublishConfigForm>,
+        content: Query<Option<String>>,
         r#type: Query<Option<String>>,
+        form: Form<PublishConfigForm>,
         request: &Request,
     ) -> poem::Result<Json<bool>> {
         let funs = crate::get_tardis_inst();
         let namespace_id = namespace_id.0.or(tenant.0).unwrap_or("public".into());
-        let ctx = extract_context(request).await?;
+        let ctx = extract_context_from_body(&form.0).await.unwrap_or(extract_context(request).await)?;
         let src_user = &ctx.owner;
         let descriptor = ConfigDescriptor {
             namespace_id,
@@ -78,7 +79,7 @@ impl ConfNacosV1CsApi {
         let mut publish_request = ConfigPublishRequest {
             descriptor,
             schema: r#type.0,
-            content: form.0.content,
+            content: form.0.content.or(content.0).ok_or_else(|| missing_param("content"))?,
             src_user: Some(src_user.clone()),
             ..Default::default()
         };

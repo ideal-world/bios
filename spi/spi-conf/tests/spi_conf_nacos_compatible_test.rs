@@ -162,8 +162,10 @@ async fn test_tardis_compatibility(_test_client: &TestHttpClient) -> TardisResul
     let mut form = HashMap::new();
     form.insert("customNamespaceId", "test-namespace-1");
     form.insert("namespaceName", "测试命名空间1");
+    form.insert("username", username);
+    form.insert("password", password);
     // publish
-    let resp = nacos_client.reqwest_execute(|c| c.post(namespace_url).form(&form)).await?;
+    let resp = nacos_client.reqwest_client.post(namespace_url).form(&form).send().await?;
     log::info!("response: {resp:#?}");
     let success = resp.json::<bool>().await?;
     assert!(success);

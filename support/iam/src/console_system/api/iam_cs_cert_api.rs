@@ -11,7 +11,7 @@ use bios_basic::rbum::dto::rbum_cert_dto::{RbumCertSummaryResp, RbumCertSummaryW
 use bios_basic::rbum::dto::rbum_filer_dto::RbumCertFilterReq;
 use bios_basic::rbum::helper::rbum_scope_helper::get_max_level_id_by_context;
 
-use crate::basic::dto::iam_cert_dto::{IamCertUserPwdRestReq, IamThirdIntegrationConfigDto, IamThirdIntegrationSyncAddReq};
+use crate::basic::dto::iam_cert_dto::{IamCertUserPwdRestReq, IamThirdIntegrationConfigDto, IamThirdIntegrationSyncAddReq, IamThirdIntegrationSyncStatusDto};
 use crate::basic::serv::iam_cert_ldap_serv::IamCertLdapServ;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_cert_user_pwd_serv::IamCertUserPwdServ;
@@ -107,7 +107,7 @@ impl IamCsCertApi {
 
     ///Add Or Modify Sync Config
     #[oai(path = "/sync", method = "put")]
-    async fn add_or_modify_sync_third_integration_config(&self, req: Json<IamThirdIntegrationSyncAddReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+    async fn add_or_modify_sync_third_integration_config(&self, req: Json<Vec<IamThirdIntegrationSyncAddReq>>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let funs = iam_constants::get_tardis_inst();
         IamCertServ::add_or_modify_sync_third_integration_config(req.0, &funs, &ctx.0).await?;
         ctx.0.execute_task().await?;
@@ -116,16 +116,27 @@ impl IamCsCertApi {
 
     ///Get Sync Config
     #[oai(path = "/sync", method = "get")]
-    async fn get_sync_third_integration_config(&self, ctx: TardisContextExtractor) -> TardisApiResult<Option<IamThirdIntegrationConfigDto>> {
+    async fn get_sync_third_integration_config(&self, ctx: TardisContextExtractor) -> TardisApiResult<Option<Vec<IamThirdIntegrationConfigDto>>> {
         let funs = iam_constants::get_tardis_inst();
         let result = IamCertServ::get_sync_third_integration_config(&funs, &ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
 
+    ///Get sync status
+    ///
+    /// 获取最新的同步状态,如果返回为空，那么就是没有同步记录。
+    /// 当total=failed+success被认为同步完成
+    #[oai(path = "/sync/status", method = "get")]
+    async fn get_third_intg_sync_status(&self) -> TardisApiResult<Option<IamThirdIntegrationSyncStatusDto>> {
+        let funs = iam_constants::get_tardis_inst();
+        let result = IamCertServ::get_third_intg_sync_status(&funs).await?;
+        TardisResp::ok(result)
+    }
+
     ///Manual sync
     ///
-    /// 手动触发第三方集成同步
+    /// 手动触发第三方集成同步，如果有其他同步正在进行中，那么就会返回错误。
     #[oai(path = "/sync", method = "post")]
     async fn third_integration_sync(&self, account_sync_from: Json<IamCertExtKind>, ctx: TardisContextExtractor) -> TardisApiResult<Option<String>> {
         let funs = iam_constants::get_tardis_inst();

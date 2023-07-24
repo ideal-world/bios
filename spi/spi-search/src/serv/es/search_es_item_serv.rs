@@ -2,10 +2,7 @@ use std::collections::HashMap;
 
 use bios_basic::{
     basic_enumeration::BasicQueryOpKind,
-    spi::{
-        spi_funs::SpiBsInst,
-        spi_initializer::common,
-    },
+    spi::{spi_funs::SpiBsInst, spi_initializer::common},
 };
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
@@ -34,20 +31,23 @@ fn gen_data_mappings(ext: &Option<Value>) -> String {
     let mut ext_string = r#"{"type": "object"}"#.to_string();
     let mut ext_properties = vec![];
     if let Some(ext) = ext {
-        for (k,v) in ext.as_object().expect("ext is not object") {
+        for (k, v) in ext.as_object().expect("ext is not object") {
             if v.is_string() {
                 ext_properties.push(format!(r#""{k}":{{"type": "keyword"}}"#));
             }
         }
     }
     if !ext_properties.is_empty() {
-        ext_string = format!("\"properties\": {{
+        ext_string = format!(
+            "\"properties\": {{
             {}
-        }}", ext_properties.join(","));
-
+        }}",
+            ext_properties.join(",")
+        );
     }
-    
-    format!(r#"{{
+
+    format!(
+        r#"{{
         "mappings": {{
             "properties": {{
                 "tag":{{"type": "keyword"}},
@@ -71,7 +71,8 @@ fn gen_data_mappings(ext: &Option<Value>) -> String {
                 }}
             }}
         }}
-    }}"#)
+    }}"#
+    )
 }
 
 pub async fn add(add_req: &mut SearchItemAddReq, funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
@@ -120,7 +121,7 @@ pub async fn add(add_req: &mut SearchItemAddReq, funs: &TardisFunsInst, ctx: &Ta
     Ok(())
 }
 
-pub async fn modify(tag: &str, key: &str, modify_req: &mut SearchItemModifyReq, funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
+pub async fn modify(tag: &str, key: &str, modify_req: &mut SearchItemModifyReq, funs: &TardisFunsInst, _ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
     let (client, ext, _) = inst.inst::<TardisSearchClient>();
     let index = format_index(tag, ext);
     if !client.check_index_exist(&index).await? {

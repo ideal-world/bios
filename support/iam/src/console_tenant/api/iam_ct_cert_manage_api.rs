@@ -1,3 +1,4 @@
+use bios_sdk_invoke::clients::spi_log_client::{LogDynamicContentReq, SpiLogClient};
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem_openapi;
 use tardis::web::poem_openapi::param::Path;
@@ -41,7 +42,23 @@ impl IamCtCertManageApi {
     async fn add_manage_cert(&self, add_req: Json<IamCertManageAddReq>, ctx: TardisContextExtractor) -> TardisApiResult<String> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        let id = IamCertServ::add_manage_cert(&add_req.0, &funs, &ctx.0).await?;
+        let id = IamCertServ::add_manage_cert(&add_req.0, &funs, &ctx.0.clone()).await?;
+        let _ = SpiLogClient::add_dynamic_log(
+            &LogDynamicContentReq {
+                details: None,
+                sub_kind: None,
+                content: Some(format!("创建了 凭证 {}", add_req.0.ak)),
+            },
+            None,
+            Some("dynamic_log_cert_manage".to_string()),
+            Some(id.clone()),
+            Some("新增".to_string()),
+            None,
+            Some(tardis::chrono::Utc::now().to_rfc3339()),
+            &funs,
+            &ctx.0,
+        )
+        .await;
         funs.commit().await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(id)
@@ -53,6 +70,22 @@ impl IamCtCertManageApi {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         IamCertServ::modify_manage_cert(&id.0, &modify_req.0, &funs, &ctx.0).await?;
+        let _ = SpiLogClient::add_dynamic_log(
+            &LogDynamicContentReq {
+                details: None,
+                sub_kind: None,
+                content: Some(format!("编辑了 凭证 {}", modify_req.0.ak)),
+            },
+            None,
+            Some("dynamic_log_cert_manage".to_string()),
+            Some(id.0.to_string()),
+            Some("编辑".to_string()),
+            None,
+            Some(tardis::chrono::Utc::now().to_rfc3339()),
+            &funs,
+            &ctx.0,
+        )
+        .await;
         funs.commit().await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
@@ -84,7 +117,24 @@ impl IamCtCertManageApi {
     async fn delete_manage_cert_ext(&self, id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
+        let cert = IamCertServ::get_3th_kind_cert_by_id(&id.0, &funs, &ctx.0).await?;
         IamCertServ::delete_manage_cert(&id.0, &funs, &ctx.0).await?;
+        let _ = SpiLogClient::add_dynamic_log(
+            &LogDynamicContentReq {
+                details: None,
+                sub_kind: None,
+                content: Some(format!("删除了 凭证 {}", cert.ak)),
+            },
+            None,
+            Some("dynamic_log_cert_manage".to_string()),
+            Some(id.clone()),
+            Some("删除".to_string()),
+            None,
+            Some(tardis::chrono::Utc::now().to_rfc3339()),
+            &funs,
+            &ctx.0,
+        )
+        .await;
         funs.commit().await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void {})

@@ -128,7 +128,7 @@ impl IamCpCertUserPwdServ {
             funs,
         )
         .await?;
-        IamCertUserPwdServ::modify_ak_cert(req, &rbum_cert_conf_id, funs, &ctx).await?;
+        IamCertUserPwdServ::modify_ak_cert(&ctx.owner, req, &rbum_cert_conf_id, funs, &ctx).await?;
 
         let id = ctx.owner.to_string();
         let op_describe = format!("修改用户名为{}", req.new_ak.as_ref());
