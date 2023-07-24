@@ -7,7 +7,7 @@ use bios_basic::{
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
     search::search_client::TardisSearchClient,
-    serde_json::{self, json},
+    serde_json::{self, json, Value},
     web::web_resp::TardisPage,
     TardisFuns, TardisFunsInst,
 };
@@ -27,40 +27,59 @@ fn format_index(req_index: &str, ext: &HashMap<String, String>) -> String {
     }
 }
 
-fn gen_data_mappings() -> String {
-    r#"{
-        "mappings": {
-            "properties": {
-                "tag":{"type": "keyword"},
-                "kind":{"type": "keyword"},
-                "key":{"type": "keyword"},
-                "title":{"type": "text"},
-                "content":{"type": "text"},
-                "owner":{"type": "keyword"},
-                "own_paths":{"type": "text"},
-                "create_time":{"type": "date"},
-                "update_time":{"type": "date"},
-                "ext":{"type": "object"},
-                "visit_keys":{
-                    "properties": {
-                        "accounts": { "type": "keyword" },
-                        "apps": { "type": "keyword" },
-                        "tenants": { "type": "keyword" },
-                        "roles": { "type": "keyword" },
-                        "groups": { "type": "keyword" }
-                      }
-                }
+fn gen_data_mappings(ext: &Option<Value>) -> String {
+    let mut ext_string = r#"{"type": "object"}"#.to_string();
+    let mut ext_properties = vec![];
+    if let Some(ext) = ext {
+        for (k, v) in ext.as_object().expect("ext is not object") {
+            if v.is_string() {
+                ext_properties.push(format!(r#""{k}":{{"type": "keyword"}}"#));
             }
         }
-    }"#
-    .to_string()
+    }
+    if !ext_properties.is_empty() {
+        ext_string = format!(
+            "\"properties\": {{
+            {}
+        }}",
+            ext_properties.join(",")
+        );
+    }
+
+    format!(
+        r#"{{
+        "mappings": {{
+            "properties": {{
+                "tag":{{"type": "keyword"}},
+                "kind":{{"type": "keyword"}},
+                "key":{{"type": "keyword"}},
+                "title":{{"type": "text"}},
+                "content":{{"type": "text"}},
+                "owner":{{"type": "keyword"}},
+                "own_paths":{{"type": "text"}},
+                "create_time":{{"type": "date"}},
+                "update_time":{{"type": "date"}},
+                "ext":{{{ext_string}}},
+                "visit_keys":{{
+                    "properties": {{
+                        "accounts": {{ "type": "keyword" }},
+                        "apps": {{ "type": "keyword" }},
+                        "tenants": {{ "type": "keyword" }},
+                        "roles": {{ "type": "keyword" }},
+                        "groups": {{ "type": "keyword" }}
+                      }}
+                }}
+            }}
+        }}
+    }}"#
+    )
 }
 
 pub async fn add(add_req: &mut SearchItemAddReq, funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
     let (client, ext, _) = inst.inst::<TardisSearchClient>();
     let index = format_index(&add_req.tag, ext);
 
-    if search_es_initializer::init_index(client, &index, Some(&gen_data_mappings())).await.is_err() {
+    if search_es_initializer::init_index(client, &index, Some(&gen_data_mappings(&add_req.ext))).await.is_err() {
         return Err(funs.err().bad_request("search_es_item_serv", "add", "index not exist", "400-search-index-not-exist"));
     }
     if !search(
