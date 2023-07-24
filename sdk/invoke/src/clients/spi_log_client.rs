@@ -45,9 +45,9 @@ pub struct LogItemFindResp {
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Default, Debug)]
 pub struct LogDynamicContentReq {
-    pub details: String,
-    pub sub_kind: String,
-    pub content: String,
+    pub details: Option<String>,
+    pub sub_kind: Option<String>,
+    pub content: Option<String>,
 }
 
 impl SpiLogClient {
@@ -59,8 +59,6 @@ impl SpiLogClient {
         op: Option<String>,
         rel_key: Option<String>,
         ts: Option<String>,
-        owner: Option<String>,
-        own_paths: Option<String>,
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<()> {
@@ -73,8 +71,8 @@ impl SpiLogClient {
             op,
             rel_key,
             ts,
-            owner,
-            own_paths,
+            Some(ctx.owner.clone()),
+            Some(ctx.own_paths.clone()),
             funs,
             ctx,
         )
