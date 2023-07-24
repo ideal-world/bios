@@ -139,7 +139,7 @@ pub struct LoginResponse {
 pub struct PublishConfigForm {
     pub(crate) username: Option<String>,
     pub(crate) password: Option<String>,
-    pub content: String,
+    pub content: Option<String>,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Default)]
