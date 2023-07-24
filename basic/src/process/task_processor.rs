@@ -79,13 +79,10 @@ impl TaskProcessor {
         let handle = tardis::tokio::spawn(async move {
             let result = process().await;
             match result {
-                Ok(_) => {
-                    TASK_HANDLE.write().await.remove(&task_id);
-                    match TaskProcessor::set_status(&cache_key, task_id, true, cache_client).await {
-                        Ok(_) => {}
-                        Err(e) => log::error!("Asynchronous task [{}] process error:{:?}", task_id, e),
-                    }
-                }
+                Ok(_) => match TaskProcessor::set_status(&cache_key, task_id, true, cache_client).await {
+                    Ok(_) => {}
+                    Err(e) => log::error!("Asynchronous task [{}] process error:{:?}", task_id, e),
+                },
                 Err(e) => {
                     log::error!("Asynchronous task [{}] process error:{:?}", task_id, e);
                 }
@@ -108,17 +105,21 @@ impl TaskProcessor {
         }
     }
 
-    pub async fn stop_task(task_id: i64, funs: &TardisFunsInst) -> TardisResult<()> {
-        funs.mq()
-            .publish(
-                &funs.rbum_conf_task_mq_topic_event(),
-                TardisFuns::json.obj_to_string(&TaskEventMessage {
-                    task_id,
-                    operate: TaskOperate::Stop,
-                })?,
-                &HashMap::new(),
-            )
-            .await?;
+    pub async fn stop_task(cache_key: &str, task_id: i64, funs: &TardisFunsInst) -> TardisResult<()> {
+        if TaskProcessor::check_status(cache_key, task_id, funs).await? {
+            TASK_HANDLE.write().await.remove(&task_id);
+        } else {
+            funs.mq()
+                .publish(
+                    &funs.rbum_conf_task_mq_topic_event(),
+                    TardisFuns::json.obj_to_string(&TaskEventMessage {
+                        task_id,
+                        operate: TaskOperate::Stop,
+                    })?,
+                    &HashMap::new(),
+                )
+                .await?;
+        }
         Ok(())
     }
 

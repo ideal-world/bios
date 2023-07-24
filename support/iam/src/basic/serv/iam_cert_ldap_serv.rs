@@ -848,7 +848,6 @@ impl IamCertLdapServ {
                 //ldap没有 iam有的 需要同步删除
                 let delete_result = match sync_config.account_way_to_delete {
                     WayToDelete::DoNotDelete => {
-                        success += 1;
                         Ok(())
                     }
                     WayToDelete::DeleteCert => {
