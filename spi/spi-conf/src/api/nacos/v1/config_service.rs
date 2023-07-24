@@ -57,29 +57,33 @@ impl ConfNacosV1CsApi {
         tenant: Query<Option<NamespaceId>>,
         #[oai(name = "namespaceId")] namespace_id: Query<Option<NamespaceId>>,
         /// 配置分组名
-        group: Query<String>,
+        group: Query<Option<String>>,
         /// 配置名
         #[oai(name = "dataId")]
-        data_id: Query<String>,
+        data_id: Query<Option<String>>,
         content: Query<Option<String>>,
         r#type: Query<Option<String>>,
-        form: Form<PublishConfigForm>,
+        form: Option<Form<PublishConfigForm>>,
         request: &Request,
     ) -> poem::Result<Json<bool>> {
         let funs = crate::get_tardis_inst();
-        let namespace_id = namespace_id.0.or(tenant.0).unwrap_or("public".into());
-        let ctx = extract_context_from_body(&form.0).await.unwrap_or(extract_context(request).await)?;
+        let namespace_id = form.as_ref().and_then(|f| f.0.tenant.clone()).or(tenant.0).or(namespace_id.0).unwrap_or("public".into());
+        let ctx = if let Some(form) = &form {
+            extract_context_from_body(&form.0).await.unwrap_or(extract_context(request).await)?
+        } else {
+            extract_context(request).await?
+        };
         let src_user = &ctx.owner;
         let descriptor = ConfigDescriptor {
             namespace_id,
-            group: group.0,
-            data_id: data_id.0,
+            group: form.as_ref().and_then(|f| f.0.group.clone()).or(group.0).ok_or_else(|| missing_param("group"))?,
+            data_id: form.as_ref().and_then(|f| f.0.data_id.clone()).or(data_id.0).ok_or_else(|| missing_param("data_id"))?,
             ..Default::default()
         };
         let mut publish_request = ConfigPublishRequest {
             descriptor,
             schema: r#type.0,
-            content: form.0.content.or(content.0).ok_or_else(|| missing_param("content"))?,
+            content: form.and_then(|f| f.0.content).or(content.0).ok_or_else(|| missing_param("content"))?,
             src_user: Some(src_user.clone()),
             ..Default::default()
         };

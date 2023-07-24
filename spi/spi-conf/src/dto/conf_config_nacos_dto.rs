@@ -136,10 +136,18 @@ pub struct LoginResponse {
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Default)]
+#[oai(rename_all="camelCase")]
 pub struct PublishConfigForm {
     pub(crate) username: Option<String>,
     pub(crate) password: Option<String>,
+    pub tenant: Option<NamespaceId>,
+    pub namespace_id: Option<NamespaceId>,
+    /// 配置分组名
+    pub group: Option<String>,
+    /// 配置名
+    pub data_id: Option<String>,
     pub content: Option<String>,
+    pub r#type: Option<String>,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Default)]
