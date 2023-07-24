@@ -61,7 +61,7 @@ pub struct SgFilterIpTimeConfigRule {
 
 #[derive(Debug)]
 pub struct SgFilterIpTime {
-    /// # enhancement: 
+    /// # enhancement:
     /// should be a time segment list
     /// - segment list
     ///     - ban: Set {}
