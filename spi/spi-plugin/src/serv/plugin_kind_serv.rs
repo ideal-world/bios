@@ -33,37 +33,38 @@ impl PluginKindServ {
             PluginBsServ::add_or_modify_plugin_rel_agg(&add_req.bs_id, &add_req.app_tenant_id, &mut bs_rel.clone(), funs, ctx).await?;
         }
         let bs_rel = PluginBsServ::get_bs_rel_agg(&add_req.bs_id, &add_req.app_tenant_id, funs, ctx).await?;
-        if RbumRelServ::count_rbums(
-            &RbumRelFilterReq {
-                basic: RbumBasicFilterReq {
-                    with_sub_own_paths: true,
-                    ..Default::default()
-                },
-                tag: Some(PluginAppBindRelKind::PluginAppBindKind.to_string()),
-                from_rbum_kind: Some(RbumRelFromKind::Item),
-                from_rbum_id: Some(bing_item_id.clone()),
-                ext_eq: Some(add_req.kind_id.clone()),
-                ..Default::default()
-            },
+        // if RbumRelServ::count_rbums(
+        //     &RbumRelFilterReq {
+        //         basic: RbumBasicFilterReq {
+        //             with_sub_own_paths: true,
+        //             ..Default::default()
+        //         },
+        //         tag: Some(PluginAppBindRelKind::PluginAppBindKind.to_string()),
+        //         from_rbum_kind: Some(RbumRelFromKind::Item),
+        //         from_rbum_id: Some(bing_item_id.clone()),
+        //         ext_eq: Some(add_req.kind_id.clone()),
+        //         ..Default::default()
+        //     },
+        //     funs,
+        //     ctx,
+        // )
+        // .await?
+        //     == 0
+        // {
+        Self::delete_kind_agg_rel(&add_req.kind_id, funs, ctx).await?;
+        PluginRelServ::add_simple_rel(
+            &PluginAppBindRelKind::PluginAppBindKind,
+            &bing_item_id,
+            &bs_rel.rel.id,
+            None,
+            Some(add_req.kind_id.clone()),
+            false,
+            true,
             funs,
             ctx,
         )
-        .await?
-            == 0
-        {
-            PluginRelServ::add_simple_rel(
-                &PluginAppBindRelKind::PluginAppBindKind,
-                &bing_item_id,
-                &bs_rel.rel.id,
-                None,
-                Some(add_req.kind_id.clone()),
-                false,
-                true,
-                funs,
-                ctx,
-            )
-            .await?;
-        }
+        .await?;
+        // }
         Ok(())
     }
 
