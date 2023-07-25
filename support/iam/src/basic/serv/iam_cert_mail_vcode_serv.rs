@@ -405,7 +405,7 @@ impl IamCertMailVCodeServ {
         let resp = IamCertServ::get_kernel_cert(account_id, &IamCertKernelKind::MailVCode, funs, ctx).await;
         match resp {
             Ok(cert) => {
-                let _ = MailClient::send_pwd(&cert.ak, pwd, funs).await;
+                let _ = MailClient::async_send_pwd(&cert.ak, pwd, funs, ctx).await;
             }
             Err(_) => info!("mail pwd not found"),
         }
