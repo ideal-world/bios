@@ -1318,8 +1318,8 @@ impl IamCertServ {
 
         TaskProcessor::execute_task_with_ctx(
             &funs.conf::<IamConfig>().cache_key_async_task_status,
-            || async move {
-                let _ = sync;
+            move || async move {
+                let sync = sync;
                 let funs = iam_constants::get_tardis_inst();
 
                 let sync_config = if let Some(sync_config) = sync_config {
@@ -1336,13 +1336,16 @@ impl IamCertServ {
                 } else {
                     return Err(funs.err().conflict("ldap_account", "sync", "should have sync config!", "iam-not-found-sync-config"));
                 };
-                match sync_config.account_sync_from {
+
+                let result = match sync_config.account_sync_from {
                     IamCertExtKind::Ldap => {
                         IamCertLdapServ::iam_sync_ldap_user_to_iam(sync_config, &funs, &task_ctx).await?;
                         Ok(())
                     }
                     _ => Err(funs.err().not_implemented("third_integration", "sync", "501-sync-from-is-not-implemented", "501-sync-from-is-not-implemented")),
-                }
+                };
+                drop(sync);
+                result
             },
             funs,
             ctx,
