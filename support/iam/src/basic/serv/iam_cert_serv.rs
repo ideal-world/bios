@@ -1322,8 +1322,13 @@ impl IamCertServ {
     pub async fn third_integration_sync(sync_config: Option<IamThirdIntegrationConfigDto>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let task_ctx = ctx.clone();
         let sync = SYNC_LOCK.try_lock().map_err(|_| funs.err().conflict("third_integration_config", "sync", "The last synchronization has not ended yet", "iam-sync-not-ended"))?;
+        if let Some(task_id) = funs.cache().get(&funs.conf::<IamConfig>().cache_key_sync_ldap_task_lock).await?.and_then(|task_id| task_id.parse().ok()) {
+            if !TaskProcessor::check_status(&funs.conf::<IamConfig>().cache_key_async_task_status, task_id, funs.cache()).await? {
+                return Err(funs.err().conflict("third_integration_config", "sync", "The last synchronization has not ended yet", "iam-sync-not-ended"));
+            };
+        }
 
-        TaskProcessor::execute_task_with_ctx(
+        let task_id = TaskProcessor::execute_task_with_ctx(
             &funs.conf::<IamConfig>().cache_key_async_task_status,
             move || async move {
                 let sync = sync;
@@ -1358,6 +1363,7 @@ impl IamCertServ {
             ctx,
         )
         .await?;
+        funs.cache().set(&funs.conf::<IamConfig>().cache_key_sync_ldap_task_lock, &task_id.to_string()).await?;
         Ok(())
     }
 
