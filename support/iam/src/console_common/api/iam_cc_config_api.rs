@@ -21,7 +21,8 @@ impl IamCcConfigApi {
     async fn get(&self, ctx: TardisContextExtractor) -> TardisApiResult<IamCertConfUserPwdResp> {
         let funs = iam_constants::get_tardis_inst();
         let result = if IamAccountServ::is_global_account(&ctx.0.owner, &funs, &ctx.0).await? {
-            IamPlatformServ::get_platform_config_agg(&funs, &ctx.0).await?.cert_conf_by_user_pwd
+            let new_ctx = IamAccountServ::new_context_if_account_is_global(&ctx.0, &funs).await?;
+            IamPlatformServ::get_platform_config_agg(&funs, &new_ctx).await?.cert_conf_by_user_pwd
         } else {
             IamTenantServ::get_tenant_config_agg(&IamTenantServ::get_id_by_ctx(&ctx.0, &funs)?, &funs, &ctx.0).await?.cert_conf_by_user_pwd
         };
