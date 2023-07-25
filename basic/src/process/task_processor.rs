@@ -22,12 +22,12 @@ const NOTIFY_EVENT_IN_CTX_FLAG: &str = "notify";
 pub struct TaskProcessor;
 
 impl TaskProcessor {
-    pub async fn subscribe_task(component_code: &str, funs: &TardisFunsInst) -> TardisResult<()> {
-        let component_code_clone = component_code.to_string();
+    pub async fn subscribe_task(funs: &TardisFunsInst) -> TardisResult<()> {
+        let component_code = funs.module_code().to_string();
         //todo Use node id to differentiate nodes
         funs.mq()
             .subscribe(&funs.rbum_conf_task_mq_topic_event(), move |(_, msg)| {
-                let component_code_clone = component_code_clone.clone();
+                let component_code_clone = component_code.clone();
                 async move {
                     let funs = TardisFuns::inst_with_db_conn(component_code_clone, None);
                     let task_msg = TardisFuns::json.str_to_obj::<TaskEventMessage>(&msg)?;

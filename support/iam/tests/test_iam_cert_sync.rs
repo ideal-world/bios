@@ -88,19 +88,21 @@ pub async fn test(ldap_account_num: u64, conf_ldap_add_or_modify_req: IamCertCon
     .await
     .unwrap();
 
-    tokio::spawn(async {
-        let funs = iam_constants::get_tardis_inst();
-        loop {
-            let a = IamCertServ::get_third_intg_sync_status(&funs).await.unwrap();
-            info!("get_third_intg_sync_status:{:?}", a);
-            if a.is_some() {
-                let a = a.unwrap();
-                if a.total != 0 && (a.total == (a.failed + a.success) as usize) {
-                    break;
+    if let Some(task_id) = TaskProcessor::get_task_id_with_ctx(&admin_ctx).await.unwrap() {
+        tokio::spawn(async move {
+            let funs = iam_constants::get_tardis_inst();
+            loop {
+                let a = IamCertServ::get_third_intg_sync_status(&task_id, &funs).await.unwrap();
+                info!("get_third_intg_sync_status:{:?}", a);
+                if a.is_some() {
+                    let a = a.unwrap();
+                    if a.total != 0 && (a.total == (a.failed + a.success) as usize) {
+                        break;
+                    }
                 }
             }
-        }
-    });
+        });
+    }
 
     info!("【When a sync task is in progress, executing the sync method again will response an error】");
     assert!(IamCertServ::third_integration_sync(

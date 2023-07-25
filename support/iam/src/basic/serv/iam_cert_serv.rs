@@ -1,14 +1,12 @@
 use bios_basic::process::task_processor::TaskProcessor;
 use bios_basic::rbum::dto::rbum_rel_agg_dto::RbumRelAggAddReq;
 use bios_basic::rbum::serv::rbum_rel_serv::RbumRelServ;
-use ldap3::log::info;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
-use tardis::db::sea_orm::sea_query::tests_cfg::Task;
 use tardis::tokio::sync::Mutex;
 
 use tardis::web::web_resp::TardisPage;
@@ -1206,7 +1204,7 @@ impl IamCertServ {
                 ctx,
             )
             .await?
-            .map(|r| r.id.clone())
+            .map(|r| r.id)
             .ok_or_else(|| funs.err().not_found("iam", "init", "not found sys admin role", ""))?;
             Ok((role_sys_admin_id, res_sum.id))
         } else {
@@ -1254,10 +1252,10 @@ impl IamCertServ {
         match reqs.iter().find(|req| req.account_sync_cron.is_none()) {
             Some(_) => {
                 // 添加手动同步按钮权限
-                let _ = IamRoleServ::add_rel_res(&role_sys_admin_id, &res_id, &funs, &ctx).await;
+                let _ = IamRoleServ::add_rel_res(&role_sys_admin_id, &res_id, funs, ctx).await;
             }
             None => {
-                let _ = IamRoleServ::delete_rel_res(&role_sys_admin_id, &res_id, &funs, &ctx).await;
+                let _ = IamRoleServ::delete_rel_res(&role_sys_admin_id, &res_id, funs, ctx).await;
             }
         }
 
@@ -1290,7 +1288,7 @@ impl IamCertServ {
         let mut result = None;
         let task_id = task_id.parse().map_err(|_| funs.err().format_error("system", "task", "task id format error", "406-iam-task-id-format"))?;
         let is_end = TaskProcessor::check_status(&funs.conf::<IamConfig>().cache_key_async_task_status, task_id, funs.cache()).await?;
-        for i in 0..5 {
+        for _i in 0..5 {
             result = funs
                 .cache()
                 .get(&funs.conf::<IamConfig>().cache_key_sync_ldap_status)

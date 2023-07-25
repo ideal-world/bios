@@ -335,7 +335,7 @@ impl IamCertPhoneVCodeServ {
                 ..Default::default()
             },
             funs,
-            &ctx,
+            ctx,
         )
         .await?
             > 0
@@ -356,7 +356,7 @@ impl IamCertPhoneVCodeServ {
                 ..Default::default()
             },
             funs,
-            &ctx,
+            ctx,
         )
         .await?
             > 0
