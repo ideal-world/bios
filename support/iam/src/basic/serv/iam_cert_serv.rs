@@ -4,9 +4,11 @@ use bios_basic::rbum::serv::rbum_rel_serv::RbumRelServ;
 use ldap3::log::info;
 use std::collections::HashMap;
 use std::sync::Arc;
+use std::time::Duration;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
+use tardis::db::sea_orm::sea_query::tests_cfg::Task;
 use tardis::tokio::sync::Mutex;
 
 use tardis::web::web_resp::TardisPage;
@@ -1284,9 +1286,28 @@ impl IamCertServ {
         }
     }
 
-    pub async fn get_third_intg_sync_status(funs: &TardisFunsInst) -> TardisResult<Option<IamThirdIntegrationSyncStatusDto>> {
-        let result =
-            funs.cache().get(&funs.conf::<IamConfig>().cache_key_sync_ldap_status).await?.and_then(|s| TardisFuns::json.str_to_obj::<IamThirdIntegrationSyncStatusDto>(&s).ok());
+    pub async fn get_third_intg_sync_status(task_id: &str, funs: &TardisFunsInst) -> TardisResult<Option<IamThirdIntegrationSyncStatusDto>> {
+        let mut result = None;
+        let task_id = task_id.parse().map_err(|_| funs.err().format_error("system", "task", "task id format error", "406-iam-task-id-format"))?;
+        let is_end = TaskProcessor::check_status(&funs.conf::<IamConfig>().cache_key_async_task_status, task_id, funs.cache()).await?;
+        for i in 0..5 {
+            result = funs
+                .cache()
+                .get(&funs.conf::<IamConfig>().cache_key_sync_ldap_status)
+                .await?
+                .and_then(|s| TardisFuns::json.str_to_obj::<IamThirdIntegrationSyncStatusDto>(&s).ok());
+            if is_end || (result.is_some() && result.as_ref().expect("").total != 0) {
+                break;
+            }
+            tardis::tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+        if !is_end && result.is_some() && (result.as_ref().expect("").total <= (result.as_ref().expect("").success + result.as_ref().expect("").failed) as usize) {
+            result = Some(IamThirdIntegrationSyncStatusDto {
+                total: (result.as_ref().expect("").success + result.as_ref().expect("").failed) as usize + 1,
+                success: result.as_ref().expect("").success,
+                failed: result.as_ref().expect("").failed,
+            });
+        }
         Ok(result)
     }
 

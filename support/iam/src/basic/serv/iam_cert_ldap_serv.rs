@@ -797,7 +797,7 @@ impl IamCertLdapServ {
                         &funs,
                         ctx,
                     )
-                        .await?
+                    .await?
                     {
                         let modify_result = RbumCertServ::modify_rbum(
                             &phone_cert.id,
@@ -814,7 +814,7 @@ impl IamCertLdapServ {
                             &funs,
                             ctx,
                         )
-                            .await;
+                        .await;
                         if let Some(e) = modify_result.err() {
                             let err_msg = format!("modify phone cert_id:{} failed:{}", phone_cert.id, e);
                             tardis::log::error!("{}", err_msg);
@@ -831,7 +831,7 @@ impl IamCertLdapServ {
                             &funs,
                             ctx,
                         )
-                            .await
+                        .await
                         {
                             let err_msg = format!("add phone phone:{} failed:{}", iam_account_ext_sys_resp.mobile.clone(), e);
                             tardis::log::error!("{}", err_msg);
