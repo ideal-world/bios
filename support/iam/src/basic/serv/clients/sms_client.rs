@@ -7,7 +7,6 @@ use tardis::{tokio, TardisFuns, TardisFunsInst};
 pub struct SmsClient;
 
 impl SmsClient {
-    
     pub async fn async_send_vcode(phone: &str, vcode: &str, _funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let ctx_clone = ctx.clone();
         let phone_clone = phone.to_string();

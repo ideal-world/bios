@@ -1307,6 +1307,13 @@ impl IamCertServ {
                 failed: result.as_ref().expect("").failed,
             });
         }
+        if is_end && result.is_some() {
+            result = Some(IamThirdIntegrationSyncStatusDto {
+                total: (result.as_ref().expect("").success + result.as_ref().expect("").failed) as usize,
+                success: result.as_ref().expect("").success,
+                failed: result.as_ref().expect("").failed,
+            });
+        }
         Ok(result)
     }
 
