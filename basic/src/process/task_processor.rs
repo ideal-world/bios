@@ -128,6 +128,7 @@ impl TaskProcessor {
             Some(handle) => {
                 handle.abort();
                 TASK_HANDLE.write().await.remove(&task_id);
+                TaskProcessor::set_status(&cache_key, task_id, true, cache_client).await;
                 Ok(())
             }
             None => Err(TardisError::bad_request("task not found,may task is end", "400-stop-task-error")),
