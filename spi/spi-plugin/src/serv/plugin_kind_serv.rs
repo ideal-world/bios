@@ -120,11 +120,22 @@ impl PluginKindServ {
             .get(0)
             {
                 let rel = PluginRelServ::get_rel(&rel_bind.rel_id, funs, ctx).await?;
-                kind_aggs.push(PluginKindAggResp {
-                    kind: kind.clone(),
-                    rel_bind: Some(rel_bind.clone()),
-                    rel_bs: Some(PluginBsServ::get_bs(&rel.from_rbum_id, &rel.to_rbum_item_id, funs, ctx).await?),
-                });
+                match PluginBsServ::get_bs(&rel.from_rbum_id, &rel.to_rbum_item_id, funs, ctx).await {
+                    Ok(rel_bs) => {
+                        kind_aggs.push(PluginKindAggResp {
+                            kind: kind.clone(),
+                            rel_bind: Some(rel_bind.clone()),
+                            rel_bs: Some(rel_bs),
+                        });
+                    }
+                    Err(_) => {
+                        kind_aggs.push(PluginKindAggResp {
+                            kind: kind.clone(),
+                            rel_bind: Some(rel_bind.clone()),
+                            rel_bs: None,
+                        });
+                    }
+                }
             } else {
                 kind_aggs.push(PluginKindAggResp {
                     kind: kind.clone(),
