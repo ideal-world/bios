@@ -273,15 +273,13 @@ impl IamAccountServ {
                 )
                 .await?;
             }
-            // todo Add the ctx task queue
-            let _ = SmsClient::send_pwd(cert_phone, &pwd, funs, ctx).await;
+            let _ = SmsClient::async_send_pwd(cert_phone, &pwd, funs, ctx).await;
         }
         if let Some(cert_mail) = &add_req.cert_mail {
             if let Some(cert_conf) = IamCertServ::get_cert_conf_id_and_ext_opt_by_kind(&IamCertKernelKind::MailVCode.to_string(), Some(ctx.own_paths.clone()), funs).await? {
                 IamCertMailVCodeServ::add_cert(&IamCertMailVCodeAddReq { mail: cert_mail.to_string() }, &account_id, &cert_conf.id, funs, ctx).await?;
             }
-            // todo Add the ctx task queue
-            let _ = MailClient::send_pwd(cert_mail, &pwd, funs).await;
+            let _ = MailClient::async_send_pwd(cert_mail, &pwd, funs, ctx).await;
         }
         if let Some(role_ids) = &add_req.role_ids {
             for role_id in role_ids {

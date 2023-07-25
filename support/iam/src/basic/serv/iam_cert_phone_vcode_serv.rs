@@ -457,7 +457,7 @@ impl IamCertPhoneVCodeServ {
         let resp = IamCertServ::get_kernel_cert(account_id, &IamCertKernelKind::PhoneVCode, funs, ctx).await;
         match resp {
             Ok(cert) => {
-                let _ = SmsClient::send_pwd(&cert.ak, pwd, funs, ctx).await;
+                let _ = SmsClient::async_send_pwd(&cert.ak, pwd, funs, ctx).await;
             }
             Err(_) => info!("phone pwd not found"),
         }
