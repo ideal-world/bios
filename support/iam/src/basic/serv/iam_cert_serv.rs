@@ -1,9 +1,9 @@
 use bios_basic::process::task_processor::TaskProcessor;
 use bios_basic::rbum::dto::rbum_rel_agg_dto::RbumRelAggAddReq;
 use bios_basic::rbum::serv::rbum_rel_serv::RbumRelServ;
-use ldap3::log::info;
 use std::collections::HashMap;
 use std::sync::Arc;
+use std::time::Duration;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
@@ -1204,7 +1204,7 @@ impl IamCertServ {
                 ctx,
             )
             .await?
-            .map(|r| r.id.clone())
+            .map(|r| r.id)
             .ok_or_else(|| funs.err().not_found("iam", "init", "not found sys admin role", ""))?;
             Ok((role_sys_admin_id, res_sum.id))
         } else {
@@ -1252,10 +1252,10 @@ impl IamCertServ {
         match reqs.iter().find(|req| req.account_sync_cron.is_none()) {
             Some(_) => {
                 // 添加手动同步按钮权限
-                let _ = IamRoleServ::add_rel_res(&role_sys_admin_id, &res_id, &funs, &ctx).await;
+                let _ = IamRoleServ::add_rel_res(&role_sys_admin_id, &res_id, funs, ctx).await;
             }
             None => {
-                let _ = IamRoleServ::delete_rel_res(&role_sys_admin_id, &res_id, &funs, &ctx).await;
+                let _ = IamRoleServ::delete_rel_res(&role_sys_admin_id, &res_id, funs, ctx).await;
             }
         }
 
@@ -1284,9 +1284,29 @@ impl IamCertServ {
         }
     }
 
-    pub async fn get_third_intg_sync_status(funs: &TardisFunsInst) -> TardisResult<Option<IamThirdIntegrationSyncStatusDto>> {
-        let result =
-            funs.cache().get(&funs.conf::<IamConfig>().cache_key_sync_ldap_status).await?.and_then(|s| TardisFuns::json.str_to_obj::<IamThirdIntegrationSyncStatusDto>(&s).ok());
+    pub async fn get_third_intg_sync_status(task_id: &str, funs: &TardisFunsInst) -> TardisResult<Option<IamThirdIntegrationSyncStatusDto>> {
+        let mut result = None;
+        let task_id = task_id.parse().map_err(|_| funs.err().format_error("system", "task", "task id format error", "406-iam-task-id-format"))?;
+        let mut is_end = TaskProcessor::check_status(&funs.conf::<IamConfig>().cache_key_async_task_status, task_id, funs.cache()).await?;
+        for _i in 0..5 {
+            result = funs
+                .cache()
+                .get(&funs.conf::<IamConfig>().cache_key_sync_ldap_status)
+                .await?
+                .and_then(|s| TardisFuns::json.str_to_obj::<IamThirdIntegrationSyncStatusDto>(&s).ok());
+            is_end = TaskProcessor::check_status(&funs.conf::<IamConfig>().cache_key_async_task_status, task_id, funs.cache()).await?;
+            if is_end || (result.is_some() && result.as_ref().expect("").total != 0) {
+                break;
+            }
+            tardis::tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+        if !is_end && result.is_some() && (result.as_ref().expect("").total <= (result.as_ref().expect("").success + result.as_ref().expect("").failed) as usize) {
+            result = Some(IamThirdIntegrationSyncStatusDto {
+                total: (result.as_ref().expect("").success + result.as_ref().expect("").failed) as usize + 1,
+                success: result.as_ref().expect("").success,
+                failed: result.as_ref().expect("").failed,
+            });
+        }
         Ok(result)
     }
 
@@ -1294,12 +1314,12 @@ impl IamCertServ {
     /// 如果手动导入,那么third_integration_config必须Some
     pub async fn third_integration_sync(sync_config: Option<IamThirdIntegrationConfigDto>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let task_ctx = ctx.clone();
-        // let sync = SYNC_LOCK.try_lock().map_err(|_| funs.err().conflict("third_integration_config", "sync", "The last synchronization has not ended yet", "iam-sync-not-ended"))?;
+        let sync = SYNC_LOCK.try_lock().map_err(|_| funs.err().conflict("third_integration_config", "sync", "The last synchronization has not ended yet", "iam-sync-not-ended"))?;
 
         TaskProcessor::execute_task_with_ctx(
             &funs.conf::<IamConfig>().cache_key_async_task_status,
-            || async move {
-                // let _ = sync;
+            move || async move {
+                let sync = sync;
                 let funs = iam_constants::get_tardis_inst();
 
                 let sync_config = if let Some(sync_config) = sync_config {
@@ -1316,19 +1336,21 @@ impl IamCertServ {
                 } else {
                     return Err(funs.err().conflict("ldap_account", "sync", "should have sync config!", "iam-not-found-sync-config"));
                 };
-                match sync_config.account_sync_from {
+
+                let result = match sync_config.account_sync_from {
                     IamCertExtKind::Ldap => {
                         IamCertLdapServ::iam_sync_ldap_user_to_iam(sync_config, &funs, &task_ctx).await?;
                         Ok(())
                     }
                     _ => Err(funs.err().not_implemented("third_integration", "sync", "501-sync-from-is-not-implemented", "501-sync-from-is-not-implemented")),
-                }
+                };
+                drop(sync);
+                result
             },
             funs,
             ctx,
         )
         .await?;
-        info!("end of third_integration_sync");
         Ok(())
     }
 

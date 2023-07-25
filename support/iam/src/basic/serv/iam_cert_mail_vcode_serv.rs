@@ -282,7 +282,7 @@ impl IamCertMailVCodeServ {
                 ..Default::default()
             },
             funs,
-            &ctx,
+            ctx,
         )
         .await?
             > 0
@@ -303,7 +303,7 @@ impl IamCertMailVCodeServ {
                 ..Default::default()
             },
             funs,
-            &ctx,
+            ctx,
         )
         .await?
             > 0

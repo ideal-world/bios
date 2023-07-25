@@ -777,67 +777,69 @@ impl IamCertLdapServ {
                 //     continue;
                 // }
 
-                // 如果有手机号配置那么就更新手机号
-                let phone_cert_conf_id = IamCertServ::get_cert_conf_id_by_kind(&IamCertKernelKind::PhoneVCode.to_string(), Some(ctx.own_paths.clone()), &funs).await?;
-                if let Some(phone_cert) = RbumCertServ::find_one_rbum(
-                    &RbumCertFilterReq {
-                        basic: RbumBasicFilterReq {
-                            own_paths: Some(ctx.own_paths.clone()),
-                            with_sub_own_paths: true,
-                            ignore_scope: true,
+                if !iam_account_ext_sys_resp.mobile.is_empty() {
+                    // 如果有手机号配置那么就更新手机号
+                    let phone_cert_conf_id = IamCertServ::get_cert_conf_id_by_kind(&IamCertKernelKind::PhoneVCode.to_string(), Some(ctx.own_paths.clone()), &funs).await?;
+                    if let Some(phone_cert) = RbumCertServ::find_one_rbum(
+                        &RbumCertFilterReq {
+                            basic: RbumBasicFilterReq {
+                                own_paths: Some(ctx.own_paths.clone()),
+                                with_sub_own_paths: true,
+                                ignore_scope: true,
+                                ..Default::default()
+                            },
+                            status: Some(RbumCertStatusKind::Enabled),
+                            rel_rbum_kind: Some(RbumCertRelKind::Item),
+                            rel_rbum_id: Some(cert.rel_rbum_id.clone()),
+                            rel_rbum_cert_conf_ids: Some(vec![phone_cert_conf_id.clone()]),
                             ..Default::default()
                         },
-                        status: Some(RbumCertStatusKind::Enabled),
-                        rel_rbum_kind: Some(RbumCertRelKind::Item),
-                        rel_rbum_id: Some(cert.rel_rbum_id.clone()),
-                        rel_rbum_cert_conf_ids: Some(vec![phone_cert_conf_id.clone()]),
-                        ..Default::default()
-                    },
-                    &funs,
-                    ctx,
-                )
-                .await?
-                {
-                    let modify_result = RbumCertServ::modify_rbum(
-                        &phone_cert.id,
-                        &mut RbumCertModifyReq {
-                            ak: Some(TrimString(iam_account_ext_sys_resp.mobile.clone())),
-                            sk: None,
-                            is_ignore_check_sk: false,
-                            ext: None,
-                            start_time: None,
-                            end_time: None,
-                            conn_uri: None,
-                            status: None,
-                        },
                         &funs,
                         ctx,
                     )
-                    .await;
-                    if let Some(e) = modify_result.err() {
-                        let err_msg = format!("modify phone cert_id:{} failed:{}", phone_cert.id, e);
-                        tardis::log::error!("{}", err_msg);
-                        msg = format!("{msg}{err_msg}\n");
-                    }
-                } else {
-                    //添加手机号
-                    if let Err(e) = IamCertPhoneVCodeServ::add_cert_skip_vcode(
-                        &IamCertPhoneVCodeAddReq {
-                            phone: TrimString(iam_account_ext_sys_resp.mobile.clone()),
-                        },
-                        cert.rel_rbum_id.as_str(),
-                        phone_cert_conf_id.as_str(),
-                        &funs,
-                        ctx,
-                    )
-                    .await
+                    .await?
                     {
-                        let err_msg = format!("add phone phone:{} failed:{}", iam_account_ext_sys_resp.mobile.clone(), e);
-                        tardis::log::error!("{}", err_msg);
-                        msg = format!("{msg}{err_msg}\n");
-                        failed += 1;
-                        ldap_id_to_account_map.remove(&local_ldap_id);
-                        continue;
+                        let modify_result = RbumCertServ::modify_rbum(
+                            &phone_cert.id,
+                            &mut RbumCertModifyReq {
+                                ak: Some(TrimString(iam_account_ext_sys_resp.mobile.clone())),
+                                sk: None,
+                                is_ignore_check_sk: false,
+                                ext: None,
+                                start_time: None,
+                                end_time: None,
+                                conn_uri: None,
+                                status: None,
+                            },
+                            &funs,
+                            ctx,
+                        )
+                        .await;
+                        if let Some(e) = modify_result.err() {
+                            let err_msg = format!("modify phone cert_id:{} failed:{}", phone_cert.id, e);
+                            tardis::log::error!("{}", err_msg);
+                            msg = format!("{msg}{err_msg}\n");
+                        }
+                    } else {
+                        //添加手机号
+                        if let Err(e) = IamCertPhoneVCodeServ::add_cert_skip_vcode(
+                            &IamCertPhoneVCodeAddReq {
+                                phone: TrimString(iam_account_ext_sys_resp.mobile.clone()),
+                            },
+                            cert.rel_rbum_id.as_str(),
+                            phone_cert_conf_id.as_str(),
+                            &funs,
+                            ctx,
+                        )
+                        .await
+                        {
+                            let err_msg = format!("add phone phone:{} failed:{}", iam_account_ext_sys_resp.mobile.clone(), e);
+                            tardis::log::error!("{}", err_msg);
+                            msg = format!("{msg}{err_msg}\n");
+                            failed += 1;
+                            ldap_id_to_account_map.remove(&local_ldap_id);
+                            continue;
+                        }
                     }
                 }
 

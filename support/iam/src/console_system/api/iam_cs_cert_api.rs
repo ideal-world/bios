@@ -127,10 +127,10 @@ impl IamCsCertApi {
     ///
     /// 获取最新的同步状态,如果返回为空，那么就是没有同步记录。
     /// 当total=failed+success被认为同步完成
-    #[oai(path = "/sync/status", method = "get")]
-    async fn get_third_intg_sync_status(&self) -> TardisApiResult<Option<IamThirdIntegrationSyncStatusDto>> {
+    #[oai(path = "/sync/:task_id/status", method = "get")]
+    async fn get_third_intg_sync_status(&self, task_id: Path<String>) -> TardisApiResult<Option<IamThirdIntegrationSyncStatusDto>> {
         let funs = iam_constants::get_tardis_inst();
-        let result = IamCertServ::get_third_intg_sync_status(&funs).await?;
+        let result = IamCertServ::get_third_intg_sync_status(&task_id.0, &funs).await?;
         TardisResp::ok(result)
     }
 
