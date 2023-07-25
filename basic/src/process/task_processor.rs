@@ -22,18 +22,23 @@ const NOTIFY_EVENT_IN_CTX_FLAG: &str = "notify";
 pub struct TaskProcessor;
 
 impl TaskProcessor {
-    pub async fn subscribe_task(funs: &TardisFunsInst) -> TardisResult<()> {
+    pub async fn subscribe_task(component_code: &str, funs: &TardisFunsInst) -> TardisResult<()> {
+        let component_code_clone = component_code.to_string();
         //todo Use node id to differentiate nodes
         funs.mq()
-            .subscribe(&funs.rbum_conf_task_mq_topic_event(), |(_, msg)| async move {
-                let task_msg = TardisFuns::json.str_to_obj::<TaskEventMessage>(&msg)?;
-                match task_msg.operate {
-                    TaskOperate::Stop => {
-                        Self::do_stop_task(task_msg.task_id).await?;
+            .subscribe(&funs.rbum_conf_task_mq_topic_event(), move |(_, msg)| {
+                let component_code_clone = component_code_clone.clone();
+                async move {
+                    let funs = TardisFuns::inst_with_db_conn(component_code_clone, None);
+                    let task_msg = TardisFuns::json.str_to_obj::<TaskEventMessage>(&msg)?;
+                    match task_msg.operate {
+                        TaskOperate::Stop => {
+                            Self::do_stop_task(&task_msg.cache_key, task_msg.task_id, &funs).await?;
+                        }
+                        _ => {}
                     }
-                    _ => {}
+                    Ok(())
                 }
-                Ok(())
             })
             .await?;
         Ok(())
@@ -115,6 +120,7 @@ impl TaskProcessor {
                     TardisFuns::json.obj_to_string(&TaskEventMessage {
                         task_id,
                         operate: TaskOperate::Stop,
+                        cache_key: cache_key.to_string(),
                     })?,
                     &HashMap::new(),
                 )
@@ -123,12 +129,14 @@ impl TaskProcessor {
         Ok(())
     }
 
-    pub async fn do_stop_task(task_id: i64) -> TardisResult<()> {
-        match TASK_HANDLE.write().await.get(&task_id) {
+    pub async fn do_stop_task(cache_key: &str, task_id: i64, funs: &TardisFunsInst) -> TardisResult<()> {
+        match TASK_HANDLE.write().await.remove(&task_id) {
             Some(handle) => {
                 handle.abort();
-                TASK_HANDLE.write().await.remove(&task_id);
-                TaskProcessor::set_status(&cache_key, task_id, true, cache_client).await;
+                match TaskProcessor::set_status(cache_key, task_id, true, funs.cache()).await {
+                    Ok(_) => {}
+                    Err(e) => log::error!("Asynchronous task [{}] stop error:{:?}", task_id, e),
+                }
                 Ok(())
             }
             None => Err(TardisError::bad_request("task not found,may task is end", "400-stop-task-error")),
@@ -175,6 +183,7 @@ pub struct NotifyEventMessage {
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct TaskEventMessage {
+    pub cache_key: String,
     pub task_id: i64,
     pub operate: TaskOperate,
 }

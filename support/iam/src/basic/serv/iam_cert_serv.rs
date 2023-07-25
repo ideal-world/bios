@@ -1294,12 +1294,12 @@ impl IamCertServ {
     /// 如果手动导入,那么third_integration_config必须Some
     pub async fn third_integration_sync(sync_config: Option<IamThirdIntegrationConfigDto>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let task_ctx = ctx.clone();
-        // let sync = SYNC_LOCK.try_lock().map_err(|_| funs.err().conflict("third_integration_config", "sync", "The last synchronization has not ended yet", "iam-sync-not-ended"))?;
+        let sync = SYNC_LOCK.try_lock().map_err(|_| funs.err().conflict("third_integration_config", "sync", "The last synchronization has not ended yet", "iam-sync-not-ended"))?;
 
         TaskProcessor::execute_task_with_ctx(
             &funs.conf::<IamConfig>().cache_key_async_task_status,
             || async move {
-                // let _ = sync;
+                let _ = sync;
                 let funs = iam_constants::get_tardis_inst();
 
                 let sync_config = if let Some(sync_config) = sync_config {
@@ -1328,7 +1328,6 @@ impl IamCertServ {
             ctx,
         )
         .await?;
-        info!("end of third_integration_sync");
         Ok(())
     }
 
