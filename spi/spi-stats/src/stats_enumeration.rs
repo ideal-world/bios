@@ -368,7 +368,7 @@ impl StatsQueryTimeWindowKind {
                 StatsQueryTimeWindowKind::Month => {
                     format!("CONCAT(date_part('year', timezone('UTC',{column_name})), '-',LPAD(date_part('month', timezone('UTC', {column_name}))::text, 2, '0'))")
                 }
-                StatsQueryTimeWindowKind::Year => format!("date_part('year',timezone('UTC', {column_name}))"),
+                StatsQueryTimeWindowKind::Year => format!("CONCAT(date_part('year',timezone('UTC', {column_name})),'')"),
             }
         } else {
             match self {
