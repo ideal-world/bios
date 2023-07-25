@@ -89,7 +89,6 @@ impl PluginRelServ {
             &RbumRelFindReq {
                 tag: Some(tag.to_string()),
                 to_rbum_item_id: Some(to_rbum_item_id.to_string()),
-                from_own_paths: Some(ctx.own_paths.to_string()),
                 ..Default::default()
             },
             funs,
