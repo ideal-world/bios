@@ -119,9 +119,9 @@ impl PluginKindServ {
             .await?
             .get(0)
             {
-                let rel = PluginRelServ::get_rel(&rel_bind.rel_id, funs, ctx).await?;
-                match PluginBsServ::get_bs(&rel.from_rbum_id, &rel.to_rbum_item_id, funs, ctx).await {
-                    Ok(rel_bs) => {
+                match PluginRelServ::get_rel(&rel_bind.rel_id, funs, ctx).await {
+                    Ok(rel) => {
+                        let rel_bs = PluginBsServ::get_bs(&rel.from_rbum_id, &rel.to_rbum_item_id, funs, ctx).await?;
                         kind_aggs.push(PluginKindAggResp {
                             kind: kind.clone(),
                             rel_bind: Some(rel_bind.clone()),
@@ -131,7 +131,7 @@ impl PluginKindServ {
                     Err(_) => {
                         kind_aggs.push(PluginKindAggResp {
                             kind: kind.clone(),
-                            rel_bind: Some(rel_bind.clone()),
+                            rel_bind: None,
                             rel_bs: None,
                         });
                     }
