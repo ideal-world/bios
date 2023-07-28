@@ -5,6 +5,7 @@ pub mod api;
 pub mod client;
 pub mod config;
 pub mod consts;
+pub mod invoke;
 mod task;
 mod domain;
 mod dto;

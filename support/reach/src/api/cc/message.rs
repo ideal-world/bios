@@ -3,12 +3,12 @@ use std::collections::{HashMap, HashSet};
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 
 use tardis::web::context_extractor::TardisContextExtractor;
-use tardis::web::poem::web::{Json, Path};
+use tardis::web::poem::web::{Json, Path, Query};
 
 use tardis::web::poem_openapi;
 use tardis::web::web_resp::{TardisApiResult, TardisResp, Void};
 
-use crate::client::{sms, SendChannelAll};
+use crate::client::{sms, SendChannelAll, GenericTemplate};
 use crate::config::ReachConfig;
 use crate::consts::*;
 use crate::dto::*;
@@ -38,7 +38,7 @@ impl ReachMessageCcApi {
     }
 
     /// 验证码发送
-    #[oai(method = "put", path = "/general/:to/:code")]
+    #[oai(method = "put", path = "/vcode/:to/:code")]
     pub async fn vcode_send(&self, to: Path<String>, code: Path<String>, TardisContextExtractor(ctx): TardisContextExtractor) -> TardisApiResult<Void> {
         let funs = get_tardis_inst();
         let v_code_strategy = {
@@ -63,7 +63,7 @@ impl ReachMessageCcApi {
     }
 
     /// 密码发送
-    #[oai(method = "put", path = "/general/:to/:code")]
+    #[oai(method = "put", path = "/pwd/:to/:code")]
     pub async fn pwd_send(&self, to: Path<String>, code: Path<String>) -> TardisApiResult<Void> {
         let funs = get_tardis_inst();
         let config = funs.conf::<ReachConfig>();
@@ -80,6 +80,17 @@ impl ReachMessageCcApi {
                 signature: sms_cfg.sms_general_signature.as_deref(),
             })
             .await?;
+        TardisResp::ok(VOID)
+    }
+
+    /// 邮箱发送
+    #[oai(method = "put", path = "/mail/:mail")]
+    pub async fn mail_pwd_send(&self, mail: Path<String>, message: Query<String>, subject: Query<String>) -> TardisApiResult<Void> {
+        self.channel.send(ReachChannelKind::Email, GenericTemplate {
+            name: Some(subject.as_ref()),
+            content: &message,
+            ..Default::default()
+        }, &Default::default(), &HashSet::from([mail.0])).await?;
         TardisResp::ok(VOID)
     }
 }

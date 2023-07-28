@@ -12,6 +12,7 @@ use tardis::regex::Regex;
 /// 格式
 /// `{[<key>:<value>],*,?}`
 #[repr(transparent)]
+#[derive(Debug, Default)]
 pub struct ContentReplace(HashMap<String, String>);
 
 impl<K, V, I> From<I> for ContentReplace

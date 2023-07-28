@@ -4,7 +4,7 @@ use tardis::{
     TardisFunsInst,
 };
 
-use super::TardisCtxTrait;
+use super::InvokeClient;
 
 #[derive(Clone)]
 pub struct IamClient<'a> {
@@ -24,15 +24,20 @@ impl<'a> IamClient<'a> {
         }
     }
 }
-impl<'a> TardisCtxTrait for IamClient<'a> {
+impl<'a> InvokeClient for IamClient<'a> {
+    const DOMAIN_CODE: &'static str = "iam";
     fn get_ctx(&self) -> &'a TardisContext {
         self.ctx
+    }
+
+    fn get_base_url(&self) -> &str {
+        self.base_url
     }
 }
 
 impl IamClient<'_> {
     pub async fn get_account(&self, id: &str, tenant_id: &str) -> TardisResult<IamAccountSummaryAggResp> {
-        let ctx = self.get_tardis_context()?;
+        let ctx = self.get_tardis_context_header()?;
         let url = format!(
             "{base_url}/{account}/{id}?tenant_id={tenant_id}",
             base_url = self.base_url,

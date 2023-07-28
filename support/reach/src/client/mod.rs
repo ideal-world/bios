@@ -13,6 +13,7 @@ use self::sms::SendSmsRequest;
 pub mod email;
 pub mod sms;
 
+#[derive(Default)]
 pub struct GenericTemplate<'t> {
     pub name: Option<&'t str>,
     pub content: &'t str,
