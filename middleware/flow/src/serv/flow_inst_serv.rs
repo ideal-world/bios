@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use async_recursion::async_recursion;
 use bios_basic::{
     dto::BasicQueryCondInfo,
     rbum::{
@@ -12,7 +13,6 @@ use bios_basic::{
 };
 use bios_sdk_invoke::clients::spi_kv_client::SpiKvClient;
 use itertools::Itertools;
-use serde_json::json;
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
     chrono::{DateTime, Utc},
@@ -30,13 +30,17 @@ use tardis::{
 use crate::{
     domain::flow_inst,
     dto::{
+        flow_external_dto::{
+            FlowExternalFetchRelObjReq, FlowExternalFetchRelObjResp, FlowExternalKind, FlowExternalModifyFieldReq, FlowExternalModifyFieldResp, FlowExternalNotifyChangesReq,
+            FlowExternalParams, FlowExternalReq,
+        },
         flow_inst_dto::{
             FlowInstAbortReq, FlowInstDetailResp, FlowInstFindNextTransitionResp, FlowInstFindNextTransitionsReq, FlowInstFindStateAndTransitionsReq,
             FlowInstFindStateAndTransitionsResp, FlowInstStartReq, FlowInstSummaryResp, FlowInstTransferReq, FlowInstTransferResp, FlowInstTransitionInfo, FlowOperationContext,
         },
         flow_model_dto::{FlowModelDetailResp, FlowModelFilterReq},
         flow_state_dto::{FlowStateFilterReq, FlowSysStateKind},
-        flow_transition_dto::{FlowTransitionActionChangeInfo, FlowTransitionDetailResp}, flow_external_dto::{FlowExternalReq, FlowExternalKind, FlowExternalParams, FlowExternalFetchRelObjReq, FlowExternalModifyFieldResp, FlowExternalFetchRelObjResp},
+        flow_transition_dto::{FlowTransitionActionByStateChangeInfo, FlowTransitionActionChangeInfo, FlowTransitionDetailResp},
     },
     flow_constants,
     serv::{flow_model_serv::FlowModelServ, flow_state_serv::FlowStateServ},
@@ -87,7 +91,7 @@ impl FlowInstServ {
         Ok(id)
     }
 
-    pub async fn get_model_id_by_own_paths(tag: &String, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
+    pub async fn get_model_id_by_own_paths(tag: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
         let mut result = None;
         // try get model in app path
         result = FlowModelServ::find_one_item(
@@ -96,7 +100,7 @@ impl FlowInstServ {
                     own_paths: Some(ctx.own_paths.clone()),
                     ..Default::default()
                 },
-                tag: Some(tag.clone()),
+                tag: Some(tag.to_string()),
                 ..Default::default()
             },
             funs,
@@ -111,7 +115,7 @@ impl FlowInstServ {
                         own_paths: Some(ctx.own_paths.split_once('/').unwrap_or_default().0.to_string()),
                         ..Default::default()
                     },
-                    tag: Some(tag.clone()),
+                    tag: Some(tag.to_string()),
                     ..Default::default()
                 },
                 funs,
@@ -417,9 +421,9 @@ impl FlowInstServ {
         Ok(state_and_next_transitions.next_flow_transitions)
     }
 
+    #[async_recursion]
     pub async fn transfer(flow_inst_id: &str, transfer_req: &FlowInstTransferReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<FlowInstTransferResp> {
         let flow_inst_detail = Self::get(flow_inst_id, funs, ctx).await?;
-        let current_state_id = flow_inst_detail.current_state_id.clone();
         let flow_model = FlowModelServ::get_item(
             &flow_inst_detail.rel_flow_model_id,
             &FlowModelFilterReq {
@@ -434,10 +438,17 @@ impl FlowInstServ {
             ctx,
         )
         .await?;
-        let next_flow_transition = Self::do_find_next_transitions(&flow_inst_detail, &flow_model, Some(transfer_req.flow_transition_id.to_string()), &transfer_req.vars, funs, ctx)
-            .await?
-            .next_flow_transitions
-            .pop();
+        let next_flow_transition = Self::do_find_next_transitions(
+            &flow_inst_detail,
+            &flow_model,
+            Some(transfer_req.flow_transition_id.to_string()),
+            &transfer_req.vars,
+            funs,
+            ctx,
+        )
+        .await?
+        .next_flow_transitions
+        .pop();
         if next_flow_transition.is_none() {
             return Err(funs.err().not_found("flow_inst", "transfer", "no transferable state", "404-flow-inst-transfer-state-not-found"));
         }
@@ -498,14 +509,12 @@ impl FlowInstServ {
         )
         .await?;
 
-        Self::do_post_change(
-            &flow_inst_detail,
-            &flow_model,
-            model_transition.iter().find(|model_transition| model_transition.id == next_flow_transition.next_flow_transition_id),
-            ctx,
-            funs,
-        )
-        .await?;
+        let post_changes =
+            model_transition.into_iter().find(|model_transition| model_transition.id == next_flow_transition.next_flow_transition_id).unwrap_or_default().action_by_post_changes();
+        if !post_changes.is_empty() {
+            Self::do_post_change(&flow_inst_detail, &flow_model, post_changes, ctx, funs).await?;
+        }
+
         Ok(FlowInstTransferResp {
             new_flow_state_id: next_flow_transition.next_flow_state_id,
             new_flow_state_name: next_flow_transition.next_flow_state_name,
@@ -517,45 +526,153 @@ impl FlowInstServ {
     async fn do_post_change(
         current_inst: &FlowInstDetailResp,
         current_model: &FlowModelDetailResp,
-        transition_detail: Option<&FlowTransitionDetailResp>,
+        post_changes: Vec<FlowTransitionActionChangeInfo>,
         ctx: &TardisContext,
         funs: &TardisFunsInst,
     ) -> TardisResult<()> {
-        if let Some(transition_detail) = transition_detail {
-            let external_url = SpiKvClient::get_item(format!("{}:config:{}", flow_constants::DOMAIN_CODE, &current_model.tag), None, funs, ctx)
-                .await?
-                .ok_or_else(|| funs.err().not_found("flow_inst_serv", "do_post_change", "not found external url", "404-external-data-url-not-exist"))?;
-            let post_changes = transition_detail.action_by_post_changes();
-            for post_change in post_changes {
-                match post_change {
-                    FlowTransitionActionChangeInfo::Var(change_info) => {
-                        let _ : TardisResp<FlowExternalModifyFieldResp> = funs.web_client().post(&external_url.value.to_string(), &json!({}), None).await?.body.ok_or_else(|| funs.err().not_found("flow_inst_serv", "do_post_change", "illegal response", "404-external-illegal-response"))?;
+        let external_url = SpiKvClient::get_item(format!("{}:config:{}", flow_constants::DOMAIN_CODE, &current_model.tag), None, funs, ctx)
+            .await?
+            .ok_or_else(|| funs.err().not_found("flow_inst_serv", "do_post_change", "not found external url", "404-external-data-url-not-exist"))?;
+        for post_change in post_changes {
+            match post_change {
+                FlowTransitionActionChangeInfo::Var(change_info) => {
+                    let resp: TardisResp<FlowExternalModifyFieldResp> = funs
+                        .web_client()
+                        .post(
+                            &external_url.value.to_string(),
+                            &FlowExternalReq {
+                                kind: FlowExternalKind::ModifyField,
+                                curr_tag: current_model.tag.clone(),
+                                curr_bus_obj_id: current_inst.rel_business_obj_id.clone(),
+                                params: FlowExternalParams::ModifyField(FlowExternalModifyFieldReq {
+                                    current: change_info.current,
+                                    rel_tag: change_info.obj_tag.clone(),
+                                    var_name: change_info.var_name.clone(),
+                                    value: change_info.changed_val.clone(),
+                                }),
+                            },
+                            None,
+                        )
+                        .await?
+                        .body
+                        .ok_or_else(|| funs.err().internal_error("flow_inst_serv", "do_post_change", "illegal response", "500-external-illegal-response"))?;
+                    if resp.code == "200" {
+                        let _: Option<TardisResp<FlowExternalModifyFieldResp>> = funs
+                            .web_client()
+                            .post(
+                                &external_url.value.to_string(),
+                                &FlowExternalReq {
+                                    kind: FlowExternalKind::NotifyChanges,
+                                    curr_tag: current_model.tag.clone(),
+                                    curr_bus_obj_id: current_inst.rel_business_obj_id.clone(),
+                                    params: FlowExternalParams::NotifyChanges(FlowExternalNotifyChangesReq {
+                                        rel_tag: if change_info.current {
+                                            current_model.tag.clone()
+                                        } else {
+                                            change_info.obj_tag.clone().unwrap_or_default()
+                                        },
+                                        rel_bus_obj_ids: resp.data.unwrap_or_default().rel_bus_obj_ids,
+                                        state_id: None,
+                                        var_name: Some(change_info.var_name),
+                                        value: change_info.changed_val,
+                                    }),
+                                },
+                                None,
+                            )
+                            .await?
+                            .body;
                     }
-                    FlowTransitionActionChangeInfo::State(change_info) => {
-                        let resp : TardisResp<FlowExternalFetchRelObjResp> = funs.web_client().post(&external_url.value.to_string(), &FlowExternalReq {
-                            kind: FlowExternalKind::FetchRelObj,
-                            curr_tag: current_model.tag.clone(),
-                            curr_bus_obj_id: current_inst.rel_business_obj_id.clone(),
-                            params: FlowExternalParams::FetchRelObj(FlowExternalFetchRelObjReq {
-                                obj_tag: current_model.tag.clone(),
-                                obj_current_state_id: change_info.obj_current_state_id,
-                                change_condition: change_info.change_condition,
-                            }),
-                        }, None).await?.body.ok_or_else(|| funs.err().not_found("flow_inst_serv", "do_post_change", "illegal response", "404-external-illegal-response"))?;
-                        if let Some(resp) = resp.data {
-                            let rel_bus_obj_ids = resp.rel_bus_obj_ids;
-                            // let rel_inst_ids = funs.db().get_dto::<Vec<String>>(
-                            //     Query::select()
-                            //     .column(flow_inst::Column::Id)
-                            //     .from(flow_inst::Entity)
-                            //     .and_where(Expr::col(flow_inst::Column::RelBusinessObjId).is_in(rel_bus_obj_ids))
-                            // ).await?;
-                        }
+                }
+                FlowTransitionActionChangeInfo::State(change_info) => {
+                    let resp: TardisResp<FlowExternalFetchRelObjResp> = funs
+                        .web_client()
+                        .post(
+                            &external_url.value.to_string(),
+                            &FlowExternalReq {
+                                kind: FlowExternalKind::FetchRelObj,
+                                curr_tag: current_model.tag.clone(),
+                                curr_bus_obj_id: current_inst.rel_business_obj_id.clone(),
+                                params: FlowExternalParams::FetchRelObj(FlowExternalFetchRelObjReq {
+                                    obj_tag: current_model.tag.clone(),
+                                    obj_current_state_id: change_info.obj_current_state_id.clone(),
+                                    change_condition: change_info.change_condition.clone(),
+                                }),
+                            },
+                            None,
+                        )
+                        .await?
+                        .body
+                        .ok_or_else(|| funs.err().internal_error("flow_inst", "do_post_change", "illegal response", "500-external-illegal-response"))?;
+                    if let Some(resp) = resp.data {
+                        Self::do_modify_state_by_post_action(resp.rel_bus_obj_ids, &change_info, funs, ctx).await?;
                     }
                 }
             }
         }
 
+        Ok(())
+    }
+
+    async fn do_modify_state_by_post_action(
+        rel_bus_obj_ids: Vec<String>,
+        change_info: &FlowTransitionActionByStateChangeInfo,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<()> {
+        #[derive(sea_orm::FromQueryResult)]
+        pub struct FlowInstIdsResult {
+            pub id: String,
+        }
+        let rel_inst_ids = funs
+            .db()
+            .find_dtos::<FlowInstIdsResult>(
+                Query::select().column(flow_inst::Column::Id).from(flow_inst::Entity).and_where(Expr::col(flow_inst::Column::RelBusinessObjId).is_in(rel_bus_obj_ids.clone())),
+            )
+            .await?
+            .iter()
+            .map(|inst_result| inst_result.id.clone())
+            .collect_vec();
+        if rel_bus_obj_ids.len() != rel_inst_ids.len() {
+            return Err(funs.err().not_found("flow_inst", "do_post_change", "some flow instances not found", "404-flow-inst-not-found"));
+        }
+        let insts = Self::find_detail(rel_inst_ids, funs, ctx).await?;
+        for rel_inst in insts {
+            // find transition
+            let flow_model = FlowModelServ::get_item(
+                &rel_inst.rel_flow_model_id,
+                &FlowModelFilterReq {
+                    basic: RbumBasicFilterReq {
+                        with_sub_own_paths: true,
+                        own_paths: Some("".to_string()),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                funs,
+                ctx,
+            )
+            .await?;
+            let transition = Self::do_find_next_transitions(&rel_inst, &flow_model, None, &None, funs, ctx)
+                .await?
+                .next_flow_transitions
+                .into_iter()
+                .filter(|transition_detail| *transition_detail.next_flow_state_id == change_info.changed_state_id)
+                .collect_vec()
+                .pop();
+            if let Some(transition) = transition {
+                Self::transfer(
+                    &rel_inst.id,
+                    &FlowInstTransferReq {
+                        flow_transition_id: transition.next_flow_transition_id,
+                        message: None,
+                        vars: None,
+                    },
+                    funs,
+                    ctx,
+                )
+                .await?;
+            }
+        }
         Ok(())
     }
 
@@ -648,7 +765,7 @@ impl FlowInstServ {
                         return false;
                     }
                 }
-                false
+                true
             })
             .map(|model_transition| FlowInstFindNextTransitionResp {
                 next_flow_transition_id: model_transition.id.to_string(),

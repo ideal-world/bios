@@ -33,7 +33,7 @@ pub struct FlowExternalFetchRelObjReq {
     pub change_condition: Option<StateChangeCondition>,
 }
 
-#[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
+#[derive(Default, Serialize, Deserialize, Debug, poem_openapi::Object)]
 pub struct FlowExternalFetchRelObjResp {
     pub rel_bus_obj_ids: Vec<String>,
 }
@@ -41,13 +41,15 @@ pub struct FlowExternalFetchRelObjResp {
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
 pub struct FlowExternalModifyFieldReq {
     pub current: bool,
-    pub rel_tag: String,
+    pub rel_tag: Option<String>,
     pub var_name: String,
     pub value: Option<Value>,
 }
 
-#[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
-pub struct FlowExternalModifyFieldResp {}
+#[derive(Default, Serialize, Deserialize, Debug, poem_openapi::Object)]
+pub struct FlowExternalModifyFieldResp {
+    pub rel_bus_obj_ids: Vec<String>,
+}
 
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
 pub struct FlowExternalNotifyChangesReq {

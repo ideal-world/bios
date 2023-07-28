@@ -65,7 +65,7 @@ pub struct FlowTransitionModifyReq {
     pub double_check: Option<FlowTransitionDoubleCheckInfo>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, poem_openapi::Object, sea_orm::FromQueryResult)]
+#[derive(Serialize, Deserialize, Default, Debug, Clone, poem_openapi::Object, sea_orm::FromQueryResult)]
 pub struct FlowTransitionDetailResp {
     pub id: String,
     pub name: String,
