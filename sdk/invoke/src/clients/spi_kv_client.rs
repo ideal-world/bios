@@ -1,18 +1,26 @@
+use std::marker::PhantomData;
+
 use serde::Serialize;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::result::TardisResult;
 use tardis::serde_json::json;
 use tardis::TardisFunsInst;
 
+use crate::invoke_config::InvokeConfigTrait;
 use crate::invoke_enumeration::InvokeModuleKind;
 
 use super::base_spi_client::BaseSpiClient;
 
-pub struct SpiKvClient;
+#[derive(Debug, Default)]
+pub struct SpiKvClient<C> {
+    marker: PhantomData<C>
+}
 
-impl SpiKvClient {
+impl<C> SpiKvClient<C>
+where C: InvokeConfigTrait + 'static
+{
     pub async fn add_or_modify_item<T: ?Sized + Serialize>(key: &str, value: &T, info: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        let kv_url: String = BaseSpiClient::module_url(InvokeModuleKind::Kv, funs).await?;
+        let kv_url: String = BaseSpiClient::module_url::<C>(InvokeModuleKind::Kv, funs).await?;
         let headers = BaseSpiClient::headers(None, funs, ctx).await?;
         let json = json!({
             "key":key.to_string(),
@@ -24,7 +32,7 @@ impl SpiKvClient {
     }
 
     pub async fn add_or_modify_key_name(key: &str, name: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        let kv_url = BaseSpiClient::module_url(InvokeModuleKind::Kv, funs).await?;
+        let kv_url = BaseSpiClient::module_url::<C>(InvokeModuleKind::Kv, funs).await?;
         let headers = BaseSpiClient::headers(None, funs, ctx).await?;
         funs.web_client()
             .put_obj_to_str(

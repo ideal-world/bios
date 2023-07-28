@@ -43,25 +43,8 @@ impl DerefMut for ContentReplace {
 impl FromStr for ContentReplace {
     type Err = TardisError;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        fn not_trim_empty(s: &&str) -> bool {
-            !s.trim().is_empty()
-        }
-        s.trim_start_matches('{')
-            .trim_end_matches('}')
-            // remove end trailing comma
-            .trim_end_matches(',')
-            .split(',')
-            .map(|kv| {
-                let mut kv = kv.split(':');
-                let Some(key) = kv.next().filter(not_trim_empty) else {
-                    return Err(TardisError::bad_request("key is empty", "400-invalid-content-replace"));
-                };
-                let Some(value) = kv.next().filter(not_trim_empty) else {
-                    return Err(TardisError::bad_request("value is empty", "400-invalid-content-replace"));
-                };
-                Ok((key.to_string(), value.to_string()))
-            })
-            .collect::<Result<_, _>>()
+        tardis::serde_json::from_str(s)
+            .map_err(|e| TardisError::bad_request(&format!("content replace is not a valid json map: {e}"), "400-invalid-content-replace"))
             .map(ContentReplace)
     }
 }

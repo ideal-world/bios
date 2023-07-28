@@ -1,9 +1,10 @@
-use crate::dto::{ReachVCodeStrategyAddReq, ReachVCodeStrategyModifyReq};
+use crate::dto::*;
 use crate::fill_by_add_req;
 use tardis::basic::dto::TardisContext;
 use tardis::chrono::{self, DateTime, Utc};
 use tardis::db::reldb_client::TardisActiveModel;
 use tardis::db::sea_orm;
+
 
 use tardis::db::sea_orm::sea_query::{ColumnDef, IndexCreateStatement, Table, TableCreateStatement};
 use tardis::db::sea_orm::*;
@@ -11,27 +12,27 @@ use tardis::db::sea_orm::*;
 #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]
 #[sea_orm(table_name = "reach_vcode_strategy")]
 pub struct Model {
-    #[sea_orm(primary_key, auto_increment = false, generator = "uuid")]
-    pub id: String,
+    #[sea_orm(primary_key, auto_increment = false)]
+    pub id: Nanoid,
     /// 所有者路径
-    #[sea_orm(column_name = "own_paths", column_type = "String(Some(255))")]
+    #[sea_orm(column_type = "String(Some(255))")]
     pub own_paths: String,
     /// 所有者
-    #[sea_orm(column_name = "owner", column_type = "String(Some(255))")]
+    #[sea_orm(column_type = "String(Some(255))")]
     pub owner: String,
     /// 创建时间
-    #[sea_orm(column_name = "create_time", column_type = "Timestamp")]
+    #[sea_orm(column_type = "Timestamp")]
     pub create_time: DateTime<Utc>,
     /// 更新时间
-    #[sea_orm(column_name = "update_time", column_type = "Timestamp")]
+    #[sea_orm(column_type = "Timestamp")]
     pub update_time: DateTime<Utc>,
-    #[sea_orm(column_name = "max_error_times", column_type = "TinyInteger")]
+    #[sea_orm(column_type = "TinyInteger")]
     pub max_error_times: i32,
-    #[sea_orm(column_name = "expire_sec", column_type = "SmallInteger")]
+    #[sea_orm(column_type = "SmallInteger")]
     pub expire_sec: i32,
-    #[sea_orm(column_name = "length", column_type = "TinyInteger")]
+    #[sea_orm(column_type = "TinyInteger")]
     pub length: i32,
-    #[sea_orm(column_name = "rel_reach_set_id", column_type = "String(Some(255))")]
+    #[sea_orm(column_type = "String(Some(255))")]
     pub rel_reach_set_id: String,
 }
 

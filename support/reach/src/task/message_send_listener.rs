@@ -1,0 +1,96 @@
+use std::{collections::HashSet, sync::Arc};
+
+use crate::{client::*, config::ReachConfig, consts::*, domain::*, dto::*, serv::*};
+use bios_basic::rbum::helper::rbum_scope_helper;
+use bios_sdk_invoke::{clients::iam_client::IamClient, invoke_config::InvokeConfigTrait, invoke_enumeration::InvokeModuleKind};
+use tardis::{
+    basic::{dto::TardisContext, result::TardisResult},
+    db::sea_orm::{sea_query::Query, *},
+    log, tokio, TardisFunsInst,
+};
+
+#[derive(Clone)]
+pub struct MessageSendListener {
+    sync: Arc<tokio::sync::Mutex<()>>,
+    funs: Arc<TardisFunsInst>,
+    channel: SendChannelAll,
+}
+
+impl Default for MessageSendListener {
+    fn default() -> Self {
+        Self {
+            sync: Default::default(),
+            funs: get_tardis_inst().into(),
+            channel: SendChannelAll::default(),
+        }
+    }
+}
+
+impl MessageSendListener {
+    async fn execute_send_account(&self, message: message::Model, template: message_template::Model) -> TardisResult<()> {
+        const PHONE_V_CODE: &str = "PhoneVCode";
+        let cfg = self.funs.conf::<ReachConfig>();
+        let _lock = self.sync.lock().await;
+        let ctx = TardisContext {
+            own_paths: message.own_paths.clone(),
+            ..Default::default()
+        };
+        let iam_client = Arc::new(IamClient::new(&cfg.iam_get_account, &self.funs, &ctx, cfg.invoke.get_module_url(InvokeModuleKind::Iam)));
+        let ReachStatusKind::Pending = message.reach_status else {
+            return Ok(())
+        };
+        ReachMessageServ::update_status(&message.id, ReachStatusKind::Sending, &self.funs, &ctx).await?;
+        let mut to = HashSet::new();
+
+        let owner_path = rbum_scope_helper::get_pre_paths(RBUM_SCOPE_LEVEL_TENANT as i16, &message.own_paths).unwrap_or_default();
+        for account_id in message.to_res_ids.split(';') {
+            if let Ok(mut resp) = iam_client.get_account(account_id, &owner_path).await {
+                let Some(phone) = resp.certs.remove(PHONE_V_CODE) else {
+                    log::warn!("[Reach] Notify Phone channel send error, missing [PhoneVCode] parameters, resp: {resp:?}");
+                    continue
+                };
+                to.insert(phone);
+            }
+        }
+        match self.channel.send(message.rel_reach_channel, &template, &message.content_replace.parse()?, &to).await {
+            Ok(_) => {
+                ReachMessageServ::update_status(&message.id, ReachStatusKind::SendSuccess, &self.funs, &ctx).await?;
+            }
+            Err(e) => {
+                ReachMessageServ::update_status(&message.id, ReachStatusKind::Fail, &self.funs, &ctx).await?;
+                return Err(e);
+            }
+        }
+        Ok(())
+    }
+    pub async fn run(&self) -> TardisResult<()> {
+        let funs = get_tardis_inst();
+        let db = funs.db();
+        let messages: Vec<message::Model> = db
+            .find_dtos(Query::select().and_where(message::Column::ReachStatus.eq(ReachStatusKind::Pending)).and_where(message::Column::ReceiveKind.eq(ReachReceiveKind::Account)))
+            .await?;
+        for message in messages {
+            let Some(template) = db.get_dto::<message_template::Model>(Query::select().and_where(message_template::Column::Id.eq(&message.id))).await? else {
+                continue;
+            };
+            let Some(_signature) = db.get_dto::<message_signature::Model>(Query::select().and_where(message_template::Column::Id.eq(&message.id))).await? else {
+                continue;
+            };
+            match message.receive_kind {
+                ReachReceiveKind::Account => {
+                    let _res = self.execute_send_account(message, template).await;
+                }
+                ReachReceiveKind::Tenant => {
+                    // do nothing
+                }
+                ReachReceiveKind::Role => {
+                    // do nothing
+                }
+                ReachReceiveKind::App => {
+                    // do nothing
+                }
+            }
+        }
+        Ok(())
+    }
+}

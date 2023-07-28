@@ -2,6 +2,8 @@ use bios_basic::rbum::{
     dto::{rbum_filer_dto::RbumItemBasicFilterReq, rbum_item_dto::RbumItemAddReq},
     rbum_enumeration::RbumScopeLevelKind,
 };
+use tardis::basic::field::TrimString;
+
 use serde::Serialize;
 use tardis::{
     chrono::{DateTime, Utc},
@@ -20,12 +22,12 @@ pub struct ReachTriggerSceneAddReq {
 }
 
 impl ReachTriggerSceneAddReq {
-    pub fn new_with_name_code(_name: impl Into<String>, _code: impl Into<String>) -> Self {
+    pub fn new_with_name_code(name: impl Into<String>, code: impl Into<String>) -> Self {
         Self {
             rbum_add_req: RbumItemAddReq {
                 id: None,
-                code: None,
-                name: "".into(),
+                code: Some(TrimString(code.into())),
+                name: TrimString(name.into()),
                 rel_rbum_kind_id: Default::default(),
                 rel_rbum_domain_id: Default::default(),
                 scope_level: Some(RbumScopeLevelKind::Private),

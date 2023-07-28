@@ -9,5 +9,7 @@ pub use content_replace::*;
 mod vcode_strategy;
 pub use vcode_strategy::*;
 
+mod nanoid;
 use tardis::web::web_resp::Void;
 pub const VOID: Void = Void {};
+pub use nanoid::Nanoid;

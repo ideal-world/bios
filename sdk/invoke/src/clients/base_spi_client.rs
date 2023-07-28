@@ -7,16 +7,16 @@ use tardis::web::web_client::TardisHttpResponse;
 use tardis::web::web_resp::TardisResp;
 use tardis::{TardisFuns, TardisFunsInst};
 
-use crate::invoke_config::InvokeConfig;
+use crate::invoke_config::{InvokeConfig, InvokeConfigTrait};
 use crate::invoke_constants::TARDIS_CONTEXT;
 use crate::invoke_enumeration::InvokeModuleKind;
 
 pub struct BaseSpiClient;
 
 impl BaseSpiClient {
-    pub async fn module_url(module: InvokeModuleKind, funs: &TardisFunsInst) -> TardisResult<String> {
-        if let Some(uri) = funs.conf::<InvokeConfig>().module_urls.get(&module.to_string()) {
-            return Ok(uri.as_str().to_string());
+    pub async fn module_url<C: InvokeConfigTrait + 'static>(module: InvokeModuleKind, funs: &TardisFunsInst) -> TardisResult<String> {
+        if let Some(uri) = funs.conf::<C>().get_module_opt_url(module) {
+            return Ok(uri.to_string());
         }
         Err(funs.err().conflict("spi-module", "spi_module", "spi module uri Not configured yet.", "400-spi-module-not-exist"))
     }

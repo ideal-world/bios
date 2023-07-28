@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use tardis::{db::sea_orm, derive_more::Display, web::poem_openapi};
 
-#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, sea_orm::strum::EnumString)]
+#[derive(Display, Copy, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, sea_orm::strum::EnumString, Hash)]
 pub enum InvokeModuleKind {
     #[oai(rename = "search")]
     Search,
@@ -21,4 +21,6 @@ pub enum InvokeModuleKind {
     Stats,
     #[oai(rename = "schedule")]
     Schedule,
+    #[oai(rename = "iam")]
+    Iam,
 }

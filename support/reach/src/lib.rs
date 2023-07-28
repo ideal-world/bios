@@ -5,8 +5,13 @@ pub mod api;
 pub mod client;
 pub mod config;
 pub mod consts;
+mod task;
 mod domain;
 mod dto;
 mod errors;
-pub mod init;
+mod init;
+pub use init::init;
+pub mod reach_initializer {
+    pub use crate::init;
+}
 mod serv;

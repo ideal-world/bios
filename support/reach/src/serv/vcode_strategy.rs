@@ -8,7 +8,9 @@ use tardis::basic::result::TardisResult;
 use tardis::db::reldb_client::TardisActiveModel;
 use tardis::db::sea_orm::sea_query::{Query, SelectStatement};
 use tardis::db::sea_orm::*;
-use tardis::TardisFunsInst;
+use tardis::{TardisFunsInst, TardisFuns};
+
+
 
 pub struct VcodeStrategeServ;
 
@@ -28,6 +30,7 @@ impl
     }
     async fn package_add(add_req: &ReachVCodeStrategyAddReq, _: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<reach_vcode_strategy::ActiveModel> {
         let mut model = reach_vcode_strategy::ActiveModel::from(add_req);
+        model.id = Set(TardisFuns::field.nanoid());
         model.fill_ctx(ctx, true);
         Ok(model)
     }
@@ -38,7 +41,7 @@ impl
 
     async fn package_modify(id: &str, modify_req: &ReachVCodeStrategyModifyReq, _: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<reach_vcode_strategy::ActiveModel> {
         let mut model = reach_vcode_strategy::ActiveModel::from(modify_req);
-        model.id = Set(id.to_string());
+        model.id = Set(id.into());
         model.fill_ctx(ctx, true);
         Ok(model)
     }

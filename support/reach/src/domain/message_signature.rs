@@ -1,46 +1,46 @@
-use crate::dto::{ReachMsgSignatureAddReq, ReachMsgSignatureModifyReq};
+use crate::dto::*;
 use tardis::basic::dto::TardisContext;
 use tardis::chrono::{self, DateTime, Utc};
 use tardis::db::reldb_client::TardisActiveModel;
 use tardis::db::sea_orm;
 
+
 use tardis::db::sea_orm::sea_query::{ColumnDef, Table, TableCreateStatement};
 use tardis::db::sea_orm::*;
 
-use crate::dto::ReachChannelKind;
 use crate::fill_by_mod_req;
 
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
 #[sea_orm(table_name = "reach_msg_signature")]
 pub struct Model {
-    #[sea_orm(primary_key, auto_increment = false, generator = "uuid")]
-    pub id: String,
+    #[sea_orm(primary_key, auto_increment = false)]
+    pub id: Nanoid,
     /// 所有者路径
-    #[sea_orm(column_name = "own_paths", column_type = "String(Some(255))")]
+    #[sea_orm(column_type = "String(Some(255))")]
     pub own_paths: String,
     /// 所有者
-    #[sea_orm(column_name = "owner", column_type = "String(Some(255))")]
+    #[sea_orm(column_type = "String(Some(255))")]
     pub owner: String,
     /// 创建时间
-    #[sea_orm(column_name = "create_time", column_type = "Timestamp")]
+    #[sea_orm(column_type = "Timestamp")]
     pub create_time: DateTime<Utc>,
     /// 更新时间
-    #[sea_orm(column_name = "update_time", column_type = "Timestamp")]
+    #[sea_orm(column_type = "Timestamp")]
     pub update_time: DateTime<Utc>,
     /// 名称
-    #[sea_orm(column_name = "name", column_type = "String(Some(255))")]
+    #[sea_orm(column_type = "String(Some(255))")]
     pub name: String,
     /// 说明
-    #[sea_orm(column_name = "note", column_type = "String(Some(2000))")]
+    #[sea_orm(column_type = "String(Some(2000))")]
     pub note: String,
     /// 内容
-    #[sea_orm(column_name = "content", column_type = "String(Some(2000))")]
+    #[sea_orm(column_type = "String(Some(2000))")]
     pub content: String,
     /// 来源
-    #[sea_orm(column_name = "source", column_type = "String(Some(255))")]
+    #[sea_orm(column_type = "String(Some(255))")]
     pub source: String,
     /// 关联的触达通道
-    #[sea_orm(column_name = "source", column_type = "String(Some(255))")]
+    #[sea_orm(column_type = "String(Some(255))")]
     pub rel_reach_channel: ReachChannelKind,
 }
 
@@ -99,9 +99,7 @@ impl TardisActiveModel for ActiveModel {
             .col(ColumnDef::new(Column::Source).not_null().string())
             .col(ColumnDef::new(Column::RelReachChannel).not_null().string())
             .col(ColumnDef::new(Column::OwnPaths).not_null().string())
-            .col(ColumnDef::new(Column::Owner).not_null().string())
-            .col(ColumnDef::new(Column::CreateTime).timestamp())
-            .col(ColumnDef::new(Column::UpdateTime).timestamp());
+            .col(ColumnDef::new(Column::Owner).not_null().string());
         if db == DatabaseBackend::Postgres {
             builder
                 .col(ColumnDef::new(Column::CreateTime).extra("DEFAULT CURRENT_TIMESTAMP".to_string()).timestamp_with_time_zone())

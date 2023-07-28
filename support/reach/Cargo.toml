@@ -19,8 +19,15 @@ path = "src/lib.rs"
 [dependencies]
 serde.workspace = true
 lazy_static.workspace = true
-tardis = { workspace = true, features = ["reldb-postgres", "web-server", "mail"] }
+tardis = { workspace = true, features = [
+    "reldb-postgres",
+    "web-server",
+    "mail",
+] }
 bios-basic = { path = "../../basic", features = ["default"] }
+bios-sdk-invoke = { path = "../../sdk/invoke", features = [
+    "iam",
+], default-features = false }
 [dev-dependencies]
 tardis = { workspace = true, features = ["test"] }
 

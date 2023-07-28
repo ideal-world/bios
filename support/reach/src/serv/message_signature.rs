@@ -6,10 +6,13 @@ use tardis::async_trait::async_trait;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::result::TardisResult;
 use tardis::db::reldb_client::TardisActiveModel;
+
 use tardis::db::sea_orm::sea_query::{Query, SelectStatement};
 use tardis::db::sea_orm::EntityName;
 use tardis::db::sea_orm::{ColumnTrait, Set};
-use tardis::TardisFunsInst;
+use tardis::{TardisFunsInst, TardisFuns};
+
+
 #[async_trait]
 impl
     RbumCrudOperation<
@@ -26,6 +29,7 @@ impl
     }
     async fn package_add(add_req: &ReachMsgSignatureAddReq, _funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<message_signature::ActiveModel> {
         let mut model = message_signature::ActiveModel::from(add_req);
+        model.id = Set(TardisFuns::field.nanoid());
         model.fill_ctx(ctx, true);
         Ok(model)
     }
@@ -35,7 +39,7 @@ impl
 
     async fn package_modify(id: &str, modify_req: &ReachMsgSignatureModifyReq, _: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<message_signature::ActiveModel> {
         let mut model = message_signature::ActiveModel::from(modify_req);
-        model.id = Set(id.to_string());
+        model.id = Set(id.into());
         model.fill_ctx(ctx, true);
         Ok(model)
     }

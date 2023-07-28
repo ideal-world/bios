@@ -14,10 +14,10 @@ use crate::{
     api,
     config::ReachConfig,
     consts::{get_tardis_inst, DOMAIN_CODE, DOMAIN_REACH_ID, RBUM_EXT_TABLE_REACH_MESSAGE, RBUM_KIND_CODE_REACH_MESSAGE},
-    serv::ReachTriggerSceneService,
+    serv::ReachTriggerSceneService, task,
 };
 
-pub async fn init_db() -> TardisResult<()> {
+pub async fn db_init() -> TardisResult<()> {
     let mut funs = get_tardis_inst();
     bios_basic::rbum::rbum_initializer::init(funs.module_code(), funs.conf::<ReachConfig>().rbum.clone()).await?;
     funs.begin().await?;
@@ -71,7 +71,8 @@ pub async fn init_db() -> TardisResult<()> {
 }
 
 pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
-    init_db().await?;
+    db_init().await?;
     api::init(web_server).await?;
+    task::init().await?;
     Ok(())
 }

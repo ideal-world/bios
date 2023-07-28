@@ -15,15 +15,19 @@ name = "bios_sdk_invoke"
 path = "src/lib.rs"
 
 [features]
-default = ["spi-kv", "spi-log", "spi-search"]
-spi-kv = []
-spi-log = []
-spi-search = []
+default = ["spi-kv", "spi-log", "spi-search", "iam"]
+spi-base = []
+spi-kv = ["spi-base"]
+spi-log = ["spi-base"]
+spi-search = ["spi-base"]
+iam = ["dep:bios-iam"]
 
 [dependencies]
 serde.workspace = true
 lazy_static.workspace = true
 itertools.workspace = true
 tardis = { workspace = true, features = ["web-server"] }
+bios-iam = { path = "../../support/iam", optional = true }
+
 [dev-dependencies]
 tardis = { workspace = true, features = ["test"] }

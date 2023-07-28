@@ -6,84 +6,85 @@ use tardis::db::sea_orm;
 use tardis::db::sea_orm::sea_query::{ColumnDef, Table, TableCreateStatement};
 use tardis::db::sea_orm::*;
 
-use crate::dto::{ReachChannelKind, ReachLevelKind, ReachMessageTemplateAddReq, ReachMessageTemplateModifyReq, ReachTemplateKind, ReachTimeoutStrategyKind};
+
+use crate::dto::*;
 use crate::fill_by_mod_req;
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
 #[sea_orm(table_name = "reach_msg_template")]
 pub struct Model {
-    #[sea_orm(primary_key, auto_increment = false, generator = "uuid")]
-    pub id: String,
+    #[sea_orm(primary_key, auto_increment = false)]
+    pub id: Nanoid,
     /// 所有者路径
-    #[sea_orm(column_name = "own_paths", column_type = "String(Some(255))")]
+    #[sea_orm(column_type = "String(Some(255))")]
     pub own_paths: String,
     /// 所有者
-    #[sea_orm(column_name = "owner", column_type = "String(Some(255))")]
+    #[sea_orm(column_type = "String(Some(255))")]
     pub owner: String,
     /// 创建时间
-    #[sea_orm(column_name = "create_time", column_type = "Timestamp")]
+    #[sea_orm(column_type = "Timestamp")]
     pub create_time: DateTime<Utc>,
     /// 更新时间
-    #[sea_orm(column_name = "update_time", column_type = "Timestamp")]
+    #[sea_orm(column_type = "Timestamp")]
     pub update_time: DateTime<Utc>,
     /// 资源作用级别
     #[sea_orm(column_name = "scope_level")]
     pub scope_level: i16,
     /// 编码
-    #[sea_orm(column_name = "code", column_type = "String(Some(255))")]
+    #[sea_orm(column_type = "String(Some(255))")]
     pub code: String,
     /// 名称
-    #[sea_orm(column_name = "name", column_type = "String(Some(255))")]
+    #[sea_orm(column_type = "String(Some(255))")]
     pub name: String,
     /// 说明
-    #[sea_orm(column_name = "note", column_type = "String(Some(2000))")]
+    #[sea_orm(column_type = "String(Some(2000))")]
     pub note: String,
     /// 图标
-    #[sea_orm(column_name = "icon", column_type = "String(Some(1000))")]
+    #[sea_orm(column_type = "String(Some(1000))")]
     pub icon: String,
     /// 排序
-    #[sea_orm(column_name = "sort", column_type = "Integer")]
+    #[sea_orm(column_type = "Integer")]
     pub sort: i32,
     /// 是否禁用
-    #[sea_orm(column_name = "disabled", column_type = "Boolean")]
+    #[sea_orm(column_type = "Boolean")]
     pub disabled: bool,
     /// 模板变量
     /// - name: 模板字段，对象名.字段名。对于值类型模板，name = x， x为字段名，对于引用类型模板，name = x.y.z, x、y为级联的对象，z为字段名
     /// - required: 是否必须
     /// - defaultValue: 默认值
-    #[sea_orm(column_name = "template_vars", column_type = "Text")]
+    #[sea_orm(column_type = "Text")]
     pub variables: String,
     /// 用户触达等级类型
-    #[sea_orm(column_name = "level_kind", column_type = "String(Some(255))")]
+    #[sea_orm(column_type = "String(Some(255))")]
     pub level_kind: ReachLevelKind,
     /// 主题
-    #[sea_orm(column_name = "topic", column_type = "String(Some(255))")]
+    #[sea_orm(column_type = "String(Some(255))")]
     pub topic: String,
     /// 内容
-    #[sea_orm(column_name = "content", column_type = "Text")]
+    #[sea_orm(column_type = "Text")]
     pub content: String,
     /// 确认超时时间
     #[sea_orm(column_name = "timeout_sec")]
     pub timeout_sec: i32,
     /// 确认超时策略
-    #[sea_orm(column_name = "timeout_strategy", column_type = "String(Some(255))")]
+    #[sea_orm(column_type = "String(Some(255))")]
     pub timeout_strategy: ReachTimeoutStrategyKind,
     /// 关联的触达通道
-    #[sea_orm(column_name = "rel_reach_channel", column_type = "String(Some(255))")]
+    #[sea_orm(column_type = "String(Some(255))")]
     pub rel_reach_channel: ReachChannelKind,
     /// NOTICE
-    #[sea_orm(column_name = "kind", column_type = "String(Some(255))")]
+    #[sea_orm(column_type = "String(Some(255))")]
     pub kind: ReachTemplateKind,
     /// 用户触达验证码策略Id
-    #[sea_orm(column_name = "rel_reach_verify_code_strategy_id", column_type = "String(Some(255))")]
+    #[sea_orm(column_type = "String(Some(255))")]
     pub rel_reach_verify_code_strategy_id: String,
     /// 第三方插件-模板Id
-    #[sea_orm(column_name = "sms_template_id", column_type = "String(Some(255))")]
+    #[sea_orm(column_type = "String(Some(255))")]
     pub sms_template_id: String,
     /// 第三方插件-签名
-    #[sea_orm(column_name = "sms_signature", column_type = "String(Some(255))")]
+    #[sea_orm(column_type = "String(Some(255))")]
     pub sms_signature: String,
     /// 第三方插件-短信发送方的号码
-    #[sea_orm(column_name = "sms_from", column_type = "String(Some(255))")]
+    #[sea_orm(column_type = "String(Some(255))")]
     pub sms_from: String,
 }
 impl From<&ReachMessageTemplateAddReq> for ActiveModel {
