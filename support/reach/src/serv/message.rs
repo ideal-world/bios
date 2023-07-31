@@ -10,9 +10,7 @@ use tardis::db::reldb_client::TardisActiveModel;
 
 use tardis::db::sea_orm::sea_query::{Expr, Query, SelectStatement};
 use tardis::db::sea_orm::*;
-use tardis::{TardisFunsInst, TardisFuns};
-
-
+use tardis::{TardisFuns, TardisFunsInst};
 
 pub struct ReachMessageServ;
 #[async_trait]
@@ -75,13 +73,15 @@ impl ReachMessageServ {
         Ok(())
     }
     pub async fn update_status(id: impl Into<String>, status: ReachStatusKind, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        funs.db().update_one(
-            message::ActiveModel {
-                id: Set(id.into()),
-                reach_status: Set(status),
-                ..Default::default()
-            },
-            ctx,
-        ).await
+        funs.db()
+            .update_one(
+                message::ActiveModel {
+                    id: Set(id.into()),
+                    reach_status: Set(status),
+                    ..Default::default()
+                },
+                ctx,
+            )
+            .await
     }
 }

@@ -113,6 +113,7 @@ impl PluginCiBsApi {
         funs.begin().await?;
         let result = PluginBsServ::add_or_modify_plugin_rel_agg(&id.0, &app_tenant_id.0, &mut add_req.0, &funs, &ctx.0).await?;
         funs.commit().await?;
+        ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
 
@@ -161,8 +162,9 @@ impl PluginCiBsApi {
     async fn delete_rel(&self, id: Path<String>, app_tenant_id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = crate::get_tardis_inst();
         funs.begin().await?;
-        SpiBsServ::delete_rel(&id.0, &app_tenant_id.0, &funs, &ctx.0).await?;
+        PluginBsServ::delete_plugin_rel(&id.0, &app_tenant_id.0, &funs, &ctx.0).await?;
         funs.commit().await?;
+        ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
     }
 }

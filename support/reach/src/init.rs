@@ -14,7 +14,8 @@ use crate::{
     api,
     config::ReachConfig,
     consts::{get_tardis_inst, DOMAIN_CODE, DOMAIN_REACH_ID, RBUM_EXT_TABLE_REACH_MESSAGE, RBUM_KIND_CODE_REACH_MESSAGE},
-    serv::ReachTriggerSceneService, task,
+    serv::ReachTriggerSceneService,
+    task,
 };
 
 pub async fn db_init() -> TardisResult<()> {

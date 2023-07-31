@@ -16,7 +16,7 @@ use crate::basic::serv::iam_key_cache_serv::IamIdentCacheServ;
 use crate::iam_config::IamBasicConfigApi;
 use crate::iam_enumeration::IamCertKernelKind;
 
-use super::clients::spi_log_client::{LogParamTag, SpiLogClient};
+use super::clients::iam_log_client::{IamLogClient, LogParamTag};
 use super::iam_account_serv::IamAccountServ;
 use super::iam_cert_mail_vcode_serv::IamCertMailVCodeServ;
 use super::iam_cert_phone_vcode_serv::IamCertPhoneVCodeServ;
@@ -96,7 +96,7 @@ impl IamCertUserPwdServ {
             ));
         }
         for (op_describe, op_kind) in log_tasks {
-            let _ = SpiLogClient::add_ctx_task(LogParamTag::SecurityAlarm, None, op_describe, Some(op_kind), ctx).await;
+            let _ = IamLogClient::add_ctx_task(LogParamTag::SecurityAlarm, None, op_describe, Some(op_kind), ctx).await;
         }
 
         RbumCertConfServ::modify_rbum(
@@ -141,6 +141,7 @@ impl IamCertUserPwdServ {
         } else {
             RbumCertStatusKind::Pending
         };
+        IamCertUserPwdServ::check_sk_contains_ak(&add_req.ak, &add_req.sk, funs)?;
         RbumCertServ::add_rbum(
             &mut RbumCertAddReq {
                 ak: add_req.ak.clone(),
@@ -185,6 +186,7 @@ impl IamCertUserPwdServ {
         )
         .await?;
         if let Some(cert) = cert {
+            IamCertUserPwdServ::check_sk_contains_ak(&cert.ak, &modify_req.new_sk, funs)?;
             RbumCertServ::change_sk(&cert.id, &modify_req.original_sk.0, &modify_req.new_sk.0, &RbumCertFilterReq::default(), funs, ctx).await?;
             IamCertPhoneVCodeServ::send_pwd(rel_iam_item_id, &modify_req.new_sk.0, funs, ctx).await?;
             IamCertMailVCodeServ::send_pwd(rel_iam_item_id, &modify_req.new_sk.0, funs, ctx).await?;
@@ -205,7 +207,7 @@ impl IamCertUserPwdServ {
             )
             .await?;
 
-            let _ = SpiLogClient::add_ctx_task(
+            let _ = IamLogClient::add_ctx_task(
                 LogParamTag::IamAccount,
                 Some(ctx.owner.clone()),
                 "修改密码".to_string(),
@@ -224,11 +226,12 @@ impl IamCertUserPwdServ {
         }
     }
 
-    pub async fn modify_ak_cert(modify_req: &IamCertUserNameNewReq, rel_rbum_cert_conf_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    pub async fn modify_ak_cert(account_id: &str, modify_req: &IamCertUserNameNewReq, rel_rbum_cert_conf_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let cert = RbumCertServ::find_one_rbum(
             &RbumCertFilterReq {
                 ak: Some(modify_req.original_ak.to_string()),
                 rel_rbum_kind: Some(RbumCertRelKind::Item),
+                rel_rbum_id: Some(account_id.to_string()),
                 rel_rbum_cert_conf_ids: Some(vec![rel_rbum_cert_conf_id.to_string()]),
                 ..Default::default()
             },
@@ -251,6 +254,7 @@ impl IamCertUserPwdServ {
             if cert_resp.is_some() {
                 return Err(funs.err().conflict("ak_cert", "modify", "ak is used", "409-rbum-cert-ak-duplicate"));
             }
+            IamCertUserPwdServ::check_sk_contains_ak(&modify_req.new_ak, &modify_req.sk, funs)?;
             RbumCertServ::modify_rbum(
                 &cert.id,
                 &mut RbumCertModifyReq {
@@ -299,6 +303,7 @@ impl IamCertUserPwdServ {
         )
         .await?;
         if let Some(cert) = cert {
+            IamCertUserPwdServ::check_sk_contains_ak(&cert.ak, &new_sk, funs)?;
             RbumCertServ::reset_sk(&cert.id, &new_sk, true, &RbumCertFilterReq::default(), funs, ctx).await?;
             IamCertPhoneVCodeServ::send_pwd(rel_iam_item_id, &new_sk, funs, ctx).await?;
             IamCertMailVCodeServ::send_pwd(rel_iam_item_id, &new_sk, funs, ctx).await?;
@@ -320,7 +325,7 @@ impl IamCertUserPwdServ {
             .await?;
             let result = IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(rel_iam_item_id, funs).await;
 
-            let _ = SpiLogClient::add_ctx_task(
+            let _ = IamLogClient::add_ctx_task(
                 LogParamTag::IamAccount,
                 Some(rel_iam_item_id.to_string()),
                 "重置账号密码".to_string(),
@@ -364,9 +369,10 @@ impl IamCertUserPwdServ {
         )
         .await?;
         if let Some(cert) = cert {
+            IamCertUserPwdServ::check_sk_contains_ak(&cert.ak, &new_sk, funs)?;
             RbumCertServ::reset_sk(&cert.id, &new_sk, true, &RbumCertFilterReq::default(), funs, ctx).await?;
-            IamCertPhoneVCodeServ::send_pwd(rel_iam_item_id, &new_sk, funs, ctx).await?;
-            IamCertMailVCodeServ::send_pwd(rel_iam_item_id, &new_sk, funs, ctx).await?;
+            // IamCertPhoneVCodeServ::send_pwd(rel_iam_item_id, &new_sk, funs, ctx).await?;
+            // IamCertMailVCodeServ::send_pwd(rel_iam_item_id, &new_sk, funs, ctx).await?;
             RbumCertServ::modify_rbum(
                 &cert.id,
                 &mut RbumCertModifyReq {
@@ -384,7 +390,7 @@ impl IamCertUserPwdServ {
             )
             .await?;
 
-            let _ = SpiLogClient::add_ctx_task(
+            let _ = IamLogClient::add_ctx_task(
                 LogParamTag::IamAccount,
                 Some(rel_iam_item_id.to_string()),
                 "重置账号密码".to_string(),
@@ -488,5 +494,13 @@ impl IamCertUserPwdServ {
             cert_conf_by_user_pwd.sk_rule_len_min,
             cert_conf_by_user_pwd.sk_rule_len_max
         ))
+    }
+
+    // 不在rbum_cert_serve在做检查是因为其他凭证sk不需要去检查是否包含ak, 但是在这里做检查是因为用户密码凭证需要检查
+    fn check_sk_contains_ak(ak: &str, sk: &str, funs: &TardisFunsInst) -> TardisResult<()> {
+        if sk.to_lowercase().contains(&ak.to_lowercase()) {
+            return Err(funs.err().bad_request("iam_cert", "check ak sk", "sk can not contains ak", "400-iam-cert-sk-contains-ak"));
+        }
+        Ok(())
     }
 }

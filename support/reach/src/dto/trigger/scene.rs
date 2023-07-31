@@ -4,7 +4,7 @@ use bios_basic::rbum::{
 };
 use tardis::basic::field::TrimString;
 
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 use tardis::{
     chrono::{DateTime, Utc},
     db::sea_orm,

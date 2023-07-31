@@ -149,6 +149,6 @@ impl SendChannelAll {
         }
     }
     pub async fn send(&self, kind: ReachChannelKind, template: impl Into<GenericTemplate<'_>>, content: &ContentReplace, to: &HashSet<impl AsRef<str>>) -> TardisResult<()> {
-        self.get_channel(kind).send(template.into(), content, &to.iter().map(|x|x.as_ref()).collect()).await
+        self.get_channel(kind).send(template.into(), content, &to.iter().map(|x| x.as_ref()).collect()).await
     }
 }

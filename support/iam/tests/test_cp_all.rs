@@ -98,6 +98,7 @@ pub async fn test(sysadmin_info: (&str, &str), system_admin_context: &TardisCont
             cert_conf_by_oauth2: None,
             cert_conf_by_ldap: None,
             config: None,
+            token_default_coexist_num: None,
         },
         &funs,
         tenant_ctx,

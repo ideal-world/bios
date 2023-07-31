@@ -2,7 +2,7 @@ use std::{collections::HashSet, sync::Arc};
 
 use crate::{client::*, config::ReachConfig, consts::*, domain::*, dto::*, serv::*};
 use bios_basic::rbum::helper::rbum_scope_helper;
-use bios_sdk_invoke::{clients::iam_client::IamClient, invoke_config::InvokeConfigTrait, invoke_enumeration::InvokeModuleKind};
+use bios_sdk_invoke::clients::iam_client::IamClient;
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
     db::sea_orm::{sea_query::Query, *},
@@ -35,7 +35,12 @@ impl MessageSendListener {
             own_paths: message.own_paths.clone(),
             ..Default::default()
         };
-        let iam_client = Arc::new(IamClient::new(&cfg.iam_get_account, &self.funs, &ctx, cfg.invoke.get_module_url(InvokeModuleKind::Iam)));
+        let iam_client = Arc::new(IamClient::new(
+            &cfg.iam_get_account,
+            &self.funs,
+            &ctx,
+            cfg.invoke.module_urls.get("iam").expect("missing iam base url"),
+        ));
         let ReachStatusKind::Pending = message.reach_status else {
             return Ok(())
         };

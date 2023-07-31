@@ -1,5 +1,3 @@
-use std::marker::PhantomData;
-
 use serde::{Deserialize, Serialize};
 
 use tardis::{
@@ -10,14 +8,12 @@ use tardis::{
         poem_openapi,
         web_resp::{TardisPage, TardisResp},
     },
-    TardisFunsInst,
+    TardisFuns, TardisFunsInst,
 };
 
-use crate::{clients::base_spi_client::BaseSpiClient, invoke_enumeration::InvokeModuleKind, invoke_config::InvokeConfigTrait};
-#[derive(Debug, Default)]
-pub struct SpiLogClient<C> {
-    marker: PhantomData<C>
-}
+use crate::{clients::base_spi_client::BaseSpiClient, invoke_constants::DYNAMIC_LOG, invoke_enumeration::InvokeModuleKind};
+
+pub struct SpiLogClient;
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct LogItemFindReq {
@@ -47,9 +43,43 @@ pub struct LogItemFindResp {
     pub ts: DateTime<Utc>,
 }
 
-impl<C> SpiLogClient<C> 
-where C: InvokeConfigTrait + 'static
-{
+#[derive(poem_openapi::Object, Serialize, Deserialize, Default, Debug)]
+pub struct LogDynamicContentReq {
+    pub details: Option<String>,
+    pub sub_kind: Option<String>,
+    pub content: Option<String>,
+}
+
+impl SpiLogClient {
+    pub async fn add_dynamic_log(
+        content: &LogDynamicContentReq,
+        ext: Option<Value>,
+        kind: Option<String>,
+        key: Option<String>,
+        op: Option<String>,
+        rel_key: Option<String>,
+        ts: Option<String>,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<()> {
+        Self::add(
+            DYNAMIC_LOG,
+            &TardisFuns::json.obj_to_string(content)?,
+            ext,
+            kind,
+            key,
+            op,
+            rel_key,
+            ts,
+            Some(ctx.owner.clone()),
+            Some(ctx.own_paths.clone()),
+            funs,
+            ctx,
+        )
+        .await?;
+        Ok(())
+    }
+
     pub async fn add(
         tag: &str,
         content: &str,
@@ -64,7 +94,7 @@ where C: InvokeConfigTrait + 'static
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<()> {
-        let log_url: String = BaseSpiClient::module_url::<C>(InvokeModuleKind::Log, funs).await?;
+        let log_url: String = BaseSpiClient::module_url(InvokeModuleKind::Log, funs).await?;
         let headers = BaseSpiClient::headers(None, funs, ctx).await?;
         let body = json!({
             "tag": tag,
@@ -83,7 +113,7 @@ where C: InvokeConfigTrait + 'static
     }
 
     pub async fn find(find_req: LogItemFindReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<TardisPage<LogItemFindResp>>> {
-        let log_url: String = BaseSpiClient::module_url::<C>(InvokeModuleKind::Log, funs).await?;
+        let log_url: String = BaseSpiClient::module_url(InvokeModuleKind::Log, funs).await?;
         let headers = BaseSpiClient::headers(None, funs, ctx).await?;
         let resp = funs.web_client().put::<LogItemFindReq, TardisResp<TardisPage<LogItemFindResp>>>(&format!("{log_url}/ci/item"), &find_req, headers.clone()).await?;
         BaseSpiClient::package_resp(resp)

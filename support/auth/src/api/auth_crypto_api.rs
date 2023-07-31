@@ -11,10 +11,10 @@ use crate::serv::clients::spi_log_client::{LogParamContent, SpiLogClient};
 #[derive(Clone)]
 pub struct CryptoApi;
 
-/// Crypto API
+/// Crypto API 密码API
 #[poem_openapi::OpenApi(prefix_path = "/auth/crypto")]
 impl CryptoApi {
-    /// Fetch public key
+    /// Fetch public key 获取公钥
     #[oai(path = "/key", method = "get")]
     async fn fetch_public_key(&self, req: &Request) -> TardisApiResult<String> {
         let result = auth_crypto_serv::fetch_public_key().await?;
@@ -33,7 +33,7 @@ impl CryptoApi {
         TardisResp::ok(result)
     }
 
-    /// Encrypt body
+    /// Encrypt body 加密body
     #[oai(path = "/", method = "put")]
     async fn encrypt_body(&self, req: Json<AuthEncryptReq>, request: &Request) -> TardisApiResult<AuthEncryptResp> {
         let result = auth_crypto_serv::encrypt_body(&req.0).await?;

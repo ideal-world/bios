@@ -1,7 +1,8 @@
+use tardis::chrono::Utc;
 use tardis::db::sea_orm;
 use tardis::db::sea_orm::prelude::Json;
 use tardis::db::sea_orm::*;
-use tardis::{TardisCreateEntity, TardisEmptyBehavior, TardisEmptyRelation};
+use tardis::{chrono, TardisCreateEntity, TardisEmptyBehavior, TardisEmptyRelation};
 
 /// Transfer / 流转
 ///
@@ -70,10 +71,6 @@ pub struct Model {
     /// TODO Vec<FlowVarInfo>
     pub vars_collect: Json,
 
-    /// rear action config / 关于后置动作的配置
-    /// TODO FlowRearActionInfo
-    // pub rear_action: Json,
-
     /// External interface to be called when entering this transition
     /// 进入此流转时，需要调用的外部接口
     ///
@@ -85,13 +82,25 @@ pub struct Model {
     /// action similar to `Event` in BPMN
     pub action_by_post_callback: String,
 
-    /// TODO Vec<FlowTransitionActionByVarChangeInfo>
-    // pub action_by_post_var_changes: Json,
+    /// TODO Vec<FlowTransitionActionChangeInfo>
+    pub action_by_post_changes: Json,
 
-    /// TODO Vec<FlowTransitionActionByStateChangeInfo>
-    // pub action_by_post_state_changes: Json,
+    /// Secondary confirmation pop-up / 关于二次确认弹窗的配置
+    /// TODO FlowTransitionDoubleCheckInfo
+    pub double_check: Json,
+
     pub rel_flow_model_id: String,
 
     #[fill_ctx(own_paths)]
     pub own_paths: String,
+
+    /// Creation time / 创建时间
+    #[index]
+    #[sea_orm(extra = "DEFAULT CURRENT_TIMESTAMP")]
+    pub create_time: chrono::DateTime<Utc>,
+
+    /// Updated time / 更新时间
+    #[index]
+    #[sea_orm(extra = "DEFAULT CURRENT_TIMESTAMP")]
+    pub update_time: chrono::DateTime<Utc>,
 }

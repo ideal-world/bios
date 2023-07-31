@@ -8,7 +8,7 @@ use tardis::web::poem::web::{Json, Path, Query};
 use tardis::web::poem_openapi;
 use tardis::web::web_resp::{TardisApiResult, TardisResp, Void};
 
-use crate::client::{sms, SendChannelAll, GenericTemplate};
+use crate::client::{sms, GenericTemplate, SendChannelAll};
 use crate::config::ReachConfig;
 use crate::consts::*;
 use crate::dto::*;
@@ -86,11 +86,18 @@ impl ReachMessageCcApi {
     /// 邮箱发送
     #[oai(method = "put", path = "/mail/:mail")]
     pub async fn mail_pwd_send(&self, mail: Path<String>, message: Query<String>, subject: Query<String>) -> TardisApiResult<Void> {
-        self.channel.send(ReachChannelKind::Email, GenericTemplate {
-            name: Some(subject.as_ref()),
-            content: &message,
-            ..Default::default()
-        }, &Default::default(), &HashSet::from([mail.0])).await?;
+        self.channel
+            .send(
+                ReachChannelKind::Email,
+                GenericTemplate {
+                    name: Some(subject.as_ref()),
+                    content: &message,
+                    ..Default::default()
+                },
+                &Default::default(),
+                &HashSet::from([mail.0]),
+            )
+            .await?;
         TardisResp::ok(VOID)
     }
 }

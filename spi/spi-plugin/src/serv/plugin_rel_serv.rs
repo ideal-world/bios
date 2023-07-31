@@ -84,7 +84,20 @@ impl PluginRelServ {
         Ok(())
     }
 
-    async fn exist_rels(tag: &PluginAppBindRelKind, from_rbum_id: &str, to_rbum_item_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<bool> {
+    pub async fn exist_to_simple_rels(tag: &PluginAppBindRelKind, to_rbum_item_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<bool> {
+        RbumRelServ::exist_simple_rel(
+            &RbumRelFindReq {
+                tag: Some(tag.to_string()),
+                to_rbum_item_id: Some(to_rbum_item_id.to_string()),
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await
+    }
+
+    pub async fn exist_rels(tag: &PluginAppBindRelKind, from_rbum_id: &str, to_rbum_item_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<bool> {
         RbumRelServ::exist_simple_rel(
             &RbumRelFindReq {
                 tag: Some(tag.to_string()),
@@ -99,6 +112,7 @@ impl PluginRelServ {
         )
         .await
     }
+
     pub async fn find_to_simple_rels(
         tag: &PluginAppBindRelKind,
         to_rbum_item_id: &str,

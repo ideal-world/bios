@@ -6,7 +6,6 @@ use tardis::chrono::{self, DateTime, Utc};
 use tardis::db::reldb_client::TardisActiveModel;
 use tardis::db::sea_orm;
 
-
 use tardis::db::sea_orm::sea_query::{ColumnDef, IndexCreateStatement, Table, TableCreateStatement};
 use tardis::db::sea_orm::*;
 

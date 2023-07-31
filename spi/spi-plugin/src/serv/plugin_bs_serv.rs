@@ -20,8 +20,11 @@ use bios_basic::{
         spi_constants::{self, SPI_IDENT_REL_TAG},
     },
 };
+use bios_sdk_invoke::clients::spi_log_client::{LogDynamicContentReq, SpiLogClient};
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
+    log::info,
+    tokio,
     web::web_resp::TardisPage,
     TardisFunsInst,
 };
@@ -37,6 +40,8 @@ pub struct PluginBsServ;
 
 impl PluginBsServ {
     pub async fn add_or_modify_plugin_rel_agg(bs_id: &str, app_tenant_id: &str, add_req: &mut PluginBsAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
+        let ctx_clone = ctx.clone();
+        let bs_id_clone = bs_id.to_string();
         if !ctx.own_paths.contains(app_tenant_id) {
             return Err(funs.err().unauthorized(
                 "spi_bs",
@@ -47,6 +52,32 @@ impl PluginBsServ {
         }
         let bs = SpiBsServ::peek_item(bs_id, &SpiBsFilterReq::default(), funs, ctx).await?;
         if Self::exist_bs(bs_id, app_tenant_id, funs, ctx).await? {
+            ctx.add_async_task(Box::new(|| {
+                Box::pin(async move {
+                    let task_handle = tokio::spawn(async move {
+                        let funs = crate::get_tardis_inst();
+                        let _ = SpiLogClient::add_dynamic_log(
+                            &LogDynamicContentReq {
+                                details: None,
+                                sub_kind: None,
+                                content: Some(format!("插件 {}", bs.name)),
+                            },
+                            None,
+                            Some("dynamic_log_plugin_manage".to_string()),
+                            Some(bs_id_clone),
+                            Some("编辑".to_string()),
+                            None,
+                            Some(tardis::chrono::Utc::now().to_rfc3339()),
+                            &funs,
+                            &ctx_clone,
+                        )
+                        .await;
+                    });
+                    task_handle.await.unwrap();
+                    Ok(())
+                })
+            }))
+            .await?;
             let rel_agg = Self::get_bs_rel_agg(bs_id, app_tenant_id, funs, ctx).await?;
             for attrs in rel_agg.attrs {
                 RbumRelAttrServ::delete_rbum(&attrs.id, funs, ctx).await?;
@@ -70,9 +101,63 @@ impl PluginBsServ {
                 }
             }
         } else {
+            ctx.add_async_task(Box::new(|| {
+                Box::pin(async move {
+                    let task_handle = tokio::spawn(async move {
+                        let funs = crate::get_tardis_inst();
+                        let _ = SpiLogClient::add_dynamic_log(
+                            &LogDynamicContentReq {
+                                details: None,
+                                sub_kind: None,
+                                content: Some(format!("插件 {}", bs.name)),
+                            },
+                            None,
+                            Some("dynamic_log_plugin_manage".to_string()),
+                            Some(bs_id_clone),
+                            Some("新增".to_string()),
+                            None,
+                            Some(tardis::chrono::Utc::now().to_rfc3339()),
+                            &funs,
+                            &ctx_clone,
+                        )
+                        .await;
+                    });
+                    task_handle.await.unwrap();
+                    Ok(())
+                })
+            }))
+            .await?;
+
             SpiBsServ::add_rel_agg(bs.id.as_str(), app_tenant_id, add_req.attrs.clone(), None, funs, ctx).await?;
         }
         Ok(bs.id)
+    }
+
+    pub async fn delete_plugin_rel(bs_id: &str, app_tenant_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let ctx_clone = ctx.clone();
+        let rel_agg = Self::get_bs_rel_agg(bs_id, app_tenant_id, funs, ctx).await?;
+        if PluginRelServ::exist_to_simple_rels(&PluginAppBindRelKind::PluginAppBindKind, &rel_agg.rel.id, funs, ctx).await? {
+            return Err(funs.err().unauthorized("spi_bs", "delete_plugin_rel", &format!("The pluging exists bound"), "401-spi-plugin-bind-exist"));
+        }
+        let bs = SpiBsServ::peek_item(bs_id, &SpiBsFilterReq::default(), funs, ctx).await?;
+        let _ = SpiLogClient::add_dynamic_log(
+            &LogDynamicContentReq {
+                details: None,
+                sub_kind: None,
+                content: Some(format!("插件 {}", bs.name)),
+            },
+            None,
+            Some("dynamic_log_plugin_manage".to_string()),
+            Some(bs_id.to_string()),
+            Some("删除".to_string()),
+            None,
+            Some(tardis::chrono::Utc::now().to_rfc3339()),
+            &funs,
+            &ctx_clone,
+        )
+        .await;
+        SpiBsServ::delete_rel(bs_id, app_tenant_id, &funs, &ctx).await?;
+        Ok(())
     }
 
     pub async fn paginate_bs_rel_agg(
@@ -223,7 +308,6 @@ impl PluginBsServ {
 
     pub async fn get_bs_by_rel_up(kind_code: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<PluginBsCertInfoResp> {
         let kind_id = RbumKindServ::get_rbum_kind_id_by_code(&kind_code.clone().unwrap_or_default(), funs).await?;
-
         if let Some(kind_id) = kind_id {
             if let Some(rel_bind) = PluginRelServ::find_from_simple_rels(
                 &PluginAppBindRelKind::PluginAppBindKind,
@@ -241,6 +325,18 @@ impl PluginBsServ {
             {
                 let rel = PluginRelServ::get_rel(&rel_bind.rel_id, funs, ctx).await?;
                 return Self::get_cert_bs(&rel.from_rbum_id, &rel.to_rbum_item_id, funs, ctx).await;
+            } else {
+                let own_paths = Self::get_parent_own_paths(ctx.own_paths.as_str())?;
+                for own_path in own_paths {
+                    let resp = Self::get_bs_by_rel(kind_code.clone(), own_path.as_str(), funs, ctx).await;
+                    info!("【get_bs_by_rel_up】 {}: {}", own_path, resp.is_ok());
+                    if resp.is_ok() {
+                        match resp {
+                            Ok(bs) => return Ok(bs),
+                            Err(_) => return Err(funs.err().not_found(&SpiBsServ::get_obj_name(), "get_bs_by_rel_up", "not found backend service", "404-spi-bs-not-exist")),
+                        }
+                    }
+                }
             }
         }
         Err(funs.err().not_found(&SpiBsServ::get_obj_name(), "get_bs_by_rel_up", "not found backend service", "404-spi-bs-not-exist"))

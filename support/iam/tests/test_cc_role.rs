@@ -150,6 +150,7 @@ async fn test_single_level(context: &TardisContext, account_name: &str, another_
             crypto_resp: None,
             double_auth: None,
             double_auth_msg: None,
+            need_login: None,
         },
         &funs,
         context,

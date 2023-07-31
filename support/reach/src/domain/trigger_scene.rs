@@ -9,7 +9,6 @@ use tardis::db::sea_orm;
 use tardis::db::sea_orm::sea_query::{ColumnDef, IndexCreateStatement, Table, TableCreateStatement};
 use tardis::db::sea_orm::*;
 
-
 #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]
 #[sea_orm(table_name = "reach_trigger_scene")]
 pub struct Model {

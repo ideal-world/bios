@@ -30,6 +30,7 @@ pub async fn test_match() -> TardisResult<()> {
         false,
         false,
         false,
+        false,
     )?;
     assert!(auth_kernel_serv::do_auth(&AuthContext {
         rbum_uri: "iam-res://iam-serv".to_string(),
@@ -50,6 +51,7 @@ pub async fn test_match() -> TardisResult<()> {
         "GET",
         "iam-res://iam-serv",
         Some(TardisFuns::json.str_to_obj(r###"{"accounts":"#acc1#acc2#"}"###)?),
+        false,
         false,
         false,
         false,
@@ -89,6 +91,7 @@ pub async fn test_match() -> TardisResult<()> {
         false,
         false,
         false,
+        false,
     )?;
     assert!(auth_kernel_serv::do_auth(&AuthContext {
         rbum_uri: "iam-res://iam-serv".to_string(),
@@ -122,6 +125,7 @@ pub async fn test_match() -> TardisResult<()> {
         "GET",
         "iam-res://iam-serv",
         Some(TardisFuns::json.str_to_obj(r###"{"groups":"#g2.aaaa#g1.aaab##g1.aaaaaaaa##g1.aaaaaaab#"}"###)?),
+        false,
         false,
         false,
         false,
@@ -174,6 +178,7 @@ pub async fn test_match() -> TardisResult<()> {
         false,
         false,
         false,
+        false,
     )?;
     assert!(auth_kernel_serv::do_auth(&AuthContext {
         rbum_uri: "iam-res://iam-serv".to_string(),
@@ -207,6 +212,7 @@ pub async fn test_match() -> TardisResult<()> {
         "GET",
         "iam-res://iam-serv",
         Some(TardisFuns::json.str_to_obj(r###"{"tenants":"#tenant1#tenant2#"}"###)?),
+        false,
         false,
         false,
         false,
@@ -246,6 +252,7 @@ pub async fn test_match() -> TardisResult<()> {
         false,
         false,
         false,
+        false,
     )?;
     assert!(auth_kernel_serv::do_auth(&AuthContext {
         rbum_uri: "iam-res://iam-serv".to_string(),
@@ -266,6 +273,7 @@ pub async fn test_match() -> TardisResult<()> {
         "GET",
         "iam-res://app1/ct/account/001",
         Some(TardisFuns::json.str_to_obj(r###"{"accounts":"#acc1#acc2#"}"###)?),
+        false,
         false,
         false,
         false,
@@ -303,6 +311,7 @@ pub async fn test_match() -> TardisResult<()> {
         false,
         false,
         false,
+        false,
     )?;
     assert!(auth_kernel_serv::do_auth(&AuthContext {
         rbum_uri: "iam-res://app1/ct/account/001".to_string(),
@@ -321,6 +330,7 @@ pub async fn test_match() -> TardisResult<()> {
         "GET",
         "iam-res://app1/ct/**",
         Some(TardisFuns::json.str_to_obj(r###"{"roles":"#tenant_admin#"}"###)?),
+        false,
         false,
         false,
         false,
@@ -352,6 +362,7 @@ pub async fn test_match() -> TardisResult<()> {
         false,
         false,
         true,
+        false,
     )?;
     assert!(auth_kernel_serv::do_auth(&AuthContext {
         rbum_uri: "iam-res://pbulic".to_string(),

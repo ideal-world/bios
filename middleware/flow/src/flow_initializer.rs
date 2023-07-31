@@ -4,6 +4,8 @@ use bios_basic::rbum::{
     rbum_initializer,
     serv::{rbum_crud_serv::RbumCrudOperation, rbum_domain_serv::RbumDomainServ, rbum_kind_serv::RbumKindServ},
 };
+use bios_sdk_invoke::invoke_initializer;
+
 use tardis::{
     basic::{dto::TardisContext, field::TrimString, result::TardisResult},
     db::{reldb_client::TardisActiveModel, sea_orm::sea_query::Table},
@@ -13,8 +15,11 @@ use tardis::{
 };
 
 use crate::{
-    api::cc::{flow_cc_inst_api, flow_cc_model_api, flow_cc_state_api},
-    domain::{flow_inst, flow_model, flow_state, flow_transition},
+    api::{
+        cc::{flow_cc_inst_api, flow_cc_model_api, flow_cc_state_api},
+        cs::flow_cs_config_api,
+    },
+    domain::{flow_config, flow_inst, flow_model, flow_state, flow_transition},
     dto::{
         flow_state_dto::FlowSysStateKind,
         flow_transition_dto::FlowTransitionInitInfo,
@@ -35,7 +40,12 @@ async fn init_api(web_server: &TardisWebServer) -> TardisResult<()> {
     web_server
         .add_module(
             flow_constants::DOMAIN_CODE,
-            (flow_cc_state_api::FlowCcStateApi, flow_cc_model_api::FlowCcModelApi, flow_cc_inst_api::FlowCcInstApi),
+            (
+                flow_cc_state_api::FlowCcStateApi,
+                flow_cc_model_api::FlowCcModelApi,
+                flow_cc_inst_api::FlowCcInstApi,
+                flow_cs_config_api::FlowCsConfigApi,
+            ),
         )
         .await;
     Ok(())
@@ -43,7 +53,7 @@ async fn init_api(web_server: &TardisWebServer) -> TardisResult<()> {
 
 pub async fn init_db(mut funs: TardisFunsInst) -> TardisResult<()> {
     bios_basic::rbum::rbum_initializer::init(funs.module_code(), funs.conf::<FlowConfig>().rbum.clone()).await?;
-
+    invoke_initializer::init(funs.module_code(), funs.conf::<FlowConfig>().invoke.clone())?;
     let ctx = TardisContext {
         own_paths: "".to_string(),
         ak: "".to_string(),
@@ -63,6 +73,7 @@ pub async fn init_db(mut funs: TardisFunsInst) -> TardisResult<()> {
         funs.db().init(flow_model::ActiveModel::init(db_kind, None, compatible_type.clone())).await?;
         funs.db().init(flow_transition::ActiveModel::init(db_kind, None, compatible_type.clone())).await?;
         funs.db().init(flow_inst::ActiveModel::init(db_kind, None, compatible_type.clone())).await?;
+        funs.db().init(flow_config::ActiveModel::init(db_kind, None, compatible_type.clone())).await?;
         init_rbum_data(&funs, &ctx).await?;
         init_model(&funs, &ctx).await?;
     };
@@ -190,6 +201,8 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                 vars_collect: None,
                 action_by_pre_callback: None,
                 action_by_post_callback: None,
+                action_by_post_changes: vec![],
+                double_check: None,
             },
             FlowTransitionInitInfo {
                 from_flow_state_name: "待处理".to_string(),
@@ -206,6 +219,8 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                 vars_collect: None,
                 action_by_pre_callback: None,
                 action_by_post_callback: None,
+                action_by_post_changes: vec![],
+                double_check: None,
             },
             FlowTransitionInitInfo {
                 from_flow_state_name: "待处理".to_string(),
@@ -222,6 +237,8 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                 vars_collect: None,
                 action_by_pre_callback: None,
                 action_by_post_callback: None,
+                action_by_post_changes: vec![],
+                double_check: None,
             },
             FlowTransitionInitInfo {
                 from_flow_state_name: "待处理".to_string(),
@@ -238,6 +255,8 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                 vars_collect: None,
                 action_by_pre_callback: None,
                 action_by_post_callback: None,
+                action_by_post_changes: vec![],
+                double_check: None,
             },
             FlowTransitionInitInfo {
                 from_flow_state_name: "待确认".to_string(),
@@ -254,6 +273,8 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                 vars_collect: None,
                 action_by_pre_callback: None,
                 action_by_post_callback: None,
+                action_by_post_changes: vec![],
+                double_check: None,
             },
             FlowTransitionInitInfo {
                 from_flow_state_name: "待确认".to_string(),
@@ -270,6 +291,8 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                 vars_collect: None,
                 action_by_pre_callback: None,
                 action_by_post_callback: None,
+                action_by_post_changes: vec![],
+                double_check: None,
             },
         ],
         funs,
@@ -347,6 +370,8 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                 ]),
                 action_by_pre_callback: None,
                 action_by_post_callback: None,
+                action_by_post_changes: vec![],
+                double_check: None,
             },
             FlowTransitionInitInfo {
                 from_flow_state_name: "待开始".to_string(),
@@ -363,6 +388,8 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                 vars_collect: None,
                 action_by_pre_callback: None,
                 action_by_post_callback: None,
+                action_by_post_changes: vec![],
+                double_check: None,
             },
             FlowTransitionInitInfo {
                 from_flow_state_name: "进行中".to_string(),
@@ -424,6 +451,8 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                 ]),
                 action_by_pre_callback: None,
                 action_by_post_callback: None,
+                action_by_post_changes: vec![],
+                double_check: None,
             },
             FlowTransitionInitInfo {
                 from_flow_state_name: "进行中".to_string(),
@@ -440,6 +469,8 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                 vars_collect: None,
                 action_by_pre_callback: None,
                 action_by_post_callback: None,
+                action_by_post_changes: vec![],
+                double_check: None,
             },
             FlowTransitionInitInfo {
                 from_flow_state_name: "已完成".to_string(),
@@ -501,6 +532,8 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                 ]),
                 action_by_pre_callback: None,
                 action_by_post_callback: None,
+                action_by_post_changes: vec![],
+                double_check: None,
             },
             FlowTransitionInitInfo {
                 from_flow_state_name: "已完成".to_string(),
@@ -517,6 +550,8 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                 vars_collect: None,
                 action_by_pre_callback: None,
                 action_by_post_callback: None,
+                action_by_post_changes: vec![],
+                double_check: None,
             },
             FlowTransitionInitInfo {
                 from_flow_state_name: "已关闭".to_string(),
@@ -533,6 +568,8 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                 vars_collect: None,
                 action_by_pre_callback: None,
                 action_by_post_callback: None,
+                action_by_post_changes: vec![],
+                double_check: None,
             },
         ],
         funs,

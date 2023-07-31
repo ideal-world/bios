@@ -6,7 +6,6 @@ use tardis::{
     web::poem_openapi,
 };
 
-
 use crate::dto::*;
 /// 添加用户触达签名请求
 #[derive(Debug, poem_openapi::Object, Deserialize)]

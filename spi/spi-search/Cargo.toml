@@ -15,12 +15,13 @@ name = "bios_spi_search"
 path = "src/lib.rs"
 
 [features]
-default = ["spi-pg"]
+default = ["spi-pg", "spi-es"]
 spi-pg = ["tardis/reldb-postgres"]
+spi-es = ["tardis/web-client"]
 
 [dependencies]
 serde.workspace = true
-tardis = { workspace = true, features = ["reldb-postgres", "web-server"] }
+tardis = { workspace = true, features = ["reldb-postgres", "web-server", "web-client"] }
 bios-basic = { path = "../../basic", features = ["default"] }
 
 [dev-dependencies]

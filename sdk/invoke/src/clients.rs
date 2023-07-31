@@ -8,15 +8,18 @@ use tardis::{
 
 use crate::invoke_constants::TARDIS_CONTEXT;
 
-#[cfg(feature = "spi-base")]
+#[cfg(feature = "spi_base")]
 mod base_spi_client;
+
+#[cfg(feature = "spi_kv")]
+pub mod spi_kv_client;
+#[cfg(feature = "spi_log")]
+pub mod spi_log_client;
+#[cfg(feature = "spi_search")]
+pub mod spi_search_client;
+
 #[cfg(feature = "iam")]
 pub mod iam_client;
-#[cfg(feature = "spi-kv")]
-pub mod spi_kv_client;
-#[cfg(feature = "spi-log")]
-pub mod spi_log_client;
-
 #[macro_export]
 /// 
 /// 

@@ -23,7 +23,7 @@ use crate::{
     iam_enumeration::IamConfigKind,
 };
 
-use super::clients::spi_log_client::{LogParamTag, SpiLogClient};
+use super::clients::iam_log_client::{IamLogClient, LogParamTag};
 
 pub struct IamConfigServ;
 
@@ -144,7 +144,7 @@ impl IamConfigServ {
                 _ => ("".to_string(), "".to_string()),
             };
             if !op_describe.is_empty() {
-                let _ = SpiLogClient::add_ctx_task(LogParamTag::SecurityAlarm, None, op_describe, Some(op_kind), ctx).await;
+                let _ = IamLogClient::add_ctx_task(LogParamTag::SecurityAlarm, None, op_describe, Some(op_kind), ctx).await;
             }
             if let Some(id) = config_id {
                 Self::modify_rbum(

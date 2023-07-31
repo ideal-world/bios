@@ -1,6 +1,6 @@
 use super::*;
-use std::{collections::HashMap};
-use tardis::{basic::dto::TardisContext};
+use std::collections::HashMap;
+use tardis::basic::dto::TardisContext;
 
 /// 用户触达消息发送请求
 #[derive(Debug, Serialize, Deserialize)]

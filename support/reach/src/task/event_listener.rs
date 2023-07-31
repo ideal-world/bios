@@ -4,8 +4,7 @@ use bios_basic::rbum::{dto::rbum_item_dto::RbumItemAddReq, serv::rbum_crud_serv:
 use tardis::{
     basic::result::TardisResult,
     db::sea_orm::{self, sea_query::Query, ColumnTrait},
-    log,
-    TardisFuns,
+    log, TardisFuns,
 };
 
 use crate::{consts::*, domain::*, dto::*, serv::*};

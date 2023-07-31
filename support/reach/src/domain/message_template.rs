@@ -6,7 +6,6 @@ use tardis::db::sea_orm;
 use tardis::db::sea_orm::sea_query::{ColumnDef, Table, TableCreateStatement};
 use tardis::db::sea_orm::*;
 
-
 use crate::dto::*;
 use crate::fill_by_mod_req;
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]

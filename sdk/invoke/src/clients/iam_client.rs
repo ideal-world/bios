@@ -1,7 +1,9 @@
-pub use bios_iam::basic::dto::iam_account_dto::*;
+use std::collections::HashMap;
+
+use serde::{Deserialize, Serialize};
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
-    TardisFunsInst,
+    TardisFunsInst, web::poem_openapi,
 };
 
 use super::SimpleInvokeClient;
@@ -33,6 +35,13 @@ impl<'a> SimpleInvokeClient for IamClient<'a> {
     fn get_base_url(&self) -> &str {
         self.base_url
     }
+}
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct IamAccountSummaryAggResp {
+    pub roles: HashMap<String, String>,
+    pub certs: HashMap<String, String>,
+    pub orgs: Vec<String>,
 }
 
 impl IamClient<'_> {
