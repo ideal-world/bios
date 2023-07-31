@@ -4,7 +4,7 @@ use bios_basic::rbum::{
 };
 use tardis::basic::field::TrimString;
 
-use serde::Serialize;
+use serde::{Serialize, Deserialize};
 use tardis::{
     chrono::{DateTime, Utc},
     db::sea_orm,
@@ -64,7 +64,7 @@ pub struct ReachTriggerSceneFilterReq {
     pub name: Option<String>,
 }
 
-#[derive(Debug, poem_openapi::Object, Serialize, sea_orm::FromQueryResult)]
+#[derive(Debug, poem_openapi::Object, Serialize, Deserialize, sea_orm::FromQueryResult)]
 pub struct ReachTriggerSceneSummaryResp {
     pub id: String,
     pub own_paths: String,
@@ -79,7 +79,7 @@ pub struct ReachTriggerSceneSummaryResp {
     pub pid: String,
 }
 
-#[derive(Debug, poem_openapi::Object, Serialize, sea_orm::FromQueryResult)]
+#[derive(Debug, poem_openapi::Object, Serialize, Deserialize, sea_orm::FromQueryResult)]
 pub struct ReachTriggerSceneDetailResp {
     pub id: String,
     pub own_paths: String,

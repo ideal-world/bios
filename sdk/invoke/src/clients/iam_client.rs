@@ -4,7 +4,7 @@ use tardis::{
     TardisFunsInst,
 };
 
-use super::InvokeClient;
+use super::SimpleInvokeClient;
 
 #[derive(Clone)]
 pub struct IamClient<'a> {
@@ -24,7 +24,7 @@ impl<'a> IamClient<'a> {
         }
     }
 }
-impl<'a> InvokeClient for IamClient<'a> {
+impl<'a> SimpleInvokeClient for IamClient<'a> {
     const DOMAIN_CODE: &'static str = "iam";
     fn get_ctx(&self) -> &'a TardisContext {
         self.ctx
