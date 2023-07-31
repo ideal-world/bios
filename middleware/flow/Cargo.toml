@@ -29,3 +29,4 @@ bios-sdk-invoke = { path = "../../sdk/invoke", features = ["default"] }
 tardis = { workspace = true, features = ["test", "web-client"] }
 bios-basic = { path = "../../basic", features = ["default", "test"] }
 bios-sdk-invoke = { path = "../../sdk/invoke", features = ["default"] }
+bios-spi-kv = { path = "../../spi/spi-kv" }
