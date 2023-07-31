@@ -1,0 +1,196 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: sgfilters.spacegate.idealworld.group
+spec:
+  group: spacegate.idealworld.group
+  scope: Namespaced
+  names:
+    plural: sgfilters
+    singular: sgfilter
+    kind: SgFilter
+    shortNames:
+    - sgf
+  versions:
+    - name: v1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              required:
+                - filters
+                - targetRefs
+              properties:
+                filters:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        minLength: 1
+                      name:
+                        type: string
+                        minLength: 1
+                      enable:
+                        type: boolean
+                        default: true
+                      config:
+                        type: object
+                        x-kubernetes-preserve-unknown-fields: true
+                  required:
+                    - code
+                    - enable
+                    - config
+                targetRefs:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      kind:
+                        type: string
+                        minLength: 1
+                      name:
+                        type: string  
+                        minLength: 1               
+                      namespace:
+                        type: string
+                        minLength: 1
+                  required:
+                    - kind
+                    - name
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: spacegate
+  namespace: spacegate
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: spacegate
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - services
+  - secrets
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+  - patch
+- apiGroups:
+  - discovery.k8s.io
+  resources:
+  - endpointslices
+  verbs:
+  - list
+  - watch
+- apiGroups:
+  - gateway.networking.k8s.io
+  resources:
+  - gatewayclasses
+  - gateways
+  - httproutes
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - gateway.networking.k8s.io
+  resources:
+  - httproutes/status
+  - gateways/status
+  - gatewayclasses/status
+  verbs:
+  - update
+- apiGroups:
+  - spacegate.idealworld.group
+  resources:
+  - sgfilters
+  verbs:
+  - get
+  - list
+  - watch
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: spacegate
+subjects:
+- kind: ServiceAccount
+  name: spacegate
+  namespace: spacegate
+roleRef:
+  kind: ClusterRole
+  name: spacegate
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: spacegate
+  namespace: spacegate
+spec:
+  selector:
+    matchLabels:
+      app: spacegate
+  template:
+    metadata:
+      labels:
+        app: spacegate
+    spec:
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      serviceAccountName: spacegate
+      containers:
+      - name: spacegate
+        image: ecfront/spacegateway:latest
+        imagePullPolicy: IfNotPresent
+#        env:
+#        - name: RUST_LOG
+#          value: info,spacegate_kernel=trace
+# ---        
+# apiVersion: apps/v1
+# kind: Deployment
+# metadata:
+#   name: spacegate
+#   namespace: spacegate
+# spec:
+#   replicas: 1
+#   selector:
+#     matchLabels:
+#       app: spacegate
+#   template:
+#     metadata:
+#       labels:
+#         app: spacegate
+#     spec:
+#       shareProcessNamespace: true
+#       serviceAccountName: spacegate
+#       containers:
+#       - name: spacegate
+#         image: ecfront/spacegate:0.1.0-alpha.2
+#         imagePullPolicy: IfNotPresent
+#         securityContext:
+#           runAsUser: 1001
+#         volumeMounts:
+#         - name: kubeconfig
+#           readOnly: true
+#           mountPath: /kube
+#       volumes:
+#       - name: kubeconfig
+#         secret:
+#           secretName: kubeconfig

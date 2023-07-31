@@ -7,7 +7,7 @@ use super::clients::iam_log_client::{IamLogClient, LogParamTag};
 use super::iam_cert_phone_vcode_serv::IamCertPhoneVCodeServ;
 use super::{iam_account_serv::IamAccountServ, iam_cert_serv::IamCertServ, iam_tenant_serv::IamTenantServ};
 use crate::basic::dto::iam_account_dto::{IamAccountAddByLdapResp, IamAccountAggModifyReq, IamAccountExtSysAddReq, IamAccountExtSysBatchAddReq};
-use crate::basic::dto::iam_cert_dto::{IamCertPhoneVCodeAddReq, IamThirdIntegrationConfigDto};
+use crate::basic::dto::iam_cert_dto::{IamCertPhoneVCodeAddReq, IamThirdIntegrationConfigDto, IamThirdIntegrationSyncStatusDto};
 use crate::basic::serv::iam_cert_user_pwd_serv::IamCertUserPwdServ;
 use crate::console_passport::dto::iam_cp_cert_dto::IamCpUserPwdBindWithLdapReq;
 use crate::console_passport::serv::iam_cp_cert_user_pwd_serv::IamCpCertUserPwdServ;
@@ -39,6 +39,8 @@ use bios_basic::rbum::{
     },
 };
 use serde::{Deserialize, Serialize};
+
+use crate::iam_config::IamConfig;
 use tardis::regex::Regex;
 use tardis::web::poem_openapi;
 use tardis::{
@@ -687,6 +689,13 @@ impl IamCertLdapServ {
 
     //同步ldap人员到iam
     pub async fn iam_sync_ldap_user_to_iam(sync_config: IamThirdIntegrationConfigDto, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
+        let _ = funs
+            .cache()
+            .set(
+                &funs.conf::<IamConfig>().cache_key_sync_ldap_status,
+                &TardisFuns::json.obj_to_string(&IamThirdIntegrationSyncStatusDto { total: 0, success: 0, failed: 0 })?,
+            )
+            .await;
         let mut msg = "".to_string();
         let (mut ldap_client, cert_conf, cert_conf_id) = Self::get_ldap_client(Some(ctx.own_paths.clone()), "", funs, ctx).await?;
         if ldap_client.bind_by_dn(&cert_conf.principal, &cert_conf.credentials).await?.is_none() {
@@ -708,7 +717,16 @@ impl IamCertLdapServ {
             ldap_id_to_account_map.insert(r.account_id.clone(), r);
         });
 
-        ldap_client.unbind().await?;
+        let (mut total, mut success, mut failed) = (ldap_account.len(), 0, 0);
+
+        let _ = funs
+            .cache()
+            .set(
+                &funs.conf::<IamConfig>().cache_key_sync_ldap_status,
+                &TardisFuns::json.obj_to_string(&IamThirdIntegrationSyncStatusDto { total, success, failed })?,
+            )
+            .await;
+        let _ = ldap_client.unbind().await;
 
         let certs = IamCertServ::find_certs(
             &RbumCertFilterReq {
@@ -759,74 +777,86 @@ impl IamCertLdapServ {
                 //     continue;
                 // }
 
-                // 如果有手机号配置那么就更新手机号
-                let phone_cert_conf_id = IamCertServ::get_cert_conf_id_by_kind(&IamCertKernelKind::PhoneVCode.to_string(), Some(ctx.own_paths.clone()), &funs).await?;
-                if let Some(phone_cert) = RbumCertServ::find_one_rbum(
-                    &RbumCertFilterReq {
-                        basic: RbumBasicFilterReq {
-                            own_paths: Some(ctx.own_paths.clone()),
-                            with_sub_own_paths: true,
-                            ignore_scope: true,
+                if !iam_account_ext_sys_resp.mobile.is_empty() {
+                    // 如果有手机号配置那么就更新手机号
+                    let phone_cert_conf_id = IamCertServ::get_cert_conf_id_by_kind(&IamCertKernelKind::PhoneVCode.to_string(), Some(ctx.own_paths.clone()), &funs).await?;
+                    if let Some(phone_cert) = RbumCertServ::find_one_rbum(
+                        &RbumCertFilterReq {
+                            basic: RbumBasicFilterReq {
+                                own_paths: Some(ctx.own_paths.clone()),
+                                with_sub_own_paths: true,
+                                ignore_scope: true,
+                                ..Default::default()
+                            },
+                            status: Some(RbumCertStatusKind::Enabled),
+                            rel_rbum_kind: Some(RbumCertRelKind::Item),
+                            rel_rbum_id: Some(cert.rel_rbum_id.clone()),
+                            rel_rbum_cert_conf_ids: Some(vec![phone_cert_conf_id.clone()]),
                             ..Default::default()
                         },
-                        status: Some(RbumCertStatusKind::Enabled),
-                        rel_rbum_kind: Some(RbumCertRelKind::Item),
-                        rel_rbum_id: Some(cert.rel_rbum_id.clone()),
-                        rel_rbum_cert_conf_ids: Some(vec![phone_cert_conf_id.clone()]),
-                        ..Default::default()
-                    },
-                    &funs,
-                    ctx,
-                )
-                .await?
-                {
-                    let modify_result = RbumCertServ::modify_rbum(
-                        &phone_cert.id,
-                        &mut RbumCertModifyReq {
-                            ak: Some(TrimString(iam_account_ext_sys_resp.mobile.clone())),
-                            sk: None,
-                            is_ignore_check_sk: false,
-                            ext: None,
-                            start_time: None,
-                            end_time: None,
-                            conn_uri: None,
-                            status: None,
-                        },
                         &funs,
                         ctx,
                     )
-                    .await;
-                    if let Some(e) = modify_result.err() {
-                        let err_msg = format!("modify phone cert_id:{} failed:{}", phone_cert.id, e);
-                        tardis::log::error!("{}", err_msg);
-                        msg = format!("{msg}{err_msg}\n");
-                    }
-                } else {
-                    //添加手机号
-                    if let Err(e) = IamCertPhoneVCodeServ::add_cert_skip_vcode(
-                        &IamCertPhoneVCodeAddReq {
-                            phone: TrimString(iam_account_ext_sys_resp.mobile.clone()),
-                        },
-                        cert.rel_rbum_id.as_str(),
-                        phone_cert_conf_id.as_str(),
-                        &funs,
-                        ctx,
-                    )
-                    .await
+                    .await?
                     {
-                        let err_msg = format!("add phone phone:{} failed:{}", iam_account_ext_sys_resp.mobile.clone(), e);
-                        tardis::log::error!("{}", err_msg);
-                        msg = format!("{msg}{err_msg}\n");
+                        let modify_result = RbumCertServ::modify_rbum(
+                            &phone_cert.id,
+                            &mut RbumCertModifyReq {
+                                ak: Some(TrimString(iam_account_ext_sys_resp.mobile.clone())),
+                                sk: None,
+                                is_ignore_check_sk: false,
+                                ext: None,
+                                start_time: None,
+                                end_time: None,
+                                conn_uri: None,
+                                status: None,
+                            },
+                            &funs,
+                            ctx,
+                        )
+                        .await;
+                        if let Some(e) = modify_result.err() {
+                            let err_msg = format!("modify phone cert_id:{} failed:{}", phone_cert.id, e);
+                            tardis::log::error!("{}", err_msg);
+                            msg = format!("{msg}{err_msg}\n");
+                        }
+                    } else {
+                        //添加手机号
+                        if let Err(e) = IamCertPhoneVCodeServ::add_cert_skip_vcode(
+                            &IamCertPhoneVCodeAddReq {
+                                phone: TrimString(iam_account_ext_sys_resp.mobile.clone()),
+                            },
+                            cert.rel_rbum_id.as_str(),
+                            phone_cert_conf_id.as_str(),
+                            &funs,
+                            ctx,
+                        )
+                        .await
+                        {
+                            let err_msg = format!("add phone phone:{} failed:{}", iam_account_ext_sys_resp.mobile.clone(), e);
+                            tardis::log::error!("{}", err_msg);
+                            msg = format!("{msg}{err_msg}\n");
+                            failed += 1;
+                            ldap_id_to_account_map.remove(&local_ldap_id);
+                            continue;
+                        }
                     }
                 }
 
                 ldap_id_to_account_map.remove(&local_ldap_id);
+                success += 1;
+                let _ = funs
+                    .cache()
+                    .set(
+                        &funs.conf::<IamConfig>().cache_key_sync_ldap_status,
+                        &TardisFuns::json.obj_to_string(&IamThirdIntegrationSyncStatusDto { total, success, failed })?,
+                    )
+                    .await;
             } else {
+                total += 1;
                 //ldap没有 iam有的 需要同步删除
-                match sync_config.account_way_to_delete {
-                    WayToDelete::DoNotDelete => {
-                        continue;
-                    }
+                let delete_result = match sync_config.account_way_to_delete {
+                    WayToDelete::DoNotDelete => Ok(()),
                     WayToDelete::DeleteCert => {
                         RbumCertServ::modify_rbum(
                             &cert.id,
@@ -843,7 +873,7 @@ impl IamCertLdapServ {
                             &funs,
                             ctx,
                         )
-                        .await?;
+                        .await
                     }
                     WayToDelete::Disable => {
                         IamAccountServ::modify_account_agg(
@@ -863,12 +893,23 @@ impl IamCertLdapServ {
                             &funs,
                             ctx,
                         )
-                        .await?;
+                        .await
                     }
-                    WayToDelete::DeleteAccount => {
-                        IamAccountServ::delete_item_with_all_rels(&cert.rel_rbum_id, &funs, ctx).await?;
+                    WayToDelete::DeleteAccount => IamAccountServ::delete_item_with_all_rels(&cert.rel_rbum_id, &funs, ctx).await.map(|_| ()),
+                };
+                match delete_result {
+                    Ok(_) => success += 1,
+                    Err(_) => {
+                        failed += 1;
                     }
                 }
+                let _ = funs
+                    .cache()
+                    .set(
+                        &funs.conf::<IamConfig>().cache_key_sync_ldap_status,
+                        &TardisFuns::json.obj_to_string(&IamThirdIntegrationSyncStatusDto { total, success, failed })?,
+                    )
+                    .await;
             };
             funs.commit().await?;
         }
@@ -942,8 +983,18 @@ impl IamCertLdapServ {
                 tardis::log::error!("{}", err_msg);
                 msg = format!("{msg}{err_msg}\n");
                 funs.rollback().await?;
+                failed += 1;
                 continue;
+            } else {
+                success += 1;
             }
+            let _ = funs
+                .cache()
+                .set(
+                    &funs.conf::<IamConfig>().cache_key_sync_ldap_status,
+                    &TardisFuns::json.obj_to_string(&IamThirdIntegrationSyncStatusDto { total, success, failed })?,
+                )
+                .await;
             funs.commit().await?;
             mock_ctx.execute_task().await?;
         }

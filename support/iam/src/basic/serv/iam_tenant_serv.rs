@@ -18,7 +18,9 @@ use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
 use crate::basic::domain::iam_tenant;
 use crate::basic::dto::iam_account_dto::IamAccountAggAddReq;
-use crate::basic::dto::iam_cert_conf_dto::{IamCertConfLdapResp, IamCertConfMailVCodeAddOrModifyReq, IamCertConfPhoneVCodeAddOrModifyReq, IamCertConfUserPwdAddOrModifyReq};
+use crate::basic::dto::iam_cert_conf_dto::{
+    IamCertConfLdapResp, IamCertConfMailVCodeAddOrModifyReq, IamCertConfPhoneVCodeAddOrModifyReq, IamCertConfTokenModifyReq, IamCertConfUserPwdAddOrModifyReq,
+};
 use crate::basic::dto::iam_config_dto::IamConfigAggOrModifyReq;
 use crate::basic::dto::iam_filer_dto::{IamConfigFilterReq, IamTenantFilterReq};
 use crate::basic::dto::iam_tenant_dto::{
@@ -36,10 +38,11 @@ use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::iam_config::{IamBasicConfigApi, IamBasicInfoManager, IamConfig};
 use crate::iam_constants;
 use crate::iam_constants::{RBUM_ITEM_ID_TENANT_LEN, RBUM_SCOPE_LEVEL_TENANT};
-use crate::iam_enumeration::{IamCertExtKind, IamCertKernelKind, IamCertOAuth2Supplier, IamConfigDataTypeKind, IamConfigKind, IamSetKind};
+use crate::iam_enumeration::{IamCertExtKind, IamCertKernelKind, IamCertOAuth2Supplier, IamCertTokenKind, IamConfigDataTypeKind, IamConfigKind, IamSetKind};
 
 use super::clients::iam_log_client::{IamLogClient, LogParamTag};
 use super::iam_cert_oauth2_serv::IamCertOAuth2Serv;
+use super::iam_cert_token_serv::IamCertTokenServ;
 use super::iam_config_serv::IamConfigServ;
 use super::iam_platform_serv::IamPlatformServ;
 
@@ -427,6 +430,21 @@ impl IamTenantServ {
             }
         }
 
+        if let Some(token_default_coexist_num) = &modify_req.token_default_coexist_num {
+            if let Some(cert_conf_by_token_default_id) = cert_confs.iter().find(|r| r.kind == IamCertTokenKind::TokenDefault.to_string()).map(|r| r.id.clone()) {
+                IamCertTokenServ::modify_cert_conf(
+                    &cert_conf_by_token_default_id,
+                    &IamCertConfTokenModifyReq {
+                        coexist_num: Some(*token_default_coexist_num),
+                        name: None,
+                        expire_sec: None,
+                    },
+                    funs,
+                    ctx,
+                )
+                .await?;
+            }
+        }
         //modify oauth2 config
         //The current oauth2 related configuration in the database/过滤出现在数据库中oauth2相关的配置
         let old_cert_conf_by_oauth2: Vec<_> = cert_confs.iter().filter(|r| r.kind == IamCertExtKind::OAuth2.to_string()).collect();
@@ -533,6 +551,7 @@ impl IamTenantServ {
                 cert_conf_by_oauth2,
                 cert_conf_by_ldap,
                 strict_security_mode: funs.conf::<IamConfig>().strict_security_mode,
+                token_default_coexist_num: cert_confs.iter().find(|r| r.kind == IamCertTokenKind::TokenDefault.to_string()).map(|r| r.coexist_num).unwrap_or(1),
             };
 
             Ok(tenant_config)

@@ -6,7 +6,7 @@ use tardis::{
     search::search_client::TardisSearchClient,
 };
 
-pub async fn init(bs_cert: &SpiBsCertResp, ctx: &TardisContext, mgr: bool) -> TardisResult<SpiBsInst> {
+pub async fn init(bs_cert: &SpiBsCertResp, ctx: &TardisContext, _mgr: bool) -> TardisResult<SpiBsInst> {
     let client = TardisSearchClient::init(&bs_cert.conn_uri, 60)?;
     let mut ext = HashMap::new();
     if !bs_cert.private {

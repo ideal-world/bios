@@ -1,5 +1,5 @@
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumCertConfFilterReq, RbumCertFilterReq};
-use bios_basic::rbum::helper::rbum_scope_helper;
+
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
@@ -335,7 +335,7 @@ impl IamCertPhoneVCodeServ {
                 ..Default::default()
             },
             funs,
-            &ctx,
+            ctx,
         )
         .await?
             > 0
@@ -356,7 +356,7 @@ impl IamCertPhoneVCodeServ {
                 ..Default::default()
             },
             funs,
-            &ctx,
+            ctx,
         )
         .await?
             > 0
@@ -457,7 +457,7 @@ impl IamCertPhoneVCodeServ {
         let resp = IamCertServ::get_kernel_cert(account_id, &IamCertKernelKind::PhoneVCode, funs, ctx).await;
         match resp {
             Ok(cert) => {
-                let _ = SmsClient::send_pwd(&cert.ak, pwd, funs, ctx).await;
+                let _ = SmsClient::async_send_pwd(&cert.ak, pwd, funs, ctx).await;
             }
             Err(_) => info!("phone pwd not found"),
         }

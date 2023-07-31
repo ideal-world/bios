@@ -30,7 +30,7 @@ pub async fn auth(req: &mut AuthReq, is_mix_req: bool) -> TardisResult<AuthResp>
     let cache_client = TardisFuns::cache_by_module_or_default(DOMAIN_CODE);
     match ident(req, config, cache_client).await {
         Ok(ident) => match do_auth(&ident).await {
-            Ok(res_container_leaf_info) => match decrypt(&req.headers, &req.body, config, &res_container_leaf_info, is_mix_req).await {
+            Ok(res_container_leaf_info) => match decrypt(&req, config, &res_container_leaf_info, is_mix_req).await {
                 Ok((body, headers)) => Ok(AuthResp::ok(Some(&ident), body, headers, config)),
                 Err(e) => Ok(AuthResp::err(e, config)),
             },
@@ -478,13 +478,20 @@ pub async fn do_auth(ctx: &AuthContext) -> TardisResult<Option<ResContainerLeafI
 }
 
 pub async fn decrypt(
-    headers: &HashMap<String, String>,
-    body: &Option<String>,
+    req: &AuthReq,
     config: &AuthConfig,
     res_container_leaf_info: &Option<ResContainerLeafInfo>,
     is_mix_req: bool,
 ) -> TardisResult<(Option<String>, Option<HashMap<String, String>>)> {
-    if is_mix_req {
+    let headers = &req.headers;
+    let body = &req.body;
+    let mut is_skip = false;
+    for exclude_path in TardisFuns::cs_config::<AuthConfig>(DOMAIN_CODE).exclude_encrypt_decrypt_path.clone() {
+        if req.path.starts_with(&exclude_path) {
+            is_skip = true;
+        }
+    }
+    if is_mix_req || is_skip {
         return Ok((body.clone(), Some(headers.clone())));
     }
     if let Some(res_container_leaf_info) = res_container_leaf_info {

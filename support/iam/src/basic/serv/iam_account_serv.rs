@@ -5,9 +5,8 @@ use bios_sdk_invoke::clients::spi_search_client::SpiSearchClient;
 use bios_sdk_invoke::dto::search_item_dto::{SearchItemAddReq, SearchItemModifyReq, SearchItemVisitKeysReq};
 use itertools::Itertools;
 
-use ldap3::tokio::time::sleep;
 use std::collections::{HashMap, HashSet};
-use std::time::Duration;
+
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
@@ -17,7 +16,7 @@ use tardis::db::sea_orm::*;
 
 use tardis::serde_json::json;
 use tardis::web::web_resp::{TardisPage, Void};
-use tardis::{serde_json, tokio, TardisFuns, TardisFunsInst};
+use tardis::{tokio, TardisFunsInst};
 
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumCertFilterReq, RbumItemRelFilterReq};
 use bios_basic::rbum::dto::rbum_item_dto::{RbumItemKernelAddReq, RbumItemKernelModifyReq};
@@ -274,15 +273,13 @@ impl IamAccountServ {
                 )
                 .await?;
             }
-            // todo Add the ctx task queue
-            let _ = SmsClient::send_pwd(cert_phone, &pwd, funs, ctx).await;
+            let _ = SmsClient::async_send_pwd(cert_phone, &pwd, funs, ctx).await;
         }
         if let Some(cert_mail) = &add_req.cert_mail {
             if let Some(cert_conf) = IamCertServ::get_cert_conf_id_and_ext_opt_by_kind(&IamCertKernelKind::MailVCode.to_string(), Some(ctx.own_paths.clone()), funs).await? {
                 IamCertMailVCodeServ::add_cert(&IamCertMailVCodeAddReq { mail: cert_mail.to_string() }, &account_id, &cert_conf.id, funs, ctx).await?;
             }
-            // todo Add the ctx task queue
-            let _ = MailClient::send_pwd(cert_mail, &pwd, funs).await;
+            let _ = MailClient::async_send_pwd(cert_mail, &pwd, funs, ctx).await;
         }
         if let Some(role_ids) = &add_req.role_ids {
             for role_id in role_ids {
@@ -844,7 +841,7 @@ impl IamAccountServ {
         .await
     }
 
-    pub async fn async_delete_account_search(account_id: String, funs: &TardisFunsInst, ctx: TardisContext) -> TardisResult<()> {
+    pub async fn async_delete_account_search(account_id: String, _funs: &TardisFunsInst, ctx: TardisContext) -> TardisResult<()> {
         let ctx_clone = ctx.clone();
         ctx.add_async_task(Box::new(|| {
             Box::pin(async move {

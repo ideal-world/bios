@@ -127,7 +127,7 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
         .contains("TokenDefault"));
     assert_eq!(
         funs.cache().hlen(format!("{}{}", funs.conf::<IamConfig>().cache_key_account_info_, account_resp.account_id).as_str()).await?,
-        1
+        2
     );
 
     info!("【test_key_cache】 Change cert, expected no token record");
@@ -190,7 +190,7 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
         .contains("TokenDefault"));
     assert_eq!(
         funs.cache().hlen(format!("{}{}", funs.conf::<IamConfig>().cache_key_account_info_, account_resp.account_id).as_str()).await?,
-        1
+        2
     );
 
     info!("【test_key_cache】 Rest cert, expected no token record");
@@ -253,7 +253,7 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
         .contains("TokenDefault"));
     assert_eq!(
         funs.cache().hlen(format!("{}{}", funs.conf::<IamConfig>().cache_key_account_info_, account_resp.account_id).as_str()).await?,
-        1
+        2
     );
 
     let account_id = IamAccountServ::add_account_agg(
@@ -340,7 +340,7 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
         .contains("TokenDefault"));
     assert_eq!(
         funs.cache().hlen(format!("{}{}", funs.conf::<IamConfig>().cache_key_account_info_, account_id).as_str(),).await?,
-        2
+        3
     );
 
     info!("【test_key_cache】 Login by tenant again, expected two token records");
@@ -370,7 +370,7 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
         .contains("TokenDefault"));
     assert_eq!(
         funs.cache().hlen(format!("{}{}", funs.conf::<IamConfig>().cache_key_account_info_, account_id).as_str(),).await?,
-        2
+        3
     );
 
     info!("【test_key_cache】 Login by tenant again, expected two token records");
@@ -410,7 +410,7 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
         .contains("TokenDefault"));
     assert_eq!(
         funs.cache().hlen(format!("{}{}", funs.conf::<IamConfig>().cache_key_account_info_, account_id).as_str(),).await?,
-        2
+        3
     );
 
     let app_admin_context = IamIdentCacheServ::get_context(
@@ -500,7 +500,7 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
         .contains("TokenDefault"));
     assert_eq!(
         funs.cache().hlen(format!("{}{}", funs.conf::<IamConfig>().cache_key_account_info_, account_id).as_str(),).await?,
-        2
+        3
     );
 
     info!("【test_key_cache】 Enable role and login, expected two token records");
@@ -556,7 +556,7 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
         .contains("TokenDefault"));
     assert_eq!(
         funs.cache().hlen(format!("{}{}", funs.conf::<IamConfig>().cache_key_account_info_, account_id).as_str(),).await?,
-        2
+        3
     );
 
     // todo: test account disabled
@@ -637,7 +637,7 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
     );
     assert_eq!(
         funs.cache().hlen(format!("{}{}", funs.conf::<IamConfig>().cache_key_account_info_, account_id).as_str(),).await?,
-        2
+        3
     );
 
     info!("【test_key_cache】 Login again with disabled app, expected one token record");
@@ -684,7 +684,7 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
         .contains("TokenDefault"));
     assert_eq!(
         funs.cache().hlen(format!("{}{}", funs.conf::<IamConfig>().cache_key_account_info_, account_id).as_str(),).await?,
-        2
+        3
     );
 
     info!("【test_key_cache】 Enable app and login, expected two token records");
@@ -736,7 +736,7 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
         .contains("TokenDefault"));
     assert_eq!(
         funs.cache().hlen(format!("{}{}", funs.conf::<IamConfig>().cache_key_account_info_, account_id).as_str(),).await?,
-        2
+        3
     );
 
     //---------------------------------- Test Tenant ----------------------------------
@@ -826,7 +826,7 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
 
     assert_eq!(
         funs.cache().hlen(format!("{}{}", funs.conf::<IamConfig>().cache_key_account_rel_, account_id).as_str(),).await?,
-        1
+        2
     );
     assert!(funs
         .cache()
@@ -836,7 +836,7 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
         .contains("TokenDefault"));
     assert_eq!(
         funs.cache().hlen(format!("{}{}", funs.conf::<IamConfig>().cache_key_account_info_, account_id).as_str(),).await?,
-        2
+        3
     );
 
     //---------------------------------- Test Res ----------------------------------

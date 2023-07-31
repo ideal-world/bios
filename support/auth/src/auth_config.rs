@@ -45,6 +45,8 @@ pub struct AuthConfig {
     ///
     /// 当请求是加密的时候,true:是默认响应也需要加密，false:反之不用加密
     pub default_resp_crypto: bool,
+    /// Exclude encryption and decryption path.use prefix match.
+    pub exclude_encrypt_decrypt_path: Vec<String>,
 }
 
 impl Default for AuthConfig {
@@ -82,6 +84,7 @@ impl Default for AuthConfig {
             query_own_paths: "own_paths".to_string(),
 
             spi: IamSpiConfig::default(),
+            exclude_encrypt_decrypt_path: vec!["/iam/ci/".to_string()],
         }
     }
 }

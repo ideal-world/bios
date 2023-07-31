@@ -20,9 +20,11 @@ use bios_basic::{
         spi_constants::{self, SPI_IDENT_REL_TAG},
     },
 };
+use bios_sdk_invoke::clients::spi_log_client::{LogDynamicContentReq, SpiLogClient};
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
     log::info,
+    tokio,
     web::web_resp::TardisPage,
     TardisFunsInst,
 };
@@ -38,6 +40,8 @@ pub struct PluginBsServ;
 
 impl PluginBsServ {
     pub async fn add_or_modify_plugin_rel_agg(bs_id: &str, app_tenant_id: &str, add_req: &mut PluginBsAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
+        let ctx_clone = ctx.clone();
+        let bs_id_clone = bs_id.to_string();
         if !ctx.own_paths.contains(app_tenant_id) {
             return Err(funs.err().unauthorized(
                 "spi_bs",
@@ -48,6 +52,32 @@ impl PluginBsServ {
         }
         let bs = SpiBsServ::peek_item(bs_id, &SpiBsFilterReq::default(), funs, ctx).await?;
         if Self::exist_bs(bs_id, app_tenant_id, funs, ctx).await? {
+            ctx.add_async_task(Box::new(|| {
+                Box::pin(async move {
+                    let task_handle = tokio::spawn(async move {
+                        let funs = crate::get_tardis_inst();
+                        let _ = SpiLogClient::add_dynamic_log(
+                            &LogDynamicContentReq {
+                                details: None,
+                                sub_kind: None,
+                                content: Some(format!("插件 {}", bs.name)),
+                            },
+                            None,
+                            Some("dynamic_log_plugin_manage".to_string()),
+                            Some(bs_id_clone),
+                            Some("编辑".to_string()),
+                            None,
+                            Some(tardis::chrono::Utc::now().to_rfc3339()),
+                            &funs,
+                            &ctx_clone,
+                        )
+                        .await;
+                    });
+                    task_handle.await.unwrap();
+                    Ok(())
+                })
+            }))
+            .await?;
             let rel_agg = Self::get_bs_rel_agg(bs_id, app_tenant_id, funs, ctx).await?;
             for attrs in rel_agg.attrs {
                 RbumRelAttrServ::delete_rbum(&attrs.id, funs, ctx).await?;
@@ -71,16 +101,61 @@ impl PluginBsServ {
                 }
             }
         } else {
+            ctx.add_async_task(Box::new(|| {
+                Box::pin(async move {
+                    let task_handle = tokio::spawn(async move {
+                        let funs = crate::get_tardis_inst();
+                        let _ = SpiLogClient::add_dynamic_log(
+                            &LogDynamicContentReq {
+                                details: None,
+                                sub_kind: None,
+                                content: Some(format!("插件 {}", bs.name)),
+                            },
+                            None,
+                            Some("dynamic_log_plugin_manage".to_string()),
+                            Some(bs_id_clone),
+                            Some("新增".to_string()),
+                            None,
+                            Some(tardis::chrono::Utc::now().to_rfc3339()),
+                            &funs,
+                            &ctx_clone,
+                        )
+                        .await;
+                    });
+                    task_handle.await.unwrap();
+                    Ok(())
+                })
+            }))
+            .await?;
+
             SpiBsServ::add_rel_agg(bs.id.as_str(), app_tenant_id, add_req.attrs.clone(), None, funs, ctx).await?;
         }
         Ok(bs.id)
     }
 
     pub async fn delete_plugin_rel(bs_id: &str, app_tenant_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let ctx_clone = ctx.clone();
         let rel_agg = Self::get_bs_rel_agg(bs_id, app_tenant_id, funs, ctx).await?;
-        if PluginRelServ::exist_rels(&PluginAppBindRelKind::PluginAppBindKind, app_tenant_id, &rel_agg.rel.id, funs, ctx).await? {
+        if PluginRelServ::exist_to_simple_rels(&PluginAppBindRelKind::PluginAppBindKind, &rel_agg.rel.id, funs, ctx).await? {
             return Err(funs.err().unauthorized("spi_bs", "delete_plugin_rel", &format!("The pluging exists bound"), "401-spi-plugin-bind-exist"));
         }
+        let bs = SpiBsServ::peek_item(bs_id, &SpiBsFilterReq::default(), funs, ctx).await?;
+        let _ = SpiLogClient::add_dynamic_log(
+            &LogDynamicContentReq {
+                details: None,
+                sub_kind: None,
+                content: Some(format!("插件 {}", bs.name)),
+            },
+            None,
+            Some("dynamic_log_plugin_manage".to_string()),
+            Some(bs_id.to_string()),
+            Some("删除".to_string()),
+            None,
+            Some(tardis::chrono::Utc::now().to_rfc3339()),
+            &funs,
+            &ctx_clone,
+        )
+        .await;
         SpiBsServ::delete_rel(bs_id, app_tenant_id, &funs, &ctx).await?;
         Ok(())
     }

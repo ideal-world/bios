@@ -11,7 +11,7 @@ EXCEPTION
 END;$$;
 
 -- test
--- SELECT to_tsquery('public.chinese_zh', '保障房资金压力');
+-- SELECT plainto_tsquery('public.chinese_zh', '保障房资金压力');
 
 -- list all tokens
 -- select ts_token_type('zhparser');
