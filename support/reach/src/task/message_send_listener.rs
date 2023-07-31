@@ -49,7 +49,7 @@ impl MessageSendListener {
 
         let owner_path = rbum_scope_helper::get_pre_paths(RBUM_SCOPE_LEVEL_TENANT as i16, &message.own_paths).unwrap_or_default();
         for account_id in message.to_res_ids.split(';') {
-            if let Ok(mut resp) = iam_client.get_account(account_id, &owner_path).await {
+            if let Ok(mut resp) = iam_client.get_account(iam_client.account, account_id, &owner_path).await {
                 let Some(phone) = resp.certs.remove(PHONE_V_CODE) else {
                     log::warn!("[Reach] Notify Phone channel send error, missing [PhoneVCode] parameters, resp: {resp:?}");
                     continue

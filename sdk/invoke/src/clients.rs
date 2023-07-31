@@ -99,10 +99,10 @@ macro_rules! taidis_api {
         $crate::taidis_api!($fn_name @query $method {$($args_i:$args_t,)*} {$($path,)*} {;} $($tt)*);
     };
     ($fn_name:ident @path $method:ident {$($args_i:ident:$args_t:ty,)*} {$($path:expr,)*} [$next:ident, $($rest_path:tt)*] $($tt:tt)*) => {
-        $crate::taidis_api!($fn_name @path $method {$($args_i:$args_t,)* $next: (&str),} {$($path,)* $next,} [$($rest_path)*] $($tt)*);
+        $crate::taidis_api!($fn_name @path $method {$($args_i:$args_t,)* $next: &str,} {$($path,)* $next,} [$($rest_path)*] $($tt)*);
     };
     ($fn_name:ident @path $method:ident {$($args_i:ident:$args_t:ty,)*} {$($path:expr,)*} [$next:ident $(,)?] $($tt:tt)*) => {
-        $crate::taidis_api!($fn_name @path $method {$($args_i:$args_t,)* $next: (&str),} {$($path,)* $next,} [] $($tt)*);
+        $crate::taidis_api!($fn_name @path $method {$($args_i:$args_t,)* $next: &str,} {$($path,)* $next,} [] $($tt)*);
     };
     ($fn_name:ident @path $method:ident {$($args_i:ident:$args_t:ty,)*} {$($path:expr,)*} [$next:literal, $($rest_path:tt)*] $($tt:tt)*) => {
         $crate::taidis_api!($fn_name @path $method {$($args_i:$args_t,)*} {$($path,)* $next,} [$($rest_path)*] $($tt)*);
@@ -285,8 +285,8 @@ pub trait SimpleInvokeClient {
     }
     fn get_url(&self, path: &[&str], query: &str) -> String {
         format!(
-            "{base}/{domain}/{path}?{query}",
-            domain = Self::DOMAIN_CODE,
+            "{base}/{path}?{query}",
+            // domain = Self::DOMAIN_CODE,
             base = self.get_base_url().trim_end_matches('/'),
             path = path.join("/").trim_matches('/'),
             query = query

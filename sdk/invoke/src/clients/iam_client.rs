@@ -2,9 +2,11 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 use tardis::{
-    basic::{dto::TardisContext, result::TardisResult},
+    basic::dto::TardisContext,
     TardisFunsInst, web::poem_openapi,
 };
+
+use crate::impl_taidis_api_client;
 
 use super::SimpleInvokeClient;
 
@@ -44,18 +46,7 @@ pub struct IamAccountSummaryAggResp {
     pub orgs: Vec<String>,
 }
 
-impl IamClient<'_> {
-    pub async fn get_account(&self, id: &str, tenant_id: &str) -> TardisResult<IamAccountSummaryAggResp> {
-        let ctx = self.get_tardis_context_header()?;
-        let url = format!(
-            "{base_url}/{account}/{id}?tenant_id={tenant_id}",
-            base_url = self.base_url,
-            account = self.account,
-            id = id,
-            tenant_id = tenant_id
-        );
-        let resp = self.funs.web_client().get::<IamAccountSummaryAggResp>(&url, Some(vec![ctx])).await?;
-        let resp_body = resp.body.ok_or_else(|| self.funs.err().internal_error("iam-client", "get_account", "response", "500-iam_client-request_fail"))?;
-        Ok(resp_body)
-    }
+impl_taidis_api_client! {
+    IamClient<'_>:
+    {get_account, get [account, id] {tenant_id} IamAccountSummaryAggResp}
 }

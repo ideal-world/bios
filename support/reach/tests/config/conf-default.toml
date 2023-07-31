@@ -7,7 +7,7 @@ app_secret = "test"
 
 sms_pwd_template_id = "sms_pwd_template_id"
 sms_general_from = "bios-reach-test"
-[csm.reach]
+[csm.reach.invoke]
 iam_get_account = "iam_get_account"
 
 [fw.web_server]
