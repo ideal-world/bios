@@ -29,7 +29,7 @@ pub enum FlowExternalParams {
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
 pub struct FlowExternalFetchRelObjReq {
     pub obj_tag: String,
-    pub obj_current_state_id: Option<String>,
+    pub obj_current_state_id: Option<Vec<String>>,
     pub change_condition: Option<StateChangeCondition>,
 }
 

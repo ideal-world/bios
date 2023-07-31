@@ -174,7 +174,7 @@ pub enum FlowTransitionActionChangeInfo {
 pub enum FlowTransitionActionChangeKind {
     #[sea_orm(string_value = "var")]
     Var,
-    #[sea_orm(string_value = "progress")]
+    #[sea_orm(string_value = "state")]
     State,
 }
 
@@ -193,7 +193,7 @@ pub struct FlowTransitionActionByStateChangeInfo {
     pub kind: FlowTransitionActionChangeKind,
     pub obj_tag: String,
     pub describe: String,
-    pub obj_current_state_id: Option<String>,
+    pub obj_current_state_id: Option<Vec<String>>,
     pub change_condition: Option<StateChangeCondition>,
     pub changed_state_id: String,
 }
