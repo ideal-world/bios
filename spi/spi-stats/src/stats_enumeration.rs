@@ -19,6 +19,8 @@ pub enum StatsDataTypeKind {
     Int,
     #[oai(rename = "float")]
     Float,
+    #[oai(rename = "double")]
+    Double,
     #[oai(rename = "bool")]
     Boolean,
     #[oai(rename = "date")]
@@ -39,7 +41,8 @@ impl StatsDataTypeKind {
         match self {
             StatsDataTypeKind::String => "character varying",
             StatsDataTypeKind::Int => "integer",
-            StatsDataTypeKind::Float => "double precision",
+            StatsDataTypeKind::Float => "real",
+            StatsDataTypeKind::Double => "double precision",
             StatsDataTypeKind::Boolean => "boolean",
             StatsDataTypeKind::Date => "date",
             StatsDataTypeKind::DateTime => "timestamp with time zone",
@@ -63,6 +66,7 @@ impl StatsDataTypeKind {
             }
             StatsDataTypeKind::Int => sea_orm::Value::from(json_value.as_i64().ok_or(self.err_json_value_type())? as i32),
             StatsDataTypeKind::Float => sea_orm::Value::from(json_value.as_f64().ok_or(self.err_json_value_type())? as f32),
+            StatsDataTypeKind::Double => sea_orm::Value::from(json_value.as_f64().ok_or(self.err_json_value_type())? as f64),
             StatsDataTypeKind::Boolean => sea_orm::Value::from(json_value.as_bool().ok_or(self.err_json_value_type())?),
             StatsDataTypeKind::Date => {
                 sea_orm::Value::from(NaiveDate::parse_from_str(json_value.as_str().ok_or(self.err_json_value_type())?, "%Y-%m-%d").map_err(|_| err_parse_time())?)
@@ -78,6 +82,7 @@ impl StatsDataTypeKind {
             StatsDataTypeKind::String => sea_orm::sea_query::ArrayType::String,
             StatsDataTypeKind::Int => sea_orm::sea_query::ArrayType::Int,
             StatsDataTypeKind::Float => sea_orm::sea_query::ArrayType::Float,
+            StatsDataTypeKind::Double => sea_orm::sea_query::ArrayType::Double,
             StatsDataTypeKind::Boolean => sea_orm::sea_query::ArrayType::Bool,
             StatsDataTypeKind::Date => sea_orm::sea_query::ArrayType::TimeDate,
             StatsDataTypeKind::DateTime => sea_orm::sea_query::ArrayType::TimeDateTimeWithTimeZone,
@@ -91,6 +96,7 @@ impl StatsDataTypeKind {
             StatsDataTypeKind::String => sea_orm::Value::from(query_result.try_get::<String>("", key)?),
             StatsDataTypeKind::Int => sea_orm::Value::from(query_result.try_get::<i32>("", key)?),
             StatsDataTypeKind::Float => sea_orm::Value::from(query_result.try_get::<f32>("", key)?),
+            StatsDataTypeKind::Double => sea_orm::Value::from(query_result.try_get::<f64>("", key)?),
             StatsDataTypeKind::Boolean => sea_orm::Value::from(query_result.try_get::<bool>("", key)?),
             StatsDataTypeKind::Date => sea_orm::Value::from(query_result.try_get::<NaiveDate>("", key)?),
             StatsDataTypeKind::DateTime => sea_orm::Value::from(query_result.try_get::<DateTimeWithTimeZone>("", key)?),
@@ -102,6 +108,7 @@ impl StatsDataTypeKind {
             StatsDataTypeKind::String => sea_orm::Value::from(query_result.try_get::<Vec<String>>("", key)?),
             StatsDataTypeKind::Int => sea_orm::Value::from(query_result.try_get::<Vec<i32>>("", key)?),
             StatsDataTypeKind::Float => sea_orm::Value::from(query_result.try_get::<Vec<f32>>("", key)?),
+            StatsDataTypeKind::Double => sea_orm::Value::from(query_result.try_get::<Vec<f64>>("", key)?),
             StatsDataTypeKind::Boolean => sea_orm::Value::from(query_result.try_get::<Vec<bool>>("", key)?),
             StatsDataTypeKind::Date => sea_orm::Value::from(query_result.try_get::<Vec<NaiveDate>>("", key)?),
             StatsDataTypeKind::DateTime => sea_orm::Value::from(query_result.try_get::<Vec<DateTimeWithTimeZone>>("", key)?),
@@ -137,6 +144,7 @@ impl StatsDataTypeKind {
             if multi_values && (time_window_fun.is_some() || op != &BasicQueryOpKind::In)
                 || self == &StatsDataTypeKind::Int && (op == &BasicQueryOpKind::In || op == &BasicQueryOpKind::Like)
                 || self == &StatsDataTypeKind::Float && (op == &BasicQueryOpKind::In || op == &BasicQueryOpKind::Like)
+                || self == &StatsDataTypeKind::Double && (op == &BasicQueryOpKind::In || op == &BasicQueryOpKind::Like)
                 || self == &StatsDataTypeKind::Boolean && (op != &BasicQueryOpKind::Eq && op != &BasicQueryOpKind::Ne)
                 || self == &StatsDataTypeKind::Date && (op == &BasicQueryOpKind::In || op == &BasicQueryOpKind::Like)
                 || self == &StatsDataTypeKind::DateTime && (op == &BasicQueryOpKind::In || op == &BasicQueryOpKind::Like)
@@ -203,6 +211,7 @@ impl StatsDataTypeKind {
             if multi_values && (fun.is_some() || op != &BasicQueryOpKind::In)
                 || self == &StatsDataTypeKind::Int && (op == &BasicQueryOpKind::In || op == &BasicQueryOpKind::Like)
                 || self == &StatsDataTypeKind::Float && (op == &BasicQueryOpKind::In || op == &BasicQueryOpKind::Like)
+                || self == &StatsDataTypeKind::Double && (op == &BasicQueryOpKind::In || op == &BasicQueryOpKind::Like)
                 || self == &StatsDataTypeKind::Boolean && (op != &BasicQueryOpKind::Eq && op != &BasicQueryOpKind::Ne)
                 || self == &StatsDataTypeKind::Date && (op == &BasicQueryOpKind::In || op == &BasicQueryOpKind::Like)
                 || self == &StatsDataTypeKind::DateTime && (op == &BasicQueryOpKind::In || op == &BasicQueryOpKind::Like)
