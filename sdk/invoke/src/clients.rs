@@ -3,7 +3,7 @@ use std::fmt::Display;
 use tardis::{
     basic::{dto::TardisContext, error::TardisError, result::TardisResult},
     web::web_client::TardisHttpResponse,
-    TardisFuns,
+    TardisFunsInst, TardisFuns,
 };
 
 use crate::invoke_constants::TARDIS_CONTEXT;
@@ -174,7 +174,7 @@ macro_rules! taidis_api {
             )*
             let url = self.get_url(&[$($path,)*], query.as_ref());
             let header = self.get_tardis_context_header()?;
-            let resp = self.funs.web_client().get::<$Resp>(&url, Some(vec![header])).await?;
+            let resp = self.get_funs().web_client().get::<$Resp>(&url, Some(vec![header])).await?;
             Self::extract_response(resp)
         }
     };
@@ -195,7 +195,7 @@ macro_rules! taidis_api {
             )*
             let url = self.get_url(&[$($path,)*], query.as_ref());
             let header = self.get_tardis_context_header()?;
-            let resp = self.funs.web_client().post::<$Body, $Resp>(&url, body, Some(vec![header])).await?;
+            let resp = self.get_funs().web_client().post::<$Body, $Resp>(&url, body, Some(vec![header])).await?;
             Self::extract_response(resp)
         }
     };
@@ -216,7 +216,7 @@ macro_rules! taidis_api {
             )*
             let url = self.get_url(&[$($path,)*], query.as_ref());
             let header = self.get_tardis_context_header()?;
-            let resp = self.funs.web_client().put::<$Body, $Resp>(&url, body, Some(vec![header])).await?;
+            let resp = self.get_funs().web_client().put::<$Body, $Resp>(&url, body, Some(vec![header])).await?;
             Self::extract_response(resp)
         }
     };
@@ -237,7 +237,7 @@ macro_rules! taidis_api {
             )*
             let url = self.get_url(&[$($path,)*], query.as_ref());
             let header = self.get_tardis_context_header()?;
-            let resp = self.funs.web_client().delete::<$Resp>(&url, Some(vec![header])).await?;
+            let resp = self.get_funs().web_client().delete::<$Resp>(&url, Some(vec![header])).await?;
             Self::extract_response(resp)
         }
     };
@@ -273,6 +273,7 @@ impl QueryBuilder {
 pub trait SimpleInvokeClient {
     const DOMAIN_CODE: &'static str;
     fn get_ctx(&self) -> &TardisContext;
+    fn get_funs(&self) -> &TardisFunsInst;
     fn get_base_url(&self) -> &str;
 
     /*

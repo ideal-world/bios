@@ -27,6 +27,10 @@ impl SimpleInvokeClient for Client<'_> {
     fn get_base_url(&self) -> &str {
         self.base_url
     }
+
+    fn get_funs(&self) -> &TardisFunsInst {
+        self.funs
+    }
 }
 
 impl_taidis_api_client! {

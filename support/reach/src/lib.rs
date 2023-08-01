@@ -9,6 +9,7 @@ mod domain;
 mod dto;
 mod errors;
 mod init;
+#[cfg(feature = "simple-client")]
 pub mod invoke;
 mod task;
 pub use init::init;

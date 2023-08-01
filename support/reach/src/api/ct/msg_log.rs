@@ -1,8 +1,7 @@
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
-
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem::web::Path;
-
+use simple_invoke_client_macro::simple_invoke_client;
 use tardis::web::poem_openapi;
 use tardis::web::web_resp::{TardisApiResult, TardisResp};
 
@@ -13,7 +12,7 @@ use crate::serv::*;
 #[derive(Clone, Default)]
 /// 消息记录-租户控制台
 pub struct ReachMsgLogCtApi;
-
+#[simple_invoke_client(Client, "/ct/msg/log")]
 #[poem_openapi::OpenApi(prefix_path = "/ct/msg/log")]
 impl ReachMsgLogCtApi {
     /// 获取所有消息记录数据

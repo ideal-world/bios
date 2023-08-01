@@ -37,6 +37,10 @@ impl<'a> SimpleInvokeClient for IamClient<'a> {
     fn get_base_url(&self) -> &str {
         self.base_url
     }
+
+    fn get_funs(&self) -> &tardis::TardisFunsInst {
+        self.funs
+    }
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
