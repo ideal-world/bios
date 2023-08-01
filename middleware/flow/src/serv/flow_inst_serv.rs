@@ -40,7 +40,7 @@ use crate::{
         },
         flow_model_dto::{FlowModelDetailResp, FlowModelFilterReq},
         flow_state_dto::{FlowStateFilterReq, FlowSysStateKind},
-        flow_transition_dto::{FlowTransitionActionByStateChangeInfo, FlowTransitionActionChangeInfo, FlowTransitionDetailResp},
+        flow_transition_dto::{FlowTransitionActionByStateChangeInfo, FlowTransitionActionChangeInfo, FlowTransitionDetailResp, FlowTransitionActionChangeKind},
     },
     flow_constants,
     serv::{flow_model_serv::FlowModelServ, flow_state_serv::FlowStateServ},
@@ -534,77 +534,81 @@ impl FlowInstServ {
             .await?
             .ok_or_else(|| funs.err().not_found("flow_inst_serv", "do_post_change", "not found external url", "404-external-data-url-not-exist"))?;
         for post_change in post_changes {
-            match post_change {
-                FlowTransitionActionChangeInfo::Var(change_info) => {
-                    let resp: TardisResp<FlowExternalModifyFieldResp> = funs
-                        .web_client()
-                        .post(
-                            &external_url.value.to_string(),
-                            &FlowExternalReq {
-                                kind: FlowExternalKind::ModifyField,
-                                curr_tag: current_model.tag.clone(),
-                                curr_bus_obj_id: current_inst.rel_business_obj_id.clone(),
-                                params: FlowExternalParams::ModifyField(FlowExternalModifyFieldReq {
-                                    current: change_info.current,
-                                    rel_tag: change_info.obj_tag.clone(),
-                                    var_name: change_info.var_name.clone(),
-                                    value: change_info.changed_val.clone(),
-                                }),
-                            },
-                            None,
-                        )
-                        .await?
-                        .body
-                        .ok_or_else(|| funs.err().internal_error("flow_inst_serv", "do_post_change", "illegal response", "500-external-illegal-response"))?;
-                    if resp.code == "200" {
-                        let _: Option<TardisResp<FlowExternalModifyFieldResp>> = funs
+            match post_change.kind {
+                FlowTransitionActionChangeKind::Var => {
+                    if let Some(change_info) = post_change.var_change_info {
+                        let resp: TardisResp<FlowExternalModifyFieldResp> = funs
                             .web_client()
                             .post(
                                 &external_url.value.to_string(),
                                 &FlowExternalReq {
-                                    kind: FlowExternalKind::NotifyChanges,
+                                    kind: FlowExternalKind::ModifyField,
                                     curr_tag: current_model.tag.clone(),
                                     curr_bus_obj_id: current_inst.rel_business_obj_id.clone(),
-                                    params: FlowExternalParams::NotifyChanges(FlowExternalNotifyChangesReq {
-                                        rel_tag: if change_info.current {
-                                            current_model.tag.clone()
-                                        } else {
-                                            change_info.obj_tag.clone().unwrap_or_default()
-                                        },
-                                        rel_bus_obj_ids: resp.data.unwrap_or_default().rel_bus_obj_ids,
-                                        state_id: None,
-                                        var_name: Some(change_info.var_name),
-                                        value: change_info.changed_val,
+                                    params: FlowExternalParams::ModifyField(FlowExternalModifyFieldReq {
+                                        current: change_info.current,
+                                        rel_tag: change_info.obj_tag.clone(),
+                                        var_name: change_info.var_name.clone(),
+                                        value: change_info.changed_val.clone(),
                                     }),
                                 },
                                 None,
                             )
                             .await?
-                            .body;
+                            .body
+                            .ok_or_else(|| funs.err().internal_error("flow_inst_serv", "do_post_change", "illegal response", "500-external-illegal-response"))?;
+                        if resp.code == "200" {
+                            let _: Option<TardisResp<FlowExternalModifyFieldResp>> = funs
+                                .web_client()
+                                .post(
+                                    &external_url.value.to_string(),
+                                    &FlowExternalReq {
+                                        kind: FlowExternalKind::NotifyChanges,
+                                        curr_tag: current_model.tag.clone(),
+                                        curr_bus_obj_id: current_inst.rel_business_obj_id.clone(),
+                                        params: FlowExternalParams::NotifyChanges(FlowExternalNotifyChangesReq {
+                                            rel_tag: if change_info.current {
+                                                current_model.tag.clone()
+                                            } else {
+                                                change_info.obj_tag.clone().unwrap_or_default()
+                                            },
+                                            rel_bus_obj_ids: resp.data.unwrap_or_default().rel_bus_obj_ids,
+                                            state_id: None,
+                                            var_name: Some(change_info.var_name),
+                                            value: change_info.changed_val,
+                                        }),
+                                    },
+                                    None,
+                                )
+                                .await?
+                                .body;
+                        }   
                     }
-                }
-                FlowTransitionActionChangeInfo::State(change_info) => {
-                    let resp: TardisResp<FlowExternalFetchRelObjResp> = funs
-                        .web_client()
-                        .post(
-                            &external_url.value.to_string(),
-                            &FlowExternalReq {
-                                kind: FlowExternalKind::FetchRelObj,
-                                curr_tag: current_model.tag.clone(),
-                                curr_bus_obj_id: current_inst.rel_business_obj_id.clone(),
-                                params: FlowExternalParams::FetchRelObj(FlowExternalFetchRelObjReq {
-                                    obj_tag: current_model.tag.clone(),
-                                    obj_current_state_id: change_info.obj_current_state_id.clone(),
-                                    change_condition: change_info.change_condition.clone(),
-                                }),
-                            },
-                            None,
-                        )
-                        .await?
-                        .body
-                        .ok_or_else(|| funs.err().internal_error("flow_inst", "do_post_change", "illegal response", "500-external-illegal-response"))?;
-                    if let Some(resp) = resp.data {
-                        Self::do_modify_state_by_post_action(resp.rel_bus_obj_ids, &change_info, funs, ctx).await?;
+                },
+                FlowTransitionActionChangeKind::State => {
+                    if let Some(change_info) = post_change.state_change_info {
+                        let resp: TardisResp<FlowExternalFetchRelObjResp> = funs
+                            .web_client()
+                            .post(
+                                &external_url.value.to_string(),
+                                &FlowExternalReq {
+                                    kind: FlowExternalKind::FetchRelObj,
+                                    curr_tag: current_model.tag.clone(),
+                                    curr_bus_obj_id: current_inst.rel_business_obj_id.clone(),
+                                    params: FlowExternalParams::FetchRelObj(FlowExternalFetchRelObjReq {
+                                        obj_tag: current_model.tag.clone(),
+                                        obj_current_state_id: change_info.obj_current_state_id.clone(),
+                                        change_condition: change_info.change_condition.clone(),
+                                    }),
+                                },
+                                None,
+                            )
+                            .await?
+                            .body
+                            .ok_or_else(|| funs.err().internal_error("flow_inst", "do_post_change", "illegal response", "500-external-illegal-response"))?;
+                        if let Some(resp) = resp.data {
+                            Self::do_modify_state_by_post_action(resp.rel_bus_obj_ids, &change_info, funs, ctx).await?;
+                        }
                     }
                 }
             }

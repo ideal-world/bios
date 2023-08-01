@@ -38,9 +38,10 @@ async fn test_flow_api() -> TardisResult<()> {
 
     sleep(Duration::from_millis(500)).await;
 
-    let mut client = TestHttpClient::new("https://localhost:8080/flow".to_string());
+    let mut flow_client = TestHttpClient::new("https://localhost:8080/flow".to_string());
+    let mut kv_client = TestHttpClient::new("https://localhost:8080/spi-kv".to_string());
 
-    test_flow_scenes_fsm::test(&mut client).await?;
+    test_flow_scenes_fsm::test(&mut flow_client, &mut kv_client).await?;
     init_flow_data().await?;
 
     Ok(())

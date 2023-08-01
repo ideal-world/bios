@@ -163,10 +163,11 @@ pub struct FlowTransitionDoubleCheckInfo {
     pub content: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, Debug, poem_openapi::Union)]
-pub enum FlowTransitionActionChangeInfo {
-    Var(FlowTransitionActionByVarChangeInfo),
-    State(FlowTransitionActionByStateChangeInfo),
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug, poem_openapi::Object)]
+pub struct FlowTransitionActionChangeInfo {
+    pub kind: FlowTransitionActionChangeKind,
+    pub var_change_info: Option<FlowTransitionActionByVarChangeInfo>,
+    pub state_change_info: Option<FlowTransitionActionByStateChangeInfo>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, sea_orm::strum::EnumIter, sea_orm::DeriveActiveEnum)]
@@ -180,7 +181,6 @@ pub enum FlowTransitionActionChangeKind {
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug, poem_openapi::Object, sea_orm::FromJsonQueryResult)]
 pub struct FlowTransitionActionByVarChangeInfo {
-    pub kind: FlowTransitionActionChangeKind,
     pub current: bool,
     pub describe: String,
     pub obj_tag: Option<String>,
@@ -190,7 +190,6 @@ pub struct FlowTransitionActionByVarChangeInfo {
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug, poem_openapi::Object, sea_orm::FromJsonQueryResult)]
 pub struct FlowTransitionActionByStateChangeInfo {
-    pub kind: FlowTransitionActionChangeKind,
     pub obj_tag: String,
     pub describe: String,
     pub obj_current_state_id: Option<Vec<String>>,
