@@ -7,7 +7,7 @@ use tardis::TardisFunsInst;
 
 use bios_basic::rbum::dto::rbum_cert_conf_dto::{RbumCertConfAddReq, RbumCertConfModifyReq};
 use bios_basic::rbum::dto::rbum_cert_dto::{RbumCertAddReq, RbumCertModifyReq};
-use bios_basic::rbum::dto::rbum_filer_dto::{RbumCertConfFilterReq, RbumCertFilterReq};
+use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumCertConfFilterReq, RbumCertFilterReq};
 use bios_basic::rbum::rbum_enumeration::{RbumCertConfStatusKind, RbumCertRelKind, RbumCertStatusKind};
 use bios_basic::rbum::serv::rbum_cert_serv::{RbumCertConfServ, RbumCertServ};
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
@@ -22,8 +22,8 @@ use crate::basic::serv::iam_tenant_serv::IamTenantServ;
 use crate::iam_config::IamBasicConfigApi;
 use crate::iam_enumeration::IamCertKernelKind;
 
+use super::clients::iam_log_client::{IamLogClient, LogParamTag};
 use super::clients::mail_client::MailClient;
-use super::clients::spi_log_client::{LogParamTag, SpiLogClient};
 
 pub struct IamCertMailVCodeServ;
 
@@ -219,23 +219,9 @@ impl IamCertMailVCodeServ {
 
     pub async fn send_bind_mail(mail: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let ctx = IamAccountServ::new_context_if_account_is_global(ctx, funs).await?;
-        if RbumCertServ::count_rbums(
-            &RbumCertFilterReq {
-                ak: Some(mail.to_string()),
-                rel_rbum_kind: Some(RbumCertRelKind::Item),
-                rel_rbum_cert_conf_ids: Some(vec![
-                    IamCertServ::get_cert_conf_id_by_kind(IamCertKernelKind::MailVCode.to_string().as_str(), Some(IamTenantServ::get_id_by_ctx(&ctx, funs)?), funs).await?,
-                ]),
-                ..Default::default()
-            },
-            funs,
-            &ctx,
-        )
-        .await?
-            > 0
-        {
-            return Err(funs.err().unauthorized("iam_cert_mail_vcode", "activate", "email already exist", "401-iam-cert-valid"));
-        }
+        let rel_rbum_cert_conf_id =
+            IamCertServ::get_cert_conf_id_by_kind(IamCertKernelKind::MailVCode.to_string().as_str(), Some(IamTenantServ::get_id_by_ctx(&ctx, funs)?), funs).await?;
+        Self::check_bind_mail(mail, vec![rel_rbum_cert_conf_id], &ctx.owner, funs, &ctx).await?;
         let vcode = Self::get_vcode();
         let account_name = IamAccountServ::peek_item(&ctx.owner, &IamAccountFilterReq::default(), funs, &ctx).await?.name;
         RbumCertServ::add_vcode_to_cache(mail, &vcode, &ctx.own_paths, funs).await?;
@@ -249,6 +235,7 @@ impl IamCertMailVCodeServ {
             if cached_vcode == input_vcode {
                 let rel_rbum_cert_conf_id =
                     IamCertServ::get_cert_conf_id_by_kind(IamCertKernelKind::MailVCode.to_string().as_str(), Some(IamTenantServ::get_id_by_ctx(&ctx, funs)?), funs).await?;
+                Self::check_bind_mail(mail, vec![rel_rbum_cert_conf_id.clone()], &ctx.owner.clone(), funs, &ctx).await?;
                 let id = RbumCertServ::add_rbum(
                     &mut RbumCertAddReq {
                         ak: TrimString(mail.trim().to_string()),
@@ -272,12 +259,58 @@ impl IamCertMailVCodeServ {
                 )
                 .await?;
                 let op_describe = format!("绑定邮箱为{}", mail);
-                let _ = SpiLogClient::add_ctx_task(LogParamTag::IamAccount, Some(ctx.owner.to_string()), op_describe, Some("BindMailbox".to_string()), &ctx).await;
+                let _ = IamLogClient::add_ctx_task(LogParamTag::IamAccount, Some(ctx.owner.to_string()), op_describe, Some("BindMailbox".to_string()), &ctx).await;
 
                 return Ok(id);
             }
         }
         Err(funs.err().unauthorized("iam_cert_mail_vcode", "activate", "email or verification code error", "401-iam-cert-valid"))
+    }
+
+    pub async fn check_bind_mail(mail: &str, rel_rbum_cert_conf_ids: Vec<String>, rel_rbum_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        // check bind or not
+        if RbumCertServ::count_rbums(
+            &RbumCertFilterReq {
+                basic: RbumBasicFilterReq {
+                    own_paths: Some("".to_string()),
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                rel_rbum_id: Some(rel_rbum_id.to_owned()),
+                rel_rbum_kind: Some(RbumCertRelKind::Item),
+                rel_rbum_cert_conf_ids: Some(rel_rbum_cert_conf_ids.clone()),
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?
+            > 0
+        {
+            return Err(funs.err().conflict("iam_cert_mail_vcode", "bind", "email already exist bind", "409-iam-cert-email-bind-already-exist"));
+        }
+        // check existence or not
+        if RbumCertServ::count_rbums(
+            &RbumCertFilterReq {
+                basic: RbumBasicFilterReq {
+                    own_paths: Some("".to_string()),
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                ak: Some(mail.to_string()),
+                rel_rbum_kind: Some(RbumCertRelKind::Item),
+                rel_rbum_cert_conf_ids: Some(rel_rbum_cert_conf_ids),
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?
+            > 0
+        {
+            return Err(funs.err().unauthorized("iam_cert_mail_vcode", "activate", "email already exist", "404-iam-cert-email-not-exist"));
+        }
+        Ok(())
     }
 
     pub async fn send_login_mail(mail: &str, tenant_id: &str, funs: &TardisFunsInst) -> TardisResult<()> {
@@ -286,13 +319,55 @@ impl IamCertMailVCodeServ {
             own_paths: own_paths.to_string(),
             ..Default::default()
         };
-        if IamCertServ::count_cert_ak_by_kind(&IamCertKernelKind::MailVCode.to_string(), mail, funs, &mock_ctx).await? == 0 {
-            return Err(funs.err().not_found("iam_cert_phone_vcode", "send", "email not find", "404-iam-cert-email-not-exist"));
+        let global_rbum_cert_conf_id = IamCertServ::get_cert_conf_id_by_kind(&IamCertKernelKind::MailVCode.to_string(), None, funs).await?;
+        let tenant_rbum_cert_conf_id = IamCertServ::get_cert_conf_id_by_kind(&IamCertKernelKind::MailVCode.to_string(), Some(tenant_id.to_owned()), funs).await?;
+        if RbumCertServ::count_rbums(
+            &RbumCertFilterReq {
+                basic: RbumBasicFilterReq {
+                    own_paths: Some("".to_string()),
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                ak: Some(mail.to_string()),
+                rel_rbum_kind: Some(RbumCertRelKind::Item),
+                rel_rbum_cert_conf_ids: Some(vec![tenant_rbum_cert_conf_id]),
+                ..Default::default()
+            },
+            funs,
+            &mock_ctx,
+        )
+        .await?
+            > 0
+        {
+            let vcode = Self::get_vcode();
+            RbumCertServ::add_vcode_to_cache(mail, &vcode, &own_paths, funs).await?;
+            MailClient::send_vcode(mail, None, &vcode, funs).await?;
+            return Ok(());
         }
-        let vcode = Self::get_vcode();
-        RbumCertServ::add_vcode_to_cache(mail, &vcode, &own_paths, funs).await?;
-        MailClient::send_vcode(mail, None, &vcode, funs).await?;
-        Ok(())
+        if RbumCertServ::count_rbums(
+            &RbumCertFilterReq {
+                basic: RbumBasicFilterReq {
+                    own_paths: Some("".to_string()),
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                ak: Some(mail.to_string()),
+                rel_rbum_kind: Some(RbumCertRelKind::Item),
+                rel_rbum_cert_conf_ids: Some(vec![global_rbum_cert_conf_id]),
+                ..Default::default()
+            },
+            funs,
+            &mock_ctx,
+        )
+        .await?
+            > 0
+        {
+            let vcode = Self::get_vcode();
+            RbumCertServ::add_vcode_to_cache(mail, &vcode, "", funs).await?;
+            MailClient::send_vcode(mail, None, &vcode, funs).await?;
+            return Ok(());
+        }
+        return Err(funs.err().not_found("iam_cert_phone_vcode", "send", "email not find", "404-iam-cert-email-not-exist"));
     }
 
     fn get_vcode() -> String {
@@ -330,7 +405,7 @@ impl IamCertMailVCodeServ {
         let resp = IamCertServ::get_kernel_cert(account_id, &IamCertKernelKind::MailVCode, funs, ctx).await;
         match resp {
             Ok(cert) => {
-                let _ = MailClient::send_pwd(&cert.ak, pwd, funs).await;
+                let _ = MailClient::async_send_pwd(&cert.ak, pwd, funs, ctx).await;
             }
             Err(_) => info!("mail pwd not found"),
         }

@@ -159,6 +159,7 @@ impl ResContainerNode {
         need_crypto_req: bool,
         need_crypto_resp: bool,
         need_double_auth: bool,
+        need_login: bool,
     ) {
         self.children.as_mut().expect("[Auth.kernel] children get none").insert(
             key.to_string(),
@@ -171,6 +172,7 @@ impl ResContainerNode {
                     need_crypto_req,
                     need_crypto_resp,
                     need_double_auth,
+                    need_login,
                 }),
             },
         );
@@ -189,6 +191,7 @@ pub struct ResContainerLeafInfo {
     pub need_crypto_req: bool,
     pub need_crypto_resp: bool,
     pub need_double_auth: bool,
+    pub need_login: bool,
 }
 
 #[derive(Serialize, Deserialize, Default)]
@@ -211,6 +214,7 @@ pub(crate) struct Api {
     pub need_crypto_req: bool,
     pub need_crypto_resp: bool,
     pub need_double_auth: bool,
+    pub need_login: bool,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -237,4 +241,15 @@ pub struct MixRequestBody {
     pub body: String,
     pub headers: HashMap<String, String>,
     pub ts: f64,
+}
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
+pub struct SignWebHookReq {
+    pub ak: String,
+    pub onwer: String,
+    pub own_paths: String,
+    pub path: String,
+    pub query: HashMap<String, String>,
+    pub method: String,
+    pub req_date: String,
 }

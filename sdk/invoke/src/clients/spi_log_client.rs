@@ -8,10 +8,10 @@ use tardis::{
         poem_openapi,
         web_resp::{TardisPage, TardisResp},
     },
-    TardisFunsInst,
+    TardisFuns, TardisFunsInst,
 };
 
-use crate::{clients::base_spi_client::BaseSpiClient, invoke_enumeration::InvokeModuleKind};
+use crate::{clients::base_spi_client::BaseSpiClient, invoke_constants::DYNAMIC_LOG, invoke_enumeration::InvokeModuleKind};
 
 pub struct SpiLogClient;
 
@@ -43,7 +43,43 @@ pub struct LogItemFindResp {
     pub ts: DateTime<Utc>,
 }
 
+#[derive(poem_openapi::Object, Serialize, Deserialize, Default, Debug)]
+pub struct LogDynamicContentReq {
+    pub details: Option<String>,
+    pub sub_kind: Option<String>,
+    pub content: Option<String>,
+}
+
 impl SpiLogClient {
+    pub async fn add_dynamic_log(
+        content: &LogDynamicContentReq,
+        ext: Option<Value>,
+        kind: Option<String>,
+        key: Option<String>,
+        op: Option<String>,
+        rel_key: Option<String>,
+        ts: Option<String>,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<()> {
+        Self::add(
+            DYNAMIC_LOG,
+            &TardisFuns::json.obj_to_string(content)?,
+            ext,
+            kind,
+            key,
+            op,
+            rel_key,
+            ts,
+            Some(ctx.owner.clone()),
+            Some(ctx.own_paths.clone()),
+            funs,
+            ctx,
+        )
+        .await?;
+        Ok(())
+    }
+
     pub async fn add(
         tag: &str,
         content: &str,

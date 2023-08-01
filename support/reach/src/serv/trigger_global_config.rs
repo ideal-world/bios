@@ -8,7 +8,7 @@ use tardis::basic::result::TardisResult;
 use tardis::db::reldb_client::TardisActiveModel;
 use tardis::db::sea_orm::sea_query::{Query, SelectStatement};
 use tardis::db::sea_orm::*;
-use tardis::TardisFunsInst;
+use tardis::{TardisFuns, TardisFunsInst};
 
 pub struct ReachTriggerGlobalConfigService;
 
@@ -28,6 +28,7 @@ impl
     }
     async fn package_add(add_req: &ReachTriggerGlobalConfigAddReq, _: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<trigger_global_config::ActiveModel> {
         let mut model = trigger_global_config::ActiveModel::from(add_req);
+        model.id = Set(TardisFuns::field.nanoid());
         model.fill_ctx(ctx, true);
         Ok(model)
     }
@@ -76,7 +77,7 @@ impl
 
     async fn package_modify(id: &str, modify_req: &ReachTriggerGlobalConfigModifyReq, _: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<trigger_global_config::ActiveModel> {
         let mut model = trigger_global_config::ActiveModel::from(modify_req);
-        model.id = Set(id.to_string());
+        model.id = Set(id.into());
         model.fill_ctx(ctx, true);
         Ok(model)
     }

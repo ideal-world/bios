@@ -7,10 +7,11 @@ use bios_basic::rbum::serv::rbum_crud_serv::{RbumCrudOperation, RbumCrudQueryPac
 use tardis::basic::dto::TardisContext;
 use tardis::basic::result::TardisResult;
 use tardis::db::reldb_client::TardisActiveModel;
+
 use tardis::db::sea_orm::sea_query::{Query, SelectStatement};
 use tardis::db::sea_orm::EntityName;
 use tardis::db::sea_orm::{ColumnTrait, Set};
-use tardis::TardisFunsInst;
+use tardis::{TardisFuns, TardisFunsInst};
 
 pub struct ReachMessageTemplateServ;
 
@@ -30,6 +31,7 @@ impl
     }
     async fn package_add(add_req: &ReachMessageTemplateAddReq, _funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<message_template::ActiveModel> {
         let mut model = message_template::ActiveModel::from(add_req);
+        model.id = Set(TardisFuns::field.nanoid());
         model.fill_ctx(ctx, true);
         Ok(model)
     }
@@ -39,7 +41,7 @@ impl
 
     async fn package_modify(id: &str, modify_req: &ReachMessageTemplateModifyReq, _: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<message_template::ActiveModel> {
         let mut model = message_template::ActiveModel::from(modify_req);
-        model.id = Set(id.to_string());
+        model.id = Set(id.into());
         model.fill_ctx(ctx, true);
         Ok(model)
     }

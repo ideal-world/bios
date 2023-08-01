@@ -52,7 +52,7 @@ pub struct SearchItemModifyReq {
     pub visit_keys: Option<SearchItemVisitKeysReq>,
 }
 
-#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
 pub struct SearchItemVisitKeysReq {
     pub accounts: Option<Vec<String>>,
     pub apps: Option<Vec<String>>,
@@ -139,7 +139,7 @@ impl SearchItemSearchCtxReq {
     }
 }
 
-#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Default)]
 pub struct SearchItemQueryReq {
     // Fuzzy search content
     pub q: Option<String>,

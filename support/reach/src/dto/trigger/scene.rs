@@ -2,7 +2,9 @@ use bios_basic::rbum::{
     dto::{rbum_filer_dto::RbumItemBasicFilterReq, rbum_item_dto::RbumItemAddReq},
     rbum_enumeration::RbumScopeLevelKind,
 };
-use serde::Serialize;
+use tardis::basic::field::TrimString;
+
+use serde::{Deserialize, Serialize};
 use tardis::{
     chrono::{DateTime, Utc},
     db::sea_orm,
@@ -20,12 +22,12 @@ pub struct ReachTriggerSceneAddReq {
 }
 
 impl ReachTriggerSceneAddReq {
-    pub fn new_with_name_code(_name: impl Into<String>, _code: impl Into<String>) -> Self {
+    pub fn new_with_name_code(name: impl Into<String>, code: impl Into<String>) -> Self {
         Self {
             rbum_add_req: RbumItemAddReq {
                 id: None,
-                code: None,
-                name: "".into(),
+                code: Some(TrimString(code.into())),
+                name: TrimString(name.into()),
                 rel_rbum_kind_id: Default::default(),
                 rel_rbum_domain_id: Default::default(),
                 scope_level: Some(RbumScopeLevelKind::Private),
@@ -62,7 +64,7 @@ pub struct ReachTriggerSceneFilterReq {
     pub name: Option<String>,
 }
 
-#[derive(Debug, poem_openapi::Object, Serialize, sea_orm::FromQueryResult)]
+#[derive(Debug, poem_openapi::Object, Serialize, Deserialize, sea_orm::FromQueryResult)]
 pub struct ReachTriggerSceneSummaryResp {
     pub id: String,
     pub own_paths: String,
@@ -77,7 +79,7 @@ pub struct ReachTriggerSceneSummaryResp {
     pub pid: String,
 }
 
-#[derive(Debug, poem_openapi::Object, Serialize, sea_orm::FromQueryResult)]
+#[derive(Debug, poem_openapi::Object, Serialize, Deserialize, sea_orm::FromQueryResult)]
 pub struct ReachTriggerSceneDetailResp {
     pub id: String,
     pub own_paths: String,

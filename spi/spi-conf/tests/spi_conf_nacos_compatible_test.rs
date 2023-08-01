@@ -79,8 +79,10 @@ async fn test_tardis_compatibility(_test_client: &TestHttpClient) -> TardisResul
     headers.append(TardisFuns::fw_config().web_server.context_conf.context_header_name.as_str(), ctx_base64.parse().unwrap());
     let client = reqwest::ClientBuilder::default().danger_accept_invalid_certs(true).default_headers(headers).build().unwrap();
     let mut nacos_client = NacosClient::new_with_client("https://localhost:8080/spi-conf-nacos/nacos", client);
+    // register
     let resp = nacos_client.reqwest_client.post("https://localhost:8080/spi-conf/ci/auth/register").json(&RegisterRequest::default()).send().await?;
     let resp = resp.json::<TardisResp<RegisterResponse>>().await?;
+
     let auth = resp.data.expect("error in register");
 
     let data_id = "default-config";
@@ -101,7 +103,17 @@ async fn test_tardis_compatibility(_test_client: &TestHttpClient) -> TardisResul
     let success = nacos_client.publish_config(&config_descriptor, &mut CONFIG_CONTENT.as_bytes()).await.expect("fail to publish config");
     assert!(success);
     log::info!("get config");
+    let config_by_basic_auth_resp = nacos_client
+        .reqwest_client
+        .get("https://localhost:8080/spi-conf-nacos/nacos/v1/cs/configs")
+        .query(&config_descriptor)
+        .basic_auth(&auth.username, Some(&auth.password))
+        .send()
+        .await?;
+    let config_by_basic_auth = config_by_basic_auth_resp.text().await?;
+    log::info!("config_by_basic_auth: {}", &config_by_basic_auth);
     let config = nacos_client.get_config(&config_descriptor).await.expect("fail to get config");
+    assert_eq!(&config_by_basic_auth, &config);
     assert_eq!(CONFIG_CONTENT, &config);
     log::info!("delete config");
     let success = nacos_client.delete_config(&config_descriptor).await.unwrap();
@@ -150,8 +162,10 @@ async fn test_tardis_compatibility(_test_client: &TestHttpClient) -> TardisResul
     let mut form = HashMap::new();
     form.insert("customNamespaceId", "test-namespace-1");
     form.insert("namespaceName", "测试命名空间1");
+    form.insert("username", username);
+    form.insert("password", password);
     // publish
-    let resp = nacos_client.reqwest_execute(|c| c.post(namespace_url).form(&form)).await?;
+    let resp = nacos_client.reqwest_client.post(namespace_url).form(&form).send().await?;
     log::info!("response: {resp:#?}");
     let success = resp.json::<bool>().await?;
     assert!(success);

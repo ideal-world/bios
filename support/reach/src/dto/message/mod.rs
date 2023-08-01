@@ -19,7 +19,7 @@ use super::*;
 
 // Request
 
-#[derive(Debug, poem_openapi::Object, Deserialize)]
+#[derive(Debug, poem_openapi::Object, Deserialize, Serialize)]
 pub struct ReachMessageAddReq {
     #[oai(flatten)]
     #[serde(flatten)]

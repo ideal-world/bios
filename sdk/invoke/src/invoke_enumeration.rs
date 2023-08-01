@@ -1,6 +1,9 @@
 use serde::{Deserialize, Serialize};
-use tardis::{db::sea_orm, derive_more::Display, web::poem_openapi};
+#[cfg(feature = "reldb-core")]
+use tardis::db::sea_orm;
+use tardis::{derive_more::Display, web::poem_openapi};
 
+#[cfg(feature = "reldb-core")]
 #[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, sea_orm::strum::EnumString)]
 pub enum InvokeModuleKind {
     #[oai(rename = "search")]
@@ -21,4 +24,21 @@ pub enum InvokeModuleKind {
     Stats,
     #[oai(rename = "schedule")]
     Schedule,
+    #[oai(rename = "iam")]
+    Iam,
+}
+
+#[cfg(not(feature = "reldb-core"))]
+#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum)]
+pub enum InvokeModuleKind {
+    Search,
+    Plugin,
+    Kv,
+    Log,
+    Object,
+    Cache,
+    Graph,
+    Stats,
+    Schedule,
+    Iam
 }

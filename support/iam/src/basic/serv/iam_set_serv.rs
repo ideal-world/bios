@@ -25,7 +25,7 @@ use crate::iam_config::IamBasicConfigApi;
 use crate::iam_constants::{RBUM_SCOPE_LEVEL_APP, RBUM_SCOPE_LEVEL_TENANT};
 use crate::iam_enumeration::{IamRelKind, IamSetCateKind, IamSetKind};
 
-use super::clients::spi_log_client::{LogParamTag, SpiLogClient};
+use super::clients::iam_log_client::{IamLogClient, LogParamTag};
 use super::iam_account_serv::IamAccountServ;
 use super::iam_rel_serv::IamRelServ;
 
@@ -189,7 +189,7 @@ impl IamSetServ {
             };
 
             if let Some(tag) = tag {
-                let _ = SpiLogClient::add_ctx_task(tag, Some(result.clone().unwrap_or_default()), op_describe, op_kind, ctx).await;
+                let _ = IamLogClient::add_ctx_task(tag, Some(result.clone().unwrap_or_default()), op_describe, op_kind, ctx).await;
             }
         }
 
@@ -212,14 +212,38 @@ impl IamSetServ {
         )
         .await;
         if result.is_ok() {
-            let set_cate_item = RbumSetCateServ::get_rbum(set_cate_id, &RbumSetCateFilterReq::default(), funs, ctx).await?;
-            let item = RbumSetServ::get_rbum(&set_cate_item.rel_rbum_set_id, &RbumSetFilterReq::default(), funs, ctx).await?;
+            let set_cate_item = RbumSetCateServ::get_rbum(
+                set_cate_id,
+                &RbumSetCateFilterReq {
+                    basic: RbumBasicFilterReq {
+                        with_sub_own_paths: true,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                funs,
+                ctx,
+            )
+            .await?;
+            let item = RbumSetServ::get_rbum(
+                &set_cate_item.rel_rbum_set_id,
+                &RbumSetFilterReq {
+                    basic: RbumBasicFilterReq {
+                        with_sub_own_paths: true,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                funs,
+                ctx,
+            )
+            .await?;
             let mut kind = item.kind;
             kind.make_ascii_lowercase();
             match kind.as_str() {
                 "org" => {
                     if let Some(name) = &modify_req.name {
-                        let _ = SpiLogClient::add_ctx_task(
+                        let _ = IamLogClient::add_ctx_task(
                             LogParamTag::IamOrg,
                             Some(set_cate_id.to_string()),
                             format!("重命名部门为{}", name),
@@ -230,7 +254,7 @@ impl IamSetServ {
                     }
                 }
                 "res" => {
-                    let _ = SpiLogClient::add_ctx_task(
+                    let _ = IamLogClient::add_ctx_task(
                         LogParamTag::IamRes,
                         Some(set_cate_id.to_string()),
                         "编辑目录".to_string(),
@@ -247,8 +271,32 @@ impl IamSetServ {
     }
 
     pub async fn delete_set_cate(set_cate_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<u64> {
-        let set_cate_item = RbumSetCateServ::get_rbum(set_cate_id, &RbumSetCateFilterReq::default(), funs, ctx).await?;
-        let item = RbumSetServ::get_rbum(&set_cate_item.rel_rbum_set_id, &RbumSetFilterReq::default(), funs, ctx).await?;
+        let set_cate_item = RbumSetCateServ::get_rbum(
+            set_cate_id,
+            &RbumSetCateFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?;
+        let item = RbumSetServ::get_rbum(
+            &set_cate_item.rel_rbum_set_id,
+            &RbumSetFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?;
 
         let result = RbumSetCateServ::delete_rbum(set_cate_id, funs, ctx).await;
 
@@ -261,7 +309,7 @@ impl IamSetServ {
                 _ => (String::new(), None, None),
             };
             if let Some(tag) = tag {
-                let _ = SpiLogClient::add_ctx_task(tag, Some(set_cate_id.to_string()), op_describe, op_kind, ctx).await;
+                let _ = IamLogClient::add_ctx_task(tag, Some(set_cate_id.to_string()), op_describe, op_kind, ctx).await;
             }
         }
 
@@ -526,7 +574,7 @@ impl IamSetServ {
 
         let set_cate_id = add_req.set_cate_id.clone();
         if let Ok(account) = IamAccountServ::get_item(add_req.rel_rbum_item_id.clone().as_str(), &IamAccountFilterReq::default(), funs, ctx).await {
-            let _ = SpiLogClient::add_ctx_task(
+            let _ = IamLogClient::add_ctx_task(
                 LogParamTag::IamOrg,
                 Some(set_cate_id.clone()),
                 format!("添加部门人员{}", account.name.clone()),
@@ -561,7 +609,7 @@ impl IamSetServ {
 
         if result.is_ok() {
             if let Ok(account) = IamAccountServ::get_item(item.rel_rbum_item_id.clone().as_str(), &IamAccountFilterReq::default(), funs, ctx).await {
-                let _ = SpiLogClient::add_ctx_task(
+                let _ = IamLogClient::add_ctx_task(
                     LogParamTag::IamOrg,
                     Some(item.rel_rbum_set_cate_id.unwrap_or_default().clone()),
                     format!("移除部门人员{}", account.name.clone()),

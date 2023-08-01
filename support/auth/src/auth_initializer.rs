@@ -65,7 +65,12 @@ pub async fn init_data() -> TardisResult<()> {
         } else {
             false
         };
-        auth_res_serv::add_res(f[1], f[0], auth, need_crypto_req, need_crypto_resp, need_double_auth).unwrap_or_default();
+        let need_login = if let Some(need_login) = info.get("need_login") {
+            need_login.as_bool().unwrap_or_default()
+        } else {
+            false
+        };
+        auth_res_serv::add_res(f[1], f[0], auth, need_crypto_req, need_crypto_resp, need_double_auth, need_login).unwrap_or_default();
     }
     tardis::tokio::spawn(async move {
         let mut interval = time::interval(Duration::from_secs(config.cache_key_res_changed_timer_sec as u64));
@@ -85,8 +90,8 @@ pub async fn init_data() -> TardisResult<()> {
                                     let need_crypto_req = info.get("need_crypto_req").map_or(false, |v| v.as_bool().unwrap_or_default());
                                     let need_crypto_resp = info.get("need_crypto_resp").map_or(false, |v| v.as_bool().unwrap_or_default());
                                     let need_double_auth = info.get("need_double_auth").map_or(false, |v| v.as_bool().unwrap_or_default());
-
-                                    auth_res_serv::add_res(f[1], f[0], auth, need_crypto_req, need_crypto_resp, need_double_auth).unwrap_or_default();
+                                    let need_login = info.get("need_login").map_or(false, |v| v.as_bool().unwrap_or_default());
+                                    auth_res_serv::add_res(f[1], f[0], auth, need_crypto_req, need_crypto_resp, need_double_auth, need_login).unwrap_or_default();
                                 } else {
                                     auth_res_serv::remove_res(f[1], f[0]).unwrap_or_default();
                                 }

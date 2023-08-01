@@ -1,6 +1,7 @@
 use std::fmt::Debug;
 use std::sync::Mutex;
 
+use bios_sdk_invoke::invoke_config::InvokeConfig;
 use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
 use tardis::basic::error::TardisError;
@@ -15,6 +16,7 @@ use tardis::web::poem::http::HeaderName;
 #[serde(default)]
 pub struct IamConfig {
     pub rbum: RbumConfig,
+    pub invoke: InvokeConfig,
     // token -> (token_kind, account_id)
     // accessToken(token_kind = TokenOauth2) -> (token_kind, rel_iam_item_id, ak, SetCateIds)
     pub cache_key_token_info_: String,
@@ -38,6 +40,8 @@ pub struct IamConfig {
     pub cache_key_res_changed_info_: String,
     pub cache_key_res_changed_expire_sec: usize,
     pub cache_key_async_task_status: String,
+    pub cache_key_sync_ldap_status: String,
+    pub cache_key_sync_ldap_task_lock: String,
     pub mail_template_cert_activate_title: String,
     pub mail_template_cert_activate_content: String,
     pub mail_template_cert_login_title: String,
@@ -116,6 +120,7 @@ impl Default for IamConfig {
     fn default() -> Self {
         IamConfig {
             rbum: Default::default(),
+            invoke: InvokeConfig::default(),
             cache_key_token_info_: "iam:cache:token:info:".to_string(),
             cache_key_aksk_info_: "iam:cache:aksk:info:".to_string(),
             cache_key_account_rel_: "iam:cache:account:rel:".to_string(),
@@ -140,6 +145,8 @@ impl Default for IamConfig {
             init_menu_json_path: "config/init-menu-default.json".to_string(),
             ldap: IamLdapConfig::default(),
             cache_key_async_task_status: "iam:cache:task:status".to_string(),
+            cache_key_sync_ldap_status: "iam:cache:sync:ldap:status".to_string(),
+            cache_key_sync_ldap_task_lock: "iam:cache:sync:ldap:taskId".to_string(),
             sms_base_url: "http://reach:8080".to_string(),
             sms_path: "cc/msg/vcode".to_string(),
             sms_pwd_path: "cc/msg/pwd".to_string(),

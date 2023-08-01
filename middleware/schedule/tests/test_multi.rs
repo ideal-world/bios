@@ -25,16 +25,15 @@ async fn test_multi() -> TardisResult<()> {
     let config = ScheduleConfig::default();
 
     init_tardis().await?;
-    let mut serve_group = init_task_serve_group(5).await?;
-    let log_url = "https://localhost:8080/spi-log";
     let counter = mock_webserver().await?;
+    let mut serve_group = init_task_serve_group(5).await?;
     let test_env = TestEnv { counter };
     let rng = &mut rand::thread_rng();
     for idx in 0..10 {
         let code = format!("print-hello-{idx}", idx = idx);
         serve_group.shuffle(rng);
         for serv in serve_group.iter() {
-            serv.add(log_url, new_task(&code), &config).await.expect("fail to add schedule task");
+            serv.add(new_task(&code), &config).await.expect("fail to add schedule task");
         }
     }
     tokio::time::sleep(tokio::time::Duration::from_secs(4)).await;

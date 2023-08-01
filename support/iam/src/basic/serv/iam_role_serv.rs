@@ -29,7 +29,7 @@ use crate::iam_constants;
 use crate::iam_constants::{RBUM_SCOPE_LEVEL_APP, RBUM_SCOPE_LEVEL_TENANT};
 use crate::iam_enumeration::{IamRelKind, IamRoleKind};
 
-use super::clients::spi_log_client::{LogParamTag, SpiLogClient};
+use super::clients::iam_log_client::{IamLogClient, LogParamTag};
 
 pub struct IamRoleServ;
 
@@ -87,7 +87,7 @@ impl RbumItemCrudOperation<iam_role::ActiveModel, IamRoleAddReq, IamRoleModifyRe
             )
             .await?;
 
-        let _ = SpiLogClient::add_ctx_task(
+        let _ = IamLogClient::add_ctx_task(
             LogParamTag::IamRole,
             Some(id.to_string()),
             "添加自定义角色".to_string(),
@@ -192,7 +192,7 @@ impl RbumItemCrudOperation<iam_role::ActiveModel, IamRoleAddReq, IamRoleModifyRe
         }
 
         if !op_describe.is_empty() {
-            let _ = SpiLogClient::add_ctx_task(LogParamTag::IamRole, Some(id.to_string()), op_describe, Some(op_kind), ctx).await;
+            let _ = IamLogClient::add_ctx_task(LogParamTag::IamRole, Some(id.to_string()), op_describe, Some(op_kind), ctx).await;
         }
 
         Ok(())
@@ -254,7 +254,7 @@ impl RbumItemCrudOperation<iam_role::ActiveModel, IamRoleAddReq, IamRoleModifyRe
         )
         .await?;
 
-        let _ = SpiLogClient::add_ctx_task(
+        let _ = IamLogClient::add_ctx_task(
             LogParamTag::IamRole,
             Some(id.to_string()),
             "删除自定义角色".to_string(),
@@ -340,7 +340,7 @@ impl IamRoleServ {
             } else {
                 ("编辑内置角色权限".to_string(), "ModifyBuiltRolePermissions".to_string())
             };
-            let _ = SpiLogClient::add_ctx_task(LogParamTag::IamRole, Some(id.to_string()), op_describe, Some(op_kind), ctx).await;
+            let _ = IamLogClient::add_ctx_task(LogParamTag::IamRole, Some(id.to_string()), op_describe, Some(op_kind), ctx).await;
         }
         Ok(())
     }

@@ -5,10 +5,11 @@ use tardis::async_trait::async_trait;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::result::TardisResult;
 use tardis::db::reldb_client::TardisActiveModel;
+
 use tardis::db::sea_orm::sea_query::{Query, SelectStatement};
 use tardis::db::sea_orm::EntityName;
 use tardis::db::sea_orm::{ColumnTrait, Set};
-use tardis::TardisFunsInst;
+use tardis::{TardisFuns, TardisFunsInst};
 
 pub struct ReachMessageLogServ;
 #[async_trait]
@@ -20,6 +21,7 @@ impl RbumCrudOperation<message_log::ActiveModel, ReachMsgLogAddReq, ReachMsgLogM
     }
     async fn package_add(add_req: &ReachMsgLogAddReq, _funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<message_log::ActiveModel> {
         let mut model = message_log::ActiveModel::from(add_req);
+        model.id = Set(TardisFuns::field.nanoid());
         model.fill_ctx(ctx, true);
         Ok(model)
     }
@@ -29,7 +31,7 @@ impl RbumCrudOperation<message_log::ActiveModel, ReachMsgLogAddReq, ReachMsgLogM
 
     async fn package_modify(id: &str, modify_req: &ReachMsgLogModifyReq, _: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<message_log::ActiveModel> {
         let mut model = message_log::ActiveModel::from(modify_req);
-        model.id = Set(id.to_string());
+        model.id = Set(id.into());
         model.fill_ctx(ctx, true);
         Ok(model)
     }

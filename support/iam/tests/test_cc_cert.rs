@@ -73,6 +73,17 @@ async fn test_single_level(context: &TardisContext, ak: &str, another_context: &
     )
     .await
     .is_err());
+    assert!(IamCertUserPwdServ::reset_sk(
+        &IamCertUserPwdRestReq {
+            new_sk: Some(TrimString(format!("{}sssss", ak).to_string())),
+        },
+        &context.owner,
+        &rbum_cert_conf_id,
+        &funs,
+        context,
+    )
+    .await
+    .is_err());
     IamCertUserPwdServ::reset_sk(
         &IamCertUserPwdRestReq {
             new_sk: Some(TrimString("sssssssssss".to_string())),

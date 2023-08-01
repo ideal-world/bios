@@ -1,4 +1,6 @@
+use bios_basic::process::task_processor::TaskProcessor;
 use bios_basic::rbum::rbum_enumeration::{RbumCertStatusKind, RbumScopeLevelKind};
+use bios_sdk_invoke::invoke_initializer;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
@@ -31,7 +33,7 @@ use crate::basic::serv::iam_res_serv::{IamMenuServ, IamResServ};
 use crate::basic::serv::iam_role_serv::IamRoleServ;
 use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::console_app::api::{iam_ca_account_api, iam_ca_app_api, iam_ca_cert_manage_api, iam_ca_res_api, iam_ca_role_api};
-use crate::console_common::api::{iam_cc_account_api, iam_cc_app_api, iam_cc_org_api, iam_cc_res_api, iam_cc_role_api, iam_cc_system_api, iam_cc_tenant_api};
+use crate::console_common::api::{iam_cc_account_api, iam_cc_app_api, iam_cc_config_api, iam_cc_org_api, iam_cc_res_api, iam_cc_role_api, iam_cc_system_api, iam_cc_tenant_api};
 use crate::console_interface::api::{iam_ci_account_api, iam_ci_app_api, iam_ci_cert_api, iam_ci_res_api, iam_ci_role_api};
 use crate::console_passport::api::{iam_cp_account_api, iam_cp_app_api, iam_cp_cert_api, iam_cp_tenant_api};
 use crate::console_system::api::{
@@ -64,6 +66,7 @@ async fn init_api(web_server: &TardisWebServer) -> TardisResult<()> {
                     iam_cc_account_api::IamCcAccountLdapApi,
                     iam_cc_role_api::IamCcRoleApi,
                     iam_cc_org_api::IamCcOrgApi,
+                    iam_cc_config_api::IamCcConfigApi,
                     iam_cc_res_api::IamCcResApi,
                     iam_cc_system_api::IamCcSystemApi,
                     iam_cc_tenant_api::IamCcTenantApi,
@@ -126,6 +129,8 @@ async fn init_api(web_server: &TardisWebServer) -> TardisResult<()> {
 
 pub async fn init_db(mut funs: TardisFunsInst) -> TardisResult<Option<(String, String)>> {
     bios_basic::rbum::rbum_initializer::init(funs.module_code(), funs.conf::<IamConfig>().rbum.clone()).await?;
+    TaskProcessor::subscribe_task(&funs).await?;
+    invoke_initializer::init(funs.module_code(), funs.conf::<IamConfig>().invoke.clone())?;
     funs.begin().await?;
     let ctx = get_first_account_context(iam_constants::RBUM_KIND_CODE_IAM_ACCOUNT, iam_constants::COMPONENT_CODE, &funs).await?;
     let sysadmin_info = if let Some(ctx) = ctx {
@@ -640,6 +645,7 @@ async fn add_res<'a>(
                 crypto_resp: None,
                 double_auth: None,
                 double_auth_msg: None,
+                need_login: None,
             },
             set: IamSetItemAggAddReq {
                 set_cate_id: cate_menu_id.to_string(),
@@ -667,6 +673,7 @@ async fn add_res<'a>(
                 crypto_resp: Some(false),
                 double_auth: Some(false),
                 double_auth_msg: None,
+                need_login: None,
             },
             set: IamSetItemAggAddReq {
                 set_cate_id: cate_api_id.to_string(),

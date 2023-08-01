@@ -4,7 +4,7 @@ use tardis::basic::dto::TardisContext;
 use tardis::basic::result::TardisResult;
 use tardis::{TardisFuns, TardisFunsInst};
 
-use crate::basic::dto::iam_cert_conf_dto::{IamCertConfMailVCodeAddOrModifyReq, IamCertConfPhoneVCodeAddOrModifyReq};
+use crate::basic::dto::iam_cert_conf_dto::{IamCertConfMailVCodeAddOrModifyReq, IamCertConfPhoneVCodeAddOrModifyReq, IamCertConfTokenModifyReq};
 use crate::basic::dto::iam_filer_dto::IamConfigFilterReq;
 use crate::basic::dto::iam_platform_dto::{IamPlatformConfigReq, IamPlatformConfigResp};
 use crate::basic::serv::iam_cert_mail_vcode_serv::IamCertMailVCodeServ;
@@ -12,9 +12,10 @@ use crate::basic::serv::iam_cert_phone_vcode_serv::IamCertPhoneVCodeServ;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 
 use crate::iam_config::IamConfig;
-use crate::iam_enumeration::IamCertKernelKind;
+use crate::iam_enumeration::{IamCertKernelKind, IamCertTokenKind};
 
-use super::clients::spi_log_client::{LogParamTag, SpiLogClient};
+use super::clients::iam_log_client::{IamLogClient, LogParamTag};
+use super::iam_cert_token_serv::IamCertTokenServ;
 use super::iam_cert_user_pwd_serv::IamCertUserPwdServ;
 use super::iam_config_serv::IamConfigServ;
 
@@ -38,7 +39,7 @@ impl IamPlatformServ {
             log_tasks.push(("修改认证方式为邮箱".to_string(), "ModifyCertifiedWay".to_string()));
         }
         for (op_describe, op_kind) in log_tasks {
-            let _ = SpiLogClient::add_ctx_task(LogParamTag::SecurityAlarm, None, op_describe, Some(op_kind), ctx).await;
+            let _ = IamLogClient::add_ctx_task(LogParamTag::SecurityAlarm, None, op_describe, Some(op_kind), ctx).await;
         }
         // Init cert conf
         let cert_confs = IamCertServ::find_cert_conf(true, Some("".to_string()), None, None, funs, ctx).await?;
@@ -66,6 +67,21 @@ impl IamPlatformServ {
                 }
             } else if cert_conf_by_mail_vcode {
                 IamCertMailVCodeServ::add_or_enable_cert_conf(&IamCertConfMailVCodeAddOrModifyReq { ak_note: None, ak_rule: None }, Some("".to_string()), funs, ctx).await?;
+            }
+        }
+        if let Some(token_default_coexist_num) = &modify_req.token_default_coexist_num {
+            if let Some(cert_conf_by_token_default_id) = cert_confs.iter().find(|r| r.kind == IamCertTokenKind::TokenDefault.to_string()).map(|r| r.id.clone()) {
+                IamCertTokenServ::modify_cert_conf(
+                    &cert_conf_by_token_default_id,
+                    &IamCertConfTokenModifyReq {
+                        coexist_num: Some(*token_default_coexist_num),
+                        name: None,
+                        expire_sec: None,
+                    },
+                    funs,
+                    ctx,
+                )
+                .await?;
             }
         }
         if let Some(config) = &modify_req.config {
@@ -99,6 +115,7 @@ impl IamPlatformServ {
             cert_conf_by_mail_vcode: cert_confs.iter().any(|r| r.kind == IamCertKernelKind::MailVCode.to_string()),
             config,
             strict_security_mode: funs.conf::<IamConfig>().strict_security_mode,
+            token_default_coexist_num: cert_confs.iter().find(|r| r.kind == IamCertTokenKind::TokenDefault.to_string()).map(|r| r.coexist_num).unwrap_or(1),
         };
 
         Ok(platform)

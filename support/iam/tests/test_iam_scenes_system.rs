@@ -572,6 +572,7 @@ pub async fn sys_console_res_mgr_page(client: &mut BIOSWebTestClient) -> TardisR
                     crypto_req: Some(false),
                     crypto_resp: Some(false),
                     double_auth: Some(false),
+                    need_login: Some(false),
                     double_auth_msg: None,
                 },
                 set: IamSetItemAggAddReq {
@@ -600,6 +601,7 @@ pub async fn sys_console_res_mgr_page(client: &mut BIOSWebTestClient) -> TardisR
                     crypto_req: Some(false),
                     crypto_resp: Some(false),
                     double_auth: Some(false),
+                    need_login: Some(false),
                     double_auth_msg: None,
                 },
                 set: IamSetItemAggAddReq {
@@ -626,6 +628,7 @@ pub async fn sys_console_res_mgr_page(client: &mut BIOSWebTestClient) -> TardisR
                     crypto_req: Some(false),
                     crypto_resp: Some(false),
                     double_auth: Some(false),
+                    need_login: Some(false),
                     double_auth_msg: None,
                 },
                 set: IamSetItemAggAddReq {
@@ -657,6 +660,7 @@ pub async fn sys_console_res_mgr_page(client: &mut BIOSWebTestClient) -> TardisR
                     crypto_req: Some(false),
                     crypto_resp: Some(false),
                     double_auth: Some(false),
+                    need_login: Some(false),
                     double_auth_msg: None,
                 },
                 set: IamSetItemAggAddReq {
@@ -682,6 +686,7 @@ pub async fn sys_console_res_mgr_page(client: &mut BIOSWebTestClient) -> TardisR
                 crypto_resp: None,
                 double_auth: None,
                 double_auth_msg: None,
+                need_login: None,
             },
         )
         .await;

@@ -4,7 +4,7 @@ use tardis::{
     web::poem_openapi,
 };
 #[repr(u8)]
-#[derive(Debug, poem_openapi::Enum, EnumIter, Clone, Copy, DeriveActiveEnum, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, poem_openapi::Enum, EnumIter, Clone, Copy, DeriveActiveEnum, PartialEq, Eq, Serialize, Deserialize, Hash)]
 #[oai(rename_all = "SCREAMING_SNAKE_CASE")]
 #[sea_orm(rs_type = "String", db_type = "String(Some(255))")]
 pub enum ReachChannelKind {
@@ -24,7 +24,7 @@ pub enum ReachChannelKind {
     WebHook,
 }
 
-#[derive(Debug, poem_openapi::Enum, EnumIter, Clone, Copy, DeriveActiveEnum, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, poem_openapi::Enum, EnumIter, Clone, Copy, DeriveActiveEnum, PartialEq, Eq, Serialize, Deserialize, Hash)]
 #[oai(rename_all = "SCREAMING_SNAKE_CASE")]
 #[sea_orm(rs_type = "String", db_type = "String(Some(255))")]
 pub enum ReachReceiveKind {

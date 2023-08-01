@@ -6,24 +6,24 @@ use tardis::db::sea_orm;
 use tardis::db::sea_orm::sea_query::{ColumnDef, Table, TableCreateStatement};
 use tardis::db::sea_orm::*;
 
-use crate::dto::{ReachDndStrategyKind, ReachMsgLogAddReq, ReachMsgLogModifyReq};
+use crate::dto::*;
 use crate::fill_by_add_req;
 #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]
 #[sea_orm(table_name = "reach_msg_log")]
 pub struct Model {
-    #[sea_orm(primary_key, auto_increment = false, generator = "uuid")]
-    pub id: String,
+    #[sea_orm(primary_key, auto_increment = false)]
+    pub id: Nanoid,
     /// 所有者路径
-    #[sea_orm(column_name = "own_paths", column_type = "String(Some(255))")]
+    #[sea_orm(column_type = "String(Some(255))")]
     pub own_paths: String,
     /// 所有者
-    #[sea_orm(column_name = "owner", column_type = "String(Some(255))")]
+    #[sea_orm(column_type = "String(Some(255))")]
     pub owner: String,
     /// 创建时间
-    #[sea_orm(column_name = "create_time", column_type = "Timestamp")]
+    #[sea_orm(column_type = "Timestamp")]
     pub create_time: DateTime<Utc>,
     /// 更新时间
-    #[sea_orm(column_name = "update_time", column_type = "Timestamp")]
+    #[sea_orm(column_type = "Timestamp")]
     pub update_time: DateTime<Utc>,
     /// 关联接收人Id
     pub rel_account_id: String,

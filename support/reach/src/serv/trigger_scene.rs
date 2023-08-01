@@ -7,7 +7,7 @@ use tardis::basic::result::TardisResult;
 use tardis::db::reldb_client::TardisActiveModel;
 use tardis::db::sea_orm::sea_query::{Query, SelectStatement};
 use tardis::db::sea_orm::*;
-use tardis::TardisFunsInst;
+use tardis::{TardisFuns, TardisFunsInst};
 
 pub struct ReachTriggerSceneService;
 
@@ -27,6 +27,7 @@ impl
     }
     async fn package_add(add_req: &ReachTriggerSceneAddReq, _: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<trigger_scene::ActiveModel> {
         let mut model = trigger_scene::ActiveModel::from(add_req);
+        model.id = Set(TardisFuns::field.nanoid());
         model.fill_ctx(ctx, true);
         Ok(model)
     }
@@ -44,7 +45,7 @@ impl
     async fn package_modify(id: &str, modify_req: &ReachTriggerSceneModifyReq, _: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<trigger_scene::ActiveModel> {
         let mut model = trigger_scene::ActiveModel::from(modify_req);
         model.fill_ctx(ctx, true);
-        model.id = Set(id.to_string());
+        model.id = Set(id.into());
         Ok(model)
     }
 
@@ -64,25 +65,13 @@ impl
 macro_rules! add_scene {
     // empty
     () => {};
-    /*
-     *  for tree
-     */
+    // for tree
     (
         $funs: expr;
         $ctx: expr;
-        @tree_or_item $($args: expr),*) => {
-        add_scene!(
-            $funs;
-            $ctx;
-            @item $($args),*
-        );
-    };
-    (
-        $funs: expr;
-        $ctx: expr;
-        @tree_or_item $($p: expr),* => {$(
+        @tree_or_item $($p: expr),* $(=> {$(
             $($args: expr),*$( => $subs: tt)?;
-        )*}
+        )*})?
     ) => {
         {
             let parent_id = add_scene!(
@@ -91,29 +80,24 @@ macro_rules! add_scene {
                 @item $($p),*
             );
             $(
-                add_scene!(
-                    $funs;
-                    $ctx;
-                    @tree_or_item $($args),*, &parent_id $( => $subs)?
-                );
-            )*
+                $(
+                    add_scene!(
+                        $funs;
+                        $ctx;
+                        @tree_or_item $($args),*, &parent_id $( => $subs)?
+                    );
+                )*
+            )?
             parent_id
         }
     };
-    /*
-     * for single item
-     */
+    // for single item
     (
         $funs: expr;
         $ctx: expr;
-        @item $name: expr, $code: expr, $pid: expr) => {
-        Self::add_rbum(&mut ReachTriggerSceneAddReq::new_with_name_code($name, $code).pid($pid), $funs, $ctx).await?
-    };
-    (
-        $funs: expr;
-        $ctx: expr;
-        @item $name: expr, $code: expr) => {
-        Self::add_rbum(&mut ReachTriggerSceneAddReq::new_with_name_code($name, $code), $funs, $ctx).await?
+        @item $code: expr, $name: expr $(, $pid: expr)?
+    ) => {
+        Self::add_rbum(&mut ReachTriggerSceneAddReq::new_with_name_code($name, $code)$(.pid($pid))?, $funs, $ctx).await?
     };
     // enter
     (

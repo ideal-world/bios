@@ -12,19 +12,19 @@ use tardis::db::sea_orm::*;
 #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]
 #[sea_orm(table_name = "reach_trigger_instance_config")]
 pub struct Model {
-    #[sea_orm(primary_key, auto_increment = false, generator = "uuid")]
-    pub id: String,
+    #[sea_orm(primary_key, auto_increment = false)]
+    pub id: Nanoid,
     /// 所有者路径
-    #[sea_orm(column_name = "own_paths", column_type = "String(Some(255))")]
+    #[sea_orm(column_type = "String(Some(255))")]
     pub own_paths: String,
     /// 所有者
-    #[sea_orm(column_name = "owner", column_type = "String(Some(255))")]
+    #[sea_orm(column_type = "String(Some(255))")]
     pub owner: String,
     /// 创建时间
-    #[sea_orm(column_name = "create_time", column_type = "Timestamp")]
+    #[sea_orm(column_type = "Timestamp")]
     pub create_time: DateTime<Utc>,
     /// 更新时间
-    #[sea_orm(column_name = "update_time", column_type = "Timestamp")]
+    #[sea_orm(column_type = "Timestamp")]
     pub update_time: DateTime<Utc>,
     #[sea_orm(column_type = "String(Some(512))")]
     /// 关联的触发场景id

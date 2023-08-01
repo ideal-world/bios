@@ -7,7 +7,7 @@ use tardis::web::web_client::TardisHttpResponse;
 use tardis::web::web_resp::TardisResp;
 use tardis::{TardisFuns, TardisFunsInst};
 
-use crate::invoke_config::InvokeConfig;
+use crate::invoke_config::InvokeConfigApi;
 use crate::invoke_constants::TARDIS_CONTEXT;
 use crate::invoke_enumeration::InvokeModuleKind;
 
@@ -15,7 +15,7 @@ pub struct BaseSpiClient;
 
 impl BaseSpiClient {
     pub async fn module_url(module: InvokeModuleKind, funs: &TardisFunsInst) -> TardisResult<String> {
-        if let Some(uri) = funs.conf::<InvokeConfig>().module_urls.get(&module.to_string()) {
+        if let Some(uri) = funs.invoke_conf_module_url().get(&module.to_string()) {
             return Ok(uri.as_str().to_string());
         }
         Err(funs.err().conflict("spi-module", "spi_module", "spi module uri Not configured yet.", "400-spi-module-not-exist"))
@@ -23,7 +23,7 @@ impl BaseSpiClient {
 
     pub async fn headers(headers: Option<Vec<(String, String)>>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<Vec<(String, String)>>> {
         let spi_ctx = TardisContext {
-            owner: funs.conf::<InvokeConfig>().spi_app_id.clone(),
+            owner: funs.invoke_conf_spi_app_id(),
             ..ctx.clone()
         };
         let base_ctx = (TARDIS_CONTEXT.to_string(), TardisFuns::crypto.base64.encode(&TardisFuns::json.obj_to_string(&spi_ctx)?));

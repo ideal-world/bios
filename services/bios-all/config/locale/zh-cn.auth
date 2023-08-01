@@ -7,3 +7,4 @@
 401-auth-req-ak-not-exist	请求ak不存在或不完整
 
 403-auth-req-permission-denied	请求权限不合法
+500-auth-sign-webhook-permission-denied	签名权限不合法
