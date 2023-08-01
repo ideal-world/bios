@@ -4,15 +4,15 @@ use tardis::web::poem::web::Path;
 use simple_invoke_client_macro::simple_invoke_client;
 use tardis::web::poem_openapi;
 use tardis::web::web_resp::{TardisApiResult, TardisResp};
-
+use bios_sdk_invoke::clients::SimpleInvokeClient;
 use crate::consts::get_tardis_inst;
 use crate::dto::*;
 use crate::serv::*;
-
+use crate::invoke::Client;
 #[derive(Clone, Default)]
 /// 消息记录-租户控制台
 pub struct ReachMsgLogCtApi;
-#[simple_invoke_client(Client, "/ct/msg/log")]
+#[simple_invoke_client(Client<'_>, "/ct/msg/log")]
 #[poem_openapi::OpenApi(prefix_path = "/ct/msg/log")]
 impl ReachMsgLogCtApi {
     /// 获取所有消息记录数据

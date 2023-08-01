@@ -1,6 +1,6 @@
 use bios_basic::rbum::dto::{rbum_filer_dto::RbumItemBasicFilterReq, rbum_item_dto::RbumItemAddReq};
 
-use serde::Serialize;
+use serde::{Serialize, Deserialize};
 use tardis::{
     chrono::{DateTime, Utc},
     db::sea_orm,
@@ -47,7 +47,7 @@ pub struct ReachMsgLogModifyReq {
     pub fail_message: String,
 }
 
-#[derive(Debug, poem_openapi::Object, Serialize, sea_orm::FromQueryResult)]
+#[derive(Debug, poem_openapi::Object, Serialize, Deserialize, sea_orm::FromQueryResult)]
 pub struct ReachMsgLogSummaryResp {
     pub id: String,
     pub own_paths: String,

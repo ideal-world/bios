@@ -31,6 +31,8 @@ bios-basic = { path = "../../basic", features = ["default"] }
 bios-sdk-invoke = { path = "../../sdk/invoke", features = [
     "iam",
 ], default-features = false }
+simple-invoke-client-macro = { path = "../../sdk/simple-invoke-client-macro" }
+
 [dev-dependencies]
 tardis = { workspace = true, features = ["test"] }
 
@@ -38,4 +40,3 @@ bios-basic = { path = "../../basic", features = ["default", "test"] }
 
 bios-reach = { path = "./", features = ["simple-client"] }
 
-simple-invoke-client-macro = { path = "../../sdk/simple-invoke-client-macro" }
