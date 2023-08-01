@@ -10,7 +10,6 @@ use crate::invoke_constants::TARDIS_CONTEXT;
 
 #[cfg(feature = "spi_base")]
 mod base_spi_client;
-
 #[cfg(feature = "spi_kv")]
 pub mod spi_kv_client;
 #[cfg(feature = "spi_log")]

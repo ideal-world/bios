@@ -42,3 +42,17 @@ pub enum InvokeModuleKind {
     Schedule,
     Iam
 }
+
+#[cfg(not(feature = "reldb-core"))]
+#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum)]
+pub enum InvokeModuleKind {
+    Search,
+    Plugin,
+    Kv,
+    Log,
+    Object,
+    Cache,
+    Graph,
+    Stats,
+    Schedule,
+}
