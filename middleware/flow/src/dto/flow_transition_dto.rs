@@ -65,7 +65,7 @@ pub struct FlowTransitionModifyReq {
     pub double_check: Option<FlowTransitionDoubleCheckInfo>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, poem_openapi::Object, sea_orm::FromQueryResult)]
+#[derive(Serialize, Deserialize, Default, Debug, Clone, poem_openapi::Object, sea_orm::FromQueryResult)]
 pub struct FlowTransitionDetailResp {
     pub id: String,
     pub name: String,
@@ -163,10 +163,20 @@ pub struct FlowTransitionDoubleCheckInfo {
     pub content: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, Debug, poem_openapi::Union)]
-pub enum FlowTransitionActionChangeInfo {
-    Var(FlowTransitionActionByVarChangeInfo),
-    State(FlowTransitionActionByStateChangeInfo),
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug, poem_openapi::Object)]
+pub struct FlowTransitionActionChangeInfo {
+    pub kind: FlowTransitionActionChangeKind,
+    pub var_change_info: Option<FlowTransitionActionByVarChangeInfo>,
+    pub state_change_info: Option<FlowTransitionActionByStateChangeInfo>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, sea_orm::strum::EnumIter, sea_orm::DeriveActiveEnum)]
+#[sea_orm(rs_type = "String", db_type = "String(Some(255))")]
+pub enum FlowTransitionActionChangeKind {
+    #[sea_orm(string_value = "var")]
+    Var,
+    #[sea_orm(string_value = "state")]
+    State,
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug, poem_openapi::Object, sea_orm::FromJsonQueryResult)]
@@ -175,15 +185,15 @@ pub struct FlowTransitionActionByVarChangeInfo {
     pub describe: String,
     pub obj_tag: Option<String>,
     pub var_name: String,
-    pub changed_val: Value,
+    pub changed_val: Option<Value>,
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug, poem_openapi::Object, sea_orm::FromJsonQueryResult)]
 pub struct FlowTransitionActionByStateChangeInfo {
     pub obj_tag: String,
     pub describe: String,
-    pub obj_current_state_id: Option<String>,
-    pub change_conditions: Option<StateChangeCondition>,
+    pub obj_current_state_id: Option<Vec<String>>,
+    pub change_condition: Option<StateChangeCondition>,
     pub changed_state_id: String,
 }
 

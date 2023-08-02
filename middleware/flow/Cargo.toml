@@ -18,6 +18,7 @@ path = "src/lib.rs"
 serde.workspace = true
 serde_json.workspace = true
 async-trait.workspace = true
+async-recursion.workspace = true
 lazy_static.workspace = true
 itertools.workspace = true
 tardis = { workspace = true, features = ["reldb-postgres", "web-client"] }
@@ -28,3 +29,4 @@ bios-sdk-invoke = { path = "../../sdk/invoke", features = ["default"] }
 tardis = { workspace = true, features = ["test", "web-client"] }
 bios-basic = { path = "../../basic", features = ["default", "test"] }
 bios-sdk-invoke = { path = "../../sdk/invoke", features = ["default"] }
+bios-spi-kv = { path = "../../spi/spi-kv" }
