@@ -21,6 +21,7 @@ spi_kv = ["spi_base"]
 spi_log = ["spi_base"]
 spi_search = ["spi_base"]
 iam = []
+macro = ["dep:simple-invoke-client-macro"]
 reldb-core=["tardis/reldb-core"]
 
 [dependencies]
@@ -28,6 +29,6 @@ serde.workspace = true
 lazy_static.workspace = true
 itertools.workspace = true
 tardis = { workspace = true, features = ["web-server"] }
-
+simple-invoke-client-macro = { path = "../simple-invoke-client-macro", optional = true}
 [dev-dependencies]
 tardis = { workspace = true, features = ["test"] }

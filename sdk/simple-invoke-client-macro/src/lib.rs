@@ -1,10 +1,8 @@
-
-
 use std::{collections::HashMap, str::FromStr};
 
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::{parse_macro_input, FnArg, GenericArgument, Ident, ItemImpl, LitStr, Pat, ReturnType, TypeTuple, Type, Token};
+use syn::{parse_macro_input, FnArg, GenericArgument, Ident, ItemImpl, LitStr, Pat, ReturnType, Token, Type, TypeTuple};
 
 struct MatchGenericT {
     pub ident: syn::Ident,
@@ -48,7 +46,6 @@ fn match_generic_t(gtype: &str, arg: &FnArg) -> Option<MatchGenericT> {
     // is last segment Option ?
     if p_last_seg.ident == "Option" {
         is_optional = true;
-        // get Query<Option<T>> T
         let syn::PathArguments::AngleBracketed(a) = &p_last_seg.arguments else {
             return None;
         };
@@ -172,19 +169,55 @@ impl ApiInfoBuilder {
     }
 }
 
+/// # Usage
+/// This Attribute Macro is used to generate corresponding client methods for you api.
+/// Simplely add it **upon** `OpenApi` attribute.
+/// 
+/// The `Client` is your custom client struct witch implemented `SimpleInvokeClient` trait.
+/// ```no_run, ignore
+/// #[simple_invoke_client(Client)]
+/// #[poem_openapi::OpenApi(prefix_path = "/ct/msg")]
+/// impl Api {
+///     #[oai(method = "get", path = "/page")]
+///     pub async fn get_page(
+///         &self,
+///         page_number: Path<u32>,
+///         page_size: Query<Option<u32>>,
+///         TardisContextExtractor(ctx): TardisContextExtractor,
+///     ) -> TardisApiResult<TardisPage<String>> {
+///         // do something
+///         TardisResp::ok(TardisPage {
+///             page_number: 1,
+///             page_size: 10,
+///             total_size: 1,
+///             records: vec!["hello".to_string()],
+///         })
+///     }
+/// }
+/// ```
 #[proc_macro_attribute]
 pub fn simple_invoke_client(attr: TokenStream, item: TokenStream) -> TokenStream {
     let input = parse_macro_input!(item as ItemImpl);
-    let metadata = parse_macro_input!(attr as Metadata);
-
+    let mut metadata = parse_macro_input!(attr as Metadata);
+    // extract openapi metadata
+    input.attrs.iter().for_each(|attr| {
+        if attr.path().segments.iter().last().is_some_and(|last| last.ident == "OpenApi") {
+            let _ = attr.parse_nested_meta(|meta| {
+                if metadata.prefix_path.is_none() && meta.path.is_ident("prefix_path") {
+                    let path = meta.value()?.parse::<LitStr>()?;
+                    metadata.prefix_path.replace(path);
+                }
+                Ok(())
+            });
+        }
+    });
     let method_info_list = input
         .items
         .iter()
         .filter_map(|item| {
             if let syn::ImplItem::Fn(func) = item {
                 let name = &func.sig.ident;
-                let _inputs = func.sig.inputs.iter().map(|input| quote! { #input });
-                let _output = quote! { #func.sig.output };
+
                 let mut builder = ApiInfoBuilder::new(name.clone());
                 let mut path_map = HashMap::new();
                 // 1. find out body: arg with type: Json<T>,
@@ -260,7 +293,6 @@ pub fn simple_invoke_client(attr: TokenStream, item: TokenStream) -> TokenStream
 }
 
 fn generate_impl_taidis_api_client(apis: &[ApiInfo], client: Type, prefix: Option<LitStr>) -> proc_macro2::TokenStream {
-
     let mut impl_items = Vec::new();
 
     for api_info in apis {
@@ -272,7 +304,7 @@ fn generate_impl_taidis_api_client(apis: &[ApiInfo], client: Type, prefix: Optio
         let method = generate_method_token(&api_info.method);
         let body_resp = match &api_info.method {
             Method::Get | Method::Delete => quote!( #resp ),
-            Method::Post | Method::Put  => quote!( #body => #resp )
+            Method::Post | Method::Put => quote!( #body => #resp ),
         };
         let path = match &prefix {
             Some(prefix) => quote! { #prefix, #path },
@@ -344,8 +376,11 @@ struct Metadata {
 impl syn::parse::Parse for Metadata {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
         let client = input.parse::<Type>()?;
-        let _comma = input.parse::<Token![,]>()?;
-        let mut prefix_path = Some(input.parse::<LitStr>()?);
-        Ok(Self { client, prefix_path })
+        let mut meta_data = Self { client, prefix_path: None };
+        if let Ok(_comma) = input.parse::<Token![,]>() {
+            let prefix_path = Some(input.parse::<LitStr>()?);
+            meta_data.prefix_path = prefix_path;
+        }
+        Ok(meta_data)
     }
 }

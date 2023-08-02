@@ -1,18 +1,17 @@
-use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
-use tardis::web::context_extractor::TardisContextExtractor;
-use tardis::web::poem::web::Path;
-use simple_invoke_client_macro::simple_invoke_client;
-use tardis::web::poem_openapi;
-use tardis::web::web_resp::{TardisApiResult, TardisResp};
-use bios_sdk_invoke::clients::SimpleInvokeClient;
 use crate::consts::get_tardis_inst;
 use crate::dto::*;
-use crate::serv::*;
 use crate::invoke::Client;
+use crate::serv::*;
+use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
+use bios_sdk_invoke::simple_invoke_client;
+use tardis::web::context_extractor::TardisContextExtractor;
+use tardis::web::poem::web::Path;
+use tardis::web::poem_openapi;
+use tardis::web::web_resp::{TardisApiResult, TardisResp};
 #[derive(Clone, Default)]
 /// 消息记录-租户控制台
 pub struct ReachMsgLogCtApi;
-#[simple_invoke_client(Client<'_>, "/ct/msg/log")]
+#[cfg_attr(feature = "simple-client", simple_invoke_client(Client<'_>))]
 #[poem_openapi::OpenApi(prefix_path = "/ct/msg/log")]
 impl ReachMsgLogCtApi {
     /// 获取所有消息记录数据

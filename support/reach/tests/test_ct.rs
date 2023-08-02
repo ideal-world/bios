@@ -18,6 +18,7 @@ pub async fn test_ct_api() -> TardisResult<()> {
     let funs = get_tardis_inst();
     let client = invoke::Client::new("https://localhost:8080", &ctx, &funs);
     client.mail_pwd_send("test_mail", "hello", "hello from test", &()).await?;
+    let resp = client.find_msg_log("reach_message_id").await?;
     wait_for_press();
     drop(holder);
     Ok(())

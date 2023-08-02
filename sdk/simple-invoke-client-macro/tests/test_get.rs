@@ -1,5 +1,3 @@
-
-
 use bios_sdk_invoke::clients::SimpleInvokeClient;
 use tardis::basic::dto::TardisContext;
 use tardis::web::context_extractor::TardisContextExtractor;
@@ -32,7 +30,7 @@ impl SimpleInvokeClient for Client {
     }
 }
 use simple_invoke_client_macro::simple_invoke_client;
-#[simple_invoke_client(Client, "/ct/msg")]
+#[simple_invoke_client(Client)]
 #[poem_openapi::OpenApi(prefix_path = "/ct/msg")]
 impl Api {
     /// 获取所有用户触达消息数据分页
@@ -50,6 +48,21 @@ impl Api {
             records: vec!["hello".to_string()],
         })
     }
+        /// 获取所有用户触达消息数据分页
+    #[oai(method = "get", path = "/page/:page_number/size/:page_size")]
+    pub async fn get_page_path(
+        &self,
+        page_number: Path<u32>,
+        page_size: Path<u32>,
+        TardisContextExtractor(ctx): TardisContextExtractor,
+    ) -> TardisApiResult<TardisPage<String>> {
+        TardisResp::ok(TardisPage {
+            page_number: 1,
+            page_size: 10,
+            total_size: 1,
+            records: vec!["hello".to_string()],
+        })
+    }
 }
 
 async fn test() {
@@ -57,4 +70,5 @@ async fn test() {
 
     };
     let resp = client.get_page(None, None).await;
+    let resp = client.get_page_path(1, 2).await;
 }
