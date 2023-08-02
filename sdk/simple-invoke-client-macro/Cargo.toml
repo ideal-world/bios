@@ -26,4 +26,3 @@ tardis = { workspace = true, features = [
     "web-client",
     "crypto",
 ] }
-bios-sdk-invoke= { path = "../invoke" }
