@@ -16,6 +16,7 @@ use tardis::tokio::time::sleep;
 use tardis::web::web_resp::Void;
 use tardis::{testcontainers, tokio, TardisFuns};
 
+mod mock_api;
 mod test_flow_scenes_fsm;
 
 #[tokio::test]
@@ -30,6 +31,7 @@ async fn test_flow_api() -> TardisResult<()> {
 
     let web_server = TardisFuns::web_server();
     flow_initializer::init(web_server).await.unwrap();
+    web_server.add_module("mock", mock_api::MockApi).await;
     init_spi_kv().await?;
 
     tokio::spawn(async move {

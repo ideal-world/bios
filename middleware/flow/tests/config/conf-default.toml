@@ -67,5 +67,7 @@ FZygs8miAhWPzqnpmgTj1cPiU1M=
 """
 [fw.web_server.modules.flow]
 [fw.web_server.modules.spi-kv]
+[fw.web_server.modules.mock]
+
 title = "Flow Component"
 doc_urls = [["test env", "http://localhost:8080/"]]

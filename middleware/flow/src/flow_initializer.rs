@@ -188,7 +188,9 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
         funs,
         ctx,
     )
-    .await?.records.pop();
+    .await?
+    .records
+    .pop();
     if ticket_init_model.is_none() {
         // 工单模板初始化
         FlowModelServ::init_model(
@@ -329,7 +331,9 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
         funs,
         ctx,
     )
-    .await?.records.pop();
+    .await?
+    .records
+    .pop();
     if ticket_init_model.is_none() {
         // 需求模板初始化
         FlowModelServ::init_model(
@@ -622,7 +626,9 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
         funs,
         ctx,
     )
-    .await?.records.pop();
+    .await?
+    .records
+    .pop();
     if product_init_model.is_none() {
         FlowModelServ::init_model(
             "PROJECT",
@@ -673,8 +679,9 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                 },
             ],
             funs,
-            ctx
-        ).await?;
+            ctx,
+        )
+        .await?;
     }
     Ok(())
 }

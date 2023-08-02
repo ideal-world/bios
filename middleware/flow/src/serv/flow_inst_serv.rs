@@ -40,7 +40,7 @@ use crate::{
         },
         flow_model_dto::{FlowModelDetailResp, FlowModelFilterReq},
         flow_state_dto::{FlowStateFilterReq, FlowSysStateKind},
-        flow_transition_dto::{FlowTransitionActionByStateChangeInfo, FlowTransitionActionChangeInfo, FlowTransitionDetailResp, FlowTransitionActionChangeKind},
+        flow_transition_dto::{FlowTransitionActionByStateChangeInfo, FlowTransitionActionChangeInfo, FlowTransitionActionChangeKind, FlowTransitionDetailResp},
     },
     flow_constants,
     serv::{flow_model_serv::FlowModelServ, flow_state_serv::FlowStateServ},
@@ -582,9 +582,9 @@ impl FlowInstServ {
                                 )
                                 .await?
                                 .body;
-                        }   
+                        }
                     }
-                },
+                }
                 FlowTransitionActionChangeKind::State => {
                     if let Some(change_info) = post_change.state_change_info {
                         let resp: TardisResp<FlowExternalFetchRelObjResp> = funs
