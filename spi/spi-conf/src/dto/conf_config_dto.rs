@@ -112,7 +112,6 @@ pub struct ConfigPublishRequest {
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 #[serde(default)]
-#[serde(rename_all = "camelCase")]
 pub struct ConfigItem {
     /// 配置id
     pub id: String,
@@ -170,7 +169,6 @@ impl Default for ConfigItem {
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Default)]
 #[serde(default)]
-#[serde(rename_all = "camelCase")]
 pub struct ConfigItemDigest {
     /// 配置名
     pub data_id: String,
@@ -186,7 +184,6 @@ pub struct ConfigItemDigest {
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 #[serde(default)]
-#[serde(rename_all = "camelCase")]
 pub struct ConfigHistoryListRequest {
     #[serde(flatten)]
     pub descriptor: ConfigDescriptor,
