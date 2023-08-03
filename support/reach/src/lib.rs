@@ -6,7 +6,7 @@ pub mod client;
 pub mod config;
 pub mod consts;
 mod domain;
-mod dto;
+pub mod dto;
 mod errors;
 mod init;
 #[cfg(feature = "simple-client")]

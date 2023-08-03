@@ -46,7 +46,7 @@ pub struct ReachMessageAddReq {
     pub content_replace: String,
 }
 
-#[derive(Debug, poem_openapi::Object, Default)]
+#[derive(Debug, poem_openapi::Object, Default, Deserialize, Serialize)]
 pub struct ReachMessageModifyReq {
     /// 发件人
     #[oai(validator(max_length = "2000"))]
@@ -69,14 +69,15 @@ pub struct ReachMessageModifyReq {
     /// 触达状态
     pub content_replace: Option<String>,
 }
-#[derive(Debug, poem_openapi::Object, Default)]
+#[derive(Debug, poem_openapi::Object, Default, Serialize, Deserialize)]
 pub struct ReachMessageFilterReq {
     #[oai(flatten)]
+    #[serde(flatten)]
     pub rbum_item_basic_filter_req: RbumItemBasicFilterReq,
     pub reach_status: Option<ReachStatusKind>,
 }
 
-#[derive(Debug, poem_openapi::Object, Serialize, sea_orm::FromQueryResult)]
+#[derive(Debug, poem_openapi::Object, Serialize, Deserialize, sea_orm::FromQueryResult)]
 pub struct ReachMessageSummaryResp {
     pub id: String,
     pub own_paths: String,
@@ -100,7 +101,7 @@ pub struct ReachMessageSummaryResp {
     pub template_name: String,
 }
 
-#[derive(Debug, poem_openapi::Object, Serialize, sea_orm::FromQueryResult)]
+#[derive(Debug, poem_openapi::Object, Serialize, Deserialize, sea_orm::FromQueryResult)]
 pub struct ReachMessageDetailResp {
     pub id: String,
     pub own_paths: String,

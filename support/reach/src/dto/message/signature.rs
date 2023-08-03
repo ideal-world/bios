@@ -8,7 +8,7 @@ use tardis::{
 
 use crate::dto::*;
 /// 添加用户触达签名请求
-#[derive(Debug, poem_openapi::Object, Deserialize)]
+#[derive(Debug, poem_openapi::Object, Serialize, Deserialize)]
 pub struct ReachMsgSignatureAddReq {
     /// 名称
     #[oai(validator(max_length = "255"))]
@@ -25,7 +25,7 @@ pub struct ReachMsgSignatureAddReq {
     pub rel_reach_channel: ReachChannelKind,
 }
 /// 修改用户触达签名请求
-#[derive(Debug, poem_openapi::Object, Deserialize)]
+#[derive(Debug, poem_openapi::Object, Serialize, Deserialize)]
 pub struct ReachMsgSignatureModifyReq {
     /// 名称
     #[oai(validator(max_length = "255"))]
@@ -54,7 +54,7 @@ pub struct ReachMsgSignatureFilterReq {
     pub rel_reach_channel: Option<ReachChannelKind>,
 }
 
-#[derive(Debug, poem_openapi::Object, sea_orm::FromQueryResult, Serialize)]
+#[derive(Debug, poem_openapi::Object, sea_orm::FromQueryResult, Serialize, Deserialize)]
 pub struct ReachMsgSignatureSummaryResp {
     pub id: String,
     pub own_paths: String,
@@ -68,7 +68,7 @@ pub struct ReachMsgSignatureSummaryResp {
     pub rel_reach_channel: ReachChannelKind,
 }
 
-#[derive(Debug, poem_openapi::Object, sea_orm::FromQueryResult, Serialize)]
+#[derive(Debug, poem_openapi::Object, sea_orm::FromQueryResult, Serialize, Deserialize)]
 pub struct ReachMsgSignatureDetailResp {
     pub id: String,
     pub own_paths: String,

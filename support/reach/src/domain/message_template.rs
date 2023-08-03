@@ -6,7 +6,7 @@ use tardis::db::sea_orm;
 use tardis::db::sea_orm::sea_query::{ColumnDef, Table, TableCreateStatement};
 use tardis::db::sea_orm::*;
 
-use crate::dto::*;
+use crate::{dto::*, fill_by_add_req};
 use crate::fill_by_mod_req;
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
 #[sea_orm(table_name = "reach_msg_template")]
@@ -87,35 +87,36 @@ pub struct Model {
     pub sms_from: String,
 }
 impl From<&ReachMessageTemplateAddReq> for ActiveModel {
-    fn from(modify_req: &ReachMessageTemplateAddReq) -> Self {
-        let mut model = ActiveModel {
-            own_paths: Set(modify_req.own_paths.to_string()),
-            owner: Set(modify_req.owner.to_string()),
-            create_time: Set(modify_req.create_time),
+    fn from(add_req: &ReachMessageTemplateAddReq) -> Self {
+        let mut model = ActiveModel { 
+            create_time: Set(Utc::now()),
             update_time: Set(Utc::now()),
-            note: Set(modify_req.note.to_string()),
-            icon: Set(modify_req.icon.to_string()),
-            sort: Set(modify_req.sort),
-            disabled: Set(modify_req.disabled),
-            variables: Set(modify_req.variables.to_string()),
-            level_kind: Set(modify_req.level_kind),
-            topic: Set(modify_req.topic.to_string()),
-            content: Set(modify_req.content.to_string()),
-            timeout_sec: Set(modify_req.timeout_sec),
-            rel_reach_verify_code_strategy_id: Set(modify_req.rel_reach_verify_code_strategy_id.to_string()),
-            sms_template_id: Set(modify_req.sms_template_id.to_string()),
-            sms_signature: Set(modify_req.sms_signature.to_string()),
-            sms_from: Set(modify_req.sms_from.to_string()),
-            ..Default::default()
+            ..Default::default() 
         };
-        if let Some(code) = &modify_req.code {
-            model.code = Set(code.to_string());
-        }
-        if let Some(name) = &modify_req.name {
-            model.name = Set(name.to_string());
-        }
-        if let Some(scope_level) = modify_req.scope_level {
-            model.scope_level = Set(scope_level);
+        fill_by_add_req!(add_req => {
+            note,
+            icon,
+            sort,
+            disabled,
+            variables,
+            level_kind,
+            topic,
+            content,
+            timeout_sec,
+            timeout_strategy,
+            rel_reach_channel,
+            kind,
+            rel_reach_verify_code_strategy_id,
+            sms_template_id,
+            sms_signature,
+            sms_from,
+        } model);
+        fill_by_mod_req! {
+            add_req => {
+                code,
+                name,
+                scope_level,
+            } model
         }
         model
     }

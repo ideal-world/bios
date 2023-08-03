@@ -13,7 +13,7 @@ use tardis::{
 use crate::{
     api,
     config::ReachConfig,
-    consts::{get_tardis_inst, DOMAIN_CODE, DOMAIN_REACH_ID, RBUM_EXT_TABLE_REACH_MESSAGE, RBUM_KIND_CODE_REACH_MESSAGE},
+    consts::{get_tardis_inst, DOMAIN_CODE, DOMAIN_REACH_ID, RBUM_EXT_TABLE_REACH_MESSAGE, RBUM_KIND_CODE_REACH_MESSAGE, REACH_INIT_OWNER},
     serv::ReachTriggerSceneService,
     task,
 };
@@ -23,7 +23,7 @@ pub async fn db_init() -> TardisResult<()> {
     bios_basic::rbum::rbum_initializer::init(funs.module_code(), funs.conf::<ReachConfig>().rbum.clone()).await?;
     funs.begin().await?;
     let ctx = TardisContext {
-        owner: "ReachInit".to_string(),
+        owner: REACH_INIT_OWNER.into(),
         ..Default::default()
     };
     // add kind code

@@ -46,6 +46,7 @@ impl
 
     async fn package_query(is_detail: bool, filter: &ReachVCodeStrategyFilterReq, _funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<SelectStatement> {
         let mut query = Query::select();
+        query.from(reach_vcode_strategy::Entity);
         if let Some(rel_reach_set_id) = &filter.rel_reach_set_id {
             query.and_where(reach_vcode_strategy::Column::RelReachSetId.eq(rel_reach_set_id));
         }

@@ -5,12 +5,11 @@ use serde::{Deserialize, Serialize};
 mod mail;
 mod sms;
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
+#[serde(default)]
 pub struct ReachConfig {
     pub sms: sms::HwSmsConfig,
-    #[serde(default)]
     pub rbum: RbumConfig,
-    #[serde(default)]
     pub invoke: InvokeConfig,
     pub iam_get_account: String,
 }

@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
+#[serde(default)]
 pub struct HwSmsConfig {
     pub base_url: String,
     pub app_key: String,

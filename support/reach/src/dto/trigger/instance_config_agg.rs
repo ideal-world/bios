@@ -1,15 +1,15 @@
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use tardis::web::poem_openapi;
 
 use crate::dto::*;
 
 /// 添加或编辑用户触达触发实例聚合配置请求
-#[derive(Debug, poem_openapi::Object, Deserialize)]
+#[derive(Debug, poem_openapi::Object, Serialize, Deserialize)]
 pub struct ReachTriggerInstanceConfigAddOrModifyAggReq {
     pub instance_config: Vec<ReachTriggerInstanceConfigAddOrModifyReq>,
 }
 
-#[derive(Debug, poem_openapi::Object, Deserialize)]
+#[derive(Debug, poem_openapi::Object, Serialize, Deserialize)]
 pub struct ReachTriggerInstanceConfigAddOrModifyReq {
     #[oai(validator(max_length = "512"))]
     /// 关联的触发场景id

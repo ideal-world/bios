@@ -3,7 +3,7 @@ use std::collections::{HashMap, HashSet};
 use bios_basic::rbum::{dto::rbum_item_dto::RbumItemAddReq, serv::rbum_crud_serv::RbumCrudOperation};
 use tardis::{
     basic::result::TardisResult,
-    db::sea_orm::{self, sea_query::Query, ColumnTrait},
+    db::sea_orm::{sea_query::Query, ColumnTrait},
     log, TardisFuns,
 };
 
@@ -25,14 +25,9 @@ impl EventListener {
                     return Err(err("receiver is empty"));
                 }
                 let ctx = send_req.get_ctx();
-                // find scene
-                #[derive(sea_orm::FromQueryResult)]
-                struct TriggerScene {
-                    id: String,
-                }
                 let scene = funs
                     .db()
-                    .get_dto::<TriggerScene>(Query::select().and_where(trigger_scene::Column::Code.eq(&send_req.scene_code)).limit(1))
+                    .get_dto::<trigger_scene::Model>(Query::select().from(trigger_scene::Entity).and_where(trigger_scene::Column::Code.eq(&send_req.scene_code)).limit(1))
                     .await?
                     .ok_or_else(|| funs.err().not_found("reach", "event_listener", "cannot find scene", ""))?;
                 let filter = &ReachTriggerGlobalConfigFilterReq {

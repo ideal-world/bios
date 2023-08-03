@@ -13,6 +13,8 @@ use crate::config::ReachConfig;
 use crate::consts::*;
 use crate::dto::*;
 use crate::serv::*;
+#[cfg(feature = "simple-client")]
+use crate::invoke::Client;
 
 #[derive(Clone, Default)]
 /// 用户触达消息-公共控制台
@@ -20,7 +22,8 @@ pub struct ReachMessageCcApi {
     channel: SendChannelAll,
 }
 
-#[poem_openapi::OpenApi(prefix_path = "/cc/msg")]
+#[cfg_attr(feature = "simple-client", bios_sdk_invoke::simple_invoke_client(Client<'_>))]
+#[poem_openapi::OpenApi(prefix_path = "/cc/msg", tag = "bios_basic::ApiTag::App")]
 impl ReachMessageCcApi {
     /// 根据模板id发送信息
     #[oai(method = "put", path = "/general/:to/:msg_template_id")]

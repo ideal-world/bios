@@ -40,10 +40,12 @@ macro_rules! fill_by_add_req {
     ($req:expr => {
         $($field: ident $(:$clone_stg:tt)?),*$(,)?
     } $active_model:expr ) => {
-        use sea_orm::entity::ActiveValue;
-        $(
-            $active_model.$field = ActiveValue::Set(fill_by_add_req!(@clone $req.$field $(,$clone_stg)?));
-        )*
+        {
+            use sea_orm::entity::ActiveValue;
+            $(
+                $active_model.$field = ActiveValue::Set(fill_by_add_req!(@clone $req.$field $(,$clone_stg)?));
+            )*
+        }
     };
     /*
         clone or copy a reference value

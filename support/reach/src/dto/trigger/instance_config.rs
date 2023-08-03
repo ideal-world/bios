@@ -1,6 +1,6 @@
 use bios_basic::rbum::dto::rbum_filer_dto::RbumItemBasicFilterReq;
 
-use serde::Serialize;
+use serde::{Serialize, Deserialize};
 use tardis::{
     chrono::{DateTime, Utc},
     db::sea_orm,
@@ -65,7 +65,7 @@ pub struct ReachTriggerInstanceConfigFilterReq {
     pub rel_reach_trigger_scene_id: Option<String>,
 }
 
-#[derive(Debug, poem_openapi::Object, Serialize, sea_orm::FromQueryResult)]
+#[derive(Debug, poem_openapi::Object, Serialize, Deserialize, sea_orm::FromQueryResult)]
 pub struct ReachTriggerInstanceConfigSummaryResp {
     pub id: String,
     pub own_paths: String,

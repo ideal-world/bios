@@ -7,9 +7,10 @@ use tardis::{
     web::poem_openapi,
 };
 
-#[derive(Debug, poem_openapi::Object)]
+#[derive(Debug, poem_openapi::Object, Serialize, Deserialize)]
 pub struct ReachMsgLogAddReq {
     #[oai(flatten)]
+    #[serde(flatten)]
     pub rbum_add_req: RbumItemAddReq,
     pub rel_account_id: String,
     pub dnd_time: String,
@@ -22,14 +23,15 @@ pub struct ReachMsgLogAddReq {
 }
 
 use super::ReachDndStrategyKind;
-#[derive(Debug, poem_openapi::Object, Default)]
+#[derive(Debug, poem_openapi::Object, Default, Serialize, Deserialize)]
 pub struct ReachMsgLogFilterReq {
     #[oai(flatten)]
+    #[serde(flatten)]
     pub base_filter: RbumItemBasicFilterReq,
     pub rel_reach_message_id: Option<String>,
 }
 
-#[derive(Debug, poem_openapi::Object)]
+#[derive(Debug, poem_openapi::Object, Serialize, Deserialize)]
 pub struct ReachMsgLogModifyReq {
     /// 关联接收人Id
     pub rel_account_id: String,
@@ -72,7 +74,7 @@ pub struct ReachMsgLogSummaryResp {
     pub rel_reach_message_id: String,
 }
 
-#[derive(Debug, poem_openapi::Object, Serialize, sea_orm::FromQueryResult)]
+#[derive(Debug, poem_openapi::Object, Serialize, Deserialize, sea_orm::FromQueryResult)]
 pub struct ReachMsgLogDetailResp {
     pub id: String,
     pub own_paths: String,

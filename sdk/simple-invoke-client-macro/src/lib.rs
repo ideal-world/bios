@@ -122,7 +122,7 @@ impl FromStr for Method {
 struct ApiInfo {
     pub name: Ident,
     pub path: Vec<PathItem>,
-    pub query: HashMap<String, MatchGenericT>,
+    pub query: Vec<(String, MatchGenericT)>,
     pub body: syn::Type,
     pub resp: syn::Type,
     pub method: Method,
@@ -133,7 +133,7 @@ struct ApiInfoBuilder {
     pub path: Vec<PathItem>,
     pub body: Option<syn::Type>,
     pub resp: syn::Type,
-    pub query: HashMap<String, MatchGenericT>,
+    pub query: Vec<(String, MatchGenericT)>,
     pub method: Option<Method>,
 }
 
@@ -148,7 +148,7 @@ impl ApiInfoBuilder {
                 elems: Default::default(),
             }),
             method: None,
-            query: HashMap::new(),
+            query: Vec::new(),
         }
     }
     pub fn build(self) -> Result<ApiInfo, syn::Error> {
@@ -226,7 +226,7 @@ pub fn simple_invoke_client(attr: TokenStream, item: TokenStream) -> TokenStream
                 // 4. find out query args: arg with type: Query<T>,
                 for arg in &func.sig.inputs {
                     if let Some(q) = match_generic_t("Query", arg) {
-                        builder.query.insert(q.ident.to_string(), q);
+                        builder.query.push((q.ident.to_string(), q));
                     }
                     if let Some(p) = match_generic_t("Path", arg) {
                         path_map.insert(p.ident.to_string(), p);
@@ -340,7 +340,7 @@ fn generate_path_tokens(path: &[PathItem]) -> proc_macro2::TokenStream {
     quote! { #(#tokens),* }
 }
 
-fn generate_query_tokens(query: &HashMap<String, MatchGenericT>) -> proc_macro2::TokenStream {
+fn generate_query_tokens(query: &[(String, MatchGenericT)]) -> proc_macro2::TokenStream {
     let tokens = query.iter().map(|(_name, ty)| {
         let ty_ts = generate_type_tokens(&ty.tp);
         let ident = &ty.ident;

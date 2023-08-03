@@ -9,16 +9,18 @@ use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp};
 use crate::consts::get_tardis_inst;
 use crate::dto::*;
 use crate::serv::*;
-
+#[cfg(feature = "simple-client")]
+use crate::invoke::Client;
 #[derive(Clone, Default)]
 /// 用户触达消息-公共控制台
 pub struct ReachMessageCtApi;
 
-#[poem_openapi::OpenApi(prefix_path = "/ct/msg")]
+#[cfg_attr(feature = "simple-client", bios_sdk_invoke::simple_invoke_client(Client<'_>))]
+#[poem_openapi::OpenApi(prefix_path = "/ct/msg", tag = "bios_basic::ApiTag::App")]
 impl ReachMessageCtApi {
     /// 获取所有用户触达消息数据分页
     #[oai(method = "get", path = "/page")]
-    pub async fn paginate_msg_log(
+    pub async fn paginate_msg(
         &self,
         page_number: Query<Option<u32>>,
         page_size: Query<Option<u32>>,
@@ -36,7 +38,7 @@ impl ReachMessageCtApi {
 
     /// 获取所有用户触达消息数据
     #[oai(method = "get", path = "/")]
-    pub async fn find_msg_log(&self, TardisContextExtractor(ctx): TardisContextExtractor) -> TardisApiResult<Vec<ReachMessageSummaryResp>> {
+    pub async fn find_msg(&self, TardisContextExtractor(ctx): TardisContextExtractor) -> TardisApiResult<Vec<ReachMessageSummaryResp>> {
         let mut filter = ReachMessageFilterReq::default();
         filter.rbum_item_basic_filter_req.basic.with_sub_own_paths = true;
         let funs = get_tardis_inst();
@@ -46,7 +48,7 @@ impl ReachMessageCtApi {
 
     /// 根据Id获取用户触达消息数据
     #[oai(method = "get", path = "/:id")]
-    pub async fn get_msg_signature_by_id(&self, id: Path<String>, TardisContextExtractor(ctx): TardisContextExtractor) -> TardisApiResult<ReachMessageDetailResp> {
+    pub async fn get_msg_by_id(&self, id: Path<String>, TardisContextExtractor(ctx): TardisContextExtractor) -> TardisApiResult<ReachMessageDetailResp> {
         let mut filter = ReachMessageFilterReq::default();
         filter.rbum_item_basic_filter_req.basic.with_sub_own_paths = true;
         let funs = get_tardis_inst();

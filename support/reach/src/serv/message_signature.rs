@@ -8,7 +8,7 @@ use tardis::basic::result::TardisResult;
 use tardis::db::reldb_client::TardisActiveModel;
 
 use tardis::db::sea_orm::sea_query::{Query, SelectStatement};
-use tardis::db::sea_orm::EntityName;
+use tardis::db::sea_orm::{EntityName, Iterable};
 use tardis::db::sea_orm::{ColumnTrait, Set};
 use tardis::{TardisFuns, TardisFunsInst};
 
@@ -45,6 +45,8 @@ impl
 
     async fn package_query(is_detail: bool, filter: &ReachMsgSignatureFilterReq, _: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<SelectStatement> {
         let mut query = Query::select();
+        query.from(message_signature::Entity);
+        query.columns(message_signature::Column::iter().map(|c|(message_signature::Entity, c)));
         query.with_filter(Self::get_table_name(), &filter.base_filter, is_detail, false, ctx);
         if !filter.name.is_empty() {
             query.and_where(message_signature::Column::Name.contains(filter.name.as_str()));

@@ -13,7 +13,7 @@ pub use trigger_instance::ReachTriggerInstanceConfigCtApi;
 
 pub type ReachCtApi = (
     ReachMessageCtApi,
-    ReachMsgLogCtApi,
+    ReachMsgSignatureCtApi,
     ReachMsgLogCtApi,
     ReachMessageTemplateCtApi,
     ReachTriggerGlobalConfigCtApi,

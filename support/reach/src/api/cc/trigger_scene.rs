@@ -7,14 +7,16 @@ use tardis::web::poem_openapi;
 use tardis::web::web_resp::{TardisApiResult, TardisResp};
 
 use crate::consts::get_tardis_inst;
-
+#[cfg(feature = "simple-client")]
+use crate::invoke::Client;
 use crate::dto::*;
 use crate::serv::*;
 
 #[derive(Clone, Default)]
 pub struct ReachTriggerSceneCcApi;
 
-#[poem_openapi::OpenApi(prefix_path = "/cc/trigger/scene")]
+#[cfg_attr(feature = "simple-client", bios_sdk_invoke::simple_invoke_client(Client<'_>))]
+#[poem_openapi::OpenApi(prefix_path = "/cc/trigger/scene", tag = "bios_basic::ApiTag::App")]
 impl ReachTriggerSceneCcApi {
     /// 用户触达触发场景-公告`控制台
     #[oai(method = "get", path = "/")]

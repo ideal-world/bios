@@ -10,15 +10,17 @@ use crate::consts::get_tardis_inst;
 use crate::dto::*;
 use crate::serv::*;
 
+#[cfg(feature = "simple-client")]
+use crate::invoke::Client;
 #[derive(Clone, Default)]
 /// 用户触达消息消息模板-租户控制台
 pub struct ReachMessageTemplateCtApi;
-
-#[poem_openapi::OpenApi(prefix_path = "/ct/msg/template")]
+#[cfg_attr(feature = "simple-client", bios_sdk_invoke::simple_invoke_client(Client<'_>))]
+#[poem_openapi::OpenApi(prefix_path = "/ct/msg/template", tag = "bios_basic::ApiTag::App")]
 impl ReachMessageTemplateCtApi {
     /// 获取所有用户触达消息消息模板数据分页
     #[oai(method = "get", path = "/page")]
-    pub async fn paginate_msg_log(
+    pub async fn paginate_msg_template(
         &self,
         page_number: Query<Option<u32>>,
         page_size: Query<Option<u32>>,
@@ -64,7 +66,7 @@ impl ReachMessageTemplateCtApi {
     }
 
     /// 添加用户触达消息消息模板
-    #[oai(method = "get", path = "/")]
+    #[oai(method = "post", path = "/")]
     pub async fn add_msg_template(&self, mut agg_req: Json<ReachMessageTemplateAddReq>, TardisContextExtractor(ctx): TardisContextExtractor) -> TardisApiResult<String> {
         let funs = get_tardis_inst();
         let id = ReachMessageTemplateServ::add_rbum(&mut agg_req, &funs, &ctx).await?;

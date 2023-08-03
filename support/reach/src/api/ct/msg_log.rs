@@ -1,5 +1,6 @@
 use crate::consts::get_tardis_inst;
 use crate::dto::*;
+#[cfg(feature = "simple-client")]
 use crate::invoke::Client;
 use crate::serv::*;
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
@@ -12,7 +13,7 @@ use tardis::web::web_resp::{TardisApiResult, TardisResp};
 /// 消息记录-租户控制台
 pub struct ReachMsgLogCtApi;
 #[cfg_attr(feature = "simple-client", simple_invoke_client(Client<'_>))]
-#[poem_openapi::OpenApi(prefix_path = "/ct/msg/log")]
+#[poem_openapi::OpenApi(prefix_path = "/ct/msg/log", tag = "bios_basic::ApiTag::App")]
 impl ReachMsgLogCtApi {
     /// 获取所有消息记录数据
     #[oai(method = "get", path = "/:reach_message_id")]

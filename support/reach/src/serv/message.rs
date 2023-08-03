@@ -50,7 +50,7 @@ impl RbumCrudOperation<message::ActiveModel, ReachMessageAddReq, ReachMessageMod
 
     async fn package_query(is_detail: bool, filter: &ReachMessageFilterReq, _: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<SelectStatement> {
         let mut query = Query::select();
-
+        query.from(message::Entity);
         query.left_join(
             message_template::Entity,
             Expr::col((message_template::Entity, message_template::Column::Id)).equals((message::Entity, message::Column::RelReachMsgTemplateId)),

@@ -72,13 +72,13 @@ impl MessageSendListener {
         let funs = get_tardis_inst();
         let db = funs.db();
         let messages: Vec<message::Model> = db
-            .find_dtos(Query::select().and_where(message::Column::ReachStatus.eq(ReachStatusKind::Pending)).and_where(message::Column::ReceiveKind.eq(ReachReceiveKind::Account)))
+            .find_dtos(Query::select().from(message::Entity).and_where(message::Column::ReachStatus.eq(ReachStatusKind::Pending)).and_where(message::Column::ReceiveKind.eq(ReachReceiveKind::Account)))
             .await?;
         for message in messages {
-            let Some(template) = db.get_dto::<message_template::Model>(Query::select().and_where(message_template::Column::Id.eq(&message.id))).await? else {
+            let Some(template) = db.get_dto::<message_template::Model>(Query::select().from(message_template::Entity).and_where(message_template::Column::Id.eq(&message.id))).await? else {
                 continue;
             };
-            let Some(_signature) = db.get_dto::<message_signature::Model>(Query::select().and_where(message_template::Column::Id.eq(&message.id))).await? else {
+            let Some(_signature) = db.get_dto::<message_signature::Model>(Query::select().from(message_template::Entity).and_where(message_template::Column::Id.eq(&message.id))).await? else {
                 continue;
             };
             match message.receive_kind {

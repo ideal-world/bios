@@ -1,8 +1,8 @@
 [cs]
 cache_key_res_changed_timer_sec = 1
+[csm.reach]
 [csm.reach.sms]
 base_url = "http://localhost:8080/test_sms_server"
-
 [csm.reach.invoke]
 
 [fw.web_server]

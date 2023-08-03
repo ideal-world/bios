@@ -84,6 +84,7 @@ impl
 
     async fn package_query(is_detail: bool, filter: &ReachTriggerGlobalConfigFilterReq, _: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<SelectStatement> {
         let mut query = Query::select();
+        query.from(trigger_global_config::Entity);
         query
             .columns(trigger_global_config::Column::iter())
             .and_where_option(filter.rel_reach_trigger_scene_id.as_ref().map(|v| trigger_global_config::Column::RelReachTriggerSceneId.eq(v)))

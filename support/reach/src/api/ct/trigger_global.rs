@@ -10,11 +10,14 @@ use crate::consts::get_tardis_inst;
 use crate::dto::*;
 use crate::serv::*;
 
+#[cfg(feature = "simple-client")]
+use crate::invoke::Client;
 #[derive(Clone, Default)]
 /// 用户触达触发全局配置-租户控制台
 pub struct ReachTriggerGlobalConfigCtApi;
 
-#[poem_openapi::OpenApi(prefix_path = "/ct/msg/global/config")]
+#[cfg_attr(feature = "simple-client", bios_sdk_invoke::simple_invoke_client(Client<'_>))]
+#[poem_openapi::OpenApi(prefix_path = "/ct/msg/global/config", tag = "bios_basic::ApiTag::App")]
 impl ReachTriggerGlobalConfigCtApi {
     /// 获取所有用户触达触发全局配置数据
     #[oai(method = "get", path = "/")]

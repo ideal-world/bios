@@ -10,15 +10,18 @@ use crate::consts::get_tardis_inst;
 use crate::dto::*;
 use crate::serv::*;
 
+#[cfg(feature = "simple-client")]
+use crate::invoke::Client;
 #[derive(Clone, Default)]
 /// 用户触达触发实例配置-租户控制台
 pub struct ReachTriggerInstanceConfigCtApi;
 
-#[poem_openapi::OpenApi(prefix_path = "/ct/msg/instance/config")]
+#[cfg_attr(feature = "simple-client", bios_sdk_invoke::simple_invoke_client(Client<'_>))]
+#[poem_openapi::OpenApi(prefix_path = "/ct/msg/instance/config", tag = "bios_basic::ApiTag::App")]
 impl ReachTriggerInstanceConfigCtApi {
     /// 根据类型获取所有用户触达触发实例配置数据
     #[oai(method = "get", path = "/")]
-    pub async fn find_trigger_global_config(
+    pub async fn find_trigger_instance_config(
         &self,
         rel_item_id: Query<String>,
         TardisContextExtractor(ctx): TardisContextExtractor,

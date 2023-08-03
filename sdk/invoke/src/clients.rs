@@ -1,8 +1,9 @@
 use std::fmt::Display;
 
+use serde::Serialize;
 use tardis::{
     basic::{dto::TardisContext, error::TardisError, result::TardisResult},
-    web::web_client::TardisHttpResponse,
+    web::{web_client::TardisHttpResponse, web_resp::TardisResp, poem_openapi::types::{ParseFromJSON, ToJSON}},
     TardisFunsInst, TardisFuns,
 };
 
@@ -160,6 +161,7 @@ macro_rules! taidis_api {
     ($fn_name:ident @build get {$($args_i:ident:$args_t:ty,)*} {$($path:expr,)*} {$($query:expr,)*;$($optional_query:expr,)*} $Resp:ty) => {
         pub async fn $fn_name(&self, $($args_i:$args_t,)*) -> tardis::basic::result::TardisResult<$Resp> {
             use $crate::clients::SimpleInvokeClient;
+            use tardis::web::web_resp::TardisResp;
             let mut query = $crate::clients::QueryBuilder::new();
             $(
                 {
@@ -175,13 +177,14 @@ macro_rules! taidis_api {
             )*
             let url = self.get_url(&[$($path,)*], query.as_ref());
             let header = self.get_tardis_context_header()?;
-            let resp = self.get_funs().web_client().get::<$Resp>(&url, Some(vec![header])).await?;
+            let resp = self.get_funs().web_client().get::<TardisResp<$Resp>>(&url, Some(vec![header])).await?;
             Self::extract_response(resp)
         }
     };
     ($fn_name:ident @build post {$($args_i:ident:$args_t:ty,)*} {$($path:expr,)*} {$($query:expr,)*;$($optional_query:expr,)*} $Body:ty => $Resp:ty) => {
         pub async fn $fn_name(&self, $($args_i:$args_t,)* body: &$Body) -> tardis::basic::result::TardisResult<$Resp> {
             use $crate::clients::SimpleInvokeClient;
+            use tardis::web::web_resp::TardisResp;
             let mut query = $crate::clients::QueryBuilder::new();
             $(
                 {
@@ -197,13 +200,14 @@ macro_rules! taidis_api {
             )*
             let url = self.get_url(&[$($path,)*], query.as_ref());
             let header = self.get_tardis_context_header()?;
-            let resp = self.get_funs().web_client().post::<$Body, $Resp>(&url, body, Some(vec![header])).await?;
+            let resp = self.get_funs().web_client().post::<$Body, TardisResp<$Resp>>(&url, body, Some(vec![header])).await?;
             Self::extract_response(resp)
         }
     };
     ($fn_name:ident @build put {$($args_i:ident:$args_t:ty,)*} {$($path:expr,)*} {$($query:expr,)*;$($optional_query:expr,)*} $Body:ty => $Resp:ty) => {
         pub async fn $fn_name(&self, $($args_i:$args_t,)* body: &$Body) -> tardis::basic::result::TardisResult<$Resp> {
             use $crate::clients::SimpleInvokeClient;
+            use tardis::web::web_resp::TardisResp;
             let mut query = $crate::clients::QueryBuilder::new();
             $(
                 {
@@ -219,13 +223,14 @@ macro_rules! taidis_api {
             )*
             let url = self.get_url(&[$($path,)*], query.as_ref());
             let header = self.get_tardis_context_header()?;
-            let resp = self.get_funs().web_client().put::<$Body, $Resp>(&url, body, Some(vec![header])).await?;
+            let resp = self.get_funs().web_client().put::<$Body, TardisResp<$Resp>>(&url, body, Some(vec![header])).await?;
             Self::extract_response(resp)
         }
     };
     ($fn_name:ident @build delete {$($args_i:ident:$args_t:ty,)*} {$($path:expr,)*} {$($query:expr,)*;$($optional_query:expr,)*} $Resp:ty) => {
         pub async fn $fn_name(&self, $($args_i:$args_t),*) -> tardis::basic::result::TardisResult<$Resp> {
             use $crate::clients::SimpleInvokeClient;
+            use tardis::web::web_resp::TardisResp;
             let mut query = $crate::clients::QueryBuilder::new();
             $(
                 {
@@ -241,7 +246,7 @@ macro_rules! taidis_api {
             )*
             let url = self.get_url(&[$($path,)*], query.as_ref());
             let header = self.get_tardis_context_header()?;
-            let resp = self.get_funs().web_client().delete::<$Resp>(&url, Some(vec![header])).await?;
+            let resp = self.get_funs().web_client().delete::<TardisResp<$Resp>>(&url, Some(vec![header])).await?;
             Self::extract_response(resp)
         }
     };
@@ -296,12 +301,24 @@ pub trait SimpleInvokeClient {
             query = query
         )
     }
-    fn extract_response<T>(resp: TardisHttpResponse<T>) -> TardisResult<T> {
-        resp.body.ok_or_else(|| {
-            TardisError::internal_error(
+    fn extract_response<T>(resp: TardisHttpResponse<TardisResp<T>>) -> TardisResult<T> 
+    where T: ParseFromJSON + ToJSON + Serialize + Send + Sync
+    {
+        match resp.body {
+            Some(b) => {
+                if let Some(data) = b.data {
+                    Ok(data)
+                } else {
+                    Err(TardisError::internal_error(
+                        &format!("invoke-{domain} with code [{code}]: {msg}", domain = Self::DOMAIN_CODE, code = b.code, msg = b.msg),
+                        "500-invoke-request-error",
+                    ))
+                }
+            }
+            None => Err(TardisError::internal_error(
                 &format!("invoke-{domain}: {code}", domain = Self::DOMAIN_CODE, code = resp.code),
                 "500-invoke-request-error",
-            )
-        })
+            )),
+        }
     }
 }

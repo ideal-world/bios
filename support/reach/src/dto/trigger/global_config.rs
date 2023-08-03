@@ -11,7 +11,7 @@ use tardis::{
 
 use crate::dto::*;
 /// 添加 用户触达触发实例配置请求
-#[derive(Debug, poem_openapi::Object, Deserialize)]
+#[derive(Debug, poem_openapi::Object, Serialize, Deserialize)]
 pub struct ReachTriggerGlobalConfigAddReq {
     /// 关联的触发场景id
     pub rel_reach_trigger_scene_id: String,
@@ -68,7 +68,7 @@ pub struct ReachTriggerGlobalConfigFilterReq {
     pub rel_reach_msg_template_id: Option<String>,
 }
 
-#[derive(Debug, poem_openapi::Object, Serialize, sea_orm::FromQueryResult)]
+#[derive(Debug, poem_openapi::Object, Serialize, Deserialize, sea_orm::FromQueryResult)]
 pub struct ReachTriggerGlobalConfigSummaryResp {
     pub id: String,
     pub own_paths: String,
@@ -85,7 +85,7 @@ pub struct ReachTriggerGlobalConfigSummaryResp {
     pub rel_reach_msg_template_id: String,
 }
 
-#[derive(Debug, poem_openapi::Object, Serialize, sea_orm::FromQueryResult)]
+#[derive(Debug, poem_openapi::Object, Serialize, Deserialize, sea_orm::FromQueryResult)]
 pub struct ReachTriggerGlobalConfigDetailResp {
     pub id: String,
     pub own_paths: String,

@@ -9,12 +9,12 @@ use tardis::{
 
 use crate::{client::sms::SendSmsRequest, dto::*};
 
-#[derive(Debug, poem_openapi::Object, Deserialize)]
+#[derive(Debug, poem_openapi::Object, Serialize, Deserialize, Default)]
 pub struct ReachMessageTemplateAddReq {
     pub own_paths: String,
     pub owner: String,
-    pub create_time: DateTime<Utc>,
-    pub update_time: DateTime<Utc>,
+    // pub create_time: DateTime<Utc>,
+    // pub update_time: DateTime<Utc>,
     /// 用户触达等级类型
     pub scope_level: Option<i16>,
     /// 编码
@@ -71,7 +71,7 @@ pub struct ReachMessageTemplateAddReq {
     pub sms_from: String,
 }
 
-#[derive(Debug, poem_openapi::Object, Deserialize)]
+#[derive(Debug, poem_openapi::Object, Serialize, Deserialize)]
 pub struct ReachMessageTemplateModifyReq {
     /// 用户触达等级类型
     pub scope_level: Option<i16>,
@@ -136,7 +136,7 @@ pub struct ReachMessageTemplateFilterReq {
     pub rel_reach_verify_code_strategy_id: Option<String>,
 }
 
-#[derive(Debug, poem_openapi::Object, Serialize, sea_orm::FromQueryResult)]
+#[derive(Debug, poem_openapi::Object, Serialize, Deserialize, sea_orm::FromQueryResult)]
 pub struct ReachMessageTemplateSummaryResp {
     pub own_paths: String,
     pub owner: String,
@@ -194,7 +194,7 @@ pub struct ReachMessageTemplateSummaryResp {
     pub sms_from: Option<String>,
 }
 
-#[derive(Debug, poem_openapi::Object, Serialize, sea_orm::FromQueryResult)]
+#[derive(Debug, poem_openapi::Object, Serialize, Deserialize, sea_orm::FromQueryResult)]
 pub struct ReachMessageTemplateDetailResp {
     pub own_paths: String,
     pub owner: String,

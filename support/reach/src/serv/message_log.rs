@@ -38,6 +38,7 @@ impl RbumCrudOperation<message_log::ActiveModel, ReachMsgLogAddReq, ReachMsgLogM
 
     async fn package_query(is_detail: bool, filter: &ReachMsgLogFilterReq, _: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<SelectStatement> {
         let mut query = Query::select();
+        query.from(message_log::Entity);
         if let Some(id) = &filter.rel_reach_message_id {
             query.and_where(message_log::Column::RelReachMessageId.eq(id));
         }
