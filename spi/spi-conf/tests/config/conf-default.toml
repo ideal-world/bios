@@ -65,3 +65,4 @@ FZygs8miAhWPzqnpmgTj1cPiU1M=
 title = "配置服务"
 doc_urls = [["test env", "http://localhost:8080/"]]
 uniform_error = false
+[fw.web_server.modules.spi-conf-nacos]
