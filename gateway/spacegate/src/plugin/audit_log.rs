@@ -11,12 +11,9 @@ use bios_sdk_invoke::invoke_initializer;
 use jsonpath_rust::{JsonPathInst, JsonPathQuery};
 use serde::{Deserialize, Serialize};
 use spacegate_kernel::plugins::context::SGRoleInfo;
-use spacegate_kernel::{
-    functions::http_route::SgHttpRouteMatchInst,
-    plugins::{
-        context::SgRoutePluginContext,
-        filters::{BoxSgPluginFilter, SgPluginFilter, SgPluginFilterAccept, SgPluginFilterDef, SgPluginFilterInitDto},
-    },
+use spacegate_kernel::plugins::{
+    context::SgRoutePluginContext,
+    filters::{BoxSgPluginFilter, SgPluginFilter, SgPluginFilterAccept, SgPluginFilterDef, SgPluginFilterInitDto},
 };
 use tardis::basic::dto::TardisContext;
 use tardis::serde_json::{json, Value};
@@ -99,12 +96,12 @@ impl SgPluginFilter for SgFilterAuditLog {
         Ok(())
     }
 
-    async fn req_filter(&self, _: &str, mut ctx: SgRoutePluginContext, _matched_match_inst: Option<&SgHttpRouteMatchInst>) -> TardisResult<(bool, SgRoutePluginContext)> {
+    async fn req_filter(&self, _: &str, mut ctx: SgRoutePluginContext) -> TardisResult<(bool, SgRoutePluginContext)> {
         ctx.set_ext(&get_start_time_ext_code(), &tardis::chrono::Utc::now().timestamp_millis().to_string());
         return Ok((true, ctx));
     }
 
-    async fn resp_filter(&self, _: &str, mut ctx: SgRoutePluginContext, _: Option<&SgHttpRouteMatchInst>) -> TardisResult<(bool, SgRoutePluginContext)> {
+    async fn resp_filter(&self, _: &str, mut ctx: SgRoutePluginContext) -> TardisResult<(bool, SgRoutePluginContext)> {
         if self.enabled {
             let funs = get_tardis_inst();
             let start_time = ctx.get_ext(&get_start_time_ext_code()).and_then(|time| time.parse::<i64>().ok());
@@ -114,8 +111,8 @@ impl SgPluginFilter for SgFilterAuditLog {
                 roles: ctx.get_cert_info().map(|info| info.roles.clone().into_iter().map(|r| r.id).collect()).unwrap_or_default(),
                 ..Default::default()
             };
-            let op = ctx.get_req_method().to_string();
-            let resp_body = ctx.pop_resp_body().await?;
+            let op = ctx.request.get_req_method().to_string();
+            let resp_body = ctx.response.pop_resp_body().await?;
             let success = match resp_body {
                 Some(body) => {
                     let body_string = String::from_utf8_lossy(&body).to_string();
@@ -140,7 +137,7 @@ impl SgPluginFilter for SgFilterAuditLog {
                         }
                         Err(_) => false,
                     };
-                    ctx.set_resp_body(body)?;
+                    ctx.response.set_resp_body(body)?;
                     result
                 }
                 None => false,
@@ -151,8 +148,8 @@ impl SgPluginFilter for SgFilterAuditLog {
                 name: ctx.get_cert_info().and_then(|info| info.account_name.clone()).unwrap_or_default(),
                 user_id: ctx.get_cert_info().map(|info| info.account_id.clone()),
                 role: ctx.get_cert_info().map(|info| info.roles.clone()).unwrap_or_default(),
-                ip: ctx.get_req_remote_addr().ip().to_string(),
-                token: ctx.get_req_headers().get(&self.header_token_name).and_then(|v| v.to_str().ok().map(|v| v.to_string())),
+                ip: ctx.request.get_req_remote_addr().ip().to_string(),
+                token: ctx.request.get_req_headers().get(&self.header_token_name).and_then(|v| v.to_str().ok().map(|v| v.to_string())),
                 server_timing: start_time.map(|st| end_time - st),
                 success,
             };

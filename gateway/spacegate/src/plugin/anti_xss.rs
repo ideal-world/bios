@@ -5,12 +5,9 @@ use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use spacegate_kernel::http;
 use spacegate_kernel::plugins::filters::SgPluginFilterInitDto;
-use spacegate_kernel::{
-    functions::http_route::SgHttpRouteMatchInst,
-    plugins::{
-        context::SgRoutePluginContext,
-        filters::{BoxSgPluginFilter, SgPluginFilter, SgPluginFilterAccept, SgPluginFilterDef},
-    },
+use spacegate_kernel::plugins::{
+    context::SgRoutePluginContext,
+    filters::{BoxSgPluginFilter, SgPluginFilter, SgPluginFilterAccept, SgPluginFilterDef},
 };
 
 use tardis::{
@@ -182,20 +179,20 @@ impl SgPluginFilter for SgFilterAntiXSS {
         Ok(())
     }
 
-    async fn req_filter(&self, _: &str, ctx: SgRoutePluginContext, _matched_match_inst: Option<&SgHttpRouteMatchInst>) -> TardisResult<(bool, SgRoutePluginContext)> {
+    async fn req_filter(&self, _: &str, ctx: SgRoutePluginContext) -> TardisResult<(bool, SgRoutePluginContext)> {
         Ok((true, ctx))
     }
 
-    async fn resp_filter(&self, _: &str, mut ctx: SgRoutePluginContext, _: Option<&SgHttpRouteMatchInst>) -> TardisResult<(bool, SgRoutePluginContext)> {
+    async fn resp_filter(&self, _: &str, mut ctx: SgRoutePluginContext) -> TardisResult<(bool, SgRoutePluginContext)> {
         let mut enable = false;
-        if let Some(content_type) = ctx.get_resp_headers().get(http::header::CONTENT_TYPE) {
+        if let Some(content_type) = ctx.response.get_resp_headers().get(http::header::CONTENT_TYPE) {
             enable = content_type.eq("text/html") || content_type.eq("text/css") || content_type.eq("application/javascript") || content_type.eq("application/x-javascript");
         };
         if enable {
             if self.csp_config.report_only {
-                let _ = ctx.set_resp_header(http::header::CONTENT_SECURITY_POLICY_REPORT_ONLY.as_str(), &self.csp_config.to_string_header_value());
+                let _ = ctx.response.set_resp_header(http::header::CONTENT_SECURITY_POLICY_REPORT_ONLY.as_str(), &self.csp_config.to_string_header_value());
             } else {
-                let _ = ctx.set_resp_header(http::header::CONTENT_SECURITY_POLICY.as_str(), &self.csp_config.to_string_header_value());
+                let _ = ctx.response.set_resp_header(http::header::CONTENT_SECURITY_POLICY.as_str(), &self.csp_config.to_string_header_value());
             }
         }
         Ok((true, ctx))

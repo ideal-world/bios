@@ -6,7 +6,7 @@ use spacegate_kernel::plugins::{
     context::SgRoutePluginContext,
     filters::{BoxSgPluginFilter, SgPluginFilter, SgPluginFilterDef},
 };
-use spacegate_kernel::{functions::http_route::SgHttpRouteMatchInst, plugins::filters::SgPluginFilterInitDto};
+use spacegate_kernel::{ plugins::filters::SgPluginFilterInitDto};
 
 use tardis::{async_trait::async_trait, basic::result::TardisResult, log, serde_json, TardisFuns};
 pub const CODE: &str = "ip_time";
@@ -81,14 +81,14 @@ impl SgPluginFilter for SgFilterIpTime {
     }
 
     /// white list is prior
-    async fn req_filter(&self, _id: &str, ctx: SgRoutePluginContext, _matched_match_inst: Option<&SgHttpRouteMatchInst>) -> TardisResult<(bool, SgRoutePluginContext)> {
-        let socket_addr = ctx.get_req_remote_addr();
+    async fn req_filter(&self, _id: &str, ctx: SgRoutePluginContext,) -> TardisResult<(bool, SgRoutePluginContext)> {
+        let socket_addr = ctx.request.get_req_remote_addr();
         let ip = socket_addr.ip();
         let pass = self.rules.iter().any(|(net, rule)| net.contains(&ip) && rule.check_by_now());
         Ok((pass, ctx))
     }
 
-    async fn resp_filter(&self, _id: &str, ctx: SgRoutePluginContext, _matched_match_inst: Option<&SgHttpRouteMatchInst>) -> TardisResult<(bool, SgRoutePluginContext)> {
+    async fn resp_filter(&self, _id: &str, ctx: SgRoutePluginContext,) -> TardisResult<(bool, SgRoutePluginContext)> {
         return Ok((true, ctx));
     }
 }
