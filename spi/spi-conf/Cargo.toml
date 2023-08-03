@@ -29,6 +29,6 @@ bios-basic = { path = "../../basic", features = ["default"] }
 lazy_static = { workspace = true }
 jsonwebtoken = "8"
 [dev-dependencies]
-tardis = { workspace = true, features = ["test", "conf-remote"] }
+tardis = { workspace = true, features = ["test", "conf-remote", "mq"] }
 bios-basic = { path = "../../basic", features = ["default", "test"] }
 reqwest = "*"

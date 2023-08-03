@@ -133,6 +133,7 @@ pub async fn test_curd(client: &mut TestHttpClient) -> TardisResult<()> {
     // since we have deleted the config, the config_count should be 0
     assert_eq!(_response.config_count, 0);
     // 7. update namespace
+    // 7.1
     let _response = client
         .put::<_, bool>(
             "/ci/namespace",
@@ -146,7 +147,18 @@ pub async fn test_curd(client: &mut TestHttpClient) -> TardisResult<()> {
     // varify the namespace_desc has been updated
     let response = client.get::<NamespaceItem>("/ci/namespace?namespace_id=test1").await;
     assert_eq!(&response.namespace_desc.unwrap(), "测试命名空间1-修改");
-
+    // 7.2 modify namespace does not exist
+    let response = client
+        .put_resp::<_, bool>(
+            "/ci/namespace",
+            &NamespaceAttribute {
+                namespace: "not-exsist-namespace".to_string(),
+                namespace_show_name: "测试命名空间1".to_string(),
+                namespace_desc: Some("测试命名空间1-修改".to_string()),
+            },
+        )
+        .await;
+    assert!(response.code.contains("404"));
     // 8. delete namespace
     // 8.1 first publish a config
     let _response = client
