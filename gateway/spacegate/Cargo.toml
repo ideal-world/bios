@@ -1,5 +1,5 @@
 [package]
-name = "spacegateway"
+name = "bios-spacegate"
 version.workspace = true
 authors.workspace = true
 homepage.workspace = true
@@ -17,11 +17,11 @@ serde.workspace = true
 lazy_static.workspace = true
 bios-sdk-invoke = { path = "../../sdk/invoke", features = ["spi_log"] }
 
- spacegate-kernel = { version = "0.1.0-alpha.4", features = [
-     "ws",
-     "cache",
-     "k8s",
- ] }
+spacegate-kernel = { version = "0.1.0-alpha.6", features = [
+    "ws",
+    "cache",
+    "k8s",
+] }
 #  spacegate-kernel = { git = "https://github.com/ideal-world/spacegate.git", features = [
 #    "ws",
 #    "cache",

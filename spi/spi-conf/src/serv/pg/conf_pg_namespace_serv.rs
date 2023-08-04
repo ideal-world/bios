@@ -71,17 +71,16 @@ pub async fn edit_namespace(attribute: &mut NamespaceAttribute, _funs: &TardisFu
     let typed_inst = bs_inst.inst::<TardisRelDBClient>();
     let (mut conn, table_name) = conf_pg_initializer::init_table_and_conn_namespace(typed_inst, ctx, true).await?;
     conn.begin().await?;
-    conn
-        .query_one(
-            &format!(
-                r#"SELECT id
+    conn.query_one(
+        &format!(
+            r#"SELECT id
 FROM {table_name}
 WHERE id = $1"#
-            ),
-            vec![Value::from(&attribute.namespace)],
-        )
-        .await?
-        .ok_or_else(|| TardisError::not_found("namespace not found", error::NAMESPACE_NOTFOUND))?;
+        ),
+        vec![Value::from(&attribute.namespace)],
+    )
+    .await?
+    .ok_or_else(|| TardisError::not_found("namespace not found", error::NAMESPACE_NOTFOUND))?;
     conn.execute_one(
         &format!(
             r#"UPDATE {table_name} 

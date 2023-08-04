@@ -88,7 +88,7 @@ pub async fn test(ldap_account_num: u64, conf_ldap_add_or_modify_req: IamCertCon
     .await
     .unwrap();
 
-    if let Some(task_id) = TaskProcessor::get_task_id_with_ctx(&admin_ctx).await.unwrap() {
+    if let Some(task_id) = TaskProcessor::get_task_id_with_ctx(admin_ctx).await.unwrap() {
         tokio::spawn(async move {
             let funs = iam_constants::get_tardis_inst();
             loop {

@@ -12,9 +12,9 @@ use bios_mw_flow::dto::flow_model_dto::{
     FlowTemplateModelResp,
 };
 use bios_mw_flow::dto::flow_state_dto::FlowStateSummaryResp;
-use bios_mw_flow::dto::flow_transition_dto::{FlowTransitionActionByStateChangeInfo, FlowTransitionActionChangeKind, FlowTransitionDoubleCheckInfo, FlowTransitionModifyReq};
+use bios_mw_flow::dto::flow_transition_dto::{FlowTransitionDoubleCheckInfo, FlowTransitionModifyReq};
 
-use bios_mw_flow::flow_constants;
+
 // use bios_mw_flow::serv::flow_inst_serv::FlowInstServ;
 use bios_sdk_invoke::clients::spi_kv_client::KvItemSummaryResp;
 use tardis::basic::dto::TardisContext;
@@ -26,7 +26,7 @@ use tardis::web::poem_openapi::types::Type;
 use tardis::web::web_resp::{TardisPage, Void};
 use tardis::TardisFuns;
 
-pub async fn test(flow_client: &mut TestHttpClient, kv_client: &mut TestHttpClient) -> TardisResult<()> {
+pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpClient) -> TardisResult<()> {
     info!("【test_flow_scenes_fsm】");
 
     let mut ctx = TardisContext {
@@ -247,7 +247,7 @@ pub async fn test(flow_client: &mut TestHttpClient, kv_client: &mut TestHttpClie
             }],
         )
         .await;
-    let transfer: FlowInstTransferResp = flow_client
+    let _transfer: FlowInstTransferResp = flow_client
         .put(
             &format!("/cc/inst/{}/transition/transfer", req_inst_id),
             &FlowInstTransferReq {
