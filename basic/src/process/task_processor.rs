@@ -97,17 +97,18 @@ impl TaskProcessor {
         Ok(task_id)
     }
 
-    pub async fn execute_task_with_ctx<P, T>(cache_key: &str, process: P, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()>
+    pub async fn execute_task_with_ctx<P, T>(cache_key: &str, process: P, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<i64>
     where
         P: FnOnce() -> T + Send + Sync + 'static,
         T: Future<Output = TardisResult<()>> + Send + 'static,
     {
         let task_id = Self::execute_task(cache_key, process, funs).await?;
         if let Some(exist_task_ids) = ctx.get_ext(TASK_IN_CTX_FLAG).await? {
-            ctx.add_ext(TASK_IN_CTX_FLAG, &format!("{exist_task_ids},{task_id}")).await
+            ctx.add_ext(TASK_IN_CTX_FLAG, &format!("{exist_task_ids},{task_id}")).await?;
         } else {
-            ctx.add_ext(TASK_IN_CTX_FLAG, &task_id.to_string()).await
+            ctx.add_ext(TASK_IN_CTX_FLAG, &task_id.to_string()).await?;
         }
+        Ok(task_id)
     }
 
     pub async fn stop_task(cache_key: &str, task_id: i64, funs: &TardisFunsInst) -> TardisResult<()> {

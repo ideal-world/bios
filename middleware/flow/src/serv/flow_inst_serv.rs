@@ -539,10 +539,7 @@ impl FlowInstServ {
             .ok_or_else(|| funs.err().not_found("flow_inst_serv", "do_post_change", "not found external url", "404-external-data-url-not-exist"))?;
         for post_change in post_changes {
             let post_change = FlowTransitionActionChangeAgg::from(post_change);
-            match post_change.kind {
                 FlowTransitionActionChangeKind::Var => {
-                    if let Some(change_info) = post_change.var_change_info {
-                        let resp: TardisResp<FlowExternalModifyFieldResp> = funs
                             .web_client()
                             .post(
                                 &external_url.value.to_string(),
