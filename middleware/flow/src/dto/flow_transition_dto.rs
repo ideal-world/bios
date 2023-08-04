@@ -1,6 +1,12 @@
 use bios_basic::dto::BasicQueryCondInfo;
 use serde::{Deserialize, Serialize};
-use tardis::{basic::field::TrimString, db::sea_orm, serde_json::Value, web::poem_openapi, TardisFuns};
+use tardis::{
+    basic::{error::TardisError, field::TrimString},
+    db::sea_orm,
+    serde_json::Value,
+    web::poem_openapi,
+    TardisFuns,
+};
 
 use super::flow_var_dto::FlowVarInfo;
 
@@ -165,6 +171,48 @@ pub struct FlowTransitionDoubleCheckInfo {
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug, poem_openapi::Object)]
 pub struct FlowTransitionActionChangeInfo {
+    pub kind: FlowTransitionActionChangeKind,
+    pub describe: String,
+    pub obj_tag: Option<String>,
+    pub obj_current_state_id: Option<Vec<String>>,
+    pub change_condition: Option<StateChangeCondition>,
+    pub changed_state_id: String,
+    pub current: bool,
+    pub var_name: String,
+    pub changed_val: Option<Value>,
+}
+
+impl From<FlowTransitionActionChangeInfo> for FlowTransitionActionChangeAgg {
+    fn from(value: FlowTransitionActionChangeInfo) -> Self {
+        match value.kind {
+            FlowTransitionActionChangeKind::State => FlowTransitionActionChangeAgg {
+                kind: value.kind,
+                var_change_info: None,
+                state_change_info: Some(FlowTransitionActionByStateChangeInfo {
+                    obj_tag: value.obj_tag.unwrap(),
+                    describe: value.describe,
+                    obj_current_state_id: value.obj_current_state_id,
+                    change_condition: value.change_condition,
+                    changed_state_id: value.changed_state_id,
+                }),
+            },
+            FlowTransitionActionChangeKind::Var => FlowTransitionActionChangeAgg {
+                kind: value.kind,
+                var_change_info: Some(FlowTransitionActionByVarChangeInfo {
+                    current: value.current,
+                    describe: value.describe,
+                    obj_tag: value.obj_tag,
+                    var_name: value.var_name,
+                    changed_val: value.changed_val,
+                }),
+                state_change_info: None,
+            },
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug, poem_openapi::Object)]
+pub struct FlowTransitionActionChangeAgg {
     pub kind: FlowTransitionActionChangeKind,
     pub var_change_info: Option<FlowTransitionActionByVarChangeInfo>,
     pub state_change_info: Option<FlowTransitionActionByStateChangeInfo>,

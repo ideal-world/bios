@@ -196,7 +196,13 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
         .put(
             &format!("/cc/inst/{}/transition/transfer", req_inst_id),
             &FlowInstTransferReq {
-                flow_transition_id: state_and_next_transitions[0].next_flow_transitions[1].next_flow_transition_id.clone(),
+                flow_transition_id: state_and_next_transitions[0]
+                    .next_flow_transitions
+                    .iter()
+                    .find(|&trans| trans.next_flow_transition_name.contains("关闭"))
+                    .unwrap()
+                    .next_flow_transition_id
+                    .to_string(),
                 vars: Some(TardisFuns::json.json_to_obj(json!({ "reason":"测试关闭" })).unwrap()),
                 message: None,
             },
@@ -204,7 +210,7 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
         .await;
     assert_eq!(
         transfer.new_flow_state_id,
-        state_and_next_transitions[0].next_flow_transitions[1].next_flow_state_id.clone()
+        state_and_next_transitions[0].next_flow_transitions.iter().find(|&trans| trans.next_flow_transition_name.contains("关闭")).unwrap().next_flow_state_id.clone()
     );
     // 4. set config
     let mut modify_configs = vec![];
@@ -245,7 +251,7 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
         .put(
             &format!("/cc/inst/{}/transition/transfer", req_inst_id),
             &FlowInstTransferReq {
-                flow_transition_id: state_and_next_transitions[0].next_flow_transitions[1].next_flow_transition_id.clone(),
+                flow_transition_id: state_and_next_transitions[0].next_flow_transitions[0].next_flow_transition_id.clone(),
                 vars: None,
                 message: None,
             },

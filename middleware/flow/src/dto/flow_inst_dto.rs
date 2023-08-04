@@ -137,6 +137,8 @@ pub struct FlowInstTransferReq {
 
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
 pub struct FlowInstTransferResp {
+    pub prev_flow_state_id: String,
+    pub prev_flow_state_name: Option<String>,
     pub new_flow_state_id: String,
     pub new_flow_state_name: String,
 
