@@ -572,15 +572,7 @@ impl FlowInstServ {
                                         curr_tag: current_model.tag.clone(),
                                         curr_bus_obj_id: current_inst.rel_business_obj_id.clone(),
                                         params: FlowExternalParams::NotifyChanges(FlowExternalNotifyChangesReq {
-                                            rel_tag: if change_info.current {
-                                                current_model.tag.clone()
-                                            } else {
-                                                change_info.obj_tag.clone().unwrap_or_default()
-                                            },
-                                            rel_bus_obj_ids: resp.data.unwrap_or_default().rel_bus_obj_ids,
-                                            state_id: None,
-                                            var_name: Some(change_info.var_name),
-                                            value: change_info.changed_val,
+                                            changed_vars: vec![]
                                         }),
                                     },
                                     None,

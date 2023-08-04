@@ -53,11 +53,7 @@ pub struct FlowExternalModifyFieldResp {
 
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
 pub struct FlowExternalNotifyChangesReq {
-    pub rel_tag: String,
-    pub rel_bus_obj_ids: Vec<String>,
-    pub state_id: Option<String>,
-    pub var_name: Option<String>,
-    pub value: Option<Value>,
+    pub changed_vars: Vec<Value>,
 }
 
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
