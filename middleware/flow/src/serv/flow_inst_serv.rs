@@ -40,7 +40,9 @@ use crate::{
         },
         flow_model_dto::{FlowModelDetailResp, FlowModelFilterReq},
         flow_state_dto::{FlowStateFilterReq, FlowSysStateKind},
-        flow_transition_dto::{FlowTransitionActionByStateChangeInfo, FlowTransitionActionChangeInfo, FlowTransitionActionChangeKind, FlowTransitionDetailResp},
+        flow_transition_dto::{
+            FlowTransitionActionByStateChangeInfo, FlowTransitionActionChangeAgg, FlowTransitionActionChangeInfo, FlowTransitionActionChangeKind, FlowTransitionDetailResp,
+        },
     },
     flow_constants,
     serv::{flow_model_serv::FlowModelServ, flow_state_serv::FlowStateServ},
@@ -516,6 +518,8 @@ impl FlowInstServ {
         }
 
         Ok(FlowInstTransferResp {
+            prev_flow_state_id: flow_inst_detail.current_state_id,
+            prev_flow_state_name: flow_inst_detail.current_state_name,
             new_flow_state_id: next_flow_transition.next_flow_state_id,
             new_flow_state_name: next_flow_transition.next_flow_state_name,
             vars: Some(new_vars),
@@ -534,10 +538,8 @@ impl FlowInstServ {
             .await?
             .ok_or_else(|| funs.err().not_found("flow_inst_serv", "do_post_change", "not found external url", "404-external-data-url-not-exist"))?;
         for post_change in post_changes {
-            match post_change.kind {
+            let post_change = FlowTransitionActionChangeAgg::from(post_change);
                 FlowTransitionActionChangeKind::Var => {
-                    if let Some(change_info) = post_change.var_change_info {
-                        let resp: TardisResp<FlowExternalModifyFieldResp> = funs
                             .web_client()
                             .post(
                                 &external_url.value.to_string(),
