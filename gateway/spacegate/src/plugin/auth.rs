@@ -1,18 +1,19 @@
-use std::{collections::HashMap, mem, str::FromStr, sync::Arc};
-
 use async_trait::async_trait;
 use bios_auth::{
     auth_config::AuthConfig,
     auth_initializer,
     dto::{
         auth_crypto_dto::AuthEncryptReq,
-        auth_kernel_dto::{AuthReq, AuthResp},
+        auth_kernel_dto::{AuthReq, AuthResp, AuthResult},
     },
     serv::{auth_crypto_serv, auth_kernel_serv},
 };
 use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
-use spacegate_kernel::plugins::filters::SgPluginFilterInitDto;
+use spacegate_kernel::plugins::{
+    context::{SGCertInfo, SGRoleInfo},
+    filters::SgPluginFilterInitDto,
+};
 use spacegate_kernel::{
     http::{self, HeaderMap, HeaderName, HeaderValue},
     plugins::{
@@ -20,6 +21,7 @@ use spacegate_kernel::{
         filters::{BoxSgPluginFilter, SgPluginFilter, SgPluginFilterAccept, SgPluginFilterDef},
     },
 };
+use std::{collections::HashMap, mem, str::FromStr, sync::Arc};
 use tardis::{
     async_trait,
     basic::{error::TardisError, result::TardisResult},
@@ -129,17 +131,17 @@ impl SgPluginFilter for SgFilterAuth {
     }
 
     async fn req_filter(&self, _: &str, mut ctx: SgRoutePluginContext) -> TardisResult<(bool, SgRoutePluginContext)> {
-        if ctx.request.get_req_method() == &http::Method::OPTIONS {
+        if ctx.request.get_req_method() == http::Method::OPTIONS {
             return Ok((true, ctx));
         }
         let (mut auth_req, req_body) = ctx_to_auth_req(&mut ctx).await?;
         match auth_kernel_serv::auth(&mut auth_req, false).await {
-            Ok(auth_resp) => {
-                if auth_resp.allow {
-                    ctx = success_auth_resp_to_ctx(auth_resp, req_body, ctx)?;
+            Ok(auth_result) => {
+                if auth_result.e.is_none() {
+                    ctx = success_auth_resp_to_ctx(auth_result, req_body, ctx)?;
                 } else {
                     ctx.set_action(SgRouteFilterRequestAction::Response);
-                    ctx.response.set_resp_body(auth_resp.reason.map(|s| s.into_bytes()).unwrap_or_default())?;
+                    ctx.response.set_resp_body(auth_result.e.map(|s| s.message.into_bytes()).unwrap_or_default())?;
                     return Ok((false, ctx));
                 };
                 Ok((true, ctx))
@@ -201,7 +203,18 @@ async fn ctx_to_auth_req(ctx: &mut SgRoutePluginContext) -> TardisResult<(AuthRe
     ))
 }
 
-fn success_auth_resp_to_ctx(auth_resp: AuthResp, old_req_body: Vec<u8>, mut ctx: SgRoutePluginContext) -> TardisResult<SgRoutePluginContext> {
+fn success_auth_resp_to_ctx(auth_result: AuthResult, old_req_body: Vec<u8>, mut ctx: SgRoutePluginContext) -> TardisResult<SgRoutePluginContext> {
+    ctx.set_cert_info(SGCertInfo {
+        account_id: auth_result.ctx.as_ref().and_then(|ctx| ctx.account_id.clone()).unwrap_or_default(),
+        account_name: None,
+        roles: auth_result
+            .ctx
+            .as_ref()
+            .and_then(|ctx| ctx.roles.clone())
+            .map(|role| role.iter().map(|r| SGRoleInfo { id: r.to_string(), name: None }).collect::<Vec<_>>())
+            .unwrap_or_default(),
+    });
+    let auth_resp = AuthResp::from_result(auth_result);
     let new_headers = hashmap_header_to_headermap(auth_resp.headers.clone())?;
 
     ctx.request.set_req_headers(new_headers);
@@ -249,9 +262,11 @@ fn headermap_header_to_hashmap(old_headers: HeaderMap) -> TardisResult<HashMap<S
 mod tests {
     use std::env;
 
+    use bios_auth::auth_constants;
     use spacegate_kernel::config::gateway_dto::SgParameters;
     use spacegate_kernel::http::{Method, Uri, Version};
     use spacegate_kernel::hyper::{Body, StatusCode};
+    use tardis::basic::dto::TardisContext;
     use tardis::crypto::crypto_sm2_4::{TardisCryptoSm2, TardisCryptoSm2PrivateKey};
     use tardis::{
         test::test_container::TardisTestContainer,
@@ -261,8 +276,93 @@ mod tests {
     };
 
     use super::*;
+
     #[tokio::test]
-    async fn test_auth_plugin() {
+    async fn test_auth_plugin_ctx() {
+        env::set_var("RUST_LOG", "debug,bios_auth=trace,tardis=trace");
+        tracing_subscriber::fmt::init();
+
+        let docker = testcontainers::clients::Cli::default();
+        let _x = docker_init(&docker).await.unwrap();
+
+        let mut filter_auth = SgFilterAuth {
+            cache_url: env::var("TARDIS_FW.CACHE.URL").unwrap(),
+            ..Default::default()
+        };
+
+        filter_auth
+            .init(&SgPluginFilterInitDto {
+                gateway_parameters: SgParameters {
+                    redis_url: None,
+                    log_level: None,
+                    lang: None,
+                },
+                http_route_rules: vec![],
+            })
+            .await
+            .unwrap();
+
+        let cache_client = TardisFuns::cache_by_module_or_default(auth_constants::DOMAIN_CODE);
+
+        let mut header = HeaderMap::new();
+        header.insert("Bios-Token", "aaa".parse().unwrap());
+        let ctx = SgRoutePluginContext::new_http(
+            Method::POST,
+            Uri::from_static("http://sg.idealworld.group/test1"),
+            Version::HTTP_11,
+            header,
+            Body::from("test"),
+            "127.0.0.1:8080".parse().unwrap(),
+            "".to_string(),
+            None,
+        );
+        let (is_ok, mut before_filter_ctx) = filter_auth.req_filter("", ctx).await.unwrap();
+        assert!(!is_ok);
+        let req_body = before_filter_ctx.response.pop_resp_body().await.unwrap().map(|b| String::from_utf8_lossy(&b).to_string());
+        assert!(req_body.is_some());
+        assert_eq!(req_body.unwrap(), "[Auth] Token [aaa] is not legal");
+
+        cache_client.set(&format!("{}tokenxxx", filter_auth.auth_config.cache_key_token_info), "default,accountxxx").await.unwrap();
+        cache_client
+            .hset(
+                &format!("{}accountxxx", filter_auth.auth_config.cache_key_account_info),
+                "",
+                "{\"own_paths\":\"\",\"owner\":\"account1\",\"roles\":[\"r001\"],\"groups\":[\"g001\"]}",
+            )
+            .await
+            .unwrap();
+
+        let mut header = HeaderMap::new();
+        header.insert("Bios-Token", "tokenxxx".parse().unwrap());
+        let ctx = SgRoutePluginContext::new_http(
+            Method::POST,
+            Uri::from_static("http://sg.idealworld.group/test1"),
+            Version::HTTP_11,
+            header,
+            Body::from("test"),
+            "127.0.0.1:8080".parse().unwrap(),
+            "".to_string(),
+            None,
+        );
+        let (is_ok, mut before_filter_ctx) = filter_auth.req_filter("", ctx).await.unwrap();
+        assert!(is_ok);
+        let ctx = decode_context(before_filter_ctx.request.get_req_headers());
+
+        assert_eq!(ctx.own_paths, "tenant1");
+        assert_eq!(ctx.owner, "account1");
+        assert_eq!(ctx.roles, vec!["r001"]);
+        assert_eq!(ctx.groups, vec!["g001"]);
+    }
+
+    fn decode_context(headers: &HeaderMap) -> TardisContext {
+        let config = TardisFuns::cs_config::<AuthConfig>(auth_constants::DOMAIN_CODE);
+        let ctx = headers.get(&config.head_key_context).unwrap();
+        let ctx = TardisFuns::crypto.base64.decode(ctx.to_str().unwrap()).unwrap();
+        TardisFuns::json.str_to_obj(&ctx).unwrap()
+    }
+
+    #[tokio::test]
+    async fn test_auth_plugin_crypto() {
         env::set_var("RUST_LOG", "debug,bios_auth=trace,tardis=trace");
         tracing_subscriber::fmt::init();
 

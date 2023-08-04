@@ -21,6 +21,48 @@ pub struct AuthReq {
     pub body: Option<String>,
 }
 
+pub struct AuthResult {
+    pub ctx: Option<AuthContext>,
+    pub resp_body: Option<String>,
+    pub resp_headers: Option<HashMap<String, String>>,
+    pub config: AuthConfig,
+    pub e: Option<TardisError>,
+}
+impl AuthResult {
+    pub(crate) fn ok(ctx: Option<&AuthContext>, resp_body: Option<String>, resp_headers: Option<HashMap<String, String>>, config: &AuthConfig) -> Self {
+        Self {
+            ctx: if ctx.is_none() {
+                None
+            } else {
+                let ctx = ctx.unwrap();
+                Some(AuthContext {
+                    rbum_uri: ctx.rbum_uri.clone(),
+                    rbum_action: ctx.rbum_action.clone(),
+                    app_id: ctx.app_id.clone(),
+                    tenant_id: ctx.tenant_id.clone(),
+                    account_id: ctx.account_id.clone(),
+                    roles: ctx.roles.clone(),
+                    groups: ctx.groups.clone(),
+                    own_paths: ctx.own_paths.clone(),
+                    ak: ctx.ak.clone(),
+                })
+            },
+            resp_body,
+            resp_headers,
+            config: config.clone(),
+            e: None,
+        }
+    }
+    pub(crate) fn err(e: TardisError, config: &AuthConfig) -> Self {
+        Self {
+            e: Some(e),
+            ctx: None,
+            resp_body: None,
+            resp_headers: None,
+            config: config.clone(),
+        }
+    }
+}
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct AuthResp {
     pub allow: bool,
@@ -41,6 +83,14 @@ impl AuthResp {
             ("Access-Control-Allow-Credentials".to_string(), "true".to_string()),
             ("Content-Type".to_string(), "application/json".to_string()),
         ])
+    }
+
+    pub fn from_result(result: AuthResult) -> Self {
+        if result.e.is_none() {
+            Self::ok(result.ctx.as_ref(), result.resp_body, result.resp_headers, &result.config)
+        } else {
+            Self::err(result.e.unwrap(), &result.config)
+        }
     }
 
     pub(crate) fn ok(ctx: Option<&AuthContext>, resp_body: Option<String>, resp_headers: Option<HashMap<String, String>>, config: &AuthConfig) -> Self {
