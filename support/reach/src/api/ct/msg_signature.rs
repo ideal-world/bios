@@ -1,7 +1,8 @@
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 
 use tardis::web::context_extractor::TardisContextExtractor;
-use tardis::web::poem::web::{Json, Path, Query};
+use tardis::web::poem_openapi::param::{Path, Query};
+use tardis::web::poem_openapi::payload::Json;
 
 use tardis::web::poem_openapi;
 use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp};
@@ -12,6 +13,8 @@ use crate::serv::*;
 
 #[cfg(feature = "simple-client")]
 use crate::invoke::Client;
+
+use super::map_notfound_to_false;
 #[derive(Clone, Default)]
 /// 用户触达签名-租户控制台
 pub struct ReachMsgSignatureCtApi;
@@ -81,7 +84,7 @@ impl ReachMsgSignatureCtApi {
     #[oai(method = "delete", path = "/:id")]
     pub async fn delete_msg_signature(&self, id: Path<String>, TardisContextExtractor(ctx): TardisContextExtractor) -> TardisApiResult<bool> {
         let funs = get_tardis_inst();
-        let res = ReachMessageSignatureServ::delete_rbum(&id, &funs, &ctx).await?;
-        TardisResp::ok(res == 0)
+        let ok = ReachMessageSignatureServ::delete_rbum(&id, &funs, &ctx).await.map_or_else(map_notfound_to_false, |count| Ok(count != 0))?;
+        TardisResp::ok(ok)
     }
 }

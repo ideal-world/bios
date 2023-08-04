@@ -3,8 +3,12 @@ use std::fmt::Display;
 use serde::Serialize;
 use tardis::{
     basic::{dto::TardisContext, error::TardisError, result::TardisResult},
-    web::{web_client::TardisHttpResponse, web_resp::TardisResp, poem_openapi::types::{ParseFromJSON, ToJSON}},
-    TardisFunsInst, TardisFuns,
+    web::{
+        poem_openapi::types::{ParseFromJSON, ToJSON},
+        web_client::TardisHttpResponse,
+        web_resp::TardisResp,
+    },
+    TardisFuns, TardisFunsInst,
 };
 
 use crate::invoke_constants::TARDIS_CONTEXT;
@@ -21,8 +25,8 @@ pub mod spi_search_client;
 #[cfg(feature = "iam")]
 pub mod iam_client;
 #[macro_export]
-/// 
-/// 
+///
+///
 /// # Usage
 /// as if `Client` is some type implemented trait `SimpleInvokeClient`
 /// ```no_run, ignore
@@ -31,20 +35,20 @@ pub mod iam_client;
 /// #     ctx: &'a TardisContext,
 /// #     funs: &'a TardisFunsInst,
 /// # }
-/// # 
+/// #
 /// # impl<'a> Client<'a> {
 /// #     pub fn new(base_url: &'a str, ctx: &'a TardisContext, funs: &'a TardisFunsInst) -> Self {
 /// #         Self { base_url, funs, ctx }
 /// #     }
 /// # }
-/// # 
+/// #
 /// # impl SimpleInvokeClient for Client<'_> {
 /// #     const DOMAIN_CODE: &'static str = "crate::consts::DOMAIN_CODE";
-/// # 
+/// #
 /// #     fn get_ctx(&self) -> &tardis::basic::dto::TardisContext {
 /// #         self.ctx
 /// #     }
-/// # 
+/// #
 /// #     fn get_base_url(&self) -> &str {
 /// #         self.base_url
 /// #     }
@@ -254,7 +258,7 @@ macro_rules! taidis_api {
 
 #[derive(Debug, Default)]
 pub struct QueryBuilder {
-    pub inner: String
+    pub inner: String,
 }
 impl AsRef<str> for QueryBuilder {
     fn as_ref(&self) -> &str {
@@ -294,31 +298,35 @@ pub trait SimpleInvokeClient {
     }
     fn get_url(&self, path: &[&str], query: &str) -> String {
         format!(
-            "{base}/{path}?{query}",
+            "{base}/{path}{path_query_spliter}{query}",
             // domain = Self::DOMAIN_CODE,
             base = self.get_base_url().trim_end_matches('/'),
             path = path.join("/").trim_matches('/'),
+            path_query_spliter = if query.is_empty() { "" } else { "?" },
             query = query
         )
     }
-    fn extract_response<T>(resp: TardisHttpResponse<TardisResp<T>>) -> TardisResult<T> 
-    where T: ParseFromJSON + ToJSON + Serialize + Send + Sync
+    fn extract_response<T>(resp: TardisHttpResponse<TardisResp<T>>) -> TardisResult<T>
+    where
+        T: ParseFromJSON + ToJSON + Serialize + Send + Sync,
     {
-        match resp.body {
-            Some(b) => {
-                if let Some(data) = b.data {
-                    Ok(data)
-                } else {
-                    Err(TardisError::internal_error(
-                        &format!("invoke-{domain} with code [{code}]: {msg}", domain = Self::DOMAIN_CODE, code = b.code, msg = b.msg),
-                        "500-invoke-request-error",
-                    ))
-                }
-            }
-            None => Err(TardisError::internal_error(
-                &format!("invoke-{domain}: {code}", domain = Self::DOMAIN_CODE, code = resp.code),
-                "500-invoke-request-error",
-            )),
-        }
+        resp.body.map_or_else(
+            || {
+                Err(TardisError::internal_error(
+                    &format!("invoke {domain} encounter an error", domain = Self::DOMAIN_CODE),
+                    "500-invoke-request-error",
+                ))
+            },
+            |b| {
+                b.data.ok_or_else(|| TardisError {
+                    code: b.code,
+                    message: format!(
+                        "simple invoke client call domain [{domain}] encounter an error: {msg}",
+                        domain = Self::DOMAIN_CODE,
+                        msg = b.msg
+                    ),
+                })
+            },
+        )
     }
 }

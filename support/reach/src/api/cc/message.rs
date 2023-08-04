@@ -3,18 +3,19 @@ use std::collections::{HashMap, HashSet};
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 
 use tardis::web::context_extractor::TardisContextExtractor;
-use tardis::web::poem::web::{Json, Path, Query};
+use tardis::web::poem_openapi::param::{Path, Query};
 
 use tardis::web::poem_openapi;
+use tardis::web::poem_openapi::payload::Json;
 use tardis::web::web_resp::{TardisApiResult, TardisResp, Void};
 
 use crate::client::{sms, GenericTemplate, SendChannelAll};
 use crate::config::ReachConfig;
 use crate::consts::*;
 use crate::dto::*;
-use crate::serv::*;
 #[cfg(feature = "simple-client")]
 use crate::invoke::Client;
+use crate::serv::*;
 
 #[derive(Clone, Default)]
 /// 用户触达消息-公共控制台
@@ -26,16 +27,17 @@ pub struct ReachMessageCcApi {
 #[poem_openapi::OpenApi(prefix_path = "/cc/msg", tag = "bios_basic::ApiTag::App")]
 impl ReachMessageCcApi {
     /// 根据模板id发送信息
-    #[oai(method = "put", path = "/general/:to/:msg_template_id")]
+    #[oai(method = "put", path = "/general/:to/template/:template_id")]
     pub async fn general_send(
         &self,
         to: Path<String>,
-        msg_template_id: Path<String>,
+        template_id: Path<String>,
+        ctx: TardisContextExtractor,
         replacement: Json<HashMap<String, String>>,
-        TardisContextExtractor(ctx): TardisContextExtractor,
     ) -> TardisApiResult<Void> {
+        let ctx = ctx.0;
         let funs = get_tardis_inst();
-        let msg_template = ReachMessageTemplateServ::get_by_id(&msg_template_id, &funs, &ctx).await?;
+        let msg_template = ReachMessageTemplateServ::get_by_id(&template_id, &funs, &ctx).await?;
         self.channel.send(msg_template.rel_reach_channel, &msg_template, &replacement.0.into(), &HashSet::from([to.0])).await?;
         TardisResp::ok(VOID)
     }

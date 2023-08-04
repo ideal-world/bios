@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SmsResponse<T> {
     pub code: String,
@@ -8,7 +8,7 @@ pub struct SmsResponse<T> {
     pub result: Option<T>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SmsId {
     pub sms_msg_id: String,

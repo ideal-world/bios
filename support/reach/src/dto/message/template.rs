@@ -71,7 +71,7 @@ pub struct ReachMessageTemplateAddReq {
     pub sms_from: String,
 }
 
-#[derive(Debug, poem_openapi::Object, Serialize, Deserialize)]
+#[derive(Debug, poem_openapi::Object, Serialize, Deserialize, Default)]
 pub struct ReachMessageTemplateModifyReq {
     /// 用户触达等级类型
     pub scope_level: Option<i16>,

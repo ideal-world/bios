@@ -71,20 +71,36 @@ impl ContentReplace {
 
 fn content_replace<const MAXLEN: usize>(content: &str, values: &HashMap<String, String>) -> String {
     lazy_static::lazy_static! {
-        static ref EXTRACT_R: Regex = Regex::new(r"(\[^}]+?})").expect("reach content replace extract regex is invalid");
+        static ref EXTRACT_R: Regex = Regex::new(r"(\{[^}]+?})").expect("reach content replace extract regex is invalid");
     }
-    let mut new_content = content.to_string();
+    let mut new_content = String::new();
     let matcher = EXTRACT_R.find_iter(content);
+    let mut idx = 0;
     for mat in matcher {
-        let key = &content[mat.start() + 1..mat.end() - 1];
+        new_content.push_str(&content[idx..mat.start()]);
+        let key = &content[(mat.start() + 1)..(mat.end() - 1)];
         if let Some(value) = values.get(key) {
-            let replace_value = if value.len() > MAXLEN {
-                format!("{}...", &value[(MAXLEN - 3)..])
+            if value.len() > MAXLEN {
+                new_content.push_str(&value[..(MAXLEN - 3)]);
+                new_content.push_str("...");
             } else {
-                value.to_string()
+                new_content.push_str(value)
             };
-            new_content = new_content.replacen(mat.as_str(), &replace_value, 1);
         }
+        idx = mat.end();
     }
+    new_content.push_str(&content[idx..]);
     new_content
+}
+
+#[test]
+fn test_content_replace() {
+    let content = "hello {name}, your code is {code}";
+    let replaced = content_replace::<10>(content, &[("name".to_string(), "Alice".to_string()), ("code".to_string(), "123456".to_string())].into());
+    assert_eq!(replaced, "hello Alice, your code is 123456");
+    let replaced = content_replace::<10>(
+        content,
+        &[("name".to_string(), "Alice".to_string()), ("code".to_string(), "123456789abcdef".to_string())].into(),
+    );
+    assert_eq!(replaced, "hello Alice, your code is 1234567...");
 }

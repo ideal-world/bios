@@ -1,7 +1,8 @@
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 
 use tardis::web::context_extractor::TardisContextExtractor;
-use tardis::web::poem::web::{Json, Path, Query};
+use tardis::web::poem_openapi::param::{Path, Query};
+use tardis::web::poem_openapi::payload::Json;
 
 use tardis::web::poem_openapi;
 use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp};
@@ -12,6 +13,8 @@ use crate::serv::*;
 
 #[cfg(feature = "simple-client")]
 use crate::invoke::Client;
+
+use super::map_notfound_to_false;
 #[derive(Clone, Default)]
 /// 用户触达消息消息模板-租户控制台
 pub struct ReachMessageTemplateCtApi;
@@ -24,16 +27,17 @@ impl ReachMessageTemplateCtApi {
         &self,
         page_number: Query<Option<u32>>,
         page_size: Query<Option<u32>>,
-        rel_reach_channel: Query<Option<ReachChannelKind>>,
+        rel_reach_channel: Query<Option<String>>,
         TardisContextExtractor(ctx): TardisContextExtractor,
     ) -> TardisApiResult<TardisPage<ReachMessageTemplateSummaryResp>> {
         let page_number = page_number.unwrap_or(1);
         let page_size = page_size.unwrap_or(10);
+        let rel_reach_channel = rel_reach_channel.0.map(|x| x.parse::<ReachChannelKind>()).transpose()?;
         let funs = get_tardis_inst();
         // filter
         let mut filter = ReachMessageTemplateFilterReq::default();
         filter.base_filter.with_sub_own_paths = true;
-        filter.rel_reach_channel = rel_reach_channel.0;
+        filter.rel_reach_channel = rel_reach_channel;
         let page_resp = ReachMessageTemplateServ::paginate_rbums(&filter, page_number, page_size, None, None, &funs, &ctx).await?;
         TardisResp::ok(page_resp)
     }
@@ -42,14 +46,15 @@ impl ReachMessageTemplateCtApi {
     #[oai(method = "get", path = "/")]
     pub async fn find_msg_template(
         &self,
-        rel_reach_channel: Query<Option<ReachChannelKind>>,
+        rel_reach_channel: Query<Option<String>>,
         TardisContextExtractor(ctx): TardisContextExtractor,
     ) -> TardisApiResult<Vec<ReachMessageTemplateSummaryResp>> {
         let funs = get_tardis_inst();
         // filter
         let mut filter = ReachMessageTemplateFilterReq::default();
+        let rel_reach_channel = rel_reach_channel.0.map(|x| x.parse::<ReachChannelKind>()).transpose()?;
         filter.base_filter.with_sub_own_paths = true;
-        filter.rel_reach_channel = rel_reach_channel.0;
+        filter.rel_reach_channel = rel_reach_channel;
         let resp = ReachMessageTemplateServ::find_rbums(&filter, None, None, &funs, &ctx).await?;
         TardisResp::ok(resp)
     }
@@ -90,7 +95,7 @@ impl ReachMessageTemplateCtApi {
     #[oai(method = "delete", path = "/:id")]
     pub async fn delete_msg_template(&self, id: Path<String>, TardisContextExtractor(ctx): TardisContextExtractor) -> TardisApiResult<bool> {
         let funs = get_tardis_inst();
-        let res = ReachMessageTemplateServ::delete_rbum(&id, &funs, &ctx).await?;
-        TardisResp::ok(res == 0)
+        let ok = ReachMessageTemplateServ::delete_rbum(&id, &funs, &ctx).await.map_or_else(map_notfound_to_false, |count| Ok(count != 0))?;
+        TardisResp::ok(ok)
     }
 }

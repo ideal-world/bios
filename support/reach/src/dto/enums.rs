@@ -1,5 +1,8 @@
+use std::str::FromStr;
+
 use serde::{Deserialize, Serialize};
 use tardis::{
+    basic::error::TardisError,
     db::sea_orm::{self, DeriveActiveEnum, EnumIter},
     web::poem_openapi,
 };
@@ -24,6 +27,23 @@ pub enum ReachChannelKind {
     Push,
     #[sea_orm(string_value = "WEB_HOOK")]
     WebHook,
+}
+
+impl FromStr for ReachChannelKind {
+    type Err = TardisError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_uppercase().as_str() {
+            "SMS" => Ok(Self::Sms),
+            "EMAIL" => Ok(Self::Email),
+            "INBOX" => Ok(Self::Inbox),
+            "WECHAT" => Ok(Self::Wechat),
+            "DINGTALK" => Ok(Self::DingTalk),
+            "PUSH" => Ok(Self::Push),
+            "WEB_HOOK" => Ok(Self::WebHook),
+            _ => Err(TardisError::bad_request(&format!("invalid ReachChannelKind: {}", s), "400-reach-invalid-param")),
+        }
+    }
 }
 
 #[derive(Debug, poem_openapi::Enum, EnumIter, Clone, Copy, DeriveActiveEnum, PartialEq, Eq, Serialize, Deserialize, Hash)]

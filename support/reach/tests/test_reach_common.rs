@@ -1,23 +1,26 @@
-use std::sync::OnceLock;
+use std::collections::HashMap;
+use std::sync::{Arc, OnceLock};
 
-use bios_basic::rbum::dto::rbum_filer_dto::{RbumKindFilterReq, RbumBasicFilterReq};
+use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumKindFilterReq};
 use bios_basic::rbum::dto::rbum_item_dto::RbumItemAddReq;
-use bios_basic::rbum::dto::rbum_kind_dto::RbumKindAddReq;
 use bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind;
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use bios_basic::rbum::serv::rbum_domain_serv::RbumDomainServ;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemServ;
 use bios_basic::rbum::serv::rbum_kind_serv::RbumKindServ;
 use bios_basic::{rbum::rbum_config::RbumConfig, test::test_http_client::TestHttpClient};
-use bios_reach::consts::{DOMAIN_CODE, REACH_INIT_OWNER, RBUM_KIND_CODE_REACH_MESSAGE};
-use tardis::rand;
+use bios_reach::client::sms::{SmsId, SmsResponse};
+use bios_reach::consts::{DOMAIN_CODE, RBUM_KIND_CODE_REACH_MESSAGE, REACH_INIT_OWNER};
+use serde::Deserialize;
 use tardis::testcontainers::images::{generic::GenericImage, redis::Redis};
+use tardis::tokio::sync::RwLock;
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
     test::test_container::TardisTestContainer,
     testcontainers::{clients::Cli, Container},
     TardisFuns,
 };
+use tardis::{log, rand};
 pub struct Holder<'d> {
     pub db: Container<'d, GenericImage>,
     pub cache: Container<'d, Redis>,
@@ -27,11 +30,9 @@ pub struct Holder<'d> {
 pub const TEST_OWNER: &str = "test-reach";
 pub fn get_test_ctx() -> &'static TardisContext {
     static TEST_CTX: OnceLock<TardisContext> = OnceLock::new();
-    TEST_CTX.get_or_init(||{
-        TardisContext {
-            owner: TEST_OWNER.to_string(),
-            ..Default::default()
-        }
+    TEST_CTX.get_or_init(|| TardisContext {
+        owner: TEST_OWNER.to_string(),
+        ..Default::default()
     })
 }
 
@@ -64,26 +65,45 @@ pub async fn init_tardis(docker: &Cli) -> TardisResult<Holder> {
         owner: REACH_INIT_OWNER.into(),
         ..Default::default()
     };
-    let rel_rbum_kind_id = RbumKindServ::find_one_rbum(&RbumKindFilterReq {
-        basic: RbumBasicFilterReq {
-            code: Some(RBUM_KIND_CODE_REACH_MESSAGE.into()),
+    let rel_rbum_kind_id = RbumKindServ::find_one_rbum(
+        &RbumKindFilterReq {
+            basic: RbumBasicFilterReq {
+                code: Some(RBUM_KIND_CODE_REACH_MESSAGE.into()),
+                ..Default::default()
+            },
             ..Default::default()
         },
-        ..Default::default()
-    }, &funs, &ctx).await?.expect("fail to find kind").id;
-    let rel_rbum_domain_id = RbumDomainServ::find_one_rbum(&RbumBasicFilterReq {
-        code: Some(DOMAIN_CODE.into()),
-        ..Default::default()
-    }, &funs, &ctx).await?.expect("fail to find domain").id;
-    RbumItemServ::add_rbum(&mut RbumItemAddReq {
-        code: Some("reach-test".into()),
-        name: "reach-test".into(),
-        scope_level: Some(RbumScopeLevelKind::Root),
-        id: Some(TEST_OWNER.into()),
-        rel_rbum_kind_id,
-        rel_rbum_domain_id,
-        disabled: None,
-    }, &funs, &ctx).await?;
+        &funs,
+        &ctx,
+    )
+    .await?
+    .expect("fail to find kind")
+    .id;
+    let rel_rbum_domain_id = RbumDomainServ::find_one_rbum(
+        &RbumBasicFilterReq {
+            code: Some(DOMAIN_CODE.into()),
+            ..Default::default()
+        },
+        &funs,
+        &ctx,
+    )
+    .await?
+    .expect("fail to find domain")
+    .id;
+    RbumItemServ::add_rbum(
+        &mut RbumItemAddReq {
+            code: Some("reach-test".into()),
+            name: "reach-test".into(),
+            scope_level: Some(RbumScopeLevelKind::Root),
+            id: Some(TEST_OWNER.into()),
+            rel_rbum_kind_id,
+            rel_rbum_domain_id,
+            disabled: None,
+        },
+        &funs,
+        &ctx,
+    )
+    .await?;
     web_server.start().await?;
     Ok(holder)
 }
@@ -114,4 +134,72 @@ pub fn random_string(size: usize) -> String {
     thread_rng().sample_iter(&Alphanumeric).take(size).map(|x| x as char).collect()
 }
 
+#[allow(dead_code)]
+pub struct HwSmsMockServer {
+    host: String,
+    handle: Option<tardis::tokio::task::JoinHandle<()>>,
+    pub sent_messages: Arc<RwLock<HashMap<String, Vec<String>>>>,
+}
 
+#[allow(dead_code)]
+impl HwSmsMockServer {
+    pub fn new(url: impl Into<String>) -> Self {
+        Self {
+            host: url.into(),
+            handle: None,
+            sent_messages: Default::default(),
+        }
+    }
+    pub async fn init(&mut self) {
+        use axum::{extract::State, http::StatusCode, response::IntoResponse, routing::post, Form, Json, Router};
+        #[derive(Debug, Deserialize)]
+        pub struct SendSmsRequest {
+            pub from: String,
+            pub status_callback: Option<String>,
+            pub extend: Option<String>,
+            pub to: String,
+            pub template_id: String,
+            pub template_paras: String,
+            pub signature: Option<String>,
+        }
+        type SentMessage = Arc<RwLock<HashMap<String, Vec<String>>>>;
+        async fn batch_send_sms_v1<'a>(state: State<SentMessage>, Form(request): Form<SendSmsRequest>) -> impl IntoResponse {
+            log::info!("revieved sms request: {:?}", request);
+            for to in request.to.split(',') {
+                state.write().await.entry(to.into()).or_insert(vec![]).push(request.template_paras.clone());
+            }
+            let response = SmsResponse {
+                code: "200".into(),
+                description: "OK".into(),
+                result: Some(
+                    request
+                        .to
+                        .split(',')
+                        .map(|x| SmsId {
+                            from: request.from.clone(),
+                            sms_msg_id: random_string(16),
+                            origin_to: x.into(),
+                            status: "OK".into(),
+                            create_time: tardis::chrono::Utc::now().to_rfc3339(),
+                        })
+                        .collect::<Vec<_>>(),
+                ),
+            };
+            let body = Json::from(response);
+            (StatusCode::OK, body)
+        }
+        let state = self.sent_messages.clone();
+        let app = Router::new().route("/sms/batchSendSms/v1", post(batch_send_sms_v1)).with_state(state);
+        log::info!("starting sms mocker at {}", self.host);
+        let addr = self.host.parse().expect("invalid sms mocker host");
+        let handle = tardis::tokio::spawn(async move {
+            let _ = axum::Server::bind(&addr).serve(app.into_make_service()).await;
+        });
+        if let Some(h) = self.handle.replace(handle) {
+            h.abort();
+        }
+    }
+    pub async fn get_latest_message(&self, user: &str) -> Option<String> {
+        self.sent_messages.read().await.get(user).and_then(|x| x.last().cloned())
+    }
+}

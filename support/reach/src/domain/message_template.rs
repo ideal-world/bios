@@ -6,8 +6,8 @@ use tardis::db::sea_orm;
 use tardis::db::sea_orm::sea_query::{ColumnDef, Table, TableCreateStatement};
 use tardis::db::sea_orm::*;
 
-use crate::{dto::*, fill_by_add_req};
 use crate::fill_by_mod_req;
+use crate::{dto::*, fill_by_add_req};
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
 #[sea_orm(table_name = "reach_msg_template")]
 pub struct Model {
@@ -88,10 +88,10 @@ pub struct Model {
 }
 impl From<&ReachMessageTemplateAddReq> for ActiveModel {
     fn from(add_req: &ReachMessageTemplateAddReq) -> Self {
-        let mut model = ActiveModel { 
+        let mut model = ActiveModel {
             create_time: Set(Utc::now()),
             update_time: Set(Utc::now()),
-            ..Default::default() 
+            ..Default::default()
         };
         fill_by_add_req!(add_req => {
             note,

@@ -41,10 +41,9 @@ impl MessageSendListener {
             &ctx,
             cfg.invoke.module_urls.get("iam").expect("missing iam base url"),
         ));
-        let ReachStatusKind::Pending = message.reach_status else {
-            return Ok(())
-        };
-        ReachMessageServ::update_status(&message.id, ReachStatusKind::Sending, &self.funs, &ctx).await?;
+        if !ReachMessageServ::update_status(&message.id, ReachStatusKind::Pending, ReachStatusKind::Sending, &self.funs, &ctx).await? {
+            return Ok(());
+        }
         let mut to = HashSet::new();
 
         let owner_path = rbum_scope_helper::get_pre_paths(RBUM_SCOPE_LEVEL_TENANT as i16, &message.own_paths).unwrap_or_default();
@@ -59,10 +58,10 @@ impl MessageSendListener {
         }
         match self.channel.send(message.rel_reach_channel, &template, &message.content_replace.parse()?, &to).await {
             Ok(_) => {
-                ReachMessageServ::update_status(&message.id, ReachStatusKind::SendSuccess, &self.funs, &ctx).await?;
+                ReachMessageServ::update_status(&message.id, ReachStatusKind::Sending, ReachStatusKind::SendSuccess, &self.funs, &ctx).await?;
             }
             Err(e) => {
-                ReachMessageServ::update_status(&message.id, ReachStatusKind::Fail, &self.funs, &ctx).await?;
+                ReachMessageServ::update_status(&message.id, ReachStatusKind::Sending, ReachStatusKind::Fail, &self.funs, &ctx).await?;
                 return Err(e);
             }
         }
@@ -72,13 +71,24 @@ impl MessageSendListener {
         let funs = get_tardis_inst();
         let db = funs.db();
         let messages: Vec<message::Model> = db
-            .find_dtos(Query::select().from(message::Entity).and_where(message::Column::ReachStatus.eq(ReachStatusKind::Pending)).and_where(message::Column::ReceiveKind.eq(ReachReceiveKind::Account)))
+            .find_dtos(
+                Query::select()
+                    .columns(message::Column::iter())
+                    .from(message::Entity)
+                    .and_where(message::Column::ReachStatus.eq(ReachStatusKind::Pending))
+                    .and_where(message::Column::ReceiveKind.eq(ReachReceiveKind::Account)),
+            )
             .await?;
         for message in messages {
-            let Some(template) = db.get_dto::<message_template::Model>(Query::select().from(message_template::Entity).and_where(message_template::Column::Id.eq(&message.id))).await? else {
+            let Some(template) = db.get_dto::<message_template::Model>(
+                Query::select()
+                .columns(message_template::Column::iter())
+                .from(message_template::Entity)
+                .and_where(message_template::Column::Id.eq(&message.id))
+            ).await? else {
                 continue;
             };
-            let Some(_signature) = db.get_dto::<message_signature::Model>(Query::select().from(message_template::Entity).and_where(message_template::Column::Id.eq(&message.id))).await? else {
+            let Some(_signature) = db.get_dto::<message_signature::Model>(Query::select().columns(message_signature::Column::iter()).from(message_template::Entity).and_where(message_template::Column::Id.eq(&message.id))).await? else {
                 continue;
             };
             match message.receive_kind {

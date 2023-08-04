@@ -9,8 +9,8 @@ use tardis::basic::result::TardisResult;
 use tardis::db::reldb_client::TardisActiveModel;
 
 use tardis::db::sea_orm::sea_query::{Query, SelectStatement};
-use tardis::db::sea_orm::{EntityName, Iterable};
 use tardis::db::sea_orm::{ColumnTrait, Set};
+use tardis::db::sea_orm::{EntityName, Iterable};
 use tardis::{TardisFuns, TardisFunsInst};
 
 pub struct ReachMessageTemplateServ;
@@ -49,7 +49,7 @@ impl
     async fn package_query(is_detail: bool, filter: &ReachMessageTemplateFilterReq, _: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<SelectStatement> {
         let mut query = Query::select();
         query.from(message_template::Entity);
-        query.columns(message_template::Column::iter().map(|c|(message_template::Entity, c)));
+        query.columns(message_template::Column::iter().map(|c| (message_template::Entity, c)));
         if let Some(chan) = filter.rel_reach_channel {
             query.and_where(message_template::Column::RelReachChannel.eq(chan));
         }

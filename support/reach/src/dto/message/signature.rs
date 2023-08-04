@@ -25,7 +25,7 @@ pub struct ReachMsgSignatureAddReq {
     pub rel_reach_channel: ReachChannelKind,
 }
 /// 修改用户触达签名请求
-#[derive(Debug, poem_openapi::Object, Serialize, Deserialize)]
+#[derive(Debug, poem_openapi::Object, Serialize, Deserialize, Default)]
 pub struct ReachMsgSignatureModifyReq {
     /// 名称
     #[oai(validator(max_length = "255"))]

@@ -1,16 +1,17 @@
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 
 use tardis::web::context_extractor::TardisContextExtractor;
-use tardis::web::poem::web::{Json, Path, Query};
 
 use tardis::web::poem_openapi;
+use tardis::web::poem_openapi::param::{Path, Query};
+use tardis::web::poem_openapi::payload::Json;
 use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp};
 
 use crate::consts::get_tardis_inst;
 use crate::dto::*;
-use crate::serv::*;
 #[cfg(feature = "simple-client")]
 use crate::invoke::Client;
+use crate::serv::*;
 #[derive(Clone, Default)]
 /// 用户触达消息-公共控制台
 pub struct ReachMessageCtApi;
@@ -56,7 +57,7 @@ impl ReachMessageCtApi {
         TardisResp::ok(resp)
     }
 
-    /// 根据Id获取用户触达消息数据
+    /// 重新发送消息
     #[oai(method = "put", path = "/resend/:id")]
     pub async fn resend(&self, id: Path<String>, TardisContextExtractor(ctx): TardisContextExtractor) -> TardisApiResult<String> {
         let funs = get_tardis_inst();
@@ -64,7 +65,7 @@ impl ReachMessageCtApi {
         TardisResp::ok(id.to_string())
     }
 
-    /// 根据Id获取用户触达消息数据
+    /// 添加消息
     #[oai(method = "post", path = "/")]
     pub async fn add_message(&self, mut add_req: Json<ReachMessageAddReq>, TardisContextExtractor(ctx): TardisContextExtractor) -> TardisApiResult<String> {
         let funs = get_tardis_inst();

@@ -72,16 +72,12 @@ impl ReachMessageServ {
         Self::modify_rbum(id, &mut modify_req, funs, ctx).await?;
         Ok(())
     }
-    pub async fn update_status(id: impl Into<String>, status: ReachStatusKind, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        funs.db()
-            .update_one(
-                message::ActiveModel {
-                    id: Set(id.into()),
-                    reach_status: Set(status),
-                    ..Default::default()
-                },
-                ctx,
-            )
-            .await
+    pub async fn update_status(id: impl Into<String>, from: ReachStatusKind, to: ReachStatusKind, funs: &TardisFunsInst, _ctx: &TardisContext) -> TardisResult<bool> {
+        let mut query = Query::update();
+        query.table(message::Entity);
+        query.cond_where(message::Column::Id.eq(id.into()).and(message::Column::ReachStatus.eq(from)));
+        query.value(message::Column::ReachStatus, to);
+        let res = funs.db().execute(&query).await?;
+        Ok(res.rows_affected() == 1)
     }
 }
