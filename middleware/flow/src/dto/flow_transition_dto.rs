@@ -249,7 +249,7 @@ pub struct FlowTransitionActionByStateChangeInfo {
 pub struct StateChangeCondition {
     pub current: bool,
     pub obj_tag: Option<String>,
-    pub state_id: String,
+    pub state_id: Vec<String>,
     pub op: StateChangeConditionOp,
 }
 

@@ -34,7 +34,7 @@ pub async fn init_tardis(docker: &Cli) -> TardisResult<Holder> {
     let holder = Holder {
         pg: reldb_container,
         redis: redis_container,
-        mq: mq_container
+        mq: mq_container,
     };
     TardisFuns::init(Some("tests/config")).await?;
     bios_basic::rbum::rbum_initializer::init(DOMAIN_CODE, RbumConfig::default()).await?;
