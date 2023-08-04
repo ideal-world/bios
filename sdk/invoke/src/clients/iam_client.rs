@@ -44,7 +44,7 @@ impl<'a> SimpleInvokeClient for IamClient<'a> {
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
-pub struct IamAccountSummaryAggResp {
+pub struct IamAccountDetailAggResp {
     pub roles: HashMap<String, String>,
     pub certs: HashMap<String, String>,
     pub orgs: Vec<String>,
@@ -52,5 +52,5 @@ pub struct IamAccountSummaryAggResp {
 
 impl_taidis_api_client! {
     IamClient<'_>:
-    {get_account, get [account, id] {tenant_id} IamAccountSummaryAggResp}
+    {get_account, get ["/ct/account", id] {tenant_id} IamAccountDetailAggResp}
 }

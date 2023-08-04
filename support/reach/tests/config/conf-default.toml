@@ -4,6 +4,7 @@ cache_key_res_changed_timer_sec = 1
 [csm.reach.sms]
 base_url = "http://localhost:8081"
 [csm.reach.invoke]
+module_urls = { iam = "http://localhost:8080/iam" }
 
 [fw.web_server]
 port = 8080
