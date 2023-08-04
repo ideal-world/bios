@@ -81,8 +81,7 @@ impl SgPluginFilter for SgFilterAntiReplay {
             tokio::time::sleep(Duration::from_millis(time)).await;
             let cache_client = spacegate_kernel::functions::cache_client::get(&name).expect("get cache client error!");
             let _ = set_status(md5, &cache_key, false, cache_client).await;
-        })
-        .await;
+        });
         Ok((true, ctx))
     }
 }

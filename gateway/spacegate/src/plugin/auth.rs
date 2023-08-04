@@ -25,7 +25,7 @@ use std::{collections::HashMap, mem, str::FromStr, sync::Arc};
 use tardis::{
     async_trait,
     basic::{error::TardisError, result::TardisResult},
-    config::config_dto::{AppConfig, CacheConfig, FrameworkConfig, TardisConfig, WebServerConfig, WebServerModuleConfig},
+    config::config_dto::{AppConfig, CacheConfig, FrameworkConfig, LogConfig, TardisConfig, WebServerConfig, WebServerModuleConfig},
     log,
     serde_json::{self, Value},
     tokio::{self, sync::Mutex, task::JoinHandle},
@@ -103,30 +103,34 @@ impl SgPluginFilter for SgFilterAuth {
                     },
                     ..Default::default()
                 },
+                log: init_dto.gateway_parameters.log_level.as_ref().map(|l| LogConfig {
+                    level: l.clone(),
+                    ..Default::default()
+                }),
                 ..Default::default()
             },
         })
         .await?;
-        let web_server = TardisFuns::web_server();
-        auth_initializer::init(web_server).await?;
-        let mut shut_down = SHUTDOWN.lock().await;
-        let join_handle = tokio::spawn(async move {
-            let _ = web_server.start().await;
-        });
-        *shut_down = Some(join_handle);
+        // let web_server = TardisFuns::web_server();
+        // auth_initializer::init(web_server).await?;
+        auth_initializer::init_data().await?;
+        auth_crypto_serv::init().await?;
+        log::info!("[SG.Filter.Auth] Server started");
+        // match web_server.start().await {
+        //     Ok(_) => log::info!("[SG.Filter.Auth] Server started"),
+        //     Err(_) => {}
+        // };
+
         Ok(())
     }
 
     async fn destroy(&self) -> TardisResult<()> {
-        let mut shut_down = SHUTDOWN.lock().await;
-        let mut swap_shutdown: Option<JoinHandle<()>> = None;
-        mem::swap(&mut *shut_down, &mut swap_shutdown);
-        if let Some(shutdown) = swap_shutdown {
-            if !shutdown.is_finished() {
-                shutdown.abort();
-            };
-            log::info!("[SG.Filter.Status] Server stopped");
+        let web_server = TardisFuns::web_server();
+        match web_server.shutdown().await {
+            Ok(_) => log::info!("[SG.Filter.Auth] Server stopped"),
+            Err(_) => {}
         };
+
         Ok(())
     }
 
@@ -298,6 +302,7 @@ mod tests {
                     lang: None,
                 },
                 http_route_rules: vec![],
+                attached_level: spacegate_kernel::plugins::filters::SgAttachedLevel::Gateway,
             })
             .await
             .unwrap();
@@ -382,6 +387,7 @@ mod tests {
                     lang: None,
                 },
                 http_route_rules: vec![],
+                attached_level: spacegate_kernel::plugins::filters::SgAttachedLevel::Gateway,
             })
             .await
             .unwrap();
