@@ -77,7 +77,7 @@ impl SgPluginFilter for SgFilterAntiReplay {
         let cache_key = self.cache_key.clone();
         let name = ctx.get_gateway_name();
         let time = self.time;
-        let _ = tokio::spawn(async move {
+        tokio::spawn(async move {
             tokio::time::sleep(Duration::from_millis(time)).await;
             let cache_client = spacegate_kernel::functions::cache_client::get(&name).expect("get cache client error!");
             let _ = set_status(md5, &cache_key, false, cache_client).await;

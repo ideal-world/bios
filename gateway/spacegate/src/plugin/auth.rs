@@ -21,19 +21,19 @@ use spacegate_kernel::{
         filters::{BoxSgPluginFilter, SgPluginFilter, SgPluginFilterAccept, SgPluginFilterDef},
     },
 };
-use std::{collections::HashMap, mem, str::FromStr, sync::Arc};
+use std::{collections::HashMap, str::FromStr, sync::Arc};
 use tardis::{
     async_trait,
     basic::{error::TardisError, result::TardisResult},
     config::config_dto::{AppConfig, CacheConfig, FrameworkConfig, LogConfig, TardisConfig, WebServerConfig, WebServerModuleConfig},
     log,
     serde_json::{self, Value},
-    tokio::{self, sync::Mutex, task::JoinHandle},
+    tokio::sync::RwLock,
     TardisFuns,
 };
 
 lazy_static! {
-    static ref SHUTDOWN: Arc<Mutex<Option<JoinHandle<()>>>> = <_>::default();
+    static ref INSTANCE: Arc<RwLock<HashMap<u16, String>>> = <_>::default();
 }
 
 pub const CODE: &str = "auth";
@@ -71,6 +71,15 @@ impl SgPluginFilter for SgFilterAuth {
     }
 
     async fn init(&mut self, init_dto: &SgPluginFilterInitDto) -> TardisResult<()> {
+        let config_md5 = TardisFuns::crypto.digest.md5(&TardisFuns::json.obj_to_string(self)?)?;
+        let mut instance = INSTANCE.write().await;
+        if let Some(md5) = instance.get(&self.port) {
+            if config_md5.eq(md5) {
+                return Ok(());
+            }
+        }
+        (*instance).insert(self.port, config_md5);
+
         let mut cs = HashMap::<String, Value>::new();
         cs.insert(
             bios_auth::auth_constants::DOMAIN_CODE.to_string(),
@@ -85,7 +94,7 @@ impl SgPluginFilter for SgFilterAuth {
                     ..Default::default()
                 },
                 web_server: WebServerConfig {
-                    enabled: true,
+                    enabled: false,
                     port: self.port,
                     modules: HashMap::from([("auth".to_string(), WebServerModuleConfig { ..Default::default() })]),
                     ..Default::default()
@@ -103,34 +112,20 @@ impl SgPluginFilter for SgFilterAuth {
                     },
                     ..Default::default()
                 },
-                log: init_dto.gateway_parameters.log_level.as_ref().map(|l| LogConfig {
-                    level: l.clone(),
-                    ..Default::default()
-                }),
+                log: init_dto.gateway_parameters.log_level.as_ref().map(|l| LogConfig { level: l.clone() }),
                 ..Default::default()
             },
         })
         .await?;
-        // let web_server = TardisFuns::web_server();
-        // auth_initializer::init(web_server).await?;
+
         auth_initializer::init_data().await?;
         auth_crypto_serv::init().await?;
-        log::info!("[SG.Filter.Auth] Server started");
-        // match web_server.start().await {
-        //     Ok(_) => log::info!("[SG.Filter.Auth] Server started"),
-        //     Err(_) => {}
-        // };
+        log::info!("[SG.Filter.Auth] init done");
 
         Ok(())
     }
 
     async fn destroy(&self) -> TardisResult<()> {
-        let web_server = TardisFuns::web_server();
-        match web_server.shutdown().await {
-            Ok(_) => log::info!("[SG.Filter.Auth] Server stopped"),
-            Err(_) => {}
-        };
-
         Ok(())
     }
 
