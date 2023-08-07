@@ -62,7 +62,7 @@ impl
     ) -> TardisResult<trigger_instance_config::ActiveModel> {
         let mut model = trigger_instance_config::ActiveModel::from(modify_req);
         model.id = Set(id.into());
-        model.fill_ctx(ctx, true);
+        model.fill_ctx(ctx, false);
         Ok(model)
     }
 

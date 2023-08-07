@@ -1,11 +1,3 @@
-use std::collections::HashMap;
-use std::sync::{Arc, OnceLock};
-
-use axum::extract::{Path, Query, State};
-use axum::http::StatusCode;
-use axum::response::IntoResponse;
-use axum::routing::post;
-use axum::{Form, Json, Router};
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumKindFilterReq};
 use bios_basic::rbum::dto::rbum_item_dto::RbumItemAddReq;
 use bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind;
@@ -15,21 +7,30 @@ use bios_basic::rbum::serv::rbum_item_serv::RbumItemServ;
 use bios_basic::rbum::serv::rbum_kind_serv::RbumKindServ;
 use bios_basic::{rbum::rbum_config::RbumConfig, test::test_http_client::TestHttpClient};
 use bios_reach::client::sms::{SmsId, SmsResponse};
-use bios_reach::consts::{DOMAIN_CODE, RBUM_KIND_CODE_REACH_MESSAGE, REACH_INIT_OWNER};
-use serde::Deserialize;
+use bios_reach::consts::{DOMAIN_CODE, IAM_KEY_PHONE_V_CODE, RBUM_KIND_CODE_REACH_MESSAGE, REACH_INIT_OWNER};
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::sync::{Arc, OnceLock};
 use tardis::testcontainers::images::{generic::GenericImage, redis::Redis};
 use tardis::tokio::sync::RwLock;
+use tardis::web::poem_openapi::param::Path;
+use tardis::web::poem_openapi::payload::{Form, Json};
+use tardis::web::poem_openapi::{self, Object};
+use tardis::web::web_resp::{TardisApiResult, TardisResp};
+use tardis::web::web_server::{WebServerModule, WebServerModuleOption};
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
     test::test_container::TardisTestContainer,
     testcontainers::{clients::Cli, Container},
     TardisFuns,
 };
-use tardis::{log, rand};
+use tardis::{log, rand, serde_json};
 pub struct Holder<'d> {
     pub db: Container<'d, GenericImage>,
     pub cache: Container<'d, Redis>,
     pub mq: Container<'d, GenericImage>,
+    pub sms_mocker: HwSmsMockerApi,
+    pub iam_mocker: IamMockerApi,
 }
 
 pub const TEST_OWNER: &str = "test-reach";
@@ -55,16 +56,16 @@ pub async fn init_tardis(docker: &Cli) -> TardisResult<Holder> {
     let port = rabbit_container.get_host_port_ipv4(5672);
     let url = format!("amqp://guest:guest@127.0.0.1:{port}/%2f");
     std::env::set_var("TARDIS_FW.MQ.URL", url);
-    let holder = Holder {
-        db: reldb_container,
-        cache: redis_container,
-        mq: rabbit_container,
-    };
+
     TardisFuns::init(Some("tests/config")).await?;
     bios_basic::rbum::rbum_initializer::init(DOMAIN_CODE, RbumConfig::default()).await?;
     bios_basic::rbum::rbum_initializer::init("", RbumConfig::default()).await?;
     let web_server = TardisFuns::web_server();
     bios_reach::init(web_server).await?;
+    let sms_mocker = HwSmsMockerApi::default();
+    let iam_mocker = IamMockerApi::default();
+    web_server.add_module("sms", WebServerModule::from(sms_mocker.clone()).options(WebServerModuleOption { uniform_error: false })).await;
+    web_server.add_module("iam", iam_mocker.clone()).await;
     let funs = TardisFuns::inst_with_db_conn(DOMAIN_CODE.to_string(), None);
     let ctx = TardisContext {
         owner: REACH_INIT_OWNER.into(),
@@ -110,6 +111,13 @@ pub async fn init_tardis(docker: &Cli) -> TardisResult<Holder> {
     )
     .await?;
     web_server.start().await?;
+    let holder = Holder {
+        db: reldb_container,
+        cache: redis_container,
+        mq: rabbit_container,
+        sms_mocker,
+        iam_mocker,
+    };
     Ok(holder)
 }
 
@@ -140,70 +148,78 @@ pub fn random_string(size: usize) -> String {
 }
 
 #[allow(dead_code)]
-pub struct HwSmsMockServer {
-    host: String,
-    handle: Option<tardis::tokio::task::JoinHandle<()>>,
+#[derive(Clone, Default)]
+pub struct HwSmsMockerApi {
     pub sent_messages: Arc<RwLock<HashMap<String, Vec<String>>>>,
 }
 
 #[allow(dead_code)]
-impl HwSmsMockServer {
-    pub fn new(url: impl Into<String>) -> Self {
-        Self {
-            host: url.into(),
-            handle: None,
-            sent_messages: Default::default(),
-        }
-    }
-    pub async fn init(&mut self) {
-        #[derive(Debug, Deserialize)]
-        pub struct SendSmsRequest {
-            pub from: String,
-            pub status_callback: Option<String>,
-            pub extend: Option<String>,
-            pub to: String,
-            pub template_id: String,
-            pub template_paras: String,
-            pub signature: Option<String>,
-        }
-        type SentMessage = Arc<RwLock<HashMap<String, Vec<String>>>>;
-        async fn batch_send_sms_v1<'a>(state: State<SentMessage>, Form(request): Form<SendSmsRequest>) -> impl IntoResponse {
-            log::info!("revieved sms request: {:?}", request);
-            for to in request.to.split(',') {
-                state.write().await.entry(to.into()).or_insert(vec![]).push(request.template_paras.clone());
-            }
-            let response = SmsResponse {
-                code: "200".into(),
-                description: "OK".into(),
-                result: Some(
-                    request
-                        .to
-                        .split(',')
-                        .map(|x| SmsId {
-                            from: request.from.clone(),
-                            sms_msg_id: random_string(16),
-                            origin_to: x.into(),
-                            status: "OK".into(),
-                            create_time: tardis::chrono::Utc::now().to_rfc3339(),
-                        })
-                        .collect::<Vec<_>>(),
-                ),
-            };
-            let body = Json::from(response);
-            (StatusCode::OK, body)
-        }
-        let state = self.sent_messages.clone();
-        let app = Router::new().route("/sms/batchSendSms/v1", post(batch_send_sms_v1)).with_state(state);
-        log::info!("starting sms mocker at {}", self.host);
-        let addr = self.host.parse().expect("invalid sms mocker host");
-        let handle = tardis::tokio::spawn(async move {
-            let _ = axum::Server::bind(&addr).serve(app.into_make_service()).await;
-        });
-        if let Some(h) = self.handle.replace(handle) {
-            h.abort();
-        }
-    }
+impl HwSmsMockerApi {
     pub async fn get_latest_message(&self, user: &str) -> Option<String> {
         self.sent_messages.read().await.get(user).and_then(|x| x.last().cloned())
+    }
+}
+
+#[derive(Debug, Deserialize, Object)]
+pub struct SendSmsRequest {
+    pub from: String,
+    pub status_callback: Option<String>,
+    pub extend: Option<String>,
+    pub to: String,
+    pub template_id: String,
+    pub template_paras: String,
+    pub signature: Option<String>,
+}
+
+#[poem_openapi::OpenApi]
+impl HwSmsMockerApi {
+    #[oai(path = "/batchSendSms/v1", method = "post")]
+    async fn get_ct_account(&self, request: Form<SendSmsRequest>) -> Json<serde_json::Value> {
+        log::info!("revieved sms request: {:?}", request);
+        for to in request.to.split(',') {
+            self.sent_messages.write().await.entry(to.into()).or_insert(vec![]).push(request.template_paras.clone());
+        }
+        let response = SmsResponse {
+            code: "200".into(),
+            description: "OK".into(),
+            result: Some(
+                request
+                    .to
+                    .split(',')
+                    .map(|x| SmsId {
+                        from: request.from.clone(),
+                        sms_msg_id: random_string(16),
+                        origin_to: x.into(),
+                        status: "OK".into(),
+                        create_time: tardis::chrono::Utc::now().to_rfc3339(),
+                    })
+                    .collect::<Vec<_>>(),
+            ),
+        };
+        Json(serde_json::to_value(response).unwrap())
+    }
+}
+
+#[derive(Default, Clone)]
+pub struct IamMockerApi {}
+#[derive(Debug, Serialize, Deserialize, Object)]
+pub struct GetAccountResp {
+    pub roles: HashMap<String, String>,
+    pub certs: HashMap<String, String>,
+    pub orgs: Vec<String>,
+}
+
+#[poem_openapi::OpenApi]
+impl IamMockerApi {
+    #[oai(path = "/ct/account/:id", method = "get")]
+    async fn get_ct_account(&self, id: Path<String>) -> TardisApiResult<GetAccountResp> {
+        log::info!("revieved iam request: {:?}", &id.0);
+        let mut resp = GetAccountResp {
+            roles: HashMap::new(),
+            certs: HashMap::new(),
+            orgs: vec![],
+        };
+        resp.certs.insert(IAM_KEY_PHONE_V_CODE.into(), id.0);
+        TardisResp::ok(resp)
     }
 }

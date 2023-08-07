@@ -10,7 +10,7 @@ use tardis::db::reldb_client::TardisActiveModel;
 
 use tardis::db::sea_orm::sea_query::{Expr, Query, SelectStatement};
 use tardis::db::sea_orm::*;
-use tardis::{TardisFuns, TardisFunsInst};
+use tardis::{TardisFunsInst, TardisFuns};
 
 pub struct ReachMessageServ;
 #[async_trait]
@@ -20,19 +20,11 @@ impl RbumCrudOperation<message::ActiveModel, ReachMessageAddReq, ReachMessageMod
     fn get_table_name() -> &'static str {
         message::Entity.table_name()
     }
-    async fn package_add(add_req: &ReachMessageAddReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<message::ActiveModel> {
-        Ok(message::ActiveModel {
-            id: Set(TardisFuns::field.nanoid()),
-            from_res: Set(add_req.from_res.to_string()),
-            rel_reach_channel: Set(add_req.rel_reach_channel),
-            receive_kind: Set(add_req.receive_kind),
-            to_res_ids: Set(add_req.to_res_ids.to_string()),
-            rel_reach_msg_signature_id: Set(add_req.rel_reach_msg_signature_id.to_string()),
-            rel_reach_msg_template_id: Set(add_req.rel_reach_msg_template_id.to_string()),
-            content_replace: Set(add_req.rel_reach_msg_template_id.to_string()),
-            reach_status: Set(add_req.reach_status),
-            ..Default::default()
-        })
+    async fn package_add(add_req: &ReachMessageAddReq, _: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<message::ActiveModel> {
+        let mut model = message::ActiveModel::from(add_req);
+        model.id = Set(TardisFuns::field.nanoid());
+        model.fill_ctx(ctx, true);
+        Ok(model)
     }
 
     async fn before_add_rbum(add_req: &mut ReachMessageAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
@@ -44,7 +36,7 @@ impl RbumCrudOperation<message::ActiveModel, ReachMessageAddReq, ReachMessageMod
     async fn package_modify(id: &str, modify_req: &ReachMessageModifyReq, _: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<message::ActiveModel> {
         let mut model = message::ActiveModel::from(modify_req);
         model.id = Set(id.into());
-        model.fill_ctx(ctx, true);
+        model.fill_ctx(ctx, false);
         Ok(model)
     }
 

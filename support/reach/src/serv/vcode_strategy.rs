@@ -40,7 +40,7 @@ impl
     async fn package_modify(id: &str, modify_req: &ReachVCodeStrategyModifyReq, _: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<reach_vcode_strategy::ActiveModel> {
         let mut model = reach_vcode_strategy::ActiveModel::from(modify_req);
         model.id = Set(id.into());
-        model.fill_ctx(ctx, true);
+        model.fill_ctx(ctx, false);
         Ok(model)
     }
 

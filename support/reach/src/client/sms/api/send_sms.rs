@@ -36,6 +36,12 @@ impl SmsClient {
         let mut headers = HeaderMap::new();
         self.add_wsse_headers_to(&mut headers)?;
         let url = self.get_url(PATH);
+        // debug use
+        // {
+        //     let resp = self.inner.post(url.clone()).form(&request).send().await?;
+        //     let x = resp.text().await?;
+        //     dbg!(x);
+        // }
         let resp = self.inner.post(url).form(&request).send().await?.json().await?;
         Ok(resp)
     }

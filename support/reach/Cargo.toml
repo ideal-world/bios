@@ -40,5 +40,4 @@ tardis = { workspace = true, features = ["test"] }
 bios-basic = { path = "../../basic", features = ["default", "test"] }
 
 bios-reach = { path = "./", features = ["simple-client"] }
-axum = "0.6.19"
 

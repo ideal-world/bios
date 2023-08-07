@@ -44,7 +44,7 @@ impl
 
     async fn package_modify(id: &str, modify_req: &ReachTriggerSceneModifyReq, _: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<trigger_scene::ActiveModel> {
         let mut model = trigger_scene::ActiveModel::from(modify_req);
-        model.fill_ctx(ctx, true);
+        model.fill_ctx(ctx, false);
         model.id = Set(id.into());
         Ok(model)
     }

@@ -32,7 +32,7 @@ impl RbumCrudOperation<message_log::ActiveModel, ReachMsgLogAddReq, ReachMsgLogM
     async fn package_modify(id: &str, modify_req: &ReachMsgLogModifyReq, _: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<message_log::ActiveModel> {
         let mut model = message_log::ActiveModel::from(modify_req);
         model.id = Set(id.into());
-        model.fill_ctx(ctx, true);
+        model.fill_ctx(ctx, false);
         Ok(model)
     }
 

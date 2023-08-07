@@ -1,11 +1,5 @@
 use bios_basic::rbum::dto::rbum_item_dto::RbumItemAddReq;
-use std::collections::HashMap;
-use tardis::{
-    basic::{dto::TardisContext, result::TardisResult},
-    log,
-    serde_json::json,
-    testcontainers, tokio,
-};
+use tardis::{basic::result::TardisResult, log, serde_json::json, testcontainers, tokio};
 
 mod test_reach_common;
 use bios_reach::{consts::*, dto::*, invoke};
@@ -18,18 +12,19 @@ pub async fn test_ct_api() -> TardisResult<()> {
     // std::env::set_var("RUST_LOG", "test_ct=info");
     let docker = testcontainers::clients::Cli::default();
     let holder = init_tardis(&docker).await?;
-    let mut sms_mocker = HwSmsMockServer::new("127.0.0.1:8081");
-    sms_mocker.init().await;
     let ctx = get_test_ctx();
     let funs = get_tardis_inst();
-    let client = invoke::Client::new("https://localhost:8080/reach", ctx, &funs);
-
+    let client = invoke::Client::new("http://localhost:8080/reach", ctx, &funs);
+    const CONTENT_TEMPLATE: &str = "hello {name}, your code is {code}";
+    fn expected_content(name: &str, code: &str) -> String {
+        format!("hello {name}, your code is {code}")
+    }
     let template_id = {
         // msg template apis
         let template_name = random_string(16);
         let message_add_req = ReachMessageTemplateAddReq {
             rel_reach_channel: ReachChannelKind::Sms,
-            content: "hello {name}, your code is {code}".into(),
+            content: CONTENT_TEMPLATE.into(),
             own_paths: ctx.own_paths.clone(),
             owner: ctx.owner.clone(),
             variables: "name,code".into(),
@@ -128,14 +123,13 @@ pub async fn test_ct_api() -> TardisResult<()> {
         let code = random_string(6);
         let to_name = "Bob";
         let _resp = client.general_send(to_name, &template_id, &[("name".to_owned(), to_name.to_owned()), ("code".to_owned(), code.clone())].into()).await?;
-        let msg = sms_mocker.get_latest_message(to_name).await.expect("message not found");
-        assert_eq!(msg, format!("hello {to_name}, your code is {code}"));
+        let msg = holder.sms_mocker.get_latest_message(to_name).await.expect("message not found");
+        assert_eq!(msg, expected_content(to_name, &code));
     }
 
     // add messages
-
     {
-        let name = "cindy";
+        let name = "Carol";
         let code = random_string(6);
         let add_message_req = ReachMessageAddReq {
             rbum_item_add_req: RbumItemAddReq {
@@ -150,7 +144,7 @@ pub async fn test_ct_api() -> TardisResult<()> {
             from_res: "from-res".to_string(),
             rel_reach_channel: ReachChannelKind::Sms,
             receive_kind: ReachReceiveKind::Account,
-            to_res_ids: [name].join(","),
+            to_res_ids: [name].join(";"),
             rel_reach_msg_signature_id: signature_id.clone(),
             rel_reach_msg_template_id: template_id.clone(),
             reach_status: ReachStatusKind::Pending,
@@ -162,12 +156,14 @@ pub async fn test_ct_api() -> TardisResult<()> {
         };
         // msg send api
         log::info!("add_message");
-        let resp = client.add_message(&add_message_req).await?;
-        // let's waiting for 5 second to see if the message is sent
-        tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
-        let msg = sms_mocker.get_latest_message(name).await;
-
+        let message_id = client.add_message(&add_message_req).await?;
+        log::info!("added message id {message_id}");
+        // let's waiting for 3 seconds to see if the message is sent
+        tokio::time::sleep(tokio::time::Duration::from_secs(3)).await;
+        let msg = holder.sms_mocker.get_latest_message(name).await;
         log::info!("latest message for {name}: {:?}", msg);
+        let msg = msg.expect("message is empty");
+        assert_eq!(msg, expected_content(name, &code));
     }
 
     wait_for_press();

@@ -42,7 +42,7 @@ impl
     async fn package_modify(id: &str, modify_req: &ReachMessageTemplateModifyReq, _: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<message_template::ActiveModel> {
         let mut model = message_template::ActiveModel::from(modify_req);
         model.id = Set(id.into());
-        model.fill_ctx(ctx, true);
+        model.fill_ctx(ctx, false);
         Ok(model)
     }
 

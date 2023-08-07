@@ -78,7 +78,7 @@ impl
     async fn package_modify(id: &str, modify_req: &ReachTriggerGlobalConfigModifyReq, _: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<trigger_global_config::ActiveModel> {
         let mut model = trigger_global_config::ActiveModel::from(modify_req);
         model.id = Set(id.into());
-        model.fill_ctx(ctx, true);
+        model.fill_ctx(ctx, false);
         Ok(model)
     }
 
