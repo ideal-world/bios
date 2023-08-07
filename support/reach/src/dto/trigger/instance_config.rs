@@ -51,7 +51,7 @@ pub struct ReachTriggerInstanceConfigFilterReq {
     #[oai(flatten)]
     pub base_filter: RbumItemBasicFilterReq,
     #[oai(validator(max_length = "255"))]
-    pub receive_group_code: Vec<String>,
+    pub receive_group_code: Option<Vec<String>>,
 
     /// 关联的触达通道
     pub rel_reach_channel: Option<ReachChannelKind>,

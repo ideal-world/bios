@@ -40,6 +40,8 @@ pub struct ReachMessageAddReq {
     #[oai(validator(max_length = "255"))]
     /// 用户触达模板Id
     pub rel_reach_msg_template_id: String,
+    #[serde(default)]
+    #[oai(default)]
     /// 触达状态
     pub reach_status: ReachStatusKind,
     /// 触达状态
@@ -110,18 +112,18 @@ pub struct ReachMessageDetailResp {
     pub create_time: DateTime<Utc>,
     pub update_time: DateTime<Utc>,
     #[oai(validator(max_length = "2000"))]
-    from_res: String,
-    rel_reach_channel: ReachChannelKind,
-    receive_kind: ReachReceiveKind,
+    pub from_res: String,
+    pub rel_reach_channel: ReachChannelKind,
+    pub receive_kind: ReachReceiveKind,
     #[oai(validator(max_length = "2000"))]
     /// 接收主体，分号分隔
-    to_res_ids: String,
+    pub to_res_ids: String,
     #[oai(validator(max_length = "255"))]
-    rel_reach_msg_signature_id: String,
+    pub rel_reach_msg_signature_id: String,
     #[oai(validator(max_length = "255"))]
-    rel_reach_msg_template_id: String,
-    reach_status: ReachStatusKind,
-    content_replace: String,
-    template_content: String,
-    template_name: String,
+    pub rel_reach_msg_template_id: String,
+    pub reach_status: ReachStatusKind,
+    pub content_replace: String,
+    pub template_content: String,
+    pub template_name: String,
 }

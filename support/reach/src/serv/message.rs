@@ -8,7 +8,7 @@ use tardis::basic::dto::TardisContext;
 use tardis::basic::result::TardisResult;
 use tardis::db::reldb_client::TardisActiveModel;
 
-use tardis::db::sea_orm::sea_query::{Expr, Query, SelectStatement};
+use tardis::db::sea_orm::sea_query::{Expr, Query, SelectStatement, Alias};
 use tardis::db::sea_orm::*;
 use tardis::{TardisFunsInst, TardisFuns};
 
@@ -42,6 +42,9 @@ impl RbumCrudOperation<message::ActiveModel, ReachMessageAddReq, ReachMessageMod
 
     async fn package_query(is_detail: bool, filter: &ReachMessageFilterReq, _: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<SelectStatement> {
         let mut query = Query::select();
+        query.columns(message::Column::iter().map(|c| (message::Entity, c)));
+        query.expr_as(Expr::col((message_template::Entity, message_template::Column::Name)), Alias::new("template_name"));
+        query.expr_as(Expr::col((message_template::Entity, message_template::Column::Content)), Alias::new("template_content"));
         query.from(message::Entity);
         query.left_join(
             message_template::Entity,
@@ -56,13 +59,9 @@ impl RbumCrudOperation<message::ActiveModel, ReachMessageAddReq, ReachMessageMod
 }
 
 impl ReachMessageServ {
-    pub async fn resend(id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        let mut modify_req = ReachMessageModifyReq {
-            reach_status: Some(ReachStatusKind::Pending),
-            ..Default::default()
-        };
-        Self::modify_rbum(id, &mut modify_req, funs, ctx).await?;
-        Ok(())
+    pub async fn resend(id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<bool> {
+        let success = Self::update_status(id, ReachStatusKind::Fail, ReachStatusKind::Pending, funs, ctx).await?;
+        Ok(success)
     }
     pub async fn update_status(id: impl Into<String>, from: ReachStatusKind, to: ReachStatusKind, funs: &TardisFunsInst, _ctx: &TardisContext) -> TardisResult<bool> {
         let mut query = Query::update();

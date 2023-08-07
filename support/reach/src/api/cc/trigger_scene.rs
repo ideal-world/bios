@@ -1,9 +1,9 @@
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 
 use tardis::web::context_extractor::TardisContextExtractor;
-use tardis::web::poem::web::Query;
 
 use tardis::web::poem_openapi;
+use tardis::web::poem_openapi::param::Query;
 use tardis::web::web_resp::{TardisApiResult, TardisResp};
 
 use crate::consts::get_tardis_inst;

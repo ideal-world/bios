@@ -18,7 +18,7 @@ pub type ReachCtApi = (
     ReachMsgLogCtApi,
     ReachMessageTemplateCtApi,
     ReachTriggerGlobalConfigCtApi,
-    ReachTriggerGlobalConfigCtApi,
+    ReachTriggerInstanceConfigCtApi,
 );
 
 fn map_notfound_to_false(e: TardisError) -> TardisResult<bool> {

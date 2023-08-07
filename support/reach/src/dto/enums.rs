@@ -61,7 +61,7 @@ pub enum ReachReceiveKind {
     Tenant,
 }
 
-#[derive(Debug, poem_openapi::Enum, EnumIter, Clone, Copy, DeriveActiveEnum, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, poem_openapi::Enum, EnumIter, Clone, Copy, DeriveActiveEnum, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[oai(rename_all = "SCREAMING_SNAKE_CASE")]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 #[sea_orm(rs_type = "String", db_type = "String(Some(255))")]
@@ -69,6 +69,7 @@ pub enum ReachStatusKind {
     #[sea_orm(string_value = "DRAFT")]
     Draft,
     #[sea_orm(string_value = "PENDING")]
+    #[default]
     /// 定时消息未发送时的状态
     Pending,
     /// 非 [ReachChannelKind::Inbox] 类型的发送中的状态

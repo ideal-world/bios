@@ -51,7 +51,9 @@ impl
 
     async fn package_query(is_detail: bool, filter: &ReachTriggerSceneFilterReq, _: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<SelectStatement> {
         let mut query = Query::select();
+        query.columns(trigger_scene::Column::iter().map(|c| (trigger_scene::Entity, c)));
         query.from(trigger_scene::Entity);
+
         if let Some(code) = &filter.code {
             query.and_where(trigger_scene::Column::Code.starts_with(code));
         }

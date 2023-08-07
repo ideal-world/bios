@@ -57,12 +57,12 @@ impl ReachMessageCtApi {
         TardisResp::ok(resp)
     }
 
-    /// 重新发送消息
+    /// 重新发送消息（仅仅适用于状态为Fail的消息）
     #[oai(method = "put", path = "/resend/:id")]
-    pub async fn resend(&self, id: Path<String>, TardisContextExtractor(ctx): TardisContextExtractor) -> TardisApiResult<String> {
+    pub async fn resend(&self, id: Path<String>, TardisContextExtractor(ctx): TardisContextExtractor) -> TardisApiResult<bool> {
         let funs = get_tardis_inst();
-        ReachMessageServ::resend(&id, &funs, &ctx).await?;
-        TardisResp::ok(id.to_string())
+        let success = ReachMessageServ::resend(&id, &funs, &ctx).await?;
+        TardisResp::ok(success)
     }
 
     /// 添加消息

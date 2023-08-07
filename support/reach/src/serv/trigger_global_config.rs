@@ -84,6 +84,7 @@ impl
 
     async fn package_query(is_detail: bool, filter: &ReachTriggerGlobalConfigFilterReq, _: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<SelectStatement> {
         let mut query = Query::select();
+        query.columns(trigger_global_config::Column::iter().map(|c| (trigger_global_config::Entity, c)));
         query.from(trigger_global_config::Entity);
         query
             .columns(trigger_global_config::Column::iter())
