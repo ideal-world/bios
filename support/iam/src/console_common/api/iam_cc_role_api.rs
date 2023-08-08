@@ -112,4 +112,21 @@ impl IamCcRoleApi {
         ctx.execute_task().await?;
         TardisResp::ok(result)
     }
+
+    /// Find Role Name By Ids
+    ///
+    /// Return format: ["<id>,<name>"]
+    #[oai(path = "/name", method = "get")]
+    async fn find_name_by_ids(
+        &self,
+        // Role Ids, multiple ids separated by ,
+        ids: Query<String>,
+        ctx: TardisContextExtractor,
+    ) -> TardisApiResult<Vec<String>> {
+        let funs = iam_constants::get_tardis_inst();
+        let ids = ids.0.split(',').map(|s| s.to_string()).collect();
+        let result = IamRoleServ::find_name_by_ids(ids, &funs, &ctx.0).await?;
+        ctx.0.execute_task().await?;
+        TardisResp::ok(result)
+    }
 }

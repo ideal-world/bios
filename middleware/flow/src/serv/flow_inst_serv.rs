@@ -584,24 +584,28 @@ impl FlowInstServ {
             // Check mismatch rel_obj_ids and filter them
             let mut mismatch_rel_obj_ids = vec![];
             for rel_obj_id in result_rel_obj_ids.iter() {
-                if change_condition.current && change_condition.obj_tag.is_some() && !change_condition.state_id.is_empty() {
-                    let resp = FlowExternalServ::do_fetch_rel_obj(change_condition.obj_tag.clone().unwrap_or_default().as_str(), rel_obj_id, ctx, funs).await?;
-                    if !resp.rel_bus_obj_ids.is_empty() {
-                        let rel_obj_ids = Self::filter_rel_obj_ids_by_state(&resp.rel_bus_obj_ids, &Some(change_condition.state_id.clone()), funs, ctx).await?;
-                        match change_condition.op {
-                            StateChangeConditionOp::And => {
-                                if change_condition.state_id.len() != rel_obj_ids.len() {
-                                    mismatch_rel_obj_ids.push(rel_obj_id.clone());
+                for condition_item in change_condition.conditions.iter() {
+                    if change_condition.current && condition_item.obj_tag.is_some() && !condition_item.state_id.is_empty() {
+                        let resp = FlowExternalServ::do_fetch_rel_obj(condition_item.obj_tag.clone().unwrap_or_default().as_str(), rel_obj_id, ctx, funs).await?;
+                        if !resp.rel_bus_obj_ids.is_empty() {
+                            let rel_obj_ids = Self::filter_rel_obj_ids_by_state(&resp.rel_bus_obj_ids, &Some(condition_item.state_id.clone()), funs, ctx).await?;
+                            match change_condition.op {
+                                StateChangeConditionOp::And => {
+                                    if condition_item.state_id.len() != rel_obj_ids.len() {
+                                        mismatch_rel_obj_ids.push(rel_obj_id.clone());
+                                        continue;
+                                    }
                                 }
-                            }
-                            StateChangeConditionOp::Or => {
-                                if rel_obj_ids.is_empty() {
-                                    mismatch_rel_obj_ids.push(rel_obj_id.clone());
+                                StateChangeConditionOp::Or => {
+                                    if rel_obj_ids.is_empty() {
+                                        mismatch_rel_obj_ids.push(rel_obj_id.clone());
+                                        continue;
+                                    }
                                 }
+                                _ => {}
                             }
-                            _ => {}
                         }
-                    }
+                    }   
                 }
             }
             result_rel_obj_ids = result_rel_obj_ids.into_iter().filter(|result_rel_obj_id| !mismatch_rel_obj_ids.contains(result_rel_obj_id)).collect_vec();
@@ -755,6 +759,7 @@ impl FlowInstServ {
                 if !model_transition.guard_by_creator
                     && model_transition.guard_by_spec_account_ids.is_empty()
                     && model_transition.guard_by_spec_role_ids.is_empty()
+                    && model_transition.guard_by_spec_org_ids.is_empty()
                     && !model_transition.guard_by_his_operators
                 {
                     return true;
@@ -766,6 +771,9 @@ impl FlowInstServ {
                     return true;
                 }
                 if !model_transition.guard_by_spec_role_ids.is_empty() && model_transition.guard_by_spec_role_ids.iter().any(|role_ids| ctx.roles.contains(role_ids)) {
+                    return true;
+                }
+                if !model_transition.guard_by_spec_org_ids.is_empty() && model_transition.guard_by_spec_org_ids.iter().any(|role_ids| ctx.groups.contains(role_ids)) {
                     return true;
                 }
                 if model_transition.guard_by_his_operators
