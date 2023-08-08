@@ -6,7 +6,7 @@ use tardis::{basic::result::TardisResult, log, serde_json::{json, self}, testcon
 mod test_reach_common;
 use bios_reach::{consts::*, dto::*, invoke};
 use test_reach_common::*;
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 pub async fn test_ct_api() -> TardisResult<()> {
     // for debug
     // std::env::set_current_dir("./support/reach/")?;
@@ -249,6 +249,7 @@ pub async fn test_ct_api() -> TardisResult<()> {
             own_paths: ctx.own_paths.clone(),
         };
         log::info!("send trigger message");
+        // plan to replace mq
         funs.mq().publish(MQ_REACH_TOPIC_MESSAGE, TardisFuns::json.obj_to_string(&send_req)?, &HashMap::new()).await?;
         // wait for about 3 seconds
         tokio::time::sleep(tokio::time::Duration::from_secs(3)).await;

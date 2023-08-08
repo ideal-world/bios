@@ -27,35 +27,45 @@ pub async fn db_init() -> TardisResult<()> {
         ..Default::default()
     };
     // add kind code
-    RbumKindServ::add_rbum(
-        &mut RbumKindAddReq {
-            code: RBUM_KIND_CODE_REACH_MESSAGE.into(),
-            name: RBUM_KIND_CODE_REACH_MESSAGE.into(),
-            note: None,
-            icon: None,
-            sort: None,
-            module: None,
-            ext_table_name: Some(RBUM_EXT_TABLE_REACH_MESSAGE.to_owned()),
-            scope_level: Some(RbumScopeLevelKind::Root),
-        },
-        &funs,
-        &ctx,
-    )
-    .await?;
+    let _rbum_kind_id = match RbumKindServ::get_rbum_kind_id_by_code(RBUM_KIND_CODE_REACH_MESSAGE, &funs).await? {
+        Some(id) => id,
+        None => {
+            RbumKindServ::add_rbum(
+                &mut RbumKindAddReq {
+                    code: RBUM_KIND_CODE_REACH_MESSAGE.into(),
+                    name: RBUM_KIND_CODE_REACH_MESSAGE.into(),
+                    note: None,
+                    icon: None,
+                    sort: None,
+                    module: None,
+                    ext_table_name: Some(RBUM_EXT_TABLE_REACH_MESSAGE.to_owned()),
+                    scope_level: Some(RbumScopeLevelKind::Root),
+                },
+                &funs,
+                &ctx,
+            )
+            .await?
+        }
+    };
+    
     // add domain
-    let domain_id = RbumDomainServ::add_rbum(
-        &mut RbumDomainAddReq {
-            code: DOMAIN_CODE.into(),
-            name: DOMAIN_CODE.into(),
-            note: None,
-            icon: None,
-            sort: None,
-            scope_level: Some(RbumScopeLevelKind::Root),
-        },
-        &funs,
-        &ctx,
-    )
-    .await?;
+    let domain_id = match RbumDomainServ::get_rbum_domain_id_by_code(DOMAIN_CODE, &funs).await? {
+        Some(id) => id,
+        None => RbumDomainServ::add_rbum(
+            &mut RbumDomainAddReq {
+                code: DOMAIN_CODE.into(),
+                name: DOMAIN_CODE.into(),
+                note: None,
+                icon: None,
+                sort: None,
+                scope_level: Some(RbumScopeLevelKind::Root),
+            },
+            &funs,
+            &ctx,
+        )
+        .await?
+    };
+    
     DOMAIN_REACH_ID.set(domain_id).expect("fail to set DOMAIN_REACH_ID");
     let db_kind = TardisFuns::reldb().backend();
     let compatible_type = TardisFuns::reldb().compatible_type();
