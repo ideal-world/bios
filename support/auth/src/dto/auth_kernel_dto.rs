@@ -21,6 +21,7 @@ pub struct AuthReq {
     pub body: Option<String>,
 }
 
+#[derive(Debug)]
 pub struct AuthResult {
     pub ctx: Option<AuthContext>,
     pub resp_body: Option<String>,
@@ -147,6 +148,7 @@ pub struct MixAuthResp {
     pub body: Option<String>,
 }
 
+#[derive(Debug)]
 pub struct AuthContext {
     pub rbum_uri: String,
     pub rbum_action: String,

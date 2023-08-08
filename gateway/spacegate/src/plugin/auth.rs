@@ -10,15 +10,18 @@ use bios_auth::{
 };
 use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
-use spacegate_kernel::plugins::{
-    context::{SGCertInfo, SGRoleInfo},
-    filters::SgPluginFilterInitDto,
-};
 use spacegate_kernel::{
     http::{self, HeaderMap, HeaderName, HeaderValue},
     plugins::{
         context::{SgRouteFilterRequestAction, SgRoutePluginContext},
         filters::{BoxSgPluginFilter, SgPluginFilter, SgPluginFilterAccept, SgPluginFilterDef},
+    },
+};
+use spacegate_kernel::{
+    hyper::StatusCode,
+    plugins::{
+        context::{SGCertInfo, SGRoleInfo},
+        filters::SgPluginFilterInitDto,
     },
 };
 use std::{collections::HashMap, str::FromStr, sync::Arc};
@@ -27,7 +30,7 @@ use tardis::{
     basic::{error::TardisError, result::TardisResult},
     config::config_dto::{AppConfig, CacheConfig, FrameworkConfig, LogConfig, TardisConfig, WebServerConfig, WebServerModuleConfig},
     log,
-    serde_json::{self, Value},
+    serde_json::{self, json, Value},
     tokio::sync::RwLock,
     TardisFuns,
 };
@@ -52,6 +55,9 @@ pub struct SgFilterAuth {
     auth_config: AuthConfig,
     port: u16,
     cache_url: String,
+    cors_allow_origin: String,
+    cors_allow_methods: String,
+    cors_allow_headers: String,
 }
 
 impl Default for SgFilterAuth {
@@ -60,7 +66,21 @@ impl Default for SgFilterAuth {
             auth_config: Default::default(),
             port: 8080,
             cache_url: "".to_string(),
+            cors_allow_origin: "*".to_string(),
+            cors_allow_methods: "*".to_string(),
+            cors_allow_headers: "*".to_string(),
         }
+    }
+}
+impl SgFilterAuth {
+    fn cors(&self, ctx: &mut SgRoutePluginContext) -> TardisResult<()> {
+        ctx.response.set_resp_header(http::header::ACCESS_CONTROL_ALLOW_ORIGIN.as_str(), &self.cors_allow_origin)?;
+        ctx.response.set_resp_header(http::header::ACCESS_CONTROL_ALLOW_METHODS.as_str(), &self.cors_allow_methods)?;
+        ctx.response.set_resp_header(http::header::ACCESS_CONTROL_ALLOW_HEADERS.as_str(), &self.cors_allow_headers)?;
+        ctx.response.set_resp_header(http::header::ACCESS_CONTROL_MAX_AGE.as_str(), "3600000")?;
+        ctx.response.set_resp_header(http::header::ACCESS_CONTROL_ALLOW_CREDENTIALS.as_str(), "true")?;
+        ctx.response.set_resp_header(http::header::CONTENT_TYPE.as_str(), "application/json")?;
+        Ok(())
     }
 }
 
@@ -136,16 +156,19 @@ impl SgPluginFilter for SgFilterAuth {
         let (mut auth_req, req_body) = ctx_to_auth_req(&mut ctx).await?;
         match auth_kernel_serv::auth(&mut auth_req, false).await {
             Ok(auth_result) => {
+                log::trace!("[Plugin.Auth] auth return ok {:?}", auth_result);
                 if auth_result.e.is_none() {
                     ctx = success_auth_resp_to_ctx(auth_result, req_body, ctx)?;
-                } else {
+                } else if let Some(e) = auth_result.e {
                     ctx.set_action(SgRouteFilterRequestAction::Response);
-                    ctx.response.set_resp_body(auth_result.e.map(|s| s.message.into_bytes()).unwrap_or_default())?;
+                    ctx.response.set_resp_status_code(StatusCode::from_str(&e.code).unwrap_or(StatusCode::BAD_GATEWAY));
+                    ctx.response.set_resp_body(json!({"code":format!("{}-gateway-cert-error",e.code),"message":e.message}).to_string().into_bytes())?;
                     return Ok((false, ctx));
                 };
                 Ok((true, ctx))
             }
             Err(e) => {
+                log::trace!("[Plugin.Auth] auth return error {:?}", e);
                 ctx.set_action(SgRouteFilterRequestAction::Response);
                 ctx.response.set_resp_body(format!("[Plugin.Auth] auth return error:{e}").into_bytes())?;
                 Ok((false, ctx))
@@ -165,18 +188,20 @@ impl SgPluginFilter for SgFilterAuth {
             crypto_value,
         );
         let encrypt_resp = auth_crypto_serv::encrypt_body(&ctx_to_auth_encrypt_req(&mut ctx).await?).await?;
-        ctx.response.set_resp_headers(hashmap_header_to_headermap(encrypt_resp.headers)?);
+        ctx.response.get_resp_headers_mut().extend(hashmap_header_to_headermap(encrypt_resp.headers)?);
         ctx.response.set_resp_body(encrypt_resp.body.into_bytes())?;
+        self.cors(&mut ctx)?;
 
         Ok((true, ctx))
     }
 }
+
 async fn ctx_to_auth_req(ctx: &mut SgRoutePluginContext) -> TardisResult<(AuthReq, Vec<u8>)> {
     let url = ctx.request.get_req_uri().clone();
     let scheme = url.scheme().map(|s| s.to_string()).unwrap_or("http".to_string());
     let headers = headermap_header_to_hashmap(ctx.request.get_req_headers().clone())?;
     let req_body = ctx.request.pop_req_body().await?;
-
+    let body = req_body.clone().map(|s| String::from_utf8_lossy(&s).to_string().trim_matches('"').to_string());
     Ok((
         AuthReq {
             scheme: scheme.clone(),
@@ -196,7 +221,7 @@ async fn ctx_to_auth_req(ctx: &mut SgRoutePluginContext) -> TardisResult<(AuthRe
             host: url.host().unwrap_or("127.0.0.1").to_string(),
             port: url.port().map(|p| p.as_u16()).unwrap_or_else(|| if scheme == "https" { 443 } else { 80 }),
             headers,
-            body: req_body.clone().map(|s| String::from_utf8_lossy(&s).to_string()),
+            body,
         },
         req_body.unwrap_or_default(),
     ))
@@ -262,6 +287,7 @@ mod tests {
     use std::env;
 
     use bios_auth::auth_constants;
+    use bios_auth::serv::auth_res_serv;
     use spacegate_kernel::config::gateway_dto::SgParameters;
     use spacegate_kernel::http::{Method, Uri, Version};
     use spacegate_kernel::hyper::{Body, StatusCode};
@@ -271,7 +297,6 @@ mod tests {
         test::test_container::TardisTestContainer,
         testcontainers::{self, clients::Cli, images::redis::Redis, Container},
         tokio,
-        web::web_resp::TardisResp,
     };
 
     use super::*;
@@ -348,6 +373,36 @@ mod tests {
         assert!(is_ok);
         let ctx = decode_context(before_filter_ctx.request.get_req_headers());
 
+        assert_eq!(ctx.own_paths, "");
+        assert_eq!(ctx.owner, "account1");
+        assert_eq!(ctx.roles, vec!["r001"]);
+        assert_eq!(ctx.groups, vec!["g001"]);
+
+        cache_client.set(&format!("{}tokenxxx", filter_auth.auth_config.cache_key_token_info), "default,accountxxx").await.unwrap();
+        cache_client
+            .hset(
+                &format!("{}accountxxx", filter_auth.auth_config.cache_key_account_info),
+                "",
+                "{\"own_paths\":\"tenant1\",\"owner\":\"account1\",\"roles\":[\"r001\"],\"groups\":[\"g001\"]}",
+            )
+            .await
+            .unwrap();
+        let mut header = HeaderMap::new();
+        header.insert("Bios-Token", "tokenxxx".parse().unwrap());
+        let ctx = SgRoutePluginContext::new_http(
+            Method::POST,
+            Uri::from_static("http://sg.idealworld.group/test1"),
+            Version::HTTP_11,
+            header,
+            Body::from("test"),
+            "127.0.0.1:8080".parse().unwrap(),
+            "".to_string(),
+            None,
+        );
+        let (is_ok, mut before_filter_ctx) = filter_auth.req_filter("", ctx).await.unwrap();
+        assert!(is_ok);
+        let ctx = decode_context(before_filter_ctx.request.get_req_headers());
+
         assert_eq!(ctx.own_paths, "tenant1");
         assert_eq!(ctx.owner, "account1");
         assert_eq!(ctx.roles, vec!["r001"]);
@@ -387,12 +442,7 @@ mod tests {
             .await
             .unwrap();
 
-        let apis = TardisFuns::web_client().get::<TardisResp<Value>>(&format!("http://127.0.0.1:{}/auth/auth/apis", filter_auth.port), None).await.unwrap().body;
-        assert!(apis.is_some());
-        let apis = apis.unwrap();
-        assert!(apis.code == 200.to_string());
-        assert!(apis.data.is_some());
-        let data = apis.data.unwrap();
+        let data = auth_res_serv::get_apis_json().unwrap();
         let pub_key = data["pub_key"].as_str().unwrap();
         let server_sm2 = TardisCryptoSm2 {};
         let server_public_key = server_sm2.new_public_key_from_public_key(pub_key).unwrap();
