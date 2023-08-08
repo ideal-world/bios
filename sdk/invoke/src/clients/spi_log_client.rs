@@ -29,7 +29,7 @@ pub struct LogItemFindReq {
     pub page_number: u32,
     pub page_size: u16,
 }
-#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
 pub struct LogItemFindResp {
     #[oai(validator(min_length = "2"))]
     pub content: String,
