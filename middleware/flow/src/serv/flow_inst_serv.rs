@@ -11,8 +11,8 @@ use bios_basic::{
         },
     },
 };
-use bios_sdk_invoke::clients::spi_kv_client::SpiKvClient;
 use itertools::Itertools;
+use serde_json::json;
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
     chrono::{DateTime, Utc},
@@ -23,17 +23,13 @@ use tardis::{
     },
     futures_util::future::join_all,
     serde_json::Value,
-    web::web_resp::{TardisPage, TardisResp},
+    web::web_resp::TardisPage,
     TardisFuns, TardisFunsInst,
 };
 
 use crate::{
     domain::flow_inst,
     dto::{
-        flow_external_dto::{
-            FlowExternalFetchRelObjReq, FlowExternalFetchRelObjResp, FlowExternalKind, FlowExternalModifyFieldReq, FlowExternalModifyFieldResp, FlowExternalNotifyChangesReq,
-            FlowExternalParams, FlowExternalReq,
-        },
         flow_inst_dto::{
             FlowInstAbortReq, FlowInstDetailResp, FlowInstFindNextTransitionResp, FlowInstFindNextTransitionsReq, FlowInstFindStateAndTransitionsReq,
             FlowInstFindStateAndTransitionsResp, FlowInstStartReq, FlowInstSummaryResp, FlowInstTransferReq, FlowInstTransferResp, FlowInstTransitionInfo, FlowOperationContext,
@@ -42,9 +38,9 @@ use crate::{
         flow_state_dto::{FlowStateFilterReq, FlowSysStateKind},
         flow_transition_dto::{
             FlowTransitionActionByStateChangeInfo, FlowTransitionActionChangeAgg, FlowTransitionActionChangeInfo, FlowTransitionActionChangeKind, FlowTransitionDetailResp,
+            StateChangeConditionOp,
         },
     },
-    flow_constants,
     serv::{flow_model_serv::FlowModelServ, flow_state_serv::FlowStateServ},
 };
 
@@ -504,6 +500,21 @@ impl FlowInstServ {
         }
 
         funs.db().update_one(flow_inst, ctx).await?;
+        // notify changes
+        FlowExternalServ::do_notify_changes(
+            &flow_model.tag,
+            &flow_inst_detail.rel_business_obj_id,
+            vec![
+                json!({
+                    "current_state_id":next_flow_state.id
+                }),
+                json!({ "current_vars": &new_vars }),
+                json!({ "transitions": &new_transitions }),
+            ],
+            ctx,
+            funs,
+        )
+        .await?;
 
         let model_transition = flow_model.transitions();
         Self::do_request_webhook(
@@ -547,7 +558,7 @@ impl FlowInstServ {
                     if let Some(change_info) = post_change.state_change_info {
                         let resp = FlowExternalServ::do_fetch_rel_obj(&current_model.tag, &current_inst.rel_business_obj_id, ctx, funs).await?;
                         if !resp.rel_bus_obj_ids.is_empty() {
-                            let inst_ids = Self::filter_inst(resp.rel_bus_obj_ids, &change_info, funs, ctx).await?;
+                            let inst_ids = Self::find_inst_ids_by_rel_obj_ids(resp.rel_bus_obj_ids, &change_info, funs, ctx).await?;
                             Self::do_modify_state_by_post_action(inst_ids, &change_info, funs, ctx).await?;
                         }
                     }
@@ -557,8 +568,7 @@ impl FlowInstServ {
 
         Ok(())
     }
-
-    async fn filter_inst(
+    async fn find_inst_ids_by_rel_obj_ids(
         rel_bus_obj_ids: Vec<String>,
         change_info: &FlowTransitionActionByStateChangeInfo,
         funs: &TardisFunsInst,
@@ -567,36 +577,87 @@ impl FlowInstServ {
         #[derive(sea_orm::FromQueryResult)]
         pub struct FlowInstIdsResult {
             pub id: String,
+        }
+        let mut result_rel_obj_ids = Self::filter_rel_obj_ids_by_state(&rel_bus_obj_ids, &change_info.obj_current_state_id, funs, ctx).await?;
+
+        if let Some(change_condition) = change_info.change_condition.clone() {
+            // Check mismatch rel_obj_ids and filter them
+            let mut mismatch_rel_obj_ids = vec![];
+            for rel_obj_id in result_rel_obj_ids.iter() {
+                if change_condition.current && change_condition.obj_tag.is_some() && !change_condition.state_id.is_empty() {
+                    let resp = FlowExternalServ::do_fetch_rel_obj(change_condition.obj_tag.clone().unwrap_or_default().as_str(), rel_obj_id, ctx, funs).await?;
+                    if !resp.rel_bus_obj_ids.is_empty() {
+                        let rel_obj_ids = Self::filter_rel_obj_ids_by_state(&resp.rel_bus_obj_ids, &Some(change_condition.state_id.clone()), funs, ctx).await?;
+                        match change_condition.op {
+                            StateChangeConditionOp::And => {
+                                if change_condition.state_id.len() != rel_obj_ids.len() {
+                                    mismatch_rel_obj_ids.push(rel_obj_id.clone());
+                                }
+                            }
+                            StateChangeConditionOp::Or => {
+                                if rel_obj_ids.is_empty() {
+                                    mismatch_rel_obj_ids.push(rel_obj_id.clone());
+                                }
+                            }
+                            _ => {}
+                        }
+                    }
+                }
+            }
+            result_rel_obj_ids = result_rel_obj_ids.into_iter().filter(|result_rel_obj_id| !mismatch_rel_obj_ids.contains(result_rel_obj_id)).collect_vec();
+        }
+
+        let result = funs
+            .db()
+            .find_dtos::<FlowInstIdsResult>(
+                Query::select()
+                    .columns([flow_inst::Column::Id, flow_inst::Column::CurrentStateId, flow_inst::Column::RelBusinessObjId])
+                    .from(flow_inst::Entity)
+                    .and_where(Expr::col(flow_inst::Column::RelBusinessObjId).is_in(&result_rel_obj_ids)),
+            )
+            .await?
+            .iter()
+            .map(|rel_inst| rel_inst.id.clone())
+            .collect_vec();
+        Ok(result)
+    }
+
+    async fn filter_rel_obj_ids_by_state(
+        rel_bus_obj_ids: &Vec<String>,
+        obj_current_state_id: &Option<Vec<String>>,
+        funs: &TardisFunsInst,
+        _ctx: &TardisContext,
+    ) -> TardisResult<Vec<String>> {
+        #[derive(sea_orm::FromQueryResult)]
+        pub struct FlowInstRelObjIdsResult {
+            pub id: String,
             pub current_state_id: String,
             pub rel_business_obj_id: String,
         }
         let rel_insts = funs
             .db()
-            .find_dtos::<FlowInstIdsResult>(
-                Query::select().columns([
-                    flow_inst::Column::Id,
-                    flow_inst::Column::CurrentStateId,
-                    flow_inst::Column::RelBusinessObjId,
-                ]).from(flow_inst::Entity).and_where(Expr::col(flow_inst::Column::RelBusinessObjId).is_in(rel_bus_obj_ids.clone())),
+            .find_dtos::<FlowInstRelObjIdsResult>(
+                Query::select()
+                    .columns([flow_inst::Column::Id, flow_inst::Column::CurrentStateId, flow_inst::Column::RelBusinessObjId])
+                    .from(flow_inst::Entity)
+                    .and_where(Expr::col(flow_inst::Column::RelBusinessObjId).is_in(rel_bus_obj_ids.clone())),
             )
             .await?;
         if rel_bus_obj_ids.len() != rel_insts.len() {
             return Err(funs.err().not_found("flow_inst", "do_post_change", "some flow instances not found", "404-flow-inst-not-found"));
         }
-        let rel_inst_ids = rel_insts.iter()
-        .filter(|inst_result| {
-            if let Some(obj_current_state_id) = change_info.obj_current_state_id.clone() {
-                if !obj_current_state_id.contains(&inst_result.current_state_id) {
-                    return false;
+        let rel_inst_ids = rel_insts
+            .iter()
+            .filter(|inst_result| {
+                if let Some(obj_current_state_id) = obj_current_state_id.clone() {
+                    if !obj_current_state_id.contains(&inst_result.current_state_id) {
+                        return false;
+                    }
                 }
-            }
-            if let Some(change_condition) = change_info.change_condition.clone() {
-                if change_condition.current && change_condition.obj_tag.is_some() && !change_condition.state_id.is_empty() {
-                    FlowExternalServ::do_fetch_rel_obj(change_condition.obj_tag.clone().unwrap_or_default().as_str(), &inst_result.rel_business_obj_id, ctx, funs).await?;
-                }
-            }
-            true
-        }).map(|inst_result| inst_result.id.clone()).collect_vec();
+                true
+            })
+            .map(|inst_result| inst_result.rel_business_obj_id.clone())
+            .collect_vec();
         Ok(rel_inst_ids)
     }
 
@@ -652,7 +713,7 @@ impl FlowInstServ {
         if let Some(from_transition_detail) = from_transition_detail {
             if !from_transition_detail.action_by_post_callback.is_empty() {
                 let callback_url = format!(
-                    "{}?transion={}",
+                    "{}?transition={}",
                     from_transition_detail.action_by_post_callback.as_str(),
                     from_transition_detail.to_flow_state_name
                 );
@@ -662,7 +723,7 @@ impl FlowInstServ {
         if let Some(to_transition_detail) = to_transition_detail {
             if !to_transition_detail.action_by_pre_callback.is_empty() {
                 let callback_url = format!(
-                    "{}?transion={}",
+                    "{}?transition={}",
                     to_transition_detail.action_by_pre_callback.as_str(),
                     to_transition_detail.to_flow_state_name
                 );

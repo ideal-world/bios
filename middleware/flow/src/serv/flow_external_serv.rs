@@ -1,9 +1,9 @@
-use bios_sdk_invoke::clients::spi_kv_client::SpiKvClient;
+use bios_sdk_invoke::{clients::spi_kv_client::SpiKvClient, invoke_constants::TARDIS_CONTEXT};
 use serde_json::Value;
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
     web::web_resp::TardisResp,
-    TardisFunsInst,
+    TardisFunsInst, TardisFuns,
 };
 
 use crate::{
@@ -22,6 +22,7 @@ pub struct FlowExternalServ;
 impl FlowExternalServ {
     pub async fn do_fetch_rel_obj(tag: &str, rel_business_obj_id: &str, ctx: &TardisContext, funs: &TardisFunsInst) -> TardisResult<FlowExternalFetchRelObjResp> {
         let external_url = Self::get_external_url(tag, ctx, funs).await?;
+        let header = Self::headers(None, funs, ctx).await?;
         let resp: TardisResp<FlowExternalFetchRelObjResp> = funs
             .web_client()
             .post(
@@ -32,7 +33,7 @@ impl FlowExternalServ {
                     curr_bus_obj_id: rel_business_obj_id.to_string(),
                     params: FlowExternalParams::FetchRelObj(FlowExternalFetchRelObjReq { obj_tag: tag.to_string() }),
                 },
-                None,
+                header,
             )
             .await?
             .body
@@ -52,6 +53,7 @@ impl FlowExternalServ {
         funs: &TardisFunsInst,
     ) -> TardisResult<FlowExternalModifyFieldResp> {
         let external_url = Self::get_external_url(tag, ctx, funs).await?;
+        let header = Self::headers(None, funs, ctx).await?;
         let resp: TardisResp<FlowExternalModifyFieldResp> = funs
             .web_client()
             .post(
@@ -67,7 +69,7 @@ impl FlowExternalServ {
                         value: change_info.changed_val.clone(),
                     }),
                 },
-                None,
+                header,
             )
             .await?
             .body
@@ -87,6 +89,7 @@ impl FlowExternalServ {
         funs: &TardisFunsInst,
     ) -> TardisResult<FlowExternalNotifyChangesResp> {
         let external_url = Self::get_external_url(tag, ctx, funs).await?;
+        let header = Self::headers(None, funs, ctx).await?;
         let resp: TardisResp<FlowExternalNotifyChangesResp> = funs
             .web_client()
             .post(
@@ -97,7 +100,7 @@ impl FlowExternalServ {
                     curr_bus_obj_id: rel_business_obj_id.to_string(),
                     params: FlowExternalParams::NotifyChanges(FlowExternalNotifyChangesReq { changed_vars: changes }),
                 },
-                None,
+                header,
             )
             .await?
             .body
@@ -113,6 +116,16 @@ impl FlowExternalServ {
         let external_url = SpiKvClient::get_item(format!("{}:config:{}", flow_constants::DOMAIN_CODE, tag), None, funs, ctx)
             .await?
             .ok_or_else(|| funs.err().not_found("flow_external", "get_external_url", "not found external url", "404-external-data-url-not-exist"))?;
-        Ok(external_url.value.to_string())
+        Ok(external_url.value.as_str().unwrap_or_default().to_string())
+    }
+
+    async fn headers(headers: Option<Vec<(String, String)>>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<Vec<(String, String)>>> {
+        let base_ctx = (TARDIS_CONTEXT.to_string(), TardisFuns::crypto.base64.encode(&TardisFuns::json.obj_to_string(ctx)?));
+        if let Some(mut headers) = headers {
+            headers.push(base_ctx);
+            return Ok(Some(headers));
+        }
+        let headers = Some(vec![base_ctx]);
+        Ok(headers)
     }
 }
