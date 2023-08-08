@@ -571,9 +571,7 @@ impl FlowInstServ {
                                         kind: FlowExternalKind::NotifyChanges,
                                         curr_tag: current_model.tag.clone(),
                                         curr_bus_obj_id: current_inst.rel_business_obj_id.clone(),
-                                        params: FlowExternalParams::NotifyChanges(FlowExternalNotifyChangesReq {
-                                            changed_vars: vec![]
-                                        }),
+                                        params: FlowExternalParams::NotifyChanges(FlowExternalNotifyChangesReq { changed_vars: vec![] }),
                                     },
                                     None,
                                 )

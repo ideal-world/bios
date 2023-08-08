@@ -36,14 +36,9 @@ impl SgPluginFilterDef for SgFilterAntiXSSDef {
 
 #[derive(Serialize, Deserialize)]
 #[serde(default)]
+#[derive(Default)]
 pub struct SgFilterAntiXSS {
     csp_config: CSPConfig,
-}
-
-impl Default for SgFilterAntiXSS {
-    fn default() -> Self {
-        Self { csp_config: CSPConfig::default() }
-    }
 }
 
 #[derive(Serialize, Deserialize)]

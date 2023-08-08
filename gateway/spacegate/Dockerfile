@@ -16,6 +16,6 @@ MinProtocol = TLSv1 \n\
 CipherString = DEFAULT:@SECLEVEL=1 \n'\
 >>/usr/lib/ssl/openssl.cnf
 
-COPY ./spacegateway ./spacegateway
+COPY ./bios-spacegate ./spacegate
 
-CMD ["./spacegateway"]
+CMD ["./spacegate"]

@@ -20,7 +20,7 @@ lazy_static! {
     static ref SM2_KEYS: RwLock<Option<(TardisCryptoSm2PublicKey, TardisCryptoSm2PrivateKey)>> = RwLock::new(None);
 }
 
-pub(crate) async fn init() -> TardisResult<()> {
+pub async fn init() -> TardisResult<()> {
     let cache_client = TardisFuns::cache_by_module_or_default(DOMAIN_CODE);
     let config = TardisFuns::cs_config::<AuthConfig>(DOMAIN_CODE);
     let (pri_key, pub_key) = if let Some(pri_key) = cache_client.get(&config.cache_key_crypto_key).await? {
