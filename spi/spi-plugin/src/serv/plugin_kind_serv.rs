@@ -149,15 +149,15 @@ impl PluginKindServ {
     }
 
     pub async fn exist_kind_rel_by_kind_code(kind_code: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<bool> {
-        if let Some(kind_id) = RbumKindServ::get_rbum_kind_id_by_code(kind_code, &funs).await? {
-            return Ok(Self::exist_kind_rel(&kind_id, funs, ctx).await?);
+        if let Some(kind_id) = RbumKindServ::get_rbum_kind_id_by_code(kind_code, funs).await? {
+            return Self::exist_kind_rel(&kind_id, funs, ctx).await;
         }
-        Err(funs.err().not_found(&RbumKindServ::get_obj_name(), "get", &format!("not found kind"), "404-spi-plugin-kind-not-exist"))
+        Err(funs.err().not_found(&RbumKindServ::get_obj_name(), "get", "not found kind", "404-spi-plugin-kind-not-exist"))
     }
 
     pub async fn exist_kind_rel(kind_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<bool> {
         let bing_item_id = rbum_scope_helper::get_max_level_id_by_context(ctx).unwrap_or_default();
-        Ok(RbumRelServ::exist_rbum(
+        RbumRelServ::exist_rbum(
             &RbumRelFilterReq {
                 basic: RbumBasicFilterReq {
                     with_sub_own_paths: true,
@@ -172,6 +172,6 @@ impl PluginKindServ {
             funs,
             ctx,
         )
-        .await?)
+        .await
     }
 }

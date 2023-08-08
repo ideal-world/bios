@@ -4,12 +4,9 @@ use async_trait::async_trait;
 
 use serde::{Deserialize, Serialize};
 use spacegate_kernel::plugins::filters::SgPluginFilterInitDto;
-use spacegate_kernel::{
-    functions::http_route::SgHttpRouteMatchInst,
-    plugins::{
-        context::SgRoutePluginContext,
-        filters::{BoxSgPluginFilter, SgPluginFilter, SgPluginFilterAccept, SgPluginFilterDef},
-    },
+use spacegate_kernel::plugins::{
+    context::SgRoutePluginContext,
+    filters::{BoxSgPluginFilter, SgPluginFilter, SgPluginFilterAccept, SgPluginFilterDef},
 };
 use tardis::cache::cache_client::TardisCacheClient;
 
@@ -62,7 +59,7 @@ impl SgPluginFilter for SgFilterAntiReplay {
         Ok(())
     }
 
-    async fn req_filter(&self, _: &str, mut ctx: SgRoutePluginContext, _matched_match_inst: Option<&SgHttpRouteMatchInst>) -> TardisResult<(bool, SgRoutePluginContext)> {
+    async fn req_filter(&self, _: &str, mut ctx: SgRoutePluginContext) -> TardisResult<(bool, SgRoutePluginContext)> {
         let md5 = get_md5(&mut ctx)?;
         if get_status(md5.clone(), &self.cache_key, ctx.cache()?).await? {
             Err(TardisError::forbidden(
@@ -75,27 +72,27 @@ impl SgPluginFilter for SgFilterAntiReplay {
         }
     }
 
-    async fn resp_filter(&self, _: &str, mut ctx: SgRoutePluginContext, _: Option<&SgHttpRouteMatchInst>) -> TardisResult<(bool, SgRoutePluginContext)> {
+    async fn resp_filter(&self, _: &str, mut ctx: SgRoutePluginContext) -> TardisResult<(bool, SgRoutePluginContext)> {
         let md5 = get_md5(&mut ctx)?;
         let cache_key = self.cache_key.clone();
         let name = ctx.get_gateway_name();
         let time = self.time;
-        let _ = tokio::spawn(async move {
+        tokio::spawn(async move {
             tokio::time::sleep(Duration::from_millis(time)).await;
             let cache_client = spacegate_kernel::functions::cache_client::get(&name).expect("get cache client error!");
             let _ = set_status(md5, &cache_key, false, cache_client).await;
-        })
-        .await;
+        });
         Ok((true, ctx))
     }
 }
 
 fn get_md5(ctx: &mut SgRoutePluginContext) -> TardisResult<String> {
+    let req = &ctx.request;
     let data = format!(
         "{}{}{}",
-        ctx.get_req_uri_raw(),
-        ctx.get_req_method_raw(),
-        ctx.get_req_headers_raw().iter().map(|h| h.0.as_str().to_owned() + h.1.to_str().unwrap_or_default()).collect::<Vec<String>>().join(""),
+        req.get_req_uri_raw(),
+        req.get_req_method_raw(),
+        req.get_req_headers_raw().iter().map(|h| h.0.as_str().to_owned() + h.1.to_str().unwrap_or_default()).collect::<Vec<String>>().join(""),
     );
     tardis::crypto::crypto_digest::TardisCryptoDigest {}.md5(&data)
 }

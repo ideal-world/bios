@@ -4,7 +4,7 @@ members = [
     "basic",
     "spi/*",
     "gateway/test",
-    "gateway/spacegateway",
+    "gateway/spacegate",
     "middleware/*",
     "support/iam",
     "support/auth",

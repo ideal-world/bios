@@ -15,7 +15,7 @@ use crate::{clients::base_spi_client::BaseSpiClient, invoke_constants::DYNAMIC_L
 
 pub struct SpiLogClient;
 
-#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+#[derive(poem_openapi::Object, Serialize, Deserialize, Default, Debug)]
 pub struct LogItemFindReq {
     pub tag: String,
     pub kinds: Option<Vec<TrimString>>,
@@ -29,7 +29,7 @@ pub struct LogItemFindReq {
     pub page_number: u32,
     pub page_size: u16,
 }
-#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
 pub struct LogItemFindResp {
     #[oai(validator(min_length = "2"))]
     pub content: String,

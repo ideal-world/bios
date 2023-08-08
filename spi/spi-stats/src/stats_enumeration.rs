@@ -66,7 +66,7 @@ impl StatsDataTypeKind {
             }
             StatsDataTypeKind::Int => sea_orm::Value::from(json_value.as_i64().ok_or(self.err_json_value_type())? as i32),
             StatsDataTypeKind::Float => sea_orm::Value::from(json_value.as_f64().ok_or(self.err_json_value_type())? as f32),
-            StatsDataTypeKind::Double => sea_orm::Value::from(json_value.as_f64().ok_or(self.err_json_value_type())? as f64),
+            StatsDataTypeKind::Double => sea_orm::Value::from(json_value.as_f64().ok_or(self.err_json_value_type())?),
             StatsDataTypeKind::Boolean => sea_orm::Value::from(json_value.as_bool().ok_or(self.err_json_value_type())?),
             StatsDataTypeKind::Date => {
                 sea_orm::Value::from(NaiveDate::parse_from_str(json_value.as_str().ok_or(self.err_json_value_type())?, "%Y-%m-%d").map_err(|_| err_parse_time())?)

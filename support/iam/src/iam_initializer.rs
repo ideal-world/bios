@@ -120,8 +120,7 @@ async fn init_api(web_server: &TardisWebServer) -> TardisResult<()> {
                     iam_ci_role_api::IamCiRoleApi,
                     iam_ci_account_api::IamCiAccountApi,
                 ),
-            ))
-            .middleware(EncryptMW),
+            )), // .middleware(EncryptMW),
         )
         .await;
     Ok(())

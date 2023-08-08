@@ -9,7 +9,7 @@ use tardis::{
     TardisFuns,
 };
 
-use crate::dto::auth_kernel_dto::{MixAuthResp, MixRequestBody, ResContainerLeafInfo, SignWebHookReq};
+use crate::dto::auth_kernel_dto::{AuthResult, MixAuthResp, MixRequestBody, ResContainerLeafInfo, SignWebHookReq};
 use crate::helper::auth_common_helper;
 use crate::{
     auth_config::AuthConfig,
@@ -19,24 +19,24 @@ use crate::{
 
 use super::{auth_crypto_serv, auth_mgr_serv, auth_res_serv};
 
-pub async fn auth(req: &mut AuthReq, is_mix_req: bool) -> TardisResult<AuthResp> {
+pub async fn auth(req: &mut AuthReq, is_mix_req: bool) -> TardisResult<AuthResult> {
     trace!("[Auth] Request auth: {:?}", req);
     let config = TardisFuns::cs_config::<AuthConfig>(DOMAIN_CODE);
     match check(req) {
-        Ok(true) => return Ok(AuthResp::ok(None, None, None, config)),
-        Err(e) => return Ok(AuthResp::err(e, config)),
+        Ok(true) => return Ok(AuthResult::ok(None, None, None, config)),
+        Err(e) => return Ok(AuthResult::err(e, config)),
         _ => {}
     }
     let cache_client = TardisFuns::cache_by_module_or_default(DOMAIN_CODE);
     match ident(req, config, cache_client).await {
         Ok(ident) => match do_auth(&ident).await {
             Ok(res_container_leaf_info) => match decrypt(&req, config, &res_container_leaf_info, is_mix_req).await {
-                Ok((body, headers)) => Ok(AuthResp::ok(Some(&ident), body, headers, config)),
-                Err(e) => Ok(AuthResp::err(e, config)),
+                Ok((body, headers)) => Ok(AuthResult::ok(Some(&ident), body, headers, config)),
+                Err(e) => Ok(AuthResult::err(e, config)),
             },
-            Err(e) => Ok(AuthResp::err(e, config)),
+            Err(e) => Ok(AuthResult::err(e, config)),
         },
-        Err(e) => Ok(AuthResp::err(e, config)),
+        Err(e) => Ok(AuthResult::err(e, config)),
     }
 }
 
@@ -518,20 +518,22 @@ pub(crate) async fn parse_mix_req(req: AuthReq) -> TardisResult<MixAuthResp> {
     let mix_body = TardisFuns::json.str_to_obj::<MixRequestBody>(&body)?;
     let mut headers = headers.unwrap_or_default();
     headers.extend(mix_body.headers);
-    let auth_resp = auth(
-        &mut AuthReq {
-            scheme: req.scheme,
-            path: req.path,
-            query: req.query,
-            method: mix_body.method.clone(),
-            host: "".to_string(),
-            port: 80,
-            headers,
-            body: Some(mix_body.body),
-        },
-        true,
-    )
-    .await?;
+    let auth_resp = AuthResp::from_result(
+        auth(
+            &mut AuthReq {
+                scheme: req.scheme,
+                path: req.path,
+                query: req.query,
+                method: mix_body.method.clone(),
+                host: "".to_string(),
+                port: 80,
+                headers,
+                body: Some(mix_body.body),
+            },
+            true,
+        )
+        .await?,
+    );
     let url = if let Some(0) = mix_body.uri.find('/') {
         mix_body.uri
     } else {

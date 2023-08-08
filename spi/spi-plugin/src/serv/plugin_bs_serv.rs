@@ -137,7 +137,7 @@ impl PluginBsServ {
         let ctx_clone = ctx.clone();
         let rel_agg = Self::get_bs_rel_agg(bs_id, app_tenant_id, funs, ctx).await?;
         if PluginRelServ::exist_to_simple_rels(&PluginAppBindRelKind::PluginAppBindKind, &rel_agg.rel.id, funs, ctx).await? {
-            return Err(funs.err().unauthorized("spi_bs", "delete_plugin_rel", &format!("The pluging exists bound"), "401-spi-plugin-bind-exist"));
+            return Err(funs.err().unauthorized("spi_bs", "delete_plugin_rel", "The pluging exists bound", "401-spi-plugin-bind-exist"));
         }
         let bs = SpiBsServ::peek_item(bs_id, &SpiBsFilterReq::default(), funs, ctx).await?;
         let _ = SpiLogClient::add_dynamic_log(
@@ -152,11 +152,11 @@ impl PluginBsServ {
             Some("删除".to_string()),
             None,
             Some(tardis::chrono::Utc::now().to_rfc3339()),
-            &funs,
+            funs,
             &ctx_clone,
         )
         .await;
-        SpiBsServ::delete_rel(bs_id, app_tenant_id, &funs, &ctx).await?;
+        SpiBsServ::delete_rel(bs_id, app_tenant_id, funs, ctx).await?;
         Ok(())
     }
 
