@@ -253,13 +253,13 @@ pub struct FlowTransitionActionByStateChangeInfo {
 pub struct StateChangeCondition {
     pub current: bool,
     pub conditions: Vec<StateChangeConditionItem>,
-    pub op: StateChangeConditionOp,
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug, poem_openapi::Object, sea_orm::FromJsonQueryResult)]
 pub struct StateChangeConditionItem {
     pub obj_tag: Option<String>,
     pub state_id: Vec<String>,
+    pub op: StateChangeConditionOp,
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug, poem_openapi::Enum)]

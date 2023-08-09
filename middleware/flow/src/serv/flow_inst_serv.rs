@@ -589,7 +589,7 @@ impl FlowInstServ {
                         let resp = FlowExternalServ::do_fetch_rel_obj(condition_item.obj_tag.clone().unwrap_or_default().as_str(), rel_obj_id, ctx, funs).await?;
                         if !resp.rel_bus_obj_ids.is_empty() {
                             let rel_obj_ids = Self::filter_rel_obj_ids_by_state(&resp.rel_bus_obj_ids, &Some(condition_item.state_id.clone()), funs, ctx).await?;
-                            match change_condition.op {
+                            match condition_item.op {
                                 StateChangeConditionOp::And => {
                                     if condition_item.state_id.len() != rel_obj_ids.len() {
                                         mismatch_rel_obj_ids.push(rel_obj_id.clone());
