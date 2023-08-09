@@ -2,8 +2,6 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use tardis::web::poem_openapi;
 
-use super::flow_transition_dto::StateChangeCondition;
-
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
 pub struct FlowExternalReq {
     pub kind: FlowExternalKind,
@@ -38,16 +36,12 @@ pub struct FlowExternalFetchRelObjResp {
 
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
 pub struct FlowExternalModifyFieldReq {
-    pub current: bool,
-    pub rel_tag: Option<String>,
     pub var_name: String,
     pub value: Option<Value>,
 }
 
 #[derive(Default, Serialize, Deserialize, Debug, poem_openapi::Object)]
-pub struct FlowExternalModifyFieldResp {
-    pub rel_bus_obj_ids: Vec<String>,
-}
+pub struct FlowExternalModifyFieldResp {}
 
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
 pub struct FlowExternalNotifyChangesReq {

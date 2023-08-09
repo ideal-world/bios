@@ -23,7 +23,7 @@ impl MockApi {
                 })
             }
             FlowExternalKind::ModifyField => {
-                json!(FlowExternalModifyFieldResp { rel_bus_obj_ids: vec![] })
+                json!(FlowExternalModifyFieldResp {})
             }
             FlowExternalKind::NotifyChanges => {
                 json!(FlowExternalNotifyChangesResp {})

@@ -1,12 +1,6 @@
 use bios_basic::dto::BasicQueryCondInfo;
 use serde::{Deserialize, Serialize};
-use tardis::{
-    basic::field::TrimString,
-    db::sea_orm,
-    serde_json::Value,
-    web::poem_openapi,
-    TardisFuns,
-};
+use tardis::{basic::field::TrimString, db::sea_orm, serde_json::Value, web::poem_openapi, TardisFuns};
 
 use super::flow_var_dto::FlowVarInfo;
 
@@ -253,13 +247,13 @@ pub struct FlowTransitionActionByStateChangeInfo {
 pub struct StateChangeCondition {
     pub current: bool,
     pub conditions: Vec<StateChangeConditionItem>,
-    pub op: StateChangeConditionOp,
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug, poem_openapi::Object, sea_orm::FromJsonQueryResult)]
 pub struct StateChangeConditionItem {
     pub obj_tag: Option<String>,
     pub state_id: Vec<String>,
+    pub op: StateChangeConditionOp,
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug, poem_openapi::Enum)]
