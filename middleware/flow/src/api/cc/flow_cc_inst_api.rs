@@ -96,7 +96,7 @@ impl FlowCcInstApi {
         TardisResp::ok(result)
     }
 
-    /// Transfer State By State Id / 流转
+    /// Modify Assigned / 同步执行人信息
     #[oai(path = "/:flow_inst_id/transition/transfer", method = "post")]
     async fn modify_assigned(&self, flow_inst_id: Path<String>, modify_req: Json<FlowInstModifyAssignedReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = flow_constants::get_tardis_inst();
