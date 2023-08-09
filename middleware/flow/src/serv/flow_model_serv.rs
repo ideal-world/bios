@@ -532,6 +532,7 @@ impl FlowModelServ {
                 (flow_transition::Entity, flow_transition::Column::GuardByAssigned),
                 (flow_transition::Entity, flow_transition::Column::GuardBySpecAccountIds),
                 (flow_transition::Entity, flow_transition::Column::GuardBySpecRoleIds),
+                (flow_transition::Entity, flow_transition::Column::GuardBySpecOrgIds),
                 (flow_transition::Entity, flow_transition::Column::GuardByOtherConds),
                 (flow_transition::Entity, flow_transition::Column::VarsCollect),
                 (flow_transition::Entity, flow_transition::Column::ActionByPreCallback),
