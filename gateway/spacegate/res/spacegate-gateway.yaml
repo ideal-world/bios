@@ -157,7 +157,7 @@ spec:
       serviceAccountName: spacegate
       containers:
       - name: spacegate
-        image: ecfront/spacegateway:latest
+        image: ecfront/bios-spacegate:latest
         imagePullPolicy: IfNotPresent
 #        env:
 #        - name: RUST_LOG
