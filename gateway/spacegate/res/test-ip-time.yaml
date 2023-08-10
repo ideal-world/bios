@@ -1,0 +1,20 @@
+apiVersion: spacegate.idealworld.group/v1
+kind: SgFilter
+metadata:
+  name: ip-time-filters
+spec:
+  filters:
+    - code: ip_time
+      config:
+        rules:
+          - ip_list:
+              - "127.0.0.1"
+              - "172.20.0.1"
+            time_rule:
+              mode: "black_list"
+              ban:
+                - start: "18:00:00"
+                  end: "09:00:00"
+  targetRefs:
+    - kind: Gateway
+      name: gateway

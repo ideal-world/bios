@@ -1,14 +1,16 @@
+use std::net::IpAddr;
+
 use super::{SgFilterIpTime, SgFilterIpTimeConfig};
 
-use tardis::chrono::NaiveTime;
-
-use tardis::serde_json;
+use tardis::{chrono::Local, serde_json};
 #[test]
 fn parse_config() {
     let json_str = include_str!("./testconfig.json");
+    println!("Init ip-time plugin, local timezone offset: {tz}", tz = Local::now().offset());
     let value: Vec<SgFilterIpTimeConfig> = serde_json::from_str(json_str).expect("fail to parse config into json");
     let filters = value.into_iter().map(SgFilterIpTime::from).collect::<Vec<_>>();
-    let rule_0_0 = &filters[0].rules[0].1;
-    assert!(!rule_0_0.check_by_time(NaiveTime::from_hms_opt(23, 59, 59).expect("invalid native time")));
+    let ip: IpAddr = "123.123.123.123".parse().expect("invalid ip");
+    let passed = filters[0].check_ip(&ip);
+    assert!(!passed);
     dbg!(filters);
 }

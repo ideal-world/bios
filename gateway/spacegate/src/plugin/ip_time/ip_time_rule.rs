@@ -25,6 +25,7 @@ impl IpTimeRule {
         }
     }
     pub fn check_by_now(&self) -> bool {
-        self.check_by_time(Local::now().time())
+        let local_time = Local::now().time();
+        self.check_by_time(local_time)
     }
 }
