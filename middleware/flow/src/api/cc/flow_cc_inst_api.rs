@@ -6,7 +6,7 @@ use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 
 use crate::dto::flow_inst_dto::{
     FlowInstAbortReq, FlowInstDetailResp, FlowInstFindNextTransitionResp, FlowInstFindNextTransitionsReq, FlowInstFindStateAndTransitionsReq, FlowInstFindStateAndTransitionsResp,
-    FlowInstStartReq, FlowInstSummaryResp, FlowInstTransferReq, FlowInstTransferResp,
+    FlowInstModifyAssignedReq, FlowInstStartReq, FlowInstSummaryResp, FlowInstTransferReq, FlowInstTransferResp,
 };
 use crate::flow_constants;
 use crate::serv::flow_inst_serv::FlowInstServ;
@@ -94,5 +94,15 @@ impl FlowCcInstApi {
         let result = FlowInstServ::transfer(&flow_inst_id.0, &transfer_req.0, &funs, &ctx.0).await?;
         funs.commit().await?;
         TardisResp::ok(result)
+    }
+
+    /// Modify Assigned / 同步执行人信息
+    #[oai(path = "/:flow_inst_id/transition/transfer", method = "post")]
+    async fn modify_assigned(&self, flow_inst_id: Path<String>, modify_req: Json<FlowInstModifyAssignedReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+        let mut funs = flow_constants::get_tardis_inst();
+        funs.begin().await?;
+        FlowInstServ::modify_assigned(&flow_inst_id.0, &modify_req.0.current_assigned, &funs, &ctx.0).await?;
+        funs.commit().await?;
+        TardisResp::ok(Void {})
     }
 }

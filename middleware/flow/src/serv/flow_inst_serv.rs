@@ -156,6 +156,36 @@ impl FlowInstServ {
         Ok(())
     }
 
+    pub async fn modify_assigned(flow_inst_id: &str, assigned_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        if funs
+            .db()
+            .count(
+                Query::select()
+                    .column((flow_inst::Entity, flow_inst::Column::Id))
+                    .from(flow_inst::Entity)
+                    .and_where(Expr::col((flow_inst::Entity, flow_inst::Column::Id)).eq(flow_inst_id.to_string()))
+                    .and_where(Expr::col((flow_inst::Entity, flow_inst::Column::OwnPaths)).like(format!("{}%", ctx.own_paths))),
+            )
+            .await?
+            == 0
+        {
+            return Err(funs.err().not_found(
+                "flow_inst",
+                "modify_assigned",
+                &format!("flow instance {} not found", flow_inst_id),
+                "404-flow-inst-not-found",
+            ));
+        }
+        let flow_inst = flow_inst::ActiveModel {
+            id: Set(flow_inst_id.to_string()),
+            current_assigned: Set(Some(assigned_id.to_string())),
+            ..Default::default()
+        };
+        funs.db().update_one(flow_inst, ctx).await?;
+
+        Ok(())
+    }
+
     pub async fn get(flow_inst_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<FlowInstDetailResp> {
         let mut flow_insts = Self::find_detail(vec![flow_inst_id.to_string()], funs, ctx).await?;
         if flow_insts.len() == 1 {
@@ -173,6 +203,8 @@ impl FlowInstServ {
             pub rel_flow_model_name: String,
 
             pub current_state_id: String,
+            pub current_assigned: Option<String>,
+
             pub current_state_name: Option<String>,
             pub current_vars: Option<Value>,
 
@@ -210,6 +242,7 @@ impl FlowInstServ {
                 (flow_inst::Entity, flow_inst::Column::OutputMessage),
                 (flow_inst::Entity, flow_inst::Column::Transitions),
                 (flow_inst::Entity, flow_inst::Column::OwnPaths),
+                (flow_inst::Entity, flow_inst::Column::CurrentAssigned),
             ])
             .expr_as(Expr::col((rel_state_table.clone(), NAME_FIELD.clone())).if_null(""), Alias::new("current_state_name"))
             .expr_as(Expr::col((rel_model_table.clone(), NAME_FIELD.clone())).if_null(""), Alias::new("rel_flow_model_name"))
@@ -252,6 +285,7 @@ impl FlowInstServ {
                 own_paths: inst.own_paths,
                 transitions: inst.transitions.map(|transitions| TardisFuns::json.json_to_obj(transitions).unwrap()),
                 current_state_id: inst.current_state_id,
+                current_assigned: inst.current_assigned,
                 current_state_name: inst.current_state_name,
                 current_vars: inst.current_vars.map(|current_vars| TardisFuns::json.json_to_obj(current_vars).unwrap()),
                 rel_business_obj_id: inst.rel_business_obj_id,
@@ -287,6 +321,7 @@ impl FlowInstServ {
             pub output_message: Option<String>,
 
             pub own_paths: String,
+            pub current_assigned: Option<String>,
         }
         let mut query = Query::select();
         query
@@ -301,6 +336,7 @@ impl FlowInstServ {
                 (flow_inst::Entity, flow_inst::Column::FinishAbort),
                 (flow_inst::Entity, flow_inst::Column::OutputMessage),
                 (flow_inst::Entity, flow_inst::Column::OwnPaths),
+                (flow_inst::Entity, flow_inst::Column::CurrentAssigned),
             ])
             .expr_as(Expr::col((RBUM_ITEM_TABLE.clone(), NAME_FIELD.clone())).if_null(""), Alias::new("rel_flow_model_name"))
             .from(flow_inst::Entity)
@@ -351,6 +387,7 @@ impl FlowInstServ {
                     own_paths: inst.own_paths,
                     current_state_id: inst.current_state_id,
                     rel_business_obj_id: inst.rel_business_obj_id,
+                    current_assigned: inst.current_assigned,
                 })
                 .collect_vec(),
         })
@@ -605,7 +642,7 @@ impl FlowInstServ {
                                 _ => {}
                             }
                         }
-                    }   
+                    }
                 }
             }
             result_rel_obj_ids = result_rel_obj_ids.into_iter().filter(|result_rel_obj_id| !mismatch_rel_obj_ids.contains(result_rel_obj_id)).collect_vec();
@@ -776,6 +813,12 @@ impl FlowInstServ {
                 if !model_transition.guard_by_spec_org_ids.is_empty() && model_transition.guard_by_spec_org_ids.iter().any(|role_ids| ctx.groups.contains(role_ids)) {
                     return true;
                 }
+                if model_transition.guard_by_assigned
+                    && flow_inst.current_assigned.is_some()
+                    && !(flow_inst.current_assigned.clone().unwrap() != ctx.own_paths || flow_inst.current_assigned.clone().unwrap() != ctx.owner)
+                {
+                    return true;
+                }
                 if model_transition.guard_by_his_operators
                     && flow_inst
                         .transitions
@@ -791,8 +834,6 @@ impl FlowInstServ {
                 {
                     return true;
                 }
-                // TODO guard_by_assigned is not implement
-                if model_transition.guard_by_assigned {}
                 if let Some(guard_by_other_conds) = model_transition.guard_by_other_conds() {
                     let mut check_vars: HashMap<String, Value> = HashMap::new();
                     if let Some(current_vars) = &flow_inst.current_vars {

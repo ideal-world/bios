@@ -1,12 +1,6 @@
 use bios_basic::dto::BasicQueryCondInfo;
 use serde::{Deserialize, Serialize};
-use tardis::{
-    basic::field::TrimString,
-    db::sea_orm,
-    serde_json::Value,
-    web::poem_openapi,
-    TardisFuns,
-};
+use tardis::{basic::field::TrimString, db::sea_orm, serde_json::Value, web::poem_openapi, TardisFuns};
 
 use super::flow_var_dto::FlowVarInfo;
 

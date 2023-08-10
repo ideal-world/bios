@@ -3,7 +3,7 @@ use serde_json::Value;
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
     web::web_resp::TardisResp,
-    TardisFunsInst, TardisFuns,
+    TardisFuns, TardisFunsInst,
 };
 
 use crate::{
@@ -63,8 +63,6 @@ impl FlowExternalServ {
                     curr_tag: tag.to_string(),
                     curr_bus_obj_id: rel_business_obj_id.to_string(),
                     params: FlowExternalParams::ModifyField(FlowExternalModifyFieldReq {
-                        current: change_info.current,
-                        rel_tag: change_info.obj_tag.clone(),
                         var_name: change_info.var_name.clone(),
                         value: change_info.changed_val.clone(),
                     }),
@@ -119,7 +117,7 @@ impl FlowExternalServ {
         Ok(external_url.value.as_str().unwrap_or_default().to_string())
     }
 
-    async fn headers(headers: Option<Vec<(String, String)>>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<Vec<(String, String)>>> {
+    async fn headers(headers: Option<Vec<(String, String)>>, _funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<Vec<(String, String)>>> {
         let base_ctx = (TARDIS_CONTEXT.to_string(), TardisFuns::crypto.base64.encode(&TardisFuns::json.obj_to_string(ctx)?));
         if let Some(mut headers) = headers {
             headers.push(base_ctx);

@@ -56,13 +56,7 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
     let template_id = "mock_template_id".to_string();
     // 1. set config
     let mut modify_configs = vec![];
-    let codes = vec![
-        "REQ",
-        "MS",
-        "PROJ",
-        "ITER",
-        "TICKET",
-    ];
+    let codes = vec!["REQ", "MS", "PROJ", "ITER", "TICKET"];
     for code in codes {
         modify_configs.push(FlowConfigModifyReq {
             code: code.to_string(),
