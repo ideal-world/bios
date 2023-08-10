@@ -192,4 +192,41 @@ impl FlowStateServ {
         )
         .await
     }
+
+    pub(crate) async fn find_state_id_by_name(tag: &str, mut name: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
+        if tag == "ISSUE" {
+            name = match name {
+                "待开始" => "待处理",
+                "进行中" => "修复中",
+                "存在风险" => "修复中",
+                "已完成" => "已解决",
+                "已关闭" => "已关闭",
+                _ => "",
+            };
+        }
+        let state = Self::paginate_detail_items(
+            &FlowStateFilterReq {
+                basic: RbumBasicFilterReq {
+                    name: Some(name.to_string()),
+                    ..Default::default()
+                },
+                tag: None,
+                ..Default::default()
+            },
+            1,
+            1,
+            None,
+            None,
+            funs,
+            ctx,
+        )
+        .await?
+        .records
+        .pop();
+        if let Some(state) = state {
+            Ok(state.name)
+        } else {
+            Err(funs.err().not_found("flow_state_serv", "find_state_id_by_name", "state_id not match", ""))
+        }
+    }
 }

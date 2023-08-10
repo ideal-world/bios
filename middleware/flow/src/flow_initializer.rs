@@ -67,6 +67,7 @@ pub async fn init_db(mut funs: TardisFunsInst) -> TardisResult<()> {
     funs.begin().await?;
     if check_initialized(&funs, &ctx).await? {
         init_basic_info(&funs).await?;
+        init_model(&funs, &ctx).await?;
     } else {
         let db_kind = TardisFuns::reldb().backend();
         let compatible_type = TardisFuns::reldb().compatible_type();
@@ -1856,8 +1857,9 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                 },
             ],
             funs,
-            ctx
-        ).await?;
+            ctx,
+        )
+        .await?;
     }
     let iter_init_model = FlowModelServ::paginate_items(
         &FlowModelFilterReq {
@@ -1892,15 +1894,13 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     to_flow_state_name: "进行中".to_string(),
                     name: "开始".to_string(),
                     guard_by_creator: Some(true),
-                    vars_collect: Some(vec![
-                        FlowVarInfo {
-                            name: "start_end".to_string(),
-                            label: "计划周期".to_string(),
-                            data_type: RbumDataTypeKind::DATETIME,
-                            widget_type: RbumWidgetTypeKind::DATETIME,
-                            ..Default::default()
-                        },
-                    ]),
+                    vars_collect: Some(vec![FlowVarInfo {
+                        name: "start_end".to_string(),
+                        label: "计划周期".to_string(),
+                        data_type: RbumDataTypeKind::DATETIME,
+                        widget_type: RbumWidgetTypeKind::DATETIME,
+                        ..Default::default()
+                    }]),
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
@@ -1914,16 +1914,14 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     to_flow_state_name: "已完成".to_string(),
                     name: "完成".to_string(),
                     guard_by_creator: Some(true),
-                    vars_collect: Some(vec![
-                        FlowVarInfo {
-                            name: "start_end".to_string(),
-                            label: "实际周期".to_string(),
-                            data_type: RbumDataTypeKind::DATETIME,
-                            widget_type: RbumWidgetTypeKind::DATETIME,
-                            required: Some(true),
-                            ..Default::default()
-                        },
-                    ]),
+                    vars_collect: Some(vec![FlowVarInfo {
+                        name: "start_end".to_string(),
+                        label: "实际周期".to_string(),
+                        data_type: RbumDataTypeKind::DATETIME,
+                        widget_type: RbumWidgetTypeKind::DATETIME,
+                        required: Some(true),
+                        ..Default::default()
+                    }]),
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
@@ -1952,16 +1950,14 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     to_flow_state_name: "已完成".to_string(),
                     name: "完成".to_string(),
                     guard_by_creator: Some(true),
-                    vars_collect: Some(vec![
-                        FlowVarInfo {
-                            name: "start_end".to_string(),
-                            label: "实际周期".to_string(),
-                            data_type: RbumDataTypeKind::DATETIME,
-                            widget_type: RbumWidgetTypeKind::DATETIME,
-                            required: Some(true),
-                            ..Default::default()
-                        },
-                    ]),
+                    vars_collect: Some(vec![FlowVarInfo {
+                        name: "start_end".to_string(),
+                        label: "实际周期".to_string(),
+                        data_type: RbumDataTypeKind::DATETIME,
+                        widget_type: RbumWidgetTypeKind::DATETIME,
+                        required: Some(true),
+                        ..Default::default()
+                    }]),
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
@@ -1976,15 +1972,13 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     to_flow_state_name: "进行中".to_string(),
                     name: "重新处理".to_string(),
                     guard_by_creator: Some(true),
-                    vars_collect: Some(vec![
-                        FlowVarInfo {
-                            name: "start_end".to_string(),
-                            label: "计划周期".to_string(),
-                            data_type: RbumDataTypeKind::DATETIME,
-                            widget_type: RbumWidgetTypeKind::DATETIME,
-                            ..Default::default()
-                        },
-                    ]),
+                    vars_collect: Some(vec![FlowVarInfo {
+                        name: "start_end".to_string(),
+                        label: "计划周期".to_string(),
+                        data_type: RbumDataTypeKind::DATETIME,
+                        widget_type: RbumWidgetTypeKind::DATETIME,
+                        ..Default::default()
+                    }]),
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
@@ -2003,8 +1997,9 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                 },
             ],
             funs,
-            ctx
-        ).await?;
+            ctx,
+        )
+        .await?;
     }
     let task_init_model = FlowModelServ::paginate_items(
         &FlowModelFilterReq {
@@ -2182,8 +2177,9 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                 },
             ],
             funs,
-            ctx
-        ).await?;
+            ctx,
+        )
+        .await?;
     }
     let tp_init_model = FlowModelServ::paginate_items(
         &FlowModelFilterReq {
@@ -2344,8 +2340,9 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                 },
             ],
             funs,
-            ctx
-        ).await?;
+            ctx,
+        )
+        .await?;
     }
     let ts_init_model = FlowModelServ::paginate_items(
         &FlowModelFilterReq {
@@ -2506,8 +2503,9 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                 },
             ],
             funs,
-            ctx
-        ).await?;
+            ctx,
+        )
+        .await?;
     }
 
     Ok(())
