@@ -1,7 +1,12 @@
 use std::collections::HashMap;
 
 use bios_basic::rbum::dto::rbum_item_dto::RbumItemAddReq;
-use tardis::{basic::result::TardisResult, log, serde_json::{json, self}, testcontainers, tokio, TardisFuns};
+use tardis::{
+    basic::result::TardisResult,
+    log,
+    serde_json::{self, json},
+    testcontainers, tokio, TardisFuns,
+};
 
 mod test_reach_common;
 use bios_reach::{consts::*, dto::*, invoke};
@@ -245,7 +250,7 @@ pub async fn test_ct_api() -> TardisResult<()> {
                 receive_kind: ReachReceiveKind::Account,
             }],
             rel_item_id,
-            replace: [(name.to_string(), code.clone())].into(),
+            replace: [("name".to_owned(), name.to_owned()), ("code".to_owned(), code.clone())].into(),
             own_paths: ctx.own_paths.clone(),
         };
         log::info!("send trigger message");
@@ -258,7 +263,6 @@ pub async fn test_ct_api() -> TardisResult<()> {
         let msg = msg.expect("message is empty");
         assert_eq!(msg, expected_content(name, &code));
     }
-    wait_for_press();
     drop(holder);
     Ok(())
 }

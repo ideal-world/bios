@@ -7,12 +7,13 @@ use std::str::FromStr;
 use tardis::basic::error::TardisError;
 
 use tardis::regex::Regex;
-
+use tardis::serde::{Deserialize, Serialize};
 /// ContentReplace
 /// 格式
 /// `{[<key>:<value>],*,?}`
 #[repr(transparent)]
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Deserialize, Serialize)]
+#[serde(transparent)]
 pub struct ContentReplace(HashMap<String, String>);
 
 impl<K, V, I> From<I> for ContentReplace
@@ -52,11 +53,7 @@ impl FromStr for ContentReplace {
 
 impl Display for ContentReplace {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let mut content = String::new();
-        for (key, value) in self.iter() {
-            content.push_str(&format!("{}:{},", key, value));
-        }
-        write!(f, "{{{}}}", content.trim_end_matches(','))
+        tardis::serde_json::to_string(self).expect("content replace is not a valid json map").fmt(f)
     }
 }
 

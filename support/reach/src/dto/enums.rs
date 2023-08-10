@@ -1,4 +1,4 @@
-use std::str::FromStr;
+use std::{str::FromStr, fmt::Display};
 
 use serde::{Deserialize, Serialize};
 use tardis::{
@@ -29,6 +29,19 @@ pub enum ReachChannelKind {
     WebHook,
 }
 
+impl Display for ReachChannelKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ReachChannelKind::Sms => write!(f, "SMS"),
+            ReachChannelKind::Email => write!(f, "EMAIL"),
+            ReachChannelKind::Inbox => write!(f, "INBOX"),
+            ReachChannelKind::Wechat => write!(f, "WECHAT"),
+            ReachChannelKind::DingTalk => write!(f, "DINGTALK"),
+            ReachChannelKind::Push => write!(f, "PUSH"),
+            ReachChannelKind::WebHook => write!(f, "WEB_HOOK"),
+        }
+    }
+}
 impl FromStr for ReachChannelKind {
     type Err = TardisError;
 

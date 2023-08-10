@@ -87,7 +87,6 @@ impl
         query.columns(trigger_global_config::Column::iter().map(|c| (trigger_global_config::Entity, c)));
         query.from(trigger_global_config::Entity);
         query
-            .columns(trigger_global_config::Column::iter())
             .and_where_option(filter.rel_reach_trigger_scene_id.as_ref().map(|v| trigger_global_config::Column::RelReachTriggerSceneId.eq(v)))
             .and_where_option(filter.rel_reach_channel.map(|v| trigger_global_config::Column::RelReachChannel.eq(v)))
             .and_where_option(filter.rel_reach_msg_signature_id.as_ref().map(|v| trigger_global_config::Column::RelReachMsgSignatureId.eq(v)))
