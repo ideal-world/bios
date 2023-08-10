@@ -157,11 +157,13 @@ spec:
       serviceAccountName: spacegate
       containers:
       - name: spacegate
-        image: ecfront/spacegateway:latest
+        image: ecfront/bios-spacegate:latest
         imagePullPolicy: IfNotPresent
-#        env:
-#        - name: RUST_LOG
-#          value: info,spacegate_kernel=trace
+        # env:
+        # - name: RUST_LOG
+        #   value: bios_spacegate=trace,spacegate_kernel=trace
+        # - name: TZ
+        #   value: Asia/Shanghai
 # ---        
 # apiVersion: apps/v1
 # kind: Deployment
