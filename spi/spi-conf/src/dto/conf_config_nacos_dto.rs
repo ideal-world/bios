@@ -119,8 +119,8 @@ impl NacosJwtClaim {
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Default)]
 #[serde(rename = "camelCase")]
 pub struct LoginRequest {
-    pub username: String,
-    pub password: String,
+    pub username: Option<String>,
+    pub password: Option<String>,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Default)]
