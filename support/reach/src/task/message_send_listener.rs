@@ -28,7 +28,6 @@ impl Default for MessageSendListener {
 
 impl MessageSendListener {
     async fn execute_send_account(&self, message: message::Model, template: message_template::Model) -> TardisResult<()> {
-
         let cfg = self.funs.conf::<ReachConfig>();
         let _lock = self.sync.lock().await;
         let ctx = TardisContext {
