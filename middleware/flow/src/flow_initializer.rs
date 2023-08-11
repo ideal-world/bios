@@ -23,7 +23,7 @@ use crate::{
     dto::{
         flow_model_dto::FlowModelFilterReq,
         flow_state_dto::FlowSysStateKind,
-        flow_transition_dto::FlowTransitionInitInfo,
+        flow_transition_dto::{FlowTransitionDoubleCheckInfo, FlowTransitionInitInfo},
         flow_var_dto::{FlowVarInfo, RbumDataTypeKind, RbumWidgetTypeKind},
     },
     flow_config::{BasicInfo, FlowBasicInfoManager, FlowConfig},
@@ -67,6 +67,7 @@ pub async fn init_db(mut funs: TardisFunsInst) -> TardisResult<()> {
     funs.begin().await?;
     if check_initialized(&funs, &ctx).await? {
         init_basic_info(&funs).await?;
+        init_model(&funs, &ctx).await?;
     } else {
         let db_kind = TardisFuns::reldb().backend();
         let compatible_type = TardisFuns::reldb().compatible_type();
@@ -208,109 +209,43 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     from_flow_state_name: "待处理".to_string(),
                     to_flow_state_name: "处理中".to_string(),
                     name: "立即处理".to_string(),
-                    transfer_by_auto: None,
-                    transfer_by_timer: None,
                     guard_by_creator: Some(true),
-                    guard_by_his_operators: None,
-                    guard_by_assigned: None,
-                    guard_by_spec_account_ids: None,
-                    guard_by_spec_role_ids: None,
-                    guard_by_other_conds: None,
-                    vars_collect: None,
-                    action_by_pre_callback: None,
-                    action_by_post_callback: None,
-                    action_by_post_changes: vec![],
-                    double_check: None,
+                    ..Default::default()
                 },
                 FlowTransitionInitInfo {
                     from_flow_state_name: "待处理".to_string(),
                     to_flow_state_name: "已撤销".to_string(),
                     name: "撤销".to_string(),
-                    transfer_by_auto: None,
-                    transfer_by_timer: None,
                     guard_by_creator: Some(true),
-                    guard_by_his_operators: None,
-                    guard_by_assigned: None,
-                    guard_by_spec_account_ids: None,
-                    guard_by_spec_role_ids: None,
-                    guard_by_other_conds: None,
-                    vars_collect: None,
-                    action_by_pre_callback: None,
-                    action_by_post_callback: None,
-                    action_by_post_changes: vec![],
-                    double_check: None,
+                    ..Default::default()
                 },
                 FlowTransitionInitInfo {
                     from_flow_state_name: "待处理".to_string(),
                     to_flow_state_name: "待确认".to_string(),
                     name: "处理完成".to_string(),
-                    transfer_by_auto: None,
-                    transfer_by_timer: None,
-                    guard_by_creator: None,
                     guard_by_his_operators: Some(true),
-                    guard_by_assigned: None,
-                    guard_by_spec_account_ids: None,
-                    guard_by_spec_role_ids: None,
-                    guard_by_other_conds: None,
-                    vars_collect: None,
-                    action_by_pre_callback: None,
-                    action_by_post_callback: None,
-                    action_by_post_changes: vec![],
-                    double_check: None,
+                    ..Default::default()
                 },
                 FlowTransitionInitInfo {
                     from_flow_state_name: "待处理".to_string(),
                     to_flow_state_name: "已关闭".to_string(),
                     name: "关闭".to_string(),
-                    transfer_by_auto: None,
-                    transfer_by_timer: None,
                     guard_by_creator: Some(true),
-                    guard_by_his_operators: None,
-                    guard_by_assigned: None,
-                    guard_by_spec_account_ids: None,
-                    guard_by_spec_role_ids: None,
-                    guard_by_other_conds: None,
-                    vars_collect: None,
-                    action_by_pre_callback: None,
-                    action_by_post_callback: None,
-                    action_by_post_changes: vec![],
-                    double_check: None,
+                    ..Default::default()
                 },
                 FlowTransitionInitInfo {
                     from_flow_state_name: "待确认".to_string(),
                     to_flow_state_name: "已关闭".to_string(),
                     name: "确认解决".into(),
-                    transfer_by_auto: None,
-                    transfer_by_timer: None,
                     guard_by_creator: Some(true),
-                    guard_by_his_operators: None,
-                    guard_by_assigned: None,
-                    guard_by_spec_account_ids: None,
-                    guard_by_spec_role_ids: None,
-                    guard_by_other_conds: None,
-                    vars_collect: None,
-                    action_by_pre_callback: None,
-                    action_by_post_callback: None,
-                    action_by_post_changes: vec![],
-                    double_check: None,
+                    ..Default::default()
                 },
                 FlowTransitionInitInfo {
                     from_flow_state_name: "待确认".to_string(),
                     to_flow_state_name: "处理中".to_string(),
                     name: "未解决".to_string(),
-                    transfer_by_auto: None,
-                    transfer_by_timer: None,
                     guard_by_creator: Some(true),
-                    guard_by_his_operators: None,
-                    guard_by_assigned: None,
-                    guard_by_spec_account_ids: None,
-                    guard_by_spec_role_ids: None,
-                    guard_by_other_conds: None,
-                    vars_collect: None,
-                    action_by_pre_callback: None,
-                    action_by_post_callback: None,
-                    action_by_post_changes: vec![],
-                    double_check: None,
+                    ..Default::default()
                 },
             ],
             funs,
@@ -334,7 +269,7 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
     .await?
     .records
     .pop();
-    if ticket_init_model.is_none() {
+    if req_init_model.is_none() {
         // 需求模板初始化
         FlowModelServ::init_model(
             "REQ",
@@ -350,262 +285,98 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     from_flow_state_name: "待开始".to_string(),
                     to_flow_state_name: "进行中".to_string(),
                     name: "开始".to_string(),
-                    transfer_by_auto: None,
-                    transfer_by_timer: None,
-                    guard_by_creator: None,
-                    guard_by_his_operators: None,
                     guard_by_assigned: Some(true),
-                    guard_by_spec_account_ids: None,
-                    guard_by_spec_role_ids: None,
-                    guard_by_other_conds: None,
                     vars_collect: Some(vec![
                         FlowVarInfo {
                             name: "assigned".to_string(),
                             label: "负责人".to_string(),
                             data_type: RbumDataTypeKind::STRING,
                             widget_type: RbumWidgetTypeKind::SELECT,
-                            note: None,
-                            sort: None,
-                            hide: None,
-                            secret: None,
-                            show_by_conds: None,
-                            widget_columns: None,
-                            default_value: None,
-                            dyn_default_value: None,
-                            options: None,
-                            dyn_options: None,
                             required: Some(true),
-                            min_length: None,
-                            max_length: None,
-                            action: None,
-                            ext: None,
-                            parent_attr_name: None,
+                            ..Default::default()
                         },
                         FlowVarInfo {
                             name: "start_end".to_string(),
                             label: "计划周期".to_string(),
                             data_type: RbumDataTypeKind::DATETIME,
                             widget_type: RbumWidgetTypeKind::DATETIME,
-                            note: None,
-                            sort: None,
-                            hide: None,
-                            secret: None,
-                            show_by_conds: None,
-                            widget_columns: None,
-                            default_value: None,
-                            dyn_default_value: None,
-                            options: None,
-                            dyn_options: None,
-                            required: None,
-                            min_length: None,
-                            max_length: None,
-                            action: None,
-                            ext: None,
-                            parent_attr_name: None,
+                            ..Default::default()
                         },
                     ]),
-                    action_by_pre_callback: None,
-                    action_by_post_callback: None,
-                    action_by_post_changes: vec![],
-                    double_check: None,
+                    ..Default::default()
                 },
                 FlowTransitionInitInfo {
                     from_flow_state_name: "待开始".to_string(),
                     to_flow_state_name: "已关闭".to_string(),
                     name: "关闭".to_string(),
-                    transfer_by_auto: None,
-                    transfer_by_timer: None,
-                    guard_by_creator: None,
-                    guard_by_his_operators: None,
-                    guard_by_assigned: None,
-                    guard_by_spec_account_ids: None,
-                    guard_by_spec_role_ids: None,
-                    guard_by_other_conds: None,
-                    vars_collect: None,
-                    action_by_pre_callback: None,
-                    action_by_post_callback: None,
-                    action_by_post_changes: vec![],
-                    double_check: None,
+                    ..Default::default()
                 },
                 FlowTransitionInitInfo {
                     from_flow_state_name: "进行中".to_string(),
                     to_flow_state_name: "已完成".to_string(),
                     name: "完成".to_string(),
-                    transfer_by_auto: None,
-                    transfer_by_timer: None,
-                    guard_by_creator: None,
-                    guard_by_his_operators: None,
                     guard_by_assigned: Some(true),
-                    guard_by_spec_account_ids: None,
-                    guard_by_spec_role_ids: None,
-                    guard_by_other_conds: None,
                     vars_collect: Some(vec![
                         FlowVarInfo {
                             name: "assigned".to_string(),
                             label: "负责人".to_string(),
                             data_type: RbumDataTypeKind::STRING,
                             widget_type: RbumWidgetTypeKind::SELECT,
-                            note: None,
-                            sort: None,
-                            hide: None,
-                            secret: None,
-                            show_by_conds: None,
-                            widget_columns: None,
-                            default_value: None,
-                            dyn_default_value: None,
-                            options: None,
-                            dyn_options: None,
                             required: Some(true),
-                            min_length: None,
-                            max_length: None,
-                            action: None,
-                            ext: None,
-                            parent_attr_name: None,
+                            ..Default::default()
                         },
                         FlowVarInfo {
                             name: "start_end".to_string(),
                             label: "计划周期".to_string(),
                             data_type: RbumDataTypeKind::DATETIME,
                             widget_type: RbumWidgetTypeKind::DATETIME,
-                            note: None,
-                            sort: None,
-                            hide: None,
-                            secret: None,
-                            show_by_conds: None,
-                            widget_columns: None,
-                            default_value: None,
-                            dyn_default_value: None,
-                            options: None,
-                            dyn_options: None,
                             required: Some(true),
-                            min_length: None,
-                            max_length: None,
-                            action: None,
-                            ext: None,
-                            parent_attr_name: None,
+                            ..Default::default()
                         },
                     ]),
-                    action_by_pre_callback: None,
-                    action_by_post_callback: None,
-                    action_by_post_changes: vec![],
-                    double_check: None,
+                    ..Default::default()
                 },
                 FlowTransitionInitInfo {
                     from_flow_state_name: "进行中".to_string(),
                     to_flow_state_name: "已关闭".to_string(),
                     name: "关闭".to_string(),
-                    transfer_by_auto: None,
-                    transfer_by_timer: None,
-                    guard_by_creator: None,
-                    guard_by_his_operators: None,
-                    guard_by_assigned: None,
-                    guard_by_spec_account_ids: None,
-                    guard_by_spec_role_ids: None,
-                    guard_by_other_conds: None,
-                    vars_collect: None,
-                    action_by_pre_callback: None,
-                    action_by_post_callback: None,
-                    action_by_post_changes: vec![],
-                    double_check: None,
+                    ..Default::default()
                 },
                 FlowTransitionInitInfo {
                     from_flow_state_name: "已完成".to_string(),
                     to_flow_state_name: "进行中".to_string(),
                     name: "重新处理".into(),
-                    transfer_by_auto: None,
-                    transfer_by_timer: None,
-                    guard_by_creator: None,
-                    guard_by_his_operators: None,
                     guard_by_assigned: Some(true),
-                    guard_by_spec_account_ids: None,
-                    guard_by_spec_role_ids: None,
-                    guard_by_other_conds: None,
                     vars_collect: Some(vec![
                         FlowVarInfo {
                             name: "assigned".to_string(),
                             label: "负责人".to_string(),
                             data_type: RbumDataTypeKind::STRING,
                             widget_type: RbumWidgetTypeKind::SELECT,
-                            note: None,
-                            sort: None,
-                            hide: None,
-                            secret: None,
-                            show_by_conds: None,
-                            widget_columns: None,
-                            default_value: None,
-                            dyn_default_value: None,
-                            options: None,
-                            dyn_options: None,
                             required: Some(true),
-                            min_length: None,
-                            max_length: None,
-                            action: None,
-                            ext: None,
-                            parent_attr_name: None,
+                            ..Default::default()
                         },
                         FlowVarInfo {
                             name: "start_end".to_string(),
                             label: "计划周期".to_string(),
                             data_type: RbumDataTypeKind::DATETIME,
                             widget_type: RbumWidgetTypeKind::DATETIME,
-                            note: None,
-                            sort: None,
-                            hide: None,
-                            secret: None,
-                            show_by_conds: None,
-                            widget_columns: None,
-                            default_value: None,
-                            dyn_default_value: None,
-                            options: None,
-                            dyn_options: None,
-                            required: None,
-                            min_length: None,
-                            max_length: None,
-                            action: None,
-                            ext: None,
-                            parent_attr_name: None,
+                            ..Default::default()
                         },
                     ]),
-                    action_by_pre_callback: None,
-                    action_by_post_callback: None,
-                    action_by_post_changes: vec![],
-                    double_check: None,
+                    ..Default::default()
                 },
                 FlowTransitionInitInfo {
                     from_flow_state_name: "已完成".to_string(),
                     to_flow_state_name: "已关闭".to_string(),
                     name: "关闭".to_string(),
-                    transfer_by_auto: None,
-                    transfer_by_timer: None,
-                    guard_by_creator: None,
-                    guard_by_his_operators: None,
-                    guard_by_assigned: None,
-                    guard_by_spec_account_ids: None,
-                    guard_by_spec_role_ids: None,
-                    guard_by_other_conds: None,
-                    vars_collect: None,
-                    action_by_pre_callback: None,
-                    action_by_post_callback: None,
-                    action_by_post_changes: vec![],
-                    double_check: None,
+                    ..Default::default()
                 },
                 FlowTransitionInitInfo {
                     from_flow_state_name: "已关闭".to_string(),
                     to_flow_state_name: "待开始".to_string(),
                     name: "激活".to_string(),
-                    transfer_by_auto: None,
-                    transfer_by_timer: None,
-                    guard_by_creator: None,
-                    guard_by_his_operators: None,
-                    guard_by_assigned: Some(true),
-                    guard_by_spec_account_ids: None,
-                    guard_by_spec_role_ids: None,
-                    guard_by_other_conds: None,
-                    vars_collect: None,
-                    action_by_pre_callback: None,
-                    action_by_post_callback: None,
-                    action_by_post_changes: vec![],
-                    double_check: None,
+                    ..Default::default()
                 },
             ],
             funs,
@@ -616,7 +387,7 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
     let product_init_model = FlowModelServ::paginate_items(
         &FlowModelFilterReq {
             basic: RbumBasicFilterReq { ..Default::default() },
-            tag: Some("PROJECT".to_string()),
+            tag: Some("PROJ".to_string()),
             ..Default::default()
         },
         1,
@@ -631,13 +402,14 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
     .pop();
     if product_init_model.is_none() {
         FlowModelServ::init_model(
-            "PROJECT",
+            "PROJ",
             vec![
-                ("归档", FlowSysStateKind::Finish),
                 ("待开始", FlowSysStateKind::Start),
                 ("进行中", FlowSysStateKind::Progress),
                 ("存在风险", FlowSysStateKind::Progress),
-                ("已完成", FlowSysStateKind::Finish),
+                ("已完成", FlowSysStateKind::Progress),
+                ("已关闭", FlowSysStateKind::Finish),
+                ("已归档", FlowSysStateKind::Finish),
             ],
             "默认项目模板",
             vec![
@@ -645,37 +417,91 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     from_flow_state_name: "待开始".to_string(),
                     to_flow_state_name: "进行中".to_string(),
                     name: "开始".to_string(),
-                    transfer_by_auto: None,
-                    transfer_by_timer: None,
-                    guard_by_creator: None,
-                    guard_by_his_operators: None,
-                    guard_by_assigned: None,
-                    guard_by_spec_account_ids: None,
-                    guard_by_spec_role_ids: None,
-                    guard_by_other_conds: None,
-                    vars_collect: None,
-                    action_by_pre_callback: None,
-                    action_by_post_callback: None,
-                    action_by_post_changes: vec![],
-                    double_check: None,
+                    ..Default::default()
                 },
                 FlowTransitionInitInfo {
                     from_flow_state_name: "待开始".to_string(),
                     to_flow_state_name: "进行中".to_string(),
                     name: "关闭".to_string(),
-                    transfer_by_auto: None,
-                    transfer_by_timer: None,
-                    guard_by_creator: None,
-                    guard_by_his_operators: None,
-                    guard_by_assigned: None,
-                    guard_by_spec_account_ids: None,
-                    guard_by_spec_role_ids: None,
-                    guard_by_other_conds: None,
-                    vars_collect: None,
-                    action_by_pre_callback: None,
-                    action_by_post_callback: None,
-                    action_by_post_changes: vec![],
-                    double_check: None,
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "进行中".to_string(),
+                    to_flow_state_name: "已完成".to_string(),
+                    name: "完成".to_string(),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "进行中".to_string(),
+                    to_flow_state_name: "存在风险".to_string(),
+                    name: "有风险".to_string(),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "进行中".to_string(),
+                    to_flow_state_name: "已关闭".to_string(),
+                    name: "关闭".to_string(),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "存在风险".to_string(),
+                    to_flow_state_name: "进行中".to_string(),
+                    name: "正常".to_string(),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "存在风险".to_string(),
+                    to_flow_state_name: "已完成".to_string(),
+                    name: "完成".to_string(),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "存在风险".to_string(),
+                    to_flow_state_name: "已关闭".to_string(),
+                    name: "关闭".to_string(),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "已完成".to_string(),
+                    to_flow_state_name: "进行中".to_string(),
+                    name: "重新处理".to_string(),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "已完成".to_string(),
+                    to_flow_state_name: "已关闭".to_string(),
+                    name: "关闭".to_string(),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "已完成".to_string(),
+                    to_flow_state_name: "已归档".to_string(),
+                    name: "归档".to_string(),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "已关闭".to_string(),
+                    to_flow_state_name: "待开始".to_string(),
+                    name: "激活".to_string(),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "已关闭".to_string(),
+                    to_flow_state_name: "已归档".to_string(),
+                    name: "归档".to_string(),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "已归档".to_string(),
+                    to_flow_state_name: "进行中".to_string(),
+                    name: "重新激活".to_string(),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "已归档".to_string(),
+                    to_flow_state_name: "已关闭".to_string(),
+                    name: "关闭".to_string(),
+                    ..Default::default()
                 },
             ],
             funs,
@@ -683,5 +509,2004 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
         )
         .await?;
     }
+    let ms_init_model = FlowModelServ::paginate_items(
+        &FlowModelFilterReq {
+            basic: RbumBasicFilterReq { ..Default::default() },
+            tag: Some("MS".to_string()),
+            ..Default::default()
+        },
+        1,
+        1,
+        None,
+        None,
+        funs,
+        ctx,
+    )
+    .await?
+    .records
+    .pop();
+    if ms_init_model.is_none() {
+        FlowModelServ::init_model(
+            "MS",
+            vec![
+                ("待开始", FlowSysStateKind::Start),
+                ("进行中", FlowSysStateKind::Progress),
+                ("存在风险", FlowSysStateKind::Progress),
+                ("已完成", FlowSysStateKind::Progress),
+                ("已关闭", FlowSysStateKind::Finish),
+            ],
+            "默认里程碑模板",
+            vec![
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "待开始".to_string(),
+                    to_flow_state_name: "进行中".to_string(),
+                    name: "开始".to_string(),
+                    guard_by_creator: Some(true),
+                    vars_collect: Some(vec![
+                        FlowVarInfo {
+                            name: "assigned".to_string(),
+                            label: "负责人".to_string(),
+                            data_type: RbumDataTypeKind::STRING,
+                            widget_type: RbumWidgetTypeKind::SELECT,
+                            required: Some(true),
+                            ..Default::default()
+                        },
+                        FlowVarInfo {
+                            name: "start_end".to_string(),
+                            label: "计划周期".to_string(),
+                            data_type: RbumDataTypeKind::DATETIME,
+                            widget_type: RbumWidgetTypeKind::DATETIME,
+                            ..Default::default()
+                        },
+                    ]),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "待开始".to_string(),
+                    to_flow_state_name: "已关闭".to_string(),
+                    name: "关闭".to_string(),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "进行中".to_string(),
+                    to_flow_state_name: "已完成".to_string(),
+                    name: "完成".to_string(),
+                    guard_by_creator: Some(true),
+                    vars_collect: Some(vec![
+                        FlowVarInfo {
+                            name: "assigned".to_string(),
+                            label: "负责人".to_string(),
+                            data_type: RbumDataTypeKind::STRING,
+                            widget_type: RbumWidgetTypeKind::SELECT,
+                            required: Some(true),
+                            ..Default::default()
+                        },
+                        FlowVarInfo {
+                            name: "start_end".to_string(),
+                            label: "实际周期".to_string(),
+                            data_type: RbumDataTypeKind::DATETIME,
+                            widget_type: RbumWidgetTypeKind::DATETIME,
+                            required: Some(true),
+                            ..Default::default()
+                        },
+                    ]),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "进行中".to_string(),
+                    to_flow_state_name: "存在风险".to_string(),
+                    name: "有风险".to_string(),
+                    guard_by_creator: Some(true),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "进行中".to_string(),
+                    to_flow_state_name: "已关闭".to_string(),
+                    name: "关闭".to_string(),
+                    guard_by_creator: Some(true),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "存在风险".to_string(),
+                    to_flow_state_name: "进行中".to_string(),
+                    name: "正常".to_string(),
+                    guard_by_creator: Some(true),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "存在风险".to_string(),
+                    to_flow_state_name: "已完成".to_string(),
+                    name: "完成".to_string(),
+                    guard_by_creator: Some(true),
+                    vars_collect: Some(vec![
+                        FlowVarInfo {
+                            name: "assigned".to_string(),
+                            label: "负责人".to_string(),
+                            data_type: RbumDataTypeKind::STRING,
+                            widget_type: RbumWidgetTypeKind::SELECT,
+                            required: Some(true),
+                            ..Default::default()
+                        },
+                        FlowVarInfo {
+                            name: "start_end".to_string(),
+                            label: "实际周期".to_string(),
+                            data_type: RbumDataTypeKind::DATETIME,
+                            widget_type: RbumWidgetTypeKind::DATETIME,
+                            required: Some(true),
+                            ..Default::default()
+                        },
+                    ]),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "存在风险".to_string(),
+                    to_flow_state_name: "已关闭".to_string(),
+                    name: "关闭".to_string(),
+                    guard_by_creator: Some(true),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "已完成".to_string(),
+                    to_flow_state_name: "进行中".to_string(),
+                    name: "重新处理".to_string(),
+                    guard_by_creator: Some(true),
+                    vars_collect: Some(vec![
+                        FlowVarInfo {
+                            name: "assigned".to_string(),
+                            label: "负责人".to_string(),
+                            data_type: RbumDataTypeKind::STRING,
+                            widget_type: RbumWidgetTypeKind::SELECT,
+                            required: Some(true),
+                            ..Default::default()
+                        },
+                        FlowVarInfo {
+                            name: "start_end".to_string(),
+                            label: "计划周期".to_string(),
+                            data_type: RbumDataTypeKind::DATETIME,
+                            widget_type: RbumWidgetTypeKind::DATETIME,
+                            ..Default::default()
+                        },
+                    ]),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "已完成".to_string(),
+                    to_flow_state_name: "已关闭".to_string(),
+                    name: "关闭".to_string(),
+                    guard_by_creator: Some(true),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "已关闭".to_string(),
+                    to_flow_state_name: "待开始".to_string(),
+                    name: "激活".to_string(),
+                    guard_by_creator: Some(true),
+                    ..Default::default()
+                },
+            ],
+            funs,
+            ctx,
+        )
+        .await?;
+    }
+    let iter_init_model = FlowModelServ::paginate_items(
+        &FlowModelFilterReq {
+            basic: RbumBasicFilterReq { ..Default::default() },
+            tag: Some("ITER".to_string()),
+            ..Default::default()
+        },
+        1,
+        1,
+        None,
+        None,
+        funs,
+        ctx,
+    )
+    .await?
+    .records
+    .pop();
+    if iter_init_model.is_none() {
+        FlowModelServ::init_model(
+            "ITER",
+            vec![
+                ("待开始", FlowSysStateKind::Start),
+                ("进行中", FlowSysStateKind::Progress),
+                ("存在风险", FlowSysStateKind::Progress),
+                ("已完成", FlowSysStateKind::Progress),
+                ("已关闭", FlowSysStateKind::Finish),
+            ],
+            "默认迭代模板",
+            vec![
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "待开始".to_string(),
+                    to_flow_state_name: "进行中".to_string(),
+                    name: "开始".to_string(),
+                    guard_by_creator: Some(true),
+                    vars_collect: Some(vec![FlowVarInfo {
+                        name: "start_end".to_string(),
+                        label: "计划周期".to_string(),
+                        data_type: RbumDataTypeKind::DATETIME,
+                        widget_type: RbumWidgetTypeKind::DATETIME,
+                        ..Default::default()
+                    }]),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "待开始".to_string(),
+                    to_flow_state_name: "已关闭".to_string(),
+                    name: "关闭".to_string(),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "进行中".to_string(),
+                    to_flow_state_name: "已完成".to_string(),
+                    name: "完成".to_string(),
+                    guard_by_creator: Some(true),
+                    vars_collect: Some(vec![FlowVarInfo {
+                        name: "start_end".to_string(),
+                        label: "实际周期".to_string(),
+                        data_type: RbumDataTypeKind::DATETIME,
+                        widget_type: RbumWidgetTypeKind::DATETIME,
+                        required: Some(true),
+                        ..Default::default()
+                    }]),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "进行中".to_string(),
+                    to_flow_state_name: "存在风险".to_string(),
+                    name: "有风险".to_string(),
+                    guard_by_creator: Some(true),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "进行中".to_string(),
+                    to_flow_state_name: "已关闭".to_string(),
+                    name: "关闭".to_string(),
+                    guard_by_creator: Some(true),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "存在风险".to_string(),
+                    to_flow_state_name: "进行中".to_string(),
+                    name: "正常".to_string(),
+                    guard_by_creator: Some(true),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "存在风险".to_string(),
+                    to_flow_state_name: "已完成".to_string(),
+                    name: "完成".to_string(),
+                    guard_by_creator: Some(true),
+                    vars_collect: Some(vec![FlowVarInfo {
+                        name: "start_end".to_string(),
+                        label: "实际周期".to_string(),
+                        data_type: RbumDataTypeKind::DATETIME,
+                        widget_type: RbumWidgetTypeKind::DATETIME,
+                        required: Some(true),
+                        ..Default::default()
+                    }]),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "存在风险".to_string(),
+                    to_flow_state_name: "已关闭".to_string(),
+                    name: "关闭".to_string(),
+                    guard_by_creator: Some(true),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "已完成".to_string(),
+                    to_flow_state_name: "进行中".to_string(),
+                    name: "重新处理".to_string(),
+                    guard_by_creator: Some(true),
+                    vars_collect: Some(vec![FlowVarInfo {
+                        name: "start_end".to_string(),
+                        label: "计划周期".to_string(),
+                        data_type: RbumDataTypeKind::DATETIME,
+                        widget_type: RbumWidgetTypeKind::DATETIME,
+                        ..Default::default()
+                    }]),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "已完成".to_string(),
+                    to_flow_state_name: "已关闭".to_string(),
+                    name: "关闭".to_string(),
+                    guard_by_creator: Some(true),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "已关闭".to_string(),
+                    to_flow_state_name: "待开始".to_string(),
+                    name: "激活".to_string(),
+                    guard_by_creator: Some(true),
+                    ..Default::default()
+                },
+            ],
+            funs,
+            ctx,
+        )
+        .await?;
+    }
+    let task_init_model = FlowModelServ::paginate_items(
+        &FlowModelFilterReq {
+            basic: RbumBasicFilterReq { ..Default::default() },
+            tag: Some("TASK".to_string()),
+            ..Default::default()
+        },
+        1,
+        1,
+        None,
+        None,
+        funs,
+        ctx,
+    )
+    .await?
+    .records
+    .pop();
+    if task_init_model.is_none() {
+        FlowModelServ::init_model(
+            "TASK",
+            vec![
+                ("待开始", FlowSysStateKind::Start),
+                ("进行中", FlowSysStateKind::Progress),
+                ("存在风险", FlowSysStateKind::Progress),
+                ("已完成", FlowSysStateKind::Progress),
+                ("已关闭", FlowSysStateKind::Finish),
+            ],
+            "默认任务模板",
+            vec![
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "待开始".to_string(),
+                    to_flow_state_name: "进行中".to_string(),
+                    name: "开始".to_string(),
+                    guard_by_creator: Some(true),
+                    vars_collect: Some(vec![
+                        FlowVarInfo {
+                            name: "assigned".to_string(),
+                            label: "负责人".to_string(),
+                            data_type: RbumDataTypeKind::STRING,
+                            widget_type: RbumWidgetTypeKind::SELECT,
+                            required: Some(true),
+                            ..Default::default()
+                        },
+                        FlowVarInfo {
+                            name: "start_end".to_string(),
+                            label: "计划周期".to_string(),
+                            data_type: RbumDataTypeKind::DATETIME,
+                            widget_type: RbumWidgetTypeKind::DATETIME,
+                            ..Default::default()
+                        },
+                    ]),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "待开始".to_string(),
+                    to_flow_state_name: "已关闭".to_string(),
+                    name: "关闭".to_string(),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "进行中".to_string(),
+                    to_flow_state_name: "已完成".to_string(),
+                    name: "完成".to_string(),
+                    guard_by_creator: Some(true),
+                    vars_collect: Some(vec![
+                        FlowVarInfo {
+                            name: "assigned".to_string(),
+                            label: "负责人".to_string(),
+                            data_type: RbumDataTypeKind::STRING,
+                            widget_type: RbumWidgetTypeKind::SELECT,
+                            required: Some(true),
+                            ..Default::default()
+                        },
+                        FlowVarInfo {
+                            name: "start_end".to_string(),
+                            label: "实际周期".to_string(),
+                            data_type: RbumDataTypeKind::DATETIME,
+                            widget_type: RbumWidgetTypeKind::DATETIME,
+                            required: Some(true),
+                            ..Default::default()
+                        },
+                    ]),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "进行中".to_string(),
+                    to_flow_state_name: "存在风险".to_string(),
+                    name: "有风险".to_string(),
+                    guard_by_creator: Some(true),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "进行中".to_string(),
+                    to_flow_state_name: "已关闭".to_string(),
+                    name: "关闭".to_string(),
+                    guard_by_creator: Some(true),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "存在风险".to_string(),
+                    to_flow_state_name: "进行中".to_string(),
+                    name: "正常".to_string(),
+                    guard_by_creator: Some(true),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "存在风险".to_string(),
+                    to_flow_state_name: "已完成".to_string(),
+                    name: "完成".to_string(),
+                    guard_by_creator: Some(true),
+                    vars_collect: Some(vec![
+                        FlowVarInfo {
+                            name: "assigned".to_string(),
+                            label: "负责人".to_string(),
+                            data_type: RbumDataTypeKind::STRING,
+                            widget_type: RbumWidgetTypeKind::SELECT,
+                            required: Some(true),
+                            ..Default::default()
+                        },
+                        FlowVarInfo {
+                            name: "start_end".to_string(),
+                            label: "实际周期".to_string(),
+                            data_type: RbumDataTypeKind::DATETIME,
+                            widget_type: RbumWidgetTypeKind::DATETIME,
+                            required: Some(true),
+                            ..Default::default()
+                        },
+                    ]),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "存在风险".to_string(),
+                    to_flow_state_name: "已关闭".to_string(),
+                    name: "关闭".to_string(),
+                    guard_by_creator: Some(true),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "已完成".to_string(),
+                    to_flow_state_name: "进行中".to_string(),
+                    name: "重新处理".to_string(),
+                    guard_by_creator: Some(true),
+                    vars_collect: Some(vec![
+                        FlowVarInfo {
+                            name: "assigned".to_string(),
+                            label: "负责人".to_string(),
+                            data_type: RbumDataTypeKind::STRING,
+                            widget_type: RbumWidgetTypeKind::SELECT,
+                            required: Some(true),
+                            ..Default::default()
+                        },
+                        FlowVarInfo {
+                            name: "start_end".to_string(),
+                            label: "计划周期".to_string(),
+                            data_type: RbumDataTypeKind::DATETIME,
+                            widget_type: RbumWidgetTypeKind::DATETIME,
+                            ..Default::default()
+                        },
+                    ]),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "已完成".to_string(),
+                    to_flow_state_name: "已关闭".to_string(),
+                    name: "关闭".to_string(),
+                    guard_by_creator: Some(true),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "已关闭".to_string(),
+                    to_flow_state_name: "待开始".to_string(),
+                    name: "激活".to_string(),
+                    guard_by_creator: Some(true),
+                    ..Default::default()
+                },
+            ],
+            funs,
+            ctx,
+        )
+        .await?;
+    }
+    let tp_init_model = FlowModelServ::paginate_items(
+        &FlowModelFilterReq {
+            basic: RbumBasicFilterReq { ..Default::default() },
+            tag: Some("TP".to_string()),
+            ..Default::default()
+        },
+        1,
+        1,
+        None,
+        None,
+        funs,
+        ctx,
+    )
+    .await?
+    .records
+    .pop();
+    if tp_init_model.is_none() {
+        FlowModelServ::init_model(
+            "TP",
+            vec![
+                ("待开始", FlowSysStateKind::Start),
+                ("进行中", FlowSysStateKind::Progress),
+                ("存在风险", FlowSysStateKind::Progress),
+                ("已完成", FlowSysStateKind::Progress),
+                ("已关闭", FlowSysStateKind::Finish),
+            ],
+            "默认测试计划模板",
+            vec![
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "待开始".to_string(),
+                    to_flow_state_name: "进行中".to_string(),
+                    name: "开始".to_string(),
+                    guard_by_creator: Some(true),
+                    vars_collect: Some(vec![
+                        FlowVarInfo {
+                            name: "assigned".to_string(),
+                            label: "负责人".to_string(),
+                            data_type: RbumDataTypeKind::STRING,
+                            widget_type: RbumWidgetTypeKind::SELECT,
+                            required: Some(true),
+                            ..Default::default()
+                        },
+                        FlowVarInfo {
+                            name: "start_end".to_string(),
+                            label: "计划周期".to_string(),
+                            data_type: RbumDataTypeKind::DATETIME,
+                            widget_type: RbumWidgetTypeKind::DATETIME,
+                            ..Default::default()
+                        },
+                    ]),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "待开始".to_string(),
+                    to_flow_state_name: "已关闭".to_string(),
+                    name: "关闭".to_string(),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "进行中".to_string(),
+                    to_flow_state_name: "已完成".to_string(),
+                    name: "完成".to_string(),
+                    guard_by_creator: Some(true),
+                    vars_collect: Some(vec![
+                        FlowVarInfo {
+                            name: "assigned".to_string(),
+                            label: "负责人".to_string(),
+                            data_type: RbumDataTypeKind::STRING,
+                            widget_type: RbumWidgetTypeKind::SELECT,
+                            required: Some(true),
+                            ..Default::default()
+                        },
+                        FlowVarInfo {
+                            name: "start_end".to_string(),
+                            label: "实际周期".to_string(),
+                            data_type: RbumDataTypeKind::DATETIME,
+                            widget_type: RbumWidgetTypeKind::DATETIME,
+                            required: Some(true),
+                            ..Default::default()
+                        },
+                    ]),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "进行中".to_string(),
+                    to_flow_state_name: "存在风险".to_string(),
+                    name: "有风险".to_string(),
+                    guard_by_creator: Some(true),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "进行中".to_string(),
+                    to_flow_state_name: "已关闭".to_string(),
+                    name: "关闭".to_string(),
+                    guard_by_creator: Some(true),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "存在风险".to_string(),
+                    to_flow_state_name: "进行中".to_string(),
+                    name: "正常".to_string(),
+                    guard_by_creator: Some(true),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "存在风险".to_string(),
+                    to_flow_state_name: "已完成".to_string(),
+                    name: "完成".to_string(),
+                    guard_by_creator: Some(true),
+                    vars_collect: Some(vec![
+                        FlowVarInfo {
+                            name: "assigned".to_string(),
+                            label: "负责人".to_string(),
+                            data_type: RbumDataTypeKind::STRING,
+                            widget_type: RbumWidgetTypeKind::SELECT,
+                            required: Some(true),
+                            ..Default::default()
+                        },
+                        FlowVarInfo {
+                            name: "start_end".to_string(),
+                            label: "实际周期".to_string(),
+                            data_type: RbumDataTypeKind::DATETIME,
+                            widget_type: RbumWidgetTypeKind::DATETIME,
+                            required: Some(true),
+                            ..Default::default()
+                        },
+                    ]),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "存在风险".to_string(),
+                    to_flow_state_name: "已关闭".to_string(),
+                    name: "关闭".to_string(),
+                    guard_by_creator: Some(true),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "已完成".to_string(),
+                    to_flow_state_name: "进行中".to_string(),
+                    name: "重新处理".to_string(),
+                    guard_by_creator: Some(true),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "已完成".to_string(),
+                    to_flow_state_name: "已关闭".to_string(),
+                    name: "关闭".to_string(),
+                    guard_by_creator: Some(true),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "已关闭".to_string(),
+                    to_flow_state_name: "待开始".to_string(),
+                    name: "激活".to_string(),
+                    guard_by_creator: Some(true),
+                    ..Default::default()
+                },
+            ],
+            funs,
+            ctx,
+        )
+        .await?;
+    }
+    let ts_init_model = FlowModelServ::paginate_items(
+        &FlowModelFilterReq {
+            basic: RbumBasicFilterReq { ..Default::default() },
+            tag: Some("TS".to_string()),
+            ..Default::default()
+        },
+        1,
+        1,
+        None,
+        None,
+        funs,
+        ctx,
+    )
+    .await?
+    .records
+    .pop();
+    if ts_init_model.is_none() {
+        FlowModelServ::init_model(
+            "TS",
+            vec![
+                ("待开始", FlowSysStateKind::Start),
+                ("进行中", FlowSysStateKind::Progress),
+                ("存在风险", FlowSysStateKind::Progress),
+                ("已完成", FlowSysStateKind::Progress),
+                ("已关闭", FlowSysStateKind::Finish),
+            ],
+            "默认测试阶段模板",
+            vec![
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "待开始".to_string(),
+                    to_flow_state_name: "进行中".to_string(),
+                    name: "开始".to_string(),
+                    guard_by_creator: Some(true),
+                    vars_collect: Some(vec![
+                        FlowVarInfo {
+                            name: "assigned".to_string(),
+                            label: "负责人".to_string(),
+                            data_type: RbumDataTypeKind::STRING,
+                            widget_type: RbumWidgetTypeKind::SELECT,
+                            required: Some(true),
+                            ..Default::default()
+                        },
+                        FlowVarInfo {
+                            name: "start_end".to_string(),
+                            label: "计划周期".to_string(),
+                            data_type: RbumDataTypeKind::DATETIME,
+                            widget_type: RbumWidgetTypeKind::DATETIME,
+                            ..Default::default()
+                        },
+                    ]),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "待开始".to_string(),
+                    to_flow_state_name: "已关闭".to_string(),
+                    name: "关闭".to_string(),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "进行中".to_string(),
+                    to_flow_state_name: "已完成".to_string(),
+                    name: "完成".to_string(),
+                    guard_by_creator: Some(true),
+                    vars_collect: Some(vec![
+                        FlowVarInfo {
+                            name: "assigned".to_string(),
+                            label: "负责人".to_string(),
+                            data_type: RbumDataTypeKind::STRING,
+                            widget_type: RbumWidgetTypeKind::SELECT,
+                            required: Some(true),
+                            ..Default::default()
+                        },
+                        FlowVarInfo {
+                            name: "start_end".to_string(),
+                            label: "实际周期".to_string(),
+                            data_type: RbumDataTypeKind::DATETIME,
+                            widget_type: RbumWidgetTypeKind::DATETIME,
+                            required: Some(true),
+                            ..Default::default()
+                        },
+                    ]),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "进行中".to_string(),
+                    to_flow_state_name: "存在风险".to_string(),
+                    name: "有风险".to_string(),
+                    guard_by_creator: Some(true),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "进行中".to_string(),
+                    to_flow_state_name: "已关闭".to_string(),
+                    name: "关闭".to_string(),
+                    guard_by_creator: Some(true),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "存在风险".to_string(),
+                    to_flow_state_name: "进行中".to_string(),
+                    name: "正常".to_string(),
+                    guard_by_creator: Some(true),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "存在风险".to_string(),
+                    to_flow_state_name: "已完成".to_string(),
+                    name: "完成".to_string(),
+                    guard_by_creator: Some(true),
+                    vars_collect: Some(vec![
+                        FlowVarInfo {
+                            name: "assigned".to_string(),
+                            label: "负责人".to_string(),
+                            data_type: RbumDataTypeKind::STRING,
+                            widget_type: RbumWidgetTypeKind::SELECT,
+                            required: Some(true),
+                            ..Default::default()
+                        },
+                        FlowVarInfo {
+                            name: "start_end".to_string(),
+                            label: "实际周期".to_string(),
+                            data_type: RbumDataTypeKind::DATETIME,
+                            widget_type: RbumWidgetTypeKind::DATETIME,
+                            required: Some(true),
+                            ..Default::default()
+                        },
+                    ]),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "存在风险".to_string(),
+                    to_flow_state_name: "已关闭".to_string(),
+                    name: "关闭".to_string(),
+                    guard_by_creator: Some(true),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "已完成".to_string(),
+                    to_flow_state_name: "进行中".to_string(),
+                    name: "重新处理".to_string(),
+                    guard_by_creator: Some(true),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "已完成".to_string(),
+                    to_flow_state_name: "已关闭".to_string(),
+                    name: "关闭".to_string(),
+                    guard_by_creator: Some(true),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "已关闭".to_string(),
+                    to_flow_state_name: "待开始".to_string(),
+                    name: "激活".to_string(),
+                    guard_by_creator: Some(true),
+                    ..Default::default()
+                },
+            ],
+            funs,
+            ctx,
+        )
+        .await?;
+    }
+    let issue_init_model = FlowModelServ::paginate_items(
+        &FlowModelFilterReq {
+            basic: RbumBasicFilterReq { ..Default::default() },
+            tag: Some("ISSUE".to_string()),
+            ..Default::default()
+        },
+        1,
+        1,
+        None,
+        None,
+        funs,
+        ctx,
+    )
+    .await?
+    .records
+    .pop();
+    if issue_init_model.is_none() {
+        FlowModelServ::init_model(
+            "ISSUE",
+            vec![
+                ("待处理", FlowSysStateKind::Start),
+                ("修复中", FlowSysStateKind::Progress),
+                ("待确认", FlowSysStateKind::Progress),
+                ("已解决", FlowSysStateKind::Progress),
+                ("已关闭", FlowSysStateKind::Finish),
+            ],
+            "默认缺陷模板",
+            vec![
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "待处理".to_string(),
+                    to_flow_state_name: "修复中".to_string(),
+                    name: "确认并修复".to_string(),
+                    guard_by_creator: Some(true),
+                    vars_collect: Some(vec![
+                        FlowVarInfo {
+                            name: "assigned".to_string(),
+                            label: "负责人".to_string(),
+                            data_type: RbumDataTypeKind::STRING,
+                            widget_type: RbumWidgetTypeKind::SELECT,
+                            required: Some(true),
+                            ..Default::default()
+                        },
+                        FlowVarInfo {
+                            name: "comment".to_string(),
+                            label: "评论".to_string(),
+                            data_type: RbumDataTypeKind::STRING,
+                            widget_type: RbumWidgetTypeKind::INPUT,
+                            ..Default::default()
+                        },
+                    ]),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "待处理".to_string(),
+                    to_flow_state_name: "待确认".to_string(),
+                    name: "修复完成".to_string(),
+                    guard_by_creator: Some(true),
+                    vars_collect: Some(vec![
+                        FlowVarInfo {
+                            name: "handle_user".to_string(),
+                            label: "解决人".to_string(),
+                            data_type: RbumDataTypeKind::STRING,
+                            widget_type: RbumWidgetTypeKind::SELECT,
+                            required: Some(true),
+                            ..Default::default()
+                        },
+                        FlowVarInfo {
+                            name: "issue_solution".to_string(),
+                            label: "解决方案".to_string(),
+                            data_type: RbumDataTypeKind::STRING,
+                            widget_type: RbumWidgetTypeKind::SELECT,
+                            required: Some(true),
+                            ..Default::default()
+                        },
+                        FlowVarInfo {
+                            name: "comment".to_string(),
+                            label: "评论".to_string(),
+                            data_type: RbumDataTypeKind::STRING,
+                            widget_type: RbumWidgetTypeKind::INPUT,
+                            ..Default::default()
+                        },
+                    ]),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "修复中".to_string(),
+                    to_flow_state_name: "待确认".to_string(),
+                    name: "修复完成".to_string(),
+                    guard_by_creator: Some(true),
+                    vars_collect: Some(vec![
+                        FlowVarInfo {
+                            name: "handle_user".to_string(),
+                            label: "解决人".to_string(),
+                            data_type: RbumDataTypeKind::STRING,
+                            widget_type: RbumWidgetTypeKind::SELECT,
+                            required: Some(true),
+                            ..Default::default()
+                        },
+                        FlowVarInfo {
+                            name: "issue_solution".to_string(),
+                            label: "解决方案".to_string(),
+                            data_type: RbumDataTypeKind::STRING,
+                            widget_type: RbumWidgetTypeKind::SELECT,
+                            required: Some(true),
+                            ..Default::default()
+                        },
+                        FlowVarInfo {
+                            name: "comment".to_string(),
+                            label: "评论".to_string(),
+                            data_type: RbumDataTypeKind::STRING,
+                            widget_type: RbumWidgetTypeKind::INPUT,
+                            ..Default::default()
+                        },
+                    ]),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "待确认".to_string(),
+                    to_flow_state_name: "已解决".to_string(),
+                    name: "确认修复".to_string(),
+                    guard_by_creator: Some(true),
+                    vars_collect: Some(vec![
+                        FlowVarInfo {
+                            name: "handle_user".to_string(),
+                            label: "解决人".to_string(),
+                            data_type: RbumDataTypeKind::STRING,
+                            widget_type: RbumWidgetTypeKind::SELECT,
+                            required: Some(true),
+                            ..Default::default()
+                        },
+                        FlowVarInfo {
+                            name: "issue_solution".to_string(),
+                            label: "解决方案".to_string(),
+                            data_type: RbumDataTypeKind::STRING,
+                            widget_type: RbumWidgetTypeKind::SELECT,
+                            required: Some(true),
+                            ..Default::default()
+                        },
+                        FlowVarInfo {
+                            name: "handle_time".to_string(),
+                            label: "解决时间".to_string(),
+                            data_type: RbumDataTypeKind::STRING,
+                            widget_type: RbumWidgetTypeKind::DATETIME,
+                            required: Some(true),
+                            ..Default::default()
+                        },
+                        FlowVarInfo {
+                            name: "comment".to_string(),
+                            label: "评论".to_string(),
+                            data_type: RbumDataTypeKind::STRING,
+                            widget_type: RbumWidgetTypeKind::INPUT,
+                            ..Default::default()
+                        },
+                    ]),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "待确认".to_string(),
+                    to_flow_state_name: "修复中".to_string(),
+                    name: "未修复".to_string(),
+                    guard_by_creator: Some(true),
+                    vars_collect: Some(vec![
+                        FlowVarInfo {
+                            name: "assigned".to_string(),
+                            label: "负责人".to_string(),
+                            data_type: RbumDataTypeKind::STRING,
+                            widget_type: RbumWidgetTypeKind::SELECT,
+                            required: Some(true),
+                            ..Default::default()
+                        },
+                        FlowVarInfo {
+                            name: "comment".to_string(),
+                            label: "评论".to_string(),
+                            data_type: RbumDataTypeKind::STRING,
+                            widget_type: RbumWidgetTypeKind::INPUT,
+                            ..Default::default()
+                        },
+                    ]),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "已解决".to_string(),
+                    to_flow_state_name: "待处理".to_string(),
+                    name: "激活".to_string(),
+                    guard_by_creator: Some(true),
+                    vars_collect: Some(vec![
+                        FlowVarInfo {
+                            name: "assigned".to_string(),
+                            label: "负责人".to_string(),
+                            data_type: RbumDataTypeKind::STRING,
+                            widget_type: RbumWidgetTypeKind::SELECT,
+                            required: Some(true),
+                            ..Default::default()
+                        },
+                        FlowVarInfo {
+                            name: "comment".to_string(),
+                            label: "评论".to_string(),
+                            data_type: RbumDataTypeKind::STRING,
+                            widget_type: RbumWidgetTypeKind::INPUT,
+                            ..Default::default()
+                        },
+                    ]),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "已解决".to_string(),
+                    to_flow_state_name: "已关闭".to_string(),
+                    name: "关闭".to_string(),
+                    guard_by_creator: Some(true),
+                    vars_collect: Some(vec![
+                        FlowVarInfo {
+                            name: "assigned".to_string(),
+                            label: "负责人".to_string(),
+                            data_type: RbumDataTypeKind::STRING,
+                            widget_type: RbumWidgetTypeKind::SELECT,
+                            required: Some(true),
+                            ..Default::default()
+                        },
+                        FlowVarInfo {
+                            name: "comment".to_string(),
+                            label: "评论".to_string(),
+                            data_type: RbumDataTypeKind::STRING,
+                            widget_type: RbumWidgetTypeKind::INPUT,
+                            ..Default::default()
+                        },
+                    ]),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "已关闭".to_string(),
+                    to_flow_state_name: "待处理".to_string(),
+                    name: "激活".to_string(),
+                    guard_by_creator: Some(true),
+                    vars_collect: Some(vec![
+                        FlowVarInfo {
+                            name: "assigned".to_string(),
+                            label: "负责人".to_string(),
+                            data_type: RbumDataTypeKind::STRING,
+                            widget_type: RbumWidgetTypeKind::SELECT,
+                            required: Some(true),
+                            ..Default::default()
+                        },
+                        FlowVarInfo {
+                            name: "comment".to_string(),
+                            label: "评论".to_string(),
+                            data_type: RbumDataTypeKind::STRING,
+                            widget_type: RbumWidgetTypeKind::INPUT,
+                            ..Default::default()
+                        },
+                    ]),
+                    ..Default::default()
+                },
+            ],
+            funs,
+            ctx,
+        )
+        .await?;
+    }
+    let cts_init_model = FlowModelServ::paginate_items(
+        &FlowModelFilterReq {
+            basic: RbumBasicFilterReq { ..Default::default() },
+            tag: Some("CTS".to_string()),
+            ..Default::default()
+        },
+        1,
+        1,
+        None,
+        None,
+        funs,
+        ctx,
+    )
+    .await?
+    .records
+    .pop();
+    if cts_init_model.is_none() {
+        FlowModelServ::init_model(
+            "CTS",
+            vec![
+                ("待接收", FlowSysStateKind::Start),
+                ("已接收", FlowSysStateKind::Progress),
+                ("已退回", FlowSysStateKind::Finish),
+                ("已撤销", FlowSysStateKind::Finish),
+            ],
+            "默认缺陷模板",
+            vec![
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "待接收".to_string(),
+                    to_flow_state_name: "已接收".to_string(),
+                    name: "接收".to_string(),
+                    guard_by_creator: Some(true),
+                    double_check: Some(FlowTransitionDoubleCheckInfo {
+                        is_open: true,
+                        content: Some("确认接收该转测单？".to_string()),
+                    }),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "待接收".to_string(),
+                    to_flow_state_name: "已撤销".to_string(),
+                    name: "撤销".to_string(),
+                    guard_by_creator: Some(true),
+                    double_check: Some(FlowTransitionDoubleCheckInfo {
+                        is_open: true,
+                        content: Some("确认撤销该转测单？".to_string()),
+                    }),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "待接收".to_string(),
+                    to_flow_state_name: "已退回".to_string(),
+                    name: "退回".to_string(),
+                    guard_by_creator: Some(true),
+                    double_check: Some(FlowTransitionDoubleCheckInfo {
+                        is_open: true,
+                        content: Some("确认退回该转测单？".to_string()),
+                    }),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "已退回".to_string(),
+                    to_flow_state_name: "已接收".to_string(),
+                    name: "重新提交".to_string(),
+                    guard_by_creator: Some(true),
+                    double_check: Some(FlowTransitionDoubleCheckInfo {
+                        is_open: true,
+                        content: Some("确认重新提交该转测单？".to_string()),
+                    }),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "已撤销".to_string(),
+                    to_flow_state_name: "待接收".to_string(),
+                    name: "重新提交".to_string(),
+                    guard_by_creator: Some(true),
+                    double_check: Some(FlowTransitionDoubleCheckInfo {
+                        is_open: true,
+                        content: Some("确认重新提交该转测单？".to_string()),
+                    }),
+                    ..Default::default()
+                },
+            ],
+            funs,
+            ctx,
+        )
+        .await?;
+    }
+    let ms_init_model = FlowModelServ::paginate_items(
+        &FlowModelFilterReq {
+            basic: RbumBasicFilterReq { ..Default::default() },
+            tag: Some("MS".to_string()),
+            ..Default::default()
+        },
+        1,
+        1,
+        None,
+        None,
+        funs,
+        ctx,
+    )
+    .await?
+    .records
+    .pop();
+    if ms_init_model.is_none() {
+        FlowModelServ::init_model(
+            "MS",
+            vec![
+                ("待开始", FlowSysStateKind::Start),
+                ("进行中", FlowSysStateKind::Progress),
+                ("存在风险", FlowSysStateKind::Progress),
+                ("已完成", FlowSysStateKind::Progress),
+                ("已关闭", FlowSysStateKind::Finish),
+            ],
+            "默认里程碑模板",
+            vec![
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "待开始".to_string(),
+                    to_flow_state_name: "进行中".to_string(),
+                    name: "开始".to_string(),
+                    guard_by_creator: Some(true),
+                    vars_collect: Some(vec![
+                        FlowVarInfo {
+                            name: "assigned".to_string(),
+                            label: "负责人".to_string(),
+                            data_type: RbumDataTypeKind::STRING,
+                            widget_type: RbumWidgetTypeKind::SELECT,
+                            required: Some(true),
+                            ..Default::default()
+                        },
+                        FlowVarInfo {
+                            name: "start_end".to_string(),
+                            label: "计划周期".to_string(),
+                            data_type: RbumDataTypeKind::DATETIME,
+                            widget_type: RbumWidgetTypeKind::DATETIME,
+                            ..Default::default()
+                        },
+                    ]),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "待开始".to_string(),
+                    to_flow_state_name: "已关闭".to_string(),
+                    name: "关闭".to_string(),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "进行中".to_string(),
+                    to_flow_state_name: "已完成".to_string(),
+                    name: "完成".to_string(),
+                    guard_by_creator: Some(true),
+                    vars_collect: Some(vec![
+                        FlowVarInfo {
+                            name: "assigned".to_string(),
+                            label: "负责人".to_string(),
+                            data_type: RbumDataTypeKind::STRING,
+                            widget_type: RbumWidgetTypeKind::SELECT,
+                            required: Some(true),
+                            ..Default::default()
+                        },
+                        FlowVarInfo {
+                            name: "start_end".to_string(),
+                            label: "实际周期".to_string(),
+                            data_type: RbumDataTypeKind::DATETIME,
+                            widget_type: RbumWidgetTypeKind::DATETIME,
+                            required: Some(true),
+                            ..Default::default()
+                        },
+                    ]),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "进行中".to_string(),
+                    to_flow_state_name: "存在风险".to_string(),
+                    name: "有风险".to_string(),
+                    guard_by_creator: Some(true),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "进行中".to_string(),
+                    to_flow_state_name: "已关闭".to_string(),
+                    name: "关闭".to_string(),
+                    guard_by_creator: Some(true),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "存在风险".to_string(),
+                    to_flow_state_name: "进行中".to_string(),
+                    name: "正常".to_string(),
+                    guard_by_creator: Some(true),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "存在风险".to_string(),
+                    to_flow_state_name: "已完成".to_string(),
+                    name: "完成".to_string(),
+                    guard_by_creator: Some(true),
+                    vars_collect: Some(vec![
+                        FlowVarInfo {
+                            name: "assigned".to_string(),
+                            label: "负责人".to_string(),
+                            data_type: RbumDataTypeKind::STRING,
+                            widget_type: RbumWidgetTypeKind::SELECT,
+                            required: Some(true),
+                            ..Default::default()
+                        },
+                        FlowVarInfo {
+                            name: "start_end".to_string(),
+                            label: "实际周期".to_string(),
+                            data_type: RbumDataTypeKind::DATETIME,
+                            widget_type: RbumWidgetTypeKind::DATETIME,
+                            required: Some(true),
+                            ..Default::default()
+                        },
+                    ]),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "存在风险".to_string(),
+                    to_flow_state_name: "已关闭".to_string(),
+                    name: "关闭".to_string(),
+                    guard_by_creator: Some(true),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "已完成".to_string(),
+                    to_flow_state_name: "进行中".to_string(),
+                    name: "重新处理".to_string(),
+                    guard_by_creator: Some(true),
+                    vars_collect: Some(vec![
+                        FlowVarInfo {
+                            name: "assigned".to_string(),
+                            label: "负责人".to_string(),
+                            data_type: RbumDataTypeKind::STRING,
+                            widget_type: RbumWidgetTypeKind::SELECT,
+                            required: Some(true),
+                            ..Default::default()
+                        },
+                        FlowVarInfo {
+                            name: "start_end".to_string(),
+                            label: "计划周期".to_string(),
+                            data_type: RbumDataTypeKind::DATETIME,
+                            widget_type: RbumWidgetTypeKind::DATETIME,
+                            ..Default::default()
+                        },
+                    ]),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "已完成".to_string(),
+                    to_flow_state_name: "已关闭".to_string(),
+                    name: "关闭".to_string(),
+                    guard_by_creator: Some(true),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "已关闭".to_string(),
+                    to_flow_state_name: "待开始".to_string(),
+                    name: "激活".to_string(),
+                    guard_by_creator: Some(true),
+                    ..Default::default()
+                },
+            ],
+            funs,
+            ctx,
+        )
+        .await?;
+    }
+    let iter_init_model = FlowModelServ::paginate_items(
+        &FlowModelFilterReq {
+            basic: RbumBasicFilterReq { ..Default::default() },
+            tag: Some("ITER".to_string()),
+            ..Default::default()
+        },
+        1,
+        1,
+        None,
+        None,
+        funs,
+        ctx,
+    )
+    .await?
+    .records
+    .pop();
+    if iter_init_model.is_none() {
+        FlowModelServ::init_model(
+            "ITER",
+            vec![
+                ("待开始", FlowSysStateKind::Start),
+                ("进行中", FlowSysStateKind::Progress),
+                ("存在风险", FlowSysStateKind::Progress),
+                ("已完成", FlowSysStateKind::Progress),
+                ("已关闭", FlowSysStateKind::Finish),
+            ],
+            "默认迭代模板",
+            vec![
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "待开始".to_string(),
+                    to_flow_state_name: "进行中".to_string(),
+                    name: "开始".to_string(),
+                    guard_by_creator: Some(true),
+                    vars_collect: Some(vec![FlowVarInfo {
+                        name: "start_end".to_string(),
+                        label: "计划周期".to_string(),
+                        data_type: RbumDataTypeKind::DATETIME,
+                        widget_type: RbumWidgetTypeKind::DATETIME,
+                        ..Default::default()
+                    }]),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "待开始".to_string(),
+                    to_flow_state_name: "已关闭".to_string(),
+                    name: "关闭".to_string(),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "进行中".to_string(),
+                    to_flow_state_name: "已完成".to_string(),
+                    name: "完成".to_string(),
+                    guard_by_creator: Some(true),
+                    vars_collect: Some(vec![FlowVarInfo {
+                        name: "start_end".to_string(),
+                        label: "实际周期".to_string(),
+                        data_type: RbumDataTypeKind::DATETIME,
+                        widget_type: RbumWidgetTypeKind::DATETIME,
+                        required: Some(true),
+                        ..Default::default()
+                    }]),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "进行中".to_string(),
+                    to_flow_state_name: "存在风险".to_string(),
+                    name: "有风险".to_string(),
+                    guard_by_creator: Some(true),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "进行中".to_string(),
+                    to_flow_state_name: "已关闭".to_string(),
+                    name: "关闭".to_string(),
+                    guard_by_creator: Some(true),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "存在风险".to_string(),
+                    to_flow_state_name: "进行中".to_string(),
+                    name: "正常".to_string(),
+                    guard_by_creator: Some(true),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "存在风险".to_string(),
+                    to_flow_state_name: "已完成".to_string(),
+                    name: "完成".to_string(),
+                    guard_by_creator: Some(true),
+                    vars_collect: Some(vec![FlowVarInfo {
+                        name: "start_end".to_string(),
+                        label: "实际周期".to_string(),
+                        data_type: RbumDataTypeKind::DATETIME,
+                        widget_type: RbumWidgetTypeKind::DATETIME,
+                        required: Some(true),
+                        ..Default::default()
+                    }]),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "存在风险".to_string(),
+                    to_flow_state_name: "已关闭".to_string(),
+                    name: "关闭".to_string(),
+                    guard_by_creator: Some(true),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "已完成".to_string(),
+                    to_flow_state_name: "进行中".to_string(),
+                    name: "重新处理".to_string(),
+                    guard_by_creator: Some(true),
+                    vars_collect: Some(vec![FlowVarInfo {
+                        name: "start_end".to_string(),
+                        label: "计划周期".to_string(),
+                        data_type: RbumDataTypeKind::DATETIME,
+                        widget_type: RbumWidgetTypeKind::DATETIME,
+                        ..Default::default()
+                    }]),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "已完成".to_string(),
+                    to_flow_state_name: "已关闭".to_string(),
+                    name: "关闭".to_string(),
+                    guard_by_creator: Some(true),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "已关闭".to_string(),
+                    to_flow_state_name: "待开始".to_string(),
+                    name: "激活".to_string(),
+                    guard_by_creator: Some(true),
+                    ..Default::default()
+                },
+            ],
+            funs,
+            ctx,
+        )
+        .await?;
+    }
+    let task_init_model = FlowModelServ::paginate_items(
+        &FlowModelFilterReq {
+            basic: RbumBasicFilterReq { ..Default::default() },
+            tag: Some("TASK".to_string()),
+            ..Default::default()
+        },
+        1,
+        1,
+        None,
+        None,
+        funs,
+        ctx,
+    )
+    .await?
+    .records
+    .pop();
+    if task_init_model.is_none() {
+        FlowModelServ::init_model(
+            "TASK",
+            vec![
+                ("待开始", FlowSysStateKind::Start),
+                ("进行中", FlowSysStateKind::Progress),
+                ("存在风险", FlowSysStateKind::Progress),
+                ("已完成", FlowSysStateKind::Progress),
+                ("已关闭", FlowSysStateKind::Finish),
+            ],
+            "默认任务模板",
+            vec![
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "待开始".to_string(),
+                    to_flow_state_name: "进行中".to_string(),
+                    name: "开始".to_string(),
+                    guard_by_creator: Some(true),
+                    vars_collect: Some(vec![
+                        FlowVarInfo {
+                            name: "assigned".to_string(),
+                            label: "负责人".to_string(),
+                            data_type: RbumDataTypeKind::STRING,
+                            widget_type: RbumWidgetTypeKind::SELECT,
+                            required: Some(true),
+                            ..Default::default()
+                        },
+                        FlowVarInfo {
+                            name: "start_end".to_string(),
+                            label: "计划周期".to_string(),
+                            data_type: RbumDataTypeKind::DATETIME,
+                            widget_type: RbumWidgetTypeKind::DATETIME,
+                            ..Default::default()
+                        },
+                    ]),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "待开始".to_string(),
+                    to_flow_state_name: "已关闭".to_string(),
+                    name: "关闭".to_string(),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "进行中".to_string(),
+                    to_flow_state_name: "已完成".to_string(),
+                    name: "完成".to_string(),
+                    guard_by_creator: Some(true),
+                    vars_collect: Some(vec![
+                        FlowVarInfo {
+                            name: "assigned".to_string(),
+                            label: "负责人".to_string(),
+                            data_type: RbumDataTypeKind::STRING,
+                            widget_type: RbumWidgetTypeKind::SELECT,
+                            required: Some(true),
+                            ..Default::default()
+                        },
+                        FlowVarInfo {
+                            name: "start_end".to_string(),
+                            label: "实际周期".to_string(),
+                            data_type: RbumDataTypeKind::DATETIME,
+                            widget_type: RbumWidgetTypeKind::DATETIME,
+                            required: Some(true),
+                            ..Default::default()
+                        },
+                    ]),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "进行中".to_string(),
+                    to_flow_state_name: "存在风险".to_string(),
+                    name: "有风险".to_string(),
+                    guard_by_creator: Some(true),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "进行中".to_string(),
+                    to_flow_state_name: "已关闭".to_string(),
+                    name: "关闭".to_string(),
+                    guard_by_creator: Some(true),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "存在风险".to_string(),
+                    to_flow_state_name: "进行中".to_string(),
+                    name: "正常".to_string(),
+                    guard_by_creator: Some(true),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "存在风险".to_string(),
+                    to_flow_state_name: "已完成".to_string(),
+                    name: "完成".to_string(),
+                    guard_by_creator: Some(true),
+                    vars_collect: Some(vec![
+                        FlowVarInfo {
+                            name: "assigned".to_string(),
+                            label: "负责人".to_string(),
+                            data_type: RbumDataTypeKind::STRING,
+                            widget_type: RbumWidgetTypeKind::SELECT,
+                            required: Some(true),
+                            ..Default::default()
+                        },
+                        FlowVarInfo {
+                            name: "start_end".to_string(),
+                            label: "实际周期".to_string(),
+                            data_type: RbumDataTypeKind::DATETIME,
+                            widget_type: RbumWidgetTypeKind::DATETIME,
+                            required: Some(true),
+                            ..Default::default()
+                        },
+                    ]),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "存在风险".to_string(),
+                    to_flow_state_name: "已关闭".to_string(),
+                    name: "关闭".to_string(),
+                    guard_by_creator: Some(true),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "已完成".to_string(),
+                    to_flow_state_name: "进行中".to_string(),
+                    name: "重新处理".to_string(),
+                    guard_by_creator: Some(true),
+                    vars_collect: Some(vec![
+                        FlowVarInfo {
+                            name: "assigned".to_string(),
+                            label: "负责人".to_string(),
+                            data_type: RbumDataTypeKind::STRING,
+                            widget_type: RbumWidgetTypeKind::SELECT,
+                            required: Some(true),
+                            ..Default::default()
+                        },
+                        FlowVarInfo {
+                            name: "start_end".to_string(),
+                            label: "计划周期".to_string(),
+                            data_type: RbumDataTypeKind::DATETIME,
+                            widget_type: RbumWidgetTypeKind::DATETIME,
+                            ..Default::default()
+                        },
+                    ]),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "已完成".to_string(),
+                    to_flow_state_name: "已关闭".to_string(),
+                    name: "关闭".to_string(),
+                    guard_by_creator: Some(true),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "已关闭".to_string(),
+                    to_flow_state_name: "待开始".to_string(),
+                    name: "激活".to_string(),
+                    guard_by_creator: Some(true),
+                    ..Default::default()
+                },
+            ],
+            funs,
+            ctx,
+        )
+        .await?;
+    }
+    let tp_init_model = FlowModelServ::paginate_items(
+        &FlowModelFilterReq {
+            basic: RbumBasicFilterReq { ..Default::default() },
+            tag: Some("TP".to_string()),
+            ..Default::default()
+        },
+        1,
+        1,
+        None,
+        None,
+        funs,
+        ctx,
+    )
+    .await?
+    .records
+    .pop();
+    if tp_init_model.is_none() {
+        FlowModelServ::init_model(
+            "TP",
+            vec![
+                ("待开始", FlowSysStateKind::Start),
+                ("进行中", FlowSysStateKind::Progress),
+                ("存在风险", FlowSysStateKind::Progress),
+                ("已完成", FlowSysStateKind::Progress),
+                ("已关闭", FlowSysStateKind::Finish),
+            ],
+            "默认测试计划模板",
+            vec![
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "待开始".to_string(),
+                    to_flow_state_name: "进行中".to_string(),
+                    name: "开始".to_string(),
+                    guard_by_creator: Some(true),
+                    vars_collect: Some(vec![
+                        FlowVarInfo {
+                            name: "assigned".to_string(),
+                            label: "负责人".to_string(),
+                            data_type: RbumDataTypeKind::STRING,
+                            widget_type: RbumWidgetTypeKind::SELECT,
+                            required: Some(true),
+                            ..Default::default()
+                        },
+                        FlowVarInfo {
+                            name: "start_end".to_string(),
+                            label: "计划周期".to_string(),
+                            data_type: RbumDataTypeKind::DATETIME,
+                            widget_type: RbumWidgetTypeKind::DATETIME,
+                            ..Default::default()
+                        },
+                    ]),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "待开始".to_string(),
+                    to_flow_state_name: "已关闭".to_string(),
+                    name: "关闭".to_string(),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "进行中".to_string(),
+                    to_flow_state_name: "已完成".to_string(),
+                    name: "完成".to_string(),
+                    guard_by_creator: Some(true),
+                    vars_collect: Some(vec![
+                        FlowVarInfo {
+                            name: "assigned".to_string(),
+                            label: "负责人".to_string(),
+                            data_type: RbumDataTypeKind::STRING,
+                            widget_type: RbumWidgetTypeKind::SELECT,
+                            required: Some(true),
+                            ..Default::default()
+                        },
+                        FlowVarInfo {
+                            name: "start_end".to_string(),
+                            label: "实际周期".to_string(),
+                            data_type: RbumDataTypeKind::DATETIME,
+                            widget_type: RbumWidgetTypeKind::DATETIME,
+                            required: Some(true),
+                            ..Default::default()
+                        },
+                    ]),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "进行中".to_string(),
+                    to_flow_state_name: "存在风险".to_string(),
+                    name: "有风险".to_string(),
+                    guard_by_creator: Some(true),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "进行中".to_string(),
+                    to_flow_state_name: "已关闭".to_string(),
+                    name: "关闭".to_string(),
+                    guard_by_creator: Some(true),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "存在风险".to_string(),
+                    to_flow_state_name: "进行中".to_string(),
+                    name: "正常".to_string(),
+                    guard_by_creator: Some(true),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "存在风险".to_string(),
+                    to_flow_state_name: "已完成".to_string(),
+                    name: "完成".to_string(),
+                    guard_by_creator: Some(true),
+                    vars_collect: Some(vec![
+                        FlowVarInfo {
+                            name: "assigned".to_string(),
+                            label: "负责人".to_string(),
+                            data_type: RbumDataTypeKind::STRING,
+                            widget_type: RbumWidgetTypeKind::SELECT,
+                            required: Some(true),
+                            ..Default::default()
+                        },
+                        FlowVarInfo {
+                            name: "start_end".to_string(),
+                            label: "实际周期".to_string(),
+                            data_type: RbumDataTypeKind::DATETIME,
+                            widget_type: RbumWidgetTypeKind::DATETIME,
+                            required: Some(true),
+                            ..Default::default()
+                        },
+                    ]),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "存在风险".to_string(),
+                    to_flow_state_name: "已关闭".to_string(),
+                    name: "关闭".to_string(),
+                    guard_by_creator: Some(true),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "已完成".to_string(),
+                    to_flow_state_name: "进行中".to_string(),
+                    name: "重新处理".to_string(),
+                    guard_by_creator: Some(true),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "已完成".to_string(),
+                    to_flow_state_name: "已关闭".to_string(),
+                    name: "关闭".to_string(),
+                    guard_by_creator: Some(true),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "已关闭".to_string(),
+                    to_flow_state_name: "待开始".to_string(),
+                    name: "激活".to_string(),
+                    guard_by_creator: Some(true),
+                    ..Default::default()
+                },
+            ],
+            funs,
+            ctx,
+        )
+        .await?;
+    }
+    let ts_init_model = FlowModelServ::paginate_items(
+        &FlowModelFilterReq {
+            basic: RbumBasicFilterReq { ..Default::default() },
+            tag: Some("TS".to_string()),
+            ..Default::default()
+        },
+        1,
+        1,
+        None,
+        None,
+        funs,
+        ctx,
+    )
+    .await?
+    .records
+    .pop();
+    if ts_init_model.is_none() {
+        FlowModelServ::init_model(
+            "TS",
+            vec![
+                ("待开始", FlowSysStateKind::Start),
+                ("进行中", FlowSysStateKind::Progress),
+                ("存在风险", FlowSysStateKind::Progress),
+                ("已完成", FlowSysStateKind::Progress),
+                ("已关闭", FlowSysStateKind::Finish),
+            ],
+            "默认测试计划模板",
+            vec![
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "待开始".to_string(),
+                    to_flow_state_name: "进行中".to_string(),
+                    name: "开始".to_string(),
+                    guard_by_creator: Some(true),
+                    vars_collect: Some(vec![
+                        FlowVarInfo {
+                            name: "assigned".to_string(),
+                            label: "负责人".to_string(),
+                            data_type: RbumDataTypeKind::STRING,
+                            widget_type: RbumWidgetTypeKind::SELECT,
+                            required: Some(true),
+                            ..Default::default()
+                        },
+                        FlowVarInfo {
+                            name: "start_end".to_string(),
+                            label: "计划周期".to_string(),
+                            data_type: RbumDataTypeKind::DATETIME,
+                            widget_type: RbumWidgetTypeKind::DATETIME,
+                            ..Default::default()
+                        },
+                    ]),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "待开始".to_string(),
+                    to_flow_state_name: "已关闭".to_string(),
+                    name: "关闭".to_string(),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "进行中".to_string(),
+                    to_flow_state_name: "已完成".to_string(),
+                    name: "完成".to_string(),
+                    guard_by_creator: Some(true),
+                    vars_collect: Some(vec![
+                        FlowVarInfo {
+                            name: "assigned".to_string(),
+                            label: "负责人".to_string(),
+                            data_type: RbumDataTypeKind::STRING,
+                            widget_type: RbumWidgetTypeKind::SELECT,
+                            required: Some(true),
+                            ..Default::default()
+                        },
+                        FlowVarInfo {
+                            name: "start_end".to_string(),
+                            label: "实际周期".to_string(),
+                            data_type: RbumDataTypeKind::DATETIME,
+                            widget_type: RbumWidgetTypeKind::DATETIME,
+                            required: Some(true),
+                            ..Default::default()
+                        },
+                    ]),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "进行中".to_string(),
+                    to_flow_state_name: "存在风险".to_string(),
+                    name: "有风险".to_string(),
+                    guard_by_creator: Some(true),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "进行中".to_string(),
+                    to_flow_state_name: "已关闭".to_string(),
+                    name: "关闭".to_string(),
+                    guard_by_creator: Some(true),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "存在风险".to_string(),
+                    to_flow_state_name: "进行中".to_string(),
+                    name: "正常".to_string(),
+                    guard_by_creator: Some(true),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "存在风险".to_string(),
+                    to_flow_state_name: "已完成".to_string(),
+                    name: "完成".to_string(),
+                    guard_by_creator: Some(true),
+                    vars_collect: Some(vec![
+                        FlowVarInfo {
+                            name: "assigned".to_string(),
+                            label: "负责人".to_string(),
+                            data_type: RbumDataTypeKind::STRING,
+                            widget_type: RbumWidgetTypeKind::SELECT,
+                            required: Some(true),
+                            ..Default::default()
+                        },
+                        FlowVarInfo {
+                            name: "start_end".to_string(),
+                            label: "实际周期".to_string(),
+                            data_type: RbumDataTypeKind::DATETIME,
+                            widget_type: RbumWidgetTypeKind::DATETIME,
+                            required: Some(true),
+                            ..Default::default()
+                        },
+                    ]),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "存在风险".to_string(),
+                    to_flow_state_name: "已关闭".to_string(),
+                    name: "关闭".to_string(),
+                    guard_by_creator: Some(true),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "已完成".to_string(),
+                    to_flow_state_name: "进行中".to_string(),
+                    name: "重新处理".to_string(),
+                    guard_by_creator: Some(true),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "已完成".to_string(),
+                    to_flow_state_name: "已关闭".to_string(),
+                    name: "关闭".to_string(),
+                    guard_by_creator: Some(true),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "已关闭".to_string(),
+                    to_flow_state_name: "待开始".to_string(),
+                    name: "激活".to_string(),
+                    guard_by_creator: Some(true),
+                    ..Default::default()
+                },
+            ],
+            funs,
+            ctx,
+        )
+        .await?;
+    }
+
     Ok(())
 }

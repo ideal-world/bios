@@ -316,6 +316,7 @@ mod tests {
 
         filter_auth
             .init(&SgPluginFilterInitDto {
+                gateway_name: "".to_string(),
                 gateway_parameters: SgParameters {
                     redis_url: None,
                     log_level: None,
@@ -431,6 +432,7 @@ mod tests {
 
         filter_auth
             .init(&SgPluginFilterInitDto {
+                gateway_name: "".to_string(),
                 gateway_parameters: SgParameters {
                     redis_url: None,
                     log_level: None,

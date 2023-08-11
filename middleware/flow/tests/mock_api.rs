@@ -15,7 +15,7 @@ pub struct MockApi;
 impl MockApi {
     /// Exchange Data / 数据交换
     #[oai(path = "/exchange_data", method = "post")]
-    async fn external_data(&self, req: Json<FlowExternalReq>, _ctx: TardisContextExtractor) -> TardisApiResult<Value> {
+    async fn exchange_data(&self, req: Json<FlowExternalReq>, ctx: TardisContextExtractor) -> TardisApiResult<Value> {
         let result = match req.0.kind {
             FlowExternalKind::FetchRelObj => {
                 json!(FlowExternalFetchRelObjResp {
@@ -23,7 +23,7 @@ impl MockApi {
                 })
             }
             FlowExternalKind::ModifyField => {
-                json!(FlowExternalModifyFieldResp { rel_bus_obj_ids: vec![] })
+                json!(FlowExternalModifyFieldResp {})
             }
             FlowExternalKind::NotifyChanges => {
                 json!(FlowExternalNotifyChangesResp {})

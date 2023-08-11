@@ -54,13 +54,25 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
     let init_state_id = states.records[0].id.clone();
 
     let template_id = "mock_template_id".to_string();
-    // 1.Get model based on template id
+    // 1. set config
+    let mut modify_configs = vec![];
+    let codes = vec!["REQ", "MS", "PROJ", "ITER", "TICKET"];
+    for code in codes {
+        modify_configs.push(FlowConfigModifyReq {
+            code: code.to_string(),
+            value: "https://localhost:8080/mock/mock/exchange_data".to_string(),
+        });
+    }
+    let _: Void = flow_client.post("/cs/config", &modify_configs).await;
+    let configs: Option<TardisPage<KvItemSummaryResp>> = flow_client.get("/cs/config").await;
+    info!("configs_new: {:?}", configs);
+    // 2.Get model based on template id
     let result: HashMap<String, FlowTemplateModelResp> = flow_client.get(&format!("/cc/model/get_models?tag_ids=REQ&temp_id={}", template_id)).await;
     let model_id = result.get("REQ").unwrap().id.clone();
 
     let result: HashMap<String, FlowTemplateModelResp> = flow_client.get(&format!("/cc/model/get_models?tag_ids=TICKET&temp_id={}", template_id)).await;
     let ticket_model_id = result.get("TICKET").unwrap().id.clone();
-    // 2.modify model
+    // 3.modify model
     // Delete and add some transitions
     let _: Void = flow_client
         .post(
@@ -116,6 +128,7 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
                     guard_by_assigned: None,
                     guard_by_spec_account_ids: None,
                     guard_by_spec_role_ids: None,
+                    guard_by_spec_org_ids: None,
                     guard_by_other_conds: None,
                     vars_collect: None,
                     action_by_pre_callback: None,
@@ -133,7 +146,7 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
     let mut model_agg_new: FlowModelAggResp = flow_client.get(&format!("/cc/model/{}", model_id)).await;
     assert!(!model_agg_new.states.first_mut().unwrap().transitions.iter_mut().any(|trans| trans.transfer_by_auto).is_empty());
     info!("model_agg_new: {:?}", model_agg_new);
-    // 3.Start a instance
+    // 4.Start a instance
     let req_inst_rel_id = TardisFuns::field.nanoid();
     let ticket_inst_rel_id = "mock-rel-obj-id".to_string();
     let req_inst_id: String = flow_client
@@ -143,6 +156,7 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
                 tag: "REQ".to_string(),
                 create_vars: None,
                 rel_business_obj_id: req_inst_rel_id.clone(),
+                current_state_name: None,
             },
         )
         .await;
@@ -153,6 +167,7 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
                 tag: "TICKET".to_string(),
                 create_vars: None,
                 rel_business_obj_id: ticket_inst_rel_id.clone(),
+                current_state_name: None,
             },
         )
         .await;
@@ -211,26 +226,6 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
         transfer.new_flow_state_id,
         state_and_next_transitions[0].next_flow_transitions.iter().find(|&trans| trans.next_flow_transition_name.contains("关闭")).unwrap().next_flow_state_id.clone()
     );
-    // 4. set config
-    let mut modify_configs = vec![];
-    let codes = vec![
-        "exchange_data_url_req",
-        "exchange_data_url_milestone",
-        "exchange_data_url_project",
-        "exchange_data_url_iter",
-        "exchange_data_url_ticket",
-        "exchange_data_url_test_job",
-        "exchange_data_url_test_stage",
-    ];
-    for code in codes {
-        modify_configs.push(FlowConfigModifyReq {
-            code: code.to_string(),
-            value: "https://localhost:8080/mock/exchange_data".to_string(),
-        });
-    }
-    let _: Void = flow_client.post("/cs/config", &modify_configs).await;
-    let configs: Option<TardisPage<KvItemSummaryResp>> = flow_client.get("/cs/config").await;
-    info!("configs_new: {:?}", configs);
     // 5. post action
     // check original instance
     let ticket_model_agg: FlowModelAggResp = flow_client.get(&format!("/cc/model/{}", ticket_model_id)).await;

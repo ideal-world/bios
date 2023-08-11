@@ -1,12 +1,6 @@
 use bios_basic::dto::BasicQueryCondInfo;
 use serde::{Deserialize, Serialize};
-use tardis::{
-    basic::{error::TardisError, field::TrimString},
-    db::sea_orm,
-    serde_json::Value,
-    web::poem_openapi,
-    TardisFuns,
-};
+use tardis::{basic::field::TrimString, db::sea_orm, serde_json::Value, web::poem_openapi, TardisFuns};
 
 use super::flow_var_dto::FlowVarInfo;
 
@@ -28,6 +22,7 @@ pub struct FlowTransitionAddReq {
     pub guard_by_assigned: Option<bool>,
     pub guard_by_spec_account_ids: Option<Vec<String>>,
     pub guard_by_spec_role_ids: Option<Vec<String>>,
+    pub guard_by_spec_org_ids: Option<Vec<String>>,
     pub guard_by_other_conds: Option<Vec<Vec<BasicQueryCondInfo>>>,
 
     pub vars_collect: Option<Vec<FlowVarInfo>>,
@@ -59,6 +54,7 @@ pub struct FlowTransitionModifyReq {
     pub guard_by_assigned: Option<bool>,
     pub guard_by_spec_account_ids: Option<Vec<String>>,
     pub guard_by_spec_role_ids: Option<Vec<String>>,
+    pub guard_by_spec_org_ids: Option<Vec<String>>,
     pub guard_by_other_conds: Option<Vec<Vec<BasicQueryCondInfo>>>,
 
     pub vars_collect: Option<Vec<FlowVarInfo>>,
@@ -89,6 +85,7 @@ pub struct FlowTransitionDetailResp {
     pub guard_by_assigned: bool,
     pub guard_by_spec_account_ids: Vec<String>,
     pub guard_by_spec_role_ids: Vec<String>,
+    pub guard_by_spec_org_ids: Vec<String>,
     // TODO
     pub guard_by_other_conds: Value,
 
@@ -153,6 +150,7 @@ impl From<FlowTransitionDetailResp> for FlowTransitionAddReq {
             guard_by_assigned: Some(value.guard_by_assigned),
             guard_by_spec_account_ids: Some(value.guard_by_spec_account_ids),
             guard_by_spec_role_ids: Some(value.guard_by_spec_role_ids),
+            guard_by_spec_org_ids: Some(value.guard_by_spec_org_ids),
             guard_by_other_conds,
             vars_collect,
             action_by_pre_callback: Some(value.action_by_pre_callback),
@@ -248,8 +246,13 @@ pub struct FlowTransitionActionByStateChangeInfo {
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug, poem_openapi::Object, sea_orm::FromJsonQueryResult)]
 pub struct StateChangeCondition {
     pub current: bool,
+    pub conditions: Vec<StateChangeConditionItem>,
+}
+
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug, poem_openapi::Object, sea_orm::FromJsonQueryResult)]
+pub struct StateChangeConditionItem {
     pub obj_tag: Option<String>,
-    pub state_id: String,
+    pub state_id: Vec<String>,
     pub op: StateChangeConditionOp,
 }
 
@@ -261,6 +264,7 @@ pub enum StateChangeConditionOp {
     Neq,
 }
 
+#[derive(Default)]
 pub struct FlowTransitionInitInfo {
     pub from_flow_state_name: String,
     pub to_flow_state_name: String,
@@ -273,6 +277,7 @@ pub struct FlowTransitionInitInfo {
     pub guard_by_assigned: Option<bool>,
     pub guard_by_spec_account_ids: Option<Vec<String>>,
     pub guard_by_spec_role_ids: Option<Vec<String>>,
+    pub guard_by_spec_org_ids: Option<Vec<String>>,
     pub guard_by_other_conds: Option<Vec<Vec<BasicQueryCondInfo>>>,
 
     pub vars_collect: Option<Vec<FlowVarInfo>>,

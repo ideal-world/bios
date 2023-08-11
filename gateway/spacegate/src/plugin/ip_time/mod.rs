@@ -8,6 +8,8 @@ use spacegate_kernel::plugins::{
     filters::{BoxSgPluginFilter, SgPluginFilter, SgPluginFilterDef},
 };
 
+use tardis::basic::error::TardisError;
+use tardis::chrono::Local;
 use tardis::{async_trait::async_trait, basic::result::TardisResult, log, serde_json, TardisFuns};
 pub const CODE: &str = "ip_time";
 pub struct SgFilterIpTimeDef;
@@ -61,18 +63,24 @@ pub struct SgFilterIpTimeConfigRule {
 
 #[derive(Debug)]
 pub struct SgFilterIpTime {
-    /// # enhancement:
-    /// should be a time segment list
-    /// - segment list
-    ///     - ban: Set {}
-    ///     - allow: Set {}
-    /// - pointer to the lastest segment
+    // # enhancement:
+    // should be a time segment list
+    // - segment list
+    //     - ban: Set {}
+    //     - allow: Set {}
+    // - pointer to the lastest segment
     pub rules: Vec<(IpNet, IpTimeRule)>,
 }
-
+impl SgFilterIpTime {
+    pub fn check_ip(&self, ip: &IpAddr) -> bool {
+        // any rule contains the ip and the time is not allowed
+        !self.rules.iter().any(|(net, rule)| net.contains(ip) && !rule.check_by_now())
+    }
+}
 #[async_trait]
 impl SgPluginFilter for SgFilterIpTime {
     async fn init(&mut self, _http_route_rule: &SgPluginFilterInitDto) -> TardisResult<()> {
+        log::debug!("Init ip-time plugin, local timezone offset: {tz}", tz = Local::now().offset());
         return Ok(());
     }
 
@@ -84,8 +92,12 @@ impl SgPluginFilter for SgFilterIpTime {
     async fn req_filter(&self, _id: &str, ctx: SgRoutePluginContext) -> TardisResult<(bool, SgRoutePluginContext)> {
         let socket_addr = ctx.request.get_req_remote_addr();
         let ip = socket_addr.ip();
-        let pass = self.rules.iter().any(|(net, rule)| net.contains(&ip) && rule.check_by_now());
-        Ok((pass, ctx))
+        let passed = self.check_ip(&ip);
+        log::trace!("[{CODE}] Check ip time rule from {socket_addr}, passed {passed}");
+        if !passed {
+            return Err(TardisError::forbidden("[SG.Plugin.IpTime] Blocked by ip-time plugin", ""));
+        }
+        Ok((passed, ctx))
     }
 
     async fn resp_filter(&self, _id: &str, ctx: SgRoutePluginContext) -> TardisResult<(bool, SgRoutePluginContext)> {
