@@ -62,4 +62,7 @@ pub struct Model {
     pub transitions: Option<Json>,
 
     pub own_paths: String,
+
+    /// Current Assigned  / 指定执行人
+    pub current_assigned: Option<String>,
 }

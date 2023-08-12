@@ -52,9 +52,12 @@ pub struct Model {
     /// Transfer condition: the current operator contains the corresponding users
     /// 流转条件：当前操作人包含对应的用户
     pub guard_by_spec_account_ids: Vec<String>,
-    /// Transfer condition: he current operator contains the corresponding roles
+    /// Transfer condition: the current operator contains the corresponding roles
     /// 流转条件：当前操作人包含对应的角色
     pub guard_by_spec_role_ids: Vec<String>,
+    /// Transfer condition: the current operator contains the corresponding org
+    /// 流转条件：当前操作人属于对应的组织
+    pub guard_by_spec_org_ids: Vec<String>,
     /// Transfer condition: the condition that the current variable satisfies
     /// 流转条件：当前变量满足的条件
     ///

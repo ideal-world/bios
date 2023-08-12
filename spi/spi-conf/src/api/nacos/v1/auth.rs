@@ -1,6 +1,6 @@
 use tardis::web::{
     poem::{self, web::Form},
-    poem_openapi::{self, payload::Json},
+    poem_openapi::{self, payload::Json, param::Query},
 };
 
 use crate::serv::*;
@@ -13,9 +13,9 @@ pub struct ConfNacosV1AuthApi;
 #[poem_openapi::OpenApi(prefix_path = "/nacos/v1/auth", tag = "bios_basic::ApiTag::Interface")]
 impl ConfNacosV1AuthApi {
     #[oai(path = "/login", method = "post")]
-    async fn login(&self, form: Form<LoginRequest>) -> poem::Result<Json<LoginResponse>> {
-        let username = form.0.username;
-        let password = form.0.password;
+    async fn login(&self, username: Query<Option<String>>, password: Query<Option<String>>, form: Form<LoginRequest>) -> poem::Result<Json<LoginResponse>> {
+        let username = username.0.or(form.0.username).unwrap_or_default();
+        let password = password.0.or(form.0.password).unwrap_or_default();
         let funs = crate::get_tardis_inst();
         let ctx = auth(&username, &password, &funs).await?;
         let token = jwt_sign(&funs, &ctx).await?;
@@ -25,5 +25,17 @@ impl ConfNacosV1AuthApi {
             token_ttl: cfg.token_ttl,
             global_admin: true,
         }))
+    }
+
+    /// this is for java client
+    #[oai(path = "/users/login", method = "post")]
+    async fn users_login(&self, username: Query<Option<String>>, password: Query<Option<String>>, form: Form<LoginRequest>) -> poem::Result<Json<LoginResponse>> {
+        self.login(username, password, form).await
+    }
+
+    /// this is for java client
+    #[oai(path = "/user/login", method = "post")]
+    async fn user_login(&self, username: Query<Option<String>>, password: Query<Option<String>>, form: Form<LoginRequest>) -> poem::Result<Json<LoginResponse>> {
+        self.login(username, password, form).await
     }
 }

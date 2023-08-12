@@ -252,6 +252,7 @@ impl FlowModelServ {
                 guard_by_assigned: transition.guard_by_assigned,
                 guard_by_spec_account_ids: transition.guard_by_spec_account_ids,
                 guard_by_spec_role_ids: transition.guard_by_spec_role_ids,
+                guard_by_spec_org_ids: transition.guard_by_spec_org_ids,
                 guard_by_other_conds: transition.guard_by_other_conds,
                 vars_collect: transition.vars_collect,
                 action_by_pre_callback: transition.action_by_pre_callback,
@@ -344,6 +345,7 @@ impl FlowModelServ {
                 guard_by_assigned: Set(req.guard_by_assigned.unwrap_or(false)),
                 guard_by_spec_account_ids: Set(req.guard_by_spec_account_ids.as_ref().unwrap_or(&vec![]).clone()),
                 guard_by_spec_role_ids: Set(req.guard_by_spec_role_ids.as_ref().unwrap_or(&vec![]).clone()),
+                guard_by_spec_org_ids: Set(req.guard_by_spec_org_ids.as_ref().unwrap_or(&vec![]).clone()),
                 guard_by_other_conds: Set(req.guard_by_other_conds.as_ref().map(|conds| TardisFuns::json.obj_to_json(conds).unwrap()).unwrap_or(json!([]))),
 
                 vars_collect: Set(req.vars_collect.as_ref().map(|vars| TardisFuns::json.obj_to_json(vars).unwrap()).unwrap_or(json!([]))),
@@ -454,6 +456,9 @@ impl FlowModelServ {
             if let Some(guard_by_spec_role_ids) = &req.guard_by_spec_role_ids {
                 flow_transition.guard_by_spec_role_ids = Set(guard_by_spec_role_ids.clone());
             }
+            if let Some(guard_by_spec_org_ids) = &req.guard_by_spec_org_ids {
+                flow_transition.guard_by_spec_org_ids = Set(guard_by_spec_org_ids.clone());
+            }
             if let Some(guard_by_other_conds) = &req.guard_by_other_conds {
                 flow_transition.guard_by_other_conds = Set(TardisFuns::json.obj_to_json(guard_by_other_conds)?);
             }
@@ -527,6 +532,7 @@ impl FlowModelServ {
                 (flow_transition::Entity, flow_transition::Column::GuardByAssigned),
                 (flow_transition::Entity, flow_transition::Column::GuardBySpecAccountIds),
                 (flow_transition::Entity, flow_transition::Column::GuardBySpecRoleIds),
+                (flow_transition::Entity, flow_transition::Column::GuardBySpecOrgIds),
                 (flow_transition::Entity, flow_transition::Column::GuardByOtherConds),
                 (flow_transition::Entity, flow_transition::Column::VarsCollect),
                 (flow_transition::Entity, flow_transition::Column::ActionByPreCallback),

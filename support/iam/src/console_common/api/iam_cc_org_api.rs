@@ -49,4 +49,21 @@ impl IamCcOrgApi {
         ctx.execute_task().await?;
         TardisResp::ok(result)
     }
+
+    /// Find Org Cate Name By Cate Ids
+    ///
+    /// Return format: ["<id>,<name>"]
+    #[oai(path = "/cate_name", method = "get")]
+    async fn find_set_cate_name_by_cate_ids(
+        &self,
+        // Cate Ids, multiple ids separated by ,
+        ids: Query<String>,
+        ctx: TardisContextExtractor,
+    ) -> TardisApiResult<Vec<String>> {
+        let funs = iam_constants::get_tardis_inst();
+        let ids = ids.0.split(',').map(|s| s.to_string()).collect();
+        let result = IamSetServ::find_set_cate_name_by_cate_ids(ids, &funs, &ctx.0).await?;
+        ctx.0.execute_task().await?;
+        TardisResp::ok(result)
+    }
 }
