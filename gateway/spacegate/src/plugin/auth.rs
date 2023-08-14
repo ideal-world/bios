@@ -37,6 +37,8 @@ use tardis::{
     TardisFuns,
 };
 
+use super::plugin_constants;
+
 lazy_static! {
     static ref INSTANCE: Arc<RwLock<HashMap<u16, String>>> = <_>::default();
 }
@@ -211,7 +213,7 @@ impl SgPluginFilter for SgFilterAuth {
 
     async fn resp_filter(&self, _: &str, mut ctx: SgRoutePluginContext) -> TardisResult<(bool, SgRoutePluginContext)> {
         let head_key_crypto = self.auth_config.head_key_crypto.clone();
-        
+
         if ctx.request.get_req_headers().get(&head_key_crypto).is_none() || self.get_is_true_mix_req_from_header(ctx.request.get_req_headers()) {
             return Ok((true, ctx));
         }
@@ -274,6 +276,19 @@ async fn mix_req_to_ctx(auth_config: &AuthConfig, mut ctx: SgRoutePluginContext)
             })
             .collect::<HeaderMap<HeaderValue>>(),
     );
+
+    let real_ip = ctx.request.get_req_remote_addr().ip().to_string();
+    let forwarded_for = match ctx.request.get_req_headers().get("X-Forwarded-For") {
+        Some(forwarded) => {
+            format!(
+                "{},{}",
+                forwarded.to_str().map_err(|e| TardisError::custom("502", &format!("[MixReq] X-Forwarded-For header value parse err {e}"), "502-parse_mix_req-url-error"))?,
+                real_ip
+            )
+        }
+        None => real_ip,
+    };
+    ctx.request.set_req_header("X-Forwarded-For", &forwarded_for)?;
     ctx.request.set_req_body(mix_body.body.into_bytes())?;
     Ok(ctx)
 }
@@ -322,9 +337,10 @@ fn success_auth_result_to_ctx(auth_result: AuthResult, old_req_body: Vec<u8>, mu
     });
     let auth_resp = AuthResp::from_result(auth_result);
     let new_headers = hashmap_header_to_headermap(auth_resp.headers.clone())?;
-
+    log::warn!("[Plugin.Auth] auth_resp: {:?}", auth_resp);
     ctx.request.set_req_headers(new_headers);
     if let Some(new_body) = auth_resp.body {
+        log::warn!("[Plugin.Auth] req body change to {}", new_body);
         ctx.request.set_req_body(new_body.into_bytes())?;
     } else {
         ctx.request.set_req_body(old_req_body)?;
@@ -334,11 +350,12 @@ fn success_auth_result_to_ctx(auth_result: AuthResult, old_req_body: Vec<u8>, mu
 
 async fn ctx_to_auth_encrypt_req(ctx: &mut SgRoutePluginContext) -> TardisResult<AuthEncryptReq> {
     let headers = headermap_header_to_hashmap(ctx.response.get_resp_headers().clone())?;
+    let body = ctx.response.pop_resp_body().await?.map(|s| String::from_utf8_lossy(&s).to_string()).unwrap_or_default();
+    if !body.is_empty() {
+        ctx.set_ext(plugin_constants::BEFORE_ENCRYPT_BODY, &body);
+    }
 
-    Ok(AuthEncryptReq {
-        headers,
-        body: ctx.response.pop_resp_body().await?.map(|s| String::from_utf8_lossy(&s).to_string()).unwrap_or_default(),
-    })
+    Ok(AuthEncryptReq { headers, body })
 }
 
 fn hashmap_header_to_headermap(old_headers: HashMap<String, String>) -> TardisResult<HeaderMap> {
