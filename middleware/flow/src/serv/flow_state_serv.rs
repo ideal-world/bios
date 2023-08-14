@@ -193,7 +193,8 @@ impl FlowStateServ {
         .await
     }
 
-    pub(crate) async fn find_state_id_by_name(tag: &str, mut name: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
+    // For the old data migration, this function match id by old state name
+    pub(crate) async fn match_state_id_by_name(tag: &str, mut name: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
         if tag == "ISSUE" {
             name = match name {
                 "待开始" => "待处理",
