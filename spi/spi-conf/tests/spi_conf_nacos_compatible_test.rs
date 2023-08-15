@@ -19,9 +19,9 @@ use tardis::{
 mod spi_conf_test_common;
 use spi_conf_test_common::*;
 
-#[tokio::test]
+#[tokio::test(flavor="multi_thread")]
 async fn spi_conf_namespace_test() -> TardisResult<()> {
-    std::env::set_var("RUST_LOG", "info,tardis=debug,spi_conf_listener_test=debug,sqlx=off,sea_orm=off,bios_spi_conf=DEBUG");
+    std::env::set_var("RUST_LOG", "info,tardis=debug,spi_conf_listener_test=debug,sqlx=off,sea_orm=off,bios_spi_conf=DEBUG,poem_grpc=TRACE,tonic=TRACE,h2=debug");
     std::env::set_var("PROFILE", "nacos");
     let docker = testcontainers::clients::Cli::default();
     let container_hold = init_tardis(&docker).await?;
@@ -58,8 +58,8 @@ async fn spi_conf_namespace_test() -> TardisResult<()> {
 
     // test register
 
+    TardisFuns::web_server().await;
     test_tardis_compatibility(&client).await?;
-    // web_server_hanlde.await.unwrap()?;
     drop(container_hold);
     Ok(())
 }
@@ -78,9 +78,9 @@ async fn test_tardis_compatibility(_test_client: &TestHttpClient) -> TardisResul
     let mut headers = reqwest::header::HeaderMap::new();
     headers.append(TardisFuns::fw_config().web_server.context_conf.context_header_name.as_str(), ctx_base64.parse().unwrap());
     let client = reqwest::ClientBuilder::default().danger_accept_invalid_certs(true).default_headers(headers).build().unwrap();
-    let mut nacos_client = NacosClient::new_with_client("https://localhost:8080/spi-conf-nacos/nacos", client);
+    let mut nacos_client = NacosClient::new_with_client("http://localhost:8080/spi-conf-nacos/nacos", client);
     // register
-    let resp = nacos_client.reqwest_client.post("https://localhost:8080/spi-conf/ci/auth/register").json(&RegisterRequest::default()).send().await?;
+    let resp = nacos_client.reqwest_client.post("http://localhost:8080/spi-conf/ci/auth/register").json(&RegisterRequest::default()).send().await?;
     let resp = resp.json::<TardisResp<RegisterResponse>>().await?;
 
     let auth = resp.data.expect("error in register");
@@ -105,7 +105,7 @@ async fn test_tardis_compatibility(_test_client: &TestHttpClient) -> TardisResul
     log::info!("get config");
     let config_by_basic_auth_resp = nacos_client
         .reqwest_client
-        .get("https://localhost:8080/spi-conf-nacos/nacos/v1/cs/configs")
+        .get("http://localhost:8080/spi-conf-nacos/nacos/v1/cs/configs")
         .query(&config_descriptor)
         .basic_auth(&auth.username, Some(&auth.password))
         .send()
@@ -138,7 +138,7 @@ async fn test_tardis_compatibility(_test_client: &TestHttpClient) -> TardisResul
     let password = "nacosmocker";
     let resp = nacos_client
         .reqwest_client
-        .post("https://localhost:8080/spi-conf/ci/auth/register")
+        .post("http://localhost:8080/spi-conf/ci/auth/register")
         .json(&RegisterRequest {
             username: Some(username.into()),
             password: Some(password.into()),
@@ -149,7 +149,7 @@ async fn test_tardis_compatibility(_test_client: &TestHttpClient) -> TardisResul
     let auth = resp.data.expect("error in register");
     assert_eq!(username, auth.username);
     assert_eq!(password, auth.password);
-    let login_url = "https://localhost:8080/spi-conf-nacos/nacos/v1/auth/login";
+    let login_url = "http://localhost:8080/spi-conf-nacos/nacos/v1/auth/login";
     let mut form = HashMap::new();
     form.insert("password", username);
     form.insert("username", password);
@@ -158,7 +158,7 @@ async fn test_tardis_compatibility(_test_client: &TestHttpClient) -> TardisResul
 
     let value = resp.json::<tardis::serde_json::Value>().await?;
     let token = value.get("accessToken").expect("missing accessToken").as_str().expect("access_token should be string");
-    let namespace_url = "https://localhost:8080/spi-conf-nacos/nacos/v1/console/namespaces";
+    let namespace_url = "http://localhost:8080/spi-conf-nacos/nacos/v1/console/namespaces";
     let mut form = HashMap::new();
     form.insert("customNamespaceId", "test-namespace-1");
     form.insert("namespaceName", "测试命名空间1");
