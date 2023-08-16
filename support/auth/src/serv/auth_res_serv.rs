@@ -89,12 +89,10 @@ fn parse_uri(res_uri: &str) -> TardisResult<Vec<String>> {
 pub fn init_res() -> TardisResult<()> {
     let mut res_container = RES_CONTAINER.write()?;
     let mut res_apis = RES_APIS.write()?;
-    if res_container.is_none() {
-        *res_container = Some(ResContainerNode::new());
-    }
-    if res_apis.is_none() {
-        *res_apis = Some(HashMap::new());
-    }
+
+    *res_container = Some(ResContainerNode::new());
+
+    *res_apis = Some(HashMap::new());
     Ok(())
 }
 

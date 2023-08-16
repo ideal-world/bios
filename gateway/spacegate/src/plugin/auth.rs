@@ -29,10 +29,10 @@ use std::{collections::HashMap, str::FromStr, sync::Arc};
 use tardis::{
     async_trait,
     basic::{error::TardisError, result::TardisResult},
-    config::config_dto::{AppConfig, CacheConfig, ConfCenterConfig, FrameworkConfig, LogConfig, TardisConfig, WebServerConfig, WebServerModuleConfig},
+    config::config_dto::{AppConfig, CacheConfig, FrameworkConfig, LogConfig, TardisConfig, WebServerConfig},
     log,
     serde_json::{self, json, Value},
-    tokio::{fs::File, io::AsyncWriteExt, sync::RwLock},
+    tokio::{io::AsyncWriteExt, sync::RwLock, task::JoinHandle},
     url::Url,
     web::web_resp::TardisResp,
     TardisFuns,
@@ -41,7 +41,7 @@ use tardis::{
 use super::plugin_constants;
 
 lazy_static! {
-    static ref INSTANCE: Arc<RwLock<HashMap<u16, String>>> = <_>::default();
+    static ref INSTANCE: Arc<RwLock<Option<(String, JoinHandle<()>)>>> = <_>::default();
 }
 
 pub const CODE: &str = "auth";
@@ -58,7 +58,6 @@ impl SgPluginFilterDef for SgFilterAuthDef {
 #[serde(default)]
 pub struct SgFilterAuth {
     auth_config: AuthConfig,
-    port: u16,
     cache_url: String,
     header_is_mix_req: String,
     cors_allow_origin: String,
@@ -71,7 +70,6 @@ impl Default for SgFilterAuth {
     fn default() -> Self {
         Self {
             auth_config: Default::default(),
-            port: 8080,
             cache_url: "".to_string(),
             cors_allow_origin: "*".to_string(),
             cors_allow_methods: "*".to_string(),
@@ -114,12 +112,14 @@ impl SgPluginFilter for SgFilterAuth {
     async fn init(&mut self, init_dto: &SgPluginFilterInitDto) -> TardisResult<()> {
         let config_md5 = TardisFuns::crypto.digest.md5(&TardisFuns::json.obj_to_string(self)?)?;
         let mut instance = INSTANCE.write().await;
-        if let Some(md5) = instance.get(&self.port) {
+        if let Some((md5, handle)) = instance.as_ref() {
             if config_md5.eq(md5) {
+                log::info!("[SG.Filter.Auth] have not found config change");
                 return Ok(());
+            } else {
+                handle.abort();
             }
         }
-        (*instance).insert(self.port, config_md5);
 
         let mut cs = HashMap::<String, Value>::new();
         cs.insert(
@@ -136,8 +136,6 @@ impl SgPluginFilter for SgFilterAuth {
                 },
                 web_server: WebServerConfig {
                     enabled: false,
-                    port: self.port,
-                    modules: HashMap::from([("auth".to_string(), WebServerModuleConfig { ..Default::default() })]),
                     ..Default::default()
                 },
                 cache: CacheConfig {
@@ -161,6 +159,7 @@ impl SgPluginFilter for SgFilterAuth {
 
         let handle = auth_initializer::init_data().await?;
         auth_crypto_serv::init().await?;
+        *instance = Some((config_md5, handle));
         log::info!("[SG.Filter.Auth] init done");
 
         Ok(())
@@ -175,7 +174,7 @@ impl SgPluginFilter for SgFilterAuth {
             return Ok((true, ctx));
         }
 
-        if ctx.request.get_req_uri_raw().path() == self.fetch_server_config_path.as_str() {
+        if ctx.request.get_req_method().eq(&Method::GET) && ctx.request.get_req_uri_raw().path() == self.fetch_server_config_path.as_str() {
             ctx.set_action(SgRouteFilterRequestAction::Response);
             let mut headers = HeaderMap::new();
             headers.insert(http::header::CONTENT_TYPE, HeaderValue::from_static("application/json"));
@@ -189,7 +188,7 @@ impl SgPluginFilter for SgFilterAuth {
                 .map_err(|e| TardisError::bad_request(&format!("[Plugin.Auth] fetch_server_config serde error: {e}"), ""))?
                 .into_bytes(),
             )?;
-            return Ok((false, ctx));
+            return Ok((true, ctx));
         }
 
         let is_true_mix_req = self.get_is_true_mix_req_from_header(ctx.request.get_req_headers());
@@ -230,21 +229,6 @@ impl SgPluginFilter for SgFilterAuth {
         if ctx.request.get_req_headers().get(&head_key_crypto).is_none() || self.get_is_true_mix_req_from_header(ctx.request.get_req_headers()) {
             return Ok((true, ctx));
         }
-
-        //===========todo remove ↓
-        let uri = ctx.request.get_req_uri_raw().to_string();
-        let body = ctx.response.pop_resp_body().await?;
-
-        log::info!(
-            "resp_filter get all url={} header={:?} body={:?}",
-            uri,
-            ctx.response.get_resp_headers(),
-            body.clone().map(|s| String::from_utf8_lossy(&s).to_string())
-        );
-        if let Some(body) = body {
-            ctx.response.set_resp_body(body)?;
-        }
-        //===========todo remove ↑
 
         let crypto_value = ctx.request.get_req_headers().get(&head_key_crypto).expect("").clone();
         let ctx_resp_headers = ctx.response.get_resp_headers_mut();
@@ -297,12 +281,12 @@ async fn mix_req_to_ctx(auth_config: &AuthConfig, mut ctx: SgRoutePluginContext)
         headers
             .into_iter()
             .map(|(k, v)| {
-                (
-                    HeaderName::from_str(&k).expect(&format!("error parse str {k} to header name ")),
-                    HeaderValue::from_str(&v).expect(&format!("error parse str {v} to header value")),
-                )
+                Ok::<_, TardisError>((
+                    HeaderName::from_str(&k).map_err(|e| TardisError::format_error(&format!("[Plugin.Auth] error parse str {k} to header name :{e}"), ""))?,
+                    HeaderValue::from_str(&v).map_err(|e| TardisError::format_error(&format!("[Plugin.Auth] error parse str {v} to header value :{e}"), ""))?,
+                ))
             })
-            .collect::<HeaderMap<HeaderValue>>(),
+            .collect::<TardisResult<HeaderMap<HeaderValue>>>()?,
     );
 
     let real_ip = ctx.request.get_req_remote_addr().ip().to_string();
@@ -369,10 +353,8 @@ fn success_auth_result_to_ctx(auth_result: AuthResult, old_req_body: Vec<u8>, mu
     });
     let auth_resp = AuthResp::from_result(auth_result);
     let new_headers = hashmap_header_to_headermap(auth_resp.headers.clone())?;
-    log::warn!("[Plugin.Auth] auth_resp: {:?}", auth_resp);
     ctx.request.set_req_headers(new_headers);
     if let Some(new_body) = auth_resp.body {
-        log::warn!("[Plugin.Auth] req body change to {}", new_body);
         ctx.request.set_req_body(new_body.into_bytes())?;
     } else {
         ctx.request.set_req_body(old_req_body)?;
@@ -418,10 +400,10 @@ mod tests {
     use std::env;
 
     use bios_auth::auth_constants;
-    use bios_auth::serv::auth_res_serv;
+
     use spacegate_kernel::config::gateway_dto::SgParameters;
     use spacegate_kernel::http::{Method, Uri, Version};
-    use spacegate_kernel::hyper::{Body, StatusCode};
+    use spacegate_kernel::hyper::{self, Body, StatusCode};
     use tardis::basic::dto::TardisContext;
     use tardis::crypto::crypto_sm2_4::{TardisCryptoSm2, TardisCryptoSm2PrivateKey};
     use tardis::{
@@ -575,7 +557,23 @@ mod tests {
             .await
             .unwrap();
 
-        let data = auth_res_serv::get_apis_json().unwrap();
+        let ctx = SgRoutePluginContext::new_http(
+            Method::GET,
+            Uri::from_str(&format!("http://sg.idealworld.group{}", filter_auth.fetch_server_config_path)).unwrap(),
+            Version::HTTP_11,
+            HeaderMap::new(),
+            Body::from(""),
+            "127.0.0.1:8080".parse().unwrap(),
+            "".to_string(),
+            None,
+        );
+        let (_, mut before_filter_ctx) = filter_auth.req_filter("", ctx).await.unwrap();
+        let mut server_config_resp = before_filter_ctx.build_response().await.unwrap();
+        let data: Value = serde_json::from_str(&String::from_utf8_lossy(
+            &hyper::body::to_bytes(server_config_resp.body_mut()).await.unwrap().iter().cloned().collect::<Vec<u8>>(),
+        ))
+        .unwrap();
+
         let pub_key = data["pub_key"].as_str().unwrap();
         let server_sm2 = TardisCryptoSm2 {};
         let server_public_key = server_sm2.new_public_key_from_public_key(pub_key).unwrap();
@@ -652,9 +650,6 @@ mod tests {
         assert_eq!(resp_body, mock_resp.to_string());
 
         filter_auth.destroy().await.unwrap();
-
-        let test_result = TardisFuns::web_client().get_to_str(&format!("http://127.0.0.1:{}/auth/auth/apis", filter_auth.port), None).await;
-        assert!(test_result.is_err() || test_result.unwrap().code == 502);
     }
 
     fn crypto_req(body: &str, serv_pub_key: &str, front_pub_key: &str, need_crypto_resp: bool) -> (String, String) {
