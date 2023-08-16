@@ -32,7 +32,7 @@ use tardis::{
     config::config_dto::{AppConfig, CacheConfig, FrameworkConfig, LogConfig, TardisConfig, WebServerConfig},
     log,
     serde_json::{self, json, Value},
-    tokio::{io::AsyncWriteExt, sync::RwLock, task::JoinHandle},
+    tokio::{sync::RwLock, task::JoinHandle},
     url::Url,
     web::web_resp::TardisResp,
     TardisFuns,
@@ -114,7 +114,7 @@ impl SgPluginFilter for SgFilterAuth {
         let mut instance = INSTANCE.write().await;
         if let Some((md5, handle)) = instance.as_ref() {
             if config_md5.eq(md5) {
-                log::info!("[SG.Filter.Auth] have not found config change");
+                log::debug!("[SG.Filter.Auth] have not found config change");
                 return Ok(());
             } else {
                 handle.abort();
