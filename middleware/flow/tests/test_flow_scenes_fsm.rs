@@ -279,7 +279,13 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
         .put(
             &format!("/cc/inst/{}/transition/transfer", req_inst_id),
             &FlowInstTransferReq {
-                flow_transition_id: state_and_next_transitions[0].next_flow_transitions.iter().find(|trans|trans.next_flow_state_name== "进行中").unwrap().next_flow_transition_id.clone(),
+                flow_transition_id: state_and_next_transitions[0]
+                    .next_flow_transitions
+                    .iter()
+                    .find(|trans| trans.next_flow_state_name == "进行中")
+                    .unwrap()
+                    .next_flow_transition_id
+                    .clone(),
                 vars: None,
                 message: None,
             },
