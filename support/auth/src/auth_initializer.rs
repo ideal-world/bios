@@ -9,7 +9,7 @@ use crate::{
 use tardis::{
     basic::result::TardisResult,
     log::{info, trace},
-    tokio::time,
+    tokio::{task::JoinHandle, time},
     web::web_server::TardisWebServer,
     TardisFuns,
 };
@@ -28,7 +28,7 @@ pub async fn crypto_init() -> TardisResult<()> {
     auth_crypto_serv::init().await
 }
 
-pub async fn init_data() -> TardisResult<()> {
+pub async fn init_data() -> TardisResult<JoinHandle<()>> {
     let cache_client = TardisFuns::cache_by_module_or_default(DOMAIN_CODE);
     let config = TardisFuns::cs_config::<AuthConfig>(DOMAIN_CODE);
     info!(
@@ -72,7 +72,7 @@ pub async fn init_data() -> TardisResult<()> {
         };
         auth_res_serv::add_res(f[1], f[0], auth, need_crypto_req, need_crypto_resp, need_double_auth, need_login).unwrap_or_default();
     }
-    tardis::tokio::spawn(async move {
+    let handle = tardis::tokio::spawn(async move {
         let mut interval = time::interval(Duration::from_secs(config.cache_key_res_changed_timer_sec as u64));
         loop {
             {
@@ -103,7 +103,7 @@ pub async fn init_data() -> TardisResult<()> {
             interval.tick().await;
         }
     });
-    Ok(())
+    Ok(handle)
 }
 
 pub async fn init_api(web_server: &TardisWebServer) -> TardisResult<()> {
