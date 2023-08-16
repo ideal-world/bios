@@ -32,7 +32,7 @@ use crate::{
     dto::{
         flow_inst_dto::{
             FlowInstAbortReq, FlowInstDetailResp, FlowInstFindNextTransitionResp, FlowInstFindNextTransitionsReq, FlowInstFindStateAndTransitionsReq,
-            FlowInstFindStateAndTransitionsResp, FlowInstStartReq, FlowInstSummaryResp, FlowInstTransferReq, FlowInstTransferResp, FlowInstTransitionInfo, FlowOperationContext,
+            FlowInstFindStateAndTransitionsResp, FlowInstStartReq, FlowInstSummaryResp, FlowInstTransferReq, FlowInstTransferResp, FlowInstTransitionInfo, FlowOperationContext, FlowInstBindReq, FlowInstBindResp,
         },
         flow_model_dto::{FlowModelDetailResp, FlowModelFilterReq},
         flow_state_dto::{FlowStateFilterReq, FlowSysStateKind},
@@ -67,17 +67,12 @@ impl FlowInstServ {
         )
         .await?;
         let id = TardisFuns::field.nanoid();
-        let current_state_id = if let Some(current_state_name) = &start_req.current_state_name {
-            FlowStateServ::match_state_id_by_name(&start_req.tag, current_state_name, funs, ctx).await?
-        } else {
-            flow_model.init_state_id.clone()
-        };
         let flow_inst: flow_inst::ActiveModel = flow_inst::ActiveModel {
             id: Set(id.clone()),
             rel_flow_model_id: Set(flow_model_id.to_string()),
             rel_business_obj_id: Set(start_req.rel_business_obj_id.to_string()),
 
-            current_state_id: Set(current_state_id),
+            current_state_id: Set(flow_model.init_state_id.clone()),
 
             create_vars: Set(start_req.create_vars.as_ref().map(|vars| TardisFuns::json.obj_to_json(vars).unwrap())),
             create_ctx: Set(FlowOperationContext::from_ctx(ctx)),
@@ -94,6 +89,42 @@ impl FlowInstServ {
         .await?;
 
         Ok(id)
+    }
+
+    pub async fn batch_bind(bind_req: &FlowInstBindReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<FlowInstBindResp>>{
+        let mut result = vec![];
+        for rel_bussiness_obj in &bind_req.rel_bussiness_objs {
+            let flow_model_id = Self::get_model_id_by_own_paths(&bind_req.tag, funs, ctx).await?;
+
+            let current_state_id = FlowStateServ::match_state_id_by_name(&bind_req.tag, &rel_bussiness_obj.current_state_name, funs, ctx).await?;
+            let id = TardisFuns::field.nanoid();
+            let flow_inst: flow_inst::ActiveModel = flow_inst::ActiveModel {
+                id: Set(id.clone()),
+                rel_flow_model_id: Set(flow_model_id.to_string()),
+                rel_business_obj_id: Set(rel_bussiness_obj.rel_bussiness_obj_id.to_string()),
+    
+                current_state_id: Set(current_state_id),
+    
+                create_ctx: Set(FlowOperationContext::from_ctx(ctx)),
+    
+                own_paths: Set(rel_bussiness_obj.own_paths.to_string()),
+                ..Default::default()
+            };
+            let resp = if funs.db().insert_one(flow_inst, ctx).await.is_ok() {
+                FlowInstBindResp {
+                    rel_bussiness_obj_id: rel_bussiness_obj.rel_bussiness_obj_id.clone(),
+                    inst_id: Some(id),
+                }
+            } else {
+                FlowInstBindResp {
+                    rel_bussiness_obj_id: rel_bussiness_obj.rel_bussiness_obj_id.clone(),
+                    inst_id: None,
+                }
+            };
+            result.push(resp);
+        }
+
+        Ok(result)
     }
 
     pub async fn get_model_id_by_own_paths(tag: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
