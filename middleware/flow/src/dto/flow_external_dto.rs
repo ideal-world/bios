@@ -7,7 +7,8 @@ pub struct FlowExternalReq {
     pub kind: FlowExternalKind,
     pub curr_tag: String,
     pub curr_bus_obj_id: String,
-    pub params: FlowExternalParams,
+    pub target_state: Option<String>,
+    pub params: Vec<FlowExternalParams>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum)]
@@ -26,17 +27,26 @@ pub enum FlowExternalParams {
 
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
 pub struct FlowExternalFetchRelObjReq {
-    pub obj_tag: String,
+    pub rel_tag: String,
 }
 
 #[derive(Default, Serialize, Deserialize, Debug, poem_openapi::Object)]
 pub struct FlowExternalFetchRelObjResp {
+    pub curr_tag: String,
+    pub curr_bus_obj_id: String,
+    pub rel_bus_objs: Vec<RelBusObjResp>,
+}
+
+#[derive(Default, Serialize, Deserialize, Debug, poem_openapi::Object)]
+pub struct RelBusObjResp {
+    pub rel_tag: String,
     pub rel_bus_obj_ids: Vec<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
 pub struct FlowExternalModifyFieldReq {
-    pub var_name: String,
+    pub var_id: Option<String>,
+    pub var_name: Option<String>,
     pub value: Option<Value>,
 }
 

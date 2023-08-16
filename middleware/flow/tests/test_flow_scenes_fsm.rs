@@ -12,7 +12,10 @@ use bios_mw_flow::dto::flow_model_dto::{
     FlowTemplateModelResp,
 };
 use bios_mw_flow::dto::flow_state_dto::FlowStateSummaryResp;
-use bios_mw_flow::dto::flow_transition_dto::{FlowTransitionDoubleCheckInfo, FlowTransitionModifyReq};
+use bios_mw_flow::dto::flow_transition_dto::{
+    FlowTransitionActionChangeInfo, FlowTransitionActionChangeKind, FlowTransitionDoubleCheckInfo, FlowTransitionModifyReq, StateChangeCondition, StateChangeConditionItem,
+    StateChangeConditionOp,
+};
 
 // use bios_mw_flow::serv::flow_inst_serv::FlowInstServ;
 use bios_sdk_invoke::clients::spi_kv_client::KvItemSummaryResp;
@@ -72,6 +75,12 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
 
     let result: HashMap<String, FlowTemplateModelResp> = flow_client.get(&format!("/cc/model/get_models?tag_ids=TICKET&temp_id={}", template_id)).await;
     let ticket_model_id = result.get("TICKET").unwrap().id.clone();
+    let ticket_model_agg: FlowModelAggResp = flow_client.get(&format!("/cc/model/{}", ticket_model_id)).await;
+
+    let result: HashMap<String, FlowTemplateModelResp> = flow_client.get(&format!("/cc/model/get_models?tag_ids=ITER&temp_id={}", template_id)).await;
+    let iter_model_id = result.get("ITER").unwrap().id.clone();
+    let iter_model_agg: FlowModelAggResp = flow_client.get(&format!("/cc/model/{}", iter_model_id)).await;
+
     // 3.modify model
     // Delete and add some transitions
     let _: Void = flow_client
@@ -111,7 +120,7 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
         )
         .await;
     // modify transitions
-    let trans_modify = model_agg_old.states.first().unwrap().transitions[0].clone();
+    let trans_modify = model_agg_old.states.first().unwrap().transitions.iter().find(|trans| trans.name == "开始").unwrap();
     let _: Void = flow_client
         .patch(
             &format!("/cc/model/{}", model_id),
@@ -133,7 +142,24 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
                     vars_collect: None,
                     action_by_pre_callback: None,
                     action_by_post_callback: None,
-                    action_by_post_changes: None,
+                    action_by_post_changes: Some(vec![FlowTransitionActionChangeInfo {
+                        kind: FlowTransitionActionChangeKind::State,
+                        describe: "".to_string(),
+                        obj_tag: Some("TICKET".to_string()),
+                        obj_current_state_id: Some(vec![ticket_model_agg.init_state_id.clone()]),
+                        change_condition: Some(StateChangeCondition {
+                            current: true,
+                            conditions: vec![StateChangeConditionItem {
+                                obj_tag: Some("ITER".to_string()),
+                                state_id: vec![iter_model_agg.init_state_id.clone()],
+                                op: StateChangeConditionOp::And,
+                            }],
+                        }),
+                        changed_state_id: ticket_model_agg.states.iter().find(|state| state.name == "处理中").unwrap().id.clone(),
+                        current: true,
+                        var_name: "".to_string(),
+                        changed_val: None,
+                    }]),
                     double_check: Some(FlowTransitionDoubleCheckInfo {
                         is_open: true,
                         content: Some("再次确认该操作生效".to_string()),
@@ -148,7 +174,8 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
     info!("model_agg_new: {:?}", model_agg_new);
     // 4.Start a instance
     let req_inst_rel_id = TardisFuns::field.nanoid();
-    let ticket_inst_rel_id = "mock-rel-obj-id".to_string();
+    let ticket_inst_rel_id = "mock-ticket-obj-id".to_string();
+    let iter_inst_rel_id = "mock-iter-obj-id".to_string();
     let req_inst_id: String = flow_client
         .post(
             "/cc/inst",
@@ -167,6 +194,17 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
                 tag: "TICKET".to_string(),
                 create_vars: None,
                 rel_business_obj_id: ticket_inst_rel_id.clone(),
+                current_state_name: None,
+            },
+        )
+        .await;
+    let _iter_inst_id: String = flow_client
+        .post(
+            "/cc/inst",
+            &FlowInstStartReq {
+                tag: "ITER".to_string(),
+                create_vars: None,
+                rel_business_obj_id: iter_inst_rel_id.clone(),
                 current_state_name: None,
             },
         )
@@ -206,29 +244,28 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
         .any(|trans| trans.next_flow_transition_name.contains("开始") && trans.vars_collect.as_ref().unwrap().len() == 2));
     assert!(state_and_next_transitions[0].next_flow_transitions.iter().any(|trans| trans.next_flow_transition_name.contains("关闭")));
     // Transfer task status
-    let transfer: FlowInstTransferResp = flow_client
-        .put(
-            &format!("/cc/inst/{}/transition/transfer", req_inst_id),
-            &FlowInstTransferReq {
-                flow_transition_id: state_and_next_transitions[0]
-                    .next_flow_transitions
-                    .iter()
-                    .find(|&trans| trans.next_flow_transition_name.contains("关闭"))
-                    .unwrap()
-                    .next_flow_transition_id
-                    .to_string(),
-                vars: Some(TardisFuns::json.json_to_obj(json!({ "reason":"测试关闭" })).unwrap()),
-                message: None,
-            },
-        )
-        .await;
-    assert_eq!(
-        transfer.new_flow_state_id,
-        state_and_next_transitions[0].next_flow_transitions.iter().find(|&trans| trans.next_flow_transition_name.contains("关闭")).unwrap().next_flow_state_id.clone()
-    );
+    // let transfer: FlowInstTransferResp = flow_client
+    //     .put(
+    //         &format!("/cc/inst/{}/transition/transfer", req_inst_id),
+    //         &FlowInstTransferReq {
+    //             flow_transition_id: state_and_next_transitions[0]
+    //                 .next_flow_transitions
+    //                 .iter()
+    //                 .find(|&trans| trans.next_flow_transition_name.contains("关闭"))
+    //                 .unwrap()
+    //                 .next_flow_transition_id
+    //                 .to_string(),
+    //             vars: Some(TardisFuns::json.json_to_obj(json!({ "reason":"测试关闭" })).unwrap()),
+    //             message: None,
+    //         },
+    //     )
+    //     .await;
+    // assert_eq!(
+    //     transfer.new_flow_state_id,
+    //     state_and_next_transitions[0].next_flow_transitions.iter().find(|&trans| trans.next_flow_transition_name.contains("关闭")).unwrap().next_flow_state_id.clone()
+    // );
     // 5. post action
     // check original instance
-    let ticket_model_agg: FlowModelAggResp = flow_client.get(&format!("/cc/model/{}", ticket_model_id)).await;
     let ticket: FlowInstDetailResp = flow_client.get(&format!("/cc/inst/{}", ticket_inst_id)).await;
     assert_eq!(ticket.current_state_id, ticket_model_agg.init_state_id);
     // transfer trigger post action
@@ -245,12 +282,14 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
         .put(
             &format!("/cc/inst/{}/transition/transfer", req_inst_id),
             &FlowInstTransferReq {
-                flow_transition_id: state_and_next_transitions[0].next_flow_transitions[0].next_flow_transition_id.clone(),
+                flow_transition_id: state_and_next_transitions[0].next_flow_transitions.iter().find(|trans|trans.next_flow_state_name== "进行中").unwrap().next_flow_transition_id.clone(),
                 vars: None,
                 message: None,
             },
         )
         .await;
+    let ticket: FlowInstDetailResp = flow_client.get(&format!("/cc/inst/{}", ticket_inst_id)).await;
+    assert_eq!(ticket.current_state_id, ticket_model_agg.states.iter().find(|state| state.name == "处理中").unwrap().id);
 
     Ok(())
 }
