@@ -225,7 +225,7 @@ impl FlowStateServ {
         .records
         .pop();
         if let Some(state) = state {
-            Ok(state.name)
+            Ok(state.id)
         } else {
             Err(funs.err().not_found("flow_state_serv", "find_state_id_by_name", "state_id not match", ""))
         }
