@@ -6,7 +6,7 @@ use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 
 use crate::dto::flow_inst_dto::{
     FlowInstAbortReq, FlowInstDetailResp, FlowInstFindNextTransitionResp, FlowInstFindNextTransitionsReq, FlowInstFindStateAndTransitionsReq, FlowInstFindStateAndTransitionsResp,
-    FlowInstModifyAssignedReq, FlowInstStartReq, FlowInstSummaryResp, FlowInstTransferReq, FlowInstTransferResp,
+    FlowInstModifyAssignedReq, FlowInstStartReq, FlowInstSummaryResp, FlowInstTransferReq, FlowInstTransferResp, FlowInstBindReq, FlowInstBindResp,
 };
 use crate::flow_constants;
 use crate::serv::flow_inst_serv::FlowInstServ;
@@ -25,6 +25,16 @@ impl FlowCcInstApi {
         funs.commit().await?;
         TardisResp::ok(result)
     }
+
+     /// Batch Bind Instance / 批量绑定实例(初始化)
+     #[oai(path = "/", method = "post")]
+     async fn batch_bind(&self, add_req: Json<FlowInstBindReq>, ctx: TardisContextExtractor) -> TardisApiResult<Vec<FlowInstBindResp>> {
+         let mut funs = flow_constants::get_tardis_inst();
+         funs.begin().await?;
+         let result = FlowInstServ::batch_bind(&add_req.0, &funs, &ctx.0).await?;
+         funs.commit().await?;
+         TardisResp::ok(result)
+     }
 
     /// Abort Instance / 中止实例
     #[oai(path = "/:flow_inst_id", method = "delete")]
