@@ -93,31 +93,31 @@ impl FlowInstServ {
 
     pub async fn batch_bind(bind_req: &FlowInstBindReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<FlowInstBindResp>>{
         let mut result = vec![];
-        for rel_bussiness_obj in &bind_req.rel_bussiness_objs {
+        for rel_business_obj in &bind_req.rel_business_objs {
             let flow_model_id = Self::get_model_id_by_own_paths(&bind_req.tag, funs, ctx).await?;
 
-            let current_state_id = FlowStateServ::match_state_id_by_name(&bind_req.tag, &rel_bussiness_obj.current_state_name, funs, ctx).await?;
+            let current_state_id = FlowStateServ::match_state_id_by_name(&bind_req.tag, &rel_business_obj.current_state_name, funs, ctx).await?;
             let id = TardisFuns::field.nanoid();
             let flow_inst: flow_inst::ActiveModel = flow_inst::ActiveModel {
                 id: Set(id.clone()),
                 rel_flow_model_id: Set(flow_model_id.to_string()),
-                rel_business_obj_id: Set(rel_bussiness_obj.rel_bussiness_obj_id.to_string()),
+                rel_business_obj_id: Set(rel_business_obj.rel_business_obj_id.to_string()),
     
                 current_state_id: Set(current_state_id),
     
                 create_ctx: Set(FlowOperationContext::from_ctx(ctx)),
     
-                own_paths: Set(rel_bussiness_obj.own_paths.to_string()),
+                own_paths: Set(rel_business_obj.own_paths.to_string()),
                 ..Default::default()
             };
             let resp = if funs.db().insert_one(flow_inst, ctx).await.is_ok() {
                 FlowInstBindResp {
-                    rel_bussiness_obj_id: rel_bussiness_obj.rel_bussiness_obj_id.clone(),
+                    rel_business_obj_id: rel_business_obj.rel_business_obj_id.clone(),
                     inst_id: Some(id),
                 }
             } else {
                 FlowInstBindResp {
-                    rel_bussiness_obj_id: rel_bussiness_obj.rel_bussiness_obj_id.clone(),
+                    rel_business_obj_id: rel_business_obj.rel_business_obj_id.clone(),
                     inst_id: None,
                 }
             };
