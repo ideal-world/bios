@@ -27,6 +27,7 @@ pub struct StatsConfDimAddReq {
     /// e.g. address dimension can be province-city-district, etc.
     pub hierarchy: Option<Vec<String>>,
     pub remark: Option<String>,
+    pub dynamic_url: Option<String>,
 }
 
 /// Modify Dimension Configuration Request Object
@@ -46,6 +47,7 @@ pub struct StatsConfDimModifyReq {
     /// e.g. address dimension can be province-city-district, etc.
     pub hierarchy: Option<Vec<String>>,
     pub remark: Option<String>,
+    pub dynamic_url: Option<String>,
 }
 
 /// Dimension Configuration Response Object
@@ -70,6 +72,7 @@ pub struct StatsConfDimInfoResp {
     /// Whether the dimension is enabled
     pub online: bool,
     pub remark: Option<String>,
+    pub dynamic_url: Option<String>,
     pub create_time: DateTime<Utc>,
     pub update_time: DateTime<Utc>,
 }
@@ -87,6 +90,9 @@ pub struct StatsConfFactAddReq {
     #[oai(validator(minimum(value = "1", exclusive = "false")))]
     pub query_limit: i32,
     pub remark: Option<String>,
+    pub redirect_path: Option<String>,
+    /// default value is false
+    pub is_online: Option<bool>,
 }
 
 /// Modify Fact Configuration Request Object
@@ -99,6 +105,8 @@ pub struct StatsConfFactModifyReq {
     #[oai(validator(minimum(value = "1", exclusive = "false")))]
     pub query_limit: Option<i32>,
     pub remark: Option<String>,
+    pub redirect_path: Option<String>,
+    pub is_online: Option<bool>,
 }
 
 /// Fact Configuration Response Object
@@ -116,6 +124,8 @@ pub struct StatsConfFactInfoResp {
     /// Whether the dimension is enabled
     pub online: bool,
     pub remark: Option<String>,
+    pub is_online: bool,
+    pub redirect_path: Option<String>,
     pub create_time: DateTime<Utc>,
     pub update_time: DateTime<Utc>,
 }
@@ -145,6 +155,8 @@ pub struct StatsConfFactColAddReq {
     /// Valid when kind = Measure, Used to specify the data update frequency.
     /// E.g. RT(Real Time),1H(Hour),1D(Day),1M(Month)
     pub mes_frequency: Option<String>,
+    /// Valid when kind = Measure, Used to specify the measure unit
+    pub mes_unit: Option<String>,
     /// Valid when kind = Measure, Used to specify the measure activation (only active when all specified dimensions are present)
     pub mes_act_by_dim_conf_keys: Option<Vec<String>>,
     /// Associated fact and fact column configuration.
@@ -175,6 +187,8 @@ pub struct StatsConfFactColModifyReq {
     /// Valid when kind = Measure, Used to specify the data update frequency.
     /// E.g. RT(Real Time),1H(Hour),1D(Day),1M(Month)
     pub mes_frequency: Option<String>,
+    /// Valid when kind = Measure, Used to specify the measure unit
+    pub mes_unit: Option<String>,
     /// Valid when kind = Measure, Used to specify the measure activation (only active when all specified dimensions are present)
     pub mes_act_by_dim_conf_keys: Option<Vec<String>>,
     /// Associated fact and fact column configuration.
@@ -208,6 +222,8 @@ pub struct StatsConfFactColInfoResp {
     /// Valid when kind = Measure, Used to specify the data update frequency.
     /// E.g. RT(Real Time),1H(Hour),1D(Day),1M(Month)
     pub mes_frequency: Option<String>,
+    /// Valid when kind = Measure, Used to specify the measure unit
+    pub mes_unit: Option<String>,
     /// Valid when kind = Measure, Used to specify the measure activation (only active when all specified dimensions are present)
     pub mes_act_by_dim_conf_keys: Option<Vec<String>>,
     /// Associated fact and fact column configuration.
@@ -216,4 +232,12 @@ pub struct StatsConfFactColInfoResp {
     pub remark: Option<String>,
     pub create_time: DateTime<Utc>,
     pub update_time: DateTime<Utc>,
+}
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct StatsConfFactColAggWithDimInfoResp {
+    pub dim_show_name: String,
+    #[serde(flatten)]
+    #[oai(flatten)]
+    pub stats_conf_fact_col_info_resp: StatsConfFactColInfoResp,
 }

@@ -22,7 +22,7 @@ pub async fn online(dim_conf_key: &str, conn: &TardisRelDBlConnection, ctx: &Tar
     common_pg::check_table_exit(&format!("stats_inst_dim_{dim_conf_key}"), conn, ctx).await
 }
 
-pub(crate) async fn add(add_req: &StatsConfDimAddReq, funs: &&TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
+pub(crate) async fn add(add_req: &StatsConfDimAddReq, funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
     let bs_inst = inst.inst::<TardisRelDBClient>();
     let (mut conn, table_name) = stats_pg_initializer::init_conf_dim_table_and_conn(bs_inst, ctx, true).await?;
     conn.begin().await?;
@@ -41,14 +41,15 @@ pub(crate) async fn add(add_req: &StatsConfDimAddReq, funs: &&TardisFunsInst, ct
         Value::from(add_req.data_type.to_string()),
         Value::from(add_req.hierarchy.as_ref().unwrap_or(&vec![]).clone()),
         Value::from(add_req.remark.as_ref().unwrap_or(&"".to_string()).as_str()),
+        Value::from(add_req.dynamic_url.as_deref()),
     ];
 
     conn.execute_one(
         &format!(
             r#"INSERT INTO {table_name}
-(key, show_name, stable_ds, data_type, hierarchy, remark)
+(key, show_name, stable_ds, data_type, hierarchy, remark, dynamic_url)
 VALUES
-($1, $2, $3, $4, $5, $6)
+($1, $2, $3, $4, $5, $6, $7)
 "#,
         ),
         params,
@@ -92,6 +93,10 @@ pub(crate) async fn modify(dim_conf_key: &str, modify_req: &StatsConfDimModifyRe
         sql_sets.push(format!("remark = ${}", params.len() + 1));
         params.push(Value::from(remark.to_string()));
     }
+    if let Some(dynamic_url) = &modify_req.dynamic_url {
+        sql_sets.push(format!("dynamic_url = ${}", params.len() + 1));
+        params.push(Value::from(dynamic_url));
+    }
     conn.execute_one(
         &format!(
             r#"UPDATE {table_name}
@@ -106,10 +111,26 @@ WHERE key = $1"#,
     Ok(())
 }
 
-pub(crate) async fn delete(dim_conf_key: &str, _funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
+pub(crate) async fn delete(dim_conf_key: &str, funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
     let bs_inst = inst.inst::<TardisRelDBClient>();
     let (mut conn, table_name) = stats_pg_initializer::init_conf_dim_table_and_conn(bs_inst, ctx, true).await?;
+    let (_, conf_fact_col_table) = stats_pg_initializer::init_conf_fact_col_table_and_conn(bs_inst, ctx, true).await?;
+    // check if has fact col relation on this dim key
     conn.begin().await?;
+    let query_result = conn
+        .count_by_sql(
+            &format!("SELECT 1 FROM {conf_fact_col_table} WHERE dim_rel_conf_dim_key = $1"),
+            vec![Value::from(dim_conf_key)],
+        )
+        .await?;
+    if query_result != 0 {
+        return Err(funs.err().conflict(
+            "dim_conf",
+            "delete",
+            "This dimension config has been used by some other fact config, please delete the fact config first.",
+            "409-spi-stats-dim-conf-used",
+        ));
+    }
     conn.execute_one(&format!("DELETE FROM {table_name} WHERE key = $1"), vec![Value::from(dim_conf_key)]).await?;
     if online(dim_conf_key, &conn, ctx).await? {
         conn.execute_one(&format!("DROP TABLE {}_{dim_conf_key}", package_table_name("stats_inst_dim", ctx)), vec![]).await?;
@@ -171,7 +192,7 @@ async fn do_paginate(
     let result = conn
         .query_all(
             &format!(
-                r#"SELECT key, show_name, stable_ds, data_type, hierarchy, remark, create_time, update_time, count(*) OVER() AS total
+                r#"SELECT key, show_name, stable_ds, data_type, hierarchy, remark, dynamic_url, create_time, update_time, count(*) OVER() AS total
 FROM {table_name}
 WHERE 
     {}
@@ -204,6 +225,7 @@ WHERE
             create_time: item.try_get("", "create_time")?,
             update_time: item.try_get("", "update_time")?,
             online: online(&item.try_get::<String>("", "key")?, conn, ctx).await?,
+            dynamic_url: item.try_get("", "dynamic_url")?,
         });
     }
     Ok(TardisPage {

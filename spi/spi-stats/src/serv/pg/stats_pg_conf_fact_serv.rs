@@ -41,14 +41,16 @@ pub(crate) async fn add(add_req: &StatsConfFactAddReq, funs: &TardisFunsInst, ct
         Value::from(add_req.show_name.clone()),
         Value::from(add_req.query_limit),
         Value::from(add_req.remark.as_ref().unwrap_or(&"".to_string()).as_str()),
+        Value::from(add_req.redirect_path.clone()),
+        Value::from(add_req.is_online.unwrap_or_default()),
     ];
 
     conn.execute_one(
         &format!(
             r#"INSERT INTO {table_name}
-(key, show_name, query_limit, remark)
+(key, show_name, query_limit, remark, redirect_path, is_online)
 VALUES
-($1, $2, $3, $4)
+($1, $2, $3, $4, $5, $6)
 "#,
         ),
         params,
@@ -84,6 +86,14 @@ pub(crate) async fn modify(fact_conf_key: &str, modify_req: &StatsConfFactModify
         sql_sets.push(format!("remark = ${}", params.len() + 1));
         params.push(Value::from(remark.to_string()));
     }
+    if let Some(redirect_path) = &modify_req.redirect_path {
+        sql_sets.push(format!("redirect_path = ${}", params.len() + 1));
+        params.push(Value::from(redirect_path));
+    }
+    if let Some(is_online) = &modify_req.is_online {
+        sql_sets.push(format!("is_online = ${}", params.len() + 1));
+        params.push(Value::from(*is_online));
+    }
     conn.execute_one(
         &format!(
             r#"UPDATE {table_name}
@@ -102,8 +112,11 @@ WHERE key = $1
 pub(crate) async fn delete(fact_conf_key: &str, _funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
     let bs_inst = inst.inst::<TardisRelDBClient>();
     let (mut conn, table_name) = stats_pg_initializer::init_conf_fact_table_and_conn(bs_inst, ctx, true).await?;
+    let (_, fact_col_table_name) = stats_pg_initializer::init_conf_fact_col_table_and_conn(bs_inst, ctx, true).await?;
     conn.begin().await?;
     conn.execute_one(&format!("DELETE FROM {table_name} WHERE key = $1"), vec![Value::from(fact_conf_key)]).await?;
+    // delete related fact column config
+    conn.execute_one(&format!("DELETE FROM {fact_col_table_name} WHERE rel_conf_fact_key = $1"), vec![Value::from(fact_conf_key)]).await?;
     // The lazy loading mechanism may cause the ``<schema>.starsys_stats_inst_fact_<key>_col`` table to not be created
     if common_pg::check_table_exit(&format!("stats_inst_fact_{fact_conf_key}_col"), &conn, ctx).await? {
         conn.execute_one(
@@ -121,12 +134,13 @@ pub(crate) async fn delete(fact_conf_key: &str, _funs: &TardisFunsInst, ctx: &Ta
 }
 
 pub(in crate::serv::pg) async fn get(fact_conf_key: &str, conn: &TardisRelDBlConnection, ctx: &TardisContext) -> TardisResult<Option<StatsConfFactInfoResp>> {
-    do_paginate(Some(fact_conf_key.to_string()), None, 1, 1, None, None, conn, ctx).await.map(|page| page.records.into_iter().next())
+    do_paginate(Some(fact_conf_key.to_string()), None, None, 1, 1, None, None, conn, ctx).await.map(|page| page.records.into_iter().next())
 }
 
 pub(crate) async fn paginate(
     fact_conf_key: Option<String>,
     show_name: Option<String>,
+    is_online: Option<bool>,
     page_number: u32,
     page_size: u32,
     desc_by_create: Option<bool>,
@@ -138,12 +152,13 @@ pub(crate) async fn paginate(
     let bs_inst = inst.inst::<TardisRelDBClient>();
     let (conn, _) = stats_pg_initializer::init_conf_fact_table_and_conn(bs_inst, ctx, true).await?;
 
-    do_paginate(fact_conf_key, show_name, page_number, page_size, desc_by_create, desc_by_update, &conn, ctx).await
+    do_paginate(fact_conf_key, show_name, is_online, page_number, page_size, desc_by_create, desc_by_update, &conn, ctx).await
 }
 
 async fn do_paginate(
     fact_conf_key: Option<String>,
     show_name: Option<String>,
+    is_online: Option<bool>,
     page_number: u32,
     page_size: u32,
     desc_by_create: Option<bool>,
@@ -163,6 +178,10 @@ async fn do_paginate(
         sql_where.push(format!("show_name LIKE ${}", params.len() + 1));
         params.push(Value::from(format!("%{show_name}%")));
     }
+    if let Some(is_online) = &is_online {
+        sql_where.push(format!("is_online = ${}", params.len() + 1));
+        params.push(Value::from(*is_online));
+    }
     if let Some(desc_by_create) = desc_by_create {
         sql_order.push(format!("create_time {}", if desc_by_create { "DESC" } else { "ASC" }));
     }
@@ -173,7 +192,7 @@ async fn do_paginate(
     let result = conn
         .query_all(
             &format!(
-                r#"SELECT key, show_name, query_limit, remark, create_time, update_time, count(*) OVER() AS total
+                r#"SELECT key, show_name, query_limit, remark, redirect_path, is_online, create_time, update_time, count(*) OVER() AS total
 FROM {table_name}
 WHERE 
     {}
@@ -205,6 +224,8 @@ LIMIT $1 OFFSET $2
             create_time: item.try_get("", "create_time")?,
             update_time: item.try_get("", "update_time")?,
             online: online(&item.try_get::<String>("", "key")?, conn, ctx).await?,
+            is_online: item.try_get("", "is_online")?,
+            redirect_path: item.try_get("", "redirect_path")?,
         });
     }
     Ok(TardisPage {
