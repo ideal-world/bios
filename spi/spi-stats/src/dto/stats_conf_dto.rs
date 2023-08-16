@@ -162,6 +162,7 @@ pub struct StatsConfFactColAddReq {
     /// Associated fact and fact column configuration.
     /// Format: <fact configuration table key>.<fact field configuration table key>
     pub rel_conf_fact_and_col_key: Option<String>,
+    pub dim_exclusive_rec: Option<bool>,
     pub remark: Option<String>,
 }
 
@@ -182,6 +183,7 @@ pub struct StatsConfFactColModifyReq {
     /// valid when kind = Dimension, whether to allow multiple values.
     /// When true, the corresponding data format is an array type, and uses the gin type index
     pub dim_multi_values: Option<bool>,
+    pub dim_exclusive_rec: Option<bool>,
     /// Valid when kind = Measure, Used to specify the data type
     pub mes_data_type: Option<StatsDataTypeKind>,
     /// Valid when kind = Measure, Used to specify the data update frequency.
@@ -229,6 +231,7 @@ pub struct StatsConfFactColInfoResp {
     /// Associated fact and fact column configuration.
     /// Format: <fact configuration table key>.<fact field configuration table key>
     pub rel_conf_fact_and_col_key: Option<String>,
+    pub dim_exclusive_rec: Option<String>,
     pub remark: Option<String>,
     pub create_time: DateTime<Utc>,
     pub update_time: DateTime<Utc>,

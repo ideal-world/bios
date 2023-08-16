@@ -96,7 +96,10 @@ pub(crate) async fn add(fact_conf_key: &str, add_req: &StatsConfFactColAddReq, f
         params.push(Value::from(rel_conf_fact_and_col_key.to_string()));
         sql_fields.push("rel_conf_fact_and_col_key");
     }
-
+    if let Some(dim_exclusive_rec) = add_req.dim_exclusive_rec {
+        params.push(Value::from(dim_exclusive_rec));
+        sql_fields.push("dim_exclusive_rec");
+    }
     conn.execute_one(
         &format!(
             r#"INSERT INTO {table_name}
@@ -182,6 +185,10 @@ pub(crate) async fn modify(
     if let Some(remark) = &modify_req.remark {
         sql_sets.push(format!("remark = ${}", params.len() + 1));
         params.push(Value::from(remark.to_string()));
+    }
+    if let Some(dim_exclusive_rec) = modify_req.dim_exclusive_rec {
+        sql_sets.push(format!("rel_conf_fact_and_col_key = ${}", params.len() + 1));
+        params.push(Value::from(dim_exclusive_rec));
     }
     conn.execute_one(
         &format!(
@@ -337,7 +344,7 @@ async fn do_paginate(
     let result = conn
         .query_all(
             &format!(
-                r#"SELECT key, show_name, kind, remark, dim_rel_conf_dim_key, dim_multi_values, mes_data_distinct, mes_data_type, mes_frequency, mes_unit, mes_act_by_dim_conf_keys, rel_conf_fact_and_col_key, create_time, update_time, count(*) OVER() AS total
+                r#"SELECT key, show_name, kind, remark, dim_rel_conf_dim_key, dim_multi_values, dim_exclusive_rec, mes_data_distinct, mes_data_type, mes_frequency, mes_unit, mes_act_by_dim_conf_keys, rel_conf_fact_and_col_key, create_time, update_time, count(*) OVER() AS total
 FROM {table_name}
 WHERE 
     {}
@@ -366,6 +373,7 @@ WHERE
                 kind: item.try_get("", "kind")?,
                 dim_rel_conf_dim_key: item.try_get("", "dim_rel_conf_dim_key")?,
                 dim_multi_values: item.try_get("", "dim_multi_values")?,
+                dim_exclusive_rec: item.try_get("", "dim_exclusive_rec")?,
                 mes_data_distinct: item.try_get("", "mes_data_distinct")?,
                 mes_data_type: if item.try_get::<Option<String>>("", "mes_data_type")?.is_none() {
                     None
@@ -431,7 +439,7 @@ async fn do_paginate_agg_with_dim(
         .query_all(
             &format!(
                 r#"SELECT
-    col.key, col.show_name, col.kind, col.remark, col.dim_rel_conf_dim_key,
+    col.key, col.show_name, col.kind, col.remark, col.dim_rel_conf_dim_key, col.dim_exclusive_rec,
     col.dim_multi_values, col.mes_data_distinct, col.mes_data_type, col.mes_frequency,
     col.mes_unit, col.mes_act_by_dim_conf_keys, col.rel_conf_fact_and_col_key,
     col.create_time, col.update_time, dim.show_name as dim_show_name, count(*) OVER() AS total
@@ -465,6 +473,7 @@ WHERE
                     kind: item.try_get("", "kind")?,
                     dim_rel_conf_dim_key: item.try_get("", "dim_rel_conf_dim_key")?,
                     dim_multi_values: item.try_get("", "dim_multi_values")?,
+                    dim_exclusive_rec: item.try_get("", "dim_exclusive_rec")?,
                     mes_data_distinct: item.try_get("", "mes_data_distinct")?,
                     mes_data_type: if item.try_get::<Option<String>>("", "mes_data_type")?.is_none() {
                         None
