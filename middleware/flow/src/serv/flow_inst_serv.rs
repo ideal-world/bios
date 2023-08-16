@@ -68,7 +68,7 @@ impl FlowInstServ {
         .await?;
         let id = TardisFuns::field.nanoid();
         let current_state_id = if let Some(current_state_name) = &start_req.current_state_name {
-            FlowStateServ::find_state_id_by_name(&start_req.tag, current_state_name, funs, ctx).await?
+            FlowStateServ::match_state_id_by_name(&start_req.tag, current_state_name, funs, ctx).await?
         } else {
             flow_model.init_state_id.clone()
         };
@@ -546,6 +546,7 @@ impl FlowInstServ {
         FlowExternalServ::do_notify_changes(
             &flow_model.tag,
             &flow_inst_detail.rel_business_obj_id,
+            Some(next_flow_state.name.to_string()),
             vec![
                 json!({
                     "current_state_id":next_flow_state.id
@@ -593,14 +594,24 @@ impl FlowInstServ {
             match post_change.kind {
                 FlowTransitionActionChangeKind::Var => {
                     if let Some(change_info) = post_change.var_change_info {
-                        FlowExternalServ::do_modify_field(&current_model.tag, &current_inst.rel_business_obj_id, &change_info, ctx, funs).await?;
+                        if let Some(rel_tag) = change_info.obj_tag.clone() {
+                            let mut resp = FlowExternalServ::do_fetch_rel_obj(&current_model.tag, &current_inst.rel_business_obj_id, vec![rel_tag.clone()], ctx, funs).await?;
+                            if !resp.rel_bus_objs.is_empty() {
+                                for rel_bus_obj_id in resp.rel_bus_objs.pop().unwrap().rel_bus_obj_ids {
+                                    FlowExternalServ::do_modify_field(&rel_tag, &rel_bus_obj_id, &change_info, ctx, funs).await?;
+                                }
+                            }
+                        } else {
+                            FlowExternalServ::do_modify_field(&current_model.tag, &current_inst.rel_business_obj_id, &change_info, ctx, funs).await?;
+                        }
                     }
                 }
                 FlowTransitionActionChangeKind::State => {
                     if let Some(change_info) = post_change.state_change_info {
-                        let resp = FlowExternalServ::do_fetch_rel_obj(&current_model.tag, &current_inst.rel_business_obj_id, ctx, funs).await?;
-                        if !resp.rel_bus_obj_ids.is_empty() {
-                            let inst_ids = Self::find_inst_ids_by_rel_obj_ids(resp.rel_bus_obj_ids, &change_info, funs, ctx).await?;
+                        let mut resp =
+                            FlowExternalServ::do_fetch_rel_obj(&current_model.tag, &current_inst.rel_business_obj_id, vec![change_info.obj_tag.clone()], ctx, funs).await?;
+                        if !resp.rel_bus_objs.is_empty() {
+                            let inst_ids = Self::find_inst_ids_by_rel_obj_ids(resp.rel_bus_objs.pop().unwrap().rel_bus_obj_ids, &change_info, funs, ctx).await?;
                             Self::do_modify_state_by_post_action(inst_ids, &change_info, funs, ctx).await?;
                         }
                     }
@@ -626,14 +637,26 @@ impl FlowInstServ {
             // Check mismatch rel_obj_ids and filter them
             let mut mismatch_rel_obj_ids = vec![];
             for rel_obj_id in result_rel_obj_ids.iter() {
-                for condition_item in change_condition.conditions.iter() {
-                    if change_condition.current && condition_item.obj_tag.is_some() && !condition_item.state_id.is_empty() {
-                        let resp = FlowExternalServ::do_fetch_rel_obj(condition_item.obj_tag.clone().unwrap_or_default().as_str(), rel_obj_id, ctx, funs).await?;
-                        if !resp.rel_bus_obj_ids.is_empty() {
-                            let rel_obj_ids = Self::filter_rel_obj_ids_by_state(&resp.rel_bus_obj_ids, &Some(condition_item.state_id.clone()), funs, ctx).await?;
-                            match condition_item.op {
+                if change_condition.current {
+                    // collect rel tags
+                    let mut rel_tags = vec![];
+                    for condition_item in change_condition.conditions.iter() {
+                        if condition_item.obj_tag.is_some() && !condition_item.state_id.is_empty() {
+                            rel_tags.push(condition_item.obj_tag.clone().unwrap());
+                        }
+                    }
+                    let resp = FlowExternalServ::do_fetch_rel_obj(&change_info.obj_tag, rel_obj_id, rel_tags, ctx, funs).await?;
+                    if !resp.rel_bus_objs.is_empty() {
+                        for rel_bus_obj in resp.rel_bus_objs {
+                            let condition = change_condition
+                                .conditions
+                                .iter()
+                                .find(|condition| condition.obj_tag.is_some() && condition.obj_tag.clone().unwrap() == rel_bus_obj.rel_tag.clone())
+                                .unwrap();
+                            let rel_obj_ids = Self::filter_rel_obj_ids_by_state(&rel_bus_obj.rel_bus_obj_ids, &Some(condition.state_id.clone()), funs, ctx).await?;
+                            match condition.op {
                                 StateChangeConditionOp::And => {
-                                    if condition_item.state_id.len() != rel_obj_ids.len() {
+                                    if condition.state_id.len() != rel_obj_ids.len() {
                                         mismatch_rel_obj_ids.push(rel_obj_id.clone());
                                         continue;
                                     }

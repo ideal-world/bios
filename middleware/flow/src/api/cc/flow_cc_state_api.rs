@@ -86,7 +86,7 @@ impl FlowCcStateApi {
                 (Some("".to_string()), with_sub.0.unwrap_or(false))
             }
         } else {
-            (Some("".to_string()), true)
+            (None, true)
         };
 
         let result = FlowStateServ::paginate_items(

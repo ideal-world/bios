@@ -1,4 +1,5 @@
 use bios_sdk_invoke::{clients::spi_kv_client::SpiKvClient, invoke_constants::TARDIS_CONTEXT};
+use itertools::Itertools;
 use serde_json::Value;
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
@@ -20,7 +21,13 @@ use crate::{
 pub struct FlowExternalServ;
 
 impl FlowExternalServ {
-    pub async fn do_fetch_rel_obj(tag: &str, rel_business_obj_id: &str, ctx: &TardisContext, funs: &TardisFunsInst) -> TardisResult<FlowExternalFetchRelObjResp> {
+    pub async fn do_fetch_rel_obj(
+        tag: &str,
+        rel_business_obj_id: &str,
+        rel_tags: Vec<String>,
+        ctx: &TardisContext,
+        funs: &TardisFunsInst,
+    ) -> TardisResult<FlowExternalFetchRelObjResp> {
         let external_url = Self::get_external_url(tag, ctx, funs).await?;
         let header = Self::headers(None, funs, ctx).await?;
         let resp: TardisResp<FlowExternalFetchRelObjResp> = funs
@@ -31,7 +38,8 @@ impl FlowExternalServ {
                     kind: FlowExternalKind::FetchRelObj,
                     curr_tag: tag.to_string(),
                     curr_bus_obj_id: rel_business_obj_id.to_string(),
-                    params: FlowExternalParams::FetchRelObj(FlowExternalFetchRelObjReq { obj_tag: tag.to_string() }),
+                    target_state: None,
+                    params: rel_tags.into_iter().map(|tag| FlowExternalParams::FetchRelObj(FlowExternalFetchRelObjReq { rel_tag: tag })).collect_vec(),
                 },
                 header,
             )
@@ -62,10 +70,12 @@ impl FlowExternalServ {
                     kind: FlowExternalKind::ModifyField,
                     curr_tag: tag.to_string(),
                     curr_bus_obj_id: rel_business_obj_id.to_string(),
-                    params: FlowExternalParams::ModifyField(FlowExternalModifyFieldReq {
-                        var_name: change_info.var_name.clone(),
+                    target_state: None,
+                    params: vec![FlowExternalParams::ModifyField(FlowExternalModifyFieldReq {
+                        var_id: Some(change_info.var_name.clone()),
+                        var_name: Some(change_info.var_name.clone()),
                         value: change_info.changed_val.clone(),
-                    }),
+                    })],
                 },
                 header,
             )
@@ -82,6 +92,7 @@ impl FlowExternalServ {
     pub async fn do_notify_changes(
         tag: &str,
         rel_business_obj_id: &str,
+        target_state: Option<String>,
         changes: Vec<Value>,
         ctx: &TardisContext,
         funs: &TardisFunsInst,
@@ -96,7 +107,8 @@ impl FlowExternalServ {
                     kind: FlowExternalKind::NotifyChanges,
                     curr_tag: tag.to_string(),
                     curr_bus_obj_id: rel_business_obj_id.to_string(),
-                    params: FlowExternalParams::NotifyChanges(FlowExternalNotifyChangesReq { changed_vars: changes }),
+                    target_state,
+                    params: vec![FlowExternalParams::NotifyChanges(FlowExternalNotifyChangesReq { changed_vars: changes })],
                 },
                 header,
             )
