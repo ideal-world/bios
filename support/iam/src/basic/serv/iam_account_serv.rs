@@ -119,7 +119,7 @@ impl RbumItemCrudOperation<iam_account::ActiveModel, IamAccountAddReq, IamAccoun
     }
 
     async fn package_ext_modify(id: &str, modify_req: &IamAccountModifyReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<Option<iam_account::ActiveModel>> {
-        if modify_req.icon.is_none() && modify_req.status.is_none() && modify_req.lock_status.is_none() {
+        if modify_req.icon.is_none() && modify_req.status.is_none() && modify_req.lock_status.is_none() && modify_req.temporary.is_none() {
             return Ok(None);
         }
         let mut iam_account = iam_account::ActiveModel {
@@ -134,6 +134,9 @@ impl RbumItemCrudOperation<iam_account::ActiveModel, IamAccountAddReq, IamAccoun
         }
         if let Some(lock_status) = &modify_req.lock_status {
             iam_account.lock_status = Set(lock_status.to_int());
+        }
+        if let Some(temporary) = &modify_req.temporary {
+            iam_account.temporary = Set(temporary.clone());
         }
         Ok(Some(iam_account))
     }
@@ -313,6 +316,7 @@ impl IamAccountServ {
                 name: modify_req.name.clone(),
                 scope_level: modify_req.scope_level.clone(),
                 disabled: modify_req.disabled,
+                temporary: modify_req.temporary,
                 icon: modify_req.icon.clone(),
                 status: modify_req.status.clone(),
                 is_auto: Some(false),
@@ -409,6 +413,7 @@ impl IamAccountServ {
                 status: None,
                 lock_status: None,
                 is_auto: None,
+                temporary: None,
             },
             funs,
             &mock_ctx,
@@ -744,6 +749,7 @@ impl IamAccountServ {
                 status: None,
                 is_auto: Some(false),
                 lock_status: Some(IamAccountLockStateKind::Unlocked),
+                temporary: None,
             },
             funs,
             ctx,
