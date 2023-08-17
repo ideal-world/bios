@@ -27,7 +27,7 @@ impl FlowCcInstApi {
     }
 
      /// Batch Bind Instance / 批量绑定实例(初始化)
-     #[oai(path = "/", method = "post")]
+     #[oai(path = "/batch_bind", method = "post")]
      async fn batch_bind(&self, add_req: Json<FlowInstBindReq>, ctx: TardisContextExtractor) -> TardisApiResult<Vec<FlowInstBindResp>> {
          let mut funs = flow_constants::get_tardis_inst();
          funs.begin().await?;
