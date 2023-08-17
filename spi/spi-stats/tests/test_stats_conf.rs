@@ -104,7 +104,8 @@ pub async fn test_dim_conf(client: &mut TestHttpClient) -> TardisResult<()> {
                 "show_name":"状态",
                 "stable_ds": false,
                 "data_type":"bool",
-                "remark":"状态"
+                "remark":"状态",
+                "dynamic_url": "dynamic/url"
             }),
         )
         .await;
@@ -116,7 +117,8 @@ pub async fn test_dim_conf(client: &mut TestHttpClient) -> TardisResult<()> {
                 "show_name":"需求状态",
                 "stable_ds": true,
                 "data_type":"string",
-                "remark":"需求状态"
+                "remark":"需求状态",
+                "dynamic_url": "dynamic/url/2"
             }),
         )
         .await;
@@ -152,6 +154,7 @@ pub async fn test_dim_conf(client: &mut TestHttpClient) -> TardisResult<()> {
     assert_eq!(list.records[0]["data_type"].as_str().unwrap(), "string");
     assert!(list.records[0]["hierarchy"].as_array().unwrap().is_empty());
     assert_eq!(list.records[0]["remark"].as_str().unwrap(), "需求状态");
+    assert_eq!(list.records[0]["dynamic_url"].as_str().unwrap(), "dynamic/url/2");
 
     client.delete("/ci/conf/dim/to_be_del").await;
     let list: TardisPage<Value> = client.get("/ci/conf/dim?page_number=1&page_size=10").await;
@@ -216,7 +219,9 @@ pub async fn test_fact_conf(client: &mut TestHttpClient) -> TardisResult<()> {
                 "key":"kb_doc",
                 "show_name":"知识库文档",
                 "query_limit": 1000,
-                "remark":"知识库文档"
+                "remark":"知识库文档",
+                "is_online": false,
+                "redirect_path": "path/to/some/where"
             }),
         )
         .await;
@@ -255,7 +260,9 @@ pub async fn test_fact_conf(client: &mut TestHttpClient) -> TardisResult<()> {
             &json!({
                 "show_name":"需求",
                 "query_limit": 2000,
-                "remark":"需求说明"
+                "remark":"需求说明",
+                "is_online": true,
+                "redirect_path": "path/to/some/where"
             }),
         )
         .await;
@@ -281,10 +288,14 @@ pub async fn test_fact_conf(client: &mut TestHttpClient) -> TardisResult<()> {
         .await;
     let list: TardisPage<Value> = client.get("/ci/conf/fact?page_number=1&page_size=10").await;
     assert_eq!(list.total_size, 4);
+    let list: TardisPage<Value> = client.get("/ci/conf/fact?page_number=1&page_size=10&is_online=true").await;
+    assert_eq!(list.total_size, 1);
     let list: TardisPage<Value> = client.get("/ci/conf/fact?page_number=1&page_size=10&show_name=需求&key=req").await;
     assert_eq!(list.total_size, 1);
     assert_eq!(list.records[0]["key"].as_str().unwrap(), "req");
     assert_eq!(list.records[0]["show_name"].as_str().unwrap(), "需求");
+    assert!(list.records[0]["is_online"].as_bool().unwrap());
+    assert_eq!(list.records[0]["redirect_path"].as_str().unwrap(), "path/to/some/where");
     assert_eq!(list.records[0]["query_limit"].as_i64().unwrap(), 2000);
     assert_eq!(list.records[0]["remark"].as_str().unwrap(), "需求说明");
 
@@ -348,7 +359,6 @@ pub async fn test_fact_conf(client: &mut TestHttpClient) -> TardisResult<()> {
     let list: TardisPage<Value> = client.get("/ci/conf/fact?page_number=1&page_size=10").await;
     assert_eq!(list.total_size, 2);
     assert_eq!(list.records.iter().filter(|d| d["online"].as_bool().unwrap()).count(), 1);
-
     Ok(())
 }
 
@@ -508,6 +518,7 @@ pub async fn test_fact_col_conf(client: &mut TestHttpClient) -> TardisResult<()>
                 "key":"plan_hours",
                 "show_name":"计划工时_to_be_modify",
                 "kind": "measure",
+                "mes_unit": "hour",
                 "mes_data_type": "bool",
                 "mes_frequency": "RT"
             }),
@@ -539,9 +550,17 @@ pub async fn test_fact_col_conf(client: &mut TestHttpClient) -> TardisResult<()>
             }),
         )
         .await;
-
+    // cannot delete this dim because it is used by other fact
+    let resp = client.delete_resp("/ci/conf/dim/address").await;
+    assert!(resp.code.contains("409"));
     let list: TardisPage<Value> = client.get("/ci/conf/fact/req/col?page_number=1&page_size=10").await;
     assert_eq!(list.total_size, 8);
+    // agg query with dim
+    let list: TardisPage<Value> = client.get("/ci/conf/fact/req/dim/address/col?page_number=1&page_size=10").await;
+    assert_eq!(list.total_size, 1);
+    assert_eq!(list.records[0]["key"].as_str().unwrap(), "source");
+    assert_eq!(list.records[0]["show_name"].as_str().unwrap(), "来源");
+    assert_eq!(list.records[0]["dim_show_name"].as_str().unwrap(), "地址");
     let list: TardisPage<Value> = client.get("/ci/conf/fact/req/col?page_number=1&page_size=10&show_name=工时").await;
     assert_eq!(list.total_size, 2);
     let list: TardisPage<Value> = client.get("/ci/conf/fact/req/col?page_number=1&page_size=10&key=source").await;
@@ -566,12 +585,25 @@ pub async fn test_fact_col_conf(client: &mut TestHttpClient) -> TardisResult<()>
     assert!(list.records[0]["dim_multi_values"].is_null());
     assert_eq!(list.records[0]["mes_data_type"].as_str().unwrap(), "int");
     assert_eq!(list.records[0]["mes_frequency"].as_str().unwrap(), "1H");
+    assert_eq!(list.records[0]["mes_unit"].as_str().unwrap(), "hour");
     assert_eq!(list.records[0]["mes_act_by_dim_conf_keys"].as_array().unwrap().len(), 1);
     assert!(list.records[0]["rel_conf_fact_and_col_key"].is_null());
 
     client.delete("/ci/conf/fact/req/col/to_be_del").await;
     let list: TardisPage<Value> = client.get("/ci/conf/fact/req/col?page_number=1&page_size=10").await;
     assert_eq!(list.total_size, 7);
+
+    /* enable to test delete fact
+    // delete by kind
+    client.delete("/ci/conf/fact/req/kind/dimension").await;
+    let list: TardisPage<Value> = client.get("/ci/conf/fact/req/col?page_number=1&page_size=10").await;
+    assert_eq!(list.total_size, 2);
+
+    // delete fact will delete related measure and dimension
+    client.delete("/ci/conf/fact/req").await;
+    let list: TardisPage<Value> = client.get("/ci/conf/fact/req/col?page_number=1&page_size=10").await;
+    assert_eq!(list.total_size, 0);
+    */
 
     Ok(())
 }
