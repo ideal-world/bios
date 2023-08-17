@@ -227,7 +227,7 @@ impl FlowStateServ {
         if let Some(state) = state {
             Ok((state.id, name.to_string()))
         } else {
-            Err(funs.err().not_found("flow_state_serv", "find_state_id_by_name", "state_id not match", ""))
+            Err(funs.err().not_found("flow_state_serv", "find_state_id_by_name", &format!("state_name: {} not match", name), ""))
         }
     }
 }
