@@ -4,6 +4,7 @@ use bios_basic::rbum::rbum_enumeration::RbumRelFromKind;
 use bios_sdk_invoke::clients::spi_search_client::SpiSearchClient;
 use bios_sdk_invoke::dto::search_item_dto::{SearchItemAddReq, SearchItemModifyReq, SearchItemVisitKeysReq};
 use itertools::Itertools;
+use tardis::chrono::Utc;
 
 use std::collections::{HashMap, HashSet};
 
@@ -131,6 +132,9 @@ impl RbumItemCrudOperation<iam_account::ActiveModel, IamAccountAddReq, IamAccoun
         }
         if let Some(status) = &modify_req.status {
             iam_account.status = Set(status.to_int());
+            if status == &IamAccountStatusKind::Active {
+                iam_account.effective_time = Set(Utc::now());
+            }
         }
         if let Some(lock_status) = &modify_req.lock_status {
             iam_account.lock_status = Set(lock_status.to_int());
@@ -206,6 +210,7 @@ impl RbumItemCrudOperation<iam_account::ActiveModel, IamAccountAddReq, IamAccoun
         query.column((iam_account::Entity, iam_account::Column::Ext7));
         query.column((iam_account::Entity, iam_account::Column::Ext8));
         query.column((iam_account::Entity, iam_account::Column::Ext9));
+        query.column((iam_account::Entity, iam_account::Column::EffectiveTime));
         if let Some(icon) = &filter.icon {
             query.and_where(Expr::col(iam_account::Column::Icon).eq(icon.as_str()));
         }
@@ -493,6 +498,7 @@ impl IamAccountServ {
             owner_name: account.owner_name,
             create_time: account.create_time,
             update_time: account.update_time,
+            effective_time: account.effective_time,
             scope_level: account.scope_level,
             disabled: account.disabled,
             is_locked: funs.cache().exists(&format!("{}{}", funs.rbum_conf_cache_key_cert_locked_(), &account.id.clone())).await?,
@@ -562,6 +568,7 @@ impl IamAccountServ {
                 owner: account.owner,
                 create_time: account.create_time,
                 update_time: account.update_time,
+                effective_time: account.effective_time,
                 scope_level: account.scope_level,
                 disabled: account.disabled,
                 is_locked: funs.cache().exists(&format!("{}{}", funs.rbum_conf_cache_key_cert_locked_(), &account.id.clone())).await?,
