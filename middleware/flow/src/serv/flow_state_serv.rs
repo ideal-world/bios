@@ -194,7 +194,7 @@ impl FlowStateServ {
     }
 
     // For the old data migration, this function match id by old state name
-    pub(crate) async fn match_state_id_by_name(tag: &str, mut name: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
+    pub(crate) async fn match_state_id_and_name_by_name(tag: &str, mut name: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<(String, String)> {
         if tag == "ISSUE" {
             name = match name {
                 "待开始" => "待处理",
@@ -225,7 +225,7 @@ impl FlowStateServ {
         .records
         .pop();
         if let Some(state) = state {
-            Ok(state.id)
+            Ok((state.id, name.to_string()))
         } else {
             Err(funs.err().not_found("flow_state_serv", "find_state_id_by_name", "state_id not match", ""))
         }

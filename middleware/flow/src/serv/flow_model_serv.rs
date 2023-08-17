@@ -926,4 +926,18 @@ impl FlowModelServ {
         }
         Ok(())
     }
+
+    async fn find_transitions_by_state_id(flow_model_id: &str, current_state_id: Option<Vec<String>>, target_state_id: &str, funs: &TardisFunsInst,ctx: &TardisContext) -> TardisResult<Vec<FlowTransitionDetailResp>> {
+        Ok(Self::find_transitions(flow_model_id, funs, ctx)
+            .await?
+            .into_iter()
+            .filter(|tran_detail| {
+                if let Some(current_state_id) = current_state_id.as_ref() {
+                    current_state_id.contains(&tran_detail.from_flow_state_id) && tran_detail.to_flow_state_id == target_state_id
+                } else {
+                    tran_detail.to_flow_state_id == target_state_id
+                }
+            })
+            .collect_vec())
+    }
 }
