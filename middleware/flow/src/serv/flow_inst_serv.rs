@@ -96,7 +96,7 @@ impl FlowInstServ {
         for rel_business_obj in &bind_req.rel_business_objs {
             let flow_model_id = Self::get_model_id_by_own_paths(&bind_req.tag, funs, ctx).await?;
 
-            let current_state_id = FlowStateServ::match_state_id_by_name(&bind_req.tag, &rel_business_obj.current_state_name, funs, ctx).await?;
+            let (current_state_id, current_state_name) = FlowStateServ::match_state_id_and_name_by_name(&bind_req.tag, &rel_business_obj.current_state_name, funs, ctx).await?;
             let id = TardisFuns::field.nanoid();
             let flow_inst: flow_inst::ActiveModel = flow_inst::ActiveModel {
                 id: Set(id.clone()),
@@ -113,11 +113,13 @@ impl FlowInstServ {
             let resp = if funs.db().insert_one(flow_inst, ctx).await.is_ok() {
                 FlowInstBindResp {
                     rel_business_obj_id: rel_business_obj.rel_business_obj_id.clone(),
+                    current_state_name,
                     inst_id: Some(id),
                 }
             } else {
                 FlowInstBindResp {
                     rel_business_obj_id: rel_business_obj.rel_business_obj_id.clone(),
+                    current_state_name,
                     inst_id: None,
                 }
             };
