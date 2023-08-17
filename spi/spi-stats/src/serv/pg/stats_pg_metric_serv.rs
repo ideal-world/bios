@@ -117,6 +117,7 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
     col.dim_multi_values as dim_multi_values,
     col.mes_data_distinct as mes_data_distinct,
     col.mes_data_type as mes_data_type,
+    col.mes_unit as mes_unit,
     dim.data_type as dim_data_type,
     fact.query_limit as query_limit
   FROM
