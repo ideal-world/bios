@@ -130,7 +130,7 @@ async fn ident(req: &AuthReq, config: &AuthConfig, cache_client: &TardisCacheCli
                 account_id: Some(bios_ctx.owner),
                 roles: Some(bios_ctx.roles),
                 groups: Some(bios_ctx.groups),
-                own_paths: Some(own_paths),
+                own_paths: Some(bios_ctx.own_paths),
                 ak: Some(ak_authorization.to_string()),
             })
         } else {
