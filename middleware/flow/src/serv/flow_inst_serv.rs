@@ -67,12 +67,17 @@ impl FlowInstServ {
         )
         .await?;
         let id = TardisFuns::field.nanoid();
+        let current_state_id = if let Some(current_state_name) = &start_req.current_state_name {
+            FlowStateServ::match_state_id_and_name_by_name(&start_req.tag, current_state_name, funs, ctx).await?.0
+        } else {
+            flow_model.init_state_id.clone()
+        };
         let flow_inst: flow_inst::ActiveModel = flow_inst::ActiveModel {
             id: Set(id.clone()),
             rel_flow_model_id: Set(flow_model_id.to_string()),
             rel_business_obj_id: Set(start_req.rel_business_obj_id.to_string()),
 
-            current_state_id: Set(flow_model.init_state_id.clone()),
+            current_state_id: Set(current_state_id),
 
             create_vars: Set(start_req.create_vars.as_ref().map(|vars| TardisFuns::json.obj_to_json(vars).unwrap())),
             create_ctx: Set(FlowOperationContext::from_ctx(ctx)),
