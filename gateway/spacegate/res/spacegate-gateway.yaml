@@ -42,10 +42,10 @@ spec:
                       config:
                         type: object
                         x-kubernetes-preserve-unknown-fields: true
-                  required:
-                    - code
-                    - enable
-                    - config
+                    required:
+                      - code
+                      - enable
+                      - config
                 targetRefs:
                   type: array
                   items:
@@ -60,9 +60,9 @@ spec:
                       namespace:
                         type: string
                         minLength: 1
-                  required:
-                    - kind
-                    - name
+                    required:
+                      - kind
+                      - name
 ---
 apiVersion: v1
 kind: ServiceAccount
