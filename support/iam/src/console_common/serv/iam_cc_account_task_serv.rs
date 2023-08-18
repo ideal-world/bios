@@ -5,15 +5,20 @@ use crate::{
             iam_config_dto::IamConfigSummaryResp,
             iam_filer_dto::IamAccountFilterReq,
         },
-        serv::{clients::iam_log_client::LogParamTag, iam_account_serv::IamAccountServ, iam_platform_serv::IamPlatformServ, iam_tenant_serv::IamTenantServ},
+        serv::{
+            clients::iam_log_client::LogParamTag, iam_account_serv::IamAccountServ, iam_platform_serv::IamPlatformServ, iam_rel_serv::IamRelServ, iam_tenant_serv::IamTenantServ,
+        },
     },
-    iam_config::IamConfig,
+    iam_config::{IamBasicConfigApi, IamConfig},
     iam_constants,
-    iam_enumeration::IamAccountLockStateKind,
+    iam_enumeration::{IamAccountLockStateKind, IamRelKind},
 };
 use bios_basic::{
     process::task_processor::TaskProcessor,
-    rbum::{dto::rbum_filer_dto::RbumBasicFilterReq, serv::rbum_item_serv::RbumItemCrudOperation},
+    rbum::{
+        dto::rbum_filer_dto::{RbumBasicFilterReq, RbumItemRelFilterReq},
+        serv::rbum_item_serv::RbumItemCrudOperation,
+    },
 };
 use bios_sdk_invoke::clients::spi_log_client::{LogItemFindReq, SpiLogClient};
 use tardis::{
@@ -51,10 +56,18 @@ impl IamCcAccountTaskServ {
                     &task_ctx,
                 )
                 .await?;
+                let admin_account_list = IamRelServ::find_to_simple_rels(&IamRelKind::IamAccountRole, &funs.iam_basic_role_sys_admin_id(), None, None, &funs, &task_ctx)
+                    .await?
+                    .iter()
+                    .map(|r| r.rel_id.clone())
+                    .collect::<Vec<String>>();
                 let platform_config = IamPlatformServ::get_platform_config_agg(&funs, &task_ctx).await?;
                 let mut num = 0;
                 for account in account_liet {
                     let id = account.id.clone();
+                    if admin_account_list.contains(&id) {
+                        continue;
+                    }
                     num += 1;
                     if num % 100 == 0 {
                         tardis::tokio::time::sleep(std::time::Duration::from_secs(1)).await;
