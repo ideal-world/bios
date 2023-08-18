@@ -16,6 +16,7 @@ pub struct FlowInstStartReq {
     pub rel_business_obj_id: String,
     pub tag: String,
     pub create_vars: Option<HashMap<String, Value>>,
+    pub current_state_name: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
