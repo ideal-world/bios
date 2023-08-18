@@ -1,16 +1,17 @@
-use std::time::Duration;
-
+#[cfg(feature = "web-server")]
+use crate::api::{auth_crypto_api, auth_kernel_api, auth_mgr_api};
 use crate::{
-    api::{auth_crypto_api, auth_kernel_api, auth_mgr_api},
     auth_config::AuthConfig,
     auth_constants::DOMAIN_CODE,
     serv::{auth_crypto_serv, auth_res_serv},
 };
+use std::time::Duration;
+#[cfg(feature = "web-server")]
+use tardis::web::web_server::TardisWebServer;
 use tardis::{
     basic::result::TardisResult,
     log::{info, trace},
     tokio::{task::JoinHandle, time},
-    web::web_server::TardisWebServer,
     TardisFuns,
 };
 use tardis::{
@@ -18,10 +19,17 @@ use tardis::{
     serde_json::json,
 };
 
+#[cfg(feature = "web-server")]
 pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
     init_data().await?;
     auth_crypto_serv::init().await?;
     init_api(web_server).await
+}
+
+#[cfg(not(feature = "web-server"))]
+pub async fn init() -> TardisResult<JoinHandle<()>> {
+    auth_crypto_serv::init().await?;
+    init_data().await
 }
 
 pub async fn crypto_init() -> TardisResult<()> {
@@ -106,6 +114,7 @@ pub async fn init_data() -> TardisResult<JoinHandle<()>> {
     Ok(handle)
 }
 
+#[cfg(feature = "web-server")]
 pub async fn init_api(web_server: &TardisWebServer) -> TardisResult<()> {
     web_server.add_module(DOMAIN_CODE, (auth_mgr_api::MgrApi, auth_crypto_api::CryptoApi, auth_kernel_api::AuthApi)).await;
     Ok(())

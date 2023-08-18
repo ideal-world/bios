@@ -183,6 +183,7 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
                 tag: "REQ".to_string(),
                 create_vars: None,
                 rel_business_obj_id: req_inst_rel_id.clone(),
+                current_state_name: None,
             },
         )
         .await;
@@ -193,6 +194,7 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
                 tag: "TICKET".to_string(),
                 create_vars: None,
                 rel_business_obj_id: ticket_inst_rel_id.clone(),
+                current_state_name: None,
             },
         )
         .await;
@@ -203,6 +205,7 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
                 tag: "ITER".to_string(),
                 create_vars: None,
                 rel_business_obj_id: iter_inst_rel_id.clone(),
+                current_state_name: None,
             },
         )
         .await;
