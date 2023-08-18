@@ -6,12 +6,13 @@ use crate::iam_constants;
 use crate::iam_enumeration::IamSetKind;
 use bios_basic::rbum::rbum_config::RbumConfigApi;
 
+use bios_basic::helper::request_helper::add_remote_ip;
 use tardis::web::context_extractor::TardisContextExtractor;
+use tardis::web::poem::Request;
 use tardis::web::poem_openapi;
 use tardis::web::poem_openapi::payload::Json;
 use tardis::web::web_resp::{TardisApiResult, TardisResp};
 use tardis::TardisFuns;
-
 #[derive(Clone, Default)]
 pub struct IamCiResApi;
 
@@ -21,7 +22,8 @@ pub struct IamCiResApi;
 #[poem_openapi::OpenApi(prefix_path = "/ci/res", tag = "bios_basic::ApiTag::Interface")]
 impl IamCiResApi {
     #[oai(path = "/", method = "post")]
-    async fn add(&self, mut add_req: Json<IamResAggAddReq>, ctx: TardisContextExtractor) -> TardisApiResult<String> {
+    async fn add(&self, mut add_req: Json<IamResAggAddReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<String> {
+        add_remote_ip(&request, &ctx.0).await?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Res, &funs, &ctx.0).await?;
@@ -33,7 +35,8 @@ impl IamCiResApi {
 
     /// Add Res Cate
     #[oai(path = "/cate", method = "post")]
-    async fn add_cate(&self, add_req: Json<IamSetCateAddReq>, ctx: TardisContextExtractor) -> TardisApiResult<String> {
+    async fn add_cate(&self, add_req: Json<IamSetCateAddReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<String> {
+        add_remote_ip(&request, &ctx.0).await?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         let set_cate_sys_code_node_len = funs.rbum_conf_set_cate_sys_code_node_len();
