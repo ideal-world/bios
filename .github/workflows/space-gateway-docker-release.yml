@@ -33,7 +33,7 @@ jobs:
         run: cargo clippy --all-features -p bios-spacegate
 
       - name: Build rust
-        run: cargo build --release --bin bios-spacegate
+        run: cargo build --release -p bios-spacegate
 
       - name: Copy binary to workspace
         run: cp ./target/release/bios-spacegate ./gateway/spacegate/
