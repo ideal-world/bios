@@ -323,6 +323,7 @@ async fn test_rbum_set_cate(context: &TardisContext) -> TardisResult<()> {
             sort: None,
             ext: None,
             scope_level: None,
+            sys_code: None,
         },
         &funs,
         context,
@@ -997,7 +998,16 @@ async fn test_rbum_set_item(context: &TardisContext) -> TardisResult<()> {
     assert!(set_paths.get(0).unwrap().iter().any(|i| i.name == "l1"));
 
     info!("【test_rbum_set_item】 : Test Modify : RbumSetItemServ::modify_rbum");
-    RbumSetItemServ::modify_rbum(&id, &mut RbumSetItemModifyReq { sort: 10 }, &funs, context).await?;
+    RbumSetItemServ::modify_rbum(
+        &id,
+        &mut RbumSetItemModifyReq {
+            sort: Some(10),
+            rel_rbum_set_cate_code: None,
+        },
+        &funs,
+        context,
+    )
+    .await?;
 
     info!("【test_rbum_set_item】 : Test Find : RbumSetItemServ::paginate_rbums");
     let rbums = RbumSetItemServ::paginate_rbums(

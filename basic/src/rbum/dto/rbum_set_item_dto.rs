@@ -23,7 +23,8 @@ pub struct RbumSetItemAddReq {
 #[derive(Serialize, Deserialize, Debug)]
 #[cfg_attr(feature = "default", derive(poem_openapi::Object))]
 pub struct RbumSetItemModifyReq {
-    pub sort: i64,
+    pub sort: Option<i64>,
+    pub rel_rbum_set_cate_code: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]

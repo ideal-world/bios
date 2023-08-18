@@ -206,6 +206,7 @@ impl IamSetServ {
                 sort: modify_req.sort,
                 ext: modify_req.ext.clone(),
                 scope_level: modify_req.scope_level.clone(),
+                sys_code: None,
             },
             funs,
             ctx,
@@ -537,6 +538,24 @@ impl IamSetServ {
         Ok(rbum_cate.as_ref().map(|r| r.id.clone()).unwrap_or_default())
     }
 
+    pub async fn get_sys_code_by_cate_id(set_id: &str, cate_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<String>> {
+        let rbum_cate = RbumSetCateServ::find_one_rbum(
+            &RbumSetCateFilterReq {
+                basic: RbumBasicFilterReq {
+                    ids: Some(vec![cate_id.to_string()]),
+                    ..Default::default()
+                },
+                rel_rbum_set_id: Some(set_id.to_string()),
+                sys_code_query_kind: Some(RbumSetCateLevelQueryKind::Current),
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?;
+        Ok(rbum_cate.map(|r| r.sys_code))
+    }
+
     async fn get_tree_with_sys_codes(
         set_id: &str,
         filter_sys_codes: Option<Vec<String>>,
@@ -724,6 +743,106 @@ impl IamSetServ {
 
     pub async fn check_scope(app_id: &str, account_id: &str, set_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<bool> {
         RbumSetItemServ::check_a_is_parent_or_sibling_of_b(account_id, app_id, set_id, funs, ctx).await
+    }
+
+    pub async fn add_prefix_to_sys_code_of_set(sys_code_prefix: &str, target_set_id: &str, funs: &TardisFunsInst, target_ctx: &TardisContext) -> TardisResult<()> {
+        let set_tree: RbumSetTreeResp = RbumSetServ::get_tree(
+            target_set_id,
+            &RbumSetTreeFilterReq {
+                fetch_cate_item: true,
+                sys_code_query_kind: Some(RbumSetCateLevelQueryKind::CurrentAndSub),
+                sys_code_query_depth: Some(1),
+                ..Default::default()
+            },
+            funs,
+            target_ctx,
+        )
+        .await?;
+        for cate in set_tree.main.clone() {
+            RbumSetCateServ::modify_rbum(
+                &cate.id,
+                &mut RbumSetCateModifyReq {
+                    sys_code: Some(format!("{}{}", sys_code_prefix, cate.sys_code,)),
+                    bus_code: None,
+                    name: None,
+                    icon: None,
+                    sort: None,
+                    ext: None,
+                    scope_level: None,
+                },
+                funs,
+                target_ctx,
+            )
+            .await?;
+            if let Some(ext) = set_tree.ext.clone() {
+                if let Some(items) = ext.items.get(&cate.id) {
+                    for item in items {
+                        RbumSetItemServ::modify_rbum(
+                            &item.id,
+                            &mut RbumSetItemModifyReq {
+                                rel_rbum_set_cate_code: Some(format!("{}{}", sys_code_prefix, cate.sys_code,)),
+                                sort: None,
+                            },
+                            funs,
+                            target_ctx,
+                        )
+                        .await?;
+                    }
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    pub async fn delete_prefix_sys_code_of_set(sys_code_prefix: &str, target_set_id: &str, funs: &TardisFunsInst, target_ctx: &TardisContext) -> TardisResult<()> {
+        let set_tree: RbumSetTreeResp = RbumSetServ::get_tree(
+            target_set_id,
+            &RbumSetTreeFilterReq {
+                fetch_cate_item: true,
+                sys_code_query_kind: Some(RbumSetCateLevelQueryKind::CurrentAndSub),
+                sys_code_query_depth: Some(1),
+                ..Default::default()
+            },
+            funs,
+            target_ctx,
+        )
+        .await?;
+        for cate in set_tree.main.clone() {
+            RbumSetCateServ::modify_rbum(
+                &cate.id,
+                &mut RbumSetCateModifyReq {
+                    sys_code: cate.sys_code.strip_prefix(sys_code_prefix).map(|s| s.to_string()),
+                    bus_code: None,
+                    name: None,
+                    icon: None,
+                    sort: None,
+                    ext: None,
+                    scope_level: None,
+                },
+                funs,
+                target_ctx,
+            )
+            .await?;
+            if let Some(ext) = set_tree.ext.clone() {
+                if let Some(items) = ext.items.get(&cate.id) {
+                    for item in items {
+                        RbumSetItemServ::modify_rbum(
+                            &item.id,
+                            &mut RbumSetItemModifyReq {
+                                rel_rbum_set_cate_code: cate.sys_code.strip_prefix(sys_code_prefix).map(|s| s.to_string()),
+                                sort: None,
+                            },
+                            funs,
+                            target_ctx,
+                        )
+                        .await?;
+                    }
+                }
+            }
+        }
+
+        Ok(())
     }
 
     pub async fn cut_tree_to_new_set<'a>(

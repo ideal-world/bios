@@ -6,6 +6,7 @@ use bios_iam::basic::serv::iam_account_serv::IamAccountServ;
 use bios_iam::basic::serv::iam_cert_serv::IamCertServ;
 
 use bios_iam::console_system::serv::iam_cs_org_serv::IamCsOrgServ;
+use itertools::Itertools;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
@@ -182,8 +183,27 @@ async fn test_single_level(context: &TardisContext, another_context: &TardisCont
     .is_err());
 
     info!("【test_ca_set】 : test_single_level : Modify Set Item By Id");
-    assert!(IamSetServ::modify_set_item(&item_id1, &mut RbumSetItemModifyReq { sort: 10 }, &funs, another_context).await.is_err());
-    IamSetServ::modify_set_item(&item_id1, &mut RbumSetItemModifyReq { sort: 10 }, &funs, context).await?;
+    assert!(IamSetServ::modify_set_item(
+        &item_id1,
+        &mut RbumSetItemModifyReq {
+            sort: Some(10),
+            rel_rbum_set_cate_code: None,
+        },
+        &funs,
+        another_context
+    )
+    .await
+    .is_err());
+    IamSetServ::modify_set_item(
+        &item_id1,
+        &mut RbumSetItemModifyReq {
+            sort: Some(10),
+            rel_rbum_set_cate_code: None,
+        },
+        &funs,
+        context,
+    )
+    .await?;
 
     info!("【test_ca_set】 : test_single_level : Find Set Item");
     let items = IamSetServ::find_set_items(None, Some(set_cate_id1.clone()), None, None, false, &funs, context).await?;
@@ -1324,6 +1344,13 @@ pub async fn test_bind_platform_to_tenant_node(
     let cate_t2_items = resp.ext.unwrap().items.get(set_cate_t2_xxx_id).unwrap().clone();
     assert!(cate_t2_items.iter().any(|r| r.rel_rbum_item_id == g_account_id));
     assert!(cate_t2_items.iter().any(|r| r.rel_rbum_item_id == t2_account_id1));
+
+    let search_vec = resp.main.clone();
+    for ele in resp.main.clone() {
+        for sub_ele in search_vec.iter().filter(|m| m.pid == Some(ele.id.clone())).collect_vec() {
+            assert!(sub_ele.sys_code.contains(&ele.sys_code));
+        }
+    }
 
     funs.rollback().await?;
     Ok(())
