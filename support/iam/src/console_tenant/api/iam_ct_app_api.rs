@@ -11,6 +11,8 @@ use crate::basic::dto::iam_app_dto::{IamAppAggAddReq, IamAppDetailResp, IamAppMo
 use crate::basic::dto::iam_filer_dto::IamAppFilterReq;
 use crate::basic::serv::iam_app_serv::IamAppServ;
 use crate::iam_constants;
+use bios_basic::helper::request_helper::add_remote_ip;
+use tardis::web::poem::Request;
 #[derive(Clone, Default)]
 pub struct IamCtAppApi;
 
@@ -19,7 +21,8 @@ pub struct IamCtAppApi;
 impl IamCtAppApi {
     /// Add App
     #[oai(path = "/", method = "post")]
-    async fn add(&self, add_req: Json<IamAppAggAddReq>, ctx: TardisContextExtractor) -> TardisApiResult<String> {
+    async fn add(&self, add_req: Json<IamAppAggAddReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<String> {
+        add_remote_ip(&request, &ctx.0).await?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         let result = IamAppServ::add_app_agg(&add_req.0, &funs, &ctx.0).await?;
@@ -32,7 +35,8 @@ impl IamCtAppApi {
     ///
     /// When code = 202, the return value is the asynchronous task id
     #[oai(path = "/:id", method = "put")]
-    async fn modify(&self, id: Path<String>, mut modify_req: Json<IamAppModifyReq>, ctx: TardisContextExtractor) -> TardisApiResult<Option<String>> {
+    async fn modify(&self, id: Path<String>, mut modify_req: Json<IamAppModifyReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Option<String>> {
+        add_remote_ip(&request, &ctx.0).await?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         IamAppServ::modify_item(&id.0, &mut modify_req, &funs, &ctx.0).await?;
@@ -47,7 +51,8 @@ impl IamCtAppApi {
 
     /// Get App By App Id
     #[oai(path = "/:id", method = "get")]
-    async fn get(&self, id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<IamAppDetailResp> {
+    async fn get(&self, id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<IamAppDetailResp> {
+        add_remote_ip(&request, &ctx.0).await?;
         let funs = iam_constants::get_tardis_inst();
         let result = IamAppServ::get_item(&id.0, &IamAppFilterReq::default(), &funs, &ctx.0).await?;
         ctx.0.execute_task().await?;
@@ -65,7 +70,9 @@ impl IamCtAppApi {
         page_number: Query<u32>,
         page_size: Query<u32>,
         ctx: TardisContextExtractor,
+        request: &Request,
     ) -> TardisApiResult<TardisPage<IamAppSummaryResp>> {
+        add_remote_ip(&request, &ctx.0).await?;
         let funs = iam_constants::get_tardis_inst();
 
         let result = IamAppServ::paginate_items(
@@ -93,7 +100,8 @@ impl IamCtAppApi {
 
     /// Delete App By App Id
     #[oai(path = "/:id", method = "delete")]
-    async fn delete(&self, id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+    async fn delete(&self, id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
+        add_remote_ip(&request, &ctx.0).await?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         IamAppServ::delete_item_with_all_rels(&id.0, &funs, &ctx.0).await?;

@@ -17,7 +17,8 @@ use crate::basic::serv::iam_role_serv::IamRoleServ;
 use crate::iam_constants;
 use crate::iam_constants::RBUM_SCOPE_LEVEL_APP;
 use crate::iam_enumeration::{IamRelKind, IamRoleKind};
-
+use bios_basic::helper::request_helper::add_remote_ip;
+use tardis::web::poem::Request;
 #[derive(Clone, Default)]
 pub struct IamCaRoleApi;
 
@@ -26,7 +27,8 @@ pub struct IamCaRoleApi;
 impl IamCaRoleApi {
     /// Add Role
     #[oai(path = "/", method = "post")]
-    async fn add(&self, mut add_req: Json<IamRoleAggAddReq>, ctx: TardisContextExtractor) -> TardisApiResult<String> {
+    async fn add(&self, mut add_req: Json<IamRoleAggAddReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<String> {
+        add_remote_ip(&request, &ctx.0).await?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         add_req.0.role.kind = Some(IamRoleKind::App);
@@ -40,7 +42,8 @@ impl IamCaRoleApi {
     ///
     /// When code = 202, the return value is the asynchronous task id
     #[oai(path = "/:id", method = "put")]
-    async fn modify(&self, id: Path<String>, mut modify_req: Json<IamRoleAggModifyReq>, ctx: TardisContextExtractor) -> TardisApiResult<Option<String>> {
+    async fn modify(&self, id: Path<String>, mut modify_req: Json<IamRoleAggModifyReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Option<String>> {
+        add_remote_ip(&request, &ctx.0).await?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         IamRoleServ::modify_role_agg(&id.0, &mut modify_req.0, &funs, &ctx.0).await?;
@@ -55,7 +58,8 @@ impl IamCaRoleApi {
 
     /// Get Role By Role Id
     #[oai(path = "/:id", method = "get")]
-    async fn get(&self, id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<IamRoleDetailResp> {
+    async fn get(&self, id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<IamRoleDetailResp> {
+        add_remote_ip(&request, &ctx.0).await?;
         let funs = iam_constants::get_tardis_inst();
         let result = IamRoleServ::get_item(
             &id.0,
@@ -86,7 +90,9 @@ impl IamCaRoleApi {
         desc_by_create: Query<Option<bool>>,
         desc_by_update: Query<Option<bool>>,
         ctx: TardisContextExtractor,
+        request: &Request,
     ) -> TardisApiResult<TardisPage<IamRoleSummaryResp>> {
+        add_remote_ip(&request, &ctx.0).await?;
         let funs = iam_constants::get_tardis_inst();
         let result = IamRoleServ::paginate_items(
             &IamRoleFilterReq {
@@ -114,7 +120,8 @@ impl IamCaRoleApi {
 
     /// Delete Role By Role Id
     #[oai(path = "/:id", method = "delete")]
-    async fn delete(&self, id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+    async fn delete(&self, id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
+        add_remote_ip(&request, &ctx.0).await?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         IamRoleServ::delete_item_with_all_rels(&id.0, &funs, &ctx.0).await?;
@@ -125,7 +132,8 @@ impl IamCaRoleApi {
 
     /// Add Role Rel Account
     #[oai(path = "/:id/account/:account_id", method = "put")]
-    async fn add_rel_account(&self, id: Path<String>, account_id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+    async fn add_rel_account(&self, id: Path<String>, account_id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
+        add_remote_ip(&request, &ctx.0).await?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         let app_id = IamAppServ::get_id_by_ctx(&ctx.0, &funs)?;
@@ -138,7 +146,8 @@ impl IamCaRoleApi {
 
     /// Batch add Role Rel Account
     #[oai(path = "/:id/account/batch/:account_ids", method = "put")]
-    async fn batch_add_rel_account(&self, id: Path<String>, account_ids: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+    async fn batch_add_rel_account(&self, id: Path<String>, account_ids: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
+        add_remote_ip(&request, &ctx.0).await?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         let app_id = IamAppServ::get_id_by_ctx(&ctx.0, &funs)?;
@@ -154,7 +163,8 @@ impl IamCaRoleApi {
 
     /// Delete Role Rel Account
     #[oai(path = "/:id/account/:account_id", method = "delete")]
-    async fn delete_rel_account(&self, id: Path<String>, account_id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+    async fn delete_rel_account(&self, id: Path<String>, account_id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
+        add_remote_ip(&request, &ctx.0).await?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         IamRoleServ::delete_rel_account(&id.0, &account_id.0, Some(RBUM_SCOPE_LEVEL_APP), &funs, &ctx.0).await?;
@@ -165,7 +175,8 @@ impl IamCaRoleApi {
 
     /// Batch delete Role Rel Account
     #[oai(path = "/:id/account/batch/:account_ids", method = "delete")]
-    async fn batch_delete_rel_account(&self, id: Path<String>, account_ids: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+    async fn batch_delete_rel_account(&self, id: Path<String>, account_ids: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
+        add_remote_ip(&request, &ctx.0).await?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         let split = account_ids.0.split(',').collect::<Vec<_>>();
@@ -179,7 +190,8 @@ impl IamCaRoleApi {
 
     /// Count Rel Accounts By Role Id
     #[oai(path = "/:id/account/total", method = "get")]
-    async fn count_rel_accounts(&self, id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<u64> {
+    async fn count_rel_accounts(&self, id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<u64> {
+        add_remote_ip(&request, &ctx.0).await?;
         let funs = iam_constants::get_tardis_inst();
         let result = IamAccountServ::count_items(
             &IamAccountFilterReq {
@@ -203,7 +215,8 @@ impl IamCaRoleApi {
 
     /// Add Role Rel Res
     #[oai(path = "/:id/res/:res_id", method = "put")]
-    async fn add_rel_res(&self, id: Path<String>, res_id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+    async fn add_rel_res(&self, id: Path<String>, res_id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
+        add_remote_ip(&request, &ctx.0).await?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         IamRoleServ::add_rel_res(&id.0, &res_id.0, &funs, &ctx.0).await?;
@@ -214,7 +227,8 @@ impl IamCaRoleApi {
 
     /// Delete Role Rel Res
     #[oai(path = "/:id/res/:res_id", method = "delete")]
-    async fn delete_rel_res(&self, id: Path<String>, res_id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+    async fn delete_rel_res(&self, id: Path<String>, res_id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
+        add_remote_ip(&request, &ctx.0).await?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         IamRoleServ::delete_rel_res(&id.0, &res_id.0, &funs, &ctx.0).await?;
@@ -225,7 +239,8 @@ impl IamCaRoleApi {
 
     /// Count Rel Res By Role Id
     #[oai(path = "/:id/res/total", method = "get")]
-    async fn count_rel_res(&self, id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<u64> {
+    async fn count_rel_res(&self, id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<u64> {
+        add_remote_ip(&request, &ctx.0).await?;
         let funs = iam_constants::get_tardis_inst();
         let result = IamRoleServ::count_rel_res(&id.0, &funs, &ctx.0).await?;
         ctx.0.execute_task().await?;
@@ -240,7 +255,9 @@ impl IamCaRoleApi {
         desc_by_create: Query<Option<bool>>,
         desc_by_update: Query<Option<bool>>,
         ctx: TardisContextExtractor,
+        request: &Request,
     ) -> TardisApiResult<Vec<RbumRelBoneResp>> {
+        add_remote_ip(&request, &ctx.0).await?;
         let funs = iam_constants::get_tardis_inst();
         let result = IamRoleServ::find_simple_rel_res(&id.0, desc_by_create.0, desc_by_update.0, &funs, &ctx.0).await?;
         ctx.0.execute_task().await?;

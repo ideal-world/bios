@@ -1,6 +1,9 @@
-use bios_basic::rbum::{
-    dto::rbum_filer_dto::{RbumBasicFilterReq, RbumSetCateFilterReq},
-    serv::{rbum_crud_serv::RbumCrudOperation, rbum_item_serv::RbumItemCrudOperation, rbum_set_serv::RbumSetCateServ},
+use bios_basic::{
+    helper::request_helper::get_remote_ip,
+    rbum::{
+        dto::rbum_filer_dto::{RbumBasicFilterReq, RbumSetCateFilterReq},
+        serv::{rbum_crud_serv::RbumCrudOperation, rbum_item_serv::RbumItemCrudOperation, rbum_set_serv::RbumSetCateServ},
+    },
 };
 use bios_sdk_invoke::clients::spi_log_client::SpiLogClient;
 use serde::Serialize;
@@ -68,11 +71,19 @@ impl IamLogClient {
             Box::pin(async move {
                 let task_handle = tokio::spawn(async move {
                     let funs = iam_constants::get_tardis_inst();
+                    let mut ip = "".to_string();
+                    match get_remote_ip(&ctx_clone).await {
+                        Ok(remote_ip) => {
+                            ip = remote_ip.unwrap_or_default();
+                        }
+                        Err(_) => {}
+                    }
                     IamLogClient::add_item(
                         tag,
                         LogParamContent {
                             op: op_describe,
                             key: key.clone(),
+                            ip,
                             ..Default::default()
                         },
                         None,
