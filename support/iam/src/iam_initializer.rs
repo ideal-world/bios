@@ -63,7 +63,6 @@ async fn init_api(web_server: &TardisWebServer) -> TardisResult<()> {
             WebServerModule::from((
                 (
                     iam_cc_account_api::IamCcAccountApi,
-                    iam_cc_account_task_api::IamCcAccountTaskApi,
                     iam_cc_app_api::IamCcAppApi,
                     #[cfg(feature = "ldap_client")]
                     iam_cc_account_api::IamCcAccountLdapApi,
