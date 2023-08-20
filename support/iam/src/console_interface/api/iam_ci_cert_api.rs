@@ -1,7 +1,5 @@
-use crate::basic::dto::iam_account_dto::IamAccountExtSysResp;
 use crate::basic::dto::iam_cert_dto::{IamCertAkSkAddReq, IamCertAkSkResp, IamOauth2AkSkResp, IamThirdPartyCertExtAddReq};
 use crate::basic::serv::iam_account_serv::IamAccountServ;
-use crate::basic::serv::iam_cert_ldap_serv::IamCertLdapServ;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::console_interface::serv::iam_ci_cert_aksk_serv::IamCiCertAkSkServ;
 use crate::console_interface::serv::iam_ci_oauth2_token_serv::IamCiOauth2AkSkServ;
@@ -10,7 +8,6 @@ use crate::iam_constants;
 use crate::iam_enumeration::Oauth2GrantType;
 use bios_basic::helper::request_helper::add_remote_ip;
 use bios_basic::rbum::dto::rbum_cert_dto::RbumCertSummaryWithSkResp;
-use tardis::basic::dto::TardisContext;
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem::Request;
 use tardis::web::poem_openapi;
@@ -21,8 +18,6 @@ use tardis::web::web_resp::{TardisApiResult, TardisResp, Void};
 pub struct IamCiCertManageApi;
 #[derive(Clone, Default)]
 pub struct IamCiCertApi;
-#[derive(Clone, Default)]
-pub struct IamCiLdapCertApi;
 
 /// # Interface Console Manage Cert API
 ///
@@ -144,25 +139,5 @@ impl IamCiCertApi {
         let msg = IamCertServ::third_integration_sync_without_config(&funs, &ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(msg)
-    }
-}
-
-#[poem_openapi::OpenApi(prefix_path = "/ci/ldap/cert", tag = "bios_basic::ApiTag::Interface")]
-impl IamCiLdapCertApi {
-    /// 根据ldap cn查询对应的displayName
-    #[oai(path = "/cn/:cn", method = "get")]
-    async fn get_ldap_resp_by_cn(&self, cn: Path<String>) -> TardisApiResult<Vec<IamAccountExtSysResp>> {
-        let funs = iam_constants::get_tardis_inst();
-        let ctx = TardisContext {
-            own_paths: "".to_string(),
-            ak: "".to_string(),
-            roles: vec![],
-            groups: vec![],
-            owner: "".to_string(),
-            ..Default::default()
-        };
-        let result = IamCertLdapServ::get_ldap_resp_by_cn(&cn.0, &funs, &ctx).await?;
-        ctx.execute_task().await?;
-        TardisResp::ok(result)
     }
 }
