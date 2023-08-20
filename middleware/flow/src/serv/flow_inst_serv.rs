@@ -165,7 +165,8 @@ impl FlowInstServ {
                 ctx,
             )
             .await?;
-        }if result.is_none() {
+        }
+        if result.is_none() {
             result = FlowModelServ::find_one_item(
                 &FlowModelFilterReq {
                     basic: RbumBasicFilterReq {
