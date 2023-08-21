@@ -13,7 +13,7 @@ use tardis::{
 };
 
 use crate::{
-    dto::stats_conf_dto::{StatsConfFactColAddReq, StatsConfFactColAggWithDimInfoResp, StatsConfFactColInfoResp, StatsConfFactColModifyReq},
+    dto::stats_conf_dto::{StatsConfFactColAddReq, StatsConfFactColInfoResp, StatsConfFactColModifyReq},
     stats_enumeration::StatsFactColKind,
 };
 
@@ -248,12 +248,13 @@ pub(in crate::serv::pg) async fn find_by_fact_conf_key(
     if !common_pg::check_table_exit("stats_conf_fact_col", conn, ctx).await? {
         return Ok(vec![]);
     }
-    do_paginate(fact_conf_key.to_string(), None, None, 1, u32::MAX, None, None, conn, ctx).await.map(|page| page.records)
+    do_paginate(Some(fact_conf_key.to_string()), None, None, None, 1, u32::MAX, None, None, conn, ctx).await.map(|page| page.records)
 }
 
 pub(crate) async fn paginate(
-    fact_conf_key: String,
+    fact_conf_key: Option<String>,
     fact_col_conf_key: Option<String>,
+    dim_key: Option<String>,
     show_name: Option<String>,
     page_number: u32,
     page_size: u32,
@@ -269,37 +270,7 @@ pub(crate) async fn paginate(
     do_paginate(
         fact_conf_key,
         fact_col_conf_key,
-        show_name,
-        page_number,
-        page_size,
-        desc_by_create,
-        desc_by_update,
-        &conn,
-        ctx,
-    )
-    .await
-}
-
-pub(crate) async fn paginate_agg_with_dim(
-    fact_conf_key: String,
-    dim_key: String,
-    fact_col_conf_key: Option<String>,
-    show_name: Option<String>,
-    page_number: u32,
-    page_size: u32,
-    desc_by_create: Option<bool>,
-    desc_by_update: Option<bool>,
-    _funs: &TardisFunsInst,
-    ctx: &TardisContext,
-    inst: &SpiBsInst,
-) -> TardisResult<TardisPage<StatsConfFactColAggWithDimInfoResp>> {
-    let bs_inst = inst.inst::<TardisRelDBClient>();
-    let (conn, _) = stats_pg_initializer::init_conf_fact_col_table_and_conn(bs_inst, ctx, true).await?;
-
-    do_paginate_agg_with_dim(
-        fact_conf_key,
         dim_key,
-        fact_col_conf_key,
         show_name,
         page_number,
         page_size,
@@ -312,8 +283,9 @@ pub(crate) async fn paginate_agg_with_dim(
 }
 
 async fn do_paginate(
-    fact_conf_key: String,
+    fact_conf_key: Option<String>,
     fact_col_conf_key: Option<String>,
+    dim_key: Option<String>,
     show_name: Option<String>,
     page_number: u32,
     page_size: u32,
@@ -323,12 +295,20 @@ async fn do_paginate(
     ctx: &TardisContext,
 ) -> TardisResult<TardisPage<StatsConfFactColInfoResp>> {
     let table_name = package_table_name("stats_conf_fact_col", ctx);
-    let mut sql_where = vec!["rel_conf_fact_key = $1".to_string()];
+    let mut sql_where = vec![];
     let mut sql_order = vec![];
-    let mut params: Vec<Value> = vec![Value::from(fact_conf_key), Value::from(page_size), Value::from((page_number - 1) * page_size)];
+    let mut params: Vec<Value> = vec![Value::from(page_size), Value::from((page_number - 1) * page_size)];
+    if let Some(fact_conf_key) = fact_conf_key {
+        sql_where.push(format!("rel_conf_fact_key = ${}", params.len() + 1));
+        params.push(Value::from(fact_conf_key));
+    }
     if let Some(fact_col_conf_key) = &fact_col_conf_key {
         sql_where.push(format!("key = ${}", params.len() + 1));
-        params.push(Value::from(fact_col_conf_key.to_string()));
+        params.push(Value::from(fact_col_conf_key));
+    }
+    if let Some(dim_key) = &dim_key {
+        sql_where.push(format!("dim_rel_conf_dim_key = ${}", params.len() + 1));
+        params.push(Value::from(dim_key));
     }
     if let Some(show_name) = &show_name {
         sql_where.push(format!("show_name LIKE ${}", params.len() + 1));
@@ -387,107 +367,6 @@ WHERE
                 remark: item.try_get("", "remark")?,
                 create_time: item.try_get("", "create_time")?,
                 update_time: item.try_get("", "update_time")?,
-            })
-        })
-        .collect::<TardisResult<_>>()?;
-    Ok(TardisPage {
-        page_size: page_size as u64,
-        page_number: page_number as u64,
-        total_size: total_size as u64,
-        records: result,
-    })
-}
-
-async fn do_paginate_agg_with_dim(
-    fact_conf_key: String,
-    dim_key: String,
-    fact_col_conf_key: Option<String>,
-    show_name: Option<String>,
-    page_number: u32,
-    page_size: u32,
-    desc_by_create: Option<bool>,
-    desc_by_update: Option<bool>,
-    conn: &TardisRelDBlConnection,
-    ctx: &TardisContext,
-) -> TardisResult<TardisPage<StatsConfFactColAggWithDimInfoResp>> {
-    let table_name = package_table_name("stats_conf_fact_col", ctx);
-    let dim_table_name = package_table_name("stats_conf_dim", ctx);
-    let mut sql_where = vec!["rel_conf_fact_key = $1 AND dim_rel_conf_dim_key = $2".to_string()];
-    let mut sql_order = vec![];
-    let mut params: Vec<Value> = vec![
-        Value::from(fact_conf_key),
-        Value::from(dim_key),
-        Value::from(page_size),
-        Value::from((page_number - 1) * page_size),
-    ];
-    if let Some(fact_col_conf_key) = &fact_col_conf_key {
-        sql_where.push(format!("key = ${}", params.len() + 1));
-        params.push(Value::from(fact_col_conf_key.to_string()));
-    }
-    if let Some(show_name) = &show_name {
-        sql_where.push(format!("show_name LIKE ${}", params.len() + 1));
-        params.push(Value::from(format!("%{show_name}%")));
-    }
-    if let Some(desc_by_create) = desc_by_create {
-        sql_order.push(format!("create_time {}", if desc_by_create { "DESC" } else { "ASC" }));
-    }
-    if let Some(desc_by_update) = desc_by_update {
-        sql_order.push(format!("update_time {}", if desc_by_update { "DESC" } else { "ASC" }));
-    }
-
-    let result = conn
-        .query_all(
-            &format!(
-                r#"SELECT
-    col.key, col.show_name, col.kind, col.remark, col.dim_rel_conf_dim_key, col.dim_exclusive_rec,
-    col.dim_multi_values, col.mes_data_distinct, col.mes_data_type, col.mes_frequency,
-    col.mes_unit, col.mes_act_by_dim_conf_keys, col.rel_conf_fact_and_col_key,
-    col.create_time, col.update_time, dim.show_name as dim_show_name, count(*) OVER() AS total
-FROM {table_name} col LEFT JOIN {dim_table_name} dim ON col.dim_rel_conf_dim_key = dim.key
-WHERE 
-    {}
-{}"#,
-                sql_where.join(" AND "),
-                if sql_order.is_empty() {
-                    "".to_string()
-                } else {
-                    format!("ORDER BY {}", sql_order.join(","))
-                }
-            ),
-            params,
-        )
-        .await?;
-
-    let mut total_size: i64 = 0;
-    let result = result
-        .into_iter()
-        .map(|item| {
-            if total_size == 0 {
-                total_size = item.try_get("", "total")?;
-            }
-            Ok(StatsConfFactColAggWithDimInfoResp {
-                dim_show_name: item.try_get("", "dim_show_name")?,
-                stats_conf_fact_col_info_resp: StatsConfFactColInfoResp {
-                    key: item.try_get("", "key")?,
-                    show_name: item.try_get("", "show_name")?,
-                    kind: item.try_get("", "kind")?,
-                    dim_rel_conf_dim_key: item.try_get("", "dim_rel_conf_dim_key")?,
-                    dim_multi_values: item.try_get("", "dim_multi_values")?,
-                    dim_exclusive_rec: item.try_get("", "dim_exclusive_rec")?,
-                    mes_data_distinct: item.try_get("", "mes_data_distinct")?,
-                    mes_data_type: if item.try_get::<Option<String>>("", "mes_data_type")?.is_none() {
-                        None
-                    } else {
-                        Some(item.try_get("", "mes_data_type")?)
-                    },
-                    mes_frequency: item.try_get("", "mes_frequency")?,
-                    mes_unit: item.try_get("", "mes_unit")?,
-                    mes_act_by_dim_conf_keys: item.try_get("", "mes_act_by_dim_conf_keys")?,
-                    rel_conf_fact_and_col_key: item.try_get("", "rel_conf_fact_and_col_key")?,
-                    remark: item.try_get("", "remark")?,
-                    create_time: item.try_get("", "create_time")?,
-                    update_time: item.try_get("", "update_time")?,
-                },
             })
         })
         .collect::<TardisResult<_>>()?;
