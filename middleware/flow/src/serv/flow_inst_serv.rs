@@ -165,6 +165,35 @@ impl FlowInstServ {
                 ctx,
             )
             .await?;
+        }if result.is_none() {
+            result = FlowModelServ::find_one_item(
+                &FlowModelFilterReq {
+                    basic: RbumBasicFilterReq {
+                        own_paths: Some(ctx.own_paths.split_once('/').unwrap_or_default().0.to_string()),
+                        ..Default::default()
+                    },
+                    tag: Some(tag.to_string()),
+                    ..Default::default()
+                },
+                funs,
+                ctx,
+            )
+            .await?;
+        }
+        if result.is_none() {
+            result = FlowModelServ::find_one_item(
+                &FlowModelFilterReq {
+                    basic: RbumBasicFilterReq {
+                        own_paths: Some("".to_string()),
+                        ..Default::default()
+                    },
+                    tag: Some(tag.to_string()),
+                    ..Default::default()
+                },
+                funs,
+                ctx,
+            )
+            .await?;
         }
         match result {
             Some(model) => Ok(model.id),
