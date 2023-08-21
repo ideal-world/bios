@@ -6,8 +6,8 @@ use tardis::web::web_resp::TardisPage;
 use tardis::TardisFunsInst;
 
 use crate::dto::stats_conf_dto::{
-    StatsConfDimAddReq, StatsConfDimInfoResp, StatsConfDimModifyReq, StatsConfFactAddReq, StatsConfFactColAddReq, StatsConfFactColAggWithDimInfoResp, StatsConfFactColInfoResp,
-    StatsConfFactColModifyReq, StatsConfFactInfoResp, StatsConfFactModifyReq,
+    StatsConfDimAddReq, StatsConfDimInfoResp, StatsConfDimModifyReq, StatsConfFactAddReq, StatsConfFactColAddReq, StatsConfFactColInfoResp, StatsConfFactColModifyReq,
+    StatsConfFactInfoResp, StatsConfFactModifyReq,
 };
 use crate::stats_enumeration::StatsFactColKind;
 use crate::stats_initializer;
@@ -159,8 +159,9 @@ pub async fn fact_col_paginate(
         #[cfg(feature = "spi-pg")]
         spi_constants::SPI_PG_KIND_CODE => {
             pg::stats_pg_conf_fact_col_serv::paginate(
-                fact_conf_key,
+                Some(fact_conf_key),
                 fact_col_conf_key,
+                None,
                 show_name,
                 page_number,
                 page_size,
@@ -176,8 +177,8 @@ pub async fn fact_col_paginate(
     }
 }
 
-pub async fn fact_col_paginate_agg_with_dim(
-    fact_conf_key: String,
+pub async fn fact_col_paginate_by_dim(
+    fact_conf_key: Option<String>,
     dim_key: String,
     fact_col_conf_key: Option<String>,
     show_name: Option<String>,
@@ -187,15 +188,15 @@ pub async fn fact_col_paginate_agg_with_dim(
     desc_by_update: Option<bool>,
     funs: &TardisFunsInst,
     ctx: &TardisContext,
-) -> TardisResult<TardisPage<StatsConfFactColAggWithDimInfoResp>> {
+) -> TardisResult<TardisPage<StatsConfFactColInfoResp>> {
     let inst = funs.init(ctx, true, stats_initializer::init_fun).await?;
     match inst.kind_code() {
         #[cfg(feature = "spi-pg")]
         spi_constants::SPI_PG_KIND_CODE => {
-            pg::stats_pg_conf_fact_col_serv::paginate_agg_with_dim(
+            pg::stats_pg_conf_fact_col_serv::paginate(
                 fact_conf_key,
-                dim_key,
                 fact_col_conf_key,
+                Some(dim_key),
                 show_name,
                 page_number,
                 page_size,

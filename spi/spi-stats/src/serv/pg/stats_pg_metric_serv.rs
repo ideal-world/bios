@@ -13,7 +13,6 @@ use tardis::{
     },
     log::info,
     serde_json::{self, json, Map},
-    web::poem_openapi::types::Type,
     TardisFunsInst,
 };
 
