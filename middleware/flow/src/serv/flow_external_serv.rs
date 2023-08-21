@@ -64,6 +64,7 @@ impl FlowExternalServ {
         if external_url.is_empty() {
             return Ok(FlowExternalModifyFieldResp {});
         }
+
         let header = Self::headers(None, funs, ctx).await?;
         let resp: TardisResp<FlowExternalModifyFieldResp> = funs
             .web_client()
@@ -104,6 +105,7 @@ impl FlowExternalServ {
         if external_url.is_empty() {
             return Ok(FlowExternalNotifyChangesResp {});
         }
+
         let header = Self::headers(None, funs, ctx).await?;
         let resp: TardisResp<FlowExternalNotifyChangesResp> = funs
             .web_client()
