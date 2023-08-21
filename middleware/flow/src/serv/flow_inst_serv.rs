@@ -31,8 +31,9 @@ use crate::{
     domain::flow_inst,
     dto::{
         flow_inst_dto::{
-            FlowInstAbortReq, FlowInstDetailResp, FlowInstFindNextTransitionResp, FlowInstFindNextTransitionsReq, FlowInstFindStateAndTransitionsReq,
-            FlowInstFindStateAndTransitionsResp, FlowInstStartReq, FlowInstSummaryResp, FlowInstTransferReq, FlowInstTransferResp, FlowInstTransitionInfo, FlowOperationContext, FlowInstBindReq, FlowInstBindResp,
+            FlowInstAbortReq, FlowInstBindReq, FlowInstBindResp, FlowInstDetailResp, FlowInstFindNextTransitionResp, FlowInstFindNextTransitionsReq,
+            FlowInstFindStateAndTransitionsReq, FlowInstFindStateAndTransitionsResp, FlowInstStartReq, FlowInstSummaryResp, FlowInstTransferReq, FlowInstTransferResp,
+            FlowInstTransitionInfo, FlowOperationContext,
         },
         flow_model_dto::{FlowModelDetailResp, FlowModelFilterReq},
         flow_state_dto::{FlowStateFilterReq, FlowSysStateKind},
@@ -96,7 +97,7 @@ impl FlowInstServ {
         Ok(id)
     }
 
-    pub async fn batch_bind(bind_req: &FlowInstBindReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<FlowInstBindResp>>{
+    pub async fn batch_bind(bind_req: &FlowInstBindReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<FlowInstBindResp>> {
         let mut result = vec![];
         for rel_business_obj in &bind_req.rel_business_objs {
             let flow_model_id = Self::get_model_id_by_own_paths(&bind_req.tag, funs, ctx).await?;
@@ -107,11 +108,11 @@ impl FlowInstServ {
                 id: Set(id.clone()),
                 rel_flow_model_id: Set(flow_model_id.to_string()),
                 rel_business_obj_id: Set(rel_business_obj.rel_business_obj_id.to_string()),
-    
+
                 current_state_id: Set(current_state_id),
-    
+
                 create_ctx: Set(FlowOperationContext::from_ctx(ctx)),
-    
+
                 own_paths: Set(rel_business_obj.own_paths.to_string()),
                 ..Default::default()
             };
@@ -155,6 +156,37 @@ impl FlowInstServ {
                 &FlowModelFilterReq {
                     basic: RbumBasicFilterReq {
                         own_paths: Some(ctx.own_paths.split_once('/').unwrap_or_default().0.to_string()),
+                        ..Default::default()
+                    },
+                    tag: Some(tag.to_string()),
+                    ..Default::default()
+                },
+                funs,
+                ctx,
+            )
+            .await?;
+        }
+        if result.is_none() {
+            result = FlowModelServ::find_one_item(
+                &FlowModelFilterReq {
+                    basic: RbumBasicFilterReq {
+                        own_paths: Some(ctx.own_paths.split_once('/').unwrap_or_default().0.to_string()),
+                        ..Default::default()
+                    },
+                    tag: Some(tag.to_string()),
+                    ..Default::default()
+                },
+                funs,
+                ctx,
+            )
+            .await
+            .unwrap_or_default();
+        }
+        if result.is_none() {
+            result = FlowModelServ::find_one_item(
+                &FlowModelFilterReq {
+                    basic: RbumBasicFilterReq {
+                        own_paths: Some("".to_string()),
                         ..Default::default()
                     },
                     tag: Some(tag.to_string()),

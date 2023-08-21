@@ -15,7 +15,6 @@ use crate::basic::serv::iam_app_serv::IamAppServ;
 use crate::basic::serv::iam_tenant_serv::IamTenantServ;
 use crate::iam_config::IamConfig;
 use crate::iam_constants;
-
 #[derive(Clone, Default)]
 pub struct IamCsSpiDataApi;
 

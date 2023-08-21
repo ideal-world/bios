@@ -38,6 +38,7 @@ pub struct StatsQueryMetricsReq {
     /// Sort conditions
     /// The code and fun must exist in Select
     pub group_order: Option<Vec<StatsQueryDimensionGroupOrderReq>>,
+    pub group_agg: Option<bool>,
     /// Filter conditions after group
     /// The code and fun must exist in Select
     pub having: Option<Vec<StatsQueryMetricsHavingReq>>,

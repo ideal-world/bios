@@ -157,8 +157,7 @@ impl SgPluginFilter for SgFilterAuth {
         })
         .await?;
 
-        let handle = auth_initializer::init_data().await?;
-        auth_crypto_serv::init().await?;
+        let handle = auth_initializer::init().await?;
         *instance = Some((config_md5, handle));
         log::info!("[SG.Filter.Auth] init done");
 

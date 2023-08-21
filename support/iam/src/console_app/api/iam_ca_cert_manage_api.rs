@@ -8,7 +8,8 @@ use bios_basic::rbum::dto::rbum_rel_dto::RbumRelBoneResp;
 
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::iam_constants;
-
+use bios_basic::helper::request_helper::add_remote_ip;
+use tardis::web::poem::Request;
 #[derive(Clone, Default)]
 pub struct IamCaCertManageApi;
 
@@ -17,7 +18,8 @@ pub struct IamCaCertManageApi;
 impl IamCaCertManageApi {
     /// get manage cert
     #[oai(path = "/:id", method = "get")]
-    async fn get_manage_cert(&self, id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<RbumCertSummaryWithSkResp> {
+    async fn get_manage_cert(&self, id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<RbumCertSummaryWithSkResp> {
+        add_remote_ip(&request, &ctx.0).await?;
         let funs = iam_constants::get_tardis_inst();
         let ctx = IamCertServ::use_sys_or_tenant_ctx_unsafe(ctx.0)?;
         let cert = IamCertServ::get_3th_kind_cert_by_id(&id.0, &funs, &ctx).await?;
@@ -27,7 +29,8 @@ impl IamCaCertManageApi {
 
     /// Find Manage Certs By item Id
     #[oai(path = "/rel/:item_id", method = "get")]
-    async fn find_certs(&self, item_id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Vec<RbumRelBoneResp>> {
+    async fn find_certs(&self, item_id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Vec<RbumRelBoneResp>> {
+        add_remote_ip(&request, &ctx.0).await?;
         let funs = iam_constants::get_tardis_inst();
         let ctx = IamCertServ::use_sys_or_tenant_ctx_unsafe(ctx.0)?;
         let rbum_certs = IamCertServ::find_to_simple_rel_cert(&item_id.0, None, None, &funs, &ctx).await?;

@@ -5,7 +5,6 @@ use tardis::web::web_resp::{TardisApiResult, TardisResp, Void};
 
 use crate::iam_config::IamConfig;
 use crate::iam_constants;
-
 #[derive(Clone, Default)]
 pub struct IamCcSystemApi;
 
