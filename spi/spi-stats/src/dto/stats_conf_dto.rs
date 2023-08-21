@@ -96,7 +96,7 @@ pub struct StatsConfFactAddReq {
 }
 
 /// Modify Fact Configuration Request Object
-#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Default)]
 pub struct StatsConfFactModifyReq {
     /// The name of the fact
     #[oai(validator(min_length = "2"))]
