@@ -14,14 +14,14 @@ pub struct IamCiSystemApi;
 /// Use commas to separate multiple task ids
 #[poem_openapi::OpenApi(prefix_path = "/ci/system", tag = "bios_basic::ApiTag::Interface")]
 impl IamCiSystemApi {
-    #[oai(path = "/task/external", method = "put")]
+    #[oai(path = "/task/execute", method = "put")]
     async fn execute_task_external(&self, cache_key: Query<String>) -> TardisApiResult<i64> {
         let funs = iam_constants::get_tardis_inst();
         let task_id = TaskProcessor::execute_task_external(&cache_key.0, &funs).await?;
         TardisResp::ok(task_id)
     }
 
-    #[oai(path = "/task/external/stop/:task_id", method = "delete")]
+    #[oai(path = "/task/execute/stop/:task_id", method = "delete")]
     async fn stop_task_external(&self, cache_key: Query<String>, task_ids: Path<String>) -> TardisApiResult<Void> {
         let funs = iam_constants::get_tardis_inst();
         let task_ids = task_ids.0.split(',');
