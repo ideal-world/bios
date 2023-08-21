@@ -16,25 +16,26 @@ pub struct FlowInstStartReq {
     pub rel_business_obj_id: String,
     pub tag: String,
     pub create_vars: Option<HashMap<String, Value>>,
+    pub current_state_name: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
 pub struct FlowInstBindReq {
-    pub tag:String,
-    pub rel_business_objs:Vec<FlowInstBindRelObjReq>,
+    pub tag: String,
+    pub rel_business_objs: Vec<FlowInstBindRelObjReq>,
 }
 
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
 pub struct FlowInstBindRelObjReq {
-    pub rel_business_obj_id:String,
-    pub current_state_name:String,
-    pub own_paths:String,
+    pub rel_business_obj_id: String,
+    pub current_state_name: String,
+    pub own_paths: String,
 }
 
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
-pub struct FlowInstBindResp{
-    pub rel_business_obj_id:String,
-    pub current_state_name:String,
+pub struct FlowInstBindResp {
+    pub rel_business_obj_id: String,
+    pub current_state_name: String,
     pub inst_id: Option<String>,
 }
 

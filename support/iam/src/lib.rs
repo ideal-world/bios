@@ -13,4 +13,3 @@ pub mod iam_constants;
 pub mod iam_enumeration;
 pub mod iam_initializer;
 pub mod iam_test_helper;
-pub mod integration;

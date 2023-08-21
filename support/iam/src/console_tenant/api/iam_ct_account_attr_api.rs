@@ -10,7 +10,8 @@ use bios_basic::rbum::dto::rbum_kind_attr_dto::{RbumKindAttrDetailResp, RbumKind
 use crate::basic::dto::iam_attr_dto::IamKindAttrAddReq;
 use crate::basic::serv::iam_attr_serv::IamAttrServ;
 use crate::iam_constants;
-
+use bios_basic::helper::request_helper::add_remote_ip;
+use tardis::web::poem::Request;
 #[derive(Clone, Default)]
 pub struct IamCtAccountAttrApi;
 
@@ -21,7 +22,8 @@ pub struct IamCtAccountAttrApi;
 impl IamCtAccountAttrApi {
     /// Add Account Attr
     #[oai(path = "/", method = "post")]
-    async fn add_attr(&self, add_req: Json<IamKindAttrAddReq>, ctx: TardisContextExtractor) -> TardisApiResult<String> {
+    async fn add_attr(&self, add_req: Json<IamKindAttrAddReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<String> {
+        add_remote_ip(&request, &ctx.0).await?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         let result = IamAttrServ::add_account_attr(&add_req.0, &funs, &ctx.0).await?;
@@ -32,7 +34,8 @@ impl IamCtAccountAttrApi {
 
     /// Modify Account Attr By Account Attr Id
     #[oai(path = "/:id", method = "put")]
-    async fn modify_attr(&self, id: Path<String>, mut modify_req: Json<RbumKindAttrModifyReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+    async fn modify_attr(&self, id: Path<String>, mut modify_req: Json<RbumKindAttrModifyReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
+        add_remote_ip(&request, &ctx.0).await?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         IamAttrServ::modify_account_attr(&id.0, &mut modify_req.0, &funs, &ctx.0).await?;
@@ -43,7 +46,8 @@ impl IamCtAccountAttrApi {
 
     /// Get Account Attr By Account Attr Id
     #[oai(path = "/:id", method = "get")]
-    async fn get_attr(&self, id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<RbumKindAttrDetailResp> {
+    async fn get_attr(&self, id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<RbumKindAttrDetailResp> {
+        add_remote_ip(&request, &ctx.0).await?;
         let funs = iam_constants::get_tardis_inst();
         let result = IamAttrServ::get_account_attr(&id.0, true, &funs, &ctx.0).await?;
         ctx.0.execute_task().await?;
@@ -52,7 +56,8 @@ impl IamCtAccountAttrApi {
 
     /// Find Account Attrs
     #[oai(path = "/", method = "get")]
-    async fn find_attrs(&self, ctx: TardisContextExtractor) -> TardisApiResult<Vec<RbumKindAttrSummaryResp>> {
+    async fn find_attrs(&self, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Vec<RbumKindAttrSummaryResp>> {
+        add_remote_ip(&request, &ctx.0).await?;
         let funs = iam_constants::get_tardis_inst();
         let result = IamAttrServ::find_account_attrs(&funs, &ctx.0).await?;
         ctx.0.execute_task().await?;
@@ -61,7 +66,8 @@ impl IamCtAccountAttrApi {
 
     /// Delete Account Attr By Account Attr Id
     #[oai(path = "/:id", method = "delete")]
-    async fn delete_attr(&self, id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+    async fn delete_attr(&self, id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
+        add_remote_ip(&request, &ctx.0).await?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         IamAttrServ::delete_account_attr(&id.0, &funs, &ctx.0).await?;
@@ -72,7 +78,8 @@ impl IamCtAccountAttrApi {
 
     /// Find Account Ext Attr Values By Account Id
     #[oai(path = "/value", method = "get")]
-    async fn find_account_attr_values(&self, account_id: Query<String>, ctx: TardisContextExtractor) -> TardisApiResult<HashMap<String, String>> {
+    async fn find_account_attr_values(&self, account_id: Query<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<HashMap<String, String>> {
+        add_remote_ip(&request, &ctx.0).await?;
         let funs = iam_constants::get_tardis_inst();
         let result = IamAttrServ::find_account_attr_values(&account_id.0, &funs, &ctx.0).await?;
         ctx.0.execute_task().await?;

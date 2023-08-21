@@ -12,14 +12,14 @@
 |-- Dockerfile                      # Dockerfile
 ----
 
-==== How to use in k8s 
-see [spacegate doc](https://github.com/ideaworld/spacegate/docs/k8s/installtion.md)
-but different: 
+==== How to use in k8s
+see  https://github.com/ideaworld/spacegate/docs/k8s/installtion.md[spacegate doc]
+but different:
 
 ==== Plugin
 ===== Auth
 auth must have httproute below:
-``` yaml
+[source,yaml]
 apiVersion: gateway.networking.k8s.io/v1beta1
 kind: HTTPRoute
 metadata:
@@ -43,9 +43,10 @@ spec:
         type: Exact
         value: /starsysApi/apis
       method: POST
-```
+
 and auth config example:
-``` yaml
+
+[source,yaml]
 apiVersion: spacegate.idealworld.group/v1
 kind: SgFilter
 metadata:
@@ -62,4 +63,29 @@ spec:
       name: iam-test
     - kind: HTTPRoute
       name: apis-test
-```
+
+===== Ip_Time
+
+config example:
+
+[source,yaml]
+apiVersion: spacegate.idealworld.group/v1
+kind: SgFilter
+metadata:
+  name: ip-time-filters
+spec:
+  filters:
+    - code: ip_time
+      config:
+        rules:
+          - ip_list:
+              - "127.0.0.1"
+              - "172.20.0.1"
+            time_rule:
+              mode: "black_list"
+              ban:
+                - start: "18:00:00"
+                  end: "09:00:00"
+  targetRefs:
+    - kind: Gateway
+      name: gateway
