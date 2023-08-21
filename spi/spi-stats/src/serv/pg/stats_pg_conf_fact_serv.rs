@@ -91,15 +91,7 @@ pub(crate) async fn modify(fact_conf_key: &str, modify_req: &StatsConfFactModify
             params.push(Value::from(redirect_path));
         }
     };
-    
-    if let Some(is_online) = &modify_req.is_online {
-        sql_sets.push(format!("is_online = ${}", params.len() + 1));
-        params.push(Value::from(*is_online));
-    }
-    if let Some(redirect_path) = &modify_req.redirect_path {
-        sql_sets.push(format!("redirect_path = ${}", params.len() + 1));
-        params.push(Value::from(redirect_path));
-    }
+
     if let Some(is_online) = &modify_req.is_online {
         sql_sets.push(format!("is_online = ${}", params.len() + 1));
         params.push(Value::from(*is_online));
