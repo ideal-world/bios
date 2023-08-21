@@ -66,13 +66,15 @@ pub(crate) async fn modify(fact_conf_key: &str, modify_req: &StatsConfFactModify
     conn.begin().await?;
     let mut sql_sets = vec![];
     let mut params = vec![Value::from(fact_conf_key.to_string())];
-    if online(fact_conf_key, &conn, ctx).await? && modify_req.is_online.is_none(){
-        return Err(funs.err().conflict(
-            "fact_conf",
-            "modify",
-            "The fact instance table already exists, please delete it and then modify it.",
-            "409-spi-stats-fact-inst-exist",
-        ));
+    if online(fact_conf_key, &conn, ctx).await? {
+        if modify_req.is_online.is_none() {
+            return Err(funs.err().conflict(
+                "fact_conf",
+                "modify",
+                "The fact instance table already exists, please delete it and then modify it.",
+                "409-spi-stats-fact-inst-exist",
+            ));
+        }
     } else {
         if let Some(show_name) = &modify_req.show_name {
             sql_sets.push(format!("show_name = ${}", params.len() + 1));
