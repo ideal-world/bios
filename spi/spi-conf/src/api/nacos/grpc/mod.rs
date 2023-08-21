@@ -1,9 +1,7 @@
-use tardis::{web::poem, log};
+use tardis::{web::poem, log, basic::result::TardisResult};
 #[allow(non_snake_case)]
-mod nacos_proto {
-    poem_grpc::include_proto!("_");
-}
-pub use nacos_proto:: {
+mod proto;
+pub use proto:: {
     Request as RequestProto,
     RequestServer as RequestGrpcServer,
     Payload,
@@ -29,7 +27,7 @@ impl RequestProto for RequestProtoImpl {
         let body = String::from_utf8_lossy(&body.value);
         log::debug!("body: {}", body);
         let type_info = &metadata.r#type;
-
+        
         // reflect type_info to get the type of the request
         log::debug!("type_info: {}", type_info);
         return Ok(Response::new(Payload::default()));
@@ -37,3 +35,12 @@ impl RequestProto for RequestProtoImpl {
 }
 
 
+pub async fn dispatch_request(
+    type_info: &str, value: &str,
+) -> TardisResult<Payload> {
+    match request.type_info {
+        "ServerCheckRequest" => {
+            
+        }
+    }
+}

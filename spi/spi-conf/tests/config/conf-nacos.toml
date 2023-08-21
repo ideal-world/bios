@@ -15,5 +15,4 @@ uniform_error = true
 [fw.web_server.modules.spi-conf-nacos]
 title = "配置nacos服务"
 uniform_error = false
-[fw.web_server.modules.""]
 

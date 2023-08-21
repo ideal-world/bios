@@ -8,6 +8,9 @@ fn main() -> Result<()> {
     poem_grpc_build::Config::new()
     .build_server(true)
     .build_client(false)
+    // .codec("::poem_grpc::codec::JsonCodec")
+    // .type_attribute(".", "#[derive(serde::Deserialize, serde::Serialize)]")
+    .file_descriptor_set_path(format!("{proto_dir}/nacos_grpc_service.desc"))
     .compile(&[format!("{proto_dir}/nacos_grpc_service.proto")], &[&proto_dir])?;
     Ok(())
 }

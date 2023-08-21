@@ -18,16 +18,16 @@ use tardis::{
 
 mod spi_conf_test_common;
 use spi_conf_test_common::*;
-
+const SCHEMA: &str = "http";
 #[tokio::test(flavor="multi_thread")]
 async fn spi_conf_namespace_test() -> TardisResult<()> {
-    std::env::set_var("RUST_LOG", "info,tardis=debug,spi_conf_listener_test=debug,sqlx=off,sea_orm=off,bios_spi_conf=DEBUG,poem_grpc=TRACE,tonic=TRACE,h2=debug");
+    std::env::set_var("RUST_LOG", "info,tardis=debug,spi_conf_listener_test=debug,sqlx=off,sea_orm=off,bios_spi_conf=DEBUG,poem_grpc=TRACE,tonic=TRACE");
     std::env::set_var("PROFILE", "nacos");
     let docker = testcontainers::clients::Cli::default();
     let container_hold = init_tardis(&docker).await?;
     let _web_server_hanlde = start_web_server();
     let tardis_ctx = TardisContext::default();
-    let mut client = TestHttpClient::new("https://localhost:8080/spi-conf".to_string());
+    let mut client = TestHttpClient::new(format!("{SCHEMA}://localhost:8080/spi-conf"));
     client.set_auth(&tardis_ctx)?;
     let funs = TardisFuns::inst_with_db_conn(DOMAIN_CODE.to_string(), None);
     let kind_id = RbumKindServ::get_rbum_kind_id_by_code(spi_constants::SPI_PG_KIND_CODE, &funs).await?.unwrap();
@@ -58,8 +58,8 @@ async fn spi_conf_namespace_test() -> TardisResult<()> {
 
     // test register
 
-    TardisFuns::web_server().await;
     test_tardis_compatibility(&client).await?;
+    TardisFuns::web_server().await;
     drop(container_hold);
     Ok(())
 }
@@ -78,9 +78,9 @@ async fn test_tardis_compatibility(_test_client: &TestHttpClient) -> TardisResul
     let mut headers = reqwest::header::HeaderMap::new();
     headers.append(TardisFuns::fw_config().web_server.context_conf.context_header_name.as_str(), ctx_base64.parse().unwrap());
     let client = reqwest::ClientBuilder::default().danger_accept_invalid_certs(true).default_headers(headers).build().unwrap();
-    let mut nacos_client = NacosClient::new_with_client("http://localhost:8080/spi-conf-nacos/nacos", client);
+    let mut nacos_client = NacosClient::new_with_client(format!("{SCHEMA}://localhost:8080/spi-conf-nacos/nacos"), client);
     // register
-    let resp = nacos_client.reqwest_client.post("http://localhost:8080/spi-conf/ci/auth/register").json(&RegisterRequest::default()).send().await?;
+    let resp = nacos_client.reqwest_client.post(format!("{SCHEMA}://localhost:8080/spi-conf/ci/auth/register")).json(&RegisterRequest::default()).send().await?;
     let resp = resp.json::<TardisResp<RegisterResponse>>().await?;
 
     let auth = resp.data.expect("error in register");
@@ -105,7 +105,7 @@ async fn test_tardis_compatibility(_test_client: &TestHttpClient) -> TardisResul
     log::info!("get config");
     let config_by_basic_auth_resp = nacos_client
         .reqwest_client
-        .get("http://localhost:8080/spi-conf-nacos/nacos/v1/cs/configs")
+        .get(format!("{SCHEMA}://localhost:8080/spi-conf-nacos/nacos/v1/cs/configs"))
         .query(&config_descriptor)
         .basic_auth(&auth.username, Some(&auth.password))
         .send()
@@ -138,7 +138,7 @@ async fn test_tardis_compatibility(_test_client: &TestHttpClient) -> TardisResul
     let password = "nacosmocker";
     let resp = nacos_client
         .reqwest_client
-        .post("http://localhost:8080/spi-conf/ci/auth/register")
+        .post(format!("{SCHEMA}://localhost:8080/spi-conf/ci/auth/register"))
         .json(&RegisterRequest {
             username: Some(username.into()),
             password: Some(password.into()),
@@ -149,7 +149,7 @@ async fn test_tardis_compatibility(_test_client: &TestHttpClient) -> TardisResul
     let auth = resp.data.expect("error in register");
     assert_eq!(username, auth.username);
     assert_eq!(password, auth.password);
-    let login_url = "http://localhost:8080/spi-conf-nacos/nacos/v1/auth/login";
+    let login_url = format!("{SCHEMA}://localhost:8080/spi-conf-nacos/nacos/v1/auth/login");
     let mut form = HashMap::new();
     form.insert("password", username);
     form.insert("username", password);
@@ -158,14 +158,14 @@ async fn test_tardis_compatibility(_test_client: &TestHttpClient) -> TardisResul
 
     let value = resp.json::<tardis::serde_json::Value>().await?;
     let token = value.get("accessToken").expect("missing accessToken").as_str().expect("access_token should be string");
-    let namespace_url = "http://localhost:8080/spi-conf-nacos/nacos/v1/console/namespaces";
+    let namespace_url = format!("{SCHEMA}://localhost:8080/spi-conf-nacos/nacos/v1/console/namespaces");
     let mut form = HashMap::new();
     form.insert("customNamespaceId", "test-namespace-1");
     form.insert("namespaceName", "测试命名空间1");
     form.insert("username", username);
     form.insert("password", password);
     // publish
-    let resp = nacos_client.reqwest_client.post(namespace_url).form(&form).send().await?;
+    let resp = nacos_client.reqwest_client.post(&namespace_url).form(&form).send().await?;
     log::info!("response: {resp:#?}");
     let success = resp.json::<bool>().await?;
     assert!(success);
@@ -173,7 +173,7 @@ async fn test_tardis_compatibility(_test_client: &TestHttpClient) -> TardisResul
     let mut form = HashMap::new();
     form.insert("namespace", "test-namespace-1");
     form.insert("namespaceShowName", "测试命名空间1-修改");
-    let resp = nacos_client.reqwest_client.put(namespace_url).query(&[("accessToken", token)]).form(&form).send().await?;
+    let resp = nacos_client.reqwest_client.put(&namespace_url).query(&[("accessToken", token)]).form(&form).send().await?;
     // let info = resp.text().await?;
     // log::info!("response: {info}");
     let success = resp.json::<bool>().await?;
@@ -182,7 +182,7 @@ async fn test_tardis_compatibility(_test_client: &TestHttpClient) -> TardisResul
     // delete
     let mut form = HashMap::new();
     form.insert("namespaceId", "test-namespace-1");
-    let resp = nacos_client.reqwest_client.delete(namespace_url).query(&[("accessToken", token)]).form(&form).send().await?;
+    let resp = nacos_client.reqwest_client.delete(&namespace_url).query(&[("accessToken", token)]).form(&form).send().await?;
     // let info = resp.text().await?;
     // log::info!("response: {info}");
     let success = resp.json::<bool>().await?;

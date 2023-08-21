@@ -45,3 +45,10 @@ service BiRequestStream {
   rpc requestBiStream (stream Payload) returns (stream Payload) {
   }
 }
+
+message ConfigQueryRequest {
+  string dataId = 1;
+  string group = 2;
+  string tenant = 3;
+  string tag = 4;
+}
