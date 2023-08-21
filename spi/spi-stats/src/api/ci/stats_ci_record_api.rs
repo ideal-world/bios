@@ -17,6 +17,13 @@ pub struct StatsCiRecordApi;
 #[poem_openapi::OpenApi(prefix_path = "/ci/record", tag = "bios_basic::ApiTag::Interface")]
 impl StatsCiRecordApi {
     /// Load Fact Record
+    #[oai(path = "/fact/:fact_key/latest/:record_key", method = "get")]
+    async fn get_fact_record_latest(&self, fact_key: Path<String>, record_key: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<serde_json::Value> {
+        let funs = crate::get_tardis_inst();
+        TardisResp::ok(stats_record_serv::get_fact_record_latest(&fact_key.0, &record_key.0, &funs, &ctx.0).await?)
+    }
+
+    /// Load Fact Record
     #[oai(path = "/fact/:fact_key/:record_key", method = "put")]
     async fn fact_record_load(
         &self,
