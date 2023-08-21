@@ -117,6 +117,7 @@ pub struct IamAccountSummaryResp {
     pub owner: String,
     pub create_time: DateTime<Utc>,
     pub update_time: DateTime<Utc>,
+    pub effective_time: DateTime<Utc>,
 
     pub scope_level: RbumScopeLevelKind,
     pub disabled: bool,
@@ -137,6 +138,7 @@ pub struct IamAccountDetailResp {
     pub owner_name: Option<String>,
     pub create_time: DateTime<Utc>,
     pub update_time: DateTime<Utc>,
+    pub effective_time: DateTime<Utc>,
 
     pub scope_level: RbumScopeLevelKind,
     pub disabled: bool,
@@ -155,6 +157,7 @@ pub struct IamAccountSummaryAggResp {
     pub owner: String,
     pub create_time: DateTime<Utc>,
     pub update_time: DateTime<Utc>,
+    pub effective_time: DateTime<Utc>,
 
     pub scope_level: RbumScopeLevelKind,
     pub disabled: bool,
@@ -180,6 +183,7 @@ pub struct IamAccountDetailAggResp {
     pub owner_name: Option<String>,
     pub create_time: DateTime<Utc>,
     pub update_time: DateTime<Utc>,
+    pub effective_time: DateTime<Utc>,
 
     pub scope_level: RbumScopeLevelKind,
     pub disabled: bool,

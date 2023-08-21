@@ -20,6 +20,26 @@ pub struct FlowInstStartReq {
 }
 
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
+pub struct FlowInstBindReq {
+    pub tag: String,
+    pub rel_business_objs: Vec<FlowInstBindRelObjReq>,
+}
+
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
+pub struct FlowInstBindRelObjReq {
+    pub rel_business_obj_id: String,
+    pub current_state_name: String,
+    pub own_paths: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
+pub struct FlowInstBindResp {
+    pub rel_business_obj_id: String,
+    pub current_state_name: String,
+    pub inst_id: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
 pub struct FlowInstAbortReq {
     pub message: String,
 }

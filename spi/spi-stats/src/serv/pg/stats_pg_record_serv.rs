@@ -22,6 +22,41 @@ use crate::{
 
 use super::{stats_pg_conf_dim_serv, stats_pg_conf_fact_col_serv, stats_pg_conf_fact_serv};
 
+pub(crate) async fn get_fact_record_latest(
+    fact_conf_key: &str,
+    fact_record_key: &str,
+    funs: &TardisFunsInst,
+    ctx: &TardisContext,
+    inst: &SpiBsInst,
+) -> TardisResult<serde_json::Value> {
+    let bs_inst = inst.inst::<TardisRelDBClient>();
+    let (conn, _) = common_pg::init_conn(bs_inst).await?;
+    if !stats_pg_conf_fact_serv::online(fact_conf_key, &conn, ctx).await? {
+        return Err(funs.err().conflict("fact_record", "load", "The fact config not online.", "409-spi-stats-fact-conf-not-online"));
+    }
+    let table_name = package_table_name(&format!("stats_inst_fact_{fact_conf_key}"), ctx);
+    let result = conn
+        .query_all(
+            &format!(
+                r#"SELECT *, count(*) OVER() AS total
+FROM {table_name}
+WHERE 
+    key = $1
+ORDER BY ct
+LIMIT 1
+"#,
+            ),
+            vec![Value::from(fact_record_key)],
+        )
+        .await?;
+    if result.is_empty() {
+        Ok(serde_json::Value::Null)
+    } else {
+        let values = serde_json::Value::from_query_result_optional(&result.get(0).unwrap(), "")?.expect("Fail to get value from query result in get_fact_record_latest");
+        Ok(values)
+    }
+}
+
 pub(crate) async fn fact_record_load(
     fact_conf_key: &str,
     fact_record_key: &str,

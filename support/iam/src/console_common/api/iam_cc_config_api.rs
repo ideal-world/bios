@@ -1,6 +1,7 @@
+use bios_basic::helper::request_helper::add_remote_ip;
 use tardis::web::context_extractor::TardisContextExtractor;
+use tardis::web::poem::Request;
 use tardis::web::poem_openapi;
-
 use tardis::web::web_resp::{TardisApiResult, TardisResp};
 
 use crate::basic::dto::iam_cert_conf_dto::IamCertConfUserPwdResp;
@@ -18,7 +19,8 @@ pub struct IamCcConfigApi;
 impl IamCcConfigApi {
     /// Get config
     #[oai(path = "/", method = "get")]
-    async fn get(&self, ctx: TardisContextExtractor) -> TardisApiResult<IamCertConfUserPwdResp> {
+    async fn get(&self, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<IamCertConfUserPwdResp> {
+        add_remote_ip(&request, &ctx.0).await?;
         let funs = iam_constants::get_tardis_inst();
         let result = if IamAccountServ::is_global_account(&ctx.0.owner, &funs, &ctx.0).await? {
             let new_ctx = IamAccountServ::new_context_if_account_is_global(&ctx.0, &funs).await?;

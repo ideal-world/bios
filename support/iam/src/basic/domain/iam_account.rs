@@ -1,4 +1,5 @@
 use tardis::basic::dto::TardisContext;
+use tardis::chrono::{self, Utc};
 use tardis::db::reldb_client::TardisActiveModel;
 use tardis::db::sea_orm;
 use tardis::db::sea_orm::sea_query::{ColumnDef, Index, IndexCreateStatement, Table, TableCreateStatement};
@@ -27,6 +28,7 @@ pub struct Model {
     pub ext7: String,
     pub ext8: String,
     pub ext9: String,
+    pub effective_time: chrono::DateTime<Utc>,
 
     pub own_paths: String,
 }
@@ -58,8 +60,14 @@ impl TardisActiveModel for ActiveModel {
             .col(ColumnDef::new(Column::Ext8).not_null().string())
             .col(ColumnDef::new(Column::Ext9).not_null().string())
             .col(ColumnDef::new(Column::OwnPaths).not_null().string());
-        if db == DatabaseBackend::MySql {
-            builder.engine("InnoDB").character_set("utf8mb4").collate("utf8mb4_0900_as_cs");
+        if db == DatabaseBackend::Postgres {
+            builder.col(ColumnDef::new(Column::EffectiveTime).extra("DEFAULT CURRENT_TIMESTAMP".to_string()).timestamp_with_time_zone());
+        } else if db == DatabaseBackend::MySql {
+            builder
+                .col(ColumnDef::new(Column::EffectiveTime).extra("DEFAULT CURRENT_TIMESTAMP".to_string()).timestamp())
+                .engine("InnoDB")
+                .character_set("utf8mb4")
+                .collate("utf8mb4_0900_as_cs");
         }
         builder.to_owned()
     }

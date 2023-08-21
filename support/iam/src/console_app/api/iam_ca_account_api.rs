@@ -13,6 +13,8 @@ use crate::basic::serv::iam_account_serv::IamAccountServ;
 use crate::basic::serv::iam_app_serv::IamAppServ;
 use crate::iam_constants;
 use crate::iam_enumeration::IamRelKind;
+use bios_basic::helper::request_helper::add_remote_ip;
+use tardis::web::poem::Request;
 
 #[derive(Clone, Default)]
 pub struct IamCaAccountApi;
@@ -22,7 +24,8 @@ pub struct IamCaAccountApi;
 impl IamCaAccountApi {
     /// Get Account By Account Id
     #[oai(path = "/:id", method = "get")]
-    async fn get(&self, id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<IamAccountDetailAggResp> {
+    async fn get(&self, id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<IamAccountDetailAggResp> {
+        add_remote_ip(&request, &ctx.0).await?;
         let funs = iam_constants::get_tardis_inst();
         let result = IamAccountServ::get_account_detail_aggs(&id.0, &IamAccountFilterReq::default(), true, false, &funs, &ctx.0).await?;
         ctx.0.execute_task().await?;
@@ -41,7 +44,9 @@ impl IamCaAccountApi {
         desc_by_create: Query<Option<bool>>,
         desc_by_update: Query<Option<bool>>,
         ctx: TardisContextExtractor,
+        request: &Request,
     ) -> TardisApiResult<TardisPage<IamAccountSummaryAggResp>> {
+        add_remote_ip(&request, &ctx.0).await?;
         let funs = iam_constants::get_tardis_inst();
         let rel2 = role_ids.0.map(|role_ids| {
             let role_ids = role_ids.split(',').map(|r| r.to_string()).collect::<Vec<_>>();
@@ -82,7 +87,8 @@ impl IamCaAccountApi {
 
     /// Count Accounts
     #[oai(path = "/total", method = "get")]
-    async fn count(&self, ctx: TardisContextExtractor) -> TardisApiResult<u64> {
+    async fn count(&self, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<u64> {
+        add_remote_ip(&request, &ctx.0).await?;
         let funs = iam_constants::get_tardis_inst();
         let result = IamAccountServ::count_items(&IamAccountFilterReq::default(), &funs, &ctx.0).await?;
         ctx.0.execute_task().await?;

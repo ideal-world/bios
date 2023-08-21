@@ -236,11 +236,3 @@ pub struct StatsConfFactColInfoResp {
     pub create_time: DateTime<Utc>,
     pub update_time: DateTime<Utc>,
 }
-
-#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
-pub struct StatsConfFactColAggWithDimInfoResp {
-    pub dim_show_name: String,
-    #[serde(flatten)]
-    #[oai(flatten)]
-    pub stats_conf_fact_col_info_resp: StatsConfFactColInfoResp,
-}

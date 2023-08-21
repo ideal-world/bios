@@ -14,6 +14,10 @@ publish.workspace = true
 name = "bios_auth"
 path = "src/lib.rs"
 
+[features]
+default = []
+web-server = ["tardis/web-server"]
+
 [dependencies]
 serde.workspace = true
 itertools.workspace = true
@@ -22,7 +26,7 @@ tardis = { workspace = true, features = [
     "cache",
     "crypto",
     "crypto-with-sm",
-    "web-server",
+    "future",
 ] }
 
 [dev-dependencies]
