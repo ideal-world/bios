@@ -118,13 +118,13 @@ impl FlowInstServ {
             };
             let resp = if funs.db().insert_one(flow_inst, ctx).await.is_ok() {
                 FlowInstBindResp {
-                    rel_business_obj_id: rel_business_obj.rel_business_obj_id.clone(),
+                    rel_business_obj_id: rel_business_obj.rel_business_obj_id.to_string(),
                     current_state_name,
                     inst_id: Some(id),
                 }
             } else {
                 FlowInstBindResp {
-                    rel_business_obj_id: rel_business_obj.rel_business_obj_id.clone(),
+                    rel_business_obj_id: rel_business_obj.rel_business_obj_id.to_string(),
                     current_state_name,
                     inst_id: None,
                 }
@@ -149,23 +149,9 @@ impl FlowInstServ {
             funs,
             ctx,
         )
-        .await?;
+        .await
+        .unwrap_or_default();
         // try get model in tenant path or default model
-        if result.is_none() {
-            result = FlowModelServ::find_one_item(
-                &FlowModelFilterReq {
-                    basic: RbumBasicFilterReq {
-                        own_paths: Some(ctx.own_paths.split_once('/').unwrap_or_default().0.to_string()),
-                        ..Default::default()
-                    },
-                    tag: Some(tag.to_string()),
-                    ..Default::default()
-                },
-                funs,
-                ctx,
-            )
-            .await?;
-        }
         if result.is_none() {
             result = FlowModelServ::find_one_item(
                 &FlowModelFilterReq {
@@ -431,10 +417,6 @@ impl FlowInstServ {
             let flow_model_id = Self::get_model_id_by_own_paths(tag, funs, ctx).await?;
             query.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::RelFlowModelId)).eq(flow_model_id));
         }
-        if let Some(tag) = &tag {
-            let flow_model_id = Self::get_model_id_by_own_paths(tag, funs, ctx).await?;
-            query.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::RelFlowModelId)).eq(flow_model_id));
-        }
         if let Some(finish) = finish {
             if finish {
                 query.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::FinishTime)).is_not_null());
@@ -532,6 +514,37 @@ impl FlowInstServ {
         Ok(state_and_next_transitions.next_flow_transitions)
     }
 
+    pub async fn check_transfer_vars(flow_inst_id: &str, transfer_req: &FlowInstTransferReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let flow_inst_detail: FlowInstDetailResp = Self::get(flow_inst_id, funs, ctx).await?;
+        let flow_model = FlowModelServ::get_item(
+            &flow_inst_detail.rel_flow_model_id,
+            &FlowModelFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    own_paths: Some("".to_string()),
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?;
+        let vars_collect = flow_model
+            .transitions()
+            .into_iter()
+            .find(|trans| trans.id == transfer_req.flow_transition_id)
+            .ok_or_else(|| funs.err().not_found("flow_inst", "check_transfer_vars", "illegal response", "404-transition-not-found"))?
+            .vars_collect();
+        if let Some(vars_collect) = vars_collect {
+            if vars_collect.into_iter().any(|var| var.required == Some(true) && (transfer_req.vars.is_none() || !transfer_req.vars.as_ref().unwrap().contains_key(&var.name))) {
+                return Err(funs.err().internal_error("flow_inst", "check_transfer_vars", "missing required field", "400-flow-inst-vars-field-missing"));
+            }
+        }
+
+        Ok(())
+    }
+
     #[async_recursion]
     pub async fn transfer(flow_inst_id: &str, transfer_req: &FlowInstTransferReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<FlowInstTransferResp> {
         let flow_inst_detail = Self::get(flow_inst_id, funs, ctx).await?;
@@ -563,6 +576,18 @@ impl FlowInstServ {
         if next_flow_transition.is_none() {
             return Err(funs.err().not_found("flow_inst", "transfer", "no transferable state", "404-flow-inst-transfer-state-not-found"));
         }
+        if FlowModelServ::check_post_action_ring(
+            flow_model.transitions().into_iter().find(|trans| trans.id == transfer_req.flow_transition_id).unwrap(),
+            (false, vec![]),
+            funs,
+            ctx,
+        )
+        .await?
+        .0
+        {
+            return Err(funs.err().not_found("flow_inst", "transfer", "this post action exist endless loop", "500-flow-inst-transfer-state-error"));
+        }
+
         let next_flow_transition = next_flow_transition.unwrap();
         let next_flow_state = FlowStateServ::get_item(
             &next_flow_transition.next_flow_state_id,
@@ -621,7 +646,7 @@ impl FlowInstServ {
                 json!({
                     "current_state_id":next_flow_state.id
                 }),
-                json!({ "current_vars": &new_vars }),
+                json!({ "current_vars": &transfer_req.vars }),
                 json!({ "transitions": &new_transitions }),
             ],
             ctx,
@@ -823,14 +848,14 @@ impl FlowInstServ {
                 ctx,
             )
             .await?;
-            let transition = Self::do_find_next_transitions(&rel_inst, &flow_model, None, &None, funs, ctx)
+            let transition_resp = Self::do_find_next_transitions(&rel_inst, &flow_model, None, &None, funs, ctx)
                 .await?
                 .next_flow_transitions
                 .into_iter()
                 .filter(|transition_detail| *transition_detail.next_flow_state_id == change_info.changed_state_id)
                 .collect_vec()
                 .pop();
-            if let Some(transition) = transition {
+            if let Some(transition) = transition_resp {
                 Self::transfer(
                     &rel_inst.id,
                     &FlowInstTransferReq {

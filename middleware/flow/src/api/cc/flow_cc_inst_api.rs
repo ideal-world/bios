@@ -26,7 +26,7 @@ impl FlowCcInstApi {
         TardisResp::ok(result)
     }
 
-    /// Batch Bind Instance / 批量绑定实例(初始化)
+    /// Batch Bind Instance / 批量绑定实例 （初始化）
     #[oai(path = "/batch_bind", method = "post")]
     async fn batch_bind(&self, add_req: Json<FlowInstBindReq>, ctx: TardisContextExtractor) -> TardisApiResult<Vec<FlowInstBindResp>> {
         let mut funs = flow_constants::get_tardis_inst();
@@ -101,6 +101,7 @@ impl FlowCcInstApi {
     async fn transfer(&self, flow_inst_id: Path<String>, transfer_req: Json<FlowInstTransferReq>, ctx: TardisContextExtractor) -> TardisApiResult<FlowInstTransferResp> {
         let mut funs = flow_constants::get_tardis_inst();
         funs.begin().await?;
+        FlowInstServ::check_transfer_vars(&flow_inst_id.0, &transfer_req.0, &funs, &ctx.0).await?;
         let result = FlowInstServ::transfer(&flow_inst_id.0, &transfer_req.0, &funs, &ctx.0).await?;
         funs.commit().await?;
         TardisResp::ok(result)

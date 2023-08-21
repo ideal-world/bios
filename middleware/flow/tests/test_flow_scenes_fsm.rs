@@ -17,7 +17,6 @@ use bios_mw_flow::dto::flow_transition_dto::{
     StateChangeConditionOp,
 };
 
-// use bios_mw_flow::serv::flow_inst_serv::FlowInstServ;
 use bios_sdk_invoke::clients::spi_kv_client::KvItemSummaryResp;
 use tardis::basic::dto::TardisContext;
 
@@ -71,7 +70,7 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
     info!("configs_new: {:?}", configs);
     // 2.Get model based on template id
     let result: HashMap<String, FlowTemplateModelResp> = flow_client.get(&format!("/cc/model/get_models?tag_ids=REQ&temp_id={}", template_id)).await;
-    let model_id = result.get("REQ").unwrap().id.clone();
+    let req_model_id = result.get("REQ").unwrap().id.clone();
 
     let result: HashMap<String, FlowTemplateModelResp> = flow_client.get(&format!("/cc/model/get_models?tag_ids=TICKET&temp_id={}", template_id)).await;
     let ticket_model_id = result.get("TICKET").unwrap().id.clone();
@@ -81,17 +80,21 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
     let iter_model_id = result.get("ITER").unwrap().id.clone();
     let iter_model_agg: FlowModelAggResp = flow_client.get(&format!("/cc/model/{}", iter_model_id)).await;
 
+    let result: HashMap<String, FlowTemplateModelResp> = flow_client.get(&format!("/cc/model/get_models?tag_ids=PROJ&temp_id={}", template_id)).await;
+    let proj_model_id = result.get("PROJ").unwrap().id.clone();
+    let proj_model_agg: FlowModelAggResp = flow_client.get(&format!("/cc/model/{}", proj_model_id)).await;
+
     // 3.modify model
     // Delete and add some transitions
     let _: Void = flow_client
         .post(
-            &format!("/cc/model/{}/unbind_state", &model_id),
+            &format!("/cc/model/{}/unbind_state", &req_model_id),
             &FlowModelUnbindStateReq { state_id: init_state_id.clone() },
         )
         .await;
     let _: Void = flow_client
         .post(
-            &format!("/cc/model/{}/bind_state", &model_id),
+            &format!("/cc/model/{}/bind_state", &req_model_id),
             &FlowModelBindStateReq {
                 state_id: init_state_id.clone(),
                 sort: 10,
@@ -106,13 +109,13 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
             sort: i as i64 + 1,
         });
     }
-    let _: Void = flow_client.post(&format!("/cc/model/{}/resort_state", &model_id), &FlowModelSortStatesReq { sort_states }).await;
+    let _: Void = flow_client.post(&format!("/cc/model/{}/resort_state", &req_model_id), &FlowModelSortStatesReq { sort_states }).await;
     // get model detail
-    let model_agg_old: FlowModelAggResp = flow_client.get(&format!("/cc/model/{}", &model_id)).await;
+    let model_agg_old: FlowModelAggResp = flow_client.get(&format!("/cc/model/{}", &req_model_id)).await;
     // Set initial state
     let _: Void = flow_client
         .patch(
-            &format!("/cc/model/{}", model_id),
+            &format!("/cc/model/{}", req_model_id),
             &FlowModelModifyReq {
                 init_state_id: Some(init_state_id.clone()),
                 ..Default::default()
@@ -120,10 +123,10 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
         )
         .await;
     // modify transitions
-    let trans_modify = model_agg_old.states.first().unwrap().transitions.iter().find(|trans| trans.name == "开始").unwrap();
+    let trans_modify = model_agg_old.states.iter().find(|state| state.name == "待开始").unwrap().transitions.iter().find(|trans| trans.name == "开始").unwrap();
     let _: Void = flow_client
         .patch(
-            &format!("/cc/model/{}", model_id),
+            &format!("/cc/model/{}", req_model_id),
             &FlowModelModifyReq {
                 modify_transitions: Some(vec![FlowTransitionModifyReq {
                     id: trans_modify.id.clone().into(),
@@ -169,20 +172,44 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
             },
         )
         .await;
-    let mut model_agg_new: FlowModelAggResp = flow_client.get(&format!("/cc/model/{}", model_id)).await;
+    let mut model_agg_new: FlowModelAggResp = flow_client.get(&format!("/cc/model/{}", req_model_id)).await;
     assert!(!model_agg_new.states.first_mut().unwrap().transitions.iter_mut().any(|trans| trans.transfer_by_auto).is_empty());
     info!("model_agg_new: {:?}", model_agg_new);
     // 4.Start a instance
-    let req_inst_rel_id = TardisFuns::field.nanoid();
+    // mock tenant content
+    ctx.own_paths = "t1/app01/user01".to_string();
+    flow_client.set_auth(&ctx)?;
+    let req_inst_id1: String = flow_client
+        .post(
+            "/cc/inst",
+            &FlowInstStartReq {
+                tag: "TS".to_string(),
+                create_vars: None,
+                rel_business_obj_id: TardisFuns::field.nanoid(),
+                current_state_name: None,
+            },
+        )
+        .await;
     let ticket_inst_rel_id = "mock-ticket-obj-id".to_string();
     let iter_inst_rel_id = "mock-iter-obj-id".to_string();
-    let req_inst_id: String = flow_client
+    let req_inst_id1: String = flow_client
         .post(
             "/cc/inst",
             &FlowInstStartReq {
                 tag: "REQ".to_string(),
                 create_vars: None,
-                rel_business_obj_id: req_inst_rel_id.clone(),
+                rel_business_obj_id: TardisFuns::field.nanoid(),
+                current_state_name: None,
+            },
+        )
+        .await;
+    let req_inst_id2: String = flow_client
+        .post(
+            "/cc/inst",
+            &FlowInstStartReq {
+                tag: "REQ".to_string(),
+                create_vars: None,
+                rel_business_obj_id: TardisFuns::field.nanoid(),
                 current_state_name: None,
             },
         )
@@ -211,7 +238,7 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
         .await;
     // Get the state of a task that can be transferable
     let next_transitions: Vec<FlowInstFindNextTransitionResp> =
-        flow_client.put(&format!("/cc/inst/{}/transition/next", req_inst_id), &FlowInstFindNextTransitionsReq { vars: None }).await;
+        flow_client.put(&format!("/cc/inst/{}/transition/next", req_inst_id1), &FlowInstFindNextTransitionsReq { vars: None }).await;
     assert_eq!(next_transitions.len(), 2);
     flow_client.set_auth(&TardisContext {
         own_paths: "".to_string(),
@@ -222,7 +249,7 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
         ..Default::default()
     })?;
     let next_transitions: Vec<FlowInstFindNextTransitionResp> =
-        flow_client.put(&format!("/cc/inst/{}/transition/next", req_inst_id), &FlowInstFindNextTransitionsReq { vars: None }).await;
+        flow_client.put(&format!("/cc/inst/{}/transition/next", req_inst_id1), &FlowInstFindNextTransitionsReq { vars: None }).await;
     assert_eq!(next_transitions.len(), 2);
     assert!(next_transitions.iter().any(|trans| trans.next_flow_transition_name.contains("开始") && trans.vars_collect.as_ref().unwrap().len() == 2));
     assert!(next_transitions.iter().any(|trans| trans.next_flow_transition_name.contains("关闭")));
@@ -231,7 +258,7 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
         .put(
             "/cc/inst/batch/state_transitions",
             &vec![FlowInstFindStateAndTransitionsReq {
-                flow_inst_id: req_inst_id.clone(),
+                flow_inst_id: req_inst_id1.clone(),
                 vars: None,
             }],
         )
@@ -244,27 +271,110 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
         .any(|trans| trans.next_flow_transition_name.contains("开始") && trans.vars_collect.as_ref().unwrap().len() == 2));
     assert!(state_and_next_transitions[0].next_flow_transitions.iter().any(|trans| trans.next_flow_transition_name.contains("关闭")));
     // Transfer task status
-    // let transfer: FlowInstTransferResp = flow_client
-    //     .put(
-    //         &format!("/cc/inst/{}/transition/transfer", req_inst_id),
-    //         &FlowInstTransferReq {
-    //             flow_transition_id: state_and_next_transitions[0]
-    //                 .next_flow_transitions
-    //                 .iter()
-    //                 .find(|&trans| trans.next_flow_transition_name.contains("关闭"))
-    //                 .unwrap()
-    //                 .next_flow_transition_id
-    //                 .to_string(),
-    //             vars: Some(TardisFuns::json.json_to_obj(json!({ "reason":"测试关闭" })).unwrap()),
-    //             message: None,
-    //         },
-    //     )
-    //     .await;
-    // assert_eq!(
-    //     transfer.new_flow_state_id,
-    //     state_and_next_transitions[0].next_flow_transitions.iter().find(|&trans| trans.next_flow_transition_name.contains("关闭")).unwrap().next_flow_state_id.clone()
-    // );
-    // 5. post action
+    let transfer: FlowInstTransferResp = flow_client
+        .put(
+            &format!("/cc/inst/{}/transition/transfer", req_inst_id1),
+            &FlowInstTransferReq {
+                flow_transition_id: state_and_next_transitions[0]
+                    .next_flow_transitions
+                    .iter()
+                    .find(|&trans| trans.next_flow_transition_name.contains("关闭"))
+                    .unwrap()
+                    .next_flow_transition_id
+                    .to_string(),
+                vars: Some(TardisFuns::json.json_to_obj(json!({ "reason":"测试关闭" })).unwrap()),
+                message: None,
+            },
+        )
+        .await;
+    assert_eq!(
+        transfer.new_flow_state_id,
+        state_and_next_transitions[0].next_flow_transitions.iter().find(|&trans| trans.next_flow_transition_name.contains("关闭")).unwrap().next_flow_state_id.clone()
+    );
+    // 5. check post action endless loop
+    ctx.own_paths = "t1".to_string();
+    flow_client.set_auth(&ctx)?;
+    let proj_trans = proj_model_agg.states.iter().find(|state| state.name == "进行中").unwrap().transitions.iter().find(|trans| trans.name == "有风险").unwrap();
+    let _: Void = flow_client
+        .patch(
+            &format!("/cc/model/{}", proj_model_id),
+            &FlowModelModifyReq {
+                modify_transitions: Some(vec![FlowTransitionModifyReq {
+                    id: proj_trans.id.clone().into(),
+                    name: None,
+                    from_flow_state_id: None,
+                    to_flow_state_id: None,
+                    transfer_by_auto: None,
+                    transfer_by_timer: None,
+                    guard_by_creator: None,
+                    guard_by_his_operators: None,
+                    guard_by_assigned: None,
+                    guard_by_spec_account_ids: None,
+                    guard_by_spec_role_ids: None,
+                    guard_by_spec_org_ids: None,
+                    guard_by_other_conds: None,
+                    vars_collect: None,
+                    action_by_pre_callback: None,
+                    action_by_post_callback: None,
+                    action_by_post_changes: Some(vec![FlowTransitionActionChangeInfo {
+                        kind: FlowTransitionActionChangeKind::State,
+                        describe: "".to_string(),
+                        obj_tag: Some("TICKET".to_string()),
+                        obj_current_state_id: None,
+                        change_condition: None,
+                        changed_state_id: ticket_model_agg.states.iter().find(|state| state.name == "处理中").unwrap().id.clone(),
+                        current: true,
+                        var_name: "".to_string(),
+                        changed_val: None,
+                    }]),
+                    double_check: None,
+                }]),
+                ..Default::default()
+            },
+        )
+        .await;
+    let ticket_model: FlowModelAggResp = flow_client.get(&format!("/cc/model/{}", &ticket_model_id)).await;
+    let ticket_trans = ticket_model.states.iter().find(|state| state.name == "待处理").unwrap().transitions.iter().find(|trans| trans.name == "立即处理").unwrap();
+    let endless_loop_error = flow_client
+        .patch_resp::<FlowModelModifyReq, Void>(
+            &format!("/cc/model/{}", ticket_model_id),
+            &FlowModelModifyReq {
+                modify_transitions: Some(vec![FlowTransitionModifyReq {
+                    id: ticket_trans.id.clone().into(),
+                    name: None,
+                    from_flow_state_id: None,
+                    to_flow_state_id: None,
+                    transfer_by_auto: None,
+                    transfer_by_timer: None,
+                    guard_by_creator: None,
+                    guard_by_his_operators: None,
+                    guard_by_assigned: None,
+                    guard_by_spec_account_ids: None,
+                    guard_by_spec_role_ids: None,
+                    guard_by_spec_org_ids: None,
+                    guard_by_other_conds: None,
+                    vars_collect: None,
+                    action_by_pre_callback: None,
+                    action_by_post_callback: None,
+                    action_by_post_changes: Some(vec![FlowTransitionActionChangeInfo {
+                        kind: FlowTransitionActionChangeKind::State,
+                        describe: "".to_string(),
+                        obj_tag: Some("PROJ".to_string()),
+                        obj_current_state_id: None,
+                        change_condition: None,
+                        changed_state_id: proj_model_agg.states.iter().find(|state| state.name == "存在风险").unwrap().id.clone(),
+                        current: true,
+                        var_name: "".to_string(),
+                        changed_val: None,
+                    }]),
+                    double_check: None,
+                }]),
+                ..Default::default()
+            },
+        )
+        .await;
+    assert_eq!(endless_loop_error.code, "404-flow-flow_model_Serv-after_modify_item");
+    // 6. post action
     // check original instance
     let ticket: FlowInstDetailResp = flow_client.get(&format!("/cc/inst/{}", ticket_inst_id)).await;
     assert_eq!(ticket.current_state_id, ticket_model_agg.init_state_id);
@@ -273,14 +383,16 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
         .put(
             "/cc/inst/batch/state_transitions",
             &vec![FlowInstFindStateAndTransitionsReq {
-                flow_inst_id: req_inst_id.clone(),
+                flow_inst_id: req_inst_id2.clone(),
                 vars: None,
             }],
         )
         .await;
+    let mut vars = HashMap::new();
+    vars.insert("assigned".to_string(), json!("xxxx_001"));
     let _transfer: FlowInstTransferResp = flow_client
         .put(
-            &format!("/cc/inst/{}/transition/transfer", req_inst_id),
+            &format!("/cc/inst/{}/transition/transfer", req_inst_id2),
             &FlowInstTransferReq {
                 flow_transition_id: state_and_next_transitions[0]
                     .next_flow_transitions
@@ -289,7 +401,7 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
                     .unwrap()
                     .next_flow_transition_id
                     .clone(),
-                vars: None,
+                vars: Some(vars),
                 message: None,
             },
         )

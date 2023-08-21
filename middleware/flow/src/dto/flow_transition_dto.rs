@@ -97,6 +97,8 @@ pub struct FlowTransitionDetailResp {
     pub action_by_post_changes: Value,
 
     pub double_check: Value,
+
+    pub rel_flow_model_id: String,
 }
 
 impl FlowTransitionDetailResp {
