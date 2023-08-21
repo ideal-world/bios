@@ -19,6 +19,7 @@ pub struct FlowStateAddReq {
     pub name: Option<TrimString>,
     #[oai(validator(min_length = "2", max_length = "2000"))]
     pub icon: Option<String>,
+    pub color: Option<String>,
     pub sys_state: FlowSysStateKind,
     #[oai(validator(min_length = "2", max_length = "2000"))]
     pub info: Option<String>,
@@ -42,6 +43,7 @@ pub struct FlowStateModifyReq {
     pub name: Option<TrimString>,
     #[oai(validator(min_length = "2", max_length = "2000"))]
     pub icon: Option<String>,
+    pub color: Option<String>,
     pub sys_state: Option<FlowSysStateKind>,
     #[oai(validator(min_length = "2", max_length = "2000"))]
     pub info: Option<String>,
@@ -64,6 +66,7 @@ pub struct FlowStateSummaryResp {
     pub id: String,
     pub name: String,
     pub icon: String,
+    pub color: String,
     pub sys_state: FlowSysStateKind,
     pub info: String,
 
@@ -87,6 +90,7 @@ pub struct FlowStateDetailResp {
     pub id: String,
     pub name: String,
     pub icon: String,
+    pub color: String,
     pub sys_state: FlowSysStateKind,
     pub info: String,
 
