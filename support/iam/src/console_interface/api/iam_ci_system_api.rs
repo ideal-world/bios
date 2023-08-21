@@ -27,7 +27,7 @@ impl IamCiSystemApi {
         let task_ids = task_ids.0.split(',');
         for task_id in task_ids {
             let task_id = task_id.parse().map_err(|_| funs.err().format_error("system", "task", "task id format error", "406-iam-task-id-format"))?;
-            TaskProcessor::stop_task(&cache_key.0, task_id, &funs).await?;
+            TaskProcessor::stop_task_external(&cache_key.0, task_id, &funs).await?;
         }
         TardisResp::ok(Void {})
     }
