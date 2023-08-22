@@ -81,7 +81,7 @@ impl IamCpCertApi {
     #[oai(path = "/logout/:token", method = "delete")]
     async fn logout(&self, token: Path<String>, request: &Request) -> TardisApiResult<Void> {
         let funs = iam_constants::get_tardis_inst();
-        IamCertTokenServ::delete_cert(&token.0, get_ip(&request), &funs).await?;
+        IamCertTokenServ::delete_cert(&token.0, get_ip(&request).await?, &funs).await?;
         TardisResp::ok(Void {})
     }
 
