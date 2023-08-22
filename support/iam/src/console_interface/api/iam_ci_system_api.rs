@@ -14,6 +14,21 @@ pub struct IamCiSystemApi;
 /// Use commas to separate multiple task ids
 #[poem_openapi::OpenApi(prefix_path = "/ci/system", tag = "bios_basic::ApiTag::Interface")]
 impl IamCiSystemApi {
+
+    #[oai(path = "/task/check/:task_ids", method = "get")]
+    async fn task_check_finished(&self, cache_key: Query<String>, task_ids: Path<String>) -> TardisApiResult<bool> {
+        let funs = iam_constants::get_tardis_inst();
+        let task_ids = task_ids.0.split(',');
+        for task_id in task_ids {
+            let task_id = task_id.parse().map_err(|_| funs.err().format_error("system", "task", "task id format error", "406-iam-task-id-format"))?;
+            let is_finished = TaskProcessor::check_status(&cache_key.0, task_id, funs.cache()).await?;
+            if !is_finished {
+                return TardisResp::ok(false);
+            }
+        }
+        TardisResp::ok(true)
+    }
+
     #[oai(path = "/task/execute", method = "put")]
     async fn execute_task_external(&self, cache_key: Query<String>) -> TardisApiResult<i64> {
         let funs = iam_constants::get_tardis_inst();
