@@ -8,8 +8,8 @@ use bios_mw_flow::dto::flow_inst_dto::{
     FlowInstTransferReq, FlowInstTransferResp,
 };
 use bios_mw_flow::dto::flow_model_dto::{
-    FlowModelAggResp, FlowModelBindStateReq, FlowModelModifyReq, FlowModelSortStateInfoReq, FlowModelSortStatesReq, FlowModelSummaryResp, FlowModelUnbindStateReq,
-    FlowTemplateModelResp,
+    FlowModelAddCustomModelReq, FlowModelAddCustomModelResp, FlowModelAggResp, FlowModelBindStateReq, FlowModelModifyReq, FlowModelSortStateInfoReq, FlowModelSortStatesReq,
+    FlowModelSummaryResp, FlowModelUnbindStateReq, FlowTemplateModelResp,
 };
 use bios_mw_flow::dto::flow_state_dto::FlowStateSummaryResp;
 use bios_mw_flow::dto::flow_transition_dto::{
@@ -177,19 +177,8 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
     info!("model_agg_new: {:?}", model_agg_new);
     // 4.Start a instance
     // mock tenant content
-    ctx.own_paths = "t1/app01/user01".to_string();
+    ctx.own_paths = "t1/app01".to_string();
     flow_client.set_auth(&ctx)?;
-    let req_inst_id1: String = flow_client
-        .post(
-            "/cc/inst",
-            &FlowInstStartReq {
-                tag: "TS".to_string(),
-                create_vars: None,
-                rel_business_obj_id: TardisFuns::field.nanoid(),
-                current_state_name: None,
-            },
-        )
-        .await;
     let ticket_inst_rel_id = "mock-ticket-obj-id".to_string();
     let iter_inst_rel_id = "mock-iter-obj-id".to_string();
     let req_inst_id1: String = flow_client
@@ -408,6 +397,20 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
         .await;
     let ticket: FlowInstDetailResp = flow_client.get(&format!("/cc/inst/{}", ticket_inst_id)).await;
     assert_eq!(ticket.current_state_id, ticket_model_agg.states.iter().find(|state| state.name == "处理中").unwrap().id);
+
+    // 7. bind app custom model
+    ctx.own_paths = "t1/app01".to_string();
+    flow_client.set_auth(&ctx)?;
+    let mut modify_configs = vec![];
+    let tags = vec!["REQ", "MS", "PROJ", "ITER", "TICKET"];
+    for tag in tags {
+        modify_configs.push(FlowModelAddCustomModelReq {
+            tag: tag.to_string(),
+            rel_template_id: template_id.clone(),
+        });
+    }
+    let result: Vec<FlowModelAddCustomModelResp> = flow_client.post("/cc/model/add_custom_model", &modify_configs).await;
+    assert!(result.into_iter().find(|resp| resp.tag == "MS").unwrap().model_id.is_none());
 
     Ok(())
 }

@@ -136,30 +136,18 @@ impl FlowInstServ {
     }
 
     pub async fn get_model_id_by_own_paths(tag: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
-        // try get model in app path
-        let mut result = FlowModelServ::find_one_item(
-            &FlowModelFilterReq {
-                basic: RbumBasicFilterReq {
-                    own_paths: Some(ctx.own_paths.clone()),
-                    ..Default::default()
-                },
-                tag: Some(tag.to_string()),
-                ..Default::default()
-            },
-            funs,
-            ctx,
-        )
-        .await
-        .unwrap_or_default();
-        // try get model in tenant path or default model
-        if result.is_none() {
+        let mut own_paths = ctx.own_paths.clone();
+        let mut result = None;
+        // try get model in tenant path or app path
+        while !own_paths.is_empty() {
             result = FlowModelServ::find_one_item(
                 &FlowModelFilterReq {
                     basic: RbumBasicFilterReq {
-                        own_paths: Some(ctx.own_paths.split_once('/').unwrap_or_default().0.to_string()),
+                        own_paths: Some(own_paths.clone()),
                         ..Default::default()
                     },
-                    tag: Some(tag.to_string()),
+                    tags: Some(vec![tag.to_string()]),
+                    template: Some(false),
                     ..Default::default()
                 },
                 funs,
@@ -167,6 +155,12 @@ impl FlowInstServ {
             )
             .await
             .unwrap_or_default();
+            if result.is_some() {
+                break;
+            } else {
+                let own_paths_vec = own_paths.split('/').collect_vec();
+                own_paths = own_paths_vec[0..own_paths_vec.len() - 1].join("/").to_string();
+            }
         }
         if result.is_none() {
             result = FlowModelServ::find_one_item(
@@ -175,7 +169,7 @@ impl FlowInstServ {
                         own_paths: Some("".to_string()),
                         ..Default::default()
                     },
-                    tag: Some(tag.to_string()),
+                    tags: Some(vec![tag.to_string()]),
                     ..Default::default()
                 },
                 funs,
