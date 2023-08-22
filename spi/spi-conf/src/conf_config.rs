@@ -12,6 +12,8 @@ pub struct ConfConfig {
     pub auth_key: String,
     pub auth_username: String,
     pub auth_password: String,
+    pub grpc_port: u16,
+    pub grpc_host: std::net::IpAddr,
 }
 
 impl ConfConfig {
@@ -36,6 +38,8 @@ impl Default for ConfConfig {
             auth_username: String::from("nacos"),
             auth_password: password,
             rbum: Default::default(),
+            grpc_port: 9080,
+            grpc_host: std::net::IpAddr::V4(std::net::Ipv4Addr::LOCALHOST),
         }
     }
 }

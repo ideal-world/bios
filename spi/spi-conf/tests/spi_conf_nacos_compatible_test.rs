@@ -18,7 +18,7 @@ use tardis::{
 
 mod spi_conf_test_common;
 use spi_conf_test_common::*;
-const SCHEMA: &str = "http";
+const SCHEMA: &str = "https";
 #[tokio::test(flavor="multi_thread")]
 async fn spi_conf_namespace_test() -> TardisResult<()> {
     std::env::set_var("RUST_LOG", "info,tardis=debug,spi_conf_listener_test=debug,sqlx=off,sea_orm=off,bios_spi_conf=DEBUG,poem_grpc=TRACE,tonic=TRACE");
