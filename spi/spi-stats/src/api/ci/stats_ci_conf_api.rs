@@ -6,8 +6,8 @@ use tardis::web::poem_openapi::payload::Json;
 use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 
 use crate::dto::stats_conf_dto::{
-    StatsConfDimAddReq, StatsConfDimInfoResp, StatsConfDimModifyReq, StatsConfFactAddReq, StatsConfFactColAddReq, StatsConfFactColAggWithDimInfoResp, StatsConfFactColInfoResp,
-    StatsConfFactColModifyReq, StatsConfFactInfoResp, StatsConfFactModifyReq,
+    StatsConfDimAddReq, StatsConfDimInfoResp, StatsConfDimModifyReq, StatsConfFactAddReq, StatsConfFactColAddReq, StatsConfFactColInfoResp, StatsConfFactColModifyReq,
+    StatsConfFactInfoResp, StatsConfFactModifyReq,
 };
 use crate::serv::stats_conf_serv;
 use crate::stats_enumeration::StatsFactColKind;
@@ -180,21 +180,21 @@ impl StatsCiConfApi {
     }
 
     /// Find Fact Column Configurations
-    #[oai(path = "/fact/:fact_key/dim/:dim_key/col", method = "get")]
-    async fn fact_col_paginate_agg_with_dim(
+    #[oai(path = "/dim/:dim_key/col", method = "get")]
+    async fn fact_col_paginate_by_dim(
         &self,
-        fact_key: Path<String>,
         dim_key: Path<String>,
         key: Query<Option<String>>,
+        fact_key: Query<Option<String>>,
         show_name: Query<Option<String>>,
         page_number: Query<u32>,
         page_size: Query<u32>,
         desc_by_create: Query<Option<bool>>,
         desc_by_update: Query<Option<bool>>,
         ctx: TardisContextExtractor,
-    ) -> TardisApiResult<TardisPage<StatsConfFactColAggWithDimInfoResp>> {
+    ) -> TardisApiResult<TardisPage<StatsConfFactColInfoResp>> {
         let funs = crate::get_tardis_inst();
-        let resp = stats_conf_serv::fact_col_paginate_agg_with_dim(
+        let resp = stats_conf_serv::fact_col_paginate_by_dim(
             fact_key.0,
             dim_key.0,
             key.0,

@@ -372,7 +372,7 @@ impl IamCertServ {
         let cert_id = id.to_string();
         TaskProcessor::execute_task_with_ctx(
             &funs.conf::<IamConfig>().cache_key_async_task_status,
-            move || async move {
+            move |_task_id| async move {
                 let funs = iam_constants::get_tardis_inst();
                 let rbum_cert_conf = RbumCertConfServ::peek_rbum(
                     &cert_id,
@@ -1330,7 +1330,7 @@ impl IamCertServ {
 
         let task_id = TaskProcessor::execute_task_with_ctx(
             &funs.conf::<IamConfig>().cache_key_async_task_status,
-            move || async move {
+            move |_task_id| async move {
                 let sync = sync;
                 let funs = iam_constants::get_tardis_inst();
 
