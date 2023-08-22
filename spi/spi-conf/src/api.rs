@@ -19,9 +19,6 @@ pub async fn init_api(web_server: &TardisWebServer) {
     let mut nacos_module = WebServerModule::new(ConfNacosApi::default());
     nacos_module.options.set_uniform_error(false);
     web_server.add_module(&format!("{domain}-nacos", domain = conf_constants::DOMAIN_CODE), nacos_module).await;
-    web_server
-        .add_grpc_route(WebServerGrpcModule::default().with_grpc_service(RequestGrpcServer::new(RequestProtoImpl)).with_descriptor(NACOS_GRPC_SERVICE_DESCRIPTOR.to_vec()))
-        .await;
 }
 
 pub async fn init_grpc_server(cfg: &ConfConfig) -> TardisResult<()> {
