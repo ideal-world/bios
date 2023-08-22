@@ -57,6 +57,58 @@ LIMIT 1
     }
 }
 
+pub(crate) async fn get_fact_record_pagenated(
+    fact_conf_key: &str,
+    fact_record_key: &str,
+    page_number: u32,
+    page_size: u32,
+    desc_by_create: Option<bool>,
+    funs: &TardisFunsInst,
+    ctx: &TardisContext,
+    inst: &SpiBsInst,
+) -> TardisResult<TardisPage<serde_json::Value>> {
+    let bs_inst = inst.inst::<TardisRelDBClient>();
+    let (conn, _) = common_pg::init_conn(bs_inst).await?;
+    if !stats_pg_conf_fact_serv::online(fact_conf_key, &conn, ctx).await? {
+        return Err(funs.err().conflict("fact_record", "load", "The fact config not online.", "409-spi-stats-fact-conf-not-online"));
+    }
+    let table_name = package_table_name(&format!("stats_inst_fact_{fact_conf_key}"), ctx);
+    let mut sql_order = String::new();
+    if let Some(desc_by_create) = desc_by_create {
+        sql_order = format!("ORDER BY ct {}", if desc_by_create { "DESC" } else { "ASC" });
+    }
+    let result = conn
+        .query_all(
+            &format!(
+                r#"SELECT *, count(*) OVER() AS total
+FROM {table_name}
+WHERE 
+    key = $1
+{sql_order}
+LIMIT $2 OFFSET $3
+"#,
+            ),
+            vec![Value::from(fact_record_key), Value::from(page_size), Value::from((page_number - 1) * page_size)],
+        )
+        .await?;
+    let total;
+    if let Some(first) = result.get(0) {
+        total = first.try_get("", "total")?;
+    } else {
+        total = 0;
+    }
+    let records = result
+        .iter()
+        .map(|item| serde_json::Value::from_query_result_optional(item, "").map(|x| x.unwrap_or(serde_json::Value::Null)))
+        .collect::<Result<Vec<serde_json::Value>, _>>()?;
+    Ok(TardisPage {
+        page_size: page_size.into(),
+        page_number: page_size.into(),
+        total_size: total as u64,
+        records,
+    })
+}
+
 pub(crate) async fn fact_record_load(
     fact_conf_key: &str,
     fact_record_key: &str,
