@@ -34,7 +34,7 @@ jobs:
         uses: Swatinem/rust-cache@v2
 
       - name: Build rust
-        run: cargo build --release
+        run: cargo build --release -p bios-serv-all
 
       - name: Copy binary to workspace
         run: cp ./target/release/bios-serv-all ./services/bios-all/

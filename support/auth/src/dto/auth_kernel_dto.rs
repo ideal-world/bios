@@ -1,15 +1,17 @@
 use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
+#[cfg(feature = "web-server")]
+use tardis::web::poem_openapi;
 use tardis::{
     basic::{dto::TardisContext, error::TardisError},
-    web::poem_openapi,
     TardisFuns,
 };
 
 use crate::auth_config::AuthConfig;
 
-#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
+#[cfg_attr(feature = "web-server", derive(poem_openapi::Object))]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct AuthReq {
     pub scheme: String,
     pub path: String,
@@ -64,7 +66,9 @@ impl AuthResult {
         }
     }
 }
-#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+
+#[cfg_attr(feature = "web-server", derive(poem_openapi::Object))]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct AuthResp {
     pub allow: bool,
     pub status_code: u16,
@@ -137,7 +141,8 @@ impl AuthResp {
     }
 }
 
-#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+#[cfg_attr(feature = "web-server", derive(poem_openapi::Object))]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct MixAuthResp {
     pub url: String,
     pub method: String,
@@ -280,7 +285,8 @@ pub struct ResAuthInfo {
     pub et: Option<i64>,
 }
 
-#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+#[cfg_attr(feature = "web-server", derive(poem_openapi::Object))]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct MixRequest {
     pub body: String,
     pub headers: HashMap<String, String>,
@@ -295,7 +301,8 @@ pub struct MixRequestBody {
     pub ts: f64,
 }
 
-#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
+#[cfg_attr(feature = "web-server", derive(poem_openapi::Object))]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct SignWebHookReq {
     pub ak: String,
     pub onwer: String,

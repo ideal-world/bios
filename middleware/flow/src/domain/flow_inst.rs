@@ -15,7 +15,7 @@ pub struct Model {
     pub rel_flow_model_id: String,
 
     /// Business object Id / 关联的业务对象Id
-    #[index]
+    #[index(unique = true)]
     pub rel_business_obj_id: String,
 
     /// Current state / 当前状态

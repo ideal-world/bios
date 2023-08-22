@@ -158,7 +158,7 @@ impl IamIdentCacheServ {
         let ctx_clone = ctx.clone();
         TaskProcessor::execute_task_with_ctx(
             &funs.conf::<IamConfig>().cache_key_async_task_status,
-            move || async move {
+            move |_task_id| async move {
                 let funs = iam_constants::get_tardis_inst();
                 let filter = IamAccountFilterReq {
                     basic: RbumBasicFilterReq {

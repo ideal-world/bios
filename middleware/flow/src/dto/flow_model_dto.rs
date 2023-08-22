@@ -116,6 +116,7 @@ impl FlowModelDetailResp {
 pub struct FlowModelFilterReq {
     pub basic: RbumBasicFilterReq,
     pub tag: Option<String>,
+    pub tags: Option<Vec<String>>,
     pub rel_template_id: Option<String>,
 }
 

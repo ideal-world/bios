@@ -19,7 +19,7 @@ use tardis::{
 
 use crate::{
     domain::flow_state,
-    dto::flow_state_dto::{FlowStateAddReq, FlowStateDetailResp, FlowStateFilterReq, FlowStateKind, FlowStateModifyReq, FlowStateSummaryResp},
+    dto::flow_state_dto::{FlowStateAddReq, FlowStateDetailResp, FlowStateFilterReq, FlowStateKind, FlowStateModifyReq, FlowStateSummaryResp, FlowSysStateKind},
     flow_config::FlowBasicInfoManager,
 };
 use async_trait::async_trait;
@@ -61,6 +61,7 @@ impl RbumItemCrudOperation<flow_state::ActiveModel, FlowStateAddReq, FlowStateMo
         Ok(flow_state::ActiveModel {
             id: Set(id.to_string()),
             icon: Set(add_req.icon.as_ref().unwrap_or(&"".to_string()).to_string()),
+            color: Set(add_req.color.as_ref().unwrap_or(&"".to_string()).to_string()),
             sys_state: Set(add_req.sys_state.clone()),
             info: Set(add_req.info.as_ref().unwrap_or(&"".to_string()).to_string()),
             state_kind: Set(add_req.state_kind.clone().unwrap_or(FlowStateKind::Simple)),
@@ -100,6 +101,7 @@ impl RbumItemCrudOperation<flow_state::ActiveModel, FlowStateAddReq, FlowStateMo
 
     async fn package_ext_modify(id: &str, modify_req: &FlowStateModifyReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<Option<flow_state::ActiveModel>> {
         if modify_req.icon.is_none()
+            && modify_req.color.is_none()
             && modify_req.sys_state.is_none()
             && modify_req.info.is_none()
             && modify_req.state_kind.is_none()
@@ -116,6 +118,9 @@ impl RbumItemCrudOperation<flow_state::ActiveModel, FlowStateAddReq, FlowStateMo
         };
         if let Some(icon) = &modify_req.icon {
             flow_state.icon = Set(icon.to_string());
+        }
+        if let Some(color) = &modify_req.color {
+            flow_state.color = Set(color.to_string());
         }
         if let Some(sys_state) = &modify_req.sys_state {
             flow_state.sys_state = Set(sys_state.clone());
@@ -151,6 +156,7 @@ impl RbumItemCrudOperation<flow_state::ActiveModel, FlowStateAddReq, FlowStateMo
 
     async fn package_ext_query(query: &mut SelectStatement, _: bool, filter: &FlowStateFilterReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<()> {
         query.column((flow_state::Entity, flow_state::Column::Icon));
+        query.column((flow_state::Entity, flow_state::Column::Color));
         query.column((flow_state::Entity, flow_state::Column::SysState));
         query.column((flow_state::Entity, flow_state::Column::Info));
         query.column((flow_state::Entity, flow_state::Column::StateKind));
@@ -193,7 +199,8 @@ impl FlowStateServ {
         .await
     }
 
-    pub(crate) async fn find_state_id_by_name(tag: &str, mut name: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
+    // For the old data migration, this function match id by old state name
+    pub(crate) async fn match_state_id_and_name_by_name(tag: &str, mut name: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<(String, String)> {
         if tag == "ISSUE" {
             name = match name {
                 "待开始" => "待处理",
@@ -201,7 +208,7 @@ impl FlowStateServ {
                 "存在风险" => "修复中",
                 "已完成" => "已解决",
                 "已关闭" => "已关闭",
-                _ => "",
+                _ => name,
             };
         }
         let state = Self::paginate_detail_items(
@@ -224,9 +231,17 @@ impl FlowStateServ {
         .records
         .pop();
         if let Some(state) = state {
-            Ok(state.name)
+            Ok((state.id, name.to_string()))
         } else {
-            Err(funs.err().not_found("flow_state_serv", "find_state_id_by_name", "state_id not match", ""))
+            Err(funs.err().not_found("flow_state_serv", "find_state_id_by_name", &format!("state_name: {} not match", name), ""))
+        }
+    }
+
+    pub fn get_default_color(kind: &FlowSysStateKind) -> String {
+        match kind {
+            FlowSysStateKind::Finish => "rgba(242, 158, 12, 1)".to_string(),
+            FlowSysStateKind::Start => "rgba(242, 158, 12, 1)".to_string(),
+            FlowSysStateKind::Progress => "rgba(67, 147, 248, 1)".to_string(),
         }
     }
 }

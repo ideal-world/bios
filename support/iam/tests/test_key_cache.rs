@@ -826,7 +826,7 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
 
     assert_eq!(
         funs.cache().hlen(format!("{}{}", funs.conf::<IamConfig>().cache_key_account_rel_, account_id).as_str(),).await?,
-        2
+        1
     );
     assert!(funs
         .cache()

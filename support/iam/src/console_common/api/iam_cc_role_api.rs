@@ -5,14 +5,15 @@ use tardis::web::poem_openapi;
 use tardis::web::poem_openapi::param::{Path, Query};
 use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp};
 
-use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
-use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
-
 use crate::basic::dto::iam_filer_dto::IamRoleFilterReq;
 use crate::basic::dto::iam_role_dto::IamRoleBoneResp;
 use crate::basic::serv::iam_role_serv::IamRoleServ;
 use crate::iam_constants;
 use crate::iam_enumeration::IamRoleKind;
+use bios_basic::helper::request_helper::add_remote_ip;
+use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
+use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
+use tardis::web::poem::Request;
 
 #[derive(Clone, Default)]
 pub struct IamCcRoleApi;
@@ -33,7 +34,9 @@ impl IamCcRoleApi {
         desc_by_create: Query<Option<bool>>,
         desc_by_update: Query<Option<bool>>,
         ctx: TardisContextExtractor,
+        request: &Request,
     ) -> TardisApiResult<TardisPage<IamRoleBoneResp>> {
+        add_remote_ip(&request, &ctx.0).await?;
         let funs = iam_constants::get_tardis_inst();
         let result = IamRoleServ::paginate_items(
             &IamRoleFilterReq {
@@ -84,7 +87,9 @@ impl IamCcRoleApi {
         desc_by_create: Query<Option<bool>>,
         desc_by_update: Query<Option<bool>>,
         ctx: TardisContextExtractor,
+        request: &Request,
     ) -> TardisApiResult<Vec<RbumRelBoneResp>> {
+        add_remote_ip(&request, &ctx.0).await?;
         let mut ctx = ctx.0;
         ctx.own_paths = "".to_string();
         let funs = iam_constants::get_tardis_inst();
@@ -122,7 +127,9 @@ impl IamCcRoleApi {
         // Role Ids, multiple ids separated by ,
         ids: Query<String>,
         ctx: TardisContextExtractor,
+        request: &Request,
     ) -> TardisApiResult<Vec<String>> {
+        add_remote_ip(&request, &ctx.0).await?;
         let funs = iam_constants::get_tardis_inst();
         let ids = ids.0.split(',').map(|s| s.to_string()).collect();
         let result = IamRoleServ::find_name_by_ids(ids, &funs, &ctx.0).await?;

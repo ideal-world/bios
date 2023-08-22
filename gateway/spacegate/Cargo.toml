@@ -34,8 +34,8 @@ spacegate-kernel = { git = "https://github.com/ideal-world/spacegate.git", featu
 # ] }
 
 jsonpath-rust = "0.3.1"
-bios-auth = { path = "../../support/auth" }
-tardis = { workspace = true, features = ["web-server", "web-client"] }
+bios-auth = { path = "../../support/auth", default-features = false }
+tardis = { workspace = true, features = ["web-client"] }
 ipnet = "2.8.0"
 [dev-dependencies]
 tardis = { workspace = true, features = ["test", "web-client"] }

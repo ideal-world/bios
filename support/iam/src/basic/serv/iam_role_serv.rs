@@ -156,7 +156,7 @@ impl RbumItemCrudOperation<iam_role::ActiveModel, IamRoleAddReq, IamRoleModifyRe
         if modify_req.disabled.unwrap_or(false) {
             TaskProcessor::execute_task_with_ctx(
                 &funs.conf::<IamConfig>().cache_key_async_task_status,
-                || async move {
+                |_task_id| async move {
                     let funs = iam_constants::get_tardis_inst();
                     let mut count = IamRoleServ::count_rel_accounts(&role_id, &funs, &ctx_clone).await.unwrap_or_default() as isize;
                     let mut page_number = 1;
@@ -232,7 +232,7 @@ impl RbumItemCrudOperation<iam_role::ActiveModel, IamRoleAddReq, IamRoleModifyRe
         // 现代码问题: 删除角色后，角色与用户的关联关系逻辑有冲突，导致用户的token和context不会被删除
         TaskProcessor::execute_task_with_ctx(
             &funs.conf::<IamConfig>().cache_key_async_task_status,
-            || async move {
+            |_task_id| async move {
                 let funs = iam_constants::get_tardis_inst();
                 let mut count = IamRoleServ::count_rel_accounts(&role_id, &funs, &ctx_clone).await.unwrap_or_default() as isize;
                 let mut page_number = 1;

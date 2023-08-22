@@ -10,6 +10,7 @@ use crate::dto::stats_conf_dto::{
     StatsConfFactInfoResp, StatsConfFactModifyReq,
 };
 use crate::serv::stats_conf_serv;
+use crate::stats_enumeration::StatsFactColKind;
 
 #[derive(Clone)]
 pub struct StatsCiConfApi;
@@ -88,6 +89,7 @@ impl StatsCiConfApi {
         &self,
         key: Query<Option<String>>,
         show_name: Query<Option<String>>,
+        is_online: Query<Option<bool>>,
         page_number: Query<u32>,
         page_size: Query<u32>,
         desc_by_create: Query<Option<bool>>,
@@ -95,7 +97,18 @@ impl StatsCiConfApi {
         ctx: TardisContextExtractor,
     ) -> TardisApiResult<TardisPage<StatsConfFactInfoResp>> {
         let funs = crate::get_tardis_inst();
-        let resp = stats_conf_serv::fact_paginate(key.0, show_name.0, page_number.0, page_size.0, desc_by_create.0, desc_by_update.0, &funs, &ctx.0).await?;
+        let resp = stats_conf_serv::fact_paginate(
+            key.0,
+            show_name.0,
+            is_online.0,
+            page_number.0,
+            page_size.0,
+            desc_by_create.0,
+            desc_by_update.0,
+            &funs,
+            &ctx.0,
+        )
+        .await?;
         TardisResp::ok(resp)
     }
 
@@ -125,7 +138,15 @@ impl StatsCiConfApi {
     #[oai(path = "/fact/:fact_key/col/:fact_col_key", method = "delete")]
     async fn fact_col_delete(&self, fact_key: Path<String>, fact_col_key: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let funs = crate::get_tardis_inst();
-        stats_conf_serv::fact_col_delete(&fact_key.0, &fact_col_key.0, &funs, &ctx.0).await?;
+        stats_conf_serv::fact_col_delete(&fact_key.0, Some(fact_col_key.0.as_str()), None, &funs, &ctx.0).await?;
+        TardisResp::ok(Void {})
+    }
+
+    /// Delete All Column Configuration
+    #[oai(path = "/fact/:fact_key/kind/:kind", method = "delete")]
+    async fn fact_col_delete_by_kind(&self, fact_key: Path<String>, kind: Path<StatsFactColKind>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+        let funs = crate::get_tardis_inst();
+        stats_conf_serv::fact_col_delete(&fact_key.0, None, Some(kind.0), &funs, &ctx.0).await?;
         TardisResp::ok(Void {})
     }
 
@@ -145,6 +166,37 @@ impl StatsCiConfApi {
         let funs = crate::get_tardis_inst();
         let resp = stats_conf_serv::fact_col_paginate(
             fact_key.0,
+            key.0,
+            show_name.0,
+            page_number.0,
+            page_size.0,
+            desc_by_create.0,
+            desc_by_update.0,
+            &funs,
+            &ctx.0,
+        )
+        .await?;
+        TardisResp::ok(resp)
+    }
+
+    /// Find Fact Column Configurations
+    #[oai(path = "/dim/:dim_key/col", method = "get")]
+    async fn fact_col_paginate_by_dim(
+        &self,
+        dim_key: Path<String>,
+        key: Query<Option<String>>,
+        fact_key: Query<Option<String>>,
+        show_name: Query<Option<String>>,
+        page_number: Query<u32>,
+        page_size: Query<u32>,
+        desc_by_create: Query<Option<bool>>,
+        desc_by_update: Query<Option<bool>>,
+        ctx: TardisContextExtractor,
+    ) -> TardisApiResult<TardisPage<StatsConfFactColInfoResp>> {
+        let funs = crate::get_tardis_inst();
+        let resp = stats_conf_serv::fact_col_paginate_by_dim(
+            fact_key.0,
+            dim_key.0,
             key.0,
             show_name.0,
             page_number.0,
