@@ -33,7 +33,7 @@ impl IamCcAccountTaskServ {
         let task_ctx = ctx.clone();
         TaskProcessor::execute_task_with_ctx(
             &funs.conf::<IamConfig>().cache_key_async_task_status,
-            move || async move {
+            move |_task_id| async move {
                 let mut funs = iam_constants::get_tardis_inst();
                 funs.begin().await?;
                 let account_liet = IamAccountServ::find_items(

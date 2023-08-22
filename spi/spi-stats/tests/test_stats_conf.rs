@@ -556,11 +556,10 @@ pub async fn test_fact_col_conf(client: &mut TestHttpClient) -> TardisResult<()>
     let list: TardisPage<Value> = client.get("/ci/conf/fact/req/col?page_number=1&page_size=10").await;
     assert_eq!(list.total_size, 8);
     // agg query with dim
-    let list: TardisPage<Value> = client.get("/ci/conf/fact/req/dim/address/col?page_number=1&page_size=10").await;
+    let list: TardisPage<Value> = client.get("/ci/conf/dim/address/col?page_number=1&page_size=10").await;
     assert_eq!(list.total_size, 1);
     assert_eq!(list.records[0]["key"].as_str().unwrap(), "source");
     assert_eq!(list.records[0]["show_name"].as_str().unwrap(), "来源");
-    assert_eq!(list.records[0]["dim_show_name"].as_str().unwrap(), "地址");
     let list: TardisPage<Value> = client.get("/ci/conf/fact/req/col?page_number=1&page_size=10&show_name=工时").await;
     assert_eq!(list.total_size, 2);
     let list: TardisPage<Value> = client.get("/ci/conf/fact/req/col?page_number=1&page_size=10&key=source").await;

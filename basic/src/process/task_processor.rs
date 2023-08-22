@@ -7,6 +7,7 @@ use tardis::{
     cache::cache_client::TardisCacheClient,
     chrono::Local,
     log,
+    serde_json::Value,
     tokio::{sync::RwLock, task::JoinHandle},
     TardisFuns, TardisFunsInst,
 };
@@ -18,7 +19,7 @@ lazy_static! {
 }
 const TASK_IN_CTX_FLAG: &str = "task_id";
 const NOTIFY_EVENT_IN_CTX_FLAG: &str = "notify";
-
+const TASK_PROCESSOR_DATA_EX: usize = 60 * 60 * 24;
 pub struct TaskProcessor;
 
 impl TaskProcessor {
@@ -73,16 +74,34 @@ impl TaskProcessor {
         Ok(result1 && result2)
     }
 
+    pub async fn set_task_process_data(cache_key: &str, task_id: i64, data: Value, funs: &TardisFunsInst) -> TardisResult<()> {
+        let cache_client = funs.cache();
+        let cache_key = format!("{}:{}", cache_key, task_id);
+        cache_client.set_ex(&cache_key, &TardisFuns::json.json_to_string(data)?, TASK_PROCESSOR_DATA_EX).await?;
+        Ok(())
+    }
+
+    pub async fn get_task_process_data(cache_key: &str, task_id: i64, funs: &TardisFunsInst) -> TardisResult<Value> {
+        let cache_client = funs.cache();
+        let cache_key = format!("{}:{}", cache_key, task_id);
+        let result = cache_client.get(&cache_key).await?;
+        if let Some(result) = result {
+            Ok(TardisFuns::json.str_to_obj(&result)?)
+        } else {
+            Ok(Value::Null)
+        }
+    }
+
     pub async fn execute_task<P, T>(cache_key: &str, process: P, funs: &TardisFunsInst) -> TardisResult<i64>
     where
-        P: FnOnce() -> T + Send + Sync + 'static,
+        P: FnOnce(i64) -> T + Send + Sync + 'static,
         T: Future<Output = TardisResult<()>> + Send + 'static,
     {
         let task_id = TaskProcessor::init_task(cache_key, funs.cache()).await?;
         let cache_client = funs.cache();
         let cache_key = cache_key.to_string();
         let handle = tardis::tokio::spawn(async move {
-            let result = process().await;
+            let result = process(task_id).await;
             match result {
                 Ok(_) => match TaskProcessor::set_status(&cache_key, task_id, true, cache_client).await {
                     Ok(_) => {}
@@ -97,9 +116,14 @@ impl TaskProcessor {
         Ok(task_id)
     }
 
+    pub async fn execute_task_external(cache_key: &str, funs: &TardisFunsInst) -> TardisResult<i64> {
+        let task_id = TaskProcessor::init_task(cache_key, funs.cache()).await?;
+        Ok(task_id)
+    }
+
     pub async fn execute_task_with_ctx<P, T>(cache_key: &str, process: P, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<i64>
     where
-        P: FnOnce() -> T + Send + Sync + 'static,
+        P: FnOnce(i64) -> T + Send + Sync + 'static,
         T: Future<Output = TardisResult<()>> + Send + 'static,
     {
         let task_id = Self::execute_task(cache_key, process, funs).await?;
@@ -126,6 +150,14 @@ impl TaskProcessor {
                     &HashMap::new(),
                 )
                 .await?;
+        }
+        Ok(())
+    }
+
+    pub async fn stop_task_external(cache_key: &str, task_id: i64, funs: &TardisFunsInst) -> TardisResult<()> {
+        match TaskProcessor::set_status(cache_key, task_id, true, funs.cache()).await {
+            Ok(_) => {}
+            Err(e) => log::error!("Asynchronous task [{}] stop error:{:?}", task_id, e),
         }
         Ok(())
     }

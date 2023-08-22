@@ -64,32 +64,36 @@ pub(crate) async fn modify(fact_conf_key: &str, modify_req: &StatsConfFactModify
     let bs_inst = inst.inst::<TardisRelDBClient>();
     let (mut conn, table_name) = stats_pg_initializer::init_conf_fact_table_and_conn(bs_inst, ctx, true).await?;
     conn.begin().await?;
-    if online(fact_conf_key, &conn, ctx).await? {
-        return Err(funs.err().conflict(
-            "fact_conf",
-            "modify",
-            "The fact instance table already exists, please delete it and then modify it.",
-            "409-spi-stats-fact-inst-exist",
-        ));
-    }
     let mut sql_sets = vec![];
     let mut params = vec![Value::from(fact_conf_key.to_string())];
-    if let Some(show_name) = &modify_req.show_name {
-        sql_sets.push(format!("show_name = ${}", params.len() + 1));
-        params.push(Value::from(show_name.to_string()));
-    }
-    if let Some(query_limit) = modify_req.query_limit {
-        sql_sets.push(format!("query_limit = ${}", params.len() + 1));
-        params.push(Value::from(query_limit));
-    }
-    if let Some(remark) = &modify_req.remark {
-        sql_sets.push(format!("remark = ${}", params.len() + 1));
-        params.push(Value::from(remark.to_string()));
-    }
-    if let Some(redirect_path) = &modify_req.redirect_path {
-        sql_sets.push(format!("redirect_path = ${}", params.len() + 1));
-        params.push(Value::from(redirect_path));
-    }
+    if online(fact_conf_key, &conn, ctx).await? {
+        if modify_req.is_online.is_none() {
+            return Err(funs.err().conflict(
+                "fact_conf",
+                "modify",
+                "The fact instance table already exists, please delete it and then modify it.",
+                "409-spi-stats-fact-inst-exist",
+            ));
+        }
+    } else {
+        if let Some(show_name) = &modify_req.show_name {
+            sql_sets.push(format!("show_name = ${}", params.len() + 1));
+            params.push(Value::from(show_name.to_string()));
+        }
+        if let Some(query_limit) = modify_req.query_limit {
+            sql_sets.push(format!("query_limit = ${}", params.len() + 1));
+            params.push(Value::from(query_limit));
+        }
+        if let Some(remark) = &modify_req.remark {
+            sql_sets.push(format!("remark = ${}", params.len() + 1));
+            params.push(Value::from(remark.to_string()));
+        }
+        if let Some(redirect_path) = &modify_req.redirect_path {
+            sql_sets.push(format!("redirect_path = ${}", params.len() + 1));
+            params.push(Value::from(redirect_path));
+        }
+    };
+
     if let Some(is_online) = &modify_req.is_online {
         sql_sets.push(format!("is_online = ${}", params.len() + 1));
         params.push(Value::from(*is_online));
