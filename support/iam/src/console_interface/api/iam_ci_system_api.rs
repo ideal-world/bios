@@ -14,7 +14,6 @@ pub struct IamCiSystemApi;
 /// Use commas to separate multiple task ids
 #[poem_openapi::OpenApi(prefix_path = "/ci/system", tag = "bios_basic::ApiTag::Interface")]
 impl IamCiSystemApi {
-
     #[oai(path = "/task/check/:task_ids", method = "get")]
     async fn task_check_finished(&self, cache_key: Query<String>, task_ids: Path<String>) -> TardisApiResult<bool> {
         let funs = iam_constants::get_tardis_inst();

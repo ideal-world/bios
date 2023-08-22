@@ -1,3 +1,4 @@
+use bios_basic::helper::request_helper::get_remote_ip;
 use bios_basic::rbum::dto::rbum_cert_dto::RbumCertSummaryResp;
 use ldap3::log::{error, warn};
 use std::collections::HashMap;
@@ -408,7 +409,7 @@ impl IamCertLdapServ {
             let mock_ctx = TardisContext {
                 own_paths: ctx.own_paths.clone(),
                 owner: TardisFuns::field.nanoid(),
-                ..Default::default()
+                ..ctx.clone()
             };
             let account_id = Self::do_add_account(
                 &account.dn,
@@ -631,6 +632,7 @@ impl IamCertLdapServ {
                 false,
                 Some("".to_string()),
                 Some(vec![&IamCertKernelKind::UserPwd.to_string()]),
+                get_remote_ip(ctx).await?,
                 funs,
             )
             .await;
@@ -643,6 +645,7 @@ impl IamCertLdapServ {
                     false,
                     Some(tenant_id.to_string()),
                     Some(vec![&IamCertKernelKind::UserPwd.to_string()]),
+                    get_remote_ip(ctx).await?,
                     funs,
                 )
                 .await;
@@ -665,6 +668,7 @@ impl IamCertLdapServ {
                 false,
                 Some("".to_string()),
                 Some(vec![&IamCertKernelKind::UserPwd.to_string()]),
+                get_remote_ip(ctx).await?,
                 funs,
             )
             .await?
