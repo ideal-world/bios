@@ -115,9 +115,9 @@ impl FlowModelDetailResp {
 #[serde(default)]
 pub struct FlowModelFilterReq {
     pub basic: RbumBasicFilterReq,
-    pub tag: Option<String>,
     pub tags: Option<Vec<String>>,
     pub rel_template_id: Option<String>,
+    pub template: Option<bool>,
 }
 
 impl RbumItemFilterFetcher for FlowModelFilterReq {
@@ -192,4 +192,16 @@ pub struct FlowModelSortStatesReq {
 pub struct FlowModelSortStateInfoReq {
     pub state_id: String,
     pub sort: i64,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, poem_openapi::Object)]
+pub struct FlowModelAddCustomModelReq {
+    pub tag: String,
+    pub rel_template_id: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, poem_openapi::Object)]
+pub struct FlowModelAddCustomModelResp {
+    pub tag: String,
+    pub model_id: Option<String>,
 }

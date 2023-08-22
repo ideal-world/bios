@@ -9,8 +9,8 @@ use tardis::web::poem_openapi::payload::Json;
 use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 
 use crate::dto::flow_model_dto::{
-    FlowModelAddReq, FlowModelAggResp, FlowModelBindStateReq, FlowModelFilterReq, FlowModelModifyReq, FlowModelSortStatesReq, FlowModelSummaryResp, FlowModelUnbindStateReq,
-    FlowTemplateModelResp,
+    FlowModelAddCustomModelReq, FlowModelAddCustomModelResp, FlowModelAddReq, FlowModelAggResp, FlowModelBindStateReq, FlowModelFilterReq, FlowModelModifyReq,
+    FlowModelSortStatesReq, FlowModelSummaryResp, FlowModelUnbindStateReq, FlowTemplateModelResp,
 };
 use crate::flow_constants;
 use crate::serv::flow_model_serv::FlowModelServ;
@@ -75,7 +75,7 @@ impl FlowCcModelApi {
                     enabled: enabled.0,
                     ..Default::default()
                 },
-                tag: tag.0,
+                tags: tag.0.map(|tag| vec![tag]),
                 ..Default::default()
             },
             page_number.0,
@@ -142,5 +142,19 @@ impl FlowCcModelApi {
         FlowModelServ::resort_state(&FlowRelKind::FlowModelState, &flow_model_id.0, &req.0, &funs, &ctx.0).await?;
         funs.commit().await?;
         TardisResp::ok(Void {})
+    }
+
+    /// add custom model by template_id / 添加自定义模型
+    #[oai(path = "/add_custom_model", method = "post")]
+    async fn add_custom_model(&self, req: Json<Vec<FlowModelAddCustomModelReq>>, ctx: TardisContextExtractor) -> TardisApiResult<Vec<FlowModelAddCustomModelResp>> {
+        let mut funs = flow_constants::get_tardis_inst();
+        funs.begin().await?;
+        let mut result = vec![];
+        for req in req.0 {
+            let model_id = FlowModelServ::add_custom_model(&req.tag, &req.rel_template_id, None, &funs, &ctx.0).await.ok();
+            result.push(FlowModelAddCustomModelResp { tag: req.tag, model_id })
+        }
+        funs.commit().await?;
+        TardisResp::ok(result)
     }
 }
