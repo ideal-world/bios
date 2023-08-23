@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use bios_basic::helper::request_helper::get_remote_ip;
 use bios_basic::process::task_processor::TaskProcessor;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
@@ -166,7 +167,7 @@ impl RbumItemCrudOperation<iam_role::ActiveModel, IamRoleAddReq, IamRoleModifyRe
                             ids = page.records;
                         }
                         for id in ids {
-                            IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(&id, &funs).await?;
+                            IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(&id, get_remote_ip(&ctx_clone).await?, &funs).await?;
                         }
                         page_number += 1;
                         count -= 100;
@@ -242,7 +243,7 @@ impl RbumItemCrudOperation<iam_role::ActiveModel, IamRoleAddReq, IamRoleModifyRe
                         ids = page.records;
                     }
                     for id in ids {
-                        IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(&id, &funs).await?;
+                        IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(&id, get_remote_ip(&ctx_clone).await?, &funs).await?;
                     }
                     page_number += 1;
                     count -= 100;

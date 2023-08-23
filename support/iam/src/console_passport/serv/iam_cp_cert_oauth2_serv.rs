@@ -20,13 +20,19 @@ impl IamCpCertOAuth2Serv {
         Ok(cert_conf.ak)
     }
 
-    pub async fn login_or_register(cert_supplier: IamCertOAuth2Supplier, login_req: &IamCpOAuth2LoginReq, funs: &TardisFunsInst) -> TardisResult<IamAccountInfoResp> {
+    pub async fn login_or_register(
+        cert_supplier: IamCertOAuth2Supplier,
+        login_req: &IamCpOAuth2LoginReq,
+        ip: Option<String>,
+        funs: &TardisFunsInst,
+    ) -> TardisResult<IamAccountInfoResp> {
         let oauth_info = IamCertOAuth2Serv::get_or_add_account(cert_supplier, login_req.code.as_ref(), &login_req.tenant_id.to_string(), funs).await?;
         IamCertServ::package_tardis_context_and_resp(
             Some(login_req.tenant_id.clone()),
             &oauth_info.0,
             Some(IamCertTokenKind::TokenDefault.to_string()),
             Some(oauth_info.1),
+            ip,
             funs,
         )
         .await
