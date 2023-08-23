@@ -768,9 +768,7 @@ impl FlowModelServ {
     pub async fn add_custom_model(tag: &str, rel_template_id: &str, current_template_id: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
         let current_model = Self::find_one_detail_item(
             &FlowModelFilterReq {
-                basic: RbumBasicFilterReq {
-                    ..Default::default()
-                },
+                basic: RbumBasicFilterReq { ..Default::default() },
                 tags: Some(vec![tag.to_string()]),
                 rel_template_id: Some(rel_template_id.to_string()),
                 ..Default::default()
@@ -787,12 +785,18 @@ impl FlowModelServ {
             own_paths: "".to_string(),
             ..ctx.clone()
         };
+
+        let basic = if !rel_template_id.is_empty() {
+            RbumBasicFilterReq {
+                with_sub_own_paths: true,
+                ..Default::default()
+            }
+        } else {
+            RbumBasicFilterReq::default()
+        };
         let parent_model = Self::find_one_detail_item(
             &FlowModelFilterReq {
-                basic: RbumBasicFilterReq {
-                    with_sub_own_paths: true,
-                    ..Default::default()
-                },
+                basic,
                 tags: Some(vec![tag.to_string()]),
                 rel_template_id: Some(rel_template_id.to_string()),
                 ..Default::default()
