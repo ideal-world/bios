@@ -473,6 +473,9 @@ impl RbumCrudOperation<rbum_set_cate::ActiveModel, RbumSetCateAddReq, RbumSetCat
         if let Some(ext) = &modify_req.ext {
             rbum_set_cate.ext = Set(ext.to_string());
         }
+        if let Some(sys_code) = &modify_req.sys_code {
+            rbum_set_cate.sys_code = Set(sys_code.to_string());
+        }
         if let Some(scope_level) = &modify_req.scope_level {
             rbum_set_cate.scope_level = Set(scope_level.to_int());
         }
@@ -820,11 +823,17 @@ impl RbumCrudOperation<rbum_set_item::ActiveModel, RbumSetItemAddReq, RbumSetIte
     }
 
     async fn package_modify(id: &str, modify_req: &RbumSetItemModifyReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<rbum_set_item::ActiveModel> {
-        Ok(rbum_set_item::ActiveModel {
+        let mut rbum_set_item = rbum_set_item::ActiveModel {
             id: Set(id.to_string()),
-            sort: Set(modify_req.sort),
             ..Default::default()
-        })
+        };
+        if let Some(sort) = modify_req.sort {
+            rbum_set_item.sort = Set(sort);
+        };
+        if let Some(rel_rbum_set_cate_code) = modify_req.rel_rbum_set_cate_code.clone() {
+            rbum_set_item.rel_rbum_set_cate_code = Set(rel_rbum_set_cate_code);
+        };
+        Ok(rbum_set_item)
     }
 
     async fn package_query(is_detail: bool, filter: &RbumSetItemFilterReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<SelectStatement> {

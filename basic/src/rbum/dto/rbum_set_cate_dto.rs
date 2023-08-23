@@ -41,6 +41,7 @@ pub struct RbumSetCateModifyReq {
     #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "1000")))]
     pub ext: Option<String>,
 
+    pub sys_code: Option<String>,
     pub scope_level: Option<RbumScopeLevelKind>,
 }
 
