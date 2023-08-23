@@ -19,9 +19,12 @@ use tardis::{
 mod spi_conf_test_common;
 use spi_conf_test_common::*;
 const SCHEMA: &str = "https";
-#[tokio::test(flavor="multi_thread")]
+#[tokio::test(flavor = "multi_thread")]
 async fn spi_conf_namespace_test() -> TardisResult<()> {
-    std::env::set_var("RUST_LOG", "info,tardis=debug,spi_conf_listener_test=debug,sqlx=off,sea_orm=off,bios_spi_conf=DEBUG,poem_grpc=TRACE,tonic=TRACE");
+    std::env::set_var(
+        "RUST_LOG",
+        "info,tardis=debug,spi_conf_listener_test=debug,sqlx=off,sea_orm=off,bios_spi_conf=DEBUG,poem_grpc=TRACE,tonic=TRACE",
+    );
     std::env::set_var("PROFILE", "nacos");
     let docker = testcontainers::clients::Cli::default();
     let container_hold = init_tardis(&docker).await?;
@@ -187,7 +190,14 @@ async fn test_tardis_compatibility(_test_client: &TestHttpClient) -> TardisResul
     // log::info!("response: {info}");
     let success = resp.json::<bool>().await?;
     assert!(success);
-    wait_press_enter();
+
+    let resp = nacos_client
+        .publish_config(
+            &NacosConfigDescriptor::new("hc-db.yaml", "hc", &(Default::default())),
+            &mut std::fs::File::open("tests/config/test-prod.yaml").expect("fail to open"),
+        )
+        .await
+        .expect("publish failed");
     Ok(())
 }
 
