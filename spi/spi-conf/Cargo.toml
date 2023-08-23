@@ -20,7 +20,7 @@ spi-pg = ["tardis/reldb-postgres"]
 
 [dependencies]
 serde.workspace = true
-tardis = { workspace = true, features = [
+tardis = { git = "https://github.com/ideal-world/tardis.git", features = [
     "reldb-postgres",
     "web-server",
     "crypto",
