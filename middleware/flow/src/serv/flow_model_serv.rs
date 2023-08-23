@@ -766,6 +766,23 @@ impl FlowModelServ {
 
     // add custom model by template model
     pub async fn add_custom_model(tag: &str, rel_template_id: &str, current_template_id: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
+        let current_model = Self::find_one_detail_item(
+            &FlowModelFilterReq {
+                basic: RbumBasicFilterReq {
+                    ..Default::default()
+                },
+                tags: Some(vec![tag.to_string()]),
+                rel_template_id: Some(rel_template_id.to_string()),
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?;
+        if let Some(current_model) = current_model {
+            return Ok(current_model.id);
+        }
+
         let global_ctx = TardisContext {
             own_paths: "".to_string(),
             ..ctx.clone()
