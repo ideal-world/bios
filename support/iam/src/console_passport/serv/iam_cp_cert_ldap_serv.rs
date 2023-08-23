@@ -11,7 +11,7 @@ use tardis::TardisFunsInst;
 pub struct IamCpCertLdapServ;
 
 impl IamCpCertLdapServ {
-    pub async fn login_or_register(login_req: &IamCpLdapLoginReq, funs: &TardisFunsInst) -> TardisResult<IamAccountInfoWithUserPwdAkResp> {
+    pub async fn login_or_register(login_req: &IamCpLdapLoginReq, ip: Option<String>, funs: &TardisFunsInst) -> TardisResult<IamAccountInfoWithUserPwdAkResp> {
         let ldap_info = IamCertLdapServ::get_account_with_verify(
             login_req.name.as_ref(),
             login_req.password.as_ref(),
@@ -28,6 +28,7 @@ impl IamCpCertLdapServ {
                 &account_id,
                 Some(IamCertTokenKind::TokenDefault.to_string()),
                 Some(access_token),
+                ip,
                 funs,
             )
             .await?;
@@ -61,7 +62,11 @@ impl IamCpCertLdapServ {
         Ok(IamCpUserPwdBindResp { is_bind })
     }
 
-    pub async fn bind_or_create_user_pwd_by_ldap(login_req: &IamCpUserPwdBindWithLdapReq, funs: &TardisFunsInst) -> TardisResult<IamAccountInfoWithUserPwdAkResp> {
+    pub async fn bind_or_create_user_pwd_by_ldap(
+        login_req: &IamCpUserPwdBindWithLdapReq,
+        ip: Option<String>,
+        funs: &TardisFunsInst,
+    ) -> TardisResult<IamAccountInfoWithUserPwdAkResp> {
         let (account_id, access_token) = IamCertLdapServ::bind_or_create_user_pwd_by_ldap(login_req, funs).await?;
 
         let iam_account_info_resp = IamCertServ::package_tardis_context_and_resp(
@@ -69,6 +74,7 @@ impl IamCpCertLdapServ {
             &account_id,
             Some(IamCertTokenKind::TokenDefault.to_string()),
             Some(access_token.clone()),
+            ip,
             funs,
         )
         .await?;

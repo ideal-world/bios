@@ -137,7 +137,7 @@ impl IamCertTokenServ {
         Ok(())
     }
 
-    pub async fn delete_cert(token: &str, funs: &TardisFunsInst) -> TardisResult<()> {
-        IamIdentCacheServ::delete_token_by_token(token, funs).await
+    pub async fn delete_cert(token: &str, ip: Option<String>, funs: &TardisFunsInst) -> TardisResult<()> {
+        IamIdentCacheServ::delete_token_by_token(token, ip, funs).await
     }
 }
