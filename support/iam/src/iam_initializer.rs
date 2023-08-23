@@ -26,7 +26,6 @@ use crate::basic::dto::iam_cert_conf_dto::{IamCertConfMailVCodeAddOrModifyReq, I
 use crate::basic::dto::iam_res_dto::{IamResAddReq, IamResAggAddReq, JsonMenu};
 use crate::basic::dto::iam_role_dto::{IamRoleAddReq, IamRoleAggAddReq};
 use crate::basic::dto::iam_set_dto::IamSetItemAggAddReq;
-use crate::basic::middleware::encrypt_mw::EncryptMW;
 use crate::basic::serv::iam_account_serv::IamAccountServ;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_res_serv::{IamMenuServ, IamResServ};
@@ -36,7 +35,7 @@ use crate::console_app::api::{iam_ca_account_api, iam_ca_app_api, iam_ca_cert_ma
 use crate::console_common::api::{
     iam_cc_account_api, iam_cc_account_task_api, iam_cc_app_api, iam_cc_config_api, iam_cc_org_api, iam_cc_res_api, iam_cc_role_api, iam_cc_system_api, iam_cc_tenant_api,
 };
-use crate::console_interface::api::{iam_ci_account_api, iam_ci_app_api, iam_ci_cert_api, iam_ci_res_api, iam_ci_role_api};
+use crate::console_interface::api::{iam_ci_account_api, iam_ci_app_api, iam_ci_cert_api, iam_ci_res_api, iam_ci_role_api, iam_ci_system_api};
 use crate::console_passport::api::{iam_cp_account_api, iam_cp_app_api, iam_cp_cert_api, iam_cp_tenant_api};
 use crate::console_system::api::{
     iam_cs_account_api, iam_cs_account_attr_api, iam_cs_cert_api, iam_cs_org_api, iam_cs_platform_api, iam_cs_res_api, iam_cs_role_api, iam_cs_spi_data_api, iam_cs_tenant_api,
@@ -122,6 +121,7 @@ async fn init_api(web_server: &TardisWebServer) -> TardisResult<()> {
                     iam_ci_res_api::IamCiResApi,
                     iam_ci_role_api::IamCiRoleApi,
                     iam_ci_account_api::IamCiAccountApi,
+                    iam_ci_system_api::IamCiSystemApi,
                 ),
             )), // .middleware(EncryptMW),
         )
