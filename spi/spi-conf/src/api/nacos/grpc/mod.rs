@@ -3,13 +3,16 @@ use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 use tardis::{
     basic::{error::TardisError, result::TardisResult},
+    futures_util::StreamExt,
     log, serde_json,
-    web::poem, futures_util::StreamExt,
+    web::poem,
 };
 #[allow(non_snake_case)]
 mod proto;
 use poem_grpc::{Code, Request, Response, Status};
-pub use proto::{Metadata, Payload, Request as RequestProto, RequestServer as RequestGrpcServer, BiRequestStream as BiRequestStreamProto, BiRequestStreamServer as BiRequestStreamGrpcServer};
+pub use proto::{
+    BiRequestStream as BiRequestStreamProto, BiRequestStreamServer as BiRequestStreamGrpcServer, Metadata, Payload, Request as RequestProto, RequestServer as RequestGrpcServer,
+};
 
 use crate::dto::conf_config_dto::{ConfigDescriptor, ConfigItem};
 
@@ -67,8 +70,10 @@ impl BiRequestStreamProto for BiRequestStreamProtoImpl {
             Ok(())
         });
         let stream = tokio_stream::wrappers::UnboundedReceiverStream::new(rx);
-        let resp_stream = poem_grpc::Streaming::new(stream);
-        Ok(Response::new(resp_stream))
+        let _resp_stream = poem_grpc::Streaming::new(stream);
+        // temporary return unimplemented
+        Err(Status::new(Code::Unimplemented))
+        // Ok(Response::new(resp_stream))
     }
 }
 
@@ -207,8 +212,6 @@ pub struct ConfigListenContext {
     md5: String,
 }
 
-
-
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ConfigBatchListenRequest {
@@ -257,7 +260,8 @@ pub async fn dispatch_request(type_info: &str, value: &str, access_token: Option
         }
         "ConfigBatchListenRequest" => {
             let ctx = get_ctx.await?;
-            let ConfigBatchListenRequest { listen, config_listen_contexts } = serde_json::from_str(value).map_err(|_e| TardisError::bad_request("expect a ConfigBatchListenRequest", ""))?;
+            let ConfigBatchListenRequest { listen, config_listen_contexts } =
+                serde_json::from_str(value).map_err(|_e| TardisError::bad_request("expect a ConfigBatchListenRequest", ""))?;
             let mut changed_configs = Vec::with_capacity(config_listen_contexts.len());
             if listen {
                 for config in config_listen_contexts {
@@ -280,8 +284,9 @@ pub async fn dispatch_request(type_info: &str, value: &str, access_token: Option
             ConfigChangeBatchListenResponse {
                 changed_configs,
                 response: NaocsGrpcResponse::success(),
-            }.as_payload()
-        },
+            }
+            .as_payload()
+        }
         _ => {
             log::debug!("[Spi-Conf.Nacos.Grpc] unknown type_info: {}", type_info);
             Payload::default()

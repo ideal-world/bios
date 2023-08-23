@@ -20,7 +20,7 @@ spi-pg = ["tardis/reldb-postgres"]
 
 [dependencies]
 serde.workspace = true
-tardis = { git = "https://github.com/ideal-world/tardis.git", features = [
+tardis = { path = "../../../tardis/tardis", features = [
     "reldb-postgres",
     "web-server",
     "crypto",
@@ -37,7 +37,7 @@ strum = { version = "0.25.0", features = ["derive"] }
 tokio-stream = { version = "0.1.14", features = ["sync"] }
 
 [dev-dependencies]
-tardis = { git = "https://github.com/ideal-world/tardis.git", features = [
+tardis = { path = "../../../tardis/tardis", features = [
     "test",
     "conf-remote",
     "mq",

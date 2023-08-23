@@ -6,7 +6,11 @@ use tardis::{
     TardisFuns, TardisFunsInst,
 };
 
-use crate::{api::{init_api, init_nacos_servers}, conf_config::ConfConfig, conf_constants::DOMAIN_CODE};
+use crate::{
+    api::{init_api, init_nacos_servers},
+    conf_config::ConfConfig,
+    conf_constants::DOMAIN_CODE,
+};
 
 pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
     let mut funs = crate::get_tardis_inst();

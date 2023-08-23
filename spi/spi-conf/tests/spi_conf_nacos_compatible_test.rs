@@ -191,7 +191,7 @@ async fn test_tardis_compatibility(_test_client: &TestHttpClient) -> TardisResul
     let success = resp.json::<bool>().await?;
     assert!(success);
 
-    let resp = nacos_client
+    let _resp = nacos_client
         .publish_config(
             &NacosConfigDescriptor::new("hc-db.yaml", "hc", &(Default::default())),
             &mut std::fs::File::open("tests/config/test-prod.yaml").expect("fail to open"),
