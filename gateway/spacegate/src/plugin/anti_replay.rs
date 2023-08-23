@@ -90,10 +90,10 @@ fn get_md5(ctx: &mut SgRoutePluginContext) -> TardisResult<String> {
     let req = &ctx.request;
     let data = format!(
         "{}{}{}{}",
-        req.get_req_remote_addr(),
-        req.get_req_uri_raw(),
-        req.get_req_method_raw(),
-        req.get_req_headers_raw().iter().map(|h| h.0.as_str().to_owned() + h.1.to_str().unwrap_or_default()).collect::<Vec<String>>().join(""),
+        req.get_remote_addr(),
+        req.get_uri_raw(),
+        req.get_method_raw(),
+        req.get_headers_raw().iter().map(|h| h.0.as_str().to_owned() + h.1.to_str().unwrap_or_default()).collect::<Vec<String>>().join(""),
     );
     tardis::crypto::crypto_digest::TardisCryptoDigest {}.md5(&data)
 }
