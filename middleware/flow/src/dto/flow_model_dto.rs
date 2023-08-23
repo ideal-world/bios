@@ -196,6 +196,11 @@ pub struct FlowModelSortStateInfoReq {
 
 #[derive(Serialize, Deserialize, Debug, Default, poem_openapi::Object)]
 pub struct FlowModelAddCustomModelReq {
+    pub bind_model_objs: Vec<FlowModelAddCustomModelItemReq>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, poem_openapi::Object)]
+pub struct FlowModelAddCustomModelItemReq {
     pub tag: String,
     pub rel_template_id: String,
 }

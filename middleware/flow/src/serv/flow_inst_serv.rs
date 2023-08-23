@@ -915,6 +915,7 @@ impl FlowInstServ {
                     && model_transition.guard_by_spec_role_ids.is_empty()
                     && model_transition.guard_by_spec_org_ids.is_empty()
                     && !model_transition.guard_by_his_operators
+                    && !model_transition.guard_by_assigned
                 {
                     return true;
                 }
