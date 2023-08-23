@@ -61,11 +61,11 @@ impl SgFilterAuditLog {
             Some(raw_body)
         } else {
             ctx.response
-                .pop_resp_body()
+                .pop_body()
                 .await?
                 .map(|body| {
                     let body_string = String::from_utf8_lossy(&body).to_string();
-                    ctx.response.set_resp_body(body)?;
+                    ctx.response.set_body(body)?;
                     Ok::<_, TardisError>(body_string)
                 })
                 .transpose()?
@@ -107,25 +107,21 @@ impl SgFilterAuditLog {
             Err(_) => false,
         };
         Ok(LogParamContent {
-            op: ctx.request.get_req_method().to_string(),
+            op: ctx.request.get_method().to_string(),
             key: None,
-            name: ctx.get_cert_info().and_then(|info| info.account_name.clone()).unwrap_or_default(),
-            user_id: ctx.get_cert_info().map(|info| info.account_id.clone()),
+            name: ctx.get_cert_info().and_then(|info| info.name.clone()).unwrap_or_default(),
+            user_id: ctx.get_cert_info().map(|info| info.id.clone()),
             role: ctx.get_cert_info().map(|info| info.roles.clone()).unwrap_or_default(),
-            ip: if let Some(real_ips) = ctx.request.get_req_headers().get("X-Forwarded-For") {
-                real_ips
-                    .to_str()
-                    .ok()
-                    .and_then(|ips| ips.split(',').collect::<Vec<_>>().first().map(|ip| ip.to_string()))
-                    .unwrap_or(ctx.request.get_req_remote_addr().ip().to_string())
+            ip: if let Some(real_ips) = ctx.request.get_headers().get("X-Forwarded-For") {
+                real_ips.to_str().ok().and_then(|ips| ips.split(',').collect::<Vec<_>>().first().map(|ip| ip.to_string())).unwrap_or(ctx.request.get_remote_addr().ip().to_string())
             } else {
-                ctx.request.get_req_remote_addr().ip().to_string()
+                ctx.request.get_remote_addr().ip().to_string()
             },
-            path: ctx.request.get_req_uri_raw().path().to_string(),
-            scheme: ctx.request.get_req_uri_raw().scheme_str().unwrap_or("http").to_string(),
-            token: ctx.request.get_req_headers().get(&self.header_token_name).and_then(|v| v.to_str().ok().map(|v| v.to_string())),
+            path: ctx.request.get_uri_raw().path().to_string(),
+            scheme: ctx.request.get_uri_raw().scheme_str().unwrap_or("http").to_string(),
+            token: ctx.request.get_headers().get(&self.header_token_name).and_then(|v| v.to_str().ok().map(|v| v.to_string())),
             server_timing: start_time.map(|st| end_time - st),
-            resp_status: ctx.response.get_resp_status_code().as_u16().to_string(),
+            resp_status: ctx.response.get_status_code().as_u16().to_string(),
             success,
         })
     }
@@ -187,7 +183,7 @@ impl SgPluginFilter for SgFilterAuditLog {
 
     async fn resp_filter(&self, _: &str, mut ctx: SgRoutePluginContext) -> TardisResult<(bool, SgRoutePluginContext)> {
         if self.enabled {
-            let path = ctx.request.get_req_uri_raw().path().to_string();
+            let path = ctx.request.get_uri_raw().path().to_string();
             for exclude_path in self.exclude_log_path.clone() {
                 if exclude_path == path {
                     return Ok((true, ctx));
@@ -196,11 +192,11 @@ impl SgPluginFilter for SgFilterAuditLog {
             let funs = get_tardis_inst();
             let end_time = tardis::chrono::Utc::now().timestamp_millis();
             let spi_ctx = TardisContext {
-                owner: ctx.get_cert_info().map(|info| info.account_id.clone()).unwrap_or_default(),
+                owner: ctx.get_cert_info().map(|info| info.id.clone()).unwrap_or_default(),
                 roles: ctx.get_cert_info().map(|info| info.roles.clone().into_iter().map(|r| r.id).collect()).unwrap_or_default(),
                 ..Default::default()
             };
-            let op = ctx.request.get_req_method().to_string();
+            let op = ctx.request.get_method().to_string();
 
             let content = self.get_log_content(end_time, &mut ctx).await?;
 

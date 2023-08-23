@@ -34,22 +34,17 @@ pub struct AuthResult {
 impl AuthResult {
     pub(crate) fn ok(ctx: Option<&AuthContext>, resp_body: Option<String>, resp_headers: Option<HashMap<String, String>>, config: &AuthConfig) -> Self {
         Self {
-            ctx: if ctx.is_none() {
-                None
-            } else {
-                let ctx = ctx.unwrap();
-                Some(AuthContext {
-                    rbum_uri: ctx.rbum_uri.clone(),
-                    rbum_action: ctx.rbum_action.clone(),
-                    app_id: ctx.app_id.clone(),
-                    tenant_id: ctx.tenant_id.clone(),
-                    account_id: ctx.account_id.clone(),
-                    roles: ctx.roles.clone(),
-                    groups: ctx.groups.clone(),
-                    own_paths: ctx.own_paths.clone(),
-                    ak: ctx.ak.clone(),
-                })
-            },
+            ctx: ctx.map(|ctx| AuthContext {
+                rbum_uri: ctx.rbum_uri.clone(),
+                rbum_action: ctx.rbum_action.clone(),
+                app_id: ctx.app_id.clone(),
+                tenant_id: ctx.tenant_id.clone(),
+                account_id: ctx.account_id.clone(),
+                roles: ctx.roles.clone(),
+                groups: ctx.groups.clone(),
+                own_paths: ctx.own_paths.clone(),
+                ak: ctx.ak.clone(),
+            }),
             resp_body,
             resp_headers,
             config: config.clone(),
@@ -94,7 +89,7 @@ impl AuthResp {
         if result.e.is_none() {
             Self::ok(result.ctx.as_ref(), result.resp_body, result.resp_headers, &result.config)
         } else {
-            Self::err(result.e.unwrap(), &result.config)
+            Self::err(result.e.expect(""), &result.config)
         }
     }
 

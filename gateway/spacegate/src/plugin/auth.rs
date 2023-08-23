@@ -21,7 +21,7 @@ use spacegate_kernel::{
 use spacegate_kernel::{
     hyper::StatusCode,
     plugins::{
-        context::{SGCertInfo, SGRoleInfo},
+        context::{SGIdentInfo, SGRoleInfo},
         filters::SgPluginFilterInitDto,
     },
 };
@@ -81,12 +81,12 @@ impl Default for SgFilterAuth {
 }
 impl SgFilterAuth {
     fn cors(&self, ctx: &mut SgRoutePluginContext) -> TardisResult<()> {
-        ctx.response.set_resp_header(http::header::ACCESS_CONTROL_ALLOW_ORIGIN.as_str(), &self.cors_allow_origin)?;
-        ctx.response.set_resp_header(http::header::ACCESS_CONTROL_ALLOW_METHODS.as_str(), &self.cors_allow_methods)?;
-        ctx.response.set_resp_header(http::header::ACCESS_CONTROL_ALLOW_HEADERS.as_str(), &self.cors_allow_headers)?;
-        ctx.response.set_resp_header(http::header::ACCESS_CONTROL_MAX_AGE.as_str(), "3600000")?;
-        ctx.response.set_resp_header(http::header::ACCESS_CONTROL_ALLOW_CREDENTIALS.as_str(), "true")?;
-        ctx.response.set_resp_header(http::header::CONTENT_TYPE.as_str(), "application/json")?;
+        ctx.response.set_header(http::header::ACCESS_CONTROL_ALLOW_ORIGIN.as_str(), &self.cors_allow_origin)?;
+        ctx.response.set_header(http::header::ACCESS_CONTROL_ALLOW_METHODS.as_str(), &self.cors_allow_methods)?;
+        ctx.response.set_header(http::header::ACCESS_CONTROL_ALLOW_HEADERS.as_str(), &self.cors_allow_headers)?;
+        ctx.response.set_header(http::header::ACCESS_CONTROL_MAX_AGE.as_str(), "3600000")?;
+        ctx.response.set_header(http::header::ACCESS_CONTROL_ALLOW_CREDENTIALS.as_str(), "true")?;
+        ctx.response.set_header(http::header::CONTENT_TYPE.as_str(), "application/json")?;
         Ok(())
     }
     fn get_is_true_mix_req_from_header(&self, header_map: &HeaderMap<HeaderValue>) -> bool {
@@ -169,16 +169,16 @@ impl SgPluginFilter for SgFilterAuth {
     }
 
     async fn req_filter(&self, _: &str, mut ctx: SgRoutePluginContext) -> TardisResult<(bool, SgRoutePluginContext)> {
-        if ctx.request.get_req_method() == http::Method::OPTIONS {
+        if ctx.request.get_method() == http::Method::OPTIONS {
             return Ok((true, ctx));
         }
 
-        if ctx.request.get_req_method().eq(&Method::GET) && ctx.request.get_req_uri_raw().path() == self.fetch_server_config_path.as_str() {
+        if ctx.request.get_method().eq(&Method::GET) && ctx.request.get_uri_raw().path() == self.fetch_server_config_path.as_str() {
             ctx.set_action(SgRouteFilterRequestAction::Response);
             let mut headers = HeaderMap::new();
             headers.insert(http::header::CONTENT_TYPE, HeaderValue::from_static("application/json"));
             let mut ctx = ctx.resp(StatusCode::OK, headers, Body::default());
-            ctx.response.set_resp_body(
+            ctx.response.set_body(
                 serde_json::to_string(&TardisResp {
                     code: "200".to_string(),
                     msg: "".to_string(),
@@ -190,14 +190,14 @@ impl SgPluginFilter for SgFilterAuth {
             return Ok((true, ctx));
         }
 
-        let is_true_mix_req = self.get_is_true_mix_req_from_header(ctx.request.get_req_headers());
+        let is_true_mix_req = self.get_is_true_mix_req_from_header(ctx.request.get_headers());
 
         if self.auth_config.strict_security_mode && !is_true_mix_req {
             let mut ctx = mix_req_to_ctx(&self.auth_config, ctx).await?;
-            ctx.request.set_req_header(&self.header_is_mix_req, "true")?;
+            ctx.request.set_header(&self.header_is_mix_req, "true")?;
             return Ok((false, ctx));
         }
-        ctx.request.set_req_header(&self.header_is_mix_req, "false")?;
+        ctx.request.set_header(&self.header_is_mix_req, "false")?;
         let (mut auth_req, req_body) = ctx_to_auth_req(&mut ctx).await?;
 
         match auth_kernel_serv::auth(&mut auth_req, is_true_mix_req).await {
@@ -207,8 +207,8 @@ impl SgPluginFilter for SgFilterAuth {
                     ctx = success_auth_result_to_ctx(auth_result, req_body, ctx)?;
                 } else if let Some(e) = auth_result.e {
                     ctx.set_action(SgRouteFilterRequestAction::Response);
-                    ctx.response.set_resp_status_code(StatusCode::from_str(&e.code).unwrap_or(StatusCode::BAD_GATEWAY));
-                    ctx.response.set_resp_body(json!({"code":format!("{}-gateway-cert-error",e.code),"message":e.message}).to_string().into_bytes())?;
+                    ctx.response.set_status_code(StatusCode::from_str(&e.code).unwrap_or(StatusCode::BAD_GATEWAY));
+                    ctx.response.set_body(json!({"code":format!("{}-gateway-cert-error",e.code),"message":e.message}).to_string().into_bytes())?;
                     return Ok((false, ctx));
                 };
                 Ok((true, ctx))
@@ -216,7 +216,7 @@ impl SgPluginFilter for SgFilterAuth {
             Err(e) => {
                 log::warn!("[Plugin.Auth] auth return error {:?}", e);
                 ctx.set_action(SgRouteFilterRequestAction::Response);
-                ctx.response.set_resp_body(format!("[Plugin.Auth] auth return error:{e}").into_bytes())?;
+                ctx.response.set_body(format!("[Plugin.Auth] auth return error:{e}").into_bytes())?;
                 Ok((false, ctx))
             }
         }
@@ -225,19 +225,19 @@ impl SgPluginFilter for SgFilterAuth {
     async fn resp_filter(&self, _: &str, mut ctx: SgRoutePluginContext) -> TardisResult<(bool, SgRoutePluginContext)> {
         let head_key_crypto = self.auth_config.head_key_crypto.clone();
 
-        if ctx.request.get_req_headers().get(&head_key_crypto).is_none() || self.get_is_true_mix_req_from_header(ctx.request.get_req_headers()) {
+        if ctx.request.get_headers().get(&head_key_crypto).is_none() || self.get_is_true_mix_req_from_header(ctx.request.get_headers()) {
             return Ok((true, ctx));
         }
 
-        let crypto_value = ctx.request.get_req_headers().get(&head_key_crypto).expect("").clone();
-        let ctx_resp_headers = ctx.response.get_resp_headers_mut();
+        let crypto_value = ctx.request.get_headers().get(&head_key_crypto).expect("").clone();
+        let ctx_resp_headers = ctx.response.get_headers_mut();
         ctx_resp_headers.insert(
             HeaderName::try_from(head_key_crypto.clone()).map_err(|e| TardisError::internal_error(&format!("[Plugin.Auth] get header error: {e:?}"), ""))?,
             crypto_value,
         );
         let encrypt_resp = auth_crypto_serv::encrypt_body(&ctx_to_auth_encrypt_req(&mut ctx).await?).await?;
-        ctx.response.get_resp_headers_mut().extend(hashmap_header_to_headermap(encrypt_resp.headers)?);
-        ctx.response.set_resp_body(encrypt_resp.body.into_bytes())?;
+        ctx.response.get_headers_mut().extend(hashmap_header_to_headermap(encrypt_resp.headers)?);
+        ctx.response.set_body(encrypt_resp.body.into_bytes())?;
         self.cors(&mut ctx)?;
 
         Ok((true, ctx))
@@ -245,11 +245,11 @@ impl SgPluginFilter for SgFilterAuth {
 }
 
 async fn mix_req_to_ctx(auth_config: &AuthConfig, mut ctx: SgRoutePluginContext) -> TardisResult<SgRoutePluginContext> {
-    let string_body = ctx.request.pop_req_body().await?.map(|s| String::from_utf8_lossy(&s).to_string().trim_matches('"').to_string());
+    let string_body = ctx.request.pop_body().await?.map(|s| String::from_utf8_lossy(&s).to_string().trim_matches('"').to_string());
     if string_body.is_none() {
         TardisError::custom("502", "[Plugin.Auth.MixReq] body can't be empty", "502-parse_mix_req-parse-error");
     }
-    let mut req_headers = ctx.request.get_req_headers().iter().map(|(k, v)| (k.as_str().to_string(), v.to_str().expect("error parse header value to str").to_string())).collect();
+    let mut req_headers = ctx.request.get_headers().iter().map(|(k, v)| (k.as_str().to_string(), v.to_str().expect("error parse header value to str").to_string())).collect();
     let (body, crypto_headers) = auth_crypto_serv::decrypt_req(&req_headers, &string_body, true, true, auth_config).await?;
     req_headers.remove(&auth_config.head_key_crypto);
     req_headers.remove(&auth_config.head_key_crypto.to_ascii_lowercase());
@@ -258,7 +258,7 @@ async fn mix_req_to_ctx(auth_config: &AuthConfig, mut ctx: SgRoutePluginContext)
 
     let mix_body = TardisFuns::json.str_to_obj::<MixRequestBody>(&body)?;
     ctx.set_action(SgRouteFilterRequestAction::Redirect);
-    let mut true_uri = Url::from_str(&ctx.request.get_req_uri().to_string().replace("apis", &mix_body.uri))
+    let mut true_uri = Url::from_str(&ctx.request.get_uri().to_string().replace("apis", &mix_body.uri))
         .map_err(|e| TardisError::custom("502", &format!("[Plugin.Auth.MixReq] url parse err {e}"), "502-parse_mix_req-url-error"))?;
     true_uri.set_path(&true_uri.path().replace("//", "/"));
     true_uri.set_query(Some(&if let Some(old_query) = true_uri.query() {
@@ -266,8 +266,8 @@ async fn mix_req_to_ctx(auth_config: &AuthConfig, mut ctx: SgRoutePluginContext)
     } else {
         format!("_t={}", mix_body.ts)
     }));
-    ctx.request.set_req_uri(true_uri.as_str().parse().map_err(|e| TardisError::custom("502", &format!("[Plugin.Auth.MixReq] uri parse error: {}", e), ""))?);
-    ctx.request.set_req_method(
+    ctx.request.set_uri(true_uri.as_str().parse().map_err(|e| TardisError::custom("502", &format!("[Plugin.Auth.MixReq] uri parse error: {}", e), ""))?);
+    ctx.request.set_method(
         Method::from_str(&mix_body.method.to_ascii_uppercase())
             .map_err(|e| TardisError::custom("502", &format!("[Plugin.Auth.MixReq] method parse err {e}"), "502-parse_mix_req-method-error"))?,
     );
@@ -276,7 +276,7 @@ async fn mix_req_to_ctx(auth_config: &AuthConfig, mut ctx: SgRoutePluginContext)
     headers.extend(mix_body.headers);
     headers.extend(crypto_headers.unwrap_or_default());
 
-    ctx.request.set_req_headers(
+    ctx.request.set_headers(
         headers
             .into_iter()
             .map(|(k, v)| {
@@ -288,8 +288,8 @@ async fn mix_req_to_ctx(auth_config: &AuthConfig, mut ctx: SgRoutePluginContext)
             .collect::<TardisResult<HeaderMap<HeaderValue>>>()?,
     );
 
-    let real_ip = ctx.request.get_req_remote_addr().ip().to_string();
-    let forwarded_for = match ctx.request.get_req_headers().get("X-Forwarded-For") {
+    let real_ip = ctx.request.get_remote_addr().ip().to_string();
+    let forwarded_for = match ctx.request.get_headers().get("X-Forwarded-For") {
         Some(forwarded) => {
             format!(
                 "{},{}",
@@ -303,16 +303,16 @@ async fn mix_req_to_ctx(auth_config: &AuthConfig, mut ctx: SgRoutePluginContext)
         }
         None => real_ip,
     };
-    ctx.request.set_req_header("X-Forwarded-For", &forwarded_for)?;
-    ctx.request.set_req_body(mix_body.body.into_bytes())?;
+    ctx.request.set_header("X-Forwarded-For", &forwarded_for)?;
+    ctx.request.set_body(mix_body.body.into_bytes())?;
     Ok(ctx)
 }
 
 async fn ctx_to_auth_req(ctx: &mut SgRoutePluginContext) -> TardisResult<(AuthReq, Vec<u8>)> {
-    let url = ctx.request.get_req_uri().clone();
+    let url = ctx.request.get_uri().clone();
     let scheme = url.scheme().map(|s| s.to_string()).unwrap_or("http".to_string());
-    let headers = headermap_header_to_hashmap(ctx.request.get_req_headers().clone())?;
-    let req_body = ctx.request.pop_req_body().await?;
+    let headers = headermap_header_to_hashmap(ctx.request.get_headers().clone())?;
+    let req_body = ctx.request.pop_body().await?;
     let body = req_body.clone().map(|s| String::from_utf8_lossy(&s).to_string().trim_matches('"').to_string());
     Ok((
         AuthReq {
@@ -329,7 +329,7 @@ async fn ctx_to_auth_req(ctx: &mut SgRoutePluginContext) -> TardisResult<(AuthRe
                         .collect()
                 })
                 .unwrap_or_default(),
-            method: ctx.request.get_req_method().to_string(),
+            method: ctx.request.get_method().to_string(),
             host: url.host().unwrap_or("127.0.0.1").to_string(),
             port: url.port().map(|p| p.as_u16()).unwrap_or_else(|| if scheme == "https" { 443 } else { 80 }),
             headers,
@@ -340,9 +340,9 @@ async fn ctx_to_auth_req(ctx: &mut SgRoutePluginContext) -> TardisResult<(AuthRe
 }
 
 fn success_auth_result_to_ctx(auth_result: AuthResult, old_req_body: Vec<u8>, mut ctx: SgRoutePluginContext) -> TardisResult<SgRoutePluginContext> {
-    ctx.set_cert_info(SGCertInfo {
-        account_id: auth_result.ctx.as_ref().and_then(|ctx| ctx.account_id.clone()).unwrap_or_default(),
-        account_name: None,
+    ctx.set_cert_info(SGIdentInfo {
+        id: auth_result.ctx.as_ref().and_then(|ctx| ctx.account_id.clone()).unwrap_or_default(),
+        name: None,
         roles: auth_result
             .ctx
             .as_ref()
@@ -352,18 +352,18 @@ fn success_auth_result_to_ctx(auth_result: AuthResult, old_req_body: Vec<u8>, mu
     });
     let auth_resp = AuthResp::from_result(auth_result);
     let new_headers = hashmap_header_to_headermap(auth_resp.headers.clone())?;
-    ctx.request.set_req_headers(new_headers);
+    ctx.request.set_headers(new_headers);
     if let Some(new_body) = auth_resp.body {
-        ctx.request.set_req_body(new_body.into_bytes())?;
+        ctx.request.set_body(new_body.into_bytes())?;
     } else {
-        ctx.request.set_req_body(old_req_body)?;
+        ctx.request.set_body(old_req_body)?;
     }
     Ok(ctx)
 }
 
 async fn ctx_to_auth_encrypt_req(ctx: &mut SgRoutePluginContext) -> TardisResult<AuthEncryptReq> {
-    let headers = headermap_header_to_hashmap(ctx.response.get_resp_headers().clone())?;
-    let body = ctx.response.pop_resp_body().await?.map(|s| String::from_utf8_lossy(&s).to_string()).unwrap_or_default();
+    let headers = headermap_header_to_hashmap(ctx.response.get_headers().clone())?;
+    let body = ctx.response.pop_body().await?.map(|s| String::from_utf8_lossy(&s).to_string()).unwrap_or_default();
     if !body.is_empty() {
         ctx.set_ext(plugin_constants::BEFORE_ENCRYPT_BODY, &body);
     }
@@ -456,7 +456,7 @@ mod tests {
         );
         let (is_ok, mut before_filter_ctx) = filter_auth.req_filter("", ctx).await.unwrap();
         assert!(!is_ok);
-        let req_body = before_filter_ctx.response.pop_resp_body().await.unwrap().map(|b| String::from_utf8_lossy(&b).to_string());
+        let req_body = before_filter_ctx.response.pop_body().await.unwrap().map(|b| String::from_utf8_lossy(&b).to_string());
         assert!(req_body.is_some());
         assert_eq!(req_body.unwrap(), "[Auth] Token [aaa] is not legal");
 
@@ -484,7 +484,7 @@ mod tests {
         );
         let (is_ok, mut before_filter_ctx) = filter_auth.req_filter("", ctx).await.unwrap();
         assert!(is_ok);
-        let ctx = decode_context(before_filter_ctx.request.get_req_headers());
+        let ctx = decode_context(before_filter_ctx.request.get_headers());
 
         assert_eq!(ctx.own_paths, "");
         assert_eq!(ctx.owner, "account1");
@@ -514,7 +514,7 @@ mod tests {
         );
         let (is_ok, mut before_filter_ctx) = filter_auth.req_filter("", ctx).await.unwrap();
         assert!(is_ok);
-        let ctx = decode_context(before_filter_ctx.request.get_req_headers());
+        let ctx = decode_context(before_filter_ctx.request.get_headers());
 
         assert_eq!(ctx.own_paths, "tenant1");
         assert_eq!(ctx.owner, "account1");
@@ -595,7 +595,7 @@ mod tests {
         );
         let (is_ok, mut before_filter_ctx) = filter_auth.req_filter("", ctx).await.unwrap();
         assert!(is_ok);
-        let req_body = before_filter_ctx.request.pop_req_body().await.unwrap();
+        let req_body = before_filter_ctx.request.pop_body().await.unwrap();
         assert!(req_body.is_some());
         let req_body = req_body.unwrap();
         let req_body = String::from_utf8(req_body).unwrap();
@@ -622,7 +622,7 @@ mod tests {
         );
         let (is_ok, mut before_filter_ctx) = filter_auth.req_filter("", ctx).await.unwrap();
         assert!(is_ok);
-        let req_body = before_filter_ctx.request.pop_req_body().await.unwrap();
+        let req_body = before_filter_ctx.request.pop_body().await.unwrap();
         assert!(req_body.is_some());
         let req_body = req_body.unwrap();
         let req_body = String::from_utf8(req_body).unwrap();
@@ -636,13 +636,13 @@ mod tests {
 
         let (is_ok, mut before_filter_ctx) = filter_auth.resp_filter("", ctx).await.unwrap();
         assert!(is_ok);
-        let resp_body = before_filter_ctx.response.pop_resp_body().await.unwrap();
+        let resp_body = before_filter_ctx.response.pop_body().await.unwrap();
         assert!(resp_body.is_some());
         let resp_body = resp_body.unwrap();
         let resp_body = String::from_utf8(resp_body).unwrap();
         let resp_body = crypto_resp(
             &resp_body,
-            before_filter_ctx.response.get_resp_headers().get("Bios-Crypto").unwrap().to_str().unwrap(),
+            before_filter_ctx.response.get_headers().get("Bios-Crypto").unwrap().to_str().unwrap(),
             &front_pri_key,
         );
         println!("req_body:{req_body} mock_resp:{mock_resp}");

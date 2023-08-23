@@ -180,14 +180,14 @@ impl SgPluginFilter for SgFilterAntiXSS {
 
     async fn resp_filter(&self, _: &str, mut ctx: SgRoutePluginContext) -> TardisResult<(bool, SgRoutePluginContext)> {
         let mut enable = false;
-        if let Some(content_type) = ctx.response.get_resp_headers().get(http::header::CONTENT_TYPE) {
+        if let Some(content_type) = ctx.response.get_headers().get(http::header::CONTENT_TYPE) {
             enable = content_type.eq("text/html") || content_type.eq("text/css") || content_type.eq("application/javascript") || content_type.eq("application/x-javascript");
         };
         if enable {
             if self.csp_config.report_only {
-                let _ = ctx.response.set_resp_header(http::header::CONTENT_SECURITY_POLICY_REPORT_ONLY.as_str(), &self.csp_config.to_string_header_value());
+                let _ = ctx.response.set_header(http::header::CONTENT_SECURITY_POLICY_REPORT_ONLY.as_str(), &self.csp_config.to_string_header_value());
             } else {
-                let _ = ctx.response.set_resp_header(http::header::CONTENT_SECURITY_POLICY.as_str(), &self.csp_config.to_string_header_value());
+                let _ = ctx.response.set_header(http::header::CONTENT_SECURITY_POLICY.as_str(), &self.csp_config.to_string_header_value());
             }
         }
         Ok((true, ctx))
