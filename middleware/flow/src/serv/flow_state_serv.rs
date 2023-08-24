@@ -217,7 +217,7 @@ impl FlowStateServ {
                     name: Some(name.to_string()),
                     ..Default::default()
                 },
-                tag: None,
+                tag: Some(tag.to_string()),
                 ..Default::default()
             },
             1,

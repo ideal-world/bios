@@ -402,7 +402,7 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
     ctx.own_paths = "t1/app01".to_string();
     flow_client.set_auth(&ctx)?;
     let mut modify_configs = vec![];
-    let tags = vec!["REQ", "MS", "PROJ", "ITER", "TICKET"];
+    let tags = vec!["REQ", "MS", "PROJ", "ITER", "TICKET", "MOCK"];
     for tag in tags {
         modify_configs.push(FlowModelAddCustomModelItemReq {
             tag: tag.to_string(),
@@ -418,7 +418,7 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
             },
         )
         .await;
-    assert!(result.into_iter().find(|resp| resp.tag == "MS").unwrap().model_id.is_none());
+    assert!(result.into_iter().find(|resp| resp.tag == "MOCK").unwrap().model_id.is_none());
 
     Ok(())
 }
