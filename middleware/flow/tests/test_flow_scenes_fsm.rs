@@ -8,8 +8,8 @@ use bios_mw_flow::dto::flow_inst_dto::{
     FlowInstTransferReq, FlowInstTransferResp,
 };
 use bios_mw_flow::dto::flow_model_dto::{
-    FlowModelAddCustomModelReq, FlowModelAddCustomModelResp, FlowModelAggResp, FlowModelBindStateReq, FlowModelModifyReq, FlowModelSortStateInfoReq, FlowModelSortStatesReq,
-    FlowModelSummaryResp, FlowModelUnbindStateReq, FlowTemplateModelResp,
+    FlowModelAddCustomModelItemReq, FlowModelAddCustomModelReq, FlowModelAddCustomModelResp, FlowModelAggResp, FlowModelBindStateReq, FlowModelModifyReq,
+    FlowModelSortStateInfoReq, FlowModelSortStatesReq, FlowModelSummaryResp, FlowModelUnbindStateReq, FlowTemplateModelResp,
 };
 use bios_mw_flow::dto::flow_state_dto::FlowStateSummaryResp;
 use bios_mw_flow::dto::flow_transition_dto::{
@@ -404,12 +404,20 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
     let mut modify_configs = vec![];
     let tags = vec!["REQ", "MS", "PROJ", "ITER", "TICKET"];
     for tag in tags {
-        modify_configs.push(FlowModelAddCustomModelReq {
+        modify_configs.push(FlowModelAddCustomModelItemReq {
             tag: tag.to_string(),
-            rel_template_id: template_id.clone(),
+            feature_template_id: None,
         });
     }
-    let result: Vec<FlowModelAddCustomModelResp> = flow_client.post("/cc/model/add_custom_model", &modify_configs).await;
+    let result: Vec<FlowModelAddCustomModelResp> = flow_client
+        .post(
+            "/cc/model/add_custom_model",
+            &FlowModelAddCustomModelReq {
+                proj_template_id: Some(template_id.clone()),
+                bind_model_objs: modify_configs,
+            },
+        )
+        .await;
     assert!(result.into_iter().find(|resp| resp.tag == "MS").unwrap().model_id.is_none());
 
     Ok(())
