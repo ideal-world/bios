@@ -770,7 +770,7 @@ impl FlowModelServ {
             &FlowModelFilterReq {
                 basic: RbumBasicFilterReq { ..Default::default() },
                 tags: Some(vec![tag.to_string()]),
-                rel_template_id: Some(rel_template_id.to_string()),
+                rel_template_id: current_template_id.clone(),
                 ..Default::default()
             },
             funs,
@@ -794,7 +794,7 @@ impl FlowModelServ {
         } else {
             RbumBasicFilterReq::default()
         };
-        let parent_model = Self::find_one_detail_item(
+        let parent_model = if let Some(parent_model) = Self::find_one_detail_item(
             &FlowModelFilterReq {
                 basic,
                 tags: Some(vec![tag.to_string()]),
@@ -805,7 +805,21 @@ impl FlowModelServ {
             &global_ctx,
         )
         .await?
-        .ok_or_else(|| funs.err().internal_error("flow_model_serv", "add_custom_model", "default model is not exist", "404-default-model-mot-exist"))?;
+        {
+            parent_model
+        } else {
+            Self::find_one_detail_item(
+                &FlowModelFilterReq {
+                    tags: Some(vec![tag.to_string()]),
+                    ..Default::default()
+                },
+                funs,
+                &global_ctx,
+            )
+            .await?
+            .ok_or_else(|| funs.err().internal_error("flow_model_serv", "add_custom_model", "default model is not exist", "404-default-model-mot-exist"))?
+        };
+
         // add model
         let transitions = parent_model.transitions();
         let model_id = Self::add_item(

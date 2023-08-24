@@ -597,6 +597,22 @@ impl FlowInstServ {
         )
         .await?;
 
+        // notify changes
+        FlowExternalServ::do_notify_changes(
+            &flow_model.tag,
+            &flow_inst_detail.rel_business_obj_id,
+            Some(next_flow_state.name.clone()),
+            vec![
+                json!({
+                    "current_state_id": &next_flow_state.id
+                }),
+                json!({ "current_vars": &transfer_req.vars }),
+            ],
+            ctx,
+            funs,
+        )
+        .await?;
+
         let mut new_vars: HashMap<String, Value> = HashMap::new();
         if let Some(current_vars) = &flow_inst_detail.current_vars {
             new_vars.extend(current_vars.clone());
@@ -631,22 +647,6 @@ impl FlowInstServ {
         }
 
         funs.db().update_one(flow_inst, ctx).await?;
-        // notify changes
-        FlowExternalServ::do_notify_changes(
-            &flow_model.tag,
-            &flow_inst_detail.rel_business_obj_id,
-            Some(next_flow_state.name.to_string()),
-            vec![
-                json!({
-                    "current_state_id":next_flow_state.id
-                }),
-                json!({ "current_vars": &transfer_req.vars }),
-                json!({ "transitions": &new_transitions }),
-            ],
-            ctx,
-            funs,
-        )
-        .await?;
 
         let model_transition = flow_model.transitions();
         Self::do_request_webhook(
