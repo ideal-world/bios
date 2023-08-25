@@ -1,6 +1,9 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use tardis::web::poem_openapi;
+use tardis::web::poem_openapi::{
+    self,
+    types::{ParseFromJSON, ToJSON},
+};
 
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
 pub struct FlowExternalReq {
@@ -28,6 +31,16 @@ pub enum FlowExternalParams {
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
 pub struct FlowExternalFetchRelObjReq {
     pub rel_tag: String,
+}
+
+#[derive(Default, Serialize, Deserialize, Debug, poem_openapi::Object)]
+pub struct FlowExternalResp<T>
+where
+    T: ParseFromJSON + ToJSON + Serialize + Send + Sync,
+{
+    pub code: String,
+    pub message: String,
+    pub body: Option<T>,
 }
 
 #[derive(Default, Serialize, Deserialize, Debug, poem_openapi::Object)]
