@@ -81,12 +81,15 @@ impl FlowCcStateApi {
 
         let (own_paths, with_sub_own_paths) = if let Some(is_global) = is_global.0 {
             if is_global {
+                // get global state
                 (Some("".to_string()), false)
             } else {
-                (Some("".to_string()), with_sub.0.unwrap_or(false))
+                // get custom state
+                (None, true)
             }
         } else {
-            (None, true)
+            // get all state
+            (Some("".to_string()), with_sub.0.unwrap_or(false))
         };
 
         let result = FlowStateServ::paginate_items(
