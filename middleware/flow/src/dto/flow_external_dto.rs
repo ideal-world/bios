@@ -21,16 +21,12 @@ pub enum FlowExternalKind {
     NotifyChanges,
 }
 
-#[derive(Debug, Deserialize, Serialize, poem_openapi::Union)]
-pub enum FlowExternalParams {
-    FetchRelObj(FlowExternalFetchRelObjReq),
-    ModifyField(FlowExternalModifyFieldReq),
-    NotifyChanges(FlowExternalNotifyChangesReq),
-}
-
-#[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
-pub struct FlowExternalFetchRelObjReq {
-    pub rel_tag: String,
+#[derive(Debug, Deserialize, Serialize, poem_openapi::Object, Clone)]
+pub struct FlowExternalParams {
+    pub rel_tag: Option<String>,
+    pub var_id: Option<String>,
+    pub var_name: Option<String>,
+    pub value: Option<Value>,
 }
 
 #[derive(Default, Serialize, Deserialize, Debug, poem_openapi::Object)]
@@ -56,20 +52,8 @@ pub struct RelBusObjResp {
     pub rel_bus_obj_ids: Vec<String>,
 }
 
-#[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
-pub struct FlowExternalModifyFieldReq {
-    pub var_id: Option<String>,
-    pub var_name: Option<String>,
-    pub value: Option<Value>,
-}
-
 #[derive(Default, Serialize, Deserialize, Debug, poem_openapi::Object)]
 pub struct FlowExternalModifyFieldResp {}
-
-#[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
-pub struct FlowExternalNotifyChangesReq {
-    pub changed_vars: Vec<Value>,
-}
 
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
 pub struct FlowExternalNotifyChangesResp {}
