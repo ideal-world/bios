@@ -216,4 +216,5 @@ pub struct FlowModelAddCustomModelResp {
 pub struct FlowModelFindRelStateResp {
     pub id: String,
     pub name: String,
+    pub color: String,
 }

@@ -156,6 +156,7 @@ pub struct FlowInstFindStateAndTransitionsResp {
     pub flow_inst_id: String,
     pub current_flow_state_name: String,
     pub current_flow_state_kind: FlowSysStateKind,
+    pub current_flow_state_color: String,
     pub next_flow_transitions: Vec<FlowInstFindNextTransitionResp>,
 }
 

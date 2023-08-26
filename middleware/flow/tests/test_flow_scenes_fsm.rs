@@ -374,7 +374,7 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
         )
         .await;
     let mut vars = HashMap::new();
-    vars.insert("assigned".to_string(), json!("xxxx_001"));
+    vars.insert("assigned_to".to_string(), json!("xxxx_001"));
     let _transfer: FlowInstTransferResp = flow_client
         .put(
             &format!("/cc/inst/{}/transition/transfer", req_inst_id2),
