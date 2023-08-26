@@ -211,3 +211,9 @@ pub struct FlowModelAddCustomModelResp {
     pub tag: String,
     pub model_id: Option<String>,
 }
+
+#[derive(Serialize, Deserialize, Debug, Default, poem_openapi::Object)]
+pub struct FlowModelFindRelStateResp {
+    pub id: String,
+    pub name: String,
+}
