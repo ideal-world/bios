@@ -282,7 +282,7 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     name: "开始".to_string(),
                     vars_collect: Some(vec![
                         FlowVarInfo {
-                            name: "assigned".to_string(),
+                            name: "assigned_to".to_string(),
                             label: "负责人".to_string(),
                             data_type: RbumDataTypeKind::STRING,
                             widget_type: RbumWidgetTypeKind::SELECT,
@@ -311,7 +311,7 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     name: "完成".to_string(),
                     vars_collect: Some(vec![
                         FlowVarInfo {
-                            name: "assigned".to_string(),
+                            name: "assigned_to".to_string(),
                             label: "负责人".to_string(),
                             data_type: RbumDataTypeKind::STRING,
                             widget_type: RbumWidgetTypeKind::SELECT,
@@ -341,7 +341,7 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     name: "重新处理".into(),
                     vars_collect: Some(vec![
                         FlowVarInfo {
-                            name: "assigned".to_string(),
+                            name: "assigned_to".to_string(),
                             label: "负责人".to_string(),
                             data_type: RbumDataTypeKind::STRING,
                             widget_type: RbumWidgetTypeKind::SELECT,
@@ -535,7 +535,7 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     name: "开始".to_string(),
                     vars_collect: Some(vec![
                         FlowVarInfo {
-                            name: "assigned".to_string(),
+                            name: "assigned_to".to_string(),
                             label: "负责人".to_string(),
                             data_type: RbumDataTypeKind::STRING,
                             widget_type: RbumWidgetTypeKind::SELECT,
@@ -564,7 +564,7 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     name: "完成".to_string(),
                     vars_collect: Some(vec![
                         FlowVarInfo {
-                            name: "assigned".to_string(),
+                            name: "assigned_to".to_string(),
                             label: "负责人".to_string(),
                             data_type: RbumDataTypeKind::STRING,
                             widget_type: RbumWidgetTypeKind::SELECT,
@@ -572,7 +572,7 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                             ..Default::default()
                         },
                         FlowVarInfo {
-                            name: "start_end".to_string(),
+                            name: "rel_start_end".to_string(),
                             label: "实际周期".to_string(),
                             data_type: RbumDataTypeKind::DATETIME,
                             widget_type: RbumWidgetTypeKind::DATETIME,
@@ -606,7 +606,7 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     name: "完成".to_string(),
                     vars_collect: Some(vec![
                         FlowVarInfo {
-                            name: "assigned".to_string(),
+                            name: "assigned_to".to_string(),
                             label: "负责人".to_string(),
                             data_type: RbumDataTypeKind::STRING,
                             widget_type: RbumWidgetTypeKind::SELECT,
@@ -614,7 +614,7 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                             ..Default::default()
                         },
                         FlowVarInfo {
-                            name: "start_end".to_string(),
+                            name: "rel_start_end".to_string(),
                             label: "实际周期".to_string(),
                             data_type: RbumDataTypeKind::DATETIME,
                             widget_type: RbumWidgetTypeKind::DATETIME,
@@ -636,7 +636,7 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     name: "重新处理".to_string(),
                     vars_collect: Some(vec![
                         FlowVarInfo {
-                            name: "assigned".to_string(),
+                            name: "assigned_to".to_string(),
                             label: "负责人".to_string(),
                             data_type: RbumDataTypeKind::STRING,
                             widget_type: RbumWidgetTypeKind::SELECT,
@@ -723,7 +723,7 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     to_flow_state_name: "已完成".to_string(),
                     name: "完成".to_string(),
                     vars_collect: Some(vec![FlowVarInfo {
-                        name: "start_end".to_string(),
+                        name: "rel_start_end".to_string(),
                         label: "实际周期".to_string(),
                         data_type: RbumDataTypeKind::DATETIME,
                         widget_type: RbumWidgetTypeKind::DATETIME,
@@ -755,7 +755,7 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     to_flow_state_name: "已完成".to_string(),
                     name: "完成".to_string(),
                     vars_collect: Some(vec![FlowVarInfo {
-                        name: "start_end".to_string(),
+                        name: "rel_start_end".to_string(),
                         label: "实际周期".to_string(),
                         data_type: RbumDataTypeKind::DATETIME,
                         widget_type: RbumWidgetTypeKind::DATETIME,
@@ -835,7 +835,7 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     name: "开始".to_string(),
                     vars_collect: Some(vec![
                         FlowVarInfo {
-                            name: "assigned".to_string(),
+                            name: "assigned_to".to_string(),
                             label: "负责人".to_string(),
                             data_type: RbumDataTypeKind::STRING,
                             widget_type: RbumWidgetTypeKind::SELECT,
@@ -864,7 +864,7 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     name: "完成".to_string(),
                     vars_collect: Some(vec![
                         FlowVarInfo {
-                            name: "assigned".to_string(),
+                            name: "assigned_to".to_string(),
                             label: "负责人".to_string(),
                             data_type: RbumDataTypeKind::STRING,
                             widget_type: RbumWidgetTypeKind::SELECT,
@@ -872,7 +872,7 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                             ..Default::default()
                         },
                         FlowVarInfo {
-                            name: "start_end".to_string(),
+                            name: "rel_start_end".to_string(),
                             label: "实际周期".to_string(),
                             data_type: RbumDataTypeKind::DATETIME,
                             widget_type: RbumWidgetTypeKind::DATETIME,
@@ -906,7 +906,7 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     name: "完成".to_string(),
                     vars_collect: Some(vec![
                         FlowVarInfo {
-                            name: "assigned".to_string(),
+                            name: "assigned_to".to_string(),
                             label: "负责人".to_string(),
                             data_type: RbumDataTypeKind::STRING,
                             widget_type: RbumWidgetTypeKind::SELECT,
@@ -914,7 +914,7 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                             ..Default::default()
                         },
                         FlowVarInfo {
-                            name: "start_end".to_string(),
+                            name: "rel_start_end".to_string(),
                             label: "实际周期".to_string(),
                             data_type: RbumDataTypeKind::DATETIME,
                             widget_type: RbumWidgetTypeKind::DATETIME,
@@ -936,7 +936,7 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     name: "重新处理".to_string(),
                     vars_collect: Some(vec![
                         FlowVarInfo {
-                            name: "assigned".to_string(),
+                            name: "assigned_to".to_string(),
                             label: "负责人".to_string(),
                             data_type: RbumDataTypeKind::STRING,
                             widget_type: RbumWidgetTypeKind::SELECT,
@@ -1005,7 +1005,7 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     name: "开始".to_string(),
                     vars_collect: Some(vec![
                         FlowVarInfo {
-                            name: "assigned".to_string(),
+                            name: "assigned_to".to_string(),
                             label: "负责人".to_string(),
                             data_type: RbumDataTypeKind::STRING,
                             widget_type: RbumWidgetTypeKind::SELECT,
@@ -1034,7 +1034,7 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     name: "完成".to_string(),
                     vars_collect: Some(vec![
                         FlowVarInfo {
-                            name: "assigned".to_string(),
+                            name: "assigned_to".to_string(),
                             label: "负责人".to_string(),
                             data_type: RbumDataTypeKind::STRING,
                             widget_type: RbumWidgetTypeKind::SELECT,
@@ -1042,7 +1042,7 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                             ..Default::default()
                         },
                         FlowVarInfo {
-                            name: "start_end".to_string(),
+                            name: "rel_start_end".to_string(),
                             label: "实际周期".to_string(),
                             data_type: RbumDataTypeKind::DATETIME,
                             widget_type: RbumWidgetTypeKind::DATETIME,
@@ -1076,7 +1076,7 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     name: "完成".to_string(),
                     vars_collect: Some(vec![
                         FlowVarInfo {
-                            name: "assigned".to_string(),
+                            name: "assigned_to".to_string(),
                             label: "负责人".to_string(),
                             data_type: RbumDataTypeKind::STRING,
                             widget_type: RbumWidgetTypeKind::SELECT,
@@ -1084,7 +1084,7 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                             ..Default::default()
                         },
                         FlowVarInfo {
-                            name: "start_end".to_string(),
+                            name: "rel_start_end".to_string(),
                             label: "实际周期".to_string(),
                             data_type: RbumDataTypeKind::DATETIME,
                             widget_type: RbumWidgetTypeKind::DATETIME,
@@ -1158,7 +1158,7 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     name: "开始".to_string(),
                     vars_collect: Some(vec![
                         FlowVarInfo {
-                            name: "assigned".to_string(),
+                            name: "assigned_to".to_string(),
                             label: "负责人".to_string(),
                             data_type: RbumDataTypeKind::STRING,
                             widget_type: RbumWidgetTypeKind::SELECT,
@@ -1187,7 +1187,7 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     name: "完成".to_string(),
                     vars_collect: Some(vec![
                         FlowVarInfo {
-                            name: "assigned".to_string(),
+                            name: "assigned_to".to_string(),
                             label: "负责人".to_string(),
                             data_type: RbumDataTypeKind::STRING,
                             widget_type: RbumWidgetTypeKind::SELECT,
@@ -1195,7 +1195,7 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                             ..Default::default()
                         },
                         FlowVarInfo {
-                            name: "start_end".to_string(),
+                            name: "rel_start_end".to_string(),
                             label: "实际周期".to_string(),
                             data_type: RbumDataTypeKind::DATETIME,
                             widget_type: RbumWidgetTypeKind::DATETIME,
@@ -1229,7 +1229,7 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     name: "完成".to_string(),
                     vars_collect: Some(vec![
                         FlowVarInfo {
-                            name: "assigned".to_string(),
+                            name: "assigned_to".to_string(),
                             label: "负责人".to_string(),
                             data_type: RbumDataTypeKind::STRING,
                             widget_type: RbumWidgetTypeKind::SELECT,
@@ -1237,7 +1237,7 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                             ..Default::default()
                         },
                         FlowVarInfo {
-                            name: "start_end".to_string(),
+                            name: "rel_start_end".to_string(),
                             label: "实际周期".to_string(),
                             data_type: RbumDataTypeKind::DATETIME,
                             widget_type: RbumWidgetTypeKind::DATETIME,
@@ -1311,7 +1311,7 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     name: "确认并修复".to_string(),
                     vars_collect: Some(vec![
                         FlowVarInfo {
-                            name: "assigned".to_string(),
+                            name: "assigned_to".to_string(),
                             label: "负责人".to_string(),
                             data_type: RbumDataTypeKind::STRING,
                             widget_type: RbumWidgetTypeKind::SELECT,
@@ -1435,7 +1435,7 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     name: "未修复".to_string(),
                     vars_collect: Some(vec![
                         FlowVarInfo {
-                            name: "assigned".to_string(),
+                            name: "assigned_to".to_string(),
                             label: "负责人".to_string(),
                             data_type: RbumDataTypeKind::STRING,
                             widget_type: RbumWidgetTypeKind::SELECT,
@@ -1458,7 +1458,7 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     name: "激活".to_string(),
                     vars_collect: Some(vec![
                         FlowVarInfo {
-                            name: "assigned".to_string(),
+                            name: "assigned_to".to_string(),
                             label: "负责人".to_string(),
                             data_type: RbumDataTypeKind::STRING,
                             widget_type: RbumWidgetTypeKind::SELECT,
@@ -1481,7 +1481,7 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     name: "关闭".to_string(),
                     vars_collect: Some(vec![
                         FlowVarInfo {
-                            name: "assigned".to_string(),
+                            name: "assigned_to".to_string(),
                             label: "负责人".to_string(),
                             data_type: RbumDataTypeKind::STRING,
                             widget_type: RbumWidgetTypeKind::SELECT,
@@ -1504,7 +1504,7 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     name: "激活".to_string(),
                     vars_collect: Some(vec![
                         FlowVarInfo {
-                            name: "assigned".to_string(),
+                            name: "assigned_to".to_string(),
                             label: "负责人".to_string(),
                             data_type: RbumDataTypeKind::STRING,
                             widget_type: RbumWidgetTypeKind::SELECT,
