@@ -12,7 +12,6 @@ use bios_basic::{
     },
 };
 use itertools::Itertools;
-use serde_json::json;
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
     chrono::{DateTime, Utc},
@@ -30,8 +29,9 @@ use tardis::{
 use crate::{
     domain::flow_inst,
     dto::{
+        flow_external_dto::FlowExternalParams,
         flow_inst_dto::{
-            FlowInstAbortReq, FlowInstBindReq, FlowInstBindResp, FlowInstDetailResp, FlowInstFindNextTransitionResp, FlowInstFindNextTransitionsReq,
+            FlowInstAbortReq, FlowInstBatchBindReq, FlowInstBatchBindResp, FlowInstDetailResp, FlowInstFindNextTransitionResp, FlowInstFindNextTransitionsReq,
             FlowInstFindStateAndTransitionsReq, FlowInstFindStateAndTransitionsResp, FlowInstStartReq, FlowInstSummaryResp, FlowInstTransferReq, FlowInstTransferResp,
             FlowInstTransitionInfo, FlowOperationContext,
         },
@@ -50,7 +50,7 @@ use super::flow_external_serv::FlowExternalServ;
 pub struct FlowInstServ;
 
 impl FlowInstServ {
-    pub async fn start(start_req: &FlowInstStartReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
+    pub async fn start(start_req: &FlowInstStartReq, current_state_name: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
         // get model by own_paths
         let flow_model_id = Self::get_model_id_by_own_paths(&start_req.tag, funs, ctx).await?;
         let flow_model = FlowModelServ::get_item(
@@ -68,7 +68,7 @@ impl FlowInstServ {
         )
         .await?;
         let id = TardisFuns::field.nanoid();
-        let current_state_id = if let Some(current_state_name) = &start_req.current_state_name {
+        let current_state_id = if let Some(current_state_name) = &current_state_name {
             FlowStateServ::match_state_id_and_name_by_name(&start_req.tag, current_state_name, funs, ctx).await?.0
         } else {
             flow_model.init_state_id.clone()
@@ -97,12 +97,13 @@ impl FlowInstServ {
         Ok(id)
     }
 
-    pub async fn batch_bind(bind_req: &FlowInstBindReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<FlowInstBindResp>> {
+    pub async fn batch_bind(batch_bind_req: &FlowInstBatchBindReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<FlowInstBatchBindResp>> {
         let mut result = vec![];
-        for rel_business_obj in &bind_req.rel_business_objs {
-            let flow_model_id = Self::get_model_id_by_own_paths(&bind_req.tag, funs, ctx).await?;
+        for rel_business_obj in &batch_bind_req.rel_business_objs {
+            let flow_model_id = Self::get_model_id_by_own_paths(&batch_bind_req.tag, funs, ctx).await?;
 
-            let (current_state_id, current_state_name) = FlowStateServ::match_state_id_and_name_by_name(&bind_req.tag, &rel_business_obj.current_state_name, funs, ctx).await?;
+            let (current_state_id, current_state_name) =
+                FlowStateServ::match_state_id_and_name_by_name(&batch_bind_req.tag, &rel_business_obj.current_state_name, funs, ctx).await?;
             let id = TardisFuns::field.nanoid();
             let flow_inst: flow_inst::ActiveModel = flow_inst::ActiveModel {
                 id: Set(id.clone()),
@@ -117,13 +118,13 @@ impl FlowInstServ {
                 ..Default::default()
             };
             let resp = if funs.db().insert_one(flow_inst, ctx).await.is_ok() {
-                FlowInstBindResp {
+                FlowInstBatchBindResp {
                     rel_business_obj_id: rel_business_obj.rel_business_obj_id.to_string(),
                     current_state_name,
                     inst_id: Some(id),
                 }
             } else {
-                FlowInstBindResp {
+                FlowInstBatchBindResp {
                     rel_business_obj_id: rel_business_obj.rel_business_obj_id.to_string(),
                     current_state_name,
                     inst_id: None,
@@ -597,21 +598,27 @@ impl FlowInstServ {
         )
         .await?;
 
-        // notify changes
-        FlowExternalServ::do_notify_changes(
-            &flow_model.tag,
-            &flow_inst_detail.rel_business_obj_id,
-            Some(next_flow_state.name.clone()),
-            vec![
-                json!({
-                    "current_state_id": &next_flow_state.id
-                }),
-                json!({ "current_vars": &transfer_req.vars }),
-            ],
-            ctx,
-            funs,
-        )
-        .await?;
+        // notify modify vars
+        if let Some(vars) = &transfer_req.vars {
+            let mut params = vec![];
+            for (var_name, value) in vars {
+                params.push(FlowExternalParams {
+                    rel_tag: None,
+                    var_name: Some(var_name.clone()),
+                    var_id: None,
+                    value: Some(value.clone()),
+                });
+            }
+            FlowExternalServ::do_modify_field(
+                &flow_model.tag,
+                &flow_inst_detail.rel_business_obj_id,
+                Some(next_flow_state.name.clone()),
+                params,
+                ctx,
+                funs,
+            )
+            .await?;
+        }
 
         let mut new_vars: HashMap<String, Value> = HashMap::new();
         if let Some(current_vars) = &flow_inst_detail.current_vars {
@@ -655,6 +662,11 @@ impl FlowInstServ {
         )
         .await?;
 
+        // notify changes
+        if transfer_req.vars.is_none() {
+            FlowExternalServ::do_notify_changes(&flow_model.tag, &flow_inst_detail.rel_business_obj_id, next_flow_state.name.clone(), ctx, funs).await?;
+        }
+
         let post_changes =
             model_transition.into_iter().find(|model_transition| model_transition.id == next_flow_transition.next_flow_transition_id).unwrap_or_default().action_by_post_changes();
         if !post_changes.is_empty() {
@@ -687,11 +699,37 @@ impl FlowInstServ {
                             let mut resp = FlowExternalServ::do_fetch_rel_obj(&current_model.tag, &current_inst.rel_business_obj_id, vec![rel_tag.clone()], ctx, funs).await?;
                             if !resp.rel_bus_objs.is_empty() {
                                 for rel_bus_obj_id in resp.rel_bus_objs.pop().unwrap().rel_bus_obj_ids {
-                                    FlowExternalServ::do_modify_field(&rel_tag, &rel_bus_obj_id, &change_info, ctx, funs).await?;
+                                    FlowExternalServ::do_modify_field(
+                                        &rel_tag,
+                                        &rel_bus_obj_id,
+                                        None,
+                                        vec![FlowExternalParams {
+                                            rel_tag: None,
+                                            var_id: None,
+                                            var_name: Some(change_info.var_name.clone()),
+                                            value: change_info.changed_val.clone(),
+                                        }],
+                                        ctx,
+                                        funs,
+                                    )
+                                    .await?;
                                 }
                             }
                         } else {
-                            FlowExternalServ::do_modify_field(&current_model.tag, &current_inst.rel_business_obj_id, &change_info, ctx, funs).await?;
+                            FlowExternalServ::do_modify_field(
+                                &current_model.tag,
+                                &current_inst.rel_business_obj_id,
+                                None,
+                                vec![FlowExternalParams {
+                                    rel_tag: None,
+                                    var_id: None,
+                                    var_name: Some(change_info.var_name.clone()),
+                                    value: change_info.changed_val.clone(),
+                                }],
+                                ctx,
+                                funs,
+                            )
+                            .await?;
                         }
                     }
                 }

@@ -26,13 +26,13 @@ impl StatsCiRecordApi {
     /// Get Fact Record Pagenated
     #[oai(path = "/fact/:fact_key/:record_key", method = "get")]
     async fn get_fact_record_pagenated(
-        &self, 
-        fact_key: Path<String>, 
-        record_key: Path<String>, 
+        &self,
+        fact_key: Path<String>,
+        record_key: Path<String>,
         page_number: Query<u32>,
         page_size: Query<u32>,
         desc_by_create: Query<Option<bool>>,
-        ctx: TardisContextExtractor
+        ctx: TardisContextExtractor,
     ) -> TardisApiResult<TardisPage<serde_json::Value>> {
         let funs = crate::get_tardis_inst();
         TardisResp::ok(stats_record_serv::get_fact_record_pagenated(&fact_key.0, &record_key.0, page_number.0, page_size.0, desc_by_create.0, &funs, &ctx.0).await?)

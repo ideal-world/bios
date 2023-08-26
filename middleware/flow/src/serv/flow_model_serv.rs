@@ -31,7 +31,7 @@ use crate::{
     dto::{
         flow_model_dto::{
             FlowModelAddReq, FlowModelAggResp, FlowModelBindStateReq, FlowModelDetailResp, FlowModelFilterReq, FlowModelModifyReq, FlowModelSortStatesReq, FlowModelSummaryResp,
-            FlowModelUnbindStateReq, FlowStateAggResp, FlowTemplateModelResp,
+            FlowModelUnbindStateReq, FlowStateAggResp, FlowTemplateModelResp, FlowModelFindRelStateResp,
         },
         flow_state_dto::{FlowStateAddReq, FlowStateFilterReq, FlowSysStateKind},
         flow_transition_dto::{
@@ -1014,5 +1014,15 @@ impl FlowModelServ {
             }
         }
         Ok((is_ring, current_chain))
+    }
+
+    pub async fn find_rel_states(tag: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<FlowModelFindRelStateResp>> {
+        let flow_model_id = FlowInstServ::get_model_id_by_own_paths(tag, funs, ctx).await?;
+        let result = FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelState, &flow_model_id, None, None, funs, ctx).await?.iter().map(|rel| FlowModelFindRelStateResp {
+            id: rel.rel_id.clone(),
+            name: rel.rel_name.clone(),
+        }).collect::<Vec<_>>();
+        
+        Ok(result)
     }
 }
