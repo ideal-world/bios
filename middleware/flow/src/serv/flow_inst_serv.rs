@@ -609,15 +609,17 @@ impl FlowInstServ {
                     value: Some(value.clone()),
                 });
             }
-            FlowExternalServ::do_modify_field(
-                &flow_model.tag,
-                &flow_inst_detail.rel_business_obj_id,
-                Some(next_flow_state.name.clone()),
-                params,
-                ctx,
-                funs,
-            )
-            .await?;
+            if !params.is_empty() {
+                FlowExternalServ::do_modify_field(
+                    &flow_model.tag,
+                    &flow_inst_detail.rel_business_obj_id,
+                    Some(next_flow_state.name.clone()),
+                    params,
+                    ctx,
+                    funs,
+                )
+                .await?;
+            }
         }
 
         let mut new_vars: HashMap<String, Value> = HashMap::new();
@@ -1013,7 +1015,7 @@ impl FlowInstServ {
                 double_check: model_transition.double_check(),
             })
             .collect_vec();
-        let current_flow_state_sys_state = if let Some(state) = FlowStateServ::find_one_item(
+        let current_flow_state = FlowStateServ::find_one_item(
             &FlowStateFilterReq {
                 basic: RbumBasicFilterReq {
                     ids: Some(vec![flow_inst.current_state_id.to_string()]),
@@ -1026,16 +1028,13 @@ impl FlowInstServ {
             funs,
             ctx,
         )
-        .await?
-        {
-            state.sys_state
-        } else {
-            FlowSysStateKind::Finish
-        };
+        .await?;
+
         let state_and_next_transitions = FlowInstFindStateAndTransitionsResp {
             flow_inst_id: flow_inst.id.to_string(),
             current_flow_state_name: flow_inst.current_state_name.as_ref().unwrap_or(&"".to_string()).to_string(),
-            current_flow_state_kind: current_flow_state_sys_state,
+            current_flow_state_kind: current_flow_state.as_ref().map(|state| state.sys_state.clone()).unwrap_or(FlowSysStateKind::Finish),
+            current_flow_state_color: current_flow_state.as_ref().map(|state| state.color.clone()).unwrap_or_default(),
             next_flow_transitions: next_transitions,
         };
         Ok(state_and_next_transitions)
