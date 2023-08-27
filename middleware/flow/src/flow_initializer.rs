@@ -17,8 +17,8 @@ use tardis::{
 use crate::{
     api::{
         cc::{flow_cc_inst_api, flow_cc_model_api, flow_cc_state_api},
-        cs::flow_cs_config_api,
         ci::flow_ci_inst_api,
+        cs::flow_cs_config_api,
     },
     domain::{flow_config, flow_inst, flow_model, flow_state, flow_transition},
     dto::{
