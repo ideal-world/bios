@@ -5,7 +5,7 @@ use bios_basic::test::test_http_client::TestHttpClient;
 use bios_mw_flow::dto::flow_config_dto::FlowConfigModifyReq;
 use bios_mw_flow::dto::flow_inst_dto::{
     FlowInstDetailResp, FlowInstFindNextTransitionResp, FlowInstFindNextTransitionsReq, FlowInstFindStateAndTransitionsReq, FlowInstFindStateAndTransitionsResp, FlowInstStartReq,
-    FlowInstTransferReq, FlowInstTransferResp,
+    FlowInstTransferReq, FlowInstTransferResp, FlowInstBatchBindResp,
 };
 use bios_mw_flow::dto::flow_model_dto::{
     FlowModelAddCustomModelItemReq, FlowModelAddCustomModelReq, FlowModelAddCustomModelResp, FlowModelAggResp, FlowModelBindStateReq, FlowModelModifyReq,
@@ -415,6 +415,15 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
         )
         .await;
     assert!(result.into_iter().find(|resp| resp.tag == "MOCK").unwrap().model_id.is_none());
+
+    // {"tag":"ISSUE","rel_business_objs":[{"rel_business_obj_id":"-c9rgVZOdUH_MbqofO4vc","current_state_name":"已解决","own_paths":"bzeUPv/JXYtZ0"}
+    let body = TardisFuns::json.str_to_json("{\"tag\":\"ISSUE\",\"rel_business_objs\":[{\"rel_business_obj_id\":\"-c9rgVZOdUH_MbqofO4vc\",\"current_state_name\":\"已解决\",\"own_paths\":\"bzeUPv/JXYtZ0\"}]}").unwrap();
+    let _: Vec<FlowInstBatchBindResp> = flow_client
+        .post(
+            "/ci/inst/batch_bind",
+            &body,
+        )
+        .await;
 
     Ok(())
 }
