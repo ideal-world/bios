@@ -23,7 +23,7 @@ use tardis::{
     futures_util::future::join_all,
     serde_json::Value,
     web::web_resp::TardisPage,
-    TardisFuns, TardisFunsInst,
+    TardisFuns, TardisFunsInst, log::debug,
 };
 
 use crate::{
@@ -100,32 +100,36 @@ impl FlowInstServ {
     pub async fn batch_bind(batch_bind_req: &FlowInstBatchBindReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<FlowInstBatchBindResp>> {
         let mut result = vec![];
         for rel_business_obj in &batch_bind_req.rel_business_objs {
+            if rel_business_obj.rel_business_obj_id.is_none() || rel_business_obj.current_state_name.is_none() || rel_business_obj.own_paths.is_none() {
+                debug!("rel_business_obj: {:?}", rel_business_obj);
+                return Err(funs.err().not_found("flow_inst_serv", "batch_bind", "req is valid", ""));
+            }
             let flow_model_id = Self::get_model_id_by_own_paths(&batch_bind_req.tag, funs, ctx).await?;
 
             let (current_state_id, current_state_name) =
-                FlowStateServ::match_state_id_and_name_by_name(&batch_bind_req.tag, &rel_business_obj.current_state_name, funs, ctx).await?;
+                FlowStateServ::match_state_id_and_name_by_name(&batch_bind_req.tag, &rel_business_obj.current_state_name.clone().unwrap_or_default(), funs, ctx).await?;
             let id = TardisFuns::field.nanoid();
             let flow_inst: flow_inst::ActiveModel = flow_inst::ActiveModel {
                 id: Set(id.clone()),
                 rel_flow_model_id: Set(flow_model_id.to_string()),
-                rel_business_obj_id: Set(rel_business_obj.rel_business_obj_id.to_string()),
+                rel_business_obj_id: Set(rel_business_obj.rel_business_obj_id.clone().unwrap_or_default()),
 
                 current_state_id: Set(current_state_id),
 
                 create_ctx: Set(FlowOperationContext::from_ctx(ctx)),
 
-                own_paths: Set(rel_business_obj.own_paths.to_string()),
+                own_paths: Set(rel_business_obj.own_paths.clone().unwrap_or_default()),
                 ..Default::default()
             };
             let resp = if funs.db().insert_one(flow_inst, ctx).await.is_ok() {
                 FlowInstBatchBindResp {
-                    rel_business_obj_id: rel_business_obj.rel_business_obj_id.to_string(),
+                    rel_business_obj_id: rel_business_obj.rel_business_obj_id.clone().unwrap_or_default(),
                     current_state_name,
                     inst_id: Some(id),
                 }
             } else {
                 FlowInstBatchBindResp {
-                    rel_business_obj_id: rel_business_obj.rel_business_obj_id.to_string(),
+                    rel_business_obj_id: rel_business_obj.rel_business_obj_id.clone().unwrap_or_default(),
                     current_state_name,
                     inst_id: None,
                 }
