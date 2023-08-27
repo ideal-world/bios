@@ -4,8 +4,8 @@ use bios_basic::test::test_http_client::TestHttpClient;
 
 use bios_mw_flow::dto::flow_config_dto::FlowConfigModifyReq;
 use bios_mw_flow::dto::flow_inst_dto::{
-    FlowInstDetailResp, FlowInstFindNextTransitionResp, FlowInstFindNextTransitionsReq, FlowInstFindStateAndTransitionsReq, FlowInstFindStateAndTransitionsResp, FlowInstStartReq,
-    FlowInstTransferReq, FlowInstTransferResp, FlowInstBatchBindResp,
+    FlowInstBatchBindReq, FlowInstBatchBindResp, FlowInstBindRelObjReq, FlowInstBindReq, FlowInstDetailResp, FlowInstFindNextTransitionResp, FlowInstFindNextTransitionsReq,
+    FlowInstFindStateAndTransitionsReq, FlowInstFindStateAndTransitionsResp, FlowInstStartReq, FlowInstTransferReq, FlowInstTransferResp,
 };
 use bios_mw_flow::dto::flow_model_dto::{
     FlowModelAddCustomModelItemReq, FlowModelAddCustomModelReq, FlowModelAddCustomModelResp, FlowModelAggResp, FlowModelBindStateReq, FlowModelModifyReq,
@@ -417,11 +417,51 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
     assert!(result.into_iter().find(|resp| resp.tag == "MOCK").unwrap().model_id.is_none());
 
     // {"tag":"ISSUE","rel_business_objs":[{"rel_business_obj_id":"-c9rgVZOdUH_MbqofO4vc","current_state_name":"已解决","own_paths":"bzeUPv/JXYtZ0"}
-    let body = TardisFuns::json.str_to_json("{\"tag\":\"ISSUE\",\"rel_business_objs\":[{\"rel_business_obj_id\":\"-c9rgVZOdUH_MbqofO4vc\",\"current_state_name\":\"已解决\",\"own_paths\":\"bzeUPv/JXYtZ0\"}]}").unwrap();
+    let _: String = flow_client
+        .post(
+            "/ci/inst/bind",
+            &FlowInstBindReq {
+                tag: "ISSUE".to_string(),
+                rel_business_obj_id: "-c9rgVZOdUH_MbqofO4vc".to_string(),
+                create_vars: None,
+                current_state_name: Some("已解决".to_string()),
+            },
+        )
+        .await;
+    let mut rel_business_objs = vec![];
+    for i in 5..8 {
+        let rel_business_obj_id = format!("-c9rgVZOdUH_MbqofO4vc{}", i);
+        rel_business_objs.push(FlowInstBindRelObjReq {
+            rel_business_obj_id: Some(rel_business_obj_id),
+            current_state_name: Some("已解决".to_string()),
+            own_paths: Some("bzeUPv/JXYtZ0".to_string()),
+        });
+    }
     let _: Vec<FlowInstBatchBindResp> = flow_client
         .post(
             "/ci/inst/batch_bind",
-            &body,
+            &FlowInstBatchBindReq {
+                tag: "ISSUE".to_string(),
+                rel_business_objs,
+            },
+        )
+        .await;
+    let mut rel_business_objs = vec![];
+    for i in 0..10 {
+        let rel_business_obj_id = format!("-c9rgVZOdUH_MbqofO4vc{}", i);
+        rel_business_objs.push(FlowInstBindRelObjReq {
+            rel_business_obj_id: Some(rel_business_obj_id),
+            current_state_name: Some("已解决".to_string()),
+            own_paths: Some("bzeUPv/JXYtZ0".to_string()),
+        });
+    }
+    let _: Vec<FlowInstBatchBindResp> = flow_client
+        .post(
+            "/ci/inst/batch_bind",
+            &FlowInstBatchBindReq {
+                tag: "ISSUE".to_string(),
+                rel_business_objs,
+            },
         )
         .await;
 

@@ -21,9 +21,10 @@ use tardis::{
         JoinType, Set,
     },
     futures_util::future::join_all,
+    log::debug,
     serde_json::Value,
     web::web_resp::TardisPage,
-    TardisFuns, TardisFunsInst, log::debug,
+    TardisFuns, TardisFunsInst,
 };
 
 use crate::{
@@ -108,35 +109,54 @@ impl FlowInstServ {
 
             let (current_state_id, current_state_name) =
                 FlowStateServ::match_state_id_and_name_by_name(&batch_bind_req.tag, &rel_business_obj.current_state_name.clone().unwrap_or_default(), funs, ctx).await?;
-            let id = TardisFuns::field.nanoid();
-            let flow_inst: flow_inst::ActiveModel = flow_inst::ActiveModel {
-                id: Set(id.clone()),
-                rel_flow_model_id: Set(flow_model_id.to_string()),
-                rel_business_obj_id: Set(rel_business_obj.rel_business_obj_id.clone().unwrap_or_default()),
+            let inst_id = Self::get_inst_ids_by_rel_business_obj_id(vec![rel_business_obj.rel_business_obj_id.clone().unwrap_or_default()], funs, ctx).await?.pop();
+            let resp = if let Some(inst_id) = inst_id {
+                FlowInstBatchBindResp {
+                    rel_business_obj_id: rel_business_obj.rel_business_obj_id.clone().unwrap_or_default(),
+                    current_state_name,
+                    inst_id: Some(inst_id),
+                }
+            } else {
+                let id = TardisFuns::field.nanoid();
+                let flow_inst: flow_inst::ActiveModel = flow_inst::ActiveModel {
+                    id: Set(id.clone()),
+                    rel_flow_model_id: Set(flow_model_id.to_string()),
+                    rel_business_obj_id: Set(rel_business_obj.rel_business_obj_id.clone().unwrap_or_default()),
 
-                current_state_id: Set(current_state_id),
+                    current_state_id: Set(current_state_id),
 
-                create_ctx: Set(FlowOperationContext::from_ctx(ctx)),
+                    create_ctx: Set(FlowOperationContext::from_ctx(ctx)),
 
-                own_paths: Set(rel_business_obj.own_paths.clone().unwrap_or_default()),
-                ..Default::default()
-            };
-            let resp = if funs.db().insert_one(flow_inst, ctx).await.is_ok() {
+                    own_paths: Set(rel_business_obj.own_paths.clone().unwrap_or_default()),
+                    ..Default::default()
+                };
+                funs.db().insert_one(flow_inst, ctx).await?;
                 FlowInstBatchBindResp {
                     rel_business_obj_id: rel_business_obj.rel_business_obj_id.clone().unwrap_or_default(),
                     current_state_name,
                     inst_id: Some(id),
                 }
-            } else {
-                FlowInstBatchBindResp {
-                    rel_business_obj_id: rel_business_obj.rel_business_obj_id.clone().unwrap_or_default(),
-                    current_state_name,
-                    inst_id: None,
-                }
             };
             result.push(resp);
         }
 
+        Ok(result)
+    }
+
+    pub async fn get_inst_ids_by_rel_business_obj_id(rel_business_obj_ids: Vec<String>, funs: &TardisFunsInst, _ctx: &TardisContext) -> TardisResult<Vec<String>> {
+        #[derive(sea_orm::FromQueryResult)]
+        pub struct FlowInstIdsResult {
+            id: String,
+        }
+        let result = funs
+            .db()
+            .find_dtos::<FlowInstIdsResult>(
+                Query::select().columns([flow_inst::Column::Id]).from(flow_inst::Entity).and_where(Expr::col(flow_inst::Column::RelBusinessObjId).is_in(&rel_business_obj_ids)),
+            )
+            .await?
+            .iter()
+            .map(|rel_inst| rel_inst.id.clone())
+            .collect_vec();
         Ok(result)
     }
 
@@ -760,10 +780,6 @@ impl FlowInstServ {
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<Vec<String>> {
-        #[derive(sea_orm::FromQueryResult)]
-        pub struct FlowInstIdsResult {
-            pub id: String,
-        }
         let mut result_rel_obj_ids = Self::filter_rel_obj_ids_by_state(&rel_bus_obj_ids, &change_info.obj_current_state_id, funs, ctx).await?;
 
         if let Some(change_condition) = change_info.change_condition.clone() {
@@ -809,18 +825,7 @@ impl FlowInstServ {
             result_rel_obj_ids = result_rel_obj_ids.into_iter().filter(|result_rel_obj_id| !mismatch_rel_obj_ids.contains(result_rel_obj_id)).collect_vec();
         }
 
-        let result = funs
-            .db()
-            .find_dtos::<FlowInstIdsResult>(
-                Query::select()
-                    .columns([flow_inst::Column::Id, flow_inst::Column::CurrentStateId, flow_inst::Column::RelBusinessObjId])
-                    .from(flow_inst::Entity)
-                    .and_where(Expr::col(flow_inst::Column::RelBusinessObjId).is_in(&result_rel_obj_ids)),
-            )
-            .await?
-            .iter()
-            .map(|rel_inst| rel_inst.id.clone())
-            .collect_vec();
+        let result = Self::get_inst_ids_by_rel_business_obj_id(result_rel_obj_ids, funs, ctx).await?;
         Ok(result)
     }
 
