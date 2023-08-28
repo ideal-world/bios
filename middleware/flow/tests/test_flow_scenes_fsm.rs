@@ -17,6 +17,7 @@ use bios_mw_flow::dto::flow_transition_dto::{
     StateChangeConditionOp,
 };
 
+use bios_mw_flow::dto::flow_var_dto::{FlowVarInfo, RbumDataTypeKind, RbumWidgetTypeKind};
 use bios_sdk_invoke::clients::spi_kv_client::KvItemSummaryResp;
 use tardis::basic::dto::TardisContext;
 
@@ -142,7 +143,23 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
                     guard_by_spec_role_ids: None,
                     guard_by_spec_org_ids: None,
                     guard_by_other_conds: None,
-                    vars_collect: None,
+                    vars_collect: Some(vec![
+                        FlowVarInfo {
+                            name: "assigned_to".to_string(),
+                            label: "负责人".to_string(),
+                            data_type: RbumDataTypeKind::STRING,
+                            widget_type: RbumWidgetTypeKind::SELECT,
+                            required: Some(true),
+                            ..Default::default()
+                        },
+                        FlowVarInfo {
+                            name: "start_end".to_string(),
+                            label: "计划周期".to_string(),
+                            data_type: RbumDataTypeKind::DATETIME,
+                            widget_type: RbumWidgetTypeKind::DATETIME,
+                            ..Default::default()
+                        },
+                    ]),
                     action_by_pre_callback: None,
                     action_by_post_callback: None,
                     action_by_post_changes: Some(vec![FlowTransitionActionChangeInfo {
