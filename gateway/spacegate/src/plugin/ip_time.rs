@@ -115,7 +115,7 @@ impl SgPluginFilter for SgFilterIpTime {
 
     /// white list is prior
     async fn req_filter(&self, _id: &str, ctx: SgRoutePluginContext) -> TardisResult<(bool, SgRoutePluginContext)> {
-        let socket_addr = ctx.request.get_req_remote_addr();
+        let socket_addr = ctx.request.get_remote_addr();
         let ip = socket_addr.ip();
         let passed = self.check_ip(&ip);
         log::trace!("[{CODE}] Check ip time rule from {socket_addr}, passed {passed}");

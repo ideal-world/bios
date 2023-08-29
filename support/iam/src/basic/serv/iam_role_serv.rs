@@ -563,7 +563,7 @@ impl IamRoleServ {
 
     pub async fn add_rel_res(role_id: &str, res_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         IamRelServ::add_simple_rel(&IamRelKind::IamResRole, res_id, role_id, None, None, false, false, funs, ctx).await?;
-        let sub_role_ids = IamRoleServ::find_id_items(
+        let sub_roles = IamRoleServ::find_items(
             &IamRoleFilterReq {
                 basic: RbumBasicFilterReq {
                     own_paths: Some("".to_string()),
@@ -579,13 +579,44 @@ impl IamRoleServ {
             ctx,
         )
         .await?;
-        for sub_role_id in sub_role_ids {
-            IamRelServ::add_simple_rel(&IamRelKind::IamResRole, res_id, &sub_role_id, None, None, false, false, funs, ctx).await?;
+        for sub_role in sub_roles {
+            let mock_role_ctx = TardisContext {
+                own_paths: sub_role.own_paths.to_string(),
+                ..ctx.clone()
+            };
+            IamRelServ::add_simple_rel(&IamRelKind::IamResRole, res_id, &sub_role.id, None, None, false, false, funs, &mock_role_ctx).await?;
+            mock_role_ctx.execute_task().await?;
         }
         Ok(())
     }
+
     pub async fn delete_rel_res(role_id: &str, res_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        IamRelServ::delete_simple_rel(&IamRelKind::IamResRole, res_id, role_id, funs, ctx).await
+        IamRelServ::delete_simple_rel(&IamRelKind::IamResRole, res_id, role_id, funs, ctx).await?;
+        let sub_roles = IamRoleServ::find_items(
+            &IamRoleFilterReq {
+                basic: RbumBasicFilterReq {
+                    own_paths: Some("".to_string()),
+                    with_sub_own_paths: Some(true).is_some(),
+                    ..Default::default()
+                },
+                extend_role_id: Some(role_id.to_string()),
+                ..Default::default()
+            },
+            None,
+            None,
+            funs,
+            ctx,
+        )
+        .await?;
+        for sub_role in sub_roles {
+            let mock_role_ctx = TardisContext {
+                own_paths: sub_role.own_paths.to_string(),
+                ..ctx.clone()
+            };
+            IamRelServ::delete_simple_rel(&IamRelKind::IamResRole, res_id, &sub_role.id, funs, &mock_role_ctx).await?;
+            mock_role_ctx.execute_task().await?;
+        }
+        Ok(())
     }
 
     pub async fn count_rel_res(role_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<u64> {
