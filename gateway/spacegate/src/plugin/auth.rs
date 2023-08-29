@@ -29,7 +29,7 @@ use std::{collections::HashMap, str::FromStr, sync::Arc};
 use tardis::{
     async_trait,
     basic::{error::TardisError, result::TardisResult},
-    config::config_dto::{AppConfig, CacheConfig, FrameworkConfig, LogConfig, TardisConfig, WebServerConfig},
+    config::config_dto::{AppConfig, CacheConfig, DBConfig, FrameworkConfig, LogConfig, TardisConfig, WebServerConfig},
     log,
     serde_json::{self, json, Value},
     tokio::{sync::RwLock, task::JoinHandle},
@@ -135,6 +135,10 @@ impl SgPluginFilter for SgFilterAuth {
                     ..Default::default()
                 },
                 web_server: WebServerConfig {
+                    enabled: false,
+                    ..Default::default()
+                },
+                db: DBConfig {
                     enabled: false,
                     ..Default::default()
                 },
