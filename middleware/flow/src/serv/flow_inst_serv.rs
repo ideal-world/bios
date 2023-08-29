@@ -103,11 +103,16 @@ impl FlowInstServ {
         let mut result = vec![];
         let mut current_ctx = ctx.clone();
         for rel_business_obj in &batch_bind_req.rel_business_objs {
-            if rel_business_obj.rel_business_obj_id.is_none() || rel_business_obj.current_state_name.is_none() || rel_business_obj.own_paths.is_none() {
+            if rel_business_obj.rel_business_obj_id.is_none()
+                || rel_business_obj.current_state_name.is_none()
+                || rel_business_obj.own_paths.is_none()
+                || rel_business_obj.owner.is_none()
+            {
                 debug!("rel_business_obj: {:?}", rel_business_obj);
                 return Err(funs.err().not_found("flow_inst_serv", "batch_bind", "req is valid", ""));
             }
             current_ctx.own_paths = rel_business_obj.own_paths.clone().unwrap_or_default();
+            current_ctx.owner = rel_business_obj.owner.clone().unwrap_or_default();
             let flow_model_id = Self::get_model_id_by_own_paths(&batch_bind_req.tag, funs, ctx).await?;
 
             let current_state_id = FlowStateServ::match_state_id_by_name(&batch_bind_req.tag, &rel_business_obj.current_state_name.clone().unwrap_or_default(), funs, ctx).await?;
@@ -121,7 +126,7 @@ impl FlowInstServ {
 
                     current_state_id: Set(current_state_id),
 
-                    create_ctx: Set(FlowOperationContext::from_ctx(ctx)),
+                    create_ctx: Set(FlowOperationContext::from_ctx(&current_ctx)),
 
                     own_paths: Set(rel_business_obj.own_paths.clone().unwrap_or_default()),
                     ..Default::default()
@@ -687,7 +692,7 @@ impl FlowInstServ {
         .await?;
 
         // notify change state
-        if transfer_req.vars.is_none() || !transfer_req.vars.as_ref().unwrap().is_empty() {
+        if transfer_req.vars.is_none() || transfer_req.vars.as_ref().unwrap().is_empty() {
             FlowExternalServ::do_notify_changes(&flow_model.tag, &flow_inst_detail.rel_business_obj_id, next_flow_state.name.clone(), ctx, funs).await?;
         }
 

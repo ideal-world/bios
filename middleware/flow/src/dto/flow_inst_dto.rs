@@ -37,6 +37,7 @@ pub struct FlowInstBindRelObjReq {
     pub rel_business_obj_id: Option<String>,
     pub current_state_name: Option<String>,
     pub own_paths: Option<String>,
+    pub owner: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
