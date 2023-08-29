@@ -8,7 +8,7 @@ use bios_sdk_invoke::invoke_config::InvokeConfig;
 use bios_sdk_invoke::invoke_enumeration::InvokeModuleKind;
 use bios_sdk_invoke::invoke_initializer;
 
-use jsonpath_rust::{JsonPathInst, JsonPathQuery};
+use jsonpath_rust::{JsonPathFinder, JsonPathInst, JsonPathQuery};
 use serde::{Deserialize, Serialize};
 use spacegate_kernel::plugins::context::SGRoleInfo;
 use spacegate_kernel::plugins::{
@@ -52,6 +52,8 @@ pub struct SgFilterAuditLog {
     /// Exclude log path exact match.
     exclude_log_path: Vec<String>,
     enabled: bool,
+    #[serde(skip)]
+    jsonpath_inst: Option<JsonPathInst>,
 }
 
 impl SgFilterAuditLog {
@@ -72,28 +74,32 @@ impl SgFilterAuditLog {
         };
         let success = match serde_json::from_str::<Value>(&body_string.unwrap_or_default()) {
             Ok(json) => {
-                if let Ok(matching_value) = json.path(&self.success_json_path) {
-                    if let Some(matching_value) = matching_value.as_array() {
-                        let matching_value = &matching_value[0];
-                        if matching_value.is_string() {
-                            let mut is_match = false;
-                            for value in self.success_json_path_values.clone() {
-                                if Some(value.as_str()) == matching_value.as_str() {
-                                    is_match = true;
-                                    break;
+                if let Some(jsonpath_inst) = self.jsonpath_inst {
+                    if let Ok(matching_value) = JsonPathFinder::new(Box::new(json), Box::new(jsonpath_inst)).find() {
+                        if let Some(matching_value) = matching_value.as_array() {
+                            let matching_value = &matching_value[0];
+                            if matching_value.is_string() {
+                                let mut is_match = false;
+                                for value in self.success_json_path_values.clone() {
+                                    if Some(value.as_str()) == matching_value.as_str() {
+                                        is_match = true;
+                                        break;
+                                    }
                                 }
-                            }
-                            is_match
-                        } else if matching_value.is_number() {
-                            let mut is_match = false;
-                            for value in self.success_json_path_values.clone() {
-                                let value = value.parse::<i64>();
-                                if value.is_ok() && value.ok() == matching_value.as_i64() {
-                                    is_match = true;
-                                    break;
+                                is_match
+                            } else if matching_value.is_number() {
+                                let mut is_match = false;
+                                for value in self.success_json_path_values.clone() {
+                                    let value = value.parse::<i64>();
+                                    if value.is_ok() && value.ok() == matching_value.as_i64() {
+                                        is_match = true;
+                                        break;
+                                    }
                                 }
+                                is_match
+                            } else {
+                                false
                             }
-                            is_match
                         } else {
                             false
                         }
@@ -138,6 +144,7 @@ impl Default for SgFilterAuditLog {
             enabled: false,
             success_json_path_values: vec!["200".to_string(), "201".to_string()],
             exclude_log_path: vec!["/starsysApi/apis".to_string()],
+            jsonpath_inst: None,
         }
     }
 }
@@ -165,11 +172,12 @@ impl SgPluginFilter for SgFilterAuditLog {
                     module_urls: HashMap::from([(InvokeModuleKind::Log.to_string(), self.log_url.clone())]),
                 },
             )?;
+            self.jsonpath_inst = Some(JsonPathInst::from_str(query).map_err(|e| TardisError::bad_request(&format("[Plugin.AuditLog] invalid json path:{e}]"), ""))?);
+            Ok(())
         } else {
-            log::warn!("[Plugin.AuditLog] plugin is not active, miss log_url or spi_app_id.");
             self.enabled = false;
+            Err(TardisError::bad_request("[Plugin.AuditLog] plugin is not active, miss log_url or spi_app_id.", ""))
         }
-        Ok(())
     }
 
     async fn destroy(&self) -> TardisResult<()> {
