@@ -61,6 +61,7 @@ pub struct IamAccountAggModifyReq {
     pub name: Option<TrimString>,
     pub scope_level: Option<RbumScopeLevelKind>,
     pub disabled: Option<bool>,
+    pub temporary: Option<bool>,
     pub status: Option<IamAccountStatusKind>,
     #[oai(validator(min_length = "2", max_length = "1000"))]
     pub icon: Option<String>,
@@ -82,6 +83,7 @@ pub struct IamAccountModifyReq {
     pub name: Option<TrimString>,
     pub scope_level: Option<RbumScopeLevelKind>,
     pub disabled: Option<bool>,
+    pub temporary: Option<bool>,
     pub lock_status: Option<IamAccountLockStateKind>,
 
     pub status: Option<IamAccountStatusKind>,

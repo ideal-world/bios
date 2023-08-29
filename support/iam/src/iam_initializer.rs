@@ -360,6 +360,7 @@ pub async fn init_rbum_data(funs: &TardisFunsInst) -> TardisResult<(String, Stri
             status: None,
             cert_phone: None,
             cert_mail: None,
+            temporary: None,
         },
         funs,
         &ctx,

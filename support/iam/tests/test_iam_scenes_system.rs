@@ -246,6 +246,7 @@ pub async fn sys_console_tenant_mgr_page(sysadmin_name: &str, sysadmin_password:
                 status: None,
                 cert_phone: None,
                 cert_mail: None,
+                temporary: None,
             },
         )
         .await;
@@ -461,6 +462,7 @@ pub async fn sys_console_account_mgr_page(client: &mut BIOSWebTestClient) -> Tar
                 status: None,
                 cert_phone: None,
                 cert_mail: None,
+                temporary: None,
             },
         )
         .await;
