@@ -173,7 +173,7 @@ impl IamAppServ {
         )
         .await?;
         IamRoleServ::copy_role_agg(&app_id, &IamRoleKind::App, funs, &app_ctx).await?;
-        let app_admin_role_id = IamRoleServ::get_embed_subrole_id(&funs.iam_basic_role_app_admin_id(),  funs, &app_ctx).await?;
+        let app_admin_role_id = IamRoleServ::get_embed_subrole_id(&funs.iam_basic_role_app_admin_id(), funs, &app_ctx).await?;
         // todo 是否需要在这里初始化应用级别的set？
         IamSetServ::init_set(IamSetKind::Org, RBUM_SCOPE_LEVEL_APP, funs, &app_ctx).await?;
         IamSetServ::init_set(IamSetKind::Apps, RBUM_SCOPE_LEVEL_APP, funs, &app_ctx).await?;
@@ -191,7 +191,7 @@ impl IamAppServ {
     }
 
     pub async fn modify_app_agg(id: &str, modify_req: &IamAppAggModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        let app_admin_role_id = IamRoleServ::get_embed_subrole_id(&funs.iam_basic_role_app_admin_id(),  funs, &ctx).await?;
+        let app_admin_role_id = IamRoleServ::get_embed_subrole_id(&funs.iam_basic_role_app_admin_id(), funs, &ctx).await?;
         let original_app_admin_account_ids = IamRoleServ::find_id_rel_accounts(&app_admin_role_id, None, None, funs, ctx).await?;
         let original_app_admin_account_ids = HashSet::from_iter(original_app_admin_account_ids.iter().cloned());
         Self::modify_item(

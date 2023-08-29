@@ -13,7 +13,7 @@ pub struct Model {
     pub sort: i64,
 
     pub kind: i16,
-    
+
     pub in_base: bool,
     pub in_embed: bool,
     pub extend_role_id: String,
