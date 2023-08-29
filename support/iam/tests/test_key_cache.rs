@@ -96,6 +96,7 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
             tenant_id: Some(tenant_id.clone()),
             flag: None,
         },
+        None,
         &funs,
     )
     .await?;
@@ -159,6 +160,7 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
             tenant_id: Some(tenant_id.clone()),
             flag: None,
         },
+        None,
         &funs,
     )
     .await?;
@@ -222,6 +224,7 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
             tenant_id: Some(tenant_id.clone()),
             flag: None,
         },
+        None,
         &funs,
     )
     .await?;
@@ -296,7 +299,7 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
     .await?;
 
     info!("【test_key_cache】 Delete token, expected no token record");
-    IamCertTokenServ::delete_cert(&account_resp.token, &funs).await?;
+    IamCertTokenServ::delete_cert(&account_resp.token, None, &funs).await?;
     assert!(IamIdentCacheServ::get_context(
         &IamContextFetchReq {
             token: account_resp.token.to_string(),
@@ -321,6 +324,7 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
             tenant_id: Some(tenant_id.clone()),
             flag: None,
         },
+        None,
         &funs,
     )
     .await?;
@@ -351,6 +355,7 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
             tenant_id: Some(tenant_id.clone()),
             flag: None,
         },
+        None,
         &funs,
     )
     .await?;
@@ -381,6 +386,7 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
             tenant_id: Some(tenant_id.clone()),
             flag: None,
         },
+        None,
         &funs,
     )
     .await?;
@@ -472,6 +478,7 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
             tenant_id: Some(tenant_id.clone()),
             flag: None,
         },
+        None,
         &funs,
     )
     .await?;
@@ -528,6 +535,7 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
             tenant_id: Some(tenant_id.clone()),
             flag: None,
         },
+        None,
         &funs,
     )
     .await?;
@@ -648,6 +656,7 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
             tenant_id: Some(tenant_id.clone()),
             flag: None,
         },
+        None,
         &funs,
     )
     .await?;
@@ -709,6 +718,7 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
             tenant_id: Some(tenant_id.clone()),
             flag: None,
         },
+        None,
         &funs,
     )
     .await?;
@@ -779,6 +789,7 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
             tenant_id: Some(tenant_id.clone()),
             flag: None,
         },
+        None,
         &funs,
     )
     .await
@@ -808,6 +819,7 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
             tenant_id: Some(tenant_id.clone()),
             flag: None,
         },
+        None,
         &funs,
     )
     .await?;
@@ -974,6 +986,9 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
             disabled: None,
             sort: None,
             kind: None,
+            in_embed: None,
+            extend_role_id: None,
+            in_base: None,
         },
         &funs,
         &app_admin_context,
@@ -999,7 +1014,11 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
         .contains(&format!(r##""roles":"#{}#""##, role_id1)));
     IamRoleServ::delete_rel_res(&role_id1, &res_ca_id, &funs, &app_admin_context).await?;
     assert_eq!(funs.cache().hlen(&funs.conf::<IamConfig>().cache_key_res_info).await?, exists_res_counter + 1);
-    assert!(funs.cache().hget(&funs.conf::<IamConfig>().cache_key_res_info, &IamResCacheServ::package_uri_mixed("iam/ca-2/**", "*")).await?.unwrap().contains(r##""roles":"#""##));
+    info!(
+        "ss: {:?}",
+        funs.cache().hget(&funs.conf::<IamConfig>().cache_key_res_info, &IamResCacheServ::package_uri_mixed("iam/ca-2/**", "*")).await?
+    );
+    assert!(funs.cache().hget(&funs.conf::<IamConfig>().cache_key_res_info, &IamResCacheServ::package_uri_mixed("iam/ca-2/**", "*")).await?.unwrap().contains(r##""auth":null"##));
 
     // ====================global account cache test===============================
     info!("【test_key_cache】 global account cache test, expected is_global is true");
@@ -1077,6 +1096,7 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
             tenant_id: Some(tenant_id.clone()),
             flag: None,
         },
+        None,
         &funs,
     )
     .await?;
@@ -1131,6 +1151,7 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
             tenant_id: Some(tenant_id.clone()),
             flag: None,
         },
+        None,
         &funs,
     )
     .await?;

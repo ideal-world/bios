@@ -12,8 +12,8 @@ use crate::basic::dto::iam_filer_dto::IamRoleFilterReq;
 use crate::basic::dto::iam_role_dto::{IamRoleAggAddReq, IamRoleAggModifyReq, IamRoleDetailResp, IamRoleSummaryResp};
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_role_serv::IamRoleServ;
-use crate::iam_constants;
 use crate::iam_constants::RBUM_SCOPE_LEVEL_TENANT;
+use crate::iam_constants::{self, RBUM_SCOPE_LEVEL_APP};
 use crate::iam_enumeration::IamRoleKind;
 use bios_basic::helper::request_helper::add_remote_ip;
 use tardis::web::poem::Request;
@@ -71,6 +71,9 @@ impl IamCtRoleApi {
         id: Query<Option<String>>,
         name: Query<Option<String>>,
         app_id: Query<Option<String>>,
+        in_base: Query<Option<bool>>,
+        in_embed: Query<Option<bool>>,
+        extend_role_id: Query<Option<String>>,
         with_sub: Query<Option<bool>>,
         page_number: Query<u32>,
         page_size: Query<u32>,
@@ -91,6 +94,9 @@ impl IamCtRoleApi {
                     ..Default::default()
                 },
                 kind: Some(IamRoleKind::Tenant),
+                in_base: in_base.0,
+                in_embed: in_embed.0,
+                extend_role_id: extend_role_id.0,
                 ..Default::default()
             },
             page_number.0,
@@ -230,5 +236,59 @@ impl IamCtRoleApi {
         let result = IamRoleServ::find_simple_rel_res(&id.0, desc_by_create.0, desc_by_update.0, &funs, &ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
+    }
+
+    /// Add Role Rel Account
+    #[oai(path = "/apps/:app_ids/:id/account/batch/:account_ids", method = "put")]
+    async fn batch_add_apps_rel_account(
+        &self,
+        app_ids: Path<String>,
+        id: Path<String>,
+        account_ids: Path<String>,
+        ctx: TardisContextExtractor,
+        request: &Request,
+    ) -> TardisApiResult<Void> {
+        add_remote_ip(&request, &ctx.0).await?;
+        let ctx = ctx.0;
+        let mut funs = iam_constants::get_tardis_inst();
+        funs.begin().await?;
+        let apps_split: Vec<&str> = app_ids.0.split(',').collect::<Vec<_>>();
+        let account_split: Vec<&str> = account_ids.0.split(',').collect::<Vec<_>>();
+        for app_id in apps_split {
+            let mock_app_ctx = IamCertServ::try_use_app_ctx(ctx.clone(), Some(app_id.to_string()))?;
+            for account_id in account_split.clone() {
+                IamRoleServ::add_rel_account(&id.0, &account_id, Some(RBUM_SCOPE_LEVEL_APP), &funs, &mock_app_ctx).await?;
+            }
+        }
+        funs.commit().await?;
+        ctx.execute_task().await?;
+        TardisResp::ok(Void {})
+    }
+
+    /// Add Role Rel Account
+    #[oai(path = "/apps/:app_ids/:id/account/batch/:account_ids", method = "delete")]
+    async fn batch_delete_apps_rel_account(
+        &self,
+        app_ids: Path<String>,
+        id: Path<String>,
+        account_ids: Path<String>,
+        ctx: TardisContextExtractor,
+        request: &Request,
+    ) -> TardisApiResult<Void> {
+        add_remote_ip(&request, &ctx.0).await?;
+        let ctx = ctx.0;
+        let mut funs = iam_constants::get_tardis_inst();
+        funs.begin().await?;
+        let apps_split: Vec<&str> = app_ids.0.split(',').collect::<Vec<_>>();
+        let account_split: Vec<&str> = account_ids.0.split(',').collect::<Vec<_>>();
+        for app_id in apps_split {
+            let mock_app_ctx = IamCertServ::try_use_app_ctx(ctx.clone(), Some(app_id.to_string()))?;
+            for account_id in account_split.clone() {
+                IamRoleServ::delete_rel_account(&id.0, &account_id, Some(RBUM_SCOPE_LEVEL_APP), &funs, &mock_app_ctx).await?;
+            }
+        }
+        funs.commit().await?;
+        ctx.execute_task().await?;
+        TardisResp::ok(Void {})
     }
 }

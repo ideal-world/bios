@@ -67,7 +67,6 @@ impl From<LogParamTag> for String {
 
 impl IamLogClient {
     pub async fn add_ctx_task(tag: LogParamTag, key: Option<String>, op_describe: String, op_kind: Option<String>, ctx: &TardisContext) -> TardisResult<()> {
-        info!("log begin");
         let ctx_clone = ctx.clone();
         ctx.add_async_task(Box::new(|| {
             Box::pin(async move {
@@ -98,7 +97,6 @@ impl IamLogClient {
                     )
                     .await
                     .unwrap();
-                    info!("log end ");
                 });
                 task_handle.await.unwrap();
                 Ok(())

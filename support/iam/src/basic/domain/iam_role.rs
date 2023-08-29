@@ -13,6 +13,10 @@ pub struct Model {
     pub sort: i64,
 
     pub kind: i16,
+    
+    pub in_base: bool,
+    pub in_embed: bool,
+    pub extend_role_id: String,
 
     pub own_paths: String,
 }
@@ -33,6 +37,9 @@ impl TardisActiveModel for ActiveModel {
             .col(ColumnDef::new(Column::Id).not_null().string().primary_key())
             .col(ColumnDef::new(Column::Icon).not_null().string())
             .col(ColumnDef::new(Column::Sort).not_null().big_integer())
+            .col(ColumnDef::new(Column::InBase).not_null().boolean())
+            .col(ColumnDef::new(Column::InEmbed).not_null().boolean())
+            .col(ColumnDef::new(Column::ExtendRoleId).not_null().string())
             .col(ColumnDef::new(Column::OwnPaths).not_null().string());
         if db == DatabaseBackend::MySql {
             builder.engine("InnoDB").character_set("utf8mb4").collate("utf8mb4_0900_as_cs");
