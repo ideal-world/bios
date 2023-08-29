@@ -26,7 +26,7 @@ impl BaseSpiClient {
             owner: funs.invoke_conf_spi_app_id(),
             ..ctx.clone()
         };
-        let base_ctx = (TARDIS_CONTEXT.to_string(), TardisFuns::crypto.base64.encode(&TardisFuns::json.obj_to_string(&spi_ctx)?));
+        let base_ctx = (TARDIS_CONTEXT.to_string(), TardisFuns::crypto.base64.encode(TardisFuns::json.obj_to_string(&spi_ctx)?));
         if let Some(mut headers) = headers {
             headers.push(base_ctx);
             return Ok(Some(headers));

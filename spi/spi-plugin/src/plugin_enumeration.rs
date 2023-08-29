@@ -6,13 +6,13 @@ use tardis::db::sea_orm::{DbErr, QueryResult, TryGetError, TryGetable};
 use tardis::derive_more::Display;
 use tardis::web::poem_openapi;
 
-#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, sea_orm::strum::EnumString)]
+#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, strum::EnumString)]
 pub enum PluginAppBindRelKind {
     PluginAppBindKind,
 }
 
 #[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
-#[cfg_attr(feature = "default", derive(poem_openapi::Enum, sea_orm::strum::EnumString))]
+#[cfg_attr(feature = "default", derive(poem_openapi::Enum, strum::EnumString))]
 pub enum PluginApiMethodKind {
     GET,
     PUT,

@@ -20,7 +20,7 @@ spi-pg = ["tardis/reldb-postgres"]
 
 [dependencies]
 serde.workspace = true
-tardis = { path = "../../../tardis/tardis", features = [
+tardis = { workspace = true, features = [
     "reldb-postgres",
     "web-server",
     "crypto",
@@ -37,11 +37,7 @@ strum = { version = "0.25.0", features = ["derive"] }
 tokio-stream = { version = "0.1.14", features = ["sync"] }
 
 [dev-dependencies]
-tardis = { path = "../../../tardis/tardis", features = [
-    "test",
-    "conf-remote",
-    "mq",
-] }
+tardis = { workspace = true, features = ["test", "conf-remote", "mq"] }
 bios-basic = { path = "../../basic", features = ["default", "test"] }
 reqwest = "*"
 [build-dependencies]

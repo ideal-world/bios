@@ -11,7 +11,7 @@ use tardis::{
     web::poem_openapi,
 };
 
-#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, sea_orm::strum::EnumString)]
+#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, strum::EnumString)]
 pub enum StatsDataTypeKind {
     #[oai(rename = "string")]
     String,
@@ -277,7 +277,7 @@ impl TryGetable for StatsDataTypeKind {
     }
 }
 
-#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, sea_orm::strum::EnumString)]
+#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, strum::EnumString)]
 pub enum StatsFactColKind {
     #[oai(rename = "dimension")]
     Dimension,
@@ -298,7 +298,7 @@ impl TryGetable for StatsFactColKind {
     }
 }
 
-#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, sea_orm::strum::EnumString)]
+#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, strum::EnumString)]
 pub enum StatsQueryAggFunKind {
     #[oai(rename = "sum")]
     Sum,
@@ -335,7 +335,7 @@ impl TryGetable for StatsQueryAggFunKind {
     }
 }
 
-#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, sea_orm::strum::EnumString)]
+#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, strum::EnumString)]
 pub enum StatsQueryTimeWindowKind {
     #[oai(rename = "date")]
     Date,

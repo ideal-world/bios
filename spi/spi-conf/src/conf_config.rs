@@ -29,7 +29,7 @@ impl Default for ConfConfig {
     fn default() -> Self {
         use tardis::crypto::*;
         use tardis::rand::*;
-        let auth_key = crypto_base64::TardisCryptoBase64.encode(&format!("{:016x}", random::<u128>()));
+        let auth_key = crypto_base64::TardisCryptoBase64.encode(format!("{:016x}", random::<u128>()));
         let password = format!("{:016x}", random::<u128>());
 
         Self {

@@ -77,7 +77,7 @@ async fn test_tardis_compatibility(_test_client: &TestHttpClient) -> TardisResul
         owner: "app001".to_string(),
         ..Default::default()
     };
-    let ctx_base64 = &TardisFuns::crypto.base64.encode(&TardisFuns::json.obj_to_string(&ctx)?);
+    let ctx_base64 = &TardisFuns::crypto.base64.encode(TardisFuns::json.obj_to_string(&ctx)?);
     let mut headers = reqwest::header::HeaderMap::new();
     headers.append(TardisFuns::fw_config().web_server.context_conf.context_header_name.as_str(), ctx_base64.parse().unwrap());
     let client = reqwest::ClientBuilder::default().danger_accept_invalid_certs(true).default_headers(headers).build().unwrap();
@@ -199,11 +199,4 @@ async fn test_tardis_compatibility(_test_client: &TestHttpClient) -> TardisResul
         .await
         .expect("publish failed");
     Ok(())
-}
-
-fn wait_press_enter() {
-    use std::io::*;
-    let mut buf = String::new();
-    println!("Press 'Enter' to continue");
-    stdin().read_line(&mut buf).unwrap();
 }
