@@ -111,7 +111,7 @@ pub struct FlowStateDetailResp {
     pub disabled: bool,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, sea_orm::strum::EnumIter, sea_orm::DeriveActiveEnum)]
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, strum::EnumIter, sea_orm::DeriveActiveEnum)]
 #[sea_orm(rs_type = "String", db_type = "String(Some(255))")]
 pub enum FlowSysStateKind {
     #[sea_orm(string_value = "start")]
@@ -122,7 +122,7 @@ pub enum FlowSysStateKind {
     Finish,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, sea_orm::strum::EnumIter, sea_orm::DeriveActiveEnum)]
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, strum::EnumIter, sea_orm::DeriveActiveEnum)]
 #[sea_orm(rs_type = "String", db_type = "String(Some(255))")]
 pub enum FlowStateKind {
     #[sea_orm(string_value = "simple")]
