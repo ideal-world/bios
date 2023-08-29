@@ -36,7 +36,7 @@ impl SpiLogClient {
 
         //add log item
         let mut body = HashMap::from([
-            ("tag", "Auth".to_string()),
+            ("tag", "auth".to_string()),
             ("content", TardisFuns::json.obj_to_string(&content)?),
             ("owner", ctx.owner.clone()),
             ("owner_paths", ctx.own_paths.clone()),

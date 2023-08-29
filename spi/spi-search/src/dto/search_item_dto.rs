@@ -101,6 +101,8 @@ pub struct SearchItemSearchReq {
     pub ctx: SearchItemSearchCtxReq,
     // Search conditions
     pub query: SearchItemQueryReq,
+    // Advanced search
+    pub adv_query: Option<Vec<AdvSearchItemQueryReq>>,
     // Sort
     // When the record set is very large, it will seriously affect the performance, it is not recommended to use.
     pub sort: Option<Vec<SearchItemSearchSortReq>>,
@@ -137,6 +139,17 @@ impl SearchItemSearchCtxReq {
         }
         sqls
     }
+}
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Default)]
+pub struct AdvSearchItemQueryReq {
+    pub group_by_or: Option<bool>,
+    pub create_time_start: Option<DateTime<Utc>>,
+    pub create_time_end: Option<DateTime<Utc>>,
+    pub update_time_start: Option<DateTime<Utc>>,
+    pub update_time_end: Option<DateTime<Utc>>,
+    // Extended filtering conditions
+    pub ext: Option<Vec<BasicQueryCondInfo>>,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Default)]

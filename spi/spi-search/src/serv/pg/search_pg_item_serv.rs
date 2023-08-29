@@ -352,6 +352,107 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
         }
     }
 
+    // advanced query
+    let mut sql_adv_query = vec![];
+    if let Some(adv_query) = &search_req.adv_query {
+        for group_query in adv_query {
+            let mut sql_and_where = vec![];
+            if let Some(create_time_start) = group_query.create_time_start {
+                sql_vals.push(Value::from(create_time_start));
+                sql_and_where.push(format!("create_time >= ${}", sql_vals.len()));
+            }
+            if let Some(create_time_end) = group_query.create_time_end {
+                sql_vals.push(Value::from(create_time_end));
+                sql_and_where.push(format!("create_time <= ${}", sql_vals.len()));
+            }
+            if let Some(update_time_start) = group_query.update_time_start {
+                sql_vals.push(Value::from(update_time_start));
+                sql_and_where.push(format!("update_time >= ${}", sql_vals.len()));
+            }
+            if let Some(update_time_end) = group_query.update_time_end {
+                sql_vals.push(Value::from(update_time_end));
+                sql_and_where.push(format!("update_time <= ${}", sql_vals.len()));
+            }
+            let err_not_found = |ext_item: &BasicQueryCondInfo| {
+                Err(funs.err().not_found(
+                    "item",
+                    "search",
+                    &format!("The ext field=[{}] value=[{}] operation=[{}] is not legal.", &ext_item.field, ext_item.value, &ext_item.op,),
+                    "404-spi-search-op-not-legal",
+                ))
+            };
+            if let Some(ext) = &group_query.ext {
+                for ext_item in ext {
+                    let value = db_helper::json_to_sea_orm_value(&ext_item.value, ext_item.op == BasicQueryOpKind::Like);
+                    let Some(mut value) = value else {
+                        return err_not_found(ext_item)
+                    };
+                    if ext_item.op == BasicQueryOpKind::In {
+                        if value.len() == 1 {
+                            sql_and_where.push(format!("ext -> '{}' ? ${}", ext_item.field, sql_vals.len() + 1));
+                        } else {
+                            sql_and_where.push(format!(
+                                "ext -> '{}' ?| array[{}]",
+                                ext_item.field,
+                                (0..value.len()).map(|idx| format!("${}", sql_vals.len() + idx + 1)).collect::<Vec<String>>().join(", ")
+                            ));
+                        }
+                        for val in value {
+                            sql_vals.push(val);
+                        }
+                    } else {
+                        if value.len() > 1 {
+                            return err_not_found(ext_item);
+                        }
+                        let Some(value) = value.pop() else {
+                            return Err(funs.err().bad_request(
+                                "item",
+                                "search",
+                                "Request item using 'IN' operator show hava a value",
+                                "400-spi-item-op-in-without-value",
+                            ))
+                        };
+                        if let Value::Bool(_) = value {
+                            sql_and_where.push(format!("(ext ->> '{}')::boolean {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
+                        } else if let Value::TinyInt(_) = value {
+                            sql_and_where.push(format!("(ext ->> '{}')::smallint {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
+                        } else if let Value::SmallInt(_) = value {
+                            sql_and_where.push(format!("(ext ->> '{}')::smallint {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
+                        } else if let Value::Int(_) = value {
+                            sql_and_where.push(format!("(ext ->> '{}')::integer {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
+                        } else if let Value::BigInt(_) = value {
+                            sql_and_where.push(format!("(ext ->> '{}')::bigint {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
+                        } else if let Value::TinyUnsigned(_) = value {
+                            sql_and_where.push(format!("(ext ->> '{}')::smallint {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
+                        } else if let Value::SmallUnsigned(_) = value {
+                            sql_and_where.push(format!("(ext ->> '{}')::integer {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
+                        } else if let Value::Unsigned(_) = value {
+                            sql_and_where.push(format!("(ext ->> '{}')::bigint {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
+                        } else if let Value::BigUnsigned(_) = value {
+                            // TODO
+                            sql_and_where.push(format!("(ext ->> '{}')::bigint {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
+                        } else if let Value::Float(_) = value {
+                            sql_and_where.push(format!("(ext ->> '{}')::real {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
+                        } else if let Value::Double(_) = value {
+                            sql_and_where.push(format!("(ext ->> '{}')::double precision {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
+                        } else {
+                            sql_and_where.push(format!("ext ->> '{}' {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
+                        }
+                        sql_vals.push(value);
+                    }
+                }
+            }
+            if !sql_and_where.is_empty() {
+                sql_adv_query.push(format!(
+                    " {} ( {} )",
+                    if group_query.group_by_or.unwrap_or(false) { "OR" } else { "AND" },
+                    sql_and_where.join(" AND ")
+                ));
+            }
+        }
+    }
+    let sql_adv_query = if sql_adv_query.is_empty() { "".to_string() } else { sql_adv_query.join(" ") };
+
     sql_vals.push(Value::from(search_req.page.size));
     sql_vals.push(Value::from((search_req.page.number - 1) * search_req.page.size as u32));
     let page_fragments = format!("LIMIT ${} OFFSET ${}", sql_vals.len() - 1, sql_vals.len());
@@ -366,6 +467,7 @@ FROM {table_name}{}
 WHERE 
     {}
     {}
+    {sql_adv_query}
 {}"#,
                 if search_req.page.fetch_total { ", count(*) OVER() AS total" } else { "" },
                 select_fragments,

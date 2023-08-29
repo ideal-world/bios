@@ -500,7 +500,7 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
         if ignore_group_agg {
             "".to_string()
         } else {
-            ",string_agg(_._key || ' - ' || _._own_paths || ' - ' || _._ct, ',') as s_agg".to_string()
+            ",string_agg(_._key || ' - ' || _._own_paths || ' - ' || to_char(_._ct, 'YYYY-MM-DD HH24:MI:SS'), ',') as s_agg".to_string()
         },
         if ignore_group_agg {
             "".to_string()

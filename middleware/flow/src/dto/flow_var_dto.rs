@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use std::{default, str::FromStr};
+use std::str::FromStr;
 use tardis::{
     db::sea_orm::{self, strum::Display, DbErr, QueryResult, TryGetError, TryGetable},
     serde_json::Value,
@@ -45,7 +45,7 @@ pub struct FlowVarInfo {
 
 // In order to adapt to the JAVA program, the corresponding kind in rbum is changed to uppercase format (only here for the time being, the subsequent can be placed in the public module)
 // 为了和JAVA程序适配，此处把rbum中对应的kind改为大写格式（暂时只有此处需要，后续可以放置到公共模块）
-#[derive(Display, Clone, Debug, Default, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, sea_orm::strum::EnumString)]
+#[derive(Display, Clone, Debug, Default, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, strum::EnumString)]
 pub enum RbumDataTypeKind {
     #[default]
     STRING,
@@ -74,7 +74,7 @@ impl TryGetable for RbumDataTypeKind {
     }
 }
 
-#[derive(Display, Clone, Debug, Default, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, sea_orm::strum::EnumString)]
+#[derive(Display, Clone, Debug, Default, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, strum::EnumString)]
 pub enum RbumWidgetTypeKind {
     #[default]
     INPUT,

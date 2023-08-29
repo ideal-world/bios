@@ -1,5 +1,3 @@
-mod v1;
-
 use tardis::basic::dto::TardisContext;
 use tardis::web::poem;
 use tardis::web::poem_openapi;
@@ -8,9 +6,12 @@ use tardis::web::poem_openapi::auth::BasicAuthorization;
 use crate::dto::conf_auth_dto::NacosAuth;
 use crate::serv::{auth, jwt_validate};
 
+mod v1;
 pub use self::v1::*;
 mod v2;
 pub use self::v2::*;
+mod grpc;
+pub use self::grpc::*;
 
 pub type ConfNacosApi = (ConfNacosV1Api, ConfNacosV2Api);
 

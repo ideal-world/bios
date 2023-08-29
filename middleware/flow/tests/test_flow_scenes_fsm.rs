@@ -4,12 +4,12 @@ use bios_basic::test::test_http_client::TestHttpClient;
 
 use bios_mw_flow::dto::flow_config_dto::FlowConfigModifyReq;
 use bios_mw_flow::dto::flow_inst_dto::{
-    FlowInstDetailResp, FlowInstFindNextTransitionResp, FlowInstFindNextTransitionsReq, FlowInstFindStateAndTransitionsReq, FlowInstFindStateAndTransitionsResp, FlowInstStartReq,
-    FlowInstTransferReq, FlowInstTransferResp,
+    FlowInstBatchBindReq, FlowInstBatchBindResp, FlowInstBindRelObjReq, FlowInstBindReq, FlowInstDetailResp, FlowInstFindNextTransitionResp, FlowInstFindNextTransitionsReq,
+    FlowInstFindStateAndTransitionsReq, FlowInstFindStateAndTransitionsResp, FlowInstStartReq, FlowInstTransferReq, FlowInstTransferResp,
 };
 use bios_mw_flow::dto::flow_model_dto::{
-    FlowModelAggResp, FlowModelBindStateReq, FlowModelModifyReq, FlowModelSortStateInfoReq, FlowModelSortStatesReq, FlowModelSummaryResp, FlowModelUnbindStateReq,
-    FlowTemplateModelResp,
+    FlowModelAddCustomModelItemReq, FlowModelAddCustomModelReq, FlowModelAddCustomModelResp, FlowModelAggResp, FlowModelBindStateReq, FlowModelModifyReq,
+    FlowModelSortStateInfoReq, FlowModelSortStatesReq, FlowModelSummaryResp, FlowModelUnbindStateReq, FlowTemplateModelResp,
 };
 use bios_mw_flow::dto::flow_state_dto::FlowStateSummaryResp;
 use bios_mw_flow::dto::flow_transition_dto::{
@@ -17,6 +17,7 @@ use bios_mw_flow::dto::flow_transition_dto::{
     StateChangeConditionOp,
 };
 
+use bios_mw_flow::dto::flow_var_dto::{FlowVarInfo, RbumDataTypeKind, RbumWidgetTypeKind};
 use bios_sdk_invoke::clients::spi_kv_client::KvItemSummaryResp;
 use tardis::basic::dto::TardisContext;
 
@@ -142,7 +143,23 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
                     guard_by_spec_role_ids: None,
                     guard_by_spec_org_ids: None,
                     guard_by_other_conds: None,
-                    vars_collect: None,
+                    vars_collect: Some(vec![
+                        FlowVarInfo {
+                            name: "assigned_to".to_string(),
+                            label: "负责人".to_string(),
+                            data_type: RbumDataTypeKind::STRING,
+                            widget_type: RbumWidgetTypeKind::SELECT,
+                            required: Some(true),
+                            ..Default::default()
+                        },
+                        FlowVarInfo {
+                            name: "start_end".to_string(),
+                            label: "计划周期".to_string(),
+                            data_type: RbumDataTypeKind::DATETIME,
+                            widget_type: RbumWidgetTypeKind::DATETIME,
+                            ..Default::default()
+                        },
+                    ]),
                     action_by_pre_callback: None,
                     action_by_post_callback: None,
                     action_by_post_changes: Some(vec![FlowTransitionActionChangeInfo {
@@ -177,19 +194,8 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
     info!("model_agg_new: {:?}", model_agg_new);
     // 4.Start a instance
     // mock tenant content
-    ctx.own_paths = "t1/app01/user01".to_string();
+    ctx.own_paths = "t1/app01".to_string();
     flow_client.set_auth(&ctx)?;
-    let req_inst_id1: String = flow_client
-        .post(
-            "/cc/inst",
-            &FlowInstStartReq {
-                tag: "TS".to_string(),
-                create_vars: None,
-                rel_business_obj_id: TardisFuns::field.nanoid(),
-                current_state_name: None,
-            },
-        )
-        .await;
     let ticket_inst_rel_id = "mock-ticket-obj-id".to_string();
     let iter_inst_rel_id = "mock-iter-obj-id".to_string();
     let req_inst_id1: String = flow_client
@@ -199,7 +205,6 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
                 tag: "REQ".to_string(),
                 create_vars: None,
                 rel_business_obj_id: TardisFuns::field.nanoid(),
-                current_state_name: None,
             },
         )
         .await;
@@ -210,7 +215,6 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
                 tag: "REQ".to_string(),
                 create_vars: None,
                 rel_business_obj_id: TardisFuns::field.nanoid(),
-                current_state_name: None,
             },
         )
         .await;
@@ -221,7 +225,6 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
                 tag: "TICKET".to_string(),
                 create_vars: None,
                 rel_business_obj_id: ticket_inst_rel_id.clone(),
-                current_state_name: None,
             },
         )
         .await;
@@ -232,7 +235,6 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
                 tag: "ITER".to_string(),
                 create_vars: None,
                 rel_business_obj_id: iter_inst_rel_id.clone(),
-                current_state_name: None,
             },
         )
         .await;
@@ -282,7 +284,8 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
                     .unwrap()
                     .next_flow_transition_id
                     .to_string(),
-                vars: Some(TardisFuns::json.json_to_obj(json!({ "reason":"测试关闭" })).unwrap()),
+                // vars: Some(TardisFuns::json.json_to_obj(json!({ "reason":"测试关闭" })).unwrap()),
+                vars: Some(TardisFuns::json.json_to_obj(json!({})).unwrap()),
                 message: None,
             },
         )
@@ -389,7 +392,7 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
         )
         .await;
     let mut vars = HashMap::new();
-    vars.insert("assigned".to_string(), json!("xxxx_001"));
+    vars.insert("assigned_to".to_string(), json!("xxxx_001"));
     let _transfer: FlowInstTransferResp = flow_client
         .put(
             &format!("/cc/inst/{}/transition/transfer", req_inst_id2),
@@ -408,6 +411,79 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
         .await;
     let ticket: FlowInstDetailResp = flow_client.get(&format!("/cc/inst/{}", ticket_inst_id)).await;
     assert_eq!(ticket.current_state_id, ticket_model_agg.states.iter().find(|state| state.name == "处理中").unwrap().id);
+
+    // 7. bind app custom model
+    ctx.own_paths = "t1/app01".to_string();
+    flow_client.set_auth(&ctx)?;
+    let mut modify_configs = vec![];
+    let tags = vec!["REQ", "MS", "PROJ", "ITER", "TICKET", "MOCK"];
+    for tag in tags {
+        modify_configs.push(FlowModelAddCustomModelItemReq {
+            tag: tag.to_string(),
+            feature_template_id: None,
+        });
+    }
+    let result: Vec<FlowModelAddCustomModelResp> = flow_client
+        .post(
+            "/cc/model/add_custom_model",
+            &FlowModelAddCustomModelReq {
+                proj_template_id: Some(template_id.clone()),
+                bind_model_objs: modify_configs,
+            },
+        )
+        .await;
+    assert!(result.into_iter().find(|resp| resp.tag == "MOCK").unwrap().model_id.is_none());
+
+    // {"tag":"ISSUE","rel_business_objs":[{"rel_business_obj_id":"-c9rgVZOdUH_MbqofO4vc","current_state_name":"已解决","own_paths":"bzeUPv/JXYtZ0"}
+    let _: String = flow_client
+        .post(
+            "/ci/inst/bind",
+            &FlowInstBindReq {
+                tag: "ISSUE".to_string(),
+                rel_business_obj_id: "-c9rgVZOdUH_MbqofO4vc".to_string(),
+                create_vars: None,
+                current_state_name: Some("已解决".to_string()),
+            },
+        )
+        .await;
+    let mut rel_business_objs = vec![];
+    for i in 5..8 {
+        let rel_business_obj_id = format!("-c9rgVZOdUH_MbqofO4vc{}", i);
+        rel_business_objs.push(FlowInstBindRelObjReq {
+            rel_business_obj_id: Some(rel_business_obj_id),
+            current_state_name: Some("已解决".to_string()),
+            own_paths: Some("bzeUPv/JXYtZ0".to_string()),
+            owner: Some("".to_string()),
+        });
+    }
+    let _: Vec<FlowInstBatchBindResp> = flow_client
+        .post(
+            "/ci/inst/batch_bind",
+            &FlowInstBatchBindReq {
+                tag: "ISSUE".to_string(),
+                rel_business_objs,
+            },
+        )
+        .await;
+    let mut rel_business_objs = vec![];
+    for i in 0..10 {
+        let rel_business_obj_id = format!("-c9rgVZOdUH_MbqofO4vc{}", i);
+        rel_business_objs.push(FlowInstBindRelObjReq {
+            rel_business_obj_id: Some(rel_business_obj_id),
+            current_state_name: Some("已解决".to_string()),
+            own_paths: Some("bzeUPv/JXYtZ0".to_string()),
+            owner: Some("".to_string()),
+        });
+    }
+    let _: Vec<FlowInstBatchBindResp> = flow_client
+        .post(
+            "/ci/inst/batch_bind",
+            &FlowInstBatchBindReq {
+                tag: "ISSUE".to_string(),
+                rel_business_objs,
+            },
+        )
+        .await;
 
     Ok(())
 }

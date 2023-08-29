@@ -16,24 +16,32 @@ pub struct FlowInstStartReq {
     pub rel_business_obj_id: String,
     pub tag: String,
     pub create_vars: Option<HashMap<String, Value>>,
-    pub current_state_name: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
 pub struct FlowInstBindReq {
+    pub rel_business_obj_id: String,
+    pub tag: String,
+    pub create_vars: Option<HashMap<String, Value>>,
+    pub current_state_name: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
+pub struct FlowInstBatchBindReq {
     pub tag: String,
     pub rel_business_objs: Vec<FlowInstBindRelObjReq>,
 }
 
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
 pub struct FlowInstBindRelObjReq {
-    pub rel_business_obj_id: String,
-    pub current_state_name: String,
-    pub own_paths: String,
+    pub rel_business_obj_id: Option<String>,
+    pub current_state_name: Option<String>,
+    pub own_paths: Option<String>,
+    pub owner: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
-pub struct FlowInstBindResp {
+pub struct FlowInstBatchBindResp {
     pub rel_business_obj_id: String,
     pub current_state_name: String,
     pub inst_id: Option<String>,
@@ -149,6 +157,7 @@ pub struct FlowInstFindStateAndTransitionsResp {
     pub flow_inst_id: String,
     pub current_flow_state_name: String,
     pub current_flow_state_kind: FlowSysStateKind,
+    pub current_flow_state_color: String,
     pub next_flow_transitions: Vec<FlowInstFindNextTransitionResp>,
 }
 

@@ -110,3 +110,8 @@ pub fn encrypt(text: &str) -> Result<String, JsValue> {
 pub fn decrypt(encrypt_text: &str) -> Result<String, JsValue> {
     Ok(modules::crypto_process::simple_decrypt(encrypt_text)?)
 }
+
+#[wasm_bindgen]
+pub fn get_token() -> Result<String, JsValue> {
+    Ok(modules::token_process::get_token()?.unwrap_or_default())
+}
