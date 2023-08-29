@@ -5,6 +5,7 @@ use bios_basic::{
     dto::BasicQueryCondInfo,
     rbum::{
         dto::rbum_filer_dto::RbumBasicFilterReq,
+        helper::rbum_scope_helper,
         serv::{
             rbum_crud_serv::{ID_FIELD, NAME_FIELD, REL_DOMAIN_ID_FIELD, REL_KIND_ID_FIELD},
             rbum_item_serv::{RbumItemCrudOperation, RBUM_ITEM_TABLE},
@@ -70,7 +71,7 @@ impl FlowInstServ {
         .await?;
         let id = TardisFuns::field.nanoid();
         let current_state_id = if let Some(current_state_name) = &current_state_name {
-            FlowStateServ::match_state_id_and_name_by_name(&start_req.tag, current_state_name, funs, ctx).await?.0
+            FlowStateServ::match_state_id_by_name(&start_req.tag, current_state_name, funs, ctx).await?
         } else {
             flow_model.init_state_id.clone()
         };
@@ -100,23 +101,18 @@ impl FlowInstServ {
 
     pub async fn batch_bind(batch_bind_req: &FlowInstBatchBindReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<FlowInstBatchBindResp>> {
         let mut result = vec![];
+        let mut current_ctx = ctx.clone();
         for rel_business_obj in &batch_bind_req.rel_business_objs {
             if rel_business_obj.rel_business_obj_id.is_none() || rel_business_obj.current_state_name.is_none() || rel_business_obj.own_paths.is_none() {
                 debug!("rel_business_obj: {:?}", rel_business_obj);
                 return Err(funs.err().not_found("flow_inst_serv", "batch_bind", "req is valid", ""));
             }
+            current_ctx.own_paths = rel_business_obj.own_paths.clone().unwrap_or_default();
             let flow_model_id = Self::get_model_id_by_own_paths(&batch_bind_req.tag, funs, ctx).await?;
 
-            let (current_state_id, current_state_name) =
-                FlowStateServ::match_state_id_and_name_by_name(&batch_bind_req.tag, &rel_business_obj.current_state_name.clone().unwrap_or_default(), funs, ctx).await?;
-            let inst_id = Self::get_inst_ids_by_rel_business_obj_id(vec![rel_business_obj.rel_business_obj_id.clone().unwrap_or_default()], funs, ctx).await?.pop();
-            let resp = if let Some(inst_id) = inst_id {
-                FlowInstBatchBindResp {
-                    rel_business_obj_id: rel_business_obj.rel_business_obj_id.clone().unwrap_or_default(),
-                    current_state_name,
-                    inst_id: Some(inst_id),
-                }
-            } else {
+            let current_state_id = FlowStateServ::match_state_id_by_name(&batch_bind_req.tag, &rel_business_obj.current_state_name.clone().unwrap_or_default(), funs, ctx).await?;
+            let mut inst_id = Self::get_inst_ids_by_rel_business_obj_id(vec![rel_business_obj.rel_business_obj_id.clone().unwrap_or_default()], funs, ctx).await?.pop();
+            if inst_id.is_none() {
                 let id = TardisFuns::field.nanoid();
                 let flow_inst: flow_inst::ActiveModel = flow_inst::ActiveModel {
                     id: Set(id.clone()),
@@ -130,14 +126,15 @@ impl FlowInstServ {
                     own_paths: Set(rel_business_obj.own_paths.clone().unwrap_or_default()),
                     ..Default::default()
                 };
-                funs.db().insert_one(flow_inst, ctx).await?;
-                FlowInstBatchBindResp {
-                    rel_business_obj_id: rel_business_obj.rel_business_obj_id.clone().unwrap_or_default(),
-                    current_state_name,
-                    inst_id: Some(id),
-                }
-            };
-            result.push(resp);
+                funs.db().insert_one(flow_inst, &current_ctx).await?;
+                inst_id = Some(id);
+            }
+            let current_state_name = Self::get(inst_id.as_ref().unwrap(), funs, &current_ctx).await?.current_state_name.unwrap_or_default();
+            result.push(FlowInstBatchBindResp {
+                rel_business_obj_id: rel_business_obj.rel_business_obj_id.clone().unwrap_or_default(),
+                current_state_name,
+                inst_id,
+            });
         }
 
         Ok(result)
@@ -162,6 +159,7 @@ impl FlowInstServ {
 
     pub async fn get_model_id_by_own_paths(tag: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
         let mut own_paths = ctx.own_paths.clone();
+        let mut scope_level = rbum_scope_helper::get_scope_level_by_context(ctx)?.to_int();
         let mut result = None;
         // try get model in tenant path or app path
         while !own_paths.is_empty() {
@@ -183,8 +181,8 @@ impl FlowInstServ {
             if result.is_some() {
                 break;
             } else {
-                let own_paths_vec = own_paths.split('/').collect_vec();
-                own_paths = own_paths_vec[0..own_paths_vec.len() - 1].join("/").to_string();
+                own_paths = rbum_scope_helper::get_path_item(scope_level, &ctx.own_paths).unwrap_or_default();
+                scope_level -= 1;
             }
         }
         if result.is_none() {
@@ -688,8 +686,8 @@ impl FlowInstServ {
         )
         .await?;
 
-        // notify changes
-        if transfer_req.vars.is_none() {
+        // notify change state
+        if transfer_req.vars.is_none() || !transfer_req.vars.as_ref().unwrap().is_empty() {
             FlowExternalServ::do_notify_changes(&flow_model.tag, &flow_inst_detail.rel_business_obj_id, next_flow_state.name.clone(), ctx, funs).await?;
         }
 
