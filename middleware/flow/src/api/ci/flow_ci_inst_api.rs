@@ -16,19 +16,26 @@ impl FlowCiInstApi {
     #[oai(path = "/bind", method = "post")]
     async fn bind(&self, add_req: Json<FlowInstBindReq>, ctx: TardisContextExtractor) -> TardisApiResult<String> {
         let mut funs = flow_constants::get_tardis_inst();
-        funs.begin().await?;
-        let result = FlowInstServ::start(
-            &FlowInstStartReq {
-                rel_business_obj_id: add_req.0.rel_business_obj_id.clone(),
-                tag: add_req.0.tag.clone(),
-                create_vars: add_req.0.create_vars.clone(),
-            },
-            add_req.0.current_state_name.clone(),
-            &funs,
-            &ctx.0,
-        )
-        .await?;
-        funs.commit().await?;
+        let inst_id = FlowInstServ::get_inst_ids_by_rel_business_obj_id(vec![add_req.0.rel_business_obj_id.clone()], &funs, &ctx.0).await?.pop();
+        let result = if let Some(inst_id) = inst_id {
+            inst_id
+        } else {
+            funs.begin().await?;
+            let inst_id = FlowInstServ::start(
+                &FlowInstStartReq {
+                    rel_business_obj_id: add_req.0.rel_business_obj_id.clone(),
+                    tag: add_req.0.tag.clone(),
+                    create_vars: add_req.0.create_vars.clone(),
+                },
+                add_req.0.current_state_name.clone(),
+                &funs,
+                &ctx.0,
+            )
+            .await?;
+            funs.commit().await?;
+            inst_id
+        };
+
         TardisResp::ok(result)
     }
 

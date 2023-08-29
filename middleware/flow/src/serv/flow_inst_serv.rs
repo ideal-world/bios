@@ -5,6 +5,7 @@ use bios_basic::{
     dto::BasicQueryCondInfo,
     rbum::{
         dto::rbum_filer_dto::RbumBasicFilterReq,
+        helper::rbum_scope_helper,
         serv::{
             rbum_crud_serv::{ID_FIELD, NAME_FIELD, REL_DOMAIN_ID_FIELD, REL_KIND_ID_FIELD},
             rbum_item_serv::{RbumItemCrudOperation, RBUM_ITEM_TABLE},
@@ -21,6 +22,7 @@ use tardis::{
         JoinType, Set,
     },
     futures_util::future::join_all,
+    log::debug,
     serde_json::Value,
     web::web_resp::TardisPage,
     TardisFuns, TardisFunsInst,
@@ -69,7 +71,7 @@ impl FlowInstServ {
         .await?;
         let id = TardisFuns::field.nanoid();
         let current_state_id = if let Some(current_state_name) = &current_state_name {
-            FlowStateServ::match_state_id_and_name_by_name(&start_req.tag, current_state_name, funs, ctx).await?.0
+            FlowStateServ::match_state_id_by_name(&start_req.tag, current_state_name, funs, ctx).await?
         } else {
             flow_model.init_state_id.clone()
         };
@@ -99,45 +101,65 @@ impl FlowInstServ {
 
     pub async fn batch_bind(batch_bind_req: &FlowInstBatchBindReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<FlowInstBatchBindResp>> {
         let mut result = vec![];
+        let mut current_ctx = ctx.clone();
         for rel_business_obj in &batch_bind_req.rel_business_objs {
+            if rel_business_obj.rel_business_obj_id.is_none() || rel_business_obj.current_state_name.is_none() || rel_business_obj.own_paths.is_none() {
+                debug!("rel_business_obj: {:?}", rel_business_obj);
+                return Err(funs.err().not_found("flow_inst_serv", "batch_bind", "req is valid", ""));
+            }
+            current_ctx.own_paths = rel_business_obj.own_paths.clone().unwrap_or_default();
             let flow_model_id = Self::get_model_id_by_own_paths(&batch_bind_req.tag, funs, ctx).await?;
 
-            let (current_state_id, current_state_name) =
-                FlowStateServ::match_state_id_and_name_by_name(&batch_bind_req.tag, &rel_business_obj.current_state_name, funs, ctx).await?;
-            let id = TardisFuns::field.nanoid();
-            let flow_inst: flow_inst::ActiveModel = flow_inst::ActiveModel {
-                id: Set(id.clone()),
-                rel_flow_model_id: Set(flow_model_id.to_string()),
-                rel_business_obj_id: Set(rel_business_obj.rel_business_obj_id.to_string()),
+            let current_state_id = FlowStateServ::match_state_id_by_name(&batch_bind_req.tag, &rel_business_obj.current_state_name.clone().unwrap_or_default(), funs, ctx).await?;
+            let mut inst_id = Self::get_inst_ids_by_rel_business_obj_id(vec![rel_business_obj.rel_business_obj_id.clone().unwrap_or_default()], funs, ctx).await?.pop();
+            if inst_id.is_none() {
+                let id = TardisFuns::field.nanoid();
+                let flow_inst: flow_inst::ActiveModel = flow_inst::ActiveModel {
+                    id: Set(id.clone()),
+                    rel_flow_model_id: Set(flow_model_id.to_string()),
+                    rel_business_obj_id: Set(rel_business_obj.rel_business_obj_id.clone().unwrap_or_default()),
 
-                current_state_id: Set(current_state_id),
+                    current_state_id: Set(current_state_id),
 
-                create_ctx: Set(FlowOperationContext::from_ctx(ctx)),
+                    create_ctx: Set(FlowOperationContext::from_ctx(ctx)),
 
-                own_paths: Set(rel_business_obj.own_paths.to_string()),
-                ..Default::default()
-            };
-            let resp = if funs.db().insert_one(flow_inst, ctx).await.is_ok() {
-                FlowInstBatchBindResp {
-                    rel_business_obj_id: rel_business_obj.rel_business_obj_id.to_string(),
-                    current_state_name,
-                    inst_id: Some(id),
-                }
-            } else {
-                FlowInstBatchBindResp {
-                    rel_business_obj_id: rel_business_obj.rel_business_obj_id.to_string(),
-                    current_state_name,
-                    inst_id: None,
-                }
-            };
-            result.push(resp);
+                    own_paths: Set(rel_business_obj.own_paths.clone().unwrap_or_default()),
+                    ..Default::default()
+                };
+                funs.db().insert_one(flow_inst, &current_ctx).await?;
+                inst_id = Some(id);
+            }
+            let current_state_name = Self::get(inst_id.as_ref().unwrap(), funs, &current_ctx).await?.current_state_name.unwrap_or_default();
+            result.push(FlowInstBatchBindResp {
+                rel_business_obj_id: rel_business_obj.rel_business_obj_id.clone().unwrap_or_default(),
+                current_state_name,
+                inst_id,
+            });
         }
 
         Ok(result)
     }
 
+    pub async fn get_inst_ids_by_rel_business_obj_id(rel_business_obj_ids: Vec<String>, funs: &TardisFunsInst, _ctx: &TardisContext) -> TardisResult<Vec<String>> {
+        #[derive(sea_orm::FromQueryResult)]
+        pub struct FlowInstIdsResult {
+            id: String,
+        }
+        let result = funs
+            .db()
+            .find_dtos::<FlowInstIdsResult>(
+                Query::select().columns([flow_inst::Column::Id]).from(flow_inst::Entity).and_where(Expr::col(flow_inst::Column::RelBusinessObjId).is_in(&rel_business_obj_ids)),
+            )
+            .await?
+            .iter()
+            .map(|rel_inst| rel_inst.id.clone())
+            .collect_vec();
+        Ok(result)
+    }
+
     pub async fn get_model_id_by_own_paths(tag: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
         let mut own_paths = ctx.own_paths.clone();
+        let mut scope_level = rbum_scope_helper::get_scope_level_by_context(ctx)?.to_int();
         let mut result = None;
         // try get model in tenant path or app path
         while !own_paths.is_empty() {
@@ -159,8 +181,8 @@ impl FlowInstServ {
             if result.is_some() {
                 break;
             } else {
-                let own_paths_vec = own_paths.split('/').collect_vec();
-                own_paths = own_paths_vec[0..own_paths_vec.len() - 1].join("/").to_string();
+                own_paths = rbum_scope_helper::get_path_item(scope_level, &ctx.own_paths).unwrap_or_default();
+                scope_level -= 1;
             }
         }
         if result.is_none() {
@@ -609,15 +631,17 @@ impl FlowInstServ {
                     value: Some(value.clone()),
                 });
             }
-            FlowExternalServ::do_modify_field(
-                &flow_model.tag,
-                &flow_inst_detail.rel_business_obj_id,
-                Some(next_flow_state.name.clone()),
-                params,
-                ctx,
-                funs,
-            )
-            .await?;
+            if !params.is_empty() {
+                FlowExternalServ::do_modify_field(
+                    &flow_model.tag,
+                    &flow_inst_detail.rel_business_obj_id,
+                    Some(next_flow_state.name.clone()),
+                    params,
+                    ctx,
+                    funs,
+                )
+                .await?;
+            }
         }
 
         let mut new_vars: HashMap<String, Value> = HashMap::new();
@@ -662,8 +686,8 @@ impl FlowInstServ {
         )
         .await?;
 
-        // notify changes
-        if transfer_req.vars.is_none() {
+        // notify change state
+        if transfer_req.vars.is_none() || !transfer_req.vars.as_ref().unwrap().is_empty() {
             FlowExternalServ::do_notify_changes(&flow_model.tag, &flow_inst_detail.rel_business_obj_id, next_flow_state.name.clone(), ctx, funs).await?;
         }
 
@@ -754,10 +778,6 @@ impl FlowInstServ {
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<Vec<String>> {
-        #[derive(sea_orm::FromQueryResult)]
-        pub struct FlowInstIdsResult {
-            pub id: String,
-        }
         let mut result_rel_obj_ids = Self::filter_rel_obj_ids_by_state(&rel_bus_obj_ids, &change_info.obj_current_state_id, funs, ctx).await?;
 
         if let Some(change_condition) = change_info.change_condition.clone() {
@@ -803,18 +823,7 @@ impl FlowInstServ {
             result_rel_obj_ids = result_rel_obj_ids.into_iter().filter(|result_rel_obj_id| !mismatch_rel_obj_ids.contains(result_rel_obj_id)).collect_vec();
         }
 
-        let result = funs
-            .db()
-            .find_dtos::<FlowInstIdsResult>(
-                Query::select()
-                    .columns([flow_inst::Column::Id, flow_inst::Column::CurrentStateId, flow_inst::Column::RelBusinessObjId])
-                    .from(flow_inst::Entity)
-                    .and_where(Expr::col(flow_inst::Column::RelBusinessObjId).is_in(&result_rel_obj_ids)),
-            )
-            .await?
-            .iter()
-            .map(|rel_inst| rel_inst.id.clone())
-            .collect_vec();
+        let result = Self::get_inst_ids_by_rel_business_obj_id(result_rel_obj_ids, funs, ctx).await?;
         Ok(result)
     }
 
@@ -1013,7 +1022,7 @@ impl FlowInstServ {
                 double_check: model_transition.double_check(),
             })
             .collect_vec();
-        let current_flow_state_sys_state = if let Some(state) = FlowStateServ::find_one_item(
+        let current_flow_state = FlowStateServ::find_one_item(
             &FlowStateFilterReq {
                 basic: RbumBasicFilterReq {
                     ids: Some(vec![flow_inst.current_state_id.to_string()]),
@@ -1026,16 +1035,13 @@ impl FlowInstServ {
             funs,
             ctx,
         )
-        .await?
-        {
-            state.sys_state
-        } else {
-            FlowSysStateKind::Finish
-        };
+        .await?;
+
         let state_and_next_transitions = FlowInstFindStateAndTransitionsResp {
             flow_inst_id: flow_inst.id.to_string(),
             current_flow_state_name: flow_inst.current_state_name.as_ref().unwrap_or(&"".to_string()).to_string(),
-            current_flow_state_kind: current_flow_state_sys_state,
+            current_flow_state_kind: current_flow_state.as_ref().map(|state| state.sys_state.clone()).unwrap_or(FlowSysStateKind::Finish),
+            current_flow_state_color: current_flow_state.as_ref().map(|state| state.color.clone()).unwrap_or_default(),
             next_flow_transitions: next_transitions,
         };
         Ok(state_and_next_transitions)

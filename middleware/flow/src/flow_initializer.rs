@@ -17,6 +17,7 @@ use tardis::{
 use crate::{
     api::{
         cc::{flow_cc_inst_api, flow_cc_model_api, flow_cc_state_api},
+        ci::flow_ci_inst_api,
         cs::flow_cs_config_api,
     },
     domain::{flow_config, flow_inst, flow_model, flow_state, flow_transition},
@@ -24,7 +25,6 @@ use crate::{
         flow_model_dto::FlowModelFilterReq,
         flow_state_dto::FlowSysStateKind,
         flow_transition_dto::{FlowTransitionDoubleCheckInfo, FlowTransitionInitInfo},
-        flow_var_dto::{FlowVarInfo, RbumDataTypeKind, RbumWidgetTypeKind},
     },
     flow_config::{BasicInfo, FlowBasicInfoManager, FlowConfig},
     flow_constants,
@@ -46,6 +46,7 @@ async fn init_api(web_server: &TardisWebServer) -> TardisResult<()> {
                 flow_cc_model_api::FlowCcModelApi,
                 flow_cc_inst_api::FlowCcInstApi,
                 flow_cs_config_api::FlowCsConfigApi,
+                flow_ci_inst_api::FlowCiInstApi,
             ),
         )
         .await;
@@ -280,23 +281,6 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     from_flow_state_name: "待开始".to_string(),
                     to_flow_state_name: "进行中".to_string(),
                     name: "开始".to_string(),
-                    vars_collect: Some(vec![
-                        FlowVarInfo {
-                            name: "assigned_to".to_string(),
-                            label: "负责人".to_string(),
-                            data_type: RbumDataTypeKind::STRING,
-                            widget_type: RbumWidgetTypeKind::SELECT,
-                            required: Some(true),
-                            ..Default::default()
-                        },
-                        FlowVarInfo {
-                            name: "start_end".to_string(),
-                            label: "计划周期".to_string(),
-                            data_type: RbumDataTypeKind::DATETIME,
-                            widget_type: RbumWidgetTypeKind::DATETIME,
-                            ..Default::default()
-                        },
-                    ]),
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
@@ -309,24 +293,6 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     from_flow_state_name: "进行中".to_string(),
                     to_flow_state_name: "已完成".to_string(),
                     name: "完成".to_string(),
-                    vars_collect: Some(vec![
-                        FlowVarInfo {
-                            name: "assigned_to".to_string(),
-                            label: "负责人".to_string(),
-                            data_type: RbumDataTypeKind::STRING,
-                            widget_type: RbumWidgetTypeKind::SELECT,
-                            required: Some(true),
-                            ..Default::default()
-                        },
-                        FlowVarInfo {
-                            name: "start_end".to_string(),
-                            label: "计划周期".to_string(),
-                            data_type: RbumDataTypeKind::DATETIME,
-                            widget_type: RbumWidgetTypeKind::DATETIME,
-                            required: Some(true),
-                            ..Default::default()
-                        },
-                    ]),
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
@@ -339,23 +305,6 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     from_flow_state_name: "已完成".to_string(),
                     to_flow_state_name: "进行中".to_string(),
                     name: "重新处理".into(),
-                    vars_collect: Some(vec![
-                        FlowVarInfo {
-                            name: "assigned_to".to_string(),
-                            label: "负责人".to_string(),
-                            data_type: RbumDataTypeKind::STRING,
-                            widget_type: RbumWidgetTypeKind::SELECT,
-                            required: Some(true),
-                            ..Default::default()
-                        },
-                        FlowVarInfo {
-                            name: "start_end".to_string(),
-                            label: "计划周期".to_string(),
-                            data_type: RbumDataTypeKind::DATETIME,
-                            widget_type: RbumWidgetTypeKind::DATETIME,
-                            ..Default::default()
-                        },
-                    ]),
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
@@ -533,23 +482,6 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     from_flow_state_name: "待开始".to_string(),
                     to_flow_state_name: "进行中".to_string(),
                     name: "开始".to_string(),
-                    vars_collect: Some(vec![
-                        FlowVarInfo {
-                            name: "assigned_to".to_string(),
-                            label: "负责人".to_string(),
-                            data_type: RbumDataTypeKind::STRING,
-                            widget_type: RbumWidgetTypeKind::SELECT,
-                            required: Some(true),
-                            ..Default::default()
-                        },
-                        FlowVarInfo {
-                            name: "start_end".to_string(),
-                            label: "计划周期".to_string(),
-                            data_type: RbumDataTypeKind::DATETIME,
-                            widget_type: RbumWidgetTypeKind::DATETIME,
-                            ..Default::default()
-                        },
-                    ]),
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
@@ -562,24 +494,6 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     from_flow_state_name: "进行中".to_string(),
                     to_flow_state_name: "已完成".to_string(),
                     name: "完成".to_string(),
-                    vars_collect: Some(vec![
-                        FlowVarInfo {
-                            name: "assigned_to".to_string(),
-                            label: "负责人".to_string(),
-                            data_type: RbumDataTypeKind::STRING,
-                            widget_type: RbumWidgetTypeKind::SELECT,
-                            required: Some(true),
-                            ..Default::default()
-                        },
-                        FlowVarInfo {
-                            name: "rel_start_end".to_string(),
-                            label: "实际周期".to_string(),
-                            data_type: RbumDataTypeKind::DATETIME,
-                            widget_type: RbumWidgetTypeKind::DATETIME,
-                            required: Some(true),
-                            ..Default::default()
-                        },
-                    ]),
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
@@ -604,24 +518,6 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     from_flow_state_name: "存在风险".to_string(),
                     to_flow_state_name: "已完成".to_string(),
                     name: "完成".to_string(),
-                    vars_collect: Some(vec![
-                        FlowVarInfo {
-                            name: "assigned_to".to_string(),
-                            label: "负责人".to_string(),
-                            data_type: RbumDataTypeKind::STRING,
-                            widget_type: RbumWidgetTypeKind::SELECT,
-                            required: Some(true),
-                            ..Default::default()
-                        },
-                        FlowVarInfo {
-                            name: "rel_start_end".to_string(),
-                            label: "实际周期".to_string(),
-                            data_type: RbumDataTypeKind::DATETIME,
-                            widget_type: RbumWidgetTypeKind::DATETIME,
-                            required: Some(true),
-                            ..Default::default()
-                        },
-                    ]),
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
@@ -634,23 +530,6 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     from_flow_state_name: "已完成".to_string(),
                     to_flow_state_name: "进行中".to_string(),
                     name: "重新处理".to_string(),
-                    vars_collect: Some(vec![
-                        FlowVarInfo {
-                            name: "assigned_to".to_string(),
-                            label: "负责人".to_string(),
-                            data_type: RbumDataTypeKind::STRING,
-                            widget_type: RbumWidgetTypeKind::SELECT,
-                            required: Some(true),
-                            ..Default::default()
-                        },
-                        FlowVarInfo {
-                            name: "start_end".to_string(),
-                            label: "计划周期".to_string(),
-                            data_type: RbumDataTypeKind::DATETIME,
-                            widget_type: RbumWidgetTypeKind::DATETIME,
-                            ..Default::default()
-                        },
-                    ]),
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
@@ -703,13 +582,6 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     from_flow_state_name: "待开始".to_string(),
                     to_flow_state_name: "进行中".to_string(),
                     name: "开始".to_string(),
-                    vars_collect: Some(vec![FlowVarInfo {
-                        name: "start_end".to_string(),
-                        label: "计划周期".to_string(),
-                        data_type: RbumDataTypeKind::DATETIME,
-                        widget_type: RbumWidgetTypeKind::DATETIME,
-                        ..Default::default()
-                    }]),
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
@@ -722,14 +594,6 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     from_flow_state_name: "进行中".to_string(),
                     to_flow_state_name: "已完成".to_string(),
                     name: "完成".to_string(),
-                    vars_collect: Some(vec![FlowVarInfo {
-                        name: "rel_start_end".to_string(),
-                        label: "实际周期".to_string(),
-                        data_type: RbumDataTypeKind::DATETIME,
-                        widget_type: RbumWidgetTypeKind::DATETIME,
-                        required: Some(true),
-                        ..Default::default()
-                    }]),
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
@@ -754,14 +618,6 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     from_flow_state_name: "存在风险".to_string(),
                     to_flow_state_name: "已完成".to_string(),
                     name: "完成".to_string(),
-                    vars_collect: Some(vec![FlowVarInfo {
-                        name: "rel_start_end".to_string(),
-                        label: "实际周期".to_string(),
-                        data_type: RbumDataTypeKind::DATETIME,
-                        widget_type: RbumWidgetTypeKind::DATETIME,
-                        required: Some(true),
-                        ..Default::default()
-                    }]),
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
@@ -774,13 +630,6 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     from_flow_state_name: "已完成".to_string(),
                     to_flow_state_name: "进行中".to_string(),
                     name: "重新处理".to_string(),
-                    vars_collect: Some(vec![FlowVarInfo {
-                        name: "start_end".to_string(),
-                        label: "计划周期".to_string(),
-                        data_type: RbumDataTypeKind::DATETIME,
-                        widget_type: RbumWidgetTypeKind::DATETIME,
-                        ..Default::default()
-                    }]),
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
@@ -833,23 +682,6 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     from_flow_state_name: "待开始".to_string(),
                     to_flow_state_name: "进行中".to_string(),
                     name: "开始".to_string(),
-                    vars_collect: Some(vec![
-                        FlowVarInfo {
-                            name: "assigned_to".to_string(),
-                            label: "负责人".to_string(),
-                            data_type: RbumDataTypeKind::STRING,
-                            widget_type: RbumWidgetTypeKind::SELECT,
-                            required: Some(true),
-                            ..Default::default()
-                        },
-                        FlowVarInfo {
-                            name: "start_end".to_string(),
-                            label: "计划周期".to_string(),
-                            data_type: RbumDataTypeKind::DATETIME,
-                            widget_type: RbumWidgetTypeKind::DATETIME,
-                            ..Default::default()
-                        },
-                    ]),
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
@@ -862,24 +694,6 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     from_flow_state_name: "进行中".to_string(),
                     to_flow_state_name: "已完成".to_string(),
                     name: "完成".to_string(),
-                    vars_collect: Some(vec![
-                        FlowVarInfo {
-                            name: "assigned_to".to_string(),
-                            label: "负责人".to_string(),
-                            data_type: RbumDataTypeKind::STRING,
-                            widget_type: RbumWidgetTypeKind::SELECT,
-                            required: Some(true),
-                            ..Default::default()
-                        },
-                        FlowVarInfo {
-                            name: "rel_start_end".to_string(),
-                            label: "实际周期".to_string(),
-                            data_type: RbumDataTypeKind::DATETIME,
-                            widget_type: RbumWidgetTypeKind::DATETIME,
-                            required: Some(true),
-                            ..Default::default()
-                        },
-                    ]),
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
@@ -904,24 +718,6 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     from_flow_state_name: "存在风险".to_string(),
                     to_flow_state_name: "已完成".to_string(),
                     name: "完成".to_string(),
-                    vars_collect: Some(vec![
-                        FlowVarInfo {
-                            name: "assigned_to".to_string(),
-                            label: "负责人".to_string(),
-                            data_type: RbumDataTypeKind::STRING,
-                            widget_type: RbumWidgetTypeKind::SELECT,
-                            required: Some(true),
-                            ..Default::default()
-                        },
-                        FlowVarInfo {
-                            name: "rel_start_end".to_string(),
-                            label: "实际周期".to_string(),
-                            data_type: RbumDataTypeKind::DATETIME,
-                            widget_type: RbumWidgetTypeKind::DATETIME,
-                            required: Some(true),
-                            ..Default::default()
-                        },
-                    ]),
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
@@ -934,23 +730,6 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     from_flow_state_name: "已完成".to_string(),
                     to_flow_state_name: "进行中".to_string(),
                     name: "重新处理".to_string(),
-                    vars_collect: Some(vec![
-                        FlowVarInfo {
-                            name: "assigned_to".to_string(),
-                            label: "负责人".to_string(),
-                            data_type: RbumDataTypeKind::STRING,
-                            widget_type: RbumWidgetTypeKind::SELECT,
-                            required: Some(true),
-                            ..Default::default()
-                        },
-                        FlowVarInfo {
-                            name: "start_end".to_string(),
-                            label: "计划周期".to_string(),
-                            data_type: RbumDataTypeKind::DATETIME,
-                            widget_type: RbumWidgetTypeKind::DATETIME,
-                            ..Default::default()
-                        },
-                    ]),
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
@@ -1003,23 +782,6 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     from_flow_state_name: "待开始".to_string(),
                     to_flow_state_name: "进行中".to_string(),
                     name: "开始".to_string(),
-                    vars_collect: Some(vec![
-                        FlowVarInfo {
-                            name: "assigned_to".to_string(),
-                            label: "负责人".to_string(),
-                            data_type: RbumDataTypeKind::STRING,
-                            widget_type: RbumWidgetTypeKind::SELECT,
-                            required: Some(true),
-                            ..Default::default()
-                        },
-                        FlowVarInfo {
-                            name: "start_end".to_string(),
-                            label: "计划周期".to_string(),
-                            data_type: RbumDataTypeKind::DATETIME,
-                            widget_type: RbumWidgetTypeKind::DATETIME,
-                            ..Default::default()
-                        },
-                    ]),
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
@@ -1032,24 +794,6 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     from_flow_state_name: "进行中".to_string(),
                     to_flow_state_name: "已完成".to_string(),
                     name: "完成".to_string(),
-                    vars_collect: Some(vec![
-                        FlowVarInfo {
-                            name: "assigned_to".to_string(),
-                            label: "负责人".to_string(),
-                            data_type: RbumDataTypeKind::STRING,
-                            widget_type: RbumWidgetTypeKind::SELECT,
-                            required: Some(true),
-                            ..Default::default()
-                        },
-                        FlowVarInfo {
-                            name: "rel_start_end".to_string(),
-                            label: "实际周期".to_string(),
-                            data_type: RbumDataTypeKind::DATETIME,
-                            widget_type: RbumWidgetTypeKind::DATETIME,
-                            required: Some(true),
-                            ..Default::default()
-                        },
-                    ]),
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
@@ -1074,24 +818,6 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     from_flow_state_name: "存在风险".to_string(),
                     to_flow_state_name: "已完成".to_string(),
                     name: "完成".to_string(),
-                    vars_collect: Some(vec![
-                        FlowVarInfo {
-                            name: "assigned_to".to_string(),
-                            label: "负责人".to_string(),
-                            data_type: RbumDataTypeKind::STRING,
-                            widget_type: RbumWidgetTypeKind::SELECT,
-                            required: Some(true),
-                            ..Default::default()
-                        },
-                        FlowVarInfo {
-                            name: "rel_start_end".to_string(),
-                            label: "实际周期".to_string(),
-                            data_type: RbumDataTypeKind::DATETIME,
-                            widget_type: RbumWidgetTypeKind::DATETIME,
-                            required: Some(true),
-                            ..Default::default()
-                        },
-                    ]),
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
@@ -1156,23 +882,6 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     from_flow_state_name: "待开始".to_string(),
                     to_flow_state_name: "进行中".to_string(),
                     name: "开始".to_string(),
-                    vars_collect: Some(vec![
-                        FlowVarInfo {
-                            name: "assigned_to".to_string(),
-                            label: "负责人".to_string(),
-                            data_type: RbumDataTypeKind::STRING,
-                            widget_type: RbumWidgetTypeKind::SELECT,
-                            required: Some(true),
-                            ..Default::default()
-                        },
-                        FlowVarInfo {
-                            name: "start_end".to_string(),
-                            label: "计划周期".to_string(),
-                            data_type: RbumDataTypeKind::DATETIME,
-                            widget_type: RbumWidgetTypeKind::DATETIME,
-                            ..Default::default()
-                        },
-                    ]),
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
@@ -1185,24 +894,6 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     from_flow_state_name: "进行中".to_string(),
                     to_flow_state_name: "已完成".to_string(),
                     name: "完成".to_string(),
-                    vars_collect: Some(vec![
-                        FlowVarInfo {
-                            name: "assigned_to".to_string(),
-                            label: "负责人".to_string(),
-                            data_type: RbumDataTypeKind::STRING,
-                            widget_type: RbumWidgetTypeKind::SELECT,
-                            required: Some(true),
-                            ..Default::default()
-                        },
-                        FlowVarInfo {
-                            name: "rel_start_end".to_string(),
-                            label: "实际周期".to_string(),
-                            data_type: RbumDataTypeKind::DATETIME,
-                            widget_type: RbumWidgetTypeKind::DATETIME,
-                            required: Some(true),
-                            ..Default::default()
-                        },
-                    ]),
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
@@ -1227,24 +918,6 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     from_flow_state_name: "存在风险".to_string(),
                     to_flow_state_name: "已完成".to_string(),
                     name: "完成".to_string(),
-                    vars_collect: Some(vec![
-                        FlowVarInfo {
-                            name: "assigned_to".to_string(),
-                            label: "负责人".to_string(),
-                            data_type: RbumDataTypeKind::STRING,
-                            widget_type: RbumWidgetTypeKind::SELECT,
-                            required: Some(true),
-                            ..Default::default()
-                        },
-                        FlowVarInfo {
-                            name: "rel_start_end".to_string(),
-                            label: "实际周期".to_string(),
-                            data_type: RbumDataTypeKind::DATETIME,
-                            widget_type: RbumWidgetTypeKind::DATETIME,
-                            required: Some(true),
-                            ..Default::default()
-                        },
-                    ]),
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
@@ -1309,216 +982,48 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     from_flow_state_name: "待处理".to_string(),
                     to_flow_state_name: "修复中".to_string(),
                     name: "确认并修复".to_string(),
-                    vars_collect: Some(vec![
-                        FlowVarInfo {
-                            name: "assigned_to".to_string(),
-                            label: "负责人".to_string(),
-                            data_type: RbumDataTypeKind::STRING,
-                            widget_type: RbumWidgetTypeKind::SELECT,
-                            required: Some(true),
-                            ..Default::default()
-                        },
-                        FlowVarInfo {
-                            name: "comment".to_string(),
-                            label: "评论".to_string(),
-                            data_type: RbumDataTypeKind::STRING,
-                            widget_type: RbumWidgetTypeKind::INPUT,
-                            ..Default::default()
-                        },
-                    ]),
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
                     from_flow_state_name: "待处理".to_string(),
                     to_flow_state_name: "待确认".to_string(),
                     name: "修复完成".to_string(),
-                    vars_collect: Some(vec![
-                        FlowVarInfo {
-                            name: "handle_user".to_string(),
-                            label: "解决人".to_string(),
-                            data_type: RbumDataTypeKind::STRING,
-                            widget_type: RbumWidgetTypeKind::SELECT,
-                            required: Some(true),
-                            ..Default::default()
-                        },
-                        FlowVarInfo {
-                            name: "issue_solution".to_string(),
-                            label: "解决方案".to_string(),
-                            data_type: RbumDataTypeKind::STRING,
-                            widget_type: RbumWidgetTypeKind::SELECT,
-                            required: Some(true),
-                            ..Default::default()
-                        },
-                        FlowVarInfo {
-                            name: "comment".to_string(),
-                            label: "评论".to_string(),
-                            data_type: RbumDataTypeKind::STRING,
-                            widget_type: RbumWidgetTypeKind::INPUT,
-                            ..Default::default()
-                        },
-                    ]),
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
                     from_flow_state_name: "修复中".to_string(),
                     to_flow_state_name: "待确认".to_string(),
                     name: "修复完成".to_string(),
-                    vars_collect: Some(vec![
-                        FlowVarInfo {
-                            name: "handle_user".to_string(),
-                            label: "解决人".to_string(),
-                            data_type: RbumDataTypeKind::STRING,
-                            widget_type: RbumWidgetTypeKind::SELECT,
-                            required: Some(true),
-                            ..Default::default()
-                        },
-                        FlowVarInfo {
-                            name: "issue_solution".to_string(),
-                            label: "解决方案".to_string(),
-                            data_type: RbumDataTypeKind::STRING,
-                            widget_type: RbumWidgetTypeKind::SELECT,
-                            required: Some(true),
-                            ..Default::default()
-                        },
-                        FlowVarInfo {
-                            name: "comment".to_string(),
-                            label: "评论".to_string(),
-                            data_type: RbumDataTypeKind::STRING,
-                            widget_type: RbumWidgetTypeKind::INPUT,
-                            ..Default::default()
-                        },
-                    ]),
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
                     from_flow_state_name: "待确认".to_string(),
                     to_flow_state_name: "已解决".to_string(),
                     name: "确认修复".to_string(),
-                    vars_collect: Some(vec![
-                        FlowVarInfo {
-                            name: "handle_user".to_string(),
-                            label: "解决人".to_string(),
-                            data_type: RbumDataTypeKind::STRING,
-                            widget_type: RbumWidgetTypeKind::SELECT,
-                            required: Some(true),
-                            ..Default::default()
-                        },
-                        FlowVarInfo {
-                            name: "issue_solution".to_string(),
-                            label: "解决方案".to_string(),
-                            data_type: RbumDataTypeKind::STRING,
-                            widget_type: RbumWidgetTypeKind::SELECT,
-                            required: Some(true),
-                            ..Default::default()
-                        },
-                        FlowVarInfo {
-                            name: "handle_time".to_string(),
-                            label: "解决时间".to_string(),
-                            data_type: RbumDataTypeKind::STRING,
-                            widget_type: RbumWidgetTypeKind::DATETIME,
-                            required: Some(true),
-                            ..Default::default()
-                        },
-                        FlowVarInfo {
-                            name: "comment".to_string(),
-                            label: "评论".to_string(),
-                            data_type: RbumDataTypeKind::STRING,
-                            widget_type: RbumWidgetTypeKind::INPUT,
-                            ..Default::default()
-                        },
-                    ]),
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
                     from_flow_state_name: "待确认".to_string(),
                     to_flow_state_name: "修复中".to_string(),
                     name: "未修复".to_string(),
-                    vars_collect: Some(vec![
-                        FlowVarInfo {
-                            name: "assigned_to".to_string(),
-                            label: "负责人".to_string(),
-                            data_type: RbumDataTypeKind::STRING,
-                            widget_type: RbumWidgetTypeKind::SELECT,
-                            required: Some(true),
-                            ..Default::default()
-                        },
-                        FlowVarInfo {
-                            name: "comment".to_string(),
-                            label: "评论".to_string(),
-                            data_type: RbumDataTypeKind::STRING,
-                            widget_type: RbumWidgetTypeKind::INPUT,
-                            ..Default::default()
-                        },
-                    ]),
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
                     from_flow_state_name: "已解决".to_string(),
                     to_flow_state_name: "待处理".to_string(),
                     name: "激活".to_string(),
-                    vars_collect: Some(vec![
-                        FlowVarInfo {
-                            name: "assigned_to".to_string(),
-                            label: "负责人".to_string(),
-                            data_type: RbumDataTypeKind::STRING,
-                            widget_type: RbumWidgetTypeKind::SELECT,
-                            required: Some(true),
-                            ..Default::default()
-                        },
-                        FlowVarInfo {
-                            name: "comment".to_string(),
-                            label: "评论".to_string(),
-                            data_type: RbumDataTypeKind::STRING,
-                            widget_type: RbumWidgetTypeKind::INPUT,
-                            ..Default::default()
-                        },
-                    ]),
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
                     from_flow_state_name: "已解决".to_string(),
                     to_flow_state_name: "已关闭".to_string(),
                     name: "关闭".to_string(),
-                    vars_collect: Some(vec![
-                        FlowVarInfo {
-                            name: "assigned_to".to_string(),
-                            label: "负责人".to_string(),
-                            data_type: RbumDataTypeKind::STRING,
-                            widget_type: RbumWidgetTypeKind::SELECT,
-                            required: Some(true),
-                            ..Default::default()
-                        },
-                        FlowVarInfo {
-                            name: "comment".to_string(),
-                            label: "评论".to_string(),
-                            data_type: RbumDataTypeKind::STRING,
-                            widget_type: RbumWidgetTypeKind::INPUT,
-                            ..Default::default()
-                        },
-                    ]),
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
                     from_flow_state_name: "已关闭".to_string(),
                     to_flow_state_name: "待处理".to_string(),
                     name: "激活".to_string(),
-                    vars_collect: Some(vec![
-                        FlowVarInfo {
-                            name: "assigned_to".to_string(),
-                            label: "负责人".to_string(),
-                            data_type: RbumDataTypeKind::STRING,
-                            widget_type: RbumWidgetTypeKind::SELECT,
-                            required: Some(true),
-                            ..Default::default()
-                        },
-                        FlowVarInfo {
-                            name: "comment".to_string(),
-                            label: "评论".to_string(),
-                            data_type: RbumDataTypeKind::STRING,
-                            widget_type: RbumWidgetTypeKind::INPUT,
-                            ..Default::default()
-                        },
-                    ]),
                     ..Default::default()
                 },
             ],

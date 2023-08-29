@@ -34,9 +34,9 @@ pub struct FlowInstBatchBindReq {
 
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
 pub struct FlowInstBindRelObjReq {
-    pub rel_business_obj_id: String,
-    pub current_state_name: String,
-    pub own_paths: String,
+    pub rel_business_obj_id: Option<String>,
+    pub current_state_name: Option<String>,
+    pub own_paths: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
@@ -156,6 +156,7 @@ pub struct FlowInstFindStateAndTransitionsResp {
     pub flow_inst_id: String,
     pub current_flow_state_name: String,
     pub current_flow_state_kind: FlowSysStateKind,
+    pub current_flow_state_color: String,
     pub next_flow_transitions: Vec<FlowInstFindNextTransitionResp>,
 }
 

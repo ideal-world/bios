@@ -30,8 +30,8 @@ use crate::{
     domain::{flow_model, flow_transition},
     dto::{
         flow_model_dto::{
-            FlowModelAddReq, FlowModelAggResp, FlowModelBindStateReq, FlowModelDetailResp, FlowModelFilterReq, FlowModelModifyReq, FlowModelSortStatesReq, FlowModelSummaryResp,
-            FlowModelUnbindStateReq, FlowStateAggResp, FlowTemplateModelResp, FlowModelFindRelStateResp,
+            FlowModelAddReq, FlowModelAggResp, FlowModelBindStateReq, FlowModelDetailResp, FlowModelFilterReq, FlowModelFindRelStateResp, FlowModelModifyReq,
+            FlowModelSortStatesReq, FlowModelSummaryResp, FlowModelUnbindStateReq, FlowStateAggResp, FlowTemplateModelResp,
         },
         flow_state_dto::{FlowStateAddReq, FlowStateFilterReq, FlowSysStateKind},
         flow_transition_dto::{
@@ -1018,11 +1018,32 @@ impl FlowModelServ {
 
     pub async fn find_rel_states(tag: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<FlowModelFindRelStateResp>> {
         let flow_model_id = FlowInstServ::get_model_id_by_own_paths(tag, funs, ctx).await?;
-        let result = FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelState, &flow_model_id, None, None, funs, ctx).await?.iter().map(|rel| FlowModelFindRelStateResp {
-            id: rel.rel_id.clone(),
-            name: rel.rel_name.clone(),
-        }).collect::<Vec<_>>();
-        
+        let state_ids =
+            FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelState, &flow_model_id, None, None, funs, ctx).await?.iter().map(|rel| rel.rel_id.clone()).collect::<Vec<_>>();
+        let result = FlowStateServ::find_detail_items(
+            &FlowStateFilterReq {
+                basic: RbumBasicFilterReq {
+                    ids: Some(state_ids),
+                    with_sub_own_paths: true,
+                    own_paths: Some("".to_string()),
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            None,
+            Some(true),
+            funs,
+            ctx,
+        )
+        .await?
+        .iter()
+        .map(|state_detail| FlowModelFindRelStateResp {
+            id: state_detail.id.clone(),
+            name: state_detail.name.clone(),
+            color: state_detail.color.clone(),
+        })
+        .collect_vec();
+
         Ok(result)
     }
 }
