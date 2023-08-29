@@ -1,4 +1,3 @@
-use std::default;
 use std::net::IpAddr;
 
 use ipnet::IpNet;
