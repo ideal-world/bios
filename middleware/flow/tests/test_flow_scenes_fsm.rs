@@ -284,7 +284,8 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
                     .unwrap()
                     .next_flow_transition_id
                     .to_string(),
-                vars: Some(TardisFuns::json.json_to_obj(json!({ "reason":"测试关闭" })).unwrap()),
+                // vars: Some(TardisFuns::json.json_to_obj(json!({ "reason":"测试关闭" })).unwrap()),
+                vars: Some(TardisFuns::json.json_to_obj(json!({})).unwrap()),
                 message: None,
             },
         )
@@ -452,6 +453,7 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
             rel_business_obj_id: Some(rel_business_obj_id),
             current_state_name: Some("已解决".to_string()),
             own_paths: Some("bzeUPv/JXYtZ0".to_string()),
+            owner: Some("".to_string()),
         });
     }
     let _: Vec<FlowInstBatchBindResp> = flow_client
@@ -470,6 +472,7 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
             rel_business_obj_id: Some(rel_business_obj_id),
             current_state_name: Some("已解决".to_string()),
             own_paths: Some("bzeUPv/JXYtZ0".to_string()),
+            owner: Some("".to_string()),
         });
     }
     let _: Vec<FlowInstBatchBindResp> = flow_client
