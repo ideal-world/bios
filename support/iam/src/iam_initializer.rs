@@ -373,7 +373,7 @@ pub async fn init_rbum_data(funs: &TardisFunsInst) -> TardisResult<(String, Stri
                 name: TrimString(iam_constants::RBUM_ITEM_NAME_TENANT_ADMIN_ROLE.to_string()),
                 icon: None,
                 sort: None,
-                scope_level: Some(iam_constants::RBUM_SCOPE_LEVEL_TENANT),
+                scope_level: Some(iam_constants::RBUM_SCOPE_LEVEL_GLOBAL),
                 disabled: None,
                 kind: Some(IamRoleKind::Tenant),
                 extend_role_id: None,
@@ -394,7 +394,7 @@ pub async fn init_rbum_data(funs: &TardisFunsInst) -> TardisResult<(String, Stri
                 name: TrimString(iam_constants::RBUM_ITEM_NAME_TENANT_AUDIT_ROLE.to_string()),
                 icon: None,
                 sort: None,
-                scope_level: Some(iam_constants::RBUM_SCOPE_LEVEL_TENANT),
+                scope_level: Some(iam_constants::RBUM_SCOPE_LEVEL_GLOBAL),
                 disabled: None,
                 kind: Some(IamRoleKind::Tenant),
                 extend_role_id: None,
@@ -415,7 +415,7 @@ pub async fn init_rbum_data(funs: &TardisFunsInst) -> TardisResult<(String, Stri
                 name: TrimString(iam_constants::RBUM_ITEM_NAME_APP_ADMIN_ROLE.to_string()),
                 icon: None,
                 sort: None,
-                scope_level: Some(iam_constants::RBUM_SCOPE_LEVEL_APP),
+                scope_level: Some(iam_constants::RBUM_SCOPE_LEVEL_GLOBAL),
                 disabled: None,
                 kind: Some(IamRoleKind::App),
                 extend_role_id: None,
@@ -432,7 +432,7 @@ pub async fn init_rbum_data(funs: &TardisFunsInst) -> TardisResult<(String, Stri
     let _ = add_role(
         iam_constants::RBUM_ITEM_NAME_APP_ADMIN_OM_ROLE,
         iam_constants::RBUM_ITEM_NAME_APP_ADMIN_OM_ROLE,
-        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        &iam_constants::RBUM_SCOPE_LEVEL_GLOBAL,
         &IamRoleKind::App,
         Some(vec![set_menu_ca_id.clone(), set_api_ca_id.clone()]),
         funs,
@@ -442,7 +442,7 @@ pub async fn init_rbum_data(funs: &TardisFunsInst) -> TardisResult<(String, Stri
     let _ = add_role(
         iam_constants::RBUM_ITEM_NAME_APP_ADMIN_DEVELOP_ROLE,
         iam_constants::RBUM_ITEM_NAME_APP_ADMIN_DEVELOP_ROLE,
-        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        &iam_constants::RBUM_SCOPE_LEVEL_GLOBAL,
         &IamRoleKind::App,
         Some(vec![set_menu_ca_id.clone(), set_api_ca_id.clone()]),
         funs,
@@ -452,7 +452,7 @@ pub async fn init_rbum_data(funs: &TardisFunsInst) -> TardisResult<(String, Stri
     let _ = add_role(
         iam_constants::RBUM_ITEM_NAME_APP_ADMIN_PRODUCT_ROLE,
         iam_constants::RBUM_ITEM_NAME_APP_ADMIN_PRODUCT_ROLE,
-        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        &iam_constants::RBUM_SCOPE_LEVEL_GLOBAL,
         &IamRoleKind::App,
         Some(vec![set_menu_ca_id.clone(), set_api_ca_id.clone()]),
         funs,
@@ -462,7 +462,7 @@ pub async fn init_rbum_data(funs: &TardisFunsInst) -> TardisResult<(String, Stri
     let _ = add_role(
         iam_constants::RBUM_ITEM_NAME_APP_ADMIN_ITERATE_ROLE,
         iam_constants::RBUM_ITEM_NAME_APP_ADMIN_ITERATE_ROLE,
-        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        &iam_constants::RBUM_SCOPE_LEVEL_GLOBAL,
         &IamRoleKind::App,
         Some(vec![set_menu_ca_id.clone(), set_api_ca_id.clone()]),
         funs,
@@ -472,7 +472,7 @@ pub async fn init_rbum_data(funs: &TardisFunsInst) -> TardisResult<(String, Stri
     let _ = add_role(
         iam_constants::RBUM_ITEM_NAME_APP_ADMIN_TEST_ROLE,
         iam_constants::RBUM_ITEM_NAME_APP_ADMIN_TEST_ROLE,
-        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        &iam_constants::RBUM_SCOPE_LEVEL_GLOBAL,
         &IamRoleKind::App,
         Some(vec![set_menu_ca_id.clone(), set_api_ca_id.clone()]),
         funs,
@@ -482,7 +482,7 @@ pub async fn init_rbum_data(funs: &TardisFunsInst) -> TardisResult<(String, Stri
     let _ = add_role(
         iam_constants::RBUM_ITEM_NAME_APP_NORMAL_ROLE,
         iam_constants::RBUM_ITEM_NAME_APP_NORMAL_ROLE,
-        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        &iam_constants::RBUM_SCOPE_LEVEL_GLOBAL,
         &IamRoleKind::App,
         Some(vec![set_menu_ca_id.clone(), set_api_ca_id.clone()]),
         funs,
@@ -492,7 +492,7 @@ pub async fn init_rbum_data(funs: &TardisFunsInst) -> TardisResult<(String, Stri
     let _ = add_role(
         iam_constants::RBUM_ITEM_NAME_APP_NORMAL_OM_ROLE,
         iam_constants::RBUM_ITEM_NAME_APP_NORMAL_OM_ROLE,
-        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        &iam_constants::RBUM_SCOPE_LEVEL_GLOBAL,
         &IamRoleKind::App,
         Some(vec![set_menu_ca_id.clone(), set_api_ca_id.clone()]),
         funs,
@@ -502,7 +502,7 @@ pub async fn init_rbum_data(funs: &TardisFunsInst) -> TardisResult<(String, Stri
     let _ = add_role(
         iam_constants::RBUM_ITEM_NAME_APP_NORMAL_DEVELOP_ROLE,
         iam_constants::RBUM_ITEM_NAME_APP_NORMAL_DEVELOP_ROLE,
-        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        &iam_constants::RBUM_SCOPE_LEVEL_GLOBAL,
         &IamRoleKind::App,
         Some(vec![set_menu_ca_id.clone(), set_api_ca_id.clone()]),
         funs,
@@ -512,7 +512,7 @@ pub async fn init_rbum_data(funs: &TardisFunsInst) -> TardisResult<(String, Stri
     let _ = add_role(
         iam_constants::RBUM_ITEM_NAME_APP_NORMAL_PRODUCT_ROLE,
         iam_constants::RBUM_ITEM_NAME_APP_NORMAL_PRODUCT_ROLE,
-        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        &iam_constants::RBUM_SCOPE_LEVEL_GLOBAL,
         &IamRoleKind::App,
         Some(vec![set_menu_ca_id.clone(), set_api_ca_id.clone()]),
         funs,
@@ -522,7 +522,7 @@ pub async fn init_rbum_data(funs: &TardisFunsInst) -> TardisResult<(String, Stri
     let _ = add_role(
         iam_constants::RBUM_ITEM_NAME_APP_NORMAL_ITERATE_ROLE,
         iam_constants::RBUM_ITEM_NAME_APP_NORMAL_ITERATE_ROLE,
-        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        &iam_constants::RBUM_SCOPE_LEVEL_GLOBAL,
         &IamRoleKind::App,
         Some(vec![set_menu_ca_id.clone(), set_api_ca_id.clone()]),
         funs,
@@ -532,7 +532,7 @@ pub async fn init_rbum_data(funs: &TardisFunsInst) -> TardisResult<(String, Stri
     let _ = add_role(
         iam_constants::RBUM_ITEM_NAME_APP_NORMAL_TEST_ROLE,
         iam_constants::RBUM_ITEM_NAME_APP_NORMAL_TEST_ROLE,
-        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        &iam_constants::RBUM_SCOPE_LEVEL_GLOBAL,
         &IamRoleKind::App,
         Some(vec![set_menu_ca_id.clone(), set_api_ca_id.clone()]),
         funs,
