@@ -30,8 +30,8 @@ use crate::{
     domain::{flow_model, flow_transition},
     dto::{
         flow_model_dto::{
-            FlowModelAddReq, FlowModelAggResp, FlowModelBindStateReq, FlowModelDetailResp, FlowModelFilterReq, FlowModelModifyReq, FlowModelSortStatesReq, FlowModelSummaryResp,
-            FlowModelUnbindStateReq, FlowStateAggResp, FlowTemplateModelResp,
+            FlowModelAddReq, FlowModelAggResp, FlowModelBindStateReq, FlowModelDetailResp, FlowModelFilterReq, FlowModelFindRelStateResp, FlowModelModifyReq,
+            FlowModelSortStatesReq, FlowModelSummaryResp, FlowModelUnbindStateReq, FlowStateAggResp, FlowTemplateModelResp,
         },
         flow_state_dto::{FlowStateAddReq, FlowStateFilterReq, FlowSysStateKind},
         flow_transition_dto::{
@@ -180,14 +180,14 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
         query.column((flow_model::Entity, flow_model::Column::Tag));
         query.column((flow_model::Entity, flow_model::Column::RelTemplateId));
         query.expr_as(Expr::val(json! {()}), Alias::new("transitions"));
-        if let Some(tag) = filter.tag.clone() {
-            query.and_where(Expr::col(flow_model::Column::Tag).eq(tag));
-        }
         if let Some(tags) = filter.tags.clone() {
             query.and_where(Expr::col(flow_model::Column::Tag).is_in(tags));
         }
         if let Some(rel_template_id) = filter.rel_template_id.clone() {
             query.and_where(Expr::col(flow_model::Column::RelTemplateId).eq(rel_template_id));
+        }
+        if let Some(template) = filter.template {
+            query.and_where(Expr::col(flow_model::Column::Template).eq(template));
         }
 
         Ok(())
@@ -684,10 +684,7 @@ impl FlowModelServ {
     // Find model by tag and template id
     pub async fn get_models(tags: Vec<&str>, template_id: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<HashMap<String, FlowTemplateModelResp>> {
         let mut result = HashMap::new();
-        let global_ctx = TardisContext {
-            own_paths: "".to_string(),
-            ..ctx.clone()
-        };
+
         let models = if let Some(template_id) = &template_id {
             // Since the default template is not bound to model, you can use global_ctx to find the association through the template_id
             // 因为默认模板没有绑定模型，所以通过template_id查找模型可以使用global_ctx
@@ -740,29 +737,8 @@ impl FlowModelServ {
         // Iterate over the tag based on the existing result and get the default model
         for tag in tags {
             if !result.contains_key(tag) {
-                let default_model_id = Self::paginate_items(
-                    &FlowModelFilterReq {
-                        tag: Some(tag.to_string()),
-                        basic: RbumBasicFilterReq {
-                            own_paths: Some("".to_string()),
-                            ..Default::default()
-                        },
-                        ..Default::default()
-                    },
-                    1,
-                    1,
-                    None,
-                    None,
-                    funs,
-                    &global_ctx,
-                )
-                .await?
-                .records
-                .pop()
-                .ok_or_else(|| funs.err().internal_error("flow_model_serv", "get_models", "default model is not exist", "404-default-model-mot-exist"))?
-                .id;
                 // copy custom model
-                let model_id = Self::copy_custom_model(&default_model_id, template_id.clone(), funs, ctx).await?;
+                let model_id = Self::add_custom_model(tag, "", template_id.clone(), funs, ctx).await?;
                 let custom_model = Self::get_item(
                     &model_id,
                     &FlowModelFilterReq {
@@ -788,47 +764,84 @@ impl FlowModelServ {
         Ok(result)
     }
 
-    // copy custom model
-    pub(crate) async fn copy_custom_model(default_model_id: &str, rel_template_id: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
+    // add custom model by template model
+    pub async fn add_custom_model(tag: &str, rel_template_id: &str, current_template_id: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
+        let current_model = Self::find_one_detail_item(
+            &FlowModelFilterReq {
+                basic: RbumBasicFilterReq { ..Default::default() },
+                tags: Some(vec![tag.to_string()]),
+                rel_template_id: current_template_id.clone(),
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?;
+        if let Some(current_model) = current_model {
+            return Ok(current_model.id);
+        }
+
         let global_ctx = TardisContext {
             own_paths: "".to_string(),
             ..ctx.clone()
         };
-        let default_model = Self::get_item(
-            default_model_id,
+
+        let basic = if !rel_template_id.is_empty() {
+            RbumBasicFilterReq {
+                with_sub_own_paths: true,
+                ..Default::default()
+            }
+        } else {
+            RbumBasicFilterReq::default()
+        };
+        let parent_model = if let Some(parent_model) = Self::find_one_detail_item(
             &FlowModelFilterReq {
-                basic: RbumBasicFilterReq {
-                    own_paths: Some("".to_string()),
-                    ..Default::default()
-                },
+                basic,
+                tags: Some(vec![tag.to_string()]),
+                rel_template_id: Some(rel_template_id.to_string()),
                 ..Default::default()
             },
             funs,
             &global_ctx,
         )
-        .await?;
+        .await?
+        {
+            parent_model
+        } else {
+            Self::find_one_detail_item(
+                &FlowModelFilterReq {
+                    tags: Some(vec![tag.to_string()]),
+                    ..Default::default()
+                },
+                funs,
+                &global_ctx,
+            )
+            .await?
+            .ok_or_else(|| funs.err().internal_error("flow_model_serv", "add_custom_model", "default model is not exist", "404-default-model-mot-exist"))?
+        };
+
         // add model
-        let transitions = default_model.transitions();
+        let transitions = parent_model.transitions();
         let model_id = Self::add_item(
             &mut FlowModelAddReq {
-                name: default_model.name.into(),
-                icon: Some(default_model.icon),
-                info: Some(default_model.info),
-                init_state_id: default_model.init_state_id,
-                rel_template_id,
+                name: parent_model.name.into(),
+                icon: Some(parent_model.icon),
+                info: Some(parent_model.info),
+                init_state_id: parent_model.init_state_id,
+                rel_template_id: current_template_id,
                 transitions: Some(transitions.into_iter().map(|trans| trans.into()).collect_vec()),
                 template: false,
-                rel_model_id: Some(default_model_id.to_string()),
-                tag: Some(default_model.tag),
-                scope_level: Some(default_model.scope_level),
-                disabled: Some(default_model.disabled),
+                rel_model_id: Some(parent_model.id.clone()),
+                tag: Some(parent_model.tag),
+                scope_level: Some(parent_model.scope_level),
+                disabled: Some(parent_model.disabled),
             },
             funs,
             ctx,
         )
         .await?;
         // bind states
-        let states = FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelState, default_model_id, None, None, funs, &global_ctx)
+        let states = FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelState, &parent_model.id, None, None, funs, &global_ctx)
             .await?
             .iter()
             .sorted_by_key(|rel| rel.ext.as_str().parse::<i64>().unwrap_or_default())
@@ -838,16 +851,6 @@ impl FlowModelServ {
             FlowRelServ::add_simple_rel(&FlowRelKind::FlowModelState, &model_id, state_id, None, None, false, true, Some(i as i64), funs, ctx).await?;
         }
 
-        Self::modify_item(
-            default_model_id,
-            &mut FlowModelModifyReq {
-                template: Some(true),
-                ..Default::default()
-            },
-            funs,
-            &global_ctx,
-        )
-        .await?;
         Ok(model_id)
     }
 
@@ -1011,5 +1014,36 @@ impl FlowModelServ {
             }
         }
         Ok((is_ring, current_chain))
+    }
+
+    pub async fn find_rel_states(tag: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<FlowModelFindRelStateResp>> {
+        let flow_model_id = FlowInstServ::get_model_id_by_own_paths(tag, funs, ctx).await?;
+        let state_ids =
+            FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelState, &flow_model_id, None, None, funs, ctx).await?.iter().map(|rel| rel.rel_id.clone()).collect::<Vec<_>>();
+        let result = FlowStateServ::find_detail_items(
+            &FlowStateFilterReq {
+                basic: RbumBasicFilterReq {
+                    ids: Some(state_ids),
+                    with_sub_own_paths: true,
+                    own_paths: Some("".to_string()),
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            None,
+            Some(true),
+            funs,
+            ctx,
+        )
+        .await?
+        .iter()
+        .map(|state_detail| FlowModelFindRelStateResp {
+            id: state_detail.id.clone(),
+            name: state_detail.name.clone(),
+            color: state_detail.color.clone(),
+        })
+        .collect_vec();
+
+        Ok(result)
     }
 }

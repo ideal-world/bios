@@ -19,7 +19,7 @@ use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
 use crate::basic::domain::iam_app;
 use crate::basic::dto::iam_app_dto::{IamAppAddReq, IamAppAggAddReq, IamAppAggModifyReq, IamAppDetailResp, IamAppModifyReq, IamAppSummaryResp};
-use crate::basic::dto::iam_filer_dto::IamAppFilterReq;
+use crate::basic::dto::iam_filer_dto::{IamAppFilterReq, IamRoleFilterReq};
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_key_cache_serv::IamIdentCacheServ;
 use crate::basic::serv::iam_rel_serv::IamRelServ;
@@ -28,7 +28,7 @@ use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::iam_config::{IamBasicConfigApi, IamBasicInfoManager, IamConfig};
 use crate::iam_constants::{self, RBUM_SCOPE_LEVEL_PRIVATE};
 use crate::iam_constants::{RBUM_ITEM_ID_APP_LEN, RBUM_SCOPE_LEVEL_APP};
-use crate::iam_enumeration::{IamRelKind, IamSetKind};
+use crate::iam_enumeration::{IamRelKind, IamRoleKind, IamSetKind};
 pub struct IamAppServ;
 
 #[async_trait]
@@ -172,13 +172,15 @@ impl IamAppServ {
             &app_ctx,
         )
         .await?;
+        IamRoleServ::copy_role_agg(&app_id, &IamRoleKind::App, funs, &app_ctx).await?;
+        let app_admin_role_id = IamRoleServ::get_embed_subrole_id(&funs.iam_basic_role_app_admin_id(), funs, &app_ctx).await?;
         // todo 是否需要在这里初始化应用级别的set？
         IamSetServ::init_set(IamSetKind::Org, RBUM_SCOPE_LEVEL_APP, funs, &app_ctx).await?;
         IamSetServ::init_set(IamSetKind::Apps, RBUM_SCOPE_LEVEL_APP, funs, &app_ctx).await?;
         if let Some(admin_ids) = &add_req.admin_ids {
             for admin_id in admin_ids {
                 IamAppServ::add_rel_account(&app_id, admin_id, false, funs, &app_ctx).await?;
-                IamRoleServ::add_rel_account(&funs.iam_basic_role_app_admin_id(), admin_id, None, funs, &app_ctx).await?;
+                IamRoleServ::add_rel_account(&app_admin_role_id, admin_id, None, funs, &app_ctx).await?;
             }
         }
         //refresh ctx
@@ -189,7 +191,8 @@ impl IamAppServ {
     }
 
     pub async fn modify_app_agg(id: &str, modify_req: &IamAppAggModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        let original_app_admin_account_ids = IamRoleServ::find_id_rel_accounts(&funs.iam_basic_role_app_admin_id(), None, None, funs, ctx).await?;
+        let app_admin_role_id = IamRoleServ::get_embed_subrole_id(&funs.iam_basic_role_app_admin_id(), funs, &ctx).await?;
+        let original_app_admin_account_ids = IamRoleServ::find_id_rel_accounts(&app_admin_role_id, None, None, funs, ctx).await?;
         let original_app_admin_account_ids = HashSet::from_iter(original_app_admin_account_ids.iter().cloned());
         Self::modify_item(
             id,
@@ -211,12 +214,12 @@ impl IamAppServ {
                 for admin_id in admin_ids {
                     if !original_app_admin_account_ids.contains(admin_id) {
                         IamAppServ::add_rel_account(id, admin_id, true, funs, ctx).await?;
-                        IamRoleServ::add_rel_account(&funs.iam_basic_role_app_admin_id(), admin_id, None, funs, ctx).await?;
+                        IamRoleServ::add_rel_account(&app_admin_role_id, admin_id, None, funs, ctx).await?;
                     }
                 }
                 // delete old admins
                 for account_id in original_app_admin_account_ids.difference(&admin_ids.iter().cloned().collect::<HashSet<String>>()) {
-                    IamRoleServ::delete_rel_account(&funs.iam_basic_role_app_admin_id(), account_id, None, funs, ctx).await?;
+                    IamRoleServ::delete_rel_account(&app_admin_role_id, account_id, None, funs, ctx).await?;
                     // IamAppServ::delete_rel_account(id, account_id, funs, ctx).await?;
                 }
             }

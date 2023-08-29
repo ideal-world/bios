@@ -114,6 +114,9 @@ impl RbumItemFilterFetcher for IamResFilterReq {
 pub struct IamRoleFilterReq {
     pub basic: RbumBasicFilterReq,
     pub kind: Option<IamRoleKind>,
+    pub in_base: Option<bool>,
+    pub in_embed: Option<bool>,
+    pub extend_role_id: Option<String>,
     pub rel: Option<RbumItemRelFilterReq>,
     pub rel2: Option<RbumItemRelFilterReq>,
     pub icon: Option<String>,

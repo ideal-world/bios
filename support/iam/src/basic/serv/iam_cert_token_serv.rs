@@ -119,6 +119,8 @@ impl IamCertTokenServ {
             ctx,
         )
         .await?;
+        let _ = IamLogClient::add_ctx_task(LogParamTag::Token, Some(token.to_string()), "add token".to_string(), None, ctx).await;
+        let _ = IamLogClient::add_ctx_task(LogParamTag::SecurityVisit, Some(token.to_string()), "登录".to_string(), Some("Login".to_string()), ctx).await;
         // 根据安全配置的Token Expire，计算token的活化有效期
         if let Some(config) =
             IamConfigServ::get_config_by_code_and_item_id(&IamConfigKind::TokenExpire, &get_max_level_id_by_context(ctx).unwrap_or("".to_string()), funs, ctx).await?
@@ -131,13 +133,10 @@ impl IamCertTokenServ {
         }
         IamIdentCacheServ::add_token(token, token_kind, rel_iam_item_id, None, cert_conf.expire_sec, cert_conf.coexist_num, funs).await?;
 
-        let _ = IamLogClient::add_ctx_task(LogParamTag::Token, Some(token.to_string()), "add token".to_string(), None, ctx).await;
-        let _ = IamLogClient::add_ctx_task(LogParamTag::SecurityVisit, Some(token.to_string()), "登录".to_string(), Some("Login".to_string()), ctx).await;
-
         Ok(())
     }
 
-    pub async fn delete_cert(token: &str, funs: &TardisFunsInst) -> TardisResult<()> {
-        IamIdentCacheServ::delete_token_by_token(token, funs).await
+    pub async fn delete_cert(token: &str, ip: Option<String>, funs: &TardisFunsInst) -> TardisResult<()> {
+        IamIdentCacheServ::delete_token_by_token(token, ip, funs).await
     }
 }

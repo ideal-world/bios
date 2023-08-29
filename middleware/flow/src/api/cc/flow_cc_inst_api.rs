@@ -5,8 +5,8 @@ use tardis::web::poem_openapi::payload::Json;
 use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 
 use crate::dto::flow_inst_dto::{
-    FlowInstAbortReq, FlowInstBindReq, FlowInstBindResp, FlowInstDetailResp, FlowInstFindNextTransitionResp, FlowInstFindNextTransitionsReq, FlowInstFindStateAndTransitionsReq,
-    FlowInstFindStateAndTransitionsResp, FlowInstModifyAssignedReq, FlowInstStartReq, FlowInstSummaryResp, FlowInstTransferReq, FlowInstTransferResp,
+    FlowInstAbortReq, FlowInstDetailResp, FlowInstFindNextTransitionResp, FlowInstFindNextTransitionsReq, FlowInstFindStateAndTransitionsReq, FlowInstFindStateAndTransitionsResp,
+    FlowInstModifyAssignedReq, FlowInstStartReq, FlowInstSummaryResp, FlowInstTransferReq, FlowInstTransferResp,
 };
 use crate::flow_constants;
 use crate::serv::flow_inst_serv::FlowInstServ;
@@ -21,17 +21,7 @@ impl FlowCcInstApi {
     async fn start(&self, add_req: Json<FlowInstStartReq>, ctx: TardisContextExtractor) -> TardisApiResult<String> {
         let mut funs = flow_constants::get_tardis_inst();
         funs.begin().await?;
-        let result = FlowInstServ::start(&add_req.0, &funs, &ctx.0).await?;
-        funs.commit().await?;
-        TardisResp::ok(result)
-    }
-
-    /// Batch Bind Instance / 批量绑定实例 （初始化）
-    #[oai(path = "/batch_bind", method = "post")]
-    async fn batch_bind(&self, add_req: Json<FlowInstBindReq>, ctx: TardisContextExtractor) -> TardisApiResult<Vec<FlowInstBindResp>> {
-        let mut funs = flow_constants::get_tardis_inst();
-        funs.begin().await?;
-        let result = FlowInstServ::batch_bind(&add_req.0, &funs, &ctx.0).await?;
+        let result = FlowInstServ::start(&add_req.0, None, &funs, &ctx.0).await?;
         funs.commit().await?;
         TardisResp::ok(result)
     }
@@ -100,8 +90,8 @@ impl FlowCcInstApi {
     #[oai(path = "/:flow_inst_id/transition/transfer", method = "put")]
     async fn transfer(&self, flow_inst_id: Path<String>, transfer_req: Json<FlowInstTransferReq>, ctx: TardisContextExtractor) -> TardisApiResult<FlowInstTransferResp> {
         let mut funs = flow_constants::get_tardis_inst();
-        funs.begin().await?;
         FlowInstServ::check_transfer_vars(&flow_inst_id.0, &transfer_req.0, &funs, &ctx.0).await?;
+        funs.begin().await?;
         let result = FlowInstServ::transfer(&flow_inst_id.0, &transfer_req.0, &funs, &ctx.0).await?;
         funs.commit().await?;
         TardisResp::ok(result)
