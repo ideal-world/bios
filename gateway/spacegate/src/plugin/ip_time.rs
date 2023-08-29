@@ -27,14 +27,29 @@ impl SgPluginFilterDef for SgFilterIpTimeDef {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Default)]
+#[serde(default)]
 pub struct SgFilterIpTimeConfig {
+    /// ## When white_list_mode is **enabled**
+    /// some rules passed, the request will be allowed
+    /// ## When white_list_mode is **disabled**
+    /// only when some rules blocked, the request will be blocked
+    pub mode: SgFilterIpTimeMode,
     pub rules: Vec<SgFilterIpTimeConfigRule>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum SgFilterIpTimeMode {
+    WhiteList,
+    #[default]
+    BlackList,
 }
 
 impl From<SgFilterIpTimeConfig> for SgFilterIpTime {
     fn from(value: SgFilterIpTimeConfig) -> Self {
         let mut rules = Vec::new();
+        let white_list_mode = value.mode;
         for rule in value.rules {
             let nets: Vec<IpNet> = rule
                 .ip_list
@@ -52,7 +67,7 @@ impl From<SgFilterIpTimeConfig> for SgFilterIpTime {
                 rules.push((net, rule.time_rule.clone()))
             }
         }
-        SgFilterIpTime { rules }
+        SgFilterIpTime { mode: white_list_mode, rules }
     }
 }
 #[derive(Debug, Serialize, Deserialize)]
@@ -69,12 +84,21 @@ pub struct SgFilterIpTime {
     //     - ban: Set {}
     //     - allow: Set {}
     // - pointer to the lastest segment
+    pub mode: SgFilterIpTimeMode,
     pub rules: Vec<(IpNet, IpTimeRule)>,
 }
 impl SgFilterIpTime {
     pub fn check_ip(&self, ip: &IpAddr) -> bool {
-        // any rule contains the ip and the time is not allowed
-        !self.rules.iter().any(|(net, rule)| net.contains(ip) && !rule.check_by_now())
+        match self.mode {
+            SgFilterIpTimeMode::WhiteList => {
+                // when white list mode is enabled, if we find some rule passed, the request will be allowed, otherwise blocked
+                self.rules.iter().any(|(net, rule)| net.contains(ip) && rule.check_by_now())
+            }
+            SgFilterIpTimeMode::BlackList => {
+                // when black list mode is enabled, if we find some rule blocked, the request will be blocked, otherwise allowed
+                !self.rules.iter().any(|(net, rule)| net.contains(ip) && !rule.check_by_now())
+            }
+        }
     }
 }
 #[async_trait]
