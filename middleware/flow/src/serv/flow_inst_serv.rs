@@ -687,7 +687,7 @@ impl FlowInstServ {
         .await?;
 
         // notify change state
-        if transfer_req.vars.is_none() {
+        if transfer_req.vars.is_none() || !transfer_req.vars.as_ref().unwrap().is_empty() {
             FlowExternalServ::do_notify_changes(&flow_model.tag, &flow_inst_detail.rel_business_obj_id, next_flow_state.name.clone(), ctx, funs).await?;
         }
 
