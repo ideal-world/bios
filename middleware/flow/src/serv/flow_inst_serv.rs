@@ -649,7 +649,7 @@ impl FlowInstServ {
             }
         }
 
-        let mut finish_abort = flow_inst_detail.finish_abort.unwrap_or_default();
+        let mut finish_time = flow_inst_detail.finish_time;
         let mut new_vars: HashMap<String, Value> = HashMap::new();
         if let Some(current_vars) = &flow_inst_detail.current_vars {
             new_vars.extend(current_vars.clone());
@@ -677,7 +677,7 @@ impl FlowInstServ {
             ..Default::default()
         };
         if next_flow_state.sys_state == FlowSysStateKind::Finish {
-            finish_abort = false;
+            finish_time = Some(Utc::now());
             flow_inst.finish_ctx = Set(Some(FlowOperationContext::from_ctx(ctx)));
             flow_inst.finish_time = Set(Some(Utc::now()));
             flow_inst.finish_abort = Set(Some(false));
@@ -710,7 +710,7 @@ impl FlowInstServ {
             prev_flow_state_name: flow_inst_detail.current_state_name,
             new_flow_state_id: next_flow_transition.next_flow_state_id,
             new_flow_state_name: next_flow_transition.next_flow_state_name,
-            finish_abort,
+            finish_time,
             vars: Some(new_vars),
             next_flow_transitions,
         })
@@ -1049,7 +1049,7 @@ impl FlowInstServ {
 
         let state_and_next_transitions = FlowInstFindStateAndTransitionsResp {
             flow_inst_id: flow_inst.id.to_string(),
-            finish_abort: flow_inst.finish_abort.unwrap_or_default(),
+            finish_time: flow_inst.finish_time,
             current_flow_state_name: flow_inst.current_state_name.as_ref().unwrap_or(&"".to_string()).to_string(),
             current_flow_state_kind: current_flow_state.as_ref().map(|state| state.sys_state.clone()).unwrap_or(FlowSysStateKind::Finish),
             current_flow_state_color: current_flow_state.as_ref().map(|state| state.color.clone()).unwrap_or_default(),
