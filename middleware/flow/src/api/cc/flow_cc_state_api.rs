@@ -63,6 +63,7 @@ impl FlowCcStateApi {
     async fn paginate(
         &self,
         ids: Query<Option<String>>,
+        app_ids: Query<Option<String>>,
         name: Query<Option<String>>,
         tag: Query<Option<String>>,
         sys_state: Query<Option<FlowSysStateKind>>,
@@ -106,6 +107,7 @@ impl FlowCcStateApi {
                 sys_state: sys_state.0,
                 state_kind: state_kind.0,
                 template: template.0,
+                app_ids: app_ids.0.map(|ids| ids.split(',').map(|id| id.to_string()).collect::<Vec<String>>()),
             },
             page_number.0,
             page_size.0,

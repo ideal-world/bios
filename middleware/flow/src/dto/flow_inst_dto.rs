@@ -158,6 +158,7 @@ pub struct FlowInstFindStateAndTransitionsResp {
     pub current_flow_state_name: String,
     pub current_flow_state_kind: FlowSysStateKind,
     pub current_flow_state_color: String,
+    pub finish_abort: bool,
     pub next_flow_transitions: Vec<FlowInstFindNextTransitionResp>,
 }
 
@@ -174,8 +175,10 @@ pub struct FlowInstTransferResp {
     pub prev_flow_state_name: Option<String>,
     pub new_flow_state_id: String,
     pub new_flow_state_name: String,
+    pub finish_abort: bool,
 
     pub vars: Option<HashMap<String, Value>>,
+    pub next_flow_transitions: Vec<FlowInstFindNextTransitionResp>,
 }
 
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]

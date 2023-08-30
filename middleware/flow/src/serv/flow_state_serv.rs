@@ -5,6 +5,7 @@ use bios_basic::rbum::{
         rbum_filer_dto::RbumBasicFilterReq,
         rbum_item_dto::{RbumItemKernelAddReq, RbumItemKernelModifyReq},
     },
+    helper::rbum_scope_helper,
     serv::rbum_item_serv::RbumItemCrudOperation,
 };
 use tardis::{
@@ -154,7 +155,7 @@ impl RbumItemCrudOperation<flow_state::ActiveModel, FlowStateAddReq, FlowStateMo
         Ok(None)
     }
 
-    async fn package_ext_query(query: &mut SelectStatement, _: bool, filter: &FlowStateFilterReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<()> {
+    async fn package_ext_query(query: &mut SelectStatement, _: bool, filter: &FlowStateFilterReq, _funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         query.column((flow_state::Entity, flow_state::Column::Icon));
         query.column((flow_state::Entity, flow_state::Column::Color));
         query.column((flow_state::Entity, flow_state::Column::SysState));
@@ -176,6 +177,16 @@ impl RbumItemCrudOperation<flow_state::ActiveModel, FlowStateAddReq, FlowStateMo
         }
         if let Some(template) = filter.template {
             query.and_where(Expr::col(flow_state::Column::Template).eq(template));
+        }
+        if let Some(app_ids) = filter.app_ids.clone() {
+            let tenant_own_path = rbum_scope_helper::get_path_item(1, &ctx.own_paths);
+            if let Some(tenant_own_path) = tenant_own_path {
+                let mut app_own_paths = vec![];
+                for app_id in app_ids {
+                    app_own_paths.push(format!("{}/{}", &tenant_own_path, &app_id));
+                }
+                query.and_where(Expr::col((flow_state::Entity, flow_state::Column::OwnPaths)).is_in(app_own_paths));
+            }
         }
         Ok(())
     }
