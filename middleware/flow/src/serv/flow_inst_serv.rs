@@ -649,6 +649,7 @@ impl FlowInstServ {
             }
         }
 
+        let mut finish_abort = flow_inst_detail.finish_abort.unwrap_or_default();
         let mut new_vars: HashMap<String, Value> = HashMap::new();
         if let Some(current_vars) = &flow_inst_detail.current_vars {
             new_vars.extend(current_vars.clone());
@@ -676,6 +677,7 @@ impl FlowInstServ {
             ..Default::default()
         };
         if next_flow_state.sys_state == FlowSysStateKind::Finish {
+            finish_abort = false;
             flow_inst.finish_ctx = Set(Some(FlowOperationContext::from_ctx(ctx)));
             flow_inst.finish_time = Set(Some(Utc::now()));
             flow_inst.finish_abort = Set(Some(false));
@@ -701,13 +703,16 @@ impl FlowInstServ {
         if !post_changes.is_empty() {
             Self::do_post_change(&flow_inst_detail, &flow_model, post_changes, ctx, funs).await?;
         }
+        let next_flow_transitions = Self::do_find_next_transitions(&flow_inst_detail, &flow_model, None, &None, funs, ctx).await?.next_flow_transitions;
 
         Ok(FlowInstTransferResp {
             prev_flow_state_id: flow_inst_detail.current_state_id,
             prev_flow_state_name: flow_inst_detail.current_state_name,
             new_flow_state_id: next_flow_transition.next_flow_state_id,
             new_flow_state_name: next_flow_transition.next_flow_state_name,
+            finish_abort,
             vars: Some(new_vars),
+            next_flow_transitions,
         })
     }
 
@@ -1044,6 +1049,7 @@ impl FlowInstServ {
 
         let state_and_next_transitions = FlowInstFindStateAndTransitionsResp {
             flow_inst_id: flow_inst.id.to_string(),
+            finish_abort: flow_inst.finish_abort.unwrap_or_default(),
             current_flow_state_name: flow_inst.current_state_name.as_ref().unwrap_or(&"".to_string()).to_string(),
             current_flow_state_kind: current_flow_state.as_ref().map(|state| state.sys_state.clone()).unwrap_or(FlowSysStateKind::Finish),
             current_flow_state_color: current_flow_state.as_ref().map(|state| state.color.clone()).unwrap_or_default(),
