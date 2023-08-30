@@ -371,6 +371,9 @@ pub async fn tenant_console_account_mgr_page(client: &mut BIOSWebTestClient) -> 
                     icon: None,
                     sort: None,
                     kind: None,
+                    in_embed: None,
+                    extend_role_id: None,
+                    in_base: None,
                 },
                 res_ids: None,
             },
@@ -442,6 +445,7 @@ pub async fn tenant_console_account_mgr_page(client: &mut BIOSWebTestClient) -> 
                 status: None,
                 cert_phone: None,
                 cert_mail: None,
+                temporary: None,
             },
         )
         .await;
@@ -505,6 +509,9 @@ pub async fn tenant_console_auth_mgr_page(client: &mut BIOSWebTestClient) -> Tar
                     icon: None,
                     sort: None,
                     kind: None,
+                    in_embed: None,
+                    extend_role_id: None,
+                    in_base: None,
                 },
                 res_ids: Some(vec![res_id.clone()]),
             },

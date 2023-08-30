@@ -85,6 +85,9 @@ impl IamCaRoleApi {
         &self,
         id: Query<Option<String>>,
         name: Query<Option<String>>,
+        in_base: Query<Option<bool>>,
+        in_embed: Query<Option<bool>>,
+        extend_role_id: Query<Option<String>>,
         page_number: Query<u32>,
         page_size: Query<u32>,
         desc_by_create: Query<Option<bool>>,
@@ -104,6 +107,9 @@ impl IamCaRoleApi {
                     ..Default::default()
                 },
                 kind: Some(IamRoleKind::App),
+                in_base: in_base.0,
+                in_embed: in_embed.0,
+                extend_role_id: extend_role_id.0,
                 ..Default::default()
             },
             page_number.0,

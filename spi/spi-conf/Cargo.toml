@@ -24,11 +24,21 @@ tardis = { workspace = true, features = [
     "reldb-postgres",
     "web-server",
     "crypto",
+    "web-server-grpc",
 ] }
 bios-basic = { path = "../../basic", features = ["default"] }
 lazy_static = { workspace = true }
 jsonwebtoken = "8"
+poem-grpc = "0.2.21"
+prost = "0.11.9"
+poem = "1"
+prost-types = "0.11.9"
+strum = { version = "0.25.0", features = ["derive"] }
+tokio-stream = { version = "0.1.14", features = ["sync"] }
+
 [dev-dependencies]
 tardis = { workspace = true, features = ["test", "conf-remote", "mq"] }
 bios-basic = { path = "../../basic", features = ["default", "test"] }
 reqwest = "*"
+[build-dependencies]
+poem-grpc-build = "0.2.21"

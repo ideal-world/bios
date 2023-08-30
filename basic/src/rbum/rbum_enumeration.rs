@@ -238,7 +238,7 @@ impl TryGetable for RbumRelEnvKind {
 }
 
 #[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
-#[cfg_attr(feature = "default", derive(poem_openapi::Enum, sea_orm::strum::EnumString))]
+#[cfg_attr(feature = "default", derive(poem_openapi::Enum, strum::EnumString))]
 pub enum RbumDataTypeKind {
     String,
     Number,
@@ -268,7 +268,7 @@ impl TryGetable for RbumDataTypeKind {
 }
 
 #[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
-#[cfg_attr(feature = "default", derive(poem_openapi::Enum, sea_orm::strum::EnumString))]
+#[cfg_attr(feature = "default", derive(poem_openapi::Enum, strum::EnumString))]
 pub enum RbumWidgetTypeKind {
     Input,
     InputTxt,

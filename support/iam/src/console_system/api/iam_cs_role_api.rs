@@ -78,6 +78,10 @@ impl IamCsRoleApi {
         &self,
         id: Query<Option<String>>,
         name: Query<Option<String>>,
+        kind: Query<Option<IamRoleKind>>,
+        in_base: Query<Option<bool>>,
+        in_embed: Query<Option<bool>>,
+        extend_role_id: Query<Option<String>>,
         tenant_id: Query<Option<String>>,
         with_sub: Query<Option<bool>>,
         page_number: Query<u32>,
@@ -98,6 +102,10 @@ impl IamCsRoleApi {
                     with_sub_own_paths: with_sub.0.unwrap_or(false),
                     ..Default::default()
                 },
+                kind: kind.0,
+                in_base: in_base.0,
+                in_embed: in_embed.0,
+                extend_role_id: extend_role_id.0,
                 ..Default::default()
             },
             page_number.0,

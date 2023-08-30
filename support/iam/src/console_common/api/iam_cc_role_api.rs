@@ -28,6 +28,9 @@ impl IamCcRoleApi {
         id: Query<Option<String>>,
         name: Query<Option<String>>,
         kind: Query<Option<IamRoleKind>>,
+        in_base: Query<Option<bool>>,
+        in_embed: Query<Option<bool>>,
+        extend_role_id: Query<Option<String>>,
         with_sub: Query<Option<bool>>,
         page_number: Query<u32>,
         page_size: Query<u32>,
@@ -49,6 +52,9 @@ impl IamCcRoleApi {
                     ..Default::default()
                 },
                 kind: kind.0,
+                in_base: in_base.0,
+                in_embed: in_embed.0,
+                extend_role_id: extend_role_id.0,
                 ..Default::default()
             },
             page_number.0,
@@ -74,6 +80,9 @@ impl IamCcRoleApi {
                     kind: item.kind,
                     scope_level: item.scope_level,
                     icon: item.icon,
+                    in_base: item.in_base,
+                    in_embed: item.in_embed,
+                    extend_role_id: item.extend_role_id,
                 })
                 .collect(),
         })
