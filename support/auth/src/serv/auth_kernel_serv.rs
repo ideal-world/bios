@@ -171,6 +171,13 @@ async fn ident(req: &AuthReq, config: &AuthConfig, cache_client: &TardisCacheCli
         }
         if own_paths.contains(&cache_own_paths) {
             let context = self::get_account_context(&ak_authorization, &owner, &app_id, config, cache_client).await?;
+            let mut roles = context.roles.clone();
+            for role in roles.clone() {
+                if role.contains(":") {
+                    let extend_role = role.split(':').collect::<Vec<_>>()[0];
+                    roles.push(extend_role.to_string());
+                }
+            }
             let own_paths_split = own_paths.split('/').collect::<Vec<_>>();
             let tenant_id = if own_paths.is_empty() { None } else { Some(own_paths_split[0].to_string()) };
             let app_id = if own_paths_split.len() > 1 { Some(own_paths_split[1].to_string()) } else { None };
@@ -180,7 +187,7 @@ async fn ident(req: &AuthReq, config: &AuthConfig, cache_client: &TardisCacheCli
                 app_id,
                 tenant_id,
                 account_id: Some(owner.to_string()),
-                roles: Some(context.roles),
+                roles: Some(roles),
                 groups: Some(context.groups),
                 own_paths: Some(own_paths.to_string()),
                 ak: Some(ak_authorization.to_string()),
