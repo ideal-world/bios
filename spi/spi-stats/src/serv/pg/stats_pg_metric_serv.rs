@@ -580,7 +580,7 @@ fn package_groups(
             leaf_node.insert(measure_key.to_string(), val.clone());
         }
         if !ignore_group_agg {
-            leaf_node.insert("group".to_string(), first_result.get("group").ok_or(format!("failed to get key group"))?.clone());
+            leaf_node.insert("group".to_string(), first_result.get("group").ok_or("failed to get key group".to_string())?.clone());
         }
         return Ok(serde_json::Value::Object(leaf_node));
     }
@@ -626,7 +626,7 @@ fn package_groups_agg(record: serde_json::Value) -> Result<serde_json::Value, St
             println!("{}", agg);
             let mut details = Vec::new();
             let var_agg = agg.as_str().ok_or("field group_agg should be a string")?;
-            let vars = var_agg.split(",").collect::<Vec<&str>>();
+            let vars = var_agg.split(',').collect::<Vec<&str>>();
             for var in vars {
                 let fields = var.split(" - ").collect::<Vec<&str>>();
                 details.push(json!({
