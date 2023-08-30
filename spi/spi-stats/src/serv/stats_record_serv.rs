@@ -17,7 +17,7 @@ spi_dispatch_service! {
         spi_constants::SPI_PG_KIND_CODE => pg::stats_pg_record_serv,
     },
     @method: {
-        get_fact_record_latest(fact_conf_key: &str, fact_record_key: &str) -> TardisResult<serde_json::Value>;
+        get_fact_record_latest(fact_conf_key: &str, fact_record_key: impl IntoIterator<Item = &str>) -> TardisResult<Vec<serde_json::Value>>;
         get_fact_record_pagenated(
             fact_conf_key: &str,
             fact_record_key: &str,
