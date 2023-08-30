@@ -362,7 +362,7 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                 },
                 FlowTransitionInitInfo {
                     from_flow_state_name: "待开始".to_string(),
-                    to_flow_state_name: "进行中".to_string(),
+                    to_flow_state_name: "已关闭".to_string(),
                     name: "关闭".to_string(),
                     ..Default::default()
                 },
