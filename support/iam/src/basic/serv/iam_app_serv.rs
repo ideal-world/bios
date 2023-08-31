@@ -240,7 +240,7 @@ impl IamAppServ {
         }
         if let Some(set_cate_id) = &modify_req.set_cate_id {
             let tenant_ctx = IamCertServ::use_sys_or_tenant_ctx_unsafe(ctx.clone())?;
-            // 
+            //
             let apps_set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Apps, &funs, &tenant_ctx).await?;
             IamSetServ::add_set_item(
                 &IamSetItemAddReq {

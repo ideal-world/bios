@@ -105,11 +105,7 @@ impl SgFilterAuditLog {
             user_id: ctx.get_cert_info().map(|info| info.id.clone()),
             role: ctx.get_cert_info().map(|info| info.roles.clone()).unwrap_or_default(),
             ip: if let Some(real_ips) = ctx.request.get_headers().get("X-Forwarded-For") {
-                real_ips
-                    .to_str()
-                    .ok()
-                    .and_then(|ips| ips.split(',').collect::<Vec<_>>().first().map(|ip| ip.to_string()))
-                    .unwrap_or(ctx.request.get_remote_addr().ip().to_string())
+                real_ips.to_str().ok().and_then(|ips| ips.split(',').collect::<Vec<_>>().first().map(|ip| ip.to_string())).unwrap_or(ctx.request.get_remote_addr().ip().to_string())
             } else {
                 ctx.request.get_remote_addr().ip().to_string()
             },
@@ -307,7 +303,7 @@ mod test {
             assert_eq!(log_content.token, Some("aaa".to_string()));
             assert_eq!(log_content.server_timing, Some(100));
             assert!(log_content.success);
-    
+
             let mut header = HeaderMap::new();
             header.insert(sg_filter_audit_log.header_token_name.parse::<HeaderName>().unwrap(), "aaa".parse().unwrap());
             let ctx = SgRoutePluginContext::new_http(
@@ -323,7 +319,7 @@ mod test {
             let mut ctx = ctx.resp(StatusCode::OK, HeaderMap::new(), Body::from(r#"{"code":200,"msg":"success"}"#));
             let log_content = sg_filter_audit_log.get_log_content(end_time, &mut ctx).await.unwrap();
             assert!(log_content.success);
-    
+
             let mut header = HeaderMap::new();
             header.insert(sg_filter_audit_log.header_token_name.parse::<HeaderName>().unwrap(), "aaa".parse().unwrap());
             let ctx = SgRoutePluginContext::new_http(
@@ -339,7 +335,7 @@ mod test {
             let mut ctx = ctx.resp(StatusCode::OK, HeaderMap::new(), Body::from(r#"{"code":"500","msg":"not success"}"#));
             let log_content = sg_filter_audit_log.get_log_content(end_time, &mut ctx).await.unwrap();
             assert!(!log_content.success);
-    
+
             let mut header = HeaderMap::new();
             header.insert(sg_filter_audit_log.header_token_name.parse::<HeaderName>().unwrap(), "aaa".parse().unwrap());
             let ctx = SgRoutePluginContext::new_http(

@@ -138,7 +138,19 @@ pub async fn fact_paginate(
     match inst.kind_code() {
         #[cfg(feature = "spi-pg")]
         spi_constants::SPI_PG_KIND_CODE => {
-            pg::stats_pg_conf_fact_serv::paginate(fact_conf_key, show_name, is_online, page_number, page_size, desc_by_create, desc_by_update, funs, ctx, &inst).await
+            pg::stats_pg_conf_fact_serv::paginate(
+                fact_conf_key,
+                show_name,
+                is_online,
+                page_number,
+                page_size,
+                desc_by_create,
+                desc_by_update,
+                funs,
+                ctx,
+                &inst,
+            )
+            .await
         }
         kind_code => Err(funs.bs_not_implemented(kind_code)),
     }
