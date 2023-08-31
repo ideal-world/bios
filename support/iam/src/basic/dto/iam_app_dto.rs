@@ -20,6 +20,8 @@ pub struct IamAppAggAddReq {
     pub admin_ids: Option<Vec<String>>,
 
     pub disabled: Option<bool>,
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    pub set_cate_id: Option<String>,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
@@ -54,6 +56,8 @@ pub struct IamAppAggModifyReq {
     pub contact_phone: Option<String>,
 
     pub admin_ids: Option<Vec<String>>,
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    pub set_cate_id: Option<String>,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]

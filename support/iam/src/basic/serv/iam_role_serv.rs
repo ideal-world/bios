@@ -1,3 +1,5 @@
+use std::ops::Add;
+
 use async_trait::async_trait;
 use bios_basic::helper::request_helper::get_remote_ip;
 use bios_basic::process::task_processor::TaskProcessor;
@@ -580,7 +582,30 @@ impl IamRoleServ {
     }
 
     pub async fn count_rel_res(role_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<u64> {
-        IamRelServ::count_to_rels(&IamRelKind::IamResRole, role_id, funs, ctx).await
+        let count = IamRelServ::count_to_rels(&IamRelKind::IamResRole, role_id, funs, ctx).await?;
+        let role = Self::get_item(
+            role_id,
+            &IamRoleFilterReq {
+                basic: RbumBasicFilterReq {
+                    own_paths: Some("".to_string()),
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            &funs,
+            &ctx,
+        )
+        .await?;
+        if role.extend_role_id != "" {
+            let moke_ctx = TardisContext {
+                own_paths: "".to_string(),
+                ..ctx.clone()
+            };
+            let extend_count = IamRelServ::count_to_rels(&IamRelKind::IamResRole, &role.extend_role_id, funs, &moke_ctx).await?;
+            count.add(extend_count);
+        }
+        Ok(count)
     }
 
     pub async fn find_id_rel_res(
@@ -606,7 +631,11 @@ impl IamRoleServ {
         )
         .await?;
         if role.extend_role_id != "" {
-            let extend_res_ids = IamRelServ::find_to_id_rels(&IamRelKind::IamResRole, &role.extend_role_id, desc_by_create, desc_by_update, funs, ctx).await?;
+            let moke_ctx = TardisContext {
+                own_paths: "".to_string(),
+                ..ctx.clone()
+            };
+            let extend_res_ids = IamRelServ::find_to_id_rels(&IamRelKind::IamResRole, &role.extend_role_id, desc_by_create, desc_by_update, funs, &moke_ctx).await?;
             Ok(vec![res_ids, extend_res_ids].concat())
         } else {
             Ok(res_ids)
@@ -636,7 +665,11 @@ impl IamRoleServ {
         )
         .await?;
         if role.extend_role_id != "" {
-            let extend_res = IamRelServ::find_to_simple_rels(&IamRelKind::IamResRole, &role.extend_role_id, desc_by_create, desc_by_update, funs, ctx).await?;
+            let moke_ctx = TardisContext {
+                own_paths: "".to_string(),
+                ..ctx.clone()
+            };
+            let extend_res = IamRelServ::find_to_simple_rels(&IamRelKind::IamResRole, &role.extend_role_id, desc_by_create, desc_by_update, funs, &moke_ctx).await?;
             Ok(vec![res, extend_res].concat())
         } else {
             Ok(res)
