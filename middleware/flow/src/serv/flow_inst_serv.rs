@@ -682,6 +682,9 @@ impl FlowInstServ {
             flow_inst.finish_time = Set(Some(Utc::now()));
             flow_inst.finish_abort = Set(Some(false));
             flow_inst.output_message = Set(transfer_req.message.as_ref().map(|message| message.to_string()));
+        } else {
+            flow_inst.finish_ctx = Set(None);
+            flow_inst.finish_time = Set(None);
         }
 
         funs.db().update_one(flow_inst, ctx).await?;
