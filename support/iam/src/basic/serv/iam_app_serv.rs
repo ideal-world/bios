@@ -176,8 +176,8 @@ impl IamAppServ {
         IamRoleServ::copy_role_agg(&app_id, &IamRoleKind::App, funs, &app_ctx).await?;
         let app_admin_role_id = IamRoleServ::get_embed_subrole_id(&funs.iam_basic_role_app_admin_id(), funs, &app_ctx).await?;
         // todo 是否需要在这里初始化应用级别的set？
-        // IamSetServ::init_set(IamSetKind::Org, RBUM_SCOPE_LEVEL_APP, funs, &app_ctx).await?;
-        // IamSetServ::init_set(IamSetKind::Apps, RBUM_SCOPE_LEVEL_APP, funs, &app_ctx).await?;
+        IamSetServ::init_set(IamSetKind::Org, RBUM_SCOPE_LEVEL_APP, funs, &app_ctx).await?;
+        IamSetServ::init_set(IamSetKind::Apps, RBUM_SCOPE_LEVEL_APP, funs, &app_ctx).await?;
         if let Some(admin_ids) = &add_req.admin_ids {
             for admin_id in admin_ids {
                 IamAppServ::add_rel_account(&app_id, admin_id, false, funs, &app_ctx).await?;
