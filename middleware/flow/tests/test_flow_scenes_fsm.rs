@@ -197,7 +197,8 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
     ctx.own_paths = "t1/app01".to_string();
     flow_client.set_auth(&ctx)?;
     let ticket_inst_rel_id = "mock-ticket-obj-id".to_string();
-    let iter_inst_rel_id = "mock-iter-obj-id".to_string();
+    let iter_inst_rel_id1 = "mock-iter-obj-id1".to_string();
+    let iter_inst_rel_id2 = "mock-iter-obj-id2".to_string();
     let req_inst_id1: String = flow_client
         .post(
             "/cc/inst",
@@ -234,7 +235,17 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
             &FlowInstStartReq {
                 tag: "ITER".to_string(),
                 create_vars: None,
-                rel_business_obj_id: iter_inst_rel_id.clone(),
+                rel_business_obj_id: iter_inst_rel_id1.clone(),
+            },
+        )
+        .await;
+    let _iter_inst_id: String = flow_client
+        .post(
+            "/cc/inst",
+            &FlowInstStartReq {
+                tag: "ITER".to_string(),
+                create_vars: None,
+                rel_business_obj_id: iter_inst_rel_id2.clone(),
             },
         )
         .await;

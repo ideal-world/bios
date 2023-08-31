@@ -45,7 +45,7 @@ impl MockApi {
                     curr_bus_obj_id: req.curr_bus_obj_id.clone(),
                     rel_bus_objs: vec![RelBusObjResp {
                         rel_tag: "ITER".to_string(),
-                        rel_bus_obj_ids: vec!["mock-iter-obj-id".to_string()],
+                        rel_bus_obj_ids: vec!["mock-iter-obj-id1".to_string(), "mock-iter-obj-id2".to_string()],
                     },],
                 }),
                 _ => json!({}),

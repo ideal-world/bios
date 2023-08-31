@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use bios_basic::rbum::{
     dto::{
@@ -20,12 +20,18 @@ use tardis::{
 
 use crate::{
     domain::flow_state,
-    dto::flow_state_dto::{FlowStateAddReq, FlowStateDetailResp, FlowStateFilterReq, FlowStateKind, FlowStateModifyReq, FlowStateSummaryResp, FlowSysStateKind},
+    dto::{
+        flow_model_dto::FlowModelFilterReq,
+        flow_state_dto::{FlowStateAddReq, FlowStateDetailResp, FlowStateFilterReq, FlowStateKind, FlowStateModifyReq, FlowStateSummaryResp, FlowSysStateKind},
+    },
     flow_config::FlowBasicInfoManager,
 };
 use async_trait::async_trait;
 
-use super::flow_model_serv::FlowModelServ;
+use super::{
+    flow_model_serv::FlowModelServ,
+    flow_rel_serv::{FlowRelKind, FlowRelServ},
+};
 
 pub struct FlowStateServ;
 
@@ -155,7 +161,7 @@ impl RbumItemCrudOperation<flow_state::ActiveModel, FlowStateAddReq, FlowStateMo
         Ok(None)
     }
 
-    async fn package_ext_query(query: &mut SelectStatement, _: bool, filter: &FlowStateFilterReq, _funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    async fn package_ext_query(query: &mut SelectStatement, _: bool, filter: &FlowStateFilterReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         query.column((flow_state::Entity, flow_state::Column::Icon));
         query.column((flow_state::Entity, flow_state::Column::Color));
         query.column((flow_state::Entity, flow_state::Column::SysState));
@@ -181,11 +187,42 @@ impl RbumItemCrudOperation<flow_state::ActiveModel, FlowStateAddReq, FlowStateMo
         if let Some(app_ids) = filter.app_ids.clone() {
             let tenant_own_path = rbum_scope_helper::get_path_item(1, &ctx.own_paths);
             if let Some(tenant_own_path) = tenant_own_path {
+                // collect app own path
                 let mut app_own_paths = vec![];
                 for app_id in app_ids {
                     app_own_paths.push(format!("{}/{}", &tenant_own_path, &app_id));
                 }
-                query.and_where(Expr::col((flow_state::Entity, flow_state::Column::OwnPaths)).is_in(app_own_paths));
+                // find flow models
+                let flow_model_ids = FlowModelServ::find_id_items(
+                    &FlowModelFilterReq {
+                        basic: RbumBasicFilterReq {
+                            with_sub_own_paths: true,
+                            ..Default::default()
+                        },
+                        tags: filter.tag.clone().map(|tag| vec![tag]),
+                        own_paths: Some(app_own_paths),
+                        ..Default::default()
+                    },
+                    None,
+                    None,
+                    funs,
+                    ctx,
+                )
+                .await?;
+                // find rel state
+                let mut state_id = HashSet::new();
+                for flow_model_id in flow_model_ids {
+                    let rel_state_id = FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelState, &flow_model_id, None, None, funs, ctx)
+                        .await?
+                        .iter()
+                        .map(|rel| rel.rel_id.clone())
+                        .collect::<Vec<_>>();
+                    state_id.extend(rel_state_id.into_iter());
+                }
+
+                if !state_id.is_empty() {
+                    query.and_where(Expr::col((flow_state::Entity, flow_state::Column::Id)).is_in(state_id));
+                }
             }
         }
         Ok(())
