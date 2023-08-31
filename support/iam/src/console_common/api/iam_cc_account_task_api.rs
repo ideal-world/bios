@@ -6,7 +6,10 @@ use tardis::web::{
     web_resp::{TardisApiResult, TardisResp},
 };
 
-use crate::{console_common::serv::iam_cc_account_task_serv::IamCcAccountTaskServ, iam_constants};
+use crate::{
+    console_common::serv::{iam_cc_account_task_serv::IamCcAccountTaskServ, iam_cc_role_task_serv::IamCcRoleTaskServ},
+    iam_constants,
+};
 
 #[derive(Clone, Default)]
 pub struct IamCcAccountTaskApi;
@@ -19,6 +22,18 @@ impl IamCcAccountTaskApi {
         add_remote_ip(&request, &ctx.0).await?;
         let funs = iam_constants::get_tardis_inst();
         IamCcAccountTaskServ::execute_account_task(&funs, &ctx.0).await?;
+        if let Some(task_id) = TaskProcessor::get_task_id_with_ctx(&ctx.0).await? {
+            TardisResp::accepted(Some(task_id))
+        } else {
+            TardisResp::ok(None)
+        }
+    }
+
+    #[oai(path = "/role", method = "get")]
+    async fn execute_role_task(&self, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Option<String>> {
+        add_remote_ip(&request, &ctx.0).await?;
+        let funs = iam_constants::get_tardis_inst();
+        IamCcRoleTaskServ::execute_role_task(&funs, &ctx.0).await?;
         if let Some(task_id) = TaskProcessor::get_task_id_with_ctx(&ctx.0).await? {
             TardisResp::accepted(Some(task_id))
         } else {

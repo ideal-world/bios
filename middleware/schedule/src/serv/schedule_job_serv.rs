@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 use std::vec;
 
@@ -23,13 +23,13 @@ use crate::schedule_config::ScheduleConfig;
 use crate::schedule_constants::{DOMAIN_CODE, KV_KEY_CODE};
 
 /// global service instance
-static mut MAYBE_GLOBAL_SERV: Option<Arc<OwnedScheduleTaskServ>> = None;
+static GLOBAL_SERV: OnceLock<Arc<OwnedScheduleTaskServ>> = OnceLock::new();
 
 /// get service instance without checking if it's initialized
 /// # Safety
 /// if called before init, this function will panic
-unsafe fn service() -> Arc<OwnedScheduleTaskServ> {
-    MAYBE_GLOBAL_SERV.as_ref().cloned().expect("tring to get scheduler before it's initialized")
+fn service() -> Arc<OwnedScheduleTaskServ> {
+    GLOBAL_SERV.get().expect("tring to get scheduler before it's initialized").clone()
 }
 
 // still not good, should manage to merge it with `OwnedScheduleTaskServ::add`
@@ -44,10 +44,10 @@ pub(crate) async fn add_or_modify(add_or_modify: ScheduleJobAddOrModifyReq, funs
     };
     let headers = Some(vec![(
         "Tardis-Context".to_string(),
-        TardisFuns::crypto.base64.encode(&TardisFuns::json.obj_to_string(&spi_ctx)?),
+        TardisFuns::crypto.base64.encode(TardisFuns::json.obj_to_string(&spi_ctx)?),
     )]);
     // if exist delete it first
-    if unsafe { service().code_uuid.write().await.get(code).is_some() } {
+    if service().code_uuid.write().await.get(code).is_some() {
         delete(code, funs, ctx).await?;
     }
     // 1. log add operation
@@ -91,7 +91,7 @@ pub(crate) async fn delete(code: &str, funs: &TardisFunsInst, ctx: &TardisContex
     };
     let headers = Some(vec![(
         "Tardis-Context".to_string(),
-        TardisFuns::crypto.base64.encode(&TardisFuns::json.obj_to_string(&spi_ctx)?),
+        TardisFuns::crypto.base64.encode(TardisFuns::json.obj_to_string(&spi_ctx)?),
     )]);
     // 1. log this operation
     TardisFuns::web_client()
@@ -115,7 +115,7 @@ pub(crate) async fn delete(code: &str, funs: &TardisFunsInst, ctx: &TardisContex
     let cache_key_job_changed_info = &config.cache_key_job_changed_info;
     conn.set_ex(&format!("{cache_key_job_changed_info}{code}"), "delete", config.cache_key_job_changed_timer_sec as usize).await?;
     // 4. do delete at local scheduler
-    if unsafe { service().code_uuid.read().await.get(code).is_some() } {
+    if service().code_uuid.read().await.get(code).is_some() {
         // delete schedual-task from kv cache first
         let mut conn = funs.cache().cmd().await?;
         let config = funs.conf::<ScheduleConfig>();
@@ -135,7 +135,7 @@ pub(crate) async fn find_job(code: Option<String>, page_number: u32, page_size: 
     };
     let headers = Some(vec![(
         "Tardis-Context".to_string(),
-        TardisFuns::crypto.base64.encode(&TardisFuns::json.obj_to_string(&spi_ctx)?),
+        TardisFuns::crypto.base64.encode(TardisFuns::json.obj_to_string(&spi_ctx)?),
     )]);
     let resp = funs
         .web_client()
@@ -194,7 +194,7 @@ pub(crate) async fn find_one_job(code: &str, funs: &TardisFunsInst, ctx: &Tardis
     };
     let headers = Some(vec![(
         "Tardis-Context".to_string(),
-        TardisFuns::crypto.base64.encode(&TardisFuns::json.obj_to_string(&spi_ctx)?),
+        TardisFuns::crypto.base64.encode(TardisFuns::json.obj_to_string(&spi_ctx)?),
     )]);
     let resp = funs.web_client().get::<TardisResp<Option<KvItemSummaryResp>>>(&format!("{}/ci/item?key={}", kv_url, format_args!("{}{}", KV_KEY_CODE, code)), headers).await?;
 
@@ -274,7 +274,7 @@ pub(crate) async fn find_task(
 
 pub(crate) async fn init(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
     let service_instance = OwnedScheduleTaskServ::init(funs, ctx).await?;
-    unsafe { MAYBE_GLOBAL_SERV.replace(service_instance) };
+    GLOBAL_SERV.get_or_init(|| service_instance);
     Ok(())
 }
 
@@ -283,11 +283,11 @@ pub struct ScheduleTaskServ;
 impl ScheduleTaskServ {
     /// add schedule task
     pub async fn add(add_or_modify: ScheduleJobAddOrModifyReq, config: &ScheduleConfig) -> TardisResult<()> {
-        unsafe { MAYBE_GLOBAL_SERV.as_ref().expect("Schedule task serv not yet initialized") }.add(add_or_modify, config).await
+        service().add(add_or_modify, config).await
     }
 
     pub async fn delete(code: &str) -> TardisResult<()> {
-        unsafe { MAYBE_GLOBAL_SERV.as_ref().expect("Schedule task serv not yet initialized") }.delete(code).await
+        service().delete(code).await
     }
 }
 
@@ -423,7 +423,7 @@ impl OwnedScheduleTaskServ {
         };
         let headers = Some(vec![(
             "Tardis-Context".to_string(),
-            TardisFuns::crypto.base64.encode(&TardisFuns::json.obj_to_string(&ctx)?),
+            TardisFuns::crypto.base64.encode(TardisFuns::json.obj_to_string(&ctx)?),
         )]);
         // startup cron scheduler
         let job = Job::new_async(job_config.cron.as_str(), move |_uuid, _scheduler| {
@@ -443,7 +443,7 @@ impl OwnedScheduleTaskServ {
                     Ok(true) => {
                         // safety: it's ok to unwrap in this closure, scheduler will restart this job when after panic
                         let Ok(()) = cache_client.expire(&lock_key, distributed_lock_expire_sec as usize).await else {
-                            return
+                            return;
                         };
                         trace!("executing schedule task {code}");
                         // 1. write log exec start
@@ -459,9 +459,10 @@ impl OwnedScheduleTaskServ {
                                 ]),
                                 headers.clone(),
                             )
-                            .await else {
-                                return;
-                            };
+                            .await
+                        else {
+                            return;
+                        };
                         // 2. request webhook
                         let Ok(task_msg) = TardisFuns::web_client().get_to_str(callback_url.as_str(), headers.clone()).await else {
                             return;
@@ -480,9 +481,9 @@ impl OwnedScheduleTaskServ {
                                 headers,
                             )
                             .await
-                            else {
-                                return;
-                            };
+                        else {
+                            return;
+                        };
                         trace!("executed schedule task {code}");
                     }
                     Ok(false) => {

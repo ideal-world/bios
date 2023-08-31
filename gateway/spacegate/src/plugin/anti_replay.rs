@@ -86,8 +86,6 @@ impl SgPluginFilter for SgFilterAntiReplay {
     }
 }
 
-
-
 fn get_md5(ctx: &mut SgRoutePluginContext) -> TardisResult<String> {
     let req = &ctx.request;
     let data = format!(

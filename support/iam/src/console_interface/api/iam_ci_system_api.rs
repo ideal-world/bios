@@ -35,7 +35,7 @@ impl IamCiSystemApi {
         TardisResp::ok(task_id)
     }
 
-    #[oai(path = "/task/execute/stop/:task_id", method = "delete")]
+    #[oai(path = "/task/execute/stop/:task_ids", method = "delete")]
     async fn stop_task_external(&self, cache_key: Query<String>, task_ids: Path<String>) -> TardisApiResult<Void> {
         let funs = iam_constants::get_tardis_inst();
         let task_ids = task_ids.0.split(',');

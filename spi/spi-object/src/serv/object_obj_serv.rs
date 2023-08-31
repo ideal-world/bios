@@ -21,7 +21,7 @@ pub async fn presign_obj_url(
     let inst = funs.init(ctx, true, object_initializer::init_fun).await?;
     match inst.kind_code() {
         #[cfg(feature = "spi-s3")]
-        object_constants::SPI_S3_KIND_CODE => s3::object_s3_obj_serv::presign_obj_url(presign_kind, object_path, max_width, max_height, exp_secs, private, funs, ctx, inst).await,
+        object_constants::SPI_S3_KIND_CODE => s3::object_s3_obj_serv::presign_obj_url(presign_kind, object_path, max_width, max_height, exp_secs, private, funs, ctx, &inst).await,
         kind_code => Err(funs.bs_not_implemented(kind_code)),
     }
 }
