@@ -87,13 +87,20 @@ async fn ident(req: &AuthReq, config: &AuthConfig, cache_client: &TardisCacheCli
         let own_paths_split = context.own_paths.split('/').collect::<Vec<_>>();
         let tenant_id = if context.own_paths.is_empty() { None } else { Some(own_paths_split[0].to_string()) };
         let app_id = if own_paths_split.len() > 1 { Some(own_paths_split[1].to_string()) } else { None };
+        let mut roles = context.roles.clone();
+        for role in context.roles.clone() {
+            if role.contains(":") {
+                let extend_role = role.split(':').collect::<Vec<_>>()[0];
+                roles.push(extend_role.to_string());
+            }
+        }
         Ok(AuthContext {
             rbum_uri,
             rbum_action,
             app_id,
             tenant_id,
             account_id: Some(context.owner),
-            roles: Some(context.roles),
+            roles: Some(roles),
             groups: Some(context.groups),
             own_paths: Some(context.own_paths),
             ak: Some(context.ak),
@@ -122,13 +129,20 @@ async fn ident(req: &AuthReq, config: &AuthConfig, cache_client: &TardisCacheCli
         }
 
         if bios_ctx.own_paths.contains(&own_paths) {
+            let mut roles = bios_ctx.roles.clone();
+            for role in bios_ctx.roles.clone() {
+                if role.contains(":") {
+                    let extend_role = role.split(':').collect::<Vec<_>>()[0];
+                    roles.push(extend_role.to_string());
+                }
+            }
             Ok(AuthContext {
                 rbum_uri,
                 rbum_action,
                 app_id: if app_id.is_empty() { None } else { Some(app_id) },
                 tenant_id: Some(cache_tenant_id),
                 account_id: Some(bios_ctx.owner),
-                roles: Some(bios_ctx.roles),
+                roles: Some(roles),
                 groups: Some(bios_ctx.groups),
                 own_paths: Some(bios_ctx.own_paths),
                 ak: Some(ak_authorization.to_string()),
