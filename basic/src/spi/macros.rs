@@ -52,7 +52,8 @@ macro_rules! spi_dispatch_service {
         $(
             $(#[$attr])*
             pub async fn $service($($arg: $type,)* funs: &tardis::TardisFunsInst, ctx: &tardis::basic::dto::TardisContext) -> $ret {
-                let inst = funs.init(ctx, $mgr, $init).await?.as_ref();
+                let arc_inst = funs.init(ctx, $mgr, $init).await?;
+                let inst = arc_inst.as_ref();
                 $crate::spi_dispatch_function!($service, funs, ctx, inst, @dispatch: $dispatch, @args: {$($arg),*})
             }
         )*
