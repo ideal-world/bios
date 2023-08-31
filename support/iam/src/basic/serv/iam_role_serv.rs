@@ -27,7 +27,7 @@ use crate::basic::serv::iam_account_serv::IamAccountServ;
 use crate::basic::serv::iam_key_cache_serv::IamIdentCacheServ;
 use crate::basic::serv::iam_rel_serv::IamRelServ;
 use crate::iam_config::{IamBasicConfigApi, IamBasicInfoManager, IamConfig};
-use crate::iam_constants;
+use crate::iam_constants::{self, RBUM_ITEM_ID_SUB_ROLE_LEN};
 use crate::iam_constants::{RBUM_SCOPE_LEVEL_APP, RBUM_SCOPE_LEVEL_TENANT};
 use crate::iam_enumeration::{IamRelKind, IamRoleKind};
 
@@ -52,6 +52,15 @@ impl RbumItemCrudOperation<iam_role::ActiveModel, IamRoleAddReq, IamRoleModifyRe
 
     async fn package_item_add(add_req: &IamRoleAddReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<RbumItemKernelAddReq> {
         Ok(RbumItemKernelAddReq {
+            id: if add_req.extend_role_id.is_some() {
+                Some(TrimString::from(format!(
+                    "{}:{}",
+                    add_req.extend_role_id.clone().unwrap_or_default(),
+                    Self::get_sub_new_id()
+                )))
+            } else {
+                None
+            },
             code: add_req.code.clone(),
             name: add_req.name.clone(),
             scope_level: add_req.scope_level.clone(),
@@ -315,6 +324,10 @@ impl RbumItemCrudOperation<iam_role::ActiveModel, IamRoleAddReq, IamRoleModifyRe
 }
 
 impl IamRoleServ {
+    pub fn get_sub_new_id() -> String {
+        TardisFuns::field.nanoid_len(RBUM_ITEM_ID_SUB_ROLE_LEN as usize)
+    }
+
     pub async fn copy_role_agg(tenant_or_app_id: &str, kind: &IamRoleKind, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let base_roles = Self::find_detail_items(
             &IamRoleFilterReq {
@@ -334,12 +347,7 @@ impl IamRoleServ {
             ctx,
         )
         .await?;
-        let mock_ctx = TardisContext {
-            own_paths: "".to_string(),
-            ..ctx.clone()
-        };
         for base_role in base_roles {
-            let res_ids = Self::find_id_rel_res(&base_role.id, None, None, funs, &mock_ctx).await?;
             Self::add_role_agg(
                 &mut IamRoleAggAddReq {
                     role: IamRoleAddReq {
@@ -354,7 +362,7 @@ impl IamRoleServ {
                         disabled: Some(base_role.disabled),
                         in_base: Some(false),
                     },
-                    res_ids: Some(res_ids),
+                    res_ids: None,
                 },
                 funs,
                 ctx,
@@ -563,59 +571,11 @@ impl IamRoleServ {
 
     pub async fn add_rel_res(role_id: &str, res_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         IamRelServ::add_simple_rel(&IamRelKind::IamResRole, res_id, role_id, None, None, false, false, funs, ctx).await?;
-        let sub_roles = IamRoleServ::find_items(
-            &IamRoleFilterReq {
-                basic: RbumBasicFilterReq {
-                    own_paths: Some("".to_string()),
-                    with_sub_own_paths: Some(true).is_some(),
-                    ..Default::default()
-                },
-                extend_role_id: Some(role_id.to_string()),
-                ..Default::default()
-            },
-            None,
-            None,
-            funs,
-            ctx,
-        )
-        .await?;
-        for sub_role in sub_roles {
-            let mock_role_ctx = TardisContext {
-                own_paths: sub_role.own_paths.to_string(),
-                ..ctx.clone()
-            };
-            IamRelServ::add_simple_rel(&IamRelKind::IamResRole, res_id, &sub_role.id, None, None, false, false, funs, &mock_role_ctx).await?;
-            mock_role_ctx.execute_task().await?;
-        }
         Ok(())
     }
 
     pub async fn delete_rel_res(role_id: &str, res_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         IamRelServ::delete_simple_rel(&IamRelKind::IamResRole, res_id, role_id, funs, ctx).await?;
-        let sub_roles = IamRoleServ::find_items(
-            &IamRoleFilterReq {
-                basic: RbumBasicFilterReq {
-                    own_paths: Some("".to_string()),
-                    with_sub_own_paths: Some(true).is_some(),
-                    ..Default::default()
-                },
-                extend_role_id: Some(role_id.to_string()),
-                ..Default::default()
-            },
-            None,
-            None,
-            funs,
-            ctx,
-        )
-        .await?;
-        for sub_role in sub_roles {
-            let mock_role_ctx = TardisContext {
-                own_paths: sub_role.own_paths.to_string(),
-                ..ctx.clone()
-            };
-            IamRelServ::delete_simple_rel(&IamRelKind::IamResRole, res_id, &sub_role.id, funs, &mock_role_ctx).await?;
-            mock_role_ctx.execute_task().await?;
-        }
         Ok(())
     }
 
@@ -630,7 +590,27 @@ impl IamRoleServ {
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<Vec<String>> {
-        IamRelServ::find_to_id_rels(&IamRelKind::IamResRole, role_id, desc_by_create, desc_by_update, funs, ctx).await
+        let res_ids = IamRelServ::find_to_id_rels(&IamRelKind::IamResRole, role_id, desc_by_create, desc_by_update, funs, ctx).await?;
+        let role = Self::get_item(
+            role_id,
+            &IamRoleFilterReq {
+                basic: RbumBasicFilterReq {
+                    own_paths: Some("".to_string()),
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            &funs,
+            &ctx,
+        )
+        .await?;
+        if role.extend_role_id != "" {
+            let extend_res_ids = IamRelServ::find_to_id_rels(&IamRelKind::IamResRole, &role.extend_role_id, desc_by_create, desc_by_update, funs, ctx).await?;
+            Ok(vec![res_ids, extend_res_ids].concat())
+        } else {
+            Ok(res_ids)
+        }
     }
 
     pub async fn find_simple_rel_res(
@@ -640,7 +620,27 @@ impl IamRoleServ {
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<Vec<RbumRelBoneResp>> {
-        IamRelServ::find_to_simple_rels(&IamRelKind::IamResRole, role_id, desc_by_create, desc_by_update, funs, ctx).await
+        let res = IamRelServ::find_to_simple_rels(&IamRelKind::IamResRole, role_id, desc_by_create, desc_by_update, funs, ctx).await?;
+        let role = Self::get_item(
+            role_id,
+            &IamRoleFilterReq {
+                basic: RbumBasicFilterReq {
+                    own_paths: Some("".to_string()),
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            &funs,
+            &ctx,
+        )
+        .await?;
+        if role.extend_role_id != "" {
+            let extend_res = IamRelServ::find_to_simple_rels(&IamRelKind::IamResRole, &role.extend_role_id, desc_by_create, desc_by_update, funs, ctx).await?;
+            Ok(vec![res, extend_res].concat())
+        } else {
+            Ok(res)
+        }
     }
 
     pub async fn find_simple_rels(
@@ -652,7 +652,7 @@ impl IamRoleServ {
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<Vec<RbumRelBoneResp>> {
-        IamRelServ::find_simple_rels(
+        let res = IamRelServ::find_simple_rels(
             &RbumRelFilterReq {
                 basic: RbumBasicFilterReq {
                     own_paths: Some(ctx.own_paths.to_string()),
@@ -672,7 +672,47 @@ impl IamRoleServ {
             funs,
             ctx,
         )
-        .await
+        .await?;
+        let role = Self::get_item(
+            role_id,
+            &IamRoleFilterReq {
+                basic: RbumBasicFilterReq {
+                    own_paths: Some("".to_string()),
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            &funs,
+            &ctx,
+        )
+        .await?;
+        if role.extend_role_id != "" {
+            let extend_res = IamRelServ::find_simple_rels(
+                &RbumRelFilterReq {
+                    basic: RbumBasicFilterReq {
+                        own_paths: Some(ctx.own_paths.to_string()),
+                        with_sub_own_paths: true,
+                        ignore_scope: true,
+                        ..Default::default()
+                    },
+                    tag: Some(IamRelKind::IamResRole.to_string()),
+                    to_rbum_item_id: Some(role.extend_role_id.to_string()),
+                    from_rbum_scope_levels: from_scope_levels.clone(),
+                    to_rbum_item_scope_levels: to_scope_levels.clone(),
+                    ..Default::default()
+                },
+                desc_sort_by_create,
+                desc_sort_by_update,
+                false,
+                funs,
+                ctx,
+            )
+            .await?;
+            Ok(vec![res, extend_res].concat())
+        } else {
+            Ok(res)
+        }
     }
 
     pub async fn paginate_id_rel_res(
