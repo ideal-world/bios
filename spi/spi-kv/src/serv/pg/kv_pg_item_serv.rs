@@ -73,7 +73,8 @@ pub async fn find_items(keys: Vec<String>, extract: Option<String>, funs: &Tardi
         })
         .collect::<Vec<String>>()
         .join(",");
-    let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
+    let inst_arc = funs.bs(ctx).await?;
+    let bs_inst = inst_arc.inst::<TardisRelDBClient>();
     let (conn, table_name) = kv_pg_initializer::init_table_and_conn(bs_inst, ctx, true).await?;
     let result = conn
         .find_dtos_by_sql(

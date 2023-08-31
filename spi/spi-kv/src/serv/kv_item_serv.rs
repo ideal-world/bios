@@ -38,7 +38,7 @@ pub async fn add_or_modify_key_name(add_or_modify_req: &mut KvNameAddOrModifyReq
     let inst = funs.init(ctx, true, kv_initializer::init_fun).await?;
     match inst.kind_code() {
         #[cfg(feature = "spi-pg")]
-        spi_constants::SPI_PG_KIND_CODE => pg::kv_pg_item_serv::add_or_modify_item(&req, funs, ctx, inst).await,
+        spi_constants::SPI_PG_KIND_CODE => pg::kv_pg_item_serv::add_or_modify_item(&req, funs, ctx, &inst).await,
         kind_code => Err(funs.bs_not_implemented(kind_code)),
     }
 }
@@ -48,7 +48,7 @@ pub async fn find_key_names(keys: Vec<String>, funs: &TardisFunsInst, ctx: &Tard
     let inst = funs.init(ctx, true, kv_initializer::init_fun).await?;
     match inst.kind_code() {
         #[cfg(feature = "spi-pg")]
-        spi_constants::SPI_PG_KIND_CODE => pg::kv_pg_item_serv::find_items(keys, None, funs, ctx, inst).await,
+        spi_constants::SPI_PG_KIND_CODE => pg::kv_pg_item_serv::find_items(keys, None, funs, ctx, &inst).await,
         kind_code => Err(funs.bs_not_implemented(kind_code)),
     }
     .and_then(|items| {
@@ -75,7 +75,7 @@ pub async fn add_or_modify_tag(add_or_modify_req: &mut KvTagAddOrModifyReq, funs
     let inst = funs.init(ctx, true, kv_initializer::init_fun).await?;
     match inst.kind_code() {
         #[cfg(feature = "spi-pg")]
-        spi_constants::SPI_PG_KIND_CODE => pg::kv_pg_item_serv::add_or_modify_item(&req, funs, ctx, inst).await,
+        spi_constants::SPI_PG_KIND_CODE => pg::kv_pg_item_serv::add_or_modify_item(&req, funs, ctx, &inst).await,
         kind_code => Err(funs.bs_not_implemented(kind_code)),
     }
 }
@@ -95,7 +95,7 @@ pub async fn find_tags(key_prefix: String, page_number: u32, page_size: u16, fun
                 },
                 funs,
                 ctx,
-                inst,
+                &inst,
             )
             .await
         }
