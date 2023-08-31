@@ -3,6 +3,7 @@ use std::sync::OnceLock;
 use bios_basic::spi::api::spi_ci_bs_api::SpiCiBsApi;
 use tardis::{
     basic::result::TardisResult,
+    log,
     web::web_server::{TardisWebServer, WebServerGrpcModule, WebServerModule},
 };
 
@@ -23,6 +24,7 @@ pub async fn init_api(web_server: &TardisWebServer) {
 }
 
 pub async fn init_nacos_servers(cfg: &ConfConfig) -> TardisResult<()> {
+    log::info!("[Spi.Conf] init nacos server");
     let http_server = TardisWebServer::init_simple(&cfg.nacos_host.to_string(), cfg.nacos_port)?;
     let mut nacos_module = WebServerModule::new(ConfNacosApi::default());
     nacos_module.options.set_uniform_error(false);

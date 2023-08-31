@@ -18,7 +18,7 @@ pub async fn dim_add(add_req: &StatsConfDimAddReq, funs: &TardisFunsInst, ctx: &
     let inst = funs.init(ctx, true, stats_initializer::init_fun).await?;
     match inst.kind_code() {
         #[cfg(feature = "spi-pg")]
-        spi_constants::SPI_PG_KIND_CODE => pg::stats_pg_conf_dim_serv::add(add_req, funs, ctx, inst).await,
+        spi_constants::SPI_PG_KIND_CODE => pg::stats_pg_conf_dim_serv::add(add_req, funs, ctx, &inst).await,
         kind_code => Err(funs.bs_not_implemented(kind_code)),
     }
 }
@@ -27,7 +27,7 @@ pub async fn dim_modify(dim_conf_key: &str, modify_req: &StatsConfDimModifyReq, 
     let inst = funs.init(ctx, true, stats_initializer::init_fun).await?;
     match inst.kind_code() {
         #[cfg(feature = "spi-pg")]
-        spi_constants::SPI_PG_KIND_CODE => pg::stats_pg_conf_dim_serv::modify(dim_conf_key, modify_req, funs, ctx, inst).await,
+        spi_constants::SPI_PG_KIND_CODE => pg::stats_pg_conf_dim_serv::modify(dim_conf_key, modify_req, funs, ctx, &inst).await,
         kind_code => Err(funs.bs_not_implemented(kind_code)),
     }
 }
@@ -36,7 +36,7 @@ pub async fn dim_delete(dim_conf_key: &str, funs: &TardisFunsInst, ctx: &TardisC
     let inst = funs.init(ctx, true, stats_initializer::init_fun).await?;
     match inst.kind_code() {
         #[cfg(feature = "spi-pg")]
-        spi_constants::SPI_PG_KIND_CODE => pg::stats_pg_conf_dim_serv::delete(dim_conf_key, funs, ctx, inst).await,
+        spi_constants::SPI_PG_KIND_CODE => pg::stats_pg_conf_dim_serv::delete(dim_conf_key, funs, ctx, &inst).await,
         kind_code => Err(funs.bs_not_implemented(kind_code)),
     }
 }
@@ -45,7 +45,7 @@ pub async fn fact_add(add_req: &StatsConfFactAddReq, funs: &TardisFunsInst, ctx:
     let inst = funs.init(ctx, true, stats_initializer::init_fun).await?;
     match inst.kind_code() {
         #[cfg(feature = "spi-pg")]
-        spi_constants::SPI_PG_KIND_CODE => pg::stats_pg_conf_fact_serv::add(add_req, funs, ctx, inst).await,
+        spi_constants::SPI_PG_KIND_CODE => pg::stats_pg_conf_fact_serv::add(add_req, funs, ctx, &inst).await,
         kind_code => Err(funs.bs_not_implemented(kind_code)),
     }
 }
@@ -54,7 +54,7 @@ pub async fn fact_modify(fact_conf_key: &str, modify_req: &StatsConfFactModifyRe
     let inst = funs.init(ctx, true, stats_initializer::init_fun).await?;
     match inst.kind_code() {
         #[cfg(feature = "spi-pg")]
-        spi_constants::SPI_PG_KIND_CODE => pg::stats_pg_conf_fact_serv::modify(fact_conf_key, modify_req, funs, ctx, inst).await,
+        spi_constants::SPI_PG_KIND_CODE => pg::stats_pg_conf_fact_serv::modify(fact_conf_key, modify_req, funs, ctx, &inst).await,
         kind_code => Err(funs.bs_not_implemented(kind_code)),
     }
 }
@@ -63,7 +63,7 @@ pub async fn fact_delete(fact_conf_key: &str, funs: &TardisFunsInst, ctx: &Tardi
     let inst = funs.init(ctx, true, stats_initializer::init_fun).await?;
     match inst.kind_code() {
         #[cfg(feature = "spi-pg")]
-        spi_constants::SPI_PG_KIND_CODE => pg::stats_pg_conf_fact_serv::delete(fact_conf_key, funs, ctx, inst).await,
+        spi_constants::SPI_PG_KIND_CODE => pg::stats_pg_conf_fact_serv::delete(fact_conf_key, funs, ctx, &inst).await,
         kind_code => Err(funs.bs_not_implemented(kind_code)),
     }
 }
@@ -71,7 +71,7 @@ pub async fn fact_col_modify(fact_conf_key: &str, fact_col_conf_key: &str, modif
     let inst = funs.init(ctx, true, stats_initializer::init_fun).await?;
     match inst.kind_code() {
         #[cfg(feature = "spi-pg")]
-        spi_constants::SPI_PG_KIND_CODE => pg::stats_pg_conf_fact_col_serv::modify(fact_conf_key, fact_col_conf_key, modify_req, funs, ctx, inst).await,
+        spi_constants::SPI_PG_KIND_CODE => pg::stats_pg_conf_fact_col_serv::modify(fact_conf_key, fact_col_conf_key, modify_req, funs, ctx, &inst).await,
         kind_code => Err(funs.bs_not_implemented(kind_code)),
     }
 }
@@ -80,7 +80,7 @@ pub async fn fact_col_delete(fact_conf_key: &str, fact_col_conf_key: Option<&str
     let inst = funs.init(ctx, true, stats_initializer::init_fun).await?;
     match inst.kind_code() {
         #[cfg(feature = "spi-pg")]
-        spi_constants::SPI_PG_KIND_CODE => pg::stats_pg_conf_fact_col_serv::delete(fact_conf_key, fact_col_conf_key, kind, funs, ctx, inst).await,
+        spi_constants::SPI_PG_KIND_CODE => pg::stats_pg_conf_fact_col_serv::delete(fact_conf_key, fact_col_conf_key, kind, funs, ctx, &inst).await,
         kind_code => Err(funs.bs_not_implemented(kind_code)),
     }
 }
@@ -89,7 +89,7 @@ pub async fn dim_online(dim_conf_key: &str, funs: &TardisFunsInst, ctx: &TardisC
     let inst = funs.init(ctx, true, stats_initializer::init_fun).await?;
     match inst.kind_code() {
         #[cfg(feature = "spi-pg")]
-        spi_constants::SPI_PG_KIND_CODE => pg::stats_pg_conf_dim_serv::create_inst(dim_conf_key, funs, ctx, inst).await,
+        spi_constants::SPI_PG_KIND_CODE => pg::stats_pg_conf_dim_serv::create_inst(dim_conf_key, funs, ctx, &inst).await,
         kind_code => Err(funs.bs_not_implemented(kind_code)),
     }
 }
@@ -98,7 +98,7 @@ pub async fn fact_online(fact_conf_key: &str, funs: &TardisFunsInst, ctx: &Tardi
     let inst = funs.init(ctx, true, stats_initializer::init_fun).await?;
     match inst.kind_code() {
         #[cfg(feature = "spi-pg")]
-        spi_constants::SPI_PG_KIND_CODE => pg::stats_pg_conf_fact_serv::create_inst(fact_conf_key, funs, ctx, inst).await,
+        spi_constants::SPI_PG_KIND_CODE => pg::stats_pg_conf_fact_serv::create_inst(fact_conf_key, funs, ctx, &inst).await,
         kind_code => Err(funs.bs_not_implemented(kind_code)),
     }
 }
@@ -117,7 +117,7 @@ pub async fn dim_paginate(
     match inst.kind_code() {
         #[cfg(feature = "spi-pg")]
         spi_constants::SPI_PG_KIND_CODE => {
-            pg::stats_pg_conf_dim_serv::paginate(dim_conf_key, show_name, page_number, page_size, desc_by_create, desc_by_update, funs, ctx, inst).await
+            pg::stats_pg_conf_dim_serv::paginate(dim_conf_key, show_name, page_number, page_size, desc_by_create, desc_by_update, funs, ctx, &inst).await
         }
         kind_code => Err(funs.bs_not_implemented(kind_code)),
     }
@@ -138,7 +138,7 @@ pub async fn fact_paginate(
     match inst.kind_code() {
         #[cfg(feature = "spi-pg")]
         spi_constants::SPI_PG_KIND_CODE => {
-            pg::stats_pg_conf_fact_serv::paginate(fact_conf_key, show_name, is_online, page_number, page_size, desc_by_create, desc_by_update, funs, ctx, inst).await
+            pg::stats_pg_conf_fact_serv::paginate(fact_conf_key, show_name, is_online, page_number, page_size, desc_by_create, desc_by_update, funs, ctx, &inst).await
         }
         kind_code => Err(funs.bs_not_implemented(kind_code)),
     }
@@ -169,7 +169,7 @@ pub async fn fact_col_paginate(
                 desc_by_update,
                 funs,
                 ctx,
-                inst,
+                &inst,
             )
             .await
         }
@@ -204,7 +204,7 @@ pub async fn fact_col_paginate_by_dim(
                 desc_by_update,
                 funs,
                 ctx,
-                inst,
+                &inst,
             )
             .await
         }
@@ -216,7 +216,7 @@ pub async fn fact_col_add(fact_conf_key: &str, add_req: &StatsConfFactColAddReq,
     let inst = funs.init(ctx, true, stats_initializer::init_fun).await?;
     match inst.kind_code() {
         #[cfg(feature = "spi-pg")]
-        spi_constants::SPI_PG_KIND_CODE => pg::stats_pg_conf_fact_col_serv::add(fact_conf_key, add_req, funs, ctx, inst).await,
+        spi_constants::SPI_PG_KIND_CODE => pg::stats_pg_conf_fact_col_serv::add(fact_conf_key, add_req, funs, ctx, &inst).await,
         kind_code => Err(funs.bs_not_implemented(kind_code)),
     }
 }
