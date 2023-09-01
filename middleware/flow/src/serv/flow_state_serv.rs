@@ -12,7 +12,7 @@ use itertools::Itertools;
 use tardis::{
     basic::{dto::TardisContext, field::TrimString, result::TardisResult},
     db::sea_orm::{
-        sea_query::{Expr, SelectStatement},
+        sea_query::{Expr, SelectStatement, Cond},
         EntityName, Set,
     },
     serde_json::json,
@@ -177,7 +177,11 @@ impl RbumItemCrudOperation<flow_state::ActiveModel, FlowStateAddReq, FlowStateMo
             query.and_where(Expr::col(flow_state::Column::SysState).eq(sys_state.clone()));
         }
         if let Some(tag) = &filter.tag {
-            query.and_where(Expr::col(flow_state::Column::Tags).like(format!("%{}%", tag)));
+            let mut cond = Cond::any();
+            for tag in tag.split(',') {
+                cond = cond.add(Expr::col(flow_state::Column::Tags).like(format!("%{}%", tag)));
+            }
+            query.cond_where(cond);
         }
         if let Some(state_kind) = &filter.state_kind {
             query.and_where(Expr::col(flow_state::Column::StateKind).eq(state_kind.clone()));
