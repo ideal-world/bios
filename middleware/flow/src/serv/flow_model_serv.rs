@@ -189,6 +189,9 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
         if let Some(template) = filter.template {
             query.and_where(Expr::col(flow_model::Column::Template).eq(template));
         }
+        if let Some(own_paths) = filter.own_paths.clone() {
+            query.and_where(Expr::col(flow_model::Column::OwnPaths).is_in(own_paths));
+        }
 
         Ok(())
     }

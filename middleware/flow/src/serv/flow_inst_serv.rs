@@ -816,7 +816,7 @@ impl FlowInstServ {
                             let rel_obj_ids = Self::filter_rel_obj_ids_by_state(&rel_bus_obj.rel_bus_obj_ids, &Some(condition.state_id.clone()), funs, ctx).await?;
                             match condition.op {
                                 StateChangeConditionOp::And => {
-                                    if condition.state_id.len() != rel_obj_ids.len() {
+                                    if rel_bus_obj.rel_bus_obj_ids.len() != rel_obj_ids.len() {
                                         mismatch_rel_obj_ids.push(rel_obj_id.clone());
                                         continue;
                                     }
