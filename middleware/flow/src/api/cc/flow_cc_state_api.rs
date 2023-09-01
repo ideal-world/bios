@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use tardis::web::context_extractor::TardisContextExtractor;
@@ -8,7 +6,9 @@ use tardis::web::poem_openapi::param::{Path, Query};
 use tardis::web::poem_openapi::payload::Json;
 use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 
-use crate::dto::flow_state_dto::{FlowStateAddReq, FlowStateDetailResp, FlowStateFilterReq, FlowStateKind, FlowStateModifyReq, FlowStateSummaryResp, FlowSysStateKind};
+use crate::dto::flow_state_dto::{
+    FlowStateAddReq, FlowStateDetailResp, FlowStateFilterReq, FlowStateKind, FlowStateModifyReq, FlowStateNameResp, FlowStateSummaryResp, FlowSysStateKind,
+};
 use crate::flow_constants;
 use crate::serv::flow_state_serv::FlowStateServ;
 #[derive(Clone)]
@@ -63,7 +63,6 @@ impl FlowCcStateApi {
     async fn paginate(
         &self,
         ids: Query<Option<String>>,
-        app_ids: Query<Option<String>>,
         name: Query<Option<String>>,
         tag: Query<Option<String>>,
         sys_state: Query<Option<FlowSysStateKind>>,
@@ -107,7 +106,7 @@ impl FlowCcStateApi {
                 sys_state: sys_state.0,
                 state_kind: state_kind.0,
                 template: template.0,
-                app_ids: app_ids.0.map(|ids| ids.split(',').map(|id| id.to_string()).collect::<Vec<String>>()),
+                ..Default::default()
             },
             page_number.0,
             page_size.0,
@@ -137,9 +136,22 @@ impl FlowCcStateApi {
 
     /// Find Names By Ids
     #[oai(path = "/names", method = "get")]
-    async fn find_names(&self, ids: Query<Vec<String>>, ctx: TardisContextExtractor) -> TardisApiResult<HashMap<String, String>> {
+    async fn find_names(
+        &self,
+        ids: Query<Option<Vec<String>>>,
+        tag: Query<Option<String>>,
+        app_ids: Query<Option<String>>,
+        ctx: TardisContextExtractor,
+    ) -> TardisApiResult<Vec<FlowStateNameResp>> {
         let funs = flow_constants::get_tardis_inst();
-        let resp = FlowStateServ::find_names(ids.0, &funs, &ctx.0).await?;
+        let resp = FlowStateServ::find_names(
+            ids.0,
+            tag.0,
+            app_ids.0.map(|ids| ids.split(',').map(|id| id.to_string()).collect::<Vec<String>>()),
+            &funs,
+            &ctx.0,
+        )
+        .await?;
         TardisResp::ok(resp)
     }
 }

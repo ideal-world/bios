@@ -11,7 +11,7 @@ use bios_mw_flow::dto::flow_model_dto::{
     FlowModelAddCustomModelItemReq, FlowModelAddCustomModelReq, FlowModelAddCustomModelResp, FlowModelAggResp, FlowModelBindStateReq, FlowModelModifyReq,
     FlowModelSortStateInfoReq, FlowModelSortStatesReq, FlowModelSummaryResp, FlowModelUnbindStateReq, FlowTemplateModelResp,
 };
-use bios_mw_flow::dto::flow_state_dto::FlowStateSummaryResp;
+use bios_mw_flow::dto::flow_state_dto::{FlowStateNameResp, FlowStateSummaryResp};
 use bios_mw_flow::dto::flow_transition_dto::{
     FlowTransitionActionChangeInfo, FlowTransitionActionChangeKind, FlowTransitionDoubleCheckInfo, FlowTransitionModifyReq, StateChangeCondition, StateChangeConditionItem,
     StateChangeConditionOp,
@@ -124,14 +124,14 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
         )
         .await;
     // modify transitions
-    let trans_modify = model_agg_old.states.iter().find(|state| state.name == "待开始").unwrap().transitions.iter().find(|trans| trans.name == "开始").unwrap();
+    let state_modify_trans = model_agg_old.states.iter().find(|state| state.name == "待开始").unwrap().transitions.iter().find(|trans| trans.name == "开始").unwrap();
     let _: Void = flow_client
         .patch(
             &format!("/cc/model/{}", req_model_id),
             &FlowModelModifyReq {
                 modify_transitions: Some(vec![FlowTransitionModifyReq {
-                    id: trans_modify.id.clone().into(),
-                    name: Some(format!("{}-modify", &trans_modify.name).into()),
+                    id: state_modify_trans.id.clone().into(),
+                    name: Some(format!("{}-modify", &state_modify_trans.name).into()),
                     from_flow_state_id: None,
                     to_flow_state_id: None,
                     transfer_by_auto: Some(true),
@@ -184,6 +184,45 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
                         is_open: true,
                         content: Some("再次确认该操作生效".to_string()),
                     }),
+                }]),
+                ..Default::default()
+            },
+        )
+        .await;
+    let field_modify_trans = model_agg_old.states.iter().find(|state| state.name == "进行中").unwrap().transitions.iter().find(|trans| trans.name == "完成").unwrap();
+    let _: Void = flow_client
+        .patch(
+            &format!("/cc/model/{}", req_model_id),
+            &FlowModelModifyReq {
+                modify_transitions: Some(vec![FlowTransitionModifyReq {
+                    id: field_modify_trans.id.clone().into(),
+                    name: Some(format!("{}-modify", &field_modify_trans.name).into()),
+                    from_flow_state_id: None,
+                    to_flow_state_id: None,
+                    transfer_by_auto: Some(true),
+                    transfer_by_timer: None,
+                    guard_by_creator: None,
+                    guard_by_his_operators: None,
+                    guard_by_assigned: None,
+                    guard_by_spec_account_ids: None,
+                    guard_by_spec_role_ids: None,
+                    guard_by_spec_org_ids: None,
+                    guard_by_other_conds: None,
+                    vars_collect: None,
+                    action_by_pre_callback: None,
+                    action_by_post_callback: None,
+                    action_by_post_changes: Some(vec![FlowTransitionActionChangeInfo {
+                        kind: FlowTransitionActionChangeKind::Var,
+                        describe: "".to_string(),
+                        obj_tag: Some("".to_string()),
+                        obj_current_state_id: None,
+                        change_condition: None,
+                        changed_state_id: "".to_string(),
+                        current: false,
+                        var_name: "id".to_string(),
+                        changed_val: Some(json!("xxx".to_string())),
+                    }]),
+                    double_check: None,
                 }]),
                 ..Default::default()
             },
@@ -422,7 +461,31 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
         .await;
     let ticket: FlowInstDetailResp = flow_client.get(&format!("/cc/inst/{}", ticket_inst_id)).await;
     assert_eq!(ticket.current_state_id, ticket_model_agg.states.iter().find(|state| state.name == "处理中").unwrap().id);
-
+    let state_and_next_transitions: Vec<FlowInstFindStateAndTransitionsResp> = flow_client
+        .put(
+            "/cc/inst/batch/state_transitions",
+            &vec![FlowInstFindStateAndTransitionsReq {
+                flow_inst_id: req_inst_id2.clone(),
+                vars: None,
+            }],
+        )
+        .await;
+    let _transfer: FlowInstTransferResp = flow_client
+        .put(
+            &format!("/cc/inst/{}/transition/transfer", req_inst_id2),
+            &FlowInstTransferReq {
+                flow_transition_id: state_and_next_transitions[0]
+                    .next_flow_transitions
+                    .iter()
+                    .find(|trans| trans.next_flow_state_name == "已完成")
+                    .unwrap()
+                    .next_flow_transition_id
+                    .clone(),
+                vars: None,
+                message: None,
+            },
+        )
+        .await;
     // 7. bind app custom model
     ctx.own_paths = "t1/app01".to_string();
     flow_client.set_auth(&ctx)?;
@@ -495,6 +558,7 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
             },
         )
         .await;
+    // let states: Vec<FlowStateNameResp> = flow_client.get("/cc/state/names?tag=REQ&app_ids=app01").await;
 
     Ok(())
 }
