@@ -12,7 +12,7 @@ use itertools::Itertools;
 use tardis::{
     basic::{dto::TardisContext, field::TrimString, result::TardisResult},
     db::sea_orm::{
-        sea_query::{Expr, SelectStatement, Cond},
+        sea_query::{Cond, Expr, SelectStatement},
         EntityName, Set,
     },
     serde_json::json,
@@ -23,13 +23,17 @@ use crate::{
     domain::flow_state,
     dto::{
         flow_model_dto::FlowModelFilterReq,
-        flow_state_dto::{FlowStateAddReq, FlowStateDetailResp, FlowStateFilterReq, FlowStateKind, FlowStateModifyReq, FlowStateNameResp, FlowStateSummaryResp, FlowSysStateKind},
+        flow_state_dto::{
+            FlowStateAddReq, FlowStateCountGroupByStateReq, FlowStateCountGroupByStateResp, FlowStateDetailResp, FlowStateFilterReq, FlowStateKind, FlowStateModifyReq,
+            FlowStateNameResp, FlowStateSummaryResp, FlowSysStateKind,
+        },
     },
     flow_config::FlowBasicInfoManager,
 };
 use async_trait::async_trait;
 
 use super::{
+    flow_inst_serv::FlowInstServ,
     flow_model_serv::FlowModelServ,
     flow_rel_serv::{FlowRelKind, FlowRelServ},
 };
@@ -264,7 +268,7 @@ impl FlowStateServ {
         .into_iter()
         .map(|state_detail| FlowStateNameResp {
             key: state_detail.name.clone(),
-            name: state_detail.name.clone(),
+            name: state_detail.name,
         })
         .collect_vec();
         Ok(names)
@@ -314,5 +318,30 @@ impl FlowStateServ {
             FlowSysStateKind::Start => "rgba(242, 158, 12, 1)".to_string(),
             FlowSysStateKind::Progress => "rgba(67, 147, 248, 1)".to_string(),
         }
+    }
+
+    pub async fn count_group_by_state(req: &FlowStateCountGroupByStateReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<FlowStateCountGroupByStateResp>> {
+        let states = Self::find_id_name_items(
+            &FlowStateFilterReq {
+                tag: Some(req.tag.clone()),
+                ..Default::default()
+            },
+            None,
+            None,
+            funs,
+            ctx,
+        )
+        .await?;
+        let mut result = vec![];
+        let insts = FlowInstServ::find_detail(req.inst_ids.clone(), funs, ctx).await?;
+        for (state_id, state_name) in states {
+            let inst_ids = insts.iter().filter(|inst| inst.current_state_id == state_id).map(|inst| inst.id.clone()).collect_vec();
+            result.push(FlowStateCountGroupByStateResp {
+                state_name,
+                count: inst_ids.len().to_string(),
+                inst_ids,
+            });
+        }
+        Ok(result)
     }
 }

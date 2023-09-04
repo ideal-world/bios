@@ -167,3 +167,16 @@ pub struct FlowStateNameResp {
     pub key: String,
     pub name: String,
 }
+
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object, sea_orm::FromQueryResult)]
+pub struct FlowStateCountGroupByStateReq {
+    pub tag: String,
+    pub inst_ids: Vec<String>,
+}
+
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object, sea_orm::FromQueryResult)]
+pub struct FlowStateCountGroupByStateResp {
+    pub state_name: String,
+    pub count: String,
+    pub inst_ids: Vec<String>,
+}
