@@ -147,7 +147,7 @@ pub struct FlowStateFilterReq {
     pub tag: Option<String>,
     pub state_kind: Option<FlowStateKind>,
     pub template: Option<bool>,
-    pub app_ids: Option<Vec<String>>,
+    pub flow_model_ids: Option<Vec<String>>,
 }
 
 impl RbumItemFilterFetcher for FlowStateFilterReq {
@@ -160,4 +160,23 @@ impl RbumItemFilterFetcher for FlowStateFilterReq {
     fn rel2(&self) -> &Option<RbumItemRelFilterReq> {
         &None
     }
+}
+
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object, sea_orm::FromQueryResult)]
+pub struct FlowStateNameResp {
+    pub key: String,
+    pub name: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object, sea_orm::FromQueryResult)]
+pub struct FlowStateCountGroupByStateReq {
+    pub tag: String,
+    pub inst_ids: Vec<String>,
+}
+
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object, sea_orm::FromQueryResult)]
+pub struct FlowStateCountGroupByStateResp {
+    pub state_name: String,
+    pub count: String,
+    pub inst_ids: Vec<String>,
 }

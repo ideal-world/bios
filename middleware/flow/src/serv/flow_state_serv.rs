@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 
 use bios_basic::rbum::{
     dto::{
@@ -8,10 +8,11 @@ use bios_basic::rbum::{
     helper::rbum_scope_helper,
     serv::rbum_item_serv::RbumItemCrudOperation,
 };
+use itertools::Itertools;
 use tardis::{
     basic::{dto::TardisContext, field::TrimString, result::TardisResult},
     db::sea_orm::{
-        sea_query::{Expr, SelectStatement},
+        sea_query::{Cond, Expr, SelectStatement},
         EntityName, Set,
     },
     serde_json::json,
@@ -22,13 +23,17 @@ use crate::{
     domain::flow_state,
     dto::{
         flow_model_dto::FlowModelFilterReq,
-        flow_state_dto::{FlowStateAddReq, FlowStateDetailResp, FlowStateFilterReq, FlowStateKind, FlowStateModifyReq, FlowStateSummaryResp, FlowSysStateKind},
+        flow_state_dto::{
+            FlowStateAddReq, FlowStateCountGroupByStateReq, FlowStateCountGroupByStateResp, FlowStateDetailResp, FlowStateFilterReq, FlowStateKind, FlowStateModifyReq,
+            FlowStateNameResp, FlowStateSummaryResp, FlowSysStateKind,
+        },
     },
     flow_config::FlowBasicInfoManager,
 };
 use async_trait::async_trait;
 
 use super::{
+    flow_inst_serv::FlowInstServ,
     flow_model_serv::FlowModelServ,
     flow_rel_serv::{FlowRelKind, FlowRelServ},
 };
@@ -176,7 +181,11 @@ impl RbumItemCrudOperation<flow_state::ActiveModel, FlowStateAddReq, FlowStateMo
             query.and_where(Expr::col(flow_state::Column::SysState).eq(sys_state.clone()));
         }
         if let Some(tag) = &filter.tag {
-            query.and_where(Expr::col(flow_state::Column::Tags).like(format!("%{}%", tag)));
+            let mut cond = Cond::any();
+            for tag in tag.split(',') {
+                cond = cond.add(Expr::col(flow_state::Column::Tags).like(format!("%{}%", tag)));
+            }
+            query.cond_where(cond);
         }
         if let Some(state_kind) = &filter.state_kind {
             query.and_where(Expr::col(flow_state::Column::StateKind).eq(state_kind.clone()));
@@ -184,45 +193,20 @@ impl RbumItemCrudOperation<flow_state::ActiveModel, FlowStateAddReq, FlowStateMo
         if let Some(template) = filter.template {
             query.and_where(Expr::col(flow_state::Column::Template).eq(template));
         }
-        if let Some(app_ids) = filter.app_ids.clone() {
-            let tenant_own_path = rbum_scope_helper::get_path_item(1, &ctx.own_paths);
-            if let Some(tenant_own_path) = tenant_own_path {
-                // collect app own path
-                let mut app_own_paths = vec![];
-                for app_id in app_ids {
-                    app_own_paths.push(format!("{}/{}", &tenant_own_path, &app_id));
-                }
-                // find flow models
-                let flow_model_ids = FlowModelServ::find_id_items(
-                    &FlowModelFilterReq {
-                        basic: RbumBasicFilterReq {
-                            with_sub_own_paths: true,
-                            ..Default::default()
-                        },
-                        tags: filter.tag.clone().map(|tag| vec![tag]),
-                        own_paths: Some(app_own_paths),
-                        ..Default::default()
-                    },
-                    None,
-                    None,
-                    funs,
-                    ctx,
-                )
-                .await?;
-                // find rel state
-                let mut state_id = HashSet::new();
-                for flow_model_id in flow_model_ids {
-                    let rel_state_id = FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelState, &flow_model_id, None, None, funs, ctx)
-                        .await?
-                        .iter()
-                        .map(|rel| rel.rel_id.clone())
-                        .collect::<Vec<_>>();
-                    state_id.extend(rel_state_id.into_iter());
-                }
+        if let Some(flow_model_ids) = filter.flow_model_ids.clone() {
+            // find rel state
+            let mut state_id = HashSet::new();
+            for flow_model_id in flow_model_ids {
+                let rel_state_id = FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelState, &flow_model_id, None, None, funs, ctx)
+                    .await?
+                    .iter()
+                    .map(|rel| rel.rel_id.clone())
+                    .collect::<Vec<_>>();
+                state_id.extend(rel_state_id.into_iter());
+            }
 
-                if !state_id.is_empty() {
-                    query.and_where(Expr::col((flow_state::Entity, flow_state::Column::Id)).is_in(state_id));
-                }
+            if !state_id.is_empty() {
+                query.and_where(Expr::col((flow_state::Entity, flow_state::Column::Id)).is_in(state_id));
             }
         }
         Ok(())
@@ -230,13 +214,49 @@ impl RbumItemCrudOperation<flow_state::ActiveModel, FlowStateAddReq, FlowStateMo
 }
 
 impl FlowStateServ {
-    pub(crate) async fn find_names(ids: Vec<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<HashMap<String, String>> {
-        Self::find_id_name_items(
+    pub(crate) async fn find_names(
+        ids: Option<Vec<String>>,
+        tag: Option<String>,
+        app_ids: Option<Vec<String>>,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<Vec<FlowStateNameResp>> {
+        let mut flow_model_ids = None;
+        if let Some(app_ids) = app_ids {
+            let tenant_own_path = rbum_scope_helper::get_path_item(1, &ctx.own_paths);
+            if let Some(tenant_own_path) = tenant_own_path {
+                // collect app own path
+                let app_own_paths = app_ids.into_iter().map(|app_id| format!("{}/{}", &tenant_own_path, &app_id)).collect_vec();
+                // find flow models
+                flow_model_ids = Some(
+                    FlowModelServ::find_id_items(
+                        &FlowModelFilterReq {
+                            basic: RbumBasicFilterReq {
+                                with_sub_own_paths: true,
+                                ..Default::default()
+                            },
+                            tags: tag.clone().map(|tag| vec![tag]),
+                            own_paths: Some(app_own_paths),
+                            ..Default::default()
+                        },
+                        None,
+                        None,
+                        funs,
+                        ctx,
+                    )
+                    .await?,
+                );
+            }
+        }
+        let names = Self::find_detail_items(
             &FlowStateFilterReq {
                 basic: RbumBasicFilterReq {
-                    ids: Some(ids),
+                    ids,
+                    with_sub_own_paths: true,
                     ..Default::default()
                 },
+                tag,
+                flow_model_ids,
                 ..Default::default()
             },
             None,
@@ -244,7 +264,14 @@ impl FlowStateServ {
             funs,
             ctx,
         )
-        .await
+        .await?
+        .into_iter()
+        .map(|state_detail| FlowStateNameResp {
+            key: state_detail.name.clone(),
+            name: state_detail.name,
+        })
+        .collect_vec();
+        Ok(names)
     }
 
     // For the old data migration, this function match id by old state name
@@ -291,5 +318,30 @@ impl FlowStateServ {
             FlowSysStateKind::Start => "rgba(242, 158, 12, 1)".to_string(),
             FlowSysStateKind::Progress => "rgba(67, 147, 248, 1)".to_string(),
         }
+    }
+
+    pub async fn count_group_by_state(req: &FlowStateCountGroupByStateReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<FlowStateCountGroupByStateResp>> {
+        let states = Self::find_id_name_items(
+            &FlowStateFilterReq {
+                tag: Some(req.tag.clone()),
+                ..Default::default()
+            },
+            None,
+            None,
+            funs,
+            ctx,
+        )
+        .await?;
+        let mut result = vec![];
+        let insts = FlowInstServ::find_detail(req.inst_ids.clone(), funs, ctx).await?;
+        for (state_id, state_name) in states {
+            let inst_ids = insts.iter().filter(|inst| inst.current_state_id == state_id).map(|inst| inst.id.clone()).collect_vec();
+            result.push(FlowStateCountGroupByStateResp {
+                state_name,
+                count: inst_ids.len().to_string(),
+                inst_ids,
+            });
+        }
+        Ok(result)
     }
 }

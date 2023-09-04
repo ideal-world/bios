@@ -278,7 +278,7 @@ impl FlowInstServ {
         }
     }
 
-    async fn find_detail(flow_inst_ids: Vec<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<FlowInstDetailResp>> {
+    pub async fn find_detail(flow_inst_ids: Vec<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<FlowInstDetailResp>> {
         #[derive(sea_orm::FromQueryResult)]
         pub struct FlowInstDetailResult {
             pub id: String,
@@ -689,6 +689,9 @@ impl FlowInstServ {
 
         funs.db().update_one(flow_inst, ctx).await?;
 
+        // get updated instance detail
+        let flow_inst_detail = Self::get(flow_inst_id, funs, ctx).await?;
+
         let model_transition = flow_model.transitions();
         Self::do_request_webhook(
             from_transition_id.and_then(|id: String| model_transition.iter().find(|model_transition| model_transition.id == id)),
@@ -732,7 +735,8 @@ impl FlowInstServ {
             match post_change.kind {
                 FlowTransitionActionChangeKind::Var => {
                     if let Some(change_info) = post_change.var_change_info {
-                        if let Some(rel_tag) = change_info.obj_tag.clone() {
+                        let rel_tag = change_info.obj_tag.unwrap_or_default();
+                        if !rel_tag.is_empty() {
                             let mut resp = FlowExternalServ::do_fetch_rel_obj(&current_model.tag, &current_inst.rel_business_obj_id, vec![rel_tag.clone()], ctx, funs).await?;
                             if !resp.rel_bus_objs.is_empty() {
                                 for rel_bus_obj_id in resp.rel_bus_objs.pop().unwrap().rel_bus_obj_ids {
