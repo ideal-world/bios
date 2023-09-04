@@ -7,7 +7,8 @@ use tardis::web::poem_openapi::payload::Json;
 use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 
 use crate::dto::flow_state_dto::{
-    FlowStateAddReq, FlowStateDetailResp, FlowStateFilterReq, FlowStateKind, FlowStateModifyReq, FlowStateNameResp, FlowStateSummaryResp, FlowSysStateKind,
+    FlowStateAddReq, FlowStateCountGroupByStateReq, FlowStateCountGroupByStateResp, FlowStateDetailResp, FlowStateFilterReq, FlowStateKind, FlowStateModifyReq, FlowStateNameResp,
+    FlowStateSummaryResp, FlowSysStateKind,
 };
 use crate::flow_constants;
 use crate::serv::flow_state_serv::FlowStateServ;
@@ -153,5 +154,15 @@ impl FlowCcStateApi {
         )
         .await?;
         TardisResp::ok(resp)
+    }
+
+    /// Count Group By State / 按状态分组统计
+    #[oai(path = "/count_group_by_state", method = "post")]
+    async fn count_group_by_state(&self, req: Json<FlowStateCountGroupByStateReq>, ctx: TardisContextExtractor) -> TardisApiResult<Vec<FlowStateCountGroupByStateResp>> {
+        let mut funs = flow_constants::get_tardis_inst();
+        funs.begin().await?;
+        let result = FlowStateServ::count_group_by_state(&req.0, &funs, &ctx.0).await?;
+        funs.commit().await?;
+        TardisResp::ok(result)
     }
 }

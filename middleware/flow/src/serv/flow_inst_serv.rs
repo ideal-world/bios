@@ -278,7 +278,7 @@ impl FlowInstServ {
         }
     }
 
-    async fn find_detail(flow_inst_ids: Vec<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<FlowInstDetailResp>> {
+    pub async fn find_detail(flow_inst_ids: Vec<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<FlowInstDetailResp>> {
         #[derive(sea_orm::FromQueryResult)]
         pub struct FlowInstDetailResult {
             pub id: String,
@@ -688,6 +688,9 @@ impl FlowInstServ {
         }
 
         funs.db().update_one(flow_inst, ctx).await?;
+
+        // get updated instance detail
+        let flow_inst_detail = Self::get(flow_inst_id, funs, ctx).await?;
 
         let model_transition = flow_model.transitions();
         Self::do_request_webhook(
