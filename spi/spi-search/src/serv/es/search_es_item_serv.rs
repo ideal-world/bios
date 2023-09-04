@@ -173,10 +173,10 @@ pub async fn modify(tag: &str, key: &str, modify_req: &mut SearchItemModifyReq, 
         query.insert("own_paths".to_string(), json!(own_paths.clone()).to_string());
     }
     if let Some(create_time) = &modify_req.create_time {
-        query.insert("create_time".to_string(), create_time.to_rfc3339());
+        query.insert("create_time".to_string(), json!(create_time.to_rfc3339()).to_string());
     }
     if let Some(update_time) = &modify_req.update_time {
-        query.insert("update_time".to_string(), update_time.to_rfc3339());
+        query.insert("update_time".to_string(), json!(update_time.to_rfc3339()).to_string());
     }
     if let Some(ext) = &modify_req.ext {
         let mut ext = ext.clone();
