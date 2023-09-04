@@ -42,5 +42,6 @@ spi_dispatch_service! {
             desc_by_update: Option<bool>
         ) -> TardisResult<TardisPage<Value>>;
         dim_record_delete(dim_conf_key: String, dim_record_key: Value) -> TardisResult<()>;
+        dim_record_real_delete(dim_conf_key: String, dim_record_key: Value) -> TardisResult<()>;
     }
 }

@@ -758,6 +758,29 @@ WHERE key = $1
     Ok(())
 }
 
+pub(crate) async fn dim_record_real_delete(dim_conf_key: String, dim_record_key: serde_json::Value, funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
+    let bs_inst = inst.inst::<TardisRelDBClient>();
+    let (mut conn, _) = common_pg::init_conn(bs_inst).await?;
+    conn.begin().await?;
+    if !stats_pg_conf_dim_serv::online(&dim_conf_key, &conn, ctx).await? {
+        return Err(funs.err().conflict("dim_record", "delete", "The dimension config not online.", "409-spi-stats-dim-conf-not-online"));
+    }
+    let dim_conf = stats_pg_conf_dim_serv::get(&dim_conf_key, &conn, ctx, inst).await?.expect("Fail to get dim_conf");
+
+    let table_name = package_table_name(&format!("stats_inst_dim_{}", dim_conf.key), ctx);
+    let values = vec![dim_conf.data_type.json_to_sea_orm_value(&dim_record_key, false)?];
+
+    conn.execute_one(
+        &format!(
+            r#"delete {table_name} WHERE key = $1 "#,
+        ),
+        values,
+    )
+    .await?;
+    conn.commit().await?;
+    Ok(())
+}
+
 async fn fact_get_latest_record_raw(
     fact_conf_key: &str,
     dim_record_key: &str,

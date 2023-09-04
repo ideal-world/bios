@@ -139,4 +139,12 @@ impl StatsCiRecordApi {
         stats_record_serv::dim_record_delete(dim_key.0, delete_req.0.key, &funs, &ctx.0).await?;
         TardisResp::ok(Void {})
     }
+
+    /// Delete Dimension Record
+    #[oai(path = "/dim/:dim_key/remove", method = "delete")]
+    async fn dim_record_real_delete(&self, dim_key: Path<String>, delete_req: Json<StatsDimRecordDeleteReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+        let funs = crate::get_tardis_inst();
+        stats_record_serv::dim_record_real_delete(dim_key.0, delete_req.0.key, &funs, &ctx.0).await?;
+        TardisResp::ok(Void {})
+    }
 }

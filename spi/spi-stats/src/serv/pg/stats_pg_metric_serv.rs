@@ -623,6 +623,9 @@ fn package_groups(
 fn package_groups_agg(record: serde_json::Value) -> Result<serde_json::Value, String> {
     match record.get("s_agg") {
         Some(agg) => {
+            if agg.is_null() {
+                return Ok(serde_json::Value::Null);
+            }
             println!("{}", agg);
             let mut details = Vec::new();
             let var_agg = agg.as_str().ok_or("field group_agg should be a string")?;
