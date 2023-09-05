@@ -87,13 +87,14 @@ impl SgPluginFilter for SgFilterAntiReplay {
 }
 
 fn get_md5(ctx: &mut SgRoutePluginContext) -> TardisResult<String> {
-    let req = &ctx.request;
+    let req = &mut ctx.request;
+    let method = req.get_method().clone();
     let data = format!(
         "{}{}{}{}",
         req.get_remote_addr(),
         req.get_uri_raw(),
-        req.get_method(),
-        req.get_headers_raw().iter().fold(String::new(), |c, (key, value)| {
+        method,
+        req.get_headers_raw().iter().fold(String::new(), |mut c, (key, value)| {
             c.push_str(&key.as_str());
             c.push_str(&String::from_utf8_lossy(&value.as_bytes()));
             c

@@ -2,6 +2,7 @@ pub mod iam_cc_account_api;
 // todo remove
 pub mod iam_cc_account_task_api;
 pub mod iam_cc_app_api;
+pub mod iam_cc_app_set_api;
 pub mod iam_cc_config_api;
 pub mod iam_cc_org_api;
 pub mod iam_cc_res_api;
