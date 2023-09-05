@@ -25,6 +25,8 @@ lazy_static.workspace = true
 itertools.workspace = true
 tardis = { workspace = true, features = ["reldb-postgres", "web-server"] }
 serde_json = { workspace = true, features = ["preserve_order"] }
+strum = { workerspace = true, features = ["derive"] }
+
 [dev-dependencies]
 tardis = { workspace = true, features = ["test"] }
 bios-basic = { path = "../../basic", features = ["default", "test"] }

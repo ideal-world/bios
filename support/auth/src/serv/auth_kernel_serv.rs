@@ -9,7 +9,7 @@ use tardis::{
     TardisFuns,
 };
 
-use crate::dto::auth_kernel_dto::{MixAuthResp, MixRequestBody, ResContainerLeafInfo, SignWebHookReq};
+use crate::dto::auth_kernel_dto::{AuthResult, MixAuthResp, MixRequestBody, ResContainerLeafInfo, SignWebHookReq};
 use crate::helper::auth_common_helper;
 use crate::{
     auth_config::AuthConfig,
@@ -19,24 +19,24 @@ use crate::{
 
 use super::{auth_crypto_serv, auth_mgr_serv, auth_res_serv};
 
-pub async fn auth(req: &mut AuthReq, is_mix_req: bool) -> TardisResult<AuthResp> {
+pub async fn auth(req: &mut AuthReq, is_mix_req: bool) -> TardisResult<AuthResult> {
     trace!("[Auth] Request auth: {:?}", req);
     let config = TardisFuns::cs_config::<AuthConfig>(DOMAIN_CODE);
     match check(req) {
-        Ok(true) => return Ok(AuthResp::ok(None, None, None, config)),
-        Err(e) => return Ok(AuthResp::err(e, config)),
+        Ok(true) => return Ok(AuthResult::ok(None, None, None, config)),
+        Err(e) => return Ok(AuthResult::err(e, config)),
         _ => {}
     }
     let cache_client = TardisFuns::cache_by_module_or_default(DOMAIN_CODE);
     match ident(req, config, cache_client).await {
         Ok(ident) => match do_auth(&ident).await {
             Ok(res_container_leaf_info) => match decrypt(&req, config, &res_container_leaf_info, is_mix_req).await {
-                Ok((body, headers)) => Ok(AuthResp::ok(Some(&ident), body, headers, config)),
-                Err(e) => Ok(AuthResp::err(e, config)),
+                Ok((body, headers)) => Ok(AuthResult::ok(Some(&ident), body, headers, config)),
+                Err(e) => Ok(AuthResult::err(e, config)),
             },
-            Err(e) => Ok(AuthResp::err(e, config)),
+            Err(e) => Ok(AuthResult::err(e, config)),
         },
-        Err(e) => Ok(AuthResp::err(e, config)),
+        Err(e) => Ok(AuthResult::err(e, config)),
     }
 }
 
@@ -87,13 +87,20 @@ async fn ident(req: &AuthReq, config: &AuthConfig, cache_client: &TardisCacheCli
         let own_paths_split = context.own_paths.split('/').collect::<Vec<_>>();
         let tenant_id = if context.own_paths.is_empty() { None } else { Some(own_paths_split[0].to_string()) };
         let app_id = if own_paths_split.len() > 1 { Some(own_paths_split[1].to_string()) } else { None };
+        let mut roles = context.roles.clone();
+        for role in context.roles.clone() {
+            if role.contains(":") {
+                let extend_role = role.split(':').collect::<Vec<_>>()[0];
+                roles.push(extend_role.to_string());
+            }
+        }
         Ok(AuthContext {
             rbum_uri,
             rbum_action,
             app_id,
             tenant_id,
             account_id: Some(context.owner),
-            roles: Some(context.roles),
+            roles: Some(roles),
             groups: Some(context.groups),
             own_paths: Some(context.own_paths),
             ak: Some(context.ak),
@@ -122,15 +129,22 @@ async fn ident(req: &AuthReq, config: &AuthConfig, cache_client: &TardisCacheCli
         }
 
         if bios_ctx.own_paths.contains(&own_paths) {
+            let mut roles = bios_ctx.roles.clone();
+            for role in bios_ctx.roles.clone() {
+                if role.contains(":") {
+                    let extend_role = role.split(':').collect::<Vec<_>>()[0];
+                    roles.push(extend_role.to_string());
+                }
+            }
             Ok(AuthContext {
                 rbum_uri,
                 rbum_action,
                 app_id: if app_id.is_empty() { None } else { Some(app_id) },
                 tenant_id: Some(cache_tenant_id),
                 account_id: Some(bios_ctx.owner),
-                roles: Some(bios_ctx.roles),
+                roles: Some(roles),
                 groups: Some(bios_ctx.groups),
-                own_paths: Some(own_paths),
+                own_paths: Some(bios_ctx.own_paths),
                 ak: Some(ak_authorization.to_string()),
             })
         } else {
@@ -171,6 +185,13 @@ async fn ident(req: &AuthReq, config: &AuthConfig, cache_client: &TardisCacheCli
         }
         if own_paths.contains(&cache_own_paths) {
             let context = self::get_account_context(&ak_authorization, &owner, &app_id, config, cache_client).await?;
+            let mut roles = context.roles.clone();
+            for role in roles.clone() {
+                if role.contains(":") {
+                    let extend_role = role.split(':').collect::<Vec<_>>()[0];
+                    roles.push(extend_role.to_string());
+                }
+            }
             let own_paths_split = own_paths.split('/').collect::<Vec<_>>();
             let tenant_id = if own_paths.is_empty() { None } else { Some(own_paths_split[0].to_string()) };
             let app_id = if own_paths_split.len() > 1 { Some(own_paths_split[1].to_string()) } else { None };
@@ -180,7 +201,7 @@ async fn ident(req: &AuthReq, config: &AuthConfig, cache_client: &TardisCacheCli
                 app_id,
                 tenant_id,
                 account_id: Some(owner.to_string()),
-                roles: Some(context.roles),
+                roles: Some(roles),
                 groups: Some(context.groups),
                 own_paths: Some(own_paths.to_string()),
                 ak: Some(ak_authorization.to_string()),
@@ -518,20 +539,22 @@ pub(crate) async fn parse_mix_req(req: AuthReq) -> TardisResult<MixAuthResp> {
     let mix_body = TardisFuns::json.str_to_obj::<MixRequestBody>(&body)?;
     let mut headers = headers.unwrap_or_default();
     headers.extend(mix_body.headers);
-    let auth_resp = auth(
-        &mut AuthReq {
-            scheme: req.scheme,
-            path: req.path,
-            query: req.query,
-            method: mix_body.method.clone(),
-            host: "".to_string(),
-            port: 80,
-            headers,
-            body: Some(mix_body.body),
-        },
-        true,
-    )
-    .await?;
+    let auth_resp = AuthResp::from_result(
+        auth(
+            &mut AuthReq {
+                scheme: req.scheme,
+                path: req.path,
+                query: req.query,
+                method: mix_body.method.clone(),
+                host: "".to_string(),
+                port: 80,
+                headers,
+                body: Some(mix_body.body),
+            },
+            true,
+        )
+        .await?,
+    );
     let url = if let Some(0) = mix_body.uri.find('/') {
         mix_body.uri
     } else {

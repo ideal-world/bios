@@ -22,6 +22,7 @@ default = [
     "tardis/web-client",
     "tardis/reldb-postgres",
     "tardis/cache",
+    "tardis/mq",
 ]
 # TODO remvoe
 with-mq = ["tardis/mq"]
@@ -36,7 +37,6 @@ itertools.workspace = true
 fancy-regex.workspace = true
 tardis = { workspace = true, optional = true }
 strum = { workspace = true }
-
 [dev-dependencies]
 tardis = { workspace = true, features = ["test"] }
 

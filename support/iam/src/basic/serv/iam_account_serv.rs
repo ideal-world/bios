@@ -1,9 +1,11 @@
 use async_trait::async_trait;
+use bios_basic::helper::request_helper::get_remote_ip;
 use bios_basic::rbum::rbum_config::RbumConfigApi;
 use bios_basic::rbum::rbum_enumeration::RbumRelFromKind;
 use bios_sdk_invoke::clients::spi_search_client::SpiSearchClient;
 use bios_sdk_invoke::dto::search_item_dto::{SearchItemAddReq, SearchItemModifyReq, SearchItemVisitKeysReq};
 use itertools::Itertools;
+use tardis::chrono::Utc;
 
 use std::collections::{HashMap, HashSet};
 
@@ -119,7 +121,7 @@ impl RbumItemCrudOperation<iam_account::ActiveModel, IamAccountAddReq, IamAccoun
     }
 
     async fn package_ext_modify(id: &str, modify_req: &IamAccountModifyReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<Option<iam_account::ActiveModel>> {
-        if modify_req.icon.is_none() && modify_req.status.is_none() && modify_req.lock_status.is_none() {
+        if modify_req.icon.is_none() && modify_req.status.is_none() && modify_req.lock_status.is_none() && modify_req.temporary.is_none() {
             return Ok(None);
         }
         let mut iam_account = iam_account::ActiveModel {
@@ -131,16 +133,22 @@ impl RbumItemCrudOperation<iam_account::ActiveModel, IamAccountAddReq, IamAccoun
         }
         if let Some(status) = &modify_req.status {
             iam_account.status = Set(status.to_int());
+            if status == &IamAccountStatusKind::Active {
+                iam_account.effective_time = Set(Utc::now());
+            }
         }
         if let Some(lock_status) = &modify_req.lock_status {
             iam_account.lock_status = Set(lock_status.to_int());
+        }
+        if let Some(temporary) = &modify_req.temporary {
+            iam_account.temporary = Set(temporary.clone());
         }
         Ok(Some(iam_account))
     }
 
     async fn after_modify_item(id: &str, modify_req: &mut IamAccountModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         if modify_req.disabled.is_some() || modify_req.scope_level.is_some() || modify_req.status.is_some() {
-            IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(id, funs).await?;
+            IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(id, get_remote_ip(&ctx).await?, funs).await?;
         }
 
         let mut tasks = vec![];
@@ -187,7 +195,7 @@ impl RbumItemCrudOperation<iam_account::ActiveModel, IamAccountAddReq, IamAccoun
     }
 
     async fn after_delete_item(id: &str, _: &Option<IamAccountDetailResp>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(id, funs).await?;
+        IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(id, get_remote_ip(&ctx).await?, funs).await?;
         IamAccountServ::async_delete_account_search(id.to_string(), funs, ctx.clone()).await?;
         Ok(())
     }
@@ -206,6 +214,7 @@ impl RbumItemCrudOperation<iam_account::ActiveModel, IamAccountAddReq, IamAccoun
         query.column((iam_account::Entity, iam_account::Column::Ext7));
         query.column((iam_account::Entity, iam_account::Column::Ext8));
         query.column((iam_account::Entity, iam_account::Column::Ext9));
+        query.column((iam_account::Entity, iam_account::Column::EffectiveTime));
         if let Some(icon) = &filter.icon {
             query.and_where(Expr::col(iam_account::Column::Icon).eq(icon.as_str()));
         }
@@ -313,6 +322,7 @@ impl IamAccountServ {
                 name: modify_req.name.clone(),
                 scope_level: modify_req.scope_level.clone(),
                 disabled: modify_req.disabled,
+                temporary: modify_req.temporary,
                 icon: modify_req.icon.clone(),
                 status: modify_req.status.clone(),
                 is_auto: Some(false),
@@ -409,6 +419,7 @@ impl IamAccountServ {
                 status: None,
                 lock_status: None,
                 is_auto: None,
+                temporary: None,
             },
             funs,
             &mock_ctx,
@@ -493,6 +504,7 @@ impl IamAccountServ {
             owner_name: account.owner_name,
             create_time: account.create_time,
             update_time: account.update_time,
+            effective_time: account.effective_time,
             scope_level: account.scope_level,
             disabled: account.disabled,
             is_locked: funs.cache().exists(&format!("{}{}", funs.rbum_conf_cache_key_cert_locked_(), &account.id.clone())).await?,
@@ -562,6 +574,7 @@ impl IamAccountServ {
                 owner: account.owner,
                 create_time: account.create_time,
                 update_time: account.update_time,
+                effective_time: account.effective_time,
                 scope_level: account.scope_level,
                 disabled: account.disabled,
                 is_locked: funs.cache().exists(&format!("{}{}", funs.rbum_conf_cache_key_cert_locked_(), &account.id.clone())).await?,
@@ -728,7 +741,7 @@ impl IamAccountServ {
 
     pub async fn delete_tokens(id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         RbumItemServ::check_ownership(id, funs, ctx).await?;
-        IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(id, funs).await
+        IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(id, get_remote_ip(&ctx).await?, funs).await
     }
 
     pub async fn unlock_account(id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Void> {
@@ -744,6 +757,7 @@ impl IamAccountServ {
                 status: None,
                 is_auto: Some(false),
                 lock_status: Some(IamAccountLockStateKind::Unlocked),
+                temporary: None,
             },
             funs,
             ctx,

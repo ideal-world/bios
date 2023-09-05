@@ -1,8 +1,9 @@
+use bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 use tardis::log::info;
-use tardis::TardisFunsInst;
+use tardis::{TardisFuns, TardisFunsInst};
 
 use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
@@ -45,6 +46,9 @@ async fn test_single_level(context: &TardisContext, account_name: &str, another_
             disabled: None,
             sort: None,
             kind: Some(IamRoleKind::Tenant),
+            in_embed: None,
+            extend_role_id: None,
+            in_base: None,
         },
         &funs,
         context,
@@ -59,6 +63,9 @@ async fn test_single_level(context: &TardisContext, account_name: &str, another_
             disabled: None,
             sort: None,
             kind: Some(IamRoleKind::Tenant),
+            in_embed: None,
+            extend_role_id: None,
+            in_base: None,
         },
         &funs,
         another_context,
@@ -105,7 +112,23 @@ async fn test_single_level(context: &TardisContext, account_name: &str, another_
     assert!(!role.disabled);
 
     info!("【test_cc_role】 : test_single_level : Find Roles");
-    let roles = IamRoleServ::paginate_items(&IamRoleFilterReq::default(), 1, 16, None, None, &funs, context).await?;
+    let roles = IamRoleServ::paginate_items(
+        &IamRoleFilterReq {
+            basic: RbumBasicFilterReq {
+                scope_level: Some(RbumScopeLevelKind::Private),
+                ..Default::default()
+            },
+            kind: Some(IamRoleKind::Tenant),
+            ..Default::default()
+        },
+        1,
+        16,
+        None,
+        None,
+        &funs,
+        context,
+    )
+    .await?;
     assert_eq!(roles.page_number, 1);
     assert_eq!(roles.page_size, 16);
     assert!(roles.records.iter().any(|i| i.name == "角色3"));
@@ -228,6 +251,9 @@ async fn test_multi_level_add<'a>(
             disabled: None,
             sort: None,
             kind: None,
+            in_embed: None,
+            extend_role_id: None,
+            in_base: None,
         },
         funs,
         sys_context,
@@ -243,6 +269,9 @@ async fn test_multi_level_add<'a>(
             disabled: None,
             sort: None,
             kind: Some(IamRoleKind::System),
+            in_embed: None,
+            extend_role_id: None,
+            in_base: None,
         },
         funs,
         sys_context,
@@ -258,6 +287,9 @@ async fn test_multi_level_add<'a>(
             disabled: None,
             sort: None,
             kind: None,
+            in_embed: None,
+            extend_role_id: None,
+            in_base: None,
         },
         funs,
         t1_context,
@@ -273,6 +305,9 @@ async fn test_multi_level_add<'a>(
             disabled: None,
             sort: None,
             kind: None,
+            in_embed: None,
+            extend_role_id: None,
+            in_base: None,
         },
         funs,
         t2_context,
@@ -288,6 +323,9 @@ async fn test_multi_level_add<'a>(
             disabled: None,
             sort: None,
             kind: Some(IamRoleKind::Tenant),
+            in_embed: None,
+            extend_role_id: None,
+            in_base: None,
         },
         funs,
         t2_context,
@@ -303,6 +341,9 @@ async fn test_multi_level_add<'a>(
             disabled: None,
             sort: None,
             kind: None,
+            in_embed: None,
+            extend_role_id: None,
+            in_base: None,
         },
         funs,
         t2_a1_context,
@@ -318,6 +359,9 @@ async fn test_multi_level_add<'a>(
             disabled: None,
             sort: None,
             kind: None,
+            in_embed: None,
+            extend_role_id: None,
+            in_base: None,
         },
         funs,
         t2_a2_context,

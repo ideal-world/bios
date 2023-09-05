@@ -26,6 +26,7 @@ impl IamPlatformServ {
         if modify_req.cert_conf_by_user_pwd.is_none()
             && modify_req.cert_conf_by_phone_vcode.is_none()
             && modify_req.cert_conf_by_mail_vcode.is_none()
+            && modify_req.token_default_coexist_num.is_none()
             && modify_req.config.is_none()
         {
             return Ok(());

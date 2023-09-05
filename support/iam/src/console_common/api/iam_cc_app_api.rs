@@ -1,5 +1,7 @@
+use bios_basic::helper::request_helper::add_remote_ip;
 use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
 use tardis::web::context_extractor::TardisContextExtractor;
+use tardis::web::poem::Request;
 use tardis::web::poem_openapi;
 use tardis::web::poem_openapi::param::Query;
 use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp};
@@ -28,7 +30,9 @@ impl IamCcAppApi {
         page_number: Query<u32>,
         page_size: Query<u32>,
         ctx: TardisContextExtractor,
+        request: &Request,
     ) -> TardisApiResult<TardisPage<IamAppSummaryResp>> {
+        add_remote_ip(&request, &ctx.0).await?;
         let funs = iam_constants::get_tardis_inst();
 
         let result = IamAppServ::paginate_items(
@@ -63,7 +67,9 @@ impl IamCcAppApi {
         // App Ids, multiple ids separated by ,
         ids: Query<String>,
         ctx: TardisContextExtractor,
+        request: &Request,
     ) -> TardisApiResult<Vec<String>> {
+        add_remote_ip(&request, &ctx.0).await?;
         let funs = iam_constants::get_tardis_inst();
         let ids = ids.0.split(',').map(|s| s.to_string()).collect();
         let result = IamAppServ::find_name_by_ids(

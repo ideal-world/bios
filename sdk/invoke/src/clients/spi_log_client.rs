@@ -15,7 +15,7 @@ use crate::{clients::base_spi_client::BaseSpiClient, invoke_constants::DYNAMIC_L
 
 pub struct SpiLogClient;
 
-#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+#[derive(poem_openapi::Object, Serialize, Deserialize, Default, Debug)]
 pub struct LogItemFindReq {
     pub tag: String,
     pub kinds: Option<Vec<TrimString>>,
@@ -29,7 +29,7 @@ pub struct LogItemFindReq {
     pub page_number: u32,
     pub page_size: u16,
 }
-#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
 pub struct LogItemFindResp {
     #[oai(validator(min_length = "2"))]
     pub content: String,
@@ -115,7 +115,7 @@ impl SpiLogClient {
     pub async fn find(find_req: LogItemFindReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<TardisPage<LogItemFindResp>>> {
         let log_url: String = BaseSpiClient::module_url(InvokeModuleKind::Log, funs).await?;
         let headers = BaseSpiClient::headers(None, funs, ctx).await?;
-        let resp = funs.web_client().put::<LogItemFindReq, TardisResp<TardisPage<LogItemFindResp>>>(&format!("{log_url}/ci/item"), &find_req, headers.clone()).await?;
+        let resp = funs.web_client().put::<LogItemFindReq, TardisResp<TardisPage<LogItemFindResp>>>(&format!("{log_url}/ci/item/find"), &find_req, headers.clone()).await?;
         BaseSpiClient::package_resp(resp)
     }
 }

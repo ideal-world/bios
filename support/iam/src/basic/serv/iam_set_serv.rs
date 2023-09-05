@@ -623,6 +623,24 @@ impl IamSetServ {
         result
     }
 
+    pub async fn find_set_cate_name_by_cate_ids(cate_ids: Vec<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<String>> {
+        RbumSetCateServ::find_detail_rbums(
+            &RbumSetCateFilterReq {
+                basic: RbumBasicFilterReq {
+                    ids: Some(cate_ids),
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            None,
+            None,
+            funs,
+            ctx,
+        )
+        .await
+        .map(|r| r.into_iter().map(|r| format!("{},{}", r.id, r.name)).collect())
+    }
+
     pub async fn find_set_items(
         set_id: Option<String>,
         set_cate_id: Option<String>,

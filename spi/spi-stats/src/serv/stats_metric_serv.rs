@@ -13,7 +13,7 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
     let inst = funs.init(ctx, true, stats_initializer::init_fun).await?;
     match inst.kind_code() {
         #[cfg(feature = "spi-pg")]
-        spi_constants::SPI_PG_KIND_CODE => pg::stats_pg_metric_serv::query_metrics(query_req, funs, ctx, inst).await,
+        spi_constants::SPI_PG_KIND_CODE => pg::stats_pg_metric_serv::query_metrics(query_req, funs, ctx, &inst).await,
         kind_code => Err(funs.bs_not_implemented(kind_code)),
     }
 }

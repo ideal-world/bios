@@ -6,6 +6,8 @@ use tardis::chrono::{Local, NaiveTime};
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(tag = "mode", rename_all = "snake_case")]
 pub enum IpTimeRule {
+    AllTimeBan,
+    AllTimeAllow,
     BlackList { ban: Vec<Range<NaiveTime>> },
     WhiteList { allow: Vec<Range<NaiveTime>> },
 }
@@ -20,11 +22,14 @@ impl IpTimeRule {
             }
         };
         match self {
+            IpTimeRule::AllTimeBan => false,
+            IpTimeRule::AllTimeAllow => true,
             IpTimeRule::WhiteList { allow } => allow.iter().any(contains_time),
             IpTimeRule::BlackList { ban } => !ban.iter().any(contains_time),
         }
     }
     pub fn check_by_now(&self) -> bool {
-        self.check_by_time(Local::now().time())
+        let local_time = Local::now().time();
+        self.check_by_time(local_time)
     }
 }

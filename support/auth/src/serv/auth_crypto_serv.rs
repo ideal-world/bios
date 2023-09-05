@@ -43,7 +43,7 @@ pub(crate) async fn fetch_public_key() -> TardisResult<String> {
     sm_keys.as_ref().ok_or_else(|| TardisError::internal_error("[Auth.crypto] get sm keys none", ""))?.0.serialize()
 }
 
-pub(crate) async fn decrypt_req(
+pub async fn decrypt_req(
     headers: &HashMap<String, String>,
     body: &Option<String>,
     need_crypto_req: bool,

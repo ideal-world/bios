@@ -14,7 +14,9 @@ use tardis::{
 pub struct Holder<'d> {
     pub pg: Container<'d, GenericImage>,
     pub redis: Container<'d, Redis>,
+    pub mq: Container<'d, GenericImage>,
 }
+
 #[allow(dead_code)]
 pub async fn init_tardis(docker: &Cli) -> TardisResult<Holder> {
     let reldb_container = TardisTestContainer::postgres_custom(None, docker);
@@ -25,9 +27,14 @@ pub async fn init_tardis(docker: &Cli) -> TardisResult<Holder> {
     let port = redis_container.get_host_port_ipv4(6379);
     let url = format!("redis://127.0.0.1:{port}/0");
     std::env::set_var("TARDIS_FW.CACHE.URL", url);
+    let mq_container = TardisTestContainer::rabbit_custom(docker);
+    let port = mq_container.get_host_port_ipv4(5672);
+    let url = format!("amqp://guest:guest@127.0.0.1:{port}/%2f");
+    std::env::set_var("TARDIS_FW.MQ.URL", url);
     let holder = Holder {
         pg: reldb_container,
         redis: redis_container,
+        mq: mq_container,
     };
     TardisFuns::init(Some("tests/config")).await?;
     bios_basic::rbum::rbum_initializer::init(DOMAIN_CODE, RbumConfig::default()).await?;

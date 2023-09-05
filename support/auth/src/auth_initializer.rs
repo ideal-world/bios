@@ -1,16 +1,17 @@
-use std::time::Duration;
-
+#[cfg(feature = "web-server")]
+use crate::api::{auth_crypto_api, auth_kernel_api, auth_mgr_api};
 use crate::{
-    api::{auth_crypto_api, auth_kernel_api, auth_mgr_api},
     auth_config::AuthConfig,
     auth_constants::DOMAIN_CODE,
     serv::{auth_crypto_serv, auth_res_serv},
 };
+use std::time::Duration;
+#[cfg(feature = "web-server")]
+use tardis::web::web_server::TardisWebServer;
 use tardis::{
     basic::result::TardisResult,
     log::{info, trace},
-    tokio::time,
-    web::web_server::TardisWebServer,
+    tokio::{task::JoinHandle, time},
     TardisFuns,
 };
 use tardis::{
@@ -18,17 +19,24 @@ use tardis::{
     serde_json::json,
 };
 
+#[cfg(feature = "web-server")]
 pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
     init_data().await?;
     auth_crypto_serv::init().await?;
     init_api(web_server).await
 }
 
+#[cfg(not(feature = "web-server"))]
+pub async fn init() -> TardisResult<JoinHandle<()>> {
+    auth_crypto_serv::init().await?;
+    init_data().await
+}
+
 pub async fn crypto_init() -> TardisResult<()> {
     auth_crypto_serv::init().await
 }
 
-pub async fn init_data() -> TardisResult<()> {
+pub async fn init_data() -> TardisResult<JoinHandle<()>> {
     let cache_client = TardisFuns::cache_by_module_or_default(DOMAIN_CODE);
     let config = TardisFuns::cs_config::<AuthConfig>(DOMAIN_CODE);
     info!(
@@ -72,7 +80,7 @@ pub async fn init_data() -> TardisResult<()> {
         };
         auth_res_serv::add_res(f[1], f[0], auth, need_crypto_req, need_crypto_resp, need_double_auth, need_login).unwrap_or_default();
     }
-    tardis::tokio::spawn(async move {
+    let handle = tardis::tokio::spawn(async move {
         let mut interval = time::interval(Duration::from_secs(config.cache_key_res_changed_timer_sec as u64));
         loop {
             {
@@ -103,9 +111,10 @@ pub async fn init_data() -> TardisResult<()> {
             interval.tick().await;
         }
     });
-    Ok(())
+    Ok(handle)
 }
 
+#[cfg(feature = "web-server")]
 pub async fn init_api(web_server: &TardisWebServer) -> TardisResult<()> {
     web_server.add_module(DOMAIN_CODE, (auth_mgr_api::MgrApi, auth_crypto_api::CryptoApi, auth_kernel_api::AuthApi)).await;
     Ok(())

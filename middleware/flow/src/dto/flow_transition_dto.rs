@@ -22,6 +22,7 @@ pub struct FlowTransitionAddReq {
     pub guard_by_assigned: Option<bool>,
     pub guard_by_spec_account_ids: Option<Vec<String>>,
     pub guard_by_spec_role_ids: Option<Vec<String>>,
+    pub guard_by_spec_org_ids: Option<Vec<String>>,
     pub guard_by_other_conds: Option<Vec<Vec<BasicQueryCondInfo>>>,
 
     pub vars_collect: Option<Vec<FlowVarInfo>>,
@@ -53,6 +54,7 @@ pub struct FlowTransitionModifyReq {
     pub guard_by_assigned: Option<bool>,
     pub guard_by_spec_account_ids: Option<Vec<String>>,
     pub guard_by_spec_role_ids: Option<Vec<String>>,
+    pub guard_by_spec_org_ids: Option<Vec<String>>,
     pub guard_by_other_conds: Option<Vec<Vec<BasicQueryCondInfo>>>,
 
     pub vars_collect: Option<Vec<FlowVarInfo>>,
@@ -65,7 +67,7 @@ pub struct FlowTransitionModifyReq {
     pub double_check: Option<FlowTransitionDoubleCheckInfo>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, poem_openapi::Object, sea_orm::FromQueryResult)]
+#[derive(Serialize, Deserialize, Default, Debug, Clone, poem_openapi::Object, sea_orm::FromQueryResult)]
 pub struct FlowTransitionDetailResp {
     pub id: String,
     pub name: String,
@@ -83,6 +85,7 @@ pub struct FlowTransitionDetailResp {
     pub guard_by_assigned: bool,
     pub guard_by_spec_account_ids: Vec<String>,
     pub guard_by_spec_role_ids: Vec<String>,
+    pub guard_by_spec_org_ids: Vec<String>,
     // TODO
     pub guard_by_other_conds: Value,
 
@@ -94,6 +97,8 @@ pub struct FlowTransitionDetailResp {
     pub action_by_post_changes: Value,
 
     pub double_check: Value,
+
+    pub rel_flow_model_id: String,
 }
 
 impl FlowTransitionDetailResp {
@@ -147,6 +152,7 @@ impl From<FlowTransitionDetailResp> for FlowTransitionAddReq {
             guard_by_assigned: Some(value.guard_by_assigned),
             guard_by_spec_account_ids: Some(value.guard_by_spec_account_ids),
             guard_by_spec_role_ids: Some(value.guard_by_spec_role_ids),
+            guard_by_spec_org_ids: Some(value.guard_by_spec_org_ids),
             guard_by_other_conds,
             vars_collect,
             action_by_pre_callback: Some(value.action_by_pre_callback),
@@ -163,10 +169,62 @@ pub struct FlowTransitionDoubleCheckInfo {
     pub content: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, Debug, poem_openapi::Union)]
-pub enum FlowTransitionActionChangeInfo {
-    Var(FlowTransitionActionByVarChangeInfo),
-    State(FlowTransitionActionByStateChangeInfo),
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug, poem_openapi::Object)]
+pub struct FlowTransitionActionChangeInfo {
+    pub kind: FlowTransitionActionChangeKind,
+    pub describe: String,
+    pub obj_tag: Option<String>,
+    pub obj_current_state_id: Option<Vec<String>>,
+    pub change_condition: Option<StateChangeCondition>,
+    pub changed_state_id: String,
+    pub current: bool,
+    pub var_name: String,
+    pub changed_val: Option<Value>,
+}
+
+impl From<FlowTransitionActionChangeInfo> for FlowTransitionActionChangeAgg {
+    fn from(value: FlowTransitionActionChangeInfo) -> Self {
+        match value.kind {
+            FlowTransitionActionChangeKind::State => FlowTransitionActionChangeAgg {
+                kind: value.kind,
+                var_change_info: None,
+                state_change_info: Some(FlowTransitionActionByStateChangeInfo {
+                    obj_tag: value.obj_tag.unwrap(),
+                    describe: value.describe,
+                    obj_current_state_id: value.obj_current_state_id,
+                    change_condition: value.change_condition,
+                    changed_state_id: value.changed_state_id,
+                }),
+            },
+            FlowTransitionActionChangeKind::Var => FlowTransitionActionChangeAgg {
+                kind: value.kind,
+                var_change_info: Some(FlowTransitionActionByVarChangeInfo {
+                    current: value.current,
+                    describe: value.describe,
+                    obj_tag: value.obj_tag,
+                    var_name: value.var_name,
+                    changed_val: value.changed_val,
+                }),
+                state_change_info: None,
+            },
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug, poem_openapi::Object)]
+pub struct FlowTransitionActionChangeAgg {
+    pub kind: FlowTransitionActionChangeKind,
+    pub var_change_info: Option<FlowTransitionActionByVarChangeInfo>,
+    pub state_change_info: Option<FlowTransitionActionByStateChangeInfo>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, strum::EnumIter, sea_orm::DeriveActiveEnum)]
+#[sea_orm(rs_type = "String", db_type = "String(Some(255))")]
+pub enum FlowTransitionActionChangeKind {
+    #[sea_orm(string_value = "var")]
+    Var,
+    #[sea_orm(string_value = "state")]
+    State,
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug, poem_openapi::Object, sea_orm::FromJsonQueryResult)]
@@ -175,23 +233,28 @@ pub struct FlowTransitionActionByVarChangeInfo {
     pub describe: String,
     pub obj_tag: Option<String>,
     pub var_name: String,
-    pub changed_val: Value,
+    pub changed_val: Option<Value>,
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug, poem_openapi::Object, sea_orm::FromJsonQueryResult)]
 pub struct FlowTransitionActionByStateChangeInfo {
     pub obj_tag: String,
     pub describe: String,
-    pub obj_current_state_id: Option<String>,
-    pub change_conditions: Option<StateChangeCondition>,
+    pub obj_current_state_id: Option<Vec<String>>,
+    pub change_condition: Option<StateChangeCondition>,
     pub changed_state_id: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug, poem_openapi::Object, sea_orm::FromJsonQueryResult)]
 pub struct StateChangeCondition {
     pub current: bool,
+    pub conditions: Vec<StateChangeConditionItem>,
+}
+
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug, poem_openapi::Object, sea_orm::FromJsonQueryResult)]
+pub struct StateChangeConditionItem {
     pub obj_tag: Option<String>,
-    pub state_id: String,
+    pub state_id: Vec<String>,
     pub op: StateChangeConditionOp,
 }
 
@@ -203,6 +266,7 @@ pub enum StateChangeConditionOp {
     Neq,
 }
 
+#[derive(Default)]
 pub struct FlowTransitionInitInfo {
     pub from_flow_state_name: String,
     pub to_flow_state_name: String,
@@ -215,6 +279,7 @@ pub struct FlowTransitionInitInfo {
     pub guard_by_assigned: Option<bool>,
     pub guard_by_spec_account_ids: Option<Vec<String>>,
     pub guard_by_spec_role_ids: Option<Vec<String>>,
+    pub guard_by_spec_org_ids: Option<Vec<String>>,
     pub guard_by_other_conds: Option<Vec<Vec<BasicQueryCondInfo>>>,
 
     pub vars_collect: Option<Vec<FlowVarInfo>>,

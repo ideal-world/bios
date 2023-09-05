@@ -3,7 +3,7 @@ name: Publish rust gateway docker image
 on:
   push:
     paths:
-      - "gateway/spacegateway/**"
+      - "gateway/spacegate/**"
       - ".github/workflows/space-gateway-docker-push.yml"
 
 jobs:
@@ -28,18 +28,18 @@ jobs:
         uses: Swatinem/rust-cache@v2
 
       - name: Build rust
-        run: cargo build --release --bin spacegateway
+        run: cargo build --release -p bios-spacegate
 
       - name: Copy binary to workspace
-        run: cp ./target/release/spacegateway ./gateway/spacegateway/
+        run: cp ./target/release/bios-spacegate ./gateway/spacegate/
 
       - name: Build and push Docker image to dockerhub
         uses: mr-smithers-excellent/docker-build-push@v5
         with:
-          directory: gateway/spacegateway
-          dockerfile: gateway/spacegateway/Dockerfile
+          directory: gateway/spacegate
+          dockerfile: gateway/spacegate/Dockerfile
           registry: docker.io
-          image: ecfront/spacegateway
+          image: ecfront/bios-spacegate
           tags: latest
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}

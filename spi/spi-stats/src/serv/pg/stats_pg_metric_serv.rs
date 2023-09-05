@@ -117,6 +117,7 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
     col.dim_multi_values as dim_multi_values,
     col.mes_data_distinct as mes_data_distinct,
     col.mes_data_type as mes_data_type,
+    col.mes_unit as mes_unit,
     dim.data_type as dim_data_type,
     fact.query_limit as query_limit
   FROM
@@ -471,12 +472,12 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
     };
     // package limit
     let query_limit = if let Some(limit) = &query_req.limit { format!("LIMIT {limit}") } else { "".to_string() };
-
+    let ignore_group_agg = !(!sql_part_groups.is_empty() && query_req.group_agg.unwrap_or(false));
     let final_sql = format!(
-        r#"SELECT {sql_part_outer_selects}
+        r#"SELECT {sql_part_outer_selects}{}
     FROM (
         SELECT
-             {sql_part_inner_selects}
+             {sql_part_inner_selects}{}
              FROM(
                 SELECT {}fact.*, 1 as _count
                 FROM {fact_inst_table_name} fact
@@ -496,6 +497,16 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
     {sql_part_havings}
     {sql_orders}
     {query_limit}"#,
+        if ignore_group_agg {
+            "".to_string()
+        } else {
+            ",string_agg(_._key || ' - ' || _._own_paths || ' - ' || to_char(_._ct, 'YYYY-MM-DD HH24:MI:SS'), ',') as s_agg".to_string()
+        },
+        if ignore_group_agg {
+            "".to_string()
+        } else {
+            ",fact.key as _key, fact.own_paths as _own_paths, fact.ct as _ct".to_string()
+        },
         if query_req.ignore_distinct.unwrap_or(false) {
             ""
         } else if mes_distinct {
@@ -539,12 +550,17 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
     Ok(StatsQueryMetricsResp {
         from: query_req.from.to_string(),
         show_names,
-        group: package_groups(select_dimension_keys, &select_measure_keys, result)
+        group: package_groups(select_dimension_keys, &select_measure_keys, ignore_group_agg, result)
             .map_err(|msg| TardisError::internal_error(&format!("Fail to package groups: {msg}"), "500-spi-stats-internal-error"))?,
     })
 }
 
-fn package_groups(curr_select_dimension_keys: Vec<String>, select_measure_keys: &Vec<String>, result: Vec<serde_json::Value>) -> Result<serde_json::Value, String> {
+fn package_groups(
+    curr_select_dimension_keys: Vec<String>,
+    select_measure_keys: &Vec<String>,
+    ignore_group_agg: bool,
+    result: Vec<serde_json::Value>,
+) -> Result<serde_json::Value, String> {
     if curr_select_dimension_keys.is_empty() {
         let first_result = result.first().ok_or("result is empty")?;
         let mut leaf_node = Map::with_capacity(result.len());
@@ -561,7 +577,10 @@ fn package_groups(curr_select_dimension_keys: Vec<String>, select_measure_keys: 
             } else {
                 val.clone()
             };
-            leaf_node.insert(measure_key.to_string(), val);
+            leaf_node.insert(measure_key.to_string(), val.clone());
+        }
+        if !ignore_group_agg {
+            leaf_node.insert("group".to_string(), first_result.get("group").ok_or("failed to get key group".to_string())?.clone());
         }
         return Ok(serde_json::Value::Object(leaf_node));
     }
@@ -580,17 +599,51 @@ fn package_groups(curr_select_dimension_keys: Vec<String>, select_measure_keys: 
             }
         };
         let group = groups.entry(key.clone()).or_insert_with(Vec::new);
-        group.push(record.clone());
+        if ignore_group_agg {
+            group.push(record.clone());
+        } else {
+            let mut g_aggs = record.clone();
+            if let Some(g_agg) = g_aggs.as_object_mut() {
+                g_agg.insert("group".to_owned(), package_groups_agg(record)?);
+            }
+            group.push(g_aggs.clone());
+        }
         if !order.contains(&key) {
             order.push(key.clone());
         }
     }
     for key in order {
         let group = groups.get(&key).expect("groups shouldn't miss the value of key in order");
-        let sub = package_groups(curr_select_dimension_keys[1..].to_vec(), select_measure_keys, group.to_vec())?;
+        let sub = package_groups(curr_select_dimension_keys[1..].to_vec(), select_measure_keys, ignore_group_agg, group.to_vec())?;
         node.insert(key, sub);
     }
     Ok(serde_json::Value::Object(node))
+}
+
+fn package_groups_agg(record: serde_json::Value) -> Result<serde_json::Value, String> {
+    match record.get("s_agg") {
+        Some(agg) => {
+            if agg.is_null() {
+                return Ok(serde_json::Value::Null);
+            }
+            println!("{}", agg);
+            let mut details = Vec::new();
+            let var_agg = agg.as_str().ok_or("field group_agg should be a string")?;
+            let vars = var_agg.split(',').collect::<Vec<&str>>();
+            for var in vars {
+                let fields = var.split(" - ").collect::<Vec<&str>>();
+                details.push(json!({
+                    "key": fields.get(0).unwrap_or(&""),
+                    "own_paths": fields.get(1).unwrap_or(&""),
+                    "ct": fields.get(2).unwrap_or(&""),
+                }));
+            }
+            return Ok(serde_json::Value::Array(details));
+        }
+        None => {
+            return Ok(serde_json::Value::Null);
+        }
+    }
 }
 
 #[derive(sea_orm::FromQueryResult)]

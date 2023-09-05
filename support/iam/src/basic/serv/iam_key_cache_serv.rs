@@ -1,6 +1,7 @@
 use std::default::Default;
 use std::str::FromStr;
 
+use bios_basic::helper::request_helper::{add_ip, get_remote_ip};
 use bios_basic::process::task_processor::TaskProcessor;
 use bios_basic::rbum::rbum_config::RbumConfigApi;
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
@@ -78,13 +79,13 @@ impl IamIdentCacheServ {
                 .map(|(token, _, _)| token)
                 .collect::<Vec<String>>();
             for old_token in old_tokens {
-                Self::delete_token_by_token(&old_token, funs).await?;
+                Self::delete_token_by_token(&old_token, None, funs).await?;
             }
         }
         Ok(())
     }
 
-    pub async fn delete_token_by_token(token: &str, funs: &TardisFunsInst) -> TardisResult<()> {
+    pub async fn delete_token_by_token(token: &str, ip: Option<String>, funs: &TardisFunsInst) -> TardisResult<()> {
         log::trace!("delete token: token={}", token);
         if let Some(token_info) = funs.cache().get(format!("{}{}", funs.conf::<IamConfig>().cache_key_token_info_, token).as_str()).await? {
             let iam_item_id = token_info.split(',').nth(1).unwrap_or("");
@@ -93,6 +94,7 @@ impl IamIdentCacheServ {
             funs.cache().hdel(format!("{}{}", funs.conf::<IamConfig>().cache_key_account_rel_, iam_item_id).as_str(), token).await?;
 
             let mut mock_ctx = TardisContext::default();
+            add_ip(ip, &mock_ctx).await?;
             if let Ok(account_context) = Self::get_account_context(iam_item_id, "", funs).await {
                 mock_ctx = account_context;
             } else {
@@ -158,7 +160,7 @@ impl IamIdentCacheServ {
         let ctx_clone = ctx.clone();
         TaskProcessor::execute_task_with_ctx(
             &funs.conf::<IamConfig>().cache_key_async_task_status,
-            move || async move {
+            move |_task_id| async move {
                 let funs = iam_constants::get_tardis_inst();
                 let filter = IamAccountFilterReq {
                     basic: RbumBasicFilterReq {
@@ -179,7 +181,7 @@ impl IamIdentCacheServ {
                         let account_context = Self::get_account_context(&id, "", &funs).await;
                         if let Ok(account_context) = account_context {
                             if account_context.own_paths == ctx_clone.own_paths {
-                                Self::delete_tokens_and_contexts_by_account_id(&id, &funs).await?;
+                                Self::delete_tokens_and_contexts_by_account_id(&id, get_remote_ip(&ctx_clone).await?, &funs).await?;
                             }
                         }
                     }
@@ -198,7 +200,7 @@ impl IamIdentCacheServ {
                             let account_context = Self::get_account_context(&id, "", &funs).await;
                             if let Ok(account_context) = account_context {
                                 if account_context.own_paths == ctx_clone.own_paths {
-                                    Self::delete_tokens_and_contexts_by_account_id(&id, &funs).await?;
+                                    Self::delete_tokens_and_contexts_by_account_id(&id, get_remote_ip(&ctx_clone).await?, &funs).await?;
                                 }
                             }
                         }
@@ -215,7 +217,7 @@ impl IamIdentCacheServ {
         Ok(())
     }
 
-    pub async fn delete_tokens_and_contexts_by_account_id(account_id: &str, funs: &TardisFunsInst) -> TardisResult<()> {
+    pub async fn delete_tokens_and_contexts_by_account_id(account_id: &str, ip: Option<String>, funs: &TardisFunsInst) -> TardisResult<()> {
         log::trace!("delete tokens and contexts: account_id={}", account_id);
         let tokens = funs.cache().hgetall(format!("{}{}", funs.conf::<IamConfig>().cache_key_account_rel_, account_id).as_str()).await?;
         for (token, _) in tokens.iter() {
@@ -225,6 +227,7 @@ impl IamIdentCacheServ {
         funs.cache().del(format!("{}{}", funs.conf::<IamConfig>().cache_key_account_info_, account_id).as_str()).await?;
 
         let mock_ctx = TardisContext { ..Default::default() };
+        add_ip(ip, &mock_ctx).await?;
         let _ = IamLogClient::add_ctx_task(
             LogParamTag::IamAccount,
             Some(account_id.to_string()),

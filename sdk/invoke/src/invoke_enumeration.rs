@@ -4,7 +4,7 @@ use tardis::db::sea_orm;
 use tardis::{derive_more::Display, web::poem_openapi};
 
 #[cfg(feature = "reldb-core")]
-#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, sea_orm::strum::EnumString)]
+#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, strum::EnumString)]
 pub enum InvokeModuleKind {
     #[oai(rename = "search")]
     Search,

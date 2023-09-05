@@ -1,3 +1,4 @@
+use bios_basic::helper::request_helper::{add_ip, get_remote_ip};
 use bios_basic::process::task_processor::TaskProcessor;
 use bios_basic::rbum::dto::rbum_rel_agg_dto::RbumRelAggAddReq;
 use bios_basic::rbum::serv::rbum_rel_serv::RbumRelServ;
@@ -372,7 +373,7 @@ impl IamCertServ {
         let cert_id = id.to_string();
         TaskProcessor::execute_task_with_ctx(
             &funs.conf::<IamConfig>().cache_key_async_task_status,
-            move || async move {
+            move |_task_id| async move {
                 let funs = iam_constants::get_tardis_inst();
                 let rbum_cert_conf = RbumCertConfServ::peek_rbum(
                     &cert_id,
@@ -900,7 +901,7 @@ impl IamCertServ {
         )
         .await?;
         let result = RbumCertServ::delete_rbum(id, funs, ctx).await?;
-        IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(&cert.rel_rbum_id, funs).await?;
+        IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(&cert.rel_rbum_id, get_remote_ip(&ctx).await?, funs).await?;
         Ok(result)
     }
 
@@ -979,6 +980,7 @@ impl IamCertServ {
         account_id: &str,
         token_kind: Option<String>,
         access_token: Option<String>,
+        ip: Option<String>,
         funs: &TardisFunsInst,
     ) -> TardisResult<IamAccountInfoResp> {
         let token_kind = IamCertTokenKind::parse(&token_kind);
@@ -991,6 +993,7 @@ impl IamCertServ {
             groups: vec![],
             ..Default::default()
         };
+        add_ip(ip, &context).await?;
         let rbum_cert_conf_id = Self::get_cert_conf_id_by_kind(token_kind.to_string().as_str(), Some(tenant_id.clone()), funs).await?;
 
         let account_info = Self::package_tardis_account_context_and_resp(account_id, &tenant_id, token, access_token, funs, &context).await?;
@@ -1330,7 +1333,7 @@ impl IamCertServ {
 
         let task_id = TaskProcessor::execute_task_with_ctx(
             &funs.conf::<IamConfig>().cache_key_async_task_status,
-            move || async move {
+            move |_task_id| async move {
                 let sync = sync;
                 let funs = iam_constants::get_tardis_inst();
 
@@ -1390,6 +1393,7 @@ impl IamCertServ {
         ignore_end_time: bool,
         own_paths: Option<String>,
         allowed_kinds: Option<Vec<&str>>,
+        ip: Option<String>,
         funs: &TardisFunsInst,
     ) -> TardisResult<(String, RbumCertRelKind, String)> {
         let result: Result<(String, RbumCertRelKind, String), tardis::basic::error::TardisError> = if rbum_cert_conf_id.is_some() {
@@ -1420,6 +1424,7 @@ impl IamCertServ {
                 if let Some(own_paths) = own_paths {
                     mock_ctx.own_paths = own_paths;
                 }
+                add_ip(ip, &mock_ctx).await?;
                 let _ = IamLogClient::add_ctx_task(
                     LogParamTag::IamAccount,
                     None,

@@ -25,7 +25,7 @@
 
 
 *-prod.toml
-
+*-prod.yaml
 # CI
 /.github/deploy_key
 out
@@ -55,7 +55,9 @@ node_modules
 
 #macos
 .DS_Store
+#gateway dev
 gateway/example/log
+gateway/spacegate/devsh/save-o.sh
 
 # pre-commit
 .pre-commit-config.yaml

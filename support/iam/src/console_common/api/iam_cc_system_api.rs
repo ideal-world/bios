@@ -1,11 +1,11 @@
 use bios_basic::process::task_processor::TaskProcessor;
+use tardis::serde_json::Value;
 use tardis::web::poem_openapi;
 use tardis::web::poem_openapi::param::Path;
 use tardis::web::web_resp::{TardisApiResult, TardisResp, Void};
 
 use crate::iam_config::IamConfig;
 use crate::iam_constants;
-
 #[derive(Clone, Default)]
 pub struct IamCcSystemApi;
 
@@ -39,5 +39,12 @@ impl IamCcSystemApi {
             TaskProcessor::stop_task(&funs.conf::<IamConfig>().cache_key_async_task_status, task_id, &funs).await?;
         }
         TardisResp::ok(Void {})
+    }
+
+    #[oai(path = "/task/process/:task_id", method = "get")]
+    async fn get_task_process_data(&self, task_id: Path<i64>) -> TardisApiResult<Value> {
+        let funs = iam_constants::get_tardis_inst();
+        let data = TaskProcessor::get_task_process_data(&funs.conf::<IamConfig>().cache_key_async_task_status, task_id.0, &funs).await?;
+        TardisResp::ok(data)
     }
 }

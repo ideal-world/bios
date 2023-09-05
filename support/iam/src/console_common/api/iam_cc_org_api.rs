@@ -1,15 +1,15 @@
+use crate::basic::serv::iam_cert_serv::IamCertServ;
+use crate::basic::serv::iam_set_serv::IamSetServ;
+use crate::iam_constants;
+use bios_basic::helper::request_helper::add_remote_ip;
 use bios_basic::rbum::dto::rbum_filer_dto::RbumSetTreeFilterReq;
 use bios_basic::rbum::dto::rbum_set_dto::RbumSetTreeResp;
+use bios_basic::rbum::rbum_enumeration::RbumSetCateLevelQueryKind;
 use tardis::web::context_extractor::TardisContextExtractor;
+use tardis::web::poem::Request;
 use tardis::web::poem_openapi;
 use tardis::web::poem_openapi::param::Query;
 use tardis::web::web_resp::{TardisApiResult, TardisResp};
-
-use crate::basic::serv::iam_cert_serv::IamCertServ;
-use bios_basic::rbum::rbum_enumeration::RbumSetCateLevelQueryKind;
-
-use crate::basic::serv::iam_set_serv::IamSetServ;
-use crate::iam_constants;
 
 #[derive(Clone, Default)]
 pub struct IamCcOrgApi;
@@ -24,7 +24,14 @@ impl IamCcOrgApi {
     /// * Without parameters: Query the whole tree
     /// * ``parent_sys_code=true`` : query only the next level. This can be used to query level by level when the tree is too large
     #[oai(path = "/tree", method = "get")]
-    async fn get_tree(&self, parent_sys_code: Query<Option<String>>, tenant_id: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<RbumSetTreeResp> {
+    async fn get_tree(
+        &self,
+        parent_sys_code: Query<Option<String>>,
+        tenant_id: Query<Option<String>>,
+        ctx: TardisContextExtractor,
+        request: &Request,
+    ) -> TardisApiResult<RbumSetTreeResp> {
+        add_remote_ip(&request, &ctx.0).await?;
         let funs = iam_constants::get_tardis_inst();
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
         let code = if ctx.own_paths.is_empty() {
@@ -47,6 +54,25 @@ impl IamCcOrgApi {
         )
         .await?;
         ctx.execute_task().await?;
+        TardisResp::ok(result)
+    }
+
+    /// Find Org Cate Name By Cate Ids
+    ///
+    /// Return format: ["<id>,<name>"]
+    #[oai(path = "/cate_name", method = "get")]
+    async fn find_set_cate_name_by_cate_ids(
+        &self,
+        // Cate Ids, multiple ids separated by ,
+        ids: Query<String>,
+        ctx: TardisContextExtractor,
+        request: &Request,
+    ) -> TardisApiResult<Vec<String>> {
+        add_remote_ip(&request, &ctx.0).await?;
+        let funs = iam_constants::get_tardis_inst();
+        let ids = ids.0.split(',').map(|s| s.to_string()).collect();
+        let result = IamSetServ::find_set_cate_name_by_cate_ids(ids, &funs, &ctx.0).await?;
+        ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
 }

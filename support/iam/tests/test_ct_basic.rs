@@ -69,6 +69,7 @@ pub async fn test(_context: &TardisContext) -> TardisResult<(TardisContext, Tard
             tenant_id: Some(tenant_id.clone()),
             flag: None,
         },
+        None,
         &funs,
     )
     .await?;
@@ -132,6 +133,7 @@ pub async fn test(_context: &TardisContext) -> TardisResult<(TardisContext, Tard
             tenant_id: Some(tenant_id.clone()),
             flag: None,
         },
+        None,
         &funs,
     )
     .await?;

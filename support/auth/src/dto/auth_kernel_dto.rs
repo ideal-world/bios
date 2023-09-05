@@ -1,15 +1,17 @@
 use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
+#[cfg(feature = "web-server")]
+use tardis::web::poem_openapi;
 use tardis::{
     basic::{dto::TardisContext, error::TardisError},
-    web::poem_openapi,
     TardisFuns,
 };
 
 use crate::auth_config::AuthConfig;
 
-#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
+#[cfg_attr(feature = "web-server", derive(poem_openapi::Object))]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct AuthReq {
     pub scheme: String,
     pub path: String,
@@ -21,7 +23,52 @@ pub struct AuthReq {
     pub body: Option<String>,
 }
 
-#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+#[derive(Debug)]
+pub struct AuthResult {
+    pub ctx: Option<AuthContext>,
+    pub resp_body: Option<String>,
+    pub resp_headers: Option<HashMap<String, String>>,
+    pub config: AuthConfig,
+    pub e: Option<TardisError>,
+}
+impl AuthResult {
+    pub(crate) fn ok(ctx: Option<&AuthContext>, resp_body: Option<String>, resp_headers: Option<HashMap<String, String>>, config: &AuthConfig) -> Self {
+        Self {
+            ctx: if ctx.is_none() {
+                None
+            } else {
+                let ctx = ctx.unwrap();
+                Some(AuthContext {
+                    rbum_uri: ctx.rbum_uri.clone(),
+                    rbum_action: ctx.rbum_action.clone(),
+                    app_id: ctx.app_id.clone(),
+                    tenant_id: ctx.tenant_id.clone(),
+                    account_id: ctx.account_id.clone(),
+                    roles: ctx.roles.clone(),
+                    groups: ctx.groups.clone(),
+                    own_paths: ctx.own_paths.clone(),
+                    ak: ctx.ak.clone(),
+                })
+            },
+            resp_body,
+            resp_headers,
+            config: config.clone(),
+            e: None,
+        }
+    }
+    pub(crate) fn err(e: TardisError, config: &AuthConfig) -> Self {
+        Self {
+            e: Some(e),
+            ctx: None,
+            resp_body: None,
+            resp_headers: None,
+            config: config.clone(),
+        }
+    }
+}
+
+#[cfg_attr(feature = "web-server", derive(poem_openapi::Object))]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct AuthResp {
     pub allow: bool,
     pub status_code: u16,
@@ -41,6 +88,14 @@ impl AuthResp {
             ("Access-Control-Allow-Credentials".to_string(), "true".to_string()),
             ("Content-Type".to_string(), "application/json".to_string()),
         ])
+    }
+
+    pub fn from_result(result: AuthResult) -> Self {
+        if result.e.is_none() {
+            Self::ok(result.ctx.as_ref(), result.resp_body, result.resp_headers, &result.config)
+        } else {
+            Self::err(result.e.unwrap(), &result.config)
+        }
     }
 
     pub(crate) fn ok(ctx: Option<&AuthContext>, resp_body: Option<String>, resp_headers: Option<HashMap<String, String>>, config: &AuthConfig) -> Self {
@@ -86,7 +141,8 @@ impl AuthResp {
     }
 }
 
-#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+#[cfg_attr(feature = "web-server", derive(poem_openapi::Object))]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct MixAuthResp {
     pub url: String,
     pub method: String,
@@ -97,6 +153,7 @@ pub struct MixAuthResp {
     pub body: Option<String>,
 }
 
+#[derive(Debug)]
 pub struct AuthContext {
     pub rbum_uri: String,
     pub rbum_action: String,
@@ -228,7 +285,8 @@ pub struct ResAuthInfo {
     pub et: Option<i64>,
 }
 
-#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+#[cfg_attr(feature = "web-server", derive(poem_openapi::Object))]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct MixRequest {
     pub body: String,
     pub headers: HashMap<String, String>,
@@ -243,7 +301,8 @@ pub struct MixRequestBody {
     pub ts: f64,
 }
 
-#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
+#[cfg_attr(feature = "web-server", derive(poem_openapi::Object))]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct SignWebHookReq {
     pub ak: String,
     pub onwer: String,

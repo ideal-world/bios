@@ -12,14 +12,22 @@ use tardis::{
     TardisFunsInst,
 };
 
-use crate::dto::stats_conf_dto::{StatsConfFactColAddReq, StatsConfFactColInfoResp, StatsConfFactColModifyReq};
+use crate::{
+    dto::stats_conf_dto::{StatsConfFactColAddReq, StatsConfFactColInfoResp, StatsConfFactColModifyReq},
+    stats_enumeration::StatsFactColKind,
+};
 
 use super::{stats_pg_conf_dim_serv, stats_pg_conf_fact_serv, stats_pg_initializer};
 
 pub(crate) async fn add(fact_conf_key: &str, add_req: &StatsConfFactColAddReq, funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
     let bs_inst = inst.inst::<TardisRelDBClient>();
     let (mut conn, table_name) = stats_pg_initializer::init_conf_fact_col_table_and_conn(bs_inst, ctx, true).await?;
+    let (_, conf_fact_table) = stats_pg_initializer::init_conf_fact_table_and_conn(bs_inst, ctx, true).await?;
     conn.begin().await?;
+    // check if this fact exists
+    if conn.count_by_sql(&format!("SELECT 1 FROM {conf_fact_table} WHERE key = $1"), vec![Value::from(fact_conf_key)]).await? == 0 {
+        return Err(funs.err().conflict("fact_col_conf", "add", "The fact config not exists.", "409-spi-stats-fact-conf-not-exist"));
+    }
     if stats_pg_conf_fact_serv::online(fact_conf_key, &conn, ctx).await? {
         return Err(funs.err().conflict(
             "fact_col_conf",
@@ -76,6 +84,10 @@ pub(crate) async fn add(fact_conf_key: &str, add_req: &StatsConfFactColAddReq, f
         params.push(Value::from(mes_frequency.to_string()));
         sql_fields.push("mes_frequency");
     }
+    if let Some(mes_unit) = &add_req.mes_unit {
+        params.push(Value::from(mes_unit));
+        sql_fields.push("mes_unit");
+    }
     if let Some(mes_act_by_dim_conf_keys) = &add_req.mes_act_by_dim_conf_keys {
         params.push(Value::from(mes_act_by_dim_conf_keys.clone()));
         sql_fields.push("mes_act_by_dim_conf_keys");
@@ -84,7 +96,10 @@ pub(crate) async fn add(fact_conf_key: &str, add_req: &StatsConfFactColAddReq, f
         params.push(Value::from(rel_conf_fact_and_col_key.to_string()));
         sql_fields.push("rel_conf_fact_and_col_key");
     }
-
+    if let Some(dim_exclusive_rec) = add_req.dim_exclusive_rec {
+        params.push(Value::from(dim_exclusive_rec));
+        sql_fields.push("dim_exclusive_rec");
+    }
     conn.execute_one(
         &format!(
             r#"INSERT INTO {table_name}
@@ -155,6 +170,10 @@ pub(crate) async fn modify(
         sql_sets.push(format!("mes_frequency = ${}", params.len() + 1));
         params.push(Value::from(mes_frequency.to_string()));
     }
+    if let Some(mes_unit) = &modify_req.mes_unit {
+        sql_sets.push(format!("mes_unit = ${}", params.len() + 1));
+        params.push(Value::from(mes_unit.to_string()));
+    }
     if let Some(mes_act_by_dim_conf_keys) = &modify_req.mes_act_by_dim_conf_keys {
         sql_sets.push(format!("mes_act_by_dim_conf_keys = ${}", params.len() + 1));
         params.push(Value::from(mes_act_by_dim_conf_keys.clone()));
@@ -166,6 +185,10 @@ pub(crate) async fn modify(
     if let Some(remark) = &modify_req.remark {
         sql_sets.push(format!("remark = ${}", params.len() + 1));
         params.push(Value::from(remark.to_string()));
+    }
+    if let Some(dim_exclusive_rec) = modify_req.dim_exclusive_rec {
+        sql_sets.push(format!("rel_conf_fact_and_col_key = ${}", params.len() + 1));
+        params.push(Value::from(dim_exclusive_rec));
     }
     conn.execute_one(
         &format!(
@@ -182,7 +205,14 @@ WHERE key = $1 AND rel_conf_fact_key = $2
     Ok(())
 }
 
-pub(crate) async fn delete(fact_conf_key: &str, fact_col_conf_key: &str, funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
+pub(crate) async fn delete(
+    fact_conf_key: &str,
+    fact_col_conf_key: Option<&str>,
+    kind: Option<StatsFactColKind>,
+    funs: &TardisFunsInst,
+    ctx: &TardisContext,
+    inst: &SpiBsInst,
+) -> TardisResult<()> {
     let bs_inst = inst.inst::<TardisRelDBClient>();
     let (mut conn, table_name) = stats_pg_initializer::init_conf_fact_col_table_and_conn(bs_inst, ctx, true).await?;
     conn.begin().await?;
@@ -194,11 +224,17 @@ pub(crate) async fn delete(fact_conf_key: &str, fact_col_conf_key: &str, funs: &
             "409-spi-stats-fact-inst-exist",
         ));
     }
-    conn.execute_one(
-        &format!("DELETE FROM {table_name} WHERE key = $1 AND rel_conf_fact_key = $2"),
-        vec![Value::from(fact_col_conf_key), Value::from(fact_conf_key)],
-    )
-    .await?;
+    let mut where_clause = String::from("rel_conf_fact_key = $1");
+    let mut params = vec![Value::from(fact_conf_key.to_string())];
+    if let Some(fact_col_conf_key) = fact_col_conf_key {
+        params.push(Value::from(fact_col_conf_key));
+        where_clause.push_str(&format!(" AND key = ${param_idx}", param_idx = params.len()));
+    }
+    if let Some(kind) = kind {
+        params.push(Value::from(kind.to_string()));
+        where_clause.push_str(&format!(" AND kind = ${param_idx}", param_idx = params.len()));
+    }
+    conn.execute_one(&format!("DELETE FROM {table_name} WHERE {where_clause}"), params).await?;
     conn.commit().await?;
     Ok(())
 }
@@ -212,12 +248,13 @@ pub(in crate::serv::pg) async fn find_by_fact_conf_key(
     if !common_pg::check_table_exit("stats_conf_fact_col", conn, ctx).await? {
         return Ok(vec![]);
     }
-    do_paginate(fact_conf_key.to_string(), None, None, 1, u32::MAX, None, None, conn, ctx).await.map(|page| page.records)
+    do_paginate(Some(fact_conf_key.to_string()), None, None, None, 1, u32::MAX, None, None, conn, ctx).await.map(|page| page.records)
 }
 
 pub(crate) async fn paginate(
-    fact_conf_key: String,
+    fact_conf_key: Option<String>,
     fact_col_conf_key: Option<String>,
+    dim_key: Option<String>,
     show_name: Option<String>,
     page_number: u32,
     page_size: u32,
@@ -233,6 +270,7 @@ pub(crate) async fn paginate(
     do_paginate(
         fact_conf_key,
         fact_col_conf_key,
+        dim_key,
         show_name,
         page_number,
         page_size,
@@ -245,8 +283,9 @@ pub(crate) async fn paginate(
 }
 
 async fn do_paginate(
-    fact_conf_key: String,
+    fact_conf_key: Option<String>,
     fact_col_conf_key: Option<String>,
+    dim_key: Option<String>,
     show_name: Option<String>,
     page_number: u32,
     page_size: u32,
@@ -256,12 +295,20 @@ async fn do_paginate(
     ctx: &TardisContext,
 ) -> TardisResult<TardisPage<StatsConfFactColInfoResp>> {
     let table_name = package_table_name("stats_conf_fact_col", ctx);
-    let mut sql_where = vec!["rel_conf_fact_key = $1".to_string()];
+    let mut sql_where = vec![];
     let mut sql_order = vec![];
-    let mut params: Vec<Value> = vec![Value::from(fact_conf_key), Value::from(page_size), Value::from((page_number - 1) * page_size)];
+    let mut params: Vec<Value> = vec![Value::from(page_size), Value::from((page_number - 1) * page_size)];
+    if let Some(fact_conf_key) = fact_conf_key {
+        sql_where.push(format!("rel_conf_fact_key = ${}", params.len() + 1));
+        params.push(Value::from(fact_conf_key));
+    }
     if let Some(fact_col_conf_key) = &fact_col_conf_key {
         sql_where.push(format!("key = ${}", params.len() + 1));
-        params.push(Value::from(fact_col_conf_key.to_string()));
+        params.push(Value::from(fact_col_conf_key));
+    }
+    if let Some(dim_key) = &dim_key {
+        sql_where.push(format!("dim_rel_conf_dim_key = ${}", params.len() + 1));
+        params.push(Value::from(dim_key));
     }
     if let Some(show_name) = &show_name {
         sql_where.push(format!("show_name LIKE ${}", params.len() + 1));
@@ -277,7 +324,7 @@ async fn do_paginate(
     let result = conn
         .query_all(
             &format!(
-                r#"SELECT key, show_name, kind, remark, dim_rel_conf_dim_key, dim_multi_values, mes_data_distinct, mes_data_type, mes_frequency, mes_act_by_dim_conf_keys, rel_conf_fact_and_col_key, create_time, update_time, count(*) OVER() AS total
+                r#"SELECT key, show_name, kind, remark, dim_rel_conf_dim_key, dim_multi_values, dim_exclusive_rec, mes_data_distinct, mes_data_type, mes_frequency, mes_unit, mes_act_by_dim_conf_keys, rel_conf_fact_and_col_key, create_time, update_time, count(*) OVER() AS total
 FROM {table_name}
 WHERE 
     {}
@@ -306,6 +353,7 @@ WHERE
                 kind: item.try_get("", "kind")?,
                 dim_rel_conf_dim_key: item.try_get("", "dim_rel_conf_dim_key")?,
                 dim_multi_values: item.try_get("", "dim_multi_values")?,
+                dim_exclusive_rec: item.try_get("", "dim_exclusive_rec")?,
                 mes_data_distinct: item.try_get("", "mes_data_distinct")?,
                 mes_data_type: if item.try_get::<Option<String>>("", "mes_data_type")?.is_none() {
                     None
@@ -313,6 +361,7 @@ WHERE
                     Some(item.try_get("", "mes_data_type")?)
                 },
                 mes_frequency: item.try_get("", "mes_frequency")?,
+                mes_unit: item.try_get("", "mes_unit")?,
                 mes_act_by_dim_conf_keys: item.try_get("", "mes_act_by_dim_conf_keys")?,
                 rel_conf_fact_and_col_key: item.try_get("", "rel_conf_fact_and_col_key")?,
                 remark: item.try_get("", "remark")?,

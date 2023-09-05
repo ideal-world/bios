@@ -23,6 +23,16 @@ pub struct KvItemSummaryResp {
     pub update_time: DateTime<Utc>,
 }
 
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct KvItemDetailResp {
+    #[oai(validator(min_length = "2"))]
+    pub key: String,
+    pub value: Value,
+    pub info: String,
+    pub create_time: DateTime<Utc>,
+    pub update_time: DateTime<Utc>,
+}
+
 impl SpiKvClient {
     pub async fn add_or_modify_item<T: ?Sized + Serialize>(key: &str, value: &T, info: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let kv_url: String = BaseSpiClient::module_url(InvokeModuleKind::Kv, funs).await?;
@@ -67,6 +77,17 @@ impl SpiKvClient {
             url = format!("{url}&={}", extract);
         }
         let resp = funs.web_client().get::<TardisResp<TardisPage<KvItemSummaryResp>>>(&url, headers.clone()).await?;
+        BaseSpiClient::package_resp(resp)
+    }
+
+    pub async fn get_item(key: String, extract: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<KvItemDetailResp>> {
+        let kv_url = BaseSpiClient::module_url(InvokeModuleKind::Kv, funs).await?;
+        let headers = BaseSpiClient::headers(None, funs, ctx).await?;
+        let mut url = format!("{kv_url}/ci/item?key={key}");
+        if let Some(extract) = extract {
+            url = format!("{url}&={}", extract);
+        }
+        let resp = funs.web_client().get::<TardisResp<KvItemDetailResp>>(&url, headers.clone()).await?;
         BaseSpiClient::package_resp(resp)
     }
 }

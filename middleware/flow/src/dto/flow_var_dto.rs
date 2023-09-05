@@ -15,7 +15,7 @@ pub struct FlowVarSimpleInfo {
     pub required: bool,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, poem_openapi::Object)]
+#[derive(Serialize, Deserialize, Debug, Default, Clone, poem_openapi::Object)]
 pub struct FlowVarInfo {
     #[oai(validator(min_length = "2", max_length = "200"))]
     pub name: String,
@@ -45,8 +45,9 @@ pub struct FlowVarInfo {
 
 // In order to adapt to the JAVA program, the corresponding kind in rbum is changed to uppercase format (only here for the time being, the subsequent can be placed in the public module)
 // 为了和JAVA程序适配，此处把rbum中对应的kind改为大写格式（暂时只有此处需要，后续可以放置到公共模块）
-#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, sea_orm::strum::EnumString)]
+#[derive(Display, Clone, Debug, Default, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, strum::EnumString)]
 pub enum RbumDataTypeKind {
+    #[default]
     STRING,
     NUMBER,
     BOOLEAN,
@@ -73,8 +74,9 @@ impl TryGetable for RbumDataTypeKind {
     }
 }
 
-#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, sea_orm::strum::EnumString)]
+#[derive(Display, Clone, Debug, Default, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, strum::EnumString)]
 pub enum RbumWidgetTypeKind {
+    #[default]
     INPUT,
     INPUTTXT,
     INPUTNUM,

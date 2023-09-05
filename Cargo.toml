@@ -4,7 +4,7 @@ members = [
     "basic",
     "spi/*",
     "gateway/test",
-    "gateway/spacegateway",
+    "gateway/spacegate",
     "middleware/*",
     "support/iam",
     "support/auth",
@@ -38,6 +38,7 @@ strip = true
 
 [workspace.dependencies]
 # basic
+async-recursion = { version = "1.0.4" }
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1" }
 async-trait = { version = "0.1" }
@@ -45,8 +46,8 @@ lazy_static = { version = "1" }
 itertools = { version = "0" }
 fancy-regex = { version = "0" }
 run_script = { version = "0.10" }
-
+strum ={ version = "0.25", features = ["derive"] }
 # tardis
-tardis = { version = "=0.1.0-beta.11" }
+tardis = { version = "=0.1.0-beta.12" }
 # tardis = { path = "../tardis/tardis" }
-# tardis = { git = "https://github.com/ideal-world/tardis.git" }
+# tardis = { git = "https://github.com/ideal-world/tardis.git", rev = "9424e16" }

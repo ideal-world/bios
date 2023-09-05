@@ -9,8 +9,8 @@ use tardis::web::poem_openapi::payload::Json;
 use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 
 use crate::dto::flow_model_dto::{
-    FlowModelAddReq, FlowModelAggResp, FlowModelBindStateReq, FlowModelFilterReq, FlowModelModifyReq, FlowModelSortStatesReq, FlowModelSummaryResp, FlowModelUnbindStateReq,
-    FlowTemplateModelResp,
+    FlowModelAddCustomModelReq, FlowModelAddCustomModelResp, FlowModelAddReq, FlowModelAggResp, FlowModelBindStateReq, FlowModelFilterReq, FlowModelFindRelStateResp,
+    FlowModelModifyReq, FlowModelSortStatesReq, FlowModelSummaryResp, FlowModelUnbindStateReq, FlowTemplateModelResp,
 };
 use crate::flow_constants;
 use crate::serv::flow_model_serv::FlowModelServ;
@@ -75,7 +75,7 @@ impl FlowCcModelApi {
                     enabled: enabled.0,
                     ..Default::default()
                 },
-                tag: tag.0,
+                tags: tag.0.map(|tag| vec![tag]),
                 ..Default::default()
             },
             page_number.0,
@@ -142,5 +142,29 @@ impl FlowCcModelApi {
         FlowModelServ::resort_state(&FlowRelKind::FlowModelState, &flow_model_id.0, &req.0, &funs, &ctx.0).await?;
         funs.commit().await?;
         TardisResp::ok(Void {})
+    }
+
+    /// add custom model by template_id / 添加自定义模型
+    #[oai(path = "/add_custom_model", method = "post")]
+    async fn add_custom_model(&self, req: Json<FlowModelAddCustomModelReq>, ctx: TardisContextExtractor) -> TardisApiResult<Vec<FlowModelAddCustomModelResp>> {
+        let mut funs = flow_constants::get_tardis_inst();
+        funs.begin().await?;
+        let proj_template_id = req.0.proj_template_id.unwrap_or_default();
+        let mut result = vec![];
+        for item in req.0.bind_model_objs {
+            let model_id = FlowModelServ::add_custom_model(&item.tag, &proj_template_id, None, &funs, &ctx.0).await.ok();
+            result.push(FlowModelAddCustomModelResp { tag: item.tag, model_id })
+        }
+        funs.commit().await?;
+        TardisResp::ok(result)
+    }
+
+    /// find rel states by model_id / 获取关联状态
+    #[oai(path = "/find_rel_status", method = "get")]
+    async fn find_rel_states(&self, tag: Query<String>, ctx: TardisContextExtractor) -> TardisApiResult<Vec<FlowModelFindRelStateResp>> {
+        let funs = flow_constants::get_tardis_inst();
+        let result = FlowModelServ::find_rel_states(&tag, &funs, &ctx.0).await?;
+
+        TardisResp::ok(result)
     }
 }

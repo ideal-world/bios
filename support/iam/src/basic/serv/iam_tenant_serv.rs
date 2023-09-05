@@ -38,13 +38,14 @@ use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::iam_config::{IamBasicConfigApi, IamBasicInfoManager, IamConfig};
 use crate::iam_constants;
 use crate::iam_constants::{RBUM_ITEM_ID_TENANT_LEN, RBUM_SCOPE_LEVEL_TENANT};
-use crate::iam_enumeration::{IamCertExtKind, IamCertKernelKind, IamCertOAuth2Supplier, IamCertTokenKind, IamConfigDataTypeKind, IamConfigKind, IamSetKind};
+use crate::iam_enumeration::{IamCertExtKind, IamCertKernelKind, IamCertOAuth2Supplier, IamCertTokenKind, IamConfigDataTypeKind, IamConfigKind, IamRoleKind, IamSetKind};
 
 use super::clients::iam_log_client::{IamLogClient, LogParamTag};
 use super::iam_cert_oauth2_serv::IamCertOAuth2Serv;
 use super::iam_cert_token_serv::IamCertTokenServ;
 use super::iam_config_serv::IamConfigServ;
 use super::iam_platform_serv::IamPlatformServ;
+use super::iam_role_serv::IamRoleServ;
 
 pub struct IamTenantServ;
 
@@ -296,7 +297,9 @@ impl IamTenantServ {
             });
         }
         IamConfigServ::add_or_modify_batch(&tenant_id, reqs, funs, &tenant_ctx).await?;
-
+        IamRoleServ::copy_role_agg(&tenant_id, &IamRoleKind::Tenant, funs, &tenant_ctx).await?;
+        let tenant_admin_role_id = IamRoleServ::get_embed_subrole_id(&funs.iam_basic_role_tenant_admin_id(), funs, &tenant_ctx).await?;
+        let tenant_audit_role_id = IamRoleServ::get_embed_subrole_id(&funs.iam_basic_role_tenant_audit_id(), funs, &tenant_ctx).await?;
         // Init admin pwd
         let admin_pwd: String = if let Some(admin_password) = &add_req.admin_password {
             admin_password.to_string()
@@ -314,7 +317,7 @@ impl IamTenantServ {
                 icon: None,
                 disabled: add_req.disabled,
                 scope_level: Some(RBUM_SCOPE_LEVEL_TENANT),
-                role_ids: Some(vec![funs.iam_basic_role_tenant_admin_id()]),
+                role_ids: Some(vec![tenant_admin_role_id]),
                 org_node_ids: None,
                 exts: Default::default(),
                 status: Some(RbumCertStatusKind::Pending),
@@ -343,7 +346,7 @@ impl IamTenantServ {
                 icon: None,
                 disabled: add_req.disabled,
                 scope_level: Some(RBUM_SCOPE_LEVEL_TENANT),
-                role_ids: Some(vec![funs.iam_basic_role_tenant_audit_id()]),
+                role_ids: Some(vec![tenant_audit_role_id]),
                 org_node_ids: None,
                 exts: Default::default(),
                 status: Some(RbumCertStatusKind::Pending),
@@ -388,6 +391,7 @@ impl IamTenantServ {
             && modify_req.cert_conf_by_mail_vcode.is_none()
             && modify_req.cert_conf_by_oauth2.is_none()
             && modify_req.cert_conf_by_ldap.is_none()
+            && modify_req.token_default_coexist_num.is_none()
             && modify_req.config.is_none()
         {
             return Ok(());

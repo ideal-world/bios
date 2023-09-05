@@ -23,7 +23,7 @@ impl AuthApi {
     /// Auth 身份验证
     #[oai(path = "/", method = "put")]
     async fn auth(&self, req: Json<AuthReq>, request: &Request) -> TardisApiResult<AuthResp> {
-        let result = auth_kernel_serv::auth(&mut req.0.clone(), false).await?;
+        let result = AuthResp::from_result(auth_kernel_serv::auth(&mut req.0.clone(), false).await?);
         trace!("[Auth] Response auth: {:?}", result);
         let _ = SpiLogClient::add_item(
             LogParamContent {
@@ -42,7 +42,7 @@ impl AuthApi {
     }
 
     // mix apis 解析混合api
-    #[oai(path = "/apis", method = "put")]
+    #[oai(path = "/apis", method = "post")]
     async fn apis(&self, req: Json<AuthReq>, request: &Request) -> TardisApiResult<MixAuthResp> {
         let result = auth_kernel_serv::parse_mix_req(req.0.clone()).await?;
         trace!("[Auth] Response apis: {:?}", result);

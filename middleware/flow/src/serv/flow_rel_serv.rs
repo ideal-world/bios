@@ -20,7 +20,7 @@ use tardis::{
 
 pub struct FlowRelServ;
 
-#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, sea_orm::strum::EnumString)]
+#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, strum::EnumString)]
 pub enum FlowRelKind {
     FlowModelState,
 }
@@ -119,7 +119,7 @@ impl FlowRelServ {
         .await
     }
 
-    pub async fn find_to_simple_rels(
+    pub async fn _find_to_simple_rels(
         flow_rel_kind: &FlowRelKind,
         flow_model_id: &str,
         desc_sort_by_create: Option<bool>,

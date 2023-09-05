@@ -1,3 +1,4 @@
+400-flow-inst-vars-field-missing	缺少必填字段信息
 409-flow-state-already-used	状态已被使用
 404-flow-state-add-not-legal	要添加的状态不合法（权限错误、已禁用等）
 404-flow-transition-rel-model-not-legal	转换关联的模型不合法

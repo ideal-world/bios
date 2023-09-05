@@ -13,6 +13,8 @@ use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::iam_constants;
 use crate::iam_enumeration::IamSetKind;
+use bios_basic::helper::request_helper::add_remote_ip;
+use tardis::web::poem::Request;
 #[derive(Clone, Default)]
 pub struct IamCtAppSetApi;
 
@@ -22,7 +24,8 @@ pub struct IamCtAppSetApi;
 impl IamCtAppSetApi {
     /// Add App Set Cate
     #[oai(path = "/cate", method = "post")]
-    async fn add_cate(&self, add_req: Json<IamSetCateAddReq>, ctx: TardisContextExtractor) -> TardisApiResult<String> {
+    async fn add_cate(&self, add_req: Json<IamSetCateAddReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<String> {
+        add_remote_ip(&request, &ctx.0).await?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Apps, &funs, &ctx.0).await?;
@@ -34,7 +37,8 @@ impl IamCtAppSetApi {
 
     /// Modify App Set Cate By App Cate Id
     #[oai(path = "/cate/:id", method = "put")]
-    async fn modify_set_cate(&self, id: Path<String>, modify_req: Json<IamSetCateModifyReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+    async fn modify_set_cate(&self, id: Path<String>, modify_req: Json<IamSetCateModifyReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
+        add_remote_ip(&request, &ctx.0).await?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         IamSetServ::modify_set_cate(&id.0, &modify_req.0, &funs, &ctx.0).await?;
@@ -49,9 +53,16 @@ impl IamCtAppSetApi {
     /// * ``parent_sys_code=true`` : query only the next level. This can be used to query level by level when the tree is too large
     /// * ``only_related=true`` : Invalidate the parent_sys_code parameter when this parameter is turned on, it is used to query only the tree nodes with related resources(including children nodes)
     #[oai(path = "/tree", method = "get")]
-    async fn get_tree(&self, parent_sys_code: Query<Option<String>>, only_related: Query<Option<bool>>, ctx: TardisContextExtractor) -> TardisApiResult<RbumSetTreeResp> {
+    async fn get_tree(
+        &self,
+        parent_sys_code: Query<Option<String>>,
+        only_related: Query<Option<bool>>,
+        ctx: TardisContextExtractor,
+        request: &Request,
+    ) -> TardisApiResult<RbumSetTreeResp> {
         let funs = iam_constants::get_tardis_inst();
         let ctx = IamCertServ::use_sys_or_tenant_ctx_unsafe(ctx.0)?;
+        add_remote_ip(&request, &ctx).await?;
         let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Apps, &funs, &ctx).await?;
         let only_related = only_related.0.unwrap_or(false);
         let result = if only_related {
@@ -78,7 +89,8 @@ impl IamCtAppSetApi {
 
     /// Delete App Set Cate By Org Cate Id
     #[oai(path = "/cate/:id", method = "delete")]
-    async fn delete_cate(&self, id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+    async fn delete_cate(&self, id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
+        add_remote_ip(&request, &ctx.0).await?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         IamSetServ::delete_set_cate(&id.0, &funs, &ctx.0).await?;
@@ -89,10 +101,11 @@ impl IamCtAppSetApi {
 
     /// Add App Set Item (App Or Account)
     #[oai(path = "/item", method = "put")]
-    async fn add_set_item(&self, add_req: Json<IamSetItemWithDefaultSetAddReq>, ctx: TardisContextExtractor) -> TardisApiResult<String> {
+    async fn add_set_item(&self, add_req: Json<IamSetItemWithDefaultSetAddReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<String> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         let ctx = IamCertServ::use_sys_or_tenant_ctx_unsafe(ctx.0)?;
+        add_remote_ip(&request, &ctx).await?;
         let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Apps, &funs, &ctx).await?;
         let result = IamSetServ::add_set_item(
             &IamSetItemAddReq {
@@ -112,10 +125,11 @@ impl IamCtAppSetApi {
 
     /// Batch Add App Set Item (App Or Account)
     #[oai(path = "/item/batch", method = "put")]
-    async fn batch_add_set_item(&self, add_req: Json<IamSetItemWithDefaultSetAddReq>, ctx: TardisContextExtractor) -> TardisApiResult<Vec<String>> {
+    async fn batch_add_set_item(&self, add_req: Json<IamSetItemWithDefaultSetAddReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Vec<String>> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         let ctx = IamCertServ::use_sys_or_tenant_ctx_unsafe(ctx.0)?;
+        add_remote_ip(&request, &ctx).await?;
         let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Apps, &funs, &ctx).await?;
         let split = add_req.rel_rbum_item_id.split(',').collect::<Vec<_>>();
         let mut result = vec![];
@@ -141,21 +155,29 @@ impl IamCtAppSetApi {
 
     /// Find App Set Items (App Or Account)
     #[oai(path = "/item", method = "get")]
-    async fn find_items(&self, cate_id: Query<Option<String>>, item_id: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<Vec<RbumSetItemDetailResp>> {
+    async fn find_items(
+        &self,
+        cate_id: Query<Option<String>>,
+        item_id: Query<Option<String>>,
+        ctx: TardisContextExtractor,
+        request: &Request,
+    ) -> TardisApiResult<Vec<RbumSetItemDetailResp>> {
         let funs = iam_constants::get_tardis_inst();
         let ctx = IamCertServ::use_sys_or_tenant_ctx_unsafe(ctx.0)?;
+        add_remote_ip(&request, &ctx).await?;
         let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Apps, &funs, &ctx).await?;
-        let result = IamSetServ::find_set_items_with_none_set_cate_id(Some(set_id), cate_id.0, item_id.0, false, &funs, &ctx).await?;
+        let result = IamSetServ::find_set_items(Some(set_id), cate_id.0, item_id.0, None, false, &funs, &ctx).await?;
         ctx.execute_task().await?;
         TardisResp::ok(result)
     }
 
     /// Delete App Set Item (App Or Account) By App Set Item Id
     #[oai(path = "/item/:id", method = "delete")]
-    async fn delete_item(&self, id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+    async fn delete_item(&self, id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         let ctx = IamCertServ::use_sys_or_tenant_ctx_unsafe(ctx.0)?;
+        add_remote_ip(&request, &ctx).await?;
         IamSetServ::delete_set_item(&id.0, &funs, &ctx).await?;
         funs.commit().await?;
         ctx.execute_task().await?;
@@ -164,9 +186,10 @@ impl IamCtAppSetApi {
 
     /// Check App Scope with Account
     #[oai(path = "/scope", method = "get")]
-    async fn check_scope(&self, app_id: Query<String>, account_id: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<bool> {
+    async fn check_scope(&self, app_id: Query<String>, account_id: Query<Option<String>>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<bool> {
         let funs = iam_constants::get_tardis_inst();
         let ctx = IamCertServ::use_sys_or_tenant_ctx_unsafe(ctx.0)?;
+        add_remote_ip(&request, &ctx).await?;
         let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Apps, &funs, &ctx).await?;
         let result = IamSetServ::check_scope(&app_id.0, &account_id.0.unwrap_or_else(|| ctx.owner.clone()), &set_id, &funs, &ctx).await?;
         ctx.execute_task().await?;

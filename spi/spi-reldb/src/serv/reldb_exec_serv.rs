@@ -51,7 +51,8 @@ fn parse_params(params: &JsonValue) -> Vec<Value> {
 pub async fn tx_begin(auto_commit: bool, exp_sec: Option<u8>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<ReldbTxResp> {
     let tx_id = TardisFuns::crypto.hex.encode(TardisFuns::field.nanoid());
     let exp_ts_at = Utc::now().timestamp_millis() + (exp_sec.unwrap_or(5)) as i64 * 1000;
-    let bs_inst = funs.init_bs(ctx, true, reldb_initializer::init_fun).await?.inst::<TardisRelDBClient>();
+    let inst_arc = funs.init_bs(ctx, true, reldb_initializer::init_fun).await?;
+    let bs_inst = inst_arc.inst::<TardisRelDBClient>();
     let mut conn = reldb_initializer::inst_conn(bs_inst).await?;
     if !conn.has_tx() {
         conn.begin().await?;
@@ -80,7 +81,8 @@ pub async fn tx_rollback(tx_id: String) -> TardisResult<()> {
 }
 
 pub async fn ddl(ddl_req: &mut ReldbDdlReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-    let bs_inst = funs.init_bs(ctx, true, reldb_initializer::init_fun).await?.inst::<TardisRelDBClient>();
+    let inst_arc = funs.init_bs(ctx, true, reldb_initializer::init_fun).await?;
+    let bs_inst = inst_arc.inst::<TardisRelDBClient>();
     let conn = reldb_initializer::inst_conn(bs_inst).await?;
     let params = parse_params(&ddl_req.params);
     conn.execute_one(&ddl_req.sql, params).await?;
@@ -89,7 +91,8 @@ pub async fn ddl(ddl_req: &mut ReldbDdlReq, funs: &TardisFunsInst, ctx: &TardisC
 }
 
 pub async fn dml(dml_req: &mut ReldbDmlReq, tx_id: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<ReldbDmlResp> {
-    let bs_inst = funs.init_bs(ctx, true, reldb_initializer::init_fun).await?.inst::<TardisRelDBClient>();
+    let inst_arc = funs.init_bs(ctx, true, reldb_initializer::init_fun).await?;
+    let bs_inst = inst_arc.inst::<TardisRelDBClient>();
     let params = parse_params(&dml_req.params);
     let resp = if let Some(tx_id) = &tx_id {
         let tx_container = TX_CONTAINER.read().await;
@@ -118,7 +121,8 @@ pub async fn dml(dml_req: &mut ReldbDmlReq, tx_id: Option<String>, funs: &Tardis
 }
 
 pub async fn dql(dql_req: &mut ReldbDqlReq, tx_id: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<JsonValue>> {
-    let bs_inst = funs.init_bs(ctx, true, reldb_initializer::init_fun).await?.inst::<TardisRelDBClient>();
+    let inst_arc = funs.init_bs(ctx, true, reldb_initializer::init_fun).await?;
+    let bs_inst = inst_arc.inst::<TardisRelDBClient>();
     let params = parse_params(&dql_req.params);
     let resp = if let Some(tx_id) = tx_id {
         let tx_container = TX_CONTAINER.read().await;
