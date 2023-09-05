@@ -583,6 +583,8 @@ fn gen_query_dsl(search_req: &SearchItemSearchReq) -> TardisResult<String> {
                         }
                     }));
                 }
+                BasicQueryOpKind::NotLike => {}
+                BasicQueryOpKind::NotIn => {}
             }
         }
     }
