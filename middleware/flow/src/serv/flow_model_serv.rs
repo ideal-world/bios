@@ -911,10 +911,16 @@ impl FlowModelServ {
         }
         FlowRelServ::add_simple_rel(flow_rel_kind, flow_model_id, flow_state_id, None, None, false, true, Some(sort), funs, ctx).await?;
 
-        Self::modify_item(flow_model_id, &mut FlowModelModifyReq {
-            name: Some(Self::get_model_name(flow_model_id, funs, ctx).await?.into()),
-            ..Default::default()
-        }, funs, ctx).await?;
+        Self::modify_item(
+            flow_model_id,
+            &mut FlowModelModifyReq {
+                name: Some(Self::get_model_name(flow_model_id, funs, ctx).await?.into()),
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?;
 
         Ok(())
     }
@@ -945,10 +951,16 @@ impl FlowModelServ {
         }
         FlowRelServ::delete_simple_rel(flow_rel_kind, flow_model_id, flow_state_id, funs, ctx).await?;
 
-        Self::modify_item(flow_model_id, &mut FlowModelModifyReq {
-            name: Some(Self::get_model_name(flow_model_id, funs, ctx).await?.into()),
-            ..Default::default()
-        }, funs, ctx).await?;
+        Self::modify_item(
+            flow_model_id,
+            &mut FlowModelModifyReq {
+                name: Some(Self::get_model_name(flow_model_id, funs, ctx).await?.into()),
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?;
 
         Ok(())
     }
@@ -970,11 +982,17 @@ impl FlowModelServ {
             )
             .await?;
         }
-        Self::modify_item(flow_model_id, &mut FlowModelModifyReq {
-            name: Some(Self::get_model_name(flow_model_id, funs, ctx).await?.into()),
-            ..Default::default()
-        }, funs, ctx).await?;
-        
+        Self::modify_item(
+            flow_model_id,
+            &mut FlowModelModifyReq {
+                name: Some(Self::get_model_name(flow_model_id, funs, ctx).await?.into()),
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?;
+
         Ok(())
     }
 
@@ -1041,9 +1059,12 @@ impl FlowModelServ {
     }
 
     async fn find_sorted_rel_states_by_model_id(flow_model_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<FlowModelFindRelStateResp>> {
-        let state_ids = FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelState, flow_model_id, None, None, funs, ctx).await?.iter()
+        let state_ids = FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelState, flow_model_id, None, None, funs, ctx)
+            .await?
+            .iter()
             .sorted_by_key(|rel| rel.ext.as_str().parse::<i64>().unwrap_or_default())
-            .map(|rel| rel.rel_id.clone()).collect::<Vec<_>>();
+            .map(|rel| rel.rel_id.clone())
+            .collect::<Vec<_>>();
         Ok(FlowStateServ::find_detail_items(
             &FlowStateFilterReq {
                 basic: RbumBasicFilterReq {
