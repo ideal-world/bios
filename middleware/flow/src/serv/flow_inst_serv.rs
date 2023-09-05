@@ -611,6 +611,19 @@ impl FlowInstServ {
         }
 
         let next_flow_transition = next_flow_transition.unwrap();
+        let prev_flow_state = FlowStateServ::get_item(
+            &flow_inst_detail.current_state_id,
+            &FlowStateFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?;
         let next_flow_state = FlowStateServ::get_item(
             &next_flow_transition.next_flow_state_id,
             &FlowStateFilterReq {
@@ -712,10 +725,12 @@ impl FlowInstServ {
         let next_flow_transitions = Self::do_find_next_transitions(&flow_inst_detail, &flow_model, None, &None, funs, ctx).await?.next_flow_transitions;
 
         Ok(FlowInstTransferResp {
-            prev_flow_state_id: flow_inst_detail.current_state_id,
-            prev_flow_state_name: flow_inst_detail.current_state_name,
-            new_flow_state_id: next_flow_transition.next_flow_state_id,
-            new_flow_state_name: next_flow_transition.next_flow_state_name,
+            prev_flow_state_id: prev_flow_state.id,
+            prev_flow_state_name: prev_flow_state.name,
+            prev_flow_state_color: prev_flow_state.color,
+            new_flow_state_id: next_flow_state.id,
+            new_flow_state_name: next_flow_state.name,
+            new_flow_state_color: next_flow_state.color,
             finish_time,
             vars: Some(new_vars),
             next_flow_transitions,
@@ -995,10 +1010,7 @@ impl FlowInstServ {
                 if !model_transition.guard_by_spec_org_ids.is_empty() && model_transition.guard_by_spec_org_ids.iter().any(|role_ids| ctx.groups.contains(role_ids)) {
                     return true;
                 }
-                if model_transition.guard_by_assigned
-                    && flow_inst.current_assigned.is_some()
-                    && !(flow_inst.current_assigned.clone().unwrap() != ctx.own_paths || flow_inst.current_assigned.clone().unwrap() != ctx.owner)
-                {
+                if model_transition.guard_by_assigned && flow_inst.current_assigned.is_some() && flow_inst.current_assigned.clone().unwrap() == ctx.owner {
                     return true;
                 }
                 if model_transition.guard_by_his_operators

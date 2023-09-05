@@ -11,7 +11,7 @@ use bios_mw_flow::dto::flow_model_dto::{
     FlowModelAddCustomModelItemReq, FlowModelAddCustomModelReq, FlowModelAddCustomModelResp, FlowModelAggResp, FlowModelBindStateReq, FlowModelModifyReq,
     FlowModelSortStateInfoReq, FlowModelSortStatesReq, FlowModelSummaryResp, FlowModelUnbindStateReq, FlowTemplateModelResp,
 };
-use bios_mw_flow::dto::flow_state_dto::{FlowStateNameResp, FlowStateSummaryResp};
+use bios_mw_flow::dto::flow_state_dto::FlowStateSummaryResp;
 use bios_mw_flow::dto::flow_transition_dto::{
     FlowTransitionActionChangeInfo, FlowTransitionActionChangeKind, FlowTransitionDoubleCheckInfo, FlowTransitionModifyReq, StateChangeCondition, StateChangeConditionItem,
     StateChangeConditionOp,
@@ -46,7 +46,7 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
     let mut models: TardisPage<FlowModelSummaryResp> = flow_client.get("/cc/model/?tag=REQ&page_number=1&page_size=100").await;
     let init_model = models.records.pop().unwrap();
     info!("models: {:?}", init_model);
-    assert_eq!(&init_model.name, "默认需求模板");
+    assert_eq!(&init_model.name, "待开始-进行中-已完成-已关闭");
     assert_eq!(&init_model.owner, "");
 
     // mock tenant content

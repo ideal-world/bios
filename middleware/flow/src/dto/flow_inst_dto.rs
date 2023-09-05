@@ -172,9 +172,11 @@ pub struct FlowInstTransferReq {
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
 pub struct FlowInstTransferResp {
     pub prev_flow_state_id: String,
-    pub prev_flow_state_name: Option<String>,
+    pub prev_flow_state_name: String,
+    pub prev_flow_state_color: String,
     pub new_flow_state_id: String,
     pub new_flow_state_name: String,
+    pub new_flow_state_color: String,
     pub finish_time: Option<DateTime<Utc>>,
 
     pub vars: Option<HashMap<String, Value>>,
