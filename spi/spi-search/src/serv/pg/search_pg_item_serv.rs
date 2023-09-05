@@ -466,8 +466,8 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
 FROM {table_name}{}
 WHERE 
     {}
-    {}
     {sql_adv_query}
+    {}
 {}"#,
                 if search_req.page.fetch_total { ", count(*) OVER() AS total" } else { "" },
                 select_fragments,
