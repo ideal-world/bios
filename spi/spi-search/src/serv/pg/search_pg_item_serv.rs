@@ -498,7 +498,7 @@ WHERE
                 kind: item.try_get("", "kind")?,
                 key: item.try_get("", "key")?,
                 title: item.try_get("", "title")?,
-                content: item.try_get("", "content")?,
+                content: item.try_get("", "content").unwrap_or_default(),
                 owner: item.try_get("", "owner")?,
                 own_paths: item.try_get("", "own_paths")?,
                 create_time: item.try_get("", "create_time")?,
