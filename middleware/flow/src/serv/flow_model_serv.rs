@@ -771,7 +771,7 @@ impl FlowModelServ {
     pub async fn add_custom_model(tag: &str, rel_template_id: &str, current_template_id: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
         let current_model = Self::find_one_detail_item(
             &FlowModelFilterReq {
-                basic: RbumBasicFilterReq { ..Default::default() },
+                basic: RbumBasicFilterReq::default(),
                 tags: Some(vec![tag.to_string()]),
                 rel_template_id: current_template_id.clone(),
                 ..Default::default()
@@ -911,6 +911,11 @@ impl FlowModelServ {
         }
         FlowRelServ::add_simple_rel(flow_rel_kind, flow_model_id, flow_state_id, None, None, false, true, Some(sort), funs, ctx).await?;
 
+        Self::modify_item(flow_model_id, &mut FlowModelModifyReq {
+            name: Some(Self::get_model_name(flow_model_id, funs, ctx).await?.into()),
+            ..Default::default()
+        }, funs, ctx).await?;
+
         Ok(())
     }
 
@@ -939,6 +944,12 @@ impl FlowModelServ {
             ));
         }
         FlowRelServ::delete_simple_rel(flow_rel_kind, flow_model_id, flow_state_id, funs, ctx).await?;
+
+        Self::modify_item(flow_model_id, &mut FlowModelModifyReq {
+            name: Some(Self::get_model_name(flow_model_id, funs, ctx).await?.into()),
+            ..Default::default()
+        }, funs, ctx).await?;
+
         Ok(())
     }
 
@@ -959,6 +970,11 @@ impl FlowModelServ {
             )
             .await?;
         }
+        Self::modify_item(flow_model_id, &mut FlowModelModifyReq {
+            name: Some(Self::get_model_name(flow_model_id, funs, ctx).await?.into()),
+            ..Default::default()
+        }, funs, ctx).await?;
+        
         Ok(())
     }
 
@@ -1021,9 +1037,14 @@ impl FlowModelServ {
 
     pub async fn find_rel_states(tag: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<FlowModelFindRelStateResp>> {
         let flow_model_id = FlowInstServ::get_model_id_by_own_paths(tag, funs, ctx).await?;
-        let state_ids =
-            FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelState, &flow_model_id, None, None, funs, ctx).await?.iter().map(|rel| rel.rel_id.clone()).collect::<Vec<_>>();
-        let result = FlowStateServ::find_detail_items(
+        Self::find_sorted_rel_states_by_model_id(&flow_model_id, funs, ctx).await
+    }
+
+    async fn find_sorted_rel_states_by_model_id(flow_model_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<FlowModelFindRelStateResp>> {
+        let state_ids = FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelState, flow_model_id, None, None, funs, ctx).await?.iter()
+            .sorted_by_key(|rel| rel.ext.as_str().parse::<i64>().unwrap_or_default())
+            .map(|rel| rel.rel_id.clone()).collect::<Vec<_>>();
+        Ok(FlowStateServ::find_detail_items(
             &FlowStateFilterReq {
                 basic: RbumBasicFilterReq {
                     ids: Some(state_ids),
@@ -1045,8 +1066,10 @@ impl FlowModelServ {
             name: state_detail.name.clone(),
             color: state_detail.color.clone(),
         })
-        .collect_vec();
+        .collect_vec())
+    }
 
-        Ok(result)
+    async fn get_model_name(flow_model_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
+        Ok(Self::find_sorted_rel_states_by_model_id(flow_model_id, funs, ctx).await?.into_iter().map(|state| state.name).collect_vec().join("-"))
     }
 }
