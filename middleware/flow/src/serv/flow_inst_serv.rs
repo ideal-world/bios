@@ -1010,7 +1010,10 @@ impl FlowInstServ {
                 if !model_transition.guard_by_spec_org_ids.is_empty() && model_transition.guard_by_spec_org_ids.iter().any(|role_ids| ctx.groups.contains(role_ids)) {
                     return true;
                 }
-                if model_transition.guard_by_assigned && flow_inst.current_assigned.is_some() && flow_inst.current_assigned.clone().unwrap() == ctx.owner {
+                if model_transition.guard_by_assigned
+                    && flow_inst.current_assigned.is_some()
+                    && flow_inst.current_assigned.clone().unwrap().split(',').collect_vec().contains(&ctx.owner.as_str())
+                {
                     return true;
                 }
                 if model_transition.guard_by_his_operators

@@ -8,8 +8,8 @@ use bios_mw_flow::dto::flow_inst_dto::{
     FlowInstFindStateAndTransitionsReq, FlowInstFindStateAndTransitionsResp, FlowInstStartReq, FlowInstTransferReq, FlowInstTransferResp,
 };
 use bios_mw_flow::dto::flow_model_dto::{
-    FlowModelAddCustomModelItemReq, FlowModelAddCustomModelReq, FlowModelAddCustomModelResp, FlowModelAggResp, FlowModelModifyReq,
-    FlowModelSortStateInfoReq, FlowModelSortStatesReq, FlowModelSummaryResp, FlowModelUnbindStateReq, FlowTemplateModelResp,
+    FlowModelAddCustomModelItemReq, FlowModelAddCustomModelReq, FlowModelAddCustomModelResp, FlowModelAggResp, FlowModelModifyReq, FlowModelSortStateInfoReq,
+    FlowModelSortStatesReq, FlowModelSummaryResp, FlowModelUnbindStateReq, FlowTemplateModelResp,
 };
 use bios_mw_flow::dto::flow_state_dto::FlowStateSummaryResp;
 use bios_mw_flow::dto::flow_transition_dto::{
@@ -108,14 +108,17 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
         )
         .await;
     // modify transitions
-    let state_modify_trans = model_agg_old.states.iter().find(|state| state.name == "待开始").unwrap().transitions.iter().find(|trans| trans.name == "开始").unwrap();
+    let trans_start = model_agg_old.states.iter().find(|state| state.name == "待开始").unwrap().transitions.iter().find(|trans| trans.name == "开始").unwrap();
+    let trans_complate = model_agg_old.states.iter().find(|state| state.name == "进行中").unwrap().transitions.iter().find(|trans| trans.name == "完成").unwrap();
+    let trans_close = model_agg_old.states.iter().find(|state| state.name == "进行中").unwrap().transitions.iter().find(|trans| trans.name == "关闭").unwrap();
+
     let _: Void = flow_client
         .patch(
             &format!("/cc/model/{}", req_model_id),
             &FlowModelModifyReq {
                 modify_transitions: Some(vec![FlowTransitionModifyReq {
-                    id: state_modify_trans.id.clone().into(),
-                    name: Some(format!("{}-modify", &state_modify_trans.name).into()),
+                    id: trans_start.id.clone().into(),
+                    name: Some(format!("{}-modify", &trans_start.name).into()),
                     from_flow_state_id: None,
                     to_flow_state_id: None,
                     transfer_by_auto: Some(true),
@@ -173,14 +176,13 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
             },
         )
         .await;
-    let field_modify_trans = model_agg_old.states.iter().find(|state| state.name == "进行中").unwrap().transitions.iter().find(|trans| trans.name == "完成").unwrap();
     let _: Void = flow_client
         .patch(
             &format!("/cc/model/{}", req_model_id),
             &FlowModelModifyReq {
                 modify_transitions: Some(vec![FlowTransitionModifyReq {
-                    id: field_modify_trans.id.clone().into(),
-                    name: Some(format!("{}-modify", &field_modify_trans.name).into()),
+                    id: trans_complate.id.clone().into(),
+                    name: Some(format!("{}-modify", &trans_complate.name).into()),
                     from_flow_state_id: None,
                     to_flow_state_id: None,
                     transfer_by_auto: Some(true),
@@ -206,6 +208,34 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
                         var_name: "id".to_string(),
                         changed_val: Some(json!("xxx".to_string())),
                     }]),
+                    double_check: None,
+                }]),
+                ..Default::default()
+            },
+        )
+        .await;
+    let _: Void = flow_client
+        .patch(
+            &format!("/cc/model/{}", req_model_id),
+            &FlowModelModifyReq {
+                modify_transitions: Some(vec![FlowTransitionModifyReq {
+                    id: trans_close.id.clone().into(),
+                    name: None,
+                    from_flow_state_id: None,
+                    to_flow_state_id: None,
+                    transfer_by_auto: None,
+                    transfer_by_timer: None,
+                    guard_by_creator: None,
+                    guard_by_his_operators: None,
+                    guard_by_assigned: Some(true),
+                    guard_by_spec_account_ids: None,
+                    guard_by_spec_role_ids: None,
+                    guard_by_spec_org_ids: None,
+                    guard_by_other_conds: None,
+                    vars_collect: None,
+                    action_by_pre_callback: None,
+                    action_by_post_callback: None,
+                    action_by_post_changes: None,
                     double_check: None,
                 }]),
                 ..Default::default()
@@ -331,7 +361,9 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
     let state_unbind_error = flow_client
         .post_resp::<FlowModelUnbindStateReq, Void>(
             &format!("/cc/model/{}/unbind_state", &req_model_id),
-            &FlowModelUnbindStateReq { state_id: transfer.new_flow_state_id.clone() },
+            &FlowModelUnbindStateReq {
+                state_id: transfer.new_flow_state_id.clone(),
+            },
         )
         .await;
     assert_eq!(state_unbind_error.code, "409-flow-flow_model-unbind_state");
@@ -461,6 +493,7 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
             }],
         )
         .await;
+    assert_eq!(state_and_next_transitions[0].next_flow_transitions.len(), 1);
     let _transfer: FlowInstTransferResp = flow_client
         .put(
             &format!("/cc/inst/{}/transition/transfer", req_inst_id2),
