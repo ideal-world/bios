@@ -320,12 +320,7 @@ async fn create_inst_table(
     for fact_col_conf in fact_col_conf_set {
         if fact_col_conf.kind == StatsFactColKind::Dimension {
             let Some(dim_conf_key) = &fact_col_conf.dim_rel_conf_dim_key else {
-                return Err(funs.err().bad_request(
-                    "fact_inst",
-                    "create",
-                    "Fail to get dimension config",
-                    "400-spi-stats-fail-to-get-dim-config-key",
-                ));
+                return Err(funs.err().bad_request("fact_inst", "create", "Fail to get dimension config", "400-spi-stats-fail-to-get-dim-config-key"));
             };
             if !stats_pg_conf_dim_serv::online(dim_conf_key, conn, ctx).await? {
                 return Err(funs.err().conflict(

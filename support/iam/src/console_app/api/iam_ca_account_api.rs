@@ -25,7 +25,7 @@ impl IamCaAccountApi {
     /// Get Account By Account Id
     #[oai(path = "/:id", method = "get")]
     async fn get(&self, id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<IamAccountDetailAggResp> {
-        add_remote_ip(&request, &ctx.0).await?;
+        add_remote_ip(request, &ctx.0).await?;
         let funs = iam_constants::get_tardis_inst();
         let result = IamAccountServ::get_account_detail_aggs(&id.0, &IamAccountFilterReq::default(), true, false, &funs, &ctx.0).await?;
         ctx.0.execute_task().await?;
@@ -46,7 +46,7 @@ impl IamCaAccountApi {
         ctx: TardisContextExtractor,
         request: &Request,
     ) -> TardisApiResult<TardisPage<IamAccountSummaryAggResp>> {
-        add_remote_ip(&request, &ctx.0).await?;
+        add_remote_ip(request, &ctx.0).await?;
         let funs = iam_constants::get_tardis_inst();
         let rel2 = role_ids.0.map(|role_ids| {
             let role_ids = role_ids.split(',').map(|r| r.to_string()).collect::<Vec<_>>();
@@ -88,7 +88,7 @@ impl IamCaAccountApi {
     /// Count Accounts
     #[oai(path = "/total", method = "get")]
     async fn count(&self, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<u64> {
-        add_remote_ip(&request, &ctx.0).await?;
+        add_remote_ip(request, &ctx.0).await?;
         let funs = iam_constants::get_tardis_inst();
         let result = IamAccountServ::count_items(&IamAccountFilterReq::default(), &funs, &ctx.0).await?;
         ctx.0.execute_task().await?;

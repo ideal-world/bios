@@ -22,7 +22,7 @@ impl IamCpAccountApi {
     /// Modify Current Account
     #[oai(path = "/", method = "put")]
     async fn modify(&self, mut modify_req: Json<IamAccountSelfModifyReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
-        add_remote_ip(&request, &ctx.0).await?;
+        add_remote_ip(request, &ctx.0).await?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         let ctx: tardis::basic::dto::TardisContext = IamCertServ::use_sys_or_tenant_ctx_unsafe(ctx.0)?;
@@ -39,7 +39,7 @@ impl IamCpAccountApi {
     /// Get Current Account
     #[oai(path = "/", method = "get")]
     async fn get_current_account_info(&self, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<IamCpAccountInfoResp> {
-        add_remote_ip(&request, &ctx.0).await?;
+        add_remote_ip(request, &ctx.0).await?;
         let funs = iam_constants::get_tardis_inst();
         let result = IamCpAccountServ::get_current_account_info(true, &funs, &ctx.0).await?;
         ctx.0.execute_task().await?;

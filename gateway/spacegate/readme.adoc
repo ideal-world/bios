@@ -12,9 +12,9 @@
 |-- Dockerfile                      # Dockerfile
 ----
 
-==== How to use in k8s 
+==== How to use in k8s
 see  https://github.com/ideaworld/spacegate/docs/k8s/installtion.md[spacegate doc]
-but different: 
+but different:
 
 ==== Plugin
 ===== Auth

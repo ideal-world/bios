@@ -36,7 +36,7 @@ fn crypto_req(body: &str, serv_pub_key: &str, front_pub_key: &str, need_crypto_r
     } else {
         pub_key.encrypt(&format!("{sign_data} {sm4_key} {sm4_iv}",)).unwrap()
     };
-    let base64_encrypt = TardisFuns::crypto.base64.encode(&sm4_encrypt);
+    let base64_encrypt = TardisFuns::crypto.base64.encode(sm4_encrypt);
     (data, base64_encrypt)
 }
 
@@ -212,8 +212,8 @@ pub async fn test_encrypt() -> TardisResult<()> {
     assert_eq!(resp.status_code, 400);
     assert_eq!(resp.reason.unwrap(), "[Auth] Request is not legal, missing [path]");
 
-    let mock_body = r###"!@#$%^&*"()AZXdfds测试内容_~/n'//n/r/n'<>|\"###;
-    let mock_resp_body = r###"!@#$%^&*"()AZXdfds测试内容_~/n'//n/r/n'<>|\内容内容"###;
+    let mock_body = r#"!@#$%^&*"()AZXdfds测试内容_~/n'//n/r/n'<>|\"#;
+    let mock_resp_body = r#"!@#$%^&*"()AZXdfds测试内容_~/n'//n/r/n'<>|\内容内容"#;
 
     let resp = mock_req(
         "POST",

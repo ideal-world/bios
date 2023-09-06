@@ -23,7 +23,7 @@ impl IamCcResApi {
     /// Find Menu Tree
     #[oai(path = "/tree", method = "get")]
     async fn get_menu_tree(&self, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<RbumSetTreeResp> {
-        add_remote_ip(&request, &ctx.0).await?;
+        add_remote_ip(request, &ctx.0).await?;
         let funs = iam_constants::get_tardis_inst();
         let set_id = IamSetServ::get_set_id_by_code(&IamSetServ::get_default_code(&IamSetKind::Res, ""), true, &funs, &ctx.0).await?;
         let result = IamSetServ::get_menu_tree_by_roles(&set_id, &ctx.0.roles, &funs, &ctx.0).await?;
@@ -34,7 +34,7 @@ impl IamCcResApi {
     /// Find res by apps
     #[oai(path = "/res", method = "get")]
     async fn get_res_by_app(&self, app_ids: Query<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<HashMap<String, Vec<IamResSummaryResp>>> {
-        add_remote_ip(&request, &ctx.0).await?;
+        add_remote_ip(request, &ctx.0).await?;
         let funs = iam_constants::get_tardis_inst();
         let ids = app_ids.0.split(',').map(|s| s.to_string()).collect();
         let result = IamResServ::get_res_by_app(ids, &funs, &ctx.0).await?;

@@ -278,9 +278,7 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
     if let Some(ext) = &search_req.query.ext {
         for ext_item in ext {
             let value = db_helper::json_to_sea_orm_value(&ext_item.value, ext_item.op == BasicQueryOpKind::Like);
-            let Some(mut value) = value else {
-                return err_not_found(ext_item)
-            };
+            let Some(mut value) = value else { return err_not_found(ext_item) };
             if ext_item.op == BasicQueryOpKind::In {
                 let value = value.clone();
                 if value.len() == 1 {
@@ -314,12 +312,7 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
                     return err_not_found(ext_item);
                 }
                 let Some(value) = value.pop() else {
-                    return Err(funs.err().bad_request(
-                        "item",
-                        "search",
-                        "Request item using 'IN' operator show hava a value",
-                        "400-spi-item-op-in-without-value",
-                    ))
+                    return Err(funs.err().bad_request("item", "search", "Request item using 'IN' operator show hava a value", "400-spi-item-op-in-without-value"));
                 };
                 if let Value::Bool(_) = value {
                     where_fragments.push(format!("(ext ->> '{}')::boolean {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
@@ -400,9 +393,7 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
             if let Some(ext) = &group_query.ext {
                 for ext_item in ext {
                     let value = db_helper::json_to_sea_orm_value(&ext_item.value, ext_item.op == BasicQueryOpKind::Like);
-                    let Some(mut value) = value else {
-                        return err_not_found(ext_item)
-                    };
+                    let Some(mut value) = value else { return err_not_found(ext_item) };
                     if ext_item.op == BasicQueryOpKind::In {
                         if value.len() == 1 {
                             sql_and_where.push(format!("ext -> '{}' ? ${}", ext_item.field, sql_vals.len() + 1));
@@ -421,12 +412,7 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
                             return err_not_found(ext_item);
                         }
                         let Some(value) = value.pop() else {
-                            return Err(funs.err().bad_request(
-                                "item",
-                                "search",
-                                "Request item using 'IN' operator show hava a value",
-                                "400-spi-item-op-in-without-value",
-                            ))
+                            return Err(funs.err().bad_request("item", "search", "Request item using 'IN' operator show hava a value", "400-spi-item-op-in-without-value"));
                         };
                         if let Value::Bool(_) = value {
                             sql_and_where.push(format!("(ext ->> '{}')::boolean {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));

@@ -22,6 +22,10 @@ pub const CODE: &str = "anti_replay";
 pub struct SgFilterAntiReplayDef;
 
 impl SgPluginFilterDef for SgFilterAntiReplayDef {
+    fn get_code(&self) -> &str {
+        CODE
+    }
+
     fn inst(&self, spec: serde_json::Value) -> TardisResult<BoxSgPluginFilter> {
         let filter = TardisFuns::json.json_to_obj::<SgFilterAntiReplay>(spec)?;
         Ok(filter.boxed())
@@ -61,13 +65,14 @@ impl SgPluginFilter for SgFilterAntiReplay {
 
     async fn req_filter(&self, _: &str, mut ctx: SgRoutePluginContext) -> TardisResult<(bool, SgRoutePluginContext)> {
         let md5 = get_md5(&mut ctx)?;
-        if get_status(md5.clone(), &self.cache_key, ctx.cache()?).await? {
+        let cache = ctx.cache().await?;
+        if get_status(md5.clone(), &self.cache_key, &cache).await? {
             Err(TardisError::forbidden(
                 "[SG.Plugin.Anti_Replay] Request denied due to replay attack. Please refresh and resubmit the request.",
                 "",
             ))
         } else {
-            set_status(md5, &self.cache_key, true, ctx.cache()?).await?;
+            set_status(md5, &self.cache_key, true, &cache).await?;
             Ok((true, ctx))
         }
     }
@@ -79,8 +84,8 @@ impl SgPluginFilter for SgFilterAntiReplay {
         let time = self.time;
         tokio::spawn(async move {
             tokio::time::sleep(Duration::from_millis(time)).await;
-            let cache_client = spacegate_kernel::functions::cache_client::get(&name).expect("get cache client error!");
-            let _ = set_status(md5, &cache_key, false, cache_client).await;
+            let cache_client = spacegate_kernel::functions::cache_client::get(&name).await.expect("get cache client error!");
+            let _ = set_status(md5, &cache_key, false, &cache_client).await;
         });
         Ok((true, ctx))
     }
@@ -88,36 +93,35 @@ impl SgPluginFilter for SgFilterAntiReplay {
 
 fn get_md5(ctx: &mut SgRoutePluginContext) -> TardisResult<String> {
     let req = &mut ctx.request;
-    let method = req.get_method().clone();
     let data = format!(
         "{}{}{}{}",
         req.get_remote_addr(),
         req.get_uri_raw(),
-        method,
+        req.method.get(),
         req.get_headers_raw().iter().fold(String::new(), |mut c, (key, value)| {
-            c.push_str(&key.as_str());
-            c.push_str(&String::from_utf8_lossy(&value.as_bytes()));
+            c.push_str(key.as_str());
+            c.push_str(&String::from_utf8_lossy(value.as_bytes()));
             c
         }),
     );
-    tardis::crypto::crypto_digest::TardisCryptoDigest {}.md5(&data)
+    tardis::crypto::crypto_digest::TardisCryptoDigest {}.md5(data)
 }
 
-async fn set_status(md5: String, cache_key: &str, status: bool, cache_client: &TardisCacheClient) -> TardisResult<()> {
+async fn set_status(md5: String, cache_key: &str, status: bool, cache_client: impl AsRef<TardisCacheClient>) -> TardisResult<()> {
     let (split1, split2) = md5.split_at(16);
     let split1 = u128::from_str_radix(split1, 16)? as u32;
     let split2 = u128::from_str_radix(split2, 16)? as u32;
-    cache_client.setbit(&format!("{cache_key}:1"), split1 as usize, status).await?;
-    cache_client.setbit(&format!("{cache_key}:2"), split2 as usize, status).await?;
+    cache_client.as_ref().setbit(&format!("{cache_key}:1"), split1 as usize, status).await?;
+    cache_client.as_ref().setbit(&format!("{cache_key}:2"), split2 as usize, status).await?;
     Ok(())
 }
 
-async fn get_status(md5: String, cache_key: &str, cache_client: &TardisCacheClient) -> TardisResult<bool> {
+async fn get_status(md5: String, cache_key: &str, cache_client: impl AsRef<TardisCacheClient>) -> TardisResult<bool> {
     let (split1, split2) = md5.split_at(16);
     let split1 = u128::from_str_radix(split1, 16)? as u32;
     let split2 = u128::from_str_radix(split2, 16)? as u32;
-    let status1 = cache_client.getbit(&format!("{cache_key}:1"), split1 as usize).await?;
-    let status2 = cache_client.getbit(&format!("{cache_key}:2"), split2 as usize).await?;
+    let status1 = cache_client.as_ref().getbit(&format!("{cache_key}:1"), split1 as usize).await?;
+    let status2 = cache_client.as_ref().getbit(&format!("{cache_key}:2"), split2 as usize).await?;
     Ok(status1 && status2)
 }
 
