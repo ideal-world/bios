@@ -8,7 +8,7 @@ use bios_auth::{
     },
     serv::{auth_crypto_serv, auth_kernel_serv, auth_res_serv},
 };
-use lazy_static::lazy_static;
+
 use serde::{Deserialize, Serialize};
 use spacegate_kernel::{
     http::{self, HeaderMap, HeaderName, HeaderValue},
@@ -25,7 +25,7 @@ use spacegate_kernel::{
         filters::SgPluginFilterInitDto,
     },
 };
-use std::{collections::HashMap, str::FromStr, sync::Arc};
+use std::{collections::HashMap, str::FromStr, sync::{Arc, OnceLock}};
 use tardis::{
     async_trait,
     basic::{error::TardisError, result::TardisResult, tracing::TardisTracing},
@@ -39,10 +39,8 @@ use tardis::{
 };
 
 use super::plugin_constants;
-
-lazy_static! {
-    static ref INSTANCE: Arc<RwLock<Option<(String, JoinHandle<()>)>>> = <_>::default();
-}
+#[allow(clippy::type_complexity)]
+static INSTANCE: OnceLock<Arc<RwLock<Option<(String, JoinHandle<()>)>>>> = OnceLock::new();
 
 pub const CODE: &str = "auth";
 pub struct SgFilterAuthDef;
@@ -54,6 +52,10 @@ impl SgPluginFilterDef for SgFilterAuthDef {
     fn inst(&self, spec: serde_json::Value) -> TardisResult<BoxSgPluginFilter> {
         let filter = TardisFuns::json.json_to_obj::<SgFilterAuth>(spec)?;
         Ok(filter.boxed())
+    }
+
+    fn get_code(&self) -> &str {
+        CODE
     }
 }
 
@@ -114,7 +116,8 @@ impl SgPluginFilter for SgFilterAuth {
 
     async fn init(&mut self, init_dto: &SgPluginFilterInitDto) -> TardisResult<()> {
         let config_md5 = TardisFuns::crypto.digest.md5(TardisFuns::json.obj_to_string(self)?)?;
-        let mut instance = INSTANCE.write().await;
+
+        let mut instance = INSTANCE.get_or_init(Default::default).write().await;
         if let Some((md5, handle)) = instance.as_ref() {
             if config_md5.eq(md5) {
                 log::debug!("[SG.Filter.Auth] have not found config change");
@@ -167,7 +170,6 @@ impl SgPluginFilter for SgFilterAuth {
         let handle = auth_initializer::init().await?;
         *instance = Some((config_md5, handle));
         log::info!("[SG.Filter.Auth] init done");
-
         if let Some(log_level) = &init_dto.gateway_parameters.log_level {
             let _ = TardisTracing::update_log_level_by_domain_code(crate::DOMAIN_CODE, log_level);
         }
@@ -376,7 +378,7 @@ async fn ctx_to_auth_encrypt_req(ctx: &mut SgRoutePluginContext) -> TardisResult
     let body_as_bytes = ctx.response.take_body_into_bytes().await?;
     let body = String::from_utf8_lossy(&body_as_bytes);
     if !body.is_empty() {
-        ctx.set_ext(plugin_constants::BEFORE_ENCRYPT_BODY, body.clone());
+        ctx.set_ext(plugin_constants::BEFORE_ENCRYPT_BODY, body.to_string());
     }
 
     Ok(AuthEncryptReq {

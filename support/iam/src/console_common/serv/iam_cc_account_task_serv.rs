@@ -71,7 +71,7 @@ impl IamCcAccountTaskServ {
                     }
                     match account.scope_level.clone() {
                         bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind::Private => {
-                            if account.own_paths.len() > 0 {
+                            if !account.own_paths.is_empty() {
                                 let tenant_config = IamTenantServ::get_tenant_config_agg(&account.own_paths, &funs, &task_ctx).await?;
                                 Self::task_modify_account_agg(account, tenant_config.config, &funs, &task_ctx).await?;
                             } else {
@@ -109,13 +109,16 @@ impl IamCcAccountTaskServ {
                 owners: Some(vec![account.id.clone()]),
                 ..Default::default()
             },
-            &funs,
-            &ctx,
+            funs,
+            ctx,
         )
         .await?;
         let account_log = if let Some(log_page) = token_log_resp {
-            let account_log = if log_page.records.len() > 0 { Some(log_page.records[0].clone()) } else { None };
-            account_log
+            if !log_page.records.is_empty() {
+                Some(log_page.records[0].clone())
+            } else {
+                None
+            }
         } else {
             None
         };

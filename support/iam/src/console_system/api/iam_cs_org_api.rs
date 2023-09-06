@@ -38,7 +38,7 @@ impl IamCsOrgApi {
     ) -> TardisApiResult<RbumSetTreeResp> {
         let funs = iam_constants::get_tardis_inst();
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
-        add_remote_ip(&request, &ctx).await?;
+        add_remote_ip(request, &ctx).await?;
         let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, &funs, &ctx).await?;
         let result = IamSetServ::get_tree(
             &set_id,
@@ -59,7 +59,7 @@ impl IamCsOrgApi {
     /// Add Org Cate
     #[oai(path = "/cate", method = "post")]
     async fn add_cate(&self, mut add_req: Json<IamSetCateAddReq>, tenant_id: Query<Option<String>>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<String> {
-        add_remote_ip(&request, &ctx.0).await?;
+        add_remote_ip(request, &ctx.0).await?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         let result = IamCsOrgServ::add_set_cate(tenant_id.0, &mut add_req.0, &funs, &ctx.0).await?;
@@ -81,7 +81,7 @@ impl IamCsOrgApi {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
-        add_remote_ip(&request, &ctx).await?;
+        add_remote_ip(request, &ctx).await?;
         IamSetServ::modify_set_cate(&id.0, &modify_req.0, &funs, &ctx).await?;
         funs.commit().await?;
         ctx.execute_task().await?;
@@ -94,7 +94,7 @@ impl IamCsOrgApi {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
-        add_remote_ip(&request, &ctx).await?;
+        add_remote_ip(request, &ctx).await?;
         IamSetServ::delete_set_cate(&id.0, &funs, &ctx).await?;
         funs.commit().await?;
         ctx.execute_task().await?;
@@ -109,7 +109,7 @@ impl IamCsOrgApi {
     /// 如果平台绑定的节点下有其他节点，那么全部剪切到租户层，解绑的时候需要拷贝一份去平台，并且保留租户的节点
     #[oai(path = "/cate/:id/rel/tenant/:tenant_id", method = "post")]
     async fn bind_cate_with_platform(&self, id: Path<String>, tenant_id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
-        add_remote_ip(&request, &ctx.0).await?;
+        add_remote_ip(request, &ctx.0).await?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         IamCsOrgServ::bind_cate_with_tenant(&id.0, &tenant_id.0, &IamSetKind::Org, &funs, &ctx.0).await?;
@@ -121,7 +121,7 @@ impl IamCsOrgApi {
     /// Unbind Tenant Org
     #[oai(path = "/cate/:id/rel", method = "delete")]
     async fn unbind_cate_with_tenant(&self, id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
-        add_remote_ip(&request, &ctx.0).await?;
+        add_remote_ip(request, &ctx.0).await?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         let old_rel = RbumRelServ::find_one_rbum(
@@ -152,7 +152,7 @@ impl IamCsOrgApi {
     /// Query tenant IDs that have already been bound
     #[oai(path = "/tenant/rel", method = "get")]
     async fn find_rel_tenant_org(&self, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Vec<String>> {
-        add_remote_ip(&request, &ctx.0).await?;
+        add_remote_ip(request, &ctx.0).await?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         let result = IamCsOrgServ::find_rel_tenant_org(&funs, &ctx.0).await?;
@@ -176,7 +176,7 @@ impl IamCsOrgItemApi {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
-        add_remote_ip(&request, &ctx).await?;
+        add_remote_ip(request, &ctx).await?;
         let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, &funs, &ctx).await?;
         let split = add_req.rel_rbum_item_id.split(',').collect::<Vec<_>>();
         let mut result = vec![];
@@ -211,7 +211,7 @@ impl IamCsOrgItemApi {
     ) -> TardisApiResult<Vec<RbumSetItemDetailResp>> {
         let funs = iam_constants::get_tardis_inst();
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0.clone())?;
-        add_remote_ip(&request, &ctx).await?;
+        add_remote_ip(request, &ctx).await?;
         let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, &funs, &ctx).await?;
         let scope_level = if tenant_id.is_none() || tenant_id.0.clone().unwrap_or_default().is_empty() {
             None
@@ -229,7 +229,7 @@ impl IamCsOrgItemApi {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
-        add_remote_ip(&request, &ctx).await?;
+        add_remote_ip(request, &ctx).await?;
         IamSetServ::delete_set_item(&id.0, &funs, &ctx).await?;
         funs.commit().await?;
         ctx.execute_task().await?;

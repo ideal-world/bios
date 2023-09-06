@@ -171,7 +171,7 @@ pub async fn encrypt_body(req: &AuthEncryptReq) -> TardisResult<AuthEncryptResp>
         .encrypt(&format!("{sign_data} {sm4_key} {sm4_iv}"))
         .map_err(|e| TardisError::bad_request(&format!("[Auth] Encrypt response: key encrypt error:{e}"), "401-auth-req-crypto-error"))?;
     Ok(AuthEncryptResp {
-        headers: HashMap::from([(config.head_key_crypto.to_string(), TardisFuns::crypto.base64.encode(&pub_key))]),
+        headers: HashMap::from([(config.head_key_crypto.to_string(), TardisFuns::crypto.base64.encode(pub_key))]),
         body: data,
     })
 }

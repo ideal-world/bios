@@ -43,6 +43,10 @@ impl SgPluginFilterDef for SgFilterAuditLogDef {
         let filter = TardisFuns::json.json_to_obj::<SgFilterAuditLog>(spec)?;
         Ok(filter.boxed())
     }
+
+    fn get_code(&self) -> &str {
+        CODE
+    }
 }
 
 #[derive(Serialize, Deserialize)]

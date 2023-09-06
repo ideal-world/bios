@@ -10,7 +10,6 @@ use serde::Serialize;
 
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
-    log::info,
     serde_json::json,
     tokio, TardisFuns, TardisFunsInst,
 };

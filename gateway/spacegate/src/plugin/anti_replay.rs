@@ -30,6 +30,10 @@ impl SgPluginFilterDef for SgFilterAntiReplayDef {
         let filter = TardisFuns::json.json_to_obj::<SgFilterAntiReplay>(spec)?;
         Ok(filter.boxed())
     }
+
+    fn get_code(&self) -> &str {
+        CODE
+    }
 }
 
 #[derive(Serialize, Deserialize)]
@@ -65,13 +69,14 @@ impl SgPluginFilter for SgFilterAntiReplay {
 
     async fn req_filter(&self, _: &str, mut ctx: SgRoutePluginContext) -> TardisResult<(bool, SgRoutePluginContext)> {
         let md5 = get_md5(&mut ctx)?;
-        if get_status(md5.clone(), &self.cache_key, ctx.cache().await?).await? {
+        let cache = ctx.cache().await?;
+        if get_status(md5.clone(), &self.cache_key, &cache).await? {
             Err(TardisError::forbidden(
                 "[SG.Plugin.Anti_Replay] Request denied due to replay attack. Please refresh and resubmit the request.",
                 "",
             ))
         } else {
-            set_status(md5, &self.cache_key, true, ctx.cache().await?).await?;
+            set_status(md5, &self.cache_key, true, &cache).await?;
             Ok((true, ctx))
         }
     }
@@ -97,7 +102,7 @@ fn get_md5(ctx: &mut SgRoutePluginContext) -> TardisResult<String> {
         "{}{}{}{}",
         req.get_remote_addr(),
         req.get_uri_raw(),
-        method,
+        req.method.get(),
         req.get_headers_raw().iter().fold(String::new(), |mut c, (key, value)| {
             c.push_str(key.as_str());
             c.push_str(&String::from_utf8_lossy(value.as_bytes()));
