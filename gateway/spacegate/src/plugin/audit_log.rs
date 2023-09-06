@@ -153,10 +153,8 @@ impl SgPluginFilter for SgFilterAuditLog {
 
     async fn init(&mut self, _: &SgPluginFilterInitDto) -> TardisResult<()> {
         if !self.log_url.is_empty() && !self.spi_app_id.is_empty() {
-            log::info!("=========success_json_path:{}", self.success_json_path);
             if let Ok(jsonpath_inst) = JsonPathInst::from_str(&self.success_json_path).map_err(|e| log::error!("[Plugin.AuditLog] invalid json path:{e}")) {
                 self.jsonpath_inst = Some(jsonpath_inst);
-                log::info!("=========jsonpath_inst:Some",);
             } else {
                 self.enabled = false;
                 return Ok(());
