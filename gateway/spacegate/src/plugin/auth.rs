@@ -54,9 +54,6 @@ impl SgPluginFilterDef for SgFilterAuthDef {
         Ok(filter.boxed())
     }
 
-    fn get_code(&self) -> &str {
-        CODE
-    }
 }
 
 #[derive(Serialize, Deserialize)]

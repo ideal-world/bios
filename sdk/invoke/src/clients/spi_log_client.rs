@@ -50,7 +50,6 @@ pub struct LogDynamicContentReq {
     pub content: Option<String>,
 }
 
-#[allow(dead_code)]
 impl SpiLogClient {
     pub async fn add_dynamic_log(
         content: &LogDynamicContentReq,
