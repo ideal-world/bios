@@ -25,6 +25,10 @@ impl SgPluginFilterDef for SgFilterIpTimeDef {
         let filter: SgFilterIpTime = config.into();
         Ok(filter.boxed())
     }
+
+    fn get_code(&self) -> &str {
+        CODE
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, Default)]
