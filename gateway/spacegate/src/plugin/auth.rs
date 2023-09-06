@@ -28,7 +28,7 @@ use spacegate_kernel::{
 use std::{collections::HashMap, str::FromStr, sync::Arc};
 use tardis::{
     async_trait,
-    basic::{error::TardisError, result::TardisResult},
+    basic::{error::TardisError, result::TardisResult, tracing::TardisTracing},
     config::config_dto::{AppConfig, CacheConfig, DBConfig, FrameworkConfig, LogConfig, TardisConfig, WebServerConfig},
     log,
     serde_json::{self, json, Value},
@@ -165,6 +165,9 @@ impl SgPluginFilter for SgFilterAuth {
         *instance = Some((config_md5, handle));
         log::info!("[SG.Filter.Auth] init done");
 
+        if let Some(log_level) = &init_dto.gateway_parameters.log_level {
+            let _ = TardisTracing::update_log_level_by_domain_code(crate::DOMAIN_CODE, log_level);
+        }
         Ok(())
     }
 
