@@ -10,10 +10,12 @@ use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
 use crate::basic::dto::iam_filer_dto::IamRoleFilterReq;
 use crate::basic::dto::iam_role_dto::{IamRoleAggAddReq, IamRoleAggModifyReq, IamRoleDetailResp, IamRoleSummaryResp};
+use crate::basic::serv::iam_app_serv::IamAppServ;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_role_serv::IamRoleServ;
 use crate::iam_constants::RBUM_SCOPE_LEVEL_TENANT;
 use crate::iam_constants::{self, RBUM_SCOPE_LEVEL_APP};
+
 use crate::iam_enumeration::IamRoleKind;
 use bios_basic::helper::request_helper::add_remote_ip;
 use tardis::web::poem::Request;
@@ -239,12 +241,12 @@ impl IamCtRoleApi {
     }
 
     /// Add Role Rel Account
-    #[oai(path = "/apps/:app_ids/:id/account/batch/:account_ids", method = "put")]
+    #[oai(path = "/:id/apps/account/batch", method = "put")]
     async fn batch_add_apps_rel_account(
         &self,
-        app_ids: Path<String>,
         id: Path<String>,
-        account_ids: Path<String>,
+        app_ids: Query<String>,
+        account_ids: Query<String>,
         ctx: TardisContextExtractor,
         request: &Request,
     ) -> TardisApiResult<Void> {
@@ -257,6 +259,7 @@ impl IamCtRoleApi {
         for app_id in apps_split {
             let mock_app_ctx = IamCertServ::try_use_app_ctx(ctx.clone(), Some(app_id.to_string()))?;
             for account_id in account_split.clone() {
+                IamAppServ::add_rel_account(&app_id, account_id, true, &funs, &mock_app_ctx).await?;
                 IamRoleServ::add_rel_account(&id.0, &account_id, Some(RBUM_SCOPE_LEVEL_APP), &funs, &mock_app_ctx).await?;
             }
         }
@@ -266,12 +269,12 @@ impl IamCtRoleApi {
     }
 
     /// Add Role Rel Account
-    #[oai(path = "/apps/:app_ids/:id/account/batch/:account_ids", method = "delete")]
+    #[oai(path = "/:id/apps/account/batch", method = "delete")]
     async fn batch_delete_apps_rel_account(
         &self,
-        app_ids: Path<String>,
         id: Path<String>,
-        account_ids: Path<String>,
+        app_ids: Query<String>,
+        account_ids: Query<String>,
         ctx: TardisContextExtractor,
         request: &Request,
     ) -> TardisApiResult<Void> {
