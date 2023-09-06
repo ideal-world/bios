@@ -41,9 +41,9 @@ pub async fn add(add_req: &mut SearchItemAddReq, _funs: &TardisFunsInst, ctx: &T
     conn.execute_one(
         &format!(
             r#"INSERT INTO {table_name} 
-    (kind, key, title, title_tsv, content_tsv, owner, own_paths, create_time, update_time, ext, visit_keys)
+    (kind, key, title, title_tsv,content, content_tsv, owner, own_paths, create_time, update_time, ext, visit_keys)
 VALUES
-    ($1, $2, $3, to_tsvector('public.chinese_zh', $4), to_tsvector('public.chinese_zh', $5), $6, $7, $8, $9, $10, {})"#,
+    ($1, $2, $3, to_tsvector('public.chinese_zh', $4), $5, to_tsvector('public.chinese_zh', $5), $6, $7, $8, $9, $10, {})"#,
             if add_req.visit_keys.is_some() { "$11" } else { "null" },
         ),
         params,
@@ -72,6 +72,7 @@ pub async fn modify(tag: &str, key: &str, modify_req: &mut SearchItemModifyReq, 
         params.push(Value::from(title));
     };
     if let Some(content) = &modify_req.content {
+        sql_sets.push(format!("content = ${}", params.len() + 1));
         sql_sets.push(format!("content_tsv = to_tsvector('public.chinese_zh', ${})", params.len() + 1));
         params.push(Value::from(content));
     };
@@ -462,14 +463,15 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
     let result = conn
         .query_all(
             format!(
-                r#"SELECT kind, key, title, owner, own_paths, create_time, update_time, ext{}{}
+                r#"SELECT kind, key, title, owner, own_paths, create_time, update_time, ext{}{}{}
 FROM {table_name}{}
 WHERE 
     {}
-    {}
     {sql_adv_query}
+    {}
 {}"#,
                 if search_req.page.fetch_total { ", count(*) OVER() AS total" } else { "" },
+                if search_req.query.in_q_content.unwrap_or(false) { ", content" } else { "" },
                 select_fragments,
                 from_fragments,
                 where_fragments.join(" AND "),
@@ -496,6 +498,7 @@ WHERE
                 kind: item.try_get("", "kind")?,
                 key: item.try_get("", "key")?,
                 title: item.try_get("", "title")?,
+                content: item.try_get("", "content").unwrap_or_default(),
                 owner: item.try_get("", "owner")?,
                 own_paths: item.try_get("", "own_paths")?,
                 create_time: item.try_get("", "create_time")?,

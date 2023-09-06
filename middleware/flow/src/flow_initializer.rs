@@ -204,7 +204,7 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                 ("已关闭", FlowSysStateKind::Finish),
                 ("已撤销", FlowSysStateKind::Finish),
             ],
-            "默认工单模板",
+            "待处理-处理中-待确认-已关闭-已撤销",
             vec![
                 FlowTransitionInitInfo {
                     from_flow_state_name: "待处理".to_string(),
@@ -275,7 +275,7 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                 ("已完成", FlowSysStateKind::Finish),
                 ("已关闭", FlowSysStateKind::Finish),
             ],
-            "默认需求模板",
+            "待开始-进行中-已完成-已关闭",
             vec![
                 FlowTransitionInitInfo {
                     from_flow_state_name: "待开始".to_string(),
@@ -352,7 +352,7 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                 ("已关闭", FlowSysStateKind::Finish),
                 ("已归档", FlowSysStateKind::Finish),
             ],
-            "默认项目模板",
+            "待开始-进行中-存在风险-已完成-已关闭-已归档",
             vec![
                 FlowTransitionInitInfo {
                     from_flow_state_name: "待开始".to_string(),
@@ -476,7 +476,7 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                 ("已完成", FlowSysStateKind::Progress),
                 ("已关闭", FlowSysStateKind::Finish),
             ],
-            "默认里程碑模板",
+            "待开始-进行中-存在风险-已完成-已关闭",
             vec![
                 FlowTransitionInitInfo {
                     from_flow_state_name: "待开始".to_string(),
@@ -576,7 +576,7 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                 ("已完成", FlowSysStateKind::Progress),
                 ("已关闭", FlowSysStateKind::Finish),
             ],
-            "默认迭代模板",
+            "待开始-进行中-存在风险-已完成-已关闭",
             vec![
                 FlowTransitionInitInfo {
                     from_flow_state_name: "待开始".to_string(),
@@ -676,7 +676,7 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                 ("已完成", FlowSysStateKind::Progress),
                 ("已关闭", FlowSysStateKind::Finish),
             ],
-            "默认任务模板",
+            "待开始-进行中-存在风险-已完成-已关闭",
             vec![
                 FlowTransitionInitInfo {
                     from_flow_state_name: "待开始".to_string(),
@@ -776,7 +776,7 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                 ("已完成", FlowSysStateKind::Progress),
                 ("已关闭", FlowSysStateKind::Finish),
             ],
-            "默认测试计划模板",
+            "待开始-进行中-存在风险-已完成-已关闭",
             vec![
                 FlowTransitionInitInfo {
                     from_flow_state_name: "待开始".to_string(),
@@ -876,7 +876,7 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                 ("已完成", FlowSysStateKind::Progress),
                 ("已关闭", FlowSysStateKind::Finish),
             ],
-            "默认测试阶段模板",
+            "待开始-进行中-存在风险-已完成-已关闭",
             vec![
                 FlowTransitionInitInfo {
                     from_flow_state_name: "待开始".to_string(),
@@ -976,7 +976,7 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                 ("已解决", FlowSysStateKind::Progress),
                 ("已关闭", FlowSysStateKind::Finish),
             ],
-            "默认缺陷模板",
+            "待处理-修复中-待确认-已解决-已关闭",
             vec![
                 FlowTransitionInitInfo {
                     from_flow_state_name: "待处理".to_string(),
@@ -1057,7 +1057,7 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                 ("已退回", FlowSysStateKind::Finish),
                 ("已撤销", FlowSysStateKind::Finish),
             ],
-            "默认转测单模板",
+            "待接收-已接收-已退回-已撤销",
             vec![
                 FlowTransitionInitInfo {
                     from_flow_state_name: "待接收".to_string(),

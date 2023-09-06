@@ -461,21 +461,29 @@ impl IamRoleServ {
         {
             return Err(funs.err().conflict(&Self::get_obj_name(), "add_rel_account", "associated role is invalid", "409-iam-role-rel-conflict"));
         }
-        if let Some(spec_scope_level) = spec_scope_level {
-            let role = Self::peek_item(role_id, &IamRoleFilterReq::default(), funs, ctx).await?;
-            // The role is not private and current scope
-            if role.scope_level != RbumScopeLevelKind::Private && role.scope_level.to_int() < spec_scope_level.to_int() {
-                return Err(funs.err().conflict(&Self::get_obj_name(), "add_rel_account", "associated role is invalid", "409-iam-role-rel-conflict"));
-            }
-        }
+
         match Self::get_embed_subrole_id(role_id, funs, ctx).await {
             Ok(sub_role_id) => {
-                IamRelServ::add_simple_rel(&IamRelKind::IamAccountRole, account_id, &sub_role_id, None, None, false, false, funs, ctx).await?;
+                if let Some(spec_scope_level) = spec_scope_level {
+                    let role = Self::peek_item(&sub_role_id, &IamRoleFilterReq::default(), funs, ctx).await?;
+                    // The role is not private and current scope
+                    if role.scope_level != RbumScopeLevelKind::Private && role.scope_level.to_int() < spec_scope_level.to_int() {
+                        return Err(funs.err().conflict(&Self::get_obj_name(), "add_rel_account", "associated role is invalid", "409-iam-role-rel-conflict"));
+                    }
+                }
+                IamRelServ::add_simple_rel(&IamRelKind::IamAccountRole, account_id, &sub_role_id, None, None, true, false, funs, ctx).await?;
             }
             Err(_) => {
+                if let Some(spec_scope_level) = spec_scope_level {
+                    let role = Self::peek_item(&role_id, &IamRoleFilterReq::default(), funs, ctx).await?;
+                    // The role is not private and current scope
+                    if role.scope_level != RbumScopeLevelKind::Private && role.scope_level.to_int() < spec_scope_level.to_int() {
+                        return Err(funs.err().conflict(&Self::get_obj_name(), "add_rel_account", "associated role is invalid", "409-iam-role-rel-conflict"));
+                    }
+                }
                 // TODO only bind the same own_paths roles
                 // E.g. sys admin can't bind tenant admin
-                IamRelServ::add_simple_rel(&IamRelKind::IamAccountRole, account_id, role_id, None, None, false, false, funs, ctx).await?;
+                IamRelServ::add_simple_rel(&IamRelKind::IamAccountRole, account_id, role_id, None, None, true, false, funs, ctx).await?;
             }
         }
         IamAccountServ::async_add_or_modify_account_search(account_id.to_string(), Box::new(true), "".to_string(), funs, ctx).await?;
@@ -582,7 +590,7 @@ impl IamRoleServ {
     }
 
     pub async fn count_rel_res(role_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<u64> {
-        let count = IamRelServ::count_to_rels(&IamRelKind::IamResRole, role_id, funs, ctx).await?;
+        let mut count = IamRelServ::count_to_rels(&IamRelKind::IamResRole, role_id, funs, ctx).await?;
         let role = Self::get_item(
             role_id,
             &IamRoleFilterReq {
@@ -603,7 +611,7 @@ impl IamRoleServ {
                 ..ctx.clone()
             };
             let extend_count = IamRelServ::count_to_rels(&IamRelKind::IamResRole, &role.extend_role_id, funs, &moke_ctx).await?;
-            count.add(extend_count);
+            count = count.add(extend_count);
         }
         Ok(count)
     }

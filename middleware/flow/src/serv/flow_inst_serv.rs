@@ -611,6 +611,19 @@ impl FlowInstServ {
         }
 
         let next_flow_transition = next_flow_transition.unwrap();
+        let prev_flow_state = FlowStateServ::get_item(
+            &flow_inst_detail.current_state_id,
+            &FlowStateFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?;
         let next_flow_state = FlowStateServ::get_item(
             &next_flow_transition.next_flow_state_id,
             &FlowStateFilterReq {
@@ -712,10 +725,12 @@ impl FlowInstServ {
         let next_flow_transitions = Self::do_find_next_transitions(&flow_inst_detail, &flow_model, None, &None, funs, ctx).await?.next_flow_transitions;
 
         Ok(FlowInstTransferResp {
-            prev_flow_state_id: flow_inst_detail.current_state_id,
-            prev_flow_state_name: flow_inst_detail.current_state_name,
-            new_flow_state_id: next_flow_transition.next_flow_state_id,
-            new_flow_state_name: next_flow_transition.next_flow_state_name,
+            prev_flow_state_id: prev_flow_state.id,
+            prev_flow_state_name: prev_flow_state.name,
+            prev_flow_state_color: prev_flow_state.color,
+            new_flow_state_id: next_flow_state.id,
+            new_flow_state_name: next_flow_state.name,
+            new_flow_state_color: next_flow_state.color,
             finish_time,
             vars: Some(new_vars),
             next_flow_transitions,
@@ -997,7 +1012,7 @@ impl FlowInstServ {
                 }
                 if model_transition.guard_by_assigned
                     && flow_inst.current_assigned.is_some()
-                    && !(flow_inst.current_assigned.clone().unwrap() != ctx.own_paths || flow_inst.current_assigned.clone().unwrap() != ctx.owner)
+                    && flow_inst.current_assigned.clone().unwrap().split(',').collect_vec().contains(&ctx.owner.as_str())
                 {
                     return true;
                 }
@@ -1063,5 +1078,24 @@ impl FlowInstServ {
             next_flow_transitions: next_transitions,
         };
         Ok(state_and_next_transitions)
+    }
+
+    pub async fn state_is_used(flow_model_id: &str, flow_state_id: &str, funs: &TardisFunsInst, _ctx: &TardisContext) -> TardisResult<bool> {
+        if funs
+            .db()
+            .count(
+                Query::select()
+                    .column((flow_inst::Entity, flow_inst::Column::Id))
+                    .from(flow_inst::Entity)
+                    .and_where(Expr::col((flow_inst::Entity, flow_inst::Column::CurrentStateId)).eq(flow_state_id))
+                    .and_where(Expr::col((flow_inst::Entity, flow_inst::Column::RelFlowModelId)).eq(flow_model_id)),
+            )
+            .await?
+            != 0
+        {
+            Ok(true)
+        } else {
+            Ok(false)
+        }
     }
 }

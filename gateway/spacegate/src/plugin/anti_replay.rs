@@ -92,7 +92,8 @@ impl SgPluginFilter for SgFilterAntiReplay {
 }
 
 fn get_md5(ctx: &mut SgRoutePluginContext) -> TardisResult<String> {
-    let req = &ctx.request;
+    let req = &mut ctx.request;
+    let method = req.get_method().clone();
     let data = format!(
         "{}{}{}{}",
         req.get_remote_addr(),

@@ -154,6 +154,7 @@ pub struct AdvSearchItemQueryReq {
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Default)]
 pub struct SearchItemQueryReq {
+    pub in_q_content: Option<bool>,
     // Fuzzy search content
     pub q: Option<String>,
     // Fuzzy search scope
@@ -225,6 +226,8 @@ pub struct SearchItemSearchResp {
     pub key: String,
     #[oai(validator(min_length = "2"))]
     pub title: String,
+    #[oai(validator(min_length = "2"))]
+    pub content: String,
     #[oai(validator(min_length = "2"))]
     pub owner: String,
     #[oai(validator(min_length = "2"))]
