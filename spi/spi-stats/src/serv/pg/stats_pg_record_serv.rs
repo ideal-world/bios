@@ -758,7 +758,13 @@ WHERE key = $1
     Ok(())
 }
 
-pub(crate) async fn dim_record_real_delete(dim_conf_key: String, dim_record_key: serde_json::Value, funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
+pub(crate) async fn dim_record_real_delete(
+    dim_conf_key: String,
+    dim_record_key: serde_json::Value,
+    funs: &TardisFunsInst,
+    ctx: &TardisContext,
+    inst: &SpiBsInst,
+) -> TardisResult<()> {
     let bs_inst = inst.inst::<TardisRelDBClient>();
     let (mut conn, _) = common_pg::init_conn(bs_inst).await?;
     conn.begin().await?;
@@ -770,13 +776,7 @@ pub(crate) async fn dim_record_real_delete(dim_conf_key: String, dim_record_key:
     let table_name = package_table_name(&format!("stats_inst_dim_{}", dim_conf.key), ctx);
     let values = vec![dim_conf.data_type.json_to_sea_orm_value(&dim_record_key, false)?];
 
-    conn.execute_one(
-        &format!(
-            r#"delete {table_name} WHERE key = $1 "#,
-        ),
-        values,
-    )
-    .await?;
+    conn.execute_one(&format!(r#"delete {table_name} WHERE key = $1 "#,), values).await?;
     conn.commit().await?;
     Ok(())
 }
