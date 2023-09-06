@@ -10,11 +10,11 @@ pub const DOMAIN_CODE: &str = "bios_spacegate";
 async fn main() -> TardisResult<()> {
     TardisFuns::init_log()?;
     let namespaces = std::env::args().nth(1).map(Some).unwrap_or(None);
-    spacegate_kernel::register_filter_def(audit_log::CODE, Box::new(audit_log::SgFilterAuditLogDef));
-    spacegate_kernel::register_filter_def(ip_time::CODE, Box::new(ip_time::SgFilterIpTimeDef));
-    spacegate_kernel::register_filter_def(anti_replay::CODE, Box::new(anti_replay::SgFilterAntiReplayDef));
-    spacegate_kernel::register_filter_def(anti_xss::CODE, Box::new(anti_xss::SgFilterAntiXSSDef));
-    spacegate_kernel::register_filter_def(auth::CODE, Box::new(auth::SgFilterAuthDef));
+    spacegate_kernel::register_filter_def(audit_log::SgFilterAuditLogDef);
+    spacegate_kernel::register_filter_def(ip_time::SgFilterIpTimeDef);
+    spacegate_kernel::register_filter_def(anti_replay::SgFilterAntiReplayDef);
+    spacegate_kernel::register_filter_def(anti_xss::SgFilterAntiXSSDef);
+    spacegate_kernel::register_filter_def(auth::SgFilterAuthDef);
     spacegate_kernel::startup(true, namespaces, None).await?;
     spacegate_kernel::wait_graceful_shutdown().await
 }

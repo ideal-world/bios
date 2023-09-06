@@ -48,6 +48,9 @@ pub const CODE: &str = "auth";
 pub struct SgFilterAuthDef;
 
 impl SgPluginFilterDef for SgFilterAuthDef {
+    fn get_code(&self) -> &str {
+        CODE
+    }
     fn inst(&self, spec: serde_json::Value) -> TardisResult<BoxSgPluginFilter> {
         let filter = TardisFuns::json.json_to_obj::<SgFilterAuth>(spec)?;
         Ok(filter.boxed())
@@ -110,7 +113,7 @@ impl SgPluginFilter for SgFilterAuth {
     }
 
     async fn init(&mut self, init_dto: &SgPluginFilterInitDto) -> TardisResult<()> {
-        let config_md5 = TardisFuns::crypto.digest.md5(&TardisFuns::json.obj_to_string(self)?)?;
+        let config_md5 = TardisFuns::crypto.digest.md5(TardisFuns::json.obj_to_string(self)?)?;
         let mut instance = INSTANCE.write().await;
         if let Some((md5, handle)) = instance.as_ref() {
             if config_md5.eq(md5) {
@@ -318,7 +321,7 @@ async fn mix_req_to_ctx(auth_config: &AuthConfig, mut ctx: SgRoutePluginContext)
 async fn ctx_to_auth_req(ctx: &mut SgRoutePluginContext) -> TardisResult<(AuthReq, Bytes)> {
     let url = ctx.request.get_uri().clone();
     let scheme = url.scheme().map(|s| s.to_string()).unwrap_or("http".to_string());
-    let headers = headermap_header_to_hashmap(&ctx.request.get_headers())?;
+    let headers = headermap_header_to_hashmap(ctx.request.get_headers())?;
     let req_body = ctx.request.take_body_into_bytes().await?;
     let body = String::from_utf8_lossy(&req_body).trim_matches('"').to_string();
     Ok((
@@ -373,7 +376,7 @@ async fn ctx_to_auth_encrypt_req(ctx: &mut SgRoutePluginContext) -> TardisResult
     let body_as_bytes = ctx.response.take_body_into_bytes().await?;
     let body = String::from_utf8_lossy(&body_as_bytes);
     if !body.is_empty() {
-        ctx.set_ext(plugin_constants::BEFORE_ENCRYPT_BODY, &body);
+        ctx.set_ext(plugin_constants::BEFORE_ENCRYPT_BODY, body.clone());
     }
 
     Ok(AuthEncryptReq {
@@ -592,7 +595,7 @@ mod tests {
         let front_pri_key = TardisFuns::crypto.sm2.new_private_key().unwrap();
         let front_pub_key = TardisFuns::crypto.sm2.new_public_key(&front_pri_key).unwrap();
 
-        let test_body_value = r##"test_body_value!@#$%^&*():"中文测试"##;
+        let test_body_value = r#"test_body_value!@#$%^&*():"中文测试"#;
         //dont need to decrypt
         let header = HeaderMap::new();
         let ctx = SgRoutePluginContext::new_http(
@@ -641,7 +644,7 @@ mod tests {
         assert_eq!(req_body, test_body_value.to_string());
 
         //======response============
-        let mock_resp = r##"mock_resp:test_body_value!@#$%^&*():"中文测试"##;
+        let mock_resp = r#"mock_resp:test_body_value!@#$%^&*():"中文测试"#;
         let mut header = HeaderMap::new();
         header.insert("Test_Header", "test_header".parse().unwrap());
         let ctx = before_filter_ctx.resp(StatusCode::OK, header, Body::from(mock_resp));
@@ -677,7 +680,7 @@ mod tests {
         } else {
             pub_key.encrypt(&format!("{sign_data} {sm4_key} {sm4_iv}",)).unwrap()
         };
-        let base64_encrypt = TardisFuns::crypto.base64.encode(&sm4_encrypt);
+        let base64_encrypt = TardisFuns::crypto.base64.encode(sm4_encrypt);
         (data, base64_encrypt)
     }
 
