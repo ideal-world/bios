@@ -293,7 +293,7 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
                 for val in value {
                     sql_vals.push(val);
                 }
-            }if ext_item.op == BasicQueryOpKind::NotIn {
+            } else if ext_item.op == BasicQueryOpKind::NotIn {
                 let value = value.clone();
                 if value.len() == 1 {
                     where_fragments.push(format!("not (ext -> '{}' ? ${})", ext_item.field, sql_vals.len() + 1));
@@ -400,6 +400,20 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
                         } else {
                             sql_and_where.push(format!(
                                 "ext -> '{}' ?| array[{}]",
+                                ext_item.field,
+                                (0..value.len()).map(|idx| format!("${}", sql_vals.len() + idx + 1)).collect::<Vec<String>>().join(", ")
+                            ));
+                        }
+                        for val in value {
+                            sql_vals.push(val);
+                        }
+                    } else if ext_item.op == BasicQueryOpKind::NotIn {
+                        let value = value.clone();
+                        if value.len() == 1 {
+                            where_fragments.push(format!("not (ext -> '{}' ? ${})", ext_item.field, sql_vals.len() + 1));
+                        } else {
+                            where_fragments.push(format!(
+                                "not (ext -> '{}' ?| array[{}])",
                                 ext_item.field,
                                 (0..value.len()).map(|idx| format!("${}", sql_vals.len() + idx + 1)).collect::<Vec<String>>().join(", ")
                             ));
