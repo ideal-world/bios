@@ -653,6 +653,7 @@ impl FlowInstServ {
                 FlowExternalServ::do_modify_field(
                     &flow_model.tag,
                     &flow_inst_detail.rel_business_obj_id,
+                    &flow_inst_detail.id,
                     Some(next_flow_state.name.clone()),
                     params,
                     ctx,
@@ -714,7 +715,15 @@ impl FlowInstServ {
 
         // notify change state
         if transfer_req.vars.is_none() || transfer_req.vars.as_ref().unwrap().is_empty() {
-            FlowExternalServ::do_notify_changes(&flow_model.tag, &flow_inst_detail.rel_business_obj_id, next_flow_state.name.clone(), ctx, funs).await?;
+            FlowExternalServ::do_notify_changes(
+                &flow_model.tag,
+                &flow_inst_detail.id,
+                &flow_inst_detail.rel_business_obj_id,
+                next_flow_state.name.clone(),
+                ctx,
+                funs,
+            )
+            .await?;
         }
 
         let post_changes =
@@ -752,12 +761,16 @@ impl FlowInstServ {
                     if let Some(change_info) = post_change.var_change_info {
                         let rel_tag = change_info.obj_tag.unwrap_or_default();
                         if !rel_tag.is_empty() {
-                            let mut resp = FlowExternalServ::do_fetch_rel_obj(&current_model.tag, &current_inst.rel_business_obj_id, vec![rel_tag.clone()], ctx, funs).await?;
+                            let mut resp =
+                                FlowExternalServ::do_fetch_rel_obj(&current_model.tag, &current_inst.id, &current_inst.rel_business_obj_id, vec![rel_tag.clone()], ctx, funs)
+                                    .await?;
                             if !resp.rel_bus_objs.is_empty() {
                                 for rel_bus_obj_id in resp.rel_bus_objs.pop().unwrap().rel_bus_obj_ids {
+                                    let inst_id = Self::get_inst_ids_by_rel_business_obj_id(vec![rel_bus_obj_id.clone()], funs, ctx).await?.pop().unwrap_or_default();
                                     FlowExternalServ::do_modify_field(
                                         &rel_tag,
                                         &rel_bus_obj_id,
+                                        &inst_id,
                                         None,
                                         vec![FlowExternalParams {
                                             rel_tag: None,
@@ -774,6 +787,7 @@ impl FlowInstServ {
                         } else {
                             FlowExternalServ::do_modify_field(
                                 &current_model.tag,
+                                &current_inst.id,
                                 &current_inst.rel_business_obj_id,
                                 None,
                                 vec![FlowExternalParams {
@@ -791,8 +805,15 @@ impl FlowInstServ {
                 }
                 FlowTransitionActionChangeKind::State => {
                     if let Some(change_info) = post_change.state_change_info {
-                        let mut resp =
-                            FlowExternalServ::do_fetch_rel_obj(&current_model.tag, &current_inst.rel_business_obj_id, vec![change_info.obj_tag.clone()], ctx, funs).await?;
+                        let mut resp = FlowExternalServ::do_fetch_rel_obj(
+                            &current_model.tag,
+                            &current_inst.id,
+                            &current_inst.rel_business_obj_id,
+                            vec![change_info.obj_tag.clone()],
+                            ctx,
+                            funs,
+                        )
+                        .await?;
                         if !resp.rel_bus_objs.is_empty() {
                             let inst_ids = Self::find_inst_ids_by_rel_obj_ids(resp.rel_bus_objs.pop().unwrap().rel_bus_obj_ids, &change_info, funs, ctx).await?;
                             Self::do_modify_state_by_post_action(inst_ids, &change_info, funs, ctx).await?;
@@ -824,7 +845,9 @@ impl FlowInstServ {
                             rel_tags.push(condition_item.obj_tag.clone().unwrap());
                         }
                     }
-                    let resp = FlowExternalServ::do_fetch_rel_obj(&change_info.obj_tag, rel_obj_id, rel_tags, ctx, funs).await?;
+                    let inst_id = Self::get_inst_ids_by_rel_business_obj_id(vec![rel_obj_id.clone()], funs, ctx).await?.pop().unwrap_or_default();
+
+                    let resp = FlowExternalServ::do_fetch_rel_obj(&change_info.obj_tag, &inst_id, rel_obj_id, rel_tags, ctx, funs).await?;
                     if !resp.rel_bus_objs.is_empty() {
                         for rel_bus_obj in resp.rel_bus_objs {
                             let condition = change_condition
