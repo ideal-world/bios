@@ -25,7 +25,7 @@ pub fn signature(app_key_config: &AppKeyConfig, method: &str, path: &str, query:
     let sorted_req_query = sort_query(query);
     let date = Utc::now().format("%a, %d %b %Y %T GMT").to_string();
     let signature =
-        TardisFuns::crypto.base64.encode(&TardisFuns::crypto.digest.hmac_sha256(&format!("{method}\n{date}\n{path}\n{sorted_req_query}").to_lowercase(), &app_key_config.sk)?);
+        TardisFuns::crypto.base64.encode(TardisFuns::crypto.digest.hmac_sha256(format!("{method}\n{date}\n{path}\n{sorted_req_query}").to_lowercase(), &app_key_config.sk)?);
     header.push(("Authorization".to_string(), format!("{}:{signature}", app_key_config.ak)));
     header.push((app_key_config.head_key_date_flag.to_string(), date));
     Ok(header)

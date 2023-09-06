@@ -1,14 +1,13 @@
 use bios_basic::rbum::dto::rbum_set_dto::RbumSetTreeResp;
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem_openapi;
-use tardis::web::poem_openapi::{param::Path, param::Query, payload::Json};
-use tardis::web::web_resp::{TardisApiResult, TardisResp, Void};
+use tardis::web::poem_openapi::param::Query;
+use tardis::web::web_resp::{TardisApiResult, TardisResp};
 
 use bios_basic::rbum::dto::rbum_filer_dto::RbumSetTreeFilterReq;
 use bios_basic::rbum::dto::rbum_set_item_dto::RbumSetItemDetailResp;
 use bios_basic::rbum::rbum_enumeration::RbumSetCateLevelQueryKind;
 
-use crate::basic::dto::iam_set_dto::{IamSetCateAddReq, IamSetCateModifyReq, IamSetItemAddReq, IamSetItemWithDefaultSetAddReq};
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::iam_constants;
@@ -38,7 +37,7 @@ impl IamCcAppSetApi {
     ) -> TardisApiResult<RbumSetTreeResp> {
         let funs = iam_constants::get_tardis_inst();
         let ctx = IamCertServ::use_sys_or_tenant_ctx_unsafe(ctx.0)?;
-        add_remote_ip(&request, &ctx).await?;
+        add_remote_ip(request, &ctx).await?;
         let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Apps, &funs, &ctx).await?;
         let only_related = only_related.0.unwrap_or(false);
         let result = if only_related {
@@ -74,7 +73,7 @@ impl IamCcAppSetApi {
     ) -> TardisApiResult<Vec<RbumSetItemDetailResp>> {
         let funs = iam_constants::get_tardis_inst();
         let ctx = IamCertServ::use_sys_or_tenant_ctx_unsafe(ctx.0)?;
-        add_remote_ip(&request, &ctx).await?;
+        add_remote_ip(request, &ctx).await?;
         let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Apps, &funs, &ctx).await?;
         let result = IamSetServ::find_set_items(Some(set_id), cate_id.0, item_id.0, None, false, &funs, &ctx).await?;
         ctx.execute_task().await?;

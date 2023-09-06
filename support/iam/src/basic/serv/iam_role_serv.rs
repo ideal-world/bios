@@ -475,7 +475,7 @@ impl IamRoleServ {
             }
             Err(_) => {
                 if let Some(spec_scope_level) = spec_scope_level {
-                    let role = Self::peek_item(&role_id, &IamRoleFilterReq::default(), funs, ctx).await?;
+                    let role = Self::peek_item(role_id, &IamRoleFilterReq::default(), funs, ctx).await?;
                     // The role is not private and current scope
                     if role.scope_level != RbumScopeLevelKind::Private && role.scope_level.to_int() < spec_scope_level.to_int() {
                         return Err(funs.err().conflict(&Self::get_obj_name(), "add_rel_account", "associated role is invalid", "409-iam-role-rel-conflict"));
@@ -601,11 +601,11 @@ impl IamRoleServ {
                 },
                 ..Default::default()
             },
-            &funs,
-            &ctx,
+            funs,
+            ctx,
         )
         .await?;
-        if role.extend_role_id != "" {
+        if !role.extend_role_id.is_empty() {
             let moke_ctx = TardisContext {
                 own_paths: "".to_string(),
                 ..ctx.clone()
@@ -634,17 +634,17 @@ impl IamRoleServ {
                 },
                 ..Default::default()
             },
-            &funs,
-            &ctx,
+            funs,
+            ctx,
         )
         .await?;
-        if role.extend_role_id != "" {
+        if !role.extend_role_id.is_empty() {
             let moke_ctx = TardisContext {
                 own_paths: "".to_string(),
                 ..ctx.clone()
             };
             let extend_res_ids = IamRelServ::find_to_id_rels(&IamRelKind::IamResRole, &role.extend_role_id, desc_by_create, desc_by_update, funs, &moke_ctx).await?;
-            Ok(vec![res_ids, extend_res_ids].concat())
+            Ok([res_ids, extend_res_ids].concat())
         } else {
             Ok(res_ids)
         }
@@ -668,17 +668,17 @@ impl IamRoleServ {
                 },
                 ..Default::default()
             },
-            &funs,
-            &ctx,
+            funs,
+            ctx,
         )
         .await?;
-        if role.extend_role_id != "" {
+        if !role.extend_role_id.is_empty() {
             let moke_ctx = TardisContext {
                 own_paths: "".to_string(),
                 ..ctx.clone()
             };
             let extend_res = IamRelServ::find_to_simple_rels(&IamRelKind::IamResRole, &role.extend_role_id, desc_by_create, desc_by_update, funs, &moke_ctx).await?;
-            Ok(vec![res, extend_res].concat())
+            Ok([res, extend_res].concat())
         } else {
             Ok(res)
         }
@@ -724,11 +724,11 @@ impl IamRoleServ {
                 },
                 ..Default::default()
             },
-            &funs,
-            &ctx,
+            funs,
+            ctx,
         )
         .await?;
-        if role.extend_role_id != "" {
+        if !role.extend_role_id.is_empty() {
             let extend_res = IamRelServ::find_simple_rels(
                 &RbumRelFilterReq {
                     basic: RbumBasicFilterReq {
@@ -750,7 +750,7 @@ impl IamRoleServ {
                 ctx,
             )
             .await?;
-            Ok(vec![res, extend_res].concat())
+            Ok([res, extend_res].concat())
         } else {
             Ok(res)
         }

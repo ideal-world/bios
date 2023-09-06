@@ -5,18 +5,18 @@ pub fn test_res() -> TardisResult<()> {
     auth_res_serv::init_res()?;
 
     let init_res_data = vec![
-        ("GET", "iam-res://iam-serv", r###"{"apps":"#app1#app2#","tenants":"#tenant1#"}"###),
-        ("GET", "iam-res://*/**", r###"{"apps":"#app1#app2#","tenants":"#tenant1#"}"###),
-        ("GET", "iam-res://iam-serv/p1", r###"{"accounts":"#acc#"}"###),
-        ("GET", "iam-res://iam-serv/p1/p2", r###"{"roles":"#role1#"}"###),
-        ("GET", "iam-res://iam-serv/p1/p2/*", r###"{"roles":"#role1#"}"###),
-        ("GET", "iam-res://iam-serv/p1/p2/**", r###"{"roles":"#role1#"}"###),
-        ("GET", "iam-res://iam-serv/p4/p2/**", r###"{"roles":"#role1#"}"###),
-        ("GET", "iam-res://iam-serv/*/p2", r###"{"roles":"#role1#"}"###),
-        ("GET", "iam-res://iam-serv/**/p5", r###"{"roles":"#role1#"}"###),
-        ("GET", "iam-res://iam-serv/p1?q1=aa", r###"{"roles":"#role1#"}"###),
-        ("GET", "iam-res://iam-serv/p1?q1=aa&q2=bb", r###"{"roles":"#role1#"}"###),
-        ("POST", "iam-res://iam-serv/p1", r###"{"roles":"#role1#"}"###),
+        ("GET", "iam-res://iam-serv", r##"{"apps":"#app1#app2#","tenants":"#tenant1#"}"##),
+        ("GET", "iam-res://*/**", r##"{"apps":"#app1#app2#","tenants":"#tenant1#"}"##),
+        ("GET", "iam-res://iam-serv/p1", r##"{"accounts":"#acc#"}"##),
+        ("GET", "iam-res://iam-serv/p1/p2", r##"{"roles":"#role1#"}"##),
+        ("GET", "iam-res://iam-serv/p1/p2/*", r##"{"roles":"#role1#"}"##),
+        ("GET", "iam-res://iam-serv/p1/p2/**", r##"{"roles":"#role1#"}"##),
+        ("GET", "iam-res://iam-serv/p4/p2/**", r##"{"roles":"#role1#"}"##),
+        ("GET", "iam-res://iam-serv/*/p2", r##"{"roles":"#role1#"}"##),
+        ("GET", "iam-res://iam-serv/**/p5", r##"{"roles":"#role1#"}"##),
+        ("GET", "iam-res://iam-serv/p1?q1=aa", r##"{"roles":"#role1#"}"##),
+        ("GET", "iam-res://iam-serv/p1?q1=aa&q2=bb", r##"{"roles":"#role1#"}"##),
+        ("POST", "iam-res://iam-serv/p1", r##"{"roles":"#role1#"}"##),
     ];
     for (res_action, res_uri, auth_info) in init_res_data {
         auth_res_serv::add_res(res_action, res_uri, Some(TardisFuns::json.str_to_obj(auth_info)?), false, false, false, false)?;
