@@ -213,7 +213,7 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
         ctx: &TardisContext,
     ) -> TardisResult<TardisPage<FlowModelDetailResp>> {
         let mut flow_models = Self::do_paginate_detail_items(filter, page_number, page_size, desc_sort_by_create, desc_sort_by_update, funs, ctx).await?;
-        for mut flow_model in &mut flow_models.records {
+        for flow_model in &mut flow_models.records {
             let flow_transitions = Self::find_transitions(&flow_model.id, funs, ctx).await?;
             flow_model.transitions = Some(TardisFuns::json.obj_to_json(&flow_transitions)?);
         }
@@ -228,7 +228,7 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
         ctx: &TardisContext,
     ) -> TardisResult<Vec<FlowModelDetailResp>> {
         let mut flow_models = Self::do_find_detail_items(filter, desc_sort_by_create, desc_sort_by_update, funs, ctx).await?;
-        for mut flow_model in &mut flow_models {
+        for flow_model in &mut flow_models {
             let flow_transitions = Self::find_transitions(&flow_model.id, funs, ctx).await?;
             flow_model.transitions = Some(TardisFuns::json.obj_to_json(&flow_transitions)?);
         }

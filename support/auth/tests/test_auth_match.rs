@@ -26,7 +26,7 @@ pub async fn test_match() -> TardisResult<()> {
     auth_res_serv::add_res(
         "GET",
         "iam-res://iam-serv",
-        Some(TardisFuns::json.str_to_obj(r###"{"apps":"#app1#app2#","tenants":"#tenant1#"}"###)?),
+        Some(TardisFuns::json.str_to_obj(r##"{"apps":"#app1#app2#","tenants":"#tenant1#"}"##)?),
         false,
         false,
         false,
@@ -50,7 +50,7 @@ pub async fn test_match() -> TardisResult<()> {
     auth_res_serv::add_res(
         "GET",
         "iam-res://iam-serv",
-        Some(TardisFuns::json.str_to_obj(r###"{"accounts":"#acc1#acc2#"}"###)?),
+        Some(TardisFuns::json.str_to_obj(r##"{"accounts":"#acc1#acc2#"}"##)?),
         false,
         false,
         false,
@@ -87,7 +87,7 @@ pub async fn test_match() -> TardisResult<()> {
     auth_res_serv::add_res(
         "GET",
         "iam-res://iam-serv",
-        Some(TardisFuns::json.str_to_obj(r###"{"roles":"#role1#role2#"}"###)?),
+        Some(TardisFuns::json.str_to_obj(r##"{"roles":"#role1#role2#"}"##)?),
         false,
         false,
         false,
@@ -124,7 +124,7 @@ pub async fn test_match() -> TardisResult<()> {
     auth_res_serv::add_res(
         "GET",
         "iam-res://iam-serv",
-        Some(TardisFuns::json.str_to_obj(r###"{"groups":"#g2.aaaa#g1.aaab##g1.aaaaaaaa##g1.aaaaaaab#"}"###)?),
+        Some(TardisFuns::json.str_to_obj(r##"{"groups":"#g2.aaaa#g1.aaab##g1.aaaaaaaa##g1.aaaaaaab#"}"##)?),
         false,
         false,
         false,
@@ -174,7 +174,7 @@ pub async fn test_match() -> TardisResult<()> {
     auth_res_serv::add_res(
         "GET",
         "iam-res://iam-serv",
-        Some(TardisFuns::json.str_to_obj(r###"{"apps":"#app1#app2#"}"###)?),
+        Some(TardisFuns::json.str_to_obj(r##"{"apps":"#app1#app2#"}"##)?),
         false,
         false,
         false,
@@ -211,7 +211,7 @@ pub async fn test_match() -> TardisResult<()> {
     auth_res_serv::add_res(
         "GET",
         "iam-res://iam-serv",
-        Some(TardisFuns::json.str_to_obj(r###"{"tenants":"#tenant1#tenant2#"}"###)?),
+        Some(TardisFuns::json.str_to_obj(r##"{"tenants":"#tenant1#tenant2#"}"##)?),
         false,
         false,
         false,
@@ -248,7 +248,7 @@ pub async fn test_match() -> TardisResult<()> {
     auth_res_serv::add_res(
         "GET",
         "iam-res://iam-serv",
-        Some(TardisFuns::json.str_to_obj(r###"{"tenants":"#tenant1#tenant2#"}"###)?),
+        Some(TardisFuns::json.str_to_obj(r##"{"tenants":"#tenant1#tenant2#"}"##)?),
         false,
         false,
         false,
@@ -272,7 +272,7 @@ pub async fn test_match() -> TardisResult<()> {
     auth_res_serv::add_res(
         "GET",
         "iam-res://app1/ct/account/001",
-        Some(TardisFuns::json.str_to_obj(r###"{"accounts":"#acc1#acc2#"}"###)?),
+        Some(TardisFuns::json.str_to_obj(r##"{"accounts":"#acc1#acc2#"}"##)?),
         false,
         false,
         false,
@@ -307,7 +307,7 @@ pub async fn test_match() -> TardisResult<()> {
     auth_res_serv::add_res(
         "GET",
         "iam-res://app1/ct/account/**",
-        Some(TardisFuns::json.str_to_obj(r###"{"accounts":"#acc3#"}"###)?),
+        Some(TardisFuns::json.str_to_obj(r##"{"accounts":"#acc3#"}"##)?),
         false,
         false,
         false,
@@ -329,7 +329,7 @@ pub async fn test_match() -> TardisResult<()> {
     auth_res_serv::add_res(
         "GET",
         "iam-res://app1/ct/**",
-        Some(TardisFuns::json.str_to_obj(r###"{"roles":"#tenant_admin#"}"###)?),
+        Some(TardisFuns::json.str_to_obj(r##"{"roles":"#tenant_admin#"}"##)?),
         false,
         false,
         false,
@@ -358,7 +358,7 @@ pub async fn test_match() -> TardisResult<()> {
     auth_res_serv::add_res(
         "GET",
         "iam-res://iam-serv/cp/**",
-        Some(TardisFuns::json.str_to_obj(r###"{"accounts":"#acc1#acc_2#"}"###)?),
+        Some(TardisFuns::json.str_to_obj(r##"{"accounts":"#acc1#acc_2#"}"##)?),
         false,
         false,
         true,

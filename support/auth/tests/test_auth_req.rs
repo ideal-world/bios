@@ -100,7 +100,7 @@ pub async fn test_req() -> TardisResult<()> {
 
     let app_id = "app_idcc";
     let tenant_id = "tenant_id123";
-    let head_ctx = TardisFuns::crypto.base64.encode(&TardisFuns::json.obj_to_string(&TardisContext {
+    let head_ctx = TardisFuns::crypto.base64.encode(TardisFuns::json.obj_to_string(&TardisContext {
         own_paths: format!("{tenant_id}/{app_id}"),
         ak: "".to_string(),
         owner: "".to_string(),
@@ -166,7 +166,7 @@ pub async fn test_req() -> TardisResult<()> {
     // is not legal
     let now = Utc::now().format(&config.head_date_format);
     let now = now.to_string();
-    let calc_signature = TardisFuns::crypto.base64.encode(&TardisFuns::crypto.digest.hmac_sha256(&format!("GET\n{}\niam/ci/account\n", now,).to_lowercase(), sk)?);
+    let calc_signature = TardisFuns::crypto.base64.encode(TardisFuns::crypto.digest.hmac_sha256(format!("GET\n{}\niam/ci/account\n", now,).to_lowercase(), sk)?);
     let resp = mock_req(
         "GET",
         "/iam/ci/account",
@@ -186,7 +186,7 @@ pub async fn test_req() -> TardisResult<()> {
     let now = Utc::now().format(&config.head_date_format);
     let now = now.to_string();
     cache_client.set(&format!("{}aaaa", config.cache_key_aksk_info), &format!("{sk},{tenant_id},")).await?;
-    let calc_signature = TardisFuns::crypto.base64.encode(&TardisFuns::crypto.digest.hmac_sha256(&format!("GET\n{}\niam/ci/account\n", now,).to_lowercase(), sk)?);
+    let calc_signature = TardisFuns::crypto.base64.encode(TardisFuns::crypto.digest.hmac_sha256(format!("GET\n{}\niam/ci/account\n", now,).to_lowercase(), sk)?);
     let resp = mock_req(
         "GET",
         "/iam/ci/account",
@@ -205,7 +205,7 @@ pub async fn test_req() -> TardisResult<()> {
     let now = Utc::now().format(&config.head_date_format);
     let now = now.to_string();
     cache_client.set(&format!("{}aaaa", config.cache_key_aksk_info), &format!("{sk},{tenant_id},")).await?;
-    let calc_signature = TardisFuns::crypto.base64.encode(&TardisFuns::crypto.digest.hmac_sha256(&format!("GET\n{}\niam/ci/account\n", now,).to_lowercase(), sk)?);
+    let calc_signature = TardisFuns::crypto.base64.encode(TardisFuns::crypto.digest.hmac_sha256(format!("GET\n{}\niam/ci/account\n", now,).to_lowercase(), sk)?);
     let resp = mock_req(
         "GET",
         "/iam/ci/account",
@@ -226,7 +226,7 @@ pub async fn test_req() -> TardisResult<()> {
     let now = Utc::now().format(&config.head_date_format);
     let now = now.to_string();
     cache_client.set(&format!("{}aaaa", config.cache_key_aksk_info), &format!("{sk},{tenant_id},{app_id}")).await?;
-    let calc_signature = TardisFuns::crypto.base64.encode(&TardisFuns::crypto.digest.hmac_sha256(&format!("GET\n{}\niam/ci/account\n", now,).to_lowercase(), sk)?);
+    let calc_signature = TardisFuns::crypto.base64.encode(TardisFuns::crypto.digest.hmac_sha256(format!("GET\n{}\niam/ci/account\n", now,).to_lowercase(), sk)?);
     let resp = mock_req(
         "GET",
         "/iam/ci/account",

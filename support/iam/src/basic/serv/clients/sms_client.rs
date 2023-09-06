@@ -26,7 +26,7 @@ impl SmsClient {
 
     pub async fn send_vcode(phone: &str, vcode: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let conf = funs.conf::<IamConfig>();
-        let ctx_base64 = &TardisFuns::crypto.base64.encode(&TardisFuns::json.obj_to_string(&ctx)?);
+        let ctx_base64 = &TardisFuns::crypto.base64.encode(TardisFuns::json.obj_to_string(&ctx)?);
         match funs
             .web_client()
             .put_str_to_str(
@@ -63,7 +63,7 @@ impl SmsClient {
 
     pub async fn send_pwd(phone: &str, pwd: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let conf = funs.conf::<IamConfig>();
-        let ctx_base64 = &TardisFuns::crypto.base64.encode(&TardisFuns::json.obj_to_string(&ctx)?);
+        let ctx_base64 = &TardisFuns::crypto.base64.encode(TardisFuns::json.obj_to_string(&ctx)?);
         match funs
             .web_client()
             .put_str_to_str(

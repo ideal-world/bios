@@ -901,7 +901,7 @@ impl IamCertServ {
         )
         .await?;
         let result = RbumCertServ::delete_rbum(id, funs, ctx).await?;
-        IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(&cert.rel_rbum_id, get_remote_ip(&ctx).await?, funs).await?;
+        IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(&cert.rel_rbum_id, get_remote_ip(ctx).await?, funs).await?;
         Ok(result)
     }
 
@@ -1218,7 +1218,7 @@ impl IamCertServ {
     pub async fn add_or_modify_sync_third_integration_config(reqs: Vec<IamThirdIntegrationSyncAddReq>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let headers = Some(vec![(
             "Tardis-Context".to_string(),
-            TardisFuns::crypto.base64.encode(&TardisFuns::json.obj_to_string(&ctx)?),
+            TardisFuns::crypto.base64.encode(TardisFuns::json.obj_to_string(&ctx)?),
         )]);
         let schedule_url = funs.conf::<IamConfig>().spi.schedule_url.clone();
         if schedule_url.is_empty() {

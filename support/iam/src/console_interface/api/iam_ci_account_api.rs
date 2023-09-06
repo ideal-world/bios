@@ -22,18 +22,18 @@ impl IamCiAccountApi {
     /// Get Context By Account Id	根据帐户Id获取上下文
     #[oai(path = "/:id/ctx", method = "get")]
     async fn get_account_context(&self, id: Path<String>, app_id: Query<Option<String>>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<String> {
-        add_remote_ip(&request, &ctx.0).await?;
+        add_remote_ip(request, &ctx.0).await?;
         let funs = iam_constants::get_tardis_inst();
         let mut ctx_resp = IamIdentCacheServ::get_account_context(&id.0, &app_id.0.unwrap_or((&"").to_string()), &funs).await?;
         ctx_resp.own_paths = ctx.0.own_paths;
-        TardisResp::ok(TardisFuns::crypto.base64.encode(&TardisFuns::json.obj_to_string(&ctx_resp).unwrap_or_default()))
+        TardisResp::ok(TardisFuns::crypto.base64.encode(TardisFuns::json.obj_to_string(&ctx_resp).unwrap_or_default()))
     }
 
     //// Get Account By Account Id	通过帐户Id获取帐户
     #[oai(path = "/:id", method = "get")]
     async fn get(&self, id: Path<String>, tenant_id: Query<Option<String>>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<IamAccountDetailAggResp> {
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
-        add_remote_ip(&request, &ctx).await?;
+        add_remote_ip(request, &ctx).await?;
         let funs = iam_constants::get_tardis_inst();
         let result = IamAccountServ::get_account_detail_aggs(
             &id.0,
