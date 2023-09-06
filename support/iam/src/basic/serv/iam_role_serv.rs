@@ -471,7 +471,7 @@ impl IamRoleServ {
                         return Err(funs.err().conflict(&Self::get_obj_name(), "add_rel_account", "associated role is invalid", "409-iam-role-rel-conflict"));
                     }
                 }
-                IamRelServ::add_simple_rel(&IamRelKind::IamAccountRole, account_id, &sub_role_id, None, None, false, false, funs, ctx).await?;
+                IamRelServ::add_simple_rel(&IamRelKind::IamAccountRole, account_id, &sub_role_id, None, None, true, false, funs, ctx).await?;
             }
             Err(_) => {
                 if let Some(spec_scope_level) = spec_scope_level {
@@ -483,7 +483,7 @@ impl IamRoleServ {
                 }
                 // TODO only bind the same own_paths roles
                 // E.g. sys admin can't bind tenant admin
-                IamRelServ::add_simple_rel(&IamRelKind::IamAccountRole, account_id, role_id, None, None, false, false, funs, ctx).await?;
+                IamRelServ::add_simple_rel(&IamRelKind::IamAccountRole, account_id, role_id, None, None, true, false, funs, ctx).await?;
             }
         }
         IamAccountServ::async_add_or_modify_account_search(account_id.to_string(), Box::new(true), "".to_string(), funs, ctx).await?;
