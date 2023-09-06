@@ -18,7 +18,7 @@ impl IamCiRoleApi {
     /// Batch add Role Rel Account
     #[oai(path = "/:id/account/batch/:account_ids", method = "put")]
     async fn batch_add_rel_account(&self, id: Path<String>, account_ids: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
-        add_remote_ip(&request, &ctx.0).await?;
+        add_remote_ip(request, &ctx.0).await?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         let app_id = IamAppServ::get_id_by_ctx(&ctx.0, &funs)?;
@@ -35,7 +35,7 @@ impl IamCiRoleApi {
     /// Batch delete Role Rel Account
     #[oai(path = "/:id/account/batch/:account_ids", method = "delete")]
     async fn batch_delete_rel_account(&self, id: Path<String>, account_ids: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
-        add_remote_ip(&request, &ctx.0).await?;
+        add_remote_ip(request, &ctx.0).await?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         let split = account_ids.0.split(',').collect::<Vec<_>>();
@@ -50,7 +50,7 @@ impl IamCiRoleApi {
     /// Delete Role Rel Account
     #[oai(path = "/:id/account/:account_id", method = "delete")]
     async fn delete_rel_account(&self, id: Path<String>, account_id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
-        add_remote_ip(&request, &ctx.0).await?;
+        add_remote_ip(request, &ctx.0).await?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         IamRoleServ::delete_rel_account(&id.0, &account_id.0, Some(RBUM_SCOPE_LEVEL_APP), &funs, &ctx.0).await?;

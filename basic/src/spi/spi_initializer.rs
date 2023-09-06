@@ -263,8 +263,22 @@ pub mod common_pg {
         )
         .await?;
         for (idx, (field_name_or_fun, index_type)) in indexes.into_iter().enumerate() {
+            // index name shouldn't be longer than 63 characters
+            // [4 ][     18    ][ 12 ][     26    ][ 3 ]
+            // idx_{schema_name}{tag}_{table_flag}_{idx}
+            #[inline]
+            fn truncate_str(s: &str, max_size: usize) -> &str {
+                &s[..max_size.min(s.len())]
+            }
+            let index_name = format!(
+                "idx_{schema_name}{tag}_{table_flag}_{idx}",
+                schema_name = truncate_str(schema_name, 18),
+                tag = truncate_str(tag, 11),
+                table_flag = truncate_str(table_flag, 25),
+                idx = truncate_str(idx.to_string().as_str(), 3),
+            );
             conn.execute_one(
-                &format!("CREATE INDEX idx_{schema_name}{tag}_{table_flag}_{idx} ON {schema_name}.{GLOBAL_STORAGE_FLAG}_{table_flag}{tag} USING {index_type}({field_name_or_fun})"),
+                &format!("CREATE INDEX {index_name} ON {schema_name}.{GLOBAL_STORAGE_FLAG}_{table_flag}{tag} USING {index_type}({field_name_or_fun})"),
                 vec![],
             )
             .await?;

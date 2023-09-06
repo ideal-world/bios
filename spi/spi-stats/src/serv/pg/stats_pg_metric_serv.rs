@@ -633,16 +633,14 @@ fn package_groups_agg(record: serde_json::Value) -> Result<serde_json::Value, St
             for var in vars {
                 let fields = var.split(" - ").collect::<Vec<&str>>();
                 details.push(json!({
-                    "key": fields.get(0).unwrap_or(&""),
+                    "key": fields.first().unwrap_or(&""),
                     "own_paths": fields.get(1).unwrap_or(&""),
                     "ct": fields.get(2).unwrap_or(&""),
                 }));
             }
-            return Ok(serde_json::Value::Array(details));
+            Ok(serde_json::Value::Array(details))
         }
-        None => {
-            return Ok(serde_json::Value::Null);
-        }
+        None => Ok(serde_json::Value::Null),
     }
 }
 

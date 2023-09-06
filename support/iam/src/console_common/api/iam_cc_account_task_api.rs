@@ -19,7 +19,7 @@ pub struct IamCcAccountTaskApi;
 impl IamCcAccountTaskApi {
     #[oai(path = "/", method = "get")]
     async fn execute_account_task(&self, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Option<String>> {
-        add_remote_ip(&request, &ctx.0).await?;
+        add_remote_ip(request, &ctx.0).await?;
         let funs = iam_constants::get_tardis_inst();
         IamCcAccountTaskServ::execute_account_task(&funs, &ctx.0).await?;
         if let Some(task_id) = TaskProcessor::get_task_id_with_ctx(&ctx.0).await? {
@@ -31,7 +31,7 @@ impl IamCcAccountTaskApi {
 
     #[oai(path = "/role", method = "get")]
     async fn execute_role_task(&self, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Option<String>> {
-        add_remote_ip(&request, &ctx.0).await?;
+        add_remote_ip(request, &ctx.0).await?;
         let funs = iam_constants::get_tardis_inst();
         IamCcRoleTaskServ::execute_role_task(&funs, &ctx.0).await?;
         if let Some(task_id) = TaskProcessor::get_task_id_with_ctx(&ctx.0).await? {

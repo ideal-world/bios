@@ -30,7 +30,10 @@ pub async fn presign_obj_url(
                 client.object_get_url(object_path, exp_secs, bucket_name)
             } else {
                 let Some(bucket_name) = bucket_name else {
-                    return Err(TardisError::internal_error("Cannot get public bucket name while presign object url, it may due to the lack of isolation_flag", "500-spi-object-s3-cannot-get-bucket-name"));
+                    return Err(TardisError::internal_error(
+                        "Cannot get public bucket name while presign object url, it may due to the lack of isolation_flag",
+                        "500-spi-object-s3-cannot-get-bucket-name",
+                    ));
                 };
                 Ok(format!("{}/{}/{}", spi_bs.conn_uri, bucket_name, object_path))
             }

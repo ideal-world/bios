@@ -47,7 +47,7 @@ async fn main() -> TardisResult<()> {
     let header: Vec<(String, String)> = vec![("Bios-Crypto".to_string(), "".to_string())];
     //有加密头的请求会被替换"成空 ,所以不能传json串需要base64
     let body = TardisFuns::crypto.base64.encode(
-        &TardisFuns::json
+        TardisFuns::json
             .obj_to_string(&TestAddReq {
                 code: TrimString("c001".to_string()),
                 description: "测试002".to_string(),
@@ -67,7 +67,7 @@ async fn main() -> TardisResult<()> {
     assert_eq!(resp, "3".to_string());
 
     let body = TardisFuns::crypto.base64.encode(
-        &TardisFuns::json
+        TardisFuns::json
             .obj_to_string(&TestAddReq {
                 code: TrimString("c001".to_string()),
                 description: "测试003".to_string(),
@@ -102,7 +102,7 @@ impl AuthApi {
         let mut headers = req.headers;
         if req.path == "/test/echo/2" {
             assert!(req.body.is_some());
-            let req_body = TardisFuns::crypto.base64.decode(&req.body.clone().unwrap())?;
+            let req_body = TardisFuns::crypto.base64.decode(req.body.clone().unwrap())?;
             assert!(req_body.contains("测试002"));
             req.body = Some(req_body);
             headers.insert("Bios-Crypto".to_string(), "".to_string());
@@ -113,7 +113,7 @@ impl AuthApi {
         }
         headers.insert(
             "Tardis-Context".to_string(),
-            TardisFuns::crypto.base64.encode(&TardisFuns::json.obj_to_string(&TardisContext::default()).unwrap()),
+            TardisFuns::crypto.base64.encode(TardisFuns::json.obj_to_string(&TardisContext::default()).unwrap()),
         );
         TardisResp::ok(AuthResp {
             allow: true,
@@ -131,14 +131,14 @@ impl AuthApi {
         let mut headers = req.headers;
         if req.path.contains("/apis") {
             assert!(req.body.is_some());
-            let req_body = TardisFuns::crypto.base64.decode(&req.body.clone().unwrap())?;
+            let req_body = TardisFuns::crypto.base64.decode(req.body.clone().unwrap())?;
             assert!(req_body.contains("测试003"));
             req.body = Some(req_body);
             headers.insert("Bios-Crypto".to_string(), "".to_string());
         }
         headers.insert(
             "Tardis-Context".to_string(),
-            TardisFuns::crypto.base64.encode(&TardisFuns::json.obj_to_string(&TardisContext::default()).unwrap()),
+            TardisFuns::crypto.base64.encode(TardisFuns::json.obj_to_string(&TardisContext::default()).unwrap()),
         );
         TardisResp::ok(MixAuthResp {
             url: "/test/echo/4".to_string(),

@@ -26,7 +26,7 @@ impl TestHttpClient {
     }
 
     pub fn set_auth(&mut self, ctx: &TardisContext) -> TardisResult<()> {
-        let ctx_base64 = &TardisFuns::crypto.base64.encode(&TardisFuns::json.obj_to_string(&ctx)?);
+        let ctx_base64 = &TardisFuns::crypto.base64.encode(TardisFuns::json.obj_to_string(&ctx)?);
         self.set_default_header(&TardisFuns::fw_config().web_server.context_conf.context_header_name, ctx_base64);
         self.context = ctx.clone();
         Ok(())

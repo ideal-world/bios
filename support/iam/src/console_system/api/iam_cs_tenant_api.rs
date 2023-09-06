@@ -22,7 +22,7 @@ impl IamCsTenantApi {
     /// Add Tenant
     #[oai(path = "/", method = "post")]
     async fn add(&self, add_req: Json<IamTenantAggAddReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<String> {
-        add_remote_ip(&request, &ctx.0).await?;
+        add_remote_ip(request, &ctx.0).await?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         let result = IamTenantServ::add_tenant_agg(&add_req.0, &funs).await?.0;
@@ -45,7 +45,7 @@ impl IamCsTenantApi {
     ) -> TardisApiResult<Option<String>> {
         let mut funs = iam_constants::get_tardis_inst();
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0.clone())?;
-        add_remote_ip(&request, &ctx).await?;
+        add_remote_ip(request, &ctx).await?;
         funs.begin().await?;
         IamTenantServ::modify_tenant_agg(&id.0, &modify_req.0, &funs, &ctx).await?;
         funs.commit().await?;
@@ -62,7 +62,7 @@ impl IamCsTenantApi {
     async fn get(&self, id: Path<String>, tenant_id: Query<Option<String>>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<IamTenantAggDetailResp> {
         let funs = iam_constants::get_tardis_inst();
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0.clone())?;
-        add_remote_ip(&request, &ctx).await?;
+        add_remote_ip(request, &ctx).await?;
         let result = IamTenantServ::get_tenant_agg(
             &id.0,
             &IamTenantFilterReq {
@@ -93,7 +93,7 @@ impl IamCsTenantApi {
         ctx: TardisContextExtractor,
         request: &Request,
     ) -> TardisApiResult<TardisPage<IamTenantSummaryResp>> {
-        add_remote_ip(&request, &ctx.0).await?;
+        add_remote_ip(request, &ctx.0).await?;
         let funs = iam_constants::get_tardis_inst();
         let result = IamTenantServ::paginate_items(
             &IamTenantFilterReq {
