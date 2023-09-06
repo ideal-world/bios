@@ -27,6 +27,11 @@ spacegate-kernel = { git = "https://github.com/ideal-world/spacegate.git", featu
    "cache",
    "k8s",
 ] }
+# spacegate-kernel = { path = "../../../spacegate/kernel", features = [
+#    "ws",
+#    "cache",
+#    "k8s",
+# ] }
 
 jsonpath-rust = "0.3.1"
 bios-auth = { path = "../../support/auth", default-features = false }
