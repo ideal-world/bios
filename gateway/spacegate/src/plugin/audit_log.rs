@@ -37,6 +37,10 @@ impl SgPluginFilterDef for SgFilterAuditLogDef {
         let filter = TardisFuns::json.json_to_obj::<SgFilterAuditLog>(spec)?;
         Ok(filter.boxed())
     }
+
+    fn get_code(&self) -> &str {
+        CODE
+    }
 }
 
 #[derive(Serialize, Deserialize)]
@@ -57,7 +61,7 @@ impl SgFilterAuditLog {
     async fn get_log_content(&self, end_time: i64, ctx: &mut SgRoutePluginContext) -> TardisResult<LogParamContent> {
         let start_time = ctx.get_ext(&get_start_time_ext_code()).and_then(|time| time.parse::<i64>().ok());
         let body_string = if let Some(raw_body) = ctx.get_ext(plugin_constants::BEFORE_ENCRYPT_BODY) {
-            serde_json::from_str::<Value>(&raw_body)
+            serde_json::from_str::<Value>(raw_body)
         } else {
             let body = ctx.response.dump_body().await?;
             serde_json::from_slice::<Value>(&body)

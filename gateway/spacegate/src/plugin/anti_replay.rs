@@ -26,6 +26,10 @@ impl SgPluginFilterDef for SgFilterAntiReplayDef {
         let filter = TardisFuns::json.json_to_obj::<SgFilterAntiReplay>(spec)?;
         Ok(filter.boxed())
     }
+
+    fn get_code(&self) -> &str {
+        CODE
+    }
 }
 
 #[derive(Serialize, Deserialize)]
@@ -61,13 +65,14 @@ impl SgPluginFilter for SgFilterAntiReplay {
 
     async fn req_filter(&self, _: &str, mut ctx: SgRoutePluginContext) -> TardisResult<(bool, SgRoutePluginContext)> {
         let md5 = get_md5(&mut ctx)?;
-        if get_status(md5.clone(), &self.cache_key, ctx.cache()?).await? {
+        let cache = ctx.cache().await?;
+        if get_status(md5.clone(), &self.cache_key, &cache).await? {
             Err(TardisError::forbidden(
                 "[SG.Plugin.Anti_Replay] Request denied due to replay attack. Please refresh and resubmit the request.",
                 "",
             ))
         } else {
-            set_status(md5, &self.cache_key, true, ctx.cache()?).await?;
+            set_status(md5, &self.cache_key, true, &cache).await?;
             Ok((true, ctx))
         }
     }
@@ -79,8 +84,8 @@ impl SgPluginFilter for SgFilterAntiReplay {
         let time = self.time;
         tokio::spawn(async move {
             tokio::time::sleep(Duration::from_millis(time)).await;
-            let cache_client = spacegate_kernel::functions::cache_client::get(&name).expect("get cache client error!");
-            let _ = set_status(md5, &cache_key, false, cache_client).await;
+            let cache_client = spacegate_kernel::functions::cache_client::get(&name).await.expect("get cache client error!");
+            let _ = set_status(md5, &cache_key, false, &cache_client).await;
         });
         Ok((true, ctx))
     }
@@ -92,14 +97,14 @@ fn get_md5(ctx: &mut SgRoutePluginContext) -> TardisResult<String> {
         "{}{}{}{}",
         req.get_remote_addr(),
         req.get_uri_raw(),
-        req.get_method(),
-        req.get_headers_raw().iter().fold(String::new(), |c, (key, value)| {
-            c.push_str(&key.as_str());
-            c.push_str(&String::from_utf8_lossy(&value.as_bytes()));
+        req.method.get(),
+        req.get_headers_raw().iter().fold(String::new(), |mut c, (key, value)| {
+            c.push_str(key.as_str());
+            c.push_str(&String::from_utf8_lossy(value.as_bytes()));
             c
         }),
     );
-    tardis::crypto::crypto_digest::TardisCryptoDigest {}.md5(&data)
+    tardis::crypto::crypto_digest::TardisCryptoDigest {}.md5(data)
 }
 
 async fn set_status(md5: String, cache_key: &str, status: bool, cache_client: &TardisCacheClient) -> TardisResult<()> {
