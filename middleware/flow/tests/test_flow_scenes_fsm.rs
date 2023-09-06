@@ -8,7 +8,7 @@ use bios_mw_flow::dto::flow_inst_dto::{
     FlowInstFindStateAndTransitionsReq, FlowInstFindStateAndTransitionsResp, FlowInstStartReq, FlowInstTransferReq, FlowInstTransferResp,
 };
 use bios_mw_flow::dto::flow_model_dto::{
-    FlowModelAddCustomModelItemReq, FlowModelAddCustomModelReq, FlowModelAddCustomModelResp, FlowModelAggResp, FlowModelBindStateReq, FlowModelModifyReq,
+    FlowModelAddCustomModelItemReq, FlowModelAddCustomModelReq, FlowModelAddCustomModelResp, FlowModelAggResp, FlowModelModifyReq,
     FlowModelSortStateInfoReq, FlowModelSortStatesReq, FlowModelSummaryResp, FlowModelUnbindStateReq, FlowTemplateModelResp,
 };
 use bios_mw_flow::dto::flow_state_dto::FlowStateSummaryResp;
@@ -86,22 +86,6 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
     let proj_model_agg: FlowModelAggResp = flow_client.get(&format!("/cc/model/{}", proj_model_id)).await;
 
     // 3.modify model
-    // Delete and add some transitions
-    let _: Void = flow_client
-        .post(
-            &format!("/cc/model/{}/unbind_state", &req_model_id),
-            &FlowModelUnbindStateReq { state_id: init_state_id.clone() },
-        )
-        .await;
-    let _: Void = flow_client
-        .post(
-            &format!("/cc/model/{}/bind_state", &req_model_id),
-            &FlowModelBindStateReq {
-                state_id: init_state_id.clone(),
-                sort: 10,
-            },
-        )
-        .await;
     // resort state
     let mut sort_states = vec![];
     for (i, state) in states.records.iter().enumerate() {
@@ -344,6 +328,13 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
         transfer.new_flow_state_id,
         state_and_next_transitions[0].next_flow_transitions.iter().find(|&trans| trans.next_flow_transition_name.contains("关闭")).unwrap().next_flow_state_id.clone()
     );
+    let state_unbind_error = flow_client
+        .post_resp::<FlowModelUnbindStateReq, Void>(
+            &format!("/cc/model/{}/unbind_state", &req_model_id),
+            &FlowModelUnbindStateReq { state_id: transfer.new_flow_state_id.clone() },
+        )
+        .await;
+    assert_eq!(state_unbind_error.code, "409-flow-flow_model-unbind_state");
     // 5. check post action endless loop
     ctx.own_paths = "t1".to_string();
     flow_client.set_auth(&ctx)?;
