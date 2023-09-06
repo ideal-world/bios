@@ -35,10 +35,6 @@ impl SgPluginFilterDef for SgFilterAntiXSSDef {
         let filter = TardisFuns::json.json_to_obj::<SgFilterAntiXSS>(spec)?;
         Ok(filter.boxed())
     }
-
-    fn get_code(&self) -> &str {
-        CODE
-    }
 }
 
 #[derive(Serialize, Deserialize)]

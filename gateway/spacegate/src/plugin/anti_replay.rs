@@ -30,10 +30,6 @@ impl SgPluginFilterDef for SgFilterAntiReplayDef {
         let filter = TardisFuns::json.json_to_obj::<SgFilterAntiReplay>(spec)?;
         Ok(filter.boxed())
     }
-
-    fn get_code(&self) -> &str {
-        CODE
-    }
 }
 
 #[derive(Serialize, Deserialize)]
@@ -97,7 +93,6 @@ impl SgPluginFilter for SgFilterAntiReplay {
 
 fn get_md5(ctx: &mut SgRoutePluginContext) -> TardisResult<String> {
     let req = &mut ctx.request;
-    let method = req.get_method().clone();
     let data = format!(
         "{}{}{}{}",
         req.get_remote_addr(),
