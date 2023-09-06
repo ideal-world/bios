@@ -10,6 +10,7 @@ pub struct FlowExternalReq {
     pub kind: FlowExternalKind,
     pub curr_tag: String,
     pub curr_bus_obj_id: String,
+    pub inst_id: String,
     pub target_state: Option<String>,
     pub params: Vec<FlowExternalParams>,
 }

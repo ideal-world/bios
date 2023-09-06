@@ -18,6 +18,7 @@ pub struct FlowExternalServ;
 impl FlowExternalServ {
     pub async fn do_fetch_rel_obj(
         tag: &str,
+        inst_id: &str,
         rel_business_obj_id: &str,
         rel_tags: Vec<String>,
         ctx: &TardisContext,
@@ -27,6 +28,7 @@ impl FlowExternalServ {
         let header = Self::headers(None, funs, ctx).await?;
         let body = FlowExternalReq {
             kind: FlowExternalKind::FetchRelObj,
+            inst_id: inst_id.to_string(),
             curr_tag: tag.to_string(),
             curr_bus_obj_id: rel_business_obj_id.to_string(),
             target_state: None,
@@ -57,6 +59,7 @@ impl FlowExternalServ {
     pub async fn do_modify_field(
         tag: &str,
         rel_business_obj_id: &str,
+        inst_id: &str,
         target_state: Option<String>,
         params: Vec<FlowExternalParams>,
         ctx: &TardisContext,
@@ -70,6 +73,7 @@ impl FlowExternalServ {
         let header = Self::headers(None, funs, ctx).await?;
         let body = FlowExternalReq {
             kind: FlowExternalKind::ModifyField,
+            inst_id: inst_id.to_string(),
             curr_tag: tag.to_string(),
             curr_bus_obj_id: rel_business_obj_id.to_string(),
             target_state,
@@ -91,6 +95,7 @@ impl FlowExternalServ {
 
     pub async fn do_notify_changes(
         tag: &str,
+        inst_id: &str,
         rel_business_obj_id: &str,
         target_state: String,
         ctx: &TardisContext,
@@ -104,6 +109,7 @@ impl FlowExternalServ {
         let header = Self::headers(None, funs, ctx).await?;
         let body = FlowExternalReq {
             kind: FlowExternalKind::NotifyChanges,
+            inst_id: inst_id.to_string(),
             curr_tag: tag.to_string(),
             curr_bus_obj_id: rel_business_obj_id.to_string(),
             target_state: Some(target_state),
