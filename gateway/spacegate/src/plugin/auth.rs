@@ -28,7 +28,7 @@ use spacegate_kernel::{
 use std::{collections::HashMap, str::FromStr, sync::{Arc, OnceLock}};
 use tardis::{
     async_trait,
-    basic::{error::TardisError, result::TardisResult},
+    basic::{error::TardisError, result::TardisResult, tracing::TardisTracing},
     config::config_dto::{AppConfig, CacheConfig, DBConfig, FrameworkConfig, LogConfig, TardisConfig, WebServerConfig},
     log,
     serde_json::{self, json, Value},
@@ -46,6 +46,9 @@ pub const CODE: &str = "auth";
 pub struct SgFilterAuthDef;
 
 impl SgPluginFilterDef for SgFilterAuthDef {
+    fn get_code(&self) -> &str {
+        CODE
+    }
     fn inst(&self, spec: serde_json::Value) -> TardisResult<BoxSgPluginFilter> {
         let filter = TardisFuns::json.json_to_obj::<SgFilterAuth>(spec)?;
         Ok(filter.boxed())
@@ -113,6 +116,7 @@ impl SgPluginFilter for SgFilterAuth {
 
     async fn init(&mut self, init_dto: &SgPluginFilterInitDto) -> TardisResult<()> {
         let config_md5 = TardisFuns::crypto.digest.md5(TardisFuns::json.obj_to_string(self)?)?;
+
         let mut instance = INSTANCE.get_or_init(Default::default).write().await;
         if let Some((md5, handle)) = instance.as_ref() {
             if config_md5.eq(md5) {
@@ -166,6 +170,9 @@ impl SgPluginFilter for SgFilterAuth {
         let handle = auth_initializer::init().await?;
         *instance = Some((config_md5, handle));
         log::info!("[SG.Filter.Auth] init done");
+        if let Some(log_level) = &init_dto.gateway_parameters.log_level {
+            let _ = TardisTracing::update_log_level_by_domain_code(crate::DOMAIN_CODE, log_level);
+        }
         Ok(())
     }
 

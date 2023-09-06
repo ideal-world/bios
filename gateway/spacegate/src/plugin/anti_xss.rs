@@ -28,6 +28,9 @@ pub const CODE: &str = "anti_xss";
 pub struct SgFilterAntiXSSDef;
 
 impl SgPluginFilterDef for SgFilterAntiXSSDef {
+    fn get_code(&self) -> &str {
+        CODE
+    }
     fn inst(&self, spec: serde_json::Value) -> TardisResult<BoxSgPluginFilter> {
         let filter = TardisFuns::json.json_to_obj::<SgFilterAntiXSS>(spec)?;
         Ok(filter.boxed())

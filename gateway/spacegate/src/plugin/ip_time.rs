@@ -20,6 +20,9 @@ mod tests;
 pub use ip_time_rule::IpTimeRule;
 
 impl SgPluginFilterDef for SgFilterIpTimeDef {
+    fn get_code(&self) -> &str {
+        CODE
+    }
     fn inst(&self, spec: serde_json::Value) -> TardisResult<BoxSgPluginFilter> {
         let config = TardisFuns::json.json_to_obj::<SgFilterIpTimeConfig>(spec)?;
         let filter: SgFilterIpTime = config.into();

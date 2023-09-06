@@ -21,7 +21,6 @@ pub struct IamCcAppSetApi;
 ///
 #[poem_openapi::OpenApi(prefix_path = "/cc/apps", tag = "bios_basic::ApiTag::Common")]
 impl IamCcAppSetApi {
-   
     /// Find App Tree By Current Tenant
     ///
     /// * Without parameters: Query the whole tree

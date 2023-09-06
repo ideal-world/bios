@@ -1,4 +1,6 @@
 use std::collections::HashMap;
+
+
 use std::str::FromStr;
 
 use async_trait::async_trait;
@@ -8,7 +10,7 @@ use bios_sdk_invoke::invoke_config::InvokeConfig;
 use bios_sdk_invoke::invoke_enumeration::InvokeModuleKind;
 use bios_sdk_invoke::invoke_initializer;
 
-use jsonpath_rust::{JsonPathInst, JsonPathQuery};
+use jsonpath_rust::{JsonPathInst};
 use serde::{Deserialize, Serialize};
 use spacegate_kernel::plugins::context::SGRoleInfo;
 use spacegate_kernel::plugins::{
@@ -18,6 +20,7 @@ use spacegate_kernel::plugins::{
 use tardis::basic::dto::TardisContext;
 use tardis::serde_json::{json, Value};
 
+use tardis::basic::error::TardisError;
 use tardis::{
     async_trait,
     basic::result::TardisResult,
@@ -33,6 +36,9 @@ pub const CODE: &str = "audit_log";
 pub struct SgFilterAuditLogDef;
 
 impl SgPluginFilterDef for SgFilterAuditLogDef {
+    fn get_code(&self) -> &str {
+        CODE
+    }
     fn inst(&self, spec: serde_json::Value) -> TardisResult<BoxSgPluginFilter> {
         let filter = TardisFuns::json.json_to_obj::<SgFilterAuditLog>(spec)?;
         Ok(filter.boxed())
@@ -55,6 +61,8 @@ pub struct SgFilterAuditLog {
     /// Exclude log path exact match.
     exclude_log_path: Vec<String>,
     enabled: bool,
+    #[serde(skip)]
+    jsonpath_inst: Option<JsonPathInst>,
 }
 
 impl SgFilterAuditLog {
@@ -68,9 +76,8 @@ impl SgFilterAuditLog {
         };
         let success = match body_string {
             Ok(json) => {
-                if let Ok(matching_value) = json.path(&self.success_json_path) {
-                    if let Some(matching_value) = matching_value.as_array() {
-                        let matching_value = &matching_value[0];
+                if let Some(jsonpath_inst) = &self.jsonpath_inst {
+                    if let Some(matching_value) = jsonpath_inst.find_slice(&json).get(0) {
                         if matching_value.is_string() {
                             let mut is_match = false;
                             for value in self.success_json_path_values.clone() {
@@ -134,6 +141,7 @@ impl Default for SgFilterAuditLog {
             enabled: false,
             success_json_path_values: vec!["200".to_string(), "201".to_string()],
             exclude_log_path: vec!["/starsysApi/apis".to_string()],
+            jsonpath_inst: None,
         }
     }
 }
@@ -149,7 +157,9 @@ impl SgPluginFilter for SgFilterAuditLog {
 
     async fn init(&mut self, _: &SgPluginFilterInitDto) -> TardisResult<()> {
         if !self.log_url.is_empty() && !self.spi_app_id.is_empty() {
-            if JsonPathInst::from_str(&self.success_json_path).map_err(|e| log::error!("[Plugin.AuditLog] invalid json path:{e}")).is_err() {
+            if let Ok(jsonpath_inst) = JsonPathInst::from_str(&self.success_json_path).map_err(|e| log::error!("[Plugin.AuditLog] invalid json path:{e}")) {
+                self.jsonpath_inst = Some(jsonpath_inst);
+            } else {
                 self.enabled = false;
                 return Ok(());
             };
@@ -161,11 +171,11 @@ impl SgPluginFilter for SgFilterAuditLog {
                     module_urls: HashMap::from([(InvokeModuleKind::Log.to_string(), self.log_url.clone())]),
                 },
             )?;
+            Ok(())
         } else {
-            log::warn!("[Plugin.AuditLog] plugin is not active, miss log_url or spi_app_id.");
             self.enabled = false;
+            Err(TardisError::bad_request("[Plugin.AuditLog] plugin is not active, miss log_url or spi_app_id.", ""))
         }
-        Ok(())
     }
 
     async fn destroy(&self) -> TardisResult<()> {
@@ -195,6 +205,7 @@ impl SgPluginFilter for SgFilterAuditLog {
             let op = ctx.request.get_method().to_string();
 
             let content = self.get_log_content(end_time, &mut ctx).await?;
+
             let log_ext = json!({
                 "name":content.name,
                 "id":content.user_id,
@@ -265,6 +276,7 @@ pub struct LogParamContent {
 
 #[cfg(test)]
 mod test {
+    use spacegate_kernel::plugins::filters::{SgAttachedLevel, SgPluginFilter, SgPluginFilterInitDto};
     use spacegate_kernel::{
         http::{HeaderName, Uri},
         hyper::{Body, HeaderMap, Method, StatusCode, Version},
@@ -280,7 +292,20 @@ mod test {
     async fn test_log_content() {
         let ent_time = std::time::Instant::now();
         println!("test_log_content");
-        let sg_filter_audit_log = SgFilterAuditLog { ..Default::default() };
+        let mut sg_filter_audit_log = SgFilterAuditLog {
+            log_url: "xxx".to_string(),
+            spi_app_id: "xxx".to_string(),
+            ..Default::default()
+        };
+        sg_filter_audit_log
+            .init(&SgPluginFilterInitDto {
+                gateway_name: "".to_string(),
+                gateway_parameters: Default::default(),
+                http_route_rules: vec![],
+                attached_level: SgAttachedLevel::Gateway,
+            })
+            .await
+            .unwrap();
         let guard = pprof::ProfilerGuardBuilder::default().frequency(100).blocklist(&["libc", "libgcc", "pthread", "vdso"]).build().unwrap();
         let end_time = 20100;
         let mut count = 0;
