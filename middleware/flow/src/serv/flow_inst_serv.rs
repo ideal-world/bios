@@ -662,6 +662,7 @@ impl FlowInstServ {
                     &flow_inst_detail.rel_business_obj_id,
                     &flow_inst_detail.id,
                     Some(next_flow_state.name.clone()),
+                    Some(prev_flow_state.name.clone()),
                     params,
                     ctx,
                     funs,
@@ -727,6 +728,7 @@ impl FlowInstServ {
                 &flow_inst_detail.id,
                 &flow_inst_detail.rel_business_obj_id,
                 next_flow_state.name.clone(),
+                prev_flow_state.name.clone(),
                 ctx,
                 funs,
             )
@@ -779,6 +781,7 @@ impl FlowInstServ {
                                         &rel_bus_obj_id,
                                         &inst_id,
                                         None,
+                                        None,
                                         vec![FlowExternalParams {
                                             rel_tag: None,
                                             var_id: None,
@@ -796,6 +799,7 @@ impl FlowInstServ {
                                 &current_model.tag,
                                 &current_inst.id,
                                 &current_inst.rel_business_obj_id,
+                                None,
                                 None,
                                 vec![FlowExternalParams {
                                     rel_tag: None,

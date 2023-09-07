@@ -33,6 +33,7 @@ impl FlowExternalServ {
             curr_tag: tag.to_string(),
             curr_bus_obj_id: rel_business_obj_id.to_string(),
             target_state: None,
+            original_state: None,
             params: rel_tags
                 .into_iter()
                 .map(|tag| FlowExternalParams {
@@ -62,6 +63,7 @@ impl FlowExternalServ {
         rel_business_obj_id: &str,
         inst_id: &str,
         target_state: Option<String>,
+        original_state: Option<String>,
         params: Vec<FlowExternalParams>,
         ctx: &TardisContext,
         funs: &TardisFunsInst,
@@ -78,6 +80,7 @@ impl FlowExternalServ {
             curr_tag: tag.to_string(),
             curr_bus_obj_id: rel_business_obj_id.to_string(),
             target_state,
+            original_state,
             params,
         };
         debug!("do_modify_field body: {:?}", body);
@@ -98,6 +101,7 @@ impl FlowExternalServ {
         tag: &str,
         inst_id: &str,
         rel_business_obj_id: &str,
+        original_state: String,
         target_state: String,
         ctx: &TardisContext,
         funs: &TardisFunsInst,
@@ -114,6 +118,7 @@ impl FlowExternalServ {
             curr_tag: tag.to_string(),
             curr_bus_obj_id: rel_business_obj_id.to_string(),
             target_state: Some(target_state),
+            original_state: Some(original_state),
             params: vec![],
         };
         debug!("do_notify_changes body: {:?}", body);
