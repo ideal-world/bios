@@ -4,7 +4,7 @@ use tardis::{basic::result::TardisResult, tokio, TardisFuns};
 
 mod plugin;
 
-pub const DOMAIN_CODE: &str = "bios_spacegate";
+pub const PACKAGE_NAME: &str = "bios_spacegate";
 
 #[tokio::main]
 async fn main() -> TardisResult<()> {

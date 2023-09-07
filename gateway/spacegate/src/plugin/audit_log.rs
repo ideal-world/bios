@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 
-
 use std::str::FromStr;
 
 use async_trait::async_trait;
@@ -10,7 +9,7 @@ use bios_sdk_invoke::invoke_config::InvokeConfig;
 use bios_sdk_invoke::invoke_enumeration::InvokeModuleKind;
 use bios_sdk_invoke::invoke_initializer;
 
-use jsonpath_rust::{JsonPathInst};
+use jsonpath_rust::JsonPathInst;
 use serde::{Deserialize, Serialize};
 use spacegate_kernel::plugins::context::SGRoleInfo;
 use spacegate_kernel::plugins::{
@@ -43,7 +42,6 @@ impl SgPluginFilterDef for SgFilterAuditLogDef {
         let filter = TardisFuns::json.json_to_obj::<SgFilterAuditLog>(spec)?;
         Ok(filter.boxed())
     }
-
 }
 
 #[derive(Serialize, Deserialize)]

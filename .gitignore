@@ -57,7 +57,7 @@ node_modules
 .DS_Store
 #gateway dev
 gateway/example/log
-gateway/spacegate/devsh/save-o.sh
+gateway/spacegate/devsh/
 
 # pre-commit
 .pre-commit-config.yaml

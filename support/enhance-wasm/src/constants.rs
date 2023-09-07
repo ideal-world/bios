@@ -63,6 +63,7 @@ pub(crate) struct StableConfig {
     pub logout_req_path: String,
     pub double_auth_req_method: String,
     pub double_auth_req_path: String,
+    pub exclude_encrypt_decrypt_path: Vec<String>,
 }
 
 #[derive(Serialize, Deserialize)]
