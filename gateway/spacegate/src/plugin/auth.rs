@@ -10,14 +10,10 @@ use bios_auth::{
 };
 
 use serde::{Deserialize, Serialize};
-use spacegate_kernel::{
-    http::{self, HeaderMap, HeaderName, HeaderValue},
-    hyper::{body::Bytes, Body, Method},
-    plugins::{
-        context::{SgRouteFilterRequestAction, SgRoutePluginContext},
-        filters::{BoxSgPluginFilter, SgPluginFilter, SgPluginFilterAccept, SgPluginFilterDef},
-    },
-};
+use spacegate_kernel::{http::{self, HeaderMap, HeaderName, HeaderValue}, hyper::{body::Bytes, Body, Method}, hyper, plugins::{
+    context::{SgRouteFilterRequestAction, SgRoutePluginContext},
+    filters::{BoxSgPluginFilter, SgPluginFilter, SgPluginFilterAccept, SgPluginFilterDef},
+}};
 use spacegate_kernel::{
     hyper::StatusCode,
     plugins::{
@@ -257,6 +253,7 @@ impl SgPluginFilter for SgFilterAuth {
         }
         let encrypt_resp = auth_crypto_serv::encrypt_body(&ctx_to_auth_encrypt_req(&mut ctx).await?).await?;
         ctx.response.get_headers_mut().extend(hashmap_header_to_headermap(encrypt_resp.headers)?);
+        ctx.response.headers.remove(hyper::header::TRANSFER_ENCODING);
         ctx.response.set_body(encrypt_resp.body);
         self.cors(&mut ctx)?;
 
@@ -389,7 +386,7 @@ async fn ctx_to_auth_encrypt_req(ctx: &mut SgRoutePluginContext) -> TardisResult
     if !body.is_empty() {
         ctx.set_ext(plugin_constants::BEFORE_ENCRYPT_BODY, body.to_string());
     }
-
+    log::trace!("[Plugin.Auth] Before Encrypt Body {}",body.to_string());
     Ok(AuthEncryptReq {
         headers,
         body: String::from(body),
