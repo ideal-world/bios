@@ -258,6 +258,8 @@ pub(crate) struct ServConfig {
     pub logout_req_path: String,
     pub double_auth_req_method: String,
     pub double_auth_req_path: String,
+    // list split by ','
+    pub exclude_encrypt_decrypt_path: String,
 }
 #[derive(Serialize, Deserialize, Default, Clone)]
 pub(crate) struct Api {

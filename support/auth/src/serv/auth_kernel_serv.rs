@@ -9,15 +9,16 @@ use tardis::{
     TardisFuns,
 };
 
-use crate::dto::auth_kernel_dto::{AuthResult, MixAuthResp, MixRequestBody, ResContainerLeafInfo, SignWebHookReq};
+use super::{auth_crypto_serv, auth_mgr_serv, auth_res_serv};
+#[cfg(feature = "web-server")]
+use crate::dto::auth_kernel_dto::{AuthResp, MixAuthResp, MixRequestBody};
+use crate::dto::auth_kernel_dto::{AuthResult, ResContainerLeafInfo, SignWebHookReq};
 use crate::helper::auth_common_helper;
 use crate::{
     auth_config::AuthConfig,
     auth_constants::DOMAIN_CODE,
-    dto::auth_kernel_dto::{AuthContext, AuthReq, AuthResp},
+    dto::auth_kernel_dto::{AuthContext, AuthReq},
 };
-
-use super::{auth_crypto_serv, auth_mgr_serv, auth_res_serv};
 
 pub async fn auth(req: &mut AuthReq, is_mix_req: bool) -> TardisResult<AuthResult> {
     trace!("[Auth] Request auth: {:?}", req);
@@ -527,6 +528,7 @@ pub async fn decrypt(
     Ok((None, None))
 }
 
+#[cfg(feature = "web-server")]
 pub(crate) async fn parse_mix_req(req: AuthReq) -> TardisResult<MixAuthResp> {
     let config = TardisFuns::cs_config::<AuthConfig>(DOMAIN_CODE);
     let (body, headers) = auth_crypto_serv::decrypt_req(&req.headers, &req.body, true, true, config).await?;
