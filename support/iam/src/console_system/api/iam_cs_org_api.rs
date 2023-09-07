@@ -218,7 +218,7 @@ impl IamCsOrgItemApi {
         } else {
             Some(RbumScopeLevelKind::Root)
         };
-        let result = IamSetServ::find_set_items(Some(set_id), cate_id.0, None, scope_level, false, &funs, &ctx).await?;
+        let result = IamSetServ::find_set_items(Some(set_id), cate_id.0, None, scope_level, false, None, &funs, &ctx).await?;
         ctx.execute_task().await?;
         TardisResp::ok(result)
     }

@@ -182,7 +182,7 @@ impl IamCtOrgApi {
         let ctx = IamSetServ::try_get_rel_ctx_by_set_id(set_id.0, &funs, ctx.0).await?;
         add_remote_ip(request, &ctx).await?;
         let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, &funs, &ctx).await?;
-        let result = IamSetServ::find_set_items(Some(set_id), cate_id.0, None, None, false, &funs, &ctx).await?;
+        let result = IamSetServ::find_set_items(Some(set_id), cate_id.0, None, None, false, None, &funs, &ctx).await?;
         ctx.execute_task().await?;
         TardisResp::ok(result)
     }

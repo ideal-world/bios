@@ -74,7 +74,7 @@ impl IamCcAppSetApi {
         let ctx = IamCertServ::use_sys_or_tenant_ctx_unsafe(ctx.0)?;
         add_remote_ip(request, &ctx).await?;
         let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Apps, &funs, &ctx).await?;
-        let result = IamSetServ::find_set_items(Some(set_id), cate_id.0, item_id.0, None, false, &funs, &ctx).await?;
+        let result = IamSetServ::find_set_items(Some(set_id), cate_id.0, item_id.0, None, false, None, &funs, &ctx).await?;
         ctx.execute_task().await?;
         TardisResp::ok(result)
     }

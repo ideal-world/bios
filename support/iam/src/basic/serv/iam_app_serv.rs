@@ -242,7 +242,7 @@ impl IamAppServ {
         if let Some(set_cate_id) = &modify_req.set_cate_id {
             let tenant_ctx = IamCertServ::use_sys_or_tenant_ctx_unsafe(ctx.clone())?;
             let apps_set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Apps, funs, &tenant_ctx).await?;
-            let set_items = IamSetServ::find_set_items_with_none_set_cate_id(Some(apps_set_id.clone()), None, Some(id.to_owned()), true, funs, &tenant_ctx).await?;
+            let set_items = IamSetServ::find_set_items(Some(apps_set_id.clone()), None, Some(id.to_owned()), None, true, Some(true), funs, &tenant_ctx).await?;
             for set_item in set_items {
                 IamSetServ::delete_set_item(&set_item.id, funs, &tenant_ctx).await?;
             }

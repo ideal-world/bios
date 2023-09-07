@@ -649,6 +649,7 @@ impl IamSetServ {
         item_id: Option<String>,
         scope_level: Option<RbumScopeLevelKind>,
         with_sub: bool,
+        table_rbum_set_cate_is_left: Option<bool>,
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<Vec<RbumSetItemDetailResp>> {
@@ -658,6 +659,7 @@ impl IamSetServ {
                     with_sub_own_paths: with_sub,
                     ..Default::default()
                 },
+                table_rbum_set_cate_is_left,
                 rel_rbum_item_disabled: Some(false),
                 rel_rbum_set_id: set_id.clone(),
                 rel_rbum_set_cate_ids: set_cate_id.map(|r| vec![r]),
@@ -702,7 +704,7 @@ impl IamSetServ {
             )
             .await
         } else {
-            Self::find_set_items(set_id, set_cate_id, item_id, None, with_sub, funs, ctx).await
+            Self::find_set_items(set_id, set_cate_id, item_id, None, with_sub, None, funs, ctx).await
         }
     }
 
@@ -711,7 +713,7 @@ impl IamSetServ {
     }
 
     pub async fn find_flat_set_items(set_id: &str, item_id: &str, with_sub: bool, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<HashMap<String, String>> {
-        let items = Self::find_set_items(Some(set_id.to_string()), None, Some(item_id.to_string()), None, with_sub, funs, ctx).await?;
+        let items = Self::find_set_items(Some(set_id.to_string()), None, Some(item_id.to_string()), None, with_sub, None, funs, ctx).await?;
         let items = items
             .into_iter()
             .map(|item| {
