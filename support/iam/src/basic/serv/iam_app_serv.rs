@@ -200,6 +200,7 @@ impl IamAppServ {
             &ctx,
         )
         .await?;
+        app_ctx.execute_task().await?;
 
         Ok(app_id)
     }
