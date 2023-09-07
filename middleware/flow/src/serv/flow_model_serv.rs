@@ -1091,6 +1091,7 @@ impl FlowModelServ {
         let flow_model_id = if rel_template_id.is_some() {
             Self::find_one_item(
                 &FlowModelFilterReq {
+                    tags: Some(vec![tag.to_string()]),
                     rel_template_id,
                     ..Default::default()
                 },
