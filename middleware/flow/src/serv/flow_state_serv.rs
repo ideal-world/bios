@@ -85,17 +85,17 @@ impl RbumItemCrudOperation<flow_state::ActiveModel, FlowStateAddReq, FlowStateMo
         })
     }
 
-    async fn before_modify_item(id: &str, modify_req: &mut FlowStateModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    async fn before_modify_item(_id: &str, _modify_req: &mut FlowStateModifyReq, _funs: &TardisFunsInst, _ctx: &TardisContext) -> TardisResult<()> {
         // Modifications are allowed only where non-key fields are modified or not used
-        if (modify_req.scope_level.is_some()
-            || modify_req.disabled.is_some()
-            || modify_req.sys_state.is_some()
-            || modify_req.state_kind.is_some()
-            || modify_req.kind_conf.is_some())
-            && FlowModelServ::state_is_used(id, funs, ctx).await?
-        {
-            return Err(funs.err().conflict(&Self::get_obj_name(), "modify", &format!("state {id} already used"), "409-flow-state-already-used"));
-        }
+        // if (modify_req.scope_level.is_some()
+        //     || modify_req.disabled.is_some()
+        //     || modify_req.sys_state.is_some()
+        //     || modify_req.state_kind.is_some()
+        //     || modify_req.kind_conf.is_some())
+        //     && FlowModelServ::state_is_used(id, funs, ctx).await?
+        // {
+        //     return Err(funs.err().conflict(&Self::get_obj_name(), "modify", &format!("state {id} already used"), "409-flow-state-already-used"));
+        // }
         Ok(())
     }
 

@@ -10,6 +10,7 @@ use crate::{
     dto::flow_external_dto::{
         FlowExternalFetchRelObjResp, FlowExternalKind, FlowExternalModifyFieldResp, FlowExternalNotifyChangesResp, FlowExternalParams, FlowExternalReq, FlowExternalResp,
     },
+    flow_config::FlowConfig,
     flow_constants,
 };
 
@@ -127,6 +128,17 @@ impl FlowExternalServ {
         } else {
             Err(funs.err().internal_error("flow_external", "do_notify_changes", "illegal response", "500-external-illegal-response"))
         }
+    }
+
+    pub async fn do_find_embed_subrole_id(role_id: &str, ctx: &TardisContext, funs: &TardisFunsInst) -> TardisResult<String> {
+        let iam_url = &funs.conf::<FlowConfig>().iam_url;
+
+        let header = Self::headers(None, funs, ctx).await?;
+        funs.web_client()
+            .get::<String>(&format!("{iam_url}/get_embed_subrole_id?id={role_id}"), header)
+            .await?
+            .body
+            .ok_or_else(|| funs.err().internal_error("flow_external", "do_find_embed_subrole_id", "illegal response", "500-external-illegal-response"))
     }
 
     async fn get_external_url(tag: &str, ctx: &TardisContext, funs: &TardisFunsInst) -> TardisResult<String> {

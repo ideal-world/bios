@@ -45,6 +45,7 @@ use crate::{
 use async_trait::async_trait;
 
 use super::{
+    flow_external_serv::FlowExternalServ,
     flow_inst_serv::FlowInstServ,
     flow_rel_serv::{FlowRelKind, FlowRelServ},
 };
@@ -824,7 +825,13 @@ impl FlowModelServ {
         };
 
         // add model
-        let transitions = parent_model.transitions();
+        let mut transitions = parent_model.transitions();
+        // sub role_id instead of role_id
+        for transition in &mut transitions {
+            for role_id in &mut transition.guard_by_spec_role_ids {
+                *role_id = FlowExternalServ::do_find_embed_subrole_id(role_id, ctx, funs).await?;
+            }
+        }
         let model_id = Self::add_item(
             &mut FlowModelAddReq {
                 name: parent_model.name.into(),
