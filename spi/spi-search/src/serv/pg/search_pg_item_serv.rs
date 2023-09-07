@@ -467,8 +467,6 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
             }
         }
     }
-    let sql_adv_query = if sql_adv_query.is_empty() { "".to_string() } else { sql_adv_query.join(" ") };
-
     sql_vals.push(Value::from(search_req.page.size));
     sql_vals.push(Value::from((search_req.page.number - 1) * search_req.page.size as u32));
     let page_fragments = format!("LIMIT ${} OFFSET ${}", sql_vals.len() - 1, sql_vals.len());
@@ -482,7 +480,7 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
 FROM {table_name}{}
 WHERE 
     {}
-    {sql_adv_query}
+    {}
     {}
 {}"#,
                 if search_req.page.fetch_total { ", count(*) OVER() AS total" } else { "" },
@@ -490,6 +488,11 @@ WHERE
                 select_fragments,
                 from_fragments,
                 where_fragments.join(" AND "),
+                if sql_adv_query.is_empty() {
+                    "".to_string()
+                } else {
+                    format!(" AND ( 1=1 {})", sql_adv_query.join(" "))
+                },
                 if order_fragments.is_empty() {
                     "".to_string()
                 } else {
