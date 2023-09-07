@@ -26,7 +26,7 @@ async fn test_auth() -> TardisResult<()> {
     test_auth_init::test_init().await?;
 
     let web_server = TardisFuns::web_server();
-    auth_initializer::init_api(web_server).await?;
+    auth_initializer::init_api(&web_server).await?;
     tokio::spawn(async move {
         web_server.start().await.unwrap();
     });

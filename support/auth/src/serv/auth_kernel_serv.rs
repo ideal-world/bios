@@ -23,20 +23,20 @@ pub async fn auth(req: &mut AuthReq, is_mix_req: bool) -> TardisResult<AuthResul
     trace!("[Auth] Request auth: {:?}", req);
     let config = TardisFuns::cs_config::<AuthConfig>(DOMAIN_CODE);
     match check(req) {
-        Ok(true) => return Ok(AuthResult::ok(None, None, None, config)),
-        Err(e) => return Ok(AuthResult::err(e, config)),
+        Ok(true) => return Ok(AuthResult::ok(None, None, None, &config)),
+        Err(e) => return Ok(AuthResult::err(e, &config)),
         _ => {}
     }
     let cache_client = TardisFuns::cache_by_module_or_default(DOMAIN_CODE);
-    match ident(req, config, cache_client).await {
+    match ident(req, &config, &cache_client).await {
         Ok(ident) => match do_auth(&ident).await {
-            Ok(res_container_leaf_info) => match decrypt(req, config, &res_container_leaf_info, is_mix_req).await {
-                Ok((body, headers)) => Ok(AuthResult::ok(Some(&ident), body, headers, config)),
-                Err(e) => Ok(AuthResult::err(e, config)),
+            Ok(res_container_leaf_info) => match decrypt(req, &config, &res_container_leaf_info, is_mix_req).await {
+                Ok((body, headers)) => Ok(AuthResult::ok(Some(&ident), body, headers, &config)),
+                Err(e) => Ok(AuthResult::err(e, &config)),
             },
-            Err(e) => Ok(AuthResult::err(e, config)),
+            Err(e) => Ok(AuthResult::err(e, &config)),
         },
-        Err(e) => Ok(AuthResult::err(e, config)),
+        Err(e) => Ok(AuthResult::err(e, &config)),
     }
 }
 
@@ -390,7 +390,7 @@ fn get_webhook_ak_key(req: &AuthReq, config: &AuthConfig) -> Option<String> {
 pub async fn sign_webhook_ak(sign_req: &SignWebHookReq) -> TardisResult<String> {
     let config = TardisFuns::cs_config::<AuthConfig>(DOMAIN_CODE);
     let cache_client = TardisFuns::cache_by_module_or_default(DOMAIN_CODE);
-    let (cache_sk, cache_tenant_id, cache_appid) = self::get_cache_ak(&sign_req.ak, config, cache_client).await?;
+    let (cache_sk, cache_tenant_id, cache_appid) = self::get_cache_ak(&sign_req.ak, &config, &cache_client).await?;
     let mut cache_own_paths = cache_tenant_id.clone();
     if !cache_appid.is_empty() {
         cache_own_paths = format!("{cache_tenant_id}/{cache_appid}")
@@ -529,7 +529,7 @@ pub async fn decrypt(
 
 pub(crate) async fn parse_mix_req(req: AuthReq) -> TardisResult<MixAuthResp> {
     let config = TardisFuns::cs_config::<AuthConfig>(DOMAIN_CODE);
-    let (body, headers) = auth_crypto_serv::decrypt_req(&req.headers, &req.body, true, true, config).await?;
+    let (body, headers) = auth_crypto_serv::decrypt_req(&req.headers, &req.body, true, true, &config).await?;
     let body = body.ok_or_else(|| TardisError::bad_request("[MixReq] decrypt body can't be empty", "401-parse_mix_req-parse-error"))?;
 
     let mix_body = TardisFuns::json.str_to_obj::<MixRequestBody>(&body)?;

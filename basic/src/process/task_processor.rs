@@ -97,13 +97,13 @@ impl TaskProcessor {
         P: FnOnce(i64) -> T + Send + Sync + 'static,
         T: Future<Output = TardisResult<()>> + Send + 'static,
     {
-        let task_id = TaskProcessor::init_task(cache_key, funs.cache()).await?;
+        let task_id = TaskProcessor::init_task(cache_key, &funs.cache()).await?;
         let cache_client = funs.cache();
         let cache_key = cache_key.to_string();
         let handle = tardis::tokio::spawn(async move {
             let result = process(task_id).await;
             match result {
-                Ok(_) => match TaskProcessor::set_status(&cache_key, task_id, true, cache_client).await {
+                Ok(_) => match TaskProcessor::set_status(&cache_key, task_id, true, &cache_client).await {
                     Ok(_) => {}
                     Err(e) => log::error!("Asynchronous task [{}] process error:{:?}", task_id, e),
                 },
@@ -117,7 +117,7 @@ impl TaskProcessor {
     }
 
     pub async fn execute_task_external(cache_key: &str, funs: &TardisFunsInst) -> TardisResult<i64> {
-        let task_id = TaskProcessor::init_task(cache_key, funs.cache()).await?;
+        let task_id = TaskProcessor::init_task(cache_key, &funs.cache()).await?;
         Ok(task_id)
     }
 
@@ -136,7 +136,7 @@ impl TaskProcessor {
     }
 
     pub async fn stop_task(cache_key: &str, task_id: i64, funs: &TardisFunsInst) -> TardisResult<()> {
-        if TaskProcessor::check_status(cache_key, task_id, funs.cache()).await? {
+        if TaskProcessor::check_status(cache_key, task_id, &funs.cache()).await? {
             TASK_HANDLE.write().await.remove(&task_id);
         } else {
             funs.mq()
@@ -155,7 +155,7 @@ impl TaskProcessor {
     }
 
     pub async fn stop_task_external(cache_key: &str, task_id: i64, funs: &TardisFunsInst) -> TardisResult<()> {
-        match TaskProcessor::set_status(cache_key, task_id, true, funs.cache()).await {
+        match TaskProcessor::set_status(cache_key, task_id, true, &funs.cache()).await {
             Ok(_) => {}
             Err(e) => log::error!("Asynchronous task [{}] stop error:{:?}", task_id, e),
         }
@@ -166,7 +166,7 @@ impl TaskProcessor {
         match TASK_HANDLE.write().await.remove(&task_id) {
             Some(handle) => {
                 handle.abort();
-                match TaskProcessor::set_status(cache_key, task_id, true, funs.cache()).await {
+                match TaskProcessor::set_status(cache_key, task_id, true, &funs.cache()).await {
                     Ok(_) => {}
                     Err(e) => log::error!("Asynchronous task [{}] stop error:{:?}", task_id, e),
                 }

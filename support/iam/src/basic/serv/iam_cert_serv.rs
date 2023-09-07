@@ -1290,14 +1290,14 @@ impl IamCertServ {
     pub async fn get_third_intg_sync_status(task_id: &str, funs: &TardisFunsInst) -> TardisResult<Option<IamThirdIntegrationSyncStatusDto>> {
         let mut result = None;
         let task_id = task_id.parse().map_err(|_| funs.err().format_error("system", "task", "task id format error", "406-iam-task-id-format"))?;
-        let mut is_end = TaskProcessor::check_status(&funs.conf::<IamConfig>().cache_key_async_task_status, task_id, funs.cache()).await?;
+        let mut is_end = TaskProcessor::check_status(&funs.conf::<IamConfig>().cache_key_async_task_status, task_id, &funs.cache()).await?;
         for _i in 0..5 {
             result = funs
                 .cache()
                 .get(&funs.conf::<IamConfig>().cache_key_sync_ldap_status)
                 .await?
                 .and_then(|s| TardisFuns::json.str_to_obj::<IamThirdIntegrationSyncStatusDto>(&s).ok());
-            is_end = TaskProcessor::check_status(&funs.conf::<IamConfig>().cache_key_async_task_status, task_id, funs.cache()).await?;
+            is_end = TaskProcessor::check_status(&funs.conf::<IamConfig>().cache_key_async_task_status, task_id, &funs.cache()).await?;
             if is_end || (result.is_some() && result.as_ref().expect("").total != 0) {
                 break;
             }
@@ -1326,7 +1326,7 @@ impl IamCertServ {
         let task_ctx = ctx.clone();
         let sync = SYNC_LOCK.try_lock().map_err(|_| funs.err().conflict("third_integration_config", "sync", "The last synchronization has not ended yet", "iam-sync-not-ended"))?;
         if let Some(task_id) = funs.cache().get(&funs.conf::<IamConfig>().cache_key_sync_ldap_task_lock).await?.and_then(|task_id| task_id.parse().ok()) {
-            if !TaskProcessor::check_status(&funs.conf::<IamConfig>().cache_key_async_task_status, task_id, funs.cache()).await? {
+            if !TaskProcessor::check_status(&funs.conf::<IamConfig>().cache_key_async_task_status, task_id, &funs.cache()).await? {
                 return Err(funs.err().conflict("third_integration_config", "sync", "The last synchronization has not ended yet", "iam-sync-not-ended"));
             };
         }

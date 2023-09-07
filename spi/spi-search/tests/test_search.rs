@@ -32,7 +32,7 @@ async fn init_data() -> TardisResult<()> {
 
     let web_server = TardisFuns::web_server();
     // Initialize SPI search
-    search_initializer::init(web_server).await.unwrap();
+    search_initializer::init(&web_server).await.unwrap();
 
     tokio::spawn(async move {
         web_server.start().await.unwrap();

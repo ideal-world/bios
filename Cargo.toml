@@ -47,6 +47,6 @@ fancy-regex = { version = "0" }
 run_script = { version = "0.10" }
 strum ={ version = "0.25", features = ["derive"] }
 # tardis
-tardis = { version = "=0.1.0-beta.12" }
+# tardis = { version = "=0.1.0-beta.12" }
 # tardis = { path = "../tardis/tardis" }
-# tardis = { git = "https://github.com/ideal-world/tardis.git", rev = "9424e16" }
+tardis = { git = "https://github.com/ideal-world/tardis.git", rev = "4e9cb0f" }

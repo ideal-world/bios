@@ -40,7 +40,7 @@ pub async fn init_tardis(docker: &Cli) -> TardisResult<Holder> {
     bios_basic::rbum::rbum_initializer::init(DOMAIN_CODE, RbumConfig::default()).await?;
     let web_server = TardisFuns::web_server();
     rbum_initializer::init("bios-spi", RbumConfig::default()).await?;
-    conf_initializer::init(web_server).await?;
+    conf_initializer::init(&web_server).await?;
     Ok(holder)
 }
 
