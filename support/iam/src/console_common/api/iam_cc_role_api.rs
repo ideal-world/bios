@@ -145,4 +145,14 @@ impl IamCcRoleApi {
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
+
+    /// Get Embed Subrole Id
+    #[oai(path = "/get_embed_subrole_id", method = "get")]
+    async fn get_embed_subrole_id(&self, id: Query<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<String> {
+        add_remote_ip(request, &ctx.0).await?;
+        let funs = iam_constants::get_tardis_inst();
+        let result = IamRoleServ::get_embed_subrole_id(&id, &funs, &ctx.0).await?;
+        ctx.0.execute_task().await?;
+        TardisResp::ok(result)
+    }
 }
