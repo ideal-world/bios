@@ -182,6 +182,7 @@ impl RbumItemCrudOperation<flow_state::ActiveModel, FlowStateAddReq, FlowStateMo
         }
         if let Some(tag) = &filter.tag {
             let mut cond = Cond::any();
+            cond = cond.add(Expr::col(flow_state::Column::Tags).eq(""));
             for tag in tag.split(',') {
                 cond = cond.add(Expr::col(flow_state::Column::Tags).like(format!("%{}%", tag)));
             }
