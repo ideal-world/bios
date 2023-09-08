@@ -172,6 +172,8 @@ pub(crate) async fn find_job(code: Option<String>, page_number: u32, page_size: 
                         callback_url: job.callback_url,
                         create_time: Some(record.create_time),
                         update_time: Some(record.update_time),
+                        enable_time: job.enable_time,
+                        disable_time: job.disable_time,
                     },
                     _ => ScheduleJobInfoResp {
                         code: record.key.replace(KV_KEY_CODE, ""),
@@ -179,6 +181,8 @@ pub(crate) async fn find_job(code: Option<String>, page_number: u32, page_size: 
                         callback_url: "".to_string(),
                         create_time: Some(record.create_time),
                         update_time: Some(record.update_time),
+                        enable_time: None,
+                        disable_time: None,
                     },
                 }
             })
@@ -402,6 +406,7 @@ impl OwnedScheduleTaskServ {
     fn gen_distributed_lock_key(code: &str, config: &ScheduleConfig) -> String {
         format!("{}{}", config.distributed_lock_key_prefix, code)
     }
+
     /// add schedule task
     pub async fn add(&self, job_config: ScheduleJobAddOrModifyReq, config: &ScheduleConfig) -> TardisResult<()> {
         let has_job = { self.code_uuid.read().await.get(&job_config.code.0).is_some() };
@@ -425,6 +430,9 @@ impl OwnedScheduleTaskServ {
             "Tardis-Context".to_string(),
             TardisFuns::crypto.base64.encode(TardisFuns::json.obj_to_string(&ctx)?),
         )]);
+
+        let enable_time = job_config.enable_time;
+        let disable_time = job_config.disable_time;
         // startup cron scheduler
         let job = Job::new_async(job_config.cron.as_str(), move |_uuid, _scheduler| {
             let callback_url = callback_url.clone();
@@ -432,6 +440,20 @@ impl OwnedScheduleTaskServ {
             let code = code.clone();
             let headers = headers.clone();
             let lock_key = lock_key.clone();
+            if let Some(enable_time) = enable_time {
+                if enable_time > Utc::now() {
+                    return Box::pin(async move {
+                        trace!("schedule task {code} is not enabled yet, skip", code = code);
+                    });
+                }
+            }
+            if let Some(disable_time) = disable_time {
+                if disable_time < Utc::now() {
+                    return Box::pin(async move {
+                        trace!("schedule task {code} is disabled, skip", code = code);
+                    });
+                }
+            }
             Box::pin(async move {
                 let cache_client = TardisFuns::cache();
                 // about set and setnx, see:
