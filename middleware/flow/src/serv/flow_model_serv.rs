@@ -105,7 +105,7 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
                     "flow_model_Serv",
                     "after_modify_item",
                     "this post action exist endless loop",
-                    "500-flow-model-modify-transition-error",
+                    "500-flow-transition-endless-loop",
                 ));
             }
         }
@@ -166,7 +166,7 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
                     "flow_model_Serv",
                     "after_modify_item",
                     "this post action exist endless loop",
-                    "500-flow-model-modify-transition-error",
+                    "500-flow-transition-endless-loop",
                 ));
             }
         }
@@ -280,11 +280,11 @@ impl FlowModelServ {
             add_transitions.push(FlowTransitionAddReq {
                 from_flow_state_id: states_map
                     .get(transition.from_flow_state_name.as_str())
-                    .ok_or_else(|| funs.err().internal_error("flow_model_serv", "init_model", "from_flow_state_name is illegal", "500-flow-state-illegal"))?
+                    .ok_or_else(|| funs.err().internal_error("flow_model_serv", "init_model", "from_flow_state_name is illegal", ""))?
                     .to_string(),
                 to_flow_state_id: states_map
                     .get(transition.to_flow_state_name.as_str())
-                    .ok_or_else(|| funs.err().internal_error("flow_model_serv", "init_model", "to_flow_state_name is illegal", "500-flow-state-illegal"))?
+                    .ok_or_else(|| funs.err().internal_error("flow_model_serv", "init_model", "to_flow_state_name is illegal", ""))?
                     .to_string(),
                 name: Some(transition.name.into()),
                 transfer_by_auto: transition.transfer_by_auto,
@@ -328,7 +328,7 @@ impl FlowModelServ {
             FlowRelServ::add_simple_rel(
                 &FlowRelKind::FlowModelState,
                 &model_id,
-                states_map.get(state_name).ok_or_else(|| funs.err().internal_error("flow_model_serv", "init_model", "to_flow_state_name is illegal", "500-flow-state-illegal"))?,
+                states_map.get(state_name).ok_or_else(|| funs.err().internal_error("flow_model_serv", "init_model", "to_flow_state_name is illegal", ""))?,
                 None,
                 None,
                 false,
@@ -821,7 +821,7 @@ impl FlowModelServ {
                 &global_ctx,
             )
             .await?
-            .ok_or_else(|| funs.err().internal_error("flow_model_serv", "add_custom_model", "default model is not exist", "404-default-model-mot-exist"))?
+            .ok_or_else(|| funs.err().internal_error("flow_model_serv", "add_custom_model", "default model is not exist", "404-flow-model-not-found"))?
         };
 
         // add model
@@ -913,7 +913,7 @@ impl FlowModelServ {
                 "flow_model_serv",
                 "bind_state",
                 "The own_paths of current mode isn't the own_paths of ctx",
-                "500-mx-flow-internal-error",
+                "404-flow-model-not-found",
             ));
         }
         FlowRelServ::add_simple_rel(flow_rel_kind, flow_model_id, flow_state_id, None, None, false, true, Some(sort), funs, ctx).await?;
@@ -962,7 +962,7 @@ impl FlowModelServ {
                 "flow_model_serv",
                 "unbind_state",
                 "The own_paths of current mode isn't the own_paths of ctx",
-                "500-mx-flow-internal-error",
+                "404-flow-model-not-found",
             ));
         }
         FlowRelServ::delete_simple_rel(flow_rel_kind, flow_model_id, flow_state_id, funs, ctx).await?;
@@ -1099,7 +1099,7 @@ impl FlowModelServ {
                 ctx,
             )
             .await?
-            .ok_or_else(|| funs.err().not_found(&Self::get_obj_name(), "find_rel_states", "not found flow model", "404-flow-model-not-exist"))?
+            .ok_or_else(|| funs.err().not_found(&Self::get_obj_name(), "find_rel_states", "not found flow model", "404-flow-model-not-found"))?
             .id
         } else {
             FlowInstServ::get_model_id_by_own_paths(tag, funs, ctx).await?
