@@ -101,8 +101,8 @@ impl FlowExternalServ {
         tag: &str,
         inst_id: &str,
         rel_business_obj_id: &str,
-        original_state: String,
         target_state: String,
+        original_state: String,
         ctx: &TardisContext,
         funs: &TardisFunsInst,
     ) -> TardisResult<FlowExternalNotifyChangesResp> {
