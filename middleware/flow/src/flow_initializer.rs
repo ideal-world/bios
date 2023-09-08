@@ -2,7 +2,12 @@ use bios_basic::rbum::{
     dto::{rbum_domain_dto::RbumDomainAddReq, rbum_filer_dto::RbumBasicFilterReq, rbum_kind_dto::RbumKindAddReq},
     rbum_enumeration::RbumScopeLevelKind,
     rbum_initializer,
-    serv::{rbum_crud_serv::RbumCrudOperation, rbum_domain_serv::RbumDomainServ, rbum_item_serv::{RbumItemCrudOperation, RbumItemServ}, rbum_kind_serv::RbumKindServ},
+    serv::{
+        rbum_crud_serv::RbumCrudOperation,
+        rbum_domain_serv::RbumDomainServ,
+        rbum_item_serv::{RbumItemCrudOperation, RbumItemServ},
+        rbum_kind_serv::RbumKindServ,
+    },
 };
 use bios_sdk_invoke::invoke_initializer;
 
@@ -176,10 +181,19 @@ pub async fn truncate_data<'a>(funs: &TardisFunsInst) -> TardisResult<()> {
     Ok(())
 }
 async fn get_role_id(role_code: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
-    Ok(RbumItemServ::find_id_rbums(&RbumBasicFilterReq {
-        code: Some(role_code.to_string()),
-        ..Default::default()
-    }, None, None, funs, ctx).await?.pop().unwrap_or_default())
+    Ok(RbumItemServ::find_id_rbums(
+        &RbumBasicFilterReq {
+            code: Some(role_code.to_string()),
+            ..Default::default()
+        },
+        None,
+        None,
+        funs,
+        ctx,
+    )
+    .await?
+    .pop()
+    .unwrap_or_default())
 }
 
 async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {

@@ -71,7 +71,11 @@ impl FlowInstServ {
         .await?;
         let id = TardisFuns::field.nanoid();
         let current_state_id = if let Some(current_state_name) = &current_state_name {
-            FlowStateServ::match_state_id_by_name(&start_req.tag, &flow_model_id, current_state_name, funs, ctx).await?
+            if current_state_name.is_empty() {
+                flow_model.init_state_id.clone()
+            } else {
+                FlowStateServ::match_state_id_by_name(&start_req.tag, &flow_model_id, current_state_name, funs, ctx).await?
+            }
         } else {
             flow_model.init_state_id.clone()
         };
@@ -214,7 +218,7 @@ impl FlowInstServ {
         }
         match result {
             Some(model) => Ok(model.id),
-            None => Err(funs.err().not_found("flow_inst_serv", "get_model_id_by_own_paths", "model not found", "404-model-not-found")),
+            None => Err(funs.err().not_found("flow_inst_serv", "get_model_id_by_own_paths", "model not found", "404-flow-model-not-found")),
         }
     }
 
@@ -614,7 +618,7 @@ impl FlowInstServ {
         .await?
         .0
         {
-            return Err(funs.err().not_found("flow_inst", "transfer", "this post action exist endless loop", "500-flow-inst-transfer-state-error"));
+            return Err(funs.err().not_found("flow_inst", "transfer", "this post action exist endless loop", "500-flow-transition-endless-loop"));
         }
 
         let next_flow_transition = next_flow_transition.unwrap();
