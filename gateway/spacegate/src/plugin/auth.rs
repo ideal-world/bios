@@ -126,7 +126,7 @@ impl SgPluginFilter for SgFilterAuth {
         let mut instance = INSTANCE.get_or_init(Default::default).write().await;
         if let Some((md5, handle)) = instance.as_ref() {
             if config_md5.eq(md5) {
-                log::debug!("[SG.Filter.Auth] have not found config change");
+                log::trace!("[SG.Filter.Auth] have not found config change");
                 return Ok(());
             } else {
                 handle.abort();
@@ -217,7 +217,16 @@ impl SgPluginFilter for SgFilterAuth {
 
         match auth_kernel_serv::auth(&mut auth_req, is_true_mix_req).await {
             Ok(auth_result) => {
-                log::debug!("[Plugin.Auth] auth return ok {:?}", auth_result);
+                if log::level_enabled!(log::Level::TRACE) {
+                    log::trace!("[Plugin.Auth] auth return ok {:?}", auth_result);
+                } else if log::level_enabled!(log::Level::DEBUG) {
+                    if let Some(ctx) = &auth_result.ctx {
+                        log::debug!("[Plugin.Auth] auth return ok ctx:{ctx}",);
+                    } else {
+                        log::debug!("[Plugin.Auth] auth return ok ctx:None",);
+                    };
+                }
+
                 if auth_result.e.is_none() {
                     ctx = success_auth_result_to_ctx(auth_result, req_body.into(), ctx)?;
                 } else if let Some(e) = auth_result.e {
@@ -229,7 +238,7 @@ impl SgPluginFilter for SgFilterAuth {
                 Ok((true, ctx))
             }
             Err(e) => {
-                log::warn!("[Plugin.Auth] auth return error {:?}", e);
+                log::info!("[Plugin.Auth] auth return error {:?}", e);
                 ctx.set_action(SgRouteFilterRequestAction::Response);
                 ctx.response.set_body(format!("[Plugin.Auth] auth return error:{e}"));
                 Ok((false, ctx))
