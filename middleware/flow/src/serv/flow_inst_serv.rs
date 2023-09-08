@@ -801,8 +801,8 @@ impl FlowInstServ {
                         } else {
                             FlowExternalServ::do_modify_field(
                                 &current_model.tag,
-                                &current_inst.id,
                                 &current_inst.rel_business_obj_id,
+                                &current_inst.id,
                                 None,
                                 None,
                                 vec![FlowExternalParams {
