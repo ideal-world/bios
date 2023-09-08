@@ -10,10 +10,15 @@ use bios_auth::{
 };
 
 use serde::{Deserialize, Serialize};
-use spacegate_kernel::{http::{self, HeaderMap, HeaderName, HeaderValue}, hyper::{body::Bytes, Body, Method}, hyper, plugins::{
-    context::{SgRouteFilterRequestAction, SgRoutePluginContext},
-    filters::{BoxSgPluginFilter, SgPluginFilter, SgPluginFilterAccept, SgPluginFilterDef},
-}};
+use spacegate_kernel::{
+    http::{self, HeaderMap, HeaderName, HeaderValue},
+    hyper,
+    hyper::{body::Bytes, Body, Method},
+    plugins::{
+        context::{SgRouteFilterRequestAction, SgRoutePluginContext},
+        filters::{BoxSgPluginFilter, SgPluginFilter, SgPluginFilterAccept, SgPluginFilterDef},
+    },
+};
 use spacegate_kernel::{
     hyper::StatusCode,
     plugins::{
@@ -386,7 +391,7 @@ async fn ctx_to_auth_encrypt_req(ctx: &mut SgRoutePluginContext) -> TardisResult
     if !body.is_empty() {
         ctx.set_ext(plugin_constants::BEFORE_ENCRYPT_BODY, body.to_string());
     }
-    log::trace!("[Plugin.Auth] Before Encrypt Body {}",body.to_string());
+    log::trace!("[Plugin.Auth] Before Encrypt Body {}", body.to_string());
     Ok(AuthEncryptReq {
         headers,
         body: String::from(body),
