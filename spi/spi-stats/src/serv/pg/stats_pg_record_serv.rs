@@ -46,7 +46,7 @@ pub(crate) async fn get_fact_record_latest(
     let result = conn
         .query_all(
             &format!(
-                r#"SELECT * FROM (
+                r#"SELECT "key", "own_paths", "status", "priority", "tag", "creator", "source", "act_hours", "plan_hours", "ct", "total"  FROM (
     SELECT *, ROW_NUMBER() OVER (PARTITION BY "key" ORDER BY ct DESC) AS rn, count(*) OVER() AS total
     FROM {table_name}
     WHERE "key" IN ({placeholder})
