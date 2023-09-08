@@ -37,14 +37,14 @@ impl SgPluginFilterDef for SgFilterAntiXSSDef {
     }
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Default, Serialize, Deserialize)]
 #[serde(default)]
-#[derive(Default)]
 pub struct SgFilterAntiXSS {
     csp_config: CSPConfig,
 }
 
 #[derive(Serialize, Deserialize)]
+#[serde(default)]
 pub struct CSPConfig {
     default_src: String,
     base_uri: Option<String>,

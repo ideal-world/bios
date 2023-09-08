@@ -12,6 +12,7 @@ use bios_auth::{
 use serde::{Deserialize, Serialize};
 use spacegate_kernel::{
     http::{self, HeaderMap, HeaderName, HeaderValue},
+    hyper,
     hyper::{body::Bytes, Body, Method},
     plugins::{
         context::{SgRouteFilterRequestAction, SgRoutePluginContext},
@@ -125,7 +126,7 @@ impl SgPluginFilter for SgFilterAuth {
         let mut instance = INSTANCE.get_or_init(Default::default).write().await;
         if let Some((md5, handle)) = instance.as_ref() {
             if config_md5.eq(md5) {
-                log::debug!("[SG.Filter.Auth] have not found config change");
+                log::trace!("[SG.Filter.Auth] have not found config change");
                 return Ok(());
             } else {
                 handle.abort();
@@ -216,7 +217,16 @@ impl SgPluginFilter for SgFilterAuth {
 
         match auth_kernel_serv::auth(&mut auth_req, is_true_mix_req).await {
             Ok(auth_result) => {
-                log::debug!("[Plugin.Auth] auth return ok {:?}", auth_result);
+                if log::level_enabled!(log::Level::TRACE) {
+                    log::trace!("[Plugin.Auth] auth return ok {:?}", auth_result);
+                } else if log::level_enabled!(log::Level::DEBUG) {
+                    if let Some(ctx) = &auth_result.ctx {
+                        log::debug!("[Plugin.Auth] auth return ok ctx:{ctx}",);
+                    } else {
+                        log::debug!("[Plugin.Auth] auth return ok ctx:None",);
+                    };
+                }
+
                 if auth_result.e.is_none() {
                     ctx = success_auth_result_to_ctx(auth_result, req_body.into(), ctx)?;
                 } else if let Some(e) = auth_result.e {
@@ -228,7 +238,7 @@ impl SgPluginFilter for SgFilterAuth {
                 Ok((true, ctx))
             }
             Err(e) => {
-                log::warn!("[Plugin.Auth] auth return error {:?}", e);
+                log::info!("[Plugin.Auth] auth return error {:?}", e);
                 ctx.set_action(SgRouteFilterRequestAction::Response);
                 ctx.response.set_body(format!("[Plugin.Auth] auth return error:{e}"));
                 Ok((false, ctx))
@@ -257,6 +267,7 @@ impl SgPluginFilter for SgFilterAuth {
         }
         let encrypt_resp = auth_crypto_serv::encrypt_body(&ctx_to_auth_encrypt_req(&mut ctx).await?).await?;
         ctx.response.get_headers_mut().extend(hashmap_header_to_headermap(encrypt_resp.headers)?);
+        ctx.response.headers.remove(hyper::header::TRANSFER_ENCODING);
         ctx.response.set_body(encrypt_resp.body);
         self.cors(&mut ctx)?;
 
@@ -389,7 +400,7 @@ async fn ctx_to_auth_encrypt_req(ctx: &mut SgRoutePluginContext) -> TardisResult
     if !body.is_empty() {
         ctx.set_ext(plugin_constants::BEFORE_ENCRYPT_BODY, body.to_string());
     }
-
+    log::trace!("[Plugin.Auth] Before Encrypt Body {}", body.to_string());
     Ok(AuthEncryptReq {
         headers,
         body: String::from(body),
