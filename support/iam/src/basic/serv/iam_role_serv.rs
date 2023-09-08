@@ -461,21 +461,29 @@ impl IamRoleServ {
         {
             return Err(funs.err().conflict(&Self::get_obj_name(), "add_rel_account", "associated role is invalid", "409-iam-role-rel-conflict"));
         }
-        if let Some(spec_scope_level) = spec_scope_level {
-            let role = Self::peek_item(role_id, &IamRoleFilterReq::default(), funs, ctx).await?;
-            // The role is not private and current scope
-            if role.scope_level != RbumScopeLevelKind::Private && role.scope_level.to_int() < spec_scope_level.to_int() {
-                return Err(funs.err().conflict(&Self::get_obj_name(), "add_rel_account", "associated role is invalid", "409-iam-role-rel-conflict"));
-            }
-        }
+
         match Self::get_embed_subrole_id(role_id, funs, ctx).await {
             Ok(sub_role_id) => {
-                IamRelServ::add_simple_rel(&IamRelKind::IamAccountRole, account_id, &sub_role_id, None, None, false, false, funs, ctx).await?;
+                if let Some(spec_scope_level) = spec_scope_level {
+                    let role = Self::peek_item(&sub_role_id, &IamRoleFilterReq::default(), funs, ctx).await?;
+                    // The role is not private and current scope
+                    if role.scope_level != RbumScopeLevelKind::Private && role.scope_level.to_int() < spec_scope_level.to_int() {
+                        return Err(funs.err().conflict(&Self::get_obj_name(), "add_rel_account", "associated role is invalid", "409-iam-role-rel-conflict"));
+                    }
+                }
+                IamRelServ::add_simple_rel(&IamRelKind::IamAccountRole, account_id, &sub_role_id, None, None, true, false, funs, ctx).await?;
             }
             Err(_) => {
+                if let Some(spec_scope_level) = spec_scope_level {
+                    let role = Self::peek_item(role_id, &IamRoleFilterReq::default(), funs, ctx).await?;
+                    // The role is not private and current scope
+                    if role.scope_level != RbumScopeLevelKind::Private && role.scope_level.to_int() < spec_scope_level.to_int() {
+                        return Err(funs.err().conflict(&Self::get_obj_name(), "add_rel_account", "associated role is invalid", "409-iam-role-rel-conflict"));
+                    }
+                }
                 // TODO only bind the same own_paths roles
                 // E.g. sys admin can't bind tenant admin
-                IamRelServ::add_simple_rel(&IamRelKind::IamAccountRole, account_id, role_id, None, None, false, false, funs, ctx).await?;
+                IamRelServ::add_simple_rel(&IamRelKind::IamAccountRole, account_id, role_id, None, None, true, false, funs, ctx).await?;
             }
         }
         IamAccountServ::async_add_or_modify_account_search(account_id.to_string(), Box::new(true), "".to_string(), funs, ctx).await?;
@@ -582,7 +590,7 @@ impl IamRoleServ {
     }
 
     pub async fn count_rel_res(role_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<u64> {
-        let count = IamRelServ::count_to_rels(&IamRelKind::IamResRole, role_id, funs, ctx).await?;
+        let mut count = IamRelServ::count_to_rels(&IamRelKind::IamResRole, role_id, funs, ctx).await?;
         let role = Self::get_item(
             role_id,
             &IamRoleFilterReq {
@@ -593,17 +601,17 @@ impl IamRoleServ {
                 },
                 ..Default::default()
             },
-            &funs,
-            &ctx,
+            funs,
+            ctx,
         )
         .await?;
-        if role.extend_role_id != "" {
+        if !role.extend_role_id.is_empty() {
             let moke_ctx = TardisContext {
                 own_paths: "".to_string(),
                 ..ctx.clone()
             };
             let extend_count = IamRelServ::count_to_rels(&IamRelKind::IamResRole, &role.extend_role_id, funs, &moke_ctx).await?;
-            count.add(extend_count);
+            count = count.add(extend_count);
         }
         Ok(count)
     }
@@ -626,17 +634,17 @@ impl IamRoleServ {
                 },
                 ..Default::default()
             },
-            &funs,
-            &ctx,
+            funs,
+            ctx,
         )
         .await?;
-        if role.extend_role_id != "" {
+        if !role.extend_role_id.is_empty() {
             let moke_ctx = TardisContext {
                 own_paths: "".to_string(),
                 ..ctx.clone()
             };
             let extend_res_ids = IamRelServ::find_to_id_rels(&IamRelKind::IamResRole, &role.extend_role_id, desc_by_create, desc_by_update, funs, &moke_ctx).await?;
-            Ok(vec![res_ids, extend_res_ids].concat())
+            Ok([res_ids, extend_res_ids].concat())
         } else {
             Ok(res_ids)
         }
@@ -660,17 +668,17 @@ impl IamRoleServ {
                 },
                 ..Default::default()
             },
-            &funs,
-            &ctx,
+            funs,
+            ctx,
         )
         .await?;
-        if role.extend_role_id != "" {
+        if !role.extend_role_id.is_empty() {
             let moke_ctx = TardisContext {
                 own_paths: "".to_string(),
                 ..ctx.clone()
             };
             let extend_res = IamRelServ::find_to_simple_rels(&IamRelKind::IamResRole, &role.extend_role_id, desc_by_create, desc_by_update, funs, &moke_ctx).await?;
-            Ok(vec![res, extend_res].concat())
+            Ok([res, extend_res].concat())
         } else {
             Ok(res)
         }
@@ -716,11 +724,11 @@ impl IamRoleServ {
                 },
                 ..Default::default()
             },
-            &funs,
-            &ctx,
+            funs,
+            ctx,
         )
         .await?;
-        if role.extend_role_id != "" {
+        if !role.extend_role_id.is_empty() {
             let extend_res = IamRelServ::find_simple_rels(
                 &RbumRelFilterReq {
                     basic: RbumBasicFilterReq {
@@ -742,7 +750,7 @@ impl IamRoleServ {
                 ctx,
             )
             .await?;
-            Ok(vec![res, extend_res].concat())
+            Ok([res, extend_res].concat())
         } else {
             Ok(res)
         }

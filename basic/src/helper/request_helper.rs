@@ -18,11 +18,7 @@ pub async fn add_remote_ip(request: &Request, ctx: &TardisContext) -> TardisResu
 }
 
 pub async fn get_ip(request: &Request) -> TardisResult<Option<String>> {
-    let back_ip = if let Some(socert_addr) = request.remote_addr().as_socket_addr() {
-        Some(socert_addr.ip().to_string())
-    } else {
-        None
-    };
+    let back_ip = request.remote_addr().as_socket_addr().map(|socert_addr| socert_addr.ip().to_string());
     let ip = if let Some(real_ips) = request.headers().get("X-Forwarded-For") {
         if let Some(real_ip) = real_ips.to_str().ok().and_then(|ips| ips.split(',').collect::<Vec<_>>().first().map(|ip| ip.to_string())) {
             Some(real_ip)
@@ -36,5 +32,5 @@ pub async fn get_ip(request: &Request) -> TardisResult<Option<String>> {
 }
 
 pub async fn get_remote_ip(ctx: &TardisContext) -> TardisResult<Option<String>> {
-    Ok(ctx.get_ext(REMOTE_ADDR).await?)
+    ctx.get_ext(REMOTE_ADDR).await
 }

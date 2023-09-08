@@ -10,6 +10,7 @@ use crate::{
     dto::flow_external_dto::{
         FlowExternalFetchRelObjResp, FlowExternalKind, FlowExternalModifyFieldResp, FlowExternalNotifyChangesResp, FlowExternalParams, FlowExternalReq, FlowExternalResp,
     },
+    flow_config::FlowConfig,
     flow_constants,
 };
 
@@ -18,6 +19,7 @@ pub struct FlowExternalServ;
 impl FlowExternalServ {
     pub async fn do_fetch_rel_obj(
         tag: &str,
+        inst_id: &str,
         rel_business_obj_id: &str,
         rel_tags: Vec<String>,
         ctx: &TardisContext,
@@ -27,9 +29,11 @@ impl FlowExternalServ {
         let header = Self::headers(None, funs, ctx).await?;
         let body = FlowExternalReq {
             kind: FlowExternalKind::FetchRelObj,
+            inst_id: inst_id.to_string(),
             curr_tag: tag.to_string(),
             curr_bus_obj_id: rel_business_obj_id.to_string(),
             target_state: None,
+            original_state: None,
             params: rel_tags
                 .into_iter()
                 .map(|tag| FlowExternalParams {
@@ -57,7 +61,9 @@ impl FlowExternalServ {
     pub async fn do_modify_field(
         tag: &str,
         rel_business_obj_id: &str,
+        inst_id: &str,
         target_state: Option<String>,
+        original_state: Option<String>,
         params: Vec<FlowExternalParams>,
         ctx: &TardisContext,
         funs: &TardisFunsInst,
@@ -70,9 +76,11 @@ impl FlowExternalServ {
         let header = Self::headers(None, funs, ctx).await?;
         let body = FlowExternalReq {
             kind: FlowExternalKind::ModifyField,
+            inst_id: inst_id.to_string(),
             curr_tag: tag.to_string(),
             curr_bus_obj_id: rel_business_obj_id.to_string(),
             target_state,
+            original_state,
             params,
         };
         debug!("do_modify_field body: {:?}", body);
@@ -91,7 +99,9 @@ impl FlowExternalServ {
 
     pub async fn do_notify_changes(
         tag: &str,
+        inst_id: &str,
         rel_business_obj_id: &str,
+        original_state: String,
         target_state: String,
         ctx: &TardisContext,
         funs: &TardisFunsInst,
@@ -104,9 +114,11 @@ impl FlowExternalServ {
         let header = Self::headers(None, funs, ctx).await?;
         let body = FlowExternalReq {
             kind: FlowExternalKind::NotifyChanges,
+            inst_id: inst_id.to_string(),
             curr_tag: tag.to_string(),
             curr_bus_obj_id: rel_business_obj_id.to_string(),
             target_state: Some(target_state),
+            original_state: Some(original_state),
             params: vec![],
         };
         debug!("do_notify_changes body: {:?}", body);
@@ -123,6 +135,17 @@ impl FlowExternalServ {
         }
     }
 
+    pub async fn do_find_embed_subrole_id(role_id: &str, ctx: &TardisContext, funs: &TardisFunsInst) -> TardisResult<String> {
+        let iam_url = &funs.conf::<FlowConfig>().iam_url;
+
+        let header = Self::headers(None, funs, ctx).await?;
+        funs.web_client()
+            .get::<String>(&format!("{iam_url}/get_embed_subrole_id?id={role_id}"), header)
+            .await?
+            .body
+            .ok_or_else(|| funs.err().internal_error("flow_external", "do_find_embed_subrole_id", "illegal response", "500-external-illegal-response"))
+    }
+
     async fn get_external_url(tag: &str, ctx: &TardisContext, funs: &TardisFunsInst) -> TardisResult<String> {
         let external_url = SpiKvClient::get_item(format!("{}:config:{}", flow_constants::DOMAIN_CODE, tag), None, funs, ctx)
             .await?
@@ -131,7 +154,7 @@ impl FlowExternalServ {
     }
 
     async fn headers(headers: Option<Vec<(String, String)>>, _funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<Vec<(String, String)>>> {
-        let base_ctx = (TARDIS_CONTEXT.to_string(), TardisFuns::crypto.base64.encode(&TardisFuns::json.obj_to_string(ctx)?));
+        let base_ctx = (TARDIS_CONTEXT.to_string(), TardisFuns::crypto.base64.encode(TardisFuns::json.obj_to_string(ctx)?));
         if let Some(mut headers) = headers {
             headers.push(base_ctx);
             return Ok(Some(headers));

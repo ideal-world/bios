@@ -85,17 +85,17 @@ impl RbumItemCrudOperation<flow_state::ActiveModel, FlowStateAddReq, FlowStateMo
         })
     }
 
-    async fn before_modify_item(id: &str, modify_req: &mut FlowStateModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    async fn before_modify_item(_id: &str, _modify_req: &mut FlowStateModifyReq, _funs: &TardisFunsInst, _ctx: &TardisContext) -> TardisResult<()> {
         // Modifications are allowed only where non-key fields are modified or not used
-        if (modify_req.scope_level.is_some()
-            || modify_req.disabled.is_some()
-            || modify_req.sys_state.is_some()
-            || modify_req.state_kind.is_some()
-            || modify_req.kind_conf.is_some())
-            && FlowModelServ::state_is_used(id, funs, ctx).await?
-        {
-            return Err(funs.err().conflict(&Self::get_obj_name(), "modify", &format!("state {id} already used"), "409-flow-state-already-used"));
-        }
+        // if (modify_req.scope_level.is_some()
+        //     || modify_req.disabled.is_some()
+        //     || modify_req.sys_state.is_some()
+        //     || modify_req.state_kind.is_some()
+        //     || modify_req.kind_conf.is_some())
+        //     && FlowModelServ::state_is_used(id, funs, ctx).await?
+        // {
+        //     return Err(funs.err().conflict(&Self::get_obj_name(), "modify", &format!("state {id} already used"), "409-flow-state-already-used"));
+        // }
         Ok(())
     }
 
@@ -275,7 +275,7 @@ impl FlowStateServ {
     }
 
     // For the old data migration, this function match id by old state name
-    pub(crate) async fn match_state_id_by_name(tag: &str, mut name: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
+    pub(crate) async fn match_state_id_by_name(tag: &str, flow_model_id: &str, mut name: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
         if tag == "ISSUE" {
             name = match name {
                 "待开始" => "待处理",
@@ -286,30 +286,12 @@ impl FlowStateServ {
                 _ => name,
             };
         }
-        let state = Self::paginate_detail_items(
-            &FlowStateFilterReq {
-                basic: RbumBasicFilterReq {
-                    name: Some(name.to_string()),
-                    ..Default::default()
-                },
-                tag: Some(tag.to_string()),
-                ..Default::default()
-            },
-            1,
-            1,
-            None,
-            None,
-            funs,
-            ctx,
-        )
-        .await?
-        .records
-        .pop();
-        if let Some(state) = state {
-            Ok(state.id)
-        } else {
-            Err(funs.err().not_found("flow_state_serv", "find_state_id_by_name", &format!("state_name: {} not match", name), ""))
-        }
+        Ok(FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelState, flow_model_id, None, None, funs, ctx)
+            .await?
+            .into_iter()
+            .find(|state| state.rel_name == name)
+            .ok_or_else(|| funs.err().not_found("flow_state_serv", "find_state_id_by_name", &format!("state_name: {} not match", name), ""))?
+            .rel_id)
     }
 
     pub fn get_default_color(kind: &FlowSysStateKind) -> String {

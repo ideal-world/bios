@@ -19,7 +19,7 @@ use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
 use crate::basic::domain::iam_app;
 use crate::basic::dto::iam_app_dto::{IamAppAddReq, IamAppAggAddReq, IamAppAggModifyReq, IamAppDetailResp, IamAppModifyReq, IamAppSummaryResp};
-use crate::basic::dto::iam_filer_dto::{IamAppFilterReq, IamRoleFilterReq};
+use crate::basic::dto::iam_filer_dto::IamAppFilterReq;
 use crate::basic::dto::iam_set_dto::IamSetItemAddReq;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_key_cache_serv::IamIdentCacheServ;
@@ -188,7 +188,7 @@ impl IamAppServ {
         let ctx = IamCertServ::use_sys_or_tenant_ctx_unsafe(tenant_ctx.clone())?;
         IamCertServ::package_tardis_account_context_and_resp(&tenant_ctx.owner, &ctx.own_paths, "".to_string(), None, funs, &ctx).await?;
 
-        let apps_set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Apps, &funs, &ctx).await?;
+        let apps_set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Apps, funs, &ctx).await?;
         IamSetServ::add_set_item(
             &IamSetItemAddReq {
                 set_id: apps_set_id.clone(),
@@ -196,16 +196,17 @@ impl IamAppServ {
                 sort: add_req.app_sort.unwrap_or(0),
                 rel_rbum_item_id: app_id.to_string(),
             },
-            &funs,
+            funs,
             &ctx,
         )
         .await?;
+        app_ctx.execute_task().await?;
 
         Ok(app_id)
     }
 
     pub async fn modify_app_agg(id: &str, modify_req: &IamAppAggModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        let app_admin_role_id = IamRoleServ::get_embed_subrole_id(&funs.iam_basic_role_app_admin_id(), funs, &ctx).await?;
+        let app_admin_role_id = IamRoleServ::get_embed_subrole_id(&funs.iam_basic_role_app_admin_id(), funs, ctx).await?;
         let original_app_admin_account_ids = IamRoleServ::find_id_rel_accounts(&app_admin_role_id, None, None, funs, ctx).await?;
         let original_app_admin_account_ids = HashSet::from_iter(original_app_admin_account_ids.iter().cloned());
         Self::modify_item(
@@ -240,8 +241,8 @@ impl IamAppServ {
         }
         if let Some(set_cate_id) = &modify_req.set_cate_id {
             let tenant_ctx = IamCertServ::use_sys_or_tenant_ctx_unsafe(ctx.clone())?;
-            let apps_set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Apps, &funs, &tenant_ctx).await?;
-            let set_items = IamSetServ::find_set_items(Some(apps_set_id.clone()), None, Some(id.to_owned()), None, true, funs, &tenant_ctx).await?;
+            let apps_set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Apps, funs, &tenant_ctx).await?;
+            let set_items = IamSetServ::find_set_items(Some(apps_set_id.clone()), None, Some(id.to_owned()), None, true, Some(true), funs, &tenant_ctx).await?;
             for set_item in set_items {
                 IamSetServ::delete_set_item(&set_item.id, funs, &tenant_ctx).await?;
             }
@@ -252,7 +253,7 @@ impl IamAppServ {
                     sort: modify_req.sort.unwrap_or(0),
                     rel_rbum_item_id: id.to_string(),
                 },
-                &funs,
+                funs,
                 &tenant_ctx,
             )
             .await?;

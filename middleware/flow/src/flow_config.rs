@@ -15,6 +15,7 @@ pub struct FlowConfig {
     pub app_key: AppKeyConfig,
     pub search_url: String,
     pub log_url: String,
+    pub iam_url: String,
 }
 
 impl Default for FlowConfig {
@@ -25,6 +26,7 @@ impl Default for FlowConfig {
             app_key: Default::default(),
             search_url: "http://127.0.0.1:8080/spi-search".to_string(),
             log_url: "http://127.0.0.1:8080/spi-log".to_string(),
+            iam_url: "http://127.0.0.1:8080/iam".to_string(),
         }
     }
 }
@@ -43,6 +45,14 @@ impl FlowConfig {
             self.log_url.clone()
         } else {
             format!("{}/", self.log_url)
+        }
+    }
+
+    pub fn iam_url(&self) -> String {
+        if self.iam_url.ends_with('/') {
+            self.iam_url.clone()
+        } else {
+            format!("{}/", self.iam_url)
         }
     }
 }

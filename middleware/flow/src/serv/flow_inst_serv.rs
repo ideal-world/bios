@@ -71,7 +71,7 @@ impl FlowInstServ {
         .await?;
         let id = TardisFuns::field.nanoid();
         let current_state_id = if let Some(current_state_name) = &current_state_name {
-            FlowStateServ::match_state_id_by_name(&start_req.tag, current_state_name, funs, ctx).await?
+            FlowStateServ::match_state_id_by_name(&start_req.tag, &flow_model_id, current_state_name, funs, ctx).await?
         } else {
             flow_model.init_state_id.clone()
         };
@@ -115,7 +115,14 @@ impl FlowInstServ {
             current_ctx.owner = rel_business_obj.owner.clone().unwrap_or_default();
             let flow_model_id = Self::get_model_id_by_own_paths(&batch_bind_req.tag, funs, ctx).await?;
 
-            let current_state_id = FlowStateServ::match_state_id_by_name(&batch_bind_req.tag, &rel_business_obj.current_state_name.clone().unwrap_or_default(), funs, ctx).await?;
+            let current_state_id = FlowStateServ::match_state_id_by_name(
+                &batch_bind_req.tag,
+                &flow_model_id,
+                &rel_business_obj.current_state_name.clone().unwrap_or_default(),
+                funs,
+                ctx,
+            )
+            .await?;
             let mut inst_id = Self::get_inst_ids_by_rel_business_obj_id(vec![rel_business_obj.rel_business_obj_id.clone().unwrap_or_default()], funs, ctx).await?.pop();
             if inst_id.is_none() {
                 let id = TardisFuns::field.nanoid();
@@ -611,6 +618,19 @@ impl FlowInstServ {
         }
 
         let next_flow_transition = next_flow_transition.unwrap();
+        let prev_flow_state = FlowStateServ::get_item(
+            &flow_inst_detail.current_state_id,
+            &FlowStateFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?;
         let next_flow_state = FlowStateServ::get_item(
             &next_flow_transition.next_flow_state_id,
             &FlowStateFilterReq {
@@ -640,7 +660,9 @@ impl FlowInstServ {
                 FlowExternalServ::do_modify_field(
                     &flow_model.tag,
                     &flow_inst_detail.rel_business_obj_id,
+                    &flow_inst_detail.id,
                     Some(next_flow_state.name.clone()),
+                    Some(prev_flow_state.name.clone()),
                     params,
                     ctx,
                     funs,
@@ -701,7 +723,16 @@ impl FlowInstServ {
 
         // notify change state
         if transfer_req.vars.is_none() || transfer_req.vars.as_ref().unwrap().is_empty() {
-            FlowExternalServ::do_notify_changes(&flow_model.tag, &flow_inst_detail.rel_business_obj_id, next_flow_state.name.clone(), ctx, funs).await?;
+            FlowExternalServ::do_notify_changes(
+                &flow_model.tag,
+                &flow_inst_detail.id,
+                &flow_inst_detail.rel_business_obj_id,
+                next_flow_state.name.clone(),
+                prev_flow_state.name.clone(),
+                ctx,
+                funs,
+            )
+            .await?;
         }
 
         let post_changes =
@@ -712,10 +743,12 @@ impl FlowInstServ {
         let next_flow_transitions = Self::do_find_next_transitions(&flow_inst_detail, &flow_model, None, &None, funs, ctx).await?.next_flow_transitions;
 
         Ok(FlowInstTransferResp {
-            prev_flow_state_id: flow_inst_detail.current_state_id,
-            prev_flow_state_name: flow_inst_detail.current_state_name,
-            new_flow_state_id: next_flow_transition.next_flow_state_id,
-            new_flow_state_name: next_flow_transition.next_flow_state_name,
+            prev_flow_state_id: prev_flow_state.id,
+            prev_flow_state_name: prev_flow_state.name,
+            prev_flow_state_color: prev_flow_state.color,
+            new_flow_state_id: next_flow_state.id,
+            new_flow_state_name: next_flow_state.name,
+            new_flow_state_color: next_flow_state.color,
             finish_time,
             vars: Some(new_vars),
             next_flow_transitions,
@@ -737,12 +770,17 @@ impl FlowInstServ {
                     if let Some(change_info) = post_change.var_change_info {
                         let rel_tag = change_info.obj_tag.unwrap_or_default();
                         if !rel_tag.is_empty() {
-                            let mut resp = FlowExternalServ::do_fetch_rel_obj(&current_model.tag, &current_inst.rel_business_obj_id, vec![rel_tag.clone()], ctx, funs).await?;
+                            let mut resp =
+                                FlowExternalServ::do_fetch_rel_obj(&current_model.tag, &current_inst.id, &current_inst.rel_business_obj_id, vec![rel_tag.clone()], ctx, funs)
+                                    .await?;
                             if !resp.rel_bus_objs.is_empty() {
                                 for rel_bus_obj_id in resp.rel_bus_objs.pop().unwrap().rel_bus_obj_ids {
+                                    let inst_id = Self::get_inst_ids_by_rel_business_obj_id(vec![rel_bus_obj_id.clone()], funs, ctx).await?.pop().unwrap_or_default();
                                     FlowExternalServ::do_modify_field(
                                         &rel_tag,
                                         &rel_bus_obj_id,
+                                        &inst_id,
+                                        None,
                                         None,
                                         vec![FlowExternalParams {
                                             rel_tag: None,
@@ -759,7 +797,9 @@ impl FlowInstServ {
                         } else {
                             FlowExternalServ::do_modify_field(
                                 &current_model.tag,
+                                &current_inst.id,
                                 &current_inst.rel_business_obj_id,
+                                None,
                                 None,
                                 vec![FlowExternalParams {
                                     rel_tag: None,
@@ -776,8 +816,15 @@ impl FlowInstServ {
                 }
                 FlowTransitionActionChangeKind::State => {
                     if let Some(change_info) = post_change.state_change_info {
-                        let mut resp =
-                            FlowExternalServ::do_fetch_rel_obj(&current_model.tag, &current_inst.rel_business_obj_id, vec![change_info.obj_tag.clone()], ctx, funs).await?;
+                        let mut resp = FlowExternalServ::do_fetch_rel_obj(
+                            &current_model.tag,
+                            &current_inst.id,
+                            &current_inst.rel_business_obj_id,
+                            vec![change_info.obj_tag.clone()],
+                            ctx,
+                            funs,
+                        )
+                        .await?;
                         if !resp.rel_bus_objs.is_empty() {
                             let inst_ids = Self::find_inst_ids_by_rel_obj_ids(resp.rel_bus_objs.pop().unwrap().rel_bus_obj_ids, &change_info, funs, ctx).await?;
                             Self::do_modify_state_by_post_action(inst_ids, &change_info, funs, ctx).await?;
@@ -809,7 +856,9 @@ impl FlowInstServ {
                             rel_tags.push(condition_item.obj_tag.clone().unwrap());
                         }
                     }
-                    let resp = FlowExternalServ::do_fetch_rel_obj(&change_info.obj_tag, rel_obj_id, rel_tags, ctx, funs).await?;
+                    let inst_id = Self::get_inst_ids_by_rel_business_obj_id(vec![rel_obj_id.clone()], funs, ctx).await?.pop().unwrap_or_default();
+
+                    let resp = FlowExternalServ::do_fetch_rel_obj(&change_info.obj_tag, &inst_id, rel_obj_id, rel_tags, ctx, funs).await?;
                     if !resp.rel_bus_objs.is_empty() {
                         for rel_bus_obj in resp.rel_bus_objs {
                             let condition = change_condition
@@ -997,7 +1046,7 @@ impl FlowInstServ {
                 }
                 if model_transition.guard_by_assigned
                     && flow_inst.current_assigned.is_some()
-                    && !(flow_inst.current_assigned.clone().unwrap() != ctx.own_paths || flow_inst.current_assigned.clone().unwrap() != ctx.owner)
+                    && flow_inst.current_assigned.clone().unwrap().split(',').collect_vec().contains(&ctx.owner.as_str())
                 {
                     return true;
                 }
@@ -1063,5 +1112,24 @@ impl FlowInstServ {
             next_flow_transitions: next_transitions,
         };
         Ok(state_and_next_transitions)
+    }
+
+    pub async fn state_is_used(flow_model_id: &str, flow_state_id: &str, funs: &TardisFunsInst, _ctx: &TardisContext) -> TardisResult<bool> {
+        if funs
+            .db()
+            .count(
+                Query::select()
+                    .column((flow_inst::Entity, flow_inst::Column::Id))
+                    .from(flow_inst::Entity)
+                    .and_where(Expr::col((flow_inst::Entity, flow_inst::Column::CurrentStateId)).eq(flow_state_id))
+                    .and_where(Expr::col((flow_inst::Entity, flow_inst::Column::RelFlowModelId)).eq(flow_model_id)),
+            )
+            .await?
+            != 0
+        {
+            Ok(true)
+        } else {
+            Ok(false)
+        }
     }
 }

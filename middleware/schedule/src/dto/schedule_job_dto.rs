@@ -61,7 +61,7 @@ impl TryFrom<KvItemSummaryResp> for KvSchedualJobItemDetailResp {
 
     fn try_from(resp: KvItemSummaryResp) -> Result<Self, Self::Error> {
         let Some(s) = &resp.value.as_str() else {
-            return Err(TardisError::internal_error("value are expected to be a string", "schedule-409-bad-schedule-job"))
+            return Err(TardisError::internal_error("value are expected to be a string", "schedule-409-bad-schedule-job"));
         };
         let req: ScheduleJobAddOrModifyReq =
             tardis::serde_json::from_str(s).map_err(|e| TardisError::internal_error(&format!("can't parse schedule job json body: {e}"), "schedule-409-bad-schedule-job"))?;

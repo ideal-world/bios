@@ -8,7 +8,7 @@ use bios_auth::{
     },
     serv::{auth_crypto_serv, auth_kernel_serv, auth_res_serv},
 };
-use lazy_static::lazy_static;
+
 use serde::{Deserialize, Serialize};
 use spacegate_kernel::{
     http::{self, HeaderMap, HeaderName, HeaderValue},
@@ -25,10 +25,14 @@ use spacegate_kernel::{
         filters::SgPluginFilterInitDto,
     },
 };
-use std::{collections::HashMap, str::FromStr, sync::Arc};
+use std::{
+    collections::HashMap,
+    str::FromStr,
+    sync::{Arc, OnceLock},
+};
 use tardis::{
     async_trait,
-    basic::{error::TardisError, result::TardisResult},
+    basic::{error::TardisError, result::TardisResult, tracing::TardisTracing},
     config::config_dto::{AppConfig, CacheConfig, DBConfig, FrameworkConfig, LogConfig, TardisConfig, WebServerConfig},
     log,
     serde_json::{self, json, Value},
@@ -39,15 +43,16 @@ use tardis::{
 };
 
 use super::plugin_constants;
-
-lazy_static! {
-    static ref INSTANCE: Arc<RwLock<Option<(String, JoinHandle<()>)>>> = <_>::default();
-}
+#[allow(clippy::type_complexity)]
+static INSTANCE: OnceLock<Arc<RwLock<Option<(String, JoinHandle<()>)>>>> = OnceLock::new();
 
 pub const CODE: &str = "auth";
 pub struct SgFilterAuthDef;
 
 impl SgPluginFilterDef for SgFilterAuthDef {
+    fn get_code(&self) -> &str {
+        CODE
+    }
     fn inst(&self, spec: serde_json::Value) -> TardisResult<BoxSgPluginFilter> {
         let filter = TardisFuns::json.json_to_obj::<SgFilterAuth>(spec)?;
         Ok(filter.boxed())
@@ -110,8 +115,14 @@ impl SgPluginFilter for SgFilterAuth {
     }
 
     async fn init(&mut self, init_dto: &SgPluginFilterInitDto) -> TardisResult<()> {
-        let config_md5 = TardisFuns::crypto.digest.md5(&TardisFuns::json.obj_to_string(self)?)?;
-        let mut instance = INSTANCE.write().await;
+        if let Some(log_level) = &init_dto.gateway_parameters.log_level {
+            let _ = TardisTracing::update_log_level_by_domain_code(crate::PACKAGE_NAME, log_level);
+            let _ = TardisTracing::update_log_level_by_domain_code(bios_auth::auth_constants::PACKAGE_NAME, log_level);
+        }
+
+        let config_md5 = TardisFuns::crypto.digest.md5(TardisFuns::json.obj_to_string(self)?)?;
+
+        let mut instance = INSTANCE.get_or_init(Default::default).write().await;
         if let Some((md5, handle)) = instance.as_ref() {
             if config_md5.eq(md5) {
                 log::debug!("[SG.Filter.Auth] have not found config change");
@@ -238,6 +249,12 @@ impl SgPluginFilter for SgFilterAuth {
             HeaderName::try_from(head_key_crypto.clone()).map_err(|e| TardisError::internal_error(&format!("[Plugin.Auth] get header error: {e:?}"), ""))?,
             crypto_value,
         );
+
+        for exclude_path in self.auth_config.exclude_encrypt_decrypt_path.clone() {
+            if ctx.request.get_uri().path().starts_with(&exclude_path) {
+                return Ok((true, ctx));
+            }
+        }
         let encrypt_resp = auth_crypto_serv::encrypt_body(&ctx_to_auth_encrypt_req(&mut ctx).await?).await?;
         ctx.response.get_headers_mut().extend(hashmap_header_to_headermap(encrypt_resp.headers)?);
         ctx.response.set_body(encrypt_resp.body);
@@ -315,7 +332,7 @@ async fn mix_req_to_ctx(auth_config: &AuthConfig, mut ctx: SgRoutePluginContext)
 async fn ctx_to_auth_req(ctx: &mut SgRoutePluginContext) -> TardisResult<(AuthReq, Bytes)> {
     let url = ctx.request.get_uri().clone();
     let scheme = url.scheme().map(|s| s.to_string()).unwrap_or("http".to_string());
-    let headers = headermap_header_to_hashmap(&ctx.request.get_headers())?;
+    let headers = headermap_header_to_hashmap(ctx.request.get_headers())?;
     let req_body = ctx.request.take_body_into_bytes().await?;
     let body = String::from_utf8_lossy(&req_body).trim_matches('"').to_string();
     Ok((
@@ -370,7 +387,7 @@ async fn ctx_to_auth_encrypt_req(ctx: &mut SgRoutePluginContext) -> TardisResult
     let body_as_bytes = ctx.response.take_body_into_bytes().await?;
     let body = String::from_utf8_lossy(&body_as_bytes);
     if !body.is_empty() {
-        ctx.set_ext(plugin_constants::BEFORE_ENCRYPT_BODY, &body);
+        ctx.set_ext(plugin_constants::BEFORE_ENCRYPT_BODY, body.to_string());
     }
 
     Ok(AuthEncryptReq {
@@ -423,7 +440,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_auth_plugin_ctx() {
-        env::set_var("RUST_LOG", "debug,bios_auth=trace,tardis=trace");
+        env::set_var("RUST_LOG", "info,bios_spacegate=trace,bios_auth=trace,tardis=trace");
         tracing_subscriber::fmt::init();
 
         let docker = testcontainers::clients::Cli::default();
@@ -467,7 +484,7 @@ mod tests {
         let req_body = before_filter_ctx.response.take_body_into_bytes().await.unwrap();
         let req_body = String::from_utf8_lossy(&req_body).to_string();
         assert!(!req_body.is_empty());
-        assert_eq!(req_body, "[Auth] Token [aaa] is not legal");
+        assert_eq!(req_body, "{\"code\":\"401-gateway-cert-error\",\"message\":\"[Auth] Token [aaa] is not legal\"}");
 
         cache_client.set(&format!("{}tokenxxx", filter_auth.auth_config.cache_key_token_info), "default,accountxxx").await.unwrap();
         cache_client
@@ -540,8 +557,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_auth_plugin_crypto() {
-        env::set_var("RUST_LOG", "debug,bios_auth=trace,tardis=trace");
-        tracing_subscriber::fmt::init();
+        env::set_var("RUST_LOG", "info,bios_spacegate=trace,bios_auth=trace,tardis=trace");
+        // tracing_subscriber::fmt::init();
 
         let docker = testcontainers::clients::Cli::default();
         let _x = docker_init(&docker).await.unwrap();
@@ -582,14 +599,14 @@ mod tests {
         ))
         .unwrap();
 
-        let pub_key = data["pub_key"].as_str().unwrap();
+        let pub_key = data["data"]["pub_key"].as_str().unwrap();
         let server_sm2 = TardisCryptoSm2 {};
         let server_public_key = server_sm2.new_public_key_from_public_key(pub_key).unwrap();
 
         let front_pri_key = TardisFuns::crypto.sm2.new_private_key().unwrap();
         let front_pub_key = TardisFuns::crypto.sm2.new_public_key(&front_pri_key).unwrap();
 
-        let test_body_value = r##"test_body_value!@#$%^&*():"中文测试"##;
+        let test_body_value = r#"test_body_value!@#$%^&*():"中文测试"#;
         //dont need to decrypt
         let header = HeaderMap::new();
         let ctx = SgRoutePluginContext::new_http(
@@ -638,7 +655,7 @@ mod tests {
         assert_eq!(req_body, test_body_value.to_string());
 
         //======response============
-        let mock_resp = r##"mock_resp:test_body_value!@#$%^&*():"中文测试"##;
+        let mock_resp = r#"mock_resp:test_body_value!@#$%^&*():"中文测试"#;
         let mut header = HeaderMap::new();
         header.insert("Test_Header", "test_header".parse().unwrap());
         let ctx = before_filter_ctx.resp(StatusCode::OK, header, Body::from(mock_resp));
@@ -674,7 +691,7 @@ mod tests {
         } else {
             pub_key.encrypt(&format!("{sign_data} {sm4_key} {sm4_iv}",)).unwrap()
         };
-        let base64_encrypt = TardisFuns::crypto.base64.encode(&sm4_encrypt);
+        let base64_encrypt = TardisFuns::crypto.base64.encode(sm4_encrypt);
         (data, base64_encrypt)
     }
 

@@ -25,7 +25,7 @@ impl IamCsRoleApi {
     #[oai(path = "/", method = "post")]
     async fn add(&self, tenant_id: Query<Option<String>>, mut add_req: Json<IamRoleAggAddReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<String> {
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
-        add_remote_ip(&request, &ctx).await?;
+        add_remote_ip(request, &ctx).await?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         add_req.0.role.kind = Some(IamRoleKind::System);
@@ -48,7 +48,7 @@ impl IamCsRoleApi {
         request: &Request,
     ) -> TardisApiResult<Option<String>> {
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
-        add_remote_ip(&request, &ctx).await?;
+        add_remote_ip(request, &ctx).await?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         IamRoleServ::modify_role_agg(&id.0, &mut modify_req.0, &funs, &ctx).await?;
@@ -65,7 +65,7 @@ impl IamCsRoleApi {
     #[oai(path = "/:id", method = "get")]
     async fn get(&self, id: Path<String>, tenant_id: Query<Option<String>>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<IamRoleDetailResp> {
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
-        add_remote_ip(&request, &ctx).await?;
+        add_remote_ip(request, &ctx).await?;
         let funs = iam_constants::get_tardis_inst();
         let result = IamRoleServ::get_item(&id.0, &IamRoleFilterReq::default(), &funs, &ctx).await?;
         ctx.execute_task().await?;
@@ -92,7 +92,7 @@ impl IamCsRoleApi {
         request: &Request,
     ) -> TardisApiResult<TardisPage<IamRoleSummaryResp>> {
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
-        add_remote_ip(&request, &ctx).await?;
+        add_remote_ip(request, &ctx).await?;
         let funs = iam_constants::get_tardis_inst();
         let result = IamRoleServ::paginate_items(
             &IamRoleFilterReq {
@@ -124,7 +124,7 @@ impl IamCsRoleApi {
     #[oai(path = "/:id", method = "delete")]
     async fn delete(&self, id: Path<String>, tenant_id: Query<Option<String>>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
-        add_remote_ip(&request, &ctx).await?;
+        add_remote_ip(request, &ctx).await?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         IamRoleServ::delete_item_with_all_rels(&id.0, &funs, &ctx).await?;
@@ -144,7 +144,7 @@ impl IamCsRoleApi {
         request: &Request,
     ) -> TardisApiResult<Void> {
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
-        add_remote_ip(&request, &ctx).await?;
+        add_remote_ip(request, &ctx).await?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         IamRoleServ::add_rel_account(&id.0, &account_id.0, None, &funs, &ctx).await?;
@@ -164,7 +164,7 @@ impl IamCsRoleApi {
         request: &Request,
     ) -> TardisApiResult<Void> {
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
-        add_remote_ip(&request, &ctx).await?;
+        add_remote_ip(request, &ctx).await?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         let split = account_ids.0.split(',').collect::<Vec<_>>();
@@ -187,7 +187,7 @@ impl IamCsRoleApi {
         request: &Request,
     ) -> TardisApiResult<Void> {
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
-        add_remote_ip(&request, &ctx).await?;
+        add_remote_ip(request, &ctx).await?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         IamRoleServ::delete_rel_account(&id.0, &account_id.0, None, &funs, &ctx).await?;
@@ -207,7 +207,7 @@ impl IamCsRoleApi {
         request: &Request,
     ) -> TardisApiResult<Void> {
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
-        add_remote_ip(&request, &ctx).await?;
+        add_remote_ip(request, &ctx).await?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         let split = account_ids.0.split(',').collect::<Vec<_>>();
@@ -223,7 +223,7 @@ impl IamCsRoleApi {
     #[oai(path = "/:id/account/total", method = "get")]
     async fn count_rel_accounts(&self, id: Path<String>, tenant_id: Query<Option<String>>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<u64> {
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
-        add_remote_ip(&request, &ctx).await?;
+        add_remote_ip(request, &ctx).await?;
         let funs = iam_constants::get_tardis_inst();
         let result = IamRoleServ::count_rel_accounts(&id.0, &funs, &ctx).await?;
         ctx.execute_task().await?;
@@ -234,7 +234,7 @@ impl IamCsRoleApi {
     #[oai(path = "/:id/res/:res_id", method = "put")]
     async fn add_rel_res(&self, id: Path<String>, res_id: Path<String>, tenant_id: Query<Option<String>>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
-        add_remote_ip(&request, &ctx).await?;
+        add_remote_ip(request, &ctx).await?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         IamRoleServ::add_rel_res(&id.0, &res_id.0, &funs, &ctx).await?;
@@ -254,7 +254,7 @@ impl IamCsRoleApi {
         request: &Request,
     ) -> TardisApiResult<Void> {
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
-        add_remote_ip(&request, &ctx).await?;
+        add_remote_ip(request, &ctx).await?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         IamRoleServ::delete_rel_res(&id.0, &res_id.0, &funs, &ctx).await?;
@@ -267,7 +267,7 @@ impl IamCsRoleApi {
     #[oai(path = "/:id/res/total", method = "get")]
     async fn count_rel_res(&self, id: Path<String>, tenant_id: Query<Option<String>>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<u64> {
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
-        add_remote_ip(&request, &ctx).await?;
+        add_remote_ip(request, &ctx).await?;
         let funs = iam_constants::get_tardis_inst();
         let result = IamRoleServ::count_rel_res(&id.0, &funs, &ctx).await?;
         ctx.execute_task().await?;
@@ -290,7 +290,7 @@ impl IamCsRoleApi {
         } else {
             IamCertServ::use_sys_ctx_unsafe(ctx.0)?
         };
-        add_remote_ip(&request, &ctx).await?;
+        add_remote_ip(request, &ctx).await?;
         let funs = iam_constants::get_tardis_inst();
         let result = IamRoleServ::find_simple_rel_res(&id.0, desc_by_create.0, desc_by_update.0, &funs, &ctx).await?;
         ctx.execute_task().await?;

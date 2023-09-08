@@ -216,7 +216,7 @@ impl IamCertUserPwdServ {
                 ctx,
             )
             .await;
-            IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(rel_iam_item_id, get_remote_ip(&ctx).await?, funs).await
+            IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(rel_iam_item_id, get_remote_ip(ctx).await?, funs).await
         } else {
             Err(funs.err().not_found(
                 "iam_cert_user_pwd",
@@ -324,7 +324,7 @@ impl IamCertUserPwdServ {
                 ctx,
             )
             .await?;
-            let result = IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(rel_iam_item_id, get_remote_ip(&ctx).await?, funs).await;
+            let result = IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(rel_iam_item_id, get_remote_ip(ctx).await?, funs).await;
 
             let _ = IamLogClient::add_ctx_task(
                 LogParamTag::IamAccount,
