@@ -12,6 +12,7 @@ pub struct FlowExternalReq {
     pub curr_bus_obj_id: String,
     pub inst_id: String,
     pub target_state: Option<String>,
+    pub original_state: Option<String>,
     pub params: Vec<FlowExternalParams>,
 }
 

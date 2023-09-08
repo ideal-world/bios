@@ -1087,8 +1087,24 @@ impl FlowModelServ {
         Ok((is_ring, current_chain))
     }
 
-    pub async fn find_rel_states(tag: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<FlowModelFindRelStateResp>> {
-        let flow_model_id = FlowInstServ::get_model_id_by_own_paths(tag, funs, ctx).await?;
+    pub async fn find_rel_states(tag: &str, rel_template_id: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<FlowModelFindRelStateResp>> {
+        let flow_model_id = if rel_template_id.is_some() {
+            Self::find_one_item(
+                &FlowModelFilterReq {
+                    tags: Some(vec![tag.to_string()]),
+                    rel_template_id,
+                    ..Default::default()
+                },
+                funs,
+                ctx,
+            )
+            .await?
+            .ok_or_else(|| funs.err().not_found(&Self::get_obj_name(), "find_rel_states", "not found flow model", "404-flow-model-not-exist"))?
+            .id
+        } else {
+            FlowInstServ::get_model_id_by_own_paths(tag, funs, ctx).await?
+        };
+
         Self::find_sorted_rel_states_by_model_id(&flow_model_id, funs, ctx).await
     }
 

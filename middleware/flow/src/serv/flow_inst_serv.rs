@@ -71,7 +71,7 @@ impl FlowInstServ {
         .await?;
         let id = TardisFuns::field.nanoid();
         let current_state_id = if let Some(current_state_name) = &current_state_name {
-            FlowStateServ::match_state_id_by_name(&start_req.tag, current_state_name, funs, ctx).await?
+            FlowStateServ::match_state_id_by_name(&start_req.tag, &flow_model_id, current_state_name, funs, ctx).await?
         } else {
             flow_model.init_state_id.clone()
         };
@@ -115,7 +115,14 @@ impl FlowInstServ {
             current_ctx.owner = rel_business_obj.owner.clone().unwrap_or_default();
             let flow_model_id = Self::get_model_id_by_own_paths(&batch_bind_req.tag, funs, ctx).await?;
 
-            let current_state_id = FlowStateServ::match_state_id_by_name(&batch_bind_req.tag, &rel_business_obj.current_state_name.clone().unwrap_or_default(), funs, ctx).await?;
+            let current_state_id = FlowStateServ::match_state_id_by_name(
+                &batch_bind_req.tag,
+                &flow_model_id,
+                &rel_business_obj.current_state_name.clone().unwrap_or_default(),
+                funs,
+                ctx,
+            )
+            .await?;
             let mut inst_id = Self::get_inst_ids_by_rel_business_obj_id(vec![rel_business_obj.rel_business_obj_id.clone().unwrap_or_default()], funs, ctx).await?.pop();
             if inst_id.is_none() {
                 let id = TardisFuns::field.nanoid();
@@ -655,6 +662,7 @@ impl FlowInstServ {
                     &flow_inst_detail.rel_business_obj_id,
                     &flow_inst_detail.id,
                     Some(next_flow_state.name.clone()),
+                    Some(prev_flow_state.name.clone()),
                     params,
                     ctx,
                     funs,
@@ -720,6 +728,7 @@ impl FlowInstServ {
                 &flow_inst_detail.id,
                 &flow_inst_detail.rel_business_obj_id,
                 next_flow_state.name.clone(),
+                prev_flow_state.name.clone(),
                 ctx,
                 funs,
             )
@@ -772,6 +781,7 @@ impl FlowInstServ {
                                         &rel_bus_obj_id,
                                         &inst_id,
                                         None,
+                                        None,
                                         vec![FlowExternalParams {
                                             rel_tag: None,
                                             var_id: None,
@@ -789,6 +799,7 @@ impl FlowInstServ {
                                 &current_model.tag,
                                 &current_inst.id,
                                 &current_inst.rel_business_obj_id,
+                                None,
                                 None,
                                 vec![FlowExternalParams {
                                     rel_tag: None,
