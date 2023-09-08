@@ -124,22 +124,26 @@ impl IamCcAccountTaskServ {
         };
         match account.status {
             IamAccountStatusKind::Active => {
-                if let Some(account_temporary_sleep_expire) = account_temporary_sleep_expire {
-                    let expire = account_temporary_sleep_expire.value1.parse().unwrap_or(0);
-                    if account_log.is_none() {
-                        Self::account_modify_status(&account.id, account.update_time, expire * 30, IamAccountStatusKind::Dormant, funs, ctx).await?;
-                    } else if let Some(account_log) = account_log.clone() {
-                        Self::account_modify_status(&account.id, account_log.ts, expire * 30, IamAccountStatusKind::Dormant, funs, ctx).await?;
+                if account.temporary {
+                    if let Some(account_temporary_sleep_expire) = account_temporary_sleep_expire {
+                        let expire = account_temporary_sleep_expire.value1.parse().unwrap_or(0);
+                        if account_log.is_none() {
+                            Self::account_modify_status(&account.id, account.update_time, expire * 30, IamAccountStatusKind::Dormant, funs, ctx).await?;
+                        } else if let Some(account_log) = account_log.clone() {
+                            Self::account_modify_status(&account.id, account_log.ts, expire * 30, IamAccountStatusKind::Dormant, funs, ctx).await?;
+                        }
                     }
                 }
             }
             IamAccountStatusKind::Dormant => {
-                if let Some(account_temporary_sleep_logout_expire) = account_temporary_sleep_logout_expire {
-                    let expire = account_temporary_sleep_logout_expire.value1.parse().unwrap_or(0);
-                    if account_log.is_none() {
-                        Self::account_modify_status(&account.id, account.update_time, expire * 30, IamAccountStatusKind::Logout, funs, ctx).await?;
-                    } else if let Some(account_log) = account_log.clone() {
-                        Self::account_modify_status(&account.id, account_log.ts, expire * 30, IamAccountStatusKind::Logout, funs, ctx).await?;
+                if account.temporary {
+                    if let Some(account_temporary_sleep_logout_expire) = account_temporary_sleep_logout_expire {
+                        let expire = account_temporary_sleep_logout_expire.value1.parse().unwrap_or(0);
+                        if account_log.is_none() {
+                            Self::account_modify_status(&account.id, account.update_time, expire * 30, IamAccountStatusKind::Logout, funs, ctx).await?;
+                        } else if let Some(account_log) = account_log.clone() {
+                            Self::account_modify_status(&account.id, account_log.ts, expire * 30, IamAccountStatusKind::Logout, funs, ctx).await?;
+                        }
                     }
                 }
             }
