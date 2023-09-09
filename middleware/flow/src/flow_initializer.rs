@@ -238,18 +238,30 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     from_flow_state_name: "待处理".to_string(),
                     to_flow_state_name: "处理中".to_string(),
                     name: "立即处理".to_string(),
+                    double_check: Some(FlowTransitionDoubleCheckInfo {
+                        is_open: true,
+                        content: Some("确认将状态修改成处理中？".to_string()),
+                    }),
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
                     from_flow_state_name: "待处理".to_string(),
                     to_flow_state_name: "已撤销".to_string(),
                     name: "撤销".to_string(),
+                    double_check: Some(FlowTransitionDoubleCheckInfo {
+                        is_open: true,
+                        content: Some("确认将状态修改成已撤销？".to_string()),
+                    }),
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
                     from_flow_state_name: "待处理".to_string(),
                     to_flow_state_name: "待确认".to_string(),
                     name: "处理完成".to_string(),
+                    double_check: Some(FlowTransitionDoubleCheckInfo {
+                        is_open: true,
+                        content: Some("确认将状态修改成待确认？".to_string()),
+                    }),
                     guard_by_his_operators: Some(true),
                     ..Default::default()
                 },
@@ -259,7 +271,7 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     name: "关闭".to_string(),
                     double_check: Some(FlowTransitionDoubleCheckInfo {
                         is_open: true,
-                        content: Some("确认关闭该工单？".to_string()),
+                        content: Some("确认将状态修改成已关闭？".to_string()),
                     }),
                     ..Default::default()
                 },
@@ -267,12 +279,20 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     from_flow_state_name: "待确认".to_string(),
                     to_flow_state_name: "已关闭".to_string(),
                     name: "确认解决".into(),
+                    double_check: Some(FlowTransitionDoubleCheckInfo {
+                        is_open: true,
+                        content: Some("确认将状态修改成已关闭？".to_string()),
+                    }),
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
                     from_flow_state_name: "待确认".to_string(),
                     to_flow_state_name: "处理中".to_string(),
                     name: "未解决".to_string(),
+                    double_check: Some(FlowTransitionDoubleCheckInfo {
+                        is_open: true,
+                        content: Some("确认将状态修改成处理中？".to_string()),
+                    }),
                     ..Default::default()
                 },
             ],
@@ -320,6 +340,10 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     from_flow_state_name: "待开始".to_string(),
                     to_flow_state_name: "进行中".to_string(),
                     name: "开始".to_string(),
+                    double_check: Some(FlowTransitionDoubleCheckInfo {
+                        is_open: true,
+                        content: Some("确认将状态修改成进行中？".to_string()),
+                    }),
                     guard_by_creator: Some(true),
                     guard_by_spec_role_ids: if req_role_ids.is_empty() { None } else { Some(req_role_ids.clone()) },
                     ..Default::default()
@@ -330,7 +354,7 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     name: "关闭".to_string(),
                     double_check: Some(FlowTransitionDoubleCheckInfo {
                         is_open: true,
-                        content: Some("确认关闭该需求？".to_string()),
+                        content: Some("确认将状态修改成已关闭？".to_string()),
                     }),
                     guard_by_creator: Some(true),
                     guard_by_spec_role_ids: if req_role_ids.is_empty() { None } else { Some(req_role_ids.clone()) },
@@ -340,6 +364,10 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     from_flow_state_name: "进行中".to_string(),
                     to_flow_state_name: "已完成".to_string(),
                     name: "完成".to_string(),
+                    double_check: Some(FlowTransitionDoubleCheckInfo {
+                        is_open: true,
+                        content: Some("确认将状态修改成已完成？".to_string()),
+                    }),
                     guard_by_creator: Some(true),
                     guard_by_spec_role_ids: if req_role_ids.is_empty() { None } else { Some(req_role_ids.clone()) },
                     ..Default::default()
@@ -350,7 +378,7 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     name: "关闭".to_string(),
                     double_check: Some(FlowTransitionDoubleCheckInfo {
                         is_open: true,
-                        content: Some("确认关闭该需求？".to_string()),
+                        content: Some("确认将状态修改成已关闭？".to_string()),
                     }),
                     guard_by_creator: Some(true),
                     guard_by_spec_role_ids: if req_role_ids.is_empty() { None } else { Some(req_role_ids.clone()) },
@@ -360,6 +388,10 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     from_flow_state_name: "已完成".to_string(),
                     to_flow_state_name: "进行中".to_string(),
                     name: "重新处理".into(),
+                    double_check: Some(FlowTransitionDoubleCheckInfo {
+                        is_open: true,
+                        content: Some("确认将状态修改成进行中？".to_string()),
+                    }),
                     guard_by_creator: Some(true),
                     guard_by_spec_role_ids: if req_role_ids.is_empty() { None } else { Some(req_role_ids.clone()) },
                     ..Default::default()
@@ -370,7 +402,7 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     name: "关闭".to_string(),
                     double_check: Some(FlowTransitionDoubleCheckInfo {
                         is_open: true,
-                        content: Some("确认关闭该需求？".to_string()),
+                        content: Some("确认将状态修改成已关闭？".to_string()),
                     }),
                     guard_by_creator: Some(true),
                     guard_by_spec_role_ids: if req_role_ids.is_empty() { None } else { Some(req_role_ids.clone()) },
@@ -380,6 +412,10 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     from_flow_state_name: "已关闭".to_string(),
                     to_flow_state_name: "待开始".to_string(),
                     name: "激活".to_string(),
+                    double_check: Some(FlowTransitionDoubleCheckInfo {
+                        is_open: true,
+                        content: Some("确认将状态修改成待开始？".to_string()),
+                    }),
                     guard_by_creator: Some(true),
                     guard_by_spec_role_ids: if req_role_ids.is_empty() { None } else { Some(req_role_ids.clone()) },
                     ..Default::default()
@@ -423,6 +459,10 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     from_flow_state_name: "待开始".to_string(),
                     to_flow_state_name: "进行中".to_string(),
                     name: "开始".to_string(),
+                    double_check: Some(FlowTransitionDoubleCheckInfo {
+                        is_open: true,
+                        content: Some("确认将状态修改成进行中？".to_string()),
+                    }),
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
@@ -431,7 +471,7 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     name: "关闭".to_string(),
                     double_check: Some(FlowTransitionDoubleCheckInfo {
                         is_open: true,
-                        content: Some("确认关闭该项目？".to_string()),
+                        content: Some("确认将状态修改成已关闭？".to_string()),
                     }),
                     ..Default::default()
                 },
@@ -439,6 +479,10 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     from_flow_state_name: "进行中".to_string(),
                     to_flow_state_name: "已完成".to_string(),
                     name: "完成".to_string(),
+                    double_check: Some(FlowTransitionDoubleCheckInfo {
+                        is_open: true,
+                        content: Some("确认将状态修改成已完成？".to_string()),
+                    }),
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
@@ -447,7 +491,7 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     name: "有风险".to_string(),
                     double_check: Some(FlowTransitionDoubleCheckInfo {
                         is_open: true,
-                        content: Some("确认该项目有风险？".to_string()),
+                        content: Some("确认将状态修改成存在风险？".to_string()),
                     }),
                     ..Default::default()
                 },
@@ -457,7 +501,7 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     name: "关闭".to_string(),
                     double_check: Some(FlowTransitionDoubleCheckInfo {
                         is_open: true,
-                        content: Some("确认关闭该项目？".to_string()),
+                        content: Some("确认将状态修改成已关闭？".to_string()),
                     }),
                     ..Default::default()
                 },
@@ -467,7 +511,7 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     name: "正常".to_string(),
                     double_check: Some(FlowTransitionDoubleCheckInfo {
                         is_open: true,
-                        content: Some("确认将该项目转正常？".to_string()),
+                        content: Some("确认将状态修改成进行中？".to_string()),
                     }),
                     ..Default::default()
                 },
@@ -475,6 +519,10 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     from_flow_state_name: "存在风险".to_string(),
                     to_flow_state_name: "已完成".to_string(),
                     name: "完成".to_string(),
+                    double_check: Some(FlowTransitionDoubleCheckInfo {
+                        is_open: true,
+                        content: Some("确认将状态修改成处理中？".to_string()),
+                    }),
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
@@ -483,7 +531,7 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     name: "关闭".to_string(),
                     double_check: Some(FlowTransitionDoubleCheckInfo {
                         is_open: true,
-                        content: Some("确认关闭该项目？".to_string()),
+                        content: Some("确认将状态修改成已关闭？".to_string()),
                     }),
                     ..Default::default()
                 },
@@ -491,6 +539,10 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     from_flow_state_name: "已完成".to_string(),
                     to_flow_state_name: "进行中".to_string(),
                     name: "重新处理".to_string(),
+                    double_check: Some(FlowTransitionDoubleCheckInfo {
+                        is_open: true,
+                        content: Some("确认将状态修改成进行中？".to_string()),
+                    }),
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
@@ -499,7 +551,7 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     name: "关闭".to_string(),
                     double_check: Some(FlowTransitionDoubleCheckInfo {
                         is_open: true,
-                        content: Some("确认关闭该项目？".to_string()),
+                        content: Some("确认将状态修改成已关闭？".to_string()),
                     }),
                     ..Default::default()
                 },
@@ -507,24 +559,40 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     from_flow_state_name: "已完成".to_string(),
                     to_flow_state_name: "已归档".to_string(),
                     name: "归档".to_string(),
+                    double_check: Some(FlowTransitionDoubleCheckInfo {
+                        is_open: true,
+                        content: Some("确认将状态修改成已归档？".to_string()),
+                    }),
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
                     from_flow_state_name: "已关闭".to_string(),
                     to_flow_state_name: "待开始".to_string(),
                     name: "激活".to_string(),
+                    double_check: Some(FlowTransitionDoubleCheckInfo {
+                        is_open: true,
+                        content: Some("确认将状态修改成待开始？".to_string()),
+                    }),
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
                     from_flow_state_name: "已关闭".to_string(),
                     to_flow_state_name: "已归档".to_string(),
                     name: "归档".to_string(),
+                    double_check: Some(FlowTransitionDoubleCheckInfo {
+                        is_open: true,
+                        content: Some("确认将状态修改成已归档？".to_string()),
+                    }),
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
                     from_flow_state_name: "已归档".to_string(),
                     to_flow_state_name: "进行中".to_string(),
                     name: "重新激活".to_string(),
+                    double_check: Some(FlowTransitionDoubleCheckInfo {
+                        is_open: true,
+                        content: Some("确认将状态修改成进行中？".to_string()),
+                    }),
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
@@ -533,7 +601,7 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     name: "关闭".to_string(),
                     double_check: Some(FlowTransitionDoubleCheckInfo {
                         is_open: true,
-                        content: Some("确认关闭该项目？".to_string()),
+                        content: Some("确认将状态修改成已关闭？".to_string()),
                     }),
                     ..Default::default()
                 },
@@ -579,6 +647,10 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     from_flow_state_name: "待开始".to_string(),
                     to_flow_state_name: "进行中".to_string(),
                     name: "开始".to_string(),
+                    double_check: Some(FlowTransitionDoubleCheckInfo {
+                        is_open: true,
+                        content: Some("确认将状态修改成进行中？".to_string()),
+                    }),
                     guard_by_creator: Some(true),
                     guard_by_spec_role_ids: if ms_role_ids.is_empty() { None } else { Some(ms_role_ids.clone()) },
                     ..Default::default()
@@ -589,7 +661,7 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     name: "关闭".to_string(),
                     double_check: Some(FlowTransitionDoubleCheckInfo {
                         is_open: true,
-                        content: Some("确认关闭该里程碑？".to_string()),
+                        content: Some("确认将状态修改成已关闭？".to_string()),
                     }),
                     guard_by_creator: Some(true),
                     guard_by_spec_role_ids: if ms_role_ids.is_empty() { None } else { Some(ms_role_ids.clone()) },
@@ -599,6 +671,10 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     from_flow_state_name: "进行中".to_string(),
                     to_flow_state_name: "已完成".to_string(),
                     name: "完成".to_string(),
+                    double_check: Some(FlowTransitionDoubleCheckInfo {
+                        is_open: true,
+                        content: Some("确认将状态修改成已完成？".to_string()),
+                    }),
                     guard_by_creator: Some(true),
                     guard_by_spec_role_ids: if ms_role_ids.is_empty() { None } else { Some(ms_role_ids.clone()) },
                     ..Default::default()
@@ -609,7 +685,7 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     name: "有风险".to_string(),
                     double_check: Some(FlowTransitionDoubleCheckInfo {
                         is_open: true,
-                        content: Some("确认该里程碑有风险？".to_string()),
+                        content: Some("确认将状态修改成存在风险？".to_string()),
                     }),
                     guard_by_creator: Some(true),
                     guard_by_spec_role_ids: if ms_role_ids.is_empty() { None } else { Some(ms_role_ids.clone()) },
@@ -621,7 +697,7 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     name: "关闭".to_string(),
                     double_check: Some(FlowTransitionDoubleCheckInfo {
                         is_open: true,
-                        content: Some("确认关闭该里程碑？".to_string()),
+                        content: Some("确认将状态修改成已关闭？".to_string()),
                     }),
                     guard_by_creator: Some(true),
                     guard_by_spec_role_ids: if ms_role_ids.is_empty() { None } else { Some(ms_role_ids.clone()) },
@@ -633,7 +709,7 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     name: "正常".to_string(),
                     double_check: Some(FlowTransitionDoubleCheckInfo {
                         is_open: true,
-                        content: Some("确认将该里程碑转正常？".to_string()),
+                        content: Some("确认将状态修改成进行中？".to_string()),
                     }),
                     guard_by_creator: Some(true),
                     guard_by_spec_role_ids: if ms_role_ids.is_empty() { None } else { Some(ms_role_ids.clone()) },
@@ -643,6 +719,10 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     from_flow_state_name: "存在风险".to_string(),
                     to_flow_state_name: "已完成".to_string(),
                     name: "完成".to_string(),
+                    double_check: Some(FlowTransitionDoubleCheckInfo {
+                        is_open: true,
+                        content: Some("确认将状态修改成已完成？".to_string()),
+                    }),
                     guard_by_creator: Some(true),
                     guard_by_spec_role_ids: if ms_role_ids.is_empty() { None } else { Some(ms_role_ids.clone()) },
                     ..Default::default()
@@ -653,7 +733,7 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     name: "关闭".to_string(),
                     double_check: Some(FlowTransitionDoubleCheckInfo {
                         is_open: true,
-                        content: Some("确认关闭该里程碑？".to_string()),
+                        content: Some("确认将状态修改成已关闭？".to_string()),
                     }),
                     guard_by_creator: Some(true),
                     guard_by_spec_role_ids: if ms_role_ids.is_empty() { None } else { Some(ms_role_ids.clone()) },
@@ -663,6 +743,10 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     from_flow_state_name: "已完成".to_string(),
                     to_flow_state_name: "进行中".to_string(),
                     name: "重新处理".to_string(),
+                    double_check: Some(FlowTransitionDoubleCheckInfo {
+                        is_open: true,
+                        content: Some("确认将状态修改成进行中？".to_string()),
+                    }),
                     guard_by_creator: Some(true),
                     guard_by_spec_role_ids: if ms_role_ids.is_empty() { None } else { Some(ms_role_ids.clone()) },
                     ..Default::default()
@@ -673,7 +757,7 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     name: "关闭".to_string(),
                     double_check: Some(FlowTransitionDoubleCheckInfo {
                         is_open: true,
-                        content: Some("确认关闭该里程碑？".to_string()),
+                        content: Some("确认将状态修改成已关闭？".to_string()),
                     }),
                     guard_by_creator: Some(true),
                     guard_by_spec_role_ids: if ms_role_ids.is_empty() { None } else { Some(ms_role_ids.clone()) },
@@ -683,6 +767,10 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     from_flow_state_name: "已关闭".to_string(),
                     to_flow_state_name: "待开始".to_string(),
                     name: "激活".to_string(),
+                    double_check: Some(FlowTransitionDoubleCheckInfo {
+                        is_open: true,
+                        content: Some("确认将状态修改成待开始？".to_string()),
+                    }),
                     guard_by_creator: Some(true),
                     guard_by_spec_role_ids: if ms_role_ids.is_empty() { None } else { Some(ms_role_ids.clone()) },
                     ..Default::default()
@@ -729,6 +817,10 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     from_flow_state_name: "待开始".to_string(),
                     to_flow_state_name: "进行中".to_string(),
                     name: "开始".to_string(),
+                    double_check: Some(FlowTransitionDoubleCheckInfo {
+                        is_open: true,
+                        content: Some("确认将状态修改成进行中？".to_string()),
+                    }),
                     guard_by_creator: Some(true),
                     guard_by_spec_role_ids: if iter_role_ids.is_empty() { None } else { Some(iter_role_ids.clone()) },
                     ..Default::default()
@@ -739,7 +831,7 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     name: "关闭".to_string(),
                     double_check: Some(FlowTransitionDoubleCheckInfo {
                         is_open: true,
-                        content: Some("确认关闭该迭代？".to_string()),
+                        content: Some("确认将状态修改成已关闭？".to_string()),
                     }),
                     guard_by_creator: Some(true),
                     guard_by_spec_role_ids: if iter_role_ids.is_empty() { None } else { Some(iter_role_ids.clone()) },
@@ -749,6 +841,10 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     from_flow_state_name: "进行中".to_string(),
                     to_flow_state_name: "已完成".to_string(),
                     name: "完成".to_string(),
+                    double_check: Some(FlowTransitionDoubleCheckInfo {
+                        is_open: true,
+                        content: Some("确认将状态修改成已完成？".to_string()),
+                    }),
                     guard_by_creator: Some(true),
                     guard_by_spec_role_ids: if iter_role_ids.is_empty() { None } else { Some(iter_role_ids.clone()) },
                     ..Default::default()
@@ -759,7 +855,7 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     name: "有风险".to_string(),
                     double_check: Some(FlowTransitionDoubleCheckInfo {
                         is_open: true,
-                        content: Some("确认该迭代有风险？".to_string()),
+                        content: Some("确认将状态修改成存在风险？".to_string()),
                     }),
                     guard_by_creator: Some(true),
                     guard_by_spec_role_ids: if iter_role_ids.is_empty() { None } else { Some(iter_role_ids.clone()) },
@@ -771,7 +867,7 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     name: "关闭".to_string(),
                     double_check: Some(FlowTransitionDoubleCheckInfo {
                         is_open: true,
-                        content: Some("确认关闭该迭代？".to_string()),
+                        content: Some("确认将状态修改成已关闭？".to_string()),
                     }),
                     guard_by_creator: Some(true),
                     guard_by_spec_role_ids: if iter_role_ids.is_empty() { None } else { Some(iter_role_ids.clone()) },
@@ -783,7 +879,7 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     name: "正常".to_string(),
                     double_check: Some(FlowTransitionDoubleCheckInfo {
                         is_open: true,
-                        content: Some("确认将该迭代转正常？".to_string()),
+                        content: Some("确认将状态修改成进行中？".to_string()),
                     }),
                     guard_by_creator: Some(true),
                     guard_by_spec_role_ids: if iter_role_ids.is_empty() { None } else { Some(iter_role_ids.clone()) },
@@ -793,6 +889,10 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     from_flow_state_name: "存在风险".to_string(),
                     to_flow_state_name: "已完成".to_string(),
                     name: "完成".to_string(),
+                    double_check: Some(FlowTransitionDoubleCheckInfo {
+                        is_open: true,
+                        content: Some("确认将状态修改成已完成？".to_string()),
+                    }),
                     guard_by_creator: Some(true),
                     guard_by_spec_role_ids: if iter_role_ids.is_empty() { None } else { Some(iter_role_ids.clone()) },
                     ..Default::default()
@@ -803,7 +903,7 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     name: "关闭".to_string(),
                     double_check: Some(FlowTransitionDoubleCheckInfo {
                         is_open: true,
-                        content: Some("确认关闭该迭代？".to_string()),
+                        content: Some("确认将状态修改成已关闭？".to_string()),
                     }),
                     guard_by_creator: Some(true),
                     guard_by_spec_role_ids: if iter_role_ids.is_empty() { None } else { Some(iter_role_ids.clone()) },
@@ -813,6 +913,10 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     from_flow_state_name: "已完成".to_string(),
                     to_flow_state_name: "进行中".to_string(),
                     name: "重新处理".to_string(),
+                    double_check: Some(FlowTransitionDoubleCheckInfo {
+                        is_open: true,
+                        content: Some("确认将状态修改成进行中？".to_string()),
+                    }),
                     guard_by_creator: Some(true),
                     guard_by_spec_role_ids: if iter_role_ids.is_empty() { None } else { Some(iter_role_ids.clone()) },
                     ..Default::default()
@@ -823,7 +927,7 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     name: "关闭".to_string(),
                     double_check: Some(FlowTransitionDoubleCheckInfo {
                         is_open: true,
-                        content: Some("确认关闭该迭代？".to_string()),
+                        content: Some("确认将状态修改成已关闭？".to_string()),
                     }),
                     guard_by_creator: Some(true),
                     guard_by_spec_role_ids: if iter_role_ids.is_empty() { None } else { Some(iter_role_ids.clone()) },
@@ -833,6 +937,10 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     from_flow_state_name: "已关闭".to_string(),
                     to_flow_state_name: "待开始".to_string(),
                     name: "激活".to_string(),
+                    double_check: Some(FlowTransitionDoubleCheckInfo {
+                        is_open: true,
+                        content: Some("确认将状态修改成待开始？".to_string()),
+                    }),
                     guard_by_creator: Some(true),
                     guard_by_spec_role_ids: if iter_role_ids.is_empty() { None } else { Some(iter_role_ids.clone()) },
                     ..Default::default()
@@ -882,6 +990,10 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     from_flow_state_name: "待开始".to_string(),
                     to_flow_state_name: "进行中".to_string(),
                     name: "开始".to_string(),
+                    double_check: Some(FlowTransitionDoubleCheckInfo {
+                        is_open: true,
+                        content: Some("确认将状态修改成进行中？".to_string()),
+                    }),
                     guard_by_creator: Some(true),
                     guard_by_spec_role_ids: if task_role_ids.is_empty() { None } else { Some(task_role_ids.clone()) },
                     ..Default::default()
@@ -892,7 +1004,7 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     name: "关闭".to_string(),
                     double_check: Some(FlowTransitionDoubleCheckInfo {
                         is_open: true,
-                        content: Some("确认关闭该任务？".to_string()),
+                        content: Some("确认将状态修改成已关闭？".to_string()),
                     }),
                     guard_by_creator: Some(true),
                     guard_by_spec_role_ids: if task_role_ids.is_empty() { None } else { Some(task_role_ids.clone()) },
@@ -902,6 +1014,10 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     from_flow_state_name: "进行中".to_string(),
                     to_flow_state_name: "已完成".to_string(),
                     name: "完成".to_string(),
+                    double_check: Some(FlowTransitionDoubleCheckInfo {
+                        is_open: true,
+                        content: Some("确认将状态修改成已完成？".to_string()),
+                    }),
                     guard_by_creator: Some(true),
                     guard_by_spec_role_ids: if task_role_ids.is_empty() { None } else { Some(task_role_ids.clone()) },
                     ..Default::default()
@@ -912,7 +1028,7 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     name: "有风险".to_string(),
                     double_check: Some(FlowTransitionDoubleCheckInfo {
                         is_open: true,
-                        content: Some("确认该任务有风险？".to_string()),
+                        content: Some("确认该任务存在风险？".to_string()),
                     }),
                     guard_by_creator: Some(true),
                     guard_by_spec_role_ids: if task_role_ids.is_empty() { None } else { Some(task_role_ids.clone()) },
@@ -924,7 +1040,7 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     name: "关闭".to_string(),
                     double_check: Some(FlowTransitionDoubleCheckInfo {
                         is_open: true,
-                        content: Some("确认关闭该任务？".to_string()),
+                        content: Some("确认将状态修改成已关闭？".to_string()),
                     }),
                     guard_by_creator: Some(true),
                     guard_by_spec_role_ids: if task_role_ids.is_empty() { None } else { Some(task_role_ids.clone()) },
@@ -936,7 +1052,7 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     name: "正常".to_string(),
                     double_check: Some(FlowTransitionDoubleCheckInfo {
                         is_open: true,
-                        content: Some("确认将该任务转正常？".to_string()),
+                        content: Some("确认将状态修改成进行中？".to_string()),
                     }),
                     guard_by_creator: Some(true),
                     guard_by_spec_role_ids: if task_role_ids.is_empty() { None } else { Some(task_role_ids.clone()) },
@@ -946,6 +1062,10 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     from_flow_state_name: "存在风险".to_string(),
                     to_flow_state_name: "已完成".to_string(),
                     name: "完成".to_string(),
+                    double_check: Some(FlowTransitionDoubleCheckInfo {
+                        is_open: true,
+                        content: Some("确认将状态修改成已完成？".to_string()),
+                    }),
                     guard_by_creator: Some(true),
                     guard_by_spec_role_ids: if task_role_ids.is_empty() { None } else { Some(task_role_ids.clone()) },
                     ..Default::default()
@@ -956,7 +1076,7 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     name: "关闭".to_string(),
                     double_check: Some(FlowTransitionDoubleCheckInfo {
                         is_open: true,
-                        content: Some("确认关闭该任务？".to_string()),
+                        content: Some("确认将状态修改成已关闭？".to_string()),
                     }),
                     guard_by_creator: Some(true),
                     guard_by_spec_role_ids: if task_role_ids.is_empty() { None } else { Some(task_role_ids.clone()) },
@@ -966,6 +1086,10 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     from_flow_state_name: "已完成".to_string(),
                     to_flow_state_name: "进行中".to_string(),
                     name: "重新处理".to_string(),
+                    double_check: Some(FlowTransitionDoubleCheckInfo {
+                        is_open: true,
+                        content: Some("确认将状态修改成进行中？".to_string()),
+                    }),
                     guard_by_creator: Some(true),
                     guard_by_spec_role_ids: if task_role_ids.is_empty() { None } else { Some(task_role_ids.clone()) },
                     ..Default::default()
@@ -976,7 +1100,7 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     name: "关闭".to_string(),
                     double_check: Some(FlowTransitionDoubleCheckInfo {
                         is_open: true,
-                        content: Some("确认关闭该任务？".to_string()),
+                        content: Some("确认将状态修改成已关闭？".to_string()),
                     }),
                     guard_by_creator: Some(true),
                     guard_by_spec_role_ids: if task_role_ids.is_empty() { None } else { Some(task_role_ids.clone()) },
@@ -986,6 +1110,10 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     from_flow_state_name: "已关闭".to_string(),
                     to_flow_state_name: "待开始".to_string(),
                     name: "激活".to_string(),
+                    double_check: Some(FlowTransitionDoubleCheckInfo {
+                        is_open: true,
+                        content: Some("确认将状态修改成待开始？".to_string()),
+                    }),
                     guard_by_creator: Some(true),
                     guard_by_spec_role_ids: if task_role_ids.is_empty() { None } else { Some(task_role_ids.clone()) },
                     ..Default::default()
@@ -1032,6 +1160,10 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     from_flow_state_name: "待开始".to_string(),
                     to_flow_state_name: "进行中".to_string(),
                     name: "开始".to_string(),
+                    double_check: Some(FlowTransitionDoubleCheckInfo {
+                        is_open: true,
+                        content: Some("确认将状态修改成进行中？".to_string()),
+                    }),
                     guard_by_creator: Some(true),
                     guard_by_spec_role_ids: if tp_role_ids.is_empty() { None } else { Some(tp_role_ids.clone()) },
                     ..Default::default()
@@ -1042,7 +1174,7 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     name: "关闭".to_string(),
                     double_check: Some(FlowTransitionDoubleCheckInfo {
                         is_open: true,
-                        content: Some("确认关闭该测试计划？".to_string()),
+                        content: Some("确认将状态修改成已关闭？".to_string()),
                     }),
                     guard_by_creator: Some(true),
                     guard_by_spec_role_ids: if tp_role_ids.is_empty() { None } else { Some(tp_role_ids.clone()) },
@@ -1052,6 +1184,10 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     from_flow_state_name: "进行中".to_string(),
                     to_flow_state_name: "已完成".to_string(),
                     name: "完成".to_string(),
+                    double_check: Some(FlowTransitionDoubleCheckInfo {
+                        is_open: true,
+                        content: Some("确认将状态修改成已完成？".to_string()),
+                    }),
                     guard_by_creator: Some(true),
                     guard_by_spec_role_ids: if tp_role_ids.is_empty() { None } else { Some(tp_role_ids.clone()) },
                     ..Default::default()
@@ -1062,7 +1198,7 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     name: "有风险".to_string(),
                     double_check: Some(FlowTransitionDoubleCheckInfo {
                         is_open: true,
-                        content: Some("确认该测试计划有风险？".to_string()),
+                        content: Some("确认将状态修改成存在风险？".to_string()),
                     }),
                     guard_by_creator: Some(true),
                     guard_by_spec_role_ids: if tp_role_ids.is_empty() { None } else { Some(tp_role_ids.clone()) },
@@ -1074,7 +1210,7 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     name: "关闭".to_string(),
                     double_check: Some(FlowTransitionDoubleCheckInfo {
                         is_open: true,
-                        content: Some("确认关闭该测试计划？".to_string()),
+                        content: Some("确认将状态修改成已关闭？".to_string()),
                     }),
                     guard_by_creator: Some(true),
                     guard_by_spec_role_ids: if tp_role_ids.is_empty() { None } else { Some(tp_role_ids.clone()) },
@@ -1086,7 +1222,7 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     name: "正常".to_string(),
                     double_check: Some(FlowTransitionDoubleCheckInfo {
                         is_open: true,
-                        content: Some("确认将该测试计划转正常？".to_string()),
+                        content: Some("确认将状态修改成进行中？".to_string()),
                     }),
                     guard_by_creator: Some(true),
                     guard_by_spec_role_ids: if tp_role_ids.is_empty() { None } else { Some(tp_role_ids.clone()) },
@@ -1096,6 +1232,10 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     from_flow_state_name: "存在风险".to_string(),
                     to_flow_state_name: "已完成".to_string(),
                     name: "完成".to_string(),
+                    double_check: Some(FlowTransitionDoubleCheckInfo {
+                        is_open: true,
+                        content: Some("确认将状态修改成已完成？".to_string()),
+                    }),
                     guard_by_creator: Some(true),
                     guard_by_spec_role_ids: if tp_role_ids.is_empty() { None } else { Some(tp_role_ids.clone()) },
                     ..Default::default()
@@ -1106,7 +1246,7 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     name: "关闭".to_string(),
                     double_check: Some(FlowTransitionDoubleCheckInfo {
                         is_open: true,
-                        content: Some("确认关闭该测试计划？".to_string()),
+                        content: Some("确认将状态修改成已关闭？".to_string()),
                     }),
                     guard_by_creator: Some(true),
                     guard_by_spec_role_ids: if tp_role_ids.is_empty() { None } else { Some(tp_role_ids.clone()) },
@@ -1116,6 +1256,10 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     from_flow_state_name: "已完成".to_string(),
                     to_flow_state_name: "进行中".to_string(),
                     name: "重新处理".to_string(),
+                    double_check: Some(FlowTransitionDoubleCheckInfo {
+                        is_open: true,
+                        content: Some("确认将状态修改成进行中？".to_string()),
+                    }),
                     guard_by_creator: Some(true),
                     guard_by_spec_role_ids: if tp_role_ids.is_empty() { None } else { Some(tp_role_ids.clone()) },
                     ..Default::default()
@@ -1126,7 +1270,7 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     name: "关闭".to_string(),
                     double_check: Some(FlowTransitionDoubleCheckInfo {
                         is_open: true,
-                        content: Some("确认关闭该测试计划？".to_string()),
+                        content: Some("确认将状态修改成已关闭？".to_string()),
                     }),
                     guard_by_creator: Some(true),
                     guard_by_spec_role_ids: if tp_role_ids.is_empty() { None } else { Some(tp_role_ids.clone()) },
@@ -1136,6 +1280,10 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     from_flow_state_name: "已关闭".to_string(),
                     to_flow_state_name: "待开始".to_string(),
                     name: "激活".to_string(),
+                    double_check: Some(FlowTransitionDoubleCheckInfo {
+                        is_open: true,
+                        content: Some("确认将状态修改成待开始？".to_string()),
+                    }),
                     guard_by_creator: Some(true),
                     guard_by_spec_role_ids: if tp_role_ids.is_empty() { None } else { Some(tp_role_ids.clone()) },
                     ..Default::default()
@@ -1185,6 +1333,10 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     from_flow_state_name: "待开始".to_string(),
                     to_flow_state_name: "进行中".to_string(),
                     name: "开始".to_string(),
+                    double_check: Some(FlowTransitionDoubleCheckInfo {
+                        is_open: true,
+                        content: Some("确认将状态修改成进行中？".to_string()),
+                    }),
                     guard_by_creator: Some(true),
                     guard_by_spec_role_ids: if ts_role_ids.is_empty() { None } else { Some(ts_role_ids.clone()) },
                     ..Default::default()
@@ -1195,7 +1347,7 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     name: "关闭".to_string(),
                     double_check: Some(FlowTransitionDoubleCheckInfo {
                         is_open: true,
-                        content: Some("确认关闭该测试阶段？".to_string()),
+                        content: Some("确认将状态修改成已关闭？".to_string()),
                     }),
                     guard_by_creator: Some(true),
                     guard_by_spec_role_ids: if ts_role_ids.is_empty() { None } else { Some(ts_role_ids.clone()) },
@@ -1205,6 +1357,10 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     from_flow_state_name: "进行中".to_string(),
                     to_flow_state_name: "已完成".to_string(),
                     name: "完成".to_string(),
+                    double_check: Some(FlowTransitionDoubleCheckInfo {
+                        is_open: true,
+                        content: Some("确认将状态修改成已完成？".to_string()),
+                    }),
                     guard_by_creator: Some(true),
                     guard_by_spec_role_ids: if ts_role_ids.is_empty() { None } else { Some(ts_role_ids.clone()) },
                     ..Default::default()
@@ -1215,7 +1371,7 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     name: "有风险".to_string(),
                     double_check: Some(FlowTransitionDoubleCheckInfo {
                         is_open: true,
-                        content: Some("确认该测试阶段有风险？".to_string()),
+                        content: Some("确认将状态修改成存在风险？".to_string()),
                     }),
                     guard_by_creator: Some(true),
                     guard_by_spec_role_ids: if ts_role_ids.is_empty() { None } else { Some(ts_role_ids.clone()) },
@@ -1227,7 +1383,7 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     name: "关闭".to_string(),
                     double_check: Some(FlowTransitionDoubleCheckInfo {
                         is_open: true,
-                        content: Some("确认关闭该测试阶段？".to_string()),
+                        content: Some("确认将状态修改成已关闭？".to_string()),
                     }),
                     guard_by_creator: Some(true),
                     guard_by_spec_role_ids: if ts_role_ids.is_empty() { None } else { Some(ts_role_ids.clone()) },
@@ -1239,7 +1395,7 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     name: "正常".to_string(),
                     double_check: Some(FlowTransitionDoubleCheckInfo {
                         is_open: true,
-                        content: Some("确认将该测试阶段转正常？".to_string()),
+                        content: Some("确认将状态修改成进行中？".to_string()),
                     }),
                     guard_by_creator: Some(true),
                     guard_by_spec_role_ids: if ts_role_ids.is_empty() { None } else { Some(ts_role_ids.clone()) },
@@ -1249,6 +1405,10 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     from_flow_state_name: "存在风险".to_string(),
                     to_flow_state_name: "已完成".to_string(),
                     name: "完成".to_string(),
+                    double_check: Some(FlowTransitionDoubleCheckInfo {
+                        is_open: true,
+                        content: Some("确认将状态修改成已完成？".to_string()),
+                    }),
                     guard_by_creator: Some(true),
                     guard_by_spec_role_ids: if ts_role_ids.is_empty() { None } else { Some(ts_role_ids.clone()) },
                     ..Default::default()
@@ -1259,7 +1419,7 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     name: "关闭".to_string(),
                     double_check: Some(FlowTransitionDoubleCheckInfo {
                         is_open: true,
-                        content: Some("确认关闭该测试阶段？".to_string()),
+                        content: Some("确认将状态修改成已关闭？".to_string()),
                     }),
                     guard_by_creator: Some(true),
                     guard_by_spec_role_ids: if ts_role_ids.is_empty() { None } else { Some(ts_role_ids.clone()) },
@@ -1269,6 +1429,10 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     from_flow_state_name: "已完成".to_string(),
                     to_flow_state_name: "进行中".to_string(),
                     name: "重新处理".to_string(),
+                    double_check: Some(FlowTransitionDoubleCheckInfo {
+                        is_open: true,
+                        content: Some("确认将状态修改成进行中？".to_string()),
+                    }),
                     guard_by_creator: Some(true),
                     guard_by_spec_role_ids: if ts_role_ids.is_empty() { None } else { Some(ts_role_ids.clone()) },
                     ..Default::default()
@@ -1279,7 +1443,7 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     name: "关闭".to_string(),
                     double_check: Some(FlowTransitionDoubleCheckInfo {
                         is_open: true,
-                        content: Some("确认关闭该测试阶段？".to_string()),
+                        content: Some("确认将状态修改成已关闭？".to_string()),
                     }),
                     guard_by_creator: Some(true),
                     guard_by_spec_role_ids: if ts_role_ids.is_empty() { None } else { Some(ts_role_ids.clone()) },
@@ -1289,6 +1453,10 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     from_flow_state_name: "已关闭".to_string(),
                     to_flow_state_name: "待开始".to_string(),
                     name: "激活".to_string(),
+                    double_check: Some(FlowTransitionDoubleCheckInfo {
+                        is_open: true,
+                        content: Some("确认将状态修改成待开始？".to_string()),
+                    }),
                     guard_by_creator: Some(true),
                     guard_by_spec_role_ids: if ts_role_ids.is_empty() { None } else { Some(ts_role_ids.clone()) },
                     ..Default::default()
@@ -1338,14 +1506,21 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     from_flow_state_name: "待处理".to_string(),
                     to_flow_state_name: "修复中".to_string(),
                     name: "确认并修复".to_string(),
+                    double_check: Some(FlowTransitionDoubleCheckInfo {
+                        is_open: true,
+                        content: Some("确认将状态修改成修复中？".to_string()),
+                    }),
                     guard_by_creator: Some(true),
-                    guard_by_spec_role_ids: if issue_role_ids.is_empty() { None } else { Some(issue_role_ids.clone()) },
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
                     from_flow_state_name: "待处理".to_string(),
-                    to_flow_state_name: "待确认".to_string(),
-                    name: "修复完成".to_string(),
+                    to_flow_state_name: "已关闭".to_string(),
+                    name: "关闭".to_string(),
+                    double_check: Some(FlowTransitionDoubleCheckInfo {
+                        is_open: true,
+                        content: Some("确认将状态修改成已关闭？".to_string()),
+                    }),
                     guard_by_creator: Some(true),
                     guard_by_spec_role_ids: if issue_role_ids.is_empty() { None } else { Some(issue_role_ids.clone()) },
                     ..Default::default()
@@ -1353,14 +1528,34 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                 FlowTransitionInitInfo {
                     from_flow_state_name: "修复中".to_string(),
                     to_flow_state_name: "待确认".to_string(),
+                    double_check: Some(FlowTransitionDoubleCheckInfo {
+                        is_open: true,
+                        content: Some("确认将状态修改成待确认？".to_string()),
+                    }),
                     name: "修复完成".to_string(),
                     guard_by_assigned: Some(true),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "修复中".to_string(),
+                    to_flow_state_name: "已关闭".to_string(),
+                    name: "关闭".to_string(),
+                    double_check: Some(FlowTransitionDoubleCheckInfo {
+                        is_open: true,
+                        content: Some("确认将状态修改成已关闭？".to_string()),
+                    }),
+                    guard_by_creator: Some(true),
+                    guard_by_spec_role_ids: if issue_role_ids.is_empty() { None } else { Some(issue_role_ids.clone()) },
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
                     from_flow_state_name: "待确认".to_string(),
                     to_flow_state_name: "已解决".to_string(),
                     name: "确认修复".to_string(),
+                    double_check: Some(FlowTransitionDoubleCheckInfo {
+                        is_open: true,
+                        content: Some("确认将状态修改成已解决？".to_string()),
+                    }),
                     guard_by_creator: Some(true),
                     guard_by_spec_role_ids: if issue_role_ids.is_empty() { None } else { Some(issue_role_ids.clone()) },
                     ..Default::default()
@@ -1369,6 +1564,22 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     from_flow_state_name: "待确认".to_string(),
                     to_flow_state_name: "修复中".to_string(),
                     name: "未修复".to_string(),
+                    double_check: Some(FlowTransitionDoubleCheckInfo {
+                        is_open: true,
+                        content: Some("确认将状态修改成修复中？".to_string()),
+                    }),
+                    guard_by_creator: Some(true),
+                    guard_by_spec_role_ids: if issue_role_ids.is_empty() { None } else { Some(issue_role_ids.clone()) },
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_name: "待确认".to_string(),
+                    to_flow_state_name: "已关闭".to_string(),
+                    name: "关闭".to_string(),
+                    double_check: Some(FlowTransitionDoubleCheckInfo {
+                        is_open: true,
+                        content: Some("确认将状态修改成已关闭？".to_string()),
+                    }),
                     guard_by_creator: Some(true),
                     guard_by_spec_role_ids: if issue_role_ids.is_empty() { None } else { Some(issue_role_ids.clone()) },
                     ..Default::default()
@@ -1377,6 +1588,10 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     from_flow_state_name: "已解决".to_string(),
                     to_flow_state_name: "待处理".to_string(),
                     name: "激活".to_string(),
+                    double_check: Some(FlowTransitionDoubleCheckInfo {
+                        is_open: true,
+                        content: Some("确认将状态修改成待处理？".to_string()),
+                    }),
                     guard_by_creator: Some(true),
                     guard_by_spec_role_ids: if issue_role_ids.is_empty() { None } else { Some(issue_role_ids.clone()) },
                     ..Default::default()
@@ -1385,7 +1600,10 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     from_flow_state_name: "已解决".to_string(),
                     to_flow_state_name: "已关闭".to_string(),
                     name: "关闭".to_string(),
-
+                    double_check: Some(FlowTransitionDoubleCheckInfo {
+                        is_open: true,
+                        content: Some("确认将状态修改成已关闭？".to_string()),
+                    }),
                     guard_by_creator: Some(true),
                     guard_by_spec_role_ids: if issue_role_ids.is_empty() { None } else { Some(issue_role_ids.clone()) },
                     ..Default::default()
@@ -1394,6 +1612,10 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     from_flow_state_name: "已关闭".to_string(),
                     to_flow_state_name: "待处理".to_string(),
                     name: "激活".to_string(),
+                    double_check: Some(FlowTransitionDoubleCheckInfo {
+                        is_open: true,
+                        content: Some("确认将状态修改成待处理？".to_string()),
+                    }),
                     guard_by_creator: Some(true),
                     guard_by_spec_role_ids: if issue_role_ids.is_empty() { None } else { Some(issue_role_ids.clone()) },
                     ..Default::default()
@@ -1446,7 +1668,7 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     name: "接收".to_string(),
                     double_check: Some(FlowTransitionDoubleCheckInfo {
                         is_open: true,
-                        content: Some("确认接收该转测单？".to_string()),
+                        content: Some("确认将状态修改成已接收？".to_string()),
                     }),
                     guard_by_spec_role_ids: if cts_role_ids1.is_empty() { None } else { Some(cts_role_ids1.clone()) },
                     ..Default::default()
@@ -1457,7 +1679,7 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     name: "撤销".to_string(),
                     double_check: Some(FlowTransitionDoubleCheckInfo {
                         is_open: true,
-                        content: Some("确认撤销该转测单？".to_string()),
+                        content: Some("确认将状态修改成已撤销？".to_string()),
                     }),
                     guard_by_creator: Some(true),
                     guard_by_spec_role_ids: if cts_role_ids2.is_empty() { None } else { Some(cts_role_ids2.clone()) },
@@ -1469,7 +1691,7 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     name: "退回".to_string(),
                     double_check: Some(FlowTransitionDoubleCheckInfo {
                         is_open: true,
-                        content: Some("确认退回该转测单？".to_string()),
+                        content: Some("确认将状态修改成已退回？".to_string()),
                     }),
                     guard_by_spec_role_ids: if cts_role_ids1.is_empty() { None } else { Some(cts_role_ids1.clone()) },
                     ..Default::default()
@@ -1480,7 +1702,7 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     name: "重新提交".to_string(),
                     double_check: Some(FlowTransitionDoubleCheckInfo {
                         is_open: true,
-                        content: Some("确认重新提交该转测单？".to_string()),
+                        content: Some("确认将状态修改成已接收？".to_string()),
                     }),
                     guard_by_creator: Some(true),
                     guard_by_spec_role_ids: if cts_role_ids2.is_empty() { None } else { Some(cts_role_ids2.clone()) },
@@ -1492,7 +1714,7 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     name: "重新提交".to_string(),
                     double_check: Some(FlowTransitionDoubleCheckInfo {
                         is_open: true,
-                        content: Some("确认重新提交该转测单？".to_string()),
+                        content: Some("确认将状态修改成待接收？".to_string()),
                     }),
                     guard_by_creator: Some(true),
                     guard_by_spec_role_ids: if cts_role_ids2.is_empty() { None } else { Some(cts_role_ids2.clone()) },
