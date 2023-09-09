@@ -31,6 +31,7 @@ use std::{
     str::FromStr,
     sync::{Arc, OnceLock},
 };
+use tardis::web::poem_openapi::types::Type;
 use tardis::{
     async_trait,
     basic::{error::TardisError, result::TardisResult, tracing::TardisTracing},
@@ -352,12 +353,13 @@ async fn ctx_to_auth_req(ctx: &mut SgRoutePluginContext) -> TardisResult<(AuthRe
             path: url.path().to_string(),
             query: url
                 .query()
+                .filter(|q| !q.is_empty())
                 .map(|q| {
                     q.split('&')
-                        .map(|s| {
-                            let a: Vec<_> = s.split('=').collect();
-                            (a[0].to_string(), a[1].to_string())
-                        })
+                        .filter(|s| !s.is_empty())
+                        .map(|s| s.split('=').collect::<Vec<_>>())
+                        .filter(|a| a.len() == 2)
+                        .map(|a| (a[0].to_string(), a[1].to_string()))
                         .collect()
                 })
                 .unwrap_or_default(),
