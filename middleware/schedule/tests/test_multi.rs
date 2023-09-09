@@ -3,7 +3,7 @@ use std::sync::atomic::Ordering;
 
 use bios_basic::test::init_rbum_test_container;
 use bios_mw_schedule::{dto::schedule_job_dto::ScheduleJobAddOrModifyReq, schedule_config::ScheduleConfig};
-use tardis::chrono::{Utc, self};
+use tardis::chrono::{self, Utc};
 use tardis::rand::seq::SliceRandom;
 use tardis::{basic::result::TardisResult, rand, testcontainers, tokio};
 use test_common::*;

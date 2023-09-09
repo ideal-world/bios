@@ -231,6 +231,7 @@ impl SgPluginFilter for SgFilterAuth {
                 if auth_result.e.is_none() {
                     ctx = success_auth_result_to_ctx(auth_result, req_body.into(), ctx)?;
                 } else if let Some(e) = auth_result.e {
+                    log::info!("[Plugin.Auth] auth failed:{e}");
                     ctx.set_action(SgRouteFilterRequestAction::Response);
                     ctx.response.set_status_code(StatusCode::from_str(&e.code).unwrap_or(StatusCode::BAD_GATEWAY));
                     ctx.response.set_body(json!({"code":format!("{}-gateway-cert-error",e.code),"message":e.message}).to_string());
@@ -250,7 +251,10 @@ impl SgPluginFilter for SgFilterAuth {
     async fn resp_filter(&self, _: &str, mut ctx: SgRoutePluginContext) -> TardisResult<(bool, SgRoutePluginContext)> {
         let head_key_crypto = self.auth_config.head_key_crypto.clone();
 
-        if ctx.request.get_headers().get(&head_key_crypto).is_none() || self.get_is_true_mix_req_from_header(ctx.request.get_headers()) {
+        // Return encryption will be skipped in three cases: there is no encryption header,
+        // the http code request is unsuccessful, and it is the return of the mix request
+        // (the inner request return has been encrypted once)
+        if ctx.request.get_headers().get(&head_key_crypto).is_none() || !ctx.response.status_code.is_success() || self.get_is_true_mix_req_from_header(ctx.request.get_headers()) {
             return Ok((true, ctx));
         }
 

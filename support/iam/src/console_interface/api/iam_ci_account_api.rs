@@ -3,7 +3,7 @@ use bios_basic::rbum::rbum_enumeration::RbumRelFromKind;
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem_openapi;
 use tardis::web::poem_openapi::{param::Path, param::Query};
-use tardis::web::web_resp::{TardisApiResult, TardisResp, TardisPage};
+use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp};
 use tardis::TardisFuns;
 
 use crate::basic::dto::iam_account_dto::{IamAccountDetailAggResp, IamAccountSummaryAggResp};
@@ -22,7 +22,6 @@ pub struct IamCiAccountApi;
 /// Interface Console Account API	接口控制台帐户API
 #[poem_openapi::OpenApi(prefix_path = "/ci/account", tag = "bios_basic::ApiTag::Interface")]
 impl IamCiAccountApi {
-
     /// Find Accounts
     #[oai(path = "/", method = "get")]
     #[allow(clippy::too_many_arguments)]
