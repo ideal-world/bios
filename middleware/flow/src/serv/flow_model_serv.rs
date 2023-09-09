@@ -829,7 +829,7 @@ impl FlowModelServ {
         // sub role_id instead of role_id
         for transition in &mut transitions {
             for role_id in &mut transition.guard_by_spec_role_ids {
-                *role_id = FlowExternalServ::do_find_embed_subrole_id(role_id, ctx, funs).await?;
+                *role_id = FlowExternalServ::do_find_embed_subrole_id(role_id, ctx, funs).await.unwrap_or(role_id.to_string());
             }
         }
         let model_id = Self::add_item(
