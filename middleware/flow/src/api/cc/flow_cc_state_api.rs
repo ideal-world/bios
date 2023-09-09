@@ -1,4 +1,5 @@
 use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
+use bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem_openapi;
@@ -80,13 +81,13 @@ impl FlowCcStateApi {
     ) -> TardisApiResult<TardisPage<FlowStateSummaryResp>> {
         let funs = flow_constants::get_tardis_inst();
 
-        let (own_paths, with_sub_own_paths) = if let Some(is_global) = is_global.0 {
+        let (scope_level, with_sub_own_paths) = if let Some(is_global) = is_global.0 {
             if is_global {
                 // get global state
-                (Some("".to_string()), false)
+                (Some(RbumScopeLevelKind::Root), false)
             } else {
                 // get custom state
-                (None, true)
+                (Some(RbumScopeLevelKind::L1), true)
             }
         } else {
             // get all state
@@ -99,8 +100,8 @@ impl FlowCcStateApi {
                     ids: ids.0.map(|ids| ids.split(',').map(|id| id.to_string()).collect::<Vec<String>>()),
                     name: name.0,
                     with_sub_own_paths,
-                    own_paths,
                     enabled: enabled.0,
+                    scope_level,
                     ..Default::default()
                 },
                 tag: tag.0,
