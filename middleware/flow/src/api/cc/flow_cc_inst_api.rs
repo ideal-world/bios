@@ -27,7 +27,7 @@ impl FlowCcInstApi {
     }
 
     /// Abort Instance / 中止实例
-    #[oai(path = "/:flow_inst_id", method = "delete")]
+    #[oai(path = "/:flow_inst_id", method = "put")]
     async fn abort(&self, flow_inst_id: Path<String>, abort_req: Json<FlowInstAbortReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = flow_constants::get_tardis_inst();
         funs.begin().await?;

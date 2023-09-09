@@ -3,7 +3,7 @@ use itertools::Itertools;
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
     log::debug,
-    TardisFuns, TardisFunsInst,
+    TardisFuns, TardisFunsInst, web::web_resp::TardisResp,
 };
 
 use crate::{
@@ -139,11 +139,16 @@ impl FlowExternalServ {
         let iam_url = &funs.conf::<FlowConfig>().iam_url;
 
         let header = Self::headers(None, funs, ctx).await?;
-        funs.web_client()
-            .get::<String>(&format!("{iam_url}/get_embed_subrole_id?id={role_id}"), header)
+        let resp = funs.web_client()
+            .get::<TardisResp<String>>(&format!("{iam_url}/get_embed_subrole_id?id={role_id}"), header)
             .await?
             .body
-            .ok_or_else(|| funs.err().internal_error("flow_external", "do_find_embed_subrole_id", "illegal response", "500-external-illegal-response"))
+            .ok_or_else(|| funs.err().internal_error("flow_external", "do_find_embed_subrole_id", "illegal response", "500-external-illegal-response"))?;
+        if let Some(data) = resp.data {
+            Ok(data)
+        } else {
+            Err(funs.err().internal_error("flow_external", "do_find_embed_subrole_id", "illegal response", "500-external-illegal-response"))
+        }
     }
 
     async fn get_external_url(tag: &str, ctx: &TardisContext, funs: &TardisFunsInst) -> TardisResult<String> {
