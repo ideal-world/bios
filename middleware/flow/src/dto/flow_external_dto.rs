@@ -1,5 +1,4 @@
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
 use tardis::web::poem_openapi::{
     self,
     types::{ParseFromJSON, ToJSON},
@@ -28,7 +27,7 @@ pub struct FlowExternalParams {
     pub rel_tag: Option<String>,
     pub var_id: Option<String>,
     pub var_name: Option<String>,
-    pub value: Option<Value>,
+    pub value: Option<String>,
 }
 
 #[derive(Default, Serialize, Deserialize, Debug, poem_openapi::Object)]
