@@ -657,7 +657,7 @@ impl FlowInstServ {
                     rel_tag: None,
                     var_name: Some(var_name.clone()),
                     var_id: None,
-                    value: Some(value.to_string().clone()),
+                    value: Some(value.clone()),
                 });
             }
             if !params.is_empty() {
@@ -790,7 +790,7 @@ impl FlowInstServ {
                                             rel_tag: None,
                                             var_id: None,
                                             var_name: Some(change_info.var_name.clone()),
-                                            value: change_info.changed_val.clone().map(|val| val.to_string()),
+                                            value: change_info.changed_val.clone(),
                                         }],
                                         ctx,
                                         funs,
@@ -809,7 +809,7 @@ impl FlowInstServ {
                                     rel_tag: None,
                                     var_id: None,
                                     var_name: Some(change_info.var_name.clone()),
-                                    value: change_info.changed_val.clone().map(|val| val.to_string()),
+                                    value: change_info.changed_val.clone(),
                                 }],
                                 ctx,
                                 funs,
