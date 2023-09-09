@@ -902,10 +902,20 @@ impl IamAccountServ {
             )
             .await?;
             for t in tenants {
-                set_ids.push(IamSetServ::get_set_id_by_code(&IamSetServ::get_default_code(&IamSetKind::Org, &t.id), true, funs, ctx).await?);
+                match IamSetServ::get_set_id_by_code(&IamSetServ::get_default_code(&IamSetKind::Org, &t.id), true, funs, ctx).await {
+                    Ok(set_id) => {
+                        set_ids.push(set_id);
+                    }
+                    Err(_) => {}
+                }
             }
         } else {
-            set_ids.push(IamSetServ::get_set_id_by_code(&IamSetServ::get_default_code(&IamSetKind::Org, &account_resp.own_paths), true, funs, ctx).await?);
+            match IamSetServ::get_set_id_by_code(&IamSetServ::get_default_code(&IamSetKind::Org, &account_resp.own_paths), true, funs, ctx).await {
+                Ok(set_id) => {
+                    set_ids.push(set_id);
+                }
+                Err(_) => {}
+            }
         };
         for set_id in set_ids {
             let set_items = IamSetServ::find_set_items(Some(set_id), None, Some(account_id.to_string()), None, true, None, funs, ctx).await?;
