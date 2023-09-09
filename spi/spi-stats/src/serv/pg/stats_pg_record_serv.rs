@@ -46,7 +46,7 @@ pub(crate) async fn get_fact_record_latest(
     let result = conn
         .query_all(
             &format!(
-                r#"SELECT "key", "own_paths", "status", "priority", "tag", "creator", "source", "act_hours", "plan_hours", "ct", "total"  FROM (
+                r#"SELECT * FROM (
     SELECT *, ROW_NUMBER() OVER (PARTITION BY "key" ORDER BY ct DESC) AS rn, count(*) OVER() AS total
     FROM {table_name}
     WHERE "key" IN ({placeholder})
@@ -60,7 +60,9 @@ pub(crate) async fn get_fact_record_latest(
         .iter()
         .map(|result| {
             let result = serde_json::Value::from_query_result_optional(result, "")?;
-            Ok(result.unwrap_or_default())
+            let mut value = result.unwrap_or_default();
+            value.as_object_mut().map(|obj|obj.remove("rn"));
+            Ok(value)
         })
         .collect::<TardisResult<Vec<serde_json::Value>>>()?;
     Ok(values)
