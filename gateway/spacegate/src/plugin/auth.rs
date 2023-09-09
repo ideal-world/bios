@@ -371,7 +371,7 @@ async fn ctx_to_auth_req(ctx: &mut SgRoutePluginContext) -> TardisResult<(AuthRe
             host: url.host().unwrap_or("127.0.0.1").to_string(),
             port: url.port().map(|p| p.as_u16()).unwrap_or_else(|| if scheme == "https" { 443 } else { 80 }),
             headers,
-            body: Some(body),
+            body: if body.is_empty() { None } else { Some(body) },
         },
         req_body,
     ))
@@ -644,7 +644,26 @@ mod tests {
         let req_body = String::from_utf8(req_body).unwrap();
         assert_eq!(req_body, test_body_value.to_string());
 
-        //=========request============
+        //=========request GET============
+        let mut header = HeaderMap::new();
+        let (_crypto_data, bios_crypto_value) = crypto_req("", server_public_key.serialize().unwrap().as_ref(), front_pub_key.serialize().unwrap().as_ref(), true);
+        header.insert("Bios-Crypto", bios_crypto_value.parse().unwrap());
+        let ctx = SgRoutePluginContext::new_http(
+            Method::GET,
+            Uri::from_static("http://sg.idealworld.group/test1"),
+            Version::HTTP_11,
+            header,
+            Body::empty(),
+            "127.0.0.1:8080".parse().unwrap(),
+            "".to_string(),
+            None,
+        );
+        let (is_ok, mut before_filter_ctx) = filter_auth.req_filter("", ctx).await.unwrap();
+        assert!(is_ok);
+        let req_body = before_filter_ctx.request.dump_body().await.unwrap();
+        assert!(req_body.is_empty());
+
+        //=========request POST============
         let mut header = HeaderMap::new();
         let (crypto_data, bios_crypto_value) = crypto_req(
             test_body_value,
