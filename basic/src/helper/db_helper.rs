@@ -10,7 +10,7 @@ pub fn json_to_sea_orm_value(json_value: &serde_json::Value, like_by_str: bool) 
         serde_json::Value::Object(_) => Some(vec![sea_orm::Value::from(json_value.clone())]),
         serde_json::Value::String(val) => {
             if like_by_str {
-                Some(vec![sea_orm::Value::from(format!("{val}%"))])
+                Some(vec![sea_orm::Value::from(format!("%{val}%"))])
             } else {
                 Some(vec![sea_orm::Value::from(val)])
             }
