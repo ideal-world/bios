@@ -1,7 +1,7 @@
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem_openapi;
 use tardis::web::poem_openapi::payload::Json;
-use tardis::web::web_resp::{TardisApiResult, TardisResp};
+use tardis::web::web_resp::{TardisApiResult, TardisResp, Void};
 
 use crate::dto::flow_inst_dto::{FlowInstBatchBindReq, FlowInstBatchBindResp, FlowInstBindReq, FlowInstStartReq};
 use crate::flow_constants;
@@ -47,5 +47,14 @@ impl FlowCiInstApi {
         let result = FlowInstServ::batch_bind(&add_req.0, &funs, &ctx.0).await?;
         funs.commit().await?;
         TardisResp::ok(result)
+    }
+
+    /// fix data / 批量绑定实例 （初始化）
+    #[oai(path = "/fix_data", method = "get")]
+    async fn fix_data(&self, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+        let funs = flow_constants::get_tardis_inst();
+
+        FlowInstServ::fix_data(&funs, &ctx.0).await?;
+        TardisResp::ok(Void {})
     }
 }

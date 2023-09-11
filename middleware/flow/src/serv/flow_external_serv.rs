@@ -3,7 +3,8 @@ use itertools::Itertools;
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
     log::debug,
-    TardisFuns, TardisFunsInst, web::web_resp::TardisResp,
+    web::web_resp::TardisResp,
+    TardisFuns, TardisFunsInst,
 };
 
 use crate::{
@@ -139,7 +140,8 @@ impl FlowExternalServ {
         let iam_url = &funs.conf::<FlowConfig>().iam_url;
 
         let header = Self::headers(None, funs, ctx).await?;
-        let resp = funs.web_client()
+        let resp = funs
+            .web_client()
             .get::<TardisResp<String>>(&format!("{iam_url}/cc/role/get_embed_subrole_id?id={role_id}"), header)
             .await?
             .body
