@@ -50,11 +50,11 @@ impl FlowCiInstApi {
     }
 
     /// fix data / 批量绑定实例 （初始化）
-    #[oai(path = "/fix_data", method = "get")]
-    async fn fix_data(&self, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+    #[oai(path = "/modify_rel_model_id", method = "get")]
+    async fn modify_rel_model_id(&self, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let funs = flow_constants::get_tardis_inst();
 
-        FlowInstServ::fix_data(&funs, &ctx.0).await?;
+        FlowInstServ::modify_rel_model_id(&funs, &ctx.0).await?;
         TardisResp::ok(Void {})
     }
 }

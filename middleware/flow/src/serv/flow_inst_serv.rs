@@ -1137,7 +1137,7 @@ impl FlowInstServ {
         }
     }
 
-    pub async fn fix_data(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    pub async fn modify_rel_model_id(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let global_ctx = TardisContext {
             own_paths: "".to_string(),
             ..ctx.clone()
@@ -1243,6 +1243,9 @@ impl FlowInstServ {
                 .await?
                 .pop()
                 .unwrap();
+                if rel_flow_model_id == flow_inst_detail.rel_flow_model_id {
+                    break;
+                }
                 let flow_inst = flow_inst::ActiveModel {
                     id: Set(inst.id.clone()),
                     rel_flow_model_id: Set(rel_flow_model_id.clone()),
