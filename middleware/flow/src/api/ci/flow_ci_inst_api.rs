@@ -1,3 +1,4 @@
+use tardis::tokio;
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem_openapi;
 use tardis::web::poem_openapi::payload::Json;
@@ -53,8 +54,9 @@ impl FlowCiInstApi {
     #[oai(path = "/modify_rel_model_id", method = "put")]
     async fn modify_rel_model_id(&self, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let funs = flow_constants::get_tardis_inst();
-
-        FlowInstServ::modify_rel_model_id(&funs, &ctx.0).await?;
+        tokio::task::spawn(async move {
+            FlowInstServ::modify_rel_model_id(&funs, &ctx.0).await.unwrap();
+        });
         TardisResp::ok(Void {})
     }
 }

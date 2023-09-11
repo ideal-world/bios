@@ -44,7 +44,8 @@ use crate::{
             StateChangeConditionOp,
         },
     },
-    serv::{flow_model_serv::FlowModelServ, flow_state_serv::FlowStateServ}, flow_constants,
+    flow_constants,
+    serv::{flow_model_serv::FlowModelServ, flow_state_serv::FlowStateServ},
 };
 
 use super::flow_external_serv::FlowExternalServ;
@@ -1229,7 +1230,20 @@ impl FlowInstServ {
                 .await?;
             for inst in insts {
                 let flow_inst_detail = Self::get(&inst.id, &funs_mut, &ctx).await?;
-                let tag = FlowModelServ::get_item(&flow_inst_detail.rel_flow_model_id, &FlowModelFilterReq::default(), &funs_mut, &global_ctx).await?.tag;
+                let tag = FlowModelServ::get_item(
+                    &flow_inst_detail.rel_flow_model_id,
+                    &FlowModelFilterReq {
+                        basic: RbumBasicFilterReq {
+                            with_sub_own_paths: true,
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                    &funs_mut,
+                    &global_ctx,
+                )
+                .await?
+                .tag;
                 let rel_flow_model_id = FlowModelServ::find_id_items(
                     &FlowModelFilterReq {
                         tags: Some(vec![tag]),
