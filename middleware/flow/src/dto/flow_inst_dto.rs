@@ -140,6 +140,7 @@ pub struct FlowInstFindNextTransitionResp {
     pub next_flow_transition_name: String,
     pub next_flow_state_id: String,
     pub next_flow_state_name: String,
+    pub next_flow_state_color: String,
 
     pub vars_collect: Option<Vec<FlowVarInfo>>,
 

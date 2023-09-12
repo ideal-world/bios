@@ -27,7 +27,7 @@ use tardis::{
 };
 
 use crate::{
-    domain::{flow_model, flow_transition},
+    domain::{flow_model, flow_state, flow_transition},
     dto::{
         flow_model_dto::{
             FlowModelAddReq, FlowModelAggResp, FlowModelBindStateReq, FlowModelDetailResp, FlowModelFilterReq, FlowModelFindRelStateResp, FlowModelModifyReq,
@@ -558,7 +558,9 @@ impl FlowModelServ {
     }
 
     async fn find_transitions(flow_model_id: &str, funs: &TardisFunsInst, _ctx: &TardisContext) -> TardisResult<Vec<FlowTransitionDetailResp>> {
-        let form_state_table = Alias::new("from_state");
+        let from_state_rbum_table = Alias::new("from_state_rbum");
+        let from_state_table = Alias::new("from_state");
+        let to_state_rbum_table = Alias::new("to_state_rbum");
         let to_state_table = Alias::new("to_state");
         let mut query = Query::select();
         query
@@ -583,26 +585,43 @@ impl FlowModelServ {
                 (flow_transition::Entity, flow_transition::Column::DoubleCheck),
                 (flow_transition::Entity, flow_transition::Column::RelFlowModelId),
             ])
-            .expr_as(Expr::col((form_state_table.clone(), NAME_FIELD.clone())).if_null(""), Alias::new("from_flow_state_name"))
-            .expr_as(Expr::col((to_state_table.clone(), NAME_FIELD.clone())).if_null(""), Alias::new("to_flow_state_name"))
+            .expr_as(
+                Expr::col((from_state_rbum_table.clone(), NAME_FIELD.clone())).if_null(""),
+                Alias::new("from_flow_state_name"),
+            )
+            .expr_as(Expr::col((from_state_table.clone(), Alias::new("color"))).if_null(""), Alias::new("from_flow_state_color"))
+            .expr_as(Expr::col((to_state_rbum_table.clone(), NAME_FIELD.clone())).if_null(""), Alias::new("to_flow_state_name"))
+            .expr_as(Expr::col((to_state_table.clone(), Alias::new("color"))).if_null(""), Alias::new("to_flow_state_color"))
             .from(flow_transition::Entity)
             .join_as(
                 JoinType::LeftJoin,
                 RBUM_ITEM_TABLE.clone(),
-                form_state_table.clone(),
+                from_state_rbum_table.clone(),
                 Cond::all()
-                    .add(Expr::col((form_state_table.clone(), ID_FIELD.clone())).equals((flow_transition::Entity, flow_transition::Column::FromFlowStateId)))
-                    .add(Expr::col((form_state_table.clone(), REL_KIND_ID_FIELD.clone())).eq(FlowStateServ::get_rbum_kind_id().unwrap()))
-                    .add(Expr::col((form_state_table.clone(), REL_DOMAIN_ID_FIELD.clone())).eq(Self::get_rbum_domain_id().unwrap())),
+                    .add(Expr::col((from_state_rbum_table.clone(), ID_FIELD.clone())).equals((flow_transition::Entity, flow_transition::Column::FromFlowStateId)))
+                    .add(Expr::col((from_state_rbum_table.clone(), REL_KIND_ID_FIELD.clone())).eq(FlowStateServ::get_rbum_kind_id().unwrap()))
+                    .add(Expr::col((from_state_rbum_table.clone(), REL_DOMAIN_ID_FIELD.clone())).eq(Self::get_rbum_domain_id().unwrap())),
+            )
+            .join_as(
+                JoinType::LeftJoin,
+                flow_state::Entity,
+                from_state_table.clone(),
+                Cond::all().add(Expr::col((from_state_table.clone(), ID_FIELD.clone())).equals((flow_transition::Entity, flow_transition::Column::FromFlowStateId))),
             )
             .join_as(
                 JoinType::LeftJoin,
                 RBUM_ITEM_TABLE.clone(),
-                to_state_table.clone(),
+                to_state_rbum_table.clone(),
                 Cond::all()
-                    .add(Expr::col((to_state_table.clone(), ID_FIELD.clone())).equals((flow_transition::Entity, flow_transition::Column::ToFlowStateId)))
-                    .add(Expr::col((to_state_table.clone(), REL_KIND_ID_FIELD.clone())).eq(FlowStateServ::get_rbum_kind_id().unwrap()))
-                    .add(Expr::col((to_state_table.clone(), REL_DOMAIN_ID_FIELD.clone())).eq(Self::get_rbum_domain_id().unwrap())),
+                    .add(Expr::col((to_state_rbum_table.clone(), ID_FIELD.clone())).equals((flow_transition::Entity, flow_transition::Column::ToFlowStateId)))
+                    .add(Expr::col((to_state_rbum_table.clone(), REL_KIND_ID_FIELD.clone())).eq(FlowStateServ::get_rbum_kind_id().unwrap()))
+                    .add(Expr::col((to_state_rbum_table.clone(), REL_DOMAIN_ID_FIELD.clone())).eq(Self::get_rbum_domain_id().unwrap())),
+            )
+            .join_as(
+                JoinType::LeftJoin,
+                flow_state::Entity,
+                to_state_table.clone(),
+                Cond::all().add(Expr::col((to_state_table.clone(), ID_FIELD.clone())).equals((flow_transition::Entity, flow_transition::Column::FromFlowStateId))),
             )
             .and_where(Expr::col((flow_transition::Entity, flow_transition::Column::RelFlowModelId)).eq(flow_model_id))
             .order_by((flow_transition::Entity, flow_transition::Column::CreateTime), Order::Asc)

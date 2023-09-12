@@ -74,8 +74,10 @@ pub struct FlowTransitionDetailResp {
 
     pub from_flow_state_id: String,
     pub from_flow_state_name: String,
+    pub from_flow_state_color: String,
     pub to_flow_state_id: String,
     pub to_flow_state_name: String,
+    pub to_flow_state_color: String,
 
     pub transfer_by_auto: bool,
     pub transfer_by_timer: String,
