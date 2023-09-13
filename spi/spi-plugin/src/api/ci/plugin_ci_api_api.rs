@@ -1,6 +1,8 @@
 use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
+use bios_basic::spi::serv::spi_bs_serv::SpiBsServ;
+use tardis::basic::result;
 use tardis::chrono::{self, Utc};
 use tardis::web::context_extractor::TardisContextExtractor;
 
@@ -9,7 +11,7 @@ use tardis::web::poem_openapi::param::{Path, Query};
 use tardis::web::poem_openapi::payload::Json;
 use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 
-use crate::dto::plugin_api_dto::{PluginApiAddOrModifyReq, PluginApiFilterReq, PluginApiSummaryResp};
+use crate::dto::plugin_api_dto::{PluginApiAddOrModifyReq, PluginApiDetailResp, PluginApiFilterReq, PluginApiSummaryResp};
 use crate::serv::plugin_api_serv::PluginApiServ;
 #[derive(Clone)]
 
@@ -34,6 +36,16 @@ impl PluginApiApi {
         let funs = crate::get_tardis_inst();
         PluginApiServ::delete_by_code(&code.0, &funs, &ctx.0).await?;
         TardisResp::ok(Void {})
+    }
+
+    /// Get Plugin Api
+    #[oai(path = "/:kind_id/:code", method = "get")]
+    async fn get_api_by_code(&self, kind_id: Path<String>, code: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<PluginApiDetailResp> {
+        let funs = crate::get_tardis_inst();
+        let result = PluginApiServ::get_by_code(&kind_id.0, &code.0, &funs, &ctx.0)
+            .await?
+            .ok_or_else(|| funs.err().not_found(&SpiBsServ::get_obj_name(), "get_bs_by_rel", "api is not fond", "404-plugin-api-not-exist"))?;
+        TardisResp::ok(result)
     }
 
     /// find Plugin Api page
