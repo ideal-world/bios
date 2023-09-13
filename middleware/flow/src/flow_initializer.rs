@@ -2,12 +2,7 @@ use bios_basic::rbum::{
     dto::{rbum_domain_dto::RbumDomainAddReq, rbum_filer_dto::RbumBasicFilterReq, rbum_kind_dto::RbumKindAddReq},
     rbum_enumeration::RbumScopeLevelKind,
     rbum_initializer,
-    serv::{
-        rbum_crud_serv::RbumCrudOperation,
-        rbum_domain_serv::RbumDomainServ,
-        rbum_item_serv::{RbumItemCrudOperation, RbumItemServ},
-        rbum_kind_serv::RbumKindServ,
-    },
+    serv::{rbum_crud_serv::RbumCrudOperation, rbum_domain_serv::RbumDomainServ, rbum_item_serv::RbumItemCrudOperation, rbum_kind_serv::RbumKindServ},
 };
 use bios_sdk_invoke::invoke_initializer;
 
@@ -73,7 +68,6 @@ pub async fn init_db(mut funs: TardisFunsInst) -> TardisResult<()> {
     funs.begin().await?;
     if check_initialized(&funs, &ctx).await? {
         init_basic_info(&funs).await?;
-        init_model(&funs, &ctx).await?;
     } else {
         let db_kind = TardisFuns::reldb().backend();
         let compatible_type = TardisFuns::reldb().compatible_type();
@@ -83,7 +77,6 @@ pub async fn init_db(mut funs: TardisFunsInst) -> TardisResult<()> {
         funs.db().init(flow_inst::ActiveModel::init(db_kind, None, compatible_type.clone())).await?;
         funs.db().init(flow_config::ActiveModel::init(db_kind, None, compatible_type.clone())).await?;
         init_rbum_data(&funs, &ctx).await?;
-        init_model(&funs, &ctx).await?;
     };
     funs.commit().await?;
     Ok(())
@@ -177,34 +170,13 @@ pub async fn truncate_data<'a>(funs: &TardisFunsInst) -> TardisResult<()> {
     funs.db().execute(Table::truncate().table(flow_state::Entity)).await?;
     funs.db().execute(Table::truncate().table(flow_model::Entity)).await?;
     funs.db().execute(Table::truncate().table(flow_transition::Entity)).await?;
+    funs.db().execute(Table::truncate().table(flow_inst::Entity)).await?;
+    funs.db().execute(Table::truncate().table(flow_config::Entity)).await?;
     funs.cache().flushdb().await?;
     Ok(())
 }
-async fn get_role_id(role_code: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
-    Ok(RbumItemServ::find_id_rbums(
-        &RbumBasicFilterReq {
-            code: Some(role_code.to_string()),
-            ..Default::default()
-        },
-        None,
-        None,
-        funs,
-        ctx,
-    )
-    .await?
-    .pop()
-    .unwrap_or_default())
-}
 
-async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-    let admin_role_id = get_role_id("app_admin", funs, ctx).await?; // 项目负责人
-    let iter_admin_role_id = get_role_id("app_admin_iterate", funs, ctx).await?; // 迭代负责人
-    let proj_admin_role_id = get_role_id("app_admin_product", funs, ctx).await?; // 产品负责人
-    let proj_normal_role_id = get_role_id("app_normal_product", funs, ctx).await?; // 产品人员
-    let develop_normal_role_id = get_role_id("app_normal_develop", funs, ctx).await?; // 开发人员
-    let develop_admin_role_id = get_role_id("app_admin_develop", funs, ctx).await?; // 开发负责人
-    let test_admin_role_id = get_role_id("app_admin_test", funs, ctx).await?; // 测试负责人
-    let test_normal_role_id = get_role_id("app_normal_test", funs, ctx).await?; // 测试人员
+pub async fn init_flow_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
     let ticket_init_model = FlowModelServ::paginate_items(
         &FlowModelFilterReq {
             basic: RbumBasicFilterReq { ..Default::default() },
@@ -318,13 +290,6 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
     .records
     .pop();
     if req_init_model.is_none() {
-        let mut req_role_ids = vec![];
-        if !proj_admin_role_id.is_empty() {
-            req_role_ids.push(proj_admin_role_id);
-        }
-        if !proj_normal_role_id.is_empty() {
-            req_role_ids.push(proj_normal_role_id);
-        }
         // 需求模板初始化
         FlowModelServ::init_model(
             "REQ",
@@ -344,8 +309,6 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                         is_open: true,
                         content: Some("确认将状态修改成进行中？".to_string()),
                     }),
-                    guard_by_creator: Some(true),
-                    guard_by_spec_role_ids: if req_role_ids.is_empty() { None } else { Some(req_role_ids.clone()) },
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
@@ -356,8 +319,6 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                         is_open: true,
                         content: Some("确认将状态修改成已关闭？".to_string()),
                     }),
-                    guard_by_creator: Some(true),
-                    guard_by_spec_role_ids: if req_role_ids.is_empty() { None } else { Some(req_role_ids.clone()) },
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
@@ -368,8 +329,6 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                         is_open: true,
                         content: Some("确认将状态修改成已完成？".to_string()),
                     }),
-                    guard_by_creator: Some(true),
-                    guard_by_spec_role_ids: if req_role_ids.is_empty() { None } else { Some(req_role_ids.clone()) },
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
@@ -380,8 +339,6 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                         is_open: true,
                         content: Some("确认将状态修改成已关闭？".to_string()),
                     }),
-                    guard_by_creator: Some(true),
-                    guard_by_spec_role_ids: if req_role_ids.is_empty() { None } else { Some(req_role_ids.clone()) },
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
@@ -392,8 +349,6 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                         is_open: true,
                         content: Some("确认将状态修改成进行中？".to_string()),
                     }),
-                    guard_by_creator: Some(true),
-                    guard_by_spec_role_ids: if req_role_ids.is_empty() { None } else { Some(req_role_ids.clone()) },
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
@@ -404,8 +359,6 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                         is_open: true,
                         content: Some("确认将状态修改成已关闭？".to_string()),
                     }),
-                    guard_by_creator: Some(true),
-                    guard_by_spec_role_ids: if req_role_ids.is_empty() { None } else { Some(req_role_ids.clone()) },
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
@@ -416,8 +369,6 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                         is_open: true,
                         content: Some("确认将状态修改成待开始？".to_string()),
                     }),
-                    guard_by_creator: Some(true),
-                    guard_by_spec_role_ids: if req_role_ids.is_empty() { None } else { Some(req_role_ids.clone()) },
                     ..Default::default()
                 },
             ],
@@ -611,176 +562,6 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
         )
         .await?;
     }
-    let ms_init_model = FlowModelServ::paginate_items(
-        &FlowModelFilterReq {
-            basic: RbumBasicFilterReq { ..Default::default() },
-            tags: Some(vec!["MS".to_string()]),
-            ..Default::default()
-        },
-        1,
-        1,
-        None,
-        None,
-        funs,
-        ctx,
-    )
-    .await?
-    .records
-    .pop();
-    if ms_init_model.is_none() {
-        let mut ms_role_ids = vec![];
-        if !admin_role_id.is_empty() {
-            ms_role_ids.push(admin_role_id);
-        }
-        FlowModelServ::init_model(
-            "MS",
-            vec![
-                ("待开始", FlowSysStateKind::Start),
-                ("进行中", FlowSysStateKind::Progress),
-                ("存在风险", FlowSysStateKind::Progress),
-                ("已完成", FlowSysStateKind::Progress),
-                ("已关闭", FlowSysStateKind::Finish),
-            ],
-            "待开始-进行中-存在风险-已完成-已关闭",
-            vec![
-                FlowTransitionInitInfo {
-                    from_flow_state_name: "待开始".to_string(),
-                    to_flow_state_name: "进行中".to_string(),
-                    name: "开始".to_string(),
-                    double_check: Some(FlowTransitionDoubleCheckInfo {
-                        is_open: true,
-                        content: Some("确认将状态修改成进行中？".to_string()),
-                    }),
-                    guard_by_creator: Some(true),
-                    guard_by_spec_role_ids: if ms_role_ids.is_empty() { None } else { Some(ms_role_ids.clone()) },
-                    ..Default::default()
-                },
-                FlowTransitionInitInfo {
-                    from_flow_state_name: "待开始".to_string(),
-                    to_flow_state_name: "已关闭".to_string(),
-                    name: "关闭".to_string(),
-                    double_check: Some(FlowTransitionDoubleCheckInfo {
-                        is_open: true,
-                        content: Some("确认将状态修改成已关闭？".to_string()),
-                    }),
-                    guard_by_creator: Some(true),
-                    guard_by_spec_role_ids: if ms_role_ids.is_empty() { None } else { Some(ms_role_ids.clone()) },
-                    ..Default::default()
-                },
-                FlowTransitionInitInfo {
-                    from_flow_state_name: "进行中".to_string(),
-                    to_flow_state_name: "已完成".to_string(),
-                    name: "完成".to_string(),
-                    double_check: Some(FlowTransitionDoubleCheckInfo {
-                        is_open: true,
-                        content: Some("确认将状态修改成已完成？".to_string()),
-                    }),
-                    guard_by_creator: Some(true),
-                    guard_by_spec_role_ids: if ms_role_ids.is_empty() { None } else { Some(ms_role_ids.clone()) },
-                    ..Default::default()
-                },
-                FlowTransitionInitInfo {
-                    from_flow_state_name: "进行中".to_string(),
-                    to_flow_state_name: "存在风险".to_string(),
-                    name: "有风险".to_string(),
-                    double_check: Some(FlowTransitionDoubleCheckInfo {
-                        is_open: true,
-                        content: Some("确认将状态修改成存在风险？".to_string()),
-                    }),
-                    guard_by_creator: Some(true),
-                    guard_by_spec_role_ids: if ms_role_ids.is_empty() { None } else { Some(ms_role_ids.clone()) },
-                    ..Default::default()
-                },
-                FlowTransitionInitInfo {
-                    from_flow_state_name: "进行中".to_string(),
-                    to_flow_state_name: "已关闭".to_string(),
-                    name: "关闭".to_string(),
-                    double_check: Some(FlowTransitionDoubleCheckInfo {
-                        is_open: true,
-                        content: Some("确认将状态修改成已关闭？".to_string()),
-                    }),
-                    guard_by_creator: Some(true),
-                    guard_by_spec_role_ids: if ms_role_ids.is_empty() { None } else { Some(ms_role_ids.clone()) },
-                    ..Default::default()
-                },
-                FlowTransitionInitInfo {
-                    from_flow_state_name: "存在风险".to_string(),
-                    to_flow_state_name: "进行中".to_string(),
-                    name: "正常".to_string(),
-                    double_check: Some(FlowTransitionDoubleCheckInfo {
-                        is_open: true,
-                        content: Some("确认将状态修改成进行中？".to_string()),
-                    }),
-                    guard_by_creator: Some(true),
-                    guard_by_spec_role_ids: if ms_role_ids.is_empty() { None } else { Some(ms_role_ids.clone()) },
-                    ..Default::default()
-                },
-                FlowTransitionInitInfo {
-                    from_flow_state_name: "存在风险".to_string(),
-                    to_flow_state_name: "已完成".to_string(),
-                    name: "完成".to_string(),
-                    double_check: Some(FlowTransitionDoubleCheckInfo {
-                        is_open: true,
-                        content: Some("确认将状态修改成已完成？".to_string()),
-                    }),
-                    guard_by_creator: Some(true),
-                    guard_by_spec_role_ids: if ms_role_ids.is_empty() { None } else { Some(ms_role_ids.clone()) },
-                    ..Default::default()
-                },
-                FlowTransitionInitInfo {
-                    from_flow_state_name: "存在风险".to_string(),
-                    to_flow_state_name: "已关闭".to_string(),
-                    name: "关闭".to_string(),
-                    double_check: Some(FlowTransitionDoubleCheckInfo {
-                        is_open: true,
-                        content: Some("确认将状态修改成已关闭？".to_string()),
-                    }),
-                    guard_by_creator: Some(true),
-                    guard_by_spec_role_ids: if ms_role_ids.is_empty() { None } else { Some(ms_role_ids.clone()) },
-                    ..Default::default()
-                },
-                FlowTransitionInitInfo {
-                    from_flow_state_name: "已完成".to_string(),
-                    to_flow_state_name: "进行中".to_string(),
-                    name: "重新处理".to_string(),
-                    double_check: Some(FlowTransitionDoubleCheckInfo {
-                        is_open: true,
-                        content: Some("确认将状态修改成进行中？".to_string()),
-                    }),
-                    guard_by_creator: Some(true),
-                    guard_by_spec_role_ids: if ms_role_ids.is_empty() { None } else { Some(ms_role_ids.clone()) },
-                    ..Default::default()
-                },
-                FlowTransitionInitInfo {
-                    from_flow_state_name: "已完成".to_string(),
-                    to_flow_state_name: "已关闭".to_string(),
-                    name: "关闭".to_string(),
-                    double_check: Some(FlowTransitionDoubleCheckInfo {
-                        is_open: true,
-                        content: Some("确认将状态修改成已关闭？".to_string()),
-                    }),
-                    guard_by_creator: Some(true),
-                    guard_by_spec_role_ids: if ms_role_ids.is_empty() { None } else { Some(ms_role_ids.clone()) },
-                    ..Default::default()
-                },
-                FlowTransitionInitInfo {
-                    from_flow_state_name: "已关闭".to_string(),
-                    to_flow_state_name: "待开始".to_string(),
-                    name: "激活".to_string(),
-                    double_check: Some(FlowTransitionDoubleCheckInfo {
-                        is_open: true,
-                        content: Some("确认将状态修改成待开始？".to_string()),
-                    }),
-                    guard_by_creator: Some(true),
-                    guard_by_spec_role_ids: if ms_role_ids.is_empty() { None } else { Some(ms_role_ids.clone()) },
-                    ..Default::default()
-                },
-            ],
-            funs,
-            ctx,
-        )
-        .await?;
-    }
     let iter_init_model = FlowModelServ::paginate_items(
         &FlowModelFilterReq {
             basic: RbumBasicFilterReq { ..Default::default() },
@@ -798,10 +579,6 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
     .records
     .pop();
     if iter_init_model.is_none() {
-        let mut iter_role_ids = vec![];
-        if !iter_admin_role_id.is_empty() {
-            iter_role_ids.push(iter_admin_role_id);
-        }
         FlowModelServ::init_model(
             "ITER",
             vec![
@@ -821,8 +598,6 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                         is_open: true,
                         content: Some("确认将状态修改成进行中？".to_string()),
                     }),
-                    guard_by_creator: Some(true),
-                    guard_by_spec_role_ids: if iter_role_ids.is_empty() { None } else { Some(iter_role_ids.clone()) },
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
@@ -833,8 +608,6 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                         is_open: true,
                         content: Some("确认将状态修改成已关闭？".to_string()),
                     }),
-                    guard_by_creator: Some(true),
-                    guard_by_spec_role_ids: if iter_role_ids.is_empty() { None } else { Some(iter_role_ids.clone()) },
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
@@ -845,8 +618,6 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                         is_open: true,
                         content: Some("确认将状态修改成已完成？".to_string()),
                     }),
-                    guard_by_creator: Some(true),
-                    guard_by_spec_role_ids: if iter_role_ids.is_empty() { None } else { Some(iter_role_ids.clone()) },
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
@@ -857,8 +628,6 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                         is_open: true,
                         content: Some("确认将状态修改成存在风险？".to_string()),
                     }),
-                    guard_by_creator: Some(true),
-                    guard_by_spec_role_ids: if iter_role_ids.is_empty() { None } else { Some(iter_role_ids.clone()) },
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
@@ -869,8 +638,6 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                         is_open: true,
                         content: Some("确认将状态修改成已关闭？".to_string()),
                     }),
-                    guard_by_creator: Some(true),
-                    guard_by_spec_role_ids: if iter_role_ids.is_empty() { None } else { Some(iter_role_ids.clone()) },
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
@@ -881,8 +648,6 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                         is_open: true,
                         content: Some("确认将状态修改成进行中？".to_string()),
                     }),
-                    guard_by_creator: Some(true),
-                    guard_by_spec_role_ids: if iter_role_ids.is_empty() { None } else { Some(iter_role_ids.clone()) },
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
@@ -893,8 +658,6 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                         is_open: true,
                         content: Some("确认将状态修改成已完成？".to_string()),
                     }),
-                    guard_by_creator: Some(true),
-                    guard_by_spec_role_ids: if iter_role_ids.is_empty() { None } else { Some(iter_role_ids.clone()) },
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
@@ -905,8 +668,6 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                         is_open: true,
                         content: Some("确认将状态修改成已关闭？".to_string()),
                     }),
-                    guard_by_creator: Some(true),
-                    guard_by_spec_role_ids: if iter_role_ids.is_empty() { None } else { Some(iter_role_ids.clone()) },
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
@@ -917,8 +678,6 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                         is_open: true,
                         content: Some("确认将状态修改成进行中？".to_string()),
                     }),
-                    guard_by_creator: Some(true),
-                    guard_by_spec_role_ids: if iter_role_ids.is_empty() { None } else { Some(iter_role_ids.clone()) },
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
@@ -929,8 +688,6 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                         is_open: true,
                         content: Some("确认将状态修改成已关闭？".to_string()),
                     }),
-                    guard_by_creator: Some(true),
-                    guard_by_spec_role_ids: if iter_role_ids.is_empty() { None } else { Some(iter_role_ids.clone()) },
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
@@ -941,8 +698,6 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                         is_open: true,
                         content: Some("确认将状态修改成待开始？".to_string()),
                     }),
-                    guard_by_creator: Some(true),
-                    guard_by_spec_role_ids: if iter_role_ids.is_empty() { None } else { Some(iter_role_ids.clone()) },
                     ..Default::default()
                 },
             ],
@@ -968,13 +723,6 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
     .records
     .pop();
     if task_init_model.is_none() {
-        let mut task_role_ids = vec![];
-        if !develop_admin_role_id.is_empty() {
-            task_role_ids.push(develop_admin_role_id.clone());
-        }
-        if !develop_normal_role_id.is_empty() {
-            task_role_ids.push(develop_normal_role_id);
-        }
         FlowModelServ::init_model(
             "TASK",
             vec![
@@ -994,8 +742,6 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                         is_open: true,
                         content: Some("确认将状态修改成进行中？".to_string()),
                     }),
-                    guard_by_creator: Some(true),
-                    guard_by_spec_role_ids: if task_role_ids.is_empty() { None } else { Some(task_role_ids.clone()) },
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
@@ -1006,8 +752,6 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                         is_open: true,
                         content: Some("确认将状态修改成已关闭？".to_string()),
                     }),
-                    guard_by_creator: Some(true),
-                    guard_by_spec_role_ids: if task_role_ids.is_empty() { None } else { Some(task_role_ids.clone()) },
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
@@ -1018,8 +762,6 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                         is_open: true,
                         content: Some("确认将状态修改成已完成？".to_string()),
                     }),
-                    guard_by_creator: Some(true),
-                    guard_by_spec_role_ids: if task_role_ids.is_empty() { None } else { Some(task_role_ids.clone()) },
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
@@ -1030,8 +772,6 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                         is_open: true,
                         content: Some("确认该任务存在风险？".to_string()),
                     }),
-                    guard_by_creator: Some(true),
-                    guard_by_spec_role_ids: if task_role_ids.is_empty() { None } else { Some(task_role_ids.clone()) },
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
@@ -1042,8 +782,6 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                         is_open: true,
                         content: Some("确认将状态修改成已关闭？".to_string()),
                     }),
-                    guard_by_creator: Some(true),
-                    guard_by_spec_role_ids: if task_role_ids.is_empty() { None } else { Some(task_role_ids.clone()) },
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
@@ -1054,8 +792,6 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                         is_open: true,
                         content: Some("确认将状态修改成进行中？".to_string()),
                     }),
-                    guard_by_creator: Some(true),
-                    guard_by_spec_role_ids: if task_role_ids.is_empty() { None } else { Some(task_role_ids.clone()) },
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
@@ -1066,8 +802,6 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                         is_open: true,
                         content: Some("确认将状态修改成已完成？".to_string()),
                     }),
-                    guard_by_creator: Some(true),
-                    guard_by_spec_role_ids: if task_role_ids.is_empty() { None } else { Some(task_role_ids.clone()) },
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
@@ -1078,8 +812,6 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                         is_open: true,
                         content: Some("确认将状态修改成已关闭？".to_string()),
                     }),
-                    guard_by_creator: Some(true),
-                    guard_by_spec_role_ids: if task_role_ids.is_empty() { None } else { Some(task_role_ids.clone()) },
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
@@ -1090,8 +822,6 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                         is_open: true,
                         content: Some("确认将状态修改成进行中？".to_string()),
                     }),
-                    guard_by_creator: Some(true),
-                    guard_by_spec_role_ids: if task_role_ids.is_empty() { None } else { Some(task_role_ids.clone()) },
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
@@ -1102,8 +832,6 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                         is_open: true,
                         content: Some("确认将状态修改成已关闭？".to_string()),
                     }),
-                    guard_by_creator: Some(true),
-                    guard_by_spec_role_ids: if task_role_ids.is_empty() { None } else { Some(task_role_ids.clone()) },
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
@@ -1114,610 +842,6 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                         is_open: true,
                         content: Some("确认将状态修改成待开始？".to_string()),
                     }),
-                    guard_by_creator: Some(true),
-                    guard_by_spec_role_ids: if task_role_ids.is_empty() { None } else { Some(task_role_ids.clone()) },
-                    ..Default::default()
-                },
-            ],
-            funs,
-            ctx,
-        )
-        .await?;
-    }
-    let tp_init_model = FlowModelServ::paginate_items(
-        &FlowModelFilterReq {
-            basic: RbumBasicFilterReq { ..Default::default() },
-            tags: Some(vec!["TP".to_string()]),
-            ..Default::default()
-        },
-        1,
-        1,
-        None,
-        None,
-        funs,
-        ctx,
-    )
-    .await?
-    .records
-    .pop();
-    if tp_init_model.is_none() {
-        let mut tp_role_ids = vec![];
-        if !test_admin_role_id.is_empty() {
-            tp_role_ids.push(test_admin_role_id.clone());
-        }
-        FlowModelServ::init_model(
-            "TP",
-            vec![
-                ("待开始", FlowSysStateKind::Start),
-                ("进行中", FlowSysStateKind::Progress),
-                ("存在风险", FlowSysStateKind::Progress),
-                ("已完成", FlowSysStateKind::Progress),
-                ("已关闭", FlowSysStateKind::Finish),
-            ],
-            "待开始-进行中-存在风险-已完成-已关闭",
-            vec![
-                FlowTransitionInitInfo {
-                    from_flow_state_name: "待开始".to_string(),
-                    to_flow_state_name: "进行中".to_string(),
-                    name: "开始".to_string(),
-                    double_check: Some(FlowTransitionDoubleCheckInfo {
-                        is_open: true,
-                        content: Some("确认将状态修改成进行中？".to_string()),
-                    }),
-                    guard_by_creator: Some(true),
-                    guard_by_spec_role_ids: if tp_role_ids.is_empty() { None } else { Some(tp_role_ids.clone()) },
-                    ..Default::default()
-                },
-                FlowTransitionInitInfo {
-                    from_flow_state_name: "待开始".to_string(),
-                    to_flow_state_name: "已关闭".to_string(),
-                    name: "关闭".to_string(),
-                    double_check: Some(FlowTransitionDoubleCheckInfo {
-                        is_open: true,
-                        content: Some("确认将状态修改成已关闭？".to_string()),
-                    }),
-                    guard_by_creator: Some(true),
-                    guard_by_spec_role_ids: if tp_role_ids.is_empty() { None } else { Some(tp_role_ids.clone()) },
-                    ..Default::default()
-                },
-                FlowTransitionInitInfo {
-                    from_flow_state_name: "进行中".to_string(),
-                    to_flow_state_name: "已完成".to_string(),
-                    name: "完成".to_string(),
-                    double_check: Some(FlowTransitionDoubleCheckInfo {
-                        is_open: true,
-                        content: Some("确认将状态修改成已完成？".to_string()),
-                    }),
-                    guard_by_creator: Some(true),
-                    guard_by_spec_role_ids: if tp_role_ids.is_empty() { None } else { Some(tp_role_ids.clone()) },
-                    ..Default::default()
-                },
-                FlowTransitionInitInfo {
-                    from_flow_state_name: "进行中".to_string(),
-                    to_flow_state_name: "存在风险".to_string(),
-                    name: "有风险".to_string(),
-                    double_check: Some(FlowTransitionDoubleCheckInfo {
-                        is_open: true,
-                        content: Some("确认将状态修改成存在风险？".to_string()),
-                    }),
-                    guard_by_creator: Some(true),
-                    guard_by_spec_role_ids: if tp_role_ids.is_empty() { None } else { Some(tp_role_ids.clone()) },
-                    ..Default::default()
-                },
-                FlowTransitionInitInfo {
-                    from_flow_state_name: "进行中".to_string(),
-                    to_flow_state_name: "已关闭".to_string(),
-                    name: "关闭".to_string(),
-                    double_check: Some(FlowTransitionDoubleCheckInfo {
-                        is_open: true,
-                        content: Some("确认将状态修改成已关闭？".to_string()),
-                    }),
-                    guard_by_creator: Some(true),
-                    guard_by_spec_role_ids: if tp_role_ids.is_empty() { None } else { Some(tp_role_ids.clone()) },
-                    ..Default::default()
-                },
-                FlowTransitionInitInfo {
-                    from_flow_state_name: "存在风险".to_string(),
-                    to_flow_state_name: "进行中".to_string(),
-                    name: "正常".to_string(),
-                    double_check: Some(FlowTransitionDoubleCheckInfo {
-                        is_open: true,
-                        content: Some("确认将状态修改成进行中？".to_string()),
-                    }),
-                    guard_by_creator: Some(true),
-                    guard_by_spec_role_ids: if tp_role_ids.is_empty() { None } else { Some(tp_role_ids.clone()) },
-                    ..Default::default()
-                },
-                FlowTransitionInitInfo {
-                    from_flow_state_name: "存在风险".to_string(),
-                    to_flow_state_name: "已完成".to_string(),
-                    name: "完成".to_string(),
-                    double_check: Some(FlowTransitionDoubleCheckInfo {
-                        is_open: true,
-                        content: Some("确认将状态修改成已完成？".to_string()),
-                    }),
-                    guard_by_creator: Some(true),
-                    guard_by_spec_role_ids: if tp_role_ids.is_empty() { None } else { Some(tp_role_ids.clone()) },
-                    ..Default::default()
-                },
-                FlowTransitionInitInfo {
-                    from_flow_state_name: "存在风险".to_string(),
-                    to_flow_state_name: "已关闭".to_string(),
-                    name: "关闭".to_string(),
-                    double_check: Some(FlowTransitionDoubleCheckInfo {
-                        is_open: true,
-                        content: Some("确认将状态修改成已关闭？".to_string()),
-                    }),
-                    guard_by_creator: Some(true),
-                    guard_by_spec_role_ids: if tp_role_ids.is_empty() { None } else { Some(tp_role_ids.clone()) },
-                    ..Default::default()
-                },
-                FlowTransitionInitInfo {
-                    from_flow_state_name: "已完成".to_string(),
-                    to_flow_state_name: "进行中".to_string(),
-                    name: "重新处理".to_string(),
-                    double_check: Some(FlowTransitionDoubleCheckInfo {
-                        is_open: true,
-                        content: Some("确认将状态修改成进行中？".to_string()),
-                    }),
-                    guard_by_creator: Some(true),
-                    guard_by_spec_role_ids: if tp_role_ids.is_empty() { None } else { Some(tp_role_ids.clone()) },
-                    ..Default::default()
-                },
-                FlowTransitionInitInfo {
-                    from_flow_state_name: "已完成".to_string(),
-                    to_flow_state_name: "已关闭".to_string(),
-                    name: "关闭".to_string(),
-                    double_check: Some(FlowTransitionDoubleCheckInfo {
-                        is_open: true,
-                        content: Some("确认将状态修改成已关闭？".to_string()),
-                    }),
-                    guard_by_creator: Some(true),
-                    guard_by_spec_role_ids: if tp_role_ids.is_empty() { None } else { Some(tp_role_ids.clone()) },
-                    ..Default::default()
-                },
-                FlowTransitionInitInfo {
-                    from_flow_state_name: "已关闭".to_string(),
-                    to_flow_state_name: "待开始".to_string(),
-                    name: "激活".to_string(),
-                    double_check: Some(FlowTransitionDoubleCheckInfo {
-                        is_open: true,
-                        content: Some("确认将状态修改成待开始？".to_string()),
-                    }),
-                    guard_by_creator: Some(true),
-                    guard_by_spec_role_ids: if tp_role_ids.is_empty() { None } else { Some(tp_role_ids.clone()) },
-                    ..Default::default()
-                },
-            ],
-            funs,
-            ctx,
-        )
-        .await?;
-    }
-    let ts_init_model = FlowModelServ::paginate_items(
-        &FlowModelFilterReq {
-            basic: RbumBasicFilterReq { ..Default::default() },
-            tags: Some(vec!["TS".to_string()]),
-            ..Default::default()
-        },
-        1,
-        1,
-        None,
-        None,
-        funs,
-        ctx,
-    )
-    .await?
-    .records
-    .pop();
-    if ts_init_model.is_none() {
-        let mut ts_role_ids = vec![];
-        if !test_admin_role_id.is_empty() {
-            ts_role_ids.push(test_admin_role_id.clone());
-        }
-        if !test_normal_role_id.is_empty() {
-            ts_role_ids.push(test_normal_role_id.clone());
-        }
-        FlowModelServ::init_model(
-            "TS",
-            vec![
-                ("待开始", FlowSysStateKind::Start),
-                ("进行中", FlowSysStateKind::Progress),
-                ("存在风险", FlowSysStateKind::Progress),
-                ("已完成", FlowSysStateKind::Progress),
-                ("已关闭", FlowSysStateKind::Finish),
-            ],
-            "待开始-进行中-存在风险-已完成-已关闭",
-            vec![
-                FlowTransitionInitInfo {
-                    from_flow_state_name: "待开始".to_string(),
-                    to_flow_state_name: "进行中".to_string(),
-                    name: "开始".to_string(),
-                    double_check: Some(FlowTransitionDoubleCheckInfo {
-                        is_open: true,
-                        content: Some("确认将状态修改成进行中？".to_string()),
-                    }),
-                    guard_by_creator: Some(true),
-                    guard_by_spec_role_ids: if ts_role_ids.is_empty() { None } else { Some(ts_role_ids.clone()) },
-                    ..Default::default()
-                },
-                FlowTransitionInitInfo {
-                    from_flow_state_name: "待开始".to_string(),
-                    to_flow_state_name: "已关闭".to_string(),
-                    name: "关闭".to_string(),
-                    double_check: Some(FlowTransitionDoubleCheckInfo {
-                        is_open: true,
-                        content: Some("确认将状态修改成已关闭？".to_string()),
-                    }),
-                    guard_by_creator: Some(true),
-                    guard_by_spec_role_ids: if ts_role_ids.is_empty() { None } else { Some(ts_role_ids.clone()) },
-                    ..Default::default()
-                },
-                FlowTransitionInitInfo {
-                    from_flow_state_name: "进行中".to_string(),
-                    to_flow_state_name: "已完成".to_string(),
-                    name: "完成".to_string(),
-                    double_check: Some(FlowTransitionDoubleCheckInfo {
-                        is_open: true,
-                        content: Some("确认将状态修改成已完成？".to_string()),
-                    }),
-                    guard_by_creator: Some(true),
-                    guard_by_spec_role_ids: if ts_role_ids.is_empty() { None } else { Some(ts_role_ids.clone()) },
-                    ..Default::default()
-                },
-                FlowTransitionInitInfo {
-                    from_flow_state_name: "进行中".to_string(),
-                    to_flow_state_name: "存在风险".to_string(),
-                    name: "有风险".to_string(),
-                    double_check: Some(FlowTransitionDoubleCheckInfo {
-                        is_open: true,
-                        content: Some("确认将状态修改成存在风险？".to_string()),
-                    }),
-                    guard_by_creator: Some(true),
-                    guard_by_spec_role_ids: if ts_role_ids.is_empty() { None } else { Some(ts_role_ids.clone()) },
-                    ..Default::default()
-                },
-                FlowTransitionInitInfo {
-                    from_flow_state_name: "进行中".to_string(),
-                    to_flow_state_name: "已关闭".to_string(),
-                    name: "关闭".to_string(),
-                    double_check: Some(FlowTransitionDoubleCheckInfo {
-                        is_open: true,
-                        content: Some("确认将状态修改成已关闭？".to_string()),
-                    }),
-                    guard_by_creator: Some(true),
-                    guard_by_spec_role_ids: if ts_role_ids.is_empty() { None } else { Some(ts_role_ids.clone()) },
-                    ..Default::default()
-                },
-                FlowTransitionInitInfo {
-                    from_flow_state_name: "存在风险".to_string(),
-                    to_flow_state_name: "进行中".to_string(),
-                    name: "正常".to_string(),
-                    double_check: Some(FlowTransitionDoubleCheckInfo {
-                        is_open: true,
-                        content: Some("确认将状态修改成进行中？".to_string()),
-                    }),
-                    guard_by_creator: Some(true),
-                    guard_by_spec_role_ids: if ts_role_ids.is_empty() { None } else { Some(ts_role_ids.clone()) },
-                    ..Default::default()
-                },
-                FlowTransitionInitInfo {
-                    from_flow_state_name: "存在风险".to_string(),
-                    to_flow_state_name: "已完成".to_string(),
-                    name: "完成".to_string(),
-                    double_check: Some(FlowTransitionDoubleCheckInfo {
-                        is_open: true,
-                        content: Some("确认将状态修改成已完成？".to_string()),
-                    }),
-                    guard_by_creator: Some(true),
-                    guard_by_spec_role_ids: if ts_role_ids.is_empty() { None } else { Some(ts_role_ids.clone()) },
-                    ..Default::default()
-                },
-                FlowTransitionInitInfo {
-                    from_flow_state_name: "存在风险".to_string(),
-                    to_flow_state_name: "已关闭".to_string(),
-                    name: "关闭".to_string(),
-                    double_check: Some(FlowTransitionDoubleCheckInfo {
-                        is_open: true,
-                        content: Some("确认将状态修改成已关闭？".to_string()),
-                    }),
-                    guard_by_creator: Some(true),
-                    guard_by_spec_role_ids: if ts_role_ids.is_empty() { None } else { Some(ts_role_ids.clone()) },
-                    ..Default::default()
-                },
-                FlowTransitionInitInfo {
-                    from_flow_state_name: "已完成".to_string(),
-                    to_flow_state_name: "进行中".to_string(),
-                    name: "重新处理".to_string(),
-                    double_check: Some(FlowTransitionDoubleCheckInfo {
-                        is_open: true,
-                        content: Some("确认将状态修改成进行中？".to_string()),
-                    }),
-                    guard_by_creator: Some(true),
-                    guard_by_spec_role_ids: if ts_role_ids.is_empty() { None } else { Some(ts_role_ids.clone()) },
-                    ..Default::default()
-                },
-                FlowTransitionInitInfo {
-                    from_flow_state_name: "已完成".to_string(),
-                    to_flow_state_name: "已关闭".to_string(),
-                    name: "关闭".to_string(),
-                    double_check: Some(FlowTransitionDoubleCheckInfo {
-                        is_open: true,
-                        content: Some("确认将状态修改成已关闭？".to_string()),
-                    }),
-                    guard_by_creator: Some(true),
-                    guard_by_spec_role_ids: if ts_role_ids.is_empty() { None } else { Some(ts_role_ids.clone()) },
-                    ..Default::default()
-                },
-                FlowTransitionInitInfo {
-                    from_flow_state_name: "已关闭".to_string(),
-                    to_flow_state_name: "待开始".to_string(),
-                    name: "激活".to_string(),
-                    double_check: Some(FlowTransitionDoubleCheckInfo {
-                        is_open: true,
-                        content: Some("确认将状态修改成待开始？".to_string()),
-                    }),
-                    guard_by_creator: Some(true),
-                    guard_by_spec_role_ids: if ts_role_ids.is_empty() { None } else { Some(ts_role_ids.clone()) },
-                    ..Default::default()
-                },
-            ],
-            funs,
-            ctx,
-        )
-        .await?;
-    }
-    let issue_init_model = FlowModelServ::paginate_items(
-        &FlowModelFilterReq {
-            basic: RbumBasicFilterReq { ..Default::default() },
-            tags: Some(vec!["ISSUE".to_string()]),
-            ..Default::default()
-        },
-        1,
-        1,
-        None,
-        None,
-        funs,
-        ctx,
-    )
-    .await?
-    .records
-    .pop();
-    if issue_init_model.is_none() {
-        let mut issue_role_ids = vec![];
-        if !test_admin_role_id.is_empty() {
-            issue_role_ids.push(test_admin_role_id.clone());
-        }
-        if !test_normal_role_id.is_empty() {
-            issue_role_ids.push(test_normal_role_id.clone());
-        }
-        FlowModelServ::init_model(
-            "ISSUE",
-            vec![
-                ("待处理", FlowSysStateKind::Start),
-                ("修复中", FlowSysStateKind::Progress),
-                ("待确认", FlowSysStateKind::Progress),
-                ("已解决", FlowSysStateKind::Progress),
-                ("已关闭", FlowSysStateKind::Finish),
-            ],
-            "待处理-修复中-待确认-已解决-已关闭",
-            vec![
-                FlowTransitionInitInfo {
-                    from_flow_state_name: "待处理".to_string(),
-                    to_flow_state_name: "修复中".to_string(),
-                    name: "确认并修复".to_string(),
-                    double_check: Some(FlowTransitionDoubleCheckInfo {
-                        is_open: true,
-                        content: Some("确认将状态修改成修复中？".to_string()),
-                    }),
-                    guard_by_creator: Some(true),
-                    ..Default::default()
-                },
-                FlowTransitionInitInfo {
-                    from_flow_state_name: "待处理".to_string(),
-                    to_flow_state_name: "已关闭".to_string(),
-                    name: "关闭".to_string(),
-                    double_check: Some(FlowTransitionDoubleCheckInfo {
-                        is_open: true,
-                        content: Some("确认将状态修改成已关闭？".to_string()),
-                    }),
-                    guard_by_creator: Some(true),
-                    guard_by_spec_role_ids: if issue_role_ids.is_empty() { None } else { Some(issue_role_ids.clone()) },
-                    ..Default::default()
-                },
-                FlowTransitionInitInfo {
-                    from_flow_state_name: "修复中".to_string(),
-                    to_flow_state_name: "待确认".to_string(),
-                    double_check: Some(FlowTransitionDoubleCheckInfo {
-                        is_open: true,
-                        content: Some("确认将状态修改成待确认？".to_string()),
-                    }),
-                    name: "修复完成".to_string(),
-                    guard_by_assigned: Some(true),
-                    ..Default::default()
-                },
-                FlowTransitionInitInfo {
-                    from_flow_state_name: "修复中".to_string(),
-                    to_flow_state_name: "已关闭".to_string(),
-                    name: "关闭".to_string(),
-                    double_check: Some(FlowTransitionDoubleCheckInfo {
-                        is_open: true,
-                        content: Some("确认将状态修改成已关闭？".to_string()),
-                    }),
-                    guard_by_creator: Some(true),
-                    guard_by_spec_role_ids: if issue_role_ids.is_empty() { None } else { Some(issue_role_ids.clone()) },
-                    ..Default::default()
-                },
-                FlowTransitionInitInfo {
-                    from_flow_state_name: "待确认".to_string(),
-                    to_flow_state_name: "已解决".to_string(),
-                    name: "确认修复".to_string(),
-                    double_check: Some(FlowTransitionDoubleCheckInfo {
-                        is_open: true,
-                        content: Some("确认将状态修改成已解决？".to_string()),
-                    }),
-                    guard_by_creator: Some(true),
-                    guard_by_spec_role_ids: if issue_role_ids.is_empty() { None } else { Some(issue_role_ids.clone()) },
-                    ..Default::default()
-                },
-                FlowTransitionInitInfo {
-                    from_flow_state_name: "待确认".to_string(),
-                    to_flow_state_name: "修复中".to_string(),
-                    name: "未修复".to_string(),
-                    double_check: Some(FlowTransitionDoubleCheckInfo {
-                        is_open: true,
-                        content: Some("确认将状态修改成修复中？".to_string()),
-                    }),
-                    guard_by_creator: Some(true),
-                    guard_by_spec_role_ids: if issue_role_ids.is_empty() { None } else { Some(issue_role_ids.clone()) },
-                    ..Default::default()
-                },
-                FlowTransitionInitInfo {
-                    from_flow_state_name: "待确认".to_string(),
-                    to_flow_state_name: "已关闭".to_string(),
-                    name: "关闭".to_string(),
-                    double_check: Some(FlowTransitionDoubleCheckInfo {
-                        is_open: true,
-                        content: Some("确认将状态修改成已关闭？".to_string()),
-                    }),
-                    guard_by_creator: Some(true),
-                    guard_by_spec_role_ids: if issue_role_ids.is_empty() { None } else { Some(issue_role_ids.clone()) },
-                    ..Default::default()
-                },
-                FlowTransitionInitInfo {
-                    from_flow_state_name: "已解决".to_string(),
-                    to_flow_state_name: "待处理".to_string(),
-                    name: "激活".to_string(),
-                    double_check: Some(FlowTransitionDoubleCheckInfo {
-                        is_open: true,
-                        content: Some("确认将状态修改成待处理？".to_string()),
-                    }),
-                    guard_by_creator: Some(true),
-                    guard_by_spec_role_ids: if issue_role_ids.is_empty() { None } else { Some(issue_role_ids.clone()) },
-                    ..Default::default()
-                },
-                FlowTransitionInitInfo {
-                    from_flow_state_name: "已解决".to_string(),
-                    to_flow_state_name: "已关闭".to_string(),
-                    name: "关闭".to_string(),
-                    double_check: Some(FlowTransitionDoubleCheckInfo {
-                        is_open: true,
-                        content: Some("确认将状态修改成已关闭？".to_string()),
-                    }),
-                    guard_by_creator: Some(true),
-                    guard_by_spec_role_ids: if issue_role_ids.is_empty() { None } else { Some(issue_role_ids.clone()) },
-                    ..Default::default()
-                },
-                FlowTransitionInitInfo {
-                    from_flow_state_name: "已关闭".to_string(),
-                    to_flow_state_name: "待处理".to_string(),
-                    name: "激活".to_string(),
-                    double_check: Some(FlowTransitionDoubleCheckInfo {
-                        is_open: true,
-                        content: Some("确认将状态修改成待处理？".to_string()),
-                    }),
-                    guard_by_creator: Some(true),
-                    guard_by_spec_role_ids: if issue_role_ids.is_empty() { None } else { Some(issue_role_ids.clone()) },
-                    ..Default::default()
-                },
-            ],
-            funs,
-            ctx,
-        )
-        .await?;
-    }
-    let cts_init_model = FlowModelServ::paginate_items(
-        &FlowModelFilterReq {
-            basic: RbumBasicFilterReq { ..Default::default() },
-            tags: Some(vec!["CTS".to_string()]),
-            ..Default::default()
-        },
-        1,
-        1,
-        None,
-        None,
-        funs,
-        ctx,
-    )
-    .await?
-    .records
-    .pop();
-    if cts_init_model.is_none() {
-        let mut cts_role_ids1 = vec![];
-        if !test_admin_role_id.is_empty() {
-            cts_role_ids1.push(test_admin_role_id.clone());
-        }
-        let mut cts_role_ids2 = vec![];
-        if !develop_admin_role_id.is_empty() {
-            cts_role_ids2.push(develop_admin_role_id.clone());
-        }
-
-        FlowModelServ::init_model(
-            "CTS",
-            vec![
-                ("待接收", FlowSysStateKind::Start),
-                ("已接收", FlowSysStateKind::Progress),
-                ("已退回", FlowSysStateKind::Finish),
-                ("已撤销", FlowSysStateKind::Finish),
-            ],
-            "待接收-已接收-已退回-已撤销",
-            vec![
-                FlowTransitionInitInfo {
-                    from_flow_state_name: "待接收".to_string(),
-                    to_flow_state_name: "已接收".to_string(),
-                    name: "接收".to_string(),
-                    double_check: Some(FlowTransitionDoubleCheckInfo {
-                        is_open: true,
-                        content: Some("确认将状态修改成已接收？".to_string()),
-                    }),
-                    guard_by_spec_role_ids: if cts_role_ids1.is_empty() { None } else { Some(cts_role_ids1.clone()) },
-                    ..Default::default()
-                },
-                FlowTransitionInitInfo {
-                    from_flow_state_name: "待接收".to_string(),
-                    to_flow_state_name: "已撤销".to_string(),
-                    name: "撤销".to_string(),
-                    double_check: Some(FlowTransitionDoubleCheckInfo {
-                        is_open: true,
-                        content: Some("确认将状态修改成已撤销？".to_string()),
-                    }),
-                    guard_by_creator: Some(true),
-                    guard_by_spec_role_ids: if cts_role_ids2.is_empty() { None } else { Some(cts_role_ids2.clone()) },
-                    ..Default::default()
-                },
-                FlowTransitionInitInfo {
-                    from_flow_state_name: "待接收".to_string(),
-                    to_flow_state_name: "已退回".to_string(),
-                    name: "退回".to_string(),
-                    double_check: Some(FlowTransitionDoubleCheckInfo {
-                        is_open: true,
-                        content: Some("确认将状态修改成已退回？".to_string()),
-                    }),
-                    guard_by_spec_role_ids: if cts_role_ids1.is_empty() { None } else { Some(cts_role_ids1.clone()) },
-                    ..Default::default()
-                },
-                FlowTransitionInitInfo {
-                    from_flow_state_name: "已退回".to_string(),
-                    to_flow_state_name: "已接收".to_string(),
-                    name: "重新提交".to_string(),
-                    double_check: Some(FlowTransitionDoubleCheckInfo {
-                        is_open: true,
-                        content: Some("确认将状态修改成已接收？".to_string()),
-                    }),
-                    guard_by_creator: Some(true),
-                    guard_by_spec_role_ids: if cts_role_ids2.is_empty() { None } else { Some(cts_role_ids2.clone()) },
-                    ..Default::default()
-                },
-                FlowTransitionInitInfo {
-                    from_flow_state_name: "已撤销".to_string(),
-                    to_flow_state_name: "待接收".to_string(),
-                    name: "重新提交".to_string(),
-                    double_check: Some(FlowTransitionDoubleCheckInfo {
-                        is_open: true,
-                        content: Some("确认将状态修改成待接收？".to_string()),
-                    }),
-                    guard_by_creator: Some(true),
-                    guard_by_spec_role_ids: if cts_role_ids2.is_empty() { None } else { Some(cts_role_ids2.clone()) },
                     ..Default::default()
                 },
             ],

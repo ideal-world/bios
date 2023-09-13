@@ -55,7 +55,7 @@ pub struct FlowInstServ;
 impl FlowInstServ {
     pub async fn start(start_req: &FlowInstStartReq, current_state_name: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
         // get model by own_paths
-        let flow_model_id = Self::get_model_id_by_own_paths(&start_req.tag, funs, ctx).await?;
+        let flow_model_id = Self::get_model_id_by_own_paths_and_rel_template_id(&start_req.tag, None, funs, ctx).await?;
         let flow_model = FlowModelServ::get_item(
             &flow_model_id,
             &FlowModelFilterReq {
@@ -118,7 +118,7 @@ impl FlowInstServ {
             }
             current_ctx.own_paths = rel_business_obj.own_paths.clone().unwrap_or_default();
             current_ctx.owner = rel_business_obj.owner.clone().unwrap_or_default();
-            let flow_model_id = Self::get_model_id_by_own_paths(&batch_bind_req.tag, funs, ctx).await?;
+            let flow_model_id = Self::get_model_id_by_own_paths_and_rel_template_id(&batch_bind_req.tag, None, funs, ctx).await?;
 
             let current_state_id = FlowStateServ::match_state_id_by_name(
                 &batch_bind_req.tag,
@@ -174,7 +174,7 @@ impl FlowInstServ {
         Ok(result)
     }
 
-    pub async fn get_model_id_by_own_paths(tag: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
+    pub async fn get_model_id_by_own_paths_and_rel_template_id(tag: &str, rel_template_id: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
         let mut own_paths = ctx.own_paths.clone();
         let mut scope_level = rbum_scope_helper::get_scope_level_by_context(ctx)?.to_int();
         let mut result = None;
@@ -184,10 +184,12 @@ impl FlowInstServ {
                 &FlowModelFilterReq {
                     basic: RbumBasicFilterReq {
                         own_paths: Some(own_paths.clone()),
+                        ignore_scope: true,
                         ..Default::default()
                     },
                     tags: Some(vec![tag.to_string()]),
-                    template: Some(false),
+                    template: Some(rel_template_id.is_some()),
+                    rel_template_id: rel_template_id.clone(),
                     ..Default::default()
                 },
                 funs,
@@ -207,6 +209,7 @@ impl FlowInstServ {
                 &FlowModelFilterReq {
                     basic: RbumBasicFilterReq {
                         own_paths: Some("".to_string()),
+                        ignore_scope: true,
                         ..Default::default()
                     },
                     tags: Some(vec![tag.to_string()]),
@@ -448,7 +451,7 @@ impl FlowInstServ {
             query.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::RelFlowModelId)).eq(flow_model_id));
         }
         if let Some(tag) = &tag {
-            let flow_model_id = Self::get_model_id_by_own_paths(tag, funs, ctx).await?;
+            let flow_model_id = Self::get_model_id_by_own_paths_and_rel_template_id(tag, None, funs, ctx).await?;
             query.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::RelFlowModelId)).eq(flow_model_id));
         }
         if let Some(finish) = finish {

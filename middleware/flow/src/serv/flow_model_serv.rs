@@ -762,6 +762,16 @@ impl FlowModelServ {
             if !result.contains_key(tag) {
                 // copy custom model
                 let model_id = Self::add_custom_model(tag, "", template_id.clone(), funs, ctx).await?;
+                Self::modify_model(
+                    &model_id,
+                    &mut FlowModelModifyReq {
+                        template: Some(true),
+                        ..Default::default()
+                    },
+                    funs,
+                    ctx,
+                )
+                .await?;
                 let custom_model = Self::get_item(
                     &model_id,
                     &FlowModelFilterReq {
@@ -791,7 +801,10 @@ impl FlowModelServ {
     pub async fn add_custom_model(tag: &str, rel_template_id: &str, current_template_id: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
         let current_model = Self::find_one_detail_item(
             &FlowModelFilterReq {
-                basic: RbumBasicFilterReq::default(),
+                basic: RbumBasicFilterReq {
+                    ignore_scope: true,
+                    ..Default::default()
+                },
                 tags: Some(vec![tag.to_string()]),
                 rel_template_id: current_template_id.clone(),
                 ..Default::default()
@@ -812,6 +825,7 @@ impl FlowModelServ {
         let basic = if !rel_template_id.is_empty() {
             RbumBasicFilterReq {
                 with_sub_own_paths: true,
+                ignore_scope: true,
                 ..Default::default()
             }
         } else {
@@ -833,6 +847,10 @@ impl FlowModelServ {
         } else {
             Self::find_one_detail_item(
                 &FlowModelFilterReq {
+                    basic: RbumBasicFilterReq {
+                        ignore_scope: true,
+                        ..Default::default()
+                    },
                     tags: Some(vec![tag.to_string()]),
                     ..Default::default()
                 },
@@ -857,9 +875,9 @@ impl FlowModelServ {
                 icon: Some(parent_model.icon),
                 info: Some(parent_model.info),
                 init_state_id: parent_model.init_state_id,
+                template: current_template_id.is_some(),
                 rel_template_id: current_template_id,
                 transitions: Some(transitions.into_iter().map(|trans| trans.into()).collect_vec()),
-                template: false,
                 rel_model_id: Some(parent_model.id.clone()),
                 tag: Some(parent_model.tag),
                 scope_level: Some(parent_model.scope_level),
@@ -1076,6 +1094,7 @@ impl FlowModelServ {
         }
         current_chain.push(transition_detail.id.clone());
 
+        let model_detail = Self::get_item(&transition_detail.rel_flow_model_id, &FlowModelFilterReq::default(), funs, ctx).await?;
         let post_changes = transition_detail
             .action_by_post_changes()
             .into_iter()
@@ -1085,7 +1104,17 @@ impl FlowModelServ {
         if !post_changes.is_empty() {
             for post_change in post_changes {
                 if let Some(change_info) = &post_change.state_change_info {
-                    let flow_model_id = FlowInstServ::get_model_id_by_own_paths(&change_info.obj_tag, funs, ctx).await?;
+                    let flow_model_id = FlowInstServ::get_model_id_by_own_paths_and_rel_template_id(
+                        &change_info.obj_tag,
+                        if model_detail.rel_template_id.is_empty() {
+                            None
+                        } else {
+                            Some(model_detail.rel_template_id.clone())
+                        },
+                        funs,
+                        ctx,
+                    )
+                    .await?;
                     let transitions = FlowModelServ::find_transitions_by_state_id(
                         &flow_model_id,
                         change_info.obj_current_state_id.clone(),
@@ -1121,7 +1150,7 @@ impl FlowModelServ {
             .ok_or_else(|| funs.err().not_found(&Self::get_obj_name(), "find_rel_states", "not found flow model", "404-flow-model-not-found"))?
             .id
         } else {
-            FlowInstServ::get_model_id_by_own_paths(tag, funs, ctx).await?
+            FlowInstServ::get_model_id_by_own_paths_and_rel_template_id(tag, None, funs, ctx).await?
         };
 
         Self::find_sorted_rel_states_by_model_id(&flow_model_id, funs, ctx).await
