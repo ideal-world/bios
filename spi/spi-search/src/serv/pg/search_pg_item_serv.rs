@@ -11,7 +11,7 @@ use tardis::{
     TardisFuns, TardisFunsInst,
 };
 
-use crate::dto::search_item_dto::{SearchItemAddReq, SearchItemModifyReq, SearchItemSearchQScopeKind, SearchItemSearchReq, SearchItemSearchResp};
+use crate::dto::search_item_dto::{AdvBasicQueryCondInfo, SearchItemAddReq, SearchItemModifyReq, SearchItemSearchQScopeKind, SearchItemSearchReq, SearchItemSearchResp};
 
 use super::search_pg_initializer;
 
@@ -366,23 +366,7 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
     if let Some(adv_query) = &search_req.adv_query {
         for group_query in adv_query {
             let mut sql_and_where = vec![];
-            if let Some(create_time_start) = group_query.create_time_start {
-                sql_vals.push(Value::from(create_time_start));
-                sql_and_where.push(format!("create_time >= ${}", sql_vals.len()));
-            }
-            if let Some(create_time_end) = group_query.create_time_end {
-                sql_vals.push(Value::from(create_time_end));
-                sql_and_where.push(format!("create_time <= ${}", sql_vals.len()));
-            }
-            if let Some(update_time_start) = group_query.update_time_start {
-                sql_vals.push(Value::from(update_time_start));
-                sql_and_where.push(format!("update_time >= ${}", sql_vals.len()));
-            }
-            if let Some(update_time_end) = group_query.update_time_end {
-                sql_vals.push(Value::from(update_time_end));
-                sql_and_where.push(format!("update_time <= ${}", sql_vals.len()));
-            }
-            let err_not_found = |ext_item: &BasicQueryCondInfo| {
+            let err_not_found = |ext_item: &AdvBasicQueryCondInfo| {
                 Err(funs.err().not_found(
                     "item",
                     "search",
@@ -394,67 +378,127 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
                 for ext_item in ext {
                     let value = db_helper::json_to_sea_orm_value(&ext_item.value, ext_item.op == BasicQueryOpKind::Like);
                     let Some(mut value) = value else { return err_not_found(ext_item) };
-                    if ext_item.op == BasicQueryOpKind::In {
-                        if value.len() == 1 {
-                            sql_and_where.push(format!("ext -> '{}' ? ${}", ext_item.field, sql_vals.len() + 1));
+                    if ext_item.in_ext.unwrap_or(true) {
+                        if ext_item.op == BasicQueryOpKind::In {
+                            if value.len() == 1 {
+                                sql_and_where.push(format!("ext -> '{}' ? ${}", ext_item.field, sql_vals.len() + 1));
+                            } else {
+                                sql_and_where.push(format!(
+                                    "ext -> '{}' ?| array[{}]",
+                                    ext_item.field,
+                                    (0..value.len()).map(|idx| format!("${}", sql_vals.len() + idx + 1)).collect::<Vec<String>>().join(", ")
+                                ));
+                            }
+                            for val in value {
+                                sql_vals.push(val);
+                            }
+                        } else if ext_item.op == BasicQueryOpKind::NotIn {
+                            let value = value.clone();
+                            if value.len() == 1 {
+                                where_fragments.push(format!("not (ext -> '{}' ? ${})", ext_item.field, sql_vals.len() + 1));
+                            } else {
+                                where_fragments.push(format!(
+                                    "not (ext -> '{}' ?| array[{}])",
+                                    ext_item.field,
+                                    (0..value.len()).map(|idx| format!("${}", sql_vals.len() + idx + 1)).collect::<Vec<String>>().join(", ")
+                                ));
+                            }
+                            for val in value {
+                                sql_vals.push(val);
+                            }
                         } else {
-                            sql_and_where.push(format!(
-                                "ext -> '{}' ?| array[{}]",
-                                ext_item.field,
-                                (0..value.len()).map(|idx| format!("${}", sql_vals.len() + idx + 1)).collect::<Vec<String>>().join(", ")
-                            ));
-                        }
-                        for val in value {
-                            sql_vals.push(val);
-                        }
-                    } else if ext_item.op == BasicQueryOpKind::NotIn {
-                        let value = value.clone();
-                        if value.len() == 1 {
-                            where_fragments.push(format!("not (ext -> '{}' ? ${})", ext_item.field, sql_vals.len() + 1));
-                        } else {
-                            where_fragments.push(format!(
-                                "not (ext -> '{}' ?| array[{}])",
-                                ext_item.field,
-                                (0..value.len()).map(|idx| format!("${}", sql_vals.len() + idx + 1)).collect::<Vec<String>>().join(", ")
-                            ));
-                        }
-                        for val in value {
-                            sql_vals.push(val);
+                            if value.len() > 1 {
+                                return err_not_found(ext_item);
+                            }
+                            let Some(value) = value.pop() else {
+                                return Err(funs.err().bad_request("item", "search", "Request item using 'IN' operator show hava a value", "400-spi-item-op-in-without-value"));
+                            };
+                            if let Value::Bool(_) = value {
+                                sql_and_where.push(format!("(ext ->> '{}')::boolean {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
+                            } else if let Value::TinyInt(_) = value {
+                                sql_and_where.push(format!("(ext ->> '{}')::smallint {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
+                            } else if let Value::SmallInt(_) = value {
+                                sql_and_where.push(format!("(ext ->> '{}')::smallint {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
+                            } else if let Value::Int(_) = value {
+                                sql_and_where.push(format!("(ext ->> '{}')::integer {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
+                            } else if let Value::BigInt(_) = value {
+                                sql_and_where.push(format!("(ext ->> '{}')::bigint {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
+                            } else if let Value::TinyUnsigned(_) = value {
+                                sql_and_where.push(format!("(ext ->> '{}')::smallint {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
+                            } else if let Value::SmallUnsigned(_) = value {
+                                sql_and_where.push(format!("(ext ->> '{}')::integer {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
+                            } else if let Value::Unsigned(_) = value {
+                                sql_and_where.push(format!("(ext ->> '{}')::bigint {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
+                            } else if let Value::BigUnsigned(_) = value {
+                                // TODO
+                                sql_and_where.push(format!("(ext ->> '{}')::bigint {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
+                            } else if let Value::Float(_) = value {
+                                sql_and_where.push(format!("(ext ->> '{}')::real {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
+                            } else if let Value::Double(_) = value {
+                                sql_and_where.push(format!("(ext ->> '{}')::double precision {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
+                            } else {
+                                sql_and_where.push(format!("ext ->> '{}' {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
+                            }
+                            sql_vals.push(value);
                         }
                     } else {
-                        if value.len() > 1 {
-                            return err_not_found(ext_item);
+                        if ext_item.op == BasicQueryOpKind::In {
+                            if !value.is_empty() {
+                                where_fragments.push(format!(
+                                    "{} LIKE ANY (ARRAY[{}])",
+                                    ext_item.field,
+                                    (0..value.len()).map(|idx| format!("${}", sql_vals.len() + idx + 1)).collect::<Vec<String>>().join(",")
+                                ));
+                                for val in value {
+                                    sql_vals.push(Value::from(format!("{val}%")));
+                                }
+                            }
+                        } else if ext_item.op == BasicQueryOpKind::NotIn {
+                            if !value.is_empty() {
+                                where_fragments.push(format!(
+                                    "{} NOT LIKE ANY (ARRAY[{}])",
+                                    ext_item.field,
+                                    (0..value.len()).map(|idx| format!("${}", sql_vals.len() + idx + 1)).collect::<Vec<String>>().join(",")
+                                ));
+                                for val in value {
+                                    sql_vals.push(Value::from(format!("{val}%")));
+                                }
+                            }
+                        }else{
+                            if value.len() > 1 {
+                                return err_not_found(ext_item);
+                            }
+                            let Some(value) = value.pop() else {
+                                return Err(funs.err().bad_request("item", "search", "Request item using 'IN' operator show hava a value", "400-spi-item-op-in-without-value"));
+                            };
+                            if let Value::Bool(_) = value {
+                                sql_and_where.push(format!("({}::boolean) {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
+                            } else if let Value::TinyInt(_) = value {
+                                sql_and_where.push(format!("({}::smallint) {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
+                            } else if let Value::SmallInt(_) = value {
+                                sql_and_where.push(format!("({}::smallint) {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
+                            } else if let Value::Int(_) = value {
+                                sql_and_where.push(format!("({}::integer) {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
+                            } else if let Value::BigInt(_) = value {
+                                sql_and_where.push(format!("({}::bigint) {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
+                            } else if let Value::TinyUnsigned(_) = value {
+                                sql_and_where.push(format!("({}::smallint) {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
+                            } else if let Value::SmallUnsigned(_) = value {
+                                sql_and_where.push(format!("({}::integer) {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
+                            } else if let Value::Unsigned(_) = value {
+                                sql_and_where.push(format!("({}::bigint) {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
+                            } else if let Value::BigUnsigned(_) = value {
+                                // TODO
+                                sql_and_where.push(format!("({}::bigint) {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
+                            } else if let Value::Float(_) = value {
+                                sql_and_where.push(format!("({}::real) {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
+                            }else if let Value::Double(_) = value {
+                                sql_and_where.push(format!("({}::double precision) {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
+                            } else {
+                                sql_and_where.push(format!("{} {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
+                            }
+                            sql_vals.push(value);
                         }
-                        let Some(value) = value.pop() else {
-                            return Err(funs.err().bad_request("item", "search", "Request item using 'IN' operator show hava a value", "400-spi-item-op-in-without-value"));
-                        };
-                        if let Value::Bool(_) = value {
-                            sql_and_where.push(format!("(ext ->> '{}')::boolean {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
-                        } else if let Value::TinyInt(_) = value {
-                            sql_and_where.push(format!("(ext ->> '{}')::smallint {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
-                        } else if let Value::SmallInt(_) = value {
-                            sql_and_where.push(format!("(ext ->> '{}')::smallint {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
-                        } else if let Value::Int(_) = value {
-                            sql_and_where.push(format!("(ext ->> '{}')::integer {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
-                        } else if let Value::BigInt(_) = value {
-                            sql_and_where.push(format!("(ext ->> '{}')::bigint {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
-                        } else if let Value::TinyUnsigned(_) = value {
-                            sql_and_where.push(format!("(ext ->> '{}')::smallint {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
-                        } else if let Value::SmallUnsigned(_) = value {
-                            sql_and_where.push(format!("(ext ->> '{}')::integer {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
-                        } else if let Value::Unsigned(_) = value {
-                            sql_and_where.push(format!("(ext ->> '{}')::bigint {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
-                        } else if let Value::BigUnsigned(_) = value {
-                            // TODO
-                            sql_and_where.push(format!("(ext ->> '{}')::bigint {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
-                        } else if let Value::Float(_) = value {
-                            sql_and_where.push(format!("(ext ->> '{}')::real {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
-                        } else if let Value::Double(_) = value {
-                            sql_and_where.push(format!("(ext ->> '{}')::double precision {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
-                        } else {
-                            sql_and_where.push(format!("ext ->> '{}' {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
-                        }
-                        sql_vals.push(value);
                     }
                 }
             }
