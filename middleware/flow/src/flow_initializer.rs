@@ -198,11 +198,11 @@ pub async fn init_flow_model(funs: &TardisFunsInst, ctx: &TardisContext) -> Tard
         FlowModelServ::init_model(
             "TICKET",
             vec![
-                ("待处理", FlowSysStateKind::Start),
-                ("处理中", FlowSysStateKind::Progress),
-                ("待确认", FlowSysStateKind::Progress),
-                ("已关闭", FlowSysStateKind::Finish),
-                ("已撤销", FlowSysStateKind::Finish),
+                ("待处理", FlowSysStateKind::Start, get_default_color(&FlowSysStateKind::Start)),
+                ("处理中", FlowSysStateKind::Progress, get_default_color(&FlowSysStateKind::Progress)),
+                ("待确认", FlowSysStateKind::Progress, get_default_color(&FlowSysStateKind::Progress)),
+                ("已关闭", FlowSysStateKind::Finish, get_default_color(&FlowSysStateKind::Finish)),
+                ("已撤销", FlowSysStateKind::Finish, get_default_color(&FlowSysStateKind::Finish)),
             ],
             "待处理-处理中-待确认-已关闭-已撤销",
             vec![
@@ -294,10 +294,10 @@ pub async fn init_flow_model(funs: &TardisFunsInst, ctx: &TardisContext) -> Tard
         FlowModelServ::init_model(
             "REQ",
             vec![
-                ("待开始", FlowSysStateKind::Start),
-                ("进行中", FlowSysStateKind::Progress),
-                ("已完成", FlowSysStateKind::Finish),
-                ("已关闭", FlowSysStateKind::Finish),
+                ("待开始", FlowSysStateKind::Start, get_default_color(&FlowSysStateKind::Start)),
+                ("进行中", FlowSysStateKind::Progress, get_default_color(&FlowSysStateKind::Progress)),
+                ("已完成", FlowSysStateKind::Finish, get_default_color(&FlowSysStateKind::Finish)),
+                ("已关闭", FlowSysStateKind::Finish, get_default_color(&FlowSysStateKind::Finish)),
             ],
             "待开始-进行中-已完成-已关闭",
             vec![
@@ -397,12 +397,12 @@ pub async fn init_flow_model(funs: &TardisFunsInst, ctx: &TardisContext) -> Tard
         FlowModelServ::init_model(
             "PROJ",
             vec![
-                ("待开始", FlowSysStateKind::Start),
-                ("进行中", FlowSysStateKind::Progress),
-                ("存在风险", FlowSysStateKind::Progress),
-                ("已完成", FlowSysStateKind::Progress),
-                ("已关闭", FlowSysStateKind::Finish),
-                ("已归档", FlowSysStateKind::Finish),
+                ("待开始", FlowSysStateKind::Start, get_default_color(&FlowSysStateKind::Start)),
+                ("进行中", FlowSysStateKind::Progress, get_default_color(&FlowSysStateKind::Progress)),
+                ("存在风险", FlowSysStateKind::Progress, get_default_color(&FlowSysStateKind::Progress)),
+                ("已完成", FlowSysStateKind::Progress, get_default_color(&FlowSysStateKind::Progress)),
+                ("已关闭", FlowSysStateKind::Finish, get_default_color(&FlowSysStateKind::Finish)),
+                ("已归档", FlowSysStateKind::Finish, get_default_color(&FlowSysStateKind::Finish)),
             ],
             "待开始-进行中-存在风险-已完成-已关闭-已归档",
             vec![
@@ -582,11 +582,11 @@ pub async fn init_flow_model(funs: &TardisFunsInst, ctx: &TardisContext) -> Tard
         FlowModelServ::init_model(
             "ITER",
             vec![
-                ("待开始", FlowSysStateKind::Start),
-                ("进行中", FlowSysStateKind::Progress),
-                ("存在风险", FlowSysStateKind::Progress),
-                ("已完成", FlowSysStateKind::Progress),
-                ("已关闭", FlowSysStateKind::Finish),
+                ("待开始", FlowSysStateKind::Start, get_default_color(&FlowSysStateKind::Start)),
+                ("进行中", FlowSysStateKind::Progress, get_default_color(&FlowSysStateKind::Progress)),
+                ("存在风险", FlowSysStateKind::Progress, get_default_color(&FlowSysStateKind::Progress)),
+                ("已完成", FlowSysStateKind::Progress, get_default_color(&FlowSysStateKind::Progress)),
+                ("已关闭", FlowSysStateKind::Finish, get_default_color(&FlowSysStateKind::Finish)),
             ],
             "待开始-进行中-存在风险-已完成-已关闭",
             vec![
@@ -726,11 +726,11 @@ pub async fn init_flow_model(funs: &TardisFunsInst, ctx: &TardisContext) -> Tard
         FlowModelServ::init_model(
             "TASK",
             vec![
-                ("待开始", FlowSysStateKind::Start),
-                ("进行中", FlowSysStateKind::Progress),
-                ("存在风险", FlowSysStateKind::Progress),
-                ("已完成", FlowSysStateKind::Progress),
-                ("已关闭", FlowSysStateKind::Finish),
+                ("待开始", FlowSysStateKind::Start, get_default_color(&FlowSysStateKind::Start)),
+                ("进行中", FlowSysStateKind::Progress, get_default_color(&FlowSysStateKind::Progress)),
+                ("存在风险", FlowSysStateKind::Progress, get_default_color(&FlowSysStateKind::Progress)),
+                ("已完成", FlowSysStateKind::Progress, get_default_color(&FlowSysStateKind::Progress)),
+                ("已关闭", FlowSysStateKind::Finish, get_default_color(&FlowSysStateKind::Finish)),
             ],
             "待开始-进行中-存在风险-已完成-已关闭",
             vec![
@@ -852,4 +852,12 @@ pub async fn init_flow_model(funs: &TardisFunsInst, ctx: &TardisContext) -> Tard
     }
 
     Ok(())
+}
+
+fn get_default_color(kind: &FlowSysStateKind) -> &str {
+    match kind {
+        FlowSysStateKind::Finish => "rgba(242, 158, 12, 1)",
+        FlowSysStateKind::Start => "rgba(242, 158, 12, 1)",
+        FlowSysStateKind::Progress => "rgba(67, 147, 248, 1)",
+    }
 }

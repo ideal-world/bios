@@ -29,7 +29,7 @@ use tardis::{
 };
 
 use crate::{
-    domain::{flow_inst, flow_model},
+    domain::flow_inst,
     dto::{
         flow_external_dto::FlowExternalParams,
         flow_inst_dto::{
@@ -44,7 +44,6 @@ use crate::{
             StateChangeConditionOp,
         },
     },
-    flow_constants,
     serv::{flow_model_serv::FlowModelServ, flow_state_serv::FlowStateServ},
 };
 
@@ -571,7 +570,7 @@ impl FlowInstServ {
             .transitions()
             .into_iter()
             .find(|trans| trans.id == transfer_req.flow_transition_id)
-            .ok_or_else(|| funs.err().not_found("flow_inst", "check_transfer_vars", "illegal response", "404-transition-not-found"))?
+            .ok_or_else(|| funs.err().not_found("flow_inst", "check_transfer_vars", "illegal response", "404-flow-transition-not-found"))?
             .vars_collect();
         if let Some(vars_collect) = vars_collect {
             if vars_collect.into_iter().any(|var| var.required == Some(true) && (transfer_req.vars.is_none() || !transfer_req.vars.as_ref().unwrap().contains_key(&var.name))) {
@@ -1131,7 +1130,8 @@ impl FlowInstServ {
                     .column((flow_inst::Entity, flow_inst::Column::Id))
                     .from(flow_inst::Entity)
                     .and_where(Expr::col((flow_inst::Entity, flow_inst::Column::CurrentStateId)).eq(flow_state_id))
-                    .and_where(Expr::col((flow_inst::Entity, flow_inst::Column::RelFlowModelId)).eq(flow_model_id)),
+                    .and_where(Expr::col((flow_inst::Entity, flow_inst::Column::RelFlowModelId)).eq(flow_model_id))
+                    .and_where(Expr::col((flow_inst::Entity, flow_inst::Column::FinishAbort)).eq(false)),
             )
             .await?
             != 0
@@ -1140,140 +1140,5 @@ impl FlowInstServ {
         } else {
             Ok(false)
         }
-    }
-
-    pub async fn modify_rel_model_id(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        let global_ctx = TardisContext {
-            own_paths: "".to_string(),
-            ..ctx.clone()
-        };
-        // find default models
-        let models = FlowModelServ::find_detail_items(
-            &FlowModelFilterReq {
-                tags: Some(vec![
-                    "TICKET".to_string(),
-                    "PROJ".to_string(),
-                    "REQ".to_string(),
-                    "ITER".to_string(),
-                    "MS".to_string(),
-                    "TASK".to_string(),
-                    "TP".to_string(),
-                    "TS".to_string(),
-                    "ISSUE".to_string(),
-                    "CTS".to_string(),
-                ]),
-                ..Default::default()
-            },
-            None,
-            None,
-            funs,
-            &global_ctx,
-        )
-        .await?;
-        #[derive(sea_orm::FromQueryResult)]
-        pub struct FlowInstDetailResp {
-            pub id: String,
-            pub rel_flow_model_id: String,
-            pub own_paths: String,
-        }
-        // find all project paths
-        let own_paths_list = funs
-            .db()
-            .find_dtos::<FlowInstDetailResp>(
-                Query::select()
-                    .columns([
-                        (flow_inst::Entity, flow_inst::Column::Id),
-                        (flow_inst::Entity, flow_inst::Column::RelFlowModelId),
-                        (flow_inst::Entity, flow_inst::Column::OwnPaths),
-                    ])
-                    .from(flow_inst::Entity)
-                    .and_where(Expr::col((flow_inst::Entity, flow_inst::Column::RelFlowModelId)).eq(models.iter().find(|model| model.tag == "PROJ").unwrap().id.clone())),
-            )
-            .await?
-            .into_iter()
-            .map(|col| col.own_paths)
-            .collect_vec();
-        for own_paths in own_paths_list {
-            let mut funs_mut = flow_constants::get_tardis_inst();
-            funs_mut.begin().await?;
-            let ctx = TardisContext {
-                own_paths: own_paths.to_string(),
-                ..ctx.clone()
-            };
-            if funs_mut
-                .db()
-                .count(
-                    Query::select()
-                        .column((flow_model::Entity, flow_model::Column::Id))
-                        .from(flow_model::Entity)
-                        .and_where(Expr::col((flow_model::Entity, flow_model::Column::OwnPaths)).eq(&own_paths)),
-                )
-                .await?
-                == 0
-            {
-                // create app model
-                for model in &models {
-                    FlowModelServ::add_custom_model(&model.tag, &model.id, None, &funs_mut, &ctx).await?;
-                }
-            }
-            // find all inst by own path (except proj inst)
-            let insts = funs_mut
-                .db()
-                .find_dtos::<FlowInstDetailResp>(
-                    Query::select()
-                        .columns([
-                            (flow_inst::Entity, flow_inst::Column::Id),
-                            (flow_inst::Entity, flow_inst::Column::RelFlowModelId),
-                            (flow_inst::Entity, flow_inst::Column::OwnPaths),
-                        ])
-                        .from(flow_inst::Entity)
-                        .and_where(Expr::col((flow_inst::Entity, flow_inst::Column::OwnPaths)).eq(&own_paths))
-                        .and_where(Expr::col((flow_inst::Entity, flow_inst::Column::RelFlowModelId)).ne(models.iter().find(|model| model.tag == "PROJ").unwrap().id.clone()))
-                        .and_where(Expr::col((flow_inst::Entity, flow_inst::Column::RelFlowModelId)).ne(models.iter().find(|model| model.tag == "TICKET").unwrap().id.clone())),
-                )
-                .await?;
-            for inst in insts {
-                let flow_inst_detail = Self::get(&inst.id, &funs_mut, &ctx).await?;
-                let tag = FlowModelServ::get_item(
-                    &flow_inst_detail.rel_flow_model_id,
-                    &FlowModelFilterReq {
-                        basic: RbumBasicFilterReq {
-                            with_sub_own_paths: true,
-                            ..Default::default()
-                        },
-                        ..Default::default()
-                    },
-                    &funs_mut,
-                    &global_ctx,
-                )
-                .await?
-                .tag;
-                let rel_flow_model_id = FlowModelServ::find_id_items(
-                    &FlowModelFilterReq {
-                        tags: Some(vec![tag]),
-                        ..Default::default()
-                    },
-                    None,
-                    None,
-                    &funs_mut,
-                    &ctx,
-                )
-                .await?
-                .pop()
-                .unwrap();
-                if rel_flow_model_id == flow_inst_detail.rel_flow_model_id {
-                    break;
-                }
-                let flow_inst = flow_inst::ActiveModel {
-                    id: Set(inst.id.clone()),
-                    rel_flow_model_id: Set(rel_flow_model_id.clone()),
-                    ..Default::default()
-                };
-                funs_mut.db().update_one(flow_inst, &ctx).await?;
-            }
-            funs_mut.commit().await?;
-        }
-
-        Ok(())
     }
 }

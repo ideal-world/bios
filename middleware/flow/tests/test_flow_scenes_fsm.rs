@@ -10,7 +10,7 @@ use bios_mw_flow::dto::flow_inst_dto::{
 };
 use bios_mw_flow::dto::flow_model_dto::{
     FlowModelAddCustomModelItemReq, FlowModelAddCustomModelReq, FlowModelAddCustomModelResp, FlowModelAggResp, FlowModelModifyReq, FlowModelSortStateInfoReq,
-    FlowModelSortStatesReq, FlowModelSummaryResp, FlowModelUnbindStateReq, FlowTemplateModelResp,
+    FlowModelSortStatesReq, FlowModelSummaryResp, FlowModelUnbindStateReq, FlowTemplateModelResp, FlowModelFindRelStateResp,
 };
 use bios_mw_flow::dto::flow_state_dto::FlowStateSummaryResp;
 use bios_mw_flow::dto::flow_transition_dto::{
@@ -153,7 +153,17 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
     let iter_model_agg: FlowModelAggResp = flow_client.get(&format!("/cc/model/{}", iter_model_id)).await;
     let proj_model_id = result.get("PROJ").unwrap().id.clone();
     let proj_model_agg: FlowModelAggResp = flow_client.get(&format!("/cc/model/{}", proj_model_id)).await;
-
+    // 2-3. check find rel states
+    let _:Void = flow_client
+        .post(
+            &format!("/cc/model/{}/unbind_state", &proj_model_id),
+            &FlowModelUnbindStateReq {
+                state_id: proj_model_agg.states.iter().find(|state| state.name == "已关闭").unwrap().id.clone(),
+            },
+        )
+        .await;
+    let result: Vec<FlowModelFindRelStateResp> = flow_client.get(&format!("/cc/model/find_rel_status?tag=PROJ&rel_template_id={}", mock_template_id)).await;
+    assert!(result.into_iter().find(|state| state.name == "已关闭").is_none());
     // 3.modify model
     // 3-1. resort state
     let mut sort_states = vec![];
@@ -528,6 +538,7 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
         transfer.new_flow_state_id,
         state_and_next_transitions[0].next_flow_transitions.iter().find(|&trans| trans.next_flow_transition_name.contains("关闭")).unwrap().next_flow_state_id.clone()
     );
+    // check state is used
     let state_unbind_error = flow_client
         .post_resp::<FlowModelUnbindStateReq, Void>(
             &format!("/cc/model/{}/unbind_state", &req_model_id),
