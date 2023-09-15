@@ -464,7 +464,7 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
                                     sql_vals.push(Value::from(format!("{val}%")));
                                 }
                             }
-                        }else{
+                        } else {
                             if value.len() > 1 {
                                 return err_not_found(ext_item);
                             }
@@ -492,7 +492,7 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
                                 sql_and_where.push(format!("({}::bigint) {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
                             } else if let Value::Float(_) = value {
                                 sql_and_where.push(format!("({}::real) {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
-                            }else if let Value::Double(_) = value {
+                            } else if let Value::Double(_) = value {
                                 sql_and_where.push(format!("({}::double precision) {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
                             } else {
                                 sql_and_where.push(format!("{} {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
