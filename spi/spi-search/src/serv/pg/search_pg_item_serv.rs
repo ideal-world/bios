@@ -337,6 +337,13 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
                     where_fragments.push(format!("(ext ->> '{}')::real {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
                 } else if let Value::Double(_) = value {
                     where_fragments.push(format!("(ext ->> '{}')::double precision {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
+                } else if value.is_chrono_time() {
+                    where_fragments.push(format!(
+                        "(ext ->> '{}')::timestamp with time zone {} ${}",
+                        ext_item.field,
+                        ext_item.op.to_sql(),
+                        sql_vals.len() + 1
+                    ));
                 } else {
                     where_fragments.push(format!("ext ->> '{}' {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
                 }
@@ -436,6 +443,13 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
                                 sql_and_where.push(format!("(ext ->> '{}')::real {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
                             } else if let Value::Double(_) = value {
                                 sql_and_where.push(format!("(ext ->> '{}')::double precision {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
+                            } else if value.is_chrono_time() {
+                                sql_and_where.push(format!(
+                                    "(ext ->> '{}')::timestamp with time zone {} ${}",
+                                    ext_item.field,
+                                    ext_item.op.to_sql(),
+                                    sql_vals.len() + 1
+                                ));
                             } else {
                                 sql_and_where.push(format!("ext ->> '{}' {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
                             }
