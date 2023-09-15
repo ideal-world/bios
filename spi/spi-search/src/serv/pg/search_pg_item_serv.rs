@@ -444,7 +444,7 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
                     } else {
                         if ext_item.op == BasicQueryOpKind::In {
                             if !value.is_empty() {
-                                where_fragments.push(format!(
+                                sql_and_where.push(format!(
                                     "{} LIKE ANY (ARRAY[{}])",
                                     ext_item.field,
                                     (0..value.len()).map(|idx| format!("${}", sql_vals.len() + idx + 1)).collect::<Vec<String>>().join(",")
@@ -455,7 +455,7 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
                             }
                         } else if ext_item.op == BasicQueryOpKind::NotIn {
                             if !value.is_empty() {
-                                where_fragments.push(format!(
+                                sql_and_where.push(format!(
                                     "{} NOT LIKE ANY (ARRAY[{}])",
                                     ext_item.field,
                                     (0..value.len()).map(|idx| format!("${}", sql_vals.len() + idx + 1)).collect::<Vec<String>>().join(",")
