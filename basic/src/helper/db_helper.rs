@@ -47,5 +47,5 @@ pub fn json_to_sea_orm_value(json_value: &serde_json::Value, like_by_str: bool) 
 }
 
 fn str_to_datetime(input: &str) -> Result<DateTime<Utc>, ParseError> {
-    DateTime::parse_from_str(input, "%Y-%m-%dT%H:%M:%S%.3fZ").map(|dt| dt.with_timezone(&Utc))
+    DateTime::parse_from_rfc3339(input).map(|dt| dt.with_timezone(&Utc))
 }
