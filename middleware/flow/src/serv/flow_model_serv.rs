@@ -96,17 +96,16 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
     async fn after_add_item(flow_model_id: &str, add_req: &mut FlowModelAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         if let Some(transitions) = &add_req.transitions {
             Self::add_transitions(flow_model_id, transitions, funs, ctx).await?;
-        }
-
-        // check transition post action endless loop
-        for transition_detail in Self::get_item(flow_model_id, &FlowModelFilterReq::default(), funs, ctx).await?.transitions() {
-            if Self::check_post_action_ring(transition_detail, (false, vec![]), funs, ctx).await?.0 {
-                return Err(funs.err().not_found(
-                    "flow_model_Serv",
-                    "after_modify_item",
-                    "this post action exist endless loop",
-                    "500-flow-transition-endless-loop",
-                ));
+            // check transition post action endless loop
+            for transition_detail in Self::get_item(flow_model_id, &FlowModelFilterReq::default(), funs, ctx).await?.transitions() {
+                if Self::check_post_action_ring(transition_detail, (false, vec![]), funs, ctx).await?.0 {
+                    return Err(funs.err().not_found(
+                        "flow_model_Serv",
+                        "after_add_item",
+                        "this post action exist endless loop",
+                        "500-flow-transition-endless-loop",
+                    ));
+                }
             }
         }
 
@@ -159,15 +158,17 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
             Self::delete_transitions(flow_model_id, delete_transitions, funs, ctx).await?;
         }
 
-        // check transition post action endless loop
-        for transition_detail in Self::get_item(flow_model_id, &FlowModelFilterReq::default(), funs, ctx).await?.transitions() {
-            if Self::check_post_action_ring(transition_detail, (false, vec![]), funs, ctx).await?.0 {
-                return Err(funs.err().not_found(
-                    "flow_model_Serv",
-                    "after_modify_item",
-                    "this post action exist endless loop",
-                    "500-flow-transition-endless-loop",
-                ));
+        if modify_req.add_transitions.is_some() || modify_req.modify_transitions.is_some() {
+            // check transition post action endless loop
+            for transition_detail in Self::get_item(flow_model_id, &FlowModelFilterReq::default(), funs, ctx).await?.transitions() {
+                if Self::check_post_action_ring(transition_detail, (false, vec![]), funs, ctx).await?.0 {
+                    return Err(funs.err().not_found(
+                        "flow_model_Serv",
+                        "after_modify_item",
+                        "this post action exist endless loop",
+                        "500-flow-transition-endless-loop",
+                    ));
+                }
             }
         }
 
@@ -712,7 +713,10 @@ impl FlowModelServ {
             // 因为默认模板没有绑定模型，所以通过template_id查找模型可以使用global_ctx
             FlowModelServ::paginate_items(
                 &FlowModelFilterReq {
-                    basic: RbumBasicFilterReq { ..Default::default() },
+                    basic: RbumBasicFilterReq {
+                        ignore_scope: true,
+                        ..Default::default()
+                    },
                     rel_template_id: Some(template_id.clone()),
                     ..Default::default()
                 },
@@ -872,7 +876,7 @@ impl FlowModelServ {
                 transitions: Some(transitions.into_iter().map(|trans| trans.into()).collect_vec()),
                 rel_model_id: Some(parent_model.id.clone()),
                 tag: Some(parent_model.tag),
-                scope_level: Some(parent_model.scope_level),
+                scope_level: None,
                 disabled: Some(parent_model.disabled),
             },
             funs,
@@ -909,13 +913,7 @@ impl FlowModelServ {
         )
         .await?;
 
-        // modify
-        let mut modify_ctx = ctx.clone();
-        if current_model.scope_level == RbumScopeLevelKind::Root {
-            modify_ctx.own_paths = "".to_string();
-            modify_ctx.owner = "".to_string();
-        }
-        Self::modify_item(&current_model.id, modify_req, funs, &modify_ctx).await?;
+        Self::modify_item(&current_model.id, modify_req, funs, ctx).await?;
 
         Ok(())
     }

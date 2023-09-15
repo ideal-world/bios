@@ -400,7 +400,7 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
         .post(
             "/cc/model/add_custom_model",
             &FlowModelAddCustomModelReq {
-                proj_template_id: Some(req_share_model_id.clone()),
+                proj_template_id: Some(share_template_id.clone()),
                 bind_model_objs: vec![FlowModelAddCustomModelItemReq {
                     tag: "REQ".to_string(),
                     feature_template_id: None,
@@ -408,7 +408,22 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
             },
         )
         .await;
-    assert!(result.pop().unwrap().model_id.is_some());
+    let share_template_models: HashMap<String, FlowTemplateModelResp> = flow_client.get(&format!("/cc/model/get_models?tag_ids=REQ&temp_id={}", share_template_id)).await;
+
+    let share_mdoel_agg: FlowModelAggResp = flow_client.get(&format!("/cc/model/{}", result.pop().unwrap().model_id.unwrap())).await;
+    assert_eq!(share_mdoel_agg.scope_level, RbumScopeLevelKind::Private);
+    ctx.own_paths = "t1".to_string();
+    flow_client.set_auth(&ctx)?;
+    let req_share_model_id = share_template_models.get("REQ").unwrap().id.clone();
+    let _: Void = flow_client
+        .patch(
+            &format!("/cc/model/{}", req_share_model_id),
+            &FlowModelModifyReq {
+                scope_level: Some(RbumScopeLevelKind::L1),
+                ..Default::default()
+            },
+        )
+        .await;
     // 4.Start a instance
     // mock tenant content
     ctx.own_paths = "t1/app01".to_string();
