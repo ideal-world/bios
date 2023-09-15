@@ -25,7 +25,7 @@ use crate::{
         flow_model_dto::FlowModelFilterReq,
         flow_state_dto::{
             FlowStateAddReq, FlowStateCountGroupByStateReq, FlowStateCountGroupByStateResp, FlowStateDetailResp, FlowStateFilterReq, FlowStateKind, FlowStateModifyReq,
-            FlowStateNameResp, FlowStateSummaryResp, FlowSysStateKind,
+            FlowStateNameResp, FlowStateSummaryResp,
         },
     },
     flow_config::FlowBasicInfoManager,
@@ -293,14 +293,6 @@ impl FlowStateServ {
             .find(|state| state.rel_name == name)
             .ok_or_else(|| funs.err().not_found("flow_state_serv", "find_state_id_by_name", &format!("state_name: {} not match", name), ""))?
             .rel_id)
-    }
-
-    pub fn get_default_color(kind: &FlowSysStateKind) -> String {
-        match kind {
-            FlowSysStateKind::Finish => "rgba(242, 158, 12, 1)".to_string(),
-            FlowSysStateKind::Start => "rgba(242, 158, 12, 1)".to_string(),
-            FlowSysStateKind::Progress => "rgba(67, 147, 248, 1)".to_string(),
-        }
     }
 
     pub async fn count_group_by_state(req: &FlowStateCountGroupByStateReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<FlowStateCountGroupByStateResp>> {
