@@ -728,7 +728,10 @@ impl FlowModelServ {
             // If no template_id is passed, the real own_paths are used
             FlowModelServ::paginate_items(
                 &FlowModelFilterReq {
-                    basic: RbumBasicFilterReq { ..Default::default() },
+                    basic: RbumBasicFilterReq {
+                        ignore_scope: true,
+                        ..Default::default()
+                    },
                     tags: Some(tags.iter().map(|tag| tag.to_string()).collect_vec()),
                     ..Default::default()
                 },
@@ -761,16 +764,6 @@ impl FlowModelServ {
             if !result.contains_key(tag) {
                 // copy custom model
                 let model_id = Self::add_custom_model(tag, "", template_id.clone(), funs, ctx).await?;
-                Self::modify_model(
-                    &model_id,
-                    &mut FlowModelModifyReq {
-                        template: Some(true),
-                        ..Default::default()
-                    },
-                    funs,
-                    ctx,
-                )
-                .await?;
                 let custom_model = Self::get_item(
                     &model_id,
                     &FlowModelFilterReq {
@@ -1106,29 +1099,41 @@ impl FlowModelServ {
         if !post_changes.is_empty() {
             for post_change in post_changes {
                 if let Some(change_info) = &post_change.state_change_info {
-                    let flow_model_id = FlowInstServ::get_model_id_by_own_paths_and_rel_template_id(
-                        &change_info.obj_tag,
-                        if model_detail.rel_template_id.is_empty() {
-                            None
-                        } else {
-                            Some(model_detail.rel_template_id.clone())
+                    if let Some(flow_model_id) = Self::find_id_items(
+                        &FlowModelFilterReq {
+                            basic: RbumBasicFilterReq {
+                                ignore_scope: true,
+                                ..Default::default()
+                            },
+                            tags: Some(vec![change_info.obj_tag.clone()]),
+                            rel_template_id: if model_detail.rel_template_id.is_empty() {
+                                None
+                            } else {
+                                Some(model_detail.rel_template_id.clone())
+                            },
+                            ..Default::default()
                         },
+                        None,
+                        None,
                         funs,
                         ctx,
                     )
-                    .await?;
-                    let transitions = FlowModelServ::find_transitions_by_state_id(
-                        &flow_model_id,
-                        change_info.obj_current_state_id.clone(),
-                        Some(vec![change_info.changed_state_id.clone()]),
-                        funs,
-                        ctx,
-                    )
-                    .await?;
-                    for transition_detail in transitions {
-                        (is_ring, current_chain) = Self::check_post_action_ring(transition_detail, (is_ring, current_chain.clone()), funs, ctx).await?;
-                        if is_ring {
-                            return Ok((true, current_chain));
+                    .await?
+                    .pop()
+                    {
+                        let transitions = FlowModelServ::find_transitions_by_state_id(
+                            &flow_model_id,
+                            change_info.obj_current_state_id.clone(),
+                            Some(vec![change_info.changed_state_id.clone()]),
+                            funs,
+                            ctx,
+                        )
+                        .await?;
+                        for transition_detail in transitions {
+                            (is_ring, current_chain) = Self::check_post_action_ring(transition_detail, (is_ring, current_chain.clone()), funs, ctx).await?;
+                            if is_ring {
+                                return Ok((true, current_chain));
+                            }
                         }
                     }
                 }
