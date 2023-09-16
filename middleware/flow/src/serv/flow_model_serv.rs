@@ -794,6 +794,8 @@ impl FlowModelServ {
     }
 
     // add custom model by template model
+    // rel_template_id: Associated parent template id
+    // current_template_id: Current tempalte id
     pub async fn add_custom_model(tag: &str, rel_template_id: &str, current_template_id: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
         let current_model = Self::find_one_detail_item(
             &FlowModelFilterReq {

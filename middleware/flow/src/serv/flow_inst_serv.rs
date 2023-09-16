@@ -583,6 +583,10 @@ impl FlowInstServ {
 
     #[async_recursion]
     pub async fn transfer(flow_inst_id: &str, transfer_req: &FlowInstTransferReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<FlowInstTransferResp> {
+        let global_ctx = TardisContext {
+            own_paths: "".to_string(),
+            ..ctx.clone()
+        };
         let flow_inst_detail = Self::get(flow_inst_id, funs, ctx).await?;
         let flow_model = FlowModelServ::get_item(
             &flow_inst_detail.rel_flow_model_id,
@@ -635,7 +639,7 @@ impl FlowInstServ {
                 ..Default::default()
             },
             funs,
-            ctx,
+            &global_ctx,
         )
         .await?;
         let next_flow_state = FlowStateServ::get_item(
@@ -648,7 +652,7 @@ impl FlowInstServ {
                 ..Default::default()
             },
             funs,
-            ctx,
+            &global_ctx,
         )
         .await?;
 

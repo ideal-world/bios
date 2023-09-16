@@ -9,13 +9,13 @@ use bios_mw_flow::dto::flow_inst_dto::{
     FlowInstFindStateAndTransitionsReq, FlowInstFindStateAndTransitionsResp, FlowInstStartReq, FlowInstTransferReq, FlowInstTransferResp,
 };
 use bios_mw_flow::dto::flow_model_dto::{
-    FlowModelAddCustomModelItemReq, FlowModelAddCustomModelReq, FlowModelAddCustomModelResp, FlowModelAggResp, FlowModelFindRelStateResp, FlowModelModifyReq,
-    FlowModelSortStateInfoReq, FlowModelSortStatesReq, FlowModelSummaryResp, FlowModelUnbindStateReq, FlowTemplateModelResp,
+    FlowModelAddCustomModelItemReq, FlowModelAddCustomModelReq, FlowModelAddCustomModelResp, FlowModelAggResp, FlowModelBindStateReq, FlowModelFindRelStateResp,
+    FlowModelModifyReq, FlowModelSortStateInfoReq, FlowModelSortStatesReq, FlowModelSummaryResp, FlowModelUnbindStateReq, FlowTemplateModelResp,
 };
-use bios_mw_flow::dto::flow_state_dto::FlowStateSummaryResp;
+use bios_mw_flow::dto::flow_state_dto::{FlowStateAddReq, FlowStateSummaryResp, FlowSysStateKind};
 use bios_mw_flow::dto::flow_transition_dto::{
-    FlowTransitionActionChangeInfo, FlowTransitionActionChangeKind, FlowTransitionDoubleCheckInfo, FlowTransitionModifyReq, StateChangeCondition, StateChangeConditionItem,
-    StateChangeConditionOp,
+    FlowTransitionActionChangeInfo, FlowTransitionActionChangeKind, FlowTransitionAddReq, FlowTransitionDoubleCheckInfo, FlowTransitionModifyReq, StateChangeCondition,
+    StateChangeConditionItem, StateChangeConditionOp,
 };
 
 use bios_mw_flow::dto::flow_var_dto::{FlowVarInfo, RbumDataTypeKind, RbumWidgetTypeKind};
@@ -163,7 +163,7 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
         )
         .await;
     let result: Vec<FlowModelFindRelStateResp> = flow_client.get(&format!("/cc/model/find_rel_status?tag=PROJ&rel_template_id={}", mock_template_id)).await;
-    assert!(result.into_iter().find(|state| state.name == "已关闭").is_none());
+    assert!(!result.into_iter().any(|state| state.name == "已关闭"));
     // 3.modify model
     // 3-1. resort state
     let mut sort_states = vec![];
@@ -382,14 +382,41 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
     assert!(!model_agg_new.states.first_mut().unwrap().transitions.iter_mut().any(|trans| trans.transfer_by_auto).is_empty());
     info!("model_agg_new: {:?}", model_agg_new);
     // 3-4. Share template models
+    let custom_state_id: String = flow_client
+        .post(
+            "/cc/state",
+            &FlowStateAddReq {
+                name: Some("测试".to_string().into()),
+                sys_state: FlowSysStateKind::Start,
+                color: Some("rgba(242, 158, 12, 1)".to_string()),
+                ..Default::default()
+            },
+        )
+        .await;
+    let _: Void = flow_client
+        .post(
+            &format!("/cc/model/{}/bind_state", &proj_model_id),
+            &FlowModelBindStateReq {
+                state_id: custom_state_id.clone(),
+                sort: 1,
+            },
+        )
+        .await;
     let share_template_id = "share_template_id".to_string();
     let share_template_models: HashMap<String, FlowTemplateModelResp> = flow_client.get(&format!("/cc/model/get_models?tag_ids=REQ&temp_id={}", share_template_id)).await;
     let req_share_model_id = share_template_models.get("REQ").unwrap().id.clone();
+    let req_share_model_agg: FlowModelAggResp = flow_client.get(&format!("/cc/model/{}", req_share_model_id)).await;
     let _: Void = flow_client
         .patch(
             &format!("/cc/model/{}", req_share_model_id),
             &FlowModelModifyReq {
                 scope_level: Some(RbumScopeLevelKind::Root),
+                add_transitions: Some(vec![FlowTransitionAddReq {
+                    from_flow_state_id: req_share_model_agg.init_state_id.clone(),
+                    name: Some("111".to_string().into()),
+                    to_flow_state_id: custom_state_id.clone(),
+                    ..Default::default()
+                }]),
                 ..Default::default()
             },
         )
@@ -408,13 +435,44 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
             },
         )
         .await;
-    let share_template_models: HashMap<String, FlowTemplateModelResp> = flow_client.get(&format!("/cc/model/get_models?tag_ids=REQ&temp_id={}", share_template_id)).await;
+    let share_mdoel_id = result.pop().unwrap().model_id.unwrap();
 
-    let share_mdoel_agg: FlowModelAggResp = flow_client.get(&format!("/cc/model/{}", result.pop().unwrap().model_id.unwrap())).await;
+    let share_template_models: HashMap<String, FlowTemplateModelResp> = flow_client.get("/cc/model/get_models?tag_ids=REQ").await;
+    assert_eq!(share_mdoel_id.as_str(), share_template_models.get("REQ").unwrap().id.as_str());
+
+    let share_mdoel_agg: FlowModelAggResp = flow_client.get(&format!("/cc/model/{}", share_mdoel_id)).await;
     assert_eq!(share_mdoel_agg.scope_level, RbumScopeLevelKind::Private);
+    let req_share_inst_id: String = flow_client
+        .post(
+            "/cc/inst",
+            &FlowInstStartReq {
+                tag: "REQ".to_string(),
+                create_vars: None,
+                rel_business_obj_id: TardisFuns::field.nanoid(),
+            },
+        )
+        .await;
+    let next_transitions: Vec<FlowInstFindNextTransitionResp> = flow_client
+        .put(
+            &format!("/cc/inst/{}/transition/next", req_share_inst_id.clone()),
+            &FlowInstFindNextTransitionsReq { vars: None },
+        )
+        .await;
+    let transfer: FlowInstTransferResp = flow_client
+        .put(
+            &format!("/cc/inst/{}/transition/transfer", req_share_inst_id),
+            &FlowInstTransferReq {
+                flow_transition_id: next_transitions.into_iter().find(|trans| trans.next_flow_transition_name == "111").unwrap().next_flow_transition_id.clone(),
+                vars: Some(TardisFuns::json.json_to_obj(json!({})).unwrap()),
+                message: None,
+            },
+        )
+        .await;
+    assert_eq!(transfer.new_flow_state_id, custom_state_id.clone());
+
+    // reset share model
     ctx.own_paths = "t1".to_string();
     flow_client.set_auth(&ctx)?;
-    let req_share_model_id = share_template_models.get("REQ").unwrap().id.clone();
     let _: Void = flow_client
         .patch(
             &format!("/cc/model/{}", req_share_model_id),
@@ -446,7 +504,7 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
             },
         )
         .await;
-    let models: HashMap<String, FlowTemplateModelResp> = flow_client.get(&format!("/cc/model/get_models?tag_ids=REQ,PROJ,ITER,TICKET")).await;
+    let models: HashMap<String, FlowTemplateModelResp> = flow_client.get("/cc/model/get_models?tag_ids=REQ,PROJ,ITER,TICKET").await;
     assert_eq!(
         models.get("REQ").unwrap().id,
         result.into_iter().find(|model| model.tag == "REQ").unwrap().model_id.unwrap()
