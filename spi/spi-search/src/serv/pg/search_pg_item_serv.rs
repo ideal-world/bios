@@ -337,6 +337,13 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
                     where_fragments.push(format!("(ext ->> '{}')::real {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
                 } else if let Value::Double(_) = value {
                     where_fragments.push(format!("(ext ->> '{}')::double precision {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
+                } else if value.is_chrono_date_time_utc() {
+                    where_fragments.push(format!(
+                        "(ext ->> '{}')::timestamp with time zone {} ${}",
+                        ext_item.field,
+                        ext_item.op.to_sql(),
+                        sql_vals.len() + 1
+                    ));
                 } else {
                     where_fragments.push(format!("ext ->> '{}' {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
                 }
@@ -436,6 +443,13 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
                                 sql_and_where.push(format!("(ext ->> '{}')::real {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
                             } else if let Value::Double(_) = value {
                                 sql_and_where.push(format!("(ext ->> '{}')::double precision {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
+                            } else if value.is_chrono_date_time_utc() {
+                                sql_and_where.push(format!(
+                                    "(ext ->> '{}')::timestamp with time zone {} ${}",
+                                    ext_item.field,
+                                    ext_item.op.to_sql(),
+                                    sql_vals.len() + 1
+                                ));
                             } else {
                                 sql_and_where.push(format!("ext ->> '{}' {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
                             }
@@ -444,7 +458,7 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
                     } else {
                         if ext_item.op == BasicQueryOpKind::In {
                             if !value.is_empty() {
-                                where_fragments.push(format!(
+                                sql_and_where.push(format!(
                                     "{} LIKE ANY (ARRAY[{}])",
                                     ext_item.field,
                                     (0..value.len()).map(|idx| format!("${}", sql_vals.len() + idx + 1)).collect::<Vec<String>>().join(",")
@@ -455,7 +469,7 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
                             }
                         } else if ext_item.op == BasicQueryOpKind::NotIn {
                             if !value.is_empty() {
-                                where_fragments.push(format!(
+                                sql_and_where.push(format!(
                                     "{} NOT LIKE ANY (ARRAY[{}])",
                                     ext_item.field,
                                     (0..value.len()).map(|idx| format!("${}", sql_vals.len() + idx + 1)).collect::<Vec<String>>().join(",")
@@ -464,7 +478,7 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
                                     sql_vals.push(Value::from(format!("{val}%")));
                                 }
                             }
-                        }else{
+                        } else {
                             if value.len() > 1 {
                                 return err_not_found(ext_item);
                             }
@@ -492,7 +506,7 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
                                 sql_and_where.push(format!("({}::bigint) {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
                             } else if let Value::Float(_) = value {
                                 sql_and_where.push(format!("({}::real) {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
-                            }else if let Value::Double(_) = value {
+                            } else if let Value::Double(_) = value {
                                 sql_and_where.push(format!("({}::double precision) {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
                             } else {
                                 sql_and_where.push(format!("{} {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));

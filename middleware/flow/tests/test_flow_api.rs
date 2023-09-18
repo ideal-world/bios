@@ -42,16 +42,16 @@ async fn test_flow_api() -> TardisResult<()> {
 
     let mut flow_client = TestHttpClient::new("https://localhost:8080/flow".to_string());
     let mut kv_client = TestHttpClient::new("https://localhost:8080/spi-kv".to_string());
-    init_flow_data().await?;
 
     test_flow_scenes_fsm::test(&mut flow_client, &mut kv_client).await?;
-    truncate_flow_data().await?;
+    init_flow_data().await?;
 
     Ok(())
 }
 
 async fn init_flow_data() -> TardisResult<()> {
     let funs = flow_constants::get_tardis_inst();
+    flow_initializer::truncate_data(&funs).await?;
     let ctx = TardisContext {
         own_paths: "".to_string(),
         ak: "".to_string(),
@@ -60,14 +60,7 @@ async fn init_flow_data() -> TardisResult<()> {
         owner: "".to_string(),
         ..Default::default()
     };
-    flow_initializer::init_flow_model(&funs, &ctx).await?;
-
-    Ok(())
-}
-async fn truncate_flow_data() -> TardisResult<()> {
-    let funs = flow_constants::get_tardis_inst();
-    flow_initializer::truncate_data(&funs).await?;
-
+    flow_initializer::init_rbum_data(&funs, &ctx).await?;
     Ok(())
 }
 
