@@ -21,7 +21,7 @@ impl PluginExecServ {
         let spi_api = PluginApiServ::get_by_code(&kind_id, api_code, funs, ctx).await?;
         let result;
         if let Some(spi_api) = &spi_api {
-            let spi_bs = PluginBsServ::get_bs_by_rel_up(Some(kind_code.to_owned()), funs, ctx).await?;
+            let spi_bs = PluginBsServ::get_bs_by_rel_up(kind_code, funs, ctx).await?;
             let url = format!(
                 "{}{}",
                 &spi_bs.conn_uri,
