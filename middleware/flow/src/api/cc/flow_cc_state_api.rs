@@ -1,4 +1,5 @@
 use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
+use bios_basic::rbum::helper::rbum_scope_helper;
 use bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use tardis::web::context_extractor::TardisContextExtractor;
@@ -87,7 +88,7 @@ impl FlowCcStateApi {
                 (Some(RbumScopeLevelKind::Root), false)
             } else {
                 // get custom state
-                (Some(RbumScopeLevelKind::L1), true)
+                (Some(rbum_scope_helper::get_scope_level_by_context(&ctx.0)?), true)
             }
         } else {
             // get all state
