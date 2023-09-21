@@ -92,7 +92,7 @@ impl Default for SgFilterAuth {
             cors_allow_methods: "*".to_string(),
             cors_allow_headers: "*".to_string(),
             header_is_mix_req: "IS_MIX_REQ".to_string(),
-            fetch_server_config_path: "/starsysApi/auth/auth/apis".to_string(),
+            fetch_server_config_path: "/starsysApi/apis".to_string(),
             mix_replace_url: "apis".to_string(),
         }
     }
