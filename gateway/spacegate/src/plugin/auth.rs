@@ -471,12 +471,20 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    async fn test_auth_plugin_ctx() {
+    async fn test(){
         env::set_var("RUST_LOG", "info,bios_spacegate=trace,bios_auth=trace,tardis=trace");
         tracing_subscriber::fmt::init();
 
         let docker = testcontainers::clients::Cli::default();
         let _x = docker_init(&docker).await.unwrap();
+
+        test_auth_plugin_ctx().await;
+        test_auth_plugin_crypto().await;
+        test_auth_plugin_strict_security_mode_crypto().await;
+    }
+
+    async fn test_auth_plugin_ctx() {
+        log::info!("========test_auth_plugin_ctx=====");
 
         let mut filter_auth = SgFilterAuth {
             cache_url: env::var("TARDIS_FW.CACHE.URL").unwrap(),
@@ -581,20 +589,8 @@ mod tests {
         assert_eq!(ctx.groups, vec!["g001"]);
     }
 
-    fn decode_context(headers: &HeaderMap) -> TardisContext {
-        let config = TardisFuns::cs_config::<AuthConfig>(auth_constants::DOMAIN_CODE);
-        let ctx = headers.get(&config.head_key_context).unwrap();
-        let ctx = TardisFuns::crypto.base64.decode(ctx.to_str().unwrap()).unwrap();
-        TardisFuns::json.str_to_obj(&ctx).unwrap()
-    }
-
-    #[tokio::test]
     async fn test_auth_plugin_crypto() {
-        env::set_var("RUST_LOG", "info,bios_spacegate=trace,bios_auth=trace,tardis=trace");
-        // tracing_subscriber::fmt::init();
-
-        let docker = testcontainers::clients::Cli::default();
-        let _x = docker_init(&docker).await.unwrap();
+        log::info!("========test_auth_plugin_crypto=====");
 
         let mut filter_auth = SgFilterAuth {
             cache_url: env::var("TARDIS_FW.CACHE.URL").unwrap(),
@@ -730,13 +726,8 @@ mod tests {
         filter_auth.destroy().await.unwrap();
     }
 
-    #[tokio::test]
     async fn test_auth_plugin_strict_security_mode_crypto() {
-        env::set_var("RUST_LOG", "info,bios_spacegate=trace,bios_auth=trace,tardis=trace");
-        // tracing_subscriber::fmt::init();
-
-        let docker = Cli::default();
-        let _x = docker_init(&docker).await.unwrap();
+        log::info!("======test_auth_plugin_strict_security_mode_crypto====");
 
         let mut filter_auth = SgFilterAuth {
             cache_url: env::var("TARDIS_FW.CACHE.URL").unwrap(),
@@ -822,6 +813,13 @@ mod tests {
 
 
         filter_auth.destroy().await.unwrap();
+    }
+
+    fn decode_context(headers: &HeaderMap) -> TardisContext {
+        let config = TardisFuns::cs_config::<AuthConfig>(auth_constants::DOMAIN_CODE);
+        let ctx = headers.get(&config.head_key_context).unwrap();
+        let ctx = TardisFuns::crypto.base64.decode(ctx.to_str().unwrap()).unwrap();
+        TardisFuns::json.str_to_obj(&ctx).unwrap()
     }
 
     fn crypto_req(body: &str, serv_pub_key: &str, front_pub_key: &str, need_crypto_resp: bool) -> (String, String) {
