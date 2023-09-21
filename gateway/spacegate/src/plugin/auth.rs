@@ -12,6 +12,7 @@ use bios_auth::{
 use serde::{Deserialize, Serialize};
 use spacegate_kernel::{
     http::{self, HeaderMap, HeaderName, HeaderValue},
+    hyper,
     hyper::{body::Bytes, Body, Method},
     plugins::{
         context::{SgRouteFilterRequestAction, SgRoutePluginContext},
@@ -30,6 +31,7 @@ use std::{
     str::FromStr,
     sync::{Arc, OnceLock},
 };
+use tardis::web::poem_openapi::types::Type;
 use tardis::{
     async_trait,
     basic::{error::TardisError, result::TardisResult, tracing::TardisTracing},
@@ -125,7 +127,7 @@ impl SgPluginFilter for SgFilterAuth {
         let mut instance = INSTANCE.get_or_init(Default::default).write().await;
         if let Some((md5, handle)) = instance.as_ref() {
             if config_md5.eq(md5) {
-                log::debug!("[SG.Filter.Auth] have not found config change");
+                log::trace!("[SG.Filter.Auth] have not found config change");
                 return Ok(());
             } else {
                 handle.abort();
@@ -216,10 +218,20 @@ impl SgPluginFilter for SgFilterAuth {
 
         match auth_kernel_serv::auth(&mut auth_req, is_true_mix_req).await {
             Ok(auth_result) => {
-                log::debug!("[Plugin.Auth] auth return ok {:?}", auth_result);
+                if log::level_enabled!(log::Level::TRACE) {
+                    log::trace!("[Plugin.Auth] auth return ok {:?}", auth_result);
+                } else if log::level_enabled!(log::Level::DEBUG) {
+                    if let Some(ctx) = &auth_result.ctx {
+                        log::debug!("[Plugin.Auth] auth return ok ctx:{ctx}",);
+                    } else {
+                        log::debug!("[Plugin.Auth] auth return ok ctx:None",);
+                    };
+                }
+
                 if auth_result.e.is_none() {
                     ctx = success_auth_result_to_ctx(auth_result, req_body.into(), ctx)?;
                 } else if let Some(e) = auth_result.e {
+                    log::info!("[Plugin.Auth] auth failed:{e}");
                     ctx.set_action(SgRouteFilterRequestAction::Response);
                     ctx.response.set_status_code(StatusCode::from_str(&e.code).unwrap_or(StatusCode::BAD_GATEWAY));
                     ctx.response.set_body(json!({"code":format!("{}-gateway-cert-error",e.code),"message":e.message}).to_string());
@@ -228,7 +240,7 @@ impl SgPluginFilter for SgFilterAuth {
                 Ok((true, ctx))
             }
             Err(e) => {
-                log::warn!("[Plugin.Auth] auth return error {:?}", e);
+                log::info!("[Plugin.Auth] auth return error {:?}", e);
                 ctx.set_action(SgRouteFilterRequestAction::Response);
                 ctx.response.set_body(format!("[Plugin.Auth] auth return error:{e}"));
                 Ok((false, ctx))
@@ -239,7 +251,10 @@ impl SgPluginFilter for SgFilterAuth {
     async fn resp_filter(&self, _: &str, mut ctx: SgRoutePluginContext) -> TardisResult<(bool, SgRoutePluginContext)> {
         let head_key_crypto = self.auth_config.head_key_crypto.clone();
 
-        if ctx.request.get_headers().get(&head_key_crypto).is_none() || self.get_is_true_mix_req_from_header(ctx.request.get_headers()) {
+        // Return encryption will be skipped in three cases: there is no encryption header,
+        // the http code request is unsuccessful, and it is the return of the mix request
+        // (the inner request return has been encrypted once)
+        if ctx.request.get_headers().get(&head_key_crypto).is_none() || !ctx.response.status_code.is_success() || self.get_is_true_mix_req_from_header(ctx.request.get_headers()) {
             return Ok((true, ctx));
         }
 
@@ -257,6 +272,7 @@ impl SgPluginFilter for SgFilterAuth {
         }
         let encrypt_resp = auth_crypto_serv::encrypt_body(&ctx_to_auth_encrypt_req(&mut ctx).await?).await?;
         ctx.response.get_headers_mut().extend(hashmap_header_to_headermap(encrypt_resp.headers)?);
+        ctx.response.headers.remove(hyper::header::TRANSFER_ENCODING);
         ctx.response.set_body(encrypt_resp.body);
         self.cors(&mut ctx)?;
 
@@ -341,12 +357,13 @@ async fn ctx_to_auth_req(ctx: &mut SgRoutePluginContext) -> TardisResult<(AuthRe
             path: url.path().to_string(),
             query: url
                 .query()
+                .filter(|q| !q.is_empty())
                 .map(|q| {
                     q.split('&')
-                        .map(|s| {
-                            let a: Vec<_> = s.split('=').collect();
-                            (a[0].to_string(), a[1].to_string())
-                        })
+                        .filter(|s| !s.is_empty())
+                        .map(|s| s.split('=').collect::<Vec<_>>())
+                        .filter(|a| a.len() == 2)
+                        .map(|a| (a[0].to_string(), a[1].to_string()))
                         .collect()
                 })
                 .unwrap_or_default(),
@@ -354,7 +371,7 @@ async fn ctx_to_auth_req(ctx: &mut SgRoutePluginContext) -> TardisResult<(AuthRe
             host: url.host().unwrap_or("127.0.0.1").to_string(),
             port: url.port().map(|p| p.as_u16()).unwrap_or_else(|| if scheme == "https" { 443 } else { 80 }),
             headers,
-            body: Some(body),
+            body: if body.is_empty() { None } else { Some(body) },
         },
         req_body,
     ))
@@ -389,7 +406,7 @@ async fn ctx_to_auth_encrypt_req(ctx: &mut SgRoutePluginContext) -> TardisResult
     if !body.is_empty() {
         ctx.set_ext(plugin_constants::BEFORE_ENCRYPT_BODY, body.to_string());
     }
-
+    log::trace!("[Plugin.Auth] Before Encrypt Body {}", body.to_string());
     Ok(AuthEncryptReq {
         headers,
         body: String::from(body),
@@ -627,7 +644,26 @@ mod tests {
         let req_body = String::from_utf8(req_body).unwrap();
         assert_eq!(req_body, test_body_value.to_string());
 
-        //=========request============
+        //=========request GET============
+        let mut header = HeaderMap::new();
+        let (_crypto_data, bios_crypto_value) = crypto_req("", server_public_key.serialize().unwrap().as_ref(), front_pub_key.serialize().unwrap().as_ref(), true);
+        header.insert("Bios-Crypto", bios_crypto_value.parse().unwrap());
+        let ctx = SgRoutePluginContext::new_http(
+            Method::GET,
+            Uri::from_static("http://sg.idealworld.group/test1"),
+            Version::HTTP_11,
+            header,
+            Body::empty(),
+            "127.0.0.1:8080".parse().unwrap(),
+            "".to_string(),
+            None,
+        );
+        let (is_ok, mut before_filter_ctx) = filter_auth.req_filter("", ctx).await.unwrap();
+        assert!(is_ok);
+        let req_body = before_filter_ctx.request.dump_body().await.unwrap();
+        assert!(req_body.is_empty());
+
+        //=========request POST============
         let mut header = HeaderMap::new();
         let (crypto_data, bios_crypto_value) = crypto_req(
             test_body_value,

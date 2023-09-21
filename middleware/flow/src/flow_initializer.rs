@@ -68,7 +68,6 @@ pub async fn init_db(mut funs: TardisFunsInst) -> TardisResult<()> {
     funs.begin().await?;
     if check_initialized(&funs, &ctx).await? {
         init_basic_info(&funs).await?;
-        init_model(&funs, &ctx).await?;
     } else {
         let db_kind = TardisFuns::reldb().backend();
         let compatible_type = TardisFuns::reldb().compatible_type();
@@ -78,7 +77,6 @@ pub async fn init_db(mut funs: TardisFunsInst) -> TardisResult<()> {
         funs.db().init(flow_inst::ActiveModel::init(db_kind, None, compatible_type.clone())).await?;
         funs.db().init(flow_config::ActiveModel::init(db_kind, None, compatible_type.clone())).await?;
         init_rbum_data(&funs, &ctx).await?;
-        init_model(&funs, &ctx).await?;
     };
     funs.commit().await?;
     Ok(())
@@ -172,11 +170,13 @@ pub async fn truncate_data<'a>(funs: &TardisFunsInst) -> TardisResult<()> {
     funs.db().execute(Table::truncate().table(flow_state::Entity)).await?;
     funs.db().execute(Table::truncate().table(flow_model::Entity)).await?;
     funs.db().execute(Table::truncate().table(flow_transition::Entity)).await?;
+    funs.db().execute(Table::truncate().table(flow_inst::Entity)).await?;
+    funs.db().execute(Table::truncate().table(flow_config::Entity)).await?;
     funs.cache().flushdb().await?;
     Ok(())
 }
 
-async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+pub async fn init_flow_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
     let ticket_init_model = FlowModelServ::paginate_items(
         &FlowModelFilterReq {
             basic: RbumBasicFilterReq { ..Default::default() },
@@ -198,11 +198,11 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
         FlowModelServ::init_model(
             "TICKET",
             vec![
-                ("待处理", FlowSysStateKind::Start),
-                ("处理中", FlowSysStateKind::Progress),
-                ("待确认", FlowSysStateKind::Progress),
-                ("已关闭", FlowSysStateKind::Finish),
-                ("已撤销", FlowSysStateKind::Finish),
+                ("待处理", FlowSysStateKind::Start, ""),
+                ("处理中", FlowSysStateKind::Progress, ""),
+                ("待确认", FlowSysStateKind::Progress, ""),
+                ("已关闭", FlowSysStateKind::Finish, ""),
+                ("已撤销", FlowSysStateKind::Finish, ""),
             ],
             "待处理-处理中-待确认-已关闭-已撤销",
             vec![
@@ -210,18 +210,30 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     from_flow_state_name: "待处理".to_string(),
                     to_flow_state_name: "处理中".to_string(),
                     name: "立即处理".to_string(),
+                    double_check: Some(FlowTransitionDoubleCheckInfo {
+                        is_open: true,
+                        content: Some("确认将状态修改成处理中？".to_string()),
+                    }),
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
                     from_flow_state_name: "待处理".to_string(),
                     to_flow_state_name: "已撤销".to_string(),
                     name: "撤销".to_string(),
+                    double_check: Some(FlowTransitionDoubleCheckInfo {
+                        is_open: true,
+                        content: Some("确认将状态修改成已撤销？".to_string()),
+                    }),
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
                     from_flow_state_name: "待处理".to_string(),
                     to_flow_state_name: "待确认".to_string(),
                     name: "处理完成".to_string(),
+                    double_check: Some(FlowTransitionDoubleCheckInfo {
+                        is_open: true,
+                        content: Some("确认将状态修改成待确认？".to_string()),
+                    }),
                     guard_by_his_operators: Some(true),
                     ..Default::default()
                 },
@@ -229,18 +241,30 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     from_flow_state_name: "待处理".to_string(),
                     to_flow_state_name: "已关闭".to_string(),
                     name: "关闭".to_string(),
+                    double_check: Some(FlowTransitionDoubleCheckInfo {
+                        is_open: true,
+                        content: Some("确认将状态修改成已关闭？".to_string()),
+                    }),
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
                     from_flow_state_name: "待确认".to_string(),
                     to_flow_state_name: "已关闭".to_string(),
                     name: "确认解决".into(),
+                    double_check: Some(FlowTransitionDoubleCheckInfo {
+                        is_open: true,
+                        content: Some("确认将状态修改成已关闭？".to_string()),
+                    }),
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
                     from_flow_state_name: "待确认".to_string(),
                     to_flow_state_name: "处理中".to_string(),
                     name: "未解决".to_string(),
+                    double_check: Some(FlowTransitionDoubleCheckInfo {
+                        is_open: true,
+                        content: Some("确认将状态修改成处理中？".to_string()),
+                    }),
                     ..Default::default()
                 },
             ],
@@ -270,10 +294,10 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
         FlowModelServ::init_model(
             "REQ",
             vec![
-                ("待开始", FlowSysStateKind::Start),
-                ("进行中", FlowSysStateKind::Progress),
-                ("已完成", FlowSysStateKind::Finish),
-                ("已关闭", FlowSysStateKind::Finish),
+                ("待开始", FlowSysStateKind::Start, ""),
+                ("进行中", FlowSysStateKind::Progress, ""),
+                ("已完成", FlowSysStateKind::Finish, ""),
+                ("已关闭", FlowSysStateKind::Finish, ""),
             ],
             "待开始-进行中-已完成-已关闭",
             vec![
@@ -281,42 +305,70 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     from_flow_state_name: "待开始".to_string(),
                     to_flow_state_name: "进行中".to_string(),
                     name: "开始".to_string(),
+                    double_check: Some(FlowTransitionDoubleCheckInfo {
+                        is_open: true,
+                        content: Some("确认将状态修改成进行中？".to_string()),
+                    }),
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
                     from_flow_state_name: "待开始".to_string(),
                     to_flow_state_name: "已关闭".to_string(),
                     name: "关闭".to_string(),
+                    double_check: Some(FlowTransitionDoubleCheckInfo {
+                        is_open: true,
+                        content: Some("确认将状态修改成已关闭？".to_string()),
+                    }),
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
                     from_flow_state_name: "进行中".to_string(),
                     to_flow_state_name: "已完成".to_string(),
                     name: "完成".to_string(),
+                    double_check: Some(FlowTransitionDoubleCheckInfo {
+                        is_open: true,
+                        content: Some("确认将状态修改成已完成？".to_string()),
+                    }),
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
                     from_flow_state_name: "进行中".to_string(),
                     to_flow_state_name: "已关闭".to_string(),
                     name: "关闭".to_string(),
+                    double_check: Some(FlowTransitionDoubleCheckInfo {
+                        is_open: true,
+                        content: Some("确认将状态修改成已关闭？".to_string()),
+                    }),
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
                     from_flow_state_name: "已完成".to_string(),
                     to_flow_state_name: "进行中".to_string(),
                     name: "重新处理".into(),
+                    double_check: Some(FlowTransitionDoubleCheckInfo {
+                        is_open: true,
+                        content: Some("确认将状态修改成进行中？".to_string()),
+                    }),
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
                     from_flow_state_name: "已完成".to_string(),
                     to_flow_state_name: "已关闭".to_string(),
                     name: "关闭".to_string(),
+                    double_check: Some(FlowTransitionDoubleCheckInfo {
+                        is_open: true,
+                        content: Some("确认将状态修改成已关闭？".to_string()),
+                    }),
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
                     from_flow_state_name: "已关闭".to_string(),
                     to_flow_state_name: "待开始".to_string(),
                     name: "激活".to_string(),
+                    double_check: Some(FlowTransitionDoubleCheckInfo {
+                        is_open: true,
+                        content: Some("确认将状态修改成待开始？".to_string()),
+                    }),
                     ..Default::default()
                 },
             ],
@@ -345,12 +397,12 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
         FlowModelServ::init_model(
             "PROJ",
             vec![
-                ("待开始", FlowSysStateKind::Start),
-                ("进行中", FlowSysStateKind::Progress),
-                ("存在风险", FlowSysStateKind::Progress),
-                ("已完成", FlowSysStateKind::Progress),
-                ("已关闭", FlowSysStateKind::Finish),
-                ("已归档", FlowSysStateKind::Finish),
+                ("待开始", FlowSysStateKind::Start, ""),
+                ("进行中", FlowSysStateKind::Progress, ""),
+                ("存在风险", FlowSysStateKind::Progress, ""),
+                ("已完成", FlowSysStateKind::Progress, ""),
+                ("已关闭", FlowSysStateKind::Finish, ""),
+                ("已归档", FlowSysStateKind::Finish, ""),
             ],
             "待开始-进行中-存在风险-已完成-已关闭-已归档",
             vec![
@@ -358,190 +410,150 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     from_flow_state_name: "待开始".to_string(),
                     to_flow_state_name: "进行中".to_string(),
                     name: "开始".to_string(),
+                    double_check: Some(FlowTransitionDoubleCheckInfo {
+                        is_open: true,
+                        content: Some("确认将状态修改成进行中？".to_string()),
+                    }),
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
                     from_flow_state_name: "待开始".to_string(),
                     to_flow_state_name: "已关闭".to_string(),
                     name: "关闭".to_string(),
+                    double_check: Some(FlowTransitionDoubleCheckInfo {
+                        is_open: true,
+                        content: Some("确认将状态修改成已关闭？".to_string()),
+                    }),
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
                     from_flow_state_name: "进行中".to_string(),
                     to_flow_state_name: "已完成".to_string(),
                     name: "完成".to_string(),
+                    double_check: Some(FlowTransitionDoubleCheckInfo {
+                        is_open: true,
+                        content: Some("确认将状态修改成已完成？".to_string()),
+                    }),
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
                     from_flow_state_name: "进行中".to_string(),
                     to_flow_state_name: "存在风险".to_string(),
                     name: "有风险".to_string(),
+                    double_check: Some(FlowTransitionDoubleCheckInfo {
+                        is_open: true,
+                        content: Some("确认将状态修改成存在风险？".to_string()),
+                    }),
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
                     from_flow_state_name: "进行中".to_string(),
                     to_flow_state_name: "已关闭".to_string(),
                     name: "关闭".to_string(),
+                    double_check: Some(FlowTransitionDoubleCheckInfo {
+                        is_open: true,
+                        content: Some("确认将状态修改成已关闭？".to_string()),
+                    }),
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
                     from_flow_state_name: "存在风险".to_string(),
                     to_flow_state_name: "进行中".to_string(),
                     name: "正常".to_string(),
+                    double_check: Some(FlowTransitionDoubleCheckInfo {
+                        is_open: true,
+                        content: Some("确认将状态修改成进行中？".to_string()),
+                    }),
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
                     from_flow_state_name: "存在风险".to_string(),
                     to_flow_state_name: "已完成".to_string(),
                     name: "完成".to_string(),
+                    double_check: Some(FlowTransitionDoubleCheckInfo {
+                        is_open: true,
+                        content: Some("确认将状态修改成处理中？".to_string()),
+                    }),
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
                     from_flow_state_name: "存在风险".to_string(),
                     to_flow_state_name: "已关闭".to_string(),
                     name: "关闭".to_string(),
+                    double_check: Some(FlowTransitionDoubleCheckInfo {
+                        is_open: true,
+                        content: Some("确认将状态修改成已关闭？".to_string()),
+                    }),
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
                     from_flow_state_name: "已完成".to_string(),
                     to_flow_state_name: "进行中".to_string(),
                     name: "重新处理".to_string(),
+                    double_check: Some(FlowTransitionDoubleCheckInfo {
+                        is_open: true,
+                        content: Some("确认将状态修改成进行中？".to_string()),
+                    }),
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
                     from_flow_state_name: "已完成".to_string(),
                     to_flow_state_name: "已关闭".to_string(),
                     name: "关闭".to_string(),
+                    double_check: Some(FlowTransitionDoubleCheckInfo {
+                        is_open: true,
+                        content: Some("确认将状态修改成已关闭？".to_string()),
+                    }),
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
                     from_flow_state_name: "已完成".to_string(),
                     to_flow_state_name: "已归档".to_string(),
                     name: "归档".to_string(),
+                    double_check: Some(FlowTransitionDoubleCheckInfo {
+                        is_open: true,
+                        content: Some("确认将状态修改成已归档？".to_string()),
+                    }),
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
                     from_flow_state_name: "已关闭".to_string(),
                     to_flow_state_name: "待开始".to_string(),
                     name: "激活".to_string(),
+                    double_check: Some(FlowTransitionDoubleCheckInfo {
+                        is_open: true,
+                        content: Some("确认将状态修改成待开始？".to_string()),
+                    }),
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
                     from_flow_state_name: "已关闭".to_string(),
                     to_flow_state_name: "已归档".to_string(),
                     name: "归档".to_string(),
+                    double_check: Some(FlowTransitionDoubleCheckInfo {
+                        is_open: true,
+                        content: Some("确认将状态修改成已归档？".to_string()),
+                    }),
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
                     from_flow_state_name: "已归档".to_string(),
                     to_flow_state_name: "进行中".to_string(),
                     name: "重新激活".to_string(),
+                    double_check: Some(FlowTransitionDoubleCheckInfo {
+                        is_open: true,
+                        content: Some("确认将状态修改成进行中？".to_string()),
+                    }),
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
                     from_flow_state_name: "已归档".to_string(),
                     to_flow_state_name: "已关闭".to_string(),
                     name: "关闭".to_string(),
-                    ..Default::default()
-                },
-            ],
-            funs,
-            ctx,
-        )
-        .await?;
-    }
-    let ms_init_model = FlowModelServ::paginate_items(
-        &FlowModelFilterReq {
-            basic: RbumBasicFilterReq { ..Default::default() },
-            tags: Some(vec!["MS".to_string()]),
-            ..Default::default()
-        },
-        1,
-        1,
-        None,
-        None,
-        funs,
-        ctx,
-    )
-    .await?
-    .records
-    .pop();
-    if ms_init_model.is_none() {
-        FlowModelServ::init_model(
-            "MS",
-            vec![
-                ("待开始", FlowSysStateKind::Start),
-                ("进行中", FlowSysStateKind::Progress),
-                ("存在风险", FlowSysStateKind::Progress),
-                ("已完成", FlowSysStateKind::Progress),
-                ("已关闭", FlowSysStateKind::Finish),
-            ],
-            "待开始-进行中-存在风险-已完成-已关闭",
-            vec![
-                FlowTransitionInitInfo {
-                    from_flow_state_name: "待开始".to_string(),
-                    to_flow_state_name: "进行中".to_string(),
-                    name: "开始".to_string(),
-                    ..Default::default()
-                },
-                FlowTransitionInitInfo {
-                    from_flow_state_name: "待开始".to_string(),
-                    to_flow_state_name: "已关闭".to_string(),
-                    name: "关闭".to_string(),
-                    ..Default::default()
-                },
-                FlowTransitionInitInfo {
-                    from_flow_state_name: "进行中".to_string(),
-                    to_flow_state_name: "已完成".to_string(),
-                    name: "完成".to_string(),
-                    ..Default::default()
-                },
-                FlowTransitionInitInfo {
-                    from_flow_state_name: "进行中".to_string(),
-                    to_flow_state_name: "存在风险".to_string(),
-                    name: "有风险".to_string(),
-                    ..Default::default()
-                },
-                FlowTransitionInitInfo {
-                    from_flow_state_name: "进行中".to_string(),
-                    to_flow_state_name: "已关闭".to_string(),
-                    name: "关闭".to_string(),
-                    ..Default::default()
-                },
-                FlowTransitionInitInfo {
-                    from_flow_state_name: "存在风险".to_string(),
-                    to_flow_state_name: "进行中".to_string(),
-                    name: "正常".to_string(),
-                    ..Default::default()
-                },
-                FlowTransitionInitInfo {
-                    from_flow_state_name: "存在风险".to_string(),
-                    to_flow_state_name: "已完成".to_string(),
-                    name: "完成".to_string(),
-                    ..Default::default()
-                },
-                FlowTransitionInitInfo {
-                    from_flow_state_name: "存在风险".to_string(),
-                    to_flow_state_name: "已关闭".to_string(),
-                    name: "关闭".to_string(),
-                    ..Default::default()
-                },
-                FlowTransitionInitInfo {
-                    from_flow_state_name: "已完成".to_string(),
-                    to_flow_state_name: "进行中".to_string(),
-                    name: "重新处理".to_string(),
-                    ..Default::default()
-                },
-                FlowTransitionInitInfo {
-                    from_flow_state_name: "已完成".to_string(),
-                    to_flow_state_name: "已关闭".to_string(),
-                    name: "关闭".to_string(),
-                    ..Default::default()
-                },
-                FlowTransitionInitInfo {
-                    from_flow_state_name: "已关闭".to_string(),
-                    to_flow_state_name: "待开始".to_string(),
-                    name: "激活".to_string(),
+                    double_check: Some(FlowTransitionDoubleCheckInfo {
+                        is_open: true,
+                        content: Some("确认将状态修改成已关闭？".to_string()),
+                    }),
                     ..Default::default()
                 },
             ],
@@ -570,11 +582,11 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
         FlowModelServ::init_model(
             "ITER",
             vec![
-                ("待开始", FlowSysStateKind::Start),
-                ("进行中", FlowSysStateKind::Progress),
-                ("存在风险", FlowSysStateKind::Progress),
-                ("已完成", FlowSysStateKind::Progress),
-                ("已关闭", FlowSysStateKind::Finish),
+                ("待开始", FlowSysStateKind::Start, ""),
+                ("进行中", FlowSysStateKind::Progress, ""),
+                ("存在风险", FlowSysStateKind::Progress, ""),
+                ("已完成", FlowSysStateKind::Progress, ""),
+                ("已关闭", FlowSysStateKind::Finish, ""),
             ],
             "待开始-进行中-存在风险-已完成-已关闭",
             vec![
@@ -582,66 +594,110 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     from_flow_state_name: "待开始".to_string(),
                     to_flow_state_name: "进行中".to_string(),
                     name: "开始".to_string(),
+                    double_check: Some(FlowTransitionDoubleCheckInfo {
+                        is_open: true,
+                        content: Some("确认将状态修改成进行中？".to_string()),
+                    }),
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
                     from_flow_state_name: "待开始".to_string(),
                     to_flow_state_name: "已关闭".to_string(),
                     name: "关闭".to_string(),
+                    double_check: Some(FlowTransitionDoubleCheckInfo {
+                        is_open: true,
+                        content: Some("确认将状态修改成已关闭？".to_string()),
+                    }),
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
                     from_flow_state_name: "进行中".to_string(),
                     to_flow_state_name: "已完成".to_string(),
                     name: "完成".to_string(),
+                    double_check: Some(FlowTransitionDoubleCheckInfo {
+                        is_open: true,
+                        content: Some("确认将状态修改成已完成？".to_string()),
+                    }),
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
                     from_flow_state_name: "进行中".to_string(),
                     to_flow_state_name: "存在风险".to_string(),
                     name: "有风险".to_string(),
+                    double_check: Some(FlowTransitionDoubleCheckInfo {
+                        is_open: true,
+                        content: Some("确认将状态修改成存在风险？".to_string()),
+                    }),
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
                     from_flow_state_name: "进行中".to_string(),
                     to_flow_state_name: "已关闭".to_string(),
                     name: "关闭".to_string(),
+                    double_check: Some(FlowTransitionDoubleCheckInfo {
+                        is_open: true,
+                        content: Some("确认将状态修改成已关闭？".to_string()),
+                    }),
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
                     from_flow_state_name: "存在风险".to_string(),
                     to_flow_state_name: "进行中".to_string(),
                     name: "正常".to_string(),
+                    double_check: Some(FlowTransitionDoubleCheckInfo {
+                        is_open: true,
+                        content: Some("确认将状态修改成进行中？".to_string()),
+                    }),
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
                     from_flow_state_name: "存在风险".to_string(),
                     to_flow_state_name: "已完成".to_string(),
                     name: "完成".to_string(),
+                    double_check: Some(FlowTransitionDoubleCheckInfo {
+                        is_open: true,
+                        content: Some("确认将状态修改成已完成？".to_string()),
+                    }),
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
                     from_flow_state_name: "存在风险".to_string(),
                     to_flow_state_name: "已关闭".to_string(),
                     name: "关闭".to_string(),
+                    double_check: Some(FlowTransitionDoubleCheckInfo {
+                        is_open: true,
+                        content: Some("确认将状态修改成已关闭？".to_string()),
+                    }),
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
                     from_flow_state_name: "已完成".to_string(),
                     to_flow_state_name: "进行中".to_string(),
                     name: "重新处理".to_string(),
+                    double_check: Some(FlowTransitionDoubleCheckInfo {
+                        is_open: true,
+                        content: Some("确认将状态修改成进行中？".to_string()),
+                    }),
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
                     from_flow_state_name: "已完成".to_string(),
                     to_flow_state_name: "已关闭".to_string(),
                     name: "关闭".to_string(),
+                    double_check: Some(FlowTransitionDoubleCheckInfo {
+                        is_open: true,
+                        content: Some("确认将状态修改成已关闭？".to_string()),
+                    }),
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
                     from_flow_state_name: "已关闭".to_string(),
                     to_flow_state_name: "待开始".to_string(),
                     name: "激活".to_string(),
+                    double_check: Some(FlowTransitionDoubleCheckInfo {
+                        is_open: true,
+                        content: Some("确认将状态修改成待开始？".to_string()),
+                    }),
                     ..Default::default()
                 },
             ],
@@ -670,11 +726,11 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
         FlowModelServ::init_model(
             "TASK",
             vec![
-                ("待开始", FlowSysStateKind::Start),
-                ("进行中", FlowSysStateKind::Progress),
-                ("存在风险", FlowSysStateKind::Progress),
-                ("已完成", FlowSysStateKind::Progress),
-                ("已关闭", FlowSysStateKind::Finish),
+                ("待开始", FlowSysStateKind::Start, ""),
+                ("进行中", FlowSysStateKind::Progress, ""),
+                ("存在风险", FlowSysStateKind::Progress, ""),
+                ("已完成", FlowSysStateKind::Progress, ""),
+                ("已关闭", FlowSysStateKind::Finish, ""),
             ],
             "待开始-进行中-存在风险-已完成-已关闭",
             vec![
@@ -682,430 +738,109 @@ async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<
                     from_flow_state_name: "待开始".to_string(),
                     to_flow_state_name: "进行中".to_string(),
                     name: "开始".to_string(),
+                    double_check: Some(FlowTransitionDoubleCheckInfo {
+                        is_open: true,
+                        content: Some("确认将状态修改成进行中？".to_string()),
+                    }),
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
                     from_flow_state_name: "待开始".to_string(),
                     to_flow_state_name: "已关闭".to_string(),
                     name: "关闭".to_string(),
+                    double_check: Some(FlowTransitionDoubleCheckInfo {
+                        is_open: true,
+                        content: Some("确认将状态修改成已关闭？".to_string()),
+                    }),
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
                     from_flow_state_name: "进行中".to_string(),
                     to_flow_state_name: "已完成".to_string(),
                     name: "完成".to_string(),
+                    double_check: Some(FlowTransitionDoubleCheckInfo {
+                        is_open: true,
+                        content: Some("确认将状态修改成已完成？".to_string()),
+                    }),
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
                     from_flow_state_name: "进行中".to_string(),
                     to_flow_state_name: "存在风险".to_string(),
                     name: "有风险".to_string(),
+                    double_check: Some(FlowTransitionDoubleCheckInfo {
+                        is_open: true,
+                        content: Some("确认该任务存在风险？".to_string()),
+                    }),
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
                     from_flow_state_name: "进行中".to_string(),
                     to_flow_state_name: "已关闭".to_string(),
                     name: "关闭".to_string(),
+                    double_check: Some(FlowTransitionDoubleCheckInfo {
+                        is_open: true,
+                        content: Some("确认将状态修改成已关闭？".to_string()),
+                    }),
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
                     from_flow_state_name: "存在风险".to_string(),
                     to_flow_state_name: "进行中".to_string(),
                     name: "正常".to_string(),
+                    double_check: Some(FlowTransitionDoubleCheckInfo {
+                        is_open: true,
+                        content: Some("确认将状态修改成进行中？".to_string()),
+                    }),
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
                     from_flow_state_name: "存在风险".to_string(),
                     to_flow_state_name: "已完成".to_string(),
                     name: "完成".to_string(),
+                    double_check: Some(FlowTransitionDoubleCheckInfo {
+                        is_open: true,
+                        content: Some("确认将状态修改成已完成？".to_string()),
+                    }),
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
                     from_flow_state_name: "存在风险".to_string(),
                     to_flow_state_name: "已关闭".to_string(),
                     name: "关闭".to_string(),
+                    double_check: Some(FlowTransitionDoubleCheckInfo {
+                        is_open: true,
+                        content: Some("确认将状态修改成已关闭？".to_string()),
+                    }),
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
                     from_flow_state_name: "已完成".to_string(),
                     to_flow_state_name: "进行中".to_string(),
                     name: "重新处理".to_string(),
+                    double_check: Some(FlowTransitionDoubleCheckInfo {
+                        is_open: true,
+                        content: Some("确认将状态修改成进行中？".to_string()),
+                    }),
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
                     from_flow_state_name: "已完成".to_string(),
                     to_flow_state_name: "已关闭".to_string(),
                     name: "关闭".to_string(),
+                    double_check: Some(FlowTransitionDoubleCheckInfo {
+                        is_open: true,
+                        content: Some("确认将状态修改成已关闭？".to_string()),
+                    }),
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
                     from_flow_state_name: "已关闭".to_string(),
                     to_flow_state_name: "待开始".to_string(),
                     name: "激活".to_string(),
-                    ..Default::default()
-                },
-            ],
-            funs,
-            ctx,
-        )
-        .await?;
-    }
-    let tp_init_model = FlowModelServ::paginate_items(
-        &FlowModelFilterReq {
-            basic: RbumBasicFilterReq { ..Default::default() },
-            tags: Some(vec!["TP".to_string()]),
-            ..Default::default()
-        },
-        1,
-        1,
-        None,
-        None,
-        funs,
-        ctx,
-    )
-    .await?
-    .records
-    .pop();
-    if tp_init_model.is_none() {
-        FlowModelServ::init_model(
-            "TP",
-            vec![
-                ("待开始", FlowSysStateKind::Start),
-                ("进行中", FlowSysStateKind::Progress),
-                ("存在风险", FlowSysStateKind::Progress),
-                ("已完成", FlowSysStateKind::Progress),
-                ("已关闭", FlowSysStateKind::Finish),
-            ],
-            "待开始-进行中-存在风险-已完成-已关闭",
-            vec![
-                FlowTransitionInitInfo {
-                    from_flow_state_name: "待开始".to_string(),
-                    to_flow_state_name: "进行中".to_string(),
-                    name: "开始".to_string(),
-                    ..Default::default()
-                },
-                FlowTransitionInitInfo {
-                    from_flow_state_name: "待开始".to_string(),
-                    to_flow_state_name: "已关闭".to_string(),
-                    name: "关闭".to_string(),
-                    ..Default::default()
-                },
-                FlowTransitionInitInfo {
-                    from_flow_state_name: "进行中".to_string(),
-                    to_flow_state_name: "已完成".to_string(),
-                    name: "完成".to_string(),
-                    ..Default::default()
-                },
-                FlowTransitionInitInfo {
-                    from_flow_state_name: "进行中".to_string(),
-                    to_flow_state_name: "存在风险".to_string(),
-                    name: "有风险".to_string(),
-                    ..Default::default()
-                },
-                FlowTransitionInitInfo {
-                    from_flow_state_name: "进行中".to_string(),
-                    to_flow_state_name: "已关闭".to_string(),
-                    name: "关闭".to_string(),
-                    ..Default::default()
-                },
-                FlowTransitionInitInfo {
-                    from_flow_state_name: "存在风险".to_string(),
-                    to_flow_state_name: "进行中".to_string(),
-                    name: "正常".to_string(),
-                    ..Default::default()
-                },
-                FlowTransitionInitInfo {
-                    from_flow_state_name: "存在风险".to_string(),
-                    to_flow_state_name: "已完成".to_string(),
-                    name: "完成".to_string(),
-                    ..Default::default()
-                },
-                FlowTransitionInitInfo {
-                    from_flow_state_name: "存在风险".to_string(),
-                    to_flow_state_name: "已关闭".to_string(),
-                    name: "关闭".to_string(),
-                    ..Default::default()
-                },
-                FlowTransitionInitInfo {
-                    from_flow_state_name: "已完成".to_string(),
-                    to_flow_state_name: "进行中".to_string(),
-                    name: "重新处理".to_string(),
-                    ..Default::default()
-                },
-                FlowTransitionInitInfo {
-                    from_flow_state_name: "已完成".to_string(),
-                    to_flow_state_name: "已关闭".to_string(),
-                    name: "关闭".to_string(),
-                    ..Default::default()
-                },
-                FlowTransitionInitInfo {
-                    from_flow_state_name: "已关闭".to_string(),
-                    to_flow_state_name: "待开始".to_string(),
-                    name: "激活".to_string(),
-                    ..Default::default()
-                },
-            ],
-            funs,
-            ctx,
-        )
-        .await?;
-    }
-    let ts_init_model = FlowModelServ::paginate_items(
-        &FlowModelFilterReq {
-            basic: RbumBasicFilterReq { ..Default::default() },
-            tags: Some(vec!["TS".to_string()]),
-            ..Default::default()
-        },
-        1,
-        1,
-        None,
-        None,
-        funs,
-        ctx,
-    )
-    .await?
-    .records
-    .pop();
-    if ts_init_model.is_none() {
-        FlowModelServ::init_model(
-            "TS",
-            vec![
-                ("待开始", FlowSysStateKind::Start),
-                ("进行中", FlowSysStateKind::Progress),
-                ("存在风险", FlowSysStateKind::Progress),
-                ("已完成", FlowSysStateKind::Progress),
-                ("已关闭", FlowSysStateKind::Finish),
-            ],
-            "待开始-进行中-存在风险-已完成-已关闭",
-            vec![
-                FlowTransitionInitInfo {
-                    from_flow_state_name: "待开始".to_string(),
-                    to_flow_state_name: "进行中".to_string(),
-                    name: "开始".to_string(),
-                    ..Default::default()
-                },
-                FlowTransitionInitInfo {
-                    from_flow_state_name: "待开始".to_string(),
-                    to_flow_state_name: "已关闭".to_string(),
-                    name: "关闭".to_string(),
-                    ..Default::default()
-                },
-                FlowTransitionInitInfo {
-                    from_flow_state_name: "进行中".to_string(),
-                    to_flow_state_name: "已完成".to_string(),
-                    name: "完成".to_string(),
-                    ..Default::default()
-                },
-                FlowTransitionInitInfo {
-                    from_flow_state_name: "进行中".to_string(),
-                    to_flow_state_name: "存在风险".to_string(),
-                    name: "有风险".to_string(),
-                    ..Default::default()
-                },
-                FlowTransitionInitInfo {
-                    from_flow_state_name: "进行中".to_string(),
-                    to_flow_state_name: "已关闭".to_string(),
-                    name: "关闭".to_string(),
-                    ..Default::default()
-                },
-                FlowTransitionInitInfo {
-                    from_flow_state_name: "存在风险".to_string(),
-                    to_flow_state_name: "进行中".to_string(),
-                    name: "正常".to_string(),
-                    ..Default::default()
-                },
-                FlowTransitionInitInfo {
-                    from_flow_state_name: "存在风险".to_string(),
-                    to_flow_state_name: "已完成".to_string(),
-                    name: "完成".to_string(),
-                    ..Default::default()
-                },
-                FlowTransitionInitInfo {
-                    from_flow_state_name: "存在风险".to_string(),
-                    to_flow_state_name: "已关闭".to_string(),
-                    name: "关闭".to_string(),
-                    ..Default::default()
-                },
-                FlowTransitionInitInfo {
-                    from_flow_state_name: "已完成".to_string(),
-                    to_flow_state_name: "进行中".to_string(),
-                    name: "重新处理".to_string(),
-                    ..Default::default()
-                },
-                FlowTransitionInitInfo {
-                    from_flow_state_name: "已完成".to_string(),
-                    to_flow_state_name: "已关闭".to_string(),
-                    name: "关闭".to_string(),
-                    ..Default::default()
-                },
-                FlowTransitionInitInfo {
-                    from_flow_state_name: "已关闭".to_string(),
-                    to_flow_state_name: "待开始".to_string(),
-                    name: "激活".to_string(),
-                    ..Default::default()
-                },
-            ],
-            funs,
-            ctx,
-        )
-        .await?;
-    }
-    let issue_init_model = FlowModelServ::paginate_items(
-        &FlowModelFilterReq {
-            basic: RbumBasicFilterReq { ..Default::default() },
-            tags: Some(vec!["ISSUE".to_string()]),
-            ..Default::default()
-        },
-        1,
-        1,
-        None,
-        None,
-        funs,
-        ctx,
-    )
-    .await?
-    .records
-    .pop();
-    if issue_init_model.is_none() {
-        FlowModelServ::init_model(
-            "ISSUE",
-            vec![
-                ("待处理", FlowSysStateKind::Start),
-                ("修复中", FlowSysStateKind::Progress),
-                ("待确认", FlowSysStateKind::Progress),
-                ("已解决", FlowSysStateKind::Progress),
-                ("已关闭", FlowSysStateKind::Finish),
-            ],
-            "待处理-修复中-待确认-已解决-已关闭",
-            vec![
-                FlowTransitionInitInfo {
-                    from_flow_state_name: "待处理".to_string(),
-                    to_flow_state_name: "修复中".to_string(),
-                    name: "确认并修复".to_string(),
-                    ..Default::default()
-                },
-                FlowTransitionInitInfo {
-                    from_flow_state_name: "待处理".to_string(),
-                    to_flow_state_name: "待确认".to_string(),
-                    name: "修复完成".to_string(),
-                    ..Default::default()
-                },
-                FlowTransitionInitInfo {
-                    from_flow_state_name: "修复中".to_string(),
-                    to_flow_state_name: "待确认".to_string(),
-                    name: "修复完成".to_string(),
-                    ..Default::default()
-                },
-                FlowTransitionInitInfo {
-                    from_flow_state_name: "待确认".to_string(),
-                    to_flow_state_name: "已解决".to_string(),
-                    name: "确认修复".to_string(),
-                    ..Default::default()
-                },
-                FlowTransitionInitInfo {
-                    from_flow_state_name: "待确认".to_string(),
-                    to_flow_state_name: "修复中".to_string(),
-                    name: "未修复".to_string(),
-                    ..Default::default()
-                },
-                FlowTransitionInitInfo {
-                    from_flow_state_name: "已解决".to_string(),
-                    to_flow_state_name: "待处理".to_string(),
-                    name: "激活".to_string(),
-                    ..Default::default()
-                },
-                FlowTransitionInitInfo {
-                    from_flow_state_name: "已解决".to_string(),
-                    to_flow_state_name: "已关闭".to_string(),
-                    name: "关闭".to_string(),
-                    ..Default::default()
-                },
-                FlowTransitionInitInfo {
-                    from_flow_state_name: "已关闭".to_string(),
-                    to_flow_state_name: "待处理".to_string(),
-                    name: "激活".to_string(),
-                    ..Default::default()
-                },
-            ],
-            funs,
-            ctx,
-        )
-        .await?;
-    }
-    let cts_init_model = FlowModelServ::paginate_items(
-        &FlowModelFilterReq {
-            basic: RbumBasicFilterReq { ..Default::default() },
-            tags: Some(vec!["CTS".to_string()]),
-            ..Default::default()
-        },
-        1,
-        1,
-        None,
-        None,
-        funs,
-        ctx,
-    )
-    .await?
-    .records
-    .pop();
-    if cts_init_model.is_none() {
-        FlowModelServ::init_model(
-            "CTS",
-            vec![
-                ("待接收", FlowSysStateKind::Start),
-                ("已接收", FlowSysStateKind::Progress),
-                ("已退回", FlowSysStateKind::Finish),
-                ("已撤销", FlowSysStateKind::Finish),
-            ],
-            "待接收-已接收-已退回-已撤销",
-            vec![
-                FlowTransitionInitInfo {
-                    from_flow_state_name: "待接收".to_string(),
-                    to_flow_state_name: "已接收".to_string(),
-                    name: "接收".to_string(),
                     double_check: Some(FlowTransitionDoubleCheckInfo {
                         is_open: true,
-                        content: Some("确认接收该转测单？".to_string()),
-                    }),
-                    ..Default::default()
-                },
-                FlowTransitionInitInfo {
-                    from_flow_state_name: "待接收".to_string(),
-                    to_flow_state_name: "已撤销".to_string(),
-                    name: "撤销".to_string(),
-                    double_check: Some(FlowTransitionDoubleCheckInfo {
-                        is_open: true,
-                        content: Some("确认撤销该转测单？".to_string()),
-                    }),
-                    ..Default::default()
-                },
-                FlowTransitionInitInfo {
-                    from_flow_state_name: "待接收".to_string(),
-                    to_flow_state_name: "已退回".to_string(),
-                    name: "退回".to_string(),
-                    double_check: Some(FlowTransitionDoubleCheckInfo {
-                        is_open: true,
-                        content: Some("确认退回该转测单？".to_string()),
-                    }),
-                    ..Default::default()
-                },
-                FlowTransitionInitInfo {
-                    from_flow_state_name: "已退回".to_string(),
-                    to_flow_state_name: "已接收".to_string(),
-                    name: "重新提交".to_string(),
-                    double_check: Some(FlowTransitionDoubleCheckInfo {
-                        is_open: true,
-                        content: Some("确认重新提交该转测单？".to_string()),
-                    }),
-                    ..Default::default()
-                },
-                FlowTransitionInitInfo {
-                    from_flow_state_name: "已撤销".to_string(),
-                    to_flow_state_name: "待接收".to_string(),
-                    name: "重新提交".to_string(),
-                    double_check: Some(FlowTransitionDoubleCheckInfo {
-                        is_open: true,
-                        content: Some("确认重新提交该转测单？".to_string()),
+                        content: Some("确认将状态修改成待开始？".to_string()),
                     }),
                     ..Default::default()
                 },

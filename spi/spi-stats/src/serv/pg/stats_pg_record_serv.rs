@@ -60,7 +60,9 @@ pub(crate) async fn get_fact_record_latest(
         .iter()
         .map(|result| {
             let result = serde_json::Value::from_query_result_optional(result, "")?;
-            Ok(result.unwrap_or_default())
+            let mut value = result.unwrap_or_default();
+            value.as_object_mut().map(|obj|obj.remove("rn"));
+            Ok(value)
         })
         .collect::<TardisResult<Vec<serde_json::Value>>>()?;
     Ok(values)

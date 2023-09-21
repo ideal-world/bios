@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use bios_basic::dto::BasicQueryCondInfo;
+use bios_basic::{basic_enumeration::BasicQueryOpKind, dto::BasicQueryCondInfo};
 use serde::{Deserialize, Serialize};
 use tardis::{
     basic::field::TrimString,
@@ -144,12 +144,18 @@ impl SearchItemSearchCtxReq {
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Default)]
 pub struct AdvSearchItemQueryReq {
     pub group_by_or: Option<bool>,
-    pub create_time_start: Option<DateTime<Utc>>,
-    pub create_time_end: Option<DateTime<Utc>>,
-    pub update_time_start: Option<DateTime<Utc>>,
-    pub update_time_end: Option<DateTime<Utc>>,
     // Extended filtering conditions
-    pub ext: Option<Vec<BasicQueryCondInfo>>,
+    pub ext: Option<Vec<AdvBasicQueryCondInfo>>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[cfg_attr(feature = "default", derive(poem_openapi::Object))]
+pub struct AdvBasicQueryCondInfo {
+    pub in_ext: Option<bool>,
+    #[oai(validator(min_length = "1"))]
+    pub field: String,
+    pub op: BasicQueryOpKind,
+    pub value: Value,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Default)]

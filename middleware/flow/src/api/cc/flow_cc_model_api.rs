@@ -153,7 +153,7 @@ impl FlowCcModelApi {
         let mut result = vec![];
         for item in req.0.bind_model_objs {
             let model_id = FlowModelServ::add_custom_model(&item.tag, &proj_template_id, None, &funs, &ctx.0).await.ok();
-            result.push(FlowModelAddCustomModelResp { tag: item.tag, model_id })
+            result.push(FlowModelAddCustomModelResp { tag: item.tag, model_id });
         }
         funs.commit().await?;
         TardisResp::ok(result)

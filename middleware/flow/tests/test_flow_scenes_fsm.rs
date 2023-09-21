@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind;
 use bios_basic::test::test_http_client::TestHttpClient;
 
 use bios_mw_flow::dto::flow_config_dto::FlowConfigModifyReq;
@@ -8,13 +9,13 @@ use bios_mw_flow::dto::flow_inst_dto::{
     FlowInstFindStateAndTransitionsReq, FlowInstFindStateAndTransitionsResp, FlowInstStartReq, FlowInstTransferReq, FlowInstTransferResp,
 };
 use bios_mw_flow::dto::flow_model_dto::{
-    FlowModelAddCustomModelItemReq, FlowModelAddCustomModelReq, FlowModelAddCustomModelResp, FlowModelAggResp, FlowModelModifyReq, FlowModelSortStateInfoReq,
-    FlowModelSortStatesReq, FlowModelSummaryResp, FlowModelUnbindStateReq, FlowTemplateModelResp,
+    FlowModelAddCustomModelItemReq, FlowModelAddCustomModelReq, FlowModelAddCustomModelResp, FlowModelAggResp, FlowModelBindStateReq, FlowModelFindRelStateResp,
+    FlowModelModifyReq, FlowModelSortStateInfoReq, FlowModelSortStatesReq, FlowModelSummaryResp, FlowModelUnbindStateReq, FlowTemplateModelResp,
 };
-use bios_mw_flow::dto::flow_state_dto::FlowStateSummaryResp;
+use bios_mw_flow::dto::flow_state_dto::{FlowStateAddReq, FlowStateSummaryResp, FlowSysStateKind};
 use bios_mw_flow::dto::flow_transition_dto::{
-    FlowTransitionActionChangeInfo, FlowTransitionActionChangeKind, FlowTransitionDoubleCheckInfo, FlowTransitionModifyReq, StateChangeCondition, StateChangeConditionItem,
-    StateChangeConditionOp,
+    FlowTransitionActionChangeInfo, FlowTransitionActionChangeKind, FlowTransitionAddReq, FlowTransitionDoubleCheckInfo, FlowTransitionModifyReq, StateChangeCondition,
+    StateChangeConditionItem, StateChangeConditionOp,
 };
 
 use bios_mw_flow::dto::flow_var_dto::{FlowVarInfo, RbumDataTypeKind, RbumWidgetTypeKind};
@@ -42,24 +43,16 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
 
     flow_client.set_auth(&ctx)?;
 
-    // find default model
+    // 1. enter platform
+    // 1-1. check default model
     let mut models: TardisPage<FlowModelSummaryResp> = flow_client.get("/cc/model/?tag=REQ&page_number=1&page_size=100").await;
     let init_model = models.records.pop().unwrap();
     info!("models: {:?}", init_model);
     assert_eq!(&init_model.name, "待开始-进行中-已完成-已关闭");
     assert_eq!(&init_model.owner, "");
-
-    // mock tenant content
-    ctx.own_paths = "t1".to_string();
-    flow_client.set_auth(&ctx)?;
-    // Get states list
-    let states: TardisPage<FlowStateSummaryResp> = flow_client.get("/cc/state?tag=REQ&is_global=true&enabled=true&page_number=1&page_size=100").await;
-    let init_state_id = states.records[0].id.clone();
-
-    let template_id = "mock_template_id".to_string();
-    // 1. set config
+    // 1-2. set config
     let mut modify_configs = vec![];
-    let codes = vec!["REQ", "MS", "PROJ", "ITER", "TICKET"];
+    let codes = vec!["REQ", "PROJ", "ITER", "TICKET"];
     for code in codes {
         modify_configs.push(FlowConfigModifyReq {
             code: code.to_string(),
@@ -69,307 +62,241 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
     let _: Void = flow_client.post("/cs/config", &modify_configs).await;
     let configs: Option<TardisPage<KvItemSummaryResp>> = flow_client.get("/cs/config").await;
     info!("configs_new: {:?}", configs);
-    // 2.Get model based on template id
-    let result: HashMap<String, FlowTemplateModelResp> = flow_client.get(&format!("/cc/model/get_models?tag_ids=REQ&temp_id={}", template_id)).await;
-    let req_model_id = result.get("REQ").unwrap().id.clone();
+    // 1-3. mock import data
+    ctx.own_paths = "t2/app02".to_string();
+    flow_client.set_auth(&ctx)?;
+    let template_id = "app01".to_string();
+    let mut modify_configs = vec![];
+    let tags = vec!["REQ", "PROJ", "ITER", "TICKET", "MOCK"];
+    for tag in tags {
+        modify_configs.push(FlowModelAddCustomModelItemReq {
+            tag: tag.to_string(),
+            feature_template_id: None,
+        });
+    }
+    let result: Vec<FlowModelAddCustomModelResp> = flow_client
+        .post(
+            "/cc/model/add_custom_model",
+            &FlowModelAddCustomModelReq {
+                proj_template_id: Some(template_id.clone()),
+                bind_model_objs: modify_configs,
+            },
+        )
+        .await;
+    assert!(result.into_iter().find(|resp| resp.tag == "MOCK").unwrap().model_id.is_none());
 
-    let result: HashMap<String, FlowTemplateModelResp> = flow_client.get(&format!("/cc/model/get_models?tag_ids=TICKET&temp_id={}", template_id)).await;
+    let rel_business_obj_id = TardisFuns::field.nanoid();
+    let _: String = flow_client
+        .post(
+            "/ci/inst/bind",
+            &FlowInstBindReq {
+                tag: "ITER".to_string(),
+                rel_business_obj_id: rel_business_obj_id.clone(),
+                create_vars: None,
+                current_state_name: Some("进行中".to_string()),
+            },
+        )
+        .await;
+    let mut rel_business_objs = vec![];
+    for i in 5..8 {
+        let rel_business_obj_id_i = format!("{}{}", rel_business_obj_id, i);
+        rel_business_objs.push(FlowInstBindRelObjReq {
+            rel_business_obj_id: Some(rel_business_obj_id_i),
+            current_state_name: Some("进行中".to_string()),
+            own_paths: Some("t2/app02".to_string()),
+            owner: Some("".to_string()),
+        });
+    }
+    let _: Vec<FlowInstBatchBindResp> = flow_client
+        .post(
+            "/ci/inst/batch_bind",
+            &FlowInstBatchBindReq {
+                tag: "ITER".to_string(),
+                rel_business_objs,
+            },
+        )
+        .await;
+    let mut rel_business_objs = vec![];
+    for i in 0..10 {
+        let rel_business_obj_id = format!("-c9rgVZOdUH_MbqofO4vc{}", i);
+        rel_business_objs.push(FlowInstBindRelObjReq {
+            rel_business_obj_id: Some(rel_business_obj_id),
+            current_state_name: Some("进行中".to_string()),
+            own_paths: Some("t2/app02".to_string()),
+            owner: Some("".to_string()),
+        });
+    }
+    let _: Vec<FlowInstBatchBindResp> = flow_client
+        .post(
+            "/ci/inst/batch_bind",
+            &FlowInstBatchBindReq {
+                tag: "ITER".to_string(),
+                rel_business_objs,
+            },
+        )
+        .await;
+    // 2. enter tenant
+    ctx.own_paths = "t1".to_string();
+    flow_client.set_auth(&ctx)?;
+    // 2-1. Get states list
+    let req_states: TardisPage<FlowStateSummaryResp> = flow_client.get("/cc/state?tag=REQ&enabled=true&page_number=1&page_size=100").await;
+    let init_state_id = req_states.records[0].id.clone();
+
+    let mock_template_id = "mock_template_id".to_string();
+    // 2-2. create flow models by template_id
+    let result: HashMap<String, FlowTemplateModelResp> = flow_client.get(&format!("/cc/model/get_models?tag_ids=REQ,TICKET,ITER,PROJ&temp_id={}", mock_template_id)).await;
+    let req_model_id = result.get("REQ").unwrap().id.clone();
+    let req_model_agg: FlowModelAggResp = flow_client.get(&format!("/cc/model/{}", req_model_id)).await;
     let ticket_model_id = result.get("TICKET").unwrap().id.clone();
     let ticket_model_agg: FlowModelAggResp = flow_client.get(&format!("/cc/model/{}", ticket_model_id)).await;
-
-    let result: HashMap<String, FlowTemplateModelResp> = flow_client.get(&format!("/cc/model/get_models?tag_ids=ITER&temp_id={}", template_id)).await;
     let iter_model_id = result.get("ITER").unwrap().id.clone();
     let iter_model_agg: FlowModelAggResp = flow_client.get(&format!("/cc/model/{}", iter_model_id)).await;
-
-    let result: HashMap<String, FlowTemplateModelResp> = flow_client.get(&format!("/cc/model/get_models?tag_ids=PROJ&temp_id={}", template_id)).await;
     let proj_model_id = result.get("PROJ").unwrap().id.clone();
     let proj_model_agg: FlowModelAggResp = flow_client.get(&format!("/cc/model/{}", proj_model_id)).await;
-
+    // 2-3. check find rel states
+    let _: Void = flow_client
+        .post(
+            &format!("/cc/model/{}/unbind_state", &proj_model_id),
+            &FlowModelUnbindStateReq {
+                state_id: proj_model_agg.states.iter().find(|state| state.name == "已关闭").unwrap().id.clone(),
+            },
+        )
+        .await;
+    let result: Vec<FlowModelFindRelStateResp> = flow_client.get(&format!("/cc/model/find_rel_status?tag=PROJ&rel_template_id={}", mock_template_id)).await;
+    assert!(!result.into_iter().any(|state| state.name == "已关闭"));
     // 3.modify model
-    // resort state
+    // 3-1. resort state
     let mut sort_states = vec![];
-    for (i, state) in states.records.iter().enumerate() {
+    for (i, state) in req_states.records.iter().enumerate() {
         sort_states.push(FlowModelSortStateInfoReq {
             state_id: state.id.clone(),
             sort: i as i64 + 1,
         });
     }
     let _: Void = flow_client.post(&format!("/cc/model/{}/resort_state", &req_model_id), &FlowModelSortStatesReq { sort_states }).await;
-    // get model detail
-    let model_agg_old: FlowModelAggResp = flow_client.get(&format!("/cc/model/{}", &req_model_id)).await;
-    // Set initial state
-    let _: Void = flow_client
-        .patch(
-            &format!("/cc/model/{}", req_model_id),
-            &FlowModelModifyReq {
-                init_state_id: Some(init_state_id.clone()),
-                ..Default::default()
-            },
-        )
-        .await;
-    // modify transitions
-    let trans_start = model_agg_old.states.iter().find(|state| state.name == "待开始").unwrap().transitions.iter().find(|trans| trans.name == "开始").unwrap();
-    let trans_complate = model_agg_old.states.iter().find(|state| state.name == "进行中").unwrap().transitions.iter().find(|trans| trans.name == "完成").unwrap();
-    let trans_close = model_agg_old.states.iter().find(|state| state.name == "进行中").unwrap().transitions.iter().find(|trans| trans.name == "关闭").unwrap();
+    // 3-2. modify models
+    let trans_start = req_model_agg.states.iter().find(|state| state.name == "待开始").unwrap().transitions.iter().find(|trans| trans.name == "开始").unwrap();
+    let trans_complate = req_model_agg.states.iter().find(|state| state.name == "进行中").unwrap().transitions.iter().find(|trans| trans.name == "完成").unwrap();
+    let trans_close = req_model_agg.states.iter().find(|state| state.name == "进行中").unwrap().transitions.iter().find(|trans| trans.name == "关闭").unwrap();
 
     let _: Void = flow_client
         .patch(
             &format!("/cc/model/{}", req_model_id),
             &FlowModelModifyReq {
-                modify_transitions: Some(vec![FlowTransitionModifyReq {
-                    id: trans_start.id.clone().into(),
-                    name: Some(format!("{}-modify", &trans_start.name).into()),
-                    from_flow_state_id: None,
-                    to_flow_state_id: None,
-                    transfer_by_auto: Some(true),
-                    transfer_by_timer: None,
-                    guard_by_creator: None,
-                    guard_by_his_operators: None,
-                    guard_by_assigned: None,
-                    guard_by_spec_account_ids: None,
-                    guard_by_spec_role_ids: None,
-                    guard_by_spec_org_ids: None,
-                    guard_by_other_conds: None,
-                    vars_collect: Some(vec![
-                        FlowVarInfo {
-                            name: "assigned_to".to_string(),
-                            label: "负责人".to_string(),
-                            data_type: RbumDataTypeKind::STRING,
-                            widget_type: RbumWidgetTypeKind::SELECT,
-                            required: Some(true),
-                            ..Default::default()
-                        },
-                        FlowVarInfo {
-                            name: "start_end".to_string(),
-                            label: "计划周期".to_string(),
-                            data_type: RbumDataTypeKind::DATETIME,
-                            widget_type: RbumWidgetTypeKind::DATETIME,
-                            ..Default::default()
-                        },
-                    ]),
-                    action_by_pre_callback: None,
-                    action_by_post_callback: None,
-                    action_by_post_changes: Some(vec![FlowTransitionActionChangeInfo {
-                        kind: FlowTransitionActionChangeKind::State,
-                        describe: "".to_string(),
-                        obj_tag: Some("TICKET".to_string()),
-                        obj_current_state_id: Some(vec![ticket_model_agg.init_state_id.clone()]),
-                        change_condition: Some(StateChangeCondition {
+                init_state_id: Some(init_state_id.clone()),
+                modify_transitions: Some(vec![
+                    FlowTransitionModifyReq {
+                        id: trans_start.id.clone().into(),
+                        name: Some(format!("{}-modify", &trans_start.name).into()),
+                        from_flow_state_id: None,
+                        to_flow_state_id: None,
+                        transfer_by_auto: Some(true),
+                        transfer_by_timer: None,
+                        guard_by_creator: None,
+                        guard_by_his_operators: None,
+                        guard_by_assigned: None,
+                        guard_by_spec_account_ids: None,
+                        guard_by_spec_role_ids: None,
+                        guard_by_spec_org_ids: None,
+                        guard_by_other_conds: None,
+                        vars_collect: Some(vec![
+                            FlowVarInfo {
+                                name: "assigned_to".to_string(),
+                                label: "负责人".to_string(),
+                                data_type: RbumDataTypeKind::STRING,
+                                widget_type: RbumWidgetTypeKind::SELECT,
+                                required: Some(true),
+                                ..Default::default()
+                            },
+                            FlowVarInfo {
+                                name: "start_end".to_string(),
+                                label: "计划周期".to_string(),
+                                data_type: RbumDataTypeKind::DATETIME,
+                                widget_type: RbumWidgetTypeKind::DATETIME,
+                                ..Default::default()
+                            },
+                        ]),
+                        action_by_pre_callback: None,
+                        action_by_post_callback: None,
+                        action_by_post_changes: Some(vec![FlowTransitionActionChangeInfo {
+                            kind: FlowTransitionActionChangeKind::State,
+                            describe: "".to_string(),
+                            obj_tag: Some("TICKET".to_string()),
+                            obj_current_state_id: Some(vec![ticket_model_agg.init_state_id.clone()]),
+                            change_condition: Some(StateChangeCondition {
+                                current: true,
+                                conditions: vec![StateChangeConditionItem {
+                                    obj_tag: Some("ITER".to_string()),
+                                    state_id: vec![iter_model_agg.init_state_id.clone()],
+                                    op: StateChangeConditionOp::And,
+                                }],
+                            }),
+                            changed_state_id: ticket_model_agg.states.iter().find(|state| state.name == "处理中").unwrap().id.clone(),
                             current: true,
-                            conditions: vec![StateChangeConditionItem {
-                                obj_tag: Some("ITER".to_string()),
-                                state_id: vec![iter_model_agg.init_state_id.clone()],
-                                op: StateChangeConditionOp::And,
-                            }],
+                            var_name: "".to_string(),
+                            changed_val: None,
+                        }]),
+                        double_check: Some(FlowTransitionDoubleCheckInfo {
+                            is_open: true,
+                            content: Some("再次确认该操作生效".to_string()),
                         }),
-                        changed_state_id: ticket_model_agg.states.iter().find(|state| state.name == "处理中").unwrap().id.clone(),
-                        current: true,
-                        var_name: "".to_string(),
-                        changed_val: None,
-                    }]),
-                    double_check: Some(FlowTransitionDoubleCheckInfo {
-                        is_open: true,
-                        content: Some("再次确认该操作生效".to_string()),
-                    }),
-                }]),
+                    },
+                    FlowTransitionModifyReq {
+                        id: trans_complate.id.clone().into(),
+                        name: Some(format!("{}-modify", &trans_complate.name).into()),
+                        from_flow_state_id: None,
+                        to_flow_state_id: None,
+                        transfer_by_auto: Some(true),
+                        transfer_by_timer: None,
+                        guard_by_creator: None,
+                        guard_by_his_operators: None,
+                        guard_by_assigned: None,
+                        guard_by_spec_account_ids: None,
+                        guard_by_spec_role_ids: None,
+                        guard_by_spec_org_ids: None,
+                        guard_by_other_conds: None,
+                        vars_collect: None,
+                        action_by_pre_callback: None,
+                        action_by_post_callback: None,
+                        action_by_post_changes: Some(vec![FlowTransitionActionChangeInfo {
+                            kind: FlowTransitionActionChangeKind::Var,
+                            describe: "".to_string(),
+                            obj_tag: Some("".to_string()),
+                            obj_current_state_id: None,
+                            change_condition: None,
+                            changed_state_id: "".to_string(),
+                            current: false,
+                            var_name: "id".to_string(),
+                            changed_val: Some(json!("xxx".to_string())),
+                        }]),
+                        double_check: None,
+                    },
+                    FlowTransitionModifyReq {
+                        id: trans_close.id.clone().into(),
+                        name: None,
+                        from_flow_state_id: None,
+                        to_flow_state_id: None,
+                        transfer_by_auto: None,
+                        transfer_by_timer: None,
+                        guard_by_creator: None,
+                        guard_by_his_operators: None,
+                        guard_by_assigned: Some(true),
+                        guard_by_spec_account_ids: None,
+                        guard_by_spec_role_ids: None,
+                        guard_by_spec_org_ids: None,
+                        guard_by_other_conds: None,
+                        vars_collect: None,
+                        action_by_pre_callback: None,
+                        action_by_post_callback: None,
+                        action_by_post_changes: None,
+                        double_check: None,
+                    },
+                ]),
                 ..Default::default()
             },
         )
         .await;
-    let _: Void = flow_client
-        .patch(
-            &format!("/cc/model/{}", req_model_id),
-            &FlowModelModifyReq {
-                modify_transitions: Some(vec![FlowTransitionModifyReq {
-                    id: trans_complate.id.clone().into(),
-                    name: Some(format!("{}-modify", &trans_complate.name).into()),
-                    from_flow_state_id: None,
-                    to_flow_state_id: None,
-                    transfer_by_auto: Some(true),
-                    transfer_by_timer: None,
-                    guard_by_creator: None,
-                    guard_by_his_operators: None,
-                    guard_by_assigned: None,
-                    guard_by_spec_account_ids: None,
-                    guard_by_spec_role_ids: None,
-                    guard_by_spec_org_ids: None,
-                    guard_by_other_conds: None,
-                    vars_collect: None,
-                    action_by_pre_callback: None,
-                    action_by_post_callback: None,
-                    action_by_post_changes: Some(vec![FlowTransitionActionChangeInfo {
-                        kind: FlowTransitionActionChangeKind::Var,
-                        describe: "".to_string(),
-                        obj_tag: Some("".to_string()),
-                        obj_current_state_id: None,
-                        change_condition: None,
-                        changed_state_id: "".to_string(),
-                        current: false,
-                        var_name: "id".to_string(),
-                        changed_val: Some(json!("xxx".to_string())),
-                    }]),
-                    double_check: None,
-                }]),
-                ..Default::default()
-            },
-        )
-        .await;
-    let _: Void = flow_client
-        .patch(
-            &format!("/cc/model/{}", req_model_id),
-            &FlowModelModifyReq {
-                modify_transitions: Some(vec![FlowTransitionModifyReq {
-                    id: trans_close.id.clone().into(),
-                    name: None,
-                    from_flow_state_id: None,
-                    to_flow_state_id: None,
-                    transfer_by_auto: None,
-                    transfer_by_timer: None,
-                    guard_by_creator: None,
-                    guard_by_his_operators: None,
-                    guard_by_assigned: Some(true),
-                    guard_by_spec_account_ids: None,
-                    guard_by_spec_role_ids: None,
-                    guard_by_spec_org_ids: None,
-                    guard_by_other_conds: None,
-                    vars_collect: None,
-                    action_by_pre_callback: None,
-                    action_by_post_callback: None,
-                    action_by_post_changes: None,
-                    double_check: None,
-                }]),
-                ..Default::default()
-            },
-        )
-        .await;
-    let mut model_agg_new: FlowModelAggResp = flow_client.get(&format!("/cc/model/{}", req_model_id)).await;
-    assert!(!model_agg_new.states.first_mut().unwrap().transitions.iter_mut().any(|trans| trans.transfer_by_auto).is_empty());
-    info!("model_agg_new: {:?}", model_agg_new);
-    // 4.Start a instance
-    // mock tenant content
-    ctx.own_paths = "t1/app01".to_string();
-    flow_client.set_auth(&ctx)?;
-    let ticket_inst_rel_id = "mock-ticket-obj-id".to_string();
-    let iter_inst_rel_id1 = "mock-iter-obj-id1".to_string();
-    let iter_inst_rel_id2 = "mock-iter-obj-id2".to_string();
-    let req_inst_id1: String = flow_client
-        .post(
-            "/cc/inst",
-            &FlowInstStartReq {
-                tag: "REQ".to_string(),
-                create_vars: None,
-                rel_business_obj_id: TardisFuns::field.nanoid(),
-            },
-        )
-        .await;
-    let req_inst_id2: String = flow_client
-        .post(
-            "/cc/inst",
-            &FlowInstStartReq {
-                tag: "REQ".to_string(),
-                create_vars: None,
-                rel_business_obj_id: TardisFuns::field.nanoid(),
-            },
-        )
-        .await;
-    let ticket_inst_id: String = flow_client
-        .post(
-            "/cc/inst",
-            &FlowInstStartReq {
-                tag: "TICKET".to_string(),
-                create_vars: None,
-                rel_business_obj_id: ticket_inst_rel_id.clone(),
-            },
-        )
-        .await;
-    let _iter_inst_id: String = flow_client
-        .post(
-            "/cc/inst",
-            &FlowInstStartReq {
-                tag: "ITER".to_string(),
-                create_vars: None,
-                rel_business_obj_id: iter_inst_rel_id1.clone(),
-            },
-        )
-        .await;
-    let _iter_inst_id: String = flow_client
-        .post(
-            "/cc/inst",
-            &FlowInstStartReq {
-                tag: "ITER".to_string(),
-                create_vars: None,
-                rel_business_obj_id: iter_inst_rel_id2.clone(),
-            },
-        )
-        .await;
-    // Get the state of a task that can be transferable
-    let next_transitions: Vec<FlowInstFindNextTransitionResp> =
-        flow_client.put(&format!("/cc/inst/{}/transition/next", req_inst_id1), &FlowInstFindNextTransitionsReq { vars: None }).await;
-    assert_eq!(next_transitions.len(), 2);
-    flow_client.set_auth(&TardisContext {
-        own_paths: "".to_string(),
-        ak: "".to_string(),
-        roles: vec!["admin".to_string()],
-        groups: vec![],
-        owner: "a001".to_string(),
-        ..Default::default()
-    })?;
-    let next_transitions: Vec<FlowInstFindNextTransitionResp> =
-        flow_client.put(&format!("/cc/inst/{}/transition/next", req_inst_id1), &FlowInstFindNextTransitionsReq { vars: None }).await;
-    assert_eq!(next_transitions.len(), 2);
-    assert!(next_transitions.iter().any(|trans| trans.next_flow_transition_name.contains("开始") && trans.vars_collect.as_ref().unwrap().len() == 2));
-    assert!(next_transitions.iter().any(|trans| trans.next_flow_transition_name.contains("关闭")));
-    // Find the state and transfer information of the specified instances in batch
-    let state_and_next_transitions: Vec<FlowInstFindStateAndTransitionsResp> = flow_client
-        .put(
-            "/cc/inst/batch/state_transitions",
-            &vec![FlowInstFindStateAndTransitionsReq {
-                flow_inst_id: req_inst_id1.clone(),
-                vars: None,
-            }],
-        )
-        .await;
-    assert_eq!(state_and_next_transitions.len(), 1);
-    assert_eq!(state_and_next_transitions[0].current_flow_state_name, "待开始");
-    assert!(state_and_next_transitions[0]
-        .next_flow_transitions
-        .iter()
-        .any(|trans| trans.next_flow_transition_name.contains("开始") && trans.vars_collect.as_ref().unwrap().len() == 2));
-    assert!(state_and_next_transitions[0].next_flow_transitions.iter().any(|trans| trans.next_flow_transition_name.contains("关闭")));
-    // Transfer task status
-    let transfer: FlowInstTransferResp = flow_client
-        .put(
-            &format!("/cc/inst/{}/transition/transfer", req_inst_id1),
-            &FlowInstTransferReq {
-                flow_transition_id: state_and_next_transitions[0]
-                    .next_flow_transitions
-                    .iter()
-                    .find(|&trans| trans.next_flow_transition_name.contains("关闭"))
-                    .unwrap()
-                    .next_flow_transition_id
-                    .to_string(),
-                // vars: Some(TardisFuns::json.json_to_obj(json!({ "reason":"测试关闭" })).unwrap()),
-                vars: Some(TardisFuns::json.json_to_obj(json!({})).unwrap()),
-                message: None,
-            },
-        )
-        .await;
-    assert_eq!(
-        transfer.new_flow_state_id,
-        state_and_next_transitions[0].next_flow_transitions.iter().find(|&trans| trans.next_flow_transition_name.contains("关闭")).unwrap().next_flow_state_id.clone()
-    );
-    let state_unbind_error = flow_client
-        .post_resp::<FlowModelUnbindStateReq, Void>(
-            &format!("/cc/model/{}/unbind_state", &req_model_id),
-            &FlowModelUnbindStateReq {
-                state_id: transfer.new_flow_state_id.clone(),
-            },
-        )
-        .await;
-    assert_eq!(state_unbind_error.code, "409-flow-flow_model-unbind_state");
-    // 5. check post action endless loop
-    ctx.own_paths = "t1".to_string();
-    flow_client.set_auth(&ctx)?;
+    // 3-3. check post action endless loop
     let proj_trans = proj_model_agg.states.iter().find(|state| state.name == "进行中").unwrap().transitions.iter().find(|trans| trans.name == "有风险").unwrap();
     let _: Void = flow_client
         .patch(
@@ -450,6 +377,282 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
         )
         .await;
     assert_eq!(endless_loop_error.code, "404-flow-flow_model_Serv-after_modify_item");
+
+    let mut model_agg_new: FlowModelAggResp = flow_client.get(&format!("/cc/model/{}", req_model_id)).await;
+    assert!(!model_agg_new.states.first_mut().unwrap().transitions.iter_mut().any(|trans| trans.transfer_by_auto).is_empty());
+    info!("model_agg_new: {:?}", model_agg_new);
+    // 3-4. Share template models
+    let custom_state_id: String = flow_client
+        .post(
+            "/cc/state",
+            &FlowStateAddReq {
+                name: Some("测试".to_string().into()),
+                sys_state: FlowSysStateKind::Start,
+                color: Some("rgba(242, 158, 12, 1)".to_string()),
+                ..Default::default()
+            },
+        )
+        .await;
+    let share_template_id = "share_template_id".to_string();
+    let share_template_models: HashMap<String, FlowTemplateModelResp> = flow_client.get(&format!("/cc/model/get_models?tag_ids=REQ&temp_id={}", share_template_id)).await;
+    let req_share_model_id = share_template_models.get("REQ").unwrap().id.clone();
+    let req_share_model_agg: FlowModelAggResp = flow_client.get(&format!("/cc/model/{}", req_share_model_id)).await;
+    let _: Void = flow_client
+        .post(
+            &format!("/cc/model/{}/bind_state", &req_share_model_id),
+            &FlowModelBindStateReq {
+                state_id: custom_state_id.clone(),
+                sort: 1,
+            },
+        )
+        .await;
+    let _: Void = flow_client
+        .patch(
+            &format!("/cc/model/{}", req_share_model_id),
+            &FlowModelModifyReq {
+                scope_level: Some(RbumScopeLevelKind::Root),
+                ..Default::default()
+            },
+        )
+        .await;
+    ctx.own_paths = "t3/app03".to_string();
+    flow_client.set_auth(&ctx)?;
+    let mut result: Vec<FlowModelAddCustomModelResp> = flow_client
+        .post(
+            "/cc/model/add_custom_model",
+            &FlowModelAddCustomModelReq {
+                proj_template_id: Some(share_template_id.clone()),
+                bind_model_objs: vec![FlowModelAddCustomModelItemReq {
+                    tag: "REQ".to_string(),
+                    feature_template_id: None,
+                }],
+            },
+        )
+        .await;
+    let share_model_id = result.pop().unwrap().model_id.unwrap();
+    let _: Void = flow_client
+        .patch(
+            &format!("/cc/model/{}", share_model_id),
+            &FlowModelModifyReq {
+                add_transitions: Some(vec![FlowTransitionAddReq {
+                    from_flow_state_id: req_share_model_agg.init_state_id.clone(),
+                    name: Some("111".to_string().into()),
+                    to_flow_state_id: custom_state_id.clone(),
+                    ..Default::default()
+                }]),
+                ..Default::default()
+            },
+        )
+        .await;
+    let share_template_models: HashMap<String, FlowTemplateModelResp> = flow_client.get("/cc/model/get_models?tag_ids=REQ").await;
+    assert_eq!(share_model_id.as_str(), share_template_models.get("REQ").unwrap().id.as_str());
+
+    let share_model_agg: FlowModelAggResp = flow_client.get(&format!("/cc/model/{}", share_model_id)).await;
+    assert_eq!(share_model_agg.scope_level, RbumScopeLevelKind::Private);
+    let req_share_inst_id: String = flow_client
+        .post(
+            "/cc/inst",
+            &FlowInstStartReq {
+                tag: "REQ".to_string(),
+                create_vars: None,
+                rel_business_obj_id: TardisFuns::field.nanoid(),
+            },
+        )
+        .await;
+    let next_transitions: Vec<FlowInstFindNextTransitionResp> = flow_client
+        .put(
+            &format!("/cc/inst/{}/transition/next", req_share_inst_id.clone()),
+            &FlowInstFindNextTransitionsReq { vars: None },
+        )
+        .await;
+    let transfer: FlowInstTransferResp = flow_client
+        .put(
+            &format!("/cc/inst/{}/transition/transfer", req_share_inst_id),
+            &FlowInstTransferReq {
+                flow_transition_id: next_transitions.into_iter().find(|trans| trans.next_flow_transition_name == "111").unwrap().next_flow_transition_id.clone(),
+                vars: Some(TardisFuns::json.json_to_obj(json!({})).unwrap()),
+                message: None,
+            },
+        )
+        .await;
+    assert_eq!(transfer.new_flow_state_id, custom_state_id.clone());
+    let state_and_next_transitions: Vec<FlowInstFindStateAndTransitionsResp> = flow_client
+        .put(
+            "/cc/inst/batch/state_transitions",
+            &vec![FlowInstFindStateAndTransitionsReq {
+                flow_inst_id: req_share_inst_id.clone(),
+                vars: None,
+            }],
+        )
+        .await;
+    assert_eq!(state_and_next_transitions.len(), 1);
+    assert_eq!(state_and_next_transitions[0].current_flow_state_name, "测试");
+    let state_bind_error = flow_client
+        .post_resp::<FlowModelBindStateReq, Void>(
+            &format!("/cc/model/{}/bind_state", &share_model_id),
+            &FlowModelBindStateReq {
+                state_id: custom_state_id.clone(),
+                sort: 1,
+            },
+        )
+        .await;
+    assert_eq!(state_bind_error.code, "500-flow-flow_model_serv-bind_state");
+    // reset share model
+    ctx.own_paths = "t1".to_string();
+    flow_client.set_auth(&ctx)?;
+    let _: Void = flow_client
+        .patch(
+            &format!("/cc/model/{}", req_share_model_id),
+            &FlowModelModifyReq {
+                scope_level: Some(RbumScopeLevelKind::L1),
+                ..Default::default()
+            },
+        )
+        .await;
+    // 4.Start a instance
+    // mock tenant content
+    ctx.own_paths = "t1/app01".to_string();
+    flow_client.set_auth(&ctx)?;
+    // create app flow model
+    let mut modify_configs = vec![];
+    let tags = vec!["REQ", "PROJ", "ITER", "TICKET"];
+    for tag in tags {
+        modify_configs.push(FlowModelAddCustomModelItemReq {
+            tag: tag.to_string(),
+            feature_template_id: None,
+        });
+    }
+    let result: Vec<FlowModelAddCustomModelResp> = flow_client
+        .post(
+            "/cc/model/add_custom_model",
+            &FlowModelAddCustomModelReq {
+                proj_template_id: Some(mock_template_id.clone()),
+                bind_model_objs: modify_configs,
+            },
+        )
+        .await;
+    let models: HashMap<String, FlowTemplateModelResp> = flow_client.get("/cc/model/get_models?tag_ids=REQ,PROJ,ITER,TICKET").await;
+    assert_eq!(
+        models.get("REQ").unwrap().id,
+        result.into_iter().find(|model| model.tag == "REQ").unwrap().model_id.unwrap()
+    );
+
+    let ticket_inst_rel_id = "mock-ticket-obj-id".to_string();
+    let iter_inst_rel_id1 = "mock-iter-obj-id1".to_string();
+    let iter_inst_rel_id2 = "mock-iter-obj-id2".to_string();
+    let req_inst_id1: String = flow_client
+        .post(
+            "/cc/inst",
+            &FlowInstStartReq {
+                tag: "REQ".to_string(),
+                create_vars: None,
+                rel_business_obj_id: TardisFuns::field.nanoid(),
+            },
+        )
+        .await;
+    let req_inst_id2: String = flow_client
+        .post(
+            "/cc/inst",
+            &FlowInstStartReq {
+                tag: "REQ".to_string(),
+                create_vars: None,
+                rel_business_obj_id: TardisFuns::field.nanoid(),
+            },
+        )
+        .await;
+    let ticket_inst_id: String = flow_client
+        .post(
+            "/cc/inst",
+            &FlowInstStartReq {
+                tag: "TICKET".to_string(),
+                create_vars: None,
+                rel_business_obj_id: ticket_inst_rel_id.clone(),
+            },
+        )
+        .await;
+    let _iter_inst_id: String = flow_client
+        .post(
+            "/cc/inst",
+            &FlowInstStartReq {
+                tag: "ITER".to_string(),
+                create_vars: None,
+                rel_business_obj_id: iter_inst_rel_id1.clone(),
+            },
+        )
+        .await;
+    let _iter_inst_id: String = flow_client
+        .post(
+            "/cc/inst",
+            &FlowInstStartReq {
+                tag: "ITER".to_string(),
+                create_vars: None,
+                rel_business_obj_id: iter_inst_rel_id2.clone(),
+            },
+        )
+        .await;
+    // Get the state of a task that can be transferable
+    let next_transitions: Vec<FlowInstFindNextTransitionResp> =
+        flow_client.put(&format!("/cc/inst/{}/transition/next", req_inst_id1), &FlowInstFindNextTransitionsReq { vars: None }).await;
+    assert_eq!(next_transitions.len(), 2);
+    flow_client.set_auth(&TardisContext {
+        own_paths: "t1/app01".to_string(),
+        ak: "".to_string(),
+        roles: vec!["admin".to_string()],
+        groups: vec![],
+        owner: "a001".to_string(),
+        ..Default::default()
+    })?;
+    let next_transitions: Vec<FlowInstFindNextTransitionResp> =
+        flow_client.put(&format!("/cc/inst/{}/transition/next", req_inst_id1), &FlowInstFindNextTransitionsReq { vars: None }).await;
+    assert_eq!(next_transitions.len(), 2);
+    assert!(next_transitions.iter().any(|trans| trans.next_flow_transition_name.contains("开始")));
+    assert!(next_transitions.iter().any(|trans| trans.next_flow_transition_name.contains("关闭")));
+    // Find the state and transfer information of the specified instances in batch
+    let state_and_next_transitions: Vec<FlowInstFindStateAndTransitionsResp> = flow_client
+        .put(
+            "/cc/inst/batch/state_transitions",
+            &vec![FlowInstFindStateAndTransitionsReq {
+                flow_inst_id: req_inst_id1.clone(),
+                vars: None,
+            }],
+        )
+        .await;
+    assert_eq!(state_and_next_transitions.len(), 1);
+    assert_eq!(state_and_next_transitions[0].current_flow_state_name, "待开始");
+    assert!(state_and_next_transitions[0].next_flow_transitions.iter().any(|trans| trans.next_flow_transition_name.contains("开始")));
+    assert!(state_and_next_transitions[0].next_flow_transitions.iter().any(|trans| trans.next_flow_transition_name.contains("关闭")));
+    // Transfer task status
+    let transfer: FlowInstTransferResp = flow_client
+        .put(
+            &format!("/cc/inst/{}/transition/transfer", req_inst_id1),
+            &FlowInstTransferReq {
+                flow_transition_id: state_and_next_transitions[0]
+                    .next_flow_transitions
+                    .iter()
+                    .find(|&trans| trans.next_flow_transition_name.contains("关闭"))
+                    .unwrap()
+                    .next_flow_transition_id
+                    .to_string(),
+                // vars: Some(TardisFuns::json.json_to_obj(json!({ "reason":"测试关闭" })).unwrap()),
+                vars: Some(TardisFuns::json.json_to_obj(json!({})).unwrap()),
+                message: None,
+            },
+        )
+        .await;
+    assert_eq!(
+        transfer.new_flow_state_id,
+        state_and_next_transitions[0].next_flow_transitions.iter().find(|&trans| trans.next_flow_transition_name.contains("关闭")).unwrap().next_flow_state_id.clone()
+    );
+    // check state is used
+    let state_unbind_error = flow_client
+        .post_resp::<FlowModelUnbindStateReq, Void>(
+            &format!("/cc/model/{}/unbind_state", &req_model_id),
+            &FlowModelUnbindStateReq {
+                state_id: transfer.new_flow_state_id.clone(),
+            },
+        )
+        .await;
+    assert_eq!(state_unbind_error.code, "500-flow-flow_model_serv-unbind_state");
     // 6. post action
     // check original instance
     let ticket: FlowInstDetailResp = flow_client.get(&format!("/cc/inst/{}", ticket_inst_id)).await;
@@ -510,79 +713,6 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
             },
         )
         .await;
-    // 7. bind app custom model
-    ctx.own_paths = "t1/app01".to_string();
-    flow_client.set_auth(&ctx)?;
-    let mut modify_configs = vec![];
-    let tags = vec!["REQ", "MS", "PROJ", "ITER", "TICKET", "MOCK"];
-    for tag in tags {
-        modify_configs.push(FlowModelAddCustomModelItemReq {
-            tag: tag.to_string(),
-            feature_template_id: None,
-        });
-    }
-    let result: Vec<FlowModelAddCustomModelResp> = flow_client
-        .post(
-            "/cc/model/add_custom_model",
-            &FlowModelAddCustomModelReq {
-                proj_template_id: Some(template_id.clone()),
-                bind_model_objs: modify_configs,
-            },
-        )
-        .await;
-    assert!(result.into_iter().find(|resp| resp.tag == "MOCK").unwrap().model_id.is_none());
-
-    // {"tag":"ISSUE","rel_business_objs":[{"rel_business_obj_id":"-c9rgVZOdUH_MbqofO4vc","current_state_name":"已解决","own_paths":"bzeUPv/JXYtZ0"}
-    let _: String = flow_client
-        .post(
-            "/ci/inst/bind",
-            &FlowInstBindReq {
-                tag: "ISSUE".to_string(),
-                rel_business_obj_id: "-c9rgVZOdUH_MbqofO4vc".to_string(),
-                create_vars: None,
-                current_state_name: Some("已解决".to_string()),
-            },
-        )
-        .await;
-    let mut rel_business_objs = vec![];
-    for i in 5..8 {
-        let rel_business_obj_id = format!("-c9rgVZOdUH_MbqofO4vc{}", i);
-        rel_business_objs.push(FlowInstBindRelObjReq {
-            rel_business_obj_id: Some(rel_business_obj_id),
-            current_state_name: Some("已解决".to_string()),
-            own_paths: Some("bzeUPv/JXYtZ0".to_string()),
-            owner: Some("".to_string()),
-        });
-    }
-    let _: Vec<FlowInstBatchBindResp> = flow_client
-        .post(
-            "/ci/inst/batch_bind",
-            &FlowInstBatchBindReq {
-                tag: "ISSUE".to_string(),
-                rel_business_objs,
-            },
-        )
-        .await;
-    let mut rel_business_objs = vec![];
-    for i in 0..10 {
-        let rel_business_obj_id = format!("-c9rgVZOdUH_MbqofO4vc{}", i);
-        rel_business_objs.push(FlowInstBindRelObjReq {
-            rel_business_obj_id: Some(rel_business_obj_id),
-            current_state_name: Some("已解决".to_string()),
-            own_paths: Some("bzeUPv/JXYtZ0".to_string()),
-            owner: Some("".to_string()),
-        });
-    }
-    let _: Vec<FlowInstBatchBindResp> = flow_client
-        .post(
-            "/ci/inst/batch_bind",
-            &FlowInstBatchBindReq {
-                tag: "ISSUE".to_string(),
-                rel_business_objs,
-            },
-        )
-        .await;
-    // let states: Vec<FlowStateNameResp> = flow_client.get("/cc/state/names?tag=REQ&app_ids=app01").await;
 
     Ok(())
 }

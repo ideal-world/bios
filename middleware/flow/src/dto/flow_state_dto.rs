@@ -11,7 +11,7 @@ use tardis::{
     web::poem_openapi,
 };
 
-#[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
+#[derive(Serialize, Deserialize, Default, Debug, poem_openapi::Object)]
 pub struct FlowStateAddReq {
     #[oai(validator(min_length = "2", max_length = "200"))]
     pub id_prefix: Option<TrimString>,
@@ -111,9 +111,10 @@ pub struct FlowStateDetailResp {
     pub disabled: bool,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, sea_orm::strum::EnumIter, sea_orm::DeriveActiveEnum)]
+#[derive(Clone, Default, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, sea_orm::strum::EnumIter, sea_orm::DeriveActiveEnum)]
 #[sea_orm(rs_type = "String", db_type = "String(Some(255))")]
 pub enum FlowSysStateKind {
+    #[default]
     #[sea_orm(string_value = "start")]
     Start,
     #[sea_orm(string_value = "progress")]

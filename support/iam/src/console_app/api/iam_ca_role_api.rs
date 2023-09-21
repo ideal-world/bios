@@ -64,11 +64,9 @@ impl IamCaRoleApi {
         let result = IamRoleServ::get_item(
             &id.0,
             &IamRoleFilterReq {
-                basic: RbumBasicFilterReq {
-                    // Only fetch app-level roles
-                    scope_level: Some(RBUM_SCOPE_LEVEL_APP),
-                    ..Default::default()
-                },
+                basic: RbumBasicFilterReq { ..Default::default() },
+                // Only fetch app-level roles
+                kind: Some(IamRoleKind::App),
                 ..Default::default()
             },
             &funs,

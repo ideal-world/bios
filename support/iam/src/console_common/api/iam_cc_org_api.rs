@@ -44,6 +44,7 @@ impl IamCcOrgApi {
             &set_id,
             &mut RbumSetTreeFilterReq {
                 fetch_cate_item: true,
+                hide_item_with_disabled: true,
                 sys_codes: parent_sys_code.0.map(|parent_sys_code| vec![parent_sys_code]),
                 sys_code_query_kind: Some(RbumSetCateLevelQueryKind::CurrentAndSub),
                 sys_code_query_depth: Some(1),

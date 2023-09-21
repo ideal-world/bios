@@ -8,7 +8,11 @@
 |-- res                             # spacegate resources
 |-- src
 |---- plugins
+|------ anti_replay.rs              # anti_replay plugin
+|------ anti_xss.rs                 # anti_xss plugin
+|------ audit_log.rs                # audit_log plugin
 |------ auth.rs                     # auth-bios plugin
+|------ ip_time.rs                  # ip_time plugin
 |-- Dockerfile                      # Dockerfile
 ----
 

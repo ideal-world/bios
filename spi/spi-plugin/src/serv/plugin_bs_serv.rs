@@ -306,8 +306,8 @@ impl PluginBsServ {
         })
     }
 
-    pub async fn get_bs_by_rel_up(kind_code: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<PluginBsCertInfoResp> {
-        let kind_id = RbumKindServ::get_rbum_kind_id_by_code(&kind_code.clone().unwrap_or_default(), funs).await?;
+    pub async fn get_bs_by_rel_up(kind_code: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<PluginBsCertInfoResp> {
+        let kind_id = RbumKindServ::get_rbum_kind_id_by_code(&kind_code, funs).await?;
         if let Some(kind_id) = kind_id {
             if let Some(rel_bind) = PluginRelServ::find_from_simple_rels(
                 &PluginAppBindRelKind::PluginAppBindKind,
@@ -328,7 +328,7 @@ impl PluginBsServ {
             } else {
                 let own_paths = Self::get_parent_own_paths(ctx.own_paths.as_str())?;
                 for own_path in own_paths {
-                    let resp = Self::get_bs_by_rel(kind_code.clone(), own_path.as_str(), funs, ctx).await;
+                    let resp = Self::get_bs_by_rel(Some(kind_code.to_string()), own_path.as_str(), funs, ctx).await;
                     info!("【get_bs_by_rel_up】 {}: {}", own_path, resp.is_ok());
                     if resp.is_ok() {
                         match resp {

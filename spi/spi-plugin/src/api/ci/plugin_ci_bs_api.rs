@@ -12,7 +12,7 @@ use tardis::web::poem_openapi::param::{Path, Query};
 use tardis::web::poem_openapi::payload::Json;
 use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 
-use crate::dto::plugin_bs_dto::{PluginBsAddReq, PluginBsInfoResp};
+use crate::dto::plugin_bs_dto::{PluginBsAddReq, PluginBsCertInfoResp, PluginBsInfoResp};
 use crate::serv::plugin_bs_serv::PluginBsServ;
 #[derive(Clone)]
 
@@ -138,6 +138,14 @@ impl PluginCiBsApi {
     async fn get_bs_rel_agg(&self, id: Path<String>, app_tenant_id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<PluginBsInfoResp> {
         let funs = crate::get_tardis_inst();
         let result = PluginBsServ::get_bs(&id.0, &app_tenant_id.0, &funs, &ctx.0).await?;
+        TardisResp::ok(result)
+    }
+
+    /// Get Plugin Service Rel App/Tenant
+    #[oai(path = "/rel/up/:kind_code", method = "get")]
+    async fn get_bs_by_rel_up(&self, kind_code: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<PluginBsCertInfoResp> {
+        let funs = crate::get_tardis_inst();
+        let result = PluginBsServ::get_bs_by_rel_up(&kind_code.0, &funs, &ctx.0).await?;
         TardisResp::ok(result)
     }
 

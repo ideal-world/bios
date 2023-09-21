@@ -54,7 +54,7 @@ pub struct FlowInstServ;
 impl FlowInstServ {
     pub async fn start(start_req: &FlowInstStartReq, current_state_name: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
         // get model by own_paths
-        let flow_model_id = Self::get_model_id_by_own_paths(&start_req.tag, funs, ctx).await?;
+        let flow_model_id = Self::get_model_id_by_own_paths_and_rel_template_id(&start_req.tag, None, funs, ctx).await?;
         let flow_model = FlowModelServ::get_item(
             &flow_model_id,
             &FlowModelFilterReq {
@@ -71,7 +71,11 @@ impl FlowInstServ {
         .await?;
         let id = TardisFuns::field.nanoid();
         let current_state_id = if let Some(current_state_name) = &current_state_name {
-            FlowStateServ::match_state_id_by_name(&start_req.tag, &flow_model_id, current_state_name, funs, ctx).await?
+            if current_state_name.is_empty() {
+                flow_model.init_state_id.clone()
+            } else {
+                FlowStateServ::match_state_id_by_name(&start_req.tag, &flow_model_id, current_state_name, funs, ctx).await?
+            }
         } else {
             flow_model.init_state_id.clone()
         };
@@ -113,7 +117,7 @@ impl FlowInstServ {
             }
             current_ctx.own_paths = rel_business_obj.own_paths.clone().unwrap_or_default();
             current_ctx.owner = rel_business_obj.owner.clone().unwrap_or_default();
-            let flow_model_id = Self::get_model_id_by_own_paths(&batch_bind_req.tag, funs, ctx).await?;
+            let flow_model_id = Self::get_model_id_by_own_paths_and_rel_template_id(&batch_bind_req.tag, None, funs, ctx).await?;
 
             let current_state_id = FlowStateServ::match_state_id_by_name(
                 &batch_bind_req.tag,
@@ -169,7 +173,7 @@ impl FlowInstServ {
         Ok(result)
     }
 
-    pub async fn get_model_id_by_own_paths(tag: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
+    pub async fn get_model_id_by_own_paths_and_rel_template_id(tag: &str, rel_template_id: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
         let mut own_paths = ctx.own_paths.clone();
         let mut scope_level = rbum_scope_helper::get_scope_level_by_context(ctx)?.to_int();
         let mut result = None;
@@ -179,10 +183,12 @@ impl FlowInstServ {
                 &FlowModelFilterReq {
                     basic: RbumBasicFilterReq {
                         own_paths: Some(own_paths.clone()),
+                        ignore_scope: true,
                         ..Default::default()
                     },
                     tags: Some(vec![tag.to_string()]),
-                    template: Some(false),
+                    template: Some(rel_template_id.is_some()),
+                    rel_template_id: rel_template_id.clone(),
                     ..Default::default()
                 },
                 funs,
@@ -202,6 +208,7 @@ impl FlowInstServ {
                 &FlowModelFilterReq {
                     basic: RbumBasicFilterReq {
                         own_paths: Some("".to_string()),
+                        ignore_scope: true,
                         ..Default::default()
                     },
                     tags: Some(vec![tag.to_string()]),
@@ -214,7 +221,7 @@ impl FlowInstServ {
         }
         match result {
             Some(model) => Ok(model.id),
-            None => Err(funs.err().not_found("flow_inst_serv", "get_model_id_by_own_paths", "model not found", "404-model-not-found")),
+            None => Err(funs.err().not_found("flow_inst_serv", "get_model_id_by_own_paths", "model not found", "404-flow-model-not-found")),
         }
     }
 
@@ -443,7 +450,7 @@ impl FlowInstServ {
             query.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::RelFlowModelId)).eq(flow_model_id));
         }
         if let Some(tag) = &tag {
-            let flow_model_id = Self::get_model_id_by_own_paths(tag, funs, ctx).await?;
+            let flow_model_id = Self::get_model_id_by_own_paths_and_rel_template_id(tag, None, funs, ctx).await?;
             query.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::RelFlowModelId)).eq(flow_model_id));
         }
         if let Some(finish) = finish {
@@ -563,7 +570,7 @@ impl FlowInstServ {
             .transitions()
             .into_iter()
             .find(|trans| trans.id == transfer_req.flow_transition_id)
-            .ok_or_else(|| funs.err().not_found("flow_inst", "check_transfer_vars", "illegal response", "404-transition-not-found"))?
+            .ok_or_else(|| funs.err().not_found("flow_inst", "check_transfer_vars", "illegal response", "404-flow-transition-not-found"))?
             .vars_collect();
         if let Some(vars_collect) = vars_collect {
             if vars_collect.into_iter().any(|var| var.required == Some(true) && (transfer_req.vars.is_none() || !transfer_req.vars.as_ref().unwrap().contains_key(&var.name))) {
@@ -576,6 +583,10 @@ impl FlowInstServ {
 
     #[async_recursion]
     pub async fn transfer(flow_inst_id: &str, transfer_req: &FlowInstTransferReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<FlowInstTransferResp> {
+        let global_ctx = TardisContext {
+            own_paths: "".to_string(),
+            ..ctx.clone()
+        };
         let flow_inst_detail = Self::get(flow_inst_id, funs, ctx).await?;
         let flow_model = FlowModelServ::get_item(
             &flow_inst_detail.rel_flow_model_id,
@@ -614,7 +625,7 @@ impl FlowInstServ {
         .await?
         .0
         {
-            return Err(funs.err().not_found("flow_inst", "transfer", "this post action exist endless loop", "500-flow-inst-transfer-state-error"));
+            return Err(funs.err().not_found("flow_inst", "transfer", "this post action exist endless loop", "500-flow-transition-endless-loop"));
         }
 
         let next_flow_transition = next_flow_transition.unwrap();
@@ -628,7 +639,7 @@ impl FlowInstServ {
                 ..Default::default()
             },
             funs,
-            ctx,
+            &global_ctx,
         )
         .await?;
         let next_flow_state = FlowStateServ::get_item(
@@ -641,7 +652,7 @@ impl FlowInstServ {
                 ..Default::default()
             },
             funs,
-            ctx,
+            &global_ctx,
         )
         .await?;
 
@@ -797,8 +808,8 @@ impl FlowInstServ {
                         } else {
                             FlowExternalServ::do_modify_field(
                                 &current_model.tag,
-                                &current_inst.id,
                                 &current_inst.rel_business_obj_id,
+                                &current_inst.id,
                                 None,
                                 None,
                                 vec![FlowExternalParams {
@@ -1084,6 +1095,7 @@ impl FlowInstServ {
                 next_flow_transition_name: model_transition.name.to_string(),
                 next_flow_state_id: model_transition.to_flow_state_id.to_string(),
                 next_flow_state_name: model_transition.to_flow_state_name.to_string(),
+                next_flow_state_color: model_transition.to_flow_state_color.to_string(),
                 vars_collect: model_transition.vars_collect(),
                 double_check: model_transition.double_check(),
             })
@@ -1122,7 +1134,8 @@ impl FlowInstServ {
                     .column((flow_inst::Entity, flow_inst::Column::Id))
                     .from(flow_inst::Entity)
                     .and_where(Expr::col((flow_inst::Entity, flow_inst::Column::CurrentStateId)).eq(flow_state_id))
-                    .and_where(Expr::col((flow_inst::Entity, flow_inst::Column::RelFlowModelId)).eq(flow_model_id)),
+                    .and_where(Expr::col((flow_inst::Entity, flow_inst::Column::RelFlowModelId)).eq(flow_model_id))
+                    .and_where(Expr::col((flow_inst::Entity, flow_inst::Column::FinishAbort)).eq(false)),
             )
             .await?
             != 0
