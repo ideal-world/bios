@@ -9,7 +9,8 @@ use tardis::web::poem_openapi;
 use tardis::web::poem_openapi::payload::Json;
 use tardis::web::web_resp::{TardisApiResult, TardisResp, Void};
 
-use crate::client::{sms, GenericTemplate, SendChannelAll};
+use crate::api::REACH_SEND_CHANNEL_MAP;
+use crate::client::{GenericTemplate, SendChannelMap};
 use crate::config::ReachConfig;
 use crate::consts::*;
 use crate::dto::*;
@@ -17,10 +18,18 @@ use crate::dto::*;
 use crate::invoke::Client;
 use crate::serv::*;
 
-#[derive(Clone, Default)]
+#[derive(Clone)]
 /// 用户触达消息-公共控制台
 pub struct ReachMessageCcApi {
-    channel: SendChannelAll,
+    channel: &'static SendChannelMap,
+}
+
+impl Default for ReachMessageCcApi {
+    fn default() -> Self {
+        Self {
+            channel: REACH_SEND_CHANNEL_MAP.get().expect("missing send channel map"),
+        }
+    }
 }
 
 #[cfg_attr(feature = "simple-client", bios_sdk_invoke::simple_invoke_client(Client<'_>))]
@@ -72,19 +81,7 @@ impl ReachMessageCcApi {
     pub async fn pwd_send(&self, to: Path<String>, code: Path<String>) -> TardisApiResult<Void> {
         let funs = get_tardis_inst();
         let config = funs.conf::<ReachConfig>();
-        let sms_cfg = &config.sms;
-        self.channel
-            .sms_client
-            .send_sms(sms::SendSmsRequest {
-                from: &sms_cfg.sms_general_from,
-                status_callback: sms_cfg.status_call_back.as_deref(),
-                extend: None,
-                to: to.as_str(),
-                template_id: &sms_cfg.sms_pwd_template_id,
-                template_paras: format!("[{pwd}]", pwd = code.0),
-                signature: sms_cfg.sms_general_signature.as_deref(),
-            })
-            .await?;
+        self.channel.send(ReachChannelKind::Sms, GenericTemplate::pwd_template(config), &[("pwd", code.0)].into(), &[to.0].into()).await?;
         TardisResp::ok(VOID)
     }
 

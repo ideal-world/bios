@@ -13,7 +13,7 @@ use tardis::{
 pub struct MessageSendListener {
     sync: Arc<tokio::sync::Mutex<()>>,
     funs: Arc<TardisFunsInst>,
-    channel: SendChannelAll,
+    channel: SendChannelMap,
 }
 
 impl Default for MessageSendListener {
@@ -21,7 +21,7 @@ impl Default for MessageSendListener {
         Self {
             sync: Default::default(),
             funs: get_tardis_inst().into(),
-            channel: SendChannelAll::default(),
+            channel: SendChannelMap::default(),
         }
     }
 }
@@ -46,7 +46,7 @@ impl MessageSendListener {
         let mut to = HashSet::new();
 
         let owner_path = rbum_scope_helper::get_pre_paths(RBUM_SCOPE_LEVEL_TENANT as i16, &message.own_paths).unwrap_or_default();
-        for account_id in message.to_res_ids.split(';') {
+        for account_id in message.to_res_ids.split(ACCOUNT_SPLIT) {
             if let Ok(mut resp) = iam_client.get_account(account_id, &owner_path).await {
                 let Some(phone) = resp.certs.remove(IAM_KEY_PHONE_V_CODE) else {
                     log::warn!("[Reach] Notify Phone channel send error, missing [PhoneVCode] parameters, resp: {resp:?}");

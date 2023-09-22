@@ -15,7 +15,7 @@ use crate::{
     config::ReachConfig,
     consts::{get_tardis_inst, DOMAIN_CODE, DOMAIN_REACH_ID, RBUM_EXT_TABLE_REACH_MESSAGE, RBUM_KIND_CODE_REACH_MESSAGE, REACH_INIT_OWNER},
     serv::ReachTriggerSceneService,
-    task,
+    task, client::SendChannelMap,
 };
 
 pub async fn db_init() -> TardisResult<()> {
@@ -81,9 +81,9 @@ pub async fn db_init() -> TardisResult<()> {
     Ok(())
 }
 
-pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
+pub async fn init(web_server: &TardisWebServer, send_channels: SendChannelMap) -> TardisResult<()> {
     db_init().await?;
-    api::init(web_server).await?;
+    api::init(web_server, send_channels).await?;
     task::init().await?;
     Ok(())
 }

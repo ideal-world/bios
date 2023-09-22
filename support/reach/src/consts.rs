@@ -21,6 +21,9 @@ pub const RBUM_SCOPE_LEVEL_APP: RbumScopeLevelKind = RbumScopeLevelKind::L2;
 pub const REACH_INIT_OWNER: &str = "ReachInit";
 
 pub const IAM_KEY_PHONE_V_CODE: &str = "PhoneVCode";
+
+pub const ACCOUNT_SPLIT: char = ';';
+
 pub static DOMAIN_REACH_ID: OnceLock<String> = OnceLock::new();
 
 pub fn get_domain_reach_id() -> &'static str {

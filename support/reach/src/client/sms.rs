@@ -32,7 +32,7 @@ impl SmsClient {
         // actually iso-8601
         let created = Utc::now().to_rfc3339();
         let nonce = format!("{:X}", random::<u64>());
-        let password_digest = BASE64.encode(&DIGEST.sha256(&format!("{}{}{}", nonce, created, &self.app_secret))?);
+        let password_digest = BASE64.encode(DIGEST.sha256(format!("{}{}{}", nonce, created, &self.app_secret))?);
         let wsse_header = format!("UsernameToken Username={username},PasswordDigest={password_digest},Nonce={nonce},Created={created}");
         let wsse_header = HeaderValue::from_str(&wsse_header).expect("Fail to build sms header, maybe there are unexpected char in app_key.");
         headers.insert(WSSE_HEADER_NAME, HeaderValue::from_static(Self::AUTH_WSSE_HEADER_VALUE));

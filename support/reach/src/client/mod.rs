@@ -1,4 +1,7 @@
-use std::{collections::HashSet, sync::Arc};
+use std::{
+    collections::{HashMap, HashSet},
+    sync::Arc,
+};
 
 use tardis::{
     async_trait::async_trait,
@@ -6,7 +9,7 @@ use tardis::{
     mail::mail_client::TardisMailSendReq,
 };
 
-use crate::{consts::*, domain::message_template, dto::*};
+use crate::{config::ReachConfig, domain::message_template, dto::*};
 
 use self::sms::SendSmsRequest;
 
@@ -20,6 +23,18 @@ pub struct GenericTemplate<'t> {
     pub sms_from: Option<&'t str>,
     pub sms_template_id: Option<&'t str>,
     pub sms_signature: Option<&'t str>,
+}
+
+impl<'t> GenericTemplate<'t> {
+    pub fn pwd_template(config: &'t ReachConfig) -> Self {
+        Self {
+            name: None,
+            content: "[{pwd}]",
+            sms_from: Some(&config.sms.sms_general_from),
+            sms_template_id: Some(&config.sms.sms_pwd_template_id),
+            sms_signature: config.sms.sms_general_signature.as_deref(),
+        }
+    }
 }
 
 impl<'t> From<&'t message_template::Model> for GenericTemplate<'t> {
@@ -122,31 +137,21 @@ impl SendChannel for sms::SmsClient {
 }
 
 /// 集成发送通道
-#[derive(Clone)]
-pub struct SendChannelAll {
-    pub sms_client: Arc<sms::SmsClient>,
-    pub mail_client: email::MailClient,
+#[derive(Clone, Default)]
+pub struct SendChannelMap {
+    pub channels: HashMap<ReachChannelKind, Arc<dyn SendChannel + Send + Sync>>,
 }
 
-impl Default for SendChannelAll {
-    fn default() -> Self {
-        Self {
-            sms_client: get_sms_client(),
-            mail_client: get_mail_client(),
-        }
-    }
-}
-
-impl SendChannelAll {
+impl SendChannelMap {
     pub fn new() -> Self {
         Self::default()
     }
+    pub fn with_channel(mut self, kind: ReachChannelKind, channel: Arc<dyn SendChannel + Send + Sync>) -> Self {
+        self.channels.insert(kind, channel);
+        self
+    }
     pub fn get_channel(&self, kind: ReachChannelKind) -> Arc<dyn SendChannel + Send + Sync> {
-        match kind {
-            ReachChannelKind::Sms => self.sms_client.clone(),
-            ReachChannelKind::Email => Arc::new(self.mail_client),
-            _ => Arc::new(UnimplementedChannel(kind)),
-        }
+        self.channels.get(&kind).cloned().unwrap_or(Arc::new(UnimplementedChannel(kind)))
     }
     pub async fn send(&self, kind: ReachChannelKind, template: impl Into<GenericTemplate<'_>>, content: &ContentReplace, to: &HashSet<impl AsRef<str>>) -> TardisResult<()> {
         self.get_channel(kind).send(template.into(), content, &to.iter().map(|x| x.as_ref()).collect()).await

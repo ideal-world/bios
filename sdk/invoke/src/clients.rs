@@ -294,7 +294,7 @@ pub trait SimpleInvokeClient {
      */
     fn get_tardis_context_header(&self) -> TardisResult<(String, String)> {
         let ctx = self.get_ctx();
-        Ok((TARDIS_CONTEXT.to_string(), TardisFuns::crypto.base64.encode(&TardisFuns::json.obj_to_string(ctx)?)))
+        Ok((TARDIS_CONTEXT.to_string(), TardisFuns::crypto.base64.encode(TardisFuns::json.obj_to_string(ctx)?)))
     }
     fn get_url(&self, path: &[&str], query: &str) -> String {
         format!(
