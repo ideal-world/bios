@@ -393,30 +393,24 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
             },
         )
         .await;
+    let share_template_id = "share_template_id".to_string();
+    let share_template_models: HashMap<String, FlowTemplateModelResp> = flow_client.get(&format!("/cc/model/get_models?tag_ids=REQ&temp_id={}", share_template_id)).await;
+    let req_share_model_id = share_template_models.get("REQ").unwrap().id.clone();
+    let req_share_model_agg: FlowModelAggResp = flow_client.get(&format!("/cc/model/{}", req_share_model_id)).await;
     let _: Void = flow_client
         .post(
-            &format!("/cc/model/{}/bind_state", &proj_model_id),
+            &format!("/cc/model/{}/bind_state", &req_share_model_id),
             &FlowModelBindStateReq {
                 state_id: custom_state_id.clone(),
                 sort: 1,
             },
         )
         .await;
-    let share_template_id = "share_template_id".to_string();
-    let share_template_models: HashMap<String, FlowTemplateModelResp> = flow_client.get(&format!("/cc/model/get_models?tag_ids=REQ&temp_id={}", share_template_id)).await;
-    let req_share_model_id = share_template_models.get("REQ").unwrap().id.clone();
-    let req_share_model_agg: FlowModelAggResp = flow_client.get(&format!("/cc/model/{}", req_share_model_id)).await;
     let _: Void = flow_client
         .patch(
             &format!("/cc/model/{}", req_share_model_id),
             &FlowModelModifyReq {
                 scope_level: Some(RbumScopeLevelKind::Root),
-                add_transitions: Some(vec![FlowTransitionAddReq {
-                    from_flow_state_id: req_share_model_agg.init_state_id.clone(),
-                    name: Some("111".to_string().into()),
-                    to_flow_state_id: custom_state_id.clone(),
-                    ..Default::default()
-                }]),
                 ..Default::default()
             },
         )
@@ -435,13 +429,26 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
             },
         )
         .await;
-    let share_mdoel_id = result.pop().unwrap().model_id.unwrap();
-
+    let share_model_id = result.pop().unwrap().model_id.unwrap();
+    let _: Void = flow_client
+        .patch(
+            &format!("/cc/model/{}", share_model_id),
+            &FlowModelModifyReq {
+                add_transitions: Some(vec![FlowTransitionAddReq {
+                    from_flow_state_id: req_share_model_agg.init_state_id.clone(),
+                    name: Some("111".to_string().into()),
+                    to_flow_state_id: custom_state_id.clone(),
+                    ..Default::default()
+                }]),
+                ..Default::default()
+            },
+        )
+        .await;
     let share_template_models: HashMap<String, FlowTemplateModelResp> = flow_client.get("/cc/model/get_models?tag_ids=REQ").await;
-    assert_eq!(share_mdoel_id.as_str(), share_template_models.get("REQ").unwrap().id.as_str());
+    assert_eq!(share_model_id.as_str(), share_template_models.get("REQ").unwrap().id.as_str());
 
-    let share_mdoel_agg: FlowModelAggResp = flow_client.get(&format!("/cc/model/{}", share_mdoel_id)).await;
-    assert_eq!(share_mdoel_agg.scope_level, RbumScopeLevelKind::Private);
+    let share_model_agg: FlowModelAggResp = flow_client.get(&format!("/cc/model/{}", share_model_id)).await;
+    assert_eq!(share_model_agg.scope_level, RbumScopeLevelKind::Private);
     let req_share_inst_id: String = flow_client
         .post(
             "/cc/inst",
@@ -469,7 +476,27 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
         )
         .await;
     assert_eq!(transfer.new_flow_state_id, custom_state_id.clone());
-
+    let state_and_next_transitions: Vec<FlowInstFindStateAndTransitionsResp> = flow_client
+        .put(
+            "/cc/inst/batch/state_transitions",
+            &vec![FlowInstFindStateAndTransitionsReq {
+                flow_inst_id: req_share_inst_id.clone(),
+                vars: None,
+            }],
+        )
+        .await;
+    assert_eq!(state_and_next_transitions.len(), 1);
+    assert_eq!(state_and_next_transitions[0].current_flow_state_name, "测试");
+    let state_bind_error = flow_client
+        .post_resp::<FlowModelBindStateReq, Void>(
+            &format!("/cc/model/{}/bind_state", &share_model_id),
+            &FlowModelBindStateReq {
+                state_id: custom_state_id.clone(),
+                sort: 1,
+            },
+        )
+        .await;
+    assert_eq!(state_bind_error.code, "500-flow-flow_model_serv-bind_state");
     // reset share model
     ctx.own_paths = "t1".to_string();
     flow_client.set_auth(&ctx)?;
