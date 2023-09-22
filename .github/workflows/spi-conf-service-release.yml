@@ -1,4 +1,4 @@
-name: Release all services docker image
+name: Release spi-conf services docker image
 
 on:
   push:

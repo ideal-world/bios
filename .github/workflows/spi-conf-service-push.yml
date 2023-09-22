@@ -1,4 +1,4 @@
-name: Publish all services docker image
+name: Publish spi-conf services docker image
 
 on:
   push:
