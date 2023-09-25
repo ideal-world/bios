@@ -24,7 +24,7 @@ itertools.workspace = true
 tardis = { workspace = true, features = ["reldb-postgres", "web-client"] }
 bios-basic = { path = "../../basic", features = ["default"] }
 bios-sdk-invoke = { path = "../../sdk/invoke", features = ["default"] }
-
+strum = { workspace = true }
 [dev-dependencies]
 tardis = { workspace = true, features = ["test", "web-client"] }
 bios-basic = { path = "../../basic", features = ["default", "test"] }

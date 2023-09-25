@@ -10,8 +10,6 @@ use bios_basic::rbum::{
     serv::rbum_rel_serv::RbumRelServ,
 };
 use serde::{Deserialize, Serialize};
-use tardis::db::sea_orm;
-use tardis::db::sea_orm::strum::Display;
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
     chrono::{Duration, Utc},
@@ -20,7 +18,7 @@ use tardis::{
 
 pub struct FlowRelServ;
 
-#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, sea_orm::strum::EnumString)]
+#[derive(strum::Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, strum::EnumString)]
 pub enum FlowRelKind {
     FlowModelState,
 }
