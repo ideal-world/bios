@@ -154,7 +154,7 @@ impl IamCsRoleApi {
     }
 
     /// Batch Add Role Rel Account
-    #[oai(path = "/:id/account/batch/:account_id", method = "put")]
+    #[oai(path = "/:id/account/batch/:account_ids", method = "put")]
     async fn batch_add_rel_account(
         &self,
         id: Path<String>,
