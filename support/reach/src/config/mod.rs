@@ -8,7 +8,7 @@ mod sms;
 #[derive(Debug, Serialize, Deserialize, Clone, Default)]
 #[serde(default)]
 pub struct ReachConfig {
-    pub sms: sms::HwSmsConfig,
+    pub sms: sms::SmsConfig,
     pub rbum: RbumConfig,
     pub invoke: InvokeConfig,
     pub iam_get_account: String,
