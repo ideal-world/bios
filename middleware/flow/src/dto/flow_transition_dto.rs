@@ -216,7 +216,7 @@ pub struct FlowTransitionActionChangeAgg {
     pub state_change_info: Option<FlowTransitionActionByStateChangeInfo>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, sea_orm::strum::EnumIter, sea_orm::DeriveActiveEnum)]
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, strum::EnumIter, sea_orm::DeriveActiveEnum)]
 #[sea_orm(rs_type = "String", db_type = "String(Some(255))")]
 pub enum FlowTransitionActionChangeKind {
     #[sea_orm(string_value = "var")]

@@ -24,7 +24,7 @@ async-trait.workspace = true
 tardis = { workspace = true, features = ["reldb-postgres", "web-server"] }
 bios-basic = { path = "../../basic", features = ["default"] }
 bios-sdk-invoke = { path = "../../sdk/invoke", features = ["default"] }
-
+strum = { workspace = true }
 [dev-dependencies]
 tardis = { workspace = true, features = ["test", "ws-client"] }
 bios-basic = { path = "../../basic", features = ["default", "test"] }

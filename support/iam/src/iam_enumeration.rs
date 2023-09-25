@@ -45,7 +45,7 @@ impl TryGetable for IamRoleKind {
     }
 }
 
-#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, sea_orm::strum::EnumString)]
+#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, strum::EnumString)]
 pub enum IamCertKernelKind {
     UserPwd,
     MailVCode,
@@ -53,7 +53,7 @@ pub enum IamCertKernelKind {
     AkSk,
 }
 
-#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, sea_orm::strum::EnumString)]
+#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, strum::EnumString)]
 pub enum IamCertExtKind {
     Ldap,
     OAuth2,
@@ -62,7 +62,7 @@ pub enum IamCertExtKind {
     ThirdParty,
 }
 
-#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, sea_orm::strum::EnumString)]
+#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, strum::EnumString)]
 pub enum IamCertOAuth2Supplier {
     // Weibo,
     Github,
@@ -75,7 +75,7 @@ impl IamCertOAuth2Supplier {
     }
 }
 
-#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, sea_orm::strum::EnumString)]
+#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, strum::EnumString)]
 pub enum IamCertTokenKind {
     TokenDefault,
     TokenPc,
@@ -94,7 +94,7 @@ impl IamCertTokenKind {
     }
 }
 
-#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, sea_orm::strum::EnumString)]
+#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, strum::EnumString)]
 pub enum IamRelKind {
     IamAccountRole,
     IamResRole,
@@ -149,7 +149,7 @@ pub enum IamSetKind {
     Apps,
 }
 
-#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, sea_orm::strum::EnumString)]
+#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, strum::EnumString)]
 pub enum IamSetCateKind {
     Root,
     System,
@@ -163,7 +163,7 @@ impl IamSetCateKind {
     }
 }
 
-#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, sea_orm::strum::EnumString)]
+#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, strum::EnumString)]
 pub enum Oauth2GrantType {
     AuthorizationCode,
     Password,
@@ -176,7 +176,7 @@ impl Oauth2GrantType {
     }
 }
 
-#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, sea_orm::strum::EnumString, Default)]
+#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, strum::EnumString, Default)]
 pub enum WayToAdd {
     ///同步账号同步凭证
     #[default]
@@ -185,7 +185,7 @@ pub enum WayToAdd {
     NoSynchronizeCert,
 }
 
-#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, sea_orm::strum::EnumString, Default)]
+#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, strum::EnumString, Default)]
 pub enum WayToDelete {
     ///什么也不做
     #[default]
@@ -198,7 +198,7 @@ pub enum WayToDelete {
     DeleteAccount,
 }
 
-#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, sea_orm::strum::EnumString, Default)]
+#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, strum::EnumString, Default)]
 pub enum IamAccountLockStateKind {
     // 未锁定
     #[default]
@@ -243,7 +243,7 @@ impl TryGetable for IamAccountLockStateKind {
     }
 }
 
-#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, sea_orm::strum::EnumString)]
+#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, strum::EnumString)]
 pub enum IamAccountStatusKind {
     // 激活
     Active,
@@ -286,7 +286,7 @@ impl TryGetable for IamAccountStatusKind {
     }
 }
 
-#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, sea_orm::strum::EnumString)]
+#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, strum::EnumString)]
 pub enum IamConfigDataTypeKind {
     // 月份
     Month,
@@ -350,7 +350,7 @@ impl IamConfigDataTypeKind {
     }
 }
 
-#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, sea_orm::strum::EnumString)]
+#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, strum::EnumString)]
 pub enum IamConfigKind {
     /// 登陆时间限制
     AccessTime,
