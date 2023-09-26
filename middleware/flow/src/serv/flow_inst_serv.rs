@@ -891,7 +891,6 @@ impl FlowInstServ {
                                         continue;
                                     }
                                 }
-                                _ => {}
                             }
                         }
                     }
@@ -932,7 +931,7 @@ impl FlowInstServ {
             .iter()
             .filter(|inst_result| {
                 if let Some(obj_current_state_id) = obj_current_state_id.clone() {
-                    if !obj_current_state_id.contains(&inst_result.current_state_id) {
+                    if !obj_current_state_id.is_empty() && !obj_current_state_id.contains(&inst_result.current_state_id) {
                         return false;
                     }
                 }
