@@ -88,11 +88,16 @@ pub struct Model {
     /// TODO Vec<FlowTransitionActionChangeInfo>
     pub action_by_post_changes: Json,
 
+    /// TODO Vec<FlowTransitionFrontActionInfo>
+    pub action_by_front_changes: Json,
+
     /// Secondary confirmation pop-up / 关于二次确认弹窗的配置
     /// TODO FlowTransitionDoubleCheckInfo
     pub double_check: Json,
 
     pub rel_flow_model_id: String,
+
+    pub sort: i64,
 
     #[fill_ctx(own_paths)]
     pub own_paths: String,

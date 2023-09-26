@@ -36,7 +36,7 @@ use crate::{
         flow_state_dto::{FlowStateAddReq, FlowStateFilterReq, FlowSysStateKind},
         flow_transition_dto::{
             FlowTransitionActionChangeAgg, FlowTransitionActionChangeKind, FlowTransitionAddReq, FlowTransitionDetailResp, FlowTransitionDoubleCheckInfo, FlowTransitionInitInfo,
-            FlowTransitionModifyReq,
+            FlowTransitionModifyReq, FlowTransitionSortStatesReq,
         },
     },
     flow_config::FlowBasicInfoManager,
@@ -336,7 +336,9 @@ impl FlowModelServ {
                 action_by_pre_callback: transition.action_by_pre_callback,
                 action_by_post_callback: transition.action_by_post_callback,
                 action_by_post_changes: Some(transition.action_by_post_changes),
+                action_by_front_changes: Some(transition.action_by_front_changes),
                 double_check: transition.double_check,
+                sort: transition.sort,
             });
         }
         Self::add_transitions(&model_id, &add_transitions, funs, ctx).await?;
@@ -376,15 +378,15 @@ impl FlowModelServ {
                 guard_by_other_conds: Set(req.guard_by_other_conds.as_ref().map(|conds| TardisFuns::json.obj_to_json(conds).unwrap()).unwrap_or(json!([]))),
 
                 vars_collect: Set(req.vars_collect.as_ref().map(|vars| TardisFuns::json.obj_to_json(vars).unwrap()).unwrap_or(json!([]))),
+                double_check: Set(TardisFuns::json.obj_to_json(&req.double_check).unwrap_or(json!(FlowTransitionDoubleCheckInfo::default()))),
 
                 action_by_pre_callback: Set(req.action_by_pre_callback.as_ref().unwrap_or(&"".to_string()).to_string()),
                 action_by_post_callback: Set(req.action_by_post_callback.as_ref().unwrap_or(&"".to_string()).to_string()),
-
                 action_by_post_changes: Set(TardisFuns::json.obj_to_json(&req.action_by_post_changes).unwrap_or(json!([]))),
-
-                double_check: Set(TardisFuns::json.obj_to_json(&req.double_check).unwrap_or(json!(FlowTransitionDoubleCheckInfo::default()))),
+                action_by_front_changes: Set(TardisFuns::json.obj_to_json(&req.action_by_front_changes).unwrap_or(json!([]))),
 
                 rel_flow_model_id: Set(flow_model_id.to_string()),
+                sort: Set(req.sort.unwrap_or(0)),
                 ..Default::default()
             })
             .collect_vec();
@@ -496,11 +498,17 @@ impl FlowModelServ {
             if let Some(action_by_post_callback) = &req.action_by_post_callback {
                 flow_transition.action_by_post_callback = Set(action_by_post_callback.to_string());
             }
+            if let Some(action_by_front_changes) = &req.action_by_front_changes {
+                flow_transition.action_by_front_changes = Set(TardisFuns::json.obj_to_json(action_by_front_changes)?);
+            }
             if let Some(action_by_post_changes) = &req.action_by_post_changes {
                 flow_transition.action_by_post_changes = Set(TardisFuns::json.obj_to_json(action_by_post_changes)?);
             }
             if let Some(double_check) = &req.double_check {
                 flow_transition.double_check = Set(TardisFuns::json.obj_to_json(double_check)?);
+            }
+            if let Some(sort) = &req.sort {
+                flow_transition.sort = Set(*sort);
             }
             flow_transition.update_time = Set(Utc::now());
             funs.db().update_one(flow_transition, ctx).await?;
@@ -563,8 +571,10 @@ impl FlowModelServ {
                 (flow_transition::Entity, flow_transition::Column::ActionByPreCallback),
                 (flow_transition::Entity, flow_transition::Column::ActionByPostCallback),
                 (flow_transition::Entity, flow_transition::Column::ActionByPostChanges),
+                (flow_transition::Entity, flow_transition::Column::ActionByFrontChanges),
                 (flow_transition::Entity, flow_transition::Column::DoubleCheck),
                 (flow_transition::Entity, flow_transition::Column::RelFlowModelId),
+                (flow_transition::Entity, flow_transition::Column::Sort),
             ])
             .expr_as(
                 Expr::col((from_state_rbum_table.clone(), NAME_FIELD.clone())).if_null(""),
@@ -605,6 +615,7 @@ impl FlowModelServ {
                 Cond::all().add(Expr::col((to_state_table.clone(), ID_FIELD.clone())).equals((flow_transition::Entity, flow_transition::Column::FromFlowStateId))),
             )
             .and_where(Expr::col((flow_transition::Entity, flow_transition::Column::RelFlowModelId)).eq(flow_model_id))
+            .order_by((flow_transition::Entity, flow_transition::Column::Sort), Order::Asc)
             .order_by((flow_transition::Entity, flow_transition::Column::CreateTime), Order::Asc)
             .order_by((flow_transition::Entity, flow_transition::Column::Id), Order::Asc);
         let flow_transitions: Vec<FlowTransitionDetailResp> = funs.db().find_dtos(&query).await?;
@@ -1031,6 +1042,39 @@ impl FlowModelServ {
             ctx,
         )
         .await?;
+
+        Ok(())
+    }
+
+    pub async fn resort_transition(flow_model_id: &str, sort_req: &FlowTransitionSortStatesReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        // @TODO wait tardis updated
+        let modify_trans = sort_req
+            .sort_states
+            .iter()
+            .map(|sort_req| FlowTransitionModifyReq {
+                id: sort_req.id.clone().into(),
+                name: None,
+                from_flow_state_id: None,
+                to_flow_state_id: None,
+                transfer_by_auto: None,
+                transfer_by_timer: None,
+                guard_by_creator: None,
+                guard_by_his_operators: None,
+                guard_by_assigned: None,
+                guard_by_spec_account_ids: None,
+                guard_by_spec_role_ids: None,
+                guard_by_spec_org_ids: None,
+                guard_by_other_conds: None,
+                vars_collect: None,
+                double_check: None,
+                action_by_pre_callback: None,
+                action_by_post_callback: None,
+                action_by_post_changes: None,
+                action_by_front_changes: None,
+                sort: Some(sort_req.sort),
+            })
+            .collect_vec();
+        Self::modify_transitions(flow_model_id, &modify_trans, funs, ctx).await?;
 
         Ok(())
     }
