@@ -1,0 +1,52 @@
+name: Publish spi-conf services docker image
+
+on:
+  push:
+    paths:
+      - "basic/**"
+      - "services/**"
+      - "spi/**"
+      - "middleware/**"
+      - "Cargo.toml"
+      - ".github/workflows/spi-conf-service-push.yml"
+
+jobs:
+  push_to_registry:
+    name: Push docker image to registry
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      contents: read
+    steps:
+      - name: Install Protoc
+        uses: arduino/setup-protoc@v1
+        
+      - name: Check out the repo
+        uses: actions/checkout@v3
+
+      - name: Init rust envrionment
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          components: rustfmt, clippy
+
+      - name: Cache rust
+        uses: Swatinem/rust-cache@v2
+
+      - name: Build rust
+        run: cargo build --release -p spi-conf-serv
+
+      - name: Copy binary to workspace
+        run: cp ./target/release/spi-conf-serv ./services/spi-conf/
+
+      - name: Build and push Docker image to dockerhub
+        uses: mr-smithers-excellent/docker-build-push@v5
+        with:
+          directory: services/spi-conf
+          dockerfile: services/spi-conf/Dockerfile
+          registry: docker.io
+          image: ecfront/spi-conf-serv
+          tags: latest
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
