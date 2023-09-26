@@ -40,7 +40,7 @@ pub async fn add(add_req: &mut LogItemAddReq, _funs: &TardisFunsInst, ctx: &Tard
             r#"INSERT INTO {table_name} 
     (id, kind, key, op, content, owner, own_paths, ext, rel_key{})
 VALUES
-    ($1, $2, $3, $4, $5, $6, $7, &8, $9{})
+    ($1, $2, $3, $4, $5, $6, $7, $8, $9{})
 	"#,
             if add_req.ts.is_some() { ", ts" } else { "" },
             if add_req.ts.is_some() { ", $10" } else { "" },
