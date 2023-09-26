@@ -55,6 +55,7 @@ pub struct LogItemFindResp {
     pub ext: Value,
     pub owner: String,
     pub own_paths: String,
+    pub id: String,
     pub key: String,
     pub op: String,
     pub rel_key: String,

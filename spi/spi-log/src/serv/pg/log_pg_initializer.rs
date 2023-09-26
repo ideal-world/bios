@@ -1,8 +1,9 @@
-use bios_basic::spi::{spi_funs::TypedSpiBsInst, spi_initializer};
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
     db::reldb_client::{TardisRelDBClient, TardisRelDBlConnection},
 };
+
+use bios_basic::spi::{spi_funs::TypedSpiBsInst, spi_initializer};
 
 pub async fn init_table_and_conn(bs_inst: TypedSpiBsInst<'_, TardisRelDBClient>, tag: &str, ctx: &TardisContext, mgr: bool) -> TardisResult<(TardisRelDBlConnection, String)> {
     spi_initializer::common_pg::init_table_and_conn(
@@ -12,6 +13,7 @@ pub async fn init_table_and_conn(bs_inst: TypedSpiBsInst<'_, TardisRelDBClient>,
         Some(tag),
         "log",
         r#"ts timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    id character varying NOT NULL,
     key character varying NOT NULL,
     op character varying NOT NULL,
     content text NOT NULL,
@@ -23,6 +25,7 @@ pub async fn init_table_and_conn(bs_inst: TypedSpiBsInst<'_, TardisRelDBClient>,
         vec![
             ("kind", "btree"),
             ("ts", "btree"),
+            ("id", "btree"),
             ("key", "btree"),
             ("op", "btree"),
             ("ext", "gin"),
@@ -33,5 +36,5 @@ pub async fn init_table_and_conn(bs_inst: TypedSpiBsInst<'_, TardisRelDBClient>,
         None,
         None,
     )
-    .await
+        .await
 }
