@@ -218,6 +218,7 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
                         ]),
                         action_by_pre_callback: None,
                         action_by_post_callback: None,
+                        action_by_front_changes: None,
                         action_by_post_changes: Some(vec![FlowTransitionActionChangeInfo {
                             kind: FlowTransitionActionChangeKind::State,
                             describe: "".to_string(),
@@ -240,6 +241,7 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
                             is_open: true,
                             content: Some("再次确认该操作生效".to_string()),
                         }),
+                        sort: None,
                     },
                     FlowTransitionModifyReq {
                         id: trans_complate.id.clone().into(),
@@ -258,6 +260,7 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
                         vars_collect: None,
                         action_by_pre_callback: None,
                         action_by_post_callback: None,
+                        action_by_front_changes: None,
                         action_by_post_changes: Some(vec![FlowTransitionActionChangeInfo {
                             kind: FlowTransitionActionChangeKind::Var,
                             describe: "".to_string(),
@@ -270,6 +273,7 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
                             changed_val: Some(json!("xxx".to_string())),
                         }]),
                         double_check: None,
+                        sort: None,
                     },
                     FlowTransitionModifyReq {
                         id: trans_close.id.clone().into(),
@@ -289,7 +293,9 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
                         action_by_pre_callback: None,
                         action_by_post_callback: None,
                         action_by_post_changes: None,
+                        action_by_front_changes: None,
                         double_check: None,
+                        sort: None,
                     },
                 ]),
                 ..Default::default()
@@ -319,6 +325,7 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
                     vars_collect: None,
                     action_by_pre_callback: None,
                     action_by_post_callback: None,
+                    action_by_front_changes: None,
                     action_by_post_changes: Some(vec![FlowTransitionActionChangeInfo {
                         kind: FlowTransitionActionChangeKind::State,
                         describe: "".to_string(),
@@ -331,6 +338,7 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
                         changed_val: None,
                     }]),
                     double_check: None,
+                    sort: None,
                 }]),
                 ..Default::default()
             },
@@ -359,6 +367,7 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
                     vars_collect: None,
                     action_by_pre_callback: None,
                     action_by_post_callback: None,
+                    action_by_front_changes: None,
                     action_by_post_changes: Some(vec![FlowTransitionActionChangeInfo {
                         kind: FlowTransitionActionChangeKind::State,
                         describe: "".to_string(),
@@ -371,6 +380,7 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
                         changed_val: None,
                     }]),
                     double_check: None,
+                    sort: None,
                 }]),
                 ..Default::default()
             },

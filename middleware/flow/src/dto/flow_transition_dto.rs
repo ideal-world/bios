@@ -25,14 +25,15 @@ pub struct FlowTransitionAddReq {
     pub guard_by_spec_org_ids: Option<Vec<String>>,
     pub guard_by_other_conds: Option<Vec<Vec<BasicQueryCondInfo>>>,
 
+    pub double_check: Option<FlowTransitionDoubleCheckInfo>,
     pub vars_collect: Option<Vec<FlowVarInfo>>,
 
     pub action_by_pre_callback: Option<String>,
     pub action_by_post_callback: Option<String>,
-
     pub action_by_post_changes: Option<Vec<FlowTransitionActionChangeInfo>>,
+    pub action_by_front_changes: Option<Vec<FlowTransitionFrontActionInfo>>,
 
-    pub double_check: Option<FlowTransitionDoubleCheckInfo>,
+    pub sort: Option<i64>,
 }
 
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
@@ -58,13 +59,14 @@ pub struct FlowTransitionModifyReq {
     pub guard_by_other_conds: Option<Vec<Vec<BasicQueryCondInfo>>>,
 
     pub vars_collect: Option<Vec<FlowVarInfo>>,
+    pub double_check: Option<FlowTransitionDoubleCheckInfo>,
 
     pub action_by_pre_callback: Option<String>,
     pub action_by_post_callback: Option<String>,
-
     pub action_by_post_changes: Option<Vec<FlowTransitionActionChangeInfo>>,
+    pub action_by_front_changes: Option<Vec<FlowTransitionFrontActionInfo>>,
 
-    pub double_check: Option<FlowTransitionDoubleCheckInfo>,
+    pub sort: Option<i64>,
 }
 
 #[derive(Serialize, Deserialize, Default, Debug, Clone, poem_openapi::Object, sea_orm::FromQueryResult)]
@@ -92,15 +94,15 @@ pub struct FlowTransitionDetailResp {
     pub guard_by_other_conds: Value,
 
     pub vars_collect: Value,
+    pub double_check: Value,
 
     pub action_by_pre_callback: String,
     pub action_by_post_callback: String,
-
     pub action_by_post_changes: Value,
-
-    pub double_check: Value,
+    pub action_by_front_changes: Value,
 
     pub rel_flow_model_id: String,
+    pub sort: i64,
 }
 
 impl FlowTransitionDetailResp {
@@ -128,6 +130,14 @@ impl FlowTransitionDetailResp {
         }
     }
 
+    pub fn action_by_front_changes(&self) -> Vec<FlowTransitionFrontActionInfo> {
+        if self.action_by_front_changes.is_array() && !&self.action_by_front_changes.as_array().unwrap().is_empty() {
+            TardisFuns::json.json_to_obj(self.action_by_front_changes.clone()).unwrap_or_default()
+        } else {
+            vec![]
+        }
+    }
+
     pub fn double_check(&self) -> Option<FlowTransitionDoubleCheckInfo> {
         if self.double_check.is_object() {
             Some(TardisFuns::json.json_to_obj(self.double_check.clone()).unwrap_or_default())
@@ -142,6 +152,7 @@ impl From<FlowTransitionDetailResp> for FlowTransitionAddReq {
         let guard_by_other_conds = value.guard_by_other_conds();
         let vars_collect = value.vars_collect();
         let action_by_post_changes = value.action_by_post_changes();
+        let action_by_front_changes = value.action_by_front_changes();
         let double_check = value.double_check();
         FlowTransitionAddReq {
             from_flow_state_id: value.from_flow_state_id,
@@ -160,7 +171,9 @@ impl From<FlowTransitionDetailResp> for FlowTransitionAddReq {
             action_by_pre_callback: Some(value.action_by_pre_callback),
             action_by_post_callback: Some(value.action_by_post_callback),
             action_by_post_changes: Some(action_by_post_changes),
+            action_by_front_changes: Some(action_by_front_changes),
             double_check,
+            sort: Some(value.sort),
         }
     }
 }
@@ -169,6 +182,17 @@ impl From<FlowTransitionDetailResp> for FlowTransitionAddReq {
 pub struct FlowTransitionDoubleCheckInfo {
     pub is_open: bool,
     pub content: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, poem_openapi::Object)]
+pub struct FlowTransitionSortStatesReq {
+    pub sort_states: Vec<FlowTransitionSortStateInfoReq>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, poem_openapi::Object)]
+pub struct FlowTransitionSortStateInfoReq {
+    pub id: String,
+    pub sort: i64,
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug, poem_openapi::Object)]
@@ -264,8 +288,6 @@ pub struct StateChangeConditionItem {
 pub enum StateChangeConditionOp {
     And,
     Or,
-    Eq,
-    Neq,
 }
 
 #[derive(Default)]
@@ -285,11 +307,31 @@ pub struct FlowTransitionInitInfo {
     pub guard_by_other_conds: Option<Vec<Vec<BasicQueryCondInfo>>>,
 
     pub vars_collect: Option<Vec<FlowVarInfo>>,
+    pub double_check: Option<FlowTransitionDoubleCheckInfo>,
 
     pub action_by_pre_callback: Option<String>,
     pub action_by_post_callback: Option<String>,
-
     pub action_by_post_changes: Vec<FlowTransitionActionChangeInfo>,
+    pub action_by_front_changes: Vec<FlowTransitionFrontActionInfo>,
 
-    pub double_check: Option<FlowTransitionDoubleCheckInfo>,
+    pub sort: Option<i64>,
+}
+
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug, poem_openapi::Object)]
+pub struct FlowTransitionFrontActionInfo {
+    pub describe: String,
+    pub change_condition: FlowTransitionFrontConditionOp,
+    pub left_name: String,
+    pub right_val: Option<Value>,
+    pub right_name: Option<String>,
+    pub right_time: Option<bool>,
+}
+
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug, poem_openapi::Enum)]
+pub enum FlowTransitionFrontConditionOp {
+    EQ,
+    GT,
+    LT,
+    GE,
+    LE,
 }

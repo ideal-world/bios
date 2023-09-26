@@ -12,6 +12,7 @@ use crate::dto::flow_model_dto::{
     FlowModelAddCustomModelReq, FlowModelAddCustomModelResp, FlowModelAddReq, FlowModelAggResp, FlowModelBindStateReq, FlowModelFilterReq, FlowModelFindRelStateResp,
     FlowModelModifyReq, FlowModelSortStatesReq, FlowModelSummaryResp, FlowModelUnbindStateReq, FlowTemplateModelResp,
 };
+use crate::dto::flow_transition_dto::FlowTransitionSortStatesReq;
 use crate::flow_constants;
 use crate::serv::flow_model_serv::FlowModelServ;
 use crate::serv::flow_rel_serv::FlowRelKind;
@@ -140,6 +141,16 @@ impl FlowCcModelApi {
         let mut funs = flow_constants::get_tardis_inst();
         funs.begin().await?;
         FlowModelServ::resort_state(&FlowRelKind::FlowModelState, &flow_model_id.0, &req.0, &funs, &ctx.0).await?;
+        funs.commit().await?;
+        TardisResp::ok(Void {})
+    }
+
+    /// Resort state / 动作重新排序
+    #[oai(path = "/:flow_model_id/resort_transition", method = "post")]
+    async fn resort_transition(&self, flow_model_id: Path<String>, req: Json<FlowTransitionSortStatesReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+        let mut funs = flow_constants::get_tardis_inst();
+        funs.begin().await?;
+        FlowModelServ::resort_transition(&flow_model_id.0, &req.0, &funs, &ctx.0).await?;
         funs.commit().await?;
         TardisResp::ok(Void {})
     }
