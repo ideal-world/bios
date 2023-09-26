@@ -22,6 +22,8 @@ pub struct LogItemAddReq {
     pub op: Option<String>,
     #[oai(validator(min_length = "2"))]
     pub rel_key: Option<TrimString>,
+    #[oai(validator(min_length = "2"))]
+    pub id: Option<String>,
     pub ts: Option<DateTime<Utc>>,
     #[oai(validator(min_length = "2"))]
     pub owner: Option<String>,

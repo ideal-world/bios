@@ -12,7 +12,7 @@ use crate::dto::log_item_dto::{LogItemAddReq, LogItemFindReq, LogItemFindResp};
 use super::log_pg_initializer;
 
 pub async fn add(add_req: &mut LogItemAddReq, _funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<String> {
-    let id = TardisFuns::field.nanoid();
+    let id = add_req.id.clone().unwrap_or(TardisFuns::field.nanoid());
     let mut params = vec![
         Value::from(add_req.kind.as_ref().unwrap_or(&"".into()).to_string()),
         Value::from(add_req.key.as_ref().unwrap_or(&"".into()).to_string()),
@@ -126,7 +126,7 @@ pub async fn find(find_req: &mut LogItemFindReq, funs: &TardisFunsInst, ctx: &Ta
         Err(funs.err().not_found(
             "item",
             "log",
-            &format!("The ext field=[{}] value=[{}] operation=[{}] is not legal.", &ext.field, ext.value, &ext.op,),
+            &format!("The ext field=[{}] value=[{}] operation=[{}] is not legal.", &ext.field, ext.value, &ext.op, ),
             "404-spi-log-op-not-legal",
         ))
     };
