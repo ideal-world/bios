@@ -7,7 +7,10 @@ use tardis::{
     web::poem_openapi,
 };
 
-use crate::{client::sms::SendSmsRequest, dto::*};
+use crate::{
+    client::sms::{SendSmsRequest, SmsContent},
+    dto::*,
+};
 
 #[derive(Debug, poem_openapi::Object, Serialize, Deserialize, Default)]
 pub struct ReachMessageTemplateAddReq {
@@ -251,18 +254,4 @@ pub struct ReachMessageTemplateDetailResp {
     /// 第三方插件-短信发送方的号码
     #[oai(validator(max_length = "255"))]
     pub sms_from: Option<String>,
-}
-
-impl ReachMessageTemplateDetailResp {
-    pub fn create_send_sms_request<'a>(&'a self, to: &'a str, content: &'a ContentReplace) -> TardisResult<SendSmsRequest<'a>> {
-        Ok(SendSmsRequest {
-            from: self.sms_from.as_deref().ok_or_else(|| TardisError::conflict("template missing field sms_from", "409-reach-bad-template"))?,
-            status_callback: None,
-            extend: None,
-            to,
-            template_id: self.sms_template_id.as_deref().ok_or_else(|| TardisError::conflict("template missing field template_id", "409-reach-bad-template"))?,
-            template_paras: content.render_final_content::<20>(&self.content),
-            signature: self.sms_signature.as_deref(),
-        })
-    }
 }

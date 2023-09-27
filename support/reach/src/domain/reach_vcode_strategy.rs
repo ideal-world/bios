@@ -89,7 +89,7 @@ impl TardisActiveModel for ActiveModel {
             .col(ColumnDef::new(Column::MaxErrorTimes).not_null().tiny_integer())
             .col(ColumnDef::new(Column::ExpireSec).not_null().small_integer())
             .col(ColumnDef::new(Column::Length).not_null().tiny_integer())
-            .col(ColumnDef::new(Column::MaxErrorTimes).not_null().string_len(255));
+            .col(ColumnDef::new(Column::RelReachSetId).not_null().string_len(255));
 
         if db == DatabaseBackend::Postgres {
             builder

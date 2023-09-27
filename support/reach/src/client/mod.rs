@@ -7,16 +7,17 @@ use tardis::{
     async_trait::async_trait,
     basic::{error::TardisError, result::TardisResult},
     mail::mail_client::TardisMailSendReq,
+    {log as tracing, log::instrument},
 };
 
-use crate::{config::ReachConfig, domain::message_template, dto::*};
+use crate::{client::sms::SmsContent, config::ReachConfig, domain::message_template, dto::*};
 
 use self::sms::SendSmsRequest;
 
 pub mod email;
 pub mod sms;
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct GenericTemplate<'t> {
     pub name: Option<&'t str>,
     pub content: &'t str,
@@ -29,7 +30,7 @@ impl<'t> GenericTemplate<'t> {
     pub fn pwd_template(config: &'t ReachConfig) -> Self {
         Self {
             name: None,
-            content: "[{pwd}]",
+            content: "{pwd}",
             sms_from: Some(&config.sms.sms_general_from),
             sms_template_id: Some(&config.sms.sms_pwd_template_id),
             sms_signature: config.sms.sms_general_signature.as_deref(),
@@ -111,11 +112,11 @@ impl SendChannel for email::MailClient {
 
 #[async_trait]
 impl SendChannel for sms::SmsClient {
+    #[instrument(skip(self), fields(module = "reach"))]
     async fn send(&self, template: GenericTemplate<'_>, content: &ContentReplace, to: &HashSet<&str>) -> TardisResult<()> {
-        let request = SendSmsRequest {
-            from: template.sms_from.ok_or_else(|| TardisError::conflict("template missing field sms_from", "409-reach-bad-template"))?,
-            status_callback: None,
-            extend: None,
+        let content = content.render_final_content::<20>(template.content);
+        tardis::log::trace!("send sms {content}");
+        let sms_content = SmsContent {
             to: &to.iter().fold(
                 // 11 digits + 1 comma, it's an estimate
                 String::with_capacity(to.len() * 12),
@@ -128,10 +129,24 @@ impl SendChannel for sms::SmsClient {
                 },
             ),
             template_id: template.sms_template_id.ok_or_else(|| TardisError::conflict("template missing field template_id", "409-reach-bad-template"))?,
-            template_paras: content.render_final_content::<20>(template.content),
+            template_paras: vec![&content],
             signature: template.sms_signature,
         };
-        self.send_sms(request).await?;
+        let from = template.sms_from.ok_or_else(|| TardisError::conflict("template missing field sms_from", "409-reach-bad-template"))?;
+        let request = SendSmsRequest::new(from, sms_content);
+        let resp = self.send_sms(request).await?;
+        if resp.is_error() {
+            use std::fmt::Write;
+            let mut error_buffer = String::new();
+            writeln!(&mut error_buffer, "send sms error [{code}]: {desc}.", code = resp.code, desc = resp.description).expect("write to string shouldn't fail");
+            if let Some(ids) = resp.result {
+                writeln!(&mut error_buffer, "Detail: ").expect("write to string shouldn't fail");
+                for detail in ids {
+                    writeln!(&mut error_buffer, "{:?}", detail).expect("write to string shouldn't fail");
+                }
+            }
+            return Err(TardisError::conflict(&error_buffer, "409-reach-sms-error"));
+        }
         Ok(())
     }
 }

@@ -8,6 +8,15 @@ pub struct SmsResponse<T> {
     pub result: Option<T>,
 }
 
+impl<T> SmsResponse<T> {
+    pub fn is_error(&self) -> bool {
+        self.code.starts_with('E')
+    }
+    pub fn is_ok(&self) -> bool {
+        self.code == "000000"
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SmsId {
@@ -26,6 +35,6 @@ pub struct SmsId {
 pub struct SmsContent<'r> {
     pub to: &'r str,
     pub template_id: &'r str,
-    pub template_paras: &'r [&'r str],
+    pub template_paras: Vec<&'r str>,
     pub signature: Option<&'r str>,
 }

@@ -77,8 +77,8 @@ fn content_replace<const MAXLEN: usize>(content: &str, values: &HashMap<String, 
         new_content.push_str(&content[idx..mat.start()]);
         let key = &content[(mat.start() + 1)..(mat.end() - 1)];
         if let Some(value) = values.get(key) {
-            if value.len() > MAXLEN {
-                new_content.push_str(&value[..(MAXLEN - 3)]);
+            if value.chars().count() > MAXLEN {
+                new_content.extend(value.chars().take(MAXLEN - 3));
                 new_content.push_str("...");
             } else {
                 new_content.push_str(value)

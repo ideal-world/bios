@@ -32,7 +32,7 @@ impl SmsClient {
         self.add_wsse_headers_to(&mut headers)?;
         let mut url = self.base_url.clone();
         url.set_path(PATH);
-        let resp = self.inner.post(url).json(&request).send().await?.json().await?;
+        let resp = self.inner.post(url).headers(headers).json(&request).send().await?.json().await?;
         Ok(resp)
     }
 }

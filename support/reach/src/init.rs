@@ -76,6 +76,7 @@ pub async fn db_init() -> TardisResult<()> {
     funs.db().init(crate::domain::trigger_global_config::ActiveModel::init(db_kind, None, compatible_type.clone())).await?;
     funs.db().init(crate::domain::trigger_instance_config::ActiveModel::init(db_kind, None, compatible_type.clone())).await?;
     funs.db().init(crate::domain::trigger_scene::ActiveModel::init(db_kind, None, compatible_type.clone())).await?;
+    funs.db().init(crate::domain::reach_vcode_strategy::ActiveModel::init(db_kind, None, compatible_type.clone())).await?;
     ReachTriggerSceneService::init(&funs, &ctx).await?;
     funs.commit().await?;
     Ok(())

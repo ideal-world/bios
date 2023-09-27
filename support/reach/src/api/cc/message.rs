@@ -59,7 +59,7 @@ impl ReachMessageCcApi {
             let req = ReachVCodeStrategyFilterReq::default();
             VcodeStrategeServ::find_one_rbum(&req, &funs, &ctx)
                 .await?
-                .ok_or_else(|| funs.err().internal_error("reach_message", "vcode_send", "msg", "500-reach-missing-v-code-strategy"))?
+                .ok_or_else(|| funs.err().internal_error("reach_message", "vcode_send", "no reach vcode strategy was found", "500-reach-missing-v-code-strategy"))?
         };
         let msg_template = {
             let req = ReachMessageTemplateFilterReq {
@@ -69,7 +69,7 @@ impl ReachMessageCcApi {
             };
             ReachMessageTemplateServ::find_one_rbum(&req, &funs, &ctx)
                 .await?
-                .ok_or_else(|| funs.err().internal_error("reach_message", "vcode_send", "msg", "500-reach-missing-message-template"))?
+                .ok_or_else(|| funs.err().internal_error("reach_message", "vcode_send", "corresponded template not found", "500-reach-missing-message-template"))?
         };
         let content_replace = ([("code", code.0)]).into();
         self.channel.send(msg_template.rel_reach_channel, &msg_template, &content_replace, &HashSet::from([to.0])).await?;
