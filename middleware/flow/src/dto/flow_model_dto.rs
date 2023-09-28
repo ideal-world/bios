@@ -12,7 +12,10 @@ use tardis::{
     TardisFuns,
 };
 
-use super::flow_transition_dto::{FlowTransitionAddReq, FlowTransitionDetailResp, FlowTransitionModifyReq};
+use super::{
+    flow_state_dto::FlowStateRelModelExt,
+    flow_transition_dto::{FlowTransitionAddReq, FlowTransitionDetailResp, FlowTransitionModifyReq},
+};
 
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
 pub struct FlowModelAddReq {
@@ -161,7 +164,7 @@ pub struct FlowStateAggResp {
     pub id: String,
     pub name: String,
     pub is_init: bool,
-    pub sort: i64,
+    pub ext: FlowStateRelModelExt,
     pub transitions: Vec<FlowTransitionDetailResp>,
 }
 

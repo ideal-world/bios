@@ -206,6 +206,7 @@ pub struct FlowTransitionActionChangeInfo {
     pub current: bool,
     pub var_name: String,
     pub changed_val: Option<Value>,
+    pub changed_current_time: Option<bool>,
 }
 
 impl From<FlowTransitionActionChangeInfo> for FlowTransitionActionChangeAgg {
@@ -230,6 +231,7 @@ impl From<FlowTransitionActionChangeInfo> for FlowTransitionActionChangeAgg {
                     obj_tag: value.obj_tag,
                     var_name: value.var_name,
                     changed_val: value.changed_val,
+                    changed_current_time: value.changed_current_time,
                 }),
                 state_change_info: None,
             },
@@ -260,6 +262,7 @@ pub struct FlowTransitionActionByVarChangeInfo {
     pub obj_tag: Option<String>,
     pub var_name: String,
     pub changed_val: Option<Value>,
+    pub changed_current_time: Option<bool>,
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug, poem_openapi::Object, sea_orm::FromJsonQueryResult)]
