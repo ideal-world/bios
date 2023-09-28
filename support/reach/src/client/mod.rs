@@ -75,13 +75,13 @@ impl<'t> From<&'t ReachMessageTemplateSummaryResp> for GenericTemplate<'t> {
 }
 
 #[async_trait]
-pub trait SendChannel {
+pub trait SendChannel: std::fmt::Debug + Send + Sync {
     async fn send(&self, template: GenericTemplate<'_>, content: &ContentReplace, to: &HashSet<&str>) -> TardisResult<()>;
 }
 fn bad_template(msg: impl AsRef<str>) -> TardisError {
     TardisError::conflict(msg.as_ref(), "409-reach-bad-template")
 }
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct UnimplementedChannel(pub ReachChannelKind);
 
 #[async_trait]
@@ -152,7 +152,7 @@ impl SendChannel for sms::SmsClient {
 }
 
 /// 集成发送通道
-#[derive(Clone, Default)]
+#[derive(Clone, Default, Debug)]
 pub struct SendChannelMap {
     pub channels: HashMap<ReachChannelKind, Arc<dyn SendChannel + Send + Sync>>,
 }

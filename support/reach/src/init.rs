@@ -1,3 +1,5 @@
+use std::sync::{OnceLock};
+
 use bios_basic::rbum::{
     dto::{rbum_domain_dto::RbumDomainAddReq, rbum_kind_dto::RbumKindAddReq},
     rbum_enumeration::RbumScopeLevelKind,
@@ -82,9 +84,14 @@ pub async fn db_init() -> TardisResult<()> {
     Ok(())
 }
 
+pub(crate) static REACH_SEND_CHANNEL_MAP: OnceLock<SendChannelMap> = OnceLock::new();
+pub fn get_reach_send_channel_map() -> &'static SendChannelMap {
+    REACH_SEND_CHANNEL_MAP.get().expect("missing send channel map")
+}
 pub async fn init(web_server: &TardisWebServer, send_channels: SendChannelMap) -> TardisResult<()> {
+    REACH_SEND_CHANNEL_MAP.get_or_init(||send_channels);
     db_init().await?;
-    api::init(web_server, send_channels).await?;
+    api::init(web_server).await?;
     task::init().await?;
     Ok(())
 }

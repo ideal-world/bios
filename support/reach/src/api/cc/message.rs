@@ -1,5 +1,5 @@
 use std::collections::{HashMap, HashSet};
-
+use tardis::log as tracing;
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 
 use tardis::web::context_extractor::TardisContextExtractor;
@@ -9,16 +9,17 @@ use tardis::web::poem_openapi;
 use tardis::web::poem_openapi::payload::Json;
 use tardis::web::web_resp::{TardisApiResult, TardisResp, Void};
 
-use crate::api::REACH_SEND_CHANNEL_MAP;
+
 use crate::client::{GenericTemplate, SendChannelMap};
 use crate::config::ReachConfig;
 use crate::consts::*;
 use crate::dto::*;
+use crate::init::REACH_SEND_CHANNEL_MAP;
 #[cfg(feature = "simple-client")]
 use crate::invoke::Client;
 use crate::serv::*;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 /// 用户触达消息-公共控制台
 pub struct ReachMessageCcApi {
     channel: &'static SendChannelMap,
@@ -37,6 +38,7 @@ impl Default for ReachMessageCcApi {
 impl ReachMessageCcApi {
     /// 根据模板id发送信息
     #[oai(method = "put", path = "/general/:to/template/:template_id")]
+    #[tardis::log::instrument(skip_all, fields(module = "reach"))]
     pub async fn general_send(
         &self,
         to: Path<String>,

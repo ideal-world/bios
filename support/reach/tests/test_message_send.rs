@@ -15,7 +15,7 @@ use test_reach_common::*;
 pub async fn test_ct_api() -> TardisResult<()> {
     // for debug
     // std::env::set_current_dir("./support/reach/")?;
-    std::env::set_var("RUST_LOG", "info,sqlx=off,sea_orm=debug,tardis=TRACE");
+    std::env::set_var("RUST_LOG", "debug,bios_reach=trace,sqlx=off,sea_orm=debug,tardis=TRACE");
     // std::env::set_var("RUST_LOG", "test_ct=info");
     let docker = testcontainers::clients::Cli::default();
     let holder = init_tardis(&docker).await?;
@@ -25,7 +25,7 @@ pub async fn test_ct_api() -> TardisResult<()> {
     const CONTENT_TEMPLATE: &str = "hello {name}, your code is {code}";
     let template_name = random_string(16);
     fn expected_content(name: &str, code: &str) -> String {
-        format!("hello {name}, your code is {code}")
+        format!(r#"["hello {name}, your code is {code}"]"#)
     }
     let template_id = {
         // msg template apis

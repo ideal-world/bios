@@ -1,6 +1,6 @@
 use std::{collections::HashSet, sync::Arc};
 
-use crate::{client::*, config::ReachConfig, consts::*, domain::*, dto::*, serv::*};
+use crate::{client::*, config::ReachConfig, consts::*, domain::*, dto::*, init::get_reach_send_channel_map, serv::*};
 use bios_basic::rbum::helper::rbum_scope_helper;
 use bios_sdk_invoke::clients::iam_client::IamClient;
 use tardis::{
@@ -13,7 +13,7 @@ use tardis::{
 pub struct MessageSendListener {
     sync: Arc<tokio::sync::Mutex<()>>,
     funs: Arc<TardisFunsInst>,
-    channel: SendChannelMap,
+    channel: &'static SendChannelMap,
 }
 
 impl Default for MessageSendListener {
@@ -21,7 +21,7 @@ impl Default for MessageSendListener {
         Self {
             sync: Default::default(),
             funs: get_tardis_inst().into(),
-            channel: SendChannelMap::default(),
+            channel: get_reach_send_channel_map(),
         }
     }
 }
@@ -50,7 +50,7 @@ impl MessageSendListener {
             if let Ok(mut resp) = iam_client.get_account(account_id, &owner_path).await {
                 let Some(phone) = resp.certs.remove(IAM_KEY_PHONE_V_CODE) else {
                     log::warn!("[Reach] Notify Phone channel send error, missing [PhoneVCode] parameters, resp: {resp:?}");
-                    continue
+                    continue;
                 };
                 to.insert(phone);
             }
@@ -79,15 +79,26 @@ impl MessageSendListener {
             )
             .await?;
         for message in messages {
-            let Some(template) = db.get_dto::<message_template::Model>(
-                Query::select()
-                .columns(message_template::Column::iter())
-                .from(message_template::Entity)
-                .and_where(message_template::Column::Id.eq(&message.rel_reach_msg_template_id))
-            ).await? else {
+            let Some(template) = db
+                .get_dto::<message_template::Model>(
+                    Query::select()
+                        .columns(message_template::Column::iter())
+                        .from(message_template::Entity)
+                        .and_where(message_template::Column::Id.eq(&message.rel_reach_msg_template_id)),
+                )
+                .await?
+            else {
                 continue;
             };
-            let Some(_signature) = db.get_dto::<message_signature::Model>(Query::select().columns(message_signature::Column::iter()).from(message_signature::Entity).and_where(message_signature::Column::Id.eq(&message.rel_reach_msg_signature_id))).await? else {
+            let Some(_signature) = db
+                .get_dto::<message_signature::Model>(
+                    Query::select()
+                        .columns(message_signature::Column::iter())
+                        .from(message_signature::Entity)
+                        .and_where(message_signature::Column::Id.eq(&message.rel_reach_msg_signature_id)),
+                )
+                .await?
+            else {
                 continue;
             };
             match message.receive_kind {

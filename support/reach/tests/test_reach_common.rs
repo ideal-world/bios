@@ -167,6 +167,7 @@ impl HwSmsMockerApi {
 }
 
 #[derive(Debug, Deserialize, Object)]
+#[serde(rename_all = "camelCase")]
 pub struct SendSmsRequest {
     pub from: String,
     pub status_callback: Option<String>,
