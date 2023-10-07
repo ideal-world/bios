@@ -1,4 +1,4 @@
-use bios_basic::dto::BasicQueryCondInfo;
+use bios_basic::{dto::BasicQueryCondInfo, basic_enumeration::BasicQueryOpKind};
 use serde::{Deserialize, Serialize};
 use tardis::{basic::field::TrimString, db::sea_orm, serde_json::Value, web::poem_openapi, TardisFuns};
 
@@ -322,19 +322,22 @@ pub struct FlowTransitionInitInfo {
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug, poem_openapi::Object)]
 pub struct FlowTransitionFrontActionInfo {
-    pub describe: String,
-    pub change_condition: FlowTransitionFrontConditionOp,
-    pub left_name: String,
-    pub right_val: Option<Value>,
-    pub right_name: Option<String>,
-    pub right_time: Option<bool>,
+    pub relevance_relation: BasicQueryOpKind,
+    pub relevance_label: String,
+    pub left_value: String,
+    pub left_label: String,
+    pub right_value: FlowTransitionFrontActionRightValue,
+    pub select_field: Option<String>,
+    pub change_content: Option<String>,
+    pub real_time: Option<bool>,
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug, poem_openapi::Enum)]
-pub enum FlowTransitionFrontConditionOp {
-    EQ,
-    GT,
-    LT,
-    GE,
-    LE,
+pub enum FlowTransitionFrontActionRightValue {
+    #[oai(rename = "select_field")]
+    SelectField,
+    #[oai(rename = "change_content")]
+    ChangeContent,
+    #[oai(rename = "real_time")]
+    RealTime,
 }
