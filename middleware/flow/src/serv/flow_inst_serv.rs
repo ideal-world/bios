@@ -13,6 +13,7 @@ use bios_basic::{
     },
 };
 use itertools::Itertools;
+use serde_json::json;
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
     chrono::{DateTime, Utc},
@@ -778,7 +779,10 @@ impl FlowInstServ {
             let post_change = FlowTransitionActionChangeAgg::from(post_change);
             match post_change.kind {
                 FlowTransitionActionChangeKind::Var => {
-                    if let Some(change_info) = post_change.var_change_info {
+                    if let Some(mut change_info) = post_change.var_change_info {
+                        if change_info.changed_current_time.is_some() && change_info.changed_current_time.unwrap() {
+                            change_info.changed_val = Some(json!(Utc::now().to_string()));
+                        }
                         let rel_tag = change_info.obj_tag.unwrap_or_default();
                         if !rel_tag.is_empty() {
                             let mut resp =

@@ -33,7 +33,7 @@ use crate::{
             FlowModelAddReq, FlowModelAggResp, FlowModelBindStateReq, FlowModelDetailResp, FlowModelFilterReq, FlowModelFindRelStateResp, FlowModelModifyReq,
             FlowModelSortStatesReq, FlowModelSummaryResp, FlowModelUnbindStateReq, FlowStateAggResp, FlowTemplateModelResp,
         },
-        flow_state_dto::{FlowStateAddReq, FlowStateFilterReq, FlowSysStateKind},
+        flow_state_dto::{FlowStateAddReq, FlowStateFilterReq, FlowStateRelModelExt, FlowSysStateKind},
         flow_transition_dto::{
             FlowTransitionActionChangeAgg, FlowTransitionActionChangeKind, FlowTransitionAddReq, FlowTransitionDetailResp, FlowTransitionDoubleCheckInfo, FlowTransitionInitInfo,
             FlowTransitionModifyReq, FlowTransitionSortStatesReq,
@@ -297,6 +297,10 @@ impl FlowModelServ {
 
         // add rel
         for (i, (state_name, _, _)) in states.iter().enumerate() {
+            let ext = FlowStateRelModelExt {
+                sort: i as i64,
+                ..Default::default()
+            };
             FlowRelServ::add_simple_rel(
                 &FlowRelKind::FlowModelState,
                 &model_id,
@@ -305,7 +309,7 @@ impl FlowModelServ {
                 None,
                 false,
                 false,
-                Some(i as i64),
+                Some(json!(ext).to_string()),
                 funs,
                 ctx,
             )
@@ -663,15 +667,21 @@ impl FlowModelServ {
         let state_ids = FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelState, flow_model_id, None, None, funs, ctx)
             .await?
             .iter()
-            .sorted_by_key(|rel| rel.ext.as_str().parse::<i64>().unwrap_or_default())
-            .map(|rel| (rel.rel_id.clone(), rel.rel_name.clone(), rel.ext.as_str().parse::<i64>().unwrap_or_default()))
+            .sorted_by_key(|rel| TardisFuns::json.str_to_obj::<FlowStateRelModelExt>(&rel.ext).unwrap_or_default().sort)
+            .map(|rel| {
+                (
+                    rel.rel_id.clone(),
+                    rel.rel_name.clone(),
+                    TardisFuns::json.str_to_obj::<FlowStateRelModelExt>(&rel.ext).unwrap_or_default(),
+                )
+            })
             .collect::<Vec<_>>();
         let mut states = Vec::new();
-        for (state_id, state_name, sort) in state_ids {
+        for (state_id, state_name, ext) in state_ids {
             let state_detail = FlowStateAggResp {
                 id: state_id.clone(),
                 name: state_name,
-                sort,
+                ext,
                 is_init: model_detail.init_state_id == state_id,
                 transitions: model_detail.transitions().into_iter().filter(|transition| transition.from_flow_state_id == state_id.clone()).collect_vec(),
             };
@@ -875,11 +885,23 @@ impl FlowModelServ {
         let states = FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelState, &parent_model.id, None, None, funs, &global_ctx)
             .await?
             .iter()
-            .sorted_by_key(|rel| rel.ext.as_str().parse::<i64>().unwrap_or_default())
-            .map(|rel| rel.rel_id.clone())
+            .sorted_by_key(|rel| TardisFuns::json.str_to_obj::<FlowStateRelModelExt>(&rel.ext).unwrap_or_default().sort)
+            .map(|rel| (rel.rel_id.clone(), TardisFuns::json.str_to_obj::<FlowStateRelModelExt>(&rel.ext).unwrap_or_default()))
             .collect::<Vec<_>>();
-        for (i, state_id) in states.iter().enumerate() {
-            FlowRelServ::add_simple_rel(&FlowRelKind::FlowModelState, &model_id, state_id, None, None, false, true, Some(i as i64), funs, ctx).await?;
+        for (state_id, ext) in states.iter() {
+            FlowRelServ::add_simple_rel(
+                &FlowRelKind::FlowModelState,
+                &model_id,
+                state_id,
+                None,
+                None,
+                false,
+                true,
+                Some(json!(ext).to_string()),
+                funs,
+                ctx,
+            )
+            .await?;
         }
         // add transition
         // sub role_id instead of role_id
@@ -942,7 +964,20 @@ impl FlowModelServ {
                 "404-flow-model-not-found",
             ));
         }
-        FlowRelServ::add_simple_rel(flow_rel_kind, flow_model_id, flow_state_id, None, None, false, true, Some(sort), funs, ctx).await?;
+        let ext = FlowStateRelModelExt { sort, ..Default::default() };
+        FlowRelServ::add_simple_rel(
+            flow_rel_kind,
+            flow_model_id,
+            flow_state_id,
+            None,
+            None,
+            false,
+            true,
+            Some(json!(ext).to_string()),
+            funs,
+            ctx,
+        )
+        .await?;
 
         Self::modify_item(
             flow_model_id,
@@ -1017,7 +1052,19 @@ impl FlowModelServ {
 
     pub async fn resort_state(flow_rel_kind: &FlowRelKind, flow_model_id: &str, sort_req: &FlowModelSortStatesReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let sort_states = &sort_req.sort_states;
+        let states = FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelState, flow_model_id, None, None, funs, ctx).await?;
         for sort_state in sort_states {
+            let show_btns = TardisFuns::json
+                .str_to_obj::<FlowStateRelModelExt>(
+                    &states
+                        .iter()
+                        .find(|state| state.rel_id == sort_state.state_id)
+                        .ok_or_else(|| funs.err().internal_error("flow_model_serv", "resort_state", "rel not found", "404-rel-not-found"))?
+                        .ext,
+                )
+                .unwrap_or_default()
+                .show_btns;
+            let ext = FlowStateRelModelExt { sort: sort_state.sort, show_btns };
             FlowRelServ::modify_simple_rel(
                 flow_rel_kind,
                 flow_model_id,
@@ -1025,7 +1072,7 @@ impl FlowModelServ {
                 &mut RbumRelModifyReq {
                     tag: None,
                     note: None,
-                    ext: Some(sort_state.sort.to_string()),
+                    ext: Some(json!(ext).to_string()),
                 },
                 funs,
                 ctx,
@@ -1037,6 +1084,35 @@ impl FlowModelServ {
             &mut FlowModelModifyReq {
                 name: Some(Self::get_model_name(flow_model_id, funs, ctx).await?.into()),
                 ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?;
+
+        Ok(())
+    }
+
+    pub async fn modify_rel_state(flow_model_id: &str, state_id: &str, new_ext: &FlowStateRelModelExt, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let mut ext = TardisFuns::json.str_to_obj::<FlowStateRelModelExt>(
+            &FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelState, flow_model_id, None, None, funs, ctx)
+                .await?
+                .into_iter()
+                .find(|rel| rel.rel_id == state_id)
+                .ok_or_else(|| funs.err().internal_error("flow_model_serv", "modify_rel_state", "rel not found", "404-rel-not-found"))?
+                .ext,
+        )?;
+        if let Some(show_btns) = new_ext.show_btns.clone() {
+            ext.show_btns = Some(show_btns);
+        }
+        FlowRelServ::modify_simple_rel(
+            &FlowRelKind::FlowModelState,
+            flow_model_id,
+            state_id,
+            &mut RbumRelModifyReq {
+                tag: None,
+                note: None,
+                ext: Some(json!(ext).to_string()),
             },
             funs,
             ctx,
@@ -1182,7 +1258,7 @@ impl FlowModelServ {
         let state_ids = FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelState, flow_model_id, None, None, funs, ctx)
             .await?
             .iter()
-            .sorted_by_key(|rel| rel.ext.as_str().parse::<i64>().unwrap_or_default())
+            .sorted_by_key(|rel| TardisFuns::json.str_to_obj::<FlowStateRelModelExt>(&rel.ext).unwrap_or_default().sort)
             .map(|rel| rel.rel_id.clone())
             .collect::<Vec<_>>();
         Ok(FlowStateServ::find_detail_items(

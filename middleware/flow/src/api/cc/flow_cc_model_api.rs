@@ -12,6 +12,7 @@ use crate::dto::flow_model_dto::{
     FlowModelAddCustomModelReq, FlowModelAddCustomModelResp, FlowModelAddReq, FlowModelAggResp, FlowModelBindStateReq, FlowModelFilterReq, FlowModelFindRelStateResp,
     FlowModelModifyReq, FlowModelSortStatesReq, FlowModelSummaryResp, FlowModelUnbindStateReq, FlowTemplateModelResp,
 };
+use crate::dto::flow_state_dto::FlowStateRelModelExt;
 use crate::dto::flow_transition_dto::FlowTransitionSortStatesReq;
 use crate::flow_constants;
 use crate::serv::flow_model_serv::FlowModelServ;
@@ -135,7 +136,7 @@ impl FlowCcModelApi {
         TardisResp::ok(Void {})
     }
 
-    /// Resort state / 状态重新排序
+    /// Resort states / 状态重新排序
     #[oai(path = "/:flow_model_id/resort_state", method = "post")]
     async fn resort_state(&self, flow_model_id: Path<String>, req: Json<FlowModelSortStatesReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = flow_constants::get_tardis_inst();
@@ -145,7 +146,7 @@ impl FlowCcModelApi {
         TardisResp::ok(Void {})
     }
 
-    /// Resort state / 动作重新排序
+    /// Resort transitions / 动作重新排序
     #[oai(path = "/:flow_model_id/resort_transition", method = "post")]
     async fn resort_transition(&self, flow_model_id: Path<String>, req: Json<FlowTransitionSortStatesReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = flow_constants::get_tardis_inst();
@@ -177,5 +178,15 @@ impl FlowCcModelApi {
         let result = FlowModelServ::find_rel_states(&tag, rel_template_id.0, &funs, &ctx.0).await?;
 
         TardisResp::ok(result)
+    }
+
+    /// modify related state / 编辑关联的状态
+    #[oai(path = "/:flow_model_id/modify_rel_state/:state_id", method = "patch")]
+    async fn modify_rel_state(&self, flow_model_id: Path<String>, state_id: Path<String>, req: Json<FlowStateRelModelExt>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+        let mut funs = flow_constants::get_tardis_inst();
+        funs.begin().await?;
+        FlowModelServ::modify_rel_state(&flow_model_id.0, &state_id.0, &req.0, &funs, &ctx.0).await?;
+        funs.commit().await?;
+        TardisResp::ok(Void {})
     }
 }
