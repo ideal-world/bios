@@ -22,6 +22,8 @@ pub struct LogItemAddReq {
     pub op: Option<String>,
     #[oai(validator(min_length = "2"))]
     pub rel_key: Option<TrimString>,
+    #[oai(validator(min_length = "2"))]
+    pub id: Option<String>,
     pub ts: Option<DateTime<Utc>>,
     #[oai(validator(min_length = "2"))]
     pub owner: Option<String>,
@@ -55,6 +57,7 @@ pub struct LogItemFindResp {
     pub ext: Value,
     pub owner: String,
     pub own_paths: String,
+    pub id: String,
     pub key: String,
     pub op: String,
     pub rel_key: String,

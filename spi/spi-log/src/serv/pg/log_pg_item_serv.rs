@@ -1,17 +1,20 @@
-use bios_basic::{basic_enumeration::BasicQueryOpKind, dto::BasicQueryCondInfo, helper::db_helper, spi::spi_funs::SpiBsInst};
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
     db::{reldb_client::TardisRelDBClient, sea_orm::Value},
-    web::web_resp::TardisPage,
-    TardisFuns, TardisFunsInst,
+    TardisFuns,
+    TardisFunsInst, web::web_resp::TardisPage,
 };
+
+use bios_basic::{basic_enumeration::BasicQueryOpKind, dto::BasicQueryCondInfo, helper::db_helper, spi::spi_funs::SpiBsInst};
 
 use crate::dto::log_item_dto::{LogItemAddReq, LogItemFindReq, LogItemFindResp};
 
 use super::log_pg_initializer;
 
-pub async fn add(add_req: &mut LogItemAddReq, _funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
+pub async fn add(add_req: &mut LogItemAddReq, _funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<String> {
+    let id = add_req.id.clone().unwrap_or(TardisFuns::field.nanoid());
     let mut params = vec![
+        Value::from(id.clone()),
         Value::from(add_req.kind.as_ref().unwrap_or(&"".into()).to_string()),
         Value::from(add_req.key.as_ref().unwrap_or(&"".into()).to_string()),
         Value::from(add_req.op.as_ref().unwrap_or(&"".to_string()).as_str()),
@@ -35,18 +38,18 @@ pub async fn add(add_req: &mut LogItemAddReq, _funs: &TardisFunsInst, ctx: &Tard
     conn.execute_one(
         &format!(
             r#"INSERT INTO {table_name} 
-    (kind, key, op, content, owner, own_paths, ext, rel_key{})
+    (id, kind, key, op, content, owner, own_paths, ext, rel_key{})
 VALUES
-    ($1, $2, $3, $4, $5, $6, $7,$8{})
+    ($1, $2, $3, $4, $5, $6, $7, $8, $9{})
 	"#,
             if add_req.ts.is_some() { ", ts" } else { "" },
-            if add_req.ts.is_some() { ", $9" } else { "" },
+            if add_req.ts.is_some() { ", $10" } else { "" },
         ),
         params,
     )
-    .await?;
+        .await?;
     conn.commit().await?;
-    Ok(())
+    Ok(id)
 }
 
 pub async fn find(find_req: &mut LogItemFindReq, funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<TardisPage<LogItemFindResp>> {
@@ -124,7 +127,7 @@ pub async fn find(find_req: &mut LogItemFindReq, funs: &TardisFunsInst, ctx: &Ta
         Err(funs.err().not_found(
             "item",
             "log",
-            &format!("The ext field=[{}] value=[{}] operation=[{}] is not legal.", &ext.field, ext.value, &ext.op,),
+            &format!("The ext field=[{}] value=[{}] operation=[{}] is not legal.", &ext.field, ext.value, &ext.op, ),
             "404-spi-log-op-not-legal",
         ))
     };
@@ -262,7 +265,7 @@ pub async fn find(find_req: &mut LogItemFindReq, funs: &TardisFunsInst, ctx: &Ta
     let result = conn
         .query_all(
             format!(
-                r#"SELECT ts, key, op, content, kind, ext, owner, own_paths, rel_key, count(*) OVER() AS total
+                r#"SELECT ts, id, key, op, content, kind, ext, owner, own_paths, rel_key, count(*) OVER() AS total
 FROM {table_name}
 WHERE 
     {}
@@ -271,7 +274,7 @@ ORDER BY ts DESC
                 where_fragments.join(" AND "),
                 page_fragments
             )
-            .as_str(),
+                .as_str(),
             sql_vals,
         )
         .await?;
@@ -286,6 +289,7 @@ ORDER BY ts DESC
             }
             Ok(LogItemFindResp {
                 ts: item.try_get("", "ts")?,
+                id: item.try_get("", "id")?,
                 key: item.try_get("", "key")?,
                 op: item.try_get("", "op")?,
                 ext: item.try_get("", "ext")?,
