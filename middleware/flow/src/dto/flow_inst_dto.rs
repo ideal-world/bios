@@ -9,7 +9,11 @@ use tardis::{
     web::poem_openapi,
 };
 
-use super::{flow_state_dto::FlowSysStateKind, flow_transition_dto::FlowTransitionDoubleCheckInfo, flow_var_dto::FlowVarInfo};
+use super::{
+    flow_state_dto::{FlowStateRelModelExt, FlowSysStateKind},
+    flow_transition_dto::FlowTransitionDoubleCheckInfo,
+    flow_var_dto::FlowVarInfo,
+};
 
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
 pub struct FlowInstStartReq {
@@ -143,7 +147,6 @@ pub struct FlowInstFindNextTransitionResp {
     pub next_flow_state_color: String,
 
     pub vars_collect: Option<Vec<FlowVarInfo>>,
-
     pub double_check: Option<FlowTransitionDoubleCheckInfo>,
 }
 
@@ -159,6 +162,7 @@ pub struct FlowInstFindStateAndTransitionsResp {
     pub current_flow_state_name: String,
     pub current_flow_state_kind: FlowSysStateKind,
     pub current_flow_state_color: String,
+    pub current_flow_state_ext: FlowStateRelModelExt,
     pub finish_time: Option<DateTime<Utc>>,
     pub next_flow_transitions: Vec<FlowInstFindNextTransitionResp>,
 }
@@ -178,6 +182,7 @@ pub struct FlowInstTransferResp {
     pub new_flow_state_id: String,
     pub new_flow_state_name: String,
     pub new_flow_state_color: String,
+    pub new_flow_state_ext: FlowStateRelModelExt,
     pub finish_time: Option<DateTime<Utc>>,
 
     pub vars: Option<HashMap<String, Value>>,

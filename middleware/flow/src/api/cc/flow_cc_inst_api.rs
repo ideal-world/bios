@@ -1,3 +1,6 @@
+use std::collections::HashMap;
+
+use serde_json::Value;
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem_openapi;
 use tardis::web::poem_openapi::param::{Path, Query};
@@ -103,6 +106,16 @@ impl FlowCcInstApi {
         let mut funs = flow_constants::get_tardis_inst();
         funs.begin().await?;
         FlowInstServ::modify_assigned(&flow_inst_id.0, &modify_req.0.current_assigned, &funs, &ctx.0).await?;
+        funs.commit().await?;
+        TardisResp::ok(Void {})
+    }
+
+    /// Modify list of variables / 同步当前变量列表
+    #[oai(path = "/:flow_inst_id/modify_current_vars", method = "patch")]
+    async fn modify_current_vars(&self, flow_inst_id: Path<String>, modify_req: Json<HashMap<String, Value>>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+        let mut funs = flow_constants::get_tardis_inst();
+        funs.begin().await?;
+        FlowInstServ::modify_current_vars(&flow_inst_id.0, &modify_req.0, &funs, &ctx.0).await?;
         funs.commit().await?;
         TardisResp::ok(Void {})
     }

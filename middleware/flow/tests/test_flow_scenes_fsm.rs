@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 
+use bios_basic::basic_enumeration::BasicQueryOpKind;
+use bios_basic::dto::BasicQueryCondInfo;
 use bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind;
 use bios_basic::test::test_http_client::TestHttpClient;
 
@@ -14,8 +16,9 @@ use bios_mw_flow::dto::flow_model_dto::{
 };
 use bios_mw_flow::dto::flow_state_dto::{FlowStateAddReq, FlowStateSummaryResp, FlowSysStateKind};
 use bios_mw_flow::dto::flow_transition_dto::{
-    FlowTransitionActionChangeInfo, FlowTransitionActionChangeKind, FlowTransitionAddReq, FlowTransitionDoubleCheckInfo, FlowTransitionModifyReq, StateChangeCondition,
-    StateChangeConditionItem, StateChangeConditionOp,
+    FlowTransitionActionChangeInfo, FlowTransitionActionChangeKind, FlowTransitionAddReq, FlowTransitionDoubleCheckInfo, FlowTransitionFrontActionInfo,
+    FlowTransitionFrontActionRightValue, FlowTransitionModifyReq, FlowTransitionSortStateInfoReq, FlowTransitionSortStatesReq, StateChangeCondition, StateChangeConditionItem,
+    StateChangeConditionOp,
 };
 
 use bios_mw_flow::dto::flow_var_dto::{FlowVarInfo, RbumDataTypeKind, RbumWidgetTypeKind};
@@ -182,6 +185,31 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
     let _: Void = flow_client
         .patch(
             &format!("/cc/model/{}", req_model_id),
+            &json!({
+                "modify_transitions": [
+                    {
+                        "id": trans_start.id.clone(),
+                        "action_by_front_changes": [
+                            {
+                                "relevance_relation": "in",
+                                "relevance_label": "包含",
+                                "left_value": "status",
+                                "left_label": "状态",
+                                "right_value": "select_field",
+                                "select_field": "status",
+                                "change_content": null,
+                                "select_field_label": "status",
+                                "change_content_label": null
+                            }
+                        ]
+                    }
+                ]
+            }),
+        )
+        .await;
+    let _: Void = flow_client
+        .patch(
+            &format!("/cc/model/{}", req_model_id),
             &FlowModelModifyReq {
                 init_state_id: Some(init_state_id.clone()),
                 modify_transitions: Some(vec![
@@ -218,7 +246,6 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
                         ]),
                         action_by_pre_callback: None,
                         action_by_post_callback: None,
-                        action_by_front_changes: None,
                         action_by_post_changes: Some(vec![FlowTransitionActionChangeInfo {
                             kind: FlowTransitionActionChangeKind::State,
                             describe: "".to_string(),
@@ -242,6 +269,7 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
                             is_open: true,
                             content: Some("再次确认该操作生效".to_string()),
                         }),
+                        action_by_front_changes: None,
                         sort: None,
                     },
                     FlowTransitionModifyReq {
@@ -301,6 +329,23 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
                     },
                 ]),
                 ..Default::default()
+            },
+        )
+        .await;
+    let _: Void = flow_client
+        .post(
+            &format!("/cc/model/{}/resort_transition", &req_model_id),
+            &FlowTransitionSortStatesReq {
+                sort_states: vec![
+                    FlowTransitionSortStateInfoReq {
+                        id: req_model_agg.states.iter().find(|state| state.name == "待开始").unwrap().transitions.iter().find(|trans| trans.name == "开始").unwrap().id.clone(),
+                        sort: 2,
+                    },
+                    FlowTransitionSortStateInfoReq {
+                        id: req_model_agg.states.iter().find(|state| state.name == "待开始").unwrap().transitions.iter().find(|trans| trans.name == "关闭").unwrap().id.clone(),
+                        sort: 1,
+                    },
+                ],
             },
         )
         .await;
@@ -619,8 +664,10 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
     let next_transitions: Vec<FlowInstFindNextTransitionResp> =
         flow_client.put(&format!("/cc/inst/{}/transition/next", req_inst_id1), &FlowInstFindNextTransitionsReq { vars: None }).await;
     assert_eq!(next_transitions.len(), 2);
-    assert!(next_transitions.iter().any(|trans| trans.next_flow_transition_name.contains("开始")));
-    assert!(next_transitions.iter().any(|trans| trans.next_flow_transition_name.contains("关闭")));
+    assert_eq!(next_transitions[0].next_flow_transition_name, "关闭");
+    assert_eq!(next_transitions[1].next_flow_transition_name, "开始-modify");
+    // assert!(next_transitions.iter().any(|trans| trans.next_flow_transition_name.contains("开始")));
+    // assert!(next_transitions.iter().any(|trans| trans.next_flow_transition_name.contains("关闭")));
     // Find the state and transfer information of the specified instances in batch
     let state_and_next_transitions: Vec<FlowInstFindStateAndTransitionsResp> = flow_client
         .put(

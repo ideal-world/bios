@@ -36,5 +36,5 @@ pub async fn init_table_and_conn(bs_inst: TypedSpiBsInst<'_, TardisRelDBClient>,
         None,
         None,
     )
-        .await
+    .await
 }
