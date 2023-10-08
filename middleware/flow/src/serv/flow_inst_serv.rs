@@ -39,7 +39,7 @@ use crate::{
             FlowInstTransitionInfo, FlowOperationContext,
         },
         flow_model_dto::{FlowModelDetailResp, FlowModelFilterReq},
-        flow_state_dto::{FlowStateFilterReq, FlowSysStateKind},
+        flow_state_dto::{FlowStateFilterReq, FlowStateRelModelExt, FlowSysStateKind},
         flow_transition_dto::{
             FlowTransitionActionByStateChangeInfo, FlowTransitionActionChangeAgg, FlowTransitionActionChangeInfo, FlowTransitionActionChangeKind, FlowTransitionDetailResp,
             StateChangeConditionOp,
@@ -48,7 +48,10 @@ use crate::{
     serv::{flow_model_serv::FlowModelServ, flow_state_serv::FlowStateServ},
 };
 
-use super::flow_external_serv::FlowExternalServ;
+use super::{
+    flow_external_serv::FlowExternalServ,
+    flow_rel_serv::{FlowRelKind, FlowRelServ},
+};
 
 pub struct FlowInstServ;
 
@@ -758,6 +761,14 @@ impl FlowInstServ {
             prev_flow_state_id: prev_flow_state.id,
             prev_flow_state_name: prev_flow_state.name,
             prev_flow_state_color: prev_flow_state.color,
+            new_flow_state_ext: TardisFuns::json.str_to_obj::<FlowStateRelModelExt>(
+                &FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelState, &flow_model.id, None, None, funs, ctx)
+                    .await?
+                    .into_iter()
+                    .find(|rel| next_flow_state.id == rel.rel_id)
+                    .ok_or_else(|| funs.err().not_found("flow_inst", "do_find_next_transitions", "flow state is not found", "404-flow-state-not-found"))?
+                    .ext,
+            )?,
             new_flow_state_id: next_flow_state.id,
             new_flow_state_name: next_flow_state.name,
             new_flow_state_color: next_flow_state.color,
@@ -1116,14 +1127,23 @@ impl FlowInstServ {
             funs,
             ctx,
         )
-        .await?;
+        .await?
+        .ok_or_else(|| funs.err().not_found("flow_inst", "do_find_next_transitions", "flow state is not found", "404-flow-state-not-found"))?;
 
         let state_and_next_transitions = FlowInstFindStateAndTransitionsResp {
             flow_inst_id: flow_inst.id.to_string(),
             finish_time: flow_inst.finish_time,
             current_flow_state_name: flow_inst.current_state_name.as_ref().unwrap_or(&"".to_string()).to_string(),
-            current_flow_state_kind: current_flow_state.as_ref().map(|state| state.sys_state.clone()).unwrap_or(FlowSysStateKind::Finish),
-            current_flow_state_color: current_flow_state.as_ref().map(|state| state.color.clone()).unwrap_or_default(),
+            current_flow_state_kind: current_flow_state.sys_state.clone(),
+            current_flow_state_color: current_flow_state.color.clone(),
+            current_flow_state_ext: TardisFuns::json.str_to_obj::<FlowStateRelModelExt>(
+                &FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelState, &flow_inst.rel_flow_model_id, None, None, funs, ctx)
+                    .await?
+                    .into_iter()
+                    .find(|rel| current_flow_state.id == rel.rel_id)
+                    .ok_or_else(|| funs.err().not_found("flow_inst", "do_find_next_transitions", "flow state is not found", "404-flow-state-not-found"))?
+                    .ext,
+            )?,
             next_flow_transitions: next_transitions,
         };
         Ok(state_and_next_transitions)
@@ -1147,5 +1167,22 @@ impl FlowInstServ {
         } else {
             Ok(false)
         }
+    }
+
+    pub async fn modify_current_vars(flow_inst_id: &str, current_vars: &HashMap<String, Value>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let flow_inst_detail = Self::get(flow_inst_id, funs, ctx).await?;
+        let mut new_vars: HashMap<String, Value> = HashMap::new();
+        if let Some(old_current_vars) = &flow_inst_detail.current_vars {
+            new_vars.extend(old_current_vars.clone());
+        }
+        new_vars.extend(current_vars.clone());
+        let flow_inst = flow_inst::ActiveModel {
+            id: Set(flow_inst_id.to_string()),
+            current_vars: Set(Some(TardisFuns::json.obj_to_json(&new_vars)?)),
+            ..Default::default()
+        };
+        funs.db().update_one(flow_inst, ctx).await?;
+
+        Ok(())
     }
 }
