@@ -12,6 +12,7 @@ members = [
     "support/reach",
     "services/*",
     "sdk/*",
+    "clients/*",
 ]
 
 [workspace.package]

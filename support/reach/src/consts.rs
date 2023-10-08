@@ -1,13 +1,9 @@
-use std::sync::{Arc, OnceLock};
+use std::sync::OnceLock;
 
 use bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind;
 use tardis::{TardisFuns, TardisFunsInst};
-
-use crate::{
-    client::{email::MailClient, sms::SmsClient},
-    config::ReachConfig,
-};
 pub const DOMAIN_CODE: &str = "reach";
+pub const MODULE_CODE: &str = "reach";
 pub const RBUM_KIND_CODE_REACH_MESSAGE: &str = "reach-message";
 pub const RBUM_EXT_TABLE_REACH_MESSAGE: &str = "reach_message";
 pub const RBUM_SET_SCHEME_REACH: &str = "reach_set_";
@@ -32,23 +28,4 @@ pub fn get_domain_reach_id() -> &'static str {
 
 pub fn get_tardis_inst() -> TardisFunsInst {
     TardisFuns::inst_with_db_conn(DOMAIN_CODE.to_string(), None)
-}
-
-pub fn get_sms_client() -> Arc<SmsClient> {
-    static SMS_CLIENT: OnceLock<Arc<SmsClient>> = OnceLock::new();
-    SMS_CLIENT
-        .get_or_init(|| {
-            // this would block thread but it's ok
-            let config = TardisFuns::cs_config::<ReachConfig>(DOMAIN_CODE);
-            let sms_config = &config.sms;
-            let base_url = sms_config.base_url.parse().expect("invalid sms base url");
-            let callback_url = sms_config.status_call_back.as_ref().map(|x| x.parse().expect("invalid sms status_call_back url"));
-            SmsClient::new(base_url, &sms_config.app_key, &sms_config.app_secret, callback_url).into()
-        })
-        .clone()
-}
-
-pub fn get_mail_client() -> MailClient {
-    // it's cheap, `MailClient` inner is a single static ref
-    MailClient::new()
 }

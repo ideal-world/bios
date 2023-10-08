@@ -1,16 +1,12 @@
 use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
 use serde::{Deserialize, Serialize};
 use tardis::{
-    basic::{error::TardisError, result::TardisResult},
     chrono::{DateTime, Utc},
     db::sea_orm,
     web::poem_openapi,
 };
 
-use crate::{
-    client::sms::{SendSmsRequest, SmsContent},
-    dto::*,
-};
+use crate::dto::*;
 
 #[derive(Debug, poem_openapi::Object, Serialize, Deserialize, Default)]
 pub struct ReachMessageTemplateAddReq {

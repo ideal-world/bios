@@ -1,7 +1,7 @@
 use serde::Serialize;
 use tardis::{basic::result::TardisResult, serde_json, url::Url, web::reqwest::header::HeaderMap};
 
-use crate::client::sms::{model::*, SmsClient};
+use crate::{model::*, SmsClient};
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]

@@ -5,7 +5,7 @@ use tardis::{
     web::reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION},
 };
 
-use crate::client::sms::{model::*, SmsClient};
+use crate::{model::*, SmsClient};
 
 #[derive(Debug, Serialize, Default)]
 #[serde(rename_all = "camelCase")]

@@ -7,15 +7,9 @@ use tardis::{
     async_trait::async_trait,
     basic::{error::TardisError, result::TardisResult},
     mail::mail_client::TardisMailSendReq,
-    {log as tracing, log::instrument},
 };
 
-use crate::{client::sms::SmsContent, config::ReachConfig, domain::message_template, dto::*};
-
-use self::sms::SendSmsRequest;
-
-pub mod email;
-pub mod sms;
+use crate::{config::ReachConfig, domain::message_template, dto::*};
 
 #[derive(Default, Debug)]
 pub struct GenericTemplate<'t> {
@@ -75,7 +69,8 @@ impl<'t> From<&'t ReachMessageTemplateSummaryResp> for GenericTemplate<'t> {
 }
 
 #[async_trait]
-pub trait SendChannel: std::fmt::Debug + Send + Sync {
+pub trait SendChannel: Send + Sync {
+    fn kind(&self) -> ReachChannelKind;
     async fn send(&self, template: GenericTemplate<'_>, content: &ContentReplace, to: &HashSet<&str>) -> TardisResult<()>;
 }
 fn bad_template(msg: impl AsRef<str>) -> TardisError {
@@ -90,12 +85,15 @@ impl SendChannel for UnimplementedChannel {
         let message = format!("trying to send through an unimplemented channel [{kind}]", kind = self.0);
         Err(TardisError::conflict(&message, "500-unimplemented-channel"))
     }
+    fn kind(&self) -> ReachChannelKind {
+        self.0
+    }
 }
 
 #[async_trait]
-impl SendChannel for email::MailClient {
+impl SendChannel for &'static tardis::mail::mail_client::TardisMailClient {
     async fn send(&self, template: GenericTemplate<'_>, content: &ContentReplace, to: &HashSet<&str>) -> TardisResult<()> {
-        self.inner
+        (*self)
             .send(&TardisMailSendReq {
                 subject: template.name.ok_or_else(|| bad_template("template missing field sms_from"))?.to_owned(),
                 txt_body: content.render_final_content::<{ usize::MAX }>(template.content),
@@ -108,51 +106,13 @@ impl SendChannel for email::MailClient {
             })
             .await
     }
-}
-
-#[async_trait]
-impl SendChannel for sms::SmsClient {
-    #[instrument(skip(self), fields(module = "reach"))]
-    async fn send(&self, template: GenericTemplate<'_>, content: &ContentReplace, to: &HashSet<&str>) -> TardisResult<()> {
-        let content = content.render_final_content::<20>(template.content);
-        tardis::log::trace!("send sms {content}");
-        let sms_content = SmsContent {
-            to: &to.iter().fold(
-                // 11 digits + 1 comma, it's an estimate
-                String::with_capacity(to.len() * 12),
-                |mut acc, x| {
-                    if !acc.is_empty() {
-                        acc.push(',');
-                    }
-                    acc.push_str(x);
-                    acc
-                },
-            ),
-            template_id: template.sms_template_id.ok_or_else(|| TardisError::conflict("template missing field template_id", "409-reach-bad-template"))?,
-            template_paras: vec![&content],
-            signature: template.sms_signature,
-        };
-        let from = template.sms_from.ok_or_else(|| TardisError::conflict("template missing field sms_from", "409-reach-bad-template"))?;
-        let request = SendSmsRequest::new(from, sms_content);
-        let resp = self.send_sms(request).await?;
-        if resp.is_error() {
-            use std::fmt::Write;
-            let mut error_buffer = String::new();
-            writeln!(&mut error_buffer, "send sms error [{code}]: {desc}.", code = resp.code, desc = resp.description).expect("write to string shouldn't fail");
-            if let Some(ids) = resp.result {
-                writeln!(&mut error_buffer, "Detail: ").expect("write to string shouldn't fail");
-                for detail in ids {
-                    writeln!(&mut error_buffer, "{:?}", detail).expect("write to string shouldn't fail");
-                }
-            }
-            return Err(TardisError::conflict(&error_buffer, "409-reach-sms-error"));
-        }
-        Ok(())
+    fn kind(&self) -> ReachChannelKind {
+        ReachChannelKind::Email
     }
 }
 
-/// 集成发送通道
-#[derive(Clone, Default, Debug)]
+/// 集成发送通道，每个`ReachChannelKind`对应一个实例
+#[derive(Clone, Default)]
 pub struct SendChannelMap {
     pub channels: HashMap<ReachChannelKind, Arc<dyn SendChannel + Send + Sync>>,
 }
@@ -161,9 +121,18 @@ impl SendChannelMap {
     pub fn new() -> Self {
         Self::default()
     }
-    pub fn with_channel(mut self, kind: ReachChannelKind, channel: Arc<dyn SendChannel + Send + Sync>) -> Self {
-        self.channels.insert(kind, channel);
+    pub fn with_arc_channel<C>(mut self, channel: Arc<C>) -> Self
+    where
+        C: SendChannel + Send + Sync + 'static,
+    {
+        self.channels.insert(channel.kind(), channel);
         self
+    }
+    pub fn with_channel<C>(self, channel: C) -> Self
+    where
+        C: SendChannel + Send + Sync + 'static,
+    {
+        self.with_arc_channel(Arc::new(channel))
     }
     pub fn get_channel(&self, kind: ReachChannelKind) -> Arc<dyn SendChannel + Send + Sync> {
         self.channels.get(&kind).cloned().unwrap_or(Arc::new(UnimplementedChannel(kind)))

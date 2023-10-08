@@ -1,5 +1,5 @@
-#![warn(clippy::unwrap_used)]
 #![warn(clippy::dbg_macro)]
+#![warn(clippy::unwrap_used)]
 
 pub mod api;
 pub mod client;
@@ -9,6 +9,7 @@ mod domain;
 pub mod dto;
 mod errors;
 mod init;
+
 #[cfg(feature = "simple-client")]
 pub mod invoke;
 mod task;

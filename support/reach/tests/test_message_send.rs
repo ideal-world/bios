@@ -1,12 +1,5 @@
-use std::collections::HashMap;
-
 use bios_basic::rbum::dto::rbum_item_dto::RbumItemAddReq;
-use tardis::{
-    basic::result::TardisResult,
-    log,
-    serde_json::{self, json},
-    testcontainers, tokio, TardisFuns,
-};
+use tardis::{basic::result::TardisResult, log, serde_json::json, testcontainers, tokio};
 
 mod test_reach_common;
 use bios_reach::{consts::*, dto::*, invoke};
@@ -186,7 +179,7 @@ pub async fn test_ct_api() -> TardisResult<()> {
 
     // test trigger
     // find trigger scene
-    let (trigger_scene_id, trigger_scene_code) = {
+    let (trigger_scene_id, _trigger_scene_code) = {
         log::info!("find all trigger scene");
         let trigger_scenes = client.find_trigger_scene().await?;
         let name_codes_map = trigger_scenes.iter().map(|s| (s.name.clone(), s.code.clone())).collect::<std::collections::HashMap<_, _>>();
@@ -265,7 +258,6 @@ pub async fn test_ct_api() -> TardisResult<()> {
     //     assert_eq!(msg, expected_content(name, &code));
     // }
 
-    
     drop(holder);
     Ok(())
 }

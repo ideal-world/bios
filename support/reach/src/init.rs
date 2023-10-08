@@ -1,4 +1,4 @@
-use std::sync::{OnceLock};
+use std::sync::OnceLock;
 
 use bios_basic::rbum::{
     dto::{rbum_domain_dto::RbumDomainAddReq, rbum_kind_dto::RbumKindAddReq},

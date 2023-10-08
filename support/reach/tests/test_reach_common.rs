@@ -6,10 +6,9 @@ use bios_basic::rbum::serv::rbum_domain_serv::RbumDomainServ;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemServ;
 use bios_basic::rbum::serv::rbum_kind_serv::RbumKindServ;
 use bios_basic::{rbum::rbum_config::RbumConfig, test::test_http_client::TestHttpClient};
-use bios_reach::client::sms::{SmsId, SmsResponse};
+use bios_client_hwsms::{SmsResponse, SmsId};
 use bios_reach::client::SendChannelMap;
-use bios_reach::consts::{get_mail_client, get_sms_client, DOMAIN_CODE, IAM_KEY_PHONE_V_CODE, RBUM_KIND_CODE_REACH_MESSAGE, REACH_INIT_OWNER};
-use bios_reach::dto::ReachChannelKind;
+use bios_reach::consts::{DOMAIN_CODE, IAM_KEY_PHONE_V_CODE, RBUM_KIND_CODE_REACH_MESSAGE, REACH_INIT_OWNER, get_tardis_inst};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::{Arc, OnceLock};
@@ -65,7 +64,7 @@ pub async fn init_tardis(docker: &Cli) -> TardisResult<Holder> {
     let web_server = TardisFuns::web_server();
     bios_reach::init(
         web_server,
-        SendChannelMap::new().with_channel(ReachChannelKind::Sms, get_sms_client()).with_channel(ReachChannelKind::Email, Arc::new(get_mail_client())),
+        SendChannelMap::new().with_arc_channel(bios_client_hwsms::SmsClient::from_reach_config()).with_arc_channel(Arc::new(get_tardis_inst().mail())),
     )
     .await?;
     let sms_mocker = HwSmsMockerApi::default();

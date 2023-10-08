@@ -19,7 +19,7 @@ use crate::init::REACH_SEND_CHANNEL_MAP;
 use crate::invoke::Client;
 use crate::serv::*;
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 /// 用户触达消息-公共控制台
 pub struct ReachMessageCcApi {
     channel: &'static SendChannelMap,

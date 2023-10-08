@@ -1,3 +1,6 @@
+//! # Huawei Cloud Platform Sms Client
+//! reference: https://support.huaweicloud.com/msgsms/index.html
+
 use tardis::{
     basic::result::TardisResult,
     chrono::{Utc, SecondsFormat},
@@ -8,13 +11,14 @@ use tardis::{
         Client,
     }, crypto::rust_crypto::sha2::Sha256,
 };
+mod ext;
 mod api;
 pub use api::*;
 mod model;
 pub use model::*;
 #[derive(Clone, Debug)]
 pub struct SmsClient {
-    pub(super) inner: Client,
+    pub(crate) inner: Client,
     pub app_key: String,
     pub app_secret: String,
     pub base_url: Url,
@@ -22,7 +26,7 @@ pub struct SmsClient {
 }
 
 impl SmsClient {
-    const AUTH_WSSE_HEADER_VALUE: &str = r#"WSSE realm="SDP",profile="UsernameToken",type="Appkey""#;
+    const AUTH_WSSE_HEADER_VALUE: &'static str = r#"WSSE realm="SDP",profile="UsernameToken",type="Appkey""#;
     fn add_wsse_headers_to(&self, headers: &mut HeaderMap) -> TardisResult<()> {
         use tardis::crypto::{crypto_base64::TardisCryptoBase64, crypto_digest::TardisCryptoDigest};
         const WSSE_HEADER_NAME: &str = "X-WSSE";
