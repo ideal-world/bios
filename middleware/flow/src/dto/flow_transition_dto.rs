@@ -322,8 +322,8 @@ pub struct FlowTransitionInitInfo {
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug, poem_openapi::Object)]
 pub struct FlowTransitionFrontActionInfo {
-    pub op: BasicQueryOpKind,
-    pub op_label: String,
+    pub relevance_relation: BasicQueryOpKind,
+    pub relevance_label: String,
     pub left_value: String,
     pub left_label: String,
     pub right_value: FlowTransitionFrontActionRightValue,
