@@ -59,3 +59,12 @@ pub async fn init_admin_cert(funs: &TardisFunsInst, ctx: &TardisContext) {
 pub(crate) fn get_tardis_inst() -> TardisFunsInst {
     TardisFuns::inst_with_db_conn(DOMAIN_CODE.to_string(), None)
 }
+
+#[inline]
+pub(crate) fn get_tardis_inst_ref() -> &'static TardisFunsInst {
+    use std::sync::OnceLock;
+    static INST: OnceLock<TardisFunsInst> = OnceLock::new();
+    INST.get_or_init(|| {
+        TardisFuns::inst_with_db_conn(DOMAIN_CODE.to_string(), None)
+    })
+}
