@@ -282,7 +282,7 @@ pub fn simple_invoke_client(attr: TokenStream, item: TokenStream) -> TokenStream
         .collect::<Vec<_>>();
 
     let client = metadata.client;
-    let impl_apis = generate_impl_taidis_api_client(&method_info_list, client, metadata.prefix_path);
+    let impl_apis = generate_impl_tardis_api_client(&method_info_list, client, metadata.prefix_path);
 
     let output = quote! {
         #input
@@ -292,7 +292,7 @@ pub fn simple_invoke_client(attr: TokenStream, item: TokenStream) -> TokenStream
     output.into()
 }
 
-fn generate_impl_taidis_api_client(apis: &[ApiInfo], client: Type, prefix: Option<LitStr>) -> proc_macro2::TokenStream {
+fn generate_impl_tardis_api_client(apis: &[ApiInfo], client: Type, prefix: Option<LitStr>) -> proc_macro2::TokenStream {
     let mut impl_items = Vec::new();
 
     for api_info in apis {
@@ -318,7 +318,7 @@ fn generate_impl_taidis_api_client(apis: &[ApiInfo], client: Type, prefix: Optio
     }
 
     quote! {
-        bios_sdk_invoke::impl_taidis_api_client! {
+        bios_sdk_invoke::impl_tardis_api_client! {
             #client:
             #(#impl_items)*
         }

@@ -54,7 +54,7 @@ pub mod iam_client;
 /// #     }
 /// # }
 ///
-/// impl_taidis_api_client!{
+/// impl_tardis_api_client!{
 ///     Client<'_>:
 ///     // <function_name>  <method>    <path>                                  <query> <response type>
 ///     { my_get_method,    get         ["/path", patharg, "path2", patharg2]   {code}  String}
@@ -65,11 +65,11 @@ pub mod iam_client;
 ///     { delete_test, delete ["/delete/some/msg"] String }
 /// }
 /// ```
-macro_rules! impl_taidis_api_client {
+macro_rules! impl_tardis_api_client {
     ($Client:ty: $({$($defs: tt)*})*) => {
         impl $Client {
             $(
-                $crate::taidis_api!{$($defs)*}
+                $crate::tardis_api!{$($defs)*}
             )*
         }
     }
@@ -79,85 +79,85 @@ macro_rules! impl_taidis_api_client {
 ///
 ///
 /// ```ignore,no_run
-/// taidis_api!{
+/// tardis_api!{
 ///     mail_pwd_send, put ["/cc/msg/mail", mail] {message, subject} () => ()
 /// }
 /// ```
-macro_rules! taidis_api {
+macro_rules! tardis_api {
     /*
        enter
      */
     ($fn_name:ident, $($tt:tt)*) => {
-        $crate::taidis_api!($fn_name @method $($tt)*);
+        $crate::tardis_api!($fn_name @method $($tt)*);
     };
     /*
         method
      */
     ($fn_name:ident @method $method:ident $($tt:tt)*) => {
-        $crate::taidis_api!($fn_name @path $method {} {} $($tt)*);
+        $crate::tardis_api!($fn_name @path $method {} {} $($tt)*);
     };
     /*
         path
      */
     ($fn_name:ident @path $method:ident {$($args_i:ident:$args_t:ty,)*} {$($path:expr,)*} [] $($tt:tt)*) => {
-        $crate::taidis_api!($fn_name @query $method {$($args_i:$args_t,)*} {$($path,)*} {;} $($tt)*);
+        $crate::tardis_api!($fn_name @query $method {$($args_i:$args_t,)*} {$($path,)*} {;} $($tt)*);
     };
     ($fn_name:ident @path $method:ident {$($args_i:ident:$args_t:ty,)*} {$($path:expr,)*} [$next:ident, $($rest_path:tt)*] $($tt:tt)*) => {
-        $crate::taidis_api!($fn_name @path $method {$($args_i:$args_t,)* $next: &str,} {$($path,)* $next,} [$($rest_path)*] $($tt)*);
+        $crate::tardis_api!($fn_name @path $method {$($args_i:$args_t,)* $next: &str,} {$($path,)* $next,} [$($rest_path)*] $($tt)*);
     };
     ($fn_name:ident @path $method:ident {$($args_i:ident:$args_t:ty,)*} {$($path:expr,)*} [$next:ident $(,)?] $($tt:tt)*) => {
-        $crate::taidis_api!($fn_name @path $method {$($args_i:$args_t,)* $next: &str,} {$($path,)* $next,} [] $($tt)*);
+        $crate::tardis_api!($fn_name @path $method {$($args_i:$args_t,)* $next: &str,} {$($path,)* $next,} [] $($tt)*);
     };
     ($fn_name:ident @path $method:ident {$($args_i:ident:$args_t:ty,)*} {$($path:expr,)*} [$next:literal, $($rest_path:tt)*] $($tt:tt)*) => {
-        $crate::taidis_api!($fn_name @path $method {$($args_i:$args_t,)*} {$($path,)* $next,} [$($rest_path)*] $($tt)*);
+        $crate::tardis_api!($fn_name @path $method {$($args_i:$args_t,)*} {$($path,)* $next,} [$($rest_path)*] $($tt)*);
     };
     ($fn_name:ident @path $method:ident {$($args_i:ident:$args_t:ty,)*} {$($path:expr,)*} [$next:literal $(,)?] $($tt:tt)*) => {
-        $crate::taidis_api!($fn_name @path $method {$($args_i:$args_t,)*} {$($path,)* $next,} [] $($tt)*);
+        $crate::tardis_api!($fn_name @path $method {$($args_i:$args_t,)*} {$($path,)* $next,} [] $($tt)*);
     };
     ($fn_name:ident @path $method:ident {$($args_i:ident:$args_t:ty,)*} {$($path:expr,)*} [$next_ident:ident:$next_type:ty, $($rest_path:tt)*] $($tt:tt)*) => {
-        $crate::taidis_api!($fn_name @path $method {$($args_i:$args_t,)* $next_ident:$next_type,} {$($path,)* $next_ident.to_string().as_str(),} [$($rest_path)*] $($tt)*);
+        $crate::tardis_api!($fn_name @path $method {$($args_i:$args_t,)* $next_ident:$next_type,} {$($path,)* $next_ident.to_string().as_str(),} [$($rest_path)*] $($tt)*);
     };
     ($fn_name:ident @path $method:ident {$($args_i:ident:$args_t:ty,)*} {$($path:expr,)*} [$next_ident:ident:$next_type:ty $(,)?] $($tt:tt)*) => {
-        $crate::taidis_api!($fn_name @path $method {$($args_i:$args_t,)* $next_ident:$next_type,} {$($path,)* $next_ident.to_string().as_str(),} [] $($tt)*);
+        $crate::tardis_api!($fn_name @path $method {$($args_i:$args_t,)* $next_ident:$next_type,} {$($path,)* $next_ident.to_string().as_str(),} [] $($tt)*);
     };
     /*
         query
         fn_name @query method {args} {paths} {query1, query2, ; optional_query1, optional_query2} {rest_querys} tt
      */
     ($fn_name:ident @query $method:ident {$($args_i:ident:$args_t:ty,)*} {$($path:expr,)*} {$($query:expr,)*;$($optional_query:expr,)*} {} $($tt:tt)*) => {
-        $crate::taidis_api!($fn_name @build $method {$($args_i:$args_t,)*} {$($path,)*} {$($query,)*;$($optional_query,)*} $($tt)*);
+        $crate::tardis_api!($fn_name @build $method {$($args_i:$args_t,)*} {$($path,)*} {$($query,)*;$($optional_query,)*} $($tt)*);
     };
     // for ident:type
     ($fn_name:ident @query $method:ident {$($args_i:ident:$args_t:ty,)*} {$($path:expr,)*} {$($query:expr,)*;$($optional_query:expr,)*} {$next_ident:ident:$next_type:ty, $($rest_query:tt)*} $($tt:tt)*) => {
-        $crate::taidis_api!($fn_name @query $method {$($args_i:$args_t,)* $next_ident:$next_type,} {$($path,)*} {$($query,)* (stringify!($next_ident), $next_ident), ; $($optional_query,)*} {$($rest_query)*} $($tt)*);
+        $crate::tardis_api!($fn_name @query $method {$($args_i:$args_t,)* $next_ident:$next_type,} {$($path,)*} {$($query,)* (stringify!($next_ident), $next_ident), ; $($optional_query,)*} {$($rest_query)*} $($tt)*);
     };
     ($fn_name:ident @query $method:ident {$($args_i:ident:$args_t:ty,)*} {$($path:expr,)*} {$($query:expr,)*;$($optional_query:expr,)*} {$next_ident:ident:$next_type:ty $(,)?} $($tt:tt)*) => {
-        $crate::taidis_api!($fn_name @query $method {$($args_i:$args_t,)* $next_ident:$next_type,} {$($path,)*} {$($query,)* (stringify!($next_ident), $next_ident), ; $($optional_query,)*} {} $($tt)*);
+        $crate::tardis_api!($fn_name @query $method {$($args_i:$args_t,)* $next_ident:$next_type,} {$($path,)*} {$($query,)* (stringify!($next_ident), $next_ident), ; $($optional_query,)*} {} $($tt)*);
     };
     // for ident?:type
     ($fn_name:ident @query $method:ident {$($args_i:ident:$args_t:ty,)*} {$($path:expr,)*} {$($query:expr,)*;$($optional_query:expr,)*} {$next_ident:ident?:$next_type:ty, $($rest_query:tt)*} $($tt:tt)*) => {
-        $crate::taidis_api!($fn_name @query $method {$($args_i:$args_t,)* $next_ident:Option<$next_type>,} {$($path,)*} {$($query,)* ; $($optional_query,)* (stringify!($next_ident),  $next_ident), } {$($rest_query)*} $($tt)*);
+        $crate::tardis_api!($fn_name @query $method {$($args_i:$args_t,)* $next_ident:Option<$next_type>,} {$($path,)*} {$($query,)* ; $($optional_query,)* (stringify!($next_ident),  $next_ident), } {$($rest_query)*} $($tt)*);
     };
     ($fn_name:ident @query $method:ident {$($args_i:ident:$args_t:ty,)*} {$($path:expr,)*} {$($query:expr,)*;$($optional_query:expr,)*} {$next_ident:ident?:$next_type:ty $(,)?} $($tt:tt)*) => {
-        $crate::taidis_api!($fn_name @query $method {$($args_i:$args_t,)* $next_ident:Option<$next_type>,} {$($path,)*} {$($query,)* ; $($optional_query,)* (stringify!($next_ident),  $next_ident), } {} $($tt)*);
+        $crate::tardis_api!($fn_name @query $method {$($args_i:$args_t,)* $next_ident:Option<$next_type>,} {$($path,)*} {$($query,)* ; $($optional_query,)* (stringify!($next_ident),  $next_ident), } {} $($tt)*);
     };
     // for ident
     ($fn_name:ident @query $method:ident {$($args_i:ident:$args_t:ty,)*} {$($path:expr,)*} {$($query:expr,)*;$($optional_query:expr,)*} {$next:ident $(,)?} $($tt:tt)*) => {
-        $crate::taidis_api!($fn_name @query $method {$($args_i:$args_t,)* $next:&str, } {$($path,)*} {$($query,)* (stringify!($next), $next), ; $($optional_query,)*} {} $($tt)*);
+        $crate::tardis_api!($fn_name @query $method {$($args_i:$args_t,)* $next:&str, } {$($path,)*} {$($query,)* (stringify!($next), $next), ; $($optional_query,)*} {} $($tt)*);
     };
     ($fn_name:ident @query $method:ident {$($args_i:ident:$args_t:ty,)*} {$($path:expr,)*} {$($query:expr,)*;$($optional_query:expr,)*} {$next:ident, $($rest_query:tt)*} $($tt:tt)*) => {
-        $crate::taidis_api!($fn_name @query $method {$($args_i:$args_t,)* $next:&str, } {$($path,)*} {$($query,)* (stringify!($next), $next), ; $($optional_query,)*} {$($rest_query)*} $($tt)*);
+        $crate::tardis_api!($fn_name @query $method {$($args_i:$args_t,)* $next:&str, } {$($path,)*} {$($query,)* (stringify!($next), $next), ; $($optional_query,)*} {$($rest_query)*} $($tt)*);
     };
     // for ident?
     ($fn_name:ident @query $method:ident {$($args_i:ident:$args_t:ty,)*} {$($path:expr,)*} {$($query:expr,)*;$($optional_query:expr,)*} {$next:ident? $(,)?} $($tt:tt)*) => {
-        $crate::taidis_api!($fn_name @query $method {$($args_i:$args_t,)* $next:Option<&str>, } {$($path,)*} {$($query,)* ; $($optional_query,)* (stringify!($next), $next), } {} $($tt)*);
+        $crate::tardis_api!($fn_name @query $method {$($args_i:$args_t,)* $next:Option<&str>, } {$($path,)*} {$($query,)* ; $($optional_query,)* (stringify!($next), $next), } {} $($tt)*);
     };
     ($fn_name:ident @query $method:ident {$($args_i:ident:$args_t:ty,)*} {$($path:expr,)*} {$($query:expr,)*;$($optional_query:expr,)*} {$next:ident?, $($rest_query:tt)*} $($tt:tt)*) => {
-        $crate::taidis_api!($fn_name @query $method {$($args_i:$args_t,)* $next:Option<&str>, } {$($path,)*} {$($query,)* ; $($optional_query,)* (stringify!($next), $next), } {$($rest_query)*} $($tt)*);
+        $crate::tardis_api!($fn_name @query $method {$($args_i:$args_t,)* $next:Option<&str>, } {$($path,)*} {$($query,)* ; $($optional_query,)* (stringify!($next), $next), } {$($rest_query)*} $($tt)*);
     };
     // no query args
     ($fn_name:ident @query $method:ident {$($args_i:ident:$args_t:ty,)*} {$($path:expr,)*} {;} $($tt:tt)*) => {
-        $crate::taidis_api!($fn_name @build $method {$($args_i:$args_t,)*} {$($path,)*} {;} $($tt)*);
+        $crate::tardis_api!($fn_name @build $method {$($args_i:$args_t,)*} {$($path,)*} {;} $($tt)*);
     };
     /*
         build

@@ -6,7 +6,7 @@ use tardis::{
     TardisFunsInst, web::poem_openapi,
 };
 
-use crate::impl_taidis_api_client;
+use crate::impl_tardis_api_client;
 
 use super::SimpleInvokeClient;
 
@@ -50,7 +50,7 @@ pub struct IamAccountDetailAggResp {
     pub orgs: Vec<String>,
 }
 
-impl_taidis_api_client! {
+impl_tardis_api_client! {
     IamClient<'_>:
     {get_account, get ["/ct/account", id] {tenant_id} IamAccountDetailAggResp}
 }
