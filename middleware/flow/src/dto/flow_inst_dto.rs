@@ -193,3 +193,8 @@ pub struct FlowInstTransferResp {
 pub struct FlowInstModifyAssignedReq {
     pub current_assigned: String,
 }
+
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
+pub struct FlowInstModifyCurrentVarsReq {
+    pub vars: HashMap<String, Value>,
+}

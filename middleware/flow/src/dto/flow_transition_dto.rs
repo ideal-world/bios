@@ -1,5 +1,6 @@
-use bios_basic::{basic_enumeration::BasicQueryOpKind, dto::BasicQueryCondInfo};
+use bios_basic::dto::BasicQueryCondInfo;
 use serde::{Deserialize, Serialize};
+use strum::Display;
 use tardis::{basic::field::TrimString, db::sea_orm, serde_json::Value, web::poem_openapi, TardisFuns};
 
 use super::flow_var_dto::FlowVarInfo;
@@ -322,18 +323,70 @@ pub struct FlowTransitionInitInfo {
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug, poem_openapi::Object)]
 pub struct FlowTransitionFrontActionInfo {
-    pub relevance_relation: BasicQueryOpKind,
+    pub relevance_relation: FlowTransitionFrontActionInfoRelevanceRelation,
     pub relevance_label: String,
     pub left_value: String,
     pub left_label: String,
     pub right_value: FlowTransitionFrontActionRightValue,
     pub select_field: Option<String>,
     pub select_field_label: Option<String>,
-    pub change_content: Option<String>,
+    pub change_content: Option<Value>,
     pub change_content_label: Option<String>,
 }
 
+#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum)]
+pub enum FlowTransitionFrontActionInfoRelevanceRelation {
+    #[serde(rename = "=")]
+    #[oai(rename = "=")]
+    Eq,
+    #[serde(rename = "!=")]
+    #[oai(rename = "!=")]
+    Ne,
+    #[serde(rename = ">")]
+    #[oai(rename = ">")]
+    Gt,
+    #[serde(rename = ">=")]
+    #[oai(rename = ">=")]
+    Ge,
+    #[serde(rename = "<")]
+    #[oai(rename = "<")]
+    Lt,
+    #[serde(rename = "<=")]
+    #[oai(rename = "<=")]
+    Le,
+    #[serde(rename = "like")]
+    #[oai(rename = "like")]
+    Like,
+    #[serde(rename = "not_like")]
+    #[oai(rename = "not_like")]
+    NotLike,
+    #[serde(rename = "in")]
+    #[oai(rename = "in")]
+    In,
+    #[serde(rename = "not_in")]
+    #[oai(rename = "not_in")]
+    NotIn,
+}
+
+impl FlowTransitionFrontActionInfoRelevanceRelation {
+    pub fn check_conform(&self, left_value: String, right_value: String) -> bool {
+        match self {
+            FlowTransitionFrontActionInfoRelevanceRelation::Eq => left_value == right_value,
+            FlowTransitionFrontActionInfoRelevanceRelation::Ne => left_value != right_value,
+            FlowTransitionFrontActionInfoRelevanceRelation::Gt => left_value > right_value,
+            FlowTransitionFrontActionInfoRelevanceRelation::Ge => left_value >= right_value,
+            FlowTransitionFrontActionInfoRelevanceRelation::Lt => left_value < right_value,
+            FlowTransitionFrontActionInfoRelevanceRelation::Le => left_value <= right_value,
+            FlowTransitionFrontActionInfoRelevanceRelation::Like => left_value.contains(&right_value),
+            FlowTransitionFrontActionInfoRelevanceRelation::NotLike => !left_value.contains(&right_value),
+            FlowTransitionFrontActionInfoRelevanceRelation::In => TardisFuns::json.str_to_obj::<Vec<String>>(&right_value).unwrap_or_default().contains(&left_value),
+            FlowTransitionFrontActionInfoRelevanceRelation::NotIn => !TardisFuns::json.str_to_obj::<Vec<String>>(&right_value).unwrap_or_default().contains(&left_value),
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug, poem_openapi::Enum)]
+#[serde(rename_all = "snake_case")]
 pub enum FlowTransitionFrontActionRightValue {
     #[oai(rename = "select_field")]
     SelectField,
