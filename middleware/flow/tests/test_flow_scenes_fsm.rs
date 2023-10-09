@@ -1,7 +1,5 @@
 use std::collections::HashMap;
 
-use bios_basic::basic_enumeration::BasicQueryOpKind;
-use bios_basic::dto::BasicQueryCondInfo;
 use bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind;
 use bios_basic::test::test_http_client::TestHttpClient;
 
@@ -16,9 +14,8 @@ use bios_mw_flow::dto::flow_model_dto::{
 };
 use bios_mw_flow::dto::flow_state_dto::{FlowStateAddReq, FlowStateSummaryResp, FlowSysStateKind};
 use bios_mw_flow::dto::flow_transition_dto::{
-    FlowTransitionActionChangeInfo, FlowTransitionActionChangeKind, FlowTransitionAddReq, FlowTransitionDoubleCheckInfo, FlowTransitionFrontActionInfo,
-    FlowTransitionFrontActionRightValue, FlowTransitionModifyReq, FlowTransitionSortStateInfoReq, FlowTransitionSortStatesReq, StateChangeCondition, StateChangeConditionItem,
-    StateChangeConditionOp,
+    FlowTransitionActionChangeInfo, FlowTransitionActionChangeKind, FlowTransitionAddReq, FlowTransitionDoubleCheckInfo, FlowTransitionModifyReq, FlowTransitionSortStateInfoReq,
+    FlowTransitionSortStatesReq, StateChangeCondition, StateChangeConditionItem, StateChangeConditionOp,
 };
 
 use bios_mw_flow::dto::flow_var_dto::{FlowVarInfo, RbumDataTypeKind, RbumWidgetTypeKind};
@@ -191,7 +188,7 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
                         "id": trans_start.id.clone(),
                         "action_by_front_changes": [
                             {
-                                "relevance_relation": "in",
+                                "relevance_relation": "=",
                                 "relevance_label": "包含",
                                 "left_value": "status",
                                 "left_label": "状态",

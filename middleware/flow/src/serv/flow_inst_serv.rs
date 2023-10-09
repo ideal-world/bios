@@ -42,7 +42,7 @@ use crate::{
         flow_state_dto::{FlowStateFilterReq, FlowStateRelModelExt, FlowSysStateKind},
         flow_transition_dto::{
             FlowTransitionActionByStateChangeInfo, FlowTransitionActionChangeAgg, FlowTransitionActionChangeInfo, FlowTransitionActionChangeKind, FlowTransitionDetailResp,
-            StateChangeConditionOp,
+            FlowTransitionFrontActionInfo, FlowTransitionFrontActionRightValue, StateChangeConditionOp,
         },
     },
     serv::{flow_model_serv::FlowModelServ, flow_state_serv::FlowStateServ},
@@ -1184,5 +1184,80 @@ impl FlowInstServ {
         funs.db().update_one(flow_inst, ctx).await?;
 
         Ok(())
+    }
+
+    async fn do_front_change(flow_inst_detail: &FlowInstDetailResp, ctx: &TardisContext, funs: &TardisFunsInst) -> TardisResult<()> {
+        let flow_model = FlowModelServ::get_item(
+            &flow_inst_detail.rel_flow_model_id,
+            &FlowModelFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    own_paths: Some("".to_string()),
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?;
+        let flow_transitions = flow_model
+            .transitions()
+            .into_iter()
+            .filter(|trans| trans.from_flow_state_id == flow_inst_detail.current_state_id && !trans.action_by_front_changes().is_empty())
+            .collect_vec();
+        if flow_transitions.is_empty() {
+            return Ok(());
+        }
+
+        Ok(())
+    }
+
+    async fn check_front_conditions(
+        flow_inst_detail: &FlowInstDetailResp,
+        conditions: Vec<FlowTransitionFrontActionInfo>,
+        ctx: &TardisContext,
+        funs: &TardisFunsInst,
+    ) -> TardisResult<bool> {
+        if flow_inst_detail.current_vars.is_none() {
+            return Ok(false);
+        }
+        let current_vars = flow_inst_detail.current_vars.clone().unwrap();
+        for condition in conditions {
+            if !Self::do_check_front_condition(&current_vars, &condition)? {
+                return Ok(false);
+            }
+        }
+
+        Ok(true)
+    }
+
+    fn do_check_front_condition(current_vars: &HashMap<String, Value>, condition: &FlowTransitionFrontActionInfo) -> TardisResult<bool> {
+        match condition.right_value {
+            FlowTransitionFrontActionRightValue::ChangeContent => {
+                if let Some(left_value) = current_vars.get(&condition.left_value) {
+                    Ok(condition.relevance_relation.check_conform(left_value.to_string(), condition.change_content.clone().unwrap_or_default().to_string()))
+                } else {
+                    Ok(false)
+                }
+            }
+            FlowTransitionFrontActionRightValue::SelectField => {
+                if let (Some(left_value), Some(right_value)) = (
+                    current_vars.get(&condition.left_value),
+                    current_vars.get(&condition.select_field.clone().unwrap_or_default()),
+                ) {
+                    Ok(condition.relevance_relation.check_conform(left_value.to_string(), right_value.to_string()))
+                } else {
+                    Ok(false)
+                }
+            }
+            FlowTransitionFrontActionRightValue::RealTime => {
+                if let Some(left_value) = current_vars.get(&condition.left_value) {
+                    Ok(condition.relevance_relation.check_conform(left_value.to_string(), Utc::now().to_string()))
+                } else {
+                    Ok(false)
+                }
+            }
+        }
     }
 }
