@@ -15,6 +15,7 @@ serde.workspace = true
 tardis = { workspace = true, features = ["web-server", "conf-remote"] }
 bios-iam = { path = "../../support/iam", features = ["spi_search", "spi_kv"] }
 bios-auth = { path = "../../support/auth", features = ["web-server"] }
+bios-reach = { path = "../../support/reach" }
 
 bios-spi-cache = { path = "../../spi/spi-cache" }
 bios-spi-graph = { path = "../../spi/spi-graph" }
@@ -29,3 +30,6 @@ bios-spi-conf = { path = "../../spi/spi-conf" }
 
 bios-mw-schedule = { path = "../../middleware/schedule" }
 bios-mw-flow = { path = "../../middleware/flow" }
+
+# clients
+bios-client-hwsms = { path = "../../clients/hwsms", features = ["reach"] }
