@@ -11,7 +11,7 @@ use tardis::{
 pub struct LogItemAddReq {
     #[oai(validator(pattern = r"^[a-z0-9_]+$"))]
     pub tag: String,
-    #[oai(validator(min_length = "2"))]
+    // #[oai(validator(min_length = "2"))]
     pub content: String,
     #[oai(validator(min_length = "2"))]
     pub kind: Option<TrimString>,
