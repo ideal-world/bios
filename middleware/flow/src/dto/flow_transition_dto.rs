@@ -366,6 +366,9 @@ pub enum FlowTransitionFrontActionInfoRelevanceRelation {
     #[serde(rename = "not_in")]
     #[oai(rename = "not_in")]
     NotIn,
+    #[serde(rename = "between")]
+    #[oai(rename = "between")]
+    Between,
 }
 
 impl FlowTransitionFrontActionInfoRelevanceRelation {
@@ -381,6 +384,13 @@ impl FlowTransitionFrontActionInfoRelevanceRelation {
             FlowTransitionFrontActionInfoRelevanceRelation::NotLike => !left_value.contains(&right_value),
             FlowTransitionFrontActionInfoRelevanceRelation::In => TardisFuns::json.str_to_obj::<Vec<String>>(&right_value).unwrap_or_default().contains(&left_value),
             FlowTransitionFrontActionInfoRelevanceRelation::NotIn => !TardisFuns::json.str_to_obj::<Vec<String>>(&right_value).unwrap_or_default().contains(&left_value),
+            FlowTransitionFrontActionInfoRelevanceRelation::Between => {
+                let time_interval = TardisFuns::json.str_to_obj::<Vec<String>>(&right_value).unwrap_or_default();
+                if time_interval.len() != 2 {
+                    return false;
+                }
+                left_value >= time_interval[0] && left_value <= time_interval[1]
+            }
         }
     }
 }

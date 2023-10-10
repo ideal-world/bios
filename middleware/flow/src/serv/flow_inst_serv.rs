@@ -16,7 +16,7 @@ use itertools::Itertools;
 use serde_json::json;
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
-    chrono::{DateTime, Utc},
+    chrono::{DateTime, SecondsFormat, Utc},
     db::sea_orm::{
         self,
         sea_query::{Alias, Cond, Expr, Query},
@@ -585,8 +585,12 @@ impl FlowInstServ {
         Ok(())
     }
 
-    #[async_recursion]
     pub async fn transfer(flow_inst_id: &str, transfer_req: &FlowInstTransferReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<FlowInstTransferResp> {
+        Self::do_transfer(flow_inst_id, transfer_req, funs, ctx).await
+    }
+
+    #[async_recursion]
+    async fn do_transfer(flow_inst_id: &str, transfer_req: &FlowInstTransferReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<FlowInstTransferResp> {
         let global_ctx = TardisContext {
             own_paths: "".to_string(),
             ..ctx.clone()
@@ -792,7 +796,7 @@ impl FlowInstServ {
                 FlowTransitionActionChangeKind::Var => {
                     if let Some(mut change_info) = post_change.var_change_info {
                         if change_info.changed_current_time.is_some() && change_info.changed_current_time.unwrap() {
-                            change_info.changed_val = Some(json!(Utc::now().to_string()));
+                            change_info.changed_val = Some(json!(Utc::now().to_rfc3339_opts(SecondsFormat::Millis, true)));
                         }
                         let rel_tag = change_info.obj_tag.unwrap_or_default();
                         if !rel_tag.is_empty() {
@@ -988,7 +992,7 @@ impl FlowInstServ {
                 .collect_vec()
                 .pop();
             if let Some(transition) = transition_resp {
-                Self::transfer(
+                Self::do_transfer(
                     &rel_inst.id,
                     &FlowInstTransferReq {
                         flow_transition_id: transition.next_flow_transition_id,
@@ -1182,11 +1186,13 @@ impl FlowInstServ {
             ..Default::default()
         };
         funs.db().update_one(flow_inst, ctx).await?;
+        Self::do_front_change(flow_inst_id, ctx, funs).await?;
 
         Ok(())
     }
 
-    async fn do_front_change(flow_inst_detail: &FlowInstDetailResp, ctx: &TardisContext, funs: &TardisFunsInst) -> TardisResult<()> {
+    async fn do_front_change(flow_inst_id: &str, ctx: &TardisContext, funs: &TardisFunsInst) -> TardisResult<()> {
+        let flow_inst_detail = Self::get(flow_inst_id, funs, ctx).await?;
         let flow_model = FlowModelServ::get_item(
             &flow_inst_detail.rel_flow_model_id,
             &FlowModelFilterReq {
@@ -1205,20 +1211,32 @@ impl FlowInstServ {
             .transitions()
             .into_iter()
             .filter(|trans| trans.from_flow_state_id == flow_inst_detail.current_state_id && !trans.action_by_front_changes().is_empty())
+            .sorted_by_key(|trans| trans.sort)
             .collect_vec();
         if flow_transitions.is_empty() {
             return Ok(());
+        }
+        for flow_transition in flow_transitions {
+            if Self::check_front_conditions(&flow_inst_detail, flow_transition.action_by_front_changes())? {
+                Self::do_transfer(
+                    &flow_inst_detail.id,
+                    &FlowInstTransferReq {
+                        flow_transition_id: flow_transition.id.clone(),
+                        message: None,
+                        vars: None,
+                    },
+                    funs,
+                    ctx,
+                )
+                .await?;
+                break;
+            }
         }
 
         Ok(())
     }
 
-    async fn check_front_conditions(
-        flow_inst_detail: &FlowInstDetailResp,
-        conditions: Vec<FlowTransitionFrontActionInfo>,
-        ctx: &TardisContext,
-        funs: &TardisFunsInst,
-    ) -> TardisResult<bool> {
+    fn check_front_conditions(flow_inst_detail: &FlowInstDetailResp, conditions: Vec<FlowTransitionFrontActionInfo>) -> TardisResult<bool> {
         if flow_inst_detail.current_vars.is_none() {
             return Ok(false);
         }
