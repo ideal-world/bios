@@ -1,8 +1,8 @@
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
     db::{reldb_client::TardisRelDBClient, sea_orm::Value},
-    TardisFuns,
-    TardisFunsInst, web::web_resp::TardisPage,
+    web::web_resp::TardisPage,
+    TardisFuns, TardisFunsInst,
 };
 
 use bios_basic::{basic_enumeration::BasicQueryOpKind, dto::BasicQueryCondInfo, helper::db_helper, spi::spi_funs::SpiBsInst};
@@ -47,7 +47,7 @@ VALUES
         ),
         params,
     )
-        .await?;
+    .await?;
     conn.commit().await?;
     Ok(id)
 }
@@ -127,7 +127,7 @@ pub async fn find(find_req: &mut LogItemFindReq, funs: &TardisFunsInst, ctx: &Ta
         Err(funs.err().not_found(
             "item",
             "log",
-            &format!("The ext field=[{}] value=[{}] operation=[{}] is not legal.", &ext.field, ext.value, &ext.op, ),
+            &format!("The ext field=[{}] value=[{}] operation=[{}] is not legal.", &ext.field, ext.value, &ext.op,),
             "404-spi-log-op-not-legal",
         ))
     };
@@ -274,7 +274,7 @@ ORDER BY ts DESC
                 where_fragments.join(" AND "),
                 page_fragments
             )
-                .as_str(),
+            .as_str(),
             sql_vals,
         )
         .await?;
