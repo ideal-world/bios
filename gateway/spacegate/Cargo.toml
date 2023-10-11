@@ -22,7 +22,7 @@ bios-sdk-invoke = { path = "../../sdk/invoke", features = ["spi_log"] }
 #     "cache",
 #     "k8s",
 # ] }
-spacegate-kernel = { git = "https://github.com/ideal-world/spacegate.git", features = [
+spacegate-kernel = { git = "https://github.com/ideal-world/spacegate.git", rev = "1d0bf2593efab948e495c31c0c77fc617911b457",features = [
    "ws",
    "cache",
    "k8s",
@@ -39,6 +39,7 @@ tardis = { workspace = true, features = ["web-client"] }
 ipnet = "2.8.0"
 strum ={ workspace = true, features = ["derive"] }
 [dev-dependencies]
+pprof = { version = "0.12.1", features = ["flamegraph"] }
 tardis = { workspace = true, features = ["test", "web-client"] }
 
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }

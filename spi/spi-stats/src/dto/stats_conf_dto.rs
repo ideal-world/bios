@@ -96,7 +96,7 @@ pub struct StatsConfFactAddReq {
 }
 
 /// Modify Fact Configuration Request Object
-#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Default)]
 pub struct StatsConfFactModifyReq {
     /// The name of the fact
     #[oai(validator(min_length = "2"))]
@@ -235,12 +235,4 @@ pub struct StatsConfFactColInfoResp {
     pub remark: Option<String>,
     pub create_time: DateTime<Utc>,
     pub update_time: DateTime<Utc>,
-}
-
-#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
-pub struct StatsConfFactColAggWithDimInfoResp {
-    pub dim_show_name: String,
-    #[serde(flatten)]
-    #[oai(flatten)]
-    pub stats_conf_fact_col_info_resp: StatsConfFactColInfoResp,
 }

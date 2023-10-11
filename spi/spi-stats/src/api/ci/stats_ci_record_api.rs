@@ -20,7 +20,29 @@ impl StatsCiRecordApi {
     #[oai(path = "/fact/:fact_key/latest/:record_key", method = "get")]
     async fn get_fact_record_latest(&self, fact_key: Path<String>, record_key: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<serde_json::Value> {
         let funs = crate::get_tardis_inst();
-        TardisResp::ok(stats_record_serv::get_fact_record_latest(&fact_key.0, &record_key.0, &funs, &ctx.0).await?)
+        TardisResp::ok(stats_record_serv::get_fact_record_latest(&fact_key.0, [record_key.0.as_str()], &funs, &ctx.0).await?.pop().unwrap_or_default())
+    }
+
+    /// Load Fact Record
+    #[oai(path = "/fact/:fact_key/latest", method = "get")]
+    async fn get_fact_record_latest_many(&self, fact_key: Path<String>, record_keys: Query<String>, ctx: TardisContextExtractor) -> TardisApiResult<Vec<serde_json::Value>> {
+        let funs = crate::get_tardis_inst();
+        TardisResp::ok(stats_record_serv::get_fact_record_latest(&fact_key.0, record_keys.0.split(','), &funs, &ctx.0).await?)
+    }
+
+    /// Get Fact Record Pagenated
+    #[oai(path = "/fact/:fact_key/:record_key", method = "get")]
+    async fn get_fact_record_pagenated(
+        &self,
+        fact_key: Path<String>,
+        record_key: Path<String>,
+        page_number: Query<u32>,
+        page_size: Query<u32>,
+        desc_by_create: Query<Option<bool>>,
+        ctx: TardisContextExtractor,
+    ) -> TardisApiResult<TardisPage<serde_json::Value>> {
+        let funs = crate::get_tardis_inst();
+        TardisResp::ok(stats_record_serv::get_fact_record_pagenated(&fact_key.0, &record_key.0, page_number.0, page_size.0, desc_by_create.0, &funs, &ctx.0).await?)
     }
 
     /// Load Fact Record
@@ -115,6 +137,14 @@ impl StatsCiRecordApi {
     async fn dim_record_delete(&self, dim_key: Path<String>, delete_req: Json<StatsDimRecordDeleteReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let funs = crate::get_tardis_inst();
         stats_record_serv::dim_record_delete(dim_key.0, delete_req.0.key, &funs, &ctx.0).await?;
+        TardisResp::ok(Void {})
+    }
+
+    /// Delete Dimension Record
+    #[oai(path = "/dim/:dim_key/remove", method = "delete")]
+    async fn dim_record_real_delete(&self, dim_key: Path<String>, delete_req: Json<StatsDimRecordDeleteReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+        let funs = crate::get_tardis_inst();
+        stats_record_serv::dim_record_real_delete(dim_key.0, delete_req.0.key, &funs, &ctx.0).await?;
         TardisResp::ok(Void {})
     }
 }

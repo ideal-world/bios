@@ -1,5 +1,6 @@
 use bios_basic::dto::BasicQueryCondInfo;
 use serde::{Deserialize, Serialize};
+use strum::Display;
 use tardis::{basic::field::TrimString, db::sea_orm, serde_json::Value, web::poem_openapi, TardisFuns};
 
 use super::flow_var_dto::FlowVarInfo;
@@ -25,14 +26,15 @@ pub struct FlowTransitionAddReq {
     pub guard_by_spec_org_ids: Option<Vec<String>>,
     pub guard_by_other_conds: Option<Vec<Vec<BasicQueryCondInfo>>>,
 
+    pub double_check: Option<FlowTransitionDoubleCheckInfo>,
     pub vars_collect: Option<Vec<FlowVarInfo>>,
 
     pub action_by_pre_callback: Option<String>,
     pub action_by_post_callback: Option<String>,
-
     pub action_by_post_changes: Option<Vec<FlowTransitionActionChangeInfo>>,
+    pub action_by_front_changes: Option<Vec<FlowTransitionFrontActionInfo>>,
 
-    pub double_check: Option<FlowTransitionDoubleCheckInfo>,
+    pub sort: Option<i64>,
 }
 
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
@@ -58,13 +60,14 @@ pub struct FlowTransitionModifyReq {
     pub guard_by_other_conds: Option<Vec<Vec<BasicQueryCondInfo>>>,
 
     pub vars_collect: Option<Vec<FlowVarInfo>>,
+    pub double_check: Option<FlowTransitionDoubleCheckInfo>,
 
     pub action_by_pre_callback: Option<String>,
     pub action_by_post_callback: Option<String>,
-
     pub action_by_post_changes: Option<Vec<FlowTransitionActionChangeInfo>>,
+    pub action_by_front_changes: Option<Vec<FlowTransitionFrontActionInfo>>,
 
-    pub double_check: Option<FlowTransitionDoubleCheckInfo>,
+    pub sort: Option<i64>,
 }
 
 #[derive(Serialize, Deserialize, Default, Debug, Clone, poem_openapi::Object, sea_orm::FromQueryResult)]
@@ -74,8 +77,10 @@ pub struct FlowTransitionDetailResp {
 
     pub from_flow_state_id: String,
     pub from_flow_state_name: String,
+    pub from_flow_state_color: String,
     pub to_flow_state_id: String,
     pub to_flow_state_name: String,
+    pub to_flow_state_color: String,
 
     pub transfer_by_auto: bool,
     pub transfer_by_timer: String,
@@ -90,13 +95,15 @@ pub struct FlowTransitionDetailResp {
     pub guard_by_other_conds: Value,
 
     pub vars_collect: Value,
+    pub double_check: Value,
 
     pub action_by_pre_callback: String,
     pub action_by_post_callback: String,
-
     pub action_by_post_changes: Value,
+    pub action_by_front_changes: Value,
 
-    pub double_check: Value,
+    pub rel_flow_model_id: String,
+    pub sort: i64,
 }
 
 impl FlowTransitionDetailResp {
@@ -124,6 +131,14 @@ impl FlowTransitionDetailResp {
         }
     }
 
+    pub fn action_by_front_changes(&self) -> Vec<FlowTransitionFrontActionInfo> {
+        if self.action_by_front_changes.is_array() && !&self.action_by_front_changes.as_array().unwrap().is_empty() {
+            TardisFuns::json.json_to_obj(self.action_by_front_changes.clone()).unwrap_or_default()
+        } else {
+            vec![]
+        }
+    }
+
     pub fn double_check(&self) -> Option<FlowTransitionDoubleCheckInfo> {
         if self.double_check.is_object() {
             Some(TardisFuns::json.json_to_obj(self.double_check.clone()).unwrap_or_default())
@@ -138,6 +153,7 @@ impl From<FlowTransitionDetailResp> for FlowTransitionAddReq {
         let guard_by_other_conds = value.guard_by_other_conds();
         let vars_collect = value.vars_collect();
         let action_by_post_changes = value.action_by_post_changes();
+        let action_by_front_changes = value.action_by_front_changes();
         let double_check = value.double_check();
         FlowTransitionAddReq {
             from_flow_state_id: value.from_flow_state_id,
@@ -156,7 +172,9 @@ impl From<FlowTransitionDetailResp> for FlowTransitionAddReq {
             action_by_pre_callback: Some(value.action_by_pre_callback),
             action_by_post_callback: Some(value.action_by_post_callback),
             action_by_post_changes: Some(action_by_post_changes),
+            action_by_front_changes: Some(action_by_front_changes),
             double_check,
+            sort: Some(value.sort),
         }
     }
 }
@@ -165,6 +183,17 @@ impl From<FlowTransitionDetailResp> for FlowTransitionAddReq {
 pub struct FlowTransitionDoubleCheckInfo {
     pub is_open: bool,
     pub content: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, poem_openapi::Object)]
+pub struct FlowTransitionSortStatesReq {
+    pub sort_states: Vec<FlowTransitionSortStateInfoReq>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, poem_openapi::Object)]
+pub struct FlowTransitionSortStateInfoReq {
+    pub id: String,
+    pub sort: i64,
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug, poem_openapi::Object)]
@@ -178,6 +207,7 @@ pub struct FlowTransitionActionChangeInfo {
     pub current: bool,
     pub var_name: String,
     pub changed_val: Option<Value>,
+    pub changed_current_time: Option<bool>,
 }
 
 impl From<FlowTransitionActionChangeInfo> for FlowTransitionActionChangeAgg {
@@ -202,6 +232,7 @@ impl From<FlowTransitionActionChangeInfo> for FlowTransitionActionChangeAgg {
                     obj_tag: value.obj_tag,
                     var_name: value.var_name,
                     changed_val: value.changed_val,
+                    changed_current_time: value.changed_current_time,
                 }),
                 state_change_info: None,
             },
@@ -232,6 +263,7 @@ pub struct FlowTransitionActionByVarChangeInfo {
     pub obj_tag: Option<String>,
     pub var_name: String,
     pub changed_val: Option<Value>,
+    pub changed_current_time: Option<bool>,
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug, poem_openapi::Object, sea_orm::FromJsonQueryResult)]
@@ -260,8 +292,6 @@ pub struct StateChangeConditionItem {
 pub enum StateChangeConditionOp {
     And,
     Or,
-    Eq,
-    Neq,
 }
 
 #[derive(Default)]
@@ -281,11 +311,87 @@ pub struct FlowTransitionInitInfo {
     pub guard_by_other_conds: Option<Vec<Vec<BasicQueryCondInfo>>>,
 
     pub vars_collect: Option<Vec<FlowVarInfo>>,
+    pub double_check: Option<FlowTransitionDoubleCheckInfo>,
 
     pub action_by_pre_callback: Option<String>,
     pub action_by_post_callback: Option<String>,
-
     pub action_by_post_changes: Vec<FlowTransitionActionChangeInfo>,
+    pub action_by_front_changes: Vec<FlowTransitionFrontActionInfo>,
 
-    pub double_check: Option<FlowTransitionDoubleCheckInfo>,
+    pub sort: Option<i64>,
+}
+
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug, poem_openapi::Object)]
+pub struct FlowTransitionFrontActionInfo {
+    pub relevance_relation: FlowTransitionFrontActionInfoRelevanceRelation,
+    pub relevance_label: String,
+    pub left_value: String,
+    pub left_label: String,
+    pub right_value: FlowTransitionFrontActionRightValue,
+    pub select_field: Option<String>,
+    pub select_field_label: Option<String>,
+    pub change_content: Option<Value>,
+    pub change_content_label: Option<String>,
+}
+
+#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum)]
+pub enum FlowTransitionFrontActionInfoRelevanceRelation {
+    #[serde(rename = "=")]
+    #[oai(rename = "=")]
+    Eq,
+    #[serde(rename = "!=")]
+    #[oai(rename = "!=")]
+    Ne,
+    #[serde(rename = ">")]
+    #[oai(rename = ">")]
+    Gt,
+    #[serde(rename = ">=")]
+    #[oai(rename = ">=")]
+    Ge,
+    #[serde(rename = "<")]
+    #[oai(rename = "<")]
+    Lt,
+    #[serde(rename = "<=")]
+    #[oai(rename = "<=")]
+    Le,
+    #[serde(rename = "like")]
+    #[oai(rename = "like")]
+    Like,
+    #[serde(rename = "not_like")]
+    #[oai(rename = "not_like")]
+    NotLike,
+    #[serde(rename = "in")]
+    #[oai(rename = "in")]
+    In,
+    #[serde(rename = "not_in")]
+    #[oai(rename = "not_in")]
+    NotIn,
+}
+
+impl FlowTransitionFrontActionInfoRelevanceRelation {
+    pub fn check_conform(&self, left_value: String, right_value: String) -> bool {
+        match self {
+            FlowTransitionFrontActionInfoRelevanceRelation::Eq => left_value == right_value,
+            FlowTransitionFrontActionInfoRelevanceRelation::Ne => left_value != right_value,
+            FlowTransitionFrontActionInfoRelevanceRelation::Gt => left_value > right_value,
+            FlowTransitionFrontActionInfoRelevanceRelation::Ge => left_value >= right_value,
+            FlowTransitionFrontActionInfoRelevanceRelation::Lt => left_value < right_value,
+            FlowTransitionFrontActionInfoRelevanceRelation::Le => left_value <= right_value,
+            FlowTransitionFrontActionInfoRelevanceRelation::Like => left_value.contains(&right_value),
+            FlowTransitionFrontActionInfoRelevanceRelation::NotLike => !left_value.contains(&right_value),
+            FlowTransitionFrontActionInfoRelevanceRelation::In => TardisFuns::json.str_to_obj::<Vec<String>>(&right_value).unwrap_or_default().contains(&left_value),
+            FlowTransitionFrontActionInfoRelevanceRelation::NotIn => !TardisFuns::json.str_to_obj::<Vec<String>>(&right_value).unwrap_or_default().contains(&left_value),
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug, poem_openapi::Enum)]
+#[serde(rename_all = "snake_case")]
+pub enum FlowTransitionFrontActionRightValue {
+    #[oai(rename = "select_field")]
+    SelectField,
+    #[oai(rename = "change_content")]
+    ChangeContent,
+    #[oai(rename = "real_time")]
+    RealTime,
 }

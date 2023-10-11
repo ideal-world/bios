@@ -9,15 +9,16 @@ use tardis::{
     TardisFuns,
 };
 
-use crate::dto::auth_kernel_dto::{AuthResult, MixAuthResp, MixRequestBody, ResContainerLeafInfo, SignWebHookReq};
+use super::{auth_crypto_serv, auth_mgr_serv, auth_res_serv};
+#[cfg(feature = "web-server")]
+use crate::dto::auth_kernel_dto::{AuthResp, MixAuthResp, MixRequestBody};
+use crate::dto::auth_kernel_dto::{AuthResult, ResContainerLeafInfo, SignWebHookReq};
 use crate::helper::auth_common_helper;
 use crate::{
     auth_config::AuthConfig,
     auth_constants::DOMAIN_CODE,
-    dto::auth_kernel_dto::{AuthContext, AuthReq, AuthResp},
+    dto::auth_kernel_dto::{AuthContext, AuthReq},
 };
-
-use super::{auth_crypto_serv, auth_mgr_serv, auth_res_serv};
 
 pub async fn auth(req: &mut AuthReq, is_mix_req: bool) -> TardisResult<AuthResult> {
     trace!("[Auth] Request auth: {:?}", req);
@@ -87,13 +88,20 @@ async fn ident(req: &AuthReq, config: &AuthConfig, cache_client: &TardisCacheCli
         let own_paths_split = context.own_paths.split('/').collect::<Vec<_>>();
         let tenant_id = if context.own_paths.is_empty() { None } else { Some(own_paths_split[0].to_string()) };
         let app_id = if own_paths_split.len() > 1 { Some(own_paths_split[1].to_string()) } else { None };
+        let mut roles = context.roles.clone();
+        for role in context.roles.clone() {
+            if role.contains(':') {
+                let extend_role = role.split(':').collect::<Vec<_>>()[0];
+                roles.push(extend_role.to_string());
+            }
+        }
         Ok(AuthContext {
             rbum_uri,
             rbum_action,
             app_id,
             tenant_id,
             account_id: Some(context.owner),
-            roles: Some(context.roles),
+            roles: Some(roles),
             groups: Some(context.groups),
             own_paths: Some(context.own_paths),
             ak: Some(context.ak),
@@ -122,13 +130,20 @@ async fn ident(req: &AuthReq, config: &AuthConfig, cache_client: &TardisCacheCli
         }
 
         if bios_ctx.own_paths.contains(&own_paths) {
+            let mut roles = bios_ctx.roles.clone();
+            for role in bios_ctx.roles.clone() {
+                if role.contains(':') {
+                    let extend_role = role.split(':').collect::<Vec<_>>()[0];
+                    roles.push(extend_role.to_string());
+                }
+            }
             Ok(AuthContext {
                 rbum_uri,
                 rbum_action,
                 app_id: if app_id.is_empty() { None } else { Some(app_id) },
                 tenant_id: Some(cache_tenant_id),
                 account_id: Some(bios_ctx.owner),
-                roles: Some(bios_ctx.roles),
+                roles: Some(roles),
                 groups: Some(bios_ctx.groups),
                 own_paths: Some(bios_ctx.own_paths),
                 ak: Some(ak_authorization.to_string()),
@@ -171,6 +186,13 @@ async fn ident(req: &AuthReq, config: &AuthConfig, cache_client: &TardisCacheCli
         }
         if own_paths.contains(&cache_own_paths) {
             let context = self::get_account_context(&ak_authorization, owner, &app_id, config, cache_client).await?;
+            let mut roles = context.roles.clone();
+            for role in roles.clone() {
+                if role.contains(':') {
+                    let extend_role = role.split(':').collect::<Vec<_>>()[0];
+                    roles.push(extend_role.to_string());
+                }
+            }
             let own_paths_split = own_paths.split('/').collect::<Vec<_>>();
             let tenant_id = if own_paths.is_empty() { None } else { Some(own_paths_split[0].to_string()) };
             let app_id = if own_paths_split.len() > 1 { Some(own_paths_split[1].to_string()) } else { None };
@@ -180,7 +202,7 @@ async fn ident(req: &AuthReq, config: &AuthConfig, cache_client: &TardisCacheCli
                 app_id,
                 tenant_id,
                 account_id: Some(owner.to_string()),
-                roles: Some(context.roles),
+                roles: Some(roles),
                 groups: Some(context.groups),
                 own_paths: Some(own_paths.to_string()),
                 ak: Some(ak_authorization.to_string()),
@@ -326,7 +348,7 @@ async fn check_ak_signature(ak: &str, cache_sk: &str, signature: &str, req_date:
     let sorted_req_query = auth_common_helper::sort_hashmap_query(req.query.clone());
     let calc_signature = TardisFuns::crypto
         .base64
-        .encode(&TardisFuns::crypto.digest.hmac_sha256(&format!("{}\n{}\n{}\n{}", req.method, req_date, req.path, sorted_req_query).to_lowercase(), cache_sk)?);
+        .encode(TardisFuns::crypto.digest.hmac_sha256(format!("{}\n{}\n{}\n{}", req.method, req_date, req.path, sorted_req_query).to_lowercase(), cache_sk)?);
     if calc_signature != signature {
         return Err(TardisError::unauthorized(&format!("Ak [{ak}] authentication failed"), "401-auth-req-authenticate-fail"));
     }
@@ -346,8 +368,8 @@ async fn check_webhook_ak_signature(
     let mut query = req.query.clone();
     query.remove(&config.head_key_ak_authorization);
     let sorted_req_query = auth_common_helper::sort_hashmap_query(query);
-    let calc_signature = TardisFuns::crypto.base64.encode(&TardisFuns::crypto.digest.hmac_sha256(
-        &format!("{}\n{}\n{}\n{}\n{}\n{}", onwer, own_paths, req.method, req_date, req.path, sorted_req_query).to_lowercase(),
+    let calc_signature = TardisFuns::crypto.base64.encode(TardisFuns::crypto.digest.hmac_sha256(
+        format!("{}\n{}\n{}\n{}\n{}\n{}", onwer, own_paths, req.method, req_date, req.path, sorted_req_query).to_lowercase(),
         cache_sk,
     )?);
     if calc_signature != signature {
@@ -377,13 +399,13 @@ pub async fn sign_webhook_ak(sign_req: &SignWebHookReq) -> TardisResult<String> 
     if sign_req.own_paths.contains(&cache_own_paths) {
         let sorted_req_query = auth_common_helper::sort_hashmap_query(sign_req.query.clone());
         let calc_signature = TardisFuns::crypto.base64.encode(
-            &TardisFuns::crypto.digest.hmac_sha256(
-                &format!(
+            TardisFuns::crypto.digest.hmac_sha256(
+                format!(
                     "{}\n{}\n{}\n{}\n{}\n{}",
                     sign_req.onwer, sign_req.own_paths, sign_req.method, sign_req.req_date, sign_req.path, sorted_req_query
                 )
                 .to_lowercase(),
-                &cache_sk,
+                cache_sk,
             )?,
         );
         return Ok(calc_signature);
@@ -506,6 +528,7 @@ pub async fn decrypt(
     Ok((None, None))
 }
 
+#[cfg(feature = "web-server")]
 pub(crate) async fn parse_mix_req(req: AuthReq) -> TardisResult<MixAuthResp> {
     let config = TardisFuns::cs_config::<AuthConfig>(DOMAIN_CODE);
     let (body, headers) = auth_crypto_serv::decrypt_req(&req.headers, &req.body, true, true, config).await?;

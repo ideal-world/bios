@@ -75,6 +75,7 @@ mod tests {
                 logout_req_path: "".to_string(),
                 double_auth_req_method: "".to_string(),
                 double_auth_req_path: "".to_string(),
+                exclude_encrypt_decrypt_path: "".to_string(),
             },
         )
         .unwrap();

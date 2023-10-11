@@ -72,7 +72,7 @@ pub async fn test(ldap_account_num: u64, conf_ldap_add_or_modify_req: IamCertCon
     )
     .await
     .unwrap();
-    assert_eq!(account_page.total_size, 1);
+    assert_eq!(account_page.total_size, 2);
 
     info!("【exec manual sync】");
     IamCertServ::third_integration_sync(

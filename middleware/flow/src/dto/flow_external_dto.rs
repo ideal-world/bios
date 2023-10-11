@@ -1,13 +1,18 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use tardis::web::poem_openapi;
+use tardis::web::poem_openapi::{
+    self,
+    types::{ParseFromJSON, ToJSON},
+};
 
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
 pub struct FlowExternalReq {
     pub kind: FlowExternalKind,
     pub curr_tag: String,
     pub curr_bus_obj_id: String,
+    pub inst_id: String,
     pub target_state: Option<String>,
+    pub original_state: Option<String>,
     pub params: Vec<FlowExternalParams>,
 }
 
@@ -18,16 +23,22 @@ pub enum FlowExternalKind {
     NotifyChanges,
 }
 
-#[derive(Debug, Deserialize, Serialize, poem_openapi::Union)]
-pub enum FlowExternalParams {
-    FetchRelObj(FlowExternalFetchRelObjReq),
-    ModifyField(FlowExternalModifyFieldReq),
-    NotifyChanges(FlowExternalNotifyChangesReq),
+#[derive(Debug, Deserialize, Serialize, poem_openapi::Object, Clone)]
+pub struct FlowExternalParams {
+    pub rel_tag: Option<String>,
+    pub var_id: Option<String>,
+    pub var_name: Option<String>,
+    pub value: Option<Value>,
 }
 
-#[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
-pub struct FlowExternalFetchRelObjReq {
-    pub rel_tag: String,
+#[derive(Default, Serialize, Deserialize, Debug, poem_openapi::Object)]
+pub struct FlowExternalResp<T>
+where
+    T: ParseFromJSON + ToJSON + Serialize + Send + Sync,
+{
+    pub code: String,
+    pub message: String,
+    pub body: Option<T>,
 }
 
 #[derive(Default, Serialize, Deserialize, Debug, poem_openapi::Object)]
@@ -43,20 +54,8 @@ pub struct RelBusObjResp {
     pub rel_bus_obj_ids: Vec<String>,
 }
 
-#[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
-pub struct FlowExternalModifyFieldReq {
-    pub var_id: Option<String>,
-    pub var_name: Option<String>,
-    pub value: Option<Value>,
-}
-
 #[derive(Default, Serialize, Deserialize, Debug, poem_openapi::Object)]
 pub struct FlowExternalModifyFieldResp {}
-
-#[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
-pub struct FlowExternalNotifyChangesReq {
-    pub changed_vars: Vec<Value>,
-}
 
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
 pub struct FlowExternalNotifyChangesResp {}

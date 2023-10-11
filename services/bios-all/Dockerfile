@@ -28,6 +28,10 @@ COPY ./config/locale/ ./config/locale/
 COPY ./bios-serv-all ./bios-serv-all
 
 EXPOSE 8080
+# for nacos http
+EXPOSE 8848
+# for nacos grpc
+EXPOSE 9848
 EXPOSE 10389
 
 CMD ["./bios-serv-all"]

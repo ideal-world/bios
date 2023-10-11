@@ -517,6 +517,11 @@ impl IamResServ {
             for role_id in app_role_ids {
                 let rel_res_ids = IamRelServ::find_to_id_rels(&IamRelKind::IamResRole, &role_id, None, None, funs, &global_ctx).await?;
                 res_ids.extend(rel_res_ids.into_iter());
+                if role_id.contains(':') {
+                    let extend_role_id = role_id.split(':').collect::<Vec<&str>>()[0];
+                    let rel_res_ids = IamRelServ::find_to_id_rels(&IamRelKind::IamResRole, extend_role_id, None, None, funs, &global_ctx).await?;
+                    res_ids.extend(rel_res_ids.into_iter());
+                }
             }
             let res = Self::find_items(
                 &IamResFilterReq {

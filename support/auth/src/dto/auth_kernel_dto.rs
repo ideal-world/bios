@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::fmt;
 
 use serde::{Deserialize, Serialize};
 #[cfg(feature = "web-server")]
@@ -86,10 +87,10 @@ impl AuthResp {
     }
 
     pub fn from_result(result: AuthResult) -> Self {
-        if result.e.is_none() {
-            Self::ok(result.ctx.as_ref(), result.resp_body, result.resp_headers, &result.config)
+        if let Some(e) = result.e {
+            Self::err(e, &result.config)
         } else {
-            Self::err(result.e.expect(""), &result.config)
+            Self::ok(result.ctx.as_ref(), result.resp_body, result.resp_headers, &result.config)
         }
     }
 
@@ -111,7 +112,7 @@ impl AuthResp {
                     sync_task_fns: Default::default(),
                     async_task_fns: Default::default(),
                 };
-                TardisFuns::crypto.base64.encode(&TardisFuns::json.obj_to_string(&ctx).unwrap_or_default())
+                TardisFuns::crypto.base64.encode(TardisFuns::json.obj_to_string(&ctx).unwrap_or_default())
             } else {
                 "".to_string()
             },
@@ -159,6 +160,47 @@ pub struct AuthContext {
     pub groups: Option<Vec<String>>,
     pub own_paths: Option<String>,
     pub ak: Option<String>,
+}
+
+impl fmt::Display for AuthContext {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let app_id = if let Some(app_id) = &self.app_id {
+            format!("app_id:{} ", app_id)
+        } else {
+            String::new()
+        };
+        let tenant_id = if let Some(tenant_id) = &self.tenant_id {
+            format!("tenant_id:{} ", tenant_id)
+        } else {
+            String::new()
+        };
+        let account_id = if let Some(account_id) = &self.account_id {
+            format!("account_id:{} ", account_id)
+        } else {
+            String::new()
+        };
+        let roles = if let Some(roles) = &self.roles {
+            format!("roles:[{}] ", roles.join(","))
+        } else {
+            String::new()
+        };
+        let groups = if let Some(groups) = &self.groups {
+            format!("groups:[{}] ", groups.join(","))
+        } else {
+            String::new()
+        };
+        let own_paths = if let Some(own_paths) = &self.own_paths {
+            format!("own_paths:{} ", own_paths)
+        } else {
+            String::new()
+        };
+        let ak = if let Some(ak) = &self.ak { format!("ak:{} ", ak) } else { String::new() };
+        write!(
+            f,
+            "{} {}:{}{}{}{}{}{}{}",
+            self.rbum_action, self.rbum_uri, app_id, tenant_id, account_id, roles, groups, own_paths, ak
+        )
+    }
 }
 
 #[derive(Serialize, Deserialize, Default)]
@@ -258,6 +300,8 @@ pub(crate) struct ServConfig {
     pub logout_req_path: String,
     pub double_auth_req_method: String,
     pub double_auth_req_path: String,
+    // list split by ','
+    pub exclude_encrypt_decrypt_path: String,
 }
 #[derive(Serialize, Deserialize, Default, Clone)]
 pub(crate) struct Api {

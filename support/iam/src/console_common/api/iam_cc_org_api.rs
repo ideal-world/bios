@@ -31,7 +31,7 @@ impl IamCcOrgApi {
         ctx: TardisContextExtractor,
         request: &Request,
     ) -> TardisApiResult<RbumSetTreeResp> {
-        add_remote_ip(&request, &ctx.0).await?;
+        add_remote_ip(request, &ctx.0).await?;
         let funs = iam_constants::get_tardis_inst();
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
         let code = if ctx.own_paths.is_empty() {
@@ -44,6 +44,7 @@ impl IamCcOrgApi {
             &set_id,
             &mut RbumSetTreeFilterReq {
                 fetch_cate_item: true,
+                hide_item_with_disabled: true,
                 sys_codes: parent_sys_code.0.map(|parent_sys_code| vec![parent_sys_code]),
                 sys_code_query_kind: Some(RbumSetCateLevelQueryKind::CurrentAndSub),
                 sys_code_query_depth: Some(1),
@@ -68,7 +69,7 @@ impl IamCcOrgApi {
         ctx: TardisContextExtractor,
         request: &Request,
     ) -> TardisApiResult<Vec<String>> {
-        add_remote_ip(&request, &ctx.0).await?;
+        add_remote_ip(request, &ctx.0).await?;
         let funs = iam_constants::get_tardis_inst();
         let ids = ids.0.split(',').map(|s| s.to_string()).collect();
         let result = IamSetServ::find_set_cate_name_by_cate_ids(ids, &funs, &ctx.0).await?;

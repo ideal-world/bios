@@ -17,8 +17,15 @@ spi_dispatch_service! {
         spi_constants::SPI_PG_KIND_CODE => pg::stats_pg_record_serv,
     },
     @method: {
-        get_fact_record_latest(fact_conf_key: &str,fact_record_key: &str) -> TardisResult<serde_json::Value>;
-        fact_record_load(fact_conf_key: &str,fact_record_key: &str, add_req: StatsFactRecordLoadReq) -> TardisResult<()>;
+        get_fact_record_latest(fact_conf_key: &str, fact_record_key: impl IntoIterator<Item = &str>) -> TardisResult<Vec<serde_json::Value>>;
+        get_fact_record_pagenated(
+            fact_conf_key: &str,
+            fact_record_key: &str,
+            page_number: u32,
+            page_size: u32,
+            desc_by_create: Option<bool>
+        ) -> TardisResult<TardisPage<serde_json::Value>>;
+        fact_record_load(fact_conf_key: &str, fact_record_key: &str, add_req: StatsFactRecordLoadReq) -> TardisResult<()>;
         fact_record_delete(fact_conf_key: &str, fact_record_key: &str) -> TardisResult<()>;
         fact_records_load(fact_conf_key: &str, add_req_set: Vec<StatsFactRecordsLoadReq>) -> TardisResult<()>;
         fact_records_delete(fact_conf_key: &str, fact_record_delete_keys: &[String]) -> TardisResult<()>;
@@ -35,5 +42,6 @@ spi_dispatch_service! {
             desc_by_update: Option<bool>
         ) -> TardisResult<TardisPage<Value>>;
         dim_record_delete(dim_conf_key: String, dim_record_key: Value) -> TardisResult<()>;
+        dim_record_real_delete(dim_conf_key: String, dim_record_key: Value) -> TardisResult<()>;
     }
 }

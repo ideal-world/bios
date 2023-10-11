@@ -21,6 +21,7 @@ pub struct Model {
     pub id: String,
     pub icon: String,
     pub info: String,
+    pub color: String,
     /// System state type / 系统状态类型
     ///
     /// Each state should be marked with the corresponding system state

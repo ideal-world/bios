@@ -6,16 +6,24 @@ use tardis::{
     TardisFuns, TardisFunsInst,
 };
 
-use crate::{api::init_api, conf_config::ConfConfig, conf_constants::DOMAIN_CODE};
+use crate::{
+    api::{init_api, init_nacos_servers},
+    conf_config::ConfConfig,
+    conf_constants::DOMAIN_CODE,
+};
 
 pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
     let mut funs = crate::get_tardis_inst();
-    bios_basic::rbum::rbum_initializer::init(funs.module_code(), funs.conf::<ConfConfig>().rbum.clone()).await?;
+    let cfg = funs.conf::<ConfConfig>();
+    bios_basic::rbum::rbum_initializer::init(funs.module_code(), cfg.rbum.clone()).await?;
     funs.begin().await?;
     let ctx = spi_initializer::init(DOMAIN_CODE, &funs).await?;
     init_db(&funs, &ctx).await?;
     funs.commit().await?;
     init_api(web_server).await;
+    let funs = crate::get_tardis_inst();
+    let cfg = funs.conf::<ConfConfig>();
+    init_nacos_servers(cfg).await?;
     Ok(())
 }
 
@@ -50,4 +58,13 @@ pub async fn init_admin_cert(funs: &TardisFunsInst, ctx: &TardisContext) {
 #[inline]
 pub(crate) fn get_tardis_inst() -> TardisFunsInst {
     TardisFuns::inst_with_db_conn(DOMAIN_CODE.to_string(), None)
+}
+
+#[inline]
+pub(crate) fn get_tardis_inst_ref() -> &'static TardisFunsInst {
+    use std::sync::OnceLock;
+    static INST: OnceLock<TardisFunsInst> = OnceLock::new();
+    INST.get_or_init(|| {
+        TardisFuns::inst_with_db_conn(DOMAIN_CODE.to_string(), None)
+    })
 }

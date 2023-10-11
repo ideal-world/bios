@@ -11,7 +11,7 @@ use tardis::{
     web::poem_openapi,
 };
 
-#[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
+#[derive(Serialize, Deserialize, Default, Debug, poem_openapi::Object)]
 pub struct FlowStateAddReq {
     #[oai(validator(min_length = "2", max_length = "200"))]
     pub id_prefix: Option<TrimString>,
@@ -19,6 +19,7 @@ pub struct FlowStateAddReq {
     pub name: Option<TrimString>,
     #[oai(validator(min_length = "2", max_length = "2000"))]
     pub icon: Option<String>,
+    pub color: Option<String>,
     pub sys_state: FlowSysStateKind,
     #[oai(validator(min_length = "2", max_length = "2000"))]
     pub info: Option<String>,
@@ -42,6 +43,7 @@ pub struct FlowStateModifyReq {
     pub name: Option<TrimString>,
     #[oai(validator(min_length = "2", max_length = "2000"))]
     pub icon: Option<String>,
+    pub color: Option<String>,
     pub sys_state: Option<FlowSysStateKind>,
     #[oai(validator(min_length = "2", max_length = "2000"))]
     pub info: Option<String>,
@@ -64,6 +66,7 @@ pub struct FlowStateSummaryResp {
     pub id: String,
     pub name: String,
     pub icon: String,
+    pub color: String,
     pub sys_state: FlowSysStateKind,
     pub info: String,
 
@@ -87,6 +90,7 @@ pub struct FlowStateDetailResp {
     pub id: String,
     pub name: String,
     pub icon: String,
+    pub color: String,
     pub sys_state: FlowSysStateKind,
     pub info: String,
 
@@ -107,9 +111,10 @@ pub struct FlowStateDetailResp {
     pub disabled: bool,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, strum::EnumIter, sea_orm::DeriveActiveEnum)]
+#[derive(Clone, Default, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, sea_orm::strum::EnumIter, sea_orm::DeriveActiveEnum)]
 #[sea_orm(rs_type = "String", db_type = "String(Some(255))")]
 pub enum FlowSysStateKind {
+    #[default]
     #[sea_orm(string_value = "start")]
     Start,
     #[sea_orm(string_value = "progress")]
@@ -143,6 +148,7 @@ pub struct FlowStateFilterReq {
     pub tag: Option<String>,
     pub state_kind: Option<FlowStateKind>,
     pub template: Option<bool>,
+    pub flow_model_ids: Option<Vec<String>>,
 }
 
 impl RbumItemFilterFetcher for FlowStateFilterReq {
@@ -155,4 +161,29 @@ impl RbumItemFilterFetcher for FlowStateFilterReq {
     fn rel2(&self) -> &Option<RbumItemRelFilterReq> {
         &None
     }
+}
+
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object, sea_orm::FromQueryResult)]
+pub struct FlowStateNameResp {
+    pub key: String,
+    pub name: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object, sea_orm::FromQueryResult)]
+pub struct FlowStateCountGroupByStateReq {
+    pub tag: String,
+    pub inst_ids: Vec<String>,
+}
+
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object, sea_orm::FromQueryResult)]
+pub struct FlowStateCountGroupByStateResp {
+    pub state_name: String,
+    pub count: String,
+    pub inst_ids: Vec<String>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, poem_openapi::Object, sea_orm::FromQueryResult)]
+pub struct FlowStateRelModelExt {
+    pub sort: i64,
+    pub show_btns: Option<Vec<String>>,
 }

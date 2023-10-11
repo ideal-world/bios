@@ -104,6 +104,7 @@ pub async fn add(add_req: &mut SearchItemAddReq, funs: &TardisFunsInst, ctx: &Ta
                 size: 1,
                 fetch_total: false,
             },
+            adv_query: None,
         },
         funs,
         ctx,
@@ -148,6 +149,7 @@ pub async fn modify(tag: &str, key: &str, modify_req: &mut SearchItemModifyReq, 
             size: 1,
             fetch_total: false,
         },
+        adv_query: None,
     })?;
     let mut search_result = client.raw_search(&index, &q, Some(1), Some(0), None).await?;
     if search_result.hits.hits.is_empty() {
@@ -171,10 +173,10 @@ pub async fn modify(tag: &str, key: &str, modify_req: &mut SearchItemModifyReq, 
         query.insert("own_paths".to_string(), json!(own_paths.clone()).to_string());
     }
     if let Some(create_time) = &modify_req.create_time {
-        query.insert("create_time".to_string(), create_time.to_rfc3339());
+        query.insert("create_time".to_string(), json!(create_time.to_rfc3339()).to_string());
     }
     if let Some(update_time) = &modify_req.update_time {
-        query.insert("update_time".to_string(), update_time.to_rfc3339());
+        query.insert("update_time".to_string(), json!(update_time.to_rfc3339()).to_string());
     }
     if let Some(ext) = &modify_req.ext {
         let mut ext = ext.clone();
@@ -238,6 +240,7 @@ pub async fn delete(tag: &str, key: &str, funs: &TardisFunsInst, _ctx: &TardisCo
             size: 1,
             fetch_total: false,
         },
+        adv_query: None,
     })?;
     client.delete_by_query(&index, &q).await?;
 
@@ -282,6 +285,7 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
                     kind: item.kind.clone(),
                     key: item.key.to_string(),
                     title: item.title.clone(),
+                    content: item.content.clone(),
                     owner: item.owner.clone().unwrap_or_default(),
                     own_paths: item.own_paths.clone().unwrap_or_default(),
                     create_time: item.create_time.unwrap_or_default(),
@@ -580,6 +584,8 @@ fn gen_query_dsl(search_req: &SearchItemSearchReq) -> TardisResult<String> {
                         }
                     }));
                 }
+                BasicQueryOpKind::NotLike => {}
+                BasicQueryOpKind::NotIn => {}
             }
         }
     }

@@ -206,7 +206,7 @@ impl RbumCrudOperation<rbum_cert_conf::ActiveModel, RbumCertConfAddReq, RbumCert
         let key = &format!(
             "{}{}",
             funs.rbum_conf_cache_key_cert_code_(),
-            TardisFuns::crypto.base64.encode(&format!(
+            TardisFuns::crypto.base64.encode(format!(
                 "{}{}{}",
                 &rbum_cert_conf.kind, &rbum_cert_conf.rel_rbum_domain_id, &rbum_cert_conf.rel_rbum_item_id
             ))
@@ -257,7 +257,7 @@ impl RbumCrudOperation<rbum_cert_conf::ActiveModel, RbumCertConfAddReq, RbumCert
         let key = &format!(
             "{}{}",
             funs.rbum_conf_cache_key_cert_code_(),
-            TardisFuns::crypto.base64.encode(&format!("{}{}{}", &result.kind, &result.rel_rbum_domain_id, &result.rel_rbum_item_id))
+            TardisFuns::crypto.base64.encode(format!("{}{}{}", &result.kind, &result.rel_rbum_domain_id, &result.rel_rbum_item_id))
         );
         funs.cache().del(key).await?;
         Ok(None)
@@ -358,7 +358,7 @@ impl RbumCertConfServ {
         let key = &format!(
             "{}{}",
             funs.rbum_conf_cache_key_cert_code_(),
-            TardisFuns::crypto.base64.encode(&format!("{kind}{supplier}{rbum_domain_id}{rbum_item_id}"))
+            TardisFuns::crypto.base64.encode(format!("{kind}{supplier}{rbum_domain_id}{rbum_item_id}"))
         );
         if let Some(cached_info) = funs.cache().get(key).await? {
             Ok(Some(TardisFuns::json.str_to_obj(&cached_info)?))

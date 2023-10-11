@@ -28,20 +28,23 @@ pub const CODE: &str = "anti_xss";
 pub struct SgFilterAntiXSSDef;
 
 impl SgPluginFilterDef for SgFilterAntiXSSDef {
+    fn get_code(&self) -> &str {
+        CODE
+    }
     fn inst(&self, spec: serde_json::Value) -> TardisResult<BoxSgPluginFilter> {
         let filter = TardisFuns::json.json_to_obj::<SgFilterAntiXSS>(spec)?;
         Ok(filter.boxed())
     }
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Default, Serialize, Deserialize)]
 #[serde(default)]
-#[derive(Default)]
 pub struct SgFilterAntiXSS {
     csp_config: CSPConfig,
 }
 
 #[derive(Serialize, Deserialize)]
+#[serde(default)]
 pub struct CSPConfig {
     default_src: String,
     base_uri: Option<String>,
@@ -185,9 +188,9 @@ impl SgPluginFilter for SgFilterAntiXSS {
         };
         if enable {
             if self.csp_config.report_only {
-                let _ = ctx.response.set_header(http::header::CONTENT_SECURITY_POLICY_REPORT_ONLY.as_str(), &self.csp_config.to_string_header_value());
+                let _ = ctx.response.set_header(http::header::CONTENT_SECURITY_POLICY_REPORT_ONLY, &self.csp_config.to_string_header_value());
             } else {
-                let _ = ctx.response.set_header(http::header::CONTENT_SECURITY_POLICY.as_str(), &self.csp_config.to_string_header_value());
+                let _ = ctx.response.set_header(http::header::CONTENT_SECURITY_POLICY, &self.csp_config.to_string_header_value());
             }
         }
         Ok((true, ctx))

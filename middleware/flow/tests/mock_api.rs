@@ -1,12 +1,22 @@
 use bios_mw_flow::dto::flow_external_dto::{
     FlowExternalFetchRelObjResp, FlowExternalKind, FlowExternalModifyFieldResp, FlowExternalNotifyChangesResp, FlowExternalReq, RelBusObjResp,
 };
+use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
-use tardis::web::{
-    context_extractor::TardisContextExtractor,
-    poem::web::Json,
-    poem_openapi,
-    web_resp::{TardisApiResult, TardisResp},
+use tardis::{
+    basic::{
+        error::TardisError,
+        result::{TARDIS_RESULT_ACCEPTED_CODE, TARDIS_RESULT_SUCCESS_CODE},
+    },
+    web::{
+        context_extractor::TardisContextExtractor,
+        poem,
+        poem_openapi::{
+            self,
+            payload::Json,
+            types::{ParseFromJSON, ToJSON},
+        },
+    },
 };
 
 #[derive(Clone)]
@@ -17,7 +27,7 @@ pub struct MockApi;
 impl MockApi {
     /// Exchange Data / 数据交换
     #[oai(path = "/exchange_data", method = "post")]
-    async fn exchange_data(&self, req: Json<FlowExternalReq>, _ctx: TardisContextExtractor) -> TardisApiResult<Value> {
+    async fn exchange_data(&self, req: Json<FlowExternalReq>, _ctx: TardisContextExtractor) -> MockApiResponse<Value> {
         let result = match req.0.kind {
             FlowExternalKind::FetchRelObj => match req.curr_tag.as_str() {
                 "REQ" => {
@@ -35,7 +45,7 @@ impl MockApi {
                     curr_bus_obj_id: req.curr_bus_obj_id.clone(),
                     rel_bus_objs: vec![RelBusObjResp {
                         rel_tag: "ITER".to_string(),
-                        rel_bus_obj_ids: vec!["mock-iter-obj-id".to_string()],
+                        rel_bus_obj_ids: vec!["mock-iter-obj-id1".to_string(), "mock-iter-obj-id2".to_string()],
                     },],
                 }),
                 _ => json!({}),
@@ -47,6 +57,43 @@ impl MockApi {
                 json!(FlowExternalNotifyChangesResp {})
             }
         };
-        TardisResp::ok(result)
+        MockResp::ok(result)
+    }
+}
+
+pub type MockApiResponse<T> = poem::Result<Json<MockResp<T>>>;
+
+#[derive(poem_openapi::Object, Deserialize, Serialize, Clone, Debug)]
+pub struct MockResp<T>
+where
+    T: ParseFromJSON + ToJSON + Serialize + Send + Sync,
+{
+    pub code: String,
+    pub message: String,
+    pub body: Option<T>,
+}
+
+impl<T> MockResp<T>
+where
+    T: ParseFromJSON + ToJSON + Serialize + Send + Sync,
+{
+    pub fn ok(data: T) -> MockApiResponse<T> {
+        MockApiResponse::Ok(Json(MockResp {
+            code: TARDIS_RESULT_SUCCESS_CODE.to_string(),
+            message: "".to_string(),
+            body: Some(data),
+        }))
+    }
+
+    pub fn accepted(data: T) -> MockApiResponse<T> {
+        MockApiResponse::Ok(Json(MockResp {
+            code: TARDIS_RESULT_ACCEPTED_CODE.to_string(),
+            message: "".to_string(),
+            body: Some(data),
+        }))
+    }
+
+    pub fn err(error: TardisError) -> MockApiResponse<T> {
+        MockApiResponse::Err(error.into())
     }
 }

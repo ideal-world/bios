@@ -38,6 +38,7 @@ pub struct LogItemFindResp {
     pub owner: String,
     pub own_paths: String,
     pub key: String,
+    pub id: String,
     pub op: String,
     pub rel_key: String,
     pub ts: DateTime<Utc>,

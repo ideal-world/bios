@@ -21,7 +21,7 @@ impl IamCiAppApi {
     /// Add App
     #[oai(path = "/", method = "post")]
     async fn add(&self, add_req: Json<IamAppAggAddReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<String> {
-        add_remote_ip(&request, &ctx.0).await?;
+        add_remote_ip(request, &ctx.0).await?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         let result = IamAppServ::add_app_agg(&add_req.0, &funs, &ctx.0).await?;
@@ -35,7 +35,7 @@ impl IamCiAppApi {
     /// When code = 202, the return value is the asynchronous task id
     #[oai(path = "/", method = "put")]
     async fn modify(&self, modify_req: Json<IamAppAggModifyReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Option<String>> {
-        add_remote_ip(&request, &ctx.0).await?;
+        add_remote_ip(request, &ctx.0).await?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
 

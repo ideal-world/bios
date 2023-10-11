@@ -205,7 +205,10 @@ impl StatsDataTypeKind {
         };
 
         let Some(mut value) = value else {
-            return Err(TardisError::internal_error("to_pg_having: json_to_sea_orm_value result is empty", "spi-stats-inaternal-error"));
+            return Err(TardisError::internal_error(
+                "to_pg_having: json_to_sea_orm_value result is empty",
+                "spi-stats-inaternal-error",
+            ));
         };
         Ok(
             if multi_values && (fun.is_some() || op != &BasicQueryOpKind::In)

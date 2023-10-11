@@ -57,6 +57,7 @@ pub fn get_apis_json() -> TardisResult<Value> {
         logout_req_path: config.extra_api.logout_req_path.clone(),
         double_auth_req_method: config.extra_api.double_auth_req_method.clone(),
         double_auth_req_path: config.extra_api.double_auth_req_path.clone(),
+        exclude_encrypt_decrypt_path: config.exclude_encrypt_decrypt_path.join(","),
     })
 }
 

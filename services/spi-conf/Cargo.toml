@@ -1,0 +1,17 @@
+[package]
+name = "spi-conf-serv"
+version.workspace = true
+authors.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+repository.workspace = true
+license.workspace = true
+edition.workspace = true
+readme.workspace = true
+publish.workspace = true
+
+[dependencies]
+serde.workspace = true
+tardis = { workspace = true, features = ["web-server", "conf-remote"] }
+
+bios-spi-conf = { path = "../../spi/spi-conf" }

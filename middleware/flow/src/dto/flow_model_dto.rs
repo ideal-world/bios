@@ -12,7 +12,10 @@ use tardis::{
     TardisFuns,
 };
 
-use super::flow_transition_dto::{FlowTransitionAddReq, FlowTransitionDetailResp, FlowTransitionModifyReq};
+use super::{
+    flow_state_dto::FlowStateRelModelExt,
+    flow_transition_dto::{FlowTransitionAddReq, FlowTransitionDetailResp, FlowTransitionModifyReq},
+};
 
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
 pub struct FlowModelAddReq {
@@ -115,8 +118,10 @@ impl FlowModelDetailResp {
 #[serde(default)]
 pub struct FlowModelFilterReq {
     pub basic: RbumBasicFilterReq,
-    pub tag: Option<String>,
+    pub tags: Option<Vec<String>>,
     pub rel_template_id: Option<String>,
+    pub template: Option<bool>,
+    pub own_paths: Option<Vec<String>>,
 }
 
 impl RbumItemFilterFetcher for FlowModelFilterReq {
@@ -159,7 +164,7 @@ pub struct FlowStateAggResp {
     pub id: String,
     pub name: String,
     pub is_init: bool,
-    pub sort: i64,
+    pub ext: FlowStateRelModelExt,
     pub transitions: Vec<FlowTransitionDetailResp>,
 }
 
@@ -191,4 +196,29 @@ pub struct FlowModelSortStatesReq {
 pub struct FlowModelSortStateInfoReq {
     pub state_id: String,
     pub sort: i64,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, poem_openapi::Object)]
+pub struct FlowModelAddCustomModelReq {
+    pub proj_template_id: Option<String>,
+    pub bind_model_objs: Vec<FlowModelAddCustomModelItemReq>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, poem_openapi::Object)]
+pub struct FlowModelAddCustomModelItemReq {
+    pub tag: String,
+    pub feature_template_id: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, poem_openapi::Object)]
+pub struct FlowModelAddCustomModelResp {
+    pub tag: String,
+    pub model_id: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, poem_openapi::Object)]
+pub struct FlowModelFindRelStateResp {
+    pub id: String,
+    pub name: String,
+    pub color: String,
 }

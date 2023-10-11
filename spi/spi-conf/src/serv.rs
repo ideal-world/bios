@@ -18,14 +18,11 @@ use bios_basic::{
     spi_dispatch_service,
 };
 use tardis::{
-    basic::{dto::TardisContext, result::TardisResult},
+    basic::{dto::TardisContext, error::TardisError, result::TardisResult},
     db::sea_orm::prelude::Uuid,
     log,
     serde_json::{self, json},
-    tokio::{
-        sync::OnceCell,
-        time::{interval, Duration, Instant},
-    },
+    tokio::{sync::OnceCell, time::Instant},
     tokio::{sync::RwLock, task::JoinHandle},
     web::{poem, reqwest::StatusCode},
     TardisFunsInst,
@@ -212,25 +209,26 @@ pub async fn auth(ak: &str, sk: &str, funs: &TardisFunsInst) -> TardisResult<Tar
     Ok(ctx)
 }
 
+fn jwt_token_key(token: &str) -> String {
+    const KEY_PREFIX: &str = "spi-conf:access-token";
+    format!("{KEY_PREFIX}:{token}")
+}
+
 /// bind a jwt token with a tardis context
-async fn bind_token_ctx(token: &str, ttl: u64, ctx: &TardisContext) {
-    TOKEN_CTX_MAP.write().await.insert(token.to_string(), (ctx.clone(), Instant::now() + Duration::from_secs(ttl)));
+async fn bind_token_ctx(token: &str, ttl: u64, ctx: &TardisContext) -> TardisResult<()> {
+    let funs = crate::get_tardis_inst_ref();
+    let ctx_json = tardis::basic::json::TardisJson.obj_to_string(ctx)?;
+    funs.cache().set_ex(&jwt_token_key(token), &ctx_json, ttl as usize).await.map_err(|e| TardisError::internal_error(&format!("{e}"), CACHE_ERROR))
 }
 
 /// get the tardis context by jwt token
-async fn get_ctx_by_token(token: &str) -> Option<TardisContext> {
-    TOKEN_CTX_MAP.read().await.get(token).map(|(ctx, _exp)| ctx.clone())
-}
-
-/// init context-jwt map cleanner task
-async fn init_map_cleaner_task() -> JoinHandle<()> {
-    tardis::tokio::spawn(async move {
-        let mut tick = interval(Duration::from_secs(1800));
-        loop {
-            let time = tick.tick().await;
-            TOKEN_CTX_MAP.write().await.retain(|_, (_, exp)| *exp > time);
-        }
-    })
+async fn get_ctx_by_token(token: &str) -> TardisResult<Option<TardisContext>> {
+    let funs = crate::get_tardis_inst_ref();
+    let Some(ctx_json) = funs.cache().get(&jwt_token_key(token)).await.map_err(|e| TardisError::internal_error(&format!("{e}"), CACHE_ERROR))? else {
+        return Ok(None);
+    };
+    let ctx = tardis::basic::json::TardisJson.str_to_obj(&ctx_json)?;
+    Ok(Some(ctx))
 }
 
 /// sign a jwt for a tardis context
@@ -239,13 +237,12 @@ pub async fn jwt_sign(funs: &TardisFunsInst, ctx: &TardisContext) -> poem::Resul
     let cfg = funs.conf::<ConfConfig>();
     let ttl = cfg.token_ttl as u64;
     let claim = NacosJwtClaim::gen(ttl, &cfg.auth_username);
-    MAP_CLEANER_TASK.get_or_init(init_map_cleaner_task).await;
     let key =
         EncodingKey::from_base64_secret(&cfg.auth_key).map_err(|_| poem::Error::from_string("spi-conf nacosmocker using an invalid authkey", StatusCode::INTERNAL_SERVER_ERROR))?;
 
     let token = encode(&Header::new(Algorithm::HS256), &claim, &key)
         .map_err(|_| poem::Error::from_string("spi-conf nacosmocker fail to encode auth token", StatusCode::INTERNAL_SERVER_ERROR))?;
-    bind_token_ctx(&token, ttl, ctx).await;
+    bind_token_ctx(&token, ttl, ctx).await.map_err(|e| poem::Error::from_string(format!("{e}"), StatusCode::INTERNAL_SERVER_ERROR))?;
     Ok(token)
 }
 
@@ -258,7 +255,7 @@ pub async fn jwt_validate(token: &str, funs: &TardisFunsInst) -> poem::Result<Ta
     let key =
         DecodingKey::from_base64_secret(&cfg.auth_key).map_err(|_| poem::Error::from_string("spi-conf nacosmocker using an invalid authkey", StatusCode::INTERNAL_SERVER_ERROR))?;
     let _ = decode::<NacosJwtClaim>(token, &key, &validation).map_err(|e| poem::Error::from_string(e.to_string(), StatusCode::FORBIDDEN))?;
-    if let Some(ctx) = get_ctx_by_token(token).await {
+    if let Some(ctx) = get_ctx_by_token(token).await? {
         Ok(ctx)
     } else {
         Err(poem::Error::from_string("Unknown token", StatusCode::FORBIDDEN))

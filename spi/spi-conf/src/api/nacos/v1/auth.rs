@@ -16,6 +16,7 @@ impl ConfNacosV1AuthApi {
     async fn login(&self, username: Query<Option<String>>, password: Query<Option<String>>, form: Form<LoginRequest>) -> poem::Result<Json<LoginResponse>> {
         let username = username.0.or(form.0.username).unwrap_or_default();
         let password = password.0.or(form.0.password).unwrap_or_default();
+        tardis::log::debug!("trying to loggin from {username}");
         let funs = crate::get_tardis_inst();
         let ctx = auth(&username, &password, &funs).await?;
         let token = jwt_sign(&funs, &ctx).await?;

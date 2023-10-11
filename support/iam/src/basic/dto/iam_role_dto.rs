@@ -26,6 +26,10 @@ pub struct IamRoleAddReq {
     #[oai(validator(min_length = "2", max_length = "1000"))]
     pub icon: Option<String>,
     pub sort: Option<i64>,
+    #[oai(validator(min_length = "2", max_length = "1000"))]
+    pub extend_role_id: Option<String>,
+    pub in_embed: Option<bool>,
+    pub in_base: Option<bool>,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
@@ -56,6 +60,9 @@ pub struct IamRoleBoneResp {
     pub scope_level: RbumScopeLevelKind,
     pub code: String,
     pub icon: String,
+    pub in_base: bool,
+    pub in_embed: bool,
+    pub extend_role_id: String,
 }
 
 #[derive(poem_openapi::Object, sea_orm::FromQueryResult, Serialize, Deserialize, Debug)]
@@ -75,6 +82,9 @@ pub struct IamRoleSummaryResp {
     pub icon: String,
     pub code: String,
     pub sort: i64,
+    pub in_base: bool,
+    pub in_embed: bool,
+    pub extend_role_id: String,
 }
 
 #[derive(poem_openapi::Object, sea_orm::FromQueryResult, Serialize, Deserialize, Debug)]
@@ -95,4 +105,7 @@ pub struct IamRoleDetailResp {
     pub icon: String,
     pub code: String,
     pub sort: i64,
+    pub in_base: bool,
+    pub in_embed: bool,
+    pub extend_role_id: String,
 }

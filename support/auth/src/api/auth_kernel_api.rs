@@ -42,7 +42,7 @@ impl AuthApi {
     }
 
     // mix apis 解析混合api
-    #[oai(path = "/apis", method = "post")]
+    #[oai(path = "/apis", method = "put")]
     async fn apis(&self, req: Json<AuthReq>, request: &Request) -> TardisApiResult<MixAuthResp> {
         let result = auth_kernel_serv::parse_mix_req(req.0.clone()).await?;
         trace!("[Auth] Response apis: {:?}", result);
@@ -87,7 +87,7 @@ impl AuthApi {
         let config = TardisFuns::cs_config::<AuthConfig>(DOMAIN_CODE);
         let cache_client = TardisFuns::cache_by_module_or_default(DOMAIN_CODE);
         let result = auth_kernel_serv::get_token_context(&token.0, &app_id.0.unwrap_or("".to_string()), config, cache_client).await?;
-        TardisResp::ok(TardisFuns::crypto.base64.encode(&TardisFuns::json.obj_to_string(&result)?))
+        TardisResp::ok(TardisFuns::crypto.base64.encode(TardisFuns::json.obj_to_string(&result)?))
     }
 
     /// sign webhook 签名webhook
