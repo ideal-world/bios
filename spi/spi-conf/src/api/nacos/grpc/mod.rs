@@ -25,16 +25,16 @@ impl RequestProto for RequestProtoImpl {
         let Some(metadata) = &request.metadata else {
             return Err(Status::new(Code::InvalidArgument));
         };
-        log::debug!("metadata: {metadata:?}");
+        log::trace!("metadata: {metadata:?}");
         let access_token = metadata.headers.get("accessToken").map(|x| x.as_str());
         let Some(body) = &request.body else {
             return Err(Status::new(Code::InvalidArgument));
         };
         let body = String::from_utf8_lossy(&body.value);
-        log::debug!("body: {}", body);
+        log::trace!("body: {}", body);
         let type_info = &metadata.r#type;
         dispatch_request(type_info, &body, access_token).await.map(Response::new).map_err(|e| {
-            log::error!("[Spi-Conf.Nacos.Grpc] dispatch_request error: {}", e);
+            log::error!("[spi-conf.nacos.grpc] dispatch_request error: {}", e);
             Status::new(Code::Internal)
         })
     }
@@ -53,18 +53,12 @@ impl BiRequestStreamProto for BiRequestStreamProtoImpl {
                     let Some(metadata) = &payload.metadata else {
                         return Err(Status::new(Code::InvalidArgument));
                     };
-                    log::debug!("bistream: metadata: {metadata:?}");
-                    // let access_token = metadata.headers.get("accessToken").map(|x| x.as_str());
+                    log::trace!("bistream: metadata: {metadata:?}");
                     let Some(body) = &payload.body else {
                         return Err(Status::new(Code::InvalidArgument));
                     };
                     let body = String::from_utf8_lossy(&body.value);
-                    log::debug!("bistream: body: {}", body);
-                    // let type_info = &metadata.r#type;
-                    // dispatch_request(type_info, &body, access_token).await.map(Response::new).map_err(|e| {
-                    //     log::error!("[Spi-Conf.Nacos.Grpc] dispatch_request error: {}", e);
-                    //     Status::new(Code::Internal)
-                    // })
+                    log::trace!("bistream: body: {}", body);
                 }
             }
             Ok(())
@@ -238,10 +232,9 @@ pub async fn dispatch_request(type_info: &str, value: &str, access_token: Option
         let Some(token) = access_token else {
             return Err(TardisError::unauthorized("missing access token", ""));
         };
-        let Ok(ctx) = jwt_validate(token, &funs).await else {
-            return Err(TardisError::unauthorized("invalid access token", ""));
-        };
-        Ok(ctx)
+        jwt_validate(token, &funs).await.map_err(|e| {
+            TardisError::unauthorized(&format!("invalid access token, error: {e}, token: {token}"), "")
+        })
     };
     let response = match type_info {
         "ServerCheckRequest" => ServerCheckResponse::success(None).as_payload(),
