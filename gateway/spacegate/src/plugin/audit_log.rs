@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+
 use std::str::FromStr;
 
 use async_trait::async_trait;
@@ -8,7 +9,7 @@ use bios_sdk_invoke::invoke_config::InvokeConfig;
 use bios_sdk_invoke::invoke_enumeration::InvokeModuleKind;
 use bios_sdk_invoke::invoke_initializer;
 
-use jsonpath_rust::{JsonPathFinder, JsonPathInst, JsonPathQuery};
+use jsonpath_rust::JsonPathInst;
 use serde::{Deserialize, Serialize};
 use spacegate_kernel::plugins::context::SGRoleInfo;
 use spacegate_kernel::plugins::{
@@ -16,9 +17,9 @@ use spacegate_kernel::plugins::{
     filters::{BoxSgPluginFilter, SgPluginFilter, SgPluginFilterAccept, SgPluginFilterDef, SgPluginFilterInitDto},
 };
 use tardis::basic::dto::TardisContext;
-use tardis::basic::error::TardisError;
 use tardis::serde_json::{json, Value};
 
+use tardis::basic::error::TardisError;
 use tardis::{
     async_trait,
     basic::result::TardisResult,
@@ -34,6 +35,9 @@ pub const CODE: &str = "audit_log";
 pub struct SgFilterAuditLogDef;
 
 impl SgPluginFilterDef for SgFilterAuditLogDef {
+    fn get_code(&self) -> &str {
+        CODE
+    }
     fn inst(&self, spec: serde_json::Value) -> TardisResult<BoxSgPluginFilter> {
         let filter = TardisFuns::json.json_to_obj::<SgFilterAuditLog>(spec)?;
         Ok(filter.boxed())
@@ -60,31 +64,21 @@ impl SgFilterAuditLog {
     async fn get_log_content(&self, end_time: i64, ctx: &mut SgRoutePluginContext) -> TardisResult<LogParamContent> {
         let start_time = ctx.get_ext(&get_start_time_ext_code()).and_then(|time| time.parse::<i64>().ok());
         let body_string = if let Some(raw_body) = ctx.get_ext(plugin_constants::BEFORE_ENCRYPT_BODY) {
-            Some(raw_body)
+            serde_json::from_str::<Value>(raw_body)
         } else {
-            ctx.response
-                .pop_body()
-                .await?
-                .map(|body| {
-                    let body_string = String::from_utf8_lossy(&body).to_string();
-                    ctx.response.set_body(body)?;
-                    Ok::<_, TardisError>(body_string)
-                })
-                .transpose()?
+            let body = ctx.response.dump_body().await?;
+            serde_json::from_slice::<Value>(&body)
         };
-        let success = match serde_json::from_str::<Value>(&body_string.unwrap_or_default()) {
+        let success = match body_string {
             Ok(json) => {
-                if let Some(jsonpath_inst) = self.jsonpath_inst {
-                    if let Ok(matching_value) = JsonPathFinder::new(Box::new(json), Box::new(jsonpath_inst)).find() {
-                        if let Some(matching_value) = matching_value.as_array() {
-                            let matching_value = &matching_value[0];
-                            if matching_value.is_string() {
-                                let mut is_match = false;
-                                for value in self.success_json_path_values.clone() {
-                                    if Some(value.as_str()) == matching_value.as_str() {
-                                        is_match = true;
-                                        break;
-                                    }
+                if let Some(jsonpath_inst) = &self.jsonpath_inst {
+                    if let Some(matching_value) = jsonpath_inst.find_slice(&json).get(0) {
+                        if matching_value.is_string() {
+                            let mut is_match = false;
+                            for value in self.success_json_path_values.clone() {
+                                if Some(value.as_str()) == matching_value.as_str() {
+                                    is_match = true;
+                                    break;
                                 }
                                 is_match
                             } else if matching_value.is_number() {
@@ -160,7 +154,9 @@ impl SgPluginFilter for SgFilterAuditLog {
 
     async fn init(&mut self, _: &SgPluginFilterInitDto) -> TardisResult<()> {
         if !self.log_url.is_empty() && !self.spi_app_id.is_empty() {
-            if JsonPathInst::from_str(&self.success_json_path).map_err(|e| log::error!("[Plugin.AuditLog] invalid json path:{e}")).is_err() {
+            if let Ok(jsonpath_inst) = JsonPathInst::from_str(&self.success_json_path).map_err(|e| log::error!("[Plugin.AuditLog] invalid json path:{e}")) {
+                self.jsonpath_inst = Some(jsonpath_inst);
+            } else {
                 self.enabled = false;
                 return Ok(());
             };
@@ -172,7 +168,6 @@ impl SgPluginFilter for SgFilterAuditLog {
                     module_urls: HashMap::from([(InvokeModuleKind::Log.to_string(), self.log_url.clone())]),
                 },
             )?;
-            self.jsonpath_inst = Some(JsonPathInst::from_str(query).map_err(|e| TardisError::bad_request(&format("[Plugin.AuditLog] invalid json path:{e}]"), ""))?);
             Ok(())
         } else {
             self.enabled = false;
@@ -218,7 +213,7 @@ impl SgPluginFilter for SgFilterAuditLog {
                 "success":content.success,
             });
             let tag = self.tag.clone();
-            tokio::spawn(async move {
+            tokio::task::spawn(async move {
                 match spi_log_client::SpiLogClient::add(
                     &tag,
                     &TardisFuns::json.obj_to_string(&content).unwrap_or_default(),
@@ -278,6 +273,7 @@ pub struct LogParamContent {
 
 #[cfg(test)]
 mod test {
+    use spacegate_kernel::plugins::filters::{SgAttachedLevel, SgPluginFilter, SgPluginFilterInitDto};
     use spacegate_kernel::{
         http::{HeaderName, Uri},
         hyper::{Body, HeaderMap, Method, StatusCode, Version},
@@ -291,73 +287,103 @@ mod test {
 
     #[tokio::test]
     async fn test_log_content() {
-        let sg_filter_audit_log = SgFilterAuditLog { ..Default::default() };
+        let ent_time = std::time::Instant::now();
+        println!("test_log_content");
+        let mut sg_filter_audit_log = SgFilterAuditLog {
+            log_url: "xxx".to_string(),
+            spi_app_id: "xxx".to_string(),
+            ..Default::default()
+        };
+        sg_filter_audit_log
+            .init(&SgPluginFilterInitDto {
+                gateway_name: "".to_string(),
+                gateway_parameters: Default::default(),
+                http_route_rules: vec![],
+                attached_level: SgAttachedLevel::Gateway,
+            })
+            .await
+            .unwrap();
+        let guard = pprof::ProfilerGuardBuilder::default().frequency(100).blocklist(&["libc", "libgcc", "pthread", "vdso"]).build().unwrap();
         let end_time = 20100;
-        let mut header = HeaderMap::new();
-        header.insert(sg_filter_audit_log.header_token_name.parse::<HeaderName>().unwrap(), "aaa".parse().unwrap());
-        let mut ctx = SgRoutePluginContext::new_http(
-            Method::POST,
-            Uri::from_static("http://sg.idealworld.group/test1"),
-            Version::HTTP_11,
-            header,
-            Body::from(""),
-            "127.0.0.1:8080".parse().unwrap(),
-            "".to_string(),
-            None,
-        );
-        ctx.set_ext(&get_start_time_ext_code(), &20000.to_string());
-        let mut ctx = ctx.resp(StatusCode::OK, HeaderMap::new(), Body::from(r##"{"code":"200","msg":"success"}"##));
-        let log_content = sg_filter_audit_log.get_log_content(end_time, &mut ctx).await.unwrap();
-        assert_eq!(log_content.token, Some("aaa".to_string()));
-        assert_eq!(log_content.server_timing, Some(100));
-        assert!(log_content.success);
+        let mut count = 0;
+        loop {
+            if count == 200000 {
+                break;
+            }
+            count += 1;
+            let mut header = HeaderMap::new();
+            header.insert(sg_filter_audit_log.header_token_name.parse::<HeaderName>().unwrap(), "aaa".parse().unwrap());
+            let mut ctx = SgRoutePluginContext::new_http(
+                Method::POST,
+                Uri::from_static("http://sg.idealworld.group/test1"),
+                Version::HTTP_11,
+                header,
+                Body::from(""),
+                "127.0.0.1:8080".parse().unwrap(),
+                "".to_string(),
+                None,
+            );
+            ctx.set_ext(&get_start_time_ext_code(), &20000.to_string());
+            let mut ctx = ctx.resp(StatusCode::OK, HeaderMap::new(), Body::from(r#"{"code":"200","msg":"success"}"#));
+            let log_content = sg_filter_audit_log.get_log_content(end_time, &mut ctx).await.unwrap();
+            assert_eq!(log_content.token, Some("aaa".to_string()));
+            assert_eq!(log_content.server_timing, Some(100));
+            assert!(log_content.success);
 
-        let mut header = HeaderMap::new();
-        header.insert(sg_filter_audit_log.header_token_name.parse::<HeaderName>().unwrap(), "aaa".parse().unwrap());
-        let ctx = SgRoutePluginContext::new_http(
-            Method::POST,
-            Uri::from_static("http://sg.idealworld.group/test1"),
-            Version::HTTP_11,
-            header,
-            Body::from(""),
-            "127.0.0.1:8080".parse().unwrap(),
-            "".to_string(),
-            None,
-        );
-        let mut ctx = ctx.resp(StatusCode::OK, HeaderMap::new(), Body::from(r##"{"code":200,"msg":"success"}"##));
-        let log_content = sg_filter_audit_log.get_log_content(end_time, &mut ctx).await.unwrap();
-        assert!(log_content.success);
+            let mut header = HeaderMap::new();
+            header.insert(sg_filter_audit_log.header_token_name.parse::<HeaderName>().unwrap(), "aaa".parse().unwrap());
+            let ctx = SgRoutePluginContext::new_http(
+                Method::POST,
+                Uri::from_static("http://sg.idealworld.group/test1"),
+                Version::HTTP_11,
+                header,
+                Body::from(""),
+                "127.0.0.1:8080".parse().unwrap(),
+                "".to_string(),
+                None,
+            );
+            let mut ctx = ctx.resp(StatusCode::OK, HeaderMap::new(), Body::from(r#"{"code":200,"msg":"success"}"#));
+            let log_content = sg_filter_audit_log.get_log_content(end_time, &mut ctx).await.unwrap();
+            assert!(log_content.success);
 
-        let mut header = HeaderMap::new();
-        header.insert(sg_filter_audit_log.header_token_name.parse::<HeaderName>().unwrap(), "aaa".parse().unwrap());
-        let ctx = SgRoutePluginContext::new_http(
-            Method::POST,
-            Uri::from_static("http://sg.idealworld.group/test1"),
-            Version::HTTP_11,
-            header,
-            Body::from(""),
-            "127.0.0.1:8080".parse().unwrap(),
-            "".to_string(),
-            None,
-        );
-        let mut ctx = ctx.resp(StatusCode::OK, HeaderMap::new(), Body::from(r##"{"code":"500","msg":"not success"}"##));
-        let log_content = sg_filter_audit_log.get_log_content(end_time, &mut ctx).await.unwrap();
-        assert!(!log_content.success);
+            let mut header = HeaderMap::new();
+            header.insert(sg_filter_audit_log.header_token_name.parse::<HeaderName>().unwrap(), "aaa".parse().unwrap());
+            let ctx = SgRoutePluginContext::new_http(
+                Method::POST,
+                Uri::from_static("http://sg.idealworld.group/test1"),
+                Version::HTTP_11,
+                header,
+                Body::from(""),
+                "127.0.0.1:8080".parse().unwrap(),
+                "".to_string(),
+                None,
+            );
+            let mut ctx = ctx.resp(StatusCode::OK, HeaderMap::new(), Body::from(r#"{"code":"500","msg":"not success"}"#));
+            let log_content = sg_filter_audit_log.get_log_content(end_time, &mut ctx).await.unwrap();
+            assert!(!log_content.success);
 
-        let mut header = HeaderMap::new();
-        header.insert(sg_filter_audit_log.header_token_name.parse::<HeaderName>().unwrap(), "aaa".parse().unwrap());
-        let ctx = SgRoutePluginContext::new_http(
-            Method::POST,
-            Uri::from_static("http://sg.idealworld.group/test1"),
-            Version::HTTP_11,
-            header,
-            Body::from(""),
-            "127.0.0.1:8080".parse().unwrap(),
-            "".to_string(),
-            None,
-        );
-        let mut ctx = ctx.resp(StatusCode::OK, HeaderMap::new(), Body::from(r##"{"code":500,"msg":"not success"}"##));
-        let log_content = sg_filter_audit_log.get_log_content(end_time, &mut ctx).await.unwrap();
-        assert!(!log_content.success);
+            let mut header = HeaderMap::new();
+            header.insert(sg_filter_audit_log.header_token_name.parse::<HeaderName>().unwrap(), "aaa".parse().unwrap());
+            let ctx = SgRoutePluginContext::new_http(
+                Method::POST,
+                Uri::from_static("http://sg.idealworld.group/test1"),
+                Version::HTTP_11,
+                header,
+                Body::from(""),
+                "127.0.0.1:8080".parse().unwrap(),
+                "".to_string(),
+                None,
+            );
+            let mut ctx = ctx.resp(StatusCode::OK, HeaderMap::new(), Body::from(r#"{"code":500,"msg":"not success"}"#));
+            let log_content = sg_filter_audit_log.get_log_content(end_time, &mut ctx).await.unwrap();
+            assert!(!log_content.success);
+        }
+        if let Ok(report) = guard.report().build() {
+            let file = std::fs::File::create("flamegraph.svg").unwrap();
+            report.flamegraph(file).unwrap();
+        };
+        let exit_time = std::time::Instant::now();
+        let time = exit_time.duration_since(ent_time);
+        println!("test_log_content time:{:?}", time);
     }
 }

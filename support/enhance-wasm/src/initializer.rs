@@ -148,6 +148,7 @@ fn init_config(service_url: &str, serv_config: &ServConfig) -> TardisResult<()> 
         } else {
             format!("/{}", &serv_config.double_auth_req_path)
         },
+        exclude_encrypt_decrypt_path: serv_config.double_auth_req_path.split(',').map(|s| s.to_string()).collect::<Vec<String>>(),
     };
     constants::init_stable_config(serv_config.strict_security_mode, config)?;
     Ok(())
@@ -165,6 +166,7 @@ pub(crate) struct ServConfig {
     pub logout_req_path: String,
     pub double_auth_req_method: String,
     pub double_auth_req_path: String,
+    pub exclude_encrypt_decrypt_path: String,
 }
 
 #[derive(Serialize, Deserialize, Default)]

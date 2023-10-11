@@ -37,6 +37,7 @@ pub const RBUM_ITEM_NAME_APP_NORMAL_TEST_ROLE: &str = "app_normal_test";
 
 pub const RBUM_ITEM_ID_TENANT_LEN: u8 = 6;
 pub const RBUM_ITEM_ID_APP_LEN: u8 = 6;
+pub const RBUM_ITEM_ID_SUB_ROLE_LEN: u8 = 6;
 
 pub const RBUM_SCOPE_LEVEL_PRIVATE: RbumScopeLevelKind = RbumScopeLevelKind::Private;
 pub const RBUM_SCOPE_LEVEL_GLOBAL: RbumScopeLevelKind = RbumScopeLevelKind::Root;

@@ -246,6 +246,7 @@ pub async fn sys_console_tenant_mgr_page(sysadmin_name: &str, sysadmin_password:
                 status: None,
                 cert_phone: None,
                 cert_mail: None,
+                temporary: None,
             },
         )
         .await;
@@ -393,6 +394,9 @@ pub async fn sys_console_account_mgr_page(client: &mut BIOSWebTestClient) -> Tar
                     icon: None,
                     sort: None,
                     kind: None,
+                    in_embed: None,
+                    extend_role_id: None,
+                    in_base: None,
                 },
                 res_ids: None,
             },
@@ -458,6 +462,7 @@ pub async fn sys_console_account_mgr_page(client: &mut BIOSWebTestClient) -> Tar
                 status: None,
                 cert_phone: None,
                 cert_mail: None,
+                temporary: None,
             },
         )
         .await;
@@ -732,6 +737,9 @@ pub async fn sys_console_auth_mgr_page(res_menu_id: &str, client: &mut BIOSWebTe
                     icon: None,
                     sort: None,
                     kind: None,
+                    in_embed: None,
+                    extend_role_id: None,
+                    in_base: None,
                 },
                 res_ids: None,
             },

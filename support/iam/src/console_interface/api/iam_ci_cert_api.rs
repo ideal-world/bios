@@ -27,7 +27,7 @@ impl IamCiCertManageApi {
     /// Add aksk Cert
     #[oai(path = "/aksk", method = "put")]
     async fn add_aksk(&self, add_req: Json<IamCertAkSkAddReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<IamCertAkSkResp> {
-        add_remote_ip(&request, &ctx.0).await?;
+        add_remote_ip(request, &ctx.0).await?;
         let funs = iam_constants::get_tardis_inst();
         let result = IamCiCertAkSkServ::general_cert(add_req.0, &funs, &ctx.0).await?;
         ctx.0.execute_task().await?;
@@ -36,7 +36,7 @@ impl IamCiCertManageApi {
 
     #[oai(path = "/aksk", method = "delete")]
     async fn delete_aksk(&self, id: Query<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
-        add_remote_ip(&request, &ctx.0).await?;
+        add_remote_ip(request, &ctx.0).await?;
         let funs = iam_constants::get_tardis_inst();
         IamCiCertAkSkServ::delete_cert(&id.0, &funs, &ctx.0).await?;
         ctx.0.execute_task().await?;
@@ -73,7 +73,7 @@ impl IamCiCertApi {
         ctx: TardisContextExtractor,
         request: &Request,
     ) -> TardisApiResult<RbumCertSummaryWithSkResp> {
-        add_remote_ip(&request, &ctx.0).await?;
+        add_remote_ip(request, &ctx.0).await?;
         let funs = iam_constants::get_tardis_inst();
         let supplier = supplier.0.unwrap_or_default();
         let kind = kind.0.unwrap_or_else(|| "UserPwd".to_string());
@@ -104,7 +104,7 @@ impl IamCiCertApi {
         ctx: TardisContextExtractor,
         request: &Request,
     ) -> TardisApiResult<Void> {
-        add_remote_ip(&request, &ctx.0).await?;
+        add_remote_ip(request, &ctx.0).await?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         IamCertServ::add_3th_kind_cert(&mut add_req.0, &account_id.0, &funs, &ctx.0).await?;
@@ -122,7 +122,7 @@ impl IamCiCertApi {
         ctx: TardisContextExtractor,
         request: &Request,
     ) -> TardisApiResult<RbumCertSummaryWithSkResp> {
-        add_remote_ip(&request, &ctx.0).await?;
+        add_remote_ip(request, &ctx.0).await?;
         let funs = iam_constants::get_tardis_inst();
         let rbum_cert = IamCertServ::get_3th_kind_cert_by_rel_rubm_id(&account_id.0, vec![supplier.0], &funs, &ctx.0).await?;
         ctx.0.execute_task().await?;
@@ -134,7 +134,7 @@ impl IamCiCertApi {
     /// 定时任务触发第三方集成同步
     #[oai(path = "/sync", method = "get")]
     async fn third_integration_sync(&self, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<String> {
-        add_remote_ip(&request, &ctx.0).await?;
+        add_remote_ip(request, &ctx.0).await?;
         let funs = iam_constants::get_tardis_inst();
         let msg = IamCertServ::third_integration_sync_without_config(&funs, &ctx.0).await?;
         ctx.0.execute_task().await?;

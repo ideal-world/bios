@@ -75,6 +75,7 @@ pub async fn test(_context: &TardisContext) -> TardisResult<(TardisContext, Tard
             tenant_id: Some(tenant_id.clone()),
             flag: None,
         },
+        None,
         &funs,
     )
     .await?;
@@ -145,6 +146,7 @@ pub async fn test(_context: &TardisContext) -> TardisResult<(TardisContext, Tard
             app_contact_phone: None,
             disabled: None,
             admin_ids: Some(vec![account_id1.to_string()]),
+            set_cate_id: None,
         },
         &funs,
         &tenant_context,
@@ -159,6 +161,7 @@ pub async fn test(_context: &TardisContext) -> TardisResult<(TardisContext, Tard
             app_contact_phone: None,
             disabled: None,
             admin_ids: Some(vec![account_id2.clone()]),
+            set_cate_id: None,
         },
         &funs,
         &tenant_context,
@@ -172,6 +175,7 @@ pub async fn test(_context: &TardisContext) -> TardisResult<(TardisContext, Tard
             tenant_id: Some(tenant_id.clone()),
             flag: None,
         },
+        None,
         &funs,
     )
     .await?;
@@ -191,6 +195,7 @@ pub async fn test(_context: &TardisContext) -> TardisResult<(TardisContext, Tard
             tenant_id: Some(tenant_id.clone()),
             flag: None,
         },
+        None,
         &funs,
     )
     .await?;

@@ -27,6 +27,8 @@ pub struct ScheduleJobAddOrModifyReq {
     pub cron: String,
     #[oai(validator(min_length = "2"))]
     pub callback_url: String,
+    pub enable_time: Option<DateTime<Utc>>,
+    pub disable_time: Option<DateTime<Utc>>,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Clone, Debug)]
@@ -43,6 +45,8 @@ pub struct ScheduleJobInfoResp {
     pub code: String,
     pub cron: String,
     pub callback_url: String,
+    pub enable_time: Option<DateTime<Utc>>,
+    pub disable_time: Option<DateTime<Utc>>,
     pub create_time: Option<chrono::DateTime<Utc>>,
     pub update_time: Option<chrono::DateTime<Utc>>,
 }
@@ -61,7 +65,7 @@ impl TryFrom<KvItemSummaryResp> for KvSchedualJobItemDetailResp {
 
     fn try_from(resp: KvItemSummaryResp) -> Result<Self, Self::Error> {
         let Some(s) = &resp.value.as_str() else {
-            return Err(TardisError::internal_error("value are expected to be a string", "schedule-409-bad-schedule-job"))
+            return Err(TardisError::internal_error("value are expected to be a string", "schedule-409-bad-schedule-job"));
         };
         let req: ScheduleJobAddOrModifyReq =
             tardis::serde_json::from_str(s).map_err(|e| TardisError::internal_error(&format!("can't parse schedule job json body: {e}"), "schedule-409-bad-schedule-job"))?;
@@ -81,6 +85,8 @@ impl ScheduleJobInfoResp {
             code: self.code.clone().into(),
             cron: self.cron.clone(),
             callback_url: self.callback_url.clone(),
+            enable_time: self.enable_time,
+            disable_time: self.disable_time,
         }
     }
 }

@@ -31,7 +31,7 @@ impl IamCpAppApi {
         ctx: TardisContextExtractor,
         request: &Request,
     ) -> TardisApiResult<TardisPage<IamAppSummaryResp>> {
-        add_remote_ip(&request, &ctx.0).await?;
+        add_remote_ip(request, &ctx.0).await?;
         let funs = iam_constants::get_tardis_inst();
 
         let result = IamAppServ::paginate_items(

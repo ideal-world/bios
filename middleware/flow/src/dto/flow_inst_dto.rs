@@ -9,10 +9,21 @@ use tardis::{
     web::poem_openapi,
 };
 
-use super::{flow_state_dto::FlowSysStateKind, flow_transition_dto::FlowTransitionDoubleCheckInfo, flow_var_dto::FlowVarInfo};
+use super::{
+    flow_state_dto::{FlowStateRelModelExt, FlowSysStateKind},
+    flow_transition_dto::FlowTransitionDoubleCheckInfo,
+    flow_var_dto::FlowVarInfo,
+};
 
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
 pub struct FlowInstStartReq {
+    pub rel_business_obj_id: String,
+    pub tag: String,
+    pub create_vars: Option<HashMap<String, Value>>,
+}
+
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
+pub struct FlowInstBindReq {
     pub rel_business_obj_id: String,
     pub tag: String,
     pub create_vars: Option<HashMap<String, Value>>,
@@ -20,20 +31,21 @@ pub struct FlowInstStartReq {
 }
 
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
-pub struct FlowInstBindReq {
+pub struct FlowInstBatchBindReq {
     pub tag: String,
     pub rel_business_objs: Vec<FlowInstBindRelObjReq>,
 }
 
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
 pub struct FlowInstBindRelObjReq {
-    pub rel_business_obj_id: String,
-    pub current_state_name: String,
-    pub own_paths: String,
+    pub rel_business_obj_id: Option<String>,
+    pub current_state_name: Option<String>,
+    pub own_paths: Option<String>,
+    pub owner: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
-pub struct FlowInstBindResp {
+pub struct FlowInstBatchBindResp {
     pub rel_business_obj_id: String,
     pub current_state_name: String,
     pub inst_id: Option<String>,
@@ -132,9 +144,9 @@ pub struct FlowInstFindNextTransitionResp {
     pub next_flow_transition_name: String,
     pub next_flow_state_id: String,
     pub next_flow_state_name: String,
+    pub next_flow_state_color: String,
 
     pub vars_collect: Option<Vec<FlowVarInfo>>,
-
     pub double_check: Option<FlowTransitionDoubleCheckInfo>,
 }
 
@@ -149,6 +161,9 @@ pub struct FlowInstFindStateAndTransitionsResp {
     pub flow_inst_id: String,
     pub current_flow_state_name: String,
     pub current_flow_state_kind: FlowSysStateKind,
+    pub current_flow_state_color: String,
+    pub current_flow_state_ext: FlowStateRelModelExt,
+    pub finish_time: Option<DateTime<Utc>>,
     pub next_flow_transitions: Vec<FlowInstFindNextTransitionResp>,
 }
 
@@ -162,14 +177,24 @@ pub struct FlowInstTransferReq {
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
 pub struct FlowInstTransferResp {
     pub prev_flow_state_id: String,
-    pub prev_flow_state_name: Option<String>,
+    pub prev_flow_state_name: String,
+    pub prev_flow_state_color: String,
     pub new_flow_state_id: String,
     pub new_flow_state_name: String,
+    pub new_flow_state_color: String,
+    pub new_flow_state_ext: FlowStateRelModelExt,
+    pub finish_time: Option<DateTime<Utc>>,
 
     pub vars: Option<HashMap<String, Value>>,
+    pub next_flow_transitions: Vec<FlowInstFindNextTransitionResp>,
 }
 
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
 pub struct FlowInstModifyAssignedReq {
     pub current_assigned: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
+pub struct FlowInstModifyCurrentVarsReq {
+    pub vars: HashMap<String, Value>,
 }

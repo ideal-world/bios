@@ -24,6 +24,8 @@ pub enum InvokeModuleKind {
     Stats,
     #[oai(rename = "schedule")]
     Schedule,
+    #[oai(rename = "iam")]
+    Iam,
 }
 
 #[cfg(not(feature = "reldb-core"))]
@@ -38,4 +40,5 @@ pub enum InvokeModuleKind {
     Graph,
     Stats,
     Schedule,
+    Iam
 }

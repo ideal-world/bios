@@ -90,6 +90,10 @@ pub async fn decrypt_req(
 
         if let Some(body) = body.as_ref() {
             if input_sm3_digest != TardisFuns::crypto.digest.sm3(body)? {
+                trace!(
+                    "[Auth] input_keys have four key,and body:{body},input_sm3_digest:{input_sm3_digest},sm3(body):{}",
+                    TardisFuns::crypto.digest.sm3(body)?
+                );
                 return Err(TardisError::bad_request("[Auth] Encrypted request: body digest error.", "401-auth-req-crypto-error"));
             }
 
@@ -113,6 +117,10 @@ pub async fn decrypt_req(
         let input_sm4_iv = input_keys[2];
         if let Some(body) = body.as_ref() {
             if input_sm3_digest != TardisFuns::crypto.digest.sm3(body)? {
+                trace!(
+                    "[Auth] input_keys have three key,and body:{body},input_sm3_digest:{input_sm3_digest},sm3(body):{}",
+                    TardisFuns::crypto.digest.sm3(body)?
+                );
                 return Err(TardisError::bad_request("[Auth] Encrypted request: body digest error.", "401-auth-req-crypto-error"));
             }
 
@@ -171,7 +179,7 @@ pub async fn encrypt_body(req: &AuthEncryptReq) -> TardisResult<AuthEncryptResp>
         .encrypt(&format!("{sign_data} {sm4_key} {sm4_iv}"))
         .map_err(|e| TardisError::bad_request(&format!("[Auth] Encrypt response: key encrypt error:{e}"), "401-auth-req-crypto-error"))?;
     Ok(AuthEncryptResp {
-        headers: HashMap::from([(config.head_key_crypto.to_string(), TardisFuns::crypto.base64.encode(&pub_key))]),
+        headers: HashMap::from([(config.head_key_crypto.to_string(), TardisFuns::crypto.base64.encode(pub_key))]),
         body: data,
     })
 }

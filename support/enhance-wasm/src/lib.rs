@@ -40,6 +40,22 @@ pub fn on_before_request(method: &str, uri: &str, body: JsValue, headers: JsValu
     if let Some(token) = modules::token_process::get_token()? {
         headers.insert(BIOS_TOKEN.to_string(), token);
     }
+    //skip encrypt_decrypt by exclude_encrypt_decrypt_path
+    let config = STABLE_CONFIG.read().unwrap();
+    let config = config.as_ref().unwrap();
+    let remove_host_uri = if let Some(uri) = uri.strip_prefix('/') { uri } else { uri };
+    let path = remove_host_uri.split('?').collect::<Vec<_>>()[0];
+    for exclude_path in config.exclude_encrypt_decrypt_path.clone() {
+        if path.starts_with(&exclude_path) {
+            return Ok(mini_tardis::serde::obj_to_jsvalue(&MixRequest {
+                method: method.to_string(),
+                uri: uri.to_string(),
+                body,
+                headers,
+            })?);
+        }
+    }
+
     let mix_req = if constants::get_strict_security_mode()? {
         modules::global_api_process::mix(method, uri, &body, headers)?
     } else {
@@ -109,4 +125,9 @@ pub fn encrypt(text: &str) -> Result<String, JsValue> {
 #[wasm_bindgen]
 pub fn decrypt(encrypt_text: &str) -> Result<String, JsValue> {
     Ok(modules::crypto_process::simple_decrypt(encrypt_text)?)
+}
+
+#[wasm_bindgen]
+pub fn get_token() -> Result<String, JsValue> {
+    Ok(modules::token_process::get_token()?.unwrap_or_default())
 }

@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use bios_basic::dto::BasicQueryCondInfo;
+use bios_basic::{basic_enumeration::BasicQueryOpKind, dto::BasicQueryCondInfo};
 use serde::{Deserialize, Serialize};
 use tardis::{
     basic::field::TrimString,
@@ -101,6 +101,8 @@ pub struct SearchItemSearchReq {
     pub ctx: SearchItemSearchCtxReq,
     // Search conditions
     pub query: SearchItemQueryReq,
+    // Advanced search
+    pub adv_query: Option<Vec<AdvSearchItemQueryReq>>,
     // Sort
     // When the record set is very large, it will seriously affect the performance, it is not recommended to use.
     pub sort: Option<Vec<SearchItemSearchSortReq>>,
@@ -140,7 +142,25 @@ impl SearchItemSearchCtxReq {
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Default)]
+pub struct AdvSearchItemQueryReq {
+    pub group_by_or: Option<bool>,
+    // Extended filtering conditions
+    pub ext: Option<Vec<AdvBasicQueryCondInfo>>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[cfg_attr(feature = "default", derive(poem_openapi::Object))]
+pub struct AdvBasicQueryCondInfo {
+    pub in_ext: Option<bool>,
+    #[oai(validator(min_length = "1"))]
+    pub field: String,
+    pub op: BasicQueryOpKind,
+    pub value: Value,
+}
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Default)]
 pub struct SearchItemQueryReq {
+    pub in_q_content: Option<bool>,
     // Fuzzy search content
     pub q: Option<String>,
     // Fuzzy search scope
@@ -212,6 +232,8 @@ pub struct SearchItemSearchResp {
     pub key: String,
     #[oai(validator(min_length = "2"))]
     pub title: String,
+    #[oai(validator(min_length = "2"))]
+    pub content: String,
     #[oai(validator(min_length = "2"))]
     pub owner: String,
     #[oai(validator(min_length = "2"))]

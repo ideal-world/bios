@@ -24,13 +24,21 @@ use super::{stats_pg_conf_dim_serv, stats_pg_conf_fact_col_serv, stats_pg_conf_f
 
 pub(crate) async fn get_fact_record_latest(
     fact_conf_key: &str,
-    fact_record_key: &str,
+    fact_record_keys: impl IntoIterator<Item = &str>,
     funs: &TardisFunsInst,
     ctx: &TardisContext,
     inst: &SpiBsInst,
-) -> TardisResult<serde_json::Value> {
+) -> TardisResult<Vec<serde_json::Value>> {
     let bs_inst = inst.inst::<TardisRelDBClient>();
     let (conn, _) = common_pg::init_conn(bs_inst).await?;
+    let (placeholder, params) = fact_record_keys.into_iter().fold((String::new(), Vec::new()), |(mut placeholder, mut values), key| {
+        if !placeholder.is_empty() {
+            placeholder.push(',')
+        }
+        values.push(Value::from(key));
+        placeholder.push_str(&format!("${}", values.len()));
+        (placeholder, values)
+    });
     if !stats_pg_conf_fact_serv::online(fact_conf_key, &conn, ctx).await? {
         return Err(funs.err().conflict("fact_record", "load", "The fact config not online.", "409-spi-stats-fact-conf-not-online"));
     }
@@ -38,23 +46,78 @@ pub(crate) async fn get_fact_record_latest(
     let result = conn
         .query_all(
             &format!(
+                r#"SELECT * FROM (
+    SELECT *, ROW_NUMBER() OVER (PARTITION BY "key" ORDER BY ct DESC) AS rn, count(*) OVER() AS total
+    FROM {table_name}
+    WHERE "key" IN ({placeholder})
+) t WHERE rn=1
+"#,
+            ),
+            params,
+        )
+        .await?;
+    let values = result
+        .iter()
+        .map(|result| {
+            let result = serde_json::Value::from_query_result_optional(result, "")?;
+            let mut value = result.unwrap_or_default();
+            value.as_object_mut().map(|obj| obj.remove("rn"));
+            Ok(value)
+        })
+        .collect::<TardisResult<Vec<serde_json::Value>>>()?;
+    Ok(values)
+}
+
+pub(crate) async fn get_fact_record_pagenated(
+    fact_conf_key: &str,
+    fact_record_key: &str,
+    page_number: u32,
+    page_size: u32,
+    desc_by_create: Option<bool>,
+    funs: &TardisFunsInst,
+    ctx: &TardisContext,
+    inst: &SpiBsInst,
+) -> TardisResult<TardisPage<serde_json::Value>> {
+    let bs_inst = inst.inst::<TardisRelDBClient>();
+    let (conn, _) = common_pg::init_conn(bs_inst).await?;
+    if !stats_pg_conf_fact_serv::online(fact_conf_key, &conn, ctx).await? {
+        return Err(funs.err().conflict("fact_record", "load", "The fact config not online.", "409-spi-stats-fact-conf-not-online"));
+    }
+    let table_name = package_table_name(&format!("stats_inst_fact_{fact_conf_key}"), ctx);
+    let mut sql_order = String::new();
+    if let Some(desc_by_create) = desc_by_create {
+        sql_order = format!("ORDER BY ct {}", if desc_by_create { "DESC" } else { "ASC" });
+    }
+    let result = conn
+        .query_all(
+            &format!(
                 r#"SELECT *, count(*) OVER() AS total
 FROM {table_name}
 WHERE 
     key = $1
-ORDER BY ct
-LIMIT 1
+{sql_order}
+LIMIT $2 OFFSET $3
 "#,
             ),
-            vec![Value::from(fact_record_key)],
+            vec![Value::from(fact_record_key), Value::from(page_size), Value::from((page_number - 1) * page_size)],
         )
         .await?;
-    if result.is_empty() {
-        Ok(serde_json::Value::Null)
+    let total;
+    if let Some(first) = result.get(0) {
+        total = first.try_get("", "total")?;
     } else {
-        let values = serde_json::Value::from_query_result_optional(&result.get(0).unwrap(), "")?.expect("Fail to get value from query result in get_fact_record_latest");
-        Ok(values)
+        total = 0;
     }
+    let records = result
+        .iter()
+        .map(|item| serde_json::Value::from_query_result_optional(item, "").map(|x| x.unwrap_or(serde_json::Value::Null)))
+        .collect::<Result<Vec<serde_json::Value>, _>>()?;
+    Ok(TardisPage {
+        page_size: page_size.into(),
+        page_number: page_size.into(),
+        total_size: total as u64,
+        records,
+    })
 }
 
 pub(crate) async fn fact_record_load(
@@ -96,12 +159,7 @@ pub(crate) async fn fact_record_load(
         })?;
         if fact_col_conf.kind == StatsFactColKind::Dimension {
             let Some(key) = fact_col_conf.dim_rel_conf_dim_key.as_ref() else {
-                return Err(funs.err().not_found(
-                    "fact_record",
-                    "load",
-                    "Fail to get conf_dim_key",
-                    "400-spi-stats-fail-to-get-dim-config-key",
-                ))
+                return Err(funs.err().not_found("fact_record", "load", "Fail to get conf_dim_key", "400-spi-stats-fail-to-get-dim-config-key"));
             };
             let Some(dim_conf) = stats_pg_conf_dim_serv::get(key, &conn, ctx, inst).await? else {
                 return Err(funs.err().not_found(
@@ -109,7 +167,7 @@ pub(crate) async fn fact_record_load(
                     "load",
                     &format!("Fail to get dim_conf by key [{key}]"),
                     "400-spi-stats-fail-to-get-dim-config-key",
-                ))
+                ));
             };
             // TODO check value enum when stable_ds =true
             fields.push(req_fact_col_key.to_string());
@@ -121,14 +179,22 @@ pub(crate) async fn fact_record_load(
         } else if fact_col_conf.kind == StatsFactColKind::Measure {
             let Some(mes_data_type) = fact_col_conf.mes_data_type.as_ref() else {
                 return Err(funs.err().bad_request(
-                    "fact_record", "load", "Col_conf.mes_data_type shouldn't be empty while fact_col_conf.kind is Measure", "400-spi-stats-invalid-request"))
+                    "fact_record",
+                    "load",
+                    "Col_conf.mes_data_type shouldn't be empty while fact_col_conf.kind is Measure",
+                    "400-spi-stats-invalid-request",
+                ));
             };
             fields.push(req_fact_col_key.to_string());
             values.push(mes_data_type.json_to_sea_orm_value(req_fact_col_value, false)?);
         } else {
             let Some(req_fact_col_value) = req_fact_col_value.as_str() else {
                 return Err(funs.err().bad_request(
-                    "fact_record", "load", &format!("For the key [{req_fact_col_key}], value: [{req_fact_col_value}] is not a string"), "400-spi-stats-invalid-request"))
+                    "fact_record",
+                    "load",
+                    &format!("For the key [{req_fact_col_key}], value: [{req_fact_col_value}] is not a string"),
+                    "400-spi-stats-invalid-request",
+                ));
             };
             fields.push(req_fact_col_key.to_string());
             values.push(req_fact_col_value.into());
@@ -149,10 +215,15 @@ pub(crate) async fn fact_record_load(
                 fields.push(fact_col_conf.key.to_string());
                 if fact_col_conf.kind == StatsFactColKind::Dimension {
                     let Some(dim_rel_conf_dim_key) = &fact_col_conf.dim_rel_conf_dim_key else {
-                        return Err(funs.err().internal_error("fact_record", "load", "dim_rel_conf_dim_key unexpectedly being empty", "500-spi-stats-internal-error"))
+                        return Err(funs.err().internal_error("fact_record", "load", "dim_rel_conf_dim_key unexpectedly being empty", "500-spi-stats-internal-error"));
                     };
                     let Some(dim_conf) = stats_pg_conf_dim_serv::get(dim_rel_conf_dim_key, &conn, ctx, inst).await? else {
-                        return Err(funs.err().internal_error("fact_record", "load", &format!("key [{dim_rel_conf_dim_key}] missing corresponding config "), "500-spi-stats-internal-error"))
+                        return Err(funs.err().internal_error(
+                            "fact_record",
+                            "load",
+                            &format!("key [{dim_rel_conf_dim_key}] missing corresponding config "),
+                            "500-spi-stats-internal-error",
+                        ));
                     };
                     if fact_col_conf.dim_multi_values.unwrap_or(false) {
                         values.push(dim_conf.data_type.result_to_sea_orm_value_array(&latest_data, &fact_col_conf.key)?);
@@ -162,7 +233,11 @@ pub(crate) async fn fact_record_load(
                 } else if fact_col_conf.kind == StatsFactColKind::Measure {
                     let Some(mes_data_type) = fact_col_conf.mes_data_type.as_ref() else {
                         return Err(funs.err().bad_request(
-                            "fact_record", "load", "Col_conf.mes_data_type shouldn't be empty while fact_col_conf.kind is Measure", "400-spi-stats-invalid-request"))
+                            "fact_record",
+                            "load",
+                            "Col_conf.mes_data_type shouldn't be empty while fact_col_conf.kind is Measure",
+                            "400-spi-stats-invalid-request",
+                        ));
                     };
                     values.push(mes_data_type.result_to_sea_orm_value(&latest_data, &fact_col_conf.key)?);
                 } else {
@@ -211,8 +286,13 @@ pub(crate) async fn fact_records_load(
     let mut value_sets = vec![];
 
     for add_req in add_req_set {
-        let Some(req_data) =  add_req.data.as_object() else {
-            return Err(funs.err().bad_request("fact_record", "load_set", &format!("add_req.data should be a map value, got {data}", data= add_req.data), "400-spi-stats-invalid-request"))
+        let Some(req_data) = add_req.data.as_object() else {
+            return Err(funs.err().bad_request(
+                "fact_record",
+                "load_set",
+                &format!("add_req.data should be a map value, got {data}", data = add_req.data),
+                "400-spi-stats-invalid-request",
+            ));
         };
         let mut values = vec![Value::from(&add_req.key), Value::from(add_req.own_paths), Value::from(add_req.ct)];
 
@@ -234,12 +314,7 @@ pub(crate) async fn fact_records_load(
             })?;
             if fact_col_conf.kind == StatsFactColKind::Dimension {
                 let Some(key) = fact_col_conf.dim_rel_conf_dim_key.as_ref() else {
-                    return Err(funs.err().not_found(
-                        "fact_record",
-                        "load_set",
-                        "Fail to get conf_dim_key",
-                        "400-spi-stats-fail-to-get-dim-config-key",
-                    ))
+                    return Err(funs.err().not_found("fact_record", "load_set", "Fail to get conf_dim_key", "400-spi-stats-fail-to-get-dim-config-key"));
                 };
                 let Some(dim_conf) = stats_pg_conf_dim_serv::get(key, &conn, ctx, inst).await? else {
                     return Err(funs.err().not_found(
@@ -247,7 +322,7 @@ pub(crate) async fn fact_records_load(
                         "load_set",
                         &format!("Fail to get dim_conf by key [{key}]"),
                         "400-spi-stats-fail-to-get-dim-config-key",
-                    ))
+                    ));
                 };
                 // TODO check value enum when stable_ds =true
                 if fact_col_conf.dim_multi_values.unwrap_or(false) {
@@ -258,13 +333,21 @@ pub(crate) async fn fact_records_load(
             } else if fact_col_conf.kind == StatsFactColKind::Measure {
                 let Some(mes_data_type) = fact_col_conf.mes_data_type.as_ref() else {
                     return Err(funs.err().bad_request(
-                        "fact_record", "load_set", "Col_conf.mes_data_type shouldn't be empty while fact_col_conf.kind is Measure", "400-spi-stats-invalid-request"))
+                        "fact_record",
+                        "load_set",
+                        "Col_conf.mes_data_type shouldn't be empty while fact_col_conf.kind is Measure",
+                        "400-spi-stats-invalid-request",
+                    ));
                 };
                 values.push(mes_data_type.json_to_sea_orm_value(req_fact_col_value, false)?);
             } else {
                 let Some(req_fact_col_value) = req_fact_col_value.as_str() else {
                     return Err(funs.err().bad_request(
-                        "fact_record", "load_set", &format!("Value: [{req_fact_col_value}] is not a string"), "400-spi-stats-invalid-request"))
+                        "fact_record",
+                        "load_set",
+                        &format!("Value: [{req_fact_col_value}] is not a string"),
+                        "400-spi-stats-invalid-request",
+                    ));
                 };
                 values.push(req_fact_col_value.into());
             }
@@ -673,6 +756,29 @@ WHERE key = $1
         values,
     )
     .await?;
+    conn.commit().await?;
+    Ok(())
+}
+
+pub(crate) async fn dim_record_real_delete(
+    dim_conf_key: String,
+    dim_record_key: serde_json::Value,
+    funs: &TardisFunsInst,
+    ctx: &TardisContext,
+    inst: &SpiBsInst,
+) -> TardisResult<()> {
+    let bs_inst = inst.inst::<TardisRelDBClient>();
+    let (mut conn, _) = common_pg::init_conn(bs_inst).await?;
+    conn.begin().await?;
+    if !stats_pg_conf_dim_serv::online(&dim_conf_key, &conn, ctx).await? {
+        return Err(funs.err().conflict("dim_record", "delete", "The dimension config not online.", "409-spi-stats-dim-conf-not-online"));
+    }
+    let dim_conf = stats_pg_conf_dim_serv::get(&dim_conf_key, &conn, ctx, inst).await?.expect("Fail to get dim_conf");
+
+    let table_name = package_table_name(&format!("stats_inst_dim_{}", dim_conf.key), ctx);
+    let values = vec![dim_conf.data_type.json_to_sea_orm_value(&dim_record_key, false)?];
+
+    conn.execute_one(&format!(r#"delete {table_name} WHERE key = $1 "#,), values).await?;
     conn.commit().await?;
     Ok(())
 }

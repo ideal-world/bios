@@ -13,7 +13,6 @@ use tardis::{
     },
     log::info,
     serde_json::{self, json, Map},
-    web::poem_openapi::types::Type,
     TardisFunsInst,
 };
 
@@ -501,7 +500,7 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
         if ignore_group_agg {
             "".to_string()
         } else {
-            ",string_agg(_._key || ' - ' || _._own_paths || ' - ' || _._ct, ',') as s_agg".to_string()
+            ",string_agg(_._key || ' - ' || _._own_paths || ' - ' || to_char(_._ct, 'YYYY-MM-DD HH24:MI:SS'), ',') as s_agg".to_string()
         },
         if ignore_group_agg {
             "".to_string()
@@ -581,7 +580,7 @@ fn package_groups(
             leaf_node.insert(measure_key.to_string(), val.clone());
         }
         if !ignore_group_agg {
-            leaf_node.insert("group".to_string(), first_result.get("group").ok_or(format!("failed to get key group"))?.clone());
+            leaf_node.insert("group".to_string(), first_result.get("group").ok_or("failed to get key group".to_string())?.clone());
         }
         return Ok(serde_json::Value::Object(leaf_node));
     }
@@ -624,23 +623,24 @@ fn package_groups(
 fn package_groups_agg(record: serde_json::Value) -> Result<serde_json::Value, String> {
     match record.get("s_agg") {
         Some(agg) => {
+            if agg.is_null() {
+                return Ok(serde_json::Value::Null);
+            }
             println!("{}", agg);
             let mut details = Vec::new();
             let var_agg = agg.as_str().ok_or("field group_agg should be a string")?;
-            let vars = var_agg.split(",").collect::<Vec<&str>>();
+            let vars = var_agg.split(',').collect::<Vec<&str>>();
             for var in vars {
                 let fields = var.split(" - ").collect::<Vec<&str>>();
                 details.push(json!({
-                    "key": fields.get(0).unwrap_or(&""),
+                    "key": fields.first().unwrap_or(&""),
                     "own_paths": fields.get(1).unwrap_or(&""),
                     "ct": fields.get(2).unwrap_or(&""),
                 }));
             }
-            return Ok(serde_json::Value::Array(details));
+            Ok(serde_json::Value::Array(details))
         }
-        None => {
-            return Ok(serde_json::Value::Null);
-        }
+        None => Ok(serde_json::Value::Null),
     }
 }
 

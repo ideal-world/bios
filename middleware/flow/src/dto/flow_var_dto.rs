@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use std::{default, str::FromStr};
+use std::str::FromStr;
 use tardis::{
     db::sea_orm::{self, strum::Display, DbErr, QueryResult, TryGetError, TryGetable},
     serde_json::Value,

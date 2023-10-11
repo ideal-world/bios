@@ -10,6 +10,8 @@ use bios_basic::rbum::{
     serv::rbum_rel_serv::RbumRelServ,
 };
 use serde::{Deserialize, Serialize};
+
+use tardis::db::sea_orm::strum::Display;
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
     chrono::{Duration, Utc},
@@ -18,7 +20,7 @@ use tardis::{
 
 pub struct FlowRelServ;
 
-#[derive(strum::Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, strum::EnumString)]
+#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, strum::EnumString)]
 pub enum FlowRelKind {
     FlowModelState,
 }
@@ -32,7 +34,7 @@ impl FlowRelServ {
         end_timestamp: Option<i64>,
         ignore_exist_error: bool,
         to_is_outside: bool,
-        sort: Option<i64>,
+        ext: Option<String>,
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<()> {
@@ -54,7 +56,7 @@ impl FlowRelServ {
                 to_rbum_item_id: flow_state_id.to_string(),
                 to_own_paths: ctx.own_paths.to_string(),
                 to_is_outside,
-                ext: sort.map(|sort| sort.to_string()),
+                ext,
             },
             attrs: vec![],
             envs: if start_timestamp.is_some() || end_timestamp.is_some() {
@@ -117,7 +119,7 @@ impl FlowRelServ {
         .await
     }
 
-    pub async fn find_to_simple_rels(
+    pub async fn _find_to_simple_rels(
         flow_rel_kind: &FlowRelKind,
         flow_model_id: &str,
         desc_sort_by_create: Option<bool>,

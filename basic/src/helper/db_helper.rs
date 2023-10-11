@@ -1,4 +1,8 @@
-use tardis::{db::sea_orm, serde_json};
+use tardis::{
+    chrono::{DateTime, ParseError, Utc},
+    db::sea_orm,
+    serde_json,
+};
 
 pub fn json_to_sea_orm_value(json_value: &serde_json::Value, like_by_str: bool) -> Option<Vec<sea_orm::Value>> {
     match json_value {
@@ -8,13 +12,16 @@ pub fn json_to_sea_orm_value(json_value: &serde_json::Value, like_by_str: bool) 
         serde_json::Value::Number(val) if val.is_u64() => Some(vec![sea_orm::Value::from(val.as_u64())]),
         serde_json::Value::Number(val) if val.is_f64() => Some(vec![sea_orm::Value::from(val.as_f64())]),
         serde_json::Value::Object(_) => Some(vec![sea_orm::Value::from(json_value.clone())]),
-        serde_json::Value::String(val) => {
-            if like_by_str {
-                Some(vec![sea_orm::Value::from(format!("{val}%"))])
-            } else {
-                Some(vec![sea_orm::Value::from(val)])
+        serde_json::Value::String(val) => match str_to_datetime(val) {
+            Ok(val) => Some(vec![sea_orm::Value::from(val)]),
+            Err(_) => {
+                if like_by_str {
+                    Some(vec![sea_orm::Value::from(format!("%{val}%"))])
+                } else {
+                    Some(vec![sea_orm::Value::from(val)])
+                }
             }
-        }
+        },
         serde_json::Value::Array(val) => {
             if val.is_empty() {
                 return None;
@@ -37,4 +44,8 @@ pub fn json_to_sea_orm_value(json_value: &serde_json::Value, like_by_str: bool) 
         }
         _ => None,
     }
+}
+
+fn str_to_datetime(input: &str) -> Result<DateTime<Utc>, ParseError> {
+    DateTime::parse_from_rfc3339(input).map(|dt| dt.with_timezone(&Utc))
 }

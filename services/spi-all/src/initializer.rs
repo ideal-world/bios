@@ -22,6 +22,6 @@ pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
     reldb_initializer::init(web_server).await?;
     search_initializer::init(web_server).await?;
     stats_initializer::init(web_server).await?;
-    conf_initializer::init(web_server).await?;
+    // conf_initializer::init(web_server).await?;
     Ok(())
 }

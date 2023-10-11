@@ -1,9 +1,15 @@
-use std::{collections::VecDeque, sync::atomic::Ordering, time::Duration};
+use std::{collections::VecDeque, env, sync::atomic::Ordering, time::Duration};
 
 use bios_basic::test::init_rbum_test_container;
 use bios_mw_schedule::{dto::schedule_job_dto::ScheduleJobAddOrModifyReq, schedule_config::ScheduleConfig, serv::schedule_job_serv::ScheduleTaskServ};
 
-use tardis::{basic::result::TardisResult, rand::random, testcontainers, tokio};
+use tardis::{
+    basic::result::TardisResult,
+    chrono::{self, Utc},
+    rand::random,
+    test::test_container::TardisTestContainer,
+    testcontainers, tokio,
+};
 
 mod test_common;
 use test_common::*;
@@ -13,7 +19,22 @@ async fn test_basic_schedual_service() -> TardisResult<()> {
     // std::env::set_current_dir("middleware/schedule").unwrap();
     std::env::set_var("RUST_LOG", "info,sqlx=off,sea_orm=INFO");
     let docker = testcontainers::clients::Cli::default();
-    let container_hold = init_rbum_test_container::init(&docker, None).await?;
+    let reldb_container = TardisTestContainer::postgres_custom(None, &docker);
+    let port = reldb_container.get_host_port_ipv4(5432);
+    let url = format!("postgres://postgres:123456@localhost:{port}/test");
+    env::set_var("TARDIS_FW.DB.URL", url);
+
+    let redis_container = TardisTestContainer::redis_custom(&docker);
+    let port = redis_container.get_host_port_ipv4(6379);
+    let url = format!("redis://127.0.0.1:{port}/0");
+    env::set_var("TARDIS_FW.CACHE.URL", url);
+
+    let rabbit_container = TardisTestContainer::rabbit_custom(&docker);
+    let port = rabbit_container.get_host_port_ipv4(5672);
+    let url = format!("amqp://guest:guest@127.0.0.1:{port}/%2f");
+    env::set_var("TARDIS_FW.MQ.URL", url);
+
+    let holder = (reldb_container, redis_container, rabbit_container);
     init_tardis().await?;
 
     let counter = mock_webserver().await?;
@@ -22,7 +43,7 @@ async fn test_basic_schedual_service() -> TardisResult<()> {
 
     test_add_delete(&config, &test_env).await;
     test_random_ops(&config, &test_env).await;
-    drop(container_hold);
+    drop(holder);
     Ok(())
 }
 
@@ -34,6 +55,8 @@ async fn test_add_delete(config: &ScheduleConfig, test_env: &TestEnv) {
             // do every 2 seconds
             cron: "1/2 * * * * *".into(),
             callback_url: "https://localhost:8080/callback/inc".into(),
+            enable_time: None,
+            disable_time: None,
         },
         config,
     )
@@ -57,6 +80,8 @@ async fn test_random_ops(config: &ScheduleConfig, test_env: &TestEnv) {
             code: code.clone().into(),
             cron: format!("1/{period} * * * * *", period = 2),
             callback_url: "https://localhost:8080/callback/inc".into(),
+            enable_time: Utc::now().checked_add_signed(chrono::Duration::seconds(5)),
+            disable_time: None,
         }
     };
     let mut counter = 100;

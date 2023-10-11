@@ -20,6 +20,7 @@ pub mod error {
             CONLICT_AK:                 409 = "conlict-username";
             EXCEED_MAX_RETRY_TIMES:           409 = "exceed-max-retry-times";
             VALID_ERROR:                401 = "valid-error";
+            CACHE_ERROR:                500 = "cache-error";
         }
     }
 }

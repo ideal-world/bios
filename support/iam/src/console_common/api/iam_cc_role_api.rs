@@ -28,6 +28,9 @@ impl IamCcRoleApi {
         id: Query<Option<String>>,
         name: Query<Option<String>>,
         kind: Query<Option<IamRoleKind>>,
+        in_base: Query<Option<bool>>,
+        in_embed: Query<Option<bool>>,
+        extend_role_id: Query<Option<String>>,
         with_sub: Query<Option<bool>>,
         page_number: Query<u32>,
         page_size: Query<u32>,
@@ -36,7 +39,7 @@ impl IamCcRoleApi {
         ctx: TardisContextExtractor,
         request: &Request,
     ) -> TardisApiResult<TardisPage<IamRoleBoneResp>> {
-        add_remote_ip(&request, &ctx.0).await?;
+        add_remote_ip(request, &ctx.0).await?;
         let funs = iam_constants::get_tardis_inst();
         let result = IamRoleServ::paginate_items(
             &IamRoleFilterReq {
@@ -49,6 +52,9 @@ impl IamCcRoleApi {
                     ..Default::default()
                 },
                 kind: kind.0,
+                in_base: in_base.0,
+                in_embed: in_embed.0,
+                extend_role_id: extend_role_id.0,
                 ..Default::default()
             },
             page_number.0,
@@ -74,6 +80,9 @@ impl IamCcRoleApi {
                     kind: item.kind,
                     scope_level: item.scope_level,
                     icon: item.icon,
+                    in_base: item.in_base,
+                    in_embed: item.in_embed,
+                    extend_role_id: item.extend_role_id,
                 })
                 .collect(),
         })
@@ -89,7 +98,7 @@ impl IamCcRoleApi {
         ctx: TardisContextExtractor,
         request: &Request,
     ) -> TardisApiResult<Vec<RbumRelBoneResp>> {
-        add_remote_ip(&request, &ctx.0).await?;
+        add_remote_ip(request, &ctx.0).await?;
         let mut ctx = ctx.0;
         ctx.own_paths = "".to_string();
         let funs = iam_constants::get_tardis_inst();
@@ -129,10 +138,20 @@ impl IamCcRoleApi {
         ctx: TardisContextExtractor,
         request: &Request,
     ) -> TardisApiResult<Vec<String>> {
-        add_remote_ip(&request, &ctx.0).await?;
+        add_remote_ip(request, &ctx.0).await?;
         let funs = iam_constants::get_tardis_inst();
         let ids = ids.0.split(',').map(|s| s.to_string()).collect();
         let result = IamRoleServ::find_name_by_ids(ids, &funs, &ctx.0).await?;
+        ctx.0.execute_task().await?;
+        TardisResp::ok(result)
+    }
+
+    /// Get Embed Subrole Id
+    #[oai(path = "/get_embed_subrole_id", method = "get")]
+    async fn get_embed_subrole_id(&self, id: Query<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<String> {
+        add_remote_ip(request, &ctx.0).await?;
+        let funs = iam_constants::get_tardis_inst();
+        let result = IamRoleServ::get_embed_subrole_id(&id, &funs, &ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }

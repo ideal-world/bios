@@ -2,11 +2,13 @@ use async_trait::async_trait;
 use std::any::Any;
 use std::collections::HashMap;
 use std::future::Future;
-use std::ptr::replace;
+use std::sync::Arc;
+use std::sync::OnceLock;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::error::TardisError;
 use tardis::basic::result::TardisResult;
 use tardis::log::info;
+use tardis::tokio::sync::RwLock;
 use tardis::TardisFuns;
 use tardis::TardisFunsInst;
 
@@ -38,18 +40,21 @@ impl SpiBsInst {
     }
 }
 
-static mut SPI_BS_CACHES: Option<HashMap<String, SpiBsInst>> = None;
+fn get_spi_bs_caches() -> &'static RwLock<HashMap<String, Arc<SpiBsInst>>> {
+    static SPI_BS_CACHES: OnceLock<RwLock<HashMap<String, Arc<SpiBsInst>>>> = OnceLock::new();
+    SPI_BS_CACHES.get_or_init(Default::default)
+}
 
 #[async_trait]
 pub trait SpiBsInstExtractor {
-    async fn init<'a, F, T>(&self, ctx: &'a TardisContext, mgr: bool, init_funs: F) -> TardisResult<&SpiBsInst>
+    async fn init<'a, F, T>(&self, ctx: &'a TardisContext, mgr: bool, init_funs: F) -> TardisResult<Arc<SpiBsInst>>
     where
         F: Fn(SpiBsCertResp, &'a TardisContext, bool) -> T + Send + Sync,
         T: Future<Output = TardisResult<SpiBsInst>> + Send;
 
-    async fn bs<'a>(&self, ctx: &'a TardisContext) -> TardisResult<&'static SpiBsInst>;
+    async fn bs<'a>(&self, ctx: &'a TardisContext) -> TardisResult<Arc<SpiBsInst>>;
 
-    async fn init_bs<'a, F, T>(&self, ctx: &'a TardisContext, mgr: bool, init_funs: F) -> TardisResult<&'static SpiBsInst>
+    async fn init_bs<'a, F, T>(&self, ctx: &'a TardisContext, mgr: bool, init_funs: F) -> TardisResult<Arc<SpiBsInst>>
     where
         F: Fn(SpiBsCertResp, &'a TardisContext, bool) -> T + Send + Sync,
         T: Future<Output = TardisResult<SpiBsInst>> + Send;
@@ -71,34 +76,30 @@ impl SpiBsInstExtractor for TardisFunsInst {
     ///
     /// the backend service instance kind
     /// ```
-    async fn init<'a, F, T>(&self, ctx: &'a TardisContext, mgr: bool, init_fun: F) -> TardisResult<&SpiBsInst>
+    async fn init<'a, F, T>(&self, ctx: &'a TardisContext, mgr: bool, init_fun: F) -> TardisResult<Arc<SpiBsInst>>
     where
         F: Fn(SpiBsCertResp, &'a TardisContext, bool) -> T + Send + Sync,
         T: Future<Output = TardisResult<SpiBsInst>> + Send,
     {
         let cache_key = format!("{}-{}", self.module_code(), ctx.owner);
-        unsafe {
-            if SPI_BS_CACHES.is_none() {
-                replace(&mut SPI_BS_CACHES, Some(HashMap::new()));
+        {
+            let read = get_spi_bs_caches().read().await;
+            if let Some(inst) = read.get(&cache_key).cloned() {
+                return Ok(inst);
             }
-            match &mut SPI_BS_CACHES {
-                None => panic!("[SPI] CACHE instance doesn't exist"),
-                Some(caches) => {
-                    if !caches.contains_key(&cache_key) {
-                        let spi_bs = SpiBsServ::get_bs_by_rel(&ctx.owner, None, self, ctx).await?;
-                        info!(
-                            "[SPI] Init and cache backend service instance [{}]:{}",
-                            cache_key.clone(),
-                            TardisFuns::json.obj_to_string(&spi_bs)?
-                        );
-                        let kind_code = spi_bs.kind_code.clone();
-                        let mut spi_bs_inst = init_fun(spi_bs, ctx, mgr).await?;
-                        spi_bs_inst.ext.insert(spi_constants::SPI_KIND_CODE_FLAG.to_string(), kind_code);
-                        caches.insert(cache_key.clone(), spi_bs_inst);
-                    }
-                    Ok(caches.get(&cache_key).unwrap())
-                }
-            }
+        }
+        let spi_bs = SpiBsServ::get_bs_by_rel(&ctx.owner, None, self, ctx).await?;
+        info!(
+            "[SPI] Init and cache backend service instance [{}]:{}",
+            cache_key.clone(),
+            TardisFuns::json.obj_to_string(&spi_bs)?
+        );
+        let kind_code = spi_bs.kind_code.clone();
+        let mut spi_bs_inst = init_fun(spi_bs, ctx, mgr).await?;
+        {
+            let mut write = get_spi_bs_caches().write().await;
+            spi_bs_inst.ext.insert(spi_constants::SPI_KIND_CODE_FLAG.to_string(), kind_code);
+            return Ok(write.entry(cache_key.clone()).or_insert(Arc::new(spi_bs_inst)).clone());
         }
     }
 
@@ -112,14 +113,9 @@ impl SpiBsInstExtractor for TardisFunsInst {
     ///
     /// the backend service instance
     /// ```
-    async fn bs<'a>(&self, ctx: &'a TardisContext) -> TardisResult<&'static SpiBsInst> {
+    async fn bs<'a>(&self, ctx: &'a TardisContext) -> TardisResult<Arc<SpiBsInst>> {
         let cache_key = format!("{}-{}", self.module_code(), ctx.owner);
-        unsafe {
-            match &mut SPI_BS_CACHES {
-                None => panic!("[SPI] CACHE instance doesn't exist"),
-                Some(caches) => Ok(caches.get(&cache_key).unwrap()),
-            }
-        }
+        Ok(get_spi_bs_caches().read().await.get(&cache_key).unwrap().clone())
     }
 
     /// Initialize the backend service instance and fetch it
@@ -134,7 +130,7 @@ impl SpiBsInstExtractor for TardisFunsInst {
     ///
     /// the backend service instance
     /// ```
-    async fn init_bs<'a, F, T>(&self, ctx: &'a TardisContext, mgr: bool, init_fun: F) -> TardisResult<&'static SpiBsInst>
+    async fn init_bs<'a, F, T>(&self, ctx: &'a TardisContext, mgr: bool, init_fun: F) -> TardisResult<Arc<SpiBsInst>>
     where
         F: Fn(SpiBsCertResp, &'a TardisContext, bool) -> T + Send + Sync,
         T: Future<Output = TardisResult<SpiBsInst>> + Send,

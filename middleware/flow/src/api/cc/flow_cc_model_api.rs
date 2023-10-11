@@ -9,9 +9,11 @@ use tardis::web::poem_openapi::payload::Json;
 use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 
 use crate::dto::flow_model_dto::{
-    FlowModelAddReq, FlowModelAggResp, FlowModelBindStateReq, FlowModelFilterReq, FlowModelModifyReq, FlowModelSortStatesReq, FlowModelSummaryResp, FlowModelUnbindStateReq,
-    FlowTemplateModelResp,
+    FlowModelAddCustomModelReq, FlowModelAddCustomModelResp, FlowModelAddReq, FlowModelAggResp, FlowModelBindStateReq, FlowModelFilterReq, FlowModelFindRelStateResp,
+    FlowModelModifyReq, FlowModelSortStatesReq, FlowModelSummaryResp, FlowModelUnbindStateReq, FlowTemplateModelResp,
 };
+use crate::dto::flow_state_dto::FlowStateRelModelExt;
+use crate::dto::flow_transition_dto::FlowTransitionSortStatesReq;
 use crate::flow_constants;
 use crate::serv::flow_model_serv::FlowModelServ;
 use crate::serv::flow_rel_serv::FlowRelKind;
@@ -75,7 +77,7 @@ impl FlowCcModelApi {
                     enabled: enabled.0,
                     ..Default::default()
                 },
-                tag: tag.0,
+                tags: tag.0.map(|tag| vec![tag]),
                 ..Default::default()
             },
             page_number.0,
@@ -134,12 +136,56 @@ impl FlowCcModelApi {
         TardisResp::ok(Void {})
     }
 
-    /// Resort state / 状态重新排序
+    /// Resort states / 状态重新排序
     #[oai(path = "/:flow_model_id/resort_state", method = "post")]
     async fn resort_state(&self, flow_model_id: Path<String>, req: Json<FlowModelSortStatesReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = flow_constants::get_tardis_inst();
         funs.begin().await?;
         FlowModelServ::resort_state(&FlowRelKind::FlowModelState, &flow_model_id.0, &req.0, &funs, &ctx.0).await?;
+        funs.commit().await?;
+        TardisResp::ok(Void {})
+    }
+
+    /// Resort transitions / 动作重新排序
+    #[oai(path = "/:flow_model_id/resort_transition", method = "post")]
+    async fn resort_transition(&self, flow_model_id: Path<String>, req: Json<FlowTransitionSortStatesReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+        let mut funs = flow_constants::get_tardis_inst();
+        funs.begin().await?;
+        FlowModelServ::resort_transition(&flow_model_id.0, &req.0, &funs, &ctx.0).await?;
+        funs.commit().await?;
+        TardisResp::ok(Void {})
+    }
+
+    /// add custom model by template_id / 添加自定义模型
+    #[oai(path = "/add_custom_model", method = "post")]
+    async fn add_custom_model(&self, req: Json<FlowModelAddCustomModelReq>, ctx: TardisContextExtractor) -> TardisApiResult<Vec<FlowModelAddCustomModelResp>> {
+        let mut funs = flow_constants::get_tardis_inst();
+        funs.begin().await?;
+        let proj_template_id = req.0.proj_template_id.unwrap_or_default();
+        let mut result = vec![];
+        for item in req.0.bind_model_objs {
+            let model_id = FlowModelServ::add_custom_model(&item.tag, &proj_template_id, None, &funs, &ctx.0).await.ok();
+            result.push(FlowModelAddCustomModelResp { tag: item.tag, model_id });
+        }
+        funs.commit().await?;
+        TardisResp::ok(result)
+    }
+
+    /// find rel states by model_id / 获取关联状态
+    #[oai(path = "/find_rel_status", method = "get")]
+    async fn find_rel_states(&self, tag: Query<String>, rel_template_id: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<Vec<FlowModelFindRelStateResp>> {
+        let funs = flow_constants::get_tardis_inst();
+        let result = FlowModelServ::find_rel_states(&tag, rel_template_id.0, &funs, &ctx.0).await?;
+
+        TardisResp::ok(result)
+    }
+
+    /// modify related state / 编辑关联的状态
+    #[oai(path = "/:flow_model_id/modify_rel_state/:state_id", method = "patch")]
+    async fn modify_rel_state(&self, flow_model_id: Path<String>, state_id: Path<String>, req: Json<FlowStateRelModelExt>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+        let mut funs = flow_constants::get_tardis_inst();
+        funs.begin().await?;
+        FlowModelServ::modify_rel_state(&flow_model_id.0, &state_id.0, &req.0, &funs, &ctx.0).await?;
         funs.commit().await?;
         TardisResp::ok(Void {})
     }

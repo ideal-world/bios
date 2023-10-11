@@ -1,3 +1,4 @@
+use bios_basic::helper::request_helper::get_remote_ip;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::result::TardisResult;
 use tardis::chrono::{Duration, Utc};
@@ -439,7 +440,7 @@ impl IamRelServ {
                 .await;
             }
             IamRelKind::IamAccountRole => {
-                IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(from_iam_item_id, funs).await?;
+                IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(from_iam_item_id, get_remote_ip(ctx).await?, funs).await?;
                 let _ = IamLogClient::add_ctx_task(
                     LogParamTag::IamAccount,
                     Some(from_iam_item_id.to_string()),
@@ -478,7 +479,7 @@ impl IamRelServ {
                 // IamCertServ::package_tardis_account_context_and_resp(from_iam_item_id, &tenant_ctx.own_paths, "".to_string(), None, funs, &tenant_ctx).await?;
             }
             IamRelKind::IamAccountApp => {
-                IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(from_iam_item_id, funs).await?;
+                IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(from_iam_item_id, get_remote_ip(ctx).await?, funs).await?;
                 IamAccountServ::async_add_or_modify_account_search(from_iam_item_id.to_string(), Box::new(true), "".to_string(), funs, ctx).await?;
             }
             IamRelKind::IamAccountRel => {

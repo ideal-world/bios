@@ -1,3 +1,4 @@
+use bios_basic::helper::request_helper::get_remote_ip;
 use bios_basic::rbum::dto::rbum_filer_dto::RbumCertFilterReq;
 use bios_basic::rbum::rbum_enumeration::RbumCertRelKind;
 use tardis::basic::dto::TardisContext;
@@ -23,7 +24,7 @@ use crate::iam_enumeration::{IamAccountStatusKind, IamCertKernelKind};
 pub struct IamCpCertUserPwdServ;
 
 impl IamCpCertUserPwdServ {
-    pub async fn new_pwd_without_login(pwd_new_req: &IamCertPwdNewReq, funs: &TardisFunsInst) -> TardisResult<()> {
+    pub async fn new_pwd_without_login(pwd_new_req: &IamCertPwdNewReq, ip: Option<String>, funs: &TardisFunsInst) -> TardisResult<()> {
         let mut tenant_id = Self::get_tenant_id(pwd_new_req.tenant_id.clone(), funs).await?;
         let mut rbum_cert_conf_id = IamCertServ::get_cert_conf_id_by_kind(&IamCertKernelKind::UserPwd.to_string(), Some(tenant_id.clone()), funs).await?;
         let validate_resp = IamCertServ::validate_by_ak_and_sk(
@@ -38,6 +39,7 @@ impl IamCpCertUserPwdServ {
                 &IamCertKernelKind::MailVCode.to_string(),
                 &IamCertKernelKind::PhoneVCode.to_string(),
             ]),
+            ip.clone(),
             funs,
         )
         .await;
@@ -64,6 +66,7 @@ impl IamCpCertUserPwdServ {
                     &IamCertKernelKind::MailVCode.to_string(),
                     &IamCertKernelKind::PhoneVCode.to_string(),
                 ]),
+                ip,
                 funs,
             )
             .await?
@@ -86,6 +89,7 @@ impl IamCpCertUserPwdServ {
                 is_auto: Some(false),
                 icon: None,
                 lock_status: None,
+                temporary: None,
             },
             funs,
             &ctx,
@@ -124,6 +128,7 @@ impl IamCpCertUserPwdServ {
                 &IamCertKernelKind::MailVCode.to_string(),
                 &IamCertKernelKind::PhoneVCode.to_string(),
             ]),
+            get_remote_ip(&ctx).await?,
             funs,
         )
         .await?;
@@ -161,13 +166,14 @@ impl IamCpCertUserPwdServ {
             ignore_end_time,
             Some(ctx.own_paths.clone()),
             None,
+            get_remote_ip(ctx).await?,
             funs,
         )
         .await?;
         Ok(())
     }
 
-    pub async fn login_by_user_pwd(login_req: &IamCpUserPwdLoginReq, funs: &TardisFunsInst) -> TardisResult<IamAccountInfoResp> {
+    pub async fn login_by_user_pwd(login_req: &IamCpUserPwdLoginReq, ip: Option<String>, funs: &TardisFunsInst) -> TardisResult<IamAccountInfoResp> {
         let tenant_id = Self::get_tenant_id(login_req.tenant_id.clone(), funs).await?;
         let validate_resp = IamCertServ::validate_by_ak_and_sk(
             &login_req.ak.0,
@@ -181,6 +187,7 @@ impl IamCpCertUserPwdServ {
                 &IamCertKernelKind::MailVCode.to_string(),
                 &IamCertKernelKind::PhoneVCode.to_string(),
             ]),
+            ip.clone(),
             funs,
         )
         .await;
@@ -205,11 +212,12 @@ impl IamCpCertUserPwdServ {
                     &IamCertKernelKind::MailVCode.to_string(),
                     &IamCertKernelKind::PhoneVCode.to_string(),
                 ]),
+                ip.clone(),
                 funs,
             )
             .await?
         };
-        let resp = IamCertServ::package_tardis_context_and_resp(login_req.tenant_id.clone(), &rbum_item_id, login_req.flag.clone(), None, funs).await?;
+        let resp = IamCertServ::package_tardis_context_and_resp(login_req.tenant_id.clone(), &rbum_item_id, login_req.flag.clone(), None, ip, funs).await?;
         Ok(resp)
     }
 
