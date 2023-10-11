@@ -25,7 +25,7 @@ impl IamCsTenantApi {
         add_remote_ip(request, &ctx.0).await?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        let result = IamTenantServ::add_tenant_agg(&add_req.0, &funs).await?.0;
+        let result = IamTenantServ::add_tenant_agg(&add_req.0, &funs,&ctx.0).await?.0;
         funs.commit().await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
