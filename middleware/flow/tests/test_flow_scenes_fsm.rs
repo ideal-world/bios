@@ -14,8 +14,8 @@ use bios_mw_flow::dto::flow_model_dto::{
 };
 use bios_mw_flow::dto::flow_state_dto::{FlowStateAddReq, FlowStateSummaryResp, FlowSysStateKind};
 use bios_mw_flow::dto::flow_transition_dto::{
-    FlowTransitionActionChangeInfo, FlowTransitionActionChangeKind, FlowTransitionAddReq, FlowTransitionDoubleCheckInfo, FlowTransitionModifyReq, FlowTransitionSortStateInfoReq,
-    FlowTransitionSortStatesReq, StateChangeCondition, StateChangeConditionItem, StateChangeConditionOp,
+    FlowTransitionActionByVarChangeInfoChangedKind, FlowTransitionActionChangeInfo, FlowTransitionActionChangeKind, FlowTransitionAddReq, FlowTransitionDoubleCheckInfo,
+    FlowTransitionModifyReq, FlowTransitionSortStateInfoReq, FlowTransitionSortStatesReq, StateChangeCondition, StateChangeConditionItem, StateChangeConditionOp,
 };
 
 use bios_mw_flow::dto::flow_var_dto::{FlowVarInfo, RbumDataTypeKind, RbumWidgetTypeKind};
@@ -260,7 +260,7 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
                             current: true,
                             var_name: "".to_string(),
                             changed_val: None,
-                            changed_current_time: None,
+                            changed_kind: None,
                         }]),
                         double_check: Some(FlowTransitionDoubleCheckInfo {
                             is_open: true,
@@ -296,8 +296,8 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
                             changed_state_id: "".to_string(),
                             current: false,
                             var_name: "id".to_string(),
-                            changed_val: Some(json!("xxx".to_string())),
-                            changed_current_time: Some(true),
+                            changed_val: None,
+                            changed_kind: Some(FlowTransitionActionByVarChangeInfoChangedKind::AutoGetOperateTime),
                         }]),
                         double_check: None,
                         sort: None,
@@ -380,7 +380,7 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
                         current: true,
                         var_name: "".to_string(),
                         changed_val: None,
-                        changed_current_time: None,
+                        changed_kind: None,
                     }]),
                     double_check: None,
                     sort: None,
@@ -423,7 +423,7 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
                         current: true,
                         var_name: "".to_string(),
                         changed_val: None,
-                        changed_current_time: None,
+                        changed_kind: None,
                     }]),
                     double_check: None,
                     sort: None,
