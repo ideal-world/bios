@@ -1196,6 +1196,7 @@ impl FlowModelServ {
         current_chain.push(transition_detail.id.clone());
 
         let model_detail = Self::get_item(&transition_detail.rel_flow_model_id, &FlowModelFilterReq::default(), funs, ctx).await?;
+        // check post changes
         let post_changes = transition_detail
             .action_by_post_changes()
             .into_iter()
@@ -1245,6 +1246,20 @@ impl FlowModelServ {
                 }
             }
         }
+        // check front changes
+        let flow_transitions = model_detail
+            .transitions()
+            .into_iter()
+            .filter(|trans| trans.from_flow_state_id == transition_detail.to_flow_state_id && !trans.action_by_front_changes().is_empty())
+            .sorted_by_key(|trans| trans.sort)
+            .collect_vec();
+        for transition_detail in flow_transitions {
+            (is_ring, current_chain) = Self::check_post_action_ring(transition_detail, (is_ring, current_chain.clone()), funs, ctx).await?;
+            if is_ring {
+                return Ok((true, current_chain));
+            }
+        }
+
         Ok((is_ring, current_chain))
     }
 

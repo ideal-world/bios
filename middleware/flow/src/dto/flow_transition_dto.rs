@@ -207,7 +207,7 @@ pub struct FlowTransitionActionChangeInfo {
     pub current: bool,
     pub var_name: String,
     pub changed_val: Option<Value>,
-    pub changed_current_time: Option<bool>,
+    pub changed_kind: Option<FlowTransitionActionByVarChangeInfoChangedKind>,
 }
 
 impl From<FlowTransitionActionChangeInfo> for FlowTransitionActionChangeAgg {
@@ -232,7 +232,7 @@ impl From<FlowTransitionActionChangeInfo> for FlowTransitionActionChangeAgg {
                     obj_tag: value.obj_tag,
                     var_name: value.var_name,
                     changed_val: value.changed_val,
-                    changed_current_time: value.changed_current_time,
+                    changed_kind: value.changed_kind,
                 }),
                 state_change_info: None,
             },
@@ -263,7 +263,18 @@ pub struct FlowTransitionActionByVarChangeInfo {
     pub obj_tag: Option<String>,
     pub var_name: String,
     pub changed_val: Option<Value>,
-    pub changed_current_time: Option<bool>,
+    pub changed_kind: Option<FlowTransitionActionByVarChangeInfoChangedKind>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, strum::EnumIter, sea_orm::DeriveActiveEnum)]
+#[sea_orm(rs_type = "String", db_type = "String(Some(255))")]
+pub enum FlowTransitionActionByVarChangeInfoChangedKind {
+    #[sea_orm(string_value = "clean")]
+    Clean,
+    #[sea_orm(string_value = "change_content")]
+    ChangeContent,
+    #[sea_orm(string_value = "auto_get_operate_time")]
+    AutoGetOperateTime,
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug, poem_openapi::Object, sea_orm::FromJsonQueryResult)]
@@ -366,6 +377,9 @@ pub enum FlowTransitionFrontActionInfoRelevanceRelation {
     #[serde(rename = "not_in")]
     #[oai(rename = "not_in")]
     NotIn,
+    #[serde(rename = "between")]
+    #[oai(rename = "between")]
+    Between,
 }
 
 impl FlowTransitionFrontActionInfoRelevanceRelation {
@@ -381,6 +395,13 @@ impl FlowTransitionFrontActionInfoRelevanceRelation {
             FlowTransitionFrontActionInfoRelevanceRelation::NotLike => !left_value.contains(&right_value),
             FlowTransitionFrontActionInfoRelevanceRelation::In => TardisFuns::json.str_to_obj::<Vec<String>>(&right_value).unwrap_or_default().contains(&left_value),
             FlowTransitionFrontActionInfoRelevanceRelation::NotIn => !TardisFuns::json.str_to_obj::<Vec<String>>(&right_value).unwrap_or_default().contains(&left_value),
+            FlowTransitionFrontActionInfoRelevanceRelation::Between => {
+                let time_interval = TardisFuns::json.str_to_obj::<Vec<String>>(&right_value).unwrap_or_default();
+                if time_interval.len() != 2 {
+                    return false;
+                }
+                left_value >= time_interval[0] && left_value <= time_interval[1]
+            }
         }
     }
 }
