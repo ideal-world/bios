@@ -78,7 +78,8 @@ impl MailClient {
                 Ok(())
             })
         }))
-        .await
+        .await?;
+        Ok(())
     }
 
     pub async fn send_pwd(mail: &str, pwd: &str, funs: &TardisFunsInst) -> TardisResult<()> {

@@ -193,19 +193,11 @@ impl IamTenantServ {
         }
     }
 
-    pub async fn add_tenant_agg(add_req: &IamTenantAggAddReq, funs: &TardisFunsInst) -> TardisResult<(String, String, String)> {
+    pub async fn add_tenant_agg(add_req: &IamTenantAggAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<(String, String, String)> {
         let tenant_admin_id = TardisFuns::field.nanoid();
         let tenant_audit_id = TardisFuns::field.nanoid();
         // TODO security check
         let tenant_id = IamTenantServ::get_new_id();
-        let platform_ctx = TardisContext {
-            own_paths: "".to_string(),
-            ak: "".to_string(),
-            roles: vec![],
-            groups: vec![],
-            owner: tenant_admin_id.to_string(),
-            ..Default::default()
-        };
         let tenant_ctx = TardisContext {
             own_paths: tenant_id.clone(),
             ak: "".to_string(),
@@ -235,7 +227,7 @@ impl IamTenantServ {
         IamSetServ::init_set(IamSetKind::Apps, RBUM_SCOPE_LEVEL_TENANT, funs, &tenant_ctx).await?;
 
         // // Init cert conf
-        let platform_config = IamPlatformServ::get_platform_config_agg(funs, &platform_ctx).await?;
+        let platform_config = IamPlatformServ::get_platform_config_agg(funs, &ctx).await?;
 
         let cert_conf_by_phone_vcode = if platform_config.cert_conf_by_phone_vcode {
             Some(IamCertConfPhoneVCodeAddOrModifyReq { ak_note: None, ak_rule: None })

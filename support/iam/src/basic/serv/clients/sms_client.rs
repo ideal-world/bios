@@ -58,7 +58,8 @@ impl SmsClient {
                 Ok(())
             })
         }))
-        .await
+        .await?;
+        Ok(())
     }
 
     pub async fn send_pwd(phone: &str, pwd: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
