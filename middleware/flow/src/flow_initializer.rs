@@ -32,7 +32,9 @@ use crate::{
     dto::{
         flow_model_dto::FlowModelFilterReq,
         flow_state_dto::FlowSysStateKind,
-        flow_transition_dto::{FlowTransitionActionChangeInfo, FlowTransitionDoubleCheckInfo, FlowTransitionInitInfo, FlowTransitionActionChangeKind, FlowTransitionActionByVarChangeInfoChangedKind},
+        flow_transition_dto::{
+            FlowTransitionActionByVarChangeInfoChangedKind, FlowTransitionActionChangeInfo, FlowTransitionActionChangeKind, FlowTransitionDoubleCheckInfo, FlowTransitionInitInfo,
+        },
     },
     flow_config::{BasicInfo, FlowBasicInfoManager, FlowConfig},
     flow_constants,
@@ -130,7 +132,8 @@ pub async fn modify_post_actions(funs: &TardisFunsInst, ctx: &TardisContext) -> 
         id: String,
         action_by_post_changes: Value,
     }
-    let transactions = funs.db()
+    let transactions = funs
+        .db()
         .find_dtos::<FlowTransactionPostAction>(
             Query::select()
                 .columns([

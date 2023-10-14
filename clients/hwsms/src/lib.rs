@@ -3,16 +3,17 @@
 
 use tardis::{
     basic::result::TardisResult,
-    chrono::{Utc, SecondsFormat},
+    chrono::{SecondsFormat, Utc},
+    crypto::rust_crypto::sha2::Sha256,
     rand::random,
     url::Url,
     web::reqwest::{
         header::{HeaderMap, HeaderValue, AUTHORIZATION},
         Client,
-    }, crypto::rust_crypto::sha2::Sha256,
+    },
 };
-mod ext;
 mod api;
+mod ext;
 pub use api::*;
 mod model;
 pub use model::*;

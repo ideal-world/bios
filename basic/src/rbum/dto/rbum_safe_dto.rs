@@ -1,10 +1,10 @@
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
+#[cfg(feature = "default")]
+use tardis::db::sea_orm;
 use tardis::{
     chrono::{DateTime, Utc},
     web::poem_openapi,
 };
-#[cfg(feature = "default")]
-use tardis::db::sea_orm;
 #[derive(Debug, Clone, Default, Serialize)]
 #[cfg_attr(feature = "default", derive(poem_openapi::Object, sea_orm::FromQueryResult))]
 pub struct RbumSafeSummaryResp {

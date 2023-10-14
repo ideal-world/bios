@@ -12,7 +12,6 @@ use crate::{consts::*, domain::*, dto::*, serv::*};
 #[derive(Debug, Default, Clone)]
 pub struct EventListener {}
 
-
 // logic of this part could be modified.
 
 impl EventListener {
@@ -21,7 +20,7 @@ impl EventListener {
         funs.mq()
             .subscribe(MQ_REACH_TOPIC_MESSAGE, |(_, msg)| {
                 log::debug!("Receive message : {msg}");
-                async move  {
+                async move {
                     let funs = get_tardis_inst();
                     let err = |msg: &str| funs.err().not_found("reach", "event_listener", msg, "");
                     let send_req: ReachMsgSendReq = TardisFuns::json.str_to_obj(&msg)?;
@@ -33,10 +32,7 @@ impl EventListener {
                     let scene = funs
                         .db()
                         .get_dto::<trigger_scene::Model>(
-                            Query::select()
-                            .columns(trigger_scene::Column::iter())
-                            .from(trigger_scene::Entity)
-                            .and_where(trigger_scene::Column::Code.eq(&send_req.scene_code)),
+                            Query::select().columns(trigger_scene::Column::iter()).from(trigger_scene::Entity).and_where(trigger_scene::Column::Code.eq(&send_req.scene_code)),
                         )
                         .await?
                         .ok_or_else(|| funs.err().not_found("reach", "event_listener", "cannot find scene", ""))?;
@@ -44,7 +40,7 @@ impl EventListener {
                         rel_reach_trigger_scene_id: Some(scene.id.clone()),
                         ..Default::default()
                     };
-    
+
                     // retrive all related global configs, group by channel
                     let global_configs =
                         ReachTriggerGlobalConfigService::find_detail_rbums(filter, None, None, &funs, &ctx).await?.into_iter().fold(HashMap::new(), |mut map, item| {
@@ -54,7 +50,7 @@ impl EventListener {
                     if global_configs.is_empty() {
                         return Err(err("global_configs is empty"));
                     }
-    
+
                     // retrive all instance configs, group by group_code
                     let filter = &ReachTriggerInstanceConfigFilterReq {
                         rel_reach_trigger_scene_id: Some(scene.id),
@@ -69,17 +65,17 @@ impl EventListener {
                         map.entry(item.receive_group_code.clone()).or_insert(Vec::new()).push(item);
                         map
                     });
-    
+
                     let mut instance_group_code =
                         instances.into_iter().filter(|inst| receive_group_code.contains_key(&inst.receive_group_code.clone())).fold(HashMap::new(), |mut map, item| {
                             map.entry(item.receive_group_code.clone()).or_insert(Vec::new()).push(item);
                             map
                         });
-    
+
                     if instance_group_code.is_empty() {
                         return Ok(());
                     }
-    
+
                     let (other_receive_collect, other_group_code) = receive_group_code.into_iter().fold(
                         (HashMap::new(), HashSet::new()),
                         |(mut other_receive_collect, mut other_group_code), (group_code, receives)| {
@@ -96,7 +92,7 @@ impl EventListener {
                             (other_receive_collect, other_group_code)
                         },
                     );
-    
+
                     for (_kind, gc) in global_configs {
                         for (receive_kind, to_res_ids) in &other_receive_collect {
                             if other_group_code.contains(&gc.rel_reach_channel) {

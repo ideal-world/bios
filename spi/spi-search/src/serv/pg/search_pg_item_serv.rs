@@ -490,13 +490,13 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
                                     sql_vals.push(Value::from(format!("{val}%")));
                                 }
                             }
-                        }else if ext_item.op == BasicQueryOpKind::IsNUll {
+                        } else if ext_item.op == BasicQueryOpKind::IsNUll {
                             sql_and_where.push(format!("{} is null", ext_item.field));
                         } else if ext_item.op == BasicQueryOpKind::IsNotNUll {
                             sql_and_where.push(format!("{} is not null", ext_item.field));
                         } else if ext_item.op == BasicQueryOpKind::IsNullOrEmpty {
                             sql_and_where.push(format!("({} is null or {} = '')", ext_item.field, ext_item.field));
-                        }  else {
+                        } else {
                             if value.len() > 1 {
                                 return err_not_found(ext_item);
                             }
