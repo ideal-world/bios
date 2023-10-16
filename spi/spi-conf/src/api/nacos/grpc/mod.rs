@@ -106,6 +106,26 @@ impl NaocsGrpcResponse {
             request_id: None,
         }
     }
+    pub const fn not_found() -> Self {
+        Self {
+            result_code: 500,
+            error_code: Some(300),
+            message: None,
+            request_id: None,
+        }
+    }
+    pub const fn unregister() -> Self {
+        Self {
+            result_code: 500,
+            error_code: Some(301),
+            message: None,
+            request_id: None,
+        }
+    }
+}
+
+impl AsPayload for NaocsGrpcResponse {
+    const TYPE_NAME: &'static str = "Response";
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -170,6 +190,24 @@ pub struct ConfigQueryResponse {
     pub response: NaocsGrpcResponse,
 }
 
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct ConfigQueryResponseNotFound {
+    #[serde(flatten)]
+    pub response: NaocsGrpcResponse,
+}
+
+impl Default for ConfigQueryResponseNotFound {
+    fn default() -> Self {
+        ConfigQueryResponseNotFound {
+            response: NaocsGrpcResponse::not_found(),
+        }
+    }
+}
+
+impl AsPayload for ConfigQueryResponseNotFound {
+    const TYPE_NAME: &'static str = "ConfigQueryResponse";
+}
+
 impl From<ConfigItem> for ConfigQueryResponse {
     fn from(item: ConfigItem) -> Self {
         Self {
@@ -232,15 +270,15 @@ pub async fn dispatch_request(type_info: &str, value: &str, access_token: Option
         let Some(token) = access_token else {
             return Err(TardisError::unauthorized("missing access token", ""));
         };
-        jwt_validate(token, &funs).await.map_err(|e| {
-            TardisError::unauthorized(&format!("invalid access token, error: {e}, token: {token}"), "")
-        })
+        jwt_validate(token, &funs).await.map_err(|e| TardisError::unauthorized(&format!("invalid access token, error: {e}, token: {token}"), ""))
     };
     let response = match type_info {
         "ServerCheckRequest" => ServerCheckResponse::success(None).as_payload(),
         "HealthCheckRequest" => HealthCheckResponse::success().as_payload(),
         "ConfigQueryRequest" => {
-            let ctx = get_ctx.await?;
+            let Ok(ctx) = get_ctx.await else {
+                return Ok(NaocsGrpcResponse::unregister().as_payload())
+            };
             let ConfigQueryRequest { data_id, group, tenant } = serde_json::from_str(value).map_err(|_e| TardisError::bad_request("expect a ConfigQueryRequest", ""))?;
             let mut descriptor = ConfigDescriptor {
                 namespace_id: tenant.unwrap_or("public".into()),
@@ -248,8 +286,10 @@ pub async fn dispatch_request(type_info: &str, value: &str, access_token: Option
                 group,
                 ..Default::default()
             };
-            let result: ConfigQueryResponse = get_config_detail(&mut descriptor, &funs, &ctx).await?.into();
-            result.as_payload()
+            match get_config_detail(&mut descriptor, &funs, &ctx).await {
+                Ok(data) => ConfigQueryResponse::from(data).as_payload(),
+                Err(_) => ConfigQueryResponseNotFound::default().as_payload(),
+            }
         }
         "ConfigBatchListenRequest" => {
             let ctx = get_ctx.await?;
