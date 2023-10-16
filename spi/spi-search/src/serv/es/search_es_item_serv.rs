@@ -14,7 +14,7 @@ use tardis::{
 
 use crate::dto::search_item_dto::{
     SearchItemAddReq, SearchItemModifyReq, SearchItemQueryReq, SearchItemSearchCtxReq, SearchItemSearchPageReq, SearchItemSearchQScopeKind, SearchItemSearchReq,
-    SearchItemSearchResp,
+    SearchItemSearchResp, SearchQueryMetricsReq, SearchQueryMetricsResp,
 };
 
 use super::search_es_initializer;
@@ -586,6 +586,9 @@ fn gen_query_dsl(search_req: &SearchItemSearchReq) -> TardisResult<String> {
                 }
                 BasicQueryOpKind::NotLike => {}
                 BasicQueryOpKind::NotIn => {}
+                BasicQueryOpKind::IsNUll => {}
+                BasicQueryOpKind::IsNotNUll => {}
+                BasicQueryOpKind::IsNullOrEmpty => {}
             }
         }
     }
@@ -634,4 +637,8 @@ fn merge(a: &mut serde_json::Value, b: serde_json::Value) {
         }
         (a, b) => *a = b,
     }
+}
+
+pub async fn query_metrics(query_req: &SearchQueryMetricsReq, funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<SearchQueryMetricsResp> {
+    Err(funs.err().format_error("search_es_item_serv", "query_metrics", "not support", "500-not-support"))
 }

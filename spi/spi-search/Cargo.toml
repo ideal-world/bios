@@ -23,6 +23,7 @@ spi-es = ["tardis/web-client"]
 serde.workspace = true
 tardis = { workspace = true, features = ["reldb-postgres", "web-server", "web-client"] }
 bios-basic = { path = "../../basic", features = ["default"] }
+strum = { workerspace = true, features = ["derive"] }
 
 [dev-dependencies]
 tardis = { workspace = true, features = ["test"] }
