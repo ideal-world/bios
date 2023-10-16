@@ -586,8 +586,8 @@ fn gen_query_dsl(search_req: &SearchItemSearchReq) -> TardisResult<String> {
                 }
                 BasicQueryOpKind::NotLike => {}
                 BasicQueryOpKind::NotIn => {}
-                BasicQueryOpKind::IsNUll => {}
-                BasicQueryOpKind::IsNotNUll => {}
+                BasicQueryOpKind::IsNull => {}
+                BasicQueryOpKind::IsNotNull => {}
                 BasicQueryOpKind::IsNullOrEmpty => {}
             }
         }
