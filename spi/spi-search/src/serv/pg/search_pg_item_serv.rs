@@ -946,7 +946,7 @@ pub async fn query_metrics(query_req: &SearchQueryMetricsReq, funs: &TardisFunsI
         sql_part_outer_select_infos.iter().filter(|(_, _, _, is_dimension)| !*is_dimension).map(|(_, alias_name, _, _)| alias_name.to_string()).collect::<Vec<String>>();
     let show_names = sql_part_outer_select_infos.into_iter().map(|(_, alias_name, show_name, _)| (alias_name, show_name)).collect::<HashMap<String, String>>();
     Ok(SearchQueryMetricsResp {
-        from: query_req.tag.to_string(),
+        tag: query_req.tag.to_string(),
         show_names,
         group: package_groups(select_dimension_keys, &select_measure_keys, ignore_group_agg, result)
             .map_err(|msg| TardisError::internal_error(&format!("Fail to package groups: {msg}"), "500-spi-stats-internal-error"))?,

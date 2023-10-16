@@ -352,7 +352,7 @@ pub struct SearchQueryMetricsHavingReq {
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct SearchQueryMetricsResp {
     /// Fact key
-    pub from: String,
+    pub tag: String,
     /// Show names
     ///
     /// key = alias name, value = show name
