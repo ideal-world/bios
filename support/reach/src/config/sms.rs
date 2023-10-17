@@ -7,7 +7,7 @@ pub struct SmsConfig {
     pub app_key: String,
     pub app_secret: String,
     pub status_call_back: Option<String>,
-    
+
     pub sms_pwd_template_id: String,
     pub sms_general_from: String,
     pub sms_general_signature: Option<String>,

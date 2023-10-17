@@ -1,7 +1,7 @@
 // std::env::set_var("PROFILE", "prod");
 use serde::Deserialize;
 use std::time::Duration;
-use tardis::{basic::result::TardisResult, tokio, testcontainers};
+use tardis::{basic::result::TardisResult, testcontainers, tokio};
 
 mod test_reach_common;
 use bios_reach::{consts::*, invoke};

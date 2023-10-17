@@ -14,10 +14,11 @@ use tardis::{
 
 use crate::{
     api,
+    client::SendChannelMap,
     config::ReachConfig,
     consts::{get_tardis_inst, DOMAIN_CODE, DOMAIN_REACH_ID, RBUM_EXT_TABLE_REACH_MESSAGE, RBUM_KIND_CODE_REACH_MESSAGE, REACH_INIT_OWNER},
     serv::ReachTriggerSceneService,
-    task, client::SendChannelMap,
+    task,
 };
 
 pub async fn db_init() -> TardisResult<()> {
@@ -49,25 +50,27 @@ pub async fn db_init() -> TardisResult<()> {
             .await?
         }
     };
-    
+
     // add domain
     let domain_id = match RbumDomainServ::get_rbum_domain_id_by_code(DOMAIN_CODE, &funs).await? {
         Some(id) => id,
-        None => RbumDomainServ::add_rbum(
-            &mut RbumDomainAddReq {
-                code: DOMAIN_CODE.into(),
-                name: DOMAIN_CODE.into(),
-                note: None,
-                icon: None,
-                sort: None,
-                scope_level: Some(RbumScopeLevelKind::Root),
-            },
-            &funs,
-            &ctx,
-        )
-        .await?
+        None => {
+            RbumDomainServ::add_rbum(
+                &mut RbumDomainAddReq {
+                    code: DOMAIN_CODE.into(),
+                    name: DOMAIN_CODE.into(),
+                    note: None,
+                    icon: None,
+                    sort: None,
+                    scope_level: Some(RbumScopeLevelKind::Root),
+                },
+                &funs,
+                &ctx,
+            )
+            .await?
+        }
     };
-    
+
     DOMAIN_REACH_ID.set(domain_id).expect("fail to set DOMAIN_REACH_ID");
     let db_kind = TardisFuns::reldb().backend();
     let compatible_type = TardisFuns::reldb().compatible_type();
@@ -89,7 +92,7 @@ pub fn get_reach_send_channel_map() -> &'static SendChannelMap {
     REACH_SEND_CHANNEL_MAP.get().expect("missing send channel map")
 }
 pub async fn init(web_server: &TardisWebServer, send_channels: SendChannelMap) -> TardisResult<()> {
-    REACH_SEND_CHANNEL_MAP.get_or_init(||send_channels);
+    REACH_SEND_CHANNEL_MAP.get_or_init(|| send_channels);
     db_init().await?;
     api::init(web_server).await?;
     task::init().await?;
