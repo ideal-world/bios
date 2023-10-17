@@ -351,7 +351,7 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
             }
         }
     }
-    
+
     if let Some(sort) = &search_req.sort {
         for sort_item in sort {
             if sort_item.field.to_lowercase() == "key"

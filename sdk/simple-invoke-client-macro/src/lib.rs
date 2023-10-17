@@ -172,7 +172,7 @@ impl ApiInfoBuilder {
 /// # Usage
 /// This Attribute Macro is used to generate corresponding client methods for you api.
 /// Simplely add it **upon** `OpenApi` attribute.
-/// 
+///
 /// The `Client` is your custom client struct witch implemented `SimpleInvokeClient` trait.
 /// ```no_run, ignore
 /// #[simple_invoke_client(Client)]

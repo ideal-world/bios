@@ -9,7 +9,8 @@ use tardis::{
 
 use crate::{
     dto::flow_external_dto::{
-        FlowExternalFetchRelObjResp, FlowExternalKind, FlowExternalModifyFieldResp, FlowExternalNotifyChangesResp, FlowExternalParams, FlowExternalReq, FlowExternalResp,
+        FlowExternalFetchRelObjResp, FlowExternalKind, FlowExternalModifyFieldResp, FlowExternalNotifyChangesResp, FlowExternalParams, FlowExternalQueryFieldResp, FlowExternalReq,
+        FlowExternalResp,
     },
     flow_config::FlowConfig,
     flow_constants,
@@ -33,8 +34,6 @@ impl FlowExternalServ {
             inst_id: inst_id.to_string(),
             curr_tag: tag.to_string(),
             curr_bus_obj_id: rel_business_obj_id.to_string(),
-            target_state: None,
-            original_state: None,
             params: rel_tags
                 .into_iter()
                 .map(|tag| FlowExternalParams {
@@ -44,6 +43,7 @@ impl FlowExternalServ {
                     value: None,
                 })
                 .collect_vec(),
+            ..Default::default()
         };
         debug!("do_fetch_rel_obj body: {:?}", body);
         let resp: FlowExternalResp<FlowExternalFetchRelObjResp> = funs
@@ -83,6 +83,7 @@ impl FlowExternalServ {
             target_state,
             original_state,
             params,
+            ..Default::default()
         };
         debug!("do_modify_field body: {:?}", body);
         let resp: FlowExternalResp<FlowExternalModifyFieldResp> = funs
@@ -120,7 +121,7 @@ impl FlowExternalServ {
             curr_bus_obj_id: rel_business_obj_id.to_string(),
             target_state: Some(target_state),
             original_state: Some(original_state),
-            params: vec![],
+            ..Default::default()
         };
         debug!("do_notify_changes body: {:?}", body);
         let resp: FlowExternalResp<FlowExternalNotifyChangesResp> = funs
@@ -150,6 +151,44 @@ impl FlowExternalServ {
             Ok(data)
         } else {
             Err(funs.err().internal_error("flow_external", "do_find_embed_subrole_id", "illegal response", "500-external-illegal-response"))
+        }
+    }
+
+    pub async fn do_query_field(
+        tag: &str,
+        rel_business_obj_ids: Vec<String>,
+        own_paths: &str,
+        ctx: &TardisContext,
+        funs: &TardisFunsInst,
+    ) -> TardisResult<FlowExternalQueryFieldResp> {
+        let external_url = Self::get_external_url(tag, ctx, funs).await?;
+        if external_url.is_empty() {
+            return Ok(FlowExternalQueryFieldResp::default());
+        }
+
+        let header = Self::headers(None, funs, ctx).await?;
+        let body = FlowExternalReq {
+            kind: FlowExternalKind::QueryField,
+            inst_id: "".to_string(),
+            curr_tag: tag.to_string(),
+            curr_bus_obj_id: "".to_string(),
+            owner_paths: own_paths.to_string(),
+            obj_ids: rel_business_obj_ids,
+            target_state: None,
+            original_state: None,
+            params: vec![],
+        };
+        debug!("do_query_field body: {:?}", body);
+        let resp: FlowExternalResp<FlowExternalQueryFieldResp> = funs
+            .web_client()
+            .post(&external_url, &body, header)
+            .await?
+            .body
+            .ok_or_else(|| funs.err().internal_error("flow_external", "do_query_field", "illegal response", "500-external-illegal-response"))?;
+        if let Some(data) = resp.body {
+            Ok(data)
+        } else {
+            Err(funs.err().internal_error("flow_external", "do_query_field", "illegal response", "500-external-illegal-response"))
         }
     }
 

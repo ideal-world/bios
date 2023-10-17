@@ -5,7 +5,7 @@ use tardis::web::poem_openapi::{
     types::{ParseFromJSON, ToJSON},
 };
 
-#[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
+#[derive(Serialize, Deserialize, Debug, Default, poem_openapi::Object)]
 pub struct FlowExternalReq {
     pub kind: FlowExternalKind,
     pub curr_tag: String,
@@ -13,14 +13,18 @@ pub struct FlowExternalReq {
     pub inst_id: String,
     pub target_state: Option<String>,
     pub original_state: Option<String>,
+    pub owner_paths: String,
+    pub obj_ids: Vec<String>,
     pub params: Vec<FlowExternalParams>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum)]
 pub enum FlowExternalKind {
+    #[default]
     FetchRelObj,
     ModifyField,
     NotifyChanges,
+    QueryField,
 }
 
 #[derive(Debug, Deserialize, Serialize, poem_openapi::Object, Clone)]
@@ -59,3 +63,8 @@ pub struct FlowExternalModifyFieldResp {}
 
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
 pub struct FlowExternalNotifyChangesResp {}
+
+#[derive(Serialize, Deserialize, Debug, Default, poem_openapi::Object)]
+pub struct FlowExternalQueryFieldResp {
+    pub objs: Vec<Value>,
+}
