@@ -44,9 +44,9 @@ pub enum BasicQueryOpKind {
     #[oai(rename = "not_in")]
     NotIn,
     #[oai(rename = "is_null")]
-    IsNUll,
+    IsNull,
     #[oai(rename = "is_not_null")]
-    IsNotNUll,
+    IsNotNull,
     #[oai(rename = "is_not_null_or_empty")]
     IsNullOrEmpty,
 }
@@ -64,8 +64,8 @@ impl BasicQueryOpKind {
             BasicQueryOpKind::NotLike => "NOT LIKE".to_string(),
             BasicQueryOpKind::In => "IN".to_string(),
             BasicQueryOpKind::NotIn => "NOT IN".to_string(),
-            BasicQueryOpKind::IsNUll => "IS NULL".to_string(),
-            BasicQueryOpKind::IsNotNUll => "IS NOT NULL".to_string(),
+            BasicQueryOpKind::IsNull => "IS NULL".to_string(),
+            BasicQueryOpKind::IsNotNull => "IS NOT NULL".to_string(),
             BasicQueryOpKind::IsNullOrEmpty => "IS NULL".to_string(),
         }
     }
