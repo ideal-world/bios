@@ -249,7 +249,6 @@ pub struct SearchItemSearchResp {
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct SearchQueryMetricsReq {
     pub tag: String,
-    pub kind: String,
     pub select: Vec<SearchQueryMetricsSelectReq>,
     pub ignore_distinct: Option<bool>,
     pub group: Vec<SearchQueryDimensionGroupReq>,
@@ -260,10 +259,12 @@ pub struct SearchQueryMetricsReq {
     pub group_order: Option<Vec<SearchQueryDimensionGroupOrderReq>>,
     pub group_agg: Option<bool>,
     pub having: Option<Vec<SearchQueryMetricsHavingReq>>,
-    pub start_time: DateTime<Utc>,
-    pub end_time: DateTime<Utc>,
      // Search context for record permission filtering
      pub ctx: SearchItemSearchCtxReq,
+     // Search conditions
+    pub query: SearchItemQueryReq,
+    // Advanced search
+    pub adv_query: Option<Vec<AdvSearchItemQueryReq>>,
     pub limit: Option<u32>,
 }
 
