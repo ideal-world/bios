@@ -709,7 +709,9 @@ pub async fn query_metrics(query_req: &SearchQueryMetricsReq, funs: &TardisFunsI
             }
             sql_part_or_wheres.push(sql_part_and_wheres.join(" AND "));
         }
-        sql_part_wheres.push(format!("( {} )", sql_part_or_wheres.join(" OR ")));
+        if !sql_part_or_wheres.is_empty() {
+            sql_part_wheres.push(format!("( {} )", sql_part_or_wheres.join(" OR ")));
+        }
     }
 
     // Add visit_keys filter
@@ -734,7 +736,7 @@ pub async fn query_metrics(query_req: &SearchQueryMetricsReq, funs: &TardisFunsI
         }
         if !where_visit_keys_fragments.is_empty() {
             sql_part_wheres.push(format!(
-                " AND (fact.visit_keys IS NULL OR ({}))",
+                " (fact.visit_keys IS NULL OR ({}))",
                 where_visit_keys_fragments.join(if query_req.ctx.cond_by_or.unwrap_or(false) { " OR " } else { " AND " })
             ));
         }
