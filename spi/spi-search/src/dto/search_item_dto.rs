@@ -259,9 +259,9 @@ pub struct SearchQueryMetricsReq {
     pub group_order: Option<Vec<SearchQueryDimensionGroupOrderReq>>,
     pub group_agg: Option<bool>,
     pub having: Option<Vec<SearchQueryMetricsHavingReq>>,
-     // Search context for record permission filtering
-     pub ctx: SearchItemSearchCtxReq,
-     // Search conditions
+    // Search context for record permission filtering
+    pub ctx: SearchItemSearchCtxReq,
+    // Search conditions
     pub query: SearchItemQueryReq,
     // Advanced search
     pub adv_query: Option<Vec<AdvSearchItemQueryReq>>,

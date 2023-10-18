@@ -877,7 +877,12 @@ pub async fn query_metrics(query_req: &SearchQueryMetricsReq, funs: &TardisFunsI
                 } else if let Value::Float(_) = value {
                     sql_part_wheres.push(format!("(fact.ext ->> '{}')::real {} ${}", ext_item.field, ext_item.op.to_sql(), params.len() + 1));
                 } else if let Value::Double(_) = value {
-                    sql_part_wheres.push(format!("(fact.ext ->> '{}')::double precision {} ${}", ext_item.field, ext_item.op.to_sql(), params.len() + 1));
+                    sql_part_wheres.push(format!(
+                        "(fact.ext ->> '{}')::double precision {} ${}",
+                        ext_item.field,
+                        ext_item.op.to_sql(),
+                        params.len() + 1
+                    ));
                 } else if value.is_chrono_date_time_utc() {
                     sql_part_wheres.push(format!(
                         "(fact.ext ->> '{}')::timestamp with time zone {} ${}",
@@ -978,7 +983,12 @@ pub async fn query_metrics(query_req: &SearchQueryMetricsReq, funs: &TardisFunsI
                             } else if let Value::Float(_) = value {
                                 sql_and_where.push(format!("(fact.ext ->> '{}')::real {} ${}", ext_item.field, ext_item.op.to_sql(), params.len() + 1));
                             } else if let Value::Double(_) = value {
-                                sql_and_where.push(format!("(fact.ext ->> '{}')::double precision {} ${}", ext_item.field, ext_item.op.to_sql(), params.len() + 1));
+                                sql_and_where.push(format!(
+                                    "(fact.ext ->> '{}')::double precision {} ${}",
+                                    ext_item.field,
+                                    ext_item.op.to_sql(),
+                                    params.len() + 1
+                                ));
                             } else if value.is_chrono_date_time_utc() {
                                 sql_and_where.push(format!(
                                     "(fact.ext ->> '{}')::timestamp with time zone {} ${}",
@@ -1067,7 +1077,6 @@ pub async fn query_metrics(query_req: &SearchQueryMetricsReq, funs: &TardisFunsI
             }
         }
     }
-
 
     let sql_adv_query = if sql_adv_query.is_empty() {
         "".to_string()
@@ -1235,8 +1244,6 @@ pub async fn query_metrics(query_req: &SearchQueryMetricsReq, funs: &TardisFunsI
     };
     // package limit
     let query_limit = if let Some(limit) = &query_req.limit { format!("LIMIT {limit}") } else { "".to_string() };
-
-    
 
     let bs_inst = inst.inst::<TardisRelDBClient>();
     let (conn, table_name) = search_pg_initializer::init_table_and_conn(bs_inst, &query_req.tag, ctx, false).await?;

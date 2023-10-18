@@ -36,13 +36,13 @@ jobs:
         run: cargo build --release -p bios-spacegate
 
       - name: Copy binary to workspace
-        run: cp ./target/release/bios-spacegate ./gateway/spacegate/
+        run: cp ./target/release/bios-spacegate ./services/spacegate/
 
       - name: Build and push Docker image to github
         uses: mr-smithers-excellent/docker-build-push@v5
         with:
-          directory: gateway/spacegate
-          dockerfile: gateway/spacegate/Dockerfile
+          directory: services/spacegate
+          dockerfile: services/spacegate/Dockerfile
           registry: ghcr.io
           image: bios-spacegate
           tags: ${{ github.ref_name }}
@@ -52,8 +52,8 @@ jobs:
       - name: Build and push Docker image to dockerhub
         uses: mr-smithers-excellent/docker-build-push@v5
         with:
-          directory: gateway/spacegate
-          dockerfile: gateway/spacegate/Dockerfile
+          directory: services/spacegate
+          dockerfile: gatservices/spacegate/Dockerfile
           registry: docker.io
           image: ecfront/bios-spacegate
           tags: ${{ github.ref_name }}
