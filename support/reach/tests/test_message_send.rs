@@ -37,9 +37,9 @@ pub async fn test_ct_api() -> TardisResult<()> {
             sms_template_id: "sms-tempalte-id".into(),
             sms_signature: "sms-signature".into(),
             sms_from: "reach@bios.dev".into(),
-            scope_level: Some(0),
-            code: Some("test-code".into()),
-            name: Some(template_name.clone()),
+            scope_level: 0,
+            code: "test-code".into(),
+            name: template_name.clone(),
             note: "test-note".into(),
             icon: "test-icon".into(),
             ..Default::default()
