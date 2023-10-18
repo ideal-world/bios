@@ -116,15 +116,4 @@ impl FlowCcInstApi {
         funs.commit().await?;
         TardisResp::ok(Void {})
     }
-
-    /// trigger instance front action / 触发前置动作
-    #[oai(path = "/trigger_front_action", method = "get")]
-    async fn trigger_front_action(&self) -> TardisApiResult<Void> {
-        let mut funs = flow_constants::get_tardis_inst();
-        funs.begin().await?;
-        FlowInstServ::trigger_front_action(&funs).await?;
-        funs.commit().await?;
-
-        TardisResp::ok(Void {})
-    }
 }

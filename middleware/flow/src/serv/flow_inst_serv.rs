@@ -1275,7 +1275,7 @@ impl FlowInstServ {
         match condition.right_value {
             FlowTransitionFrontActionRightValue::ChangeContent => {
                 if let Some(left_value) = current_vars.get(&condition.left_value) {
-                    Ok(condition.relevance_relation.check_conform(left_value.to_string(), condition.change_content.clone().unwrap_or_default().to_string()))
+                    Ok(condition.relevance_relation.check_conform(left_value.as_str().unwrap_or_default().to_string(), condition.change_content.clone().unwrap_or_default().to_string()))
                 } else {
                     Ok(false)
                 }
@@ -1285,14 +1285,14 @@ impl FlowInstServ {
                     current_vars.get(&condition.left_value),
                     current_vars.get(&condition.select_field.clone().unwrap_or_default()),
                 ) {
-                    Ok(condition.relevance_relation.check_conform(left_value.to_string(), right_value.to_string()))
+                    Ok(condition.relevance_relation.check_conform(left_value.as_str().unwrap_or_default().to_string(), right_value.as_str().unwrap_or_default().to_string()))
                 } else {
                     Ok(false)
                 }
             }
             FlowTransitionFrontActionRightValue::RealTime => {
                 if let Some(left_value) = current_vars.get(&condition.left_value) {
-                    Ok(condition.relevance_relation.check_conform(left_value.to_string(), Utc::now().to_string()))
+                    Ok(condition.relevance_relation.check_conform(left_value.as_str().unwrap_or_default().to_string(), Utc::now().to_string()))
                 } else {
                     Ok(false)
                 }
@@ -1300,72 +1300,85 @@ impl FlowInstServ {
         }
     }
 
+    async fn get_new_vars(flow_inst_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Value> {
+        let flow_inst_detail = Self::find_detail(vec![flow_inst_id.to_string()], funs, ctx)
+            .await?
+            .into_iter()
+            .next()
+            .ok_or_else(|| funs.err().not_found("flow_inst", "get_new_vars", "illegal response", "404-flow-inst-not-found"))?;
+        let flow_model = FlowModelServ::get_item(
+            &flow_inst_detail.rel_flow_model_id,
+            &FlowModelFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    own_paths: Some("".to_string()),
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?;
+
+        Ok(
+            FlowExternalServ::do_query_field(&flow_model.tag, vec![flow_inst_detail.rel_business_obj_id.clone()], &flow_inst_detail.own_paths, ctx, funs)
+                .await?
+                .objs
+                .into_iter()
+                .next()
+                .unwrap_or_default(),
+        )
+    }
+
     pub async fn trigger_front_action(funs: &TardisFunsInst) -> TardisResult<()> {
         #[derive(sea_orm::FromQueryResult)]
         pub struct FloTransitionsResult {
             rel_flow_model_id: String,
             action_by_front_changes: Value,
+            from_flow_state_id: String,
         }
         #[derive(sea_orm::FromQueryResult)]
         pub struct FlowInstanceResult {
             id: String,
         }
-        // find models
+
         let global_ctx = TardisContext::default();
-        // let model_id = funs
-        //     .db()
-        //     .find_dtos::<FloTransitionsResult>(
-        //         Query::select()
-        //             .columns([flow_transition::Column::RelFlowModelId])
-        //             .from(flow_transition::Entity)
-        //             .and_where(Expr::cust_with_expr("JSON_ARRAY_LENGTH($1) > 1", Expr::col(flow_transition::Column::ActionByFrontChanges))),
-        //     )
-        //     .await?
-        //     .iter()
-        //     .map(|res| res.rel_flow_model_id.clone())
-        //     .collect_vec();
-        let rel_flow_model_ids = funs
+        let flow_transition_list = funs
             .db()
             .find_dtos::<FloTransitionsResult>(
-                Query::select().columns([flow_transition::Column::RelFlowModelId, flow_transition::Column::ActionByFrontChanges]).from(flow_transition::Entity),
+                Query::select()
+                    .columns([
+                        flow_transition::Column::RelFlowModelId,
+                        flow_transition::Column::ActionByFrontChanges,
+                        flow_transition::Column::FromFlowStateId,
+                    ])
+                    .from(flow_transition::Entity),
             )
             .await?
-            .iter()
+            .into_iter()
             .filter(|res| !TardisFuns::json.json_to_obj::<Vec<FlowTransitionFrontActionInfo>>(res.action_by_front_changes.clone()).unwrap_or_default().is_empty())
-            .map(|res| res.rel_flow_model_id.clone())
             .collect_vec();
-        // find models
-        let model_ids = FlowModelServ::find_detail_items(
-            &FlowModelFilterReq {
-                basic: RbumBasicFilterReq {
-                    ids: Some(rel_flow_model_ids),
-                    ..Default::default()
-                },
-                ..Default::default()
-            },
-            None,
-            None,
-            funs,
-            &global_ctx,
-        )
-        .await?
-        .into_iter()
-        .filter(|model| {
-            model
-                .transitions()
-                .into_iter()
-                .any(|trans| trans.action_by_front_changes().into_iter().any(|action| action.right_value == FlowTransitionFrontActionRightValue::RealTime))
-        })
-        .map(|model| model.id)
-        .collect_vec();
-        let flow_insts = funs
-            .db()
-            .find_dtos::<FlowInstanceResult>(
-                Query::select().columns([flow_inst::Column::Id]).from(flow_inst::Entity).and_where(Expr::col(flow_inst::Column::RelFlowModelId).is_in(&model_ids)),
-            )
-            .await?;
-        for flow_inst in flow_insts {
-            Self::do_front_change(&flow_inst.id, &global_ctx, funs).await?;
+        // get instance
+        for flow_transition in flow_transition_list {
+            // let front_actions = TardisFuns::json.json_to_obj::<Vec<FlowTransitionFrontActionInfo>>(flow_transition.action_by_front_changes.clone()).unwrap_or_default();
+            // if !front_actions.iter().any(|action| action.right_value == FlowTransitionFrontActionRightValue::RealTime) {
+            //     continue;
+            // }
+            let flow_insts = funs
+                .db()
+                .find_dtos::<FlowInstanceResult>(
+                    Query::select()
+                        .columns([flow_inst::Column::Id])
+                        .from(flow_inst::Entity)
+                        .and_where(Expr::col(flow_inst::Column::RelFlowModelId).eq(&flow_transition.rel_flow_model_id))
+                        .and_where(Expr::col(flow_inst::Column::CurrentStateId).eq(&flow_transition.from_flow_state_id)),
+                )
+                .await?;
+            for flow_inst in flow_insts {
+                let new_vars = Self::get_new_vars(&flow_inst.id, funs, &global_ctx).await?;
+                Self::modify_current_vars(&flow_inst.id, &TardisFuns::json.json_to_obj::<HashMap<String, Value>>(new_vars).unwrap_or_default(), funs, &global_ctx).await?;
+            }
         }
 
         Ok(())
