@@ -2,12 +2,9 @@ use std::sync::Arc;
 
 use tardis::{basic::result::TardisResult, tokio};
 
-mod event_listener;
 mod message_send_listener;
 
 pub async fn init() -> TardisResult<()> {
-    // deprecate mq tunnel
-    event_listener::EventListener::default().run().await?;
     tokio::task::spawn(async move {
         let period = tokio::time::Duration::from_secs(2);
         let mut interval = tokio::time::interval(period);
