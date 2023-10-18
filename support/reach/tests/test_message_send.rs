@@ -179,7 +179,7 @@ pub async fn test_ct_api() -> TardisResult<()> {
 
     // test trigger
     // find trigger scene
-    let (trigger_scene_id, _trigger_scene_code) = {
+    let (trigger_scene_id, trigger_scene_code) = {
         log::info!("find all trigger scene");
         let trigger_scenes = client.find_trigger_scene().await?;
         let name_codes_map = trigger_scenes.iter().map(|s| (s.name.clone(), s.code.clone())).collect::<std::collections::HashMap<_, _>>();
@@ -232,31 +232,29 @@ pub async fn test_ct_api() -> TardisResult<()> {
     };
 
     // test mq trigger
-    // deprecated
-    // {
-    //     let name = "David";
-    //     let code = random_string(6);
-    //     let send_req = ReachMsgSendReq {
-    //         scene_code: trigger_scene_code,
-    //         receives: vec![ReachMsgReceive {
-    //             receive_group_code: receive_group_code.clone(),
-    //             receive_ids: vec![name.into()],
-    //             receive_kind: ReachReceiveKind::Account,
-    //         }],
-    //         rel_item_id,
-    //         replace: [("name".to_owned(), name.to_owned()), ("code".to_owned(), code.clone())].into(),
-    //         own_paths: ctx.own_paths.clone(),
-    //     };
-    //     log::info!("send trigger message");
-    //     // plan to replace mq
-    //     funs.mq().publish(MQ_REACH_TOPIC_MESSAGE, TardisFuns::json.obj_to_string(&send_req)?, &HashMap::new()).await?;
-    //     // wait for about 3 seconds
-    //     tokio::time::sleep(tokio::time::Duration::from_secs(3)).await;
-    //     let msg = holder.sms_mocker.get_latest_message(name).await;
-    //     log::info!("latest message for {name}: {:?}", msg);
-    //     let msg = msg.expect("message is empty");
-    //     assert_eq!(msg, expected_content(name, &code));
-    // }
+    {
+        let name = "David";
+        let code = random_string(6);
+        let send_req = ReachMsgSendReq {
+            scene_code: trigger_scene_code,
+            receives: vec![ReachMsgReceive {
+                receive_group_code: receive_group_code.clone(),
+                receive_ids: vec![name.into()],
+                receive_kind: ReachReceiveKind::Account,
+            }],
+            rel_item_id,
+            replace: [("name".to_owned(), name.to_owned()), ("code".to_owned(), code.clone())].into(),
+        };
+        log::info!("send trigger message");
+        // plan to replace mq
+        client.message_send(&send_req).await?;
+        // wait for about 3 seconds
+        tokio::time::sleep(tokio::time::Duration::from_secs(3)).await;
+        let msg = holder.sms_mocker.get_latest_message(name).await;
+        log::info!("latest message for {name}: {:?}", msg);
+        let msg = msg.expect("message is empty");
+        assert_eq!(msg, expected_content(name, &code));
+    }
 
     drop(holder);
     Ok(())

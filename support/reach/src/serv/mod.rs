@@ -9,7 +9,8 @@ mod message_template;
 pub use message_template::ReachMessageTemplateServ;
 mod message_log;
 pub use message_log::ReachMessageLogServ;
-
+mod message_send;
+pub use message_send::*;
 /*
     trigger
 */
