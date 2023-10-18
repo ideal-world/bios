@@ -277,7 +277,7 @@ pub async fn dispatch_request(type_info: &str, value: &str, access_token: Option
         "HealthCheckRequest" => HealthCheckResponse::success().as_payload(),
         "ConfigQueryRequest" => {
             let Ok(ctx) = get_ctx.await else {
-                return Ok(NaocsGrpcResponse::unregister().as_payload())
+                return Ok(NaocsGrpcResponse::unregister().as_payload());
             };
             let ConfigQueryRequest { data_id, group, tenant } = serde_json::from_str(value).map_err(|_e| TardisError::bad_request("expect a ConfigQueryRequest", ""))?;
             let mut descriptor = ConfigDescriptor {

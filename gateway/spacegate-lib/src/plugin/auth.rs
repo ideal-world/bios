@@ -233,7 +233,7 @@ impl SgPluginFilter for SgFilterAuth {
             return Ok((false, ctx));
         }
         ctx.request.set_header_str(&self.header_is_mix_req, "false")?;
-        let (mut auth_req, req_body) = ctx_to_auth_req(&self.auth_path_ignore_prefix,&mut ctx).await?;
+        let (mut auth_req, req_body) = ctx_to_auth_req(&self.auth_path_ignore_prefix, &mut ctx).await?;
 
         match auth_kernel_serv::auth(&mut auth_req, is_true_mix_req).await {
             Ok(auth_result) => {
@@ -377,7 +377,7 @@ async fn ctx_to_auth_req(ignore_prefix: &str, ctx: &mut SgRoutePluginContext) ->
     Ok((
         AuthReq {
             scheme: scheme.clone(),
-            path: url.path().replace(ignore_prefix,"").to_string(),
+            path: url.path().replace(ignore_prefix, "").to_string(),
             query: url
                 .query()
                 .filter(|q| !q.is_empty())
