@@ -16,7 +16,7 @@ use itertools::Itertools;
 use serde_json::json;
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
-    chrono::{DateTime, Utc},
+    chrono::{DateTime, SecondsFormat, Utc},
     db::sea_orm::{
         self,
         sea_query::{Alias, Cond, Expr, Query},
@@ -30,7 +30,7 @@ use tardis::{
 };
 
 use crate::{
-    domain::flow_inst,
+    domain::{flow_inst, flow_transition},
     dto::{
         flow_external_dto::FlowExternalParams,
         flow_inst_dto::{
@@ -41,8 +41,8 @@ use crate::{
         flow_model_dto::{FlowModelDetailResp, FlowModelFilterReq},
         flow_state_dto::{FlowStateFilterReq, FlowStateRelModelExt, FlowSysStateKind},
         flow_transition_dto::{
-            FlowTransitionActionByStateChangeInfo, FlowTransitionActionChangeAgg, FlowTransitionActionChangeInfo, FlowTransitionActionChangeKind, FlowTransitionDetailResp,
-            FlowTransitionFrontActionInfo, FlowTransitionFrontActionRightValue, StateChangeConditionOp,
+            FlowTransitionActionByStateChangeInfo, FlowTransitionActionByVarChangeInfoChangedKind, FlowTransitionActionChangeAgg, FlowTransitionActionChangeInfo,
+            FlowTransitionActionChangeKind, FlowTransitionDetailResp, FlowTransitionFrontActionInfo, FlowTransitionFrontActionRightValue, StateChangeConditionOp,
         },
     },
     serv::{flow_model_serv::FlowModelServ, flow_state_serv::FlowStateServ},
@@ -585,8 +585,26 @@ impl FlowInstServ {
         Ok(())
     }
 
-    #[async_recursion]
     pub async fn transfer(flow_inst_id: &str, transfer_req: &FlowInstTransferReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<FlowInstTransferResp> {
+        // record updated instance id
+        let mut updated_instance_list: Vec<String> = Vec::new();
+        let result = Self::do_transfer(flow_inst_id, transfer_req, &mut updated_instance_list, funs, ctx).await;
+
+        for updated_instance_id in updated_instance_list {
+            Self::do_front_change(&updated_instance_id, ctx, funs).await?;
+        }
+
+        result
+    }
+
+    #[async_recursion]
+    async fn do_transfer(
+        flow_inst_id: &str,
+        transfer_req: &FlowInstTransferReq,
+        updated_instance_list: &mut Vec<String>,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<FlowInstTransferResp> {
         let global_ctx = TardisContext {
             own_paths: "".to_string(),
             ..ctx.clone()
@@ -725,6 +743,7 @@ impl FlowInstServ {
         }
 
         funs.db().update_one(flow_inst, ctx).await?;
+        updated_instance_list.push(flow_inst_id.to_string());
 
         // get updated instance detail
         let flow_inst_detail = Self::get(flow_inst_id, funs, ctx).await?;
@@ -753,7 +772,7 @@ impl FlowInstServ {
         let post_changes =
             model_transition.into_iter().find(|model_transition| model_transition.id == next_flow_transition.next_flow_transition_id).unwrap_or_default().action_by_post_changes();
         if !post_changes.is_empty() {
-            Self::do_post_change(&flow_inst_detail, &flow_model, post_changes, ctx, funs).await?;
+            Self::do_post_change(&flow_inst_detail, &flow_model, post_changes, updated_instance_list, ctx, funs).await?;
         }
         let next_flow_transitions = Self::do_find_next_transitions(&flow_inst_detail, &flow_model, None, &None, funs, ctx).await?.next_flow_transitions;
 
@@ -783,6 +802,7 @@ impl FlowInstServ {
         current_inst: &FlowInstDetailResp,
         current_model: &FlowModelDetailResp,
         post_changes: Vec<FlowTransitionActionChangeInfo>,
+        updated_instance_list: &mut Vec<String>,
         ctx: &TardisContext,
         funs: &TardisFunsInst,
     ) -> TardisResult<()> {
@@ -791,8 +811,8 @@ impl FlowInstServ {
             match post_change.kind {
                 FlowTransitionActionChangeKind::Var => {
                     if let Some(mut change_info) = post_change.var_change_info {
-                        if change_info.changed_current_time.is_some() && change_info.changed_current_time.unwrap() {
-                            change_info.changed_val = Some(json!(Utc::now().to_string()));
+                        if change_info.changed_kind.is_some() && change_info.changed_kind.unwrap() == FlowTransitionActionByVarChangeInfoChangedKind::AutoGetOperateTime {
+                            change_info.changed_val = Some(json!(Utc::now().to_rfc3339_opts(SecondsFormat::Millis, true)));
                         }
                         let rel_tag = change_info.obj_tag.unwrap_or_default();
                         if !rel_tag.is_empty() {
@@ -818,6 +838,7 @@ impl FlowInstServ {
                                         funs,
                                     )
                                     .await?;
+                                    updated_instance_list.push(inst_id.clone());
                                 }
                             }
                         } else {
@@ -837,6 +858,7 @@ impl FlowInstServ {
                                 funs,
                             )
                             .await?;
+                            updated_instance_list.push(current_inst.id.clone());
                         }
                     }
                 }
@@ -853,7 +875,7 @@ impl FlowInstServ {
                         .await?;
                         if !resp.rel_bus_objs.is_empty() {
                             let inst_ids = Self::find_inst_ids_by_rel_obj_ids(resp.rel_bus_objs.pop().unwrap().rel_bus_obj_ids, &change_info, funs, ctx).await?;
-                            Self::do_modify_state_by_post_action(inst_ids, &change_info, funs, ctx).await?;
+                            Self::do_modify_state_by_post_action(inst_ids, &change_info, updated_instance_list, funs, ctx).await?;
                         }
                     }
                 }
@@ -960,6 +982,7 @@ impl FlowInstServ {
     async fn do_modify_state_by_post_action(
         rel_inst_ids: Vec<String>,
         change_info: &FlowTransitionActionByStateChangeInfo,
+        updated_instance_list: &mut Vec<String>,
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<()> {
@@ -988,13 +1011,14 @@ impl FlowInstServ {
                 .collect_vec()
                 .pop();
             if let Some(transition) = transition_resp {
-                Self::transfer(
+                Self::do_transfer(
                     &rel_inst.id,
                     &FlowInstTransferReq {
                         flow_transition_id: transition.next_flow_transition_id,
                         message: None,
                         vars: None,
                     },
+                    updated_instance_list,
                     funs,
                     ctx,
                 )
@@ -1182,11 +1206,14 @@ impl FlowInstServ {
             ..Default::default()
         };
         funs.db().update_one(flow_inst, ctx).await?;
+        Self::do_front_change(flow_inst_id, ctx, funs).await?;
 
         Ok(())
     }
 
-    async fn do_front_change(flow_inst_detail: &FlowInstDetailResp, ctx: &TardisContext, funs: &TardisFunsInst) -> TardisResult<()> {
+    #[async_recursion]
+    async fn do_front_change(flow_inst_id: &str, ctx: &TardisContext, funs: &TardisFunsInst) -> TardisResult<()> {
+        let flow_inst_detail = Self::get(flow_inst_id, funs, ctx).await?;
         let flow_model = FlowModelServ::get_item(
             &flow_inst_detail.rel_flow_model_id,
             &FlowModelFilterReq {
@@ -1205,20 +1232,32 @@ impl FlowInstServ {
             .transitions()
             .into_iter()
             .filter(|trans| trans.from_flow_state_id == flow_inst_detail.current_state_id && !trans.action_by_front_changes().is_empty())
+            .sorted_by_key(|trans| trans.sort)
             .collect_vec();
         if flow_transitions.is_empty() {
             return Ok(());
+        }
+        for flow_transition in flow_transitions {
+            if Self::check_front_conditions(&flow_inst_detail, flow_transition.action_by_front_changes())? {
+                Self::transfer(
+                    &flow_inst_detail.id,
+                    &FlowInstTransferReq {
+                        flow_transition_id: flow_transition.id.clone(),
+                        message: None,
+                        vars: None,
+                    },
+                    funs,
+                    ctx,
+                )
+                .await?;
+                break;
+            }
         }
 
         Ok(())
     }
 
-    async fn check_front_conditions(
-        flow_inst_detail: &FlowInstDetailResp,
-        conditions: Vec<FlowTransitionFrontActionInfo>,
-        ctx: &TardisContext,
-        funs: &TardisFunsInst,
-    ) -> TardisResult<bool> {
+    fn check_front_conditions(flow_inst_detail: &FlowInstDetailResp, conditions: Vec<FlowTransitionFrontActionInfo>) -> TardisResult<bool> {
         if flow_inst_detail.current_vars.is_none() {
             return Ok(false);
         }
@@ -1259,5 +1298,76 @@ impl FlowInstServ {
                 }
             }
         }
+    }
+
+    pub async fn trigger_front_action(funs: &TardisFunsInst) -> TardisResult<()> {
+        #[derive(sea_orm::FromQueryResult)]
+        pub struct FloTransitionsResult {
+            rel_flow_model_id: String,
+            action_by_front_changes: Value,
+        }
+        #[derive(sea_orm::FromQueryResult)]
+        pub struct FlowInstanceResult {
+            id: String,
+        }
+        // find models
+        let global_ctx = TardisContext::default();
+        // let model_id = funs
+        //     .db()
+        //     .find_dtos::<FloTransitionsResult>(
+        //         Query::select()
+        //             .columns([flow_transition::Column::RelFlowModelId])
+        //             .from(flow_transition::Entity)
+        //             .and_where(Expr::cust_with_expr("JSON_ARRAY_LENGTH($1) > 1", Expr::col(flow_transition::Column::ActionByFrontChanges))),
+        //     )
+        //     .await?
+        //     .iter()
+        //     .map(|res| res.rel_flow_model_id.clone())
+        //     .collect_vec();
+        let rel_flow_model_ids = funs
+            .db()
+            .find_dtos::<FloTransitionsResult>(
+                Query::select().columns([flow_transition::Column::RelFlowModelId, flow_transition::Column::ActionByFrontChanges]).from(flow_transition::Entity),
+            )
+            .await?
+            .iter()
+            .filter(|res| !TardisFuns::json.json_to_obj::<Vec<FlowTransitionFrontActionInfo>>(res.action_by_front_changes.clone()).unwrap_or_default().is_empty())
+            .map(|res| res.rel_flow_model_id.clone())
+            .collect_vec();
+        // find models
+        let model_ids = FlowModelServ::find_detail_items(
+            &FlowModelFilterReq {
+                basic: RbumBasicFilterReq {
+                    ids: Some(rel_flow_model_ids),
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            None,
+            None,
+            funs,
+            &global_ctx,
+        )
+        .await?
+        .into_iter()
+        .filter(|model| {
+            model
+                .transitions()
+                .into_iter()
+                .any(|trans| trans.action_by_front_changes().into_iter().any(|action| action.right_value == FlowTransitionFrontActionRightValue::RealTime))
+        })
+        .map(|model| model.id)
+        .collect_vec();
+        let flow_insts = funs
+            .db()
+            .find_dtos::<FlowInstanceResult>(
+                Query::select().columns([flow_inst::Column::Id]).from(flow_inst::Entity).and_where(Expr::col(flow_inst::Column::RelFlowModelId).is_in(&model_ids)),
+            )
+            .await?;
+        for flow_inst in flow_insts {
+            Self::do_front_change(&flow_inst.id, &global_ctx, funs).await?;
+        }
+
+        Ok(())
     }
 }

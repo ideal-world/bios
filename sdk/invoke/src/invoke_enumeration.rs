@@ -40,5 +40,5 @@ pub enum InvokeModuleKind {
     Graph,
     Stats,
     Schedule,
-    Iam
+    Iam,
 }

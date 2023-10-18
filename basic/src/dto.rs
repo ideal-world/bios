@@ -76,6 +76,9 @@ impl BasicQueryCondInfo {
                     }
                     BasicQueryOpKind::In => check_val.as_array().map(|check_val_arr| check_val_arr.contains(&cond.value)).unwrap_or(false),
                     BasicQueryOpKind::NotIn => check_val.as_array().map(|check_val_arr| check_val_arr.contains(&cond.value)).unwrap_or(false),
+                    BasicQueryOpKind::IsNull => false,
+                    BasicQueryOpKind::IsNotNull => false,
+                    BasicQueryOpKind::IsNullOrEmpty => false,
                 },
                 None => false,
             })

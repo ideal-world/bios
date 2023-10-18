@@ -6,7 +6,7 @@ use bios_basic::test::test_http_client::TestHttpClient;
 use bios_mw_flow::dto::flow_config_dto::FlowConfigModifyReq;
 use bios_mw_flow::dto::flow_inst_dto::{
     FlowInstBatchBindReq, FlowInstBatchBindResp, FlowInstBindRelObjReq, FlowInstBindReq, FlowInstDetailResp, FlowInstFindNextTransitionResp, FlowInstFindNextTransitionsReq,
-    FlowInstFindStateAndTransitionsReq, FlowInstFindStateAndTransitionsResp, FlowInstStartReq, FlowInstTransferReq, FlowInstTransferResp,
+    FlowInstFindStateAndTransitionsReq, FlowInstFindStateAndTransitionsResp, FlowInstModifyCurrentVarsReq, FlowInstStartReq, FlowInstTransferReq, FlowInstTransferResp,
 };
 use bios_mw_flow::dto::flow_model_dto::{
     FlowModelAddCustomModelItemReq, FlowModelAddCustomModelReq, FlowModelAddCustomModelResp, FlowModelAggResp, FlowModelBindStateReq, FlowModelFindRelStateResp,
@@ -14,8 +14,8 @@ use bios_mw_flow::dto::flow_model_dto::{
 };
 use bios_mw_flow::dto::flow_state_dto::{FlowStateAddReq, FlowStateSummaryResp, FlowSysStateKind};
 use bios_mw_flow::dto::flow_transition_dto::{
-    FlowTransitionActionChangeInfo, FlowTransitionActionChangeKind, FlowTransitionAddReq, FlowTransitionDoubleCheckInfo, FlowTransitionModifyReq, FlowTransitionSortStateInfoReq,
-    FlowTransitionSortStatesReq, StateChangeCondition, StateChangeConditionItem, StateChangeConditionOp,
+    FlowTransitionActionByVarChangeInfoChangedKind, FlowTransitionActionChangeInfo, FlowTransitionActionChangeKind, FlowTransitionAddReq, FlowTransitionDoubleCheckInfo,
+    FlowTransitionModifyReq, FlowTransitionSortStateInfoReq, FlowTransitionSortStatesReq, StateChangeCondition, StateChangeConditionItem, StateChangeConditionOp,
 };
 
 use bios_mw_flow::dto::flow_var_dto::{FlowVarInfo, RbumDataTypeKind, RbumWidgetTypeKind};
@@ -185,7 +185,7 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
             &json!({
                 "modify_transitions": [
                     {
-                        "id": trans_start.id.clone(),
+                        "id": trans_complate.id.clone(),
                         "action_by_front_changes": [
                             {
                                 "relevance_relation": "=",
@@ -260,7 +260,7 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
                             current: true,
                             var_name: "".to_string(),
                             changed_val: None,
-                            changed_current_time: None,
+                            changed_kind: None,
                         }]),
                         double_check: Some(FlowTransitionDoubleCheckInfo {
                             is_open: true,
@@ -296,8 +296,8 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
                             changed_state_id: "".to_string(),
                             current: false,
                             var_name: "id".to_string(),
-                            changed_val: Some(json!("xxx".to_string())),
-                            changed_current_time: None,
+                            changed_val: None,
+                            changed_kind: Some(FlowTransitionActionByVarChangeInfoChangedKind::AutoGetOperateTime),
                         }]),
                         double_check: None,
                         sort: None,
@@ -380,7 +380,7 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
                         current: true,
                         var_name: "".to_string(),
                         changed_val: None,
-                        changed_current_time: None,
+                        changed_kind: None,
                     }]),
                     double_check: None,
                     sort: None,
@@ -423,7 +423,7 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
                         current: true,
                         var_name: "".to_string(),
                         changed_val: None,
-                        changed_current_time: None,
+                        changed_kind: None,
                     }]),
                     double_check: None,
                     sort: None,
@@ -471,6 +471,12 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
             },
         )
         .await;
+
+    ctx.own_paths = "t2".to_string();
+    flow_client.set_auth(&ctx)?;
+    let other_models: HashMap<String, FlowTemplateModelResp> = flow_client.get(&format!("/cc/model/get_models?tag_ids=REQ&temp_id={}", share_template_id)).await;
+    assert_eq!(req_share_model_id, other_models.get("REQ").unwrap().id.clone());
+
     ctx.own_paths = "t3/app03".to_string();
     flow_client.set_auth(&ctx)?;
     let mut result: Vec<FlowModelAddCustomModelResp> = flow_client
@@ -755,22 +761,26 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
         )
         .await;
     assert_eq!(state_and_next_transitions[0].next_flow_transitions.len(), 1);
-    let _transfer: FlowInstTransferResp = flow_client
-        .put(
-            &format!("/cc/inst/{}/transition/transfer", req_inst_id2),
-            &FlowInstTransferReq {
-                flow_transition_id: state_and_next_transitions[0]
-                    .next_flow_transitions
-                    .iter()
-                    .find(|trans| trans.next_flow_state_name == "已完成")
-                    .unwrap()
-                    .next_flow_transition_id
-                    .clone(),
-                vars: None,
-                message: None,
-            },
+    // handle front change
+    let current_vars = HashMap::from([("status".to_string(), json!("xxx"))]);
+    let _: Void = flow_client
+        .patch(
+            &format!("/cc/inst/{}/modify_current_vars", req_inst_id2),
+            &FlowInstModifyCurrentVarsReq { vars: current_vars },
         )
         .await;
+    let state_and_next_transitions: Vec<FlowInstFindStateAndTransitionsResp> = flow_client
+        .put(
+            "/cc/inst/batch/state_transitions",
+            &vec![FlowInstFindStateAndTransitionsReq {
+                flow_inst_id: req_inst_id2.clone(),
+                vars: None,
+            }],
+        )
+        .await;
+    assert_eq!(state_and_next_transitions[0].current_flow_state_name, "已完成");
+    //
+    let _: Void = flow_client.get("/cc/inst/trigger_front_action").await;
 
     Ok(())
 }

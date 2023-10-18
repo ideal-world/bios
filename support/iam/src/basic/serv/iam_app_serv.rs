@@ -235,7 +235,6 @@ impl IamAppServ {
                 // delete old admins
                 for account_id in original_app_admin_account_ids.difference(&admin_ids.iter().cloned().collect::<HashSet<String>>()) {
                     IamRoleServ::delete_rel_account(&app_admin_role_id, account_id, None, funs, ctx).await?;
-                    // IamAppServ::delete_rel_account(id, account_id, funs, ctx).await?;
                 }
             }
         }
