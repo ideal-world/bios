@@ -166,7 +166,11 @@ impl SearchDataTypeKind {
             } else if let Some(time_window_fun) = time_window_fun {
                 value.pop().map(|value| {
                     (
-                        format!("{} {} ${param_idx}", time_window_fun.to_sql(column_name, self == &SearchDataTypeKind::DateTime), op.to_sql()),
+                        format!(
+                            "{} {} ${param_idx}",
+                            time_window_fun.to_sql(column_name, self == &SearchDataTypeKind::DateTime),
+                            op.to_sql()
+                        ),
                         vec![value],
                     )
                 })

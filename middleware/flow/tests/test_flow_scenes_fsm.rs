@@ -780,7 +780,7 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
         .await;
     assert_eq!(state_and_next_transitions[0].current_flow_state_name, "已完成");
     //
-    let _: Void = flow_client.get("/cc/inst/trigger_front_action").await;
+    let _: Void = flow_client.get("/ci/inst/trigger_front_action").await;
 
     Ok(())
 }
