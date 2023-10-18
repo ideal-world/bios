@@ -78,6 +78,7 @@ pub async fn init_db(mut funs: TardisFunsInst) -> TardisResult<()> {
     funs.begin().await?;
     if check_initialized(&funs, &ctx).await? {
         init_basic_info(&funs).await?;
+        self::modify_post_actions(&funs, &ctx).await?;
     } else {
         let db_kind = TardisFuns::reldb().backend();
         let compatible_type = TardisFuns::reldb().compatible_type();
@@ -87,7 +88,6 @@ pub async fn init_db(mut funs: TardisFunsInst) -> TardisResult<()> {
         funs.db().init(flow_inst::ActiveModel::init(db_kind, None, compatible_type.clone())).await?;
         funs.db().init(flow_config::ActiveModel::init(db_kind, None, compatible_type.clone())).await?;
         init_rbum_data(&funs, &ctx).await?;
-        self::modify_post_actions(&funs, &ctx).await?;
     };
     funs.commit().await?;
     Ok(())

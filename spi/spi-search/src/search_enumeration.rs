@@ -358,29 +358,29 @@ impl SearchQueryTimeWindowKind {
     pub fn to_sql(&self, column_name: &str, is_date_time: bool) -> String {
         if is_date_time {
             match self {
-                SearchQueryTimeWindowKind::Date => format!("date(timezone('UTC', {column_name}))"),
+                SearchQueryTimeWindowKind::Date => format!("date(timezone('UTC', {column_name}::timestamp))"),
                 // SearchQueryTimeWindowKind::Hour => format!("date_part('hour',timezone('UTC', {column_name}))"),
                 SearchQueryTimeWindowKind::Hour => format!(
-                    "CONCAT(date_part('year', timezone('UTC', {column_name})), '-',
-                LPAD(date_part('month', timezone('UTC', {column_name}))::text, 2, '0'), '-',
-                LPAD(date_part('day', timezone('UTC', {column_name}))::text, 2, '0'), ' ',
-                LPAD(date_part('hour', timezone('UTC', {column_name}))::text, 2, '0'))"
+                    "CONCAT(date_part('year', timezone('UTC', {column_name}::timestamp)), '-',
+                LPAD(date_part('month', timezone('UTC', {column_name}::timestamp))::text, 2, '0'), '-',
+                LPAD(date_part('day', timezone('UTC', {column_name}::timestamp))::text, 2, '0'), ' ',
+                LPAD(date_part('hour', timezone('UTC', {column_name}::timestamp))::text, 2, '0'))"
                 ),
                 // SearchQueryTimeWindowKind::Day => format!("date_part('day',timezone('UTC', {column_name}))"),
                 SearchQueryTimeWindowKind::Day => format!(
-                    "CONCAT(date_part('year', timezone('UTC', {column_name})), '-',
-                LPAD(date_part('month', timezone('UTC', {column_name}))::text, 2, '0'), '-',
-                LPAD(date_part('day', timezone('UTC', {column_name}))::text, 2, '0'))"
+                    "CONCAT(date_part('year', timezone('UTC', {column_name}::timestamp)), '-',
+                LPAD(date_part('month', timezone('UTC', {column_name}::timestamp))::text, 2, '0'), '-',
+                LPAD(date_part('day', timezone('UTC', {column_name}::timestamp))::text, 2, '0'))"
                 ),
                 SearchQueryTimeWindowKind::Week => format!(
-                    "CONCAT(date_part('year', timezone('UTC', {column_name})), ' ',
-                    date_part('week', timezone('UTC', {column_name})))"
+                    "CONCAT(date_part('year', timezone('UTC', {column_name}::timestamp)), ' ',
+                    date_part('week', timezone('UTC', {column_name}::timestamp)))"
                 ),
                 // SearchQueryTimeWindowKind::Month => format!("date_part('month',timezone('UTC', {column_name}))"),
                 SearchQueryTimeWindowKind::Month => {
-                    format!("CONCAT(date_part('year', timezone('UTC',{column_name})), '-',LPAD(date_part('month', timezone('UTC', {column_name}))::text, 2, '0'))")
+                    format!("CONCAT(date_part('year', timezone('UTC',{column_name}::timestamp)), '-',LPAD(date_part('month', timezone('UTC', {column_name}::timestamp))::text, 2, '0'))")
                 }
-                SearchQueryTimeWindowKind::Year => format!("CONCAT(date_part('year',timezone('UTC', {column_name})),'')"),
+                SearchQueryTimeWindowKind::Year => format!("CONCAT(date_part('year',timezone('UTC', {column_name}::timestamp)),'')"),
             }
         } else {
             match self {
@@ -390,24 +390,24 @@ impl SearchQueryTimeWindowKind {
                 // SearchQueryTimeWindowKind::Month => format!("date_part('month', {column_name})"),
                 // SearchQueryTimeWindowKind::Year => format!("date_part('year', {column_name})"),
                 SearchQueryTimeWindowKind::Hour => format!(
-                    "CONCAT(date_part('year', timezone('UTC', {column_name})), '-',
-                LPAD(date_part('month', timezone('UTC', {column_name}))::text, 2, '0'), '-',
-                LPAD(date_part('day', timezone('UTC', {column_name}))::text, 2, '0'), ' ',
-                LPAD(date_part('hour', timezone('UTC', {column_name}))::text, 2, '0'))"
+                    "CONCAT(date_part('year', timezone('UTC', {column_name}::timestamp)), '-',
+                LPAD(date_part('month', timezone('UTC', {column_name}::timestamp))::text, 2, '0'), '-',
+                LPAD(date_part('day', timezone('UTC', {column_name}::timestamp))::text, 2, '0'), ' ',
+                LPAD(date_part('hour', timezone('UTC', {column_name}::timestamp))::text, 2, '0'))"
                 ),
                 SearchQueryTimeWindowKind::Day => format!(
-                    "CONCAT(date_part('year', timezone('UTC', {column_name})), '-',
-                LPAD(date_part('month', timezone('UTC', {column_name}))::text, 2, '0'), '-',
-                LPAD(date_part('day', timezone('UTC', {column_name}))::text, 2, '0'))"
+                    "CONCAT(date_part('year', timezone('UTC', {column_name}::timestamp)), '-',
+                LPAD(date_part('month', timezone('UTC', {column_name}::timestamp))::text, 2, '0'), '-',
+                LPAD(date_part('day', timezone('UTC', {column_name}::timestamp))::text, 2, '0'))"
                 ),
                 SearchQueryTimeWindowKind::Week => format!(
-                    "CONCAT(date_part('year', timezone('UTC', {column_name})), ' ',
-                    date_part('week', timezone('UTC', {column_name})))"
+                    "CONCAT(date_part('year', timezone('UTC', {column_name}::timestamp)), ' ',
+                    date_part('week', timezone('UTC', {column_name}::timestamp)))"
                 ),
                 SearchQueryTimeWindowKind::Month => {
-                    format!("CONCAT(date_part('year', timezone('UTC',{column_name})), '-',LPAD(date_part('month', timezone('UTC', {column_name}))::text, 2, '0'))")
+                    format!("CONCAT(date_part('year', timezone('UTC',{column_name}::timestamp)), '-',LPAD(date_part('month', timezone('UTC', {column_name}::timestamp))::text, 2, '0'))")
                 }
-                SearchQueryTimeWindowKind::Year => format!("CONCAT(date_part('year',timezone('UTC', {column_name})),'')"),
+                SearchQueryTimeWindowKind::Year => format!("CONCAT(date_part('year',timezone('UTC', {column_name}::timestamp)),'')"),
             }
         }
     }

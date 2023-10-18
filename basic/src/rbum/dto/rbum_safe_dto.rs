@@ -1,4 +1,4 @@
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 #[cfg(feature = "default")]
 use tardis::db::sea_orm;
 use tardis::{
