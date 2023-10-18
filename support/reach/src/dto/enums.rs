@@ -1,4 +1,4 @@
-use std::{str::FromStr, fmt::Display};
+use std::{fmt::Display, str::FromStr};
 
 use serde::{Deserialize, Serialize};
 use tardis::{

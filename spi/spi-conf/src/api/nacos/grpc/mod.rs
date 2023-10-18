@@ -232,9 +232,7 @@ pub async fn dispatch_request(type_info: &str, value: &str, access_token: Option
         let Some(token) = access_token else {
             return Err(TardisError::unauthorized("missing access token", ""));
         };
-        jwt_validate(token, &funs).await.map_err(|e| {
-            TardisError::unauthorized(&format!("invalid access token, error: {e}, token: {token}"), "")
-        })
+        jwt_validate(token, &funs).await.map_err(|e| TardisError::unauthorized(&format!("invalid access token, error: {e}, token: {token}"), ""))
     };
     let response = match type_info {
         "ServerCheckRequest" => ServerCheckResponse::success(None).as_payload(),

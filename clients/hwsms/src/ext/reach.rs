@@ -1,15 +1,21 @@
-use std::{collections::HashSet, sync::{Arc, OnceLock}};
+use std::{
+    collections::HashSet,
+    sync::{Arc, OnceLock},
+};
 
 use bios_reach::{
     client::{GenericTemplate, SendChannel},
-    dto::{ContentReplace, ReachChannelKind}, config::ReachConfig, consts::MODULE_CODE,
+    config::ReachConfig,
+    consts::MODULE_CODE,
+    dto::{ContentReplace, ReachChannelKind},
 };
 use tardis::{
     async_trait::async_trait,
-    basic::{error::TardisError, result::TardisResult}, TardisFuns,
+    basic::{error::TardisError, result::TardisResult},
+    TardisFuns,
 };
 
-use crate::{SendSmsRequest, SmsContent, SmsClient};
+use crate::{SendSmsRequest, SmsClient, SmsContent};
 
 #[async_trait]
 impl SendChannel for crate::SmsClient {

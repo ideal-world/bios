@@ -1,10 +1,7 @@
 use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
-use tardis::{
-    basic::dto::TardisContext,
-    TardisFunsInst, web::poem_openapi,
-};
+use tardis::{basic::dto::TardisContext, web::poem_openapi, TardisFunsInst};
 
 use crate::impl_tardis_api_client;
 

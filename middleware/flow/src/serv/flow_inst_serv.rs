@@ -30,7 +30,7 @@ use tardis::{
 };
 
 use crate::{
-    domain::flow_inst,
+    domain::{flow_inst, flow_transition},
     dto::{
         flow_external_dto::FlowExternalParams,
         flow_inst_dto::{
@@ -1298,5 +1298,76 @@ impl FlowInstServ {
                 }
             }
         }
+    }
+
+    pub async fn trigger_front_action(funs: &TardisFunsInst) -> TardisResult<()> {
+        #[derive(sea_orm::FromQueryResult)]
+        pub struct FloTransitionsResult {
+            rel_flow_model_id: String,
+            action_by_front_changes: Value,
+        }
+        #[derive(sea_orm::FromQueryResult)]
+        pub struct FlowInstanceResult {
+            id: String,
+        }
+        // find models
+        let global_ctx = TardisContext::default();
+        // let model_id = funs
+        //     .db()
+        //     .find_dtos::<FloTransitionsResult>(
+        //         Query::select()
+        //             .columns([flow_transition::Column::RelFlowModelId])
+        //             .from(flow_transition::Entity)
+        //             .and_where(Expr::cust_with_expr("JSON_ARRAY_LENGTH($1) > 1", Expr::col(flow_transition::Column::ActionByFrontChanges))),
+        //     )
+        //     .await?
+        //     .iter()
+        //     .map(|res| res.rel_flow_model_id.clone())
+        //     .collect_vec();
+        let rel_flow_model_ids = funs
+            .db()
+            .find_dtos::<FloTransitionsResult>(
+                Query::select().columns([flow_transition::Column::RelFlowModelId, flow_transition::Column::ActionByFrontChanges]).from(flow_transition::Entity),
+            )
+            .await?
+            .iter()
+            .filter(|res| !TardisFuns::json.json_to_obj::<Vec<FlowTransitionFrontActionInfo>>(res.action_by_front_changes.clone()).unwrap_or_default().is_empty())
+            .map(|res| res.rel_flow_model_id.clone())
+            .collect_vec();
+        // find models
+        let model_ids = FlowModelServ::find_detail_items(
+            &FlowModelFilterReq {
+                basic: RbumBasicFilterReq {
+                    ids: Some(rel_flow_model_ids),
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            None,
+            None,
+            funs,
+            &global_ctx,
+        )
+        .await?
+        .into_iter()
+        .filter(|model| {
+            model
+                .transitions()
+                .into_iter()
+                .any(|trans| trans.action_by_front_changes().into_iter().any(|action| action.right_value == FlowTransitionFrontActionRightValue::RealTime))
+        })
+        .map(|model| model.id)
+        .collect_vec();
+        let flow_insts = funs
+            .db()
+            .find_dtos::<FlowInstanceResult>(
+                Query::select().columns([flow_inst::Column::Id]).from(flow_inst::Entity).and_where(Expr::col(flow_inst::Column::RelFlowModelId).is_in(&model_ids)),
+            )
+            .await?;
+        for flow_inst in flow_insts {
+            Self::do_front_change(&flow_inst.id, &global_ctx, funs).await?;
+        }
+
+        Ok(())
     }
 }

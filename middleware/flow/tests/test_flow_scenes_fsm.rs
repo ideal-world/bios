@@ -471,6 +471,12 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
             },
         )
         .await;
+
+    ctx.own_paths = "t2".to_string();
+    flow_client.set_auth(&ctx)?;
+    let other_models: HashMap<String, FlowTemplateModelResp> = flow_client.get(&format!("/cc/model/get_models?tag_ids=REQ&temp_id={}", share_template_id)).await;
+    assert_eq!(req_share_model_id, other_models.get("REQ").unwrap().id.clone());
+
     ctx.own_paths = "t3/app03".to_string();
     flow_client.set_auth(&ctx)?;
     let mut result: Vec<FlowModelAddCustomModelResp> = flow_client
@@ -773,6 +779,8 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
         )
         .await;
     assert_eq!(state_and_next_transitions[0].current_flow_state_name, "已完成");
+    //
+    let _: Void = flow_client.get("/cc/inst/trigger_front_action").await;
 
     Ok(())
 }
