@@ -1,7 +1,7 @@
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem_openapi;
 use tardis::web::poem_openapi::payload::Json;
-use tardis::web::web_resp::{TardisApiResult, TardisResp};
+use tardis::web::web_resp::{TardisApiResult, TardisResp, Void};
 
 use crate::dto::flow_inst_dto::{FlowInstBatchBindReq, FlowInstBatchBindResp, FlowInstBindReq, FlowInstStartReq};
 use crate::flow_constants;
@@ -47,5 +47,16 @@ impl FlowCiInstApi {
         let result = FlowInstServ::batch_bind(&add_req.0, &funs, &ctx.0).await?;
         funs.commit().await?;
         TardisResp::ok(result)
+    }
+
+    /// trigger instance front action / 触发前置动作
+    #[oai(path = "/trigger_front_action", method = "get")]
+    async fn trigger_front_action(&self) -> TardisApiResult<Void> {
+        let mut funs = flow_constants::get_tardis_inst();
+        funs.begin().await?;
+        FlowInstServ::trigger_front_action(&funs).await?;
+        funs.commit().await?;
+
+        TardisResp::ok(Void {})
     }
 }

@@ -81,6 +81,10 @@ pub struct SgFilterAuth {
     /// |   `/apis`     |  `apis`   |    `/{true_url}`    |
     /// |`/prefix/apis` |  `apis`   |`/prefix/{true_url}` |
     mix_replace_url: String,
+    /// Remove prefix of AuthReq path.
+    /// use for [ctx_to_auth_req]
+    /// Used to remove a fixed prefix from the original URL.
+    auth_path_ignore_prefix: String,
 }
 
 impl Default for SgFilterAuth {
@@ -94,6 +98,7 @@ impl Default for SgFilterAuth {
             header_is_mix_req: "IS_MIX_REQ".to_string(),
             fetch_server_config_path: "/starsysApi/apis".to_string(),
             mix_replace_url: "apis".to_string(),
+            auth_path_ignore_prefix: "/starsysApi".to_string(),
         }
     }
 }
@@ -228,7 +233,7 @@ impl SgPluginFilter for SgFilterAuth {
             return Ok((false, ctx));
         }
         ctx.request.set_header_str(&self.header_is_mix_req, "false")?;
-        let (mut auth_req, req_body) = ctx_to_auth_req(&mut ctx).await?;
+        let (mut auth_req, req_body) = ctx_to_auth_req(&self.auth_path_ignore_prefix, &mut ctx).await?;
 
         match auth_kernel_serv::auth(&mut auth_req, is_true_mix_req).await {
             Ok(auth_result) => {
@@ -360,8 +365,11 @@ async fn mix_req_to_ctx(auth_config: &AuthConfig, mix_replace_url: &str, mut ctx
     Ok(ctx)
 }
 
-async fn ctx_to_auth_req(ctx: &mut SgRoutePluginContext) -> TardisResult<(AuthReq, Bytes)> {
-    let url = ctx.request.get_uri().clone();
+/// # Convert SgRoutePluginContext to AuthReq
+/// Prepare the AuthReq required for the authentication process.
+/// The authentication process requires a URL that has not been rewritten.
+async fn ctx_to_auth_req(ignore_prefix: &str, ctx: &mut SgRoutePluginContext) -> TardisResult<(AuthReq, Bytes)> {
+    let url = ctx.request.get_uri_raw().clone();
     let scheme = url.scheme().map(|s| s.to_string()).unwrap_or("http".to_string());
     let headers = headermap_header_to_hashmap(ctx.request.get_headers())?;
     let req_body = ctx.request.take_body_into_bytes().await?;
@@ -369,7 +377,7 @@ async fn ctx_to_auth_req(ctx: &mut SgRoutePluginContext) -> TardisResult<(AuthRe
     Ok((
         AuthReq {
             scheme: scheme.clone(),
-            path: url.path().to_string(),
+            path: url.path().replace(ignore_prefix, "").to_string(),
             query: url
                 .query()
                 .filter(|q| !q.is_empty())

@@ -15,28 +15,10 @@ publish.workspace = true
 [dependencies]
 serde.workspace = true
 lazy_static.workspace = true
-bios-sdk-invoke = { path = "../../sdk/invoke", features = ["spi_log"] }
+spacegate-kernel.workspace = true
+tardis.workspace = true
+spacegate-lib={path = "../../gateway/spacegate-lib"}
 
-# spacegate-kernel = { version = "0.1.0-alpha.6", features = [
-#     "ws",
-#     "cache",
-#     "k8s",
-# ] }
-spacegate-kernel = { git = "https://github.com/ideal-world/spacegate.git", rev = "1d0bf2593efab948e495c31c0c77fc617911b457",features = [
-   "ws",
-   "cache",
-   "k8s",
-] }
-# spacegate-kernel = { path = "../../../spacegate/kernel", features = [
-#    "ws",
-#    "cache",
-#    "k8s",
-# ] }
-
-jsonpath-rust = "0.3.1"
-bios-auth = { path = "../../support/auth", default-features = false }
-tardis = { workspace = true, features = ["web-client"] }
-ipnet = "2.8.0"
 [dev-dependencies]
 pprof = { version = "0.12.1", features = ["flamegraph"] }
 tardis = { workspace = true, features = ["test", "web-client"] }
