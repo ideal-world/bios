@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - "gateway/spacegate-lib/**"
+      - "support/auth/**"
       - "services/spacegate/**"
       - ".github/workflows/space-gateway-docker-push.yml"
 
