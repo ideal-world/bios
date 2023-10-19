@@ -42,6 +42,7 @@ impl MessageSendListener {
             &ctx,
             cfg.invoke.module_urls.get("iam").expect("missing iam base url"),
         ));
+        // if not pending status, this task may be excuted by other nodes, just return
         if !ReachMessageServ::update_status(&message.id, ReachStatusKind::Pending, ReachStatusKind::Sending, &self.funs, &ctx).await? {
             return Ok(());
         }
@@ -55,6 +56,8 @@ impl MessageSendListener {
                     continue;
                 };
                 to.insert(phone);
+            } else {
+                log::warn!("[Reach] iam get account info error, account_id: {account_id}")
             }
         }
         match self.channel.send(message.rel_reach_channel, &template, &content_replace, &to).await {
