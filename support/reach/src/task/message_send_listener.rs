@@ -1,10 +1,11 @@
 use std::{collections::HashSet, sync::Arc};
 
-use crate::{reach_send_channel::*, reach_config::ReachConfig, reach_consts::*, domain::*, dto::*, reach_init::get_reach_send_channel_map, serv::*};
-use bios_basic::rbum::helper::rbum_scope_helper;
+use crate::{domain::*, dto::*, reach_config::ReachConfig, reach_consts::*, reach_init::get_reach_send_channel_map, reach_send_channel::*, serv::*};
+use bios_basic::rbum::{helper::rbum_scope_helper, serv::rbum_crud_serv::RbumCrudOperation};
 use bios_sdk_invoke::clients::iam_client::IamClient;
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
+    chrono::Utc,
     db::sea_orm::{sea_query::Query, *},
     log, tokio, TardisFunsInst,
 };
@@ -28,6 +29,7 @@ impl Default for MessageSendListener {
 
 impl MessageSendListener {
     async fn execute_send_account(&self, message: message::Model, template: message_template::Model) -> TardisResult<()> {
+        let content_replace: ContentReplace = message.content_replace.parse()?;
         let cfg = self.funs.conf::<ReachConfig>();
         let _lock = self.sync.lock().await;
         let ctx = TardisContext {
@@ -44,7 +46,7 @@ impl MessageSendListener {
             return Ok(());
         }
         let mut to = HashSet::new();
-
+        let start_time = Utc::now();
         let owner_path = rbum_scope_helper::get_pre_paths(RBUM_SCOPE_LEVEL_TENANT as i16, &message.own_paths).unwrap_or_default();
         for account_id in message.to_res_ids.split(ACCOUNT_SPLIT) {
             if let Ok(mut resp) = iam_client.get_account(account_id, &owner_path).await {
@@ -55,12 +57,47 @@ impl MessageSendListener {
                 to.insert(phone);
             }
         }
-        match self.channel.send(message.rel_reach_channel, &template, &message.content_replace.parse()?, &to).await {
+        match self.channel.send(message.rel_reach_channel, &template, &content_replace, &to).await {
             Ok(_) => {
                 ReachMessageServ::update_status(&message.id, ReachStatusKind::Sending, ReachStatusKind::SendSuccess, &self.funs, &ctx).await?;
+                for rel_account_id in to {
+                    ReachMessageLogServ::add_rbum(
+                        &mut ReachMsgLogAddReq {
+                            rbum_add_req: Default::default(),
+                            dnd_time: Default::default(),
+                            rel_account_id,
+                            dnd_strategy: ReachDndStrategyKind::Ignore,
+                            start_time,
+                            end_time: Utc::now(),
+                            failure: false,
+                            fail_message: Default::default(),
+                            rel_reach_message_id: message.id.clone(),
+                        },
+                        &self.funs,
+                        &ctx,
+                    ).await?;
+                }
             }
             Err(e) => {
                 ReachMessageServ::update_status(&message.id, ReachStatusKind::Sending, ReachStatusKind::Fail, &self.funs, &ctx).await?;
+                for rel_account_id in to {
+                    ReachMessageLogServ::add_rbum(
+                        &mut ReachMsgLogAddReq {
+                            rbum_add_req: Default::default(),
+                            dnd_time: Default::default(),
+                            rel_account_id,
+                            dnd_strategy: ReachDndStrategyKind::Ignore,
+                            start_time,
+                            end_time: Utc::now(),
+                            failure: true,
+                            fail_message: e.to_string(),
+                            rel_reach_message_id: message.id.clone(),
+                        },
+                        &self.funs,
+                        &ctx,
+                    ).await?;
+                }
+
                 return Err(e);
             }
         }
