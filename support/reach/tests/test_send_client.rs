@@ -31,9 +31,9 @@ pub async fn test_hw_sms() -> TardisResult<()> {
     let ctx = get_test_ctx();
     let funs = get_tardis_inst();
     let client = reach_invoke::Client::new("http://localhost:8080/reach", ctx, &funs);
-    // client.pwd_send(&phone, &code, &()).await?;
+    client.pwd_send(&phone, &code, &()).await?;
 
-    client.vcode_send(&phone, &code, &()).await?;
+    // client.vcode_send(&phone, &code, &()).await?;
     // wait for send
     tokio::time::sleep(Duration::from_secs(10)).await;
     drop(holder);

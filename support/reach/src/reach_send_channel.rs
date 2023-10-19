@@ -9,7 +9,7 @@ use tardis::{
     mail::mail_client::TardisMailSendReq,
 };
 
-use crate::{reach_config::ReachConfig, domain::message_template, dto::*};
+use crate::{domain::message_template, dto::*, reach_config::ReachConfig};
 
 #[derive(Default, Debug)]
 pub struct GenericTemplate<'t> {
@@ -24,7 +24,7 @@ impl<'t> GenericTemplate<'t> {
     pub fn pwd_template(config: &'t ReachConfig) -> Self {
         Self {
             name: None,
-            content: "{pwd}",
+            content: r#"["{pwd}"]"#,
             sms_from: Some(&config.sms.sms_general_from),
             sms_template_id: Some(&config.sms.sms_pwd_template_id),
             sms_signature: config.sms.sms_general_signature.as_deref(),
