@@ -97,6 +97,7 @@ pub struct ReachMessageSummaryResp {
     pub rel_reach_msg_signature_id: String,
     #[oai(validator(max_length = "255"))]
     pub rel_reach_msg_template_id: String,
+    #[oai(default)]
     pub reach_status: ReachStatusKind,
     pub content_replace: String,
     pub template_content: String,

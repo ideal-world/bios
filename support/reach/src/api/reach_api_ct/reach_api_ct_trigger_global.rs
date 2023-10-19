@@ -6,12 +6,12 @@ use tardis::web::poem::web::Json;
 use tardis::web::poem_openapi;
 use tardis::web::web_resp::{TardisApiResult, TardisResp, Void};
 
-use crate::consts::get_tardis_inst;
+use crate::reach_consts::get_tardis_inst;
 use crate::dto::*;
 use crate::serv::*;
 
 #[cfg(feature = "simple-client")]
-use crate::invoke::Client;
+use crate::reach_invoke::Client;
 #[derive(Clone, Default)]
 /// 用户触达触发全局配置-租户控制台
 pub struct ReachTriggerGlobalConfigCtApi;

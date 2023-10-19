@@ -2,7 +2,7 @@ use bios_basic::rbum::dto::rbum_item_dto::RbumItemAddReq;
 use tardis::{basic::result::TardisResult, log, serde_json::json, testcontainers, tokio};
 
 mod test_reach_common;
-use bios_reach::{consts::*, dto::*, invoke};
+use bios_reach::{reach_consts::*, dto::*, reach_invoke};
 use test_reach_common::*;
 #[tokio::test(flavor = "multi_thread")]
 pub async fn test_ct_api() -> TardisResult<()> {
@@ -14,7 +14,7 @@ pub async fn test_ct_api() -> TardisResult<()> {
     let holder = init_tardis(&docker).await?;
     let ctx = get_test_ctx();
     let funs = get_tardis_inst();
-    let client = invoke::Client::new("http://localhost:8080/reach", ctx, &funs);
+    let client = reach_invoke::Client::new("http://localhost:8080/reach", ctx, &funs);
     const CONTENT_TEMPLATE: &str = "hello {name}, your code is {code}";
     let template_name = random_string(16);
     fn expected_content(name: &str, code: &str) -> String {
@@ -37,9 +37,9 @@ pub async fn test_ct_api() -> TardisResult<()> {
             sms_template_id: "sms-tempalte-id".into(),
             sms_signature: "sms-signature".into(),
             sms_from: "reach@bios.dev".into(),
-            scope_level: Some(0),
-            code: Some("test-code".into()),
-            name: Some(template_name.clone()),
+            scope_level: 0,
+            code: "test-code".into(),
+            name: template_name.clone(),
             note: "test-note".into(),
             icon: "test-icon".into(),
             ..Default::default()
