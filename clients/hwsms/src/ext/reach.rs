@@ -4,9 +4,9 @@ use std::{
 };
 
 use bios_reach::{
-    client::{GenericTemplate, SendChannel},
-    config::ReachConfig,
-    consts::MODULE_CODE,
+    reach_send_channel::{GenericTemplate, SendChannel},
+    reach_config::ReachConfig,
+    reach_consts::MODULE_CODE,
     dto::{ContentReplace, ReachChannelKind},
 };
 use tardis::{

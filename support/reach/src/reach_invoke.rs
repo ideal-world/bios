@@ -14,7 +14,7 @@ impl<'a> Client<'a> {
 }
 
 impl SimpleInvokeClient for Client<'_> {
-    const DOMAIN_CODE: &'static str = crate::consts::DOMAIN_CODE;
+    const DOMAIN_CODE: &'static str = crate::reach_consts::DOMAIN_CODE;
 
     fn get_ctx(&self) -> &tardis::basic::dto::TardisContext {
         self.ctx

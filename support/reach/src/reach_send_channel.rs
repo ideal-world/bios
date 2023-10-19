@@ -9,7 +9,7 @@ use tardis::{
     mail::mail_client::TardisMailSendReq,
 };
 
-use crate::{config::ReachConfig, domain::message_template, dto::*};
+use crate::{reach_config::ReachConfig, domain::message_template, dto::*};
 
 #[derive(Default, Debug)]
 pub struct GenericTemplate<'t> {
