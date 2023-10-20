@@ -51,8 +51,8 @@ impl TryGetable for RbumScopeLevelKind {
         RbumScopeLevelKind::from_int(s).map_err(|_| TryGetError::DbErr(DbErr::RecordNotFound(format!("{pre}:{col}"))))
     }
 
-    fn try_get_by<I: sea_orm::ColIdx>(_res: &QueryResult, _index: I) -> Result<Self, TryGetError> {
-        panic!("not implemented")
+    fn try_get_by<I: sea_orm::ColIdx>(res: &QueryResult, index: I) -> Result<Self, TryGetError> {
+        i16::try_get_by(res, index).map(RbumScopeLevelKind::from_int)?.map_err(|e| TryGetError::DbErr(DbErr::Custom(format!("invalid scope level: {e}"))))
     }
 }
 
