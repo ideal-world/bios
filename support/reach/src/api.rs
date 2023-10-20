@@ -5,7 +5,7 @@ pub use reach_api_cc::*;
 mod reach_api_ct;
 pub use reach_api_ct::*;
 
-mod reach_api_ci; 
+mod reach_api_ci;
 pub use reach_api_ci::*;
 use tardis::{basic::result::TardisResult, web::web_server::TardisWebServer};
 

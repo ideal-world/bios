@@ -1357,6 +1357,7 @@ impl FlowInstServ {
         #[derive(sea_orm::FromQueryResult)]
         pub struct FlowInstanceResult {
             id: String,
+            own_paths: String,
         }
 
         let global_ctx = TardisContext::default();
@@ -1385,19 +1386,23 @@ impl FlowInstServ {
                 .db()
                 .find_dtos::<FlowInstanceResult>(
                     Query::select()
-                        .columns([flow_inst::Column::Id])
+                        .columns([flow_inst::Column::Id, flow_inst::Column::OwnPaths])
                         .from(flow_inst::Entity)
                         .and_where(Expr::col(flow_inst::Column::RelFlowModelId).eq(&flow_transition.rel_flow_model_id))
                         .and_where(Expr::col(flow_inst::Column::CurrentStateId).eq(&flow_transition.from_flow_state_id)),
                 )
                 .await?;
             for flow_inst in flow_insts {
-                let new_vars = Self::get_new_vars(&flow_inst.id, funs, &global_ctx).await?;
+                let ctx = TardisContext {
+                    own_paths: flow_inst.own_paths,
+                    ..global_ctx.clone()
+                };
+                let new_vars = Self::get_new_vars(&flow_inst.id, funs, &ctx).await?;
                 Self::modify_current_vars(
                     &flow_inst.id,
                     &TardisFuns::json.json_to_obj::<HashMap<String, Value>>(new_vars).unwrap_or_default(),
                     funs,
-                    &global_ctx,
+                    &ctx,
                 )
                 .await?;
             }
