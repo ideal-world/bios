@@ -27,7 +27,7 @@ pub struct Model {
     pub update_time: DateTime<Utc>,
     /// 资源作用级别
     #[sea_orm(column_name = "scope_level")]
-    pub scope_level: i16,
+    pub scope_level: Option<i16>,
     /// 编码
     #[sea_orm(column_type = "String(Some(255))")]
     pub code: String,
@@ -98,7 +98,6 @@ impl From<&ReachMessageTemplateAddReq> for ActiveModel {
             icon,
             code,
             name,
-            scope_level,
             sort,
             disabled,
             variables,
@@ -114,6 +113,7 @@ impl From<&ReachMessageTemplateAddReq> for ActiveModel {
             sms_signature,
             sms_from,
         } model);
+        model.scope_level = Set(add_req.scope_level.clone().map(|level|level.to_int()));
         model
     }
 }
@@ -125,7 +125,6 @@ impl From<&ReachMessageTemplateModifyReq> for ActiveModel {
             ..Default::default()
         };
         fill_by_mod_req!(value => {
-            scope_level,
             code,
             name,
             note,
@@ -164,7 +163,7 @@ impl TardisActiveModel for ActiveModel {
             .col(ColumnDef::new(Column::Id).not_null().string().primary_key())
             .col(ColumnDef::new(Column::OwnPaths).not_null().string())
             .col(ColumnDef::new(Column::Owner).not_null().string())
-            .col(ColumnDef::new(Column::ScopeLevel).not_null().small_integer())
+            .col(ColumnDef::new(Column::ScopeLevel).small_integer())
             .col(ColumnDef::new(Column::Code).not_null().string())
             .col(ColumnDef::new(Column::Name).not_null().string())
             .col(ColumnDef::new(Column::Note).not_null().string())

@@ -25,8 +25,6 @@ pub async fn test_ct_api() -> TardisResult<()> {
         let message_add_req = ReachMessageTemplateAddReq {
             rel_reach_channel: ReachChannelKind::Sms,
             content: CONTENT_TEMPLATE.into(),
-            own_paths: ctx.own_paths.clone(),
-            owner: ctx.owner.clone(),
             variables: "name,code".into(),
             level_kind: ReachLevelKind::Normal,
             topic: "hellow".to_string(),
@@ -37,7 +35,6 @@ pub async fn test_ct_api() -> TardisResult<()> {
             sms_template_id: "sms-tempalte-id".into(),
             sms_signature: "sms-signature".into(),
             sms_from: "reach@bios.dev".into(),
-            scope_level: 0,
             code: "test-code".into(),
             name: template_name.clone(),
             note: "test-note".into(),

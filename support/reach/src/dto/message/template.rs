@@ -7,16 +7,16 @@ use tardis::{
 };
 
 use crate::dto::*;
-
+use bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind;
 #[derive(Debug, poem_openapi::Object, Serialize, Deserialize, Default)]
 pub struct ReachMessageTemplateAddReq {
-    pub own_paths: String,
-    pub owner: String,
+    // pub own_paths: String,
+    // pub owner: String,
     // pub create_time: DateTime<Utc>,
     // pub update_time: DateTime<Utc>,
     /// 用户触达等级类型
     #[oai(default)]
-    pub scope_level: i16,
+    pub scope_level: Option<RbumScopeLevelKind>,
     /// 编码
     #[oai(validator(max_length = "255"), default)]
     pub code: String,
@@ -78,7 +78,7 @@ pub struct ReachMessageTemplateAddReq {
 #[derive(Debug, poem_openapi::Object, Serialize, Deserialize, Default)]
 pub struct ReachMessageTemplateModifyReq {
     /// 用户触达等级类型
-    pub scope_level: Option<i16>,
+    pub scope_level: Option<RbumScopeLevelKind>,
     /// 编码
     #[oai(validator(max_length = "255"))]
     pub code: Option<String>,
@@ -151,7 +151,7 @@ pub struct ReachMessageTemplateSummaryResp {
     pub owner: String,
     pub create_time: DateTime<Utc>,
     pub update_time: DateTime<Utc>,
-    pub scope_level: Option<i16>,
+    pub scope_level: Option<RbumScopeLevelKind>,
     /// 编码
     #[oai(validator(max_length = "255"))]
     pub code: Option<String>,
@@ -210,7 +210,7 @@ pub struct ReachMessageTemplateDetailResp {
     pub owner_name: String,
     pub create_time: DateTime<Utc>,
     pub update_time: DateTime<Utc>,
-    pub scope_level: Option<i16>,
+    pub scope_level: Option<RbumScopeLevelKind>,
     /// 编码
     #[oai(validator(max_length = "255"))]
     pub code: Option<String>,
