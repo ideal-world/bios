@@ -1282,7 +1282,16 @@ impl FlowInstServ {
         match condition.right_value {
             FlowTransitionFrontActionRightValue::ChangeContent => {
                 if let Some(left_value) = current_vars.get(&condition.left_value) {
-                    Ok(condition.relevance_relation.check_conform(left_value.as_str().unwrap_or_default().to_string(), condition.change_content.clone().unwrap_or_default().as_str().unwrap_or(condition.change_content.clone().unwrap_or_default().to_string().as_str()).to_string()))
+                    Ok(condition.relevance_relation.check_conform(
+                        left_value.as_str().unwrap_or_default().to_string(),
+                        condition
+                            .change_content
+                            .clone()
+                            .unwrap_or_default()
+                            .as_str()
+                            .unwrap_or(condition.change_content.clone().unwrap_or_default().to_string().as_str())
+                            .to_string(),
+                    ))
                 } else {
                     Ok(false)
                 }
@@ -1384,7 +1393,13 @@ impl FlowInstServ {
                 .await?;
             for flow_inst in flow_insts {
                 let new_vars = Self::get_new_vars(&flow_inst.id, funs, &global_ctx).await?;
-                Self::modify_current_vars(&flow_inst.id, &TardisFuns::json.json_to_obj::<HashMap<String, Value>>(new_vars).unwrap_or_default(), funs, &global_ctx).await?;
+                Self::modify_current_vars(
+                    &flow_inst.id,
+                    &TardisFuns::json.json_to_obj::<HashMap<String, Value>>(new_vars).unwrap_or_default(),
+                    funs,
+                    &global_ctx,
+                )
+                .await?;
             }
         }
 

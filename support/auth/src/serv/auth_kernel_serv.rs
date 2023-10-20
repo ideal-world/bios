@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use tardis::chrono::{TimeZone, Utc};
+use tardis::chrono::{NaiveDateTime, Utc};
 use tardis::{
     basic::{dto::TardisContext, error::TardisError, result::TardisResult},
     cache::cache_client::TardisCacheClient,
@@ -309,7 +309,7 @@ async fn parsing_base_ak(ak_authorization: &str, req: &AuthReq, config: &AuthCon
             "401-auth-req-ak-not-exist",
         ));
     }
-    let req_head_time = if let Ok(date_time) = Utc.datetime_from_str(req_date, &config.head_date_format) {
+    let req_head_time = if let Ok(date_time) = NaiveDateTime::parse_from_str(req_date, &config.head_date_format) {
         date_time.timestamp_millis()
     } else {
         return Err(TardisError::bad_request("[Auth] bad date format", "401-auth-req-date-incorrect"));

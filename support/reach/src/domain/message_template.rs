@@ -96,6 +96,9 @@ impl From<&ReachMessageTemplateAddReq> for ActiveModel {
         fill_by_add_req!(add_req => {
             note,
             icon,
+            code,
+            name,
+            scope_level,
             sort,
             disabled,
             variables,
@@ -111,13 +114,6 @@ impl From<&ReachMessageTemplateAddReq> for ActiveModel {
             sms_signature,
             sms_from,
         } model);
-        fill_by_mod_req! {
-            add_req => {
-                code,
-                name,
-                scope_level,
-            } model
-        }
         model
     }
 }

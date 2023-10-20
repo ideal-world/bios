@@ -255,10 +255,8 @@ impl SearchDataTypeKind {
         )
     }
 
-    pub(crate) fn to_pg_group(&self, column_name: &str, multi_values: bool, time_window_fun: &Option<SearchQueryTimeWindowKind>) -> Option<String> {
-        if multi_values {
-            Some(format!("unnest({})", column_name))
-        } else if let Some(time_window_fun) = time_window_fun {
+    pub(crate) fn to_pg_group(&self, column_name: &str, time_window_fun: &Option<SearchQueryTimeWindowKind>) -> Option<String> {
+        if let Some(time_window_fun) = time_window_fun {
             if self != &SearchDataTypeKind::Date && self != &SearchDataTypeKind::DateTime {
                 return None;
             }

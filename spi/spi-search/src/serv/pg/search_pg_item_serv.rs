@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 
-use bios_basic::{basic_enumeration::BasicQueryOpKind, dto::BasicQueryCondInfo, helper::db_helper, spi::spi_funs::SpiBsInst};
 use tardis::{
     basic::{dto::TardisContext, error::TardisError, result::TardisResult},
     chrono::Utc,
@@ -9,9 +8,11 @@ use tardis::{
         sea_orm::{FromQueryResult, Value},
     },
     serde_json::{self, json, Map},
-    web::web_resp::TardisPage,
-    TardisFuns, TardisFunsInst,
+    TardisFuns,
+    TardisFunsInst, web::web_resp::TardisPage,
 };
+
+use bios_basic::{basic_enumeration::BasicQueryOpKind, dto::BasicQueryCondInfo, helper::db_helper, spi::spi_funs::SpiBsInst};
 
 use crate::dto::search_item_dto::{
     AdvBasicQueryCondInfo, SearchItemAddReq, SearchItemModifyReq, SearchItemSearchQScopeKind, SearchItemSearchReq, SearchItemSearchResp, SearchQueryMetricsReq,
@@ -709,7 +710,9 @@ pub async fn query_metrics(query_req: &SearchQueryMetricsReq, funs: &TardisFunsI
             }
             sql_part_or_wheres.push(sql_part_and_wheres.join(" AND "));
         }
-        sql_part_wheres.push(format!("( {} )", sql_part_or_wheres.join(" OR ")));
+        if !sql_part_or_wheres.is_empty() {
+            sql_part_wheres.push(format!("( {} )", sql_part_or_wheres.join(" OR ")));
+        }
     }
 
     // Add visit_keys filter
@@ -734,7 +737,7 @@ pub async fn query_metrics(query_req: &SearchQueryMetricsReq, funs: &TardisFunsI
         }
         if !where_visit_keys_fragments.is_empty() {
             sql_part_wheres.push(format!(
-                " AND (fact.visit_keys IS NULL OR ({}))",
+                " (fact.visit_keys IS NULL OR ({}))",
                 where_visit_keys_fragments.join(if query_req.ctx.cond_by_or.unwrap_or(false) { " OR " } else { " AND " })
             ));
         }
@@ -1094,7 +1097,11 @@ pub async fn query_metrics(query_req: &SearchQueryMetricsReq, funs: &TardisFunsI
     }
     for group in &query_req.group {
         if group.in_ext.unwrap_or(true) {
-            sql_part_inner_selects.push(format!("fact.ext ->> '{}' AS {}", &group.code, &group.code));
+            if group.multi_values.unwrap_or(false) {
+                sql_part_inner_selects.push(format!("jsonb_array_elements(fact.ext -> '{}') AS {}", &group.code, &group.code));
+            }else {
+                sql_part_inner_selects.push(format!("fact.ext ->> '{}' AS {}", &group.code, &group.code));
+            }
         } else {
             sql_part_inner_selects.push(format!("fact.{} AS {}", &group.code, &group.code));
         }
@@ -1105,7 +1112,7 @@ pub async fn query_metrics(query_req: &SearchQueryMetricsReq, funs: &TardisFunsI
     // (column name with fun, alias name, show name)
     let mut sql_part_group_infos = vec![];
     for group in &query_req.group {
-        if let Some(column_name_with_fun) = group.data_type.to_pg_group(&format!("_.{}", &group.code), group.multi_values.unwrap_or(false), &group.time_window) {
+        if let Some(column_name_with_fun) = group.data_type.to_pg_group(&format!("_.{}", &group.code),  &group.time_window) {
             let alias_name = format!(
                 "{}{}{FUNCTION_SUFFIX_FLAG}{}",
                 group.code,
