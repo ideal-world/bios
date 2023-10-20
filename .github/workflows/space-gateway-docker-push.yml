@@ -6,6 +6,7 @@ on:
       - "gateway/spacegate-lib/**"
       - "support/auth/**"
       - "services/spacegate/**"
+      - "Cargo.toml"
       - ".github/workflows/space-gateway-docker-push.yml"
 
 jobs:
