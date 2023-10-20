@@ -480,23 +480,23 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
                         if ext_item.op == BasicQueryOpKind::In {
                             if !value.is_empty() {
                                 sql_and_where.push(format!(
-                                    "{} LIKE ANY (ARRAY[{}])",
+                                    "{} IN ({})",
                                     ext_item.field,
                                     (0..value.len()).map(|idx| format!("${}", sql_vals.len() + idx + 1)).collect::<Vec<String>>().join(",")
                                 ));
                                 for val in value {
-                                    sql_vals.push(Value::from(format!("{val}%")));
+                                    sql_vals.push(val);
                                 }
                             }
                         } else if ext_item.op == BasicQueryOpKind::NotIn {
                             if !value.is_empty() {
                                 sql_and_where.push(format!(
-                                    "{} NOT LIKE ANY (ARRAY[{}])",
+                                    "{} NOT IN ({})",
                                     ext_item.field,
                                     (0..value.len()).map(|idx| format!("${}", sql_vals.len() + idx + 1)).collect::<Vec<String>>().join(",")
                                 ));
                                 for val in value {
-                                    sql_vals.push(Value::from(format!("{val}%")));
+                                    sql_vals.push(val);
                                 }
                             }
                         } else if ext_item.op == BasicQueryOpKind::IsNull {
