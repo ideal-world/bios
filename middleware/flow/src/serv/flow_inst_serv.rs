@@ -521,7 +521,7 @@ impl FlowInstServ {
                 .map(|flow_inst| async {
                     let req = find_req.iter().find(|req| req.flow_inst_id == flow_inst.id).unwrap();
                     let flow_model = flow_models.iter().find(|model| model.id == flow_inst.rel_flow_model_id).unwrap();
-                    Self::do_find_next_transitions(flow_inst, flow_model, None, &req.vars, funs, ctx).await.unwrap()
+                    Self::do_find_next_transitions(flow_inst, flow_model, None, &req.vars, false, funs, ctx).await.unwrap()
                 })
                 .collect_vec(),
         )
@@ -550,7 +550,7 @@ impl FlowInstServ {
             ctx,
         )
         .await?;
-        let state_and_next_transitions = Self::do_find_next_transitions(&flow_inst, &flow_model, None, &next_req.vars, funs, ctx).await?;
+        let state_and_next_transitions = Self::do_find_next_transitions(&flow_inst, &flow_model, None, &next_req.vars, false, funs, ctx).await?;
         Ok(state_and_next_transitions.next_flow_transitions)
     }
 
@@ -588,7 +588,7 @@ impl FlowInstServ {
     pub async fn transfer(flow_inst_id: &str, transfer_req: &FlowInstTransferReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<FlowInstTransferResp> {
         // record updated instance id
         let mut updated_instance_list: Vec<String> = Vec::new();
-        let result = Self::do_transfer(flow_inst_id, transfer_req, &mut updated_instance_list, funs, ctx).await;
+        let result = Self::do_transfer(flow_inst_id, transfer_req, &mut updated_instance_list, false, funs, ctx).await;
 
         for updated_instance_id in updated_instance_list {
             Self::do_front_change(&updated_instance_id, ctx, funs).await?;
@@ -602,6 +602,7 @@ impl FlowInstServ {
         flow_inst_id: &str,
         transfer_req: &FlowInstTransferReq,
         updated_instance_list: &mut Vec<String>,
+        skip_filter: bool,
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<FlowInstTransferResp> {
@@ -629,6 +630,7 @@ impl FlowInstServ {
             &flow_model,
             Some(transfer_req.flow_transition_id.to_string()),
             &transfer_req.vars,
+            skip_filter,
             funs,
             ctx,
         )
@@ -774,7 +776,7 @@ impl FlowInstServ {
         if !post_changes.is_empty() {
             Self::do_post_change(&flow_inst_detail, &flow_model, post_changes, updated_instance_list, ctx, funs).await?;
         }
-        let next_flow_transitions = Self::do_find_next_transitions(&flow_inst_detail, &flow_model, None, &None, funs, ctx).await?.next_flow_transitions;
+        let next_flow_transitions = Self::do_find_next_transitions(&flow_inst_detail, &flow_model, None, &None, skip_filter, funs, ctx).await?.next_flow_transitions;
 
         Ok(FlowInstTransferResp {
             prev_flow_state_id: prev_flow_state.id,
@@ -812,7 +814,7 @@ impl FlowInstServ {
                 FlowTransitionActionChangeKind::Var => {
                     if let Some(mut change_info) = post_change.var_change_info {
                         if change_info.changed_kind.is_some() && change_info.changed_kind.unwrap() == FlowTransitionActionByVarChangeInfoChangedKind::AutoGetOperateTime {
-                            change_info.changed_val = Some(json!(Utc::now().to_rfc3339_opts(SecondsFormat::Millis, true)));
+                            change_info.changed_val = Some(json!(Utc::now().to_rfc3339_opts(SecondsFormat::Secs, true)));
                         }
                         let rel_tag = change_info.obj_tag.unwrap_or_default();
                         if !rel_tag.is_empty() {
@@ -1003,7 +1005,7 @@ impl FlowInstServ {
                 ctx,
             )
             .await?;
-            let transition_resp = Self::do_find_next_transitions(&rel_inst, &flow_model, None, &None, funs, ctx)
+            let transition_resp = Self::do_find_next_transitions(&rel_inst, &flow_model, None, &None, false, funs, ctx)
                 .await?
                 .next_flow_transitions
                 .into_iter()
@@ -1019,6 +1021,7 @@ impl FlowInstServ {
                         vars: None,
                     },
                     updated_instance_list,
+                    true,
                     funs,
                     ctx,
                 )
@@ -1060,6 +1063,7 @@ impl FlowInstServ {
         flow_model: &FlowModelDetailResp,
         spec_flow_transition_id: Option<String>,
         req_vars: &Option<HashMap<String, Value>>,
+        skip_filter: bool,
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<FlowInstFindStateAndTransitionsResp> {
@@ -1072,6 +1076,9 @@ impl FlowInstServ {
                     && (spec_flow_transition_id.is_none() || &model_transition.id == spec_flow_transition_id.as_ref().unwrap())
             })
             .filter(|model_transition| {
+                if skip_filter {
+                    return true;
+                }
                 if !model_transition.guard_by_creator
                     && model_transition.guard_by_spec_account_ids.is_empty()
                     && model_transition.guard_by_spec_role_ids.is_empty()
@@ -1275,7 +1282,16 @@ impl FlowInstServ {
         match condition.right_value {
             FlowTransitionFrontActionRightValue::ChangeContent => {
                 if let Some(left_value) = current_vars.get(&condition.left_value) {
-                    Ok(condition.relevance_relation.check_conform(left_value.as_str().unwrap_or_default().to_string(), condition.change_content.clone().unwrap_or_default().to_string()))
+                    Ok(condition.relevance_relation.check_conform(
+                        left_value.as_str().unwrap_or_default().to_string(),
+                        condition
+                            .change_content
+                            .clone()
+                            .unwrap_or_default()
+                            .as_str()
+                            .unwrap_or(condition.change_content.clone().unwrap_or_default().to_string().as_str())
+                            .to_string(),
+                    ))
                 } else {
                     Ok(false)
                 }
@@ -1292,7 +1308,7 @@ impl FlowInstServ {
             }
             FlowTransitionFrontActionRightValue::RealTime => {
                 if let Some(left_value) = current_vars.get(&condition.left_value) {
-                    Ok(condition.relevance_relation.check_conform(left_value.as_str().unwrap_or_default().to_string(), Utc::now().to_string()))
+                    Ok(condition.relevance_relation.check_conform(left_value.as_str().unwrap_or_default().to_string(), Utc::now().to_rfc3339_opts(SecondsFormat::Secs, true)))
                 } else {
                     Ok(false)
                 }
@@ -1377,7 +1393,13 @@ impl FlowInstServ {
                 .await?;
             for flow_inst in flow_insts {
                 let new_vars = Self::get_new_vars(&flow_inst.id, funs, &global_ctx).await?;
-                Self::modify_current_vars(&flow_inst.id, &TardisFuns::json.json_to_obj::<HashMap<String, Value>>(new_vars).unwrap_or_default(), funs, &global_ctx).await?;
+                Self::modify_current_vars(
+                    &flow_inst.id,
+                    &TardisFuns::json.json_to_obj::<HashMap<String, Value>>(new_vars).unwrap_or_default(),
+                    funs,
+                    &global_ctx,
+                )
+                .await?;
             }
         }
 

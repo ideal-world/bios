@@ -27,6 +27,19 @@ pub struct RbumItemAddReq {
     pub disabled: Option<bool>,
 }
 
+impl Default for RbumItemAddReq {
+    fn default() -> Self {
+        Self {
+            id: Default::default(),
+            code: Default::default(),
+            name: TrimString::from(""),
+            rel_rbum_kind_id: Default::default(),
+            rel_rbum_domain_id: Default::default(),
+            scope_level: Default::default(),
+            disabled: Default::default(),
+        }
+    }
+}
 /// For security reasons, this object cannot be used as an input to the API
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(default)]

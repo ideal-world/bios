@@ -188,15 +188,17 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
                         "id": trans_complate.id.clone(),
                         "action_by_front_changes": [
                             {
-                                "relevance_relation": "=",
+                                "relevance_relation": "in",
                                 "relevance_label": "包含",
                                 "left_value": "status",
                                 "left_label": "状态",
-                                "right_value": "select_field",
+                                "right_value": "change_content",
                                 "select_field": "status",
-                                "change_content": null,
+                                "change_content": [
+                                    "xxx"
+                                  ],
                                 "select_field_label": "status",
-                                "change_content_label": null
+                                "change_content_label": "x"
                             }
                         ]
                     }
