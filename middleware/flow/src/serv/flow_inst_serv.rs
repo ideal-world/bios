@@ -812,7 +812,7 @@ impl FlowInstServ {
                 FlowTransitionActionChangeKind::Var => {
                     if let Some(mut change_info) = post_change.var_change_info {
                         if change_info.changed_kind.is_some() && change_info.changed_kind.unwrap() == FlowTransitionActionByVarChangeInfoChangedKind::AutoGetOperateTime {
-                            change_info.changed_val = Some(json!(Utc::now().to_rfc3339_opts(SecondsFormat::Millis, true)));
+                            change_info.changed_val = Some(json!(Utc::now().to_rfc3339_opts(SecondsFormat::Secs, true)));
                         }
                         let rel_tag = change_info.obj_tag.unwrap_or_default();
                         if !rel_tag.is_empty() {
@@ -1275,7 +1275,7 @@ impl FlowInstServ {
         match condition.right_value {
             FlowTransitionFrontActionRightValue::ChangeContent => {
                 if let Some(left_value) = current_vars.get(&condition.left_value) {
-                    Ok(condition.relevance_relation.check_conform(left_value.as_str().unwrap_or_default().to_string(), condition.change_content.clone().unwrap_or_default().to_string()))
+                    Ok(condition.relevance_relation.check_conform(left_value.as_str().unwrap_or_default().to_string(), condition.change_content.clone().unwrap_or_default().as_str().unwrap_or_default().to_string()))
                 } else {
                     Ok(false)
                 }
