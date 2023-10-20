@@ -179,33 +179,6 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
     let trans_complate = req_model_agg.states.iter().find(|state| state.name == "进行中").unwrap().transitions.iter().find(|trans| trans.name == "完成").unwrap();
     let trans_close = req_model_agg.states.iter().find(|state| state.name == "进行中").unwrap().transitions.iter().find(|trans| trans.name == "关闭").unwrap();
 
-    // let _: Void = flow_client
-    //     .patch(
-    //         &format!("/cc/model/{}", req_model_id),
-    //         &json!({
-    //             "modify_transitions": [
-    //                 {
-    //                     "id": trans_complate.id.clone(),
-    //                     "action_by_front_changes": [
-    //                         {
-    //                             "relevance_relation": "in",
-    //                             "relevance_label": "包含",
-    //                             "left_value": "status",
-    //                             "left_label": "状态",
-    //                             "right_value": "change_content",
-    //                             "select_field": "status",
-    //                             "change_content": [
-    //                                 "xxx"
-    //                               ],
-    //                             "select_field_label": "status",
-    //                             "change_content_label": "x"
-    //                         }
-    //                     ]
-    //                 }
-    //             ]
-    //         }),
-    //     )
-    //     .await;
     let _: Void = flow_client
         .patch(
             &format!("/cc/model/{}", req_model_id),
