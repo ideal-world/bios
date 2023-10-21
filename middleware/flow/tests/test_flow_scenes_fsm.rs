@@ -25,6 +25,7 @@ use tardis::basic::dto::TardisContext;
 use tardis::basic::result::TardisResult;
 use tardis::log::info;
 use tardis::serde_json::json;
+use tardis::tokio;
 use tardis::web::poem_openapi::types::Type;
 use tardis::web::web_resp::{TardisPage, Void};
 use tardis::TardisFuns;
@@ -776,6 +777,7 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
         )
         .await;
     let _: Void = flow_client.get("/ci/inst/trigger_front_action").await;
+    tokio::time::sleep(tokio::time::Duration::from_secs(10)).await;
     let state_and_next_transitions: Vec<FlowInstFindStateAndTransitionsResp> = flow_client
         .put(
             "/cc/inst/batch/state_transitions",

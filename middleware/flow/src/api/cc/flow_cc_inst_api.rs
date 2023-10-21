@@ -92,7 +92,7 @@ impl FlowCcInstApi {
         let mut funs = flow_constants::get_tardis_inst();
         FlowInstServ::check_transfer_vars(&flow_inst_id.0, &transfer_req.0, &funs, &ctx.0).await?;
         funs.begin().await?;
-        let result = FlowInstServ::transfer(&flow_inst_id.0, &transfer_req.0, &funs, &ctx.0).await?;
+        let result = FlowInstServ::transfer(&flow_inst_id.0, &transfer_req.0, false, &funs, &ctx.0).await?;
         funs.commit().await?;
         TardisResp::ok(result)
     }
