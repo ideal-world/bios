@@ -585,10 +585,16 @@ impl FlowInstServ {
         Ok(())
     }
 
-    pub async fn transfer(flow_inst_id: &str, transfer_req: &FlowInstTransferReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<FlowInstTransferResp> {
+    pub async fn transfer(
+        flow_inst_id: &str,
+        transfer_req: &FlowInstTransferReq,
+        skip_filter: bool,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<FlowInstTransferResp> {
         // record updated instance id
         let mut updated_instance_list: Vec<String> = Vec::new();
-        let result = Self::do_transfer(flow_inst_id, transfer_req, &mut updated_instance_list, false, funs, ctx).await;
+        let result = Self::do_transfer(flow_inst_id, transfer_req, &mut updated_instance_list, skip_filter, funs, ctx).await;
 
         for updated_instance_id in updated_instance_list {
             Self::do_front_change(&updated_instance_id, ctx, funs).await?;
@@ -1253,6 +1259,7 @@ impl FlowInstServ {
                         message: None,
                         vars: None,
                     },
+                    true,
                     funs,
                     ctx,
                 )
