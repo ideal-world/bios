@@ -182,33 +182,6 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
     let _: Void = flow_client
         .patch(
             &format!("/cc/model/{}", req_model_id),
-            &json!({
-                "modify_transitions": [
-                    {
-                        "id": trans_complate.id.clone(),
-                        "action_by_front_changes": [
-                            {
-                                "relevance_relation": "in",
-                                "relevance_label": "包含",
-                                "left_value": "status",
-                                "left_label": "状态",
-                                "right_value": "change_content",
-                                "select_field": "status",
-                                "change_content": [
-                                    "xxx"
-                                  ],
-                                "select_field_label": "status",
-                                "change_content_label": "x"
-                            }
-                        ]
-                    }
-                ]
-            }),
-        )
-        .await;
-    let _: Void = flow_client
-        .patch(
-            &format!("/cc/model/{}", req_model_id),
             &FlowModelModifyReq {
                 init_state_id: Some(init_state_id.clone()),
                 modify_transitions: Some(vec![
@@ -764,7 +737,7 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
         .await;
     assert_eq!(state_and_next_transitions[0].next_flow_transitions.len(), 1);
     // handle front change
-    let current_vars = HashMap::from([("status".to_string(), json!("xxx"))]);
+    let current_vars = HashMap::from([("status".to_string(), json!("xxx")), ("handle_time".to_string(), json!("2023-10-10"))]);
     let _: Void = flow_client
         .patch(
             &format!("/cc/inst/{}/modify_current_vars", req_inst_id2),
@@ -780,9 +753,38 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
             }],
         )
         .await;
-    assert_eq!(state_and_next_transitions[0].current_flow_state_name, "已完成");
     //
+    let _: Void = flow_client
+        .patch(
+            &format!("/cc/model/{}", models.get("REQ").unwrap().id),
+            &json!({
+                "modify_transitions": [
+                    {
+                        "id": state_and_next_transitions[0].next_flow_transitions[0].next_flow_transition_id.clone(),
+                        "action_by_front_changes": [
+                            {
+                                "relevance_relation": "<",
+                                "relevance_label": "包含",
+                                "left_value": "handle_time",
+                                "left_label": "状态",
+                                "right_value": "real_time"
+                            }
+                        ]
+                    }
+                ]
+            }),
+        )
+        .await;
     let _: Void = flow_client.get("/ci/inst/trigger_front_action").await;
-
+    let state_and_next_transitions: Vec<FlowInstFindStateAndTransitionsResp> = flow_client
+        .put(
+            "/cc/inst/batch/state_transitions",
+            &vec![FlowInstFindStateAndTransitionsReq {
+                flow_inst_id: req_inst_id2.clone(),
+                vars: None,
+            }],
+        )
+        .await;
+    assert_eq!(state_and_next_transitions[0].current_flow_state_name, "已完成");
     Ok(())
 }

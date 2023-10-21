@@ -8,8 +8,8 @@ use tardis::{
         sea_orm::{FromQueryResult, Value},
     },
     serde_json::{self, json, Map},
-    TardisFuns,
-    TardisFunsInst, web::web_resp::TardisPage,
+    web::web_resp::TardisPage,
+    TardisFuns, TardisFunsInst,
 };
 
 use bios_basic::{basic_enumeration::BasicQueryOpKind, dto::BasicQueryCondInfo, helper::db_helper, spi::spi_funs::SpiBsInst};
@@ -1099,7 +1099,7 @@ pub async fn query_metrics(query_req: &SearchQueryMetricsReq, funs: &TardisFunsI
         if group.in_ext.unwrap_or(true) {
             if group.multi_values.unwrap_or(false) {
                 sql_part_inner_selects.push(format!("jsonb_array_elements(fact.ext -> '{}') AS {}", &group.code, &group.code));
-            }else {
+            } else {
                 sql_part_inner_selects.push(format!("fact.ext ->> '{}' AS {}", &group.code, &group.code));
             }
         } else {
@@ -1112,7 +1112,7 @@ pub async fn query_metrics(query_req: &SearchQueryMetricsReq, funs: &TardisFunsI
     // (column name with fun, alias name, show name)
     let mut sql_part_group_infos = vec![];
     for group in &query_req.group {
-        if let Some(column_name_with_fun) = group.data_type.to_pg_group(&format!("_.{}", &group.code),  &group.time_window) {
+        if let Some(column_name_with_fun) = group.data_type.to_pg_group(&format!("_.{}", &group.code), &group.time_window) {
             let alias_name = format!(
                 "{}{}{FUNCTION_SUFFIX_FLAG}{}",
                 group.code,

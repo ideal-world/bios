@@ -78,7 +78,8 @@ impl MessageSendListener {
                         },
                         &self.funs,
                         &ctx,
-                    ).await?;
+                    )
+                    .await?;
                 }
             }
             Err(e) => {
@@ -98,7 +99,8 @@ impl MessageSendListener {
                         },
                         &self.funs,
                         &ctx,
-                    ).await?;
+                    )
+                    .await?;
                 }
 
                 return Err(e);
