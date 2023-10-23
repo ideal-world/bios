@@ -7,8 +7,8 @@ use tardis::basic::result::TardisResult;
 use tardis::db::reldb_client::TardisActiveModel;
 
 use tardis::db::sea_orm::sea_query::{Query, SelectStatement};
-use tardis::db::sea_orm::EntityName;
 use tardis::db::sea_orm::{ColumnTrait, Set};
+use tardis::db::sea_orm::{EntityName, Iterable};
 use tardis::{TardisFuns, TardisFunsInst};
 
 pub struct ReachMessageLogServ;
@@ -38,6 +38,7 @@ impl RbumCrudOperation<message_log::ActiveModel, ReachMsgLogAddReq, ReachMsgLogM
 
     async fn package_query(is_detail: bool, filter: &ReachMsgLogFilterReq, _: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<SelectStatement> {
         let mut query = Query::select();
+        query.columns(message_log::Column::iter().map(|c| (message_log::Entity, c)));
         query.from(message_log::Entity);
         if let Some(id) = &filter.rel_reach_message_id {
             query.and_where(message_log::Column::RelReachMessageId.eq(id));

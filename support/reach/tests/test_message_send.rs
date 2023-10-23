@@ -15,7 +15,7 @@ pub async fn test_ct_api() -> TardisResult<()> {
     let ctx = get_test_ctx();
     let funs = get_tardis_inst();
     let client = reach_invoke::Client::new("http://localhost:8080/reach", ctx, &funs);
-    const CONTENT_TEMPLATE: &str = "hello {name}, your code is {code}";
+    const CONTENT_TEMPLATE: &str = "[\"hello {name}, your code is {code}\"]";
     let template_name = random_string(16);
     fn expected_content(name: &str, code: &str) -> String {
         format!(r#"["hello {name}, your code is {code}"]"#)
@@ -25,8 +25,6 @@ pub async fn test_ct_api() -> TardisResult<()> {
         let message_add_req = ReachMessageTemplateAddReq {
             rel_reach_channel: ReachChannelKind::Sms,
             content: CONTENT_TEMPLATE.into(),
-            own_paths: ctx.own_paths.clone(),
-            owner: ctx.owner.clone(),
             variables: "name,code".into(),
             level_kind: ReachLevelKind::Normal,
             topic: "hellow".to_string(),
@@ -37,7 +35,6 @@ pub async fn test_ct_api() -> TardisResult<()> {
             sms_template_id: "sms-tempalte-id".into(),
             sms_signature: "sms-signature".into(),
             sms_from: "reach@bios.dev".into(),
-            scope_level: 0,
             code: "test-code".into(),
             name: template_name.clone(),
             note: "test-note".into(),
@@ -254,6 +251,10 @@ pub async fn test_ct_api() -> TardisResult<()> {
         log::info!("latest message for {name}: {:?}", msg);
         let msg = msg.expect("message is empty");
         assert_eq!(msg, expected_content(name, &code));
+
+        // should have log now
+        let logs = client.find_msg_log_paged(Some(1), Some(10), None).await?;
+        dbg!(logs);
     }
 
     drop(holder);

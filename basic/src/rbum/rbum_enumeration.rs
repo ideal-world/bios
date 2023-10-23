@@ -11,7 +11,7 @@ use tardis::derive_more::Display;
 #[cfg(feature = "default")]
 use tardis::web::poem_openapi;
 
-#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[derive(Display, Clone, Debug, PartialEq, Eq, Serialize)]
 #[cfg_attr(feature = "default", derive(poem_openapi::Enum))]
 pub enum RbumScopeLevelKind {
     Private,
@@ -19,6 +19,22 @@ pub enum RbumScopeLevelKind {
     L1,
     L2,
     L3,
+}
+
+impl<'de> Deserialize<'de> for RbumScopeLevelKind {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        String::deserialize(deserializer).and_then(|s| match s.to_lowercase().as_str() {
+            "private" => Ok(RbumScopeLevelKind::Private),
+            "root" => Ok(RbumScopeLevelKind::Root),
+            "l1" => Ok(RbumScopeLevelKind::L1),
+            "l2" => Ok(RbumScopeLevelKind::L2),
+            "l3" => Ok(RbumScopeLevelKind::L3),
+            _ => Err(serde::de::Error::custom(format!("invalid RbumScopeLevelKind: {s}"))),
+        })
+    }
 }
 
 impl RbumScopeLevelKind {
@@ -51,8 +67,8 @@ impl TryGetable for RbumScopeLevelKind {
         RbumScopeLevelKind::from_int(s).map_err(|_| TryGetError::DbErr(DbErr::RecordNotFound(format!("{pre}:{col}"))))
     }
 
-    fn try_get_by<I: sea_orm::ColIdx>(_res: &QueryResult, _index: I) -> Result<Self, TryGetError> {
-        panic!("not implemented")
+    fn try_get_by<I: sea_orm::ColIdx>(res: &QueryResult, index: I) -> Result<Self, TryGetError> {
+        i16::try_get_by(res, index).map(RbumScopeLevelKind::from_int)?.map_err(|e| TryGetError::DbErr(DbErr::Custom(format!("invalid scope level: {e}"))))
     }
 }
 
