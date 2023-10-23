@@ -1,4 +1,5 @@
 use bios_basic::dto::BasicQueryCondInfo;
+use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use strum::Display;
 use tardis::{basic::field::TrimString, db::sea_orm, serde_json::Value, web::poem_openapi, TardisFuns};
@@ -384,6 +385,9 @@ pub enum FlowTransitionFrontActionInfoRelevanceRelation {
 
 impl FlowTransitionFrontActionInfoRelevanceRelation {
     pub fn check_conform(&self, left_value: String, right_value: String) -> bool {
+        if left_value.is_empty() {
+            return false;
+        }
         match self {
             FlowTransitionFrontActionInfoRelevanceRelation::Eq => left_value == right_value,
             FlowTransitionFrontActionInfoRelevanceRelation::Ne => left_value != right_value,
@@ -393,8 +397,22 @@ impl FlowTransitionFrontActionInfoRelevanceRelation {
             FlowTransitionFrontActionInfoRelevanceRelation::Le => left_value <= right_value,
             FlowTransitionFrontActionInfoRelevanceRelation::Like => left_value.contains(&right_value),
             FlowTransitionFrontActionInfoRelevanceRelation::NotLike => !left_value.contains(&right_value),
-            FlowTransitionFrontActionInfoRelevanceRelation::In => TardisFuns::json.str_to_obj::<Vec<String>>(&right_value).unwrap_or_default().contains(&left_value),
-            FlowTransitionFrontActionInfoRelevanceRelation::NotIn => !TardisFuns::json.str_to_obj::<Vec<String>>(&right_value).unwrap_or_default().contains(&left_value),
+            FlowTransitionFrontActionInfoRelevanceRelation::In => {
+                TardisFuns::json
+                .str_to_obj::<Vec<Value>>(&right_value)
+                .unwrap()
+                .into_iter()
+                .map(|item| item.as_str().unwrap_or(item.to_string().as_str()).to_string())
+                .collect_vec()
+                .contains(&left_value)
+            },
+            FlowTransitionFrontActionInfoRelevanceRelation::NotIn => !TardisFuns::json
+                .str_to_obj::<Vec<Value>>(&right_value)
+                .unwrap()
+                .into_iter()
+                .map(|item| item.as_str().unwrap_or(item.to_string().as_str()).to_string())
+                .collect_vec()
+                .contains(&left_value),
             FlowTransitionFrontActionInfoRelevanceRelation::Between => {
                 let time_interval = TardisFuns::json.str_to_obj::<Vec<String>>(&right_value).unwrap_or_default();
                 if time_interval.len() != 2 {
