@@ -585,10 +585,16 @@ impl FlowInstServ {
         Ok(())
     }
 
-    pub async fn transfer(flow_inst_id: &str, transfer_req: &FlowInstTransferReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<FlowInstTransferResp> {
+    pub async fn transfer(
+        flow_inst_id: &str,
+        transfer_req: &FlowInstTransferReq,
+        skip_filter: bool,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<FlowInstTransferResp> {
         // record updated instance id
         let mut updated_instance_list: Vec<String> = Vec::new();
-        let result = Self::do_transfer(flow_inst_id, transfer_req, &mut updated_instance_list, false, funs, ctx).await;
+        let result = Self::do_transfer(flow_inst_id, transfer_req, &mut updated_instance_list, skip_filter, funs, ctx).await;
 
         for updated_instance_id in updated_instance_list {
             Self::do_front_change(&updated_instance_id, ctx, funs).await?;
@@ -814,7 +820,7 @@ impl FlowInstServ {
                 FlowTransitionActionChangeKind::Var => {
                     if let Some(mut change_info) = post_change.var_change_info {
                         if change_info.changed_kind.is_some() && change_info.changed_kind.unwrap() == FlowTransitionActionByVarChangeInfoChangedKind::AutoGetOperateTime {
-                            change_info.changed_val = Some(json!(Utc::now().to_rfc3339_opts(SecondsFormat::Secs, true)));
+                            change_info.changed_val = Some(json!(Utc::now().to_rfc3339_opts(SecondsFormat::Millis, true)));
                         }
                         let rel_tag = change_info.obj_tag.unwrap_or_default();
                         if !rel_tag.is_empty() {
@@ -1253,6 +1259,7 @@ impl FlowInstServ {
                         message: None,
                         vars: None,
                     },
+                    true,
                     funs,
                     ctx,
                 )
@@ -1308,7 +1315,7 @@ impl FlowInstServ {
             }
             FlowTransitionFrontActionRightValue::RealTime => {
                 if let Some(left_value) = current_vars.get(&condition.left_value) {
-                    Ok(condition.relevance_relation.check_conform(left_value.as_str().unwrap_or_default().to_string(), Utc::now().to_rfc3339_opts(SecondsFormat::Secs, true)))
+                    Ok(condition.relevance_relation.check_conform(left_value.as_str().unwrap_or_default().to_string(), Utc::now().to_rfc3339_opts(SecondsFormat::Millis, true)))
                 } else {
                     Ok(false)
                 }
@@ -1357,6 +1364,7 @@ impl FlowInstServ {
         #[derive(sea_orm::FromQueryResult)]
         pub struct FlowInstanceResult {
             id: String,
+            own_paths: String,
         }
 
         let global_ctx = TardisContext::default();
@@ -1385,19 +1393,23 @@ impl FlowInstServ {
                 .db()
                 .find_dtos::<FlowInstanceResult>(
                     Query::select()
-                        .columns([flow_inst::Column::Id])
+                        .columns([flow_inst::Column::Id, flow_inst::Column::OwnPaths])
                         .from(flow_inst::Entity)
                         .and_where(Expr::col(flow_inst::Column::RelFlowModelId).eq(&flow_transition.rel_flow_model_id))
                         .and_where(Expr::col(flow_inst::Column::CurrentStateId).eq(&flow_transition.from_flow_state_id)),
                 )
                 .await?;
             for flow_inst in flow_insts {
-                let new_vars = Self::get_new_vars(&flow_inst.id, funs, &global_ctx).await?;
+                let ctx = TardisContext {
+                    own_paths: flow_inst.own_paths,
+                    ..global_ctx.clone()
+                };
+                let new_vars = Self::get_new_vars(&flow_inst.id, funs, &ctx).await?;
                 Self::modify_current_vars(
                     &flow_inst.id,
                     &TardisFuns::json.json_to_obj::<HashMap<String, Value>>(new_vars).unwrap_or_default(),
                     funs,
-                    &global_ctx,
+                    &ctx,
                 )
                 .await?;
             }

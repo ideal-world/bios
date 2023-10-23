@@ -2,12 +2,12 @@
 #![warn(clippy::unwrap_used)]
 
 mod api;
-pub mod reach_send_channel;
-pub mod reach_config;
-pub mod reach_consts;
 mod domain;
 pub mod dto;
+pub mod reach_config;
+pub mod reach_consts;
 mod reach_init;
+pub mod reach_send_channel;
 
 #[cfg(feature = "simple-client")]
 pub mod reach_invoke;

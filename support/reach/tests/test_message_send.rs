@@ -2,7 +2,7 @@ use bios_basic::rbum::dto::rbum_item_dto::RbumItemAddReq;
 use tardis::{basic::result::TardisResult, log, serde_json::json, testcontainers, tokio};
 
 mod test_reach_common;
-use bios_reach::{reach_consts::*, dto::*, reach_invoke};
+use bios_reach::{dto::*, reach_consts::*, reach_invoke};
 use test_reach_common::*;
 #[tokio::test(flavor = "multi_thread")]
 pub async fn test_ct_api() -> TardisResult<()> {

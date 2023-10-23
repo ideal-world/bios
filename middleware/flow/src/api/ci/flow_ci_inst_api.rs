@@ -2,6 +2,7 @@ use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem_openapi;
 use tardis::web::poem_openapi::payload::Json;
 use tardis::web::web_resp::{TardisApiResult, TardisResp, Void};
+use tardis::{log, tokio};
 
 use crate::dto::flow_inst_dto::{FlowInstBatchBindReq, FlowInstBatchBindResp, FlowInstBindReq, FlowInstStartReq};
 use crate::flow_constants;
@@ -53,9 +54,18 @@ impl FlowCiInstApi {
     #[oai(path = "/trigger_front_action", method = "get")]
     async fn trigger_front_action(&self) -> TardisApiResult<Void> {
         let mut funs = flow_constants::get_tardis_inst();
-        funs.begin().await?;
-        FlowInstServ::trigger_front_action(&funs).await?;
-        funs.commit().await?;
+        tokio::spawn(async move {
+            funs.begin().await.unwrap();
+            match FlowInstServ::trigger_front_action(&funs).await {
+                Ok(_) => {
+                    log::trace!("[Flow.Inst] add log success")
+                }
+                Err(e) => {
+                    log::warn!("[Flow.Inst] failed to add log:{e}")
+                }
+            }
+            funs.commit().await.unwrap();
+        });
 
         TardisResp::ok(Void {})
     }
