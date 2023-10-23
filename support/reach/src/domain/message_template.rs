@@ -113,7 +113,7 @@ impl From<&ReachMessageTemplateAddReq> for ActiveModel {
             sms_signature,
             sms_from,
         } model);
-        model.scope_level = Set(add_req.scope_level.clone().map(|level|level.to_int()));
+        model.scope_level = Set(add_req.scope_level.clone().map(|level| level.to_int()));
         model
     }
 }

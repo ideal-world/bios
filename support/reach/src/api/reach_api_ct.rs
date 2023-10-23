@@ -7,8 +7,8 @@ pub use reach_api_ct_msg_signature::ReachMsgSignatureCtApi;
 mod reach_api_ct_msg_template;
 pub use reach_api_ct_msg_template::ReachMessageTemplateCtApi;
 mod reach_api_ct_trigger_global;
-use tardis::basic::{error::TardisError, result::TardisResult};
 pub use reach_api_ct_trigger_global::ReachTriggerGlobalConfigCtApi;
+use tardis::basic::{error::TardisError, result::TardisResult};
 mod reach_api_ct_trigger_instance;
 pub use reach_api_ct_trigger_instance::ReachTriggerInstanceConfigCtApi;
 

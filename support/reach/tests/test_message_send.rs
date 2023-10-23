@@ -2,7 +2,7 @@ use bios_basic::rbum::dto::rbum_item_dto::RbumItemAddReq;
 use tardis::{basic::result::TardisResult, log, serde_json::json, testcontainers, tokio};
 
 mod test_reach_common;
-use bios_reach::{reach_consts::*, dto::*, reach_invoke};
+use bios_reach::{dto::*, reach_consts::*, reach_invoke};
 use test_reach_common::*;
 #[tokio::test(flavor = "multi_thread")]
 pub async fn test_ct_api() -> TardisResult<()> {
@@ -15,7 +15,7 @@ pub async fn test_ct_api() -> TardisResult<()> {
     let ctx = get_test_ctx();
     let funs = get_tardis_inst();
     let client = reach_invoke::Client::new("http://localhost:8080/reach", ctx, &funs);
-    const CONTENT_TEMPLATE: &str = "hello {name}, your code is {code}";
+    const CONTENT_TEMPLATE: &str = "[\"hello {name}, your code is {code}\"]";
     let template_name = random_string(16);
     fn expected_content(name: &str, code: &str) -> String {
         format!(r#"["hello {name}, your code is {code}"]"#)
@@ -251,6 +251,10 @@ pub async fn test_ct_api() -> TardisResult<()> {
         log::info!("latest message for {name}: {:?}", msg);
         let msg = msg.expect("message is empty");
         assert_eq!(msg, expected_content(name, &code));
+
+        // should have log now
+        let logs = client.find_msg_log_paged(Some(1), Some(10), None).await?;
+        dbg!(logs);
     }
 
     drop(holder);
