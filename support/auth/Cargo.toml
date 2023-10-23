@@ -28,6 +28,6 @@ tardis = { workspace = true, features = [
     "crypto-with-sm",
     "future",
 ] }
-
+testcontainers-modules = { workspace = true }
 [dev-dependencies]
 tardis = { workspace = true, features = ["test", "web-client"] }

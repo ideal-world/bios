@@ -38,12 +38,12 @@ impl RbumCrudOperation<rbum_domain::ActiveModel, RbumDomainAddReq, RbumDomainMod
     }
 
     async fn before_add_rbum(add_req: &mut RbumDomainAddReq, funs: &TardisFunsInst, _: &TardisContext) -> TardisResult<()> {
-        if !R_URL_PART_CODE.is_match(add_req.code.0.as_str()) {
+        if !R_URL_PART_CODE.is_match(add_req.code.as_str()) {
             return Err(funs.err().bad_request(&Self::get_obj_name(), "add", &format!("code {} is invalid", add_req.code), "400-rbum-*-code-illegal"));
         }
         if funs
             .db()
-            .count(Query::select().column(rbum_domain::Column::Id).from(rbum_domain::Entity).and_where(Expr::col(rbum_domain::Column::Code).eq(add_req.code.0.as_str())))
+            .count(Query::select().column(rbum_domain::Column::Id).from(rbum_domain::Entity).and_where(Expr::col(rbum_domain::Column::Code).eq(add_req.code.as_str())))
             .await?
             > 0
         {

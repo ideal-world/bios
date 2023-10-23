@@ -30,7 +30,7 @@ async fn test_flow_api() -> TardisResult<()> {
     flow_initializer::init_db(funs).await?;
 
     let web_server = TardisFuns::web_server();
-    flow_initializer::init(web_server).await.unwrap();
+    flow_initializer::init(&web_server).await.unwrap();
     web_server.add_module("mock", mock_api::MockApi).await;
     init_spi_kv().await?;
 
@@ -77,7 +77,7 @@ async fn init_spi_kv() -> TardisResult<()> {
 
     let web_server = TardisFuns::web_server();
     // Initialize SPI KV
-    kv_initializer::init(web_server).await.unwrap();
+    kv_initializer::init(&web_server).await.unwrap();
 
     tokio::spawn(async move {
         web_server.start().await.unwrap();

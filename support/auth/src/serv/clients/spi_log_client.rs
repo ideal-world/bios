@@ -29,10 +29,10 @@ impl SpiLogClient {
             return Ok(());
         }
         let spi_ctx = TardisContext { owner: spi_owner, ..ctx.clone() };
-        let headers = Some(vec![(
+        let headers = [(
             "Tardis-Context".to_string(),
             TardisFuns::crypto.base64.encode(TardisFuns::json.obj_to_string(&spi_ctx)?),
-        )]);
+        )];
 
         //add log item
         let mut body = HashMap::from([

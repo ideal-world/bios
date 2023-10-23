@@ -86,7 +86,7 @@ impl AuthApi {
     async fn get_token_context(&self, token: Query<String>, app_id: Query<Option<String>>) -> TardisApiResult<String> {
         let config = TardisFuns::cs_config::<AuthConfig>(DOMAIN_CODE);
         let cache_client = TardisFuns::cache_by_module_or_default(DOMAIN_CODE);
-        let result = auth_kernel_serv::get_token_context(&token.0, &app_id.0.unwrap_or("".to_string()), config, cache_client).await?;
+        let result = auth_kernel_serv::get_token_context(&token.0, &app_id.0.unwrap_or("".to_string()), &config, &cache_client).await?;
         TardisResp::ok(TardisFuns::crypto.base64.encode(TardisFuns::json.obj_to_string(&result)?))
     }
 

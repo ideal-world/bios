@@ -832,7 +832,7 @@ mod tests {
     fn decode_context(headers: &HeaderMap) -> TardisContext {
         let config = TardisFuns::cs_config::<AuthConfig>(auth_constants::DOMAIN_CODE);
         let ctx = headers.get(&config.head_key_context).unwrap();
-        let ctx = TardisFuns::crypto.base64.decode(ctx.to_str().unwrap()).unwrap();
+        let ctx = TardisFuns::crypto.base64.decode_to_string(ctx.to_str().unwrap()).unwrap();
         TardisFuns::json.str_to_obj(&ctx).unwrap()
     }
 
@@ -855,7 +855,7 @@ mod tests {
     }
 
     fn crypto_resp(body: &str, crypto_header: &str, front_pri_key: &TardisCryptoSm2PrivateKey) -> String {
-        let decode_base64 = TardisFuns::crypto.base64.decode(crypto_header).unwrap();
+        let decode_base64 = TardisFuns::crypto.base64.decode_to_string(crypto_header).unwrap();
         let decrypt_key = front_pri_key.decrypt(&decode_base64).unwrap();
         let splits: Vec<_> = decrypt_key.split(' ').collect();
         if splits.len() != 3 {

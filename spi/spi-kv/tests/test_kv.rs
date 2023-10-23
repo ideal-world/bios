@@ -35,7 +35,7 @@ async fn init_data() -> TardisResult<()> {
 
     let web_server = TardisFuns::web_server();
     // Initialize SPI KV
-    kv_initializer::init(web_server).await.unwrap();
+    kv_initializer::init(&web_server).await.unwrap();
 
     tokio::spawn(async move {
         web_server.start().await.unwrap();

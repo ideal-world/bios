@@ -181,7 +181,7 @@ macro_rules! tardis_api {
             )*
             let url = self.get_url(&[$($path,)*], query.as_ref());
             let header = self.get_tardis_context_header()?;
-            let resp = self.get_funs().web_client().get::<TardisResp<$Resp>>(&url, Some(vec![header])).await?;
+            let resp = self.get_funs().web_client().get::<TardisResp<$Resp>>(&url, vec![header]).await?;
             Self::extract_response(resp)
         }
     };
@@ -204,7 +204,7 @@ macro_rules! tardis_api {
             )*
             let url = self.get_url(&[$($path,)*], query.as_ref());
             let header = self.get_tardis_context_header()?;
-            let resp = self.get_funs().web_client().post::<$Body, TardisResp<$Resp>>(&url, body, Some(vec![header])).await?;
+            let resp = self.get_funs().web_client().post::<$Body, TardisResp<$Resp>>(&url, body, vec![header]).await?;
             Self::extract_response(resp)
         }
     };
@@ -250,7 +250,7 @@ macro_rules! tardis_api {
             )*
             let url = self.get_url(&[$($path,)*], query.as_ref());
             let header = self.get_tardis_context_header()?;
-            let resp = self.get_funs().web_client().delete::<TardisResp<$Resp>>(&url, Some(vec![header])).await?;
+            let resp = self.get_funs().web_client().delete::<TardisResp<$Resp>>(&url, vec![header]).await?;
             Self::extract_response(resp)
         }
     };

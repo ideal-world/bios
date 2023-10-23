@@ -69,6 +69,7 @@ async fn spi_conf_namespace_test() -> TardisResult<()> {
 
 async fn test_tardis_compatibility(_test_client: &TestHttpClient) -> TardisResult<()> {
     use tardis::config::config_nacos::nacos_client::*;
+    let config = TardisFuns::fw_config();
     let ctx = TardisContext {
         own_paths: "t1/app001".to_string(),
         ak: "".to_string(),
@@ -79,7 +80,8 @@ async fn test_tardis_compatibility(_test_client: &TestHttpClient) -> TardisResul
     };
     let ctx_base64 = &TardisFuns::crypto.base64.encode(TardisFuns::json.obj_to_string(&ctx)?);
     let mut headers = reqwest::header::HeaderMap::new();
-    headers.append(TardisFuns::fw_config().web_server.context_conf.context_header_name.as_str(), ctx_base64.parse().unwrap());
+    let context_header_name = config.web_server.context_conf.context_header_name.clone();
+    headers.append(context_header_name, ctx_base64.parse().unwrap());
     let client = reqwest::ClientBuilder::default().danger_accept_invalid_certs(true).default_headers(headers).build().unwrap();
     let mut nacos_client = NacosClient::new_with_client(format!("{SCHEMA}://localhost:8080/spi-conf-nacos/nacos"), client);
     // register

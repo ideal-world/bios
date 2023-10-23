@@ -39,7 +39,7 @@ async fn init_data() -> TardisResult<()> {
 
     let web_server = TardisFuns::web_server();
     // Initialize SPI plugin
-    plugin_initializer::init(web_server).await.unwrap();
+    plugin_initializer::init(&web_server).await.unwrap();
 
     tokio::spawn(async move {
         web_server.start().await.unwrap();

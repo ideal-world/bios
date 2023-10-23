@@ -78,7 +78,7 @@ pub(crate) async fn add_or_modify(add_or_modify: ScheduleJobAddOrModifyReq, funs
     let cache_key_job_changed_info = &config.cache_key_job_changed_info;
     conn.set_ex(&format!("{cache_key_job_changed_info}{code}"), "update", config.cache_key_job_changed_timer_sec as usize).await?;
     // 4. do add at local scheduler
-    ScheduleTaskServ::add(add_or_modify, config).await?;
+    ScheduleTaskServ::add(add_or_modify, &config).await?;
     Ok(())
 }
 
@@ -383,7 +383,7 @@ impl OwnedScheduleTaskServ {
                             match self::find_one_job(code, &funs, &ctx).await {
                                 Ok(Some(resp)) => {
                                     // if we have this job code in local cache, update or add it
-                                    serv.add(resp.value, config).await.map_err(|e| error!("fail to delete schedule task: {e}")).unwrap_or_default();
+                                    serv.add(resp.value, &config).await.map_err(|e| error!("fail to delete schedule task: {e}")).unwrap_or_default();
                                 }
                                 Ok(None) => {
                                     // if we don't have this job code in local cache, remove it

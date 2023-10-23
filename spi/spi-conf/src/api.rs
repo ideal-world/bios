@@ -25,11 +25,11 @@ pub async fn init_api(web_server: &TardisWebServer) {
 
 pub async fn init_nacos_servers(cfg: &ConfConfig) -> TardisResult<()> {
     log::info!("[Spi.Conf] init nacos server");
-    let http_server = TardisWebServer::init_simple(&cfg.nacos_host.to_string(), cfg.nacos_port)?;
+    let http_server = TardisWebServer::init_simple(cfg.nacos_host.clone(), cfg.nacos_port)?;
     let mut nacos_module = WebServerModule::new(ConfNacosApi::default());
     nacos_module.options.set_uniform_error(false);
 
-    let grpc_server = TardisWebServer::init_simple(&cfg.nacos_host.to_string(), cfg.nacos_grpc_port)?;
+    let grpc_server = TardisWebServer::init_simple(cfg.nacos_host.clone(), cfg.nacos_grpc_port)?;
 
     grpc_server
         .add_grpc_route(

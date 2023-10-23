@@ -46,8 +46,7 @@ pub async fn init_tardis(docker: &Cli) -> TardisResult<Holder> {
 
 #[allow(dead_code)]
 pub fn start_web_server() -> JoinHandle<TardisResult<()>> {
-    let task = TardisFuns::web_server().start();
-    tokio::spawn(task)
+    TardisFuns::web_server().start().await
 }
 
 #[allow(dead_code)]

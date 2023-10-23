@@ -13,7 +13,7 @@ async fn main() -> TardisResult<()> {
     // env::set_var("RUST_LOG", "debug,tardis=trace,sqlx=off,bios-spi-serv-all=trace,hyper::proto=off,sqlparser::parser=off");
     TardisFuns::init(Some("config")).await?;
     let web_server = TardisFuns::web_server();
-    initializer::init(web_server).await?;
+    initializer::init(&web_server).await?;
     web_server.start().await?;
     web_server.await;
     Ok(())

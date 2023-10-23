@@ -63,7 +63,7 @@ pub async fn init_tardis(docker: &Cli) -> TardisResult<Holder> {
     bios_basic::rbum::rbum_initializer::init("", RbumConfig::default()).await?;
     let web_server = TardisFuns::web_server();
     bios_reach::init(
-        web_server,
+        &web_server,
         SendChannelMap::new().with_arc_channel(bios_client_hwsms::SmsClient::from_reach_config()).with_arc_channel(Arc::new(get_tardis_inst().mail())),
     )
     .await?;
