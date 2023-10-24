@@ -207,7 +207,7 @@ pub mod common_pg {
         primary_keys: Option<Vec<&str>>,
         update_time_field: Option<&str>,
     ) -> TardisResult<(TardisRelDBlConnection, String)> {
-        let tag = tag.map(|t| format!("_{t}")).unwrap_or_else(|| "".to_string());
+        let tag = tag.map(|t| format!("_{t}")).unwrap_or_default();
         let conn = bs_inst.0.conn();
         let schema_name = get_schema_name_from_ext(bs_inst.1).unwrap();
         if check_table_exit(&format!("{table_flag}{tag}"), &conn, ctx).await? {
@@ -237,7 +237,7 @@ pub mod common_pg {
         update_time_field: Option<&str>,
         ctx: &TardisContext,
     ) -> TardisResult<()> {
-        let tag = tag.map(|t| format!("_{t}")).unwrap_or_else(|| "".to_string());
+        let tag = tag.map(|t| format!("_{t}")).unwrap_or_default();
         let schema_name = get_schema_name_from_context(ctx);
         do_init_table(&schema_name, conn, &tag, table_flag, table_create_content, indexes, primary_keys, update_time_field).await
     }
