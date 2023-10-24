@@ -147,6 +147,7 @@ pub struct ReachMessageTemplateFilterReq {
 
 #[derive(Debug, poem_openapi::Object, Serialize, Deserialize, sea_orm::FromQueryResult)]
 pub struct ReachMessageTemplateSummaryResp {
+    pub id: String,
     pub own_paths: String,
     pub owner: String,
     pub create_time: DateTime<Utc>,
@@ -205,6 +206,7 @@ pub struct ReachMessageTemplateSummaryResp {
 
 #[derive(Debug, poem_openapi::Object, Serialize, Deserialize, sea_orm::FromQueryResult)]
 pub struct ReachMessageTemplateDetailResp {
+    pub id: String,
     pub own_paths: String,
     pub owner: String,
     pub owner_name: String,

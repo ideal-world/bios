@@ -39,7 +39,7 @@ impl PluginExecServ {
             }
             headers.push(("Content-Type".to_string(), spi_api.content_type.to_string()));
             headers.push(("Callback-Url".to_string(), spi_api.callback.to_string()));
-            let headers = Some(headers);
+            let headers = headers;
             info!("url: {}", url);
             match spi_api.http_method {
                 crate::plugin_enumeration::PluginApiMethodKind::GET => {

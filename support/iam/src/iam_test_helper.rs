@@ -5,6 +5,7 @@ use serde::Serialize;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
+use tardis::config::config_dto::WebClientModuleConfig;
 use tardis::log::{info, warn};
 use tardis::web::poem_openapi::types::{ParseFromJSON, ToJSON};
 use tardis::web::web_client::TardisWebClient;
@@ -24,7 +25,7 @@ pub struct BIOSWebTestClient {
 impl BIOSWebTestClient {
     pub fn new(base_url: String) -> BIOSWebTestClient {
         BIOSWebTestClient {
-            client: TardisWebClient::init(600).unwrap(),
+            client: TardisWebClient::init(&WebClientModuleConfig::builder().connect_timeout_sec(600u64).build()).unwrap(),
             context: Default::default(),
             base_url,
         }
@@ -33,7 +34,10 @@ impl BIOSWebTestClient {
     pub async fn set_auth(&mut self, token: &str, app_id: Option<String>) -> TardisResult<()> {
         let context: String = self.put("/cp/context", &IamContextFetchReq { token: token.to_string(), app_id }).await;
         self.context = TardisFuns::json.str_to_obj(&TardisFuns::crypto.base64.decode_to_string(&context)?)?;
-        self.set_default_header(&TardisFuns::fw_config().web_server.context_conf.context_header_name, &context);
+        let fw_config = TardisFuns::fw_config();
+        let web_server_config = fw_config.web_server();
+        let context_header_name = web_server_config.context_conf.context_header_name.as_str();
+        self.set_default_header(context_header_name, &context);
         Ok(())
     }
 

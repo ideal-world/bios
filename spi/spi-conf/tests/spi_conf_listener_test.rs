@@ -85,11 +85,8 @@ pub async fn test_single_listener(client: &mut TestHttpClient) -> TardisResult<(
         )
         .await;
     let config = client.get::<String>(&format!("/ci/cs/config?group=DEFAULT-GROUP&data_id={DATA_ID}")).await;
-    use tardis::crypto::rust_crypto::{digest::Digest, md5::Md5};
-    let mut md5_encoder = Md5::new();
-    md5_encoder.input_str(config.as_str());
-    let md5 = md5_encoder.result_str();
-    md5_encoder.reset();
+    use tardis::crypto::crypto_digest::TardisCryptoDigest;
+    let md5 = TardisCryptoDigest.md5(config)?;
     let config = client.get_resp::<ConfigDescriptor>(&format!("/ci/cs/configs/listener?data_id={DATA_ID}&group=DEFAULT-GROUP&md5={md5}")).await;
     // with a correct md5, no config should be returned
     assert!(config.data.is_none());
@@ -111,9 +108,7 @@ pub async fn test_single_listener(client: &mut TestHttpClient) -> TardisResult<(
     assert!(config.data.is_some());
     // get new config
     let config = client.get::<String>(&format!("/ci/cs/config?group=DEFAULT-GROUP&data_id={DATA_ID}")).await;
-    md5_encoder.input_str(config.as_str());
-    let md5 = md5_encoder.result_str();
-    md5_encoder.reset();
+    let md5 = tardis::crypto::crypto_digest::TardisCryptoDigest.md5(config)?;
     // check update again
     let config = client.get_resp::<ConfigDescriptor>(&format!("/ci/cs/configs/listener?data_id={DATA_ID}&group=DEFAULT-GROUP&md5={md5}")).await;
     // with a correct md5, no config should be returned
@@ -170,16 +165,14 @@ pub async fn test_listener(client: &mut TestHttpClient) -> TardisResult<()> {
             let client = get_client("https://localhost:8080/spi-conf", &ctx);
             let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(1));
             let mut md5 = String::new();
-            use tardis::crypto::rust_crypto::{digest::Digest, md5::Md5};
+            use tardis::crypto::crypto_digest::TardisCryptoDigest;
             let mut md5_encoder = Md5::new();
             loop {
                 let config = client.get_resp::<ConfigDescriptor>(&format!("/ci/cs/configs/listener?data_id=conf-default&group=DEFAULT-GROUP&md5={md5}")).await;
                 if config.data.is_some() {
                     update_counter.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
                     let config = client.get::<String>("/ci/cs/config?group=DEFAULT-GROUP&data_id=conf-default").await;
-                    md5_encoder.input_str(&config);
-                    md5 = md5_encoder.result_str();
-                    md5_encoder.reset();
+                    md5 = TardisCryptoDigest.md5(config);
                 }
                 interval.tick().await;
             }

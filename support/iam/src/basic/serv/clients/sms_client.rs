@@ -26,16 +26,16 @@ impl SmsClient {
 
     pub async fn send_vcode(phone: &str, vcode: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let conf = funs.conf::<IamConfig>();
-        let ctx_base64 = &TardisFuns::crypto.base64.encode(TardisFuns::json.obj_to_string(&ctx)?);
+        let ctx_base64 = TardisFuns::crypto.base64.encode(TardisFuns::json.obj_to_string(&ctx)?);
+        let fw_config = TardisFuns::fw_config();
+        let web_server_config = fw_config.web_server();
+        let header_name = web_server_config.context_conf.context_header_name.to_string();
         match funs
             .web_client()
             .put_str_to_str(
                 &format!("{}/{}/{}/{}", conf.sms_base_url, conf.sms_path, phone, vcode),
                 "",
-                Some(vec![(
-                    TardisFuns::fw_config().web_server.context_conf.context_header_name.to_string(),
-                    ctx_base64.to_string(),
-                )]),
+                vec![(header_name, ctx_base64,)],
             )
             .await
         {
@@ -64,16 +64,18 @@ impl SmsClient {
 
     pub async fn send_pwd(phone: &str, pwd: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let conf = funs.conf::<IamConfig>();
-        let ctx_base64 = &TardisFuns::crypto.base64.encode(TardisFuns::json.obj_to_string(&ctx)?);
+        let ctx_base64 = TardisFuns::crypto.base64.encode(TardisFuns::json.obj_to_string(&ctx)?);
+        let fw_config = TardisFuns::fw_config();
+        let web_server_config = fw_config.web_server();
         match funs
             .web_client()
             .put_str_to_str(
                 &format!("{}/{}/{}/{}", conf.sms_base_url, conf.sms_pwd_path, phone, pwd),
                 "",
-                Some(vec![(
-                    TardisFuns::fw_config().web_server.context_conf.context_header_name.to_string(),
+                vec![(
+                    web_server_config.context_conf.context_header_name.clone(),
                     ctx_base64.to_string(),
-                )]),
+                )],
             )
             .await
         {

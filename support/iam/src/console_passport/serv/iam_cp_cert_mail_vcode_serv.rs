@@ -25,7 +25,7 @@ impl IamCpCertMailVCodeServ {
             let rbum_cert_conf_id = IamCertServ::get_cert_conf_id_by_kind(&IamCertKernelKind::MailVCode.to_string(), Some(tenant_id.clone()), funs).await?;
             let result = IamCertServ::validate_by_ak_and_sk(
                 &login_req.mail,
-                &login_req.vcode.0,
+                &login_req.vcode,
                 Some(&rbum_cert_conf_id),
                 None,
                 false,
@@ -39,7 +39,7 @@ impl IamCpCertMailVCodeServ {
                 if e.code == "401-iam-cert-valid" {
                     IamCertServ::validate_by_ak_and_sk(
                         &login_req.mail,
-                        &login_req.vcode.0,
+                        &login_req.vcode,
                         Some(&global_rbum_cert_conf_id),
                         None,
                         false,
@@ -60,7 +60,7 @@ impl IamCpCertMailVCodeServ {
         } else {
             let (_, _, rbum_item_id) = IamCertServ::validate_by_ak_and_sk(
                 &login_req.mail,
-                &login_req.vcode.0,
+                &login_req.vcode,
                 Some(&global_rbum_cert_conf_id),
                 None,
                 false,

@@ -82,7 +82,7 @@ impl ReachMessageCcApi {
     pub async fn pwd_send(&self, to: Path<String>, code: Path<String>) -> TardisApiResult<Void> {
         let funs = get_tardis_inst();
         let config = funs.conf::<ReachConfig>();
-        self.channel.send(ReachChannelKind::Sms, GenericTemplate::pwd_template(config), &[("pwd", code.0)].into(), &[to.0].into()).await?;
+        self.channel.send(ReachChannelKind::Sms, GenericTemplate::pwd_template(&config), &[("pwd", code.0)].into(), &[to.0].into()).await?;
         TardisResp::ok(VOID)
     }
 

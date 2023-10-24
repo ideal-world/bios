@@ -12,7 +12,8 @@ use bios_reach::reach_send_channel::SendChannelMap;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::{Arc, OnceLock};
-use tardis::testcontainers::images::{generic::GenericImage, redis::Redis};
+use tardis::testcontainers::GenericImage;
+use testcontainers_modules::redis::Redis;
 use tardis::tokio::sync::RwLock;
 use tardis::web::poem_openapi::param::Path;
 use tardis::web::poem_openapi::payload::{Form, Json};
@@ -64,7 +65,7 @@ pub async fn init_tardis(docker: &Cli) -> TardisResult<Holder> {
     let web_server = TardisFuns::web_server();
     bios_reach::init(
         &web_server,
-        SendChannelMap::new().with_arc_channel(bios_client_hwsms::SmsClient::from_reach_config()).with_arc_channel(Arc::new(get_tardis_inst().mail())),
+        SendChannelMap::new().with_arc_channel(bios_client_hwsms::SmsClient::from_reach_config()).with_arc_channel(get_tardis_inst().mail()),
     )
     .await?;
     let sms_mocker = HwSmsMockerApi::default();
