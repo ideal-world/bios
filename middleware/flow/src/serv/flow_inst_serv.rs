@@ -98,7 +98,6 @@ impl FlowInstServ {
         };
         funs.db().insert_one(flow_inst, ctx).await?;
 
-        Self::do_front_change(&inst_id, ctx, funs).await?;
         Self::do_request_webhook(
             None,
             flow_model.transitions().iter().filter(|model_transition| model_transition.to_flow_state_id == flow_model.init_state_id).collect_vec().pop(),
