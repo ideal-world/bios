@@ -47,7 +47,7 @@ impl TaskProcessor {
 
     pub async fn init_task(cache_key: &str, cache_client: &TardisCacheClient) -> TardisResult<i64> {
         //todo change to SnowFlake or other distributed ID generator
-        let task_id = Local::now().timestamp_nanos();
+        let task_id = Local::now().timestamp_nanos_opt().expect("maybe in 23rd centery");
         let max: i64 = u32::MAX.into();
         let task_id_split1: usize = (task_id / max).try_into()?;
         let task_id_split2: usize = (task_id % max).try_into()?;
