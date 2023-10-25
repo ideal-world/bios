@@ -6,6 +6,7 @@ on:
       - "basic/**"
       - "support/iam/**"
       - "support/auth/**"
+      - "support/reach/**"
       - "services/**"
       - "spi/**"
       - "middleware/**"
