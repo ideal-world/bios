@@ -418,7 +418,7 @@ impl FlowInstServ {
 
             pub finish_ctx: Option<Value>,
             pub finish_time: Option<DateTime<Utc>>,
-            pub finish_abort: bool,
+            pub finish_abort: Option<bool>,
             pub output_message: Option<String>,
 
             pub own_paths: String,
@@ -429,6 +429,7 @@ impl FlowInstServ {
             .columns([
                 (flow_inst::Entity, flow_inst::Column::Id),
                 (flow_inst::Entity, flow_inst::Column::RelFlowModelId),
+                (flow_inst::Entity, flow_inst::Column::RelBusinessObjId),
                 (flow_inst::Entity, flow_inst::Column::CurrentStateId),
                 (flow_inst::Entity, flow_inst::Column::CreateCtx),
                 (flow_inst::Entity, flow_inst::Column::CreateTime),
@@ -482,7 +483,7 @@ impl FlowInstServ {
                     create_time: inst.create_time,
                     finish_ctx: inst.finish_ctx.map(|finish_ctx| TardisFuns::json.json_to_obj(finish_ctx).unwrap()),
                     finish_time: inst.finish_time,
-                    finish_abort: inst.finish_abort,
+                    finish_abort: inst.finish_abort.is_some(),
                     output_message: inst.output_message,
                     own_paths: inst.own_paths,
                     current_state_id: inst.current_state_id,

@@ -79,7 +79,7 @@ pub async fn init_db(mut funs: TardisFunsInst) -> TardisResult<()> {
     if check_initialized(&funs, &ctx).await? {
         init_basic_info(&funs).await?;
         self::modify_post_actions(&funs, &ctx).await?;
-        self::check_data(&funs, &ctx).await?;
+        // self::check_data(&funs, &ctx).await?;
     } else {
         let db_kind = TardisFuns::reldb().backend();
         let compatible_type = TardisFuns::reldb().compatible_type();
