@@ -234,7 +234,7 @@ pub async fn truncate_data<'a>(funs: &TardisFunsInst) -> TardisResult<()> {
 // @TODO temporary
 async fn check_data(funs: &TardisFunsInst, global_ctx: &TardisContext) -> TardisResult<()> {
     //1.add missed model
-    let proj_insts = FlowInstServ::paginate(None, Some("PROJ".to_string()), Some(false), None, 1, 99999, funs, global_ctx).await?;
+    let proj_insts = FlowInstServ::paginate(None, Some("PROJ".to_string()), Some(false), Some(true), 1, 99999, funs, global_ctx).await?;
     for proj_inst in proj_insts.records {
         let ctx = TardisContext {
             own_paths: proj_inst.own_paths.clone(),
