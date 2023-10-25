@@ -54,7 +54,7 @@ tardis = { version = "=0.1.0-rc.1" }
 # tardis = { path = "../tardis/tardis" }
 # tardis = { git = "https://github.com/ideal-world/tardis.git", rev = "9424e16" }
 #spacegate
-spacegate-kernel = { git = "https://github.com/ideal-world/spacegate.git", rev = "aac2989e48b6064c31db4dedcc30b3c4135b399d",features = [
+spacegate-kernel = { git = "https://github.com/ideal-world/spacegate.git", rev = "97258e2",features = [
     "ws",
     "cache",
     "k8s",

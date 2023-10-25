@@ -16,7 +16,7 @@ pub struct TestConfig {
 
 impl TestConfig {
     fn load() -> Self {
-        toml::from_slice(include_bytes!("config/test-send-client.toml")).expect("invalid config")
+        toml::from_str(include_str!("config/test-send-client.toml")).expect("invalid config")
     }
 }
 

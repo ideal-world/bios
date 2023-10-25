@@ -26,7 +26,7 @@ async fn spi_conf_namespace_test() -> TardisResult<()> {
     std::env::set_var("RUST_LOG", "error,spi_conf_listener_test=debug,sqlx=off,sea_orm=off,bios_spi_conf=DEBUG");
     let docker = testcontainers::clients::Cli::default();
     let container_hold = init_tardis(&docker).await?;
-    let _web_server_hanlde = start_web_server();
+    start_web_server().await?;
     let tardis_ctx = TardisContext::default();
     let mut client = TestHttpClient::new("https://localhost:8080/spi-conf".to_string());
     client.set_auth(&tardis_ctx)?;
@@ -47,7 +47,7 @@ async fn spi_conf_namespace_test() -> TardisResult<()> {
             },
         )
         .await;
-    let _: Void = client.put(&format!("/ci/manage/bs/{}/rel/app001", bs_id), &Void {}).await;
+    let _: tardis::serde_json::Value = client.put(&format!("/ci/manage/bs/{}/rel/app001", bs_id), &Void {}).await;
     client.set_auth(&TardisContext {
         own_paths: "t1/app001".to_string(),
         ak: "".to_string(),
@@ -166,13 +166,12 @@ pub async fn test_listener(client: &mut TestHttpClient) -> TardisResult<()> {
             let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(1));
             let mut md5 = String::new();
             use tardis::crypto::crypto_digest::TardisCryptoDigest;
-            let mut md5_encoder = Md5::new();
             loop {
                 let config = client.get_resp::<ConfigDescriptor>(&format!("/ci/cs/configs/listener?data_id=conf-default&group=DEFAULT-GROUP&md5={md5}")).await;
                 if config.data.is_some() {
                     update_counter.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
                     let config = client.get::<String>("/ci/cs/config?group=DEFAULT-GROUP&data_id=conf-default").await;
-                    md5 = TardisCryptoDigest.md5(config);
+                    md5 = TardisCryptoDigest.md5(config).expect("shall not fail");
                 }
                 interval.tick().await;
             }

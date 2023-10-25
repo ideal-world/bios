@@ -31,11 +31,10 @@ use std::{
     str::FromStr,
     sync::{Arc, OnceLock},
 };
-use tardis::web::poem_openapi::types::Type;
 use tardis::{
     async_trait,
-    basic::{error::TardisError, result::TardisResult, tracing::TardisTracing},
-    config::config_dto::{AppConfig, CacheConfig, DBConfig, FrameworkConfig, LogConfig, TardisConfig, WebServerConfig},
+    basic::{error::TardisError, result::TardisResult},
+    config::config_dto::{AppConfig, CacheModuleConfig, FrameworkConfig, LogConfig, TardisConfig},
     log,
     serde_json::{self, json, Value},
     tokio::{sync::RwLock, task::JoinHandle},
@@ -43,6 +42,8 @@ use tardis::{
     web::web_resp::TardisResp,
     TardisFuns,
 };
+use tardis::{tracing, web::poem_openapi::types::Type};
+use tracing_subscriber::filter::Directive;
 
 use super::plugin_constants;
 #[allow(clippy::type_complexity)]
@@ -134,8 +135,17 @@ impl SgPluginFilter for SgFilterAuth {
 
     async fn init(&mut self, init_dto: &SgPluginFilterInitDto) -> TardisResult<()> {
         if let Some(log_level) = &init_dto.gateway_parameters.log_level {
-            let _ = TardisTracing::update_log_level_by_domain_code(crate::PACKAGE_NAME, log_level);
-            let _ = TardisTracing::update_log_level_by_domain_code(bios_auth::auth_constants::PACKAGE_NAME, log_level);
+            let mut log_config = TardisFuns::fw_config().log().clone();
+            fn directive(path: &str, lvl: &str) -> Directive {
+                let s = format!("{path}={lvl}");
+                format!("{path}={lvl}").parse().unwrap_or_else(|e| {
+                    tracing::error!("[SG.Filter.Auth] failed to parse directive {:?}: {}", s, e);
+                    Default::default()
+                })
+            }
+            log_config.directives.push(directive(crate::PACKAGE_NAME, log_level));
+            log_config.directives.push(directive(bios_auth::auth_constants::PACKAGE_NAME, log_level));
+            TardisFuns::tracing().update_config(&log_config);
         }
 
         let config_md5 = TardisFuns::crypto.digest.md5(TardisFuns::json.obj_to_string(self)?)?;
@@ -163,28 +173,28 @@ impl SgPluginFilter for SgFilterAuth {
                     desc: "This is a spacegate plugin-auth".to_string(),
                     ..Default::default()
                 },
-                web_server: WebServerConfig {
-                    enabled: false,
+                cache: Some(
+                    CacheModuleConfig::builder()
+                        .url(
+                            if self.cache_url.is_empty() {
+                                if let Some(redis_url) = init_dto.gateway_parameters.redis_url.clone() {
+                                    redis_url.as_str()
+                                } else {
+                                    "redis://127.0.0.1:6379"
+                                }
+                            } else {
+                                self.cache_url.as_str()
+                            }
+                            .parse()
+                            .map_err(|e| TardisError::internal_error(&format!("[Plugin.Auth]invalid redis url: {e:?}"), "-1"))?,
+                        )
+                        .build()
+                        .into(),
+                ),
+                log: init_dto.gateway_parameters.log_level.as_ref().map(|l| LogConfig {
+                    level: l.parse().unwrap_or_default(),
                     ..Default::default()
-                },
-                db: DBConfig {
-                    enabled: false,
-                    ..Default::default()
-                },
-                cache: CacheConfig {
-                    enabled: true,
-                    url: if self.cache_url.is_empty() {
-                        if let Some(redis_url) = init_dto.gateway_parameters.redis_url.clone() {
-                            redis_url
-                        } else {
-                            "redis://127.0.0.1:6379".to_string()
-                        }
-                    } else {
-                        self.cache_url.clone()
-                    },
-                    ..Default::default()
-                },
-                log: init_dto.gateway_parameters.log_level.as_ref().map(|l| LogConfig { level: l.clone() }),
+                }),
                 ..Default::default()
             },
         })
@@ -465,6 +475,7 @@ mod tests {
 
     use bios_auth::auth_constants;
 
+    use super::*;
     use spacegate_kernel::config::gateway_dto::SgParameters;
     use spacegate_kernel::http::{Method, Uri, Version};
     use spacegate_kernel::hyper::{self, Body, StatusCode};
@@ -472,11 +483,10 @@ mod tests {
     use tardis::crypto::crypto_sm2_4::{TardisCryptoSm2, TardisCryptoSm2PrivateKey};
     use tardis::{
         test::test_container::TardisTestContainer,
-        testcontainers::{self, clients::Cli, images::redis::Redis, Container},
+        testcontainers::{self, clients::Cli, Container},
         tokio,
     };
-
-    use super::*;
+    use testcontainers_modules::redis::Redis;
 
     #[tokio::test]
     async fn test() {
@@ -811,7 +821,7 @@ mod tests {
             "".to_string(),
             None,
         );
-        let (is_ok, mut before_filter_ctx) = filter_auth.req_filter("", ctx).await.unwrap();
+        let (is_ok, before_filter_ctx) = filter_auth.req_filter("", ctx).await.unwrap();
         assert!(!is_ok);
         assert_eq!(before_filter_ctx.get_action(), &SgRouteFilterRequestAction::Redirect);
         assert_eq!(before_filter_ctx.request.get_uri().path(), &format!("/{}", true_path));
@@ -839,16 +849,18 @@ mod tests {
     fn crypto_req(body: &str, serv_pub_key: &str, front_pub_key: &str, need_crypto_resp: bool) -> (String, String) {
         let pub_key = TardisFuns::crypto.sm2.new_public_key_from_public_key(serv_pub_key).unwrap();
 
-        let sm4_key = TardisFuns::crypto.key.rand_16_hex().unwrap();
-        let sm4_iv = TardisFuns::crypto.key.rand_16_hex().unwrap();
+        let sm4_key = TardisFuns::crypto.key.rand_16_bytes();
+        let sm4_key_hex = TardisFuns::crypto.hex.encode(&sm4_key);
+        let sm4_iv = TardisFuns::crypto.key.rand_16_bytes();
+        let sm4_iv_hex = TardisFuns::crypto.hex.encode(&sm4_key);
 
         let data = TardisFuns::crypto.sm4.encrypt_cbc(body, &sm4_key, &sm4_iv).unwrap();
         let sign_data = TardisFuns::crypto.digest.sm3(&data).unwrap();
 
         let sm4_encrypt = if need_crypto_resp {
-            pub_key.encrypt(&format!("{sign_data} {sm4_key} {sm4_iv} {front_pub_key}",)).unwrap()
+            pub_key.encrypt(&format!("{sign_data} {sm4_key_hex} {sm4_iv_hex} {front_pub_key}",)).unwrap()
         } else {
-            pub_key.encrypt(&format!("{sign_data} {sm4_key} {sm4_iv}",)).unwrap()
+            pub_key.encrypt(&format!("{sign_data} {sm4_key_hex} {sm4_iv_hex}",)).unwrap()
         };
         let base64_encrypt = TardisFuns::crypto.base64.encode(sm4_encrypt);
         (data, base64_encrypt)
