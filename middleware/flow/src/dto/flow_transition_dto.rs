@@ -400,7 +400,7 @@ impl FlowTransitionFrontActionInfoRelevanceRelation {
             FlowTransitionFrontActionInfoRelevanceRelation::In => {
                 TardisFuns::json
                 .str_to_obj::<Vec<Value>>(&right_value)
-                .unwrap()
+                .unwrap_or_default()
                 .into_iter()
                 .map(|item| item.as_str().unwrap_or(item.to_string().as_str()).to_string())
                 .collect_vec()
@@ -408,7 +408,7 @@ impl FlowTransitionFrontActionInfoRelevanceRelation {
             },
             FlowTransitionFrontActionInfoRelevanceRelation::NotIn => !TardisFuns::json
                 .str_to_obj::<Vec<Value>>(&right_value)
-                .unwrap()
+                .unwrap_or_default()
                 .into_iter()
                 .map(|item| item.as_str().unwrap_or(item.to_string().as_str()).to_string())
                 .collect_vec()
