@@ -375,6 +375,8 @@ async fn create_inst_table(
         }
     }
     sql.push("ct timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP".to_string());
+    // TODO DELETE
+    // sql.push("is_delete boolean".to_string());
     index.push(("ct".to_string(), "btree"));
     index.push(("date(timezone('UTC', ct))".to_string(), "btree"));
     index.push(("date_part('hour',timezone('UTC', ct))".to_string(), "btree"));
