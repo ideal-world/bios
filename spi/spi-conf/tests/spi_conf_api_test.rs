@@ -29,7 +29,7 @@ async fn spi_conf_namespace_test() -> TardisResult<()> {
     std::env::set_var("RUST_LOG", "info,sqlx=off,sea_orm=debug,spi_conf_namespace_test=DEBUG,bios_spi_conf=TRACE");
     let docker = testcontainers::clients::Cli::default();
     let container_hold = init_tardis(&docker).await?;
-    let _web_server_hanlde = start_web_server();
+    let _web_server_hanlde = start_web_server().await?;
     let tardis_ctx = TardisContext::default();
     let mut client = TestHttpClient::new("https://localhost:8080/spi-conf".to_string());
     client.set_auth(&tardis_ctx)?;
