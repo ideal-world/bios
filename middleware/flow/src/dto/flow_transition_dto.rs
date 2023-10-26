@@ -397,15 +397,13 @@ impl FlowTransitionFrontActionInfoRelevanceRelation {
             FlowTransitionFrontActionInfoRelevanceRelation::Le => left_value <= right_value,
             FlowTransitionFrontActionInfoRelevanceRelation::Like => left_value.contains(&right_value),
             FlowTransitionFrontActionInfoRelevanceRelation::NotLike => !left_value.contains(&right_value),
-            FlowTransitionFrontActionInfoRelevanceRelation::In => {
-                TardisFuns::json
+            FlowTransitionFrontActionInfoRelevanceRelation::In => TardisFuns::json
                 .str_to_obj::<Vec<Value>>(&right_value)
                 .unwrap_or_default()
                 .into_iter()
                 .map(|item| item.as_str().unwrap_or(item.to_string().as_str()).to_string())
                 .collect_vec()
-                .contains(&left_value)
-            },
+                .contains(&left_value),
             FlowTransitionFrontActionInfoRelevanceRelation::NotIn => !TardisFuns::json
                 .str_to_obj::<Vec<Value>>(&right_value)
                 .unwrap_or_default()
@@ -414,11 +412,11 @@ impl FlowTransitionFrontActionInfoRelevanceRelation {
                 .collect_vec()
                 .contains(&left_value),
             FlowTransitionFrontActionInfoRelevanceRelation::Between => {
-                let time_interval = TardisFuns::json.str_to_obj::<Vec<String>>(&right_value).unwrap_or_default();
-                if time_interval.len() != 2 {
+                let interval = TardisFuns::json.str_to_obj::<Vec<String>>(&right_value).unwrap_or_default();
+                if interval.len() != 2 {
                     return false;
                 }
-                left_value >= time_interval[0] && left_value <= time_interval[1]
+                left_value >= interval[0] && left_value <= interval[1]
             }
         }
     }
