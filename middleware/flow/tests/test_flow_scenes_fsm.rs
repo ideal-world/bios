@@ -738,7 +738,7 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
         .await;
     assert_eq!(state_and_next_transitions[0].next_flow_transitions.len(), 1);
     // handle front change
-    let current_vars = HashMap::from([("status".to_string(), json!("xxx")), ("handle_time".to_string(), json!("2023-10-10"))]);
+    let current_vars = HashMap::from([("status".to_string(), json!(true)), ("handle_time".to_string(), json!("2023-10-10"))]);
     let _: Void = flow_client
         .patch(
             &format!("/cc/inst/{}/modify_current_vars", req_inst_id2),
@@ -764,11 +764,14 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
                         "id": state_and_next_transitions[0].next_flow_transitions[0].next_flow_transition_id.clone(),
                         "action_by_front_changes": [
                             {
-                                "relevance_relation": "<",
+                                "relevance_relation": "in",
                                 "relevance_label": "包含",
-                                "left_value": "handle_time",
+                                "left_value": "status",
                                 "left_label": "状态",
-                                "right_value": "real_time"
+                                "right_value": "change_content",
+                                "change_content": [
+                                    true
+                                ],
                             }
                         ]
                     }

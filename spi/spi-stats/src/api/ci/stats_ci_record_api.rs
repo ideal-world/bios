@@ -59,6 +59,7 @@ impl StatsCiRecordApi {
         TardisResp::ok(Void {})
     }
 
+    /// 删除事实记录
     /// Delete Fact Record
     #[oai(path = "/fact/:fact_key/:record_key", method = "delete")]
     async fn fact_record_delete(&self, fact_key: Path<String>, record_key: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
@@ -67,6 +68,7 @@ impl StatsCiRecordApi {
         TardisResp::ok(Void {})
     }
 
+    /// 删除事实记录
     /// Load Fact Records
     #[oai(path = "/fact/:fact_key/batch/load", method = "put")]
     async fn fact_records_load(&self, fact_key: Path<String>, add_req: Json<Vec<StatsFactRecordsLoadReq>>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
@@ -75,11 +77,23 @@ impl StatsCiRecordApi {
         TardisResp::ok(Void {})
     }
 
+    /// 删除事实记录
     /// Delete Fact Records
     #[oai(path = "/fact/:fact_key/batch/remove", method = "put")]
     async fn fact_records_delete(&self, fact_key: Path<String>, delete_req: Json<Vec<String>>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let funs = crate::get_tardis_inst();
         stats_record_serv::fact_records_delete(&fact_key.0, &delete_req.0, &funs, &ctx.0).await?;
+        TardisResp::ok(Void {})
+    }
+
+    /// 删除事实记录
+    /// 注意:此操作在逻辑上删除了所有权的实际记录。
+    /// Delete Fact Records
+    /// Note: This action logically removes the factual record of ownership.
+    #[oai(path = "/fact/:fact_key/ownership/remove", method = "put")]
+    async fn fact_records_logic_delete_by_ownership(&self, fact_key: Path<String>, own_paths: Query<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+        let funs = crate::get_tardis_inst();
+        stats_record_serv::fact_records_logic_delete_by_ownership(&fact_key.0, &own_paths.0, &funs, &ctx.0).await?;
         TardisResp::ok(Void {})
     }
 
@@ -97,8 +111,9 @@ impl StatsCiRecordApi {
         TardisResp::ok(Void {})
     }
 
+    /// 清空事实记录
+    /// 注意:此操作将物理删除所有事实记录，且无法恢复，请谨慎使用!
     /// Clean Fact Records
-    ///
     /// Note:This operation will physically delete all fact records and cannot be recovered, please use caution!
     #[oai(path = "/fact/:fact_key/batch/clean", method = "delete")]
     async fn fact_records_clean(&self, fact_key: Path<String>, before_ct: Query<Option<DateTime<Utc>>>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {

@@ -30,7 +30,7 @@ use tardis::{
 };
 
 use crate::{
-    domain::{flow_inst, flow_transition},
+    domain::{flow_inst, flow_model, flow_transition},
     dto::{
         flow_external_dto::FlowExternalParams,
         flow_inst_dto::{
@@ -73,7 +73,7 @@ impl FlowInstServ {
             ctx,
         )
         .await?;
-        let id = TardisFuns::field.nanoid();
+        let inst_id = TardisFuns::field.nanoid();
         let current_state_id = if let Some(current_state_name) = &current_state_name {
             if current_state_name.is_empty() {
                 flow_model.init_state_id.clone()
@@ -84,7 +84,7 @@ impl FlowInstServ {
             flow_model.init_state_id.clone()
         };
         let flow_inst: flow_inst::ActiveModel = flow_inst::ActiveModel {
-            id: Set(id.clone()),
+            id: Set(inst_id.clone()),
             rel_flow_model_id: Set(flow_model_id.to_string()),
             rel_business_obj_id: Set(start_req.rel_business_obj_id.to_string()),
 
@@ -104,7 +104,7 @@ impl FlowInstServ {
         )
         .await?;
 
-        Ok(id)
+        Ok(inst_id)
     }
 
     pub async fn batch_bind(batch_bind_req: &FlowInstBatchBindReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<FlowInstBatchBindResp>> {
@@ -418,7 +418,7 @@ impl FlowInstServ {
 
             pub finish_ctx: Option<Value>,
             pub finish_time: Option<DateTime<Utc>>,
-            pub finish_abort: bool,
+            pub finish_abort: Option<bool>,
             pub output_message: Option<String>,
 
             pub own_paths: String,
@@ -429,6 +429,7 @@ impl FlowInstServ {
             .columns([
                 (flow_inst::Entity, flow_inst::Column::Id),
                 (flow_inst::Entity, flow_inst::Column::RelFlowModelId),
+                (flow_inst::Entity, flow_inst::Column::RelBusinessObjId),
                 (flow_inst::Entity, flow_inst::Column::CurrentStateId),
                 (flow_inst::Entity, flow_inst::Column::CreateCtx),
                 (flow_inst::Entity, flow_inst::Column::CreateTime),
@@ -444,6 +445,10 @@ impl FlowInstServ {
             .left_join(
                 RBUM_ITEM_TABLE.clone(),
                 Expr::col((RBUM_ITEM_TABLE.clone(), ID_FIELD.clone())).equals((flow_inst::Entity, flow_inst::Column::RelFlowModelId)),
+            )
+            .left_join(
+                flow_model::Entity,
+                Expr::col((flow_model::Entity, flow_model::Column::Id)).equals((flow_inst::Entity, flow_inst::Column::RelFlowModelId)),
             );
         if with_sub.unwrap_or(false) {
             query.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::OwnPaths)).like(format!("{}%", ctx.own_paths)));
@@ -454,8 +459,7 @@ impl FlowInstServ {
             query.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::RelFlowModelId)).eq(flow_model_id));
         }
         if let Some(tag) = &tag {
-            let flow_model_id = Self::get_model_id_by_own_paths_and_rel_template_id(tag, None, funs, ctx).await?;
-            query.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::RelFlowModelId)).eq(flow_model_id));
+            query.and_where(Expr::col((flow_model::Entity, flow_model::Column::Tag)).eq(tag));
         }
         if let Some(finish) = finish {
             if finish {
@@ -479,7 +483,7 @@ impl FlowInstServ {
                     create_time: inst.create_time,
                     finish_ctx: inst.finish_ctx.map(|finish_ctx| TardisFuns::json.json_to_obj(finish_ctx).unwrap()),
                     finish_time: inst.finish_time,
-                    finish_abort: inst.finish_abort,
+                    finish_abort: inst.finish_abort.is_some(),
                     output_message: inst.output_message,
                     own_paths: inst.own_paths,
                     current_state_id: inst.current_state_id,
@@ -1290,7 +1294,7 @@ impl FlowInstServ {
             FlowTransitionFrontActionRightValue::ChangeContent => {
                 if let Some(left_value) = current_vars.get(&condition.left_value) {
                     Ok(condition.relevance_relation.check_conform(
-                        left_value.as_str().unwrap_or_default().to_string(),
+                        left_value.as_str().unwrap_or(left_value.to_string().as_str()).to_string(),
                         condition
                             .change_content
                             .clone()
@@ -1308,14 +1312,20 @@ impl FlowInstServ {
                     current_vars.get(&condition.left_value),
                     current_vars.get(&condition.select_field.clone().unwrap_or_default()),
                 ) {
-                    Ok(condition.relevance_relation.check_conform(left_value.as_str().unwrap_or_default().to_string(), right_value.as_str().unwrap_or_default().to_string()))
+                    Ok(condition.relevance_relation.check_conform(
+                        left_value.as_str().unwrap_or(left_value.to_string().as_str()).to_string(),
+                        right_value.as_str().unwrap_or(left_value.to_string().as_str()).to_string(),
+                    ))
                 } else {
                     Ok(false)
                 }
             }
             FlowTransitionFrontActionRightValue::RealTime => {
                 if let Some(left_value) = current_vars.get(&condition.left_value) {
-                    Ok(condition.relevance_relation.check_conform(left_value.as_str().unwrap_or_default().to_string(), Utc::now().to_rfc3339_opts(SecondsFormat::Millis, true)))
+                    Ok(condition.relevance_relation.check_conform(
+                        left_value.as_str().unwrap_or(left_value.to_string().as_str()).to_string(),
+                        Utc::now().to_rfc3339_opts(SecondsFormat::Millis, true),
+                    ))
                 } else {
                     Ok(false)
                 }

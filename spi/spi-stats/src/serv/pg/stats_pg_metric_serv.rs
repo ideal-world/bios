@@ -473,6 +473,7 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
     // package limit
     let query_limit = if let Some(limit) = &query_req.limit { format!("LIMIT {limit}") } else { "".to_string() };
     let ignore_group_agg = !(!sql_part_groups.is_empty() && query_req.group_agg.unwrap_or(false));
+    // TODO DELETE: AND fact.is_delete = TRUE
     let final_sql = format!(
         r#"SELECT {sql_part_outer_selects}{}
     FROM (
@@ -484,6 +485,7 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
                 LEFT JOIN {fact_inst_del_table_name} del ON del.key = fact.key AND del.ct >= $2 AND del.ct <= $3
                 WHERE
                     fact.own_paths LIKE $1
+
                     AND del.key IS NULL
                     AND fact.ct >= $2 AND fact.ct <= $3
                 ORDER BY {}fact.ct DESC

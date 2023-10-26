@@ -141,6 +141,14 @@ pub async fn delete(tag: &str, key: &str, _funs: &TardisFunsInst, ctx: &TardisCo
     conn.commit().await?;
     Ok(())
 }
+pub async fn delete_by_ownership(tag: &str, own_paths: &str, _funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
+    let bs_inst = inst.inst::<TardisRelDBClient>();
+    let (mut conn, table_name) = search_pg_initializer::init_table_and_conn(bs_inst, tag, ctx, false).await?;
+    conn.begin().await?;
+    conn.execute_one(&format!("DELETE FROM {table_name} WHERE own_paths = $1"), vec![Value::from(own_paths)]).await?;
+    conn.commit().await?;
+    Ok(())
+}
 
 async fn get_ext(tag: &str, key: &str, table_name: &str, conn: &TardisRelDBlConnection, funs: &TardisFunsInst, _inst: &SpiBsInst) -> TardisResult<serde_json::Value> {
     let result = conn
