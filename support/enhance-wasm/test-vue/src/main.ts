@@ -4,8 +4,7 @@ import App from './App.vue'
 import router from './router'
 
 console.log('--------Init---------');
-
-await bios.init('', {
+await bios.main('', {
     "strict_security_mode": false,
     "pub_key": "02fbba662032fd384079b7824c07ec8eeaac615187e27ce6a58fcd1597105c1065",
     "double_auth_exp_sec": 60,

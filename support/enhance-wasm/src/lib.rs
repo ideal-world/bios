@@ -1,9 +1,11 @@
 use std::collections::HashMap;
 
+use wasm_bindgen::JsValue;
+use wasm_bindgen::prelude::*;
+
 use constants::{BIOS_TOKEN, STABLE_CONFIG};
 use modules::global_api_process::MixRequest;
-use wasm_bindgen::prelude::*;
-use wasm_bindgen::JsValue;
+
 mod constants;
 mod initializer;
 mod mini_tardis;
@@ -27,7 +29,7 @@ pub async fn main(service_url: &str, config: JsValue) -> Result<(), JsValue> {
 
 #[wasm_bindgen]
 /// uri: path?query eg. /iam/ct/xxx?q=1
-pub fn on_before_request(method: &str, uri: &str, body: JsValue, headers: JsValue) -> Result<JsValue, JsValue> {
+pub fn on_before_request(method: &str, uri: &str, body: JsValue, headers: JsValue,ignore_token: JsValue) -> Result<JsValue, JsValue> {
     if modules::double_auth_process::need_auth(method, uri)? {
         return Err(JsValue::try_from(JsError::new("Need double auth.")).unwrap());
     }
@@ -37,8 +39,15 @@ pub fn on_before_request(method: &str, uri: &str, body: JsValue, headers: JsValu
         mini_tardis::serde::jsvalue_to_str(&body)?
     };
     let mut headers = mini_tardis::serde::jsvalue_to_obj::<HashMap<String, String>>(headers)?;
-    if let Some(token) = modules::token_process::get_token()? {
-        headers.insert(BIOS_TOKEN.to_string(), token);
+    let ignore_token = if ignore_token == JsValue::NULL {
+        false
+    } else {
+        mini_tardis::serde::jsvalue_to_obj::<bool>(ignore_token)?
+    };
+    if !ignore_token {
+        if let Some(token) = modules::token_process::get_token()? {
+            headers.insert(BIOS_TOKEN.to_string(), token);
+        }
     }
     //skip encrypt_decrypt by exclude_encrypt_decrypt_path
     let config = STABLE_CONFIG.read().unwrap();
