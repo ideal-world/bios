@@ -2,8 +2,7 @@ use tardis::basic::result::TardisResult;
 use tardis::serde_json::json;
 use tardis::testcontainers::clients::Cli;
 use tardis::testcontainers::core::WaitFor;
-use tardis::testcontainers::images::generic::GenericImage;
-use tardis::testcontainers::{images, Container, RunnableImage};
+use tardis::testcontainers::{GenericImage, Container, RunnableImage};
 use tardis::TardisFuns;
 
 pub(crate) async fn init(docker: &Cli) -> TardisResult<(String, Container<GenericImage>)> {
@@ -20,7 +19,7 @@ pub(crate) async fn init(docker: &Cli) -> TardisResult<(String, Container<Generi
     println!("Output: {}", output);
 
     // Start docker container
-    let image = images::generic::GenericImage::new("apisix_test", "latest").with_wait_for(WaitFor::seconds(15));
+    let image = GenericImage::new("apisix_test", "latest").with_wait_for(WaitFor::seconds(15));
     let mut runnable_image: RunnableImage<GenericImage> = image.into();
     runnable_image = runnable_image.with_network("host");
     runnable_image = runnable_image.with_container_name("apisix_test");
@@ -45,7 +44,7 @@ pub(crate) async fn init(docker: &Cli) -> TardisResult<(String, Container<Generi
                     }
                 }
             }),
-            Some(vec![("X-API-KEY".to_string(), "edd1c9f034335f136f87ad84b6acecs1".to_string())]),
+            vec![("X-API-KEY".to_string(), "edd1c9f034335f136f87ad84b6acecs1".to_string())],
         )
         .await?;
     Ok((url.to_string(), node))

@@ -17,7 +17,7 @@ impl IamCertOAuth2Spi for IamCertOAuth2SpiGithub {
             .post_to_obj::<Value>(
                 &format!("https://github.com/login/oauth/access_token?client_id={ak}&client_secret={sk}&code={code}"),
                 "",
-                Some(headers),
+                headers,
             )
             .await?;
         if result.code != 200 {
@@ -38,7 +38,7 @@ impl IamCertOAuth2Spi for IamCertOAuth2SpiGithub {
                 ("User-Agent".to_string(), "BIOS".to_string()),
             ];
             //get user info
-            let result = funs.web_client().get_to_str("https://api.github.com/user", Some(headers)).await?;
+            let result = funs.web_client().get_to_str("https://api.github.com/user", headers).await?;
             trace!("iam oauth2 spi [Github] get user info response: {:?}", result);
             if result.code != 200 {
                 return Err(funs.err().not_found(

@@ -59,7 +59,7 @@ pub async fn decrypt_req(
         ));
     };
 
-    let input_keys = TardisFuns::crypto.base64.decode(input_keys).map_err(|_| {
+    let input_keys = TardisFuns::crypto.base64.decode_to_string(input_keys).map_err(|_| {
         TardisError::bad_request(
             &format!("[Auth] Encrypted request: {} field in header is not base64 format.", config.head_key_crypto),
             "401-auth-req-crypto-error",
@@ -152,7 +152,7 @@ pub async fn encrypt_body(req: &AuthEncryptReq) -> TardisResult<AuthEncryptResp>
         ));
     };
 
-    let pub_key = TardisFuns::crypto.base64.decode(pub_key).map_err(|_| {
+    let pub_key = TardisFuns::crypto.base64.decode_to_string(pub_key).map_err(|_| {
         TardisError::bad_request(
             &format!("[Auth] Encrypt response: {} field in header is not base64 format.", config.head_key_crypto),
             "401-auth-req-crypto-error",
@@ -165,8 +165,9 @@ pub async fn encrypt_body(req: &AuthEncryptReq) -> TardisResult<AuthEncryptResp>
         .new_public_key_from_public_key(&pub_key)
         .map_err(|e| TardisError::bad_request(&format!("[Auth] Encrypt response: generate public key error:{e}"), "401-auth-req-crypto-error"))?;
 
-    let sm4_key = TardisFuns::crypto.key.rand_16_hex()?;
-    let sm4_iv = TardisFuns::crypto.key.rand_16_hex()?;
+    let sm4_key = TardisFuns::crypto.key.rand_16_hex();
+
+    let sm4_iv = TardisFuns::crypto.key.rand_16_hex();
 
     let data = TardisFuns::crypto
         .sm4

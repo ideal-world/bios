@@ -3,14 +3,14 @@ use bios_basic::{
     test::test_http_client::TestHttpClient,
 };
 use bios_spi_conf::{conf_constants::DOMAIN_CODE, conf_initializer};
-use tardis::testcontainers::images::{generic::GenericImage, redis::Redis};
+use tardis::testcontainers::GenericImage;
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
     test::test_container::TardisTestContainer,
     testcontainers::{clients::Cli, Container},
-    tokio::{self, task::JoinHandle},
     TardisFuns,
 };
+use testcontainers_modules::redis::Redis;
 pub struct Holder<'d> {
     pub pg: Container<'d, GenericImage>,
     pub redis: Container<'d, Redis>,
@@ -45,9 +45,8 @@ pub async fn init_tardis(docker: &Cli) -> TardisResult<Holder> {
 }
 
 #[allow(dead_code)]
-pub fn start_web_server() -> JoinHandle<TardisResult<()>> {
-    let task = TardisFuns::web_server().start();
-    tokio::spawn(task)
+pub async fn start_web_server() -> TardisResult<()> {
+    TardisFuns::web_server().start().await
 }
 
 #[allow(dead_code)]

@@ -17,7 +17,7 @@ use tardis::{
 };
 
 async fn mock_req(method: &str, path: &str, query: &str, headers: Vec<(&str, &str)>) -> AuthResp {
-    let web_client = TardisWebClient::init(1).unwrap();
+    let web_client = TardisWebClient::init(&Default::default()).unwrap();
     info!(">>>>[Request]| path:{}, query:{}, headers:{:#?}", path, query, headers);
     let hashmap_query = if query.is_empty() {
         HashMap::new()
@@ -56,7 +56,7 @@ async fn mock_req(method: &str, path: &str, query: &str, headers: Vec<(&str, &st
 fn decode_context(headers: &HashMap<String, String>) -> TardisContext {
     let config = TardisFuns::cs_config::<AuthConfig>(DOMAIN_CODE);
     let ctx = headers.get(&config.head_key_context).unwrap();
-    let ctx = TardisFuns::crypto.base64.decode(ctx).unwrap();
+    let ctx = TardisFuns::crypto.base64.decode_to_string(ctx).unwrap();
     TardisFuns::json.str_to_obj(&ctx).unwrap()
 }
 

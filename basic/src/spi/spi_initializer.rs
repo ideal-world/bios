@@ -104,6 +104,7 @@ pub mod common_pg {
 
     use tardis::{
         basic::{dto::TardisContext, error::TardisError, result::TardisResult},
+        config::config_dto::DBModuleConfig,
         db::{
             reldb_client::{TardisRelDBClient, TardisRelDBlConnection},
             sea_orm::Value,
@@ -170,14 +171,14 @@ pub mod common_pg {
     pub async fn init(bs_cert: &SpiBsCertResp, ctx: &TardisContext, mgr: bool) -> TardisResult<SpiBsInst> {
         let ext = TardisFuns::json.str_to_json(&bs_cert.ext)?;
         let compatible_type = TardisFuns::json.json_to_obj(ext.get("compatible_type").unwrap_or(&tardis::serde_json::Value::String("None".to_string())).clone())?;
-        let client = TardisRelDBClient::init(
-            &bs_cert.conn_uri,
-            ext.get("max_connections").unwrap().as_u64().unwrap() as u32,
-            ext.get("min_connections").unwrap().as_u64().unwrap() as u32,
-            None,
-            None,
+        let client = TardisRelDBClient::init(&DBModuleConfig {
+            url: bs_cert.conn_uri.parse().expect("invalid url"),
+            max_connections: ext.get("max_connections").unwrap().as_u64().unwrap() as u32,
+            min_connections: ext.get("min_connections").unwrap().as_u64().unwrap() as u32,
+            connect_timeout_sec: None,
+            idle_timeout_sec: None,
             compatible_type,
-        )
+        })
         .await?;
         let mut ext = HashMap::new();
         let schema_name = if bs_cert.private {
@@ -206,7 +207,7 @@ pub mod common_pg {
         primary_keys: Option<Vec<&str>>,
         update_time_field: Option<&str>,
     ) -> TardisResult<(TardisRelDBlConnection, String)> {
-        let tag = tag.map(|t| format!("_{t}")).unwrap_or_else(|| "".to_string());
+        let tag = tag.map(|t| format!("_{t}")).unwrap_or_default();
         let conn = bs_inst.0.conn();
         let schema_name = get_schema_name_from_ext(bs_inst.1).unwrap();
         if check_table_exit(&format!("{table_flag}{tag}"), &conn, ctx).await? {
@@ -236,7 +237,7 @@ pub mod common_pg {
         update_time_field: Option<&str>,
         ctx: &TardisContext,
     ) -> TardisResult<()> {
-        let tag = tag.map(|t| format!("_{t}")).unwrap_or_else(|| "".to_string());
+        let tag = tag.map(|t| format!("_{t}")).unwrap_or_default();
         let schema_name = get_schema_name_from_context(ctx);
         do_init_table(&schema_name, conn, &tag, table_flag, table_create_content, indexes, primary_keys, update_time_field).await
     }

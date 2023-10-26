@@ -23,7 +23,7 @@ pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
     init_api(web_server).await;
     let funs = crate::get_tardis_inst();
     let cfg = funs.conf::<ConfConfig>();
-    init_nacos_servers(cfg).await?;
+    init_nacos_servers(&cfg).await?;
     Ok(())
 }
 

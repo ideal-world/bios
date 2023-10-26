@@ -40,5 +40,6 @@ tokio-stream = { version = "0.1.14", features = ["sync"] }
 tardis = { workspace = true, features = ["test", "conf-remote", "mq"] }
 bios-basic = { path = "../../basic", features = ["default", "test"] }
 reqwest = "*"
+testcontainers-modules = { workspace = true }
 [build-dependencies]
 poem-grpc-build = "0.2.21"

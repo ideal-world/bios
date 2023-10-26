@@ -42,3 +42,5 @@ bios-reach = { path = "./", features = ["simple-client"] }
 toml = "*"
 
 bios-client-hwsms = { path = "../../clients/hwsms", features = ["reach"] }
+
+testcontainers-modules = { workspace = true }

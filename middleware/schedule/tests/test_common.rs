@@ -48,9 +48,9 @@ pub async fn init_tardis() -> TardisResult<()> {
     let web_server = TardisFuns::web_server();
     // cache_initializer::init(web_server).await?;
     bios_basic::rbum::rbum_initializer::init("bios-spi", bios_basic::rbum::rbum_config::RbumConfig::default()).await?;
-    log_initializer::init(web_server).await?;
-    kv_initializer::init(web_server).await?;
-    schedule_initializer::init(web_server).await?;
+    log_initializer::init(&web_server).await?;
+    kv_initializer::init(&web_server).await?;
+    schedule_initializer::init(&web_server).await?;
     Ok(())
 }
 #[allow(dead_code)]

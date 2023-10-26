@@ -255,8 +255,8 @@ impl SpiBsServ {
         )
         .await?
         {
-            let attrs = attrs.unwrap_or(vec![]);
-            let envs = envs.unwrap_or(vec![]);
+            let attrs = attrs.unwrap_or_default();
+            let envs = envs.unwrap_or_default();
             RbumRelServ::add_rel(
                 &mut RbumRelAggAddReq {
                     rel: RbumRelAddReq {

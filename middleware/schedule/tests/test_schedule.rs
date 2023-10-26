@@ -35,9 +35,9 @@ async fn init_data() -> TardisResult<()> {
     bios_basic::rbum::rbum_initializer::init(DOMAIN_CODE, RbumConfig::default()).await?;
     let web_server = TardisFuns::web_server();
     // Initialize SPI shedule
-    schedule_initializer::init(web_server).await?;
-    log_initializer::init(web_server).await?;
-    kv_initializer::init(web_server).await?;
+    schedule_initializer::init(&web_server).await?;
+    log_initializer::init(&web_server).await?;
+    kv_initializer::init(&web_server).await?;
 
     tokio::spawn(async move {
         web_server.start().await.unwrap();

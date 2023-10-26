@@ -4,9 +4,8 @@ use tardis::basic::result::TardisResult;
 use tardis::test::test_container::TardisTestContainer;
 use tardis::testcontainers::clients::Cli;
 use tardis::testcontainers::core::WaitFor;
-use tardis::testcontainers::images::generic::GenericImage;
-use tardis::testcontainers::images::redis::Redis;
-use tardis::testcontainers::{images, Container};
+use tardis::testcontainers::{GenericImage, Container};
+use testcontainers_modules::redis::Redis;
 use tardis::TardisFuns;
 
 pub struct LifeHold<'a> {
@@ -58,7 +57,7 @@ pub fn postgres_custom<'a>(init_script_path: Option<&str>, docker: &'a Cli) -> C
             .unwrap_or_else(|| panic!("[Tardis.Test_Container] Script Path [{}] get error", init_script_path))
             .to_string();
         docker.run(
-            images::generic::GenericImage::new("abcfy2/zhparser", "15")
+            GenericImage::new("abcfy2/zhparser", "15")
                 .with_env_var("POSTGRES_PASSWORD", "123456")
                 .with_env_var("POSTGRES_DB", "test")
                 .with_volume(path, "/docker-entrypoint-initdb.d/")
@@ -66,7 +65,7 @@ pub fn postgres_custom<'a>(init_script_path: Option<&str>, docker: &'a Cli) -> C
         )
     } else {
         docker.run(
-            images::generic::GenericImage::new("abcfy2/zhparser", "15")
+            GenericImage::new("abcfy2/zhparser", "15")
                 .with_env_var("POSTGRES_PASSWORD", "123456")
                 .with_env_var("POSTGRES_DB", "test")
                 .with_wait_for(WaitFor::message_on_stderr("database system is ready to accept connections")),

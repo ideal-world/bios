@@ -33,7 +33,7 @@ impl Default for ConfConfig {
         let auth_key = crypto_base64::TardisCryptoBase64.encode(random::<[u8; 32]>());
         let password = format!("{:016x}", random::<u128>());
         Self {
-            /// 18000 secs (5 hours)
+            // 18000 secs (5 hours)
             token_ttl: 18000,
             auth_key,
             auth_username: String::from("nacos"),

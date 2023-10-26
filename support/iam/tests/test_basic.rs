@@ -6,7 +6,7 @@ use bios_iam::basic::serv::iam_cert_ldap_serv::AccountFieldMap;
 use tardis::basic::result::TardisResult;
 use tardis::testcontainers::clients::Cli;
 use tardis::testcontainers::core::{ExecCommand, WaitFor};
-use tardis::testcontainers::images::generic::GenericImage;
+use tardis::testcontainers::GenericImage;
 use tardis::testcontainers::Container;
 use tardis::TardisFuns;
 
@@ -56,7 +56,7 @@ pub struct LifeHold<'a> {
 }
 
 pub async fn init(docker: &'_ Cli) -> TardisResult<LifeHold<'_>> {
-    let ldap_container = get_ldap_container(docker).await;
+    let ldap_container = get_ldap_container(docker);
 
     TardisFuns::init(Some("tests/config")).await?;
     // TardisFuns::init("core/iam/tests/config").await?;
@@ -64,7 +64,7 @@ pub async fn init(docker: &'_ Cli) -> TardisResult<LifeHold<'_>> {
     Ok(LifeHold { ldap: ldap_container })
 }
 
-async fn get_ldap_container<'a>(docker: &'a Cli) -> Container<'a, GenericImage> {
+fn get_ldap_container<'a>(docker: &'a Cli) -> Container<'a, GenericImage> {
     const ORGANISATION: &str = "test";
     const ADMIN_PASSWORD: &str = "123456";
     let domain: String = format!("{}.com", ORGANISATION);

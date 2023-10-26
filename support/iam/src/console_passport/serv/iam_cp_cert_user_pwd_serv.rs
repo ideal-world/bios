@@ -29,8 +29,8 @@ impl IamCpCertUserPwdServ {
         let mut tenant_id = Self::get_tenant_id(pwd_new_req.tenant_id.clone(), funs).await?;
         let mut rbum_cert_conf_id = IamCertServ::get_cert_conf_id_by_kind(&IamCertKernelKind::UserPwd.to_string(), Some(tenant_id.clone()), funs).await?;
         let validate_resp = IamCertServ::validate_by_ak_and_sk(
-            &pwd_new_req.ak.0,
-            &pwd_new_req.original_sk.0,
+            &pwd_new_req.ak,
+            &pwd_new_req.original_sk,
             None,
             Some(&RbumCertRelKind::Item),
             true,
@@ -56,8 +56,8 @@ impl IamCpCertUserPwdServ {
             tenant_id = "".to_string();
             rbum_cert_conf_id = IamCertServ::get_cert_conf_id_by_kind(&IamCertKernelKind::UserPwd.to_string(), Some(tenant_id.clone()), funs).await?;
             IamCertServ::validate_by_ak_and_sk(
-                &pwd_new_req.ak.0,
-                &pwd_new_req.original_sk.0,
+                &pwd_new_req.ak,
+                &pwd_new_req.original_sk,
                 None,
                 Some(&RbumCertRelKind::Item),
                 true,
@@ -118,8 +118,8 @@ impl IamCpCertUserPwdServ {
         let ctx = IamAccountServ::new_context_if_account_is_global(ctx, funs).await?;
         let rbum_cert_conf_id = IamCertServ::get_cert_conf_id_by_kind(&IamCertKernelKind::UserPwd.to_string(), tenant_id.clone(), funs).await?;
         let _ = IamCertServ::validate_by_ak_and_sk(
-            &req.original_ak.0,
-            &req.sk.0,
+            &req.original_ak,
+            &req.sk,
             None,
             Some(&RbumCertRelKind::Item),
             false,
@@ -136,7 +136,7 @@ impl IamCpCertUserPwdServ {
         IamCertUserPwdServ::modify_ak_cert(&ctx.owner, req, &rbum_cert_conf_id, funs, &ctx).await?;
 
         let id = ctx.owner.to_string();
-        let op_describe = format!("修改用户名为{}", req.new_ak.as_ref());
+        let op_describe = format!("修改用户名为{}", req.new_ak);
         let _ = IamLogClient::add_ctx_task(LogParamTag::IamAccount, Some(id), op_describe, Some("ModifyUserName".to_string()), &ctx).await;
 
         Ok(())
@@ -187,8 +187,8 @@ impl IamCpCertUserPwdServ {
     pub async fn login_by_user_pwd(login_req: &IamCpUserPwdLoginReq, ip: Option<String>, funs: &TardisFunsInst) -> TardisResult<IamAccountInfoResp> {
         let tenant_id = Self::get_tenant_id(login_req.tenant_id.clone(), funs).await?;
         let validate_resp = IamCertServ::validate_by_ak_and_sk(
-            &login_req.ak.0,
-            &login_req.sk.0,
+            &login_req.ak,
+            &login_req.sk,
             None,
             Some(&RbumCertRelKind::Item),
             false,
@@ -212,8 +212,8 @@ impl IamCpCertUserPwdServ {
                 }
             };
             IamCertServ::validate_by_ak_and_sk(
-                &login_req.ak.0,
-                &login_req.sk.0,
+                &login_req.ak,
+                &login_req.sk,
                 None,
                 Some(&RbumCertRelKind::Item),
                 false,
