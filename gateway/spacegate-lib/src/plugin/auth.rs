@@ -42,7 +42,7 @@ use tardis::{
     web::web_resp::TardisResp,
     TardisFuns,
 };
-use tardis::{tracing, web::poem_openapi::types::Type, basic::tracing::Directive};
+use tardis::{basic::tracing::Directive, tracing, web::poem_openapi::types::Type};
 
 use super::plugin_constants;
 #[allow(clippy::type_complexity)]
@@ -144,7 +144,7 @@ impl SgPluginFilter for SgFilterAuth {
             }
             log_config.directives.push(directive(crate::PACKAGE_NAME, log_level));
             log_config.directives.push(directive(bios_auth::auth_constants::PACKAGE_NAME, log_level));
-            TardisFuns::tracing().update_config(&log_config);
+            TardisFuns::tracing().update_config(&log_config)?;
         }
 
         let config_md5 = TardisFuns::crypto.digest.md5(TardisFuns::json.obj_to_string(self)?)?;
@@ -176,11 +176,7 @@ impl SgPluginFilter for SgFilterAuth {
                     CacheModuleConfig::builder()
                         .url(
                             if self.cache_url.is_empty() {
-                                if let Some(redis_url) = init_dto.gateway_parameters.redis_url.clone() {
-                                    redis_url.as_str()
-                                } else {
-                                    "redis://127.0.0.1:6379"
-                                }
+                                init_dto.gateway_parameters.redis_url.as_deref().unwrap_or("redis://127.0.0.1:6379")
                             } else {
                                 self.cache_url.as_str()
                             }

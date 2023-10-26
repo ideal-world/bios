@@ -14,4 +14,4 @@ jobs:
         with:
           keywords: ${{secrets.LEAK_WORDS}}
           ignoreCase: true
-          ignoredDirs: '["architecture.png"]'
+          ignoredDirs: '["architecture.png", ".git"]'
