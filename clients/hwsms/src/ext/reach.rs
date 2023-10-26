@@ -1,15 +1,21 @@
-use std::{collections::HashSet, sync::{Arc, OnceLock}};
+use std::{
+    collections::HashSet,
+    sync::{Arc, OnceLock},
+};
 
 use bios_reach::{
-    client::{GenericTemplate, SendChannel},
-    dto::{ContentReplace, ReachChannelKind}, config::ReachConfig, consts::MODULE_CODE,
+    dto::{ContentReplace, ReachChannelKind},
+    reach_config::ReachConfig,
+    reach_consts::MODULE_CODE,
+    reach_send_channel::{GenericTemplate, SendChannel},
 };
 use tardis::{
     async_trait::async_trait,
-    basic::{error::TardisError, result::TardisResult}, TardisFuns,
+    basic::{error::TardisError, result::TardisResult},
+    serde_json, TardisFuns,
 };
 
-use crate::{SendSmsRequest, SmsContent, SmsClient};
+use crate::{SendSmsRequest, SmsClient, SmsContent};
 
 #[async_trait]
 impl SendChannel for crate::SmsClient {
@@ -18,6 +24,10 @@ impl SendChannel for crate::SmsClient {
     }
     async fn send(&self, template: GenericTemplate<'_>, content: &ContentReplace, to: &HashSet<&str>) -> TardisResult<()> {
         let content = content.render_final_content::<20>(template.content);
+        // content should be a json string array
+        let content_as_json_string_array: Vec<String> =
+            serde_json::from_str(&content).map_err(|e| TardisError::conflict(&format!("hwsms content should be a json string array: {e}"), "409-reach-bad-template"))?;
+        let template_paras = content_as_json_string_array.iter().map(|s| s.as_str()).collect();
         tardis::log::trace!("send sms {content}");
         let sms_content = SmsContent {
             to: &to.iter().fold(
@@ -32,7 +42,7 @@ impl SendChannel for crate::SmsClient {
                 },
             ),
             template_id: template.sms_template_id.ok_or_else(|| TardisError::conflict("template missing field template_id", "409-reach-bad-template"))?,
-            template_paras: vec![&content],
+            template_paras,
             signature: template.sms_signature,
         };
         let from = template.sms_from.ok_or_else(|| TardisError::conflict("template missing field sms_from", "409-reach-bad-template"))?;

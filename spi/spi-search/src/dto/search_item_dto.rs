@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use crate::search_enumeration::{SearchDataTypeKind, SearchQueryAggFunKind, SearchQueryTimeWindowKind};
 use bios_basic::{basic_enumeration::BasicQueryOpKind, dto::BasicQueryCondInfo};
 use serde::{Deserialize, Serialize};
 use tardis::{
@@ -243,4 +244,232 @@ pub struct SearchItemSearchResp {
     pub ext: Value,
     pub rank_title: f32,
     pub rank_content: f32,
+}
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct SearchQueryMetricsReq {
+    pub tag: String,
+    pub select: Vec<SearchQueryMetricsSelectReq>,
+    pub ignore_distinct: Option<bool>,
+    pub group: Vec<SearchQueryDimensionGroupReq>,
+    pub ignore_group_rollup: Option<bool>,
+    pub _where: Option<Vec<Vec<SearchQueryMetricsWhereReq>>>,
+    pub dimension_order: Option<Vec<SearchQueryDimensionOrderReq>>,
+    pub metrics_order: Option<Vec<SearchQueryMetricsOrderReq>>,
+    pub group_order: Option<Vec<SearchQueryDimensionGroupOrderReq>>,
+    pub group_agg: Option<bool>,
+    pub having: Option<Vec<SearchQueryMetricsHavingReq>>,
+    // Search context for record permission filtering
+    pub ctx: SearchItemSearchCtxReq,
+    // Search conditions
+    pub query: SearchItemQueryReq,
+    // Advanced search
+    pub adv_query: Option<Vec<AdvSearchItemQueryReq>>,
+    pub limit: Option<u32>,
+}
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct SearchQueryMetricsSelectReq {
+    pub in_ext: Option<bool>,
+    pub multi_values: Option<bool>,
+    pub data_type: SearchDataTypeKind,
+    /// Measure column key
+    pub code: String,
+    /// Aggregate function
+    pub fun: SearchQueryAggFunKind,
+}
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct SearchQueryDimensionGroupReq {
+    pub in_ext: Option<bool>,
+    pub multi_values: Option<bool>,
+    pub data_type: SearchDataTypeKind,
+    /// Dimension column key
+    pub code: String,
+    /// Time window function
+    pub time_window: Option<SearchQueryTimeWindowKind>,
+}
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct SearchQueryMetricsWhereReq {
+    pub in_ext: Option<bool>,
+    pub multi_values: Option<bool>,
+    pub data_type: SearchDataTypeKind,
+    /// Dimension or measure column key
+    pub code: String,
+    /// Operator
+    pub op: BasicQueryOpKind,
+    /// Value
+    pub value: Value,
+    /// Time window function
+    pub time_window: Option<SearchQueryTimeWindowKind>,
+}
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct SearchQueryDimensionOrderReq {
+    pub in_ext: Option<bool>,
+    /// Dimension column key
+    pub code: String,
+    /// Sort direction
+    pub asc: bool,
+}
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct SearchQueryMetricsOrderReq {
+    pub in_ext: Option<bool>,
+    /// Measure column key
+    pub code: String,
+    pub fun: SearchQueryAggFunKind,
+    /// Sort direction
+    pub asc: bool,
+}
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct SearchQueryDimensionGroupOrderReq {
+    pub in_ext: Option<bool>,
+    /// Dimension column key
+    pub code: String,
+    /// Time window function
+    pub time_window: Option<SearchQueryTimeWindowKind>,
+    /// Sort direction
+    pub asc: bool,
+}
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct SearchQueryMetricsHavingReq {
+    pub in_ext: Option<bool>,
+    pub multi_values: Option<bool>,
+    pub data_type: SearchDataTypeKind,
+    /// Measure Column key
+    pub code: String,
+    /// Aggregate function
+    pub fun: SearchQueryAggFunKind,
+    /// Operator
+    pub op: BasicQueryOpKind,
+    /// Value
+    pub value: Value,
+}
+
+/// Query Metrics Response
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct SearchQueryMetricsResp {
+    /// Fact key
+    pub tag: String,
+    /// Show names
+    ///
+    /// key = alias name, value = show name
+    ///
+    /// The format of the alias: `field name__<function name>`
+    pub show_names: HashMap<String, String>,
+    /// Group
+    ///
+    /// Format with only one level (single dimension):
+    /// map
+    /// ```
+    /// {
+    ///     "":{  // The root group
+    ///         "alias name1":value,
+    ///         "alias name...":value,
+    ///     },
+    ///     "<group name1>" {
+    ///         "alias name1":value,
+    ///         "alias name...":value,
+    ///     }
+    ///     "<group name...>" {
+    ///         "alias name1":value,
+    ///         "alias name...":value,
+    ///     }
+    /// }
+    /// ```
+    /// array
+    /// ```
+    /// [   
+    ///     {
+    ///         "name": "<group name1>",
+    ///         "value": value
+    ///     },
+    ///     
+    /// ]
+    /// ```
+    ///
+    /// Format with multiple levels (multiple dimensions):
+    /// ```
+    /// {
+    ///     "":{  // The root group
+    ///         "": {
+    ///             "alias name1":value,
+    ///             "alias name...":value,
+    ///         }
+    ///     },
+    ///     "<group name1>" {
+    ///         "": {
+    ///             "alias name1":value,
+    ///             "alias name...":value,
+    ///         },
+    ///         "<sub group name...>": {
+    ///             "alias name1":value,
+    ///             "alias name...":value,
+    ///         }
+    ///     }
+    ///     "<group name...>" {
+    ///         "": {
+    ///             "alias name1":value,
+    ///             "alias name...":value,
+    ///         },
+    ///         "<sub group name...>": {
+    ///             "alias name1":value,
+    ///             "alias name...":value,
+    ///         }
+    ///     }
+    /// }
+    /// ```
+    ///
+    /// # Example
+    /// ```
+    /// {
+    ///     "from": "req",
+    ///     "show_names": {
+    ///         "ct__date": "创建时间",
+    ///         "act_hours__sum": "实例工时",
+    ///         "status__": "状态",
+    ///         "plan_hours__sum": "计划工时"
+    ///     },
+    ///     "group": {
+    ///         "": {
+    ///             "": {
+    ///                 "act_hours__sum": 180,
+    ///                 "plan_hours__sum": 330
+    ///             }
+    ///         },
+    ///         "2023-01-01": {
+    ///             "": {
+    ///                 "act_hours__sum": 120,
+    ///                 "plan_hours__sum": 240
+    ///             },
+    ///             "open": {
+    ///                 "act_hours__sum": 80,
+    ///                 "plan_hours__sum": 160
+    ///             },
+    ///             "close": {
+    ///                 "act_hours__sum": 40,
+    ///                 "plan_hours__sum": 80
+    ///             }
+    ///         }
+    ///         "2023-01-02": {
+    ///             "": {
+    ///                 "act_hours__sum": 60,
+    ///                 "plan_hours__sum": 90
+    ///             },
+    ///             "open": {
+    ///                 "act_hours__sum": 40,
+    ///                 "plan_hours__sum": 60
+    ///             },
+    ///             "progress": {
+    ///                 "act_hours__sum": 20,
+    ///                 "plan_hours__sum": 30
+    ///             }
+    ///         }
+    ///     }
+    /// }
+    /// ```
+    pub group: Value,
 }

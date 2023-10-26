@@ -708,6 +708,10 @@ impl FlowModelServ {
 
     // Find model by tag and template id
     pub async fn get_models(tags: Vec<&str>, template_id: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<HashMap<String, FlowTemplateModelResp>> {
+        let global_ctx = TardisContext {
+            own_paths: "".to_string(),
+            ..ctx.clone()
+        };
         let mut result = HashMap::new();
 
         let models = if let Some(template_id) = &template_id {
@@ -717,6 +721,7 @@ impl FlowModelServ {
                 &FlowModelFilterReq {
                     basic: RbumBasicFilterReq {
                         ignore_scope: true,
+                        with_sub_own_paths: true,
                         ..Default::default()
                     },
                     rel_template_id: Some(template_id.clone()),
@@ -727,7 +732,7 @@ impl FlowModelServ {
                 None,
                 None,
                 funs,
-                ctx,
+                &global_ctx,
             )
             .await?
         } else {
@@ -797,8 +802,8 @@ impl FlowModelServ {
 
     // add custom model by template model
     // rel_template_id: Associated parent template id
-    // current_template_id: Current tempalte id
-    pub async fn add_custom_model(tag: &str, rel_template_id: &str, current_template_id: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
+    // current_template_id: Current template id
+    pub async fn add_custom_model(tag: &str, parent_template_id: &str, rel_template_id: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
         let current_model = Self::find_one_detail_item(
             &FlowModelFilterReq {
                 basic: RbumBasicFilterReq {
@@ -806,7 +811,7 @@ impl FlowModelServ {
                     ..Default::default()
                 },
                 tags: Some(vec![tag.to_string()]),
-                rel_template_id: current_template_id.clone(),
+                rel_template_id: rel_template_id.clone(),
                 ..Default::default()
             },
             funs,
@@ -822,7 +827,7 @@ impl FlowModelServ {
             ..ctx.clone()
         };
 
-        let basic = if !rel_template_id.is_empty() {
+        let basic = if !parent_template_id.is_empty() {
             RbumBasicFilterReq {
                 with_sub_own_paths: true,
                 ignore_scope: true,
@@ -835,7 +840,7 @@ impl FlowModelServ {
             &FlowModelFilterReq {
                 basic,
                 tags: Some(vec![tag.to_string()]),
-                rel_template_id: Some(rel_template_id.to_string()),
+                rel_template_id: Some(parent_template_id.to_string()),
                 ..Default::default()
             },
             funs,
@@ -869,8 +874,8 @@ impl FlowModelServ {
                 icon: Some(parent_model.icon),
                 info: Some(parent_model.info),
                 init_state_id: parent_model.init_state_id,
-                template: current_template_id.is_some(),
-                rel_template_id: current_template_id,
+                template: rel_template_id.is_some(),
+                rel_template_id,
                 transitions: None,
                 rel_model_id: Some(parent_model.id.clone()),
                 tag: Some(parent_model.tag),
@@ -1196,6 +1201,7 @@ impl FlowModelServ {
         current_chain.push(transition_detail.id.clone());
 
         let model_detail = Self::get_item(&transition_detail.rel_flow_model_id, &FlowModelFilterReq::default(), funs, ctx).await?;
+        // check post changes
         let post_changes = transition_detail
             .action_by_post_changes()
             .into_iter()
@@ -1245,6 +1251,20 @@ impl FlowModelServ {
                 }
             }
         }
+        // check front changes
+        let flow_transitions = model_detail
+            .transitions()
+            .into_iter()
+            .filter(|trans| trans.from_flow_state_id == transition_detail.to_flow_state_id && !trans.action_by_front_changes().is_empty())
+            .sorted_by_key(|trans| trans.sort)
+            .collect_vec();
+        for transition_detail in flow_transitions {
+            (is_ring, current_chain) = Self::check_post_action_ring(transition_detail, (is_ring, current_chain.clone()), funs, ctx).await?;
+            if is_ring {
+                return Ok((true, current_chain));
+            }
+        }
+
         Ok((is_ring, current_chain))
     }
 

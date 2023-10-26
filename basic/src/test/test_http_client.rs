@@ -4,6 +4,7 @@ use serde::de::DeserializeOwned;
 use serde::Serialize;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::result::TardisResult;
+use tardis::config::config_dto::WebClientModuleConfig;
 use tardis::log::{info, warn};
 use tardis::web::poem_openapi::types::{ParseFromJSON, ToJSON};
 use tardis::web::web_client::TardisWebClient;
@@ -19,7 +20,7 @@ pub struct TestHttpClient {
 impl TestHttpClient {
     pub fn new(base_url: String) -> TestHttpClient {
         TestHttpClient {
-            client: TardisWebClient::init(600).unwrap(),
+            client: TardisWebClient::init(&WebClientModuleConfig { connect_timeout_sec: 600, ..Default::default() }).unwrap(),
             context: Default::default(),
             base_url,
         }
@@ -27,7 +28,9 @@ impl TestHttpClient {
 
     pub fn set_auth(&mut self, ctx: &TardisContext) -> TardisResult<()> {
         let ctx_base64 = &TardisFuns::crypto.base64.encode(TardisFuns::json.obj_to_string(&ctx)?);
-        self.set_default_header(&TardisFuns::fw_config().web_server.context_conf.context_header_name, ctx_base64);
+        let fw_config = TardisFuns::fw_config();
+        let web_server_config = fw_config.web_server();
+        self.set_default_header(&web_server_config.context_conf.context_header_name, ctx_base64);
         self.context = ctx.clone();
         Ok(())
     }

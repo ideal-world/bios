@@ -31,17 +31,13 @@ async fn test_auth() -> TardisResult<()> {
     auth_initializer::crypto_init().await?;
     test_auth_init::test_init().await?;
 
-    #[cfg(feature = "web-server")]
-    {
-        let web_server = TardisFuns::web_server();
-        auth_initializer::init_api(web_server).await?;
-        tokio::spawn(async move {
-            web_server.start().await.unwrap();
-        });
-        sleep(Duration::from_millis(500)).await;
+    let web_server = TardisFuns::web_server();
+    auth_initializer::init_api(&web_server).await?;
+    web_server.start().await.unwrap();
+    sleep(Duration::from_millis(500)).await;
 
-        test_auth_req::test_req().await?;
-        test_auth_encrypt::test_encrypt().await?;
-    }
+    test_auth_req::test_req().await?;
+    test_auth_encrypt::test_encrypt().await?;
+
     Ok(())
 }

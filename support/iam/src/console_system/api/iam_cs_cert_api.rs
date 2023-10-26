@@ -7,6 +7,7 @@ use tardis::web::web_resp::{TardisApiResult, TardisResp, Void};
 
 use crate::basic::dto::iam_cert_conf_dto::{IamCertConfLdapAddOrModifyReq, IamCertConfLdapResp};
 use crate::basic::serv::iam_account_serv::IamAccountServ;
+use crate::basic::serv::iam_cert_ldap_serv::IamCertLdapServ;
 use bios_basic::rbum::dto::rbum_cert_dto::{RbumCertSummaryResp, RbumCertSummaryWithSkResp};
 use bios_basic::rbum::dto::rbum_filer_dto::RbumCertFilterReq;
 use bios_basic::rbum::helper::rbum_scope_helper::get_max_level_id_by_context;

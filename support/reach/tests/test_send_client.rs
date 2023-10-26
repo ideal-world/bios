@@ -1,10 +1,10 @@
 // std::env::set_var("PROFILE", "prod");
 use serde::Deserialize;
 use std::time::Duration;
-use tardis::{basic::result::TardisResult, tokio, testcontainers};
+use tardis::{basic::result::TardisResult, testcontainers, tokio};
 
 mod test_reach_common;
-use bios_reach::{consts::*, invoke};
+use bios_reach::{reach_consts::*, reach_invoke};
 use test_reach_common::*;
 #[derive(Deserialize)]
 pub struct TestConfig {
@@ -16,7 +16,7 @@ pub struct TestConfig {
 
 impl TestConfig {
     fn load() -> Self {
-        toml::from_slice(include_bytes!("config/test-send-client.toml")).expect("invalid config")
+        toml::from_str(include_str!("config/test-send-client.toml")).expect("invalid config")
     }
 }
 
@@ -30,10 +30,10 @@ pub async fn test_hw_sms() -> TardisResult<()> {
     let holder = init_tardis(&docker).await?;
     let ctx = get_test_ctx();
     let funs = get_tardis_inst();
-    let client = invoke::Client::new("http://localhost:8080/reach", ctx, &funs);
-    // client.pwd_send(&phone, &code, &()).await?;
+    let client = reach_invoke::Client::new("http://localhost:8080/reach", ctx, &funs);
+    client.pwd_send(&phone, &code, &()).await?;
 
-    client.vcode_send(&phone, &code, &()).await?;
+    // client.vcode_send(&phone, &code, &()).await?;
     // wait for send
     tokio::time::sleep(Duration::from_secs(10)).await;
     drop(holder);
@@ -50,7 +50,7 @@ pub async fn test_mail() -> TardisResult<()> {
     let holder = init_tardis(&docker).await?;
     let ctx = get_test_ctx();
     let funs = get_tardis_inst();
-    let client = invoke::Client::new("http://localhost:8080/reach", ctx, &funs);
+    let client = reach_invoke::Client::new("http://localhost:8080/reach", ctx, &funs);
     client.mail_pwd_send(&mail, &content, "测试", &()).await?;
     // wait for send
     tokio::time::sleep(Duration::from_secs(10)).await;

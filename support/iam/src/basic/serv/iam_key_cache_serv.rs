@@ -58,7 +58,7 @@ impl IamIdentCacheServ {
             .hset(
                 format!("{}{}", funs.conf::<IamConfig>().cache_key_account_rel_, rel_iam_item_id).as_str(),
                 token,
-                &format!("{},{}", token_kind, Utc::now().timestamp_nanos()),
+                &format!("{},{}", token_kind, Utc::now().timestamp_nanos_opt().expect("maybe in 23rd centery")),
             )
             .await?;
         // Remove old tokens

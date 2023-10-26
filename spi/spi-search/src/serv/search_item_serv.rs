@@ -5,7 +5,7 @@ use bios_basic::spi_dispatch_service;
 use tardis::basic::result::TardisResult;
 use tardis::web::web_resp::TardisPage;
 
-use crate::dto::search_item_dto::{SearchItemAddReq, SearchItemModifyReq, SearchItemSearchReq, SearchItemSearchResp};
+use crate::dto::search_item_dto::{SearchItemAddReq, SearchItemModifyReq, SearchItemSearchReq, SearchItemSearchResp, SearchQueryMetricsReq, SearchQueryMetricsResp};
 use crate::search_initializer;
 
 #[cfg(feature = "spi-es")]
@@ -26,6 +26,8 @@ spi_dispatch_service! {
         add(add_req: &mut SearchItemAddReq) -> TardisResult<()>;
         modify(tag: &str, key: &str, modify_req: &mut SearchItemModifyReq) -> TardisResult<()>;
         delete(tag: &str, key: &str) -> TardisResult<()>;
+        delete_by_ownership(tag: &str, own_paths: &str) -> TardisResult<()>;
         search(search_req: &mut SearchItemSearchReq) -> TardisResult<TardisPage<SearchItemSearchResp>>;
+        query_metrics(query_req: &SearchQueryMetricsReq) -> TardisResult<SearchQueryMetricsResp>;
     }
 }

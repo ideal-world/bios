@@ -133,12 +133,12 @@ pub async fn init_db(mut funs: TardisFunsInst) -> TardisResult<Option<(String, S
     } else {
         let db_kind = TardisFuns::reldb().backend();
         let compatible_type = TardisFuns::reldb().compatible_type();
-        funs.db().init(iam_tenant::ActiveModel::init(db_kind, None, compatible_type.clone())).await?;
-        funs.db().init(iam_app::ActiveModel::init(db_kind, None, compatible_type.clone())).await?;
-        funs.db().init(iam_role::ActiveModel::init(db_kind, None, compatible_type.clone())).await?;
-        funs.db().init(iam_account::ActiveModel::init(db_kind, None, compatible_type.clone())).await?;
-        funs.db().init(iam_res::ActiveModel::init(db_kind, None, compatible_type.clone())).await?;
-        funs.db().init(iam_config::ActiveModel::init(db_kind, None, compatible_type.clone())).await?;
+        funs.db().init(iam_tenant::ActiveModel::init(db_kind, None, compatible_type)).await?;
+        funs.db().init(iam_app::ActiveModel::init(db_kind, None, compatible_type)).await?;
+        funs.db().init(iam_role::ActiveModel::init(db_kind, None, compatible_type)).await?;
+        funs.db().init(iam_account::ActiveModel::init(db_kind, None, compatible_type)).await?;
+        funs.db().init(iam_res::ActiveModel::init(db_kind, None, compatible_type)).await?;
+        funs.db().init(iam_config::ActiveModel::init(db_kind, None, compatible_type)).await?;
         let (name, password) = init_rbum_data(&funs).await?;
         Some((name, password))
     };

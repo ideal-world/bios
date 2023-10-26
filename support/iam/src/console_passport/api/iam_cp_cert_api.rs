@@ -25,8 +25,9 @@ use crate::basic::serv::iam_key_cache_serv::IamIdentCacheServ;
 use crate::basic::serv::iam_tenant_serv::IamTenantServ;
 use crate::console_passport::dto::iam_cp_cert_dto::{
     IamCpExistMailVCodeReq, IamCpExistPhoneVCodeReq, IamCpMailVCodeLoginGenVCodeReq, IamCpMailVCodeLoginReq, IamCpOAuth2LoginReq, IamCpPhoneVCodeLoginGenVCodeReq,
-    IamCpPhoneVCodeLoginSendVCodeReq, IamCpUserPwdLoginReq,
+    IamCpPhoneVCodeLoginSendVCodeReq, IamCpUserPwdLoginReq, IamCpLdapLoginReq, IamCpUserPwdCheckReq, IamCpUserPwdBindWithLdapReq,
 };
+use crate::console_passport::serv::iam_cp_cert_ldap_serv::IamCpCertLdapServ;
 use crate::console_passport::serv::iam_cp_cert_mail_vcode_serv::IamCpCertMailVCodeServ;
 use crate::console_passport::serv::iam_cp_cert_oauth2_serv::IamCpCertOAuth2Serv;
 use crate::console_passport::serv::iam_cp_cert_phone_vcode_serv::IamCpCertPhoneVCodeServ;
@@ -343,6 +344,7 @@ impl IamCpCertApi {
     }
 }
 
+pub struct IamCpCertLdapApi;
 /// Passport Console Cert LDAP API
 #[cfg(feature = "ldap_client")]
 #[poem_openapi::OpenApi(prefix_path = "/cp/ldap", tag = "bios_basic::ApiTag::Passport")]

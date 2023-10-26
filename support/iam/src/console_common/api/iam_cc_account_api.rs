@@ -10,9 +10,10 @@ use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumItemRelFilte
 use bios_basic::rbum::rbum_enumeration::RbumRelFromKind;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
-use crate::basic::dto::iam_account_dto::{IamAccountBoneResp, IamAccountExtSysBatchAddReq, IamAccountExtSysResp};
+use crate::basic::dto::iam_account_dto::{IamAccountBoneResp, IamAccountExtSysBatchAddReq, IamAccountExtSysResp, IamAccountAddByLdapResp};
 use crate::basic::dto::iam_filer_dto::IamAccountFilterReq;
 use crate::basic::serv::iam_account_serv::IamAccountServ;
+use crate::basic::serv::iam_cert_ldap_serv::IamCertLdapServ;
 use crate::iam_constants;
 use crate::iam_enumeration::IamRelKind;
 
@@ -152,6 +153,8 @@ impl IamCcAccountApi {
     }
 }
 
+#[derive(Clone, Default)]
+pub struct IamCcAccountLdapApi;
 /// Common Console Account LDAP API
 #[cfg(feature = "ldap_client")]
 #[poem_openapi::OpenApi(prefix_path = "/cc/account/ldap", tag = "bios_basic::ApiTag::Common")]

@@ -31,11 +31,10 @@ use std::{
     str::FromStr,
     sync::{Arc, OnceLock},
 };
-use tardis::web::poem_openapi::types::Type;
 use tardis::{
     async_trait,
-    basic::{error::TardisError, result::TardisResult, tracing::TardisTracing},
-    config::config_dto::{AppConfig, CacheConfig, DBConfig, FrameworkConfig, LogConfig, TardisConfig, WebServerConfig},
+    basic::{error::TardisError, result::TardisResult},
+    config::config_dto::{AppConfig, CacheModuleConfig, FrameworkConfig, LogConfig, TardisConfig},
     log,
     serde_json::{self, json, Value},
     tokio::{sync::RwLock, task::JoinHandle},
@@ -43,6 +42,7 @@ use tardis::{
     web::web_resp::TardisResp,
     TardisFuns,
 };
+use tardis::{tracing, web::poem_openapi::types::Type, basic::tracing::Directive};
 
 use super::plugin_constants;
 #[allow(clippy::type_complexity)]
@@ -80,7 +80,11 @@ pub struct SgFilterAuth {
     /// |---------------|-----------|---------------------|
     /// |   `/apis`     |  `apis`   |    `/{true_url}`    |
     /// |`/prefix/apis` |  `apis`   |`/prefix/{true_url}` |
-    mix_replace_url:String,
+    mix_replace_url: String,
+    /// Remove prefix of AuthReq path.
+    /// use for [ctx_to_auth_req]
+    /// Used to remove a fixed prefix from the original URL.
+    auth_path_ignore_prefix: String,
 }
 
 impl Default for SgFilterAuth {
@@ -94,6 +98,7 @@ impl Default for SgFilterAuth {
             header_is_mix_req: "IS_MIX_REQ".to_string(),
             fetch_server_config_path: "/starsysApi/apis".to_string(),
             mix_replace_url: "apis".to_string(),
+            auth_path_ignore_prefix: "/starsysApi".to_string(),
         }
     }
 }
@@ -129,8 +134,17 @@ impl SgPluginFilter for SgFilterAuth {
 
     async fn init(&mut self, init_dto: &SgPluginFilterInitDto) -> TardisResult<()> {
         if let Some(log_level) = &init_dto.gateway_parameters.log_level {
-            let _ = TardisTracing::update_log_level_by_domain_code(crate::PACKAGE_NAME, log_level);
-            let _ = TardisTracing::update_log_level_by_domain_code(bios_auth::auth_constants::PACKAGE_NAME, log_level);
+            let mut log_config = TardisFuns::fw_config().log().clone();
+            fn directive(path: &str, lvl: &str) -> Directive {
+                let s = format!("{path}={lvl}");
+                format!("{path}={lvl}").parse().unwrap_or_else(|e| {
+                    tracing::error!("[SG.Filter.Auth] failed to parse directive {:?}: {}", s, e);
+                    Default::default()
+                })
+            }
+            log_config.directives.push(directive(crate::PACKAGE_NAME, log_level));
+            log_config.directives.push(directive(bios_auth::auth_constants::PACKAGE_NAME, log_level));
+            TardisFuns::tracing().update_config(&log_config);
         }
 
         let config_md5 = TardisFuns::crypto.digest.md5(TardisFuns::json.obj_to_string(self)?)?;
@@ -158,28 +172,28 @@ impl SgPluginFilter for SgFilterAuth {
                     desc: "This is a spacegate plugin-auth".to_string(),
                     ..Default::default()
                 },
-                web_server: WebServerConfig {
-                    enabled: false,
+                cache: Some(
+                    CacheModuleConfig::builder()
+                        .url(
+                            if self.cache_url.is_empty() {
+                                if let Some(redis_url) = init_dto.gateway_parameters.redis_url.clone() {
+                                    redis_url.as_str()
+                                } else {
+                                    "redis://127.0.0.1:6379"
+                                }
+                            } else {
+                                self.cache_url.as_str()
+                            }
+                            .parse()
+                            .map_err(|e| TardisError::internal_error(&format!("[Plugin.Auth]invalid redis url: {e:?}"), "-1"))?,
+                        )
+                        .build()
+                        .into(),
+                ),
+                log: init_dto.gateway_parameters.log_level.as_ref().map(|l| LogConfig {
+                    level: l.parse().unwrap_or_default(),
                     ..Default::default()
-                },
-                db: DBConfig {
-                    enabled: false,
-                    ..Default::default()
-                },
-                cache: CacheConfig {
-                    enabled: true,
-                    url: if self.cache_url.is_empty() {
-                        if let Some(redis_url) = init_dto.gateway_parameters.redis_url.clone() {
-                            redis_url
-                        } else {
-                            "redis://127.0.0.1:6379".to_string()
-                        }
-                    } else {
-                        self.cache_url.clone()
-                    },
-                    ..Default::default()
-                },
-                log: init_dto.gateway_parameters.log_level.as_ref().map(|l| LogConfig { level: l.clone() }),
+                }),
                 ..Default::default()
             },
         })
@@ -201,9 +215,9 @@ impl SgPluginFilter for SgFilterAuth {
             return Ok((true, ctx));
         }
 
-        log::trace!("[Plugin.Auth] request filter info: request path is {}",ctx.request.get_uri().path());
+        log::trace!("[Plugin.Auth] request filter info: request path is {}", ctx.request.get_uri().path());
         if ctx.request.get_method().eq(&Method::GET) && ctx.request.get_uri().path() == self.fetch_server_config_path.as_str() {
-            log::debug!("[Plugin.Auth] request path hit fetch server config path: {}",self.fetch_server_config_path);
+            log::debug!("[Plugin.Auth] request path hit fetch server config path: {}", self.fetch_server_config_path);
             ctx.set_action(SgRouteFilterRequestAction::Response);
             let mut headers = HeaderMap::new();
             headers.insert(http::header::CONTENT_TYPE, HeaderValue::from_static("application/json"));
@@ -223,12 +237,12 @@ impl SgPluginFilter for SgFilterAuth {
 
         if self.auth_config.strict_security_mode && !is_true_mix_req {
             log::debug!("[Plugin.Auth] handle mix request");
-            let mut ctx = mix_req_to_ctx(&self.auth_config,&self.mix_replace_url, ctx).await?;
+            let mut ctx = mix_req_to_ctx(&self.auth_config, &self.mix_replace_url, ctx).await?;
             ctx.request.set_header_str(&self.header_is_mix_req, "true")?;
             return Ok((false, ctx));
         }
         ctx.request.set_header_str(&self.header_is_mix_req, "false")?;
-        let (mut auth_req, req_body) = ctx_to_auth_req(&mut ctx).await?;
+        let (mut auth_req, req_body) = ctx_to_auth_req(&self.auth_path_ignore_prefix, &mut ctx).await?;
 
         match auth_kernel_serv::auth(&mut auth_req, is_true_mix_req).await {
             Ok(auth_result) => {
@@ -294,7 +308,7 @@ impl SgPluginFilter for SgFilterAuth {
     }
 }
 
-async fn mix_req_to_ctx(auth_config: &AuthConfig,mix_replace_url:&str, mut ctx: SgRoutePluginContext) -> TardisResult<SgRoutePluginContext> {
+async fn mix_req_to_ctx(auth_config: &AuthConfig, mix_replace_url: &str, mut ctx: SgRoutePluginContext) -> TardisResult<SgRoutePluginContext> {
     let body = ctx.request.take_body_into_bytes().await?;
     let string_body = String::from_utf8_lossy(&body).trim_matches('"').to_string();
     if string_body.is_empty() {
@@ -355,13 +369,16 @@ async fn mix_req_to_ctx(auth_config: &AuthConfig,mix_replace_url:&str, mut ctx: 
         None => real_ip,
     };
     ctx.request.set_header_str("X-Forwarded-For", &forwarded_for)?;
-    ctx.request.set_header_str(hyper::header::CONTENT_LENGTH.as_str(),mix_body.body.as_bytes().len().to_string().as_str())?;
+    ctx.request.set_header_str(hyper::header::CONTENT_LENGTH.as_str(), mix_body.body.as_bytes().len().to_string().as_str())?;
     ctx.request.set_body(mix_body.body);
     Ok(ctx)
 }
 
-async fn ctx_to_auth_req(ctx: &mut SgRoutePluginContext) -> TardisResult<(AuthReq, Bytes)> {
-    let url = ctx.request.get_uri().clone();
+/// # Convert SgRoutePluginContext to AuthReq
+/// Prepare the AuthReq required for the authentication process.
+/// The authentication process requires a URL that has not been rewritten.
+async fn ctx_to_auth_req(ignore_prefix: &str, ctx: &mut SgRoutePluginContext) -> TardisResult<(AuthReq, Bytes)> {
+    let url = ctx.request.get_uri_raw().clone();
     let scheme = url.scheme().map(|s| s.to_string()).unwrap_or("http".to_string());
     let headers = headermap_header_to_hashmap(ctx.request.get_headers())?;
     let req_body = ctx.request.take_body_into_bytes().await?;
@@ -369,7 +386,7 @@ async fn ctx_to_auth_req(ctx: &mut SgRoutePluginContext) -> TardisResult<(AuthRe
     Ok((
         AuthReq {
             scheme: scheme.clone(),
-            path: url.path().to_string(),
+            path: url.path().replace(ignore_prefix, "").to_string(),
             query: url
                 .query()
                 .filter(|q| !q.is_empty())
@@ -457,6 +474,7 @@ mod tests {
 
     use bios_auth::auth_constants;
 
+    use super::*;
     use spacegate_kernel::config::gateway_dto::SgParameters;
     use spacegate_kernel::http::{Method, Uri, Version};
     use spacegate_kernel::hyper::{self, Body, StatusCode};
@@ -464,14 +482,13 @@ mod tests {
     use tardis::crypto::crypto_sm2_4::{TardisCryptoSm2, TardisCryptoSm2PrivateKey};
     use tardis::{
         test::test_container::TardisTestContainer,
-        testcontainers::{self, clients::Cli, images::redis::Redis, Container},
+        testcontainers::{self, clients::Cli, Container},
         tokio,
     };
-
-    use super::*;
+    use testcontainers_modules::redis::Redis;
 
     #[tokio::test]
-    async fn test(){
+    async fn test() {
         env::set_var("RUST_LOG", "info,bios_spacegate=trace,bios_auth=trace,tardis=trace");
         tracing_subscriber::fmt::init();
 
@@ -733,7 +750,7 @@ mod tests {
             cache_url: env::var("TARDIS_FW.CACHE.URL").unwrap(),
             ..Default::default()
         };
-        filter_auth.auth_config.strict_security_mode=true;
+        filter_auth.auth_config.strict_security_mode = true;
 
         filter_auth
             .init(&SgPluginFilterInitDto {
@@ -765,7 +782,7 @@ mod tests {
         let data: Value = serde_json::from_str(&String::from_utf8_lossy(
             &hyper::body::to_bytes(server_config_resp.body_mut()).await.unwrap().iter().cloned().collect::<Vec<u8>>(),
         ))
-            .unwrap();
+        .unwrap();
 
         let pub_key = data["data"]["pub_key"].as_str().unwrap();
         let server_sm2 = TardisCryptoSm2 {};
@@ -774,24 +791,28 @@ mod tests {
         let front_pri_key = TardisFuns::crypto.sm2.new_private_key().unwrap();
         let front_pub_key = TardisFuns::crypto.sm2.new_public_key(&front_pri_key).unwrap();
 
-
         //=========request GET by apis============
-        let true_path="get_path";
-        let body=MixRequestBody{
+        let true_path = "get_path";
+        let body = MixRequestBody {
             method: "GET".to_string(),
             uri: true_path.to_string(),
             body: "".to_string(),
             headers: Default::default(),
             ts: 0.0,
         };
-        let mix_body=TardisFuns::json.obj_to_string(&body).unwrap();
+        let mix_body = TardisFuns::json.obj_to_string(&body).unwrap();
         let mut header = HeaderMap::new();
-        let (crypto_body, bios_crypto_value) = crypto_req(&mix_body, server_public_key.serialize().unwrap().as_ref(), front_pub_key.serialize().unwrap().as_ref(), true);
+        let (crypto_body, bios_crypto_value) = crypto_req(
+            &mix_body,
+            server_public_key.serialize().unwrap().as_ref(),
+            front_pub_key.serialize().unwrap().as_ref(),
+            true,
+        );
         header.insert("Bios-Crypto", bios_crypto_value.parse().unwrap());
-        header.insert(hyper::header::CONTENT_LENGTH,crypto_body.as_bytes().len().to_string().parse().unwrap());
+        header.insert(hyper::header::CONTENT_LENGTH, crypto_body.as_bytes().len().to_string().parse().unwrap());
         let ctx = SgRoutePluginContext::new_http(
             Method::POST,
-            Uri::from_str(&format!("http://sg.idealworld.group/{}",filter_auth.mix_replace_url)).unwrap(),
+            Uri::from_str(&format!("http://sg.idealworld.group/{}", filter_auth.mix_replace_url)).unwrap(),
             Version::HTTP_11,
             header,
             Body::from(crypto_body),
@@ -799,18 +820,20 @@ mod tests {
             "".to_string(),
             None,
         );
-        let (is_ok, mut before_filter_ctx) = filter_auth.req_filter("", ctx).await.unwrap();
+        let (is_ok, before_filter_ctx) = filter_auth.req_filter("", ctx).await.unwrap();
         assert!(!is_ok);
-        assert_eq!(before_filter_ctx.get_action(),&SgRouteFilterRequestAction::Redirect);
-        assert_eq!(before_filter_ctx.request.get_uri().path(),&format!("/{}",true_path));
-        assert_eq!(before_filter_ctx.request.get_method(),&Method::GET);
-        assert_eq!(before_filter_ctx.request.get_headers().get(hyper::header::CONTENT_LENGTH),Some(&HeaderValue::from_static("0")));
+        assert_eq!(before_filter_ctx.get_action(), &SgRouteFilterRequestAction::Redirect);
+        assert_eq!(before_filter_ctx.request.get_uri().path(), &format!("/{}", true_path));
+        assert_eq!(before_filter_ctx.request.get_method(), &Method::GET);
+        assert_eq!(
+            before_filter_ctx.request.get_headers().get(hyper::header::CONTENT_LENGTH),
+            Some(&HeaderValue::from_static("0"))
+        );
         let (is_ok, mut before_filter_ctx) = filter_auth.req_filter("", before_filter_ctx).await.unwrap();
         assert!(is_ok);
-        println!("before_filter_ctx=={:?}",before_filter_ctx);
+        println!("before_filter_ctx=={:?}", before_filter_ctx);
         let req_body = before_filter_ctx.request.dump_body().await.unwrap();
         assert!(req_body.is_empty());
-
 
         filter_auth.destroy().await.unwrap();
     }
@@ -818,30 +841,32 @@ mod tests {
     fn decode_context(headers: &HeaderMap) -> TardisContext {
         let config = TardisFuns::cs_config::<AuthConfig>(auth_constants::DOMAIN_CODE);
         let ctx = headers.get(&config.head_key_context).unwrap();
-        let ctx = TardisFuns::crypto.base64.decode(ctx.to_str().unwrap()).unwrap();
+        let ctx = TardisFuns::crypto.base64.decode_to_string(ctx.to_str().unwrap()).unwrap();
         TardisFuns::json.str_to_obj(&ctx).unwrap()
     }
 
     fn crypto_req(body: &str, serv_pub_key: &str, front_pub_key: &str, need_crypto_resp: bool) -> (String, String) {
         let pub_key = TardisFuns::crypto.sm2.new_public_key_from_public_key(serv_pub_key).unwrap();
 
-        let sm4_key = TardisFuns::crypto.key.rand_16_hex().unwrap();
-        let sm4_iv = TardisFuns::crypto.key.rand_16_hex().unwrap();
+        let sm4_key = TardisFuns::crypto.key.rand_16_bytes();
+        let sm4_key_hex = TardisFuns::crypto.hex.encode(&sm4_key);
+        let sm4_iv = TardisFuns::crypto.key.rand_16_bytes();
+        let sm4_iv_hex = TardisFuns::crypto.hex.encode(&sm4_key);
 
         let data = TardisFuns::crypto.sm4.encrypt_cbc(body, &sm4_key, &sm4_iv).unwrap();
         let sign_data = TardisFuns::crypto.digest.sm3(&data).unwrap();
 
         let sm4_encrypt = if need_crypto_resp {
-            pub_key.encrypt(&format!("{sign_data} {sm4_key} {sm4_iv} {front_pub_key}",)).unwrap()
+            pub_key.encrypt(&format!("{sign_data} {sm4_key_hex} {sm4_iv_hex} {front_pub_key}",)).unwrap()
         } else {
-            pub_key.encrypt(&format!("{sign_data} {sm4_key} {sm4_iv}",)).unwrap()
+            pub_key.encrypt(&format!("{sign_data} {sm4_key_hex} {sm4_iv_hex}",)).unwrap()
         };
         let base64_encrypt = TardisFuns::crypto.base64.encode(sm4_encrypt);
         (data, base64_encrypt)
     }
 
     fn crypto_resp(body: &str, crypto_header: &str, front_pri_key: &TardisCryptoSm2PrivateKey) -> String {
-        let decode_base64 = TardisFuns::crypto.base64.decode(crypto_header).unwrap();
+        let decode_base64 = TardisFuns::crypto.base64.decode_to_string(crypto_header).unwrap();
         let decrypt_key = front_pri_key.decrypt(&decode_base64).unwrap();
         let splits: Vec<_> = decrypt_key.split(' ').collect();
         if splits.len() != 3 {

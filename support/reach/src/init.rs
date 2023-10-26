@@ -71,14 +71,14 @@ pub async fn db_init() -> TardisResult<()> {
     DOMAIN_REACH_ID.set(domain_id).expect("fail to set DOMAIN_REACH_ID");
     let db_kind = TardisFuns::reldb().backend();
     let compatible_type = TardisFuns::reldb().compatible_type();
-    funs.db().init(crate::domain::message_log::ActiveModel::init(db_kind, None, compatible_type.clone())).await?;
-    funs.db().init(crate::domain::message_signature::ActiveModel::init(db_kind, None, compatible_type.clone())).await?;
-    funs.db().init(crate::domain::message_template::ActiveModel::init(db_kind, None, compatible_type.clone())).await?;
-    funs.db().init(crate::domain::message::ActiveModel::init(db_kind, None, compatible_type.clone())).await?;
-    funs.db().init(crate::domain::trigger_global_config::ActiveModel::init(db_kind, None, compatible_type.clone())).await?;
-    funs.db().init(crate::domain::trigger_instance_config::ActiveModel::init(db_kind, None, compatible_type.clone())).await?;
-    funs.db().init(crate::domain::trigger_scene::ActiveModel::init(db_kind, None, compatible_type.clone())).await?;
-    funs.db().init(crate::domain::reach_vcode_strategy::ActiveModel::init(db_kind, None, compatible_type.clone())).await?;
+    funs.db().init(crate::domain::message_log::ActiveModel::init(db_kind, None, compatible_type)).await?;
+    funs.db().init(crate::domain::message_signature::ActiveModel::init(db_kind, None, compatible_type)).await?;
+    funs.db().init(crate::domain::message_template::ActiveModel::init(db_kind, None, compatible_type)).await?;
+    funs.db().init(crate::domain::message::ActiveModel::init(db_kind, None, compatible_type)).await?;
+    funs.db().init(crate::domain::trigger_global_config::ActiveModel::init(db_kind, None, compatible_type)).await?;
+    funs.db().init(crate::domain::trigger_instance_config::ActiveModel::init(db_kind, None, compatible_type)).await?;
+    funs.db().init(crate::domain::trigger_scene::ActiveModel::init(db_kind, None, compatible_type)).await?;
+    funs.db().init(crate::domain::reach_vcode_strategy::ActiveModel::init(db_kind, None, compatible_type)).await?;
     ReachTriggerSceneService::init(&funs, &ctx).await?;
     funs.commit().await?;
     Ok(())

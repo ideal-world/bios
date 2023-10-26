@@ -1,20 +1,21 @@
 use std::collections::HashMap;
 
-use bios_basic::{
-    basic_enumeration::BasicQueryOpKind,
-    spi::{spi_funs::SpiBsInst, spi_initializer::common},
-};
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
     search::search_client::TardisSearchClient,
     serde_json::{self, json, Value},
-    web::web_resp::TardisPage,
-    TardisFuns, TardisFunsInst,
+    TardisFuns,
+    TardisFunsInst, web::web_resp::TardisPage,
+};
+
+use bios_basic::{
+    basic_enumeration::BasicQueryOpKind,
+    spi::{spi_funs::SpiBsInst, spi_initializer::common},
 };
 
 use crate::dto::search_item_dto::{
     SearchItemAddReq, SearchItemModifyReq, SearchItemQueryReq, SearchItemSearchCtxReq, SearchItemSearchPageReq, SearchItemSearchQScopeKind, SearchItemSearchReq,
-    SearchItemSearchResp,
+    SearchItemSearchResp, SearchQueryMetricsReq, SearchQueryMetricsResp,
 };
 
 use super::search_es_initializer;
@@ -218,7 +219,7 @@ pub async fn delete(tag: &str, key: &str, funs: &TardisFunsInst, _ctx: &TardisCo
     let (client, ext, _) = inst.inst::<TardisSearchClient>();
     let index = format_index(tag, ext);
     if !client.check_index_exist(&index).await? {
-        return Err(funs.err().bad_request("search_es_item_serv", "add", "index not exist", "400-search-index-not-exist"));
+        return Err(funs.err().bad_request("search_es_item_serv", "delete", "index not exist", "400-search-index-not-exist"));
     }
     let q = gen_query_dsl(&SearchItemSearchReq {
         tag: tag.to_string(),
@@ -232,6 +233,39 @@ pub async fn delete(tag: &str, key: &str, funs: &TardisFunsInst, _ctx: &TardisCo
         },
         query: SearchItemQueryReq {
             keys: Some(vec![key.to_string().into()]),
+            ..Default::default()
+        },
+        sort: None,
+        page: SearchItemSearchPageReq {
+            number: 1,
+            size: 1,
+            fetch_total: false,
+        },
+        adv_query: None,
+    })?;
+    client.delete_by_query(&index, &q).await?;
+
+    Ok(())
+}
+
+pub async fn delete_by_ownership(tag: &str, onw_paths: &str, funs: &TardisFunsInst, _ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
+    let (client, ext, _) = inst.inst::<TardisSearchClient>();
+    let index = format_index(tag, ext);
+    if !client.check_index_exist(&index).await? {
+        return Err(funs.err().bad_request("search_es_item_serv", "delete", "index not exist", "400-search-index-not-exist"));
+    }
+    let q = gen_query_dsl(&SearchItemSearchReq {
+        tag: tag.to_string(),
+        ctx: SearchItemSearchCtxReq {
+            accounts: None,
+            apps: None,
+            tenants: None,
+            roles: None,
+            groups: None,
+            cond_by_or: None,
+        },
+        query: SearchItemQueryReq {
+            own_paths:Some(vec![onw_paths.to_string().into()]),
             ..Default::default()
         },
         sort: None,
@@ -586,6 +620,9 @@ fn gen_query_dsl(search_req: &SearchItemSearchReq) -> TardisResult<String> {
                 }
                 BasicQueryOpKind::NotLike => {}
                 BasicQueryOpKind::NotIn => {}
+                BasicQueryOpKind::IsNull => {}
+                BasicQueryOpKind::IsNotNull => {}
+                BasicQueryOpKind::IsNullOrEmpty => {}
             }
         }
     }
@@ -634,4 +671,8 @@ fn merge(a: &mut serde_json::Value, b: serde_json::Value) {
         }
         (a, b) => *a = b,
     }
+}
+
+pub async fn query_metrics(_query_req: &SearchQueryMetricsReq, funs: &TardisFunsInst, _ctx: &TardisContext, _inst: &SpiBsInst) -> TardisResult<SearchQueryMetricsResp> {
+    Err(funs.err().format_error("search_es_item_serv", "query_metrics", "not support", "500-not-support"))
 }

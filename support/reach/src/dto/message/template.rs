@@ -7,21 +7,22 @@ use tardis::{
 };
 
 use crate::dto::*;
-
+use bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind;
 #[derive(Debug, poem_openapi::Object, Serialize, Deserialize, Default)]
 pub struct ReachMessageTemplateAddReq {
-    pub own_paths: String,
-    pub owner: String,
+    // pub own_paths: String,
+    // pub owner: String,
     // pub create_time: DateTime<Utc>,
     // pub update_time: DateTime<Utc>,
     /// 用户触达等级类型
-    pub scope_level: Option<i16>,
+    #[oai(default)]
+    pub scope_level: Option<RbumScopeLevelKind>,
     /// 编码
-    #[oai(validator(max_length = "255"))]
-    pub code: Option<String>,
+    #[oai(validator(max_length = "255"), default)]
+    pub code: String,
     /// 名称
-    #[oai(validator(max_length = "255"))]
-    pub name: Option<String>,
+    #[oai(validator(max_length = "255"), default)]
+    pub name: String,
     /// 说明
     #[oai(validator(max_length = "2000"), default)]
     pub note: String,
@@ -37,6 +38,7 @@ pub struct ReachMessageTemplateAddReq {
     /// 参数
     #[oai(default)]
     pub variables: String,
+    #[oai(default)]
     /// 用户触达等级类型
     pub level_kind: ReachLevelKind,
     /// 主题
@@ -48,10 +50,13 @@ pub struct ReachMessageTemplateAddReq {
     /// 确认超时时间
     pub timeout_sec: i32,
     /// 确认超时策略
+    #[oai(default)]
     pub timeout_strategy: ReachTimeoutStrategyKind,
     /// 关联的触达通道
+    #[oai(default)]
     pub rel_reach_channel: ReachChannelKind,
     /// 模板类型
+    #[oai(default)]
     pub kind: ReachTemplateKind,
     /// 用户触达验证码策略Id
     #[oai(validator(max_length = "255"))]
@@ -73,7 +78,7 @@ pub struct ReachMessageTemplateAddReq {
 #[derive(Debug, poem_openapi::Object, Serialize, Deserialize, Default)]
 pub struct ReachMessageTemplateModifyReq {
     /// 用户触达等级类型
-    pub scope_level: Option<i16>,
+    pub scope_level: Option<RbumScopeLevelKind>,
     /// 编码
     #[oai(validator(max_length = "255"))]
     pub code: Option<String>,
@@ -95,6 +100,7 @@ pub struct ReachMessageTemplateModifyReq {
     /// 参数
     #[oai(default)]
     pub variables: Option<String>,
+    #[oai(default)]
     /// 用户触达等级类型
     pub level_kind: Option<ReachLevelKind>,
     /// 主题
@@ -103,22 +109,26 @@ pub struct ReachMessageTemplateModifyReq {
     /// 内容
     #[oai(validator(max_length = "2000"))]
     pub content: Option<String>,
+    #[oai(default)]
     /// 确认超时时间
     pub timeout_sec: Option<i32>,
     /// 确认超时策略
+    #[oai(default)]
     pub timeout_strategy: Option<ReachTimeoutStrategyKind>,
+    #[oai(default)]
     /// 关联的触达通道
     pub rel_reach_channel: Option<ReachChannelKind>,
+    #[oai(default)]
     /// 模板类型
     pub kind: Option<ReachTemplateKind>,
     /// 用户触达验证码策略Id
-    #[oai(validator(max_length = "255"))]
+    #[oai(validator(max_length = "255"), default)]
     pub rel_reach_verify_code_strategy_id: Option<String>,
     /// 第三方插件-模板Id
-    #[oai(validator(max_length = "255"))]
+    #[oai(validator(max_length = "255"), default)]
     pub sms_template_id: Option<String>,
     /// 第三方插件-签名
-    #[oai(validator(max_length = "255"))]
+    #[oai(validator(max_length = "255"), default)]
     pub sms_signature: Option<String>,
     /// 第三方插件-短信发送方的号码
     #[oai(validator(max_length = "255"))]
@@ -137,11 +147,12 @@ pub struct ReachMessageTemplateFilterReq {
 
 #[derive(Debug, poem_openapi::Object, Serialize, Deserialize, sea_orm::FromQueryResult)]
 pub struct ReachMessageTemplateSummaryResp {
+    pub id: String,
     pub own_paths: String,
     pub owner: String,
     pub create_time: DateTime<Utc>,
     pub update_time: DateTime<Utc>,
-    pub scope_level: Option<i16>,
+    pub scope_level: Option<RbumScopeLevelKind>,
     /// 编码
     #[oai(validator(max_length = "255"))]
     pub code: Option<String>,
@@ -195,12 +206,13 @@ pub struct ReachMessageTemplateSummaryResp {
 
 #[derive(Debug, poem_openapi::Object, Serialize, Deserialize, sea_orm::FromQueryResult)]
 pub struct ReachMessageTemplateDetailResp {
+    pub id: String,
     pub own_paths: String,
     pub owner: String,
     pub owner_name: String,
     pub create_time: DateTime<Utc>,
     pub update_time: DateTime<Utc>,
-    pub scope_level: Option<i16>,
+    pub scope_level: Option<RbumScopeLevelKind>,
     /// 编码
     #[oai(validator(max_length = "255"))]
     pub code: Option<String>,

@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use tardis::chrono::{TimeZone, Utc};
+use tardis::chrono::{NaiveDateTime, Utc};
 use tardis::{
     basic::{dto::TardisContext, error::TardisError, result::TardisResult},
     cache::cache_client::TardisCacheClient,
@@ -24,20 +24,20 @@ pub async fn auth(req: &mut AuthReq, is_mix_req: bool) -> TardisResult<AuthResul
     trace!("[Auth] Request auth: {:?}", req);
     let config = TardisFuns::cs_config::<AuthConfig>(DOMAIN_CODE);
     match check(req) {
-        Ok(true) => return Ok(AuthResult::ok(None, None, None, config)),
-        Err(e) => return Ok(AuthResult::err(e, config)),
+        Ok(true) => return Ok(AuthResult::ok(None, None, None, &config)),
+        Err(e) => return Ok(AuthResult::err(e, &config)),
         _ => {}
     }
     let cache_client = TardisFuns::cache_by_module_or_default(DOMAIN_CODE);
-    match ident(req, config, cache_client).await {
+    match ident(req, &config, &cache_client).await {
         Ok(ident) => match do_auth(&ident).await {
-            Ok(res_container_leaf_info) => match decrypt(req, config, &res_container_leaf_info, is_mix_req).await {
-                Ok((body, headers)) => Ok(AuthResult::ok(Some(&ident), body, headers, config)),
-                Err(e) => Ok(AuthResult::err(e, config)),
+            Ok(res_container_leaf_info) => match decrypt(req, &config, &res_container_leaf_info, is_mix_req).await {
+                Ok((body, headers)) => Ok(AuthResult::ok(Some(&ident), body, headers, &config)),
+                Err(e) => Ok(AuthResult::err(e, &config)),
             },
-            Err(e) => Ok(AuthResult::err(e, config)),
+            Err(e) => Ok(AuthResult::err(e, &config)),
         },
-        Err(e) => Ok(AuthResult::err(e, config)),
+        Err(e) => Ok(AuthResult::err(e, &config)),
     }
 }
 
@@ -111,7 +111,7 @@ async fn ident(req: &AuthReq, config: &AuthConfig, cache_client: &TardisCacheCli
         let (cache_sk, cache_tenant_id, cache_appid) = self::get_cache_ak(&ak, config, cache_client).await?;
         self::check_ak_signature(&ak, &cache_sk, &signature, &req_date, req).await?;
         let bios_ctx = if let Some(bios_ctx) = req.headers.get(&config.head_key_bios_ctx).or_else(|| req.headers.get(&config.head_key_bios_ctx.to_lowercase())) {
-            TardisFuns::json.str_to_obj::<TardisContext>(&TardisFuns::crypto.base64.decode(bios_ctx)?)?
+            TardisFuns::json.str_to_obj::<TardisContext>(&TardisFuns::crypto.base64.decode_to_string(bios_ctx)?)?
         } else {
             return Err(TardisError::unauthorized(
                 &format!("[Auth] Request is not legal, missing header [{}]", config.head_key_bios_ctx),
@@ -309,7 +309,7 @@ async fn parsing_base_ak(ak_authorization: &str, req: &AuthReq, config: &AuthCon
             "401-auth-req-ak-not-exist",
         ));
     }
-    let req_head_time = if let Ok(date_time) = Utc.datetime_from_str(req_date, &config.head_date_format) {
+    let req_head_time = if let Ok(date_time) = NaiveDateTime::parse_from_str(req_date, &config.head_date_format) {
         date_time.timestamp_millis()
     } else {
         return Err(TardisError::bad_request("[Auth] bad date format", "401-auth-req-date-incorrect"));
@@ -391,8 +391,8 @@ fn get_webhook_ak_key(req: &AuthReq, config: &AuthConfig) -> Option<String> {
 pub async fn sign_webhook_ak(sign_req: &SignWebHookReq) -> TardisResult<String> {
     let config = TardisFuns::cs_config::<AuthConfig>(DOMAIN_CODE);
     let cache_client = TardisFuns::cache_by_module_or_default(DOMAIN_CODE);
-    let (cache_sk, cache_tenant_id, cache_appid) = self::get_cache_ak(&sign_req.ak, config, cache_client).await?;
-    let mut cache_own_paths = cache_tenant_id;
+    let (cache_sk, cache_tenant_id, cache_appid) = self::get_cache_ak(&sign_req.ak, &config, &cache_client).await?;
+    let mut cache_own_paths = cache_tenant_id.clone();
     if !cache_appid.is_empty() {
         cache_own_paths = format!("{cache_own_paths}/{cache_appid}")
     }
@@ -531,7 +531,7 @@ pub async fn decrypt(
 #[cfg(feature = "web-server")]
 pub(crate) async fn parse_mix_req(req: AuthReq) -> TardisResult<MixAuthResp> {
     let config = TardisFuns::cs_config::<AuthConfig>(DOMAIN_CODE);
-    let (body, headers) = auth_crypto_serv::decrypt_req(&req.headers, &req.body, true, true, config).await?;
+    let (body, headers) = auth_crypto_serv::decrypt_req(&req.headers, &req.body, true, true, &config).await?;
     let body = body.ok_or_else(|| TardisError::bad_request("[MixReq] decrypt body can't be empty", "401-parse_mix_req-parse-error"))?;
 
     let mix_body = TardisFuns::json.str_to_obj::<MixRequestBody>(&body)?;

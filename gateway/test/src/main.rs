@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
-use tardis::config::config_dto::{FrameworkConfig, TardisConfig, WebServerConfig, WebServerModuleConfig};
+use tardis::config::config_dto::{FrameworkConfig, TardisConfig, WebServerCommonConfig, WebServerConfig, WebServerModuleConfig};
 use tardis::web::poem_openapi;
 use tardis::web::poem_openapi::payload::Json;
 use tardis::web::web_resp::{TardisApiResult, TardisResp};
@@ -55,14 +55,14 @@ async fn main() -> TardisResult<()> {
             })
             .unwrap(),
     );
-    let resp: TardisResp<TestDetailResp> = TardisFuns::web_client().post(&format!("{gateway_url}/test/echo/2"), &body, Some(header)).await?.body.unwrap();
+    let resp: TardisResp<TestDetailResp> = TardisFuns::web_client().post(&format!("{gateway_url}/test/echo/2"), &body, header).await?.body.unwrap();
     let resp = resp.data.unwrap();
     assert_eq!(&resp.code, "c001");
     assert_eq!(&resp.description, "测试002");
     assert!(!resp.done);
 
     let header: Vec<(String, String)> = vec![("Bios-Crypto".to_string(), "".to_string())];
-    let resp: TardisResp<String> = TardisFuns::web_client().get(&format!("{gateway_url}/test/echo/get/3"), Some(header)).await?.body.unwrap();
+    let resp: TardisResp<String> = TardisFuns::web_client().get(&format!("{gateway_url}/test/echo/get/3"), header).await?.body.unwrap();
     let resp = resp.data.unwrap();
     assert_eq!(resp, "3".to_string());
 
@@ -76,7 +76,7 @@ async fn main() -> TardisResult<()> {
             .unwrap(),
     );
     let header: Vec<(String, String)> = vec![("Bios-Crypto".to_string(), "".to_string())];
-    let resp: TardisResp<TestDetailResp> = TardisFuns::web_client().post(&format!("{gateway_url}/apis"), &body, Some(header)).await?.body.unwrap();
+    let resp: TardisResp<TestDetailResp> = TardisFuns::web_client().post(&format!("{gateway_url}/apis"), &body, header).await?.body.unwrap();
     let resp = resp.data.unwrap();
     assert_eq!(&resp.code, "c001");
     assert_eq!(&resp.description, "测试003");
@@ -102,7 +102,7 @@ impl AuthApi {
         let mut headers = req.headers;
         if req.path == "/test/echo/2" {
             assert!(req.body.is_some());
-            let req_body = TardisFuns::crypto.base64.decode(req.body.clone().unwrap())?;
+            let req_body = TardisFuns::crypto.base64.decode_to_string(req.body.clone().unwrap())?;
             assert!(req_body.contains("测试002"));
             req.body = Some(req_body);
             headers.insert("Bios-Crypto".to_string(), "".to_string());
@@ -131,7 +131,7 @@ impl AuthApi {
         let mut headers = req.headers;
         if req.path.contains("/apis") {
             assert!(req.body.is_some());
-            let req_body = TardisFuns::crypto.base64.decode(req.body.clone().unwrap())?;
+            let req_body = TardisFuns::crypto.base64.decode_to_string(req.body.clone().unwrap())?;
             assert!(req_body.contains("测试003"));
             req.body = Some(req_body);
             headers.insert("Bios-Crypto".to_string(), "".to_string());
@@ -156,15 +156,16 @@ async fn start_serv() -> TardisResult<()> {
     TardisFuns::init_conf(TardisConfig {
         cs: Default::default(),
         fw: FrameworkConfig {
-            web_server: WebServerConfig {
-                enabled: true,
-                port: 8080,
-                modules: HashMap::from([
-                    ("auth".to_string(), WebServerModuleConfig { ..Default::default() }),
-                    ("test".to_string(), WebServerModuleConfig { ..Default::default() }),
-                ]),
-                ..Default::default()
-            },
+            web_server: Some(
+                WebServerConfig::builder()
+                    .common(WebServerCommonConfig::builder().port(8080).build())
+                    .default(WebServerModuleConfig::default())
+                    .modules([
+                        ("auth".to_string(), WebServerModuleConfig::default()),
+                        ("test".to_string(), WebServerModuleConfig::default()),
+                    ])
+                    .build(),
+            ),
             ..Default::default()
         },
     })

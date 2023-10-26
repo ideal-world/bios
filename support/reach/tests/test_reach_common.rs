@@ -6,13 +6,14 @@ use bios_basic::rbum::serv::rbum_domain_serv::RbumDomainServ;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemServ;
 use bios_basic::rbum::serv::rbum_kind_serv::RbumKindServ;
 use bios_basic::{rbum::rbum_config::RbumConfig, test::test_http_client::TestHttpClient};
-use bios_client_hwsms::{SmsResponse, SmsId};
-use bios_reach::client::SendChannelMap;
-use bios_reach::consts::{DOMAIN_CODE, IAM_KEY_PHONE_V_CODE, RBUM_KIND_CODE_REACH_MESSAGE, REACH_INIT_OWNER, get_tardis_inst};
+use bios_client_hwsms::{SmsId, SmsResponse};
+use bios_reach::reach_consts::{get_tardis_inst, DOMAIN_CODE, IAM_KEY_PHONE_V_CODE, RBUM_KIND_CODE_REACH_MESSAGE, REACH_INIT_OWNER};
+use bios_reach::reach_send_channel::SendChannelMap;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::{Arc, OnceLock};
-use tardis::testcontainers::images::{generic::GenericImage, redis::Redis};
+use tardis::testcontainers::GenericImage;
+use testcontainers_modules::redis::Redis;
 use tardis::tokio::sync::RwLock;
 use tardis::web::poem_openapi::param::Path;
 use tardis::web::poem_openapi::payload::{Form, Json};
@@ -63,8 +64,8 @@ pub async fn init_tardis(docker: &Cli) -> TardisResult<Holder> {
     bios_basic::rbum::rbum_initializer::init("", RbumConfig::default()).await?;
     let web_server = TardisFuns::web_server();
     bios_reach::init(
-        web_server,
-        SendChannelMap::new().with_arc_channel(bios_client_hwsms::SmsClient::from_reach_config()).with_arc_channel(Arc::new(get_tardis_inst().mail())),
+        &web_server,
+        SendChannelMap::new().with_arc_channel(bios_client_hwsms::SmsClient::from_reach_config()).with_arc_channel(get_tardis_inst().mail()),
     )
     .await?;
     let sms_mocker = HwSmsMockerApi::default();
