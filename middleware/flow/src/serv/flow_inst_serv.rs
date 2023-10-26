@@ -23,8 +23,9 @@ use tardis::{
         JoinType, Set,
     },
     futures_util::future::join_all,
-    log::debug,
+    log::{debug, warn},
     serde_json::Value,
+    tokio,
     web::web_resp::TardisPage,
     TardisFuns, TardisFunsInst,
 };
@@ -45,6 +46,7 @@ use crate::{
             FlowTransitionActionChangeKind, FlowTransitionDetailResp, FlowTransitionFrontActionInfo, FlowTransitionFrontActionRightValue, StateChangeConditionOp,
         },
     },
+    flow_constants,
     serv::{flow_model_serv::FlowModelServ, flow_state_serv::FlowStateServ},
 };
 
@@ -1223,7 +1225,20 @@ impl FlowInstServ {
             ..Default::default()
         };
         funs.db().update_one(flow_inst, ctx).await?;
-        Self::do_front_change(flow_inst_id, ctx, funs).await?;
+
+        let flow_inst_id_sync = flow_inst_id.to_string();
+        let ctx_sync = ctx.clone();
+        tokio::spawn(async move {
+            let mut funs = flow_constants::get_tardis_inst();
+            funs.begin().await.unwrap();
+            match Self::do_front_change(&flow_inst_id_sync, &ctx_sync, &funs).await {
+                Ok(_) => {}
+                Err(e) => {
+                    warn!("[Flow.Inst] failed to add log:{e}")
+                }
+            }
+            funs.commit().await.unwrap();
+        });
 
         Ok(())
     }
@@ -1395,10 +1410,6 @@ impl FlowInstServ {
             .collect_vec();
         // get instance
         for flow_transition in flow_transition_list {
-            // let front_actions = TardisFuns::json.json_to_obj::<Vec<FlowTransitionFrontActionInfo>>(flow_transition.action_by_front_changes.clone()).unwrap_or_default();
-            // if !front_actions.iter().any(|action| action.right_value == FlowTransitionFrontActionRightValue::RealTime) {
-            //     continue;
-            // }
             let flow_insts = funs
                 .db()
                 .find_dtos::<FlowInstanceResult>(
