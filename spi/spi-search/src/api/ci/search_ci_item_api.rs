@@ -1,4 +1,5 @@
 use tardis::web::context_extractor::TardisContextExtractor;
+use tardis::web::poem::web::Query;
 
 use tardis::web::poem_openapi;
 use tardis::web::poem_openapi::param::Path;
@@ -37,6 +38,15 @@ impl SearchCiItemApi {
         search_item_serv::delete(&tag.0, &key.0, &funs, &ctx.0).await?;
         TardisResp::ok(Void {})
     }
+
+    /// Delete Item
+    #[oai(path = "/:tag/ownership", method = "delete")]
+    async fn delete_by_ownership(&self, tag: Path<String>, own_paths: Query<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+        let funs = crate::get_tardis_inst();
+        search_item_serv::delete_by_ownership(&tag.0, &own_paths.0, &funs, &ctx.0).await?;
+        TardisResp::ok(Void {})
+    }
+
 
     /// Search Items
     #[oai(path = "/search", method = "put")]

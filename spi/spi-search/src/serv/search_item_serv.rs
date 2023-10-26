@@ -26,6 +26,7 @@ spi_dispatch_service! {
         add(add_req: &mut SearchItemAddReq) -> TardisResult<()>;
         modify(tag: &str, key: &str, modify_req: &mut SearchItemModifyReq) -> TardisResult<()>;
         delete(tag: &str, key: &str) -> TardisResult<()>;
+        delete_by_ownership(tag: &str, own_paths: &str) -> TardisResult<()>;
         search(search_req: &mut SearchItemSearchReq) -> TardisResult<TardisPage<SearchItemSearchResp>>;
         query_metrics(query_req: &SearchQueryMetricsReq) -> TardisResult<SearchQueryMetricsResp>;
     }
