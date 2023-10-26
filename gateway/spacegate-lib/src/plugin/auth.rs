@@ -42,8 +42,7 @@ use tardis::{
     web::web_resp::TardisResp,
     TardisFuns,
 };
-use tardis::{tracing, web::poem_openapi::types::Type};
-use tracing_subscriber::filter::Directive;
+use tardis::{tracing, web::poem_openapi::types::Type, basic::tracing::Directive};
 
 use super::plugin_constants;
 #[allow(clippy::type_complexity)]
