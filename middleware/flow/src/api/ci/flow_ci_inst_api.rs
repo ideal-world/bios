@@ -1,7 +1,6 @@
 use tardis::web::context_extractor::TardisContextExtractor;
-use tardis::web::poem::web::Query;
-use tardis::web::poem_openapi;
 use tardis::web::poem_openapi::payload::Json;
+use tardis::web::poem_openapi::{self, param::Query};
 use tardis::web::web_resp::{TardisApiResult, TardisResp, Void};
 use tardis::{log, tokio};
 
@@ -53,18 +52,16 @@ impl FlowCiInstApi {
 
     /// Get list of instance id by rel_business_obj_id / 通过业务ID获取实例信息
     #[oai(path = "/find_detail_by_obj_ids", method = "get")]
-    async fn find_detail_by_obj_ids(&self, rel_business_obj_ids: Query<String>, ctx: TardisContextExtractor) -> TardisApiResult<Vec<FlowInstDetailResp>> {
-        let mut funs = flow_constants::get_tardis_inst();
-        let rel_business_obj_ids: Vec<_> = rel_business_obj_ids.split(',').map(|id| id.to_string()).collect();
-        funs.begin().await?;
+    async fn find_detail_by_obj_ids(&self, obj_ids: Query<String>, ctx: TardisContextExtractor) -> TardisApiResult<Vec<FlowInstDetailResp>> {
+        let funs = flow_constants::get_tardis_inst();
+        let rel_business_obj_ids: Vec<_> = obj_ids.0.split(',').map(|id| id.to_string()).collect();
         let inst_ids = FlowInstServ::get_inst_ids_by_rel_business_obj_id(rel_business_obj_ids, &funs, &ctx.0).await?;
         let mut result = vec![];
         for inst_id in inst_ids {
-            if let Ok(inst_detail) = FlowInstServ::get(&inst_id, &funs, &ctx.0).await{
+            if let Ok(inst_detail) = FlowInstServ::get(&inst_id, &funs, &ctx.0).await {
                 result.push(inst_detail);
             }
         }
-        funs.commit().await?;
         TardisResp::ok(result)
     }
 

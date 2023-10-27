@@ -578,6 +578,7 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
     let ticket_inst_rel_id = "mock-ticket-obj-id".to_string();
     let iter_inst_rel_id1 = "mock-iter-obj-id1".to_string();
     let iter_inst_rel_id2 = "mock-iter-obj-id2".to_string();
+    let req_inst_rel_id2 = "mock-req-obj-id2".to_string();
     let req_inst_id1: String = flow_client
         .post(
             "/cc/inst",
@@ -594,7 +595,7 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
             &FlowInstStartReq {
                 tag: "REQ".to_string(),
                 create_vars: None,
-                rel_business_obj_id: TardisFuns::field.nanoid(),
+                rel_business_obj_id: req_inst_rel_id2.clone(),
             },
         )
         .await;
@@ -780,7 +781,7 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
         )
         .await;
     let _: Void = flow_client.get("/ci/inst/trigger_front_action").await;
-    tokio::time::sleep(tokio::time::Duration::from_secs(10)).await;
+    tokio::time::sleep(tokio::time::Duration::from_secs(3)).await;
     let state_and_next_transitions: Vec<FlowInstFindStateAndTransitionsResp> = flow_client
         .put(
             "/cc/inst/batch/state_transitions",
@@ -791,5 +792,8 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
         )
         .await;
     assert_eq!(state_and_next_transitions[0].current_flow_state_name, "已完成");
+    let flow_inst_list: Vec<FlowInstDetailResp> = flow_client.get(&format!("/ci/inst/find_detail_by_obj_ids?obj_ids={}", req_inst_rel_id2)).await;
+    assert_eq!(flow_inst_list[0].id, req_inst_id2);
+
     Ok(())
 }
