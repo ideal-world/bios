@@ -428,7 +428,7 @@ pub(crate) async fn fact_records_delete(fact_conf_key: &str, fact_record_delete_
 }
 
 
-pub(crate) async fn fact_records_logic_delete_by_ownership(fact_conf_key: &str, own_paths: &str, funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
+pub(crate) async fn fact_records_delete_by_ownership(fact_conf_key: &str, own_paths: &str, funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
     let bs_inst = inst.inst::<TardisRelDBClient>();
     let (mut conn, _) = common_pg::init_conn(bs_inst).await?;
     conn.begin().await?;
@@ -439,7 +439,7 @@ pub(crate) async fn fact_records_logic_delete_by_ownership(fact_conf_key: &str, 
     let table_name = package_table_name(&format!("stats_inst_fact_{fact_conf_key}"), ctx);
     conn.execute_one(
         &format!(
-            r#"UPDATE {table_name} SET is_delete = TRUE
+            r#"DELETE FROM {table_name}
             WHERE own_paths = $1
     "#,
         ),

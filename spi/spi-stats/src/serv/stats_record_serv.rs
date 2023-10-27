@@ -29,8 +29,8 @@ spi_dispatch_service! {
         fact_record_delete(fact_conf_key: &str, fact_record_key: &str) -> TardisResult<()>;
         fact_records_load(fact_conf_key: &str, add_req_set: Vec<StatsFactRecordsLoadReq>) -> TardisResult<()>;
         fact_records_delete(fact_conf_key: &str, fact_record_delete_keys: &[String]) -> TardisResult<()>;
-        fact_records_logic_delete_by_ownership(fact_conf_key: &str, dim_conf_key: &str) -> TardisResult<()>;
-        fact_records_delete_by_dim_key(fact_conf_key: &str, own_paths: &str,dim_record_key: Option<serde_json::Value>) -> TardisResult<()>;
+        fact_records_delete_by_ownership(fact_conf_key: &str, own_paths: &str) -> TardisResult<()>;
+        fact_records_delete_by_dim_key(fact_conf_key: &str, dim_conf_key: &str,dim_record_key: Option<serde_json::Value>) -> TardisResult<()>;
         fact_records_clean(fact_conf_key: &str, before_ct: Option<DateTime<Utc>>) -> TardisResult<()>;
         dim_record_add(dim_conf_key: String, add_req: StatsDimRecordAddReq) -> TardisResult<()>;
         dim_record_paginate(
