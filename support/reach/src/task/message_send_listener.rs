@@ -28,7 +28,7 @@ impl Default for MessageSendListener {
 }
 
 impl MessageSendListener {
-    async fn execute_send_account(&self, message: message::Model, template: message_template::Model) -> TardisResult<()> {
+    async fn execute_send_account(&self, message: message::Model, template: message_template::Model, _signarure: Option<message_signature::Model>) -> TardisResult<()> {
         let content_replace: ContentReplace = message.content_replace.parse()?;
         let cfg = self.funs.conf::<ReachConfig>();
         let _lock = self.sync.lock().await;
@@ -132,20 +132,18 @@ impl MessageSendListener {
             else {
                 continue;
             };
-            let Some(_signature) = db
-                .get_dto::<message_signature::Model>(
-                    Query::select()
-                        .columns(message_signature::Column::iter())
-                        .from(message_signature::Entity)
-                        .and_where(message_signature::Column::Id.eq(&message.rel_reach_msg_signature_id)),
-                )
-                .await?
-            else {
-                continue;
-            };
+            // signature is not necessary now
+            // let signature = db
+            //     .get_dto::<message_signature::Model>(
+            //         Query::select()
+            //             .columns(message_signature::Column::iter())
+            //             .from(message_signature::Entity)
+            //             .and_where(message_signature::Column::Id.eq(&message.rel_reach_msg_signature_id)),
+            //     )
+            //     .await?;
             match message.receive_kind {
                 ReachReceiveKind::Account => {
-                    let _res = self.execute_send_account(message, template).await;
+                    let _res = self.execute_send_account(message, template, None).await;
                 }
                 ReachReceiveKind::Tenant => {
                     // do nothing

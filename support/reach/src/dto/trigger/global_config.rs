@@ -11,12 +11,14 @@ use tardis::{
 
 use crate::dto::*;
 /// 添加 用户触达触发实例配置请求
-#[derive(Debug, poem_openapi::Object, Serialize, Deserialize)]
+#[derive(Debug, poem_openapi::Object, Serialize, Deserialize, Default)]
 pub struct ReachTriggerGlobalConfigAddReq {
     /// 关联的触发场景id
     pub rel_reach_trigger_scene_id: String,
     /// 关联的触达通道
     pub rel_reach_channel: ReachChannelKind,
+    #[serde(default)]
+    #[oai(default)]
     /// 用户触达消息签名Id
     pub rel_reach_msg_signature_id: String,
     /// 用户触达消息模板Id
