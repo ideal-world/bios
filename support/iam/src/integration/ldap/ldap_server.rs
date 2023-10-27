@@ -52,6 +52,7 @@
 use std::convert::TryFrom;
 use std::net;
 use std::str::FromStr;
+use std::sync::Arc;
 
 use ldap3_proto::simple::*;
 use ldap3_proto::LdapCodec;
@@ -221,7 +222,8 @@ fn extract_cn(dn: &str) -> Option<String> {
     }
 }
 
-async fn handle_client(socket: TcpStream, _addr: net::SocketAddr, config: &IamLdapConfig) {
+async fn handle_client(socket: TcpStream, _addr: net::SocketAddr, config: Arc<IamConfig>) {
+    let config = &config.ldap;
     let (r, w) = tokio::io::split(socket);
     let mut reqs = FramedRead::new(r, LdapCodec);
     let mut resp = FramedWrite::new(w, LdapCodec);
@@ -276,6 +278,7 @@ pub async fn start() -> TardisResult<()> {
         loop {
             match listener.accept().await {
                 Ok((socket, addr)) => {
+                    let config = TardisFuns::cs_config::<IamConfig>(iam_constants::COMPONENT_CODE);
                     tokio::spawn(handle_client(socket, addr, config));
                 }
                 Err(e) => {

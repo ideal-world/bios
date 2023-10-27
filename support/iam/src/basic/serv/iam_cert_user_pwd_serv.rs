@@ -188,9 +188,9 @@ impl IamCertUserPwdServ {
         .await?;
         if let Some(cert) = cert {
             IamCertUserPwdServ::check_sk_contains_ak(&cert.ak, &modify_req.new_sk, funs)?;
-            RbumCertServ::change_sk(&cert.id, &modify_req.original_sk.0, &modify_req.new_sk.0, &RbumCertFilterReq::default(), funs, ctx).await?;
-            IamCertPhoneVCodeServ::send_pwd(rel_iam_item_id, &modify_req.new_sk.0, funs, ctx).await?;
-            IamCertMailVCodeServ::send_pwd(rel_iam_item_id, &modify_req.new_sk.0, funs, ctx).await?;
+            RbumCertServ::change_sk(&cert.id, &modify_req.original_sk, &modify_req.new_sk, &RbumCertFilterReq::default(), funs, ctx).await?;
+            IamCertPhoneVCodeServ::send_pwd(rel_iam_item_id, &modify_req.new_sk, funs, ctx).await?;
+            IamCertMailVCodeServ::send_pwd(rel_iam_item_id, &modify_req.new_sk, funs, ctx).await?;
             RbumCertServ::modify_rbum(
                 &cert.id,
                 &mut RbumCertModifyReq {

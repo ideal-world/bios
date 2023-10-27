@@ -48,7 +48,7 @@ impl RbumCrudOperation<rbum_item::ActiveModel, RbumItemAddReq, RbumItemKernelMod
     }
 
     async fn package_add(add_req: &RbumItemAddReq, funs: &TardisFunsInst, _: &TardisContext) -> TardisResult<rbum_item::ActiveModel> {
-        let id = if let Some(id) = &add_req.id { id.0.clone() } else { TardisFuns::field.nanoid() };
+        let id = if let Some(id) = &add_req.id { id.to_string() } else { TardisFuns::field.nanoid() };
         let code = if let Some(code) = &add_req.code {
             if funs
                 .db()
@@ -64,14 +64,14 @@ impl RbumCrudOperation<rbum_item::ActiveModel, RbumItemAddReq, RbumItemKernelMod
                             rbum_kind::Entity,
                             Expr::col((rbum_kind::Entity, rbum_kind::Column::Id)).equals((rbum_item::Entity, rbum_item::Column::RelRbumKindId)),
                         )
-                        .and_where(Expr::col((rbum_item::Entity, rbum_item::Column::Code)).eq(code.0.as_str())),
+                        .and_where(Expr::col((rbum_item::Entity, rbum_item::Column::Code)).eq(code.as_str())),
                 )
                 .await?
                 > 0
             {
                 return Err(funs.err().conflict(&Self::get_obj_name(), "add", &format!("code {code} already exists"), "409-rbum-*-code-exist"));
             }
-            code.0.clone()
+            code.to_string()
         } else {
             id.clone()
         };
@@ -113,7 +113,7 @@ impl RbumCrudOperation<rbum_item::ActiveModel, RbumItemAddReq, RbumItemKernelMod
                             rbum_kind::Entity,
                             Expr::col((rbum_kind::Entity, rbum_kind::Column::Id)).equals((rbum_item::Entity, rbum_item::Column::RelRbumKindId)),
                         )
-                        .and_where(Expr::col((rbum_item::Entity, rbum_item::Column::Code)).eq(code.0.as_str()))
+                        .and_where(Expr::col((rbum_item::Entity, rbum_item::Column::Code)).eq(code.as_str()))
                         .and_where(Expr::col((rbum_item::Entity, rbum_item::Column::Id)).ne(id)),
                 )
                 .await?

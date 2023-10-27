@@ -4,7 +4,7 @@
 use tardis::{
     basic::result::TardisResult,
     chrono::{SecondsFormat, Utc},
-    crypto::rust_crypto::sha2::Sha256,
+    crypto::crypto_digest::algorithm::Sha256,
     rand::random,
     url::Url,
     web::reqwest::{
@@ -39,7 +39,7 @@ impl SmsClient {
         // and random 1~128bit number
         let nonce = format!("{:X}", random::<u128>());
         let digest_raw = format!("{}{}{}", nonce, created, &self.app_secret);
-        let password_digest = BASE64.encode_raw(DIGEST.digest_raw(digest_raw.as_bytes(), Sha256::new())?);
+        let password_digest = BASE64.encode_raw(DIGEST.digest_bytes::<Sha256>(digest_raw)?);
         let wsse_header = format!(r#"UsernameToken Username="{username}",PasswordDigest="{password_digest}",Nonce="{nonce}",Created="{created}""#);
         let wsse_header = HeaderValue::from_str(&wsse_header).expect("Fail to build sms header, maybe there are unexpected char in app_key.");
         headers.insert(AUTHORIZATION, HeaderValue::from_static(Self::AUTH_WSSE_HEADER_VALUE));

@@ -36,10 +36,8 @@ macro_rules! get {
 use super::{add_history, conf_pg_initializer, gen_select_sql_stmt, HistoryInsertParams, OpType};
 
 fn md5(content: &str) -> String {
-    use tardis::crypto::rust_crypto::{digest::Digest, md5::Md5};
-    let mut md5 = Md5::new();
-    md5.input_str(content);
-    md5.result_str()
+    use tardis::crypto::crypto_digest::TardisCryptoDigest;
+    TardisCryptoDigest.md5(content).expect("md5 digest shouldn't fail")
 }
 
 pub async fn get_config(descriptor: &mut ConfigDescriptor, _funs: &TardisFunsInst, ctx: &TardisContext, bs_inst: &SpiBsInst) -> TardisResult<String> {

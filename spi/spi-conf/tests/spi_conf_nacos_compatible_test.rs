@@ -9,6 +9,7 @@ use bios_spi_conf::{
     conf_constants::DOMAIN_CODE,
     dto::conf_auth_dto::{RegisterRequest, RegisterResponse},
 };
+use poem::http::HeaderName;
 use tardis::{
     basic::{dto::TardisContext, field::TrimString, result::TardisResult},
     log, testcontainers, tokio,
@@ -28,7 +29,7 @@ async fn spi_conf_namespace_test() -> TardisResult<()> {
     std::env::set_var("PROFILE", "nacos");
     let docker = testcontainers::clients::Cli::default();
     let container_hold = init_tardis(&docker).await?;
-    let _web_server_hanlde = start_web_server();
+    let _web_server_hanlde = start_web_server().await;
     let tardis_ctx = TardisContext::default();
     let mut client = TestHttpClient::new(format!("{SCHEMA}://localhost:8080/spi-conf"));
     client.set_auth(&tardis_ctx)?;
@@ -69,6 +70,7 @@ async fn spi_conf_namespace_test() -> TardisResult<()> {
 
 async fn test_tardis_compatibility(_test_client: &TestHttpClient) -> TardisResult<()> {
     use tardis::config::config_nacos::nacos_client::*;
+    let config = TardisFuns::fw_config();
     let ctx = TardisContext {
         own_paths: "t1/app001".to_string(),
         ak: "".to_string(),
@@ -79,7 +81,9 @@ async fn test_tardis_compatibility(_test_client: &TestHttpClient) -> TardisResul
     };
     let ctx_base64 = &TardisFuns::crypto.base64.encode(TardisFuns::json.obj_to_string(&ctx)?);
     let mut headers = reqwest::header::HeaderMap::new();
-    headers.append(TardisFuns::fw_config().web_server.context_conf.context_header_name.as_str(), ctx_base64.parse().unwrap());
+    let web_server_config = config.web_server();
+    let context_header_name = web_server_config.context_conf.context_header_name.clone();
+    headers.append(HeaderName::from_bytes(context_header_name.as_bytes()).expect("should be ok") , ctx_base64.parse().unwrap());
     let client = reqwest::ClientBuilder::default().danger_accept_invalid_certs(true).default_headers(headers).build().unwrap();
     let mut nacos_client = NacosClient::new_with_client(format!("{SCHEMA}://localhost:8080/spi-conf-nacos/nacos"), client);
     // register

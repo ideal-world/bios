@@ -1,7 +1,7 @@
 import * as bios from "bios-enhance-wasm";
 
 async function doInit(strictSecurityMode) {
-    await bios.init('', {
+    await bios.main('', {
         "strict_security_mode": strictSecurityMode,
         "pub_key": "02fbba662032fd384079b7824c07ec8eeaac615187e27ce6a58fcd1597105c1065",
         "double_auth_exp_sec": 60,
@@ -67,28 +67,28 @@ document.getElementById("uriDecrypt").addEventListener("click", async () => {
 document.getElementById("apiNonCrypto").addEventListener("click", () => {
     const body = document.getElementById("bodyExample").value;
     const headers = { "X-Key": "k001" };
-    const encryptRequest = bios.on_before_request("post", "iam/cc/xxxx", body, headers)
+    const encryptRequest = bios.on_before_request("post", "iam/cc/xxxx", body, headers,false)
     document.getElementById("output").innerHTML = "Request:<br/>POST:iam/cc/xxxx<br/>Headers:" + JSON.stringify(headers) + "<br/>Body:" + body + "<br/>------------------------<br/>Encrypt:<br/>" + JSON.stringify(encryptRequest);
 });
 
 document.getElementById("apiReqCrypto").addEventListener("click", () => {
     const body = document.getElementById("bodyExample").value;
     const headers = { "X-Key": "k001" };
-    const encryptRequest = bios.on_before_request("get", "iam/ct/need_crypto_req/xxxx", body, headers)
+    const encryptRequest = bios.on_before_request("get", "iam/ct/need_crypto_req/xxxx", body, headers,false)
     document.getElementById("output").innerHTML = "Request:<br/>GET:iam/ct/need_crypto_req/xxxx<br/>Headers:" + JSON.stringify(headers) + "<br/>Body:" + body + "<br/>------------------------<br/>Encrypt:<br/>" + JSON.stringify(encryptRequest);
 });
 
 document.getElementById("apiRespCrypto").addEventListener("click", () => {
     const body = document.getElementById("bodyExample").value;
     const headers = { "X-Key": "k001" };
-    const encryptRequest = bios.on_before_request("get", "iam/ct/need_crypto_resp/xxxx", body, headers)
+    const encryptRequest = bios.on_before_request("get", "iam/ct/need_crypto_resp/xxxx", body, headers,false)
     document.getElementById("output").innerHTML = "Request:<br/>GET:iam/ct/need_crypto_resp/xxxx<br/>Headers:" + JSON.stringify(headers) + "<br/>Body:" + body + "<br/>------------------------<br/>Encrypt:<br/>" + JSON.stringify(encryptRequest);
 });
 
 document.getElementById("apiReqRespCrypto").addEventListener("click", () => {
     const body = document.getElementById("bodyExample").value;
     const headers = { "X-Key": "k001" };
-    const encryptRequest = bios.on_before_request("get", "iam/cs/xxxx", body, headers)
+    const encryptRequest = bios.on_before_request("get", "iam/cs/xxxx", body, headers,false)
     document.getElementById("output").innerHTML = "Request:<br/>GET:iam/cs/xxxx<br/>Headers:" + JSON.stringify(headers) + "<br/>Body:" + body + "<br/>------------------------<br/>Encrypt:<br/>" + JSON.stringify(encryptRequest);
 });
 
@@ -108,7 +108,7 @@ document.getElementById("needDoubleAuth").addEventListener("click", async () => 
     const body = document.getElementById("bodyExample").value;
     const headers = { "X-Key": "k001" };
     try {
-        let encryptRequest = bios.on_before_request("get", "iam/ct/need_double_auth/111", body, headers)
+        let encryptRequest = bios.on_before_request("get", "iam/ct/need_double_auth/111", body, headers,false)
         document.getElementById("output").innerHTML = "Request:<br/>GET:iam/ct/need_double_auth/11<br/>Headers:" + JSON.stringify(headers) + "<br/>Body:" + body + "<br/>------------------------<br/>Encrypt:<br/>" + JSON.stringify(encryptRequest);
     } catch (e) {
         document.getElementById("output").innerHTML = "Request:<br/>GET:iam/ct/need_double_auth/11<br/>Headers:" + JSON.stringify(headers) + "<br/>Body:" + body + "<br/>------------------------<br/>Encrypt:<br/>" + e;
@@ -126,7 +126,7 @@ document.getElementById("performanceTest").addEventListener("click", async () =>
     const headers = { "X-Key": "k001" };
     const start = new Date().getTime();
     Array.from(Array(100)).forEach((x) => {
-        bios.on_before_request("get", "iam/cs/xxxx", body + x, headers)
+        bios.on_before_request("get", "iam/cs/xxxx", body + x, headers,false)
     });
     const averageTime = (new Date().getTime() - start) / 100;
     document.getElementById("output").innerHTML = "Request:<br/>GET:iam/ct/need_double_auth/11<br/>Headers:" + JSON.stringify(headers) + "<br/>Body:" + body + "<br/>------------------------<br/>Average Time(ms):<br/>" + averageTime;

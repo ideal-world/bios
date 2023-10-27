@@ -107,7 +107,7 @@ impl TardisActiveModel for ActiveModel {
             .if_not_exists()
             .col(ColumnDef::new(Column::Id).not_null().string().primary_key())
             .col(ColumnDef::new(Column::OwnPaths).not_null().string())
-            .col(ColumnDef::new(Column::Owner).not_null().string_len(255))
+            .col(ColumnDef::new(Column::Owner).not_null().string_len(255).default(String::default()))
             .col(ColumnDef::new(Column::FromRes).not_null().string())
             .col(ColumnDef::new(Column::RelReachChannel).not_null().string())
             .col(ColumnDef::new(Column::ReceiveKind).not_null().string())

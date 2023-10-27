@@ -91,20 +91,16 @@ impl SendChannel for UnimplementedChannel {
 }
 
 #[async_trait]
-impl SendChannel for &'static tardis::mail::mail_client::TardisMailClient {
+impl SendChannel for tardis::mail::mail_client::TardisMailClient {
     async fn send(&self, template: GenericTemplate<'_>, content: &ContentReplace, to: &HashSet<&str>) -> TardisResult<()> {
-        (*self)
-            .send(&TardisMailSendReq {
-                subject: template.name.ok_or_else(|| bad_template("template missing field sms_from"))?.to_owned(),
-                txt_body: content.render_final_content::<{ usize::MAX }>(template.content),
-                html_body: None,
-                to: to.iter().map(|x| x.to_string()).collect(),
-                reply_to: None,
-                cc: None,
-                bcc: None,
-                from: None,
-            })
-            .await
+        self.send(
+            &TardisMailSendReq::builder()
+                .subject(template.name.ok_or_else(|| bad_template("template missing field sms_from"))?)
+                .txt_body(content.render_final_content::<{ usize::MAX }>(template.content))
+                .to(to.iter().map(|x| x.to_string()).collect::<Vec<_>>())
+                .build(),
+        )
+        .await
     }
     fn kind(&self) -> ReachChannelKind {
         ReachChannelKind::Email

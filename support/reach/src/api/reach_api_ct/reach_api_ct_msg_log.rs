@@ -4,6 +4,7 @@ use crate::reach_consts::get_tardis_inst;
 use crate::reach_invoke::Client;
 use crate::serv::*;
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
+#[cfg(feature = "simple-client")]
 use bios_sdk_invoke::simple_invoke_client;
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem_openapi;

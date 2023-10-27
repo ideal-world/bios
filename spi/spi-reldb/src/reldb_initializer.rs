@@ -7,6 +7,7 @@ use bios_basic::spi::{
 };
 use tardis::{
     basic::{dto::TardisContext, error::TardisError, result::TardisResult},
+    config::config_dto::DBModuleConfig,
     db::reldb_client::{TardisRelDBClient, TardisRelDBlConnection},
     serde_json::Value as JsonValue,
     web::web_server::TardisWebServer,
@@ -47,21 +48,22 @@ async fn init_api(web_server: &TardisWebServer) -> TardisResult<()> {
 pub async fn init_fun(bs_cert: SpiBsCertResp, ctx: &TardisContext, _: bool) -> TardisResult<SpiBsInst> {
     let ext = TardisFuns::json.str_to_json(&bs_cert.ext)?;
     let compatible_type = TardisFuns::json.json_to_obj(ext.get("compatible_type").unwrap_or(&tardis::serde_json::Value::String("None".to_string())).clone())?;
-    let client = TardisRelDBClient::init(
-        &bs_cert.conn_uri,
-        ext.get("max_connections").and_then(JsonValue::as_u64).ok_or(TardisError::bad_request(
+
+    let config = DBModuleConfig {
+        url: bs_cert.conn_uri.clone(),
+        max_connections: ext.get("max_connections").and_then(JsonValue::as_u64).ok_or(TardisError::bad_request(
             "Tardis context ext expect `max_connections` as an unsigned interger number",
             "400-spi-invalid-tardis-ctx",
         ))? as u32,
-        ext.get("min_connections").and_then(JsonValue::as_u64).ok_or(TardisError::bad_request(
+        min_connections: ext.get("min_connections").and_then(JsonValue::as_u64).ok_or(TardisError::bad_request(
             "Tardis context ext expect `min_connections` as an unsigned interger number",
             "400-spi-invalid-tardis-ctx",
         ))? as u32,
-        None,
-        None,
+        connect_timeout_sec: None,
+        idle_timeout_sec: None,
         compatible_type,
-    )
-    .await?;
+    };
+    let client = TardisRelDBClient::init(&config).await?;
     let ext = match bs_cert.kind_code.as_str() {
         #[cfg(feature = "spi-pg")]
         spi_constants::SPI_PG_KIND_CODE => serv::pg::reldb_pg_initializer::init(&bs_cert, &client, ctx).await?,

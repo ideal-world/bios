@@ -23,7 +23,7 @@ impl IamAttrServ {
     pub async fn add_account_attr(add_req: &IamKindAttrAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
         let idx = add_req.idx.unwrap_or(false);
         let main_column = add_req.main_column.unwrap_or(false);
-        let name = add_req.name.0.as_str();
+        let name = add_req.name.as_str();
         if idx && !main_column {
             return Err(funs.err().bad_request("iam_account_attr", "add", "only the main table columns support indexes", "400-iam-attr-idx-not-in-main"));
         }

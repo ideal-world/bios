@@ -53,10 +53,10 @@ impl RbumCrudOperation<rbum_kind::ActiveModel, RbumKindAddReq, RbumKindModifyReq
     }
 
     async fn before_add_rbum(add_req: &mut RbumKindAddReq, funs: &TardisFunsInst, _: &TardisContext) -> TardisResult<()> {
-        if !R_URL_PART_CODE.is_match(add_req.code.0.as_str()) {
+        if !R_URL_PART_CODE.is_match(add_req.code.as_str()) {
             return Err(funs.err().bad_request(&Self::get_obj_name(), "add", &format!("code {} is invalid", add_req.code), "400-rbum-*-code-illegal"));
         }
-        if funs.db().count(Query::select().column(rbum_kind::Column::Id).from(rbum_kind::Entity).and_where(Expr::col(rbum_kind::Column::Code).eq(add_req.code.0.as_str()))).await?
+        if funs.db().count(Query::select().column(rbum_kind::Column::Id).from(rbum_kind::Entity).and_where(Expr::col(rbum_kind::Column::Code).eq(add_req.code.as_str()))).await?
             > 0
         {
             return Err(funs.err().conflict(&Self::get_obj_name(), "add", &format!("code {} already exists", add_req.code), "409-rbum-*-code-exist"));
@@ -188,8 +188,8 @@ impl RbumCrudOperation<rbum_kind_attr::ActiveModel, RbumKindAttrAddReq, RbumKind
                 Query::select()
                     .column(rbum_kind_attr::Column::Id)
                     .from(rbum_kind_attr::Entity)
-                    .and_where(Expr::col(rbum_kind_attr::Column::Name).eq(add_req.name.0.as_str()))
-                    .and_where(Expr::col(rbum_kind_attr::Column::Module).eq(add_req.module.as_ref().unwrap_or(&TrimString("".to_string())).0.as_str()))
+                    .and_where(Expr::col(rbum_kind_attr::Column::Name).eq(add_req.name.as_str()))
+                    .and_where(Expr::col(rbum_kind_attr::Column::Module).eq(add_req.module.as_ref().unwrap_or(&TrimString("".to_string())).as_str()))
                     .and_where(Expr::col(rbum_kind_attr::Column::RelRbumKindId).eq(add_req.rel_rbum_kind_id.as_str()))
                     .and_where(Expr::col(rbum_kind_attr::Column::OwnPaths).like(format!("{}%", ctx.own_paths).as_str())),
             )

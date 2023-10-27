@@ -34,7 +34,7 @@ async fn init_data(minio_url: &str) -> TardisResult<()> {
 
     let web_server = TardisFuns::web_server();
     // Initialize SPI object
-    object_initializer::init(web_server).await.unwrap();
+    object_initializer::init(&web_server).await.unwrap();
 
     tokio::spawn(async move {
         web_server.start().await.unwrap();

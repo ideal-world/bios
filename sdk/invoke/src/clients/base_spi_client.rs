@@ -21,7 +21,7 @@ impl BaseSpiClient {
         Err(funs.err().conflict("spi-module", "spi_module", "spi module uri Not configured yet.", "400-spi-module-not-exist"))
     }
 
-    pub async fn headers(headers: Option<Vec<(String, String)>>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<Vec<(String, String)>>> {
+    pub async fn headers(headers: Option<Vec<(String, String)>>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<(String, String)>> {
         let spi_ctx = TardisContext {
             owner: funs.invoke_conf_spi_app_id(),
             ..ctx.clone()
@@ -29,9 +29,9 @@ impl BaseSpiClient {
         let base_ctx = (TARDIS_CONTEXT.to_string(), TardisFuns::crypto.base64.encode(TardisFuns::json.obj_to_string(&spi_ctx)?));
         if let Some(mut headers) = headers {
             headers.push(base_ctx);
-            return Ok(Some(headers));
+            return Ok(headers);
         }
-        let headers = Some(vec![base_ctx]);
+        let headers = vec![base_ctx];
         Ok(headers)
     }
 

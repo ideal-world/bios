@@ -1,7 +1,8 @@
 {
   "main": "index.js",
   "scripts": {
-    "start": "webpack-dev-server --host '0.0.0.0'"
+//    "start": "webpack-dev-server --host '0.0.0.0'"
+    "start": "webpack-dev-server"
   },
   "devDependencies": {
     "bios-enhance-wasm": "file:../pkg",

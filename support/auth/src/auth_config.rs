@@ -55,7 +55,7 @@ impl Default for AuthConfig {
             head_key_token: "Bios-Token".to_string(),
             head_key_ak_authorization: "Bios-Authorization".to_string(),
             head_key_bios_ctx: "Bios-Ctx".to_string(),
-            /// Special: need use UTC Time
+            // Special: need use UTC Time
             head_key_date_flag: "Bios-Date".to_string(),
             head_key_app: "Bios-App".to_string(),
             head_key_protocol: "Bios-Proto".to_string(),

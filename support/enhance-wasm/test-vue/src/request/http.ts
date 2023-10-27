@@ -15,7 +15,7 @@ apiClient.interceptors.request.use(function (config) {
     config.raw_path = path
     let mix_request
     try {
-        mix_request = bios.on_before_request(typeof config.method === 'undefined' ? "get" : config.method, path, body, config.headers)
+        mix_request = bios.on_before_request(typeof config.method === 'undefined' ? "get" : config.method, path, body, config.headers,false)
     } catch (e) {
         if (e.message == "Need double auth.") {
             return Promise.reject(e);

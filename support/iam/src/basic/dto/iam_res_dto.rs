@@ -42,14 +42,14 @@ pub struct IamResAddReq {
 
 impl IamResAddReq {
     pub fn encoding(&mut self) -> &mut Self {
-        if self.code.0.starts_with('/') {
-            self.code.0 = self.code.0[1..].to_string();
+        if self.code.starts_with('/') {
+            self.code = TrimString::new(self.code[1..].to_string());
         }
         self.code = TrimString(format!(
             "{}/{}/{}",
             self.kind.to_int(),
             self.method.as_ref().unwrap_or(&TrimString("*".to_string())),
-            self.code.0
+            self.code
         ));
         self
     }

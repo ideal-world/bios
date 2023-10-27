@@ -2,7 +2,6 @@ use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
 use bios_basic::spi::serv::spi_bs_serv::SpiBsServ;
-use tardis::basic::result;
 use tardis::chrono::{self, Utc};
 use tardis::web::context_extractor::TardisContextExtractor;
 

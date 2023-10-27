@@ -302,7 +302,7 @@ impl IamTenantServ {
             &IamAccountAggAddReq {
                 id: Some(TrimString(tenant_admin_id.clone())),
                 name: add_req.admin_name.clone(),
-                cert_user_name: TrimString(add_req.admin_username.0.to_string()),
+                cert_user_name: add_req.admin_username.clone(),
                 cert_password: Some(TrimString(admin_pwd.to_string())),
                 cert_phone: add_req.admin_phone.clone(),
                 cert_mail: add_req.admin_mail.clone(),
@@ -331,7 +331,7 @@ impl IamTenantServ {
             &IamAccountAggAddReq {
                 id: Some(TrimString(tenant_audit_id.clone())),
                 name: add_req.audit_name.clone(),
-                cert_user_name: TrimString(add_req.audit_username.0.to_string()),
+                cert_user_name: add_req.audit_username.clone(),
                 cert_password: Some(TrimString(audit_pwd.to_string())),
                 cert_phone: add_req.audit_phone.clone(),
                 cert_mail: add_req.audit_mail.clone(),

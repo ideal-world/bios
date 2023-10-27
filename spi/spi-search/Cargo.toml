@@ -28,3 +28,4 @@ strum = { workerspace = true, features = ["derive"] }
 [dev-dependencies]
 tardis = { workspace = true, features = ["test"] }
 bios-basic = { path = "../../basic", features = ["default", "test"] }
+testcontainers-modules ={ workspace = true }

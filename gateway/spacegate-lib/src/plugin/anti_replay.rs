@@ -137,9 +137,9 @@ mod tests {
     };
     use tardis::{
         test::test_container::TardisTestContainer,
-        testcontainers::{self, clients::Cli, images::redis::Redis, Container},
+        testcontainers::{self, clients::Cli, Container},
     };
-
+    use testcontainers_modules::redis::Redis;
     use super::*;
 
     #[tokio::test]

@@ -10,6 +10,7 @@ use bios_auth::{
         auth_kernel_dto::{AuthReq, AuthResp},
     },
 };
+use tardis::config::config_dto::WebClientModuleConfig;
 use tardis::{
     basic::result::TardisResult,
     crypto::crypto_sm2_4::TardisCryptoSm2,
@@ -25,8 +26,8 @@ use tardis::{
 fn crypto_req(body: &str, serv_pub_key: &str, front_pub_key: &str, need_crypto_resp: bool) -> (String, String) {
     let pub_key = TardisFuns::crypto.sm2.new_public_key_from_public_key(serv_pub_key).unwrap();
 
-    let sm4_key = TardisFuns::crypto.key.rand_16_hex().unwrap();
-    let sm4_iv = TardisFuns::crypto.key.rand_16_hex().unwrap();
+    let sm4_key = TardisFuns::crypto.key.rand_16_hex();
+    let sm4_iv = TardisFuns::crypto.key.rand_16_hex();
 
     let data = TardisFuns::crypto.sm4.encrypt_cbc(body, &sm4_key, &sm4_iv).unwrap();
     let sign_data = TardisFuns::crypto.digest.sm3(&data).unwrap();
@@ -40,6 +41,12 @@ fn crypto_req(body: &str, serv_pub_key: &str, front_pub_key: &str, need_crypto_r
     (data, base64_encrypt)
 }
 
+
+const WEB_CLIENT_CFG: WebClientModuleConfig = WebClientModuleConfig {
+    connect_timeout_sec: 1,
+    request_timeout_sec: 60,
+};
+
 async fn mock_req(
     method: &str,
     path: &str,
@@ -51,7 +58,7 @@ async fn mock_req(
     need_crypto_req: bool,
     need_crypto_resp: bool,
 ) -> AuthResp {
-    let web_client = TardisWebClient::init(1).unwrap();
+    let web_client = TardisWebClient::init(&WEB_CLIENT_CFG).unwrap();
     info!(">>>>[Request]| path:{}, query:{}, headers:{:#?}", path, query, headers);
     let config = TardisFuns::cs_config::<AuthConfig>(DOMAIN_CODE);
     let encrypt;
@@ -98,7 +105,7 @@ async fn mock_req(
 }
 
 pub async fn mock_req_mix_apis(method: &str, uri: &str, body: &str, mut headers: Vec<(&str, &str)>, serv_pub_key: &str, front_pub_key: &str) -> MixAuthResp {
-    let web_client = TardisWebClient::init(1).unwrap();
+    let web_client = TardisWebClient::init(&WEB_CLIENT_CFG).unwrap();
     let config = TardisFuns::cs_config::<AuthConfig>(DOMAIN_CODE);
     let mix_body = json!({
         "method": method,
@@ -147,7 +154,7 @@ pub async fn mock_req_mix_apis(method: &str, uri: &str, body: &str, mut headers:
 }
 
 async fn mock_encrypt_resp(body: &str, headers: HashMap<String, String>, front_pri_key: &TardisCryptoSm2PrivateKey) -> String {
-    let web_client = TardisWebClient::init(1).unwrap();
+    let web_client = TardisWebClient::init(&WEB_CLIENT_CFG).unwrap();
     info!(">>>>[Response]| headers:{:#?}", headers);
     let config = TardisFuns::cs_config::<AuthConfig>(DOMAIN_CODE);
     let result: TardisResp<AuthEncryptResp> = web_client
@@ -165,7 +172,7 @@ async fn mock_encrypt_resp(body: &str, headers: HashMap<String, String>, front_p
         .unwrap();
     info!("<<<<[Response]| headers:{:#?}, result:{:#?}", headers, result);
     let result = result.data.unwrap();
-    let decode_base64 = TardisFuns::crypto.base64.decode(result.headers.get(&config.head_key_crypto).unwrap()).unwrap();
+    let decode_base64 = TardisFuns::crypto.base64.decode_to_string(result.headers.get(&config.head_key_crypto).unwrap()).unwrap();
     let decrypt_key = front_pri_key.decrypt(&decode_base64).unwrap();
     let splits: Vec<_> = decrypt_key.split(' ').collect();
     if splits.len() != 3 {
@@ -185,7 +192,7 @@ async fn init_get_pub_key(sm2: &TardisCryptoSm2) -> TardisResult<(TardisCryptoSm
     let pri_key = TardisFuns::crypto.sm2.new_private_key().unwrap();
     let pub_key = TardisFuns::crypto.sm2.new_public_key(&pri_key).unwrap();
 
-    let web_client = TardisWebClient::init(1).unwrap();
+    let web_client = TardisWebClient::init(&WEB_CLIENT_CFG).unwrap();
     let result: TardisResp<String> = web_client.get(&format!("https://localhost:8080/{DOMAIN_CODE}/auth/crypto/key"), None).await.unwrap().body.unwrap();
     Ok((sm2.new_public_key_from_public_key(&result.data.unwrap()).unwrap(), pri_key, pub_key))
 }

@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use bios_reach::reach_send_channel::SendChannelMap;
 use tardis::basic::result::TardisResult;
 use tardis::web::web_server::TardisWebServer;
@@ -11,7 +9,7 @@ pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
         web_server,
         SendChannelMap::new()
             .with_arc_channel(bios_client_hwsms::SmsClient::from_reach_config())
-            .with_arc_channel(Arc::new(tardis::TardisFuns::mail_by_module_or_default(bios_reach::reach_consts::MODULE_CODE))),
+            .with_arc_channel(tardis::TardisFuns::mail_by_module_or_default(bios_reach::reach_consts::MODULE_CODE)),
     )
     .await?;
 
