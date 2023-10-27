@@ -18,6 +18,7 @@ lazy_static.workspace = true
 spacegate-kernel.workspace = true
 tardis.workspace = true
 spacegate-lib={path = "../../gateway/spacegate-lib"}
+tracing-subscriber={version = "0.3"}
 
 [dev-dependencies]
 pprof = { version = "0.12.1", features = ["flamegraph"] }
