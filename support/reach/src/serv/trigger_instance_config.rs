@@ -87,6 +87,7 @@ impl ReachTriggerInstanceConfigService {
         filter.rel_reach_channel = Some(req.rel_reach_channel);
         filter.rel_reach_trigger_scene_id = Some(req.rel_reach_trigger_scene_id.clone());
         filter.receive_group_code = Some(vec![req.receive_group_code.clone()]);
+        filter.rel_item_id = Some(req.rel_item_id.clone());
         if let Some(trigger_instance_config) = Self::find_one_rbum(&filter, funs, ctx).await? {
             if req.delete_kind {
                 Self::delete_rbum(&trigger_instance_config.id, funs, ctx).await?;
