@@ -1106,7 +1106,9 @@ pub async fn query_metrics(query_req: &SearchQueryMetricsReq, funs: &TardisFunsI
     for group in &query_req.group {
         if group.in_ext.unwrap_or(true) {
             if group.multi_values.unwrap_or(false) {
-                sql_part_inner_selects.push(format!("jsonb_array_elements(fact.ext -> '{}') AS {}", &group.code, &group.code));
+                // sql_part_inner_selects.push(format!("jsonb_array_elements(fact.ext -> '{}') AS {}", &group.code, &group.code));
+                sql_part_inner_selects.push(format!("jsonb_array_elements(case when fact.ext-> '{}' is null then '[\"\"]' else case when jsonb_array_length(fact.ext -> '{}') = 0 then '[\"\"]' else fact.ext -> '{}' end end) as {}",
+                                                    &group.code, &group.code, &group.code, &group.code));
             } else {
                 sql_part_inner_selects.push(format!("fact.ext ->> '{}' AS {}", &group.code, &group.code));
             }
