@@ -33,6 +33,9 @@ pub struct Model {
     pub length: i32,
     #[sea_orm(column_type = "String(Some(255))")]
     pub rel_reach_set_id: String,
+    /// 资源作用级别
+    #[sea_orm(column_name = "scope_level")]
+    pub scope_level: Option<i16>,
 }
 
 impl From<&ReachVCodeStrategyAddReq> for ActiveModel {
@@ -89,7 +92,8 @@ impl TardisActiveModel for ActiveModel {
             .col(ColumnDef::new(Column::MaxErrorTimes).not_null().tiny_integer())
             .col(ColumnDef::new(Column::ExpireSec).not_null().small_integer())
             .col(ColumnDef::new(Column::Length).not_null().tiny_integer())
-            .col(ColumnDef::new(Column::RelReachSetId).not_null().string_len(255));
+            .col(ColumnDef::new(Column::RelReachSetId).not_null().string_len(255))
+            .col(ColumnDef::new(Column::ScopeLevel).small_integer());
 
         if db == DatabaseBackend::Postgres {
             builder
