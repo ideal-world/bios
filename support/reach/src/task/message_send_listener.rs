@@ -60,19 +60,11 @@ impl MessageSendListener {
         };
         for account_id in message.to_res_ids.split(ACCOUNT_SPLIT) {
             if let Ok(mut resp) = iam_client.get_account(account_id, &owner_path).await {
-                match message.rel_reach_channel {
-                    ReachChannelKind::Sms => {
-                        let Some(res_id) = resp.certs.remove(cert_key) else {
-                            log::warn!("[Reach] Notify Phone channel send error, missing [{cert_key}] parameters, resp: {resp:?}");
-                            continue;
-                        };
-                        to.insert(res_id);
-                    }
-                    ReachChannelKind::Email => {}
-                    _ => {
-                        continue;
-                    }
-                }
+                let Some(res_id) = resp.certs.remove(cert_key) else {
+                    log::warn!("[Reach] Notify Phone channel send error, missing [{cert_key}] parameters, resp: {resp:?}");
+                    continue;
+                };
+                to.insert(res_id);
             } else {
                 log::warn!("[Reach] iam get account info error, account_id: {account_id}")
             }
