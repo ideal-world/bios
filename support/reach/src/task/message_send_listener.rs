@@ -61,7 +61,7 @@ impl MessageSendListener {
         for account_id in message.to_res_ids.split(ACCOUNT_SPLIT) {
             if let Ok(mut resp) = iam_client.get_account(account_id, &owner_path).await {
                 let Some(res_id) = resp.certs.remove(cert_key) else {
-                    log::warn!("[Reach] Notify Phone channel send error, missing [{cert_key}] parameters, resp: {resp:?}");
+                    log::warn!("[Reach] Notify {chan} channel send error, missing [{cert_key}] parameters, resp: {resp:?}", chan = message.rel_reach_channel);
                     continue;
                 };
                 to.insert(res_id);
