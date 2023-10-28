@@ -385,7 +385,7 @@ pub enum FlowTransitionFrontActionInfoRelevanceRelation {
 
 impl FlowTransitionFrontActionInfoRelevanceRelation {
     pub fn check_conform(&self, left_value: String, right_value: String) -> bool {
-        if left_value.is_empty() {
+        if left_value.is_empty() || left_value == "null" || right_value == "null" {
             return false;
         }
         match self {
