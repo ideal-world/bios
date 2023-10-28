@@ -49,13 +49,30 @@ impl MessageSendListener {
         let mut to = HashSet::new();
         let start_time = Utc::now();
         let owner_path = rbum_scope_helper::get_pre_paths(RBUM_SCOPE_LEVEL_TENANT as i16, &message.own_paths).unwrap_or_default();
+        let cert_key = match message.rel_reach_channel {
+            ReachChannelKind::Sms => IAM_KEY_PHONE_V_CODE,
+            ReachChannelKind::Email => IAM_KEY_MAIL_V_CODE,
+            _ => {
+                // unsupported
+                ReachMessageServ::update_status(&message.id, ReachStatusKind::Pending, ReachStatusKind::Fail, &self.funs, &ctx).await?;
+                return Ok(());
+            }
+        };
         for account_id in message.to_res_ids.split(ACCOUNT_SPLIT) {
             if let Ok(mut resp) = iam_client.get_account(account_id, &owner_path).await {
-                let Some(phone) = resp.certs.remove(IAM_KEY_PHONE_V_CODE) else {
-                    log::warn!("[Reach] Notify Phone channel send error, missing [PhoneVCode] parameters, resp: {resp:?}");
-                    continue;
-                };
-                to.insert(phone);
+                match message.rel_reach_channel {
+                    ReachChannelKind::Sms => {
+                        let Some(res_id) = resp.certs.remove(cert_key) else {
+                            log::warn!("[Reach] Notify Phone channel send error, missing [{cert_key}] parameters, resp: {resp:?}");
+                            continue;
+                        };
+                        to.insert(res_id);
+                    }
+                    ReachChannelKind::Email => {}
+                    _ => {
+                        continue;
+                    }
+                }
             } else {
                 log::warn!("[Reach] iam get account info error, account_id: {account_id}")
             }
