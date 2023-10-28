@@ -59,7 +59,7 @@ impl
         if let Some(kind) = filter.kind {
             query.and_where(message_template::Column::Kind.eq(kind));
         }
-        query.with_filter(Self::get_table_name(), &filter.base_filter, is_detail, false, ctx);
+        query.with_filter(Self::get_table_name(), &filter.base_filter, is_detail, true, ctx);
         Ok(query)
     }
 }
