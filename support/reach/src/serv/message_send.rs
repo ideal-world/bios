@@ -83,7 +83,7 @@ pub async fn message_send(send_req: ReachMsgSendReq, funs: &TardisFunsInst, ctx:
 
     for (_kind, gc) in global_configs {
         for (receive_kind, to_res_ids) in &other_receive_collect {
-            if other_group_code.contains(&gc.rel_reach_channel) {
+            if other_group_code.contains(&gc.rel_reach_channel) && !gc.rel_reach_msg_signature_id.is_empty() && !gc.rel_reach_msg_template_id.is_empty() {
                 ReachMessageServ::add_rbum(
                     &mut ReachMessageAddReq {
                         rbum_item_add_req: RbumItemAddReq {
