@@ -28,8 +28,7 @@ impl Default for MessageSendListener {
 }
 
 impl MessageSendListener {
-    async fn execute_send_account(&self, message: message::Model, template: message_template::Model, _signarure: Option<message_signature::Model>) -> TardisResult<()> {
-        let content_replace: ContentReplace = message.content_replace.parse()?;
+    async fn execute_send_account(&self, content_replace: ContentReplace, message: message::Model, template: message_template::Model, _signarure: Option<message_signature::Model>) -> TardisResult<()> {
         let cfg = self.funs.conf::<ReachConfig>();
         let _lock = self.sync.lock().await;
         let ctx = TardisContext {
@@ -150,9 +149,10 @@ impl MessageSendListener {
             //             .and_where(message_signature::Column::Id.eq(&message.rel_reach_msg_signature_id)),
             //     )
             //     .await?;
+            let content_replace: ContentReplace = message.content_replace.parse()?;
             match message.receive_kind {
                 ReachReceiveKind::Account => {
-                    let _res = self.execute_send_account(message, template, None).await;
+                    let _res = self.execute_send_account(content_replace, message, template, None).await;
                 }
                 ReachReceiveKind::Tenant => {
                     // do nothing
