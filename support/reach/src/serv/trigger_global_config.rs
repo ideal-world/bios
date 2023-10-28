@@ -39,19 +39,18 @@ impl
             .count(Query::select().column(trigger_scene::Column::Id).from(trigger_scene::Entity).and_where(trigger_scene::Column::Id.eq(&add_req.rel_reach_trigger_scene_id)))
             .await?
         {
-            return Err(funs.err().bad_request("reach_trigger_global_config", "before_add_rbum", "rel_reach_trigger_scene_id is exist", ""));
+            return Err(funs.err().bad_request("reach_trigger_global_config", "before_add_rbum", "rel_reach_trigger_scene_id doesn't exist", ""));
         }
-        if 1 != funs
-            .db()
-            .count(
-                Query::select()
-                    .column(message_signature::Column::Id)
-                    .from(message_signature::Entity)
-                    .and_where(message_signature::Column::Id.eq(&add_req.rel_reach_msg_signature_id)),
-            )
-            .await?
-        {
-            return Err(funs.err().bad_request("reach_trigger_global_config", "before_add_rbum", "rel_reach_msg_signature_id is exist", ""));
+        if !add_req.rel_reach_msg_signature_id.is_empty() && 1 != funs
+                .db()
+                .count(
+                    Query::select()
+                        .column(message_signature::Column::Id)
+                        .from(message_signature::Entity)
+                        .and_where(message_signature::Column::Id.eq(&add_req.rel_reach_msg_signature_id)),
+                )
+                .await? {
+            return Err(funs.err().bad_request("reach_trigger_global_config", "before_add_rbum", "rel_reach_msg_signature_id doesn't exist", ""));
         }
         if 1 != funs
             .db()
@@ -60,7 +59,7 @@ impl
             )
             .await?
         {
-            return Err(funs.err().bad_request("reach_trigger_global_config", "before_add_rbum", "rel_reach_msg_template_id is exist", ""));
+            return Err(funs.err().bad_request("reach_trigger_global_config", "before_add_rbum", "rel_reach_msg_template_id doesn't exist", ""));
         }
         let mut filter = ReachTriggerGlobalConfigFilterReq {
             rel_reach_trigger_scene_id: Some(add_req.rel_reach_trigger_scene_id.clone()),

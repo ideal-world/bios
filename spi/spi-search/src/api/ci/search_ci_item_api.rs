@@ -39,7 +39,10 @@ impl SearchCiItemApi {
         TardisResp::ok(Void {})
     }
 
+    /// 删除单项资源
+    /// 注意:此操作将物理删除所有事实记录，且无法恢复，请谨慎使用!
     /// Delete Item
+    /// Note:This operation will physically delete all fact records and cannot be recovered, please use caution!
     #[oai(path = "/:tag/ownership", method = "delete")]
     async fn delete_by_ownership(&self, tag: Path<String>, own_paths: Query<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let funs = crate::get_tardis_inst();

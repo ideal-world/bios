@@ -8,8 +8,8 @@ use tardis::{
         sea_orm::{FromQueryResult, Value},
     },
     serde_json::{self, json, Map},
-    web::web_resp::TardisPage,
-    TardisFuns, TardisFunsInst,
+    TardisFuns,
+    TardisFunsInst, web::web_resp::TardisPage,
 };
 
 use bios_basic::{basic_enumeration::BasicQueryOpKind, dto::BasicQueryCondInfo, helper::db_helper, spi::spi_funs::SpiBsInst};
@@ -1148,7 +1148,7 @@ pub async fn query_metrics(query_req: &SearchQueryMetricsReq, funs: &TardisFunsI
     // (column name with fun, alias name, show_name, is dimension)
     let mut sql_part_outer_select_infos = vec![];
     for (column_name_with_fun, alias_name, show_name) in sql_part_group_infos {
-        sql_part_outer_select_infos.push((column_name_with_fun, alias_name, show_name, true));
+        sql_part_outer_select_infos.push((format!("COALESCE({},'\"empty\"')",column_name_with_fun), alias_name, show_name, true));
     }
     for select in &query_req.select {
         let select_column = if select.in_ext.unwrap_or(true) {

@@ -87,13 +87,13 @@ impl StatsCiRecordApi {
     }
 
     /// 删除事实记录
-    /// 注意:此操作在逻辑上删除了所有权的实际记录。
+    /// 注意:此操作将物理删除所有事实记录，且无法恢复，请谨慎使用!
     /// Delete Fact Records
-    /// Note: This action logically removes the factual record of ownership.
+    /// Note:This operation will physically delete all fact records and cannot be recovered, please use caution!
     #[oai(path = "/fact/:fact_key/ownership/remove", method = "put")]
-    async fn fact_records_logic_delete_by_ownership(&self, fact_key: Path<String>, own_paths: Query<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+    async fn fact_records_delete_by_ownership(&self, fact_key: Path<String>, own_paths: Query<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let funs = crate::get_tardis_inst();
-        stats_record_serv::fact_records_logic_delete_by_ownership(&fact_key.0, &own_paths.0, &funs, &ctx.0).await?;
+        stats_record_serv::fact_records_delete_by_ownership(&fact_key.0, &own_paths.0, &funs, &ctx.0).await?;
         TardisResp::ok(Void {})
     }
 
