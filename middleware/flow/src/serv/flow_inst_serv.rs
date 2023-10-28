@@ -27,7 +27,7 @@ use tardis::{
     serde_json::Value,
     tokio,
     web::web_resp::TardisPage,
-    TardisFuns, TardisFunsInst,
+    TardisFuns, TardisFunsInst, futures::executor::block_on,
 };
 
 use crate::{
@@ -43,7 +43,7 @@ use crate::{
         flow_state_dto::{FlowStateFilterReq, FlowStateRelModelExt, FlowSysStateKind},
         flow_transition_dto::{
             FlowTransitionActionByStateChangeInfo, FlowTransitionActionByVarChangeInfoChangedKind, FlowTransitionActionChangeAgg, FlowTransitionActionChangeInfo,
-            FlowTransitionActionChangeKind, FlowTransitionDetailResp, FlowTransitionFrontActionInfo, FlowTransitionFrontActionRightValue, StateChangeConditionOp,
+            FlowTransitionActionChangeKind, FlowTransitionDetailResp, FlowTransitionFrontActionInfo, FlowTransitionFrontActionRightValue, StateChangeConditionOp, FlowTransitionFrontActionInfoRelevanceRelation,
         },
     },
     flow_constants,
@@ -1224,7 +1224,7 @@ impl FlowInstServ {
             current_vars: Set(Some(TardisFuns::json.obj_to_json(&new_vars)?)),
             ..Default::default()
         };
-        funs.db().update_one(flow_inst, ctx).await?;
+        block_on(funs.db().update_one(flow_inst, ctx))?;
 
         let flow_inst_id_sync = flow_inst_id.to_string();
         let ctx_sync = ctx.clone();
