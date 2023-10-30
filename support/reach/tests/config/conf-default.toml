@@ -71,3 +71,12 @@ doc_urls = [["test env", "http://localhost:8080/"]]
 [fw.web_server.modules.sms]
 uniform_error = false
 
+[fw.mail]
+smtp_host = "test.com"
+smtp_port = 465
+smtp_username = "dev@test.com"
+smtp_password = ""
+default_from = ""
+starttls = false
+
+[fw.web_client]

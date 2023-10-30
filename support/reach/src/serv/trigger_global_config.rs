@@ -71,9 +71,9 @@ impl
         filter.base_filter.basic.with_sub_own_paths = true;
 
         if 0 != Self::count_rbums(&filter, funs, ctx).await? {
-            log::warn!("[Reach] reach_trigger_scene_id {id} and reach_channel {chan} is exist", id = add_req.rel_reach_trigger_scene_id, chan = add_req.rel_reach_channel);
-            return Ok(());
-            // return Err(funs.err().bad_request("reach_trigger_global_config", "before_add_rbum", "reach_trigger_scene_id and reach_channel is exist", ""));
+            log::warn!("[Reach] reach_trigger_scene_id {id} and reach_channel {chan} is existed", id = add_req.rel_reach_trigger_scene_id, chan = add_req.rel_reach_channel);
+            // return Ok(());
+            return Err(funs.err().bad_request("reach_trigger_global_config", "before_add_rbum", "reach_trigger_scene_id and reach_channel is existed", ""));
         }
         Ok(())
     }
@@ -119,7 +119,6 @@ impl ReachTriggerGlobalConfigService {
     }
     pub async fn add_or_modify_global_config(agg_req: ReachTriggerGlobalConfigAddOrModifyAggReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         for req in agg_req.global_config {
-            
             Self::add_or_modify_by_single_req(req, funs, ctx).await?;
         }
         Ok(())

@@ -12,6 +12,9 @@ pub async fn test_ct_api() -> TardisResult<()> {
     // std::env::set_var("RUST_LOG", "test_ct=info");
     let docker = testcontainers::clients::Cli::default();
     let holder = init_tardis(&docker).await?;
+    let scene_code = "TEST-SCENE-CODE";
+    let scene_name = "测试场景";
+    bios_reach::reach_initializer::reach_init_trigger_scene(& ReachTriggerSceneTree::new(scene_name, scene_code, [])).await?;
     let ctx = get_test_ctx();
     let funs = get_tardis_inst();
     let client = reach_invoke::Client::new("http://localhost:8080/reach", ctx, &funs);
@@ -20,6 +23,23 @@ pub async fn test_ct_api() -> TardisResult<()> {
     fn expected_content(name: &str, code: &str) -> String {
         format!(r#"["hello {name}, your code is {code}"]"#)
     }
+    // test vcode_strategy
+    let rel_reach_verify_code_strategy_id = {
+        let id = client
+            .add_vcode_strategy(&ReachVCodeStrategyAddReq {
+                // rbum_item_add_req: Default::default(),
+                max_error_times: 1,
+                expire_sec: 30,
+                length: 50,
+                rel_reach_set_id: Default::default(),
+            })
+            .await?;
+
+        let strategy = client.get_vcode_strategy(None).await?.expect("strategy not found");
+
+        assert_eq!(id, strategy.id);
+        id
+    };
     let template_id = {
         // msg template apis
         let message_add_req = ReachMessageTemplateAddReq {
@@ -31,7 +51,7 @@ pub async fn test_ct_api() -> TardisResult<()> {
             timeout_sec: 6000,
             timeout_strategy: ReachTimeoutStrategyKind::Ignore,
             kind: ReachTemplateKind::Vcode,
-            rel_reach_verify_code_strategy_id: "strategy-id".into(),
+            rel_reach_verify_code_strategy_id,
             sms_template_id: "sms-tempalte-id".into(),
             sms_signature: "sms-signature".into(),
             sms_from: "reach@bios.dev".into(),
@@ -183,7 +203,7 @@ pub async fn test_ct_api() -> TardisResult<()> {
         log::info!("all trigger scenes: {name_codes_map:?}");
         // find one trigger scene
         log::info!("find one trigger scene");
-        let scene = client.find_trigger_scene_by_code("app_task_create").await?.into_iter().next().expect("scene app_task_create have not initialized");
+        let scene = client.find_trigger_scene_by_code(scene_code).await?.into_iter().next().expect("scene app_task_create have not initialized");
         (scene.id, scene.code)
     };
 
@@ -257,6 +277,15 @@ pub async fn test_ct_api() -> TardisResult<()> {
         dbg!(logs);
     }
 
+    // test vcode send
+    {
+        let name = "Eve";
+        let code = random_string(6);
+        client.vcode_send(name, &code, &()).await?;
+        tokio::time::sleep(tokio::time::Duration::from_secs(3)).await;
+        let msg = holder.sms_mocker.get_latest_message(name).await.unwrap();
+        assert_eq!(msg, expected_content("", &code));
+    }
     drop(holder);
     Ok(())
 }

@@ -11,6 +11,8 @@ pub use reach_api_ct_trigger_global::ReachTriggerGlobalConfigCtApi;
 use tardis::basic::{error::TardisError, result::TardisResult};
 mod reach_api_ct_trigger_instance;
 pub use reach_api_ct_trigger_instance::ReachTriggerInstanceConfigCtApi;
+mod reach_api_ct_vcode_strategy;
+pub use reach_api_ct_vcode_strategy::ReachVcodeStrategyCtApi;
 
 pub type ReachCtApi = (
     ReachMessageCtApi,
@@ -19,6 +21,7 @@ pub type ReachCtApi = (
     ReachMessageTemplateCtApi,
     ReachTriggerGlobalConfigCtApi,
     ReachTriggerInstanceConfigCtApi,
+    ReachVcodeStrategyCtApi,
 );
 
 fn map_notfound_to_false(e: TardisError) -> TardisResult<bool> {

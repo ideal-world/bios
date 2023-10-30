@@ -14,10 +14,10 @@ use tardis::{
 
 use crate::{
     api,
+    dto::ReachTriggerSceneTree,
     reach_config::ReachConfig,
     reach_consts::{get_tardis_inst, DOMAIN_CODE, DOMAIN_REACH_ID, RBUM_EXT_TABLE_REACH_MESSAGE, RBUM_KIND_CODE_REACH_MESSAGE, REACH_INIT_OWNER},
     reach_send_channel::SendChannelMap,
-    serv::ReachTriggerSceneService,
     task,
 };
 
@@ -82,7 +82,6 @@ pub async fn db_init() -> TardisResult<()> {
     funs.db().init(crate::domain::trigger_instance_config::ActiveModel::init(db_kind, None, compatible_type)).await?;
     funs.db().init(crate::domain::trigger_scene::ActiveModel::init(db_kind, None, compatible_type)).await?;
     funs.db().init(crate::domain::reach_vcode_strategy::ActiveModel::init(db_kind, None, compatible_type)).await?;
-    // ReachTriggerSceneService::init(&funs, &ctx).await?;
     funs.commit().await?;
     Ok(())
 }
@@ -97,4 +96,13 @@ pub async fn init(web_server: &TardisWebServer, send_channels: SendChannelMap) -
     api::init(web_server).await?;
     task::init().await?;
     Ok(())
+}
+
+pub async fn reach_init_trigger_scene(tree: &ReachTriggerSceneTree) -> TardisResult<()> {
+    let ctx = TardisContext {
+        owner: REACH_INIT_OWNER.into(),
+        ..Default::default()
+    };
+    let funs = get_tardis_inst();
+    crate::serv::ReachTriggerSceneService::init(tree, &funs, &ctx).await
 }
