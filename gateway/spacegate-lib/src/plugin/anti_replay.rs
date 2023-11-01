@@ -16,7 +16,6 @@ use tardis::{
     basic::{error::TardisError, result::TardisResult},
     serde_json::{self},
     tokio::{self},
-    TardisFuns,
 };
 
 def_filter!("anti_replay", SgFilterAntiReplayDef, SgFilterAntiReplay);
