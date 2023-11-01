@@ -14,7 +14,7 @@ pub async fn test_ct_api() -> TardisResult<()> {
     let holder = init_tardis(&docker).await?;
     let scene_code = "TEST-SCENE-CODE";
     let scene_name = "测试场景";
-    bios_reach::reach_initializer::reach_init_trigger_scene(& ReachTriggerSceneTree::new(scene_name, scene_code, [])).await?;
+    bios_reach::reach_initializer::reach_init_trigger_scene(&ReachTriggerSceneTree::new(scene_name, scene_code, [])).await?;
     let ctx = get_test_ctx();
     let funs = get_tardis_inst();
     let client = reach_invoke::Client::new("http://localhost:8080/reach", ctx, &funs);

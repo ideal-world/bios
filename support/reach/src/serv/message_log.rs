@@ -6,7 +6,7 @@ use tardis::basic::dto::TardisContext;
 use tardis::basic::result::TardisResult;
 use tardis::db::reldb_client::TardisActiveModel;
 
-use tardis::db::sea_orm::sea_query::{Query, SelectStatement, Expr, Alias};
+use tardis::db::sea_orm::sea_query::{Alias, Expr, Query, SelectStatement};
 use tardis::db::sea_orm::{ColumnTrait, Set};
 use tardis::db::sea_orm::{EntityName, Iterable};
 use tardis::{TardisFuns, TardisFunsInst};
@@ -42,7 +42,6 @@ impl RbumCrudOperation<message_log::ActiveModel, ReachMsgLogAddReq, ReachMsgLogM
         query.expr_as(Expr::col((message::Entity, message::Column::ReachStatus)), Alias::new("reach_status"));
         query.expr_as(Expr::col((message::Entity, message::Column::ReceiveKind)), Alias::new("receive_kind"));
         query.expr_as(Expr::col((message::Entity, message::Column::ToResIds)), Alias::new("to_res_ids"));
-        
 
         query.left_join(
             message::Entity,

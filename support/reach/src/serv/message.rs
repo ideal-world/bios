@@ -59,11 +59,11 @@ impl RbumCrudOperation<message::ActiveModel, ReachMessageAddReq, ReachMessageMod
 }
 
 impl ReachMessageServ {
-    pub async fn resend(id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<bool> {
-        let success = Self::update_status(id, ReachStatusKind::Fail, ReachStatusKind::Pending, funs, ctx).await?;
+    pub async fn resend(id: &str, funs: &TardisFunsInst) -> TardisResult<bool> {
+        let success = Self::update_status(id, ReachStatusKind::Fail, ReachStatusKind::Pending, funs).await?;
         Ok(success)
     }
-    pub async fn update_status(id: impl Into<String>, from: ReachStatusKind, to: ReachStatusKind, funs: &TardisFunsInst, _ctx: &TardisContext) -> TardisResult<bool> {
+    pub async fn update_status(id: impl Into<String>, from: ReachStatusKind, to: ReachStatusKind, funs: &TardisFunsInst) -> TardisResult<bool> {
         let mut query = Query::update();
         query.table(message::Entity);
         query.cond_where(message::Column::Id.eq(id.into()).and(message::Column::ReachStatus.eq(from)));

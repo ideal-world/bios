@@ -1,8 +1,12 @@
 use bios_basic::rbum::{
     dto::{rbum_filer_dto::RbumItemBasicFilterReq, rbum_item_dto::RbumItemAddReq},
-    rbum_enumeration::RbumScopeLevelKind, serv::rbum_crud_serv::RbumCrudOperation,
+    rbum_enumeration::RbumScopeLevelKind,
+    serv::rbum_crud_serv::RbumCrudOperation,
 };
-use tardis::{basic::{field::TrimString, dto::TardisContext, result::TardisResult}, TardisFunsInst};
+use tardis::{
+    basic::{dto::TardisContext, field::TrimString, result::TardisResult},
+    TardisFunsInst,
+};
 
 use serde::{Deserialize, Serialize};
 use tardis::{
@@ -97,7 +101,6 @@ pub struct ReachTriggerSceneDetailResp {
     pub pid: String,
 }
 
-
 pub struct ReachTriggerSceneTree {
     pub name: String,
     pub code: String,
@@ -120,7 +123,7 @@ impl ReachTriggerSceneTree {
                 add_req = add_req.pid(&pid)
             }
             let id = ReachTriggerSceneService::add_rbum(&mut add_req, funs, ctx).await?;
-            stack.extend(scene.children.iter().map(|child|(Some(id.clone()), child)));
+            stack.extend(scene.children.iter().map(|child| (Some(id.clone()), child)));
         }
         Ok(())
     }
