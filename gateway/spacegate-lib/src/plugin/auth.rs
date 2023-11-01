@@ -11,6 +11,7 @@ use bios_auth::{
 
 use serde::{Deserialize, Serialize};
 use spacegate_kernel::{
+    def_filter,
     http::{self, HeaderMap, HeaderName, HeaderValue},
     hyper,
     hyper::{body::Bytes, Body, Method},
@@ -48,18 +49,7 @@ use super::plugin_constants;
 #[allow(clippy::type_complexity)]
 static INSTANCE: OnceLock<Arc<RwLock<Option<(String, JoinHandle<()>)>>>> = OnceLock::new();
 
-pub const CODE: &str = "auth";
-pub struct SgFilterAuthDef;
-
-impl SgPluginFilterDef for SgFilterAuthDef {
-    fn get_code(&self) -> &str {
-        CODE
-    }
-    fn inst(&self, spec: serde_json::Value) -> TardisResult<BoxSgPluginFilter> {
-        let filter = TardisFuns::json.json_to_obj::<SgFilterAuth>(spec)?;
-        Ok(filter.boxed())
-    }
-}
+def_filter!("auth", SgFilterAuthDef, SgFilterAuth);
 
 #[derive(Serialize, Deserialize)]
 #[serde(default)]

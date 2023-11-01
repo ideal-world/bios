@@ -20,7 +20,11 @@ pub struct TestHttpClient {
 impl TestHttpClient {
     pub fn new(base_url: String) -> TestHttpClient {
         TestHttpClient {
-            client: TardisWebClient::init(&WebClientModuleConfig { connect_timeout_sec: 600, ..Default::default() }).unwrap(),
+            client: TardisWebClient::init(&WebClientModuleConfig {
+                connect_timeout_sec: 600,
+                ..Default::default()
+            })
+            .unwrap(),
             context: Default::default(),
             base_url,
         }

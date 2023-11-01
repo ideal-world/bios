@@ -41,7 +41,6 @@ fn crypto_req(body: &str, serv_pub_key: &str, front_pub_key: &str, need_crypto_r
     (data, base64_encrypt)
 }
 
-
 const WEB_CLIENT_CFG: WebClientModuleConfig = WebClientModuleConfig {
     connect_timeout_sec: 1,
     request_timeout_sec: 60,

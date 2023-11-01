@@ -3,6 +3,7 @@ use std::time::Duration;
 use async_trait::async_trait;
 
 use serde::{Deserialize, Serialize};
+use spacegate_kernel::def_filter;
 use spacegate_kernel::plugins::filters::SgPluginFilterInitDto;
 use spacegate_kernel::plugins::{
     context::SgRoutePluginContext,
@@ -18,19 +19,7 @@ use tardis::{
     TardisFuns,
 };
 
-pub const CODE: &str = "anti_replay";
-pub struct SgFilterAntiReplayDef;
-
-impl SgPluginFilterDef for SgFilterAntiReplayDef {
-    fn get_code(&self) -> &str {
-        CODE
-    }
-
-    fn inst(&self, spec: serde_json::Value) -> TardisResult<BoxSgPluginFilter> {
-        let filter = TardisFuns::json.json_to_obj::<SgFilterAntiReplay>(spec)?;
-        Ok(filter.boxed())
-    }
-}
+def_filter!("anti_replay", SgFilterAntiReplayDef, SgFilterAntiReplay);
 
 #[derive(Serialize, Deserialize)]
 #[serde(default)]
@@ -131,6 +120,7 @@ mod tests {
 
     use std::env;
 
+    use super::*;
     use spacegate_kernel::{
         http::Uri,
         hyper::{Body, HeaderMap, Method, Version},
@@ -140,7 +130,6 @@ mod tests {
         testcontainers::{self, clients::Cli, Container},
     };
     use testcontainers_modules::redis::Redis;
-    use super::*;
 
     #[tokio::test]
     async fn test_anti_replay() {
