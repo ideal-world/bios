@@ -1,14 +1,14 @@
 use ipnet::IpNet;
 use serde::{Deserialize, Serialize};
+use spacegate_kernel::config::gateway_dto::SgProtocol;
 use spacegate_kernel::def_filter;
 use spacegate_kernel::plugins::context::{SgRouteFilterRequestAction, SgRoutePluginContext};
 use spacegate_kernel::plugins::filters::{SgPluginFilter, SgPluginFilterInitDto};
 use std::net::IpAddr;
-use spacegate_kernel::config::gateway_dto::SgProtocol;
 use tardis::async_trait::async_trait;
+use tardis::basic::error::TardisError;
 use tardis::basic::result::TardisResult;
 use tardis::{log, serde_json};
-use tardis::basic::error::TardisError;
 
 def_filter!("rewrite_ns", RewriteNsDef, RewriteNs);
 
@@ -17,14 +17,18 @@ def_filter!("rewrite_ns", RewriteNsDef, RewriteNs);
 #[serde(default)]
 pub struct RewriteNs {
     pub ip_list: Vec<String>,
-    pub target_ns:String,
+    pub target_ns: String,
     #[serde(skip)]
     pub ip_net: Vec<IpNet>,
 }
 
 impl Default for RewriteNs {
     fn default() -> Self {
-        RewriteNs { ip_list: vec![], target_ns: "default".to_string(), ip_net: vec![] }
+        RewriteNs {
+            ip_list: vec![],
+            target_ns: "default".to_string(),
+            ip_net: vec![],
+        }
     }
 }
 
@@ -40,22 +44,23 @@ impl SgPluginFilter for RewriteNs {
         Ok(())
     }
 
-    async fn req_filter(&self, id: &str,mut ctx: SgRoutePluginContext) -> TardisResult<(bool, SgRoutePluginContext)> {
-        if let Some(backend)=ctx.get_chose_backend(){
-            if backend.namespace.is_some(){
-                let ip=ctx.get_remote_addr().ip();
-                if self.ip_net.iter().any(|ipnet|ipnet.contains(&IpNet::from(ip))){
+    async fn req_filter(&self, id: &str, mut ctx: SgRoutePluginContext) -> TardisResult<(bool, SgRoutePluginContext)> {
+        if let Some(backend) = ctx.get_chose_backend() {
+            if backend.namespace.is_some() {
+                let ip = ctx.get_remote_addr().ip();
+                if self.ip_net.iter().any(|ipnet| ipnet.contains(&IpNet::from(ip))) {
                     ctx.set_action(SgRouteFilterRequestAction::Redirect);
                     let scheme = backend.protocol.as_ref().unwrap_or(&SgProtocol::Http);
-                    let host = format!("{}{}", backend.name_or_host,  format!(".{}",self.target_ns));
-                    let port = if (backend.port == 0 || backend.port == 80) && scheme == &SgProtocol::Http || (backend.port == 0 || backend.port == 443) && scheme == &SgProtocol::Https {
-                        "".to_string()
-                    } else {
-                        format!(":{}", backend.port)
-                    };
-                    let url=format!("{}://{}{}{}", scheme, host, port, ctx.request.get_uri().path_and_query().map(|p| p.as_str()).unwrap_or(""));
-                    ctx.request.set_uri(url.parse().map_err(|e|TardisError::wrap(&format!("[Plugin.Auth.Rewrite_Ns({id})] parse url:{e}"),""))?);
-                    log::debug!("[Plugin.Auth.Rewrite_Ns({id})] change namespace to {}",self.target_ns);
+                    let host = format!("{}{}", backend.name_or_host, format_args!(".{}", self.target_ns));
+                    let port =
+                        if (backend.port == 0 || backend.port == 80) && scheme == &SgProtocol::Http || (backend.port == 0 || backend.port == 443) && scheme == &SgProtocol::Https {
+                            "".to_string()
+                        } else {
+                            format!(":{}", backend.port)
+                        };
+                    let url = format!("{}://{}{}{}", scheme, host, port, ctx.request.get_uri().path_and_query().map(|p| p.as_str()).unwrap_or(""));
+                    ctx.request.set_uri(url.parse().map_err(|e| TardisError::wrap(&format!("[Plugin.Auth.Rewrite_Ns({id})] parse url:{e}"), ""))?);
+                    log::debug!("[Plugin.Auth.Rewrite_Ns({id})] change namespace to {}", self.target_ns);
                 }
             }
         }
@@ -69,6 +74,7 @@ impl SgPluginFilter for RewriteNs {
 
 #[cfg(test)]
 mod test {
+    use crate::plugin::rewrite_ns_b_ip::RewriteNs;
     use spacegate_kernel::config::gateway_dto::SgParameters;
     use spacegate_kernel::http::{HeaderMap, Method, Uri, Version};
     use spacegate_kernel::hyper::Body;
@@ -76,8 +82,6 @@ mod test {
     use spacegate_kernel::plugins::context::SgRoutePluginContext;
     use spacegate_kernel::plugins::filters::{SgPluginFilter, SgPluginFilterInitDto};
     use tardis::tokio;
-    use crate::plugin::rewrite_ns_b_ip::RewriteNs;
-
 
     #[tokio::test]
     async fn test() {
@@ -118,11 +122,9 @@ mod test {
             port: 80,
             ..Default::default()
         };
-            ctx.set_chose_backend_inst(&back_inst);
+        ctx.set_chose_backend_inst(&back_inst);
 
-
-        let (_,ctx)=filter_rens.req_filter("",ctx).await.unwrap();
-        assert_eq!(ctx.request.uri.get().host().unwrap(),format!("test.target"))
-
+        let (_, ctx) = filter_rens.req_filter("", ctx).await.unwrap();
+        assert_eq!(ctx.request.uri.get().host().unwrap(), format!("test.target"))
     }
 }
