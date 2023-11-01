@@ -17,7 +17,7 @@ use spacegate_kernel::{
     hyper::{Body, body::Bytes, Method},
     plugins::{
         context::{SgRouteFilterRequestAction, SgRoutePluginContext},
-        filters::{SgPluginFilter, SgPluginFilterAccept, SgPluginFilterDef},
+        filters::{SgPluginFilter, SgPluginFilterAccept},
     },
 };
 use spacegate_kernel::{

@@ -94,7 +94,7 @@ async fn test_auth_plugin_ctx() {
         "".to_string(),
         None,
     );
-    let (is_ok, mut before_filter_ctx) = filter_auth.req_filter("", ctx).await.unwrap();
+    let (is_ok, before_filter_ctx) = filter_auth.req_filter("", ctx).await.unwrap();
     assert!(is_ok);
     let ctx = decode_context(before_filter_ctx.request.get_headers());
 
@@ -124,7 +124,7 @@ async fn test_auth_plugin_ctx() {
         "".to_string(),
         None,
     );
-    let (is_ok, mut before_filter_ctx) = filter_auth.req_filter("", ctx).await.unwrap();
+    let (is_ok, before_filter_ctx) = filter_auth.req_filter("", ctx).await.unwrap();
     assert!(is_ok);
     let ctx = decode_context(before_filter_ctx.request.get_headers());
 
@@ -377,11 +377,11 @@ fn crypto_req(body: &str, serv_pub_key: &str, front_pub_key: &str, need_crypto_r
     let pub_key = TardisFuns::crypto.sm2.new_public_key_from_public_key(serv_pub_key).unwrap();
 
     let sm4_key = TardisFuns::crypto.key.rand_16_bytes();
-    let sm4_key_hex = TardisFuns::crypto.hex.encode(&sm4_key);
+    let sm4_key_hex = TardisFuns::crypto.hex.encode(sm4_key);
     let sm4_iv = TardisFuns::crypto.key.rand_16_bytes();
-    let sm4_iv_hex = TardisFuns::crypto.hex.encode(&sm4_key);
+    let sm4_iv_hex = TardisFuns::crypto.hex.encode(sm4_key);
 
-    let data = TardisFuns::crypto.sm4.encrypt_cbc(body, &sm4_key, &sm4_iv).unwrap();
+    let data = TardisFuns::crypto.sm4.encrypt_cbc(body, sm4_key, sm4_iv).unwrap();
     let sign_data = TardisFuns::crypto.digest.sm3(&data).unwrap();
 
     let sm4_encrypt = if need_crypto_resp {

@@ -15,7 +15,7 @@ use spacegate_kernel::def_filter;
 use spacegate_kernel::plugins::context::SGRoleInfo;
 use spacegate_kernel::plugins::{
     context::SgRoutePluginContext,
-    filters::{BoxSgPluginFilter, SgPluginFilter, SgPluginFilterAccept, SgPluginFilterDef, SgPluginFilterInitDto},
+    filters::{SgPluginFilter, SgPluginFilterAccept, SgPluginFilterDef, SgPluginFilterInitDto},
 };
 use tardis::basic::dto::TardisContext;
 use tardis::serde_json::{json, Value};

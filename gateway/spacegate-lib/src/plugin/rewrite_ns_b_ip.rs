@@ -41,7 +41,7 @@ impl SgPluginFilter for RewriteNs {
     }
 
     async fn req_filter(&self, id: &str,mut ctx: SgRoutePluginContext) -> TardisResult<(bool, SgRoutePluginContext)> {
-        if let Some(mut backend)=ctx.get_chose_backend(){
+        if let Some(backend)=ctx.get_chose_backend(){
             if backend.namespace.is_some(){
                 let ip=ctx.get_remote_addr().ip();
                 if self.ip_net.iter().any(|ipnet|ipnet.contains(&IpNet::from(ip))){

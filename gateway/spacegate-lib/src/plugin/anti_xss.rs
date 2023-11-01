@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use spacegate_kernel::plugins::filters::SgPluginFilterInitDto;
 use spacegate_kernel::plugins::{
     context::SgRoutePluginContext,
-    filters::{BoxSgPluginFilter, SgPluginFilter, SgPluginFilterAccept, SgPluginFilterDef},
+    filters::{SgPluginFilter, SgPluginFilterAccept},
 };
 use spacegate_kernel::{def_filter, http};
 
@@ -14,7 +14,6 @@ use tardis::{
     async_trait,
     basic::result::TardisResult,
     serde_json::{self},
-    TardisFuns,
 };
 
 macro_rules! append_value {
