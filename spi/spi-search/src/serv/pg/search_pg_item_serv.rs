@@ -648,7 +648,7 @@ fn merge(a: &mut serde_json::Value, b: serde_json::Value) {
 
 pub async fn query_metrics(query_req: &SearchQueryMetricsReq, funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<SearchQueryMetricsResp> {
     let mut params = vec![];
-    let conf_limit = query_req.limit.unwrap_or(100);
+    let conf_limit = query_req.conf_limit.unwrap_or(100);
     let select_fragments;
     let mut from_fragments = "".to_string();
     // Package filter
