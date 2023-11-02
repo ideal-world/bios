@@ -30,15 +30,7 @@ impl SmsClient {
         let fw_config = TardisFuns::fw_config();
         let web_server_config = fw_config.web_server();
         let header_name = web_server_config.context_conf.context_header_name.to_string();
-        match funs
-            .web_client()
-            .put_str_to_str(
-                &format!("{}/{}/{}/{}", conf.sms_base_url, conf.sms_path, phone, vcode),
-                "",
-                vec![(header_name, ctx_base64,)],
-            )
-            .await
-        {
+        match funs.web_client().put_str_to_str(&format!("{}/{}/{}/{}", conf.sms_base_url, conf.sms_path, phone, vcode), "", vec![(header_name, ctx_base64)]).await {
             Ok(_) => Ok(()),
             Err(_) => Err(funs.err().unauthorized("send_code", "activate", "send sms error", "403-iam-cert-valid")),
         }
@@ -72,10 +64,7 @@ impl SmsClient {
             .put_str_to_str(
                 &format!("{}/{}/{}/{}", conf.sms_base_url, conf.sms_pwd_path, phone, pwd),
                 "",
-                vec![(
-                    web_server_config.context_conf.context_header_name.clone(),
-                    ctx_base64.to_string(),
-                )],
+                vec![(web_server_config.context_conf.context_header_name.clone(), ctx_base64.to_string())],
             )
             .await
         {

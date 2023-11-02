@@ -1216,10 +1216,7 @@ impl IamCertServ {
     }
 
     pub async fn add_or_modify_sync_third_integration_config(reqs: Vec<IamThirdIntegrationSyncAddReq>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        let headers = vec![(
-            "Tardis-Context".to_string(),
-            TardisFuns::crypto.base64.encode(TardisFuns::json.obj_to_string(&ctx)?),
-        )];
+        let headers = vec![("Tardis-Context".to_string(), TardisFuns::crypto.base64.encode(TardisFuns::json.obj_to_string(&ctx)?))];
         let schedule_url = funs.conf::<IamConfig>().spi.schedule_url.clone();
         if schedule_url.is_empty() {
             return Err(funs.err().not_implemented("third_integration_config", "add_or_modify", "schedule is not impl!", "501-iam-schedule_not_impl_error"));

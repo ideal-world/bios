@@ -581,7 +581,8 @@ impl IamSetServ {
                     format!("添加部门人员{}", account.name.clone()),
                     Some("AddAccount".to_string()),
                     ctx,
-                ).await;
+                )
+                .await;
             }
             Err(_) => {}
         }
