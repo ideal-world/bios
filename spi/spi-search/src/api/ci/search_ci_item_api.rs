@@ -50,7 +50,6 @@ impl SearchCiItemApi {
         TardisResp::ok(Void {})
     }
 
-
     /// Search Items
     #[oai(path = "/search", method = "put")]
     async fn search(&self, mut search_req: Json<SearchItemSearchReq>, ctx: TardisContextExtractor) -> TardisApiResult<TardisPage<SearchItemSearchResp>> {

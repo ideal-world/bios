@@ -3,18 +3,17 @@ use std::fmt;
 use async_trait::async_trait;
 
 use serde::{Deserialize, Serialize};
-use spacegate_kernel::http;
 use spacegate_kernel::plugins::filters::SgPluginFilterInitDto;
 use spacegate_kernel::plugins::{
     context::SgRoutePluginContext,
-    filters::{BoxSgPluginFilter, SgPluginFilter, SgPluginFilterAccept, SgPluginFilterDef},
+    filters::{SgPluginFilter, SgPluginFilterAccept},
 };
+use spacegate_kernel::{def_filter, http};
 
 use tardis::{
     async_trait,
     basic::result::TardisResult,
     serde_json::{self},
-    TardisFuns,
 };
 
 macro_rules! append_value {
@@ -24,18 +23,8 @@ macro_rules! append_value {
         }
     };
 }
-pub const CODE: &str = "anti_xss";
-pub struct SgFilterAntiXSSDef;
 
-impl SgPluginFilterDef for SgFilterAntiXSSDef {
-    fn get_code(&self) -> &str {
-        CODE
-    }
-    fn inst(&self, spec: serde_json::Value) -> TardisResult<BoxSgPluginFilter> {
-        let filter = TardisFuns::json.json_to_obj::<SgFilterAntiXSS>(spec)?;
-        Ok(filter.boxed())
-    }
-}
+def_filter!("anti_xss", SgFilterAntiXSSDef, SgFilterAntiXSS);
 
 #[derive(Default, Serialize, Deserialize)]
 #[serde(default)]

@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
-use wasm_bindgen::JsValue;
 use wasm_bindgen::prelude::*;
+use wasm_bindgen::JsValue;
 
 use constants::{BIOS_TOKEN, STABLE_CONFIG};
 use modules::global_api_process::MixRequest;
@@ -29,7 +29,7 @@ pub async fn main(service_url: &str, config: JsValue) -> Result<(), JsValue> {
 
 #[wasm_bindgen]
 /// uri: path?query eg. /iam/ct/xxx?q=1
-pub fn on_before_request(method: &str, uri: &str, body: JsValue, headers: JsValue,ignore_token: JsValue) -> Result<JsValue, JsValue> {
+pub fn on_before_request(method: &str, uri: &str, body: JsValue, headers: JsValue, ignore_token: JsValue) -> Result<JsValue, JsValue> {
     if modules::double_auth_process::need_auth(method, uri)? {
         return Err(JsValue::try_from(JsError::new("Need double auth.")).unwrap());
     }

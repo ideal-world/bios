@@ -56,8 +56,7 @@ impl RbumCrudOperation<rbum_kind::ActiveModel, RbumKindAddReq, RbumKindModifyReq
         if !R_URL_PART_CODE.is_match(add_req.code.as_str()) {
             return Err(funs.err().bad_request(&Self::get_obj_name(), "add", &format!("code {} is invalid", add_req.code), "400-rbum-*-code-illegal"));
         }
-        if funs.db().count(Query::select().column(rbum_kind::Column::Id).from(rbum_kind::Entity).and_where(Expr::col(rbum_kind::Column::Code).eq(add_req.code.as_str()))).await?
-            > 0
+        if funs.db().count(Query::select().column(rbum_kind::Column::Id).from(rbum_kind::Entity).and_where(Expr::col(rbum_kind::Column::Code).eq(add_req.code.as_str()))).await? > 0
         {
             return Err(funs.err().conflict(&Self::get_obj_name(), "add", &format!("code {} already exists", add_req.code), "409-rbum-*-code-exist"));
         }

@@ -13,7 +13,6 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::{Arc, OnceLock};
 use tardis::testcontainers::GenericImage;
-use testcontainers_modules::redis::Redis;
 use tardis::tokio::sync::RwLock;
 use tardis::web::poem_openapi::param::Path;
 use tardis::web::poem_openapi::payload::{Form, Json};
@@ -27,6 +26,7 @@ use tardis::{
     TardisFuns,
 };
 use tardis::{log, rand, serde_json};
+use testcontainers_modules::redis::Redis;
 pub struct Holder<'d> {
     pub db: Container<'d, GenericImage>,
     pub cache: Container<'d, Redis>,

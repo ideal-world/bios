@@ -427,7 +427,6 @@ pub(crate) async fn fact_records_delete(fact_conf_key: &str, fact_record_delete_
     Ok(())
 }
 
-
 pub(crate) async fn fact_records_delete_by_ownership(fact_conf_key: &str, own_paths: &str, funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
     let bs_inst = inst.inst::<TardisRelDBClient>();
     let (mut conn, _) = common_pg::init_conn(bs_inst).await?;
@@ -445,7 +444,7 @@ pub(crate) async fn fact_records_delete_by_ownership(fact_conf_key: &str, own_pa
         ),
         vec![Value::from(own_paths)],
     )
-        .await?;
+    .await?;
     conn.commit().await?;
     Ok(())
 }

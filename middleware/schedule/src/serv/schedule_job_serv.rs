@@ -42,10 +42,7 @@ pub(crate) async fn add_or_modify(add_or_modify: ScheduleJobAddOrModifyReq, funs
         owner: funs.conf::<ScheduleConfig>().spi_app_id.clone(),
         ..ctx.clone()
     };
-    let headers = vec![(
-        "Tardis-Context".to_string(),
-        TardisFuns::crypto.base64.encode(TardisFuns::json.obj_to_string(&spi_ctx)?),
-    )];
+    let headers = vec![("Tardis-Context".to_string(), TardisFuns::crypto.base64.encode(TardisFuns::json.obj_to_string(&spi_ctx)?))];
     // if exist delete it first
     if service().code_uuid.write().await.get(code).is_some() {
         delete(code, funs, ctx).await?;
@@ -89,10 +86,7 @@ pub(crate) async fn delete(code: &str, funs: &TardisFunsInst, ctx: &TardisContex
         owner: funs.conf::<ScheduleConfig>().spi_app_id.clone(),
         ..ctx.clone()
     };
-    let headers = vec![(
-        "Tardis-Context".to_string(),
-        TardisFuns::crypto.base64.encode(TardisFuns::json.obj_to_string(&spi_ctx)?),
-    )];
+    let headers = vec![("Tardis-Context".to_string(), TardisFuns::crypto.base64.encode(TardisFuns::json.obj_to_string(&spi_ctx)?))];
     // 1. log this operation
     TardisFuns::web_client()
         .post_obj_to_str(
@@ -133,10 +127,7 @@ pub(crate) async fn find_job(code: Option<String>, page_number: u32, page_size: 
         owner: funs.conf::<ScheduleConfig>().spi_app_id.clone(),
         ..ctx.clone()
     };
-    let headers = [(
-        "Tardis-Context".to_string(),
-        TardisFuns::crypto.base64.encode(TardisFuns::json.obj_to_string(&spi_ctx)?),
-    )];
+    let headers = [("Tardis-Context".to_string(), TardisFuns::crypto.base64.encode(TardisFuns::json.obj_to_string(&spi_ctx)?))];
     let resp = funs
         .web_client()
         .get::<TardisResp<TardisPage<ScheduleJobKvSummaryResp>>>(
@@ -196,10 +187,7 @@ pub(crate) async fn find_one_job(code: &str, funs: &TardisFunsInst, ctx: &Tardis
         owner: funs.conf::<ScheduleConfig>().spi_app_id.clone(),
         ..ctx.clone()
     };
-    let headers = [(
-        "Tardis-Context".to_string(),
-        TardisFuns::crypto.base64.encode(TardisFuns::json.obj_to_string(&spi_ctx)?),
-    )];
+    let headers = [("Tardis-Context".to_string(), TardisFuns::crypto.base64.encode(TardisFuns::json.obj_to_string(&spi_ctx)?))];
     let resp = funs.web_client().get::<TardisResp<Option<KvItemSummaryResp>>>(&format!("{}/ci/item?key={}", kv_url, format_args!("{}{}", KV_KEY_CODE, code)), headers).await?;
 
     let Some(body) = resp.body else {
@@ -225,10 +213,7 @@ pub(crate) async fn find_task(
         owner: funs.conf::<ScheduleConfig>().spi_app_id.clone(),
         ..ctx.clone()
     };
-    let headers = [(
-        "Tardis-Context".to_string(),
-        TardisFuns::crypto.base64.encode(&TardisFuns::json.obj_to_string(&spi_ctx)?),
-    )];
+    let headers = [("Tardis-Context".to_string(), TardisFuns::crypto.base64.encode(&TardisFuns::json.obj_to_string(&spi_ctx)?))];
     let mut url = format!(
         "{}/ci/item?tag={}&key={}&page_number={}&page_size={}",
         log_url,
@@ -426,10 +411,7 @@ impl OwnedScheduleTaskServ {
             groups: vec![],
             ..Default::default()
         };
-        let headers = [(
-            "Tardis-Context".to_string(),
-            TardisFuns::crypto.base64.encode(TardisFuns::json.obj_to_string(&ctx)?),
-        )];
+        let headers = [("Tardis-Context".to_string(), TardisFuns::crypto.base64.encode(TardisFuns::json.obj_to_string(&ctx)?))];
 
         let enable_time = job_config.enable_time;
         let disable_time = job_config.disable_time;
