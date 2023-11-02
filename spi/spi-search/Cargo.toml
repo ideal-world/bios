@@ -24,8 +24,10 @@ serde.workspace = true
 tardis = { workspace = true, features = ["reldb-postgres", "web-server", "web-client"] }
 bios-basic = { path = "../../basic", features = ["default"] }
 strum = { workerspace = true, features = ["derive"] }
+pinyin =  { version = "0.10" }
 
 [dev-dependencies]
 tardis = { workspace = true, features = ["test"] }
 bios-basic = { path = "../../basic", features = ["default", "test"] }
 testcontainers-modules ={ workspace = true }
+pinyin =  { version = "0.10" }
