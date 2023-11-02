@@ -28,8 +28,7 @@ impl Default for MessageSendListener {
 }
 
 impl MessageSendListener {
-    async fn execute_send_account(&self, message: message::Model, template: message_template::Model) -> TardisResult<()> {
-        let content_replace: ContentReplace = message.content_replace.parse()?;
+    async fn execute_send_account(&self, content_replace: ContentReplace, message: message::Model, template: message_template::Model, _signarure: Option<message_signature::Model>) -> TardisResult<()> {
         let cfg = self.funs.conf::<ReachConfig>();
         let _lock = self.sync.lock().await;
         let ctx = TardisContext {
@@ -49,13 +48,22 @@ impl MessageSendListener {
         let mut to = HashSet::new();
         let start_time = Utc::now();
         let owner_path = rbum_scope_helper::get_pre_paths(RBUM_SCOPE_LEVEL_TENANT as i16, &message.own_paths).unwrap_or_default();
+        let cert_key = match message.rel_reach_channel {
+            ReachChannelKind::Sms => IAM_KEY_PHONE_V_CODE,
+            ReachChannelKind::Email => IAM_KEY_MAIL_V_CODE,
+            _ => {
+                // unsupported
+                ReachMessageServ::update_status(&message.id, ReachStatusKind::Pending, ReachStatusKind::Fail, &self.funs, &ctx).await?;
+                return Ok(());
+            }
+        };
         for account_id in message.to_res_ids.split(ACCOUNT_SPLIT) {
             if let Ok(mut resp) = iam_client.get_account(account_id, &owner_path).await {
-                let Some(phone) = resp.certs.remove(IAM_KEY_PHONE_V_CODE) else {
-                    log::warn!("[Reach] Notify Phone channel send error, missing [PhoneVCode] parameters, resp: {resp:?}");
+                let Some(res_id) = resp.certs.remove(cert_key) else {
+                    log::warn!("[Reach] Notify {chan} channel send error, missing [{cert_key}] parameters, resp: {resp:?}", chan = message.rel_reach_channel);
                     continue;
                 };
-                to.insert(phone);
+                to.insert(res_id);
             } else {
                 log::warn!("[Reach] iam get account info error, account_id: {account_id}")
             }
@@ -132,20 +140,19 @@ impl MessageSendListener {
             else {
                 continue;
             };
-            let Some(_signature) = db
-                .get_dto::<message_signature::Model>(
-                    Query::select()
-                        .columns(message_signature::Column::iter())
-                        .from(message_signature::Entity)
-                        .and_where(message_signature::Column::Id.eq(&message.rel_reach_msg_signature_id)),
-                )
-                .await?
-            else {
-                continue;
-            };
+            // signature is not necessary now
+            // let signature = db
+            //     .get_dto::<message_signature::Model>(
+            //         Query::select()
+            //             .columns(message_signature::Column::iter())
+            //             .from(message_signature::Entity)
+            //             .and_where(message_signature::Column::Id.eq(&message.rel_reach_msg_signature_id)),
+            //     )
+            //     .await?;
+            let content_replace: ContentReplace = message.content_replace.parse()?;
             match message.receive_kind {
                 ReachReceiveKind::Account => {
-                    let _res = self.execute_send_account(message, template).await;
+                    let _res = self.execute_send_account(content_replace, message, template, None).await;
                 }
                 ReachReceiveKind::Tenant => {
                     // do nothing

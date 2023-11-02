@@ -30,6 +30,7 @@ impl
         let mut model = reach_vcode_strategy::ActiveModel::from(add_req);
         model.id = Set(TardisFuns::field.nanoid());
         model.fill_ctx(ctx, true);
+        model.scope_level = Set(Some(0));
         Ok(model)
     }
 
@@ -51,7 +52,7 @@ impl
         if let Some(rel_reach_set_id) = &filter.rel_reach_set_id {
             query.and_where(reach_vcode_strategy::Column::RelReachSetId.eq(rel_reach_set_id));
         }
-        query.with_filter(Self::get_table_name(), &filter.base_filter.basic, is_detail, false, ctx);
+        query.with_filter(Self::get_table_name(), &filter.base_filter.basic, is_detail, true, ctx);
         Ok(query)
     }
 }

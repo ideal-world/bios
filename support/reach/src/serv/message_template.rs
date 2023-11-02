@@ -59,7 +59,10 @@ impl
         if let Some(kind) = filter.kind {
             query.and_where(message_template::Column::Kind.eq(kind));
         }
-        query.with_filter(Self::get_table_name(), &filter.base_filter, is_detail, false, ctx);
+        if let Some(rel_reach_verify_code_strategy_id) = filter.rel_reach_verify_code_strategy_id.clone() {
+            query.and_where(message_template::Column::RelReachVerifyCodeStrategyId.eq(rel_reach_verify_code_strategy_id));
+        }
+        query.with_filter(Self::get_table_name(), &filter.base_filter, is_detail, true, ctx);
         Ok(query)
     }
 }
