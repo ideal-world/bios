@@ -10,21 +10,21 @@ use tardis::basic::error::TardisError;
 use tardis::basic::result::TardisResult;
 use tardis::{log, serde_json};
 
-def_filter!("rewrite_ns", RewriteNsDef, RewriteNs);
+def_filter!("rewrite_ns", SgFilterRewriteNsDef, SgFilterRewriteNs);
 
 /// Kube available only!
 #[derive(Serialize, Deserialize)]
 #[serde(default)]
-pub struct RewriteNs {
+pub struct SgFilterRewriteNs {
     pub ip_list: Vec<String>,
     pub target_ns: String,
     #[serde(skip)]
     pub ip_net: Vec<IpNet>,
 }
 
-impl Default for RewriteNs {
+impl Default for SgFilterRewriteNs {
     fn default() -> Self {
-        RewriteNs {
+        SgFilterRewriteNs {
             ip_list: vec![],
             target_ns: "default".to_string(),
             ip_net: vec![],
@@ -33,7 +33,7 @@ impl Default for RewriteNs {
 }
 
 #[async_trait]
-impl SgPluginFilter for RewriteNs {
+impl SgPluginFilter for SgFilterRewriteNs {
     async fn init(&mut self, _: &SgPluginFilterInitDto) -> TardisResult<()> {
         let ip_net = self.ip_list.iter().filter_map(|ip| ip.parse::<IpNet>().or(ip.parse::<IpAddr>().map(IpNet::from)).ok()).collect();
         self.ip_net = ip_net;
@@ -74,7 +74,7 @@ impl SgPluginFilter for RewriteNs {
 
 #[cfg(test)]
 mod test {
-    use crate::plugin::rewrite_ns_b_ip::RewriteNs;
+    use crate::plugin::rewrite_ns_b_ip::SgFilterRewriteNs;
     use spacegate_kernel::config::gateway_dto::SgParameters;
     use spacegate_kernel::http::{HeaderMap, Method, Uri, Version};
     use spacegate_kernel::hyper::Body;
@@ -85,7 +85,7 @@ mod test {
 
     #[tokio::test]
     async fn test() {
-        let mut filter_rens = RewriteNs {
+        let mut filter_rens = SgFilterRewriteNs {
             ip_list: vec!["198.168.1.0/24".to_string()],
             target_ns: "target".to_string(),
             ..Default::default()
