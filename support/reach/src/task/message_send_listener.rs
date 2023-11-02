@@ -28,7 +28,13 @@ impl Default for MessageSendListener {
 }
 
 impl MessageSendListener {
-    async fn execute_send_account(&self, content_replace: ContentReplace, message: message::Model, template: message_template::Model, _signarure: Option<message_signature::Model>) -> TardisResult<()> {
+    async fn execute_send_account(
+        &self,
+        content_replace: ContentReplace,
+        message: message::Model,
+        template: message_template::Model,
+        _signarure: Option<message_signature::Model>,
+    ) -> TardisResult<()> {
         let cfg = self.funs.conf::<ReachConfig>();
         let _lock = self.sync.lock().await;
         let ctx = TardisContext {
@@ -60,7 +66,10 @@ impl MessageSendListener {
         for account_id in message.to_res_ids.split(ACCOUNT_SPLIT) {
             if let Ok(mut resp) = iam_client.get_account(account_id, &owner_path).await {
                 let Some(res_id) = resp.certs.remove(cert_key) else {
-                    log::warn!("[Reach] Notify {chan} channel send error, missing [{cert_key}] parameters, resp: {resp:?}", chan = message.rel_reach_channel);
+                    log::warn!(
+                        "[Reach] Notify {chan} channel send error, missing [{cert_key}] parameters, resp: {resp:?}",
+                        chan = message.rel_reach_channel
+                    );
                     continue;
                 };
                 to.insert(res_id);
