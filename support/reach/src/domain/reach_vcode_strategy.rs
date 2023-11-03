@@ -25,11 +25,11 @@ pub struct Model {
     /// 更新时间
     #[sea_orm(column_type = "Timestamp")]
     pub update_time: DateTime<Utc>,
-    #[sea_orm(column_type = "TinyInteger")]
+    #[sea_orm(column_type = "Integer")]
     pub max_error_times: i32,
-    #[sea_orm(column_type = "SmallInteger")]
+    #[sea_orm(column_type = "Integer")]
     pub expire_sec: i32,
-    #[sea_orm(column_type = "TinyInteger")]
+    #[sea_orm(column_type = "Integer")]
     pub length: i32,
     #[sea_orm(column_type = "String(Some(255))")]
     pub rel_reach_set_id: String,
@@ -89,9 +89,9 @@ impl TardisActiveModel for ActiveModel {
             .col(ColumnDef::new(Column::Id).not_null().string().primary_key())
             .col(ColumnDef::new(Column::OwnPaths).not_null().string())
             .col(ColumnDef::new(Column::Owner).not_null().string())
-            .col(ColumnDef::new(Column::MaxErrorTimes).not_null().tiny_integer())
-            .col(ColumnDef::new(Column::ExpireSec).not_null().small_integer())
-            .col(ColumnDef::new(Column::Length).not_null().tiny_integer())
+            .col(ColumnDef::new(Column::MaxErrorTimes).not_null().integer().default(1))
+            .col(ColumnDef::new(Column::ExpireSec).not_null().integer().default(30))
+            .col(ColumnDef::new(Column::Length).not_null().integer().default(0))
             .col(ColumnDef::new(Column::RelReachSetId).not_null().string_len(255))
             .col(ColumnDef::new(Column::ScopeLevel).small_integer());
 

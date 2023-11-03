@@ -74,12 +74,12 @@ impl
 
         if 0 != Self::count_rbums(&filter, funs, ctx).await? {
             log::warn!(
-                "[Reach] reach_trigger_scene_id {id} and reach_channel {chan} is exist",
+                "[Reach] reach_trigger_scene_id {id} and reach_channel {chan} is existed",
                 id = add_req.rel_reach_trigger_scene_id,
                 chan = add_req.rel_reach_channel
             );
-            return Ok(());
-            // return Err(funs.err().bad_request("reach_trigger_global_config", "before_add_rbum", "reach_trigger_scene_id and reach_channel is exist", ""));
+            // return Ok(());
+            return Err(funs.err().bad_request("reach_trigger_global_config", "before_add_rbum", "reach_trigger_scene_id and reach_channel is existed", ""));
         }
         Ok(())
     }

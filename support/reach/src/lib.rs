@@ -15,5 +15,6 @@ mod task;
 pub use reach_init::init;
 pub mod reach_initializer {
     pub use crate::init;
+    pub use crate::reach_init::reach_init_trigger_scene;
 }
 mod serv;
