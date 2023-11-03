@@ -33,14 +33,15 @@ pub async fn add(add_req: &mut SearchItemAddReq, _funs: &TardisFunsInst, ctx: &T
     params.push(Value::from(format!(
         "{},{}",
         add_req.title.as_str(),
-        to_pinyin_vec(add_req.title.as_str(), Pinyin::plain).join(",")
+        generate_word_combinations(to_pinyin_vec(add_req.title.as_str(), Pinyin::plain)).join(",")
     )));
     params.push(Value::from(add_req.content.as_str()));
-    params.push(Value::from(format!(
-        "{},{}",
-        add_req.content.as_str(),
-        to_pinyin_vec(add_req.content.as_str(), Pinyin::plain).join(",")
-    )));
+    params.push(Value::from(add_req.content.as_str()));
+    // params.push(Value::from(format!(
+    //     "{},{}",
+    //     add_req.content.as_str(),
+    //     to_pinyin_vec(add_req.content.as_str(), Pinyin::plain).join(",")
+    // )));
     params.push(Value::from(add_req.owner.as_ref().unwrap_or(&"".to_string()).as_str()));
     params.push(Value::from(add_req.own_paths.as_ref().unwrap_or(&"".to_string()).as_str()));
     params.push(Value::from(if let Some(create_time) = add_req.create_time { create_time } else { Utc::now() }));
@@ -89,13 +90,13 @@ pub async fn modify(tag: &str, key: &str, modify_req: &mut SearchItemModifyReq, 
         sql_sets.push(format!("title = ${}", params.len() + 1));
         params.push(Value::from(title));
         sql_sets.push(format!("title_tsv = to_tsvector('public.chinese_zh', ${})", params.len() + 1));
-        params.push(Value::from(format!("{},{}", title, to_pinyin_vec(title, Pinyin::plain).join(","))));
+        params.push(Value::from(format!("{},{}", title, generate_word_combinations(to_pinyin_vec(title, Pinyin::plain)).join(","))));
     };
     if let Some(content) = &modify_req.content {
         sql_sets.push(format!("content = ${}", params.len() + 1));
-        params.push(Value::from(content));
         sql_sets.push(format!("content_tsv = to_tsvector('public.chinese_zh', ${})", params.len() + 1));
-        params.push(Value::from(format!("{},{}", content, to_pinyin_vec(content, Pinyin::plain).join(","))));
+        params.push(Value::from(content));
+        // params.push(Value::from(format!("{},{}", content, to_pinyin_vec(content, Pinyin::plain).join(","))));
     };
     if let Some(owner) = &modify_req.owner {
         sql_sets.push(format!("owner = ${}", params.len() + 1));
@@ -143,6 +144,17 @@ WHERE key = $1
     .await?;
     conn.commit().await?;
     Ok(())
+}
+
+fn generate_word_combinations(chars: Vec<&str>) -> Vec<String> {
+    let mut combinations = Vec::new();
+    for i in 0..chars.len() {
+        for j in i..chars.len() {
+            let word = chars[i..=j].join("");
+            combinations.push(word);
+        }
+    }
+    combinations
 }
 
 pub async fn delete(tag: &str, key: &str, _funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
