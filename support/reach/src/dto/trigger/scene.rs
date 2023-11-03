@@ -1,8 +1,12 @@
 use bios_basic::rbum::{
     dto::{rbum_filer_dto::RbumItemBasicFilterReq, rbum_item_dto::RbumItemAddReq},
     rbum_enumeration::RbumScopeLevelKind,
+    serv::rbum_crud_serv::RbumCrudOperation,
 };
-use tardis::basic::field::TrimString;
+use tardis::{
+    basic::{dto::TardisContext, field::TrimString, result::TardisResult},
+    TardisFunsInst,
+};
 
 use serde::{Deserialize, Serialize};
 use tardis::{
@@ -10,6 +14,8 @@ use tardis::{
     db::sea_orm,
     web::poem_openapi,
 };
+
+use crate::serv::ReachTriggerSceneService;
 
 /// 添加用户触达触发场景请求
 #[derive(Debug, poem_openapi::Object)]
@@ -93,4 +99,32 @@ pub struct ReachTriggerSceneDetailResp {
     pub name: String,
     /// 父场景ID
     pub pid: String,
+}
+
+pub struct ReachTriggerSceneTree {
+    pub name: String,
+    pub code: String,
+    pub children: Vec<Self>,
+}
+
+impl ReachTriggerSceneTree {
+    pub fn new(name: impl Into<String>, code: impl Into<String>, children: impl IntoIterator<Item = Self>) -> Self {
+        ReachTriggerSceneTree {
+            name: name.into(),
+            code: code.into(),
+            children: children.into_iter().collect(),
+        }
+    }
+    pub(crate) async fn add(&self, pid: Option<&str>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let mut stack = vec![(pid.map(String::from), self)];
+        while let Some((pid, scene)) = stack.pop() {
+            let mut add_req = ReachTriggerSceneAddReq::new_with_name_code(&self.name, &self.code);
+            if let Some(pid) = pid {
+                add_req = add_req.pid(&pid)
+            }
+            let id = ReachTriggerSceneService::add_rbum(&mut add_req, funs, ctx).await?;
+            stack.extend(scene.children.iter().map(|child| (Some(id.clone()), child)));
+        }
+        Ok(())
+    }
 }
