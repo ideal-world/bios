@@ -165,9 +165,13 @@ impl IamCiAccountApi {
         let kind = kind.0.unwrap_or_else(|| "UserPwd".to_string());
         let kind = if kind.is_empty() { "UserPwd".to_string() } else { kind };
 
-        let result = if let Ok(conf_id) = IamCertServ::get_cert_conf_id_by_kind_supplier(&kind, &supplier.clone(), tenant_id.0, &funs).await {
+        let result = if let Ok(conf_id) = IamCertServ::get_cert_conf_id_by_kind_supplier(&kind, &supplier.clone(), tenant_id.0.clone(), &funs).await {
             if let Some(cert) = RbumCertServ::find_one_detail_rbum(
                 &RbumCertFilterReq {
+                    basic:RbumBasicFilterReq {
+                        own_paths: tenant_id.0,
+                        ..Default::default()
+                    },
                     ak: Some(ak.0),
                     rel_rbum_cert_conf_ids: Some(vec![conf_id]),
                     ..Default::default()
@@ -179,7 +183,7 @@ impl IamCiAccountApi {
             {
                 Some(
                     IamAccountServ::get_item(
-                        &cert.owner,
+                        &cert.rel_rbum_id,
                         &IamAccountFilterReq {
                             basic: RbumBasicFilterReq {
                                 own_paths: Some("".to_string()),
