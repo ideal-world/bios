@@ -2,7 +2,7 @@ use tardis::basic::result::TardisResult;
 use tardis::serde_json::json;
 use tardis::testcontainers::clients::Cli;
 use tardis::testcontainers::core::WaitFor;
-use tardis::testcontainers::{GenericImage, Container, RunnableImage};
+use tardis::testcontainers::{Container, GenericImage, RunnableImage};
 use tardis::TardisFuns;
 
 pub(crate) async fn init(docker: &Cli) -> TardisResult<(String, Container<GenericImage>)> {

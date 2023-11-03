@@ -3,11 +3,15 @@ use std::collections::HashMap;
 use bios_basic::spi::{dto::spi_bs_dto::SpiBsCertResp, spi_funs::SpiBsInst, spi_initializer};
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
-    search::search_client::TardisSearchClient, config::config_dto::SearchModuleConfig,
+    config::config_dto::SearchModuleConfig,
+    search::search_client::TardisSearchClient,
 };
 
 pub async fn init(bs_cert: &SpiBsCertResp, ctx: &TardisContext, _mgr: bool) -> TardisResult<SpiBsInst> {
-    let config = SearchModuleConfig { url: bs_cert.conn_uri.parse().expect("invalid url"), timeout_sec: 60 };
+    let config = SearchModuleConfig {
+        url: bs_cert.conn_uri.parse().expect("invalid url"),
+        timeout_sec: 60,
+    };
     let client = TardisSearchClient::init(&config)?;
     let mut ext = HashMap::new();
     if !bs_cert.private {

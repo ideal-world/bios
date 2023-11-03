@@ -11,10 +11,11 @@ use bios_sdk_invoke::invoke_initializer;
 
 use jsonpath_rust::JsonPathInst;
 use serde::{Deserialize, Serialize};
+use spacegate_kernel::def_filter;
 use spacegate_kernel::plugins::context::SGRoleInfo;
 use spacegate_kernel::plugins::{
     context::SgRoutePluginContext,
-    filters::{BoxSgPluginFilter, SgPluginFilter, SgPluginFilterAccept, SgPluginFilterDef, SgPluginFilterInitDto},
+    filters::{SgPluginFilter, SgPluginFilterAccept, SgPluginFilterInitDto},
 };
 use tardis::basic::dto::TardisContext;
 use tardis::serde_json::{json, Value};
@@ -31,18 +32,7 @@ use tardis::{
 
 use super::plugin_constants;
 
-pub const CODE: &str = "audit_log";
-pub struct SgFilterAuditLogDef;
-
-impl SgPluginFilterDef for SgFilterAuditLogDef {
-    fn get_code(&self) -> &str {
-        CODE
-    }
-    fn inst(&self, spec: serde_json::Value) -> TardisResult<BoxSgPluginFilter> {
-        let filter = TardisFuns::json.json_to_obj::<SgFilterAuditLog>(spec)?;
-        Ok(filter.boxed())
-    }
-}
+def_filter!("audit_log", SgFilterAuditLogDef, SgFilterAuditLog);
 
 #[derive(Serialize, Deserialize)]
 #[serde(default)]

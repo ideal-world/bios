@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use pinyin::{Pinyin, to_pinyin_vec};
 use tardis::{
     basic::{dto::TardisContext, error::TardisError, result::TardisResult},
     chrono::Utc,
@@ -8,8 +9,8 @@ use tardis::{
         sea_orm::{FromQueryResult, Value},
     },
     serde_json::{self, json, Map},
-    TardisFuns,
-    TardisFunsInst, web::web_resp::TardisPage,
+    web::web_resp::TardisPage,
+    TardisFuns, TardisFunsInst,
 };
 
 use bios_basic::{basic_enumeration::BasicQueryOpKind, dto::BasicQueryCondInfo, helper::db_helper, spi::spi_funs::SpiBsInst};
@@ -29,8 +30,9 @@ pub async fn add(add_req: &mut SearchItemAddReq, _funs: &TardisFunsInst, ctx: &T
     params.push(Value::from(add_req.kind.to_string()));
     params.push(Value::from(add_req.key.to_string()));
     params.push(Value::from(add_req.title.as_str()));
-    params.push(Value::from(add_req.title.as_str()));
+    params.push(Value::from(format!("{},{}",add_req.title.as_str(), to_pinyin_vec(add_req.title.as_str(), Pinyin::plain).join(","))));
     params.push(Value::from(add_req.content.as_str()));
+    params.push(Value::from(format!("{},{}",add_req.content.as_str(),to_pinyin_vec(add_req.content.as_str(),Pinyin::plain).join(","))));
     params.push(Value::from(add_req.owner.as_ref().unwrap_or(&"".to_string()).as_str()));
     params.push(Value::from(add_req.own_paths.as_ref().unwrap_or(&"".to_string()).as_str()));
     params.push(Value::from(if let Some(create_time) = add_req.create_time { create_time } else { Utc::now() }));
@@ -52,8 +54,8 @@ pub async fn add(add_req: &mut SearchItemAddReq, _funs: &TardisFunsInst, ctx: &T
             r#"INSERT INTO {table_name} 
     (kind, key, title, title_tsv,content, content_tsv, owner, own_paths, create_time, update_time, ext, visit_keys)
 VALUES
-    ($1, $2, $3, to_tsvector('public.chinese_zh', $4), $5, to_tsvector('public.chinese_zh', $5), $6, $7, $8, $9, $10, {})"#,
-            if add_req.visit_keys.is_some() { "$11" } else { "null" },
+    ($1, $2, $3, to_tsvector('public.chinese_zh', $4), $5, to_tsvector('public.chinese_zh', $6), $7, $8, $9, $10, $11, {})"#,
+            if add_req.visit_keys.is_some() { "$12" } else { "null" },
         ),
         params,
     )
@@ -77,13 +79,15 @@ pub async fn modify(tag: &str, key: &str, modify_req: &mut SearchItemModifyReq, 
     };
     if let Some(title) = &modify_req.title {
         sql_sets.push(format!("title = ${}", params.len() + 1));
-        sql_sets.push(format!("title_tsv = to_tsvector('public.chinese_zh', ${})", params.len() + 1));
         params.push(Value::from(title));
+        sql_sets.push(format!("title_tsv = to_tsvector('public.chinese_zh', ${})", params.len() + 1));
+        params.push(Value::from(format!("{},{}",title,to_pinyin_vec(title, Pinyin::plain).join(","))));
     };
     if let Some(content) = &modify_req.content {
         sql_sets.push(format!("content = ${}", params.len() + 1));
-        sql_sets.push(format!("content_tsv = to_tsvector('public.chinese_zh', ${})", params.len() + 1));
         params.push(Value::from(content));
+        sql_sets.push(format!("content_tsv = to_tsvector('public.chinese_zh', ${})", params.len() + 1));
+        params.push(Value::from(format!("{},{}",content,to_pinyin_vec(content, Pinyin::plain).join(","))));
     };
     if let Some(owner) = &modify_req.owner {
         sql_sets.push(format!("owner = ${}", params.len() + 1));
@@ -644,7 +648,7 @@ fn merge(a: &mut serde_json::Value, b: serde_json::Value) {
 
 pub async fn query_metrics(query_req: &SearchQueryMetricsReq, funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<SearchQueryMetricsResp> {
     let mut params = vec![];
-    let conf_limit = query_req.limit.unwrap_or(100);
+    let conf_limit = query_req.conf_limit.unwrap_or(100);
     let select_fragments;
     let mut from_fragments = "".to_string();
     // Package filter
@@ -1150,7 +1154,7 @@ pub async fn query_metrics(query_req: &SearchQueryMetricsReq, funs: &TardisFunsI
     // (column name with fun, alias name, show_name, is dimension)
     let mut sql_part_outer_select_infos = vec![];
     for (column_name_with_fun, alias_name, show_name) in sql_part_group_infos {
-        sql_part_outer_select_infos.push((format!("COALESCE({},'\"empty\"')",column_name_with_fun), alias_name, show_name, true));
+        sql_part_outer_select_infos.push((format!("COALESCE({},'\"empty\"')", column_name_with_fun), alias_name, show_name, true));
     }
     for select in &query_req.select {
         let select_column = if select.in_ext.unwrap_or(true) {

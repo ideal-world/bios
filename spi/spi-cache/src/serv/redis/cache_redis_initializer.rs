@@ -3,12 +3,13 @@ use std::collections::HashMap;
 use bios_basic::spi::{dto::spi_bs_dto::SpiBsCertResp, spi_funs::SpiBsInst, spi_initializer};
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
-    cache::cache_client::TardisCacheClient, config::config_dto::CacheModuleConfig,
+    cache::cache_client::TardisCacheClient,
+    config::config_dto::CacheModuleConfig,
 };
 
 pub async fn init(bs_cert: &SpiBsCertResp, ctx: &TardisContext, _: bool) -> TardisResult<SpiBsInst> {
     let config = CacheModuleConfig {
-        url: bs_cert.conn_uri.parse().expect("invalid url")
+        url: bs_cert.conn_uri.parse().expect("invalid url"),
     };
     let client = TardisCacheClient::init(&config).await?;
     let mut ext = HashMap::new();

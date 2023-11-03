@@ -83,7 +83,7 @@ async fn test_tardis_compatibility(_test_client: &TestHttpClient) -> TardisResul
     let mut headers = reqwest::header::HeaderMap::new();
     let web_server_config = config.web_server();
     let context_header_name = web_server_config.context_conf.context_header_name.clone();
-    headers.append(HeaderName::from_bytes(context_header_name.as_bytes()).expect("should be ok") , ctx_base64.parse().unwrap());
+    headers.append(HeaderName::from_bytes(context_header_name.as_bytes()).expect("should be ok"), ctx_base64.parse().unwrap());
     let client = reqwest::ClientBuilder::default().danger_accept_invalid_certs(true).default_headers(headers).build().unwrap();
     let mut nacos_client = NacosClient::new_with_client(format!("{SCHEMA}://localhost:8080/spi-conf-nacos/nacos"), client);
     // register
