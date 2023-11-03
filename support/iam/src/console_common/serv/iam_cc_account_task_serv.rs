@@ -29,6 +29,47 @@ use crate::iam_enumeration::IamAccountStatusKind;
 pub struct IamCcAccountTaskServ;
 
 impl IamCcAccountTaskServ {
+    pub async fn execute_account_search_task(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<String>> {
+        let task_ctx = ctx.clone();
+        TaskProcessor::execute_task_with_ctx(
+            &funs.conf::<IamConfig>().cache_key_async_task_status,
+            move |_task_id| async move {
+                let funs = iam_constants::get_tardis_inst();
+                let account_liet = IamAccountServ::find_id_items(
+                    &IamAccountFilterReq {
+                        basic: RbumBasicFilterReq {
+                            ignore_scope: false,
+                            rel_ctx_owner: false,
+                            own_paths: Some(task_ctx.own_paths.clone()),
+                            with_sub_own_paths: true,
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                    None,
+                    None,
+                    &funs,
+                    &task_ctx,
+                )
+                    .await?;
+                let mut num = 0;
+                for account in account_liet {
+                    let id = account;
+                    num += 1;
+                    if num % 100 == 0 {
+                        tardis::tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+                    }
+                    IamAccountServ::async_add_or_modify_account_search(id, Box::new(true), "".to_string(), &funs, &task_ctx).await?;
+                    task_ctx.execute_task().await?;
+                }
+                Ok(())
+            },
+            funs,
+            ctx,
+        )
+            .await?;
+        Ok(None)
+    }
     pub async fn execute_account_task(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<String>> {
         let task_ctx = ctx.clone();
         TaskProcessor::execute_task_with_ctx(
