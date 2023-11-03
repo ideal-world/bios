@@ -1,4 +1,4 @@
-use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumItemRelFilterReq, RbumSetCateFilterReq, RbumSetItemRelFilterReq};
+use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumCertFilterReq, RbumItemRelFilterReq, RbumSetCateFilterReq, RbumSetItemRelFilterReq};
 use bios_basic::rbum::rbum_enumeration::RbumRelFromKind;
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem_openapi;
@@ -6,7 +6,7 @@ use tardis::web::poem_openapi::{param::Path, param::Query};
 use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp};
 use tardis::TardisFuns;
 
-use crate::basic::dto::iam_account_dto::{IamAccountDetailAggResp, IamAccountSummaryAggResp};
+use crate::basic::dto::iam_account_dto::{IamAccountDetailAggResp, IamAccountDetailResp, IamAccountSummaryAggResp};
 use crate::basic::dto::iam_filer_dto::IamAccountFilterReq;
 use crate::basic::serv::iam_account_serv::IamAccountServ;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
@@ -15,7 +15,11 @@ use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::iam_constants;
 use crate::iam_enumeration::IamRelKind;
 use bios_basic::helper::request_helper::add_remote_ip;
+use bios_basic::rbum::serv::rbum_cert_serv::RbumCertServ;
+use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use tardis::web::poem::Request;
+use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
+
 #[derive(Clone, Default)]
 pub struct IamCiAccountApi;
 
@@ -117,7 +121,7 @@ impl IamCiAccountApi {
         TardisResp::ok(TardisFuns::crypto.base64.encode(TardisFuns::json.obj_to_string(&ctx_resp).unwrap_or_default()))
     }
 
-    //// Get Account By Account Id	通过帐户Id获取帐户
+    /// Get Account By Account Id	通过帐户Id获取帐户
     #[oai(path = "/:id", method = "get")]
     async fn get(&self, id: Path<String>, tenant_id: Query<Option<String>>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<IamAccountDetailAggResp> {
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
@@ -138,6 +142,63 @@ impl IamCiAccountApi {
             &ctx,
         )
         .await?;
+        ctx.execute_task().await?;
+        TardisResp::ok(result)
+    }
+
+    /// Find Account Id By Ak
+    ///
+    /// if kind is none,query default kind(UserPwd)
+    #[oai(path = "/:ak/ak", method = "get")]
+    async fn find_account_by_ak(
+        &self,
+        ak: Path<String>,
+        kind: Query<Option<String>>,
+        tenant_id: Query<Option<String>>,
+        supplier: Query<Option<String>>,
+        ctx: TardisContextExtractor,
+        request: &Request,
+    ) -> TardisApiResult<Option<IamAccountDetailResp>> {
+        add_remote_ip(request, &ctx.0).await?;
+        let funs = iam_constants::get_tardis_inst();
+        let supplier = supplier.0.unwrap_or_default();
+        let kind = kind.0.unwrap_or_else(|| "UserPwd".to_string());
+        let kind = if kind.is_empty() { "UserPwd".to_string() } else { kind };
+
+        let result=  if let Ok(conf_id) = IamCertServ::get_cert_conf_id_by_kind_supplier(&kind, &supplier.clone(), tenant_id.0, &funs).await {
+            if let Some(cert) = RbumCertServ::find_one_detail_rbum(
+                &RbumCertFilterReq {
+                    ak: Some(ak.0),
+                    rel_rbum_cert_conf_ids:Some(vec![conf_id]),
+                    ..Default::default()
+                },
+                &funs,
+                &ctx.0,
+            )
+                .await?
+            {
+                Some(IamAccountServ::get_item(
+                    &cert.owner,
+                    &IamAccountFilterReq {
+                        basic: RbumBasicFilterReq {
+                            own_paths: Some("".to_string()),
+                            with_sub_own_paths: true,
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                    &funs,
+                    &ctx.0,
+                )
+                    .await?)
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+
+
         ctx.execute_task().await?;
         TardisResp::ok(result)
     }
