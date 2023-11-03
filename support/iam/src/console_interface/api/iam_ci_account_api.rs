@@ -17,8 +17,8 @@ use crate::iam_enumeration::IamRelKind;
 use bios_basic::helper::request_helper::add_remote_ip;
 use bios_basic::rbum::serv::rbum_cert_serv::RbumCertServ;
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
-use tardis::web::poem::Request;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
+use tardis::web::poem::Request;
 
 #[derive(Clone, Default)]
 pub struct IamCiAccountApi;
@@ -165,32 +165,34 @@ impl IamCiAccountApi {
         let kind = kind.0.unwrap_or_else(|| "UserPwd".to_string());
         let kind = if kind.is_empty() { "UserPwd".to_string() } else { kind };
 
-        let result=  if let Ok(conf_id) = IamCertServ::get_cert_conf_id_by_kind_supplier(&kind, &supplier.clone(), tenant_id.0, &funs).await {
+        let result = if let Ok(conf_id) = IamCertServ::get_cert_conf_id_by_kind_supplier(&kind, &supplier.clone(), tenant_id.0, &funs).await {
             if let Some(cert) = RbumCertServ::find_one_detail_rbum(
                 &RbumCertFilterReq {
                     ak: Some(ak.0),
-                    rel_rbum_cert_conf_ids:Some(vec![conf_id]),
+                    rel_rbum_cert_conf_ids: Some(vec![conf_id]),
                     ..Default::default()
                 },
                 &funs,
                 &ctx.0,
             )
-                .await?
+            .await?
             {
-                Some(IamAccountServ::get_item(
-                    &cert.owner,
-                    &IamAccountFilterReq {
-                        basic: RbumBasicFilterReq {
-                            own_paths: Some("".to_string()),
-                            with_sub_own_paths: true,
+                Some(
+                    IamAccountServ::get_item(
+                        &cert.owner,
+                        &IamAccountFilterReq {
+                            basic: RbumBasicFilterReq {
+                                own_paths: Some("".to_string()),
+                                with_sub_own_paths: true,
+                                ..Default::default()
+                            },
                             ..Default::default()
                         },
-                        ..Default::default()
-                    },
-                    &funs,
-                    &ctx.0,
+                        &funs,
+                        &ctx.0,
+                    )
+                    .await?,
                 )
-                    .await?)
             } else {
                 None
             }
@@ -198,8 +200,7 @@ impl IamCiAccountApi {
             None
         };
 
-
-        ctx.execute_task().await?;
+        ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
 }
