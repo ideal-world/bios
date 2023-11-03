@@ -55,7 +55,7 @@ pub async fn add(add_req: &mut SearchItemAddReq, _funs: &TardisFunsInst, ctx: &T
     (kind, key, title, title_tsv,content, content_tsv, owner, own_paths, create_time, update_time, ext, visit_keys)
 VALUES
     ($1, $2, $3, to_tsvector('public.chinese_zh', $4), $5, to_tsvector('public.chinese_zh', $6), $7, $8, $9, $10, $11, {})"#,
-            if add_req.visit_keys.is_some() { "$11" } else { "null" },
+            if add_req.visit_keys.is_some() { "$12" } else { "null" },
         ),
         params,
     )
