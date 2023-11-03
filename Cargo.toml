@@ -59,3 +59,8 @@ spacegate-kernel = { git = "https://github.com/ideal-world/spacegate.git", rev =
     "cache",
     "k8s",
 ] }
+#spacegate-kernel = { path = "../spacegate/kernel",features = [
+#    "ws",
+#    "cache",
+#    "k8s",
+#] }

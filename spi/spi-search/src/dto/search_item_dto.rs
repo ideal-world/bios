@@ -265,6 +265,7 @@ pub struct SearchQueryMetricsReq {
     pub query: SearchItemQueryReq,
     // Advanced search
     pub adv_query: Option<Vec<AdvSearchItemQueryReq>>,
+    pub conf_limit: Option<u32>,
     pub limit: Option<u32>,
 }
 

@@ -3,10 +3,10 @@ use std::env;
 use tardis::basic::result::TardisResult;
 use tardis::test::test_container::TardisTestContainer;
 use tardis::testcontainers::clients::Cli;
-use tardis::testcontainers::GenericImage;
-use testcontainers_modules::redis::Redis;
 use tardis::testcontainers::Container;
+use tardis::testcontainers::GenericImage;
 use tardis::TardisFuns;
+use testcontainers_modules::redis::Redis;
 
 pub struct LifeHold<'a> {
     pub reldb: Container<'a, GenericImage>,

@@ -4,8 +4,8 @@ use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
     search::search_client::TardisSearchClient,
     serde_json::{self, json, Value},
-    TardisFuns,
-    TardisFunsInst, web::web_resp::TardisPage,
+    web::web_resp::TardisPage,
+    TardisFuns, TardisFunsInst,
 };
 
 use bios_basic::{
@@ -265,7 +265,7 @@ pub async fn delete_by_ownership(tag: &str, onw_paths: &str, funs: &TardisFunsIn
             cond_by_or: None,
         },
         query: SearchItemQueryReq {
-            own_paths:Some(vec![onw_paths.to_string().into()]),
+            own_paths: Some(vec![onw_paths.to_string().into()]),
             ..Default::default()
         },
         sort: None,
