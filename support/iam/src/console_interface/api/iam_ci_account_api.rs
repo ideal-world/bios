@@ -168,8 +168,8 @@ impl IamCiAccountApi {
         let result = if let Ok(conf_id) = IamCertServ::get_cert_conf_id_by_kind_supplier(&kind, &supplier.clone(), tenant_id.0.clone(), &funs).await {
             if let Some(cert) = RbumCertServ::find_one_detail_rbum(
                 &RbumCertFilterReq {
-                    basic:RbumBasicFilterReq {
-                        own_paths: tenant_id.0,
+                    basic: RbumBasicFilterReq {
+                        own_paths: if let Some(tenant_id) = tenant_id.0 { Some(tenant_id) } else { Some("".to_string()) },
                         ..Default::default()
                     },
                     ak: Some(ak.0),
