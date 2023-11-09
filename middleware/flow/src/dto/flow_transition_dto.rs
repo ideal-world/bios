@@ -202,6 +202,7 @@ pub struct FlowTransitionActionChangeInfo {
     pub kind: FlowTransitionActionChangeKind,
     pub describe: String,
     pub obj_tag: Option<String>,
+    pub obj_tag_rel_kind: Option<TagRelKind>,
     pub obj_current_state_id: Option<Vec<String>>,
     pub change_condition: Option<StateChangeCondition>,
     pub changed_state_id: String,
@@ -219,6 +220,7 @@ impl From<FlowTransitionActionChangeInfo> for FlowTransitionActionChangeAgg {
                 var_change_info: None,
                 state_change_info: Some(FlowTransitionActionByStateChangeInfo {
                     obj_tag: value.obj_tag.unwrap(),
+                    obj_tag_rel_kind: value.obj_tag_rel_kind,
                     describe: value.describe,
                     obj_current_state_id: value.obj_current_state_id,
                     change_condition: value.change_condition,
@@ -231,6 +233,7 @@ impl From<FlowTransitionActionChangeInfo> for FlowTransitionActionChangeAgg {
                     current: value.current,
                     describe: value.describe,
                     obj_tag: value.obj_tag,
+                    obj_tag_rel_kind: value.obj_tag_rel_kind,
                     var_name: value.var_name,
                     changed_val: value.changed_val,
                     changed_kind: value.changed_kind,
@@ -262,6 +265,7 @@ pub struct FlowTransitionActionByVarChangeInfo {
     pub current: bool,
     pub describe: String,
     pub obj_tag: Option<String>,
+    pub obj_tag_rel_kind: Option<TagRelKind>,
     pub var_name: String,
     pub changed_val: Option<Value>,
     pub changed_kind: Option<FlowTransitionActionByVarChangeInfoChangedKind>,
@@ -281,6 +285,7 @@ pub enum FlowTransitionActionByVarChangeInfoChangedKind {
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug, poem_openapi::Object, sea_orm::FromJsonQueryResult)]
 pub struct FlowTransitionActionByStateChangeInfo {
     pub obj_tag: String,
+    pub obj_tag_rel_kind: Option<TagRelKind>,
     pub describe: String,
     pub obj_current_state_id: Option<Vec<String>>,
     pub change_condition: Option<StateChangeCondition>,
@@ -296,6 +301,7 @@ pub struct StateChangeCondition {
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug, poem_openapi::Object, sea_orm::FromJsonQueryResult)]
 pub struct StateChangeConditionItem {
     pub obj_tag: Option<String>,
+    pub obj_tag_rel_kind: Option<TagRelKind>,
     pub state_id: Vec<String>,
     pub op: StateChangeConditionOp,
 }
@@ -304,6 +310,21 @@ pub struct StateChangeConditionItem {
 pub enum StateChangeConditionOp {
     And,
     Or,
+}
+
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug, poem_openapi::Enum)]
+pub enum TagRelKind {
+    ParentFeed,
+    SubFeed,
+}
+
+impl From<TagRelKind> for String {
+    fn from(kind: TagRelKind) -> Self {
+        match kind {
+            TagRelKind::ParentFeed => "PARENT_FEED".to_string(),
+            TagRelKind::SubFeed => "SUB_FEED".to_string(),
+        }
+    }
 }
 
 #[derive(Default)]

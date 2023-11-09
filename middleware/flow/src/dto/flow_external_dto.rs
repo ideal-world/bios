@@ -5,6 +5,8 @@ use tardis::web::poem_openapi::{
     types::{ParseFromJSON, ToJSON},
 };
 
+use super::flow_state_dto::FlowSysStateKind;
+
 #[derive(Serialize, Deserialize, Debug, Default, poem_openapi::Object)]
 pub struct FlowExternalReq {
     pub kind: FlowExternalKind,
@@ -12,7 +14,9 @@ pub struct FlowExternalReq {
     pub curr_bus_obj_id: String,
     pub inst_id: String,
     pub target_state: Option<String>,
+    pub target_sys_state: Option<FlowSysStateKind>,
     pub original_state: Option<String>,
+    pub original_sys_state: Option<FlowSysStateKind>,
     pub owner_paths: String,
     pub obj_ids: Vec<String>,
     pub params: Vec<FlowExternalParams>,

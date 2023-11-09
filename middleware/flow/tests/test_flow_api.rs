@@ -26,13 +26,10 @@ async fn test_flow_api() -> TardisResult<()> {
     let docker = testcontainers::clients::Cli::default();
     let _x = init_rbum_test_container::init(&docker, None).await?;
 
-    let funs = flow_constants::get_tardis_inst();
-    flow_initializer::init_db(funs).await?;
-
     let web_server = TardisFuns::web_server();
     flow_initializer::init(&web_server).await.unwrap();
+    kv_initializer::init(&web_server).await.unwrap();
     web_server.add_module("mock", mock_api::MockApi).await;
-    init_spi_kv().await?;
 
     tokio::spawn(async move {
         web_server.start().await.unwrap();
@@ -40,11 +37,11 @@ async fn test_flow_api() -> TardisResult<()> {
 
     sleep(Duration::from_millis(500)).await;
 
-    let mut flow_client = TestHttpClient::new("https://localhost:8080/flow".to_string());
-    let mut kv_client = TestHttpClient::new("https://localhost:8080/spi-kv".to_string());
+    let mut flow_client = TestHttpClient::new(format!("https://localhost:8080/{}", flow_constants::DOMAIN_CODE));
     init_flow_data().await?;
+    init_spi_kv().await?;
 
-    test_flow_scenes_fsm::test(&mut flow_client, &mut kv_client).await?;
+    test_flow_scenes_fsm::test(&mut flow_client).await?;
     truncate_flow_data().await?;
 
     Ok(())
@@ -74,16 +71,6 @@ async fn truncate_flow_data() -> TardisResult<()> {
 async fn init_spi_kv() -> TardisResult<()> {
     // Initialize RBUM
     bios_basic::rbum::rbum_initializer::init(kv_constants::DOMAIN_CODE, RbumConfig::default()).await?;
-
-    let web_server = TardisFuns::web_server();
-    // Initialize SPI KV
-    kv_initializer::init(&web_server).await.unwrap();
-
-    tokio::spawn(async move {
-        web_server.start().await.unwrap();
-    });
-
-    sleep(Duration::from_millis(500)).await;
 
     let funs = TardisFuns::inst_with_db_conn(kv_constants::DOMAIN_CODE.to_string(), None);
     let kind_id = RbumKindServ::get_rbum_kind_id_by_code(spi_constants::SPI_PG_KIND_CODE, &funs).await?.unwrap();

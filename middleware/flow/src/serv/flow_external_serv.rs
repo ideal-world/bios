@@ -8,9 +8,12 @@ use tardis::{
 };
 
 use crate::{
-    dto::flow_external_dto::{
-        FlowExternalFetchRelObjResp, FlowExternalKind, FlowExternalModifyFieldResp, FlowExternalNotifyChangesResp, FlowExternalParams, FlowExternalQueryFieldResp, FlowExternalReq,
-        FlowExternalResp,
+    dto::{
+        flow_external_dto::{
+            FlowExternalFetchRelObjResp, FlowExternalKind, FlowExternalModifyFieldResp, FlowExternalNotifyChangesResp, FlowExternalParams, FlowExternalQueryFieldResp,
+            FlowExternalReq, FlowExternalResp,
+        },
+        flow_state_dto::FlowSysStateKind,
     },
     flow_config::FlowConfig,
     flow_constants,
@@ -67,7 +70,9 @@ impl FlowExternalServ {
         rel_business_obj_id: &str,
         inst_id: &str,
         target_state: Option<String>,
+        target_sys_state: Option<FlowSysStateKind>,
         original_state: Option<String>,
+        original_sys_state: Option<FlowSysStateKind>,
         params: Vec<FlowExternalParams>,
         ctx: &TardisContext,
         funs: &TardisFunsInst,
@@ -84,7 +89,9 @@ impl FlowExternalServ {
             curr_tag: tag.to_string(),
             curr_bus_obj_id: rel_business_obj_id.to_string(),
             target_state,
+            target_sys_state,
             original_state,
+            original_sys_state,
             params,
             ..Default::default()
         };
@@ -110,7 +117,9 @@ impl FlowExternalServ {
         inst_id: &str,
         rel_business_obj_id: &str,
         target_state: String,
+        target_sys_state: FlowSysStateKind,
         original_state: String,
+        original_sys_state: FlowSysStateKind,
         ctx: &TardisContext,
         funs: &TardisFunsInst,
     ) -> TardisResult<FlowExternalNotifyChangesResp> {
@@ -126,7 +135,9 @@ impl FlowExternalServ {
             curr_tag: tag.to_string(),
             curr_bus_obj_id: rel_business_obj_id.to_string(),
             target_state: Some(target_state),
+            target_sys_state: Some(target_sys_state),
             original_state: Some(original_state),
+            original_sys_state: Some(original_sys_state),
             ..Default::default()
         };
         debug!("do_notify_changes body: {:?}", body);
@@ -187,7 +198,9 @@ impl FlowExternalServ {
             owner_paths: own_paths.to_string(),
             obj_ids: rel_business_obj_ids,
             target_state: None,
+            target_sys_state: None,
             original_state: None,
+            original_sys_state: None,
             params: vec![],
         };
         debug!("do_query_field body: {:?}", body);

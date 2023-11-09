@@ -709,7 +709,9 @@ impl FlowInstServ {
                     &flow_inst_detail.rel_business_obj_id,
                     &flow_inst_detail.id,
                     Some(next_flow_state.name.clone()),
+                    Some(next_flow_state.sys_state.clone()),
                     Some(prev_flow_state.name.clone()),
+                    Some(prev_flow_state.sys_state.clone()),
                     params,
                     ctx,
                     funs,
@@ -776,7 +778,9 @@ impl FlowInstServ {
                 &flow_inst_detail.id,
                 &flow_inst_detail.rel_business_obj_id,
                 next_flow_state.name.clone(),
+                next_flow_state.sys_state,
                 prev_flow_state.name.clone(),
+                prev_flow_state.sys_state,
                 ctx,
                 funs,
             )
@@ -830,9 +834,13 @@ impl FlowInstServ {
                         }
                         let rel_tag = change_info.obj_tag.unwrap_or_default();
                         if !rel_tag.is_empty() {
+                            let obj_tag = if let Some(obj_tag_rel_kind) = change_info.obj_tag_rel_kind.clone() {
+                                String::from(obj_tag_rel_kind)
+                            } else {
+                                rel_tag.clone()
+                            };
                             let mut resp =
-                                FlowExternalServ::do_fetch_rel_obj(&current_model.tag, &current_inst.id, &current_inst.rel_business_obj_id, vec![rel_tag.clone()], ctx, funs)
-                                    .await?;
+                                FlowExternalServ::do_fetch_rel_obj(&current_model.tag, &current_inst.id, &current_inst.rel_business_obj_id, vec![obj_tag], ctx, funs).await?;
                             if !resp.rel_bus_objs.is_empty() {
                                 for rel_bus_obj_id in resp.rel_bus_objs.pop().unwrap().rel_bus_obj_ids {
                                     let inst_id = Self::get_inst_ids_by_rel_business_obj_id(vec![rel_bus_obj_id.clone()], funs, ctx).await?.pop().unwrap_or_default();
@@ -840,6 +848,8 @@ impl FlowInstServ {
                                         &rel_tag,
                                         &rel_bus_obj_id,
                                         &inst_id,
+                                        None,
+                                        None,
                                         None,
                                         None,
                                         vec![FlowExternalParams {
@@ -862,6 +872,8 @@ impl FlowInstServ {
                                 &current_inst.id,
                                 None,
                                 None,
+                                None,
+                                None,
                                 vec![FlowExternalParams {
                                     rel_tag: None,
                                     var_id: None,
@@ -878,15 +890,13 @@ impl FlowInstServ {
                 }
                 FlowTransitionActionChangeKind::State => {
                     if let Some(change_info) = post_change.state_change_info {
-                        let mut resp = FlowExternalServ::do_fetch_rel_obj(
-                            &current_model.tag,
-                            &current_inst.id,
-                            &current_inst.rel_business_obj_id,
-                            vec![change_info.obj_tag.clone()],
-                            ctx,
-                            funs,
-                        )
-                        .await?;
+                        let obj_tag = if let Some(obj_tag_rel_kind) = change_info.obj_tag_rel_kind.clone() {
+                            String::from(obj_tag_rel_kind)
+                        } else {
+                            change_info.obj_tag.clone()
+                        };
+                        let mut resp =
+                            FlowExternalServ::do_fetch_rel_obj(&current_model.tag, &current_inst.id, &current_inst.rel_business_obj_id, vec![obj_tag], ctx, funs).await?;
                         if !resp.rel_bus_objs.is_empty() {
                             let inst_ids = Self::find_inst_ids_by_rel_obj_ids(resp.rel_bus_objs.pop().unwrap().rel_bus_obj_ids, &change_info, funs, ctx).await?;
                             Self::do_modify_state_by_post_action(inst_ids, &change_info, updated_instance_list, funs, ctx).await?;
@@ -915,7 +925,12 @@ impl FlowInstServ {
                     let mut rel_tags = vec![];
                     for condition_item in change_condition.conditions.iter() {
                         if condition_item.obj_tag.is_some() && !condition_item.state_id.is_empty() {
-                            rel_tags.push(condition_item.obj_tag.clone().unwrap());
+                            let obj_tag = if let Some(obj_tag_rel_kind) = condition_item.obj_tag_rel_kind.clone() {
+                                String::from(obj_tag_rel_kind)
+                            } else {
+                                condition_item.obj_tag.clone().unwrap()
+                            };
+                            rel_tags.push(obj_tag);
                         }
                     }
                     let inst_id = Self::get_inst_ids_by_rel_business_obj_id(vec![rel_obj_id.clone()], funs, ctx).await?.pop().unwrap_or_default();
