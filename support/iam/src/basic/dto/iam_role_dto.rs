@@ -34,7 +34,7 @@ pub struct IamRoleAddReq {
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct IamRoleAggModifyReq {
-    pub role: IamRoleModifyReq,
+    pub role: Option<IamRoleModifyReq>,
     pub res_ids: Option<Vec<String>>,
 }
 
