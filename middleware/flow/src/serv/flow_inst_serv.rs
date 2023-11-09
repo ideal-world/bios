@@ -1239,12 +1239,12 @@ impl FlowInstServ {
             current_vars: Set(Some(TardisFuns::json.obj_to_json(&new_vars)?)),
             ..Default::default()
         };
-        funs.db().update_one(flow_inst, ctx).await?;
 
         let flow_inst_id_sync = flow_inst_id.to_string();
         let ctx_sync = ctx.clone();
         tokio::spawn(async move {
             let mut funs = flow_constants::get_tardis_inst();
+            funs.db().update_one(flow_inst, &ctx_sync).await.unwrap();
             funs.begin().await.unwrap();
             match Self::do_front_change(&flow_inst_id_sync, &ctx_sync, &funs).await {
                 Ok(_) => {}
