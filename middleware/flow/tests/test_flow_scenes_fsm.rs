@@ -30,7 +30,7 @@ use tardis::web::poem_openapi::types::Type;
 use tardis::web::web_resp::{TardisPage, Void};
 use tardis::TardisFuns;
 
-pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpClient) -> TardisResult<()> {
+pub async fn test(flow_client: &mut TestHttpClient) -> TardisResult<()> {
     info!("【test_flow_scenes_fsm】");
 
     let mut ctx = TardisContext {
@@ -46,7 +46,7 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
 
     // 1. enter platform
     // 1-1. check default model
-    let mut models: TardisPage<FlowModelSummaryResp> = flow_client.get("/cc/model/?tag=REQ&page_number=1&page_size=100").await;
+    let mut models: TardisPage<FlowModelSummaryResp> = flow_client.get("/cc/model?tag=REQ&page_number=1&page_size=100").await;
     let init_model = models.records.pop().unwrap();
     info!("models: {:?}", init_model);
     assert_eq!(&init_model.name, "待开始-进行中-已完成-已关闭");
@@ -223,11 +223,13 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
                             kind: FlowTransitionActionChangeKind::State,
                             describe: "".to_string(),
                             obj_tag: Some("TICKET".to_string()),
+                            obj_tag_rel_kind: None,
                             obj_current_state_id: Some(vec![ticket_model_agg.init_state_id.clone()]),
                             change_condition: Some(StateChangeCondition {
                                 current: true,
                                 conditions: vec![StateChangeConditionItem {
                                     obj_tag: Some("ITER".to_string()),
+                                    obj_tag_rel_kind: None,
                                     state_id: vec![iter_model_agg.init_state_id.clone()],
                                     op: StateChangeConditionOp::And,
                                 }],
@@ -267,6 +269,7 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
                             kind: FlowTransitionActionChangeKind::Var,
                             describe: "".to_string(),
                             obj_tag: Some("".to_string()),
+                            obj_tag_rel_kind: None,
                             obj_current_state_id: None,
                             change_condition: None,
                             changed_state_id: "".to_string(),
@@ -350,6 +353,7 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
                         kind: FlowTransitionActionChangeKind::State,
                         describe: "".to_string(),
                         obj_tag: Some("TICKET".to_string()),
+                        obj_tag_rel_kind: None,
                         obj_current_state_id: None,
                         change_condition: None,
                         changed_state_id: ticket_model_agg.states.iter().find(|state| state.name == "处理中").unwrap().id.clone(),
@@ -393,6 +397,7 @@ pub async fn test(flow_client: &mut TestHttpClient, _kv_client: &mut TestHttpCli
                         kind: FlowTransitionActionChangeKind::State,
                         describe: "".to_string(),
                         obj_tag: Some("PROJ".to_string()),
+                        obj_tag_rel_kind: None,
                         obj_current_state_id: None,
                         change_condition: None,
                         changed_state_id: proj_model_agg.states.iter().find(|state| state.name == "存在风险").unwrap().id.clone(),

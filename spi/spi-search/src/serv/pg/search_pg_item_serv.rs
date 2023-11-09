@@ -90,7 +90,11 @@ pub async fn modify(tag: &str, key: &str, modify_req: &mut SearchItemModifyReq, 
         sql_sets.push(format!("title = ${}", params.len() + 1));
         params.push(Value::from(title));
         sql_sets.push(format!("title_tsv = to_tsvector('public.chinese_zh', ${})", params.len() + 1));
-        params.push(Value::from(format!("{},{}", title, generate_word_combinations(to_pinyin_vec(title, Pinyin::plain)).join(","))));
+        params.push(Value::from(format!(
+            "{},{}",
+            title,
+            generate_word_combinations(to_pinyin_vec(title, Pinyin::plain)).join(",")
+        )));
     };
     if let Some(content) = &modify_req.content {
         sql_sets.push(format!("content = ${}", params.len() + 1));
