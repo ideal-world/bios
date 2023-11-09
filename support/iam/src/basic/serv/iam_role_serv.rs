@@ -409,7 +409,9 @@ impl IamRoleServ {
     }
 
     pub async fn modify_role_agg(id: &str, modify_req: &mut IamRoleAggModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        Self::modify_item(id, &mut modify_req.role, funs, ctx).await?;
+        if let Some(role) = modify_req.role.as_mut() {
+            Self::modify_item(id, role, funs, ctx).await?;
+        }
         if let Some(input_res_ids) = &modify_req.res_ids {
             let stored_res = Self::find_simple_rel_res(id, None, None, funs, ctx).await?;
             let stored_res_ids: Vec<String> = stored_res.into_iter().map(|x| x.rel_id).collect();
@@ -577,6 +579,11 @@ impl IamRoleServ {
         ctx: &TardisContext,
     ) -> TardisResult<TardisPage<RbumRelBoneResp>> {
         IamRelServ::paginate_to_simple_rels(&IamRelKind::IamAccountRole, role_id, page_number, page_size, desc_by_create, desc_by_update, funs, ctx).await
+    }
+
+    pub async fn save_rel_res(role_id: &str, res_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        IamRelServ::add_simple_rel(&IamRelKind::IamResRole, res_id, role_id, None, None, false, false, funs, ctx).await?;
+        Ok(())
     }
 
     pub async fn add_rel_res(role_id: &str, res_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
