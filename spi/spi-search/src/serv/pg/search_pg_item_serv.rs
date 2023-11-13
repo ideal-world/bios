@@ -465,7 +465,7 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
                         } else if ext_item.op == BasicQueryOpKind::IsNotNull {
                             sql_and_where.push(format!("ext ->> '{}' is not null", ext_item.field));
                         } else if ext_item.op == BasicQueryOpKind::IsNullOrEmpty {
-                            sql_and_where.push(format!("(ext ->> '{}' is null or ext ->> '{}' = '')", ext_item.field, ext_item.field));
+                            sql_and_where.push(format!("(ext ->> '{}' is null or ext ->> '{}' = '' or jsonb_array_length((ext->> '{}')::jsonb) is null or jsonb_array_length((ext->> '{}')::jsonb) = 0)", ext_item.field, ext_item.field, ext_item.field, ext_item.field));
                         } else {
                             if value.len() > 1 {
                                 return err_not_found(ext_item);
@@ -536,7 +536,7 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
                         } else if ext_item.op == BasicQueryOpKind::IsNotNull {
                             sql_and_where.push(format!("{} is not null", ext_item.field));
                         } else if ext_item.op == BasicQueryOpKind::IsNullOrEmpty {
-                            sql_and_where.push(format!("({} is null or {} = '')", ext_item.field, ext_item.field));
+                            sql_and_where.push(format!("({} is null or {} = '' )", ext_item.field, ext_item.field));
                         } else {
                             if value.len() > 1 {
                                 return err_not_found(ext_item);
