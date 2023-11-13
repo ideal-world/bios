@@ -280,6 +280,8 @@ pub enum FlowTransitionActionByVarChangeInfoChangedKind {
     ChangeContent,
     #[sea_orm(string_value = "auto_get_operate_time")]
     AutoGetOperateTime,
+    #[sea_orm(string_value = "select_field")]
+    SelectField,
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug, poem_openapi::Object, sea_orm::FromJsonQueryResult)]

@@ -829,8 +829,16 @@ impl FlowInstServ {
             match post_change.kind {
                 FlowTransitionActionChangeKind::Var => {
                     if let Some(mut change_info) = post_change.var_change_info {
-                        if change_info.changed_kind.is_some() && change_info.changed_kind.unwrap() == FlowTransitionActionByVarChangeInfoChangedKind::AutoGetOperateTime {
+                        if change_info.changed_kind.is_some() && change_info.changed_kind.clone().unwrap() == FlowTransitionActionByVarChangeInfoChangedKind::AutoGetOperateTime {
                             change_info.changed_val = Some(json!(Utc::now().to_rfc3339_opts(SecondsFormat::Millis, true)));
+                        }
+                        if change_info.changed_kind.is_some() && change_info.changed_kind.clone().unwrap() == FlowTransitionActionByVarChangeInfoChangedKind::SelectField {
+                            let field_key = change_info.changed_val.clone().unwrap_or_default().as_str().unwrap_or_default().to_string();
+                            if let Some(current_val) = current_inst.current_vars.clone().unwrap_or_default().get(field_key.as_str()) {
+                                change_info.changed_val = Some(current_val.clone());
+                            } else {
+                                change_info.changed_val = None;
+                            }
                         }
                         let rel_tag = change_info.obj_tag.unwrap_or_default();
                         if !rel_tag.is_empty() {
