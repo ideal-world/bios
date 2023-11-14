@@ -29,7 +29,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
         )
         .await;
 
-    let result: KvItemDetailResp = client.get("/ci/item/?key=db:url").await;
+    let result: KvItemDetailResp = client.get("/ci/item?key=db:url").await;
     assert_eq!(result.key, "db:url");
     assert_eq!(result.value, "postgres://xxxx");
     assert_eq!(result.info, "xx系统的数据库地址");
@@ -83,24 +83,24 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
         )
         .await;
 
-    let result: KvItemDetailResp = client.get("/ci/item/?key=db_info:002").await;
+    let result: KvItemDetailResp = client.get("/ci/item?key=db_info:002").await;
     assert_eq!(result.key, "db_info:002");
     assert_eq!(result.info, "002系统的数据库信息");
     assert_eq!(result.value.get("url").unwrap().as_str().unwrap(), "postgres://xxxx002");
     assert!(result.create_time < result.update_time);
 
-    let result: KvItemDetailResp = client.get("/ci/item/?key=db_info:002&extract=url").await;
+    let result: KvItemDetailResp = client.get("/ci/item?key=db_info:002&extract=url").await;
     assert_eq!(result.key, "db_info:002");
     assert_eq!(result.info, "002系统的数据库信息");
     assert_eq!(result.value.as_str().unwrap(), "postgres://xxxx002");
 
-    let result: Vec<KvItemSummaryResp> = client.get("/ci/items/?keys=db_info:002&keys=db_info:001").await;
+    let result: Vec<KvItemSummaryResp> = client.get("/ci/items?keys=db_info:002&keys=db_info:001").await;
     assert_eq!(result.len(), 2);
     assert_eq!(result[1].key, "db_info:002");
     assert_eq!(result[1].info, "002系统的数据库信息");
     assert_eq!(result[1].value.get("url").unwrap().as_str().unwrap(), "postgres://xxxx002");
 
-    let result: Vec<KvItemSummaryResp> = client.get("/ci/items/?keys=db_info:002&keys=db_info:001&&extract=url").await;
+    let result: Vec<KvItemSummaryResp> = client.get("/ci/items?keys=db_info:002&keys=db_info:001&&extract=url").await;
     assert_eq!(result.len(), 2);
     assert_eq!(result[1].key, "db_info:002");
     assert_eq!(result[1].info, "002系统的数据库信息");
@@ -158,7 +158,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
 
     client.delete("/ci/item?key=db_info:001").await;
 
-    let result: TardisResp<KvItemDetailResp> = client.get_resp("/ci/item/?key=db_info:001").await;
+    let result: TardisResp<KvItemDetailResp> = client.get_resp("/ci/item?key=db_info:001").await;
     assert!(result.data.is_none());
 
     // key-Name

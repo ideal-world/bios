@@ -33,6 +33,7 @@ pub async fn add_or_modify_key_name(add_or_modify_req: &mut KvNameAddOrModifyReq
     let req = KvItemAddOrModifyReq {
         key: format!("{}{}", kv_constants::KEY_PREFIX_BY_KEY_NAME, add_or_modify_req.key).into(),
         value: json!(add_or_modify_req.name),
+        scope_level: add_or_modify_req.scope_level,
         info: None,
     };
     let inst = funs.init(ctx, true, kv_initializer::init_fun).await?;
@@ -70,6 +71,7 @@ pub async fn add_or_modify_tag(add_or_modify_req: &mut KvTagAddOrModifyReq, funs
     let req = KvItemAddOrModifyReq {
         key: format!("{}{}", kv_constants::KEY_PREFIX_BY_TAG, add_or_modify_req.key).into(),
         value: TardisFuns::json.obj_to_json(&add_or_modify_req.items)?,
+        scope_level: add_or_modify_req.scope_level,
         info: None,
     };
     let inst = funs.init(ctx, true, kv_initializer::init_fun).await?;
