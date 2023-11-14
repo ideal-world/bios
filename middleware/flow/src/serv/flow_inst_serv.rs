@@ -365,8 +365,8 @@ impl FlowInstServ {
             .join_as(
                 JoinType::LeftJoin,
                 Alias::new("flow_state"),
-                rel_state_table.clone(),
-                Expr::col((rel_state_table.clone(), ID_FIELD.clone())).equals((flow_inst::Entity, flow_inst::Column::CurrentStateId)),
+                flow_state_table.clone(),
+                Expr::col((flow_state_table.clone(), ID_FIELD.clone())).equals((flow_inst::Entity, flow_inst::Column::CurrentStateId)),
             )
             .join_as(
                 JoinType::LeftJoin,
