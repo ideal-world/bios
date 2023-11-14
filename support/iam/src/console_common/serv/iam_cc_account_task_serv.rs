@@ -51,7 +51,7 @@ impl IamCcAccountTaskServ {
                     &funs,
                     &task_ctx,
                 )
-                    .await?;
+                .await?;
                 let mut num = 0;
                 for account in account_liet {
                     let id = account;
@@ -67,7 +67,7 @@ impl IamCcAccountTaskServ {
             funs,
             ctx,
         )
-            .await?;
+        .await?;
         Ok(None)
     }
     pub async fn execute_account_task(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<String>> {
