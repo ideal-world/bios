@@ -70,6 +70,7 @@ impl RbumItemCrudOperation<spi_bs::ActiveModel, SpiBsAddReq, SpiBsModifyReq, Spi
             &mut RbumCertAddReq {
                 ak: add_req.ak.clone(),
                 sk: Some(add_req.sk.clone()),
+                sk_visible: Some(false),
                 kind: Some(SPI_CERT_KIND.to_string()),
                 supplier: Some(id.to_string()),
                 conn_uri: Some(add_req.conn_uri.clone()),
@@ -142,6 +143,7 @@ impl RbumItemCrudOperation<spi_bs::ActiveModel, SpiBsAddReq, SpiBsModifyReq, Spi
                     status: None,
                     start_time: None,
                     end_time: None,
+                    sk_visible: None,
                 },
                 funs,
                 ctx,

@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use crate::iam_enumeration::{IamCertExtKind, WayToAdd, WayToDelete};
 use bios_basic::rbum::rbum_enumeration::RbumCertStatusKind;
 use serde::{Deserialize, Serialize};
@@ -155,6 +157,8 @@ pub struct IamCertManageAddReq {
     pub ak: String,
     #[oai(validator(min_length = "2", max_length = "10000"))]
     pub sk: Option<String>,
+    #[oai(default)]
+    pub sk_encrypted: bool,
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub conn_uri: Option<String>,
     #[oai(validator(min_length = "2", max_length = "2000"))]
@@ -169,6 +173,8 @@ pub struct IamCertManageModifyReq {
     pub ak: String,
     #[oai(validator(min_length = "2", max_length = "10000"))]
     pub sk: Option<String>,
+    #[oai(default)]
+    pub sk_encrypted: bool,
     #[oai(validator(min_length = "2", max_length = "2000"))]
     pub conn_uri: Option<String>,
     #[oai(validator(min_length = "2", max_length = "2000"))]
@@ -209,4 +215,10 @@ pub struct IamOauth2AkSkResp {
     pub expires_in: String,
     pub refresh_token: String,
     pub scope: String,
+}
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct IamCertDecodeRequest {
+    pub key: String,
+    pub codes: HashSet<String>,
 }

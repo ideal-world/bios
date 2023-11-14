@@ -50,7 +50,7 @@ async fn spi_conf_namespace_test() -> TardisResult<()> {
             },
         )
         .await;
-    let _: Void = client.put(&format!("/ci/manage/bs/{}/rel/app001", bs_id), &Void {}).await;
+    // let _: Void = client.put(&format!("/ci/manage/bs/{}/rel/app001", bs_id), &Void {}).await;
     client.set_auth(&TardisContext {
         own_paths: "t1/app001".to_string(),
         ak: "".to_string(),
@@ -62,6 +62,7 @@ async fn spi_conf_namespace_test() -> TardisResult<()> {
     test_register(&mut client).await?;
     test_curd(&mut client).await?;
     test_tags(&mut client).await?;
+
     // web_server_hanlde.await.unwrap()?;
     drop(container_hold);
     Ok(())
@@ -408,7 +409,11 @@ pub async fn test_tags(client: &mut TestHttpClient) -> TardisResult<()> {
 }
 
 pub async fn test_register(client: &mut TestHttpClient) -> TardisResult<()> {
-    let RegisterResponse { username, password } = client.post("/ci/auth/register", &json!({})).await;
+    wait_press_enter();
+    let RegisterResponse { username, password } = client.post("/ci/auth/register_bundle", &json!({
+        "username": "nacos",
+    })).await;
+    // let RegisterResponse { username, password } = client.post("/ci/auth/register", &json!({})).await;
     log::info!("username: {username}, password: {password}");
     let resp = client.post_resp::<_, RegisterResponse>("/ci/auth/register", &json!({ "username": username })).await;
     // should be 409 conflict

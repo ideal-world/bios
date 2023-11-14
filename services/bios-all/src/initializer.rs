@@ -12,7 +12,6 @@ pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
             .with_arc_channel(tardis::TardisFuns::mail_by_module_or_default(bios_reach::reach_consts::MODULE_CODE)),
     )
     .await?;
-
     bios_spi_cache::cache_initializer::init(web_server).await?;
     bios_spi_graph::graph_initializer::init(web_server).await?;
     bios_spi_kv::kv_initializer::init(web_server).await?;

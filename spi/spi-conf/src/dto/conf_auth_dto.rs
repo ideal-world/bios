@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use tardis::{basic::field::TrimString, web::poem_openapi};
+use tardis::{basic::field::TrimString, serde_json, web::poem_openapi};
 
 use super::conf_config_nacos_dto::{NacosCreateNamespaceRequest, NacosDeleteNamespaceRequest, NacosEditNamespaceRequest, PublishConfigForm};
 
@@ -57,10 +57,58 @@ pub struct RegisterRequest {
     pub password: Option<TrimString>,
 }
 
+#[derive(Debug, Serialize, Deserialize, poem_openapi::Object, Default)]
+pub struct RegisterBundleRequest {
+    pub backend_service: Option<serde_json::Value>,
+    pub app_tenent_id: Option<String>,
+    #[oai(flatten)]
+    #[serde(flatten)]
+    pub register_request: RegisterRequest,
+}
+
+#[derive(Debug, Serialize, Deserialize, Default)]
+#[serde(tag = "type", content = "value", rename_all = "snake_case")]
+pub enum BackendServiceSource {
+    Id(String),
+    #[default]
+    Default,
+    New {
+        name: String,
+        conn_uri: String,
+        // 
+        kind_code: Option<String>,
+    },
+}
+
+#[derive(Debug, Serialize, Deserialize, poem_openapi::Object, Default)]
+pub struct ChangePasswordRequest {
+    #[oai(validator(pattern = r"^[a-zA-Z\d_]{5,16}$"))]
+    pub username: TrimString,
+    #[oai(validator(pattern = r"^[a-zA-Z\d~!@#$%^&*\(\)_+]{8,16}$"))]
+    pub old_password: TrimString,
+    #[oai(validator(pattern = r"^[a-zA-Z\d~!@#$%^&*\(\)_+]{8,16}$"))]
+    pub password: Option<TrimString>,
+}
+
 impl RegisterRequest {
     #[inline]
     pub fn ak(&self) -> Option<&str> {
         self.username.as_deref()
+    }
+    #[inline]
+    pub fn old_sk(&self) -> Option<&str> {
+        self.password.as_deref()
+    }
+    #[inline]
+    pub fn sk(&self) -> Option<&str> {
+        self.password.as_deref()
+    }
+}
+
+impl ChangePasswordRequest {
+    #[inline]
+    pub fn ak(&self) -> &str {
+        self.username.as_str()
     }
     #[inline]
     pub fn sk(&self) -> Option<&str> {

@@ -133,6 +133,8 @@ impl IamCertOAuth2Serv {
                 &mut RbumCertModifyReq {
                     ak: Some(add_or_modify_req.open_id.clone()),
                     sk: None,
+                    sk_visible: None,
+
                     is_ignore_check_sk: false,
                     ext: None,
                     start_time: None,
@@ -149,6 +151,8 @@ impl IamCertOAuth2Serv {
                 &mut RbumCertAddReq {
                     ak: add_or_modify_req.open_id.clone(),
                     sk: None,
+                sk_visible: None,
+
                     kind: None,
                     supplier: None,
                     vcode: None,

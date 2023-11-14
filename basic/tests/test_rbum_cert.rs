@@ -347,6 +347,7 @@ async fn test_rbum_cert_conf_is_ak_repeatable(context: &TardisContext) -> Tardis
         &mut RbumCertModifyReq {
             ak: Some("test".into()),
             sk: None,
+            sk_visible: None,
             ext: None,
             start_time: None,
             end_time: None,
@@ -445,6 +446,7 @@ async fn test_rbum_cert_conf_is_ak_repeatable(context: &TardisContext) -> Tardis
         &mut RbumCertModifyReq {
             ak: Some("test".into()),
             sk: None,
+            sk_visible: None,
             ext: None,
             start_time: None,
             end_time: None,
@@ -776,6 +778,7 @@ async fn test_rbum_cert_basic(context: &TardisContext) -> TardisResult<()> {
             ext: Some("ext".to_string()),
             ak: None,
             sk: None,
+            sk_visible: None,
             start_time: None,
             end_time: None,
             conn_uri: None,
@@ -794,6 +797,7 @@ async fn test_rbum_cert_basic(context: &TardisContext) -> TardisResult<()> {
             ext: Some("ext".to_string()),
             ak: None,
             sk: None,
+            sk_visible: None,
             start_time: None,
             end_time: None,
             conn_uri: None,

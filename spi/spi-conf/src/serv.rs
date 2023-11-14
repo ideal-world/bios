@@ -17,6 +17,7 @@ use bios_basic::{
     },
     spi_dispatch_service,
 };
+use poem::Request;
 use tardis::{
     basic::{dto::TardisContext, error::TardisError, result::TardisResult},
     db::sea_orm::prelude::Uuid,
@@ -33,7 +34,7 @@ use crate::{
     conf_constants::{error::*, *},
     conf_initializer,
     dto::{
-        conf_auth_dto::{RegisterRequest, RegisterResponse},
+        conf_auth_dto::{ChangePasswordRequest, RegisterRequest, RegisterResponse},
         conf_config_dto::*,
         conf_config_nacos_dto::NacosJwtClaim,
         conf_namespace_dto::*,
@@ -42,6 +43,7 @@ use crate::{
 };
 #[cfg(feature = "spi-pg")]
 mod pg;
+pub mod placehodler;
 
 spi_dispatch_service! {
     @mgr: true,
@@ -182,8 +184,29 @@ pub async fn register(req: RegisterRequest, funs: &TardisFunsInst, ctx: &TardisC
         rel_rbum_kind: RbumCertRelKind::Item,
         rel_rbum_id: spi_bs.id,
         is_outside: false,
+        sk_visible: None,
     };
     RbumCertServ::add_rbum(&mut add_cert_req, funs, &conf_cert_ctx).await?;
+    Ok(RegisterResponse::new(ak, sk))
+}
+
+/// register a cert for nacos
+pub async fn change_password(req: ChangePasswordRequest, funs: &TardisFunsInst, _ctx: &TardisContext) -> TardisResult<RegisterResponse> {
+    let ak = req.ak();
+    let rand_sk = random_sk();
+    let sk = req.sk().unwrap_or(rand_sk.as_str());
+    // check if exist
+    let find_filter = RbumCertFilterReq {
+        kind: Some(String::from(SPI_CONF_CERT_KIND)),
+        ak: Some(ak.to_string()),
+        ..Default::default()
+    };
+    // conf cert using another context
+    let conf_cert_ctx = TardisContext::default();
+    if let Some(result) = RbumCertServ::find_one_rbum(&find_filter, funs, &conf_cert_ctx).await? {
+        let id = result.id;
+        RbumCertServ::reset_sk(&id, sk, false, &find_filter, funs, &conf_cert_ctx).await?;
+    }
     Ok(RegisterResponse::new(ak, sk))
 }
 
@@ -261,3 +284,5 @@ pub async fn jwt_validate(token: &str, funs: &TardisFunsInst) -> poem::Result<Ta
         Err(poem::Error::from_string("Unknown token", StatusCode::FORBIDDEN))
     }
 }
+
+use poem::web::RealIp;

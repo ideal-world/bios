@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use serde::{Deserialize, Serialize};
 use tardis::{basic::dto::TardisContext, web::poem_openapi, TardisFunsInst};
@@ -47,7 +47,14 @@ pub struct IamAccountDetailAggResp {
     pub orgs: Vec<String>,
 }
 
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct IamCertDecodeRequest {
+    pub key: String,
+    pub codes: HashSet<String>,
+}
+
 impl_tardis_api_client! {
     IamClient<'_>:
     {get_account, get ["/ct/account", id] {tenant_id} IamAccountDetailAggResp}
+    {batch_decode_cert, post ["/ct/cert/manage"] IamCertDecodeRequest => HashMap<String, String>}
 }

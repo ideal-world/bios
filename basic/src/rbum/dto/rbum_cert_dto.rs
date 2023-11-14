@@ -15,6 +15,7 @@ pub struct RbumCertAddReq {
     pub ak: TrimString,
     #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "10000")))]
     pub sk: Option<TrimString>,
+    pub sk_visible: Option<bool>,
     pub is_ignore_check_sk: bool,
     pub kind: Option<String>,
     pub supplier: Option<String>,
@@ -43,6 +44,7 @@ pub struct RbumCertModifyReq {
     pub ak: Option<TrimString>,
     #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "10000")))]
     pub sk: Option<TrimString>,
+    pub sk_visible: Option<bool>,
     pub is_ignore_check_sk: bool,
     #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
     pub ext: Option<String>,
@@ -83,6 +85,7 @@ pub struct RbumCertSummaryWithSkResp {
     pub id: String,
     pub ak: String,
     pub sk: String,
+    pub sk_visible: bool,
     pub ext: String,
     pub conn_uri: String,
     pub start_time: DateTime<Utc>,
@@ -108,6 +111,7 @@ pub struct RbumCertSummaryWithSkResp {
 pub struct RbumCertDetailResp {
     pub id: String,
     pub ak: String,
+    pub sk_visible: bool,
     pub ext: String,
     pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,

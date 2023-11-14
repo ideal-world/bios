@@ -388,6 +388,7 @@ impl RbumCrudOperation<rbum_cert::ActiveModel, RbumCertAddReq, RbumCertModifyReq
             id: Set(TardisFuns::field.nanoid()),
             ak: Set(add_req.ak.to_string()),
             sk: Set(add_req.sk.as_ref().unwrap_or(&TrimString("".to_string())).to_string()),
+            sk_visible: Set(add_req.sk_visible.unwrap_or(false)),
             kind: Set(add_req.kind.as_ref().unwrap_or(&"".to_string()).to_string()),
             supplier: Set(add_req.supplier.as_ref().unwrap_or(&"".to_string()).to_string()),
             ext: Set(add_req.ext.as_ref().unwrap_or(&"".to_string()).to_string()),

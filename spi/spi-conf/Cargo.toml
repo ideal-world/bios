@@ -35,6 +35,10 @@ poem = "1"
 prost-types = "0.11.9"
 strum = { version = "0.25.0", features = ["derive"] }
 tokio-stream = { version = "0.1.14", features = ["sync"] }
+bios-sdk-invoke = { path = "../../sdk/invoke", features = [
+    "iam",
+    "macro",
+], default-features = false }
 
 [dev-dependencies]
 tardis = { workspace = true, features = ["test", "conf-remote", "mq"] }
