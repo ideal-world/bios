@@ -306,9 +306,10 @@ impl FlowInstServ {
             pub rel_flow_model_name: String,
 
             pub current_state_id: String,
-            pub current_assigned: Option<String>,
-
             pub current_state_name: Option<String>,
+            pub current_state_color: Option<String>,
+
+            pub current_assigned: Option<String>,
             pub current_vars: Option<Value>,
 
             pub create_vars: Option<Value>,
@@ -327,6 +328,7 @@ impl FlowInstServ {
             pub rel_business_obj_id: String,
         }
         let rel_state_table = Alias::new("rel_state");
+        let flow_state_table = Alias::new("flow_state");
         let rel_model_table = Alias::new("rel_model");
         let mut query = Query::select();
         query
@@ -348,6 +350,7 @@ impl FlowInstServ {
                 (flow_inst::Entity, flow_inst::Column::CurrentAssigned),
             ])
             .expr_as(Expr::col((rel_state_table.clone(), NAME_FIELD.clone())).if_null(""), Alias::new("current_state_name"))
+            .expr_as(Expr::col((flow_state_table.clone(), Alias::new("color"))).if_null(""), Alias::new("current_state_color"))
             .expr_as(Expr::col((rel_model_table.clone(), NAME_FIELD.clone())).if_null(""), Alias::new("rel_flow_model_name"))
             .from(flow_inst::Entity)
             .join_as(
@@ -358,6 +361,12 @@ impl FlowInstServ {
                     .add(Expr::col((rel_state_table.clone(), ID_FIELD.clone())).equals((flow_inst::Entity, flow_inst::Column::CurrentStateId)))
                     .add(Expr::col((rel_state_table.clone(), REL_KIND_ID_FIELD.clone())).eq(FlowStateServ::get_rbum_kind_id().unwrap()))
                     .add(Expr::col((rel_state_table.clone(), REL_DOMAIN_ID_FIELD.clone())).eq(FlowStateServ::get_rbum_domain_id().unwrap())),
+            )
+            .join_as(
+                JoinType::LeftJoin,
+                Alias::new("flow_state"),
+                rel_state_table.clone(),
+                Expr::col((rel_state_table.clone(), ID_FIELD.clone())).equals((flow_inst::Entity, flow_inst::Column::CurrentStateId)),
             )
             .join_as(
                 JoinType::LeftJoin,
@@ -388,8 +397,9 @@ impl FlowInstServ {
                 own_paths: inst.own_paths,
                 transitions: inst.transitions.map(|transitions| TardisFuns::json.json_to_obj(transitions).unwrap()),
                 current_state_id: inst.current_state_id,
-                current_assigned: inst.current_assigned,
                 current_state_name: inst.current_state_name,
+                current_state_color:inst.current_state_color,
+                current_assigned: inst.current_assigned,
                 current_vars: inst.current_vars.map(|current_vars| TardisFuns::json.json_to_obj(current_vars).unwrap()),
                 rel_business_obj_id: inst.rel_business_obj_id,
             })
@@ -1224,7 +1234,7 @@ impl FlowInstServ {
                     .from(flow_inst::Entity)
                     .and_where(Expr::col((flow_inst::Entity, flow_inst::Column::CurrentStateId)).eq(flow_state_id))
                     .and_where(Expr::col((flow_inst::Entity, flow_inst::Column::RelFlowModelId)).eq(flow_model_id))
-                    .and_where(Expr::col((flow_inst::Entity, flow_inst::Column::FinishAbort)).eq(false)),
+                    .and_where(Expr::col((flow_inst::Entity, flow_inst::Column::FinishAbort)).ne(true)),
             )
             .await?
             != 0
