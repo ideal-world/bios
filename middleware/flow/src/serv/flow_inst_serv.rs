@@ -43,7 +43,7 @@ use crate::{
         flow_state_dto::{FlowStateFilterReq, FlowStateRelModelExt, FlowSysStateKind},
         flow_transition_dto::{
             FlowTransitionActionByStateChangeInfo, FlowTransitionActionByVarChangeInfoChangedKind, FlowTransitionActionChangeAgg, FlowTransitionActionChangeInfo,
-            FlowTransitionActionChangeKind, FlowTransitionDetailResp, FlowTransitionFrontActionInfo, FlowTransitionFrontActionRightValue, StateChangeConditionOp,
+            FlowTransitionActionChangeKind, FlowTransitionDetailResp, FlowTransitionFrontActionInfo, FlowTransitionFrontActionRightValue, StateChangeConditionOp, TagRelKind,
         },
     },
     flow_constants,
@@ -853,7 +853,11 @@ impl FlowInstServ {
                         let rel_tag = change_info.obj_tag.unwrap_or_default();
                         if !rel_tag.is_empty() {
                             let obj_tag = if let Some(obj_tag_rel_kind) = change_info.obj_tag_rel_kind.clone() {
-                                String::from(obj_tag_rel_kind)
+                                if obj_tag_rel_kind == TagRelKind::ParentFeed || obj_tag_rel_kind == TagRelKind::SubFeed {
+                                    String::from(obj_tag_rel_kind)
+                                } else {
+                                    rel_tag.clone()
+                                }
                             } else {
                                 rel_tag.clone()
                             };
@@ -909,7 +913,11 @@ impl FlowInstServ {
                 FlowTransitionActionChangeKind::State => {
                     if let Some(change_info) = post_change.state_change_info {
                         let obj_tag = if let Some(obj_tag_rel_kind) = change_info.obj_tag_rel_kind.clone() {
-                            String::from(obj_tag_rel_kind)
+                            if obj_tag_rel_kind == TagRelKind::ParentFeed || obj_tag_rel_kind == TagRelKind::SubFeed {
+                                String::from(obj_tag_rel_kind)
+                            } else {
+                                change_info.obj_tag.clone()
+                            }
                         } else {
                             change_info.obj_tag.clone()
                         };
@@ -944,7 +952,11 @@ impl FlowInstServ {
                     for condition_item in change_condition.conditions.iter() {
                         if condition_item.obj_tag.is_some() && !condition_item.state_id.is_empty() {
                             let obj_tag = if let Some(obj_tag_rel_kind) = condition_item.obj_tag_rel_kind.clone() {
-                                String::from(obj_tag_rel_kind)
+                                if obj_tag_rel_kind == TagRelKind::ParentFeed || obj_tag_rel_kind == TagRelKind::SubFeed {
+                                    String::from(obj_tag_rel_kind)
+                                } else {
+                                    condition_item.obj_tag.clone().unwrap()
+                                }
                             } else {
                                 condition_item.obj_tag.clone().unwrap()
                             };
