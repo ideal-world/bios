@@ -34,6 +34,7 @@ pub enum FlowExternalKind {
 #[derive(Debug, Deserialize, Serialize, poem_openapi::Object, Clone)]
 pub struct FlowExternalParams {
     pub rel_tag: Option<String>,
+    pub rel_kind: Option<String>,
     pub var_id: Option<String>,
     pub var_name: Option<String>,
     pub value: Option<Value>,

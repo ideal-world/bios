@@ -324,7 +324,7 @@ pub enum TagRelKind {
 impl From<TagRelKind> for String {
     fn from(kind: TagRelKind) -> Self {
         match kind {
-            TagRelKind::Default => "Default".to_string(),
+            TagRelKind::Default => "DEFAULT".to_string(),
             TagRelKind::ParentFeed => "PARENT_FEED".to_string(),
             TagRelKind::SubFeed => "SUB_FEED".to_string(),
         }

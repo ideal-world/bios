@@ -43,7 +43,7 @@ use crate::{
         flow_state_dto::{FlowStateFilterReq, FlowStateRelModelExt, FlowSysStateKind},
         flow_transition_dto::{
             FlowTransitionActionByStateChangeInfo, FlowTransitionActionByVarChangeInfoChangedKind, FlowTransitionActionChangeAgg, FlowTransitionActionChangeInfo,
-            FlowTransitionActionChangeKind, FlowTransitionDetailResp, FlowTransitionFrontActionInfo, FlowTransitionFrontActionRightValue, StateChangeConditionOp, TagRelKind,
+            FlowTransitionActionChangeKind, FlowTransitionDetailResp, FlowTransitionFrontActionInfo, FlowTransitionFrontActionRightValue, StateChangeConditionOp,
         },
     },
     flow_constants,
@@ -707,6 +707,7 @@ impl FlowInstServ {
             let mut params = vec![];
             for (var_name, value) in vars {
                 params.push(FlowExternalParams {
+                    rel_kind: None,
                     rel_tag: None,
                     var_name: Some(var_name.clone()),
                     var_id: None,
@@ -852,17 +853,8 @@ impl FlowInstServ {
                         }
                         let rel_tag = change_info.obj_tag.unwrap_or_default();
                         if !rel_tag.is_empty() {
-                            let obj_tag = if let Some(obj_tag_rel_kind) = change_info.obj_tag_rel_kind.clone() {
-                                if obj_tag_rel_kind == TagRelKind::ParentFeed || obj_tag_rel_kind == TagRelKind::SubFeed {
-                                    String::from(obj_tag_rel_kind)
-                                } else {
-                                    rel_tag.clone()
-                                }
-                            } else {
-                                rel_tag.clone()
-                            };
                             let mut resp =
-                                FlowExternalServ::do_fetch_rel_obj(&current_model.tag, &current_inst.id, &current_inst.rel_business_obj_id, vec![obj_tag], ctx, funs).await?;
+                                FlowExternalServ::do_fetch_rel_obj(&current_model.tag, &current_inst.id, &current_inst.rel_business_obj_id, vec![(rel_tag.clone(), change_info.obj_tag_rel_kind.clone())], ctx, funs).await?;
                             if !resp.rel_bus_objs.is_empty() {
                                 for rel_bus_obj_id in resp.rel_bus_objs.pop().unwrap().rel_bus_obj_ids {
                                     let inst_id = Self::get_inst_ids_by_rel_business_obj_id(vec![rel_bus_obj_id.clone()], funs, ctx).await?.pop().unwrap_or_default();
@@ -875,6 +867,7 @@ impl FlowInstServ {
                                         None,
                                         None,
                                         vec![FlowExternalParams {
+                                            rel_kind: None,
                                             rel_tag: None,
                                             var_id: None,
                                             var_name: Some(change_info.var_name.clone()),
@@ -897,6 +890,7 @@ impl FlowInstServ {
                                 None,
                                 None,
                                 vec![FlowExternalParams {
+                                    rel_kind: None,
                                     rel_tag: None,
                                     var_id: None,
                                     var_name: Some(change_info.var_name.clone()),
@@ -912,17 +906,8 @@ impl FlowInstServ {
                 }
                 FlowTransitionActionChangeKind::State => {
                     if let Some(change_info) = post_change.state_change_info {
-                        let obj_tag = if let Some(obj_tag_rel_kind) = change_info.obj_tag_rel_kind.clone() {
-                            if obj_tag_rel_kind == TagRelKind::ParentFeed || obj_tag_rel_kind == TagRelKind::SubFeed {
-                                String::from(obj_tag_rel_kind)
-                            } else {
-                                change_info.obj_tag.clone()
-                            }
-                        } else {
-                            change_info.obj_tag.clone()
-                        };
                         let mut resp =
-                            FlowExternalServ::do_fetch_rel_obj(&current_model.tag, &current_inst.id, &current_inst.rel_business_obj_id, vec![obj_tag], ctx, funs).await?;
+                            FlowExternalServ::do_fetch_rel_obj(&current_model.tag, &current_inst.id, &current_inst.rel_business_obj_id, vec![(change_info.obj_tag.clone(), change_info.obj_tag_rel_kind.clone())], ctx, funs).await?;
                         if !resp.rel_bus_objs.is_empty() {
                             let inst_ids = Self::find_inst_ids_by_rel_obj_ids(resp.rel_bus_objs.pop().unwrap().rel_bus_obj_ids, &change_info, funs, ctx).await?;
                             Self::do_modify_state_by_post_action(inst_ids, &change_info, updated_instance_list, funs, ctx).await?;
@@ -951,16 +936,7 @@ impl FlowInstServ {
                     let mut rel_tags = vec![];
                     for condition_item in change_condition.conditions.iter() {
                         if condition_item.obj_tag.is_some() && !condition_item.state_id.is_empty() {
-                            let obj_tag = if let Some(obj_tag_rel_kind) = condition_item.obj_tag_rel_kind.clone() {
-                                if obj_tag_rel_kind == TagRelKind::ParentFeed || obj_tag_rel_kind == TagRelKind::SubFeed {
-                                    String::from(obj_tag_rel_kind)
-                                } else {
-                                    condition_item.obj_tag.clone().unwrap()
-                                }
-                            } else {
-                                condition_item.obj_tag.clone().unwrap()
-                            };
-                            rel_tags.push(obj_tag);
+                            rel_tags.push((condition_item.obj_tag.clone().unwrap(), condition_item.obj_tag_rel_kind.clone()));
                         }
                     }
                     let inst_id = Self::get_inst_ids_by_rel_business_obj_id(vec![rel_obj_id.clone()], funs, ctx).await?.pop().unwrap_or_default();
