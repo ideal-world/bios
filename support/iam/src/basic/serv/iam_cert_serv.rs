@@ -457,7 +457,7 @@ impl IamCertServ {
             &mut RbumCertAddReq {
                 ak: TrimString(add_req.ak.trim().to_string()),
                 sk: add_req.sk.as_ref().map(|sk| TrimString(sk.trim().to_string())),
-                sk_invisible: None,
+                sk_invisible: add_req.sk_invisible,
                 kind: Some(IamCertExtKind::ThirdParty.to_string()),
                 supplier: Some(add_req.supplier.clone()),
                 vcode: None,
@@ -486,8 +486,7 @@ impl IamCertServ {
                 ext: modify_req.ext.clone(),
                 ak: Some(TrimString(modify_req.ak.trim().to_string())),
                 sk: Some(TrimString(modify_req.sk.clone().unwrap_or_default())),
-                sk_invisible: None,
-
+                sk_invisible: modify_req.sk_invisible,
                 is_ignore_check_sk: false,
                 start_time: None,
                 end_time: None,

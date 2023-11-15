@@ -158,7 +158,7 @@ pub struct IamCertManageAddReq {
     #[oai(validator(min_length = "2", max_length = "10000"))]
     pub sk: Option<String>,
     #[oai(default)]
-    pub sk_encrypted: bool,
+    pub sk_invisible: Option<bool>,
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub conn_uri: Option<String>,
     #[oai(validator(min_length = "2", max_length = "2000"))]
@@ -174,7 +174,7 @@ pub struct IamCertManageModifyReq {
     #[oai(validator(min_length = "2", max_length = "10000"))]
     pub sk: Option<String>,
     #[oai(default)]
-    pub sk_encrypted: bool,
+    pub sk_invisible: Option<bool>,
     #[oai(validator(min_length = "2", max_length = "2000"))]
     pub conn_uri: Option<String>,
     #[oai(validator(min_length = "2", max_length = "2000"))]
