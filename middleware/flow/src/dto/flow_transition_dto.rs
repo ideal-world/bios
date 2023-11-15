@@ -316,15 +316,15 @@ pub enum StateChangeConditionOp {
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug, poem_openapi::Enum)]
 pub enum TagRelKind {
-    ParentFeed,
-    SubFeed,
+    Default,
+    ParentOrSub,
 }
 
 impl From<TagRelKind> for String {
     fn from(kind: TagRelKind) -> Self {
         match kind {
-            TagRelKind::ParentFeed => "PARENT_FEED".to_string(),
-            TagRelKind::SubFeed => "SUB_FEED".to_string(),
+            TagRelKind::Default => "DEFAULT".to_string(),
+            TagRelKind::ParentOrSub => "PARENT_OR_SUB".to_string(),
         }
     }
 }
