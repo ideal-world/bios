@@ -157,7 +157,7 @@ impl Default for IamConfig {
             spi: Default::default(),
             strict_security_mode: false,
             crypto_conf: CryptoConf::default(),
-            cert_encode_key: Default::default()
+            cert_encode_key: Default::default(),
         }
     }
 }

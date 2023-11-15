@@ -1,3 +1,4 @@
+use poem::web::RealIp;
 use tardis::{
     basic::error::TardisError,
     db::sea_orm::prelude::Uuid,
@@ -8,8 +9,11 @@ use tardis::{
     },
 };
 
-use crate::dto::{conf_config_dto::*, conf_namespace_dto::*};
 use crate::{conf_constants::error, serv::*};
+use crate::{
+    dto::{conf_config_dto::*, conf_namespace_dto::*},
+    serv::placehodler::render_content_for_ip,
+};
 
 #[derive(Default, Clone, Copy, Debug)]
 pub struct ConfCiConfigServiceApi;
@@ -32,6 +36,7 @@ impl ConfCiConfigServiceApi {
         /// 配置类型
         r#type: Query<Option<String>>,
         ctx: TardisContextExtractor,
+        real_ip: RealIp,
     ) -> TardisApiResult<String> {
         let namespace_id = namespace_id.0.or(tenant.0).unwrap_or("public".into());
         let tags = tag.0.unwrap_or_default().split(',').map(str::trim).map(String::from).collect();
@@ -43,7 +48,10 @@ impl ConfCiConfigServiceApi {
             tp: r#type.0,
         };
         let funs = crate::get_tardis_inst();
-        let content = get_config(&mut descriptor, &funs, &ctx.0).await?;
+        let mut content = get_config(&mut descriptor, &funs, &ctx.0).await?;
+        if let Some(ip) = real_ip.0 {
+            content = render_content_for_ip(content, ip, &funs, &ctx.0).await?;
+        }
         TardisResp::ok(content)
     }
     #[oai(path = "/config/detail", method = "get")]
@@ -60,6 +68,7 @@ impl ConfCiConfigServiceApi {
         /// 配置类型
         r#type: Query<Option<String>>,
         ctx: TardisContextExtractor,
+        real_ip: RealIp,
     ) -> TardisApiResult<ConfigItem> {
         let namespace_id = namespace_id.0.or(tenant.0).unwrap_or("public".into());
         let tags = tag.0.unwrap_or_default().split(',').map(str::trim).map(String::from).collect();
@@ -71,7 +80,10 @@ impl ConfCiConfigServiceApi {
             tp: r#type.0,
         };
         let funs = crate::get_tardis_inst();
-        let config_item = get_config_detail(&mut descriptor, &funs, &ctx.0).await?;
+        let mut config_item = get_config_detail(&mut descriptor, &funs, &ctx.0).await?;
+        if let Some(ip) = real_ip.0 {
+            config_item.content = render_content_for_ip(config_item.content, ip, &funs, &ctx.0).await?;
+        }
         TardisResp::ok(config_item)
     }
     #[oai(path = "/config", method = "post")]

@@ -103,7 +103,7 @@ impl IamCertPhoneVCodeServ {
             &mut RbumCertAddReq {
                 ak: TrimString(add_req.phone.to_string()),
                 sk: None,
-                sk_visible: None,
+                sk_invisible: None,
 
                 kind: None,
                 supplier: None,
@@ -134,7 +134,7 @@ impl IamCertPhoneVCodeServ {
             &mut RbumCertModifyReq {
                 ak: Some(TrimString(modify_req.phone.to_string())),
                 sk: None,
-                sk_visible: None,
+                sk_invisible: None,
 
                 ext: None,
                 start_time: None,
@@ -193,7 +193,7 @@ impl IamCertPhoneVCodeServ {
             &mut RbumCertAddReq {
                 ak: TrimString(add_req.phone.to_string()),
                 sk: None,
-                sk_visible: None,
+                sk_invisible: None,
 
                 kind: None,
                 supplier: None,
@@ -255,7 +255,7 @@ impl IamCertPhoneVCodeServ {
                             status: Some(RbumCertStatusKind::Enabled),
                             ak: None,
                             sk: None,
-                    sk_visible: None,
+                            sk_invisible: None,
 
                             is_ignore_check_sk: false,
                             ext: None,
@@ -302,7 +302,7 @@ impl IamCertPhoneVCodeServ {
                     &mut RbumCertAddReq {
                         ak: TrimString(phone.trim().to_string()),
                         sk: None,
-                sk_visible: None,
+                        sk_invisible: None,
                         kind: None,
                         supplier: None,
                         vcode: Some(TrimString(input_vcode.to_string())),

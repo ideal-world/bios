@@ -147,7 +147,7 @@ impl IamCertUserPwdServ {
             &mut RbumCertAddReq {
                 ak: add_req.ak.clone(),
                 sk: Some(add_req.sk.clone()),
-                sk_visible: None,
+                sk_invisible: None,
 
                 is_ignore_check_sk: add_req.is_ignore_check_sk,
                 kind: None,
@@ -198,7 +198,7 @@ impl IamCertUserPwdServ {
                 &mut RbumCertModifyReq {
                     ak: None,
                     sk: None,
-                    sk_visible: None,
+                    sk_invisible: None,
                     is_ignore_check_sk: false,
                     ext: None,
                     start_time: None,
@@ -264,7 +264,7 @@ impl IamCertUserPwdServ {
                 &mut RbumCertModifyReq {
                     ak: Some(modify_req.new_ak.clone()),
                     sk: Some(modify_req.sk.clone()),
-                    sk_visible: None,
+                    sk_invisible: None,
 
                     is_ignore_check_sk: true,
                     ext: None,
@@ -318,7 +318,7 @@ impl IamCertUserPwdServ {
                 &mut RbumCertModifyReq {
                     ak: None,
                     sk: None,
-                    sk_visible: None,
+                    sk_invisible: None,
 
                     is_ignore_check_sk: false,
                     ext: None,
@@ -386,7 +386,7 @@ impl IamCertUserPwdServ {
                 &mut RbumCertModifyReq {
                     ak: None,
                     sk: None,
-                    sk_visible: None,
+                    sk_invisible: None,
 
                     is_ignore_check_sk: false,
                     ext: None,

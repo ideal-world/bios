@@ -101,7 +101,7 @@ impl IamCertMailVCodeServ {
             &mut RbumCertAddReq {
                 ak: TrimString(add_req.mail.trim().to_string()),
                 sk: None,
-                sk_visible: None,
+                sk_invisible: None,
                 kind: None,
                 supplier: None,
                 vcode: Some(TrimString(vcode.clone())),
@@ -130,7 +130,7 @@ impl IamCertMailVCodeServ {
             &mut RbumCertModifyReq {
                 ak: Some(TrimString(modify_req.mail.to_string())),
                 sk: None,
-                sk_visible: None,
+                sk_invisible: None,
 
                 ext: None,
                 start_time: None,
@@ -196,7 +196,7 @@ impl IamCertMailVCodeServ {
                             status: Some(RbumCertStatusKind::Enabled),
                             ak: None,
                             sk: None,
-                    sk_visible: None,
+                            sk_invisible: None,
 
                             is_ignore_check_sk: false,
                             ext: None,
@@ -245,7 +245,7 @@ impl IamCertMailVCodeServ {
                     &mut RbumCertAddReq {
                         ak: TrimString(mail.trim().to_string()),
                         sk: None,
-                sk_visible: None,
+                        sk_invisible: None,
                         kind: None,
                         supplier: None,
                         vcode: Some(TrimString(input_vcode.to_string())),

@@ -37,6 +37,4 @@ impl IamCaCertManageApi {
         ctx.execute_task().await?;
         TardisResp::ok(rbum_certs)
     }
-
-    
 }

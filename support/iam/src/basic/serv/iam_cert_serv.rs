@@ -284,7 +284,7 @@ impl IamCertServ {
                 id: kernel_cert.id,
                 ak: kernel_cert.ak,
                 sk: now_sk,
-                sk_visible: kernel_cert.sk_visible,
+                sk_invisible: kernel_cert.sk_invisible,
                 ext: kernel_cert.ext,
                 conn_uri: kernel_cert.conn_uri,
                 start_time: kernel_cert.start_time,
@@ -457,7 +457,7 @@ impl IamCertServ {
             &mut RbumCertAddReq {
                 ak: TrimString(add_req.ak.trim().to_string()),
                 sk: add_req.sk.as_ref().map(|sk| TrimString(sk.trim().to_string())),
-                sk_visible: None,
+                sk_invisible: None,
                 kind: Some(IamCertExtKind::ThirdParty.to_string()),
                 supplier: Some(add_req.supplier.clone()),
                 vcode: None,
@@ -486,7 +486,7 @@ impl IamCertServ {
                 ext: modify_req.ext.clone(),
                 ak: Some(TrimString(modify_req.ak.trim().to_string())),
                 sk: Some(TrimString(modify_req.sk.clone().unwrap_or_default())),
-                sk_visible: None,
+                sk_invisible: None,
 
                 is_ignore_check_sk: false,
                 start_time: None,
@@ -508,7 +508,7 @@ impl IamCertServ {
                 ext: Some(ext.to_string()),
                 ak: None,
                 sk: None,
-                sk_visible: None,
+                sk_invisible: None,
 
                 is_ignore_check_sk: false,
                 start_time: None,
@@ -558,7 +558,7 @@ impl IamCertServ {
             &mut RbumCertAddReq {
                 ak: TrimString(add_req.ak.trim().to_string()),
                 sk: add_req.sk.as_ref().map(|sk| TrimString(sk.trim().to_string())),
-                sk_visible: None,
+                sk_invisible: None,
                 kind: Some(IamCertExtKind::ThirdParty.to_string()),
                 supplier: add_req.supplier.clone(),
                 vcode: None,
@@ -638,7 +638,7 @@ impl IamCertServ {
                 id: ext_cert.id,
                 ak: if is_ldap { IamCertLdapServ::dn_to_cn(&ext_cert.ak) } else { ext_cert.ak },
                 sk: "".to_string(),
-                sk_visible: ext_cert.sk_visible,
+                sk_invisible: ext_cert.sk_invisible,
                 ext: ext_cert.ext,
 
                 conn_uri: ext_cert.conn_uri,
@@ -686,12 +686,12 @@ impl IamCertServ {
         .await?;
         if let Some(ext_cert) = ext_cert {
             let now_sk = RbumCertServ::show_sk(ext_cert.id.as_str(), &RbumCertFilterReq::default(), funs, ctx).await?;
-            let encoded_sk = encode_sk(&ext_cert.id, now_sk, ext_cert.sk_visible, funs, ctx)?;
+            let encoded_sk = encode_sk(&ext_cert.id, now_sk, ext_cert.sk_invisible, funs, ctx)?;
             Ok(RbumCertSummaryWithSkResp {
                 id: ext_cert.id,
                 ak: ext_cert.ak,
                 sk: encoded_sk,
-                sk_visible: ext_cert.sk_visible,
+                sk_invisible: ext_cert.sk_invisible,
                 ext: ext_cert.ext,
                 conn_uri: ext_cert.conn_uri,
                 start_time: ext_cert.start_time,
@@ -759,7 +759,7 @@ impl IamCertServ {
         .await?;
         if let Some(ext_cert) = ext_cert {
             let now_sk = RbumCertServ::show_sk(ext_cert.id.as_str(), &RbumCertFilterReq::default(), funs, &mock_ctx).await?;
-            let encoded_sk = encode_sk(&ext_cert.id, now_sk, ext_cert.sk_visible, funs, &mock_ctx)?;
+            let encoded_sk = encode_sk(&ext_cert.id, now_sk, ext_cert.sk_invisible, funs, &mock_ctx)?;
 
             Ok(RbumCertSummaryWithSkResp {
                 id: ext_cert.id,
@@ -781,7 +781,7 @@ impl IamCertServ {
                 create_time: ext_cert.create_time,
                 update_time: ext_cert.update_time,
                 conn_uri: ext_cert.conn_uri,
-                sk_visible: ext_cert.sk_visible,
+                sk_invisible: ext_cert.sk_invisible,
             })
         } else {
             Err(funs.err().not_found(

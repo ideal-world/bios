@@ -70,7 +70,7 @@ impl RbumItemCrudOperation<spi_bs::ActiveModel, SpiBsAddReq, SpiBsModifyReq, Spi
             &mut RbumCertAddReq {
                 ak: add_req.ak.clone(),
                 sk: Some(add_req.sk.clone()),
-                sk_visible: Some(false),
+                sk_invisible: Some(false),
                 kind: Some(SPI_CERT_KIND.to_string()),
                 supplier: Some(id.to_string()),
                 conn_uri: Some(add_req.conn_uri.clone()),
@@ -143,7 +143,7 @@ impl RbumItemCrudOperation<spi_bs::ActiveModel, SpiBsAddReq, SpiBsModifyReq, Spi
                     status: None,
                     start_time: None,
                     end_time: None,
-                    sk_visible: None,
+                    sk_invisible: None,
                 },
                 funs,
                 ctx,
@@ -162,6 +162,7 @@ impl RbumItemCrudOperation<spi_bs::ActiveModel, SpiBsAddReq, SpiBsModifyReq, Spi
             .column((rbum_cert::Entity, rbum_cert::Column::ConnUri))
             .column((rbum_cert::Entity, rbum_cert::Column::Ak))
             .column((rbum_cert::Entity, rbum_cert::Column::Sk))
+            .column((rbum_cert::Entity, rbum_cert::Column::SkInvisible))
             .column((rbum_cert::Entity, rbum_cert::Column::Ext))
             .left_join(
                 rbum_kind::Entity,

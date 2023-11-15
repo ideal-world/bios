@@ -17,7 +17,7 @@ use bios_basic::{
     },
     spi_dispatch_service,
 };
-use poem::Request;
+
 use tardis::{
     basic::{dto::TardisContext, error::TardisError, result::TardisResult},
     db::sea_orm::prelude::Uuid,
@@ -184,7 +184,7 @@ pub async fn register(req: RegisterRequest, funs: &TardisFunsInst, ctx: &TardisC
         rel_rbum_kind: RbumCertRelKind::Item,
         rel_rbum_id: spi_bs.id,
         is_outside: false,
-        sk_visible: None,
+        sk_invisible: None,
     };
     RbumCertServ::add_rbum(&mut add_cert_req, funs, &conf_cert_ctx).await?;
     Ok(RegisterResponse::new(ak, sk))
@@ -284,5 +284,3 @@ pub async fn jwt_validate(token: &str, funs: &TardisFunsInst) -> poem::Result<Ta
         Err(poem::Error::from_string("Unknown token", StatusCode::FORBIDDEN))
     }
 }
-
-use poem::web::RealIp;

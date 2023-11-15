@@ -313,6 +313,7 @@ async fn test_rbum_cert_conf_is_ak_repeatable(context: &TardisContext) -> Tardis
             rel_rbum_id: context.owner.to_string(),
             is_outside: false,
             is_ignore_check_sk: false,
+            sk_invisible: None,
         },
         &funs,
         context,
@@ -336,6 +337,7 @@ async fn test_rbum_cert_conf_is_ak_repeatable(context: &TardisContext) -> Tardis
             rel_rbum_id: context.owner.to_string(),
             is_outside: false,
             is_ignore_check_sk: false,
+            sk_invisible: None,
         },
         &funs,
         context,
@@ -347,7 +349,7 @@ async fn test_rbum_cert_conf_is_ak_repeatable(context: &TardisContext) -> Tardis
         &mut RbumCertModifyReq {
             ak: Some("test".into()),
             sk: None,
-            sk_visible: None,
+            sk_invisible: None,
             ext: None,
             start_time: None,
             end_time: None,
@@ -411,6 +413,7 @@ async fn test_rbum_cert_conf_is_ak_repeatable(context: &TardisContext) -> Tardis
             kind: None,
             supplier: None,
             is_ignore_check_sk: false,
+            sk_invisible: None,
         },
         &funs,
         context,
@@ -433,7 +436,8 @@ async fn test_rbum_cert_conf_is_ak_repeatable(context: &TardisContext) -> Tardis
             is_outside: false,
             kind: None,
             supplier: None,
-            is_ignore_check_sk: false
+            is_ignore_check_sk: false,
+            sk_invisible: None,
         },
         &funs,
         context,
@@ -446,7 +450,7 @@ async fn test_rbum_cert_conf_is_ak_repeatable(context: &TardisContext) -> Tardis
         &mut RbumCertModifyReq {
             ak: Some("test".into()),
             sk: None,
-            sk_visible: None,
+            sk_invisible: None,
             ext: None,
             start_time: None,
             end_time: None,
@@ -582,7 +586,8 @@ async fn test_rbum_cert_basic(context: &TardisContext) -> TardisResult<()> {
             is_outside: false,
             kind: None,
             supplier: None,
-            is_ignore_check_sk: false
+            is_ignore_check_sk: false,
+            sk_invisible: None,
         },
         &funs,
         context,
@@ -595,6 +600,7 @@ async fn test_rbum_cert_basic(context: &TardisContext) -> TardisResult<()> {
         &mut RbumCertAddReq {
             ak: TrimString("gudaoxuri".to_string()),
             sk: None,
+            sk_invisible: None,
             ext: None,
             vcode: None,
             start_time: None,
@@ -620,6 +626,7 @@ async fn test_rbum_cert_basic(context: &TardisContext) -> TardisResult<()> {
         &mut RbumCertAddReq {
             ak: TrimString("gudaoxuri".to_string()),
             sk: Some(TrimString("aa".to_string())),
+            sk_invisible: None,
             vcode: None,
             ext: None,
             start_time: None,
@@ -645,6 +652,7 @@ async fn test_rbum_cert_basic(context: &TardisContext) -> TardisResult<()> {
         &mut RbumCertAddReq {
             ak: TrimString("gudaoxuri".to_string()),
             sk: Some(TrimString("12345678".to_string())),
+            sk_invisible: None,
             vcode: None,
             ext: None,
             start_time: None,
@@ -670,6 +678,7 @@ async fn test_rbum_cert_basic(context: &TardisContext) -> TardisResult<()> {
         &mut RbumCertAddReq {
             ak: TrimString("gudaoxuri".to_string()),
             sk: Some(TrimString("12345678".to_string())),
+            sk_invisible: None,
             vcode: None,
             ext: None,
             start_time: None,
@@ -694,6 +703,7 @@ async fn test_rbum_cert_basic(context: &TardisContext) -> TardisResult<()> {
         &mut RbumCertAddReq {
             ak: TrimString("gudaoxuri".to_string()),
             sk: Some(TrimString("12345678".to_string())),
+            sk_invisible: None,
             vcode: None,
             ext: None,
             start_time: None,
@@ -718,6 +728,7 @@ async fn test_rbum_cert_basic(context: &TardisContext) -> TardisResult<()> {
         &mut RbumCertAddReq {
             ak: TrimString("gudaoxuri".to_string()),
             sk: Some(TrimString("12345678".to_string())),
+            sk_invisible: None,
             vcode: None,
             ext: None,
             start_time: None,
@@ -742,6 +753,7 @@ async fn test_rbum_cert_basic(context: &TardisContext) -> TardisResult<()> {
         &mut RbumCertAddReq {
             ak: TrimString("root".to_string()),
             sk: Some(TrimString("12345678".to_string())),
+            sk_invisible: None,
             vcode: None,
             ext: None,
             start_time: None,
@@ -778,7 +790,7 @@ async fn test_rbum_cert_basic(context: &TardisContext) -> TardisResult<()> {
             ext: Some("ext".to_string()),
             ak: None,
             sk: None,
-            sk_visible: None,
+            sk_invisible: None,
             start_time: None,
             end_time: None,
             conn_uri: None,
@@ -797,7 +809,7 @@ async fn test_rbum_cert_basic(context: &TardisContext) -> TardisResult<()> {
             ext: Some("ext".to_string()),
             ak: None,
             sk: None,
-            sk_visible: None,
+            sk_invisible: None,
             start_time: None,
             end_time: None,
             conn_uri: None,
@@ -925,6 +937,7 @@ async fn test_rbum_cert_sk_dynamic(context: &TardisContext) -> TardisResult<()> 
         &mut RbumCertAddReq {
             ak: TrimString("i@sunisle.org".to_string()),
             sk: None,
+            sk_invisible: None,
             vcode: Some(TrimString("123456".to_string())),
             ext: None,
             start_time: None,

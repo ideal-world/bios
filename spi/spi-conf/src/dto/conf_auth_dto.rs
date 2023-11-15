@@ -60,7 +60,7 @@ pub struct RegisterRequest {
 #[derive(Debug, Serialize, Deserialize, poem_openapi::Object, Default)]
 pub struct RegisterBundleRequest {
     pub backend_service: Option<serde_json::Value>,
-    pub app_tenent_id: Option<String>,
+    pub app_tenant_id: Option<String>,
     #[oai(flatten)]
     #[serde(flatten)]
     pub register_request: RegisterRequest,
@@ -75,7 +75,7 @@ pub enum BackendServiceSource {
     New {
         name: String,
         conn_uri: String,
-        // 
+        //
         kind_code: Option<String>,
     },
 }

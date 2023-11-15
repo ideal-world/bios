@@ -1,9 +1,7 @@
 use bios_basic::{
     rbum::{
-        dto::rbum_filer_dto::{RbumBasicFilterReq, RbumCertFilterReq, RbumItemRelFilterReq},
-        rbum_enumeration::RbumRelFromKind,
+        dto::rbum_filer_dto::RbumBasicFilterReq,
         serv::{
-            rbum_cert_serv::RbumCertServ,
             rbum_crud_serv::RbumCrudOperation,
             rbum_domain_serv::RbumDomainServ,
             rbum_item_serv::{RbumItemCrudOperation, RbumItemServ},
@@ -11,24 +9,24 @@ use bios_basic::{
         },
     },
     spi::{
-        dto::spi_bs_dto::{SpiBsAddReq, SpiBsFilterReq},
+        dto::spi_bs_dto::SpiBsAddReq,
         serv::spi_bs_serv::SpiBsServ,
-        spi_constants::{self, SPI_CERT_KIND, SPI_IDENT_REL_TAG},
+        spi_constants::{self},
     },
 };
-use poem::{web::RealIp, Request};
+use poem::web::RealIp;
 use tardis::{
-    basic::dto::TardisContext,
+    basic::error::TardisError,
     serde_json,
     web::{
         context_extractor::TardisContextExtractor,
         poem_openapi::{self, payload::Json},
+        reqwest::Url,
         web_resp::{TardisApiResult, TardisResp},
     },
-    TardisFuns,
 };
 
-use crate::{conf_config::ConfConfig, conf_constants::DOMAIN_CODE, serv::*};
+use crate::{conf_constants::DOMAIN_CODE, serv::*};
 use crate::{dto::conf_auth_dto::*, serv::placehodler::has_placeholder_auth};
 
 #[derive(Default, Clone, Copy, Debug)]
@@ -52,20 +50,21 @@ impl ConfCiAuthApi {
         TardisResp::ok(resp)
     }
     #[oai(path = "/register_bundle", method = "put")]
-    async fn bind_and_register(&self, json: Json<RegisterBundleRequest>, ctx: TardisContextExtractor) -> TardisApiResult<RegisterResponse> {
+    async fn register_bundle(&self, json: Json<RegisterBundleRequest>, ctx: TardisContextExtractor) -> TardisApiResult<RegisterResponse> {
         let req = json.0;
         let mut funs = crate::get_tardis_inst();
-        let ctx = ctx.0;
+        let mut ctx = ctx.0;
         let source = if let Some(source) = req.backend_service {
             serde_json::from_value(source).unwrap_or_default()
         } else {
             BackendServiceSource::Default
         };
         funs.begin().await?;
+        let default_ctx = ctx.clone();
         let bs_id = match source {
             BackendServiceSource::Id(id) => id,
             BackendServiceSource::Default => {
-                let default_ctx = TardisContext::default();
+                // let default_ctx = TardisContext::default();
                 let rbum_domain = RbumDomainServ::find_one_rbum(
                     &RbumBasicFilterReq {
                         code: Some(DOMAIN_CODE.to_string()),
@@ -90,20 +89,24 @@ impl ConfCiAuthApi {
                 bs.id
             }
             BackendServiceSource::New { name, conn_uri, kind_code } => {
-                let default_ctx = TardisContext::default();
+                // #TODO
+                // this should be determined by url, but now we only support spi-pg
                 let kind_code = kind_code.unwrap_or(spi_constants::SPI_PG_KIND_CODE.to_string());
                 let kind_id = RbumKindServ::get_rbum_kind_id_by_code(&kind_code, &funs)
                     .await?
                     .ok_or_else(|| funs.err().not_found(&SpiBsServ::get_obj_name(), "register", "db spi kind not found", "404-spi-bs-not-exist"))?;
+                let conn_uri = conn_uri.parse::<Url>().map_err(|_| TardisError::bad_request("invalid conn url", "400-spi_conf-bad-request"))?;
+                let ak = conn_uri.username();
+                let sk = conn_uri.password().unwrap_or("");
                 SpiBsServ::add_item(
                     &mut SpiBsAddReq {
                         name: name.into(),
-                        conn_uri,
+                        conn_uri: conn_uri.to_string(),
                         ext: "{\"max_connections\":20,\"min_connections\":10}".to_string(),
                         private: false,
                         disabled: None,
-                        ak: Default::default(),
-                        sk: Default::default(),
+                        ak: ak.into(),
+                        sk: sk.into(),
                         kind_id: kind_id.into(),
                     },
                     &funs,
@@ -112,7 +115,9 @@ impl ConfCiAuthApi {
                 .await?
             }
         };
-        SpiBsServ::add_rel(&bs_id, req.app_tenent_id.as_deref().unwrap_or(ctx.owner.as_str()), &funs, &ctx).await?;
+        let app_tenant_id = req.app_tenant_id.as_deref().unwrap_or(ctx.owner.as_str());
+        SpiBsServ::add_rel(&bs_id, app_tenant_id, &funs, &ctx).await?;
+        ctx.owner = app_tenant_id.to_string();
         let resp = register(req.register_request, &funs, &ctx).await?;
         funs.commit().await?;
         TardisResp::ok(resp)

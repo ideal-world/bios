@@ -118,7 +118,7 @@ impl IamCertAkSkServ {
             &mut RbumCertAddReq {
                 ak: ak.into(),
                 sk: Some(sk.into()),
-                sk_visible: None,
+                sk_invisible: None,
                 kind: None,
                 supplier: None,
                 vcode: None,
