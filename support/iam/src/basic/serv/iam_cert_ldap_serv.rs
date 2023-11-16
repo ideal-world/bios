@@ -803,26 +803,28 @@ impl IamCertLdapServ {
                     )
                     .await?
                     {
-                        let modify_result = RbumCertServ::modify_rbum(
-                            &phone_cert.id,
-                            &mut RbumCertModifyReq {
-                                ak: Some(TrimString(iam_account_ext_sys_resp.mobile.clone())),
-                                sk: None,
-                                is_ignore_check_sk: false,
-                                ext: None,
-                                start_time: None,
-                                end_time: None,
-                                conn_uri: None,
-                                status: None,
-                            },
-                            &funs,
-                            ctx,
-                        )
-                        .await;
-                        if let Some(e) = modify_result.err() {
-                            let err_msg = format!("modify phone cert_id:{} failed:{}", phone_cert.id, e);
-                            tardis::log::error!("{}", err_msg);
-                            msg = format!("{msg}{err_msg}\n");
+                        if phone_cert.ak != iam_account_ext_sys_resp.mobile {
+                            let modify_result = RbumCertServ::modify_rbum(
+                                &phone_cert.id,
+                                &mut RbumCertModifyReq {
+                                    ak: Some(TrimString(iam_account_ext_sys_resp.mobile.clone())),
+                                    sk: None,
+                                    is_ignore_check_sk: false,
+                                    ext: None,
+                                    start_time: None,
+                                    end_time: None,
+                                    conn_uri: None,
+                                    status: None,
+                                },
+                                &funs,
+                                ctx,
+                            )
+                            .await;
+                            if let Some(e) = modify_result.err() {
+                                let err_msg = format!("modify phone cert_id:{} failed:{}", phone_cert.id, e);
+                                tardis::log::error!("{}", err_msg);
+                                msg = format!("{msg}{err_msg}\n");
+                            }
                         }
                     } else {
                         //添加手机号
