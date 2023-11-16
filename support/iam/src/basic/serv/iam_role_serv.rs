@@ -1,7 +1,7 @@
 use std::ops::Add;
 
 use async_trait::async_trait;
-use tardis::{TardisFuns, TardisFunsInst};
+use tardis::{TardisFuns, TardisFunsInst, tokio};
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
@@ -245,9 +245,18 @@ impl RbumItemCrudOperation<iam_role::ActiveModel, IamRoleAddReq, IamRoleModifyRe
             extend_role_id: Some(id.to_string()),
             ..Default::default()
         },None,None,funs,ctx).await?;
-        for role_id in sub_role {
-            Self::delete_item_with_all_rels(&role_id,funs,ctx).await?;
-        }
+        ctx.add_async_task(Box::new(|| {
+            Box::pin(async move {
+                let task_handle = tokio::spawn(async move {
+                    let funs = iam_constants::get_tardis_inst();
+                    for role_id in sub_role {
+                        Self::delete_item_with_all_rels(&role_id, &funs, ctx).await?;
+                    }
+                });
+                task_handle.await.unwrap();
+                Ok(())
+            })
+        })).await?;
         Ok(None)
     }
 
