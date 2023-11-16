@@ -1,18 +1,18 @@
 use std::ops::Add;
 
 use async_trait::async_trait;
-use bios_basic::helper::request_helper::get_remote_ip;
-use bios_basic::process::task_processor::TaskProcessor;
+use tardis::{TardisFuns, TardisFunsInst};
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
-use tardis::db::sea_orm::sea_query::{Expr, SelectStatement};
-use tardis::db::sea_orm::EntityName;
 use tardis::db::sea_orm::*;
+use tardis::db::sea_orm::prelude::Expr;
+use tardis::db::sea_orm::sea_query::SelectStatement;
 use tardis::log::info;
 use tardis::web::web_resp::TardisPage;
-use tardis::{TardisFuns, TardisFunsInst};
 
+use bios_basic::helper::request_helper::get_remote_ip;
+use bios_basic::process::task_processor::TaskProcessor;
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumRelFilterReq};
 use bios_basic::rbum::dto::rbum_item_dto::{RbumItemKernelAddReq, RbumItemKernelModifyReq};
 use bios_basic::rbum::dto::rbum_rel_dto::{RbumRelBoneResp, RbumRelCheckReq};
@@ -23,9 +23,10 @@ use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use bios_basic::rbum::serv::rbum_rel_serv::RbumRelServ;
 
 use crate::basic::domain::iam_role;
-use crate::basic::dto::iam_filer_dto::IamRoleFilterReq;
+use crate::basic::dto::iam_filer_dto::{IamAppFilterReq, IamRoleFilterReq};
 use crate::basic::dto::iam_role_dto::{IamRoleAddReq, IamRoleAggAddReq, IamRoleAggModifyReq, IamRoleDetailResp, IamRoleModifyReq, IamRoleSummaryResp};
 use crate::basic::serv::iam_account_serv::IamAccountServ;
+use crate::basic::serv::iam_app_serv::IamAppServ;
 use crate::basic::serv::iam_key_cache_serv::IamIdentCacheServ;
 use crate::basic::serv::iam_rel_serv::IamRelServ;
 use crate::iam_config::{IamBasicConfigApi, IamBasicInfoManager, IamConfig};
@@ -240,6 +241,13 @@ impl RbumItemCrudOperation<iam_role::ActiveModel, IamRoleAddReq, IamRoleModifyRe
         {
             return Err(funs.err().conflict(&Self::get_obj_name(), "delete", "role is not private", "409-iam-delete-role-conflict"));
         }
+        let sub_role = Self::find_id_items(&IamRoleFilterReq{
+            extend_role_id: Some(id.to_string()),
+            ..Default::default()
+        },None,None,funs,ctx).await?;
+        for role_id in sub_role {
+            Self::delete_item_with_all_rels(&role_id,funs,ctx).await?;
+        }
         Ok(None)
     }
 
@@ -341,6 +349,7 @@ impl IamRoleServ {
                 },
                 kind: Some(kind.clone()),
                 in_embed: Some(true),
+                in_base: Some(true),
                 ..Default::default()
             },
             None,
@@ -374,6 +383,50 @@ impl IamRoleServ {
         Ok(())
     }
 
+    pub async fn add_app_copy_role_agg(app_id: &str,  funs: &TardisFunsInst, ctx: &TardisContext)-> TardisResult<()>{
+        Self::copy_role_agg(app_id, &IamRoleKind::App, funs, ctx).await?;
+        let tenant_app_roles = Self::find_detail_items(
+            &IamRoleFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                kind: Some(IamRoleKind::App),
+                in_embed: Some(false),
+                in_base: Some(false),
+                ..Default::default()
+            },
+            None,
+            None,
+            funs,
+            ctx,
+        )
+            .await?;
+        for app_role in tenant_app_roles {
+            Self::add_role_agg(
+                &mut IamRoleAggAddReq {
+                    role: IamRoleAddReq {
+                        code: Some(TrimString::from(format!("{}:{}", app_id, app_role.code))),
+                        name: TrimString::from(app_role.name),
+                        icon: Some(app_role.icon),
+                        sort: Some(app_role.sort),
+                        kind: Some(app_role.kind),
+                        scope_level: Some(RbumScopeLevelKind::Private),
+                        in_embed: Some(app_role.in_embed),
+                        extend_role_id: Some(app_role.id),
+                        disabled: Some(app_role.disabled),
+                        in_base: Some(false),
+                    },
+                    res_ids: None,
+                },
+                funs,
+                ctx,
+            )
+                .await?;
+        }
+        Ok(())
+    }
+
     pub async fn get_embed_subrole_id(extend_role_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
         let scope_level = get_scope_level_by_context(ctx)?;
         info!(
@@ -396,6 +449,49 @@ impl IamRoleServ {
             return Ok(base_role.id);
         }
         Err(funs.err().not_found(&Self::get_obj_name(), "get_embed_subrole_id", "role not found", "404-iam-role-not-found"))
+    }
+
+    /// 租户添加应用角色
+    pub async fn tenant_add_app_role_agg(add_req: &mut IamRoleAggAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
+        add_req.role.scope_level = Some(RbumScopeLevelKind::Private);
+        let app_role_id = Self::add_role_agg(add_req,funs,ctx).await?;
+        let app_ids = IamAppServ::find_id_items(&IamAppFilterReq {
+            basic: RbumBasicFilterReq{
+                with_sub_own_paths:true,
+                ..Default::default()
+            },
+            ..Default::default()
+        }, None, None, funs, ctx).await?;
+        let app_role = Self::get_item(&app_role_id,&IamRoleFilterReq {
+            basic: RbumBasicFilterReq{
+                with_sub_own_paths:true,
+                ..Default::default()
+            },
+            ..Default::default()
+        }, funs, ctx).await?;
+        for app_id in app_ids {
+            Self::add_role_agg(
+                &mut IamRoleAggAddReq {
+                    role: IamRoleAddReq {
+                        code: Some(TrimString::from(format!("{}:{}", app_id, app_role.code))),
+                        name: TrimString::from(app_role.name.clone()),
+                        icon: Some(app_role.icon.clone()),
+                        sort: Some(app_role.sort),
+                        kind: Some(app_role.kind.clone()),
+                        scope_level: Some(RbumScopeLevelKind::Private),
+                        in_embed: Some(app_role.in_embed),
+                        extend_role_id: Some(app_role_id.clone()),
+                        disabled: Some(app_role.disabled),
+                        in_base: Some(false),
+                    },
+                    res_ids: None,
+                },
+                funs,
+                ctx,
+            )
+                .await?;
+        }
+        Ok(app_role_id)
     }
 
     pub async fn add_role_agg(add_req: &mut IamRoleAggAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
