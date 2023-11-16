@@ -395,6 +395,7 @@ impl IamRoleServ {
 
     pub async fn add_app_copy_role_agg(app_id: &str,  funs: &TardisFunsInst, ctx: &TardisContext)-> TardisResult<()>{
         Self::copy_role_agg(app_id, &IamRoleKind::App, funs, ctx).await?;
+        let tenant_ctx = IamCertServ::use_sys_or_tenant_ctx_unsafe(ctx.clone())?;
         let tenant_app_roles = Self::find_detail_items(
             &IamRoleFilterReq {
                 basic: RbumBasicFilterReq {
@@ -409,7 +410,7 @@ impl IamRoleServ {
             None,
             None,
             funs,
-            ctx,
+            &tenant_ctx,
         )
             .await?;
         for app_role in tenant_app_roles {
