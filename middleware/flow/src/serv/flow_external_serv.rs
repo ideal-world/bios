@@ -13,7 +13,7 @@ use crate::{
             FlowExternalFetchRelObjResp, FlowExternalKind, FlowExternalModifyFieldResp, FlowExternalNotifyChangesResp, FlowExternalParams, FlowExternalQueryFieldResp,
             FlowExternalReq, FlowExternalResp,
         },
-        flow_state_dto::FlowSysStateKind,
+        flow_state_dto::FlowSysStateKind, flow_transition_dto::TagRelKind,
     },
     flow_config::FlowConfig,
     flow_constants,
@@ -26,7 +26,7 @@ impl FlowExternalServ {
         tag: &str,
         inst_id: &str,
         rel_business_obj_id: &str,
-        rel_tags: Vec<String>,
+        rel_tags: Vec<(String, Option<TagRelKind>)>,
         ctx: &TardisContext,
         funs: &TardisFunsInst,
     ) -> TardisResult<FlowExternalFetchRelObjResp> {
@@ -39,8 +39,9 @@ impl FlowExternalServ {
             curr_bus_obj_id: rel_business_obj_id.to_string(),
             params: rel_tags
                 .into_iter()
-                .map(|tag| FlowExternalParams {
+                .map(|(tag, kind)| FlowExternalParams {
                     rel_tag: Some(tag),
+                    rel_kind: kind.map(String::from),
                     var_id: None,
                     var_name: None,
                     value: None,
