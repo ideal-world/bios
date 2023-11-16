@@ -399,7 +399,6 @@ impl IamRoleServ {
         let tenant_app_roles = Self::find_detail_items(
             &IamRoleFilterReq {
                 basic: RbumBasicFilterReq {
-                    with_sub_own_paths: true,
                     ..Default::default()
                 },
                 kind: Some(IamRoleKind::App),
