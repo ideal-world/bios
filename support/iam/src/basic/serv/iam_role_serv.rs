@@ -470,6 +470,7 @@ impl IamRoleServ {
             ..Default::default()
         }, funs, ctx).await?;
         for app_id in app_ids {
+            let app_ctx = IamCertServ::try_use_app_ctx(ctx.clone(),Some(app_id.clone()))?;
             Self::add_role_agg(
                 &mut IamRoleAggAddReq {
                     role: IamRoleAddReq {
@@ -487,7 +488,7 @@ impl IamRoleServ {
                     res_ids: None,
                 },
                 funs,
-                ctx,
+                &app_ctx,
             )
                 .await?;
         }
