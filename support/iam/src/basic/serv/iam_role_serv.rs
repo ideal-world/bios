@@ -245,12 +245,13 @@ impl RbumItemCrudOperation<iam_role::ActiveModel, IamRoleAddReq, IamRoleModifyRe
             extend_role_id: Some(id.to_string()),
             ..Default::default()
         },None,None,funs,ctx).await?;
+        let ctx_clone = ctx.clone();
         ctx.add_async_task(Box::new(|| {
             Box::pin(async move {
                 let task_handle = tokio::spawn(async move {
                     let funs = iam_constants::get_tardis_inst();
                     for role_id in sub_role {
-                        Self::delete_item_with_all_rels(&role_id, &funs, ctx).await?;
+                        let _ = Self::delete_item_with_all_rels(&role_id, &funs, &ctx_clone).await;
                     }
                 });
                 task_handle.await.unwrap();
