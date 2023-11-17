@@ -75,13 +75,13 @@ impl IamCiRoleApi {
     ) -> TardisApiResult<Option<String>> {
         add_remote_ip(request, &ctx.0).await?;
         let ctx = ctx.0;
-        let apps_split: Vec<&str> = app_ids.0.split(',').collect::<Vec<_>>();
-        let account_split: Vec<&str> = account_ids.0.split(',').collect::<Vec<_>>();
         let ctx_clone = ctx.clone();
         ctx.add_async_task(Box::new(|| {
             Box::pin(async move {
                 let task_handle = tokio::spawn(async move {
                     let funs = iam_constants::get_tardis_inst();
+                    let apps_split: Vec<&str> = app_ids.0.split(',').collect::<Vec<_>>();
+                    let account_split: Vec<&str> = account_ids.0.split(',').collect::<Vec<_>>();
                     for app_id in apps_split {
                         let mock_app_ctx = IamCertServ::try_use_app_ctx(ctx_clone.clone(), Some(app_id.to_string())).unwrap_or(ctx_clone.clone());
                         for account_id in account_split.clone() {
