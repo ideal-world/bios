@@ -176,10 +176,10 @@ impl PluginApiServ {
         let resp = Self::find_one_detail_item(
             &PluginApiFilterReq {
                 basic: RbumBasicFilterReq {
-                    code: Some(code.to_string()),
                     with_sub_own_paths: true,
                     ..Default::default()
                 },
+                code: Some(code.to_string()),
                 ..Default::default()
             },
             funs,
