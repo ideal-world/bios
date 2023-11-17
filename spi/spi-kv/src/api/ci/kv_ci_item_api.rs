@@ -1,5 +1,4 @@
 use tardis::web::context_extractor::TardisContextExtractor;
-
 use tardis::web::poem_openapi;
 use tardis::web::poem_openapi::param::Query;
 use tardis::web::poem_openapi::payload::Json;
@@ -106,9 +105,9 @@ impl KvCiItemApi {
         TardisResp::ok(Void {})
     }
 
-    /// Find Tags By key prefix
+    /// Page Tags By key prefix
     #[oai(path = "/scene/tags", method = "get")]
-    async fn find_tags(
+    async fn page_tags(
         &self,
         key_prefix: Query<String>,
         page_number: Query<u32>,
@@ -116,7 +115,15 @@ impl KvCiItemApi {
         ctx: TardisContextExtractor,
     ) -> TardisApiResult<TardisPage<KvTagFindResp>> {
         let funs = crate::get_tardis_inst();
-        let resp = kv_item_serv::find_tags(key_prefix.0, page_number.0, page_size.0, &funs, &ctx.0).await?;
+        let resp = kv_item_serv::page_tags(key_prefix.0, page_number.0, page_size.0, &funs, &ctx.0).await?;
+        TardisResp::ok(resp)
+    }
+
+    /// Find Tags By
+    #[oai(path = "/tags", method = "get")]
+    async fn find_tags(&self, keys: Query<Vec<String>>, extract: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<Vec<KvTagFindResp>> {
+        let funs = crate::get_tardis_inst();
+        let resp = kv_item_serv::find_tags(keys.0, extract.0, &funs, &ctx.0).await?;
         TardisResp::ok(resp)
     }
 }
