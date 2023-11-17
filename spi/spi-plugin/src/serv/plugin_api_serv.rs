@@ -154,6 +154,21 @@ impl PluginApiServ {
         }
     }
 
+    pub async fn delete_by_kind(kind_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let api_ids = Self::find_id_items(&PluginApiFilterReq {
+            basic: RbumBasicFilterReq {
+                with_sub_own_paths: true,
+                rbum_kind_id: Some(kind_id.to_string()),
+                ..Default::default()
+            },
+            ..Default::default()
+        },None,None,funs,ctx).await?;
+        for api_id in api_ids {
+            Self::delete_item(&api_id, funs, ctx).await?;
+        }
+        Ok(())
+    }
+
     pub async fn get_by_code(rbum_kind_id: &str, code: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<PluginApiDetailResp>> {
         let resp = Self::find_one_detail_item(
             &PluginApiFilterReq {
