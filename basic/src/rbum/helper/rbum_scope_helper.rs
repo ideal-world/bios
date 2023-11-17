@@ -99,6 +99,9 @@ pub fn check_scope(record_own_paths: &str, record_scope_level: Option<i16>, filt
         return false;
     }
     if let Some(record_scope_level) = record_scope_level {
+        if record_scope_level == 0 {
+            return true;
+        }
         if let Some(p1) = get_pre_paths(1, filter_own_paths) {
             if record_scope_level == 1 {
                 return record_own_paths.is_empty() || record_own_paths.contains(&p1);
