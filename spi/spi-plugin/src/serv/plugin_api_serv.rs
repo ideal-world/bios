@@ -92,8 +92,9 @@ impl RbumItemCrudOperation<plugin_api::ActiveModel, PluginApiAddOrModifyReq, Plu
         }))
     }
 
-    async fn package_ext_modify(_: &str, modify_req: &PluginApiAddOrModifyReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<Option<plugin_api::ActiveModel>> {
+    async fn package_ext_modify(id: &str, modify_req: &PluginApiAddOrModifyReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<Option<plugin_api::ActiveModel>> {
         let plugin_api = plugin_api::ActiveModel {
+            id:Set(id.to_string()),
             callback: Set(modify_req.callback.clone()),
             content_type: Set(modify_req.content_type.clone()),
             timeout: Set(modify_req.timeout),
