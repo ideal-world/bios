@@ -121,9 +121,9 @@ impl KvCiItemApi {
 
     /// Find Tags By
     #[oai(path = "/tags", method = "get")]
-    async fn find_tags(&self, keys: Query<Vec<String>>, extract: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<Vec<KvTagFindResp>> {
+    async fn find_tags(&self, keys: Query<Vec<String>>, ctx: TardisContextExtractor) -> TardisApiResult<Vec<KvTagFindResp>> {
         let funs = crate::get_tardis_inst();
-        let resp = kv_item_serv::find_tags(keys.0, extract.0, &funs, &ctx.0).await?;
+        let resp = kv_item_serv::find_tags(keys.0, &funs, &ctx.0).await?;
         TardisResp::ok(resp)
     }
 }

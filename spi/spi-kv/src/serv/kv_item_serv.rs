@@ -82,7 +82,7 @@ pub async fn add_or_modify_tag(add_or_modify_req: &mut KvTagAddOrModifyReq, funs
     }
 }
 
-pub async fn find_tags(keys: Vec<String>, extract: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<KvTagFindResp>> {
+pub async fn find_tags(keys: Vec<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<KvTagFindResp>> {
     let keys= keys.iter().map(|r|format!("{}{}", kv_constants::KEY_PREFIX_BY_TAG, r)).collect::<Vec<_>>();
     let inst = funs.init(ctx, true, kv_initializer::init_fun).await?;
     match inst.kind_code() {
@@ -90,7 +90,7 @@ pub async fn find_tags(keys: Vec<String>, extract: Option<String>, funs: &Tardis
         spi_constants::SPI_PG_KIND_CODE => {
             pg::kv_pg_item_serv::find_items(
                 keys,
-                extract,
+                None,
                 funs,
                 ctx,
                 &inst,
