@@ -1,9 +1,11 @@
-use bios_basic::process::task_processor::TaskProcessor;
 use tardis::web::context_extractor::TardisContextExtractor;
+use tardis::web::poem::Request;
 use tardis::web::poem_openapi;
 use tardis::web::poem_openapi::{param::Path, param::Query, payload::Json};
 use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 
+use bios_basic::helper::request_helper::add_remote_ip;
+use bios_basic::process::task_processor::TaskProcessor;
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumItemRelFilterReq};
 use bios_basic::rbum::dto::rbum_rel_dto::RbumRelBoneResp;
 use bios_basic::rbum::rbum_enumeration::RbumRelFromKind;
@@ -17,8 +19,7 @@ use crate::basic::serv::iam_role_serv::IamRoleServ;
 use crate::iam_constants;
 use crate::iam_constants::RBUM_SCOPE_LEVEL_APP;
 use crate::iam_enumeration::{IamRelKind, IamRoleKind};
-use bios_basic::helper::request_helper::add_remote_ip;
-use tardis::web::poem::Request;
+
 #[derive(Clone, Default)]
 pub struct IamCaRoleApi;
 
@@ -124,14 +125,41 @@ impl IamCaRoleApi {
 
     /// Delete Role By Role Id
     #[oai(path = "/:id", method = "delete")]
-    async fn delete(&self, id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
+    async fn delete(&self, id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Option<String>> {
         add_remote_ip(request, &ctx.0).await?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
+        let app_role = IamRoleServ::get_item(&id.0,&IamRoleFilterReq{
+            basic: RbumBasicFilterReq {
+                with_sub_own_paths: true,
+                ..Default::default()
+            },
+            ..Default::default()
+        },&funs,&ctx.0).await?;
+        if app_role.kind != IamRoleKind::App {
+            Err(funs.err().conflict(
+                &IamRoleServ::get_obj_name(),
+                "delete",
+                "This role is not an app role, cannot be deleted",
+                "409-role-is-not-app",
+            ))?;
+        }
+        if app_role.extend_role_id != "".to_string() {
+            Err(funs.err().conflict(
+                &IamRoleServ::get_obj_name(),
+                "delete",
+                "This role is extend role, cannot be deleted",
+                "409-role-is-extend",
+            ))?;
+        }
         IamRoleServ::delete_item_with_all_rels(&id.0, &funs, &ctx.0).await?;
         funs.commit().await?;
         ctx.0.execute_task().await?;
-        TardisResp::ok(Void {})
+        if let Some(task_id) = TaskProcessor::get_task_id_with_ctx(&ctx.0).await? {
+            TardisResp::accepted(Some(task_id))
+        } else {
+            TardisResp::ok(None)
+        }
     }
 
     /// Add Role Rel Account

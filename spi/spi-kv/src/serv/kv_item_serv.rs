@@ -1,18 +1,20 @@
-use bios_basic::spi::spi_constants;
-use bios_basic::spi::spi_funs::SpiBsInstExtractor;
-use bios_basic::spi_dispatch_service;
+use tardis::{TardisFuns, TardisFunsInst};
 use tardis::basic::dto::TardisContext;
 use tardis::basic::result::TardisResult;
 use tardis::serde_json::json;
 use tardis::web::web_resp::TardisPage;
-use tardis::{TardisFuns, TardisFunsInst};
 
+use bios_basic::spi::spi_constants;
+use bios_basic::spi::spi_funs::SpiBsInstExtractor;
+use bios_basic::spi_dispatch_service;
+
+use crate::{kv_constants, kv_initializer};
 use crate::dto::kv_item_dto::{
     KvItemAddOrModifyReq, KvItemDetailResp, KvItemMatchReq, KvItemSummaryResp, KvNameAddOrModifyReq, KvNameFindResp, KvTagAddOrModifyReq, KvTagFindResp,
 };
-use crate::{kv_constants, kv_initializer};
 
 use super::pg;
+
 spi_dispatch_service! {
     @mgr: true,
     @init: kv_initializer::init_fun,
@@ -80,7 +82,39 @@ pub async fn add_or_modify_tag(add_or_modify_req: &mut KvTagAddOrModifyReq, funs
     }
 }
 
-pub async fn find_tags(key_prefix: String, page_number: u32, page_size: u16, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<TardisPage<KvTagFindResp>> {
+pub async fn find_tags(keys: Vec<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<KvTagFindResp>> {
+    let keys= keys.iter().map(|r|format!("{}{}", kv_constants::KEY_PREFIX_BY_TAG, r)).collect::<Vec<_>>();
+    let inst = funs.init(ctx, true, kv_initializer::init_fun).await?;
+    match inst.kind_code() {
+        #[cfg(feature = "spi-pg")]
+        spi_constants::SPI_PG_KIND_CODE => {
+            pg::kv_pg_item_serv::find_items(
+                keys,
+                None,
+                funs,
+                ctx,
+                &inst,
+            )
+            .await
+        }
+        kind_code => Err(funs.bs_not_implemented(kind_code)),
+    }
+    .and_then(|items| {
+        Ok(items
+            .into_iter()
+            .map(|item| {
+                Ok(KvTagFindResp {
+                    key: item.key.strip_prefix(kv_constants::KEY_PREFIX_BY_TAG).unwrap_or("").to_string(),
+                    items: TardisFuns::json.json_to_obj(item.value)?,
+                    create_time: item.create_time,
+                    update_time: item.update_time,
+                })
+            })
+            .collect::<TardisResult<Vec<_>>>()?)
+    })
+}
+
+pub async fn page_tags(key_prefix: String, page_number: u32, page_size: u16, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<TardisPage<KvTagFindResp>> {
     let key_prefix = format!("{}{}", kv_constants::KEY_PREFIX_BY_TAG, key_prefix);
     let inst = funs.init(ctx, true, kv_initializer::init_fun).await?;
     match inst.kind_code() {

@@ -469,7 +469,7 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
                         } else if ext_item.op == BasicQueryOpKind::IsNotNull {
                             sql_and_where.push(format!("ext ->> '{}' is not null", ext_item.field));
                         } else if ext_item.op == BasicQueryOpKind::IsNullOrEmpty {
-                            sql_and_where.push(format!("(ext ->> '{}' is null or ext ->> '{}' = '' or jsonb_array_length((ext->> '{}')::jsonb) is null or jsonb_array_length((ext->> '{}')::jsonb) = 0)", ext_item.field, ext_item.field, ext_item.field, ext_item.field));
+                            sql_and_where.push(format!("(ext ->> '{}' is null or ext ->> '{}' = '' or (jsonb_typeof(ext -> '{}') = 'array' and (jsonb_array_length(ext-> '{}') is null or jsonb_array_length(ext-> '{}') = 0)))", ext_item.field, ext_item.field, ext_item.field, ext_item.field, ext_item.field));
                         } else {
                             if value.len() > 1 {
                                 return err_not_found(ext_item);
@@ -680,7 +680,6 @@ pub async fn query_metrics(query_req: &SearchQueryMetricsReq, funs: &TardisFunsI
     if let Some(q) = &query_req.query.q {
         let q = q
             .chars()
-            // Fixed like `syntax error in tsquery: "吴 林"`
             .filter(|c| !c.is_whitespace())
             .map(|c| match c {
                 '｜' => '|',
@@ -1181,11 +1180,12 @@ pub async fn query_metrics(query_req: &SearchQueryMetricsReq, funs: &TardisFunsI
         sql_part_outer_select_infos.push((format!("COALESCE({},'\"empty\"')", column_name_with_fun), alias_name, show_name, true));
     }
     for select in &query_req.select {
-        let select_column = if select.in_ext.unwrap_or(true) {
-            format!("_.ext ->> '{}'", &select.code)
-        } else {
-            format!("_.{}", &select.code)
-        };
+        // let select_column = if select.in_ext.unwrap_or(true) {
+        //     format!("_.ext ->> '{}'", &select.code)
+        // } else {
+        //     format!("_.{}", &select.code)
+        // };
+        let select_column = format!("_.{}", &select.code);
         let column_name_with_fun = select.data_type.to_pg_select(&select_column, &select.fun);
         let alias_name = format!(
             "{}{}{FUNCTION_SUFFIX_FLAG}{}",
