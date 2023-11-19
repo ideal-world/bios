@@ -2,7 +2,16 @@
 
 members = [
     "basic",
-    "spi/*",
+    # "spi/*",
+    "spi/spi-cache",
+    "spi/spi-search",
+    "spi/spi-graph",
+    "spi/spi-kv",
+    "spi/spi-log",
+    "spi/spi-object",
+    "spi/spi-plugin",
+    "spi/spi-stats",
+    "spi/spi-reldb",
     "gateway/test",
     "gateway/spacegate-lib",
     "middleware/*",
