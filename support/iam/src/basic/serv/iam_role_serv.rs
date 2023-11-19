@@ -259,7 +259,6 @@ impl RbumItemCrudOperation<iam_role::ActiveModel, IamRoleAddReq, IamRoleModifyRe
                     for role_id in sub_role {
                         let _ = Self::delete_item_with_all_rels(&role_id, &funs, &ctx_clone).await;
                     }
-                    let _ = ctx_clone.execute_task().await;
                 });
                 task_handle.await.unwrap();
                 Ok(())
