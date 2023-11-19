@@ -242,6 +242,10 @@ impl RbumItemCrudOperation<iam_role::ActiveModel, IamRoleAddReq, IamRoleModifyRe
             return Err(funs.err().conflict(&Self::get_obj_name(), "delete", "role is not private", "409-iam-delete-role-conflict"));
         }
         let sub_role = Self::find_id_items(&IamRoleFilterReq{
+            basic: RbumBasicFilterReq{
+                with_sub_own_paths: true,
+                ..Default::default()
+            },
             extend_role_id: Some(id.to_string()),
             ..Default::default()
         },None,None,funs,ctx).await?;
