@@ -49,7 +49,6 @@ pub struct IamAccountDetailAggResp {
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct IamCertDecodeRequest {
-    pub key: String,
     pub codes: HashSet<String>,
 }
 

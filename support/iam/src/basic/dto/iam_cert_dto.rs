@@ -219,6 +219,5 @@ pub struct IamOauth2AkSkResp {
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct IamCertDecodeRequest {
-    pub key: String,
     pub codes: HashSet<String>,
 }

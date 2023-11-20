@@ -1,7 +1,6 @@
 use bios_basic::helper::request_helper::{add_ip, get_remote_ip};
 use bios_basic::process::task_processor::TaskProcessor;
 use bios_basic::rbum::dto::rbum_rel_agg_dto::RbumRelAggAddReq;
-use bios_basic::rbum::helper::rbum_encrypt_helper::decode_item;
 use bios_basic::rbum::serv::rbum_rel_serv::RbumRelServ;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
@@ -685,7 +684,7 @@ impl IamCertServ {
         .await?;
         if let Some(ext_cert) = ext_cert {
             let now_sk = RbumCertServ::show_sk(ext_cert.id.as_str(), &RbumCertFilterReq::default(), funs, ctx).await?;
-            let encoded_sk = encode_sk(&ext_cert.id, now_sk, ext_cert.sk_invisible, funs, ctx)?;
+            let encoded_sk = encode_cert(&ext_cert.id, now_sk, ext_cert.sk_invisible, funs, ctx)?;
             Ok(RbumCertSummaryWithSkResp {
                 id: ext_cert.id,
                 ak: ext_cert.ak,
@@ -758,7 +757,7 @@ impl IamCertServ {
         .await?;
         if let Some(ext_cert) = ext_cert {
             let now_sk = RbumCertServ::show_sk(ext_cert.id.as_str(), &RbumCertFilterReq::default(), funs, &mock_ctx).await?;
-            let encoded_sk = encode_sk(&ext_cert.id, now_sk, ext_cert.sk_invisible, funs, &mock_ctx)?;
+            let encoded_sk = encode_cert(&ext_cert.id, now_sk, ext_cert.sk_invisible, funs, &mock_ctx)?;
 
             Ok(RbumCertSummaryWithSkResp {
                 id: ext_cert.id,
@@ -1459,25 +1458,49 @@ impl IamCertServ {
         result
     }
 
-    pub async fn batch_decode_cert(key: String, codes: HashSet<String>, funs: &TardisFunsInst) -> TardisResult<HashMap<String, String>> {
-        use tardis::crypto::crypto_base64::TardisCryptoBase64;
-        let config_key = TardisCryptoBase64.decode(key)?;
-        let mut key = [0; 32];
-        key.copy_from_slice(&config_key);
+    pub async fn batch_decode_cert(codes: HashSet<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<HashMap<String, String>> {
         let batch_result = join_all(codes.into_iter().filter_map(|code| {
-            decode_item(&code, &key)
-                .map(|(id, own_paths)| async move {
-                    (
-                        code,
-                        RbumCertServ::show_sk(&id, &RbumCertFilterReq::default(), funs, &TardisContext { own_paths, ..Default::default() }).await,
+            if let Some((id, "sk")) = code.split_once("/") {
+                let id = id.to_owned();
+                Some(async move {
+                    let Ok(rels) = IamRelServ::find_rels(
+                        &RbumRelFilterReq {
+                            basic: RbumBasicFilterReq {
+                                own_paths: Some("".to_string()),
+                                with_sub_own_paths: true,
+                                ignore_scope: true,
+                                ..Default::default()
+                            },
+                            tag: Some(IamRelKind::IamCertRel.to_string()),
+                            from_rbum_id: Some(id.to_string()),
+                            to_own_paths: Some(ctx.own_paths.clone()),
+                            ..Default::default()
+                        },
+                        None,
+                        None,
+                        funs,
+                        ctx,
                     )
+                    .await else {
+                        return None;
+                    };
+                    let mut mock_ctx = TardisContext { ..ctx.clone() };
+                    if let Some(rel) = rels.first() {
+                        mock_ctx.own_paths = rel.rel.own_paths.clone()
+                    }
+                    let Ok(sk) = RbumCertServ::show_sk(&id, &RbumCertFilterReq::default(), funs, &mock_ctx).await else {
+                        return None;
+                    };
+                    Some((id, sk))
                 })
-                .ok()
+            } else {
+                None
+            }
         }))
         .await
         .into_iter()
-        .fold(HashMap::default(), |mut map, (id, result)| {
-            if let Ok(sk) = result {
+        .fold(HashMap::default(), |mut map, output| {
+            if let Some((id, sk)) = output {
                 map.insert(id, sk);
             }
             map
@@ -1486,20 +1509,10 @@ impl IamCertServ {
     }
 }
 
-fn get_cert_placeholder_key(funs: &TardisFunsInst) -> TardisResult<[u8; 32]> {
-    use tardis::crypto::crypto_base64::TardisCryptoBase64;
-    let config = funs.conf::<IamConfig>();
-    let config_key = TardisCryptoBase64.decode(config.cert_encode_key.as_str())?;
-    let mut key = [0; 32];
-    key.copy_from_slice(&config_key);
-    Ok(key)
-}
-fn encode_sk(id: &str, sk: String, visible: bool, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
-    if visible {
-        let key = get_cert_placeholder_key(funs)?;
-        use bios_basic::rbum::helper::rbum_encrypt_helper::*;
-        let encoded_sk = encode_item(id, &ctx.own_paths, &key)?;
-        Ok(encoded_sk)
+fn encode_cert(id: &str, sk: String, invisible: bool, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
+    if invisible {
+        let key = format!("{id}/sk");
+        Ok(key)
     } else {
         Ok(sk)
     }

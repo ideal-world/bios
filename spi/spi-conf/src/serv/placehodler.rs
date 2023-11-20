@@ -3,6 +3,8 @@
 use std::collections::{HashMap, HashSet};
 use std::net::IpAddr;
 
+use bios_basic::rbum::helper::rbum_scope_helper::get_scope_level_by_context;
+use bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind;
 use bios_sdk_invoke::clients::iam_client::{IamCertDecodeRequest, IamClient};
 use tardis::basic::dto::TardisContext;
 use tardis::basic::result::TardisResult;
@@ -62,8 +64,7 @@ async fn get_kvmap(codes: HashSet<&str>, config: &ConfConfig, funs: &tardis::Tar
     let url = config.iam_client.base_url.as_str();
     let client = IamClient::new("", funs, ctx, url);
     let codes = codes.into_iter().map(|s| s.to_string()).collect::<HashSet<String>>();
-    let key = config.iam_client.cert_encode_key.clone();
-    let req = IamCertDecodeRequest { key, codes };
+    let req = IamCertDecodeRequest { codes };
     let response = client.batch_decode_cert(&req).await?;
     Ok(response)
 }
@@ -75,7 +76,8 @@ pub fn has_placeholder_auth(source_addr: IpAddr, funs: &tardis::TardisFunsInst) 
 
 pub async fn render_content_for_ip(content: String, source_addr: IpAddr, funs: &tardis::TardisFunsInst, ctx: &tardis::basic::dto::TardisContext) -> TardisResult<String> {
     let cfg = funs.conf::<ConfConfig>();
-    if has_placeholder_auth(source_addr, funs) {
+    let level = get_scope_level_by_context(ctx)?;
+    if has_placeholder_auth(source_addr, funs) && level == RbumScopeLevelKind::Root {
         rander_content(content, cfg.as_ref(), funs, ctx).await
     } else {
         Ok(content)
