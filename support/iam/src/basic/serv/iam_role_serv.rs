@@ -241,17 +241,16 @@ impl RbumItemCrudOperation<iam_role::ActiveModel, IamRoleAddReq, IamRoleModifyRe
         {
             return Err(funs.err().conflict(&Self::get_obj_name(), "delete", "role is not private", "409-iam-delete-role-conflict"));
         }
-        let sub_role = Self::find_id_items(
-            &IamRoleFilterReq {
-                extend_role_id: Some(id.to_string()),
+        let sub_role = Self::find_id_items(&IamRoleFilterReq{
+            basic: RbumBasicFilterReq{
+                with_sub_own_paths: true,
+                ignore_scope: true,
+                own_paths: Some("".to_string()),
                 ..Default::default()
             },
-            None,
-            None,
-            funs,
-            ctx,
-        )
-        .await?;
+            extend_role_id: Some(id.to_string()),
+            ..Default::default()
+        },None,None,funs,ctx).await?;
         let ctx_clone = ctx.clone();
         ctx.add_async_task(Box::new(|| {
             Box::pin(async move {
