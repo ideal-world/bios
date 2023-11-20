@@ -129,13 +129,19 @@ impl IamCaRoleApi {
         add_remote_ip(request, &ctx.0).await?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        let app_role = IamRoleServ::get_item(&id.0,&IamRoleFilterReq{
-            basic: RbumBasicFilterReq {
-                with_sub_own_paths: true,
+        let app_role = IamRoleServ::get_item(
+            &id.0,
+            &IamRoleFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
                 ..Default::default()
             },
-            ..Default::default()
-        },&funs,&ctx.0).await?;
+            &funs,
+            &ctx.0,
+        )
+        .await?;
         if app_role.kind != IamRoleKind::App {
             Err(funs.err().conflict(
                 &IamRoleServ::get_obj_name(),
@@ -145,12 +151,7 @@ impl IamCaRoleApi {
             ))?;
         }
         if app_role.extend_role_id != "".to_string() {
-            Err(funs.err().conflict(
-                &IamRoleServ::get_obj_name(),
-                "delete",
-                "This role is extend role, cannot be deleted",
-                "409-role-is-extend",
-            ))?;
+            Err(funs.err().conflict(&IamRoleServ::get_obj_name(), "delete", "This role is extend role, cannot be deleted", "409-role-is-extend"))?;
         }
         IamRoleServ::delete_item_with_all_rels(&id.0, &funs, &ctx.0).await?;
         funs.commit().await?;
