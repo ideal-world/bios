@@ -244,6 +244,7 @@ pub async fn test(flow_client: &mut TestHttpClient) -> TardisResult<()> {
                             is_open: true,
                             content: Some("再次确认该操作生效".to_string()),
                         }),
+                        is_notify: None,
                         action_by_front_changes: None,
                         sort: None,
                     },
@@ -294,6 +295,7 @@ pub async fn test(flow_client: &mut TestHttpClient) -> TardisResult<()> {
                             },
                         ]),
                         double_check: None,
+                        is_notify: None,
                         sort: None,
                     },
                     FlowTransitionModifyReq {
@@ -316,6 +318,7 @@ pub async fn test(flow_client: &mut TestHttpClient) -> TardisResult<()> {
                         action_by_post_changes: None,
                         action_by_front_changes: None,
                         double_check: None,
+                        is_notify: None,
                         sort: None,
                     },
                 ]),
@@ -378,6 +381,7 @@ pub async fn test(flow_client: &mut TestHttpClient) -> TardisResult<()> {
                         changed_kind: None,
                     }]),
                     double_check: None,
+                    is_notify: None,
                     sort: None,
                 }]),
                 ..Default::default()
@@ -422,6 +426,7 @@ pub async fn test(flow_client: &mut TestHttpClient) -> TardisResult<()> {
                         changed_kind: None,
                     }]),
                     double_check: None,
+                    is_notify: None,
                     sort: None,
                 }]),
                 ..Default::default()

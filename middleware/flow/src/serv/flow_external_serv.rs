@@ -13,7 +13,8 @@ use crate::{
             FlowExternalFetchRelObjResp, FlowExternalKind, FlowExternalModifyFieldResp, FlowExternalNotifyChangesResp, FlowExternalParams, FlowExternalQueryFieldResp,
             FlowExternalReq, FlowExternalResp,
         },
-        flow_state_dto::FlowSysStateKind, flow_transition_dto::TagRelKind,
+        flow_state_dto::FlowSysStateKind,
+        flow_transition_dto::TagRelKind,
     },
     flow_config::FlowConfig,
     flow_constants,
@@ -45,6 +46,7 @@ impl FlowExternalServ {
                     var_id: None,
                     var_name: None,
                     value: None,
+                    changed_kind: None,
                 })
                 .collect_vec(),
             ..Default::default()

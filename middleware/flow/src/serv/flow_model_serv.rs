@@ -342,6 +342,7 @@ impl FlowModelServ {
                 action_by_post_changes: Some(transition.action_by_post_changes),
                 action_by_front_changes: Some(transition.action_by_front_changes),
                 double_check: transition.double_check,
+                is_notify: Some(true),
                 sort: transition.sort,
             });
         }
@@ -383,6 +384,7 @@ impl FlowModelServ {
 
                 vars_collect: Set(req.vars_collect.as_ref().map(|vars| TardisFuns::json.obj_to_json(vars).unwrap()).unwrap_or(json!([]))),
                 double_check: Set(TardisFuns::json.obj_to_json(&req.double_check).unwrap_or(json!(FlowTransitionDoubleCheckInfo::default()))),
+                is_notify: Set(req.is_notify.unwrap_or(true)),
 
                 action_by_pre_callback: Set(req.action_by_pre_callback.as_ref().unwrap_or(&"".to_string()).to_string()),
                 action_by_post_callback: Set(req.action_by_post_callback.as_ref().unwrap_or(&"".to_string()).to_string()),
@@ -511,6 +513,9 @@ impl FlowModelServ {
             if let Some(double_check) = &req.double_check {
                 flow_transition.double_check = Set(TardisFuns::json.obj_to_json(double_check)?);
             }
+            if let Some(is_notify) = &req.is_notify {
+                flow_transition.is_notify = Set(*is_notify);
+            }
             if let Some(sort) = &req.sort {
                 flow_transition.sort = Set(*sort);
             }
@@ -577,6 +582,7 @@ impl FlowModelServ {
                 (flow_transition::Entity, flow_transition::Column::ActionByPostChanges),
                 (flow_transition::Entity, flow_transition::Column::ActionByFrontChanges),
                 (flow_transition::Entity, flow_transition::Column::DoubleCheck),
+                (flow_transition::Entity, flow_transition::Column::IsNotify),
                 (flow_transition::Entity, flow_transition::Column::RelFlowModelId),
                 (flow_transition::Entity, flow_transition::Column::Sort),
             ])
@@ -1148,6 +1154,7 @@ impl FlowModelServ {
                 guard_by_other_conds: None,
                 vars_collect: None,
                 double_check: None,
+                is_notify: None,
                 action_by_pre_callback: None,
                 action_by_post_callback: None,
                 action_by_post_changes: None,

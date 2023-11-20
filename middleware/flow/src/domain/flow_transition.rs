@@ -95,6 +95,8 @@ pub struct Model {
     /// TODO FlowTransitionDoubleCheckInfo
     pub double_check: Json,
 
+    pub is_notify: bool,
+
     pub rel_flow_model_id: String,
 
     pub sort: i64,
