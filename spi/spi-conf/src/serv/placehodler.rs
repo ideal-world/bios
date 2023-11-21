@@ -71,7 +71,7 @@ async fn get_kvmap(codes: HashSet<&str>, config: &ConfConfig, funs: &tardis::Tar
 
 pub fn has_placeholder_auth(source_addr: IpAddr, funs: &tardis::TardisFunsInst) -> bool {
     let cfg = funs.conf::<ConfConfig>();
-    cfg.placeholder_white_list.contains(&source_addr)
+    cfg.placeholder_white_list.iter().any(|net| net.contains(&source_addr))
 }
 
 pub async fn render_content_for_ip(content: String, source_addr: IpAddr, funs: &tardis::TardisFunsInst, ctx: &tardis::basic::dto::TardisContext) -> TardisResult<String> {
