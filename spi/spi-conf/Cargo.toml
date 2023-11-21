@@ -29,7 +29,7 @@ tardis = { workspace = true, features = [
 bios-basic = { path = "../../basic", features = ["default"] }
 lazy_static = { workspace = true }
 jsonwebtoken = "8"
-poem-grpc = "0.2.21"
+poem-grpc = "=0.2.22"
 prost = "0.11.9"
 poem = "1"
 prost-types = "0.11.9"
