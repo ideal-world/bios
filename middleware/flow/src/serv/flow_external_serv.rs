@@ -14,7 +14,7 @@ use crate::{
             FlowExternalReq, FlowExternalResp,
         },
         flow_state_dto::FlowSysStateKind,
-        flow_transition_dto::TagRelKind,
+        flow_transition_dto::{TagRelKind, FlowTransitionActionByVarChangeInfoChangedKind},
     },
     flow_config::FlowConfig,
     flow_constants,
@@ -84,6 +84,18 @@ impl FlowExternalServ {
         if external_url.is_empty() {
             return Ok(FlowExternalModifyFieldResp {});
         }
+
+        // complete changed_kind
+        let params = params.into_iter().map(|mut param| {
+            if param.changed_kind.is_none() {
+                if param.value.clone().unwrap_or_default().to_string().is_empty() {
+                    param.changed_kind = Some(FlowTransitionActionByVarChangeInfoChangedKind::Clean);
+                } else {
+                    param.changed_kind = Some(FlowTransitionActionByVarChangeInfoChangedKind::ChangeContent);
+                }
+            }
+            param
+        }).collect_vec();
 
         let header = Self::headers(None, funs, ctx).await?;
         let body = FlowExternalReq {
