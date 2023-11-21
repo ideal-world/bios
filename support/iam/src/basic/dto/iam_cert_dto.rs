@@ -159,7 +159,7 @@ pub struct IamCertManageAddReq {
     pub conn_uri: Option<String>,
     #[oai(validator(min_length = "2", max_length = "2000"))]
     pub supplier: String,
-    #[oai(validator(min_length = "2", max_length = "2000"))]
+    #[oai(validator(min_length = "2", max_length = "10000"))]
     pub ext: Option<String>,
 }
 
@@ -171,7 +171,7 @@ pub struct IamCertManageModifyReq {
     pub sk: Option<String>,
     #[oai(validator(min_length = "2", max_length = "2000"))]
     pub conn_uri: Option<String>,
-    #[oai(validator(min_length = "2", max_length = "2000"))]
+    #[oai(validator(min_length = "2", max_length = "10000"))]
     pub ext: Option<String>,
 }
 

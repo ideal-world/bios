@@ -122,7 +122,7 @@ impl IamCsRoleApi {
 
     /// Delete Role By Role Id
     #[oai(path = "/:id", method = "delete")]
-    async fn delete(&self, id: Path<String>, tenant_id: Query<Option<String>>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
+    async fn delete(&self, id: Path<String>, tenant_id: Query<Option<String>>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Option<String>> {
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
         add_remote_ip(request, &ctx).await?;
         let mut funs = iam_constants::get_tardis_inst();
@@ -130,7 +130,11 @@ impl IamCsRoleApi {
         IamRoleServ::delete_item_with_all_rels(&id.0, &funs, &ctx).await?;
         funs.commit().await?;
         ctx.execute_task().await?;
-        TardisResp::ok(Void {})
+        if let Some(task_id) = TaskProcessor::get_task_id_with_ctx(&ctx).await? {
+            TardisResp::accepted(Some(task_id))
+        } else {
+            TardisResp::ok(None)
+        }
     }
 
     /// Add Role Rel Account

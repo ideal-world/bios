@@ -37,6 +37,13 @@ impl PluginApiApi {
         TardisResp::ok(Void {})
     }
 
+    #[oai(path = "/kind/:kind_id", method = "delete")]
+    async fn delete_by_kind(&self, kind_id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+        let funs = crate::get_tardis_inst();
+        PluginApiServ::delete_by_kind(&kind_id.0, &funs, &ctx.0).await?;
+        TardisResp::ok(Void {})
+    }
+
     /// Get Plugin Api
     #[oai(path = "/:kind_id/:code", method = "get")]
     async fn get_api_by_code(&self, kind_id: Path<String>, code: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<PluginApiDetailResp> {

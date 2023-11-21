@@ -9,7 +9,7 @@ use tardis::db::sea_orm::sea_query::SelectStatement;
 use tardis::db::sea_orm::*;
 use tardis::log::info;
 use tardis::web::web_resp::TardisPage;
-use tardis::{TardisFuns, TardisFunsInst};
+use tardis::{tokio, TardisFuns, TardisFunsInst};
 
 use bios_basic::helper::request_helper::get_remote_ip;
 use bios_basic::process::task_processor::TaskProcessor;
@@ -243,6 +243,12 @@ impl RbumItemCrudOperation<iam_role::ActiveModel, IamRoleAddReq, IamRoleModifyRe
         }
         let sub_role = Self::find_id_items(
             &IamRoleFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    ignore_scope: true,
+                    own_paths: Some("".to_string()),
+                    ..Default::default()
+                },
                 extend_role_id: Some(id.to_string()),
                 ..Default::default()
             },
@@ -252,9 +258,20 @@ impl RbumItemCrudOperation<iam_role::ActiveModel, IamRoleAddReq, IamRoleModifyRe
             ctx,
         )
         .await?;
-        for role_id in sub_role {
-            Self::delete_item_with_all_rels(&role_id, funs, ctx).await?;
-        }
+        let ctx_clone = ctx.clone();
+        ctx.add_async_task(Box::new(|| {
+            Box::pin(async move {
+                let task_handle = tokio::spawn(async move {
+                    let funs = iam_constants::get_tardis_inst();
+                    for role_id in sub_role {
+                        let _ = Self::delete_item_with_all_rels(&role_id, &funs, &ctx_clone).await;
+                    }
+                });
+                task_handle.await.unwrap();
+                Ok(())
+            })
+        }))
+        .await?;
         Ok(None)
     }
 
@@ -392,12 +409,10 @@ impl IamRoleServ {
 
     pub async fn add_app_copy_role_agg(app_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         Self::copy_role_agg(app_id, &IamRoleKind::App, funs, ctx).await?;
+        let tenant_ctx = IamCertServ::use_sys_or_tenant_ctx_unsafe(ctx.clone())?;
         let tenant_app_roles = Self::find_detail_items(
             &IamRoleFilterReq {
-                basic: RbumBasicFilterReq {
-                    with_sub_own_paths: true,
-                    ..Default::default()
-                },
+                basic: RbumBasicFilterReq { ..Default::default() },
                 kind: Some(IamRoleKind::App),
                 in_embed: Some(false),
                 in_base: Some(false),
@@ -406,7 +421,7 @@ impl IamRoleServ {
             None,
             None,
             funs,
-            ctx,
+            &tenant_ctx,
         )
         .await?;
         for app_role in tenant_app_roles {
