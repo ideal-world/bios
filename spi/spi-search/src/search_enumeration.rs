@@ -320,10 +320,10 @@ pub enum SearchQueryAggFunKind {
 impl SearchQueryAggFunKind {
     pub(crate) fn to_sql(&self, column_name: &str) -> String {
         match self {
-            SearchQueryAggFunKind::Sum => format!("sum({column_name})"),
-            SearchQueryAggFunKind::Avg => format!("avg({column_name})"),
-            SearchQueryAggFunKind::Max => format!("max({column_name})"),
-            SearchQueryAggFunKind::Min => format!("min({column_name})"),
+            SearchQueryAggFunKind::Sum => format!("sum({column_name}::decimal)"),
+            SearchQueryAggFunKind::Avg => format!("avg({column_name}::decimal)"),
+            SearchQueryAggFunKind::Max => format!("max({column_name}::decimal)"),
+            SearchQueryAggFunKind::Min => format!("min({column_name}::decimal)"),
             SearchQueryAggFunKind::Count => format!("count({column_name})"),
         }
     }
