@@ -527,6 +527,9 @@ impl RbumCrudOperation<rbum_cert::ActiveModel, RbumCertAddReq, RbumCertModifyReq
         if let Some(sk) = &modify_req.sk {
             rbum_cert.sk = Set(sk.to_string());
         }
+        if let Some(sk_invisible) = &modify_req.sk_invisible {
+            rbum_cert.sk_invisible = Set(*sk_invisible);
+        }
         if let Some(ext) = &modify_req.ext {
             rbum_cert.ext = Set(ext.to_string());
         }

@@ -165,7 +165,7 @@ pub async fn register(req: RegisterRequest, funs: &TardisFunsInst, ctx: &TardisC
     // add a cert
     let ext = json!({
         "owner": ctx.owner,
-        "owner_paths": ctx.own_paths
+        "own_paths": ctx.own_paths
     })
     .to_string();
     let mut add_cert_req = RbumCertAddReq {
