@@ -1,10 +1,6 @@
 use std::{collections::HashMap, env};
 
-use bios_basic::{
-    rbum::serv::rbum_kind_serv::RbumKindServ,
-    spi::{dto::spi_bs_dto::SpiBsAddReq, spi_constants},
-    test::test_http_client::TestHttpClient,
-};
+use bios_basic::test::test_http_client::TestHttpClient;
 use bios_spi_conf::{
     conf_constants::DOMAIN_CODE,
     dto::conf_auth_dto::{RegisterRequest, RegisterResponse},

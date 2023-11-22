@@ -758,7 +758,7 @@ impl IamCertServ {
         if let Some(ext_cert) = ext_cert {
             let now_sk = RbumCertServ::show_sk(ext_cert.id.as_str(), &RbumCertFilterReq::default(), funs, &mock_ctx).await?;
             let encoded_sk = encode_cert(&ext_cert.id, now_sk, ext_cert.sk_invisible, funs, &mock_ctx)?;
-
+            // let encoded_sk = now_sk;
             Ok(RbumCertSummaryWithSkResp {
                 id: ext_cert.id,
                 ak: ext_cert.ak,

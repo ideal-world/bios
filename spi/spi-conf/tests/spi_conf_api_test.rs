@@ -328,7 +328,6 @@ pub async fn test_curd(client: &mut TestHttpClient) -> TardisResult<()> {
     assert_eq!(response[0].data_id, "conf-2");
     assert_eq!(response[1].data_id, "conf-1");
     assert_eq!(response[2].data_id, "conf-0");
-
     Ok(())
 }
 
