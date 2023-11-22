@@ -221,9 +221,11 @@ impl IamCtCertManageApi {
 
     /// decode cert
     #[oai(path = "/decode", method = "post")]
-    async fn decode_certs(&self, body: Json<IamCertDecodeRequest>, ctx: TardisContextExtractor,) -> TardisApiResult<HashMap<String, String>> {
+    async fn decode_certs(&self, body: Json<IamCertDecodeRequest>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<HashMap<String, String>> {
         let funs = iam_constants::get_tardis_inst();
-        let doceded = IamCertServ::batch_decode_cert(body.0.codes, &funs, &ctx.0).await?;
+        let ctx = IamCertServ::use_sys_or_tenant_ctx_unsafe(ctx.0)?;
+        add_remote_ip(request, &ctx).await?;
+        let doceded = IamCertServ::batch_decode_cert(body.0.codes, &funs, &ctx).await?;
         TardisResp::ok(doceded)
     }
 }

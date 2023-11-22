@@ -1460,7 +1460,7 @@ impl IamCertServ {
 
     pub async fn batch_decode_cert(codes: HashSet<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<HashMap<String, String>> {
         let batch_result = join_all(codes.into_iter().filter_map(|code| {
-            if let Some((id, "sk")) = code.split_once("/") {
+            if let Some((id, "sk")) = code.split_once('/') {
                 let id = id.to_owned();
                 Some(async move {
                     let Ok(rels) = IamRelServ::find_rels(
