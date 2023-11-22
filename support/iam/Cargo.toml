@@ -35,7 +35,7 @@ tardis = { workspace = true, features = [
     "web-client",
     "mail",
 ] }
-bios-basic = { path = "../../basic", features = ["default", "with-mq"] }
+bios-basic = { path = "../../basic", features = ["default"] }
 bios-sdk-invoke = { path = "../../sdk/invoke", features = ["default"] }
 
 # ldap
