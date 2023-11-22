@@ -1201,7 +1201,9 @@ impl FlowInstServ {
                     .from(flow_inst::Entity)
                     .and_where(Expr::col((flow_inst::Entity, flow_inst::Column::CurrentStateId)).eq(flow_state_id))
                     .and_where(Expr::col((flow_inst::Entity, flow_inst::Column::RelFlowModelId)).eq(flow_model_id))
-                    .and_where(Expr::col((flow_inst::Entity, flow_inst::Column::FinishAbort)).eq(false)),
+                    .and_where(
+                        Expr::col((flow_inst::Entity, flow_inst::Column::FinishAbort)).ne(true).or(Expr::col((flow_inst::Entity, flow_inst::Column::FinishAbort)).is_null()),
+                    ),
             )
             .await?
             != 0
