@@ -151,7 +151,7 @@ impl IamCtRoleApi {
                 basic: RbumBasicFilterReq {
                     ..Default::default()
                 },
-                kind: Some(IamRoleKind::Tenant),
+                // kind: Some(IamRoleKind::Tenant),
                 in_base: Some(false),
                 ..Default::default()
             },
@@ -163,8 +163,8 @@ impl IamCtRoleApi {
             .await?;
         ctx.0.execute_task().await?;
         let mut result = vec![];
-        result.extend(app_result);
         result.extend(tenant_result);
+        result.extend(app_result);
         TardisResp::ok(result)
     }
 
