@@ -64,7 +64,6 @@ pub struct IamConfig {
     pub iam_base_url: String,
     pub strict_security_mode: bool,
     pub crypto_conf: CryptoConf,
-    pub cert_encode_key: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -157,7 +156,6 @@ impl Default for IamConfig {
             spi: Default::default(),
             strict_security_mode: false,
             crypto_conf: CryptoConf::default(),
-            cert_encode_key: Default::default(),
         }
     }
 }
