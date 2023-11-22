@@ -2,12 +2,13 @@ use bios_basic::helper::request_helper::{add_ip, get_remote_ip};
 use bios_basic::process::task_processor::TaskProcessor;
 use bios_basic::rbum::dto::rbum_rel_agg_dto::RbumRelAggAddReq;
 use bios_basic::rbum::serv::rbum_rel_serv::RbumRelServ;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use std::time::Duration;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
+use tardis::futures_util::future::join_all;
 use tardis::tokio::sync::Mutex;
 
 use tardis::web::web_resp::TardisPage;
@@ -282,6 +283,7 @@ impl IamCertServ {
                 id: kernel_cert.id,
                 ak: kernel_cert.ak,
                 sk: now_sk,
+                sk_invisible: kernel_cert.sk_invisible,
                 ext: kernel_cert.ext,
                 conn_uri: kernel_cert.conn_uri,
                 start_time: kernel_cert.start_time,
@@ -454,6 +456,7 @@ impl IamCertServ {
             &mut RbumCertAddReq {
                 ak: TrimString(add_req.ak.trim().to_string()),
                 sk: add_req.sk.as_ref().map(|sk| TrimString(sk.trim().to_string())),
+                sk_invisible: add_req.sk_invisible,
                 kind: Some(IamCertExtKind::ThirdParty.to_string()),
                 supplier: Some(add_req.supplier.clone()),
                 vcode: None,
@@ -482,6 +485,7 @@ impl IamCertServ {
                 ext: modify_req.ext.clone(),
                 ak: Some(TrimString(modify_req.ak.trim().to_string())),
                 sk: Some(TrimString(modify_req.sk.clone().unwrap_or_default())),
+                sk_invisible: modify_req.sk_invisible,
                 is_ignore_check_sk: false,
                 start_time: None,
                 end_time: None,
@@ -502,6 +506,8 @@ impl IamCertServ {
                 ext: Some(ext.to_string()),
                 ak: None,
                 sk: None,
+                sk_invisible: None,
+
                 is_ignore_check_sk: false,
                 start_time: None,
                 end_time: None,
@@ -550,6 +556,7 @@ impl IamCertServ {
             &mut RbumCertAddReq {
                 ak: TrimString(add_req.ak.trim().to_string()),
                 sk: add_req.sk.as_ref().map(|sk| TrimString(sk.trim().to_string())),
+                sk_invisible: None,
                 kind: Some(IamCertExtKind::ThirdParty.to_string()),
                 supplier: add_req.supplier.clone(),
                 vcode: None,
@@ -629,7 +636,9 @@ impl IamCertServ {
                 id: ext_cert.id,
                 ak: if is_ldap { IamCertLdapServ::dn_to_cn(&ext_cert.ak) } else { ext_cert.ak },
                 sk: "".to_string(),
+                sk_invisible: ext_cert.sk_invisible,
                 ext: ext_cert.ext,
+
                 conn_uri: ext_cert.conn_uri,
                 start_time: ext_cert.start_time,
                 end_time: ext_cert.end_time,
@@ -675,10 +684,12 @@ impl IamCertServ {
         .await?;
         if let Some(ext_cert) = ext_cert {
             let now_sk = RbumCertServ::show_sk(ext_cert.id.as_str(), &RbumCertFilterReq::default(), funs, ctx).await?;
+            let encoded_sk = encode_cert(&ext_cert.id, now_sk, ext_cert.sk_invisible, funs, ctx)?;
             Ok(RbumCertSummaryWithSkResp {
                 id: ext_cert.id,
                 ak: ext_cert.ak,
-                sk: now_sk,
+                sk: encoded_sk,
+                sk_invisible: ext_cert.sk_invisible,
                 ext: ext_cert.ext,
                 conn_uri: ext_cert.conn_uri,
                 start_time: ext_cert.start_time,
@@ -746,10 +757,12 @@ impl IamCertServ {
         .await?;
         if let Some(ext_cert) = ext_cert {
             let now_sk = RbumCertServ::show_sk(ext_cert.id.as_str(), &RbumCertFilterReq::default(), funs, &mock_ctx).await?;
+            let encoded_sk = encode_cert(&ext_cert.id, now_sk, ext_cert.sk_invisible, funs, &mock_ctx)?;
+            // let encoded_sk = now_sk;
             Ok(RbumCertSummaryWithSkResp {
                 id: ext_cert.id,
                 ak: ext_cert.ak,
-                sk: now_sk,
+                sk: encoded_sk,
                 ext: ext_cert.ext,
                 start_time: ext_cert.start_time,
                 end_time: ext_cert.end_time,
@@ -766,6 +779,7 @@ impl IamCertServ {
                 create_time: ext_cert.create_time,
                 update_time: ext_cert.update_time,
                 conn_uri: ext_cert.conn_uri,
+                sk_invisible: ext_cert.sk_invisible,
             })
         } else {
             Err(funs.err().not_found(
@@ -1442,5 +1456,64 @@ impl IamCertServ {
             }
         }
         result
+    }
+
+    pub async fn batch_decode_cert(codes: HashSet<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<HashMap<String, String>> {
+        let batch_result = join_all(codes.into_iter().filter_map(|code| {
+            if let Some((id, "sk")) = code.split_once('/') {
+                let id = id.to_owned();
+                Some(async move {
+                    let Ok(rels) = IamRelServ::find_rels(
+                        &RbumRelFilterReq {
+                            basic: RbumBasicFilterReq {
+                                own_paths: Some("".to_string()),
+                                with_sub_own_paths: true,
+                                ignore_scope: true,
+                                ..Default::default()
+                            },
+                            tag: Some(IamRelKind::IamCertRel.to_string()),
+                            from_rbum_id: Some(id.to_string()),
+                            to_own_paths: Some(ctx.own_paths.clone()),
+                            ..Default::default()
+                        },
+                        None,
+                        None,
+                        funs,
+                        ctx,
+                    )
+                    .await else {
+                        return None;
+                    };
+                    let mut mock_ctx = TardisContext { ..ctx.clone() };
+                    if let Some(rel) = rels.first() {
+                        mock_ctx.own_paths = rel.rel.own_paths.clone()
+                    }
+                    let Ok(sk) = RbumCertServ::show_sk(&id, &RbumCertFilterReq::default(), funs, &mock_ctx).await else {
+                        return None;
+                    };
+                    Some((id, sk))
+                })
+            } else {
+                None
+            }
+        }))
+        .await
+        .into_iter()
+        .fold(HashMap::default(), |mut map, output| {
+            if let Some((id, sk)) = output {
+                map.insert(id, sk);
+            }
+            map
+        });
+        Ok(batch_result)
+    }
+}
+
+fn encode_cert(id: &str, sk: String, invisible: bool, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
+    if invisible {
+        let key = format!("{id}/sk");
+        Ok(key)
+    } else {
+        Ok(sk)
     }
 }

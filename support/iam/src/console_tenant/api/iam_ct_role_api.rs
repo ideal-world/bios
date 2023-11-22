@@ -27,7 +27,7 @@ pub struct IamCtRoleApi;
 impl IamCtRoleApi {
     /// Add Role
     #[oai(path = "/", method = "post")]
-    async fn add(&self,is_app: Query<Option<bool>>, mut add_req: Json<IamRoleAggAddReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<String> {
+    async fn add(&self, is_app: Query<Option<bool>>, mut add_req: Json<IamRoleAggAddReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<String> {
         add_remote_ip(request, &ctx.0).await?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
@@ -35,7 +35,7 @@ impl IamCtRoleApi {
         if is_app.0.unwrap_or(false) {
             add_req.0.role.kind = Some(IamRoleKind::App);
             result = IamRoleServ::tenant_add_app_role_agg(&mut add_req.0, &funs, &ctx.0).await?;
-        }else{
+        } else {
             add_req.0.role.kind = Some(IamRoleKind::Tenant);
             result = IamRoleServ::add_role_agg(&mut add_req.0, &funs, &ctx.0).await?;
         }

@@ -21,7 +21,7 @@ mod test_flow_scenes_fsm;
 
 #[tokio::test]
 async fn test_flow_api() -> TardisResult<()> {
-    env::set_var("RUST_LOG", "debug,test_flow_api=trace,sqlx::query=off");
+    env::set_var("RUST_LOG", "debug,test_flow_api=trace");
 
     let docker = testcontainers::clients::Cli::default();
     let _x = init_rbum_test_container::init(&docker, None).await?;

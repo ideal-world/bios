@@ -29,6 +29,7 @@ pub struct FlowTransitionAddReq {
 
     pub double_check: Option<FlowTransitionDoubleCheckInfo>,
     pub vars_collect: Option<Vec<FlowVarInfo>>,
+    pub is_notify: Option<bool>,
 
     pub action_by_pre_callback: Option<String>,
     pub action_by_post_callback: Option<String>,
@@ -62,6 +63,7 @@ pub struct FlowTransitionModifyReq {
 
     pub vars_collect: Option<Vec<FlowVarInfo>>,
     pub double_check: Option<FlowTransitionDoubleCheckInfo>,
+    pub is_notify: Option<bool>,
 
     pub action_by_pre_callback: Option<String>,
     pub action_by_post_callback: Option<String>,
@@ -97,6 +99,7 @@ pub struct FlowTransitionDetailResp {
 
     pub vars_collect: Value,
     pub double_check: Value,
+    pub is_notify: bool,
 
     pub action_by_pre_callback: String,
     pub action_by_post_callback: String,
@@ -175,6 +178,7 @@ impl From<FlowTransitionDetailResp> for FlowTransitionAddReq {
             action_by_post_changes: Some(action_by_post_changes),
             action_by_front_changes: Some(action_by_front_changes),
             double_check,
+            is_notify: Some(value.is_notify),
             sort: Some(value.sort),
         }
     }
@@ -347,6 +351,7 @@ pub struct FlowTransitionInitInfo {
 
     pub vars_collect: Option<Vec<FlowVarInfo>>,
     pub double_check: Option<FlowTransitionDoubleCheckInfo>,
+    pub is_notify: bool,
 
     pub action_by_pre_callback: Option<String>,
     pub action_by_post_callback: Option<String>,

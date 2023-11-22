@@ -163,6 +163,7 @@ macro_rules! tardis_api {
         build
      */
     ($fn_name:ident @build get {$($args_i:ident:$args_t:ty,)*} {$($path:expr,)*} {$($query:expr,)*;$($optional_query:expr,)*} $Resp:ty) => {
+        #[allow(unused_mut)]
         pub async fn $fn_name(&self, $($args_i:$args_t,)*) -> tardis::basic::result::TardisResult<$Resp> {
             use $crate::clients::SimpleInvokeClient;
             use tardis::web::web_resp::TardisResp;
@@ -186,6 +187,7 @@ macro_rules! tardis_api {
         }
     };
     ($fn_name:ident @build post {$($args_i:ident:$args_t:ty,)*} {$($path:expr,)*} {$($query:expr,)*;$($optional_query:expr,)*} $Body:ty => $Resp:ty) => {
+        #[allow(unused_mut)]
         pub async fn $fn_name(&self, $($args_i:$args_t,)* body: &$Body) -> tardis::basic::result::TardisResult<$Resp> {
             use $crate::clients::SimpleInvokeClient;
             use tardis::web::web_resp::TardisResp;
@@ -209,6 +211,7 @@ macro_rules! tardis_api {
         }
     };
     ($fn_name:ident @build put {$($args_i:ident:$args_t:ty,)*} {$($path:expr,)*} {$($query:expr,)*;$($optional_query:expr,)*} $Body:ty => $Resp:ty) => {
+        #[allow(unused_mut)]
         pub async fn $fn_name(&self, $($args_i:$args_t,)* body: &$Body) -> tardis::basic::result::TardisResult<$Resp> {
             use $crate::clients::SimpleInvokeClient;
             use tardis::web::web_resp::TardisResp;
@@ -232,6 +235,7 @@ macro_rules! tardis_api {
         }
     };
     ($fn_name:ident @build delete {$($args_i:ident:$args_t:ty,)*} {$($path:expr,)*} {$($query:expr,)*;$($optional_query:expr,)*} $Resp:ty) => {
+        #[allow(unused_mut)]
         pub async fn $fn_name(&self, $($args_i:$args_t),*) -> tardis::basic::result::TardisResult<$Resp> {
             use $crate::clients::SimpleInvokeClient;
             use tardis::web::web_resp::TardisResp;

@@ -94,7 +94,7 @@ impl RbumItemCrudOperation<plugin_api::ActiveModel, PluginApiAddOrModifyReq, Plu
 
     async fn package_ext_modify(id: &str, modify_req: &PluginApiAddOrModifyReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<Option<plugin_api::ActiveModel>> {
         let plugin_api = plugin_api::ActiveModel {
-            id:Set(id.to_string()),
+            id: Set(id.to_string()),
             callback: Set(modify_req.callback.clone()),
             content_type: Set(modify_req.content_type.clone()),
             timeout: Set(modify_req.timeout),
@@ -155,14 +155,21 @@ impl PluginApiServ {
     }
 
     pub async fn delete_by_kind(kind_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        let api_ids = Self::find_id_items(&PluginApiFilterReq {
-            basic: RbumBasicFilterReq {
-                with_sub_own_paths: true,
-                rbum_kind_id: Some(kind_id.to_string()),
+        let api_ids = Self::find_id_items(
+            &PluginApiFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    rbum_kind_id: Some(kind_id.to_string()),
+                    ..Default::default()
+                },
                 ..Default::default()
             },
-            ..Default::default()
-        },None,None,funs,ctx).await?;
+            None,
+            None,
+            funs,
+            ctx,
+        )
+        .await?;
         for api_id in api_ids {
             Self::delete_item(&api_id, funs, ctx).await?;
         }

@@ -5,7 +5,7 @@ use tardis::web::poem_openapi::{
     types::{ParseFromJSON, ToJSON},
 };
 
-use super::flow_state_dto::FlowSysStateKind;
+use super::{flow_state_dto::FlowSysStateKind, flow_transition_dto::FlowTransitionActionByVarChangeInfoChangedKind};
 
 #[derive(Serialize, Deserialize, Debug, Default, poem_openapi::Object)]
 pub struct FlowExternalReq {
@@ -38,6 +38,7 @@ pub struct FlowExternalParams {
     pub var_id: Option<String>,
     pub var_name: Option<String>,
     pub value: Option<Value>,
+    pub changed_kind: Option<FlowTransitionActionByVarChangeInfoChangedKind>,
 }
 
 #[derive(Default, Serialize, Deserialize, Debug, poem_openapi::Object)]

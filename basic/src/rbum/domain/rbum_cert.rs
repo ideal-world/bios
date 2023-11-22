@@ -22,6 +22,8 @@ pub struct Model {
     /// Cert key \
     /// E.g. password, token, secret key
     pub sk: String,
+    /// Whether the key is visible \
+    pub sk_invisible: bool,
     /// Extend information \
     /// The content and format are set by the upper service itself
     pub ext: String,
@@ -79,6 +81,7 @@ impl TardisActiveModel for ActiveModel {
             .col(ColumnDef::new(Column::Supplier).not_null().string())
             .col(ColumnDef::new(Column::Ak).not_null().string())
             .col(ColumnDef::new(Column::Sk).not_null().string())
+            .col(ColumnDef::new(Column::SkInvisible).not_null().boolean().default(false))
             .col(ColumnDef::new(Column::Ext).not_null().string())
             .col(ColumnDef::new(Column::ConnUri).not_null().string())
             .col(ColumnDef::new(Column::RelRbumCertConfId).not_null().string())

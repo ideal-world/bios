@@ -64,7 +64,7 @@ pub async fn init(docker: &'_ Cli) -> TardisResult<LifeHold<'_>> {
     Ok(LifeHold { ldap: ldap_container })
 }
 
-fn get_ldap_container<'a>(docker: &'a Cli) -> Container<'a, GenericImage> {
+fn get_ldap_container(docker: &Cli) -> Container<'_, GenericImage> {
     const ORGANISATION: &str = "test";
     const ADMIN_PASSWORD: &str = "123456";
     let domain: String = format!("{}.com", ORGANISATION);

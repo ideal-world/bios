@@ -17,9 +17,7 @@ use tardis::{
     basic::{dto::TardisContext, field::TrimString, result::TardisResult},
     log,
     serde_json::{json, Value},
-    testcontainers, tokio,
-    web::web_resp::Void,
-    TardisFuns,
+    testcontainers, tokio, TardisFuns,
 };
 mod spi_conf_test_common;
 use spi_conf_test_common::*;
@@ -29,28 +27,28 @@ async fn spi_conf_namespace_test() -> TardisResult<()> {
     std::env::set_var("RUST_LOG", "info,sqlx=off,sea_orm=debug,spi_conf_namespace_test=DEBUG,bios_spi_conf=TRACE");
     let docker = testcontainers::clients::Cli::default();
     let container_hold = init_tardis(&docker).await?;
-    let _web_server_hanlde = start_web_server().await?;
+    start_web_server().await?;
     let tardis_ctx = TardisContext::default();
     let mut client = TestHttpClient::new("https://localhost:8080/spi-conf".to_string());
     client.set_auth(&tardis_ctx)?;
     let funs = TardisFuns::inst_with_db_conn(DOMAIN_CODE.to_string(), None);
-    let kind_id = RbumKindServ::get_rbum_kind_id_by_code(spi_constants::SPI_PG_KIND_CODE, &funs).await?.unwrap();
-    let bs_id: String = client
-        .post(
-            "/ci/manage/bs",
-            &SpiBsAddReq {
-                name: TrimString("test-spi".to_string()),
-                kind_id: TrimString(kind_id),
-                conn_uri: env::var("TARDIS_FW.DB.URL").unwrap(),
-                ak: TrimString("".to_string()),
-                sk: TrimString("".to_string()),
-                ext: "{\"max_connections\":20,\"min_connections\":10}".to_string(),
-                private: false,
-                disabled: None,
-            },
+    let RegisterResponse { username, password } = client
+        .put(
+            "/ci/auth/register_bundle",
+            &json!({
+                "app_tenant_id": "app001",
+                "username": "nacos",
+                "backend_service": {
+                    "type": "new",
+                    "value": {
+                        "name": "spi-nacos-app01",
+                        "conn_uri": env::var("TARDIS_FW.DB.URL").unwrap(),
+                    }
+                }
+            }),
         )
         .await;
-    let _: Void = client.put(&format!("/ci/manage/bs/{}/rel/app001", bs_id), &Void {}).await;
+    log::info!("username: {username}, password: {password}");
     client.set_auth(&TardisContext {
         own_paths: "t1/app001".to_string(),
         ak: "".to_string(),
@@ -62,6 +60,7 @@ async fn spi_conf_namespace_test() -> TardisResult<()> {
     test_register(&mut client).await?;
     test_curd(&mut client).await?;
     test_tags(&mut client).await?;
+
     // web_server_hanlde.await.unwrap()?;
     drop(container_hold);
     Ok(())
@@ -329,7 +328,6 @@ pub async fn test_curd(client: &mut TestHttpClient) -> TardisResult<()> {
     assert_eq!(response[0].data_id, "conf-2");
     assert_eq!(response[1].data_id, "conf-1");
     assert_eq!(response[2].data_id, "conf-0");
-
     Ok(())
 }
 

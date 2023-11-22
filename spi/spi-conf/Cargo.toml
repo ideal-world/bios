@@ -29,17 +29,21 @@ tardis = { workspace = true, features = [
 bios-basic = { path = "../../basic", features = ["default"] }
 lazy_static = { workspace = true }
 jsonwebtoken = "8"
-poem-grpc = "0.2.21"
+poem-grpc = "=0.2.22"
 prost = "0.11.9"
 poem = "1"
 prost-types = "0.11.9"
 strum = { version = "0.25.0", features = ["derive"] }
 tokio-stream = { version = "0.1.14", features = ["sync"] }
-
+bios-sdk-invoke = { path = "../../sdk/invoke", features = [
+    "iam",
+    "macro",
+], default-features = false }
+ipnet = { version = "2", features = ["serde"] }
 [dev-dependencies]
 tardis = { workspace = true, features = ["test", "conf-remote", "mq"] }
 bios-basic = { path = "../../basic", features = ["default", "test"] }
 reqwest = "*"
 testcontainers-modules = { workspace = true }
 [build-dependencies]
-poem-grpc-build = "0.2.21"
+poem-grpc-build = "0.2.22"

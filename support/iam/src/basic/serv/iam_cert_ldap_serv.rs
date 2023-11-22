@@ -285,6 +285,7 @@ impl IamCertLdapServ {
                 &mut RbumCertModifyReq {
                     ak: Some(add_or_modify_req.ldap_id.clone()),
                     sk: None,
+                    sk_invisible: None,
                     is_ignore_check_sk: false,
                     ext: None,
                     start_time: None,
@@ -301,6 +302,7 @@ impl IamCertLdapServ {
                 &mut RbumCertAddReq {
                     ak: add_or_modify_req.ldap_id.clone(),
                     sk: None,
+                    sk_invisible: None,
                     kind: None,
                     supplier: None,
                     vcode: None,
@@ -803,26 +805,29 @@ impl IamCertLdapServ {
                     )
                     .await?
                     {
-                        let modify_result = RbumCertServ::modify_rbum(
-                            &phone_cert.id,
-                            &mut RbumCertModifyReq {
-                                ak: Some(TrimString(iam_account_ext_sys_resp.mobile.clone())),
-                                sk: None,
-                                is_ignore_check_sk: false,
-                                ext: None,
-                                start_time: None,
-                                end_time: None,
-                                conn_uri: None,
-                                status: None,
-                            },
-                            &funs,
-                            ctx,
-                        )
-                        .await;
-                        if let Some(e) = modify_result.err() {
-                            let err_msg = format!("modify phone cert_id:{} failed:{}", phone_cert.id, e);
-                            tardis::log::error!("{}", err_msg);
-                            msg = format!("{msg}{err_msg}\n");
+                        if phone_cert.ak != iam_account_ext_sys_resp.mobile {
+                            let modify_result = RbumCertServ::modify_rbum(
+                                &phone_cert.id,
+                                &mut RbumCertModifyReq {
+                                    ak: Some(TrimString(iam_account_ext_sys_resp.mobile.clone())),
+                                    sk: None,
+                                    is_ignore_check_sk: false,
+                                    ext: None,
+                                    start_time: None,
+                                    end_time: None,
+                                    conn_uri: None,
+                                    status: None,
+                                    sk_invisible: None,
+                                },
+                                &funs,
+                                ctx,
+                            )
+                            .await;
+                            if let Some(e) = modify_result.err() {
+                                let err_msg = format!("modify phone cert_id:{} failed:{}", phone_cert.id, e);
+                                tardis::log::error!("{}", err_msg);
+                                msg = format!("{msg}{err_msg}\n");
+                            }
                         }
                     } else {
                         //添加手机号
@@ -867,6 +872,8 @@ impl IamCertLdapServ {
                             &mut RbumCertModifyReq {
                                 ak: None,
                                 sk: None,
+                                sk_invisible: None,
+
                                 is_ignore_check_sk: false,
                                 ext: None,
                                 start_time: None,

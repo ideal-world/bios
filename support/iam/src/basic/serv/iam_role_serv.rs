@@ -1,15 +1,15 @@
 use std::ops::Add;
 
 use async_trait::async_trait;
-use tardis::{TardisFuns, TardisFunsInst, tokio};
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
-use tardis::db::sea_orm::*;
 use tardis::db::sea_orm::prelude::Expr;
 use tardis::db::sea_orm::sea_query::SelectStatement;
+use tardis::db::sea_orm::*;
 use tardis::log::info;
 use tardis::web::web_resp::TardisPage;
+use tardis::{tokio, TardisFuns, TardisFunsInst};
 
 use bios_basic::helper::request_helper::get_remote_ip;
 use bios_basic::process::task_processor::TaskProcessor;
@@ -241,16 +241,23 @@ impl RbumItemCrudOperation<iam_role::ActiveModel, IamRoleAddReq, IamRoleModifyRe
         {
             return Err(funs.err().conflict(&Self::get_obj_name(), "delete", "role is not private", "409-iam-delete-role-conflict"));
         }
-        let sub_role = Self::find_id_items(&IamRoleFilterReq{
-            basic: RbumBasicFilterReq{
-                with_sub_own_paths: true,
-                ignore_scope: true,
-                own_paths: Some("".to_string()),
+        let sub_role = Self::find_id_items(
+            &IamRoleFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    ignore_scope: true,
+                    own_paths: Some("".to_string()),
+                    ..Default::default()
+                },
+                extend_role_id: Some(id.to_string()),
                 ..Default::default()
             },
-            extend_role_id: Some(id.to_string()),
-            ..Default::default()
-        },None,None,funs,ctx).await?;
+            None,
+            None,
+            funs,
+            ctx,
+        )
+        .await?;
         let ctx_clone = ctx.clone();
         ctx.add_async_task(Box::new(|| {
             Box::pin(async move {
@@ -263,7 +270,8 @@ impl RbumItemCrudOperation<iam_role::ActiveModel, IamRoleAddReq, IamRoleModifyRe
                 task_handle.await.unwrap();
                 Ok(())
             })
-        })).await?;
+        }))
+        .await?;
         Ok(None)
     }
 
@@ -399,14 +407,12 @@ impl IamRoleServ {
         Ok(())
     }
 
-    pub async fn add_app_copy_role_agg(app_id: &str,  funs: &TardisFunsInst, ctx: &TardisContext)-> TardisResult<()>{
+    pub async fn add_app_copy_role_agg(app_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         Self::copy_role_agg(app_id, &IamRoleKind::App, funs, ctx).await?;
         let tenant_ctx = IamCertServ::use_sys_or_tenant_ctx_unsafe(ctx.clone())?;
         let tenant_app_roles = Self::find_detail_items(
             &IamRoleFilterReq {
-                basic: RbumBasicFilterReq {
-                    ..Default::default()
-                },
+                basic: RbumBasicFilterReq { ..Default::default() },
                 kind: Some(IamRoleKind::App),
                 in_embed: Some(false),
                 in_base: Some(false),
@@ -417,7 +423,7 @@ impl IamRoleServ {
             funs,
             &tenant_ctx,
         )
-            .await?;
+        .await?;
         for app_role in tenant_app_roles {
             Self::add_role_agg(
                 &mut IamRoleAggAddReq {
@@ -438,7 +444,7 @@ impl IamRoleServ {
                 funs,
                 ctx,
             )
-                .await?;
+            .await?;
         }
         Ok(())
     }
@@ -470,23 +476,36 @@ impl IamRoleServ {
     /// 租户添加应用角色
     pub async fn tenant_add_app_role_agg(add_req: &mut IamRoleAggAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
         add_req.role.scope_level = Some(RbumScopeLevelKind::Private);
-        let app_role_id = Self::add_role_agg(add_req,funs,ctx).await?;
-        let app_ids = IamAppServ::find_id_items(&IamAppFilterReq {
-            basic: RbumBasicFilterReq{
-                with_sub_own_paths:true,
+        let app_role_id = Self::add_role_agg(add_req, funs, ctx).await?;
+        let app_ids = IamAppServ::find_id_items(
+            &IamAppFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
                 ..Default::default()
             },
-            ..Default::default()
-        }, None, None, funs, ctx).await?;
-        let app_role = Self::get_item(&app_role_id,&IamRoleFilterReq {
-            basic: RbumBasicFilterReq{
-                with_sub_own_paths:true,
+            None,
+            None,
+            funs,
+            ctx,
+        )
+        .await?;
+        let app_role = Self::get_item(
+            &app_role_id,
+            &IamRoleFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
                 ..Default::default()
             },
-            ..Default::default()
-        }, funs, ctx).await?;
+            funs,
+            ctx,
+        )
+        .await?;
         for app_id in app_ids {
-            let app_ctx = IamCertServ::try_use_app_ctx(ctx.clone(),Some(app_id.clone()))?;
+            let app_ctx = IamCertServ::try_use_app_ctx(ctx.clone(), Some(app_id.clone()))?;
             Self::add_role_agg(
                 &mut IamRoleAggAddReq {
                     role: IamRoleAddReq {
@@ -506,7 +525,7 @@ impl IamRoleServ {
                 funs,
                 &app_ctx,
             )
-                .await?;
+            .await?;
         }
         Ok(app_role_id)
     }
