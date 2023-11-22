@@ -3,8 +3,6 @@
 use std::collections::{HashMap, HashSet};
 use std::net::IpAddr;
 
-use bios_basic::rbum::helper::rbum_scope_helper::get_scope_level_by_context;
-use bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind;
 use bios_sdk_invoke::clients::iam_client::{IamCertDecodeRequest, IamClient};
 use tardis::basic::dto::TardisContext;
 use tardis::basic::result::TardisResult;
@@ -14,7 +12,7 @@ use tardis::tardis_static;
 use crate::conf_config::ConfConfig;
 
 tardis_static! {
-    pub place_holder_regex: Regex = Regex::new(r"\$CERT\{([A-Z_]+)\}").expect("invalid content replace regex");
+    pub place_holder_regex: Regex = Regex::new(r"\$CERT\{(.+)\}").expect("invalid content replace regex");
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -53,9 +51,10 @@ pub async fn rander_content(content: String, config: &ConfConfig, funs: &tardis:
     }
     // enhancement: this can be depart from function, KvSource should be trait
     let kvmap = get_kvmap(keys, config, funs, ctx).await?;
+
     let content = segments.into_iter().fold(String::new(), |content, seg| match seg {
         Segment::Raw(raw) => content + raw,
-        Segment::Replace { key } => content + kvmap.get(key).unwrap_or(&String::new()).as_str(),
+        Segment::Replace { key } => content + kvmap.get(key).map(String::as_str).unwrap_or(key),
     });
     Ok(content)
 }
@@ -76,8 +75,10 @@ pub fn has_placeholder_auth(source_addr: IpAddr, funs: &tardis::TardisFunsInst) 
 
 pub async fn render_content_for_ip(content: String, source_addr: IpAddr, funs: &tardis::TardisFunsInst, ctx: &tardis::basic::dto::TardisContext) -> TardisResult<String> {
     let cfg = funs.conf::<ConfConfig>();
-    let level = get_scope_level_by_context(ctx)?;
-    if has_placeholder_auth(source_addr, funs) && level == RbumScopeLevelKind::Root {
+    // let level = get_scope_level_by_context(ctx)?;
+    let is_render = has_placeholder_auth(source_addr, funs);
+    tardis::tracing::trace!("[Bios.Spi-Config] Trying to render config for ip: {source_addr}, ctx: {ctx:?}, render: {is_render}");
+    if is_render {
         rander_content(content, cfg.as_ref(), funs, ctx).await
     } else {
         Ok(content)

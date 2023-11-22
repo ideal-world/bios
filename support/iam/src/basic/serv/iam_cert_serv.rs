@@ -1491,7 +1491,7 @@ impl IamCertServ {
                     let Ok(sk) = RbumCertServ::show_sk(&id, &RbumCertFilterReq::default(), funs, &mock_ctx).await else {
                         return None;
                     };
-                    Some((id, sk))
+                    Some((id, format!("{sk}/sk")))
                 })
             } else {
                 None
