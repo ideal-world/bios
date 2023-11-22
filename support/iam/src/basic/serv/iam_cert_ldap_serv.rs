@@ -285,6 +285,7 @@ impl IamCertLdapServ {
                 &mut RbumCertModifyReq {
                     ak: Some(add_or_modify_req.ldap_id.clone()),
                     sk: None,
+                    sk_invisible: None,
                     is_ignore_check_sk: false,
                     ext: None,
                     start_time: None,
@@ -301,6 +302,7 @@ impl IamCertLdapServ {
                 &mut RbumCertAddReq {
                     ak: add_or_modify_req.ldap_id.clone(),
                     sk: None,
+                    sk_invisible: None,
                     kind: None,
                     supplier: None,
                     vcode: None,
@@ -815,6 +817,7 @@ impl IamCertLdapServ {
                                     end_time: None,
                                     conn_uri: None,
                                     status: None,
+                                    sk_invisible: None,
                                 },
                                 &funs,
                                 ctx,
@@ -869,6 +872,8 @@ impl IamCertLdapServ {
                             &mut RbumCertModifyReq {
                                 ak: None,
                                 sk: None,
+                                sk_invisible: None,
+
                                 is_ignore_check_sk: false,
                                 ext: None,
                                 start_time: None,

@@ -1,5 +1,8 @@
+use std::net::IpAddr;
+use ipnet::IpNet;
 use bios_basic::rbum::rbum_config::RbumConfig;
 use serde::{Deserialize, Serialize};
+use tardis::consts::{IP_LOCALHOST, IP_UNSPECIFIED};
 
 use crate::dto::conf_auth_dto::RegisterRequest;
 
@@ -15,7 +18,15 @@ pub struct ConfConfig {
     pub auth_password: String,
     pub nacos_port: u16,
     pub nacos_grpc_port: u16,
-    pub nacos_host: std::net::IpAddr,
+    pub nacos_host: IpAddr,
+    pub placeholder_white_list: Vec<IpNet>,
+    pub iam_client: IamClientConfig,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
+#[serde(default)]
+pub struct IamClientConfig {
+    pub base_url: String,
 }
 
 impl ConfConfig {
@@ -41,7 +52,9 @@ impl Default for ConfConfig {
             rbum: Default::default(),
             nacos_port: 8848,
             nacos_grpc_port: 9848,
-            nacos_host: std::net::IpAddr::V4(std::net::Ipv4Addr::UNSPECIFIED),
+            nacos_host: IP_UNSPECIFIED,
+            placeholder_white_list: vec![IpNet::from(IP_LOCALHOST)],
+            iam_client: Default::default(),
         }
     }
 }

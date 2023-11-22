@@ -1,3 +1,4 @@
+use poem::web::RealIp;
 use tardis::{
     basic::error::TardisError,
     db::sea_orm::prelude::Uuid,
@@ -15,6 +16,7 @@ use tardis::{
 use crate::{
     api::nacos::{extract_context, extract_context_from_body},
     dto::{conf_config_dto::*, conf_config_nacos_dto::PublishConfigForm, conf_namespace_dto::*},
+    serv::placehodler::render_content_for_ip,
 };
 use crate::{conf_constants::error, serv::*};
 
@@ -38,6 +40,7 @@ impl ConfNacosV1CsApi {
         #[oai(name = "dataId")]
         data_id: Query<String>,
         request: &Request,
+        real_ip: RealIp,
     ) -> poem::Result<PlainText<String>> {
         let namespace_id = namespace_id.0.or(tenant.0).unwrap_or("public".into());
         let mut descriptor = ConfigDescriptor {
@@ -48,7 +51,10 @@ impl ConfNacosV1CsApi {
         };
         let funs = crate::get_tardis_inst();
         let ctx = extract_context(request).await?;
-        let content = get_config(&mut descriptor, &funs, &ctx).await.map_err(tardis_err_to_poem_err)?;
+        let mut content = get_config(&mut descriptor, &funs, &ctx).await.map_err(tardis_err_to_poem_err)?;
+        if let Some(ip) = real_ip.0 {
+            content = render_content_for_ip(content, ip, &funs, &ctx).await?;
+        }
         Ok(PlainText(content))
     }
     #[oai(path = "/configs", method = "post")]

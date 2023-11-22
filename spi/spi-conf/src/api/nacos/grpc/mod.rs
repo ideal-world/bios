@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, net::IpAddr};
 
 use serde::{Deserialize, Serialize};
 use tardis::{
@@ -14,7 +14,10 @@ pub use proto::{
     BiRequestStream as BiRequestStreamProto, BiRequestStreamServer as BiRequestStreamGrpcServer, Metadata, Payload, Request as RequestProto, RequestServer as RequestGrpcServer,
 };
 
-use crate::dto::conf_config_dto::{ConfigDescriptor, ConfigItem};
+use crate::{
+    dto::conf_config_dto::{ConfigDescriptor, ConfigItem},
+    serv::placehodler::render_content_for_ip,
+};
 
 #[derive(Clone, Default)]
 pub struct RequestProtoImpl;
@@ -27,13 +30,14 @@ impl RequestProto for RequestProtoImpl {
         };
         log::trace!("metadata: {metadata:?}");
         let access_token = metadata.headers.get("accessToken").map(|x| x.as_str());
+        let client_ip = metadata.client_ip.parse::<IpAddr>().ok();
         let Some(body) = &request.body else {
             return Err(Status::new(Code::InvalidArgument));
         };
         let body = String::from_utf8_lossy(&body.value);
         log::trace!("body: {}", body);
         let type_info = &metadata.r#type;
-        dispatch_request(type_info, &body, access_token).await.map(Response::new).map_err(|e| {
+        dispatch_request(type_info, &body, access_token, client_ip).await.map(Response::new).map_err(|e| {
             log::error!("[spi-conf.nacos.grpc] dispatch_request error: {}", e);
             Status::new(Code::Internal)
         })
@@ -263,7 +267,7 @@ impl AsPayload for ConfigChangeBatchListenResponse {
     const TYPE_NAME: &'static str = "ConfigChangeBatchListenResponse";
 }
 
-pub async fn dispatch_request(type_info: &str, value: &str, access_token: Option<&str>) -> TardisResult<Payload> {
+pub async fn dispatch_request(type_info: &str, value: &str, access_token: Option<&str>, ip: Option<IpAddr>) -> TardisResult<Payload> {
     use crate::serv::*;
     let funs = crate::get_tardis_inst();
     let get_ctx = async {
@@ -287,7 +291,12 @@ pub async fn dispatch_request(type_info: &str, value: &str, access_token: Option
                 ..Default::default()
             };
             match get_config_detail(&mut descriptor, &funs, &ctx).await {
-                Ok(data) => ConfigQueryResponse::from(data).as_payload(),
+                Ok(mut data) => {
+                    if let Some(ip) = ip {
+                        data.content = render_content_for_ip(data.content, ip, &funs, &ctx).await?;
+                    }
+                    ConfigQueryResponse::from(data).as_payload()
+                }
                 Err(_) => ConfigQueryResponseNotFound::default().as_payload(),
             }
         }
