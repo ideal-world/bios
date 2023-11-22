@@ -1481,7 +1481,8 @@ impl IamCertServ {
                         funs,
                         ctx,
                     )
-                    .await else {
+                    .await
+                    else {
                         return None;
                     };
                     let mut mock_ctx = TardisContext { ..ctx.clone() };
