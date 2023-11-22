@@ -119,6 +119,55 @@ impl IamCtRoleApi {
         TardisResp::ok(result)
     }
 
+
+    /// 聚合查询租户及基础项目角色 Find Roles base app
+    #[oai(path = "/base_app", method = "get")]
+    async fn find_role_base_app(
+        &self,
+        desc_by_create: Query<Option<bool>>,
+        desc_by_update: Query<Option<bool>>,
+        ctx: TardisContextExtractor,
+        request: &Request,
+    ) -> TardisApiResult<Vec<IamRoleSummaryResp>> {
+        add_remote_ip(request, &ctx.0).await?;
+        let funs = iam_constants::get_tardis_inst();
+        let app_result = IamRoleServ::find_items(
+            &IamRoleFilterReq {
+                basic: RbumBasicFilterReq {
+                    ..Default::default()
+                },
+                kind: Some(IamRoleKind::App),
+                in_base: Some(true),
+                ..Default::default()
+            },
+            desc_by_create.0,
+            desc_by_update.0,
+            &funs,
+            &ctx.0,
+        )
+            .await?;
+        let tenant_result = IamRoleServ::find_items(
+            &IamRoleFilterReq {
+                basic: RbumBasicFilterReq {
+                    ..Default::default()
+                },
+                kind: Some(IamRoleKind::Tenant),
+                in_base: Some(false),
+                ..Default::default()
+            },
+            desc_by_create.0,
+            desc_by_update.0,
+            &funs,
+            &ctx.0,
+        )
+            .await?;
+        ctx.0.execute_task().await?;
+        let mut result = vec![];
+        result.extend(app_result);
+        result.extend(tenant_result);
+        TardisResp::ok(result)
+    }
+
     /// Delete Role By Role Id
     #[oai(path = "/:id", method = "delete")]
     async fn delete(&self, id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Option<String>> {
