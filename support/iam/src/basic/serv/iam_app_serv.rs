@@ -173,7 +173,7 @@ impl IamAppServ {
             &app_ctx,
         )
         .await?;
-        IamRoleServ::copy_role_agg(&app_id, &IamRoleKind::App, funs, &app_ctx).await?;
+        IamRoleServ::add_app_copy_role_agg(&app_id, funs, &app_ctx).await?;
         let app_admin_role_id = IamRoleServ::get_embed_subrole_id(&funs.iam_basic_role_app_admin_id(), funs, &app_ctx).await?;
         // todo 是否需要在这里初始化应用级别的set？
         IamSetServ::init_set(IamSetKind::Org, RBUM_SCOPE_LEVEL_APP, funs, &app_ctx).await?;

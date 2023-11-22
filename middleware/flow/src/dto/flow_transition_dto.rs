@@ -29,6 +29,7 @@ pub struct FlowTransitionAddReq {
 
     pub double_check: Option<FlowTransitionDoubleCheckInfo>,
     pub vars_collect: Option<Vec<FlowVarInfo>>,
+    pub is_notify: Option<bool>,
 
     pub action_by_pre_callback: Option<String>,
     pub action_by_post_callback: Option<String>,
@@ -62,6 +63,7 @@ pub struct FlowTransitionModifyReq {
 
     pub vars_collect: Option<Vec<FlowVarInfo>>,
     pub double_check: Option<FlowTransitionDoubleCheckInfo>,
+    pub is_notify: Option<bool>,
 
     pub action_by_pre_callback: Option<String>,
     pub action_by_post_callback: Option<String>,
@@ -97,6 +99,7 @@ pub struct FlowTransitionDetailResp {
 
     pub vars_collect: Value,
     pub double_check: Value,
+    pub is_notify: bool,
 
     pub action_by_pre_callback: String,
     pub action_by_post_callback: String,
@@ -175,6 +178,7 @@ impl From<FlowTransitionDetailResp> for FlowTransitionAddReq {
             action_by_post_changes: Some(action_by_post_changes),
             action_by_front_changes: Some(action_by_front_changes),
             double_check,
+            is_notify: Some(value.is_notify),
             sort: Some(value.sort),
         }
     }
@@ -280,6 +284,8 @@ pub enum FlowTransitionActionByVarChangeInfoChangedKind {
     ChangeContent,
     #[sea_orm(string_value = "auto_get_operate_time")]
     AutoGetOperateTime,
+    #[sea_orm(string_value = "select_field")]
+    SelectField,
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug, poem_openapi::Object, sea_orm::FromJsonQueryResult)]
@@ -314,15 +320,15 @@ pub enum StateChangeConditionOp {
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug, poem_openapi::Enum)]
 pub enum TagRelKind {
-    ParentFeed,
-    SubFeed,
+    Default,
+    ParentOrSub,
 }
 
 impl From<TagRelKind> for String {
     fn from(kind: TagRelKind) -> Self {
         match kind {
-            TagRelKind::ParentFeed => "PARENT_FEED".to_string(),
-            TagRelKind::SubFeed => "SUB_FEED".to_string(),
+            TagRelKind::Default => "DEFAULT".to_string(),
+            TagRelKind::ParentOrSub => "PARENT_OR_SUB".to_string(),
         }
     }
 }
@@ -345,6 +351,7 @@ pub struct FlowTransitionInitInfo {
 
     pub vars_collect: Option<Vec<FlowVarInfo>>,
     pub double_check: Option<FlowTransitionDoubleCheckInfo>,
+    pub is_notify: bool,
 
     pub action_by_pre_callback: Option<String>,
     pub action_by_post_callback: Option<String>,

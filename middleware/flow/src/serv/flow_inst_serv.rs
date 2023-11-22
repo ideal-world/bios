@@ -306,9 +306,10 @@ impl FlowInstServ {
             pub rel_flow_model_name: String,
 
             pub current_state_id: String,
-            pub current_assigned: Option<String>,
-
             pub current_state_name: Option<String>,
+            pub current_state_color: Option<String>,
+
+            pub current_assigned: Option<String>,
             pub current_vars: Option<Value>,
 
             pub create_vars: Option<Value>,
@@ -327,6 +328,7 @@ impl FlowInstServ {
             pub rel_business_obj_id: String,
         }
         let rel_state_table = Alias::new("rel_state");
+        let flow_state_table = Alias::new("flow_state");
         let rel_model_table = Alias::new("rel_model");
         let mut query = Query::select();
         query
@@ -348,6 +350,7 @@ impl FlowInstServ {
                 (flow_inst::Entity, flow_inst::Column::CurrentAssigned),
             ])
             .expr_as(Expr::col((rel_state_table.clone(), NAME_FIELD.clone())).if_null(""), Alias::new("current_state_name"))
+            .expr_as(Expr::col((flow_state_table.clone(), Alias::new("color"))).if_null(""), Alias::new("current_state_color"))
             .expr_as(Expr::col((rel_model_table.clone(), NAME_FIELD.clone())).if_null(""), Alias::new("rel_flow_model_name"))
             .from(flow_inst::Entity)
             .join_as(
@@ -358,6 +361,12 @@ impl FlowInstServ {
                     .add(Expr::col((rel_state_table.clone(), ID_FIELD.clone())).equals((flow_inst::Entity, flow_inst::Column::CurrentStateId)))
                     .add(Expr::col((rel_state_table.clone(), REL_KIND_ID_FIELD.clone())).eq(FlowStateServ::get_rbum_kind_id().unwrap()))
                     .add(Expr::col((rel_state_table.clone(), REL_DOMAIN_ID_FIELD.clone())).eq(FlowStateServ::get_rbum_domain_id().unwrap())),
+            )
+            .join_as(
+                JoinType::LeftJoin,
+                Alias::new("flow_state"),
+                flow_state_table.clone(),
+                Expr::col((flow_state_table.clone(), ID_FIELD.clone())).equals((flow_inst::Entity, flow_inst::Column::CurrentStateId)),
             )
             .join_as(
                 JoinType::LeftJoin,
@@ -388,8 +397,9 @@ impl FlowInstServ {
                 own_paths: inst.own_paths,
                 transitions: inst.transitions.map(|transitions| TardisFuns::json.json_to_obj(transitions).unwrap()),
                 current_state_id: inst.current_state_id,
-                current_assigned: inst.current_assigned,
                 current_state_name: inst.current_state_name,
+                current_state_color: inst.current_state_color,
+                current_assigned: inst.current_assigned,
                 current_vars: inst.current_vars.map(|current_vars| TardisFuns::json.json_to_obj(current_vars).unwrap()),
                 rel_business_obj_id: inst.rel_business_obj_id,
             })
@@ -697,10 +707,12 @@ impl FlowInstServ {
             let mut params = vec![];
             for (var_name, value) in vars {
                 params.push(FlowExternalParams {
+                    rel_kind: None,
                     rel_tag: None,
                     var_name: Some(var_name.clone()),
                     var_id: None,
                     value: Some(value.clone()),
+                    changed_kind: None,
                 });
             }
             if !params.is_empty() {
@@ -829,18 +841,21 @@ impl FlowInstServ {
             match post_change.kind {
                 FlowTransitionActionChangeKind::Var => {
                     if let Some(mut change_info) = post_change.var_change_info {
-                        if change_info.changed_kind.is_some() && change_info.changed_kind.unwrap() == FlowTransitionActionByVarChangeInfoChangedKind::AutoGetOperateTime {
+                        if change_info.changed_kind.is_some() && change_info.changed_kind.clone().unwrap() == FlowTransitionActionByVarChangeInfoChangedKind::AutoGetOperateTime {
                             change_info.changed_val = Some(json!(Utc::now().to_rfc3339_opts(SecondsFormat::Millis, true)));
+                            change_info.changed_kind = Some(FlowTransitionActionByVarChangeInfoChangedKind::ChangeContent);
                         }
                         let rel_tag = change_info.obj_tag.unwrap_or_default();
                         if !rel_tag.is_empty() {
-                            let obj_tag = if let Some(obj_tag_rel_kind) = change_info.obj_tag_rel_kind.clone() {
-                                String::from(obj_tag_rel_kind)
-                            } else {
-                                rel_tag.clone()
-                            };
-                            let mut resp =
-                                FlowExternalServ::do_fetch_rel_obj(&current_model.tag, &current_inst.id, &current_inst.rel_business_obj_id, vec![obj_tag], ctx, funs).await?;
+                            let mut resp = FlowExternalServ::do_fetch_rel_obj(
+                                &current_model.tag,
+                                &current_inst.id,
+                                &current_inst.rel_business_obj_id,
+                                vec![(rel_tag.clone(), change_info.obj_tag_rel_kind.clone())],
+                                ctx,
+                                funs,
+                            )
+                            .await?;
                             if !resp.rel_bus_objs.is_empty() {
                                 for rel_bus_obj_id in resp.rel_bus_objs.pop().unwrap().rel_bus_obj_ids {
                                     let inst_id = Self::get_inst_ids_by_rel_business_obj_id(vec![rel_bus_obj_id.clone()], funs, ctx).await?.pop().unwrap_or_default();
@@ -853,10 +868,12 @@ impl FlowInstServ {
                                         None,
                                         None,
                                         vec![FlowExternalParams {
+                                            rel_kind: None,
                                             rel_tag: None,
                                             var_id: None,
                                             var_name: Some(change_info.var_name.clone()),
                                             value: change_info.changed_val.clone(),
+                                            changed_kind: change_info.changed_kind.clone(),
                                         }],
                                         ctx,
                                         funs,
@@ -875,10 +892,12 @@ impl FlowInstServ {
                                 None,
                                 None,
                                 vec![FlowExternalParams {
+                                    rel_kind: None,
                                     rel_tag: None,
                                     var_id: None,
                                     var_name: Some(change_info.var_name.clone()),
                                     value: change_info.changed_val.clone(),
+                                    changed_kind: change_info.changed_kind,
                                 }],
                                 ctx,
                                 funs,
@@ -890,13 +909,15 @@ impl FlowInstServ {
                 }
                 FlowTransitionActionChangeKind::State => {
                     if let Some(change_info) = post_change.state_change_info {
-                        let obj_tag = if let Some(obj_tag_rel_kind) = change_info.obj_tag_rel_kind.clone() {
-                            String::from(obj_tag_rel_kind)
-                        } else {
-                            change_info.obj_tag.clone()
-                        };
-                        let mut resp =
-                            FlowExternalServ::do_fetch_rel_obj(&current_model.tag, &current_inst.id, &current_inst.rel_business_obj_id, vec![obj_tag], ctx, funs).await?;
+                        let mut resp = FlowExternalServ::do_fetch_rel_obj(
+                            &current_model.tag,
+                            &current_inst.id,
+                            &current_inst.rel_business_obj_id,
+                            vec![(change_info.obj_tag.clone(), change_info.obj_tag_rel_kind.clone())],
+                            ctx,
+                            funs,
+                        )
+                        .await?;
                         if !resp.rel_bus_objs.is_empty() {
                             let inst_ids = Self::find_inst_ids_by_rel_obj_ids(resp.rel_bus_objs.pop().unwrap().rel_bus_obj_ids, &change_info, funs, ctx).await?;
                             Self::do_modify_state_by_post_action(inst_ids, &change_info, updated_instance_list, funs, ctx).await?;
@@ -925,12 +946,7 @@ impl FlowInstServ {
                     let mut rel_tags = vec![];
                     for condition_item in change_condition.conditions.iter() {
                         if condition_item.obj_tag.is_some() && !condition_item.state_id.is_empty() {
-                            let obj_tag = if let Some(obj_tag_rel_kind) = condition_item.obj_tag_rel_kind.clone() {
-                                String::from(obj_tag_rel_kind)
-                            } else {
-                                condition_item.obj_tag.clone().unwrap()
-                            };
-                            rel_tags.push(obj_tag);
+                            rel_tags.push((condition_item.obj_tag.clone().unwrap(), condition_item.obj_tag_rel_kind.clone()));
                         }
                     }
                     let inst_id = Self::get_inst_ids_by_rel_business_obj_id(vec![rel_obj_id.clone()], funs, ctx).await?.pop().unwrap_or_default();
@@ -1216,7 +1232,9 @@ impl FlowInstServ {
                     .from(flow_inst::Entity)
                     .and_where(Expr::col((flow_inst::Entity, flow_inst::Column::CurrentStateId)).eq(flow_state_id))
                     .and_where(Expr::col((flow_inst::Entity, flow_inst::Column::RelFlowModelId)).eq(flow_model_id))
-                    .and_where(Expr::col((flow_inst::Entity, flow_inst::Column::FinishAbort)).eq(false)),
+                    .and_where(
+                        Expr::col((flow_inst::Entity, flow_inst::Column::FinishAbort)).ne(true).or(Expr::col((flow_inst::Entity, flow_inst::Column::FinishAbort)).is_null()),
+                    ),
             )
             .await?
             != 0
@@ -1239,12 +1257,12 @@ impl FlowInstServ {
             current_vars: Set(Some(TardisFuns::json.obj_to_json(&new_vars)?)),
             ..Default::default()
         };
-        funs.db().update_one(flow_inst, ctx).await?;
 
         let flow_inst_id_sync = flow_inst_id.to_string();
         let ctx_sync = ctx.clone();
         tokio::spawn(async move {
             let mut funs = flow_constants::get_tardis_inst();
+            funs.db().update_one(flow_inst, &ctx_sync).await.unwrap();
             funs.begin().await.unwrap();
             match Self::do_front_change(&flow_inst_id_sync, &ctx_sync, &funs).await {
                 Ok(_) => {}

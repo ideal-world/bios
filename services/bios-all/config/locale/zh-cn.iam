@@ -62,3 +62,6 @@
 409-iam-cert-phone-bind-already-exist	手机号已存在绑定关系
 409-iam-cert-email-bind-already-exist	邮箱已存在绑定关系
 404-sync-element-not-found-error	请先添加同步按钮
+
+409-role-is-not-app	该角色不属于app角色，不能删除
+409-role-is-extend	该角色是扩展角色，不能删除

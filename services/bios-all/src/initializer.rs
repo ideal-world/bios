@@ -21,7 +21,7 @@ pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
     bios_spi_reldb::reldb_initializer::init(web_server).await?;
     bios_spi_search::search_initializer::init(web_server).await?;
     bios_spi_stats::stats_initializer::init(web_server).await?;
-    bios_spi_conf::conf_initializer::init(web_server).await?;
+    // bios_spi_conf::conf_initializer::init(web_server).await?;
 
     bios_mw_schedule::schedule_initializer::init(web_server).await?;
     bios_mw_flow::flow_initializer::init(web_server).await?;
