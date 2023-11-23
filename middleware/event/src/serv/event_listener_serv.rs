@@ -12,13 +12,14 @@ use super::event_topic_serv::TOPICS;
 
 lazy_static! {
     pub static ref LISTENERS: Arc<RwLock<HashMap<String, EventListenerInfo>>> = Arc::new(RwLock::new(HashMap::new()));
+    // topic => 
     pub static ref MGR_LISTENERS: Arc<RwLock<HashMap<String, HashMap<String, String>>>> = Arc::new(RwLock::new(HashMap::new()));
 }
 
 const MGR_LISTENER_AVATAR_PREFIX: &str = "_";
 
 pub(crate) async fn register(listener: EventListenerRegisterReq, funs: &TardisFunsInst) -> TardisResult<EventListenerRegisterResp> {
-    if let Some(topic) = TOPICS.read().await.get(&listener.topic_code.to_string()) {
+    if let Some(topic) = TOPICS.read().await.get(listener.topic_code.as_str()) {
         let sk = listener.topic_sk.clone().unwrap_or("".to_string());
         let mgr = if sk == topic.use_sk {
             false
@@ -29,8 +30,7 @@ pub(crate) async fn register(listener: EventListenerRegisterReq, funs: &TardisFu
         };
         let avatars = if mgr {
             let mut mgr_listeners = MGR_LISTENERS.write().await;
-            mgr_listeners.entry(listener.topic_code.to_string()).or_insert_with(HashMap::new);
-            let mgr_listeners_with_topic = mgr_listeners.get_mut(&listener.topic_code.to_string()).unwrap();
+            let mgr_listeners_with_topic = mgr_listeners.entry(listener.topic_code.to_string()).or_insert_with(HashMap::new);
             match &listener.events {
                 Some(events) => events
                     .iter()
@@ -59,7 +59,7 @@ pub(crate) async fn register(listener: EventListenerRegisterReq, funs: &TardisFu
             listener.avatars.iter().map(|v| v.to_string()).collect()
         };
 
-        let listener_code = TardisFuns::crypto.base64.encode(&TardisFuns::field.nanoid());
+        let listener_code = TardisFuns::crypto.base64.encode(TardisFuns::field.nanoid());
         let token = TardisFuns::field.nanoid_len(32);
 
         let listener_info = EventListenerInfo {
