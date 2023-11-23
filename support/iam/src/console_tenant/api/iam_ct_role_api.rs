@@ -119,7 +119,6 @@ impl IamCtRoleApi {
         TardisResp::ok(result)
     }
 
-
     /// 聚合查询租户及基础项目角色 Find Roles base app
     #[oai(path = "/base_app", method = "get")]
     async fn find_role_base_app(
@@ -133,9 +132,7 @@ impl IamCtRoleApi {
         let funs = iam_constants::get_tardis_inst();
         let app_result = IamRoleServ::find_items(
             &IamRoleFilterReq {
-                basic: RbumBasicFilterReq {
-                    ..Default::default()
-                },
+                basic: RbumBasicFilterReq { ..Default::default() },
                 kind: Some(IamRoleKind::App),
                 in_base: Some(true),
                 ..Default::default()
@@ -145,12 +142,10 @@ impl IamCtRoleApi {
             &funs,
             &ctx.0,
         )
-            .await?;
+        .await?;
         let tenant_result = IamRoleServ::find_items(
             &IamRoleFilterReq {
-                basic: RbumBasicFilterReq {
-                    ..Default::default()
-                },
+                basic: RbumBasicFilterReq { ..Default::default() },
                 // kind: Some(IamRoleKind::Tenant),
                 in_base: Some(false),
                 ..Default::default()
@@ -160,7 +155,7 @@ impl IamCtRoleApi {
             &funs,
             &ctx.0,
         )
-            .await?;
+        .await?;
         ctx.0.execute_task().await?;
         let mut result = vec![];
         result.extend(tenant_result);
