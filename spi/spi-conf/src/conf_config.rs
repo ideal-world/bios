@@ -1,7 +1,7 @@
-use std::net::IpAddr;
-use ipnet::IpNet;
 use bios_basic::rbum::rbum_config::RbumConfig;
+use ipnet::IpNet;
 use serde::{Deserialize, Serialize};
+use std::net::IpAddr;
 use tardis::consts::{IP_LOCALHOST, IP_UNSPECIFIED};
 
 use crate::dto::conf_auth_dto::RegisterRequest;

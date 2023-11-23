@@ -87,6 +87,8 @@ pub struct FlowInstDetailResp {
     pub current_state_id: String,
     pub current_state_name: Option<String>,
     pub current_state_color: Option<String>,
+    pub current_state_kind: Option<FlowSysStateKind>,
+    pub current_state_ext: Option<String>,
 
     pub current_assigned: Option<String>,
     pub current_vars: Option<HashMap<String, Value>>,
