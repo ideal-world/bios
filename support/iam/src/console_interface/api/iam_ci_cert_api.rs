@@ -1,5 +1,7 @@
+use std::collections::HashMap;
+
 use crate::basic::dto::iam_account_dto::IamAccountExtSysResp;
-use crate::basic::dto::iam_cert_dto::{IamCertAkSkAddReq, IamCertAkSkResp, IamOauth2AkSkResp, IamThirdPartyCertExtAddReq};
+use crate::basic::dto::iam_cert_dto::{IamCertAkSkAddReq, IamCertAkSkResp, IamOauth2AkSkResp, IamThirdPartyCertExtAddReq, IamCertDecodeRequest};
 use crate::basic::serv::iam_account_serv::IamAccountServ;
 use crate::basic::serv::iam_cert_ldap_serv::IamCertLdapServ;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
@@ -144,6 +146,16 @@ impl IamCiCertApi {
         let msg = IamCertServ::third_integration_sync_without_config(&funs, &ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(msg)
+    }
+
+    /// decode cert
+    #[oai(path = "/decode", method = "post")]
+    async fn decode_certs(&self, body: Json<IamCertDecodeRequest>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<HashMap<String, String>> {
+        let funs = iam_constants::get_tardis_inst();
+        let ctx = IamCertServ::use_sys_or_tenant_ctx_unsafe(ctx.0)?;
+        add_remote_ip(request, &ctx).await?;
+        let doceded = IamCertServ::batch_decode_cert(body.0.codes, &funs, &ctx).await?;
+        TardisResp::ok(doceded)
     }
 }
 

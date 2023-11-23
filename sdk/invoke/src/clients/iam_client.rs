@@ -55,5 +55,5 @@ pub struct IamCertDecodeRequest {
 impl_tardis_api_client! {
     IamClient<'_>:
     {get_account, get ["/ct/account", id] {tenant_id} IamAccountDetailAggResp}
-    {batch_decode_cert, post ["/ct/cert/manage/decode"] IamCertDecodeRequest => HashMap<String, String>}
+    {batch_decode_cert, post ["/ci/cert/decode"] IamCertDecodeRequest => HashMap<String, String>}
 }
