@@ -684,7 +684,7 @@ impl IamCertServ {
         .await?;
         if let Some(ext_cert) = ext_cert {
             let now_sk = RbumCertServ::show_sk(ext_cert.id.as_str(), &RbumCertFilterReq::default(), funs, ctx).await?;
-            let encoded_sk = encode_cert(&ext_cert.id, now_sk, ext_cert.sk_invisible, funs, ctx)?;
+            let encoded_sk = encode_cert(&ext_cert.id, now_sk, ext_cert.sk_invisible)?;
             Ok(RbumCertSummaryWithSkResp {
                 id: ext_cert.id,
                 ak: ext_cert.ak,
@@ -757,7 +757,7 @@ impl IamCertServ {
         .await?;
         if let Some(ext_cert) = ext_cert {
             let now_sk = RbumCertServ::show_sk(ext_cert.id.as_str(), &RbumCertFilterReq::default(), funs, &mock_ctx).await?;
-            let encoded_sk = encode_cert(&ext_cert.id, now_sk, ext_cert.sk_invisible, funs, &mock_ctx)?;
+            let encoded_sk = encode_cert(&ext_cert.id, now_sk, ext_cert.sk_invisible)?;
             // let encoded_sk = now_sk;
             Ok(RbumCertSummaryWithSkResp {
                 id: ext_cert.id,
@@ -1510,9 +1510,11 @@ impl IamCertServ {
     }
 }
 
-fn encode_cert(id: &str, sk: String, invisible: bool, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
+fn encode_cert(id: &str, sk: String, invisible: bool) -> TardisResult<String> {
+    let usage = "CERT";
+    let field = "sk";
     if invisible {
-        let key = format!("{id}/sk");
+        let key = format!("${usage}{{{id}/{field}}}");
         Ok(key)
     } else {
         Ok(sk)
