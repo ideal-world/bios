@@ -20,6 +20,8 @@ use crate::{
 
 pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
     let mut funs = TardisFuns::inst_with_db_conn(DOMAIN_CODE.to_string(), None);
+    init_api(web_server).await?;
+    init_cluster_resource().await;
     let ctx = TardisContext {
         own_paths: "".to_string(),
         ak: "".to_string(),
@@ -31,8 +33,7 @@ pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
     funs.begin().await?;
     init_db(DOMAIN_CODE.to_string(), KIND_CODE.to_string(), &funs, &ctx).await?;
     EventDefServ::init(&funs, &ctx).await?;
-    funs.commit().await?;
-    init_api(web_server).await
+    funs.commit().await
 }
 
 async fn init_db(domain_code: String, kind_code: String, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
@@ -86,4 +87,13 @@ async fn init_api(web_server: &TardisWebServer) -> TardisResult<()> {
         )
         .await;
     Ok(())
+}
+
+async fn init_cluster_resource() {
+    use tardis::cluster::cluster_processor::subscribe;
+    use crate::serv::event_listener_serv::{listeners, mgr_listeners};
+    use crate::serv::event_topic_serv::topics;
+    subscribe(listeners().clone()).await;
+    subscribe(mgr_listeners().clone()).await;
+    subscribe(topics().clone()).await;
 }

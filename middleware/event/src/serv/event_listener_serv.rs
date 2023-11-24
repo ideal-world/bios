@@ -1,3 +1,5 @@
+use tardis::cluster::cluster_hashmap::ClusterStaticHashMap;
+use tardis::tardis_static;
 use tardis::TardisFunsInst;
 use tardis::{basic::result::TardisResult, TardisFuns};
 
@@ -8,18 +10,24 @@ use std::{collections::HashMap, sync::Arc};
 use lazy_static::lazy_static;
 use tardis::tokio::sync::RwLock;
 
-use super::event_topic_serv::TOPICS;
+use super::event_topic_serv::topics;
+
+tardis_static! {
+    pub(crate) listeners: ClusterStaticHashMap<String, EventListenerInfo> = ClusterStaticHashMap::new("bios/event/listeners");
+    // (topic, event) => avatar
+    pub(crate) mgr_listeners: ClusterStaticHashMap<(String, String), String> = ClusterStaticHashMap::new("bios/event/msg_listeners");
+}
 
 lazy_static! {
     pub static ref LISTENERS: Arc<RwLock<HashMap<String, EventListenerInfo>>> = Arc::new(RwLock::new(HashMap::new()));
-    // topic => 
+    // topic => event => avatar
     pub static ref MGR_LISTENERS: Arc<RwLock<HashMap<String, HashMap<String, String>>>> = Arc::new(RwLock::new(HashMap::new()));
 }
 
 const MGR_LISTENER_AVATAR_PREFIX: &str = "_";
 
 pub(crate) async fn register(listener: EventListenerRegisterReq, funs: &TardisFunsInst) -> TardisResult<EventListenerRegisterResp> {
-    if let Some(topic) = TOPICS.read().await.get(listener.topic_code.as_str()) {
+    if let Some(topic) = topics().get(listener.topic_code.to_string()).await? {
         let sk = listener.topic_sk.clone().unwrap_or("".to_string());
         let mgr = if sk == topic.use_sk {
             false
@@ -29,18 +37,18 @@ pub(crate) async fn register(listener: EventListenerRegisterReq, funs: &TardisFu
             return Err(funs.err().unauthorized("listener", "register", "sk do not match", "401-event-listener-sk-not-match"));
         };
         let avatars = if mgr {
-            let mut mgr_listeners = MGR_LISTENERS.write().await;
-            let mgr_listeners_with_topic = mgr_listeners.entry(listener.topic_code.to_string()).or_insert_with(HashMap::new);
+            // let mut mgr_listeners = MGR_LISTENERS.write().await;
+            // let mgr_listeners_with_topic = mgr_listeners.entry(listener.topic_code.to_string()).or_insert_with(HashMap::new);
+            let topic = listener.topic_code.to_string();
             match &listener.events {
-                Some(events) => events
-                    .iter()
-                    .map(|event_code| {
-                        mgr_listeners_with_topic.insert(event_code.to_string(), format!("{MGR_LISTENER_AVATAR_PREFIX}{event_code}"));
-                        format!("{MGR_LISTENER_AVATAR_PREFIX}{event_code}")
-                    })
-                    .collect(),
+                Some(events) => {
+                    let pairs = events.iter().map(|event| ((topic.to_string(), event.to_string()), format!("{MGR_LISTENER_AVATAR_PREFIX}{event}"))).collect();
+                    let avatars = events.iter().map(|event| format!("{MGR_LISTENER_AVATAR_PREFIX}{event}")).collect::<Vec<_>>();
+                    mgr_listeners().batch_insert(pairs).await?;
+                    avatars
+                }
                 None => {
-                    mgr_listeners_with_topic.insert("".to_string(), MGR_LISTENER_AVATAR_PREFIX.to_string());
+                    mgr_listeners().insert((topic.to_string(), String::default()), MGR_LISTENER_AVATAR_PREFIX.to_string()).await?;
                     vec![MGR_LISTENER_AVATAR_PREFIX.to_string()]
                 }
             }
@@ -70,7 +78,7 @@ pub(crate) async fn register(listener: EventListenerRegisterReq, funs: &TardisFu
             token: token.clone(),
             avatars: avatars.clone(),
         };
-        LISTENERS.write().await.insert(listener_code.clone(), listener_info);
+        listeners().insert(listener_code.clone(), listener_info).await?;
         let event_url = funs.conf::<EventConfig>().event_url();
         Ok(EventListenerRegisterResp {
             listener_code: listener_code.clone(),
@@ -82,21 +90,17 @@ pub(crate) async fn register(listener: EventListenerRegisterReq, funs: &TardisFu
 }
 
 pub(crate) async fn remove(listener_code: &str, token: &str, funs: &TardisFunsInst) -> TardisResult<()> {
-    if let Some(listener) = LISTENERS.read().await.get(listener_code) {
+    if let Some(listener) = listeners().get(listener_code.to_string()).await? {
         if listener.token == token {
-            LISTENERS.write().await.remove(listener_code);
+            listeners().remove(listener_code.to_string()).await?;
             if listener.mgr {
-                let mut mgr_listeners = MGR_LISTENERS.write().await;
-                if let Some(event_code_info) = mgr_listeners.get_mut(&listener.topic_code) {
-                    match &listener.events {
-                        Some(events) => events.iter().for_each(|event_code| {
-                            event_code_info.remove(event_code);
-                        }),
-                        None => {
-                            event_code_info.remove("");
-                        }
+                let to_removes = match listener.events {
+                    Some(events) => events.into_iter().map(|event_code| (listener.topic_code.clone(), event_code)).collect(),
+                    None => {
+                        vec![(listener.topic_code.clone(), String::default())]
                     }
-                }
+                };
+                mgr_listeners().batch_remove(to_removes).await?;
             }
             Ok(())
         } else {

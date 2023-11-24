@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use std::{borrow::Cow, collections::HashMap};
 
-use bios_basic::process::ci_processor;
+use bios_basic::process::ci_processor::{self, AppKeyConfig};
 use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
 use tardis::basic::result::TardisResult;
@@ -24,8 +24,8 @@ use tardis::{tokio, TardisFuns, TardisFunsInst};
 use crate::dto::event_dto::EventMessageMgrWrap;
 use crate::event_config::EventConfig;
 
-use super::event_listener_serv::{LISTENERS, MGR_LISTENERS};
-use super::event_topic_serv::TOPICS;
+use super::event_listener_serv::{LISTENERS, MGR_LISTENERS, listeners, mgr_listeners};
+use super::event_topic_serv::topics;
 
 tardis_static! {
     // temporary no cleaner for senders
@@ -63,10 +63,11 @@ pub async fn add_sender(topic_code: String, capacity: usize) {
 }
 
 pub(crate) async fn ws_process(listener_code: String, token: String, websocket: WebSocket, funs: &TardisFunsInst) -> BoxWebSocketUpgraded {
-    if let Some(listener) = LISTENERS.read().await.get(&listener_code) {
+    if let Ok(Some(listener)) = listeners().get(listener_code.clone()).await {
         if listener.token == token {
-            let topic = TOPICS.read().await;
-            let topic = topic.get(&listener.topic_code).unwrap();
+            let Ok(Some(topic)) = topics().get(listener.topic_code.clone()).await else {
+                return ws_error(listener_code, "topic not found", websocket);
+            };
             let need_mgr = topic.need_mgr;
             let save_message = topic.save_message;
             let is_mgr = listener.mgr;
@@ -83,7 +84,7 @@ pub(crate) async fn ws_process(listener_code: String, token: String, websocket: 
                     ("listener_code".to_string(), listener_code),
                     ("topic_code".to_string(), listener.topic_code.clone()),
                     ("log_url".to_string(), funs.conf::<EventConfig>().log_url()),
-                    ("app_key".to_string(), TardisFuns::json.obj_to_string(&funs.conf::<EventConfig>().app_key).unwrap()),
+                    ("app_key".to_string(), TardisFuns::json.obj_to_string(&funs.conf::<EventConfig>().app_key).expect("event config not a valid json value")),
                 ]),
                 websocket,
                 sender,
@@ -93,19 +94,17 @@ pub(crate) async fn ws_process(listener_code: String, token: String, websocket: 
                             if log_url == "/" {
                                 info!("[Event] MESSAGE LOG: {}", TardisFuns::json.obj_to_string(&req_msg).expect("req_msg not a valid json value"));
                             } else {
-                                let app_key = ext.get("app_key").expect("app_key not found");
-                                let _ = TardisFuns::json.str_to_obj(ext.get("app_key").unwrap())
-                                ci_processor::signature(&TardisFuns::json.str_to_obj(ext.get("app_key").unwrap()).unwrap(), "post", "/ci/item", "", Vec::new()).unwrap(),
-                                TardisFuns::web_client()
+                                let app_key = ext.get("app_key").expect("app_key was modified unexpectedly");
+                                let app_key_config: AppKeyConfig = TardisFuns::json.str_to_obj(app_key).unwrap_or_default();
+                                let headers = ci_processor::signature(&app_key_config, "post", "/ci/item", "", Vec::new()).unwrap_or_default();
+                                let _ = TardisFuns::web_client()
                                     .post_obj_to_str(
                                         &format!("{}/ci/item", log_url),
                                         &req_msg,
-                                        ci_processor::signature(&TardisFuns::json.str_to_obj(ext.get("app_key").unwrap()).unwrap(), "post", "/ci/item", "", Vec::new()).unwrap(),
+                                        headers,
                                     )
-                                    .await
+                                    .await;
                             }
-                        } else {
-                            warn!("[Event] MESSAGE LOG ERROR: {}", e);
                         }
                     }
                     if !need_mgr || is_mgr {
@@ -116,31 +115,31 @@ pub(crate) async fn ws_process(listener_code: String, token: String, websocket: 
                         });
                     }
                     // TODO set cache
-                    if let Some(msg_event_code_info) = MGR_LISTENERS.read().await.get(ext.get("topic_code").unwrap()) {
-                        let msg_avatar = if let Some(req_event_code) = &req_msg.event {
-                            msg_event_code_info.get(req_event_code)
-                        } else {
-                            msg_event_code_info.get("")
-                        };
-                        if let Some(msg_avatar) = msg_avatar {
-                            return Some(TardisWebsocketResp {
-                                msg: TardisFuns::json
-                                    .obj_to_json(&EventMessageMgrWrap {
-                                        msg: req_msg.msg,
-                                        ori_from_avatar: req_msg.from_avatar,
-                                        ori_to_avatars: req_msg.to_avatars,
-                                    })
-                                    .unwrap(),
-                                to_avatars: vec![msg_avatar.clone()],
-                                ignore_avatars: vec![],
-                            });
-                        } else {
-                            warn!(
-                                "[Event] topic [{}] event code [{}] management node not found",
-                                ext.get("topic_code").unwrap(),
-                                &req_msg.event.unwrap_or("".to_string())
-                            );
-                        }
+                    let topic_code = ext.get("topic_code").expect("topic_code was modified unexpectedly");
+                    let msg_avatar = if let Some(req_event_code) = req_msg.event.clone() {
+                        mgr_listeners().get((topic_code.clone(), req_event_code)).await
+                    } else {
+                        mgr_listeners().get((topic_code.clone(), Default::default())).await
+
+                    };
+                    if let Ok(Some(msg_avatar)) = msg_avatar {
+                        return Some(TardisWebsocketResp {
+                            msg: TardisFuns::json
+                                .obj_to_json(&EventMessageMgrWrap {
+                                    msg: req_msg.msg,
+                                    ori_from_avatar: req_msg.from_avatar,
+                                    ori_to_avatars: req_msg.to_avatars,
+                                })
+                                .expect("EventMessageMgrWrap not a valid json value"),
+                            to_avatars: vec![msg_avatar.clone()],
+                            ignore_avatars: vec![],
+                        });
+                    } else {
+                        warn!(
+                            "[Event] topic [{}] event code [{}] management node not found",
+                            topic_code,
+                            &req_msg.event.unwrap_or_default()
+                        );
                     }
                     None
                 },
@@ -161,8 +160,9 @@ fn ws_error(req_session: String, error: &str, websocket: WebSocket) -> BoxWebSoc
         HashMap::from([("error".to_string(), error.to_string())]),
         websocket,
         |_, _, ext| async move {
-            warn!("[Event] Websocket connection error: {}", ext.get("error").unwrap());
-            Some(format!("Websocket connection error: {}", ext.get("error").unwrap()))
+            let error = ext.get("error").expect("error was modified unexpectedly");
+            warn!("[Event] Websocket connection error: {}", error);
+            Some(format!("Websocket connection error: {}", error))
         },
         |_, _| async move {},
     )

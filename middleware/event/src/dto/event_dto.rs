@@ -20,7 +20,7 @@ pub struct EventTopicAddOrModifyReq {
     pub mgr_sk: Option<String>,
 }
 
-#[derive(poem_openapi::Object, sea_orm::FromQueryResult, Serialize, Deserialize, Debug)]
+#[derive(poem_openapi::Object, sea_orm::FromQueryResult, Serialize, Deserialize, Debug, Clone)]
 pub struct EventTopicInfoResp {
     #[oai(validator(pattern = r"^[a-z0-9]+$"))]
     pub code: String,
@@ -69,7 +69,7 @@ pub struct EventListenerRegisterResp {
     pub listener_code: String,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct EventListenerInfo {
     pub topic_code: String,
     pub subscribe_mode: bool,
