@@ -678,8 +678,10 @@ impl FlowInstServ {
         if next_flow_transition.is_none() {
             return Err(funs.err().not_found("flow_inst", "transfer", "no transferable state", "404-flow-inst-transfer-state-not-found"));
         }
+        let model_transition = flow_model.transitions();
+        let next_transition_detail = model_transition.iter().find(|trans| trans.id == transfer_req.flow_transition_id).unwrap().to_owned();
         if FlowModelServ::check_post_action_ring(
-            flow_model.transitions().into_iter().find(|trans| trans.id == transfer_req.flow_transition_id).unwrap(),
+            next_transition_detail.clone(),
             (false, vec![]),
             funs,
             ctx,
@@ -740,6 +742,7 @@ impl FlowInstServ {
                     Some(next_flow_state.sys_state.clone()),
                     Some(prev_flow_state.name.clone()),
                     Some(prev_flow_state.sys_state.clone()),
+                    next_transition_detail.is_notify,
                     params,
                     ctx,
                     funs,
@@ -792,10 +795,9 @@ impl FlowInstServ {
         // get updated instance detail
         let flow_inst_detail = Self::get(flow_inst_id, funs, ctx).await?;
 
-        let model_transition = flow_model.transitions();
         Self::do_request_webhook(
             from_transition_id.and_then(|id: String| model_transition.iter().find(|model_transition| model_transition.id == id)),
-            model_transition.iter().find(|model_transition| model_transition.id == next_flow_transition.next_flow_transition_id),
+            Some(&next_transition_detail),
         )
         .await?;
 
@@ -809,6 +811,7 @@ impl FlowInstServ {
                 next_flow_state.sys_state,
                 prev_flow_state.name.clone(),
                 prev_flow_state.sys_state,
+                next_transition_detail.is_notify,
                 ctx,
                 funs,
             )
@@ -818,7 +821,7 @@ impl FlowInstServ {
         let post_changes =
             model_transition.into_iter().find(|model_transition| model_transition.id == next_flow_transition.next_flow_transition_id).unwrap_or_default().action_by_post_changes();
         if !post_changes.is_empty() {
-            Self::do_post_change(&flow_inst_detail, &flow_model, post_changes, updated_instance_list, ctx, funs).await?;
+            Self::do_post_change(&flow_inst_detail, &flow_model, post_changes, updated_instance_list, next_transition_detail.is_notify, ctx, funs).await?;
         }
         let next_flow_transitions = Self::do_find_next_transitions(&flow_inst_detail, &flow_model, None, &None, skip_filter, funs, ctx).await?.next_flow_transitions;
 
@@ -849,6 +852,7 @@ impl FlowInstServ {
         current_model: &FlowModelDetailResp,
         post_changes: Vec<FlowTransitionActionChangeInfo>,
         updated_instance_list: &mut Vec<String>,
+        is_notify: bool,
         ctx: &TardisContext,
         funs: &TardisFunsInst,
     ) -> TardisResult<()> {
@@ -883,6 +887,7 @@ impl FlowInstServ {
                                         None,
                                         None,
                                         None,
+                                        is_notify,
                                         vec![FlowExternalParams {
                                             rel_kind: None,
                                             rel_tag: None,
@@ -907,6 +912,7 @@ impl FlowInstServ {
                                 None,
                                 None,
                                 None,
+                                is_notify,
                                 vec![FlowExternalParams {
                                     rel_kind: None,
                                     rel_tag: None,

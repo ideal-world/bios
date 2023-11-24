@@ -76,6 +76,7 @@ impl FlowExternalServ {
         target_sys_state: Option<FlowSysStateKind>,
         original_state: Option<String>,
         original_sys_state: Option<FlowSysStateKind>,
+        is_notify: bool,
         params: Vec<FlowExternalParams>,
         ctx: &TardisContext,
         funs: &TardisFunsInst,
@@ -110,6 +111,7 @@ impl FlowExternalServ {
             target_sys_state,
             original_state,
             original_sys_state,
+            notify: Some(is_notify),
             params,
             ..Default::default()
         };
@@ -138,6 +140,7 @@ impl FlowExternalServ {
         target_sys_state: FlowSysStateKind,
         original_state: String,
         original_sys_state: FlowSysStateKind,
+        is_notify: bool,
         ctx: &TardisContext,
         funs: &TardisFunsInst,
     ) -> TardisResult<FlowExternalNotifyChangesResp> {
@@ -156,6 +159,7 @@ impl FlowExternalServ {
             target_sys_state: Some(target_sys_state),
             original_state: Some(original_state),
             original_sys_state: Some(original_sys_state),
+            notify: Some(is_notify),
             ..Default::default()
         };
         debug!("do_notify_changes body: {:?}", body);
@@ -215,11 +219,7 @@ impl FlowExternalServ {
             curr_bus_obj_id: "".to_string(),
             owner_paths: own_paths.to_string(),
             obj_ids: rel_business_obj_ids,
-            target_state: None,
-            target_sys_state: None,
-            original_state: None,
-            original_sys_state: None,
-            params: vec![],
+            ..Default::default()
         };
         debug!("do_query_field body: {:?}", body);
         let resp: FlowExternalResp<FlowExternalQueryFieldResp> = funs
