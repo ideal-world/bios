@@ -221,3 +221,8 @@ pub struct IamOauth2AkSkResp {
 pub struct IamCertDecodeRequest {
     pub codes: HashSet<String>,
 }
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct IamCertModifyVisibilityRequest {
+    pub sk_invisible: bool,
+}

@@ -73,8 +73,8 @@ pub enum BackendServiceSource {
     #[default]
     Default,
     New {
-        name: String,
-        conn_uri: String,
+        name: Option<String>,
+        // conn_uri: String,
         //
         kind_code: Option<String>,
     },
