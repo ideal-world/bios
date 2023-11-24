@@ -87,10 +87,10 @@ impl ConfCiAuthApi {
                 .ok_or_else(|| funs.err().not_found(&SpiBsServ::get_obj_name(), "register", "not found backend service", "404-spi-bs-not-exist"))?;
                 bs.id
             }
-            BackendServiceSource::New { name, kind_code } => {
+            BackendServiceSource::New { name } => {
                 // #TODO
                 // this should be determined by url, but now we only support spi-pg
-                let kind_code = kind_code.unwrap_or(spi_constants::SPI_PG_KIND_CODE.to_string());
+                let kind_code = spi_constants::SPI_PG_KIND_CODE.to_string();
                 let kind_id = RbumKindServ::get_rbum_kind_id_by_code(&kind_code, &funs)
                     .await?
                     .ok_or_else(|| funs.err().not_found(&SpiBsServ::get_obj_name(), "register", "db spi kind not found", "404-spi-bs-not-exist"))?;

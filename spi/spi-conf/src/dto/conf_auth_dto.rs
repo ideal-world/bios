@@ -76,7 +76,7 @@ pub enum BackendServiceSource {
         name: Option<String>,
         // conn_uri: String,
         //
-        kind_code: Option<String>,
+        // kind_code: Option<String>,
     },
 }
 
