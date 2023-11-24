@@ -13,6 +13,7 @@ pub struct KvItemAddOrModifyReq {
     pub key: TrimString,
     pub value: Value,
     pub info: Option<String>,
+    pub scope_level: Option<i16>,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug, sea_orm::FromQueryResult)]
@@ -21,6 +22,9 @@ pub struct KvItemDetailResp {
     pub key: String,
     pub value: Value,
     pub info: String,
+    pub owner: String,
+    pub own_paths: String,
+    pub scope_level: i16,
     pub create_time: DateTime<Utc>,
     pub update_time: DateTime<Utc>,
 }
@@ -31,6 +35,9 @@ pub struct KvItemSummaryResp {
     pub key: String,
     pub value: Value,
     pub info: String,
+    pub owner: String,
+    pub own_paths: String,
+    pub scope_level: i16,
     pub create_time: DateTime<Utc>,
     pub update_time: DateTime<Utc>,
 }
@@ -54,6 +61,7 @@ pub struct KvNameAddOrModifyReq {
     #[oai(validator(min_length = "2"))]
     pub key: TrimString,
     pub name: String,
+    pub scope_level: Option<i16>,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
@@ -69,6 +77,7 @@ pub struct KvTagAddOrModifyReq {
     #[oai(validator(min_length = "2"))]
     pub key: TrimString,
     pub items: Vec<KvTagItemAddReq>,
+    pub scope_level: Option<i16>,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]

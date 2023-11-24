@@ -1,4 +1,7 @@
-use bios_basic::spi::spi_funs::{SpiBsInst, SpiBsInstExtractor};
+use bios_basic::{
+    rbum::{dto::rbum_filer_dto::RbumBasicFilterReq, helper::rbum_scope_helper},
+    spi::spi_funs::{SpiBsInst, SpiBsInstExtractor},
+};
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
     db::{reldb_client::TardisRelDBClient, sea_orm::Value},
@@ -15,11 +18,19 @@ pub async fn add_or_modify_item(add_or_modify_req: &KvItemAddOrModifyReq, _funs:
         Value::from(add_or_modify_req.key.to_string()),
         Value::from(add_or_modify_req.value.clone()),
         Value::from(add_or_modify_req.info.as_ref().unwrap_or(&"".to_string()).as_str()),
+        Value::from(ctx.owner.clone()),
+        Value::from(ctx.own_paths.clone()),
+        Value::from(add_or_modify_req.scope_level.unwrap_or(-1)),
     ];
     let mut update_opt_fragments: Vec<&str> = Vec::new();
     update_opt_fragments.push("v = $2");
     if add_or_modify_req.info.is_some() {
         update_opt_fragments.push("info = $3");
+    }
+    update_opt_fragments.push("owner = $4");
+    update_opt_fragments.push("own_paths = $5");
+    if add_or_modify_req.scope_level.is_some() {
+        update_opt_fragments.push("scope_level = $6");
     }
     let bs_inst = inst.inst::<TardisRelDBClient>();
     let (mut conn, table_name) = kv_pg_initializer::init_table_and_conn(bs_inst, ctx, true).await?;
@@ -27,9 +38,9 @@ pub async fn add_or_modify_item(add_or_modify_req: &KvItemAddOrModifyReq, _funs:
     conn.execute_one(
         &format!(
             r#"INSERT INTO {} 
-    (k, v, info)
+    (k, v, info, owner, own_paths, scope_level)
 VALUES
-    ($1, $2, $3)
+    ($1, $2, $3, $4, $5, $6)
 ON CONFLICT (k)
 DO UPDATE SET
     {}
@@ -48,9 +59,9 @@ pub async fn get_item(key: String, extract: Option<String>, _funs: &TardisFunsIn
     let bs_inst = inst.inst::<TardisRelDBClient>();
     let (conn, table_name) = kv_pg_initializer::init_table_and_conn(bs_inst, ctx, true).await?;
     let result = conn
-        .get_dto_by_sql(
+        .get_dto_by_sql::<KvItemDetailResp>(
             &format!(
-                r#"SELECT k AS key, v{} AS value, info, create_time, update_time
+                r#"SELECT k AS key, v{} AS value, info, owner, own_paths, scope_level, create_time, update_time
 FROM {}
 WHERE 
     k = $1"#,
@@ -60,6 +71,19 @@ WHERE
             vec![Value::from(key)],
         )
         .await?;
+    if let Some(detail) = result.as_ref() {
+        if !rbum_scope_helper::check_scope(
+            &detail.own_paths,
+            Some(detail.scope_level),
+            &RbumBasicFilterReq {
+                ignore_scope: false,
+                ..Default::default()
+            },
+            ctx,
+        ) {
+            return Ok(None);
+        }
+    }
     Ok(result)
 }
 
@@ -77,9 +101,9 @@ pub async fn find_items(keys: Vec<String>, extract: Option<String>, funs: &Tardi
     let bs_inst = inst_arc.inst::<TardisRelDBClient>();
     let (conn, table_name) = kv_pg_initializer::init_table_and_conn(bs_inst, ctx, true).await?;
     let result = conn
-        .find_dtos_by_sql(
+        .find_dtos_by_sql::<KvItemSummaryResp>(
             &format!(
-                r#"SELECT k AS key, v{} AS value, info, create_time, update_time
+                r#"SELECT k AS key, v{} AS value, info, owner, own_paths, scope_level, create_time, update_time
 FROM {}
 WHERE 
     k IN ({})"#,
@@ -89,7 +113,20 @@ WHERE
             ),
             sql_vals,
         )
-        .await?;
+        .await?
+        .into_iter()
+        .filter(|item| {
+            rbum_scope_helper::check_scope(
+                &item.own_paths,
+                Some(item.scope_level),
+                &RbumBasicFilterReq {
+                    ignore_scope: false,
+                    ..Default::default()
+                },
+                ctx,
+            )
+        })
+        .collect();
     Ok(result)
 }
 
@@ -141,7 +178,7 @@ pub async fn match_items(match_req: KvItemMatchReq, _funs: &TardisFunsInst, ctx:
     let result = conn
         .query_all(
             &format!(
-                r#"SELECT k, v{} AS v, info, create_time, update_time, count(*) OVER() AS total
+                r#"SELECT k, v{} AS v, info, owner, own_paths, scope_level, create_time, update_time, count(*) OVER() AS total
 FROM {}
 WHERE 
     {}
@@ -171,10 +208,22 @@ WHERE
                 key: item.try_get("", "k")?,
                 value: item.try_get("", "v")?,
                 info: item.try_get("", "info")?,
+                owner: item.try_get("", "owner")?,
+                own_paths: item.try_get("", "own_paths")?,
+                scope_level: item.try_get("", "scope_level")?,
                 create_time: item.try_get("", "create_time")?,
                 update_time: item.try_get("", "update_time")?,
             })
         })
+        .filter(|item| item.is_ok() && rbum_scope_helper::check_scope(
+            &item.as_ref().expect("invalid result").own_paths,
+            Some(item.as_ref().expect("invalid result").scope_level),
+            &RbumBasicFilterReq {
+                ignore_scope: false,
+                ..Default::default()
+            },
+            ctx,
+        ))
         .collect::<TardisResult<Vec<_>>>()?;
     Ok(TardisPage {
         page_size: match_req.page_size as u64,
