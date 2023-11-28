@@ -53,7 +53,7 @@ derive_into_nacos_auth! {
 pub struct RegisterRequest {
     #[oai(validator(pattern = r"^[a-zA-Z\d_]{5,16}$"))]
     pub username: Option<TrimString>,
-    #[oai(validator(pattern = r"^[a-zA-Z\d~!@#$%^&*\(\)_+]{8,16}$"))]
+    #[oai(validator(pattern = r"^[a-zA-Z\d~!@#$%^&*\(\)_+\.]{8,16}$"))]
     pub password: Option<TrimString>,
 }
 
@@ -84,9 +84,9 @@ pub enum BackendServiceSource {
 pub struct ChangePasswordRequest {
     #[oai(validator(pattern = r"^[a-zA-Z\d_]{5,16}$"))]
     pub username: TrimString,
-    #[oai(validator(pattern = r"^[a-zA-Z\d~!@#$%^&*\(\)_+]{8,16}$"))]
+    #[oai(validator(pattern = r"^[a-zA-Z\d~!@#$%^&*\(\)_+\.]{8,16}$"))]
     pub old_password: TrimString,
-    #[oai(validator(pattern = r"^[a-zA-Z\d~!@#$%^&*\(\)_+]{8,16}$"))]
+    #[oai(validator(pattern = r"^[a-zA-Z\d~!@#$%^&*\(\)_+\.]{8,16}$"))]
     pub password: Option<TrimString>,
 }
 
