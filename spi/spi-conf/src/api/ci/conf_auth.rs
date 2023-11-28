@@ -26,7 +26,10 @@ use tardis::{
 };
 
 use crate::{conf_constants::DOMAIN_CODE, serv::*};
-use crate::{dto::conf_auth_dto::*, serv::placehodler::has_placeholder_auth};
+use crate::{
+    dto::{conf_auth_dto::*, conf_namespace_dto::*},
+    serv::placehodler::has_placeholder_auth,
+};
 
 #[derive(Default, Clone, Copy, Debug)]
 
@@ -116,6 +119,18 @@ impl ConfCiAuthApi {
         SpiBsServ::add_rel(&bs_id, app_tenant_id, &funs, &ctx).await?;
         ctx.owner = app_tenant_id.to_string();
         let resp = register(req.register_request, &funs, &ctx).await?;
+        if let Some((_, app)) = ctx.own_paths.split_once('/') {
+            create_namespace(
+                &mut NamespaceAttribute {
+                    namespace: app.to_string(),
+                    namespace_show_name: app.to_string(),
+                    namespace_desc: None,
+                },
+                &funs,
+                &ctx,
+            )
+            .await?;
+        }
         funs.commit().await?;
         TardisResp::ok(resp)
     }
