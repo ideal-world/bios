@@ -23,8 +23,6 @@ use tardis::web::web_resp::{TardisApiResult, TardisResp, Void};
 pub struct IamCiCertManageApi;
 #[derive(Clone, Default)]
 pub struct IamCiCertApi;
-#[derive(Clone, Default)]
-pub struct IamCiLdapCertApi;
 
 /// # Interface Console Manage Cert API
 ///
@@ -159,22 +157,3 @@ impl IamCiCertApi {
     }
 }
 
-#[poem_openapi::OpenApi(prefix_path = "/ci/ldap/cert", tag = "bios_basic::ApiTag::Interface")]
-impl IamCiLdapCertApi {
-    /// 根据ldap cn查询对应的displayName
-    #[oai(path = "/cn/:cn", method = "get")]
-    async fn get_ldap_resp_by_cn(&self, cn: Path<String>) -> TardisApiResult<Vec<IamAccountExtSysResp>> {
-        let funs = iam_constants::get_tardis_inst();
-        let ctx = TardisContext {
-            own_paths: "".to_string(),
-            ak: "".to_string(),
-            roles: vec![],
-            groups: vec![],
-            owner: "".to_string(),
-            ..Default::default()
-        };
-        let result = IamCertLdapServ::get_ldap_resp_by_cn(&cn.0, &funs, &ctx).await?;
-        ctx.execute_task().await?;
-        TardisResp::ok(result)
-    }
-}

@@ -27,8 +27,6 @@ use crate::console_passport::dto::iam_cp_cert_dto::{
     IamCpExistMailVCodeReq, IamCpExistPhoneVCodeReq, IamCpLdapLoginReq, IamCpMailVCodeLoginGenVCodeReq, IamCpMailVCodeLoginReq, IamCpOAuth2LoginReq,
     IamCpPhoneVCodeLoginGenVCodeReq, IamCpPhoneVCodeLoginSendVCodeReq, IamCpUserPwdBindWithLdapReq, IamCpUserPwdCheckReq, IamCpUserPwdLoginReq,
 };
-#[cfg(feature = "ldap_client")]
-use crate::console_passport::serv::iam_cp_cert_ldap_serv::IamCpCertLdapServ;
 use crate::console_passport::serv::iam_cp_cert_mail_vcode_serv::IamCpCertMailVCodeServ;
 use crate::console_passport::serv::iam_cp_cert_oauth2_serv::IamCpCertOAuth2Serv;
 use crate::console_passport::serv::iam_cp_cert_phone_vcode_serv::IamCpCertPhoneVCodeServ;
@@ -39,8 +37,6 @@ use bios_basic::helper::request_helper::add_remote_ip;
 use tardis::web::poem::Request;
 #[derive(Clone, Default)]
 pub struct IamCpCertApi;
-#[derive(Clone, Default)]
-pub struct IamCpCertLdapApi;
 
 /// Passport Console Cert API
 #[poem_openapi::OpenApi(prefix_path = "/cp", tag = "bios_basic::ApiTag::Passport")]
@@ -347,40 +343,3 @@ impl IamCpCertApi {
     }
 }
 
-/// Passport Console Cert LDAP API
-#[cfg(feature = "ldap_client")]
-#[poem_openapi::OpenApi(prefix_path = "/cp/ldap", tag = "bios_basic::ApiTag::Passport")]
-impl IamCpCertLdapApi {
-    /// Login by LDAP
-    #[oai(path = "/login", method = "put")]
-    async fn login_or_register_by_ldap(&self, login_req: Json<IamCpLdapLoginReq>, request: &Request) -> TardisApiResult<IamAccountInfoWithUserPwdAkResp> {
-        let mut funs = iam_constants::get_tardis_inst();
-        funs.begin().await?;
-        let resp = IamCpCertLdapServ::login_or_register(&login_req.0, get_ip(request).await?, &funs).await?;
-        funs.commit().await?;
-        TardisResp::ok(resp)
-    }
-    /// Check userpwd cert binding with ldap cert
-    #[oai(path = "/check-bind", method = "post")]
-    async fn check_user_pwd_is_bind(&self, login_req: Json<IamCpUserPwdCheckReq>) -> TardisApiResult<IamCpUserPwdBindResp> {
-        let mut funs = iam_constants::get_tardis_inst();
-        funs.begin().await?;
-        let resp = IamCpCertLdapServ::check_user_pwd_is_bind(&login_req.0, &funs).await?;
-        funs.commit().await?;
-        TardisResp::ok(resp)
-    }
-
-    /// bind username password cert by ldap
-    ///
-    /// if ak param is None then create new userpwd cert \
-    /// else bind with ldap cert
-    /// name-password -ldap login
-    #[oai(path = "/bind-or-create-userpwd", method = "put")]
-    async fn bind_or_create_user_pwd_cert_by_ldap(&self, login_req: Json<IamCpUserPwdBindWithLdapReq>, request: &Request) -> TardisApiResult<IamAccountInfoWithUserPwdAkResp> {
-        let mut funs = iam_constants::get_tardis_inst();
-        funs.begin().await?;
-        let resp = IamCpCertLdapServ::bind_or_create_user_pwd_by_ldap(&login_req.0, get_ip(request).await?, &funs).await?;
-        funs.commit().await?;
-        TardisResp::ok(resp)
-    }
-}
