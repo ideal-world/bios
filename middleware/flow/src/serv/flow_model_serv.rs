@@ -200,7 +200,7 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
 
     async fn get_item(flow_model_id: &str, filter: &FlowModelFilterReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<FlowModelDetailResp> {
         let mut flow_model = Self::do_get_item(flow_model_id, filter, funs, ctx).await?;
-        let flow_transitions = Self::find_transitions(flow_model_id, funs, ctx).await?;
+        let flow_transitions = Self::find_transitions(flow_model_id, filter.specified_state_ids.as_deref(), funs, ctx).await?;
         flow_model.transitions = Some(TardisFuns::json.obj_to_json(&flow_transitions)?);
         Ok(flow_model)
     }
@@ -216,7 +216,7 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
     ) -> TardisResult<TardisPage<FlowModelDetailResp>> {
         let mut flow_models = Self::do_paginate_detail_items(filter, page_number, page_size, desc_sort_by_create, desc_sort_by_update, funs, ctx).await?;
         for flow_model in &mut flow_models.records {
-            let flow_transitions = Self::find_transitions(&flow_model.id, funs, ctx).await?;
+            let flow_transitions = Self::find_transitions(&flow_model.id, filter.specified_state_ids.as_deref(), funs, ctx).await?;
             flow_model.transitions = Some(TardisFuns::json.obj_to_json(&flow_transitions)?);
         }
         Ok(flow_models)
@@ -231,7 +231,7 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
     ) -> TardisResult<Vec<FlowModelDetailResp>> {
         let mut flow_models = Self::do_find_detail_items(filter, desc_sort_by_create, desc_sort_by_update, funs, ctx).await?;
         for flow_model in &mut flow_models {
-            let flow_transitions = Self::find_transitions(&flow_model.id, funs, ctx).await?;
+            let flow_transitions = Self::find_transitions(&flow_model.id, filter.specified_state_ids.as_deref(), funs, ctx).await?;
             flow_model.transitions = Some(TardisFuns::json.obj_to_json(&flow_transitions)?);
         }
         Ok(flow_models)
@@ -555,7 +555,7 @@ impl FlowModelServ {
         Ok(())
     }
 
-    async fn find_transitions(flow_model_id: &str, funs: &TardisFunsInst, _ctx: &TardisContext) -> TardisResult<Vec<FlowTransitionDetailResp>> {
+    async fn find_transitions(flow_model_id: &str, specified_state_ids: Option<&[String]>, funs: &TardisFunsInst, _ctx: &TardisContext) -> TardisResult<Vec<FlowTransitionDetailResp>> {
         let from_state_rbum_table = Alias::new("from_state_rbum");
         let from_state_table = Alias::new("from_state");
         let to_state_rbum_table = Alias::new("to_state_rbum");
@@ -624,7 +624,11 @@ impl FlowModelServ {
                 to_state_table.clone(),
                 Cond::all().add(Expr::col((to_state_table.clone(), ID_FIELD.clone())).equals((flow_transition::Entity, flow_transition::Column::FromFlowStateId))),
             )
-            .and_where(Expr::col((flow_transition::Entity, flow_transition::Column::RelFlowModelId)).eq(flow_model_id))
+            .and_where(Expr::col((flow_transition::Entity, flow_transition::Column::RelFlowModelId)).eq(flow_model_id));
+        if let Some(specified_state_ids) = specified_state_ids {
+            query.and_where(Expr::col((flow_transition::Entity, flow_transition::Column::FromFlowStateId)).is_in(specified_state_ids));
+        }
+        query
             .order_by((flow_transition::Entity, flow_transition::Column::Sort), Order::Asc)
             .order_by((flow_transition::Entity, flow_transition::Column::CreateTime), Order::Asc)
             .order_by((flow_transition::Entity, flow_transition::Column::Id), Order::Asc);
@@ -1174,7 +1178,7 @@ impl FlowModelServ {
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<Vec<FlowTransitionDetailResp>> {
-        Ok(Self::find_transitions(flow_model_id, funs, ctx)
+        Ok(Self::find_transitions(flow_model_id, None, funs, ctx)
             .await?
             .into_iter()
             .filter(|tran_detail| {
