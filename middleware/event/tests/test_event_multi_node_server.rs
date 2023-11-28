@@ -82,7 +82,7 @@ async fn test_event() -> TardisResult<()> {
                     tokio::select! {
                         result = stdout.read(&mut buf) => {
                             let size = result?;
-                            if size != 0 {
+                            if size != 0 && node_idx == 0 {
                                 println!("node[{node_idx}]/stdout:");
                                 println!("{}", String::from_utf8_lossy(&buf[..size]));
                             }
@@ -107,7 +107,7 @@ async fn test_event() -> TardisResult<()> {
             });
             tokio::time::sleep(Duration::from_secs(1)).await;
         }
-        tokio::time::sleep(Duration::from_secs(5)).await;
+        tokio::time::sleep(Duration::from_secs(10)).await;
         client_side().await?;
     }
 

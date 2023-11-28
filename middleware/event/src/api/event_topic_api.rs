@@ -1,8 +1,6 @@
 use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
-use bios_basic::TardisFunInstExtractor;
 use tardis::web::context_extractor::TardisContextExtractor;
-use tardis::web::poem::Request;
 use tardis::web::poem_openapi;
 use tardis::web::poem_openapi::param::{Path, Query};
 use tardis::web::poem_openapi::payload::Json;
@@ -22,7 +20,6 @@ impl EventTopicApi {
     async fn add(&self, mut add_or_modify_req: Json<EventTopicAddOrModifyReq>, ctx: TardisContextExtractor) -> TardisApiResult<String> {
         let funs = get_tardis_inst();
         let id = EventDefServ::add_item(&mut add_or_modify_req.0, &funs, &ctx.0).await?;
-        dbg!(&id);
         TardisResp::ok(id)
     }
 

@@ -12,11 +12,7 @@ use crate::domain::event_topic;
 use crate::dto::event_dto::{EventTopicAddOrModifyReq, EventTopicFilterReq, EventTopicInfoResp};
 use crate::event_config::EventInfoManager;
 
-use std::{collections::HashMap, sync::Arc};
-
-use lazy_static::lazy_static;
 use tardis::cluster::cluster_hashmap::ClusterStaticHashMap;
-use tardis::tokio::sync::RwLock;
 
 tardis_static! {
     pub(crate) topics: ClusterStaticHashMap<String, EventTopicInfoResp> = ClusterStaticHashMap::new("bios/event/topics");
@@ -64,7 +60,6 @@ impl RbumItemCrudOperation<event_topic::ActiveModel, EventTopicAddOrModifyReq, E
     async fn after_add_item(id: &str, add_req: &mut EventTopicAddOrModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let key = add_req.code.to_string();
         let value = Self::get_item(id, &EventTopicFilterReq::default(), funs, ctx).await?;
-        dbg!(&value);
         topics().insert(key, value).await?;
         Ok(())
     }

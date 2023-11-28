@@ -38,7 +38,7 @@ pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
 
 async fn init_db(domain_code: String, kind_code: String, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
     if let Some(domain_id) = RbumDomainServ::get_rbum_domain_id_by_code(&domain_code, funs).await? {
-        let kind_id = RbumKindServ::get_rbum_kind_id_by_code(&kind_code, funs).await?.unwrap();
+        let kind_id = RbumKindServ::get_rbum_kind_id_by_code(&kind_code, funs).await?.expect("missing event kind");
         EventInfoManager::set(EventInfo { kind_id, domain_id })?;
         return Ok(());
     }
