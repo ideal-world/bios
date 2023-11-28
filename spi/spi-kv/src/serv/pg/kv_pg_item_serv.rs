@@ -215,15 +215,18 @@ WHERE
                 update_time: item.try_get("", "update_time")?,
             })
         })
-        .filter(|item| item.is_ok() && rbum_scope_helper::check_scope(
-            &item.as_ref().expect("invalid result").own_paths,
-            Some(item.as_ref().expect("invalid result").scope_level),
-            &RbumBasicFilterReq {
-                ignore_scope: false,
-                ..Default::default()
-            },
-            ctx,
-        ))
+        .filter(|item| {
+            item.is_ok()
+                && rbum_scope_helper::check_scope(
+                    &item.as_ref().expect("invalid result").own_paths,
+                    Some(item.as_ref().expect("invalid result").scope_level),
+                    &RbumBasicFilterReq {
+                        ignore_scope: false,
+                        ..Default::default()
+                    },
+                    ctx,
+                )
+        })
         .collect::<TardisResult<Vec<_>>>()?;
     Ok(TardisPage {
         page_size: match_req.page_size as u64,

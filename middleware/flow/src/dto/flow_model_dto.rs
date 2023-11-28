@@ -122,6 +122,7 @@ pub struct FlowModelFilterReq {
     pub rel_template_id: Option<String>,
     pub template: Option<bool>,
     pub own_paths: Option<Vec<String>>,
+    pub specified_state_ids: Option<Vec<String>>,
 }
 
 impl RbumItemFilterFetcher for FlowModelFilterReq {
