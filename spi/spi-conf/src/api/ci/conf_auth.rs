@@ -16,7 +16,6 @@ use bios_basic::{
 };
 use poem::web::RealIp;
 use tardis::{
-    basic::error::TardisError,
     serde_json,
     web::{
         context_extractor::TardisContextExtractor,
@@ -27,7 +26,10 @@ use tardis::{
 };
 
 use crate::{conf_constants::DOMAIN_CODE, serv::*};
-use crate::{dto::conf_auth_dto::*, serv::placehodler::has_placeholder_auth};
+use crate::{
+    dto::{conf_auth_dto::*, conf_namespace_dto::*},
+    serv::placehodler::has_placeholder_auth,
+};
 
 #[derive(Default, Clone, Copy, Debug)]
 
@@ -88,37 +90,47 @@ impl ConfCiAuthApi {
                 .ok_or_else(|| funs.err().not_found(&SpiBsServ::get_obj_name(), "register", "not found backend service", "404-spi-bs-not-exist"))?;
                 bs.id
             }
-            BackendServiceSource::New { name, conn_uri, kind_code } => {
+            BackendServiceSource::New { name } => {
                 // #TODO
                 // this should be determined by url, but now we only support spi-pg
-                let kind_code = kind_code.unwrap_or(spi_constants::SPI_PG_KIND_CODE.to_string());
+                let kind_code = spi_constants::SPI_PG_KIND_CODE.to_string();
                 let kind_id = RbumKindServ::get_rbum_kind_id_by_code(&kind_code, &funs)
                     .await?
                     .ok_or_else(|| funs.err().not_found(&SpiBsServ::get_obj_name(), "register", "db spi kind not found", "404-spi-bs-not-exist"))?;
-                let conn_uri = conn_uri.parse::<Url>().map_err(|_| TardisError::bad_request("invalid conn url", "400-spi_conf-bad-request"))?;
-                let ak = conn_uri.username();
-                let sk = conn_uri.password().unwrap_or("");
-                SpiBsServ::add_item(
-                    &mut SpiBsAddReq {
-                        name: name.into(),
-                        conn_uri: conn_uri.to_string(),
-                        ext: "{\"max_connections\":20,\"min_connections\":10}".to_string(),
-                        private: false,
-                        disabled: None,
-                        ak: ak.into(),
-                        sk: sk.into(),
-                        kind_id: kind_id.into(),
-                    },
-                    &funs,
-                    &default_ctx,
-                )
-                .await?
+                let conn_uri = tardis::TardisFuns::fw_config().db().default.url.clone();
+                let mut req = SpiBsAddReq {
+                    name: name.unwrap_or(format!("spi-conf-{}", tardis::crypto::crypto_key::TardisCryptoKey.rand_8_hex())).into(),
+                    conn_uri: conn_uri.to_string(),
+                    ext: "{\"max_connections\":20,\"min_connections\":10}".to_string(),
+                    private: false,
+                    disabled: None,
+                    ak: "".into(),
+                    sk: "".into(),
+                    kind_id: kind_id.into(),
+                };
+                if let Ok(conn_uri) = Url::parse(&conn_uri) {
+                    req.ak = conn_uri.username().into();
+                    req.sk = conn_uri.password().unwrap_or("").into();
+                }
+                SpiBsServ::add_item(&mut req, &funs, &default_ctx).await?
             }
         };
         let app_tenant_id = req.app_tenant_id.as_deref().unwrap_or(ctx.owner.as_str());
         SpiBsServ::add_rel(&bs_id, app_tenant_id, &funs, &ctx).await?;
         ctx.owner = app_tenant_id.to_string();
         let resp = register(req.register_request, &funs, &ctx).await?;
+        if let Some((_, app)) = ctx.own_paths.split_once('/') {
+            create_namespace(
+                &mut NamespaceAttribute {
+                    namespace: app.to_string(),
+                    namespace_show_name: app.to_string(),
+                    namespace_desc: None,
+                },
+                &funs,
+                &ctx,
+            )
+            .await?;
+        }
         funs.commit().await?;
         TardisResp::ok(resp)
     }

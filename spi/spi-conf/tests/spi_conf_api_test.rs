@@ -30,7 +30,14 @@ async fn spi_conf_namespace_test() -> TardisResult<()> {
     start_web_server().await?;
     let tardis_ctx = TardisContext::default();
     let mut client = TestHttpClient::new("https://localhost:8080/spi-conf".to_string());
-    client.set_auth(&tardis_ctx)?;
+    client.set_auth(&TardisContext {
+        own_paths: "t1/app001".to_string(),
+        ak: "".to_string(),
+        roles: vec![],
+        groups: vec![],
+        owner: "app001".to_string(),
+        ..Default::default()
+    })?;
     let funs = TardisFuns::inst_with_db_conn(DOMAIN_CODE.to_string(), None);
     let RegisterResponse { username, password } = client
         .put(
@@ -49,14 +56,7 @@ async fn spi_conf_namespace_test() -> TardisResult<()> {
         )
         .await;
     log::info!("username: {username}, password: {password}");
-    client.set_auth(&TardisContext {
-        own_paths: "t1/app001".to_string(),
-        ak: "".to_string(),
-        roles: vec![],
-        groups: vec![],
-        owner: "app001".to_string(),
-        ..Default::default()
-    })?;
+
     test_register(&mut client).await?;
     test_curd(&mut client).await?;
     test_tags(&mut client).await?;
@@ -123,7 +123,7 @@ pub async fn test_curd(client: &mut TestHttpClient) -> TardisResult<()> {
     assert_eq!(_response.config_count, 1);
     // 4.1 get namespace list
     let _response = client.get::<Vec<NamespaceItem>>("/ci/namespace/list").await;
-    assert_eq!(_response.len(), 3);
+    assert_eq!(_response.len(), 4);
     // since we have published a config, the config_count should be 1
     // 5. delete config
     client.delete("/ci/cs/config?namespace_id=public&group=DEFAULT-GROUP&data_id=conf-default").await;

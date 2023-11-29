@@ -6,17 +6,9 @@ use bios_basic::rbum::{
 };
 use bios_sdk_invoke::invoke_initializer;
 
-use itertools::Itertools;
-use serde_json::Value;
 use tardis::{
     basic::{dto::TardisContext, field::TrimString, result::TardisResult},
-    db::{
-        reldb_client::TardisActiveModel,
-        sea_orm::{
-            self,
-            sea_query::{Query, Table},
-        },
-    },
+    db::{reldb_client::TardisActiveModel, sea_orm::sea_query::Table},
     log::info,
     web::web_server::TardisWebServer,
     TardisFuns, TardisFunsInst,
@@ -32,9 +24,7 @@ use crate::{
     dto::{
         flow_model_dto::FlowModelFilterReq,
         flow_state_dto::FlowSysStateKind,
-        flow_transition_dto::{
-            FlowTransitionActionByVarChangeInfoChangedKind, FlowTransitionActionChangeInfo, FlowTransitionActionChangeKind, FlowTransitionDoubleCheckInfo, FlowTransitionInitInfo,
-        },
+        flow_transition_dto::{FlowTransitionDoubleCheckInfo, FlowTransitionInitInfo},
     },
     flow_config::{BasicInfo, FlowBasicInfoManager, FlowConfig},
     flow_constants,
@@ -77,7 +67,6 @@ pub async fn init_db(mut funs: TardisFunsInst) -> TardisResult<()> {
     funs.begin().await?;
     if check_initialized(&funs, &ctx).await? {
         init_basic_info(&funs).await?;
-        // self::modify_post_actions(&funs, &ctx).await?;
     } else {
         let db_kind = TardisFuns::reldb().backend();
         let compatible_type = TardisFuns::reldb().compatible_type();
@@ -122,49 +111,6 @@ async fn init_basic_info<'a>(funs: &TardisFunsInst) -> TardisResult<()> {
         kind_model_id,
         domain_flow_id,
     })?;
-    Ok(())
-}
-
-// @TODO temporary
-pub async fn modify_post_actions(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-    #[derive(sea_orm::FromQueryResult)]
-    pub struct FlowTransactionPostAction {
-        id: String,
-        action_by_post_changes: Value,
-    }
-    let transactions = funs
-        .db()
-        .find_dtos::<FlowTransactionPostAction>(
-            Query::select()
-                .columns([
-                    (flow_transition::Entity, flow_transition::Column::Id),
-                    (flow_transition::Entity, flow_transition::Column::ActionByPostChanges),
-                ])
-                .from(flow_transition::Entity),
-        )
-        .await?
-        .into_iter()
-        .filter(|res| !TardisFuns::json.json_to_obj::<Vec<FlowTransitionActionChangeInfo>>(res.action_by_post_changes.clone()).unwrap_or_default().is_empty())
-        .collect_vec();
-    for transaction in transactions {
-        let mut post_changes = TardisFuns::json.json_to_obj::<Vec<FlowTransitionActionChangeInfo>>(transaction.action_by_post_changes.clone()).unwrap_or_default();
-        for post_change in post_changes.iter_mut() {
-            if post_change.changed_kind.is_none() && post_change.kind == FlowTransitionActionChangeKind::Var {
-                if post_change.changed_val.is_some() {
-                    post_change.changed_kind = Some(FlowTransitionActionByVarChangeInfoChangedKind::ChangeContent);
-                } else {
-                    post_change.changed_kind = Some(FlowTransitionActionByVarChangeInfoChangedKind::Clean);
-                }
-            }
-        }
-        let flow_transition = flow_transition::ActiveModel {
-            id: sea_orm::ActiveValue::Set(transaction.id.clone()),
-            action_by_post_changes: sea_orm::ActiveValue::Set(TardisFuns::json.obj_to_json(&post_changes)?),
-            ..Default::default()
-        };
-        funs.db().update_one(flow_transition, ctx).await?;
-    }
-
     Ok(())
 }
 
