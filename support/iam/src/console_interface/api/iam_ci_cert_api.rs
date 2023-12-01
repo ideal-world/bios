@@ -70,6 +70,9 @@ impl IamCiCertApi {
     /// Find Cert By Kind And Supplier
     ///
     /// if kind is none,query default kind(UserPwd)
+    /// - `supplier` is only used when kind is `Ldap`
+    /// - `ldap_origin` is only used when kind is `Ldap` and default is false.
+    /// when true,return ak will be original DN
     #[oai(path = "/:account_id", method = "get")]
     async fn get_cert_by_kind_supplier(
         &self,
@@ -77,6 +80,7 @@ impl IamCiCertApi {
         kind: Query<Option<String>>,
         tenant_id: Query<Option<String>>,
         supplier: Query<Option<String>>,
+        ldap_origin: Query<Option<bool>>,
         ctx: TardisContextExtractor,
         request: &Request,
     ) -> TardisApiResult<RbumCertSummaryWithSkResp> {
@@ -96,8 +100,8 @@ impl IamCiCertApi {
         } else {
             None
         };
-
-        let cert = IamCertServ::get_cert_by_relrubmid_kind_supplier(&account_id.0, &kind, vec![supplier], conf_id, &true_tenant_id.unwrap_or_default(), &funs, &ctx.0).await?;
+        let ldap_DN = ldap_origin.0.unwrap_or_default();
+        let cert = IamCertServ::get_cert_by_relrubmid_kind_supplier(&account_id.0, &kind, vec![supplier], conf_id, &true_tenant_id.unwrap_or_default(), ldap_DN,&funs, &ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(cert)
     }
