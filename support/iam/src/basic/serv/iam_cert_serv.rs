@@ -588,9 +588,11 @@ impl IamCertServ {
         cert_supplier: Vec<String>,
         cert_conf_id: Option<String>,
         tenant_id: &str,
+        ldap_dn: bool,
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<RbumCertSummaryWithSkResp> {
+        let ldap_cn = !ldap_dn;
         let mut is_ldap = false;
         let rbum_cert_filter_req = if let Some(cert_conf_id) = cert_conf_id {
             let cert_conf = RbumCertConfServ::get_rbum(
@@ -635,7 +637,7 @@ impl IamCertServ {
         if let Some(ext_cert) = ext_cert {
             Ok(RbumCertSummaryWithSkResp {
                 id: ext_cert.id,
-                ak: if is_ldap { IamCertLdapServ::dn_to_cn(&ext_cert.ak) } else { ext_cert.ak },
+                ak: if is_ldap && ldap_cn { IamCertLdapServ::dn_to_cn(&ext_cert.ak) } else { ext_cert.ak },
                 sk: "".to_string(),
                 sk_invisible: ext_cert.sk_invisible,
                 ext: ext_cert.ext,
