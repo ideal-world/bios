@@ -33,7 +33,8 @@ use crate::basic::dto::iam_cert_conf_dto::{
     IamCertConfLdapAddOrModifyReq, IamCertConfMailVCodeAddOrModifyReq, IamCertConfPhoneVCodeAddOrModifyReq, IamCertConfTokenAddReq, IamCertConfUserPwdAddOrModifyReq,
 };
 use crate::basic::dto::iam_cert_dto::{
-    IamCertManageAddReq, IamCertManageModifyReq, IamThirdIntegrationConfigDto, IamThirdIntegrationSyncAddReq, IamThirdIntegrationSyncStatusDto, IamThirdPartyCertExtAddReq,
+    IamCertManageAddReq, IamCertManageModifyReq, IamCertModifyVisibilityRequest, IamThirdIntegrationConfigDto, IamThirdIntegrationSyncAddReq, IamThirdIntegrationSyncStatusDto,
+    IamThirdPartyCertExtAddReq,
 };
 use crate::basic::dto::iam_filer_dto::{IamAccountFilterReq, IamResFilterReq, IamRoleFilterReq};
 use crate::basic::serv::iam_account_serv::IamAccountServ;
@@ -684,7 +685,7 @@ impl IamCertServ {
         .await?;
         if let Some(ext_cert) = ext_cert {
             let now_sk = RbumCertServ::show_sk(ext_cert.id.as_str(), &RbumCertFilterReq::default(), funs, ctx).await?;
-            let encoded_sk = encode_cert(&ext_cert.id, now_sk, ext_cert.sk_invisible, funs, ctx)?;
+            let encoded_sk = encode_cert(&ext_cert.id, now_sk, ext_cert.sk_invisible)?;
             Ok(RbumCertSummaryWithSkResp {
                 id: ext_cert.id,
                 ak: ext_cert.ak,
@@ -757,7 +758,7 @@ impl IamCertServ {
         .await?;
         if let Some(ext_cert) = ext_cert {
             let now_sk = RbumCertServ::show_sk(ext_cert.id.as_str(), &RbumCertFilterReq::default(), funs, &mock_ctx).await?;
-            let encoded_sk = encode_cert(&ext_cert.id, now_sk, ext_cert.sk_invisible, funs, &mock_ctx)?;
+            let encoded_sk = encode_cert(&ext_cert.id, now_sk, ext_cert.sk_invisible)?;
             // let encoded_sk = now_sk;
             Ok(RbumCertSummaryWithSkResp {
                 id: ext_cert.id,
@@ -1508,11 +1509,79 @@ impl IamCertServ {
         });
         Ok(batch_result)
     }
+
+    pub async fn modify_sk_visibility(id: &str, req: IamCertModifyVisibilityRequest, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let rels = IamRelServ::find_rels(
+            &RbumRelFilterReq {
+                basic: RbumBasicFilterReq {
+                    own_paths: Some("".to_string()),
+                    with_sub_own_paths: true,
+                    ignore_scope: true,
+                    ..Default::default()
+                },
+                tag: Some(IamRelKind::IamCertRel.to_string()),
+                from_rbum_id: Some(id.to_string()),
+                to_own_paths: Some(ctx.own_paths.clone()),
+                ..Default::default()
+            },
+            None,
+            None,
+            funs,
+            ctx,
+        )
+        .await?;
+        let mut mock_ctx = TardisContext { ..ctx.clone() };
+        if let Some(rel) = rels.first() {
+            mock_ctx.own_paths = rel.rel.own_paths.clone()
+        }
+        let ext_cert = RbumCertServ::do_find_one_detail_rbum(
+            &RbumCertFilterReq {
+                basic: RbumBasicFilterReq {
+                    ids: Some(vec![id.into()]),
+                    ..Default::default()
+                },
+                kind: Some(IamCertExtKind::ThirdParty.to_string()),
+                ..Default::default()
+            },
+            funs,
+            &mock_ctx,
+        )
+        .await?;
+        if let Some(ext_cert) = ext_cert {
+            RbumCertServ::modify_rbum(
+                ext_cert.id.as_str(),
+                &mut RbumCertModifyReq {
+                    sk_invisible: Some(req.sk_invisible),
+                    ak: None,
+                    sk: None,
+                    is_ignore_check_sk: true,
+                    ext: None,
+                    start_time: None,
+                    end_time: None,
+                    conn_uri: None,
+                    status: None,
+                },
+                funs,
+                ctx,
+            )
+            .await?;
+            Ok(())
+        } else {
+            Err(funs.err().not_found(
+                "iam_cert",
+                "get_3th_kind_cert_by_id",
+                &format!("not found credential by id {id}"),
+                "404-rbum-cert-not-exist",
+            ))
+        }
+    }
 }
 
-fn encode_cert(id: &str, sk: String, invisible: bool, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
+fn encode_cert(id: &str, sk: String, invisible: bool) -> TardisResult<String> {
+    let usage = "CERT";
+    let field = "sk";
     if invisible {
-        let key = format!("{id}/sk");
+        let key = format!("${usage}{{{id}/{field}}}");
         Ok(key)
     } else {
         Ok(sk)
