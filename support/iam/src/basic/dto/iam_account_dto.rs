@@ -244,6 +244,7 @@ pub struct IamAccountExtSysResp {
     pub user_name: String,
     pub display_name: String,
     pub mobile: String,
+    pub email: String,
 }
 
 impl IamAccountExtSysResp {
@@ -257,6 +258,7 @@ impl IamAccountExtSysResp {
                 resp.dn.clone()
             },
             mobile: resp.get_simple_attr(&config.account_field_map.field_mobile).unwrap_or_default(),
+            email: resp.get_simple_attr(&config.account_field_map.field_email).unwrap_or_default(),
         }
     }
 }

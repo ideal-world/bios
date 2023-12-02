@@ -34,7 +34,14 @@ pub struct KvItemDetailResp {
 }
 
 impl SpiKvClient {
-    pub async fn add_or_modify_item<T: ?Sized + Serialize>(key: &str, value: &T, info: Option<String>, scope_level: Option<i16>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    pub async fn add_or_modify_item<T: ?Sized + Serialize>(
+        key: &str,
+        value: &T,
+        info: Option<String>,
+        scope_level: Option<i16>,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<()> {
         let kv_url: String = BaseSpiClient::module_url(InvokeModuleKind::Kv, funs).await?;
         let headers = BaseSpiClient::headers(None, funs, ctx).await?;
         let json = json!({
