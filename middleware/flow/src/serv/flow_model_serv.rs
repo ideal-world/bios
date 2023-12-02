@@ -555,7 +555,12 @@ impl FlowModelServ {
         Ok(())
     }
 
-    async fn find_transitions(flow_model_id: &str, specified_state_ids: Option<&[String]>, funs: &TardisFunsInst, _ctx: &TardisContext) -> TardisResult<Vec<FlowTransitionDetailResp>> {
+    async fn find_transitions(
+        flow_model_id: &str,
+        specified_state_ids: Option<&[String]>,
+        funs: &TardisFunsInst,
+        _ctx: &TardisContext,
+    ) -> TardisResult<Vec<FlowTransitionDetailResp>> {
         let from_state_rbum_table = Alias::new("from_state_rbum");
         let from_state_table = Alias::new("from_state");
         let to_state_rbum_table = Alias::new("to_state_rbum");

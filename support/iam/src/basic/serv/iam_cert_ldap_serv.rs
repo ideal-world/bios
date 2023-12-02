@@ -1,14 +1,11 @@
-use bios_basic::helper::request_helper::get_remote_ip;
-use bios_basic::rbum::dto::rbum_cert_dto::RbumCertSummaryResp;
-use ldap3::log::{error, warn};
-use std::collections::HashMap;
-
 use self::ldap::LdapClient;
 use super::clients::iam_log_client::{IamLogClient, LogParamTag};
 use super::iam_cert_phone_vcode_serv::IamCertPhoneVCodeServ;
 use super::{iam_account_serv::IamAccountServ, iam_cert_serv::IamCertServ, iam_tenant_serv::IamTenantServ};
 use crate::basic::dto::iam_account_dto::{IamAccountAddByLdapResp, IamAccountAggModifyReq, IamAccountExtSysAddReq, IamAccountExtSysBatchAddReq};
+use crate::basic::dto::iam_cert_dto::IamCertMailVCodeAddReq;
 use crate::basic::dto::iam_cert_dto::{IamCertPhoneVCodeAddReq, IamThirdIntegrationConfigDto, IamThirdIntegrationSyncStatusDto};
+use crate::basic::serv::iam_cert_mail_vcode_serv::IamCertMailVCodeServ;
 use crate::basic::serv::iam_cert_user_pwd_serv::IamCertUserPwdServ;
 use crate::console_passport::dto::iam_cp_cert_dto::IamCpUserPwdBindWithLdapReq;
 use crate::console_passport::serv::iam_cp_cert_user_pwd_serv::IamCpCertUserPwdServ;
@@ -23,6 +20,8 @@ use crate::{
     iam_config::IamBasicConfigApi,
     iam_constants,
 };
+use bios_basic::helper::request_helper::get_remote_ip;
+use bios_basic::rbum::dto::rbum_cert_dto::RbumCertSummaryResp;
 use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
 use bios_basic::rbum::rbum_enumeration::RbumCertStatusKind::Enabled;
 use bios_basic::rbum::rbum_enumeration::{RbumCertConfStatusKind, RbumScopeLevelKind};
@@ -39,7 +38,9 @@ use bios_basic::rbum::{
         rbum_item_serv::RbumItemCrudOperation,
     },
 };
+use ldap3::log::{error, warn};
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 use crate::iam_config::IamConfig;
 use tardis::regex::Regex;
@@ -850,6 +851,75 @@ impl IamCertLdapServ {
                             continue;
                         }
                     }
+                }
+                if !iam_account_ext_sys_resp.email.is_empty() {
+                    // 如果有配置邮箱那么就更新邮箱
+                    let email_cert_conf_id = IamCertServ::get_cert_conf_id_by_kind(&IamCertKernelKind::MailVCode.to_string(), Some(ctx.own_paths.clone()), &funs).await?;
+                    if let Some(email_cert) = RbumCertServ::find_one_rbum(
+                        &RbumCertFilterReq {
+                            basic: RbumBasicFilterReq {
+                                own_paths: Some(ctx.own_paths.clone()),
+                                with_sub_own_paths: true,
+                                ignore_scope: true,
+                                ..Default::default()
+                            },
+                            status: Some(RbumCertStatusKind::Enabled),
+                            rel_rbum_kind: Some(RbumCertRelKind::Item),
+                            rel_rbum_id: Some(cert.rel_rbum_id.clone()),
+                            rel_rbum_cert_conf_ids: Some(vec![email_cert_conf_id.clone()]),
+                            ..Default::default()
+                        },
+                        &funs,
+                        ctx,
+                    )
+                    .await?
+                    {
+                        // 更新邮箱
+                        if email_cert.ak != iam_account_ext_sys_resp.email {
+                            let modify_result = RbumCertServ::modify_rbum(
+                                &email_cert.id,
+                                &mut RbumCertModifyReq {
+                                    ak: Some(TrimString(iam_account_ext_sys_resp.email.clone())),
+                                    sk: None,
+                                    is_ignore_check_sk: false,
+                                    ext: None,
+                                    start_time: None,
+                                    end_time: None,
+                                    conn_uri: None,
+                                    status: None,
+                                    sk_invisible: None,
+                                },
+                                &funs,
+                                ctx,
+                            )
+                            .await;
+                            if let Some(e) = modify_result.err() {
+                                let err_msg = format!("modify email cert_id:{} failed:{}", email_cert.id, e);
+                                tardis::log::error!("{}", err_msg);
+                                msg = format!("{msg}{err_msg}\n");
+                            }
+                        }
+                    } else {
+                        //添加邮箱
+                        if let Err(e) = IamCertMailVCodeServ::add_cert(
+                            &IamCertMailVCodeAddReq {
+                                mail: TrimString(iam_account_ext_sys_resp.email.clone()).to_string(),
+                            },
+                            cert.rel_rbum_id.as_str(),
+                            &email_cert_conf_id,
+                            &funs,
+                            ctx,
+                        )
+                        .await
+                        {
+                            let err_msg = format!("add email email:{} failed:{}", iam_account_ext_sys_resp.email.clone(), e);
+                            tardis::log::error!("{}", err_msg);
+                            msg = format!("{msg}{err_msg}\n");
+                            failed += 1;
+                            ldap_id_to_account_map.remove(&local_ldap_id);
+                            continue;
+                        }
+                    };
                 }
 
                 ldap_id_to_account_map.remove(&local_ldap_id);

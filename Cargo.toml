@@ -56,14 +56,14 @@ lazy_static = { version = "1" }
 itertools = { version = "0" }
 fancy-regex = { version = "0" }
 run_script = { version = "0.10" }
-testcontainers-modules = { version = "0.1"}
-strum ={ version = "0.25", features = ["derive"] }
+testcontainers-modules = { version = "0.1" }
+strum = { version = "0.25", features = ["derive"] }
 # tardis
 tardis = { version = "=0.1.0-rc.3" }
 # tardis = { path = "../tardis/tardis" }
 # tardis = { git = "https://github.com/ideal-world/tardis.git", rev = "9424e16" }
 #spacegate
-spacegate-kernel = { git = "https://github.com/ideal-world/spacegate.git", rev = "40e7bf8d0b",features = [
+spacegate-kernel = { git = "https://github.com/ideal-world/spacegate.git", rev = "40e7bf8d0b", features = [
     "ws",
     "cache",
     "k8s",

@@ -13,7 +13,15 @@ pub struct FlowConfigServ;
 impl FlowConfigServ {
     pub async fn modify_config(modify_req: &Vec<FlowConfigModifyReq>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         for req in modify_req {
-            SpiKvClient::add_or_modify_item(&format!("{}:config:{}", flow_constants::DOMAIN_CODE, req.code.clone()), &req.value, None, Some(RbumScopeLevelKind::Root.to_int()), funs, ctx).await?;
+            SpiKvClient::add_or_modify_item(
+                &format!("{}:config:{}", flow_constants::DOMAIN_CODE, req.code.clone()),
+                &req.value,
+                None,
+                Some(RbumScopeLevelKind::Root.to_int()),
+                funs,
+                ctx,
+            )
+            .await?;
         }
         Ok(())
     }
