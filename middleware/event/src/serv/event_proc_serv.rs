@@ -4,7 +4,8 @@ use std::{borrow::Cow, collections::HashMap};
 use bios_basic::process::ci_processor::{self, AppKeyConfig};
 use serde::{Deserialize, Serialize};
 use tardis::basic::result::TardisResult;
-use tardis::cluster::cluster_processor::TardisClusterMessageReq;
+use tardis::cluster::cluster_processor::{ClusterEventTarget, TardisClusterMessageReq};
+use tardis::cluster::cluster_publish::publish_event_no_response;
 use tardis::log::{info, warn};
 use tardis::serde_json::Value;
 use tardis::tokio::sync::RwLock;
@@ -54,7 +55,13 @@ impl TardisClusterSubscriber for CreateRemoteSenderSubscriber {
 pub async fn add_sender(topic_code: String, capacity: usize) {
     let clst_bc_tx = ClusterBroadcastChannel::new(topic_code.clone(), capacity);
     let mut wg = senders().write().await;
-    wg.insert(topic_code, clst_bc_tx);
+    wg.insert(topic_code.clone(), clst_bc_tx);
+    let _ = publish_event_no_response(
+        CreateRemoteSenderSubscriber.event_name(),
+        TardisFuns::json.obj_to_json(&CreateRemoteSenderEvent { topic_code, capacity }).expect("invalid json"),
+        ClusterEventTarget::Broadcast,
+    )
+    .await;
 }
 
 pub(crate) async fn ws_process(listener_code: String, token: String, websocket: WebSocket, funs: &TardisFunsInst) -> BoxWebSocketUpgraded {

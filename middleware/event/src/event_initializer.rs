@@ -15,7 +15,7 @@ use crate::{
     domain::event_topic,
     event_config::{EventInfo, EventInfoManager},
     event_constants::{DOMAIN_CODE, KIND_CODE},
-    serv::event_topic_serv::EventDefServ,
+    serv::{event_topic_serv::EventDefServ, event_proc_serv::CreateRemoteSenderSubscriber},
 };
 
 pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
@@ -96,4 +96,5 @@ async fn init_cluster_resource() {
     subscribe(listeners().clone()).await;
     subscribe(mgr_listeners().clone()).await;
     subscribe(topics().clone()).await;
+    subscribe(CreateRemoteSenderSubscriber).await;
 }

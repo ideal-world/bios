@@ -12,6 +12,7 @@ use tardis::web::tokio_tungstenite::tungstenite::Message;
 use tardis::web::ws_processor::{TardisWebsocketMessage, TardisWebsocketMgrMessage, TardisWebsocketReq, WS_SYSTEM_EVENT_AVATAR_ADD};
 use tardis::{TardisFuns, rand};
 
+
 pub async fn test(http_clients: &[&TestHttpClient]) -> TardisResult<()> {
     static TEST_LOG_COUNTER: AtomicUsize = AtomicUsize::new(0);
     static FEED_FROM_MGR_COUNTER: AtomicUsize = AtomicUsize::new(0);
@@ -20,7 +21,7 @@ pub async fn test(http_clients: &[&TestHttpClient]) -> TardisResult<()> {
     prepare(http_clients).await?;
 
     // Register management listener
-    let url = add_listener(Vec::new(), true, vec![TrimString("test_log_append".to_string())], http_clients).await?;
+    let url = add_listener(Vec::new(), true, vec![TrimString("test_log_append")], http_clients).await?;
     let mgr_test_log_client = TardisFuns::ws_client(&url, move |msg| async move {
         let receive_msg = TardisFuns::json.str_to_obj::<TardisWebsocketMgrMessage>(msg.to_string().as_str()).unwrap();
         let ori_msg = TardisFuns::json.json_to_obj::<EventMessageMgrWrap>(receive_msg.msg).unwrap();

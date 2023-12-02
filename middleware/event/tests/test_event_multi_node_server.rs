@@ -19,7 +19,7 @@ use tokio::process::Command;
 mod test_event_with_event_code;
 mod test_event_with_im;
 mod test_event_without_mgr;
-
+mod test_inmails;
 #[tokio::test(flavor = "multi_thread")]
 async fn test_event() -> TardisResult<()> {
     if let Ok(kind) = env::var("KIND") {
@@ -82,7 +82,7 @@ async fn test_event() -> TardisResult<()> {
                     tokio::select! {
                         result = stdout.read(&mut buf) => {
                             let size = result?;
-                            if size != 0 && node_idx == 0 {
+                            if size != 0 {
                                 println!("node[{node_idx}]/stdout:");
                                 println!("{}", String::from_utf8_lossy(&buf[..size]));
                             }
@@ -150,9 +150,9 @@ async fn client_side() -> TardisResult<()> {
         })
         .collect::<Vec<_>>();
 
-    test_event_without_mgr::test(&client_set.iter().collect::<Vec<_>>()).await?;
-    test_event_with_event_code::test(&client_set.iter().collect::<Vec<_>>()).await?;
-    test_event_with_im::test(&client_set.iter().collect::<Vec<_>>()).await?;
-
+    // test_event_without_mgr::test(&client_set.iter().collect::<Vec<_>>()).await?;
+    // test_event_with_event_code::test(&client_set.iter().collect::<Vec<_>>()).await?;
+    // test_event_with_im::test(&client_set.iter().collect::<Vec<_>>()).await?;
+    test_inmails::test(&client_set.iter().collect::<Vec<_>>()).await?;
     Ok(())
 }

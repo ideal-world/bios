@@ -9,7 +9,7 @@ use tardis::{
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct EventTopicAddOrModifyReq {
-    #[oai(validator(pattern = r"^[a-z0-9]+$"))]
+    // #[oai(validator(pattern = r"^[a-z0-9]+$"))]
     pub code: TrimString,
     pub name: TrimString,
     pub save_message: bool,
@@ -22,7 +22,7 @@ pub struct EventTopicAddOrModifyReq {
 
 #[derive(poem_openapi::Object, sea_orm::FromQueryResult, Serialize, Deserialize, Debug, Clone)]
 pub struct EventTopicInfoResp {
-    #[oai(validator(pattern = r"^[a-z0-9]+$"))]
+    // #[oai(validator(pattern = r"^[a-z0-9]+$"))]
     pub code: String,
     pub name: String,
     pub save_message: bool,
@@ -55,10 +55,10 @@ impl RbumItemFilterFetcher for EventTopicFilterReq {
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct EventListenerRegisterReq {
-    #[oai(validator(pattern = r"^[a-z0-9]+$"))]
+    // #[oai(validator(pattern = r"^[a-z0-9]+$"))]
     pub topic_code: TrimString,
     pub topic_sk: Option<String>,
-    #[oai(validator(pattern = r"^[a-z0-9-_]+$"))]
+    // #[oai(validator(pattern = r"^[a-z0-9-_]+$"))]
     pub events: Option<Vec<TrimString>>,
     pub avatars: Vec<TrimString>,
     pub subscribe_mode: bool,
