@@ -31,7 +31,7 @@ fn parse_content(content: &str) -> Vec<Segment<'_>> {
         result.push(Segment::Replace { key });
         idx = mat.end();
     }
-    result.push_str(Segment::Raw(&content[idx..]));
+    result.push(Segment::Raw(&content[idx..]));
     result
 }
 
