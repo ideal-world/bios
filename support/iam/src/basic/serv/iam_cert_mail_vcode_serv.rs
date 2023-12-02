@@ -123,6 +123,40 @@ impl IamCertMailVCodeServ {
         Ok(id)
     }
 
+    pub async fn add_cert_skip_activate(
+        add_req: &IamCertMailVCodeAddReq,
+        account_id: &str,
+        rel_rbum_cert_conf_id: &str,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<String> {
+        let vcode = Self::get_vcode();
+        let id = RbumCertServ::add_rbum(
+            &mut RbumCertAddReq {
+                ak: TrimString(add_req.mail.trim().to_string()),
+                sk: None,
+                sk_invisible: None,
+                kind: None,
+                supplier: None,
+                vcode: Some(TrimString(vcode.clone())),
+                ext: None,
+                start_time: None,
+                end_time: None,
+                conn_uri: None,
+                status: RbumCertStatusKind::Enabled,
+                rel_rbum_cert_conf_id: Some(rel_rbum_cert_conf_id.to_string()),
+                rel_rbum_kind: RbumCertRelKind::Item,
+                rel_rbum_id: account_id.to_string(),
+                is_outside: false,
+                is_ignore_check_sk: false,
+            },
+            funs,
+            ctx,
+        )
+        .await?;
+        Ok(id)
+    }
+
     pub async fn modify_cert(id: &str, modify_req: &IamCertMailVCodeModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         RbumCertServ::modify_rbum(
             id,

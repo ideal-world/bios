@@ -901,7 +901,7 @@ impl IamCertLdapServ {
                         }
                     } else {
                         //添加邮箱
-                        if let Err(e) = IamCertMailVCodeServ::add_cert(
+                        if let Err(e) = IamCertMailVCodeServ::add_cert_skip_activate(
                             &IamCertMailVCodeAddReq {
                                 mail: TrimString(iam_account_ext_sys_resp.email.clone()).to_string(),
                             },
