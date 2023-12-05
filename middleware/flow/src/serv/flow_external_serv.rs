@@ -76,6 +76,7 @@ impl FlowExternalServ {
         target_sys_state: Option<FlowSysStateKind>,
         original_state: Option<String>,
         original_sys_state: Option<FlowSysStateKind>,
+        transition_name: Option<String>,
         is_notify: bool,
         params: Vec<FlowExternalParams>,
         ctx: &TardisContext,
@@ -112,6 +113,7 @@ impl FlowExternalServ {
             original_state,
             original_sys_state,
             notify: Some(is_notify),
+            transition_name,
             params,
             ..Default::default()
         };
@@ -140,6 +142,7 @@ impl FlowExternalServ {
         target_sys_state: FlowSysStateKind,
         original_state: String,
         original_sys_state: FlowSysStateKind,
+        transition_name: String,
         is_notify: bool,
         ctx: &TardisContext,
         funs: &TardisFunsInst,
@@ -159,6 +162,7 @@ impl FlowExternalServ {
             target_sys_state: Some(target_sys_state),
             original_state: Some(original_state),
             original_sys_state: Some(original_sys_state),
+            transition_name: Some(transition_name),
             notify: Some(is_notify),
             ..Default::default()
         };
