@@ -6,8 +6,8 @@ use bios_basic::rbum::{
 use tardis::{
     basic::{dto::TardisContext, field::TrimString, result::TardisResult},
     db::reldb_client::TardisActiveModel,
-    web::web_server::TardisWebServer,
-    TardisFuns, TardisFunsInst,
+    web::{web_server::TardisWebServer, ws_client::TardisWSClient},
+    TardisFuns, TardisFunsInst, utils::tardis_static,
 };
 
 use crate::{
@@ -97,4 +97,15 @@ async fn init_cluster_resource() {
     subscribe(mgr_listeners().clone()).await;
     subscribe(topics().clone()).await;
     subscribe(CreateRemoteSenderSubscriber).await;
+}
+
+async fn init_ws_client() -> TardisWSClient {
+    while !TardisFuns::web_server().is_running().await {
+        tardis::tokio::task::yield_now().await
+    }
+    todo!("init ws client")
+}
+
+tardis::tardis_static! {
+    pub(crate) async ws_client: TardisWSClient = init_ws_client();
 }

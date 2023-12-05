@@ -1,10 +1,11 @@
-use tardis::cluster::cluster_hashmap::ClusterStaticHashMap;
-use tardis::tardis_static;
-use tardis::TardisFunsInst;
-use tardis::{basic::result::TardisResult, TardisFuns};
-
 use crate::dto::event_dto::{EventListenerInfo, EventListenerRegisterReq, EventListenerRegisterResp};
 use crate::event_config::EventConfig;
+use tardis::cluster::cluster_hashmap::ClusterStaticHashMap;
+use tardis::log::info;
+use tardis::tardis_static;
+use tardis::tracing;
+use tardis::TardisFunsInst;
+use tardis::{basic::result::TardisResult, TardisFuns};
 
 use super::event_topic_serv::topics;
 
@@ -16,6 +17,7 @@ tardis_static! {
 
 const MGR_LISTENER_AVATAR_PREFIX: &str = "_";
 
+#[tracing::instrument(skip_all, fields(domain="event"))]
 pub(crate) async fn register(listener: EventListenerRegisterReq, funs: &TardisFunsInst) -> TardisResult<EventListenerRegisterResp> {
     let Some(topic) = topics().get(listener.topic_code.to_string()).await? else {
         return Err(funs.err().not_found("listener", "register", "topic not found", "404-event-topic-not-exist"));
@@ -61,7 +63,6 @@ pub(crate) async fn register(listener: EventListenerRegisterReq, funs: &TardisFu
 
     let listener_code = TardisFuns::crypto.base64.encode(TardisFuns::field.nanoid());
     let token = TardisFuns::field.nanoid_len(32);
-
     let listener_info = EventListenerInfo {
         topic_code: listener.topic_code.to_string(),
         events: listener.events.map(|v| v.iter().map(|v| v.to_string()).collect()),

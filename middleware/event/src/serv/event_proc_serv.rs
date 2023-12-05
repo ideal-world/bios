@@ -19,6 +19,8 @@ use tardis::{TardisFuns, TardisFunsInst};
 
 use crate::dto::event_dto::EventMessageMgrWrap;
 use crate::event_config::EventConfig;
+use crate::event_constants::DOMAIN_CODE;
+use crate::event_initializer::ws_client;
 
 use super::event_listener_serv::{listeners, mgr_listeners};
 use super::event_topic_serv::topics;
@@ -104,10 +106,25 @@ pub(crate) async fn ws_process(listener_code: String, token: String, websocket: 
                 if log_url == "/" {
                     info!("[Event] MESSAGE LOG: {}", TardisFuns::json.obj_to_string(&req_msg).expect("req_msg not a valid json value"));
                 } else {
+                    use bios_sdk_invoke::clients::spi_log_client::{SpiLogEventExt, LogItemAddReq};
                     let app_key = ext.get("app_key").expect("app_key was modified unexpectedly");
+                    let ws_client = ws_client().await;
+                    let ctx = { todo!()};
+                    let req = LogItemAddReq {
+                        tag: DOMAIN_CODE,
+                        content: TardisFuns::json.obj_to_string(&req_msg).expect("req_msg not a valid json value"),
+                        kind: todo!(),
+                        ext: todo!(),
+                        key: todo!(),
+                        op: todo!(),
+                        rel_key: todo!(),
+                        id: todo!(),
+                        ts: todo!(),
+                        owner: ctx.owner.clone(),
+                        own_paths: ctx.own_paths.clone(),
+                    };
+                    ws_client.publish_add_log(&req, &ctx);
                     let app_key_config: AppKeyConfig = TardisFuns::json.str_to_obj(app_key).unwrap_or_default();
-                    let headers = ci_processor::signature(&app_key_config, "post", "/ci/item", "", Vec::new()).unwrap_or_default();
-                    let _ = TardisFuns::web_client().post_obj_to_str(&format!("{}/ci/item", log_url), &req_msg, headers).await;
                 }
             }
             if !need_mgr || is_mgr {

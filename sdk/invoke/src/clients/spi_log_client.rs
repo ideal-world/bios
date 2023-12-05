@@ -4,11 +4,14 @@ use tardis::{
     basic::{dto::TardisContext, field::TrimString, result::TardisResult},
     chrono::{DateTime, Utc},
     serde_json::{json, Value},
+    tokio,
     web::{
         poem_openapi,
         web_resp::{TardisPage, TardisResp},
+        ws_client::TardisWSClient,
+        ws_processor::TardisWebsocketReq,
     },
-    TardisFuns, TardisFunsInst,
+    TardisFuns, TardisFunsInst, async_trait::async_trait,
 };
 
 use crate::{clients::base_spi_client::BaseSpiClient, invoke_constants::DYNAMIC_LOG, invoke_enumeration::InvokeModuleKind};
@@ -118,5 +121,41 @@ impl SpiLogClient {
         let headers = BaseSpiClient::headers(None, funs, ctx).await?;
         let resp = funs.web_client().put::<LogItemFindReq, TardisResp<TardisPage<LogItemFindResp>>>(&format!("{log_url}/ci/item/find"), &find_req, headers.clone()).await?;
         BaseSpiClient::package_resp(resp)
+    }
+}
+
+pub struct LogEventClient {}
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct LogItemAddReq {
+    pub tag: String,
+    // #[oai(validator(min_length = "2"))]
+    pub content: String,
+    pub kind: Option<TrimString>,
+    pub ext: Option<Value>,
+    pub key: Option<TrimString>,
+    pub op: Option<String>,
+    pub rel_key: Option<TrimString>,
+    pub id: Option<String>,
+    pub ts: Option<DateTime<Utc>>,
+    pub owner: Option<String>,
+    pub own_paths: Option<String>,
+}
+
+#[async_trait]
+pub trait SpiLogEventExt {
+    async fn publish_add_log(&self, req: &LogItemAddReq, ctx: &TardisContext) -> TardisResult<()>;
+}
+
+#[async_trait]
+impl SpiLogEventExt for TardisWSClient {
+    async fn publish_add_log(&self, req: &LogItemAddReq, ctx: &TardisContext) -> TardisResult<()> {
+        let req = TardisWebsocketReq {
+            msg: TardisFuns::json.obj_to_json(&(req, ctx)).expect("invalid json"),
+            to_avatars: Some(vec!["spi-conf/server".into()]),
+            ..Default::default()
+        };
+        self.send_obj(&req).await?;
+        return Ok(());
     }
 }
