@@ -24,6 +24,10 @@ pub mod spi_search_client;
 
 #[cfg(feature = "iam")]
 pub mod iam_client;
+
+#[cfg(feature = "event")]
+pub mod event_client;
+
 #[macro_export]
 ///
 ///

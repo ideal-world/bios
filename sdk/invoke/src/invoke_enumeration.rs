@@ -41,4 +41,5 @@ pub enum InvokeModuleKind {
     Stats,
     Schedule,
     Iam,
+    Event,
 }

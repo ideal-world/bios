@@ -21,6 +21,7 @@ spi_kv = ["spi_base"]
 spi_log = ["spi_base"]
 spi_search = ["spi_base"]
 iam = []
+event = []
 macro = ["dep:simple-invoke-client-macro"]
 reldb-core=["tardis/reldb-core"]
 
