@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 use bios_basic::rbum::{
     dto::{
@@ -307,16 +307,27 @@ impl FlowStateServ {
             ctx,
         )
         .await?;
-        let mut result = vec![];
+        let mut result = HashMap::new();
         let insts = FlowInstServ::find_detail(req.inst_ids.clone(), funs, ctx).await?;
         for (state_id, state_name) in states {
-            let inst_ids = insts.iter().filter(|inst| inst.current_state_id == state_id).map(|inst| inst.id.clone()).collect_vec();
-            result.push(FlowStateCountGroupByStateResp {
-                state_name,
-                count: inst_ids.len().to_string(),
-                inst_ids,
-            });
+            let mut inst_ids = insts.iter().filter(|inst| inst.current_state_id == state_id).map(|inst| inst.id.clone()).collect_vec();
+            result
+                .entry(state_name.clone())
+                .and_modify(|resp: &mut FlowStateCountGroupByStateResp| {
+                    resp.inst_ids.append(&mut inst_ids);
+                    resp.count = (resp.count.parse::<usize>().unwrap_or_default() + inst_ids.len()).to_string()
+                })
+                .or_insert(FlowStateCountGroupByStateResp {
+                    state_name,
+                    count: inst_ids.len().to_string(),
+                    inst_ids,
+                });
+            // result.push(FlowStateCountGroupByStateResp {
+            //     state_name,
+            //     count: inst_ids.len().to_string(),
+            //     inst_ids,
+            // });
         }
-        Ok(result)
+        Ok(result.into_values().collect_vec())
     }
 }
