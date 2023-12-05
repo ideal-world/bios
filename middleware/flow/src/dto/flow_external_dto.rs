@@ -17,6 +17,7 @@ pub struct FlowExternalReq {
     pub target_sys_state: Option<FlowSysStateKind>,
     pub original_state: Option<String>,
     pub original_sys_state: Option<FlowSysStateKind>,
+    pub transition_name: Option<String>,
     pub owner_paths: String,
     pub obj_ids: Vec<String>,
     pub notify: Option<bool>,
