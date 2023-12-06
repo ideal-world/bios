@@ -82,7 +82,7 @@ impl KvCiItemApi {
     }
 
     /// Delete Item Body
-    #[oai(path = "/item/body", method = "delete")]
+    #[oai(path = "/item/delete", method = "put")]
     async fn delete_item_body(&self, delete_req: Json<KvItemDeleteReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let funs = crate::get_tardis_inst();
         kv_item_serv::delete_item(delete_req.0.key.to_string(), &funs, &ctx.0).await?;
