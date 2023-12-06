@@ -57,6 +57,7 @@ impl PluginCiBsApi {
         name: Query<Option<String>>,
         kind_id: Query<Option<String>>,
         kind_code: Query<Option<String>>,
+        kind_codes: Query<Option<String>>,
         app_tenant_id: Query<Option<String>>,
         page_number: Query<u32>,
         page_size: Query<u32>,
@@ -72,6 +73,11 @@ impl PluginCiBsApi {
             rel_item_id: Some(app_tenant_id),
             ..Default::default()
         });
+        let kind_codes: Option<Vec<String>> = if Some(kind_codes) = kind_codes.0 {
+            Some(kind_codes.split(",").map(|kind_code| kind_code.to_string()).collect())
+        } else {
+            None
+        };
         let result = SpiBsServ::paginate_items(
             &SpiBsFilterReq {
                 basic: RbumBasicFilterReq {
@@ -81,6 +87,7 @@ impl PluginCiBsApi {
                 },
                 kind_id: kind_id.0,
                 kind_code: kind_code.0,
+                kind_codes: kind_codes.clone(),
                 domain_code: Some(funs.module_code().to_string()),
                 rel,
                 ..Default::default()
