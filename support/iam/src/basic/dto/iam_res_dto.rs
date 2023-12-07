@@ -160,7 +160,6 @@ pub struct MenuItem {
     pub kind: String,
 }
 
-
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct IamResAppReq {
     pub app_ids: Vec<String>,
