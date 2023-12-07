@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 use bios_basic::rbum::{dto::rbum_item_dto::RbumItemAddReq, serv::rbum_crud_serv::RbumCrudOperation};
 use tardis::{
@@ -50,6 +50,7 @@ pub async fn message_send(send_req: ReachMsgSendReq, funs: &TardisFunsInst, ctx:
     if instances.is_empty() {
         return Ok(());
     }
+    // 重组入参
     let receive_group_code = send_req.receives.into_iter().fold(HashMap::<String, Vec<_>>::new(), |mut map, item| {
         map.entry(item.receive_group_code.clone()).or_default().push(item);
         map
@@ -63,27 +64,39 @@ pub async fn message_send(send_req: ReachMsgSendReq, funs: &TardisFunsInst, ctx:
     if instance_group_code.is_empty() {
         return Ok(());
     }
-
-    let (other_receive_collect, other_group_code) = receive_group_code.into_iter().fold(
-        (HashMap::new(), HashSet::new()),
-        |(mut other_receive_collect, mut other_group_code), (group_code, receives)| {
-            if let Some(instance_list) = instance_group_code.get_mut(&group_code) {
-                if !instance_list.is_empty() {
-                    for r in receives {
-                        other_receive_collect.entry(r.receive_kind).or_insert(Vec::new()).extend(r.receive_ids)
-                    }
-                    for i in instance_list {
-                        other_group_code.insert(i.rel_reach_channel);
-                    }
+    
+    let other_receive_collect = receive_group_code.into_iter().fold(HashMap::new(), |mut other_receive_collect, (group_code, receives)| {
+        if let Some(instance_list) = instance_group_code.get_mut(&group_code) {
+            if !instance_list.is_empty() {
+                for i in instance_list {
+                    for r in &receives {
+                        other_receive_collect.entry((r.receive_kind, i.rel_reach_channel)).or_insert(Vec::new()).extend(r.receive_ids.clone())
+                    }    
                 }
             }
-            (other_receive_collect, other_group_code)
-        },
-    );
+        }
+        other_receive_collect
+    });
+    // let (other_receive_collect, other_group_code) = receive_group_code.into_iter().fold(
+    //     (HashMap::new(), HashSet::new()),
+    //     |(mut other_receive_collect, mut other_group_code), (group_code, receives)| {
+    //         if let Some(instance_list) = instance_group_code.get_mut(&group_code) {
+    //             if !instance_list.is_empty() {
+    //                 for r in receives {
+    //                     other_receive_collect.entry(r.receive_kind).or_insert(Vec::new()).extend(r.receive_ids)
+    //                 }
+    //                 for i in instance_list {
+    //                     other_group_code.insert(i.rel_reach_channel);
+    //                 }
+    //             }
+    //         }
+    //         (other_receive_collect, other_group_code)
+    //     },
+    // );
 
     for (_kind, gc) in global_configs {
-        for (receive_kind, to_res_ids) in &other_receive_collect {
-            if other_group_code.contains(&gc.rel_reach_channel) && !gc.rel_reach_msg_signature_id.is_empty() && !gc.rel_reach_msg_template_id.is_empty() {
+        for ((receive_kind, rel_reach_channel), to_res_ids) in &other_receive_collect {
+            if rel_reach_channel == &gc.rel_reach_channel && !gc.rel_reach_msg_signature_id.is_empty() && !gc.rel_reach_msg_template_id.is_empty() {
                 ReachMessageServ::add_rbum(
                     &mut ReachMessageAddReq {
                         rbum_item_add_req: RbumItemAddReq {
