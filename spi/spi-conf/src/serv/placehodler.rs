@@ -22,7 +22,6 @@ enum Segment<'s> {
 }
 
 fn parse_content(content: &str) -> Vec<Segment<'_>> {
-    let mut new_content = String::new();
     let matcher = place_holder_regex().find_iter(content);
     let mut idx = 0;
     let mut result = Vec::new();
@@ -32,7 +31,7 @@ fn parse_content(content: &str) -> Vec<Segment<'_>> {
         result.push(Segment::Replace { key });
         idx = mat.end();
     }
-    new_content.push_str(&content[idx..]);
+    result.push(Segment::Raw(&content[idx..]));
     result
 }
 
