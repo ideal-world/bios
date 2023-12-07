@@ -50,7 +50,6 @@ pub async fn message_send(send_req: ReachMsgSendReq, funs: &TardisFunsInst, ctx:
     if instances.is_empty() {
         return Ok(());
     }
-    // 重组入参
     let receive_group_code = send_req.receives.into_iter().fold(HashMap::<String, Vec<_>>::new(), |mut map, item| {
         map.entry(item.receive_group_code.clone()).or_default().push(item);
         map
@@ -64,14 +63,14 @@ pub async fn message_send(send_req: ReachMsgSendReq, funs: &TardisFunsInst, ctx:
     if instance_group_code.is_empty() {
         return Ok(());
     }
-    
+
     let other_receive_collect = receive_group_code.into_iter().fold(HashMap::new(), |mut other_receive_collect, (group_code, receives)| {
         if let Some(instance_list) = instance_group_code.get_mut(&group_code) {
             if !instance_list.is_empty() {
                 for i in instance_list {
                     for r in &receives {
                         other_receive_collect.entry((r.receive_kind, i.rel_reach_channel)).or_insert(Vec::new()).extend(r.receive_ids.clone())
-                    }    
+                    }
                 }
             }
         }
