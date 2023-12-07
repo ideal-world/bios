@@ -1,10 +1,3 @@
-use tardis::basic::dto::TardisContext;
-use tardis::basic::field::TrimString;
-use tardis::basic::result::TardisResult;
-use tardis::log::info;
-use tardis::rand::Rng;
-use tardis::TardisFunsInst;
-
 use bios_basic::rbum::dto::rbum_cert_conf_dto::{RbumCertConfAddReq, RbumCertConfModifyReq};
 use bios_basic::rbum::dto::rbum_cert_dto::{RbumCertAddReq, RbumCertModifyReq};
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumCertConfFilterReq, RbumCertFilterReq};
@@ -12,6 +5,12 @@ use bios_basic::rbum::rbum_enumeration::{RbumCertConfStatusKind, RbumCertRelKind
 use bios_basic::rbum::serv::rbum_cert_serv::{RbumCertConfServ, RbumCertServ};
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
+use tardis::basic::dto::TardisContext;
+use tardis::basic::field::TrimString;
+use tardis::basic::result::TardisResult;
+use tardis::log::info;
+use tardis::rand::Rng;
+use tardis::TardisFunsInst;
 
 use crate::basic::dto::iam_cert_conf_dto::IamCertConfMailVCodeAddOrModifyReq;
 use crate::basic::dto::iam_cert_dto::{IamCertMailVCodeAddReq, IamCertMailVCodeModifyReq};
@@ -121,6 +120,40 @@ impl IamCertMailVCodeServ {
         )
         .await?;
         Self::send_activation_mail(account_id, &add_req.mail, &vcode, funs, ctx).await?;
+        Ok(id)
+    }
+
+    pub async fn add_cert_skip_activate(
+        add_req: &IamCertMailVCodeAddReq,
+        account_id: &str,
+        rel_rbum_cert_conf_id: &str,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<String> {
+        let vcode = Self::get_vcode();
+        let id = RbumCertServ::add_rbum(
+            &mut RbumCertAddReq {
+                ak: TrimString(add_req.mail.trim().to_string()),
+                sk: None,
+                sk_invisible: None,
+                kind: None,
+                supplier: None,
+                vcode: Some(TrimString(vcode.clone())),
+                ext: None,
+                start_time: None,
+                end_time: None,
+                conn_uri: None,
+                status: RbumCertStatusKind::Enabled,
+                rel_rbum_cert_conf_id: Some(rel_rbum_cert_conf_id.to_string()),
+                rel_rbum_kind: RbumCertRelKind::Item,
+                rel_rbum_id: account_id.to_string(),
+                is_outside: false,
+                is_ignore_check_sk: false,
+            },
+            funs,
+            ctx,
+        )
+        .await?;
         Ok(id)
     }
 

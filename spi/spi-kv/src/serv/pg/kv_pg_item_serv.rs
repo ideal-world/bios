@@ -20,7 +20,7 @@ pub async fn add_or_modify_item(add_or_modify_req: &KvItemAddOrModifyReq, _funs:
         Value::from(add_or_modify_req.info.as_ref().unwrap_or(&"".to_string()).as_str()),
         Value::from(ctx.owner.clone()),
         Value::from(ctx.own_paths.clone()),
-        Value::from(add_or_modify_req.scope_level.unwrap_or(-1)),
+        Value::from(add_or_modify_req.scope_level.unwrap_or(0)),
     ];
     let mut update_opt_fragments: Vec<&str> = Vec::new();
     update_opt_fragments.push("v = $2");

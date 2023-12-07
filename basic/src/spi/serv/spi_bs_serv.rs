@@ -182,6 +182,13 @@ impl RbumItemCrudOperation<spi_bs::ActiveModel, SpiBsAddReq, SpiBsModifyReq, Spi
         if let Some(kind_code) = &filter.kind_code {
             query.and_where(Expr::col((rbum_kind::Entity, rbum_domain::Column::Code)).eq(kind_code.to_string()));
         }
+        if let Some(kind_codes) = &filter.kind_codes {
+            if kind_codes.len() == 1 {
+                query.and_where(Expr::col((rbum_kind::Entity, rbum_domain::Column::Code)).eq(kind_codes.first().unwrap().to_string()));
+            } else if !kind_codes.is_empty() {
+                query.and_where(Expr::col((rbum_kind::Entity, rbum_domain::Column::Code)).is_in(kind_codes));
+            }
+        }
         if let Some(kind_id) = &filter.kind_id {
             query.and_where(Expr::col((rbum_kind::Entity, rbum_domain::Column::Id)).eq(kind_id.to_string()));
         }

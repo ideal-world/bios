@@ -422,70 +422,71 @@ pub async fn do_auth(ctx: &AuthContext) -> TardisResult<Option<ResContainerLeafI
         // No authentication required
         return Ok(None);
     }
-    for matched_res in matched_res {
-        // Determine if the most precisely matched resource requires double authentication
-        if matched_res.need_double_auth {
-            if let Some(req_account_id) = &ctx.account_id {
-                if !auth_mgr_serv::has_double_auth(req_account_id).await? {
-                    return Err(TardisError::forbidden("[Auth] Secondary confirmation is required", "401-auth-req-need-double-auth"));
-                }
-            } else {
+    let matched_res = matched_res[0].clone();
+    // for matched_res in matched_res {
+    // Determine if the most precisely matched resource requires double authentication
+    if matched_res.need_double_auth {
+        if let Some(req_account_id) = &ctx.account_id {
+            if !auth_mgr_serv::has_double_auth(req_account_id).await? {
                 return Err(TardisError::forbidden("[Auth] Secondary confirmation is required", "401-auth-req-need-double-auth"));
             }
-        }
-        // Check auth
-        if let Some(auth) = &matched_res.auth {
-            let now = Utc::now().timestamp();
-            if let (Some(st), Some(et)) = (auth.st, auth.et) {
-                if now > et || now < st {
-                    // expired,need delete auth
-                    auth_res_serv::delete_auth(&matched_res.action, &matched_res.uri).await?;
-                    continue;
-                }
-            }
-            if let Some(matched_accounts) = &auth.accounts {
-                if let Some(req_account_id) = &ctx.account_id {
-                    if matched_accounts.contains(&format!("#{req_account_id}#")) {
-                        return Ok(Some(matched_res));
-                    }
-                }
-            }
-            if let Some(matched_roles) = &auth.roles {
-                if let Some(iam_roles) = &ctx.roles {
-                    for iam_role in iam_roles {
-                        if matched_roles.contains(&format!("#{iam_role}#")) {
-                            return Ok(Some(matched_res));
-                        }
-                    }
-                }
-            }
-            if let Some(matched_groups) = &auth.groups {
-                if let Some(iam_groups) = &ctx.groups {
-                    for iam_group in iam_groups {
-                        if Regex::new(&format!(r"#{iam_group}.*#"))?.is_match(matched_groups) {
-                            return Ok(Some(matched_res));
-                        }
-                    }
-                }
-            }
-            if let Some(matched_apps) = &auth.apps {
-                if let Some(iam_app_id) = &ctx.app_id {
-                    if matched_apps.contains(&format!("#{iam_app_id}#")) {
-                        return Ok(Some(matched_res));
-                    }
-                }
-            }
-            if let Some(matched_tenants) = &auth.tenants {
-                if let Some(iam_tenant_id) = &ctx.tenant_id {
-                    if matched_tenants.contains(&format!("#{iam_tenant_id}#")) || matched_tenants.contains(&"#*#".to_string()) {
-                        return Ok(Some(matched_res));
-                    }
-                }
-            }
         } else {
-            return Ok(Some(matched_res));
+            return Err(TardisError::forbidden("[Auth] Secondary confirmation is required", "401-auth-req-need-double-auth"));
         }
     }
+    // Check auth
+    if let Some(auth) = &matched_res.auth {
+        // let now = Utc::now().timestamp();
+        // if let (Some(st), Some(et)) = (auth.st, auth.et) {
+        //     if now > et || now < st {
+        //         // expired,need delete auth
+        //         auth_res_serv::delete_auth(&matched_res.action, &matched_res.uri).await?;
+        //         continue;
+        //     }
+        // }
+        if let Some(matched_accounts) = &auth.accounts {
+            if let Some(req_account_id) = &ctx.account_id {
+                if matched_accounts.contains(&format!("#{req_account_id}#")) {
+                    return Ok(Some(matched_res));
+                }
+            }
+        }
+        if let Some(matched_roles) = &auth.roles {
+            if let Some(iam_roles) = &ctx.roles {
+                for iam_role in iam_roles {
+                    if matched_roles.contains(&format!("#{iam_role}#")) {
+                        return Ok(Some(matched_res));
+                    }
+                }
+            }
+        }
+        if let Some(matched_groups) = &auth.groups {
+            if let Some(iam_groups) = &ctx.groups {
+                for iam_group in iam_groups {
+                    if Regex::new(&format!(r"#{iam_group}.*#"))?.is_match(matched_groups) {
+                        return Ok(Some(matched_res));
+                    }
+                }
+            }
+        }
+        if let Some(matched_apps) = &auth.apps {
+            if let Some(iam_app_id) = &ctx.app_id {
+                if matched_apps.contains(&format!("#{iam_app_id}#")) {
+                    return Ok(Some(matched_res));
+                }
+            }
+        }
+        if let Some(matched_tenants) = &auth.tenants {
+            if let Some(iam_tenant_id) = &ctx.tenant_id {
+                if matched_tenants.contains(&format!("#{iam_tenant_id}#")) || matched_tenants.contains(&"#*#".to_string()) {
+                    return Ok(Some(matched_res));
+                }
+            }
+        }
+    } else {
+        return Ok(Some(matched_res));
+    }
+    // }
     if ctx.ak.is_some() {
         //have token,not not have permission
         Err(TardisError::forbidden("[Auth] Permission denied", "403-auth-req-permission-denied"))
