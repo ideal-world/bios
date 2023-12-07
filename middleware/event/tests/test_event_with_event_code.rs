@@ -10,8 +10,7 @@ use tardis::serde_json::json;
 use tardis::tokio::time::sleep;
 use tardis::web::tokio_tungstenite::tungstenite::Message;
 use tardis::web::ws_processor::{TardisWebsocketMessage, TardisWebsocketMgrMessage, TardisWebsocketReq, WS_SYSTEM_EVENT_AVATAR_ADD};
-use tardis::{TardisFuns, rand};
-
+use tardis::{rand, TardisFuns};
 
 pub async fn test(http_clients: &[&TestHttpClient]) -> TardisResult<()> {
     static TEST_LOG_COUNTER: AtomicUsize = AtomicUsize::new(0);

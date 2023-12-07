@@ -8,10 +8,7 @@ use bios_sdk_invoke::invoke_initializer;
 
 use tardis::{
     basic::{dto::TardisContext, field::TrimString, result::TardisResult},
-    db::{
-        reldb_client::TardisActiveModel,
-        sea_orm::sea_query::Table,
-    },
+    db::{reldb_client::TardisActiveModel, sea_orm::sea_query::Table},
     log::info,
     web::web_server::TardisWebServer,
     TardisFuns, TardisFunsInst,
@@ -27,9 +24,7 @@ use crate::{
     dto::{
         flow_model_dto::FlowModelFilterReq,
         flow_state_dto::FlowSysStateKind,
-        flow_transition_dto::{
-            FlowTransitionDoubleCheckInfo, FlowTransitionInitInfo,
-        },
+        flow_transition_dto::{FlowTransitionDoubleCheckInfo, FlowTransitionInitInfo},
     },
     flow_config::{BasicInfo, FlowBasicInfoManager, FlowConfig},
     flow_constants,

@@ -27,6 +27,6 @@ pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
 
     bios_mw_schedule::schedule_initializer::init(web_server).await?;
     bios_mw_flow::flow_initializer::init(web_server).await?;
-    
+
     Ok(())
 }

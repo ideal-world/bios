@@ -59,8 +59,8 @@ run_script = { version = "0.10" }
 testcontainers-modules = { version = "0.1"}
 strum ={ version = "0.25", features = ["derive"] }
 # tardis
-# tardis = { version = "=0.1.0-rc.4" }
-tardis = { path = "../tardis/tardis" }
+tardis = { version = "=0.1.0-rc.5" }
+# tardis = { path = "../tardis/tardis" }
 # tardis = { git = "https://github.com/ideal-world/tardis.git", rev = "9424e16" }
 #spacegate
 spacegate-kernel = { git = "https://github.com/ideal-world/spacegate.git", rev = "40e7bf8d0b",features = [

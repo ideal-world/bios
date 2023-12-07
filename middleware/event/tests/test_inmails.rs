@@ -52,7 +52,7 @@ pub async fn test(http_clients: &[&TestHttpClient]) -> TardisResult<()> {
                 InMails::Publish { topic, message } => {
                     println!("publish: {} -> {}", topic, message);
                     return None;
-                },
+                }
             }
         }
         None
@@ -82,7 +82,7 @@ pub async fn test(http_clients: &[&TestHttpClient]) -> TardisResult<()> {
                 InMails::Publish { topic, message } => {
                     println!("publish: {} -> {}", topic, message);
                     return None;
-                },
+                }
             }
         }
         return None;
@@ -190,6 +190,6 @@ struct EbWebsocketMessage {
 #[derive(Deserialize, Serialize, Clone, Debug)]
 pub enum InMails {
     Subscribe { topic: String },
-    Publish { topic: String, message: String }, 
+    Publish { topic: String, message: String },
     Dm { message: String, target: String },
 }

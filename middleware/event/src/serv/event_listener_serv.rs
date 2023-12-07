@@ -1,7 +1,6 @@
 use crate::dto::event_dto::{EventListenerInfo, EventListenerRegisterReq, EventListenerRegisterResp};
 use crate::event_config::EventConfig;
 use tardis::cluster::cluster_hashmap::ClusterStaticHashMap;
-use tardis::log::info;
 use tardis::tardis_static;
 use tardis::tracing;
 use tardis::TardisFunsInst;
@@ -17,7 +16,7 @@ tardis_static! {
 
 const MGR_LISTENER_AVATAR_PREFIX: &str = "_";
 
-#[tracing::instrument(skip_all, fields(domain="event"))]
+#[tracing::instrument(skip_all, fields(domain = "event"))]
 pub(crate) async fn register(listener: EventListenerRegisterReq, funs: &TardisFunsInst) -> TardisResult<EventListenerRegisterResp> {
     let Some(topic) = topics().get(listener.topic_code.to_string()).await? else {
         return Err(funs.err().not_found("listener", "register", "topic not found", "404-event-topic-not-exist"));

@@ -1,21 +1,24 @@
 use bios_basic::rbum::{
     dto::{rbum_domain_dto::RbumDomainAddReq, rbum_kind_dto::RbumKindAddReq},
     rbum_enumeration::RbumScopeLevelKind,
-    serv::{rbum_crud_serv::RbumCrudOperation, rbum_domain_serv::RbumDomainServ, rbum_kind_serv::RbumKindServ},
+    serv::{rbum_crud_serv::RbumCrudOperation, rbum_domain_serv::RbumDomainServ, rbum_item_serv::RbumItemCrudOperation, rbum_kind_serv::RbumKindServ},
 };
+use bios_sdk_invoke::clients::event_client::TOPIC_EVENT_BUS;
 use tardis::{
     basic::{dto::TardisContext, field::TrimString, result::TardisResult},
     db::reldb_client::TardisActiveModel,
+    log::error,
     web::{web_server::TardisWebServer, ws_client::TardisWSClient},
-    TardisFuns, TardisFunsInst, utils::tardis_static,
+    TardisFuns, TardisFunsInst,
 };
 
 use crate::{
     api::{event_listener_api, event_proc_api, event_topic_api},
     domain::event_topic,
-    event_config::{EventInfo, EventInfoManager},
-    event_constants::{DOMAIN_CODE, KIND_CODE},
-    serv::{event_topic_serv::EventDefServ, event_proc_serv::CreateRemoteSenderSubscriber},
+    dto::event_dto::EventTopicAddOrModifyReq,
+    event_config::{EventConfig, EventInfo, EventInfoManager},
+    event_constants::{DOMAIN_CODE, KIND_CODE, SERVICE_EVENT_BUS_AVATAR},
+    serv::{self, event_proc_serv::CreateRemoteSenderSubscriber, event_topic_serv::EventDefServ},
 };
 
 pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
@@ -76,6 +79,22 @@ async fn init_db(domain_code: String, kind_code: String, funs: &TardisFunsInst, 
     )
     .await?;
     EventInfoManager::set(EventInfo { kind_id, domain_id })?;
+    let config = funs.conf::<EventConfig>();
+    // create event bus topic
+    serv::event_topic_serv::EventDefServ::add_item(
+        &mut EventTopicAddOrModifyReq {
+            code: TOPIC_EVENT_BUS.into(),
+            name: TOPIC_EVENT_BUS.into(),
+            save_message: false,
+            need_mgr: false,
+            queue_size: 1024,
+            use_sk: Some(config.event_bus_sk.clone()),
+            mgr_sk: None,
+        },
+        funs,
+        ctx,
+    )
+    .await?;
     Ok(())
 }
 
@@ -90,9 +109,9 @@ async fn init_api(web_server: &TardisWebServer) -> TardisResult<()> {
 }
 
 async fn init_cluster_resource() {
-    use tardis::cluster::cluster_processor::subscribe;
     use crate::serv::event_listener_serv::{listeners, mgr_listeners};
     use crate::serv::event_topic_serv::topics;
+    use tardis::cluster::cluster_processor::subscribe;
     subscribe(listeners().clone()).await;
     subscribe(mgr_listeners().clone()).await;
     subscribe(topics().clone()).await;
@@ -103,7 +122,37 @@ async fn init_ws_client() -> TardisWSClient {
     while !TardisFuns::web_server().is_running().await {
         tardis::tokio::task::yield_now().await
     }
-    todo!("init ws client")
+    let funs = TardisFuns::inst_with_db_conn(DOMAIN_CODE.to_string(), None);
+    let conf = funs.conf::<EventConfig>();
+    let topic_sk = conf.event_bus_sk.clone();
+    let client = bios_sdk_invoke::clients::event_client::EventClient::new("http://localhost:8080/event", &funs);
+    loop {
+        let addr = loop {
+            if let Ok(result) = client
+                .register(&bios_sdk_invoke::clients::event_client::EventListenerRegisterReq {
+                    topic_code: TOPIC_EVENT_BUS.to_string(),
+                    topic_sk: Some(topic_sk.clone()),
+                    events: None,
+                    avatars: vec![SERVICE_EVENT_BUS_AVATAR.into()],
+                    subscribe_mode: false,
+                })
+                .await
+            {
+                break result.ws_addr;
+            }
+            tardis::tokio::time::sleep(std::time::Duration::from_secs(10)).await;
+        };
+        let ws_client = TardisFuns::ws_client(&addr, |_| async move { None }).await;
+        match ws_client {
+            Ok(ws_client) => {
+                return ws_client;
+            }
+            Err(err) => {
+                error!("[Bios.Event] failed to connect to event server: {}", err);
+                tardis::tokio::time::sleep(std::time::Duration::from_secs(10)).await;
+            }
+        }
+    }
 }
 
 tardis::tardis_static! {

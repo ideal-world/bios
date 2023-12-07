@@ -24,6 +24,9 @@ lazy_static.workspace = true
 # tokio-cron-scheduler = "*"
 tardis = { workspace = true, features = ["reldb-postgres", "web-server"] }
 bios-basic = { path = "../../basic", features = ["default"] }
+bios-sdk-invoke = { path = "../../sdk/invoke", features = [
+    "spi_log", "event"
+], default-features = false }
 [dependencies.tokio-cron-scheduler]
 git = "https://github.com/4t145/tokio-cron-scheduler.git"
 branch = "time-local"

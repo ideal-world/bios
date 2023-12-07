@@ -50,7 +50,7 @@ impl EventTopicApi {
         page_size: Query<u32>,
         desc_by_create: Query<Option<bool>>,
         desc_by_update: Query<Option<bool>>,
-        ctx: TardisContextExtractor
+        ctx: TardisContextExtractor,
     ) -> TardisApiResult<TardisPage<EventTopicInfoResp>> {
         let funs = get_tardis_inst();
         let result = EventDefServ::paginate_items(

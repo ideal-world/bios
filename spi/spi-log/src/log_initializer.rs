@@ -48,7 +48,7 @@ async fn init_event() -> TardisResult<()> {
                 tokio::task::yield_now().await
             }
         }
-        crate::event::start_log_event_service(&event_config.base_url, &event_config.log_sk).await?;
+        crate::event::start_log_event_service(event_config).await?;
     }
     Ok(())
 }

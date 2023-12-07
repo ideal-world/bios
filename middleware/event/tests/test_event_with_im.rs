@@ -9,7 +9,7 @@ use tardis::basic::result::TardisResult;
 use tardis::tokio::time::sleep;
 use tardis::web::tokio_tungstenite::tungstenite::Message;
 use tardis::web::ws_processor::{TardisWebsocketMessage, TardisWebsocketMgrMessage, TardisWebsocketReq};
-use tardis::{TardisFuns, rand};
+use tardis::{rand, TardisFuns};
 
 pub async fn test(http_clients: &[&TestHttpClient]) -> TardisResult<()> {
     static NOTIFY_COUNTER: AtomicUsize = AtomicUsize::new(0);

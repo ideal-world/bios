@@ -1,18 +1,14 @@
-use std::{
-    collections::{HashMap, HashSet},
-    iter,
-};
+use std::iter;
 
 use serde::{Deserialize, Serialize};
 use tardis::{
-    basic::{dto::TardisContext, result::TardisResult},
-    web::{poem_openapi::{self, Object}, web_resp::{Void, TardisResp}},
-    TardisFuns, TardisFunsInst,
+    basic::result::TardisResult,
+    web::{
+        poem_openapi::{self, Object},
+        web_resp::{TardisResp, Void},
+    },
+    TardisFunsInst,
 };
-
-use crate::{impl_tardis_api_client, invoke_config::InvokeConfigApi};
-
-use super::SimpleInvokeClient;
 
 #[derive(Clone)]
 pub struct EventClient<'a> {
@@ -31,12 +27,12 @@ impl<'a> EventClient<'a> {
         let resp = self.funs.web_client().post::<EventListenerRegisterReq, TardisResp<EventListenerRegisterResp>>(&url, req, iter::empty()).await?;
         if let Some(resp) = resp.body {
             if let Some(data) = resp.data {
-                return Ok(data)
+                return Ok(data);
             } else {
-                return Err(self.funs.err().internal_error("event", "register", &resp.msg, ""))
+                return Err(self.funs.err().internal_error("event", "register", &resp.msg, ""));
             }
         }
-        return Err(self.funs.err().internal_error("event", "register", "failed to register event listener", ""))
+        return Err(self.funs.err().internal_error("event", "register", "failed to register event listener", ""));
     }
 
     pub async fn remove(&self, listener_code: &str, token: &str) -> TardisResult<()> {
@@ -44,12 +40,12 @@ impl<'a> EventClient<'a> {
         let resp = self.funs.web_client().delete::<TardisResp<Void>>(&url, iter::empty()).await?;
         if let Some(resp) = resp.body {
             if resp.data.is_some() {
-                return Ok(())
+                return Ok(());
             } else {
-                return Err(self.funs.err().internal_error("event", "register", &resp.msg, ""))
+                return Err(self.funs.err().internal_error("event", "register", &resp.msg, ""));
             }
         }
-        return Err(self.funs.err().internal_error("event", "register", "failed to register event listener", ""))
+        return Err(self.funs.err().internal_error("event", "register", "failed to register event listener", ""));
     }
 }
 
@@ -68,4 +64,30 @@ pub struct EventListenerRegisterReq {
 pub struct EventListenerRegisterResp {
     pub ws_addr: String,
     pub listener_code: String,
+}
+
+// GLOBAL EVENT BUS
+pub const TOPIC_EVENT_BUS: &str = "event_bus";
+
+#[derive(Serialize, Deserialize, Debug, Default, Clone)]
+#[serde(default)]
+pub struct EventTopicConfig {
+    pub topic_code: String,
+    pub topic_sk: Option<String>,
+    pub events: Option<Vec<String>>,
+    pub avatars: Vec<String>,
+    pub subscribe_mode: bool,
+    pub base_url: String,
+}
+
+impl From<EventTopicConfig> for EventListenerRegisterReq {
+    fn from(val: EventTopicConfig) -> Self {
+        EventListenerRegisterReq {
+            topic_code: val.topic_code,
+            topic_sk: val.topic_sk,
+            events: val.events,
+            avatars: val.avatars,
+            subscribe_mode: val.subscribe_mode,
+        }
+    }
 }

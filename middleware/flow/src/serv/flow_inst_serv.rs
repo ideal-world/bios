@@ -680,15 +680,7 @@ impl FlowInstServ {
         }
         let model_transition = flow_model.transitions();
         let next_transition_detail = model_transition.iter().find(|trans| trans.id == transfer_req.flow_transition_id).unwrap().to_owned();
-        if FlowModelServ::check_post_action_ring(
-            next_transition_detail.clone(),
-            (false, vec![]),
-            funs,
-            ctx,
-        )
-        .await?
-        .0
-        {
+        if FlowModelServ::check_post_action_ring(next_transition_detail.clone(), (false, vec![]), funs, ctx).await?.0 {
             return Err(funs.err().not_found("flow_inst", "transfer", "this post action exist endless loop", "500-flow-transition-endless-loop"));
         }
 
@@ -821,7 +813,16 @@ impl FlowInstServ {
         let post_changes =
             model_transition.into_iter().find(|model_transition| model_transition.id == next_flow_transition.next_flow_transition_id).unwrap_or_default().action_by_post_changes();
         if !post_changes.is_empty() {
-            Self::do_post_change(&flow_inst_detail, &flow_model, post_changes, updated_instance_list, next_transition_detail.is_notify, ctx, funs).await?;
+            Self::do_post_change(
+                &flow_inst_detail,
+                &flow_model,
+                post_changes,
+                updated_instance_list,
+                next_transition_detail.is_notify,
+                ctx,
+                funs,
+            )
+            .await?;
         }
         let next_flow_transitions = Self::do_find_next_transitions(&flow_inst_detail, &flow_model, None, &None, skip_filter, funs, ctx).await?.next_flow_transitions;
 

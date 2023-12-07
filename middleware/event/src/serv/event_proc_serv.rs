@@ -1,8 +1,8 @@
 use std::sync::Arc;
 use std::{borrow::Cow, collections::HashMap};
 
-use bios_basic::process::ci_processor::{self, AppKeyConfig};
 use serde::{Deserialize, Serialize};
+use tardis::basic::dto::TardisContext;
 use tardis::basic::result::TardisResult;
 use tardis::cluster::cluster_processor::{ClusterEventTarget, TardisClusterMessageReq};
 use tardis::cluster::cluster_publish::publish_event_no_response;
@@ -19,7 +19,7 @@ use tardis::{TardisFuns, TardisFunsInst};
 
 use crate::dto::event_dto::EventMessageMgrWrap;
 use crate::event_config::EventConfig;
-use crate::event_constants::DOMAIN_CODE;
+use crate::event_constants::{DOMAIN_CODE, SERVICE_EVENT_BUS_AVATAR};
 use crate::event_initializer::ws_client;
 
 use super::event_listener_serv::{listeners, mgr_listeners};
@@ -58,12 +58,15 @@ pub async fn add_sender(topic_code: String, capacity: usize) {
     let clst_bc_tx = ClusterBroadcastChannel::new(topic_code.clone(), capacity);
     let mut wg = senders().write().await;
     wg.insert(topic_code.clone(), clst_bc_tx);
-    let _ = publish_event_no_response(
-        CreateRemoteSenderSubscriber.event_name(),
-        TardisFuns::json.obj_to_json(&CreateRemoteSenderEvent { topic_code, capacity }).expect("invalid json"),
-        ClusterEventTarget::Broadcast,
-    )
-    .await;
+    drop(wg);
+    if TardisFuns::fw_config().cluster.is_some() {
+        let _ = publish_event_no_response(
+            CreateRemoteSenderSubscriber.event_name(),
+            TardisFuns::json.obj_to_json(&CreateRemoteSenderEvent { topic_code, capacity }).expect("invalid json"),
+            ClusterEventTarget::Broadcast,
+        )
+        .await;
+    }
 }
 
 pub(crate) async fn ws_process(listener_code: String, token: String, websocket: WebSocket, funs: &TardisFunsInst) -> BoxWebSocketUpgraded {
@@ -92,39 +95,38 @@ pub(crate) async fn ws_process(listener_code: String, token: String, websocket: 
         HashMap::from([
             ("listener_code".to_string(), listener_code),
             ("topic_code".to_string(), listener.topic_code.clone()),
-            ("log_url".to_string(), funs.conf::<EventConfig>().log_url()),
-            (
-                "app_key".to_string(),
-                TardisFuns::json.obj_to_string(&funs.conf::<EventConfig>().app_key).expect("event config not a valid json value"),
-            ),
+            ("spi_app_id".to_string(), funs.conf::<EventConfig>().spi_app_id.clone()),
         ]),
         websocket,
         sender,
         move |req_msg, ext| async move {
             if save_message {
-                let log_url = ext.get("log_url").expect("topic_code was modified unexpectedly");
-                if log_url == "/" {
+                let spi_app_id = ext.get("spi_app_id").expect("spi_app_id was modified unexpectedly");
+                if spi_app_id.is_empty() {
                     info!("[Event] MESSAGE LOG: {}", TardisFuns::json.obj_to_string(&req_msg).expect("req_msg not a valid json value"));
                 } else {
-                    use bios_sdk_invoke::clients::spi_log_client::{SpiLogEventExt, LogItemAddReq};
-                    let app_key = ext.get("app_key").expect("app_key was modified unexpectedly");
+                    use bios_sdk_invoke::clients::spi_log_client::{LogItemAddReq, SpiLogEventExt};
                     let ws_client = ws_client().await;
-                    let ctx = { todo!()};
-                    let req = LogItemAddReq {
-                        tag: DOMAIN_CODE,
-                        content: TardisFuns::json.obj_to_string(&req_msg).expect("req_msg not a valid json value"),
-                        kind: todo!(),
-                        ext: todo!(),
-                        key: todo!(),
-                        op: todo!(),
-                        rel_key: todo!(),
-                        id: todo!(),
-                        ts: todo!(),
-                        owner: ctx.owner.clone(),
-                        own_paths: ctx.own_paths.clone(),
+                    let ctx = TardisContext {
+                        owner: spi_app_id.clone(),
+                        ..Default::default()
                     };
-                    ws_client.publish_add_log(&req, &ctx);
-                    let app_key_config: AppKeyConfig = TardisFuns::json.str_to_obj(app_key).unwrap_or_default();
+                    let req = LogItemAddReq {
+                        tag: DOMAIN_CODE.to_string(),
+                        content: TardisFuns::json.obj_to_string(&req_msg).expect("req_msg not a valid json value"),
+                        kind: None,
+                        ext: None,
+                        key: None,
+                        op: None,
+                        rel_key: None,
+                        id: None,
+                        ts: None,
+                        owner: Some(ctx.owner.clone()),
+                        own_paths: Some(ctx.own_paths.clone()),
+                    };
+                    if let Err(e) = ws_client.publish_add_log(&req, SERVICE_EVENT_BUS_AVATAR.to_string(), &ctx).await {
+                        warn!("[Bios.Event] publish log fail: {}", e);
+                    }
                 }
             }
             if !need_mgr || is_mgr {
