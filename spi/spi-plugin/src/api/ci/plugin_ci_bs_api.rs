@@ -73,7 +73,7 @@ impl PluginCiBsApi {
             rel_item_id: Some(app_tenant_id),
             ..Default::default()
         });
-        let kind_codes: Option<Vec<String>> = if Some(kind_codes) = kind_codes.0 {
+        let kind_codes: Option<Vec<String>> = if let Some(kind_codes) = kind_codes.0 {
             Some(kind_codes.split(",").map(|kind_code| kind_code.to_string()).collect())
         } else {
             None
