@@ -499,7 +499,7 @@ impl IamResServ {
 
     pub async fn get_res_by_app_code(
         app_ids: Vec<String>,
-        res_code: Option<Vec<String>>,
+        res_codes: Option<Vec<String>>,
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<HashMap<String, Vec<IamResSummaryResp>>> {
@@ -528,12 +528,18 @@ impl IamResServ {
                     res_ids.extend(rel_res_ids.into_iter());
                 }
             }
+            let res_codes = if let Some(res_codes) = &res_codes {
+                let codes = res_codes.clone();
+                Some(res_codes.iter().map(|code| format!("{}/{}/{}", IamResKind::Ele.to_int(), "*".to_string(), code)).chain(codes).collect::<Vec<String>>())
+            } else {
+                None
+            };
             let res = Self::find_items(
                 &IamResFilterReq {
                     basic: RbumBasicFilterReq {
                         with_sub_own_paths: true,
                         ids: Some(res_ids.into_iter().collect()),
-                        codes: res_code.clone(),
+                        codes: res_codes.clone(),
                         ..Default::default()
                     },
                     ..Default::default()
