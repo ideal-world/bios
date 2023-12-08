@@ -462,7 +462,7 @@ async fn test_rbum_cert_conf_is_ak_repeatable(context: &TardisContext) -> Tardis
         context,
     )
     .await
-    .is_err());
+    .is_ok());
     funs.rollback().await?;
     Ok(())
 }
