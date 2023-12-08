@@ -497,7 +497,12 @@ impl IamResServ {
         Ok(res_id)
     }
 
-    pub async fn get_res_by_app(app_ids: Vec<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<HashMap<String, Vec<IamResSummaryResp>>> {
+    pub async fn get_res_by_app_code(
+        app_ids: Vec<String>,
+        res_codes: Option<Vec<String>>,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<HashMap<String, Vec<IamResSummaryResp>>> {
         let raw_roles = IamAccountServ::find_simple_rel_roles(&ctx.owner, true, Some(true), None, funs, ctx).await?;
         let mut roles: Vec<RbumRelBoneResp> = vec![];
         let mut result = HashMap::new();
@@ -523,11 +528,18 @@ impl IamResServ {
                     res_ids.extend(rel_res_ids.into_iter());
                 }
             }
+            let res_codes = if let Some(res_codes) = &res_codes {
+                let codes = res_codes.clone();
+                Some(res_codes.iter().map(|code| format!("{}/{}/{}", IamResKind::Ele.to_int(), "*".to_string(), code)).chain(codes).collect::<Vec<String>>())
+            } else {
+                None
+            };
             let res = Self::find_items(
                 &IamResFilterReq {
                     basic: RbumBasicFilterReq {
                         with_sub_own_paths: true,
                         ids: Some(res_ids.into_iter().collect()),
+                        codes: res_codes.clone(),
                         ..Default::default()
                     },
                     ..Default::default()

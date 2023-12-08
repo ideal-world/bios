@@ -735,6 +735,7 @@ impl FlowInstServ {
                     Some(next_flow_state.sys_state.clone()),
                     Some(prev_flow_state.name.clone()),
                     Some(prev_flow_state.sys_state.clone()),
+                    Some(next_flow_transition.next_flow_state_name.clone()),
                     next_transition_detail.is_notify,
                     params,
                     ctx,
@@ -804,6 +805,7 @@ impl FlowInstServ {
                 next_flow_state.sys_state,
                 prev_flow_state.name.clone(),
                 prev_flow_state.sys_state,
+                next_transition_detail.name.clone(),
                 next_transition_detail.is_notify,
                 ctx,
                 funs,
@@ -814,16 +816,7 @@ impl FlowInstServ {
         let post_changes =
             model_transition.into_iter().find(|model_transition| model_transition.id == next_flow_transition.next_flow_transition_id).unwrap_or_default().action_by_post_changes();
         if !post_changes.is_empty() {
-            Self::do_post_change(
-                &flow_inst_detail,
-                &flow_model,
-                post_changes,
-                updated_instance_list,
-                next_transition_detail.is_notify,
-                ctx,
-                funs,
-            )
-            .await?;
+            Self::do_post_change(&flow_inst_detail, &flow_model, &next_transition_detail, post_changes, updated_instance_list, ctx, funs).await?;
         }
         let next_flow_transitions = Self::do_find_next_transitions(&flow_inst_detail, &flow_model, None, &None, skip_filter, funs, ctx).await?.next_flow_transitions;
 
@@ -852,9 +845,9 @@ impl FlowInstServ {
     async fn do_post_change(
         current_inst: &FlowInstDetailResp,
         current_model: &FlowModelDetailResp,
+        transition_detail: &FlowTransitionDetailResp,
         post_changes: Vec<FlowTransitionActionChangeInfo>,
         updated_instance_list: &mut Vec<String>,
-        is_notify: bool,
         ctx: &TardisContext,
         funs: &TardisFunsInst,
     ) -> TardisResult<()> {
@@ -889,7 +882,8 @@ impl FlowInstServ {
                                         None,
                                         None,
                                         None,
-                                        is_notify,
+                                        Some(transition_detail.name.clone()),
+                                        transition_detail.is_notify,
                                         vec![FlowExternalParams {
                                             rel_kind: None,
                                             rel_tag: None,
@@ -914,7 +908,8 @@ impl FlowInstServ {
                                 None,
                                 None,
                                 None,
-                                is_notify,
+                                Some(transition_detail.name.clone()),
+                                transition_detail.is_notify,
                                 vec![FlowExternalParams {
                                     rel_kind: None,
                                     rel_tag: None,

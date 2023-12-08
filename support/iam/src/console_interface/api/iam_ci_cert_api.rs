@@ -1,18 +1,19 @@
 use std::collections::HashMap;
 
 use crate::basic::dto::iam_account_dto::IamAccountExtSysResp;
+use crate::basic::dto::iam_cert_conf_dto::IamCertConfLdapResp;
 use crate::basic::dto::iam_cert_dto::{IamCertAkSkAddReq, IamCertAkSkResp, IamCertDecodeRequest, IamOauth2AkSkResp, IamThirdPartyCertExtAddReq};
 use crate::basic::serv::iam_account_serv::IamAccountServ;
 use crate::basic::serv::iam_cert_ldap_serv::IamCertLdapServ;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::console_interface::serv::iam_ci_cert_aksk_serv::IamCiCertAkSkServ;
 use crate::console_interface::serv::iam_ci_oauth2_token_serv::IamCiOauth2AkSkServ;
-
 use crate::iam_constants;
 use crate::iam_enumeration::Oauth2GrantType;
 use bios_basic::helper::request_helper::add_remote_ip;
 use bios_basic::rbum::dto::rbum_cert_dto::RbumCertSummaryWithSkResp;
 use tardis::basic::dto::TardisContext;
+use tardis::basic::error::TardisError;
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem::Request;
 use tardis::web::poem_openapi;
@@ -23,6 +24,8 @@ use tardis::web::web_resp::{TardisApiResult, TardisResp, Void};
 pub struct IamCiCertManageApi;
 #[derive(Clone, Default)]
 pub struct IamCiCertApi;
+#[derive(Clone, Default)]
+pub struct IamCiLdapCertApi;
 
 /// # Interface Console Manage Cert API
 ///
@@ -68,6 +71,9 @@ impl IamCiCertApi {
     /// Find Cert By Kind And Supplier
     ///
     /// if kind is none,query default kind(UserPwd)
+    /// - `supplier` is only used when kind is `Ldap`
+    /// - `ldap_origin` is only used when kind is `Ldap` and default is false.
+    /// when true,return ak will be original DN
     #[oai(path = "/:account_id", method = "get")]
     async fn get_cert_by_kind_supplier(
         &self,
@@ -75,6 +81,7 @@ impl IamCiCertApi {
         kind: Query<Option<String>>,
         tenant_id: Query<Option<String>>,
         supplier: Query<Option<String>>,
+        ldap_origin: Query<Option<bool>>,
         ctx: TardisContextExtractor,
         request: &Request,
     ) -> TardisApiResult<RbumCertSummaryWithSkResp> {
@@ -94,8 +101,9 @@ impl IamCiCertApi {
         } else {
             None
         };
-
-        let cert = IamCertServ::get_cert_by_relrubmid_kind_supplier(&account_id.0, &kind, vec![supplier], conf_id, &true_tenant_id.unwrap_or_default(), &funs, &ctx.0).await?;
+        let ldap_DN = ldap_origin.0.unwrap_or_default();
+        let cert =
+            IamCertServ::get_cert_by_relrubmid_kind_supplier(&account_id.0, &kind, vec![supplier], conf_id, &true_tenant_id.unwrap_or_default(), ldap_DN, &funs, &ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(cert)
     }
@@ -157,3 +165,45 @@ impl IamCiCertApi {
     }
 }
 
+#[poem_openapi::OpenApi(prefix_path = "/ci/ldap", tag = "bios_basic::ApiTag::Interface")]
+impl IamCiLdapCertApi {
+    /// 根据ldap cn查询对应的displayName
+    #[oai(path = "/cert/cn/:cn", method = "get")]
+    async fn get_ldap_resp_by_cn(&self, cn: Path<String>) -> TardisApiResult<Vec<IamAccountExtSysResp>> {
+        let funs = iam_constants::get_tardis_inst();
+        let ctx = TardisContext {
+            own_paths: "".to_string(),
+            ak: "".to_string(),
+            roles: vec![],
+            groups: vec![],
+            owner: "".to_string(),
+            ..Default::default()
+        };
+        let result = IamCertLdapServ::get_ldap_resp_by_cn(&cn.0, &funs, &ctx).await?;
+        ctx.execute_task().await?;
+        TardisResp::ok(result)
+    }
+
+    /// Get Ldap Cert Conf
+    #[oai(path = "/conf", method = "get")]
+    async fn get_ldap_cert(
+        &self,
+        supplier: Query<String>,
+        tenant_id: Query<Option<String>>,
+        ctx: TardisContextExtractor,
+        request: &Request,
+    ) -> TardisApiResult<IamCertConfLdapResp> {
+        let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0.clone())?;
+        add_remote_ip(request, &ctx).await?;
+        let mut funs = iam_constants::get_tardis_inst();
+        funs.begin().await?;
+        let conf_id = if let Ok(conf_id) = IamCertServ::get_cert_conf_id_by_kind_supplier("Ldap", &supplier.0, tenant_id.0, &funs).await {
+            conf_id
+        } else {
+            return TardisResp::err(TardisError::bad_request("ldap config not found", ""));
+        };
+        let resp = IamCertLdapServ::get_cert_conf(&conf_id, &funs, &ctx).await?;
+        funs.commit().await?;
+        TardisResp::ok(resp)
+    }
+}

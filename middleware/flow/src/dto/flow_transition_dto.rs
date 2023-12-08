@@ -284,6 +284,8 @@ pub enum FlowTransitionActionByVarChangeInfoChangedKind {
     ChangeContent,
     #[sea_orm(string_value = "auto_get_operate_time")]
     AutoGetOperateTime,
+    #[sea_orm(string_value = "auto_get_operator")]
+    AutoGetOperator,
     #[sea_orm(string_value = "select_field")]
     SelectField,
 }

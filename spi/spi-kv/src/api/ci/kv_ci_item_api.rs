@@ -5,7 +5,7 @@ use tardis::web::poem_openapi::payload::Json;
 use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 
 use crate::dto::kv_item_dto::{
-    KvItemAddOrModifyReq, KvItemDetailResp, KvItemMatchReq, KvItemSummaryResp, KvNameAddOrModifyReq, KvNameFindResp, KvTagAddOrModifyReq, KvTagFindResp,
+    KvItemAddOrModifyReq, KvItemDeleteReq, KvItemDetailResp, KvItemMatchReq, KvItemSummaryResp, KvNameAddOrModifyReq, KvNameFindResp, KvTagAddOrModifyReq, KvTagFindResp,
 };
 use crate::serv::kv_item_serv;
 
@@ -78,6 +78,14 @@ impl KvCiItemApi {
     async fn delete_item(&self, key: Query<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let funs = crate::get_tardis_inst();
         kv_item_serv::delete_item(key.0, &funs, &ctx.0).await?;
+        TardisResp::ok(Void {})
+    }
+
+    /// Delete Item Body
+    #[oai(path = "/item/delete", method = "put")]
+    async fn delete_item_body(&self, delete_req: Json<KvItemDeleteReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+        let funs = crate::get_tardis_inst();
+        kv_item_serv::delete_item(delete_req.0.key.to_string(), &funs, &ctx.0).await?;
         TardisResp::ok(Void {})
     }
 

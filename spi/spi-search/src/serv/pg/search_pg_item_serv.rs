@@ -414,7 +414,7 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
             {
                 order_fragments.push(format!("{} {}", sort_item.field, sort_item.order.to_sql()));
             } else {
-                order_fragments.push(format!("ext ->> '{}' {}", sort_item.field, sort_item.order.to_sql()));
+                order_fragments.push(format!("ext -> '{}' {}", sort_item.field, sort_item.order.to_sql()));
             }
         }
     }
