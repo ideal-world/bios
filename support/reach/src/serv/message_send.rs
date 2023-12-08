@@ -10,6 +10,7 @@ use tardis::{
 use crate::{domain, dto::*, reach_consts::*, serv::*};
 
 pub async fn message_send(send_req: ReachMsgSendReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    tardis::tracing::debug!("[Bios.Reach] input: {:?}", send_req);
     let err = |msg: &str| funs.err().not_found("reach", "event_listener", msg, "");
 
     if send_req.receives.is_empty() {
