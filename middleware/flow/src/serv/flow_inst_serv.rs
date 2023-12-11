@@ -735,7 +735,7 @@ impl FlowInstServ {
                     Some(next_flow_state.sys_state.clone()),
                     Some(prev_flow_state.name.clone()),
                     Some(prev_flow_state.sys_state.clone()),
-                    Some(next_flow_transition.next_flow_state_name.clone()),
+                    Some(next_flow_transition.next_flow_transition_name.clone()),
                     next_transition_detail.is_notify,
                     params,
                     ctx,
