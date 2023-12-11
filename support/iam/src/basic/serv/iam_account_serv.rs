@@ -442,7 +442,8 @@ impl IamAccountServ {
         let set_id = if use_sys_org {
             IamSetServ::get_set_id_by_code(&IamSetServ::get_default_code(&IamSetKind::Org, ""), true, funs, ctx).await?
         } else {
-            IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, funs, ctx).await?
+            IamSetServ::get_set_id_by_code(&IamSetServ::get_default_code(&IamSetKind::Org, &IamTenantServ::get_id_by_ctx(ctx, funs)?), true, funs, ctx).await?
+            // IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, funs, ctx).await?
         };
         let raw_roles = Self::find_simple_rel_roles(&account.id, true, Some(true), None, funs, ctx).await?;
         let mut roles: Vec<RbumRelBoneResp> = vec![];
@@ -564,7 +565,8 @@ impl IamAccountServ {
         let set_id = if use_sys_org {
             IamSetServ::get_set_id_by_code(&IamSetServ::get_default_code(&IamSetKind::Org, ""), true, funs, ctx).await?
         } else {
-            IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, funs, ctx).await?
+            IamSetServ::get_set_id_by_code(&IamSetServ::get_default_code(&IamSetKind::Org, &IamTenantServ::get_id_by_ctx(ctx, funs)?), true, funs, ctx).await?
+            // IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, funs, ctx).await?
         };
         for account in accounts.records {
             account_aggs.push(IamAccountSummaryAggResp {

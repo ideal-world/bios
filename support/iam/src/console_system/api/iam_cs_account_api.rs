@@ -81,8 +81,8 @@ impl IamCsAccountApi {
                 },
                 ..Default::default()
             },
-            true,
-            true,
+            tenant_id.0.is_none(),
+            tenant_id.0.is_none(),
             &funs,
             &ctx,
         )
