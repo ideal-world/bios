@@ -8,6 +8,7 @@ use bios_mw_event::event_constants::DOMAIN_CODE;
 use bios_mw_event::event_initializer;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::result::TardisResult;
+use tardis::cluster::cluster_processor::set_local_node_id;
 use tardis::tokio::time::sleep;
 use tardis::{testcontainers, tokio, TardisFuns};
 mod test_event_with_event_code;
@@ -20,6 +21,7 @@ async fn test_event() -> TardisResult<()> {
 
     let docker = testcontainers::clients::Cli::default();
     let _x = init_rbum_test_container::init(&docker, None).await?;
+    set_local_node_id(TardisFuns::field.nanoid());
 
     init_data().await?;
 

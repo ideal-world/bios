@@ -60,6 +60,7 @@ impl RbumItemCrudOperation<event_topic::ActiveModel, EventTopicAddOrModifyReq, E
     async fn after_add_item(id: &str, add_req: &mut EventTopicAddOrModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let key = add_req.code.to_string();
         let value = Self::get_item(id, &EventTopicFilterReq::default(), funs, ctx).await?;
+        // topics().local().write().await.insert(key, value);
         topics().insert(key, value).await?;
         Ok(())
     }

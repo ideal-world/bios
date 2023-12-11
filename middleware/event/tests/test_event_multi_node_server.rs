@@ -9,6 +9,7 @@ use bios_mw_event::event_constants::DOMAIN_CODE;
 use bios_mw_event::event_initializer;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::result::TardisResult;
+use tardis::cluster::cluster_processor::set_local_node_id;
 use tardis::config::config_dto::TardisConfig;
 use tardis::test::test_container::TardisTestContainer;
 use tardis::tokio::time::sleep;
@@ -17,10 +18,10 @@ use tardis::{testcontainers, tokio, TardisFuns};
 use tokio::io::AsyncReadExt;
 use tokio::process::Command;
 
+mod test_event_inmails;
 mod test_event_with_event_code;
 mod test_event_with_im;
 mod test_event_without_mgr;
-mod test_inmails;
 #[tokio::test(flavor = "multi_thread")]
 async fn test_event() -> TardisResult<()> {
     if let Ok(kind) = env::var("KIND") {
@@ -108,7 +109,7 @@ async fn test_event() -> TardisResult<()> {
             });
             tokio::time::sleep(Duration::from_secs(1)).await;
         }
-        tokio::time::sleep(Duration::from_secs(10)).await;
+        tokio::time::sleep(Duration::from_secs(15)).await;
         client_side().await?;
     }
 
@@ -117,13 +118,13 @@ async fn test_event() -> TardisResult<()> {
 
 async fn server_side() -> TardisResult<()> {
     TardisFuns::init(Some("tests/config")).await?;
-
+    set_local_node_id(TardisFuns::field.nanoid());
     // Initialize RBUM
     let rbum_init_result = bios_basic::rbum::rbum_initializer::init(DOMAIN_CODE, RbumConfig::default()).await;
 
     let web_server = TardisFuns::web_server();
     // Initialize Event
-    let _event_init_result = event_initializer::init(web_server.as_ref()).await;
+    let _event_init_result = event_initializer::init(web_server.as_ref()).await.expect("fail to initialize");
     web_server.start().await?;
     web_server.await;
     Ok(())
@@ -154,6 +155,6 @@ async fn client_side() -> TardisResult<()> {
     // test_event_without_mgr::test(&client_set.iter().collect::<Vec<_>>()).await?;
     // test_event_with_event_code::test(&client_set.iter().collect::<Vec<_>>()).await?;
     // test_event_with_im::test(&client_set.iter().collect::<Vec<_>>()).await?;
-    test_inmails::test(&client_set.iter().collect::<Vec<_>>()).await?;
+    test_event_inmails::test(&client_set.iter().collect::<Vec<_>>()).await?;
     Ok(())
 }

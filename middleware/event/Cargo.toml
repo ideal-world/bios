@@ -18,12 +18,23 @@ path = "src/lib.rs"
 serde.workspace = true
 async-trait.workspace = true
 lazy_static.workspace = true
-tardis = { workspace = true, features = ["reldb-postgres", "web-server", "ws-client", "cluster"] }
+tardis = { workspace = true, features = [
+    "reldb-postgres",
+    "web-server",
+    "ws-client",
+    "cluster",
+] }
 bios-basic = { path = "../../basic", features = ["default"] }
 bios-sdk-invoke = { path = "../../sdk/invoke", features = [
     "spi_log",
+    "event",
 ], default-features = false }
 [dev-dependencies]
-tardis = { workspace = true, features = ["test", "ws-client", "cluster", "web-server"] }
+tardis = { workspace = true, features = [
+    "test",
+    "ws-client",
+    "cluster",
+    "web-server",
+] }
 bios-basic = { path = "../../basic", features = ["default", "test"] }
 tokio = { version = "1", features = ["full"] }
