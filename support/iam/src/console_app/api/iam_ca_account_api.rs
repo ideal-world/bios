@@ -71,7 +71,7 @@ impl IamCaAccountApi {
                 rel2,
                 ..Default::default()
             },
-            true,
+            false,
             true,
             page_number.0,
             page_size.0,
