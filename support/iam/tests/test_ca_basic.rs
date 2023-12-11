@@ -20,7 +20,7 @@ use bios_iam::console_passport::dto::iam_cp_cert_dto::IamCpUserPwdLoginReq;
 use bios_iam::console_passport::serv::iam_cp_cert_user_pwd_serv::IamCpCertUserPwdServ;
 use bios_iam::iam_constants;
 
-pub async fn test(_context: &TardisContext) -> TardisResult<(TardisContext, TardisContext, TardisContext)> {
+pub async fn test(context: &TardisContext) -> TardisResult<(TardisContext, TardisContext, TardisContext)> {
     let mut funs = iam_constants::get_tardis_inst();
     funs.begin().await?;
 
@@ -64,6 +64,7 @@ pub async fn test(_context: &TardisContext) -> TardisResult<(TardisContext, Tard
             cert_conf_by_ldap: None,
         },
         &funs,
+        &context
     )
     .await?;
     sleep(Duration::from_secs(1)).await;

@@ -73,6 +73,7 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
             cert_conf_by_ldap: None,
         },
         &funs,
+        &system_admin_context
     )
     .await?;
     IamCertTokenServ::modify_cert_conf(
@@ -446,14 +447,14 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
     IamRoleServ::modify_role_agg(
         role_id,
         &mut IamRoleAggModifyReq {
-            role: IamRoleModifyReq {
+            role: Some(IamRoleModifyReq {
                 name: None,
                 scope_level: None,
                 disabled: Some(true),
                 icon: None,
                 sort: None,
                 kind: None,
-            },
+            }),
             res_ids: None,
         },
         &funs,
@@ -515,14 +516,14 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
     IamRoleServ::modify_role_agg(
         role_id,
         &mut IamRoleAggModifyReq {
-            role: IamRoleModifyReq {
+            role: Some(IamRoleModifyReq {
                 name: None,
                 scope_level: None,
                 disabled: Some(false),
                 icon: None,
                 sort: None,
                 kind: None,
-            },
+            }),
             res_ids: None,
         },
         &funs,
@@ -1087,6 +1088,7 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
             cert_conf_by_ldap: None,
         },
         &funs,
+        &system_admin_context
     )
     .await?;
 

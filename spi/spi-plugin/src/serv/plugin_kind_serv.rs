@@ -88,12 +88,13 @@ impl PluginKindServ {
         Ok(())
     }
 
-    pub async fn find_kind_agg(app_tenant_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<PluginKindAggResp>> {
+    pub async fn find_kind_agg(kind_codes: Option<Vec<String>>, app_tenant_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<PluginKindAggResp>> {
         let kinds = RbumKindServ::find_detail_rbums(
             &RbumKindFilterReq {
                 basic: RbumBasicFilterReq {
                     with_sub_own_paths: true,
                     own_paths: Some("".to_string()),
+                    codes: kind_codes,
                     ..Default::default()
                 },
                 module: Some(KIND_MODULE_CODE.to_string()),
