@@ -2,6 +2,7 @@
 
 mod api;
 pub mod dto;
+pub mod event;
 pub mod log_config;
 pub mod log_constants;
 pub mod log_initializer;

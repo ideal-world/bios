@@ -12,7 +12,7 @@ publish.workspace = true
 
 [dependencies]
 serde.workspace = true
-tardis = { workspace = true, features = ["web-server", "conf-remote"] }
+tardis = { workspace = true, features = ["web-server", "conf-remote", "cluster"] }
 bios-iam = { path = "../../support/iam", features = ["spi_search", "spi_kv"] }
 bios-auth = { path = "../../support/auth", features = ["web-server"] }
 bios-reach = { path = "../../support/reach" }
@@ -30,6 +30,7 @@ bios-spi-stats = { path = "../../spi/spi-stats" }
 
 bios-mw-schedule = { path = "../../middleware/schedule" }
 bios-mw-flow = { path = "../../middleware/flow" }
+bios-mw-event = { path = "../../middleware/event" }
 
 # clients
 bios-client-hwsms = { path = "../../clients/hwsms", features = ["reach"] }

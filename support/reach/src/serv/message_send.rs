@@ -32,7 +32,7 @@ pub async fn message_send(send_req: ReachMsgSendReq, funs: &TardisFunsInst, ctx:
         ..Default::default()
     };
 
-    // retrive all related global configs, group by channel
+    // retrieve all related global configs, group by channel
     let global_configs = ReachTriggerGlobalConfigService::find_detail_rbums(filter, None, None, funs, ctx).await?.into_iter().fold(HashMap::new(), |mut map, item| {
         map.entry(item.rel_reach_channel).or_insert(item);
         map
@@ -41,7 +41,7 @@ pub async fn message_send(send_req: ReachMsgSendReq, funs: &TardisFunsInst, ctx:
         return Err(err("global_configs is empty"));
     }
 
-    // retrive all instance configs, group by group_code
+    // retrieve all instance configs, group by group_code
     let filter = &ReachTriggerInstanceConfigFilterReq {
         rel_reach_trigger_scene_id: Some(scene.id),
         rel_item_id: Some(send_req.rel_item_id),

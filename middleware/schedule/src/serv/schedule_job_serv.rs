@@ -3,6 +3,7 @@ use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 use std::vec;
 
+use bios_sdk_invoke::clients::spi_log_client::{LogItemAddReq, SpiLogEventExt};
 use tardis::basic::dto::TardisContext;
 use tardis::basic::error::TardisError;
 use tardis::basic::result::TardisResult;
@@ -21,6 +22,7 @@ use crate::dto::schedule_job_dto::{
 };
 use crate::schedule_config::ScheduleConfig;
 use crate::schedule_constants::{DOMAIN_CODE, KV_KEY_CODE};
+use crate::schedule_initializer::{default_avatar, ws_client};
 
 /// global service instance
 static GLOBAL_SERV: OnceLock<Arc<OwnedScheduleTaskServ>> = OnceLock::new();
@@ -88,17 +90,19 @@ pub(crate) async fn delete(code: &str, funs: &TardisFunsInst, ctx: &TardisContex
     };
     let headers = vec![("Tardis-Context".to_string(), TardisFuns::crypto.base64.encode(TardisFuns::json.obj_to_string(&spi_ctx)?))];
     // 1. log this operation
-    TardisFuns::web_client()
-        .post_obj_to_str(
-            &format!("{log_url}/ci/item"),
-            &HashMap::from([
-                ("tag", "schedule_job"),
-                ("content", "delete job"),
-                ("key", code),
-                ("op", "delete"),
-                ("ts", &Utc::now().to_rfc3339()),
-            ]),
-            headers.clone(),
+    ws_client()
+        .await
+        .publish_add_log(
+            &LogItemAddReq {
+                tag: "schedule_job".to_string(),
+                content: "delete job".to_string(),
+                key: Some(code.into()),
+                op: Some("delete".to_string()),
+                ts: Some(Utc::now()),
+                ..Default::default()
+            },
+            default_avatar().await.clone(),
+            ctx,
         )
         .await?;
     // 2. sync to kv
@@ -213,7 +217,7 @@ pub(crate) async fn find_task(
         owner: funs.conf::<ScheduleConfig>().spi_app_id.clone(),
         ..ctx.clone()
     };
-    let headers = [("Tardis-Context".to_string(), TardisFuns::crypto.base64.encode(&TardisFuns::json.obj_to_string(&spi_ctx)?))];
+    let headers = [("Tardis-Context".to_string(), TardisFuns::crypto.base64.encode(TardisFuns::json.obj_to_string(&spi_ctx)?))];
     let mut url = format!(
         "{}/ci/item?tag={}&key={}&page_number={}&page_size={}",
         log_url,

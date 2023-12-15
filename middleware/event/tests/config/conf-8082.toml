@@ -1,0 +1,5 @@
+[fw.web_server]
+port = 8082
+[fw.cluster]
+watch_kind = "cache"
+cache_check_interval_sec = 10

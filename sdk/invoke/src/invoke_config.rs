@@ -22,6 +22,7 @@ impl Default for InvokeConfig {
                 (InvokeModuleKind::Search.to_string(), "http://127.0.0.1:8080/spi-search".to_string()),
                 (InvokeModuleKind::Schedule.to_string(), "http://127.0.0.1:8080/schedule".to_string()),
                 (InvokeModuleKind::Iam.to_string(), "http://127.0.0.1:8080/iam".to_string()),
+                (InvokeModuleKind::Event.to_string(), "http://127.0.0.1:8080/event".to_string()),
             ]),
         }
     }
