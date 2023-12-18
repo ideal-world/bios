@@ -10,17 +10,17 @@ use tardis::serde_json::json;
 use tardis::tokio::time::sleep;
 use tardis::web::tokio_tungstenite::tungstenite::Message;
 use tardis::web::ws_processor::{TardisWebsocketMessage, TardisWebsocketMgrMessage, TardisWebsocketReq, WS_SYSTEM_EVENT_AVATAR_ADD};
-use tardis::TardisFuns;
+use tardis::{rand, TardisFuns};
 
-pub async fn test(http_client: &TestHttpClient) -> TardisResult<()> {
+pub async fn test(http_clients: &[&TestHttpClient]) -> TardisResult<()> {
     static TEST_LOG_COUNTER: AtomicUsize = AtomicUsize::new(0);
     static FEED_FROM_MGR_COUNTER: AtomicUsize = AtomicUsize::new(0);
     static FEED_FROM_USER_COUNTER: AtomicUsize = AtomicUsize::new(0);
 
-    prepare(http_client).await?;
+    prepare(http_clients).await?;
 
     // Register management listener
-    let url = add_listener(Vec::new(), true, vec![TrimString("test_log_append".to_string())], http_client).await?;
+    let url = add_listener(Vec::new(), true, vec![TrimString("test_log_append")], http_clients).await?;
     let mgr_test_log_client = TardisFuns::ws_client(&url, move |msg| async move {
         let receive_msg = TardisFuns::json.str_to_obj::<TardisWebsocketMgrMessage>(msg.to_string().as_str()).unwrap();
         let ori_msg = TardisFuns::json.json_to_obj::<EventMessageMgrWrap>(receive_msg.msg).unwrap();
@@ -44,7 +44,7 @@ pub async fn test(http_client: &TestHttpClient) -> TardisResult<()> {
         Vec::new(),
         true,
         vec![TrimString("feed_add".to_string()), TrimString(WS_SYSTEM_EVENT_AVATAR_ADD.to_string())],
-        http_client,
+        http_clients,
     )
     .await?;
     let mgr_feed_client = TardisFuns::ws_client(&url, move |msg| async move {
@@ -75,7 +75,7 @@ pub async fn test(http_client: &TestHttpClient) -> TardisResult<()> {
     .await?;
 
     // Register user listener
-    let url = add_listener(vec![TrimString("test_serv".to_string())], false, vec![], http_client).await?;
+    let url = add_listener(vec![TrimString("test_serv".to_string())], false, vec![], http_clients).await?;
     TardisFuns::ws_client(&url, move |msg| async move {
         let receive_msg = TardisFuns::json.str_to_obj::<TardisWebsocketMessage>(msg.to_string().as_str()).unwrap();
         let raw_msg = TardisFuns::json.json_to_obj::<EbWebsocketMessage>(receive_msg.msg).unwrap();
@@ -94,7 +94,7 @@ pub async fn test(http_client: &TestHttpClient) -> TardisResult<()> {
     })
     .await?;
 
-    let url = add_listener(vec![TrimString("test_serv".to_string()), TrimString("feed_serv".to_string())], false, vec![], http_client).await?;
+    let url = add_listener(vec![TrimString("test_serv".to_string()), TrimString("feed_serv".to_string())], false, vec![], http_clients).await?;
     TardisFuns::ws_client(&url, move |msg| async move {
         let receive_msg = TardisFuns::json.str_to_obj::<TardisWebsocketMessage>(msg.to_string().as_str()).unwrap();
         let raw_msg = TardisFuns::json.json_to_obj::<EbWebsocketMessage>(receive_msg.msg).unwrap();
@@ -111,7 +111,7 @@ pub async fn test(http_client: &TestHttpClient) -> TardisResult<()> {
     })
     .await?;
 
-    let url = add_listener(vec![TrimString("feed_serv".to_string())], false, vec![], http_client).await?;
+    let url = add_listener(vec![TrimString("feed_serv".to_string())], false, vec![], http_clients).await?;
     let feed1_client = TardisFuns::ws_client(&url, move |msg| async move {
         let receive_msg = TardisFuns::json.str_to_obj::<TardisWebsocketMessage>(msg.to_string().as_str()).unwrap();
         let raw_msg = TardisFuns::json.json_to_obj::<EbWebsocketMessage>(receive_msg.msg).unwrap();
@@ -130,7 +130,7 @@ pub async fn test(http_client: &TestHttpClient) -> TardisResult<()> {
     })
     .await?;
 
-    let url = add_listener(vec![TrimString("others".to_string())], false, vec![], http_client).await?;
+    let url = add_listener(vec![TrimString("others".to_string())], false, vec![], http_clients).await?;
     let feed2_client = TardisFuns::ws_client(&url, move |msg| async move {
         let receive_msg = TardisFuns::json.str_to_obj::<TardisWebsocketMessage>(msg.to_string().as_str()).unwrap();
         let raw_msg = TardisFuns::json.json_to_obj::<EbWebsocketMessage>(receive_msg.msg).unwrap();
@@ -205,7 +205,9 @@ pub async fn test(http_client: &TestHttpClient) -> TardisResult<()> {
     Ok(())
 }
 
-async fn prepare(http_client: &TestHttpClient) -> TardisResult<()> {
+async fn prepare(http_clients: &[&TestHttpClient]) -> TardisResult<()> {
+    let idx = rand::random::<usize>() % http_clients.len();
+    let http_client = &http_clients[idx];
     let _: String = http_client
         .post(
             "/topic",
@@ -223,7 +225,9 @@ async fn prepare(http_client: &TestHttpClient) -> TardisResult<()> {
     Ok(())
 }
 
-async fn add_listener(avatars: Vec<TrimString>, mgr: bool, events: Vec<TrimString>, http_client: &TestHttpClient) -> TardisResult<String> {
+async fn add_listener(avatars: Vec<TrimString>, mgr: bool, events: Vec<TrimString>, http_clients: &[&TestHttpClient]) -> TardisResult<String> {
+    let idx = rand::random::<usize>() % http_clients.len();
+    let http_client = &http_clients[idx];
     let resp: EventListenerRegisterResp = http_client
         .post(
             "/listener",

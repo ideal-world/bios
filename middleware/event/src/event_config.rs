@@ -10,6 +10,8 @@ pub struct EventConfig {
     pub app_key: AppKeyConfig,
     pub event_url: String,
     pub log_url: String,
+    pub event_bus_sk: String,
+    pub spi_app_id: String,
 }
 
 impl Default for EventConfig {
@@ -19,6 +21,8 @@ impl Default for EventConfig {
             app_key: Default::default(),
             event_url: "".to_string(),
             log_url: "".to_string(),
+            event_bus_sk: "".to_string(),
+            spi_app_id: "".to_string(),
         }
     }
 }

@@ -22,6 +22,9 @@ spi-pg = ["tardis/reldb-postgres"]
 serde.workspace = true
 tardis = { workspace = true, features = ["reldb-postgres", "web-server"] }
 bios-basic = { path = "../../basic", features = ["default"] }
+bios-sdk-invoke = { path = "../../sdk/invoke", features = [
+    "event",
+], default-features = false }
 
 [dev-dependencies]
 tardis = { workspace = true, features = ["test"] }

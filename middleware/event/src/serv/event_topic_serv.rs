@@ -6,19 +6,16 @@ use tardis::basic::dto::TardisContext;
 use tardis::basic::result::TardisResult;
 use tardis::db::sea_orm::sea_query::SelectStatement;
 use tardis::db::sea_orm::{EntityName, Set};
-use tardis::TardisFunsInst;
+use tardis::{tardis_static, TardisFunsInst};
 
 use crate::domain::event_topic;
 use crate::dto::event_dto::{EventTopicAddOrModifyReq, EventTopicFilterReq, EventTopicInfoResp};
 use crate::event_config::EventInfoManager;
 
-use std::{collections::HashMap, sync::Arc};
+use tardis::cluster::cluster_hashmap::ClusterStaticHashMap;
 
-use lazy_static::lazy_static;
-use tardis::tokio::sync::RwLock;
-
-lazy_static! {
-    pub static ref TOPICS: Arc<RwLock<HashMap<String, EventTopicInfoResp>>> = Arc::new(RwLock::new(HashMap::new()));
+tardis_static! {
+    pub(crate) topics: ClusterStaticHashMap<String, EventTopicInfoResp> = ClusterStaticHashMap::new("bios/event/topics");
 }
 
 pub struct EventDefServ;
@@ -61,7 +58,10 @@ impl RbumItemCrudOperation<event_topic::ActiveModel, EventTopicAddOrModifyReq, E
     }
 
     async fn after_add_item(id: &str, add_req: &mut EventTopicAddOrModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        TOPICS.write().await.insert(add_req.code.to_string(), Self::get_item(id, &EventTopicFilterReq::default(), funs, ctx).await?);
+        let key = add_req.code.to_string();
+        let value = Self::get_item(id, &EventTopicFilterReq::default(), funs, ctx).await?;
+        // topics().local().write().await.insert(key, value);
+        topics().insert(key, value).await?;
         Ok(())
     }
 
@@ -86,13 +86,15 @@ impl RbumItemCrudOperation<event_topic::ActiveModel, EventTopicAddOrModifyReq, E
     }
 
     async fn after_modify_item(id: &str, modify_req: &mut EventTopicAddOrModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        TOPICS.write().await.insert(modify_req.code.to_string(), Self::get_item(id, &EventTopicFilterReq::default(), funs, ctx).await?);
+        let key = modify_req.code.to_string();
+        let value = Self::get_item(id, &EventTopicFilterReq::default(), funs, ctx).await?;
+        topics().insert(key, value).await?;
         Ok(())
     }
 
     async fn after_delete_item(id: &str, _: &Option<EventTopicInfoResp>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let item = Self::get_item(id, &EventTopicFilterReq::default(), funs, ctx).await?;
-        TOPICS.write().await.remove(&item.code);
+        topics().remove(item.code).await?;
         Ok(())
     }
 
@@ -110,7 +112,7 @@ impl RbumItemCrudOperation<event_topic::ActiveModel, EventTopicAddOrModifyReq, E
 impl EventDefServ {
     pub async fn init(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let defs = Self::find_items(&EventTopicFilterReq::default(), None, None, funs, ctx).await?;
-        let mut cache_defs = TOPICS.write().await;
+        let mut cache_defs = topics().local().write().await;
         for def in defs {
             cache_defs.insert(def.code.to_string(), def);
         }

@@ -8,18 +8,20 @@ use bios_mw_event::event_constants::DOMAIN_CODE;
 use bios_mw_event::event_initializer;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::result::TardisResult;
+use tardis::cluster::cluster_processor::set_local_node_id;
 use tardis::tokio::time::sleep;
 use tardis::{testcontainers, tokio, TardisFuns};
 mod test_event_with_event_code;
 mod test_event_with_im;
 mod test_event_without_mgr;
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_event() -> TardisResult<()> {
     env::set_var("RUST_LOG", "debug,tardis=trace,bios_mw_event=trace,test_event=trace,sqlx::query=off");
 
     let docker = testcontainers::clients::Cli::default();
     let _x = init_rbum_test_container::init(&docker, None).await?;
+    set_local_node_id(TardisFuns::field.nanoid());
 
     init_data().await?;
 
@@ -32,8 +34,7 @@ async fn init_data() -> TardisResult<()> {
 
     let web_server = TardisFuns::web_server();
     // Initialize Event
-    event_initializer::init(web_server).await.unwrap();
-
+    event_initializer::init(web_server.as_ref()).await.unwrap();
     tokio::spawn(async move {
         web_server.start().await.unwrap();
     });
@@ -53,9 +54,9 @@ async fn init_data() -> TardisResult<()> {
 
     client.set_auth(&ctx)?;
 
-    test_event_without_mgr::test(&mut client).await?;
-    test_event_with_event_code::test(&mut client).await?;
-    test_event_with_im::test(&mut client).await?;
+    test_event_without_mgr::test(&[&client]).await?;
+    test_event_with_event_code::test(&[&client]).await?;
+    test_event_with_im::test(&[&client]).await?;
 
     Ok(())
 }
