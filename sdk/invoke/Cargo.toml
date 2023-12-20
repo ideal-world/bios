@@ -29,7 +29,7 @@ reldb-core=["tardis/reldb-core"]
 serde.workspace = true
 lazy_static.workspace = true
 itertools.workspace = true
-tardis = { workspace = true, features = ["web-server", "web-client", "crypto"] }
+tardis = { workspace = true, features = ["web-server", "web-client", "crypto", "ws-client"] }
 simple-invoke-client-macro = { path = "../simple-invoke-client-macro", optional = true}
 [dev-dependencies]
 tardis = { workspace = true, features = ["test"] }
