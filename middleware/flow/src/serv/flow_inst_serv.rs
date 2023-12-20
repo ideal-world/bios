@@ -938,7 +938,7 @@ impl FlowInstServ {
                         )
                         .await?;
                         if !resp.rel_bus_objs.is_empty() {
-                            let inst_ids = Self::find_inst_ids_by_rel_obj_ids(resp.rel_bus_objs.pop().unwrap().rel_bus_obj_ids, &change_info, funs, ctx).await?;
+                            let inst_ids = Self::find_inst_ids_by_rel_obj_ids(&current_model,resp.rel_bus_objs.pop().unwrap().rel_bus_obj_ids, &change_info, funs, ctx).await?;
                             Self::do_modify_state_by_post_action(inst_ids, &change_info, updated_instance_list, funs, ctx).await?;
                         }
                     }
@@ -949,6 +949,7 @@ impl FlowInstServ {
         Ok(())
     }
     async fn find_inst_ids_by_rel_obj_ids(
+        flow_model: &FlowModelDetailResp,
         rel_bus_obj_ids: Vec<String>,
         change_info: &FlowTransitionActionByStateChangeInfo,
         funs: &TardisFunsInst,
@@ -970,7 +971,7 @@ impl FlowInstServ {
                     }
                     let inst_id = Self::get_inst_ids_by_rel_business_obj_id(vec![rel_obj_id.clone()], funs, ctx).await?.pop().unwrap_or_default();
 
-                    let resp = FlowExternalServ::do_fetch_rel_obj(&change_info.obj_tag, &inst_id, rel_obj_id, rel_tags, ctx, funs).await?;
+                    let resp = FlowExternalServ::do_fetch_rel_obj(&flow_model.tag, &inst_id, rel_obj_id, rel_tags, ctx, funs).await?;
                     if !resp.rel_bus_objs.is_empty() {
                         for rel_bus_obj in resp.rel_bus_objs {
                             let condition = change_condition
