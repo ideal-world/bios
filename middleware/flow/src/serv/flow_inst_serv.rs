@@ -938,7 +938,7 @@ impl FlowInstServ {
                         )
                         .await?;
                         if !resp.rel_bus_objs.is_empty() {
-                            let inst_ids = Self::find_inst_ids_by_rel_obj_ids(&current_model,resp.rel_bus_objs.pop().unwrap().rel_bus_obj_ids, &change_info, funs, ctx).await?;
+                            let inst_ids = Self::find_inst_ids_by_rel_obj_ids(current_model, resp.rel_bus_objs.pop().unwrap().rel_bus_obj_ids, &change_info, funs, ctx).await?;
                             Self::do_modify_state_by_post_action(inst_ids, &change_info, updated_instance_list, funs, ctx).await?;
                         }
                     }
@@ -982,7 +982,7 @@ impl FlowInstServ {
                             let rel_obj_ids = Self::filter_rel_obj_ids_by_state(&rel_bus_obj.rel_bus_obj_ids, &Some(condition.state_id.clone()), funs, ctx).await?;
                             match condition.op {
                                 StateChangeConditionOp::And => {
-                                    if rel_bus_obj.rel_bus_obj_ids.len() != rel_obj_ids.len() {
+                                    if !rel_bus_obj.rel_bus_obj_ids.is_empty() && rel_bus_obj.rel_bus_obj_ids.len() != rel_obj_ids.len() {
                                         mismatch_rel_obj_ids.push(rel_obj_id.clone());
                                         continue;
                                     }
