@@ -1,6 +1,5 @@
 use crate::{api::ci::schedule_ci_job_api, schedule_config::ScheduleConfig, schedule_constants::DOMAIN_CODE, serv::schedule_job_serv};
 use bios_basic::spi::{dto::spi_bs_dto::SpiBsCertResp, spi_constants, spi_funs::SpiBsInst, spi_initializer};
-use bios_sdk_invoke::clients::event_client::TOPIC_EVENT_BUS;
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
     log::error,

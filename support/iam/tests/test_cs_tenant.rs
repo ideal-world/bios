@@ -56,7 +56,7 @@ pub async fn test(context: &TardisContext) -> TardisResult<()> {
             cert_conf_by_ldap: None,
         },
         &funs,
-        &context
+        &context,
     )
     .await?;
 
@@ -99,7 +99,7 @@ pub async fn test(context: &TardisContext) -> TardisResult<()> {
             cert_conf_by_ldap: None,
         },
         &funs,
-        &context
+        &context,
     )
     .await?;
 
@@ -142,7 +142,7 @@ pub async fn test(context: &TardisContext) -> TardisResult<()> {
             cert_conf_by_ldap: None,
         },
         &funs,
-        &context
+        &context,
     )
     .await?
     .0;

@@ -31,7 +31,7 @@ impl IamCtRoleApi {
         add_remote_ip(request, &ctx.0).await?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        let mut result = "".to_string();
+        let result;
         if is_app.0.unwrap_or(false) {
             add_req.0.role.kind = Some(IamRoleKind::App);
             result = IamRoleServ::tenant_add_app_role_agg(&mut add_req.0, &funs, &ctx.0).await?;

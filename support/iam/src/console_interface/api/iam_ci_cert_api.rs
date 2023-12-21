@@ -101,9 +101,9 @@ impl IamCiCertApi {
         } else {
             None
         };
-        let ldap_DN = ldap_origin.0.unwrap_or_default();
+        let ldap_dn = ldap_origin.0.unwrap_or_default();
         let cert =
-            IamCertServ::get_cert_by_relrubmid_kind_supplier(&account_id.0, &kind, vec![supplier], conf_id, &true_tenant_id.unwrap_or_default(), ldap_DN, &funs, &ctx.0).await?;
+            IamCertServ::get_cert_by_relrubmid_kind_supplier(&account_id.0, &kind, vec![supplier], conf_id, &true_tenant_id.unwrap_or_default(), ldap_dn, &funs, &ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(cert)
     }
