@@ -211,15 +211,15 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
         match search_req.query.q_scope.as_ref().unwrap_or(&SearchItemSearchQScopeKind::Title) {
             SearchItemSearchQScopeKind::Title => {
                 select_fragments = ", COALESCE(ts_rank(title_tsv, query), 0::float4) AS rank_title, 0::float4 AS rank_content".to_string();
-                where_fragments.push("(query @@ title_tsv)".to_string());
+                where_fragments.push(format!("(query @@ title_tsv OR {} LIKE ${})", ext_item.field, sql_vals.len()));
             }
             SearchItemSearchQScopeKind::Content => {
                 select_fragments = ", 0::float4 AS rank_title, COALESCE(ts_rank(content_tsv, query), 0::float4) AS rank_content".to_string();
-                where_fragments.push("(query @@ content_tsv)".to_string());
+                where_fragments.push(format!("(query @@ content_tsv OR {} LIKE ${})", ext_item.field, sql_vals.len()));
             }
             SearchItemSearchQScopeKind::TitleContent => {
                 select_fragments = ", COALESCE(ts_rank(title_tsv, query), 0::float4) AS rank_title, COALESCE(ts_rank(content_tsv, query), 0::float4) AS rank_content".to_string();
-                where_fragments.push("(query @@ title_tsv OR query @@ content_tsv)".to_string());
+                where_fragments.push(format!("(query @@ title_tsv OR query @@ content_tsv OR {} LIKE ${})", ext_item.field, sql_vals.len()));
             }
         }
     } else {
@@ -407,6 +407,7 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
         for sort_item in sort {
             if sort_item.field.to_lowercase() == "key"
                 || sort_item.field.to_lowercase() == "title"
+                || sort_item.field.to_lowercase() == "content"
                 || sort_item.field.to_lowercase() == "owner"
                 || sort_item.field.to_lowercase() == "own_paths"
                 || sort_item.field.to_lowercase() == "create_time"
