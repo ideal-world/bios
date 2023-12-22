@@ -6,7 +6,7 @@ use crate::{
     log_initializer::get_tardis_inst,
     serv,
 };
-use bios_sdk_invoke::clients::event_client::{self, TOPIC_EVENT_BUS, EventTopicConfig};
+use bios_sdk_invoke::clients::event_client::{self, EventTopicConfig, TOPIC_EVENT_BUS};
 use tardis::{
     basic::result::TardisResult,
     log::{error, info, warn},

@@ -275,10 +275,9 @@ impl IamAppServ {
                     )
                     .await?
                     .into_iter()
-                    .map(|set_item_id|async move {
-                        RbumSetItemServ::delete_rbum(&set_item_id, funs, ctx).await
-                    }),
-                ).await;
+                    .map(|set_item_id| async move { RbumSetItemServ::delete_rbum(&set_item_id, funs, ctx).await }),
+                )
+                .await;
             }
         }
         Ok(())

@@ -495,7 +495,7 @@ impl RbumCrudOperation<rbum_set_cate::ActiveModel, RbumSetCateAddReq, RbumSetCat
                     )
                     .inner_join(
                         rbum_item::Entity,
-                        Expr::col((rbum_item::Entity, rbum_item::Column::Id)).equals((rbum_set_item::Entity, rbum_set_item::Column::RelRbumItemId))
+                        Expr::col((rbum_item::Entity, rbum_item::Column::Id)).equals((rbum_set_item::Entity, rbum_set_item::Column::RelRbumItemId)),
                     )
                     .and_where(Expr::col((rbum_set_cate::Entity, rbum_set_cate::Column::Id)).eq(id))
                     .and_where(Expr::col((rbum_item::Entity, rbum_item::Column::Disabled)).eq(false)),

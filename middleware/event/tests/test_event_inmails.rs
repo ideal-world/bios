@@ -106,13 +106,7 @@ pub async fn test(http_clients: &[&TestHttpClient]) -> TardisResult<()> {
     })
     .await?;
 
-    let url = add_listener(
-        vec!["inmails/client/bob".into()],
-        false,
-        vec!["dm".into(), "push".into(), "broadcast".into()],
-        http_clients,
-    )
-    .await?;
+    let url = add_listener(vec!["inmails/client/bob".into()], false, vec!["dm".into(), "push".into(), "broadcast".into()], http_clients).await?;
     let client_bob = TardisFuns::ws_client(&url, |message| async move {
         info!("client bob receive message {message}");
         mailbox_bob().lock().await.push(TardisFuns::json.str_to_obj::<TardisWebsocketMessage>(message.to_string().as_str()).unwrap());
