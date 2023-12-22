@@ -29,7 +29,7 @@ pub struct FlowVarInfo {
     pub data_type: RbumDataTypeKind,
     pub widget_type: RbumWidgetTypeKind,
     pub widget_columns: Option<i16>,
-    pub default_value: Option<Value>,
+    pub default_value: Option<DefaultValue>,
     pub dyn_default_value: Option<Value>,
     pub options: Option<String>,
     pub dyn_options: Option<String>,
@@ -41,6 +41,27 @@ pub struct FlowVarInfo {
     #[oai(validator(min_length = "2", max_length = "2000"))]
     pub ext: Option<String>,
     pub parent_attr_name: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, poem_openapi::Object)]
+pub struct DefaultValue {
+    pub value_type: DefaultValueType,
+    pub value: String,
+}
+
+#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, strum::EnumString)]
+pub enum DefaultValueType {
+    Custom,
+    // Associated attribute
+    AssociatedAttr,
+    // Auto fill attribute
+    AutoFill,
+}
+
+#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, strum::EnumString)]
+pub enum FillType {
+    Person,
+    Time,
 }
 
 // In order to adapt to the JAVA program, the corresponding kind in rbum is changed to uppercase format (only here for the time being, the subsequent can be placed in the public module)

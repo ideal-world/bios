@@ -825,7 +825,7 @@ impl IamCertLdapServ {
                             )
                             .await;
                             if let Some(e) = modify_result.err() {
-                                let err_msg = format!("modify phone cert_id:{} failed:{}", phone_cert.id, e);
+                                let err_msg = format!("sync account:{} modify phone cert_id:{} failed:{}", cert.rel_rbum_id, phone_cert.id, e);
                                 tardis::log::error!("{}", err_msg);
                                 msg = format!("{msg}{err_msg}\n");
                             }
@@ -843,7 +843,7 @@ impl IamCertLdapServ {
                         )
                         .await
                         {
-                            let err_msg = format!("add phone phone:{} failed:{}", iam_account_ext_sys_resp.mobile.clone(), e);
+                            let err_msg = format!("sync account:{} add phone phone:{} failed:{}", cert.rel_rbum_id, iam_account_ext_sys_resp.mobile.clone(), e);
                             tardis::log::error!("{}", err_msg);
                             msg = format!("{msg}{err_msg}\n");
                             failed += 1;
@@ -894,7 +894,7 @@ impl IamCertLdapServ {
                             )
                             .await;
                             if let Some(e) = modify_result.err() {
-                                let err_msg = format!("modify email cert_id:{} failed:{}", email_cert.id, e);
+                                let err_msg = format!("sync account:{} modify email cert_id:{} failed:{}", cert.rel_rbum_id, email_cert.id, e);
                                 tardis::log::error!("{}", err_msg);
                                 msg = format!("{msg}{err_msg}\n");
                             }
@@ -912,7 +912,7 @@ impl IamCertLdapServ {
                         )
                         .await
                         {
-                            let err_msg = format!("add email email:{} failed:{}", iam_account_ext_sys_resp.email.clone(), e);
+                            let err_msg = format!("sync account:{} add email email:{} failed:{}", cert.rel_rbum_id, iam_account_ext_sys_resp.email.clone(), e);
                             tardis::log::error!("{}", err_msg);
                             msg = format!("{msg}{err_msg}\n");
                             failed += 1;
@@ -1038,7 +1038,25 @@ impl IamCertLdapServ {
                         )
                         .await
                         {
-                            let err_msg = format!("add phone phone:{} failed:{}", ldap_resp.mobile.clone(), e);
+                            let err_msg = format!("add account:{}add phone phone:{} failed:{}", mock_ctx.owner, ldap_resp.mobile.clone(), e);
+                            tardis::log::error!("{}", err_msg);
+                            msg = format!("{msg}{err_msg}\n");
+                        }
+
+                        //添加email
+                        let email_cert_conf_id = IamCertServ::get_cert_conf_id_by_kind(&IamCertKernelKind::MailVCode.to_string(), Some(ctx.own_paths.clone()), &funs).await?;
+                        if let Err(e) = IamCertMailVCodeServ::add_cert_skip_activate(
+                            &IamCertMailVCodeAddReq {
+                                mail: TrimString(ldap_resp.email.clone()).to_string(),
+                            },
+                            mock_ctx.owner.as_str(),
+                            email_cert_conf_id.as_str(),
+                            &funs,
+                            ctx,
+                        )
+                        .await
+                        {
+                            let err_msg = format!("add account:{} add email:{} failed:{}", mock_ctx.owner, ldap_resp.email.clone(), e);
                             tardis::log::error!("{}", err_msg);
                             msg = format!("{msg}{err_msg}\n");
                         }
