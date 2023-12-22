@@ -6,7 +6,7 @@ use bios_basic::helper::request_helper::add_remote_ip;
 use bios_basic::process::task_processor::TaskProcessor;
 use tardis::tokio;
 use tardis::web::context_extractor::TardisContextExtractor;
-use tardis::web::poem::{Request, RequestBody};
+use tardis::web::poem::Request;
 use tardis::web::poem_openapi;
 use tardis::web::poem_openapi::param::{Path, Query};
 use tardis::web::web_resp::{TardisApiResult, TardisResp, Void};
