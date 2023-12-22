@@ -2,16 +2,19 @@ use std::collections::HashSet;
 
 use async_trait::async_trait;
 use bios_basic::rbum::dto::rbum_rel_dto::RbumRelBoneResp;
+use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use bios_basic::rbum::serv::rbum_rel_serv::RbumRelServ;
+use bios_basic::rbum::serv::rbum_set_serv::RbumSetItemServ;
 use bios_sdk_invoke::clients::spi_kv_client::SpiKvClient;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 use tardis::db::sea_orm::sea_query::{Expr, SelectStatement};
 use tardis::db::sea_orm::*;
+use tardis::futures_util::future::join_all;
 use tardis::{TardisFuns, TardisFunsInst};
 
-use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumItemRelFilterReq};
+use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumItemRelFilterReq, RbumSetItemFilterReq};
 use bios_basic::rbum::dto::rbum_item_dto::{RbumItemKernelAddReq, RbumItemKernelModifyReq};
 use bios_basic::rbum::helper::rbum_scope_helper;
 use bios_basic::rbum::rbum_enumeration::RbumRelFromKind;
@@ -256,6 +259,27 @@ impl IamAppServ {
                 &tenant_ctx,
             )
             .await?;
+        }
+        if let Some(disabled) = &modify_req.disabled {
+            if *disabled {
+                join_all(
+                    RbumSetItemServ::find_id_rbums(
+                        &RbumSetItemFilterReq {
+                            rel_rbum_item_ids: Some(vec![id.to_string()]),
+                            ..Default::default()
+                        },
+                        None,
+                        None,
+                        funs,
+                        ctx,
+                    )
+                    .await?
+                    .into_iter()
+                    .map(|set_item_id|async move {
+                        RbumSetItemServ::delete_rbum(&set_item_id, funs, ctx).await
+                    }),
+                ).await;
+            }
         }
         Ok(())
     }
