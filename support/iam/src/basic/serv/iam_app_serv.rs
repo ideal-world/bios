@@ -32,7 +32,7 @@ use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::iam_config::{IamBasicConfigApi, IamBasicInfoManager, IamConfig};
 use crate::iam_constants::{self, RBUM_SCOPE_LEVEL_PRIVATE};
 use crate::iam_constants::{RBUM_ITEM_ID_APP_LEN, RBUM_SCOPE_LEVEL_APP};
-use crate::iam_enumeration::{IamRelKind, IamRoleKind, IamSetKind};
+use crate::iam_enumeration::{IamRelKind, IamSetKind};
 pub struct IamAppServ;
 
 #[async_trait]

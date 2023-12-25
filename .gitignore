@@ -61,3 +61,5 @@ services/spacegate/devsh/
 
 # pre-commit
 .pre-commit-config.yaml
+
+.uuid

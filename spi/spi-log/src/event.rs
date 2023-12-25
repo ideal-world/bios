@@ -1,12 +1,7 @@
 use std::time::Duration;
 
-use crate::{
-    event::event_client::EventListenerRegisterReq,
-    log_constants::{DOMAIN_CODE, EVENT_ADD_LOG},
-    log_initializer::get_tardis_inst,
-    serv,
-};
-use bios_sdk_invoke::clients::event_client::{self, EventTopicConfig, TOPIC_EVENT_BUS};
+use crate::{log_constants::EVENT_ADD_LOG, log_initializer::get_tardis_inst, serv};
+use bios_sdk_invoke::clients::event_client::{self, EventTopicConfig};
 use tardis::{
     basic::result::TardisResult,
     log::{error, info, warn},
