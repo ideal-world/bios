@@ -111,8 +111,8 @@ pub async fn page_tags(
     key_prefix: String,
     page_number: u32,
     page_size: u16,
-    desc_sort_by_create: Query<Option<bool>>,
-    desc_sort_by_create: Query<Option<bool>>,
+    desc_sort_by_create: Option<bool>,
+    desc_sort_by_create: Option<bool>,
     funs: &TardisFunsInst,
     ctx: &TardisContext,
 ) -> TardisResult<TardisPage<KvTagFindResp>> {
