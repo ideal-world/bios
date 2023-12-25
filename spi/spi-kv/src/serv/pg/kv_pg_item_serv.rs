@@ -133,6 +133,7 @@ WHERE
 pub async fn match_items(match_req: KvItemMatchReq, _funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<TardisPage<KvItemSummaryResp>> {
     let mut where_fragments: Vec<String> = Vec::new();
     let mut sql_vals: Vec<Value> = vec![];
+    let mut order_fragments: Vec<String> = Vec::new();
     sql_vals.push(Value::from(format!("{}%", match_req.key_prefix)));
     where_fragments.push(format!("k LIKE ${}", sql_vals.len()));
 
@@ -168,6 +169,12 @@ pub async fn match_items(match_req: KvItemMatchReq, _funs: &TardisFunsInst, ctx:
         sql_vals.push(Value::from(update_time_end));
         where_fragments.push(format!("update_time <= ${}", sql_vals.len()));
     }
+    if let Some(desc_sort_by_create) = match_req.desc_sort_by_create {
+        order_fragments.push(format!("create_time {}", if desc_sort_by_create { "DESC" } else { "ASC" }));
+    }
+    if let Some(desc_sort_by_update) = match_req.desc_sort_by_update {
+        order_fragments.push(format!("update_time {}", if desc_sort_by_update { "DESC" } else { "ASC" }));
+    }
 
     sql_vals.push(Value::from(match_req.page_size));
     sql_vals.push(Value::from((match_req.page_number - 1) * match_req.page_size as u32));
@@ -182,6 +189,7 @@ pub async fn match_items(match_req: KvItemMatchReq, _funs: &TardisFunsInst, ctx:
 FROM {}
 WHERE 
     {}
+{}
 {}"#,
                 if let Some(extract) = match_req.extract {
                     format!("->'{extract}'")
@@ -190,6 +198,11 @@ WHERE
                 },
                 table_name,
                 where_fragments.join(" AND "),
+                if order_fragments.is_empty() {
+                    "".to_string()
+                } else {
+                    format!("ORDER BY {}", order_fragments.join(", "))
+                }
                 page_fragments
             ),
             sql_vals,

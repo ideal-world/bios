@@ -120,10 +120,12 @@ impl KvCiItemApi {
         key_prefix: Query<String>,
         page_number: Query<u32>,
         page_size: Query<u16>,
+        desc_by_create: Query<Option<bool>>,
+        desc_by_update: Query<Option<bool>>,
         ctx: TardisContextExtractor,
     ) -> TardisApiResult<TardisPage<KvTagFindResp>> {
         let funs = crate::get_tardis_inst();
-        let resp = kv_item_serv::page_tags(key_prefix.0, page_number.0, page_size.0, &funs, &ctx.0).await?;
+        let resp = kv_item_serv::page_tags(key_prefix.0, page_number.0, page_size.0, desc_by_create.0, desc_by_update.0, &funs, &ctx.0).await?;
         TardisResp::ok(resp)
     }
 

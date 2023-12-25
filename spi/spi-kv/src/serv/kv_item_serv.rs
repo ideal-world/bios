@@ -107,7 +107,15 @@ pub async fn find_tags(keys: Vec<String>, funs: &TardisFunsInst, ctx: &TardisCon
     })
 }
 
-pub async fn page_tags(key_prefix: String, page_number: u32, page_size: u16, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<TardisPage<KvTagFindResp>> {
+pub async fn page_tags(
+    key_prefix: String,
+    page_number: u32,
+    page_size: u16,
+    desc_sort_by_create: Query<Option<bool>>,
+    desc_sort_by_create: Query<Option<bool>>,
+    funs: &TardisFunsInst,
+    ctx: &TardisContext,
+) -> TardisResult<TardisPage<KvTagFindResp>> {
     let key_prefix = format!("{}{}", kv_constants::KEY_PREFIX_BY_TAG, key_prefix);
     let inst = funs.init(ctx, true, kv_initializer::init_fun).await?;
     match inst.kind_code() {
@@ -118,6 +126,8 @@ pub async fn page_tags(key_prefix: String, page_number: u32, page_size: u16, fun
                     key_prefix,
                     page_number,
                     page_size,
+                    desc_sort_by_create,
+                    desc_sort_by_create,
                     ..Default::default()
                 },
                 funs,
