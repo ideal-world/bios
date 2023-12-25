@@ -440,7 +440,7 @@ impl IamRelServ {
                 .await;
             }
             IamRelKind::IamAccountRole => {
-                IamIdentCacheServ::delete_rel_roles_by_account_id(from_iam_item_id, vec![to_iam_item_id.to_string()], funs).await?;
+                IamIdentCacheServ::refresh_account_info_by_account_id(from_iam_item_id, funs).await?;
                 let _ = IamLogClient::add_ctx_task(
                     LogParamTag::IamAccount,
                     Some(from_iam_item_id.to_string()),

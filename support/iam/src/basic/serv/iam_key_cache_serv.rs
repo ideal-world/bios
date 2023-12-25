@@ -21,6 +21,7 @@ use crate::basic::dto::iam_filer_dto::{IamAccountFilterReq, IamAppFilterReq};
 use crate::basic::serv::clients::iam_log_client::{IamLogClient, LogParamTag};
 use crate::basic::serv::iam_account_serv::IamAccountServ;
 use crate::basic::serv::iam_app_serv::IamAppServ;
+use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_rel_serv::IamRelServ;
 use crate::iam_config::IamConfig;
 use crate::iam_constants;
@@ -253,24 +254,20 @@ impl IamIdentCacheServ {
         Ok(false)
     }
 
-    pub async fn delete_rel_roles_by_account_id(account_id: &str, del_role_ids: Vec<String>, funs: &TardisFunsInst) -> TardisResult<()> {
-        log::trace!("delete rel roles: account_id={}", account_id);
-        let account_info = funs.cache().hgetall(format!("{}{}", funs.conf::<IamConfig>().cache_key_account_info_, account_id).as_str()).await?;
-        if account_info.is_empty() {
+    pub async fn refresh_account_info_by_account_id(account_id: &str, funs: &TardisFunsInst) -> TardisResult<()> {
+        log::trace!("refresh account info: account_id={}", account_id);
+        let tenant_info = funs.cache().hget(format!("{}{}", funs.conf::<IamConfig>().cache_key_account_info_, account_id).as_str(), "").await?;
+        if tenant_info.is_none() {
             return Ok(());
         }
-        for (app_id, value) in account_info.iter() {
-            if let Ok(mut ctx) = TardisFuns::json.str_to_obj::<TardisContext>(value) {
-                ctx.roles.retain(|role_id| !del_role_ids.contains(&role_id));
-                funs.cache()
-                    .hset(
-                        format!("{}{}", funs.conf::<IamConfig>().cache_key_account_info_, account_id).as_str(),
-                        app_id,
-                        &TardisFuns::json.obj_to_string(&ctx).unwrap_or_default(),
-                    )
-                    .await;
-            }
-        }
+        funs.cache().del(format!("{}{}", funs.conf::<IamConfig>().cache_key_account_info_, account_id).as_str()).await?;
+
+        let tenant_id = TardisFuns::json.str_to_obj::<TardisContext>(&tenant_info.unwrap())?.own_paths;
+        let mock_ctx = TardisContext {
+            own_paths: tenant_id.clone(),
+            ..Default::default()
+        };
+        IamCertServ::package_tardis_account_context_and_resp(account_id, &tenant_id, "".to_string(), None, funs, &mock_ctx).await;
         Ok(())
     }
 
