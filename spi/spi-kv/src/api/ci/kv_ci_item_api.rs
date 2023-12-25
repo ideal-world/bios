@@ -47,6 +47,8 @@ impl KvCiItemApi {
         extract: Query<Option<String>>,
         page_number: Query<u32>,
         page_size: Query<u16>,
+        desc_by_create: Query<Option<bool>>,
+        desc_by_update: Query<Option<bool>>,
         ctx: TardisContextExtractor,
     ) -> TardisApiResult<TardisPage<KvItemSummaryResp>> {
         let funs = crate::get_tardis_inst();
@@ -56,6 +58,8 @@ impl KvCiItemApi {
                 extract: extract.0,
                 page_number: page_number.0,
                 page_size: page_size.0,
+                desc_sort_by_create: desc_by_create.0,
+                desc_sort_by_update: desc_by_update.0,
                 ..Default::default()
             },
             &funs,
