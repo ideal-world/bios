@@ -440,9 +440,7 @@ impl IamRelServ {
                 .await;
             }
             IamRelKind::IamAccountRole => {
-                if Self::find_from_id_rels(&IamRelKind::IamAccountRole, false, from_iam_item_id, None, None, funs, ctx).await?.is_empty() {
-                    IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(from_iam_item_id, get_remote_ip(ctx).await?, funs).await?;
-                }
+                IamIdentCacheServ::delete_rel_roles_by_account_id(from_iam_item_id, vec![to_iam_item_id.to_string()], funs).await?;
                 let _ = IamLogClient::add_ctx_task(
                     LogParamTag::IamAccount,
                     Some(from_iam_item_id.to_string()),

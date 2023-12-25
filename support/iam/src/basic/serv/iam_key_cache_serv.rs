@@ -253,6 +253,27 @@ impl IamIdentCacheServ {
         Ok(false)
     }
 
+    pub async fn delete_rel_roles_by_account_id(account_id: &str, del_role_ids: Vec<String>, funs: &TardisFunsInst) -> TardisResult<()> {
+        log::trace!("delete rel roles: account_id={}", account_id);
+        let account_info = funs.cache().hgetall(format!("{}{}", funs.conf::<IamConfig>().cache_key_account_info_, account_id).as_str()).await?;
+        if account_info.is_empty() {
+            return Ok(());
+        }
+        for (app_id, value) in account_info.iter() {
+            if let Ok(mut ctx) = TardisFuns::json.str_to_obj::<TardisContext>(value) {
+                ctx.roles.retain(|role_id| !del_role_ids.contains(&role_id));
+                funs.cache()
+                    .hset(
+                        format!("{}{}", funs.conf::<IamConfig>().cache_key_account_info_, account_id).as_str(),
+                        app_id,
+                        &TardisFuns::json.obj_to_string(&ctx).unwrap_or_default(),
+                    )
+                    .await;
+            }
+        }
+        Ok(())
+    }
+
     pub async fn delete_lock_by_account_id(account_id: &str, funs: &TardisFunsInst) -> TardisResult<()> {
         log::trace!("delete lock: account_id={}", account_id);
         funs.cache().del(&format!("{}{}", funs.rbum_conf_cache_key_cert_locked_(), &account_id)).await?;
