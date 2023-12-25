@@ -73,7 +73,7 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
             cert_conf_by_ldap: None,
         },
         &funs,
-        &system_admin_context
+        &system_admin_context,
     )
     .await?;
     IamCertTokenServ::modify_cert_conf(
@@ -1088,7 +1088,7 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
             cert_conf_by_ldap: None,
         },
         &funs,
-        &system_admin_context
+        &system_admin_context,
     )
     .await?;
 

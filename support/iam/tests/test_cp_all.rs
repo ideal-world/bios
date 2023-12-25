@@ -67,7 +67,7 @@ pub async fn test(sysadmin_info: (&str, &str), system_admin_context: &TardisCont
             cert_conf_by_ldap: None,
         },
         &funs,
-        &system_admin_context
+        &system_admin_context,
     )
     .await?;
     sleep(Duration::from_secs(1)).await;

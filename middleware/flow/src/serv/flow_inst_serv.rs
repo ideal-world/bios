@@ -1,4 +1,7 @@
-use std::collections::{HashMap, HashSet};
+use std::{
+    collections::{HashMap, HashSet},
+    str::FromStr as _,
+};
 
 use async_recursion::async_recursion;
 use bios_basic::{
@@ -45,6 +48,7 @@ use crate::{
             FlowTransitionActionByStateChangeInfo, FlowTransitionActionByVarChangeInfoChangedKind, FlowTransitionActionChangeAgg, FlowTransitionActionChangeInfo,
             FlowTransitionActionChangeKind, FlowTransitionDetailResp, FlowTransitionFrontActionInfo, FlowTransitionFrontActionRightValue, StateChangeConditionOp,
         },
+        flow_var_dto::FillType,
     },
     flow_constants,
     serv::{flow_model_serv::FlowModelServ, flow_state_serv::FlowStateServ},
@@ -587,7 +591,7 @@ impl FlowInstServ {
         Ok(state_and_next_transitions.next_flow_transitions)
     }
 
-    pub async fn check_transfer_vars(flow_inst_id: &str, transfer_req: &FlowInstTransferReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    pub async fn check_transfer_vars(flow_inst_id: &str, transfer_req: &mut FlowInstTransferReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let flow_inst_detail: FlowInstDetailResp = Self::get(flow_inst_id, funs, ctx).await?;
         let flow_model = FlowModelServ::get_item(
             &flow_inst_detail.rel_flow_model_id,
@@ -610,8 +614,33 @@ impl FlowInstServ {
             .ok_or_else(|| funs.err().not_found("flow_inst", "check_transfer_vars", "illegal response", "404-flow-transition-not-found"))?
             .vars_collect();
         if let Some(vars_collect) = vars_collect {
-            if vars_collect.into_iter().any(|var| var.required == Some(true) && (transfer_req.vars.is_none() || !transfer_req.vars.as_ref().unwrap().contains_key(&var.name))) {
-                return Err(funs.err().internal_error("flow_inst", "check_transfer_vars", "missing required field", "400-flow-inst-vars-field-missing"));
+            for var in vars_collect {
+                if var.required == Some(true) && transfer_req.vars.as_ref().map_or(true, |map| !map.contains_key(&var.name)) {
+                    return Err(funs.err().internal_error("flow_inst", "check_transfer_vars", "missing required field", "400-flow-inst-vars-field-missing"));
+                }
+                if let Some(default) = var.default_value {
+                    let default_value = match default.value_type {
+                        crate::dto::flow_var_dto::DefaultValueType::Custom => serde_json::Value::String(default.value),
+                        crate::dto::flow_var_dto::DefaultValueType::AssociatedAttr => {
+                            if let Some(current_vars) = flow_inst_detail.current_vars.as_ref() {
+                                current_vars.get(&var.name).cloned().unwrap_or_default()
+                            } else {
+                                Value::String("".to_string())
+                            }
+                        }
+                        crate::dto::flow_var_dto::DefaultValueType::AutoFill => match FillType::from_str(&default.value)
+                            .map_err(|err| funs.err().internal_error("flow_inst", "check_transfer_vars", &err.to_string(), "400-flow-inst-vars-field-missing"))?
+                        {
+                            FillType::Time => Value::String(Utc::now().timestamp_millis().to_string()),
+                            FillType::Person => Value::String(ctx.owner.clone()),
+                        },
+                    };
+                    if let Some(vars) = transfer_req.vars.as_mut() {
+                        vars.insert(var.name, default_value);
+                    } else {
+                        transfer_req.vars = Some(HashMap::from([(var.name, default_value)]));
+                    }
+                }
             }
         }
 
