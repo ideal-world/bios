@@ -213,6 +213,19 @@ impl IamRelServ {
                 ctx,
             )
             .await?;
+            let res_other = IamResServ::peek_item(
+                res_other_id,
+                &IamResFilterReq {
+                    basic: RbumBasicFilterReq {
+                        with_sub_own_paths: true,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                funs,
+                ctx,
+            )
+            .await?;
             if res_api.kind != IamResKind::Api {
                 return Err(funs.err().conflict("iam_rel", "add", "when add IamResApi kind from item must be api kind", "409-iam-rel-kind-api-conflict"));
             }
@@ -241,15 +254,21 @@ impl IamRelServ {
             )
             .await?;
 
+            let (op_describe, op_kind) = match res_other.kind {
+                IamResKind::Api => ("", ""),
+                IamResKind::Ele => ("添加操作API", "AddElementApi"),
+                IamResKind::Menu => ("添加目录页面API", "AddContentPageApi"),
+            };
             let _ = IamLogClient::add_ctx_task(
                 LogParamTag::IamRes,
                 Some(from_iam_item_id.to_string()),
-                "添加目录页面API".to_string(),
-                Some("AddContentPageApi".to_string()),
+                op_describe.to_string(),
+                Some(op_kind.to_string()),
                 ctx,
             )
             .await;
         }
+
         Ok(())
     }
 
@@ -382,6 +401,19 @@ impl IamRelServ {
                     ctx,
                 )
                 .await?;
+                let res_other = IamResServ::peek_item(
+                    res_other_id,
+                    &IamResFilterReq {
+                        basic: RbumBasicFilterReq {
+                            with_sub_own_paths: true,
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                    funs,
+                    ctx,
+                )
+                .await?;
                 if res_api.kind != IamResKind::Api {
                     return Err(funs.err().conflict(
                         "iam_rel",
@@ -430,17 +462,22 @@ impl IamRelServ {
                 )
                 .await?;
 
+                let (op_describe, op_kind) = match res_other.kind {
+                    IamResKind::Api => ("", ""),
+                    IamResKind::Ele => ("移除操作API", "RemoveElementApi"),
+                    IamResKind::Menu => ("移除目录页面API", "RemoveContentPageApi"),
+                };
                 let _ = IamLogClient::add_ctx_task(
                     LogParamTag::IamRes,
                     Some(from_iam_item_id.to_string()),
-                    "移除目录页面API".to_string(),
-                    Some("RemoveContentPageApi".to_string()),
+                    op_describe.to_string(),
+                    Some(op_kind.to_string()),
                     ctx,
                 )
                 .await;
             }
             IamRelKind::IamAccountRole => {
-                IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(from_iam_item_id, get_remote_ip(ctx).await?, funs).await?;
+                IamIdentCacheServ::refresh_account_info_by_account_id(from_iam_item_id, funs).await?;
                 let _ = IamLogClient::add_ctx_task(
                     LogParamTag::IamAccount,
                     Some(from_iam_item_id.to_string()),

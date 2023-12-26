@@ -439,6 +439,8 @@ impl IamAccountServ {
         ctx: &TardisContext,
     ) -> TardisResult<IamAccountDetailAggResp> {
         let account = IamAccountServ::get_item(account_id, filter, funs, ctx).await?;
+        let mut mock_tenant_ctx = ctx.clone();
+        mock_tenant_ctx.own_paths = IamTenantServ::get_id_by_ctx(ctx, funs)?;
         let set_id = if use_sys_org {
             IamSetServ::get_set_id_by_code(&IamSetServ::get_default_code(&IamSetKind::Org, ""), true, funs, ctx).await?
         } else {
@@ -536,7 +538,7 @@ impl IamAccountServ {
             .into_iter()
             .map(|r| (r.rel_rbum_cert_conf_code.unwrap_or("".to_string()), r.ak))
             .collect(),
-            orgs: IamSetServ::find_set_paths(&account.id, &set_id, funs, ctx).await?.into_iter().map(|r| r.into_iter().map(|rr| rr.name).join("/")).collect(),
+            orgs: IamSetServ::find_set_paths(&account.id, &set_id, funs, &mock_tenant_ctx).await?.into_iter().map(|r| r.into_iter().map(|rr| rr.name).join("/")).collect(),
             exts: account_attrs
                 .into_iter()
                 .map(|r| IamAccountAttrResp {

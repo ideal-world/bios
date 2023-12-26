@@ -666,6 +666,7 @@ async fn add_res<'a>(
                 double_auth: None,
                 double_auth_msg: None,
                 need_login: None,
+                bind_api_res: None,
             },
             set: IamSetItemAggAddReq {
                 set_cate_id: cate_menu_id.to_string(),
@@ -694,6 +695,7 @@ async fn add_res<'a>(
                 double_auth: Some(false),
                 double_auth_msg: None,
                 need_login: None,
+                bind_api_res: None,
             },
             set: IamSetItemAggAddReq {
                 set_cate_id: cate_api_id.to_string(),

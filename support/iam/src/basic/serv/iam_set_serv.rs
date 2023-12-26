@@ -573,18 +573,15 @@ impl IamSetServ {
         .await;
 
         let set_cate_id = add_req.set_cate_id.clone();
-        match IamAccountServ::get_item(add_req.rel_rbum_item_id.clone().as_str(), &IamAccountFilterReq::default(), funs, ctx).await {
-            Ok(account) => {
-                let _ = IamLogClient::add_ctx_task(
-                    LogParamTag::IamOrg,
-                    Some(set_cate_id.clone()),
-                    format!("添加部门人员{}", account.name.clone()),
-                    Some("AddAccount".to_string()),
-                    ctx,
-                )
-                .await;
-            }
-            Err(_) => {}
+        if let Ok(account) = IamAccountServ::get_item(add_req.rel_rbum_item_id.clone().as_str(), &IamAccountFilterReq::default(), funs, ctx).await {
+            let _ = IamLogClient::add_ctx_task(
+                LogParamTag::IamOrg,
+                Some(set_cate_id.clone()),
+                format!("添加部门人员{}", account.name.clone()),
+                Some("AddAccount".to_string()),
+                ctx,
+            )
+            .await;
         }
 
         result
@@ -610,18 +607,16 @@ impl IamSetServ {
 
         let result = RbumSetItemServ::delete_rbum(set_item_id, funs, ctx).await;
 
-        if result.is_ok() {
-            if item.rel_rbum_item_kind_id == funs.iam_basic_kind_account_id() {
-                if let Ok(account) = IamAccountServ::get_item(item.rel_rbum_item_id.clone().as_str(), &IamAccountFilterReq::default(), funs, ctx).await {
-                    let _ = IamLogClient::add_ctx_task(
-                        LogParamTag::IamOrg,
-                        Some(item.rel_rbum_set_cate_id.unwrap_or_default().clone()),
-                        format!("移除部门人员{}", account.name.clone()),
-                        Some("RemoveAccount".to_string()),
-                        ctx,
-                    )
-                    .await;
-                }
+        if result.is_ok() && item.rel_rbum_item_kind_id == funs.iam_basic_kind_account_id() {
+            if let Ok(account) = IamAccountServ::get_item(item.rel_rbum_item_id.clone().as_str(), &IamAccountFilterReq::default(), funs, ctx).await {
+                let _ = IamLogClient::add_ctx_task(
+                    LogParamTag::IamOrg,
+                    Some(item.rel_rbum_set_cate_id.unwrap_or_default().clone()),
+                    format!("移除部门人员{}", account.name.clone()),
+                    Some("RemoveAccount".to_string()),
+                    ctx,
+                )
+                .await;
             }
         }
 
