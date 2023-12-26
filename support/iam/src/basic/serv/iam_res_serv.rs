@@ -5,6 +5,7 @@ use bios_basic::rbum::rbum_config::RbumConfigApi;
 use bios_basic::rbum::rbum_enumeration::RbumSetCateLevelQueryKind;
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use bios_basic::rbum::serv::rbum_set_serv::{RbumSetCateServ, RbumSetItemServ};
+use itertools::Itertools;
 use ldap3::log::warn;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
@@ -220,11 +221,26 @@ impl RbumItemCrudOperation<iam_res::ActiveModel, IamResAddReq, IamResModifyReq, 
                 }
             }
         }
-
+        if let Some(bind_api_res) = modify_req.bind_api_res {
+            let rel_kind = match res.kind {
+                IamResKind::Menu => IamRelKind::IamResApi,
+                IamResKind::Ele => IamRelKind::IamEleApi,
+                _ => return Err(funs.err().format_error("iam_res_serv", "add_res_agg", "not support bind api res", "500-iam-bind-api-kind-error")),
+            };
+            let old_api_res = IamResServ::find_to_simple_rel_roles(&rel_kind, id, None, None, funs, ctx).await?.into_iter().map(|rel| rel.rel_id).collect_vec();
+            if old_api_res != bind_api_res {
+                for del_to_item_id in old_api_res {
+                    IamRelServ::delete_simple_rel(&rel_kind, &del_to_item_id, id, funs, ctx).await?;
+                }
+                for add_to_item_id in bind_api_res {
+                    IamRelServ::add_simple_rel(&rel_kind, &add_to_item_id, id, None, None, false, false, &funs, ctx).await?;
+                }
+            }
+        }
         let (op_describe, op_kind) = match res.kind {
             IamResKind::Menu => ("编辑目录页面".to_string(), "ModifyContentPage".to_string()),
             IamResKind::Api => ("编辑API".to_string(), "ModifyApi".to_string()),
-            IamResKind::Ele => ("".to_string(), "".to_string()),
+            IamResKind::Ele => ("编辑操作".to_string(), "ModifyEle".to_string()),
         };
         if !op_describe.is_empty() {
             let _ = IamLogClient::add_ctx_task(LogParamTag::IamRes, Some(id.to_string()), op_describe, Some(op_kind), ctx).await;
@@ -494,6 +510,16 @@ impl IamResServ {
             ctx,
         )
         .await?;
+        if let Some(bind_api_res) = &add_req.res.bind_api_res {
+            let rel_kind = match add_req.res.kind {
+                IamResKind::Menu => IamRelKind::IamResApi,
+                IamResKind::Ele => IamRelKind::IamEleApi,
+                _ => return Err(funs.err().format_error("iam_res_serv", "add_res_agg", "not support bind api res", "500-iam-bind-api-kind-error")),
+            };
+            for api_id in bind_api_res {
+                IamRelServ::add_simple_rel(&rel_kind, api_id, &res_id, None, None, false, false, &funs, ctx).await?;
+            }
+        }
         Ok(res_id)
     }
 
@@ -640,6 +666,7 @@ impl IamMenuServ {
                     double_auth: None,
                     double_auth_msg: None,
                     need_login: None,
+                    bind_api_res: None,
                 },
                 set: IamSetItemAggAddReq {
                     set_cate_id: cate_menu_id.to_string(),
@@ -671,6 +698,7 @@ impl IamMenuServ {
                     double_auth: None,
                     double_auth_msg: None,
                     need_login: None,
+                    bind_api_res: None,
                 },
                 set: IamSetItemAggAddReq {
                     set_cate_id: cate_menu_id.to_string(),

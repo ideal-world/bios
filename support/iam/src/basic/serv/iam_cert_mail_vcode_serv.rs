@@ -273,30 +273,66 @@ impl IamCertMailVCodeServ {
             if cached_vcode == input_vcode {
                 let rel_rbum_cert_conf_id =
                     IamCertServ::get_cert_conf_id_by_kind(IamCertKernelKind::MailVCode.to_string().as_str(), Some(IamTenantServ::get_id_by_ctx(&ctx, funs)?), funs).await?;
-                Self::check_bind_mail(mail, vec![rel_rbum_cert_conf_id.clone()], &ctx.owner.clone(), funs, &ctx).await?;
-                let id = RbumCertServ::add_rbum(
-                    &mut RbumCertAddReq {
-                        ak: TrimString(mail.trim().to_string()),
-                        sk: None,
-                        sk_invisible: None,
-                        kind: None,
-                        supplier: None,
-                        vcode: Some(TrimString(input_vcode.to_string())),
-                        ext: None,
-                        start_time: None,
-                        end_time: None,
-                        conn_uri: None,
-                        status: RbumCertStatusKind::Enabled,
-                        rel_rbum_cert_conf_id: Some(rel_rbum_cert_conf_id),
-                        rel_rbum_kind: RbumCertRelKind::Item,
-                        rel_rbum_id: ctx.owner.clone(),
-                        is_outside: false,
-                        is_ignore_check_sk: false,
-                    },
-                    funs,
-                    &ctx,
-                )
-                .await?;
+                let id = if Self::check_bind_mail(mail, vec![rel_rbum_cert_conf_id.clone()], &ctx.owner.clone(), funs, &ctx).await.is_ok() {
+                    RbumCertServ::add_rbum(
+                        &mut RbumCertAddReq {
+                            ak: TrimString(mail.trim().to_string()),
+                            sk: None,
+                            sk_invisible: None,
+                            kind: None,
+                            supplier: None,
+                            vcode: Some(TrimString(input_vcode.to_string())),
+                            ext: None,
+                            start_time: None,
+                            end_time: None,
+                            conn_uri: None,
+                            status: RbumCertStatusKind::Enabled,
+                            rel_rbum_cert_conf_id: Some(rel_rbum_cert_conf_id),
+                            rel_rbum_kind: RbumCertRelKind::Item,
+                            rel_rbum_id: ctx.owner.clone(),
+                            is_outside: false,
+                            is_ignore_check_sk: false,
+                        },
+                        funs,
+                        &ctx,
+                    )
+                    .await?
+                } else {
+                    let id = RbumCertServ::find_id_rbums(
+                        &RbumCertFilterReq {
+                            status: Some(RbumCertStatusKind::Enabled),
+                            rel_rbum_id: Some(ctx.owner.clone()),
+                            rel_rbum_kind: Some(RbumCertRelKind::Item),
+                            rel_rbum_cert_conf_ids: Some(vec![rel_rbum_cert_conf_id]),
+                            ..Default::default()
+                        },
+                        None,
+                        None,
+                        funs,
+                        &ctx,
+                    )
+                    .await?
+                    .pop()
+                    .ok_or_else(|| funs.err().unauthorized("iam_cert_mail_vcode", "activate", "email or verification code error", "401-iam-cert-valid"))?;
+                    RbumCertServ::modify_rbum(
+                        &id,
+                        &mut RbumCertModifyReq {
+                            ak: Some(TrimString(mail.trim().to_string())),
+                            sk: None,
+                            sk_invisible: None,
+                            is_ignore_check_sk: true,
+                            ext: None,
+                            start_time: None,
+                            end_time: None,
+                            conn_uri: None,
+                            status: None,
+                        },
+                        funs,
+                        &ctx,
+                    )
+                    .await?;
+                    id
+                };
                 let op_describe = format!("绑定邮箱为{}", mail);
                 let _ = IamLogClient::add_ctx_task(LogParamTag::IamAccount, Some(ctx.owner.to_string()), op_describe, Some("BindMailbox".to_string()), &ctx).await;
 

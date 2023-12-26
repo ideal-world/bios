@@ -260,7 +260,6 @@ impl IamIdentCacheServ {
         if tenant_info.is_none() {
             return Ok(());
         }
-        funs.cache().del(format!("{}{}", funs.conf::<IamConfig>().cache_key_account_info_, account_id).as_str()).await?;
 
         let tenant_id = TardisFuns::json.str_to_obj::<TardisContext>(&tenant_info.unwrap())?.own_paths;
         let mock_ctx = TardisContext {
