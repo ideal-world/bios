@@ -38,6 +38,7 @@ pub struct IamResAddReq {
     pub double_auth_msg: Option<String>,
     pub need_login: Option<bool>,
     pub disabled: Option<bool>,
+    pub bind_api_res: Option<Vec<String>>,
 }
 
 impl IamResAddReq {
@@ -72,6 +73,7 @@ pub struct IamResModifyReq {
     pub double_auth: Option<bool>,
     pub double_auth_msg: Option<String>,
     pub need_login: Option<bool>,
+    pub bind_api_res: Option<Vec<String>>,
 }
 
 #[derive(poem_openapi::Object, sea_orm::FromQueryResult, Serialize, Deserialize, Debug)]

@@ -202,7 +202,7 @@ WHERE
                     "".to_string()
                 } else {
                     format!("ORDER BY {}", order_fragments.join(", "))
-                }
+                },
                 page_fragments
             ),
             sql_vals,
