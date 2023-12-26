@@ -37,7 +37,6 @@
 404-iam-cache-res-rel-not-exist	缓存资源关联不存在
 
 409-iam-rel-kind-api-conflict	请求来源类型必须是API类型
-500-iam-bind-api-kind-error	请求类型不支持绑定API资源
 404-iam-res-not-exist	资源不存在
 
 409-iam-cate-menu-conflict	当前目录只能挂一个菜单

@@ -232,21 +232,13 @@ impl IamCsResApi {
     async fn get_res_apis(
         &self,
         ids: Path<String>,
-        desc_by_create: Query<Option<bool>>,
-        desc_by_update: Query<Option<bool>>,
         ctx: TardisContextExtractor,
         request: &Request,
     ) -> TardisApiResult<HashMap<String, Vec<RbumRelBoneResp>>> {
         add_remote_ip(request, &ctx.0).await?;
         let funs = iam_constants::get_tardis_inst();
         let id_list = ids.split(',').collect_vec();
-        let mut result = HashMap::new();
-        for id in id_list {
-            result.insert(
-                id.to_string(),
-                IamResServ::find_to_simple_rel_roles(&IamRelKind::IamEleApi, id, desc_by_create.0, desc_by_update.0, &funs, &ctx.0).await?,
-            );
-        }
+        let result = IamResServ::find_to_multi_rel_roles(&IamRelKind::IamResApi, id_list, &funs, &ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }

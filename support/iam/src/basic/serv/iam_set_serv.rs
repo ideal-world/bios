@@ -573,18 +573,15 @@ impl IamSetServ {
         .await;
 
         let set_cate_id = add_req.set_cate_id.clone();
-        match IamAccountServ::get_item(add_req.rel_rbum_item_id.clone().as_str(), &IamAccountFilterReq::default(), funs, ctx).await {
-            Ok(account) => {
-                let _ = IamLogClient::add_ctx_task(
-                    LogParamTag::IamOrg,
-                    Some(set_cate_id.clone()),
-                    format!("添加部门人员{}", account.name.clone()),
-                    Some("AddAccount".to_string()),
-                    ctx,
-                )
-                .await;
-            }
-            Err(_) => {}
+        if let Ok(account) = IamAccountServ::get_item(add_req.rel_rbum_item_id.clone().as_str(), &IamAccountFilterReq::default(), funs, ctx).await {
+            let _ = IamLogClient::add_ctx_task(
+                LogParamTag::IamOrg,
+                Some(set_cate_id.clone()),
+                format!("添加部门人员{}", account.name.clone()),
+                Some("AddAccount".to_string()),
+                ctx,
+            )
+            .await;
         }
 
         result

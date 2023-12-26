@@ -221,19 +221,14 @@ impl RbumItemCrudOperation<iam_res::ActiveModel, IamResAddReq, IamResModifyReq, 
                 }
             }
         }
-        if let Some(bind_api_res) = modify_req.bind_api_res {
-            let rel_kind = match res.kind {
-                IamResKind::Menu => IamRelKind::IamResApi,
-                IamResKind::Ele => IamRelKind::IamEleApi,
-                _ => return Err(funs.err().format_error("iam_res_serv", "add_res_agg", "not support bind api res", "500-iam-bind-api-kind-error")),
-            };
-            let old_api_res = IamResServ::find_to_simple_rel_roles(&rel_kind, id, None, None, funs, ctx).await?.into_iter().map(|rel| rel.rel_id).collect_vec();
-            if old_api_res != bind_api_res {
+        if let Some(bind_api_res) = &modify_req.bind_api_res {
+            let old_api_res = IamResServ::find_to_simple_rel_roles(&IamRelKind::IamResApi, id, None, None, funs, ctx).await?.into_iter().map(|rel| rel.rel_id).collect_vec();
+            if old_api_res != *bind_api_res {
                 for del_to_item_id in old_api_res {
-                    IamRelServ::delete_simple_rel(&rel_kind, &del_to_item_id, id, funs, ctx).await?;
+                    IamRelServ::delete_simple_rel(&IamRelKind::IamResApi, &del_to_item_id, id, funs, ctx).await?;
                 }
                 for add_to_item_id in bind_api_res {
-                    IamRelServ::add_simple_rel(&rel_kind, &add_to_item_id, id, None, None, false, false, &funs, ctx).await?;
+                    IamRelServ::add_simple_rel(&IamRelKind::IamResApi, add_to_item_id, id, None, None, false, false, funs, ctx).await?;
                 }
             }
         }
@@ -431,6 +426,22 @@ impl IamResServ {
         IamRelServ::find_to_simple_rels(rel_kind, res_id, desc_by_create, desc_by_update, funs, ctx).await
     }
 
+    pub async fn find_to_multi_rel_roles(
+        rel_kind: &IamRelKind,
+        res_id: Vec<&str>,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<HashMap<String, Vec<RbumRelBoneResp>>> {
+        let mut result = HashMap::new();
+        for id in res_id {
+            result.insert(
+                id.to_string(),
+                Self::find_to_simple_rel_roles(rel_kind, id, None, None, funs, ctx).await?,
+            );
+        }
+        Ok(result)
+    }
+
     pub async fn paginate_from_simple_rel_roles(
         rel_kind: &IamRelKind,
         res_id: &str,
@@ -511,13 +522,8 @@ impl IamResServ {
         )
         .await?;
         if let Some(bind_api_res) = &add_req.res.bind_api_res {
-            let rel_kind = match add_req.res.kind {
-                IamResKind::Menu => IamRelKind::IamResApi,
-                IamResKind::Ele => IamRelKind::IamEleApi,
-                _ => return Err(funs.err().format_error("iam_res_serv", "add_res_agg", "not support bind api res", "500-iam-bind-api-kind-error")),
-            };
             for api_id in bind_api_res {
-                IamRelServ::add_simple_rel(&rel_kind, api_id, &res_id, None, None, false, false, &funs, ctx).await?;
+                IamRelServ::add_simple_rel(&IamRelKind::IamResApi, api_id, &res_id, None, None, false, false, funs, ctx).await?;
             }
         }
         Ok(res_id)
@@ -556,7 +562,7 @@ impl IamResServ {
             }
             let res_codes = if let Some(res_codes) = &res_codes {
                 let codes = res_codes.clone();
-                Some(res_codes.iter().map(|code| format!("{}/{}/{}", IamResKind::Ele.to_int(), "*".to_string(), code)).chain(codes).collect::<Vec<String>>())
+                Some(res_codes.iter().map(|code| format!("{}/{}/{}", IamResKind::Ele.to_int(), "*", code)).chain(codes).collect::<Vec<String>>())
             } else {
                 None
             };

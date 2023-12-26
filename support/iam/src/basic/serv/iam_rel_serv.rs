@@ -213,6 +213,19 @@ impl IamRelServ {
                 ctx,
             )
             .await?;
+            let res_other = IamResServ::peek_item(
+                res_other_id,
+                &IamResFilterReq {
+                    basic: RbumBasicFilterReq {
+                        with_sub_own_paths: true,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                funs,
+                ctx,
+            )
+            .await?;
             if res_api.kind != IamResKind::Api {
                 return Err(funs.err().conflict("iam_rel", "add", "when add IamResApi kind from item must be api kind", "409-iam-rel-kind-api-conflict"));
             }
@@ -241,65 +254,16 @@ impl IamRelServ {
             )
             .await?;
 
+            let (op_describe, op_kind) = match res_other.kind {
+                IamResKind::Api => ("", ""),
+                IamResKind::Ele => ("添加操作API", "AddElementApi"),
+                IamResKind::Menu => ("添加目录页面API", "AddContentPageApi"),
+            };
             let _ = IamLogClient::add_ctx_task(
                 LogParamTag::IamRes,
                 Some(from_iam_item_id.to_string()),
-                "添加目录页面API".to_string(),
-                Some("AddContentPageApi".to_string()),
-                ctx,
-            )
-            .await;
-        }
-
-        if rel_kind == &IamRelKind::IamEleApi {
-            let res_api_id = from_iam_item_id;
-            let res_other_id = to_iam_item_id;
-            let res_api = IamResServ::peek_item(
-                res_api_id,
-                &IamResFilterReq {
-                    basic: RbumBasicFilterReq {
-                        with_sub_own_paths: true,
-                        ..Default::default()
-                    },
-                    ..Default::default()
-                },
-                funs,
-                ctx,
-            )
-            .await?;
-            if res_api.kind != IamResKind::Api {
-                return Err(funs.err().conflict("iam_rel", "add", "when add IamEleApi kind from item must be api kind", "409-iam-rel-kind-api-conflict"));
-            }
-            // See example (1) / (4)
-            // Find the list of roles associated with a menu or element resource
-            let sys_ctx = IamCertServ::use_sys_ctx_unsafe(ctx.clone())?;
-            let rel_role_ids = Self::find_from_id_rels(&IamRelKind::IamResRole, true, res_other_id, None, None, funs, &sys_ctx).await?;
-            // Create API bindings to associated roles in the cache
-            IamResCacheServ::add_or_modify_res_rel(
-                &res_api.code,
-                &res_api.method,
-                &IamCacheResRelAddOrModifyReq {
-                    st: if start_timestamp.is_some() { Some(value1) } else { None },
-                    et: if end_timestamp.is_some() { Some(value2) } else { None },
-                    accounts: vec![],
-                    roles: rel_role_ids,
-                    groups: vec![],
-                    apps: vec![],
-                    tenants: vec![],
-                    need_crypto_req: None,
-                    need_crypto_resp: None,
-                    need_double_auth: None,
-                    need_login: None,
-                },
-                funs,
-            )
-            .await?;
-
-            let _ = IamLogClient::add_ctx_task(
-                LogParamTag::IamRes,
-                Some(from_iam_item_id.to_string()),
-                "添加操作API".to_string(),
-                Some("AddElementApi".to_string()),
+                op_describe.to_string(),
+                Some(op_kind.to_string()),
                 ctx,
             )
             .await;
@@ -437,6 +401,19 @@ impl IamRelServ {
                     ctx,
                 )
                 .await?;
+                let res_other = IamResServ::peek_item(
+                    res_other_id,
+                    &IamResFilterReq {
+                        basic: RbumBasicFilterReq {
+                            with_sub_own_paths: true,
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                    funs,
+                    ctx,
+                )
+                .await?;
                 if res_api.kind != IamResKind::Api {
                     return Err(funs.err().conflict(
                         "iam_rel",
@@ -485,11 +462,16 @@ impl IamRelServ {
                 )
                 .await?;
 
+                let (op_describe, op_kind) = match res_other.kind {
+                    IamResKind::Api => ("", ""),
+                    IamResKind::Ele => ("移除操作API", "RemoveElementApi"),
+                    IamResKind::Menu => ("移除目录页面API", "RemoveContentPageApi"),
+                };
                 let _ = IamLogClient::add_ctx_task(
                     LogParamTag::IamRes,
                     Some(from_iam_item_id.to_string()),
-                    "移除目录页面API".to_string(),
-                    Some("RemoveContentPageApi".to_string()),
+                    op_describe.to_string(),
+                    Some(op_kind.to_string()),
                     ctx,
                 )
                 .await;
@@ -542,79 +524,6 @@ impl IamRelServ {
             }
             IamRelKind::IamCertRel => {}
             IamRelKind::IamOrgRel => {}
-            IamRelKind::IamEleApi => {
-                let res_api_id = from_iam_item_id;
-                let res_other_id = to_iam_item_id;
-                let res_api = IamResServ::peek_item(
-                    res_api_id,
-                    &IamResFilterReq {
-                        basic: RbumBasicFilterReq {
-                            with_sub_own_paths: true,
-                            ..Default::default()
-                        },
-                        ..Default::default()
-                    },
-                    funs,
-                    ctx,
-                )
-                .await?;
-                if res_api.kind != IamResKind::Api {
-                    return Err(funs.err().conflict(
-                        "iam_rel",
-                        "delete",
-                        "when delete IamEleApi kind from item must be api kind",
-                        "409-iam-rel-kind-api-conflict",
-                    ));
-                }
-                // See example (1) / (4)
-                // 1) Find the list of roles associated with a menu or element resource (ready to remove the binding to the API resource from the cache)
-                let sys_ctx = IamCertServ::use_sys_ctx_unsafe(ctx.clone())?;
-                let rel_role_ids = Self::find_from_id_rels(&IamRelKind::IamResRole, true, res_other_id, None, None, funs, &sys_ctx).await?;
-                let mut remove_role_ids = Vec::new();
-                for rel_role_id in rel_role_ids {
-                    // 2) If an API resource is explicitly associated with a role, it cannot be removed
-                    if Self::exist_rels(&IamRelKind::IamResRole, res_api_id, &rel_role_id, funs, &sys_ctx).await? {
-                        continue;
-                    }
-                    // 3) Find the list of resources associated with the associated role (indirect relationship)
-                    let rel_res_ids = Self::find_to_id_rels(&IamRelKind::IamResRole, &rel_role_id, None, None, funs, &sys_ctx)
-                        .await?
-                        .into_iter()
-                        // 4) Exclude own Id
-                        .filter(|r| r != res_other_id)
-                        .collect::<Vec<String>>();
-                    // 5) If these associated resources are explicitly associated with API resources, they cannot be removed
-                    for rel_res_id in rel_res_ids {
-                        if Self::exist_rels(&IamRelKind::IamEleApi, res_api_id, &rel_res_id, funs, &sys_ctx).await? {
-                            break;
-                        }
-                    }
-                    remove_role_ids.push(rel_role_id);
-                }
-                // 6) Remove API resources from binding to roles in the cache
-                IamResCacheServ::delete_res_rel(
-                    &res_api.code,
-                    &res_api.method,
-                    &IamCacheResRelDeleteReq {
-                        accounts: vec![],
-                        roles: remove_role_ids,
-                        groups: vec![],
-                        apps: vec![],
-                        tenants: vec![],
-                    },
-                    funs,
-                )
-                .await?;
-
-                let _ = IamLogClient::add_ctx_task(
-                    LogParamTag::IamRes,
-                    Some(from_iam_item_id.to_string()),
-                    "移除操作API".to_string(),
-                    Some("RemoveElementApi".to_string()),
-                    ctx,
-                )
-                .await;
-            }
         }
         Ok(())
     }
