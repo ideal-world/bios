@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crate::basic::dto::iam_filer_dto::IamResFilterReq;
 use crate::basic::dto::iam_res_dto::{IamResAggAddReq, IamResDetailResp, IamResModifyReq, IamResSummaryResp};
 use crate::basic::dto::iam_set_dto::{IamSetCateAddReq, IamSetCateModifyReq};
@@ -13,6 +15,7 @@ use bios_basic::rbum::dto::rbum_set_dto::RbumSetTreeResp;
 use bios_basic::rbum::rbum_config::RbumConfigApi;
 use bios_basic::rbum::rbum_enumeration::RbumSetCateLevelQueryKind;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
+use itertools::Itertools;
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem::Request;
 use tardis::web::poem_openapi;
@@ -220,6 +223,30 @@ impl IamCsResApi {
         add_remote_ip(request, &ctx.0).await?;
         let funs = iam_constants::get_tardis_inst();
         let result = IamResServ::find_from_simple_rel_roles(&IamRelKind::IamResRole, false, &id.0, desc_by_create.0, desc_by_update.0, &funs, &ctx.0).await?;
+        ctx.0.execute_task().await?;
+        TardisResp::ok(result)
+    }
+
+    /// Find Element Rel Apis By Res Ids
+    #[oai(path = "/get_res_apis/:ids", method = "put")]
+    async fn get_res_apis(
+        &self,
+        ids: Path<String>,
+        desc_by_create: Query<Option<bool>>,
+        desc_by_update: Query<Option<bool>>,
+        ctx: TardisContextExtractor,
+        request: &Request,
+    ) -> TardisApiResult<HashMap<String, Vec<RbumRelBoneResp>>> {
+        add_remote_ip(request, &ctx.0).await?;
+        let funs = iam_constants::get_tardis_inst();
+        let id_list = ids.split(',').collect_vec();
+        let mut result = HashMap::new();
+        for id in id_list {
+            result.insert(
+                id.to_string(),
+                IamResServ::find_to_simple_rel_roles(&IamRelKind::IamEleApi, id, desc_by_create.0, desc_by_update.0, &funs, &ctx.0).await?,
+            );
+        }
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
