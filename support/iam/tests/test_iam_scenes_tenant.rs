@@ -532,14 +532,14 @@ pub async fn tenant_console_auth_mgr_page(client: &mut BIOSWebTestClient) -> Tar
         .put_resp(
             &format!("/ct/role/{}", role_id),
             &IamRoleAggModifyReq {
-                role: IamRoleModifyReq {
+                role: Some(IamRoleModifyReq {
                     name: Some(TrimString("xx角色".to_string())),
                     scope_level: None,
                     disabled: None,
                     icon: None,
                     sort: None,
                     kind: None,
-                },
+                }),
                 res_ids: Some(vec![]),
             },
         )
@@ -640,6 +640,7 @@ pub async fn tenant_console_app_set_mgr_page(client: &mut BIOSWebTestClient) -> 
                 app_contact_phone: None,
                 disabled: None,
                 admin_ids: Some(vec![app_account1_id.clone()]),
+                set_cate_id: None,
             },
         )
         .await;
@@ -653,6 +654,7 @@ pub async fn tenant_console_app_set_mgr_page(client: &mut BIOSWebTestClient) -> 
                 app_contact_phone: None,
                 disabled: None,
                 admin_ids: Some(vec![app_account2_id.clone()]),
+                set_cate_id: None,
             },
         )
         .await;
