@@ -112,6 +112,7 @@ pub async fn app_console_project_mgr_page(tenant_id: &str, client: &mut BIOSWebT
                 app_contact_phone: None,
                 admin_ids: Some(vec![app_account_id.clone()]),
                 disabled: None,
+                set_cate_id: None,
             },
         )
         .await;
@@ -204,14 +205,14 @@ pub async fn app_console_auth_mgr_page(client: &mut BIOSWebTestClient) -> Tardis
         .put_resp(
             &format!("/ca/role/{}", role_id),
             &IamRoleAggModifyReq {
-                role: IamRoleModifyReq {
+                role: Some(IamRoleModifyReq {
                     name: Some(TrimString("自定义角色new".to_string())),
                     scope_level: None,
                     disabled: None,
                     icon: None,
                     sort: None,
                     kind: None,
-                },
+                }),
                 res_ids: Some(vec![]),
             },
         )

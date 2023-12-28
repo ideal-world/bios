@@ -30,7 +30,7 @@ async fn test_iam_api() -> TardisResult<()> {
     let (sysadmin_name, sysadmin_password) = bios_iam::iam_initializer::init_db(funs).await?.unwrap();
 
     let web_server = TardisFuns::web_server();
-    bios_iam::iam_initializer::init(web_server).await.unwrap();
+    bios_iam::iam_initializer::init(&web_server).await.unwrap();
 
     tokio::spawn(async move {
         web_server.start().await.unwrap();

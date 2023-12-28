@@ -579,6 +579,7 @@ pub async fn sys_console_res_mgr_page(client: &mut BIOSWebTestClient) -> TardisR
                     double_auth: Some(false),
                     need_login: Some(false),
                     double_auth_msg: None,
+                    bind_api_res: None,
                 },
                 set: IamSetItemAggAddReq {
                     set_cate_id: cate_work_spaces_id.to_string(),
@@ -608,6 +609,7 @@ pub async fn sys_console_res_mgr_page(client: &mut BIOSWebTestClient) -> TardisR
                     double_auth: Some(false),
                     need_login: Some(false),
                     double_auth_msg: None,
+                    bind_api_res: None,
                 },
                 set: IamSetItemAggAddReq {
                     set_cate_id: cate_work_spaces_id.to_string(),
@@ -635,6 +637,7 @@ pub async fn sys_console_res_mgr_page(client: &mut BIOSWebTestClient) -> TardisR
                     double_auth: Some(false),
                     need_login: Some(false),
                     double_auth_msg: None,
+                    bind_api_res: None,
                 },
                 set: IamSetItemAggAddReq {
                     set_cate_id: cate_work_spaces_id.to_string(),
@@ -667,6 +670,7 @@ pub async fn sys_console_res_mgr_page(client: &mut BIOSWebTestClient) -> TardisR
                     double_auth: Some(false),
                     need_login: Some(false),
                     double_auth_msg: None,
+                    bind_api_res: None,
                 },
                 set: IamSetItemAggAddReq {
                     set_cate_id: cate_apis_id.to_string(),
@@ -692,6 +696,7 @@ pub async fn sys_console_res_mgr_page(client: &mut BIOSWebTestClient) -> TardisR
                 double_auth: None,
                 double_auth_msg: None,
                 need_login: None,
+                bind_api_res: None,
             },
         )
         .await;
@@ -705,9 +710,9 @@ pub async fn sys_console_res_mgr_page(client: &mut BIOSWebTestClient) -> TardisR
     let _: Void = client.put(&format!("/cs/res/{}/res/{}", res_menu_id, res_api_id), &Void {}).await;
 
     // Find Api Res By Res Id
-    let rel_api_res: Vec<RbumRelBoneResp> = client.get(&format!("/cs/res/{}/res", res_menu_id)).await;
+    let rel_api_res: Vec<IamResDetailResp> = client.get(&format!("/cs/res/{}/res", res_menu_id)).await;
     assert_eq!(rel_api_res.len(), 1);
-    assert_eq!(rel_api_res.get(0).unwrap().rel_name, "系统控制台功能");
+    assert_eq!(rel_api_res.get(0).unwrap().name, "系统控制台功能");
 
     // Count Api Res By Res Id
     let rel_api_res: u64 = client.get(&format!("/cs/res/{}/res/total", res_menu_id)).await;
@@ -750,14 +755,14 @@ pub async fn sys_console_auth_mgr_page(res_menu_id: &str, client: &mut BIOSWebTe
         .put_resp(
             &format!("/cs/role/{}", role_id),
             &IamRoleAggModifyReq {
-                role: IamRoleModifyReq {
+                role: Some(IamRoleModifyReq {
                     name: Some(TrimString("测试角色2".to_string())),
                     scope_level: None,
                     disabled: None,
                     icon: None,
                     sort: None,
                     kind: None,
-                },
+                }),
                 res_ids: Some(vec![res_menu_id.to_string()]),
             },
         )

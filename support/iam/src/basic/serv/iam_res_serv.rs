@@ -14,6 +14,7 @@ use tardis::db::sea_orm::sea_query::{Expr, SelectStatement};
 use tardis::db::sea_orm::*;
 use tardis::futures::future::BoxFuture;
 use tardis::futures::FutureExt;
+use tardis::futures_util::future::join_all;
 use tardis::web::web_resp::TardisPage;
 use tardis::TardisFunsInst;
 
@@ -426,18 +427,41 @@ impl IamResServ {
         IamRelServ::find_to_simple_rels(rel_kind, res_id, desc_by_create, desc_by_update, funs, ctx).await
     }
 
+    pub async fn find_rel_res(
+        rel_kind: &IamRelKind,
+        res_id: &str,
+        desc_by_create: Option<bool>,
+        desc_by_update: Option<bool>,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<Vec<IamResDetailResp>> {
+        Ok(join_all(
+            Self::find_to_simple_rel_roles(rel_kind, res_id, desc_by_create, desc_by_update, funs, ctx)
+                .await?
+                .into_iter()
+                .map(|rel| async move { Self::get_item(&rel.rel_id, &IamResFilterReq::default(), funs, ctx).await.unwrap() })
+                .collect_vec(),
+        )
+        .await)
+    }
+
     pub async fn find_to_multi_rel_roles(
         rel_kind: &IamRelKind,
         res_id: Vec<&str>,
         funs: &TardisFunsInst,
         ctx: &TardisContext,
-    ) -> TardisResult<HashMap<String, Vec<RbumRelBoneResp>>> {
+    ) -> TardisResult<HashMap<String, Vec<IamResDetailResp>>> {
         let mut result = HashMap::new();
         for id in res_id {
-            result.insert(
-                id.to_string(),
-                Self::find_to_simple_rel_roles(rel_kind, id, None, None, funs, ctx).await?,
-            );
+            let res_list = join_all(
+                Self::find_to_simple_rel_roles(rel_kind, id, None, None, funs, ctx)
+                    .await?
+                    .into_iter()
+                    .map(|rel| async move { Self::get_item(&rel.rel_id, &IamResFilterReq::default(), funs, ctx).await.unwrap() })
+                    .collect_vec(),
+            )
+            .await;
+            result.insert(id.to_string(), res_list);
         }
         Ok(result)
     }
