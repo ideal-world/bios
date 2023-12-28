@@ -820,7 +820,7 @@ pub async fn login_by_ldap(client: &mut BIOSWebTestClient) -> TardisResult<()> {
     //add global account ldap login config
     IamCertLdapServ::add_cert_conf(
         &IamCertConfLdapAddOrModifyReq {
-            supplier: Some(TrimString(LDAP_SUPPLIER.into())),
+            supplier: Some(TrimString(LDAP_SUPPLIER)),
             name: LDAP_SUPPLIER.into(),
             conn_uri: env::var("TARDIS_FW.LDAP.URL").unwrap(),
             is_tls: false,
