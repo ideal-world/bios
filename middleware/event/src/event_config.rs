@@ -9,7 +9,6 @@ pub struct EventConfig {
     pub rbum: RbumConfig,
     pub app_key: AppKeyConfig,
     pub event_url: String,
-    pub log_url: String,
     pub event_bus_sk: String,
     pub spi_app_id: String,
 }
@@ -20,7 +19,6 @@ impl Default for EventConfig {
             rbum: Default::default(),
             app_key: Default::default(),
             event_url: "".to_string(),
-            log_url: "".to_string(),
             event_bus_sk: "".to_string(),
             spi_app_id: "".to_string(),
         }
@@ -33,14 +31,6 @@ impl EventConfig {
             self.event_url.clone()
         } else {
             format!("{}/", self.event_url)
-        }
-    }
-
-    pub fn log_url(&self) -> String {
-        if self.log_url.ends_with('/') {
-            self.log_url.clone()
-        } else {
-            format!("{}/", self.log_url)
         }
     }
 }
