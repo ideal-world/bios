@@ -36,14 +36,14 @@ use tardis::{
 use crate::{
     domain::{flow_inst, flow_model, flow_transition},
     dto::{
-        flow_external_dto::FlowExternalParams,
+        flow_external_dto::{FlowExternalParams, FlowExternalCallbackOp},
         flow_inst_dto::{
             FlowInstAbortReq, FlowInstBatchBindReq, FlowInstBatchBindResp, FlowInstDetailResp, FlowInstFindNextTransitionResp, FlowInstFindNextTransitionsReq,
             FlowInstFindStateAndTransitionsReq, FlowInstFindStateAndTransitionsResp, FlowInstStartReq, FlowInstSummaryResp, FlowInstTransferReq, FlowInstTransferResp,
             FlowInstTransitionInfo, FlowOperationContext,
         },
         flow_model_dto::{FlowModelDetailResp, FlowModelFilterReq},
-        flow_state_dto::{FlowStateFilterReq, FlowStateRelModelExt, FlowSysStateKind},
+        flow_state_dto::{FlowStateFilterReq, FlowStateRelModelExt, FlowSysStateKind, FlowStateDetailResp},
         flow_transition_dto::{
             FlowTransitionActionByStateChangeInfo, FlowTransitionActionByVarChangeInfoChangedKind, FlowTransitionActionChangeAgg, FlowTransitionActionChangeInfo,
             FlowTransitionActionChangeKind, FlowTransitionDetailResp, FlowTransitionFrontActionInfo, FlowTransitionFrontActionRightValue, StateChangeConditionOp,
@@ -758,14 +758,14 @@ impl FlowInstServ {
             if !params.is_empty() {
                 FlowExternalServ::do_modify_field(
                     &flow_model.tag,
+                    &next_transition_detail,
                     &flow_inst_detail.rel_business_obj_id,
                     &flow_inst_detail.id,
-                    Some(next_flow_state.name.clone()),
-                    Some(next_flow_state.sys_state.clone()),
-                    Some(prev_flow_state.name.clone()),
-                    Some(prev_flow_state.sys_state.clone()),
-                    Some(next_flow_transition.next_flow_transition_name.clone()),
-                    next_transition_detail.is_notify,
+                    FlowExternalCallbackOp::VerifyContent,
+                    next_flow_state.name.clone(),
+                    next_flow_state.sys_state.clone(),
+                    prev_flow_state.name.clone(),
+                    prev_flow_state.sys_state.clone(),
                     params,
                     ctx,
                     funs,
@@ -831,9 +831,9 @@ impl FlowInstServ {
                 &flow_inst_detail.id,
                 &flow_inst_detail.rel_business_obj_id,
                 next_flow_state.name.clone(),
-                next_flow_state.sys_state,
+                next_flow_state.sys_state.clone(),
                 prev_flow_state.name.clone(),
-                prev_flow_state.sys_state,
+                prev_flow_state.sys_state.clone(),
                 next_transition_detail.name.clone(),
                 next_transition_detail.is_notify,
                 ctx,
@@ -845,7 +845,7 @@ impl FlowInstServ {
         let post_changes =
             model_transition.into_iter().find(|model_transition| model_transition.id == next_flow_transition.next_flow_transition_id).unwrap_or_default().action_by_post_changes();
         if !post_changes.is_empty() {
-            Self::do_post_change(&flow_inst_detail, &flow_model, &next_transition_detail, post_changes, updated_instance_list, ctx, funs).await?;
+            Self::do_post_change(&flow_inst_detail, &flow_model, &next_transition_detail, &prev_flow_state, &next_flow_state, post_changes, updated_instance_list, ctx, funs).await?;
         }
         let next_flow_transitions = Self::do_find_next_transitions(&flow_inst_detail, &flow_model, None, &None, skip_filter, funs, ctx).await?.next_flow_transitions;
 
@@ -875,6 +875,8 @@ impl FlowInstServ {
         current_inst: &FlowInstDetailResp,
         current_model: &FlowModelDetailResp,
         transition_detail: &FlowTransitionDetailResp,
+        prev_flow_state: &FlowStateDetailResp,
+        next_flow_state: &FlowStateDetailResp,
         post_changes: Vec<FlowTransitionActionChangeInfo>,
         updated_instance_list: &mut Vec<String>,
         ctx: &TardisContext,
@@ -905,14 +907,14 @@ impl FlowInstServ {
                                     let inst_id = Self::get_inst_ids_by_rel_business_obj_id(vec![rel_bus_obj_id.clone()], funs, ctx).await?.pop().unwrap_or_default();
                                     FlowExternalServ::do_modify_field(
                                         &rel_tag,
+                                        transition_detail,
                                         &rel_bus_obj_id,
                                         &inst_id,
-                                        None,
-                                        None,
-                                        None,
-                                        None,
-                                        Some(transition_detail.name.clone()),
-                                        transition_detail.is_notify,
+                                        FlowExternalCallbackOp::PostAction,
+                                        next_flow_state.name.clone(),
+                                        next_flow_state.sys_state.clone(),
+                                        prev_flow_state.name.clone(),
+                                        prev_flow_state.sys_state.clone(),
                                         vec![FlowExternalParams {
                                             rel_kind: None,
                                             rel_tag: None,
@@ -931,14 +933,14 @@ impl FlowInstServ {
                         } else {
                             FlowExternalServ::do_modify_field(
                                 &current_model.tag,
+                                transition_detail,
                                 &current_inst.rel_business_obj_id,
                                 &current_inst.id,
-                                None,
-                                None,
-                                None,
-                                None,
-                                Some(transition_detail.name.clone()),
-                                transition_detail.is_notify,
+                                FlowExternalCallbackOp::PostAction,
+                                next_flow_state.name.clone(),
+                            next_flow_state.sys_state.clone(),
+                            prev_flow_state.name.clone(),
+                            prev_flow_state.sys_state.clone(),
                                 vec![FlowExternalParams {
                                     rel_kind: None,
                                     rel_tag: None,

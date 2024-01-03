@@ -10,6 +10,7 @@ use super::{flow_state_dto::FlowSysStateKind, flow_transition_dto::FlowTransitio
 #[derive(Serialize, Deserialize, Debug, Default, poem_openapi::Object)]
 pub struct FlowExternalReq {
     pub kind: FlowExternalKind,
+    pub callback_op: Option<FlowExternalCallbackOp>,
     pub curr_tag: String,
     pub curr_bus_obj_id: String,
     pub inst_id: String,
@@ -31,6 +32,14 @@ pub enum FlowExternalKind {
     ModifyField,
     NotifyChanges,
     QueryField,
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum)]
+pub enum FlowExternalCallbackOp {
+    #[default]
+    PostAction,
+    VerifyContent,
+    ConditionalTrigger,
 }
 
 #[derive(Debug, Deserialize, Serialize, poem_openapi::Object, Clone)]
