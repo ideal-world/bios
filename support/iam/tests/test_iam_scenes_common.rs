@@ -177,6 +177,7 @@ pub async fn test(sysadmin_name: &str, sysadmin_password: &str, client: &mut BIO
                 app_contact_phone: None,
                 admin_ids: Some(vec![app_account_id.clone()]),
                 disabled: None,
+                set_cate_id: None,
             },
         )
         .await;

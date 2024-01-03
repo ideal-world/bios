@@ -202,10 +202,10 @@ impl IamCsResApi {
         desc_by_update: Query<Option<bool>>,
         ctx: TardisContextExtractor,
         request: &Request,
-    ) -> TardisApiResult<Vec<RbumRelBoneResp>> {
+    ) -> TardisApiResult<Vec<IamResDetailResp>> {
         add_remote_ip(request, &ctx.0).await?;
         let funs = iam_constants::get_tardis_inst();
-        let result = IamResServ::find_to_simple_rel_roles(&IamRelKind::IamResApi, &id.0, desc_by_create.0, desc_by_update.0, &funs, &ctx.0).await?;
+        let result = IamResServ::find_rel_res(&IamRelKind::IamResApi, &id.0, desc_by_create.0, desc_by_update.0, &funs, &ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
@@ -229,12 +229,7 @@ impl IamCsResApi {
 
     /// Find Element Rel Apis By Res Ids
     #[oai(path = "/get_res_apis/:ids", method = "put")]
-    async fn get_res_apis(
-        &self,
-        ids: Path<String>,
-        ctx: TardisContextExtractor,
-        request: &Request,
-    ) -> TardisApiResult<HashMap<String, Vec<RbumRelBoneResp>>> {
+    async fn get_res_apis(&self, ids: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<HashMap<String, Vec<IamResDetailResp>>> {
         add_remote_ip(request, &ctx.0).await?;
         let funs = iam_constants::get_tardis_inst();
         let id_list = ids.split(',').collect_vec();
