@@ -283,9 +283,9 @@ impl IamCertPhoneVCodeServ {
 
     pub async fn send_bind_phone(phone: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let ctx = IamAccountServ::new_context_if_account_is_global(ctx, funs).await?;
-        let rel_rbum_cert_conf_id =
-            IamCertServ::get_cert_conf_id_by_kind(IamCertKernelKind::PhoneVCode.to_string().as_str(), Some(IamTenantServ::get_id_by_ctx(&ctx, funs)?), funs).await?;
-        Self::check_bind_phone(phone, vec![rel_rbum_cert_conf_id], &ctx.owner.clone(), funs, &ctx).await?;
+        // let rel_rbum_cert_conf_id =
+        //     IamCertServ::get_cert_conf_id_by_kind(IamCertKernelKind::PhoneVCode.to_string().as_str(), Some(IamTenantServ::get_id_by_ctx(&ctx, funs)?), funs).await?;
+        // Self::check_bind_phone(phone, vec![rel_rbum_cert_conf_id], &ctx.owner.clone(), funs, &ctx).await?;
         let vcode = Self::get_vcode();
         RbumCertServ::add_vcode_to_cache(phone, &vcode, &ctx.own_paths, funs).await?;
         SmsClient::send_vcode(phone, &vcode, funs, &ctx).await
