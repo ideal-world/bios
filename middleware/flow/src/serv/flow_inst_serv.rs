@@ -36,14 +36,14 @@ use tardis::{
 use crate::{
     domain::{flow_inst, flow_model, flow_transition},
     dto::{
-        flow_external_dto::{FlowExternalParams, FlowExternalCallbackOp},
+        flow_external_dto::{FlowExternalCallbackOp, FlowExternalParams},
         flow_inst_dto::{
             FlowInstAbortReq, FlowInstBatchBindReq, FlowInstBatchBindResp, FlowInstDetailResp, FlowInstFindNextTransitionResp, FlowInstFindNextTransitionsReq,
             FlowInstFindStateAndTransitionsReq, FlowInstFindStateAndTransitionsResp, FlowInstStartReq, FlowInstSummaryResp, FlowInstTransferReq, FlowInstTransferResp,
             FlowInstTransitionInfo, FlowOperationContext,
         },
         flow_model_dto::{FlowModelDetailResp, FlowModelFilterReq},
-        flow_state_dto::{FlowStateFilterReq, FlowStateRelModelExt, FlowSysStateKind, FlowStateDetailResp},
+        flow_state_dto::{FlowStateDetailResp, FlowStateFilterReq, FlowStateRelModelExt, FlowSysStateKind},
         flow_transition_dto::{
             FlowTransitionActionByStateChangeInfo, FlowTransitionActionByVarChangeInfoChangedKind, FlowTransitionActionChangeAgg, FlowTransitionActionChangeInfo,
             FlowTransitionActionChangeKind, FlowTransitionDetailResp, FlowTransitionFrontActionInfo, FlowTransitionFrontActionRightValue, StateChangeConditionOp,
@@ -845,7 +845,18 @@ impl FlowInstServ {
         let post_changes =
             model_transition.into_iter().find(|model_transition| model_transition.id == next_flow_transition.next_flow_transition_id).unwrap_or_default().action_by_post_changes();
         if !post_changes.is_empty() {
-            Self::do_post_change(&flow_inst_detail, &flow_model, &next_transition_detail, &prev_flow_state, &next_flow_state, post_changes, updated_instance_list, ctx, funs).await?;
+            Self::do_post_change(
+                &flow_inst_detail,
+                &flow_model,
+                &next_transition_detail,
+                &prev_flow_state,
+                &next_flow_state,
+                post_changes,
+                updated_instance_list,
+                ctx,
+                funs,
+            )
+            .await?;
         }
         let next_flow_transitions = Self::do_find_next_transitions(&flow_inst_detail, &flow_model, None, &None, skip_filter, funs, ctx).await?.next_flow_transitions;
 
@@ -938,9 +949,9 @@ impl FlowInstServ {
                                 &current_inst.id,
                                 FlowExternalCallbackOp::PostAction,
                                 next_flow_state.name.clone(),
-                            next_flow_state.sys_state.clone(),
-                            prev_flow_state.name.clone(),
-                            prev_flow_state.sys_state.clone(),
+                                next_flow_state.sys_state.clone(),
+                                prev_flow_state.name.clone(),
+                                prev_flow_state.sys_state.clone(),
                                 vec![FlowExternalParams {
                                     rel_kind: None,
                                     rel_tag: None,
@@ -969,7 +980,7 @@ impl FlowInstServ {
                         )
                         .await?;
                         if !resp.rel_bus_objs.is_empty() {
-                            let inst_ids = Self::find_inst_ids_by_rel_obj_ids(current_model, resp.rel_bus_objs.pop().unwrap().rel_bus_obj_ids, &change_info, funs, ctx).await?;
+                            let inst_ids = Self::find_inst_ids_by_rel_obj_ids(resp.rel_bus_objs.pop().unwrap().rel_bus_obj_ids, &change_info, funs, ctx).await?;
                             Self::do_modify_state_by_post_action(inst_ids, &change_info, updated_instance_list, funs, ctx).await?;
                         }
                     }
@@ -980,7 +991,6 @@ impl FlowInstServ {
         Ok(())
     }
     async fn find_inst_ids_by_rel_obj_ids(
-        flow_model: &FlowModelDetailResp,
         rel_bus_obj_ids: Vec<String>,
         change_info: &FlowTransitionActionByStateChangeInfo,
         funs: &TardisFunsInst,
@@ -1002,7 +1012,7 @@ impl FlowInstServ {
                     }
                     let inst_id = Self::get_inst_ids_by_rel_business_obj_id(vec![rel_obj_id.clone()], funs, ctx).await?.pop().unwrap_or_default();
 
-                    let resp = FlowExternalServ::do_fetch_rel_obj(&flow_model.tag, &inst_id, rel_obj_id, rel_tags, ctx, funs).await?;
+                    let resp = FlowExternalServ::do_fetch_rel_obj(&change_info.obj_tag, &inst_id, rel_obj_id, rel_tags, ctx, funs).await?;
                     if !resp.rel_bus_objs.is_empty() {
                         for rel_bus_obj in resp.rel_bus_objs {
                             let condition = change_condition
@@ -1060,7 +1070,7 @@ impl FlowInstServ {
         if rel_bus_obj_ids.len() != rel_insts.len() {
             return Err(funs.err().not_found("flow_inst", "do_post_change", "some flow instances not found", "404-flow-inst-not-found"));
         }
-        let rel_inst_ids = rel_insts
+        Ok(rel_insts
             .iter()
             .filter(|inst_result| {
                 if let Some(obj_current_state_id) = obj_current_state_id.clone() {
@@ -1071,8 +1081,7 @@ impl FlowInstServ {
                 true
             })
             .map(|inst_result| inst_result.rel_business_obj_id.clone())
-            .collect_vec();
-        Ok(rel_inst_ids)
+            .collect_vec())
     }
 
     async fn do_modify_state_by_post_action(
