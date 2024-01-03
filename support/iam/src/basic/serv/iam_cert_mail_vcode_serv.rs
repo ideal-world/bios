@@ -257,9 +257,9 @@ impl IamCertMailVCodeServ {
 
     pub async fn send_bind_mail(mail: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let ctx = IamAccountServ::new_context_if_account_is_global(ctx, funs).await?;
-        let rel_rbum_cert_conf_id =
-            IamCertServ::get_cert_conf_id_by_kind(IamCertKernelKind::MailVCode.to_string().as_str(), Some(IamTenantServ::get_id_by_ctx(&ctx, funs)?), funs).await?;
-        Self::check_bind_mail(mail, vec![rel_rbum_cert_conf_id], &ctx.owner, funs, &ctx).await?;
+        // let rel_rbum_cert_conf_id =
+        //     IamCertServ::get_cert_conf_id_by_kind(IamCertKernelKind::MailVCode.to_string().as_str(), Some(IamTenantServ::get_id_by_ctx(&ctx, funs)?), funs).await?;
+        // Self::check_bind_mail(mail, vec![rel_rbum_cert_conf_id], &ctx.owner, funs, &ctx).await?;
         let vcode = Self::get_vcode();
         let account_name = IamAccountServ::peek_item(&ctx.owner, &IamAccountFilterReq::default(), funs, &ctx).await?.name;
         RbumCertServ::add_vcode_to_cache(mail, &vcode, &ctx.own_paths, funs).await?;
