@@ -11,10 +11,10 @@ use crate::{
     dto::{
         flow_external_dto::{
             FlowExternalFetchRelObjResp, FlowExternalKind, FlowExternalModifyFieldResp, FlowExternalNotifyChangesResp, FlowExternalParams, FlowExternalQueryFieldResp,
-            FlowExternalReq, FlowExternalResp,
+            FlowExternalReq, FlowExternalResp, FlowExternalCallbackOp,
         },
         flow_state_dto::FlowSysStateKind,
-        flow_transition_dto::{FlowTransitionActionByVarChangeInfoChangedKind, TagRelKind},
+        flow_transition_dto::{FlowTransitionActionByVarChangeInfoChangedKind, TagRelKind, FlowTransitionDetailResp},
     },
     flow_config::FlowConfig,
     flow_constants,
@@ -70,14 +70,14 @@ impl FlowExternalServ {
 
     pub async fn do_modify_field(
         tag: &str,
+        transition_detail: &FlowTransitionDetailResp,
         rel_business_obj_id: &str,
         inst_id: &str,
-        target_state: Option<String>,
-        target_sys_state: Option<FlowSysStateKind>,
-        original_state: Option<String>,
-        original_sys_state: Option<FlowSysStateKind>,
-        transition_name: Option<String>,
-        is_notify: bool,
+        callback_op: FlowExternalCallbackOp,
+        target_state: String,
+        target_sys_state: FlowSysStateKind,
+        original_state: String,
+        original_sys_state: FlowSysStateKind,
         params: Vec<FlowExternalParams>,
         ctx: &TardisContext,
         funs: &TardisFunsInst,
@@ -105,15 +105,16 @@ impl FlowExternalServ {
         let header = Self::headers(None, funs, ctx).await?;
         let body = FlowExternalReq {
             kind: FlowExternalKind::ModifyField,
+            callback_op: Some(callback_op),
             inst_id: inst_id.to_string(),
             curr_tag: tag.to_string(),
             curr_bus_obj_id: rel_business_obj_id.to_string(),
-            target_state,
-            target_sys_state,
-            original_state,
-            original_sys_state,
-            notify: Some(is_notify),
-            transition_name,
+            target_state: Some(target_state),
+            target_sys_state: Some(target_sys_state),
+            original_state: Some(original_state),
+            original_sys_state: Some(original_sys_state),
+            notify: Some(transition_detail.is_notify),
+            transition_name: Some(transition_detail.name.clone()),
             params,
             ..Default::default()
         };
