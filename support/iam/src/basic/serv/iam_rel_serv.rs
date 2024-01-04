@@ -443,12 +443,16 @@ impl IamRelServ {
                         .filter(|r| r != res_other_id)
                         .collect::<Vec<String>>();
                     // 5) If these associated resources are explicitly associated with API resources, they cannot be removed
+                    let mut res_bound = false;
                     for rel_res_id in rel_res_ids {
                         if rel_api_res_ids.contains(&rel_res_id) {
+                            res_bound = true;
                             break;
                         }
                     }
-                    remove_role_ids.push(rel_role_id);
+                    if !res_bound {
+                        remove_role_ids.push(rel_role_id);
+                    }
                 }
                 // 6) Remove API resources from binding to roles in the cache
                 IamResCacheServ::delete_res_rel(
