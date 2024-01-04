@@ -273,7 +273,8 @@ impl IamCertMailVCodeServ {
             if cached_vcode == input_vcode {
                 let rel_rbum_cert_conf_id =
                     IamCertServ::get_cert_conf_id_by_kind(IamCertKernelKind::MailVCode.to_string().as_str(), Some(IamTenantServ::get_id_by_ctx(&ctx, funs)?), funs).await?;
-                let id = if Self::check_bind_mail(mail, vec![rel_rbum_cert_conf_id.clone()], &ctx.owner.clone(), funs, &ctx).await.is_ok() {
+                Self::check_mail_bound(mail, vec![rel_rbum_cert_conf_id.clone()], funs, &ctx).await?;
+                let id = if Self::check_account_bind_mail(vec![rel_rbum_cert_conf_id.clone()], &ctx.owner.clone(), funs, &ctx).await.is_ok() {
                     RbumCertServ::add_rbum(
                         &mut RbumCertAddReq {
                             ak: TrimString(mail.trim().to_string()),
@@ -342,7 +343,7 @@ impl IamCertMailVCodeServ {
         Err(funs.err().unauthorized("iam_cert_mail_vcode", "activate", "email or verification code error", "401-iam-cert-valid"))
     }
 
-    pub async fn check_bind_mail(mail: &str, rel_rbum_cert_conf_ids: Vec<String>, rel_rbum_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    async fn check_account_bind_mail(rel_rbum_cert_conf_ids: Vec<String>, rel_rbum_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         // check bind or not
         if RbumCertServ::count_rbums(
             &RbumCertFilterReq {
@@ -364,6 +365,10 @@ impl IamCertMailVCodeServ {
         {
             return Err(funs.err().conflict("iam_cert_mail_vcode", "bind", "email already exist bind", "409-iam-cert-email-bind-already-exist"));
         }
+        Ok(())
+    }
+
+    async fn check_mail_bound(mail: &str, rel_rbum_cert_conf_ids: Vec<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         // check existence or not
         if RbumCertServ::count_rbums(
             &RbumCertFilterReq {
