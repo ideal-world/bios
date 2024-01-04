@@ -41,6 +41,7 @@ use crate::iam_constants::{RBUM_ITEM_ID_TENANT_LEN, RBUM_SCOPE_LEVEL_TENANT};
 use crate::iam_enumeration::{IamCertExtKind, IamCertKernelKind, IamCertOAuth2Supplier, IamCertTokenKind, IamConfigDataTypeKind, IamConfigKind, IamRoleKind, IamSetKind};
 
 use super::clients::iam_log_client::{IamLogClient, LogParamTag};
+use super::clients::iam_search_client::IamSearchClient;
 use super::iam_cert_oauth2_serv::IamCertOAuth2Serv;
 use super::iam_cert_token_serv::IamCertTokenServ;
 use super::iam_config_serv::IamConfigServ;
@@ -350,8 +351,8 @@ impl IamTenantServ {
             &tenant_ctx,
         )
         .await?;
-        IamAccountServ::async_add_or_modify_account_search(admin_id, Box::new(false), "".to_string(), funs, &tenant_ctx).await?;
-        IamAccountServ::async_add_or_modify_account_search(audit_id, Box::new(false), "".to_string(), funs, &tenant_ctx).await?;
+        IamSearchClient::async_add_or_modify_account_search(admin_id, Box::new(false), "".to_string(), funs, &tenant_ctx).await?;
+        IamSearchClient::async_add_or_modify_account_search(audit_id, Box::new(false), "".to_string(), funs, &tenant_ctx).await?;
         tenant_ctx.execute_task().await?;
         Ok((tenant_id, admin_pwd, audit_pwd))
     }

@@ -35,6 +35,7 @@ use crate::iam_constants::{RBUM_SCOPE_LEVEL_APP, RBUM_SCOPE_LEVEL_TENANT};
 use crate::iam_enumeration::{IamRelKind, IamRoleKind};
 
 use super::clients::iam_log_client::{IamLogClient, LogParamTag};
+use super::clients::iam_search_client::IamSearchClient;
 use super::iam_cert_serv::IamCertServ;
 
 pub struct IamRoleServ;
@@ -620,7 +621,7 @@ impl IamRoleServ {
                 IamRelServ::add_simple_rel(&IamRelKind::IamAccountRole, account_id, role_id, None, None, true, false, funs, ctx).await?;
             }
         }
-        IamAccountServ::async_add_or_modify_account_search(account_id.to_string(), Box::new(true), "".to_string(), funs, ctx).await?;
+        IamSearchClient::async_add_or_modify_account_search(account_id.to_string(), Box::new(true), "".to_string(), funs, ctx).await?;
         Ok(())
     }
 
@@ -661,7 +662,7 @@ impl IamRoleServ {
                 IamRelServ::delete_simple_rel(&IamRelKind::IamAccountRole, account_id, role_id, funs, ctx).await?;
             }
         }
-        IamAccountServ::async_add_or_modify_account_search(account_id.to_string(), Box::new(true), "".to_string(), funs, ctx).await?;
+        IamSearchClient::async_add_or_modify_account_search(account_id.to_string(), Box::new(true), "".to_string(), funs, ctx).await?;
         Ok(())
     }
 

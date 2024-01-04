@@ -21,13 +21,21 @@ spi-es = ["tardis/web-client"]
 
 [dependencies]
 serde.workspace = true
-tardis = { workspace = true, features = ["reldb-postgres", "web-server", "web-client", "openapi-rapidoc"] }
+tardis = { workspace = true, features = [
+  "reldb-postgres",
+  "web-server",
+  "web-client",
+  "openapi-rapidoc",
+] }
 bios-basic = { path = "../../basic", features = ["default"] }
 strum = { workerspace = true, features = ["derive"] }
-pinyin =  { version = "0.10" }
+pinyin = { version = "0.10" }
+bios-sdk-invoke = { path = "../../sdk/invoke", features = [
+  "event",
+], default-features = false }
 
 [dev-dependencies]
 tardis = { workspace = true, features = ["test"] }
 bios-basic = { path = "../../basic", features = ["default", "test"] }
-testcontainers-modules ={ workspace = true }
-pinyin =  { version = "0.10" }
+testcontainers-modules = { workspace = true }
+pinyin = { version = "0.10" }

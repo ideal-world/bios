@@ -266,7 +266,7 @@ impl IamIdentCacheServ {
             own_paths: tenant_id.clone(),
             ..Default::default()
         };
-        IamCertServ::package_tardis_account_context_and_resp(account_id, &tenant_id, "".to_string(), None, funs, &mock_ctx).await;
+        let _ = IamCertServ::package_tardis_account_context_and_resp(account_id, &tenant_id, "".to_string(), None, funs, &mock_ctx).await;
         Ok(())
     }
 

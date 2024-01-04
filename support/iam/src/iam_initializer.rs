@@ -6,8 +6,9 @@ use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 use tardis::db::reldb_client::TardisActiveModel;
 use tardis::db::sea_orm::sea_query::Table;
-use tardis::log::info;
+use tardis::log::{error, info};
 use tardis::web::web_server::{TardisWebServer, WebServerModule};
+use tardis::web::ws_client::TardisWSClient;
 use tardis::{TardisFuns, TardisFunsInst};
 
 use bios_basic::rbum::dto::rbum_domain_dto::RbumDomainAddReq;
@@ -719,4 +720,42 @@ pub async fn truncate_data<'a>(funs: &TardisFunsInst) -> TardisResult<()> {
     funs.db().execute(Table::truncate().table(iam_config::Entity)).await?;
     funs.cache().flushdb().await?;
     Ok(())
+}
+
+async fn init_ws_client() -> TardisWSClient {
+    while !TardisFuns::web_server().is_running().await {
+        tardis::tokio::task::yield_now().await
+    }
+    let funs = iam_constants::get_tardis_inst();
+    let conf = funs.conf::<IamConfig>();
+    let mut event_conf = conf.event.clone();
+    if event_conf.avatars.is_empty() {
+        event_conf.avatars.push(format!("{}/{}", event_conf.topic_code, tardis::pkg!()))
+    }
+    let default_avatar = event_conf.avatars[0].clone();
+    set_default_avatar(default_avatar);
+    let client = bios_sdk_invoke::clients::event_client::EventClient::new(&event_conf.base_url, &funs);
+    loop {
+        let addr = loop {
+            if let Ok(result) = client.register(&event_conf.clone().into()).await {
+                break result.ws_addr;
+            }
+            tardis::tokio::time::sleep(std::time::Duration::from_secs(10)).await;
+        };
+        let ws_client = TardisFuns::ws_client(&addr, |_| async move { None }).await;
+        match ws_client {
+            Ok(ws_client) => {
+                return ws_client;
+            }
+            Err(err) => {
+                error!("[Bios.Iam] failed to connect to event server: {}", err);
+                tardis::tokio::time::sleep(std::time::Duration::from_secs(10)).await;
+            }
+        }
+    }
+}
+use std::sync::OnceLock;
+tardis::tardis_static! {
+    pub(crate) async ws_client: TardisWSClient = init_ws_client();
+    pub(crate) async set default_avatar: String;
 }

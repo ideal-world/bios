@@ -1,4 +1,5 @@
 use crate::basic::dto::iam_filer_dto::{IamAccountFilterReq, IamAppFilterReq, IamTenantFilterReq};
+use crate::basic::serv::clients::iam_search_client::IamSearchClient;
 use bios_basic::process::task_processor::TaskProcessor;
 use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
@@ -150,7 +151,7 @@ impl IamCsSpiDataApi {
                             &task_ctx,
                         )
                         .await?;
-                        IamAccountServ::add_or_modify_account_search(account_resp, is_modify.clone(), "", &funs, &task_ctx).await?;
+                        IamSearchClient::add_or_modify_account_search(account_resp, is_modify.clone(), "", &funs, &task_ctx).await?;
                     }
                     funs.commit().await?;
                     Ok(())

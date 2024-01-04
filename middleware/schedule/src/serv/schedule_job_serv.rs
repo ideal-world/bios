@@ -102,6 +102,7 @@ pub(crate) async fn delete(code: &str, funs: &TardisFunsInst, ctx: &TardisContex
                 ..Default::default()
             },
             default_avatar().await.clone(),
+            funs.conf::<ScheduleConfig>().spi_app_id.clone(),
             ctx,
         )
         .await?;

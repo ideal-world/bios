@@ -4,9 +4,6 @@
       <input v-model="url" placeholder="req url" />
     </div>
     <div>
-      <input v-model="wsUrl" placeholder="socket url prefix" />
-    </div>
-    <div>
       <textarea
         v-model="registerFrom"
         @input="parseJson"
@@ -110,7 +107,6 @@ export default {
   data() {
     return {
       url: "http://127.0.0.1:8080/event/listener",
-      wsUrl: "ws://127.0.0.1:8080/event",
       registerFrom:
         '{"topic_code":"","topic_sk":"","events":[],"avatars":[],"subscribe_mode":false}',
       socketList: [],
@@ -170,7 +166,7 @@ export default {
         alert("Your browser does not support Sockets");
       } else {
         this.socketList[index].socket = new WebSocket(
-          this.wsUrl + this.socketList[index].ws_addr
+          this.socketList[index].ws_addr
         );
         const i = index;
         this.socketList[index].socket.onopen = this.open;
@@ -231,9 +227,11 @@ export default {
   },
   computed: {
     to_avatars: function () {
-      return this.socketList
+      var list = this.socketList
         .filter((socket) => socket.state == "connected")
         .flatMap((socket) => socket.registerFrom.avatars);
+      list.push("spi-log/server");
+      return list;
     },
   },
   destroyed() {},

@@ -1,8 +1,12 @@
+use tardis::async_trait::async_trait;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::result::TardisResult;
-use tardis::TardisFunsInst;
+use tardis::web::ws_client::TardisWSClient;
+use tardis::web::ws_processor::TardisWebsocketReq;
+use tardis::{async_trait, TardisFuns, TardisFunsInst};
 
-use crate::dto::search_item_dto::{SearchItemAddReq, SearchItemModifyReq};
+use crate::dto::search_item_dto::{SearchEventItemDeleteReq, SearchEventItemModifyReq, SearchItemAddReq, SearchItemModifyReq};
+use crate::invoke_config::InvokeConfigApi;
 use crate::invoke_enumeration::InvokeModuleKind;
 
 use super::base_spi_client::BaseSpiClient;
@@ -36,5 +40,60 @@ impl SpiSearchClient {
         let headers = BaseSpiClient::headers(None, funs, ctx).await?;
         funs.web_client().delete_to_void(&format!("{search_url}/ci/item/{tag}/{key}"), headers.clone()).await?;
         Ok(())
+    }
+}
+
+#[async_trait]
+pub trait SpiSearchEventExt {
+    async fn publish_add_item(&self, req: &SearchItemAddReq, from: String, spi_app_id: String, ctx: &TardisContext) -> TardisResult<()>;
+    async fn publish_modify_item(&self, tag: String, key: String, req: &SearchItemModifyReq, from: String, spi_app_id: String, ctx: &TardisContext) -> TardisResult<()>;
+    async fn publish_delete_item(&self, tag: String, key: String, from: String, spi_app_id: String, ctx: &TardisContext) -> TardisResult<()>;
+}
+
+#[async_trait]
+impl SpiSearchEventExt for TardisWSClient {
+    async fn publish_add_item(&self, req: &SearchItemAddReq, from: String, spi_app_id: String, ctx: &TardisContext) -> TardisResult<()> {
+        let spi_ctx = TardisContext { owner: spi_app_id, ..ctx.clone() };
+        let req = TardisWebsocketReq {
+            msg: TardisFuns::json.obj_to_json(&(req, spi_ctx)).expect("invalid json"),
+            to_avatars: Some(vec!["spi-search/service".into()]),
+            from_avatar: from,
+            event: Some("spi-search/add".into()),
+            ..Default::default()
+        };
+        self.send_obj(&req).await?;
+        return Ok(());
+    }
+
+    async fn publish_modify_item(&self, tag: String, key: String, req: &SearchItemModifyReq, from: String, spi_app_id: String, ctx: &TardisContext) -> TardisResult<()> {
+        let spi_ctx = TardisContext { owner: spi_app_id, ..ctx.clone() };
+        let event_req = SearchEventItemModifyReq {
+            tag,
+            key,
+            item: TardisFuns::json.obj_to_json(req).expect("invalid json"),
+        };
+        let req = TardisWebsocketReq {
+            msg: TardisFuns::json.obj_to_json(&(event_req, spi_ctx)).expect("invalid json"),
+            to_avatars: Some(vec!["spi-search/service".into()]),
+            from_avatar: from,
+            event: Some("spi-search/modify".into()),
+            ..Default::default()
+        };
+        self.send_obj(&req).await?;
+        return Ok(());
+    }
+
+    async fn publish_delete_item(&self, tag: String, key: String, from: String, spi_app_id: String, ctx: &TardisContext) -> TardisResult<()> {
+        let spi_ctx = TardisContext { owner: spi_app_id, ..ctx.clone() };
+        let event_req = SearchEventItemDeleteReq { tag, key };
+        let req = TardisWebsocketReq {
+            msg: TardisFuns::json.obj_to_json(&(event_req, spi_ctx)).expect("invalid json"),
+            to_avatars: Some(vec!["spi-search/service".into()]),
+            from_avatar: from,
+            event: Some("spi-search/delete".into()),
+            ..Default::default()
+        };
+        self.send_obj(&req).await?;
+        return Ok(());
     }
 }

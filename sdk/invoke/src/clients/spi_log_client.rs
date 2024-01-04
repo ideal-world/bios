@@ -4,6 +4,7 @@ use tardis::{
     async_trait::async_trait,
     basic::{dto::TardisContext, field::TrimString, result::TardisResult},
     chrono::{DateTime, Utc},
+    log::info,
     serde_json::{json, Value},
     web::{
         poem_openapi,
@@ -14,7 +15,7 @@ use tardis::{
     TardisFuns, TardisFunsInst,
 };
 
-use crate::{clients::base_spi_client::BaseSpiClient, invoke_constants::DYNAMIC_LOG, invoke_enumeration::InvokeModuleKind};
+use crate::{clients::base_spi_client::BaseSpiClient, invoke_config::InvokeConfigApi, invoke_constants::DYNAMIC_LOG, invoke_enumeration::InvokeModuleKind};
 
 pub struct SpiLogClient;
 
@@ -144,19 +145,21 @@ pub struct LogItemAddReq {
 
 #[async_trait]
 pub trait SpiLogEventExt {
-    async fn publish_add_log(&self, req: &LogItemAddReq, from: String, ctx: &TardisContext) -> TardisResult<()>;
+    async fn publish_add_log(&self, req: &LogItemAddReq, from: String, spi_app_id: String, ctx: &TardisContext) -> TardisResult<()>;
 }
 
 #[async_trait]
 impl SpiLogEventExt for TardisWSClient {
-    async fn publish_add_log(&self, req: &LogItemAddReq, from: String, ctx: &TardisContext) -> TardisResult<()> {
+    async fn publish_add_log(&self, req: &LogItemAddReq, from: String, spi_app_id: String, ctx: &TardisContext) -> TardisResult<()> {
+        let spi_ctx = TardisContext { owner: spi_app_id, ..ctx.clone() };
         let req = TardisWebsocketReq {
-            msg: TardisFuns::json.obj_to_json(&(req, ctx)).expect("invalid json"),
+            msg: TardisFuns::json.obj_to_json(&(req, spi_ctx)).expect("invalid json"),
             to_avatars: Some(vec!["spi-log/service".into()]),
             from_avatar: from,
             event: Some("spi-log/add".into()),
             ..Default::default()
         };
+        info!("event add log {}", TardisFuns::json.obj_to_string(&req).expect("invalid json"));
         self.send_obj(&req).await?;
         return Ok(());
     }

@@ -18,6 +18,7 @@ use crate::iam_config::IamBasicConfigApi;
 use crate::iam_enumeration::IamCertKernelKind;
 
 use super::clients::iam_log_client::{IamLogClient, LogParamTag};
+use super::clients::iam_search_client::IamSearchClient;
 use super::iam_account_serv::IamAccountServ;
 use super::iam_cert_mail_vcode_serv::IamCertMailVCodeServ;
 use super::iam_cert_phone_vcode_serv::IamCertPhoneVCodeServ;
@@ -277,7 +278,7 @@ impl IamCertUserPwdServ {
                 ctx,
             )
             .await?;
-            IamAccountServ::async_add_or_modify_account_search(cert.rel_rbum_id, Box::new(true), "".to_string(), funs, ctx).await?;
+            IamSearchClient::async_add_or_modify_account_search(cert.rel_rbum_id, Box::new(true), "".to_string(), funs, ctx).await?;
             Ok(())
         } else {
             Err(funs.err().not_found(

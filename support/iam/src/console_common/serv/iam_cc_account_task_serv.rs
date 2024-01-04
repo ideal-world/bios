@@ -6,7 +6,7 @@ use crate::{
             iam_filer_dto::IamAccountFilterReq,
         },
         serv::{
-            clients::iam_log_client::LogParamTag, iam_account_serv::IamAccountServ, iam_platform_serv::IamPlatformServ, iam_rel_serv::IamRelServ, iam_tenant_serv::IamTenantServ,
+            clients::{iam_log_client::LogParamTag, iam_search_client::IamSearchClient}, iam_account_serv::IamAccountServ, iam_platform_serv::IamPlatformServ, iam_rel_serv::IamRelServ, iam_tenant_serv::IamTenantServ,
         },
     },
     iam_config::{IamBasicConfigApi, IamConfig},
@@ -59,7 +59,7 @@ impl IamCcAccountTaskServ {
                     if num % 100 == 0 {
                         tardis::tokio::time::sleep(std::time::Duration::from_secs(1)).await;
                     }
-                    IamAccountServ::async_add_or_modify_account_search(id, Box::new(true), "".to_string(), &funs, &task_ctx).await?;
+                    IamSearchClient::async_add_or_modify_account_search(id, Box::new(true), "".to_string(), &funs, &task_ctx).await?;
                     task_ctx.execute_task().await?;
                 }
                 Ok(())
@@ -126,7 +126,7 @@ impl IamCcAccountTaskServ {
                         bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind::L2 => {}
                         bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind::L3 => {}
                     }
-                    IamAccountServ::async_add_or_modify_account_search(id, Box::new(true), "".to_string(), &funs, &task_ctx).await?;
+                    IamSearchClient::async_add_or_modify_account_search(id, Box::new(true), "".to_string(), &funs, &task_ctx).await?;
                 }
                 funs.commit().await?;
                 task_ctx.execute_task().await?;

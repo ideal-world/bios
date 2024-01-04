@@ -2,7 +2,7 @@ use bios_basic::spi::{api::spi_ci_bs_api, dto::spi_bs_dto::SpiBsCertResp, spi_co
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
     web::web_server::TardisWebServer,
-    TardisFuns, TardisFunsInst,
+    TardisFuns, TardisFunsInst, tokio,
 };
 
 use crate::{api::ci::search_ci_item_api, search_config::SearchConfig, search_constants::DOMAIN_CODE, serv};
@@ -14,6 +14,7 @@ pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
     let ctx = spi_initializer::init(DOMAIN_CODE, &funs).await?;
     init_db(&funs, &ctx).await?;
     funs.commit().await?;
+    tokio::spawn(init_event());
     init_api(web_server).await
 }
 
@@ -38,6 +39,22 @@ pub async fn init_fun(bs_cert: SpiBsCertResp, ctx: &TardisContext, mgr: bool) ->
         spi_constants::SPI_ES_KIND_CODE => serv::es::search_es_initializer::init(&bs_cert, ctx, mgr).await,
         _ => Err(bs_cert.bs_not_implemented())?,
     }
+}
+
+async fn init_event() -> TardisResult<()> {
+    let funs = crate::get_tardis_inst();
+    let conf = funs.conf::<SearchConfig>();
+    if let Some(event_config) = conf.event.as_ref() {
+        loop {
+            if TardisFuns::web_server().is_running().await {
+                break;
+            } else {
+                tokio::task::yield_now().await
+            }
+        }
+        crate::event::start_search_event_service(event_config).await?;
+    }
+    Ok(())
 }
 
 #[inline]

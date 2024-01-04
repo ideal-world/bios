@@ -30,7 +30,7 @@ pub struct SearchItemAddReq {
     pub visit_keys: Option<SearchItemVisitKeysReq>,
 }
 
-#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
 pub struct SearchItemModifyReq {
     #[oai(validator(min_length = "2"))]
     pub kind: Option<String>,
@@ -59,4 +59,21 @@ pub struct SearchItemVisitKeysReq {
     pub tenants: Option<Vec<String>>,
     pub roles: Option<Vec<String>>,
     pub groups: Option<Vec<String>>,
+}
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
+pub struct SearchEventItemModifyReq {
+    #[oai(validator(pattern = r"^[a-z0-9-_]+$"))]
+    pub tag: String,
+    #[oai(validator(min_length = "2"))]
+    pub key: String,
+    pub item: Value,
+}
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
+pub struct SearchEventItemDeleteReq {
+    #[oai(validator(pattern = r"^[a-z0-9-_]+$"))]
+    pub tag: String,
+    #[oai(validator(min_length = "2"))]
+    pub key: String,
 }

@@ -1,5 +1,6 @@
 use self::ldap::LdapClient;
 use super::clients::iam_log_client::{IamLogClient, LogParamTag};
+use super::clients::iam_search_client::IamSearchClient;
 use super::iam_cert_phone_vcode_serv::IamCertPhoneVCodeServ;
 use super::{iam_account_serv::IamAccountServ, iam_cert_serv::IamCertServ, iam_tenant_serv::IamTenantServ};
 use crate::basic::dto::iam_account_dto::{IamAccountAddByLdapResp, IamAccountAggModifyReq, IamAccountExtSysAddReq, IamAccountExtSysBatchAddReq};
@@ -1165,7 +1166,7 @@ impl IamCertLdapServ {
             ctx,
         )
         .await?;
-        IamAccountServ::async_add_or_modify_account_search(account_id.clone(), Box::new(false), "".to_string(), funs, ctx).await?;
+        IamSearchClient::async_add_or_modify_account_search(account_id.clone(), Box::new(false), "".to_string(), funs, ctx).await?;
         Ok(account_id)
     }
 

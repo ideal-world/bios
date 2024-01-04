@@ -5,7 +5,10 @@ use bios_basic::{
         serv::{rbum_crud_serv::RbumCrudOperation, rbum_item_serv::RbumItemCrudOperation, rbum_set_serv::RbumSetCateServ},
     },
 };
-use bios_sdk_invoke::clients::spi_log_client::SpiLogClient;
+use bios_sdk_invoke::{
+    clients::spi_log_client::{LogItemAddReq, SpiLogClient, SpiLogEventExt},
+    invoke_config::InvokeConfigApi,
+};
 use serde::Serialize;
 
 use tardis::{
@@ -19,8 +22,10 @@ use crate::{
         dto::iam_filer_dto::{IamAccountFilterReq, IamResFilterReq, IamRoleFilterReq, IamTenantFilterReq},
         serv::{iam_account_serv::IamAccountServ, iam_cert_serv::IamCertServ, iam_res_serv::IamResServ, iam_role_serv::IamRoleServ, iam_tenant_serv::IamTenantServ},
     },
+    iam_config::IamConfig,
     iam_constants,
     iam_enumeration::IamCertKernelKind,
+    iam_initializer::{default_avatar, ws_client},
 };
 pub struct IamLogClient;
 
@@ -136,21 +141,38 @@ impl IamLogClient {
         let tag: String = tag.into();
         let own_paths = if ctx.own_paths.len() < 2 { None } else { Some(ctx.own_paths.clone()) };
         let owner = if ctx.owner.len() < 2 { None } else { Some(ctx.owner.clone()) };
-        SpiLogClient::add(
-            &tag,
-            &TardisFuns::json.obj_to_string(&content)?,
-            Some(search_ext),
-            kind,
-            key,
-            op,
-            rel_key,
-            ts,
-            owner,
-            own_paths,
-            funs,
-            ctx,
-        )
-        .await?;
+        if funs.conf::<IamConfig>().in_event {
+            let req = LogItemAddReq {
+                tag,
+                content: TardisFuns::json.obj_to_string(&content).expect("req_msg not a valid json value"),
+                kind: None,
+                ext: None,
+                key: None,
+                op: None,
+                rel_key: None,
+                id: None,
+                ts: None,
+                owner: Some(ctx.owner.clone()),
+                own_paths: Some(ctx.own_paths.clone()),
+            };
+            ws_client().await.publish_add_log(&req, default_avatar().await.clone(), funs.invoke_conf_spi_app_id(), &ctx).await?;
+        } else {
+            SpiLogClient::add(
+                &tag,
+                &TardisFuns::json.obj_to_string(&content).expect("req_msg not a valid json value"),
+                Some(search_ext),
+                kind,
+                key,
+                op,
+                rel_key,
+                ts,
+                owner,
+                own_paths,
+                funs,
+                ctx,
+            )
+            .await?;
+        }
         Ok(())
     }
 

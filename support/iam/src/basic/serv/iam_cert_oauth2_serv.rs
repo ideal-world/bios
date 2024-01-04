@@ -23,6 +23,7 @@ use bios_basic::rbum::rbum_enumeration::{RbumCertConfStatusKind, RbumCertRelKind
 use bios_basic::rbum::serv::rbum_cert_serv::{RbumCertConfServ, RbumCertServ};
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 
+use super::clients::iam_search_client::IamSearchClient;
 use super::iam_account_serv::IamAccountServ;
 use super::iam_cert_serv::IamCertServ;
 use super::iam_tenant_serv::IamTenantServ;
@@ -250,7 +251,7 @@ impl IamCertOAuth2Serv {
             &mock_ctx,
         )
         .await?;
-        IamAccountServ::async_add_or_modify_account_search(account_id.clone(), Box::new(false), "".to_string(), funs, &mock_ctx).await?;
+        IamSearchClient::async_add_or_modify_account_search(account_id.clone(), Box::new(false), "".to_string(), funs, &mock_ctx).await?;
         mock_ctx.execute_task().await?;
         Ok((account_id, oauth_token_info.access_token))
     }

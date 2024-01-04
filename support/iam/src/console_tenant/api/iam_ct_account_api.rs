@@ -11,6 +11,7 @@ use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
 use crate::basic::dto::iam_account_dto::{IamAccountAggAddReq, IamAccountAggModifyReq, IamAccountDetailAggResp, IamAccountModifyReq, IamAccountSummaryAggResp};
 use crate::basic::dto::iam_filer_dto::IamAccountFilterReq;
+use crate::basic::serv::clients::iam_search_client::IamSearchClient;
 use crate::basic::serv::iam_account_serv::IamAccountServ;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_set_serv::IamSetServ;
@@ -32,7 +33,7 @@ impl IamCtAccountApi {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         let result = IamAccountServ::add_account_agg(&add_req.0, false, &funs, &ctx).await?;
-        IamAccountServ::async_add_or_modify_account_search(result.clone(), Box::new(false), "".to_string(), &funs, &ctx).await?;
+        IamSearchClient::async_add_or_modify_account_search(result.clone(), Box::new(false), "".to_string(), &funs, &ctx).await?;
         // TaskProcessor::get_notify_event_with_ctx(&funs, &ctx).await?;
         funs.commit().await?;
         ctx.execute_task().await?;
@@ -54,7 +55,7 @@ impl IamCtAccountApi {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         IamAccountServ::modify_account_agg(&id.0, &modify_req.0, &funs, &ctx).await?;
-        IamAccountServ::async_add_or_modify_account_search(id.0, Box::new(true), "".to_string(), &funs, &ctx).await?;
+        IamSearchClient::async_add_or_modify_account_search(id.0, Box::new(true), "".to_string(), &funs, &ctx).await?;
         funs.commit().await?;
         ctx.execute_task().await?;
         if let Some(notify_events) = TaskProcessor::get_notify_event_with_ctx(&ctx).await? {
@@ -193,7 +194,7 @@ impl IamCtAccountApi {
         add_remote_ip(request, &ctx.0).await?;
         funs.begin().await?;
         IamAccountServ::delete_item_with_all_rels(&id.0, &funs, &ctx.0).await?;
-        IamAccountServ::async_delete_account_search(id.0, &funs, ctx.0.clone()).await?;
+        IamSearchClient::async_delete_account_search(id.0, &funs, ctx.0.clone()).await?;
         funs.commit().await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
@@ -255,7 +256,7 @@ impl IamCtAccountApi {
             &ctx.0,
         )
         .await?;
-        IamAccountServ::async_add_or_modify_account_search(id.0, Box::new(true), "".to_string(), &funs, &ctx.0).await?;
+        IamSearchClient::async_add_or_modify_account_search(id.0, Box::new(true), "".to_string(), &funs, &ctx.0).await?;
         funs.commit().await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
@@ -283,7 +284,7 @@ impl IamCtAccountApi {
             &ctx.0,
         )
         .await?;
-        IamAccountServ::async_add_or_modify_account_search(id.0, Box::new(true), "Manual cancellation.".to_string(), &funs, &ctx.0).await?;
+        IamSearchClient::async_add_or_modify_account_search(id.0, Box::new(true), "Manual cancellation.".to_string(), &funs, &ctx.0).await?;
         funs.commit().await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
@@ -311,7 +312,7 @@ impl IamCtAccountApi {
             &ctx.0,
         )
         .await?;
-        IamAccountServ::async_add_or_modify_account_search(id.0, Box::new(true), "".to_string(), &funs, &ctx.0).await?;
+        IamSearchClient::async_add_or_modify_account_search(id.0, Box::new(true), "".to_string(), &funs, &ctx.0).await?;
         funs.commit().await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
@@ -324,7 +325,7 @@ impl IamCtAccountApi {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         IamAccountServ::unlock_account(&id.0, &funs, &ctx.0).await?;
-        IamAccountServ::async_add_or_modify_account_search(id.0, Box::new(true), "".to_string(), &funs, &ctx.0).await?;
+        IamSearchClient::async_add_or_modify_account_search(id.0, Box::new(true), "".to_string(), &funs, &ctx.0).await?;
         funs.commit().await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void {})

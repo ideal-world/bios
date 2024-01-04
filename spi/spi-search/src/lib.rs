@@ -2,6 +2,7 @@
 
 mod api;
 pub mod dto;
+pub mod event;
 pub mod search_config;
 pub mod search_constants;
 pub mod search_enumeration;

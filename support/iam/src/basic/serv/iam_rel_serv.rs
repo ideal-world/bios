@@ -20,6 +20,7 @@ use crate::basic::serv::iam_res_serv::IamResServ;
 use crate::iam_enumeration::{IamRelKind, IamResKind};
 
 use super::clients::iam_log_client::{IamLogClient, LogParamTag};
+use super::clients::iam_search_client::IamSearchClient;
 use super::iam_account_serv::IamAccountServ;
 
 pub struct IamRelServ;
@@ -109,10 +110,10 @@ impl IamRelServ {
                 ctx,
             )
             .await;
-            IamAccountServ::async_add_or_modify_account_search(from_iam_item_id.to_string(), Box::new(true), "".to_string(), funs, ctx).await?;
+            IamSearchClient::async_add_or_modify_account_search(from_iam_item_id.to_string(), Box::new(true), "".to_string(), funs, ctx).await?;
         }
         if rel_kind == &IamRelKind::IamAccountApp {
-            IamAccountServ::async_add_or_modify_account_search(from_iam_item_id.to_string(), Box::new(true), "".to_string(), funs, ctx).await?;
+            IamSearchClient::async_add_or_modify_account_search(from_iam_item_id.to_string(), Box::new(true), "".to_string(), funs, ctx).await?;
         }
 
         if rel_kind == &IamRelKind::IamResRole {
@@ -510,17 +511,17 @@ impl IamRelServ {
                     ctx,
                 )
                 .await;
-                IamAccountServ::async_add_or_modify_account_search(from_iam_item_id.to_string(), Box::new(true), "".to_string(), funs, ctx).await?;
+                IamSearchClient::async_add_or_modify_account_search(from_iam_item_id.to_string(), Box::new(true), "".to_string(), funs, ctx).await?;
                 // TODO reset account cache
                 // let tenant_ctx = IamCertServ::use_sys_or_tenant_ctx_unsafe(ctx.clone())?;
                 // IamCertServ::package_tardis_account_context_and_resp(from_iam_item_id, &tenant_ctx.own_paths, "".to_string(), None, funs, &tenant_ctx).await?;
             }
             IamRelKind::IamAccountApp => {
                 IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(from_iam_item_id, get_remote_ip(ctx).await?, funs).await?;
-                IamAccountServ::async_add_or_modify_account_search(from_iam_item_id.to_string(), Box::new(true), "".to_string(), funs, ctx).await?;
+                IamSearchClient::async_add_or_modify_account_search(from_iam_item_id.to_string(), Box::new(true), "".to_string(), funs, ctx).await?;
             }
             IamRelKind::IamAccountRel => {
-                IamAccountServ::async_add_or_modify_account_search(from_iam_item_id.to_string(), Box::new(true), "".to_string(), funs, ctx).await?;
+                IamSearchClient::async_add_or_modify_account_search(from_iam_item_id.to_string(), Box::new(true), "".to_string(), funs, ctx).await?;
             }
             IamRelKind::IamCertRel => {}
             IamRelKind::IamOrgRel => {}
