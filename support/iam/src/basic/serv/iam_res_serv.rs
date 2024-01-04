@@ -122,11 +122,11 @@ impl RbumItemCrudOperation<iam_res::ActiveModel, IamResAddReq, IamResModifyReq, 
     }
 
     async fn package_item_modify(_: &str, modify_req: &IamResModifyReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<Option<RbumItemKernelModifyReq>> {
-        if modify_req.name.is_none() && modify_req.scope_level.is_none() && modify_req.disabled.is_none() {
+        if modify_req.name.is_none() && modify_req.scope_level.is_none() && modify_req.disabled.is_none() && modify_req.code.is_none() {
             return Ok(None);
         }
         Ok(Some(RbumItemKernelModifyReq {
-            code: None,
+            code: modify_req.code.clone(),
             name: modify_req.name.clone(),
             scope_level: modify_req.scope_level.clone(),
             disabled: modify_req.disabled,
