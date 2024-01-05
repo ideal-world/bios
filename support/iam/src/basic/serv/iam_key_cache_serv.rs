@@ -533,19 +533,29 @@ impl IamResCacheServ {
             if let Some(res_auth) = res_dto.auth {
                 let mut auth = res_auth;
                 for account in &delete_req.accounts {
-                    auth.accounts = auth.accounts.replace(&format!("#{account}#"), "#");
+                    while auth.accounts.contains(&format!("#{account}#")) {
+                        auth.accounts = auth.accounts.replacen(&format!("#{account}#"), "#", 1);
+                    }
                 }
                 for role in &delete_req.roles {
-                    auth.roles = auth.roles.replace(&format!("#{role}#"), "#");
+                    while auth.roles.contains(&format!("#{role}#")) {
+                        auth.roles = auth.roles.replacen(&format!("#{role}#"), "#", 1);
+                    }
                 }
                 for group in &delete_req.groups {
-                    auth.groups = auth.groups.replace(&format!("#{group}#"), "#");
+                    while auth.groups.contains(&format!("#{group}#")) {
+                        auth.groups = auth.groups.replacen(&format!("#{group}#"), "#", 1);
+                    }
                 }
                 for app in &delete_req.apps {
-                    auth.apps = auth.apps.replace(&format!("#{app}#"), "#");
+                    while auth.apps.contains(&format!("#{app}#")) {
+                        auth.apps = auth.apps.replacen(&format!("#{app}#"), "#", 1);
+                    }
                 }
                 for tenant in &delete_req.tenants {
-                    auth.tenants = auth.tenants.replace(&format!("#{tenant}#"), "#");
+                    while auth.tenants.contains(&format!("#{tenant}#")) {
+                        auth.tenants = auth.tenants.replacen(&format!("#{tenant}#"), "#", 1);
+                    }
                 }
                 if (auth.accounts == "#" || auth.accounts == "##")
                     && (auth.roles == "#" || auth.roles == "##")
