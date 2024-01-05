@@ -60,6 +60,8 @@ impl IamResAddReq {
 pub struct IamResModifyReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub name: Option<TrimString>,
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    pub code: Option<TrimString>,
     pub icon: Option<String>,
     pub sort: Option<i64>,
     pub hide: Option<bool>,
@@ -74,6 +76,20 @@ pub struct IamResModifyReq {
     pub double_auth_msg: Option<String>,
     pub need_login: Option<bool>,
     pub bind_api_res: Option<Vec<String>>,
+}
+
+impl IamResModifyReq {
+    pub fn encoding(&mut self, kind: IamResKind, method: String) -> &mut Self {
+        if self.code.is_none() {
+            return self;
+        }
+        let code = self.code.clone().unwrap();
+        if code.starts_with('/') {
+            self.code = Some(TrimString::new(code[1..].to_string()));
+        }
+        self.code = Some(TrimString(format!("{}/{}/{}", kind.to_int(), method, code)));
+        self
+    }
 }
 
 #[derive(poem_openapi::Object, sea_orm::FromQueryResult, Serialize, Deserialize, Debug)]
