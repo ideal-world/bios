@@ -17,7 +17,7 @@ use crate::{
     domain::event_topic,
     dto::event_dto::EventTopicAddOrModifyReq,
     event_config::{EventConfig, EventInfo, EventInfoManager},
-    event_constants::{DOMAIN_CODE, KIND_CODE, SERVICE_EVENT_BUS_AVATAR},
+    event_constants::{DOMAIN_CODE, KIND_CODE},
     serv::{self, event_proc_serv::CreateRemoteSenderSubscriber, event_topic_serv::EventDefServ},
 };
 
@@ -118,23 +118,28 @@ async fn init_cluster_resource() {
     subscribe(CreateRemoteSenderSubscriber).await;
 }
 
-async fn init_ws_client() -> TardisWSClient {
+async fn init_log_ws_client() -> TardisWSClient {
     while !TardisFuns::web_server().is_running().await {
         tardis::tokio::task::yield_now().await
     }
     let funs = TardisFuns::inst_with_db_conn(DOMAIN_CODE.to_string(), None);
     let conf = funs.conf::<EventConfig>();
-    let topic_sk = conf.event_bus_sk.clone();
-    let client = bios_sdk_invoke::clients::event_client::EventClient::new("http://localhost:8080/event", &funs);
+    let mut event_conf = conf.log_event.clone();
+    if event_conf.avatars.is_empty() {
+        event_conf.avatars.push(format!("{}/{}", event_conf.topic_code, tardis::pkg!()))
+    }
+    let default_avatar = event_conf.avatars[0].clone();
+    set_default_log_avatar(default_avatar);
+    let client = bios_sdk_invoke::clients::event_client::EventClient::new(&event_conf.base_url, &funs);
     loop {
         let addr = loop {
             if let Ok(result) = client
                 .register(&bios_sdk_invoke::clients::event_client::EventListenerRegisterReq {
-                    topic_code: TOPIC_EVENT_BUS.to_string(),
-                    topic_sk: Some(topic_sk.clone()),
-                    events: None,
-                    avatars: vec![SERVICE_EVENT_BUS_AVATAR.into()],
-                    subscribe_mode: false,
+                    topic_code: event_conf.topic_code.to_string(),
+                    topic_sk: event_conf.topic_sk.clone(),
+                    events: event_conf.events.clone(),
+                    avatars: event_conf.avatars.clone(),
+                    subscribe_mode: event_conf.subscribe_mode,
                 })
                 .await
             {
@@ -154,7 +159,8 @@ async fn init_ws_client() -> TardisWSClient {
         }
     }
 }
-
+use std::sync::OnceLock;
 tardis::tardis_static! {
-    pub(crate) async ws_client: TardisWSClient = init_ws_client();
+    pub(crate) async ws_log_client: TardisWSClient = init_log_ws_client();
+    pub(crate) async set default_log_avatar: String;
 }

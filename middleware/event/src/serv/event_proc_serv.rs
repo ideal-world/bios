@@ -19,8 +19,8 @@ use tardis::{TardisFuns, TardisFunsInst};
 
 use crate::dto::event_dto::EventMessageMgrWrap;
 use crate::event_config::EventConfig;
-use crate::event_constants::{DOMAIN_CODE, SERVICE_EVENT_BUS_AVATAR};
-use crate::event_initializer::ws_client;
+use crate::event_constants::DOMAIN_CODE;
+use crate::event_initializer::{default_log_avatar, ws_log_client};
 
 use super::event_listener_serv::{listeners, mgr_listeners};
 use super::event_topic_serv::topics;
@@ -106,7 +106,7 @@ pub(crate) async fn ws_process(listener_code: String, token: String, websocket: 
                     info!("[Event] MESSAGE LOG: {}", TardisFuns::json.obj_to_string(&req_msg).expect("req_msg not a valid json value"));
                 } else {
                     use bios_sdk_invoke::clients::spi_log_client::{LogItemAddReq, SpiLogEventExt};
-                    let ws_client = ws_client().await;
+                    let ws_client = ws_log_client().await;
                     let ctx = TardisContext {
                         owner: spi_app_id.clone(),
                         ..Default::default()
@@ -124,7 +124,7 @@ pub(crate) async fn ws_process(listener_code: String, token: String, websocket: 
                         owner: Some(ctx.owner.clone()),
                         own_paths: Some(ctx.own_paths.clone()),
                     };
-                    if let Err(e) = ws_client.publish_add_log(&req, SERVICE_EVENT_BUS_AVATAR.to_string(), spi_app_id.clone(), &ctx).await {
+                    if let Err(e) = ws_client.publish_add_log(&req, default_log_avatar().await.clone(), spi_app_id.clone(), &ctx).await {
                         warn!("[Bios.Event] publish log fail: {}", e);
                     }
                 }
