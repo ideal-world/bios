@@ -36,7 +36,7 @@ use crate::{
     iam_config::IamConfig,
     iam_constants,
     iam_enumeration::{IamCertKernelKind, IamSetKind},
-    iam_initializer::{default_avatar, ws_client},
+    iam_initializer::{default_search_avatar, ws_search_client},
 };
 pub struct IamSearchClient;
 
@@ -192,7 +192,7 @@ impl IamSearchClient {
                 }),
             };
             if funs.conf::<IamConfig>().in_event {
-                ws_client().await.publish_modify_item(tag, key, &modify_req, default_avatar().await.clone(), funs.invoke_conf_spi_app_id(), ctx).await?;
+                ws_search_client().await.publish_modify_item(tag, key, &modify_req, default_search_avatar().await.clone(), funs.invoke_conf_spi_app_id(), ctx).await?;
             } else {
                 SpiSearchClient::modify_item(&tag, &key, &modify_req, funs, ctx).await?;
             }
@@ -233,7 +233,7 @@ impl IamSearchClient {
                 }),
             };
             if funs.conf::<IamConfig>().in_event {
-                ws_client().await.publish_add_item(&add_req, default_avatar().await.clone(), funs.invoke_conf_spi_app_id(), ctx).await?;
+                ws_search_client().await.publish_add_item(&add_req, default_search_avatar().await.clone(), funs.invoke_conf_spi_app_id(), ctx).await?;
             } else {
                 SpiSearchClient::add_item(&add_req, funs, ctx).await?;
             }
@@ -245,7 +245,7 @@ impl IamSearchClient {
     pub async fn delete_account_search(account_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let tag = funs.conf::<IamConfig>().spi.search_account_tag.clone();
         if funs.conf::<IamConfig>().in_event {
-            ws_client().await.publish_delete_item(tag, account_id.to_owned(), default_avatar().await.clone(), funs.invoke_conf_spi_app_id(), ctx).await?;
+            ws_search_client().await.publish_delete_item(tag, account_id.to_owned(), default_search_avatar().await.clone(), funs.invoke_conf_spi_app_id(), ctx).await?;
         } else {
             SpiSearchClient::delete_item(&tag, account_id, funs, ctx).await?;
         }

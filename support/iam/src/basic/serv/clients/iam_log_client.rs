@@ -25,7 +25,7 @@ use crate::{
     iam_config::IamConfig,
     iam_constants,
     iam_enumeration::IamCertKernelKind,
-    iam_initializer::{default_avatar, ws_client},
+    iam_initializer::{default_log_avatar, ws_log_client},
 };
 pub struct IamLogClient;
 
@@ -155,7 +155,7 @@ impl IamLogClient {
                 owner: Some(ctx.owner.clone()),
                 own_paths: Some(ctx.own_paths.clone()),
             };
-            ws_client().await.publish_add_log(&req, default_avatar().await.clone(), funs.invoke_conf_spi_app_id(), &ctx).await?;
+            ws_log_client().await.publish_add_log(&req, default_log_avatar().await.clone(), funs.invoke_conf_spi_app_id(), &ctx).await?;
         } else {
             SpiLogClient::add(
                 &tag,

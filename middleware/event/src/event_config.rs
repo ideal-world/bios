@@ -1,4 +1,5 @@
 use bios_basic::{process::ci_processor::AppKeyConfig, rbum::rbum_config::RbumConfig};
+use bios_sdk_invoke::clients::event_client::EventTopicConfig;
 use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
 use std::{fmt::Debug, sync::Mutex};
@@ -7,6 +8,7 @@ use tardis::basic::{error::TardisError, result::TardisResult};
 #[serde(default)]
 pub struct EventConfig {
     pub rbum: RbumConfig,
+    pub log_event: EventTopicConfig,
     pub app_key: AppKeyConfig,
     pub event_url: String,
     pub event_bus_sk: String,
@@ -17,6 +19,7 @@ impl Default for EventConfig {
     fn default() -> Self {
         EventConfig {
             rbum: Default::default(),
+            log_event: Default::default(),
             app_key: Default::default(),
             event_url: "".to_string(),
             event_bus_sk: "".to_string(),

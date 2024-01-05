@@ -18,7 +18,8 @@ use tardis::web::poem::http::HeaderName;
 pub struct IamConfig {
     pub rbum: RbumConfig,
     pub in_event: bool,
-    pub event: EventTopicConfig,
+    pub log_event: EventTopicConfig,
+    pub search_event: EventTopicConfig,
     pub invoke: InvokeConfig,
     // token -> (token_kind, account_id)
     // accessToken(token_kind = TokenOauth2) -> (token_kind, rel_iam_item_id, ak, SetCateIds)
@@ -124,7 +125,8 @@ impl Default for IamConfig {
         IamConfig {
             rbum: Default::default(),
             in_event: false,
-            event: EventTopicConfig::default(),
+            log_event: EventTopicConfig::default(),
+            search_event: EventTopicConfig::default(),
             invoke: InvokeConfig::default(),
             cache_key_token_info_: "iam:cache:token:info:".to_string(),
             cache_key_aksk_info_: "iam:cache:aksk:info:".to_string(),
