@@ -151,6 +151,26 @@ pub async fn find(find_req: &mut LogItemFindReq, funs: &TardisFunsInst, ctx: &Ta
                 for val in value {
                     sql_vals.push(val);
                 }
+            } else if ext_item.op == BasicQueryOpKind::NotIn {
+                let value = value.clone();
+                if value.len() == 1 {
+                    where_fragments.push(format!("not (ext -> '{}' ? ${})", ext_item.field, sql_vals.len() + 1));
+                } else {
+                    where_fragments.push(format!(
+                        "not (ext -> '{}' ?| array[{}])",
+                        ext_item.field,
+                        (0..value.len()).map(|idx| format!("${}", sql_vals.len() + idx + 1)).collect::<Vec<String>>().join(", ")
+                    ));
+                }
+                for val in value {
+                    sql_vals.push(val);
+                }
+            } else if ext_item.op == BasicQueryOpKind::IsNull {
+                where_fragments.push(format!("ext ->> '{}' is null", ext_item.field));
+            } else if ext_item.op == BasicQueryOpKind::IsNotNull {
+                where_fragments.push(format!("ext ->> '{}' is not null", ext_item.field));
+            } else if ext_item.op == BasicQueryOpKind::IsNullOrEmpty {
+                where_fragments.push(format!("(ext ->> '{}' is null or ext ->> '{}' = '')", ext_item.field, ext_item.field));
             } else {
                 if value.len() > 1 {
                     return err_notfound(ext_item);
