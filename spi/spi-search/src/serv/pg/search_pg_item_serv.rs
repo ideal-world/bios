@@ -211,22 +211,25 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
         match search_req.query.q_scope.as_ref().unwrap_or(&SearchItemSearchQScopeKind::Title) {
             SearchItemSearchQScopeKind::Title => {
                 select_fragments = ", COALESCE(ts_rank(title_tsv, query), 0::float4) AS rank_title, 0::float4 AS rank_content".to_string();
-                sql_vals.push(Value::from(format!("%{q}%")));
-                where_fragments.push(format!("(query @@ title_tsv OR title LIKE ${})", sql_vals.len()));
+                where_fragments.push("(query @@ title_tsv)".to_string());
+                // sql_vals.push(Value::from(format!("%{q}%")));
+                // where_fragments.push(format!("(query @@ title_tsv OR title LIKE ${})", sql_vals.len()));
             }
             SearchItemSearchQScopeKind::Content => {
                 select_fragments = ", 0::float4 AS rank_title, COALESCE(ts_rank(content_tsv, query), 0::float4) AS rank_content".to_string();
-                sql_vals.push(Value::from(format!("%{q}%")));
-                where_fragments.push(format!("(query @@ content_tsv OR content LIKE ${})", sql_vals.len()));
+                where_fragments.push("(query @@ content_tsv)".to_string());
+                // sql_vals.push(Value::from(format!("%{q}%")));
+                // where_fragments.push(format!("(query @@ content_tsv OR content LIKE ${})", sql_vals.len()));
             }
             SearchItemSearchQScopeKind::TitleContent => {
                 select_fragments = ", COALESCE(ts_rank(title_tsv, query), 0::float4) AS rank_title, COALESCE(ts_rank(content_tsv, query), 0::float4) AS rank_content".to_string();
-                sql_vals.push(Value::from(format!("%{q}%")));
-                where_fragments.push(format!(
-                    "(query @@ title_tsv OR query @@ content_tsv OR title LIKE ${} OR content LIKE ${})",
-                    sql_vals.len(),
-                    sql_vals.len()
-                ));
+                where_fragments.push("(query @@ title_tsv OR query @@ content_tsv)".to_string());
+                // sql_vals.push(Value::from(format!("%{q}%")));
+                // where_fragments.push(format!(
+                //     "(query @@ title_tsv OR query @@ content_tsv OR title LIKE ${} OR content LIKE ${})",
+                //     sql_vals.len(),
+                //     sql_vals.len()
+                // ));
             }
         }
     } else {
