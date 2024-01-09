@@ -254,21 +254,26 @@ impl RbumItemCrudOperation<iam_res::ActiveModel, IamResAddReq, IamResModifyReq, 
     }
 
     async fn before_delete_item(id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<IamResDetailResp>> {
-        Ok(Some(
-            Self::get_item(
-                id,
-                &IamResFilterReq {
-                    basic: RbumBasicFilterReq {
-                        with_sub_own_paths: true,
-                        ..Default::default()
-                    },
+        let deleted_item = Self::get_item(
+            id,
+            &IamResFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
                     ..Default::default()
                 },
-                funs,
-                ctx,
-            )
-            .await?,
-        ))
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?;
+        if deleted_item.kind == IamResKind::Ele {
+            let delete_api_res = IamResServ::find_to_simple_rel_roles(&IamRelKind::IamResApi, id, None, None, funs, ctx).await?.into_iter().map(|rel| rel.rel_id).collect_vec();
+            for delete_api_id in delete_api_res {
+                IamRelServ::delete_simple_rel(&IamRelKind::IamResApi, &delete_api_id, id, funs, ctx).await?;
+            }
+        }
+        Ok(Some(deleted_item))
     }
 
     async fn after_delete_item(_: &str, deleted_item: &Option<IamResDetailResp>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
