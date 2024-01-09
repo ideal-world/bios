@@ -145,6 +145,7 @@ impl FlowExternalServ {
         original_sys_state: FlowSysStateKind,
         transition_name: String,
         is_notify: bool,
+        callback_op: Option<FlowExternalCallbackOp>,
         ctx: &TardisContext,
         funs: &TardisFunsInst,
     ) -> TardisResult<FlowExternalNotifyChangesResp> {
@@ -156,6 +157,7 @@ impl FlowExternalServ {
         let header = Self::headers(None, funs, ctx).await?;
         let body = FlowExternalReq {
             kind: FlowExternalKind::NotifyChanges,
+            callback_op,
             inst_id: inst_id.to_string(),
             curr_tag: tag.to_string(),
             curr_bus_obj_id: rel_business_obj_id.to_string(),

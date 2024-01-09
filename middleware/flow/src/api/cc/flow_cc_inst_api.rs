@@ -4,6 +4,7 @@ use tardis::web::poem_openapi::param::{Path, Query};
 use tardis::web::poem_openapi::payload::Json;
 use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 
+use crate::dto::flow_external_dto::FlowExternalCallbackOp;
 use crate::dto::flow_inst_dto::{
     FlowInstAbortReq, FlowInstDetailResp, FlowInstFindNextTransitionResp, FlowInstFindNextTransitionsReq, FlowInstFindStateAndTransitionsReq, FlowInstFindStateAndTransitionsResp,
     FlowInstModifyAssignedReq, FlowInstModifyCurrentVarsReq, FlowInstStartReq, FlowInstSummaryResp, FlowInstTransferReq, FlowInstTransferResp,
@@ -92,7 +93,7 @@ impl FlowCcInstApi {
         let mut funs = flow_constants::get_tardis_inst();
         FlowInstServ::check_transfer_vars(&flow_inst_id.0, &transfer_req.0, &funs, &ctx.0).await?;
         funs.begin().await?;
-        let result = FlowInstServ::transfer(&flow_inst_id.0, &transfer_req.0, false, &funs, &ctx.0).await?;
+        let result = FlowInstServ::transfer(&flow_inst_id.0, &transfer_req.0, false, FlowExternalCallbackOp::Default, &funs, &ctx.0).await?;
         funs.commit().await?;
         TardisResp::ok(result)
     }

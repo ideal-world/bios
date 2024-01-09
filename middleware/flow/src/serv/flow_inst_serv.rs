@@ -622,12 +622,13 @@ impl FlowInstServ {
         flow_inst_id: &str,
         transfer_req: &FlowInstTransferReq,
         skip_filter: bool,
+        callback_kind: FlowExternalCallbackOp,
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<FlowInstTransferResp> {
         // record updated instance id
         let mut updated_instance_list: Vec<String> = Vec::new();
-        let result = Self::do_transfer(flow_inst_id, transfer_req, &mut updated_instance_list, skip_filter, funs, ctx).await;
+        let result = Self::do_transfer(flow_inst_id, transfer_req, &mut updated_instance_list, skip_filter, callback_kind, funs, ctx).await;
 
         for updated_instance_id in updated_instance_list {
             Self::do_front_change(&updated_instance_id, ctx, funs).await?;
@@ -642,6 +643,7 @@ impl FlowInstServ {
         transfer_req: &FlowInstTransferReq,
         updated_instance_list: &mut Vec<String>,
         skip_filter: bool,
+        callback_kind: FlowExternalCallbackOp,
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<FlowInstTransferResp> {
@@ -807,6 +809,7 @@ impl FlowInstServ {
                 prev_flow_state.sys_state.clone(),
                 next_transition_detail.name.clone(),
                 next_transition_detail.is_notify,
+                Some(callback_kind),
                 ctx,
                 funs,
             )
@@ -1101,6 +1104,7 @@ impl FlowInstServ {
                     },
                     updated_instance_list,
                     true,
+                    FlowExternalCallbackOp::PostAction,
                     funs,
                     ctx,
                 )
@@ -1326,6 +1330,7 @@ impl FlowInstServ {
                         vars: None,
                     },
                     true,
+                    FlowExternalCallbackOp::ConditionalTrigger,
                     funs,
                     ctx,
                 )

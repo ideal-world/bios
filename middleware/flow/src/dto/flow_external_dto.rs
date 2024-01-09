@@ -34,9 +34,10 @@ pub enum FlowExternalKind {
     QueryField,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum)]
+#[derive(Copy, Clone, Debug, Default, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum)]
 pub enum FlowExternalCallbackOp {
     #[default]
+    Default,
     PostAction,
     VerifyContent,
     ConditionalTrigger,
