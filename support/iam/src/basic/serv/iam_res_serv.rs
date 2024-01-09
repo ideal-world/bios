@@ -267,7 +267,7 @@ impl RbumItemCrudOperation<iam_res::ActiveModel, IamResAddReq, IamResModifyReq, 
             ctx,
         )
         .await?;
-        if deleted_item.kind == IamResKind::Ele {
+        if deleted_item.kind == IamResKind::Ele || deleted_item.kind == IamResKind::Menu {
             let delete_api_res = IamResServ::find_to_simple_rel_roles(&IamRelKind::IamResApi, id, None, None, funs, ctx).await?.into_iter().map(|rel| rel.rel_id).collect_vec();
             for delete_api_id in delete_api_res {
                 IamRelServ::delete_simple_rel(&IamRelKind::IamResApi, &delete_api_id, id, funs, ctx).await?;
