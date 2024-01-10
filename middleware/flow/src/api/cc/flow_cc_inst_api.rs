@@ -91,7 +91,8 @@ impl FlowCcInstApi {
     #[oai(path = "/:flow_inst_id/transition/transfer", method = "put")]
     async fn transfer(&self, flow_inst_id: Path<String>, transfer_req: Json<FlowInstTransferReq>, ctx: TardisContextExtractor) -> TardisApiResult<FlowInstTransferResp> {
         let mut funs = flow_constants::get_tardis_inst();
-        FlowInstServ::check_transfer_vars(&flow_inst_id.0, &transfer_req.0, &funs, &ctx.0).await?;
+        let mut transfer = transfer_req.0;
+        FlowInstServ::check_transfer_vars(&flow_inst_id.0, &mut transfer, &funs, &ctx.0).await?;
         funs.begin().await?;
         let result = FlowInstServ::transfer(&flow_inst_id.0, &transfer_req.0, false, FlowExternalCallbackOp::Default, &funs, &ctx.0).await?;
         funs.commit().await?;
