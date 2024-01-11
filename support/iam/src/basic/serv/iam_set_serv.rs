@@ -897,7 +897,7 @@ impl IamSetServ {
                 SpiKvClient::add_or_modify_key_name(&format!("{}:{}", funs.conf::<IamConfig>().spi.kv_tenant_prefix.clone(), id), &name, funs, ctx).await?;
             }
         }
-    
+
         Ok(())
     }
 }

@@ -195,7 +195,7 @@ impl IamCtAppSetApi {
         ctx.execute_task().await?;
         TardisResp::ok(result)
     }
-    
+
     /// refresh data
     #[oai(path = "/refresh_data", method = "get")]
     async fn refresh_data(&self, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
