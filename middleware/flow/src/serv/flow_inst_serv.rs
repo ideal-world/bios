@@ -986,7 +986,7 @@ impl FlowInstServ {
                         }
                     }
                     let inst_id = Self::get_inst_ids_by_rel_business_obj_id(vec![rel_obj_id.clone()], funs, ctx).await?.pop().unwrap_or_default();
-                    let tag =  if change_info.obj_tag_rel_kind == Some(TagRelKind::ParentOrSub) {
+                    let tag = if change_info.obj_tag_rel_kind == Some(TagRelKind::ParentOrSub) {
                         &flow_model.tag
                     } else {
                         &change_info.obj_tag

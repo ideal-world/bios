@@ -12,6 +12,7 @@ use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use bios_basic::rbum::serv::rbum_rel_serv::RbumRelServ;
 use bios_basic::rbum::serv::rbum_set_serv::{RbumSetCateServ, RbumSetItemServ, RbumSetServ};
+use bios_sdk_invoke::clients::spi_kv_client::SpiKvClient;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
@@ -21,7 +22,7 @@ use tardis::{TardisFuns, TardisFunsInst};
 
 use crate::basic::dto::iam_filer_dto::IamAccountFilterReq;
 use crate::basic::dto::iam_set_dto::{IamSetCateAddReq, IamSetCateModifyReq, IamSetItemAddReq};
-use crate::iam_config::IamBasicConfigApi;
+use crate::iam_config::{IamBasicConfigApi, IamConfig};
 use crate::iam_constants::{RBUM_SCOPE_LEVEL_APP, RBUM_SCOPE_LEVEL_TENANT};
 use crate::iam_enumeration::{IamRelKind, IamSetCateKind, IamSetKind};
 
@@ -178,9 +179,19 @@ impl IamSetServ {
         )
         .await;
 
+        let item = RbumSetServ::get_rbum(set_id, &RbumSetFilterReq::default(), funs, ctx).await?;
+        let mut kind = item.kind;
+
+        if kind == IamSetKind::Apps.to_string() && result.is_ok() {
+            SpiKvClient::add_or_modify_key_name(
+                &format!("{}:{}", funs.conf::<IamConfig>().spi.kv_tenant_prefix.clone(), result.clone().unwrap()),
+                &add_req.name,
+                funs,
+                ctx,
+            )
+            .await?;
+        }
         if result.is_ok() {
-            let item = RbumSetServ::get_rbum(set_id, &RbumSetFilterReq::default(), funs, ctx).await?;
-            let mut kind = item.kind;
             kind.make_ascii_lowercase();
             let (op_describe, tag, op_kind) = match kind.as_str() {
                 "org" => ("添加部门".to_string(), Some(LogParamTag::IamOrg), Some("Add".to_string())),
@@ -239,6 +250,15 @@ impl IamSetServ {
             )
             .await?;
             let mut kind = item.kind;
+            if kind == IamSetKind::Apps.to_string() {
+                SpiKvClient::add_or_modify_key_name(
+                    &format!("{}:{}", funs.conf::<IamConfig>().spi.kv_tenant_prefix.clone(), &set_cate_id),
+                    &set_cate_item.name.clone(),
+                    funs,
+                    ctx,
+                )
+                .await?;
+            }
             kind.make_ascii_lowercase();
             match kind.as_str() {
                 "org" => {
