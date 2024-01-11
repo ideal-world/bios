@@ -858,4 +858,46 @@ impl IamSetServ {
         }
         Ok(())
     }
+
+    pub async fn refresh_app_groups_data(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let set_ids = RbumSetServ::find_id_rbums(
+            &RbumSetFilterReq {
+                basic: RbumBasicFilterReq {
+                    own_paths: Some("".to_string()),
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                kind: Some(IamSetKind::Apps.to_string()),
+                ..Default::default()
+            },
+            None,
+            None,
+            funs,
+            ctx,
+        )
+        .await?;
+        for set_id in set_ids {
+            let id_and_names = RbumSetCateServ::find_id_name_rbums(
+                &RbumSetCateFilterReq {
+                    basic: RbumBasicFilterReq {
+                        own_paths: Some("".to_string()),
+                        with_sub_own_paths: true,
+                        ..Default::default()
+                    },
+                    rel_rbum_set_id: Some(set_id),
+                    ..Default::default()
+                },
+                None,
+                None,
+                funs,
+                ctx,
+            )
+            .await?;
+            for (id, name) in id_and_names {
+                SpiKvClient::add_or_modify_key_name(&format!("{}:{}", funs.conf::<IamConfig>().spi.kv_tenant_prefix.clone(), id), &name, funs, ctx).await?;
+            }
+        }
+    
+        Ok(())
+    }
 }

@@ -1,7 +1,5 @@
 use bios_basic::process::task_processor::TaskProcessor;
 use bios_basic::rbum::rbum_enumeration::{RbumCertStatusKind, RbumScopeLevelKind};
-use bios_basic::rbum::serv::rbum_set_serv::{RbumSetCateServ, RbumSetServ};
-use bios_sdk_invoke::clients::spi_kv_client::SpiKvClient;
 use bios_sdk_invoke::invoke_initializer;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
@@ -14,7 +12,7 @@ use tardis::web::ws_client::TardisWSClient;
 use tardis::{TardisFuns, TardisFunsInst};
 
 use bios_basic::rbum::dto::rbum_domain_dto::RbumDomainAddReq;
-use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumSetCateFilterReq, RbumSetFilterReq};
+use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
 use bios_basic::rbum::dto::rbum_kind_dto::RbumKindAddReq;
 use bios_basic::rbum::rbum_initializer;
 use bios_basic::rbum::rbum_initializer::get_first_account_context;
@@ -142,7 +140,6 @@ pub async fn init_db(mut funs: TardisFunsInst) -> TardisResult<Option<(String, S
     let ctx = get_first_account_context(iam_constants::RBUM_KIND_CODE_IAM_ACCOUNT, iam_constants::COMPONENT_CODE, &funs).await?;
     let sysadmin_info = if let Some(ctx) = ctx {
         init_basic_info(&funs, &ctx).await?;
-        refresh_app_groups_data(&funs, &ctx).await?;
         None
     } else {
         let db_kind = TardisFuns::reldb().backend();
@@ -158,48 +155,6 @@ pub async fn init_db(mut funs: TardisFunsInst) -> TardisResult<Option<(String, S
     };
     funs.commit().await?;
     Ok(sysadmin_info)
-}
-
-async fn refresh_app_groups_data(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-    let set_ids = RbumSetServ::find_id_rbums(
-        &RbumSetFilterReq {
-            basic: RbumBasicFilterReq {
-                own_paths: Some("".to_string()),
-                with_sub_own_paths: true,
-                ..Default::default()
-            },
-            kind: Some(IamSetKind::Apps.to_string()),
-            ..Default::default()
-        },
-        None,
-        None,
-        funs,
-        ctx,
-    )
-    .await?;
-    for set_id in set_ids {
-        let id_and_names = RbumSetCateServ::find_id_name_rbums(
-            &RbumSetCateFilterReq {
-                basic: RbumBasicFilterReq {
-                    own_paths: Some("".to_string()),
-                    with_sub_own_paths: true,
-                    ..Default::default()
-                },
-                rel_rbum_set_id: Some(set_id),
-                ..Default::default()
-            },
-            None,
-            None,
-            funs,
-            ctx,
-        )
-        .await?;
-        for (id, name) in id_and_names {
-            SpiKvClient::add_or_modify_key_name(&format!("{}:{}", funs.conf::<IamConfig>().spi.kv_tenant_prefix.clone(), id), &name, funs, ctx).await?;
-        }
-    }
-
-    Ok(())
 }
 
 async fn init_basic_info<'a>(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {

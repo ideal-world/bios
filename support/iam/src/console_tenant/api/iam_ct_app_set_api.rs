@@ -195,4 +195,14 @@ impl IamCtAppSetApi {
         ctx.execute_task().await?;
         TardisResp::ok(result)
     }
+    
+    /// refresh data
+    #[oai(path = "/refresh_data", method = "get")]
+    async fn refresh_data(&self, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
+        add_remote_ip(request, &ctx.0).await?;
+        let funs = iam_constants::get_tardis_inst();
+        IamSetServ::refresh_app_groups_data(&funs, &ctx.0).await?;
+        ctx.0.execute_task().await?;
+        TardisResp::ok(Void {})
+    }
 }
