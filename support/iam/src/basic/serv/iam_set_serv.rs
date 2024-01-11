@@ -182,7 +182,7 @@ impl IamSetServ {
         let item = RbumSetServ::get_rbum(set_id, &RbumSetFilterReq::default(), funs, ctx).await?;
         let mut kind = item.kind;
 
-        if kind == "Apps" && result.is_ok() {
+        if kind == IamSetKind::Apps.to_string() && result.is_ok() {
             SpiKvClient::add_or_modify_key_name(
                 &format!("{}:{}", funs.conf::<IamConfig>().spi.kv_tenant_prefix.clone(), result.clone().unwrap()),
                 &add_req.name,
@@ -250,7 +250,7 @@ impl IamSetServ {
             )
             .await?;
             let mut kind = item.kind;
-            if kind == "Apps" {
+            if kind == IamSetKind::Apps.to_string() {
                 SpiKvClient::add_or_modify_key_name(
                     &format!("{}:{}", funs.conf::<IamConfig>().spi.kv_tenant_prefix.clone(), &set_cate_id),
                     &set_cate_item.name.clone(),

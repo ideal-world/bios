@@ -168,7 +168,7 @@ async fn refresh_app_groups_data(funs: &TardisFunsInst, ctx: &TardisContext) -> 
                 with_sub_own_paths: true,
                 ..Default::default()
             },
-            kind: Some("Apps".to_string()),
+            kind: Some(IamSetKind::Apps.to_string()),
             ..Default::default()
         },
         None,
