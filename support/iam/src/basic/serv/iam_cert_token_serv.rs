@@ -120,7 +120,7 @@ impl IamCertTokenServ {
         )
         .await?;
         let _ = IamLogClient::add_ctx_task(LogParamTag::Token, Some(token.to_string()), "add token".to_string(), None, ctx).await;
-        let _ = IamLogClient::add_ctx_task(LogParamTag::SecurityVisit, Some(token.to_string()), "登录".to_string(), Some("Login".to_string()), ctx).await;
+        let _ = IamLogClient::add_ctx_task(LogParamTag::SecurityVisit, Some(ctx.owner.clone()), "登录".to_string(), Some("Login".to_string()), ctx).await;
         // 根据安全配置的Token Expire，计算token的活化有效期
         if let Some(config) =
             IamConfigServ::get_config_by_code_and_item_id(&IamConfigKind::TokenExpire, &get_max_level_id_by_context(ctx).unwrap_or("".to_string()), funs, ctx).await?
