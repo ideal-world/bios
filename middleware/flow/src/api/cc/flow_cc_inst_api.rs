@@ -99,6 +99,28 @@ impl FlowCcInstApi {
         TardisResp::ok(result)
     }
 
+    /// Batch transfer State By State Id / 批量流转
+    #[oai(path = "/batch/:flow_inst_ids/transition/transfer", method = "put")]
+    async fn batch_transfer(
+        &self,
+        flow_inst_ids: Path<String>,
+        transfer_req: Json<FlowInstTransferReq>,
+        ctx: TardisContextExtractor,
+    ) -> TardisApiResult<Vec<FlowInstTransferResp>> {
+        let mut funs = flow_constants::get_tardis_inst();
+        let mut result = vec![];
+        let flow_inst_ids: Vec<_> = flow_inst_ids.split(',').collect();
+        funs.begin().await?;
+        for flow_inst_id in &flow_inst_ids {
+            FlowInstServ::check_transfer_vars(flow_inst_id, &transfer_req.0, &funs, &ctx.0).await?;
+        }
+        for flow_inst_id in flow_inst_ids {
+            result.push(FlowInstServ::transfer(flow_inst_id, &transfer_req.0, false, FlowExternalCallbackOp::Default, &funs, &ctx.0).await?);
+        }
+        funs.commit().await?;
+        TardisResp::ok(result)
+    }
+
     /// Modify Assigned / 同步执行人信息
     #[oai(path = "/:flow_inst_id/transition/modify_assigned", method = "post")]
     async fn modify_assigned(&self, flow_inst_id: Path<String>, modify_req: Json<FlowInstModifyAssignedReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
