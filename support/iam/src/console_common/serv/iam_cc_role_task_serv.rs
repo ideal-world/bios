@@ -204,7 +204,7 @@ impl IamCcRoleTaskServ {
                 Ok(())
             },
             funs,
-            Some(ws_iam_send_client().await.clone()),
+            ws_iam_send_client().await.clone(),
             default_iam_send_avatar().await.clone(),
             ctx,
         )

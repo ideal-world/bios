@@ -194,7 +194,7 @@ impl RbumItemCrudOperation<iam_role::ActiveModel, IamRoleAddReq, IamRoleModifyRe
                     Ok(())
                 },
                 funs,
-                Some(ws_iam_send_client().await.clone()),
+                ws_iam_send_client().await.clone(),
                 default_iam_send_avatar().await.clone(),
                 ctx,
             )
@@ -305,7 +305,7 @@ impl RbumItemCrudOperation<iam_role::ActiveModel, IamRoleAddReq, IamRoleModifyRe
                 Ok(())
             },
             funs,
-            Some(ws_iam_send_client().await.clone()),
+            ws_iam_send_client().await.clone(),
             default_iam_send_avatar().await.clone(),
             ctx,
         )

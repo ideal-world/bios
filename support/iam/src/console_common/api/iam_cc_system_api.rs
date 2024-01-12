@@ -41,7 +41,7 @@ impl IamCcSystemApi {
             TaskProcessor::stop_task(
                 &funs.conf::<IamConfig>().cache_key_async_task_status,
                 task_id,
-                Some(ws_iam_send_client().await.clone()),
+                ws_iam_send_client().await.clone(),
                 default_iam_send_avatar().await.clone(),
                 &funs,
                 &ctx.0,
