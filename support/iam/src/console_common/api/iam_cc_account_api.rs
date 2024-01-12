@@ -3,14 +3,14 @@ use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem::web::Json;
 use tardis::web::poem::Request;
 use tardis::web::poem_openapi;
-use tardis::web::poem_openapi::param::Query;
+use tardis::web::poem_openapi::param::{Query, Path};
 use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp};
 
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumItemRelFilterReq};
 use bios_basic::rbum::rbum_enumeration::RbumRelFromKind;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
-use crate::basic::dto::iam_account_dto::{IamAccountAddByLdapResp, IamAccountBoneResp, IamAccountExtSysBatchAddReq, IamAccountExtSysResp};
+use crate::basic::dto::iam_account_dto::{IamAccountAddByLdapResp, IamAccountBoneResp, IamAccountExtSysBatchAddReq, IamAccountExtSysResp, IamAccountDetailAggResp};
 use crate::basic::dto::iam_filer_dto::IamAccountFilterReq;
 use crate::basic::serv::iam_account_serv::IamAccountServ;
 #[cfg(feature = "ldap_client")]
@@ -96,6 +96,30 @@ impl IamCcAccountApi {
                 })
                 .collect(),
         })
+    }
+
+    /// Get Account
+    #[oai(path = "/:id", method = "get")]
+    async fn get(&self, id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<IamAccountDetailAggResp> {
+        add_remote_ip(request, &ctx.0).await?;
+        let funs = iam_constants::get_tardis_inst();
+        let result = IamAccountServ::get_account_detail_aggs(
+            &id.0,
+            &IamAccountFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            false,
+            true,
+            &funs,
+            &ctx.0,
+        )
+        .await?;
+        ctx.0.execute_task().await?;
+        TardisResp::ok(result)
     }
 
     /// Find Account Name By Ids
