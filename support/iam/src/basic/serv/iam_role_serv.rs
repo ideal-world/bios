@@ -33,6 +33,7 @@ use crate::iam_config::{IamBasicConfigApi, IamBasicInfoManager, IamConfig};
 use crate::iam_constants::{self, RBUM_ITEM_ID_SUB_ROLE_LEN};
 use crate::iam_constants::{RBUM_SCOPE_LEVEL_APP, RBUM_SCOPE_LEVEL_TENANT};
 use crate::iam_enumeration::{IamRelKind, IamRoleKind};
+use crate::iam_initializer::{default_iam_avatar, default_iam_send_avatar, ws_iam_client, ws_iam_send_client};
 
 use super::clients::iam_log_client::{IamLogClient, LogParamTag};
 use super::clients::iam_search_client::IamSearchClient;
@@ -193,6 +194,8 @@ impl RbumItemCrudOperation<iam_role::ActiveModel, IamRoleAddReq, IamRoleModifyRe
                     Ok(())
                 },
                 funs,
+                Some(ws_iam_send_client().await.clone()),
+                default_iam_send_avatar().await.clone(),
                 ctx,
             )
             .await?;
@@ -302,6 +305,8 @@ impl RbumItemCrudOperation<iam_role::ActiveModel, IamRoleAddReq, IamRoleModifyRe
                 Ok(())
             },
             funs,
+            Some(ws_iam_send_client().await.clone()),
+            default_iam_send_avatar().await.clone(),
             ctx,
         )
         .await?;

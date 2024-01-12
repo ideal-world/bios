@@ -47,6 +47,7 @@ use crate::basic::serv::iam_key_cache_serv::IamIdentCacheServ;
 use crate::iam_config::{IamBasicConfigApi, IamConfig};
 use crate::iam_constants::{self, RBUM_SCOPE_LEVEL_TENANT};
 use crate::iam_enumeration::{IamAccountLockStateKind, IamCertExtKind, IamCertKernelKind, IamCertTokenKind, IamRelKind, IamResKind};
+use crate::iam_initializer::{default_iam_avatar, default_iam_send_avatar, ws_iam_client, ws_iam_send_client};
 
 lazy_static! {
     static ref SYNC_LOCK: Arc<Mutex<Option<usize>>> = Arc::new(Mutex::new(None));
@@ -418,6 +419,8 @@ impl IamCertServ {
                 Ok(())
             },
             funs,
+            Some(ws_iam_send_client().await.clone()),
+            default_iam_send_avatar().await.clone(),
             ctx,
         )
         .await?;
@@ -1377,6 +1380,8 @@ impl IamCertServ {
                 result
             },
             funs,
+            Some(ws_iam_send_client().await.clone()),
+            default_iam_send_avatar().await.clone(),
             ctx,
         )
         .await?;

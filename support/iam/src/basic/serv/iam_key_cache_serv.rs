@@ -26,6 +26,7 @@ use crate::basic::serv::iam_rel_serv::IamRelServ;
 use crate::iam_config::IamConfig;
 use crate::iam_constants;
 use crate::iam_enumeration::{IamCertTokenKind, IamRelKind};
+use crate::iam_initializer::{default_iam_avatar, ws_iam_client, ws_iam_send_client, default_iam_send_avatar};
 pub struct IamIdentCacheServ;
 
 impl IamIdentCacheServ {
@@ -212,6 +213,8 @@ impl IamIdentCacheServ {
                 Ok(())
             },
             funs,
+            Some(ws_iam_send_client().await.clone()),
+            default_iam_send_avatar().await.clone(),
             ctx,
         )
         .await?;
