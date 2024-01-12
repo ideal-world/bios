@@ -254,26 +254,21 @@ impl RbumItemCrudOperation<iam_res::ActiveModel, IamResAddReq, IamResModifyReq, 
     }
 
     async fn before_delete_item(id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<IamResDetailResp>> {
-        let deleted_item = Self::get_item(
-            id,
-            &IamResFilterReq {
-                basic: RbumBasicFilterReq {
-                    with_sub_own_paths: true,
+        Ok(Some(
+            Self::get_item(
+                id,
+                &IamResFilterReq {
+                    basic: RbumBasicFilterReq {
+                        with_sub_own_paths: true,
+                        ..Default::default()
+                    },
                     ..Default::default()
                 },
-                ..Default::default()
-            },
-            funs,
-            ctx,
-        )
-        .await?;
-        if deleted_item.kind == IamResKind::Ele || deleted_item.kind == IamResKind::Menu {
-            let delete_api_res = IamResServ::find_to_simple_rel_roles(&IamRelKind::IamResApi, id, None, None, funs, ctx).await?.into_iter().map(|rel| rel.rel_id).collect_vec();
-            for delete_api_id in delete_api_res {
-                IamRelServ::delete_simple_rel(&IamRelKind::IamResApi, &delete_api_id, id, funs, ctx).await?;
-            }
-        }
-        Ok(Some(deleted_item))
+                funs,
+                ctx,
+            )
+            .await?,
+        ))
     }
 
     async fn after_delete_item(_: &str, deleted_item: &Option<IamResDetailResp>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
@@ -622,6 +617,29 @@ impl IamResServ {
             result.insert(app_id, res);
         }
         Ok(result)
+    }
+
+    pub async fn delete_res(id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<u64> {
+        let item_detail = Self::get_item(
+            id,
+            &IamResFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?;
+        if item_detail.kind == IamResKind::Ele || item_detail.kind == IamResKind::Menu {
+            let delete_api_res = IamResServ::find_to_simple_rel_roles(&IamRelKind::IamResApi, id, None, None, funs, ctx).await?.into_iter().map(|rel| rel.rel_id).collect_vec();
+            for delete_api_id in delete_api_res {
+                IamRelServ::delete_simple_rel(&IamRelKind::IamResApi, &delete_api_id, id, funs, ctx).await?;
+            }
+        }
+        Self::delete_item_with_all_rels(id, funs, ctx).await
     }
 }
 
