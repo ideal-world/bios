@@ -30,9 +30,9 @@ bios-basic = { path = "../../basic", features = ["default"] }
 lazy_static = { workspace = true }
 jsonwebtoken = "8"
 poem-grpc = "0.2.25"
-prost = "0.11.9"
+prost-types = "0.12"
+prost = "0.12"
 poem = "1"
-prost-types = "0.11.9"
 strum = { version = "0.25.0", features = ["derive"] }
 tokio-stream = { version = "0.1.14", features = ["sync"] }
 bios-sdk-invoke = { path = "../../sdk/invoke", features = [

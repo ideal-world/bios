@@ -6,7 +6,7 @@ use crate::{
     iam_config::IamConfig,
     iam_constants,
     iam_enumeration::{IamRelKind, IamRoleKind},
-    iam_initializer::{default_iam_avatar, ws_iam_client, ws_iam_send_client, default_iam_send_avatar},
+    iam_initializer::{default_iam_avatar, default_iam_send_avatar, ws_iam_client, ws_iam_send_client},
 };
 use bios_basic::{
     process::task_processor::TaskProcessor,

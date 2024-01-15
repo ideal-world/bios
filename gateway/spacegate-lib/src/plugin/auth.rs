@@ -178,7 +178,7 @@ impl SgPluginFilter for SgFilterAuth {
                         .into(),
                 ),
                 log: init_dto.gateway_parameters.log_level.as_ref().map(|l| LogConfig {
-                    level: l.parse().unwrap_or_default(),
+                    level: Some(l.parse().unwrap_or_default()),
                     ..Default::default()
                 }),
                 ..Default::default()
