@@ -409,7 +409,7 @@ impl RbumSetServ {
         )
         .await?
         {
-            funs.cache().set_ex(key, &rbum_set.id, funs.rbum_conf_cache_key_set_code_expire_sec()).await?;
+            funs.cache().set_ex(key, &rbum_set.id, funs.rbum_conf_cache_key_set_code_expire_sec() as u64).await?;
             Ok(Some(rbum_set.id))
         } else {
             Ok(None)

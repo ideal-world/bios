@@ -106,7 +106,7 @@ impl IamCsResApi {
         add_remote_ip(request, &ctx.0).await?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        IamResServ::delete_item_with_all_rels(&id.0, &funs, &ctx.0).await?;
+        IamResServ::delete_res(&id.0, &funs, &ctx.0).await?;
         funs.commit().await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void {})

@@ -861,8 +861,15 @@ pub async fn init_ws_iam_event_client() -> TardisWSClient {
                     };
                     tokio::spawn(async move {
                         let funs = iam_constants::get_tardis_inst();
-                        let result =
-                            TaskProcessor::execute_task_external(&cache_key, task_id, ws_iam_send_client().await.clone(), default_iam_send_avatar().await.clone(), &funs, &ctx).await;
+                        let result = TaskProcessor::execute_task_external(
+                            &cache_key,
+                            task_id,
+                            ws_iam_send_client().await.clone(),
+                            default_iam_send_avatar().await.clone(),
+                            &funs,
+                            &ctx,
+                        )
+                        .await;
                         if let Err(err) = result {
                             error!("[Bios.Iam] failed to execute_task_external item: {}", err);
                         }
@@ -875,7 +882,15 @@ pub async fn init_ws_iam_event_client() -> TardisWSClient {
                     tokio::spawn(async move {
                         let funs = iam_constants::get_tardis_inst();
                         for task_id in task_ids {
-                            let result = TaskProcessor::stop_task(&cache_key, task_id, ws_iam_send_client().await.clone(), default_iam_send_avatar().await.clone(), &funs, &ctx).await;
+                            let result = TaskProcessor::stop_task(
+                                &cache_key,
+                                task_id,
+                                ws_iam_send_client().await.clone(),
+                                default_iam_send_avatar().await.clone(),
+                                &funs,
+                                &ctx,
+                            )
+                            .await;
                             if let Err(err) = result {
                                 error!("[Bios.Iam] failed to stop_task_external : {}", err);
                             }

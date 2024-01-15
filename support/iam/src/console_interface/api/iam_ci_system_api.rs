@@ -7,7 +7,7 @@ use tardis::web::poem_openapi::payload::Json;
 use tardis::web::web_resp::{TardisApiResult, TardisResp, Void};
 
 use crate::iam_constants;
-use crate::iam_initializer::{default_iam_avatar, ws_iam_client, ws_iam_send_client, default_iam_send_avatar};
+use crate::iam_initializer::{default_iam_avatar, default_iam_send_avatar, ws_iam_client, ws_iam_send_client};
 #[derive(Clone, Default)]
 pub struct IamCiSystemApi;
 
@@ -33,7 +33,15 @@ impl IamCiSystemApi {
     #[oai(path = "/task/execute", method = "put")]
     async fn execute_task_external(&self, cache_key: Query<String>, task_id: Query<i64>, ctx: TardisContextExtractor) -> TardisApiResult<i64> {
         let funs = iam_constants::get_tardis_inst();
-        let task_id = TaskProcessor::execute_task_external(&cache_key.0, task_id.0, ws_iam_send_client().await.clone(), default_iam_send_avatar().await.clone(), &funs, &ctx.0).await?;
+        let task_id = TaskProcessor::execute_task_external(
+            &cache_key.0,
+            task_id.0,
+            ws_iam_send_client().await.clone(),
+            default_iam_send_avatar().await.clone(),
+            &funs,
+            &ctx.0,
+        )
+        .await?;
         TardisResp::ok(task_id)
     }
 
@@ -43,7 +51,15 @@ impl IamCiSystemApi {
         let task_ids = task_ids.0.split(',');
         for task_id in task_ids {
             let task_id = task_id.parse().map_err(|_| funs.err().format_error("system", "task", "task id format error", "406-iam-task-id-format"))?;
-            TaskProcessor::stop_task(&cache_key.0, task_id, ws_iam_send_client().await.clone(), default_iam_send_avatar().await.clone(), &funs, &ctx.0).await?;
+            TaskProcessor::stop_task(
+                &cache_key.0,
+                task_id,
+                ws_iam_send_client().await.clone(),
+                default_iam_send_avatar().await.clone(),
+                &funs,
+                &ctx.0,
+            )
+            .await?;
         }
         TardisResp::ok(Void {})
     }

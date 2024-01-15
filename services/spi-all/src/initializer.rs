@@ -1,7 +1,7 @@
 use bios_basic::rbum::rbum_config::RbumConfig;
 use bios_basic::rbum::rbum_initializer;
 use bios_spi_cache::cache_initializer;
-use bios_spi_conf::conf_initializer;
+
 use bios_spi_kv::kv_initializer;
 use bios_spi_log::log_initializer;
 use bios_spi_object::object_initializer;
