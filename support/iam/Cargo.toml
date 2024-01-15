@@ -36,7 +36,7 @@ tardis = { workspace = true, features = [
     "mail",
 ] }
 bios-basic = { path = "../../basic", features = ["default", "with-mq"] }
-bios-sdk-invoke = { path = "../../sdk/invoke", features = ["default"] }
+bios-sdk-invoke = { path = "../../sdk/invoke", features = ["default", "event"] }
 
 # ldap
 ldap3_proto = { version = "0.3", optional = true }

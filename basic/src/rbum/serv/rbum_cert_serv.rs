@@ -737,7 +737,7 @@ impl RbumCertServ {
             .and_where(Expr::col(rbum_cert::Column::StartTime).lte(Utc::now().naive_utc()));
         let rbum_cert = funs.db().get_dto::<IdAndSkResp>(&query).await?;
         if let Some(rbum_cert) = rbum_cert {
-            if funs.cache().exists(&format!("{}{}", funs.rbum_conf_cache_key_cert_locked_(), rbum_cert.rel_rbum_id)).await? {
+            if Self::cert_is_locked(&rbum_cert.rel_rbum_id, funs).await {
                 return Err(funs.err().unauthorized(&Self::get_obj_name(), "valid", "cert is locked", "400-rbum-cert-lock"));
             }
             if !ignore_end_time && rbum_cert.end_time < Utc::now() {
@@ -860,7 +860,7 @@ impl RbumCertServ {
         }
         let rbum_cert = funs.db().get_dto::<IdAndSkResp>(&query).await?;
         if let Some(rbum_cert) = rbum_cert {
-            if funs.cache().exists(&format!("{}{}", funs.rbum_conf_cache_key_cert_locked_(), rbum_cert.rel_rbum_id)).await? {
+            if Self::cert_is_locked(&rbum_cert.rel_rbum_id, funs).await {
                 return Err(funs.err().unauthorized(&Self::get_obj_name(), "valid_lock", "cert is locked", "401-rbum-cert-lock"));
             }
             if let Some(rbum_cert_conf_id) = Some(rbum_cert.rel_rbum_cert_conf_id) {
@@ -1280,5 +1280,9 @@ impl RbumCertServ {
 
     fn encrypt_sk(sk: &str, ak: &str, rbum_cert_conf_id: &str) -> TardisResult<String> {
         TardisFuns::crypto.digest.sha512(format!("{sk}-{ak}-{rbum_cert_conf_id}").as_str())
+    }
+
+    pub async fn cert_is_locked(rel_rbum_id: &str, funs: &TardisFunsInst) -> bool {
+        funs.cache().exists(&format!("{}{}", funs.rbum_conf_cache_key_cert_locked_(), rel_rbum_id)).await.is_ok()
     }
 }

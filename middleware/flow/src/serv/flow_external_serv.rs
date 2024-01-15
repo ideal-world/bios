@@ -177,7 +177,7 @@ impl FlowExternalServ {
             .body
             .ok_or_else(|| funs.err().internal_error("flow_external", "do_notify_changes", "illegal response", "500-external-illegal-response"))?;
         if resp.code != *"200" {
-            return Err(funs.err().internal_error("flow_external", "do_find_embed_subrole_id", "illegal response", "500-external-illegal-response"));
+            return Err(funs.err().internal_error("flow_external", "do_notify_changes", "illegal response", "500-external-illegal-response"));
         }
         if let Some(data) = resp.body {
             Ok(data)
