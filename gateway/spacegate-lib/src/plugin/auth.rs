@@ -124,20 +124,6 @@ impl SgPluginFilter for SgFilterAuth {
     }
 
     async fn init(&mut self, init_dto: &SgPluginFilterInitDto) -> TardisResult<()> {
-        if let Some(log_level) = &init_dto.gateway_parameters.log_level {
-            let mut log_config = TardisFuns::fw_config().log().clone();
-            fn directive(path: &str, lvl: &str) -> Directive {
-                let s = format!("{path}={lvl}");
-                format!("{path}={lvl}").parse().unwrap_or_else(|e| {
-                    tracing::error!("[SG.Filter.Auth] failed to parse directive {:?}: {}", s, e);
-                    Default::default()
-                })
-            }
-            log_config.directives.push(directive(crate::PACKAGE_NAME, log_level));
-            log_config.directives.push(directive(bios_auth::auth_constants::PACKAGE_NAME, log_level));
-            TardisFuns::tracing().update_config(&log_config)?;
-        }
-
         let config_md5 = TardisFuns::crypto.digest.md5(TardisFuns::json.obj_to_string(self)?)?;
 
         let mut instance = INSTANCE.get_or_init(Default::default).write().await;
@@ -181,6 +167,20 @@ impl SgPluginFilter for SgFilterAuth {
             },
         })
         .await?;
+
+        if let Some(log_level) = &init_dto.gateway_parameters.log_level {
+            let mut log_config = TardisFuns::fw_config().log().clone();
+            fn directive(path: &str, lvl: &str) -> Directive {
+                let s = format!("{path}={lvl}");
+                format!("{path}={lvl}").parse().unwrap_or_else(|e| {
+                    tracing::error!("[SG.Filter.Auth] failed to parse directive {:?}: {}", s, e);
+                    Default::default()
+                })
+            }
+            log_config.directives.push(directive(crate::PACKAGE_NAME, log_level));
+            log_config.directives.push(directive(bios_auth::auth_constants::PACKAGE_NAME, log_level));
+            TardisFuns::tracing().update_config(&log_config)?;
+        }
 
         let handle = auth_initializer::init().await?;
         *instance = Some((config_md5, handle));
