@@ -1,35 +1,35 @@
 [workspace]
 
 members = [
-    "basic",
-    # "spi/*",
-    "spi/spi-cache",
-    "spi/spi-search",
-    "spi/spi-graph",
-    "spi/spi-kv",
-    "spi/spi-log",
-    "spi/spi-object",
-    "spi/spi-plugin",
-    "spi/spi-stats",
-    "spi/spi-reldb",
-    "gateway/test",
-    "gateway/spacegate-lib",
-    "middleware/*",
-    "support/iam",
-    "support/auth",
-    "support/enhance-wasm",
-    "support/reach",
-    "services/*",
-    "sdk/*",
-    "clients/*",
+  "basic",
+  # "spi/*",
+  "spi/spi-cache",
+  "spi/spi-search",
+  "spi/spi-graph",
+  "spi/spi-kv",
+  "spi/spi-log",
+  "spi/spi-object",
+  "spi/spi-plugin",
+  "spi/spi-stats",
+  "spi/spi-reldb",
+  "gateway/test",
+  "gateway/spacegate-lib",
+  "middleware/*",
+  "support/iam",
+  "support/auth",
+  "support/enhance-wasm",
+  "support/reach",
+  "services/*",
+  "sdk/*",
+  "clients/*",
 ]
 
 [workspace.package]
 version = "0.1.0"
 authors = [
-    "gudaoxuri <i@sunisle.org>",
-    "hermitCode <17743125563@163.com>",
-    "RWDai <rwdai@foxmail.com>",
+  "gudaoxuri <i@sunisle.org>",
+  "hermitCode <17743125563@163.com>",
+  "RWDai <rwdai@foxmail.com>",
 ]
 homepage = "https://bios.idealworld.group"
 documentation = "https://bios.idealworld.group"
@@ -56,17 +56,17 @@ lazy_static = { version = "1" }
 itertools = { version = "0" }
 fancy-regex = { version = "0" }
 run_script = { version = "0.10" }
-testcontainers-modules = { version = "0.1" }
+testcontainers-modules = { version = "0.2" }
 strum = { version = "0.25", features = ["derive"] }
 # tardis
-tardis = { version = "=0.1.0-rc.6" }
+tardis = { version = "0.1.0-rc.8" }
 # tardis = { path = "../tardis/tardis" }
 # tardis = { git = "https://github.com/ideal-world/tardis.git", rev = "9424e16" }
 #spacegate
-spacegate-kernel = { git = "https://github.com/ideal-world/spacegate.git", rev = "40e7bf8d0b", features = [
-    "ws",
-    "cache",
-    "k8s",
+spacegate-kernel = { git = "https://github.com/ideal-world/spacegate.git", rev = "fbb828d", features = [
+  "ws",
+  "cache",
+  "k8s",
 ] }
 #spacegate-kernel = { path = "../spacegate/kernel",features = [
 #    "ws",

@@ -24,7 +24,7 @@ pub async fn set(req: &KvReq, _funs: &TardisFunsInst, _ctx: &TardisContext, inst
 
 pub async fn set_ex(req: &KvWithExReq, _funs: &TardisFunsInst, _ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
     let bs_inst = inst.inst::<TardisCacheClient>();
-    Ok(bs_inst.0.set_ex(&format_key(&req.key, bs_inst.1), &req.value, req.exp_sec as usize).await?)
+    Ok(bs_inst.0.set_ex(&format_key(&req.key, bs_inst.1), &req.value, req.exp_sec as u64).await?)
 }
 
 pub async fn set_nx(req: &KvReq, _funs: &TardisFunsInst, _ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<bool> {
@@ -59,7 +59,7 @@ pub async fn exists(req: &KReq, _funs: &TardisFunsInst, _ctx: &TardisContext, in
 
 pub async fn expire(req: &ExpReq, _funs: &TardisFunsInst, _ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
     let bs_inst = inst.inst::<TardisCacheClient>();
-    Ok(bs_inst.0.expire(&format_key(&req.key, bs_inst.1), req.exp_sec as usize).await?)
+    Ok(bs_inst.0.expire(&format_key(&req.key, bs_inst.1), req.exp_sec as i64).await?)
 }
 
 pub async fn ttl(req: &KReq, _funs: &TardisFunsInst, _ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<u64> {

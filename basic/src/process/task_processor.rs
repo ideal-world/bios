@@ -9,21 +9,16 @@ use tardis::{
     log,
     serde_json::Value,
     tokio::{sync::RwLock, task::JoinHandle},
-    web::{
-        ws_client::{self, TardisWSClient},
-        ws_processor::TardisWebsocketReq,
-    },
+    web::{ws_client::TardisWSClient, ws_processor::TardisWebsocketReq},
     TardisFuns, TardisFunsInst,
 };
-
-use crate::rbum::rbum_config::RbumConfigApi;
 
 lazy_static! {
     static ref TASK_HANDLE: Arc<RwLock<HashMap<i64, JoinHandle<()>>>> = Arc::new(RwLock::new(HashMap::new()));
 }
 const TASK_IN_CTX_FLAG: &str = "task_id";
 const NOTIFY_EVENT_IN_CTX_FLAG: &str = "notify";
-const TASK_PROCESSOR_DATA_EX: usize = 60 * 60 * 24;
+const TASK_PROCESSOR_DATA_EX: u64 = 60 * 60 * 24;
 const EVENT_EXECUTE_TASK_EXTERNAL: &str = "execute_task_external";
 const EVENT_TASK_STATUS_EXTERNAL: &str = "task_status_external";
 const EVENT_SET_TASK_PROCESS_DATA_EXTERNAL: &str = "set_task_process_data";
