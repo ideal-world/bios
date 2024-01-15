@@ -1,11 +1,13 @@
 use bios_basic::process::task_processor::TaskProcessor;
 use tardis::serde_json::Value;
+use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem_openapi;
 use tardis::web::poem_openapi::param::Path;
 use tardis::web::web_resp::{TardisApiResult, TardisResp, Void};
 
 use crate::iam_config::IamConfig;
 use crate::iam_constants;
+use crate::iam_initializer::{default_iam_avatar, default_iam_send_avatar, ws_iam_client, ws_iam_send_client};
 #[derive(Clone, Default)]
 pub struct IamCcSystemApi;
 
@@ -16,7 +18,7 @@ pub struct IamCcSystemApi;
 impl IamCcSystemApi {
     /// Get Async Task Status
     #[oai(path = "/task/:task_ids", method = "get")]
-    async fn task_check_finished(&self, task_ids: Path<String>) -> TardisApiResult<bool> {
+    async fn task_check_finished(&self, task_ids: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<bool> {
         let funs = iam_constants::get_tardis_inst();
         let task_ids = task_ids.0.split(',');
         for task_id in task_ids {
@@ -31,18 +33,26 @@ impl IamCcSystemApi {
 
     /// Stop Async Task
     #[oai(path = "/task/:task_ids", method = "delete")]
-    async fn stop_task(&self, task_ids: Path<String>) -> TardisApiResult<Void> {
+    async fn stop_task(&self, task_ids: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let funs = iam_constants::get_tardis_inst();
         let task_ids = task_ids.0.split(',');
         for task_id in task_ids {
             let task_id = task_id.parse().map_err(|_| funs.err().format_error("system", "task", "task id format error", "406-iam-task-id-format"))?;
-            TaskProcessor::stop_task(&funs.conf::<IamConfig>().cache_key_async_task_status, task_id, &funs).await?;
+            TaskProcessor::stop_task(
+                &funs.conf::<IamConfig>().cache_key_async_task_status,
+                task_id,
+                ws_iam_send_client().await.clone(),
+                default_iam_send_avatar().await.clone(),
+                &funs,
+                &ctx.0,
+            )
+            .await?;
         }
         TardisResp::ok(Void {})
     }
 
     #[oai(path = "/task/process/:task_id", method = "get")]
-    async fn get_task_process_data(&self, task_id: Path<i64>) -> TardisApiResult<Value> {
+    async fn get_task_process_data(&self, task_id: Path<i64>, ctx: TardisContextExtractor) -> TardisApiResult<Value> {
         let funs = iam_constants::get_tardis_inst();
         let data = TaskProcessor::get_task_process_data(&funs.conf::<IamConfig>().cache_key_async_task_status, task_id.0, &funs).await?;
         TardisResp::ok(data)

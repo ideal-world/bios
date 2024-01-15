@@ -21,23 +21,23 @@ spi-pg = ["tardis/reldb-postgres"]
 [dependencies]
 serde.workspace = true
 tardis = { workspace = true, features = [
-    "reldb-postgres",
-    "web-server",
-    "crypto",
-    "web-server-grpc",
+  "reldb-postgres",
+  "web-server",
+  "crypto",
+  "web-server-grpc",
 ] }
 bios-basic = { path = "../../basic", features = ["default"] }
 lazy_static = { workspace = true }
 jsonwebtoken = "8"
-poem-grpc = "=0.2.22"
-prost = "0.11.9"
+poem-grpc = "0.2.25"
+prost-types = "0.12"
+prost = "0.12"
 poem = "1"
-prost-types = "0.11.9"
 strum = { version = "0.25.0", features = ["derive"] }
 tokio-stream = { version = "0.1.14", features = ["sync"] }
 bios-sdk-invoke = { path = "../../sdk/invoke", features = [
-    "iam",
-    "macro",
+  "iam",
+  "macro",
 ], default-features = false }
 ipnet = { version = "2", features = ["serde"] }
 [dev-dependencies]

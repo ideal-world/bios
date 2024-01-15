@@ -18,6 +18,8 @@ use tardis::web::poem::http::HeaderName;
 pub struct IamConfig {
     pub rbum: RbumConfig,
     pub in_event: bool,
+    pub iam_event_bus: EventTopicConfig,
+    pub iam_send_event_bus: EventTopicConfig,
     pub log_event: EventTopicConfig,
     pub search_event: EventTopicConfig,
     pub invoke: InvokeConfig,
@@ -125,6 +127,8 @@ impl Default for IamConfig {
         IamConfig {
             rbum: Default::default(),
             in_event: false,
+            iam_event_bus: EventTopicConfig::default(),
+            iam_send_event_bus: EventTopicConfig::default(),
             log_event: EventTopicConfig::default(),
             search_event: EventTopicConfig::default(),
             invoke: InvokeConfig::default(),

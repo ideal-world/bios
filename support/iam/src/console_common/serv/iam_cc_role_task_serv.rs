@@ -6,6 +6,7 @@ use crate::{
     iam_config::IamConfig,
     iam_constants,
     iam_enumeration::{IamRelKind, IamRoleKind},
+    iam_initializer::{default_iam_avatar, default_iam_send_avatar, ws_iam_client, ws_iam_send_client},
 };
 use bios_basic::{
     process::task_processor::TaskProcessor,
@@ -203,6 +204,8 @@ impl IamCcRoleTaskServ {
                 Ok(())
             },
             funs,
+            ws_iam_send_client().await.clone(),
+            default_iam_send_avatar().await.clone(),
             ctx,
         )
         .await?;

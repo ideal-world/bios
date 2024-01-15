@@ -75,7 +75,7 @@ pub(crate) async fn add_or_modify(add_or_modify: ScheduleJobAddOrModifyReq, funs
     // 3. notify cache
     let mut conn = funs.cache().cmd().await?;
     let cache_key_job_changed_info = &config.cache_key_job_changed_info;
-    conn.set_ex(&format!("{cache_key_job_changed_info}{code}"), "update", config.cache_key_job_changed_timer_sec as usize).await?;
+    conn.set_ex(&format!("{cache_key_job_changed_info}{code}"), "update", config.cache_key_job_changed_timer_sec as u64).await?;
     // 4. do add at local scheduler
     ScheduleTaskServ::add(add_or_modify, &config).await?;
     Ok(())
@@ -112,7 +112,7 @@ pub(crate) async fn delete(code: &str, funs: &TardisFunsInst, ctx: &TardisContex
     let config = funs.conf::<ScheduleConfig>();
     let mut conn = funs.cache().cmd().await?;
     let cache_key_job_changed_info = &config.cache_key_job_changed_info;
-    conn.set_ex(&format!("{cache_key_job_changed_info}{code}"), "delete", config.cache_key_job_changed_timer_sec as usize).await?;
+    conn.set_ex(&format!("{cache_key_job_changed_info}{code}"), "delete", config.cache_key_job_changed_timer_sec as u64).await?;
     // 4. do delete at local scheduler
     if service().code_uuid.read().await.get(code).is_some() {
         // delete schedual-task from kv cache first
@@ -451,7 +451,7 @@ impl OwnedScheduleTaskServ {
                 match cache_client.set_nx(&lock_key, "executing").await {
                     Ok(true) => {
                         // safety: it's ok to unwrap in this closure, scheduler will restart this job when after panic
-                        let Ok(()) = cache_client.expire(&lock_key, distributed_lock_expire_sec as usize).await else {
+                        let Ok(()) = cache_client.expire(&lock_key, distributed_lock_expire_sec as i64).await else {
                             return;
                         };
                         trace!("executing schedule task {code}");

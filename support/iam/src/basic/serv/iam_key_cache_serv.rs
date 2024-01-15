@@ -26,6 +26,7 @@ use crate::basic::serv::iam_rel_serv::IamRelServ;
 use crate::iam_config::IamConfig;
 use crate::iam_constants;
 use crate::iam_enumeration::{IamCertTokenKind, IamRelKind};
+use crate::iam_initializer::{default_iam_avatar, default_iam_send_avatar, ws_iam_client, ws_iam_send_client};
 pub struct IamIdentCacheServ;
 
 impl IamIdentCacheServ {
@@ -49,7 +50,7 @@ impl IamIdentCacheServ {
                 .set_ex(
                     format!("{}{}", funs.conf::<IamConfig>().cache_key_token_info_, token).as_str(),
                     token_value.as_str(),
-                    expire_sec as usize,
+                    expire_sec as u64,
                 )
                 .await?;
         } else {
@@ -212,6 +213,8 @@ impl IamIdentCacheServ {
                 Ok(())
             },
             funs,
+            ws_iam_send_client().await.clone(),
+            default_iam_send_avatar().await.clone(),
             ctx,
         )
         .await?;
@@ -353,7 +356,7 @@ impl IamIdentCacheServ {
                 .set_ex(
                     format!("{}{}", funs.conf::<IamConfig>().cache_key_aksk_info_, ak).as_str(),
                     format!("{},{},{}", sk, tenant_id, app_id.unwrap_or_default()).as_str(),
-                    expire_sec as usize,
+                    expire_sec as u64,
                 )
                 .await?;
         } else {
@@ -382,7 +385,7 @@ impl IamIdentCacheServ {
             .set_ex(
                 format!("{}{}", funs.conf::<IamConfig>().cache_key_double_auth_info, account_id).as_str(),
                 "",
-                funs.conf::<IamConfig>().cache_key_double_auth_expire_sec,
+                funs.conf::<IamConfig>().cache_key_double_auth_expire_sec as u64,
             )
             .await?;
 
@@ -579,7 +582,7 @@ impl IamResCacheServ {
             .set_ex(
                 &format!("{}{}", funs.conf::<IamConfig>().cache_key_res_changed_info_, uri),
                 "",
-                funs.conf::<IamConfig>().cache_key_res_changed_expire_sec,
+                funs.conf::<IamConfig>().cache_key_res_changed_expire_sec as u64,
             )
             .await?;
         Ok(())

@@ -6,10 +6,12 @@ use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 use tardis::db::reldb_client::TardisActiveModel;
 use tardis::db::sea_orm::sea_query::Table;
-use tardis::log::{error, info};
+use tardis::log::{error, info, warn};
+use tardis::serde_json::Value;
 use tardis::web::web_server::{TardisWebServer, WebServerModule};
 use tardis::web::ws_client::TardisWSClient;
-use tardis::{TardisFuns, TardisFunsInst};
+use tardis::web::ws_processor::TardisWebsocketMessage;
+use tardis::{tokio, TardisFuns, TardisFunsInst};
 
 use bios_basic::rbum::dto::rbum_domain_dto::RbumDomainAddReq;
 use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
@@ -47,13 +49,14 @@ use crate::console_tenant::api::{
     iam_ct_tenant_api,
 };
 use crate::iam_config::{BasicInfo, IamBasicInfoManager, IamConfig};
-use crate::iam_constants;
 use crate::iam_constants::RBUM_SCOPE_LEVEL_GLOBAL;
+use crate::iam_constants::{self, EVENT_EXECUTE_TASK_EXTERNAL, EVENT_SET_TASK_PROCESS_DATA_EXTERNAL, EVENT_STOP_TASK_EXTERNAL};
 use crate::iam_enumeration::{IamResKind, IamRoleKind, IamSetKind};
 
 pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
     let funs = iam_constants::get_tardis_inst();
     init_db(funs).await?;
+    tokio::spawn(init_event());
     init_api(web_server).await
 }
 
@@ -134,7 +137,7 @@ async fn init_api(web_server: &TardisWebServer) -> TardisResult<()> {
 
 pub async fn init_db(mut funs: TardisFunsInst) -> TardisResult<Option<(String, String)>> {
     bios_basic::rbum::rbum_initializer::init(funs.module_code(), funs.conf::<IamConfig>().rbum.clone()).await?;
-    TaskProcessor::subscribe_task(&funs).await?;
+    // TaskProcessor::subscribe_task(&funs).await?;
     invoke_initializer::init(funs.module_code(), funs.conf::<IamConfig>().invoke.clone())?;
     funs.begin().await?;
     let ctx = get_first_account_context(iam_constants::RBUM_KIND_CODE_IAM_ACCOUNT, iam_constants::COMPONENT_CODE, &funs).await?;
@@ -788,10 +791,186 @@ async fn init_ws_search_client() -> TardisWSClient {
     }
 }
 
+async fn init_ws_iam_send_event_client() -> Option<TardisWSClient> {
+    while !TardisFuns::web_server().is_running().await {
+        tardis::tokio::task::yield_now().await
+    }
+    let funs = iam_constants::get_tardis_inst();
+    let conf = funs.conf::<IamConfig>();
+    if !conf.in_event {
+        return None;
+    }
+    let mut event_conf = conf.iam_send_event_bus.clone();
+    if event_conf.avatars.is_empty() {
+        event_conf.avatars.push(format!("{}/{}", event_conf.topic_code, tardis::pkg!()))
+    }
+    let default_avatar = event_conf.avatars[0].clone();
+    set_default_iam_send_avatar(default_avatar);
+    let client = bios_sdk_invoke::clients::event_client::EventClient::new(&event_conf.base_url, &funs);
+    loop {
+        let addr = loop {
+            if let Ok(result) = client.register(&event_conf.clone().into()).await {
+                break result.ws_addr;
+            }
+            tardis::tokio::time::sleep(std::time::Duration::from_secs(10)).await;
+        };
+        let ws_client = TardisFuns::ws_client(&addr, |_| async move { None }).await;
+        match ws_client {
+            Ok(ws_client) => {
+                return Some(ws_client);
+            }
+            Err(err) => {
+                error!("[Bios.Iam] failed to connect to event server: {}", err);
+                tardis::tokio::time::sleep(std::time::Duration::from_secs(10)).await;
+            }
+        }
+    }
+}
+
+pub async fn init_ws_iam_event_client() -> TardisWSClient {
+    while !TardisFuns::web_server().is_running().await {
+        tardis::tokio::task::yield_now().await
+    }
+    let funs = iam_constants::get_tardis_inst();
+    let conf = funs.conf::<IamConfig>();
+    let mut event_conf = conf.iam_event_bus.clone();
+    if event_conf.avatars.is_empty() {
+        event_conf.avatars.push(format!("{}/{}", event_conf.topic_code, tardis::pkg!()))
+    }
+    let default_avatar = event_conf.avatars[0].clone();
+    set_default_iam_avatar(default_avatar);
+    let client = bios_sdk_invoke::clients::event_client::EventClient::new(&event_conf.base_url, &funs);
+    loop {
+        let addr = loop {
+            if let Ok(result) = client.register(&event_conf.clone().into()).await {
+                break result.ws_addr;
+            }
+            tardis::tokio::time::sleep(std::time::Duration::from_secs(10)).await;
+        };
+        let ws_client = TardisFuns::ws_client(&addr, |message| async move {
+            let Ok(json_str) = message.to_text() else { return None };
+            info!("[Bios.Iam] event msg: {json_str}");
+            let Ok(TardisWebsocketMessage { msg, event }) = TardisFuns::json.str_to_obj(json_str) else {
+                return None;
+            };
+            match event.as_deref() {
+                Some(EVENT_EXECUTE_TASK_EXTERNAL) => {
+                    let Ok((cache_key, task_id, ctx)) = TardisFuns::json.json_to_obj::<(String, i64, TardisContext)>(msg) else {
+                        return None;
+                    };
+                    tokio::spawn(async move {
+                        let funs = iam_constants::get_tardis_inst();
+                        let result = TaskProcessor::execute_task_external(
+                            &cache_key,
+                            task_id,
+                            ws_iam_send_client().await.clone(),
+                            default_iam_send_avatar().await.clone(),
+                            &funs,
+                            &ctx,
+                        )
+                        .await;
+                        if let Err(err) = result {
+                            error!("[Bios.Iam] failed to execute_task_external item: {}", err);
+                        }
+                    });
+                }
+                Some(EVENT_STOP_TASK_EXTERNAL) => {
+                    let Ok((cache_key, task_ids, ctx)) = TardisFuns::json.json_to_obj::<(String, Vec<i64>, TardisContext)>(msg) else {
+                        return None;
+                    };
+                    tokio::spawn(async move {
+                        let funs = iam_constants::get_tardis_inst();
+                        for task_id in task_ids {
+                            let result = TaskProcessor::stop_task(
+                                &cache_key,
+                                task_id,
+                                ws_iam_send_client().await.clone(),
+                                default_iam_send_avatar().await.clone(),
+                                &funs,
+                                &ctx,
+                            )
+                            .await;
+                            if let Err(err) = result {
+                                error!("[Bios.Iam] failed to stop_task_external : {}", err);
+                            }
+                        }
+                    });
+                }
+                Some(EVENT_SET_TASK_PROCESS_DATA_EXTERNAL) => {
+                    let Ok((cache_key, task_id, data, ctx)) = TardisFuns::json.json_to_obj::<(String, i64, Value, TardisContext)>(msg) else {
+                        return None;
+                    };
+                    tokio::spawn(async move {
+                        let funs = iam_constants::get_tardis_inst();
+                        let result = TaskProcessor::set_task_process_data(
+                            &cache_key,
+                            task_id,
+                            data,
+                            ws_iam_send_client().await.clone(),
+                            default_iam_send_avatar().await.clone(),
+                            &funs,
+                            &ctx,
+                        )
+                        .await;
+                        if let Err(err) = result {
+                            error!("[Bios.Iam] failed to set_task_process_data item: {}", err);
+                        }
+                    });
+                }
+                Some(unknown_event) => {
+                    warn!("[Bios.Iam] event receive unknown event {unknown_event}")
+                }
+                _ => {}
+            }
+            None
+        })
+        .await;
+        match ws_client {
+            Ok(ws_client) => {
+                return ws_client;
+            }
+            Err(err) => {
+                error!("[Bios.Iam] failed to connect to event server: {}", err);
+                tardis::tokio::time::sleep(std::time::Duration::from_secs(10)).await;
+            }
+        }
+    }
+}
+
+async fn init_event() -> TardisResult<()> {
+    let funs = iam_constants::get_tardis_inst();
+    let conf = funs.conf::<IamConfig>();
+    if conf.in_event {
+        loop {
+            if TardisFuns::web_server().is_running().await {
+                break;
+            } else {
+                tokio::task::yield_now().await
+            }
+        }
+        ws_iam_client().await;
+        tokio::spawn(async move {
+            loop {
+                // it's ok todo so, reconnect will be blocked until the previous ws_client is dropped
+                let result = ws_iam_client().await.reconnect().await;
+                if let Err(err) = result {
+                    error!("[Bios.Iam] failed to reconnect to event service: {}", err);
+                }
+                tokio::time::sleep(std::time::Duration::from_secs(10)).await;
+            }
+        });
+    }
+    Ok(())
+}
+
 use std::sync::OnceLock;
 tardis::tardis_static! {
     pub(crate) async ws_log_client: TardisWSClient = init_ws_log_client();
     pub(crate) async ws_search_client: TardisWSClient = init_ws_search_client();
+    pub(crate) async ws_iam_send_client: Option<TardisWSClient> = init_ws_iam_send_event_client();
+    pub(crate) async ws_iam_client: TardisWSClient = init_ws_iam_event_client();
     pub(crate) async set default_log_avatar: String;
     pub(crate) async set default_search_avatar: String;
+    pub(crate) async set default_iam_avatar: String;
+    pub(crate) async set default_iam_send_avatar: String;
 }

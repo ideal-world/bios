@@ -16,6 +16,7 @@ use crate::{
     iam_config::{IamBasicConfigApi, IamConfig},
     iam_constants,
     iam_enumeration::{IamAccountLockStateKind, IamRelKind},
+    iam_initializer::{default_iam_avatar, default_iam_send_avatar, ws_iam_client, ws_iam_send_client},
 };
 use bios_basic::{
     process::task_processor::TaskProcessor,
@@ -69,6 +70,8 @@ impl IamCcAccountTaskServ {
                 Ok(())
             },
             funs,
+            ws_iam_send_client().await.clone(),
+            default_iam_send_avatar().await.clone(),
             ctx,
         )
         .await?;
@@ -137,6 +140,8 @@ impl IamCcAccountTaskServ {
                 Ok(())
             },
             funs,
+            ws_iam_send_client().await.clone(),
+            default_iam_send_avatar().await.clone(),
             ctx,
         )
         .await?;

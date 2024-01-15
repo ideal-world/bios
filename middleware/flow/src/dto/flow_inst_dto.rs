@@ -170,7 +170,7 @@ pub struct FlowInstFindStateAndTransitionsResp {
     pub next_flow_transitions: Vec<FlowInstFindNextTransitionResp>,
 }
 
-#[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
+#[derive(Serialize, Deserialize, Clone, Debug, poem_openapi::Object)]
 pub struct FlowInstTransferReq {
     pub flow_transition_id: String,
     pub message: Option<String>,
