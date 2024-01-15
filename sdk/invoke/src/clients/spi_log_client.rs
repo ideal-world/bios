@@ -15,7 +15,7 @@ use tardis::{
     TardisFuns, TardisFunsInst,
 };
 
-use crate::{clients::base_spi_client::BaseSpiClient, invoke_config::InvokeConfigApi, invoke_constants::DYNAMIC_LOG, invoke_enumeration::InvokeModuleKind};
+use crate::{clients::base_spi_client::BaseSpiClient, invoke_constants::DYNAMIC_LOG, invoke_enumeration::InvokeModuleKind};
 
 pub struct SpiLogClient;
 

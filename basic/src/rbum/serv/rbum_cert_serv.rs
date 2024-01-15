@@ -218,7 +218,7 @@ impl RbumCrudOperation<rbum_cert_conf::ActiveModel, RbumCertConfAddReq, RbumCert
                     id: rbum_cert_conf.id.clone(),
                     ext: rbum_cert_conf.ext.clone(),
                 })?,
-                funs.rbum_conf_cache_key_cert_code_expire_sec(),
+                funs.rbum_conf_cache_key_cert_code_expire_sec() as u64,
             )
             .await?;
         Ok(())
@@ -367,7 +367,7 @@ impl RbumCertConfServ {
                 .set_ex(
                     key,
                     &TardisFuns::json.obj_to_string(&rbum_cert_conf_id_and_ext)?,
-                    funs.rbum_conf_cache_key_cert_code_expire_sec(),
+                    funs.rbum_conf_cache_key_cert_code_expire_sec() as u64,
                 )
                 .await?;
             Ok(Some(rbum_cert_conf_id_and_ext))
@@ -664,7 +664,7 @@ impl RbumCertServ {
             .set_ex(
                 format!("{}{}:{}", funs.rbum_conf_cache_key_cert_vcode_info_(), own_paths, ak).as_str(),
                 vcode.to_string().as_str(),
-                funs.rbum_conf_cache_key_cert_vcode_expire_sec(),
+                funs.rbum_conf_cache_key_cert_vcode_expire_sec() as u64,
             )
             .await?;
         Ok(())
@@ -1009,10 +1009,10 @@ impl RbumCertServ {
         }
         let err_times = funs.cache().incr(&format!("{}{}", funs.rbum_conf_cache_key_cert_err_times_(), rbum_item_id), 1).await?;
         if sk_lock_err_times <= err_times as i16 {
-            funs.cache().set_ex(&format!("{}{}", funs.rbum_conf_cache_key_cert_locked_(), rbum_item_id), "", sk_lock_duration_sec as usize).await?;
+            funs.cache().set_ex(&format!("{}{}", funs.rbum_conf_cache_key_cert_locked_(), rbum_item_id), "", sk_lock_duration_sec as u64).await?;
             funs.cache().del(&format!("{}{}", funs.rbum_conf_cache_key_cert_err_times_(), rbum_item_id)).await?;
         } else if err_times == 1 {
-            funs.cache().expire(&format!("{}{}", funs.rbum_conf_cache_key_cert_err_times_(), rbum_item_id), sk_lock_cycle_sec as usize).await?;
+            funs.cache().expire(&format!("{}{}", funs.rbum_conf_cache_key_cert_err_times_(), rbum_item_id), sk_lock_cycle_sec as i64).await?;
         }
         Ok(())
     }
