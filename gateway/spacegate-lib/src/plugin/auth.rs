@@ -35,7 +35,7 @@ use std::{
 use tardis::{
     async_trait,
     basic::{error::TardisError, result::TardisResult},
-    config::config_dto::{AppConfig, CacheModuleConfig, FrameworkConfig, LogConfig, TardisConfig},
+    config::config_dto::{AppConfig, CacheModuleConfig, FrameworkConfig, TardisConfig},
     log,
     serde_json::{self, json, Value},
     tokio::{sync::RwLock, task::JoinHandle},
@@ -177,10 +177,6 @@ impl SgPluginFilter for SgFilterAuth {
                         .build()
                         .into(),
                 ),
-                log: init_dto.gateway_parameters.log_level.as_ref().map(|l| LogConfig {
-                    level: Some(l.parse().unwrap_or_default()),
-                    ..Default::default()
-                }),
                 ..Default::default()
             },
         })
