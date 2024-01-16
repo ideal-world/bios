@@ -1,5 +1,6 @@
-use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumCertFilterReq, RbumItemRelFilterReq, RbumSetCateFilterReq, RbumSetItemRelFilterReq};
-use bios_basic::rbum::rbum_enumeration::RbumRelFromKind;
+use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumCertFilterReq, RbumItemRelFilterReq, RbumSetCateFilterReq, RbumSetItemFilterReq, RbumSetItemRelFilterReq};
+use bios_basic::rbum::rbum_enumeration::{RbumRelFromKind, RbumSetCateLevelQueryKind};
+use bios_basic::rbum::serv::rbum_set_serv::RbumSetItemServ;
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem_openapi;
 use tardis::web::poem_openapi::{param::Path, param::Query};
@@ -12,8 +13,9 @@ use crate::basic::serv::iam_account_serv::IamAccountServ;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_key_cache_serv::IamIdentCacheServ;
 use crate::basic::serv::iam_set_serv::IamSetServ;
+use crate::iam_config::IamBasicConfigApi;
 use crate::iam_constants;
-use crate::iam_enumeration::IamRelKind;
+use crate::iam_enumeration::{IamRelKind, IamSetKind};
 use bios_basic::helper::request_helper::add_remote_ip;
 use bios_basic::rbum::serv::rbum_cert_serv::RbumCertServ;
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
@@ -205,6 +207,59 @@ impl IamCiAccountApi {
         };
 
         ctx.0.execute_task().await?;
+        TardisResp::ok(result)
+    }
+
+    /// Find App Set Items (Account)
+    #[oai(path = "/apps/account/ctx", method = "get")]
+    async fn find_items(&self, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Vec<RbumSetItemDetailResp>> {
+        let funs = iam_constants::get_tardis_inst();
+        add_remote_ip(request, &ctx).await?;
+        let ctx = IamCertServ::use_sys_or_tenant_ctx_unsafe(ctx.0)?;
+        let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Apps, &funs, &ctx).await?;
+        let cate_codes = RbumSetItemServ::find_detail_rbums(
+            &RbumSetItemFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: false,
+                    ..Default::default()
+                },
+                rel_rbum_item_disabled: Some(false),
+                rel_rbum_set_id: Some(set_id.clone()),
+                rel_rbum_item_ids: Some(vec![ctx.owner]),
+                ..Default::default()
+            },
+            None,
+            None,
+            &funs,
+            &ctx,
+        )
+        .await?
+        .into_iter()
+        .map(|resp| resp.rel_rbum_item_code.unwrap_or_default())
+        .collect();
+        if cate_codes.is_empty() {
+            return TardisResp::ok(vec![]);
+        }
+        let result = RbumSetItemServ::find_detail_rbums(
+            &RbumSetItemFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: false,
+                    ..Default::default()
+                },
+                rel_rbum_item_disabled: Some(false),
+                rel_rbum_set_id: Some(set_id.clone()),
+                rel_rbum_set_cate_sys_codes: Some(cate_codes),
+                sys_code_query_kind: Some(RbumSetCateLevelQueryKind::CurrentAndSub),
+                rel_rbum_item_kind_ids: Some(vec![funs.iam_basic_kind_account_id()]),
+                ..Default::default()
+            },
+            None,
+            None,
+            &funs,
+            &ctx,
+        )
+        .await?;
+        ctx.execute_task().await?;
         TardisResp::ok(result)
     }
 }
