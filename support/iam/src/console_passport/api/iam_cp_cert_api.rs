@@ -9,6 +9,7 @@ use tardis::web::poem_openapi::param::Query;
 use tardis::web::poem_openapi::{param::Path, payload::Json};
 use tardis::web::web_resp::{TardisApiResult, TardisResp, Void};
 use tardis::TardisFuns;
+use tardis::log;
 
 use crate::basic::dto::iam_account_dto::{IamAccountInfoResp, IamAccountInfoWithUserPwdAkResp, IamCpUserPwdBindResp};
 use crate::basic::dto::iam_cert_dto::{
@@ -81,6 +82,7 @@ impl IamCpCertApi {
     #[oai(path = "/logout/:token", method = "delete")]
     async fn logout(&self, token: Path<String>, request: &Request) -> TardisApiResult<Void> {
         let funs = iam_constants::get_tardis_inst();
+        log::debug!("logout headers: {:?}", request.headers());
         IamCertTokenServ::delete_cert(&token.0, get_ip(request).await?, &funs).await?;
         TardisResp::ok(Void {})
     }

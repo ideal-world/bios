@@ -4,6 +4,7 @@ use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::console_passport::dto::iam_cp_cert_dto::{IamCpLdapLoginReq, IamCpUserPwdBindWithLdapReq, IamCpUserPwdCheckReq};
 use crate::iam_enumeration::{IamCertKernelKind, IamCertTokenKind};
 use std::collections::HashMap;
+use bios_basic::rbum::serv::rbum_cert_serv::RbumCertServ;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::result::TardisResult;
 use tardis::TardisFunsInst;
@@ -22,6 +23,9 @@ impl IamCpCertLdapServ {
         .await?;
         let mock_ctx = IamCertLdapServ::generate_default_mock_ctx(login_req.code.as_ref(), login_req.tenant_id.clone(), funs).await;
         let resp = if let Some((account_id, access_token)) = ldap_info {
+            if RbumCertServ::cert_is_locked(&account_id, funs).await {
+                return Err(funs.err().unauthorized("iam_cp_cert_ldap", "login_or_register", "cert is locked", "400-rbum-cert-lock"));
+            }
             let (ak, status) = Self::get_pwd_cert_name(&account_id, funs, &mock_ctx).await?;
             let iam_account_info_resp = IamCertServ::package_tardis_context_and_resp(
                 login_req.tenant_id.clone(),
