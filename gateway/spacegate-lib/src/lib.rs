@@ -4,7 +4,7 @@ use crate::plugin::{anti_replay, anti_xss, audit_log, auth, ip_time, rewrite_ns_
 
 mod plugin;
 
-pub const PACKAGE_NAME: &str = "bios_spacegate";
+pub const PACKAGE_NAME: &str = "spacegate_lib";
 
 pub fn register_lib_filter() {
     spacegate_kernel::register_filter_def(audit_log::SgFilterAuditLogDef);

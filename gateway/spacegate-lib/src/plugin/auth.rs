@@ -107,8 +107,8 @@ impl SgFilterAuth {
         header_map
             .get(&self.header_is_mix_req)
             .map(|v: &HeaderValue| {
-                bool::from_str(v.to_str().map_err(|e| TardisError::custom("502", &format!("[Plugin.Auth] parse header IS_MIX_REQ error:{e}"), ""))?)
-                    .map_err(|e| TardisError::custom("502", &format!("[Plugin.Auth] parse header IS_MIX_REQ error:{e}"), ""))
+                bool::from_str(v.to_str().map_err(|e| TardisError::custom("502", &format!("[SG.Filter.Auth] parse header IS_MIX_REQ error:{e}"), ""))?)
+                    .map_err(|e| TardisError::custom("502", &format!("[SG.Filter.Auth] parse header IS_MIX_REQ error:{e}"), ""))
             })
             .transpose()
             .ok()
@@ -139,13 +139,13 @@ impl SgPluginFilter for SgFilterAuth {
         let mut cs = HashMap::<String, Value>::new();
         cs.insert(
             bios_auth::auth_constants::DOMAIN_CODE.to_string(),
-            serde_json::to_value(self.auth_config.clone()).map_err(|e| TardisError::internal_error(&format!("[Plugin.Auth]init auth config error: {e:?}"), ""))?,
+            serde_json::to_value(self.auth_config.clone()).map_err(|e| TardisError::internal_error(&format!("[SG.Filter.Auth]init auth config error: {e:?}"), ""))?,
         );
         TardisFuns::init_conf(TardisConfig {
             cs,
             fw: FrameworkConfig {
                 app: AppConfig {
-                    name: "spacegate.plugin.auth".to_string(),
+                    name: "spacegate.SG.Filter.Auth".to_string(),
                     desc: "This is a spacegate plugin-auth".to_string(),
                     ..Default::default()
                 },
@@ -158,7 +158,7 @@ impl SgPluginFilter for SgFilterAuth {
                                 self.cache_url.as_str()
                             }
                             .parse()
-                            .map_err(|e| TardisError::internal_error(&format!("[Plugin.Auth]invalid redis url: {e:?}"), "-1"))?,
+                            .map_err(|e| TardisError::internal_error(&format!("[SG.Filter.Auth]invalid redis url: {e:?}"), "-1"))?,
                         )
                         .build()
                         .into(),
@@ -198,9 +198,9 @@ impl SgPluginFilter for SgFilterAuth {
             return Ok((true, ctx));
         }
 
-        log::trace!("[Plugin.Auth] request filter info: request path is {}", ctx.request.get_uri().path());
+        log::trace!("[SG.Filter.Auth] request filter info: request path is {}", ctx.request.get_uri().path());
         if ctx.request.get_method().eq(&Method::GET) && ctx.request.get_uri().path() == self.fetch_server_config_path.as_str() {
-            log::debug!("[Plugin.Auth] request path hit fetch server config path: {}", self.fetch_server_config_path);
+            log::debug!("[SG.Filter.Auth] request path hit fetch server config path: {}", self.fetch_server_config_path);
             ctx.set_action(SgRouteFilterRequestAction::Response);
             let mut headers = HeaderMap::new();
             headers.insert(http::header::CONTENT_TYPE, HeaderValue::from_static("application/json"));
@@ -211,7 +211,7 @@ impl SgPluginFilter for SgFilterAuth {
                     msg: "".to_string(),
                     data: Some(auth_res_serv::get_apis_json()?),
                 })
-                .map_err(|e| TardisError::bad_request(&format!("[Plugin.Auth] fetch_server_config serde error: {e}"), ""))?,
+                .map_err(|e| TardisError::bad_request(&format!("[SG.Filter.Auth] fetch_server_config serde error: {e}"), ""))?,
             );
             return Ok((true, ctx));
         }
@@ -219,7 +219,7 @@ impl SgPluginFilter for SgFilterAuth {
         let is_true_mix_req = self.get_is_true_mix_req_from_header(ctx.request.get_headers());
 
         if self.auth_config.strict_security_mode && !is_true_mix_req {
-            log::debug!("[Plugin.Auth] handle mix request");
+            log::debug!("[SG.Filter.Auth] handle mix request");
             let mut ctx = mix_req_to_ctx(&self.auth_config, &self.mix_replace_url, ctx).await?;
             ctx.request.set_header_str(&self.header_is_mix_req, "true")?;
             return Ok((false, ctx));
@@ -230,19 +230,19 @@ impl SgPluginFilter for SgFilterAuth {
         match auth_kernel_serv::auth(&mut auth_req, is_true_mix_req).await {
             Ok(auth_result) => {
                 if log::level_enabled!(log::Level::TRACE) {
-                    log::trace!("[Plugin.Auth] auth return ok {:?}", auth_result);
+                    log::trace!("[SG.Filter.Auth] auth return ok {:?}", auth_result);
                 } else if log::level_enabled!(log::Level::DEBUG) {
                     if let Some(ctx) = &auth_result.ctx {
-                        log::debug!("[Plugin.Auth] auth return ok ctx:{ctx}",);
+                        log::debug!("[SG.Filter.Auth] auth return ok ctx:{ctx}",);
                     } else {
-                        log::debug!("[Plugin.Auth] auth return ok ctx:None",);
+                        log::debug!("[SG.Filter.Auth] auth return ok ctx:None",);
                     };
                 }
 
                 if auth_result.e.is_none() {
                     ctx = success_auth_result_to_ctx(auth_result, req_body.into(), ctx)?;
                 } else if let Some(e) = auth_result.e {
-                    log::info!("[Plugin.Auth] auth failed:{e}");
+                    log::info!("[SG.Filter.Auth] auth failed:{e}");
                     ctx.set_action(SgRouteFilterRequestAction::Response);
                     ctx.response.set_status_code(StatusCode::from_str(&e.code).unwrap_or(StatusCode::BAD_GATEWAY));
                     ctx.response.set_body(json!({"code":format!("{}-gateway-cert-error",e.code),"message":e.message}).to_string());
@@ -251,9 +251,9 @@ impl SgPluginFilter for SgFilterAuth {
                 Ok((true, ctx))
             }
             Err(e) => {
-                log::info!("[Plugin.Auth] auth return error {:?}", e);
+                log::info!("[SG.Filter.Auth] auth return error {:?}", e);
                 ctx.set_action(SgRouteFilterRequestAction::Response);
-                ctx.response.set_body(format!("[Plugin.Auth] auth return error:{e}"));
+                ctx.response.set_body(format!("[SG.Filter.Auth] auth return error:{e}"));
                 Ok((false, ctx))
             }
         }
@@ -272,7 +272,7 @@ impl SgPluginFilter for SgFilterAuth {
         let crypto_value = ctx.request.get_headers().get(&head_key_crypto).expect("").clone();
         let ctx_resp_headers = ctx.response.get_headers_mut();
         ctx_resp_headers.insert(
-            HeaderName::try_from(head_key_crypto.clone()).map_err(|e| TardisError::internal_error(&format!("[Plugin.Auth] get header error: {e:?}"), ""))?,
+            HeaderName::try_from(head_key_crypto.clone()).map_err(|e| TardisError::internal_error(&format!("[SG.Filter.Auth] get header error: {e:?}"), ""))?,
             crypto_value,
         );
 
@@ -295,29 +295,29 @@ async fn mix_req_to_ctx(auth_config: &AuthConfig, mix_replace_url: &str, mut ctx
     let body = ctx.request.take_body_into_bytes().await?;
     let string_body = String::from_utf8_lossy(&body).trim_matches('"').to_string();
     if string_body.is_empty() {
-        TardisError::custom("502", "[Plugin.Auth.MixReq] body can't be empty", "502-parse_mix_req-parse-error");
+        TardisError::custom("502", "[SG.Filter.Auth.MixReq] body can't be empty", "502-parse_mix_req-parse-error");
     }
     let mut req_headers = ctx.request.get_headers().iter().map(|(k, v)| (k.as_str().to_string(), v.to_str().expect("error parse header value to str").to_string())).collect();
     let (body, crypto_headers) = auth_crypto_serv::decrypt_req(&req_headers, &Some(string_body), true, true, auth_config).await?;
     req_headers.remove(&auth_config.head_key_crypto);
     req_headers.remove(&auth_config.head_key_crypto.to_ascii_lowercase());
 
-    let body = body.ok_or_else(|| TardisError::custom("502", "[Plugin.Auth.MixReq] decrypt body can't be empty", "502-parse_mix_req-parse-error"))?;
+    let body = body.ok_or_else(|| TardisError::custom("502", "[SG.Filter.Auth.MixReq] decrypt body can't be empty", "502-parse_mix_req-parse-error"))?;
 
     let mix_body = TardisFuns::json.str_to_obj::<MixRequestBody>(&body)?;
     ctx.set_action(SgRouteFilterRequestAction::Redirect);
     let mut true_uri = Url::from_str(&ctx.request.get_uri().to_string().replace(mix_replace_url, &mix_body.uri))
-        .map_err(|e| TardisError::custom("502", &format!("[Plugin.Auth.MixReq] url parse err {e}"), "502-parse_mix_req-url-error"))?;
+        .map_err(|e| TardisError::custom("502", &format!("[SG.Filter.Auth.MixReq] url parse err {e}"), "502-parse_mix_req-url-error"))?;
     true_uri.set_path(&true_uri.path().replace("//", "/"));
     true_uri.set_query(Some(&if let Some(old_query) = true_uri.query() {
         format!("{}&_t={}", old_query, mix_body.ts)
     } else {
         format!("_t={}", mix_body.ts)
     }));
-    ctx.request.set_uri(true_uri.as_str().parse().map_err(|e| TardisError::custom("502", &format!("[Plugin.Auth.MixReq] uri parse error: {}", e), ""))?);
+    ctx.request.set_uri(true_uri.as_str().parse().map_err(|e| TardisError::custom("502", &format!("[SG.Filter.Auth.MixReq] uri parse error: {}", e), ""))?);
     ctx.request.set_method(
         Method::from_str(&mix_body.method.to_ascii_uppercase())
-            .map_err(|e| TardisError::custom("502", &format!("[Plugin.Auth.MixReq] method parse err {e}"), "502-parse_mix_req-method-error"))?,
+            .map_err(|e| TardisError::custom("502", &format!("[SG.Filter.Auth.MixReq] method parse err {e}"), "502-parse_mix_req-method-error"))?,
     );
 
     let mut headers = req_headers;
@@ -329,8 +329,8 @@ async fn mix_req_to_ctx(auth_config: &AuthConfig, mix_replace_url: &str, mut ctx
             .into_iter()
             .map(|(k, v)| {
                 Ok::<_, TardisError>((
-                    HeaderName::from_str(&k).map_err(|e| TardisError::format_error(&format!("[Plugin.Auth] error parse str {k} to header name :{e}"), ""))?,
-                    HeaderValue::from_str(&v).map_err(|e| TardisError::format_error(&format!("[Plugin.Auth] error parse str {v} to header value :{e}"), ""))?,
+                    HeaderName::from_str(&k).map_err(|e| TardisError::format_error(&format!("[SG.Filter.Auth] error parse str {k} to header name :{e}"), ""))?,
+                    HeaderValue::from_str(&v).map_err(|e| TardisError::format_error(&format!("[SG.Filter.Auth] error parse str {v} to header value :{e}"), ""))?,
                 ))
             })
             .collect::<TardisResult<HeaderMap<HeaderValue>>>()?,
@@ -343,7 +343,7 @@ async fn mix_req_to_ctx(auth_config: &AuthConfig, mix_replace_url: &str, mut ctx
                 "{},{}",
                 forwarded.to_str().map_err(|e| TardisError::custom(
                     "502",
-                    &format!("[Plugin.Auth.MixReq] X-Forwarded-For header value parse err {e}"),
+                    &format!("[SG.Filter.Auth.MixReq] X-Forwarded-For header value parse err {e}"),
                     "502-parse_mix_req-url-error"
                 ))?,
                 real_ip
@@ -421,7 +421,7 @@ async fn ctx_to_auth_encrypt_req(ctx: &mut SgRoutePluginContext) -> TardisResult
     if !body.is_empty() {
         ctx.set_ext(plugin_constants::BEFORE_ENCRYPT_BODY, body.to_string());
     }
-    log::trace!("[Plugin.Auth] Before Encrypt Body {}", body.to_string());
+    log::trace!("[SG.Filter.Auth] Before Encrypt Body {}", body.to_string());
     Ok(AuthEncryptReq {
         headers,
         body: String::from(body),
@@ -432,8 +432,8 @@ fn hashmap_header_to_headermap(old_headers: HashMap<String, String>) -> TardisRe
     let mut new_headers = HeaderMap::new();
     for header in old_headers {
         new_headers.insert(
-            HeaderName::from_str(&header.0).map_err(|e| TardisError::format_error(&format!("[Plugin.Auth] request header error :{e}"), ""))?,
-            HeaderValue::from_str(&header.1).map_err(|e| TardisError::format_error(&format!("[Plugin.Auth] request header error :{e}"), ""))?,
+            HeaderName::from_str(&header.0).map_err(|e| TardisError::format_error(&format!("[SG.Filter.Auth] request header error :{e}"), ""))?,
+            HeaderValue::from_str(&header.1).map_err(|e| TardisError::format_error(&format!("[SG.Filter.Auth] request header error :{e}"), ""))?,
         );
     }
     Ok(new_headers)
@@ -444,7 +444,7 @@ fn headermap_header_to_hashmap(old_headers: &HeaderMap) -> TardisResult<HashMap<
     for header_name in old_headers.keys() {
         new_headers.insert(
             header_name.to_string(),
-            old_headers.get(header_name).expect("").to_str().map_err(|e| TardisError::format_error(&format!("[Plugin.Auth] response header error :{e}"), ""))?.to_string(),
+            old_headers.get(header_name).expect("").to_str().map_err(|e| TardisError::format_error(&format!("[SG.Filter.Auth] response header error :{e}"), ""))?.to_string(),
         );
     }
     Ok(new_headers)

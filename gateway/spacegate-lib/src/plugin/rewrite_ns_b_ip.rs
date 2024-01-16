@@ -59,8 +59,8 @@ impl SgPluginFilter for SgFilterRewriteNs {
                             format!(":{}", backend.port)
                         };
                     let url = format!("{}://{}{}{}", scheme, host, port, ctx.request.get_uri().path_and_query().map(|p| p.as_str()).unwrap_or(""));
-                    ctx.request.set_uri(url.parse().map_err(|e| TardisError::wrap(&format!("[Plugin.Auth.Rewrite_Ns({id})] parse url:{e}"), ""))?);
-                    log::debug!("[Plugin.Auth.Rewrite_Ns({id})] change namespace to {}", self.target_ns);
+                    ctx.request.set_uri(url.parse().map_err(|e| TardisError::wrap(&format!("[SG.Filter.Auth.Rewrite_Ns({id})] parse url:{e}"), ""))?);
+                    log::debug!("[SG.Filter.Auth.Rewrite_Ns({id})] change namespace to {}", self.target_ns);
                 }
             }
         }
