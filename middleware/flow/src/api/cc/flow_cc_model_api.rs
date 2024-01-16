@@ -175,7 +175,7 @@ impl FlowCcModelApi {
     #[oai(path = "/find_rel_status", method = "get")]
     async fn find_rel_states(&self, tag: Query<String>, rel_template_id: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<Vec<FlowModelFindRelStateResp>> {
         let funs = flow_constants::get_tardis_inst();
-        let result = FlowModelServ::find_rel_states(&tag, rel_template_id.0, &funs, &ctx.0).await?;
+        let result = FlowModelServ::find_rel_states(tag.0.split(',').collect(), rel_template_id.0, &funs, &ctx.0).await?;
 
         TardisResp::ok(result)
     }
