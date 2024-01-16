@@ -71,7 +71,7 @@ impl IamCpAppApi {
     }
 
     /// Find App Set Items (app)
-    #[oai(path = "/apps/app", method = "get")]
+    #[oai(path = "/apps/item", method = "get")]
     async fn find_items(&self, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Vec<RbumSetItemDetailResp>> {
         let funs = iam_constants::get_tardis_inst();
         add_remote_ip(request, &ctx).await?;
