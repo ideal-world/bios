@@ -1284,10 +1284,14 @@ impl FlowModelServ {
         Ok((is_ring, current_chain))
     }
 
-    pub async fn find_rel_states(tag: &str, rel_template_id: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<FlowModelFindRelStateResp>> {
-        let flow_model_id = FlowInstServ::get_model_id_by_own_paths_and_rel_template_id(tag, rel_template_id, funs, ctx).await?;
-
-        Self::find_sorted_rel_states_by_model_id(&flow_model_id, funs, ctx).await
+    pub async fn find_rel_states(tags: Vec<&str>, rel_template_id: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<FlowModelFindRelStateResp>> {
+        let mut result = Vec::new();
+        for tag in tags {
+            let flow_model_id = FlowInstServ::get_model_id_by_own_paths_and_rel_template_id(tag, rel_template_id.clone(), funs, ctx).await?;
+            let mut states = Self::find_sorted_rel_states_by_model_id(&flow_model_id, funs, ctx).await?;
+            result.append(&mut states);
+        }
+        Ok(result)
     }
 
     async fn find_sorted_rel_states_by_model_id(flow_model_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<FlowModelFindRelStateResp>> {
