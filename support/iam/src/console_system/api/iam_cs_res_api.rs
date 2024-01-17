@@ -228,7 +228,7 @@ impl IamCsResApi {
     }
 
     /// Find Element Rel Apis By Res Ids
-    #[oai(path = "/get_res_apis/:ids", method = "put")]
+    #[oai(path = "/get_res_apis/:ids", method = "get")]
     async fn get_res_apis(&self, ids: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<HashMap<String, Vec<IamResDetailResp>>> {
         add_remote_ip(request, &ctx.0).await?;
         let funs = iam_constants::get_tardis_inst();

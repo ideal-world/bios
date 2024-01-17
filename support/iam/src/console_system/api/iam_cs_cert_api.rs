@@ -133,8 +133,10 @@ impl IamCsCertApi {
         request: &Request,
     ) -> TardisApiResult<Void> {
         add_remote_ip(request, &ctx.0).await?;
-        let funs = iam_constants::get_tardis_inst();
+        let mut funs = iam_constants::get_tardis_inst();
+        funs.begin().await?;
         IamCertServ::add_or_modify_sync_third_integration_config(req.0, &funs, &ctx.0).await?;
+        funs.commit().await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
     }
@@ -167,6 +169,7 @@ impl IamCsCertApi {
     async fn third_integration_sync(&self, account_sync_from: Json<IamCertExtKind>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Option<String>> {
         add_remote_ip(request, &ctx.0).await?;
         let funs = iam_constants::get_tardis_inst();
+        funs.begin().await?;
         IamCertServ::third_integration_sync(
             Some(IamThirdIntegrationConfigDto {
                 account_sync_from: account_sync_from.0,
@@ -178,6 +181,7 @@ impl IamCsCertApi {
             &ctx.0,
         )
         .await?;
+        funs.commit().await?;
         ctx.0.execute_task().await?;
         if let Some(task_id) = TaskProcessor::get_task_id_with_ctx(&ctx.0).await? {
             TardisResp::accepted(Some(task_id))

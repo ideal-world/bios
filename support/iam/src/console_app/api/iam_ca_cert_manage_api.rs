@@ -32,9 +32,11 @@ impl IamCaCertManageApi {
     #[oai(path = "/:id", method = "put")]
     async fn modify_sk_visibility(&self, id: Path<String>, body: Json<IamCertModifyVisibilityRequest>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         add_remote_ip(request, &ctx.0).await?;
-        let funs = iam_constants::get_tardis_inst();
+        let mut funs = iam_constants::get_tardis_inst();
         let ctx = IamCertServ::use_sys_or_tenant_ctx_unsafe(ctx.0)?;
+        funs.begin().await?;
         IamCertServ::modify_sk_visibility(&id.0, body.0, &funs, &ctx).await?;
+        funs.commit().await?;
         ctx.execute_task().await?;
         TardisResp::ok(Void)
     }

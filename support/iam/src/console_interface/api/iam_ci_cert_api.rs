@@ -36,8 +36,10 @@ impl IamCiCertManageApi {
     #[oai(path = "/aksk", method = "put")]
     async fn add_aksk(&self, add_req: Json<IamCertAkSkAddReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<IamCertAkSkResp> {
         add_remote_ip(request, &ctx.0).await?;
-        let funs = iam_constants::get_tardis_inst();
+        let mut funs = iam_constants::get_tardis_inst();
+        funs.begin().await?;
         let result = IamCiCertAkSkServ::general_cert(add_req.0, &funs, &ctx.0).await?;
+        funs.commit().await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
@@ -45,8 +47,10 @@ impl IamCiCertManageApi {
     #[oai(path = "/aksk", method = "delete")]
     async fn delete_aksk(&self, id: Query<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         add_remote_ip(request, &ctx.0).await?;
-        let funs = iam_constants::get_tardis_inst();
+        let mut funs = iam_constants::get_tardis_inst();
+        funs.begin().await?;
         IamCiCertAkSkServ::delete_cert(&id.0, &funs, &ctx.0).await?;
+        funs.commit().await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
     }
@@ -157,10 +161,12 @@ impl IamCiCertApi {
     /// decode cert
     #[oai(path = "/decode", method = "post")]
     async fn decode_certs(&self, body: Json<IamCertDecodeRequest>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<HashMap<String, String>> {
-        let funs = iam_constants::get_tardis_inst();
+        let mut funs = iam_constants::get_tardis_inst();
         let ctx = IamCertServ::use_sys_or_tenant_ctx_unsafe(ctx.0)?;
         add_remote_ip(request, &ctx).await?;
+        funs.begin().await?;
         let doceded = IamCertServ::batch_decode_cert(body.0.codes, &funs, &ctx).await?;
+        funs.commit().await?;
         TardisResp::ok(doceded)
     }
 }

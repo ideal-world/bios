@@ -211,8 +211,10 @@ impl IamCcAccountLdapApi {
         request: &Request,
     ) -> TardisApiResult<IamAccountAddByLdapResp> {
         add_remote_ip(request, &ctx.0).await?;
-        let funs = iam_constants::get_tardis_inst();
+        let mut funs = iam_constants::get_tardis_inst();
+        funs.begin().await?;
         let result = IamCertLdapServ::batch_get_or_add_account_without_verify(add_req.0, tenant_id.0, &funs, &ctx.0).await?;
+        funs.commit().await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
