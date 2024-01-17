@@ -19,6 +19,7 @@ use crate::console_passport::dto::iam_cp_account_dto::IamCpAccountInfoResp;
 use crate::console_passport::serv::iam_cp_account_serv::IamCpAccountServ;
 use crate::iam_config::IamBasicConfigApi;
 use crate::iam_constants;
+use crate::iam_enumeration::IamSetKind;
 use bios_basic::helper::request_helper::add_remote_ip;
 use tardis::web::poem::Request;
 #[derive(Clone, Default)]
@@ -58,8 +59,8 @@ impl IamCpAccountApi {
     #[oai(path = "/apps/item", method = "get")]
     async fn find_items(&self, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Vec<RbumSetItemDetailResp>> {
         let funs = iam_constants::get_tardis_inst();
-        add_remote_ip(request, &ctx).await?;
         let ctx = IamCertServ::use_sys_or_tenant_ctx_unsafe(ctx.0)?;
+        add_remote_ip(request, &ctx).await?;
         let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Apps, &funs, &ctx).await?;
         let cate_codes = RbumSetItemServ::find_detail_rbums(
             &RbumSetItemFilterReq {
@@ -69,7 +70,7 @@ impl IamCpAccountApi {
                 },
                 rel_rbum_item_disabled: Some(false),
                 rel_rbum_set_id: Some(set_id.clone()),
-                rel_rbum_item_ids: Some(vec![ctx.owner]),
+                rel_rbum_item_ids: Some(vec![ctx.owner.clone()]),
                 ..Default::default()
             },
             None,
@@ -79,8 +80,8 @@ impl IamCpAccountApi {
         )
         .await?
         .into_iter()
-        .map(|resp| resp.rel_rbum_item_code.unwrap_or_default())
-        .collect();
+        .map(|resp| resp.rel_rbum_item_code)
+        .collect::<Vec<String>>();
         if cate_codes.is_empty() {
             return TardisResp::ok(vec![]);
         }

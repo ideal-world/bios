@@ -168,7 +168,7 @@ impl IamCsCertApi {
     #[oai(path = "/sync", method = "post")]
     async fn third_integration_sync(&self, account_sync_from: Json<IamCertExtKind>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Option<String>> {
         add_remote_ip(request, &ctx.0).await?;
-        let funs = iam_constants::get_tardis_inst();
+        let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         IamCertServ::third_integration_sync(
             Some(IamThirdIntegrationConfigDto {

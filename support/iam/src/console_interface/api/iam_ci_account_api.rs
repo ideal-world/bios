@@ -1,4 +1,5 @@
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumCertFilterReq, RbumItemRelFilterReq, RbumSetCateFilterReq, RbumSetItemFilterReq, RbumSetItemRelFilterReq};
+use bios_basic::rbum::dto::rbum_set_item_dto::RbumSetItemDetailResp;
 use bios_basic::rbum::rbum_enumeration::{RbumRelFromKind, RbumSetCateLevelQueryKind};
 use bios_basic::rbum::serv::rbum_set_serv::RbumSetItemServ;
 use tardis::web::context_extractor::TardisContextExtractor;
@@ -214,8 +215,8 @@ impl IamCiAccountApi {
     #[oai(path = "/apps/item/ctx", method = "get")]
     async fn find_items(&self, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Vec<RbumSetItemDetailResp>> {
         let funs = iam_constants::get_tardis_inst();
-        add_remote_ip(request, &ctx).await?;
         let ctx = IamCertServ::use_sys_or_tenant_ctx_unsafe(ctx.0)?;
+        add_remote_ip(request, &ctx).await?;
         let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Apps, &funs, &ctx).await?;
         let cate_codes = RbumSetItemServ::find_detail_rbums(
             &RbumSetItemFilterReq {
@@ -225,7 +226,7 @@ impl IamCiAccountApi {
                 },
                 rel_rbum_item_disabled: Some(false),
                 rel_rbum_set_id: Some(set_id.clone()),
-                rel_rbum_item_ids: Some(vec![ctx.owner]),
+                rel_rbum_item_ids: Some(vec![ctx.owner.clone()]),
                 ..Default::default()
             },
             None,
@@ -235,8 +236,8 @@ impl IamCiAccountApi {
         )
         .await?
         .into_iter()
-        .map(|resp| resp.rel_rbum_item_code.unwrap_or_default())
-        .collect();
+        .map(|resp| resp.rel_rbum_item_code)
+        .collect::<Vec<String>>();
         if cate_codes.is_empty() {
             return TardisResp::ok(vec![]);
         }

@@ -5,6 +5,7 @@ use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::iam_config::IamBasicConfigApi;
 use crate::iam_constants::{self};
+use crate::iam_enumeration::IamSetKind;
 use bios_basic::process::task_processor::TaskProcessor;
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumSetItemFilterReq};
 use bios_basic::rbum::dto::rbum_set_item_dto::RbumSetItemDetailResp;
@@ -61,8 +62,8 @@ impl IamCiAppApi {
     #[oai(path = "/apps/item/ctx", method = "get")]
     async fn find_items(&self, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Vec<RbumSetItemDetailResp>> {
         let funs = iam_constants::get_tardis_inst();
-        add_remote_ip(request, &ctx).await?;
         let ctx = IamCertServ::use_sys_or_tenant_ctx_unsafe(ctx.0)?;
+        add_remote_ip(request, &ctx).await?;
         let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Apps, &funs, &ctx).await?;
         let cate_codes = RbumSetItemServ::find_detail_rbums(
             &RbumSetItemFilterReq {
@@ -72,7 +73,7 @@ impl IamCiAppApi {
                 },
                 rel_rbum_item_disabled: Some(false),
                 rel_rbum_set_id: Some(set_id.clone()),
-                rel_rbum_item_ids: Some(vec![ctx.]),
+                rel_rbum_item_ids: Some(vec![ctx.owner.clone()]),
                 ..Default::default()
             },
             None,
@@ -82,8 +83,8 @@ impl IamCiAppApi {
         )
         .await?
         .into_iter()
-        .map(|resp| resp.rel_rbum_item_code.unwrap_or_default())
-        .collect();
+        .map(|resp| resp.rel_rbum_item_code)
+        .collect::<Vec<String>>();
         if cate_codes.is_empty() {
             return TardisResp::ok(vec![]);
         }

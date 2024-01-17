@@ -191,9 +191,9 @@ impl IamCtCertManageApi {
     ) -> TardisApiResult<Void> {
         add_remote_ip(request, &ctx.0).await?;
         let mut funs = iam_constants::get_tardis_inst();
-        funs.begin();
+        funs.begin().await?;
         IamCertServ::add_rel_cert(&id.0, &item_id.0, note.0, ext.0, own_paths.0, &funs, &ctx.0).await?;
-        funs.commit();
+        funs.commit().await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
     }
@@ -203,9 +203,9 @@ impl IamCtCertManageApi {
     async fn delete_rel_item(&self, id: Path<String>, item_id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         add_remote_ip(request, &ctx.0).await?;
         let mut funs = iam_constants::get_tardis_inst();
-        funs.begin();
+        funs.begin().await?;
         IamCertServ::delete_rel_cert(&id.0, &item_id.0, &funs, &ctx.0).await?;
-        funs.commit();
+        funs.commit().await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
     }
