@@ -11,7 +11,7 @@ use tardis::{
     db::{reldb_client::TardisActiveModel, sea_orm::sea_query::Table},
     log::info,
     web::web_server::TardisWebServer,
-    TardisFuns, TardisFunsInst,
+    TardisFuns, TardisFunsInst, tokio,
 };
 
 use crate::{
@@ -850,5 +850,20 @@ pub async fn init_flow_model(funs: &TardisFunsInst, ctx: &TardisContext) -> Tard
         .await?;
     }
 
+    Ok(())
+}
+
+async fn init_event(funs: TardisFunsInst) -> TardisResult<()> {
+    let conf = funs.conf::<FlowConfig>();
+    if let Some(event_config) = conf.event.as_ref() {
+        loop {
+            if TardisFuns::web_server().is_running().await {
+                break;
+            } else {
+                tokio::task::yield_now().await
+            }
+        }
+        crate::event::start_flow_event_service(event_config).await?;
+    }
     Ok(())
 }
