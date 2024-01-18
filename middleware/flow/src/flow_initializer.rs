@@ -34,6 +34,7 @@ use crate::{
 pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
     let funs = flow_constants::get_tardis_inst();
     init_db(funs).await?;
+    tokio::spawn(init_event());
     init_api(web_server).await
 }
 
@@ -853,7 +854,8 @@ pub async fn init_flow_model(funs: &TardisFunsInst, ctx: &TardisContext) -> Tard
     Ok(())
 }
 
-async fn init_event(funs: TardisFunsInst) -> TardisResult<()> {
+async fn init_event() -> TardisResult<()> {
+    let funs = flow_constants::get_tardis_inst();
     let conf = funs.conf::<FlowConfig>();
     if let Some(event_config) = conf.event.as_ref() {
         loop {
