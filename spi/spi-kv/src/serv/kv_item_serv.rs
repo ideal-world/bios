@@ -93,7 +93,7 @@ pub async fn find_tags(keys: Vec<String>, funs: &TardisFunsInst, ctx: &TardisCon
         kind_code => Err(funs.bs_not_implemented(kind_code)),
     }
     .and_then(|items| {
-        Ok(items
+        items
             .into_iter()
             .map(|item| {
                 Ok(KvTagFindResp {
@@ -103,7 +103,7 @@ pub async fn find_tags(keys: Vec<String>, funs: &TardisFunsInst, ctx: &TardisCon
                     update_time: item.update_time,
                 })
             })
-            .collect::<TardisResult<Vec<_>>>()?)
+            .collect::<TardisResult<Vec<_>>>()
     })
 }
 
