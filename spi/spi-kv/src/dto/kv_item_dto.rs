@@ -94,6 +94,8 @@ pub struct KvTagItemAddReq {
     pub label: String,
     pub color: String,
     pub icon: String,
+    pub url: Option<String>,
+    pub service: Option<String>,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
@@ -110,4 +112,6 @@ pub struct KvTagItemFindResp {
     pub label: String,
     pub color: String,
     pub icon: String,
+    pub url: Option<String>,
+    pub service: Option<String>,
 }
