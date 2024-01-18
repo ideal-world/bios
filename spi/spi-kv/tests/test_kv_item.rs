@@ -206,25 +206,19 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
                         "code":"01",
                         "label":"紧急",
                         "color":"",
-                        "icon":"",
-                        "url":"",
-                        "service":""
+                        "icon":""
                     },
                     {
                         "code":"02",
                         "label":"高",
                         "color":"",
-                        "icon":"",
-                        "url":"",
-                        "service":""
+                        "icon":""
                     },
                     {
                         "code":"03",
                         "label":"低",
                         "color":"",
-                        "icon":"",
-                        "url":"",
-                        "service":""
+                        "icon":""
                     }
                 ]
             }),
@@ -241,25 +235,19 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
                         "code":"req",
                         "label":"需求",
                         "color":"",
-                        "icon":"",
-                        "url":"",
-                        "service":""
+                        "icon":""
                     },
                     {
                         "code":"task",
                         "label":"任务",
                         "color":"",
-                        "icon":"",
-                        "url":"",
-                        "service":""
+                        "icon":""
                     },
                     {
                         "code":"bug",
                         "label":"缺陷",
                         "color":"",
-                        "icon":"",
-                        "url":"",
-                        "service":""
+                        "icon":""
                     }
                 ]
             }),
