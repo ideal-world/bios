@@ -12,7 +12,8 @@ use bios_sdk_invoke::{
 use serde::Serialize;
 
 use tardis::{
-    basic::{dto::TardisContext, result::TardisResult},
+    basic::{dto::TardisContext, field::TrimString, result::TardisResult},
+    chrono::{DateTime, Utc},
     serde_json::json,
     tokio, TardisFuns, TardisFunsInst,
 };
@@ -77,11 +78,8 @@ impl IamLogClient {
                 let task_handle = tokio::spawn(async move {
                     let funs = iam_constants::get_tardis_inst();
                     let mut ip = "".to_string();
-                    match get_remote_ip(&ctx_clone).await {
-                        Ok(remote_ip) => {
-                            ip = remote_ip.unwrap_or_default();
-                        }
-                        Err(_) => {}
+                    if let Ok(remote_ip) = get_remote_ip(&ctx_clone).await {
+                        ip = remote_ip.unwrap_or_default();
                     }
                     IamLogClient::add_item(
                         tag,
@@ -145,17 +143,17 @@ impl IamLogClient {
             let req = LogItemAddReq {
                 tag,
                 content: TardisFuns::json.obj_to_string(&content).expect("req_msg not a valid json value"),
-                kind,
-                ext,
-                key,
+                kind: kind.map(TrimString),
+                ext: Some(search_ext),
+                key: key.map(TrimString),
                 op,
-                rel_key,
+                rel_key: rel_key.map(TrimString),
                 id: None,
-                ts,
+                ts: ts.map(|ts| DateTime::parse_from_rfc3339(&ts).unwrap_or_default().with_timezone(&Utc)),
                 owner: Some(ctx.owner.clone()),
                 own_paths: Some(ctx.own_paths.clone()),
             };
-            ws_log_client().await.publish_add_log(&req, default_log_avatar().await.clone(), funs.invoke_conf_spi_app_id(), &ctx).await?;
+            ws_log_client().await.publish_add_log(&req, default_log_avatar().await.clone(), funs.invoke_conf_spi_app_id(), ctx).await?;
         } else {
             SpiLogClient::add(
                 &tag,
