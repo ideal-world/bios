@@ -1,16 +1,23 @@
 use bios_basic::process::task_processor::TaskProcessor;
+use bios_basic::rbum::dto::rbum_set_item_dto::RbumSetItemDetailResp;
+use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
+use bios_basic::rbum::serv::rbum_set_serv::RbumSetItemServ;
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem_openapi;
 use tardis::web::poem_openapi::{param::Path, param::Query, payload::Json};
 use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 
-use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
+use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumSetItemFilterReq};
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
 use crate::basic::dto::iam_app_dto::{IamAppAggAddReq, IamAppDetailResp, IamAppModifyReq, IamAppSummaryResp};
 use crate::basic::dto::iam_filer_dto::IamAppFilterReq;
 use crate::basic::serv::iam_app_serv::IamAppServ;
+use crate::basic::serv::iam_cert_serv::IamCertServ;
+use crate::basic::serv::iam_set_serv::IamSetServ;
+use crate::iam_config::IamBasicConfigApi;
 use crate::iam_constants;
+use crate::iam_enumeration::IamSetKind;
 use bios_basic::helper::request_helper::add_remote_ip;
 use tardis::web::poem::Request;
 #[derive(Clone, Default)]
@@ -108,5 +115,47 @@ impl IamCtAppApi {
         funs.commit().await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
+    }
+
+    /// Find App Set Items (app)
+    #[oai(path = "/apps/item", method = "get")]
+    async fn find_items(
+        &self,
+        cate_ids: Query<Option<String>>,
+        item_ids: Query<Option<String>>,
+        page_number: Query<u32>,
+        page_size: Query<u32>,
+        desc_by_create: Query<Option<bool>>,
+        desc_by_update: Query<Option<bool>>,
+        ctx: TardisContextExtractor,
+        request: &Request,
+    ) -> TardisApiResult<TardisPage<RbumSetItemDetailResp>> {
+        let funs = iam_constants::get_tardis_inst();
+        let ctx = IamCertServ::use_sys_or_tenant_ctx_unsafe(ctx.0)?;
+        add_remote_ip(request, &ctx).await?;
+        let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Apps, &funs, &ctx).await?;
+        let result = RbumSetItemServ::paginate_detail_rbums(
+            &RbumSetItemFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: false,
+                    ..Default::default()
+                },
+                rel_rbum_item_disabled: Some(false),
+                rel_rbum_set_id: Some(set_id.clone()),
+                rel_rbum_item_kind_ids: Some(vec![funs.iam_basic_kind_app_id()]),
+                rel_rbum_set_cate_ids: cate_ids.0.map(|ids| ids.split(',').map(|id| id.to_string()).collect::<Vec<String>>()),
+                rel_rbum_item_ids: item_ids.0.map(|ids| ids.split(',').map(|id| id.to_string()).collect::<Vec<String>>()),
+                ..Default::default()
+            },
+            page_number.0,
+            page_size.0,
+            desc_by_create.0,
+            desc_by_update.0,
+            &funs,
+            &ctx,
+        )
+        .await?;
+        ctx.execute_task().await?;
+        TardisResp::ok(result)
     }
 }
