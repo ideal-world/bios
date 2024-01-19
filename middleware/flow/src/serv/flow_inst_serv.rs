@@ -26,7 +26,7 @@ use tardis::{
         JoinType, Set,
     },
     futures_util::future::join_all,
-    log::{debug, warn},
+    log::{debug, error},
     serde_json::Value,
     tokio,
     web::web_resp::TardisPage,
@@ -1170,7 +1170,7 @@ impl FlowInstServ {
     }
 
     /// The kernel function of flow processing
-    async fn do_find_next_transitions(
+    pub async fn do_find_next_transitions(
         flow_inst: &FlowInstDetailResp,
         flow_model: &FlowModelDetailResp,
         spec_flow_transition_id: Option<String>,
@@ -1314,7 +1314,7 @@ impl FlowInstServ {
             match Self::do_front_change(&flow_inst_id_sync, &ctx_sync, &funs).await {
                 Ok(_) => {}
                 Err(e) => {
-                    warn!("[Flow.Inst] failed to add log:{e}")
+                    error!("[Flow.Inst] failed to add log:{e}")
                 }
             }
             funs.commit().await.unwrap();

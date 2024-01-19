@@ -9,7 +9,7 @@ use tardis::{
     TardisFuns,
 };
 
-use crate::flow_constants;
+use crate::{flow_constants::{self, get_tardis_inst, EVENT_FRONT_CHANGE, EVENT_POST_CHANGE, EVENT_MODIFY_ASSIGNED}, serv::{flow_inst_serv, flow_event_serv::FlowEventServ}};
 pub const RECONNECT_INTERVAL: Duration = Duration::from_secs(10);
 
 pub async fn start_flow_event_service(config: &EventTopicConfig) -> TardisResult<()> {
@@ -28,6 +28,24 @@ pub async fn start_flow_event_service(config: &EventTopicConfig) -> TardisResult
             return None;
         };
         match event.as_deref() {
+            Some(EVENT_FRONT_CHANGE) => {
+                let Ok((inst_id, ctx)) = TardisFuns::json.json_to_obj::<(String, _)>(msg) else {
+                    return None;
+                };
+                tokio::spawn(async move {
+                    let funs = get_tardis_inst();
+                    let result = FlowEventServ::do_front_change(&inst_id, &ctx, &funs).await;
+                    if let Err(err) = result {
+                        error!("[Bios.Log] failed to do front change: {}, inst_id: {}", err, inst_id);
+                    }
+                });
+            },
+            Some(EVENT_POST_CHANGE) => {
+
+            },
+            Some(EVENT_MODIFY_ASSIGNED) => {
+
+            },
             Some(unknown_event) => {
                 warn!("[Bios.Flow] event receive unknown event {unknown_event}")
             }
