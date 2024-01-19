@@ -239,7 +239,7 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
 
     let mut params = if let Some(own_paths) = &query_req.own_paths {
         vec![
-            Value::from(own_paths.join(", ")),
+            Value::from(own_paths.join("', '")),
             Value::from(query_req.start_time),
             Value::from(query_req.end_time),
         ]
