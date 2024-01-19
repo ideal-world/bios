@@ -1,5 +1,5 @@
 use bios_basic::{process::ci_processor::AppKeyConfig, rbum::rbum_config::RbumConfig};
-use bios_sdk_invoke::invoke_config::InvokeConfig;
+use bios_sdk_invoke::{invoke_config::InvokeConfig, clients::event_client::EventTopicConfig};
 use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
 use std::{fmt::Debug, sync::Mutex};
@@ -13,6 +13,7 @@ pub struct FlowConfig {
     pub rbum: RbumConfig,
     pub invoke: InvokeConfig,
     pub app_key: AppKeyConfig,
+    pub event: Option<EventTopicConfig>,
     pub search_url: String,
     pub log_url: String,
     pub iam_url: String,
@@ -24,6 +25,7 @@ impl Default for FlowConfig {
             rbum: Default::default(),
             invoke: Default::default(),
             app_key: Default::default(),
+            event: None,
             search_url: "http://127.0.0.1:8080/spi-search".to_string(),
             log_url: "http://127.0.0.1:8080/spi-log".to_string(),
             iam_url: "http://127.0.0.1:8080/iam".to_string(),
