@@ -1,4 +1,4 @@
-use bios_basic::dto::BasicQueryCondInfo;
+use bios_basic::{dto::BasicQueryCondInfo, basic_enumeration::BasicQueryOpKind};
 use serde::{Deserialize, Serialize};
 use tardis::{
     basic::field::TrimString,
@@ -42,11 +42,30 @@ pub struct LogItemFindReq {
     pub ext_or: Option<Vec<BasicQueryCondInfo>>,
     // Extended filtering conditions
     pub ext: Option<Vec<BasicQueryCondInfo>>,
+    // Advanced search
+    pub adv_query: Option<Vec<AdvLogItemQueryReq>>,
     pub rel_keys: Option<Vec<TrimString>>,
     pub ts_start: Option<DateTime<Utc>>,
     pub ts_end: Option<DateTime<Utc>>,
     pub page_number: u32,
     pub page_size: u16,
+}
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Default)]
+pub struct AdvLogItemQueryReq {
+    pub group_by_or: Option<bool>,
+    // Extended filtering conditions
+    pub ext: Option<Vec<AdvBasicQueryCondInfo>>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[cfg_attr(feature = "default", derive(poem_openapi::Object))]
+pub struct AdvBasicQueryCondInfo {
+    pub in_ext: Option<bool>,
+    #[oai(validator(min_length = "1"))]
+    pub field: String,
+    pub op: BasicQueryOpKind,
+    pub value: Value,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
