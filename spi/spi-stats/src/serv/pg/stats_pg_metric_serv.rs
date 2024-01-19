@@ -237,11 +237,19 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
         false
     });
 
-    let mut params = vec![
-        Value::from(format!("{}%", ctx.own_paths)),
-        Value::from(query_req.start_time),
-        Value::from(query_req.end_time),
-    ];
+    let mut params = if let Some(own_paths) = &query_req.own_paths {
+        vec![
+            Value::from(own_paths.join(", ")),
+            Value::from(query_req.start_time),
+            Value::from(query_req.end_time),
+        ]
+    } else {
+        vec![
+            Value::from(format!("{}%", ctx.own_paths)),
+            Value::from(query_req.start_time),
+            Value::from(query_req.end_time),
+        ]
+    };
 
     // Package filter
     let mut sql_part_wheres = vec![];
@@ -473,6 +481,7 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
     // package limit
     let query_limit = if let Some(limit) = &query_req.limit { format!("LIMIT {limit}") } else { "".to_string() };
     let ignore_group_agg = !(!sql_part_groups.is_empty() && query_req.group_agg.unwrap_or(false));
+    let filter_own_paths = if query_req.own_paths.is_some() { "fact.own_paths IN ($1)" } else { "fact.own_paths LIKE $1" };
     let final_sql = format!(
         r#"SELECT {sql_part_outer_selects}{}
     FROM (
@@ -483,7 +492,7 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
                 FROM {fact_inst_table_name} fact
                 LEFT JOIN {fact_inst_del_table_name} del ON del.key = fact.key AND del.ct >= $2 AND del.ct <= $3
                 WHERE
-                    fact.own_paths LIKE $1
+                    {filter_own_paths}
                     AND del.key IS NULL
                     AND fact.ct >= $2 AND fact.ct <= $3
                 ORDER BY {}fact.ct DESC

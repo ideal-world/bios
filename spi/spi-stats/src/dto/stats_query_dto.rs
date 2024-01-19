@@ -24,6 +24,7 @@ pub struct StatsQueryMetricsReq {
     /// List of grouped fields,
     /// the order is related to the returned hierarchy and is handled internally using ROLLUP
     pub group: Vec<StatsQueryDimensionGroupReq>,
+    pub own_paths: Option<Vec<String>>,
     /// Ignore group rollup
     /// If true or null, the group rollup will not be counted
     /// If false, the group rollup will be counted
