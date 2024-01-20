@@ -99,6 +99,7 @@ impl IamCpAccountApi {
                     ..Default::default()
                 },
                 rel_rbum_item_disabled: Some(false),
+                table_rbum_set_cate_is_left: Some(true),
                 rel_rbum_set_id: Some(set_id.clone()),
                 rel_rbum_set_cate_sys_codes: Some(cate_codes),
                 sys_code_query_kind: Some(RbumSetCateLevelQueryKind::CurrentAndSub),

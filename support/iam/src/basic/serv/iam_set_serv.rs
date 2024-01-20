@@ -603,7 +603,7 @@ impl IamSetServ {
                 ctx,
             )
             .await;
-            let _ = IamSearchClient::async_add_or_modify_account_search(add_req.rel_rbum_item_id, Box::new(true), "".to_owned(), funs, ctx).await;
+            let _ = IamSearchClient::async_add_or_modify_account_search(add_req.rel_rbum_item_id.clone(), Box::new(true), "".to_owned(), funs, ctx).await;
         }
 
         result
