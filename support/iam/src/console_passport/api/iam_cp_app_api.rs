@@ -103,7 +103,7 @@ impl IamCpAppApi {
         )
         .await?
         .into_iter()
-        .map(|resp| resp.rel_rbum_set_cate_sys_code)
+        .map(|resp| resp.rel_rbum_set_cate_sys_code.unwrap_or("".to_string()))
         .collect::<Vec<String>>();
         if cate_codes.is_empty() {
             return TardisResp::ok(vec![]);
