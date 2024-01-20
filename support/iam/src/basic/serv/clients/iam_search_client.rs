@@ -181,7 +181,8 @@ impl IamSearchClient {
                     "certs":account_resp.certs,
                     "icon":account_resp.icon,
                     "logout_msg":logout_msg,
-                    "disabled":account_resp.disabled
+                    "disabled":account_resp.disabled,
+                    "scope_level":account_resp.scope_level
                 })),
                 ext_override: Some(true),
                 visit_keys: Some(SearchItemVisitKeysReq {
@@ -224,7 +225,8 @@ impl IamSearchClient {
                     "certs":account_resp.certs,
                     "icon":account_resp.icon,
                     "logout_msg":logout_msg,
-                    "disabled":account_resp.disabled
+                    "disabled":account_resp.disabled,
+                    "scope_level":account_resp.scope_level
                 })),
                 visit_keys: Some(SearchItemVisitKeysReq {
                     accounts: None,
