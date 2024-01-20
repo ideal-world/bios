@@ -1,5 +1,6 @@
 use bios_basic::process::task_processor::TaskProcessor;
 use bios_basic::rbum::dto::rbum_set_item_dto::RbumSetItemDetailResp;
+use bios_basic::rbum::rbum_enumeration::RbumSetCateLevelQueryKind;
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use bios_basic::rbum::serv::rbum_set_serv::RbumSetItemServ;
 use tardis::web::context_extractor::TardisContextExtractor;
