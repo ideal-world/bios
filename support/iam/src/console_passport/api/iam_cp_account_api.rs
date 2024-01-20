@@ -76,6 +76,7 @@ impl IamCpAccountApi {
                     ..Default::default()
                 },
                 rel_rbum_item_disabled: Some(false),
+                table_rbum_set_cate_is_left: Some(true),
                 rel_rbum_set_id: Some(set_id.clone()),
                 rel_rbum_item_ids: Some(vec![ctx.owner.clone()]),
                 ..Default::default()
@@ -87,7 +88,7 @@ impl IamCpAccountApi {
         )
         .await?
         .into_iter()
-        .map(|resp| resp.rel_rbum_item_code)
+        .map(|resp| resp.rel_rbum_set_cate_sys_code)
         .collect::<Vec<String>>();
         if cate_codes.is_empty() {
             return TardisResp::ok(vec![]);
