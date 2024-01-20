@@ -5,6 +5,7 @@ use bios_basic::spi::{
     spi_initializer::common_pg::{self, package_table_name},
 };
 
+use itertools::Itertools;
 use tardis::{
     basic::{dto::TardisContext, error::TardisError, result::TardisResult},
     db::{
@@ -238,18 +239,15 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
     });
 
     let mut params = if let Some(own_paths) = &query_req.own_paths {
-        vec![
-            Value::from(own_paths.join(", ")),
-            Value::from(query_req.start_time),
-            Value::from(query_req.end_time),
-        ]
+        own_paths.iter().map(Value::from).collect_vec()
     } else {
         vec![
             Value::from(format!("{}%", ctx.own_paths)),
-            Value::from(query_req.start_time),
-            Value::from(query_req.end_time),
         ]
     };
+    let own_paths_count = params.len();
+    params.push(Value::from(query_req.start_time));
+    params.push(Value::from(query_req.end_time));
 
     // Package filter
     let mut sql_part_wheres = vec![];
@@ -481,7 +479,10 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
     // package limit
     let query_limit = if let Some(limit) = &query_req.limit { format!("LIMIT {limit}") } else { "".to_string() };
     let ignore_group_agg = !(!sql_part_groups.is_empty() && query_req.group_agg.unwrap_or(false));
-    let filter_own_paths = if query_req.own_paths.is_some() { "fact.own_paths IN ($1)" } else { "fact.own_paths LIKE $1" };
+    let own_paths_placeholder = (1..=own_paths_count).map(|idx| format!("${}", idx)).collect::<Vec<String>>().join(", ");
+    let create_time_placeholder = format!("${}", own_paths_count + 1);
+    let end_time_placeholder = format!("${}", own_paths_count + 2);
+    let filter_own_paths = if query_req.own_paths.is_some() { format!("fact.own_paths IN ({own_paths_placeholder})") } else { "fact.own_paths LIKE $1".to_string() };
     let final_sql = format!(
         r#"SELECT {sql_part_outer_selects}{}
     FROM (
@@ -490,11 +491,11 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
              FROM(
                 SELECT {}fact.*, 1 as _count
                 FROM {fact_inst_table_name} fact
-                LEFT JOIN {fact_inst_del_table_name} del ON del.key = fact.key AND del.ct >= $2 AND del.ct <= $3
+                LEFT JOIN {fact_inst_del_table_name} del ON del.key = fact.key AND del.ct >= {create_time_placeholder} AND del.ct <= {end_time_placeholder}
                 WHERE
                     {filter_own_paths}
                     AND del.key IS NULL
-                    AND fact.ct >= $2 AND fact.ct <= $3
+                    AND fact.ct >= {create_time_placeholder} AND fact.ct <= {end_time_placeholder}
                 ORDER BY {}fact.ct DESC
              ) fact 
              where 1 = 1
