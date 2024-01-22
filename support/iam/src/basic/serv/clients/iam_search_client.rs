@@ -142,7 +142,7 @@ impl IamSearchClient {
         for set_id in set_ids {
             let set_items = IamSetServ::find_set_items(Some(set_id), None, Some(account_id.to_string()), None, true, None, funs, ctx).await?;
             account_resp_dept_id
-                .extend(set_items.iter().filter(|s| s.rel_rbum_set_cate_id.is_none()).map(|s| s.rel_rbum_set_cate_id.clone().unwrap_or("".to_owned())).collect::<Vec<_>>());
+                .extend(set_items.iter().filter(|s| s.rel_rbum_set_cate_id.is_some()).map(|s| s.rel_rbum_set_cate_id.clone().unwrap_or("".to_owned())).collect::<Vec<_>>());
         }
 
         let tag = funs.conf::<IamConfig>().spi.search_account_tag.clone();

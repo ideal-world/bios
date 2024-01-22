@@ -185,7 +185,15 @@ impl IamSetServ {
 
         if kind == IamSetKind::Apps.to_string() && result.is_ok() {
             SpiKvClient::add_or_modify_key_name(
-                &format!("{}:{}", funs.conf::<IamConfig>().spi.kv_tenant_prefix.clone(), result.clone().unwrap()),
+                &format!("{}:{}", funs.conf::<IamConfig>().spi.kv_apps_prefix.clone(), result.clone().unwrap()),
+                &add_req.name,
+                funs,
+                ctx,
+            )
+            .await?;
+        } else if kind == IamSetKind::Org.to_string() && result.is_ok() {
+            SpiKvClient::add_or_modify_key_name(
+                &format!("{}:{}", funs.conf::<IamConfig>().spi.kv_orgs_prefix.clone(), result.clone().unwrap()),
                 &add_req.name,
                 funs,
                 ctx,
@@ -253,7 +261,15 @@ impl IamSetServ {
             let mut kind = item.kind;
             if kind == IamSetKind::Apps.to_string() {
                 SpiKvClient::add_or_modify_key_name(
-                    &format!("{}:{}", funs.conf::<IamConfig>().spi.kv_tenant_prefix.clone(), &set_cate_id),
+                    &format!("{}:{}", funs.conf::<IamConfig>().spi.kv_apps_prefix.clone(), &set_cate_id.clone()),
+                    &set_cate_item.name.clone(),
+                    funs,
+                    ctx,
+                )
+                .await?;
+            } else if kind == IamSetKind::Org.to_string() && result.is_ok() {
+                SpiKvClient::add_or_modify_key_name(
+                    &format!("{}:{}", funs.conf::<IamConfig>().spi.kv_orgs_prefix.clone(), &set_cate_id),
                     &set_cate_item.name.clone(),
                     funs,
                     ctx,
