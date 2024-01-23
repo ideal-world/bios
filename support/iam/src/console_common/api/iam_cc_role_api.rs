@@ -88,6 +88,46 @@ impl IamCcRoleApi {
         })
     }
 
+    /// Find Role By CTX
+    #[oai(path = "/ctx", method = "get")]
+    async fn find_by_ctx(&self, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Vec<IamRoleBoneResp>> {
+        add_remote_ip(request, &ctx.0).await?;
+        let funs = iam_constants::get_tardis_inst();
+        let roles = ctx.0.roles.clone();
+        let result = IamRoleServ::do_find_items(
+            &IamRoleFilterReq {
+                basic: RbumBasicFilterReq {
+                    ids: Some(roles),
+                    enabled: Some(true),
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            None,
+            None,
+            &funs,
+            &ctx.0,
+        )
+        .await?;
+        ctx.0.execute_task().await?;
+        TardisResp::ok(
+            result
+                .into_iter()
+                .map(|item| IamRoleBoneResp {
+                    id: item.id,
+                    name: item.name,
+                    code: item.code,
+                    kind: item.kind,
+                    scope_level: item.scope_level,
+                    icon: item.icon,
+                    in_base: item.in_base,
+                    in_embed: item.in_embed,
+                    extend_role_id: item.extend_role_id,
+                })
+                .collect(),
+        )
+    }
+
     /// Find pub Rel Res By Role Id
     #[oai(path = "/:id/pub_res", method = "get")]
     async fn find_rel_res_with_pub(
