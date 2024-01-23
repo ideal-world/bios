@@ -1,5 +1,5 @@
 use bios_basic::{process::ci_processor::AppKeyConfig, rbum::rbum_config::RbumConfig};
-use bios_sdk_invoke::{invoke_config::InvokeConfig, clients::event_client::EventTopicConfig};
+use bios_sdk_invoke::{clients::event_client::EventTopicConfig, invoke_config::InvokeConfig};
 use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
 use std::{fmt::Debug, sync::Mutex};

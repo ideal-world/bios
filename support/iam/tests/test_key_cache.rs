@@ -918,6 +918,7 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
         &mut IamResModifyReq {
             name: None,
             icon: None,
+            code: None,
             sort: None,
             hide: None,
             action: None,
@@ -943,6 +944,7 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
         &mut IamResModifyReq {
             name: None,
             icon: None,
+            code: None,
             sort: None,
             hide: None,
             action: None,

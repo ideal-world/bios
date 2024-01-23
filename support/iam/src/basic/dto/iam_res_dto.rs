@@ -62,6 +62,7 @@ pub struct IamResModifyReq {
     pub name: Option<TrimString>,
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub code: Option<TrimString>,
+    pub method: Option<TrimString>,
     pub icon: Option<String>,
     pub sort: Option<i64>,
     pub hide: Option<bool>,

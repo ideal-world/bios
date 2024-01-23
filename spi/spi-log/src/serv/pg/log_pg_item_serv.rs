@@ -7,7 +7,7 @@ use tardis::{
 
 use bios_basic::{basic_enumeration::BasicQueryOpKind, dto::BasicQueryCondInfo, helper::db_helper, spi::spi_funs::SpiBsInst};
 
-use crate::dto::log_item_dto::{LogItemAddReq, LogItemFindReq, LogItemFindResp, AdvBasicQueryCondInfo};
+use crate::dto::log_item_dto::{AdvBasicQueryCondInfo, LogItemAddReq, LogItemFindReq, LogItemFindResp};
 
 use super::log_pg_initializer;
 
@@ -272,7 +272,7 @@ pub async fn find(find_req: &mut LogItemFindReq, funs: &TardisFunsInst, ctx: &Ta
         }
         where_fragments.push(format!(" ( {} ) ", or_fragments.join(" OR ")));
     }
-    
+
     // advanced query
     let mut sql_adv_query = vec![];
     if let Some(adv_query) = &find_req.adv_query {
