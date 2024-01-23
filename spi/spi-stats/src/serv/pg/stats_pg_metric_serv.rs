@@ -241,9 +241,7 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
     let mut params = if let Some(own_paths) = &query_req.own_paths {
         own_paths.iter().map(Value::from).collect_vec()
     } else {
-        vec![
-            Value::from(format!("{}%", ctx.own_paths)),
-        ]
+        vec![Value::from(format!("{}%", ctx.own_paths))]
     };
     let own_paths_count = params.len();
     params.push(Value::from(query_req.start_time));
@@ -482,7 +480,11 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
     let own_paths_placeholder = (1..=own_paths_count).map(|idx| format!("${}", idx)).collect::<Vec<String>>().join(", ");
     let create_time_placeholder = format!("${}", own_paths_count + 1);
     let end_time_placeholder = format!("${}", own_paths_count + 2);
-    let filter_own_paths = if query_req.own_paths.is_some() { format!("fact.own_paths IN ({own_paths_placeholder})") } else { "fact.own_paths LIKE $1".to_string() };
+    let filter_own_paths = if query_req.own_paths.is_some() {
+        format!("fact.own_paths IN ({own_paths_placeholder})")
+    } else {
+        "fact.own_paths LIKE $1".to_string()
+    };
     let final_sql = format!(
         r#"SELECT {sql_part_outer_selects}{}
     FROM (

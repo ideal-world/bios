@@ -33,7 +33,7 @@ pub async fn add(add_req: &mut SearchItemAddReq, _funs: &TardisFunsInst, ctx: &T
     params.push(Value::from(format!(
         "{},{}",
         add_req.title.as_str(),
-        generate_word_combinations(to_pinyin_vec(add_req.title.as_str(), Pinyin::plain)).join(",")
+        generate_word_combinations(to_pinyin_vec(add_req.title.as_str(), Pinyin::plain)).join(" ")
     )));
     params.push(Value::from(add_req.content.as_str()));
     params.push(Value::from(add_req.content.as_str()));
@@ -93,7 +93,7 @@ pub async fn modify(tag: &str, key: &str, modify_req: &mut SearchItemModifyReq, 
         params.push(Value::from(format!(
             "{},{}",
             title,
-            generate_word_combinations(to_pinyin_vec(title, Pinyin::plain)).join(",")
+            generate_word_combinations(to_pinyin_vec(title, Pinyin::plain)).join(" ")
         )));
     };
     if let Some(content) = &modify_req.content {
