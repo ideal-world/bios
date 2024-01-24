@@ -118,4 +118,67 @@ impl IamCpAccountApi {
         ctx.execute_task().await?;
         TardisResp::ok(result)
     }
+
+    /// Find Org Set Items (Account)
+    #[oai(path = "/org/item", method = "get")]
+    async fn find_items(
+        &self,
+        cate_ids: Query<Option<String>>,
+        item_ids: Query<Option<String>>,
+        ctx: TardisContextExtractor,
+        request: &Request,
+    ) -> TardisApiResult<Vec<RbumSetItemDetailResp>> {
+        let funs = iam_constants::get_tardis_inst();
+        let ctx = IamCertServ::use_sys_or_tenant_ctx_unsafe(ctx.0)?;
+        add_remote_ip(request, &ctx).await?;
+        let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, &funs, &ctx).await?;
+        let cate_codes = RbumSetItemServ::find_detail_rbums(
+            &RbumSetItemFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: false,
+                    ..Default::default()
+                },
+                rel_rbum_item_disabled: Some(false),
+                table_rbum_set_cate_is_left: Some(true),
+                rel_rbum_set_id: Some(set_id.clone()),
+                rel_rbum_item_ids: Some(vec![ctx.owner.clone()]),
+                ..Default::default()
+            },
+            None,
+            None,
+            &funs,
+            &ctx,
+        )
+        .await?
+        .into_iter()
+        .map(|resp| resp.rel_rbum_set_cate_sys_code.unwrap_or("".to_string()))
+        .collect::<Vec<String>>();
+        if cate_codes.is_empty() {
+            return TardisResp::ok(vec![]);
+        }
+        let result = RbumSetItemServ::find_detail_rbums(
+            &RbumSetItemFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: false,
+                    ..Default::default()
+                },
+                rel_rbum_item_disabled: Some(false),
+                table_rbum_set_cate_is_left: Some(true),
+                rel_rbum_set_id: Some(set_id.clone()),
+                rel_rbum_set_cate_sys_codes: Some(cate_codes),
+                sys_code_query_kind: Some(RbumSetCateLevelQueryKind::CurrentAndSub),
+                rel_rbum_item_kind_ids: Some(vec![funs.iam_basic_kind_account_id()]),
+                rel_rbum_set_cate_ids: cate_ids.0.map(|ids| ids.split(',').map(|id| id.to_string()).collect::<Vec<String>>()),
+                rel_rbum_item_ids: item_ids.0.map(|ids| ids.split(',').map(|id| id.to_string()).collect::<Vec<String>>()),
+                ..Default::default()
+            },
+            None,
+            None,
+            &funs,
+            &ctx,
+        )
+        .await?;
+        ctx.execute_task().await?;
+        TardisResp::ok(result)
+    }
 }
