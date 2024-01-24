@@ -58,7 +58,7 @@ impl IamCpAccountApi {
 
     /// Find App Set Items (Account)
     #[oai(path = "/apps/item", method = "get")]
-    async fn find_items(
+    async fn find_apps_items(
         &self,
         cate_ids: Query<Option<String>>,
         item_ids: Query<Option<String>>,
@@ -121,7 +121,7 @@ impl IamCpAccountApi {
 
     /// Find Org Set Items (Account)
     #[oai(path = "/org/item", method = "get")]
-    async fn find_items(
+    async fn find_org_items(
         &self,
         cate_ids: Query<Option<String>>,
         item_ids: Query<Option<String>>,
