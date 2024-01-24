@@ -9,7 +9,7 @@ use tardis::{
     TardisFuns,
 };
 
-use crate::{flow_constants::{self, get_tardis_inst, EVENT_FRONT_CHANGE, EVENT_POST_CHANGE, EVENT_MODIFY_ASSIGNED}, serv::{flow_inst_serv, flow_event_serv::FlowEventServ}};
+use crate::{flow_constants::{self, get_tardis_inst, EVENT_FRONT_CHANGE, EVENT_POST_CHANGE, EVENT_MODIFY_ASSIGNED}, serv::flow_event_serv::FlowEventServ};
 pub const RECONNECT_INTERVAL: Duration = Duration::from_secs(10);
 
 pub async fn start_flow_event_service(config: &EventTopicConfig) -> TardisResult<()> {
