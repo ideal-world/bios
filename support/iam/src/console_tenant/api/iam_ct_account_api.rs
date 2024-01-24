@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use bios_basic::process::task_processor::TaskProcessor;
 use bios_basic::rbum::dto::rbum_set_item_dto::RbumSetItemDetailResp;
 use bios_basic::rbum::helper::rbum_event_helper;
@@ -156,7 +158,12 @@ impl IamCtAccountApi {
             )
             .await?;
             Some(RbumSetItemRelFilterReq {
-                set_ids_and_cate_codes: Some(set_cate_vec.into_iter().map(|sc| (sc.rel_rbum_set_id, sc.sys_code)).collect()),
+                set_ids_and_cate_codes: Some(
+                    set_cate_vec.into_iter().map(|sc| (sc.rel_rbum_set_id, sc.sys_code)).fold(HashMap::new(), |mut acc, (key, value)| {
+                        acc.entry(key).or_insert_with(Vec::new).push(value);
+                        acc
+                    }),
+                ),
                 with_sub_set_cate_codes: false,
                 ..Default::default()
             })
