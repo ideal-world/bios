@@ -27,6 +27,7 @@ use crate::iam_constants::{RBUM_SCOPE_LEVEL_APP, RBUM_SCOPE_LEVEL_TENANT};
 use crate::iam_enumeration::{IamRelKind, IamSetCateKind, IamSetKind};
 
 use super::clients::iam_log_client::{IamLogClient, LogParamTag};
+use super::clients::iam_search_client::IamSearchClient;
 use super::iam_account_serv::IamAccountServ;
 use super::iam_rel_serv::IamRelServ;
 
@@ -184,7 +185,15 @@ impl IamSetServ {
 
         if kind == IamSetKind::Apps.to_string() && result.is_ok() {
             SpiKvClient::add_or_modify_key_name(
-                &format!("{}:{}", funs.conf::<IamConfig>().spi.kv_tenant_prefix.clone(), result.clone().unwrap()),
+                &format!("{}:{}", funs.conf::<IamConfig>().spi.kv_apps_prefix.clone(), result.clone().unwrap()),
+                &add_req.name,
+                funs,
+                ctx,
+            )
+            .await?;
+        } else if kind == IamSetKind::Org.to_string() && result.is_ok() {
+            SpiKvClient::add_or_modify_key_name(
+                &format!("{}:{}", funs.conf::<IamConfig>().spi.kv_orgs_prefix.clone(), result.clone().unwrap()),
                 &add_req.name,
                 funs,
                 ctx,
@@ -252,7 +261,15 @@ impl IamSetServ {
             let mut kind = item.kind;
             if kind == IamSetKind::Apps.to_string() {
                 SpiKvClient::add_or_modify_key_name(
-                    &format!("{}:{}", funs.conf::<IamConfig>().spi.kv_tenant_prefix.clone(), &set_cate_id),
+                    &format!("{}:{}", funs.conf::<IamConfig>().spi.kv_apps_prefix.clone(), &set_cate_id),
+                    &set_cate_item.name.clone(),
+                    funs,
+                    ctx,
+                )
+                .await?;
+            } else if kind == IamSetKind::Org.to_string() && result.is_ok() {
+                SpiKvClient::add_or_modify_key_name(
+                    &format!("{}:{}", funs.conf::<IamConfig>().spi.kv_orgs_prefix.clone(), &set_cate_id),
                     &set_cate_item.name.clone(),
                     funs,
                     ctx,
@@ -602,6 +619,7 @@ impl IamSetServ {
                 ctx,
             )
             .await;
+            let _ = IamSearchClient::async_add_or_modify_account_search(add_req.rel_rbum_item_id.clone(), Box::new(true), "".to_owned(), funs, ctx).await;
         }
 
         result
@@ -637,6 +655,7 @@ impl IamSetServ {
                     ctx,
                 )
                 .await;
+                let _ = IamSearchClient::async_add_or_modify_account_search(item.rel_rbum_item_id, Box::new(true), "".to_owned(), funs, ctx).await;
             }
         }
 
@@ -894,7 +913,7 @@ impl IamSetServ {
             )
             .await?;
             for (id, name) in id_and_names {
-                SpiKvClient::add_or_modify_key_name(&format!("{}:{}", funs.conf::<IamConfig>().spi.kv_tenant_prefix.clone(), id), &name, funs, ctx).await?;
+                SpiKvClient::add_or_modify_key_name(&format!("{}:{}", funs.conf::<IamConfig>().spi.kv_apps_prefix.clone(), id), &name, funs, ctx).await?;
             }
         }
 

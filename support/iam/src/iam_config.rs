@@ -103,6 +103,8 @@ pub struct IamSpiConfig {
     pub kv_tenant_prefix: String,
     pub kv_account_prefix: String,
     pub kv_app_prefix: String,
+    pub kv_apps_prefix: String,
+    pub kv_orgs_prefix: String,
 
     pub owner: String,
 }
@@ -117,6 +119,8 @@ impl Default for IamSpiConfig {
             kv_tenant_prefix: "iam_tenant".to_string(),
             kv_account_prefix: "iam_account".to_string(),
             kv_app_prefix: "iam_app".to_string(),
+            kv_apps_prefix: "iam_apps".to_string(),
+            kv_orgs_prefix: "iam_orgs".to_string(),
             owner: "".to_string(),
         }
     }

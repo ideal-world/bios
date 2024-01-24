@@ -122,9 +122,16 @@ impl RbumItemCrudOperation<iam_res::ActiveModel, IamResAddReq, IamResModifyReq, 
     }
 
     async fn before_modify_item(id: &str, modify_req: &mut IamResModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        if modify_req.code.is_some() {
+        if modify_req.code.is_some() || modify_req.method.is_some() {
             let item = Self::get_item(id, &IamResFilterReq::default(), funs, ctx).await?;
-            modify_req.encoding(item.kind.clone(), item.method.clone());
+            modify_req.encoding(
+                item.kind.clone(),
+                if let Some(method) = &modify_req.method {
+                    method.to_string()
+                } else {
+                    item.method.clone()
+                },
+            );
         }
         Ok(())
     }
@@ -146,6 +153,7 @@ impl RbumItemCrudOperation<iam_res::ActiveModel, IamResAddReq, IamResModifyReq, 
             && modify_req.sort.is_none()
             && modify_req.hide.is_none()
             && modify_req.action.is_none()
+            && modify_req.method.is_none()
             && modify_req.crypto_req.is_none()
             && modify_req.crypto_resp.is_none()
             && modify_req.double_auth.is_none()
@@ -167,6 +175,9 @@ impl RbumItemCrudOperation<iam_res::ActiveModel, IamResAddReq, IamResModifyReq, 
         }
         if let Some(action) = &modify_req.action {
             iam_res.action = Set(action.to_string());
+        }
+        if let Some(method) = &modify_req.method {
+            iam_res.method = Set(method.to_string());
         }
         if let Some(crypto_req) = modify_req.crypto_req {
             iam_res.crypto_req = Set(crypto_req);
@@ -200,7 +211,7 @@ impl RbumItemCrudOperation<iam_res::ActiveModel, IamResAddReq, IamResModifyReq, 
             ctx,
         )
         .await?;
-        if modify_req.crypto_req.is_some() || modify_req.crypto_resp.is_some() || modify_req.double_auth.is_some() {
+        if modify_req.crypto_req.is_some() || modify_req.crypto_resp.is_some() || modify_req.double_auth.is_some() || modify_req.method.is_some() {
             IamResCacheServ::add_or_modify_res_rel(
                 &res.code,
                 &res.method,

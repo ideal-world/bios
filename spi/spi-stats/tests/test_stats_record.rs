@@ -212,7 +212,7 @@ pub async fn test_fact_record(client: &mut TestHttpClient) -> TardisResult<()> {
     // std::io::stdin().read_line(&mut Default::default()).unwrap();
     let latest_req_2: Value = client.get("/ci/record/fact/req/latest/rec2").await;
     assert!(!latest_req_2.is_null());
-    let latest_reqs: Vec<Value> = client.get("/ci/record/fact/req/latest/?record_keys=rec1,rec2").await;
+    let latest_reqs: Vec<Value> = client.get("/ci/record/fact/req/latest?record_keys=rec1,rec2").await;
     assert!(latest_reqs.len() == 2);
     sleep(Duration::from_millis(1000)).await;
     let _: Void = client
