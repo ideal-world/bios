@@ -798,7 +798,6 @@ async fn init_ws_iam_send_event_client() -> Option<TardisWSClient> {
     }
     let funs = iam_constants::get_tardis_inst();
     let conf = funs.conf::<IamConfig>();
-    set_default_iam_send_avatar("".to_owned());
     if !conf.in_event {
         return None;
     }
