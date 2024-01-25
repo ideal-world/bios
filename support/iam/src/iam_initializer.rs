@@ -955,7 +955,7 @@ async fn init_event() -> TardisResult<()> {
             loop {
                 // it's ok todo so, reconnect will be blocked until the previous ws_client is dropped
                 let result = ws_iam_client().await.reconnect().await;
-                let result = ws_iam_send_client().await;
+                let _ = ws_iam_send_client().await;
                 if let Err(err) = result {
                     error!("[Bios.Iam] failed to reconnect to event service: {}", err);
                 }
