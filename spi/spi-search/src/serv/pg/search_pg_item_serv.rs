@@ -681,6 +681,26 @@ fn merge(a: &mut serde_json::Value, b: serde_json::Value) {
     }
 }
 
+pub async fn refresh_data(tag: String, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
+    let bs_inst = inst.inst::<TardisRelDBClient>();
+    let (conn, table_name) = search_pg_initializer::init_table_and_conn(bs_inst, &tag, ctx, false).await?;
+    let mut page = 0;
+    loop {
+        let result = conn.query_all(&format!(r#"SELECT key, title FROM {table_name} LIMIT {} OFFSET {};"#, page, (page-1) * 1000), vec![]).await?;
+        if result.is_empty() {
+            break;
+        }
+        for item in result {
+            let title: String = item.try_get("", "title")?;
+            let key: String = item.try_get("", "key")?;
+            conn.execute_one(&format!("UPDATE {table_name} SET title_tsv = to_tsvector('public.chinese_zh', $1) WHERE key = $2"), vec![Value::from(format!("{},{}",&title,generate_word_combinations(to_pinyin_vec(&title, Pinyin::plain)).join(" "))), Value::from(key)]).await?;
+        }
+        page += 1;
+    }
+    
+    Ok(())
+}
+
 pub async fn query_metrics(query_req: &SearchQueryMetricsReq, funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<SearchQueryMetricsResp> {
     let mut params = vec![];
     let conf_limit = query_req.conf_limit.unwrap_or(100);
