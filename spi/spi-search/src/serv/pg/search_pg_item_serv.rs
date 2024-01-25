@@ -61,12 +61,17 @@ pub async fn add(add_req: &mut SearchItemAddReq, _funs: &TardisFunsInst, ctx: &T
     let bs_inst = inst.inst::<TardisRelDBClient>();
     let (mut conn, table_name) = search_pg_initializer::init_table_and_conn(bs_inst, &add_req.tag, ctx, true).await?;
     conn.begin().await?;
+    let word_combinations_way = if add_req.title.len() > 15 {
+        "simple"
+    } else {
+        "public.chinese_zh"
+    };
     conn.execute_one(
         &format!(
             r#"INSERT INTO {table_name} 
     (kind, key, title, title_tsv,content, content_tsv, owner, own_paths, create_time, update_time, ext, visit_keys)
 VALUES
-    ($1, $2, $3, to_tsvector('simple', $4), $5, to_tsvector('public.chinese_zh', $6), $7, $8, $9, $10, $11, {})"#,
+    ($1, $2, $3, to_tsvector('{word_combinations_way}', $4), $5, to_tsvector('public.chinese_zh', $6), $7, $8, $9, $10, $11, {})"#,
             if add_req.visit_keys.is_some() { "$12" } else { "null" },
         ),
         params,
@@ -92,7 +97,12 @@ pub async fn modify(tag: &str, key: &str, modify_req: &mut SearchItemModifyReq, 
     if let Some(title) = &modify_req.title {
         sql_sets.push(format!("title = ${}", params.len() + 1));
         params.push(Value::from(title));
-        sql_sets.push(format!("title_tsv = to_tsvector('simple', ${})", params.len() + 1));
+        let word_combinations_way = if title.len() > 15 {
+            "simple"
+        } else {
+            "public.chinese_zh"
+        };
+        sql_sets.push(format!("title_tsv = to_tsvector('{word_combinations_way}', ${})", params.len() + 1));
         params.push(Value::from(format!(
         "{} {} {} {} {}",
         title,
