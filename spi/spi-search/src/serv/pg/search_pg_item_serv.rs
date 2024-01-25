@@ -61,7 +61,7 @@ pub async fn add(add_req: &mut SearchItemAddReq, _funs: &TardisFunsInst, ctx: &T
     let bs_inst = inst.inst::<TardisRelDBClient>();
     let (mut conn, table_name) = search_pg_initializer::init_table_and_conn(bs_inst, &add_req.tag, ctx, true).await?;
     conn.begin().await?;
-    let word_combinations_way = if add_req.title.len() > 15 {
+    let word_combinations_way = if add_req.title.chars().count() > 15 {
         "simple"
     } else {
         "public.chinese_zh"
@@ -97,7 +97,7 @@ pub async fn modify(tag: &str, key: &str, modify_req: &mut SearchItemModifyReq, 
     if let Some(title) = &modify_req.title {
         sql_sets.push(format!("title = ${}", params.len() + 1));
         params.push(Value::from(title));
-        let word_combinations_way = if title.len() > 15 {
+        let word_combinations_way = if title.chars().count() > 15 {
             "simple"
         } else {
             "public.chinese_zh"
