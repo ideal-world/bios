@@ -31,7 +31,7 @@ pub async fn start_search_event_service(config: &EventTopicConfig) -> TardisResu
     let resp = client.register(&event_conf.into()).await?;
     let ws_client = TardisFuns::ws_client(&resp.ws_addr, |message| async move {
         let Ok(json_str) = message.to_text() else { return None };
-        let Ok(TardisWebsocketMessage { msg, event }) = TardisFuns::json.str_to_obj(json_str) else {
+        let Ok(TardisWebsocketMessage { msg, event, .. }) = TardisFuns::json.str_to_obj(json_str) else {
             return None;
         };
         match event.as_deref() {

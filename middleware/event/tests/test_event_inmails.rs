@@ -55,6 +55,7 @@ pub fn auth_action(from: &str, action: Action) -> bool {
 
 pub fn mgr_on_message(message: Message) -> Option<Message> {
     let receive_msg = TardisFuns::json.str_to_obj::<TardisWebsocketMgrMessage>(message.to_string().as_str()).unwrap();
+    let msg_id = receive_msg.msg_id.clone();
     dbg!(&receive_msg);
     let mut ori_msg = TardisFuns::json.json_to_obj::<EventMessageMgrWrap>(receive_msg.msg.clone()).unwrap();
     let from = ori_msg.ori_from_avatar.as_str();
@@ -77,7 +78,7 @@ pub fn mgr_on_message(message: Message) -> Option<Message> {
     };
     if auth_action(from, action) {
         return Some(Message::text(
-            TardisFuns::json.obj_to_string(&receive_msg.into_req(ori_msg.msg, ori_msg.ori_from_avatar, ori_msg.ori_to_avatars)).unwrap(),
+            TardisFuns::json.obj_to_string(&receive_msg.into_req(msg_id, ori_msg.msg, ori_msg.ori_from_avatar, ori_msg.ori_to_avatars)).unwrap(),
         ));
     }
     None
