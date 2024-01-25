@@ -26,6 +26,7 @@ tardis = { workspace = true, features = [
   "web-server",
   "web-client",
   "openapi-rapidoc",
+   "k8s",
 ] }
 bios-basic = { path = "../../basic", features = ["default"] }
 strum = { workerspace = true, features = ["derive"] }
