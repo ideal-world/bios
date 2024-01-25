@@ -23,6 +23,8 @@ pub async fn test(http_clients: &[&TestHttpClient]) -> TardisResult<()> {
     let url = add_listener(Vec::new(), true, http_clients).await?;
     let mgr_client = TardisFuns::ws_client(&url, move |msg| async move {
         let receive_msg = TardisFuns::json.str_to_obj::<TardisWebsocketMgrMessage>(msg.to_string().as_str()).unwrap();
+        let msg_id = receive_msg.msg_id.clone();
+        
         let ori_msg = TardisFuns::json.json_to_obj::<EventMessageMgrWrap>(receive_msg.msg.clone()).unwrap();
         let raw_msg = TardisFuns::json.json_to_obj::<ImWebsocketMessage>(ori_msg.msg.clone()).unwrap();
         if raw_msg.content == "系统升级" {
@@ -39,7 +41,7 @@ pub async fn test(http_clients: &[&TestHttpClient]) -> TardisResult<()> {
             TO_G1_COUNTER.fetch_add(1, Ordering::SeqCst);
         }
         Some(Message::text(
-            TardisFuns::json.obj_to_string(&receive_msg.into_req(ori_msg.msg, ori_msg.ori_from_avatar, ori_msg.ori_to_avatars)).unwrap(),
+            TardisFuns::json.obj_to_string(&receive_msg.into_req(msg_id, ori_msg.msg, ori_msg.ori_from_avatar, ori_msg.ori_to_avatars)).unwrap(),
         ))
     })
     .await?;

@@ -798,7 +798,6 @@ async fn init_ws_iam_send_event_client() -> Option<TardisWSClient> {
     }
     let funs = iam_constants::get_tardis_inst();
     let conf = funs.conf::<IamConfig>();
-    set_default_iam_send_avatar("".to_owned());
     if !conf.in_event {
         return None;
     }
@@ -852,7 +851,7 @@ pub async fn init_ws_iam_event_client() -> TardisWSClient {
         let ws_client = TardisFuns::ws_client(&addr, |message| async move {
             let Ok(json_str) = message.to_text() else { return None };
             info!("[Bios.Iam] event msg: {json_str}");
-            let Ok(TardisWebsocketMessage { msg, event }) = TardisFuns::json.str_to_obj(json_str) else {
+            let Ok(TardisWebsocketMessage { msg, event, .. }) = TardisFuns::json.str_to_obj(json_str) else {
                 return None;
             };
             match event.as_deref() {

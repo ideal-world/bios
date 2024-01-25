@@ -47,7 +47,7 @@ pub enum BasicQueryOpKind {
     IsNull,
     #[oai(rename = "is_not_null")]
     IsNotNull,
-    #[oai(rename = "is_not_null_or_empty")]
+    #[oai(rename = "is_null_or_empty")]
     IsNullOrEmpty,
 }
 

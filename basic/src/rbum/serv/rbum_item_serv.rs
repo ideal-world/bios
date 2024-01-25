@@ -595,10 +595,21 @@ where
         if let Some(set_ids_and_cate_codes) = rbum_set_rel_filter_req.set_ids_and_cate_codes.clone() {
             let mut condition = Condition::any();
             for set_id in set_ids_and_cate_codes.keys() {
-                let expr = Expr::col((rbum_set_item::Entity, rbum_set_item::Column::RelRbumSetId)).eq(set_id.to_string()).and(if rbum_set_rel_filter_req.with_sub_set_cate_codes {
-                    Expr::col((rbum_set_item::Entity, rbum_set_item::Column::RelRbumSetCateCode)).like(format!("{}%", set_ids_and_cate_codes.get(set_id).unwrap()))
+                let expr = Expr::col((rbum_set_item::Entity, rbum_set_item::Column::RelRbumSetId)).eq(set_id).and(if rbum_set_rel_filter_req.with_sub_set_cate_codes {
+                    if let Some(cate_code) = set_ids_and_cate_codes.get(set_id) {
+                        let like_clauses: Vec<_> = cate_code
+                            .iter()
+                            .map(|cate_code| Expr::col((rbum_set_item::Entity, rbum_set_item::Column::RelRbumSetCateCode)).like(format!("{}%", cate_code)))
+                            .collect();
+                        // Join LIKE clauses with OR
+                        like_clauses.into_iter().fold(Expr::col((rbum_set_item::Entity, rbum_set_item::Column::RelRbumSetCateCode)).into(), |acc, exprx| {
+                            acc.or(exprx)
+                        })
+                    } else {
+                        Expr::col((rbum_set_item::Entity, rbum_set_item::Column::RelRbumSetCateCode)).like(format!("{}%", ""))
+                    }
                 } else {
-                    Expr::col((rbum_set_item::Entity, rbum_set_item::Column::RelRbumSetCateCode)).eq(set_ids_and_cate_codes.get(set_id).unwrap().to_string())
+                    Expr::col((rbum_set_item::Entity, rbum_set_item::Column::RelRbumSetCateCode)).is_in(set_ids_and_cate_codes.get(set_id).unwrap_or(&Vec::<String>::new()))
                 });
                 condition = condition.add(expr);
             }

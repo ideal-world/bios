@@ -190,7 +190,7 @@ pub trait RbumItemFilterFetcher {
 #[serde(default)]
 pub struct RbumSetItemRelFilterReq {
     //同时根据set_id cate_code 二元组限制
-    pub set_ids_and_cate_codes: Option<HashMap<String, String>>,
+    pub set_ids_and_cate_codes: Option<HashMap<String, Vec<String>>>,
     pub with_sub_set_cate_codes: bool,
     pub rel_item_ids: Option<Vec<String>>,
 }

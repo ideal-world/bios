@@ -20,7 +20,7 @@ pub struct RbumRelAggAddReq {
 #[cfg_attr(feature = "default", derive(poem_openapi::Object))]
 pub struct RbumRelAttrAggAddReq {
     pub is_from: bool,
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
+    #[cfg_attr(feature = "default", oai(validator(min_length = "0", max_length = "2000")))]
     pub value: String,
     #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
     pub name: String,
