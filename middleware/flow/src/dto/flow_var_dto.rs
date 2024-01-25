@@ -105,6 +105,7 @@ pub enum RbumWidgetTypeKind {
     NUMBER,
     DATE,
     DATETIME,
+    TIME,
     UPLOAD,
     RADIO,
     BUTTON,

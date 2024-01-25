@@ -48,7 +48,7 @@ use crate::{
             FlowTransitionActionByStateChangeInfo, FlowTransitionActionByVarChangeInfoChangedKind, FlowTransitionActionChangeAgg, FlowTransitionActionChangeInfo,
             FlowTransitionActionChangeKind, FlowTransitionDetailResp, FlowTransitionFrontActionInfo, FlowTransitionFrontActionRightValue, StateChangeConditionOp, TagRelKind,
         },
-        flow_var_dto::FillType,
+        flow_var_dto::{FillType, FlowVarInfo},
     },
     flow_constants,
     serv::{flow_model_serv::FlowModelServ, flow_state_serv::FlowStateServ},
@@ -1514,6 +1514,59 @@ impl FlowInstServ {
                     &ctx,
                 )
                 .await?;
+            }
+        }
+
+        Ok(())
+    }
+
+    pub async fn refresh_var_collect(funs: &TardisFunsInst) -> TardisResult<()> {
+        #[derive(sea_orm::FromQueryResult)]
+        pub struct FlowTransitionsResult {
+            id: String,
+            vars_collect: Value,
+        }
+
+        //{"filed_type":"built","value_type":"tag","global":"true","tag_name":"priority","digits":null}
+        #[derive(serde::Serialize, serde::Deserialize, Debug, Default, Clone)]
+        pub struct FlowTransitionsExt {
+            filed_type: String,
+            value_type: String,
+            tag_name: Option<String>,
+            tag: Option<String>,
+            global: Option<String>,
+            digits: Option<String>,
+        }
+        let global_ctx = TardisContext::default();
+        let flow_transition_list = funs
+            .db()
+            .find_dtos::<FlowTransitionsResult>(Query::select().columns([flow_transition::Column::Id, flow_transition::Column::VarsCollect]).from(flow_transition::Entity))
+            .await?
+            .into_iter()
+            .filter(|res| !TardisFuns::json.json_to_obj::<Vec<FlowVarInfo>>(res.vars_collect.clone()).unwrap_or_default().is_empty())
+            .collect_vec();
+        for flow_transition in flow_transition_list {
+            let mut is_update = false;
+            let mut vars_collect = TardisFuns::json.json_to_obj::<Vec<FlowVarInfo>>(flow_transition.vars_collect.clone())?;
+            for var in vars_collect.iter_mut() {
+                let mut ext = TardisFuns::json.str_to_obj::<FlowTransitionsExt>(&var.ext.clone().unwrap_or_default()).unwrap_or_default();
+                if ext.tag_name.is_some() {
+                    ext.tag_name = Some(format!("_:{}", ext.tag_name.unwrap_or_default()));
+                    var.ext = Some(TardisFuns::json.obj_to_string(&ext)?);
+                    is_update = true;
+                }
+            }
+            if is_update {
+                funs.db()
+                    .update_one(
+                        flow_transition::ActiveModel {
+                            id: Set(flow_transition.id.clone()),
+                            vars_collect: Set(TardisFuns::json.obj_to_json(&vars_collect)?),
+                            ..Default::default()
+                        },
+                        &global_ctx,
+                    )
+                    .await?;
             }
         }
 

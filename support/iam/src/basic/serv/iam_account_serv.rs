@@ -843,7 +843,13 @@ impl IamAccountServ {
             ctx,
         )
         .await?;
-        SpiKvClient::add_or_modify_key_name(&format!("{}:{account_id}", funs.conf::<IamConfig>().spi.kv_account_prefix.clone()), &account.name, funs, ctx).await?;
+        SpiKvClient::add_or_modify_key_name(
+            &format!("{}:{account_id}", funs.conf::<IamConfig>().spi.kv_account_prefix.clone()),
+            &account.name,
+            funs,
+            ctx,
+        )
+        .await?;
 
         Ok(())
     }
