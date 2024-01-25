@@ -24,7 +24,7 @@ pub async fn test(http_clients: &[&TestHttpClient]) -> TardisResult<()> {
     let mgr_client = TardisFuns::ws_client(&url, move |msg| async move {
         let receive_msg = TardisFuns::json.str_to_obj::<TardisWebsocketMgrMessage>(msg.to_string().as_str()).unwrap();
         let msg_id = receive_msg.msg_id.clone();
-        
+
         let ori_msg = TardisFuns::json.json_to_obj::<EventMessageMgrWrap>(receive_msg.msg.clone()).unwrap();
         let raw_msg = TardisFuns::json.json_to_obj::<ImWebsocketMessage>(ori_msg.msg.clone()).unwrap();
         if raw_msg.content == "系统升级" {
