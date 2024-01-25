@@ -2,8 +2,7 @@ use async_trait::async_trait;
 use bios_basic::helper::request_helper::get_remote_ip;
 use bios_basic::rbum::rbum_config::RbumConfigApi;
 use bios_basic::rbum::rbum_enumeration::RbumRelFromKind;
-use bios_sdk_invoke::clients::spi_search_client::SpiSearchClient;
-use bios_sdk_invoke::dto::search_item_dto::{SearchItemAddReq, SearchItemModifyReq, SearchItemVisitKeysReq};
+use bios_sdk_invoke::clients::spi_kv_client::SpiKvClient;
 use itertools::Itertools;
 use tardis::chrono::Utc;
 
@@ -172,11 +171,13 @@ impl RbumItemCrudOperation<iam_account::ActiveModel, IamAccountAddReq, IamAccoun
         for (op_describe, op_kind) in tasks {
             let _ = IamLogClient::add_ctx_task(LogParamTag::IamAccount, Some(id.to_string()), op_describe, Some(op_kind), ctx).await;
         }
+        #[cfg(feature = "spi_kv")]
+        Self::add_or_modify_account_kv(id, funs, ctx).await?;
 
         Ok(())
     }
 
-    async fn after_add_item(id: &str, add_req: &mut IamAccountAddReq, _funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    async fn after_add_item(id: &str, add_req: &mut IamAccountAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let mut op_describe = "添加长期账号".to_string();
         let mut op_kind = "AddLongTermAccount".to_string();
         if add_req.temporary == Some(true) {
@@ -184,6 +185,10 @@ impl RbumItemCrudOperation<iam_account::ActiveModel, IamAccountAddReq, IamAccoun
             op_kind = "AddTempAccount".to_string();
         }
         let _ = IamLogClient::add_ctx_task(LogParamTag::IamAccount, Some(id.to_string()), op_describe, Some(op_kind), ctx).await;
+
+        #[cfg(feature = "spi_kv")]
+        Self::add_or_modify_account_kv(id, funs, ctx).await?;
+
         Ok(())
     }
     async fn before_delete_item(id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<IamAccountDetailResp>> {
@@ -820,5 +825,26 @@ impl IamAccountServ {
         } else {
             Ok(ctx.clone())
         }
+    }
+
+    async fn add_or_modify_account_kv(account_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let account = Self::get_item(
+            account_id,
+            &IamAccountFilterReq {
+                basic: RbumBasicFilterReq {
+                    ignore_scope: true,
+                    own_paths: Some("".to_owned()),
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?;
+        SpiKvClient::add_or_modify_key_name(&format!("{}:{account_id}", funs.conf::<IamConfig>().spi.kv_account_prefix.clone()), &account.name, funs, ctx).await?;
+
+        Ok(())
     }
 }
