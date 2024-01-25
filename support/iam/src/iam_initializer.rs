@@ -799,6 +799,7 @@ async fn init_ws_iam_send_event_client() -> Option<TardisWSClient> {
     let funs = iam_constants::get_tardis_inst();
     let conf = funs.conf::<IamConfig>();
     if !conf.in_event {
+        set_default_iam_send_avatar("".to_owned());
         return None;
     }
     let mut event_conf = conf.iam_send_event_bus.clone();
@@ -954,6 +955,7 @@ async fn init_event() -> TardisResult<()> {
             loop {
                 // it's ok todo so, reconnect will be blocked until the previous ws_client is dropped
                 let result = ws_iam_client().await.reconnect().await;
+                let result = ws_iam_send_client().await;
                 if let Err(err) = result {
                     error!("[Bios.Iam] failed to reconnect to event service: {}", err);
                 }
