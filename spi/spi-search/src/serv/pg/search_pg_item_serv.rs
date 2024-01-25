@@ -728,10 +728,27 @@ pub async fn refresh_data(tag: String, ctx: &TardisContext, inst: &SpiBsInst) ->
         for item in result {
             let title: String = item.try_get("", "title")?;
             let key: String = item.try_get("", "key")?;
+            let word_combinations_way = if title.chars().count() > 15 { "public.chinese_zh" } else { "simple" };
+            let word_combinations = if title.chars().count() > 15 {
+                Value::from(format!(
+                    "{} {}",
+                    title.as_str(),
+                    generate_word_combinations(to_pinyin_vec(title.as_str(), Pinyin::plain)).join(" ")
+                ))
+            } else {
+                Value::from(format!(
+                    "{} {} {} {} {}",
+                    title.as_str(),
+                    generate_word_combinations_with_length(title.as_str(), 1).join(" "),
+                    generate_word_combinations_with_length(title.as_str(), 2).join(" "),
+                    generate_word_combinations_with_length(title.as_str(), 3).join(" "),
+                    generate_word_combinations(to_pinyin_vec(title.as_str(), Pinyin::plain)).join(" ")
+                ))
+            };
             conn.execute_one(
-                &format!("UPDATE {table_name} SET title_tsv = to_tsvector('public.chinese_zh', $1) WHERE key = $2"),
+                &format!("UPDATE {table_name} SET title_tsv = to_tsvector('{word_combinations_way}', $1) WHERE key = $2"),
                 vec![
-                    Value::from(format!("{},{}", &title, generate_word_combinations(to_pinyin_vec(&title, Pinyin::plain)).join(" "))),
+                    word_combinations,
                     Value::from(key),
                 ],
             )
