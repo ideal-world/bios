@@ -31,8 +31,11 @@ pub async fn add(add_req: &mut SearchItemAddReq, _funs: &TardisFunsInst, ctx: &T
     params.push(Value::from(add_req.key.to_string()));
     params.push(Value::from(add_req.title.as_str()));
     params.push(Value::from(format!(
-        "{},{}",
+        "{} {} {} {} {}",
         add_req.title.as_str(),
+        generate_word_combinations_with_length(add_req.title.as_str(), 1).join(" "),
+        generate_word_combinations_with_length(add_req.title.as_str(), 2).join(" "),
+        generate_word_combinations_with_length(add_req.title.as_str(), 3).join(" "),
         generate_word_combinations(to_pinyin_vec(add_req.title.as_str(), Pinyin::plain)).join(" ")
     )));
     params.push(Value::from(add_req.content.as_str()));
@@ -63,7 +66,7 @@ pub async fn add(add_req: &mut SearchItemAddReq, _funs: &TardisFunsInst, ctx: &T
             r#"INSERT INTO {table_name} 
     (kind, key, title, title_tsv,content, content_tsv, owner, own_paths, create_time, update_time, ext, visit_keys)
 VALUES
-    ($1, $2, $3, to_tsvector('public.chinese_zh', $4), $5, to_tsvector('public.chinese_zh', $6), $7, $8, $9, $10, $11, {})"#,
+    ($1, $2, $3, to_tsvector('simple', $4), $5, to_tsvector('public.chinese_zh', $6), $7, $8, $9, $10, $11, {})"#,
             if add_req.visit_keys.is_some() { "$12" } else { "null" },
         ),
         params,
@@ -89,12 +92,15 @@ pub async fn modify(tag: &str, key: &str, modify_req: &mut SearchItemModifyReq, 
     if let Some(title) = &modify_req.title {
         sql_sets.push(format!("title = ${}", params.len() + 1));
         params.push(Value::from(title));
-        sql_sets.push(format!("title_tsv = to_tsvector('public.chinese_zh', ${})", params.len() + 1));
+        sql_sets.push(format!("title_tsv = to_tsvector('simple', ${})", params.len() + 1));
         params.push(Value::from(format!(
-            "{},{}",
-            title,
-            generate_word_combinations(to_pinyin_vec(title, Pinyin::plain)).join(" ")
-        )));
+        "{} {} {} {} {}",
+        title,
+        generate_word_combinations_with_length(title, 1).join(" "),
+        generate_word_combinations_with_length(title, 2).join(" "),
+        generate_word_combinations_with_length(title, 3).join(" "),
+        generate_word_combinations(to_pinyin_vec(title, Pinyin::plain)).join(" ")
+    )));
     };
     if let Some(content) = &modify_req.content {
         sql_sets.push(format!("content = ${}", params.len() + 1));
@@ -148,6 +154,16 @@ WHERE key = $1
     .await?;
     conn.commit().await?;
     Ok(())
+}
+
+fn generate_word_combinations_with_length(original_str: &str, split_len: usize) -> Vec<String> {
+    let mut combinations = Vec::new();
+    let original_chars = original_str.chars().map(|c| c.to_string()).collect::<Vec<_>>();
+    for i in 0..original_chars.len()-split_len+1 {
+        let word = original_chars[i..=(i+split_len-1)].join("");
+            combinations.push(word);
+    }
+    combinations
 }
 
 fn generate_word_combinations(chars: Vec<&str>) -> Vec<String> {
