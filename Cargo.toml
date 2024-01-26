@@ -61,7 +61,7 @@ strum = { version = "0.25", features = ["derive"] }
 # tardis
 # tardis = { version = "0.1.0-rc.9" }
 # tardis = { path = "../tardis/tardis" }
-tardis = { git = "https://github.com/ideal-world/tardis.git", rev = "b4676b7" }
+tardis = { git = "https://github.com/ideal-world/tardis.git", rev = "08c4559" }
 #spacegate
 
 spacegate-kernel = { git = "https://github.com/ideal-world/spacegate.git", rev = "f37a81a", features = [
