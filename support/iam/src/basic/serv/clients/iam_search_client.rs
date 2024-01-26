@@ -106,7 +106,10 @@ impl IamSearchClient {
         let account_certs = account_resp.certs.iter().map(|m| m.1.clone()).collect::<Vec<String>>();
         let account_app_ids: Vec<String> = account_resp.apps.iter().map(|a| a.app_id.clone()).collect();
         let mut account_resp_dept_id = vec![];
-
+        let mock_ctx = TardisContext {
+            own_paths: "".to_owned(),
+            ..ctx.clone()
+        };
         let mut set_ids = vec![];
         if account_resp.own_paths.is_empty() {
             let tenants = IamTenantServ::find_items(
@@ -125,8 +128,14 @@ impl IamSearchClient {
                 ctx,
             )
             .await?;
+            match IamSetServ::get_set_id_by_code(&IamSetServ::get_default_code(&IamSetKind::Org, ""), true, funs, &mock_ctx).await {
+                Ok(set_id) => {
+                    set_ids.push(set_id);
+                }
+                Err(_) => {}
+            }
             for t in tenants {
-                match IamSetServ::get_set_id_by_code(&IamSetServ::get_default_code(&IamSetKind::Org, &t.id), true, funs, ctx).await {
+                match IamSetServ::get_set_id_by_code(&IamSetServ::get_default_code(&IamSetKind::Org, &t.id), true, funs, &mock_ctx).await {
                     Ok(set_id) => {
                         set_ids.push(set_id);
                     }
@@ -134,7 +143,7 @@ impl IamSearchClient {
                 }
             }
         } else {
-            match IamSetServ::get_set_id_by_code(&IamSetServ::get_default_code(&IamSetKind::Org, &account_resp.own_paths), true, funs, ctx).await {
+            match IamSetServ::get_set_id_by_code(&IamSetServ::get_default_code(&IamSetKind::Org, &account_resp.own_paths), true, funs, &mock_ctx).await {
                 Ok(set_id) => {
                     set_ids.push(set_id);
                 }
@@ -142,7 +151,7 @@ impl IamSearchClient {
             }
         };
         for set_id in set_ids {
-            let set_items = IamSetServ::find_set_items(Some(set_id), None, Some(account_id.to_string()), None, true, None, funs, ctx).await?;
+            let set_items = IamSetServ::find_set_items(Some(set_id), None, Some(account_id.to_string()), None, true, None, funs, &mock_ctx).await?;
             account_resp_dept_id
                 .extend(set_items.iter().filter(|s| s.rel_rbum_set_cate_id.is_some()).map(|s| s.rel_rbum_set_cate_id.clone().unwrap_or("".to_owned())).collect::<Vec<_>>());
         }
