@@ -19,7 +19,9 @@ use tardis::{
     basic::{dto::TardisContext, field::TrimString, result::TardisResult},
     log::warn,
     serde_json::json,
-    tokio, TardisFuns, TardisFunsInst,
+    tokio,
+    web::ws_client,
+    TardisFuns, TardisFunsInst,
 };
 
 use crate::{
@@ -193,8 +195,8 @@ impl IamSearchClient {
                     groups: Some(account_resp_dept_id),
                 }),
             };
-            if funs.conf::<IamConfig>().in_event {
-                ws_search_client().await.publish_modify_item(tag, key, &modify_req, default_search_avatar().await.clone(), funs.invoke_conf_spi_app_id(), ctx).await?;
+            if let Some(ws_client) = ws_search_client().await {
+                ws_client.publish_modify_item(tag, key, &modify_req, default_search_avatar().await.clone(), funs.invoke_conf_spi_app_id(), ctx).await?;
             } else {
                 SpiSearchClient::modify_item(&tag, &key, &modify_req, funs, ctx).await?;
             }
@@ -236,8 +238,8 @@ impl IamSearchClient {
                     groups: Some(account_resp_dept_id),
                 }),
             };
-            if funs.conf::<IamConfig>().in_event {
-                ws_search_client().await.publish_add_item(&add_req, default_search_avatar().await.clone(), funs.invoke_conf_spi_app_id(), ctx).await?;
+            if let Some(ws_client) = ws_search_client().await {
+                ws_client.publish_add_item(&add_req, default_search_avatar().await.clone(), funs.invoke_conf_spi_app_id(), ctx).await?;
             } else {
                 SpiSearchClient::add_item(&add_req, funs, ctx).await?;
             }
@@ -248,8 +250,8 @@ impl IamSearchClient {
     // account 全局搜索删除埋点方法
     pub async fn delete_account_search(account_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let tag = funs.conf::<IamConfig>().spi.search_account_tag.clone();
-        if funs.conf::<IamConfig>().in_event {
-            ws_search_client().await.publish_delete_item(tag, account_id.to_owned(), default_search_avatar().await.clone(), funs.invoke_conf_spi_app_id(), ctx).await?;
+        if let Some(ws_client) = ws_search_client().await {
+            ws_client.publish_delete_item(tag, account_id.to_owned(), default_search_avatar().await.clone(), funs.invoke_conf_spi_app_id(), ctx).await?;
         } else {
             SpiSearchClient::delete_item(&tag, account_id, funs, ctx).await?;
         }

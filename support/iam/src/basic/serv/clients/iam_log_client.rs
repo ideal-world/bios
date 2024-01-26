@@ -12,10 +12,7 @@ use bios_sdk_invoke::{
 use serde::Serialize;
 
 use tardis::{
-    basic::{dto::TardisContext, field::TrimString, result::TardisResult},
-    chrono::{DateTime, Utc},
-    serde_json::json,
-    tokio, TardisFuns, TardisFunsInst,
+    basic::{dto::TardisContext, field::TrimString, result::TardisResult}, chrono::{DateTime, Utc}, serde_json::json, tokio, web::ws_client, TardisFuns, TardisFunsInst
 };
 
 use crate::{
@@ -139,7 +136,7 @@ impl IamLogClient {
         let tag: String = tag.into();
         let own_paths = if ctx.own_paths.len() < 2 { None } else { Some(ctx.own_paths.clone()) };
         let owner = if ctx.owner.len() < 2 { None } else { Some(ctx.owner.clone()) };
-        if funs.conf::<IamConfig>().in_event {
+        if let Some(ws_client) = ws_log_client().await {
             let req = LogItemAddReq {
                 tag,
                 content: TardisFuns::json.obj_to_string(&content).expect("req_msg not a valid json value"),
@@ -153,7 +150,7 @@ impl IamLogClient {
                 owner: Some(ctx.owner.clone()),
                 own_paths: Some(ctx.own_paths.clone()),
             };
-            ws_log_client().await.publish_add_log(&req, default_log_avatar().await.clone(), funs.invoke_conf_spi_app_id(), ctx).await?;
+            ws_client.publish_add_log(&req, default_log_avatar().await.clone(), funs.invoke_conf_spi_app_id(), ctx).await?;
         } else {
             SpiLogClient::add(
                 &tag,
