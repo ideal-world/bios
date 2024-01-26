@@ -747,10 +747,7 @@ pub async fn refresh_data(tag: String, ctx: &TardisContext, inst: &SpiBsInst) ->
             };
             conn.execute_one(
                 &format!("UPDATE {table_name} SET title_tsv = to_tsvector('{word_combinations_way}', $1) WHERE key = $2"),
-                vec![
-                    word_combinations,
-                    Value::from(key),
-                ],
+                vec![word_combinations, Value::from(key)],
             )
             .await?;
         }
@@ -1246,7 +1243,14 @@ pub async fn query_metrics(query_req: &SearchQueryMetricsReq, funs: &TardisFunsI
                 if group.in_ext.unwrap_or(true) { FUNCTION_EXT_SUFFIX_FLAG } else { "" },
                 group.time_window.as_ref().map(|i| i.to_string().to_lowercase()).unwrap_or("".to_string())
             );
-            sql_part_group_infos.push((column_name_with_fun, alias_name.clone(), alias_name));
+            sql_part_group_infos.push((
+                format!(
+                    "case when _.{} IS NULL OR _.{} = '' THEN '\"empty\"' else {} end",
+                    &group.code, &group.code, column_name_with_fun
+                ),
+                alias_name.clone(),
+                alias_name,
+            ));
         } else {
             return Err(funs.err().not_found(
                 "metric",
