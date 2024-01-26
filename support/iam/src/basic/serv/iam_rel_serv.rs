@@ -78,6 +78,7 @@ impl IamRelServ {
         RbumRelServ::add_rel(req, funs, ctx).await?;
 
         if rel_kind == &IamRelKind::IamAccountRole {
+            IamIdentCacheServ::refresh_account_info_by_account_id(from_iam_item_id, funs).await?;
             let _ = IamLogClient::add_ctx_task(
                 LogParamTag::IamAccount,
                 Some(from_iam_item_id.to_string()),
