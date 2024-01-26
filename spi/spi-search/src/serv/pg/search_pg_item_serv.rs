@@ -30,11 +30,23 @@ pub async fn add(add_req: &mut SearchItemAddReq, _funs: &TardisFunsInst, ctx: &T
     params.push(Value::from(add_req.kind.to_string()));
     params.push(Value::from(add_req.key.to_string()));
     params.push(Value::from(add_req.title.as_str()));
-    params.push(Value::from(format!(
-        "{},{}",
-        add_req.title.as_str(),
-        generate_word_combinations(to_pinyin_vec(add_req.title.as_str(), Pinyin::plain)).join(" ")
-    )));
+    if add_req.title.chars().count() > 15 {
+        params.push(Value::from(format!(
+            "{} {}",
+            add_req.title.as_str(),
+            generate_word_combinations(to_pinyin_vec(add_req.title.as_str(), Pinyin::plain)).join(" ")
+        )));
+    } else {
+        params.push(Value::from(format!(
+            "{} {} {} {} {}",
+            add_req.title.as_str(),
+            generate_word_combinations_with_length(add_req.title.as_str(), 1).join(" "),
+            generate_word_combinations_with_length(add_req.title.as_str(), 2).join(" "),
+            generate_word_combinations_with_length(add_req.title.as_str(), 3).join(" "),
+            generate_word_combinations(to_pinyin_vec(add_req.title.as_str(), Pinyin::plain)).join(" ")
+        )));
+    }
+
     params.push(Value::from(add_req.content.as_str()));
     params.push(Value::from(add_req.content.as_str()));
     // params.push(Value::from(format!(
@@ -58,12 +70,13 @@ pub async fn add(add_req: &mut SearchItemAddReq, _funs: &TardisFunsInst, ctx: &T
     let bs_inst = inst.inst::<TardisRelDBClient>();
     let (mut conn, table_name) = search_pg_initializer::init_table_and_conn(bs_inst, &add_req.tag, ctx, true).await?;
     conn.begin().await?;
+    let word_combinations_way = if add_req.title.chars().count() > 15 { "public.chinese_zh" } else { "simple" };
     conn.execute_one(
         &format!(
             r#"INSERT INTO {table_name} 
     (kind, key, title, title_tsv,content, content_tsv, owner, own_paths, create_time, update_time, ext, visit_keys)
 VALUES
-    ($1, $2, $3, to_tsvector('public.chinese_zh', $4), $5, to_tsvector('public.chinese_zh', $6), $7, $8, $9, $10, $11, {})"#,
+    ($1, $2, $3, to_tsvector('{word_combinations_way}', $4), $5, to_tsvector('public.chinese_zh', $6), $7, $8, $9, $10, $11, {})"#,
             if add_req.visit_keys.is_some() { "$12" } else { "null" },
         ),
         params,
@@ -89,12 +102,24 @@ pub async fn modify(tag: &str, key: &str, modify_req: &mut SearchItemModifyReq, 
     if let Some(title) = &modify_req.title {
         sql_sets.push(format!("title = ${}", params.len() + 1));
         params.push(Value::from(title));
-        sql_sets.push(format!("title_tsv = to_tsvector('public.chinese_zh', ${})", params.len() + 1));
-        params.push(Value::from(format!(
-            "{},{}",
-            title,
-            generate_word_combinations(to_pinyin_vec(title, Pinyin::plain)).join(" ")
-        )));
+        let word_combinations_way = if title.chars().count() > 15 { "public.chinese_zh" } else { "simple" };
+        sql_sets.push(format!("title_tsv = to_tsvector('{word_combinations_way}', ${})", params.len() + 1));
+        if title.chars().count() > 15 {
+            params.push(Value::from(format!(
+                "{} {}",
+                title,
+                generate_word_combinations(to_pinyin_vec(title, Pinyin::plain)).join(" ")
+            )));
+        } else {
+            params.push(Value::from(format!(
+                "{} {} {} {} {}",
+                title,
+                generate_word_combinations_with_length(title, 1).join(" "),
+                generate_word_combinations_with_length(title, 2).join(" "),
+                generate_word_combinations_with_length(title, 3).join(" "),
+                generate_word_combinations(to_pinyin_vec(title, Pinyin::plain)).join(" ")
+            )));
+        }
     };
     if let Some(content) = &modify_req.content {
         sql_sets.push(format!("content = ${}", params.len() + 1));
@@ -148,6 +173,16 @@ WHERE key = $1
     .await?;
     conn.commit().await?;
     Ok(())
+}
+
+fn generate_word_combinations_with_length(original_str: &str, split_len: usize) -> Vec<String> {
+    let mut combinations = Vec::new();
+    let original_chars = original_str.chars().map(|c| c.to_string()).collect::<Vec<_>>();
+    for i in 0..original_chars.len() - split_len + 1 {
+        let word = original_chars[i..=(i + split_len - 1)].join("");
+        combinations.push(word);
+    }
+    combinations
 }
 
 fn generate_word_combinations(chars: Vec<&str>) -> Vec<String> {
@@ -679,6 +714,50 @@ fn merge(a: &mut serde_json::Value, b: serde_json::Value) {
         }
         (a, b) => *a = b,
     }
+}
+
+pub async fn refresh_data(tag: String, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
+    let bs_inst = inst.inst::<TardisRelDBClient>();
+    let (conn, table_name) = search_pg_initializer::init_table_and_conn(bs_inst, &tag, ctx, false).await?;
+    let mut page = 0;
+    loop {
+        let result = conn.query_all(&format!(r#"SELECT key, title FROM {table_name} LIMIT {} OFFSET {};"#, page, (page - 1) * 1000), vec![]).await?;
+        if result.is_empty() {
+            break;
+        }
+        for item in result {
+            let title: String = item.try_get("", "title")?;
+            let key: String = item.try_get("", "key")?;
+            let word_combinations_way = if title.chars().count() > 15 { "public.chinese_zh" } else { "simple" };
+            let word_combinations = if title.chars().count() > 15 {
+                Value::from(format!(
+                    "{} {}",
+                    title.as_str(),
+                    generate_word_combinations(to_pinyin_vec(title.as_str(), Pinyin::plain)).join(" ")
+                ))
+            } else {
+                Value::from(format!(
+                    "{} {} {} {} {}",
+                    title.as_str(),
+                    generate_word_combinations_with_length(title.as_str(), 1).join(" "),
+                    generate_word_combinations_with_length(title.as_str(), 2).join(" "),
+                    generate_word_combinations_with_length(title.as_str(), 3).join(" "),
+                    generate_word_combinations(to_pinyin_vec(title.as_str(), Pinyin::plain)).join(" ")
+                ))
+            };
+            conn.execute_one(
+                &format!("UPDATE {table_name} SET title_tsv = to_tsvector('{word_combinations_way}', $1) WHERE key = $2"),
+                vec![
+                    word_combinations,
+                    Value::from(key),
+                ],
+            )
+            .await?;
+        }
+        page += 1;
+    }
+
+    Ok(())
 }
 
 pub async fn query_metrics(query_req: &SearchQueryMetricsReq, funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<SearchQueryMetricsResp> {
