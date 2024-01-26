@@ -68,7 +68,7 @@ impl SearchCiItemApi {
     }
 
     /// Refresh tsv
-    #[oai(path = "/refresh_data", method = "get")]
+    #[oai(path = "/refresh_data/:tag", method = "get")]
     async fn refresh_data(&self, tag: Path<String>) -> TardisApiResult<Void> {
         let mut funs = crate::get_tardis_inst();
         tardis::tokio::spawn(async move {
