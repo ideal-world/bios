@@ -26,7 +26,7 @@ pub async fn add(add_req: &mut SearchItemAddReq, funs: &TardisFunsInst, ctx: &Ta
     params.push(Value::from(add_req.kind.to_string()));
     params.push(Value::from(add_req.key.to_string()));
     params.push(Value::from(add_req.title.as_str()));
-    if add_req.title.chars().count() > funs.conf::<SearchConfig>().word_length.unwrap_or(15) {
+    if add_req.title.chars().count() > funs.conf::<SearchConfig>().word_length.unwrap_or(30) {
         params.push(Value::from(format!(
             "{} {}",
             add_req.title.as_str(),
@@ -66,7 +66,7 @@ pub async fn add(add_req: &mut SearchItemAddReq, funs: &TardisFunsInst, ctx: &Ta
     let bs_inst = inst.inst::<TardisRelDBClient>();
     let (mut conn, table_name) = search_pg_initializer::init_table_and_conn(bs_inst, &add_req.tag, ctx, true).await?;
     conn.begin().await?;
-    let word_combinations_way = if add_req.title.chars().count() > funs.conf::<SearchConfig>().word_length.unwrap_or(15) { "public.chinese_zh" } else { "simple" };
+    let word_combinations_way = if add_req.title.chars().count() > funs.conf::<SearchConfig>().word_length.unwrap_or(30) { "public.chinese_zh" } else { "simple" };
     conn.execute_one(
         &format!(
             r#"INSERT INTO {table_name} 
@@ -83,7 +83,6 @@ VALUES
 }
 
 pub async fn modify(tag: &str, key: &str, modify_req: &mut SearchItemModifyReq, funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
-    info!("load SearchConfig: {:?}", funs.conf::<SearchConfig>());
     let bs_inst = inst.inst::<TardisRelDBClient>();
     let (mut conn, table_name) = search_pg_initializer::init_table_and_conn(bs_inst, tag, ctx, true).await?;
 
@@ -99,7 +98,7 @@ pub async fn modify(tag: &str, key: &str, modify_req: &mut SearchItemModifyReq, 
     if let Some(title) = &modify_req.title {
         sql_sets.push(format!("title = ${}", params.len() + 1));
         params.push(Value::from(title));
-        let word_combinations_way = if title.chars().count() > funs.conf::<SearchConfig>().word_length.unwrap_or(15) { "public.chinese_zh" } else { "simple" };
+        let word_combinations_way = if title.chars().count() > funs.conf::<SearchConfig>().word_length.unwrap_or(30) { "public.chinese_zh" } else { "simple" };
         sql_sets.push(format!("title_tsv = to_tsvector('{word_combinations_way}', ${})", params.len() + 1));
         if title.chars().count() > 15 {
             params.push(Value::from(format!(
@@ -725,8 +724,8 @@ pub async fn refresh_data(tag: String, funs: &TardisFunsInst, ctx: &TardisContex
         for item in result {
             let title: String = item.try_get("", "title")?;
             let key: String = item.try_get("", "key")?;
-            let word_combinations_way = if title.chars().count() > funs.conf::<SearchConfig>().word_length.unwrap_or(15) { "public.chinese_zh" } else { "simple" };
-            let word_combinations = if title.chars().count() > funs.conf::<SearchConfig>().word_length.unwrap_or(15) {
+            let word_combinations_way = if title.chars().count() > funs.conf::<SearchConfig>().word_length.unwrap_or(30) { "public.chinese_zh" } else { "simple" };
+            let word_combinations = if title.chars().count() > funs.conf::<SearchConfig>().word_length.unwrap_or(30) {
                 Value::from(format!(
                     "{} {}",
                     title.as_str(),
