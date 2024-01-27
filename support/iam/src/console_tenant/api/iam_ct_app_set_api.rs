@@ -186,7 +186,7 @@ impl IamCtAppSetApi {
 
     /// batch Delete App Set Item (App Or Account) By App Set Item Id
     #[oai(path = "/item/batch/:ids", method = "delete")]
-    async fn delete_item(&self, ids: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
+    async fn batch_delete_item(&self, ids: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         let ctx = IamCertServ::use_sys_or_tenant_ctx_unsafe(ctx.0)?;
