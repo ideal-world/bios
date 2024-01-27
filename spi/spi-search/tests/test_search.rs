@@ -41,7 +41,7 @@ async fn init_data() -> TardisResult<()> {
     sleep(Duration::from_millis(500)).await;
 
     let funs = TardisFuns::inst_with_db_conn(DOMAIN_CODE.to_string(), None);
-    let kind_id = RbumKindServ::get_rbum_kind_id_by_code(spi_constants::SPI_ES_KIND_CODE, &funs).await?.unwrap();
+    let kind_id = RbumKindServ::get_rbum_kind_id_by_code(spi_constants::SPI_PG_KIND_CODE, &funs).await?.unwrap();
     let ctx = TardisContext {
         own_paths: "".to_string(),
         ak: "".to_string(),
@@ -61,7 +61,7 @@ async fn init_data() -> TardisResult<()> {
             &SpiBsAddReq {
                 name: TrimString("test-spi".to_string()),
                 kind_id: TrimString(kind_id),
-                conn_uri: env::var("TARDIS_FW.ES.URL").unwrap(),
+                conn_uri: env::var("TARDIS_FW.DB.URL").unwrap(),
                 ak: TrimString("".to_string()),
                 sk: TrimString("".to_string()),
                 ext: "{\"max_connections\":20,\"min_connections\":10}".to_string(),

@@ -1,5 +1,8 @@
 [cs]
 
+[csm.spi-search]
+word_length=30
+
 [fw.web_server]
 port = 8080
 tls_key = """
