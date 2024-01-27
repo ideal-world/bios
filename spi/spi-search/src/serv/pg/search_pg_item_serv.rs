@@ -1249,7 +1249,7 @@ pub async fn query_metrics(query_req: &SearchQueryMetricsReq, funs: &TardisFunsI
                 format!(
                     "case when _.{} IS NULL {} THEN '\"empty\"' else {} end",
                     &group.code,
-                    if INNER_FIELD.contains(&group.code.clone().as_str()) {
+                    if INNER_FIELD.contains(&group.code.clone().as_str()) || group.time_window.is_none() {
                         "".to_string()
                     } else {
                         format!("OR _.{} = ''", &group.code.clone())
