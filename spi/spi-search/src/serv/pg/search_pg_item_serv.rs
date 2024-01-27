@@ -22,6 +22,7 @@ const FUNCTION_EXT_SUFFIX_FLAG: &str = "_ext_";
 const INNER_FIELD: [&str; 7] = ["key", "title", "content", "owner", "own_paths", "create_time", "update_time"];
 
 pub async fn add(add_req: &mut SearchItemAddReq, funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
+    info!("load SearchConfig: {:?}", funs.conf::<SearchConfig>().word_length);
     let mut params = Vec::new();
     params.push(Value::from(add_req.kind.to_string()));
     params.push(Value::from(add_req.key.to_string()));
@@ -174,9 +175,11 @@ WHERE key = $1
 fn generate_word_combinations_with_length(original_str: &str, split_len: usize) -> Vec<String> {
     let mut combinations = Vec::new();
     let original_chars = original_str.chars().map(|c| c.to_string()).collect::<Vec<_>>();
-    for i in 0..original_chars.len() - split_len + 1 {
-        let word = original_chars[i..=(i + split_len - 1)].join("");
-        combinations.push(word);
+    if original_chars.len() > split_len {
+        for i in 0..original_chars.len() - split_len + 1 {
+            let word = original_chars[i..=(i + split_len - 1)].join("");
+            combinations.push(word);
+        }
     }
     combinations
 }
