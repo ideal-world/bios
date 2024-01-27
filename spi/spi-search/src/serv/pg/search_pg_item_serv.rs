@@ -1249,7 +1249,11 @@ pub async fn query_metrics(query_req: &SearchQueryMetricsReq, funs: &TardisFunsI
                 format!(
                     "case when _.{} IS NULL {} THEN '\"empty\"' else {} end",
                     &group.code,
-                    if INNER_FIELD.contains(&group.code) { "" } else { &format!("OR _.{} = ''", &group.code) },
+                    if INNER_FIELD.contains(&group.code.clone().as_str()) {
+                        "".to_string()
+                    } else {
+                        format!("OR _.{} = ''", &group.code.clone())
+                    },
                     column_name_with_fun
                 ),
                 alias_name.clone(),
