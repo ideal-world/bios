@@ -2,15 +2,10 @@ use std::collections::HashMap;
 
 use pinyin::{to_pinyin_vec, Pinyin};
 use tardis::{
-    basic::{dto::TardisContext, error::TardisError, result::TardisResult},
-    chrono::Utc,
-    db::{
+    basic::{dto::TardisContext, error::TardisError, result::TardisResult}, chrono::Utc, db::{
         reldb_client::{TardisRelDBClient, TardisRelDBlConnection},
         sea_orm::{FromQueryResult, Value},
-    },
-    serde_json::{self, json, Map},
-    web::web_resp::TardisPage,
-    TardisFuns, TardisFunsInst,
+    }, log::info, serde_json::{self, json, Map}, web::web_resp::TardisPage, TardisFuns, TardisFunsInst
 };
 
 use bios_basic::{basic_enumeration::BasicQueryOpKind, dto::BasicQueryCondInfo, helper::db_helper, spi::spi_funs::SpiBsInst};
@@ -87,6 +82,7 @@ VALUES
 }
 
 pub async fn modify(tag: &str, key: &str, modify_req: &mut SearchItemModifyReq, funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
+    info!("load SearchConfig: {:?}", funs.conf::<SearchConfig>());
     let bs_inst = inst.inst::<TardisRelDBClient>();
     let (mut conn, table_name) = search_pg_initializer::init_table_and_conn(bs_inst, tag, ctx, true).await?;
 
