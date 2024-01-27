@@ -568,10 +568,24 @@ impl IamAccountServ {
     ) -> TardisResult<TardisPage<IamAccountSummaryAggResp>> {
         let accounts = IamAccountServ::paginate_items(filter, page_number, page_size, desc_sort_by_create, desc_sort_by_update, funs, ctx).await?;
         let mut account_aggs = Vec::with_capacity(accounts.total_size as usize);
+        let mock_ctx = if use_sys_org {
+            ctx.clone()
+        } else {
+            TardisContext {
+                own_paths: IamTenantServ::get_id_by_ctx(ctx, funs)?,
+                ..ctx.clone()
+            }
+        };
         let set_id = if use_sys_org {
             IamSetServ::get_set_id_by_code(&IamSetServ::get_default_code(&IamSetKind::Org, ""), true, funs, ctx).await?
         } else {
-            IamSetServ::get_set_id_by_code(&IamSetServ::get_default_code(&IamSetKind::Org, &IamTenantServ::get_id_by_ctx(ctx, funs)?), true, funs, ctx).await?
+            IamSetServ::get_set_id_by_code(
+                &IamSetServ::get_default_code(&IamSetKind::Org, &IamTenantServ::get_id_by_ctx(ctx, funs)?),
+                true,
+                funs,
+                &mock_ctx,
+            )
+            .await?
             // IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, funs, ctx).await?
         };
         for account in accounts.records {
