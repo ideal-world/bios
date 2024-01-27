@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use pinyin::{to_pinyin_vec, Pinyin};
 use tardis::{
@@ -19,6 +19,7 @@ use super::search_pg_initializer;
 
 const FUNCTION_SUFFIX_FLAG: &str = "__";
 const FUNCTION_EXT_SUFFIX_FLAG: &str = "_ext_";
+const INNER_FIELD: [&str; 7] = ["key", "title", "content", "owner", "own_paths", "create_time", "update_time"];
 
 pub async fn add(add_req: &mut SearchItemAddReq, funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
     let mut params = Vec::new();
@@ -1239,10 +1240,17 @@ pub async fn query_metrics(query_req: &SearchQueryMetricsReq, funs: &TardisFunsI
                 if group.in_ext.unwrap_or(true) { FUNCTION_EXT_SUFFIX_FLAG } else { "" },
                 group.time_window.as_ref().map(|i| i.to_string().to_lowercase()).unwrap_or("".to_string())
             );
+
             sql_part_group_infos.push((
                 format!(
-                    "case when _.{} IS NULL OR _.{} = '' THEN '\"empty\"' else {} end",
-                    &group.code, &group.code, column_name_with_fun
+                    "case when _.{} IS NULL {} THEN '\"empty\"' else {} end",
+                    &group.code,
+                    if INNER_FIELD.contains(&group.code.clone().as_str()) || group.time_window.is_none() {
+                        "".to_string()
+                    } else {
+                        format!("OR _.{} = ''", &group.code.clone())
+                    },
+                    column_name_with_fun
                 ),
                 alias_name.clone(),
                 alias_name,
