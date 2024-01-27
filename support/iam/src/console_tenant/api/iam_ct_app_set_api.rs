@@ -184,6 +184,21 @@ impl IamCtAppSetApi {
         TardisResp::ok(Void {})
     }
 
+    /// batch Delete App Set Item (App Or Account) By App Set Item Id
+    #[oai(path = "/item/batch/:ids", method = "delete")]
+    async fn delete_item(&self, ids: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
+        let mut funs = iam_constants::get_tardis_inst();
+        funs.begin().await?;
+        let ctx = IamCertServ::use_sys_or_tenant_ctx_unsafe(ctx.0)?;
+        add_remote_ip(request, &ctx).await?;
+        for id in ids.split(',').collect::<Vec<_>>() {
+            IamSetServ::delete_set_item(&id, &funs, &ctx).await?;
+        }
+        funs.commit().await?;
+        ctx.execute_task().await?;
+        TardisResp::ok(Void {})
+    }
+
     /// Check App Scope with Account
     #[oai(path = "/scope", method = "get")]
     async fn check_scope(&self, app_id: Query<String>, account_id: Query<Option<String>>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<bool> {
