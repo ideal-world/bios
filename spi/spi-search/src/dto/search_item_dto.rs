@@ -145,6 +145,7 @@ impl SearchItemSearchCtxReq {
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Default)]
 pub struct AdvSearchItemQueryReq {
     pub group_by_or: Option<bool>,
+    pub ext_by_or: Option<bool>,
     // Extended filtering conditions
     pub ext: Option<Vec<AdvBasicQueryCondInfo>>,
 }

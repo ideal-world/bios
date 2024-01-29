@@ -645,7 +645,7 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
                 sql_adv_query.push(format!(
                     " {} ( {} )",
                     if group_query.group_by_or.unwrap_or(false) { "OR" } else { "AND" },
-                    sql_and_where.join(" AND ")
+                    sql_and_where.join(if group_query.ext_by_or.unwrap_or(false) { " OR " } else { " AND " })
                 ));
             }
         }
@@ -1215,7 +1215,7 @@ pub async fn query_metrics(query_req: &SearchQueryMetricsReq, funs: &TardisFunsI
                 sql_adv_query.push(format!(
                     " {} ( {} )",
                     if group_query.group_by_or.unwrap_or(false) { "OR" } else { "AND" },
-                    sql_and_where.join(" AND ")
+                    sql_and_where.join(if group_query.ext_by_or.unwrap_or(false) { " OR " } else { " AND " }))
                 ));
             }
         }
