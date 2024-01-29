@@ -17,6 +17,7 @@ use tardis::web::poem_openapi;
 
 use bios_basic::helper::request_helper::add_remote_ip;
 use tardis::web::poem::Request;
+use tardis::web::poem_openapi::param::Query;
 use tardis::web::poem_openapi::payload::Json;
 use tardis::web::web_resp::{TardisApiResult, TardisResp};
 #[derive(Clone, Default)]
