@@ -43,6 +43,7 @@ impl IamCiAppSetApi {
                     ..Default::default()
                 },
                 rel_rbum_item_disabled: Some(false),
+                table_rbum_set_cate_is_left: Some(true),
                 rel_rbum_set_id: Some(set_id.clone()),
                 rel_rbum_set_cate_ids: cate_ids.0.map(|ids| ids.split(',').map(|id| id.to_string()).collect::<Vec<String>>()),
                 rel_rbum_item_ids: item_ids.0.map(|ids| ids.split(',').map(|id| id.to_string()).collect::<Vec<String>>()),
