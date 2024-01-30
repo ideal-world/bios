@@ -1,7 +1,9 @@
 use crate::basic::serv::iam_app_serv::IamAppServ;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_role_serv::IamRoleServ;
+use crate::iam_config::IamBasicConfigApi;
 use crate::iam_constants::{self, RBUM_SCOPE_LEVEL_APP};
+use crate::iam_enumeration::IamRoleKind;
 use bios_basic::helper::request_helper::add_remote_ip;
 use bios_basic::process::task_processor::TaskProcessor;
 use tardis::tokio;
@@ -19,6 +21,19 @@ pub struct IamCiRoleApi;
 /// Allow Management Of aksk (an authentication method between applications)
 #[poem_openapi::OpenApi(prefix_path = "/ci/role", tag = "bios_basic::ApiTag::Interface")]
 impl IamCiRoleApi {
+    #[oai(path = "/verify/tenant/admin", method = "get")]
+    async fn get_verify_role_tenant_admin(&self, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<bool> {
+        add_remote_ip(request, &ctx.0).await?;
+        let funs = iam_constants::get_tardis_inst();
+        let mut verify_tenant_admin = false;
+        for role in &ctx.0.roles {
+            if role.contains(&funs.iam_basic_role_tenant_admin_id()) {
+                verify_tenant_admin = true;
+            }
+        }
+        TardisResp::ok(verify_tenant_admin)
+    }
+
     /// Batch add Role Rel Account
     #[oai(path = "/:id/account/batch/:account_ids", method = "put")]
     async fn batch_add_rel_account(&self, id: Path<String>, account_ids: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
