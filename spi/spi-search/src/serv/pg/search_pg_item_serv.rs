@@ -353,7 +353,7 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
                 (0..own_paths.len()).map(|idx| format!("${}", sql_vals.len() + idx + 1)).collect::<Vec<String>>().join(",")
             ));
             for own_path in own_paths {
-                sql_vals.push(Value::from(format!("{own_path}%")));
+                sql_vals.push(Value::from(format!("{own_path}")));
             }
         }
     }
@@ -936,7 +936,7 @@ pub async fn query_metrics(query_req: &SearchQueryMetricsReq, funs: &TardisFunsI
                 (0..own_paths.len()).map(|idx| format!("${}", params.len() + idx + 1)).collect::<Vec<String>>().join(",")
             ));
             for own_path in own_paths {
-                params.push(Value::from(format!("{own_path}%")));
+                params.push(Value::from(format!("{own_path}")));
             }
         }
     }
