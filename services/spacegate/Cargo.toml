@@ -15,9 +15,9 @@ publish.workspace = true
 [dependencies]
 serde.workspace = true
 lazy_static.workspace = true
-spacegate-kernel.workspace = true
+spacegate-shell.workspace = true
 tardis.workspace = true
-spacegate-lib={path = "../../gateway/spacegate-lib"}
+spacegate-lib = { path = "../../gateway/spacegate-lib" }
 
 [dev-dependencies]
 pprof = { version = "0.12.1", features = ["flamegraph"] }

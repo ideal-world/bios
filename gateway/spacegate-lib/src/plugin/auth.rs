@@ -10,7 +10,7 @@ use bios_auth::{
 };
 
 use serde::{Deserialize, Serialize};
-use spacegate_kernel::{
+use spacegate_shell::{
     def_filter,
     http::{self, HeaderMap, HeaderName, HeaderValue},
     hyper,
@@ -20,7 +20,7 @@ use spacegate_kernel::{
         filters::{SgPluginFilter, SgPluginFilterAccept},
     },
 };
-use spacegate_kernel::{
+use spacegate_shell::{
     hyper::StatusCode,
     plugins::{
         context::{SGIdentInfo, SGRoleInfo},

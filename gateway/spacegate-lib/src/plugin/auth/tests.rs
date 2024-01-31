@@ -3,9 +3,9 @@ use std::env;
 use bios_auth::auth_constants;
 
 use super::*;
-use spacegate_kernel::config::gateway_dto::SgParameters;
-use spacegate_kernel::http::{Method, Uri, Version};
-use spacegate_kernel::hyper::{self, Body, StatusCode};
+use spacegate_shell::config::gateway_dto::SgParameters;
+use spacegate_shell::http::{Method, Uri, Version};
+use spacegate_shell::hyper::{self, Body, StatusCode};
 use tardis::basic::dto::TardisContext;
 use tardis::crypto::crypto_sm2_4::{TardisCryptoSm2, TardisCryptoSm2PrivateKey};
 use tardis::{
@@ -46,7 +46,7 @@ async fn test_auth_plugin_ctx() {
                 ignore_tls_verification: None,
             },
             http_route_rules: vec![],
-            attached_level: spacegate_kernel::plugins::filters::SgAttachedLevel::Gateway,
+            attached_level: spacegate_shell::plugins::filters::SgAttachedLevel::Gateway,
         })
         .await
         .unwrap();
@@ -152,7 +152,7 @@ async fn test_auth_plugin_crypto() {
                 ignore_tls_verification: None,
             },
             http_route_rules: vec![],
-            attached_level: spacegate_kernel::plugins::filters::SgAttachedLevel::Gateway,
+            attached_level: spacegate_shell::plugins::filters::SgAttachedLevel::Gateway,
         })
         .await
         .unwrap();
@@ -290,7 +290,7 @@ async fn test_auth_plugin_strict_security_mode_crypto() {
                 ignore_tls_verification: None,
             },
             http_route_rules: vec![],
-            attached_level: spacegate_kernel::plugins::filters::SgAttachedLevel::Gateway,
+            attached_level: spacegate_shell::plugins::filters::SgAttachedLevel::Gateway,
         })
         .await
         .unwrap();

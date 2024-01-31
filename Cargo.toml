@@ -64,13 +64,13 @@ strum = { version = "0.25", features = ["derive"] }
 tardis = { git = "https://github.com/ideal-world/tardis.git", rev = "2bd617b" }
 #spacegate
 
-spacegate-kernel = { git = "https://github.com/ideal-world/spacegate.git", rev = "f37a81a", features = [
-  "ws",
-  "cache",
-  "k8s",
+# spacegate-kernel = { git = "https://github.com/ideal-world/spacegate.git", rev = "f37a81a", features = [
+#   "ws",
+#   "cache",
+#   "k8s",
+# ] }
+spacegate-shell = { path = "../spacegate/shell",features = [
+   "ws",
+   "cache",
+   "k8s",
 ] }
-#spacegate-kernel = { path = "../spacegate/kernel",features = [
-#    "ws",
-#    "cache",
-#    "k8s",
-#] }
