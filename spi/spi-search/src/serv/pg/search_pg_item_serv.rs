@@ -349,6 +349,17 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
     if let Some(own_paths) = &search_req.query.own_paths {
         if !own_paths.is_empty() {
             where_fragments.push(format!(
+                "own_paths in ({})",
+                (0..own_paths.len()).map(|idx| format!("${}", sql_vals.len() + idx + 1)).collect::<Vec<String>>().join(",")
+            ));
+            for own_path in own_paths {
+                sql_vals.push(Value::from(format!("{own_path}%")));
+            }
+        }
+    }
+    if let Some(own_paths) = &search_req.query.rlike_own_paths {
+        if !own_paths.is_empty() {
+            where_fragments.push(format!(
                 "own_paths LIKE ANY (ARRAY[{}])",
                 (0..own_paths.len()).map(|idx| format!("${}", sql_vals.len() + idx + 1)).collect::<Vec<String>>().join(",")
             ));
@@ -920,12 +931,23 @@ pub async fn query_metrics(query_req: &SearchQueryMetricsReq, funs: &TardisFunsI
     }
     if let Some(own_paths) = &query_req.query.own_paths {
         if !own_paths.is_empty() {
-            sql_part_wheres.push(format!(
-                "fact.own_paths LIKE ANY (ARRAY[{}])",
-                (0..own_paths.len()).map(|idx| format!("${}", params.len() + idx + 1)).collect::<Vec<String>>().join(",")
+            where_fragments.push(format!(
+                "own_paths in ({})",
+                (0..own_paths.len()).map(|idx| format!("${}", sql_vals.len() + idx + 1)).collect::<Vec<String>>().join(",")
             ));
             for own_path in own_paths {
-                params.push(Value::from(format!("{own_path}%")));
+                sql_vals.push(Value::from(format!("{own_path}%")));
+            }
+        }
+    }
+    if let Some(own_paths) = &query_req.query.rlike_own_paths {
+        if !own_paths.is_empty() {
+            where_fragments.push(format!(
+                "own_paths LIKE ANY (ARRAY[{}])",
+                (0..own_paths.len()).map(|idx| format!("${}", sql_vals.len() + idx + 1)).collect::<Vec<String>>().join(",")
+            ));
+            for own_path in own_paths {
+                sql_vals.push(Value::from(format!("{own_path}%")));
             }
         }
     }
@@ -1215,8 +1237,8 @@ pub async fn query_metrics(query_req: &SearchQueryMetricsReq, funs: &TardisFunsI
                 sql_adv_query.push(format!(
                     " {} ( {} )",
                     if group_query.group_by_or.unwrap_or(false) { "OR" } else { "AND" },
-                    sql_and_where.join(if group_query.ext_by_or.unwrap_or(false) { " OR " } else { " AND " }))
-                );
+                    sql_and_where.join(if group_query.ext_by_or.unwrap_or(false) { " OR " } else { " AND " })
+                ));
             }
         }
     }
