@@ -1,15 +1,13 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use async_trait::async_trait;
-
 use serde::{Deserialize, Serialize};
 use spacegate_shell::hyper::{Request, Response, StatusCode};
 use spacegate_shell::kernel::extension::{PeerAddr, Reflect};
 // use spacegate_shell::def_filter;
 // use spacegate_shell::plugins::filters::SgPluginFilterInitDto;
 use spacegate_shell::kernel::helper_layers::bidirection_filter::{Bdf, BdfLayer, BoxReqFut, BoxRespFut};
-use spacegate_shell::plugin::{def_filter_plugin, MakeSgLayer};
+use spacegate_shell::plugin::{def_plugin, MakeSgLayer, PluginError};
 use spacegate_shell::{cache_client, SgBody, SgBoxLayer, SgResponseExt};
 // use spacegate_shell::plugin::{
 //     context::SgRoutePluginContext,
@@ -19,15 +17,13 @@ use spacegate_shell::{cache_client, SgBody, SgBoxLayer, SgResponseExt};
 use tardis::cache::cache_client::TardisCacheClient;
 
 use tardis::{
-    async_trait,
-    basic::{error::TardisError, result::TardisResult},
-    serde_json::{self},
+    basic::result::TardisResult,
     tokio::{self},
 };
 
-def_filter_plugin!("anti_replay", AntiReplayPlugin, SgFilterAntiReplay);
+def_plugin!("anti_replay", AntiReplayPlugin, SgFilterAntiReplay);
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 #[serde(default)]
 pub struct SgFilterAntiReplay {
     cache_key: String,
@@ -44,25 +40,25 @@ impl Default for SgFilterAntiReplay {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct AntiReplayDigest {
     md5: Arc<str>,
 }
 impl Bdf for SgFilterAntiReplay {
     type FutureReq = BoxReqFut;
     type FutureResp = BoxRespFut;
-    fn on_req(self: Arc<Self>, req: Request<SgBody>) -> Self::FutureReq {
+    fn on_req(self: Arc<Self>, mut req: Request<SgBody>) -> Self::FutureReq {
         Box::pin(async move {
             if let Some(cache) = cache_client::get_from_extension(req.extensions()).await {
-                let md5 = get_md5(&req)?;
+                let md5 = get_md5(&req).map_err(PluginError::bad_gateway::<AntiReplayPlugin>)?;
                 let digest = AntiReplayDigest { md5: Arc::from(md5) };
-                if get_status(&digest.md5, &self.cache_key, &cache).await? {
+                if get_status(&digest.md5, &self.cache_key, &cache).await.map_err(PluginError::bad_gateway::<AntiReplayPlugin>)? {
                     return Err(Response::with_code_message(
                         StatusCode::TOO_MANY_REQUESTS,
                         "[SG.Plugin.Anti_Replay] Request denied due to replay attack. Please refresh and resubmit the request.",
                     ));
                 } else {
-                    set_status(&digest.md5, &self.cache_key, true, &cache).await?;
+                    set_status(&digest.md5, &self.cache_key, true, &cache).await.map_err(PluginError::bad_gateway::<AntiReplayPlugin>)?;
                 }
                 req.extensions_mut().get_mut::<Reflect>().expect("missing reflect").insert(digest);
             }
@@ -70,22 +66,21 @@ impl Bdf for SgFilterAntiReplay {
         })
     }
     fn on_resp(self: Arc<Self>, resp: Response<SgBody>) -> Self::FutureResp {
-        let task = async move {
+        Box::pin(async move {
             if let (Some(digest), Some(cache)) = (resp.extensions().get::<AntiReplayDigest>(), cache_client::get_from_extension(resp.extensions()).await) {
+                let digest = digest.clone();
                 tokio::spawn(async move {
                     tokio::time::sleep(Duration::from_millis(self.time)).await;
                     let _ = set_status(&digest.md5, self.cache_key.as_ref(), false, &cache).await;
                 });
             }
-            Ok(resp)
-        };
-        Box::pin(task)
+            resp
+        })
     }
 }
 
-
 fn get_md5(req: &Request<SgBody>) -> TardisResult<String> {
-    let remote_addr = req.extensions().get::<PeerAddr>().expect("missing peer address");
+    let remote_addr = req.extensions().get::<PeerAddr>().expect("missing peer address").0;
     let uri = req.uri();
     let method = req.method();
 
@@ -123,7 +118,7 @@ async fn get_status(md5: &str, cache_key: &str, cache_client: impl AsRef<TardisC
 
 impl MakeSgLayer for SgFilterAntiReplay {
     fn make_layer(&self) -> Result<spacegate_shell::SgBoxLayer, spacegate_shell::BoxError> {
-        Ok(SgBoxLayer::new(BdfLayer::new(Arc::new(self.clone()))))
+        Ok(SgBoxLayer::new(BdfLayer::new(self.clone())))
     }
 }
 

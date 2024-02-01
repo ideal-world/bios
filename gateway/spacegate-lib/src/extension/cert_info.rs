@@ -1,3 +1,1 @@
-pub struct CertInfo {
-    
-}
+pub struct CertInfo {}

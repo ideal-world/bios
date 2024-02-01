@@ -8,7 +8,6 @@ use spacegate_shell::{
     BoxError, SgBody, SgBoxLayer,
 };
 
-
 macro_rules! append_value {
     ($result:expr, $field:expr, $value:expr) => {
         if let Some(val) = $value {
@@ -149,7 +148,7 @@ impl MakeSgLayer for SgFilterAntiXSS {
     fn make_layer(&self) -> Result<SgBoxLayer, BoxError> {
         let header = Arc::new(header::HeaderValue::from_str(&self.csp_config.to_string_header_value())?);
         let report_only = self.csp_config.report_only;
-        Ok(SgBoxLayer::new(MapResponseLayer::new(|mut resp: Response<SgBody>| {
+        Ok(SgBoxLayer::new(MapResponseLayer::new(move |mut resp: Response<SgBody>| {
             let mut enable = false;
             if let Some(content_type) = resp.headers().get(header::CONTENT_TYPE) {
                 enable = content_type.eq("text/html") || content_type.eq("text/css") || content_type.eq("application/javascript") || content_type.eq("application/x-javascript");

@@ -1,4 +1,5 @@
 use std::net::IpAddr;
+use std::sync::Arc;
 
 use ipnet::IpNet;
 use serde::{Deserialize, Serialize};
@@ -13,7 +14,6 @@ use spacegate_shell::{BoxError, SgBody, SgBoxLayer, SgResponseExt};
 
 use tardis::{log, serde_json};
 pub const CODE: &str = "ip_time";
-pub struct SgFilterIpTimeDef;
 
 mod ip_time_rule;
 #[cfg(test)]
@@ -31,7 +31,7 @@ pub struct SgFilterIpTimeConfig {
     pub rules: Vec<SgFilterIpTimeConfigRule>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Default)]
+#[derive(Debug, Serialize, Deserialize, Default, Clone, Copy)]
 #[serde(rename_all = "snake_case")]
 pub enum SgFilterIpTimeMode {
     WhiteList,
@@ -60,7 +60,10 @@ impl From<SgFilterIpTimeConfig> for SgFilterIpTime {
                 rules.push((net, rule.time_rule.clone()))
             }
         }
-        SgFilterIpTime { mode: white_list_mode, rules }
+        SgFilterIpTime {
+            mode: white_list_mode,
+            rules: rules.into(),
+        }
     }
 }
 #[derive(Debug, Serialize, Deserialize)]
@@ -69,7 +72,7 @@ pub struct SgFilterIpTimeConfigRule {
     pub time_rule: IpTimeRule,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct SgFilterIpTime {
     // # enhancement:
     // should be a time segment list
@@ -78,7 +81,7 @@ pub struct SgFilterIpTime {
     //     - allow: Set {}
     // - pointer to the lastest segment
     pub mode: SgFilterIpTimeMode,
-    pub rules: Vec<(IpNet, IpTimeRule)>,
+    pub rules: Arc<[(IpNet, IpTimeRule)]>,
 }
 
 impl SgFilterIpTime {
@@ -101,6 +104,7 @@ impl Filter for SgFilterIpTime {
         let Some(socket_addr) = req.extensions().get::<PeerAddr>() else {
             return Err(Response::with_code_message(StatusCode::BAD_GATEWAY, "Cannot get peer address, it's a implementation bug"));
         };
+        let socket_addr = socket_addr.0;
         let passed = self.check_ip(&socket_addr.ip());
         log::trace!("[{CODE}] Check ip time rule from {socket_addr}, passed {passed}");
         if !passed {
@@ -110,9 +114,9 @@ impl Filter for SgFilterIpTime {
     }
 }
 
-pub struct SgFilterIpTimePlugin;
+pub struct SgIpTimePlugin;
 
-impl Plugin for SgFilterIpTimePlugin {
+impl Plugin for SgIpTimePlugin {
     const CODE: &'static str = CODE;
     type MakeLayer = SgFilterIpTime;
     type Error = SerdeJsonError;

@@ -1,94 +1,91 @@
 use ipnet::IpNet;
 use serde::{Deserialize, Serialize};
-use spacegate_shell::config::gateway_dto::SgProtocol;
-use spacegate_shell::def_filter;
-use spacegate_shell::kernel::extension::{BackendHost, PeerAddr};
-use spacegate_shell::plugin::Filter;
-use spacegate_shell::plugins::context::{SgRouteFilterRequestAction, SgRoutePluginContext};
-use spacegate_shell::plugins::filters::{SgPluginFilter, SgPluginFilterInitDto};
-use std::net::IpAddr;
-use tardis::async_trait::async_trait;
-use tardis::basic::error::TardisError;
-use tardis::basic::result::TardisResult;
-use tardis::{log, serde_json};
 
-def_filter!("rewrite_ns", SgFilterRewriteNsDef, SgFilterRewriteNs);
+use spacegate_shell::extension::k8s_service::K8sService;
+use spacegate_shell::hyper::Request;
+use spacegate_shell::hyper::{http::uri, Response};
+use spacegate_shell::kernel::extension::PeerAddr;
+use spacegate_shell::plugin::{def_filter_plugin, Filter, PluginError};
+use spacegate_shell::{SgBody, SgResponseExt};
+use std::net::IpAddr;
+use std::str::FromStr;
+use std::sync::Arc;
+
+use tardis::log;
+
+def_filter_plugin!("rewrite_ns", RewriteNsPlugin, SgFilterRewriteNs);
 
 /// Kube available only!
-#[derive(Serialize, Deserialize)]
-#[serde(default)]
+#[derive(Clone)]
 pub struct SgFilterRewriteNs {
-    pub ip_list: Vec<String>,
+    pub ip_list: Arc<[IpNet]>,
     pub target_ns: String,
-    #[serde(skip)]
-    pub ip_net: Vec<IpNet>,
 }
 
-impl Default for SgFilterRewriteNs {
+#[derive(Serialize, Deserialize)]
+#[serde(default)]
+pub struct SgFilterRewriteNsConfig {
+    pub ip_list: Vec<String>,
+    pub target_ns: String,
+}
+
+impl<'de> Deserialize<'de> for SgFilterRewriteNs {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        SgFilterRewriteNsConfig::deserialize(deserializer).map(|config| {
+            let ip_list: Vec<IpNet> = config
+                .ip_list
+                .iter()
+                .filter_map(|p| {
+                    p.parse()
+                        .or(p.parse::<IpAddr>().map(IpNet::from))
+                        .map_err(|e| {
+                            log::warn!("[{CODE}] Cannot parse ip `{p}` when loading config: {e}");
+                        })
+                        .ok()
+                })
+                .collect();
+            SgFilterRewriteNs {
+                ip_list: ip_list.into(),
+                target_ns: config.target_ns,
+            }
+        })
+    }
+}
+
+impl Default for SgFilterRewriteNsConfig {
     fn default() -> Self {
-        SgFilterRewriteNs {
+        SgFilterRewriteNsConfig {
             ip_list: vec![],
             target_ns: "default".to_string(),
-            ip_net: vec![],
         }
     }
 }
 
 impl Filter for SgFilterRewriteNs {
-    fn filter(&self, mut req: spacegate_shell::hyper::Request<spacegate_shell::SgBody>) -> Result<spacegate_shell::hyper::Request<spacegate_shell::SgBody>, spacegate_shell::hyper::Response<spacegate_shell::SgBody>> {
-        if let Some(backend) = req.extensions().get::<BackendHost>() {
-            let host = backend.deref();
-            if backend.namespace.is_some() {
+    fn filter(&self, mut req: Request<spacegate_shell::SgBody>) -> Result<Request<SgBody>, Response<SgBody>> {
+        'change_ns: {
+            if let Some(k8s_service) = req.extensions().get::<K8sService>().cloned() {
+                let Some(ref ns) = k8s_service.0.namespace else { break 'change_ns };
                 let ip = req.extensions().get::<PeerAddr>().expect("missing peer addr").0.ip();
-                if self.ip_net.iter().any(|ipnet| ipnet.contains(&IpNet::from(ip))) {
-                    let new_host = req.uri().clone();
-                    let parts = new_host.into_parts();
-                    
-                    log::debug!("[SG.Filter.Auth.Rewrite_Ns] change namespace to {}", self.target_ns);
+                if self.ip_list.iter().any(|ipnet| ipnet.contains(&ip)) {
+                    let uri = req.uri().clone();
+                    let mut parts = uri.into_parts();
+                    let new_authority = if let Some(prev_host) = parts.authority.as_ref().and_then(|a| a.port_u16()) {
+                        format!("{svc}.{ns}:{port}", svc = k8s_service.0.name, ns = self.target_ns, port = prev_host)
+                    } else {
+                        format!("{svc}.{ns}", svc = k8s_service.0.name, ns = self.target_ns)
+                    };
+                    let new_authority = uri::Authority::from_str(&new_authority).map_err(PluginError::bad_gateway::<RewriteNsPlugin>)?;
+                    parts.authority.replace(new_authority);
+                    *req.uri_mut() = uri::Uri::from_parts(parts).map_err(PluginError::bad_gateway::<RewriteNsPlugin>)?;
+                    log::debug!("[SG.Filter.Auth.Rewrite_Ns] change namespace from {} to {}", ns, self.target_ns);
                 }
             }
         }
-        return Ok(req);
-    }
-}
-
-#[async_trait]
-impl SgPluginFilter for SgFilterRewriteNs {
-    async fn init(&mut self, _: &SgPluginFilterInitDto) -> TardisResult<()> {
-        let ip_net = self.ip_list.iter().filter_map(|ip| ip.parse::<IpNet>().or(ip.parse::<IpAddr>().map(IpNet::from)).ok()).collect();
-        self.ip_net = ip_net;
-        Ok(())
-    }
-
-    async fn destroy(&self) -> TardisResult<()> {
-        Ok(())
-    }
-
-    async fn req_filter(&self, id: &str, mut ctx: SgRoutePluginContext) -> TardisResult<(bool, SgRoutePluginContext)> {
-        if let Some(backend) = ctx.get_chose_backend() {
-            if backend.namespace.is_some() {
-                let ip = ctx.get_remote_addr().ip();
-                if self.ip_net.iter().any(|ipnet| ipnet.contains(&IpNet::from(ip))) {
-                    ctx.set_action(SgRouteFilterRequestAction::Redirect);
-                    let scheme = backend.protocol.as_ref().unwrap_or(&SgProtocol::Http);
-                    let host = format!("{}{}", backend.name_or_host, format_args!(".{}", self.target_ns));
-                    let port =
-                        if (backend.port == 0 || backend.port == 80) && scheme == &SgProtocol::Http || (backend.port == 0 || backend.port == 443) && scheme == &SgProtocol::Https {
-                            "".to_string()
-                        } else {
-                            format!(":{}", backend.port)
-                        };
-                    let url = format!("{}://{}{}{}", scheme, host, port, ctx.request.get_uri().path_and_query().map(|p| p.as_str()).unwrap_or(""));
-                    ctx.request.set_uri(url.parse().map_err(|e| TardisError::wrap(&format!("[SG.Filter.Auth.Rewrite_Ns({id})] parse url:{e}"), ""))?);
-                    log::debug!("[SG.Filter.Auth.Rewrite_Ns({id})] change namespace to {}", self.target_ns);
-                }
-            }
-        }
-        return Ok((true, ctx));
-    }
-
-    async fn resp_filter(&self, _: &str, ctx: SgRoutePluginContext) -> TardisResult<(bool, SgRoutePluginContext)> {
-        return Ok((true, ctx));
+        Ok(req)
     }
 }
 
