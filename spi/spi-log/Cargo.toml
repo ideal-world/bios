@@ -20,7 +20,11 @@ spi-pg = ["tardis/reldb-postgres"]
 
 [dependencies]
 serde.workspace = true
-tardis = { workspace = true, features = ["reldb-postgres", "web-server"] }
+tardis = { workspace = true, features = [
+    "reldb-postgres",
+    "web-server",
+    "k8s",
+] }
 bios-basic = { path = "../../basic", features = ["default"] }
 bios-sdk-invoke = { path = "../../sdk/invoke", features = [
     "event",

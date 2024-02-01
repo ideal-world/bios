@@ -7,7 +7,7 @@ use tardis::web::web_resp::{TardisApiResult, TardisResp, Void};
 
 use crate::iam_config::IamConfig;
 use crate::iam_constants;
-use crate::iam_initializer::{default_iam_avatar, default_iam_send_avatar, ws_iam_client, ws_iam_send_client};
+use crate::iam_initializer::{default_iam_send_avatar, ws_iam_send_client};
 #[derive(Clone, Default)]
 pub struct IamCcSystemApi;
 

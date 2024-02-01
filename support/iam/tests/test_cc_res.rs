@@ -108,6 +108,7 @@ async fn test_single_level(context: &TardisContext, another_context: &TardisCont
         &mut IamResModifyReq {
             name: Some(TrimString("测试资源".to_string())),
             icon: Some("/icon/icon.png".to_string()),
+            code: None,
             sort: None,
             hide: None,
             action: None,
@@ -131,6 +132,7 @@ async fn test_single_level(context: &TardisContext, another_context: &TardisCont
         &mut IamResModifyReq {
             name: Some(TrimString("测试资源".to_string())),
             icon: Some("/icon/icon.png".to_string()),
+            code: None,
             sort: None,
             hide: None,
             action: None,
@@ -420,6 +422,7 @@ pub async fn test_multi_level_by_sys_context(
         &mut IamResModifyReq {
             name: Some(TrimString("res_sys_modify".to_string())),
             icon: None,
+            code: None,
             sort: None,
             hide: None,
             action: None,
@@ -440,6 +443,7 @@ pub async fn test_multi_level_by_sys_context(
         &res_t1_id,
         &mut IamResModifyReq {
             name: Some(TrimString("res_t1_modify".to_string())),
+            code: None,
             icon: None,
             sort: None,
             hide: None,
@@ -461,6 +465,7 @@ pub async fn test_multi_level_by_sys_context(
         &res_t2_a1_id,
         &mut IamResModifyReq {
             name: Some(TrimString("res_t2_a1_modify".to_string())),
+            code: None,
             icon: None,
             sort: None,
             hide: None,
@@ -589,6 +594,7 @@ pub async fn test_multi_level_by_tenant_context(
         &mut IamResModifyReq {
             name: Some(TrimString("res_sys_modify".to_string())),
             icon: None,
+            code: None,
             sort: None,
             hide: None,
             action: None,
@@ -611,6 +617,7 @@ pub async fn test_multi_level_by_tenant_context(
         &mut IamResModifyReq {
             name: Some(TrimString("res_sys_global_modify".to_string())),
             icon: None,
+            code: None,
             sort: None,
             hide: None,
             action: None,
@@ -633,6 +640,7 @@ pub async fn test_multi_level_by_tenant_context(
         &mut IamResModifyReq {
             name: Some(TrimString("res_t1_modify".to_string())),
             icon: None,
+            code: None,
             sort: None,
             hide: None,
             action: None,
@@ -655,6 +663,7 @@ pub async fn test_multi_level_by_tenant_context(
         &mut IamResModifyReq {
             name: Some(TrimString("res_t2_modify".to_string())),
             icon: None,
+            code: None,
             sort: None,
             hide: None,
             action: None,
@@ -676,6 +685,7 @@ pub async fn test_multi_level_by_tenant_context(
         &mut IamResModifyReq {
             name: Some(TrimString("res_t2_a1_modify".to_string())),
             icon: None,
+            code: None,
             sort: None,
             hide: None,
             action: None,
@@ -793,6 +803,7 @@ pub async fn test_multi_level_by_app_context(
         &mut IamResModifyReq {
             name: Some(TrimString("res_sys_modify".to_string())),
             icon: None,
+            code: None,
             sort: None,
             hide: None,
             action: None,
@@ -815,6 +826,7 @@ pub async fn test_multi_level_by_app_context(
         &mut IamResModifyReq {
             name: Some(TrimString("res_t1_modify".to_string())),
             icon: None,
+            code: None,
             sort: None,
             hide: None,
             action: None,
@@ -837,6 +849,7 @@ pub async fn test_multi_level_by_app_context(
         &mut IamResModifyReq {
             name: Some(TrimString("res_t2_tenant_modify".to_string())),
             icon: None,
+            code: None,
             sort: None,
             hide: None,
             action: None,
@@ -859,6 +872,7 @@ pub async fn test_multi_level_by_app_context(
         &mut IamResModifyReq {
             name: Some(TrimString("res_t2_modify".to_string())),
             icon: None,
+            code: None,
             sort: None,
             hide: None,
             action: None,
@@ -881,6 +895,7 @@ pub async fn test_multi_level_by_app_context(
         &mut IamResModifyReq {
             name: Some(TrimString("res_t2_a2_modify".to_string())),
             icon: None,
+            code: None,
             sort: None,
             hide: None,
             action: None,
@@ -903,6 +918,7 @@ pub async fn test_multi_level_by_app_context(
         &mut IamResModifyReq {
             name: Some(TrimString("res_t2_a1_modify".to_string())),
             icon: None,
+            code: None,
             sort: None,
             hide: None,
             action: None,

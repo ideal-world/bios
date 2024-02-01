@@ -8,4 +8,5 @@ use std::fmt::Debug;
 pub struct SearchConfig {
     pub rbum: RbumConfig,
     pub event: Option<EventTopicConfig>,
+    pub word_length: Option<usize>,
 }

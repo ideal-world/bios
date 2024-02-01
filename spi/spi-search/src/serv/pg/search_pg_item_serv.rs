@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use pinyin::{to_pinyin_vec, Pinyin};
 use tardis::{
@@ -8,6 +8,7 @@ use tardis::{
         reldb_client::{TardisRelDBClient, TardisRelDBlConnection},
         sea_orm::{FromQueryResult, Value},
     },
+    log::info,
     serde_json::{self, json, Map},
     web::web_resp::TardisPage,
     TardisFuns, TardisFunsInst,
@@ -15,26 +16,43 @@ use tardis::{
 
 use bios_basic::{basic_enumeration::BasicQueryOpKind, dto::BasicQueryCondInfo, helper::db_helper, spi::spi_funs::SpiBsInst};
 
-use crate::dto::search_item_dto::{
-    AdvBasicQueryCondInfo, SearchItemAddReq, SearchItemModifyReq, SearchItemSearchQScopeKind, SearchItemSearchReq, SearchItemSearchResp, SearchQueryMetricsReq,
-    SearchQueryMetricsResp,
+use crate::{
+    dto::search_item_dto::{
+        AdvBasicQueryCondInfo, SearchItemAddReq, SearchItemModifyReq, SearchItemSearchQScopeKind, SearchItemSearchReq, SearchItemSearchResp, SearchQueryMetricsReq,
+        SearchQueryMetricsResp,
+    },
+    search_config::SearchConfig,
 };
 
 use super::search_pg_initializer;
 
 const FUNCTION_SUFFIX_FLAG: &str = "__";
 const FUNCTION_EXT_SUFFIX_FLAG: &str = "_ext_";
+const INNER_FIELD: [&str; 7] = ["key", "title", "content", "owner", "own_paths", "create_time", "update_time"];
 
-pub async fn add(add_req: &mut SearchItemAddReq, _funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
+pub async fn add(add_req: &mut SearchItemAddReq, funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
+    info!("load SearchConfig: {:?}", funs.conf::<SearchConfig>().word_length);
     let mut params = Vec::new();
     params.push(Value::from(add_req.kind.to_string()));
     params.push(Value::from(add_req.key.to_string()));
     params.push(Value::from(add_req.title.as_str()));
-    params.push(Value::from(format!(
-        "{},{}",
-        add_req.title.as_str(),
-        generate_word_combinations(to_pinyin_vec(add_req.title.as_str(), Pinyin::plain)).join(",")
-    )));
+    if add_req.title.chars().count() > funs.conf::<SearchConfig>().word_length.unwrap_or(30) {
+        params.push(Value::from(format!(
+            "{} {}",
+            add_req.title.as_str(),
+            generate_word_combinations(to_pinyin_vec(add_req.title.as_str(), Pinyin::plain)).join(" ")
+        )));
+    } else {
+        params.push(Value::from(format!(
+            "{} {} {} {} {}",
+            add_req.title.as_str(),
+            generate_word_combinations_with_length(add_req.title.as_str(), 1).join(" "),
+            generate_word_combinations_with_length(add_req.title.as_str(), 2).join(" "),
+            generate_word_combinations_with_length(add_req.title.as_str(), 3).join(" "),
+            generate_word_combinations(to_pinyin_vec(add_req.title.as_str(), Pinyin::plain)).join(" ")
+        )));
+    }
+
     params.push(Value::from(add_req.content.as_str()));
     params.push(Value::from(add_req.content.as_str()));
     // params.push(Value::from(format!(
@@ -58,12 +76,17 @@ pub async fn add(add_req: &mut SearchItemAddReq, _funs: &TardisFunsInst, ctx: &T
     let bs_inst = inst.inst::<TardisRelDBClient>();
     let (mut conn, table_name) = search_pg_initializer::init_table_and_conn(bs_inst, &add_req.tag, ctx, true).await?;
     conn.begin().await?;
+    let word_combinations_way = if add_req.title.chars().count() > funs.conf::<SearchConfig>().word_length.unwrap_or(30) {
+        "public.chinese_zh"
+    } else {
+        "simple"
+    };
     conn.execute_one(
         &format!(
             r#"INSERT INTO {table_name} 
     (kind, key, title, title_tsv,content, content_tsv, owner, own_paths, create_time, update_time, ext, visit_keys)
 VALUES
-    ($1, $2, $3, to_tsvector('public.chinese_zh', $4), $5, to_tsvector('public.chinese_zh', $6), $7, $8, $9, $10, $11, {})"#,
+    ($1, $2, $3, to_tsvector('{word_combinations_way}', $4), $5, to_tsvector('public.chinese_zh', $6), $7, $8, $9, $10, $11, {})"#,
             if add_req.visit_keys.is_some() { "$12" } else { "null" },
         ),
         params,
@@ -89,12 +112,28 @@ pub async fn modify(tag: &str, key: &str, modify_req: &mut SearchItemModifyReq, 
     if let Some(title) = &modify_req.title {
         sql_sets.push(format!("title = ${}", params.len() + 1));
         params.push(Value::from(title));
-        sql_sets.push(format!("title_tsv = to_tsvector('public.chinese_zh', ${})", params.len() + 1));
-        params.push(Value::from(format!(
-            "{},{}",
-            title,
-            generate_word_combinations(to_pinyin_vec(title, Pinyin::plain)).join(",")
-        )));
+        let word_combinations_way = if title.chars().count() > funs.conf::<SearchConfig>().word_length.unwrap_or(30) {
+            "public.chinese_zh"
+        } else {
+            "simple"
+        };
+        sql_sets.push(format!("title_tsv = to_tsvector('{word_combinations_way}', ${})", params.len() + 1));
+        if title.chars().count() > 15 {
+            params.push(Value::from(format!(
+                "{} {}",
+                title,
+                generate_word_combinations(to_pinyin_vec(title, Pinyin::plain)).join(" ")
+            )));
+        } else {
+            params.push(Value::from(format!(
+                "{} {} {} {} {}",
+                title,
+                generate_word_combinations_with_length(title, 1).join(" "),
+                generate_word_combinations_with_length(title, 2).join(" "),
+                generate_word_combinations_with_length(title, 3).join(" "),
+                generate_word_combinations(to_pinyin_vec(title, Pinyin::plain)).join(" ")
+            )));
+        }
     };
     if let Some(content) = &modify_req.content {
         sql_sets.push(format!("content = ${}", params.len() + 1));
@@ -148,6 +187,18 @@ WHERE key = $1
     .await?;
     conn.commit().await?;
     Ok(())
+}
+
+fn generate_word_combinations_with_length(original_str: &str, split_len: usize) -> Vec<String> {
+    let mut combinations = Vec::new();
+    let original_chars = original_str.chars().map(|c| c.to_string()).collect::<Vec<_>>();
+    if original_chars.len() > split_len {
+        for i in 0..original_chars.len() - split_len + 1 {
+            let word = original_chars[i..=(i + split_len - 1)].join("");
+            combinations.push(word);
+        }
+    }
+    combinations
 }
 
 fn generate_word_combinations(chars: Vec<&str>) -> Vec<String> {
@@ -296,6 +347,17 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
         }
     }
     if let Some(own_paths) = &search_req.query.own_paths {
+        if !own_paths.is_empty() {
+            where_fragments.push(format!(
+                "own_paths in ({})",
+                (0..own_paths.len()).map(|idx| format!("${}", sql_vals.len() + idx + 1)).collect::<Vec<String>>().join(",")
+            ));
+            for own_path in own_paths {
+                sql_vals.push(Value::from(format!("{own_path}")));
+            }
+        }
+    }
+    if let Some(own_paths) = &search_req.query.rlike_own_paths {
         if !own_paths.is_empty() {
             where_fragments.push(format!(
                 "own_paths LIKE ANY (ARRAY[{}])",
@@ -594,7 +656,7 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
                 sql_adv_query.push(format!(
                     " {} ( {} )",
                     if group_query.group_by_or.unwrap_or(false) { "OR" } else { "AND" },
-                    sql_and_where.join(" AND ")
+                    sql_and_where.join(if group_query.ext_by_or.unwrap_or(false) { " OR " } else { " AND " })
                 ));
             }
         }
@@ -679,6 +741,51 @@ fn merge(a: &mut serde_json::Value, b: serde_json::Value) {
         }
         (a, b) => *a = b,
     }
+}
+
+pub async fn refresh_data(tag: String, funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
+    let bs_inst = inst.inst::<TardisRelDBClient>();
+    let (conn, table_name) = search_pg_initializer::init_table_and_conn(bs_inst, &tag, ctx, false).await?;
+    let mut page = 0;
+    loop {
+        let result = conn.query_all(&format!(r#"SELECT key, title FROM {table_name} LIMIT {} OFFSET {};"#, page, (page - 1) * 1000), vec![]).await?;
+        if result.is_empty() {
+            break;
+        }
+        for item in result {
+            let title: String = item.try_get("", "title")?;
+            let key: String = item.try_get("", "key")?;
+            let word_combinations_way = if title.chars().count() > funs.conf::<SearchConfig>().word_length.unwrap_or(30) {
+                "public.chinese_zh"
+            } else {
+                "simple"
+            };
+            let word_combinations = if title.chars().count() > funs.conf::<SearchConfig>().word_length.unwrap_or(30) {
+                Value::from(format!(
+                    "{} {}",
+                    title.as_str(),
+                    generate_word_combinations(to_pinyin_vec(title.as_str(), Pinyin::plain)).join(" ")
+                ))
+            } else {
+                Value::from(format!(
+                    "{} {} {} {} {}",
+                    title.as_str(),
+                    generate_word_combinations_with_length(title.as_str(), 1).join(" "),
+                    generate_word_combinations_with_length(title.as_str(), 2).join(" "),
+                    generate_word_combinations_with_length(title.as_str(), 3).join(" "),
+                    generate_word_combinations(to_pinyin_vec(title.as_str(), Pinyin::plain)).join(" ")
+                ))
+            };
+            conn.execute_one(
+                &format!("UPDATE {table_name} SET title_tsv = to_tsvector('{word_combinations_way}', $1) WHERE key = $2"),
+                vec![word_combinations, Value::from(key)],
+            )
+            .await?;
+        }
+        page += 1;
+    }
+
+    Ok(())
 }
 
 pub async fn query_metrics(query_req: &SearchQueryMetricsReq, funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<SearchQueryMetricsResp> {
@@ -825,7 +932,18 @@ pub async fn query_metrics(query_req: &SearchQueryMetricsReq, funs: &TardisFunsI
     if let Some(own_paths) = &query_req.query.own_paths {
         if !own_paths.is_empty() {
             sql_part_wheres.push(format!(
-                "fact.own_paths LIKE ANY (ARRAY[{}])",
+                "own_paths in ({})",
+                (0..own_paths.len()).map(|idx| format!("${}", params.len() + idx + 1)).collect::<Vec<String>>().join(",")
+            ));
+            for own_path in own_paths {
+                params.push(Value::from(format!("{own_path}")));
+            }
+        }
+    }
+    if let Some(own_paths) = &query_req.query.rlike_own_paths {
+        if !own_paths.is_empty() {
+            sql_part_wheres.push(format!(
+                "own_paths LIKE ANY (ARRAY[{}])",
                 (0..own_paths.len()).map(|idx| format!("${}", params.len() + idx + 1)).collect::<Vec<String>>().join(",")
             ));
             for own_path in own_paths {
@@ -1119,7 +1237,7 @@ pub async fn query_metrics(query_req: &SearchQueryMetricsReq, funs: &TardisFunsI
                 sql_adv_query.push(format!(
                     " {} ( {} )",
                     if group_query.group_by_or.unwrap_or(false) { "OR" } else { "AND" },
-                    sql_and_where.join(" AND ")
+                    sql_and_where.join(if group_query.ext_by_or.unwrap_or(false) { " OR " } else { " AND " })
                 ));
             }
         }
@@ -1167,7 +1285,21 @@ pub async fn query_metrics(query_req: &SearchQueryMetricsReq, funs: &TardisFunsI
                 if group.in_ext.unwrap_or(true) { FUNCTION_EXT_SUFFIX_FLAG } else { "" },
                 group.time_window.as_ref().map(|i| i.to_string().to_lowercase()).unwrap_or("".to_string())
             );
-            sql_part_group_infos.push((column_name_with_fun, alias_name.clone(), alias_name));
+
+            sql_part_group_infos.push((
+                format!(
+                    "case when _.{} IS NULL {} THEN '\"empty\"' else {} end",
+                    &group.code,
+                    if INNER_FIELD.contains(&group.code.clone().as_str()) || group.time_window.is_none() {
+                        "".to_string()
+                    } else {
+                        format!("OR _.{} = ''", &group.code.clone())
+                    },
+                    column_name_with_fun
+                ),
+                alias_name.clone(),
+                alias_name,
+            ));
         } else {
             return Err(funs.err().not_found(
                 "metric",

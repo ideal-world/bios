@@ -78,6 +78,7 @@ pub struct EventTopicConfig {
     pub avatars: Vec<String>,
     pub subscribe_mode: bool,
     pub base_url: String,
+    pub in_event: bool,
 }
 
 impl From<EventTopicConfig> for EventListenerRegisterReq {

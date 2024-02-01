@@ -145,6 +145,7 @@ impl SearchItemSearchCtxReq {
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Default)]
 pub struct AdvSearchItemQueryReq {
     pub group_by_or: Option<bool>,
+    pub ext_by_or: Option<bool>,
     // Extended filtering conditions
     pub ext: Option<Vec<AdvBasicQueryCondInfo>>,
 }
@@ -174,6 +175,7 @@ pub struct SearchItemQueryReq {
     pub owners: Option<Vec<String>>,
     // Match own_path, support prefix match
     pub own_paths: Option<Vec<String>>,
+    pub rlike_own_paths: Option<Vec<String>>,
     pub create_time_start: Option<DateTime<Utc>>,
     pub create_time_end: Option<DateTime<Utc>>,
     pub update_time_start: Option<DateTime<Utc>>,

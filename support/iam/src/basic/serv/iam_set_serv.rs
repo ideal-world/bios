@@ -261,7 +261,7 @@ impl IamSetServ {
             let mut kind = item.kind;
             if kind == IamSetKind::Apps.to_string() {
                 SpiKvClient::add_or_modify_key_name(
-                    &format!("{}:{}", funs.conf::<IamConfig>().spi.kv_apps_prefix.clone(), &set_cate_id.clone()),
+                    &format!("{}:{}", funs.conf::<IamConfig>().spi.kv_apps_prefix.clone(), &set_cate_id),
                     &set_cate_item.name.clone(),
                     funs,
                     ctx,
@@ -913,7 +913,7 @@ impl IamSetServ {
             )
             .await?;
             for (id, name) in id_and_names {
-                SpiKvClient::add_or_modify_key_name(&format!("{}:{}", funs.conf::<IamConfig>().spi.kv_tenant_prefix.clone(), id), &name, funs, ctx).await?;
+                SpiKvClient::add_or_modify_key_name(&format!("{}:{}", funs.conf::<IamConfig>().spi.kv_apps_prefix.clone(), id), &name, funs, ctx).await?;
             }
         }
 

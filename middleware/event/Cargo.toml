@@ -35,6 +35,7 @@ tardis = { workspace = true, features = [
     "ws-client",
     "cluster",
     "web-server",
+    "k8s",
 ] }
 bios-basic = { path = "../../basic", features = ["default", "test"] }
 tokio = { version = "1", features = ["full"] }

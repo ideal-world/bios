@@ -2,8 +2,7 @@ use async_trait::async_trait;
 use bios_basic::helper::request_helper::get_remote_ip;
 use bios_basic::rbum::rbum_config::RbumConfigApi;
 use bios_basic::rbum::rbum_enumeration::RbumRelFromKind;
-use bios_sdk_invoke::clients::spi_search_client::SpiSearchClient;
-use bios_sdk_invoke::dto::search_item_dto::{SearchItemAddReq, SearchItemModifyReq, SearchItemVisitKeysReq};
+use bios_sdk_invoke::clients::spi_kv_client::SpiKvClient;
 use itertools::Itertools;
 use tardis::chrono::Utc;
 
@@ -172,11 +171,13 @@ impl RbumItemCrudOperation<iam_account::ActiveModel, IamAccountAddReq, IamAccoun
         for (op_describe, op_kind) in tasks {
             let _ = IamLogClient::add_ctx_task(LogParamTag::IamAccount, Some(id.to_string()), op_describe, Some(op_kind), ctx).await;
         }
+        #[cfg(feature = "spi_kv")]
+        Self::add_or_modify_account_kv(id, funs, ctx).await?;
 
         Ok(())
     }
 
-    async fn after_add_item(id: &str, add_req: &mut IamAccountAddReq, _funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    async fn after_add_item(id: &str, add_req: &mut IamAccountAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let mut op_describe = "添加长期账号".to_string();
         let mut op_kind = "AddLongTermAccount".to_string();
         if add_req.temporary == Some(true) {
@@ -184,6 +185,10 @@ impl RbumItemCrudOperation<iam_account::ActiveModel, IamAccountAddReq, IamAccoun
             op_kind = "AddTempAccount".to_string();
         }
         let _ = IamLogClient::add_ctx_task(LogParamTag::IamAccount, Some(id.to_string()), op_describe, Some(op_kind), ctx).await;
+
+        #[cfg(feature = "spi_kv")]
+        Self::add_or_modify_account_kv(id, funs, ctx).await?;
+
         Ok(())
     }
     async fn before_delete_item(id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<IamAccountDetailResp>> {
@@ -497,7 +502,7 @@ impl IamAccountServ {
         let account_attr_values = IamAttrServ::find_account_attr_values(&account.id, funs, ctx).await?;
 
         let org_set_id = IamSetServ::get_set_id_by_code(&IamSetServ::get_default_code(&IamSetKind::Org, &ctx.own_paths), false, funs, ctx).await?;
-        let groups = IamSetServ::find_flat_set_items(&org_set_id, &account.id, false, funs, ctx).await?;
+        let groups = IamSetServ::find_flat_set_items(&org_set_id, &account.id, false, funs, &mock_tenant_ctx).await?;
         let account = IamAccountDetailAggResp {
             id: account.id.clone(),
             name: account.name,
@@ -563,10 +568,12 @@ impl IamAccountServ {
     ) -> TardisResult<TardisPage<IamAccountSummaryAggResp>> {
         let accounts = IamAccountServ::paginate_items(filter, page_number, page_size, desc_sort_by_create, desc_sort_by_update, funs, ctx).await?;
         let mut account_aggs = Vec::with_capacity(accounts.total_size as usize);
+        let mut mock_tenant_ctx = ctx.clone();
+        mock_tenant_ctx.own_paths = IamTenantServ::get_id_by_ctx(ctx, funs)?;
         let set_id = if use_sys_org {
             IamSetServ::get_set_id_by_code(&IamSetServ::get_default_code(&IamSetKind::Org, ""), true, funs, ctx).await?
         } else {
-            IamSetServ::get_set_id_by_code(&IamSetServ::get_default_code(&IamSetKind::Org, &IamTenantServ::get_id_by_ctx(ctx, funs)?), true, funs, ctx).await?
+            IamSetServ::get_set_id_by_code(&IamSetServ::get_default_code(&IamSetKind::Org, &IamTenantServ::get_id_by_ctx(ctx, funs)?), true, funs, &ctx).await?
             // IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, funs, ctx).await?
         };
         for account in accounts.records {
@@ -610,7 +617,7 @@ impl IamAccountServ {
                 .into_iter()
                 .map(|r| (r.rel_rbum_cert_conf_code.unwrap_or("".to_string()), r.ak))
                 .collect(),
-                orgs: IamSetServ::find_set_paths(&account.id, &set_id, funs, ctx).await?.into_iter().map(|r| r.into_iter().map(|rr| rr.name).join("/")).collect(),
+                orgs: IamSetServ::find_set_paths(&account.id, &set_id, funs, &mock_tenant_ctx).await?.into_iter().map(|r| r.into_iter().map(|rr| rr.name).join("/")).collect(),
             });
         }
         Ok(TardisPage {
@@ -820,5 +827,32 @@ impl IamAccountServ {
         } else {
             Ok(ctx.clone())
         }
+    }
+
+    async fn add_or_modify_account_kv(account_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let account = Self::get_item(
+            account_id,
+            &IamAccountFilterReq {
+                basic: RbumBasicFilterReq {
+                    ignore_scope: true,
+                    own_paths: Some("".to_owned()),
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?;
+        SpiKvClient::add_or_modify_key_name(
+            &format!("{}:{account_id}", funs.conf::<IamConfig>().spi.kv_account_prefix.clone()),
+            &account.name,
+            funs,
+            ctx,
+        )
+        .await?;
+
+        Ok(())
     }
 }

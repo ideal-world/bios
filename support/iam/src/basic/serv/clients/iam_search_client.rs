@@ -19,7 +19,9 @@ use tardis::{
     basic::{dto::TardisContext, field::TrimString, result::TardisResult},
     log::warn,
     serde_json::json,
-    tokio, TardisFuns, TardisFunsInst,
+    tokio,
+    web::ws_client,
+    TardisFuns, TardisFunsInst,
 };
 
 use crate::{
@@ -104,7 +106,10 @@ impl IamSearchClient {
         let account_certs = account_resp.certs.iter().map(|m| m.1.clone()).collect::<Vec<String>>();
         let account_app_ids: Vec<String> = account_resp.apps.iter().map(|a| a.app_id.clone()).collect();
         let mut account_resp_dept_id = vec![];
-
+        let mock_ctx = TardisContext {
+            own_paths: "".to_owned(),
+            ..ctx.clone()
+        };
         let mut set_ids = vec![];
         if account_resp.own_paths.is_empty() {
             let tenants = IamTenantServ::find_items(
@@ -123,8 +128,14 @@ impl IamSearchClient {
                 ctx,
             )
             .await?;
+            match IamSetServ::get_set_id_by_code(&IamSetServ::get_default_code(&IamSetKind::Org, ""), true, funs, &mock_ctx).await {
+                Ok(set_id) => {
+                    set_ids.push(set_id);
+                }
+                Err(_) => {}
+            }
             for t in tenants {
-                match IamSetServ::get_set_id_by_code(&IamSetServ::get_default_code(&IamSetKind::Org, &t.id), true, funs, ctx).await {
+                match IamSetServ::get_set_id_by_code(&IamSetServ::get_default_code(&IamSetKind::Org, &t.id), true, funs, &mock_ctx).await {
                     Ok(set_id) => {
                         set_ids.push(set_id);
                     }
@@ -132,7 +143,7 @@ impl IamSearchClient {
                 }
             }
         } else {
-            match IamSetServ::get_set_id_by_code(&IamSetServ::get_default_code(&IamSetKind::Org, &account_resp.own_paths), true, funs, ctx).await {
+            match IamSetServ::get_set_id_by_code(&IamSetServ::get_default_code(&IamSetKind::Org, &account_resp.own_paths), true, funs, &mock_ctx).await {
                 Ok(set_id) => {
                     set_ids.push(set_id);
                 }
@@ -140,7 +151,7 @@ impl IamSearchClient {
             }
         };
         for set_id in set_ids {
-            let set_items = IamSetServ::find_set_items(Some(set_id), None, Some(account_id.to_string()), None, true, None, funs, ctx).await?;
+            let set_items = IamSetServ::find_set_items(Some(set_id), None, Some(account_id.to_string()), None, true, None, funs, &mock_ctx).await?;
             account_resp_dept_id
                 .extend(set_items.iter().filter(|s| s.rel_rbum_set_cate_id.is_some()).map(|s| s.rel_rbum_set_cate_id.clone().unwrap_or("".to_owned())).collect::<Vec<_>>());
         }
@@ -193,8 +204,8 @@ impl IamSearchClient {
                     groups: Some(account_resp_dept_id),
                 }),
             };
-            if funs.conf::<IamConfig>().in_event {
-                ws_search_client().await.publish_modify_item(tag, key, &modify_req, default_search_avatar().await.clone(), funs.invoke_conf_spi_app_id(), ctx).await?;
+            if let Some(ws_client) = ws_search_client().await {
+                ws_client.publish_modify_item(tag, key, &modify_req, default_search_avatar().await.clone(), funs.invoke_conf_spi_app_id(), ctx).await?;
             } else {
                 SpiSearchClient::modify_item(&tag, &key, &modify_req, funs, ctx).await?;
             }
@@ -236,8 +247,8 @@ impl IamSearchClient {
                     groups: Some(account_resp_dept_id),
                 }),
             };
-            if funs.conf::<IamConfig>().in_event {
-                ws_search_client().await.publish_add_item(&add_req, default_search_avatar().await.clone(), funs.invoke_conf_spi_app_id(), ctx).await?;
+            if let Some(ws_client) = ws_search_client().await {
+                ws_client.publish_add_item(&add_req, default_search_avatar().await.clone(), funs.invoke_conf_spi_app_id(), ctx).await?;
             } else {
                 SpiSearchClient::add_item(&add_req, funs, ctx).await?;
             }
@@ -248,8 +259,8 @@ impl IamSearchClient {
     // account 全局搜索删除埋点方法
     pub async fn delete_account_search(account_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let tag = funs.conf::<IamConfig>().spi.search_account_tag.clone();
-        if funs.conf::<IamConfig>().in_event {
-            ws_search_client().await.publish_delete_item(tag, account_id.to_owned(), default_search_avatar().await.clone(), funs.invoke_conf_spi_app_id(), ctx).await?;
+        if let Some(ws_client) = ws_search_client().await {
+            ws_client.publish_delete_item(tag, account_id.to_owned(), default_search_avatar().await.clone(), funs.invoke_conf_spi_app_id(), ctx).await?;
         } else {
             SpiSearchClient::delete_item(&tag, account_id, funs, ctx).await?;
         }
