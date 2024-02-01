@@ -7,19 +7,20 @@ use tardis::tokio;
 
 #[derive(Deserialize, Debug)]
 struct Config {
-    tokio_worker_thread: Option<u16>,
+    tokio_worker_thread: Option<usize>,
     tokio_event_interval: Option<u32>,
-
 }
 
-#[tokio::main]
 fn main() -> Result<(), BoxError> {
     let config = envy::from_env::<Config>()?;
     TardisTracing::initializer().with_env_layer().with_fmt_layer().init();
     let mut builder = tokio::runtime::Builder::new_multi_thread();
     builder.enable_all().thread_name("spacegate-bios");
-    if let Some(tokio_worker_thread) = config.tokio_event_interval {
-        tokio_worker_thread
+    if let Some(tokio_worker_thread) = config.tokio_worker_thread {
+        builder.worker_threads(tokio_worker_thread);
+    }
+    if let Some(tokio_event_interval) = config.tokio_event_interval {
+        builder.event_interval(tokio_event_interval);
     }
     let rt = builder.build().expect("fail to build runtime");
     let namespaces = std::env::args().nth(1).map(Some).unwrap_or(None);

@@ -10,22 +10,12 @@ use bios_auth::{
 };
 
 use serde::{Deserialize, Serialize};
+use spacegate_shell::hyper::{header, StatusCode};
 use spacegate_shell::{
-    def_filter,
-    http::{self, HeaderMap, HeaderName, HeaderValue},
-    hyper,
-    hyper::{body::Bytes, Body, Method},
-    plugins::{
-        context::{SgRouteFilterRequestAction, SgRoutePluginContext},
-        filters::{SgPluginFilter, SgPluginFilterAccept},
-    },
-};
-use spacegate_shell::{
-    hyper::StatusCode,
-    plugins::{
-        context::{SGIdentInfo, SGRoleInfo},
-        filters::SgPluginFilterInitDto,
-    },
+    hyper::http::{self, HeaderMap, HeaderName, HeaderValue, StatusCode},
+    hyper::{self, Request},
+    hyper::{body::Bytes, Method},
+    SgBody,
 };
 use std::{
     collections::HashMap,
@@ -50,18 +40,18 @@ use super::plugin_constants;
 #[allow(clippy::type_complexity)]
 static INSTANCE: OnceLock<Arc<RwLock<Option<(String, JoinHandle<()>)>>>> = OnceLock::new();
 
-def_filter!("auth", SgFilterAuthDef, SgFilterAuth);
+// def_filter!("auth", SgFilterAuthDef, SgFilterAuth);
 
-#[derive(Serialize, Deserialize)]
-#[serde(default)]
+// #[derive(Serialize, Deserialize)]
+// #[serde(default)]
 pub struct SgFilterAuth {
     auth_config: AuthConfig,
     cache_url: String,
-    header_is_mix_req: String,
-    cors_allow_origin: String,
-    cors_allow_methods: String,
-    cors_allow_headers: String,
-    fetch_server_config_path: String,
+    header_is_mix_req: HeaderValue,
+    cors_allow_origin: HeaderValue,
+    cors_allow_methods: HeaderValue,
+    cors_allow_headers: HeaderValue,
+    fetch_server_config_path: HeaderValue,
     /// Specify the part of the mix request url that needs to be replaced.
     /// Default is `apis`
     ///
@@ -94,13 +84,14 @@ impl Default for SgFilterAuth {
     }
 }
 impl SgFilterAuth {
-    fn cors(&self, ctx: &mut SgRoutePluginContext) -> TardisResult<()> {
-        ctx.response.set_header(http::header::ACCESS_CONTROL_ALLOW_ORIGIN, &self.cors_allow_origin)?;
-        ctx.response.set_header(http::header::ACCESS_CONTROL_ALLOW_METHODS, &self.cors_allow_methods)?;
-        ctx.response.set_header(http::header::ACCESS_CONTROL_ALLOW_HEADERS, &self.cors_allow_headers)?;
-        ctx.response.set_header(http::header::ACCESS_CONTROL_MAX_AGE, "3600000")?;
-        ctx.response.set_header(http::header::ACCESS_CONTROL_ALLOW_CREDENTIALS, "true")?;
-        ctx.response.set_header(http::header::CONTENT_TYPE, "application/json")?;
+    fn cors(&self, req: &mut Request<SgBody>) -> TardisResult<()> {
+        req.headers_mut().insert(header::ACCESS_CONTROL_ALLOW_ORIGIN, &self.cors_allow_origin);
+        req.headers_mut().insert(header::ACCESS_CONTROL_ALLOW_ORIGIN, &self.cors_allow_origin);
+        req.headers_mut().insert(header::ACCESS_CONTROL_ALLOW_METHODS, &self.cors_allow_methods);
+        req.headers_mut().insert(header::ACCESS_CONTROL_ALLOW_HEADERS, &self.cors_allow_headers);
+        req.headers_mut().insert(header::ACCESS_CONTROL_MAX_AGE, HeaderValue::from_static("3600000"));
+        req.headers_mut().insert(header::ACCESS_CONTROL_ALLOW_CREDENTIALS, HeaderValue::from_static("TRUE"))?;
+        req.headers_mut().insert(header::CONTENT_TYPE, HeaderValue::from_static("application/json"))?;
         Ok(())
     }
     fn get_is_true_mix_req_from_header(&self, header_map: &HeaderMap<HeaderValue>) -> bool {
@@ -135,6 +126,8 @@ impl SgPluginFilter for SgFilterAuth {
                 handle.abort();
             }
         }
+        let cs = TardisFuns::cs_config(code);
+        TardisFuns::fw_config().cache();
 
         let mut cs = HashMap::<String, Value>::new();
         cs.insert(

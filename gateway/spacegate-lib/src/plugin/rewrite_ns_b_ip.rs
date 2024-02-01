@@ -6,7 +6,7 @@ use spacegate_shell::hyper::Request;
 use spacegate_shell::hyper::{http::uri, Response};
 use spacegate_shell::kernel::extension::PeerAddr;
 use spacegate_shell::plugin::{def_filter_plugin, Filter, PluginError};
-use spacegate_shell::{SgBody, SgResponseExt};
+use spacegate_shell::SgBody;
 use std::net::IpAddr;
 use std::str::FromStr;
 use std::sync::Arc;
