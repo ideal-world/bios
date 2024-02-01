@@ -90,20 +90,33 @@ pub(crate) async fn delete(code: &str, funs: &TardisFunsInst, ctx: &TardisContex
     };
     let headers = vec![("Tardis-Context".to_string(), TardisFuns::crypto.base64.encode(TardisFuns::json.obj_to_string(&spi_ctx)?))];
     // 1. log this operation
-    ws_client()
-        .await
-        .publish_add_log(
-            &LogItemAddReq {
-                tag: "schedule_job".to_string(),
-                content: "delete job".to_string(),
-                key: Some(code.into()),
-                op: Some("delete".to_string()),
-                ts: Some(Utc::now()),
-                ..Default::default()
-            },
-            default_avatar().await.clone(),
-            funs.conf::<ScheduleConfig>().spi_app_id.clone(),
-            ctx,
+    // ws_client()
+    //     .await
+    //     .publish_add_log(
+    //         &LogItemAddReq {
+    //             tag: "schedule_job".to_string(),
+    //             content: "delete job".to_string(),
+    //             key: Some(code.into()),
+    //             op: Some("delete".to_string()),
+    //             ts: Some(Utc::now()),
+    //             ..Default::default()
+    //         },
+    //         default_avatar().await.clone(),
+    //         funs.conf::<ScheduleConfig>().spi_app_id.clone(),
+    //         ctx,
+    //     )
+    //     .await?;
+    TardisFuns::web_client()
+        .post_obj_to_str(
+            &format!("{log_url}/ci/item"),
+            &HashMap::from([
+                ("tag", "schedule_job"),
+                ("content", "delete job"),
+                ("key", code),
+                ("op", "delete"),
+                ("ts", &Utc::now().to_rfc3339()),
+            ]),
+            headers.clone(),
         )
         .await?;
     // 2. sync to kv
