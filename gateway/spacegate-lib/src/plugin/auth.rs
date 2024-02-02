@@ -10,12 +10,12 @@ use bios_auth::{
 };
 
 use serde::{Deserialize, Serialize};
-use spacegate_shell::hyper::{header, StatusCode};
 use spacegate_shell::{
-    hyper::http::{self, HeaderMap, HeaderName, HeaderValue, StatusCode},
-    hyper::{self, Request},
-    hyper::{body::Bytes, Method},
-    SgBody,
+    hyper::http::{self, HeaderMap, HeaderName, HeaderValue, StatusCode}, hyper::{self, Request}, hyper::{body::Bytes, Method}, kernel::extension::PeerAddr, plugin::PluginError, SgBody
+};
+use spacegate_shell::{
+    hyper::{header, Response, StatusCode},
+    BoxError,
 };
 use std::{
     collections::HashMap,
@@ -40,7 +40,7 @@ use super::plugin_constants;
 #[allow(clippy::type_complexity)]
 static INSTANCE: OnceLock<Arc<RwLock<Option<(String, JoinHandle<()>)>>>> = OnceLock::new();
 
-// def_filter!("auth", SgFilterAuthDef, SgFilterAuth);
+def_filter!("auth", AuthPlugin, SgFilterAuth);
 
 // #[derive(Serialize, Deserialize)]
 // #[serde(default)]
@@ -51,7 +51,7 @@ pub struct SgFilterAuth {
     cors_allow_origin: HeaderValue,
     cors_allow_methods: HeaderValue,
     cors_allow_headers: HeaderValue,
-    fetch_server_config_path: HeaderValue,
+    fetch_server_config_path: String,
     /// Specify the part of the mix request url that needs to be replaced.
     /// Default is `apis`
     ///
@@ -105,6 +105,112 @@ impl SgFilterAuth {
             .ok()
             .flatten()
             .unwrap_or(false)
+    }
+}
+
+impl SgFilterAuth {
+    pub async fn setup_tardis(&self) -> Result<(), BoxError> {
+        let config_md5 = TardisFuns::crypto.digest.md5(TardisFuns::json.obj_to_string(self)?)?;
+        let mut instance = INSTANCE.get_or_init(Default::default).write().await;
+        if let Some((md5, handle)) = instance.as_ref() {
+            if config_md5.eq(md5) {
+                log::trace!("[SG.Filter.Auth] have not found config change");
+                return Ok(());
+            } else {
+                handle.abort();
+            }
+        }
+        let mut tardis_config = tardis::TardisFuns::clone_config();
+        tardis_config.cs.insert(bios_auth::auth_constants::DOMAIN_CODE.to_string(), serde_json::to_value(self.auth_config.clone())?);
+        tardis_config.fw.cache.as_mut().map(|cache_config| {
+            cache_config.modules.entry(bios_auth::auth_constants::DOMAIN_CODE.to_string()).or_insert(
+                CacheModuleConfig::builder()
+                    .url(
+                        if self.cache_url.is_empty() {
+                            init_dto.gateway_parameters.redis_url.as_deref().unwrap_or("redis://127.0.0.1:6379")
+                        } else {
+                            self.cache_url.as_str()
+                        }
+                        .parse()
+                        .map_err(|e| TardisError::internal_error(&format!("[SG.Filter.Auth]invalid redis url: {e:?}"), "-1"))?,
+                    )
+                    .build(),
+            )
+        });
+        tardis::TardisFuns::hot_reload(tardis_config).await?;
+        let handle = auth_initializer::init().await?;
+        *instance = Some((config_md5, handle));
+        log::info!("[SG.Filter.Auth] init done");
+        Ok(())
+    }
+
+    async fn on_req(&self, req: Request<SgBody>) -> Result<Request<SgBody>, Response<SgBody>> {
+        let method = req.method().clone();
+        if method == http::Method::OPTIONS {
+            return Ok(req);
+        }
+        log::trace!("[SG.Filter.Auth] request filter info: request path is {}", req.uri().path());
+        if method == http::Method::GET && req.uri().path().trim_matches('/') == self.fetch_server_config_path.as_str().trim_matches('/') {
+            log::debug!("[SG.Filter.Auth] request path hit fetch server config path: {}", self.fetch_server_config_path);
+            let mock_resp = Response::builder()
+                .header(http::header::CONTENT_TYPE, HeaderValue::from_static("application/json"))
+                .status(http::StatusCode::OK)
+                .body(
+                    SgBody::full(
+                        serde_json::to_vec(&TardisResp {
+                            code: "200".to_string(),
+                            msg: "".to_string(),
+                            data: Some(auth_res_serv::get_apis_json()?),
+                        })
+                        .expect("TardisResp should be a valid json"),
+                    )
+                    .map_err(|e| TardisError::bad_request(&format!("[SG.Filter.Auth] fetch_server_config serde error: {e}"), ""))?,
+                )
+                .map_err(PluginError::bad_gateway::<AuthPlugin>)?;
+            return Err(mock_resp);
+        }
+
+        let is_true_mix_req = self.get_is_true_mix_req_from_header(req.headers());
+
+        if self.auth_config.strict_security_mode && !is_true_mix_req {
+            log::debug!("[SG.Filter.Auth] handle mix request");
+            let mut ctx = mix_req_to_ctx(&self.auth_config, &self.mix_replace_url, ctx).await?;
+            ctx.request.set_header_str(&self.header_is_mix_req, "true")?;
+            return Ok((false, ctx));
+        }
+        req.headers_mut().append(&self.header_is_mix_req, "false")?;
+        let (mut auth_req, req_body) = ctx_to_auth_req(&self.auth_path_ignore_prefix, &mut ctx).await?;
+
+        match auth_kernel_serv::auth(&mut auth_req, is_true_mix_req).await {
+            Ok(auth_result) => {
+                if log::level_enabled!(log::Level::TRACE) {
+                    log::trace!("[SG.Filter.Auth] auth return ok {:?}", auth_result);
+                } else if log::level_enabled!(log::Level::DEBUG) {
+                    if let Some(ctx) = &auth_result.ctx {
+                        log::debug!("[SG.Filter.Auth] auth return ok ctx:{ctx}",);
+                    } else {
+                        log::debug!("[SG.Filter.Auth] auth return ok ctx:None",);
+                    };
+                }
+
+                if auth_result.e.is_none() {
+                    ctx = success_auth_result_to_ctx(auth_result, req_body.into(), ctx)?;
+                } else if let Some(e) = auth_result.e {
+                    log::info!("[SG.Filter.Auth] auth failed:{e}");
+                    ctx.set_action(SgRouteFilterRequestAction::Response);
+                    ctx.response.set_status_code(StatusCode::from_str(&e.code).unwrap_or(StatusCode::BAD_GATEWAY));
+                    ctx.response.set_body(json!({"code":format!("{}-gateway-cert-error",e.code),"message":e.message}).to_string());
+                    return Ok((false, ctx));
+                };
+                Ok((true, ctx))
+            }
+            Err(e) => {
+                log::info!("[SG.Filter.Auth] auth return error {:?}", e);
+                ctx.set_action(SgRouteFilterRequestAction::Response);
+                ctx.response.set_body(format!("[SG.Filter.Auth] auth return error:{e}"));
+                Ok((false, ctx))
+            }
+        }
     }
 }
 
@@ -284,13 +390,16 @@ impl SgPluginFilter for SgFilterAuth {
     }
 }
 
-async fn mix_req_to_ctx(auth_config: &AuthConfig, mix_replace_url: &str, mut ctx: SgRoutePluginContext) -> TardisResult<SgRoutePluginContext> {
-    let body = ctx.request.take_body_into_bytes().await?;
+async fn mix_req_to_ctx(auth_config: &AuthConfig, mix_replace_url: &str, mut req: Request<SgBody>) -> Result<Request<SgBody>, BoxError> {
+    let (parts, mut body) = req.into_parts();
+    if !body.is_dumped() {
+        body = body.dump().await?;
+    }
     let string_body = String::from_utf8_lossy(&body).trim_matches('"').to_string();
     if string_body.is_empty() {
         TardisError::custom("502", "[SG.Filter.Auth.MixReq] body can't be empty", "502-parse_mix_req-parse-error");
     }
-    let mut req_headers = ctx.request.get_headers().iter().map(|(k, v)| (k.as_str().to_string(), v.to_str().expect("error parse header value to str").to_string())).collect();
+    let mut req_headers = parts.get_headers().iter().map(|(k, v)| (k.as_str().to_string(), v.to_str().expect("error parse header value to str").to_string())).collect();
     let (body, crypto_headers) = auth_crypto_serv::decrypt_req(&req_headers, &Some(string_body), true, true, auth_config).await?;
     req_headers.remove(&auth_config.head_key_crypto);
     req_headers.remove(&auth_config.head_key_crypto.to_ascii_lowercase());
@@ -298,8 +407,8 @@ async fn mix_req_to_ctx(auth_config: &AuthConfig, mix_replace_url: &str, mut ctx
     let body = body.ok_or_else(|| TardisError::custom("502", "[SG.Filter.Auth.MixReq] decrypt body can't be empty", "502-parse_mix_req-parse-error"))?;
 
     let mix_body = TardisFuns::json.str_to_obj::<MixRequestBody>(&body)?;
-    ctx.set_action(SgRouteFilterRequestAction::Redirect);
-    let mut true_uri = Url::from_str(&ctx.request.get_uri().to_string().replace(mix_replace_url, &mix_body.uri))
+    // ctx.set_action(SgRouteFilterRequestAction::Redirect);
+    let mut true_uri = Url::from_str(&parts.uri.to_string().replace(mix_replace_url, &mix_body.uri))
         .map_err(|e| TardisError::custom("502", &format!("[SG.Filter.Auth.MixReq] url parse err {e}"), "502-parse_mix_req-url-error"))?;
     true_uri.set_path(&true_uri.path().replace("//", "/"));
     true_uri.set_query(Some(&if let Some(old_query) = true_uri.query() {
@@ -307,8 +416,8 @@ async fn mix_req_to_ctx(auth_config: &AuthConfig, mix_replace_url: &str, mut ctx
     } else {
         format!("_t={}", mix_body.ts)
     }));
-    ctx.request.set_uri(true_uri.as_str().parse().map_err(|e| TardisError::custom("502", &format!("[SG.Filter.Auth.MixReq] uri parse error: {}", e), ""))?);
-    ctx.request.set_method(
+    *parts.uri = (true_uri.as_str().parse().map_err(|e| TardisError::custom("502", &format!("[SG.Filter.Auth.MixReq] uri parse error: {}", e), ""))?);
+    *parts.method = (
         Method::from_str(&mix_body.method.to_ascii_uppercase())
             .map_err(|e| TardisError::custom("502", &format!("[SG.Filter.Auth.MixReq] method parse err {e}"), "502-parse_mix_req-method-error"))?,
     );
@@ -317,7 +426,7 @@ async fn mix_req_to_ctx(auth_config: &AuthConfig, mix_replace_url: &str, mut ctx
     headers.extend(mix_body.headers);
     headers.extend(crypto_headers.unwrap_or_default());
 
-    ctx.request.set_headers(
+    req.headers.extend(
         headers
             .into_iter()
             .map(|(k, v)| {
@@ -329,25 +438,9 @@ async fn mix_req_to_ctx(auth_config: &AuthConfig, mix_replace_url: &str, mut ctx
             .collect::<TardisResult<HeaderMap<HeaderValue>>>()?,
     );
 
-    let real_ip = ctx.request.get_remote_addr().ip().to_string();
-    let forwarded_for = match ctx.request.get_headers().get("X-Forwarded-For") {
-        Some(forwarded) => {
-            format!(
-                "{},{}",
-                forwarded.to_str().map_err(|e| TardisError::custom(
-                    "502",
-                    &format!("[SG.Filter.Auth.MixReq] X-Forwarded-For header value parse err {e}"),
-                    "502-parse_mix_req-url-error"
-                ))?,
-                real_ip
-            )
-        }
-        None => real_ip,
-    };
-    ctx.request.set_header_str("X-Forwarded-For", &forwarded_for)?;
-    ctx.request.set_header_str(hyper::header::CONTENT_LENGTH.as_str(), mix_body.body.as_bytes().len().to_string().as_str())?;
-    ctx.request.set_body(mix_body.body);
-    Ok(ctx)
+    let real_ip = parts.extensions.get::<PeerAddr>().expect("mising peer addr").0.ip();
+    let new_body = SgBody::full(mix_body.body);
+    Ok(Response::from_parts(parts, new_body))
 }
 
 /// # Convert SgRoutePluginContext to AuthReq

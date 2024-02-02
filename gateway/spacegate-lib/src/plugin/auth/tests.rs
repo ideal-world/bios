@@ -65,7 +65,7 @@ async fn test_auth_plugin_ctx() {
         "".to_string(),
         None,
     );
-    let (is_ok, mut before_filter_ctx) = filter_auth.req_filter("", ctx).await.unwrap();
+    let (is_ok, mut before_filter_ctx) = filter_auth.on_req("", ctx).await.unwrap();
     assert!(!is_ok);
     let req_body = before_filter_ctx.response.take_body_into_bytes().await.unwrap();
     let req_body = String::from_utf8_lossy(&req_body).to_string();
@@ -94,7 +94,7 @@ async fn test_auth_plugin_ctx() {
         "".to_string(),
         None,
     );
-    let (is_ok, before_filter_ctx) = filter_auth.req_filter("", ctx).await.unwrap();
+    let (is_ok, before_filter_ctx) = filter_auth.on_req("", ctx).await.unwrap();
     assert!(is_ok);
     let ctx = decode_context(before_filter_ctx.request.get_headers());
 
@@ -124,7 +124,7 @@ async fn test_auth_plugin_ctx() {
         "".to_string(),
         None,
     );
-    let (is_ok, before_filter_ctx) = filter_auth.req_filter("", ctx).await.unwrap();
+    let (is_ok, before_filter_ctx) = filter_auth.on_req("", ctx).await.unwrap();
     assert!(is_ok);
     let ctx = decode_context(before_filter_ctx.request.get_headers());
 
@@ -167,7 +167,7 @@ async fn test_auth_plugin_crypto() {
         "".to_string(),
         None,
     );
-    let (_, mut before_filter_ctx) = filter_auth.req_filter("", ctx).await.unwrap();
+    let (_, mut before_filter_ctx) = filter_auth.on_req("", ctx).await.unwrap();
     let mut server_config_resp = before_filter_ctx.build_response().await.unwrap();
     let data: Value = serde_json::from_str(&String::from_utf8_lossy(
         &hyper::body::to_bytes(server_config_resp.body_mut()).await.unwrap().iter().cloned().collect::<Vec<u8>>(),
@@ -194,7 +194,7 @@ async fn test_auth_plugin_crypto() {
         "".to_string(),
         None,
     );
-    let (is_ok, mut before_filter_ctx) = filter_auth.req_filter("", ctx).await.unwrap();
+    let (is_ok, mut before_filter_ctx) = filter_auth.on_req("", ctx).await.unwrap();
     assert!(is_ok);
     let req_body = before_filter_ctx.request.dump_body().await.unwrap();
     assert!(!req_body.is_empty());
@@ -216,7 +216,7 @@ async fn test_auth_plugin_crypto() {
         "".to_string(),
         None,
     );
-    let (is_ok, mut before_filter_ctx) = filter_auth.req_filter("", ctx).await.unwrap();
+    let (is_ok, mut before_filter_ctx) = filter_auth.on_req("", ctx).await.unwrap();
     assert!(is_ok);
     let req_body = before_filter_ctx.request.dump_body().await.unwrap();
     assert!(req_body.is_empty());
@@ -240,7 +240,7 @@ async fn test_auth_plugin_crypto() {
         "".to_string(),
         None,
     );
-    let (is_ok, mut before_filter_ctx) = filter_auth.req_filter("", ctx).await.unwrap();
+    let (is_ok, mut before_filter_ctx) = filter_auth.on_req("", ctx).await.unwrap();
     assert!(is_ok);
     let req_body = before_filter_ctx.request.dump_body().await.unwrap();
     assert!(!req_body.is_empty());
@@ -305,7 +305,7 @@ async fn test_auth_plugin_strict_security_mode_crypto() {
         "".to_string(),
         None,
     );
-    let (_, mut before_filter_ctx) = filter_auth.req_filter("", ctx).await.unwrap();
+    let (_, mut before_filter_ctx) = filter_auth.on_req("", ctx).await.unwrap();
     let mut server_config_resp = before_filter_ctx.build_response().await.unwrap();
     let data: Value = serde_json::from_str(&String::from_utf8_lossy(
         &hyper::body::to_bytes(server_config_resp.body_mut()).await.unwrap().iter().cloned().collect::<Vec<u8>>(),
@@ -348,7 +348,7 @@ async fn test_auth_plugin_strict_security_mode_crypto() {
         "".to_string(),
         None,
     );
-    let (is_ok, before_filter_ctx) = filter_auth.req_filter("", ctx).await.unwrap();
+    let (is_ok, before_filter_ctx) = filter_auth.on_req("", ctx).await.unwrap();
     assert!(!is_ok);
     assert_eq!(before_filter_ctx.get_action(), &SgRouteFilterRequestAction::Redirect);
     assert_eq!(before_filter_ctx.request.get_uri().path(), &format!("/{}", true_path));
@@ -357,7 +357,7 @@ async fn test_auth_plugin_strict_security_mode_crypto() {
         before_filter_ctx.request.get_headers().get(hyper::header::CONTENT_LENGTH),
         Some(&HeaderValue::from_static("0"))
     );
-    let (is_ok, mut before_filter_ctx) = filter_auth.req_filter("", before_filter_ctx).await.unwrap();
+    let (is_ok, mut before_filter_ctx) = filter_auth.on_req("", before_filter_ctx).await.unwrap();
     assert!(is_ok);
     println!("before_filter_ctx=={:?}", before_filter_ctx);
     let req_body = before_filter_ctx.request.dump_body().await.unwrap();

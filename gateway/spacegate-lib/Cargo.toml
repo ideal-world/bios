@@ -21,7 +21,7 @@ bios-sdk-invoke = { path = "../../sdk/invoke", features = ["spi_log"] }
 
 jsonpath-rust = "0.3.1"
 bios-auth = { path = "../../support/auth", default-features = false }
-tardis = { workspace = true, features = ["web-client"] }
+tardis = { workspace = true, features = ["web-client", "build-info"] }
 ipnet = "2.8.0"
 
 [dev-dependencies]
