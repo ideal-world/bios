@@ -31,7 +31,7 @@ async fn test() {
 async fn test_auth_plugin_ctx() {
     log::info!("========test_auth_plugin_ctx=====");
 
-    let mut filter_auth = SgFilterAuth {
+    let mut filter_auth = SgPluginAuth {
         cache_url: env::var("TARDIS_FW.CACHE.URL").unwrap(),
         ..Default::default()
     };
@@ -137,7 +137,7 @@ async fn test_auth_plugin_ctx() {
 async fn test_auth_plugin_crypto() {
     log::info!("========test_auth_plugin_crypto=====");
 
-    let mut filter_auth = SgFilterAuth {
+    let mut filter_auth = SgPluginAuth {
         cache_url: env::var("TARDIS_FW.CACHE.URL").unwrap(),
         ..Default::default()
     };
@@ -274,7 +274,7 @@ async fn test_auth_plugin_crypto() {
 async fn test_auth_plugin_strict_security_mode_crypto() {
     log::info!("======test_auth_plugin_strict_security_mode_crypto====");
 
-    let mut filter_auth = SgFilterAuth {
+    let mut filter_auth = SgPluginAuth {
         cache_url: env::var("TARDIS_FW.CACHE.URL").unwrap(),
         ..Default::default()
     };
