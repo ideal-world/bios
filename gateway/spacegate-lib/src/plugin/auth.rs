@@ -1,4 +1,3 @@
-use async_trait::async_trait;
 use bios_auth::{
     auth_config::AuthConfig,
     auth_initializer,
@@ -15,7 +14,7 @@ use spacegate_shell::{
     hyper::{self, header, Request, Response},
     hyper::{body::Bytes, Method},
     kernel::extension::PeerAddr,
-    plugin::{def_filter_plugin, def_plugin, MakeSgLayer, PluginError},
+    plugin::{def_filter_plugin, MakeSgLayer, PluginError},
     BoxError, SgBody,
 };
 use std::{
@@ -31,12 +30,15 @@ use tardis::{
     serde_json::{self, json, Value},
     tokio::{sync::RwLock, task::JoinHandle},
     url::Url,
-    web::web_resp::TardisResp,
+    web::{poem::http::request::Parts, web_resp::TardisResp},
     TardisFuns,
 };
 use tardis::{basic::tracing::Directive, tracing, web::poem_openapi::types::Type};
 
-use crate::extension::cert_info::{CertInfo, RoleInfo};
+use crate::extension::{
+    before_encrypt_body::BeforeEncryptBody,
+    cert_info::{CertInfo, RoleInfo},
+};
 
 use super::plugin_constants;
 
@@ -180,6 +182,7 @@ impl SgPluginAuth {
             return Ok(req);
         }
         req.headers_mut().append(&self.header_is_mix_req, "false")?;
+        let (parts, body) = req.into_parts();
         let (mut auth_req, req_body) = req_to_auth_req(&self.auth_path_ignore_prefix, &mut req).await?;
 
         match auth_kernel_serv::auth(&mut auth_req, is_true_mix_req).await {
@@ -195,7 +198,7 @@ impl SgPluginAuth {
                 }
 
                 if auth_result.e.is_none() {
-                    success_auth_result_to_ctx(auth_result, req_body.into(), &mut req)?;
+                    (parts, body) = success_auth_result_to_ctx(auth_result, (parts, body))?;
                 } else if let Some(e) = auth_result.e {
                     log::info!("[SG.Filter.Auth] auth failed:{e}");
                     let err_resp = Response::builder()
@@ -247,7 +250,7 @@ impl SgPluginAuth {
                 return Ok(resp);
             }
         }
-        let encrypt_resp = auth_crypto_serv::encrypt_body(&ctx_to_auth_encrypt_req(&mut ctx).await?).await?;
+        let encrypt_resp = auth_crypto_serv::encrypt_body(&(parts, body) = ctx_to_auth_encrypt_req((parts, body)).await?).await?;
         parts.headers.extend(hashmap_header_to_headermap(encrypt_resp.headers)?);
         parts.headers.remove(hyper::header::TRANSFER_ENCODING);
         body = SgBody::full(encrypt_resp.body);
@@ -260,7 +263,8 @@ impl SgPluginAuth {
 
 impl MakeSgLayer for SgPluginAuth {
     fn make_layer(&self) -> Result<spacegate_shell::SgBoxLayer, BoxError> {
-        todo!()
+        let layer = spacegate_shell::plugin::FilterRequestLayer::new(self.clone());
+        Ok(spacegate_shell::SgBoxLayer::new(layer))
     }
 }
 
@@ -547,9 +551,8 @@ async fn req_to_auth_req(ignore_prefix: &str, req: &mut Request<SgBody>) -> Tard
     ))
 }
 
-fn success_auth_result_to_ctx(auth_result: AuthResult, old_req_body: Body, req: &mut Request<SgBody>) -> TardisResult<Request<SgBody>> {
-    let (parts, mut body) = req.into_parts();
-    CertInfo {
+fn success_auth_result_to_ctx(auth_result: AuthResult, (parts, mut body): (Parts, SgBody)) -> TardisResult<(Parts, SgBody)> {
+    let cert_info = CertInfo {
         id: auth_result.ctx.as_ref().and_then(|ctx| ctx.account_id.clone()).unwrap_or_default(),
         name: None,
         roles: auth_result
@@ -559,28 +562,28 @@ fn success_auth_result_to_ctx(auth_result: AuthResult, old_req_body: Body, req: 
             .map(|role| role.iter().map(|r| RoleInfo { id: r.to_string(), name: None }).collect::<Vec<_>>())
             .unwrap_or_default(),
     };
+    parts.extensions.insert(cert_info);
     let auth_resp: AuthResp = auth_result.into();
     parts.headers = hashmap_header_to_headermap(auth_resp.headers.clone())?;
-    // ctx.request.set_headers(new_headers);
     if let Some(new_body) = auth_resp.body {
-        ctx.request.set_body(new_body);
-    } else {
-        ctx.request.set_body(old_req_body);
-    }
-    Ok(ctx)
+        body = SgBody::full(new_body);
+    };
+    Ok((parts, body))
 }
 
-async fn ctx_to_auth_encrypt_req(ctx: &mut SgRoutePluginContext) -> TardisResult<AuthEncryptReq> {
-    let headers = headermap_to_hashmap(ctx.response.get_headers())?;
-    let body_as_bytes = ctx.response.take_body_into_bytes().await?;
-    let body = String::from_utf8_lossy(&body_as_bytes);
-    if !body.is_empty() {
-        ctx.set_ext(plugin_constants::BEFORE_ENCRYPT_BODY, body.to_string());
+async fn ctx_to_auth_encrypt_req((parts, body): (Parts, SgBody)) -> TardisResult<AuthEncryptReq> {
+    let headers = headermap_to_hashmap(&parts.headers)?;
+    if !body.is_dumped() {
+        body = body.dump().await?;
     }
-    log::trace!("[SG.Filter.Auth] Before Encrypt Body {}", body.to_string());
+    let resp_body = body.get_dumped().unwrap();
+    if resp_body.len() > 0 {
+        parts.extensions.insert(BeforeEncryptBody::new(resp_body.clone()))
+    }
+    log::trace!("[SG.Filter.Auth] Before Encrypt Body {}", resp_body.to_bytes().to_string());
     Ok(AuthEncryptReq {
         headers,
-        body: String::from(body),
+        body: String::from(resp_body),
     })
 }
 
