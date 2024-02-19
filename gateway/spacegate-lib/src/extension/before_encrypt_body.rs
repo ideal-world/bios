@@ -1,5 +1,6 @@
 use spacegate_shell::hyper::body::Bytes;
 
+#[derive(Clone)]
 pub struct BeforeEncryptBody {
     inner: Bytes,
 }
