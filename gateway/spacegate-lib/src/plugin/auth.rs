@@ -10,11 +10,14 @@ use bios_auth::{
 
 use serde::{Deserialize, Serialize};
 use spacegate_shell::{
-    hyper::http::{self, HeaderMap, HeaderName, HeaderValue, StatusCode},
-    hyper::{self, header, Request, Response},
-    hyper::{body::Bytes, Method},
-    kernel::extension::PeerAddr,
-    plugin::{def_filter_plugin, MakeSgLayer, PluginError},
+    hyper::{
+        self,
+        body::Bytes,
+        header,
+        http::{self, HeaderMap, HeaderName, HeaderValue, StatusCode},
+        Method, Request, Response,
+    },
+    plugin::{def_plugin, MakeSgLayer, Plugin, PluginError},
     BoxError, SgBody,
 };
 use std::{
@@ -22,31 +25,56 @@ use std::{
     str::FromStr,
     sync::{Arc, OnceLock},
 };
+use tardis::web::{poem::web::Form, poem_openapi::types::Type};
 use tardis::{
-    async_trait,
     basic::{error::TardisError, result::TardisResult},
     config::config_dto::{AppConfig, CacheModuleConfig, FrameworkConfig, TardisConfig},
     log,
     serde_json::{self, json, Value},
     tokio::{sync::RwLock, task::JoinHandle},
     url::Url,
-    web::{poem::http::request::Parts, web_resp::TardisResp},
+    web::web_resp::TardisResp,
     TardisFuns,
 };
-use tardis::{basic::tracing::Directive, tracing, web::poem_openapi::types::Type};
 
 use crate::extension::{
     before_encrypt_body::BeforeEncryptBody,
     cert_info::{CertInfo, RoleInfo},
 };
 
-use super::plugin_constants;
-
 #[allow(clippy::type_complexity)]
 static INSTANCE: OnceLock<Arc<RwLock<Option<(String, JoinHandle<()>)>>>> = OnceLock::new();
 
-// #[derive(Serialize, Deserialize)]
-// #[serde(default)]
+#[derive(Serialize, Deserialize)]
+#[serde(default)]
+pub struct SgPluginAuthConfig {
+    pub auth_config: AuthConfig,
+    pub cache_url: String,
+    pub cors_allow_origin: String,
+    pub cors_allow_methods: String,
+    pub cors_allow_headers: String,
+    pub header_is_mix_req: String,
+    pub fetch_server_config_path: String,
+    pub mix_replace_url: String,
+    pub auth_path_ignore_prefix: String,
+}
+
+impl Default for SgPluginAuthConfig {
+    fn default() -> Self {
+        Self {
+            auth_config: Default::default(),
+            cache_url: "".to_string(),
+            cors_allow_origin: "*".to_string(),
+            cors_allow_methods: "*".to_string(),
+            cors_allow_headers: "*".to_string(),
+            header_is_mix_req: "IS_MIX_REQ".to_string(),
+            fetch_server_config_path: "/starsysApi/apis".to_string(),
+            mix_replace_url: "apis".to_string(),
+            auth_path_ignore_prefix: "/starsysApi".to_string(),
+        }
+    }
+}
+
 pub struct SgPluginAuth {
     auth_config: AuthConfig,
     cache_url: String,
@@ -71,21 +99,31 @@ pub struct SgPluginAuth {
     auth_path_ignore_prefix: String,
 }
 
-impl Default for SgPluginAuth {
-    fn default() -> Self {
-        Self {
-            auth_config: Default::default(),
-            cache_url: "".to_string(),
-            cors_allow_origin: HeaderValue::from_static("*"),
-            cors_allow_methods: HeaderValue::from_static("*"),
-            cors_allow_headers: HeaderValue::from_static("*"),
-            header_is_mix_req: HeaderName::from_static("IS_MIX_REQ"),
-            fetch_server_config_path: "/starsysApi/apis".to_string(),
-            mix_replace_url: "apis".to_string(),
-            auth_path_ignore_prefix: "/starsysApi".to_string(),
+impl From<SgPluginAuthConfig> for SgPluginAuth {
+    fn from(value: SgPluginAuthConfig) -> Self {
+        SgPluginAuth {
+            auth_config: value.auth_config,
+            cache_url: value.cache_url,
+            cors_allow_origin: HeaderValue::from_str(&value.cors_allow_origin).expect("cors_allow_origin is invalid"),
+            cors_allow_methods: HeaderValue::from_str(&value.cors_allow_methods).expect("cors_allow_methods is invalid"),
+            cors_allow_headers: HeaderValue::from_str(&value.cors_allow_headers).expect("cors_allow_headers is invalid"),
+            header_is_mix_req: HeaderName::from_str(&value.header_is_mix_req).expect("header_is_mix_req is invalid"),
+            fetch_server_config_path: value.fetch_server_config_path,
+            mix_replace_url: value.mix_replace_url,
+            auth_path_ignore_prefix: value.auth_path_ignore_prefix,
         }
     }
 }
+
+impl<'de> Deserialize<'de> for SgPluginAuth {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        SgPluginAuthConfig::deserialize(deserializer).map(|config| config.into())
+    }
+}
+
 impl SgPluginAuth {
     fn cors(&self, resp: &mut Response<SgBody>) -> TardisResult<()> {
         resp.headers_mut().insert(header::ACCESS_CONTROL_ALLOW_ORIGIN, self.cors_allow_origin.clone());
@@ -178,10 +216,10 @@ impl SgPluginAuth {
 
         if self.auth_config.strict_security_mode && !is_true_mix_req {
             log::debug!("[SG.Filter.Auth] handle mix request");
-            handle_mix_req(&self.auth_config, &self.mix_replace_url, &mut req).await.map_err(PluginError::bad_gateway::<AuthPlugin>)?;
+            req = handle_mix_req(&self.auth_config, &self.mix_replace_url, req).await.map_err(PluginError::bad_gateway::<AuthPlugin>)?;
             return Ok(req);
         }
-        req.headers_mut().append(&self.header_is_mix_req, "false")?;
+        req.headers_mut().append(&self.header_is_mix_req, HeaderValue::from_static("false"));
         let (parts, body) = req.into_parts();
         let (mut auth_req, req_body) = req_to_auth_req(&self.auth_path_ignore_prefix, &mut req).await?;
 
@@ -458,8 +496,8 @@ struct MixAuth {
 //     }
 // }
 
-async fn handle_mix_req(auth_config: &AuthConfig, mix_replace_url: &str, req: &mut Request<SgBody>) -> Result<Request<SgBody>, BoxError> {
-    let (parts, mut body) = req.into_parts();
+async fn handle_mix_req(auth_config: &AuthConfig, mix_replace_url: &str, req: Request<SgBody>) -> Result<Request<SgBody>, BoxError> {
+    let (mut parts, mut body) = req.into_parts();
     if !body.is_dumped() {
         body = body.dump().await?;
     }
@@ -467,7 +505,7 @@ async fn handle_mix_req(auth_config: &AuthConfig, mix_replace_url: &str, req: &m
     if string_body.is_empty() {
         TardisError::custom("502", "[SG.Filter.Auth.MixReq] body can't be empty", "502-parse_mix_req-parse-error");
     }
-    let mut req_headers = parts.get_headers().iter().map(|(k, v)| (k.as_str().to_string(), v.to_str().expect("error parse header value to str").to_string())).collect();
+    let mut req_headers = parts.headers.iter().map(|(k, v)| (k.as_str().to_string(), v.to_str().expect("error parse header value to str").to_string())).collect();
     let (body, crypto_headers) = auth_crypto_serv::decrypt_req(&req_headers, &Some(string_body), true, true, auth_config).await?;
     req_headers.remove(&auth_config.head_key_crypto);
     req_headers.remove(&auth_config.head_key_crypto.to_ascii_lowercase());
@@ -484,15 +522,15 @@ async fn handle_mix_req(auth_config: &AuthConfig, mix_replace_url: &str, req: &m
     } else {
         format!("_t={}", mix_body.ts)
     }));
-    *parts.uri = true_uri.as_str().parse().map_err(|e| TardisError::custom("502", &format!("[SG.Filter.Auth.MixReq] uri parse error: {}", e), ""))?;
-    *parts.method = (Method::from_str(&mix_body.method.to_ascii_uppercase())
-        .map_err(|e| TardisError::custom("502", &format!("[SG.Filter.Auth.MixReq] method parse err {e}"), "502-parse_mix_req-method-error"))?,);
+    parts.uri = true_uri.as_str().parse().map_err(|e| TardisError::custom("502", &format!("[SG.Filter.Auth.MixReq] uri parse error: {}", e), ""))?;
+    parts.method = Method::from_str(&mix_body.method.to_ascii_uppercase())
+        .map_err(|e| TardisError::custom("502", &format!("[SG.Filter.Auth.MixReq] method parse err {e}"), "502-parse_mix_req-method-error"))?;
 
     let mut headers = req_headers;
     headers.extend(mix_body.headers);
     headers.extend(crypto_headers.unwrap_or_default());
 
-    req.headers.extend(
+    parts.headers.extend(
         headers
             .into_iter()
             .map(|(k, v)| {
@@ -504,11 +542,10 @@ async fn handle_mix_req(auth_config: &AuthConfig, mix_replace_url: &str, req: &m
             .collect::<TardisResult<HeaderMap<HeaderValue>>>()?,
     );
 
-    let real_ip = parts.extensions.get::<PeerAddr>().expect("mising peer addr").0.ip();
     let new_body = SgBody::full(mix_body.body);
 
     // ctx.request.set_header_str(&self.header_is_mix_req, "true")?;
-    Ok(Response::from_parts(parts, new_body))
+    Ok(Request::from_parts(parts, new_body))
 }
 
 /// # Convert SgRoutePluginContext to AuthReq
@@ -609,7 +646,7 @@ fn headermap_to_hashmap(old_headers: &HeaderMap<HeaderValue>) -> TardisResult<Ha
     Ok(new_headers)
 }
 
-def_filter_plugin!("auth", AuthPlugin, SgPluginAuth);
+def_plugin!("auth", AuthPlugin, SgPluginAuth);
 
 #[cfg(test)]
 #[allow(clippy::unwrap_used)]
