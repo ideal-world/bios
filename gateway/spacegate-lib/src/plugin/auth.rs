@@ -11,27 +11,28 @@ use bios_auth::{
 use serde::{Deserialize, Serialize};
 use spacegate_shell::{
     hyper::{
-        self,
-        body::Bytes,
-        header,
+        self, header,
         http::{self, HeaderMap, HeaderName, HeaderValue, StatusCode},
         Method, Request, Response,
     },
-    kernel::extension::Reflect,
-    plugin::{def_plugin, MakeSgLayer, Plugin, PluginError},
-    BoxError, SgBody,
+    kernel::{
+        extension::Reflect,
+        helper_layers::bidirection_filter::{Bdf, BdfLayer, BoxReqFut, BoxRespFut},
+    },
+    plugin::{JsonValue, MakeSgLayer, Plugin, PluginError},
+    BoxError, SgBody, SgBoxLayer,
 };
 use std::{
     collections::HashMap,
     str::FromStr,
     sync::{Arc, OnceLock},
 };
-use tardis::web::{poem::web::Form, poem_openapi::types::Type};
+use tardis::web::poem_openapi::types::Type;
 use tardis::{
     basic::{error::TardisError, result::TardisResult},
-    config::config_dto::{AppConfig, CacheModuleConfig, FrameworkConfig, TardisConfig},
+    config::config_dto::CacheModuleConfig,
     log,
-    serde_json::{self, json, Value},
+    serde_json::{self, json},
     tokio::{sync::RwLock, task::JoinHandle},
     url::Url,
     web::web_resp::TardisResp,
@@ -41,9 +42,10 @@ use tardis::{
 use crate::extension::{
     before_encrypt_body::BeforeEncryptBody,
     cert_info::{CertInfo, RoleInfo},
-    request_crypto_status::RequestCryptoStatus,
+    request_crypto_status::{HeadCryptoKey, RequestCryptoParam},
 };
 
+pub const CODE: &str = "auth";
 #[allow(clippy::type_complexity)]
 static INSTANCE: OnceLock<Arc<RwLock<Option<(String, JoinHandle<()>)>>>> = OnceLock::new();
 
@@ -61,6 +63,45 @@ pub struct SgPluginAuthConfig {
     pub auth_path_ignore_prefix: String,
 }
 
+impl SgPluginAuthConfig {
+    pub async fn setup_tardis(&self) -> Result<(), BoxError> {
+        let config_md5 = TardisFuns::crypto.digest.md5(TardisFuns::json.obj_to_string(self)?)?;
+        let mut instance = INSTANCE.get_or_init(Default::default).write().await;
+        if let Some((md5, handle)) = instance.as_ref() {
+            if config_md5.eq(md5) {
+                log::trace!("[SG.Filter.Auth] have not found config change");
+                return Ok(());
+            } else {
+                handle.abort();
+            }
+        }
+
+        let cache_url: Url = if self.cache_url.is_empty() {
+            //todo get from gateway
+            // init_dto.gateway_parameters.redis_url.as_deref().unwrap_or("redis://127.0.0.1:6379")
+            "redis://127.0.0.1:6379"
+        } else {
+            self.cache_url.as_str()
+        }
+        .parse()
+        .map_err(|e| TardisError::internal_error(&format!("[SG.Filter.Auth]invalid redis url: {e:?}"), "-1"))?;
+
+        let mut tardis_config = tardis::TardisFuns::clone_config();
+        tardis_config.cs.insert(bios_auth::auth_constants::DOMAIN_CODE.to_string(), serde_json::to_value(self.auth_config.clone())?);
+        tardis_config
+            .fw
+            .cache
+            .as_mut()
+            .map(|cache_config| cache_config.modules.insert(bios_auth::auth_constants::DOMAIN_CODE.to_string(), CacheModuleConfig::builder().url(cache_url).build()));
+
+        tardis::TardisFuns::hot_reload(tardis_config).await?;
+        let handle = auth_initializer::init().await?;
+        *instance = Some((config_md5, handle));
+        log::info!("[SG.Filter.Auth] init done");
+        Ok(())
+    }
+}
+
 impl Default for SgPluginAuthConfig {
     fn default() -> Self {
         Self {
@@ -76,7 +117,7 @@ impl Default for SgPluginAuthConfig {
         }
     }
 }
-
+#[derive(Clone)]
 pub struct SgPluginAuth {
     auth_config: AuthConfig,
     cache_url: String,
@@ -153,49 +194,12 @@ impl SgPluginAuth {
 }
 
 impl SgPluginAuth {
-    pub async fn setup_tardis(&self) -> Result<(), BoxError> {
-        let config_md5 = TardisFuns::crypto.digest.md5(TardisFuns::json.obj_to_string(self)?)?;
-        let mut instance = INSTANCE.get_or_init(Default::default).write().await;
-        if let Some((md5, handle)) = instance.as_ref() {
-            if config_md5.eq(md5) {
-                log::trace!("[SG.Filter.Auth] have not found config change");
-                return Ok(());
-            } else {
-                handle.abort();
-            }
-        }
-
-        let cache_url: Url = if self.cache_url.is_empty() {
-            //todo get from gateway
-            // init_dto.gateway_parameters.redis_url.as_deref().unwrap_or("redis://127.0.0.1:6379")
-            "redis://127.0.0.1:6379"
-        } else {
-            self.cache_url.as_str()
-        }
-        .parse()
-        .map_err(|e| TardisError::internal_error(&format!("[SG.Filter.Auth]invalid redis url: {e:?}"), "-1"))?;
-
-        let mut tardis_config = tardis::TardisFuns::clone_config();
-        tardis_config.cs.insert(bios_auth::auth_constants::DOMAIN_CODE.to_string(), serde_json::to_value(self.auth_config.clone())?);
-        tardis_config
-            .fw
-            .cache
-            .as_mut()
-            .map(|cache_config| cache_config.modules.insert(bios_auth::auth_constants::DOMAIN_CODE.to_string(), CacheModuleConfig::builder().url(cache_url).build()));
-
-        tardis::TardisFuns::hot_reload(tardis_config).await?;
-        let handle = auth_initializer::init().await?;
-        *instance = Some((config_md5, handle));
-        log::info!("[SG.Filter.Auth] init done");
-        Ok(())
-    }
-
-    async fn on_req(&self, mut req: Request<SgBody>) -> Result<Request<SgBody>, Response<SgBody>> {
-        req.extensions_mut().get_mut::<Reflect>().expect("missing reflect").insert(RequestCryptoStatus::default());
+    async fn req(&self, mut req: Request<SgBody>) -> Result<Request<SgBody>, Response<SgBody>> {
+        req.extensions_mut().get_mut::<Reflect>().expect("missing reflect").insert(RequestCryptoParam::default());
 
         for exclude_path in self.auth_config.exclude_encrypt_decrypt_path.clone() {
             if req.uri().path().starts_with(&exclude_path) {
-                req.extensions_mut().get_mut::<Reflect>().expect("missing reflect").get_mut::<RequestCryptoStatus>().expect("missing request crypto status").is_skip_crypto = true;
+                req.extensions_mut().get_mut::<Reflect>().expect("missing reflect").get_mut::<RequestCryptoParam>().expect("missing request crypto status").is_skip_crypto = true;
             }
         }
 
@@ -230,7 +234,7 @@ impl SgPluginAuth {
         }
         req.headers_mut().append(&self.header_is_mix_req, HeaderValue::from_static("false"));
 
-        let (mut auth_req, mut req) = req_to_auth_req(&self.auth_path_ignore_prefix, &self.auth_config, req).await.map_err(|e| PluginError::bad_gateway::<AuthPlugin>(e))?;
+        let (mut auth_req, mut req) = req_to_auth_req(&self.auth_path_ignore_prefix, &self.auth_config, req).await.map_err(PluginError::bad_gateway::<AuthPlugin>)?;
 
         match auth_kernel_serv::auth(&mut auth_req, is_true_mix_req).await {
             Ok(auth_result) => {
@@ -273,47 +277,72 @@ impl SgPluginAuth {
         }
     }
 
-    async fn on_resp(&self, resp: Response<SgBody>) -> Result<Response<SgBody>, Response<SgBody>> {
+    async fn resp(&self, mut resp: Response<SgBody>) -> Result<Response<SgBody>, Response<SgBody>> {
         let head_key_crypto = self.auth_config.head_key_crypto.clone();
-        let req_crypto = resp.extensions().get::<RequestCryptoStatus>().unwrap_or_else(|| &RequestCryptoStatus::default());
+
+        let req_crypto = resp.extensions_mut().remove::<RequestCryptoParam>().unwrap_or_else(RequestCryptoParam::default);
 
         // Return encryption will be skipped in three cases: there is no encryption header,
         // the http code request is unsuccessful, and it is the return of the mix request
         // (the inner request return has been encrypted once)
-        if req_crypto.have_head_crypto_key || !resp.status().is_success() || req_crypto.is_mix {
+        if req_crypto.head_crypto_key.is_some() || !resp.status().is_success() || req_crypto.is_mix {
             return Ok(resp);
         }
 
-        let (parts, body) = resp.into_parts();
-
-        let crypto_value = ctx.request.get_headers().get(&head_key_crypto).expect("").clone();
-        parts.headers.insert(
-            HeaderName::try_from(head_key_crypto.clone()).map_err(|e| TardisError::internal_error(&format!("[SG.Filter.Auth] get header error: {e:?}"), ""))?,
-            crypto_value,
-        );
+        if let HeadCryptoKey::Some(crypto_value) = &req_crypto.head_crypto_key {
+            resp.headers_mut().insert(
+                HeaderName::try_from(head_key_crypto.clone()).map_err(PluginError::bad_gateway::<AuthPlugin>)?,
+                crypto_value.clone(),
+            );
+        }
 
         if req_crypto.is_skip_crypto {
-            let resp = Response::from_parts(parts, body);
             return Ok(resp);
         }
 
-        let (encrypt_req, mut resp) = resp_to_auth_encrypt_req(resp).await.map_err(|e| PluginError::bad_gateway::<AuthPlugin>(e))?;
-        let (parts, _) = resp.into_parts();
-        let encrypt_resp = auth_crypto_serv::encrypt_body(&encrypt_req).await.map_err(|e| PluginError::bad_gateway::<AuthPlugin>(e))?;
-        parts.headers.extend(hashmap_header_to_headermap(encrypt_resp.headers).map_err(|e| PluginError::bad_gateway::<AuthPlugin>(e))?);
+        let (encrypt_req, mut resp) = resp_to_auth_encrypt_req(resp).await.map_err(PluginError::bad_gateway::<AuthPlugin>)?;
+        let (mut parts, _) = resp.into_parts();
+        let encrypt_resp = auth_crypto_serv::encrypt_body(&encrypt_req).await.map_err(PluginError::bad_gateway::<AuthPlugin>)?;
+        parts.headers.extend(hashmap_header_to_headermap(encrypt_resp.headers).map_err(PluginError::bad_gateway::<AuthPlugin>)?);
         parts.headers.remove(hyper::header::TRANSFER_ENCODING);
-        body = SgBody::full(encrypt_resp.body);
+        let body = SgBody::full(encrypt_resp.body);
         resp = Response::from_parts(parts, body);
-        self.cors(&mut resp).map_err(|e| PluginError::bad_gateway::<AuthPlugin>(e))?;
+        self.cors(&mut resp).map_err(PluginError::bad_gateway::<AuthPlugin>)?;
 
         Ok(resp)
     }
 }
 
+// impl AsyncFilter for SgPluginAuth {
+//     type Future = Pin<Box<dyn Future<Output = Result<Request<SgBody>, Response<SgBody>>> + Send + 'static>>;
+
+//     fn filter(&self, req: Request<SgBody>) -> Self::Future {
+//         Box::pin(async move { self.req(req).await })
+//     }
+// }
+
+impl Bdf for SgPluginAuth {
+    type FutureReq = BoxReqFut;
+
+    type FutureResp = BoxRespFut;
+
+    fn on_req(self: Arc<Self>, req: Request<SgBody>) -> Self::FutureReq {
+        Box::pin(async move { self.req(req).await })
+    }
+
+    fn on_resp(self: Arc<Self>, resp: Response<SgBody>) -> Self::FutureResp {
+        Box::pin(async move {
+            match self.resp(resp).await {
+                Ok(resp) => resp,
+                Err(e) => e,
+            }
+        })
+    }
+}
+
 impl MakeSgLayer for SgPluginAuth {
-    fn make_layer(&self) -> Result<spacegate_shell::SgBoxLayer, BoxError> {
-        let layer = spacegate_shell::plugin::FilterRequestLayer::new(self.clone());
-        Ok(spacegate_shell::SgBoxLayer::new(layer))
+    fn make_layer(&self) -> Result<SgBoxLayer, BoxError> {
+        Ok(SgBoxLayer::new(BdfLayer::new(self.clone())))
     }
 }
 
@@ -570,11 +599,14 @@ async fn req_to_auth_req(ignore_prefix: &str, config: &AuthConfig, req: Request<
     let url = parts.uri.clone();
     let scheme = url.scheme().map(|s| s.to_string()).unwrap_or("http".to_string());
     let headers = headermap_to_hashmap(&parts.headers)?;
-    let req_body = body.get_dumped().unwrap();
+    let req_body = body.get_dumped().expect("missing dump body");
     let string_body = String::from_utf8_lossy(req_body).trim_matches('"').to_string();
 
     if headers.contains_key(&config.head_key_crypto) || headers.contains_key(&config.head_key_crypto.to_lowercase()) {
-        parts.extensions.get_mut::<Reflect>().expect("missing reflect").get_mut::<RequestCryptoStatus>().expect("missing request crypto status").have_head_crypto_key = true;
+        parts.extensions.get_mut::<Reflect>().expect("missing reflect").get_mut::<RequestCryptoParam>().expect("missing request crypto status").head_crypto_key =
+            HeadCryptoKey::Some(
+                parts.headers.remove(&config.head_key_crypto).unwrap_or_else(|| parts.headers.remove(&config.head_key_crypto.to_ascii_lowercase()).expect("missing header")),
+            );
     }
 
     Ok((
@@ -630,11 +662,11 @@ async fn resp_to_auth_encrypt_req(resp: Response<SgBody>) -> TardisResult<(AuthE
     if !body.is_dumped() {
         body = body.dump().await.map_err(|e| TardisError::wrap(&format!("[SG.Filter.Auth] dump body error: {e}"), ""))?;
     }
-    let resp_body = body.get_dumped().unwrap();
-    if resp_body.len() > 0 {
+    let resp_body = body.get_dumped().expect("missing dump body");
+    if !resp_body.is_empty() {
         parts.extensions.insert(BeforeEncryptBody::new(resp_body.clone()));
     }
-    let string_body = String::from_utf8_lossy(&resp_body);
+    let string_body = String::from_utf8_lossy(resp_body);
     log::trace!("[SG.Filter.Auth] Before Encrypt Body {}", string_body);
     Ok((
         AuthEncryptReq {
@@ -667,7 +699,19 @@ fn headermap_to_hashmap(old_headers: &HeaderMap<HeaderValue>) -> TardisResult<Ha
     Ok(new_headers)
 }
 
-def_plugin!("auth", AuthPlugin, SgPluginAuth);
+pub struct AuthPlugin;
+
+impl Plugin for AuthPlugin {
+    const CODE: &'static str = CODE;
+    type MakeLayer = SgPluginAuth;
+    type Error = serde_json::Error;
+    fn create(value: JsonValue) -> Result<Self::MakeLayer, Self::Error> {
+        let config: SgPluginAuthConfig = serde_json::from_value(value)?;
+        let _ = tardis::futures::executor::block_on(async { config.setup_tardis().await });
+        let filter: SgPluginAuth = config.into();
+        Ok(filter)
+    }
+}
 
 #[cfg(test)]
 #[allow(clippy::unwrap_used)]

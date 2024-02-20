@@ -1,6 +1,21 @@
+use spacegate_shell::hyper::header::HeaderValue;
+
 #[derive(Clone, Default)]
-pub struct RequestCryptoStatus {
+pub struct RequestCryptoParam {
     pub is_mix: bool,
-    pub have_head_crypto_key: bool,
+    pub head_crypto_key: HeadCryptoKey,
     pub is_skip_crypto: bool,
+}
+
+#[derive(Clone, Default)]
+pub enum HeadCryptoKey {
+    #[default]
+    None,
+    Some(HeaderValue),
+}
+
+impl HeadCryptoKey {
+    pub fn is_some(&self) -> bool {
+        matches!(self, HeadCryptoKey::Some(_))
+    }
 }
