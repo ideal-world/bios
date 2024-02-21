@@ -24,6 +24,8 @@ bios-auth = { path = "../../support/auth", default-features = false }
 tardis = { workspace = true, features = ["web-client", "build-info"] }
 ipnet = "2.8.0"
 
+http = { version = "1" }
+
 [dev-dependencies]
 pprof = { version = "0.12.1", features = ["flamegraph"] }
 tardis = { workspace = true, features = ["test", "web-client"] }

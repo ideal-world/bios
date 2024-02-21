@@ -1,3 +1,5 @@
+use serde::{Deserialize, Serialize};
+
 #[derive(Clone)]
 pub struct CertInfo {
     pub id: String,
@@ -5,7 +7,7 @@ pub struct CertInfo {
     pub roles: Vec<RoleInfo>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct RoleInfo {
     pub id: String,
     pub name: Option<String>,

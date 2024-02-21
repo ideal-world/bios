@@ -120,7 +120,6 @@ impl Default for SgPluginAuthConfig {
 #[derive(Clone)]
 pub struct SgPluginAuth {
     auth_config: AuthConfig,
-    cache_url: String,
     cors_allow_origin: HeaderValue,
     cors_allow_methods: HeaderValue,
     cors_allow_headers: HeaderValue,
@@ -146,7 +145,6 @@ impl From<SgPluginAuthConfig> for SgPluginAuth {
     fn from(value: SgPluginAuthConfig) -> Self {
         SgPluginAuth {
             auth_config: value.auth_config,
-            cache_url: value.cache_url,
             cors_allow_origin: HeaderValue::from_str(&value.cors_allow_origin).expect("cors_allow_origin is invalid"),
             cors_allow_methods: HeaderValue::from_str(&value.cors_allow_methods).expect("cors_allow_methods is invalid"),
             cors_allow_headers: HeaderValue::from_str(&value.cors_allow_headers).expect("cors_allow_headers is invalid"),
@@ -346,20 +344,20 @@ impl MakeSgLayer for SgPluginAuth {
     }
 }
 
-trait AuthProcess {
-    fn on_req(&self, req: &mut Request<SgBody>) -> TardisResult<()>;
-    fn on_resp(&self, resp: Response<SgBody>) -> TardisResult<Response<SgBody>>;
-}
+// trait AuthProcess {
+//     fn on_req(&self, req: &mut Request<SgBody>) -> TardisResult<()>;
+//     fn on_resp(&self, resp: Response<SgBody>) -> TardisResult<Response<SgBody>>;
+// }
 
-struct AuthServerConfig {}
+// struct AuthServerConfig {}
 
-struct Auth {}
+// struct Auth {}
 
-struct Crypto {}
+// struct Crypto {}
 
-struct MixAuth {
-    is_mix_req: bool,
-}
+// struct MixAuth {
+//     is_mix_req: bool,
+// }
 // #[async_trait]
 // impl SgPluginFilter for SgFilterAuth {
 //     fn accept(&self) -> SgPluginFilterAccept {
