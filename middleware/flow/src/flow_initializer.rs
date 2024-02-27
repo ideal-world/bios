@@ -9,9 +9,9 @@ use bios_sdk_invoke::invoke_initializer;
 use tardis::{
     basic::{dto::TardisContext, field::TrimString, result::TardisResult},
     db::{reldb_client::TardisActiveModel, sea_orm::sea_query::Table},
-    log::info,
+    log::{error, info},
     tokio,
-    web::web_server::TardisWebServer,
+    web::{web_server::TardisWebServer, ws_client::TardisWSClient},
     TardisFuns, TardisFunsInst,
 };
 
@@ -869,4 +869,51 @@ async fn init_event() -> TardisResult<()> {
         crate::event::start_flow_event_service(event_config).await?;
     }
     Ok(())
+}
+
+async fn init_ws_flow_client() -> Option<TardisWSClient> {
+    while !TardisFuns::web_server().is_running().await {
+        tardis::tokio::task::yield_now().await
+    }
+    let funs = flow_constants::get_tardis_inst();
+    let conf = funs.conf::<FlowConfig>();
+    if conf.event.is_none() {
+        set_default_flow_avatar("".to_owned());
+        return None;
+    }
+    let mut event_conf = conf.event.clone().unwrap();
+    if !event_conf.in_event {
+        set_default_flow_avatar("".to_owned());
+        return None;
+    }
+    if event_conf.avatars.is_empty() {
+        event_conf.avatars.push(format!("{}/{}", event_conf.topic_code, tardis::pkg!()))
+    }
+    let default_avatar = event_conf.avatars[0].clone();
+    set_default_flow_avatar(default_avatar);
+    let client = bios_sdk_invoke::clients::event_client::EventClient::new(&event_conf.base_url, &funs);
+    loop {
+        let addr = loop {
+            if let Ok(result) = client.register(&event_conf.clone().into()).await {
+                break result.ws_addr;
+            }
+            tardis::tokio::time::sleep(std::time::Duration::from_secs(10)).await;
+        };
+        let ws_client = TardisFuns::ws_client(&addr, |_| async move { None }).await;
+        match ws_client {
+            Ok(ws_client) => {
+                return Some(ws_client);
+            }
+            Err(err) => {
+                error!("[Bios.Iam] failed to connect to event server: {}", err);
+                tardis::tokio::time::sleep(std::time::Duration::from_secs(10)).await;
+            }
+        }
+    }
+}
+
+use std::sync::OnceLock;
+tardis::tardis_static! {
+    pub(crate) async ws_flow_client: Option<TardisWSClient> = init_ws_flow_client();
+    pub(crate) async set default_flow_avatar: String;
 }
