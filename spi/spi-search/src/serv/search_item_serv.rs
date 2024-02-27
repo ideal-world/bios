@@ -33,13 +33,3 @@ spi_dispatch_service! {
         query_metrics(query_req: &SearchQueryMetricsReq) -> TardisResult<SearchQueryMetricsResp>;
     }
 }
-
-pub async fn refresh_data(tag: String, funs: &TardisFunsInst) -> TardisResult<()> {
-    let global_ctx = TardisContext::default();
-    let inst = funs.init(&global_ctx, true, search_initializer::init_fun).await?;
-    match inst.kind_code() {
-        #[cfg(feature = "spi-pg")]
-        spi_constants::SPI_PG_KIND_CODE => pg::search_pg_item_serv::refresh_data(tag, funs, &global_ctx, &inst).await,
-        kind_code => Err(funs.bs_not_implemented(kind_code)),
-    }
-}

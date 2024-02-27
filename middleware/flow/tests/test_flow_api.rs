@@ -7,6 +7,7 @@ use bios_basic::spi::dto::spi_bs_dto::SpiBsAddReq;
 use bios_basic::spi::spi_constants;
 use bios_basic::test::init_rbum_test_container;
 use bios_basic::test::test_http_client::TestHttpClient;
+use bios_mw_event::event_initializer;
 use bios_mw_flow::{flow_constants, flow_initializer};
 use bios_spi_kv::{kv_constants, kv_initializer};
 use tardis::basic::dto::TardisContext;
@@ -21,7 +22,7 @@ mod test_flow_scenes_fsm;
 
 #[tokio::test]
 async fn test_flow_api() -> TardisResult<()> {
-    env::set_var("RUST_LOG", "debug,test_flow_api=trace");
+    env::set_var("RUST_LOG", "debug,tardis=trace,bios_mw_event=trace,test_event=trace,sqlx::query=off");
 
     let docker = testcontainers::clients::Cli::default();
     let _x = init_rbum_test_container::init(&docker, None).await?;
