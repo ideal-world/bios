@@ -1,4 +1,3 @@
-use tardis::basic::dto::TardisContext;
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem_openapi::payload::Json;
 use tardis::web::poem_openapi::{self, param::Query};
@@ -82,16 +81,6 @@ impl FlowCiInstApi {
             }
             funs.commit().await.unwrap();
         });
-
-        TardisResp::ok(Void {})
-    }
-
-    /// refresh var_collect / 刷新var_collect
-    #[oai(path = "/refresh_var_collect", method = "get")]
-    async fn refresh_var_collect(&self, inst_id: Query<String>, assigned_id: Query<String>) -> TardisApiResult<Void> {
-        let funs = flow_constants::get_tardis_inst();
-        let global_ctx = TardisContext::default();
-        FlowInstServ::modify_assigned(&inst_id.0, &assigned_id.0, &funs, &global_ctx).await?;
 
         TardisResp::ok(Void {})
     }

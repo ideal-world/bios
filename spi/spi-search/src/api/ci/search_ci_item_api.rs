@@ -1,4 +1,3 @@
-use tardis::log::{trace, warn};
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem::web::Query;
 
@@ -65,24 +64,5 @@ impl SearchCiItemApi {
         let funs = crate::get_tardis_inst();
         let resp = search_item_serv::query_metrics(&query_req.0, &funs, &ctx.0).await?;
         TardisResp::ok(resp)
-    }
-
-    /// Refresh tsv
-    #[oai(path = "/refresh_data/:tag", method = "get")]
-    async fn refresh_data(&self, tag: Path<String>) -> TardisApiResult<Void> {
-        let mut funs = crate::get_tardis_inst();
-        tardis::tokio::spawn(async move {
-            funs.begin().await.unwrap();
-            match search_item_serv::refresh_data(tag.0, &funs).await {
-                Ok(_) => {
-                    trace!("[Spi.Search] add log success")
-                }
-                Err(e) => {
-                    warn!("[Spi.Search] failed to add log:{e}")
-                }
-            }
-            funs.commit().await.unwrap();
-        });
-        TardisResp::ok(Void {})
     }
 }
