@@ -397,7 +397,7 @@ impl FlowEventServ {
     }
 
     async fn filter_rel_obj_ids_by_state(
-        rel_bus_obj_ids: &[String],
+        rel_bus_obj_ids: &Vec<String>,
         obj_current_state_id: &Option<Vec<String>>,
         funs: &TardisFunsInst,
         _ctx: &TardisContext,
@@ -414,7 +414,7 @@ impl FlowEventServ {
                 Query::select()
                     .columns([flow_inst::Column::Id, flow_inst::Column::CurrentStateId, flow_inst::Column::RelBusinessObjId])
                     .from(flow_inst::Entity)
-                    .and_where(Expr::col(flow_inst::Column::RelBusinessObjId).is_in(rel_bus_obj_ids)),
+                    .and_where(Expr::col(flow_inst::Column::RelBusinessObjId).is_in(rel_bus_obj_ids.clone())),
             )
             .await?;
         if rel_bus_obj_ids.len() != rel_insts.len() {

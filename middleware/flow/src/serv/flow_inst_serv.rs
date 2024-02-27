@@ -42,7 +42,9 @@ use crate::{
         },
         flow_model_dto::{FlowModelDetailResp, FlowModelFilterReq},
         flow_state_dto::{FlowStateFilterReq, FlowStateRelModelExt, FlowSysStateKind},
-        flow_transition_dto::{FlowTransitionDetailResp, FlowTransitionFrontActionInfo},
+        flow_transition_dto::{
+            FlowTransitionDetailResp, FlowTransitionFrontActionInfo
+        },
         flow_var_dto::FillType,
     },
     flow_config::FlowConfig,
