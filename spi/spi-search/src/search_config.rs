@@ -8,5 +8,11 @@ use std::fmt::Debug;
 pub struct SearchConfig {
     pub rbum: RbumConfig,
     pub event: Option<EventTopicConfig>,
-    pub word_length: Option<usize>,
+    pub split_strategy_rule_config: SplitStrategyRuleConfig,
+}
+
+#[derive(Debug, Serialize, Deserialize, Default, Clone)]
+#[serde(default)]
+pub struct SplitStrategyRuleConfig {
+    pub specify_word_length: Option<usize>, 
 }

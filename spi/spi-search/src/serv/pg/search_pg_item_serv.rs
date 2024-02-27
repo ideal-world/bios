@@ -31,12 +31,11 @@ const FUNCTION_EXT_SUFFIX_FLAG: &str = "_ext_";
 const INNER_FIELD: [&str; 7] = ["key", "title", "content", "owner", "own_paths", "create_time", "update_time"];
 
 pub async fn add(add_req: &mut SearchItemAddReq, funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
-    info!("load SearchConfig: {:?}", funs.conf::<SearchConfig>().word_length);
     let mut params = Vec::new();
     params.push(Value::from(add_req.kind.to_string()));
     params.push(Value::from(add_req.key.to_string()));
     params.push(Value::from(add_req.title.as_str()));
-    if add_req.title.chars().count() > funs.conf::<SearchConfig>().word_length.unwrap_or(30) {
+    if add_req.title.chars().count() > funs.conf::<SearchConfig>().split_strategy_rule_config.specify_word_length.unwrap_or(30) {
         params.push(Value::from(format!(
             "{} {}",
             add_req.title.as_str(),
@@ -76,7 +75,7 @@ pub async fn add(add_req: &mut SearchItemAddReq, funs: &TardisFunsInst, ctx: &Ta
     let bs_inst = inst.inst::<TardisRelDBClient>();
     let (mut conn, table_name) = search_pg_initializer::init_table_and_conn(bs_inst, &add_req.tag, ctx, true).await?;
     conn.begin().await?;
-    let word_combinations_way = if add_req.title.chars().count() > funs.conf::<SearchConfig>().word_length.unwrap_or(30) {
+    let word_combinations_way = if add_req.title.chars().count() > funs.conf::<SearchConfig>().split_strategy_rule_config.specify_word_length.unwrap_or(30) {
         "public.chinese_zh"
     } else {
         "simple"
@@ -112,7 +111,7 @@ pub async fn modify(tag: &str, key: &str, modify_req: &mut SearchItemModifyReq, 
     if let Some(title) = &modify_req.title {
         sql_sets.push(format!("title = ${}", params.len() + 1));
         params.push(Value::from(title));
-        let word_combinations_way = if title.chars().count() > funs.conf::<SearchConfig>().word_length.unwrap_or(30) {
+        let word_combinations_way = if title.chars().count() > funs.conf::<SearchConfig>().split_strategy_rule_config.specify_word_length.unwrap_or(30) {
             "public.chinese_zh"
         } else {
             "simple"
@@ -755,12 +754,12 @@ pub async fn refresh_data(tag: String, funs: &TardisFunsInst, ctx: &TardisContex
         for item in result {
             let title: String = item.try_get("", "title")?;
             let key: String = item.try_get("", "key")?;
-            let word_combinations_way = if title.chars().count() > funs.conf::<SearchConfig>().word_length.unwrap_or(30) {
+            let word_combinations_way = if title.chars().count() > funs.conf::<SearchConfig>().split_strategy_rule_config.specify_word_length.unwrap_or(30) {
                 "public.chinese_zh"
             } else {
                 "simple"
             };
-            let word_combinations = if title.chars().count() > funs.conf::<SearchConfig>().word_length.unwrap_or(30) {
+            let word_combinations = if title.chars().count() > funs.conf::<SearchConfig>().split_strategy_rule_config.specify_word_length.unwrap_or(30) {
                 Value::from(format!(
                     "{} {}",
                     title.as_str(),
