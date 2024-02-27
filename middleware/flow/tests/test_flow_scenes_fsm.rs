@@ -6,7 +6,8 @@ use bios_basic::test::test_http_client::TestHttpClient;
 use bios_mw_flow::dto::flow_config_dto::FlowConfigModifyReq;
 use bios_mw_flow::dto::flow_inst_dto::{
     FlowInstBatchBindReq, FlowInstBatchBindResp, FlowInstBindRelObjReq, FlowInstBindReq, FlowInstDetailResp, FlowInstFindNextTransitionResp, FlowInstFindNextTransitionsReq,
-    FlowInstFindStateAndTransitionsReq, FlowInstFindStateAndTransitionsResp, FlowInstModifyCurrentVarsReq, FlowInstStartReq, FlowInstTransferReq, FlowInstTransferResp,
+    FlowInstFindStateAndTransitionsReq, FlowInstFindStateAndTransitionsResp, FlowInstModifyAssignedReq, FlowInstModifyCurrentVarsReq, FlowInstStartReq, FlowInstTransferReq,
+    FlowInstTransferResp,
 };
 use bios_mw_flow::dto::flow_model_dto::{
     FlowModelAddCustomModelItemReq, FlowModelAddCustomModelReq, FlowModelAddCustomModelResp, FlowModelAggResp, FlowModelBindStateReq, FlowModelFindRelStateResp,
@@ -819,6 +820,14 @@ pub async fn test(flow_client: &mut TestHttpClient) -> TardisResult<()> {
     assert_eq!(state_and_next_transitions[0].current_flow_state_name, "已完成");
     let flow_inst_list: Vec<FlowInstDetailResp> = flow_client.get(&format!("/ci/inst/find_detail_by_obj_ids?obj_ids={}", req_inst_rel_id2)).await;
     assert_eq!(flow_inst_list[0].id, req_inst_id2);
+    let _: Void = flow_client
+        .post(
+            &format!("/cc/inst/{}/transition/modify_assigned", req_inst_id2),
+            &FlowInstModifyAssignedReq {
+                current_assigned: "xxx".to_string(),
+            },
+        )
+        .await;
 
     Ok(())
 }

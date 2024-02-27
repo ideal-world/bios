@@ -1,4 +1,6 @@
+pub mod clients;
 pub mod flow_config_serv;
+pub mod flow_event_serv;
 pub mod flow_external_serv;
 pub mod flow_inst_serv;
 pub mod flow_model_serv;
