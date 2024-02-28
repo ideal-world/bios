@@ -74,7 +74,8 @@ pub struct Model {
     ///
     /// List of variables to be captured when entering this transition
     /// 当进入此流转时，需要采集的变量列表
-    #[sea_orm(column_type = "JsonBinary")]
+    #[sea_orm(column_type = "Json")]
+    #[tardis_entity(custom_type = "Json")]
     pub vars_collect: Vec<FlowVarInfo>,
 
     /// External interface to be called when entering this transition
@@ -88,17 +89,17 @@ pub struct Model {
     /// action similar to `Event` in BPMN
     pub action_by_post_callback: String,
 
-    /// TODO Vec<FlowTransitionActionChangeInfo>
-    #[sea_orm(column_type = "JsonBinary")]
+    #[sea_orm(column_type = "Json")]
+    #[tardis_entity(custom_type = "Json")]
     pub action_by_post_changes: Vec<FlowTransitionActionChangeInfo>,
 
-    /// TODO Vec<FlowTransitionFrontActionInfo>
-    #[sea_orm(column_type = "JsonBinary")]
+    #[sea_orm(column_type = "Json")]
+    #[tardis_entity(custom_type = "Json")]
     pub action_by_front_changes: Vec<FlowTransitionFrontActionInfo>,
 
     /// Secondary confirmation pop-up / 关于二次确认弹窗的配置
-    /// TODO FlowTransitionDoubleCheckInfo
-    #[sea_orm(column_type = "JsonBinary")]
+    #[sea_orm(column_type = "Json")]
+    #[tardis_entity(custom_type = "Json")]
     pub double_check: FlowTransitionDoubleCheckInfo,
 
     pub is_notify: bool,
