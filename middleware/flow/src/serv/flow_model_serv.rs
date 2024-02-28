@@ -35,7 +35,7 @@ use crate::{
         },
         flow_state_dto::{FlowStateAddReq, FlowStateFilterReq, FlowStateRelModelExt, FlowSysStateKind},
         flow_transition_dto::{
-            FlowTransitionActionChangeAgg, FlowTransitionActionChangeKind, FlowTransitionAddReq, FlowTransitionDetailResp, FlowTransitionDoubleCheckInfo, FlowTransitionInitInfo,
+            FlowTransitionActionChangeAgg, FlowTransitionActionChangeKind, FlowTransitionAddReq, FlowTransitionDetailResp, FlowTransitionInitInfo,
             FlowTransitionModifyReq, FlowTransitionSortStatesReq,
         },
     },
@@ -382,14 +382,14 @@ impl FlowModelServ {
                 guard_by_spec_org_ids: Set(req.guard_by_spec_org_ids.as_ref().unwrap_or(&vec![]).clone()),
                 guard_by_other_conds: Set(req.guard_by_other_conds.as_ref().map(|conds| TardisFuns::json.obj_to_json(conds).unwrap()).unwrap_or(json!([]))),
 
-                vars_collect: Set(req.vars_collect.as_ref().map(|vars| TardisFuns::json.obj_to_json(vars).unwrap()).unwrap_or(json!([]))),
-                double_check: Set(TardisFuns::json.obj_to_json(&req.double_check).unwrap_or(json!(FlowTransitionDoubleCheckInfo::default()))),
+                vars_collect: Set(req.vars_collect.clone().unwrap_or_default()),
+                double_check: Set(req.double_check.clone().unwrap_or_default()),
                 is_notify: Set(req.is_notify.unwrap_or(true)),
 
                 action_by_pre_callback: Set(req.action_by_pre_callback.as_ref().unwrap_or(&"".to_string()).to_string()),
                 action_by_post_callback: Set(req.action_by_post_callback.as_ref().unwrap_or(&"".to_string()).to_string()),
-                action_by_post_changes: Set(TardisFuns::json.obj_to_json(&req.action_by_post_changes).unwrap_or(json!([]))),
-                action_by_front_changes: Set(TardisFuns::json.obj_to_json(&req.action_by_front_changes).unwrap_or(json!([]))),
+                action_by_post_changes: Set(req.action_by_post_changes.clone().unwrap_or_default()),
+                action_by_front_changes: Set(req.action_by_front_changes.clone().unwrap_or_default()),
 
                 rel_flow_model_id: Set(flow_model_id.to_string()),
                 sort: Set(req.sort.unwrap_or(0)),
@@ -495,7 +495,7 @@ impl FlowModelServ {
             }
 
             if let Some(vars_collect) = &req.vars_collect {
-                flow_transition.vars_collect = Set(TardisFuns::json.obj_to_json(vars_collect)?);
+                flow_transition.vars_collect = Set(vars_collect.clone());
             }
 
             if let Some(action_by_pre_callback) = &req.action_by_pre_callback {
@@ -505,13 +505,13 @@ impl FlowModelServ {
                 flow_transition.action_by_post_callback = Set(action_by_post_callback.to_string());
             }
             if let Some(action_by_front_changes) = &req.action_by_front_changes {
-                flow_transition.action_by_front_changes = Set(TardisFuns::json.obj_to_json(action_by_front_changes)?);
+                flow_transition.action_by_front_changes = Set(action_by_front_changes.clone());
             }
             if let Some(action_by_post_changes) = &req.action_by_post_changes {
-                flow_transition.action_by_post_changes = Set(TardisFuns::json.obj_to_json(action_by_post_changes)?);
+                flow_transition.action_by_post_changes = Set(action_by_post_changes.clone());
             }
             if let Some(double_check) = &req.double_check {
-                flow_transition.double_check = Set(TardisFuns::json.obj_to_json(double_check)?);
+                flow_transition.double_check = Set(double_check.clone());
             }
             if let Some(is_notify) = &req.is_notify {
                 flow_transition.is_notify = Set(*is_notify);

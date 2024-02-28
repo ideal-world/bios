@@ -782,7 +782,7 @@ impl FlowInstServ {
             id: Set(flow_inst_id.to_string()),
             current_state_id: Set(next_flow_state.id.to_string()),
             current_vars: Set(Some(TardisFuns::json.obj_to_json(&new_vars)?)),
-            transitions: Set(Some(TardisFuns::json.obj_to_json(&new_transitions)?)),
+            transitions: Set(Some(new_transitions.clone())),
             ..Default::default()
         };
         if next_flow_state.sys_state == FlowSysStateKind::Finish {
