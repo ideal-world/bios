@@ -35,8 +35,8 @@ use crate::{
         },
         flow_state_dto::{FlowStateAddReq, FlowStateFilterReq, FlowStateRelModelExt, FlowSysStateKind},
         flow_transition_dto::{
-            FlowTransitionActionChangeAgg, FlowTransitionActionChangeKind, FlowTransitionAddReq, FlowTransitionDetailResp, FlowTransitionInitInfo, FlowTransitionModifyReq,
-            FlowTransitionSortStatesReq,
+            FlowTransitionActionChangeAgg, FlowTransitionActionChangeKind, FlowTransitionAddReq, FlowTransitionDetailResp, FlowTransitionInitInfo,
+            FlowTransitionModifyReq, FlowTransitionSortStatesReq,
         },
     },
     flow_config::FlowBasicInfoManager,

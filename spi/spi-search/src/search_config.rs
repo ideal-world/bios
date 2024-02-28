@@ -14,5 +14,5 @@ pub struct SearchConfig {
 #[derive(Debug, Serialize, Deserialize, Default, Clone)]
 #[serde(default)]
 pub struct SplitStrategyRuleConfig {
-    pub specify_word_length: Option<usize>,
+    pub specify_word_length: Option<usize>, 
 }
