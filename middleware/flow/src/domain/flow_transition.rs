@@ -4,6 +4,9 @@ use tardis::db::sea_orm::prelude::Json;
 use tardis::db::sea_orm::*;
 use tardis::{chrono, TardisCreateEntity, TardisEmptyBehavior, TardisEmptyRelation};
 
+use crate::dto::flow_transition_dto::{FlowTransitionActionChangeInfo, FlowTransitionDoubleCheckInfo, FlowTransitionFrontActionInfo};
+use crate::dto::flow_var_dto::FlowVarInfo;
+
 /// Transfer / 流转
 ///
 /// Used to define the flow of the process (migration of state)
@@ -71,8 +74,9 @@ pub struct Model {
     ///
     /// List of variables to be captured when entering this transition
     /// 当进入此流转时，需要采集的变量列表
-    /// TODO Vec<FlowVarInfo>
-    pub vars_collect: Json,
+    #[sea_orm(column_type = "Json")]
+    #[tardis_entity(custom_type = "Json")]
+    pub vars_collect: Vec<FlowVarInfo>,
 
     /// External interface to be called when entering this transition
     /// 进入此流转时，需要调用的外部接口
@@ -85,15 +89,18 @@ pub struct Model {
     /// action similar to `Event` in BPMN
     pub action_by_post_callback: String,
 
-    /// TODO Vec<FlowTransitionActionChangeInfo>
-    pub action_by_post_changes: Json,
+    #[sea_orm(column_type = "Json")]
+    #[tardis_entity(custom_type = "Json")]
+    pub action_by_post_changes: Vec<FlowTransitionActionChangeInfo>,
 
-    /// TODO Vec<FlowTransitionFrontActionInfo>
-    pub action_by_front_changes: Json,
+    #[sea_orm(column_type = "Json")]
+    #[tardis_entity(custom_type = "Json")]
+    pub action_by_front_changes: Vec<FlowTransitionFrontActionInfo>,
 
     /// Secondary confirmation pop-up / 关于二次确认弹窗的配置
-    /// TODO FlowTransitionDoubleCheckInfo
-    pub double_check: Json,
+    #[sea_orm(column_type = "Json")]
+    #[tardis_entity(custom_type = "Json")]
+    pub double_check: FlowTransitionDoubleCheckInfo,
 
     pub is_notify: bool,
 

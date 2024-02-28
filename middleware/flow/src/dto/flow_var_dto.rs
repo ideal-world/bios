@@ -6,7 +6,7 @@ use tardis::{
     web::poem_openapi,
 };
 
-#[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, poem_openapi::Object, sea_orm::FromJsonQueryResult)]
 pub struct FlowVarSimpleInfo {
     #[oai(validator(min_length = "2", max_length = "200"))]
     pub name: String,
@@ -15,7 +15,7 @@ pub struct FlowVarSimpleInfo {
     pub required: bool,
 }
 
-#[derive(Serialize, Deserialize, Debug, Default, Clone, poem_openapi::Object)]
+#[derive(Serialize, Deserialize, Debug, Default, Clone, PartialEq, poem_openapi::Object, sea_orm::FromJsonQueryResult)]
 pub struct FlowVarInfo {
     #[oai(validator(min_length = "2", max_length = "200"))]
     pub name: String,
@@ -43,7 +43,7 @@ pub struct FlowVarInfo {
     pub parent_attr_name: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, poem_openapi::Object)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, poem_openapi::Object)]
 pub struct DefaultValue {
     pub value_type: DefaultValueType,
     pub value: String,

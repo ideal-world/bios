@@ -1,4 +1,4 @@
-use crate::dto::flow_inst_dto::FlowOperationContext;
+use crate::dto::flow_inst_dto::{FlowInstTransitionInfo, FlowOperationContext};
 use tardis::chrono::Utc;
 use tardis::db::sea_orm;
 use tardis::db::sea_orm::prelude::Json;
@@ -28,7 +28,6 @@ pub struct Model {
     ///
     /// This variable list needs to be updated after each transfer
     /// 每次流转后都需要更新此变量列表
-    /// TODO Vec<FlowVarSimpleInfo>
     pub current_vars: Option<Json>,
 
     /// Variable list when created / 创建时的变量列表（HashMap<String, Value>）
@@ -54,12 +53,10 @@ pub struct Model {
     pub output_message: Option<String>,
 
     /// Transfer information list  / 流转信息列表
-    ///
-    /// TODO Vec<FlowInstTransitionInfo>
     #[index(full_text)]
     #[sea_orm(column_type = "JsonBinary", nullable)]
     #[tardis_entity(custom_type = "JsonBinary")]
-    pub transitions: Option<Json>,
+    pub transitions: Option<Vec<FlowInstTransitionInfo>>,
 
     pub own_paths: String,
 
