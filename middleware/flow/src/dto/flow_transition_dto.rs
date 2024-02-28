@@ -184,7 +184,7 @@ impl From<FlowTransitionDetailResp> for FlowTransitionAddReq {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, Debug, Default, poem_openapi::Object)]
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug, Default, poem_openapi::Object, sea_orm::FromJsonQueryResult)]
 pub struct FlowTransitionDoubleCheckInfo {
     pub is_open: bool,
     pub content: Option<String>,
@@ -201,7 +201,7 @@ pub struct FlowTransitionSortStateInfoReq {
     pub sort: i64,
 }
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, Debug, poem_openapi::Object)]
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug, poem_openapi::Object, sea_orm::FromJsonQueryResult)]
 pub struct FlowTransitionActionChangeInfo {
     pub kind: FlowTransitionActionChangeKind,
     pub describe: String,
@@ -363,7 +363,7 @@ pub struct FlowTransitionInitInfo {
     pub sort: Option<i64>,
 }
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, Debug, poem_openapi::Object)]
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug, poem_openapi::Object, sea_orm::FromJsonQueryResult)]
 pub struct FlowTransitionFrontActionInfo {
     pub relevance_relation: FlowTransitionFrontActionInfoRelevanceRelation,
     pub relevance_label: String,
