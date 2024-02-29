@@ -1,6 +1,6 @@
 #![warn(clippy::unwrap_used)]
 
-use crate::plugin::{anti_replay, anti_xss, ip_time, rewrite_ns_b_ip};
+use crate::plugin::{anti_replay, anti_xss, ip_time, rewrite_ns_b_ip, auth, audit_log};
 
 mod extension;
 mod plugin;
@@ -11,10 +11,12 @@ pub fn register_lib_plugins(repo: &SgPluginRepository) {
     repo.register::<anti_replay::AntiReplayPlugin>();
     repo.register::<anti_xss::AntiXssPlugin>();
     repo.register::<rewrite_ns_b_ip::RewriteNsPlugin>();
+    repo.register::<audit_log::AuditLogPlugin>();
+    repo.register::<auth::AuthPlugin>();
+    // spacegate_shell::register_filter_def(anti_replay::SgFilterAntiReplayDef);
+    // spacegate_shell::register_filter_def(auth::SgFilterAuthDef);
     // spacegate_shell::register_filter_def(audit_log::SgFilterAuditLogDef);
     // spacegate_shell::register_filter_def(ip_time::SgFilterIpTimeDef);
-    // spacegate_shell::register_filter_def(anti_replay::SgFilterAntiReplayDef);
     // spacegate_shell::register_filter_def(anti_xss::SgFilterAntiXSSDef);
-    // spacegate_shell::register_filter_def(auth::SgFilterAuthDef);
     // spacegate_shell::register_filter_def(rewrite_ns_b_ip::SgFilterRewriteNsDef);
 }

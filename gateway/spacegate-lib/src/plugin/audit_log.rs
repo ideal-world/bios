@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use std::str::FromStr;
 use std::time::Instant;
 
-use async_trait::async_trait;
+
 
 use bios_sdk_invoke::clients::spi_log_client;
 use bios_sdk_invoke::invoke_config::InvokeConfig;
@@ -15,7 +15,7 @@ use jsonpath_rust::JsonPathInst;
 use serde::{Deserialize, Serialize};
 use spacegate_shell::hyper::{Request, Response};
 use spacegate_shell::kernel::extension::{EnterTime, PeerAddr, Reflect};
-use spacegate_shell::kernel::helper_layers::map_response::{MapResponse, MapResponseLayer};
+
 use spacegate_shell::plugin::{JsonValue, MakeSgLayer, Plugin, PluginError};
 use spacegate_shell::{BoxError, SgBody};
 // use spacegate_shell::plugins::context::SGRoleInfo;
@@ -28,7 +28,6 @@ use tardis::serde_json::{json, Value};
 
 use tardis::basic::error::TardisError;
 use tardis::{
-    async_trait,
     basic::result::TardisResult,
     log,
     serde_json::{self},
@@ -72,7 +71,7 @@ impl SgFilterAuditLog {
                 let result = tardis::futures::executor::block_on(async {
                     let (parts, body) = resp.into_parts();
                     let body = body.dump().await?;
-                    let resp = Response::from_parts(parts, SgBody::from(body.dump_clone().expect("")));
+                    let resp = Response::from_parts(parts, body.dump_clone().expect(""));
                     let dumped = body.get_dumped().unwrap().clone();
                     Ok((resp, dumped))
                 })
@@ -85,7 +84,7 @@ impl SgFilterAuditLog {
         let success = match body_string {
             Ok(json) => {
                 if let Some(jsonpath_inst) = &self.jsonpath_inst {
-                    if let Some(matching_value) = jsonpath_inst.find_slice(&json).get(0) {
+                    if let Some(matching_value) = jsonpath_inst.find_slice(&json).first() {
                         if matching_value.is_string() {
                             let mut is_match = false;
                             for value in self.success_json_path_values.clone() {
@@ -128,7 +127,7 @@ impl SgFilterAuditLog {
             token: param.request_headers.get(&self.header_token_name).and_then(|v| v.to_str().ok().map(|v| v.to_string())),
             server_timing: start_time.map(|st| (end_time - st).as_millis() as i64),
             resp_status: resp.status().as_u16().to_string(),
-            success: success,
+            success,
         };
         Ok((resp, content))
     }
@@ -165,7 +164,7 @@ impl SgFilterAuditLog {
             request_ip: req.extensions().get::<PeerAddr>().ok_or(PluginError::bad_gateway::<AuditLogPlugin>("[Plugin.AuditLog] missing peer addr"))?.0.ip().to_string(),
         };
         req.extensions_mut().get_mut::<Reflect>().expect("missing reflect").insert(param);
-        return Ok(req);
+        Ok(req)
     }
 
     fn resp(&self, mut resp: Response<SgBody>) -> Result<Response<SgBody>, Response<SgBody>> {
@@ -178,7 +177,7 @@ impl SgFilterAuditLog {
                 }
             }
             let funs = get_tardis_inst();
-            let end_time = tardis::chrono::Utc::now().timestamp_millis();
+            let _end_time = tardis::chrono::Utc::now().timestamp_millis();
 
             let spi_ctx = TardisContext {
                 owner: resp.extensions().get::<CertInfo>().map(|info| info.id.clone()).unwrap_or_default(),

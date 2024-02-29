@@ -1,6 +1,6 @@
 use spacegate_shell::hyper::HeaderMap;
 
-use crate::plugin::audit_log::LogParamContent;
+
 
 #[derive(Clone)]
 pub struct AuditLogParam {
