@@ -24,6 +24,7 @@ tardis = { workspace = true, features = [
     "reldb-postgres",
     "web-server",
     "k8s",
+    "build-info"
 ] }
 bios-basic = { path = "../../basic", features = ["default"] }
 bios-sdk-invoke = { path = "../../sdk/invoke", features = [

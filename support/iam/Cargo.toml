@@ -35,6 +35,7 @@ tardis = { workspace = true, features = [
     "web-client",
     "mail",
     "k8s",
+    "build-info"
 ] }
 bios-basic = { path = "../../basic", features = ["default", "with-mq"] }
 bios-sdk-invoke = { path = "../../sdk/invoke", features = ["default", "event"] }
