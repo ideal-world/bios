@@ -4,7 +4,7 @@ use tardis::web::web_server::status_api::TardisStatusApi;
 use tardis::web::web_server::TardisWebServer;
 
 pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
-    web_server.add_module("tardis", TardisStatusApi).await?;
+    web_server.add_module("tardis", TardisStatusApi).await;
     bios_mw_event::event_initializer::init(web_server).await?;
 
     bios_auth::auth_initializer::init(web_server).await?;
