@@ -27,7 +27,6 @@ use std::{
     str::FromStr,
     sync::{Arc, OnceLock},
 };
-use tardis::web::poem_openapi::types::Type;
 use tardis::{
     basic::{error::TardisError, result::TardisResult},
     config::config_dto::CacheModuleConfig,
@@ -38,6 +37,7 @@ use tardis::{
     web::web_resp::TardisResp,
     TardisFuns,
 };
+use tardis::{config::config_dto::TardisComponentConfig, web::poem_openapi::types::Type};
 
 use crate::extension::{
     before_encrypt_body::BeforeEncryptBody,
@@ -88,12 +88,19 @@ impl SgPluginAuthConfig {
 
         let mut tardis_config = tardis::TardisFuns::clone_config();
         tardis_config.cs.insert(bios_auth::auth_constants::DOMAIN_CODE.to_string(), serde_json::to_value(self.auth_config.clone())?);
-        tardis_config
-            .fw
-            .cache
-            .as_mut()
-            .map(|cache_config| cache_config.modules.insert(bios_auth::auth_constants::DOMAIN_CODE.to_string(), CacheModuleConfig::builder().url(cache_url).build()));
-
+        match tardis_config.fw.cache {
+            Some(ref mut cache_config) => {
+                cache_config.modules.insert(bios_auth::auth_constants::DOMAIN_CODE.to_string(), CacheModuleConfig::builder().url(cache_url).build());
+            },
+            None => {
+                tardis_config.fw.cache = Some(
+                    <TardisComponentConfig<CacheModuleConfig>>::builder()
+                        .default(CacheModuleConfig::builder().url(cache_url.clone()).build())
+                        .modules([(bios_auth::auth_constants::DOMAIN_CODE.to_string(), CacheModuleConfig::builder().url(cache_url).build())])
+                        .build(),
+                );
+            }
+        }
         tardis::TardisFuns::hot_reload(tardis_config).await?;
         let handle = auth_initializer::init().await?;
         *instance = Some((config_md5, handle));

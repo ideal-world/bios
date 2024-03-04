@@ -9,6 +9,7 @@ use tardis::tokio;
 struct Config {
     tokio_worker_thread: Option<usize>,
     tokio_event_interval: Option<u32>,
+    spacegate_ns: Option<String>
 }
 
 fn main() -> Result<(), BoxError> {
@@ -23,7 +24,7 @@ fn main() -> Result<(), BoxError> {
         builder.event_interval(tokio_event_interval);
     }
     let rt = builder.build().expect("fail to build runtime");
-    let namespaces = std::env::args().nth(1).map(Some).unwrap_or(None);
+    let namespaces = std::env::args().nth(1).or(config.spacegate_ns);
     register_lib_plugins(SgPluginRepository::global());
     rt.block_on(async move {
         let local_set = tokio::task::LocalSet::new();

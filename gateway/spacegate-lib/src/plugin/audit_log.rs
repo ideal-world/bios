@@ -1,9 +1,10 @@
 use std::collections::HashMap;
 
+use std::future::Future;
+use std::pin::Pin;
 use std::str::FromStr;
+use std::sync::Arc;
 use std::time::Instant;
-
-
 
 use bios_sdk_invoke::clients::spi_log_client;
 use bios_sdk_invoke::invoke_config::InvokeConfig;
@@ -16,7 +17,9 @@ use serde::{Deserialize, Serialize};
 use spacegate_shell::hyper::{Request, Response};
 use spacegate_shell::kernel::extension::{EnterTime, PeerAddr, Reflect};
 
-use spacegate_shell::plugin::{JsonValue, MakeSgLayer, Plugin, PluginError};
+use spacegate_shell::kernel::helper_layers::map_response::MapResponseLayer;
+use spacegate_shell::kernel::Layer;
+use spacegate_shell::plugin::{FilterRequestLayer, JsonValue, MakeSgLayer, Plugin, PluginError};
 use spacegate_shell::{BoxError, SgBody};
 // use spacegate_shell::plugins::context::SGRoleInfo;
 // use spacegate_shell::plugins::{
@@ -41,7 +44,7 @@ use crate::extension::cert_info::{CertInfo, RoleInfo};
 
 // def_filter!("audit_log", SgFilterAuditLogDef, SgFilterAuditLog);
 pub const CODE: &str = "audit_log";
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 #[serde(default)]
 pub struct SgFilterAuditLog {
     log_url: String,
@@ -237,6 +240,11 @@ impl Default for SgFilterAuditLog {
     }
 }
 
+impl spacegate_shell::kernel::helper_layers::filter::Filter for SgFilterAuditLog {
+    fn filter(&self, req: Request<SgBody>) -> Result<Request<SgBody>, Response<SgBody>> {
+        self.req(req)
+    }
+}
 // #[async_trait]
 // impl SgPluginFilter for SgFilterAuditLog {
 //     fn accept(&self) -> SgPluginFilterAccept {
@@ -342,7 +350,11 @@ impl Default for SgFilterAuditLog {
 
 impl MakeSgLayer for SgFilterAuditLog {
     fn make_layer(&self) -> Result<spacegate_shell::SgBoxLayer, spacegate_shell::BoxError> {
-        todo!()
+        let response_inst = Arc::new(self.clone());
+        let resp_layer = MapResponseLayer::new(move |resp| response_inst.resp(resp).unwrap_or_else(|x| x));
+        let req_layer = FilterRequestLayer::new(self.clone());
+        let layer = req_layer.layer(resp_layer);
+        Ok(spacegate_shell::SgBoxLayer::new(layer))
     }
 }
 
