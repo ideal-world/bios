@@ -56,7 +56,7 @@ lazy_static = { version = "1" }
 itertools = { version = "0" }
 fancy-regex = { version = "0" }
 run_script = { version = "0.10" }
-testcontainers-modules = { version = "0" }
+testcontainers-modules = { version = "0.3", features = ["redis"] }
 strum = { version = "0.25", features = ["derive"] }
 # tardis
 # tardis = { version = "0.1.0-rc.9" }

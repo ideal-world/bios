@@ -26,6 +26,8 @@ pub enum InvokeModuleKind {
     Schedule,
     #[oai(rename = "iam")]
     Iam,
+    #[oai(rename = "event")]
+    Event,
 }
 
 #[cfg(not(feature = "reldb-core"))]
