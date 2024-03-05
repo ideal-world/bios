@@ -30,6 +30,22 @@ pub enum InvokeModuleKind {
     Event,
 }
 
+#[cfg(not(feature = "reldb-core"))]
+#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum)]
+pub enum InvokeModuleKind {
+    Search,
+    Plugin,
+    Kv,
+    Log,
+    Object,
+    Cache,
+    Graph,
+    Stats,
+    Schedule,
+    Iam,
+    Event,
+}
+
 impl std::fmt::Display for InvokeModuleKind {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
