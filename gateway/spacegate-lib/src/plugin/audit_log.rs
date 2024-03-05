@@ -1,7 +1,5 @@
 use std::collections::HashMap;
 
-use std::future::Future;
-use std::pin::Pin;
 use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Instant;
@@ -17,9 +15,9 @@ use serde::{Deserialize, Serialize};
 use spacegate_shell::hyper::{Request, Response};
 use spacegate_shell::kernel::extension::{EnterTime, PeerAddr, Reflect};
 
+use spacegate_shell::kernel::helper_layers::bidirection_filter::{Bdf, BdfLayer};
 use spacegate_shell::kernel::helper_layers::map_response::MapResponseLayer;
-use spacegate_shell::kernel::Layer;
-use spacegate_shell::plugin::{FilterRequestLayer, JsonValue, MakeSgLayer, Plugin, PluginError};
+use spacegate_shell::plugin::{JsonValue, MakeSgLayer, Plugin, PluginError};
 use spacegate_shell::{BoxError, SgBody};
 // use spacegate_shell::plugins::context::SGRoleInfo;
 // use spacegate_shell::plugins::{
@@ -240,11 +238,6 @@ impl Default for SgFilterAuditLog {
     }
 }
 
-impl spacegate_shell::kernel::helper_layers::filter::Filter for SgFilterAuditLog {
-    fn filter(&self, req: Request<SgBody>) -> Result<Request<SgBody>, Response<SgBody>> {
-        self.req(req)
-    }
-}
 // #[async_trait]
 // impl SgPluginFilter for SgFilterAuditLog {
 //     fn accept(&self) -> SgPluginFilterAccept {
@@ -348,12 +341,23 @@ impl spacegate_shell::kernel::helper_layers::filter::Filter for SgFilterAuditLog
 //     }
 // }
 
+impl Bdf for SgFilterAuditLog {
+    type FutureReq = std::future::Ready<Result<Request<SgBody>, Response<SgBody>>>;
+
+    type FutureResp = std::future::Ready<Response<SgBody>>;
+
+    fn on_req(self: Arc<Self>, req: Request<SgBody>) -> Self::FutureReq {
+        std::future::ready(self.req(req))
+    }
+
+    fn on_resp(self: Arc<Self>, resp: Response<SgBody>) -> Self::FutureResp {
+        std::future::ready(self.resp(resp).unwrap_or_else(|x| x))
+    }
+}
+
 impl MakeSgLayer for SgFilterAuditLog {
     fn make_layer(&self) -> Result<spacegate_shell::SgBoxLayer, spacegate_shell::BoxError> {
-        let response_inst = Arc::new(self.clone());
-        let resp_layer = MapResponseLayer::new(move |resp| response_inst.resp(resp).unwrap_or_else(|x| x));
-        let req_layer = FilterRequestLayer::new(self.clone());
-        let layer = req_layer.layer(resp_layer);
+        let layer = BdfLayer::new(self.clone());
         Ok(spacegate_shell::SgBoxLayer::new(layer))
     }
 }
