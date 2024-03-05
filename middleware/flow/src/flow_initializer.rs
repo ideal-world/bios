@@ -21,7 +21,7 @@ use crate::{
         ci::flow_ci_inst_api,
         cs::flow_cs_config_api,
     },
-    domain::{flow_config, flow_inst, flow_model, flow_state, flow_transition},
+    domain::{flow_inst, flow_model, flow_state, flow_transition},
     dto::{
         flow_model_dto::FlowModelFilterReq,
         flow_state_dto::FlowSysStateKind,
@@ -76,7 +76,6 @@ pub async fn init_db(mut funs: TardisFunsInst) -> TardisResult<()> {
         funs.db().init(flow_model::ActiveModel::init(db_kind, None, compatible_type)).await?;
         funs.db().init(flow_transition::ActiveModel::init(db_kind, None, compatible_type)).await?;
         funs.db().init(flow_inst::ActiveModel::init(db_kind, None, compatible_type)).await?;
-        funs.db().init(flow_config::ActiveModel::init(db_kind, None, compatible_type)).await?;
         init_rbum_data(&funs, &ctx).await?;
     };
     funs.commit().await?;
@@ -172,7 +171,6 @@ pub async fn truncate_data<'a>(funs: &TardisFunsInst) -> TardisResult<()> {
     funs.db().execute(Table::truncate().table(flow_model::Entity)).await?;
     funs.db().execute(Table::truncate().table(flow_transition::Entity)).await?;
     funs.db().execute(Table::truncate().table(flow_inst::Entity)).await?;
-    funs.db().execute(Table::truncate().table(flow_config::Entity)).await?;
     funs.cache().flushdb().await?;
     Ok(())
 }

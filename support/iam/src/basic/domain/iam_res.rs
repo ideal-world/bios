@@ -18,13 +18,13 @@ pub struct Model {
     pub hide: bool,
     // 资源动作 例如：*、list、create、update、delete
     pub action: String,
-    // 请求是否加密
+    // Whether request is encrypted or not / 请求是否加密
     pub crypto_req: bool,
-    // 相应是否加密
+    // Whether response is encrypted or not / 响应是否加密
     pub crypto_resp: bool,
-    // 是否需要二次认证
+    // Is secondary certification required / 是否需要二次认证
     pub double_auth: bool,
-    // 二次认证消息
+    /// Secondary Authentication Message / 二次认证消息
     pub double_auth_msg: String,
     // 是否需要验证登陆
     pub need_login: bool,
