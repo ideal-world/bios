@@ -18,4 +18,7 @@ impl HeadCryptoKey {
     pub fn is_some(&self) -> bool {
         matches!(self, HeadCryptoKey::Some(_))
     }
+    pub fn is_none(&self)->bool{
+        !self.is_some()
+    }
 }
