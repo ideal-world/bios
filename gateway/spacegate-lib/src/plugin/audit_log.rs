@@ -15,15 +15,9 @@ use serde::{Deserialize, Serialize};
 use spacegate_shell::hyper::{Request, Response};
 use spacegate_shell::kernel::extension::{EnterTime, PeerAddr, Reflect};
 
-use spacegate_shell::kernel::helper_layers::bidirection_filter::{Bdf, BdfLayer};
-use spacegate_shell::kernel::helper_layers::map_response::MapResponseLayer;
+use spacegate_shell::kernel::helper_layers::bidirection_filter::{Bdf, BdfLayer, BoxRespFut};
 use spacegate_shell::plugin::{JsonValue, MakeSgLayer, Plugin, PluginError};
 use spacegate_shell::{BoxError, SgBody};
-// use spacegate_shell::plugins::context::SGRoleInfo;
-// use spacegate_shell::plugins::{
-//     context::SgRoutePluginContext,
-//     filters::{SgPluginFilter, SgPluginFilterAccept, SgPluginFilterInitDto},
-// };
 use tardis::basic::dto::TardisContext;
 use tardis::log::warn;
 use tardis::serde_json::{json, Value};
@@ -41,7 +35,6 @@ use crate::extension::audit_log_param::AuditLogParam;
 use crate::extension::before_encrypt_body::BeforeEncryptBody;
 use crate::extension::cert_info::{CertInfo, RoleInfo};
 
-// def_filter!("audit_log", SgFilterAuditLogDef, SgFilterAuditLog);
 pub const CODE: &str = "audit_log";
 #[derive(Serialize, Deserialize, Clone)]
 #[serde(default)]
@@ -60,7 +53,7 @@ pub struct SgFilterAuditLog {
 }
 
 impl SgFilterAuditLog {
-    fn get_log_content(&self, mut resp: Response<SgBody>, param: AuditLogParam) -> TardisResult<(Response<SgBody>, LogParamContent)> {
+    async fn get_log_content(&self, mut resp: Response<SgBody>, param: AuditLogParam) -> TardisResult<(Response<SgBody>, LogParamContent)> {
         let start_time = resp.extensions().get::<EnterTime>().map(|time| time.0);
         let end_time = Instant::now();
 
@@ -70,16 +63,10 @@ impl SgFilterAuditLog {
             let body = if let Some(dumped) = resp.body().get_dumped() {
                 dumped.clone()
             } else {
-                let result = tardis::futures::executor::block_on(async {
-                    let (parts, body) = resp.into_parts();
-                    let body = body.dump().await?;
-                    let resp = Response::from_parts(parts, body.dump_clone().expect(""));
-                    let dumped = body.get_dumped().unwrap().clone();
-                    Ok((resp, dumped))
-                })
-                .map_err(|e: BoxError| TardisError::wrap(&format!("[SG.Filter.AuditLog] dump body error: {e}"), ""))?;
-                resp = result.0;
-                result.1
+                let (parts, body) = resp.into_parts();
+                let body = body.dump().await.map_err(|e: BoxError| TardisError::wrap(&format!("[SG.Filter.AuditLog] dump body error: {e}"), ""))?;
+                resp = Response::from_parts(parts, body.dump_clone().expect(""));
+                body.get_dumped().unwrap().clone()
             };
             serde_json::from_slice::<Value>(&body)
         };
@@ -169,8 +156,7 @@ impl SgFilterAuditLog {
         Ok(req)
     }
 
-    fn resp(&self, mut resp: Response<SgBody>) -> Result<Response<SgBody>, Response<SgBody>> {
-        use spacegate_shell::SgResponseExt;
+    async fn resp(&self, mut resp: Response<SgBody>) -> Result<Response<SgBody>, Response<SgBody>> {
         let Some(audit_param) = resp.extensions_mut().remove::<AuditLogParam>() else {
             warn!("[Plugin.AuditLog] missing audit log param");
             return Ok(resp);
@@ -191,7 +177,7 @@ impl SgFilterAuditLog {
                 ..Default::default()
             };
 
-            let (resp, content) = self.get_log_content(resp, audit_param).map_err(PluginError::bad_gateway::<AuditLogPlugin>)?;
+            let (resp, content) = self.get_log_content(resp, audit_param).await.map_err(PluginError::bad_gateway::<AuditLogPlugin>)?;
 
             let tag = self.tag.clone();
             tokio::task::spawn(async move {
@@ -243,120 +229,22 @@ impl Default for SgFilterAuditLog {
     }
 }
 
-// #[async_trait]
-// impl SgPluginFilter for SgFilterAuditLog {
-//     fn accept(&self) -> SgPluginFilterAccept {
-//         SgPluginFilterAccept {
-//             accept_error_response: true,
-//             ..Default::default()
-//         }
-//     }
-
-//     async fn init(&mut self, _: &SgPluginFilterInitDto) -> TardisResult<()> {
-//         if !self.log_url.is_empty() && !self.spi_app_id.is_empty() {
-//             if let Ok(jsonpath_inst) = JsonPathInst::from_str(&self.success_json_path).map_err(|e| log::error!("[Plugin.AuditLog] invalid json path:{e}")) {
-//                 self.jsonpath_inst = Some(jsonpath_inst);
-//             } else {
-//                 self.enabled = false;
-//                 return Ok(());
-//             };
-//             self.enabled = true;
-//             invoke_initializer::init(
-//                 CODE,
-//                 InvokeConfig {
-//                     spi_app_id: self.spi_app_id.clone(),
-//                     module_urls: HashMap::from([(InvokeModuleKind::Log.to_string(), self.log_url.clone())]),
-//                 },
-//             )?;
-//             Ok(())
-//         } else {
-//             self.enabled = false;
-//             Err(TardisError::bad_request("[Plugin.AuditLog] plugin is not active, miss log_url or spi_app_id.", ""))
-//         }
-//     }
-
-//     async fn destroy(&self) -> TardisResult<()> {
-//         Ok(())
-//     }
-
-//     async fn req_filter(&self, _: &str, mut ctx: SgRoutePluginContext) -> TardisResult<(bool, SgRoutePluginContext)> {
-//         ctx.set_ext(&get_start_time_ext_code(), &tardis::chrono::Utc::now().timestamp_millis().to_string());
-//         return Ok((true, ctx));
-//     }
-
-//     async fn resp_filter(&self, _: &str, mut ctx: SgRoutePluginContext) -> TardisResult<(bool, SgRoutePluginContext)> {
-//         if self.enabled {
-//             let path = ctx.request.get_uri_raw().path().to_string();
-//             for exclude_path in self.exclude_log_path.clone() {
-//                 if exclude_path == path {
-//                     return Ok((true, ctx));
-//                 }
-//             }
-//             let funs = get_tardis_inst();
-//             let end_time = tardis::chrono::Utc::now().timestamp_millis();
-//             let spi_ctx = TardisContext {
-//                 owner: ctx.get_cert_info().map(|info| info.id.clone()).unwrap_or_default(),
-//                 roles: ctx.get_cert_info().map(|info| info.roles.clone().into_iter().map(|r| r.id).collect()).unwrap_or_default(),
-//                 ..Default::default()
-//             };
-//             let op = ctx.request.get_method().to_string();
-
-//             let content = self.get_log_content(end_time, &mut ctx).await?;
-
-//             let log_ext = json!({
-//                 "name":content.name,
-//                 "id":content.user_id,
-//                 "ip":content.ip,
-//                 "op":op.clone(),
-//                 "path":content.path,
-//                 "resp_status": content.resp_status,
-//                 "success":content.success,
-//             });
-//             let tag = self.tag.clone();
-//             tokio::task::spawn(async move {
-//                 match spi_log_client::SpiLogClient::add(
-//                     &tag,
-//                     &TardisFuns::json.obj_to_string(&content).unwrap_or_default(),
-//                     Some(log_ext),
-//                     None,
-//                     None,
-//                     Some(op),
-//                     None,
-//                     Some(tardis::chrono::Utc::now().to_rfc3339()),
-//                     content.user_id,
-//                     None,
-//                     &funs,
-//                     &spi_ctx,
-//                 )
-//                 .await
-//                 {
-//                     Ok(_) => {
-//                         log::trace!("[Plugin.AuditLog] add log success")
-//                     }
-//                     Err(e) => {
-//                         log::warn!("[Plugin.AuditLog] failed to add log:{e}")
-//                     }
-//                 };
-//             });
-
-//             Ok((true, ctx))
-//         } else {
-//             Ok((true, ctx))
-//         }
-//     }
-// }
-
 impl Bdf for SgFilterAuditLog {
     type FutureReq = std::future::Ready<Result<Request<SgBody>, Response<SgBody>>>;
 
-    type FutureResp = std::future::Ready<Response<SgBody>>;
+    type FutureResp = BoxRespFut;
 
     fn on_req(self: Arc<Self>, req: Request<SgBody>) -> Self::FutureReq {
         std::future::ready(self.req(req))
     }
 
     fn on_resp(self: Arc<Self>, resp: Response<SgBody>) -> Self::FutureResp {
-        std::future::ready(self.resp(resp).unwrap_or_else(|x| x))
+        Box::pin(async move {
+            match self.resp(resp).await {
+                Ok(resp) => resp,
+                Err(e) => e,
+            }
+        })
     }
 }
 
@@ -382,10 +270,6 @@ impl Plugin for AuditLogPlugin {
 
 fn get_tardis_inst() -> TardisFunsInst {
     TardisFuns::inst(CODE.to_string(), None)
-}
-
-fn get_start_time_ext_code() -> String {
-    format!("{CODE}:start_time")
 }
 
 #[derive(Serialize, Deserialize)]
