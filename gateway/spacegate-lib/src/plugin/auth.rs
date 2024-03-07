@@ -91,7 +91,7 @@ impl SgPluginAuthConfig {
         match tardis_config.fw.cache {
             Some(ref mut cache_config) => {
                 cache_config.modules.insert(bios_auth::auth_constants::DOMAIN_CODE.to_string(), CacheModuleConfig::builder().url(cache_url).build());
-            },
+            }
             None => {
                 tardis_config.fw.cache = Some(
                     <TardisComponentConfig<CacheModuleConfig>>::builder()
@@ -102,7 +102,7 @@ impl SgPluginAuthConfig {
             }
         }
         tardis::TardisFuns::hot_reload(tardis_config).await?;
-        let handle = auth_initializer::init().await?;
+        let handle = auth_initializer::init_without_webserver().await?;
         *instance = Some((config_md5, handle));
         log::info!("[SG.Filter.Auth] init done");
         Ok(())
@@ -314,7 +314,6 @@ impl SgPluginAuth {
     }
 }
 
-
 impl Bdf for SgPluginAuth {
     type FutureReq = BoxReqFut;
 
@@ -339,7 +338,6 @@ impl MakeSgLayer for SgPluginAuth {
         Ok(SgBoxLayer::new(BdfLayer::new(self.clone())))
     }
 }
-
 
 // #[async_trait]
 // impl SgPluginFilter for SgFilterAuth {
@@ -522,7 +520,7 @@ async fn handle_mix_req(auth_config: &AuthConfig, mix_replace_url: &str, req: Re
     if !body.is_dumped() {
         body = body.dump().await?;
     }
-    let string_body = String::from_utf8_lossy(body.get_dumped().unwrap()).trim_matches('"').to_string();
+    let string_body = String::from_utf8_lossy(body.get_dumped().expect("not expect code")).trim_matches('"').to_string();
     if string_body.is_empty() {
         TardisError::custom("502", "[SG.Filter.Auth.MixReq] body can't be empty", "502-parse_mix_req-parse-error");
     }
