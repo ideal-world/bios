@@ -25,6 +25,7 @@ use spacegate_shell::{BoxError, SgBody};
 //     filters::{SgPluginFilter, SgPluginFilterAccept, SgPluginFilterInitDto},
 // };
 use tardis::basic::dto::TardisContext;
+use tardis::log::warn;
 use tardis::serde_json::{json, Value};
 
 use tardis::basic::error::TardisError;
@@ -169,7 +170,11 @@ impl SgFilterAuditLog {
     }
 
     fn resp(&self, mut resp: Response<SgBody>) -> Result<Response<SgBody>, Response<SgBody>> {
-        let audit_param = resp.extensions_mut().remove::<AuditLogParam>().expect("missing audit log param");
+        use spacegate_shell::SgResponseExt;
+        let Some(audit_param) = resp.extensions_mut().remove::<AuditLogParam>() else {
+            warn!("[Plugin.AuditLog] missing audit log param");
+            return Ok(resp);
+        };
         if self.enabled {
             let path = audit_param.request_path.clone();
             for exclude_path in self.exclude_log_path.clone() {
@@ -186,7 +191,7 @@ impl SgFilterAuditLog {
                 ..Default::default()
             };
 
-            let (resp, content) = self.get_log_content(resp, audit_param).unwrap();
+            let (resp, content) = self.get_log_content(resp, audit_param).map_err(PluginError::bad_gateway::<AuditLogPlugin>)?;
 
             let tag = self.tag.clone();
             tokio::task::spawn(async move {
