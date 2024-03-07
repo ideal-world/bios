@@ -1124,23 +1124,23 @@ pub async fn query_metrics(query_req: &SearchQueryMetricsReq, funs: &TardisFunsI
                         if ext_item.op == BasicQueryOpKind::In {
                             if !value.is_empty() {
                                 sql_and_where.push(format!(
-                                    "fact.{} LIKE ANY (ARRAY[{}])",
+                                    "fact.{} IN ({})",
                                     ext_item.field,
                                     (0..value.len()).map(|idx| format!("${}", params.len() + idx + 1)).collect::<Vec<String>>().join(",")
                                 ));
                                 for val in value {
-                                    params.push(Value::from(format!("{val}%")));
+                                    params.push(val);
                                 }
                             }
                         } else if ext_item.op == BasicQueryOpKind::NotIn {
                             if !value.is_empty() {
                                 sql_and_where.push(format!(
-                                    "fact.{} NOT LIKE ANY (ARRAY[{}])",
+                                    "fact.{} NOT IN ({})",
                                     ext_item.field,
                                     (0..value.len()).map(|idx| format!("${}", params.len() + idx + 1)).collect::<Vec<String>>().join(",")
                                 ));
                                 for val in value {
-                                    params.push(Value::from(format!("{val}%")));
+                                    params.push(val);
                                 }
                             }
                         } else if ext_item.op == BasicQueryOpKind::IsNull {
