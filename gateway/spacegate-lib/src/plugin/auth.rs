@@ -263,10 +263,6 @@ impl SgPluginAuth {
                         .body(SgBody::full(json!({"code":format!("{}-gateway-cert-error",e.code),"message":e.message}).to_string()))
                         .map_err(PluginError::bad_gateway::<AuthPlugin>)?;
                     return Err(err_resp);
-                    // ctx.set_action(SgRouteFilterRequestAction::Response);
-                    // ctx.response.set_status_code(StatusCode::from_str(&e.code).unwrap_or(StatusCode::BAD_GATEWAY));
-                    // ctx.response.set_body(json!({"code":format!("{}-gateway-cert-error",e.code),"message":e.message}).to_string());
-                    // return Ok((false, ctx));
                 };
                 Ok(req)
             }
@@ -290,7 +286,7 @@ impl SgPluginAuth {
         // Return encryption will be skipped in three cases: there is no encryption header,
         // the http code request is unsuccessful, and it is the return of the mix request
         // (the inner request return has been encrypted once)
-        if req_crypto.head_crypto_key.is_some() || !resp.status().is_success() || req_crypto.is_mix {
+        if req_crypto.head_crypto_key.is_none() || !resp.status().is_success() || req_crypto.is_mix {
             return Ok(resp);
         }
 
@@ -318,13 +314,6 @@ impl SgPluginAuth {
     }
 }
 
-// impl AsyncFilter for SgPluginAuth {
-//     type Future = Pin<Box<dyn Future<Output = Result<Request<SgBody>, Response<SgBody>>> + Send + 'static>>;
-
-//     fn filter(&self, req: Request<SgBody>) -> Self::Future {
-//         Box::pin(async move { self.req(req).await })
-//     }
-// }
 
 impl Bdf for SgPluginAuth {
     type FutureReq = BoxReqFut;
@@ -351,20 +340,7 @@ impl MakeSgLayer for SgPluginAuth {
     }
 }
 
-// trait AuthProcess {
-//     fn on_req(&self, req: &mut Request<SgBody>) -> TardisResult<()>;
-//     fn on_resp(&self, resp: Response<SgBody>) -> TardisResult<Response<SgBody>>;
-// }
 
-// struct AuthServerConfig {}
-
-// struct Auth {}
-
-// struct Crypto {}
-
-// struct MixAuth {
-//     is_mix_req: bool,
-// }
 // #[async_trait]
 // impl SgPluginFilter for SgFilterAuth {
 //     fn accept(&self) -> SgPluginFilterAccept {
