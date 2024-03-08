@@ -6,7 +6,7 @@
 [csm.flow.invoke]
 spi_app_id = "app001"
 [csm.flow.invoke.module_urls]
-Kv = "https://localhost:8080/spi-kv"
+kv = "https://localhost:8080/spi-kv"
 
 [fw.web_server]
 port = 8080

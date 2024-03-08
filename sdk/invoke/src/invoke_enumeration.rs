@@ -1,10 +1,12 @@
+use std::fmt::Display;
+
 use serde::{Deserialize, Serialize};
 #[cfg(feature = "reldb-core")]
 use tardis::db::sea_orm;
-use tardis::{derive_more::Display, web::poem_openapi};
+use tardis::{web::poem_openapi};
 
-#[cfg(feature = "reldb-core")]
-#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, strum::EnumString)]
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum)]
+#[cfg_attr(feature = "reldb-core", derive(strum::EnumString))]
 pub enum InvokeModuleKind {
     #[oai(rename = "search")]
     Search,
@@ -30,18 +32,20 @@ pub enum InvokeModuleKind {
     Event,
 }
 
-#[cfg(not(feature = "reldb-core"))]
-#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum)]
-pub enum InvokeModuleKind {
-    Search,
-    Plugin,
-    Kv,
-    Log,
-    Object,
-    Cache,
-    Graph,
-    Stats,
-    Schedule,
-    Iam,
-    Event,
+impl Display for InvokeModuleKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            InvokeModuleKind::Search => write!(f, "search"),
+            InvokeModuleKind::Plugin => write!(f, "Plugin"),
+            InvokeModuleKind::Kv => write!(f, "kv"),
+            InvokeModuleKind::Log => write!(f, "log"),
+            InvokeModuleKind::Object => write!(f, "object"),
+            InvokeModuleKind::Cache => write!(f, "cache"),
+            InvokeModuleKind::Graph => write!(f, "graph"),
+            InvokeModuleKind::Stats => write!(f, "stats"),
+            InvokeModuleKind::Schedule => write!(f, "schedule"),
+            InvokeModuleKind::Iam => write!(f, "iam"),
+            InvokeModuleKind::Event => write!(f, "event"),
+        }
+    }
 }
