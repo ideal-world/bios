@@ -95,7 +95,7 @@ impl IamCiRoleApi {
             Box::pin(async move {
                 let task_handle = tokio::spawn(async move {
                     let mut funs = iam_constants::get_tardis_inst();
-                    funs.begin();
+                    funs.begin().await;
                     let apps_split: Vec<&str> = app_ids.0.split(',').collect::<Vec<_>>();
                     let account_split: Vec<&str> = account_ids.0.split(',').collect::<Vec<_>>();
                     for app_id in apps_split {
@@ -105,7 +105,7 @@ impl IamCiRoleApi {
                             let _ = IamRoleServ::add_rel_account(&id.0, account_id, Some(RBUM_SCOPE_LEVEL_APP), &funs, &mock_app_ctx).await;
                         }
                     }
-                    funs.commit();
+                    funs.commit().await;
                 });
                 task_handle.await.unwrap();
                 Ok(())
