@@ -6,7 +6,6 @@ use tardis::db::sea_orm;
 use tardis::web::poem_openapi;
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum)]
-#[serde(rename_all = "lowercase")]
 #[cfg_attr(feature = "reldb-core", derive(strum::EnumString))]
 pub enum InvokeModuleKind {
     #[oai(rename = "search")]
@@ -33,7 +32,7 @@ pub enum InvokeModuleKind {
     Event,
 }
 
-impl std::fmt::Display for InvokeModuleKind {
+impl Display for InvokeModuleKind {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
             InvokeModuleKind::Search => write!(f, "search"),
