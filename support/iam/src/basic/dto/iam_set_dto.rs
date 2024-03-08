@@ -47,7 +47,7 @@ pub struct IamSetItemWithDefaultSetAddReq {
     pub set_cate_id: Option<String>,
     pub sort: i64,
 
-    #[oai(validator(min_length = "2", max_length = "2000"))]
+    #[oai(validator(min_length = "2"))]
     pub rel_rbum_item_id: String,
 }
 
