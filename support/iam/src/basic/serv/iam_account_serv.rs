@@ -700,7 +700,8 @@ impl IamAccountServ {
     pub async fn find_account_online_by_ids(ids: Vec<String>, funs: &TardisFunsInst, _ctx: &TardisContext) -> TardisResult<Vec<String>> {
         let mut online_accounts = vec![];
         for id in ids {
-            online_accounts.push(format!("{},{}", id, IamIdentCacheServ::exist_token_by_account_id(&id, funs).await?));
+            let exist = IamIdentCacheServ::exist_token_by_account_id(&id, funs).await?;
+            online_accounts.push(format!("{},{}", id, exist));
         }
         Ok(online_accounts)
     }
