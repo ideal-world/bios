@@ -3,9 +3,10 @@ use std::fmt::Display;
 use serde::{Deserialize, Serialize};
 #[cfg(feature = "reldb-core")]
 use tardis::db::sea_orm;
-use tardis::{web::poem_openapi};
+use tardis::web::poem_openapi;
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum)]
+#[serde(rename_all = "lowercase")]
 #[cfg_attr(feature = "reldb-core", derive(strum::EnumString))]
 pub enum InvokeModuleKind {
     #[oai(rename = "search")]
@@ -32,7 +33,11 @@ pub enum InvokeModuleKind {
     Event,
 }
 
+<<<<<<< HEAD
 impl Display for InvokeModuleKind {
+=======
+impl std::fmt::Display for InvokeModuleKind {
+>>>>>>> 49f8e058103a0bafc185e2c6639356573401a473
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
             InvokeModuleKind::Search => write!(f, "search"),
