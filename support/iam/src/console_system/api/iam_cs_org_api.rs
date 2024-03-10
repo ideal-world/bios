@@ -11,6 +11,9 @@ use bios_basic::rbum::dto::rbum_set_item_dto::RbumSetItemDetailResp;
 use bios_basic::rbum::rbum_enumeration::{RbumRelFromKind, RbumScopeLevelKind, RbumSetCateLevelQueryKind};
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use bios_basic::rbum::serv::rbum_rel_serv::RbumRelServ;
+use tardis::basic::error::TardisError;
+use tardis::futures::future::join_all;
+use itertools::Itertools;
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem::Request;
 use tardis::web::poem_openapi;
@@ -178,23 +181,42 @@ impl IamCsOrgItemApi {
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
         add_remote_ip(request, &ctx).await?;
         let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, &funs, &ctx).await?;
-        let split = add_req.rel_rbum_item_id.split(',').collect::<Vec<_>>();
-        let mut result = vec![];
-        for s in split {
-            result.push(
-                IamSetServ::add_set_item(
-                    &IamSetItemAddReq {
-                        set_id: set_id.clone(),
-                        set_cate_id: add_req.set_cate_id.clone().unwrap_or_default(),
-                        sort: add_req.sort,
-                        rel_rbum_item_id: s.to_string(),
-                    },
-                    &funs,
-                    &ctx,
-                )
-                .await?,
-            );
-        }
+        let result = join_all(
+            add_req.rel_rbum_item_id
+                .split(',')
+                .map(|item_id| async {
+                    IamSetServ::add_set_item(
+                        &IamSetItemAddReq {
+                            set_id: set_id.clone(),
+                            set_cate_id: add_req.set_cate_id.clone().unwrap_or_default(),
+                            sort: add_req.sort,
+                            rel_rbum_item_id: item_id.to_string(),
+                        },
+                        &funs,
+                        &ctx,
+                    )
+                    .await
+                })
+                .collect_vec(),
+        )
+        .await.into_iter().collect::<Result<Vec<String>, TardisError>>()?;
+        // let split = add_req.rel_rbum_item_id.split(',').collect::<Vec<_>>();
+        // let mut result = vec![];
+        // for s in split {
+        //     result.push(
+        //         IamSetServ::add_set_item(
+        //             &IamSetItemAddReq {
+        //                 set_id: set_id.clone(),
+        //                 set_cate_id: add_req.set_cate_id.clone().unwrap_or_default(),
+        //                 sort: add_req.sort,
+        //                 rel_rbum_item_id: s.to_string(),
+        //             },
+        //             &funs,
+        //             &ctx,
+        //         )
+        //         .await?,
+        //     );
+        // }
         funs.commit().await?;
         ctx.execute_task().await?;
         TardisResp::ok(result)

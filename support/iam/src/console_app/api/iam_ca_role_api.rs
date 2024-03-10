@@ -1,3 +1,6 @@
+use itertools::Itertools;
+use tardis::basic::error::TardisError;
+use tardis::futures::future::join_all;
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem::Request;
 use tardis::web::poem_openapi;
@@ -150,7 +153,7 @@ impl IamCaRoleApi {
                 "409-role-is-not-app",
             ))?;
         }
-        if app_role.extend_role_id != "".to_string() {
+        if app_role.extend_role_id != *"" {
             Err(funs.err().conflict(&IamRoleServ::get_obj_name(), "delete", "This role is extend role, cannot be deleted", "409-role-is-extend"))?;
         }
         IamRoleServ::delete_item_with_all_rels(&id.0, &funs, &ctx.0).await?;
@@ -184,11 +187,25 @@ impl IamCaRoleApi {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         let app_id = IamAppServ::get_id_by_ctx(&ctx.0, &funs)?;
-        let split = account_ids.0.split(',').collect::<Vec<_>>();
-        for s in split {
-            IamAppServ::add_rel_account(&app_id, s, true, &funs, &ctx.0).await?;
-            IamRoleServ::add_rel_account(&id.0, s, Some(RBUM_SCOPE_LEVEL_APP), &funs, &ctx.0).await?;
-        }
+        // let split = account_ids.0.split(',').collect::<Vec<_>>();
+        join_all(
+            account_ids
+                .0
+                .split(',')
+                .map(|account_id| async {
+                    let result = IamAppServ::add_rel_account(&app_id, account_id, true, &funs, &ctx.0).await;
+                    if result.is_err() {
+                        return result;
+                    }
+                    IamRoleServ::add_rel_account(&id.0, account_id, Some(RBUM_SCOPE_LEVEL_APP), &funs, &ctx.0).await
+                })
+                .collect_vec(),
+        )
+        .await.into_iter().collect::<Result<Vec<()>, TardisError>>()?;
+        // for s in split {
+        //     IamAppServ::add_rel_account(&app_id, s, true, &funs, &ctx.0).await?;
+        //     IamRoleServ::add_rel_account(&id.0, s, Some(RBUM_SCOPE_LEVEL_APP), &funs, &ctx.0).await?;
+        // }
         funs.commit().await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
