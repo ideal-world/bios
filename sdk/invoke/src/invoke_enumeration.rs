@@ -1,5 +1,3 @@
-use std::fmt::Display;
-
 use serde::{Deserialize, Serialize};
 #[cfg(feature = "reldb-core")]
 use tardis::db::sea_orm;
@@ -32,7 +30,7 @@ pub enum InvokeModuleKind {
     Event,
 }
 
-impl Display for InvokeModuleKind {
+impl std::fmt::Display for InvokeModuleKind {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
             InvokeModuleKind::Search => write!(f, "search"),
