@@ -1,6 +1,6 @@
 use bios_basic::rbum::dto::rbum_set_dto::RbumSetTreeResp;
-use itertools::Itertools;
 use tardis::basic::error::TardisError;
+use itertools::Itertools;
 
 use tardis::futures::future::join_all;
 use tardis::web::context_extractor::TardisContextExtractor;
@@ -136,8 +136,7 @@ impl IamCtAppSetApi {
         add_remote_ip(request, &ctx).await?;
         let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Apps, &funs, &ctx).await?;
         let result = join_all(
-            add_req
-                .rel_rbum_item_id
+            add_req.rel_rbum_item_id
                 .split(',')
                 .map(|item_id| async {
                     IamSetServ::add_set_item(
@@ -154,9 +153,7 @@ impl IamCtAppSetApi {
                 })
                 .collect_vec(),
         )
-        .await
-        .into_iter()
-        .collect::<Result<Vec<String>, TardisError>>()?;
+        .await.into_iter().collect::<Result<Vec<String>, TardisError>>()?;
         funs.commit().await?;
         ctx.execute_task().await?;
         TardisResp::ok(result)
