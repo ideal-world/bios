@@ -685,6 +685,7 @@ pub async fn sys_console_res_mgr_page(client: &mut BIOSWebTestClient) -> TardisR
             &format!("/cs/res/{}", res_api_id),
             &IamResModifyReq {
                 name: None,
+                method: None,
                 code: None,
                 icon: Some("/static/img/icon/api.png".to_string()),
                 sort: None,
