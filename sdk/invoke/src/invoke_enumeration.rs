@@ -4,6 +4,7 @@ use tardis::db::sea_orm;
 use tardis::web::poem_openapi;
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum)]
+#[serde(rename_all = "lowercase")]
 #[cfg_attr(feature = "reldb-core", derive(strum::EnumString))]
 pub enum InvokeModuleKind {
     #[oai(rename = "search")]
@@ -27,22 +28,6 @@ pub enum InvokeModuleKind {
     #[oai(rename = "iam")]
     Iam,
     #[oai(rename = "event")]
-    Event,
-}
-
-#[cfg(not(feature = "reldb-core"))]
-#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum)]
-pub enum InvokeModuleKind {
-    Search,
-    Plugin,
-    Kv,
-    Log,
-    Object,
-    Cache,
-    Graph,
-    Stats,
-    Schedule,
-    Iam,
     Event,
 }
 
