@@ -33,11 +33,7 @@ pub enum InvokeModuleKind {
     Event,
 }
 
-<<<<<<< HEAD
-impl Display for InvokeModuleKind {
-=======
 impl std::fmt::Display for InvokeModuleKind {
->>>>>>> 49f8e058103a0bafc185e2c6639356573401a473
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
             InvokeModuleKind::Search => write!(f, "search"),
