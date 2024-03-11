@@ -1,4 +1,8 @@
 use bios_basic::rbum::dto::rbum_set_dto::RbumSetTreeResp;
+use tardis::basic::error::TardisError;
+use itertools::Itertools;
+
+use tardis::futures::future::join_all;
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem_openapi;
 use tardis::web::poem_openapi::{param::Path, param::Query, payload::Json};
@@ -131,23 +135,25 @@ impl IamCtAppSetApi {
         let ctx = IamCertServ::use_sys_or_tenant_ctx_unsafe(ctx.0)?;
         add_remote_ip(request, &ctx).await?;
         let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Apps, &funs, &ctx).await?;
-        let split = add_req.rel_rbum_item_id.split(',').collect::<Vec<_>>();
-        let mut result = vec![];
-        for s in split {
-            result.push(
-                IamSetServ::add_set_item(
-                    &IamSetItemAddReq {
-                        set_id: set_id.clone(),
-                        set_cate_id: add_req.set_cate_id.clone().unwrap_or_default(),
-                        sort: add_req.sort,
-                        rel_rbum_item_id: s.to_string(),
-                    },
-                    &funs,
-                    &ctx,
-                )
-                .await?,
-            );
-        }
+        let result = join_all(
+            add_req.rel_rbum_item_id
+                .split(',')
+                .map(|item_id| async {
+                    IamSetServ::add_set_item(
+                        &IamSetItemAddReq {
+                            set_id: set_id.clone(),
+                            set_cate_id: add_req.set_cate_id.clone().unwrap_or_default(),
+                            sort: add_req.sort,
+                            rel_rbum_item_id: item_id.to_string(),
+                        },
+                        &funs,
+                        &ctx,
+                    )
+                    .await
+                })
+                .collect_vec(),
+        )
+        .await.into_iter().collect::<Result<Vec<String>, TardisError>>()?;
         funs.commit().await?;
         ctx.execute_task().await?;
         TardisResp::ok(result)
@@ -192,7 +198,7 @@ impl IamCtAppSetApi {
         let ctx = IamCertServ::use_sys_or_tenant_ctx_unsafe(ctx.0)?;
         add_remote_ip(request, &ctx).await?;
         for id in ids.split(',').collect::<Vec<_>>() {
-            IamSetServ::delete_set_item(&id, &funs, &ctx).await?;
+            IamSetServ::delete_set_item(id, &funs, &ctx).await?;
         }
         funs.commit().await?;
         ctx.execute_task().await?;
