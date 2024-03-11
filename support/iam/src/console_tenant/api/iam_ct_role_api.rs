@@ -1,4 +1,8 @@
 use bios_basic::process::task_processor::TaskProcessor;
+use itertools::Itertools;
+
+use tardis::basic::error::TardisError;
+use tardis::futures::future::join_all;
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem_openapi;
 use tardis::web::poem_openapi::{param::Path, param::Query, payload::Json};
@@ -196,10 +200,12 @@ impl IamCtRoleApi {
         add_remote_ip(request, &ctx.0).await?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        let split = account_ids.0.split(',').collect::<Vec<_>>();
-        for s in split {
-            IamRoleServ::add_rel_account(&id.0, s, Some(RBUM_SCOPE_LEVEL_TENANT), &funs, &ctx.0).await?;
-        }
+        join_all(
+            account_ids.0.split(',').map(|account_id| async { IamRoleServ::add_rel_account(&id.0, account_id, Some(RBUM_SCOPE_LEVEL_TENANT), &funs, &ctx.0).await }).collect_vec(),
+        )
+        .await
+        .into_iter()
+        .collect::<Result<Vec<()>, TardisError>>()?;
         funs.commit().await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void {})

@@ -201,7 +201,9 @@ impl IamCaRoleApi {
                 })
                 .collect_vec(),
         )
-        .await.into_iter().collect::<Result<Vec<()>, TardisError>>()?;
+        .await
+        .into_iter()
+        .collect::<Result<Vec<()>, TardisError>>()?;
         // for s in split {
         //     IamAppServ::add_rel_account(&app_id, s, true, &funs, &ctx.0).await?;
         //     IamRoleServ::add_rel_account(&id.0, s, Some(RBUM_SCOPE_LEVEL_APP), &funs, &ctx.0).await?;
