@@ -11,9 +11,9 @@ use bios_basic::rbum::dto::rbum_set_item_dto::RbumSetItemDetailResp;
 use bios_basic::rbum::rbum_enumeration::{RbumRelFromKind, RbumScopeLevelKind, RbumSetCateLevelQueryKind};
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use bios_basic::rbum::serv::rbum_rel_serv::RbumRelServ;
+use itertools::Itertools;
 use tardis::basic::error::TardisError;
 use tardis::futures::future::join_all;
-use itertools::Itertools;
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem::Request;
 use tardis::web::poem_openapi;
@@ -182,7 +182,8 @@ impl IamCsOrgItemApi {
         add_remote_ip(request, &ctx).await?;
         let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, &funs, &ctx).await?;
         let result = join_all(
-            add_req.rel_rbum_item_id
+            add_req
+                .rel_rbum_item_id
                 .split(',')
                 .map(|item_id| async {
                     IamSetServ::add_set_item(
@@ -199,7 +200,9 @@ impl IamCsOrgItemApi {
                 })
                 .collect_vec(),
         )
-        .await.into_iter().collect::<Result<Vec<String>, TardisError>>()?;
+        .await
+        .into_iter()
+        .collect::<Result<Vec<String>, TardisError>>()?;
         // let split = add_req.rel_rbum_item_id.split(',').collect::<Vec<_>>();
         // let mut result = vec![];
         // for s in split {

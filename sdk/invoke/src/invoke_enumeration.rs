@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use serde::{Deserialize, Serialize};
 #[cfg(feature = "reldb-core")]
 use tardis::db::sea_orm;
