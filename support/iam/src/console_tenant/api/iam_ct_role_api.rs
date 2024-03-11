@@ -201,10 +201,11 @@ impl IamCtRoleApi {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         join_all(
-            account_ids.0.split(',').map(|account_id| async {
-                IamRoleServ::add_rel_account(&id.0, account_id, Some(RBUM_SCOPE_LEVEL_TENANT), &funs, &ctx.0).await
-            }).collect_vec(),
-        ).await.into_iter().collect::<Result<Vec<()>, TardisError>>()?;
+            account_ids.0.split(',').map(|account_id| async { IamRoleServ::add_rel_account(&id.0, account_id, Some(RBUM_SCOPE_LEVEL_TENANT), &funs, &ctx.0).await }).collect_vec(),
+        )
+        .await
+        .into_iter()
+        .collect::<Result<Vec<()>, TardisError>>()?;
         funs.commit().await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void {})

@@ -151,7 +151,8 @@ impl IamCtOrgApi {
         add_remote_ip(request, &ctx).await?;
         let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, &funs, &ctx).await?;
         let result = join_all(
-            add_req.rel_rbum_item_id
+            add_req
+                .rel_rbum_item_id
                 .split(',')
                 .map(|item_id| async {
                     IamSetServ::add_set_item(
@@ -168,7 +169,9 @@ impl IamCtOrgApi {
                 })
                 .collect_vec(),
         )
-        .await.into_iter().collect::<Result<Vec<String>, TardisError>>()?;
+        .await
+        .into_iter()
+        .collect::<Result<Vec<String>, TardisError>>()?;
         funs.commit().await?;
         ctx.execute_task().await?;
         TardisResp::ok(result)

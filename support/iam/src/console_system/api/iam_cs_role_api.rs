@@ -175,11 +175,10 @@ impl IamCsRoleApi {
         add_remote_ip(request, &ctx).await?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        join_all(
-            account_ids.0.split(',').map(|account_id| async {
-                IamRoleServ::add_rel_account(&id.0, account_id, None, &funs, &ctx).await
-            }).collect_vec(),
-        ).await.into_iter().collect::<Result<Vec<()>, TardisError>>()?;
+        join_all(account_ids.0.split(',').map(|account_id| async { IamRoleServ::add_rel_account(&id.0, account_id, None, &funs, &ctx).await }).collect_vec())
+            .await
+            .into_iter()
+            .collect::<Result<Vec<()>, TardisError>>()?;
         funs.commit().await?;
         ctx.execute_task().await?;
         TardisResp::ok(Void {})
