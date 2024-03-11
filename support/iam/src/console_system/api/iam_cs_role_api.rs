@@ -2,6 +2,10 @@ use bios_basic::process::task_processor::TaskProcessor;
 use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
 use bios_basic::rbum::dto::rbum_rel_dto::RbumRelBoneResp;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
+use itertools::Itertools;
+
+use tardis::basic::error::TardisError;
+use tardis::futures::future::join_all;
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem_openapi;
 use tardis::web::poem_openapi::{param::Path, param::Query, payload::Json};
@@ -171,10 +175,11 @@ impl IamCsRoleApi {
         add_remote_ip(request, &ctx).await?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        let split = account_ids.0.split(',').collect::<Vec<_>>();
-        for s in split {
-            IamRoleServ::add_rel_account(&id.0, s, None, &funs, &ctx).await?;
-        }
+        join_all(
+            account_ids.0.split(',').map(|account_id| async {
+                IamRoleServ::add_rel_account(&id.0, account_id, None, &funs, &ctx).await
+            }).collect_vec(),
+        ).await.into_iter().collect::<Result<Vec<()>, TardisError>>()?;
         funs.commit().await?;
         ctx.execute_task().await?;
         TardisResp::ok(Void {})
