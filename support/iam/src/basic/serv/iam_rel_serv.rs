@@ -260,6 +260,7 @@ impl IamRelServ {
                 IamResKind::Api => ("", ""),
                 IamResKind::Ele => ("添加操作API", "AddElementApi"),
                 IamResKind::Menu => ("添加目录页面API", "AddContentPageApi"),
+                _ => ("", ""),
             };
             let _ = IamLogClient::add_ctx_task(
                 LogParamTag::IamRes,
@@ -474,6 +475,7 @@ impl IamRelServ {
                     IamResKind::Api => ("", ""),
                     IamResKind::Ele => ("移除操作API", "RemoveElementApi"),
                     IamResKind::Menu => ("移除目录页面API", "RemoveContentPageApi"),
+                    _ => ("", ""),
                 };
                 let _ = IamLogClient::add_ctx_task(
                     LogParamTag::IamRes,
@@ -532,6 +534,7 @@ impl IamRelServ {
             }
             IamRelKind::IamCertRel => {}
             IamRelKind::IamOrgRel => {}
+            IamRelKind::IamProductSpec => {}
         }
         Ok(())
     }
