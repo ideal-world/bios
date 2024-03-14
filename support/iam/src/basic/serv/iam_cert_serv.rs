@@ -1338,8 +1338,7 @@ impl IamCertServ {
     }
 
     /// 第三方集成手动同步方法入口
-    /// 如果手动导入,那么third_integration_config必须Some
-    pub async fn third_integration_sync(sync_config: Option<IamThirdIntegrationConfigDto>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    pub async fn manual_third_integration_sync(account_sync_from: IamCertExtKind, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let task_ctx = ctx.clone();
         let sync = SYNC_LOCK.try_lock().map_err(|_| funs.err().conflict("third_integration_config", "sync", "The last synchronization has not ended yet", "iam-sync-not-ended"))?;
         if let Some(task_id) = funs.cache().get(&funs.conf::<IamConfig>().cache_key_sync_ldap_task_lock).await?.and_then(|task_id| task_id.parse().ok()) {
@@ -1354,16 +1353,10 @@ impl IamCertServ {
                 let sync = sync;
                 let funs = iam_constants::get_tardis_inst();
 
-                let sync_config = if let Some(sync_config) = sync_config {
-                    sync_config
-                } else if let Some(sync_config) = IamCertServ::get_sync_third_integration_config(&funs, &task_ctx).await? {
-                    if sync_config.len() == 1 {
-                        sync_config.into_iter().last().expect("")
-                    } else {
-                        match sync_config.into_iter().find(|sync_config| sync_config.account_sync_cron.is_none()) {
-                            Some(config) => config,
-                            None => return Err(funs.err().conflict("ldap_account", "sync", "should have sync config!", "iam-not-found-sync-config")),
-                        }
+                let sync_config = if let Some(sync_config) = IamCertServ::get_sync_third_integration_config(&funs, &task_ctx).await? {
+                    match sync_config.into_iter().find(|sync_config| sync_config.account_sync_cron.is_none() && sync_config.account_sync_from == account_sync_from) {
+                        Some(config) => config,
+                        None => return Err(funs.err().conflict("ldap_account", "sync", "should have sync config!", "iam-not-found-sync-config")),
                     }
                 } else {
                     return Err(funs.err().conflict("ldap_account", "sync", "should have sync config!", "iam-not-found-sync-config"));
