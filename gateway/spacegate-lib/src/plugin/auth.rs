@@ -25,7 +25,7 @@ use spacegate_shell::{
 use std::{
     collections::HashMap,
     str::FromStr,
-    sync::{Arc, OnceLock},
+    sync::{Arc, Once, OnceLock},
 };
 use tardis::{
     basic::{error::TardisError, result::TardisResult},
@@ -49,7 +49,7 @@ pub const CODE: &str = "auth";
 #[allow(clippy::type_complexity)]
 static INSTANCE: OnceLock<Arc<RwLock<Option<(String, JoinHandle<()>)>>>> = OnceLock::new();
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 #[serde(default)]
 pub struct SgPluginAuthConfig {
     pub auth_config: AuthConfig,
@@ -686,8 +686,20 @@ impl Plugin for AuthPlugin {
     type Error = serde_json::Error;
     fn create(value: JsonValue) -> Result<Self::MakeLayer, Self::Error> {
         let config: SgPluginAuthConfig = serde_json::from_value(value)?;
-        let _ = tardis::futures::executor::block_on(async { config.setup_tardis().await });
-        let filter: SgPluginAuth = config.into();
+        let filter: SgPluginAuth = config.clone().into();
+        let tardis_init = Arc::new(Once::new());
+        {
+            let tardis_init = tardis_init.clone();
+            if !tardis_init.is_completed() {
+                tardis::tokio::task::spawn(async move {
+                    config.setup_tardis().await;
+                    tardis_init.call_once(|| {});
+                });
+            }
+        }
+        while !tardis_init.is_completed() {
+            // blocking wait tardis setup
+        }
         Ok(filter)
     }
 }

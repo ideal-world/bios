@@ -8,7 +8,8 @@ use spacegate_shell::kernel::extension::{PeerAddr, Reflect};
 // use spacegate_shell::plugins::filters::SgPluginFilterInitDto;
 use spacegate_shell::kernel::helper_layers::bidirection_filter::{Bdf, BdfLayer, BoxReqFut, BoxRespFut};
 use spacegate_shell::plugin::{def_plugin, MakeSgLayer, PluginError};
-use spacegate_shell::{cache_client, SgBody, SgBoxLayer, SgResponseExt};
+use spacegate_shell::{SgBody, SgBoxLayer, SgRequestExt, SgResponseExt};
+use spacegate_shell::spacegate_ext_redis::{global_repo as redis_repo, RedisClient, redis::AsyncCommands};
 // use spacegate_shell::plugin::{
 //     context::SgRoutePluginContext,
 //     filters::{SgPluginFilter, SgPluginFilterAccept},
@@ -43,22 +44,23 @@ impl Default for SgFilterAntiReplay {
 #[derive(Debug, Clone)]
 pub struct AntiReplayDigest {
     md5: Arc<str>,
+    client: RedisClient,
 }
 impl Bdf for SgFilterAntiReplay {
     type FutureReq = BoxReqFut;
     type FutureResp = BoxRespFut;
     fn on_req(self: Arc<Self>, mut req: Request<SgBody>) -> Self::FutureReq {
         Box::pin(async move {
-            if let Some(cache) = cache_client::get_from_extension(req.extensions()).await {
+            if let Some(client) = req.get_redis_client_by_gateway_name() {
                 let md5 = get_md5(&req).map_err(PluginError::bad_gateway::<AntiReplayPlugin>)?;
-                let digest = AntiReplayDigest { md5: Arc::from(md5) };
-                if get_status(&digest.md5, &self.cache_key, &cache).await.map_err(PluginError::bad_gateway::<AntiReplayPlugin>)? {
+                let digest = AntiReplayDigest { md5: Arc::from(md5), client: client.clone() };
+                if get_status(&digest.md5, &self.cache_key, &client).await.map_err(PluginError::bad_gateway::<AntiReplayPlugin>)? {
                     return Err(Response::with_code_message(
                         StatusCode::TOO_MANY_REQUESTS,
                         "[SG.Plugin.Anti_Replay] Request denied due to replay attack. Please refresh and resubmit the request.",
                     ));
                 } else {
-                    set_status(&digest.md5, &self.cache_key, true, &cache).await.map_err(PluginError::bad_gateway::<AntiReplayPlugin>)?;
+                    set_status(&digest.md5, &self.cache_key, true, &client).await.map_err(PluginError::bad_gateway::<AntiReplayPlugin>)?;
                 }
                 req.extensions_mut().get_mut::<Reflect>().expect("missing reflect").insert(digest);
             }
@@ -67,11 +69,11 @@ impl Bdf for SgFilterAntiReplay {
     }
     fn on_resp(self: Arc<Self>, resp: Response<SgBody>) -> Self::FutureResp {
         Box::pin(async move {
-            if let (Some(digest), Some(cache)) = (resp.extensions().get::<AntiReplayDigest>(), cache_client::get_from_extension(resp.extensions()).await) {
+            if let Some(digest) = resp.extensions().get::<AntiReplayDigest>() {
                 let digest = digest.clone();
                 tokio::spawn(async move {
                     tokio::time::sleep(Duration::from_millis(self.time)).await;
-                    let _ = set_status(&digest.md5, self.cache_key.as_ref(), false, &cache).await;
+                    let _ = set_status(&digest.md5, self.cache_key.as_ref(), false, &digest.client).await;
                 });
             }
             resp
@@ -98,21 +100,23 @@ fn get_md5(req: &Request<SgBody>) -> TardisResult<String> {
     tardis::crypto::crypto_digest::TardisCryptoDigest {}.md5(data)
 }
 
-async fn set_status(md5: &str, cache_key: &str, status: bool, cache_client: impl AsRef<TardisCacheClient>) -> TardisResult<()> {
+async fn set_status(md5: &str, cache_key: &str, status: bool, cache_client: &RedisClient) -> TardisResult<()> {
     let (split1, split2) = md5.split_at(16);
     let split1 = u128::from_str_radix(split1, 16)? as u32;
     let split2 = u128::from_str_radix(split2, 16)? as u32;
-    cache_client.as_ref().setbit(&format!("{cache_key}:1"), split1 as usize, status).await?;
-    cache_client.as_ref().setbit(&format!("{cache_key}:2"), split2 as usize, status).await?;
+    let mut conn = cache_client.get_conn().await;
+    conn.setbit(&format!("{cache_key}:1"), split1 as usize, status).await?;
+    conn.setbit(&format!("{cache_key}:2"), split2 as usize, status).await?;
     Ok(())
 }
 
-async fn get_status(md5: &str, cache_key: &str, cache_client: impl AsRef<TardisCacheClient>) -> TardisResult<bool> {
+async fn get_status(md5: &str, cache_key: &str, cache_client: &RedisClient) -> TardisResult<bool> {
     let (split1, split2) = md5.split_at(16);
     let split1 = u128::from_str_radix(split1, 16)? as u32;
     let split2 = u128::from_str_radix(split2, 16)? as u32;
-    let status1 = cache_client.as_ref().getbit(&format!("{cache_key}:1"), split1 as usize).await?;
-    let status2 = cache_client.as_ref().getbit(&format!("{cache_key}:2"), split2 as usize).await?;
+    let mut conn = cache_client.get_conn().await;
+    let status1 = conn.getbit(&format!("{cache_key}:1"), split1 as usize).await?;
+    let status2 = conn.getbit(&format!("{cache_key}:2"), split2 as usize).await?;
     Ok(status1 && status2)
 }
 
