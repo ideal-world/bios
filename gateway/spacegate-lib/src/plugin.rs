@@ -4,3 +4,4 @@ pub mod audit_log;
 pub mod auth;
 pub mod ip_time;
 pub mod rewrite_ns_b_ip;
+pub mod op_auth;

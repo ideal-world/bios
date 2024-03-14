@@ -66,7 +66,7 @@ impl SgFilterAuditLog {
                 let (parts, body) = resp.into_parts();
                 let body = body.dump().await.map_err(|e: BoxError| TardisError::wrap(&format!("[SG.Filter.AuditLog] dump body error: {e}"), ""))?;
                 resp = Response::from_parts(parts, body.dump_clone().expect(""));
-                body.get_dumped().unwrap().clone()
+                body.get_dumped().expect("not expect").clone()
             };
             serde_json::from_slice::<Value>(&body)
         };

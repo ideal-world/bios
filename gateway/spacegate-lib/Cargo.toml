@@ -32,4 +32,4 @@ pprof = { version = "0.12.1", features = ["flamegraph"] }
 tardis = { workspace = true, features = ["test", "web-client"] }
 
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
-testcontainers-modules = { workspace = true }
+testcontainers-modules = { workspace = true,features = ["redis"] }

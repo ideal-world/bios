@@ -23,7 +23,7 @@ impl AuthApi {
     /// Auth 身份验证
     #[oai(path = "/", method = "put")]
     async fn auth(&self, req: Json<AuthReq>, request: &Request) -> TardisApiResult<AuthResp> {
-        let result = AuthResp::from_result(auth_kernel_serv::auth(&mut req.0.clone(), false).await?);
+        let result = AuthResp::from(auth_kernel_serv::auth(&mut req.0.clone(), false).await?);
         trace!("[Auth] Response auth: {:?}", result);
         let _ = SpiLogClient::add_item(
             LogParamContent {

@@ -9,7 +9,7 @@ use tardis::tokio;
 struct Config {
     tokio_worker_thread: Option<usize>,
     tokio_event_interval: Option<u32>,
-    spacegate_ns: Option<String>
+    spacegate_ns: Option<String>,
 }
 
 fn main() -> Result<(), BoxError> {

@@ -538,7 +538,7 @@ pub(crate) async fn parse_mix_req(req: AuthReq) -> TardisResult<MixAuthResp> {
     let mix_body = TardisFuns::json.str_to_obj::<MixRequestBody>(&body)?;
     let mut headers = headers.unwrap_or_default();
     headers.extend(mix_body.headers);
-    let auth_resp = AuthResp::from_result(
+    let auth_resp = AuthResp::from(
         auth(
             &mut AuthReq {
                 scheme: req.scheme,
