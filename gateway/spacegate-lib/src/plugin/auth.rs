@@ -30,7 +30,7 @@ use std::{
 use tardis::{
     basic::{error::TardisError, result::TardisResult},
     config::config_dto::CacheModuleConfig,
-    log,
+    log::{self, warn},
     serde_json::{self, json},
     tokio::{sync::RwLock, task::JoinHandle},
     url::Url,
@@ -523,8 +523,12 @@ impl Plugin for AuthPlugin {
             let tardis_init = tardis_init.clone();
             if !tardis_init.is_completed() {
                 tardis::tokio::task::spawn(async move {
-                    let _ = config.setup_tardis().await;
-                    tardis_init.call_once(|| {});
+                    if config.setup_tardis().await.is_ok() {
+                        tardis_init.call_once(|| {});
+                    } else {
+                        warn!("[SG.Filter.Auth] tardis init failed");
+                        panic!("tardis init failed")
+                    };
                 });
             }
         }
