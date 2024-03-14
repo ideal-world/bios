@@ -4,18 +4,12 @@ use std::time::Duration;
 use serde::{Deserialize, Serialize};
 use spacegate_shell::hyper::{Request, Response, StatusCode};
 use spacegate_shell::kernel::extension::{PeerAddr, Reflect};
-// use spacegate_shell::def_filter;
-// use spacegate_shell::plugins::filters::SgPluginFilterInitDto;
 use spacegate_shell::kernel::helper_layers::bidirection_filter::{Bdf, BdfLayer, BoxReqFut, BoxRespFut};
 use spacegate_shell::plugin::{def_plugin, MakeSgLayer, PluginError};
+use spacegate_shell::spacegate_ext_redis::{redis::AsyncCommands, RedisClient};
 use spacegate_shell::{SgBody, SgBoxLayer, SgRequestExt, SgResponseExt};
-use spacegate_shell::spacegate_ext_redis::{global_repo as redis_repo, RedisClient, redis::AsyncCommands};
-// use spacegate_shell::plugin::{
-//     context::SgRoutePluginContext,
-//     filters::{SgPluginFilter, SgPluginFilterAccept},
 
-// };
-use tardis::cache::cache_client::TardisCacheClient;
+
 
 use tardis::{
     basic::result::TardisResult,
@@ -46,6 +40,7 @@ pub struct AntiReplayDigest {
     md5: Arc<str>,
     client: RedisClient,
 }
+
 impl Bdf for SgFilterAntiReplay {
     type FutureReq = BoxReqFut;
     type FutureResp = BoxRespFut;
@@ -53,7 +48,10 @@ impl Bdf for SgFilterAntiReplay {
         Box::pin(async move {
             if let Some(client) = req.get_redis_client_by_gateway_name() {
                 let md5 = get_md5(&req).map_err(PluginError::bad_gateway::<AntiReplayPlugin>)?;
-                let digest = AntiReplayDigest { md5: Arc::from(md5), client: client.clone() };
+                let digest = AntiReplayDigest {
+                    md5: Arc::from(md5),
+                    client: client.clone(),
+                };
                 if get_status(&digest.md5, &self.cache_key, &client).await.map_err(PluginError::bad_gateway::<AntiReplayPlugin>)? {
                     return Err(Response::with_code_message(
                         StatusCode::TOO_MANY_REQUESTS,
