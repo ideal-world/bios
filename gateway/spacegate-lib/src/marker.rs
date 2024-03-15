@@ -1,2 +1,2 @@
-mod bios_auth;
-pub use bios_auth::BiosAuth;
+mod opres_key;
+pub use opres_key::OpresKey;

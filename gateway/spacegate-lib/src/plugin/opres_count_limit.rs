@@ -10,29 +10,28 @@ use spacegate_shell::{
     }, plugin::{def_plugin, MakeSgLayer}, spacegate_ext_redis::{global_repo, redis::Script, RedisClientRepoError}, SgBoxLayer
 };
 
+
 #[derive(Serialize, Deserialize)]
 #[serde(default)]
-pub struct OpresFreqLimitConfig {
+pub struct OpresCountLimitConfig {
     prefix: String,
 }
 
-impl Default for OpresFreqLimitConfig {
+impl Default for OpresCountLimitConfig {
     fn default() -> Self {
-        Self {
-            prefix: crate::consts::OP_RES_HEADER_DEFAULT.into(),
-        }
+        Self { prefix: crate::consts::OP_RES_HEADER_DEFAULT.into() }
     }
 }
 
-impl OpresFreqLimitConfig {
+impl OpresCountLimitConfig {
     pub fn create_check(&self, gateway_name: &str) -> BoxResult<RedisCheck> {
-        let check_script = Script::new(include_str!("./opres_freq_limit/check.lua"));
+        let check_script = Script::new(include_str!("./opres_count_limit/check.lua"));
         let check = RedisCheck {
             check_script: Some(check_script.into()),
             response_script: None,
-            key_prefix: <Arc<str>>::from(format!("{}:frequency", self.prefix)),
+            key_prefix: <Arc<str>>::from(format!("{}:count", self.prefix)),
             client: global_repo().get(gateway_name).ok_or(RedisClientRepoError::new(gateway_name, "missing redis client"))?,
-            on_fail: Some((StatusCode::TOO_MANY_REQUESTS, Bytes::from_static(b"too many request, please try later"))),
+            on_fail: Some((StatusCode::FORBIDDEN, Bytes::from_static(b"times runs out"))),
         };
         Ok(check)
     }
@@ -42,7 +41,7 @@ impl OpresFreqLimitConfig {
     }
 }
 
-impl MakeSgLayer for OpresFreqLimitConfig {
+impl MakeSgLayer for OpresCountLimitConfig {
     fn make_layer(&self) -> BoxResult<spacegate_shell::SgBoxLayer> {
         self.make_layer_with_gateway_name("")
     }
@@ -68,7 +67,9 @@ impl MakeSgLayer for OpresFreqLimitConfig {
     }
 }
 
-def_plugin!("opres-freq-limit", OpresFreqLimitPlugin, OpresFreqLimitConfig);
+def_plugin!("opres-count-limit",  OpresCountLimitPlugin, OpresCountLimitConfig);
+
+
 
 #[cfg(test)]
 mod test {
@@ -76,16 +77,12 @@ mod test {
 
     use http::Request;
     use spacegate_shell::{
-        hyper::service::HttpService,
-        kernel::{
+        hyper::service::HttpService, kernel::{
             extension::MatchedSgRouter,
             layers::http_route::match_request::{SgHttpPathMatch, SgHttpRouteMatch},
             service::get_echo_service,
             Layer,
-        },
-        plugin::Plugin,
-        spacegate_ext_redis::redis::AsyncCommands,
-        SgBody,
+        }, plugin::Plugin, spacegate_ext_redis::redis::AsyncCommands, SgBody
     };
     use tardis::{
         basic::tracing::TardisTracing,
@@ -97,9 +94,9 @@ mod test {
 
     use super::*;
     #[tokio::test]
-    async fn test_op_res_freq_limit() {
+    async fn test_op_res_count_limit() {
         const GW_NAME: &str = "DEFAULT";
-        const AK: &str = "3qpm";
+        const AK: &str = "3count";
         std::env::set_var("RUST_LOG", "trace");
         let _ = TardisTracing::initializer().with_fmt_layer().with_env_layer().init_standalone();
 
@@ -108,7 +105,7 @@ mod test {
         let host_port = redis_container.get_host_port_ipv4(REDIS_PORT);
 
         let url = format!("redis://127.0.0.1:{host_port}");
-        let config = OpresFreqLimitPlugin::create(json! {
+        let config = OpresCountLimitPlugin::create(json! {
             {
                 "prefix": "bios:limit"
             }
@@ -117,7 +114,7 @@ mod test {
         global_repo().add(GW_NAME, url.as_str());
         let client = global_repo().get(GW_NAME).expect("missing client");
         let mut conn = client.get_conn().await;
-        let _: () = conn.set(format!("bios:limit:frequency:*:op-res:{AK}"), 3).await.expect("fail to set");
+        let _: () = conn.set(format!("bios:limit:count:*:op-res:{AK}"), 3).await.expect("fail to set");
         let layer = config.make_layer_with_gateway_name(GW_NAME).expect("fail to make layer");
         let backend_service = get_echo_service();
         let mut service = layer.layer(backend_service);
@@ -150,12 +147,6 @@ mod test {
             let body = body.dump().await.expect("fail to dump");
             println!("body: {body:?}, parts: {parts:?}");
             assert!(parts.status.is_client_error());
-            tokio::time::sleep(Duration::from_secs(61)).await;
-            let resp = service.call(gen_req(AK)).await.expect("infallible");
-            let (parts, body) = resp.into_parts();
-            let body = body.dump().await.expect("fail to dump");
-            println!("body: {body:?}, parts: {parts:?}");
-            assert!(parts.status.is_success());
         }
     }
 }
