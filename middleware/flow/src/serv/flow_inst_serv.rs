@@ -602,29 +602,6 @@ impl FlowInstServ {
                 if var.required == Some(true) && transfer_req.vars.as_ref().map_or(true, |map| !map.contains_key(&var.name)) {
                     return Err(funs.err().internal_error("flow_inst", "check_transfer_vars", "missing required field", "400-flow-inst-vars-field-missing"));
                 }
-                if let Some(default) = var.default_value {
-                    let default_value = match default.value_type {
-                        crate::dto::flow_var_dto::DefaultValueType::Custom => serde_json::Value::String(default.value),
-                        crate::dto::flow_var_dto::DefaultValueType::AssociatedAttr => {
-                            if let Some(current_vars) = flow_inst_detail.current_vars.as_ref() {
-                                current_vars.get(&var.name).cloned().unwrap_or_default()
-                            } else {
-                                Value::String("".to_string())
-                            }
-                        }
-                        crate::dto::flow_var_dto::DefaultValueType::AutoFill => match FillType::from_str(&default.value)
-                            .map_err(|err| funs.err().internal_error("flow_inst", "check_transfer_vars", &err.to_string(), "400-flow-inst-vars-field-missing"))?
-                        {
-                            FillType::Time => Value::String(Utc::now().timestamp_millis().to_string()),
-                            FillType::Person => Value::String(ctx.owner.clone()),
-                        },
-                    };
-                    if let Some(vars) = transfer_req.vars.as_mut() {
-                        vars.insert(var.name, default_value);
-                    } else {
-                        transfer_req.vars = Some(HashMap::from([(var.name, default_value)]));
-                    }
-                }
             }
         }
 
@@ -971,7 +948,7 @@ impl FlowInstServ {
         spec_flow_transition_id: Option<String>,
         req_vars: &Option<HashMap<String, Value>>,
         skip_filter: bool,
-        _funs: &TardisFunsInst,
+        funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<FlowInstFindStateAndTransitionsResp> {
         let flow_model_transitions = flow_model.transitions();
@@ -1042,16 +1019,46 @@ impl FlowInstServ {
                 }
                 false
             })
-            .map(|model_transition| FlowInstFindNextTransitionResp {
-                next_flow_transition_id: model_transition.id.to_string(),
-                next_flow_transition_name: model_transition.name.to_string(),
-                next_flow_state_id: model_transition.to_flow_state_id.to_string(),
-                next_flow_state_name: model_transition.to_flow_state_name.to_string(),
-                next_flow_state_color: model_transition.to_flow_state_color.to_string(),
-                vars_collect: model_transition.vars_collect(),
-                double_check: model_transition.double_check(),
+            .map(|model_transition| {
+                Ok(FlowInstFindNextTransitionResp {
+                    next_flow_transition_id: model_transition.id.to_string(),
+                    next_flow_transition_name: model_transition.name.to_string(),
+                    next_flow_state_id: model_transition.to_flow_state_id.to_string(),
+                    next_flow_state_name: model_transition.to_flow_state_name.to_string(),
+                    next_flow_state_color: model_transition.to_flow_state_color.to_string(),
+                    vars_collect: model_transition
+                        .vars_collect()
+                        .map(|vars| {
+                            vars.into_iter()
+                                .map(|mut var| {
+                                    if let Some(default) = var.default_value.clone() {
+                                        let default_value = match default.value_type {
+                                            crate::dto::flow_var_dto::DefaultValueType::Custom => serde_json::Value::String(default.value),
+                                            crate::dto::flow_var_dto::DefaultValueType::AssociatedAttr => {
+                                                if let Some(current_vars) = flow_inst.current_vars.as_ref() {
+                                                    current_vars.get(&var.name).cloned().unwrap_or_default()
+                                                } else {
+                                                    Value::String("".to_string())
+                                                }
+                                            }
+                                            crate::dto::flow_var_dto::DefaultValueType::AutoFill => match FillType::from_str(&default.value).map_err(|err| {
+                                                funs.err().internal_error("flow_inst", "check_transfer_vars", &err.to_string(), "400-flow-inst-vars-field-missing")
+                                            })? {
+                                                FillType::Time => Value::String(Utc::now().timestamp_millis().to_string()),
+                                                FillType::Person => Value::String(ctx.owner.clone()),
+                                            },
+                                        };
+                                        var.dyn_default_value = Some(default_value);
+                                    };
+                                    Ok(var)
+                                })
+                                .collect::<TardisResult<Vec<_>>>()
+                        })
+                        .transpose()?,
+                    double_check: model_transition.double_check(),
+                })
             })
-            .collect_vec();
+            .collect::<TardisResult<Vec<_>>>()?;
 
         let state_and_next_transitions = FlowInstFindStateAndTransitionsResp {
             flow_inst_id: flow_inst.id.to_string(),
