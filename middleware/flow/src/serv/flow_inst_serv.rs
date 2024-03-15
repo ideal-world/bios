@@ -511,7 +511,7 @@ impl FlowInstServ {
     }
 
     pub(crate) async fn find_state_and_next_transitions(
-        find_req: &Vec<FlowInstFindStateAndTransitionsReq>,
+        find_req: &[FlowInstFindStateAndTransitionsReq],
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<Vec<FlowInstFindStateAndTransitionsResp>> {

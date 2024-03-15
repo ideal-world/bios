@@ -13,6 +13,7 @@ pub mod iam_cert_token_serv;
 pub mod iam_cert_user_pwd_serv;
 pub mod iam_config_serv;
 pub mod iam_key_cache_serv;
+pub mod iam_open_serv;
 pub mod iam_platform_serv;
 pub mod iam_rel_serv;
 pub mod iam_res_serv;

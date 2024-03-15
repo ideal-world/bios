@@ -532,9 +532,7 @@ impl IamRelServ {
             IamRelKind::IamAccountRel => {
                 IamSearchClient::async_add_or_modify_account_search(from_iam_item_id.to_string(), Box::new(true), "".to_string(), funs, ctx).await?;
             }
-            IamRelKind::IamCertRel => {}
-            IamRelKind::IamOrgRel => {}
-            IamRelKind::IamProductSpec => {}
+            _ => {}
         }
         Ok(())
     }
