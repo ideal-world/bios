@@ -25,7 +25,7 @@ use tardis::{
 #[derive(Serialize, Deserialize)]
 #[serde(default)]
 pub struct OpresTimeLimitConfig {
-    prefix: String,
+    pub prefix: String,
 }
 
 impl Default for OpresTimeLimitConfig {

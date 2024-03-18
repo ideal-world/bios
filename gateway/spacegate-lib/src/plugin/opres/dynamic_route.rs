@@ -24,7 +24,7 @@ use crate::marker::OpresKey;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OpresDynamicRoute {
-    prefix: String,
+    pub prefix: String,
 }
 tardis_static! {
     modifier: SgHttpPathModifier =SgHttpPathModifier{
