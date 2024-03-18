@@ -1033,7 +1033,7 @@ impl FlowInstServ {
                                 .map(|mut var| {
                                     if let Some(default) = var.default_value.clone() {
                                         let default_value = match default.value_type {
-                                            crate::dto::flow_var_dto::DefaultValueType::Custom => serde_json::Value::String(default.value),
+                                            crate::dto::flow_var_dto::DefaultValueType::Custom => default.value,
                                             crate::dto::flow_var_dto::DefaultValueType::AssociatedAttr => {
                                                 if let Some(current_vars) = flow_inst.current_vars.as_ref() {
                                                     current_vars.get(&var.name).cloned().unwrap_or_default()
@@ -1041,7 +1041,7 @@ impl FlowInstServ {
                                                     Value::String("".to_string())
                                                 }
                                             }
-                                            crate::dto::flow_var_dto::DefaultValueType::AutoFill => match FillType::from_str(&default.value).map_err(|err| {
+                                            crate::dto::flow_var_dto::DefaultValueType::AutoFill => match FillType::from_str(&default.value.to_string()).map_err(|err| {
                                                 funs.err().internal_error("flow_inst", "check_transfer_vars", &err.to_string(), "400-flow-inst-vars-field-missing")
                                             })? {
                                                 FillType::Time => Value::String(Utc::now().timestamp_millis().to_string()),
