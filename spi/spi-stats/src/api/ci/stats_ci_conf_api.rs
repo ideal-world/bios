@@ -89,6 +89,7 @@ impl StatsCiConfApi {
         &self,
         key: Query<Option<String>>,
         show_name: Query<Option<String>>,
+        dim_rel_conf_dim_keys: Query<Option<String>>,
         is_online: Query<Option<bool>>,
         page_number: Query<u32>,
         page_size: Query<u32>,
@@ -97,9 +98,11 @@ impl StatsCiConfApi {
         ctx: TardisContextExtractor,
     ) -> TardisApiResult<TardisPage<StatsConfFactInfoResp>> {
         let funs = crate::get_tardis_inst();
+        let dim_rel_conf_dim_keys = dim_rel_conf_dim_keys.0.map(|keys| keys.split(',').map(|r| r.to_string()).collect());
         let resp = stats_conf_serv::fact_paginate(
             key.0,
             show_name.0,
+            dim_rel_conf_dim_keys,
             is_online.0,
             page_number.0,
             page_size.0,

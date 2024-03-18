@@ -48,7 +48,7 @@ async fn init_data() -> TardisResult<()> {
     let funs = TardisFuns::inst_with_db_conn(DOMAIN_CODE.to_string(), None);
     let kind_id = RbumKindServ::get_rbum_kind_id_by_code(spi_constants::SPI_PG_KIND_CODE, &funs).await?.unwrap();
     let ctx = TardisContext {
-        own_paths: "".to_string(),
+        own_paths: "".to_string() ,
         ak: "".to_string(),
         roles: vec![],
         groups: vec![],

@@ -126,6 +126,7 @@ pub async fn dim_paginate(
 pub async fn fact_paginate(
     fact_conf_key: Option<String>,
     show_name: Option<String>,
+    dim_rel_conf_dim_keys: Option<Vec<String>>,
     is_online: Option<bool>,
     page_number: u32,
     page_size: u32,
@@ -141,6 +142,7 @@ pub async fn fact_paginate(
             pg::stats_pg_conf_fact_serv::paginate(
                 fact_conf_key,
                 show_name,
+                dim_rel_conf_dim_keys,
                 is_online,
                 page_number,
                 page_size,

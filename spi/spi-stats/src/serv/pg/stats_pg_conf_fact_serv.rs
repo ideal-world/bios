@@ -138,12 +138,13 @@ pub(crate) async fn delete(fact_conf_key: &str, _funs: &TardisFunsInst, ctx: &Ta
 }
 
 pub(in crate::serv::pg) async fn get(fact_conf_key: &str, conn: &TardisRelDBlConnection, ctx: &TardisContext) -> TardisResult<Option<StatsConfFactInfoResp>> {
-    do_paginate(Some(fact_conf_key.to_string()), None, None, 1, 1, None, None, conn, ctx).await.map(|page| page.records.into_iter().next())
+    do_paginate(Some(fact_conf_key.to_string()), None, None, None, 1, 1, None, None, conn, ctx).await.map(|page| page.records.into_iter().next())
 }
 
 pub(crate) async fn paginate(
     fact_conf_key: Option<String>,
     show_name: Option<String>,
+    dim_rel_conf_dim_keys: Option<Vec<String>>,
     is_online: Option<bool>,
     page_number: u32,
     page_size: u32,
@@ -156,12 +157,25 @@ pub(crate) async fn paginate(
     let bs_inst = inst.inst::<TardisRelDBClient>();
     let (conn, _) = stats_pg_initializer::init_conf_fact_table_and_conn(bs_inst, ctx, true).await?;
 
-    do_paginate(fact_conf_key, show_name, is_online, page_number, page_size, desc_by_create, desc_by_update, &conn, ctx).await
+    do_paginate(
+        fact_conf_key,
+        show_name,
+        dim_rel_conf_dim_keys,
+        is_online,
+        page_number,
+        page_size,
+        desc_by_create,
+        desc_by_update,
+        &conn,
+        ctx,
+    )
+    .await
 }
 
 async fn do_paginate(
     fact_conf_key: Option<String>,
     show_name: Option<String>,
+    dim_rel_conf_dim_keys: Option<Vec<String>>,
     is_online: Option<bool>,
     page_number: u32,
     page_size: u32,
@@ -171,36 +185,51 @@ async fn do_paginate(
     ctx: &TardisContext,
 ) -> TardisResult<TardisPage<StatsConfFactInfoResp>> {
     let table_name = package_table_name("stats_conf_fact", ctx);
+    let table_col_name = package_table_name("stats_conf_fact_col", ctx);
     let mut sql_where = vec!["1 = 1".to_string()];
     let mut sql_order = vec![];
     let mut params: Vec<Value> = vec![Value::from(page_size), Value::from((page_number - 1) * page_size)];
     if let Some(fact_conf_key) = &fact_conf_key {
-        sql_where.push(format!("key = ${}", params.len() + 1));
+        sql_where.push(format!("fact.key = ${}", params.len() + 1));
         params.push(Value::from(fact_conf_key.to_string()));
     }
     if let Some(show_name) = &show_name {
-        sql_where.push(format!("show_name LIKE ${}", params.len() + 1));
+        sql_where.push(format!("fact.show_name LIKE ${}", params.len() + 1));
         params.push(Value::from(format!("%{show_name}%")));
     }
     if let Some(is_online) = &is_online {
-        sql_where.push(format!("is_online = ${}", params.len() + 1));
+        sql_where.push(format!("fact.is_online = ${}", params.len() + 1));
         params.push(Value::from(*is_online));
     }
+    if let Some(dim_rel_conf_dim_keys) = &dim_rel_conf_dim_keys {
+        if !dim_rel_conf_dim_keys.is_empty() {
+            sql_where.push(format!(
+                "fact_col.dim_rel_conf_dim_key in ({})",
+                (0..dim_rel_conf_dim_keys.len()).map(|idx| format!("${}", params.len() + idx + 1)).collect::<Vec<String>>().join(",")
+            ));
+            for dim_rel_conf_dim_key in dim_rel_conf_dim_keys {
+                params.push(Value::from(format!("{dim_rel_conf_dim_key}")));
+            }
+        }
+    }
     if let Some(desc_by_create) = desc_by_create {
-        sql_order.push(format!("create_time {}", if desc_by_create { "DESC" } else { "ASC" }));
+        sql_order.push(format!("fact.create_time {}", if desc_by_create { "DESC" } else { "ASC" }));
     }
     if let Some(desc_by_update) = desc_by_update {
-        sql_order.push(format!("update_time {}", if desc_by_update { "DESC" } else { "ASC" }));
+        sql_order.push(format!("fact.update_time {}", if desc_by_update { "DESC" } else { "ASC" }));
     }
 
     let result = conn
         .query_all(
             &format!(
-                r#"SELECT key, show_name, query_limit, remark, redirect_path, is_online, create_time, update_time, count(*) OVER() AS total
-FROM {table_name}
+                r#"SELECT t.*, count(*) OVER () AS total FROM (
+SELECT distinct fact.key as key, fact.show_name as show_name, fact.query_limit as query_limit, fact.remark as remark, fact.redirect_path as redirect_path, fact.is_online as is_online, fact.create_time as create_time, fact.update_time as update_time
+FROM {table_name} as fact
+left join {table_col_name} as fact_col on fact.key = fact_col.rel_conf_fact_key
 WHERE 
     {}
     {}
+    ) as t
 LIMIT $1 OFFSET $2
 "#,
                 sql_where.join(" AND "),
