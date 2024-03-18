@@ -10,8 +10,7 @@ use bios_basic::rbum::{
 use bios_sdk_invoke::clients::spi_kv_client::SpiKvClient;
 use itertools::Itertools;
 use tardis::{
-    basic::{dto::TardisContext, result::TardisResult},
-    TardisFunsInst,
+    basic::{dto::TardisContext, field::TrimString, result::TardisResult}, TardisFuns, TardisFunsInst
 };
 use tardis::{
     chrono::{self, Utc},
@@ -20,15 +19,13 @@ use tardis::{
 
 use crate::{
     basic::dto::{
-        iam_filer_dto::IamResFilterReq,
-        iam_open_dto::{IamOpenAddProductReq, IamOpenBindAkProductReq},
-        iam_res_dto::IamResAddReq,
+        iam_cert_conf_dto::IamCertConfAkSkAddOrModifyReq, iam_cert_dto::IamCertAkSkAddReq, iam_filer_dto::IamResFilterReq, iam_open_dto::{IamOpenAddProductReq, IamOpenAkSkAddReq, IamOpenAkSkResp, IamOpenBindAkProductReq}, iam_res_dto::IamResAddReq
     },
     iam_config::IamConfig,
-    iam_enumeration::{IamRelKind, IamResKind},
+    iam_enumeration::{IamCertKernelKind, IamRelKind, IamResKind},
 };
 
-use super::{iam_key_cache_serv::IamIdentCacheServ, iam_rel_serv::IamRelServ, iam_res_serv::IamResServ};
+use super::{iam_cert_aksk_serv::IamCertAkSkServ, iam_cert_serv::IamCertServ, iam_key_cache_serv::IamIdentCacheServ, iam_rel_serv::IamRelServ, iam_res_serv::IamResServ, iam_tenant_serv::IamTenantServ};
 
 pub struct IamOpenServ;
 
@@ -83,10 +80,39 @@ impl IamOpenServ {
             RbumRelServ::delete_rbum(&rel.id, funs, ctx).await?;
         }
 
-        Self::bind_cert_product(cert_id, &bind_req.product_id, None, funs, ctx).await?;
+        let product_id = IamResServ::find_one_detail_item(
+            &IamResFilterReq {
+                basic: RbumBasicFilterReq {
+                    code: Some(format!("{}/*/{}", IamResKind::Product.to_int(), &bind_req.product_code)),
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?
+        .ok_or_else(|| funs.err().internal_error("iam_open", "bind_cert_product_and_spec", "illegal response", "404-iam-res-not-exist"))?
+        .id;
+        let spec_id = IamResServ::find_one_detail_item(
+            &IamResFilterReq {
+                basic: RbumBasicFilterReq {
+                    code: Some(format!("{}/*/{}", IamResKind::Spec.to_int(), &bind_req.spec_code)),
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?
+        .ok_or_else(|| funs.err().internal_error("iam_open", "bind_cert_product_and_spec", "illegal response", "404-iam-res-not-exist"))?
+        .id;
+
+        Self::bind_cert_product(cert_id, &product_id, None, funs, ctx).await?;
         Self::bind_cert_spec(
             cert_id,
-            &bind_req.spec_id,
+            &spec_id,
             None,
             bind_req.start_time,
             bind_req.end_time,
@@ -238,6 +264,25 @@ impl IamOpenServ {
             IamIdentCacheServ::add_gateway_rule_info(&ak, "rewrite", None, &spec.ext, funs).await?;
         }
         Ok(())
+    }
+
+    pub async fn general_cert(add_req: IamOpenAkSkAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<IamOpenAkSkResp> {
+        let rel_iam_item_id = IamTenantServ::get_id_by_ctx(ctx, funs)?;
+        let cert_conf_id = IamCertServ::get_cert_conf_id_by_kind(IamCertKernelKind::AkSk.to_string().as_str(), Some(rel_iam_item_id.clone()), funs).await
+        .unwrap_or(
+            IamCertAkSkServ::add_cert_conf(&IamCertConfAkSkAddOrModifyReq {
+                name: TrimString(format!("AkSk-{}", &rel_iam_item_id)),
+                 expire_sec: None,
+            }, Some(IamTenantServ::get_id_by_ctx(ctx, funs)?), funs, ctx).await?
+        );
+        let ak = TardisFuns::crypto.key.generate_ak()?;
+        let sk = TardisFuns::crypto.key.generate_sk(&ak)?;
+
+        let cert_id = IamCertAkSkServ::add_cert(&IamCertAkSkAddReq {
+            tenant_id:add_req.tenant_id,
+            app_id:add_req.app_id,
+        }, &ak, &sk, &cert_conf_id, funs, ctx).await?;
+        Ok(IamOpenAkSkResp { id: cert_id, ak, sk })
     }
 
     pub async fn refresh_cert_cumulative_count(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
