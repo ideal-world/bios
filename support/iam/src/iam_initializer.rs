@@ -6,7 +6,8 @@ use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 use tardis::db::reldb_client::TardisActiveModel;
 use tardis::db::sea_orm::sea_query::Table;
-use tardis::log::{error, info, warn};
+use tardis::log::{error, info, instrument, warn};
+use tardis::log as tracing;
 use tardis::serde_json::Value;
 use tardis::web::web_server::{TardisWebServer, WebServerModule};
 use tardis::web::ws_client::TardisWSClient;
@@ -39,7 +40,7 @@ use crate::console_common::api::{
     iam_cc_account_api, iam_cc_account_task_api, iam_cc_app_api, iam_cc_app_set_api, iam_cc_config_api, iam_cc_org_api, iam_cc_res_api, iam_cc_role_api, iam_cc_system_api,
     iam_cc_tenant_api,
 };
-use crate::console_interface::api::{iam_ci_account_api, iam_ci_app_api, iam_ci_app_set_api, iam_ci_cert_api, iam_ci_res_api, iam_ci_role_api, iam_ci_system_api};
+use crate::console_interface::api::{iam_ci_account_api, iam_ci_app_api, iam_ci_app_set_api, iam_ci_cert_api, iam_ci_open_api, iam_ci_res_api, iam_ci_role_api, iam_ci_system_api};
 use crate::console_passport::api::{iam_cp_account_api, iam_cp_app_api, iam_cp_cert_api, iam_cp_tenant_api};
 use crate::console_system::api::{
     iam_cs_account_api, iam_cs_account_attr_api, iam_cs_cert_api, iam_cs_org_api, iam_cs_platform_api, iam_cs_res_api, iam_cs_role_api, iam_cs_spi_data_api, iam_cs_tenant_api,
@@ -129,6 +130,7 @@ async fn init_api(web_server: &TardisWebServer) -> TardisResult<()> {
                     iam_ci_role_api::IamCiRoleApi,
                     iam_ci_account_api::IamCiAccountApi,
                     iam_ci_system_api::IamCiSystemApi,
+                    iam_ci_open_api::IamCiOpenApi,
                 ),
             )), // .middleware(EncryptMW),
         )
@@ -672,6 +674,7 @@ async fn add_res<'a>(
                 double_auth_msg: None,
                 need_login: None,
                 bind_api_res: None,
+                ext: None,
             },
             set: IamSetItemAggAddReq {
                 set_cate_id: cate_menu_id.to_string(),
@@ -701,6 +704,7 @@ async fn add_res<'a>(
                 double_auth_msg: None,
                 need_login: None,
                 bind_api_res: None,
+                ext: None,
             },
             set: IamSetItemAggAddReq {
                 set_cate_id: cate_api_id.to_string(),
@@ -726,6 +730,7 @@ pub async fn truncate_data<'a>(funs: &TardisFunsInst) -> TardisResult<()> {
     Ok(())
 }
 
+#[instrument]
 async fn init_ws_log_client() -> Option<TardisWSClient> {
     while !TardisFuns::web_server().is_running().await {
         tardis::tokio::task::yield_now().await
@@ -753,6 +758,7 @@ async fn init_ws_log_client() -> Option<TardisWSClient> {
         let ws_client = TardisFuns::ws_client(&addr, |_| async move { None }).await;
         match ws_client {
             Ok(ws_client) => {
+                info!("[Bios.Iam] connected to server");
                 return Some(ws_client);
             }
             Err(err) => {
@@ -763,6 +769,7 @@ async fn init_ws_log_client() -> Option<TardisWSClient> {
     }
 }
 
+#[instrument]
 async fn init_ws_search_client() -> Option<TardisWSClient> {
     while !TardisFuns::web_server().is_running().await {
         tardis::tokio::task::yield_now().await
@@ -790,6 +797,7 @@ async fn init_ws_search_client() -> Option<TardisWSClient> {
         let ws_client = TardisFuns::ws_client(&addr, |_| async move { None }).await;
         match ws_client {
             Ok(ws_client) => {
+                info!("[Bios.Iam] connected to server");
                 return Some(ws_client);
             }
             Err(err) => {
@@ -800,6 +808,7 @@ async fn init_ws_search_client() -> Option<TardisWSClient> {
     }
 }
 
+#[instrument]
 async fn init_ws_iam_send_event_client() -> Option<TardisWSClient> {
     while !TardisFuns::web_server().is_running().await {
         tardis::tokio::task::yield_now().await
@@ -827,6 +836,7 @@ async fn init_ws_iam_send_event_client() -> Option<TardisWSClient> {
         let ws_client = TardisFuns::ws_client(&addr, |_| async move { None }).await;
         match ws_client {
             Ok(ws_client) => {
+                info!("[Bios.Iam] connected to server");
                 return Some(ws_client);
             }
             Err(err) => {
@@ -837,6 +847,7 @@ async fn init_ws_iam_send_event_client() -> Option<TardisWSClient> {
     }
 }
 
+#[instrument]
 pub async fn init_ws_iam_event_client() -> TardisResult<()> {
     let funs = iam_constants::get_tardis_inst();
     let conf = funs.conf::<IamConfig>();
@@ -845,27 +856,47 @@ pub async fn init_ws_iam_event_client() -> TardisResult<()> {
         event_conf.avatars.push(format!("{}/{}", event_conf.topic_code, tardis::pkg!()))
     }
     let client = bios_sdk_invoke::clients::event_client::EventClient::new(&event_conf.base_url, &funs);
-    loop {
-        let addr = loop {
-            if let Ok(result) = client.register(&event_conf.clone().into()).await {
-                break result.ws_addr;
-            }
-            tardis::tokio::time::sleep(std::time::Duration::from_secs(10)).await;
+    let addr = loop {
+        if let Ok(result) = client.register(&event_conf.clone().into()).await {
+            break result.ws_addr;
+        }
+        tardis::tokio::time::sleep(std::time::Duration::from_secs(10)).await;
+    };
+    let ws_client = TardisFuns::ws_client(&addr, |message| async move {
+        let Ok(json_str) = message.to_text() else { return None };
+        info!("[Bios.Iam] event msg: {json_str}");
+        let Ok(TardisWebsocketMessage { msg, event, .. }) = TardisFuns::json.str_to_obj(json_str) else {
+            return None;
         };
-        let ws_client = TardisFuns::ws_client(&addr, |message| async move {
-            let Ok(json_str) = message.to_text() else { return None };
-            info!("[Bios.Iam] event msg: {json_str}");
-            let Ok(TardisWebsocketMessage { msg, event, .. }) = TardisFuns::json.str_to_obj(json_str) else {
-                return None;
-            };
-            match event.as_deref() {
-                Some(EVENT_EXECUTE_TASK_EXTERNAL) => {
-                    let Ok((cache_key, task_id, ctx)) = TardisFuns::json.json_to_obj::<(String, i64, TardisContext)>(msg) else {
-                        return None;
-                    };
-                    tokio::spawn(async move {
-                        let funs = iam_constants::get_tardis_inst();
-                        let result = TaskProcessor::execute_task_external(
+        match event.as_deref() {
+            Some(EVENT_EXECUTE_TASK_EXTERNAL) => {
+                let Ok((cache_key, task_id, ctx)) = TardisFuns::json.json_to_obj::<(String, i64, TardisContext)>(msg) else {
+                    return None;
+                };
+                tokio::spawn(async move {
+                    let funs = iam_constants::get_tardis_inst();
+                    let result = TaskProcessor::execute_task_external(
+                        &cache_key,
+                        task_id,
+                        ws_iam_send_client().await.clone(),
+                        default_iam_send_avatar().await.clone(),
+                        &funs,
+                        &ctx,
+                    )
+                    .await;
+                    if let Err(err) = result {
+                        error!("[Bios.Iam] failed to execute_task_external item: {}", err);
+                    }
+                });
+            }
+            Some(EVENT_STOP_TASK_EXTERNAL) => {
+                let Ok((cache_key, task_ids, ctx)) = TardisFuns::json.json_to_obj::<(String, Vec<i64>, TardisContext)>(msg) else {
+                    return None;
+                };
+                tokio::spawn(async move {
+                    let funs = iam_constants::get_tardis_inst();
+                    for task_id in task_ids {
+                        let result = TaskProcessor::stop_task(
                             &cache_key,
                             task_id,
                             ws_iam_send_client().await.clone(),
@@ -875,72 +906,50 @@ pub async fn init_ws_iam_event_client() -> TardisResult<()> {
                         )
                         .await;
                         if let Err(err) = result {
-                            error!("[Bios.Iam] failed to execute_task_external item: {}", err);
+                            error!("[Bios.Iam] failed to stop_task_external : {}", err);
                         }
-                    });
-                }
-                Some(EVENT_STOP_TASK_EXTERNAL) => {
-                    let Ok((cache_key, task_ids, ctx)) = TardisFuns::json.json_to_obj::<(String, Vec<i64>, TardisContext)>(msg) else {
-                        return None;
-                    };
-                    tokio::spawn(async move {
-                        let funs = iam_constants::get_tardis_inst();
-                        for task_id in task_ids {
-                            let result = TaskProcessor::stop_task(
-                                &cache_key,
-                                task_id,
-                                ws_iam_send_client().await.clone(),
-                                default_iam_send_avatar().await.clone(),
-                                &funs,
-                                &ctx,
-                            )
-                            .await;
-                            if let Err(err) = result {
-                                error!("[Bios.Iam] failed to stop_task_external : {}", err);
-                            }
-                        }
-                    });
-                }
-                Some(EVENT_SET_TASK_PROCESS_DATA_EXTERNAL) => {
-                    let Ok((cache_key, task_id, data, ctx)) = TardisFuns::json.json_to_obj::<(String, i64, Value, TardisContext)>(msg) else {
-                        return None;
-                    };
-                    tokio::spawn(async move {
-                        let funs = iam_constants::get_tardis_inst();
-                        let result = TaskProcessor::set_task_process_data(
-                            &cache_key,
-                            task_id,
-                            data,
-                            ws_iam_send_client().await.clone(),
-                            default_iam_send_avatar().await.clone(),
-                            &funs,
-                            &ctx,
-                        )
-                        .await;
-                        if let Err(err) = result {
-                            error!("[Bios.Iam] failed to set_task_process_data item: {}", err);
-                        }
-                    });
-                }
-                Some(unknown_event) => {
-                    warn!("[Bios.Iam] event receive unknown event {unknown_event}")
-                }
-                _ => {}
+                    }
+                });
             }
-            None
-        })
-        .await?;
-        tokio::spawn(async move {
-            loop {
-                // it's ok todo so, reconnect will be blocked until the previous ws_client is dropped
-                let result = ws_client.reconnect().await;
-                if let Err(err) = result {
-                    error!("[Bios.Iam] failed to reconnect to event service: {}", err);
-                }
-                tokio::time::sleep(std::time::Duration::from_secs(10)).await;
+            Some(EVENT_SET_TASK_PROCESS_DATA_EXTERNAL) => {
+                let Ok((cache_key, task_id, data, ctx)) = TardisFuns::json.json_to_obj::<(String, i64, Value, TardisContext)>(msg) else {
+                    return None;
+                };
+                tokio::spawn(async move {
+                    let funs = iam_constants::get_tardis_inst();
+                    let result = TaskProcessor::set_task_process_data(
+                        &cache_key,
+                        task_id,
+                        data,
+                        ws_iam_send_client().await.clone(),
+                        default_iam_send_avatar().await.clone(),
+                        &funs,
+                        &ctx,
+                    )
+                    .await;
+                    if let Err(err) = result {
+                        error!("[Bios.Iam] failed to set_task_process_data item: {}", err);
+                    }
+                });
             }
-        });
-    }
+            Some(unknown_event) => {
+                warn!("[Bios.Iam] event receive unknown event {unknown_event}")
+            }
+            _ => {}
+        }
+        None
+    })
+    .await?;
+    tokio::spawn(async move {
+        loop {
+            // it's ok todo so, reconnect will be blocked until the previous ws_client is dropped
+            let result = ws_client.reconnect().await;
+            if let Err(err) = result {
+                error!("[Bios.Iam] failed to reconnect to event service: {}", err);
+            }
+            tokio::time::sleep(std::time::Duration::from_secs(10)).await;
+        }
+    });
     Ok(())
 }
 

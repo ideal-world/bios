@@ -37,7 +37,7 @@ itertools.workspace = true
 fancy-regex.workspace = true
 tardis = { workspace = true, optional = true }
 strum = { workspace = true }
-testcontainers-modules ={ workspace = true }
+testcontainers-modules ={ workspace = true, features = ["redis"]}
 bios-sdk-invoke = { path = "../sdk/invoke", features = ["default"] }
 [dev-dependencies]
 tardis = { workspace = true, features = ["test"] }

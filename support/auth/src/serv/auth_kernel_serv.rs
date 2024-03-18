@@ -310,7 +310,7 @@ async fn parsing_base_ak(ak_authorization: &str, req: &AuthReq, config: &AuthCon
         ));
     }
     let req_head_time = if let Ok(date_time) = NaiveDateTime::parse_from_str(req_date, &config.head_date_format) {
-        date_time.timestamp_millis()
+        date_time.and_utc().timestamp_millis()
     } else {
         return Err(TardisError::bad_request("[Auth] bad date format", "401-auth-req-date-incorrect"));
     };
@@ -538,7 +538,7 @@ pub(crate) async fn parse_mix_req(req: AuthReq) -> TardisResult<MixAuthResp> {
     let mix_body = TardisFuns::json.str_to_obj::<MixRequestBody>(&body)?;
     let mut headers = headers.unwrap_or_default();
     headers.extend(mix_body.headers);
-    let auth_resp = AuthResp::from_result(
+    let auth_resp = AuthResp::from(
         auth(
             &mut AuthReq {
                 scheme: req.scheme,

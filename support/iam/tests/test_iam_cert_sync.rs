@@ -75,18 +75,7 @@ pub async fn test(ldap_account_num: u64, conf_ldap_add_or_modify_req: IamCertCon
     assert_eq!(account_page.total_size, 2);
 
     info!("【exec manual sync】");
-    IamCertServ::third_integration_sync(
-        Some(IamThirdIntegrationConfigDto {
-            account_sync_from: IamCertExtKind::Ldap,
-            account_sync_cron: None,
-            account_way_to_add: WayToAdd::default(),
-            account_way_to_delete: WayToDelete::default(),
-        }),
-        &funs,
-        admin_ctx,
-    )
-    .await
-    .unwrap();
+    IamCertServ::manual_third_integration_sync(IamCertExtKind::Ldap, &funs, admin_ctx).await.unwrap();
 
     if let Some(task_id) = TaskProcessor::get_task_id_with_ctx(admin_ctx).await.unwrap() {
         tokio::spawn(async move {
@@ -105,18 +94,7 @@ pub async fn test(ldap_account_num: u64, conf_ldap_add_or_modify_req: IamCertCon
     }
 
     info!("【When a sync task is in progress, executing the sync method again will response an error】");
-    assert!(IamCertServ::third_integration_sync(
-        Some(IamThirdIntegrationConfigDto {
-            account_sync_from: IamCertExtKind::Ldap,
-            account_sync_cron: None,
-            account_way_to_add: WayToAdd::default(),
-            account_way_to_delete: WayToDelete::default(),
-        }),
-        &funs,
-        admin_ctx,
-    )
-    .await
-    .is_err());
+    assert!(IamCertServ::manual_third_integration_sync(IamCertExtKind::Ldap, &funs, admin_ctx,).await.is_err());
 
     //wait for sync task done;
     sleep(Duration::from_millis(500)).await;
@@ -139,18 +117,7 @@ pub async fn test(ldap_account_num: u64, conf_ldap_add_or_modify_req: IamCertCon
     .unwrap();
 
     info!("【exec manual sync 2】");
-    IamCertServ::third_integration_sync(
-        Some(IamThirdIntegrationConfigDto {
-            account_sync_from: IamCertExtKind::Ldap,
-            account_sync_cron: None,
-            account_way_to_add: WayToAdd::default(),
-            account_way_to_delete: WayToDelete::default(),
-        }),
-        &funs,
-        admin_ctx,
-    )
-    .await
-    .unwrap();
+    IamCertServ::manual_third_integration_sync(IamCertExtKind::Ldap, &funs, admin_ctx).await.unwrap();
     let account_ldap_cert: Vec<Option<&String>> = account_page.records.iter().map(|a| a.certs.get(&conf_ldap_add_or_modify_req.name)).filter(|o| o.is_some()).collect();
 
     assert_eq!(account_ldap_cert.len() as u64, ldap_account_num);

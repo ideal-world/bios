@@ -21,13 +21,11 @@ use tardis::{
 
 #[cfg(feature = "web-server")]
 pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
-    init_data().await?;
-    auth_crypto_serv::init().await?;
+    init_without_webserver().await?;
     init_api(web_server).await
 }
 
-#[cfg(not(feature = "web-server"))]
-pub async fn init() -> TardisResult<JoinHandle<()>> {
+pub async fn init_without_webserver() -> TardisResult<JoinHandle<()>> {
     auth_crypto_serv::init().await?;
     init_data().await
 }

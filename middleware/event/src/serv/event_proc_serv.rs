@@ -1,3 +1,4 @@
+use std::f64::consts::E;
 use std::sync::Arc;
 use std::{borrow::Cow, collections::HashMap};
 
@@ -54,18 +55,25 @@ impl TardisClusterSubscriber for CreateRemoteSenderSubscriber {
     }
 }
 
-pub async fn add_sender(topic_code: String, capacity: usize) {
-    let clst_bc_tx = ClusterBroadcastChannel::new(topic_code.clone(), capacity);
+pub async fn get_or_init_sender(topic_code: String, capacity: usize) -> Arc<ClusterBroadcastChannel<TardisWebsocketMgrMessage>> {
     let mut wg = senders().write().await;
-    wg.insert(topic_code.clone(), clst_bc_tx);
-    drop(wg);
-    if TardisFuns::fw_config().cluster.is_some() {
-        let _ = publish_event_no_response(
-            CreateRemoteSenderSubscriber.event_name(),
-            TardisFuns::json.obj_to_json(&CreateRemoteSenderEvent { topic_code, capacity }).expect("invalid json"),
-            ClusterEventTarget::Broadcast,
-        )
-        .await;
+    if let Some(chan) = wg.get(&topic_code) {
+        tardis::log::trace!("clone existed sender: {topic_code}");
+        chan.clone()
+    } else {
+        tardis::log::trace!("create new sender: {topic_code}:{capacity}");
+        let clst_bc_tx = ClusterBroadcastChannel::new(topic_code.clone(), capacity);
+        wg.insert(topic_code.clone(), clst_bc_tx.clone());
+        drop(wg);
+        if TardisFuns::fw_config().cluster.is_some() {
+            let _ = publish_event_no_response(
+                CreateRemoteSenderSubscriber.event_name(),
+                TardisFuns::json.obj_to_json(&CreateRemoteSenderEvent { topic_code, capacity }).expect("invalid json"),
+                ClusterEventTarget::Broadcast,
+            )
+            .await;
+        }
+        clst_bc_tx
     }
 }
 
@@ -84,10 +92,7 @@ pub(crate) async fn ws_process(listener_code: String, token: String, websocket: 
     let save_message = topic.save_message;
     let is_mgr = listener.mgr;
 
-    if !senders().read().await.contains_key(&listener.topic_code) {
-        add_sender(listener.topic_code.clone(), topic.queue_size as usize).await;
-    }
-    let sender = senders().read().await.get(&listener.topic_code).expect("conflict on topic sender").clone();
+    let sender = get_or_init_sender(listener.topic_code.clone(), topic.queue_size as usize).await;
     ws_broadcast(
         listener.avatars.clone(),
         listener.mgr,

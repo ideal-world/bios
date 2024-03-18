@@ -73,6 +73,16 @@ pub struct AuthResp {
     pub body: Option<String>,
 }
 
+impl From<AuthResult> for AuthResp {
+    fn from(result: AuthResult) -> Self {
+        if let Some(e) = result.e {
+            Self::err(e, &result.config)
+        } else {
+            Self::ok(result.ctx.as_ref(), result.resp_body, result.resp_headers, &result.config)
+        }
+    }
+}
+
 impl AuthResp {
     fn init_common_header(config: &AuthConfig) -> HashMap<String, String> {
         HashMap::from([
@@ -84,14 +94,6 @@ impl AuthResp {
             ("Access-Control-Allow-Credentials".to_string(), "true".to_string()),
             ("Content-Type".to_string(), "application/json".to_string()),
         ])
-    }
-
-    pub fn from_result(result: AuthResult) -> Self {
-        if let Some(e) = result.e {
-            Self::err(e, &result.config)
-        } else {
-            Self::ok(result.ctx.as_ref(), result.resp_body, result.resp_headers, &result.config)
-        }
     }
 
     pub(crate) fn ok(ctx: Option<&AuthContext>, resp_body: Option<String>, resp_headers: Option<HashMap<String, String>>, config: &AuthConfig) -> Self {

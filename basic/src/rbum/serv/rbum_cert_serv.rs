@@ -629,6 +629,9 @@ impl RbumCrudOperation<rbum_cert::ActiveModel, RbumCertAddReq, RbumCertModifyReq
                 rbum_cert_conf::Entity,
                 Expr::col((rbum_cert_conf::Entity, rbum_cert_conf::Column::Id)).equals((rbum_cert::Entity, rbum_cert::Column::RelRbumCertConfId)),
             );
+        if let Some(id) = &filter.id {
+            query.and_where(Expr::col((rbum_cert::Entity, rbum_cert::Column::Id)).eq(id.to_string()));
+        }
         if let Some(ak) = &filter.ak {
             query.and_where(Expr::col((rbum_cert::Entity, rbum_cert::Column::Ak)).eq(ak.to_string()));
         }
