@@ -172,7 +172,7 @@ impl Default for IamConfig {
             sms_pwd_path: "cc/msg/pwd".to_string(),
             third_integration_config_key: "iam:third:integration:config:key".to_string(),
             third_integration_schedule_code: "iam:third:integration".to_string(),
-            iam_base_url: "http://localhost:8080/iam".to_string(),
+            iam_base_url: "http://127.0.0.1:8080/iam".to_string(),
             spi: Default::default(),
             strict_security_mode: false,
             crypto_conf: CryptoConf::default(),

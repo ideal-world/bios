@@ -29,7 +29,7 @@ async fn spi_conf_namespace_test() -> TardisResult<()> {
     let container_hold = init_tardis(&docker).await?;
     start_web_server().await?;
     let tardis_ctx = TardisContext::default();
-    let mut client = TestHttpClient::new("https://localhost:8080/spi-conf".to_string());
+    let mut client = TestHttpClient::new("https://127.0.0.1:8080/spi-conf".to_string());
     client.set_auth(&TardisContext {
         own_paths: "t1/app001".to_string(),
         ak: "".to_string(),

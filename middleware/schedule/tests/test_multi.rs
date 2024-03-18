@@ -13,7 +13,7 @@ fn new_task(code: &str) -> ScheduleJobAddOrModifyReq {
     ScheduleJobAddOrModifyReq {
         code: code.into(),
         cron: format!("1/{period} * * * * *", period = 2),
-        callback_url: "https://localhost:8080/callback/inc".into(),
+        callback_url: "https://127.0.0.1:8080/callback/inc".into(),
         enable_time: Utc::now().checked_add_signed(chrono::Duration::seconds(5)),
         disable_time: Utc::now().checked_add_signed(chrono::Duration::seconds(10)),
     }

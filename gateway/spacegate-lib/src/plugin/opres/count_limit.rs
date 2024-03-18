@@ -3,13 +3,16 @@ use std::sync::Arc;
 use http::StatusCode;
 use serde::{Deserialize, Serialize};
 use spacegate_shell::{
-    hyper::body::Bytes, kernel::{
+    hyper::body::Bytes,
+    kernel::{
         extension::GatewayName,
         helper_layers::check::{redis::RedisCheck, CheckLayer},
         BoxResult,
-    }, plugin::{def_plugin, MakeSgLayer}, spacegate_ext_redis::{global_repo, redis::Script, RedisClientRepoError}, SgBoxLayer
+    },
+    plugin::{def_plugin, MakeSgLayer},
+    spacegate_ext_redis::{global_repo, redis::Script, RedisClientRepoError},
+    SgBoxLayer,
 };
-
 
 #[derive(Serialize, Deserialize)]
 #[serde(default)]
@@ -19,7 +22,9 @@ pub struct OpresCountLimitConfig {
 
 impl Default for OpresCountLimitConfig {
     fn default() -> Self {
-        Self { prefix: crate::consts::OP_RES_HEADER_DEFAULT.into() }
+        Self {
+            prefix: crate::consts::OP_RES_HEADER_DEFAULT.into(),
+        }
     }
 }
 
@@ -67,9 +72,7 @@ impl MakeSgLayer for OpresCountLimitConfig {
     }
 }
 
-def_plugin!("opres-count-limit",  OpresCountLimitPlugin, OpresCountLimitConfig);
-
-
+def_plugin!("opres-count-limit", OpresCountLimitPlugin, OpresCountLimitConfig);
 
 #[cfg(test)]
 mod test {
@@ -77,12 +80,16 @@ mod test {
 
     use http::Request;
     use spacegate_shell::{
-        hyper::service::HttpService, kernel::{
+        hyper::service::HttpService,
+        kernel::{
             extension::MatchedSgRouter,
             layers::http_route::match_request::{SgHttpPathMatch, SgHttpRouteMatch},
             service::get_echo_service,
             Layer,
-        }, plugin::Plugin, spacegate_ext_redis::redis::AsyncCommands, SgBody
+        },
+        plugin::Plugin,
+        spacegate_ext_redis::redis::AsyncCommands,
+        SgBody,
     };
     use tardis::{
         basic::tracing::TardisTracing,
@@ -121,7 +128,7 @@ mod test {
         {
             fn gen_req(ak: &str) -> Request<SgBody> {
                 Request::builder()
-                    .uri("http://localhost/op-res/example")
+                    .uri("http://127.0.0.1/op-res/example")
                     .method("GET")
                     .extension(GatewayName::new(GW_NAME))
                     .extension(MatchedSgRouter(

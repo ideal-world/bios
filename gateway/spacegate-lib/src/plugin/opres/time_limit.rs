@@ -145,7 +145,7 @@ mod test {
         let mut service = layer.layer(backend_service);
         {
             let req = Request::builder()
-                .uri("http://localhost/op-res/example")
+                .uri("http://127.0.0.1/op-res/example")
                 .method("GET")
                 .extension(GatewayName::new(GW_NAME))
                 .extension(MatchedSgRouter(
@@ -166,7 +166,7 @@ mod test {
         }
         {
             let req = Request::builder()
-                .uri("http://localhost/op-res/example")
+                .uri("http://127.0.0.1/op-res/example")
                 .method("GET")
                 .extension(GatewayName::new(GW_NAME))
                 .extension(MatchedSgRouter(
@@ -186,7 +186,7 @@ mod test {
         }
         {
             let req = Request::builder()
-                .uri("http://localhost/op-res/example")
+                .uri("http://127.0.0.1/op-res/example")
                 .method("POST")
                 .extension(GatewayName::new(GW_NAME))
                 .extension(MatchedSgRouter(
@@ -205,7 +205,7 @@ mod test {
         }
         {
             let req = Request::builder()
-                .uri("http://localhost/op-res/example")
+                .uri("http://127.0.0.1/op-res/example")
                 .method("DELETE")
                 .extension(GatewayName::new(GW_NAME))
                 .extension(MatchedSgRouter(

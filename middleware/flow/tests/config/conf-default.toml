@@ -6,7 +6,7 @@
 [csm.flow.invoke]
 spi_app_id = "app001"
 [csm.flow.invoke.module_urls]
-kv = "https://localhost:8080/spi-kv"
+kv = "https://127.0.0.1:8080/spi-kv"
 
 [fw.web_server]
 port = 8080
@@ -64,4 +64,4 @@ bY588beOczzrXB0ldJAHZkoQFccSM1sP7pmUqgBOR0ZedmMzR37GuKjEpc/TvXHR
 [fw.web_server.modules.mock]
 
 title = "Flow Component"
-doc_urls = [["test env", "http://localhost:8080/"]]
+doc_urls = [["test env", "http://127.0.0.1:8080/"]]

@@ -163,7 +163,7 @@ async fn init_data() -> TardisResult<()> {
         &ctx,
     )
     .await?;
-    let base_url = format!("https://localhost:8080/{}", DOMAIN_CODE);
+    let base_url = format!("https://127.0.0.1:8080/{}", DOMAIN_CODE);
     let mut client = TestHttpClient::new(base_url.clone());
 
     client.set_auth(&ctx)?;
