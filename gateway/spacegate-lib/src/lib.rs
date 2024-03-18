@@ -1,16 +1,20 @@
 #![warn(clippy::unwrap_used)]
 
-use crate::plugin::{anti_replay, anti_xss, audit_log, auth, ip_time, rewrite_ns_b_ip};
+use crate::plugin::{anti_replay, anti_xss, audit_log, auth, ip_time, opres, rewrite_ns_b_ip};
 
+mod consts;
+mod extension;
+mod marker;
 mod plugin;
 
 pub const PACKAGE_NAME: &str = "spacegate_lib";
-
-pub fn register_lib_filter() {
-    spacegate_kernel::register_filter_def(audit_log::SgFilterAuditLogDef);
-    spacegate_kernel::register_filter_def(ip_time::SgFilterIpTimeDef);
-    spacegate_kernel::register_filter_def(anti_replay::SgFilterAntiReplayDef);
-    spacegate_kernel::register_filter_def(anti_xss::SgFilterAntiXSSDef);
-    spacegate_kernel::register_filter_def(auth::SgFilterAuthDef);
-    spacegate_kernel::register_filter_def(rewrite_ns_b_ip::SgFilterRewriteNsDef);
+use spacegate_shell::plugin::SgPluginRepository;
+pub fn register_lib_plugins(repo: &SgPluginRepository) {
+    repo.register::<ip_time::SgIpTimePlugin>();
+    repo.register::<anti_replay::AntiReplayPlugin>();
+    repo.register::<anti_xss::AntiXssPlugin>();
+    repo.register::<rewrite_ns_b_ip::RewriteNsPlugin>();
+    repo.register::<audit_log::AuditLogPlugin>();
+    repo.register::<auth::AuthPlugin>();
+    repo.register::<opres::OpresPlugin>();
 }

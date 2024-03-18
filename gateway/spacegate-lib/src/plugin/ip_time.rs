@@ -1,34 +1,24 @@
 use std::net::IpAddr;
+use std::sync::Arc;
 
 use ipnet::IpNet;
 use serde::{Deserialize, Serialize};
-use spacegate_kernel::plugins::filters::SgPluginFilterInitDto;
-use spacegate_kernel::plugins::{
-    context::SgRoutePluginContext,
-    filters::{BoxSgPluginFilter, SgPluginFilter, SgPluginFilterDef},
+use spacegate_shell::hyper::{Request, Response, StatusCode};
+use spacegate_shell::kernel::{
+    extension::PeerAddr,
+    helper_layers::filter::{Filter, FilterRequestLayer},
 };
+use spacegate_shell::plugin::{JsonValue, MakeSgLayer, Plugin, SerdeJsonError};
 
-use tardis::basic::error::TardisError;
-use tardis::chrono::Local;
-use tardis::{async_trait::async_trait, basic::result::TardisResult, log, serde_json, TardisFuns};
+use spacegate_shell::{BoxError, SgBody, SgBoxLayer, SgResponseExt};
+
+use tardis::{log, serde_json};
 pub const CODE: &str = "ip_time";
-pub struct SgFilterIpTimeDef;
 
 mod ip_time_rule;
 #[cfg(test)]
 mod tests;
 pub use ip_time_rule::IpTimeRule;
-
-impl SgPluginFilterDef for SgFilterIpTimeDef {
-    fn get_code(&self) -> &str {
-        CODE
-    }
-    fn inst(&self, spec: serde_json::Value) -> TardisResult<BoxSgPluginFilter> {
-        let config = TardisFuns::json.json_to_obj::<SgFilterIpTimeConfig>(spec)?;
-        let filter: SgFilterIpTime = config.into();
-        Ok(filter.boxed())
-    }
-}
 
 #[derive(Debug, Serialize, Deserialize, Default)]
 #[serde(default)]
@@ -41,7 +31,7 @@ pub struct SgFilterIpTimeConfig {
     pub rules: Vec<SgFilterIpTimeConfigRule>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Default)]
+#[derive(Debug, Serialize, Deserialize, Default, Clone, Copy)]
 #[serde(rename_all = "snake_case")]
 pub enum SgFilterIpTimeMode {
     WhiteList,
@@ -70,7 +60,10 @@ impl From<SgFilterIpTimeConfig> for SgFilterIpTime {
                 rules.push((net, rule.time_rule.clone()))
             }
         }
-        SgFilterIpTime { mode: white_list_mode, rules }
+        SgFilterIpTime {
+            mode: white_list_mode,
+            rules: rules.into(),
+        }
     }
 }
 #[derive(Debug, Serialize, Deserialize)]
@@ -79,7 +72,7 @@ pub struct SgFilterIpTimeConfigRule {
     pub time_rule: IpTimeRule,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct SgFilterIpTime {
     // # enhancement:
     // should be a time segment list
@@ -88,8 +81,9 @@ pub struct SgFilterIpTime {
     //     - allow: Set {}
     // - pointer to the lastest segment
     pub mode: SgFilterIpTimeMode,
-    pub rules: Vec<(IpNet, IpTimeRule)>,
+    pub rules: Arc<[(IpNet, IpTimeRule)]>,
 }
+
 impl SgFilterIpTime {
     pub fn check_ip(&self, ip: &IpAddr) -> bool {
         match self.mode {
@@ -104,30 +98,38 @@ impl SgFilterIpTime {
         }
     }
 }
-#[async_trait]
-impl SgPluginFilter for SgFilterIpTime {
-    async fn init(&mut self, _http_route_rule: &SgPluginFilterInitDto) -> TardisResult<()> {
-        log::debug!("Init ip-time plugin, local timezone offset: {tz}", tz = Local::now().offset());
-        return Ok(());
-    }
 
-    async fn destroy(&self) -> TardisResult<()> {
-        return Ok(());
-    }
-
-    /// white list is prior
-    async fn req_filter(&self, _id: &str, ctx: SgRoutePluginContext) -> TardisResult<(bool, SgRoutePluginContext)> {
-        let socket_addr = ctx.request.get_remote_addr();
-        let ip = socket_addr.ip();
-        let passed = self.check_ip(&ip);
+impl Filter for SgFilterIpTime {
+    fn filter(&self, req: Request<SgBody>) -> Result<Request<SgBody>, Response<SgBody>> {
+        let Some(socket_addr) = req.extensions().get::<PeerAddr>() else {
+            return Err(Response::with_code_message(StatusCode::BAD_GATEWAY, "Cannot get peer address, it's a implementation bug"));
+        };
+        let socket_addr = socket_addr.0;
+        let passed = self.check_ip(&socket_addr.ip());
         log::trace!("[{CODE}] Check ip time rule from {socket_addr}, passed {passed}");
         if !passed {
-            return Err(TardisError::forbidden("[SG.Plugin.IpTime] Blocked by ip-time plugin", ""));
+            return Err(Response::with_code_message(StatusCode::FORBIDDEN, "[SG.Plugin.IpTime] Blocked by ip-time plugin"));
         }
-        Ok((passed, ctx))
+        Ok(req)
     }
+}
 
-    async fn resp_filter(&self, _id: &str, ctx: SgRoutePluginContext) -> TardisResult<(bool, SgRoutePluginContext)> {
-        return Ok((true, ctx));
+pub struct SgIpTimePlugin;
+
+impl Plugin for SgIpTimePlugin {
+    const CODE: &'static str = CODE;
+    type MakeLayer = SgFilterIpTime;
+    type Error = SerdeJsonError;
+    fn create(value: JsonValue) -> Result<Self::MakeLayer, Self::Error> {
+        let config: SgFilterIpTimeConfig = serde_json::from_value(value)?;
+        let filter: SgFilterIpTime = config.into();
+        Ok(filter)
+    }
+}
+
+impl MakeSgLayer for SgFilterIpTime {
+    fn make_layer(&self) -> Result<SgBoxLayer, BoxError> {
+        let layer = FilterRequestLayer::new(self.clone());
+        Ok(SgBoxLayer::new(layer))
     }
 }
