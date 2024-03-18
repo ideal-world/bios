@@ -46,7 +46,7 @@ pub struct FlowVarInfo {
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, poem_openapi::Object)]
 pub struct DefaultValue {
     pub value_type: DefaultValueType,
-    pub value: String,
+    pub value: Value,
 }
 
 #[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, strum::EnumString)]
