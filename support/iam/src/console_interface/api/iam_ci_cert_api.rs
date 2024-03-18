@@ -33,7 +33,7 @@ pub struct IamCiLdapCertApi;
 #[poem_openapi::OpenApi(prefix_path = "/ci/manage", tag = "bios_basic::ApiTag::Interface")]
 impl IamCiCertManageApi {
     /// Add aksk Cert
-    #[oai(path = "/aksk", method = "put")]
+    #[oai(path = "/aksk", method = "post")]
     async fn add_aksk(&self, add_req: Json<IamCertAkSkAddReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<IamCertAkSkResp> {
         add_remote_ip(request, &ctx.0).await?;
         let mut funs = iam_constants::get_tardis_inst();

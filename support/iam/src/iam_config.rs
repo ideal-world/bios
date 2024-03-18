@@ -48,6 +48,7 @@ pub struct IamConfig {
     pub cache_key_async_task_status: String,
     pub cache_key_sync_ldap_status: String,
     pub cache_key_sync_ldap_task_lock: String,
+    pub cache_key_gateway_rule_info_: String,
     pub mail_template_cert_activate_title: String,
     pub mail_template_cert_activate_content: String,
     pub mail_template_cert_login_title: String,
@@ -70,6 +71,8 @@ pub struct IamConfig {
     pub iam_base_url: String,
     pub strict_security_mode: bool,
     pub crypto_conf: CryptoConf,
+
+    pub gateway_openapi_path: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -105,6 +108,7 @@ pub struct IamSpiConfig {
     pub kv_app_prefix: String,
     pub kv_apps_prefix: String,
     pub kv_orgs_prefix: String,
+    pub kv_api_call_count_prefix: String,
 
     pub owner: String,
 }
@@ -121,6 +125,7 @@ impl Default for IamSpiConfig {
             kv_app_prefix: "iam_app".to_string(),
             kv_apps_prefix: "iam_apps".to_string(),
             kv_orgs_prefix: "iam_orgs".to_string(),
+            kv_api_call_count_prefix: "api_call_count".to_string(),
             owner: "".to_string(),
         }
     }
@@ -171,6 +176,8 @@ impl Default for IamConfig {
             spi: Default::default(),
             strict_security_mode: false,
             crypto_conf: CryptoConf::default(),
+            cache_key_gateway_rule_info_: "bios:traffic:rules:".to_string(),
+            gateway_openapi_path: "op-api".to_string(),
         }
     }
 }

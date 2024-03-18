@@ -47,6 +47,7 @@ pub struct RbumCertConfFilterReq {
 #[serde(default)]
 pub struct RbumCertFilterReq {
     pub basic: RbumBasicFilterReq,
+    pub id: Option<String>,
     pub ak: Option<String>,
     /// ak like "ak%"
     pub ak_like: Option<String>,

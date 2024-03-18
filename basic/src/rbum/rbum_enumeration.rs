@@ -220,6 +220,8 @@ pub enum RbumRelEnvKind {
     DatetimeRange,
     TimeRange,
     Ips,
+    CallFrequency,
+    CallCount,
 }
 
 impl RbumRelEnvKind {
@@ -228,6 +230,8 @@ impl RbumRelEnvKind {
             0 => Ok(RbumRelEnvKind::DatetimeRange),
             1 => Ok(RbumRelEnvKind::TimeRange),
             2 => Ok(RbumRelEnvKind::Ips),
+            3 => Ok(RbumRelEnvKind::CallFrequency),
+            4 => Ok(RbumRelEnvKind::CallCount),
             _ => Err(TardisError::format_error(&format!("invalid RbumRelEnvKind: {s}"), "406-rbum-*-enum-init-error")),
         }
     }
@@ -237,6 +241,8 @@ impl RbumRelEnvKind {
             RbumRelEnvKind::DatetimeRange => 0,
             RbumRelEnvKind::TimeRange => 1,
             RbumRelEnvKind::Ips => 2,
+            RbumRelEnvKind::CallFrequency => 3,
+            RbumRelEnvKind::CallCount => 4,
         }
     }
 }

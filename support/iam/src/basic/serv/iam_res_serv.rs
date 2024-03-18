@@ -82,6 +82,7 @@ impl RbumItemCrudOperation<iam_res::ActiveModel, IamResAddReq, IamResModifyReq, 
             crypto_resp: Set(add_req.crypto_resp.unwrap_or(false)),
             double_auth: Set(add_req.double_auth.unwrap_or(false)),
             double_auth_msg: Set(add_req.double_auth_msg.as_ref().unwrap_or(&"".to_string()).to_string()),
+            ext: Set(add_req.ext.as_ref().unwrap_or(&"".to_string()).to_string()),
             need_login: Set(add_req.need_login.unwrap_or(false)),
             ..Default::default()
         })
@@ -113,6 +114,8 @@ impl RbumItemCrudOperation<iam_res::ActiveModel, IamResAddReq, IamResModifyReq, 
             IamResKind::Menu => ("添加目录页面".to_string(), "AddContentPageaspersonal".to_string()),
             IamResKind::Api => ("添加API".to_string(), "AddApi".to_string()),
             IamResKind::Ele => ("添加目录页面按钮".to_string(), "AddContentPageButton".to_string()),
+            IamResKind::Product => ("添加产品".to_string(), "AddProduct".to_string()),
+            IamResKind::Spec => ("添加产品规格".to_string(), "AddSpecification".to_string()),
         };
         if !op_describe.is_empty() {
             let _ = IamLogClient::add_ctx_task(LogParamTag::IamRes, Some(id.to_string()), op_describe, Some(op_kind), ctx).await;
@@ -194,6 +197,9 @@ impl RbumItemCrudOperation<iam_res::ActiveModel, IamResAddReq, IamResModifyReq, 
         if let Some(need_login) = modify_req.need_login {
             iam_res.need_login = Set(need_login);
         }
+        if let Some(ext) = &modify_req.ext {
+            iam_res.ext = Set(ext.to_string());
+        }
         Ok(Some(iam_res))
     }
 
@@ -256,6 +262,8 @@ impl RbumItemCrudOperation<iam_res::ActiveModel, IamResAddReq, IamResModifyReq, 
             IamResKind::Menu => ("编辑目录页面".to_string(), "ModifyContentPage".to_string()),
             IamResKind::Api => ("编辑API".to_string(), "ModifyApi".to_string()),
             IamResKind::Ele => ("编辑操作".to_string(), "ModifyEle".to_string()),
+            IamResKind::Product => ("编辑产品".to_string(), "ModifyProduct".to_string()),
+            IamResKind::Spec => ("编辑产品规格".to_string(), "ModifySpecification".to_string()),
         };
         if !op_describe.is_empty() {
             let _ = IamLogClient::add_ctx_task(LogParamTag::IamRes, Some(id.to_string()), op_describe, Some(op_kind), ctx).await;
@@ -291,6 +299,8 @@ impl RbumItemCrudOperation<iam_res::ActiveModel, IamResAddReq, IamResModifyReq, 
                 IamResKind::Menu => ("删除目录页面".to_string(), "DeleteContentPageAsPersonal".to_string()),
                 IamResKind::Api => ("删除API".to_string(), "DeleteApi".to_string()),
                 IamResKind::Ele => ("移除目录页面按钮".to_string(), "RemoveContentPageButton".to_string()),
+                IamResKind::Product => ("移除产品".to_string(), "RemovePorduct".to_string()),
+                IamResKind::Spec => ("移除产品规格".to_string(), "RemoveSpecification".to_string()),
             };
             if !op_describe.is_empty() {
                 let _ = IamLogClient::add_ctx_task(LogParamTag::IamRes, Some(deleted_item.id.to_string()), op_describe, Some(op_kind), ctx).await;
@@ -314,6 +324,7 @@ impl RbumItemCrudOperation<iam_res::ActiveModel, IamResAddReq, IamResModifyReq, 
         query.column((iam_res::Entity, iam_res::Column::DoubleAuth));
         query.column((iam_res::Entity, iam_res::Column::DoubleAuthMsg));
         query.column((iam_res::Entity, iam_res::Column::NeedLogin));
+        query.column((iam_res::Entity, iam_res::Column::Ext));
         if let Some(kind) = &filter.kind {
             query.and_where(Expr::col(iam_res::Column::Kind).eq(kind.to_int()));
         }
@@ -739,6 +750,7 @@ impl IamMenuServ {
                     double_auth_msg: None,
                     need_login: None,
                     bind_api_res: None,
+                    ext: None,
                 },
                 set: IamSetItemAggAddReq {
                     set_cate_id: cate_menu_id.to_string(),
@@ -771,6 +783,7 @@ impl IamMenuServ {
                     double_auth_msg: None,
                     need_login: None,
                     bind_api_res: None,
+                    ext: None,
                 },
                 set: IamSetItemAggAddReq {
                     set_cate_id: cate_menu_id.to_string(),
