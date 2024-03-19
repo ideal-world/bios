@@ -26,12 +26,14 @@ pub struct Model {
     /// Associated [resource domain](crate::rbum::domain::rbum_domain::Model) id
     pub rel_rbum_domain_id: String,
 
+    pub scope_level: i16,
+
     pub own_paths: String,
     pub owner: String,
     pub create_time: chrono::DateTime<Utc>,
     pub update_time: chrono::DateTime<Utc>,
-
-    pub scope_level: i16,
+    pub creator: String,
+    pub last_updater: String,
 
     pub disabled: bool,
 }
@@ -41,7 +43,9 @@ impl TardisActiveModel for ActiveModel {
         if is_insert {
             self.own_paths = Set(ctx.own_paths.to_string());
             self.owner = Set(ctx.owner.to_string());
+            self.creator = Set(ctx.owner.to_string());
         }
+        self.last_updater = Set(ctx.owner.to_string());
     }
 
     fn create_table_statement(db: DbBackend) -> TableCreateStatement {
@@ -61,7 +65,9 @@ impl TardisActiveModel for ActiveModel {
             // With Scope
             .col(ColumnDef::new(Column::ScopeLevel).not_null().small_integer())
             // With Status
-            .col(ColumnDef::new(Column::Disabled).not_null().boolean());
+            .col(ColumnDef::new(Column::Disabled).not_null().boolean())
+            .col(ColumnDef::new(Column::Creator).not_null().string())
+            .col(ColumnDef::new(Column::LastUpdater).not_null().string());
         if db == DatabaseBackend::Postgres {
             builder
                 .col(ColumnDef::new(Column::CreateTime).extra("DEFAULT CURRENT_TIMESTAMP".to_string()).timestamp_with_time_zone())

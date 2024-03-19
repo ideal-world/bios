@@ -3,20 +3,23 @@ use tardis::chrono::{self, Utc};
 use tardis::db::reldb_client::TardisActiveModel;
 use tardis::db::sea_orm;
 use tardis::db::sea_orm::prelude::*;
-use tardis::db::sea_orm::sea_query::{ColumnDef, Index, IndexCreateStatement, Table, TableCreateStatement};
+use tardis::db::sea_orm::sea_query::{ColumnDef, IndexCreateStatement, Table, TableCreateStatement};
 use tardis::db::sea_orm::*;
+use tardis::TardisCreateIndex;
 
 /// Resource set model
 ///
 /// Resource set is essentially a general tree structure processing model
-#[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]
+#[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel, TardisCreateIndex)]
 #[sea_orm(table_name = "rbum_set")]
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
     pub id: String,
     // Set code
+    #[index(unique)]
     pub code: String,
     // Set kind
+    #[index]
     pub kind: String,
     pub name: String,
     pub note: String,
@@ -24,12 +27,15 @@ pub struct Model {
     pub sort: i64,
     pub ext: String,
 
+    pub scope_level: i16,
+
+    #[index]
     pub own_paths: String,
     pub owner: String,
     pub create_time: chrono::DateTime<Utc>,
     pub update_time: chrono::DateTime<Utc>,
-
-    pub scope_level: i16,
+    pub creator: String,
+    pub last_updater: String,
 
     pub disabled: bool,
 }
@@ -39,7 +45,9 @@ impl TardisActiveModel for ActiveModel {
         if is_insert {
             self.own_paths = Set(ctx.own_paths.to_string());
             self.owner = Set(ctx.owner.to_string());
+            self.creator = Set(ctx.owner.to_string());
         }
+        self.last_updater = Set(ctx.owner.to_string());
     }
 
     fn create_table_statement(db: DbBackend) -> TableCreateStatement {
@@ -62,7 +70,9 @@ impl TardisActiveModel for ActiveModel {
             // With Scope
             .col(ColumnDef::new(Column::ScopeLevel).not_null().small_integer())
             // With Status
-            .col(ColumnDef::new(Column::Disabled).not_null().boolean());
+            .col(ColumnDef::new(Column::Disabled).not_null().boolean())
+            .col(ColumnDef::new(Column::Creator).not_null().string())
+            .col(ColumnDef::new(Column::LastUpdater).not_null().string());
         if db == DatabaseBackend::Postgres {
             builder
                 .col(ColumnDef::new(Column::CreateTime).extra("DEFAULT CURRENT_TIMESTAMP".to_string()).timestamp_with_time_zone())
@@ -79,11 +89,7 @@ impl TardisActiveModel for ActiveModel {
     }
 
     fn create_index_statement() -> Vec<IndexCreateStatement> {
-        vec![
-            Index::create().name(&format!("idx-{}-{}", Entity.table_name(), Column::OwnPaths.to_string())).table(Entity).col(Column::OwnPaths).to_owned(),
-            Index::create().name(&format!("idx-{}-{}", Entity.table_name(), Column::Code.to_string())).table(Entity).col(Column::Code).unique().to_owned(),
-            Index::create().name(&format!("idx-{}-{}", Entity.table_name(), Column::Kind.to_string())).table(Entity).col(Column::Kind).to_owned(),
-        ]
+        tardis_create_index_statement()
     }
 }
 

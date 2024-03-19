@@ -3,8 +3,9 @@ use tardis::chrono::{self, Utc};
 use tardis::db::reldb_client::TardisActiveModel;
 use tardis::db::sea_orm;
 use tardis::db::sea_orm::prelude::*;
-use tardis::db::sea_orm::sea_query::{ColumnDef, Index, IndexCreateStatement, Table, TableCreateStatement};
+use tardis::db::sea_orm::sea_query::{ColumnDef, IndexCreateStatement, Table, TableCreateStatement};
 use tardis::db::sea_orm::*;
+use tardis::TardisCreateIndex;
 
 /// Resource kind extended attribute definition model
 ///
@@ -22,13 +23,15 @@ use tardis::db::sea_orm::*;
 /// 6. before the resource object is saved, if secret = true and an attribute variable substitution in the url, call the url and return the corresponding value
 ///
 /// For security reasons, step 6 must be done by the server side.
-#[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]
+#[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel, TardisCreateIndex)]
 #[sea_orm(table_name = "rbum_kind_attr")]
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
     pub id: String,
 
+    #[index(index_id = "id")]
     pub name: String,
+    #[index(index_id = "id")]
     pub module: String,
     pub label: String,
     pub note: String,
@@ -71,14 +74,17 @@ pub struct Model {
     pub action: String,
     pub ext: String,
     /// Associated [resource kind](crate::rbum::domain::rbum_kind::Model) id
+    #[index(index_id = "id")]
     pub rel_rbum_kind_id: String,
+
+    pub scope_level: i16,
 
     pub own_paths: String,
     pub owner: String,
     pub create_time: chrono::DateTime<Utc>,
     pub update_time: chrono::DateTime<Utc>,
-
-    pub scope_level: i16,
+    pub creator: String,
+    pub last_updater: String,
 }
 
 impl TardisActiveModel for ActiveModel {
@@ -86,7 +92,9 @@ impl TardisActiveModel for ActiveModel {
         if is_insert {
             self.own_paths = Set(ctx.own_paths.to_string());
             self.owner = Set(ctx.owner.to_string());
+            self.creator = Set(ctx.owner.to_string());
         }
+        self.last_updater = Set(ctx.owner.to_string());
     }
 
     fn create_table_statement(db: DbBackend) -> TableCreateStatement {
@@ -127,7 +135,9 @@ impl TardisActiveModel for ActiveModel {
             .col(ColumnDef::new(Column::OwnPaths).not_null().string())
             .col(ColumnDef::new(Column::Owner).not_null().string())
             // With Scope
-            .col(ColumnDef::new(Column::ScopeLevel).not_null().small_integer());
+            .col(ColumnDef::new(Column::ScopeLevel).not_null().small_integer())
+            .col(ColumnDef::new(Column::Creator).not_null().string())
+            .col(ColumnDef::new(Column::LastUpdater).not_null().string());
         if db == DatabaseBackend::Postgres {
             builder
                 .col(ColumnDef::new(Column::CreateTime).extra("DEFAULT CURRENT_TIMESTAMP".to_string()).timestamp_with_time_zone())
@@ -144,13 +154,7 @@ impl TardisActiveModel for ActiveModel {
     }
 
     fn create_index_statement() -> Vec<IndexCreateStatement> {
-        vec![Index::create()
-            .name(&format!("idx-{}-{}", Entity.table_name(), Column::RelRbumKindId.to_string()))
-            .table(Entity)
-            .col(Column::RelRbumKindId)
-            .col(Column::Name)
-            .col(Column::Module)
-            .to_owned()]
+        tardis_create_index_statement()
     }
 }
 

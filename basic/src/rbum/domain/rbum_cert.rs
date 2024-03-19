@@ -3,13 +3,14 @@ use tardis::chrono::{self, Utc};
 use tardis::db::reldb_client::TardisActiveModel;
 use tardis::db::sea_orm;
 use tardis::db::sea_orm::prelude::*;
-use tardis::db::sea_orm::sea_query::{ColumnDef, Index, IndexCreateStatement, Table, TableCreateStatement};
+use tardis::db::sea_orm::sea_query::{ColumnDef, IndexCreateStatement, Table, TableCreateStatement};
 use tardis::db::sea_orm::*;
+use tardis::TardisCreateIndex;
 
 /// Credential or authentication instance model
 ///
 /// Uniform use of cert refers to credentials or authentication
-#[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]
+#[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel, TardisCreateIndex)]
 #[sea_orm(table_name = "rbum_cert")]
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
@@ -40,6 +41,7 @@ pub struct Model {
     /// Associated [cert configuration](crate::rbum::domain::rbum_cert_conf::Model) id
     pub rel_rbum_cert_conf_id: String,
     /// Associated [resource kind](crate::rbum::rbum_enumeration::RbumCertRelKind) id
+    #[index(index_id = "id")]
     pub rel_rbum_kind: i16,
     /// Associated resource id
     ///
@@ -54,12 +56,15 @@ pub struct Model {
     ///
     /// * if rel_rbum_kind == Rel
     ///  - In the CMDB service, a resource can be sliced (E.g. DB instance), we can specify slice information of association
+    #[index(index_id = "id")]
     pub rel_rbum_id: String,
 
     pub own_paths: String,
     pub owner: String,
     pub create_time: chrono::DateTime<Utc>,
     pub update_time: chrono::DateTime<Utc>,
+    pub creator: String,
+    pub last_updater: String,
 }
 
 impl TardisActiveModel for ActiveModel {
@@ -67,7 +72,9 @@ impl TardisActiveModel for ActiveModel {
         if is_insert {
             self.own_paths = Set(ctx.own_paths.to_string());
             self.owner = Set(ctx.owner.to_string());
+            self.creator = Set(ctx.owner.to_string());
         }
+        self.last_updater = Set(ctx.owner.to_string());
     }
 
     fn create_table_statement(db: DbBackend) -> TableCreateStatement {
@@ -90,7 +97,9 @@ impl TardisActiveModel for ActiveModel {
             // Basic
             .col(ColumnDef::new(Column::OwnPaths).not_null().string())
             .col(ColumnDef::new(Column::Owner).not_null().string())
-            .col(ColumnDef::new(Column::Status).not_null().small_integer());
+            .col(ColumnDef::new(Column::Status).not_null().small_integer())
+            .col(ColumnDef::new(Column::Creator).not_null().string())
+            .col(ColumnDef::new(Column::LastUpdater).not_null().string());
         if db == DatabaseBackend::Postgres {
             builder
                 .col(ColumnDef::new(Column::StartTime).not_null().timestamp_with_time_zone())
@@ -111,23 +120,7 @@ impl TardisActiveModel for ActiveModel {
     }
 
     fn create_index_statement() -> Vec<IndexCreateStatement> {
-        vec![
-            // todo delete index
-            // Index::create()
-            //     .name(&format!("idx-{}-ak", Entity.table_name()))
-            //     .table(Entity)
-            //     .col(Column::OwnPaths)
-            //     .col(Column::RelRbumKind)
-            //     .col(Column::RelRbumCertConfId)
-            //     .col(Column::Ak)
-            //     .to_owned(),
-            Index::create()
-                .name(&format!("idx-{}-{}", Entity.table_name(), Column::RelRbumKind.to_string()))
-                .table(Entity)
-                .col(Column::RelRbumKind)
-                .col(Column::RelRbumId)
-                .to_owned(),
-        ]
+        tardis_create_index_statement()
     }
 }
 
