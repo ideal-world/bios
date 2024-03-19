@@ -656,6 +656,9 @@ impl RbumCrudOperation<rbum_cert::ActiveModel, RbumCertAddReq, RbumCertModifyReq
         if let Some(rel_rbum_id) = &filter.rel_rbum_id {
             query.and_where(Expr::col((rbum_cert::Entity, rbum_cert::Column::RelRbumId)).eq(rel_rbum_id.to_string()));
         }
+        if let Some(rel_rbum_ids) = &filter.rel_rbum_ids {
+            query.and_where(Expr::col((rbum_cert::Entity, rbum_cert::Column::RelRbumId)).is_in(rel_rbum_ids.clone()));
+        }
         query.with_filter(Self::get_table_name(), &filter.basic, is_detail, false, ctx);
         Ok(query)
     }

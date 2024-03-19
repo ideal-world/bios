@@ -9,8 +9,6 @@ use spacegate_shell::plugin::{def_plugin, MakeSgLayer, PluginError};
 use spacegate_shell::spacegate_ext_redis::{redis::AsyncCommands, RedisClient};
 use spacegate_shell::{SgBody, SgBoxLayer, SgRequestExt, SgResponseExt};
 
-
-
 use tardis::{
     basic::result::TardisResult,
     tokio::{self},

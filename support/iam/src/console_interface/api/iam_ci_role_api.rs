@@ -1,11 +1,14 @@
+use itertools::Itertools;
+use crate::basic::dto::iam_role_dto::IamRoleRelAccountCertResp;
+
 use crate::basic::serv::iam_app_serv::IamAppServ;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_role_serv::IamRoleServ;
 use crate::iam_config::IamBasicConfigApi;
 use crate::iam_constants::{self, RBUM_SCOPE_LEVEL_APP};
-use crate::iam_enumeration::IamRoleKind;
 use bios_basic::helper::request_helper::add_remote_ip;
 use bios_basic::process::task_processor::TaskProcessor;
+use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumCertFilterReq};
 use tardis::tokio;
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem::Request;
@@ -145,5 +148,39 @@ impl IamCiRoleApi {
         funs.commit().await?;
         ctx.execute_task().await?;
         TardisResp::ok(Void {})
+    }
+
+    /// get Rel Account by role_id
+    #[oai(path = "/:role_id/accounts", method = "get")]
+    async fn get_rel_accounts(&self, role_id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Vec<IamRoleRelAccountCertResp>> {
+        add_remote_ip(request, &ctx.0).await?;
+        let funs = iam_constants::get_tardis_inst();
+        let account_ids = IamRoleServ::find_id_rel_accounts(&role_id.0, None, None, &funs, &ctx.0).await?;
+        let certs = IamCertServ::find_certs(
+            &RbumCertFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                rel_rbum_ids: Some(account_ids.clone()),
+                ..Default::default()
+            },
+            None,
+            None,
+            &funs,
+            &ctx.0,
+        )
+        .await?
+        .into_iter()
+        .map(|r| (r.rel_rbum_id, r.rel_rbum_cert_conf_code.unwrap_or_default(), r.ak))
+        .collect_vec();
+        let result = account_ids
+            .iter()
+            .map(|account_id| IamRoleRelAccountCertResp {
+                account_id: account_id.clone(),
+                certs: certs.iter().filter(|cert| &cert.0 == account_id).map(|r| (r.1.clone(), r.2.clone())).collect(),
+            })
+            .collect_vec();
+        TardisResp::ok(result)
     }
 }

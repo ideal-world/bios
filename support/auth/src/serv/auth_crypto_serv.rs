@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use tardis::{
     basic::{error::TardisError, result::TardisResult},
     crypto::crypto_sm2_4::{TardisCryptoSm2PrivateKey, TardisCryptoSm2PublicKey},
-    log::{trace},
+    log::trace,
     tokio::sync::RwLock,
     TardisFuns,
 };
