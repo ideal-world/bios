@@ -9,8 +9,6 @@ use spacegate_shell::plugin::{def_plugin, MakeSgLayer, PluginError};
 use spacegate_shell::spacegate_ext_redis::{redis::AsyncCommands, RedisClient};
 use spacegate_shell::{SgBody, SgBoxLayer, SgRequestExt, SgResponseExt};
 
-
-
 use tardis::{
     basic::result::TardisResult,
     tokio::{self},
@@ -29,7 +27,7 @@ pub struct SgFilterAntiReplay {
 impl Default for SgFilterAntiReplay {
     fn default() -> Self {
         Self {
-            cache_key: "spacegate:cache:plugin:anti_replay".to_string(),
+            cache_key: "sg:plugin:anti_replay".to_string(),
             time: 5000,
         }
     }
