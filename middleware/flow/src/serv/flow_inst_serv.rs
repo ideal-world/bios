@@ -1051,7 +1051,7 @@ impl FlowInstServ {
                                                 .map_err(|err| {
                                                     funs.err().internal_error("flow_transitions", "default_value_type_parse", &err.to_string(), "400-flow-inst-vars-field-missing")
                                                 })? {
-                                                    FillType::Time => Value::String(Utc::now().timestamp_millis().to_string()),
+                                                    FillType::Time => Value::Number(Utc::now().timestamp_millis().into()),
                                                     FillType::Person => Value::String(ctx.owner.clone()),
                                                 }
                                             }
