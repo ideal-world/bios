@@ -43,6 +43,6 @@ spi_dispatch_service! {
         setbit(req: &KbvReq) -> TardisResult<bool>;
         getbit(req: &KbReq) -> TardisResult<bool>;
         bitcount(req: &KReq) -> TardisResult<u32>;
-        bitcount_range_by_bit(req: &KbRagngeReq) -> TardisResult<u32>;
+        bitcount_range_by_bit(req: &KbRangeReq) -> TardisResult<u32>;
     }
 }
