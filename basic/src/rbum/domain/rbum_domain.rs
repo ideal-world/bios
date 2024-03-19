@@ -34,8 +34,8 @@ pub struct Model {
     pub owner: String,
     pub create_time: chrono::DateTime<Utc>,
     pub update_time: chrono::DateTime<Utc>,
-    pub creator: String,
-    pub last_updater: String,
+    pub create_by: String,
+    pub update_by: String,
 }
 
 impl TardisActiveModel for ActiveModel {
@@ -43,9 +43,9 @@ impl TardisActiveModel for ActiveModel {
         if is_insert {
             self.own_paths = Set(ctx.own_paths.to_string());
             self.owner = Set(ctx.owner.to_string());
-            self.creator = Set(ctx.owner.to_string());
+            self.create_by = Set(ctx.owner.to_string());
         }
-        self.last_updater = Set(ctx.owner.to_string());
+        self.update_by = Set(ctx.owner.to_string());
     }
 
     fn create_table_statement(db: DbBackend) -> TableCreateStatement {
@@ -65,8 +65,8 @@ impl TardisActiveModel for ActiveModel {
             .col(ColumnDef::new(Column::Owner).not_null().string())
             // With Scope
             .col(ColumnDef::new(Column::ScopeLevel).not_null().small_integer())
-            .col(ColumnDef::new(Column::Creator).not_null().string())
-            .col(ColumnDef::new(Column::LastUpdater).not_null().string());
+            .col(ColumnDef::new(Column::CreateBy).not_null().string())
+            .col(ColumnDef::new(Column::UpdateBy).not_null().string());
         if db == DatabaseBackend::Postgres {
             builder
                 .col(ColumnDef::new(Column::CreateTime).extra("DEFAULT CURRENT_TIMESTAMP".to_string()).timestamp_with_time_zone())
