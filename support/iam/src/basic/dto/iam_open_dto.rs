@@ -41,7 +41,7 @@ pub struct IamOpenBindAkProductReq {
 }
 
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
-pub struct IamOpenRuleInfo {
+pub struct IamOpenRuleResp {
     pub cert_id: String,
     pub spec_code: String,
     pub start_time: Option<chrono::DateTime<Utc>>,
@@ -50,7 +50,6 @@ pub struct IamOpenRuleInfo {
     pub api_call_count: Option<u32>,
     pub api_call_cumulative_count: Option<u32>,
 }
-
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct IamOpenAkSkAddReq {

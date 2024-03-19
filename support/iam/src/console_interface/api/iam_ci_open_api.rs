@@ -3,11 +3,11 @@ use tardis::basic::dto::TardisContext;
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem::Request;
 use tardis::web::poem_openapi;
-use tardis::web::poem_openapi::param::Path;
+use tardis::web::poem_openapi::param::{Path, Query};
 use tardis::web::poem_openapi::payload::Json;
 use tardis::web::web_resp::{TardisApiResult, TardisResp, Void};
 
-use crate::basic::dto::iam_open_dto::{IamOpenAddProductReq, IamOpenAkSkAddReq, IamOpenAkSkResp, IamOpenBindAkProductReq};
+use crate::basic::dto::iam_open_dto::{IamOpenAddProductReq, IamOpenAkSkAddReq, IamOpenAkSkResp, IamOpenBindAkProductReq, IamOpenRuleResp};
 use crate::basic::serv::iam_open_serv::IamOpenServ;
 use crate::iam_constants;
 
@@ -49,6 +49,18 @@ impl IamCiOpenApi {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         let result = IamOpenServ::general_cert(add_req.0, &funs, &ctx.0).await?;
+        funs.commit().await?;
+        ctx.0.execute_task().await?;
+        TardisResp::ok(result)
+    }
+
+    /// Get account rule info / 获取账号规则信息
+    #[oai(path = "/", method = "get")]
+    async fn get_rule_info(&self, cert_id: Query<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<IamOpenRuleResp> {
+        add_remote_ip(request, &ctx.0).await?;
+        let mut funs = iam_constants::get_tardis_inst();
+        funs.begin().await?;
+        let result = IamOpenServ::get_rule_info(cert_id.0, &funs, &ctx.0).await?;
         funs.commit().await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)

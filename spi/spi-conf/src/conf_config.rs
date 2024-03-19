@@ -2,7 +2,7 @@ use bios_basic::rbum::rbum_config::RbumConfig;
 use ipnet::IpNet;
 use serde::{Deserialize, Serialize};
 use std::net::IpAddr;
-use tardis::consts::{IP_127.0.0.1, IP_UNSPECIFIED};
+use tardis::consts::{IP_LOCALHOST, IP_UNSPECIFIED};
 
 use crate::dto::conf_auth_dto::RegisterRequest;
 
@@ -53,7 +53,7 @@ impl Default for ConfConfig {
             nacos_port: 8848,
             nacos_grpc_port: 9848,
             nacos_host: IP_UNSPECIFIED,
-            placeholder_white_list: vec![IpNet::from(IP_127.0.0.1)],
+            placeholder_white_list: vec![IpNet::from(IP_LOCALHOST)],
             iam_client: Default::default(),
         }
     }
