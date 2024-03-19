@@ -316,6 +316,7 @@ async fn create_inst_table(
     let mut index = vec![];
     sql.push("key character varying NOT NULL".to_string());
     sql.push("own_paths character varying NOT NULL".to_string());
+    sql.push("ext jsonb NOT NULL".to_string());
     index.push(("own_paths".to_string(), "btree"));
     for fact_col_conf in fact_col_conf_set {
         if fact_col_conf.kind == StatsFactColKind::Dimension {
