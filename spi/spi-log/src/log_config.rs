@@ -19,7 +19,7 @@ pub struct EventClientConfig {
 impl Default for EventClientConfig {
     fn default() -> Self {
         Self {
-            base_url: "http://localhost:8080".to_string(),
+            base_url: "http://127.0.0.1:8080".to_string(),
             event_bus_sk: "".to_string(),
         }
     }

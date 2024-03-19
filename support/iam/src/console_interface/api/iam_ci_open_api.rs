@@ -7,7 +7,7 @@ use tardis::web::poem_openapi::param::Path;
 use tardis::web::poem_openapi::payload::Json;
 use tardis::web::web_resp::{TardisApiResult, TardisResp, Void};
 
-use crate::basic::dto::iam_open_dto::{IamOpenAddProductReq, IamOpenBindAkProductReq};
+use crate::basic::dto::iam_open_dto::{IamOpenAddProductReq, IamOpenAkSkAddReq, IamOpenAkSkResp, IamOpenBindAkProductReq};
 use crate::basic::serv::iam_open_serv::IamOpenServ;
 use crate::iam_constants;
 
@@ -42,9 +42,21 @@ impl IamCiOpenApi {
         TardisResp::ok(Void {})
     }
 
+    /// Add aksk Cert by open platform / 生成AKSK通过开放平台
+    #[oai(path = "/aksk", method = "post")]
+    async fn add_aksk(&self, add_req: Json<IamOpenAkSkAddReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<IamOpenAkSkResp> {
+        add_remote_ip(request, &ctx.0).await?;
+        let mut funs = iam_constants::get_tardis_inst();
+        funs.begin().await?;
+        let result = IamOpenServ::general_cert(add_req.0, &funs, &ctx.0).await?;
+        funs.commit().await?;
+        ctx.0.execute_task().await?;
+        TardisResp::ok(result)
+    }
+
     /// Refresh cumulative number of api calls / 刷新API累计调用数 (定时任务)
     #[oai(path = "/refresh_cert_cumulative_count", method = "post")]
-    async fn refresh_cert_cumulative_count(&self, request: &Request) -> TardisApiResult<Void> {
+    async fn refresh_cert_cumulative_count(&self, _request: &Request) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
         let ctx = TardisContext::default();
         funs.begin().await?;

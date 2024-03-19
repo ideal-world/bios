@@ -2,9 +2,9 @@
 cache_key_res_changed_timer_sec = 1
 [csm.reach]
 [csm.reach.sms]
-base_url = "http://localhost:8080"
+base_url = "http://127.0.0.1:8080"
 [csm.reach.invoke]
-module_urls = { iam = "http://localhost:8080/iam" }
+module_urls = { iam = "http://127.0.0.1:8080/iam" }
 
 [fw.web_server]
 port = 8080
@@ -66,7 +66,7 @@ port = 8080
 
 [fw.web_server.modules.reach]
 title = "认证服务"
-doc_urls = [["test env", "http://localhost:8080/"]]
+doc_urls = [["test env", "http://127.0.0.1:8080/"]]
 [fw.web_server.modules.iam]
 [fw.web_server.modules.sms]
 uniform_error = false

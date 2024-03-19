@@ -41,7 +41,7 @@ async fn init_ws_client() -> TardisWSClient {
     }
     let default_avatar = event_conf.avatars[0].clone();
     set_default_avatar(default_avatar);
-    let client = bios_sdk_invoke::clients::event_client::EventClient::new("http://localhost:8080/event", &funs);
+    let client = bios_sdk_invoke::clients::event_client::EventClient::new("http://127.0.0.1:8080/event", &funs);
     loop {
         let addr = loop {
             if let Ok(result) = client.register(&event_conf.clone().into()).await {

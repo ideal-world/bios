@@ -8,7 +8,7 @@ port = 8080
 
 [fw.web_server.modules.event]
 title = "事件服务"
-doc_urls = [["test env", "http://localhost:8080/"]]
+doc_urls = [["test env", "http://127.0.0.1:8080/"]]
 
 [fw.cluster]
 watch_kind = "cache"

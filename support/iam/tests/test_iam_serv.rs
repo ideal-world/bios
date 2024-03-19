@@ -18,6 +18,7 @@ mod test_cc_cert_conf;
 mod test_cc_res;
 mod test_cc_role;
 mod test_cc_set;
+mod test_ci_open;
 mod test_cp_all;
 mod test_cs_tenant;
 mod test_ct_app;
@@ -122,7 +123,7 @@ async fn test_iam_serv() -> TardisResult<()> {
         &app2_admin_context,
     )
     .await?;
-
+    test_ci_open::test(&tenant1_admin_context).await?;
     test_key_cache::test(&system_admin_context).await?;
     // test_iam_oauth2::test(&tenant1_admin_context).await?;
     let conf_ldap_add_or_modify_req = test_basic::gen_test_ldap_conf();

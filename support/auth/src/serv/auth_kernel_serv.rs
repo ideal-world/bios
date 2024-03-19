@@ -356,7 +356,7 @@ async fn check_ak_signature(ak: &str, cache_sk: &str, signature: &str, req_date:
 }
 
 async fn check_webhook_ak_signature(
-    onwer: &str,
+    owner: &str,
     own_paths: &str,
     ak: &str,
     cache_sk: &str,
@@ -369,7 +369,7 @@ async fn check_webhook_ak_signature(
     query.remove(&config.head_key_ak_authorization);
     let sorted_req_query = auth_common_helper::sort_hashmap_query(query);
     let calc_signature = TardisFuns::crypto.base64.encode(TardisFuns::crypto.digest.hmac_sha256(
-        format!("{}\n{}\n{}\n{}\n{}\n{}", onwer, own_paths, req.method, req_date, req.path, sorted_req_query).to_lowercase(),
+        format!("{}\n{}\n{}\n{}\n{}\n{}", owner, own_paths, req.method, req_date, req.path, sorted_req_query).to_lowercase(),
         cache_sk,
     )?);
     if calc_signature != signature {

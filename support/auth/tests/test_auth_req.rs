@@ -32,7 +32,7 @@ async fn mock_req(method: &str, path: &str, query: &str, headers: Vec<(&str, &st
     };
     let result: TardisResp<AuthResp> = web_client
         .put(
-            &format!("https://localhost:8080/{DOMAIN_CODE}/auth"),
+            &format!("https://127.0.0.1:8080/{DOMAIN_CODE}/auth"),
             &AuthReq {
                 scheme: "http".to_string(),
                 path: path.to_string(),

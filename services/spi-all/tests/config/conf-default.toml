@@ -19,7 +19,7 @@ port = 8080
 [fw.web_server.modules.spi-stats]
 
 [fw.db]
-url = "postgres://postgres:ENC(5892ae51dbeedacdf10ba4c0d7af42a7)@localhost:5432/test"
+url = "postgres://postgres:ENC(5892ae51dbeedacdf10ba4c0d7af42a7)@127.0.0.1:5432/test"
 
 [fw.cache]
 url = "redis://:ENC(5892ae51dbeedacdf10ba4c0d7af42a7)@127.0.0.1:6379"

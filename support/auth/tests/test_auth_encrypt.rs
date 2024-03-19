@@ -82,7 +82,7 @@ async fn mock_req(
     };
     let result: TardisResp<AuthResp> = web_client
         .put(
-            &format!("https://localhost:8080/{DOMAIN_CODE}/auth"),
+            &format!("https://127.0.0.1:8080/{DOMAIN_CODE}/auth"),
             &AuthReq {
                 scheme: "http".to_string(),
                 path: path.to_string(),
@@ -131,7 +131,7 @@ pub async fn mock_req_mix_apis(method: &str, uri: &str, body: &str, mut headers:
     };
     let result: TardisResp<MixAuthResp> = web_client
         .put(
-            &format!("https://localhost:8080/{DOMAIN_CODE}/auth/apis"),
+            &format!("https://127.0.0.1:8080/{DOMAIN_CODE}/auth/apis"),
             &AuthReq {
                 scheme: "http".to_string(),
                 path: url[0].to_string(),
@@ -158,7 +158,7 @@ async fn mock_encrypt_resp(body: &str, headers: HashMap<String, String>, front_p
     let config = TardisFuns::cs_config::<AuthConfig>(DOMAIN_CODE);
     let result: TardisResp<AuthEncryptResp> = web_client
         .put(
-            &format!("https://localhost:8080/{DOMAIN_CODE}/auth/crypto"),
+            &format!("https://127.0.0.1:8080/{DOMAIN_CODE}/auth/crypto"),
             &AuthEncryptReq {
                 headers: headers.clone(),
                 body: body.to_string(),
@@ -192,7 +192,7 @@ async fn init_get_pub_key(sm2: &TardisCryptoSm2) -> TardisResult<(TardisCryptoSm
     let pub_key = TardisFuns::crypto.sm2.new_public_key(&pri_key).unwrap();
 
     let web_client = TardisWebClient::init(&WEB_CLIENT_CFG).unwrap();
-    let result: TardisResp<String> = web_client.get(&format!("https://localhost:8080/{DOMAIN_CODE}/auth/crypto/key"), None).await.unwrap().body.unwrap();
+    let result: TardisResp<String> = web_client.get(&format!("https://127.0.0.1:8080/{DOMAIN_CODE}/auth/crypto/key"), None).await.unwrap().body.unwrap();
     Ok((sm2.new_public_key_from_public_key(&result.data.unwrap()).unwrap(), pri_key, pub_key))
 }
 

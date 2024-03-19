@@ -21,7 +21,7 @@ async fn test_basic_schedual_service() -> TardisResult<()> {
     let docker = testcontainers::clients::Cli::default();
     let reldb_container = TardisTestContainer::postgres_custom(None, &docker);
     let port = reldb_container.get_host_port_ipv4(5432);
-    let url = format!("postgres://postgres:123456@localhost:{port}/test");
+    let url = format!("postgres://postgres:123456@127.0.0.1:{port}/test");
     env::set_var("TARDIS_FW.DB.URL", url);
 
     let redis_container = TardisTestContainer::redis_custom(&docker);
@@ -54,7 +54,7 @@ async fn test_add_delete(config: &ScheduleConfig, test_env: &TestEnv) {
             code: code.into(),
             // do every 2 seconds
             cron: "1/2 * * * * *".into(),
-            callback_url: "https://localhost:8080/callback/inc".into(),
+            callback_url: "https://127.0.0.1:8080/callback/inc".into(),
             enable_time: None,
             disable_time: None,
         },
@@ -79,7 +79,7 @@ async fn test_random_ops(config: &ScheduleConfig, test_env: &TestEnv) {
         ScheduleJobAddOrModifyReq {
             code: code.clone().into(),
             cron: format!("1/{period} * * * * *", period = 2),
-            callback_url: "https://localhost:8080/callback/inc".into(),
+            callback_url: "https://127.0.0.1:8080/callback/inc".into(),
             enable_time: Utc::now().checked_add_signed(chrono::Duration::seconds(5)),
             disable_time: None,
         }

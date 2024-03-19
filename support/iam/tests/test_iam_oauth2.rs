@@ -11,7 +11,7 @@ pub async fn test(tenant1_admin_context: &TardisContext) -> TardisResult<()> {
     const GITHUB_OAUTH2_AK: &str = "";
     const GITHUB_OAUTH2_SK: &str = "";
     // Manually splicing address to obtain code
-    // https://github.com/login/oauth/authorize?client_id={GITHUB_OAUTH2_AK}&redirect_uri=http://localhost/
+    // https://github.com/login/oauth/authorize?client_id={GITHUB_OAUTH2_AK}&redirect_uri=http://127.0.0.1/
     let code = "";
 
     let mut funs = iam_constants::get_tardis_inst();

@@ -1041,12 +1041,20 @@ impl FlowInstServ {
                                                     Value::String("".to_string())
                                                 }
                                             }
-                                            crate::dto::flow_var_dto::DefaultValueType::AutoFill => match FillType::from_str(&default.value.to_string()).map_err(|err| {
-                                                funs.err().internal_error("flow_inst", "check_transfer_vars", &err.to_string(), "400-flow-inst-vars-field-missing")
-                                            })? {
-                                                FillType::Time => Value::Number(Utc::now().timestamp_millis().into()),
-                                                FillType::Person => Value::String(ctx.owner.clone()),
-                                            },
+                                            crate::dto::flow_var_dto::DefaultValueType::AutoFill => {
+                                                match FillType::from_str(&default.value.as_str().ok_or(funs.err().bad_request(
+                                                    "flow_transitions",
+                                                    "default_value_type_parse",
+                                                    "AutoFill default value type is not string",
+                                                    "400-flow-inst-vars-field-missing",
+                                                ))?)
+                                                .map_err(|err| {
+                                                    funs.err().internal_error("flow_transitions", "default_value_type_parse", &err.to_string(), "400-flow-inst-vars-field-missing")
+                                                })? {
+                                                    FillType::Time => Value::Number(Utc::now().timestamp_millis().into()),
+                                                    FillType::Person => Value::String(ctx.owner.clone()),
+                                                }
+                                            }
                                         };
                                         var.dyn_default_value = Some(default_value);
                                     };
