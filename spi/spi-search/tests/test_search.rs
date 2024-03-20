@@ -19,6 +19,8 @@ mod test_search_item;
 
 #[tokio::test]
 async fn test_search() -> TardisResult<()> {
+    env::set_var("RUST_LOG", "debug,test_search=trace,sqlx::query=off");
+
     let docker = testcontainers::clients::Cli::default();
     let _x = init_search_container::init(&docker).await?;
     init_data().await?;
