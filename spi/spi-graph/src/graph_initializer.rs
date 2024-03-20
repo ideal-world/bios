@@ -32,13 +32,13 @@ async fn init_api(web_server: &TardisWebServer) -> TardisResult<()> {
 }
 
 pub async fn init_fun(bs_cert: SpiBsCertResp, ctx: &TardisContext, mgr: bool) -> TardisResult<SpiBsInst> {
-    info!("[BIOS.Graph] Fun initializing");
+    info!("[BIOS.Graph] Fun [{}]({}) initializing", bs_cert.kind_code, bs_cert.conn_uri);
     let inst = match bs_cert.kind_code.as_str() {
         #[cfg(feature = "spi-pg")]
         spi_constants::SPI_PG_KIND_CODE => spi_initializer::common_pg::init(&bs_cert, ctx, mgr).await,
         _ => Err(bs_cert.bs_not_implemented())?,
     }?;
-    info!("[BIOS.Graph] Fun initialized");
+    info!("[BIOS.Graph] Fun [{}]({}) initialized", bs_cert.kind_code, bs_cert.conn_uri);
     Ok(inst)
 }
 
