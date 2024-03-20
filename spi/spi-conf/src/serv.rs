@@ -18,6 +18,7 @@ use bios_basic::{
     spi_dispatch_service,
 };
 
+use poem::http::StatusCode;
 use tardis::{
     basic::{dto::TardisContext, error::TardisError, result::TardisResult},
     db::sea_orm::prelude::Uuid,
@@ -25,7 +26,7 @@ use tardis::{
     serde_json::{self, json},
     tokio::{sync::OnceCell, time::Instant},
     tokio::{sync::RwLock, task::JoinHandle},
-    web::{poem, reqwest::StatusCode},
+    web::poem,
     TardisFunsInst,
 };
 
@@ -43,7 +44,7 @@ use crate::{
 };
 #[cfg(feature = "spi-pg")]
 mod pg;
-pub mod placehodler;
+pub mod placeholder;
 
 spi_dispatch_service! {
     @mgr: true,
@@ -57,17 +58,17 @@ spi_dispatch_service! {
         /// create a new namespace
         create_namespace(attribute: &mut NamespaceAttribute) -> TardisResult<()>;
         /// get a namespace
-        get_namespace(discriptor: &mut NamespaceDescriptor) -> TardisResult<NamespaceItem>;
+        get_namespace(descriptor: &mut NamespaceDescriptor) -> TardisResult<NamespaceItem>;
         /// update namespace
         edit_namespace(attribute: &mut NamespaceAttribute) -> TardisResult<()>;
         /// delete namespace
-        delete_namespace(discriptor: &mut NamespaceDescriptor) -> TardisResult<()>;
+        delete_namespace(descriptor: &mut NamespaceDescriptor) -> TardisResult<()>;
         /// list namespace
         get_namespace_list() -> TardisResult<Vec<NamespaceItem>>;
 
 
         // for configs
-        /// publich config
+        /// publish config
         publish_config(req: &mut ConfigPublishRequest) -> TardisResult<bool>;
         /// get config
         get_config(descriptor: &mut ConfigDescriptor) -> TardisResult<String>;
@@ -150,7 +151,7 @@ pub async fn register(req: RegisterRequest, funs: &TardisFunsInst, ctx: &TardisC
                 return Err(funs.err().conflict(
                     "spi-conf",
                     "register",
-                    "Generate non-conclict username attempts exceed max retry limit",
+                    "Generate non-conflict username attempts exceed max retry limit",
                     EXCEED_MAX_RETRY_TIMES,
                 ));
             }
@@ -160,7 +161,7 @@ pub async fn register(req: RegisterRequest, funs: &TardisFunsInst, ctx: &TardisC
         let supplier = result.supplier;
         let owner = result.owner;
         let error_message = format!("conflict username [{conflict_ak}] owned by [{owner}] with supplier [{supplier}]");
-        return Err(funs.err().conflict("spi-conf", "register", &error_message, CONLICT_AK));
+        return Err(funs.err().conflict("spi-conf", "register", &error_message, CONFLICT_AK));
     }
     // add a cert
     let ext = json!({
@@ -260,11 +261,11 @@ pub async fn jwt_sign(funs: &TardisFunsInst, ctx: &TardisContext) -> poem::Resul
     let cfg = funs.conf::<ConfConfig>();
     let ttl = cfg.token_ttl as u64;
     let claim = NacosJwtClaim::gen(ttl, &cfg.auth_username);
-    let key =
-        EncodingKey::from_base64_secret(&cfg.auth_key).map_err(|_| poem::Error::from_string("spi-conf nacosmocker using an invalid authkey", StatusCode::INTERNAL_SERVER_ERROR))?;
+    let key = EncodingKey::from_base64_secret(&cfg.auth_key)
+        .map_err(|_| poem::Error::from_string("spi-conf nacos mocker using an invalid authkey", StatusCode::INTERNAL_SERVER_ERROR))?;
 
     let token = encode(&Header::new(Algorithm::HS256), &claim, &key)
-        .map_err(|_| poem::Error::from_string("spi-conf nacosmocker fail to encode auth token", StatusCode::INTERNAL_SERVER_ERROR))?;
+        .map_err(|_| poem::Error::from_string("spi-conf nacos mocker fail to encode auth token", StatusCode::INTERNAL_SERVER_ERROR))?;
     bind_token_ctx(&token, ttl, ctx).await.map_err(|e| poem::Error::from_string(format!("{e}"), StatusCode::INTERNAL_SERVER_ERROR))?;
     Ok(token)
 }
@@ -275,8 +276,8 @@ pub async fn jwt_validate(token: &str, funs: &TardisFunsInst) -> poem::Result<Ta
     let cfg = funs.conf::<ConfConfig>();
     let mut validation = Validation::new(Algorithm::HS256);
     validation.sub = Some(cfg.auth_username.clone());
-    let key =
-        DecodingKey::from_base64_secret(&cfg.auth_key).map_err(|_| poem::Error::from_string("spi-conf nacosmocker using an invalid authkey", StatusCode::INTERNAL_SERVER_ERROR))?;
+    let key = DecodingKey::from_base64_secret(&cfg.auth_key)
+        .map_err(|_| poem::Error::from_string("spi-conf nacos mocker using an invalid auth key", StatusCode::INTERNAL_SERVER_ERROR))?;
     let _ = decode::<NacosJwtClaim>(token, &key, &validation).map_err(|e| poem::Error::from_string(e.to_string(), StatusCode::FORBIDDEN))?;
     if let Some(ctx) = get_ctx_by_token(token).await? {
         Ok(ctx)

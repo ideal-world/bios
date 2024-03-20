@@ -8,12 +8,9 @@ use bios_basic::{
     spi::{dto::spi_bs_dto::SpiBsAddReq, spi_constants},
     test::test_http_client::TestHttpClient,
 };
-use bios_spi_conf::{
-    conf_constants::DOMAIN_CODE,
-    dto::{conf_auth_dto::RegisterResponse, conf_config_dto::ConfigDescriptor},
-};
+use bios_spi_conf::dto::{conf_auth_dto::RegisterResponse, conf_config_dto::ConfigDescriptor};
 use tardis::{
-    basic::{dto::TardisContext, field::TrimString, result::TardisResult},
+    basic::{dto::TardisContext, result::TardisResult},
     log::{self, debug},
     rand,
     serde_json::json,
@@ -33,7 +30,6 @@ async fn spi_conf_namespace_test() -> TardisResult<()> {
     let tardis_ctx = TardisContext::default();
     let mut client = TestHttpClient::new("https://127.0.0.1:8080/spi-conf".to_string());
     client.set_auth(&tardis_ctx)?;
-    let funs = TardisFuns::inst_with_db_conn(DOMAIN_CODE.to_string(), None);
     let RegisterResponse { username, password } = client
         .put(
             "/ci/auth/register_bundle",
@@ -61,7 +57,7 @@ async fn spi_conf_namespace_test() -> TardisResult<()> {
     })?;
     test_single_listener(&mut client).await?;
     test_listener(&mut client).await?;
-    // web_server_hanlde.await.unwrap()?;
+    // web_server_handle.await.unwrap()?;
     drop(container_hold);
     Ok(())
 }

@@ -38,27 +38,27 @@ impl Default for NamespaceItem {
             namespace_desc: None,
             quota: 200,
             config_count: 0,
-            tp: NamesapceType::default().as_u32(),
+            tp: NamespaceType::default().as_u32(),
         }
     }
 }
 
 #[repr(u32)]
 #[derive(Debug, Default, Serialize, Deserialize, Clone, Copy)]
-pub enum NamesapceType {
+pub enum NamespaceType {
     Global = 0,
     #[default]
     Private = 1,
     Custom = 2,
 }
 
-impl NamesapceType {
+impl NamespaceType {
     pub fn from_u32(v: u32) -> Self {
         match v {
-            0 => NamesapceType::Global,
-            1 => NamesapceType::Private,
-            2 => NamesapceType::Custom,
-            _ => NamesapceType::Private,
+            0 => NamespaceType::Global,
+            1 => NamespaceType::Private,
+            2 => NamespaceType::Custom,
+            _ => NamespaceType::Private,
         }
     }
     pub fn as_u32(&self) -> u32 {

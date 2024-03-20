@@ -5,7 +5,7 @@ use bios_spi_conf::{
     conf_constants::DOMAIN_CODE,
     dto::conf_auth_dto::{RegisterRequest, RegisterResponse},
 };
-use poem::http::HeaderName;
+use reqwest::header::HeaderName;
 use tardis::{
     basic::{dto::TardisContext, field::TrimString, result::TardisResult},
     log,
@@ -27,7 +27,7 @@ async fn spi_conf_namespace_test() -> TardisResult<()> {
     std::env::set_var("PROFILE", "nacos");
     let docker = testcontainers::clients::Cli::default();
     let container_hold = init_tardis(&docker).await?;
-    let _web_server_hanlde = start_web_server().await;
+    let _web_server_handle = start_web_server().await;
     let tardis_ctx = TardisContext::default();
     let mut client = TestHttpClient::new(format!("{SCHEMA}://127.0.0.1:8080/spi-conf"));
     client.set_auth(&tardis_ctx)?;
@@ -92,7 +92,7 @@ async fn test_tardis_compatibility(_test_client: &TestHttpClient) -> TardisResul
 
     let data_id = "default-config";
     let group = "spi-conf-test";
-    log::info!("login to nacosmocker");
+    log::info!("login to nacos mocker");
     nacos_client.login(&auth.username, &auth.password).await.expect("fail to login");
     // temporary don't support
     // nacos_client.login("nacosmocker", "nacosmocker").await.expect("fail to login");

@@ -28,7 +28,6 @@ async fn spi_conf_namespace_test() -> TardisResult<()> {
     let docker = testcontainers::clients::Cli::default();
     let container_hold = init_tardis(&docker).await?;
     start_web_server().await?;
-    let tardis_ctx = TardisContext::default();
     let mut client = TestHttpClient::new("https://127.0.0.1:8080/spi-conf".to_string());
     client.set_auth(&TardisContext {
         own_paths: "t1/app001".to_string(),
@@ -61,7 +60,7 @@ async fn spi_conf_namespace_test() -> TardisResult<()> {
     test_curd(&mut client).await?;
     test_tags(&mut client).await?;
 
-    // web_server_hanlde.await.unwrap()?;
+    // web_server_handle.await.unwrap()?;
     drop(container_hold);
     Ok(())
 }
@@ -143,7 +142,7 @@ pub async fn test_curd(client: &mut TestHttpClient) -> TardisResult<()> {
             },
         )
         .await;
-    // varify the namespace_desc has been updated
+    // verify the namespace_desc has been updated
     let response = client.get::<NamespaceItem>("/ci/namespace?namespace_id=test1").await;
     assert_eq!(&response.namespace_desc.unwrap(), "测试命名空间1-修改");
     // 7.2 modify namespace does not exist
@@ -174,7 +173,7 @@ pub async fn test_curd(client: &mut TestHttpClient) -> TardisResult<()> {
         .await;
     // 8.2 delete namespace
     client.delete("/ci/namespace?namespace_id=test1").await;
-    // skip verify because it will panic when 404 is returned. it won't be fixup untill we can ban uniform error mw on some distinct api
+    // skip verify because it will panic when 404 is returned. it won't be fixup until we can ban uniform error mw on some distinct api
     #[allow(unreachable_code)]
     'skip: {
         break 'skip;
@@ -303,7 +302,7 @@ pub async fn test_curd(client: &mut TestHttpClient) -> TardisResult<()> {
             },
         )
         .await;
-    // namespace should have 0 configs, varifies that the namespace is empty
+    // namespace should have 0 configs, verifies that the namespace is empty
     let response = client.get::<Vec<ConfigItemDigest>>(&format!("/ci/cs/history/configs?namespace_id={}", NAMESPACE_ID)).await;
     assert_eq!(response.len(), 0);
     // 11.2 create 3 config in the namespace
@@ -347,7 +346,7 @@ pub async fn test_tags(client: &mut TestHttpClient) -> TardisResult<()> {
             }),
         )
         .await;
-    // 2. varify the tags
+    // 2. verify the tags
     let response = client.get::<ConfigItem>(&format!("/ci/cs/config/detail?namespace_id=public&group=DEFAULT-GROUP&data_id={DATA_ID}")).await;
     assert!(response.config_tags.contains(&"tag1".to_string()));
     assert!(response.config_tags.contains(&"tag2".to_string()));
@@ -365,7 +364,7 @@ pub async fn test_tags(client: &mut TestHttpClient) -> TardisResult<()> {
             }),
         )
         .await;
-    // 4. varify the tags
+    // 4. verify the tags
     let response = client.get::<ConfigItem>(&format!("/ci/cs/config/detail?namespace_id=public&group=DEFAULT-GROUP&data_id={DATA_ID}")).await;
     assert!(!response.config_tags.contains(&"tag1".to_string()));
     assert!(response.config_tags.contains(&"tag2".to_string()));
