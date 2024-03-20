@@ -68,7 +68,7 @@ pub(crate) async fn get_fact_record_latest(
     Ok(values)
 }
 
-pub(crate) async fn get_fact_record_pagenated(
+pub(crate) async fn get_fact_record_paginated(
     fact_conf_key: &str,
     fact_record_key: &str,
     page_number: u32,
