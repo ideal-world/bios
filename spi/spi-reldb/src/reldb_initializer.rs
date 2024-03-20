@@ -9,6 +9,7 @@ use tardis::{
     basic::{dto::TardisContext, error::TardisError, result::TardisResult},
     config::config_dto::DBModuleConfig,
     db::reldb_client::{TardisRelDBClient, TardisRelDBlConnection},
+    log::info,
     serde_json::Value as JsonValue,
     web::web_server::TardisWebServer,
     TardisFuns, TardisFunsInst,
@@ -22,6 +23,7 @@ use crate::{
 };
 
 pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
+    info!("[BIOS.Reldb] Module initializing");
     let mut funs = crate::get_tardis_inst();
     let clean_interval_sec = funs.conf::<ReldbConfig>().tx_clean_interval_sec;
     bios_basic::rbum::rbum_initializer::init(funs.module_code(), funs.conf::<ReldbConfig>().rbum.clone()).await?;
@@ -31,6 +33,7 @@ pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
     funs.commit().await?;
     init_api(web_server).await?;
     reldb_exec_serv::clean(clean_interval_sec).await;
+    info!("[BIOS.Reldb] Module initialized");
     Ok(())
 }
 
@@ -46,6 +49,7 @@ async fn init_api(web_server: &TardisWebServer) -> TardisResult<()> {
 }
 
 pub async fn init_fun(bs_cert: SpiBsCertResp, ctx: &TardisContext, _: bool) -> TardisResult<SpiBsInst> {
+    info!("[BIOS.Reldb] Fun [{}]({}) initializing", bs_cert.kind_code, bs_cert.conn_uri);
     let ext = TardisFuns::json.str_to_json(&bs_cert.ext)?;
     let compatible_type = TardisFuns::json.json_to_obj(ext.get("compatible_type").unwrap_or(&tardis::serde_json::Value::String("None".to_string())).clone())?;
 
@@ -71,6 +75,7 @@ pub async fn init_fun(bs_cert: SpiBsCertResp, ctx: &TardisContext, _: bool) -> T
         reldb_constants::SPI_MYSQL_KIND_CODE => serv::mysql::reldb_mysql_initializer::init(&bs_cert, &client, ctx).await?,
         _ => Err(bs_cert.bs_not_implemented())?,
     };
+    info!("[BIOS.Reldb] Fun [{}]({}) initialized", bs_cert.kind_code, bs_cert.conn_uri);
     Ok(SpiBsInst { client: Box::new(client), ext })
 }
 
