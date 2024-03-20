@@ -1,5 +1,5 @@
 use bios_basic::test::test_http_client::TestHttpClient;
-use bios_spi_graph::dto::graph_dto::{GraphNodeVersionResp, GraphRelAddReq, GraphRelDetailResp, GraphRelUpgardeDelRelReq, GraphRelUpgardeVersionReq};
+use bios_spi_graph::dto::graph_dto::{GraphNodeVersionResp, GraphRelAddReq, GraphRelDetailResp, GraphRelUpgradeDelRelReq, GraphRelUpgradeVersionReq};
 use tardis::basic::dto::TardisContext;
 use tardis::basic::result::TardisResult;
 use tardis::serde_json::json;
@@ -220,7 +220,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
     let _: Void = client
         .put(
             "/ci/version",
-            &GraphRelUpgardeVersionReq {
+            &GraphRelUpgradeVersionReq {
                 key: "req1".into(),
                 old_version: "1".to_string(),
                 new_version: "3".to_string(),
@@ -381,17 +381,17 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
     let _: Void = client
         .put(
             "/ci/version",
-            &GraphRelUpgardeVersionReq {
+            &GraphRelUpgradeVersionReq {
                 key: "req1".into(),
                 old_version: "3".to_string(),
                 new_version: "4".to_string(),
                 del_rels: vec![
-                    GraphRelUpgardeDelRelReq {
+                    GraphRelUpgradeDelRelReq {
                         tag: Some("req-task".to_string()),
                         rel_key: Some("task1".into()),
                         rel_version: None,
                     },
-                    GraphRelUpgardeDelRelReq {
+                    GraphRelUpgradeDelRelReq {
                         tag: Some("req-bug-2".to_string()),
                         rel_key: Some("bug1".into()),
                         rel_version: Some("1".to_string()),

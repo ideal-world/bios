@@ -21,13 +21,13 @@ pub struct GraphRelAddReq {
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
-pub struct GraphRelUpgardeVersionReq {
+pub struct GraphRelUpgradeVersionReq {
     pub key: TrimString,
     #[oai(validator(pattern = r"^[a-z0-9-_.]+$"))]
     pub old_version: String,
     #[oai(validator(pattern = r"^[a-z0-9-_.]+$"))]
     pub new_version: String,
-    pub del_rels: Vec<GraphRelUpgardeDelRelReq>,
+    pub del_rels: Vec<GraphRelUpgradeDelRelReq>,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug, sea_orm::FromQueryResult)]
@@ -37,7 +37,7 @@ pub struct GraphNodeVersionResp {
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
-pub struct GraphRelUpgardeDelRelReq {
+pub struct GraphRelUpgradeDelRelReq {
     #[oai(validator(pattern = r"^[a-z0-9-_.]+$"))]
     pub tag: Option<String>,
     pub rel_key: Option<TrimString>,

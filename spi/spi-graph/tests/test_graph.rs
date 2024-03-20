@@ -22,7 +22,7 @@ async fn test_graph() -> TardisResult<()> {
     let root_path = "";
     // let root_path = "spi/spi-graph/";
 
-    env::set_var("RUST_LOG", "debug,test_reldb=trace,sqlx::query=off");
+    env::set_var("RUST_LOG", "debug,test_graph=trace,sqlx::query=off");
 
     let docker = testcontainers::clients::Cli::default();
     let _x = init_rbum_test_container::init(&docker, Some(format!("{}config", root_path))).await?;

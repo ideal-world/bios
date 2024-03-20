@@ -5,7 +5,7 @@ use tardis::web::poem_openapi::param::Query;
 use tardis::web::poem_openapi::payload::Json;
 use tardis::web::web_resp::{TardisApiResult, TardisResp, Void};
 
-use crate::dto::graph_dto::{GraphNodeVersionResp, GraphRelAddReq, GraphRelDetailResp, GraphRelUpgardeVersionReq};
+use crate::dto::graph_dto::{GraphNodeVersionResp, GraphRelAddReq, GraphRelDetailResp, GraphRelUpgradeVersionReq};
 use crate::serv::graph_basic_serv;
 #[derive(Clone)]
 pub struct GraphCiRelApi;
@@ -23,7 +23,7 @@ impl GraphCiRelApi {
 
     /// Upgrade Version
     #[oai(path = "/version", method = "put")]
-    async fn upgrade_version(&self, upgrade_version_req: Json<GraphRelUpgardeVersionReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+    async fn upgrade_version(&self, upgrade_version_req: Json<GraphRelUpgradeVersionReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let funs = crate::get_tardis_inst();
         graph_basic_serv::upgrade_version(&upgrade_version_req.0, &funs, &ctx.0).await?;
         TardisResp::ok(Void {})
