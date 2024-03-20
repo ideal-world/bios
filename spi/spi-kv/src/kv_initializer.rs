@@ -1,12 +1,15 @@
 use bios_basic::spi::{api::spi_ci_bs_api, dto::spi_bs_dto::SpiBsCertResp, spi_constants, spi_funs::SpiBsInst, spi_initializer};
 use tardis::{
-    basic::{dto::TardisContext, result::TardisResult}, log::info, web::web_server::TardisWebServer, TardisFuns, TardisFunsInst
+    basic::{dto::TardisContext, result::TardisResult},
+    log::info,
+    web::web_server::TardisWebServer,
+    TardisFuns, TardisFunsInst,
 };
 
 use crate::{api::ci::kv_ci_item_api, kv_config::KvConfig, kv_constants::DOMAIN_CODE};
 
 pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
-    info!("[SPI.KV] Module initializing");
+    info!("[BIOS.KV] Module initializing");
     let mut funs = crate::get_tardis_inst();
     bios_basic::rbum::rbum_initializer::init(funs.module_code(), funs.conf::<KvConfig>().rbum.clone()).await?;
     funs.begin().await?;
@@ -14,7 +17,7 @@ pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
     init_db(&funs, &ctx).await?;
     funs.commit().await?;
     init_api(web_server).await?;
-    info!("[SPI.KV] Module initialized");
+    info!("[BIOS.KV] Module initialized");
     Ok(())
 }
 
@@ -29,13 +32,13 @@ async fn init_api(web_server: &TardisWebServer) -> TardisResult<()> {
 }
 
 pub async fn init_fun(bs_cert: SpiBsCertResp, ctx: &TardisContext, mgr: bool) -> TardisResult<SpiBsInst> {
-    info!("[SPI.KV] Fun initializing");
+    info!("[BIOS.KV] Fun initializing");
     let inst = match bs_cert.kind_code.as_str() {
         #[cfg(feature = "spi-pg")]
         spi_constants::SPI_PG_KIND_CODE => spi_initializer::common_pg::init(&bs_cert, ctx, mgr).await,
         _ => Err(bs_cert.bs_not_implemented())?,
     }?;
-    info!("[SPI.KV] Fun initialized");
+    info!("[BIOS.KV] Fun initialized");
     Ok(inst)
 }
 

@@ -21,7 +21,7 @@ use crate::{
 pub const RECONNECT_INTERVAL: Duration = Duration::from_secs(10);
 
 pub async fn start_search_event_service(config: &EventTopicConfig) -> TardisResult<()> {
-    info!("[Bios.Search] starting event service");
+    info!("[BIOS.Search] starting event service");
     let funs = get_tardis_inst();
     let client = event_client::EventClient::new(config.base_url.as_str(), &funs);
     let mut event_conf = config.clone();
@@ -43,7 +43,7 @@ pub async fn start_search_event_service(config: &EventTopicConfig) -> TardisResu
                     let funs = get_tardis_inst();
                     let result = serv::search_item_serv::add(&mut req, &funs, &ctx).await;
                     if let Err(err) = result {
-                        error!("[Bios.Search] failed to search item: {}", err);
+                        error!("[BIOS.Search] failed to search item: {}", err);
                     }
                 });
             }
@@ -56,7 +56,7 @@ pub async fn start_search_event_service(config: &EventTopicConfig) -> TardisResu
                     let funs = get_tardis_inst();
                     let result = serv::search_item_serv::modify(&req.tag, &req.key, &mut modify_req, &funs, &ctx).await;
                     if let Err(err) = result {
-                        error!("[Bios.Search] failed to search item: {}", err);
+                        error!("[BIOS.Search] failed to search item: {}", err);
                     }
                 });
             }
@@ -68,12 +68,12 @@ pub async fn start_search_event_service(config: &EventTopicConfig) -> TardisResu
                     let funs = get_tardis_inst();
                     let result = serv::search_item_serv::delete(&req.tag, &req.key, &funs, &ctx).await;
                     if let Err(err) = result {
-                        error!("[Bios.Search] failed to search item: {}", err);
+                        error!("[BIOS.Search] failed to search item: {}", err);
                     }
                 });
             }
             Some(unknown_event) => {
-                warn!("[Bios.Search] event receive unknown event {unknown_event}")
+                warn!("[BIOS.Search] event receive unknown event {unknown_event}")
             }
             _ => {}
         }
@@ -85,7 +85,7 @@ pub async fn start_search_event_service(config: &EventTopicConfig) -> TardisResu
             // it's ok todo so, reconnect will be blocked until the previous ws_client is dropped
             let result = ws_client.reconnect().await;
             if let Err(err) = result {
-                error!("[Bios.Search] failed to reconnect to event service: {}", err);
+                error!("[BIOS.Search] failed to reconnect to event service: {}", err);
             }
             tokio::time::sleep(RECONNECT_INTERVAL).await;
         }

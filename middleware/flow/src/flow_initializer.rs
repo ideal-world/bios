@@ -903,7 +903,7 @@ async fn init_ws_flow_client() -> Option<TardisWSClient> {
                 return Some(ws_client);
             }
             Err(err) => {
-                error!("[Bios.Iam] failed to connect to event server: {}", err);
+                error!("[BIOS.Iam] failed to connect to event server: {}", err);
                 tardis::tokio::time::sleep(std::time::Duration::from_secs(10)).await;
             }
         }

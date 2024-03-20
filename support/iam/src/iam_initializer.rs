@@ -758,11 +758,11 @@ async fn init_ws_log_client() -> Option<TardisWSClient> {
         let ws_client = TardisFuns::ws_client(&addr, |_| async move { None }).await;
         match ws_client {
             Ok(ws_client) => {
-                info!("[Bios.Iam] connected to server");
+                info!("[BIOS.Iam] connected to server");
                 return Some(ws_client);
             }
             Err(err) => {
-                error!("[Bios.Iam] failed to connect to event server: {}", err);
+                error!("[BIOS.Iam] failed to connect to event server: {}", err);
                 tardis::tokio::time::sleep(std::time::Duration::from_secs(10)).await;
             }
         }
@@ -797,11 +797,11 @@ async fn init_ws_search_client() -> Option<TardisWSClient> {
         let ws_client = TardisFuns::ws_client(&addr, |_| async move { None }).await;
         match ws_client {
             Ok(ws_client) => {
-                info!("[Bios.Iam] connected to server");
+                info!("[BIOS.Iam] connected to server");
                 return Some(ws_client);
             }
             Err(err) => {
-                error!("[Bios.Iam] failed to connect to event server: {}", err);
+                error!("[BIOS.Iam] failed to connect to event server: {}", err);
                 tardis::tokio::time::sleep(std::time::Duration::from_secs(10)).await;
             }
         }
@@ -836,11 +836,11 @@ async fn init_ws_iam_send_event_client() -> Option<TardisWSClient> {
         let ws_client = TardisFuns::ws_client(&addr, |_| async move { None }).await;
         match ws_client {
             Ok(ws_client) => {
-                info!("[Bios.Iam] connected to server");
+                info!("[BIOS.Iam] connected to server");
                 return Some(ws_client);
             }
             Err(err) => {
-                error!("[Bios.Iam] failed to connect to event server: {}", err);
+                error!("[BIOS.Iam] failed to connect to event server: {}", err);
                 tardis::tokio::time::sleep(std::time::Duration::from_secs(10)).await;
             }
         }
@@ -864,7 +864,7 @@ pub async fn init_ws_iam_event_client() -> TardisResult<()> {
     };
     let ws_client = TardisFuns::ws_client(&addr, |message| async move {
         let Ok(json_str) = message.to_text() else { return None };
-        info!("[Bios.Iam] event msg: {json_str}");
+        info!("[BIOS.Iam] event msg: {json_str}");
         let Ok(TardisWebsocketMessage { msg, event, .. }) = TardisFuns::json.str_to_obj(json_str) else {
             return None;
         };
@@ -885,7 +885,7 @@ pub async fn init_ws_iam_event_client() -> TardisResult<()> {
                     )
                     .await;
                     if let Err(err) = result {
-                        error!("[Bios.Iam] failed to execute_task_external item: {}", err);
+                        error!("[BIOS.Iam] failed to execute_task_external item: {}", err);
                     }
                 });
             }
@@ -906,7 +906,7 @@ pub async fn init_ws_iam_event_client() -> TardisResult<()> {
                         )
                         .await;
                         if let Err(err) = result {
-                            error!("[Bios.Iam] failed to stop_task_external : {}", err);
+                            error!("[BIOS.Iam] failed to stop_task_external : {}", err);
                         }
                     }
                 });
@@ -928,12 +928,12 @@ pub async fn init_ws_iam_event_client() -> TardisResult<()> {
                     )
                     .await;
                     if let Err(err) = result {
-                        error!("[Bios.Iam] failed to set_task_process_data item: {}", err);
+                        error!("[BIOS.Iam] failed to set_task_process_data item: {}", err);
                     }
                 });
             }
             Some(unknown_event) => {
-                warn!("[Bios.Iam] event receive unknown event {unknown_event}")
+                warn!("[BIOS.Iam] event receive unknown event {unknown_event}")
             }
             _ => {}
         }
@@ -945,7 +945,7 @@ pub async fn init_ws_iam_event_client() -> TardisResult<()> {
             // it's ok todo so, reconnect will be blocked until the previous ws_client is dropped
             let result = ws_client.reconnect().await;
             if let Err(err) = result {
-                error!("[Bios.Iam] failed to reconnect to event service: {}", err);
+                error!("[BIOS.Iam] failed to reconnect to event service: {}", err);
             }
             tokio::time::sleep(std::time::Duration::from_secs(10)).await;
         }

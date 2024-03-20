@@ -130,7 +130,7 @@ pub(crate) async fn ws_process(listener_code: String, token: String, websocket: 
                         own_paths: Some(ctx.own_paths.clone()),
                     };
                     if let Err(e) = ws_client.publish_add_log(&req, default_log_avatar().await.clone(), spi_app_id.clone(), &ctx).await {
-                        warn!("[Bios.Event] publish log fail: {}", e);
+                        warn!("[BIOS.Event] publish log fail: {}", e);
                     }
                 }
             }

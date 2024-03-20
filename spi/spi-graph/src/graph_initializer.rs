@@ -9,7 +9,7 @@ use tardis::{
 use crate::{api::ci::graph_ci_basic_api, graph_config::GraphConfig, graph_constants::DOMAIN_CODE};
 
 pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
-    info!("[SPI.Graph] Module initializing");
+    info!("[BIOS.Graph] Module initializing");
     let mut funs = crate::get_tardis_inst();
     bios_basic::rbum::rbum_initializer::init(funs.module_code(), funs.conf::<GraphConfig>().rbum.clone()).await?;
     funs.begin().await?;
@@ -17,7 +17,7 @@ pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
     init_db(&funs, &ctx).await?;
     funs.commit().await?;
     init_api(web_server).await?;
-    info!("[SPI.Graph] Module initialized");
+    info!("[BIOS.Graph] Module initialized");
     Ok(())
 }
 
@@ -32,13 +32,13 @@ async fn init_api(web_server: &TardisWebServer) -> TardisResult<()> {
 }
 
 pub async fn init_fun(bs_cert: SpiBsCertResp, ctx: &TardisContext, mgr: bool) -> TardisResult<SpiBsInst> {
-    info!("[SPI.Graph] Fun initializing");
+    info!("[BIOS.Graph] Fun initializing");
     let inst = match bs_cert.kind_code.as_str() {
         #[cfg(feature = "spi-pg")]
         spi_constants::SPI_PG_KIND_CODE => spi_initializer::common_pg::init(&bs_cert, ctx, mgr).await,
         _ => Err(bs_cert.bs_not_implemented())?,
     }?;
-    info!("[SPI.Graph] Fun initialized");
+    info!("[BIOS.Graph] Fun initialized");
     Ok(inst)
 }
 
