@@ -11,8 +11,10 @@ use crate::console_interface::serv::iam_ci_oauth2_token_serv::IamCiOauth2AkSkSer
 use crate::iam_constants;
 use crate::iam_enumeration::Oauth2GrantType;
 use bios_basic::helper::request_helper::add_remote_ip;
-use bios_basic::rbum::dto::rbum_cert_dto::{RbumCertSummaryResp, RbumCertSummaryWithSkResp};
+use bios_basic::rbum::dto::rbum_cert_dto::RbumCertSummaryWithSkResp;
 use bios_basic::rbum::dto::rbum_filer_dto::RbumCertFilterReq;
+use bios_basic::rbum::serv::rbum_cert_serv::RbumCertServ;
+use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::error::TardisError;
 use tardis::web::context_extractor::TardisContextExtractor;
@@ -74,24 +76,23 @@ impl IamCiCertManageApi {
 #[poem_openapi::OpenApi(prefix_path = "/ci/cert", tag = "bios_basic::ApiTag::Interface")]
 impl IamCiCertApi {
     #[oai(path = "/get/:id", method = "get")]
-    async fn get_cert_by_id(&self, id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<RbumCertSummaryResp> {
+    async fn get_cert_by_id(&self, id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<IamCertAkSkResp> {
         add_remote_ip(request, &ctx.0).await?;
         let funs = iam_constants::get_tardis_inst();
-        let result = IamCertServ::find_certs(
+        let ak = RbumCertServ::find_one_detail_rbum(
             &RbumCertFilterReq {
-                id: Some(id.0),
+                id: Some(id.0.clone()),
                 ..Default::default()
             },
-            None,
-            None,
             &funs,
             &ctx.0,
         )
         .await?
-        .pop()
-        .ok_or_else(|| funs.err().internal_error("iam_ci_cert", "get_cert_by_id", "cert is not found", "401-iam-cert-code-not-exist"))?;
+        .ok_or_else(|| funs.err().internal_error("iam_ci_cert", "get_cert_by_id", "cert is not found", "401-iam-cert-code-not-exist"))?
+        .ak;
+        let sk = RbumCertServ::show_sk(&id.0, &RbumCertFilterReq::default(), &funs, &ctx.0).await?;
         ctx.0.execute_task().await?;
-        TardisResp::ok(result)
+        TardisResp::ok(IamCertAkSkResp { id: id.clone(), ak, sk })
     }
     /// Find Cert By Kind And Supplier
     ///
