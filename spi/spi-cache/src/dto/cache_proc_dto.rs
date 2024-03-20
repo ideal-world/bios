@@ -78,7 +78,7 @@ pub struct KbReq {
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
-pub struct KbRagngeReq {
+pub struct KbRangeReq {
     #[oai(validator(min_length = "1"))]
     pub key: TrimString,
     pub start: u32,
