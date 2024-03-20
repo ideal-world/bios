@@ -3,7 +3,6 @@ use std::time::Duration;
 
 use bios_basic::rbum::dto::rbum_kind_attr_dto::RbumKindAttrAddReq;
 use bios_basic::rbum::dto::rbum_rel_agg_dto::RbumRelAttrAggAddReq;
-use bios_basic::rbum::rbum_config::RbumConfig;
 use bios_basic::rbum::rbum_enumeration::{RbumDataTypeKind, RbumScopeLevelKind, RbumWidgetTypeKind};
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use bios_basic::rbum::serv::rbum_kind_serv::{RbumKindAttrServ, RbumKindServ};
@@ -25,7 +24,8 @@ mod test_plugin_exec;
 
 #[tokio::test]
 async fn test_plugin() -> TardisResult<()> {
-    env::set_var("RUST_LOG", "debug,tardis=trace,bios_mw_event=trace,test_event=trace,sqlx::query=off");
+    env::set_var("RUST_LOG", "debug,test_plugin=trace,sqlx::query=off");
+    
     let docker = testcontainers::clients::Cli::default();
     let _x = init_rbum_test_container::init(&docker, None).await?;
     init_data().await?;
@@ -34,9 +34,6 @@ async fn test_plugin() -> TardisResult<()> {
 }
 
 async fn init_data() -> TardisResult<()> {
-    // Initialize RBUM
-    bios_basic::rbum::rbum_initializer::init(DOMAIN_CODE, RbumConfig::default()).await?;
-
     let web_server = TardisFuns::web_server();
     // Initialize SPI plugin
     plugin_initializer::init(&web_server).await.unwrap();
