@@ -57,11 +57,11 @@ itertools = { version = "0" }
 fancy-regex = { version = "0" }
 run_script = { version = "0.10" }
 testcontainers-modules = { version = "0.3", features = ["redis"] }
-strum = { version = "0.25", features = ["derive"] }
+strum = { version = "0.26", features = ["derive"] }
 # tardis
-# tardis = { version = "0.1.0-rc.9" }
+tardis = { version = "0.1.0-rc.10" }
 # tardis = { path = "../tardis/tardis" }
-tardis = { git = "https://github.com/ideal-world/tardis.git", rev = "aa8931b" }
+# tardis = { git = "https://github.com/ideal-world/tardis.git", rev = "6312e3305c322d48b084e14c23a8de2a879a738a" }
 #spacegate
 
 # spacegate-kernel = { git = "https://github.com/ideal-world/spacegate.git", rev = "f37a81a", features = [
