@@ -1,7 +1,6 @@
 use std::env;
 use std::time::Duration;
 
-use bios_basic::rbum::rbum_config::RbumConfig;
 use bios_basic::rbum::serv::rbum_kind_serv::RbumKindServ;
 use bios_basic::spi::dto::spi_bs_dto::SpiBsAddReq;
 use bios_basic::spi::spi_constants;
