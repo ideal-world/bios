@@ -111,13 +111,14 @@ impl IamCiCertApi {
         ctx: TardisContextExtractor,
         request: &Request,
     ) -> TardisApiResult<RbumCertSummaryWithSkResp> {
-        add_remote_ip(request, &ctx.0).await?;
+        let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0.clone())?;
+        add_remote_ip(request, &ctx).await?;
         let funs = iam_constants::get_tardis_inst();
         let supplier = supplier.0.unwrap_or_default();
         let kind = kind.0.unwrap_or_else(|| "UserPwd".to_string());
         let kind = if kind.is_empty() { "UserPwd".to_string() } else { kind };
 
-        let true_tenant_id = if IamAccountServ::is_global_account(&account_id.0, &funs, &ctx.0).await? {
+        let true_tenant_id = if IamAccountServ::is_global_account(&account_id.0, &funs, &ctx).await? {
             None
         } else {
             tenant_id.0
@@ -129,8 +130,8 @@ impl IamCiCertApi {
         };
         let ldap_dn = ldap_origin.0.unwrap_or_default();
         let cert =
-            IamCertServ::get_cert_by_relrubmid_kind_supplier(&account_id.0, &kind, vec![supplier], conf_id, &true_tenant_id.unwrap_or_default(), ldap_dn, &funs, &ctx.0).await?;
-        ctx.0.execute_task().await?;
+            IamCertServ::get_cert_by_relrubmid_kind_supplier(&account_id.0, &kind, vec![supplier], conf_id, &true_tenant_id.unwrap_or_default(), ldap_dn, &funs, &ctx).await?;
+        ctx.execute_task().await?;
         TardisResp::ok(cert)
     }
 

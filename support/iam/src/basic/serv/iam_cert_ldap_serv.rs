@@ -94,8 +94,8 @@ impl IamCertLdapServ {
             let _ = IamLogClient::add_ctx_task(
                 LogParamTag::IamAccount,
                 Some(ctx.owner.clone()),
-                "绑定5A账号".to_string(),
-                Some("Bind5aAccount".to_string()),
+                "绑定账号".to_string(),
+                Some("BindAccount".to_string()),
                 ctx,
             )
             .await;
