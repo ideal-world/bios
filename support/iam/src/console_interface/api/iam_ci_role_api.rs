@@ -1,4 +1,6 @@
 use crate::basic::dto::iam_role_dto::IamRoleRelAccountCertResp;
+use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
+use bios_basic::rbum::serv::rbum_item_serv::RbumItemServ;
 use itertools::Itertools;
 
 use crate::basic::serv::iam_app_serv::IamAppServ;
@@ -150,12 +152,23 @@ impl IamCiRoleApi {
         TardisResp::ok(Void {})
     }
 
-    /// get Rel Account by role_id
-    #[oai(path = "/:role_id/accounts", method = "get")]
-    async fn get_rel_accounts(&self, role_id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Vec<IamRoleRelAccountCertResp>> {
+    /// get Rel Account by role_code
+    #[oai(path = "/:role_code/accounts", method = "get")]
+    async fn get_rel_accounts(&self, role_code: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Vec<IamRoleRelAccountCertResp>> {
         add_remote_ip(request, &ctx.0).await?;
         let funs = iam_constants::get_tardis_inst();
-        let account_ids = IamRoleServ::find_id_rel_accounts(&role_id.0, None, None, &funs, &ctx.0).await?;
+        let role_id = RbumItemServ::find_one_rbum(
+            &RbumBasicFilterReq {
+                code: Some(role_code.0),
+                ..Default::default()
+            },
+            &funs,
+            &ctx.0,
+        )
+        .await?
+        .ok_or_else(|| funs.err().internal_error("iam_ci_role", "get_rel_accounts", "role is not found", "404-iam-res-not-exist"))?
+        .id;
+        let account_ids = IamRoleServ::find_id_rel_accounts(&role_id, None, None, &funs, &ctx.0).await?;
         let certs = IamCertServ::find_certs(
             &RbumCertFilterReq {
                 basic: RbumBasicFilterReq {
