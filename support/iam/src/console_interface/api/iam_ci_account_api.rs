@@ -169,7 +169,8 @@ impl IamCiAccountApi {
         ctx: TardisContextExtractor,
         request: &Request,
     ) -> TardisApiResult<Option<IamAccountDetailResp>> {
-        add_remote_ip(request, &ctx.0).await?;
+        let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0.clone())?;
+        add_remote_ip(request, &ctx).await?;
         let funs = iam_constants::get_tardis_inst();
         let supplier = supplier.0.unwrap_or_default();
         let kind = kind.0.unwrap_or_else(|| "UserPwd".to_string());
@@ -187,7 +188,7 @@ impl IamCiAccountApi {
                     ..Default::default()
                 },
                 &funs,
-                &ctx.0,
+                &ctx,
             )
             .await?
             {
@@ -203,7 +204,7 @@ impl IamCiAccountApi {
                             ..Default::default()
                         },
                         &funs,
-                        &ctx.0,
+                        &ctx,
                     )
                     .await?,
                 )
@@ -214,7 +215,7 @@ impl IamCiAccountApi {
             None
         };
 
-        ctx.0.execute_task().await?;
+        ctx.execute_task().await?;
         TardisResp::ok(result)
     }
 

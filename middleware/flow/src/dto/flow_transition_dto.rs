@@ -2,7 +2,7 @@ use bios_basic::dto::BasicQueryCondInfo;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use strum::Display;
-use tardis::{basic::field::TrimString, db::sea_orm, serde_json::Value, web::poem_openapi, TardisFuns};
+use tardis::{basic::field::TrimString, db::sea_orm::{self, EnumIter}, serde_json::Value, web::poem_openapi, TardisFuns};
 
 use super::flow_var_dto::FlowVarInfo;
 
@@ -255,7 +255,7 @@ pub struct FlowTransitionActionChangeAgg {
     pub state_change_info: Option<FlowTransitionActionByStateChangeInfo>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, strum::EnumIter, sea_orm::DeriveActiveEnum)]
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, EnumIter, sea_orm::DeriveActiveEnum)]
 #[sea_orm(rs_type = "String", db_type = "String(Some(255))")]
 pub enum FlowTransitionActionChangeKind {
     #[sea_orm(string_value = "var")]
@@ -275,7 +275,7 @@ pub struct FlowTransitionActionByVarChangeInfo {
     pub changed_kind: Option<FlowTransitionActionByVarChangeInfoChangedKind>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, strum::EnumIter, sea_orm::DeriveActiveEnum)]
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, EnumIter, sea_orm::DeriveActiveEnum)]
 #[sea_orm(rs_type = "String", db_type = "String(Some(255))")]
 pub enum FlowTransitionActionByVarChangeInfoChangedKind {
     #[sea_orm(string_value = "clean")]
