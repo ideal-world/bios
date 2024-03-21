@@ -14,6 +14,7 @@ pub struct AuthConfig {
     pub head_key_crypto: String,
     pub head_date_format: String,
     pub head_date_interval_millsec: u32,
+    pub head_key_auth_ident: String,
 
     pub query_key_secret: String,
 
@@ -63,6 +64,8 @@ impl Default for AuthConfig {
             head_key_crypto: "Bios-Crypto".to_string(),
             head_date_format: "%a, %d %b %Y %T GMT".to_string(),
             head_date_interval_millsec: 10000,
+            head_key_auth_ident: "Iam-Auth-Ident".to_string(),
+
             cache_key_token_info: "iam:cache:token:info:".to_string(),
             cache_key_account_info: "iam:cache:account:info:".to_string(),
             cache_key_aksk_info: "iam:cache:aksk:info:".to_string(),
