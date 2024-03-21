@@ -1,9 +1,9 @@
-use poem::web::RealIp;
 use tardis::{
     basic::error::TardisError,
     db::sea_orm::prelude::Uuid,
     web::{
         context_extractor::TardisContextExtractor,
+        poem::web::RealIp,
         poem_openapi::{self, param::Query, payload::Json},
         web_resp::{TardisApiResult, TardisResp, Void},
     },
@@ -12,7 +12,7 @@ use tardis::{
 use crate::{conf_constants::error, serv::*};
 use crate::{
     dto::{conf_config_dto::*, conf_namespace_dto::*},
-    serv::placehodler::render_content_for_ip,
+    serv::placeholder::render_content_for_ip,
 };
 
 #[derive(Default, Clone, Copy, Debug)]

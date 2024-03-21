@@ -1,7 +1,7 @@
 use bios_basic::spi::{dto::spi_bs_dto::SpiBsCertResp, spi_constants, spi_funs::SpiBsInst, spi_initializer};
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
-    log,
+    log::{self, info},
     web::web_server::TardisWebServer,
     TardisFuns, TardisFunsInst,
 };
@@ -13,6 +13,7 @@ use crate::{
 };
 
 pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
+    info!("[BIOS.Conf] Module initializing");
     let mut funs = crate::get_tardis_inst();
     let cfg = funs.conf::<ConfConfig>();
     bios_basic::rbum::rbum_initializer::init(funs.module_code(), cfg.rbum.clone()).await?;
@@ -24,6 +25,7 @@ pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
     let funs = crate::get_tardis_inst();
     let cfg = funs.conf::<ConfConfig>();
     init_nacos_servers(&cfg).await?;
+    info!("[BIOS.Conf] Module initialized");
     Ok(())
 }
 
@@ -33,11 +35,14 @@ async fn init_db(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()>
 }
 
 pub async fn init_fun(bs_cert: SpiBsCertResp, ctx: &TardisContext, mgr: bool) -> TardisResult<SpiBsInst> {
-    match bs_cert.kind_code.as_str() {
+    info!("[BIOS.Conf] Fun [{}]({}) initializing", bs_cert.kind_code, bs_cert.conn_uri);
+    let inst = match bs_cert.kind_code.as_str() {
         #[cfg(feature = "spi-pg")]
         spi_constants::SPI_PG_KIND_CODE => spi_initializer::common_pg::init(&bs_cert, ctx, mgr).await,
         _ => Err(bs_cert.bs_not_implemented())?,
-    }
+    }?;
+    info!("[BIOS.Conf] Fun [{}]({}) initialized", bs_cert.kind_code, bs_cert.conn_uri);
+    Ok(inst)
 }
 
 #[allow(dead_code)]

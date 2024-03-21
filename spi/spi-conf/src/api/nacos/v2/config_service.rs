@@ -5,7 +5,7 @@ use tardis::web::{
 };
 
 use super::tardis_err_to_poem_err;
-use crate::serv::{placehodler::render_content_for_ip, *};
+use crate::serv::{placeholder::render_content_for_ip, *};
 use crate::{
     api::nacos::extract_context,
     dto::{conf_config_dto::*, conf_config_nacos_dto::*, conf_namespace_dto::*},

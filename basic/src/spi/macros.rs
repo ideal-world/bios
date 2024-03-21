@@ -39,7 +39,7 @@ macro_rules! spi_dispatch_service {
         @mgr: $mgr: expr,
         // init fun
         @init: $init: expr,
-        // dispacher
+        // dispatcher
         @dispatch: $dispatch:tt,
         @method: {
             $(

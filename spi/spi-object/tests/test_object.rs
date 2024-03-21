@@ -1,6 +1,6 @@
+use std::env;
 use std::time::Duration;
 
-use bios_basic::rbum::rbum_config::RbumConfig;
 use bios_basic::rbum::serv::rbum_kind_serv::RbumKindServ;
 use bios_basic::spi::dto::spi_bs_dto::SpiBsAddReq;
 use bios_basic::test::init_rbum_test_container;
@@ -18,6 +18,8 @@ mod test_object_obj;
 
 #[tokio::test]
 async fn test_object() -> TardisResult<()> {
+    env::set_var("RUST_LOG", "debug,test_object=trace,sqlx::query=off");
+
     let docker = testcontainers::clients::Cli::default();
     let minio = TardisTestContainer::minio_custom(&docker);
     let minio_url = format!("http://127.0.0.1:{}", minio.get_host_port_ipv4(9000));
@@ -29,9 +31,6 @@ async fn test_object() -> TardisResult<()> {
 }
 
 async fn init_data(minio_url: &str) -> TardisResult<()> {
-    // Initialize RBUM
-    bios_basic::rbum::rbum_initializer::init(DOMAIN_CODE, RbumConfig::default()).await?;
-
     let web_server = TardisFuns::web_server();
     // Initialize SPI object
     object_initializer::init(&web_server).await.unwrap();
@@ -53,7 +52,7 @@ async fn init_data(minio_url: &str) -> TardisResult<()> {
         ..Default::default()
     };
 
-    let mut client = TestHttpClient::new(format!("https://localhost:8080/{}", DOMAIN_CODE));
+    let mut client = TestHttpClient::new(format!("https://127.0.0.1:8080/{}", DOMAIN_CODE));
 
     client.set_auth(&ctx)?;
 

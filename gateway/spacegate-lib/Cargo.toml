@@ -18,6 +18,7 @@ serde.workspace = true
 lazy_static.workspace = true
 spacegate-shell.workspace = true
 spacegate-plugin = { workspace = true, features = ["schema"], optional = true }
+
 bios-sdk-invoke = { path = "../../sdk/invoke", features = ["spi_log"] }
 
 

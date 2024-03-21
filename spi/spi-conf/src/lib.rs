@@ -2,7 +2,6 @@
 #![warn(clippy::dbg_macro)]
 
 mod api;
-pub(crate) mod client;
 pub mod conf_config;
 pub mod conf_constants;
 pub mod conf_initializer;

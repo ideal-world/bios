@@ -1,6 +1,6 @@
 use bios_basic::{rbum::serv::rbum_domain_serv::RbumDomainServ, spi::spi_initializer};
 use bios_sdk_invoke::invoke_initializer;
-use tardis::{basic::result::TardisResult, db::reldb_client::TardisActiveModel, web::web_server::TardisWebServer, TardisFuns, TardisFunsInst};
+use tardis::{basic::result::TardisResult, db::reldb_client::TardisActiveModel, log::info, web::web_server::TardisWebServer, TardisFuns, TardisFunsInst};
 
 use crate::{
     api::ci::{plugin_ci_api_api, plugin_ci_bs_api, plugin_ci_exec_api, plugin_ci_kind_api},
@@ -10,6 +10,7 @@ use crate::{
 };
 
 pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
+    info!("[BIOS.Plugin] Module initializing");
     let mut funs = crate::get_tardis_inst();
     bios_basic::rbum::rbum_initializer::init(funs.module_code(), funs.conf::<PluginConfig>().rbum.clone()).await?;
     invoke_initializer::init(funs.module_code(), funs.conf::<PluginConfig>().invoke.clone())?;
@@ -17,14 +18,16 @@ pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
     init_db(DOMAIN_CODE.to_string(), &funs).await?;
     spi_initializer::init(DOMAIN_CODE, &funs).await?;
     funs.commit().await?;
-    init_api(web_server).await
+    init_api(web_server).await?;
+    info!("[BIOS.Plugin] Module initialized");
+    Ok(())
 }
 
 async fn init_db(domain_code: String, funs: &TardisFunsInst) -> TardisResult<()> {
     if RbumDomainServ::get_rbum_domain_id_by_code(&domain_code, funs).await?.is_some() {
         return Ok(());
     }
-    // Initialize plugin component RBUM item table and indexs
+    // Initialize plugin component RBUM item table and indexes
     funs.db().init(plugin_api::ActiveModel::init(TardisFuns::reldb().backend(), None, TardisFuns::reldb().compatible_type())).await?;
     Ok(())
 }

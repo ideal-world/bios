@@ -21,7 +21,7 @@ pub async fn init(docker: &Cli) -> TardisResult<LifeHold<'_>> {
 
     let reldb_container = postgres_custom(Some(&format!("{}config", root_path)), docker);
     let port = reldb_container.get_host_port_ipv4(5432);
-    let url = format!("postgres://postgres:123456@localhost:{}/test", port);
+    let url = format!("postgres://postgres:123456@127.0.0.1:{}/test", port);
     env::set_var("TARDIS_FW.DB.URL", url);
 
     let redis_container = TardisTestContainer::redis_custom(docker);

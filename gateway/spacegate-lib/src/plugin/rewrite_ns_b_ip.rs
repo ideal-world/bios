@@ -14,10 +14,6 @@ use std::sync::Arc;
 use tardis::log;
 
 def_filter_plugin!("rewrite_ns", RewriteNsPlugin, SgFilterRewriteNs);
-#[cfg(feature = "schema")]
-use spacegate_plugin::schemars;
-#[cfg(feature = "schema")]
-spacegate_plugin::schema!(RewriteNsPlugin, SgFilterRewriteNsConfig);
 
 /// Kube available only!
 #[derive(Clone)]

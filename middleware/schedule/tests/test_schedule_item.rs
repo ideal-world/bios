@@ -9,7 +9,7 @@ pub async fn test(client: &mut TestHttpClient, _funs: &TardisFunsInst) -> Tardis
     let req = json!({
         "code": "test",
         "cron": "0/5 * * * * ?",
-        "callback_url": "https://localhost:8080/schedule/ci/schedule/test/exec/123",
+        "callback_url": "https://127.0.0.1:8080/schedule/ci/schedule/test/exec/123",
     });
     let _resp = client.put::<_, Void>("/ci/schedule/jobs", &req).await;
     let _resp = client.put::<_, Void>("/ci/schedule/jobs", &req).await;

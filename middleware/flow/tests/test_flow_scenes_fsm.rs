@@ -58,7 +58,7 @@ pub async fn test(flow_client: &mut TestHttpClient) -> TardisResult<()> {
     for code in codes {
         modify_configs.push(FlowConfigModifyReq {
             code: code.to_string(),
-            value: "https://localhost:8080/mock/mock/exchange_data".to_string(),
+            value: "https://127.0.0.1:8080/mock/mock/exchange_data".to_string(),
         });
     }
     let _: Void = flow_client.post("/cs/config", &modify_configs).await;

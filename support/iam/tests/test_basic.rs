@@ -78,7 +78,7 @@ fn get_ldap_container(docker: &Cli) -> Container<'_, GenericImage> {
     );
 
     let port = ldap_container.get_host_port_ipv4(389);
-    let url = "ldap://localhost".to_string();
+    let url = "ldap://127.0.0.1".to_string();
     let base_dn = format!("DC={ORGANISATION},DC=com");
     let admin_dn = format!("CN=admin,{base_dn}");
 
@@ -87,7 +87,7 @@ fn get_ldap_container(docker: &Cli) -> Container<'_, GenericImage> {
         ready_conditions: vec![],
     });
     ldap_container.exec(ExecCommand {
-        cmd: format!("ldapadd -x -H ldap://localhost  -D \"{admin_dn}\" -w {ADMIN_PASSWORD} -f /home/base.ldif "),
+        cmd: format!("ldapadd -x -H ldap://127.0.0.1  -D \"{admin_dn}\" -w {ADMIN_PASSWORD} -f /home/base.ldif "),
         ready_conditions: vec![WaitFor::millis(5)],
     });
 

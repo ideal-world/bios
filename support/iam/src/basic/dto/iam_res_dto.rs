@@ -163,8 +163,10 @@ pub struct IamResDetailResp {
 
 impl IamResDetailResp {
     pub fn decoding(mut self) -> Self {
-        let offset = format!("{}/{}/", self.kind.to_int(), self.method,).len();
-        self.code = self.code.chars().skip(offset).collect();
+        if self.code.starts_with(&format!("{}/{}/", self.kind.to_int(), self.method,)) {
+            let offset = format!("{}/{}/", self.kind.to_int(), self.method,).len();
+            self.code = self.code.chars().skip(offset).collect();
+        }
         self
     }
 }

@@ -1,4 +1,4 @@
-// PlaceHodler $bios{KEY}
+// Placeholder $bios{KEY}
 
 use std::collections::{HashMap, HashSet};
 use std::net::IpAddr;
@@ -35,7 +35,7 @@ fn parse_content(content: &str) -> Vec<Segment<'_>> {
     result
 }
 
-pub async fn rander_content(content: String, config: &ConfConfig, funs: &tardis::TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
+pub async fn render_content(content: String, config: &ConfConfig, funs: &tardis::TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
     let segments = parse_content(&content);
     // render
     let keys = segments.iter().fold(HashSet::new(), |mut set, seg| {
@@ -76,9 +76,9 @@ pub async fn render_content_for_ip(content: String, source_addr: IpAddr, funs: &
     let cfg = funs.conf::<ConfConfig>();
     // let level = get_scope_level_by_context(ctx)?;
     let is_render = has_placeholder_auth(source_addr, funs);
-    tardis::tracing::trace!("[Bios.Spi-Config] Trying to render config for ip: {source_addr}, ctx: {ctx:?}, render: {is_render}");
+    tardis::tracing::trace!("[BIOS.Spi-Config] Trying to render config for ip: {source_addr}, ctx: {ctx:?}, render: {is_render}");
     if is_render {
-        rander_content(content, cfg.as_ref(), funs, ctx).await
+        render_content(content, cfg.as_ref(), funs, ctx).await
     } else {
         Ok(content)
     }

@@ -1,7 +1,6 @@
 use std::env;
 use std::time::Duration;
 
-use bios_basic::rbum::rbum_config::RbumConfig;
 use bios_basic::rbum::serv::rbum_kind_serv::RbumKindServ;
 use bios_basic::spi::dto::spi_bs_dto::SpiBsAddReq;
 use bios_basic::spi::spi_constants;
@@ -32,9 +31,6 @@ async fn test_stats() -> TardisResult<()> {
 }
 
 async fn init_data() -> TardisResult<()> {
-    // Initialize RBUM
-    bios_basic::rbum::rbum_initializer::init(DOMAIN_CODE, RbumConfig::default()).await?;
-
     let web_server = TardisFuns::web_server();
     // Initialize SPI Stats
     stats_initializer::init(&web_server).await.unwrap();
@@ -48,7 +44,7 @@ async fn init_data() -> TardisResult<()> {
     let funs = TardisFuns::inst_with_db_conn(DOMAIN_CODE.to_string(), None);
     let kind_id = RbumKindServ::get_rbum_kind_id_by_code(spi_constants::SPI_PG_KIND_CODE, &funs).await?.unwrap();
     let ctx = TardisContext {
-        own_paths: "".to_string() ,
+        own_paths: "".to_string(),
         ak: "".to_string(),
         roles: vec![],
         groups: vec![],
@@ -56,7 +52,7 @@ async fn init_data() -> TardisResult<()> {
         ..Default::default()
     };
 
-    let mut client = TestHttpClient::new(format!("https://localhost:8080/{}", DOMAIN_CODE));
+    let mut client = TestHttpClient::new(format!("https://127.0.0.1:8080/{}", DOMAIN_CODE));
 
     client.set_auth(&ctx)?;
 

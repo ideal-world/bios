@@ -19,12 +19,8 @@ pub mod count_limit;
 pub mod dynamic_route;
 pub mod freq_limit;
 pub mod time_limit;
-#[cfg(feature = "schema")]
-use spacegate_plugin::schemars;
-#[cfg(feature = "schema")]
-spacegate_plugin::schema!(OpresPlugin, OpresPluginConfig);
+
 #[derive(Debug, Serialize, Deserialize)]
-#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 pub struct OpresPluginConfig {
     prefix: String,
 }

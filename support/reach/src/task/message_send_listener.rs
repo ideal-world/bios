@@ -75,7 +75,7 @@ impl MessageSendListener {
             )
             .await?
         else {
-            tardis::tracing::warn!("[Bios.Reach] missing message template");
+            tardis::tracing::warn!("[BIOS.Reach] missing message template");
             return Err(TardisError::not_found("missing message template", "404-reach-message-template-not-found"));
         };
         // signature is not necessary now

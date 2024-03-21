@@ -12,7 +12,7 @@ use tardis::{
 pub const RECONNECT_INTERVAL: Duration = Duration::from_secs(10);
 
 pub async fn start_log_event_service(config: &EventTopicConfig) -> TardisResult<()> {
-    info!("[Bios.Log] starting event service");
+    info!("[BIOS.Log] starting event service");
     let funs = get_tardis_inst();
     let client = event_client::EventClient::new(config.base_url.as_str(), &funs);
     let mut event_conf = config.clone();
@@ -22,7 +22,7 @@ pub async fn start_log_event_service(config: &EventTopicConfig) -> TardisResult<
     let resp = client.register(&event_conf.into()).await?;
     let ws_client = TardisFuns::ws_client(&resp.ws_addr, |message| async move {
         let Ok(json_str) = message.to_text() else { return None };
-        info!("[Bios.Log] event msg: {json_str}");
+        info!("[BIOS.Log] event msg: {json_str}");
         let Ok(TardisWebsocketMessage { msg, event, .. }) = TardisFuns::json.str_to_obj(json_str) else {
             return None;
         };
@@ -35,12 +35,12 @@ pub async fn start_log_event_service(config: &EventTopicConfig) -> TardisResult<
                     let funs = get_tardis_inst();
                     let result = serv::log_item_serv::add(&mut req, &funs, &ctx).await;
                     if let Err(err) = result {
-                        error!("[Bios.Log] failed to log item: {}", err);
+                        error!("[BIOS.Log] failed to log item: {}", err);
                     }
                 });
             }
             Some(unknown_event) => {
-                warn!("[Bios.Log] event receive unknown event {unknown_event}")
+                warn!("[BIOS.Log] event receive unknown event {unknown_event}")
             }
             _ => {}
         }
@@ -52,7 +52,7 @@ pub async fn start_log_event_service(config: &EventTopicConfig) -> TardisResult<
             // it's ok todo so, reconnect will be blocked until the previous ws_client is dropped
             let result = ws_client.reconnect().await;
             if let Err(err) = result {
-                error!("[Bios.Log] failed to reconnect to event service: {}", err);
+                error!("[BIOS.Log] failed to reconnect to event service: {}", err);
             }
             tokio::time::sleep(RECONNECT_INTERVAL).await;
         }

@@ -1,5 +1,5 @@
 pub const DOMAIN_CODE: &str = "spi-conf";
-pub const DOMAIN_CODE_NACOS: &str = "spi-conf-nacos";
+pub const SPI_NACOS_KIND_CODE: &str = "spi-conf-nacos";
 pub mod error {
     macro_rules! def_error_code {
         (
@@ -17,7 +17,7 @@ pub mod error {
             INVALID_UUID:               400 = "invalid-uuid";
             CONF_NOTFOUND:              404 = "conf-not-exist";
             NAMESPACE_NOTFOUND:         404 = "namespace-not-exist";
-            CONLICT_AK:                 409 = "conlict-username";
+            CONFLICT_AK:                 409 = "conflict-username";
             EXCEED_MAX_RETRY_TIMES:           409 = "exceed-max-retry-times";
             VALID_ERROR:                401 = "valid-error";
             CACHE_ERROR:                500 = "cache-error";

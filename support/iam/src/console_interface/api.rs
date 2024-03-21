@@ -6,3 +6,4 @@ pub mod iam_ci_open_api;
 pub mod iam_ci_res_api;
 pub mod iam_ci_role_api;
 pub mod iam_ci_system_api;
+pub mod iam_ci_tenant_api;

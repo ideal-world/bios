@@ -16,7 +16,7 @@ use tardis::{
 use crate::{
     api::nacos::{extract_context, extract_context_from_body},
     dto::{conf_config_dto::*, conf_config_nacos_dto::PublishConfigForm, conf_namespace_dto::*},
-    serv::placehodler::render_content_for_ip,
+    serv::placeholder::render_content_for_ip,
 };
 use crate::{conf_constants::error, serv::*};
 

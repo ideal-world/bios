@@ -9,7 +9,7 @@ use tardis::{
     TardisFunsInst,
 };
 
-use crate::dto::graph_dto::{GraphNodeVersionResp, GraphRelAddReq, GraphRelDetailResp, GraphRelUpgardeVersionReq};
+use crate::dto::graph_dto::{GraphNodeVersionResp, GraphRelAddReq, GraphRelDetailResp, GraphRelUpgradeVersionReq};
 
 use super::graph_pg_initializer;
 
@@ -55,7 +55,7 @@ pub async fn add_rel(add_req: &GraphRelAddReq, _funs: &TardisFunsInst, ctx: &Tar
     Ok(())
 }
 
-pub async fn upgrade_version(upgrade_version_req: &GraphRelUpgardeVersionReq, _funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
+pub async fn upgrade_version(upgrade_version_req: &GraphRelUpgradeVersionReq, _funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
     let mut where_fragments: Vec<String> = Vec::new();
     let mut sql_vals: Vec<Value> = vec![];
     sql_vals.push(Value::from(upgrade_version_req.new_version.to_string()));

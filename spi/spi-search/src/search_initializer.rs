@@ -1,6 +1,7 @@
 use bios_basic::spi::{api::spi_ci_bs_api, dto::spi_bs_dto::SpiBsCertResp, spi_constants, spi_funs::SpiBsInst, spi_initializer};
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
+    log::info,
     tokio,
     web::web_server::TardisWebServer,
     TardisFuns, TardisFunsInst,
@@ -9,6 +10,7 @@ use tardis::{
 use crate::{api::ci::search_ci_item_api, search_config::SearchConfig, search_constants::DOMAIN_CODE, serv};
 
 pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
+    info!("[BIOS.Search] Module initializing");
     let mut funs = crate::get_tardis_inst();
     bios_basic::rbum::rbum_initializer::init(funs.module_code(), funs.conf::<SearchConfig>().rbum.clone()).await?;
     funs.begin().await?;
@@ -16,7 +18,9 @@ pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
     init_db(&funs, &ctx).await?;
     funs.commit().await?;
     tokio::spawn(init_event());
-    init_api(web_server).await
+    init_api(web_server).await?;
+    info!("[BIOS.Search] Module initialized");
+    Ok(())
 }
 
 async fn init_db(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
@@ -33,13 +37,16 @@ async fn init_api(web_server: &TardisWebServer) -> TardisResult<()> {
 }
 
 pub async fn init_fun(bs_cert: SpiBsCertResp, ctx: &TardisContext, mgr: bool) -> TardisResult<SpiBsInst> {
-    match bs_cert.kind_code.as_str() {
+    info!("[BIOS.Search] Fun [{}]({}) initializing", bs_cert.kind_code, bs_cert.conn_uri);
+    let inst = match bs_cert.kind_code.as_str() {
         #[cfg(feature = "spi-pg")]
         spi_constants::SPI_PG_KIND_CODE => spi_initializer::common_pg::init(&bs_cert, ctx, mgr).await,
         #[cfg(feature = "spi-es")]
         spi_constants::SPI_ES_KIND_CODE => serv::es::search_es_initializer::init(&bs_cert, ctx, mgr).await,
         _ => Err(bs_cert.bs_not_implemented())?,
-    }
+    }?;
+    info!("[BIOS.Search] Fun [{}]({}) initialized", bs_cert.kind_code, bs_cert.conn_uri);
+    Ok(inst)
 }
 
 async fn init_event() -> TardisResult<()> {
