@@ -49,7 +49,13 @@ pub const CODE: &str = "auth";
 #[allow(clippy::type_complexity)]
 static INSTANCE: OnceLock<Arc<RwLock<Option<(String, JoinHandle<()>)>>>> = OnceLock::new();
 
+// #[cfg(feature = "schema")]
+// use spacegate_plugin::schemars;
+// #[cfg(feature = "schema")]
+// spacegate_plugin::schema!(AuthPlugin, SgPluginAuthConfig);
+
 #[derive(Serialize, Deserialize, Clone)]
+// #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default)]
 pub struct SgPluginAuthConfig {
     pub auth_config: AuthConfig,

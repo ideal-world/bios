@@ -14,6 +14,10 @@ use std::sync::Arc;
 use tardis::log;
 
 def_filter_plugin!("rewrite_ns", RewriteNsPlugin, SgFilterRewriteNs);
+#[cfg(feature = "schema")]
+use spacegate_plugin::schemars;
+#[cfg(feature = "schema")]
+spacegate_plugin::schema!(RewriteNsPlugin, SgFilterRewriteNsConfig);
 
 /// Kube available only!
 #[derive(Clone)]
@@ -23,6 +27,7 @@ pub struct SgFilterRewriteNs {
 }
 
 #[derive(Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default)]
 pub struct SgFilterRewriteNsConfig {
     pub ip_list: Vec<String>,

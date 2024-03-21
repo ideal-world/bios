@@ -74,8 +74,10 @@ tardis = { git = "https://github.com/ideal-world/tardis.git", rev = "aa8931b" }
 #   "k8s",
 #   "ext-redis",
 # ] }
-spacegate-shell = { git = "https://github.com/ideal-world/spacegate.git", branch = "master",  features = [
+spacegate-shell = { git = "https://github.com/ideal-world/spacegate.git", branch = "master", features = [
   "cache",
   "k8s",
   "ext-redis",
 ] }
+
+spacegate-plugin = { git = "https://github.com/ideal-world/spacegate.git", branch = "master" }

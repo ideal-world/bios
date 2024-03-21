@@ -2,10 +2,10 @@
 
 use crate::plugin::{anti_replay, anti_xss, audit_log, auth, ip_time, opres, rewrite_ns_b_ip};
 
-mod consts;
-mod extension;
-mod marker;
-mod plugin;
+pub mod consts;
+pub mod extension;
+pub mod marker;
+pub mod plugin;
 
 pub const PACKAGE_NAME: &str = "spacegate_lib";
 use spacegate_shell::plugin::SgPluginRepository;

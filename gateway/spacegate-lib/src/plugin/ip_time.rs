@@ -20,7 +20,13 @@ mod ip_time_rule;
 mod tests;
 pub use ip_time_rule::IpTimeRule;
 
+// #[cfg(feature = "schema")]
+// use spacegate_plugin::schemars;
+// #[cfg(feature = "schema")]
+// spacegate_plugin::schema!(SgIpTimePlugin, SgFilterIpTimeConfig);
+
 #[derive(Debug, Serialize, Deserialize, Default)]
+// #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default)]
 pub struct SgFilterIpTimeConfig {
     /// ## When white_list_mode is **enabled**

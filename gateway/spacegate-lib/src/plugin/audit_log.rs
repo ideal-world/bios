@@ -36,7 +36,14 @@ use crate::extension::before_encrypt_body::BeforeEncryptBody;
 use crate::extension::cert_info::{CertInfo, RoleInfo};
 
 pub const CODE: &str = "audit_log";
+
+#[cfg(feature = "schema")]
+use spacegate_plugin::schemars;
+#[cfg(feature = "schema")]
+spacegate_plugin::schema!(AuditLogPlugin, SgFilterAuditLog);
+
 #[derive(Serialize, Deserialize, Clone)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default)]
 pub struct SgFilterAuditLog {
     log_url: String,

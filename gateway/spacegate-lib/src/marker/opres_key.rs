@@ -1,4 +1,3 @@
-use http::HeaderValue;
 use spacegate_shell::{
     kernel::{extension::MatchedSgRouter, layers::http_route::match_request::SgHttpPathMatch, Marker},
     spacegate_ext_redis::{redis::ToRedisArgs, AsRedisKey},
