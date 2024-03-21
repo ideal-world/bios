@@ -2,7 +2,7 @@
 
 [csm]
 [csm.iam]
-init_menu_json_path="tests/config/init-menu-default.json"
+init_menu_json_path = "tests/config/init-menu-default.json"
 [csm.iam.rbum]
 set_cate_sys_code_node_len = 4
 
@@ -65,4 +65,4 @@ FZygs8miAhWPzqnpmgTj1cPiU1M=
 """
 [fw.web_server.modules.iam]
 title = "IAM Component"
-doc_urls = [["test env", "http://localhost:8080/"]]
+doc_urls = [["test env", "http://127.0.0.1:8080/"]]

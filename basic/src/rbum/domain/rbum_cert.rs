@@ -33,7 +33,7 @@ pub struct Model {
     pub end_time: chrono::DateTime<Utc>,
     /// Specifies the connection address, mostly for two-party or third-party configurations \
     /// Information from cert config can be overridden
-    /// E.g. http://localhost:8080/api/v1/
+    /// E.g. http://127.0.0.1:8080/api/v1/
     pub conn_uri: String,
     /// @see [status](crate::rbum::rbum_enumeration::RbumCertStatusKind)
     pub status: i16,

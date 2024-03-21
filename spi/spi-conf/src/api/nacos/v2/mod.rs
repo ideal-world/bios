@@ -5,9 +5,9 @@ use std::str::FromStr;
 
 pub use config_service::ConfNacosV2CsApi;
 pub use namespace::ConfNacosV2NamespaceApi;
+use poem::http::StatusCode;
 use tardis::{basic::error::TardisError, web::poem};
 pub type ConfNacosV2Api = (ConfNacosV2CsApi, ConfNacosV2NamespaceApi);
-pub use tardis::web::reqwest::StatusCode;
 
 fn tardis_err_to_poem_err(e: TardisError) -> poem::Error {
     let status: StatusCode = StatusCode::from_str(&e.code).unwrap_or(StatusCode::INTERNAL_SERVER_ERROR);

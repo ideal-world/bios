@@ -917,6 +917,12 @@ impl RbumRelServ {
                     RbumRelEnvKind::Ips => {
                         // TODO
                     }
+                    RbumRelEnvKind::CallFrequency => {
+                        // TODO
+                    }
+                    RbumRelEnvKind::CallCount => {
+                        // TODO
+                    }
                 }
             }
             if found {

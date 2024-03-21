@@ -37,7 +37,7 @@ async fn test_event() -> TardisResult<()> {
         let docker = testcontainers::clients::Cli::default();
         let reldb_container = TardisTestContainer::postgres_custom(None, &docker);
         let port = reldb_container.get_host_port_ipv4(5432);
-        let db_url = format!("postgres://postgres:123456@localhost:{port}/test");
+        let db_url = format!("postgres://postgres:123456@127.0.0.1:{port}/test");
         env::set_var("TARDIS_FW.DB.URL", &db_url);
 
         let redis_container = TardisTestContainer::redis_custom(&docker);
@@ -142,11 +142,11 @@ async fn client_side() -> TardisResult<()> {
         ..Default::default()
     };
 
-    // let mut client = TestHttpClient::new(format!("http://localhost:{}/{}",,  DOMAIN_CODE));
+    // let mut client = TestHttpClient::new(format!("http://127.0.0.1:{}/{}",,  DOMAIN_CODE));
     let client_set = [8080, 8081, 8082]
         .into_iter()
         .map(|port| {
-            let mut client = TestHttpClient::new(format!("http://localhost:{}/{}", port, DOMAIN_CODE));
+            let mut client = TestHttpClient::new(format!("http://127.0.0.1:{}/{}", port, DOMAIN_CODE));
             client.set_auth(&ctx).unwrap();
             client
         })

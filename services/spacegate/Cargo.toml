@@ -15,12 +15,12 @@ publish.workspace = true
 [dependencies]
 serde.workspace = true
 lazy_static.workspace = true
-spacegate-kernel.workspace = true
-tardis.workspace = true
-spacegate-lib={path = "../../gateway/spacegate-lib"}
-
+spacegate-shell = { workspace = true, features = ["k8s", "plugin-all", "ext-redis", "cache"] }
+tardis = { workerspace = true }
+spacegate-lib = { path = "../../gateway/spacegate-lib" }
+envy = "0.4"
 [dev-dependencies]
 pprof = { version = "0.12.1", features = ["flamegraph"] }
-tardis = { workspace = true, features = ["test", "web-client"] }
+# tardis = { workspace = true, features = ["test", "web-client"] }
 
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }

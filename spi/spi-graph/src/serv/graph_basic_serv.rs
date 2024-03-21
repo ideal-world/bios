@@ -5,7 +5,7 @@ use tardis::basic::dto::TardisContext;
 use tardis::basic::result::TardisResult;
 use tardis::TardisFunsInst;
 
-use crate::dto::graph_dto::{GraphNodeVersionResp, GraphRelAddReq, GraphRelDetailResp, GraphRelUpgardeVersionReq};
+use crate::dto::graph_dto::{GraphNodeVersionResp, GraphRelAddReq, GraphRelDetailResp, GraphRelUpgradeVersionReq};
 use crate::graph_initializer;
 
 use super::pg;
@@ -19,7 +19,7 @@ spi_dispatch_service! {
     },
     @method: {
         add_rel(add_req: &GraphRelAddReq) -> TardisResult<()>;
-        upgrade_version(upgrade_version_req: &GraphRelUpgardeVersionReq) -> TardisResult<()>;
+        upgrade_version(upgrade_version_req: &GraphRelUpgradeVersionReq) -> TardisResult<()>;
         find_versions(tag: String, key: String) -> TardisResult<Vec<GraphNodeVersionResp>>;
         find_rels(from_key: String, from_version: String, depth: Option<u8>) -> TardisResult<GraphRelDetailResp>;
     }

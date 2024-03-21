@@ -17,7 +17,7 @@ pub async fn test_ct_api() -> TardisResult<()> {
     bios_reach::reach_initializer::reach_init_trigger_scene(&ReachTriggerSceneTree::new(scene_name, scene_code, [])).await?;
     let ctx = get_test_ctx();
     let funs = get_tardis_inst();
-    let client = reach_invoke::Client::new("http://localhost:8080/reach", ctx, &funs);
+    let client = reach_invoke::Client::new("http://127.0.0.1:8080/reach", ctx, &funs);
     const CONTENT_TEMPLATE: &str = "[\"hello {name}, your code is {code}\"]";
     let template_name = random_string(16);
     fn expected_content(name: &str, code: &str) -> String {

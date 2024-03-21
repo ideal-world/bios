@@ -48,7 +48,7 @@ pub fn get_test_ctx() -> &'static TardisContext {
 pub async fn init_tardis(docker: &Cli) -> TardisResult<Holder> {
     let reldb_container = TardisTestContainer::postgres_custom(None, docker);
     let port = reldb_container.get_host_port_ipv4(5432);
-    let url = format!("postgres://postgres:123456@localhost:{port}/test");
+    let url = format!("postgres://postgres:123456@127.0.0.1:{port}/test");
     std::env::set_var("TARDIS_FW.DB.URL", url);
     let redis_container = TardisTestContainer::redis_custom(docker);
     let port = redis_container.get_host_port_ipv4(6379);

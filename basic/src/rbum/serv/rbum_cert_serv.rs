@@ -3,7 +3,7 @@ use fancy_regex::Regex;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
-use tardis::chrono::{DateTime, Duration, Utc};
+use tardis::chrono::{DateTime, Duration, TimeDelta, Utc};
 use tardis::db::sea_orm::sea_query::*;
 use tardis::db::sea_orm::*;
 use tardis::db::sea_orm::{self, IdenStatic};
@@ -393,7 +393,7 @@ impl RbumCrudOperation<rbum_cert::ActiveModel, RbumCertAddReq, RbumCertModifyReq
             supplier: Set(add_req.supplier.as_ref().unwrap_or(&"".to_string()).to_string()),
             ext: Set(add_req.ext.as_ref().unwrap_or(&"".to_string()).to_string()),
             start_time: Set(add_req.start_time.unwrap_or_else(Utc::now)),
-            end_time: Set(add_req.end_time.unwrap_or(Utc::now() + Duration::days(365 * 100))),
+            end_time: Set(add_req.end_time.unwrap_or(Utc::now() + Duration::try_days(365 * 100).expect("ignore"))),
             conn_uri: Set(add_req.conn_uri.as_ref().unwrap_or(&"".to_string()).to_string()),
             status: Set(add_req.status.to_int()),
             rel_rbum_cert_conf_id: Set(add_req.rel_rbum_cert_conf_id.as_ref().unwrap_or(&"".to_string()).to_string()),
@@ -444,11 +444,11 @@ impl RbumCrudOperation<rbum_cert::ActiveModel, RbumCertAddReq, RbumCertModifyReq
             }
             // Fill Time
             if let Some(start_time) = &add_req.start_time {
-                add_req.end_time = Some(*start_time + Duration::seconds(rbum_cert_conf.expire_sec));
+                add_req.end_time = Some(*start_time + Duration::try_seconds(rbum_cert_conf.expire_sec).unwrap_or(TimeDelta::max_value()));
             } else {
                 let now = Utc::now();
                 add_req.start_time = Some(now);
-                add_req.end_time = Some(now + Duration::seconds(rbum_cert_conf.expire_sec));
+                add_req.end_time = Some(now + Duration::try_seconds(rbum_cert_conf.expire_sec).unwrap_or(TimeDelta::max_value()));
             }
             if rbum_cert_conf.sk_dynamic {
                 add_req.end_time = None;
@@ -629,6 +629,9 @@ impl RbumCrudOperation<rbum_cert::ActiveModel, RbumCertAddReq, RbumCertModifyReq
                 rbum_cert_conf::Entity,
                 Expr::col((rbum_cert_conf::Entity, rbum_cert_conf::Column::Id)).equals((rbum_cert::Entity, rbum_cert::Column::RelRbumCertConfId)),
             );
+        if let Some(id) = &filter.id {
+            query.and_where(Expr::col((rbum_cert::Entity, rbum_cert::Column::Id)).eq(id.to_string()));
+        }
         if let Some(ak) = &filter.ak {
             query.and_where(Expr::col((rbum_cert::Entity, rbum_cert::Column::Ak)).eq(ak.to_string()));
         }
@@ -652,6 +655,9 @@ impl RbumCrudOperation<rbum_cert::ActiveModel, RbumCertAddReq, RbumCertModifyReq
         }
         if let Some(rel_rbum_id) = &filter.rel_rbum_id {
             query.and_where(Expr::col((rbum_cert::Entity, rbum_cert::Column::RelRbumId)).eq(rel_rbum_id.to_string()));
+        }
+        if let Some(rel_rbum_ids) = &filter.rel_rbum_ids {
+            query.and_where(Expr::col((rbum_cert::Entity, rbum_cert::Column::RelRbumId)).is_in(rel_rbum_ids.clone()));
         }
         query.with_filter(Self::get_table_name(), &filter.basic, is_detail, false, ctx);
         Ok(query)
@@ -1133,7 +1139,7 @@ impl RbumCertServ {
                     "400-rbum-cert-ak-duplicate",
                 ));
             }
-            let end_time = Utc::now() + Duration::seconds(rbum_cert_conf.expire_sec);
+            let end_time = Utc::now() + Duration::try_seconds(rbum_cert_conf.expire_sec).unwrap_or(TimeDelta::max_value());
             (new_sk, end_time)
         } else {
             if original_sk != stored_sk {

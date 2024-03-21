@@ -26,7 +26,7 @@ pub async fn init(code: &str, funs: &TardisFunsInst) -> TardisResult<TardisConte
     if RbumDomainServ::get_rbum_domain_id_by_code(code, funs).await?.is_some() {
         return Ok(ctx);
     }
-    // Initialize spi component RBUM item table and indexs
+    // Initialize spi component RBUM item table and indexes
     funs.db().init(spi_bs::ActiveModel::init(TardisFuns::reldb().backend(), None, TardisFuns::reldb().compatible_type())).await?;
     // Initialize spi component RBUM domain data
     RbumDomainServ::add_rbum(

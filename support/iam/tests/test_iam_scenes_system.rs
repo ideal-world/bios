@@ -580,6 +580,7 @@ pub async fn sys_console_res_mgr_page(client: &mut BIOSWebTestClient) -> TardisR
                     need_login: Some(false),
                     double_auth_msg: None,
                     bind_api_res: None,
+                    ext: None,
                 },
                 set: IamSetItemAggAddReq {
                     set_cate_id: cate_work_spaces_id.to_string(),
@@ -610,6 +611,7 @@ pub async fn sys_console_res_mgr_page(client: &mut BIOSWebTestClient) -> TardisR
                     need_login: Some(false),
                     double_auth_msg: None,
                     bind_api_res: None,
+                    ext: None,
                 },
                 set: IamSetItemAggAddReq {
                     set_cate_id: cate_work_spaces_id.to_string(),
@@ -638,6 +640,7 @@ pub async fn sys_console_res_mgr_page(client: &mut BIOSWebTestClient) -> TardisR
                     need_login: Some(false),
                     double_auth_msg: None,
                     bind_api_res: None,
+                    ext: None,
                 },
                 set: IamSetItemAggAddReq {
                     set_cate_id: cate_work_spaces_id.to_string(),
@@ -671,6 +674,7 @@ pub async fn sys_console_res_mgr_page(client: &mut BIOSWebTestClient) -> TardisR
                     need_login: Some(false),
                     double_auth_msg: None,
                     bind_api_res: None,
+                    ext: None,
                 },
                 set: IamSetItemAggAddReq {
                     set_cate_id: cate_apis_id.to_string(),
@@ -699,6 +703,7 @@ pub async fn sys_console_res_mgr_page(client: &mut BIOSWebTestClient) -> TardisR
                 double_auth_msg: None,
                 need_login: None,
                 bind_api_res: None,
+                ext: None,
             },
         )
         .await;

@@ -1,7 +1,6 @@
 use std::env;
 use std::time::Duration;
 
-use bios_basic::rbum::rbum_config::RbumConfig;
 use bios_basic::rbum::serv::rbum_kind_serv::RbumKindServ;
 use bios_basic::spi::dto::spi_bs_dto::SpiBsAddReq;
 use bios_basic::spi::spi_constants;
@@ -19,10 +18,10 @@ mod test_reldb_exec;
 
 #[tokio::test]
 async fn test_reldb() -> TardisResult<()> {
+    env::set_var("RUST_LOG", "debug,test_reldb=trace,sqlx::query=off");
+
     let docker = testcontainers::clients::Cli::default();
     let _x = init_rbum_test_container::init(&docker, None).await?;
-
-    env::set_var("RUST_LOG", "debug,test_reldb=trace,sqlx::query=off");
 
     init_data().await?;
 
@@ -30,9 +29,6 @@ async fn test_reldb() -> TardisResult<()> {
 }
 
 async fn init_data() -> TardisResult<()> {
-    // Initialize RBUM
-    bios_basic::rbum::rbum_initializer::init(DOMAIN_CODE, RbumConfig::default()).await?;
-
     let web_server = TardisFuns::web_server();
     // Initialize SPI reldb
     reldb_initializer::init(&web_server).await.unwrap();
@@ -54,7 +50,7 @@ async fn init_data() -> TardisResult<()> {
         ..Default::default()
     };
 
-    let mut client = TestHttpClient::new(format!("https://localhost:8080/{}", DOMAIN_CODE));
+    let mut client = TestHttpClient::new(format!("https://127.0.0.1:8080/{}", DOMAIN_CODE));
 
     client.set_auth(&ctx)?;
 

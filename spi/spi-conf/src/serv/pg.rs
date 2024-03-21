@@ -6,7 +6,6 @@ mod conf_pg_namespace_serv;
 pub use conf_pg_namespace_serv::*;
 mod conf_pg_config_history_serv;
 pub use conf_pg_config_history_serv::*;
-mod conf_pg_nacos_mocker;
 
 use tardis::db::sea_orm::Value;
 

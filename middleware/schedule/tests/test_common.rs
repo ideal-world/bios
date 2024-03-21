@@ -75,7 +75,7 @@ pub async fn init_task_serve_group(size: usize) -> TardisResult<Vec<Arc<OwnedSch
 }
 #[allow(dead_code)]
 pub async fn init_client() -> TardisResult<TestHttpClient> {
-    let mut client = TestHttpClient::new(format!("https://localhost:8080/{}", DOMAIN_CODE));
+    let mut client = TestHttpClient::new(format!("https://127.0.0.1:8080/{}", DOMAIN_CODE));
     client.set_auth(&TardisContext {
         own_paths: "t1/app001".to_string(),
         ak: "".to_string(),
@@ -89,7 +89,7 @@ pub async fn init_client() -> TardisResult<TestHttpClient> {
 
 #[allow(dead_code)]
 pub async fn init_spi(code: &str) -> TardisResult<()> {
-    let mut client = TestHttpClient::new(format!("https://localhost:8080/{}", code));
+    let mut client = TestHttpClient::new(format!("https://127.0.0.1:8080/{}", code));
     let funs = TardisFuns::inst_with_db_conn(DOMAIN_CODE.to_string(), None);
 
     let kind_id = RbumKindServ::get_rbum_kind_id_by_code(spi_constants::SPI_PG_KIND_CODE, &funs).await?.unwrap();

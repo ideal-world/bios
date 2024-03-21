@@ -18,7 +18,7 @@ spi_dispatch_service! {
     },
     @method: {
         get_fact_record_latest(fact_conf_key: &str, fact_record_key: impl IntoIterator<Item = &str>) -> TardisResult<Vec<serde_json::Value>>;
-        get_fact_record_pagenated(
+        get_fact_record_paginated(
             fact_conf_key: &str,
             fact_record_key: &str,
             page_number: u32,

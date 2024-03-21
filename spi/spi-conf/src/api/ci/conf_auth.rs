@@ -14,11 +14,11 @@ use bios_basic::{
         spi_constants::{self},
     },
 };
-use poem::web::RealIp;
 use tardis::{
     serde_json,
     web::{
         context_extractor::TardisContextExtractor,
+        poem::web::RealIp,
         poem_openapi::{self, payload::Json},
         reqwest::Url,
         web_resp::{TardisApiResult, TardisResp},
@@ -28,7 +28,7 @@ use tardis::{
 use crate::{conf_constants::DOMAIN_CODE, serv::*};
 use crate::{
     dto::{conf_auth_dto::*, conf_namespace_dto::*},
-    serv::placehodler::has_placeholder_auth,
+    serv::placeholder::has_placeholder_auth,
 };
 
 #[derive(Default, Clone, Copy, Debug)]

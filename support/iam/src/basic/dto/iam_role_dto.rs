@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use serde::{Deserialize, Serialize};
 use tardis::basic::field::TrimString;
 use tardis::chrono::{DateTime, Utc};
@@ -108,4 +110,10 @@ pub struct IamRoleDetailResp {
     pub in_base: bool,
     pub in_embed: bool,
     pub extend_role_id: String,
+}
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct IamRoleRelAccountCertResp {
+    pub account_id: String,
+    pub certs: HashMap<String, String>,
 }

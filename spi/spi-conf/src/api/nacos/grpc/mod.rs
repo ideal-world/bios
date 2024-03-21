@@ -16,7 +16,7 @@ pub use proto::{
 
 use crate::{
     dto::conf_config_dto::{ConfigDescriptor, ConfigItem},
-    serv::placehodler::render_content_for_ip,
+    serv::placeholder::render_content_for_ip,
 };
 
 #[derive(Clone, Default)]

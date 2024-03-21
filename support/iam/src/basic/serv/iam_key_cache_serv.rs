@@ -370,6 +370,66 @@ impl IamIdentCacheServ {
         Ok(())
     }
 
+    pub async fn add_gateway_rule_info(ak: &str, rule_name: &str, match_method: Option<&str>, value: &str, funs: &TardisFunsInst) -> TardisResult<()> {
+        log::trace!(
+            "add gateway_rule_info: ak={},rule_name={},match_method={},value={}",
+            ak,
+            rule_name,
+            match_method.unwrap_or("*"),
+            value
+        );
+        let match_path = &funs.conf::<IamConfig>().gateway_openapi_path;
+        funs.cache()
+            .set(
+                format!(
+                    "{}{}:{}:{}:{}",
+                    funs.conf::<IamConfig>().cache_key_gateway_rule_info_,
+                    rule_name,
+                    match_method.unwrap_or("*"),
+                    match_path,
+                    ak
+                )
+                .as_str(),
+                value,
+            )
+            .await?;
+        Ok(())
+    }
+
+    pub async fn get_gateway_cumulative_count(ak: &str, match_method: Option<&str>, funs: &TardisFunsInst) -> TardisResult<Option<String>> {
+        let match_path = &funs.conf::<IamConfig>().gateway_openapi_path;
+        let result = funs
+            .cache()
+            .get(&format!(
+                "{}count:{}:{}:{}:cumulative-count",
+                funs.conf::<IamConfig>().cache_key_gateway_rule_info_,
+                match_method.unwrap_or("*"),
+                match_path,
+                ak
+            ))
+            .await?;
+        Ok(result)
+    }
+
+    pub async fn get_gateway_rule_info(ak: &str, rule_name: &str, match_method: Option<&str>, funs: &TardisFunsInst) -> TardisResult<Option<String>> {
+        let match_path = &funs.conf::<IamConfig>().gateway_openapi_path;
+        let result = funs
+            .cache()
+            .get(
+                format!(
+                    "{}{}:{}:{}:{}",
+                    funs.conf::<IamConfig>().cache_key_gateway_rule_info_,
+                    rule_name,
+                    match_method.unwrap_or("*"),
+                    match_path,
+                    ak
+                )
+                .as_str(),
+            )
+            .await?;
+        Ok(result)
+    }
+
     pub async fn delete_aksk(ak: &str, funs: &TardisFunsInst) -> TardisResult<()> {
         log::trace!("delete aksk: ak={}", ak);
 

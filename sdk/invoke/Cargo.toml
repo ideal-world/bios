@@ -23,7 +23,6 @@ spi_search = ["spi_base"]
 iam = []
 event = []
 macro = ["dep:simple-invoke-client-macro"]
-reldb-core = ["tardis/reldb-core"]
 
 [dependencies]
 serde.workspace = true
@@ -39,7 +38,6 @@ simple-invoke-client-macro = { path = "../simple-invoke-client-macro", optional 
 [dev-dependencies]
 tardis = { workspace = true, features = ["test"] }
 simple-invoke-client-macro = { path = "../simple-invoke-client-macro" }
-
 
 [[test]]
 name = "test_macros"

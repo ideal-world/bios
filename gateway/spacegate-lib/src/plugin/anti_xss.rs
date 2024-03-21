@@ -1,19 +1,11 @@
-use std::fmt;
-
-use async_trait::async_trait;
+use std::{fmt, sync::Arc};
 
 use serde::{Deserialize, Serialize};
-use spacegate_kernel::plugins::filters::SgPluginFilterInitDto;
-use spacegate_kernel::plugins::{
-    context::SgRoutePluginContext,
-    filters::{SgPluginFilter, SgPluginFilterAccept},
-};
-use spacegate_kernel::{def_filter, http};
-
-use tardis::{
-    async_trait,
-    basic::result::TardisResult,
-    serde_json::{self},
+use spacegate_shell::{
+    hyper::{header, Response},
+    kernel::helper_layers::map_response::MapResponseLayer,
+    plugin::{def_plugin, MakeSgLayer},
+    BoxError, SgBody, SgBoxLayer,
 };
 
 macro_rules! append_value {
@@ -24,7 +16,7 @@ macro_rules! append_value {
     };
 }
 
-def_filter!("anti_xss", SgFilterAntiXSSDef, SgFilterAntiXSS);
+def_plugin!("anti_xss", AntiXssPlugin, SgFilterAntiXSS);
 
 #[derive(Default, Serialize, Deserialize)]
 #[serde(default)]
@@ -152,36 +144,23 @@ impl fmt::Display for SandBoxValue {
     }
 }
 
-#[async_trait]
-impl SgPluginFilter for SgFilterAntiXSS {
-    fn accept(&self) -> SgPluginFilterAccept {
-        SgPluginFilterAccept::default()
-    }
-
-    async fn init(&mut self, _: &SgPluginFilterInitDto) -> TardisResult<()> {
-        Ok(())
-    }
-
-    async fn destroy(&self) -> TardisResult<()> {
-        Ok(())
-    }
-
-    async fn req_filter(&self, _: &str, ctx: SgRoutePluginContext) -> TardisResult<(bool, SgRoutePluginContext)> {
-        Ok((true, ctx))
-    }
-
-    async fn resp_filter(&self, _: &str, mut ctx: SgRoutePluginContext) -> TardisResult<(bool, SgRoutePluginContext)> {
-        let mut enable = false;
-        if let Some(content_type) = ctx.response.get_headers().get(http::header::CONTENT_TYPE) {
-            enable = content_type.eq("text/html") || content_type.eq("text/css") || content_type.eq("application/javascript") || content_type.eq("application/x-javascript");
-        };
-        if enable {
-            if self.csp_config.report_only {
-                let _ = ctx.response.set_header(http::header::CONTENT_SECURITY_POLICY_REPORT_ONLY, &self.csp_config.to_string_header_value());
-            } else {
-                let _ = ctx.response.set_header(http::header::CONTENT_SECURITY_POLICY, &self.csp_config.to_string_header_value());
+impl MakeSgLayer for SgFilterAntiXSS {
+    fn make_layer(&self) -> Result<SgBoxLayer, BoxError> {
+        let header = Arc::new(header::HeaderValue::from_str(&self.csp_config.to_string_header_value())?);
+        let report_only = self.csp_config.report_only;
+        Ok(SgBoxLayer::new(MapResponseLayer::new(move |mut resp: Response<SgBody>| {
+            let mut enable = false;
+            if let Some(content_type) = resp.headers().get(header::CONTENT_TYPE) {
+                enable = content_type.eq("text/html") || content_type.eq("text/css") || content_type.eq("application/javascript") || content_type.eq("application/x-javascript");
+            };
+            if enable {
+                if report_only {
+                    let _ = resp.headers_mut().append(header::CONTENT_SECURITY_POLICY_REPORT_ONLY, header.as_ref().clone());
+                } else {
+                    let _ = resp.headers_mut().append(header::CONTENT_SECURITY_POLICY, header.as_ref().clone());
+                }
             }
-        }
-        Ok((true, ctx))
+            resp
+        })))
     }
 }

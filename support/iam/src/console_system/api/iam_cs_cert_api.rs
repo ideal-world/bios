@@ -166,21 +166,11 @@ impl IamCsCertApi {
     ///
     /// 手动触发第三方集成同步，如果有其他同步正在进行中，那么就会返回错误。
     #[oai(path = "/sync", method = "post")]
-    async fn third_integration_sync(&self, account_sync_from: Json<IamCertExtKind>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Option<String>> {
+    async fn manual_third_integration_sync(&self, account_sync_from: Json<IamCertExtKind>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Option<String>> {
         add_remote_ip(request, &ctx.0).await?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        IamCertServ::third_integration_sync(
-            Some(IamThirdIntegrationConfigDto {
-                account_sync_from: account_sync_from.0,
-                account_sync_cron: None,
-                account_way_to_add: Default::default(),
-                account_way_to_delete: Default::default(),
-            }),
-            &funs,
-            &ctx.0,
-        )
-        .await?;
+        IamCertServ::manual_third_integration_sync(account_sync_from.0, &funs, &ctx.0).await?;
         funs.commit().await?;
         ctx.0.execute_task().await?;
         if let Some(task_id) = TaskProcessor::get_task_id_with_ctx(&ctx.0).await? {

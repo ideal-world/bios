@@ -30,7 +30,7 @@ pub async fn test_hw_sms() -> TardisResult<()> {
     let holder = init_tardis(&docker).await?;
     let ctx = get_test_ctx();
     let funs = get_tardis_inst();
-    let client = reach_invoke::Client::new("http://localhost:8080/reach", ctx, &funs);
+    let client = reach_invoke::Client::new("http://127.0.0.1:8080/reach", ctx, &funs);
     client.pwd_send(&phone, &code, &()).await?;
 
     // client.vcode_send(&phone, &code, &()).await?;
@@ -50,7 +50,7 @@ pub async fn test_mail() -> TardisResult<()> {
     let holder = init_tardis(&docker).await?;
     let ctx = get_test_ctx();
     let funs = get_tardis_inst();
-    let client = reach_invoke::Client::new("http://localhost:8080/reach", ctx, &funs);
+    let client = reach_invoke::Client::new("http://127.0.0.1:8080/reach", ctx, &funs);
     client.mail_pwd_send(&mail, &content, "测试", &()).await?;
     // wait for send
     tokio::time::sleep(Duration::from_secs(10)).await;

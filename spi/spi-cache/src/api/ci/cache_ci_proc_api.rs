@@ -6,7 +6,7 @@ use tardis::web::poem_openapi;
 use tardis::web::poem_openapi::payload::Json;
 use tardis::web::web_resp::{TardisApiResult, TardisResp, Void};
 
-use crate::dto::cache_proc_dto::{ExpReq, KIncrReq, KReq, KbRagngeReq, KbReq, KbvReq, KfIncrReq, KfReq, KfvReq, KvReq, KvWithExReq};
+use crate::dto::cache_proc_dto::{ExpReq, KIncrReq, KReq, KbRangeReq, KbReq, KbvReq, KfIncrReq, KfReq, KfvReq, KvReq, KvWithExReq};
 use crate::serv::cache_proc_serv;
 #[derive(Clone)]
 pub struct CacheCiProcApi;
@@ -205,7 +205,7 @@ impl CacheCiProcApi {
 
     /// bitcount_range_by_bit
     #[oai(path = "/bitcount_range_by_bit", method = "put")]
-    async fn bitcount_range_by_bit(&self, req: Json<KbRagngeReq>, ctx: TardisContextExtractor) -> TardisApiResult<u32> {
+    async fn bitcount_range_by_bit(&self, req: Json<KbRangeReq>, ctx: TardisContextExtractor) -> TardisApiResult<u32> {
         let funs = crate::get_tardis_inst();
         TardisResp::ok(cache_proc_serv::bitcount_range_by_bit(&req.0, &funs, &ctx.0).await?)
     }

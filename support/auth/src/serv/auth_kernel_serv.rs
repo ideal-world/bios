@@ -310,7 +310,7 @@ async fn parsing_base_ak(ak_authorization: &str, req: &AuthReq, config: &AuthCon
         ));
     }
     let req_head_time = if let Ok(date_time) = NaiveDateTime::parse_from_str(req_date, &config.head_date_format) {
-        date_time.timestamp_millis()
+        date_time.and_utc().timestamp_millis()
     } else {
         return Err(TardisError::bad_request("[Auth] bad date format", "401-auth-req-date-incorrect"));
     };
@@ -356,7 +356,7 @@ async fn check_ak_signature(ak: &str, cache_sk: &str, signature: &str, req_date:
 }
 
 async fn check_webhook_ak_signature(
-    onwer: &str,
+    owner: &str,
     own_paths: &str,
     ak: &str,
     cache_sk: &str,
@@ -369,7 +369,7 @@ async fn check_webhook_ak_signature(
     query.remove(&config.head_key_ak_authorization);
     let sorted_req_query = auth_common_helper::sort_hashmap_query(query);
     let calc_signature = TardisFuns::crypto.base64.encode(TardisFuns::crypto.digest.hmac_sha256(
-        format!("{}\n{}\n{}\n{}\n{}\n{}", onwer, own_paths, req.method, req_date, req.path, sorted_req_query).to_lowercase(),
+        format!("{}\n{}\n{}\n{}\n{}\n{}", owner, own_paths, req.method, req_date, req.path, sorted_req_query).to_lowercase(),
         cache_sk,
     )?);
     if calc_signature != signature {
@@ -538,7 +538,7 @@ pub(crate) async fn parse_mix_req(req: AuthReq) -> TardisResult<MixAuthResp> {
     let mix_body = TardisFuns::json.str_to_obj::<MixRequestBody>(&body)?;
     let mut headers = headers.unwrap_or_default();
     headers.extend(mix_body.headers);
-    let auth_resp = AuthResp::from_result(
+    let auth_resp = AuthResp::from(
         auth(
             &mut AuthReq {
                 scheme: req.scheme,

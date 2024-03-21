@@ -260,6 +260,7 @@ impl IamRelServ {
                 IamResKind::Api => ("", ""),
                 IamResKind::Ele => ("添加操作API", "AddElementApi"),
                 IamResKind::Menu => ("添加目录页面API", "AddContentPageApi"),
+                _ => ("", ""),
             };
             let _ = IamLogClient::add_ctx_task(
                 LogParamTag::IamRes,
@@ -474,6 +475,7 @@ impl IamRelServ {
                     IamResKind::Api => ("", ""),
                     IamResKind::Ele => ("移除操作API", "RemoveElementApi"),
                     IamResKind::Menu => ("移除目录页面API", "RemoveContentPageApi"),
+                    _ => ("", ""),
                 };
                 let _ = IamLogClient::add_ctx_task(
                     LogParamTag::IamRes,
@@ -530,8 +532,7 @@ impl IamRelServ {
             IamRelKind::IamAccountRel => {
                 IamSearchClient::async_add_or_modify_account_search(from_iam_item_id.to_string(), Box::new(true), "".to_string(), funs, ctx).await?;
             }
-            IamRelKind::IamCertRel => {}
-            IamRelKind::IamOrgRel => {}
+            _ => {}
         }
         Ok(())
     }

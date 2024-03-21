@@ -14,6 +14,9 @@ use crate::stats_initializer;
 
 use super::pg;
 
+
+// TODO FIXME ------------ 使用 spi_dispatch_service , 前后逻辑写到 api 中 ------------
+
 pub async fn dim_add(add_req: &StatsConfDimAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
     let inst = funs.init(ctx, true, stats_initializer::init_fun).await?;
     match inst.kind_code() {
@@ -126,6 +129,7 @@ pub async fn dim_paginate(
 pub async fn fact_paginate(
     fact_conf_key: Option<String>,
     show_name: Option<String>,
+    dim_rel_conf_dim_keys: Option<Vec<String>>,
     is_online: Option<bool>,
     page_number: u32,
     page_size: u32,
@@ -141,6 +145,7 @@ pub async fn fact_paginate(
             pg::stats_pg_conf_fact_serv::paginate(
                 fact_conf_key,
                 show_name,
+                dim_rel_conf_dim_keys,
                 is_online,
                 page_number,
                 page_size,
@@ -232,3 +237,5 @@ pub async fn fact_col_add(fact_conf_key: &str, add_req: &StatsConfFactColAddReq,
         kind_code => Err(funs.bs_not_implemented(kind_code)),
     }
 }
+
+// TODO FIXME ------------ 使用 spi_dispatch_service , 前后逻辑写到 api 中 ------------

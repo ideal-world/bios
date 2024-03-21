@@ -15,7 +15,7 @@ pub struct IamResAggAddReq {
     pub set: IamSetItemAggAddReq,
 }
 
-#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+#[derive(poem_openapi::Object, Serialize, Default, Deserialize, Debug)]
 pub struct IamResAddReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub code: TrimString,
@@ -31,6 +31,8 @@ pub struct IamResAddReq {
     pub action: Option<String>,
 
     pub scope_level: Option<RbumScopeLevelKind>,
+
+    pub ext: Option<String>,
 
     pub crypto_req: Option<bool>,
     pub crypto_resp: Option<bool>,
@@ -68,6 +70,7 @@ pub struct IamResModifyReq {
     pub hide: Option<bool>,
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub action: Option<String>,
+    pub ext: Option<String>,
 
     pub scope_level: Option<RbumScopeLevelKind>,
     pub disabled: Option<bool>,
@@ -107,6 +110,7 @@ pub struct IamResSummaryResp {
 
     pub scope_level: RbumScopeLevelKind,
     pub disabled: bool,
+    pub ext: String,
 
     pub icon: String,
     pub sort: i64,
@@ -143,6 +147,7 @@ pub struct IamResDetailResp {
 
     pub scope_level: RbumScopeLevelKind,
     pub disabled: bool,
+    pub ext: String,
 
     pub icon: String,
     pub sort: i64,
@@ -158,8 +163,10 @@ pub struct IamResDetailResp {
 
 impl IamResDetailResp {
     pub fn decoding(mut self) -> Self {
-        let offset = format!("{}/{}/", self.kind.to_int(), self.method,).len();
-        self.code = self.code.chars().skip(offset).collect();
+        if self.code.starts_with(&format!("{}/{}/", self.kind.to_int(), self.method,)) {
+            let offset = format!("{}/{}/", self.kind.to_int(), self.method,).len();
+            self.code = self.code.chars().skip(offset).collect();
+        }
         self
     }
 }

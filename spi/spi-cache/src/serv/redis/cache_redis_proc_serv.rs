@@ -7,7 +7,7 @@ use tardis::{
     TardisFunsInst,
 };
 
-use crate::dto::cache_proc_dto::{ExpReq, KIncrReq, KReq, KbRagngeReq, KbReq, KbvReq, KfIncrReq, KfReq, KfvReq, KvReq, KvWithExReq};
+use crate::dto::cache_proc_dto::{ExpReq, KIncrReq, KReq, KbRangeReq, KbReq, KbvReq, KfIncrReq, KfReq, KfvReq, KvReq, KvWithExReq};
 
 pub(crate) fn format_key(req_key: &str, ext: &HashMap<String, String>) -> String {
     if let Some(key_prefix) = common::get_isolation_flag_from_ext(ext) {
@@ -153,7 +153,7 @@ pub async fn bitcount(req: &KReq, _funs: &TardisFunsInst, _ctx: &TardisContext, 
     Ok(bs_inst.0.bitcount(&format_key(&req.key, bs_inst.1)).await? as u32)
 }
 
-pub async fn bitcount_range_by_bit(req: &KbRagngeReq, _funs: &TardisFunsInst, _ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<u32> {
+pub async fn bitcount_range_by_bit(req: &KbRangeReq, _funs: &TardisFunsInst, _ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<u32> {
     let bs_inst = inst.inst::<TardisCacheClient>();
     Ok(bs_inst.0.bitcount_range_by_bit(&format_key(&req.key, bs_inst.1), req.start as usize, req.end as usize).await? as u32)
 }

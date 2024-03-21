@@ -84,8 +84,8 @@ pub async fn decrypt_req(
 
     if input_keys.len() == 4 {
         let input_sm3_digest = input_keys[0];
-        let input_sm4_key = input_keys[1];
-        let input_sm4_iv = input_keys[2];
+        let input_sm4_key = TardisFuns::crypto.hex.decode(input_keys[1])?;
+        let input_sm4_iv = TardisFuns::crypto.hex.decode(input_keys[2])?;
         let input_pub_key = input_keys[3];
 
         if let Some(body) = body.as_ref() {
@@ -113,8 +113,8 @@ pub async fn decrypt_req(
         }
     } else if input_keys.len() == 3 {
         let input_sm3_digest = input_keys[0];
-        let input_sm4_key = input_keys[1];
-        let input_sm4_iv = input_keys[2];
+        let input_sm4_key = TardisFuns::crypto.hex.decode(input_keys[1])?;
+        let input_sm4_iv = TardisFuns::crypto.hex.decode(input_keys[2])?;
         if let Some(body) = body.as_ref() {
             if input_sm3_digest != TardisFuns::crypto.digest.sm3(body)? {
                 trace!(

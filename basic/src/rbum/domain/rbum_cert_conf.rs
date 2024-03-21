@@ -54,7 +54,7 @@ pub struct Model {
     ///  `code` = 'token_android' & `coexist_num` = 1 , `code` = 'token_ios' & `coexist_num` = 1 , `code` = 'token_web' & `coexist_num` = 2
     pub coexist_num: i16,
     /// Specifies the connection address, mostly for two-party or third-party configurations \
-    /// E.g. http://localhost:8080/api/v1/
+    /// E.g. http://127.0.0.1:8080/api/v1/
     pub conn_uri: String,
     /// see [status][crate::rbum::rbum_enumeration::RbumCertConfStatusKind]
     pub status: i16,
