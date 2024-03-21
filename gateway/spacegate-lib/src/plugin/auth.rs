@@ -443,7 +443,7 @@ fn success_auth_result_to_req(auth_result: AuthResult, config: &AuthConfig, req:
             .map(|role| role.iter().map(|r| RoleInfo { id: r.to_string(), name: None }).collect::<Vec<_>>())
             .unwrap_or_default(),
     };
-    parts.extensions.insert(cert_info);
+    parts.extensions.get_mut::<Reflect>().expect("missing reflect").insert(cert_info);
 
     if let Some(mut resp_headers) = auth_result.resp_headers.clone() {
         if resp_headers.contains_key(&config.head_key_crypto) || resp_headers.contains_key(&config.head_key_crypto.to_lowercase()) {

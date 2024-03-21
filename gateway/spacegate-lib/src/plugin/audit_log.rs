@@ -16,6 +16,7 @@ use spacegate_shell::hyper::{Request, Response};
 use spacegate_shell::kernel::extension::{EnterTime, PeerAddr, Reflect};
 
 use spacegate_shell::kernel::helper_layers::bidirection_filter::{Bdf, BdfLayer, BoxRespFut};
+use spacegate_shell::kernel::Marker;
 use spacegate_shell::plugin::{JsonValue, MakeSgLayer, Plugin, PluginError};
 use spacegate_shell::{BoxError, SgBody};
 use tardis::basic::dto::TardisContext;
@@ -34,6 +35,7 @@ use tardis::{
 use crate::extension::audit_log_param::AuditLogParam;
 use crate::extension::before_encrypt_body::BeforeEncryptBody;
 use crate::extension::cert_info::{CertInfo, RoleInfo};
+use crate::marker::OpresKey;
 
 pub const CODE: &str = "audit_log";
 #[derive(Serialize, Deserialize, Clone)]
@@ -145,6 +147,7 @@ impl SgFilterAuditLog {
     }
 
     fn req(&self, mut req: Request<SgBody>) -> Result<Request<SgBody>, Response<SgBody>> {
+        let reflect = req.extensions_mut().get_mut::<Reflect>().expect("missing reflect");
         let param = AuditLogParam {
             request_path: req.uri().path().to_string(),
             request_method: req.method().to_string(),
@@ -152,7 +155,18 @@ impl SgFilterAuditLog {
             request_scheme: req.uri().scheme().unwrap_or(&Scheme::HTTP).to_string(),
             request_ip: req.extensions().get::<PeerAddr>().ok_or(PluginError::bad_gateway::<AuditLogPlugin>("[Plugin.AuditLog] missing peer addr"))?.0.ip().to_string(),
         };
-        req.extensions_mut().get_mut::<Reflect>().expect("missing reflect").insert(param);
+        if let Some(opres_config) = OpresKey::extract(&req) {
+            if let Some(cert_info) = reflect.get_mut::<CertInfo>() {
+                cert_info.id = opres_config.ak;
+            } else {
+                reflect.insert(CertInfo {
+                    id: opres_config.ak,
+                    name: None,
+                    roles: vec![],
+                })
+            }
+        };
+        reflect.insert(param);
         Ok(req)
     }
 
