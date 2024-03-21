@@ -303,7 +303,7 @@ async fn parsing_base_ak(ak_authorization: &str, req: &AuthReq, config: &AuthCon
                 "401-auth-req-date-incorrect",
             ));
         }
-    } else if now - req_head_time > config.head_date_interval_millsec as i64 {
+    } else if now - req_head_time > config.head_date_interval_ms as i64 {
         return Err(TardisError::unauthorized(
             "[Auth] The request has already been made or the client's time is incorrect. Please try again.",
             "401-auth-req-date-incorrect",
