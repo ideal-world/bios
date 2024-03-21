@@ -33,7 +33,7 @@ pub struct IamCiLdapCertApi;
 /// # Interface Console Manage Cert API
 ///
 /// Allow Management Of aksk (an authentication method between applications)
-#[poem_openapi::OpenApi(prefix_path = "/ci/manage", tag = "bios_basic::ApiTag::Interface")]
+#[poem_openapi::OpenApi(prefix_path = "/private/ci/manage", tag = "bios_basic::ApiTag::Interface")]
 impl IamCiCertManageApi {
     /// Add aksk Cert
     #[oai(path = "/aksk", method = "post")]

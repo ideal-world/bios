@@ -483,6 +483,13 @@ pub async fn do_auth(ctx: &AuthContext) -> TardisResult<Option<ResContainerLeafI
                 }
             }
         }
+        if let Some(matched_aks) = &auth.ak {
+            if let Some(iam_ak) = &ctx.ak {
+                if matched_aks.contains(&format!("#{iam_ak}#")) || matched_aks.contains(&"#*#".to_string()) {
+                    return Ok(Some(matched_res));
+                }
+            }
+        }
     } else {
         return Ok(Some(matched_res));
     }
