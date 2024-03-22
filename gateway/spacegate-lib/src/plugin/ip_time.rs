@@ -8,7 +8,7 @@ use spacegate_shell::kernel::{
     extension::PeerAddr,
     helper_layers::filter::{Filter, FilterRequestLayer},
 };
-use spacegate_shell::plugin::{JsonValue, MakeSgLayer, Plugin, SerdeJsonError};
+use spacegate_shell::plugin::{JsonValue, MakeSgLayer, Plugin};
 
 use spacegate_shell::{BoxError, SgBody, SgBoxLayer, SgResponseExt};
 
@@ -120,8 +120,7 @@ pub struct SgIpTimePlugin;
 impl Plugin for SgIpTimePlugin {
     const CODE: &'static str = CODE;
     type MakeLayer = SgFilterIpTime;
-    type Error = SerdeJsonError;
-    fn create(value: JsonValue) -> Result<Self::MakeLayer, Self::Error> {
+    fn create(_: Option<String>, value: JsonValue) -> Result<Self::MakeLayer, BoxError> {
         let config: SgFilterIpTimeConfig = serde_json::from_value(value)?;
         let filter: SgFilterIpTime = config.into();
         Ok(filter)
