@@ -14,7 +14,6 @@ use crate::stats_initializer;
 
 use super::pg;
 
-
 // TODO FIXME ------------ 使用 spi_dispatch_service , 前后逻辑写到 api 中 ------------
 
 pub async fn dim_add(add_req: &StatsConfDimAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {

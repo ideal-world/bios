@@ -279,8 +279,6 @@ pub struct StatsQueryMetricsResp {
     pub group: Value,
 }
 
-
-
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct StatsQueryStatementReq {
     /// 字段列表

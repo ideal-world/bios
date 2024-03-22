@@ -39,7 +39,7 @@ pub struct StatsFactRecordsLoadReq {
     ///
     /// Map format，key = field name of the fact table，value = field value
     pub data: Value,
-    
+
     /// 动态数据
     /// Dynamic data
     pub ext: Value,

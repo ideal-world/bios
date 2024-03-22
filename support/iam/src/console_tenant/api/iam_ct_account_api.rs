@@ -160,7 +160,7 @@ impl IamCtAccountApi {
             Some(RbumSetItemRelFilterReq {
                 set_ids_and_cate_codes: Some(
                     set_cate_vec.into_iter().map(|sc| (sc.rel_rbum_set_id, sc.sys_code)).fold(HashMap::new(), |mut acc, (key, value)| {
-                        acc.entry(key).or_insert_with(Vec::new).push(value);
+                        acc.entry(key).or_default().push(value);
                         acc
                     }),
                 ),

@@ -8,6 +8,7 @@ use tardis::web::poem_openapi::payload::Json;
 use tardis::web::web_resp::{TardisApiResult, TardisResp, Void};
 
 use crate::basic::dto::iam_open_dto::{IamOpenAddProductReq, IamOpenAkSkAddReq, IamOpenAkSkResp, IamOpenBindAkProductReq, IamOpenRuleResp};
+use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_open_serv::IamOpenServ;
 use crate::iam_constants;
 
@@ -45,12 +46,13 @@ impl IamCiOpenApi {
     /// Add aksk Cert by open platform / 生成AKSK通过开放平台
     #[oai(path = "/aksk", method = "post")]
     async fn add_aksk(&self, add_req: Json<IamOpenAkSkAddReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<IamOpenAkSkResp> {
-        add_remote_ip(request, &ctx.0).await?;
+        let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, Some(add_req.tenant_id.clone()))?;
+        add_remote_ip(request, &ctx).await?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        let result = IamOpenServ::general_cert(add_req.0, &funs, &ctx.0).await?;
+        let result = IamOpenServ::general_cert(add_req.0, &funs, &ctx).await?;
         funs.commit().await?;
-        ctx.0.execute_task().await?;
+        ctx.execute_task().await?;
         TardisResp::ok(result)
     }
 
