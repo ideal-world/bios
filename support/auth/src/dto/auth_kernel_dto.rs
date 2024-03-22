@@ -322,6 +322,7 @@ pub struct ResAuthInfo {
     pub groups: Option<String>,
     pub apps: Option<String>,
     pub tenants: Option<String>,
+    pub ak: Option<String>,
     pub st: Option<i64>,
     pub et: Option<i64>,
 }
