@@ -434,7 +434,7 @@ async fn req_to_auth_req(ignore_prefix: &str, req: Request<SgBody>) -> TardisRes
 fn success_auth_result_to_req(auth_result: AuthResult, config: &AuthConfig, req: Request<SgBody>) -> TardisResult<Request<SgBody>> {
     let (mut parts, mut body) = req.into_parts();
     let cert_info = CertInfo {
-        id: auth_result.ctx.as_ref().and_then(|ctx| ctx.account_id.clone()).unwrap_or_default(),
+        id: auth_result.ctx.as_ref().and_then(|ctx| ctx.account_id.clone().or(ctx.ak.clone())).unwrap_or_default(),
         name: None,
         roles: auth_result
             .ctx
