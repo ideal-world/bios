@@ -223,11 +223,11 @@ impl SgPluginAuth {
                     serde_json::to_vec(&TardisResp {
                         code: "200".to_string(),
                         msg: "".to_string(),
-                        data: Some(auth_res_serv::get_apis_json().map_err(PluginError::bad_gateway::<AuthPlugin>)?),
+                        data: Some(auth_res_serv::get_apis_json().map_err(PluginError::internal_error::<AuthPlugin>)?),
                     })
                     .expect("TardisResp should be a valid json"),
                 ))
-                .map_err(PluginError::bad_gateway::<AuthPlugin>)?;
+                .map_err(PluginError::internal_error::<AuthPlugin>)?;
             return Err(mock_resp);
         }
 
@@ -235,11 +235,11 @@ impl SgPluginAuth {
 
         if self.auth_config.strict_security_mode && !is_true_mix_req {
             log::debug!("[SG.Filter.Auth] handle mix request");
-            return Ok(handle_mix_req(&self.auth_config, &self.mix_replace_url, req).await.map_err(PluginError::bad_gateway::<AuthPlugin>)?);
+            return Ok(handle_mix_req(&self.auth_config, &self.mix_replace_url, req).await.map_err(PluginError::internal_error::<AuthPlugin>)?);
         }
         req.headers_mut().append(&self.header_is_mix_req, HeaderValue::from_static("false"));
 
-        let (mut auth_req, mut req) = req_to_auth_req(&self.auth_path_ignore_prefix, req).await.map_err(PluginError::bad_gateway::<AuthPlugin>)?;
+        let (mut auth_req, mut req) = req_to_auth_req(&self.auth_path_ignore_prefix, req).await.map_err(PluginError::internal_error::<AuthPlugin>)?;
 
         match auth_kernel_serv::auth(&mut auth_req, is_true_mix_req).await {
             Ok(auth_result) => {
@@ -254,14 +254,14 @@ impl SgPluginAuth {
                 }
 
                 if auth_result.e.is_none() {
-                    req = success_auth_result_to_req(auth_result, &self.auth_config, req).map_err(PluginError::bad_gateway::<AuthPlugin>)?;
+                    req = success_auth_result_to_req(auth_result, &self.auth_config, req).map_err(PluginError::internal_error::<AuthPlugin>)?;
                 } else if let Some(e) = auth_result.e {
                     log::info!("[SG.Filter.Auth] auth failed:{e}");
                     let err_resp = Response::builder()
                         .header(http::header::CONTENT_TYPE, HeaderValue::from_static("application/json"))
                         .status(StatusCode::from_str(&e.code).unwrap_or(StatusCode::BAD_GATEWAY))
                         .body(SgBody::full(json!({"code":format!("{}-gateway-cert-error",e.code),"message":e.message}).to_string()))
-                        .map_err(PluginError::bad_gateway::<AuthPlugin>)?;
+                        .map_err(PluginError::internal_error::<AuthPlugin>)?;
                     return Err(err_resp);
                 };
                 Ok(req)
@@ -272,7 +272,7 @@ impl SgPluginAuth {
                     .header(http::header::CONTENT_TYPE, HeaderValue::from_static("application/json"))
                     .status(StatusCode::from_str(&e.code).unwrap_or(StatusCode::BAD_GATEWAY))
                     .body(SgBody::full(format!("[SG.Filter.Auth] auth return error:{e}")))
-                    .map_err(PluginError::bad_gateway::<AuthPlugin>)?;
+                    .map_err(PluginError::internal_error::<AuthPlugin>)?;
                 Err(err_resp)
             }
         }
@@ -292,7 +292,7 @@ impl SgPluginAuth {
 
         if let HeadCryptoKey::Some(crypto_value) = &req_crypto.head_crypto_key {
             resp.headers_mut().insert(
-                HeaderName::try_from(head_key_crypto.clone()).map_err(PluginError::bad_gateway::<AuthPlugin>)?,
+                HeaderName::try_from(head_key_crypto.clone()).map_err(PluginError::internal_error::<AuthPlugin>)?,
                 crypto_value.clone(),
             );
         }
@@ -301,14 +301,14 @@ impl SgPluginAuth {
             return Ok(resp);
         }
 
-        let (encrypt_req, mut resp) = resp_to_auth_encrypt_req(resp).await.map_err(PluginError::bad_gateway::<AuthPlugin>)?;
+        let (encrypt_req, mut resp) = resp_to_auth_encrypt_req(resp).await.map_err(PluginError::internal_error::<AuthPlugin>)?;
         let (mut parts, _) = resp.into_parts();
-        let encrypt_resp = auth_crypto_serv::encrypt_body(&encrypt_req).await.map_err(PluginError::bad_gateway::<AuthPlugin>)?;
-        parts.headers.extend(hashmap_header_to_headermap(encrypt_resp.headers).map_err(PluginError::bad_gateway::<AuthPlugin>)?);
+        let encrypt_resp = auth_crypto_serv::encrypt_body(&encrypt_req).await.map_err(PluginError::internal_error::<AuthPlugin>)?;
+        parts.headers.extend(hashmap_header_to_headermap(encrypt_resp.headers).map_err(PluginError::internal_error::<AuthPlugin>)?);
         parts.headers.remove(hyper::header::TRANSFER_ENCODING);
         let body = SgBody::full(encrypt_resp.body);
         resp = Response::from_parts(parts, body);
-        self.cors(&mut resp).map_err(PluginError::bad_gateway::<AuthPlugin>)?;
+        self.cors(&mut resp).map_err(PluginError::internal_error::<AuthPlugin>)?;
 
         Ok(resp)
     }
@@ -514,8 +514,7 @@ pub struct AuthPlugin;
 impl Plugin for AuthPlugin {
     const CODE: &'static str = CODE;
     type MakeLayer = SgPluginAuth;
-    type Error = serde_json::Error;
-    fn create(value: JsonValue) -> Result<Self::MakeLayer, Self::Error> {
+    fn create(_: Option<String>, value: JsonValue) -> Result<Self::MakeLayer, BoxError> {
         let config: SgPluginAuthConfig = serde_json::from_value(value)?;
         let filter: SgPluginAuth = config.clone().into();
         let tardis_init = Arc::new(Once::new());

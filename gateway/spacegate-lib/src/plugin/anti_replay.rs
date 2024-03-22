@@ -49,18 +49,18 @@ impl Bdf for SgFilterAntiReplay {
     fn on_req(self: Arc<Self>, mut req: Request<SgBody>) -> Self::FutureReq {
         Box::pin(async move {
             if let Some(client) = req.get_redis_client_by_gateway_name() {
-                let md5 = get_md5(&req).map_err(PluginError::bad_gateway::<AntiReplayPlugin>)?;
+                let md5 = get_md5(&req).map_err(PluginError::internal_error::<AntiReplayPlugin>)?;
                 let digest = AntiReplayDigest {
                     md5: Arc::from(md5),
                     client: client.clone(),
                 };
-                if get_status(&digest.md5, &self.cache_key, &client).await.map_err(PluginError::bad_gateway::<AntiReplayPlugin>)? {
+                if get_status(&digest.md5, &self.cache_key, &client).await.map_err(PluginError::internal_error::<AntiReplayPlugin>)? {
                     return Err(Response::with_code_message(
                         StatusCode::TOO_MANY_REQUESTS,
                         "[SG.Plugin.Anti_Replay] Request denied due to replay attack. Please refresh and resubmit the request.",
                     ));
                 } else {
-                    set_status(&digest.md5, &self.cache_key, true, &client).await.map_err(PluginError::bad_gateway::<AntiReplayPlugin>)?;
+                    set_status(&digest.md5, &self.cache_key, true, &client).await.map_err(PluginError::internal_error::<AntiReplayPlugin>)?;
                 }
                 req.extensions_mut().get_mut::<Reflect>().expect("missing reflect").insert(digest);
             }

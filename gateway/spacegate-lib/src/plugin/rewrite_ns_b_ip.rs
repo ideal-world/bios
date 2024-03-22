@@ -79,9 +79,9 @@ impl Filter for SgFilterRewriteNs {
                     } else {
                         format!("{svc}.{ns}", svc = k8s_service.0.name, ns = self.target_ns)
                     };
-                    let new_authority = uri::Authority::from_str(&new_authority).map_err(PluginError::bad_gateway::<RewriteNsPlugin>)?;
+                    let new_authority = uri::Authority::from_str(&new_authority).map_err(PluginError::internal_error::<RewriteNsPlugin>)?;
                     parts.authority.replace(new_authority);
-                    *req.uri_mut() = uri::Uri::from_parts(parts).map_err(PluginError::bad_gateway::<RewriteNsPlugin>)?;
+                    *req.uri_mut() = uri::Uri::from_parts(parts).map_err(PluginError::internal_error::<RewriteNsPlugin>)?;
                     log::debug!("[SG.Filter.Auth.Rewrite_Ns] change namespace from {} to {}", ns, self.target_ns);
                 }
             }
