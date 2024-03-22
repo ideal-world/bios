@@ -15,8 +15,12 @@ use tardis::{
 };
 
 def_plugin!("anti_replay", AntiReplayPlugin, SgFilterAntiReplay);
-
+#[cfg(feature = "schema")]
+use spacegate_plugin::schemars;
+#[cfg(feature = "schema")]
+spacegate_plugin::schema!(AntiReplayPlugin, SgFilterAntiReplay);
 #[derive(Serialize, Deserialize, Clone)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default)]
 pub struct SgFilterAntiReplay {
     cache_key: String,

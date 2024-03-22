@@ -21,6 +21,7 @@ mod tests;
 pub use ip_time_rule::IpTimeRule;
 
 #[derive(Debug, Serialize, Deserialize, Default)]
+// #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default)]
 pub struct SgFilterIpTimeConfig {
     /// ## When white_list_mode is **enabled**

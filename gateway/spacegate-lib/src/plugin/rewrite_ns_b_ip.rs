@@ -23,6 +23,7 @@ pub struct SgFilterRewriteNs {
 }
 
 #[derive(Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default)]
 pub struct SgFilterRewriteNsConfig {
     pub ip_list: Vec<String>,

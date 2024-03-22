@@ -11,11 +11,13 @@ readme.workspace = true
 publish.workspace = true
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
+[features]
+schema = ["spacegate-plugin/schema"]
 [dependencies]
 serde.workspace = true
 lazy_static.workspace = true
 spacegate-shell.workspace = true
+spacegate-plugin = { workspace = true, features = ["schema"], optional = true }
 
 bios-sdk-invoke = { path = "../../sdk/invoke", features = ["spi_log"] }
 
@@ -33,3 +35,8 @@ tardis = { workspace = true, features = ["test", "web-client"] }
 
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 testcontainers-modules = { workspace = true, features = ["redis"] }
+
+[[test]]
+name = "export_schemas"
+path = "tests/export_schemas.rs"
+required-features = ["schema"]

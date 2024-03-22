@@ -38,7 +38,14 @@ use crate::extension::cert_info::{CertInfo, RoleInfo};
 use crate::marker::OpresKey;
 
 pub const CODE: &str = "audit_log";
+
+#[cfg(feature = "schema")]
+use spacegate_plugin::schemars;
+#[cfg(feature = "schema")]
+spacegate_plugin::schema!(AuditLogPlugin, SgFilterAuditLog);
+
 #[derive(Serialize, Deserialize, Clone)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default)]
 pub struct SgFilterAuditLog {
     log_url: String,
