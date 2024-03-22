@@ -188,8 +188,8 @@ impl SgPluginAuth {
         header_map
             .get(&self.header_is_mix_req)
             .map(|v: &HeaderValue| {
-                bool::from_str(v.to_str().map_err(|e| TardisError::custom("502", &format!("[SG.Filter.Auth] parse header IS_MIX_REQ error:{e}"), ""))?)
-                    .map_err(|e| TardisError::custom("502", &format!("[SG.Filter.Auth] parse header IS_MIX_REQ error:{e}"), ""))
+                bool::from_str(v.to_str().map_err(|e| TardisError::custom("500", &format!("[SG.Filter.Auth] parse header IS_MIX_REQ error:{e}"), ""))?)
+                    .map_err(|e| TardisError::custom("500", &format!("[SG.Filter.Auth] parse header IS_MIX_REQ error:{e}"), ""))
             })
             .transpose()
             .ok()
@@ -346,28 +346,28 @@ async fn handle_mix_req(auth_config: &AuthConfig, mix_replace_url: &str, req: Re
     }
     let string_body = String::from_utf8_lossy(body.get_dumped().expect("not expect code")).trim_matches('"').to_string();
     if string_body.is_empty() {
-        TardisError::custom("502", "[SG.Filter.Auth.MixReq] body can't be empty", "502-parse_mix_req-parse-error");
+        TardisError::custom("500", "[SG.Filter.Auth.MixReq] body can't be empty", "500-parse_mix_req-parse-error");
     }
     let mut req_headers = parts.headers.iter().map(|(k, v)| (k.as_str().to_string(), v.to_str().expect("error parse header value to str").to_string())).collect();
     let (body, crypto_headers) = auth_crypto_serv::decrypt_req(&req_headers, &Some(string_body), true, true, auth_config).await?;
     req_headers.remove(&auth_config.head_key_crypto);
     req_headers.remove(&auth_config.head_key_crypto.to_ascii_lowercase());
 
-    let body = body.ok_or_else(|| TardisError::custom("502", "[SG.Filter.Auth.MixReq] decrypt body can't be empty", "502-parse_mix_req-parse-error"))?;
+    let body = body.ok_or_else(|| TardisError::custom("500", "[SG.Filter.Auth.MixReq] decrypt body can't be empty", "500-parse_mix_req-parse-error"))?;
 
     let mix_body = TardisFuns::json.str_to_obj::<MixRequestBody>(&body)?;
     // ctx.set_action(SgRouteFilterRequestAction::Redirect);
     let mut true_uri = Url::from_str(&parts.uri.to_string().replace(mix_replace_url, &mix_body.uri))
-        .map_err(|e| TardisError::custom("502", &format!("[SG.Filter.Auth.MixReq] url parse err {e}"), "502-parse_mix_req-url-error"))?;
+        .map_err(|e| TardisError::custom("500", &format!("[SG.Filter.Auth.MixReq] url parse err {e}"), "500-parse_mix_req-url-error"))?;
     true_uri.set_path(&true_uri.path().replace("//", "/"));
     true_uri.set_query(Some(&if let Some(old_query) = true_uri.query() {
         format!("{}&_t={}", old_query, mix_body.ts)
     } else {
         format!("_t={}", mix_body.ts)
     }));
-    parts.uri = true_uri.as_str().parse().map_err(|e| TardisError::custom("502", &format!("[SG.Filter.Auth.MixReq] uri parse error: {}", e), ""))?;
+    parts.uri = true_uri.as_str().parse().map_err(|e| TardisError::custom("500", &format!("[SG.Filter.Auth.MixReq] uri parse error: {}", e), ""))?;
     parts.method = Method::from_str(&mix_body.method.to_ascii_uppercase())
-        .map_err(|e| TardisError::custom("502", &format!("[SG.Filter.Auth.MixReq] method parse err {e}"), "502-parse_mix_req-method-error"))?;
+        .map_err(|e| TardisError::custom("500", &format!("[SG.Filter.Auth.MixReq] method parse err {e}"), "500-parse_mix_req-method-error"))?;
 
     let mut headers = req_headers;
     headers.extend(mix_body.headers);
