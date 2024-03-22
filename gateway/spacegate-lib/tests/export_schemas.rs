@@ -19,7 +19,7 @@ macro_rules! export_plugins {
 #[test]
 fn export_schema() {
     use spacegate_lib::plugin::{
-        anti_replay::AntiReplayPlugin, anti_xss::AntiXssPlugin, audit_log::AuditLogPlugin, auth::AuthPlugin, ip_time::SgIpTimePlugin, opres::OpresPlugin,
+        anti_replay::AntiReplayPlugin, anti_xss::AntiXssPlugin, audit_log::AuditLogPlugin, auth::AuthPlugin, ip_time::SgIpTimePlugin, 
         rewrite_ns_b_ip::RewriteNsPlugin,
     };
     export_plugins!("schema":
@@ -28,7 +28,6 @@ fn export_schema() {
         AuditLogPlugin
         // AuthPlugin
         // SgIpTimePlugin
-        OpresPlugin
         RewriteNsPlugin
     );
 }
