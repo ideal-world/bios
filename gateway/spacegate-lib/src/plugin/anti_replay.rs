@@ -31,7 +31,7 @@ pub struct SgFilterAntiReplay {
 impl Default for SgFilterAntiReplay {
     fn default() -> Self {
         Self {
-            cache_key: "spacegate:cache:plugin:anti_replay".to_string(),
+            cache_key: "sg:plugin:anti_replay".to_string(),
             time: 5000,
         }
     }

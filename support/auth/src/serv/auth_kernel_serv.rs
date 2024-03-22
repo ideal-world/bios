@@ -56,7 +56,7 @@ fn check(req: &mut AuthReq) -> TardisResult<bool> {
     Ok(false)
 }
 
-async fn ident(req: &AuthReq, config: &AuthConfig, cache_client: &TardisCacheClient) -> TardisResult<AuthContext> {
+async fn ident(req: &mut AuthReq, config: &AuthConfig, cache_client: &TardisCacheClient) -> TardisResult<AuthContext> {
     let rbum_kind = if let Some(rbum_kind) = req.headers.get(&config.head_key_protocol).or_else(|| req.headers.get(&config.head_key_protocol.to_lowercase())) {
         rbum_kind.to_string()
     } else {
@@ -110,14 +110,7 @@ async fn ident(req: &AuthReq, config: &AuthConfig, cache_client: &TardisCacheCli
         let (req_date, ak, signature) = self::parsing_base_ak(&ak_authorization, req, config, false).await?;
         let (cache_sk, cache_tenant_id, cache_appid) = self::get_cache_ak(&ak, config, cache_client).await?;
         self::check_ak_signature(&ak, &cache_sk, &signature, &req_date, req).await?;
-        let bios_ctx = if let Some(bios_ctx) = req.headers.get(&config.head_key_bios_ctx).or_else(|| req.headers.get(&config.head_key_bios_ctx.to_lowercase())) {
-            TardisFuns::json.str_to_obj::<TardisContext>(&TardisFuns::crypto.base64.decode_to_string(bios_ctx)?)?
-        } else {
-            return Err(TardisError::unauthorized(
-                &format!("[Auth] Request is not legal, missing header [{}]", config.head_key_bios_ctx),
-                "401-auth-req-ak-not-exist",
-            ));
-        };
+
         let mut own_paths = cache_tenant_id.clone();
         if !app_id.is_empty() {
             if app_id != cache_appid {
@@ -129,31 +122,19 @@ async fn ident(req: &AuthReq, config: &AuthConfig, cache_client: &TardisCacheCli
             own_paths = format!("{cache_tenant_id}/{app_id}")
         }
 
-        if bios_ctx.own_paths.contains(&own_paths) {
-            let mut roles = bios_ctx.roles.clone();
-            for role in bios_ctx.roles.clone() {
-                if role.contains(':') {
-                    let extend_role = role.split(':').collect::<Vec<_>>()[0];
-                    roles.push(extend_role.to_string());
-                }
-            }
-            Ok(AuthContext {
-                rbum_uri,
-                rbum_action,
-                app_id: if app_id.is_empty() { None } else { Some(app_id) },
-                tenant_id: Some(cache_tenant_id),
-                account_id: Some(bios_ctx.owner),
-                roles: Some(roles),
-                groups: Some(bios_ctx.groups),
-                own_paths: Some(bios_ctx.own_paths),
-                ak: Some(ak_authorization.to_string()),
-            })
-        } else {
-            Err(TardisError::forbidden(
-                &format!("[Auth] Request is not legal from head [{}]", config.head_key_bios_ctx),
-                "403-auth-req-permission-denied",
-            ))
-        }
+        req.headers.insert(config.head_key_auth_ident.clone(), ak_authorization.clone());
+
+        Ok(AuthContext {
+            rbum_uri,
+            rbum_action,
+            app_id: if app_id.is_empty() { None } else { Some(app_id) },
+            tenant_id: Some(cache_tenant_id),
+            account_id: None,
+            roles: None,
+            groups: None,
+            own_paths: Some(own_paths),
+            ak: Some(ak_authorization.to_string()),
+        })
     } else if let Some(ak_authorization) = get_webhook_ak_key(req, config) {
         let (req_date, ak, signature) = self::parsing_base_ak(&ak_authorization, req, config, true).await?;
         let (cache_sk, cache_tenant_id, cache_appid) = self::get_cache_ak(&ak, config, cache_client).await?;
@@ -322,7 +303,7 @@ async fn parsing_base_ak(ak_authorization: &str, req: &AuthReq, config: &AuthCon
                 "401-auth-req-date-incorrect",
             ));
         }
-    } else if now - req_head_time > config.head_date_interval_millsec as i64 {
+    } else if now - req_head_time > config.head_date_interval_ms as i64 {
         return Err(TardisError::unauthorized(
             "[Auth] The request has already been made or the client's time is incorrect. Please try again.",
             "401-auth-req-date-incorrect",
@@ -479,6 +460,13 @@ pub async fn do_auth(ctx: &AuthContext) -> TardisResult<Option<ResContainerLeafI
         if let Some(matched_tenants) = &auth.tenants {
             if let Some(iam_tenant_id) = &ctx.tenant_id {
                 if matched_tenants.contains(&format!("#{iam_tenant_id}#")) || matched_tenants.contains(&"#*#".to_string()) {
+                    return Ok(Some(matched_res));
+                }
+            }
+        }
+        if let Some(matched_aks) = &auth.ak {
+            if let Some(iam_ak) = &ctx.ak {
+                if matched_aks.contains(&format!("#{iam_ak}#")) || matched_aks.contains(&"#*#".to_string()) {
                     return Ok(Some(matched_res));
                 }
             }

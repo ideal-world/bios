@@ -137,8 +137,8 @@ pub(crate) async fn fact_record_load(
 
     let fact_col_conf_set = stats_pg_conf_fact_col_serv::find_by_fact_conf_key(fact_conf_key, &conn, ctx, inst).await?;
 
-    let mut fields = vec!["key".to_string(), "own_paths".to_string(), "ct".to_string()];
-    let mut values = vec![Value::from(fact_record_key), Value::from(add_req.own_paths), Value::from(add_req.ct)];
+    let mut fields = vec!["key".to_string(), "own_paths".to_string(), "ext".to_string(), "ct".to_string()];
+    let mut values = vec![Value::from(fact_record_key), Value::from(add_req.own_paths), add_req.ext.into(), Value::from(add_req.ct)];
     let req_data = add_req.data.as_object().ok_or(funs.err().bad_request(
         "fact_record",
         "load",
@@ -282,7 +282,7 @@ pub(crate) async fn fact_records_load(
     let fact_col_conf_set = stats_pg_conf_fact_col_serv::find_by_fact_conf_key(fact_conf_key, &conn, ctx, inst).await?;
 
     let mut has_fields_init = false;
-    let mut fields = vec!["key".to_string(), "own_paths".to_string(), "ct".to_string()];
+    let mut fields = vec!["key".to_string(), "own_paths".to_string(), "ext".to_string(), "ct".to_string()];
     let mut value_sets = vec![];
 
     for add_req in add_req_set {
@@ -294,7 +294,7 @@ pub(crate) async fn fact_records_load(
                 "400-spi-stats-invalid-request",
             ));
         };
-        let mut values = vec![Value::from(&add_req.key), Value::from(add_req.own_paths), Value::from(add_req.ct)];
+        let mut values = vec![Value::from(&add_req.key), Value::from(add_req.own_paths), add_req.ext.into(), Value::from(add_req.ct)];
 
         for fact_col_conf in &fact_col_conf_set {
             if !has_fields_init {

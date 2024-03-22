@@ -3,18 +3,21 @@ use tardis::chrono::{self, Utc};
 use tardis::db::reldb_client::TardisActiveModel;
 use tardis::db::sea_orm;
 use tardis::db::sea_orm::prelude::*;
-use tardis::db::sea_orm::sea_query::{ColumnDef, Index, IndexCreateStatement, Table, TableCreateStatement};
+use tardis::db::sea_orm::sea_query::{ColumnDef, IndexCreateStatement, Table, TableCreateStatement};
 use tardis::db::sea_orm::*;
+use tardis::TardisCreateIndex;
 
 /// Credential or authentication configuration model
 ///
 /// Uniform use of cert refers to credentials or authentication
-#[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]
+#[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel, TardisCreateIndex)]
 #[sea_orm(table_name = "rbum_cert_conf")]
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
     pub id: String,
+    #[index(index_id = "id_2", unique)]
     pub kind: String,
+    #[index(index_id = "id_2", unique)]
     pub supplier: String,
     pub name: String,
     pub note: String,
@@ -59,14 +62,19 @@ pub struct Model {
     /// see [status][crate::rbum::rbum_enumeration::RbumCertConfStatusKind]
     pub status: i16,
     /// Associated [resource domain](crate::rbum::domain::rbum_domain::Model) id
+    #[index(index_id = "id_2", unique)]
     pub rel_rbum_domain_id: String,
     /// Associated [resource](crate::rbum::domain::rbum_item::Model) id
+    #[index(index_id = "id_2", unique)]
     pub rel_rbum_item_id: String,
 
+    #[index()]
     pub own_paths: String,
     pub owner: String,
     pub create_time: chrono::DateTime<Utc>,
     pub update_time: chrono::DateTime<Utc>,
+    pub create_by: String,
+    pub update_by: String,
 }
 
 impl TardisActiveModel for ActiveModel {
@@ -74,7 +82,9 @@ impl TardisActiveModel for ActiveModel {
         if is_insert {
             self.own_paths = Set(ctx.own_paths.to_string());
             self.owner = Set(ctx.owner.to_string());
+            self.create_by = Set(ctx.owner.to_string());
         }
+        self.update_by = Set(ctx.owner.to_string());
     }
 
     fn create_table_statement(db: DbBackend) -> TableCreateStatement {
@@ -111,7 +121,9 @@ impl TardisActiveModel for ActiveModel {
             .col(ColumnDef::new(Column::Status).not_null().small_integer())
             // Basic
             .col(ColumnDef::new(Column::OwnPaths).not_null().string())
-            .col(ColumnDef::new(Column::Owner).not_null().string());
+            .col(ColumnDef::new(Column::Owner).not_null().string())
+            .col(ColumnDef::new(Column::CreateBy).not_null().string())
+            .col(ColumnDef::new(Column::UpdateBy).not_null().string());
         if db == DatabaseBackend::Postgres {
             builder
                 .col(ColumnDef::new(Column::CreateTime).extra("DEFAULT CURRENT_TIMESTAMP".to_string()).timestamp_with_time_zone())
@@ -128,18 +140,7 @@ impl TardisActiveModel for ActiveModel {
     }
 
     fn create_index_statement() -> Vec<IndexCreateStatement> {
-        vec![
-            Index::create().name(&format!("idx-{}-{}", Entity.table_name(), Column::OwnPaths.to_string())).table(Entity).col(Column::OwnPaths).to_owned(),
-            Index::create()
-                .name(&format!("idx-{}-{}", Entity.table_name(), Column::Kind.to_string()))
-                .table(Entity)
-                .col(Column::Kind)
-                .col(Column::Supplier)
-                .col(Column::RelRbumDomainId)
-                .col(Column::RelRbumItemId)
-                .unique()
-                .to_owned(),
-        ]
+        tardis_create_index_statement()
     }
 }
 

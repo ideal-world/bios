@@ -11,8 +11,10 @@ use crate::console_interface::serv::iam_ci_oauth2_token_serv::IamCiOauth2AkSkSer
 use crate::iam_constants;
 use crate::iam_enumeration::Oauth2GrantType;
 use bios_basic::helper::request_helper::add_remote_ip;
-use bios_basic::rbum::dto::rbum_cert_dto::{RbumCertSummaryResp, RbumCertSummaryWithSkResp};
+use bios_basic::rbum::dto::rbum_cert_dto::RbumCertSummaryWithSkResp;
 use bios_basic::rbum::dto::rbum_filer_dto::RbumCertFilterReq;
+use bios_basic::rbum::serv::rbum_cert_serv::RbumCertServ;
+use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::error::TardisError;
 use tardis::web::context_extractor::TardisContextExtractor;
@@ -31,17 +33,18 @@ pub struct IamCiLdapCertApi;
 /// # Interface Console Manage Cert API
 ///
 /// Allow Management Of aksk (an authentication method between applications)
-#[poem_openapi::OpenApi(prefix_path = "/ci/manage", tag = "bios_basic::ApiTag::Interface")]
+#[poem_openapi::OpenApi(prefix_path = "/private/ci/manage", tag = "bios_basic::ApiTag::Interface")]
 impl IamCiCertManageApi {
     /// Add aksk Cert
     #[oai(path = "/aksk", method = "post")]
     async fn add_aksk(&self, add_req: Json<IamCertAkSkAddReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<IamCertAkSkResp> {
-        add_remote_ip(request, &ctx.0).await?;
+        let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, Some(add_req.tenant_id.clone()))?;
+        add_remote_ip(request, &ctx).await?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        let result = IamCiCertAkSkServ::general_cert(add_req.0, &funs, &ctx.0).await?;
+        let result = IamCiCertAkSkServ::general_cert(add_req.0, &funs, &ctx).await?;
         funs.commit().await?;
-        ctx.0.execute_task().await?;
+        ctx.execute_task().await?;
         TardisResp::ok(result)
     }
 
@@ -74,24 +77,23 @@ impl IamCiCertManageApi {
 #[poem_openapi::OpenApi(prefix_path = "/ci/cert", tag = "bios_basic::ApiTag::Interface")]
 impl IamCiCertApi {
     #[oai(path = "/get/:id", method = "get")]
-    async fn get_cert_by_id(&self, id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<RbumCertSummaryResp> {
+    async fn get_cert_by_id(&self, id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<IamCertAkSkResp> {
         add_remote_ip(request, &ctx.0).await?;
         let funs = iam_constants::get_tardis_inst();
-        let result = IamCertServ::find_certs(
+        let ak = RbumCertServ::find_one_detail_rbum(
             &RbumCertFilterReq {
-                id: Some(id.0),
+                id: Some(id.0.clone()),
                 ..Default::default()
             },
-            None,
-            None,
             &funs,
             &ctx.0,
         )
         .await?
-        .pop()
-        .ok_or_else(|| funs.err().internal_error("iam_ci_cert", "get_cert_by_id", "cert is not found", "401-iam-cert-code-not-exist"))?;
+        .ok_or_else(|| funs.err().internal_error("iam_ci_cert", "get_cert_by_id", "cert is not found", "401-iam-cert-code-not-exist"))?
+        .ak;
+        let sk = RbumCertServ::show_sk(&id.0, &RbumCertFilterReq::default(), &funs, &ctx.0).await?;
         ctx.0.execute_task().await?;
-        TardisResp::ok(result)
+        TardisResp::ok(IamCertAkSkResp { id: id.clone(), ak, sk })
     }
     /// Find Cert By Kind And Supplier
     ///
@@ -110,13 +112,14 @@ impl IamCiCertApi {
         ctx: TardisContextExtractor,
         request: &Request,
     ) -> TardisApiResult<RbumCertSummaryWithSkResp> {
-        add_remote_ip(request, &ctx.0).await?;
+        let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0.clone())?;
+        add_remote_ip(request, &ctx).await?;
         let funs = iam_constants::get_tardis_inst();
         let supplier = supplier.0.unwrap_or_default();
         let kind = kind.0.unwrap_or_else(|| "UserPwd".to_string());
         let kind = if kind.is_empty() { "UserPwd".to_string() } else { kind };
 
-        let true_tenant_id = if IamAccountServ::is_global_account(&account_id.0, &funs, &ctx.0).await? {
+        let true_tenant_id = if IamAccountServ::is_global_account(&account_id.0, &funs, &ctx).await? {
             None
         } else {
             tenant_id.0
@@ -128,8 +131,8 @@ impl IamCiCertApi {
         };
         let ldap_dn = ldap_origin.0.unwrap_or_default();
         let cert =
-            IamCertServ::get_cert_by_relrubmid_kind_supplier(&account_id.0, &kind, vec![supplier], conf_id, &true_tenant_id.unwrap_or_default(), ldap_dn, &funs, &ctx.0).await?;
-        ctx.0.execute_task().await?;
+            IamCertServ::get_cert_by_relrubmid_kind_supplier(&account_id.0, &kind, vec![supplier], conf_id, &true_tenant_id.unwrap_or_default(), ldap_dn, &funs, &ctx).await?;
+        ctx.execute_task().await?;
         TardisResp::ok(cert)
     }
 

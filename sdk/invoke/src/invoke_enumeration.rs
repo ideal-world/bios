@@ -1,4 +1,3 @@
-
 use serde::{Deserialize, Serialize};
 use tardis::web::poem_openapi;
 

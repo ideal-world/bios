@@ -100,22 +100,12 @@ pub async fn test_req() -> TardisResult<()> {
 
     let app_id = "app_idcc";
     let tenant_id = "tenant_id123";
-    let head_ctx = TardisFuns::crypto.base64.encode(TardisFuns::json.obj_to_string(&TardisContext {
-        own_paths: format!("{tenant_id}/{app_id}"),
-        ak: "".to_string(),
-        owner: "".to_string(),
-        ..Default::default()
-    })?);
 
     let resp = mock_req(
         "GET",
         "/iam/ci/account",
         "",
-        vec![
-            (&config.head_key_ak_authorization, "aaaa:"),
-            (&config.head_key_date_flag, &now),
-            (&config.head_key_bios_ctx, &head_ctx),
-        ],
+        vec![(&config.head_key_ak_authorization, "aaaa:"), (&config.head_key_date_flag, &now)],
     )
     .await;
     assert!(!resp.allow);
@@ -129,11 +119,7 @@ pub async fn test_req() -> TardisResult<()> {
         "GET",
         "/iam/ci/account",
         "",
-        vec![
-            (&config.head_key_ak_authorization, "aaaa:"),
-            (&config.head_key_date_flag, &now),
-            (&config.head_key_bios_ctx, &head_ctx),
-        ],
+        vec![(&config.head_key_ak_authorization, "aaaa:"), (&config.head_key_date_flag, &now)],
     )
     .await;
     assert!(!resp.allow);
@@ -150,11 +136,7 @@ pub async fn test_req() -> TardisResult<()> {
         "GET",
         "/iam/ci/account",
         "",
-        vec![
-            (&config.head_key_ak_authorization, "aaaa"),
-            (&config.head_key_date_flag, &now),
-            (&config.head_key_bios_ctx, &head_ctx),
-        ],
+        vec![(&config.head_key_ak_authorization, "aaaa"), (&config.head_key_date_flag, &now)],
     )
     .await;
     assert!(!resp.allow);
@@ -171,11 +153,7 @@ pub async fn test_req() -> TardisResult<()> {
         "GET",
         "/iam/ci/account",
         "",
-        vec![
-            (&config.head_key_ak_authorization, &format!("aaaa:{}", calc_signature)),
-            (&config.head_key_date_flag, &now),
-            (&config.head_key_bios_ctx, &head_ctx),
-        ],
+        vec![(&config.head_key_ak_authorization, &format!("aaaa:{}", calc_signature)), (&config.head_key_date_flag, &now)],
     )
     .await;
     assert!(!resp.allow);
@@ -191,11 +169,7 @@ pub async fn test_req() -> TardisResult<()> {
         "GET",
         "/iam/ci/account",
         "",
-        vec![
-            (&config.head_key_ak_authorization, &format!("aaaa:{}", calc_signature)),
-            (&config.head_key_date_flag, &now),
-            (&config.head_key_bios_ctx, &head_ctx),
-        ],
+        vec![(&config.head_key_ak_authorization, &format!("aaaa:{}", calc_signature)), (&config.head_key_date_flag, &now)],
     )
     .await;
     assert!(resp.allow);
@@ -214,7 +188,6 @@ pub async fn test_req() -> TardisResult<()> {
             (&config.head_key_ak_authorization, &format!("aaaa:{}", calc_signature)),
             (&config.head_key_date_flag, &now),
             (&config.head_key_app, app_id),
-            (&config.head_key_bios_ctx, &head_ctx),
         ],
     )
     .await;
@@ -235,7 +208,6 @@ pub async fn test_req() -> TardisResult<()> {
             (&config.head_key_ak_authorization, &format!("aaaa:{}", calc_signature)),
             (&config.head_key_date_flag, &now),
             (&config.head_key_app, app_id),
-            (&config.head_key_bios_ctx, &head_ctx),
         ],
     )
     .await;

@@ -1,7 +1,8 @@
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
+use strum::Display;
 use tardis::{
-    db::sea_orm::{self, strum::Display, DbErr, QueryResult, TryGetError, TryGetable},
+    db::sea_orm::{self, DbErr, QueryResult, TryGetError, TryGetable},
     serde_json::Value,
     web::poem_openapi,
 };
