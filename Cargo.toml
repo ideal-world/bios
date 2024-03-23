@@ -61,7 +61,7 @@ strum = { version = "0.26", features = ["derive"] }
 # tardis
 # tardis = { version = "0.1.0-rc.10" }
 # tardis = { path = "../tardis/tardis" }
-tardis = { git = "https://github.com/ideal-world/tardis.git", rev = "191f3ec6220c6020b8183f2417cbe7a2ce38b1d9" }
+tardis = { git = "https://github.com/ideal-world/tardis.git", rev = "191f3ec" }
 #spacegate
 
 # spacegate-kernel = { git = "https://github.com/ideal-world/spacegate.git", rev = "f37a81a", features = [
@@ -74,8 +74,10 @@ tardis = { git = "https://github.com/ideal-world/tardis.git", rev = "191f3ec6220
 #   "k8s",
 #   "ext-redis",
 # ] }
-spacegate-shell = { git = "https://github.com/ideal-world/spacegate.git", branch = "master",  features = [
+spacegate-shell = { git = "https://github.com/ideal-world/spacegate.git", branch = "master", features = [
   "cache",
   "k8s",
   "ext-redis",
 ] }
+
+spacegate-plugin = { git = "https://github.com/ideal-world/spacegate.git", branch = "master" }

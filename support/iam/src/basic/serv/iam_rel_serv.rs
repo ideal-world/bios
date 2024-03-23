@@ -147,6 +147,7 @@ impl IamRelServ {
                         groups: vec![],
                         apps: vec![],
                         tenants: vec![],
+                        aks: vec![],
                         need_crypto_req: None,
                         need_crypto_resp: None,
                         need_double_auth: None,
@@ -189,6 +190,7 @@ impl IamRelServ {
                             groups: vec![],
                             apps: vec![],
                             tenants: vec![],
+                            aks: vec![],
                             need_crypto_req: None,
                             need_crypto_resp: None,
                             need_double_auth: None,
@@ -247,6 +249,7 @@ impl IamRelServ {
                     groups: vec![],
                     apps: vec![],
                     tenants: vec![],
+                    aks: vec![],
                     need_crypto_req: None,
                     need_crypto_resp: None,
                     need_double_auth: None,
@@ -329,6 +332,7 @@ impl IamRelServ {
                             groups: vec![],
                             apps: vec![],
                             tenants: vec![],
+                            aks: vec![],
                         },
                         funs,
                     )
@@ -381,6 +385,7 @@ impl IamRelServ {
                                 groups: vec![],
                                 apps: vec![],
                                 tenants: vec![],
+                                aks: vec![],
                             },
                             funs,
                         )
@@ -466,6 +471,7 @@ impl IamRelServ {
                         groups: vec![],
                         apps: vec![],
                         tenants: vec![],
+                        aks: vec![],
                     },
                     funs,
                 )

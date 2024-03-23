@@ -2,7 +2,13 @@ use bios_basic::dto::BasicQueryCondInfo;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use strum::Display;
-use tardis::{basic::field::TrimString, db::sea_orm::{self, EnumIter}, serde_json::Value, web::poem_openapi, TardisFuns};
+use tardis::{
+    basic::field::TrimString,
+    db::sea_orm::{self, EnumIter},
+    serde_json::Value,
+    web::poem_openapi,
+    TardisFuns,
+};
 
 use super::flow_var_dto::FlowVarInfo;
 

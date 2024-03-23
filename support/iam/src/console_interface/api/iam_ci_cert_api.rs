@@ -33,17 +33,18 @@ pub struct IamCiLdapCertApi;
 /// # Interface Console Manage Cert API
 ///
 /// Allow Management Of aksk (an authentication method between applications)
-#[poem_openapi::OpenApi(prefix_path = "/ci/manage", tag = "bios_basic::ApiTag::Interface")]
+#[poem_openapi::OpenApi(prefix_path = "/private/ci/manage", tag = "bios_basic::ApiTag::Interface")]
 impl IamCiCertManageApi {
     /// Add aksk Cert
     #[oai(path = "/aksk", method = "post")]
     async fn add_aksk(&self, add_req: Json<IamCertAkSkAddReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<IamCertAkSkResp> {
-        add_remote_ip(request, &ctx.0).await?;
+        let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, Some(add_req.tenant_id.clone()))?;
+        add_remote_ip(request, &ctx).await?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        let result = IamCiCertAkSkServ::general_cert(add_req.0, &funs, &ctx.0).await?;
+        let result = IamCiCertAkSkServ::general_cert(add_req.0, &funs, &ctx).await?;
         funs.commit().await?;
-        ctx.0.execute_task().await?;
+        ctx.execute_task().await?;
         TardisResp::ok(result)
     }
 

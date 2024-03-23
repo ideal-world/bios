@@ -4,7 +4,9 @@ use serde::{Deserialize, Serialize};
 use tardis::chrono::{Local, NaiveTime};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+// #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(tag = "mode", rename_all = "snake_case")]
+
 pub enum IpTimeRule {
     AllTimeBan,
     AllTimeAllow,

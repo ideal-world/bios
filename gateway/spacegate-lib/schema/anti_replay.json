@@ -1,0 +1,17 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "SgFilterAntiReplay",
+  "type": "object",
+  "properties": {
+    "cache_key": {
+      "default": "spacegate:cache:plugin:anti_replay",
+      "type": "string"
+    },
+    "time": {
+      "default": 5000,
+      "type": "integer",
+      "format": "uint64",
+      "minimum": 0.0
+    }
+  }
+}
