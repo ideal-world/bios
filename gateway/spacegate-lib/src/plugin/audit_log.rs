@@ -36,7 +36,14 @@ use crate::extension::before_encrypt_body::BeforeEncryptBody;
 use crate::extension::cert_info::{CertInfo, RoleInfo};
 
 pub const CODE: &str = "audit_log";
+
+#[cfg(feature = "schema")]
+use spacegate_plugin::schemars;
+#[cfg(feature = "schema")]
+spacegate_plugin::schema!(AuditLogPlugin, SgFilterAuditLog);
+
 #[derive(Serialize, Deserialize, Clone)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default)]
 pub struct SgFilterAuditLog {
     log_url: String,
@@ -50,6 +57,7 @@ pub struct SgFilterAuditLog {
     enabled: bool,
     #[serde(skip)]
     jsonpath_inst: Option<JsonPathInst>,
+    head_key_auth_ident: String,
 }
 
 impl SgFilterAuditLog {
@@ -150,9 +158,25 @@ impl SgFilterAuditLog {
             request_method: req.method().to_string(),
             request_headers: req.headers().clone(),
             request_scheme: req.uri().scheme().unwrap_or(&Scheme::HTTP).to_string(),
-            request_ip: req.extensions().get::<PeerAddr>().ok_or(PluginError::bad_gateway::<AuditLogPlugin>("[Plugin.AuditLog] missing peer addr"))?.0.ip().to_string(),
+            request_ip: req.extensions().get::<PeerAddr>().ok_or(PluginError::internal_error::<AuditLogPlugin>("[Plugin.AuditLog] missing peer addr"))?.0.ip().to_string(),
         };
-        req.extensions_mut().get_mut::<Reflect>().expect("missing reflect").insert(param);
+
+        if let Some(ident) = req.headers().get(self.head_key_auth_ident.clone()) {
+            let ident = ident.to_str().unwrap_or_default().to_string();
+            let reflect = req.extensions_mut().get_mut::<Reflect>().expect("missing reflect");
+
+            if let Some(cert_info) = reflect.get_mut::<CertInfo>() {
+                cert_info.id = ident;
+            } else {
+                reflect.insert(CertInfo {
+                    id: ident,
+                    name: None,
+                    roles: vec![],
+                });
+            }
+        };
+        let reflect = req.extensions_mut().get_mut::<Reflect>().expect("missing reflect");
+        reflect.insert(param);
         Ok(req)
     }
 
@@ -177,7 +201,7 @@ impl SgFilterAuditLog {
                 ..Default::default()
             };
 
-            let (resp, content) = self.get_log_content(resp, audit_param).await.map_err(PluginError::bad_gateway::<AuditLogPlugin>)?;
+            let (resp, content) = self.get_log_content(resp, audit_param).await.map_err(PluginError::internal_error::<AuditLogPlugin>)?;
 
             let tag = self.tag.clone();
             tokio::task::spawn(async move {
@@ -225,6 +249,7 @@ impl Default for SgFilterAuditLog {
             success_json_path_values: vec!["200".to_string(), "201".to_string()],
             exclude_log_path: vec!["/starsysApi/apis".to_string()],
             jsonpath_inst: None,
+            head_key_auth_ident: "Iam-Auth-Ident".to_string(),
         }
     }
 }
@@ -258,11 +283,10 @@ impl MakeSgLayer for SgFilterAuditLog {
 pub struct AuditLogPlugin;
 
 impl Plugin for AuditLogPlugin {
-    const CODE: &'static str = CODE;
     type MakeLayer = SgFilterAuditLog;
-    type Error = TardisError;
-    fn create(value: JsonValue) -> Result<Self::MakeLayer, Self::Error> {
-        let mut plugin: SgFilterAuditLog = serde_json::from_value(value).map_err(|e| TardisError::wrap(&format!("[Plugin.AuditLog] deserialize error:{e}"), ""))?;
+    const CODE: &'static str = CODE;
+    fn create(_: Option<String>, value: JsonValue) -> Result<Self::MakeLayer, BoxError> {
+        let mut plugin: SgFilterAuditLog = serde_json::from_value(value).map_err(|e| -> BoxError { format!("[Plugin.AuditLog] deserialize error:{e}").into() })?;
         plugin.init()?;
         Ok(plugin)
     }

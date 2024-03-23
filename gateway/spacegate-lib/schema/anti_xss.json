@@ -1,0 +1,221 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "SgFilterAntiXSS",
+  "type": "object",
+  "properties": {
+    "csp_config": {
+      "default": {
+        "default_src": "'self'",
+        "base_uri": null,
+        "child_src": null,
+        "connect_src": null,
+        "font_src": null,
+        "form_action": null,
+        "frame_ancestors": null,
+        "frame_src": null,
+        "img_src": null,
+        "manifest_src": null,
+        "media_src": null,
+        "object_src": null,
+        "sandbox": null,
+        "script_src": null,
+        "script_src_attr": null,
+        "script_src_elem": null,
+        "strict_dynamic": null,
+        "style_src": null,
+        "style_src_attr": null,
+        "style_src_elem": null,
+        "worker_src": null,
+        "report_only": false,
+        "report_to": null
+      },
+      "allOf": [
+        {
+          "$ref": "#/definitions/CSPConfig"
+        }
+      ]
+    }
+  },
+  "definitions": {
+    "CSPConfig": {
+      "type": "object",
+      "properties": {
+        "base_uri": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "child_src": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "connect_src": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "default_src": {
+          "default": "'self'",
+          "type": "string"
+        },
+        "font_src": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "form_action": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "frame_ancestors": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "frame_src": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "img_src": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "manifest_src": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "media_src": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "object_src": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "report_only": {
+          "default": false,
+          "type": "boolean"
+        },
+        "report_to": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "sandbox": {
+          "default": null,
+          "anyOf": [
+            {
+              "$ref": "#/definitions/SandBoxValue"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "script_src": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "script_src_attr": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "script_src_elem": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "strict_dynamic": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "style_src": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "style_src_attr": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "style_src_elem": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "worker_src": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "SandBoxValue": {
+      "type": "string",
+      "enum": [
+        "none",
+        "allow_forms",
+        "allow_modals",
+        "allow_orientation_lock",
+        "allow_pointer_lock",
+        "allow_popups",
+        "allow_popups_to_escape_sandbox",
+        "allow_presentation",
+        "allow_same_origin",
+        "allow_scripts",
+        "allow_top_navigation"
+      ]
+    }
+  }
+}
