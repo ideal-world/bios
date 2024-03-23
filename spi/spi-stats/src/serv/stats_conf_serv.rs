@@ -14,7 +14,6 @@ use crate::stats_initializer;
 
 use super::pg;
 
-
 // TODO FIXME ------------ 使用 spi_dispatch_service , 前后逻辑写到 api 中 ------------
 
 pub async fn dim_add(add_req: &StatsConfDimAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
@@ -79,11 +78,18 @@ pub async fn fact_col_modify(fact_conf_key: &str, fact_col_conf_key: &str, modif
     }
 }
 
-pub async fn fact_col_delete(fact_conf_key: &str, fact_col_conf_key: Option<&str>, kind: Option<StatsFactColKind>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+pub async fn fact_col_delete(
+    fact_conf_key: &str,
+    fact_col_conf_key: Option<&str>,
+    rel_external_id: Option<String>,
+    kind: Option<StatsFactColKind>,
+    funs: &TardisFunsInst,
+    ctx: &TardisContext,
+) -> TardisResult<()> {
     let inst = funs.init(ctx, true, stats_initializer::init_fun).await?;
     match inst.kind_code() {
         #[cfg(feature = "spi-pg")]
-        spi_constants::SPI_PG_KIND_CODE => pg::stats_pg_conf_fact_col_serv::delete(fact_conf_key, fact_col_conf_key, kind, funs, ctx, &inst).await,
+        spi_constants::SPI_PG_KIND_CODE => pg::stats_pg_conf_fact_col_serv::delete(fact_conf_key, fact_col_conf_key, rel_external_id, kind, funs, ctx, &inst).await,
         kind_code => Err(funs.bs_not_implemented(kind_code)),
     }
 }
@@ -164,6 +170,7 @@ pub async fn fact_col_paginate(
     fact_conf_key: String,
     fact_col_conf_key: Option<String>,
     show_name: Option<String>,
+    rel_external_id: Option<String>,
     page_number: u32,
     page_size: u32,
     desc_by_create: Option<bool>,
@@ -180,6 +187,7 @@ pub async fn fact_col_paginate(
                 fact_col_conf_key,
                 None,
                 show_name,
+                rel_external_id,
                 page_number,
                 page_size,
                 desc_by_create,
@@ -199,6 +207,7 @@ pub async fn fact_col_paginate_by_dim(
     dim_key: String,
     fact_col_conf_key: Option<String>,
     show_name: Option<String>,
+    rel_external_id: Option<String>,
     page_number: u32,
     page_size: u32,
     desc_by_create: Option<bool>,
@@ -215,6 +224,7 @@ pub async fn fact_col_paginate_by_dim(
                 fact_col_conf_key,
                 Some(dim_key),
                 show_name,
+                rel_external_id,
                 page_number,
                 page_size,
                 desc_by_create,

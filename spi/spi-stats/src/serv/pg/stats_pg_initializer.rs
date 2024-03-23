@@ -69,6 +69,7 @@ pub async fn init_conf_fact_col_table_and_conn(bs_inst: TypedSpiBsInst<'_, Tardi
     mes_act_by_dim_conf_keys character varying[],
     rel_conf_fact_key character varying NOT NULL,
     rel_conf_fact_and_col_key character varying,
+    rel_external_id character varying NOT NULL,
     remark character varying NOT NULL,
     create_time timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
     update_time timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,

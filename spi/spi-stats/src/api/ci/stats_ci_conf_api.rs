@@ -139,17 +139,29 @@ impl StatsCiConfApi {
 
     /// Delete Fact Column Configuration
     #[oai(path = "/fact/:fact_key/col/:fact_col_key", method = "delete")]
-    async fn fact_col_delete(&self, fact_key: Path<String>, fact_col_key: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+    async fn fact_col_delete(
+        &self,
+        fact_key: Path<String>,
+        fact_col_key: Path<String>,
+        rel_external_id: Query<Option<String>>,
+        ctx: TardisContextExtractor,
+    ) -> TardisApiResult<Void> {
         let funs = crate::get_tardis_inst();
-        stats_conf_serv::fact_col_delete(&fact_key.0, Some(fact_col_key.0.as_str()), None, &funs, &ctx.0).await?;
+        stats_conf_serv::fact_col_delete(&fact_key.0, Some(fact_col_key.0.as_str()), rel_external_id.0, None, &funs, &ctx.0).await?;
         TardisResp::ok(Void {})
     }
 
     /// Delete All Column Configuration
     #[oai(path = "/fact/:fact_key/kind/:kind", method = "delete")]
-    async fn fact_col_delete_by_kind(&self, fact_key: Path<String>, kind: Path<StatsFactColKind>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+    async fn fact_col_delete_by_kind(
+        &self,
+        fact_key: Path<String>,
+        kind: Path<StatsFactColKind>,
+        rel_external_id: Query<Option<String>>,
+        ctx: TardisContextExtractor,
+    ) -> TardisApiResult<Void> {
         let funs = crate::get_tardis_inst();
-        stats_conf_serv::fact_col_delete(&fact_key.0, None, Some(kind.0), &funs, &ctx.0).await?;
+        stats_conf_serv::fact_col_delete(&fact_key.0, None, rel_external_id.0, Some(kind.0), &funs, &ctx.0).await?;
         TardisResp::ok(Void {})
     }
 
@@ -160,6 +172,7 @@ impl StatsCiConfApi {
         fact_key: Path<String>,
         key: Query<Option<String>>,
         show_name: Query<Option<String>>,
+        rel_external_id: Query<Option<String>>,
         page_number: Query<u32>,
         page_size: Query<u32>,
         desc_by_create: Query<Option<bool>>,
@@ -171,6 +184,7 @@ impl StatsCiConfApi {
             fact_key.0,
             key.0,
             show_name.0,
+            rel_external_id.0,
             page_number.0,
             page_size.0,
             desc_by_create.0,
@@ -190,6 +204,7 @@ impl StatsCiConfApi {
         key: Query<Option<String>>,
         fact_key: Query<Option<String>>,
         show_name: Query<Option<String>>,
+        rel_external_id: Query<Option<String>>,
         page_number: Query<u32>,
         page_size: Query<u32>,
         desc_by_create: Query<Option<bool>>,
@@ -202,6 +217,7 @@ impl StatsCiConfApi {
             dim_key.0,
             key.0,
             show_name.0,
+            rel_external_id.0,
             page_number.0,
             page_size.0,
             desc_by_create.0,
