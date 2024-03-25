@@ -92,7 +92,6 @@ impl AuthResp {
             ("Access-Control-Max-Age".to_string(), "3600000".to_string()),
             ("Access-Control-Allow-Credentials".to_string(), "true".to_string()),
             ("Access-Control-Allow-Credentials".to_string(), "true".to_string()),
-            ("Content-Type".to_string(), "application/json".to_string()),
         ])
     }
 
