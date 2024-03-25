@@ -2,11 +2,8 @@ use http::Uri;
 use std::env;
 use std::io::Read;
 
-use bios_auth::auth_constants;
-
 use super::*;
 
-use tardis::basic::dto::TardisContext;
 use tardis::crypto::crypto_sm2_4::{TardisCryptoSm2, TardisCryptoSm2PrivateKey};
 use tardis::serde_json::Value;
 use tardis::{
@@ -339,13 +336,6 @@ async fn test_auth_plugin_crypto() {
 
 //     filter_auth.destroy().await.unwrap();
 // }
-
-fn decode_context(headers: &HeaderMap) -> TardisContext {
-    let config = TardisFuns::cs_config::<AuthConfig>(auth_constants::DOMAIN_CODE);
-    let ctx = headers.get(&config.head_key_context).unwrap();
-    let ctx = TardisFuns::crypto.base64.decode_to_string(ctx.to_str().unwrap()).unwrap();
-    TardisFuns::json.str_to_obj(&ctx).unwrap()
-}
 
 fn crypto_req(body: &str, serv_pub_key: &str, front_pub_key: &str, need_crypto_resp: bool) -> (String, String) {
     let pub_key = TardisFuns::crypto.sm2.new_public_key_from_public_key(serv_pub_key).unwrap();
