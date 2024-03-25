@@ -244,10 +244,11 @@ pub(crate) async fn delete(
         params.push(Value::from(kind.to_string()));
         where_clause.push_str(&format!(" AND kind = ${param_idx}", param_idx = params.len()));
     }
-    where_clause.push_str(&format!(" AND rel_external_id = ${param_idx}", param_idx = params.len()));
     if let Some(rel_external_id) = rel_external_id {
+        where_clause.push_str(&format!(" AND rel_external_id = ${param_idx}", param_idx = params.len()));
         params.push(Value::from(rel_external_id));
-    } else {
+    } else if fact_col_conf_key.is_some() {
+        where_clause.push_str(&format!(" AND rel_external_id = ${param_idx}", param_idx = params.len()));
         params.push(Value::from("".to_string()));
     }
     conn.execute_one(&format!("DELETE FROM {table_name} WHERE {where_clause}"), params).await?;
@@ -352,7 +353,7 @@ async fn do_paginate(
     let result = conn
         .query_all(
             &format!(
-                r#"SELECT key, show_name, kind, remark, dim_rel_conf_dim_key, dim_multi_values, dim_exclusive_rec, mes_data_distinct, mes_data_type, mes_frequency, mes_unit, mes_act_by_dim_conf_keys, rel_conf_fact_and_col_key, create_time, update_time, count(*) OVER() AS total
+                r#"SELECT key, show_name, kind, remark, dim_rel_conf_dim_key, rel_external_id, dim_multi_values, dim_exclusive_rec, mes_data_distinct, mes_data_type, mes_frequency, mes_unit, mes_act_by_dim_conf_keys, rel_conf_fact_and_col_key, create_time, update_time, count(*) OVER() AS total
 FROM {table_name}
 WHERE 
     {}
