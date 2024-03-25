@@ -21,7 +21,7 @@ pub struct StatsFactRecordLoadReq {
     pub data: Value,
     /// 动态数据
     /// Dynamic data
-    pub ext: Value,
+    pub ext: Option<Value>,
 }
 /// 事实记录加载请求对象
 /// Load Fact Record Request Object
@@ -42,7 +42,7 @@ pub struct StatsFactRecordsLoadReq {
 
     /// 动态数据
     /// Dynamic data
-    pub ext: Value,
+    pub ext: Option<Value>,
 }
 
 /// 添加维度记录请求对象

@@ -112,7 +112,7 @@ pub async fn test_fact_record(client: &mut TestHttpClient) -> TardisResult<()> {
                     own_paths: "t1/a1".to_string(),
                     ct: Utc::now(),
                     data: json!({}),
-                    ext: json!({})
+                    ext: None
                 },
             )
             .await
@@ -129,7 +129,7 @@ pub async fn test_fact_record(client: &mut TestHttpClient) -> TardisResult<()> {
                     own_paths: "t1/a1".to_string(),
                     ct: Utc::now(),
                     data: json!({"xx":1}),
-                    ext: json!({"xx":1})
+                    ext: Some(json!({"xx":1}))
                 },
             )
             .await
@@ -148,9 +148,9 @@ pub async fn test_fact_record(client: &mut TestHttpClient) -> TardisResult<()> {
                     data: json!({
                         "status": "openxxx"
                     }),
-                    ext: json!({
+                    ext: Some(json!({
                         "status": "openxxx"
-                    })
+                    }))
                 },
             )
             .await
@@ -169,9 +169,9 @@ pub async fn test_fact_record(client: &mut TestHttpClient) -> TardisResult<()> {
                     data: json!({
                         "status": "open"
                     }),
-                    ext: json!({
+                    ext: Some(json!({
                         "status": "open"
-                    })
+                    }))
                 },
             )
             .await
@@ -194,7 +194,7 @@ pub async fn test_fact_record(client: &mut TestHttpClient) -> TardisResult<()> {
                     "act_hours": 40,
                     "plan_hours": 45
                 }),
-                ext: json!({
+                ext: Some(json!({
                     "source":"zhejiang",
                     "status": "open",
                     "priority":1,
@@ -202,7 +202,7 @@ pub async fn test_fact_record(client: &mut TestHttpClient) -> TardisResult<()> {
                     "creator":"acc001",
                     "act_hours": 40,
                     "plan_hours": 45
-                }),
+                })),
             },
         )
         .await;
@@ -221,7 +221,7 @@ pub async fn test_fact_record(client: &mut TestHttpClient) -> TardisResult<()> {
                     "act_hours": 15,
                     "plan_hours": 10
                 }),
-                ext: json!({
+                ext: Some(json!({
                     "source":"hangzhou",
                     "status": "open",
                     "priority":2,
@@ -229,7 +229,7 @@ pub async fn test_fact_record(client: &mut TestHttpClient) -> TardisResult<()> {
                     "creator":"acc002",
                     "act_hours": 15,
                     "plan_hours": 10
-                }),
+                })),
             },
         )
         .await;
@@ -248,9 +248,9 @@ pub async fn test_fact_record(client: &mut TestHttpClient) -> TardisResult<()> {
                 data: json!({
                     "status": "progress",
                 }),
-                ext: json!({
+                ext: Some(json!({
                     "status": "progress",
-                }),
+                })),
             },
         )
         .await;
@@ -264,9 +264,9 @@ pub async fn test_fact_record(client: &mut TestHttpClient) -> TardisResult<()> {
                 data: json!({
                     "priority": 1,
                 }),
-                ext: json!({
+                ext: Some(json!({
                     "priority": 1,
-                }),
+                })),
             },
         )
         .await;
@@ -283,7 +283,7 @@ pub async fn test_fact_record(client: &mut TestHttpClient) -> TardisResult<()> {
                     own_paths: "t1/a1".to_string(),
                     ct: Utc::now(),
                     data: json!({}),
-                    ext: json!({})
+                    ext: None
                 }],
             )
             .await
@@ -301,7 +301,7 @@ pub async fn test_fact_record(client: &mut TestHttpClient) -> TardisResult<()> {
                     own_paths: "t1/a1".to_string(),
                     ct: Utc::now(),
                     data: json!({}),
-                    ext: json!({})
+                    ext: None
                 }],
             )
             .await
@@ -351,7 +351,7 @@ pub async fn test_fact_record(client: &mut TestHttpClient) -> TardisResult<()> {
                         "act_hours": 40,
                         "plan_hours": 45
                     }),
-                    ext: json!({
+                    ext: Some(json!({
                         "source":"zhejiang",
                         "status": "open",
                         "priority":1,
@@ -359,7 +359,7 @@ pub async fn test_fact_record(client: &mut TestHttpClient) -> TardisResult<()> {
                         "creator":"acc001",
                         "act_hours": 40,
                         "plan_hours": 45
-                    }),
+                    })),
                 },
                 StatsFactRecordsLoadReq {
                     key: "rec4".to_string(),
@@ -374,7 +374,7 @@ pub async fn test_fact_record(client: &mut TestHttpClient) -> TardisResult<()> {
                         "act_hours": 40,
                         "plan_hours": 45
                     }),
-                    ext: json!({
+                    ext: Some(json!({
                         "source":"zhejiang",
                         "status": "open",
                         "priority":2,
@@ -382,7 +382,7 @@ pub async fn test_fact_record(client: &mut TestHttpClient) -> TardisResult<()> {
                         "creator":"acc001",
                         "act_hours": 40,
                         "plan_hours": 45
-                    }),
+                    })),
                 },
             ],
         )

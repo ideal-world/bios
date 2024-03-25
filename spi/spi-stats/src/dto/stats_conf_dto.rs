@@ -212,6 +212,11 @@ pub struct StatsConfFactColAddReq {
     /// Associated fact and fact column configuration.
     /// Format: <fact configuration table key>.<fact field configuration table key>
     pub rel_conf_fact_and_col_key: Option<String>,
+    /// 关联外部系统传入的主键或编码
+    /// 用于扩展ext字段的事实列
+    /// The primary key or encoding passed in from the external system
+    /// Used to extend the fact column of the ext field
+    pub rel_external_id: Option<String>,
     pub dim_exclusive_rec: Option<bool>,
     pub remark: Option<String>,
 }
@@ -262,6 +267,11 @@ pub struct StatsConfFactColModifyReq {
     /// Associated fact and fact column configuration.
     /// Format: <fact configuration table key>.<fact field configuration table key>
     pub rel_conf_fact_and_col_key: Option<String>,
+    /// 关联外部系统传入的主键或编码
+    /// 用于扩展ext字段的事实列
+    /// The primary key or encoding passed in from the external system
+    /// Used to extend the fact column of the ext field
+    pub rel_external_id: Option<String>,
     pub remark: Option<String>,
 }
 
@@ -314,6 +324,11 @@ pub struct StatsConfFactColInfoResp {
     /// Associated fact and fact column configuration.
     /// Format: <fact configuration table key>.<fact field configuration table key>
     pub rel_conf_fact_and_col_key: Option<String>,
+    /// 关联外部系统传入的主键或编码
+    /// 用于扩展ext字段的事实列
+    /// The primary key or encoding passed in from the external system
+    /// Used to extend the fact column of the ext field
+    pub rel_external_id: Option<String>,
     pub dim_exclusive_rec: Option<String>,
     pub remark: Option<String>,
     pub create_time: DateTime<Utc>,

@@ -68,6 +68,9 @@ pub struct StatsQueryMetricsReq {
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct StatsQueryMetricsSelectReq {
+    /// 关联外部动态id,用于ext扩展字段
+    /// Associated external dynamic id, used for ext extended fields
+    pub rel_external_id: Option<String>,
     /// 度量字段编码
     /// Measure column key
     pub code: String,
@@ -78,6 +81,9 @@ pub struct StatsQueryMetricsSelectReq {
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct StatsQueryDimensionGroupReq {
+    /// 关联外部动态id,用于ext扩展字段
+    /// Associated external dynamic id, used for ext extended fields
+    pub rel_external_id: Option<String>,
     /// 维度字段编码
     /// Dimension column key
     pub code: String,
@@ -88,6 +94,9 @@ pub struct StatsQueryDimensionGroupReq {
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct StatsQueryMetricsWhereReq {
+    /// 关联外部动态id,用于ext扩展字段
+    /// Associated external dynamic id, used for ext extended fields
+    pub rel_external_id: Option<String>,
     /// 度量字段编码
     /// Dimension or measure column key
     pub code: String,
@@ -104,6 +113,9 @@ pub struct StatsQueryMetricsWhereReq {
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct StatsQueryMetricsOrderReq {
+    /// 关联外部动态id,用于ext扩展字段
+    /// Associated external dynamic id, used for ext extended fields
+    pub rel_external_id: Option<String>,
     /// 度量字段编码
     /// Measure column key
     pub code: String,
@@ -115,6 +127,9 @@ pub struct StatsQueryMetricsOrderReq {
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct StatsQueryDimensionGroupOrderReq {
+    /// 关联外部动态id,用于ext扩展字段
+    /// Associated external dynamic id, used for ext extended fields
+    pub rel_external_id: Option<String>,
     /// 维度字段编码
     /// Dimension column key
     pub code: String,
@@ -128,6 +143,9 @@ pub struct StatsQueryDimensionGroupOrderReq {
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct StatsQueryDimensionOrderReq {
+    /// 关联外部动态id,用于ext扩展字段
+    /// Associated external dynamic id, used for ext extended fields
+    pub rel_external_id: Option<String>,
     /// 维度字段编码
     /// Dimension column key
     pub code: String,
@@ -138,6 +156,9 @@ pub struct StatsQueryDimensionOrderReq {
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct StatsQueryMetricsHavingReq {
+    /// 关联外部动态id,用于ext扩展字段
+    /// Associated external dynamic id, used for ext extended fields
+    pub rel_external_id: Option<String>,
     /// 度量字段编码
     /// Measure Column key
     pub code: String,
