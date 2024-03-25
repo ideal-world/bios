@@ -1,6 +1,7 @@
-use crate::basic::dto::iam_role_dto::IamRoleRelAccountCertResp;
+use crate::basic::dto::iam_filer_dto::IamRoleFilterReq;
+use crate::basic::dto::iam_role_dto::{IamRoleRelAccountCertResp, IamRoleSummaryResp};
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
-use bios_basic::rbum::serv::rbum_item_serv::RbumItemServ;
+use bios_basic::rbum::serv::rbum_item_serv::{RbumItemCrudOperation, RbumItemServ};
 use itertools::Itertools;
 
 use crate::basic::serv::iam_app_serv::IamAppServ;
@@ -16,7 +17,7 @@ use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem::Request;
 use tardis::web::poem_openapi;
 use tardis::web::poem_openapi::param::{Path, Query};
-use tardis::web::web_resp::{TardisApiResult, TardisResp, Void};
+use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 
 #[derive(Clone, Default)]
 pub struct IamCiRoleApi;
@@ -194,6 +195,52 @@ impl IamCiRoleApi {
                 certs: certs.iter().filter(|cert| &cert.0 == account_id).map(|r| (r.1.clone(), r.2.clone())).collect(),
             })
             .collect_vec();
+        TardisResp::ok(result)
+    }
+
+    /// Find Roles
+    #[oai(path = "/", method = "get")]
+    async fn paginate(
+        &self,
+        id: Query<Option<String>>,
+        name: Query<Option<String>>,
+        app_id: Query<Option<String>>,
+        in_base: Query<Option<bool>>,
+        in_embed: Query<Option<bool>>,
+        extend_role_id: Query<Option<String>>,
+        with_sub: Query<Option<bool>>,
+        page_number: Query<u32>,
+        page_size: Query<u32>,
+        desc_by_create: Query<Option<bool>>,
+        desc_by_update: Query<Option<bool>>,
+        ctx: TardisContextExtractor,
+        request: &Request,
+    ) -> TardisApiResult<TardisPage<IamRoleSummaryResp>> {
+        let ctx = IamCertServ::try_use_app_ctx(ctx.0, app_id.0)?;
+        add_remote_ip(request, &ctx).await?;
+        let funs = iam_constants::get_tardis_inst();
+        let result = IamRoleServ::paginate_items(
+            &IamRoleFilterReq {
+                basic: RbumBasicFilterReq {
+                    ids: id.0.map(|id| vec![id]),
+                    name: name.0,
+                    with_sub_own_paths: with_sub.0.unwrap_or(false),
+                    ..Default::default()
+                },
+                in_base: in_base.0,
+                in_embed: in_embed.0,
+                extend_role_id: extend_role_id.0,
+                ..Default::default()
+            },
+            page_number.0,
+            page_size.0,
+            desc_by_create.0,
+            desc_by_update.0,
+            &funs,
+            &ctx,
+        )
+        .await?;
+        ctx.execute_task().await?;
         TardisResp::ok(result)
     }
 }
