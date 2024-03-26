@@ -344,7 +344,10 @@ impl IamOpenServ {
 
     pub async fn general_cert(add_req: IamOpenAkSkAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<IamOpenAkSkResp> {
         let rel_iam_item_id = IamTenantServ::get_id_by_ctx(ctx, funs)?;
-        let cert_conf_id = IamCertServ::get_cert_conf_id_by_kind(IamCertKernelKind::AkSk.to_string().as_str(), Some(rel_iam_item_id.clone()), funs).await.unwrap_or(
+        let cert_conf = IamCertServ::get_cert_conf_id_by_kind(IamCertKernelKind::AkSk.to_string().as_str(), Some(rel_iam_item_id.clone()), funs).await;
+        let cert_conf_id = if let Ok(cert_conf_id) = cert_conf {
+            cert_conf_id
+        } else {
             IamCertAkSkServ::add_cert_conf(
                 &IamCertConfAkSkAddOrModifyReq {
                     name: TrimString(format!("AkSk-{}", &rel_iam_item_id)),
@@ -354,8 +357,8 @@ impl IamOpenServ {
                 funs,
                 ctx,
             )
-            .await?,
-        );
+            .await?
+        };
         let ak = TardisFuns::crypto.key.generate_ak()?;
         let sk = TardisFuns::crypto.key.generate_sk(&ak)?;
 
