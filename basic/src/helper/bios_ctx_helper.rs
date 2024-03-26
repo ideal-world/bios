@@ -5,7 +5,7 @@ use tardis::{
     TardisFuns, TardisFunsInst,
 };
 
-fn unsafe_fill_ctx<F>(request: &Request, f: F, check: bool, funs: &TardisFunsInst, ctx: &mut TardisContext) -> TardisResult<()>
+fn unsafe_check_ctx<F>(request: &Request, f: F, check: bool, funs: &TardisFunsInst, ctx: &mut TardisContext) -> TardisResult<()>
 where
     F: FnOnce(TardisContext, &mut TardisContext),
 {
@@ -35,7 +35,7 @@ where
 
 // xxx_check_own function will check the owner is empty or not.
 pub fn check_own_fill_ctx(request: &Request, funs: &TardisFunsInst, ctx: &mut TardisContext) -> TardisResult<()> {
-    unsafe_fill_ctx(
+    unsafe_check_ctx(
         request,
         |bios_ctx, ctx| {
             let mut roles = bios_ctx.roles.clone();
@@ -56,8 +56,8 @@ pub fn check_own_fill_ctx(request: &Request, funs: &TardisFunsInst, ctx: &mut Ta
     )
 }
 
-pub fn unsfae_fill_ctx(request: &Request, funs: &TardisFunsInst, ctx: &mut TardisContext) -> TardisResult<()> {
-    unsafe_fill_ctx(
+pub fn unsafe_fill_ctx(request: &Request, funs: &TardisFunsInst, ctx: &mut TardisContext) -> TardisResult<()> {
+    unsafe_check_ctx(
         request,
         |bios_ctx, ctx| {
             let mut roles = bios_ctx.roles.clone();
@@ -79,7 +79,7 @@ pub fn unsfae_fill_ctx(request: &Request, funs: &TardisFunsInst, ctx: &mut Tardi
 }
 
 pub fn unsfae_fill_owner_only(request: &Request, funs: &TardisFunsInst, ctx: &mut TardisContext) -> TardisResult<()> {
-    unsafe_fill_ctx(
+    unsafe_check_ctx(
         request,
         |bios_ctx, ctx| {
             ctx.owner = bios_ctx.owner.clone();
@@ -91,7 +91,7 @@ pub fn unsfae_fill_owner_only(request: &Request, funs: &TardisFunsInst, ctx: &mu
 }
 
 pub fn unsfae_fill_own_paths_only(request: &Request, funs: &TardisFunsInst, ctx: &mut TardisContext) -> TardisResult<()> {
-    unsafe_fill_ctx(
+    unsafe_check_ctx(
         request,
         |bios_ctx, ctx| {
             ctx.own_paths = bios_ctx.own_paths;
@@ -103,7 +103,7 @@ pub fn unsfae_fill_own_paths_only(request: &Request, funs: &TardisFunsInst, ctx:
 }
 
 pub fn unsfae_fill_roles_only(request: &Request, funs: &TardisFunsInst, ctx: &mut TardisContext) -> TardisResult<()> {
-    unsafe_fill_ctx(
+    unsafe_check_ctx(
         request,
         |bios_ctx, ctx| {
             let mut roles = bios_ctx.roles.clone();
@@ -122,7 +122,7 @@ pub fn unsfae_fill_roles_only(request: &Request, funs: &TardisFunsInst, ctx: &mu
 }
 
 pub fn unsfae_fill_groups_only(request: &Request, funs: &TardisFunsInst, ctx: &mut TardisContext) -> TardisResult<()> {
-    unsafe_fill_ctx(
+    unsafe_check_ctx(
         request,
         |bios_ctx, ctx| {
             ctx.groups = bios_ctx.groups;
