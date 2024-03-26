@@ -30,6 +30,7 @@ pub struct RbumConfig {
     pub cache_key_cert_err_times_: String,
     // table name (support prefix matching) -> <c><u><d>
     pub event_domains: HashMap<String, String>,
+    pub head_key_bios_ctx: String,
 }
 
 impl Default for RbumConfig {
@@ -49,6 +50,7 @@ impl Default for RbumConfig {
             cache_key_cert_locked_: "rbum:cert:locked:".to_string(),
             cache_key_cert_err_times_: "rbum:cert:err_times:".to_string(),
             event_domains: HashMap::from([("rbum_".to_string(), "cud".to_string())]),
+            head_key_bios_ctx: "Bios-Ctx".to_string(),
         }
     }
 }
@@ -95,6 +97,7 @@ pub trait RbumConfigApi {
     fn rbum_conf_cache_key_cert_locked_(&self) -> String;
     fn rbum_conf_cache_key_cert_err_times_(&self) -> String;
     fn rbum_conf_match_event(&self, table_name: &str, operate: &str) -> bool;
+    fn rbum_head_key_bios_ctx(&self) -> String;
 }
 
 impl RbumConfigApi for TardisFunsInst {
@@ -152,5 +155,8 @@ impl RbumConfigApi for TardisFunsInst {
 
     fn rbum_conf_match_event(&self, table_name: &str, operate: &str) -> bool {
         RbumConfigManager::match_event(self.module_code(), table_name, operate)
+    }
+    fn rbum_head_key_bios_ctx(&self) -> String {
+        RbumConfigManager::get_config(self.module_code(), |conf| conf.head_key_bios_ctx.to_string())
     }
 }
