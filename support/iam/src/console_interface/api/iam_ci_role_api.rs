@@ -31,7 +31,7 @@ impl IamCiRoleApi {
     #[oai(path = "/verify/tenant/admin", method = "get")]
     async fn get_verify_role_tenant_admin(&self, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<bool> {
         let funs = iam_constants::get_tardis_inst();
-        unsafe_fill_ctx(request, &funs, &mut ctx.0).await?;
+        unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         add_remote_ip(request, &ctx.0).await?;
         let mut verify_tenant_admin = false;
         for role in &ctx.0.roles {
@@ -46,7 +46,7 @@ impl IamCiRoleApi {
     #[oai(path = "/:id/account/batch/:account_ids", method = "put")]
     async fn batch_add_rel_account(&self, id: Path<String>, account_ids: Path<String>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
-        unsafe_fill_ctx(request, &funs, &mut ctx.0).await?;
+        unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         add_remote_ip(request, &ctx.0).await?;
         funs.begin().await?;
         let app_id = IamAppServ::get_id_by_ctx(&ctx.0, &funs)?;
@@ -64,7 +64,7 @@ impl IamCiRoleApi {
     #[oai(path = "/:id/account/batch/:account_ids", method = "delete")]
     async fn batch_delete_rel_account(&self, id: Path<String>, account_ids: Path<String>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
-        unsafe_fill_ctx(request, &funs, &mut ctx.0).await?;
+        unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         add_remote_ip(request, &ctx.0).await?;
         funs.begin().await?;
         let split = account_ids.0.split(',').collect::<Vec<_>>();
@@ -80,7 +80,7 @@ impl IamCiRoleApi {
     #[oai(path = "/:id/account/:account_id", method = "delete")]
     async fn delete_rel_account(&self, id: Path<String>, account_id: Path<String>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
-        unsafe_fill_ctx(request, &funs, &mut ctx.0).await?;
+        unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         add_remote_ip(request, &ctx.0).await?;
         funs.begin().await?;
         IamRoleServ::delete_rel_account(&id.0, &account_id.0, Some(RBUM_SCOPE_LEVEL_APP), &funs, &ctx.0).await?;
@@ -100,7 +100,7 @@ impl IamCiRoleApi {
         request: &Request,
     ) -> TardisApiResult<Option<String>> {
         let funs = iam_constants::get_tardis_inst();
-        unsafe_fill_ctx(request, &funs, &mut ctx.0).await?;
+        unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         add_remote_ip(request, &ctx.0).await?;
         let ctx = ctx.0;
         let ctx_clone = ctx.clone();
@@ -144,7 +144,7 @@ impl IamCiRoleApi {
         request: &Request,
     ) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
-        unsafe_fill_ctx(request, &funs, &mut ctx.0).await?;
+        unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         add_remote_ip(request, &ctx.0).await?;
         let ctx = ctx.0;
         funs.begin().await?;
@@ -165,7 +165,7 @@ impl IamCiRoleApi {
     #[oai(path = "/:role_code/accounts", method = "get")]
     async fn get_rel_accounts(&self, role_code: Path<String>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Vec<IamRoleRelAccountCertResp>> {
         let funs = iam_constants::get_tardis_inst();
-        unsafe_fill_ctx(request, &funs, &mut ctx.0).await?;
+        unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         add_remote_ip(request, &ctx.0).await?;
         let role_id = RbumItemServ::find_one_rbum(
             &RbumBasicFilterReq {
@@ -226,7 +226,7 @@ impl IamCiRoleApi {
         request: &Request,
     ) -> TardisApiResult<TardisPage<IamRoleSummaryResp>> {
         let funs = iam_constants::get_tardis_inst();
-        unsafe_fill_ctx(request, &funs, &mut ctx.0).await?;
+        unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         let ctx = IamCertServ::try_use_app_ctx(ctx.0, app_id.0)?;
         add_remote_ip(request, &ctx).await?;
         let result = IamRoleServ::paginate_items(

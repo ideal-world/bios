@@ -27,7 +27,7 @@ impl FlowCiModelApi {
         request: &Request,
     ) -> TardisApiResult<FlowModelAggResp> {
         let funs = flow_constants::get_tardis_inst();
-        unsafe_fill_ctx(request, &funs, &mut ctx.0).await?;
+        unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         let model_id = FlowModelServ::find_one_item(
             &FlowModelFilterReq {
                 basic: RbumBasicFilterReq {
@@ -59,7 +59,7 @@ impl FlowCiModelApi {
         request: &Request,
     ) -> TardisApiResult<Vec<FlowModelFindRelStateResp>> {
         let funs = flow_constants::get_tardis_inst();
-        unsafe_fill_ctx(request, &funs, &mut ctx.0).await?;
+        unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         let result = FlowModelServ::find_rel_states(tag.0.split(',').collect(), rel_template_id.0, &funs, &ctx.0).await?;
 
         TardisResp::ok(result)
@@ -74,7 +74,7 @@ impl FlowCiModelApi {
         request: &Request,
     ) -> TardisApiResult<Vec<FlowModelAddCustomModelResp>> {
         let mut funs = flow_constants::get_tardis_inst();
-        unsafe_fill_ctx(request, &funs, &mut ctx.0).await?;
+        unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         funs.begin().await?;
         let proj_template_id = req.0.proj_template_id.unwrap_or_default();
         let mut result = vec![];
