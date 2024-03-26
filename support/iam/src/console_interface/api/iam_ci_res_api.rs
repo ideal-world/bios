@@ -25,7 +25,7 @@ impl IamCiResApi {
     #[oai(path = "/", method = "post")]
     async fn add(&self, mut add_req: Json<IamResAggAddReq>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<String> {
         let mut funs = iam_constants::get_tardis_inst();
-        unsafe_fill_ctx(request, &funs, &mut ctx.0).await?;
+        unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         add_remote_ip(request, &ctx.0).await?;
         funs.begin().await?;
         let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Res, &funs, &ctx.0).await?;
@@ -39,7 +39,7 @@ impl IamCiResApi {
     #[oai(path = "/cate", method = "post")]
     async fn add_cate(&self, add_req: Json<IamSetCateAddReq>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<String> {
         let mut funs = iam_constants::get_tardis_inst();
-        unsafe_fill_ctx(request, &funs, &mut ctx.0).await?;
+        unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         add_remote_ip(request, &ctx.0).await?;
         funs.begin().await?;
         let set_cate_sys_code_node_len = funs.rbum_conf_set_cate_sys_code_node_len();

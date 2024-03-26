@@ -38,7 +38,7 @@ impl IamCiTenantApi {
     #[oai(path = "/", method = "get")]
     async fn get(&self, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<IamTenantAggDetailResp> {
         let funs = iam_constants::get_tardis_inst();
-        unsafe_fill_ctx(request, &funs, &mut ctx.0).await?;
+        unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         add_remote_ip(request, &ctx.0).await?;
         let result = IamTenantServ::get_tenant_agg(&IamTenantServ::get_id_by_ctx(&ctx.0, &funs)?, &IamTenantFilterReq::default(), &funs, &ctx.0).await?;
         ctx.0.execute_task().await?;
@@ -58,7 +58,7 @@ impl IamCiTenantApi {
         request: &Request,
     ) -> TardisApiResult<Vec<RbumSetTreeMainResp>> {
         let funs = iam_constants::get_tardis_inst();
-        unsafe_fill_ctx(request, &funs, &mut ctx.0).await?;
+        unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         let ctx = IamSetServ::try_get_rel_ctx_by_set_id(set_id.0, &funs, ctx.0).await?;
         add_remote_ip(request, &ctx).await?;
         let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, &funs, &ctx).await?;

@@ -33,7 +33,7 @@ impl IamCiAppApi {
     #[oai(path = "/", method = "post")]
     async fn add(&self, add_req: Json<IamAppAggAddReq>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<String> {
         let mut funs = iam_constants::get_tardis_inst();
-        unsafe_fill_ctx(request, &funs, &mut ctx.0).await?;
+        unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         add_remote_ip(request, &ctx.0).await?;
         funs.begin().await?;
         let result = IamAppServ::add_app_agg(&add_req.0, &funs, &ctx.0).await?;
@@ -48,7 +48,7 @@ impl IamCiAppApi {
     #[oai(path = "/", method = "put")]
     async fn modify(&self, modify_req: Json<IamAppAggModifyReq>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Option<String>> {
         let mut funs = iam_constants::get_tardis_inst();
-        unsafe_fill_ctx(request, &funs, &mut ctx.0).await?;
+        unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         add_remote_ip(request, &ctx.0).await?;
         funs.begin().await?;
 
@@ -72,7 +72,7 @@ impl IamCiAppApi {
         request: &Request,
     ) -> TardisApiResult<Vec<RbumSetItemDetailResp>> {
         let funs = iam_constants::get_tardis_inst();
-        unsafe_fill_ctx(request, &funs, &mut ctx.0).await?;
+        unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         let ctx = IamCertServ::use_sys_or_tenant_ctx_unsafe(ctx.0)?;
         add_remote_ip(request, &ctx).await?;
         let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Apps, &funs, &ctx).await?;
@@ -139,7 +139,7 @@ impl IamCiAppApi {
         request: &Request,
     ) -> TardisApiResult<Vec<RbumSetItemDetailResp>> {
         let funs = iam_constants::get_tardis_inst();
-        unsafe_fill_ctx(request, &funs, &mut ctx.0).await?;
+        unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         let ctx = IamCertServ::use_sys_or_tenant_ctx_unsafe(ctx.0)?;
         add_remote_ip(request, &ctx).await?;
         let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Apps, &funs, &ctx).await?;

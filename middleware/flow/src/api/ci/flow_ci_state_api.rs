@@ -40,7 +40,7 @@ impl FlowCiStateApi {
         request: &Request,
     ) -> TardisApiResult<TardisPage<FlowStateSummaryResp>> {
         let funs = flow_constants::get_tardis_inst();
-        unsafe_fill_ctx(request, &funs, &mut ctx.0).await?;
+        unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
 
         let (scope_level, with_sub_own_paths) = if let Some(is_global) = is_global.0 {
             if is_global {
@@ -92,7 +92,7 @@ impl FlowCiStateApi {
         request: &Request,
     ) -> TardisApiResult<Vec<FlowStateCountGroupByStateResp>> {
         let mut funs = flow_constants::get_tardis_inst();
-        unsafe_fill_ctx(request, &funs, &mut ctx.0).await?;
+        unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         funs.begin().await?;
         let result = FlowStateServ::count_group_by_state(&req.0, &funs, &ctx.0).await?;
         funs.commit().await?;
