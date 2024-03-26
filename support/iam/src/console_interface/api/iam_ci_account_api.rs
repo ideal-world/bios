@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use bios_basic::helper::bios_ctx_helper::unsafe_fill_ctx;
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumCertFilterReq, RbumItemRelFilterReq, RbumSetCateFilterReq, RbumSetItemFilterReq, RbumSetItemRelFilterReq};
 use bios_basic::rbum::dto::rbum_set_item_dto::RbumSetItemDetailResp;
 use bios_basic::rbum::rbum_enumeration::{RbumRelFromKind, RbumSetCateLevelQueryKind};
@@ -47,12 +48,13 @@ impl IamCiAccountApi {
         page_size: Query<u32>,
         desc_by_create: Query<Option<bool>>,
         desc_by_update: Query<Option<bool>>,
-        ctx: TardisContextExtractor,
+        mut ctx: TardisContextExtractor,
         request: &Request,
     ) -> TardisApiResult<TardisPage<IamAccountSummaryAggResp>> {
+        let funs = iam_constants::get_tardis_inst();
+        unsafe_fill_ctx(request, &funs, &mut ctx.0).await?;
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0.clone())?;
         add_remote_ip(request, &ctx).await?;
-        let funs = iam_constants::get_tardis_inst();
         let rel = role_ids.0.map(|role_ids| {
             let role_ids = role_ids.split(',').map(|r| r.to_string()).collect::<Vec<_>>();
             RbumItemRelFilterReq {
@@ -123,9 +125,10 @@ impl IamCiAccountApi {
 
     /// Get Context By Account Id	根据帐户Id获取上下文
     #[oai(path = "/:id/ctx", method = "get")]
-    async fn get_account_context(&self, id: Path<String>, app_id: Query<Option<String>>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<String> {
-        add_remote_ip(request, &ctx.0).await?;
+    async fn get_account_context(&self, id: Path<String>, app_id: Query<Option<String>>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<String> {
         let funs = iam_constants::get_tardis_inst();
+        unsafe_fill_ctx(request, &funs, &mut ctx.0).await?;
+        add_remote_ip(request, &ctx.0).await?;
         let mut ctx_resp = IamIdentCacheServ::get_account_context(&id.0, &app_id.0.unwrap_or((&"").to_string()), &funs).await?;
         ctx_resp.own_paths = ctx.0.own_paths;
         TardisResp::ok(TardisFuns::crypto.base64.encode(TardisFuns::json.obj_to_string(&ctx_resp).unwrap_or_default()))
@@ -133,10 +136,11 @@ impl IamCiAccountApi {
 
     /// Get Account By Account Id	通过帐户Id获取帐户
     #[oai(path = "/:id", method = "get")]
-    async fn get(&self, id: Path<String>, tenant_id: Query<Option<String>>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<IamAccountDetailAggResp> {
+    async fn get(&self, id: Path<String>, tenant_id: Query<Option<String>>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<IamAccountDetailAggResp> {
+        let funs = iam_constants::get_tardis_inst();
+        unsafe_fill_ctx(request, &funs, &mut ctx.0).await?;
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
         add_remote_ip(request, &ctx).await?;
-        let funs = iam_constants::get_tardis_inst();
         let result = IamAccountServ::get_account_detail_aggs(
             &id.0,
             &IamAccountFilterReq {
@@ -166,12 +170,13 @@ impl IamCiAccountApi {
         kind: Query<Option<String>>,
         tenant_id: Query<Option<String>>,
         supplier: Query<Option<String>>,
-        ctx: TardisContextExtractor,
+        mut ctx: TardisContextExtractor,
         request: &Request,
     ) -> TardisApiResult<Option<IamAccountDetailResp>> {
+        let funs = iam_constants::get_tardis_inst();
+        unsafe_fill_ctx(request, &funs, &mut ctx.0).await?;
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0.clone())?;
         add_remote_ip(request, &ctx).await?;
-        let funs = iam_constants::get_tardis_inst();
         let supplier = supplier.0.unwrap_or_default();
         let kind = kind.0.unwrap_or_else(|| "UserPwd".to_string());
         let kind = if kind.is_empty() { "UserPwd".to_string() } else { kind };
@@ -225,10 +230,11 @@ impl IamCiAccountApi {
         &self,
         cate_ids: Query<Option<String>>,
         item_ids: Query<Option<String>>,
-        ctx: TardisContextExtractor,
+        mut ctx: TardisContextExtractor,
         request: &Request,
     ) -> TardisApiResult<Vec<RbumSetItemDetailResp>> {
         let funs = iam_constants::get_tardis_inst();
+        unsafe_fill_ctx(request, &funs, &mut ctx.0).await?;
         let ctx = IamCertServ::use_sys_or_tenant_ctx_unsafe(ctx.0)?;
         add_remote_ip(request, &ctx).await?;
         let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Apps, &funs, &ctx).await?;
@@ -291,10 +297,11 @@ impl IamCiAccountApi {
         sys_code_query_depth: Query<Option<i16>>,
         cate_ids: Query<Option<String>>,
         item_ids: Query<Option<String>>,
-        ctx: TardisContextExtractor,
+        mut ctx: TardisContextExtractor,
         request: &Request,
     ) -> TardisApiResult<Vec<RbumSetItemDetailResp>> {
         let funs = iam_constants::get_tardis_inst();
+        unsafe_fill_ctx(request, &funs, &mut ctx.0).await?;
         let ctx = IamCertServ::use_sys_or_tenant_ctx_unsafe(ctx.0)?;
         add_remote_ip(request, &ctx).await?;
         let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Apps, &funs, &ctx).await?;

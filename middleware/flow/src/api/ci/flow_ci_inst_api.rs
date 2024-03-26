@@ -1,4 +1,6 @@
+use bios_basic::helper::bios_ctx_helper::unsafe_fill_ctx;
 use tardis::web::context_extractor::TardisContextExtractor;
+use tardis::web::poem::Request;
 use tardis::web::poem_openapi::payload::Json;
 use tardis::web::poem_openapi::{self, param::Query};
 use tardis::web::web_resp::{TardisApiResult, TardisResp, Void};
@@ -15,8 +17,9 @@ pub struct FlowCiInstApi;
 impl FlowCiInstApi {
     /// Bind Single Instance / 绑定单个实例
     #[oai(path = "/bind", method = "post")]
-    async fn bind(&self, add_req: Json<FlowInstBindReq>, ctx: TardisContextExtractor) -> TardisApiResult<String> {
+    async fn bind(&self, add_req: Json<FlowInstBindReq>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<String> {
         let mut funs = flow_constants::get_tardis_inst();
+        unsafe_fill_ctx(request, &funs, &mut ctx.0).await?;
         let inst_id = FlowInstServ::get_inst_ids_by_rel_business_obj_id(vec![add_req.0.rel_business_obj_id.clone()], &funs, &ctx.0).await?.pop();
         let result = if let Some(inst_id) = inst_id {
             inst_id
@@ -42,8 +45,9 @@ impl FlowCiInstApi {
 
     /// Batch Bind Instance / 批量绑定实例 （初始化）
     #[oai(path = "/batch_bind", method = "post")]
-    async fn batch_bind(&self, add_req: Json<FlowInstBatchBindReq>, ctx: TardisContextExtractor) -> TardisApiResult<Vec<FlowInstBatchBindResp>> {
+    async fn batch_bind(&self, add_req: Json<FlowInstBatchBindReq>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Vec<FlowInstBatchBindResp>> {
         let mut funs = flow_constants::get_tardis_inst();
+        unsafe_fill_ctx(request, &funs, &mut ctx.0).await?;
         funs.begin().await?;
         let result = FlowInstServ::batch_bind(&add_req.0, &funs, &ctx.0).await?;
         funs.commit().await?;
@@ -52,8 +56,9 @@ impl FlowCiInstApi {
 
     /// Get list of instance id by rel_business_obj_id / 通过业务ID获取实例信息
     #[oai(path = "/find_detail_by_obj_ids", method = "get")]
-    async fn find_detail_by_obj_ids(&self, obj_ids: Query<String>, ctx: TardisContextExtractor) -> TardisApiResult<Vec<FlowInstDetailResp>> {
+    async fn find_detail_by_obj_ids(&self, obj_ids: Query<String>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Vec<FlowInstDetailResp>> {
         let funs = flow_constants::get_tardis_inst();
+        unsafe_fill_ctx(request, &funs, &mut ctx.0).await?;
         let rel_business_obj_ids: Vec<_> = obj_ids.0.split(',').map(|id| id.to_string()).collect();
         let inst_ids = FlowInstServ::get_inst_ids_by_rel_business_obj_id(rel_business_obj_ids, &funs, &ctx.0).await?;
         let mut result = vec![];
