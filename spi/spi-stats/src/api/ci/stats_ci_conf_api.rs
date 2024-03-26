@@ -151,6 +151,21 @@ impl StatsCiConfApi {
         TardisResp::ok(Void {})
     }
 
+    /// Delete Fact Column Configuration
+    #[oai(path = "/fact/:fact_key/col/:fact_col_key/kind/:kind", method = "delete")]
+    async fn fact_col_kind_delete(
+        &self,
+        fact_key: Path<String>,
+        fact_col_key: Path<String>,
+        kind: Path<StatsFactColKind>,
+        rel_external_id: Query<Option<String>>,
+        ctx: TardisContextExtractor,
+    ) -> TardisApiResult<Void> {
+        let funs = crate::get_tardis_inst();
+        stats_conf_serv::fact_col_delete(&fact_key.0, Some(fact_col_key.0.as_str()), rel_external_id.0, Some(kind.0), &funs, &ctx.0).await?;
+        TardisResp::ok(Void {})
+    }
+
     /// Delete All Column Configuration
     #[oai(path = "/fact/:fact_key/kind/:kind", method = "delete")]
     async fn fact_col_delete_by_kind(
