@@ -24,7 +24,7 @@ impl IamCiOpenApi {
     #[oai(path = "/add_product", method = "post")]
     async fn add_product(&self, add_req: Json<IamOpenAddProductReq>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
-        unsafe_fill_ctx(request, &funs, &mut ctx.0).await?;
+        unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         add_remote_ip(request, &ctx.0).await?;
         funs.begin().await?;
         IamOpenServ::add_product(&add_req.0, &funs, &ctx.0).await?;
@@ -43,7 +43,7 @@ impl IamCiOpenApi {
         request: &Request,
     ) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
-        unsafe_fill_ctx(request, &funs, &mut ctx.0).await?;
+        unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         add_remote_ip(request, &ctx.0).await?;
         funs.begin().await?;
         IamOpenServ::bind_cert_product_and_spec(&id.0, &bind_req.0, &funs, &ctx.0).await?;
@@ -56,7 +56,7 @@ impl IamCiOpenApi {
     #[oai(path = "/aksk", method = "post")]
     async fn add_aksk(&self, add_req: Json<IamOpenAkSkAddReq>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<IamOpenAkSkResp> {
         let mut funs = iam_constants::get_tardis_inst();
-        unsafe_fill_ctx(request, &funs, &mut ctx.0).await?;
+        unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, Some(add_req.tenant_id.clone()))?;
         add_remote_ip(request, &ctx).await?;
         funs.begin().await?;
@@ -70,7 +70,7 @@ impl IamCiOpenApi {
     #[oai(path = "/", method = "get")]
     async fn get_rule_info(&self, cert_id: Query<String>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<IamOpenRuleResp> {
         let mut funs = iam_constants::get_tardis_inst();
-        unsafe_fill_ctx(request, &funs, &mut ctx.0).await?;
+        unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         add_remote_ip(request, &ctx.0).await?;
         funs.begin().await?;
         let result = IamOpenServ::get_rule_info(cert_id.0, &funs, &ctx.0).await?;
