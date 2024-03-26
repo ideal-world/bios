@@ -1,6 +1,8 @@
+use bios_basic::helper::bios_ctx_helper::unsafe_fill_ctx;
 use bios_basic::process::task_processor::TaskProcessor;
 use tardis::serde_json::Value;
 use tardis::web::context_extractor::TardisContextExtractor;
+use tardis::web::poem::Request;
 use tardis::web::poem_openapi;
 use tardis::web::poem_openapi::param::{Path, Query};
 use tardis::web::poem_openapi::payload::Json;
@@ -31,8 +33,9 @@ impl IamCiSystemApi {
     }
 
     #[oai(path = "/task/execute", method = "put")]
-    async fn execute_task_external(&self, cache_key: Query<String>, task_id: Query<i64>, ctx: TardisContextExtractor) -> TardisApiResult<i64> {
+    async fn execute_task_external(&self, cache_key: Query<String>, task_id: Query<i64>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<i64> {
         let funs = iam_constants::get_tardis_inst();
+        unsafe_fill_ctx(request, &funs, &mut ctx.0).await?;
         let task_id = TaskProcessor::execute_task_external(
             &cache_key.0,
             task_id.0,
@@ -46,8 +49,9 @@ impl IamCiSystemApi {
     }
 
     #[oai(path = "/task/execute/stop/:task_ids", method = "delete")]
-    async fn stop_task_external(&self, cache_key: Query<String>, task_ids: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+    async fn stop_task_external(&self, cache_key: Query<String>, task_ids: Path<String>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         let funs = iam_constants::get_tardis_inst();
+        unsafe_fill_ctx(request, &funs, &mut ctx.0).await?;
         let task_ids = task_ids.0.split(',');
         for task_id in task_ids {
             let task_id = task_id.parse().map_err(|_| funs.err().format_error("system", "task", "task id format error", "406-iam-task-id-format"))?;
@@ -65,8 +69,16 @@ impl IamCiSystemApi {
     }
 
     #[oai(path = "/task/process/:task_id", method = "put")]
-    async fn set_task_process_data(&self, cache_key: Query<String>, task_id: Path<i64>, data: Json<Value>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+    async fn set_task_process_data(
+        &self,
+        cache_key: Query<String>,
+        task_id: Path<i64>,
+        data: Json<Value>,
+        mut ctx: TardisContextExtractor,
+        request: &Request,
+    ) -> TardisApiResult<Void> {
         let funs = iam_constants::get_tardis_inst();
+        unsafe_fill_ctx(request, &funs, &mut ctx.0).await?;
         TaskProcessor::set_task_process_data(
             &cache_key.0,
             task_id.0,
@@ -81,8 +93,9 @@ impl IamCiSystemApi {
     }
 
     #[oai(path = "/task/process/:task_id", method = "get")]
-    async fn get_task_process_data(&self, cache_key: Query<String>, task_id: Path<i64>, ctx: TardisContextExtractor) -> TardisApiResult<Value> {
+    async fn get_task_process_data(&self, cache_key: Query<String>, task_id: Path<i64>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Value> {
         let funs = iam_constants::get_tardis_inst();
+        unsafe_fill_ctx(request, &funs, &mut ctx.0).await?;
         let data = TaskProcessor::get_task_process_data(&cache_key.0, task_id.0, &funs).await?;
         TardisResp::ok(data)
     }

@@ -6,6 +6,7 @@ use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::iam_config::IamBasicConfigApi;
 use crate::iam_constants::{self};
 use crate::iam_enumeration::IamSetKind;
+use bios_basic::helper::bios_ctx_helper::unsafe_fill_ctx;
 use bios_basic::process::task_processor::TaskProcessor;
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumSetItemFilterReq};
 use bios_basic::rbum::dto::rbum_set_item_dto::RbumSetItemDetailResp;
@@ -30,9 +31,10 @@ pub struct IamCiAppApi;
 impl IamCiAppApi {
     /// Add App
     #[oai(path = "/", method = "post")]
-    async fn add(&self, add_req: Json<IamAppAggAddReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<String> {
-        add_remote_ip(request, &ctx.0).await?;
+    async fn add(&self, add_req: Json<IamAppAggAddReq>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<String> {
         let mut funs = iam_constants::get_tardis_inst();
+        unsafe_fill_ctx(request, &funs, &mut ctx.0).await?;
+        add_remote_ip(request, &ctx.0).await?;
         funs.begin().await?;
         let result = IamAppServ::add_app_agg(&add_req.0, &funs, &ctx.0).await?;
         funs.commit().await?;
@@ -44,9 +46,10 @@ impl IamCiAppApi {
     ///
     /// When code = 202, the return value is the asynchronous task id
     #[oai(path = "/", method = "put")]
-    async fn modify(&self, modify_req: Json<IamAppAggModifyReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Option<String>> {
-        add_remote_ip(request, &ctx.0).await?;
+    async fn modify(&self, modify_req: Json<IamAppAggModifyReq>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Option<String>> {
         let mut funs = iam_constants::get_tardis_inst();
+        unsafe_fill_ctx(request, &funs, &mut ctx.0).await?;
+        add_remote_ip(request, &ctx.0).await?;
         funs.begin().await?;
 
         IamAppServ::modify_app_agg(&IamAppServ::get_id_by_ctx(&ctx.0, &funs)?, &modify_req, &funs, &ctx.0).await?;
@@ -65,10 +68,11 @@ impl IamCiAppApi {
         &self,
         cate_ids: Query<Option<String>>,
         item_ids: Query<Option<String>>,
-        ctx: TardisContextExtractor,
+        mut ctx: TardisContextExtractor,
         request: &Request,
     ) -> TardisApiResult<Vec<RbumSetItemDetailResp>> {
         let funs = iam_constants::get_tardis_inst();
+        unsafe_fill_ctx(request, &funs, &mut ctx.0).await?;
         let ctx = IamCertServ::use_sys_or_tenant_ctx_unsafe(ctx.0)?;
         add_remote_ip(request, &ctx).await?;
         let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Apps, &funs, &ctx).await?;
@@ -131,10 +135,11 @@ impl IamCiAppApi {
         sys_code_query_depth: Query<Option<i16>>,
         cate_ids: Query<Option<String>>,
         item_ids: Query<Option<String>>,
-        ctx: TardisContextExtractor,
+        mut ctx: TardisContextExtractor,
         request: &Request,
     ) -> TardisApiResult<Vec<RbumSetItemDetailResp>> {
         let funs = iam_constants::get_tardis_inst();
+        unsafe_fill_ctx(request, &funs, &mut ctx.0).await?;
         let ctx = IamCertServ::use_sys_or_tenant_ctx_unsafe(ctx.0)?;
         add_remote_ip(request, &ctx).await?;
         let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Apps, &funs, &ctx).await?;

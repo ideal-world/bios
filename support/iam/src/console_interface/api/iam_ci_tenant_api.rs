@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use bios_basic::helper::bios_ctx_helper::unsafe_fill_ctx;
 use bios_basic::helper::request_helper::add_remote_ip;
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumItemRelFilterReq, RbumSetCateFilterReq, RbumSetItemRelFilterReq, RbumSetTreeFilterReq};
 use bios_basic::rbum::dto::rbum_set_dto::RbumSetTreeMainResp;
@@ -35,9 +36,10 @@ pub struct IamCiTenantApi;
 impl IamCiTenantApi {
     /// Get Current Tenant
     #[oai(path = "/", method = "get")]
-    async fn get(&self, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<IamTenantAggDetailResp> {
-        add_remote_ip(request, &ctx.0).await?;
+    async fn get(&self, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<IamTenantAggDetailResp> {
         let funs = iam_constants::get_tardis_inst();
+        unsafe_fill_ctx(request, &funs, &mut ctx.0).await?;
+        add_remote_ip(request, &ctx.0).await?;
         let result = IamTenantServ::get_tenant_agg(&IamTenantServ::get_id_by_ctx(&ctx.0, &funs)?, &IamTenantFilterReq::default(), &funs, &ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
@@ -52,10 +54,11 @@ impl IamCiTenantApi {
         &self,
         parent_sys_code: Query<Option<String>>,
         set_id: Query<Option<String>>,
-        ctx: TardisContextExtractor,
+        mut ctx: TardisContextExtractor,
         request: &Request,
     ) -> TardisApiResult<Vec<RbumSetTreeMainResp>> {
         let funs = iam_constants::get_tardis_inst();
+        unsafe_fill_ctx(request, &funs, &mut ctx.0).await?;
         let ctx = IamSetServ::try_get_rel_ctx_by_set_id(set_id.0, &funs, ctx.0).await?;
         add_remote_ip(request, &ctx).await?;
         let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, &funs, &ctx).await?;
