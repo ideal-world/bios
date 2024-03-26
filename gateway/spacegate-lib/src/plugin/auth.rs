@@ -19,7 +19,7 @@ use spacegate_shell::{
         extension::Reflect,
         helper_layers::bidirection_filter::{Bdf, BdfLayer, BoxReqFut, BoxRespFut},
     },
-    plugin::{JsonValue, MakeSgLayer, Plugin, PluginError},
+    plugin::{ MakeSgLayer, Plugin, PluginError},
     BoxError, SgBody, SgBoxLayer,
 };
 use std::{
@@ -513,16 +513,16 @@ pub struct AuthPlugin;
 
 impl Plugin for AuthPlugin {
     const CODE: &'static str = CODE;
-    type MakeLayer = SgPluginAuth;
-    fn create(_: Option<String>, value: JsonValue) -> Result<Self::MakeLayer, BoxError> {
-        let config: SgPluginAuthConfig = serde_json::from_value(value)?;
-        let filter: SgPluginAuth = config.clone().into();
+    // type MakeLayer = SgPluginAuth;
+    fn create(config: spacegate_shell::plugin::PluginConfig) -> Result<spacegate_shell::plugin::instance::PluginInstance, BoxError> {
+        let plugin_config: SgPluginAuthConfig = serde_json::from_value(config.spec.clone())?;
+        let filter: SgPluginAuth = plugin_config.clone().into();
         let tardis_init = Arc::new(Once::new());
         {
             let tardis_init = tardis_init.clone();
             if !tardis_init.is_completed() {
                 tardis::tokio::task::spawn(async move {
-                    if config.setup_tardis().await.is_ok() {
+                    if plugin_config.setup_tardis().await.is_ok() {
                         tardis_init.call_once(|| {});
                     } else {
                         warn!("[SG.Filter.Auth] tardis init failed");
@@ -534,8 +534,10 @@ impl Plugin for AuthPlugin {
         while !tardis_init.is_completed() {
             // blocking wait tardis setup
         }
-        Ok(filter)
+        Ok(spacegate_shell::plugin::instance::PluginInstance::new::<Self, _>(config, || filter.make_layer()))
     }
+    // fn create(_: Option<String>, value: JsonValue) -> Result<Self::MakeLayer, BoxError> {
+    // }
 }
 
 #[cfg(test)]

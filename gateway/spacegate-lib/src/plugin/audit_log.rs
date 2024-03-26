@@ -16,7 +16,7 @@ use spacegate_shell::hyper::{Request, Response};
 use spacegate_shell::kernel::extension::{EnterTime, PeerAddr, Reflect};
 
 use spacegate_shell::kernel::helper_layers::bidirection_filter::{Bdf, BdfLayer, BoxRespFut};
-use spacegate_shell::plugin::{JsonValue, MakeSgLayer, Plugin, PluginError};
+use spacegate_shell::plugin::{MakeSgLayer, Plugin, PluginError};
 use spacegate_shell::{BoxError, SgBody};
 use tardis::basic::dto::TardisContext;
 use tardis::log::{debug, trace, warn};
@@ -287,12 +287,16 @@ impl MakeSgLayer for SgFilterAuditLog {
 pub struct AuditLogPlugin;
 
 impl Plugin for AuditLogPlugin {
-    type MakeLayer = SgFilterAuditLog;
+    // type MakeLayer = SgFilterAuditLog;
     const CODE: &'static str = CODE;
-    fn create(_: Option<String>, value: JsonValue) -> Result<Self::MakeLayer, BoxError> {
-        let mut plugin: SgFilterAuditLog = serde_json::from_value(value).map_err(|e| -> BoxError { format!("[Plugin.AuditLog] deserialize error:{e}").into() })?;
+
+    fn create(config: spacegate_shell::plugin::PluginConfig) -> Result<spacegate_shell::plugin::instance::PluginInstance, BoxError> {
+        let mut plugin: SgFilterAuditLog = serde_json::from_value(config.spec.clone()).map_err(|e| -> BoxError { format!("[Plugin.AuditLog] deserialize error:{e}").into() })?;
         plugin.init()?;
-        Ok(plugin)
+        Ok(spacegate_shell::plugin::instance::PluginInstance::new::<Self, _>(config, move || {
+            let layer = BdfLayer::new(plugin.clone());
+            Ok(spacegate_shell::SgBoxLayer::new(layer))
+        }))
     }
 }
 

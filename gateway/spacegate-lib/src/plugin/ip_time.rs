@@ -8,7 +8,7 @@ use spacegate_shell::kernel::{
     extension::PeerAddr,
     helper_layers::filter::{Filter, FilterRequestLayer},
 };
-use spacegate_shell::plugin::{JsonValue, MakeSgLayer, Plugin};
+use spacegate_shell::plugin::{MakeSgLayer, Plugin};
 
 use spacegate_shell::{BoxError, SgBody, SgBoxLayer, SgResponseExt};
 
@@ -119,12 +119,17 @@ pub struct SgIpTimePlugin;
 
 impl Plugin for SgIpTimePlugin {
     const CODE: &'static str = CODE;
-    type MakeLayer = SgFilterIpTime;
-    fn create(_: Option<String>, value: JsonValue) -> Result<Self::MakeLayer, BoxError> {
-        let config: SgFilterIpTimeConfig = serde_json::from_value(value)?;
-        let filter: SgFilterIpTime = config.into();
-        Ok(filter)
+    fn create(config: spacegate_shell::plugin::PluginConfig) -> Result<spacegate_shell::plugin::instance::PluginInstance, BoxError> {
+        let ip_time_config: SgFilterIpTimeConfig = serde_json::from_value(config.spec)?;
+        let filter: SgFilterIpTime = ip_time_config.into();
+        let instance = spacegate_shell::plugin::instance::PluginInstance::new::<Self, _>(config, move || filter.make_layer());
+        Ok(instance)
     }
+    // fn create(_: Option<String>, value: JsonValue) -> Result<Self::MakeLayer, BoxError> {
+    //     let config: SgFilterIpTimeConfig = serde_json::from_value(value)?;
+    //     let filter: SgFilterIpTime = config.into();
+    //     Ok(filter)
+    // }
 }
 
 impl MakeSgLayer for SgFilterIpTime {
