@@ -1,11 +1,11 @@
 use bios_basic::rbum::{
     dto::{
-        rbum_filer_dto::{RbumBasicFilterReq, RbumCertFilterReq, RbumRelFilterReq},
+        rbum_filer_dto::{RbumBasicFilterReq, RbumCertFilterReq, RbumRelExtFilterReq, RbumRelFilterReq},
         rbum_rel_agg_dto::{RbumRelAggAddReq, RbumRelEnvAggAddReq},
         rbum_rel_dto::RbumRelAddReq,
     },
     rbum_enumeration::{RbumRelEnvKind, RbumRelFromKind},
-    serv::{rbum_cert_serv::RbumCertServ, rbum_crud_serv::RbumCrudOperation, rbum_item_serv::RbumItemCrudOperation, rbum_rel_serv::RbumRelServ},
+    serv::{rbum_cert_serv::RbumCertServ, rbum_crud_serv::RbumCrudOperation, rbum_item_serv::RbumItemCrudOperation, rbum_rel_serv::{RbumRelEnvServ, RbumRelServ}},
 };
 use bios_sdk_invoke::clients::spi_kv_client::SpiKvClient;
 use itertools::Itertools;
@@ -103,6 +103,13 @@ impl IamOpenServ {
         )
         .await?;
         for rel in old_spec_rels {
+            let env_ids = RbumRelEnvServ::find_id_rbums(&RbumRelExtFilterReq {
+                rel_rbum_rel_id: Some(rel.id.clone()),
+                ..Default::default()
+            }, None, None, funs, ctx).await?;
+            for env_id in env_ids {
+                RbumRelEnvServ::delete_rbum(&env_id, funs, ctx).await?;
+            }
             RbumRelServ::delete_rbum(&rel.id, funs, ctx).await?;
         }
 
@@ -148,6 +155,15 @@ impl IamOpenServ {
             ctx,
         )
         .await?;
+
+        // update cert expire_sec
+        if let Some(end_time) = bind_req.end_time {
+            IamCertAkSkServ::modify_cert_conf(cert_id, &IamCertConfAkSkAddOrModifyReq {
+                name: TrimString(format!("AkSk-{}", &ctx.own_paths)),
+                expire_sec: Some(end_time.signed_duration_since(Utc::now()).num_seconds()),
+            }, funs, ctx).await?;
+        }
+
         Self::set_rules_cache(
             cert_id,
             &spec_id,
@@ -351,7 +367,7 @@ impl IamOpenServ {
             IamCertAkSkServ::add_cert_conf(
                 &IamCertConfAkSkAddOrModifyReq {
                     name: TrimString(format!("AkSk-{}", &rel_iam_item_id)),
-                    expire_sec: None,
+                    expire_sec: Some(0),
                 },
                 Some(IamTenantServ::get_id_by_ctx(ctx, funs)?),
                 funs,
