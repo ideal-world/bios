@@ -57,6 +57,9 @@ fn check(req: &mut AuthReq) -> TardisResult<bool> {
 }
 
 async fn ident(req: &mut AuthReq, config: &AuthConfig, cache_client: &TardisCacheClient) -> TardisResult<AuthContext> {
+    // Do not allow external header information to be used internally
+    req.headers.remove(&config.head_key_auth_ident);
+
     let rbum_kind = if let Some(rbum_kind) = req.headers.get(&config.head_key_protocol).or_else(|| req.headers.get(&config.head_key_protocol.to_lowercase())) {
         rbum_kind.to_string()
     } else {
