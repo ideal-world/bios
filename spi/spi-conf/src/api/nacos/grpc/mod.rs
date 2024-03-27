@@ -8,7 +8,6 @@ use tardis::{
     web::poem,
 };
 #[allow(non_snake_case)]
-
 mod proto;
 pub use proto::{
     BiRequestStream as BiRequestStreamProto, BiRequestStreamServer as BiRequestStreamGrpcServer, Metadata, Payload, Request as RequestProto, RequestServer as RequestGrpcServer,

@@ -459,7 +459,7 @@ fn success_auth_result_to_req(auth_result: AuthResult, config: &AuthConfig, req:
     }
 
     let auth_resp: AuthResp = auth_result.into();
-    parts.headers = hashmap_header_to_headermap(auth_resp.headers.clone())?;
+    parts.headers.extend(hashmap_header_to_headermap(auth_resp.headers.clone())?);
     if let Some(new_body) = auth_resp.body {
         body = SgBody::full(new_body);
     };
