@@ -120,7 +120,7 @@ pub struct SgIpTimePlugin;
 impl Plugin for SgIpTimePlugin {
     const CODE: &'static str = CODE;
     fn create(config: spacegate_shell::plugin::PluginConfig) -> Result<spacegate_shell::plugin::instance::PluginInstance, BoxError> {
-        let ip_time_config: SgFilterIpTimeConfig = serde_json::from_value(config.spec)?;
+        let ip_time_config: SgFilterIpTimeConfig = serde_json::from_value(config.spec.clone())?;
         let filter: SgFilterIpTime = ip_time_config.into();
         let instance = spacegate_shell::plugin::instance::PluginInstance::new::<Self, _>(config, move || filter.make_layer());
         Ok(instance)

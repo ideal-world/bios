@@ -19,7 +19,7 @@ use spacegate_shell::{
         extension::Reflect,
         helper_layers::bidirection_filter::{Bdf, BdfLayer, BoxReqFut, BoxRespFut},
     },
-    plugin::{ MakeSgLayer, Plugin, PluginError},
+    plugin::{MakeSgLayer, Plugin, PluginError},
     BoxError, SgBody, SgBoxLayer,
 };
 use std::{
@@ -534,7 +534,7 @@ impl Plugin for AuthPlugin {
         while !tardis_init.is_completed() {
             // blocking wait tardis setup
         }
-        Ok(spacegate_shell::plugin::instance::PluginInstance::new::<Self, _>(config, || filter.make_layer()))
+        Ok(spacegate_shell::plugin::instance::PluginInstance::new::<Self, _>(config, move || filter.make_layer()))
     }
     // fn create(_: Option<String>, value: JsonValue) -> Result<Self::MakeLayer, BoxError> {
     // }
