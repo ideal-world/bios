@@ -5,15 +5,21 @@ use spacegate_shell::extension::k8s_service::K8sService;
 use spacegate_shell::hyper::Request;
 use spacegate_shell::hyper::{http::uri, Response};
 use spacegate_shell::kernel::extension::PeerAddr;
-use spacegate_shell::plugin::{def_filter_plugin, Filter, PluginError};
-use spacegate_shell::SgBody;
+use spacegate_shell::plugin::{def_plugin, Filter, FilterRequestLayer, MakeSgLayer, PluginError};
+use spacegate_shell::{SgBody, SgBoxLayer};
 use std::net::IpAddr;
 use std::str::FromStr;
 use std::sync::Arc;
 
 use tardis::log;
 
-def_filter_plugin!("rewrite_ns", RewriteNsPlugin, SgFilterRewriteNs);
+impl MakeSgLayer for SgFilterRewriteNs {
+    fn make_layer(&self) -> spacegate_shell::kernel::BoxResult<SgBoxLayer> {
+        Ok(SgBoxLayer::new(FilterRequestLayer::new(self.clone())))
+    }
+}
+
+def_plugin!("rewrite_ns", RewriteNsPlugin, SgFilterRewriteNs);
 
 /// Kube available only!
 #[derive(Clone)]
