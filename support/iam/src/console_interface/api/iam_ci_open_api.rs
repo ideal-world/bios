@@ -1,3 +1,4 @@
+use bios_basic::helper::bios_ctx_helper::unsafe_fill_ctx;
 use bios_basic::helper::request_helper::add_remote_ip;
 use tardis::basic::dto::TardisContext;
 use tardis::web::context_extractor::TardisContextExtractor;
@@ -21,9 +22,10 @@ pub struct IamCiOpenApi;
 impl IamCiOpenApi {
     /// Add product / 添加产品
     #[oai(path = "/add_product", method = "post")]
-    async fn add_product(&self, add_req: Json<IamOpenAddProductReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
-        add_remote_ip(request, &ctx.0).await?;
+    async fn add_product(&self, add_req: Json<IamOpenAddProductReq>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
+        unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
+        add_remote_ip(request, &ctx.0).await?;
         funs.begin().await?;
         IamOpenServ::add_product(&add_req.0, &funs, &ctx.0).await?;
         funs.commit().await?;
@@ -33,9 +35,16 @@ impl IamCiOpenApi {
 
     /// Cert bind product_and_spec / 凭证绑定产品和规格
     #[oai(path = "/:id/bind_cert_product_and_spec", method = "post")]
-    async fn bind_cert_product_and_spec(&self, id: Path<String>, bind_req: Json<IamOpenBindAkProductReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
-        add_remote_ip(request, &ctx.0).await?;
+    async fn bind_cert_product_and_spec(
+        &self,
+        id: Path<String>,
+        bind_req: Json<IamOpenBindAkProductReq>,
+        mut ctx: TardisContextExtractor,
+        request: &Request,
+    ) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
+        unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
+        add_remote_ip(request, &ctx.0).await?;
         funs.begin().await?;
         IamOpenServ::bind_cert_product_and_spec(&id.0, &bind_req.0, &funs, &ctx.0).await?;
         funs.commit().await?;
@@ -45,10 +54,11 @@ impl IamCiOpenApi {
 
     /// Add aksk Cert by open platform / 生成AKSK通过开放平台
     #[oai(path = "/aksk", method = "post")]
-    async fn add_aksk(&self, add_req: Json<IamOpenAkSkAddReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<IamOpenAkSkResp> {
+    async fn add_aksk(&self, add_req: Json<IamOpenAkSkAddReq>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<IamOpenAkSkResp> {
+        let mut funs = iam_constants::get_tardis_inst();
+        unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, Some(add_req.tenant_id.clone()))?;
         add_remote_ip(request, &ctx).await?;
-        let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         let result = IamOpenServ::general_cert(add_req.0, &funs, &ctx).await?;
         funs.commit().await?;
@@ -58,9 +68,10 @@ impl IamCiOpenApi {
 
     /// Get account rule info / 获取账号规则信息
     #[oai(path = "/", method = "get")]
-    async fn get_rule_info(&self, cert_id: Query<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<IamOpenRuleResp> {
-        add_remote_ip(request, &ctx.0).await?;
+    async fn get_rule_info(&self, cert_id: Query<String>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<IamOpenRuleResp> {
         let mut funs = iam_constants::get_tardis_inst();
+        unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
+        add_remote_ip(request, &ctx.0).await?;
         funs.begin().await?;
         let result = IamOpenServ::get_rule_info(cert_id.0, &funs, &ctx.0).await?;
         funs.commit().await?;

@@ -188,6 +188,7 @@ async fn do_paginate(
     let table_col_name = package_table_name("stats_conf_fact_col", ctx);
     let mut sql_where = vec!["1 = 1".to_string()];
     let mut sql_order = vec![];
+    let mut sql_left = "".to_string();
     let mut params: Vec<Value> = vec![Value::from(page_size), Value::from((page_number - 1) * page_size)];
     if let Some(fact_conf_key) = &fact_conf_key {
         sql_where.push(format!("fact.key = ${}", params.len() + 1));
@@ -203,13 +204,15 @@ async fn do_paginate(
     }
     if let Some(dim_rel_conf_dim_keys) = &dim_rel_conf_dim_keys {
         if !dim_rel_conf_dim_keys.is_empty() {
-            sql_where.push(format!(
-                "fact_col.dim_rel_conf_dim_key in ({})",
-                (0..dim_rel_conf_dim_keys.len()).map(|idx| format!("${}", params.len() + idx + 1)).collect::<Vec<String>>().join(",")
-            ));
+            sql_left = format!(
+                r#" LEFT JOIN (SELECT rel_conf_fact_key,COUNT(rel_conf_fact_key) FROM {table_col_name}  WHERE dim_rel_conf_dim_key IN ({}) GROUP BY rel_conf_fact_key HAVING COUNT(rel_conf_fact_key) = {}) AS fact_col ON fact.key = fact_col.rel_conf_fact_key"#,
+                (0..dim_rel_conf_dim_keys.len()).map(|idx| format!("${}", params.len() + idx + 1)).collect::<Vec<String>>().join(","),
+                dim_rel_conf_dim_keys.len()
+            );
             for dim_rel_conf_dim_key in dim_rel_conf_dim_keys {
                 params.push(Value::from(format!("{dim_rel_conf_dim_key}")));
             }
+            sql_where.push(format!("fact_col.rel_conf_fact_key IS NOT NULL"));
         }
     }
     if let Some(desc_by_create) = desc_by_create {
@@ -225,13 +228,14 @@ async fn do_paginate(
                 r#"SELECT t.*, count(*) OVER () AS total FROM (
 SELECT distinct fact.key as key, fact.show_name as show_name, fact.query_limit as query_limit, fact.remark as remark, fact.redirect_path as redirect_path, fact.is_online as is_online, fact.create_time as create_time, fact.update_time as update_time
 FROM {table_name} as fact
-left join {table_col_name} as fact_col on fact.key = fact_col.rel_conf_fact_key
+{}
 WHERE 
     {}
     {}
     ) as t
 LIMIT $1 OFFSET $2
 "#,
+                sql_left,
                 sql_where.join(" AND "),
                 if sql_order.is_empty() {
                     "".to_string()

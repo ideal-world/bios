@@ -461,6 +461,10 @@ fn success_auth_result_to_req(auth_result: AuthResult, config: &AuthConfig, req:
     let auth_resp: AuthResp = auth_result.into();
     parts.headers.extend(hashmap_header_to_headermap(auth_resp.headers.clone())?);
     if let Some(new_body) = auth_resp.body {
+        parts.headers.insert(
+            header::CONTENT_LENGTH,
+            HeaderValue::from_str(&format!("{}", new_body.as_bytes().len())).map_err(|e| TardisError::format_error(&format!("[SG.Filter.Auth] error parse str :{e}"), ""))?,
+        );
         body = SgBody::full(new_body);
     };
     Ok(Request::from_parts(parts, body))
