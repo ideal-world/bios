@@ -453,7 +453,6 @@ impl RbumCrudOperation<rbum_cert::ActiveModel, RbumCertAddReq, RbumCertModifyReq
             if add_req.start_time.is_none() {
                 add_req.start_time = Some(Utc::now());
             }
-
             if rbum_cert_conf.sk_dynamic {
                 add_req.end_time = None;
             }
