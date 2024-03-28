@@ -98,10 +98,10 @@ impl StatsCiConfApi {
         ctx: TardisContextExtractor,
     ) -> TardisApiResult<TardisPage<StatsConfFactInfoResp>> {
         let funs = crate::get_tardis_inst();
-        let keys = keys.0.map(|keys| keys.split(',').map(|r| r.to_string()).collect());
+        let keys = keys.0.map(|key| key.split(',').map(|r| r.to_string()).collect());
         let dim_rel_conf_dim_keys = dim_rel_conf_dim_keys.0.map(|keys| keys.split(',').map(|r| r.to_string()).collect());
         let resp = stats_conf_serv::fact_paginate(
-            keys.0,
+            keys,
             show_name.0,
             dim_rel_conf_dim_keys,
             is_online.0,
