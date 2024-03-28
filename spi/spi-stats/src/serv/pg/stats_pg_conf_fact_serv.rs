@@ -138,7 +138,7 @@ pub(crate) async fn delete(fact_conf_key: &str, _funs: &TardisFunsInst, ctx: &Ta
 }
 
 pub(in crate::serv::pg) async fn get(fact_conf_key: &str, conn: &TardisRelDBlConnection, ctx: &TardisContext) -> TardisResult<Option<StatsConfFactInfoResp>> {
-    do_paginate(Some(fact_conf_key.to_string()), None, None, None, 1, 1, None, None, conn, ctx).await.map(|page| page.records.into_iter().next())
+    do_paginate(Some(vec![fact_conf_key.to_string()]), None, None, None, 1, 1, None, None, conn, ctx).await.map(|page| page.records.into_iter().next())
 }
 
 pub(crate) async fn paginate(
