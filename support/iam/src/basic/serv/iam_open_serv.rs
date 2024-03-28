@@ -1,9 +1,17 @@
 use bios_basic::rbum::{
     dto::{
-        rbum_cert_dto::RbumCertModifyReq, rbum_filer_dto::{RbumBasicFilterReq, RbumCertFilterReq, RbumRelExtFilterReq, RbumRelFilterReq}, rbum_rel_agg_dto::{RbumRelAggAddReq, RbumRelEnvAggAddReq}, rbum_rel_dto::RbumRelAddReq
+        rbum_cert_dto::RbumCertModifyReq,
+        rbum_filer_dto::{RbumBasicFilterReq, RbumCertFilterReq, RbumRelExtFilterReq, RbumRelFilterReq},
+        rbum_rel_agg_dto::{RbumRelAggAddReq, RbumRelEnvAggAddReq},
+        rbum_rel_dto::RbumRelAddReq,
     },
     rbum_enumeration::{RbumRelEnvKind, RbumRelFromKind},
-    serv::{rbum_cert_serv::RbumCertServ, rbum_crud_serv::RbumCrudOperation, rbum_item_serv::RbumItemCrudOperation, rbum_rel_serv::{RbumRelEnvServ, RbumRelServ}},
+    serv::{
+        rbum_cert_serv::RbumCertServ,
+        rbum_crud_serv::RbumCrudOperation,
+        rbum_item_serv::RbumItemCrudOperation,
+        rbum_rel_serv::{RbumRelEnvServ, RbumRelServ},
+    },
 };
 use bios_sdk_invoke::clients::spi_kv_client::SpiKvClient;
 use itertools::Itertools;
@@ -26,6 +34,7 @@ use crate::{
         iam_res_dto::IamResAddReq,
     },
     iam_config::IamConfig,
+    iam_constants::{OPENAPI_GATEWAY_PLUGIN_COUNT, OPENAPI_GATEWAY_PLUGIN_DYNAMIC_ROUTE, OPENAPI_GATEWAY_PLUGIN_LIMIT, OPENAPI_GATEWAY_PLUGIN_TIME_RANGE},
     iam_enumeration::{IamCertKernelKind, IamRelKind, IamResKind},
 };
 
@@ -101,10 +110,17 @@ impl IamOpenServ {
         )
         .await?;
         for rel in old_spec_rels {
-            let env_ids = RbumRelEnvServ::find_id_rbums(&RbumRelExtFilterReq {
-                rel_rbum_rel_id: Some(rel.id.clone()),
-                ..Default::default()
-            }, None, None, funs, ctx).await?;
+            let env_ids = RbumRelEnvServ::find_id_rbums(
+                &RbumRelExtFilterReq {
+                    rel_rbum_rel_id: Some(rel.id.clone()),
+                    ..Default::default()
+                },
+                None,
+                None,
+                funs,
+                ctx,
+            )
+            .await?;
             for env_id in env_ids {
                 RbumRelEnvServ::delete_rbum(&env_id, funs, ctx).await?;
             }
@@ -156,11 +172,17 @@ impl IamOpenServ {
 
         // update cert expire_sec
         if bind_req.end_time.is_some() && bind_req.start_time.is_some() {
-            RbumCertServ::modify_rbum(cert_id, &mut RbumCertModifyReq {
-                start_time: bind_req.start_time,
-                end_time: bind_req.end_time,
-                ..Default::default()
-            }, funs, ctx).await?;
+            RbumCertServ::modify_rbum(
+                cert_id,
+                &mut RbumCertModifyReq {
+                    start_time: bind_req.start_time,
+                    end_time: bind_req.end_time,
+                    ..Default::default()
+                },
+                funs,
+                ctx,
+            )
+            .await?;
         }
 
         Self::set_rules_cache(
@@ -211,8 +233,8 @@ impl IamOpenServ {
         if start_time.is_some() || end_time.is_some() {
             envs.push(RbumRelEnvAggAddReq {
                 kind: RbumRelEnvKind::DatetimeRange,
-                value1: start_time.unwrap().to_string(),
-                value2: Some(end_time.unwrap().to_string()),
+                value1: start_time.unwrap().to_rfc3339(),
+                value2: Some(end_time.unwrap().to_rfc3339()),
             });
         }
         if let Some(frequency) = api_call_frequency {
@@ -271,7 +293,7 @@ impl IamOpenServ {
         if start_time.is_some() && end_time.is_some() {
             IamIdentCacheServ::add_gateway_rule_info(
                 &ak,
-                "date-time-range",
+                OPENAPI_GATEWAY_PLUGIN_TIME_RANGE,
                 None,
                 &format!("{},{}", start_time.unwrap().to_rfc3339(), end_time.unwrap().to_rfc3339()),
                 funs,
@@ -279,10 +301,10 @@ impl IamOpenServ {
             .await?;
         }
         if let Some(frequency) = api_call_frequency {
-            IamIdentCacheServ::add_gateway_rule_info(&ak, "frequency", None, &frequency.to_string(), funs).await?;
+            IamIdentCacheServ::add_gateway_rule_info(&ak, OPENAPI_GATEWAY_PLUGIN_LIMIT, None, &frequency.to_string(), funs).await?;
         }
         if let Some(count) = api_call_count {
-            IamIdentCacheServ::add_gateway_rule_info(&ak, "count", None, &count.to_string(), funs).await?;
+            IamIdentCacheServ::add_gateway_rule_info(&ak, OPENAPI_GATEWAY_PLUGIN_COUNT, None, &count.to_string(), funs).await?;
         }
         let spec = IamResServ::find_one_detail_item(
             &IamResFilterReq {
@@ -297,7 +319,7 @@ impl IamOpenServ {
         )
         .await?
         .ok_or_else(|| funs.err().internal_error("iam_open", "set_rules_cache", "illegal response", "404-iam-res-not-exist"))?;
-        IamIdentCacheServ::add_gateway_rule_info(&ak, "rewrite", None, &spec.ext, funs).await?;
+        IamIdentCacheServ::add_gateway_rule_info(&ak, OPENAPI_GATEWAY_PLUGIN_DYNAMIC_ROUTE, None, &spec.ext, funs).await?;
         Ok(())
     }
 
@@ -345,14 +367,14 @@ impl IamOpenServ {
         .await?
         .ok_or_else(|| funs.err().internal_error("iam_open", "set_rules_cache", "illegal response", "404-iam-res-not-exist"))?
         .code;
-        let time_range = IamIdentCacheServ::get_gateway_rule_info(&ak, "date-time-range", None, funs).await?.unwrap_or_default();
+        let time_range = IamIdentCacheServ::get_gateway_rule_info(&ak, OPENAPI_GATEWAY_PLUGIN_TIME_RANGE, None, funs).await?.unwrap_or_default();
         Ok(IamOpenRuleResp {
             cert_id,
             spec_code,
             start_time: time_range.split(',').collect_vec().first().map(|s| DateTime::parse_from_rfc3339(s).unwrap().with_timezone(&Utc)),
             end_time: time_range.split(',').collect_vec().last().map(|s| DateTime::parse_from_rfc3339(s).unwrap().with_timezone(&Utc)),
-            api_call_frequency: IamIdentCacheServ::get_gateway_rule_info(&ak, "frequency", None, funs).await?.map(|s| s.parse::<u32>().unwrap_or_default()),
-            api_call_count: IamIdentCacheServ::get_gateway_rule_info(&ak, "count", None, funs).await?.map(|s| s.parse::<u32>().unwrap_or_default()),
+            api_call_frequency: IamIdentCacheServ::get_gateway_rule_info(&ak, OPENAPI_GATEWAY_PLUGIN_LIMIT, None, funs).await?.map(|s| s.parse::<u32>().unwrap_or_default()),
+            api_call_count: IamIdentCacheServ::get_gateway_rule_info(&ak, OPENAPI_GATEWAY_PLUGIN_COUNT, None, funs).await?.map(|s| s.parse::<u32>().unwrap_or_default()),
             api_call_cumulative_count: IamIdentCacheServ::get_gateway_cumulative_count(&ak, None, funs).await?.map(|s| s.parse::<u32>().unwrap_or_default()),
         })
     }

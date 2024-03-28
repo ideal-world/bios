@@ -172,12 +172,7 @@ impl FlowCcModelApi {
 
     /// add custom model by template_id / 添加自定义模型
     #[oai(path = "/add_custom_model", method = "post")]
-    async fn add_custom_model(
-        &self,
-        req: Json<FlowModelAddCustomModelReq>,
-        ctx: TardisContextExtractor,
-        _request: &Request,
-    ) -> TardisApiResult<Vec<FlowModelAddCustomModelResp>> {
+    async fn add_custom_model(&self, req: Json<FlowModelAddCustomModelReq>, ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<Vec<FlowModelAddCustomModelResp>> {
         let mut funs = flow_constants::get_tardis_inst();
         funs.begin().await?;
         let proj_template_id = req.0.proj_template_id.unwrap_or_default();
