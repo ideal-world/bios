@@ -133,7 +133,7 @@ pub async fn dim_paginate(
 }
 
 pub async fn fact_paginate(
-    fact_conf_key: Option<String>,
+    fact_conf_keys: Option<Vec<String>>,
     show_name: Option<String>,
     dim_rel_conf_dim_keys: Option<Vec<String>>,
     is_online: Option<bool>,
@@ -149,7 +149,7 @@ pub async fn fact_paginate(
         #[cfg(feature = "spi-pg")]
         spi_constants::SPI_PG_KIND_CODE => {
             pg::stats_pg_conf_fact_serv::paginate(
-                fact_conf_key,
+                fact_conf_keys,
                 show_name,
                 dim_rel_conf_dim_keys,
                 is_online,
