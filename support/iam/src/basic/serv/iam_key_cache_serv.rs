@@ -401,8 +401,9 @@ impl IamIdentCacheServ {
         let result = funs
             .cache()
             .get(&format!(
-                "{}count:{}:{}:{}:cumulative-count",
+                "{}{}:{}:{}:{}:cumulative-count",
                 funs.conf::<IamConfig>().cache_key_gateway_rule_info_,
+                iam_constants::OPENAPI_GATEWAY_PLUGIN_COUNT,
                 match_method.unwrap_or("*"),
                 match_path,
                 ak

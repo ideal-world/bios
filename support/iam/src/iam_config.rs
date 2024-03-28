@@ -176,7 +176,7 @@ impl Default for IamConfig {
             spi: Default::default(),
             strict_security_mode: false,
             crypto_conf: CryptoConf::default(),
-            cache_key_gateway_rule_info_: "sg:plugin:opres:".to_string(),
+            cache_key_gateway_rule_info_: "sg:plugin:".to_string(),
             gateway_openapi_path: "op-api".to_string(),
         }
     }

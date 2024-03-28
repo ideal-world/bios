@@ -51,6 +51,11 @@ pub const EVENT_EXECUTE_TASK_EXTERNAL: &str = "iam/execute_task_external";
 pub const EVENT_STOP_TASK_EXTERNAL: &str = "iam/stop_task_external";
 pub const EVENT_SET_TASK_PROCESS_DATA_EXTERNAL: &str = "iam/set_task_process_data";
 
+pub const OPENAPI_GATEWAY_PLUGIN_TIME_RANGE: &str = "redis-time-range:opres-time-range";
+pub const OPENAPI_GATEWAY_PLUGIN_LIMIT: &str = "redis-limit:opres-limit";
+pub const OPENAPI_GATEWAY_PLUGIN_COUNT: &str = "redis-count:opres-count";
+pub const OPENAPI_GATEWAY_PLUGIN_DYNAMIC_ROUTE: &str = "redis-dynamic-route:opres-dynamic-route";
+
 pub fn get_tardis_inst() -> TardisFunsInst {
     TardisFuns::inst_with_db_conn(COMPONENT_CODE.to_string(), None)
 }
