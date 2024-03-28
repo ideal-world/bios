@@ -1,8 +1,6 @@
 use bios_basic::rbum::{
     dto::{
-        rbum_filer_dto::{RbumBasicFilterReq, RbumCertFilterReq, RbumRelExtFilterReq, RbumRelFilterReq},
-        rbum_rel_agg_dto::{RbumRelAggAddReq, RbumRelEnvAggAddReq},
-        rbum_rel_dto::RbumRelAddReq,
+        rbum_cert_dto::RbumCertModifyReq, rbum_filer_dto::{RbumBasicFilterReq, RbumCertFilterReq, RbumRelExtFilterReq, RbumRelFilterReq}, rbum_rel_agg_dto::{RbumRelAggAddReq, RbumRelEnvAggAddReq}, rbum_rel_dto::RbumRelAddReq
     },
     rbum_enumeration::{RbumRelEnvKind, RbumRelFromKind},
     serv::{rbum_cert_serv::RbumCertServ, rbum_crud_serv::RbumCrudOperation, rbum_item_serv::RbumItemCrudOperation, rbum_rel_serv::{RbumRelEnvServ, RbumRelServ}},
@@ -157,10 +155,11 @@ impl IamOpenServ {
         .await?;
 
         // update cert expire_sec
-        if let Some(end_time) = bind_req.end_time {
-            IamCertAkSkServ::modify_cert_conf(cert_id, &IamCertConfAkSkAddOrModifyReq {
-                name: TrimString(format!("AkSk-{}", &ctx.own_paths)),
-                expire_sec: Some(end_time.signed_duration_since(Utc::now()).num_seconds()),
+        if bind_req.end_time.is_some() && bind_req.start_time.is_some() {
+            RbumCertServ::modify_rbum(cert_id, &mut RbumCertModifyReq {
+                start_time: bind_req.start_time,
+                end_time: bind_req.end_time,
+                ..Default::default()
             }, funs, ctx).await?;
         }
 
