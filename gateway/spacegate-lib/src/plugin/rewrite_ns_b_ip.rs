@@ -5,25 +5,19 @@ use spacegate_shell::extension::k8s_service::K8sService;
 use spacegate_shell::hyper::Request;
 use spacegate_shell::hyper::{http::uri, Response};
 use spacegate_shell::kernel::extension::PeerAddr;
-use spacegate_shell::plugin::{def_plugin, Filter, FilterRequestLayer, MakeSgLayer, PluginError};
-use spacegate_shell::{SgBody, SgBoxLayer};
+use spacegate_shell::kernel::helper_layers::function::Inner;
+use spacegate_shell::plugin::{Plugin, PluginConfig, PluginError};
+use spacegate_shell::{BoxError, SgBody};
 use std::net::IpAddr;
 use std::str::FromStr;
 use std::sync::Arc;
 
-use tardis::log;
-
-impl MakeSgLayer for SgFilterRewriteNs {
-    fn make_layer(&self) -> spacegate_shell::kernel::BoxResult<SgBoxLayer> {
-        Ok(SgBoxLayer::new(FilterRequestLayer::new(self.clone())))
-    }
-}
-
-def_plugin!("rewrite_ns", RewriteNsPlugin, SgFilterRewriteNs);
+use tardis::{log, serde_json};
+// def_plugin!("rewrite_ns", RewriteNsPlugin, SgFilterRewriteNs);
 
 /// Kube available only!
 #[derive(Clone)]
-pub struct SgFilterRewriteNs {
+pub struct RewriteNsPlugin {
     pub ip_list: Arc<[IpNet]>,
     pub target_ns: String,
 }
@@ -31,17 +25,17 @@ pub struct SgFilterRewriteNs {
 #[derive(Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default)]
-pub struct SgFilterRewriteNsConfig {
+pub struct RewriteNsConfig {
     pub ip_list: Vec<String>,
     pub target_ns: String,
 }
 
-impl<'de> Deserialize<'de> for SgFilterRewriteNs {
+impl<'de> Deserialize<'de> for RewriteNsPlugin {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,
     {
-        SgFilterRewriteNsConfig::deserialize(deserializer).map(|config| {
+        RewriteNsConfig::deserialize(deserializer).map(|config| {
             let ip_list: Vec<IpNet> = config
                 .ip_list
                 .iter()
@@ -49,12 +43,12 @@ impl<'de> Deserialize<'de> for SgFilterRewriteNs {
                     p.parse()
                         .or(p.parse::<IpAddr>().map(IpNet::from))
                         .map_err(|e| {
-                            log::warn!("[{CODE}] Cannot parse ip `{p}` when loading config: {e}");
+                            log::warn!("Cannot parse ip `{p}` when loading config: {e}");
                         })
                         .ok()
                 })
                 .collect();
-            SgFilterRewriteNs {
+            RewriteNsPlugin {
                 ip_list: ip_list.into(),
                 target_ns: config.target_ns,
             }
@@ -62,17 +56,37 @@ impl<'de> Deserialize<'de> for SgFilterRewriteNs {
     }
 }
 
-impl Default for SgFilterRewriteNsConfig {
+impl Default for RewriteNsConfig {
     fn default() -> Self {
-        SgFilterRewriteNsConfig {
+        RewriteNsConfig {
             ip_list: vec![],
             target_ns: "default".to_string(),
         }
     }
 }
 
-impl Filter for SgFilterRewriteNs {
-    fn filter(&self, mut req: Request<spacegate_shell::SgBody>) -> Result<Request<SgBody>, Response<SgBody>> {
+impl Plugin for RewriteNsPlugin {
+    const CODE: &'static str = "rewrite-ns";
+    fn create(plugin_config: PluginConfig) -> Result<Self, spacegate_shell::BoxError> {
+        let config: RewriteNsConfig = serde_json::from_value(plugin_config.spec)?;
+        let ip_list: Vec<IpNet> = config
+            .ip_list
+            .iter()
+            .filter_map(|p| {
+                p.parse()
+                    .or(p.parse::<IpAddr>().map(IpNet::from))
+                    .map_err(|e| {
+                        log::warn!("Cannot parse ip `{p}` when loading config: {e}");
+                    })
+                    .ok()
+            })
+            .collect();
+        Ok(RewriteNsPlugin {
+            ip_list: ip_list.into(),
+            target_ns: config.target_ns,
+        })
+    }
+    async fn call(&self, mut req: Request<SgBody>, inner: Inner) -> Result<Response<SgBody>, BoxError> {
         'change_ns: {
             if let Some(k8s_service) = req.extensions().get::<K8sService>().cloned() {
                 let Some(ref ns) = k8s_service.0.namespace else { break 'change_ns };
@@ -92,7 +106,7 @@ impl Filter for SgFilterRewriteNs {
                 }
             }
         }
-        Ok(req)
+        Ok(inner.call(req).await)
     }
 }
 

@@ -10,7 +10,7 @@ mod plugin;
 pub const PACKAGE_NAME: &str = "spacegate_lib";
 use spacegate_shell::plugin::SgPluginRepository;
 pub fn register_lib_plugins(repo: &SgPluginRepository) {
-    repo.register::<ip_time::SgIpTimePlugin>();
+    repo.register::<ip_time::IpTimePlugin>();
     repo.register::<anti_replay::AntiReplayPlugin>();
     repo.register::<anti_xss::AntiXssPlugin>();
     repo.register::<rewrite_ns_b_ip::RewriteNsPlugin>();

@@ -141,7 +141,7 @@ async fn test_auth_plugin_crypto() {
     };
     filter_auth.setup_tardis().await.unwrap();
 
-    let auth_plugin: SgPluginAuth = filter_auth.into();
+    let auth_plugin: AuthPlugin = filter_auth.into();
 
     let req = Request::builder()
         .method(Method::GET)

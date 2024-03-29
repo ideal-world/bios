@@ -15,12 +15,9 @@ use spacegate_shell::{
         http::{self, HeaderMap, HeaderName, HeaderValue, StatusCode},
         Method, Request, Response,
     },
-    kernel::{
-        extension::Reflect,
-        helper_layers::bidirection_filter::{Bdf, BdfLayer, BoxReqFut, BoxRespFut},
-    },
-    plugin::{MakeSgLayer, Plugin, PluginError},
-    BoxError, SgBody, SgBoxLayer,
+    kernel::{extension::Reflect, helper_layers::function::Inner},
+    plugin::{Plugin, PluginConfig, PluginError},
+    BoxError, SgBody,
 };
 use std::{
     collections::HashMap,
@@ -125,7 +122,7 @@ impl Default for SgPluginAuthConfig {
     }
 }
 #[derive(Clone)]
-pub struct SgPluginAuth {
+pub struct AuthPlugin {
     auth_config: AuthConfig,
     cors_allow_origin: HeaderValue,
     cors_allow_methods: HeaderValue,
@@ -148,9 +145,9 @@ pub struct SgPluginAuth {
     auth_path_ignore_prefix: String,
 }
 
-impl From<SgPluginAuthConfig> for SgPluginAuth {
+impl From<SgPluginAuthConfig> for AuthPlugin {
     fn from(value: SgPluginAuthConfig) -> Self {
-        SgPluginAuth {
+        AuthPlugin {
             auth_config: value.auth_config,
             cors_allow_origin: HeaderValue::from_str(&value.cors_allow_origin).expect("cors_allow_origin is invalid"),
             cors_allow_methods: HeaderValue::from_str(&value.cors_allow_methods).expect("cors_allow_methods is invalid"),
@@ -163,7 +160,7 @@ impl From<SgPluginAuthConfig> for SgPluginAuth {
     }
 }
 
-impl<'de> Deserialize<'de> for SgPluginAuth {
+impl<'de> Deserialize<'de> for AuthPlugin {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,
@@ -172,7 +169,7 @@ impl<'de> Deserialize<'de> for SgPluginAuth {
     }
 }
 
-impl SgPluginAuth {
+impl AuthPlugin {
     fn cors(&self, resp: &mut Response<SgBody>) -> TardisResult<()> {
         resp.headers_mut().insert(header::ACCESS_CONTROL_ALLOW_ORIGIN, self.cors_allow_origin.clone());
         resp.headers_mut().insert(header::ACCESS_CONTROL_ALLOW_ORIGIN, self.cors_allow_origin.clone());
@@ -198,7 +195,7 @@ impl SgPluginAuth {
     }
 }
 
-impl SgPluginAuth {
+impl AuthPlugin {
     async fn req(&self, mut req: Request<SgBody>) -> Result<Request<SgBody>, Response<SgBody>> {
         req.extensions_mut().get_mut::<Reflect>().expect("missing reflect").insert(RequestCryptoParam::default());
 
@@ -311,31 +308,6 @@ impl SgPluginAuth {
         self.cors(&mut resp).map_err(PluginError::internal_error::<AuthPlugin>)?;
 
         Ok(resp)
-    }
-}
-
-impl Bdf for SgPluginAuth {
-    type FutureReq = BoxReqFut;
-
-    type FutureResp = BoxRespFut;
-
-    fn on_req(self: Arc<Self>, req: Request<SgBody>) -> Self::FutureReq {
-        Box::pin(async move { self.req(req).await })
-    }
-
-    fn on_resp(self: Arc<Self>, resp: Response<SgBody>) -> Self::FutureResp {
-        Box::pin(async move {
-            match self.resp(resp).await {
-                Ok(resp) => resp,
-                Err(e) => e,
-            }
-        })
-    }
-}
-
-impl MakeSgLayer for SgPluginAuth {
-    fn make_layer(&self) -> Result<SgBoxLayer, BoxError> {
-        Ok(SgBoxLayer::new(BdfLayer::new(self.clone())))
     }
 }
 
@@ -513,20 +485,18 @@ fn headermap_to_hashmap(old_headers: &HeaderMap<HeaderValue>) -> TardisResult<Ha
     Ok(new_headers)
 }
 
-pub struct AuthPlugin;
-
 impl Plugin for AuthPlugin {
     const CODE: &'static str = CODE;
     // type MakeLayer = SgPluginAuth;
-    fn create(config: spacegate_shell::plugin::PluginConfig) -> Result<spacegate_shell::plugin::instance::PluginInstance, BoxError> {
-        let plugin_config: SgPluginAuthConfig = serde_json::from_value(config.spec.clone())?;
-        let filter: SgPluginAuth = plugin_config.clone().into();
+    fn create(plugin_config: PluginConfig) -> Result<Self, BoxError> {
+        let config: SgPluginAuthConfig = serde_json::from_value(plugin_config.spec.clone())?;
+        let plugin: AuthPlugin = config.clone().into();
         let tardis_init = Arc::new(Once::new());
         {
             let tardis_init = tardis_init.clone();
             if !tardis_init.is_completed() {
                 tardis::tokio::task::spawn(async move {
-                    if plugin_config.setup_tardis().await.is_ok() {
+                    if config.setup_tardis().await.is_ok() {
                         tardis_init.call_once(|| {});
                     } else {
                         warn!("[SG.Filter.Auth] tardis init failed");
@@ -538,7 +508,18 @@ impl Plugin for AuthPlugin {
         while !tardis_init.is_completed() {
             // blocking wait tardis setup
         }
-        Ok(spacegate_shell::plugin::instance::PluginInstance::new::<Self, _>(config, move || filter.make_layer()))
+        Ok(plugin)
+    }
+    async fn call(&self, req: Request<SgBody>, inner: Inner) -> Result<Response<SgBody>, BoxError> {
+        let req = match self.req(req).await {
+            Ok(req) => req,
+            Err(resp) => return Ok(resp),
+        };
+        let resp = inner.call(req).await;
+        Ok(match self.resp(resp).await {
+            Ok(resp) => resp,
+            Err(resp) => resp,
+        })
     }
     // fn create(_: Option<String>, value: JsonValue) -> Result<Self::MakeLayer, BoxError> {
     // }

@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 
 use std::str::FromStr;
-use std::sync::Arc;
 use std::time::Instant;
 
 use bios_sdk_invoke::clients::spi_log_client;
@@ -15,8 +14,8 @@ use serde::{Deserialize, Serialize};
 use spacegate_shell::hyper::{Request, Response};
 use spacegate_shell::kernel::extension::{EnterTime, PeerAddr, Reflect};
 
-use spacegate_shell::kernel::helper_layers::bidirection_filter::{Bdf, BdfLayer, BoxRespFut};
-use spacegate_shell::plugin::{MakeSgLayer, Plugin, PluginError};
+use spacegate_shell::kernel::helper_layers::function::Inner;
+use spacegate_shell::plugin::{Plugin, PluginError};
 use spacegate_shell::{BoxError, SgBody};
 use tardis::basic::dto::TardisContext;
 use tardis::log::{debug, trace, warn};
@@ -45,7 +44,7 @@ spacegate_plugin::schema!(AuditLogPlugin, SgFilterAuditLog);
 #[derive(Serialize, Deserialize, Clone)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default)]
-pub struct SgFilterAuditLog {
+pub struct AuditLogPlugin {
     log_url: String,
     spi_app_id: String,
     tag: String,
@@ -60,7 +59,7 @@ pub struct SgFilterAuditLog {
     head_key_auth_ident: String,
 }
 
-impl SgFilterAuditLog {
+impl AuditLogPlugin {
     async fn get_log_content(&self, mut resp: Response<SgBody>) -> TardisResult<(Response<SgBody>, Option<LogParamContent>)> {
         let Some(param) = resp.extensions_mut().remove::<AuditLogParam>() else {
             warn!("[Plugin.AuditLog] missing audit log param");
@@ -241,7 +240,7 @@ impl SgFilterAuditLog {
     }
 }
 
-impl Default for SgFilterAuditLog {
+impl Default for AuditLogPlugin {
     fn default() -> Self {
         Self {
             log_url: "".to_string(),
@@ -258,45 +257,26 @@ impl Default for SgFilterAuditLog {
     }
 }
 
-impl Bdf for SgFilterAuditLog {
-    type FutureReq = std::future::Ready<Result<Request<SgBody>, Response<SgBody>>>;
-
-    type FutureResp = BoxRespFut;
-
-    fn on_req(self: Arc<Self>, req: Request<SgBody>) -> Self::FutureReq {
-        std::future::ready(self.req(req))
-    }
-
-    fn on_resp(self: Arc<Self>, resp: Response<SgBody>) -> Self::FutureResp {
-        Box::pin(async move {
-            match self.resp(resp).await {
-                Ok(resp) => resp,
-                Err(e) => e,
-            }
-        })
-    }
-}
-
-impl MakeSgLayer for SgFilterAuditLog {
-    fn make_layer(&self) -> Result<spacegate_shell::SgBoxLayer, spacegate_shell::BoxError> {
-        let layer = BdfLayer::new(self.clone());
-        Ok(spacegate_shell::SgBoxLayer::new(layer))
-    }
-}
-
-pub struct AuditLogPlugin;
-
 impl Plugin for AuditLogPlugin {
     // type MakeLayer = SgFilterAuditLog;
     const CODE: &'static str = CODE;
 
-    fn create(config: spacegate_shell::plugin::PluginConfig) -> Result<spacegate_shell::plugin::instance::PluginInstance, BoxError> {
-        let mut plugin: SgFilterAuditLog = serde_json::from_value(config.spec.clone()).map_err(|e| -> BoxError { format!("[Plugin.AuditLog] deserialize error:{e}").into() })?;
+    fn create(config: spacegate_shell::plugin::PluginConfig) -> Result<Self, BoxError> {
+        let mut plugin: AuditLogPlugin = serde_json::from_value(config.spec.clone()).map_err(|e| -> BoxError { format!("[Plugin.AuditLog] deserialize error:{e}").into() })?;
         plugin.init()?;
-        Ok(spacegate_shell::plugin::instance::PluginInstance::new::<Self, _>(config, move || {
-            let layer = BdfLayer::new(plugin.clone());
-            Ok(spacegate_shell::SgBoxLayer::new(layer))
-        }))
+        Ok(plugin)
+    }
+    async fn call(&self, req: Request<SgBody>, inner: Inner) -> Result<Response<SgBody>, BoxError> {
+        match self.req(req) {
+            Ok(req) => {
+                let resp = inner.call(req).await;
+                match self.resp(resp).await {
+                    Ok(resp) => Ok(resp),
+                    Err(e) => Ok(e),
+                }
+            }
+            Err(resp) => Ok(resp),
+        }
     }
 }
 
@@ -343,13 +323,13 @@ mod test {
     };
     use tardis::tokio;
 
-    use super::SgFilterAuditLog;
+    use super::AuditLogPlugin;
 
     #[tokio::test]
     async fn test_log_content() {
         let ent_time = std::time::Instant::now();
         println!("test_log_content");
-        let mut sg_filter_audit_log = SgFilterAuditLog {
+        let mut sg_filter_audit_log = AuditLogPlugin {
             log_url: "xxx".to_string(),
             spi_app_id: "xxx".to_string(),
             exclude_log_path: vec!["/api/test".to_string(), "/cc/api/test/file".to_string()],
