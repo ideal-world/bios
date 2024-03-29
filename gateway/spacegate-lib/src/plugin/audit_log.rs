@@ -58,7 +58,6 @@ pub struct SgFilterAuditLog {
     #[serde(skip)]
     jsonpath_inst: Option<JsonPathInst>,
     head_key_auth_ident: String,
-    path_kind_map_def: HashMap<String, String>,
 }
 
 impl SgFilterAuditLog {
@@ -127,7 +126,6 @@ impl SgFilterAuditLog {
             }
             Err(_) => false,
         };
-        let kind = self.path_kind_map_def.keys().find(|k| param.request_path.contains(*k)).and_then(|k| self.path_kind_map_def.get(k));
         let content = LogParamContent {
             op: param.request_method,
             name: resp.extensions().get::<CertInfo>().and_then(|info| info.name.clone()).unwrap_or_default(),
@@ -257,7 +255,6 @@ impl Default for SgFilterAuditLog {
             exclude_log_path: vec!["/starsysApi/apis".to_string()],
             jsonpath_inst: None,
             head_key_auth_ident: "Iam-Auth-Ident".to_string(),
-            path_kind_map_def: HashMap::from([("op-api".to_string(), "op".to_string())]),
         }
     }
 }
