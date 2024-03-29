@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use std::str::FromStr;
 use std::sync::Arc;
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 use bios_sdk_invoke::clients::spi_log_client;
 use bios_sdk_invoke::invoke_config::InvokeConfig;
@@ -58,6 +58,7 @@ pub struct SgFilterAuditLog {
     #[serde(skip)]
     jsonpath_inst: Option<JsonPathInst>,
     head_key_auth_ident: String,
+    path_kind_map_def: HashMap<String, String>,
 }
 
 impl SgFilterAuditLog {
@@ -126,6 +127,7 @@ impl SgFilterAuditLog {
             }
             Err(_) => false,
         };
+        let kind = self.path_kind_map_def.keys().find(|k| param.request_path.contains(*k)).and_then(|k| self.path_kind_map_def.get(k));
         let content = LogParamContent {
             op: param.request_method,
             name: resp.extensions().get::<CertInfo>().and_then(|info| info.name.clone()).unwrap_or_default(),
@@ -135,7 +137,7 @@ impl SgFilterAuditLog {
             path: param.request_path,
             scheme: param.request_scheme,
             token: param.request_headers.get(&self.header_token_name).and_then(|v| v.to_str().ok().map(|v| v.to_string())),
-            server_timing: start_time.map(|st| (end_time - st).as_millis() as i64),
+            server_timing: start_time.map(|st| end_time - st),
             resp_status: resp.status().as_u16().to_string(),
             success,
         };
@@ -183,6 +185,7 @@ impl SgFilterAuditLog {
             } else {
                 reflect.insert(CertInfo {
                     id: ident,
+                    own_paths: None,
                     name: None,
                     roles: vec![],
                 });
@@ -254,6 +257,7 @@ impl Default for SgFilterAuditLog {
             exclude_log_path: vec!["/starsysApi/apis".to_string()],
             jsonpath_inst: None,
             head_key_auth_ident: "Iam-Auth-Ident".to_string(),
+            path_kind_map_def: HashMap::from([("op-api".to_string(), "op".to_string())]),
         }
     }
 }
@@ -310,7 +314,7 @@ pub struct LogParamContent {
     pub path: String,
     pub scheme: String,
     pub token: Option<String>,
-    pub server_timing: Option<i64>,
+    pub server_timing: Option<Duration>,
     pub resp_status: String,
     //Indicates whether the business operation was successful.
     pub success: bool,
@@ -325,6 +329,7 @@ impl LogParamContent {
             "op":self.op,
             "path":self.path,
             "resp_status": self.resp_status,
+            "server_timing":self.server_timing,
             "success":self.success,
         })
     }
