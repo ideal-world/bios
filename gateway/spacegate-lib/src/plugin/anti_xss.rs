@@ -17,14 +17,19 @@ macro_rules! append_value {
 }
 
 def_plugin!("anti_xss", AntiXssPlugin, SgFilterAntiXSS);
-
+#[cfg(feature = "schema")]
+use spacegate_plugin::schemars;
+#[cfg(feature = "schema")]
+spacegate_plugin::schema!(AntiXssPlugin, SgFilterAntiXSS);
 #[derive(Default, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default)]
 pub struct SgFilterAntiXSS {
     csp_config: CSPConfig,
 }
 
 #[derive(Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default)]
 pub struct CSPConfig {
     default_src: String,
@@ -110,6 +115,7 @@ impl Default for CSPConfig {
 }
 
 #[derive(Default, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case")]
 pub enum SandBoxValue {
     #[default]

@@ -9,10 +9,10 @@ use tardis::{
 };
 #[allow(non_snake_case)]
 mod proto;
-use poem_grpc::{Code, Request, Response, Status};
 pub use proto::{
     BiRequestStream as BiRequestStreamProto, BiRequestStreamServer as BiRequestStreamGrpcServer, Metadata, Payload, Request as RequestProto, RequestServer as RequestGrpcServer,
 };
+use tardis::web::poem_grpc::{self, Code, Request, Response, Status};
 
 use crate::{
     dto::conf_config_dto::{ConfigDescriptor, ConfigItem},

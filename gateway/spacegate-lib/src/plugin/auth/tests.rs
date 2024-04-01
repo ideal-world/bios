@@ -2,11 +2,8 @@ use http::Uri;
 use std::env;
 use std::io::Read;
 
-use bios_auth::auth_constants;
-
 use super::*;
 
-use tardis::basic::dto::TardisContext;
 use tardis::crypto::crypto_sm2_4::{TardisCryptoSm2, TardisCryptoSm2PrivateKey};
 use tardis::serde_json::Value;
 use tardis::{
@@ -340,36 +337,29 @@ async fn test_auth_plugin_crypto() {
 //     filter_auth.destroy().await.unwrap();
 // }
 
-fn decode_context(headers: &HeaderMap) -> TardisContext {
-    let config = TardisFuns::cs_config::<AuthConfig>(auth_constants::DOMAIN_CODE);
-    let ctx = headers.get(&config.head_key_context).unwrap();
-    let ctx = TardisFuns::crypto.base64.decode_to_string(ctx.to_str().unwrap()).unwrap();
-    TardisFuns::json.str_to_obj(&ctx).unwrap()
-}
-
 fn crypto_req(body: &str, serv_pub_key: &str, front_pub_key: &str, need_crypto_resp: bool) -> (String, String) {
     let pub_key = TardisFuns::crypto.sm2.new_public_key_from_public_key(serv_pub_key).unwrap();
 
-    let sm4_key = TardisFuns::crypto.key.rand_16_bytes();
-    let sm4_key_hex = TardisFuns::crypto.hex.encode(sm4_key);
-    let sm4_iv = TardisFuns::crypto.key.rand_16_bytes();
-    let sm4_iv_hex = TardisFuns::crypto.hex.encode(sm4_iv);
+    let sm4_key = TardisFuns::crypto.key.rand_16_hex();
+    // let sm4_key_hex = TardisFuns::crypto.hex.encode(sm4_key);
+    let sm4_iv = TardisFuns::crypto.key.rand_16_hex();
+    // let sm4_iv_hex = TardisFuns::crypto.hex.encode(sm4_iv);
 
-    let key = TardisFuns::crypto.hex.decode(sm4_key_hex.clone()).unwrap();
-    let iv = TardisFuns::crypto.hex.decode(sm4_iv_hex.clone()).unwrap();
+    // let key = TardisFuns::crypto.hex.decode(sm4_key_hex.clone()).unwrap();
+    // let iv = TardisFuns::crypto.hex.decode(sm4_iv_hex.clone()).unwrap();
 
-    assert_eq!(key.as_slice(), sm4_key);
-    assert_eq!(iv.as_slice(), sm4_iv);
+    // assert_eq!(key.as_slice(), sm4_key);
+    // assert_eq!(iv.as_slice(), sm4_iv);
 
-    let data = TardisFuns::crypto.sm4.encrypt_cbc(body, sm4_key, sm4_iv).unwrap();
-    assert_eq!(TardisFuns::crypto.sm4.decrypt_cbc(&data, key.as_slice(), iv.as_slice()).unwrap(), body);
+    let data = TardisFuns::crypto.sm4.encrypt_cbc(body, &sm4_key, &sm4_iv).unwrap();
+    assert_eq!(TardisFuns::crypto.sm4.decrypt_cbc(&data, &sm4_key, &sm4_iv).unwrap(), body);
 
     let sign_data = TardisFuns::crypto.digest.sm3(&data).unwrap();
 
     let sm4_encrypt = if need_crypto_resp {
-        pub_key.encrypt(&format!("{sign_data} {sm4_key_hex} {sm4_iv_hex} {front_pub_key}",)).unwrap()
+        pub_key.encrypt(&format!("{sign_data} {sm4_key} {sm4_iv} {front_pub_key}",)).unwrap()
     } else {
-        pub_key.encrypt(&format!("{sign_data} {sm4_key_hex} {sm4_iv_hex}",)).unwrap()
+        pub_key.encrypt(&format!("{sign_data} {sm4_key} {sm4_iv}",)).unwrap()
     };
     let base64_encrypt = TardisFuns::crypto.base64.encode(sm4_encrypt);
     (data, base64_encrypt)

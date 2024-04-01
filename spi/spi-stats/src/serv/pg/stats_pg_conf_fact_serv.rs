@@ -138,11 +138,11 @@ pub(crate) async fn delete(fact_conf_key: &str, _funs: &TardisFunsInst, ctx: &Ta
 }
 
 pub(in crate::serv::pg) async fn get(fact_conf_key: &str, conn: &TardisRelDBlConnection, ctx: &TardisContext) -> TardisResult<Option<StatsConfFactInfoResp>> {
-    do_paginate(Some(fact_conf_key.to_string()), None, None, None, 1, 1, None, None, conn, ctx).await.map(|page| page.records.into_iter().next())
+    do_paginate(Some(vec![fact_conf_key.to_string()]), None, None, None, 1, 1, None, None, conn, ctx).await.map(|page| page.records.into_iter().next())
 }
 
 pub(crate) async fn paginate(
-    fact_conf_key: Option<String>,
+    fact_conf_keys: Option<Vec<String>>,
     show_name: Option<String>,
     dim_rel_conf_dim_keys: Option<Vec<String>>,
     is_online: Option<bool>,
@@ -158,7 +158,7 @@ pub(crate) async fn paginate(
     let (conn, _) = stats_pg_initializer::init_conf_fact_table_and_conn(bs_inst, ctx, true).await?;
 
     do_paginate(
-        fact_conf_key,
+        fact_conf_keys,
         show_name,
         dim_rel_conf_dim_keys,
         is_online,
@@ -173,7 +173,7 @@ pub(crate) async fn paginate(
 }
 
 async fn do_paginate(
-    fact_conf_key: Option<String>,
+    fact_conf_keys: Option<Vec<String>>,
     show_name: Option<String>,
     dim_rel_conf_dim_keys: Option<Vec<String>>,
     is_online: Option<bool>,
@@ -188,10 +188,13 @@ async fn do_paginate(
     let table_col_name = package_table_name("stats_conf_fact_col", ctx);
     let mut sql_where = vec!["1 = 1".to_string()];
     let mut sql_order = vec![];
+    let mut sql_left = "".to_string();
     let mut params: Vec<Value> = vec![Value::from(page_size), Value::from((page_number - 1) * page_size)];
-    if let Some(fact_conf_key) = &fact_conf_key {
-        sql_where.push(format!("fact.key = ${}", params.len() + 1));
-        params.push(Value::from(fact_conf_key.to_string()));
+    if let Some(fact_conf_keys) = &fact_conf_keys {
+        sql_where.push(format!("fact.key IN ({})", (0..fact_conf_keys.len()).map(|idx| format!("${}", params.len() + idx + 1)).collect::<Vec<String>>().join(",")));
+        for fact_conf_key in fact_conf_keys {
+            params.push(Value::from(format!("{fact_conf_key}")));
+        }
     }
     if let Some(show_name) = &show_name {
         sql_where.push(format!("fact.show_name LIKE ${}", params.len() + 1));
@@ -203,13 +206,15 @@ async fn do_paginate(
     }
     if let Some(dim_rel_conf_dim_keys) = &dim_rel_conf_dim_keys {
         if !dim_rel_conf_dim_keys.is_empty() {
-            sql_where.push(format!(
-                "fact_col.dim_rel_conf_dim_key in ({})",
-                (0..dim_rel_conf_dim_keys.len()).map(|idx| format!("${}", params.len() + idx + 1)).collect::<Vec<String>>().join(",")
-            ));
+            sql_left = format!(
+                r#" LEFT JOIN (SELECT rel_conf_fact_key,COUNT(rel_conf_fact_key) FROM {table_col_name}  WHERE dim_rel_conf_dim_key IN ({}) GROUP BY rel_conf_fact_key HAVING COUNT(rel_conf_fact_key) = {}) AS fact_col ON fact.key = fact_col.rel_conf_fact_key"#,
+                (0..dim_rel_conf_dim_keys.len()).map(|idx| format!("${}", params.len() + idx + 1)).collect::<Vec<String>>().join(","),
+                dim_rel_conf_dim_keys.len()
+            );
             for dim_rel_conf_dim_key in dim_rel_conf_dim_keys {
                 params.push(Value::from(format!("{dim_rel_conf_dim_key}")));
             }
+            sql_where.push(format!("fact_col.rel_conf_fact_key IS NOT NULL"));
         }
     }
     if let Some(desc_by_create) = desc_by_create {
@@ -225,13 +230,14 @@ async fn do_paginate(
                 r#"SELECT t.*, count(*) OVER () AS total FROM (
 SELECT distinct fact.key as key, fact.show_name as show_name, fact.query_limit as query_limit, fact.remark as remark, fact.redirect_path as redirect_path, fact.is_online as is_online, fact.create_time as create_time, fact.update_time as update_time
 FROM {table_name} as fact
-left join {table_col_name} as fact_col on fact.key = fact_col.rel_conf_fact_key
+{}
 WHERE 
     {}
     {}
     ) as t
 LIMIT $1 OFFSET $2
 "#,
+                sql_left,
                 sql_where.join(" AND "),
                 if sql_order.is_empty() {
                     "".to_string()
@@ -345,6 +351,7 @@ async fn create_inst_table(
     let mut index = vec![];
     sql.push("key character varying NOT NULL".to_string());
     sql.push("own_paths character varying NOT NULL".to_string());
+    sql.push("ext jsonb NOT NULL".to_string());
     index.push(("own_paths".to_string(), "btree"));
     for fact_col_conf in fact_col_conf_set {
         if fact_col_conf.kind == StatsFactColKind::Dimension {

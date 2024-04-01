@@ -28,7 +28,7 @@ pub(crate) async fn add(fact_conf_key: &str, add_req: &StatsConfFactColAddReq, f
     if conn.count_by_sql(&format!("SELECT 1 FROM {conf_fact_table} WHERE key = $1"), vec![Value::from(fact_conf_key)]).await? == 0 {
         return Err(funs.err().conflict("fact_col_conf", "add", "The fact config not exists.", "409-spi-stats-fact-conf-not-exist"));
     }
-    if stats_pg_conf_fact_serv::online(fact_conf_key, &conn, ctx).await? {
+    if add_req.rel_external_id.is_none() && stats_pg_conf_fact_serv::online(fact_conf_key, &conn, ctx).await? {
         return Err(funs.err().conflict(
             "fact_col_conf",
             "add",
@@ -63,6 +63,7 @@ pub(crate) async fn add(fact_conf_key: &str, add_req: &StatsConfFactColAddReq, f
         Value::from(add_req.kind.to_string()),
         Value::from(fact_conf_key.to_string()),
         Value::from(add_req.remark.as_ref().unwrap_or(&"".to_string()).as_str()),
+        Value::from(add_req.rel_external_id.as_ref().unwrap_or(&"".to_string()).as_str()),
     ];
     if let Some(dim_rel_conf_dim_key) = &add_req.dim_rel_conf_dim_key {
         params.push(Value::from(dim_rel_conf_dim_key.to_string()));
@@ -103,9 +104,9 @@ pub(crate) async fn add(fact_conf_key: &str, add_req: &StatsConfFactColAddReq, f
     conn.execute_one(
         &format!(
             r#"INSERT INTO {table_name}
-(key, show_name, kind, rel_conf_fact_key, remark {})
+(key, show_name, kind, rel_conf_fact_key, remark, rel_external_id {})
 VALUES
-($1, $2, $3, $4, $5 {})
+($1, $2, $3, $4, $5, $6 {})
 "#,
             if sql_fields.is_empty() { "".to_string() } else { format!(",{}", sql_fields.join(",")) },
             if sql_fields.is_empty() {
@@ -142,6 +143,9 @@ pub(crate) async fn modify(
     }
     let mut sql_sets = vec![];
     let mut params = vec![Value::from(fact_col_conf_key.to_string()), Value::from(fact_conf_key.to_string())];
+    if let Some(rel_external_id) = &modify_req.rel_external_id {
+        params.push(Value::from(rel_external_id.to_string()));
+    }
     if let Some(show_name) = &modify_req.show_name {
         sql_sets.push(format!("show_name = ${}", params.len() + 1));
         params.push(Value::from(show_name.to_string()));
@@ -194,9 +198,14 @@ pub(crate) async fn modify(
         &format!(
             r#"UPDATE {table_name}
 SET {}
-WHERE key = $1 AND rel_conf_fact_key = $2
+WHERE key = $1 AND rel_conf_fact_key = $2 {}
 "#,
-            sql_sets.join(",")
+            sql_sets.join(","),
+            if modify_req.rel_external_id.is_none() {
+                "AND rel_external_id IS NULL"
+            } else {
+                "AND rel_external_id = $3"
+            }
         ),
         params,
     )
@@ -208,6 +217,7 @@ WHERE key = $1 AND rel_conf_fact_key = $2
 pub(crate) async fn delete(
     fact_conf_key: &str,
     fact_col_conf_key: Option<&str>,
+    rel_external_id: Option<String>,
     kind: Option<StatsFactColKind>,
     funs: &TardisFunsInst,
     ctx: &TardisContext,
@@ -216,7 +226,7 @@ pub(crate) async fn delete(
     let bs_inst = inst.inst::<TardisRelDBClient>();
     let (mut conn, table_name) = stats_pg_initializer::init_conf_fact_col_table_and_conn(bs_inst, ctx, true).await?;
     conn.begin().await?;
-    if stats_pg_conf_fact_serv::online(fact_conf_key, &conn, ctx).await? {
+    if rel_external_id.is_none() && stats_pg_conf_fact_serv::online(fact_conf_key, &conn, ctx).await? {
         return Err(funs.err().conflict(
             "fact_col_conf",
             "delete",
@@ -234,6 +244,13 @@ pub(crate) async fn delete(
         params.push(Value::from(kind.to_string()));
         where_clause.push_str(&format!(" AND kind = ${param_idx}", param_idx = params.len()));
     }
+    if let Some(rel_external_id) = rel_external_id {
+        where_clause.push_str(&format!(" AND rel_external_id = ${param_idx}", param_idx = params.len()));
+        params.push(Value::from(rel_external_id));
+    } else if fact_col_conf_key.is_some() {
+        where_clause.push_str(&format!(" AND rel_external_id = ${param_idx}", param_idx = params.len()));
+        params.push(Value::from("".to_string()));
+    }
     conn.execute_one(&format!("DELETE FROM {table_name} WHERE {where_clause}"), params).await?;
     conn.commit().await?;
     Ok(())
@@ -248,7 +265,7 @@ pub(in crate::serv::pg) async fn find_by_fact_conf_key(
     if !common_pg::check_table_exit("stats_conf_fact_col", conn, ctx).await? {
         return Ok(vec![]);
     }
-    do_paginate(Some(fact_conf_key.to_string()), None, None, None, 1, u32::MAX, None, None, conn, ctx).await.map(|page| page.records)
+    do_paginate(Some(fact_conf_key.to_string()), None, None, None, None, 1, u32::MAX, None, None, conn, ctx).await.map(|page| page.records)
 }
 
 pub(crate) async fn paginate(
@@ -256,6 +273,7 @@ pub(crate) async fn paginate(
     fact_col_conf_key: Option<String>,
     dim_key: Option<String>,
     show_name: Option<String>,
+    rel_external_id: Option<String>,
     page_number: u32,
     page_size: u32,
     desc_by_create: Option<bool>,
@@ -272,6 +290,7 @@ pub(crate) async fn paginate(
         fact_col_conf_key,
         dim_key,
         show_name,
+        rel_external_id,
         page_number,
         page_size,
         desc_by_create,
@@ -287,6 +306,7 @@ async fn do_paginate(
     fact_col_conf_key: Option<String>,
     dim_key: Option<String>,
     show_name: Option<String>,
+    rel_external_id: Option<String>,
     page_number: u32,
     page_size: u32,
     desc_by_create: Option<bool>,
@@ -314,6 +334,15 @@ async fn do_paginate(
         sql_where.push(format!("show_name LIKE ${}", params.len() + 1));
         params.push(Value::from(format!("%{show_name}%")));
     }
+    if let Some(rel_external_id) = &rel_external_id {
+        sql_where.push(format!("(rel_external_id = ${} OR rel_external_id = ${} )", params.len() + 1, params.len() + 2));
+        params.push(Value::from("".to_string()));
+        params.push(Value::from(rel_external_id));
+    } else {
+        sql_where.push(format!("rel_external_id = ${}", params.len() + 1));
+        params.push(Value::from("".to_string()));
+    }
+
     if let Some(desc_by_create) = desc_by_create {
         sql_order.push(format!("create_time {}", if desc_by_create { "DESC" } else { "ASC" }));
     }
@@ -324,7 +353,7 @@ async fn do_paginate(
     let result = conn
         .query_all(
             &format!(
-                r#"SELECT key, show_name, kind, remark, dim_rel_conf_dim_key, dim_multi_values, dim_exclusive_rec, mes_data_distinct, mes_data_type, mes_frequency, mes_unit, mes_act_by_dim_conf_keys, rel_conf_fact_and_col_key, create_time, update_time, count(*) OVER() AS total
+                r#"SELECT key, show_name, kind, remark, dim_rel_conf_dim_key, rel_external_id, dim_multi_values, dim_exclusive_rec, mes_data_distinct, mes_data_type, mes_frequency, mes_unit, mes_act_by_dim_conf_keys, rel_conf_fact_and_col_key, create_time, update_time, count(*) OVER() AS total
 FROM {table_name}
 WHERE 
     {}
@@ -367,6 +396,7 @@ WHERE
                 remark: item.try_get("", "remark")?,
                 create_time: item.try_get("", "create_time")?,
                 update_time: item.try_get("", "update_time")?,
+                rel_external_id: item.try_get("", "rel_external_id")?,
             })
         })
         .collect::<TardisResult<_>>()?;

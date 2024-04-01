@@ -401,8 +401,9 @@ impl IamIdentCacheServ {
         let result = funs
             .cache()
             .get(&format!(
-                "{}count:{}:{}:{}:cumulative-count",
+                "{}{}:{}:{}:{}:cumulative-count",
                 funs.conf::<IamConfig>().cache_key_gateway_rule_info_,
+                iam_constants::OPENAPI_GATEWAY_PLUGIN_COUNT,
                 match_method.unwrap_or("*"),
                 match_path,
                 ak
@@ -523,6 +524,7 @@ impl IamResCacheServ {
             groups: format!("#{}#", add_or_modify_req.groups.join("#")),
             apps: format!("#{}#", add_or_modify_req.apps.join("#")),
             tenants: format!("#{}#", add_or_modify_req.tenants.join("#")),
+            aks: format!("#{}#", add_or_modify_req.aks.join("#")),
             ..Default::default()
         };
         let mut res_dto = IamCacheResRelAddOrModifyDto {
@@ -543,6 +545,7 @@ impl IamResCacheServ {
                 res_auth.groups = format!("{}{}", res_auth.groups, old_auth.groups);
                 res_auth.apps = format!("{}{}", res_auth.apps, old_auth.apps);
                 res_auth.tenants = format!("{}{}", res_auth.tenants, old_auth.tenants);
+                res_auth.aks = format!("{}{}", res_auth.aks, old_auth.aks);
             }
 
             if let Some(need_crypto_req) = add_or_modify_req.need_crypto_req {
@@ -571,12 +574,14 @@ impl IamResCacheServ {
         res_auth.groups = res_auth.groups.replace("##", "#");
         res_auth.apps = res_auth.apps.replace("##", "#");
         res_auth.tenants = res_auth.tenants.replace("##", "#");
+        res_auth.aks = res_auth.aks.replace("##", "#");
 
         if (res_auth.accounts == "#" || res_auth.accounts == "##")
             && (res_auth.roles == "#" || res_auth.roles == "##")
             && (res_auth.groups == "#" || res_auth.groups == "##")
             && (res_auth.apps == "#" || res_auth.apps == "##")
             && (res_auth.tenants == "#" || res_auth.tenants == "##")
+            && (res_auth.aks == "#" || res_auth.aks == "##")
         {
             res_dto.auth = None;
         } else {
@@ -618,6 +623,11 @@ impl IamResCacheServ {
                 for tenant in &delete_req.tenants {
                     while auth.tenants.contains(&format!("#{tenant}#")) {
                         auth.tenants = auth.tenants.replacen(&format!("#{tenant}#"), "#", 1);
+                    }
+                }
+                for ak in &delete_req.aks {
+                    while auth.aks.contains(&format!("#{ak}#")) {
+                        auth.aks = auth.aks.replacen(&format!("#{ak}#"), "#", 1);
                     }
                 }
                 if (auth.accounts == "#" || auth.accounts == "##")
@@ -679,6 +689,7 @@ struct IamCacheResAuth {
     pub groups: String,
     pub apps: String,
     pub tenants: String,
+    pub aks: String,
     pub st: Option<i64>,
     pub et: Option<i64>,
 }
@@ -691,6 +702,7 @@ pub struct IamCacheResRelAddOrModifyReq {
     pub groups: Vec<String>,
     pub apps: Vec<String>,
     pub tenants: Vec<String>,
+    pub aks: Vec<String>,
     pub need_crypto_req: Option<bool>,
     pub need_crypto_resp: Option<bool>,
     pub need_double_auth: Option<bool>,
@@ -704,4 +716,5 @@ pub struct IamCacheResRelDeleteReq {
     pub groups: Vec<String>,
     pub apps: Vec<String>,
     pub tenants: Vec<String>,
+    pub aks: Vec<String>,
 }

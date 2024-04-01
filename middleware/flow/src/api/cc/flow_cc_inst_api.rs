@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use tardis::web::context_extractor::TardisContextExtractor;
+use tardis::web::poem::Request;
 use tardis::web::poem_openapi;
 use tardis::web::poem_openapi::param::{Path, Query};
 use tardis::web::poem_openapi::payload::Json;
@@ -21,7 +22,7 @@ pub struct FlowCcInstApi;
 impl FlowCcInstApi {
     /// Start Instance / 启动实例
     #[oai(path = "/", method = "post")]
-    async fn start(&self, add_req: Json<FlowInstStartReq>, ctx: TardisContextExtractor) -> TardisApiResult<String> {
+    async fn start(&self, add_req: Json<FlowInstStartReq>, ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<String> {
         let mut funs = flow_constants::get_tardis_inst();
         funs.begin().await?;
         let result = FlowInstServ::start(&add_req.0, None, &funs, &ctx.0).await?;
@@ -31,7 +32,7 @@ impl FlowCcInstApi {
 
     /// Abort Instance / 中止实例
     #[oai(path = "/:flow_inst_id", method = "put")]
-    async fn abort(&self, flow_inst_id: Path<String>, abort_req: Json<FlowInstAbortReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+    async fn abort(&self, flow_inst_id: Path<String>, abort_req: Json<FlowInstAbortReq>, ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<Void> {
         let mut funs = flow_constants::get_tardis_inst();
         funs.begin().await?;
         FlowInstServ::abort(&flow_inst_id.0, &abort_req.0, &funs, &ctx.0).await?;
@@ -41,7 +42,7 @@ impl FlowCcInstApi {
 
     /// Get Instance By Instance Id / 获取实例信息
     #[oai(path = "/:flow_inst_id", method = "get")]
-    async fn get(&self, flow_inst_id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<FlowInstDetailResp> {
+    async fn get(&self, flow_inst_id: Path<String>, ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<FlowInstDetailResp> {
         let funs = flow_constants::get_tardis_inst();
         let result = FlowInstServ::get(&flow_inst_id.0, &funs, &ctx.0).await?;
         TardisResp::ok(result)
@@ -58,6 +59,7 @@ impl FlowCcInstApi {
         page_number: Query<u32>,
         page_size: Query<u32>,
         ctx: TardisContextExtractor,
+        _request: &Request,
     ) -> TardisApiResult<TardisPage<FlowInstSummaryResp>> {
         let funs = flow_constants::get_tardis_inst();
         let result = FlowInstServ::paginate(flow_model_id.0, tag.0, finish.0, with_sub.0, page_number.0, page_size.0, &funs, &ctx.0).await?;
@@ -71,6 +73,7 @@ impl FlowCcInstApi {
         flow_inst_id: Path<String>,
         next_req: Json<FlowInstFindNextTransitionsReq>,
         ctx: TardisContextExtractor,
+        _request: &Request,
     ) -> TardisApiResult<Vec<FlowInstFindNextTransitionResp>> {
         let funs = flow_constants::get_tardis_inst();
         let result = FlowInstServ::find_next_transitions(&flow_inst_id.0, &next_req.0, &funs, &ctx.0).await?;
@@ -83,6 +86,7 @@ impl FlowCcInstApi {
         &self,
         find_req: Json<Vec<FlowInstFindStateAndTransitionsReq>>,
         ctx: TardisContextExtractor,
+        _request: &Request,
     ) -> TardisApiResult<Vec<FlowInstFindStateAndTransitionsResp>> {
         let funs = flow_constants::get_tardis_inst();
         let result = FlowInstServ::find_state_and_next_transitions(&find_req.0, &funs, &ctx.0).await?;
@@ -91,7 +95,13 @@ impl FlowCcInstApi {
 
     /// Transfer State By State Id / 流转
     #[oai(path = "/:flow_inst_id/transition/transfer", method = "put")]
-    async fn transfer(&self, flow_inst_id: Path<String>, transfer_req: Json<FlowInstTransferReq>, ctx: TardisContextExtractor) -> TardisApiResult<FlowInstTransferResp> {
+    async fn transfer(
+        &self,
+        flow_inst_id: Path<String>,
+        transfer_req: Json<FlowInstTransferReq>,
+        ctx: TardisContextExtractor,
+        _request: &Request,
+    ) -> TardisApiResult<FlowInstTransferResp> {
         let mut funs = flow_constants::get_tardis_inst();
         let mut transfer = transfer_req.0;
         FlowInstServ::check_transfer_vars(&flow_inst_id.0, &mut transfer, &funs, &ctx.0).await?;
@@ -108,6 +118,7 @@ impl FlowCcInstApi {
         flow_inst_ids: Path<String>,
         transfer_req: Json<FlowInstTransferReq>,
         ctx: TardisContextExtractor,
+        _request: &Request,
     ) -> TardisApiResult<Vec<FlowInstTransferResp>> {
         let mut funs = flow_constants::get_tardis_inst();
         let mut result = vec![];
@@ -129,7 +140,13 @@ impl FlowCcInstApi {
 
     /// Modify Assigned / 同步执行人信息
     #[oai(path = "/:flow_inst_id/transition/modify_assigned", method = "post")]
-    async fn modify_assigned(&self, flow_inst_id: Path<String>, modify_req: Json<FlowInstModifyAssignedReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+    async fn modify_assigned(
+        &self,
+        flow_inst_id: Path<String>,
+        modify_req: Json<FlowInstModifyAssignedReq>,
+        ctx: TardisContextExtractor,
+        _request: &Request,
+    ) -> TardisApiResult<Void> {
         let mut funs = flow_constants::get_tardis_inst();
         funs.begin().await?;
         FlowInstServ::modify_assigned(&flow_inst_id.0, &modify_req.0.current_assigned, &funs, &ctx.0).await?;
@@ -139,7 +156,13 @@ impl FlowCcInstApi {
 
     /// Modify list of variables / 同步当前变量列表
     #[oai(path = "/:flow_inst_id/modify_current_vars", method = "patch")]
-    async fn modify_current_vars(&self, flow_inst_id: Path<String>, modify_req: Json<FlowInstModifyCurrentVarsReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+    async fn modify_current_vars(
+        &self,
+        flow_inst_id: Path<String>,
+        modify_req: Json<FlowInstModifyCurrentVarsReq>,
+        ctx: TardisContextExtractor,
+        _request: &Request,
+    ) -> TardisApiResult<Void> {
         let mut funs = flow_constants::get_tardis_inst();
         funs.begin().await?;
         FlowInstServ::modify_current_vars(&flow_inst_id.0, &modify_req.0.vars, &funs, &ctx.0).await?;

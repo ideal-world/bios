@@ -11,7 +11,7 @@ use bios_basic::rbum::{
 };
 use serde::{Deserialize, Serialize};
 
-use tardis::db::sea_orm::strum::Display;
+use strum::Display;
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
     chrono::{Duration, Utc},

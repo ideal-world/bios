@@ -1,0 +1,51 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "SgFilterAuditLog",
+  "type": "object",
+  "properties": {
+    "enabled": {
+      "default": false,
+      "type": "boolean"
+    },
+    "exclude_log_path": {
+      "description": "Exclude log path exact match.",
+      "default": [
+        "/starsysApi/apis"
+      ],
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "header_token_name": {
+      "default": "Bios-Token",
+      "type": "string"
+    },
+    "log_url": {
+      "default": "",
+      "type": "string"
+    },
+    "spi_app_id": {
+      "default": "",
+      "type": "string"
+    },
+    "success_json_path": {
+      "default": "$.code",
+      "type": "string"
+    },
+    "success_json_path_values": {
+      "default": [
+        "200",
+        "201"
+      ],
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "tag": {
+      "default": "gateway",
+      "type": "string"
+    }
+  }
+}
