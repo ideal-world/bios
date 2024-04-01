@@ -136,7 +136,7 @@ async fn ident(req: &mut AuthReq, config: &AuthConfig, cache_client: &TardisCach
             roles: None,
             groups: None,
             own_paths: Some(own_paths),
-            ak: Some(ak_authorization.to_string()),
+            ak: Some(ak.to_string()),
         })
     } else if let Some(ak_authorization) = get_webhook_ak_key(req, config) {
         let (req_date, ak, signature) = self::parsing_base_ak(&ak_authorization, req, config, true).await?;
@@ -189,7 +189,7 @@ async fn ident(req: &mut AuthReq, config: &AuthConfig, cache_client: &TardisCach
                 roles: Some(roles),
                 groups: Some(context.groups),
                 own_paths: Some(own_paths.to_string()),
-                ak: Some(ak_authorization.to_string()),
+                ak: Some(ak.to_string()),
             })
         } else {
             Err(TardisError::forbidden(
