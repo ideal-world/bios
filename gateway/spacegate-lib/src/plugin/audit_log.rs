@@ -1,8 +1,7 @@
 use std::collections::HashMap;
 
 use std::str::FromStr;
-use std::sync::Arc;
-use std::time::{Duration, Instant};
+use std::time::Instant;
 
 use bios_sdk_invoke::clients::spi_log_client;
 use bios_sdk_invoke::invoke_config::InvokeConfig;
@@ -31,9 +30,9 @@ use tardis::{
     TardisFuns, TardisFunsInst,
 };
 
-use crate::extension::audit_log_param::AuditLogParam;
+use crate::extension::audit_log_param::{AuditLogParam, LogParamContent};
 use crate::extension::before_encrypt_body::BeforeEncryptBody;
-use crate::extension::cert_info::{CertInfo, RoleInfo};
+use crate::extension::cert_info::CertInfo;
 
 pub const CODE: &str = "audit_log";
 
@@ -138,6 +137,7 @@ impl AuditLogPlugin {
             server_timing: start_time.map(|st| end_time - st),
             resp_status: resp.status().as_u16().to_string(),
             success,
+            own_paths: resp.extensions().get::<CertInfo>().and_then(|info| info.own_paths.clone()),
         };
         Ok((resp, Some(content)))
     }
@@ -286,27 +286,12 @@ fn get_tardis_inst() -> TardisFunsInst {
     TardisFuns::inst(CODE.to_string(), None)
 }
 
-#[derive(Serialize, Deserialize)]
-pub struct LogParamContent {
-    pub op: String,
-    pub name: String,
-    pub user_id: Option<String>,
-    pub role: Vec<RoleInfo>,
-    pub ip: String,
-    pub path: String,
-    pub scheme: String,
-    pub token: Option<String>,
-    pub server_timing: Option<Duration>,
-    pub resp_status: String,
-    //Indicates whether the business operation was successful.
-    pub success: bool,
-}
-
 impl LogParamContent {
     fn to_value(&self) -> Value {
         json!({
             "name":self.name,
             "id":self.user_id,
+            "own_paths":self.own_paths,
             "ip":self.ip,
             "op":self.op,
             "path":self.path,
@@ -316,7 +301,6 @@ impl LogParamContent {
         })
     }
 }
-
 #[cfg(test)]
 mod test {
     use http::{HeaderName, Request, Response};
