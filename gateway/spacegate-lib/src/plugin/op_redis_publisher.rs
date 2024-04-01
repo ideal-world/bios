@@ -71,14 +71,18 @@ impl Plugin for RedisPublisherPlugin {
 
         for ext_enum in &self.form_requset_extensions {
             if let Some(mut ext) = ext_enum.to_value(req.extensions())? {
-                value.extend(ext.as_object_mut().unwrap().into_iter().map(|(k, v)| (k.clone(), v.clone())));
+                if let Some(ext) = ext.as_object_mut() {
+                    value.extend(ext.into_iter().map(|(k, v)| (k.clone(), v.clone())));
+                }
             }
         }
         let resp = inner.call(req).await;
 
         for ext_enum in &self.form_response_extensions {
             if let Some(mut ext) = ext_enum.to_value(resp.extensions())? {
-                value.extend(ext.as_object_mut().unwrap().into_iter().map(|(k, v)| (k.clone(), v.clone())));
+                if let Some(ext) = ext.as_object_mut() {
+                    value.extend(ext.into_iter().map(|(k, v)| (k.clone(), v.clone())));
+                }
             }
         }
 
@@ -109,7 +113,7 @@ impl Plugin for RedisPublisherPlugin {
 
 impl RedisPublisherPlugin {
     fn parse_spec_id(req: &SgRequest) -> Option<String> {
-        let segments: Vec<_> = req.uri().path().split("/").collect();
+        let segments: Vec<_> = req.uri().path().split('/').collect();
         //找到segment为op-api的下一个segment就是spec_id
         if let Some(index) = segments.iter().position(|&seg| seg == "op-api") {
             // 确保 "op-api" 后面还有段

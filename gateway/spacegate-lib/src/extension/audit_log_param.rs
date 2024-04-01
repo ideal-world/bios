@@ -2,7 +2,6 @@ use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
 use spacegate_shell::{hyper::HeaderMap, kernel::extension::ExtensionPack};
-use tardis::serde_json::{json, Value};
 
 use super::cert_info::RoleInfo;
 
