@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use bios_basic::helper::bios_ctx_helper::unsafe_fill_ctx;
+use tardis::log::debug;
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem::web::Path;
 use tardis::web::poem::Request;
@@ -10,7 +11,10 @@ use tardis::web::web_resp::{TardisApiResult, TardisResp, Void};
 use tardis::{log, tokio};
 
 use crate::dto::flow_external_dto::FlowExternalCallbackOp;
-use crate::dto::flow_inst_dto::{FlowInstAbortReq, FlowInstBatchBindReq, FlowInstBatchBindResp, FlowInstBindReq, FlowInstDetailResp, FlowInstFindStateAndTransitionsReq, FlowInstFindStateAndTransitionsResp, FlowInstModifyAssignedReq, FlowInstModifyCurrentVarsReq, FlowInstStartReq, FlowInstTransferReq, FlowInstTransferResp};
+use crate::dto::flow_inst_dto::{
+    FlowInstAbortReq, FlowInstBatchBindReq, FlowInstBatchBindResp, FlowInstBindReq, FlowInstDetailResp, FlowInstFindStateAndTransitionsReq, FlowInstFindStateAndTransitionsResp,
+    FlowInstModifyAssignedReq, FlowInstModifyCurrentVarsReq, FlowInstStartReq, FlowInstTransferReq, FlowInstTransferResp,
+};
 use crate::flow_constants;
 use crate::serv::flow_inst_serv::FlowInstServ;
 #[derive(Clone)]
@@ -94,6 +98,7 @@ impl FlowCiInstApi {
     ) -> TardisApiResult<Vec<FlowInstTransferResp>> {
         let mut funs = flow_constants::get_tardis_inst();
         unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
+        debug!("batch transfer request: {:?}", request);
         let mut result = vec![];
         let flow_inst_ids: Vec<_> = flow_inst_ids.split(',').collect();
         let raw_transfer_req = transfer_req.0;
