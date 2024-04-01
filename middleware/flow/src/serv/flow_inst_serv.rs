@@ -1042,7 +1042,7 @@ impl FlowInstServ {
                                                 }
                                             }
                                             crate::dto::flow_var_dto::DefaultValueType::AutoFill => {
-                                                match FillType::from_str(&default.value.as_str().ok_or(funs.err().bad_request(
+                                                match FillType::from_str(default.value.as_str().ok_or(funs.err().bad_request(
                                                     "flow_transitions",
                                                     "default_value_type_parse",
                                                     "AutoFill default value type is not string",
