@@ -1,7 +1,8 @@
 use std::collections::HashMap;
 
 use std::str::FromStr;
-use std::time::Instant;
+use std::sync::Arc;
+use std::time::{Duration, Instant};
 
 use bios_sdk_invoke::clients::spi_log_client;
 use bios_sdk_invoke::invoke_config::InvokeConfig;
@@ -134,7 +135,7 @@ impl AuditLogPlugin {
             path: param.request_path,
             scheme: param.request_scheme,
             token: param.request_headers.get(&self.header_token_name).and_then(|v| v.to_str().ok().map(|v| v.to_string())),
-            server_timing: start_time.map(|st| (end_time - st).as_millis() as i64),
+            server_timing: start_time.map(|st| end_time - st),
             resp_status: resp.status().as_u16().to_string(),
             success,
         };
@@ -182,6 +183,7 @@ impl AuditLogPlugin {
             } else {
                 reflect.insert(CertInfo {
                     id: ident,
+                    own_paths: None,
                     name: None,
                     roles: vec![],
                 });
@@ -294,7 +296,7 @@ pub struct LogParamContent {
     pub path: String,
     pub scheme: String,
     pub token: Option<String>,
-    pub server_timing: Option<i64>,
+    pub server_timing: Option<Duration>,
     pub resp_status: String,
     //Indicates whether the business operation was successful.
     pub success: bool,
@@ -309,6 +311,7 @@ impl LogParamContent {
             "op":self.op,
             "path":self.path,
             "resp_status": self.resp_status,
+            "server_timing":self.server_timing,
             "success":self.success,
         })
     }

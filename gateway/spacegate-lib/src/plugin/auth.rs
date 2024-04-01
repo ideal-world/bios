@@ -407,6 +407,7 @@ fn success_auth_result_to_req(auth_result: AuthResult, config: &AuthConfig, req:
     let (mut parts, mut body) = req.into_parts();
     let cert_info = CertInfo {
         id: auth_result.ctx.as_ref().and_then(|ctx| ctx.account_id.clone().or(ctx.ak.clone())).unwrap_or_default(),
+        own_paths: auth_result.ctx.as_ref().and_then(|ctx| ctx.own_paths.clone()),
         name: None,
         roles: auth_result
             .ctx
