@@ -8,7 +8,7 @@ use tardis::web::poem_openapi::param::{Path, Query};
 use tardis::web::poem_openapi::payload::Json;
 use tardis::web::web_resp::{TardisApiResult, TardisResp, Void};
 
-use crate::basic::dto::iam_open_dto::{IamOpenAddProductReq, IamOpenAkSkAddReq, IamOpenAkSkResp, IamOpenBindAkProductReq, IamOpenRuleResp};
+use crate::basic::dto::iam_open_dto::{IamOpenAddOrModifyProductReq, IamOpenAkSkAddReq, IamOpenAkSkResp, IamOpenBindAkProductReq, IamOpenRuleResp};
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_open_serv::IamOpenServ;
 use crate::iam_constants;
@@ -21,13 +21,13 @@ pub struct IamCiOpenApi;
 #[poem_openapi::OpenApi(prefix_path = "/ci/open", tag = "bios_basic::ApiTag::Interface")]
 impl IamCiOpenApi {
     /// Add product / 添加产品
-    #[oai(path = "/add_product", method = "post")]
-    async fn add_product(&self, add_req: Json<IamOpenAddProductReq>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
+    #[oai(path = "/add_or_modify_product", method = "post")]
+    async fn add_or_modify_product(&self, req: Json<IamOpenAddOrModifyProductReq>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
         unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         add_remote_ip(request, &ctx.0).await?;
         funs.begin().await?;
-        IamOpenServ::add_product(&add_req.0, &funs, &ctx.0).await?;
+        IamOpenServ::add_or_modify_product(&req.0, &funs, &ctx.0).await?;
         funs.commit().await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void {})

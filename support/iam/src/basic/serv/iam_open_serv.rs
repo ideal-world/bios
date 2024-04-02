@@ -30,8 +30,8 @@ use crate::{
         iam_cert_conf_dto::IamCertConfAkSkAddOrModifyReq,
         iam_cert_dto::IamCertAkSkAddReq,
         iam_filer_dto::IamResFilterReq,
-        iam_open_dto::{IamOpenAddProductReq, IamOpenAkSkAddReq, IamOpenAkSkResp, IamOpenBindAkProductReq, IamOpenRuleResp},
-        iam_res_dto::IamResAddReq,
+        iam_open_dto::{IamOpenAddOrModifyProductReq, IamOpenAkSkAddReq, IamOpenAkSkResp, IamOpenBindAkProductReq, IamOpenRuleResp},
+        iam_res_dto::{IamResAddReq, IamResDetailResp, IamResModifyReq},
     },
     iam_config::IamConfig,
     iam_constants::{OPENAPI_GATEWAY_PLUGIN_COUNT, OPENAPI_GATEWAY_PLUGIN_DYNAMIC_ROUTE, OPENAPI_GATEWAY_PLUGIN_LIMIT, OPENAPI_GATEWAY_PLUGIN_TIME_RANGE},
@@ -46,7 +46,81 @@ use super::{
 pub struct IamOpenServ;
 
 impl IamOpenServ {
-    pub async fn add_product(add_req: &IamOpenAddProductReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    pub async fn add_or_modify_product(req: &IamOpenAddOrModifyProductReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        if let Some(product) = Self::get_res_detail(req.code.as_str(), IamResKind::Product, funs, ctx).await? {
+            Self::modify_product(req, &product, funs, ctx).await?;
+        } else {
+            Self::add_product(req, funs, ctx).await?;
+        }
+        Ok(())
+    }
+
+    async fn modify_product(modify_req: &IamOpenAddOrModifyProductReq, product: &IamResDetailResp, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        IamResServ::modify_item(
+            &product.id,
+            &mut IamResModifyReq {
+                name: Some(modify_req.name.clone()),
+                icon: modify_req.icon.clone(),
+                scope_level: modify_req.scope_level.clone(),
+                disabled: modify_req.disabled,
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?;
+        for spec_req in &modify_req.specifications {
+            if let Some(spec) = Self::get_res_detail(spec_req.code.as_str(), IamResKind::Spec, funs, ctx).await? {
+                IamResServ::modify_item(
+                    &spec.id,
+                    &mut IamResModifyReq {
+                        name: Some(spec_req.name.clone()),
+                        icon: spec_req.icon.clone(),
+                        scope_level: spec_req.scope_level.clone(),
+                        disabled: spec_req.disabled,
+                        ..Default::default()
+                    },
+                    funs,
+                    ctx,
+                )
+                .await?;
+            } else {
+                let spec_id = IamResServ::add_item(
+                    &mut IamResAddReq {
+                        code: spec_req.code.clone(),
+                        name: spec_req.name.clone(),
+                        kind: IamResKind::Spec,
+                        scope_level: spec_req.scope_level.clone(),
+                        disabled: spec_req.disabled,
+                        ..Default::default()
+                    },
+                    funs,
+                    ctx,
+                )
+                .await?;
+                IamRelServ::add_simple_rel(&IamRelKind::IamProductSpec, &product.id, &spec_id, None, None, false, false, funs, ctx).await?;
+            }
+        }
+        Ok(())
+    }
+
+    async fn get_res_detail(code: &str, kind: IamResKind, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<IamResDetailResp>> {
+        IamResServ::find_one_detail_item(
+            &IamResFilterReq {
+                basic: RbumBasicFilterReq {
+                    code: Some(format!("{}/*/{}", kind.to_int(), code)),
+                    ..Default::default()
+                },
+                kind: Some(kind),
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await
+    }
+
+    async fn add_product(add_req: &IamOpenAddOrModifyProductReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let product_id = IamResServ::add_item(
             &mut IamResAddReq {
                 code: add_req.code.clone(),
