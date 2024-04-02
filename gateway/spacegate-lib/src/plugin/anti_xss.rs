@@ -1,11 +1,11 @@
-use std::{fmt, sync::Arc};
+use std::fmt;
 
 use serde::{Deserialize, Serialize};
 use spacegate_shell::{
     hyper::{header, Response},
-    kernel::helper_layers::map_response::MapResponseLayer,
-    plugin::{def_plugin, MakeSgLayer},
-    BoxError, SgBody, SgBoxLayer,
+    kernel::helper_layers::function::Inner,
+    plugin::Plugin,
+    BoxError, SgBody,
 };
 
 macro_rules! append_value {
@@ -16,15 +16,15 @@ macro_rules! append_value {
     };
 }
 
-def_plugin!("anti_xss", AntiXssPlugin, SgFilterAntiXSS);
 #[cfg(feature = "schema")]
 use spacegate_plugin::schemars;
+use tardis::serde_json;
 #[cfg(feature = "schema")]
 spacegate_plugin::schema!(AntiXssPlugin, SgFilterAntiXSS);
 #[derive(Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default)]
-pub struct SgFilterAntiXSS {
+pub struct AntiXssConfig {
     csp_config: CSPConfig,
 }
 
@@ -150,23 +150,37 @@ impl fmt::Display for SandBoxValue {
     }
 }
 
-impl MakeSgLayer for SgFilterAntiXSS {
-    fn make_layer(&self) -> Result<SgBoxLayer, BoxError> {
-        let header = Arc::new(header::HeaderValue::from_str(&self.csp_config.to_string_header_value())?);
+pub struct AntiXssPlugin {
+    csp_config: CSPConfig,
+    header: header::HeaderValue,
+}
+
+impl Plugin for AntiXssPlugin {
+    const CODE: &'static str = "anti-xss";
+    fn create(plugin_config: spacegate_shell::plugin::PluginConfig) -> Result<Self, BoxError> {
+        let config: AntiXssConfig = serde_json::from_value(plugin_config.spec)?;
+        let header = header::HeaderValue::from_str(&config.csp_config.to_string_header_value())?;
+        Ok(AntiXssPlugin {
+            csp_config: config.csp_config,
+            header,
+        })
+    }
+    async fn call(&self, req: http::Request<SgBody>, inner: Inner) -> Result<Response<SgBody>, BoxError> {
         let report_only = self.csp_config.report_only;
-        Ok(SgBoxLayer::new(MapResponseLayer::new(move |mut resp: Response<SgBody>| {
-            let mut enable = false;
-            if let Some(content_type) = resp.headers().get(header::CONTENT_TYPE) {
-                enable = content_type.eq("text/html") || content_type.eq("text/css") || content_type.eq("application/javascript") || content_type.eq("application/x-javascript");
-            };
-            if enable {
-                if report_only {
-                    let _ = resp.headers_mut().append(header::CONTENT_SECURITY_POLICY_REPORT_ONLY, header.as_ref().clone());
-                } else {
-                    let _ = resp.headers_mut().append(header::CONTENT_SECURITY_POLICY, header.as_ref().clone());
-                }
+        let mut resp = inner.call(req).await;
+        let header = &self.header;
+
+        let mut enable = false;
+        if let Some(content_type) = resp.headers().get(header::CONTENT_TYPE) {
+            enable = content_type.eq("text/html") || content_type.eq("text/css") || content_type.eq("application/javascript") || content_type.eq("application/x-javascript");
+        };
+        if enable {
+            if report_only {
+                let _ = resp.headers_mut().append(header::CONTENT_SECURITY_POLICY_REPORT_ONLY, header.clone());
+            } else {
+                let _ = resp.headers_mut().append(header::CONTENT_SECURITY_POLICY, header.clone());
             }
-            resp
-        })))
+        }
+        Ok(resp)
     }
 }

@@ -3,18 +3,18 @@ use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
 use spacegate_shell::hyper::{Request, Response, StatusCode};
-use spacegate_shell::kernel::extension::{PeerAddr, Reflect};
-use spacegate_shell::kernel::helper_layers::bidirection_filter::{Bdf, BdfLayer, BoxReqFut, BoxRespFut};
-use spacegate_shell::plugin::{def_plugin, MakeSgLayer, PluginError};
+use spacegate_shell::kernel::extension::PeerAddr;
+use spacegate_shell::kernel::helper_layers::function::Inner;
+use spacegate_shell::plugin::{Plugin, PluginError};
 use spacegate_shell::spacegate_ext_redis::{redis::AsyncCommands, RedisClient};
-use spacegate_shell::{SgBody, SgBoxLayer, SgRequestExt, SgResponseExt};
+use spacegate_shell::{BoxError, SgBody, SgRequestExt, SgResponseExt};
 
+use tardis::serde_json;
 use tardis::{
     basic::result::TardisResult,
     tokio::{self},
 };
 
-def_plugin!("anti_replay", AntiReplayPlugin, SgFilterAntiReplay);
 #[cfg(feature = "schema")]
 use spacegate_plugin::schemars;
 #[cfg(feature = "schema")]
@@ -22,16 +22,16 @@ spacegate_plugin::schema!(AntiReplayPlugin, SgFilterAntiReplay);
 #[derive(Serialize, Deserialize, Clone)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default)]
-pub struct SgFilterAntiReplay {
+pub struct AntiReplayPlugin {
     cache_key: String,
     // millisecond
     time: u64,
 }
 
-impl Default for SgFilterAntiReplay {
+impl Default for AntiReplayPlugin {
     fn default() -> Self {
         Self {
-            cache_key: "sg:plugin:anti_replay".to_string(),
+            cache_key: "sg:plugin:anti_replay".into(),
             time: 5000,
         }
     }
@@ -41,44 +41,6 @@ impl Default for SgFilterAntiReplay {
 pub struct AntiReplayDigest {
     md5: Arc<str>,
     client: RedisClient,
-}
-
-impl Bdf for SgFilterAntiReplay {
-    type FutureReq = BoxReqFut;
-    type FutureResp = BoxRespFut;
-    fn on_req(self: Arc<Self>, mut req: Request<SgBody>) -> Self::FutureReq {
-        Box::pin(async move {
-            if let Some(client) = req.get_redis_client_by_gateway_name() {
-                let md5 = get_md5(&req).map_err(PluginError::internal_error::<AntiReplayPlugin>)?;
-                let digest = AntiReplayDigest {
-                    md5: Arc::from(md5),
-                    client: client.clone(),
-                };
-                if get_status(&digest.md5, &self.cache_key, &client).await.map_err(PluginError::internal_error::<AntiReplayPlugin>)? {
-                    return Err(Response::with_code_message(
-                        StatusCode::TOO_MANY_REQUESTS,
-                        "[SG.Plugin.Anti_Replay] Request denied due to replay attack. Please refresh and resubmit the request.",
-                    ));
-                } else {
-                    set_status(&digest.md5, &self.cache_key, true, &client).await.map_err(PluginError::internal_error::<AntiReplayPlugin>)?;
-                }
-                req.extensions_mut().get_mut::<Reflect>().expect("missing reflect").insert(digest);
-            }
-            Ok(req)
-        })
-    }
-    fn on_resp(self: Arc<Self>, resp: Response<SgBody>) -> Self::FutureResp {
-        Box::pin(async move {
-            if let Some(digest) = resp.extensions().get::<AntiReplayDigest>() {
-                let digest = digest.clone();
-                tokio::spawn(async move {
-                    tokio::time::sleep(Duration::from_millis(self.time)).await;
-                    let _ = set_status(&digest.md5, self.cache_key.as_ref(), false, &digest.client).await;
-                });
-            }
-            resp
-        })
-    }
 }
 
 fn get_md5(req: &Request<SgBody>) -> TardisResult<String> {
@@ -120,9 +82,39 @@ async fn get_status(md5: &str, cache_key: &str, cache_client: &RedisClient) -> T
     Ok(status1 && status2)
 }
 
-impl MakeSgLayer for SgFilterAntiReplay {
-    fn make_layer(&self) -> Result<spacegate_shell::SgBoxLayer, spacegate_shell::BoxError> {
-        Ok(SgBoxLayer::new(BdfLayer::new(self.clone())))
+impl Plugin for AntiReplayPlugin {
+    const CODE: &'static str = "anti-replay";
+    fn create(plugin_config: spacegate_shell::plugin::PluginConfig) -> Result<Self, BoxError> {
+        let config: AntiReplayPlugin = serde_json::from_value(plugin_config.spec)?;
+        Ok(config)
+    }
+    async fn call(&self, req: Request<SgBody>, inner: Inner) -> Result<Response<SgBody>, BoxError> {
+        if let Some(client) = req.get_redis_client_by_gateway_name() {
+            let md5 = get_md5(&req).map_err(PluginError::internal_error::<AntiReplayPlugin>)?;
+            let digest = AntiReplayDigest {
+                md5: Arc::from(md5),
+                client: client.clone(),
+            };
+            if get_status(&digest.md5, &self.cache_key, &client).await.map_err(PluginError::internal_error::<AntiReplayPlugin>)? {
+                return Ok(Response::with_code_message(
+                    StatusCode::TOO_MANY_REQUESTS,
+                    "[SG.Plugin.Anti_Replay] Request denied due to replay attack. Please refresh and resubmit the request.",
+                ));
+            } else {
+                set_status(&digest.md5, &self.cache_key, true, &client).await.map_err(PluginError::internal_error::<AntiReplayPlugin>)?;
+            }
+            let resp = inner.call(req).await;
+            let time = self.time;
+            let cache_key = self.cache_key.clone();
+            tokio::spawn(async move {
+                tokio::time::sleep(Duration::from_millis(time)).await;
+                let _ = set_status(&digest.md5, cache_key.as_ref(), false, &digest.client).await;
+            });
+            Ok(resp)
+        } else {
+            let resp = inner.call(req).await;
+            Ok(resp)
+        }
     }
 }
 
