@@ -69,9 +69,10 @@ impl IamCcAccountTaskServ {
                 }
                 Ok(())
             },
-            funs,
+            &funs.cache(),
             ws_iam_send_client().await.clone(),
             default_iam_send_avatar().await.clone(),
+            Some(vec![format!("account/{}", ctx.owner)]),
             ctx,
         )
         .await?;
@@ -139,9 +140,10 @@ impl IamCcAccountTaskServ {
                 task_ctx.execute_task().await?;
                 Ok(())
             },
-            funs,
+            &funs.cache(),
             ws_iam_send_client().await.clone(),
             default_iam_send_avatar().await.clone(),
+            Some(vec![format!("account/{}", ctx.owner)]),
             ctx,
         )
         .await?;

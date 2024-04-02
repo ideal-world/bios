@@ -418,9 +418,10 @@ impl IamCertServ {
                 Self::clean_cache_by_cert_conf(&cert_id, Some(rbum_cert_conf), &funs, &task_ctx).await?;
                 Ok(())
             },
-            funs,
+            &funs.cache(),
             ws_iam_send_client().await.clone(),
             default_iam_send_avatar().await.clone(),
+            Some(vec![format!("account/{}", ctx.owner)]),
             ctx,
         )
         .await?;
@@ -1304,6 +1305,7 @@ impl IamCertServ {
         }
     }
 
+    // todo fixme 这是干什么？
     pub async fn get_third_intg_sync_status(task_id: &str, funs: &TardisFunsInst) -> TardisResult<Option<IamThirdIntegrationSyncStatusDto>> {
         let mut result = None;
         let task_id = task_id.parse().map_err(|_| funs.err().format_error("system", "task", "task id format error", "406-iam-task-id-format"))?;
@@ -1372,9 +1374,10 @@ impl IamCertServ {
                 drop(sync);
                 result
             },
-            funs,
+            &funs.cache(),
             ws_iam_send_client().await.clone(),
             default_iam_send_avatar().await.clone(),
+            Some(vec![format!("account/{}", ctx.owner)]),
             ctx,
         )
         .await?;

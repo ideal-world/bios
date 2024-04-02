@@ -1,4 +1,3 @@
-use bios_basic::process::task_processor::TaskProcessor;
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumSetItemFilterReq};
 use bios_basic::rbum::dto::rbum_set_item_dto::RbumSetItemDetailResp;
 use bios_basic::rbum::helper::rbum_event_helper;
@@ -40,7 +39,7 @@ impl IamCpAccountApi {
         IamSearchClient::async_add_or_modify_account_search(ctx.clone().owner, Box::new(true), "".to_string(), &funs, &ctx).await?;
         funs.commit().await?;
         ctx.execute_task().await?;
-        if let Some(notify_events) = TaskProcessor::get_notify_event_with_ctx(&ctx).await? {
+        if let Some(notify_events) = rbum_event_helper::get_notify_event_with_ctx(&ctx).await? {
             rbum_event_helper::try_notifies(notify_events, &iam_constants::get_tardis_inst(), &ctx).await?;
         }
         TardisResp::ok(Void {})

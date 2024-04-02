@@ -18,7 +18,7 @@ pub struct IamCcSystemApi;
 impl IamCcSystemApi {
     /// Get Async Task Status
     #[oai(path = "/task/:task_ids", method = "get")]
-    async fn task_check_finished(&self, task_ids: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<bool> {
+    async fn check_finished(&self, task_ids: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<bool> {
         let funs = iam_constants::get_tardis_inst();
         let task_ids = task_ids.0.split(',');
         for task_id in task_ids {
@@ -38,13 +38,13 @@ impl IamCcSystemApi {
         let task_ids = task_ids.0.split(',');
         for task_id in task_ids {
             let task_id = task_id.parse().map_err(|_| funs.err().format_error("system", "task", "task id format error", "406-iam-task-id-format"))?;
-            TaskProcessor::stop_task(
+            TaskProcessor::stop_task_with_event(
                 &funs.conf::<IamConfig>().cache_key_async_task_status,
                 task_id,
+                &funs.cache(),
                 ws_iam_send_client().await.clone(),
                 default_iam_send_avatar().await.clone(),
-                &funs,
-                &ctx.0,
+                Some(vec![format!("account/{}", ctx.0.owner)]),
             )
             .await?;
         }
@@ -54,7 +54,7 @@ impl IamCcSystemApi {
     #[oai(path = "/task/process/:task_id", method = "get")]
     async fn get_task_process_data(&self, task_id: Path<i64>, ctx: TardisContextExtractor) -> TardisApiResult<Value> {
         let funs = iam_constants::get_tardis_inst();
-        let data = TaskProcessor::get_task_process_data(&funs.conf::<IamConfig>().cache_key_async_task_status, task_id.0, &funs).await?;
+        let data = TaskProcessor::get_process_data(&funs.conf::<IamConfig>().cache_key_async_task_status, task_id.0, &funs.cache()).await?;
         TardisResp::ok(data)
     }
 }
