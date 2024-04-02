@@ -15,7 +15,7 @@ publish.workspace = true
 [dependencies]
 serde.workspace = true
 lazy_static.workspace = true
-spacegate-shell = { workspace = true, features = ["k8s", "plugin-all", "ext-redis", "cache"] }
+spacegate-shell = { workspace = true, features = ["k8s", "plugin-all", "ext-redis", "ext-axum", "cache"] }
 tardis = { workerspace = true }
 spacegate-lib = { path = "../../gateway/spacegate-lib" }
 envy = "0.4"

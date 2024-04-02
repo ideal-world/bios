@@ -4,13 +4,11 @@ use std::sync::Arc;
 use ipnet::IpNet;
 use serde::{Deserialize, Serialize};
 use spacegate_shell::hyper::{Request, Response, StatusCode};
-use spacegate_shell::kernel::{
-    extension::PeerAddr,
-    helper_layers::filter::{Filter, FilterRequestLayer},
-};
-use spacegate_shell::plugin::{JsonValue, MakeSgLayer, Plugin};
+use spacegate_shell::kernel::helper_layers::function::Inner;
+use spacegate_shell::kernel::{extension::PeerAddr};
+use spacegate_shell::plugin::Plugin;
 
-use spacegate_shell::{BoxError, SgBody, SgBoxLayer, SgResponseExt};
+use spacegate_shell::{BoxError, SgBody, SgResponseExt};
 
 use tardis::{log, serde_json};
 pub const CODE: &str = "ip_time";
@@ -40,7 +38,7 @@ pub enum SgFilterIpTimeMode {
     BlackList,
 }
 
-impl From<SgFilterIpTimeConfig> for SgFilterIpTime {
+impl From<SgFilterIpTimeConfig> for IpTimePlugin {
     fn from(value: SgFilterIpTimeConfig) -> Self {
         let mut rules = Vec::new();
         let white_list_mode = value.mode;
@@ -61,7 +59,7 @@ impl From<SgFilterIpTimeConfig> for SgFilterIpTime {
                 rules.push((net, rule.time_rule.clone()))
             }
         }
-        SgFilterIpTime {
+        IpTimePlugin {
             mode: white_list_mode,
             rules: rules.into(),
         }
@@ -74,7 +72,7 @@ pub struct SgFilterIpTimeConfigRule {
 }
 
 #[derive(Debug, Clone)]
-pub struct SgFilterIpTime {
+pub struct IpTimePlugin {
     // # enhancement:
     // should be a time segment list
     // - segment list
@@ -85,7 +83,7 @@ pub struct SgFilterIpTime {
     pub rules: Arc<[(IpNet, IpTimeRule)]>,
 }
 
-impl SgFilterIpTime {
+impl IpTimePlugin {
     pub fn check_ip(&self, ip: &IpAddr) -> bool {
         match self.mode {
             SgFilterIpTimeMode::WhiteList => {
@@ -99,37 +97,28 @@ impl SgFilterIpTime {
         }
     }
 }
-
-impl Filter for SgFilterIpTime {
-    fn filter(&self, req: Request<SgBody>) -> Result<Request<SgBody>, Response<SgBody>> {
+impl Plugin for IpTimePlugin {
+    const CODE: &'static str = CODE;
+    fn create(config: spacegate_shell::plugin::PluginConfig) -> Result<Self, BoxError> {
+        let ip_time_config: SgFilterIpTimeConfig = serde_json::from_value(config.spec.clone())?;
+        let plugin: IpTimePlugin = ip_time_config.into();
+        Ok(plugin)
+    }
+    async fn call(&self, req: Request<SgBody>, inner: Inner) -> Result<Response<SgBody>, BoxError> {
         let Some(socket_addr) = req.extensions().get::<PeerAddr>() else {
-            return Err(Response::with_code_message(StatusCode::BAD_GATEWAY, "Cannot get peer address, it's a implementation bug"));
+            return Err("Cannot get peer address, it's a implementation bug".into());
         };
         let socket_addr = socket_addr.0;
         let passed = self.check_ip(&socket_addr.ip());
         log::trace!("[{CODE}] Check ip time rule from {socket_addr}, passed {passed}");
         if !passed {
-            return Err(Response::with_code_message(StatusCode::FORBIDDEN, "[SG.Plugin.IpTime] Blocked by ip-time plugin"));
+            return Ok(Response::with_code_message(StatusCode::FORBIDDEN, "Blocked by ip-time plugin"));
         }
-        Ok(req)
+        Ok(inner.call(req).await)
     }
-}
-
-pub struct SgIpTimePlugin;
-
-impl Plugin for SgIpTimePlugin {
-    const CODE: &'static str = CODE;
-    type MakeLayer = SgFilterIpTime;
-    fn create(_: Option<String>, value: JsonValue) -> Result<Self::MakeLayer, BoxError> {
-        let config: SgFilterIpTimeConfig = serde_json::from_value(value)?;
-        let filter: SgFilterIpTime = config.into();
-        Ok(filter)
-    }
-}
-
-impl MakeSgLayer for SgFilterIpTime {
-    fn make_layer(&self) -> Result<SgBoxLayer, BoxError> {
-        let layer = FilterRequestLayer::new(self.clone());
-        Ok(SgBoxLayer::new(layer))
-    }
+    // fn create(_: Option<String>, value: JsonValue) -> Result<Self::MakeLayer, BoxError> {
+    //     let config: SgFilterIpTimeConfig = serde_json::from_value(value)?;
+    //     let filter: SgFilterIpTime = config.into();
+    //     Ok(filter)
+    // }
 }

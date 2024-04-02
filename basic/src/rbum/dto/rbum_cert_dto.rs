@@ -37,7 +37,7 @@ pub struct RbumCertAddReq {
     pub is_outside: bool,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Default)]
 #[cfg_attr(feature = "default", derive(poem_openapi::Object))]
 pub struct RbumCertModifyReq {
     #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]

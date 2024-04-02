@@ -138,11 +138,11 @@ pub(crate) async fn delete(fact_conf_key: &str, _funs: &TardisFunsInst, ctx: &Ta
 }
 
 pub(in crate::serv::pg) async fn get(fact_conf_key: &str, conn: &TardisRelDBlConnection, ctx: &TardisContext) -> TardisResult<Option<StatsConfFactInfoResp>> {
-    do_paginate(Some(fact_conf_key.to_string()), None, None, None, 1, 1, None, None, conn, ctx).await.map(|page| page.records.into_iter().next())
+    do_paginate(Some(vec![fact_conf_key.to_string()]), None, None, None, 1, 1, None, None, conn, ctx).await.map(|page| page.records.into_iter().next())
 }
 
 pub(crate) async fn paginate(
-    fact_conf_key: Option<String>,
+    fact_conf_keys: Option<Vec<String>>,
     show_name: Option<String>,
     dim_rel_conf_dim_keys: Option<Vec<String>>,
     is_online: Option<bool>,
@@ -158,7 +158,7 @@ pub(crate) async fn paginate(
     let (conn, _) = stats_pg_initializer::init_conf_fact_table_and_conn(bs_inst, ctx, true).await?;
 
     do_paginate(
-        fact_conf_key,
+        fact_conf_keys,
         show_name,
         dim_rel_conf_dim_keys,
         is_online,
@@ -173,7 +173,7 @@ pub(crate) async fn paginate(
 }
 
 async fn do_paginate(
-    fact_conf_key: Option<String>,
+    fact_conf_keys: Option<Vec<String>>,
     show_name: Option<String>,
     dim_rel_conf_dim_keys: Option<Vec<String>>,
     is_online: Option<bool>,
@@ -190,9 +190,11 @@ async fn do_paginate(
     let mut sql_order = vec![];
     let mut sql_left = "".to_string();
     let mut params: Vec<Value> = vec![Value::from(page_size), Value::from((page_number - 1) * page_size)];
-    if let Some(fact_conf_key) = &fact_conf_key {
-        sql_where.push(format!("fact.key = ${}", params.len() + 1));
-        params.push(Value::from(fact_conf_key.to_string()));
+    if let Some(fact_conf_keys) = &fact_conf_keys {
+        sql_where.push(format!("fact.key IN ({})", (0..fact_conf_keys.len()).map(|idx| format!("${}", params.len() + idx + 1)).collect::<Vec<String>>().join(",")));
+        for fact_conf_key in fact_conf_keys {
+            params.push(Value::from(format!("{fact_conf_key}")));
+        }
     }
     if let Some(show_name) = &show_name {
         sql_where.push(format!("fact.show_name LIKE ${}", params.len() + 1));

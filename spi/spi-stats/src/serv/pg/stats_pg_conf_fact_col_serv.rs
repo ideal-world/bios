@@ -106,7 +106,7 @@ pub(crate) async fn add(fact_conf_key: &str, add_req: &StatsConfFactColAddReq, f
             r#"INSERT INTO {table_name}
 (key, show_name, kind, rel_conf_fact_key, remark, rel_external_id {})
 VALUES
-($1, $2, $3, $4, $5 {})
+($1, $2, $3, $4, $5, $6 {})
 "#,
             if sql_fields.is_empty() { "".to_string() } else { format!(",{}", sql_fields.join(",")) },
             if sql_fields.is_empty() {
