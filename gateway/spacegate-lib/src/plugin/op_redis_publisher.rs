@@ -142,7 +142,7 @@ impl RedisPublisherPlugin {
         };
 
         let Some(param) = resp.extensions().get::<AuditLogParam>() else {
-            warn!("[Plugin.OpRedisPubilsher] missing audit log param");
+            warn!("[Plugin.OpRedisPublisher] missing audit log param");
             return Ok((resp, None));
         };
 
@@ -192,7 +192,7 @@ impl RedisPublisherPlugin {
             ip: param.request_ip.clone(),
             path: param.request_path.clone(),
             scheme: param.request_scheme.clone(),
-            server_timing: start_time.map(|st| end_time - st),
+            server_timing: start_time.map(|st| (end_time - st).as_nanos()),
             resp_status: resp.status().as_u16().to_string(),
             success,
             own_paths: resp.extensions().get::<CertInfo>().and_then(|info| info.own_paths.clone()),
@@ -211,7 +211,7 @@ struct OpLogContent {
     pub ip: String,
     pub path: String,
     pub scheme: String,
-    pub server_timing: Option<Duration>,
+    pub server_timing: Option<u128>,
     pub resp_status: String,
     //Indicates whether the business operation was successful.
     pub success: bool,

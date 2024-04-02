@@ -4,8 +4,8 @@ use std::sync::Arc;
 use ipnet::IpNet;
 use serde::{Deserialize, Serialize};
 use spacegate_shell::hyper::{Request, Response, StatusCode};
+use spacegate_shell::kernel::extension::PeerAddr;
 use spacegate_shell::kernel::helper_layers::function::Inner;
-use spacegate_shell::kernel::{extension::PeerAddr};
 use spacegate_shell::plugin::Plugin;
 
 use spacegate_shell::{BoxError, SgBody, SgResponseExt};
@@ -78,7 +78,7 @@ pub struct IpTimePlugin {
     // - segment list
     //     - ban: Set {}
     //     - allow: Set {}
-    // - pointer to the lastest segment
+    // - pointer to the latest segment
     pub mode: SgFilterIpTimeMode,
     pub rules: Arc<[(IpNet, IpTimeRule)]>,
 }
