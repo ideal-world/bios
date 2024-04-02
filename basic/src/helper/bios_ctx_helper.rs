@@ -82,7 +82,7 @@ pub fn unsafe_fill_ctx(request: &Request, funs: &TardisFunsInst, ctx: &mut Tardi
     )
 }
 
-pub fn unsfae_fill_owner_only(request: &Request, funs: &TardisFunsInst, ctx: &mut TardisContext) -> TardisResult<()> {
+pub fn unsafe_fill_owner_only(request: &Request, funs: &TardisFunsInst, ctx: &mut TardisContext) -> TardisResult<()> {
     unsafe_check_ctx(
         request,
         |bios_ctx, ctx| {
@@ -94,7 +94,7 @@ pub fn unsfae_fill_owner_only(request: &Request, funs: &TardisFunsInst, ctx: &mu
     )
 }
 
-pub fn unsfae_fill_own_paths_only(request: &Request, funs: &TardisFunsInst, ctx: &mut TardisContext) -> TardisResult<()> {
+pub fn unsafe_fill_own_paths_only(request: &Request, funs: &TardisFunsInst, ctx: &mut TardisContext) -> TardisResult<()> {
     unsafe_check_ctx(
         request,
         |bios_ctx, ctx| {
@@ -106,7 +106,7 @@ pub fn unsfae_fill_own_paths_only(request: &Request, funs: &TardisFunsInst, ctx:
     )
 }
 
-pub fn unsfae_fill_roles_only(request: &Request, funs: &TardisFunsInst, ctx: &mut TardisContext) -> TardisResult<()> {
+pub fn unsafe_fill_roles_only(request: &Request, funs: &TardisFunsInst, ctx: &mut TardisContext) -> TardisResult<()> {
     unsafe_check_ctx(
         request,
         |bios_ctx, ctx| {
@@ -125,7 +125,7 @@ pub fn unsfae_fill_roles_only(request: &Request, funs: &TardisFunsInst, ctx: &mu
     )
 }
 
-pub fn unsfae_fill_groups_only(request: &Request, funs: &TardisFunsInst, ctx: &mut TardisContext) -> TardisResult<()> {
+pub fn unsafe_fill_groups_only(request: &Request, funs: &TardisFunsInst, ctx: &mut TardisContext) -> TardisResult<()> {
     unsafe_check_ctx(
         request,
         |bios_ctx, ctx| {

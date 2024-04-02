@@ -1221,7 +1221,7 @@ impl IamCertLdapServ {
     ///  assert_eq!(IamCertLdapServ::dn_to_cn("cn=admin,ou=x,dc=x,dc=x"), "admin".to_string());
     ///  assert_eq!(IamCertLdapServ::dn_to_cn("ou=x,dc=x,dc=x"), "ou=x,dc=x,dc=x".to_string());
     ///  assert_eq!(IamCertLdapServ::dn_to_cn("cn=,ou=x,dc=x,dc=x"), "".to_string());
-    ///  assert_eq!(IamCertLdapServ::dn_to_cn("sdfafasdf"), "sdfafasdf".to_string());
+    ///  assert_eq!(IamCertLdapServ::dn_to_cn("hello world"), "hello world".to_string());
     /// ```
     pub fn dn_to_cn(dn: &str) -> String {
         let dn_regex = Regex::new(r"(,|^)[cC][nN]=(.+?)(,|$)").expect("Regular parsing error");

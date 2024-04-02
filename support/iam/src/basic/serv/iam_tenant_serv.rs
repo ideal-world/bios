@@ -481,11 +481,11 @@ impl IamTenantServ {
         }
 
         //ldap only can be one recode in each tenant
-        if let Some(cert_conf_by_ladp) = &modify_req.cert_conf_by_ldap {
+        if let Some(cert_conf_by_ldap) = &modify_req.cert_conf_by_ldap {
             if let Some(cert_conf_id_by_ldap) = cert_confs.iter().find(|r| r.kind == IamCertExtKind::Ldap.to_string()).map(|r| r.id.clone()) {
-                IamCertLdapServ::modify_cert_conf(&cert_conf_id_by_ldap, cert_conf_by_ladp, funs, ctx).await?;
+                IamCertLdapServ::modify_cert_conf(&cert_conf_id_by_ldap, cert_conf_by_ldap, funs, ctx).await?;
             } else {
-                IamCertLdapServ::add_cert_conf(cert_conf_by_ladp, Some(id.to_string()), funs, ctx).await?;
+                IamCertLdapServ::add_cert_conf(cert_conf_by_ldap, Some(id.to_string()), funs, ctx).await?;
             }
         }
 
