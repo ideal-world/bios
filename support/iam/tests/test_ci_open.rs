@@ -1,4 +1,4 @@
-use bios_iam::basic::dto::iam_open_dto::{IamOpenAddProductReq, IamOpenAddSpecReq, IamOpenAkSkAddReq, IamOpenBindAkProductReq};
+use bios_iam::basic::dto::iam_open_dto::{IamOpenAddOrModifyProductReq, IamOpenAddSpecReq, IamOpenAkSkAddReq, IamOpenBindAkProductReq};
 use bios_iam::basic::serv::iam_open_serv::IamOpenServ;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
@@ -6,9 +6,6 @@ use tardis::basic::result::TardisResult;
 use tardis::chrono::Utc;
 use tardis::log::info;
 
-use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
-use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
-use bios_iam::basic::dto::iam_app_dto::IamAppModifyReq;
 use bios_iam::iam_constants;
 
 pub async fn test(context1: &TardisContext) -> TardisResult<()> {
@@ -18,8 +15,38 @@ pub async fn test(context1: &TardisContext) -> TardisResult<()> {
     let spec1_code = "spec1".to_string();
     let spec2_code = "spec2".to_string();
     info!("【test_ci_open】 : Add Product");
-    IamOpenServ::add_product(
-        &IamOpenAddProductReq {
+    IamOpenServ::add_or_modify_product(
+        &IamOpenAddOrModifyProductReq {
+            code: TrimString(product_code.clone()),
+            name: TrimString("测试产品".to_string()),
+            icon: None,
+            scope_level: None,
+            disabled: None,
+            specifications: vec![
+                IamOpenAddSpecReq {
+                    code: TrimString(spec1_code.clone()),
+                    name: TrimString("测试规格1".to_string()),
+                    icon: None,
+                    url: None,
+                    scope_level: None,
+                    disabled: None,
+                },
+                IamOpenAddSpecReq {
+                    code: TrimString(spec2_code.clone()),
+                    name: TrimString("测试规格2".to_string()),
+                    icon: None,
+                    url: None,
+                    scope_level: None,
+                    disabled: None,
+                },
+            ],
+        },
+        &funs,
+        context1,
+    )
+    .await?;
+    IamOpenServ::add_or_modify_product(
+        &IamOpenAddOrModifyProductReq {
             code: TrimString(product_code.clone()),
             name: TrimString("测试产品".to_string()),
             icon: None,
@@ -59,7 +86,7 @@ pub async fn test(context1: &TardisContext) -> TardisResult<()> {
     )
     .await?;
     let cert_id = cert_resp.id;
-    let cert_resp2 = IamOpenServ::general_cert(
+    let _cert_resp2 = IamOpenServ::general_cert(
         IamOpenAkSkAddReq {
             tenant_id: context1.own_paths.clone(),
             app_id: None,

@@ -4,7 +4,7 @@ use tardis::chrono::{self, Utc};
 use tardis::{basic::field::TrimString, web::poem_openapi};
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
-pub struct IamOpenAddProductReq {
+pub struct IamOpenAddOrModifyProductReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub code: TrimString,
     #[oai(validator(min_length = "2", max_length = "255"))]

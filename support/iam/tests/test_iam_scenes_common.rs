@@ -193,7 +193,7 @@ pub async fn common_console_by_ldap(client: &mut BIOSWebTestClient, tenant_id: &
 
     // Find Accounts by LDAP
     let accounts: Vec<IamAccountExtSysResp> = client.get(&format!("/cc/account/ldap?name={}&tenant_id={}&code={}", name, tenant_id, LDAP_CODE)).await;
-    assert_eq!(accounts.get(0).unwrap().user_name, name);
+    assert_eq!(accounts.first().unwrap().user_name, name);
 
     let account_ids: Vec<String> = accounts.iter().map(|x| x.account_id.clone()).collect();
 
@@ -239,7 +239,7 @@ pub async fn common_console_by_tenant(client: &mut BIOSWebTestClient) -> TardisR
     assert_eq!(res_tree.main.len(), 1);
     assert!(res_tree.main.iter().any(|i| i.name == "综合服务中心"));
     assert_eq!(res_tree.ext.as_ref().unwrap().items[&res_tree.main[0].id].len(), 1);
-    assert_eq!(res_tree.ext.as_ref().unwrap().items[&res_tree.main[0].id].get(0).unwrap().rel_rbum_item_name, "测试管理员");
+    assert_eq!(res_tree.ext.as_ref().unwrap().items[&res_tree.main[0].id].first().unwrap().rel_rbum_item_name, "测试管理员");
 
     Ok(())
 }

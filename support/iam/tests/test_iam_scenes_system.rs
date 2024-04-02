@@ -222,14 +222,14 @@ pub async fn sys_console_tenant_mgr_page(sysadmin_name: &str, sysadmin_password:
             sys_admin_role_id, tenant_id
         ))
         .await;
-    let sys_admin_account_id = &accounts.records.get(0).unwrap().id;
+    let sys_admin_account_id = &accounts.records.first().unwrap().id;
     assert_eq!(accounts.total_size, 1);
-    assert_eq!(accounts.records.get(0).unwrap().name, "测试管理员");
-    assert_eq!(accounts.records.get(0).unwrap().roles.len(), 1);
-    assert!(accounts.records.get(0).unwrap().roles.iter().any(|i| i.1 == "tenant_admin"));
-    assert_eq!(accounts.records.get(0).unwrap().orgs.len(), 0);
-    assert_eq!(accounts.records.get(0).unwrap().certs.len(), 1);
-    assert!(accounts.records.get(0).unwrap().certs.contains_key("UserPwd"));
+    assert_eq!(accounts.records.first().unwrap().name, "测试管理员");
+    assert_eq!(accounts.records.first().unwrap().roles.len(), 1);
+    assert!(accounts.records.first().unwrap().roles.iter().any(|i| i.1 == "tenant_admin"));
+    assert_eq!(accounts.records.first().unwrap().orgs.len(), 0);
+    assert_eq!(accounts.records.first().unwrap().certs.len(), 1);
+    assert!(accounts.records.first().unwrap().certs.contains_key("UserPwd"));
 
     // Lock/Unlock Account By Account Id
     let _: Void = client
@@ -719,7 +719,7 @@ pub async fn sys_console_res_mgr_page(client: &mut BIOSWebTestClient) -> TardisR
     // Find Api Res By Res Id
     let rel_api_res: Vec<IamResDetailResp> = client.get(&format!("/cs/res/{}/res", res_menu_id)).await;
     assert_eq!(rel_api_res.len(), 1);
-    assert_eq!(rel_api_res.get(0).unwrap().name, "系统控制台功能");
+    assert_eq!(rel_api_res.first().unwrap().name, "系统控制台功能");
 
     // Count Api Res By Res Id
     let rel_api_res: u64 = client.get(&format!("/cs/res/{}/res/total", res_menu_id)).await;
@@ -826,7 +826,7 @@ pub async fn sys_console_auth_mgr_page(res_menu_id: &str, client: &mut BIOSWebTe
     // Find Rel Account By Role Id
     let rel_accounts: TardisPage<IamAccountSummaryAggResp> = client.get(&format!("/cs/account?role_id={}&page_number=1&page_size=10", test_role_id)).await;
     assert_eq!(rel_accounts.total_size, 1);
-    assert_eq!(rel_accounts.records.get(0).unwrap().id, account_id);
+    assert_eq!(rel_accounts.records.first().unwrap().id, account_id);
 
     // Count Rel Res By Role Id
     let rel_accounts: u64 = client.get(&format!("/cs/role/{}/account/total", test_role_id)).await;

@@ -46,7 +46,7 @@ async fn test_single_level(context: &TardisContext, another_context: &TardisCont
     assert_eq!(user_pwd_cert_conf.page_number, 1);
     assert_eq!(user_pwd_cert_conf.page_size, 10);
     assert_eq!(user_pwd_cert_conf.total_size, 1);
-    let cert_conf_user_pwd_id = user_pwd_cert_conf.records.get(0).unwrap().id.clone();
+    let cert_conf_user_pwd_id = user_pwd_cert_conf.records.first().unwrap().id.clone();
 
     info!("【test_ct_cert_conf】 : test_single_level : Modify Cert Conf By UserPwd Kind");
     assert!(IamCertUserPwdServ::modify_cert_conf(
@@ -108,7 +108,7 @@ async fn test_single_level(context: &TardisContext, another_context: &TardisCont
         context,
     )
     .await?;
-    let cert_conf_mail_vcode_id = cert_conf_mail_vcode.records.get(0).unwrap().id.clone();
+    let cert_conf_mail_vcode_id = cert_conf_mail_vcode.records.first().unwrap().id.clone();
     IamCertMailVCodeServ::modify_cert_conf(
         &cert_conf_mail_vcode_id,
         &IamCertConfMailVCodeAddOrModifyReq {
@@ -135,7 +135,7 @@ async fn test_single_level(context: &TardisContext, another_context: &TardisCont
         context,
     )
     .await?;
-    let cert_conf_phone_vcode_id = cert_conf_phone_vcode.records.get(0).unwrap().id.clone();
+    let cert_conf_phone_vcode_id = cert_conf_phone_vcode.records.first().unwrap().id.clone();
     IamCertPhoneVCodeServ::modify_cert_conf(
         &cert_conf_phone_vcode_id,
         &IamCertConfPhoneVCodeAddOrModifyReq {

@@ -3,7 +3,7 @@ use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 use tardis::log::info;
-use tardis::{TardisFuns, TardisFunsInst};
+use tardis::{TardisFunsInst};
 
 use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
@@ -149,10 +149,10 @@ async fn test_single_level(context: &TardisContext, account_name: &str, another_
     assert_eq!(role_accounts.page_size, 10);
     assert_eq!(role_accounts.total_size, 1);
     assert_eq!(role_accounts.records.len(), 1);
-    assert_eq!(role_accounts.records.get(0).unwrap().rel_name, account_name);
+    assert_eq!(role_accounts.records.first().unwrap().rel_name, account_name);
 
     info!("【test_cc_role】 : test_single_level : Delete Rel Account By Id");
-    IamRoleServ::delete_rel_account(&role_id1, &role_accounts.records.get(0).unwrap().rel_id, None, &funs, context).await?;
+    IamRoleServ::delete_rel_account(&role_id1, &role_accounts.records.first().unwrap().rel_id, None, &funs, context).await?;
     let role_accounts = IamRoleServ::paginate_simple_rel_accounts(&role_id1, 1, 10, None, None, &funs, context).await?;
     assert_eq!(role_accounts.total_size, 0);
 
@@ -196,10 +196,10 @@ async fn test_single_level(context: &TardisContext, account_name: &str, another_
     assert_eq!(role_res.page_size, 10);
     assert_eq!(role_res.total_size, 1);
     assert_eq!(role_res.records.len(), 1);
-    assert_eq!(role_res.records.get(0).unwrap().rel_name, "测试资源");
+    assert_eq!(role_res.records.first().unwrap().rel_name, "测试资源");
 
     info!("【test_cc_role】 : test_single_level : Delete Rel Res By Id");
-    IamRoleServ::delete_rel_res(&role_id1, &role_res.records.get(0).unwrap().rel_id, &funs, context).await?;
+    IamRoleServ::delete_rel_res(&role_id1, &role_res.records.first().unwrap().rel_id, &funs, context).await?;
     let role_res = IamRoleServ::paginate_simple_rel_res(&role_id1, 1, 10, None, None, &funs, context).await?;
     assert_eq!(role_res.total_size, 0);
 

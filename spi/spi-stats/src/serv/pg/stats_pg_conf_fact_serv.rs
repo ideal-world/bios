@@ -191,9 +191,12 @@ async fn do_paginate(
     let mut sql_left = "".to_string();
     let mut params: Vec<Value> = vec![Value::from(page_size), Value::from((page_number - 1) * page_size)];
     if let Some(fact_conf_keys) = &fact_conf_keys {
-        sql_where.push(format!("fact.key IN ({})", (0..fact_conf_keys.len()).map(|idx| format!("${}", params.len() + idx + 1)).collect::<Vec<String>>().join(",")));
+        sql_where.push(format!(
+            "fact.key IN ({})",
+            (0..fact_conf_keys.len()).map(|idx| format!("${}", params.len() + idx + 1)).collect::<Vec<String>>().join(",")
+        ));
         for fact_conf_key in fact_conf_keys {
-            params.push(Value::from(format!("{fact_conf_key}")));
+            params.push(Value::from(fact_conf_key.to_string()));
         }
     }
     if let Some(show_name) = &show_name {
@@ -212,9 +215,9 @@ async fn do_paginate(
                 dim_rel_conf_dim_keys.len()
             );
             for dim_rel_conf_dim_key in dim_rel_conf_dim_keys {
-                params.push(Value::from(format!("{dim_rel_conf_dim_key}")));
+                params.push(Value::from(dim_rel_conf_dim_key.to_string()));
             }
-            sql_where.push(format!("fact_col.rel_conf_fact_key IS NOT NULL"));
+            sql_where.push("fact_col.rel_conf_fact_key IS NOT NULL".to_string());
         }
     }
     if let Some(desc_by_create) = desc_by_create {

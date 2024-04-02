@@ -225,7 +225,7 @@ impl IamCcAccountTaskServ {
         ctx: &TardisContext,
     ) -> TardisResult<()> {
         let current_time = Utc::now();
-        match old_time.checked_add_signed(Duration::days(expire_day)) {
+        match old_time.checked_add_signed(Duration::try_days(expire_day).expect("TimeDelta::days out of bounds")) {
             Some(new_time) => {
                 if current_time < new_time {
                     IamAccountServ::modify_item(
@@ -253,7 +253,7 @@ impl IamCcAccountTaskServ {
 
     async fn account_lock(account_id: &str, old_time: DateTime<Utc>, expire_day: i64, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let current_time = Utc::now();
-        match old_time.checked_add_signed(Duration::days(expire_day)) {
+        match old_time.checked_add_signed(Duration::try_days(expire_day).expect("TimeDelta::days out of bounds")) {
             Some(new_time) => {
                 if current_time < new_time {
                     IamAccountServ::modify_item(

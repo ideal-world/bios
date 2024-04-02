@@ -586,8 +586,8 @@ impl IamCertServ {
     /// Get general cert method \
     /// if cert_conf_id is Some then use cert_conf_id as query param \
     /// otherwise use kind、cert_supplier as query param
-    pub async fn get_cert_by_relrubmid_kind_supplier(
-        rel_rubm_id: &str,
+    pub async fn get_cert_by_rel_rbum_id_kind_supplier(
+        rel_rbum_id: &str,
         kind: &str,
         cert_supplier: Vec<String>,
         cert_conf_id: Option<String>,
@@ -621,7 +621,7 @@ impl IamCertServ {
                     own_paths: Some(tenant_id.to_string()),
                     ..Default::default()
                 },
-                rel_rbum_id: Some(rel_rubm_id.to_string()),
+                rel_rbum_id: Some(rel_rbum_id.to_string()),
                 rel_rbum_cert_conf_ids: Some(vec![cert_conf_id]),
                 ..Default::default()
             }
@@ -633,7 +633,7 @@ impl IamCertServ {
                 },
                 kind: Some(kind.to_string()),
                 supplier: Some(cert_supplier.clone()),
-                rel_rbum_id: Some(rel_rubm_id.to_string()),
+                rel_rbum_id: Some(rel_rbum_id.to_string()),
                 ..Default::default()
             }
         };
@@ -665,15 +665,15 @@ impl IamCertServ {
         } else {
             Err(funs.err().not_found(
                 "iam_cert",
-                "get_cert_by_relrubmid_kind_supplier",
+                "get_cert_by_rel_rbum_id_kind_supplier",
                 &format!("not found credential of kind:{kind} supplier {cert_supplier:?}"),
                 "404-iam-cert-kind-not-exist",
             ))
         }
     }
 
-    pub async fn get_3th_kind_cert_by_rel_rubm_id(
-        rel_rubm_id: &str,
+    pub async fn get_3th_kind_cert_by_rel_rbum_id(
+        rel_rbum_id: &str,
         cert_supplier: Vec<String>,
         funs: &TardisFunsInst,
         ctx: &TardisContext,
@@ -682,7 +682,7 @@ impl IamCertServ {
             &RbumCertFilterReq {
                 kind: Some(IamCertExtKind::ThirdParty.to_string()),
                 supplier: Some(cert_supplier.clone()),
-                rel_rbum_id: Some(rel_rubm_id.to_string()),
+                rel_rbum_id: Some(rel_rbum_id.to_string()),
                 ..Default::default()
             },
             funs,
@@ -717,7 +717,7 @@ impl IamCertServ {
         } else {
             Err(funs.err().not_found(
                 "iam_cert",
-                "get_3th_kind_cert_by_rel_rubm_id",
+                "get_3th_kind_cert_by_rel_rbum_id",
                 &format!("not found credential of supplier {cert_supplier:?}"),
                 "404-iam-cert-kind-not-exist",
             ))

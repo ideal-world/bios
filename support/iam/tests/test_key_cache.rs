@@ -73,7 +73,7 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
             cert_conf_by_ldap: None,
         },
         &funs,
-        &system_admin_context,
+        system_admin_context,
     )
     .await?;
     IamCertTokenServ::modify_cert_conf(
@@ -442,7 +442,7 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
 
     //---------------------------------- Test Role ----------------------------------
 
-    let role_id = app_admin_context.roles.get(0).unwrap();
+    let role_id = app_admin_context.roles.first().unwrap();
     info!("【test_key_cache】 Disable role, expected no token record");
     IamRoleServ::modify_role_agg(
         role_id,
@@ -1100,7 +1100,7 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
             cert_conf_by_ldap: None,
         },
         &funs,
-        &system_admin_context,
+        system_admin_context,
     )
     .await?;
 

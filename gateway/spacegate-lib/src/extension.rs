@@ -23,7 +23,7 @@ impl From<String> for ExtensionPackEnum {
     }
 }
 impl ExtensionPackEnum {
-    pub fn to_value(&self, ext: &Extensions) -> Result<Option<Value>, BoxError> {
+    pub fn _to_value(&self, ext: &Extensions) -> Result<Option<Value>, BoxError> {
         match self {
             ExtensionPackEnum::LogParamContent() => {
                 if let Some(ext) = LogParamContent::get(ext) {
