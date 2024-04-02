@@ -300,7 +300,7 @@ impl RbumItemCrudOperation<iam_res::ActiveModel, IamResAddReq, IamResModifyReq, 
                 IamResKind::Menu => ("删除目录页面".to_string(), "DeleteContentPageAsPersonal".to_string()),
                 IamResKind::Api => ("删除API".to_string(), "DeleteApi".to_string()),
                 IamResKind::Ele => ("移除目录页面按钮".to_string(), "RemoveContentPageButton".to_string()),
-                IamResKind::Product => ("移除产品".to_string(), "RemovePorduct".to_string()),
+                IamResKind::Product => ("移除产品".to_string(), "RemoveProduct".to_string()),
                 IamResKind::Spec => ("移除产品规格".to_string(), "RemoveSpecification".to_string()),
             };
             if !op_describe.is_empty() {

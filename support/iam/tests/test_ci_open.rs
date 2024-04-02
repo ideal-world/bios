@@ -86,7 +86,7 @@ pub async fn test(context1: &TardisContext) -> TardisResult<()> {
     )
     .await?;
     let cert_id = cert_resp.id;
-    let cert_resp2 = IamOpenServ::general_cert(
+    let _cert_resp2 = IamOpenServ::general_cert(
         IamOpenAkSkAddReq {
             tenant_id: context1.own_paths.clone(),
             app_id: None,

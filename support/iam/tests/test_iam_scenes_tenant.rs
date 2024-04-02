@@ -195,7 +195,7 @@ pub async fn tenant_console_org_mgr_page(tenant_admin_user_name: &str, tenant_ad
         .await;
     let res_tree: RbumSetTreeResp = client.get("/ct/org/tree").await;
     assert_eq!(res_tree.main.len(), 1);
-    assert_eq!(res_tree.main.get(0).unwrap().name, "综合服务中心");
+    assert_eq!(res_tree.main.first().unwrap().name, "综合服务中心");
 
     // Count Accounts
     let accounts: u64 = client.get("/ct/account/total").await;
@@ -227,16 +227,16 @@ pub async fn tenant_console_org_mgr_page(tenant_admin_user_name: &str, tenant_ad
     // Find Org Items
     let items: Vec<RbumSetItemDetailResp> = client.get(&format!("/ct/org/item?cate_id={}", cate_node1_id)).await;
     assert_eq!(items.len(), 1);
-    assert_eq!(items.get(0).unwrap().rel_rbum_item_name, "测试管理员");
+    assert_eq!(items.first().unwrap().rel_rbum_item_name, "测试管理员");
     let account: IamAccountDetailAggResp = client.get(&format!("/ct/account/{}", account_id)).await;
     assert!(account.orgs.contains(&("综合服务中心".to_string())));
 
     client.login(tenant_admin_user_name, tenant_admin_password, Some(tenant_id.to_string()), None, None, true).await?;
     assert_eq!(client.context().groups.len(), 1);
-    assert!(client.context().groups.get(0).unwrap().contains(":0000"));
+    assert!(client.context().groups.first().unwrap().contains(":0000"));
 
     // Delete Org Item By Org Item Id
-    client.delete(&format!("/ct/org/item/{}", items.get(0).unwrap().id)).await;
+    client.delete(&format!("/ct/org/item/{}", items.first().unwrap().id)).await;
     let items: Vec<RbumSetItemDetailResp> = client.get(&format!("/ct/org/item?cate_id={}", cate_node1_id)).await;
     assert_eq!(items.len(), 0);
     let account: IamAccountDetailAggResp = client.get(&format!("/ct/account/{}", account_id)).await;
@@ -492,7 +492,7 @@ pub async fn tenant_console_auth_mgr_page(client: &mut BIOSWebTestClient) -> Tar
     // Find Menu Tree
     let res_tree: RbumSetTreeResp = client.get("/ct/res/tree").await;
     assert_eq!(res_tree.main.len(), 3);
-    let res = res_tree.ext.as_ref().unwrap().items[&res_tree.main.iter().find(|i| i.name == "Menus").unwrap().id].get(0).unwrap();
+    let res = res_tree.ext.as_ref().unwrap().items[&res_tree.main.iter().find(|i| i.name == "Menus").unwrap().id].first().unwrap();
     assert!(res.rel_rbum_item_name.contains("Console"));
     let res_id = res.rel_rbum_item_id.clone();
 
@@ -525,7 +525,7 @@ pub async fn tenant_console_auth_mgr_page(client: &mut BIOSWebTestClient) -> Tar
     // Find Res By Role Id
     let res: Vec<RbumRelBoneResp> = client.get(&format!("/ct/role/{}/res", role_id)).await;
     assert_eq!(res.len(), 1);
-    assert!(res.get(0).unwrap().rel_name.contains("Console"));
+    assert!(res.first().unwrap().rel_name.contains("Console"));
 
     // Modify Role by Role Id
     let modify_role_resp: TardisResp<Option<String>> = client
@@ -560,8 +560,8 @@ pub async fn tenant_console_auth_mgr_page(client: &mut BIOSWebTestClient) -> Tar
     // Find Accounts By Role Id
     let accounts: TardisPage<IamAccountSummaryAggResp> = client.get(&format!("/ct/account?role_id={}&with_sub=false&page_number=1&page_size=10", role_id)).await;
     assert_eq!(accounts.total_size, 1);
-    assert_eq!(accounts.records.get(0).unwrap().name, "测试管理员");
-    let account = accounts.records.get(0).unwrap();
+    assert_eq!(accounts.records.first().unwrap().name, "测试管理员");
+    let account = accounts.records.first().unwrap();
     assert_eq!(account.certs.len(), 1);
     assert!(account.certs.contains_key("UserPwd"));
     assert!(account.orgs.is_empty());

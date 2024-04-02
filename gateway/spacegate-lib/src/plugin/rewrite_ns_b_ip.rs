@@ -2,10 +2,10 @@ use ipnet::IpNet;
 use serde::{Deserialize, Serialize};
 
 use spacegate_shell::extension::k8s_service::K8sService;
-use spacegate_shell::hyper::Request;
 use spacegate_shell::hyper::{http::uri, Response};
 use spacegate_shell::kernel::extension::PeerAddr;
 use spacegate_shell::kernel::helper_layers::function::Inner;
+use spacegate_shell::kernel::SgRequest;
 use spacegate_shell::plugin::{Plugin, PluginConfig, PluginError};
 use spacegate_shell::{BoxError, SgBody};
 use std::net::IpAddr;
@@ -13,7 +13,6 @@ use std::str::FromStr;
 use std::sync::Arc;
 
 use tardis::{log, serde_json};
-// def_plugin!("rewrite_ns", RewriteNsPlugin, SgFilterRewriteNs);
 
 /// Kube available only!
 #[derive(Clone)]
@@ -86,7 +85,13 @@ impl Plugin for RewriteNsPlugin {
             target_ns: config.target_ns,
         })
     }
-    async fn call(&self, mut req: Request<SgBody>, inner: Inner) -> Result<Response<SgBody>, BoxError> {
+    async fn call(&self, mut req: SgRequest, inner: Inner) -> Result<Response<SgBody>, BoxError> {
+        self.req(&mut req)?;
+        Ok(inner.call(req).await)
+    }
+}
+impl RewriteNsPlugin {
+    fn req(&self, req: &mut SgRequest) -> Result<(), BoxError> {
         'change_ns: {
             if let Some(k8s_service) = req.extensions().get::<K8sService>().cloned() {
                 let Some(ref ns) = k8s_service.0.namespace else { break 'change_ns };
@@ -106,63 +111,51 @@ impl Plugin for RewriteNsPlugin {
                 }
             }
         }
-        Ok(inner.call(req).await)
+        Ok(())
     }
 }
 
-// #[cfg(test)]
-// mod test {
-//     use crate::plugin::rewrite_ns_b_ip::SgFilterRewriteNs;
-//     use spacegate_shell::config::gateway_dto::SgParameters;
-//     use spacegate_shell::http::{HeaderMap, Method, Uri, Version};
-//     use spacegate_shell::hyper::Body;
-//     use spacegate_shell::instance::SgBackendInst;
-//     use spacegate_shell::plugins::context::SgRoutePluginContext;
-//     use spacegate_shell::plugins::filters::{SgPluginFilter, SgPluginFilterInitDto};
-//     use tardis::tokio;
+#[cfg(test)]
+mod test {
 
-//     #[tokio::test]
-//     async fn test() {
-//         let mut filter_rens = SgFilterRewriteNs {
-//             ip_list: vec!["198.168.1.0/24".to_string()],
-//             target_ns: "target".to_string(),
-//             ..Default::default()
-//         };
+    use http::{Method, Request, Uri, Version};
+    use spacegate_shell::{
+        config::K8sServiceData,
+        extension::k8s_service::K8sService,
+        kernel::extension::PeerAddr,
+        plugin::{Plugin as _, PluginConfig},
+        SgBody,
+    };
+    use tardis::{serde_json::json, tokio};
 
-//         filter_rens
-//             .init(&SgPluginFilterInitDto {
-//                 gateway_name: "".to_string(),
-//                 gateway_parameters: SgParameters {
-//                     redis_url: None,
-//                     log_level: None,
-//                     lang: None,
-//                     ignore_tls_verification: None,
-//                 },
-//                 http_route_rules: vec![],
-//                 attached_level: spacegate_shell::plugins::filters::SgAttachedLevel::Gateway,
-//             })
-//             .await
-//             .unwrap();
+    use crate::plugin::rewrite_ns_b_ip::RewriteNsPlugin;
 
-//         let mut ctx = SgRoutePluginContext::new_http(
-//             Method::POST,
-//             Uri::from_static("http://sg.idealworld.group/test1"),
-//             Version::HTTP_11,
-//             HeaderMap::new(),
-//             Body::from("test"),
-//             "198.168.1.1:8080".parse().unwrap(),
-//             "".to_string(),
-//             None,
-//         );
-//         let back_inst = SgBackendInst {
-//             name_or_host: "test".to_string(),
-//             namespace: Some("Anamspace".to_string()),
-//             port: 80,
-//             ..Default::default()
-//         };
-//         ctx.set_chose_backend_inst(&back_inst);
+    #[tokio::test]
+    async fn test() {
+        let plugin = RewriteNsPlugin::create(PluginConfig {
+            code: "rewrite-ns".into(),
+            spec: json!({"ip_list":["198.168.1.0/24"],"target_ns":"target"}),
+            name: None,
+        })
+        .unwrap();
 
-//         let (_, ctx) = filter_rens.req_filter("", ctx).await.unwrap();
-//         assert_eq!(ctx.request.uri.get().host().unwrap(), format!("test.target"))
-//     }
-// }
+        let mut req = Request::builder()
+            .method(Method::POST)
+            .uri(Uri::from_static("http://sg.idealworld:80/test"))
+            .version(Version::HTTP_11)
+            .extension(K8sService(
+                K8sServiceData {
+                    name: "sg".to_string(),
+                    namespace: Some("idealworld".to_string()),
+                }
+                .into(),
+            ))
+            .extension(PeerAddr("198.168.1.1:8080".parse().unwrap()))
+            .body(SgBody::full("test"))
+            .unwrap();
+
+        plugin.req(&mut req).unwrap();
+
+        assert_eq!(req.uri().host(), Some("sg.target"));
+    }
+}

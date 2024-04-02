@@ -265,7 +265,7 @@ pub async fn delete_by_ownership(tag: &str, onw_paths: &str, funs: &TardisFunsIn
             cond_by_or: None,
         },
         query: SearchItemQueryReq {
-            own_paths: Some(vec![onw_paths.to_string().into()]),
+            own_paths: Some(vec![onw_paths.to_string()]),
             ..Default::default()
         },
         sort: None,

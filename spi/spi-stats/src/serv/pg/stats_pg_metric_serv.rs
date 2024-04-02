@@ -8,19 +8,17 @@ use bios_basic::spi::{
 use itertools::Itertools;
 use tardis::{
     basic::{dto::TardisContext, error::TardisError, result::TardisResult},
-    config::config_dto::log,
     db::{
-        reldb_client::{TardisRelDBClient, TardisRelDBlConnection},
+        reldb_client::TardisRelDBClient,
         sea_orm::{self, FromQueryResult, Value},
     },
     log::info,
     serde_json::{self, json, Map},
-    web::poem_openapi::types::{ToJSON, Type},
     TardisFunsInst,
 };
 
 use crate::{
-    dto::stats_query_dto::{StatsQueryMetricsReq, StatsQueryMetricsResp, StatsQueryStatementReq, StatsQueryStatementResp},
+    dto::stats_query_dto::{StatsQueryMetricsReq, StatsQueryMetricsResp},
     serv::stats_record_serv::dim_record_paginate,
     stats_enumeration::{StatsDataTypeKind, StatsFactColKind},
 };
