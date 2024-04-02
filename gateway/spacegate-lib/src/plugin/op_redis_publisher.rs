@@ -1,7 +1,4 @@
-use std::{
-    str::FromStr as _,
-    time::{Duration, Instant},
-};
+use std::{str::FromStr as _, time::Instant};
 
 use http::Response;
 use jsonpath_rust::JsonPathInst;
