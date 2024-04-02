@@ -1,39 +1,49 @@
+use std::{
+    str::FromStr as _,
+    time::{Duration, Instant},
+};
+
+use http::Response;
+use jsonpath_rust::JsonPathInst;
 use serde::{Deserialize, Serialize};
 use spacegate_shell::{
-    kernel::{extension::GatewayName, SgRequest},
+    kernel::{
+        extension::{EnterTime, GatewayName},
+        SgRequest, SgResponse,
+    },
     plugin::{Inner, Plugin, PluginConfig},
     spacegate_ext_redis::global_repo,
     BoxError,
 };
 use tardis::{
     cache::Script,
-    log,
-    serde_json::{self, json, Value},
+    log::{self, warn},
+    serde_json::{self, Value},
     tokio,
 };
 
-use crate::extension::ExtensionPackEnum;
+use crate::extension::{audit_log_param::AuditLogParam, before_encrypt_body::BeforeEncryptBody, cert_info::CertInfo};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(default)]
 pub struct RedisPublisherConfig {
-    pub form_requset_extensions: Vec<String>,
-    pub form_response_extensions: Vec<String>,
+    success_json_path: String,
+    success_json_path_values: Vec<String>,
 }
 
 impl Default for RedisPublisherConfig {
     fn default() -> Self {
         Self {
-            form_requset_extensions: Default::default(),
-            form_response_extensions: vec!["log_content".to_string()],
+            success_json_path: "$.code".to_string(),
+            success_json_path_values: vec!["200".to_string(), "201".to_string()],
         }
     }
 }
 pub struct RedisPublisherPlugin {
     pub key: String,
-    pub form_requset_extensions: Vec<ExtensionPackEnum>,
-    pub form_response_extensions: Vec<ExtensionPackEnum>,
     pub script: Script,
+    jsonpath_inst: Option<JsonPathInst>,
+    success_json_path_values: Vec<String>,
 }
 
 impl Plugin for RedisPublisherPlugin {
@@ -42,16 +52,21 @@ impl Plugin for RedisPublisherPlugin {
     fn create(config: PluginConfig) -> Result<Self, BoxError> {
         let id = config.none_mono_id();
         let layer_config = serde_json::from_value::<RedisPublisherConfig>(config.spec.clone())?;
+
         Ok(Self {
             key: id.redis_prefix(),
-            form_requset_extensions: layer_config.form_requset_extensions.into_iter().map(Into::into).collect(),
-            form_response_extensions: layer_config.form_response_extensions.into_iter().map(Into::into).collect(),
+            jsonpath_inst: if let Ok(jsonpath_inst) = JsonPathInst::from_str(&layer_config.success_json_path).map_err(|e| log::error!("[Plugin.AuditLog] invalid json path:{e}")) {
+                Some(jsonpath_inst)
+            } else {
+                None
+            },
+            success_json_path_values: layer_config.success_json_path_values,
             script: Script::new(
                 r##"
           local channel = KEYS[1];
           local message = ARGV[1];
 
-          PUBLISH channel message
+          return redis.call('PUBLISH',channel,message);
           "##,
             ),
         })
@@ -64,48 +79,35 @@ impl Plugin for RedisPublisherPlugin {
         let Some(client) = global_repo().get(gateway_name) else {
             return Err("missing redis client".into());
         };
-        let mut value = serde_json::Map::<String, Value>::new();
-        if let Some(spec_id) = RedisPublisherPlugin::parse_spec_id(&req) {
-            value.insert("spec_id".to_string(), json!(spec_id));
-        }
+        let spec_id = RedisPublisherPlugin::parse_spec_id(&req);
 
-        for ext_enum in &self.form_requset_extensions {
-            if let Some(mut ext) = ext_enum.to_value(req.extensions())? {
-                if let Some(ext) = ext.as_object_mut() {
-                    value.extend(ext.into_iter().map(|(k, v)| (k.clone(), v.clone())));
-                }
-            }
-        }
         let resp = inner.call(req).await;
 
-        for ext_enum in &self.form_response_extensions {
-            if let Some(mut ext) = ext_enum.to_value(resp.extensions())? {
-                if let Some(ext) = ext.as_object_mut() {
-                    value.extend(ext.into_iter().map(|(k, v)| (k.clone(), v.clone())));
-                }
-            }
-        }
+        let (resp, content) = self.op_log(resp).await?;
 
-        let key = self.key.clone();
-        let script = self.script.clone();
-        tokio::task::spawn(async move {
-            let mut conn = client.get_conn().await;
-            match serde_json::to_string(&value) {
-                Ok(v) => {
-                    match script.key(key).arg(v).invoke_async::<_, bool>(&mut conn).await {
-                        Ok(_) => {
-                            log::trace!("[Plugin.OPRedisPublisher]Publish success")
-                        }
-                        Err(e) => {
-                            log::warn!("[Plugin.OPRedisPublisher] failed to Publish:{e}")
-                        }
-                    };
+        if let Some(mut content) = content {
+            content.spec_id = spec_id;
+            let key = self.key.clone();
+            let script = self.script.clone();
+            tokio::task::spawn(async move {
+                let mut conn = client.get_conn().await;
+                match serde_json::to_string(&content) {
+                    Ok(v) => {
+                        match script.key(&key).arg(v).invoke_async::<_, bool>(&mut conn).await {
+                            Ok(_) => {
+                                log::trace!("[Plugin.OPRedisPublisher]Publish channel:{key} success")
+                            }
+                            Err(e) => {
+                                log::warn!("[Plugin.OPRedisPublisher] failed to Publish:{e}")
+                            }
+                        };
+                    }
+                    Err(e) => {
+                        log::warn!("[Plugin.OPRedisPublisher] failed to Deserialize:{e}")
+                    }
                 }
-                Err(e) => {
-                    log::warn!("[Plugin.OPRedisPublisher] failed to Deserialize:{e}")
-                }
-            }
-        });
+            });
+        }
 
         Ok(resp)
     }
@@ -123,4 +125,95 @@ impl RedisPublisherPlugin {
         }
         None
     }
+
+    async fn op_log(&self, mut resp: SgResponse) -> Result<(SgResponse, Option<OpLogContent>), BoxError> {
+        let body_string = if let Some(raw_body) = resp.extensions().get::<BeforeEncryptBody>().map(|b| b.clone().get()) {
+            serde_json::from_str::<Value>(&String::from_utf8_lossy(&raw_body))
+        } else {
+            let body = if let Some(dumped) = resp.body().get_dumped() {
+                dumped.clone()
+            } else {
+                let (parts, body) = resp.into_parts();
+                let body = body.dump().await.map_err(|e: BoxError| format!("[SG.Filter.AuditLog] dump body error: {e}"))?;
+                resp = Response::from_parts(parts, body.dump_clone().expect(""));
+                body.get_dumped().expect("not expect").clone()
+            };
+            serde_json::from_slice::<Value>(&body)
+        };
+
+        let Some(param) = resp.extensions().get::<AuditLogParam>() else {
+            warn!("[Plugin.OpRedisPubilsher] missing audit log param");
+            return Ok((resp, None));
+        };
+
+        let start_time = resp.extensions().get::<EnterTime>().map(|time| time.0);
+        let end_time = Instant::now();
+
+        let success = match body_string {
+            Ok(json) => {
+                if let Some(jsonpath_inst) = &self.jsonpath_inst {
+                    if let Some(matching_value) = jsonpath_inst.find_slice(&json).first() {
+                        if matching_value.is_string() {
+                            let mut is_match = false;
+                            for value in self.success_json_path_values.clone() {
+                                if Some(value.as_str()) == matching_value.as_str() {
+                                    is_match = true;
+                                    break;
+                                }
+                            }
+                            is_match
+                        } else if matching_value.is_number() {
+                            let mut is_match = false;
+                            for value in self.success_json_path_values.clone() {
+                                let value = value.parse::<i64>();
+                                if value.is_ok() && value.ok() == matching_value.as_i64() {
+                                    is_match = true;
+                                    break;
+                                }
+                            }
+                            is_match
+                        } else {
+                            false
+                        }
+                    } else {
+                        false
+                    }
+                } else {
+                    false
+                }
+            }
+            Err(_) => false,
+        };
+
+        let content = OpLogContent {
+            op: param.request_method.clone(),
+            name: resp.extensions().get::<CertInfo>().and_then(|info| info.name.clone()).unwrap_or_default(),
+            user_id: resp.extensions().get::<CertInfo>().map(|info| info.id.clone()),
+            ip: param.request_ip.clone(),
+            path: param.request_path.clone(),
+            scheme: param.request_scheme.clone(),
+            server_timing: start_time.map(|st| end_time - st),
+            resp_status: resp.status().as_u16().to_string(),
+            success,
+            own_paths: resp.extensions().get::<CertInfo>().and_then(|info| info.own_paths.clone()),
+            spec_id: None,
+        };
+        Ok((resp, Some(content)))
+    }
+}
+
+#[derive(Deserialize, Serialize)]
+struct OpLogContent {
+    pub op: String,
+    pub name: String,
+    pub user_id: Option<String>,
+    pub own_paths: Option<String>,
+    pub ip: String,
+    pub path: String,
+    pub scheme: String,
+    pub server_timing: Option<Duration>,
+    pub resp_status: String,
+    //Indicates whether the business operation was successful.
+    pub success: bool,
+    pub spec_id: Option<String>,
 }
