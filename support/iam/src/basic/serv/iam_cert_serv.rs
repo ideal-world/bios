@@ -418,9 +418,10 @@ impl IamCertServ {
                 Self::clean_cache_by_cert_conf(&cert_id, Some(rbum_cert_conf), &funs, &task_ctx).await?;
                 Ok(())
             },
-            funs,
+            &funs.cache(),
             ws_iam_send_client().await.clone(),
             default_iam_send_avatar().await.clone(),
+            Some(vec![format!("account/{}", ctx.owner)]),
             ctx,
         )
         .await?;
@@ -585,8 +586,8 @@ impl IamCertServ {
     /// Get general cert method \
     /// if cert_conf_id is Some then use cert_conf_id as query param \
     /// otherwise use kind、cert_supplier as query param
-    pub async fn get_cert_by_relrubmid_kind_supplier(
-        rel_rubm_id: &str,
+    pub async fn get_cert_by_rel_rbum_id_kind_supplier(
+        rel_rbum_id: &str,
         kind: &str,
         cert_supplier: Vec<String>,
         cert_conf_id: Option<String>,
@@ -620,7 +621,7 @@ impl IamCertServ {
                     own_paths: Some(tenant_id.to_string()),
                     ..Default::default()
                 },
-                rel_rbum_id: Some(rel_rubm_id.to_string()),
+                rel_rbum_id: Some(rel_rbum_id.to_string()),
                 rel_rbum_cert_conf_ids: Some(vec![cert_conf_id]),
                 ..Default::default()
             }
@@ -632,7 +633,7 @@ impl IamCertServ {
                 },
                 kind: Some(kind.to_string()),
                 supplier: Some(cert_supplier.clone()),
-                rel_rbum_id: Some(rel_rubm_id.to_string()),
+                rel_rbum_id: Some(rel_rbum_id.to_string()),
                 ..Default::default()
             }
         };
@@ -664,15 +665,15 @@ impl IamCertServ {
         } else {
             Err(funs.err().not_found(
                 "iam_cert",
-                "get_cert_by_relrubmid_kind_supplier",
+                "get_cert_by_rel_rbum_id_kind_supplier",
                 &format!("not found credential of kind:{kind} supplier {cert_supplier:?}"),
                 "404-iam-cert-kind-not-exist",
             ))
         }
     }
 
-    pub async fn get_3th_kind_cert_by_rel_rubm_id(
-        rel_rubm_id: &str,
+    pub async fn get_3th_kind_cert_by_rel_rbum_id(
+        rel_rbum_id: &str,
         cert_supplier: Vec<String>,
         funs: &TardisFunsInst,
         ctx: &TardisContext,
@@ -681,7 +682,7 @@ impl IamCertServ {
             &RbumCertFilterReq {
                 kind: Some(IamCertExtKind::ThirdParty.to_string()),
                 supplier: Some(cert_supplier.clone()),
-                rel_rbum_id: Some(rel_rubm_id.to_string()),
+                rel_rbum_id: Some(rel_rbum_id.to_string()),
                 ..Default::default()
             },
             funs,
@@ -716,7 +717,7 @@ impl IamCertServ {
         } else {
             Err(funs.err().not_found(
                 "iam_cert",
-                "get_3th_kind_cert_by_rel_rubm_id",
+                "get_3th_kind_cert_by_rel_rbum_id",
                 &format!("not found credential of supplier {cert_supplier:?}"),
                 "404-iam-cert-kind-not-exist",
             ))
@@ -1304,6 +1305,7 @@ impl IamCertServ {
         }
     }
 
+    // todo fixme 这是干什么？
     pub async fn get_third_intg_sync_status(task_id: &str, funs: &TardisFunsInst) -> TardisResult<Option<IamThirdIntegrationSyncStatusDto>> {
         let mut result = None;
         let task_id = task_id.parse().map_err(|_| funs.err().format_error("system", "task", "task id format error", "406-iam-task-id-format"))?;
@@ -1372,9 +1374,10 @@ impl IamCertServ {
                 drop(sync);
                 result
             },
-            funs,
+            &funs.cache(),
             ws_iam_send_client().await.clone(),
             default_iam_send_avatar().await.clone(),
+            Some(vec![format!("account/{}", ctx.owner)]),
             ctx,
         )
         .await?;

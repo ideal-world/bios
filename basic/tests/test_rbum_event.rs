@@ -1,6 +1,5 @@
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-use bios_basic::process::task_processor::TaskProcessor;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
@@ -55,7 +54,7 @@ pub async fn test() -> TardisResult<()> {
     )
     .await?;
 
-    if let Some(notify_events) = TaskProcessor::get_notify_event_with_ctx(&ctx).await? {
+    if let Some(notify_events) = rbum_event_helper::get_notify_event_with_ctx(&ctx).await? {
         rbum_event_helper::try_notifies(notify_events, &funs, &ctx).await?;
     }
 

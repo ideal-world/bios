@@ -15,15 +15,15 @@
 
 ``BIOS``绝大部分功能由``Rust``语言编写，依赖于由同一批贡献者维护的``Tardis``(https://github.com/ideal-world/tardis)框架。
 
-``BIOS``从底层到上层分为**RBUM**、**SPI**、**Middleware**、**Support**、**FaaS**五个层次。
+``BIOS``从底层到上层分为**RBUM**、**SPI**、**Middlewares**、**Supports**、**FaaS**五个层次。
 
 * **RBUM**(Resource-Based Unified Model)基于资源的统一模型。该模型为上层操作提供了``统一的基础操作、统一的凭证管理、统一的访问控制``等能力。
 
 * **SPI**(Service Provider Interface)，提供了常用的基础操作抽象，以适配主流的中间件/云服务。比如我们提供了``全文搜索``操作，它适配了``PostgreSql``与``ElasticSearch``并且可以再扩展其它的实现。
 
-* **Middleware**，提供了一些常用的中间件。与``SPI``层不同，这些中间件并不考虑适配性，以此获得更大的灵活性与自由度，可用于构建一些特色能力。比如我们提供了``事件服务``，它基于``Websocket``协议，实现了前端与后端、后端与后端间的事件穿透。
+* **Middlewares**，提供了一些常用的中间件。与``SPI``层不同，这些中间件并不考虑适配性，以此获得更大的灵活性与自由度，可用于构建一些特色能力。比如我们提供了``事件服务``，它基于``Websocket``协议，实现了前端与后端、后端与后端间的事件穿透。
 
-* **Support**，用于提供一些复杂的领域服务。与``Middleware``层不同，这些支撑服务聚合了``SPI``、``Middleware``的能力，形成了更为复杂的面向业务的服务。
+* **Supports**，用于提供一些复杂的领域服务。与``Middleware``层不同，这些支撑服务聚合了``SPI``、``Middleware``的能力，形成了更为复杂的面向业务的服务。
 
 * **FaaS**，用于实现以简单的前端技术构建通用业务应用。
 
@@ -37,11 +37,11 @@
 |-- backend
   |-- basic                 基础操作模块，包含了RBUM及SPI的公共逻辑
   |-- spi                   SPI层
-  |-- middleware            Middleware层
-  |-- support               Support层
+  |-- middlewares           Middleware层
+  |-- supports              Support层
   |-- faas                  FaaS层
   |-- services              聚合服务层
-  |-- gateway               网关适配层
+  |-- gateways              网关适配层
     |-- spacegate-plugins   SpaceGate网关的定制插件
 |-- frontend
   |-- console               控制台前端 

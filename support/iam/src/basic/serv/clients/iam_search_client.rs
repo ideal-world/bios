@@ -1,10 +1,9 @@
 use std::collections::HashSet;
 
 use bios_basic::{
-    helper::request_helper::get_remote_ip,
     rbum::{
-        dto::rbum_filer_dto::{RbumBasicFilterReq, RbumSetCateFilterReq},
-        serv::{rbum_crud_serv::RbumCrudOperation, rbum_item_serv::RbumItemCrudOperation, rbum_set_serv::RbumSetCateServ},
+        dto::rbum_filer_dto::{RbumBasicFilterReq},
+        serv::{rbum_item_serv::RbumItemCrudOperation},
     },
 };
 use bios_sdk_invoke::{
@@ -13,31 +12,28 @@ use bios_sdk_invoke::{
     invoke_config::InvokeConfigApi,
 };
 use itertools::Itertools;
-use serde::Serialize;
+
 
 use tardis::{
     basic::{dto::TardisContext, field::TrimString, result::TardisResult},
-    log::warn,
     serde_json::json,
-    tokio,
-    web::ws_client,
-    TardisFuns, TardisFunsInst,
+    tokio, TardisFunsInst,
 };
 
 use crate::{
     basic::{
         dto::{
             iam_account_dto::IamAccountDetailAggResp,
-            iam_filer_dto::{IamAccountFilterReq, IamResFilterReq, IamRoleFilterReq, IamTenantFilterReq},
+            iam_filer_dto::{IamAccountFilterReq, IamTenantFilterReq},
         },
         serv::{
-            iam_account_serv::IamAccountServ, iam_cert_serv::IamCertServ, iam_res_serv::IamResServ, iam_role_serv::IamRoleServ, iam_set_serv::IamSetServ,
+            iam_account_serv::IamAccountServ, iam_role_serv::IamRoleServ, iam_set_serv::IamSetServ,
             iam_tenant_serv::IamTenantServ,
         },
     },
     iam_config::IamConfig,
     iam_constants,
-    iam_enumeration::{IamCertKernelKind, IamSetKind},
+    iam_enumeration::{IamSetKind},
     iam_initializer::{default_search_avatar, ws_search_client},
 };
 pub struct IamSearchClient;
@@ -153,7 +149,7 @@ impl IamSearchClient {
         for set_id in set_ids {
             let set_items = IamSetServ::find_set_items(Some(set_id), None, Some(account_id.to_string()), None, true, None, funs, &mock_ctx).await?;
             account_resp_dept_id
-                .extend(set_items.iter().filter(|s| s.rel_rbum_set_cate_id.is_some()).map(|s| s.rel_rbum_set_cate_id.clone().unwrap_or("".to_owned())).collect::<Vec<_>>());
+                .extend(set_items.iter().filter_map(|s| s.rel_rbum_set_cate_id.clone()).collect::<Vec<_>>());
         }
 
         let tag = funs.conf::<IamConfig>().spi.search_account_tag.clone();

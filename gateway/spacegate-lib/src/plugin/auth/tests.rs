@@ -167,8 +167,8 @@ async fn test_auth_plugin_crypto() {
 
     let test_body_value = r#"test_body_value!@#$%^&*():"中文测试"#;
 
-    //========dont need to decrypt======
-    log::info!("========dont need to decrypt=====");
+    //========don't need to decrypt======
+    log::info!("========don't need to decrypt=====");
     let req = Request::builder()
         .method(Method::POST)
         .uri(Uri::from_static("http://sg.idealworld.group/test1"))

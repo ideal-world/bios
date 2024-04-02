@@ -1,3 +1,5 @@
+//! # 异步任务处理器
+
 use std::{collections::HashMap, future::Future, sync::Arc};
 
 use lazy_static::lazy_static;
@@ -10,72 +12,39 @@ use tardis::{
     serde_json::Value,
     tokio::{sync::RwLock, task::JoinHandle},
     web::{ws_client::TardisWSClient, ws_processor::TardisWebsocketReq},
-    TardisFuns, TardisFunsInst,
+    TardisFuns,
 };
 
 lazy_static! {
     static ref TASK_HANDLE: Arc<RwLock<HashMap<i64, JoinHandle<()>>>> = Arc::new(RwLock::new(HashMap::new()));
 }
+const TASK_PROCESSOR_DATA_EX_SEC: u64 = 60 * 60 * 24;
 const TASK_IN_CTX_FLAG: &str = "task_id";
-const NOTIFY_EVENT_IN_CTX_FLAG: &str = "notify";
-const TASK_PROCESSOR_DATA_EX: u64 = 60 * 60 * 24;
-const EVENT_EXECUTE_TASK_EXTERNAL: &str = "execute_task_external";
-const EVENT_TASK_STATUS_EXTERNAL: &str = "task_status_external";
-const EVENT_SET_TASK_PROCESS_DATA_EXTERNAL: &str = "set_task_process_data";
+
+/// 设置任务状态事件标识
+pub const EVENT_SET_TASK_STATUS_FLAG: &str = "set_task_status";
+/// 设置任务处理数据事件标识
+pub const EVENT_SET_TASK_PROCESS_DATA_FLAG: &str = "set_task_process";
+/// 执行任务事件标识
+pub const EVENT_EXECUTE_TASK_FLAG: &str = "execute_task";
 
 pub struct TaskProcessor;
 
 impl TaskProcessor {
-    pub async fn init_task(cache_key: &str, cache_client: &TardisCacheClient) -> TardisResult<i64> {
+    /// 初始化异步任务状态
+    pub async fn init_status(cache_key: &str, task_id: Option<i64>, cache_client: &TardisCacheClient) -> TardisResult<i64> {
         //todo change to SnowFlake or other distributed ID generator
-        let task_id = Local::now().timestamp_nanos_opt().expect("maybe in 23rd centery");
+        let task_id = task_id.unwrap_or(Local::now().timestamp_nanos_opt().expect("maybe in 23rd century"));
         let max: i64 = u32::MAX.into();
         let task_id_split1: usize = (task_id / max).try_into()?;
         let task_id_split2: usize = (task_id % max).try_into()?;
+        // 使用bitmap存储以减少内存占用
         cache_client.setbit(&format!("{cache_key}:1"), task_id_split1, false).await?;
         cache_client.setbit(&format!("{cache_key}:2"), task_id_split2, false).await?;
         Ok(task_id)
     }
 
-    pub async fn init_task_external(cache_key: &str, task_id: i64, cache_client: &TardisCacheClient) -> TardisResult<i64> {
-        //todo change to SnowFlake or other distributed ID generator
-        let max: i64 = u32::MAX.into();
-        let task_id_split1: usize = (task_id / max).try_into()?;
-        let task_id_split2: usize = (task_id % max).try_into()?;
-        cache_client.setbit(&format!("{cache_key}:1"), task_id_split1, false).await?;
-        cache_client.setbit(&format!("{cache_key}:2"), task_id_split2, false).await?;
-        Ok(task_id)
-    }
-
-    pub async fn set_status(
-        cache_key: &str,
-        task_id: i64,
-        status: bool,
-        cache_client: &TardisCacheClient,
-        ws_client: Option<TardisWSClient>,
-        from_avatar: String,
-        ctx: &TardisContext,
-    ) -> TardisResult<()> {
-        let max: i64 = u32::MAX.into();
-        let task_id_split1: usize = (task_id / max).try_into()?;
-        let task_id_split2: usize = (task_id % max).try_into()?;
-        cache_client.setbit(&format!("{cache_key}:1"), task_id_split1, status).await?;
-        cache_client.setbit(&format!("{cache_key}:2"), task_id_split2, status).await?;
-        Self::send_event(
-            ws_client,
-            TaskWsEventReq {
-                task_id,
-                data: Value::Bool(status),
-                msg: format!("task status: {}", status),
-            },
-            from_avatar,
-            Some(EVENT_TASK_STATUS_EXTERNAL.to_owned()),
-            ctx,
-        )
-        .await?;
-        Ok(())
-    }
-
+    /// 检查异步任务状态（是否完成）
     pub async fn check_status(cache_key: &str, task_id: i64, cache_client: &TardisCacheClient) -> TardisResult<bool> {
         let max: i64 = u32::MAX.into();
         let task_id_split1: usize = (task_id / max).try_into()?;
@@ -85,18 +54,58 @@ impl TaskProcessor {
         Ok(result1 && result2)
     }
 
-    pub async fn set_task_process_data(
+    /// 设置异步任务状态（是否完成）
+    pub async fn set_status(cache_key: &str, task_id: i64, status: bool, cache_client: &TardisCacheClient) -> TardisResult<()> {
+        let max: i64 = u32::MAX.into();
+        let task_id_split1: usize = (task_id / max).try_into()?;
+        let task_id_split2: usize = (task_id % max).try_into()?;
+        cache_client.setbit(&format!("{cache_key}:1"), task_id_split1, status).await?;
+        cache_client.setbit(&format!("{cache_key}:2"), task_id_split2, status).await?;
+        Ok(())
+    }
+
+    /// 设置异步任务状态（是否完成）并发送事件
+    pub async fn set_status_with_event(
+        cache_key: &str,
+        task_id: i64,
+        status: bool,
+        cache_client: &TardisCacheClient,
+        ws_client: Option<TardisWSClient>,
+        from_avatar: String,
+        to_avatars: Option<Vec<String>>,
+    ) -> TardisResult<()> {
+        Self::set_status(cache_key, task_id, status, cache_client).await?;
+        Self::send_event(
+            ws_client,
+            TaskWsEventReq {
+                task_id,
+                data: Value::Bool(status),
+                msg: format!("task status: {}", status),
+            },
+            Some(EVENT_SET_TASK_STATUS_FLAG.to_owned()),
+            from_avatar,
+            to_avatars,
+        )
+        .await
+    }
+
+    /// 设置异步任务处理数据
+    pub async fn set_process_data(cache_key: &str, task_id: i64, data: Value, cache_client: &TardisCacheClient) -> TardisResult<()> {
+        cache_client.set_ex(&format!("{cache_key}:{task_id}"), &TardisFuns::json.json_to_string(data)?, TASK_PROCESSOR_DATA_EX_SEC).await?;
+        Ok(())
+    }
+
+    /// 设置异步任务处理数据并发送事件
+    pub async fn set_process_data_with_event(
         cache_key: &str,
         task_id: i64,
         data: Value,
+        cache_client: &TardisCacheClient,
         ws_client: Option<TardisWSClient>,
         from_avatar: String,
-        funs: &TardisFunsInst,
-        ctx: &TardisContext,
+        to_avatars: Option<Vec<String>>,
     ) -> TardisResult<()> {
-        let cache_client = funs.cache();
-        let cache_key = format!("{}:{}", cache_key, task_id);
-        cache_client.set_ex(&cache_key, &TardisFuns::json.json_to_string(data.clone())?, TASK_PROCESSOR_DATA_EX).await?;
+        Self::set_process_data(cache_key, task_id, data.clone(), cache_client).await?;
         Self::send_event(
             ws_client,
             TaskWsEventReq {
@@ -104,45 +113,72 @@ impl TaskProcessor {
                 data: data.clone(),
                 msg: format!("set task process: {}", &TardisFuns::json.json_to_string(data)?),
             },
+            Some(EVENT_SET_TASK_PROCESS_DATA_FLAG.to_owned()),
             from_avatar,
-            Some(EVENT_SET_TASK_PROCESS_DATA_EXTERNAL.to_owned()),
-            ctx,
+            to_avatars,
         )
         .await?;
         Ok(())
     }
 
-    pub async fn get_task_process_data(cache_key: &str, task_id: i64, funs: &TardisFunsInst) -> TardisResult<Value> {
-        let cache_client = funs.cache();
-        let cache_key = format!("{}:{}", cache_key, task_id);
-        let result = cache_client.get(&cache_key).await?;
-        if let Some(result) = result {
+    /// 获取异步任务处理数据
+    pub async fn get_process_data(cache_key: &str, task_id: i64, cache_client: &TardisCacheClient) -> TardisResult<Value> {
+        if let Some(result) = cache_client.get(&format!("{cache_key}:{task_id}")).await? {
             Ok(TardisFuns::json.str_to_obj(&result)?)
         } else {
             Ok(Value::Null)
         }
     }
 
-    pub async fn execute_task<P, T>(
+    /// 执行异步任务
+    pub async fn execute_task<P, T>(cache_key: &str, process_fun: P, cache_client: &Arc<TardisCacheClient>) -> TardisResult<i64>
+    where
+        P: FnOnce(i64) -> T + Send + Sync + 'static,
+        T: Future<Output = TardisResult<()>> + Send + 'static,
+    {
+        Self::do_execute_task_with_ctx(cache_key, process_fun, cache_client, None, "".to_string(), None, None).await
+    }
+
+    /// 执行异步任务并发送事件
+    pub async fn execute_task_with_ctx<P, T>(
         cache_key: &str,
-        process: P,
+        process_fun: P,
+        cache_client: &Arc<TardisCacheClient>,
         ws_client: Option<TardisWSClient>,
         from_avatar: String,
-        funs: &TardisFunsInst,
+        to_avatars: Option<Vec<String>>,
         ctx: &TardisContext,
     ) -> TardisResult<i64>
     where
         P: FnOnce(i64) -> T + Send + Sync + 'static,
         T: Future<Output = TardisResult<()>> + Send + 'static,
     {
-        let task_id = TaskProcessor::init_task(cache_key, &funs.cache()).await?;
-        let cache_client = funs.cache();
+        Self::do_execute_task_with_ctx(cache_key, process_fun, cache_client, ws_client, from_avatar, to_avatars, Some(ctx)).await
+    }
+
+    async fn do_execute_task_with_ctx<P, T>(
+        cache_key: &str,
+        process_fun: P,
+        cache_client: &Arc<TardisCacheClient>,
+        ws_client: Option<TardisWSClient>,
+        from_avatar: String,
+        to_avatars: Option<Vec<String>>,
+        ctx: Option<&TardisContext>,
+    ) -> TardisResult<i64>
+    where
+        P: FnOnce(i64) -> T + Send + Sync + 'static,
+        T: Future<Output = TardisResult<()>> + Send + 'static,
+    {
+        let cache_client_clone = cache_client.clone();
+        let task_id = TaskProcessor::init_status(cache_key, None, cache_client).await?;
         let cache_key = cache_key.to_string();
-        let ctx_clone = ctx.clone();
+        let ws_client_clone = ws_client.clone();
+        let from_avatar_clone = from_avatar.clone();
+        let to_avatars_clone = to_avatars.clone();
         let handle = tardis::tokio::spawn(async move {
-            let result = process(task_id).await;
+            let result = process_fun(task_id).await;
             match result {
-                Ok(_) => match TaskProcessor::set_status(&cache_key, task_id, true, &cache_client, ws_client, from_avatar, &ctx_clone).await {
+                Ok(_) => match TaskProcessor::set_status_with_event(&cache_key, task_id, true, &cache_client_clone, ws_client, from_avatar, to_avatars).await {
                     Ok(_) => {}
                     Err(e) => log::error!("Asynchronous task [{}] process error:{:?}", task_id, e),
                 },
@@ -152,142 +188,98 @@ impl TaskProcessor {
             }
         });
         TASK_HANDLE.write().await.insert(task_id, handle);
-        Ok(task_id)
-    }
-
-    pub async fn execute_task_external(
-        cache_key: &str,
-        task_id: i64,
-        ws_client: Option<TardisWSClient>,
-        from_avatar: String,
-        funs: &TardisFunsInst,
-        ctx: &TardisContext,
-    ) -> TardisResult<i64> {
-        let task_id = TaskProcessor::init_task_external(cache_key, task_id, &funs.cache()).await?;
         Self::send_event(
-            ws_client,
+            ws_client_clone,
             TaskWsEventReq {
                 task_id,
                 data: ().into(),
                 msg: "execute task start".to_owned(),
             },
-            from_avatar,
-            Some(EVENT_EXECUTE_TASK_EXTERNAL.to_owned()),
-            ctx,
+            Some(EVENT_EXECUTE_TASK_FLAG.to_owned()),
+            from_avatar_clone,
+            to_avatars_clone,
         )
         .await?;
-        Ok(task_id)
-    }
-
-    pub async fn execute_task_with_ctx<P, T>(
-        cache_key: &str,
-        process: P,
-        funs: &TardisFunsInst,
-        ws_client: Option<TardisWSClient>,
-        from_avatar: String,
-        ctx: &TardisContext,
-    ) -> TardisResult<i64>
-    where
-        P: FnOnce(i64) -> T + Send + Sync + 'static,
-        T: Future<Output = TardisResult<()>> + Send + 'static,
-    {
-        let task_id = Self::execute_task(cache_key, process, ws_client.clone(), from_avatar.clone(), funs, &ctx.clone()).await?;
-        Self::send_event(
-            ws_client,
-            TaskWsEventReq {
-                task_id,
-                data: ().into(),
-                msg: "execute task start".to_owned(),
-            },
-            from_avatar,
-            Some(EVENT_EXECUTE_TASK_EXTERNAL.to_owned()),
-            ctx,
-        )
-        .await?;
-        if let Some(exist_task_ids) = ctx.get_ext(TASK_IN_CTX_FLAG).await? {
-            ctx.add_ext(TASK_IN_CTX_FLAG, &format!("{exist_task_ids},{task_id}")).await?;
-        } else {
-            ctx.add_ext(TASK_IN_CTX_FLAG, &task_id.to_string()).await?;
-        }
-        Ok(task_id)
-    }
-
-    pub async fn stop_task(cache_key: &str, task_id: i64, ws_client: Option<TardisWSClient>, from_avatar: String, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        if TaskProcessor::check_status(cache_key, task_id, &funs.cache()).await? {
-            TASK_HANDLE.write().await.remove(&task_id);
-        } else {
-            match TaskProcessor::do_stop_task(&cache_key, task_id, ws_client, from_avatar, funs, ctx).await {
-                Ok(_) => {}
-                Err(e) => log::error!("Asynchronous task [{}] process error:{:?}", task_id, e),
+        if let Some(ctx) = ctx {
+            if let Some(exist_task_ids) = ctx.get_ext(TASK_IN_CTX_FLAG).await? {
+                ctx.add_ext(TASK_IN_CTX_FLAG, &format!("{exist_task_ids},{task_id}")).await?;
+            } else {
+                ctx.add_ext(TASK_IN_CTX_FLAG, &task_id.to_string()).await?;
             }
         }
-        Ok(())
+        Ok(task_id)
     }
 
-    pub async fn do_stop_task(
+    /// 执行异步任务（不带异步函数，仅用于标记任务开始执行）
+    pub async fn execute_task_without_fun(
         cache_key: &str,
         task_id: i64,
+        cache_client: &Arc<TardisCacheClient>,
         ws_client: Option<TardisWSClient>,
         from_avatar: String,
-        funs: &TardisFunsInst,
-        ctx: &TardisContext,
+        to_avatars: Option<Vec<String>>,
+    ) -> TardisResult<i64> {
+        let task_id = TaskProcessor::init_status(cache_key, Some(task_id), cache_client).await?;
+        Self::send_event(
+            ws_client,
+            TaskWsEventReq {
+                task_id,
+                data: ().into(),
+                msg: "execute task start".to_owned(),
+            },
+            Some(EVENT_EXECUTE_TASK_FLAG.to_owned()),
+            from_avatar,
+            to_avatars,
+        )
+        .await?;
+        Ok(task_id)
+    }
+
+    /// 停止异步任务
+    pub async fn stop_task(cache_key: &str, task_id: i64, cache_client: &TardisCacheClient) -> TardisResult<()> {
+        Self::stop_task_with_event(cache_key, task_id, cache_client, None, "".to_string(), None).await
+    }
+
+    /// 停止异步任务并发送事件
+    pub async fn stop_task_with_event(
+        cache_key: &str,
+        task_id: i64,
+        cache_client: &TardisCacheClient,
+        ws_client: Option<TardisWSClient>,
+        from_avatar: String,
+        to_avatars: Option<Vec<String>>,
     ) -> TardisResult<()> {
+        if TaskProcessor::check_status(cache_key, task_id, cache_client).await? {
+            TASK_HANDLE.write().await.remove(&task_id);
+            return Ok(());
+        }
         if TASK_HANDLE.read().await.contains_key(&task_id) {
             match TASK_HANDLE.write().await.remove(&task_id) {
                 Some(handle) => {
                     handle.abort();
-                    match TaskProcessor::set_status(cache_key, task_id, true, &funs.cache(), ws_client, from_avatar, ctx).await {
-                        Ok(_) => {}
-                        Err(e) => log::error!("Asynchronous task [{}] stop error:{:?}", task_id, e),
-                    }
-                    Ok(())
                 }
-                None => Err(TardisError::bad_request("task not found,may task is end", "400-stop-task-error")),
+                None => return Err(TardisError::bad_request("task not found,may task is end", "400-stop-task-error")),
             }
-        } else {
-            match TaskProcessor::set_status(cache_key, task_id, true, &funs.cache(), ws_client, from_avatar, ctx).await {
-                Ok(_) => {}
-                Err(e) => log::error!("Asynchronous task [{}] stop error:{:?}", task_id, e),
-            }
-            Ok(())
         }
+        match TaskProcessor::set_status_with_event(cache_key, task_id, true, cache_client, ws_client, from_avatar, to_avatars).await {
+            Ok(_) => {}
+            Err(e) => log::error!("Asynchronous task [{}] stop error:{:?}", task_id, e),
+        }
+        Ok(())
     }
 
-    pub async fn add_notify_event(table_name: &str, operate: &str, record_id: &str, ctx: &TardisContext) -> TardisResult<()> {
-        ctx.add_ext(
-            &format!("{}{}", NOTIFY_EVENT_IN_CTX_FLAG, TardisFuns::field.nanoid()),
-            &tardis::TardisFuns::json.obj_to_string(&NotifyEventMessage {
-                table_name: table_name.to_string(),
-                operate: operate.to_string(),
-                record_id: record_id.to_string(),
-            })?,
-        )
-        .await
-    }
-
+    /// 获取异步任务IDs
+    ///
+    /// 多个任务使用``,``分隔
     pub async fn get_task_id_with_ctx(ctx: &TardisContext) -> TardisResult<Option<String>> {
         ctx.get_ext(TASK_IN_CTX_FLAG).await
     }
 
-    pub async fn get_notify_event_with_ctx(ctx: &TardisContext) -> TardisResult<Option<Vec<NotifyEventMessage>>> {
-        let notify_events = ctx.ext.read().await;
-        let notify_events = notify_events
-            .iter()
-            .filter(|(k, _)| k.starts_with(NOTIFY_EVENT_IN_CTX_FLAG))
-            .map(|(_, v)| TardisFuns::json.str_to_obj::<NotifyEventMessage>(v).unwrap())
-            .collect::<Vec<_>>();
-        if notify_events.is_empty() {
-            Ok(None)
-        } else {
-            Ok(Some(notify_events))
-        }
-    }
-
-    pub async fn send_event(ws_client: Option<TardisWSClient>, msg: TaskWsEventReq, from_avatar: String, event: Option<String>, ctx: &TardisContext) -> TardisResult<()> {
+    async fn send_event(ws_client: Option<TardisWSClient>, msg: TaskWsEventReq, event: Option<String>, from_avatar: String, to_avatars: Option<Vec<String>>) -> TardisResult<()> {
         if let Some(ws_client) = ws_client {
             let req = TardisWebsocketReq {
                 msg: tardis::serde_json::Value::String(TardisFuns::json.obj_to_string(&msg)?),
-                to_avatars: Some(vec![format!("account/{}", ctx.owner)]),
+                to_avatars,
                 from_avatar,
                 event,
                 ..Default::default()
@@ -303,24 +295,4 @@ pub struct TaskWsEventReq {
     pub task_id: i64,
     pub data: Value,
     pub msg: String,
-}
-
-#[derive(Clone, Debug, Deserialize, Serialize)]
-pub struct NotifyEventMessage {
-    pub table_name: String,
-    pub operate: String,
-    pub record_id: String,
-}
-
-#[derive(Clone, Debug, Deserialize, Serialize)]
-pub struct TaskEventMessage {
-    pub cache_key: String,
-    pub task_id: i64,
-    pub operate: TaskOperate,
-}
-
-#[derive(Clone, Debug, Deserialize, Serialize)]
-pub enum TaskOperate {
-    Start,
-    Stop,
 }

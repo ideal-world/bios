@@ -15,15 +15,15 @@ In a nutshell, BIOS is a **stable**, **secure**, **lightweight**, and **extensib
 
 The vast majority of `BIOS` functionalities are written in the ``Rust`` language and rely on the ``Tardis``(https://github.com/ideal-world/tardis) framework maintained by the same group of contributors.
 
-From the bottom to the top, ``BIOS`` is divided into five layers: **RBUM**, **SPI**, **Middleware**, **Support**, and **FaaS**.
+From the bottom to the top, ``BIOS`` is divided into five layers: **RBUM**, **SPI**, **Middlewares**, **Supports**, and **FaaS**.
 
 * **RBUM** (Resource-Based Unified Model) is a unified model based on resources. The model provides upper-level operations with `unified basic operations, unified credential management, and unified access control`.
 
 * **SPI** (Service Provider Interface) provides abstractions for commonly used basic operations to adapt to mainstream middleware/cloud services. For example, we provide the `full-text search` operation, which adapts to `PostgreSql` and `ElasticSearch` and can be further extended to other implementations.
 
-* **Middleware** provides some commonly used middleware. Different from the `SPI` layer, these middleware do not consider adaptability, thus gaining greater flexibility and freedom, and can be used to build some special features. For example, we provide the `event service`, which is based on the `Websocket` protocol and implements event penetration between the front and back ends and between the back and back ends.
+* **Middlewares** provides some commonly used middleware. Different from the `SPI` layer, these middleware do not consider adaptability, thus gaining greater flexibility and freedom, and can be used to build some special features. For example, we provide the `event service`, which is based on the `Websocket` protocol and implements event penetration between the front and back ends and between the back and back ends.
 
-* **Support** is used to provide some complex domain services. Different from the `Middleware` layer, these supporting services aggregate the capabilities of `SPI` and `Middleware` to form more complex business-oriented services.
+* **Supports** is used to provide some complex domain services. Different from the `Middleware` layer, these supporting services aggregate the capabilities of `SPI` and `Middleware` to form more complex business-oriented services.
 
 * **FaaS** is used to implement the construction of general business applications with simple front-end technologies.
 
@@ -38,11 +38,11 @@ In terms of gateway selection, we support the self-developed gateway named `Spac
 |-- backend
   |-- basic                 Basic operation module, including common logic of RBUM and SPI
   |-- spi                   SPI layer
-  |-- middleware            Middleware layer
-  |-- support               Support layer
+  |-- middlewares           Middleware layer
+  |-- supports              Support layer
   |-- faas                  FaaS layer
   |-- services              Aggregation service layer
-  |-- gateway               Gateway adaptation layer
+  |-- gateways              Gateway adaptation layer
     |-- spacegate-plugins   Customized plugins for SpaceGate gateway
 |-- frontend
   |-- console               Console front-end

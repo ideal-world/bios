@@ -136,7 +136,7 @@ impl IamCiCertApi {
         };
         let ldap_dn = ldap_origin.0.unwrap_or_default();
         let cert =
-            IamCertServ::get_cert_by_relrubmid_kind_supplier(&account_id.0, &kind, vec![supplier], conf_id, &true_tenant_id.unwrap_or_default(), ldap_dn, &funs, &ctx).await?;
+            IamCertServ::get_cert_by_rel_rbum_id_kind_supplier(&account_id.0, &kind, vec![supplier], conf_id, &true_tenant_id.unwrap_or_default(), ldap_dn, &funs, &ctx).await?;
         ctx.execute_task().await?;
         TardisResp::ok(cert)
     }
@@ -172,7 +172,7 @@ impl IamCiCertApi {
         let funs = iam_constants::get_tardis_inst();
         unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         add_remote_ip(request, &ctx.0).await?;
-        let rbum_cert = IamCertServ::get_3th_kind_cert_by_rel_rubm_id(&account_id.0, vec![supplier.0], &funs, &ctx.0).await?;
+        let rbum_cert = IamCertServ::get_3th_kind_cert_by_rel_rbum_id(&account_id.0, vec![supplier.0], &funs, &ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(rbum_cert)
     }

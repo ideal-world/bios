@@ -165,7 +165,7 @@ pub async fn app_console_auth_mgr_page(client: &mut BIOSWebTestClient) -> Tardis
     // Find Res Tree
     let res_tree: RbumSetTreeResp = client.get("/ca/res/tree").await;
     assert_eq!(res_tree.main.len(), 3);
-    let res = res_tree.ext.as_ref().unwrap().items[&res_tree.main.iter().find(|i| i.name == "Menus").unwrap().id].get(0).unwrap();
+    let res = res_tree.ext.as_ref().unwrap().items[&res_tree.main.iter().find(|i| i.name == "Menus").unwrap().id].first().unwrap();
     assert!(res.rel_rbum_item_name.contains("Console"));
     let res_id = res.rel_rbum_item_id.clone();
 
@@ -198,7 +198,7 @@ pub async fn app_console_auth_mgr_page(client: &mut BIOSWebTestClient) -> Tardis
     // Find Res By Role Id
     let res: Vec<RbumRelBoneResp> = client.get(&format!("/ca/role/{}/res", role_id)).await;
     assert_eq!(res.len(), 1);
-    assert!(res.get(0).unwrap().rel_name.contains("Console"));
+    assert!(res.first().unwrap().rel_name.contains("Console"));
 
     // Modify Role by Role Id
     let modify_role_resp: TardisResp<Option<String>> = client
@@ -237,7 +237,7 @@ pub async fn app_console_auth_mgr_page(client: &mut BIOSWebTestClient) -> Tardis
     assert_eq!(accounts.records[0].certs.len(), 2);
     assert_eq!(accounts.records[0].orgs.len(), 0);
     assert!(accounts.records[0].certs.contains_key("UserPwd"));
-    let account_id = accounts.records.get(0).unwrap().id.clone();
+    let account_id = accounts.records.first().unwrap().id.clone();
 
     // Count Account By Role Id
     let accounts: u64 = client.get(&format!("/ca/role/{}/account/total", role_id)).await;

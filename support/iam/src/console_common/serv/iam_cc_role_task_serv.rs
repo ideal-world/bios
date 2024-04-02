@@ -29,7 +29,7 @@ impl IamCcRoleTaskServ {
             move |_task_id| async move {
                 let mut funs = iam_constants::get_tardis_inst();
                 funs.begin().await?;
-                let base_tanent_role_ids = IamRoleServ::find_id_items(
+                let base_tenant_role_ids = IamRoleServ::find_id_items(
                     &IamRoleFilterReq {
                         basic: RbumBasicFilterReq {
                             own_paths: Some("".to_string()),
@@ -106,8 +106,8 @@ impl IamCcRoleTaskServ {
                     }
                     info!("execute_role_task: tenant_id: {}, tenant_name: {}", tenant.id, tenant.name);
                     IamRoleServ::copy_role_agg(&tenant.id, &IamRoleKind::Tenant, &funs, &tenant_ctx).await?;
-                    for base_tanent_role_id in &base_tanent_role_ids {
-                        let rel_account_roles = IamRelServ::find_to_simple_rels(&IamRelKind::IamAccountRole, &base_tanent_role_id, None, None, &funs, &tenant_ctx).await?;
+                    for base_tenant_role_id in &base_tenant_role_ids {
+                        let rel_account_roles = IamRelServ::find_to_simple_rels(&IamRelKind::IamAccountRole, &base_tenant_role_id, None, None, &funs, &tenant_ctx).await?;
                         for rel_account_role in rel_account_roles {
                             if IamAccountServ::count_items(
                                 &IamAccountFilterReq {
@@ -124,9 +124,9 @@ impl IamCcRoleTaskServ {
                             .await?
                                 > 0
                             {
-                                info!("execute_role_task: base_tanent_role_id: {}, rel_account_role: {:?}", base_tanent_role_id, rel_account_role);
-                                let _ = IamRoleServ::add_rel_account(&base_tanent_role_id, &rel_account_role.rel_id, None, &funs, &tenant_ctx).await;
-                                let _ = IamRelServ::delete_simple_rel(&IamRelKind::IamAccountRole, &rel_account_role.rel_id, &base_tanent_role_id, &funs, &tenant_ctx).await;
+                                info!("execute_role_task: base_tenant_role_id: {}, rel_account_role: {:?}", base_tenant_role_id, rel_account_role);
+                                let _ = IamRoleServ::add_rel_account(base_tenant_role_id, &rel_account_role.rel_id, None, &funs, &tenant_ctx).await;
+                                let _ = IamRelServ::delete_simple_rel(&IamRelKind::IamAccountRole, &rel_account_role.rel_id, base_tenant_role_id, &funs, &tenant_ctx).await;
                             }
                         }
                     }
@@ -174,7 +174,7 @@ impl IamCcRoleTaskServ {
                     info!("execute_role_task: app_id: {}, app_name: {}", app.id, app.name);
                     IamRoleServ::copy_role_agg(&app.id, &IamRoleKind::App, &funs, &app_ctx).await?;
                     for base_app_role_id in &base_app_role_ids {
-                        let rel_account_roles = IamRelServ::find_to_simple_rels(&IamRelKind::IamAccountRole, &base_app_role_id, None, None, &funs, &app_ctx).await?;
+                        let rel_account_roles = IamRelServ::find_to_simple_rels(&IamRelKind::IamAccountRole, base_app_role_id, None, None, &funs, &app_ctx).await?;
                         for rel_account_role in rel_account_roles {
                             if IamAccountServ::count_items(
                                 &IamAccountFilterReq {
@@ -192,8 +192,8 @@ impl IamCcRoleTaskServ {
                                 > 0
                             {
                                 info!("execute_role_task: base_app_role_id: {}, rel_account_role: {:?}", base_app_role_id, rel_account_role);
-                                let _ = IamRoleServ::add_rel_account(&base_app_role_id, &rel_account_role.rel_id, None, &funs, &app_ctx).await;
-                                let _ = IamRelServ::delete_simple_rel(&IamRelKind::IamAccountRole, &rel_account_role.rel_id, &base_app_role_id, &funs, &app_ctx).await;
+                                let _ = IamRoleServ::add_rel_account(base_app_role_id, &rel_account_role.rel_id, None, &funs, &app_ctx).await;
+                                let _ = IamRelServ::delete_simple_rel(&IamRelKind::IamAccountRole, &rel_account_role.rel_id, base_app_role_id, &funs, &app_ctx).await;
                             }
                         }
                     }
@@ -203,9 +203,10 @@ impl IamCcRoleTaskServ {
                 task_ctx.execute_task().await?;
                 Ok(())
             },
-            funs,
+            &funs.cache(),
             ws_iam_send_client().await.clone(),
             default_iam_send_avatar().await.clone(),
+            Some(vec![format!("account/{}", ctx.owner)]),
             ctx,
         )
         .await?;

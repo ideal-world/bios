@@ -875,13 +875,13 @@ pub async fn init_ws_iam_event_client() -> TardisResult<()> {
                 };
                 tokio::spawn(async move {
                     let funs = iam_constants::get_tardis_inst();
-                    let result = TaskProcessor::execute_task_external(
+                    let result = TaskProcessor::execute_task_without_fun(
                         &cache_key,
                         task_id,
+                        &funs.cache(),
                         ws_iam_send_client().await.clone(),
                         default_iam_send_avatar().await.clone(),
-                        &funs,
-                        &ctx,
+                        Some(vec![format!("account/{}", ctx.owner)]),
                     )
                     .await;
                     if let Err(err) = result {
@@ -896,13 +896,13 @@ pub async fn init_ws_iam_event_client() -> TardisResult<()> {
                 tokio::spawn(async move {
                     let funs = iam_constants::get_tardis_inst();
                     for task_id in task_ids {
-                        let result = TaskProcessor::stop_task(
+                        let result = TaskProcessor::stop_task_with_event(
                             &cache_key,
                             task_id,
+                            &funs.cache(),
                             ws_iam_send_client().await.clone(),
                             default_iam_send_avatar().await.clone(),
-                            &funs,
-                            &ctx,
+                            Some(vec![format!("account/{}", ctx.owner)]),
                         )
                         .await;
                         if let Err(err) = result {
@@ -917,14 +917,14 @@ pub async fn init_ws_iam_event_client() -> TardisResult<()> {
                 };
                 tokio::spawn(async move {
                     let funs = iam_constants::get_tardis_inst();
-                    let result = TaskProcessor::set_task_process_data(
+                    let result = TaskProcessor::set_process_data_with_event(
                         &cache_key,
                         task_id,
                         data,
+                        &funs.cache(),
                         ws_iam_send_client().await.clone(),
                         default_iam_send_avatar().await.clone(),
-                        &funs,
-                        &ctx,
+                        Some(vec![format!("account/{}", ctx.owner)]),
                     )
                     .await;
                     if let Err(err) = result {

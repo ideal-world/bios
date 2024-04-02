@@ -63,7 +63,7 @@ impl IamCsAccountApi {
         IamSearchClient::async_add_or_modify_account_search(id.0, Box::new(true), "".to_string(), &funs, &ctx).await?;
         funs.commit().await?;
         ctx.execute_task().await?;
-        if let Some(notify_events) = TaskProcessor::get_notify_event_with_ctx(&ctx).await? {
+        if let Some(notify_events) = rbum_event_helper::get_notify_event_with_ctx(&ctx).await? {
             rbum_event_helper::try_notifies(notify_events, &iam_constants::get_tardis_inst(), &ctx).await?;
         }
         TardisResp::ok(Void {})
@@ -147,7 +147,7 @@ impl IamCsAccountApi {
             Some(RbumSetItemRelFilterReq {
                 set_ids_and_cate_codes: Some(
                     set_cate_vec.into_iter().map(|sc| (sc.rel_rbum_set_id, sc.sys_code)).fold(HashMap::new(), |mut acc, (key, value)| {
-                        acc.entry(key).or_insert_with(Vec::new).push(value);
+                        acc.entry(key).or_default().push(value);
                         acc
                     }),
                 ),
