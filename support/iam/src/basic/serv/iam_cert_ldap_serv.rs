@@ -1243,7 +1243,7 @@ pub(crate) mod ldap {
     use std::time::Duration;
 
     use ldap3::adapters::{Adapter, EntriesOnly, PagedResults};
-    use ldap3::{log::warn, Ldap, LdapConnAsync, LdapConnSettings, Scope, SearchEntry, SearchOptions};
+    use ldap3::{log::warn, Ldap, LdapConnAsync, LdapConnSettings, Scope, SearchEntry};
     use serde::{Deserialize, Serialize};
 
     use tardis::basic::{error::TardisError, result::TardisResult};
@@ -1333,7 +1333,7 @@ pub(crate) mod ldap {
 
         /// only used for once
         pub fn with_limit(&mut self, limit: i32) -> TardisResult<()> {
-            self.ldap.with_search_options(self.ldap.search_opts.clone().unwrap_or(SearchOptions::new()).sizelimit(limit));
+            self.ldap.with_search_options(self.ldap.search_opts.clone().unwrap_or_default().sizelimit(limit));
             Ok(())
         }
 

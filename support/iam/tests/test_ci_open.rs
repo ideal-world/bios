@@ -6,9 +6,9 @@ use tardis::basic::result::TardisResult;
 use tardis::chrono::Utc;
 use tardis::log::info;
 
-use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
-use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
-use bios_iam::basic::dto::iam_app_dto::IamAppModifyReq;
+
+
+
 use bios_iam::iam_constants;
 
 pub async fn test(context1: &TardisContext) -> TardisResult<()> {
@@ -59,7 +59,7 @@ pub async fn test(context1: &TardisContext) -> TardisResult<()> {
     )
     .await?;
     let cert_id = cert_resp.id;
-    let cert_resp2 = IamOpenServ::general_cert(
+    let _cert_resp2 = IamOpenServ::general_cert(
         IamOpenAkSkAddReq {
             tenant_id: context1.own_paths.clone(),
             app_id: None,

@@ -64,7 +64,7 @@ pub async fn test(context: &TardisContext) -> TardisResult<(TardisContext, Tardi
             cert_conf_by_ldap: None,
         },
         &funs,
-        &context,
+        context,
     )
     .await?;
     sleep(Duration::from_secs(1)).await;

@@ -193,10 +193,7 @@ impl IamCaRoleApi {
                 .0
                 .split(',')
                 .map(|account_id| async {
-                    let result = IamAppServ::add_rel_account(&app_id, account_id, true, &funs, &ctx.0).await;
-                    if result.is_err() {
-                        return result;
-                    }
+                    IamAppServ::add_rel_account(&app_id, account_id, true, &funs, &ctx.0).await?;
                     IamRoleServ::add_rel_account(&id.0, account_id, Some(RBUM_SCOPE_LEVEL_APP), &funs, &ctx.0).await
                 })
                 .collect_vec(),

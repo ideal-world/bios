@@ -67,7 +67,7 @@ pub async fn test(sysadmin_info: (&str, &str), system_admin_context: &TardisCont
             cert_conf_by_ldap: None,
         },
         &funs,
-        &system_admin_context,
+        system_admin_context,
     )
     .await?;
     sleep(Duration::from_secs(1)).await;
@@ -483,7 +483,7 @@ pub async fn test(sysadmin_info: (&str, &str), system_admin_context: &TardisCont
     info!("【test_cp_all】 : Find Rel Roles By Current Account");
     let sysadmin_roles = IamAccountServ::find_simple_rel_roles(&system_admin_context.owner, false, None, None, &funs, &system_admin_context).await?;
     assert_eq!(sysadmin_roles.len(), 1);
-    assert_eq!(sysadmin_roles.get(0).unwrap().rel_name, "sys_admin");
+    assert_eq!(sysadmin_roles.first().unwrap().rel_name, "sys_admin");
 
     funs.rollback().await?;
 

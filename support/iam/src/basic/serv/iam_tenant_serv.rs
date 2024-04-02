@@ -228,7 +228,7 @@ impl IamTenantServ {
         IamSetServ::init_set(IamSetKind::Apps, RBUM_SCOPE_LEVEL_TENANT, funs, &tenant_ctx).await?;
 
         // // Init cert conf
-        let platform_config = IamPlatformServ::get_platform_config_agg(funs, &ctx).await?;
+        let platform_config = IamPlatformServ::get_platform_config_agg(funs, ctx).await?;
 
         let cert_conf_by_phone_vcode = if platform_config.cert_conf_by_phone_vcode {
             Some(IamCertConfPhoneVCodeAddOrModifyReq { ak_note: None, ak_rule: None })
@@ -450,10 +450,10 @@ impl IamTenantServ {
             if !cert_conf_by_oauth2.is_empty() {
                 //get intersection of modify request certificate configuration and database certificate configuration/获取修改request和数据库中配置的交集
                 let modify_cert_conf_by_oauth2 =
-                    cert_conf_by_oauth2.iter().filter(|r| cert_conf_by_oauth2_supplier_id_map.contains_key(&r.supplier.to_string())).collect::<Vec<_>>();
+                    cert_conf_by_oauth2.iter().filter(|r| cert_conf_by_oauth2_supplier_id_map.contains_key::<String>(r.supplier.as_ref())).collect::<Vec<_>>();
                 for modify in modify_cert_conf_by_oauth2 {
                     IamCertOAuth2Serv::modify_cert_conf(
-                        cert_conf_by_oauth2_supplier_id_map.get(&modify.supplier.to_string()).unwrap_or(&"".to_string()),
+                        cert_conf_by_oauth2_supplier_id_map.get::<String>(modify.supplier.as_ref()).unwrap_or(&"".to_string()),
                         modify,
                         funs,
                         ctx,
@@ -461,7 +461,8 @@ impl IamTenantServ {
                     .await?;
                 }
 
-                let add_cert_conf_by_oauth2 = cert_conf_by_oauth2.iter().filter(|r| !cert_conf_by_oauth2_supplier_id_map.contains_key(&r.supplier.to_string())).collect::<Vec<_>>();
+                let add_cert_conf_by_oauth2 =
+                    cert_conf_by_oauth2.iter().filter(|r| !cert_conf_by_oauth2_supplier_id_map.contains_key::<String>(r.supplier.as_ref())).collect::<Vec<_>>();
                 for add in add_cert_conf_by_oauth2 {
                     IamCertOAuth2Serv::add_or_enable_cert_conf(IamCertOAuth2Supplier::parse(&add.supplier)?, add, id, funs, ctx).await?;
                 }
