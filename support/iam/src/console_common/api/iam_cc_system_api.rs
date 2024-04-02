@@ -18,7 +18,7 @@ pub struct IamCcSystemApi;
 impl IamCcSystemApi {
     /// Get Async Task Status
     #[oai(path = "/task/:task_ids", method = "get")]
-    async fn task_check_finished(&self, task_ids: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<bool> {
+    async fn task_check_finished(&self, task_ids: Path<String>) -> TardisApiResult<bool> {
         let funs = iam_constants::get_tardis_inst();
         let task_ids = task_ids.0.split(',');
         for task_id in task_ids {

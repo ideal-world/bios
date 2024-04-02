@@ -106,8 +106,8 @@ impl IamCcRoleTaskServ {
                     }
                     info!("execute_role_task: tenant_id: {}, tenant_name: {}", tenant.id, tenant.name);
                     IamRoleServ::copy_role_agg(&tenant.id, &IamRoleKind::Tenant, &funs, &tenant_ctx).await?;
-                    for base_tanent_role_id in &base_tanent_role_ids {
-                        let rel_account_roles = IamRelServ::find_to_simple_rels(&IamRelKind::IamAccountRole, &base_tanent_role_id, None, None, &funs, &tenant_ctx).await?;
+                    for base_tenant_role_id in &base_tenant_role_ids {
+                        let rel_account_roles = IamRelServ::find_to_simple_rels(&IamRelKind::IamAccountRole, &base_tenant_role_id, None, None, &funs, &tenant_ctx).await?;
                         for rel_account_role in rel_account_roles {
                             if IamAccountServ::count_items(
                                 &IamAccountFilterReq {
