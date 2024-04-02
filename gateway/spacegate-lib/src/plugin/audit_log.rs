@@ -30,9 +30,9 @@ use tardis::{
     TardisFuns, TardisFunsInst,
 };
 
-use crate::extension::audit_log_param::AuditLogParam;
+use crate::extension::audit_log_param::{AuditLogParam, LogParamContent};
 use crate::extension::before_encrypt_body::BeforeEncryptBody;
-use crate::extension::cert_info::{CertInfo, RoleInfo};
+use crate::extension::cert_info::CertInfo;
 
 pub const CODE: &str = "audit_log";
 
@@ -134,9 +134,10 @@ impl AuditLogPlugin {
             path: param.request_path,
             scheme: param.request_scheme,
             token: param.request_headers.get(&self.header_token_name).and_then(|v| v.to_str().ok().map(|v| v.to_string())),
-            server_timing: start_time.map(|st| (end_time - st).as_millis() as i64),
+            server_timing: start_time.map(|st| end_time - st),
             resp_status: resp.status().as_u16().to_string(),
             success,
+            own_paths: resp.extensions().get::<CertInfo>().and_then(|info| info.own_paths.clone()),
         };
         Ok((resp, Some(content)))
     }
@@ -182,6 +183,7 @@ impl AuditLogPlugin {
             } else {
                 reflect.insert(CertInfo {
                     id: ident,
+                    own_paths: None,
                     name: None,
                     roles: vec![],
                 });
@@ -284,36 +286,21 @@ fn get_tardis_inst() -> TardisFunsInst {
     TardisFuns::inst(CODE.to_string(), None)
 }
 
-#[derive(Serialize, Deserialize)]
-pub struct LogParamContent {
-    pub op: String,
-    pub name: String,
-    pub user_id: Option<String>,
-    pub role: Vec<RoleInfo>,
-    pub ip: String,
-    pub path: String,
-    pub scheme: String,
-    pub token: Option<String>,
-    pub server_timing: Option<i64>,
-    pub resp_status: String,
-    //Indicates whether the business operation was successful.
-    pub success: bool,
-}
-
 impl LogParamContent {
     fn to_value(&self) -> Value {
         json!({
             "name":self.name,
             "id":self.user_id,
+            "own_paths":self.own_paths,
             "ip":self.ip,
             "op":self.op,
             "path":self.path,
             "resp_status": self.resp_status,
+            "server_timing":self.server_timing,
             "success":self.success,
         })
     }
 }
-
 #[cfg(test)]
 mod test {
     use http::{HeaderName, Request, Response};

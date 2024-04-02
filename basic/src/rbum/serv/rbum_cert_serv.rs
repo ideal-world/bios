@@ -443,12 +443,15 @@ impl RbumCrudOperation<rbum_cert::ActiveModel, RbumCertAddReq, RbumCertModifyReq
                 }
             }
             // Fill Time
-            if let Some(start_time) = &add_req.start_time {
-                add_req.end_time = Some(*start_time + Duration::try_seconds(rbum_cert_conf.expire_sec).unwrap_or(TimeDelta::max_value()));
-            } else {
-                let now = Utc::now();
-                add_req.start_time = Some(now);
-                add_req.end_time = Some(now + Duration::try_seconds(rbum_cert_conf.expire_sec).unwrap_or(TimeDelta::max_value()));
+            if add_req.end_time.is_none() {
+                if let Some(start_time) = &add_req.start_time {
+                    add_req.end_time = Some(*start_time + Duration::try_seconds(rbum_cert_conf.expire_sec).unwrap_or(TimeDelta::max_value()));
+                } else {
+                    add_req.end_time = Some(Utc::now() + Duration::try_seconds(rbum_cert_conf.expire_sec).unwrap_or(TimeDelta::max_value()));
+                }
+            }
+            if add_req.start_time.is_none() {
+                add_req.start_time = Some(Utc::now());
             }
             if rbum_cert_conf.sk_dynamic {
                 add_req.end_time = None;
