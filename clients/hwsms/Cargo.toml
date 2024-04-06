@@ -18,4 +18,4 @@ reach = ["bios-reach"]
 [dependencies]
 serde.workspace = true
 tardis = { workspace = true }
-bios-reach = { optional = true, path = "../../support/reach" }
+bios-reach = { optional = true, path = "../../backend/support/reach" }

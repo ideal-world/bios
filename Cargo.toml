@@ -1,35 +1,35 @@
 [workspace]
 
 members = [
-  "basic",
-  # "spi/*",
-  "spi/spi-cache",
-  "spi/spi-search",
-  "spi/spi-graph",
-  "spi/spi-kv",
-  "spi/spi-log",
-  "spi/spi-object",
-  "spi/spi-plugin",
-  "spi/spi-stats",
-  "spi/spi-reldb",
-  "gateway/test",
-  "gateway/spacegate-lib",
-  "middleware/*",
-  "support/iam",
-  "support/auth",
-  "support/enhance-wasm",
-  "support/reach",
-  "services/*",
-  "sdk/*",
-  "clients/*",
+    "backend/basic",
+    # "backend/spi/*",
+    "backend/spi/spi-cache",
+    "backend/spi/spi-search",
+    "backend/spi/spi-graph",
+    "backend/spi/spi-kv",
+    "backend/spi/spi-log",
+    "backend/spi/spi-object",
+    "backend/spi/spi-plugin",
+    "backend/spi/spi-stats",
+    "backend/spi/spi-reldb",
+    "backend/gateway/test",
+    "backend/gateway/spacegate-lib",
+    "backend/middleware/*",
+    "backend/support/iam",
+    "backend/support/auth",
+    "backend/support/enhance-wasm",
+    "backend/support/reach",
+    "backend/services/*",
+    "frontend/sdk/*",
+    "clients/*",
 ]
 
 [workspace.package]
 version = "0.1.0"
 authors = [
-  "gudaoxuri <i@sunisle.org>",
-  "hermitCode <17743125563@163.com>",
-  "RWDai <rwdai@foxmail.com>",
+    "gudaoxuri <i@sunisle.org>",
+    "hermitCode <17743125563@163.com>",
+    "RWDai <rwdai@foxmail.com>",
 ]
 homepage = "https://bios.idealworld.group"
 documentation = "https://bios.idealworld.group"
@@ -76,10 +76,10 @@ tardis = { git = "https://github.com/ideal-world/tardis.git", rev = "191f3ec" }
 #   "ext-axum",
 # ] }
 spacegate-shell = { git = "https://github.com/ideal-world/spacegate.git", branch = "dev", features = [
-  "cache",
-  "k8s",
-  "ext-redis",
-  "ext-axum",
+    "cache",
+    "k8s",
+    "ext-redis",
+    "ext-axum",
 ] }
 
 spacegate-plugin = { git = "https://github.com/ideal-world/spacegate.git", branch = "master" }

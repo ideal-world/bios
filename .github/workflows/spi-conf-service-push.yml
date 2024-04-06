@@ -3,10 +3,10 @@ name: Publish spi-conf services docker image
 on:
   push:
     paths:
-      - "basic/**"
-      - "services/**"
-      - "spi/**"
-      - "middleware/**"
+      - "backend/basic/**"
+      - "backend/services/**"
+      - "backend/spi/**"
+      - "backend/middleware/**"
       - "Cargo.toml"
       - ".github/workflows/spi-conf-service-push.yml"
 

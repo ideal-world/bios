@@ -3,13 +3,13 @@ name: Publish all services docker image
 on:
   push:
     paths:
-      - "basic/**"
-      - "support/iam/**"
-      - "support/auth/**"
-      - "support/reach/**"
-      - "services/**"
-      - "spi/**"
-      - "middleware/**"
+      - "backend/basic/**"
+      - "backend/support/iam/**"
+      - "backend/support/auth/**"
+      - "backend/support/reach/**"
+      - "backend/services/**"
+      - "backend/spi/**"
+      - "backend/middleware/**"
       - "Cargo.toml"
       - ".github/workflows/service-all-push.yml"
 

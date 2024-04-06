@@ -3,9 +3,9 @@ name: Publish rust gateway docker image
 on:
   push:
     paths:
-      - "gateway/spacegate-lib/**"
-      - "support/auth/**"
-      - "services/spacegate/**"
+      - "backend/gateway/spacegate-lib/**"
+      - "backend/support/auth/**"
+      - "backend/services/spacegate/**"
       - "Cargo.toml"
       - ".github/workflows/space-gateway-docker-push.yml"
 

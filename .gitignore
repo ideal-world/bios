@@ -31,8 +31,8 @@ node_modules
 #macos
 .DS_Store
 #gateway dev
-gateway/example/log
-services/spacegate/devsh/
+backend/gateway/example/log
+backend/services/spacegate/devsh/
 
 # pre-commit
 .pre-commit-config.yaml

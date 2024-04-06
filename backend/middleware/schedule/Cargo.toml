@@ -1,0 +1,38 @@
+[package]
+name = "bios-mw-schedule"
+version.workspace = true
+authors.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+repository.workspace = true
+license.workspace = true
+edition.workspace = true
+readme.workspace = true
+publish.workspace = true
+
+[lib]
+name = "bios_mw_schedule"
+path = "src/lib.rs"
+
+[features]
+default = ["spi-pg"]
+spi-pg = ["tardis/reldb-postgres"]
+
+[dependencies]
+serde.workspace = true
+lazy_static.workspace = true
+# tokio-cron-scheduler = "*"
+tardis = { workspace = true, features = ["reldb-postgres", "web-server"] }
+bios-basic = { path = "../../basic", features = ["default"] }
+bios-sdk-invoke = { path = "../../../frontend/sdk/invoke", features = [
+    "spi_log", "event"
+], default-features = false }
+[dependencies.tokio-cron-scheduler]
+git = "https://github.com/4t145/tokio-cron-scheduler.git"
+branch = "time-local"
+features = ["cron_local"]
+[dev-dependencies]
+tardis = { workspace = true, features = ["test", "ws-client", "build-info"] }
+bios-basic = { path = "../../basic", features = ["default", "test"] }
+bios-spi-kv = { path = "../../spi/spi-kv" }
+bios-spi-log = { path = "../../spi/spi-log" }
