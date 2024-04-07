@@ -20,7 +20,6 @@ tardis = { workerspace = true }
 spacegate-lib = { path = "../../gateways/spacegate-lib" }
 envy = "0.4"
 [dev-dependencies]
-pprof = { version = "0.12.1", features = ["flamegraph"] }
-# tardis = { workspace = true, features = ["test", "web-client"] }
+pprof = { version = "0.13", features = ["flamegraph"] }
 
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }

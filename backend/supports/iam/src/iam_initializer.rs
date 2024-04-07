@@ -870,7 +870,7 @@ pub async fn init_ws_iam_event_client() -> TardisResult<()> {
         };
         match event.as_deref() {
             Some(EVENT_EXECUTE_TASK_EXTERNAL) => {
-                let Ok((cache_key, task_id, ctx)) = TardisFuns::json.json_to_obj::<(String, i64, TardisContext)>(msg) else {
+                let Ok((cache_key, task_id, ctx)) = TardisFuns::json.json_to_obj::<(String, u64, TardisContext)>(msg) else {
                     return None;
                 };
                 tokio::spawn(async move {
@@ -890,7 +890,7 @@ pub async fn init_ws_iam_event_client() -> TardisResult<()> {
                 });
             }
             Some(EVENT_STOP_TASK_EXTERNAL) => {
-                let Ok((cache_key, task_ids, ctx)) = TardisFuns::json.json_to_obj::<(String, Vec<i64>, TardisContext)>(msg) else {
+                let Ok((cache_key, task_ids, ctx)) = TardisFuns::json.json_to_obj::<(String, Vec<u64>, TardisContext)>(msg) else {
                     return None;
                 };
                 tokio::spawn(async move {
@@ -912,7 +912,7 @@ pub async fn init_ws_iam_event_client() -> TardisResult<()> {
                 });
             }
             Some(EVENT_SET_TASK_PROCESS_DATA_EXTERNAL) => {
-                let Ok((cache_key, task_id, data, ctx)) = TardisFuns::json.json_to_obj::<(String, i64, Value, TardisContext)>(msg) else {
+                let Ok((cache_key, task_id, data, ctx)) = TardisFuns::json.json_to_obj::<(String, u64, Value, TardisContext)>(msg) else {
                     return None;
                 };
                 tokio::spawn(async move {

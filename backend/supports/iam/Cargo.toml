@@ -46,8 +46,8 @@ tokio-util = { version = "0.7", optional = true }
 ldap3 = { version = "0.11", optional = true }
 # todo Wait for tardis field to upgrade during removal
 nanoid = { version = "0.4" }
-
 strum = { workerspace = true, features = ["derive"] }
+
 [dev-dependencies]
 tardis = { workspace = true, features = ["test"] }
 bios-basic = { path = "../../basic", features = ["default", "test"] }
