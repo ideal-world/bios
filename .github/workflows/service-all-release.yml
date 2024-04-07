@@ -39,7 +39,7 @@ jobs:
         run: cargo build --release -p bios-serv-all
 
       - name: Copy binary to workspace
-        run: cp ./target/release/bios-serv-all ./services/bios-all/
+        run: cp ./target/release/bios-serv-all ./backend/services/bios-all/
 
       - name: Build and push Docker image to github
         uses: mr-smithers-excellent/docker-build-push@v5

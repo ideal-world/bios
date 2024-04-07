@@ -38,7 +38,7 @@ jobs:
         run: cargo build --release -p spi-conf-serv
 
       - name: Copy binary to workspace
-        run: cp ./target/release/spi-conf-serv ./services/spi-conf/
+        run: cp ./target/release/spi-conf-serv ./backend/services/spi-conf/
 
       - name: Build and push Docker image to dockerhub
         uses: mr-smithers-excellent/docker-build-push@v5
