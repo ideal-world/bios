@@ -4,6 +4,7 @@ use bios_basic::helper::bios_ctx_helper::unsafe_fill_ctx;
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use bios_basic::rbum::serv::rbum_item_serv::{RbumItemCrudOperation, RbumItemServ};
 use itertools::Itertools;
+use tardis::log::error;
 
 use crate::basic::serv::iam_app_serv::IamAppServ;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
@@ -108,7 +109,10 @@ impl IamCiRoleApi {
             Box::pin(async move {
                 let task_handle = tokio::spawn(async move {
                     let mut funs = iam_constants::get_tardis_inst();
-                    funs.begin().await;
+                    if let Err(err) = funs.begin().await {
+                        error!("[IAM] batch_add_apps_rel_account begin error: {:?}", err);
+                        return;
+                    }
                     let apps_split: Vec<&str> = app_ids.0.split(',').collect::<Vec<_>>();
                     let account_split: Vec<&str> = account_ids.0.split(',').collect::<Vec<_>>();
                     for app_id in apps_split {
@@ -118,7 +122,9 @@ impl IamCiRoleApi {
                             let _ = IamRoleServ::add_rel_account(&id.0, account_id, Some(RBUM_SCOPE_LEVEL_APP), &funs, &mock_app_ctx).await;
                         }
                     }
-                    funs.commit().await;
+                    if let Err(err) = funs.commit().await {
+                        error!("[IAM] batch_add_apps_rel_account commit error: {:?}", err);
+                    }
                 });
                 task_handle.await.unwrap();
                 Ok(())

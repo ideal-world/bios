@@ -7,7 +7,7 @@ use bios_sdk_invoke::clients::event_client::TOPIC_EVENT_BUS;
 use tardis::{
     basic::{dto::TardisContext, field::TrimString, result::TardisResult},
     db::reldb_client::TardisActiveModel,
-    log::{error, info},
+    log::error,
     web::{web_server::TardisWebServer, ws_client::TardisWSClient},
     TardisFuns, TardisFunsInst,
 };

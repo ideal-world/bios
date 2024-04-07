@@ -3,7 +3,6 @@ use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 use std::vec;
 
-use bios_sdk_invoke::clients::spi_log_client::{LogItemAddReq, SpiLogEventExt};
 use tardis::basic::dto::TardisContext;
 use tardis::basic::error::TardisError;
 use tardis::basic::result::TardisResult;
@@ -18,11 +17,10 @@ use tardis::{TardisFuns, TardisFunsInst};
 use tokio_cron_scheduler::{Job, JobScheduler};
 
 use crate::dto::schedule_job_dto::{
-    KvItemSummaryResp, KvSchedualJobItemDetailResp, ScheduleJobAddOrModifyReq, ScheduleJobInfoResp, ScheduleJobKvSummaryResp, ScheduleTaskInfoResp, ScheduleTaskLogFindResp,
+    KvItemSummaryResp, KvScheduleJobItemDetailResp, ScheduleJobAddOrModifyReq, ScheduleJobInfoResp, ScheduleJobKvSummaryResp, ScheduleTaskInfoResp, ScheduleTaskLogFindResp,
 };
 use crate::schedule_config::ScheduleConfig;
 use crate::schedule_constants::{DOMAIN_CODE, KV_KEY_CODE};
-use crate::schedule_initializer::{default_avatar, ws_client};
 
 /// global service instance
 static GLOBAL_SERV: OnceLock<Arc<OwnedScheduleTaskServ>> = OnceLock::new();
@@ -31,7 +29,7 @@ static GLOBAL_SERV: OnceLock<Arc<OwnedScheduleTaskServ>> = OnceLock::new();
 /// # Safety
 /// if called before init, this function will panic
 fn service() -> Arc<OwnedScheduleTaskServ> {
-    GLOBAL_SERV.get().expect("tring to get scheduler before it's initialized").clone()
+    GLOBAL_SERV.get().expect("trying to get scheduler before it's initialized").clone()
 }
 
 // still not good, should manage to merge it with `OwnedScheduleTaskServ::add`
@@ -199,7 +197,7 @@ pub(crate) async fn find_job(code: Option<String>, page_number: u32, page_size: 
     })
 }
 
-pub(crate) async fn find_one_job(code: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<KvSchedualJobItemDetailResp>> {
+pub(crate) async fn find_one_job(code: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<KvScheduleJobItemDetailResp>> {
     let kv_url = &funs.conf::<ScheduleConfig>().kv_url;
     let spi_ctx = TardisContext {
         owner: funs.conf::<ScheduleConfig>().spi_app_id.clone(),
@@ -215,7 +213,7 @@ pub(crate) async fn find_one_job(code: &str, funs: &TardisFunsInst, ctx: &Tardis
     if &body.code != "200" {
         return Err(funs.err().internal_error("find_job", "find", &format!("fail to get kv resp: {}", msg), ""));
     }
-    body.data.flatten().map(KvSchedualJobItemDetailResp::try_from).transpose()
+    body.data.flatten().map(KvScheduleJobItemDetailResp::try_from).transpose()
 }
 pub(crate) async fn find_task(
     job_code: &str,

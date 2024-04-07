@@ -1,5 +1,7 @@
 [workspace]
 
+#resolver = "2"
+
 members = [
     "backend/basic",
     # "backend/spi/*",
@@ -36,7 +38,7 @@ documentation = "https://bios.idealworld.group"
 repository = "https://github.com/ideal-world/bios"
 license = "Apache-2.0"
 edition = "2021"
-readme = "README.adoc"
+readme = "README.md"
 publish = false
 
 [profile.release]

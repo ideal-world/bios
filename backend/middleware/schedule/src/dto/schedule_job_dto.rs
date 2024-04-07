@@ -52,7 +52,7 @@ pub struct ScheduleJobInfoResp {
 }
 
 #[derive(poem_openapi::Object, Deserialize, Debug, Serialize)]
-pub(crate) struct KvSchedualJobItemDetailResp {
+pub(crate) struct KvScheduleJobItemDetailResp {
     pub key: String,
     pub value: ScheduleJobAddOrModifyReq,
     pub info: String,
@@ -60,7 +60,7 @@ pub(crate) struct KvSchedualJobItemDetailResp {
     pub update_time: DateTime<Utc>,
 }
 
-impl TryFrom<KvItemSummaryResp> for KvSchedualJobItemDetailResp {
+impl TryFrom<KvItemSummaryResp> for KvScheduleJobItemDetailResp {
     type Error = TardisError;
 
     fn try_from(resp: KvItemSummaryResp) -> Result<Self, Self::Error> {

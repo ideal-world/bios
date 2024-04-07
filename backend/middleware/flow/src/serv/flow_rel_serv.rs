@@ -46,7 +46,7 @@ impl FlowRelServ {
             };
         }
         let value1 = start_timestamp.unwrap_or_else(|| Utc::now().timestamp());
-        let value2 = end_timestamp.unwrap_or_else(|| (Utc::now() + Duration::days(365 * 100)).timestamp());
+        let value2 = end_timestamp.unwrap_or_else(|| (Utc::now() + Duration::try_days(365 * 100).expect("ignore")).timestamp());
         let req = &mut RbumRelAggAddReq {
             rel: RbumRelAddReq {
                 tag: flow_rel_kind.to_string(),

@@ -20,7 +20,7 @@ serde.workspace = true
 lazy_static.workspace = true
 
 # crypto
-base64 = { version = "0.21" }
+base64 = { version = "0.22" }
 hex = { version = "0.4" }
 libsm = { version = "=0.6.0" }
 num-bigint = { version = "0.4.3" }
