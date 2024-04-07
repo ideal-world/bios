@@ -15,7 +15,7 @@ use testcontainers_modules::redis::Redis;
 
 #[tokio::test]
 async fn test() {
-    env::set_var("RUST_LOG", "info,spacegate-lib=trace,bios_auth=trace,tardis=trace");
+    env::set_var("RUST_LOG", "info,spacegate-plugins=trace,bios_auth=trace,tardis=trace");
     tracing_subscriber::fmt::init();
 
     let docker = testcontainers::clients::Cli::default();

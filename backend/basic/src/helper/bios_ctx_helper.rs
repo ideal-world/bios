@@ -37,7 +37,7 @@ where
     }
 }
 
-// xxx_check_own function will check the owner is empty or not.
+// check_own_xxx function will check the owner is empty or not.
 pub fn check_own_fill_ctx(request: &Request, funs: &TardisFunsInst, ctx: &mut TardisContext) -> TardisResult<()> {
     unsafe_check_ctx(
         request,
@@ -60,6 +60,7 @@ pub fn check_own_fill_ctx(request: &Request, funs: &TardisFunsInst, ctx: &mut Ta
     )
 }
 
+// 业务不安全方法，请在接口确定将会使用 `head_key_bios_ctx`（default:'Bios-Ctx'）的上下文填充当前上下文
 pub fn unsafe_fill_ctx(request: &Request, funs: &TardisFunsInst, ctx: &mut TardisContext) -> TardisResult<()> {
     unsafe_check_ctx(
         request,
@@ -82,6 +83,7 @@ pub fn unsafe_fill_ctx(request: &Request, funs: &TardisFunsInst, ctx: &mut Tardi
     )
 }
 
+// also see [unsafe_fill_ctx] , only fill the owner.
 pub fn unsafe_fill_owner_only(request: &Request, funs: &TardisFunsInst, ctx: &mut TardisContext) -> TardisResult<()> {
     unsafe_check_ctx(
         request,
@@ -94,6 +96,7 @@ pub fn unsafe_fill_owner_only(request: &Request, funs: &TardisFunsInst, ctx: &mu
     )
 }
 
+// also see [unsafe_fill_ctx] , only fill the own_paths.
 pub fn unsafe_fill_own_paths_only(request: &Request, funs: &TardisFunsInst, ctx: &mut TardisContext) -> TardisResult<()> {
     unsafe_check_ctx(
         request,
@@ -106,6 +109,7 @@ pub fn unsafe_fill_own_paths_only(request: &Request, funs: &TardisFunsInst, ctx:
     )
 }
 
+// also see [unsafe_fill_ctx] , only fill the roles.
 pub fn unsafe_fill_roles_only(request: &Request, funs: &TardisFunsInst, ctx: &mut TardisContext) -> TardisResult<()> {
     unsafe_check_ctx(
         request,
@@ -125,6 +129,7 @@ pub fn unsafe_fill_roles_only(request: &Request, funs: &TardisFunsInst, ctx: &mu
     )
 }
 
+// also see [unsafe_fill_ctx] , only fill the groups.
 pub fn unsafe_fill_groups_only(request: &Request, funs: &TardisFunsInst, ctx: &mut TardisContext) -> TardisResult<()> {
     unsafe_check_ctx(
         request,

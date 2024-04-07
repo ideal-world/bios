@@ -5,6 +5,7 @@ use tardis::{
 
 pub const REMOTE_ADDR: &str = "remote-addr";
 
+// Add ip to context
 pub async fn add_ip(ip: Option<String>, ctx: &TardisContext) -> TardisResult<()> {
     if let Some(ip) = ip {
         ctx.add_ext(REMOTE_ADDR, &ip).await?;
