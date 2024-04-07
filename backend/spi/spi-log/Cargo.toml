@@ -25,7 +25,7 @@ tardis = { workspace = true, features = [
     "web-server",
 ] }
 bios-basic = { path = "../../basic", features = ["default"] }
-bios-sdk-invoke = { path = "../../../frontend/sdk/invoke", features = [
+bios-sdk-invoke = { path = "../../../frontend/sdks/invoke", features = [
     "event",
 ], default-features = false }
 

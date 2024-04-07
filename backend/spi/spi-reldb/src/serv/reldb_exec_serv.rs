@@ -41,7 +41,7 @@ fn parse_params(params: &JsonValue) -> Vec<Value> {
                     }
                 }
                 JsonValue::String(s) => Some(Value::from(s.as_str())),
-                // TODO do not support array and object, just skip over it
+                // TODO do not supports array and object, just skip over it
                 JsonValue::Array(..) | JsonValue::Object(..) => None,
             }
         })

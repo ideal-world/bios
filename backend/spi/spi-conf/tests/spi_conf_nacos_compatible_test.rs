@@ -94,7 +94,7 @@ async fn test_tardis_compatibility(_test_client: &TestHttpClient) -> TardisResul
     let group = "spi-conf-test";
     log::info!("login to nacos mocker");
     nacos_client.login(&auth.username, &auth.password).await.expect("fail to login");
-    // temporary don't support
+    // temporary don't supports
     // nacos_client.login("nacosmocker", "nacosmocker").await.expect("fail to login");
     let config_descriptor = NacosConfigDescriptor {
         data_id,

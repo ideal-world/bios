@@ -10,7 +10,7 @@ spec:
     singular: sgfilter
     kind: SgFilter
     shortNames:
-    - sgf
+      - sgf
   versions:
     - name: v1
       served: true
@@ -54,8 +54,8 @@ spec:
                         type: string
                         minLength: 1
                       name:
-                        type: string  
-                        minLength: 1               
+                        type: string
+                        minLength: 1
                       namespace:
                         type: string
                         minLength: 1
@@ -74,64 +74,64 @@ apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: spacegate
 rules:
-- apiGroups:
-  - ""
-  resources:
-  - services
-  - secrets
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - ""
-  resources:
-  - events
-  verbs:
-  - create
-  - patch
-- apiGroups:
-  - discovery.k8s.io
-  resources:
-  - endpointslices
-  verbs:
-  - list
-  - watch
-- apiGroups:
-  - gateway.networking.k8s.io
-  resources:
-  - gatewayclasses
-  - gateways
-  - httproutes
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - gateway.networking.k8s.io
-  resources:
-  - httproutes/status
-  - gateways/status
-  - gatewayclasses/status
-  verbs:
-  - update
-- apiGroups:
-  - spacegate.idealworld.group
-  resources:
-  - sgfilters
-  verbs:
-  - get
-  - list
-  - watch
+  - apiGroups:
+      - ""
+    resources:
+      - services
+      - secrets
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - ""
+    resources:
+      - events
+    verbs:
+      - create
+      - patch
+  - apiGroups:
+      - discovery.k8s.io
+    resources:
+      - endpointslices
+    verbs:
+      - list
+      - watch
+  - apiGroups:
+      - gateways.networking.k8s.io
+    resources:
+      - gatewayclasses
+      - gateways
+      - httproutes
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - gateways.networking.k8s.io
+    resources:
+      - httproutes/status
+      - gateways/status
+      - gatewayclasses/status
+    verbs:
+      - update
+  - apiGroups:
+      - spacegate.idealworld.group
+    resources:
+      - sgfilters
+    verbs:
+      - get
+      - list
+      - watch
 ---
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: spacegate
 subjects:
-- kind: ServiceAccount
-  name: spacegate
-  namespace: spacegate
+  - kind: ServiceAccount
+    name: spacegate
+    namespace: spacegate
 roleRef:
   kind: ClusterRole
   name: spacegate
@@ -155,14 +155,14 @@ spec:
       dnsPolicy: ClusterFirstWithHostNet
       serviceAccountName: spacegate
       containers:
-      - name: spacegate
-        image: ecfront/bios-spacegate:latest
-        imagePullPolicy: IfNotPresent
-        # env:
-        # - name: RUST_LOG
-        #   value: bios_spacegate=trace,spacegate_kernel=trace
-        # - name: TZ
-        #   value: Asia/Shanghai
+        - name: spacegate
+          image: ecfront/bios-spacegate:latest
+          imagePullPolicy: IfNotPresent
+          # env:
+          # - name: RUST_LOG
+          #   value: bios_spacegate=trace,spacegate_kernel=trace
+          # - name: TZ
+          #   value: Asia/Shanghai
 # ---        
 # apiVersion: apps/v1
 # kind: Deployment

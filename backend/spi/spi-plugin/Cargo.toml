@@ -29,4 +29,4 @@ strum = { workspace = true, features = ["derive"] }
 [dev-dependencies]
 tardis = { workspace = true, features = ["test", "ws-client"] }
 bios-basic = { path = "../../basic", features = ["default", "test"] }
-bios-sdk-invoke = { path = "../../../frontend/sdk/invoke", features = ["default"] }
+bios-sdk-invoke = { path = "../../../frontend/sdks/invoke", features = ["default"] }

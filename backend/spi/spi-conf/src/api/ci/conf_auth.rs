@@ -92,7 +92,7 @@ impl ConfCiAuthApi {
             }
             BackendServiceSource::New { name } => {
                 // #TODO
-                // this should be determined by url, but now we only support spi-pg
+                // this should be determined by url, but now we only supports spi-pg
                 let kind_code = spi_constants::SPI_PG_KIND_CODE.to_string();
                 let kind_id = RbumKindServ::get_rbum_kind_id_by_code(&kind_code, &funs)
                     .await?

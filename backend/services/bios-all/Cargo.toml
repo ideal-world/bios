@@ -28,9 +28,9 @@ bios-spi-search = { path = "../../spi/spi-search" }
 bios-spi-stats = { path = "../../spi/spi-stats" }
 #bios-spi-conf = { path = "../../spi/spi-conf" }
 
-bios-mw-schedule = { path = "../../middleware/schedule" }
-bios-mw-flow = { path = "../../middleware/flow" }
-bios-mw-event = { path = "../../middleware/event" }
+bios-mw-schedule = { path = "../../middlewares/schedule" }
+bios-mw-flow = { path = "../../middlewares/flow" }
+bios-mw-event = { path = "../../middlewares/event" }
 
 # clients
-bios-client-hwsms = { path = "../../../clients/hwsms", features = ["reach"] }
+bios-client-hwsms = { path = "../../../frontend/clients/hwsms", features = ["reach"] }

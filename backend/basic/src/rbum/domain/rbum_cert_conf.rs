@@ -37,7 +37,7 @@ pub struct Model {
     /// Whether it is a basic authentication \
     /// There can only be at most one base certification for the same `rel_rbum_item_id` \
     /// If true, the sk of this record will be the public sk of the same `rel_rbum_item_id` ,
-    /// support a login method like ak of different cert configuration in the same `rel_rbum_item_id` + sk of this record
+    /// supports a login method like ak of different cert configuration in the same `rel_rbum_item_id` + sk of this record
     pub is_basic: bool,
     /// Whether ak can be repeated \
     /// If true, ak can be same in different record

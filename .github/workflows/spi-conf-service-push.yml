@@ -6,7 +6,7 @@ on:
       - "backend/basic/**"
       - "backend/services/**"
       - "backend/spi/**"
-      - "backend/middleware/**"
+      - "backend/middlewares/**"
       - "Cargo.toml"
       - ".github/workflows/spi-conf-service-push.yml"
 
@@ -20,7 +20,7 @@ jobs:
     steps:
       - name: Install Protoc
         uses: arduino/setup-protoc@v1
-        
+
       - name: Check out the repo
         uses: actions/checkout@v3
 
@@ -38,13 +38,13 @@ jobs:
         run: cargo build --release -p spi-conf-serv
 
       - name: Copy binary to workspace
-        run: cp ./target/release/spi-conf-serv ./services/spi-conf/
+        run: cp ./target/release/spi-conf-serv ./backend/services/spi-conf/
 
       - name: Build and push Docker image to dockerhub
         uses: mr-smithers-excellent/docker-build-push@v5
         with:
-          directory: services/spi-conf
-          dockerfile: services/spi-conf/Dockerfile
+          directory: backend/services/spi-conf
+          dockerfile: backend/services/spi-conf/Dockerfile
           registry: docker.io
           image: ecfront/spi-conf-serv
           tags: latest

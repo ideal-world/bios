@@ -38,10 +38,10 @@ fancy-regex.workspace = true
 tardis = { workspace = true, optional = true }
 strum = { workspace = true }
 testcontainers-modules = { workspace = true, features = ["redis"] }
-bios-sdk-invoke = { path = "../../frontend/sdk/invoke", features = ["default"] }
+bios-sdk-invoke = { path = "../../frontend/sdks/invoke", features = ["default"] }
 [dev-dependencies]
 tardis = { workspace = true, features = ["test"] }
-bios-sdk-invoke = { path = "../../frontend/sdk/invoke", features = ["default"] }
+bios-sdk-invoke = { path = "../../frontend/sdks/invoke", features = ["default"] }
 [[test]]
 name = "test_rbum"
 required-features = ["default", "with-mq", "test"]

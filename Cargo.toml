@@ -1,5 +1,7 @@
 [workspace]
 
+#resolver = "2"
+
 members = [
     "backend/basic",
     # "backend/spi/*",
@@ -12,16 +14,16 @@ members = [
     "backend/spi/spi-plugin",
     "backend/spi/spi-stats",
     "backend/spi/spi-reldb",
-    "backend/gateway/test",
-    "backend/gateway/spacegate-lib",
-    "backend/middleware/*",
-    "backend/support/iam",
-    "backend/support/auth",
-    "backend/support/enhance-wasm",
-    "backend/support/reach",
+    "backend/gateways/test",
+    "backend/gateways/spacegate-lib",
+    "backend/middlewares/*",
+    "backend/supports/iam",
+    "backend/supports/auth",
+    "frontend/enhance-wasm",
+    "backend/supports/reach",
     "backend/services/*",
-    "frontend/sdk/*",
-    "clients/*",
+    "frontend/sdks/*",
+    "frontend/clients/*",
 ]
 resolver = "2"
 [workspace.package]
@@ -36,7 +38,7 @@ documentation = "https://bios.idealworld.group"
 repository = "https://github.com/ideal-world/bios"
 license = "Apache-2.0"
 edition = "2021"
-readme = "README.adoc"
+readme = "README.md"
 publish = false
 
 [profile.release]
