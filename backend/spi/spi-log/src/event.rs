@@ -17,7 +17,7 @@ pub async fn start_log_event_service(config: &EventTopicConfig) -> TardisResult<
     let client = event_client::EventClient::new(config.base_url.as_str(), &funs);
     let mut event_conf = config.clone();
     if event_conf.avatars.is_empty() {
-        event_conf.avatars.push(format!("{}/{}", event_conf.topic_code, tardis::pkg!()))
+        event_conf.avatars.push(format!("{}/{}", event_conf.topic_code, env!("CARGO_PKG_NAME")))
     }
     let resp = client.register(&event_conf.into()).await?;
     let ws_client = TardisFuns::ws_client(&resp.ws_addr, |message| async move {

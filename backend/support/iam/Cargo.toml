@@ -35,7 +35,6 @@ tardis = { workspace = true, features = [
     "web-client",
     "mail",
     "k8s",
-    "build-info"
 ] }
 bios-basic = { path = "../../basic", features = ["default", "with-mq"] }
 bios-sdk-invoke = { path = "../../../frontend/sdk/invoke", features = ["default", "event"] }
@@ -47,7 +46,7 @@ ldap3 = { version = "0.11", optional = true }
 # todo Wait for tardis field to upgrade during removal
 nanoid = { version = "0.4" }
 
-strum = { workerspace = true, features = ["derive"] }
+strum = { workspace = true, features = ["derive"] }
 [dev-dependencies]
 tardis = { workspace = true, features = ["test"] }
 bios-basic = { path = "../../basic", features = ["default", "test"] }

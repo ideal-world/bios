@@ -23,7 +23,6 @@ serde.workspace = true
 tardis = { workspace = true, features = [
     "reldb-postgres",
     "web-server",
-    "build-info"
 ] }
 bios-basic = { path = "../../basic", features = ["default"] }
 bios-sdk-invoke = { path = "../../../frontend/sdk/invoke", features = [

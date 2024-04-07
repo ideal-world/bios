@@ -22,7 +22,7 @@ async-trait.workspace = true
 async-recursion.workspace = true
 lazy_static.workspace = true
 itertools.workspace = true
-tardis = { workspace = true, features = ["reldb-postgres", "web-client", "build-info"] }
+tardis = { workspace = true, features = ["reldb-postgres", "web-client"] }
 bios-basic = { path = "../../basic", features = ["default"] }
 bios-sdk-invoke = { path = "../../../frontend/sdk/invoke", features = ["default"] }
 [dev-dependencies]
