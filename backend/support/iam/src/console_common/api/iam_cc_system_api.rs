@@ -52,7 +52,7 @@ impl IamCcSystemApi {
     }
 
     #[oai(path = "/task/process/:task_id", method = "get")]
-    async fn get_task_process_data(&self, task_id: Path<i64>, _ctx: TardisContextExtractor) -> TardisApiResult<Value> {
+    async fn get_task_process_data(&self, task_id: Path<u64>, _ctx: TardisContextExtractor) -> TardisApiResult<Value> {
         let funs = iam_constants::get_tardis_inst();
         let data = TaskProcessor::get_process_data(&funs.conf::<IamConfig>().cache_key_async_task_status, task_id.0, &funs.cache()).await?;
         TardisResp::ok(data)
