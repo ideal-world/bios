@@ -168,12 +168,12 @@ pub struct SearchItemQueryReq {
     // Fuzzy search scope
     pub q_scope: Option<SearchItemSearchQScopeKind>,
     pub kinds: Option<Vec<String>>,
-    // Match keys, support prefix match
+    // Match keys, supports prefix match
     pub keys: Option<Vec<TrimString>>,
     #[oai(validator(min_length = "2"))]
-    // Match owners, support prefix match
+    // Match owners, supports prefix match
     pub owners: Option<Vec<String>>,
-    // Match own_path, support prefix match
+    // Match own_path, supports prefix match
     pub own_paths: Option<Vec<String>>,
     pub rlike_own_paths: Option<Vec<String>>,
     pub create_time_start: Option<DateTime<Utc>>,

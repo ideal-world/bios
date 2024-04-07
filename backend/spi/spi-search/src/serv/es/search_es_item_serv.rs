@@ -674,5 +674,5 @@ fn merge(a: &mut serde_json::Value, b: serde_json::Value) {
 }
 
 pub async fn query_metrics(_query_req: &SearchQueryMetricsReq, funs: &TardisFunsInst, _ctx: &TardisContext, _inst: &SpiBsInst) -> TardisResult<SearchQueryMetricsResp> {
-    Err(funs.err().format_error("search_es_item_serv", "query_metrics", "not support", "500-not-support"))
+    Err(funs.err().format_error("search_es_item_serv", "query_metrics", "not supports", "500-not-supports"))
 }

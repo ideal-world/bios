@@ -12,7 +12,7 @@ use tardis::TardisCreateIndex;
 /// General logic for dynamic request processing:
 ///
 /// 1. dynamic values take precedence over static values
-/// 2. support calling http to get data with GET request
+/// 2. supports calling http to get data with GET request
 /// 3. request url supports attribute variable substitution, format is: `{attribute name}` .
 /// 4. if no attribute variable substitution exists and secret = false, the url is called directly and the corresponding value is returned,
 /// 5. if attribute variable substitution exists, then：
@@ -43,7 +43,7 @@ pub struct Model {
     pub hide: bool,
     /// When secret = true, the attribute information is not returned to the frontend(except in configuration)
     pub secret: bool,
-    /// Display condition, json format: `{<attribute name>:<attribute value>}`, currently only support `and` operations
+    /// Display condition, json format: `{<attribute name>:<attribute value>}`, currently only supports `and` operations
     pub show_by_conds: String,
     /// Whether indexing is needed
     pub idx: bool,

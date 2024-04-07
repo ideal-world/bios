@@ -34,7 +34,7 @@ prost-types = "0.12"
 prost = "0.12"
 strum = { version = "0.26", features = ["derive"] }
 tokio-stream = { version = "0.1.14", features = ["sync"] }
-bios-sdk-invoke = { path = "../../../frontend/sdk/invoke", features = [
+bios-sdk-invoke = { path = "../../../frontend/sdks/invoke", features = [
     "iam",
     "macro",
 ], default-features = false }

@@ -1,0 +1,42 @@
+[package]
+name = "spacegate-lib"
+version.workspace = true
+authors.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+repository.workspace = true
+license.workspace = true
+edition.workspace = true
+readme.workspace = true
+publish.workspace = true
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[features]
+schema = ["spacegate-plugin/schema"]
+[dependencies]
+serde.workspace = true
+lazy_static.workspace = true
+spacegate-shell.workspace = true
+spacegate-plugin = { workspace = true, features = ["schema"], optional = true }
+
+bios-sdk-invoke = { path = "../../../frontend/sdks/invoke", features = ["spi_log"] }
+
+
+jsonpath-rust = "0.3.1"
+bios-auth = { path = "../../supports/auth", default-features = false }
+tardis = { workspace = true, features = ["web-client"] }
+ipnet = "2.8.0"
+
+http = { version = "1" }
+
+[dev-dependencies]
+pprof = { version = "0.12.1", features = ["flamegraph"] }
+tardis = { workspace = true, features = ["test", "web-client"] }
+
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+testcontainers-modules = { workspace = true, features = ["redis"] }
+
+[[test]]
+name = "export_schemas"
+path = "tests/export_schemas.rs"
+required-features = ["schema"]

@@ -28,7 +28,7 @@ pub struct RbumConfig {
     pub cache_key_cert_locked_: String,
     // rbum_item_id -> error times by cycle
     pub cache_key_cert_err_times_: String,
-    // table name (support prefix matching) -> <c><u><d>
+    // table name (supports prefix matching) -> <c><u><d>
     pub event_domains: HashMap<String, String>,
     pub head_key_bios_ctx: String,
 }

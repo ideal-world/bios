@@ -1,9 +1,9 @@
-name: Release rust gateway docker image
+name: Release rust gateways docker image
 
 on:
   push:
     tags:
-    - '*'
+      - '*'
 
 jobs:
   push_to_registry:
@@ -52,8 +52,8 @@ jobs:
       - name: Build and push Docker image to dockerhub
         uses: mr-smithers-excellent/docker-build-push@v5
         with:
-          directory: services/spacegate
-          dockerfile: gatservices/spacegate/Dockerfile
+          directory: backend/services/spacegate
+          dockerfile: backend/services/spacegate/Dockerfile
           registry: docker.io
           image: ecfront/bios-spacegate
           tags: ${{ github.ref_name }}

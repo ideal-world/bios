@@ -30,8 +30,8 @@ node_modules
 
 #macos
 .DS_Store
-#gateway dev
-backend/gateway/example/log
+#gateways dev
+backend/gateways/example/log
 backend/services/spacegate/devsh/
 
 # pre-commit

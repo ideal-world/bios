@@ -3,7 +3,7 @@ name: Release spi-conf services docker image
 on:
   push:
     tags:
-    - '*'
+      - '*'
 
 jobs:
   push_to_registry:
@@ -15,7 +15,7 @@ jobs:
     steps:
       - name: Install Protoc
         uses: arduino/setup-protoc@v1
-      
+
       - name: Check out the repo
         uses: actions/checkout@v3
 
@@ -55,8 +55,8 @@ jobs:
       - name: Build and push Docker image to dockerhub
         uses: mr-smithers-excellent/docker-build-push@v5
         with:
-          directory: services/spi-conf
-          dockerfile: services/spi-conf/Dockerfile
+          directory: backend/services/spi-conf
+          dockerfile: backend/services/spi-conf/Dockerfile
           registry: docker.io
           image: ecfront/spi-conf-serv
           tags: ${{ github.ref_name }}

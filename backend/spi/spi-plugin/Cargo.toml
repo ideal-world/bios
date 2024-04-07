@@ -23,10 +23,10 @@ serde.workspace = true
 async-trait.workspace = true
 tardis = { workspace = true, features = ["reldb-postgres", "web-server"] }
 bios-basic = { path = "../../basic", features = ["default"] }
-bios-sdk-invoke = { path = "../../../frontend/sdk/invoke", features = ["default"] }
+bios-sdk-invoke = { path = "../../../frontend/sdks/invoke", features = ["default"] }
 strum = { workerspace = true, features = ["derive"] }
 
 [dev-dependencies]
 tardis = { workspace = true, features = ["test", "ws-client"] }
 bios-basic = { path = "../../basic", features = ["default", "test"] }
-bios-sdk-invoke = { path = "../../../frontend/sdk/invoke", features = ["default"] }
+bios-sdk-invoke = { path = "../../../frontend/sdks/invoke", features = ["default"] }

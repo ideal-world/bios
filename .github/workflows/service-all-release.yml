@@ -3,7 +3,7 @@ name: Release all services docker image
 on:
   push:
     tags:
-    - '*'
+      - '*'
 
 jobs:
   push_to_registry:
@@ -15,7 +15,7 @@ jobs:
     steps:
       - name: Install Protoc
         uses: arduino/setup-protoc@v1
-      
+
       - name: Check out the repo
         uses: actions/checkout@v3
 
@@ -44,8 +44,8 @@ jobs:
       - name: Build and push Docker image to github
         uses: mr-smithers-excellent/docker-build-push@v5
         with:
-          directory: services/bios-all
-          dockerfile: services/bios-all/Dockerfile
+          directory: backend/services/bios-all
+          dockerfile: backend/services/bios-all/Dockerfile
           registry: ghcr.io
           image: bios-serv-all
           tags: ${{ github.ref_name }}

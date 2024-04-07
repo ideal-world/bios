@@ -4,12 +4,12 @@ on:
   push:
     paths:
       - "backend/basic/**"
-      - "backend/support/iam/**"
-      - "backend/support/auth/**"
-      - "backend/support/reach/**"
+      - "backend/supports/iam/**"
+      - "backend/supports/auth/**"
+      - "backend/supports/reach/**"
       - "backend/services/**"
       - "backend/spi/**"
-      - "backend/middleware/**"
+      - "backend/middlewares/**"
       - "Cargo.toml"
       - ".github/workflows/service-all-push.yml"
 
@@ -23,7 +23,7 @@ jobs:
     steps:
       - name: Install Protoc
         uses: arduino/setup-protoc@v1
-        
+
       - name: Check out the repo
         uses: actions/checkout@v3
 
@@ -46,8 +46,8 @@ jobs:
       - name: Build and push Docker image to dockerhub
         uses: mr-smithers-excellent/docker-build-push@v5
         with:
-          directory: services/bios-all
-          dockerfile: services/bios-all/Dockerfile
+          directory: backend/services/bios-all
+          dockerfile: backend/services/bios-all/Dockerfile
           registry: docker.io
           image: ecfront/bios-serv-all
           tags: latest

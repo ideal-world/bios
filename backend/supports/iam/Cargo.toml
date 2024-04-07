@@ -1,0 +1,54 @@
+[package]
+name = "bios-iam"
+version.workspace = true
+authors.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+repository.workspace = true
+license.workspace = true
+edition.workspace = true
+readme.workspace = true
+publish.workspace = true
+
+[lib]
+name = "bios_iam"
+path = "src/lib.rs"
+
+[features]
+default = ["ldap_server", "ldap_client"]
+ldap_server = ["ldap3_proto", "tardis/future", "tokio-util"]
+ldap_client = ["ldap3"]
+spi_kv = []
+spi_search = []
+
+
+[dependencies]
+serde.workspace = true
+async-trait.workspace = true
+lazy_static.workspace = true
+itertools.workspace = true
+tardis = { workspace = true, features = [
+    "reldb-postgres",
+    "cache",
+    "mq",
+    "web-server",
+    "web-client",
+    "mail",
+    "k8s",
+    "build-info"
+] }
+bios-basic = { path = "../../basic", features = ["default", "with-mq"] }
+bios-sdk-invoke = { path = "../../../frontend/sdks/invoke", features = ["default", "event"] }
+
+# ldap
+ldap3_proto = { version = "0.3", optional = true }
+tokio-util = { version = "0.7", optional = true }
+ldap3 = { version = "0.11", optional = true }
+# todo Wait for tardis field to upgrade during removal
+nanoid = { version = "0.4" }
+
+strum = { workerspace = true, features = ["derive"] }
+[dev-dependencies]
+tardis = { workspace = true, features = ["test"] }
+bios-basic = { path = "../../basic", features = ["default", "test"] }
+bios-sdk-invoke = { path = "../../../frontend/sdks/invoke", features = ["default"] }

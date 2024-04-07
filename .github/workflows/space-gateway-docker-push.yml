@@ -1,13 +1,13 @@
-name: Publish rust gateway docker image
+name: Publish rust gateways docker image
 
 on:
   push:
     paths:
-      - "backend/gateway/spacegate-lib/**"
-      - "backend/support/auth/**"
+      - "backend/gateways/spacegate-lib/**"
+      - "backend/supports/auth/**"
       - "backend/services/spacegate/**"
       - "Cargo.toml"
-      - ".github/workflows/space-gateway-docker-push.yml"
+      - ".github/workflows/space-gateways-docker-push.yml"
 
 jobs:
   push_to_registry:
@@ -39,8 +39,8 @@ jobs:
       - name: Build and push Docker image to dockerhub
         uses: mr-smithers-excellent/docker-build-push@v5
         with:
-          directory: services/spacegate
-          dockerfile: services/spacegate/Dockerfile
+          directory: backend/services/spacegate
+          dockerfile: backend/services/spacegate/Dockerfile
           registry: docker.io
           image: ecfront/bios-spacegate
           tags: latest

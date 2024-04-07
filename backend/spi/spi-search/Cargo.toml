@@ -31,7 +31,7 @@ tardis = { workspace = true, features = [
 bios-basic = { path = "../../basic", features = ["default"] }
 strum = { workerspace = true, features = ["derive"] }
 pinyin = { version = "0.10" }
-bios-sdk-invoke = { path = "../../../frontend/sdk/invoke", features = [
+bios-sdk-invoke = { path = "../../../frontend/sdks/invoke", features = [
     "event",
 ], default-features = false }
 
