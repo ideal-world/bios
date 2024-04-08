@@ -26,10 +26,9 @@ tardis = { workspace = true, features = [
     "web-server",
     "web-client",
     "openapi-rapidoc",
-    "build-info"
 ] }
 bios-basic = { path = "../../basic", features = ["default"] }
-strum = { workerspace = true, features = ["derive"] }
+strum = { workspace = true, features = ["derive"] }
 pinyin = { version = "0.10" }
 bios-sdk-invoke = { path = "../../../frontend/sdks/invoke", features = [
     "event",
