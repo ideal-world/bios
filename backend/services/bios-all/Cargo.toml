@@ -12,7 +12,7 @@ publish.workspace = true
 
 [dependencies]
 serde.workspace = true
-tardis = { workspace = true, features = ["web-server", "conf-remote", "cluster", "k8s", "build-info"] }
+tardis = { workspace = true, features = ["web-server", "conf-remote", "cluster", "k8s"] }
 bios-iam = { path = "../../supports/iam", features = ["spi_search", "spi_kv"] }
 bios-auth = { path = "../../supports/auth", features = ["web-server"] }
 bios-reach = { path = "../../supports/reach" }
