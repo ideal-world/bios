@@ -78,7 +78,7 @@ impl IamOpenServ {
                         icon: spec_req.icon.clone(),
                         scope_level: spec_req.scope_level.clone(),
                         disabled: spec_req.disabled,
-                        ext: spec_req.url,
+                        ext: spec_req.url.clone(),
                         ..Default::default()
                     },
                     funs,
@@ -93,7 +93,7 @@ impl IamOpenServ {
                         kind: IamResKind::Spec,
                         scope_level: spec_req.scope_level.clone(),
                         disabled: spec_req.disabled,
-                        ext: spec_req.url,
+                        ext: spec_req.url.clone(),
                         ..Default::default()
                     },
                     funs,
@@ -144,7 +144,7 @@ impl IamOpenServ {
                     kind: IamResKind::Spec,
                     scope_level: spec.scope_level.clone(),
                     disabled: spec.disabled,
-                    ext: spec.url,
+                    ext: spec.url.clone(),
                     ..Default::default()
                 },
                 funs,
