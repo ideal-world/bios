@@ -130,7 +130,7 @@ pub async fn test(ldap_account_num: u64, conf_ldap_add_or_modify_req: IamCertCon
         let mut is_finish = false;
         while is_finish {
             sleep(Duration::from_millis(100)).await;
-            is_finish = TaskProcessor::check_status(&funs.conf::<IamConfig>().cache_key_async_task_status, task_id.parse::<i64>().unwrap(), &funs.cache()).await.unwrap();
+            is_finish = TaskProcessor::check_status(&funs.conf::<IamConfig>().cache_key_async_task_status, task_id.parse::<u64>().unwrap(), &funs.cache()).await.unwrap();
         }
     }
     let account_page = IamAccountServ::paginate_account_summary_aggs(
