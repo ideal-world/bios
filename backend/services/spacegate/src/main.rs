@@ -1,5 +1,5 @@
 use serde::Deserialize;
-use spacegate_lib::register_lib_plugins;
+use spacegate_plugins::register_lib_plugins;
 use spacegate_shell::plugin::SgPluginRepository;
 use spacegate_shell::BoxError;
 use tardis::basic::tracing::TardisTracing;

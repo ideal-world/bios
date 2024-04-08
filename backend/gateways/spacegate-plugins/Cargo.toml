@@ -1,5 +1,5 @@
 [package]
-name = "spacegate-lib"
+name = "spacegate-plugins"
 version.workspace = true
 authors.workspace = true
 homepage.workspace = true
@@ -19,7 +19,9 @@ lazy_static.workspace = true
 spacegate-shell.workspace = true
 spacegate-plugin = { workspace = true, features = ["schema"], optional = true }
 
-bios-sdk-invoke = { path = "../../../frontend/sdks/invoke", features = ["spi_log"] }
+bios-sdk-invoke = { path = "../../../frontend/sdks/invoke", features = [
+  "spi_log",
+] }
 
 
 jsonpath-rust = "0.3.1"

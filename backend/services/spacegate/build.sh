@@ -34,7 +34,7 @@ fi
 
 # cargo update;
 cargo build $RUST_BUILD_ARG;
-mv ../../target/$TARGET_DIR/bios-spacegate ./
+mv ../../../target/$TARGET_DIR/bios-spacegate ./
 
 
 ### Docker
