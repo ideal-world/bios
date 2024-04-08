@@ -137,17 +137,8 @@ pub(crate) async fn fact_record_load(
 
     let fact_col_conf_set = stats_pg_conf_fact_col_serv::find_by_fact_conf_key(fact_conf_key, &conn, ctx, inst).await?;
 
-    let mut fields = vec!["key".to_string(), "own_paths".to_string(), "ext".to_string(), "ct".to_string()];
-    let mut values = vec![
-        Value::from(fact_record_key),
-        Value::from(add_req.own_paths),
-        Value::from(if let Some(ext) = add_req.ext {
-            ext.clone()
-        } else {
-            TardisFuns::json.str_to_json("{}")?
-        }),
-        Value::from(add_req.ct),
-    ];
+    let mut fields = vec!["key".to_string(), "own_paths".to_string(), "ct".to_string()];
+    let mut values = vec![Value::from(fact_record_key), Value::from(add_req.own_paths), Value::from(add_req.ct)];
     let req_data = add_req.data.as_object().ok_or(funs.err().bad_request(
         "fact_record",
         "load",
@@ -156,7 +147,13 @@ pub(crate) async fn fact_record_load(
     ",
         "400-spi-stats-invalid-request",
     ))?;
-
+    let latest_data_resp = fact_get_latest_record_raw(fact_conf_key, fact_record_key, &conn, ctx).await?;
+    fields.push("ext".to_string());
+    if let Some(latest_data) = latest_data_resp.as_ref() {
+        merge(&mut latest_data.try_get("", "ext")?, add_req.ext.unwrap_or(TardisFuns::json.str_to_json("{}")?));
+    } else {
+        values.push(add_req.ext.unwrap_or(TardisFuns::json.str_to_json("{}")?).into());
+    }
     for (req_fact_col_key, req_fact_col_value) in req_data {
         let fact_col_conf = fact_col_conf_set.iter().find(|c| &c.key == req_fact_col_key).ok_or_else(|| {
             funs.err().not_found(
@@ -211,7 +208,7 @@ pub(crate) async fn fact_record_load(
         // TODO check data type
     }
     if fact_col_conf_set.len() != req_data.len() {
-        let latest_data = fact_get_latest_record_raw(fact_conf_key, fact_record_key, &conn, ctx).await?.ok_or_else(|| {
+        let latest_data = latest_data_resp.ok_or_else(|| {
             funs.err().not_found(
                 "fact_record",
                 "load",
@@ -832,4 +829,17 @@ async fn fact_get_latest_record_raw(
     let table_name = package_table_name(&format!("stats_inst_fact_{fact_conf_key}"), ctx);
     let result = conn.query_one(&format!("SELECT * FROM {table_name} WHERE key = $1 ORDER BY ct DESC"), vec![Value::from(dim_record_key)]).await?;
     Ok(result)
+}
+
+fn merge(a: &mut serde_json::Value, b: serde_json::Value) {
+    match (a, b) {
+        (a @ &mut serde_json::Value::Object(_), serde_json::Value::Object(b)) => {
+            if let Some(a) = a.as_object_mut() {
+                for (k, v) in b {
+                    merge(a.entry(k).or_insert(serde_json::Value::Null), v);
+                }
+            }
+        }
+        (a, b) => *a = b,
+    }
 }

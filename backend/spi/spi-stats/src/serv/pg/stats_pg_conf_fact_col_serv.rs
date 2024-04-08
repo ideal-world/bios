@@ -52,7 +52,7 @@ pub(crate) async fn add(fact_conf_key: &str, add_req: &StatsConfFactColAddReq, f
         ));
     }
     if let Some(dim_rel_conf_dim_key) = &add_req.dim_rel_conf_dim_key {
-        if !stats_pg_conf_dim_serv::online(dim_rel_conf_dim_key, &conn, ctx).await? {
+        if add_req.rel_external_id.is_none() && !stats_pg_conf_dim_serv::online(dim_rel_conf_dim_key, &conn, ctx).await? {
             return Err(funs.err().conflict("fact_col_conf", "add", "The dimension config not online.", "409-spi-stats-dim-conf-not-online"));
         }
     }
@@ -245,11 +245,11 @@ pub(crate) async fn delete(
         where_clause.push_str(&format!(" AND kind = ${param_idx}", param_idx = params.len()));
     }
     if let Some(rel_external_id) = rel_external_id {
-        where_clause.push_str(&format!(" AND rel_external_id = ${param_idx}", param_idx = params.len()));
         params.push(Value::from(rel_external_id));
-    } else if fact_col_conf_key.is_some() {
         where_clause.push_str(&format!(" AND rel_external_id = ${param_idx}", param_idx = params.len()));
+    } else if fact_col_conf_key.is_some() {
         params.push(Value::from("".to_string()));
+        where_clause.push_str(&format!(" AND rel_external_id = ${param_idx}", param_idx = params.len()));
     }
     conn.execute_one(&format!("DELETE FROM {table_name} WHERE {where_clause}"), params).await?;
     conn.commit().await?;
