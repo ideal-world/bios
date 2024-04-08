@@ -52,7 +52,7 @@ pub(crate) async fn add(fact_conf_key: &str, add_req: &StatsConfFactColAddReq, f
         ));
     }
     if let Some(dim_rel_conf_dim_key) = &add_req.dim_rel_conf_dim_key {
-        if !stats_pg_conf_dim_serv::online(dim_rel_conf_dim_key, &conn, ctx).await? {
+        if add_req.rel_external_id.is_none() && !stats_pg_conf_dim_serv::online(dim_rel_conf_dim_key, &conn, ctx).await? {
             return Err(funs.err().conflict("fact_col_conf", "add", "The dimension config not online.", "409-spi-stats-dim-conf-not-online"));
         }
     }
@@ -112,7 +112,7 @@ VALUES
             if sql_fields.is_empty() {
                 "".to_string()
             } else {
-                format!(",{}", sql_fields.iter().enumerate().map(|(i, _)| format!("${}", i + 6)).collect::<Vec<String>>().join(","))
+                format!(",{}", sql_fields.iter().enumerate().map(|(i, _)| format!("${}", i + 7)).collect::<Vec<String>>().join(","))
             }
         ),
         params,
@@ -145,6 +145,8 @@ pub(crate) async fn modify(
     let mut params = vec![Value::from(fact_col_conf_key.to_string()), Value::from(fact_conf_key.to_string())];
     if let Some(rel_external_id) = &modify_req.rel_external_id {
         params.push(Value::from(rel_external_id.to_string()));
+    } else {
+        params.push(Value::from("".to_string()));
     }
     if let Some(show_name) = &modify_req.show_name {
         sql_sets.push(format!("show_name = ${}", params.len() + 1));
@@ -198,14 +200,9 @@ pub(crate) async fn modify(
         &format!(
             r#"UPDATE {table_name}
 SET {}
-WHERE key = $1 AND rel_conf_fact_key = $2 {}
+WHERE key = $1 AND rel_conf_fact_key = $2 AND rel_external_id = $3
 "#,
             sql_sets.join(","),
-            if modify_req.rel_external_id.is_none() {
-                "AND rel_external_id IS NULL"
-            } else {
-                "AND rel_external_id = $3"
-            }
         ),
         params,
     )
@@ -245,11 +242,11 @@ pub(crate) async fn delete(
         where_clause.push_str(&format!(" AND kind = ${param_idx}", param_idx = params.len()));
     }
     if let Some(rel_external_id) = rel_external_id {
-        where_clause.push_str(&format!(" AND rel_external_id = ${param_idx}", param_idx = params.len()));
         params.push(Value::from(rel_external_id));
-    } else if fact_col_conf_key.is_some() {
         where_clause.push_str(&format!(" AND rel_external_id = ${param_idx}", param_idx = params.len()));
+    } else if fact_col_conf_key.is_some() {
         params.push(Value::from("".to_string()));
+        where_clause.push_str(&format!(" AND rel_external_id = ${param_idx}", param_idx = params.len()));
     }
     conn.execute_one(&format!("DELETE FROM {table_name} WHERE {where_clause}"), params).await?;
     conn.commit().await?;

@@ -3,35 +3,35 @@
 #resolver = "2"
 
 members = [
-    "backend/basic",
-    # "backend/spi/*",
-    "backend/spi/spi-cache",
-    "backend/spi/spi-search",
-    "backend/spi/spi-graph",
-    "backend/spi/spi-kv",
-    "backend/spi/spi-log",
-    "backend/spi/spi-object",
-    "backend/spi/spi-plugin",
-    "backend/spi/spi-stats",
-    "backend/spi/spi-reldb",
-    "backend/gateways/test",
-    "backend/gateways/spacegate-lib",
-    "backend/middlewares/*",
-    "backend/supports/iam",
-    "backend/supports/auth",
-    "frontend/enhance-wasm",
-    "backend/supports/reach",
-    "backend/services/*",
-    "frontend/sdks/*",
-    "frontend/clients/*",
+  "backend/basic",
+  # "backend/spi/*",
+  "backend/spi/spi-cache",
+  "backend/spi/spi-search",
+  "backend/spi/spi-graph",
+  "backend/spi/spi-kv",
+  "backend/spi/spi-log",
+  "backend/spi/spi-object",
+  "backend/spi/spi-plugin",
+  "backend/spi/spi-stats",
+  "backend/spi/spi-reldb",
+  "backend/gateways/test",
+  "backend/gateways/spacegate-plugins",
+  "backend/middlewares/*",
+  "backend/supports/iam",
+  "backend/supports/auth",
+  "frontend/enhance-wasm",
+  "backend/supports/reach",
+  "backend/services/*",
+  "frontend/sdks/*",
+  "frontend/clients/*",
 ]
 
 [workspace.package]
 version = "0.1.0"
 authors = [
-    "gudaoxuri <i@sunisle.org>",
-    "hermitCode <17743125563@163.com>",
-    "RWDai <rwdai@foxmail.com>",
+  "gudaoxuri <i@sunisle.org>",
+  "hermitCode <17743125563@163.com>",
+  "RWDai <rwdai@foxmail.com>",
 ]
 homepage = "https://bios.idealworld.group"
 documentation = "https://bios.idealworld.group"
@@ -77,11 +77,11 @@ tardis = { git = "https://github.com/ideal-world/tardis.git", rev = "191f3ec" }
 #   "ext-redis",
 #   "ext-axum",
 # ] }
-spacegate-shell = { git = "https://github.com/ideal-world/spacegate.git", branch = "dev", features = [
-    "cache",
-    "k8s",
-    "ext-redis",
-    "ext-axum",
+spacegate-shell = { git = "https://github.com/ideal-world/spacegate.git", branch = "master", features = [
+  "cache",
+  "k8s",
+  "ext-redis",
+  "ext-axum",
 ] }
 
 spacegate-plugin = { git = "https://github.com/ideal-world/spacegate.git", branch = "master" }
