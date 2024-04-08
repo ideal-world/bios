@@ -21,6 +21,7 @@ impl Default for AppKeyConfig {
     }
 }
 
+// signature ak
 pub fn signature(app_key_config: &AppKeyConfig, method: &str, path: &str, query: &str, mut header: Vec<(String, String)>) -> TardisResult<Vec<(String, String)>> {
     let sorted_req_query = sort_query(query);
     let date = Utc::now().format("%a, %d %b %Y %T GMT").to_string();
