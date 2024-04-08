@@ -1,4 +1,4 @@
-use std::collections::{HashMap};
+use std::collections::HashMap;
 
 use pinyin::{to_pinyin_vec, Pinyin};
 use tardis::{
@@ -1339,7 +1339,6 @@ pub async fn query_metrics(query_req: &SearchQueryMetricsReq, funs: &TardisFunsI
         let sql_part_orders = orders
             .iter()
             .map(|order| {
-                
                 if order.in_ext.unwrap_or(true) {
                     format!("fact.ext ->> '{}' {}", order.code, if order.asc { "ASC" } else { "DESC" })
                 } else {
