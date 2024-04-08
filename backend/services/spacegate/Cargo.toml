@@ -21,7 +21,7 @@ spacegate-shell = { workspace = true, features = [
   "ext-redis",
   "cache",
 ] }
-tardis = { workerspace = true }
+tardis = { workspace = true }
 spacegate-plugins = { path = "../../gateways/spacegate-plugins" }
 envy = "0.4"
 [dev-dependencies]
