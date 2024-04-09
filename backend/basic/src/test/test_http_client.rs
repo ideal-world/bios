@@ -1,3 +1,4 @@
+//! Http client for testing
 use std::fmt::Debug;
 
 use serde::de::DeserializeOwned;
@@ -30,6 +31,8 @@ impl TestHttpClient {
         }
     }
 
+    /// Build a request with authentication information
+    /// 构造一个带有认证信息的请求
     pub fn set_auth(&mut self, ctx: &TardisContext) -> TardisResult<()> {
         let ctx_base64 = &TardisFuns::crypto.base64.encode(TardisFuns::json.obj_to_string(&ctx)?);
         let fw_config = TardisFuns::fw_config();

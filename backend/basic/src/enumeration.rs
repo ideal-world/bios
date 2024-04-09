@@ -1,25 +1,42 @@
+//! Basic enumerations
 use serde::{Deserialize, Serialize};
 use tardis::derive_more::Display;
 #[cfg(feature = "default")]
 use tardis::web::poem_openapi;
 
+/// API classification
+/// API分类
 #[derive(Display, Debug)]
 #[cfg_attr(feature = "default", derive(poem_openapi::Tags))]
 pub enum ApiTag {
+    /// Common Console, mostly starting with ``cc``, generally do not require authentication.
+    /// 公共类型, 多使用 ``cc`` 开头，一般不需要认证
     #[oai(rename = "Common Console")]
     Common,
+    /// Tenant Console, mostly starting with ``ct``
+    /// 租户类型, 多使用 ``ct`` 开头
     #[oai(rename = "Tenant Console")]
     Tenant,
+    /// App Console, mostly starting with ``ca``
+    /// 应用类型, 多使用 ``ca`` 开头
     #[oai(rename = "App Console")]
     App,
+    /// System Console, mostly starting with ``cs``
+    /// 系统类型, 多使用 ``cs`` 开头
     #[oai(rename = "System Console")]
     System,
+    /// Passport Console, mostly starting with ``cp``
+    /// 通行证类型, 多使用 ``cp`` 开头
     #[oai(rename = "Passport Console")]
     Passport,
+    /// Interface Console, mostly starting with ``ci``, used for system-to-system calls, this type of interface generally uses ak/sk authentication
+    /// 接口类型, 多使用 ``ci`` 开头, 用于系统间调用, 此类型接口一般使用ak/sk认证
     #[oai(rename = "Interface Console")]
     Interface,
 }
 
+/// Basic query operator
+/// 基础查询操作符
 #[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 #[cfg_attr(feature = "default", derive(poem_openapi::Enum))]
 pub enum BasicQueryOpKind {

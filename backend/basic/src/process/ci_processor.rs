@@ -1,8 +1,13 @@
+//! CI (Interface Console) Processor
+//!
+//! The CI type interface is mostly used for calls between systems, and the interface is authenticated by Ak/Sk to ensure the security of the interface.
+//! CI类型的接口多用于系统之间的调用，通过Ak/Sk进行签名认证，保证接口的安全性。
 use serde::{Deserialize, Serialize};
 use tardis::{basic::result::TardisResult, chrono::Utc, TardisFuns};
 
 use crate::helper::request_helper::sort_query;
 
+/// Application key configuration
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(default)]
 pub struct AppKeyConfig {
@@ -21,7 +26,9 @@ impl Default for AppKeyConfig {
     }
 }
 
-// signature ak
+/// Generate signature
+///
+/// Generate a signature for the request and return the request header with the signature
 pub fn signature(app_key_config: &AppKeyConfig, method: &str, path: &str, query: &str, mut header: Vec<(String, String)>) -> TardisResult<Vec<(String, String)>> {
     let sorted_req_query = sort_query(query);
     let date = Utc::now().format("%a, %d %b %Y %T GMT").to_string();
