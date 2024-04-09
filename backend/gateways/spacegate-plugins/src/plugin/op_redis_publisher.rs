@@ -4,13 +4,9 @@ use http::Response;
 use jsonpath_rust::JsonPathInst;
 use serde::{Deserialize, Serialize};
 use spacegate_shell::{
-    kernel::{
-        extension::{EnterTime, GatewayName},
-        SgRequest, SgResponse,
-    },
+    kernel::{extension::EnterTime, SgRequest, SgResponse},
     plugin::{Inner, Plugin, PluginConfig},
-    spacegate_ext_redis::global_repo,
-    BoxError,
+    BoxError, SgRequestExt as _,
 };
 use tardis::{
     cache::Script,
@@ -70,10 +66,7 @@ impl Plugin for RedisPublisherPlugin {
     }
 
     async fn call(&self, req: SgRequest, inner: Inner) -> Result<http::Response<spacegate_shell::SgBody>, spacegate_shell::BoxError> {
-        let Some(gateway_name) = req.extensions().get::<GatewayName>() else {
-            return Err("missing gateways name".into());
-        };
-        let Some(client) = global_repo().get(gateway_name) else {
+        let Some(client) = req.get_redis_client_by_gateway_name() else {
             return Err("missing redis client".into());
         };
         let spec_id = RedisPublisherPlugin::parse_spec_id(&req);
