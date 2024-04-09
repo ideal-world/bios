@@ -9,7 +9,7 @@ use tardis::{
 };
 
 use bios_basic::{
-    basic_enumeration::BasicQueryOpKind,
+    enumeration::BasicQueryOpKind,
     spi::{spi_funs::SpiBsInst, spi_initializer::common},
 };
 

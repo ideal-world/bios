@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 use tardis::{basic::result::TardisResult, serde_json::Value};
 
-use crate::basic_enumeration::BasicQueryOpKind;
+use crate::enumeration::BasicQueryOpKind;
 #[cfg(feature = "default")]
 use tardis::web::poem_openapi;
 
@@ -93,7 +93,7 @@ mod tests {
 
     use tardis::{basic::result::TardisResult, serde_json::json};
 
-    use crate::{basic_enumeration::BasicQueryOpKind, dto::BasicQueryCondInfo};
+    use crate::{enumeration::BasicQueryOpKind, dto::BasicQueryCondInfo};
 
     #[test]
     fn test_check_or_and_conds() -> TardisResult<()> {

@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use bios_basic::helper::request_helper::get_remote_ip;
+use bios_basic::helper::request_helper::get_real_ip_from_ctx;
 use bios_basic::rbum::rbum_config::RbumConfigApi;
 use bios_basic::rbum::rbum_enumeration::RbumRelFromKind;
 use bios_sdk_invoke::clients::spi_kv_client::SpiKvClient;
@@ -146,7 +146,7 @@ impl RbumItemCrudOperation<iam_account::ActiveModel, IamAccountAddReq, IamAccoun
 
     async fn after_modify_item(id: &str, modify_req: &mut IamAccountModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         if modify_req.disabled.is_some() || modify_req.scope_level.is_some() || modify_req.status.is_some() {
-            IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(id, get_remote_ip(ctx).await?, funs).await?;
+            IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(id, get_real_ip_from_ctx(ctx).await?, funs).await?;
         }
 
         let mut tasks = vec![];
@@ -199,7 +199,7 @@ impl RbumItemCrudOperation<iam_account::ActiveModel, IamAccountAddReq, IamAccoun
     }
 
     async fn after_delete_item(id: &str, _: &Option<IamAccountDetailResp>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(id, get_remote_ip(ctx).await?, funs).await?;
+        IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(id, get_real_ip_from_ctx(ctx).await?, funs).await?;
         IamSearchClient::async_delete_account_search(id.to_string(), funs, ctx.clone()).await?;
         Ok(())
     }
@@ -752,7 +752,7 @@ impl IamAccountServ {
 
     pub async fn delete_tokens(id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         RbumItemServ::check_ownership(id, funs, ctx).await?;
-        IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(id, get_remote_ip(ctx).await?, funs).await
+        IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(id, get_real_ip_from_ctx(ctx).await?, funs).await
     }
 
     pub async fn unlock_account(id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Void> {

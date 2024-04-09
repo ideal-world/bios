@@ -6,7 +6,7 @@ use crate::basic::dto::iam_filer_dto::IamRoleFilterReq;
 use crate::basic::dto::iam_role_dto::IamRoleBoneResp;
 use crate::basic::serv::iam_role_serv::IamRoleServ;
 use crate::iam_constants;
-use bios_basic::helper::request_helper::add_remote_ip;
+use bios_basic::helper::request_helper::try_set_real_ip_from_req_to_ctx;
 use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use tardis::web::poem::Request;
@@ -19,7 +19,7 @@ impl IamCpRoleApi {
     /// Find Role By CTX
     #[oai(path = "/", method = "get")]
     async fn find_by_ctx(&self, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Vec<IamRoleBoneResp>> {
-        add_remote_ip(request, &ctx.0).await?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         let funs = iam_constants::get_tardis_inst();
         let roles = ctx.0.roles.clone();
         let result = IamRoleServ::do_find_items(

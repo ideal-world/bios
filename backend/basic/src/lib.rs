@@ -1,6 +1,6 @@
 extern crate lazy_static;
 
-pub mod basic_enumeration;
+pub mod enumeration;
 pub mod dto;
 pub mod helper;
 pub mod process;
@@ -9,7 +9,7 @@ pub mod spi;
 #[cfg(feature = "test")]
 pub mod test;
 
-pub use basic_enumeration::ApiTag;
+pub use enumeration::ApiTag;
 use tardis::{TardisFuns, TardisFunsInst};
 
 pub trait TardisFunInstExtractor {

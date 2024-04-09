@@ -1,7 +1,7 @@
 use std::default::Default;
 use std::str::FromStr;
 
-use bios_basic::helper::request_helper::{add_ip, get_remote_ip};
+use bios_basic::helper::request_helper::{add_ip, get_real_ip_from_ctx};
 use bios_basic::process::task_processor::TaskProcessor;
 use bios_basic::rbum::rbum_config::RbumConfigApi;
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
@@ -183,7 +183,7 @@ impl IamIdentCacheServ {
                         let account_context = Self::get_account_context(&id, "", &funs).await;
                         if let Ok(account_context) = account_context {
                             if account_context.own_paths == ctx_clone.own_paths {
-                                Self::delete_tokens_and_contexts_by_account_id(&id, get_remote_ip(&ctx_clone).await?, &funs).await?;
+                                Self::delete_tokens_and_contexts_by_account_id(&id, get_real_ip_from_ctx(&ctx_clone).await?, &funs).await?;
                             }
                         }
                     }
@@ -202,7 +202,7 @@ impl IamIdentCacheServ {
                             let account_context = Self::get_account_context(&id, "", &funs).await;
                             if let Ok(account_context) = account_context {
                                 if account_context.own_paths == ctx_clone.own_paths {
-                                    Self::delete_tokens_and_contexts_by_account_id(&id, get_remote_ip(&ctx_clone).await?, &funs).await?;
+                                    Self::delete_tokens_and_contexts_by_account_id(&id, get_real_ip_from_ctx(&ctx_clone).await?, &funs).await?;
                                 }
                             }
                         }

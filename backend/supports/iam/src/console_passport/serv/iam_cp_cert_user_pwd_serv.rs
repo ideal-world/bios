@@ -1,4 +1,4 @@
-use bios_basic::helper::request_helper::get_remote_ip;
+use bios_basic::helper::request_helper::get_real_ip_from_ctx;
 use bios_basic::rbum::dto::rbum_filer_dto::RbumCertFilterReq;
 use bios_basic::rbum::rbum_enumeration::RbumCertRelKind;
 use tardis::basic::dto::TardisContext;
@@ -129,7 +129,7 @@ impl IamCpCertUserPwdServ {
                 &IamCertKernelKind::MailVCode.to_string(),
                 &IamCertKernelKind::PhoneVCode.to_string(),
             ]),
-            get_remote_ip(&ctx).await?,
+            get_real_ip_from_ctx(&ctx).await?,
             funs,
         )
         .await?;
@@ -177,7 +177,7 @@ impl IamCpCertUserPwdServ {
             ignore_end_time,
             Some(ctx.own_paths.clone()),
             None,
-            get_remote_ip(ctx).await?,
+            get_real_ip_from_ctx(ctx).await?,
             funs,
         )
         .await?;

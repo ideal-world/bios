@@ -5,7 +5,7 @@ use tardis::web::web_resp::{TardisApiResult, TardisResp};
 
 use crate::basic::serv::iam_tenant_serv::IamTenantServ;
 use crate::iam_constants;
-use bios_basic::helper::request_helper::add_remote_ip;
+use bios_basic::helper::request_helper::try_set_real_ip_from_req_to_ctx;
 use tardis::web::poem::Request;
 
 #[derive(Clone, Default)]
@@ -25,7 +25,7 @@ impl IamCcTenantApi {
         ctx: TardisContextExtractor,
         request: &Request,
     ) -> TardisApiResult<Vec<String>> {
-        add_remote_ip(request, &ctx.0).await?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         let funs = iam_constants::get_tardis_inst();
         let ids = ids.0.split(',').map(|s| s.to_string()).collect();
         let result = IamTenantServ::find_name_by_ids(ids, &funs, &ctx.0).await?;

@@ -18,7 +18,7 @@ use crate::basic::dto::iam_set_dto::{IamSetCateAddReq, IamSetCateModifyReq, IamS
 use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::iam_constants;
 use crate::iam_enumeration::{IamRelKind, IamSetKind};
-use bios_basic::helper::request_helper::add_remote_ip;
+use bios_basic::helper::request_helper::try_set_real_ip_from_req_to_ctx;
 use tardis::web::poem::Request;
 #[derive(Clone, Default)]
 pub struct IamCtOrgApi;
@@ -35,7 +35,7 @@ impl IamCtOrgApi {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         let ctx = IamSetServ::try_get_rel_ctx_by_set_id(set_id.0, &funs, ctx.0).await?;
-        add_remote_ip(request, &ctx).await?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx).await?;
         let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, &funs, &ctx).await?;
         let result = IamSetServ::add_set_cate(&set_id, &add_req.0, &funs, &ctx).await?;
         funs.commit().await?;
@@ -56,7 +56,7 @@ impl IamCtOrgApi {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         let ctx = IamSetServ::try_get_rel_ctx_by_set_id(set_id.0, &funs, ctx.0).await?;
-        add_remote_ip(request, &ctx).await?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx).await?;
         IamSetServ::modify_set_cate(&id.0, &modify_req.0, &funs, &ctx).await?;
         funs.commit().await?;
         ctx.execute_task().await?;
@@ -77,7 +77,7 @@ impl IamCtOrgApi {
     ) -> TardisApiResult<RbumSetTreeResp> {
         let funs = iam_constants::get_tardis_inst();
         let ctx = IamSetServ::try_get_rel_ctx_by_set_id(set_id.0, &funs, ctx.0).await?;
-        add_remote_ip(request, &ctx).await?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx).await?;
         let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, &funs, &ctx).await?;
         let result = IamSetServ::get_tree(
             &set_id,
@@ -102,7 +102,7 @@ impl IamCtOrgApi {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         let ctx = IamSetServ::try_get_rel_ctx_by_set_id(set_id.0, &funs, ctx.0).await?;
-        add_remote_ip(request, &ctx).await?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx).await?;
         IamSetServ::delete_set_cate(&id.0, &funs, &ctx).await?;
         funs.commit().await?;
         ctx.execute_task().await?;
@@ -116,7 +116,7 @@ impl IamCtOrgApi {
             own_paths: "".to_string(),
             ..ctx.0.clone()
         };
-        add_remote_ip(request, &mock_ctx).await?;
+        try_set_real_ip_from_req_to_ctx(request, &mock_ctx).await?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         let result = RbumRelServ::find_one_rbum(
@@ -148,7 +148,7 @@ impl IamCtOrgApi {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         let ctx = IamSetServ::try_get_rel_ctx_by_set_id(set_id.0, &funs, ctx.0).await?;
-        add_remote_ip(request, &ctx).await?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx).await?;
         let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, &funs, &ctx).await?;
         let result = join_all(
             add_req
@@ -188,7 +188,7 @@ impl IamCtOrgApi {
     ) -> TardisApiResult<Vec<RbumSetItemDetailResp>> {
         let funs = iam_constants::get_tardis_inst();
         let ctx = IamSetServ::try_get_rel_ctx_by_set_id(set_id.0, &funs, ctx.0).await?;
-        add_remote_ip(request, &ctx).await?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx).await?;
         let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, &funs, &ctx).await?;
         let result = IamSetServ::find_set_items(Some(set_id), cate_id.0, None, None, false, None, &funs, &ctx).await?;
         ctx.execute_task().await?;
@@ -201,7 +201,7 @@ impl IamCtOrgApi {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         let ctx = IamSetServ::try_get_rel_ctx_by_set_id(set_id.0, &funs, ctx.0).await?;
-        add_remote_ip(request, &ctx).await?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx).await?;
         IamSetServ::delete_set_item(&id.0, &funs, &ctx).await?;
         funs.commit().await?;
         ctx.execute_task().await?;
