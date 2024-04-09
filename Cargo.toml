@@ -80,7 +80,7 @@ tardis = { version = "0.1.0-rc.11" }
 spacegate-shell = { git = "https://github.com/ideal-world/spacegate.git", branch = "master", features = [
   "cache",
   "k8s",
-  "ext-redis",
+#  "ext-redis",
 ] }
 
 spacegate-plugin = { git = "https://github.com/ideal-world/spacegate.git", branch = "master" }
