@@ -483,8 +483,16 @@ impl IamOpenServ {
         Ok(IamOpenRuleResp {
             cert_id,
             spec_code,
-            start_time: time_range.split(',').collect_vec().first().map(|s| DateTime::parse_from_rfc3339(s).unwrap().with_timezone(&Utc)),
-            end_time: time_range.split(',').collect_vec().last().map(|s| DateTime::parse_from_rfc3339(s).unwrap().with_timezone(&Utc)),
+            start_time: if !time_range.is_empty() {
+                time_range.split(',').collect_vec().first().map(|s| DateTime::parse_from_rfc3339(s).unwrap().with_timezone(&Utc))
+            } else {
+                None
+            },
+            end_time: if !time_range.is_empty() {
+                time_range.split(',').collect_vec().last().map(|s| DateTime::parse_from_rfc3339(s).unwrap().with_timezone(&Utc))
+            } else {
+                None
+            },
             api_call_frequency: IamIdentCacheServ::get_gateway_rule_info(&ak, OPENAPI_GATEWAY_PLUGIN_LIMIT, None, funs).await?.map(|s| s.parse::<u32>().unwrap_or_default()),
             api_call_count: IamIdentCacheServ::get_gateway_rule_info(&ak, OPENAPI_GATEWAY_PLUGIN_COUNT, None, funs).await?.map(|s| s.parse::<u32>().unwrap_or_default()),
             api_call_cumulative_count: IamIdentCacheServ::get_gateway_cumulative_count(&ak, None, funs).await?.map(|s| s.parse::<u32>().unwrap_or_default()),

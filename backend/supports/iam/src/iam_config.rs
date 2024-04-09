@@ -177,7 +177,7 @@ impl Default for IamConfig {
             strict_security_mode: false,
             crypto_conf: CryptoConf::default(),
             cache_key_gateway_rule_info_: "sg:plugin:".to_string(),
-            gateway_openapi_path: "op-api".to_string(),
+            gateway_openapi_path: "/op-api".to_string(),
         }
     }
 }
