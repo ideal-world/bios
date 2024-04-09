@@ -159,7 +159,7 @@ pub fn degrade_own_paths(mut ctx: TardisContext, new_own_paths: &str) -> TardisR
 /// 1. Determine the ``standard_own_paths`` : When ``filter.own_paths`` is empty, use ``ctx_own_paths`` as the standard own paths, otherwise use ``filter.own_paths`` as the standard own paths.
 /// 1. If ``record_own_paths`` is equal to the ``standard_own_paths`` or if ``filter.with_sub_own_paths`` is true and ``record_own_paths`` is a sub-path of the ``standard_own_paths``, then return true.
 /// 1. If ``filter.ignore_scope`` is true, it means only ``own_paths`` comparison is required, so directly return false.
-/// 1.  If ``record_scope_level`` exists, then get the prefix path of the ``standard_own_paths`` based on the value of ``record_scope_level``, and this prefix path must be the same as or a sub-path of ``record_own_paths``.
+/// 1. If ``record_scope_level`` exists, then get the prefix path of the ``standard_own_paths`` based on the value of ``record_scope_level``, and this prefix path must be the same as or a sub-path of ``record_own_paths``.
 ///
 /// # Examples
 /// ```
