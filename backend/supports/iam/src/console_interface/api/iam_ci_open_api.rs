@@ -68,14 +68,16 @@ impl IamCiOpenApi {
 
     /// Get account rule info / 获取账号规则信息
     #[oai(path = "/", method = "get")]
-    async fn get_rule_info(&self, cert_id: Query<String>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<IamOpenRuleResp> {
+    async fn get_rule_info(&self, cert_id: Query<Option<String>>, ak: Query<Option<String>>, _request: &Request) -> TardisApiResult<IamOpenRuleResp> {
         let mut funs = iam_constants::get_tardis_inst();
-        check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
-        add_remote_ip(request, &ctx.0).await?;
+        let global_ctx = TardisContext {
+            own_paths: "".to_string(),
+            ..Default::default()
+        };
         funs.begin().await?;
-        let result = IamOpenServ::get_rule_info(cert_id.0, &funs, &ctx.0).await?;
+        let result = IamOpenServ::get_rule_info(cert_id.0, ak.0, &funs, &global_ctx).await?;
         funs.commit().await?;
-        ctx.0.execute_task().await?;
+        global_ctx.execute_task().await?;
         TardisResp::ok(result)
     }
 

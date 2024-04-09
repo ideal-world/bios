@@ -150,7 +150,9 @@ pub(crate) async fn fact_record_load(
     let latest_data_resp = fact_get_latest_record_raw(fact_conf_key, fact_record_key, &conn, ctx).await?;
     fields.push("ext".to_string());
     if let Some(latest_data) = latest_data_resp.as_ref() {
-        merge(&mut latest_data.try_get("", "ext")?, add_req.ext.unwrap_or(TardisFuns::json.str_to_json("{}")?));
+        let mut storage_ext = latest_data.try_get("", "ext")?;
+        merge(&mut storage_ext, add_req.ext.unwrap_or(TardisFuns::json.str_to_json("{}")?));
+        values.push(Value::from(storage_ext.clone()));
     } else {
         values.push(add_req.ext.unwrap_or(TardisFuns::json.str_to_json("{}")?).into());
     }

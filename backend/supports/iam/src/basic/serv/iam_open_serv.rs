@@ -400,21 +400,55 @@ impl IamOpenServ {
         Ok(())
     }
 
-    pub async fn get_rule_info(cert_id: String, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<IamOpenRuleResp> {
-        let ak = RbumCertServ::find_one_detail_rbum(
-            &RbumCertFilterReq {
-                id: Some(cert_id.to_string()),
-                ..Default::default()
-            },
-            funs,
-            ctx,
-        )
-        .await?
-        .ok_or_else(|| funs.err().internal_error("iam_open", "get_rule_info", "cert not found", "404-iam-res-not-exist"))?
-        .ak;
+    pub async fn get_rule_info(cert_id_req: Option<String>, ak_req: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<IamOpenRuleResp> {
+        if cert_id_req.is_none() && ak_req.is_none() {
+            return Err(funs.err().internal_error("iam_open", "get_rule_info", "illegal response", "404-iam-res-not-exist"));
+        }
+        let cert_id = if let Some(cert_id) = cert_id_req.clone() {
+            cert_id
+        } else {
+            RbumCertServ::find_one_detail_rbum(
+                &RbumCertFilterReq {
+                    basic: RbumBasicFilterReq {
+                        with_sub_own_paths: true,
+                        ..Default::default()
+                    },
+                    ak: ak_req.clone(),
+                    ..Default::default()
+                },
+                funs,
+                ctx,
+            )
+            .await?
+            .ok_or_else(|| funs.err().internal_error("iam_open", "get_rule_info", "cert not found", "404-iam-res-not-exist"))?
+            .id
+        };
+        let ak = if let Some(ak) = ak_req.clone() {
+            ak
+        } else {
+            RbumCertServ::find_one_detail_rbum(
+                &RbumCertFilterReq {
+                    basic: RbumBasicFilterReq {
+                        with_sub_own_paths: true,
+                        ..Default::default()
+                    },
+                    id: cert_id_req.clone(),
+                    ..Default::default()
+                },
+                funs,
+                ctx,
+            )
+            .await?
+            .ok_or_else(|| funs.err().internal_error("iam_open", "get_rule_info", "cert not found", "404-iam-res-not-exist"))?
+            .ak
+        };
         // let spec_id = IamRelServ::find_from_id_rels(&IamRelKind::IamCertSpec, false, &cert_id, None, None, funs, ctx).await?.pop().unwrap_or_default();
         let spec_id = RbumRelServ::find_detail_rbums(
             &RbumRelFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
                 from_rbum_id: Some(cert_id.to_string()),
                 from_rbum_kind: Some(RbumRelFromKind::Cert),
                 tag: Some(IamRelKind::IamCertSpec.to_string()),
@@ -433,6 +467,7 @@ impl IamOpenServ {
         let spec_code = IamResServ::find_one_detail_item(
             &IamResFilterReq {
                 basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
                     ids: Some(vec![spec_id]),
                     ..Default::default()
                 },

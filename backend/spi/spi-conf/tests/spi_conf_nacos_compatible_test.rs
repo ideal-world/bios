@@ -5,7 +5,7 @@ use bios_spi_conf::{
     conf_constants::DOMAIN_CODE,
     dto::conf_auth_dto::{RegisterRequest, RegisterResponse},
 };
-use tardis::web::reqwest::header::HeaderName;
+use tardis::web::reqwest::{self, header::HeaderName};
 use tardis::{
     basic::{dto::TardisContext, field::TrimString, result::TardisResult},
     log,
