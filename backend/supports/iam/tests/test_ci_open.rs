@@ -110,7 +110,11 @@ pub async fn test(context1: &TardisContext) -> TardisResult<()> {
     )
     .await?;
     info!("【test_ci_open】 : Get account info");
-    let info = IamOpenServ::get_rule_info(Some(cert_id.clone()), None, &funs, context1).await?;
+    let global_ctx = TardisContext {
+        own_paths: "".to_string(),
+        ..Default::default()
+    };
+    let info = IamOpenServ::get_rule_info(Some(cert_id.clone()), None, &funs, &global_ctx).await?;
     assert_eq!(info.cert_id, cert_id.clone());
     assert_eq!(info.spec_code, spec1_code.clone());
     assert_eq!(info.api_call_frequency, Some(500));
