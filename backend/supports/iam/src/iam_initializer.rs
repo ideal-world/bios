@@ -743,7 +743,7 @@ async fn init_ws_log_client() -> Option<TardisWSClient> {
         return None;
     }
     if event_conf.avatars.is_empty() {
-        event_conf.avatars.push(format!("{}/{}", event_conf.topic_code, tardis::pkg!()))
+        event_conf.avatars.push(format!("{}/{}", event_conf.topic_code, env!("CARGO_PKG_NAME")))
     }
     let default_avatar = event_conf.avatars[0].clone();
     set_default_log_avatar(default_avatar);
@@ -782,7 +782,7 @@ async fn init_ws_search_client() -> Option<TardisWSClient> {
         return None;
     }
     if event_conf.avatars.is_empty() {
-        event_conf.avatars.push(format!("{}/{}", event_conf.topic_code, tardis::pkg!()))
+        event_conf.avatars.push(format!("{}/{}", event_conf.topic_code, env!("CARGO_PKG_NAME")))
     }
     let default_avatar = event_conf.avatars[0].clone();
     set_default_search_avatar(default_avatar);
@@ -821,7 +821,7 @@ async fn init_ws_iam_send_event_client() -> Option<TardisWSClient> {
         return None;
     }
     if event_conf.avatars.is_empty() {
-        event_conf.avatars.push(format!("{}/{}", event_conf.topic_code, tardis::pkg!()))
+        event_conf.avatars.push(format!("{}/{}", event_conf.topic_code, env!("CARGO_PKG_NAME")))
     }
     let default_avatar = event_conf.avatars[0].clone();
     set_default_iam_send_avatar(default_avatar);
@@ -853,7 +853,7 @@ pub async fn init_ws_iam_event_client() -> TardisResult<()> {
     let conf = funs.conf::<IamConfig>();
     let mut event_conf = conf.iam_event_bus.clone();
     if event_conf.avatars.is_empty() {
-        event_conf.avatars.push(format!("{}/{}", event_conf.topic_code, tardis::pkg!()))
+        event_conf.avatars.push(format!("{}/{}", event_conf.topic_code, env!("CARGO_PKG_NAME")))
     }
     let client = bios_sdk_invoke::clients::event_client::EventClient::new(&event_conf.base_url, &funs);
     let addr = loop {

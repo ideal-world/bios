@@ -9,7 +9,6 @@ license.workspace = true
 edition.workspace = true
 readme.workspace = true
 publish.workspace = true
-
 [lib]
 name = "bios_enhance_wasm"
 path = "src/lib.rs"
@@ -33,6 +32,8 @@ wasm-bindgen-futures = { version = "0" }
 serde-wasm-bindgen = { version = "0" }
 js-sys = { version = "0" }
 web-sys = { version = "0", features = [
+  'MessageEvent',
+  'Event',
   'Headers',
   'Request',
   'RequestInit',

@@ -887,7 +887,7 @@ async fn init_ws_flow_client() -> Option<TardisWSClient> {
         return None;
     }
     if event_conf.avatars.is_empty() {
-        event_conf.avatars.push(format!("{}/{}", event_conf.topic_code, tardis::pkg!()))
+        event_conf.avatars.push(format!("{}/{}", event_conf.topic_code, env!("CARGO_PKG_NAME")))
     }
     let default_avatar = event_conf.avatars[0].clone();
     set_default_flow_avatar(default_avatar);

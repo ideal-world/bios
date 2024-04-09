@@ -1,18 +1,12 @@
 use std::collections::HashSet;
 
-use bios_basic::{
-    rbum::{
-        dto::rbum_filer_dto::{RbumBasicFilterReq},
-        serv::{rbum_item_serv::RbumItemCrudOperation},
-    },
-};
+use bios_basic::rbum::{dto::rbum_filer_dto::RbumBasicFilterReq, serv::rbum_item_serv::RbumItemCrudOperation};
 use bios_sdk_invoke::{
     clients::spi_search_client::{SpiSearchClient, SpiSearchEventExt},
     dto::search_item_dto::{SearchItemAddReq, SearchItemModifyReq, SearchItemVisitKeysReq},
     invoke_config::InvokeConfigApi,
 };
 use itertools::Itertools;
-
 
 use tardis::{
     basic::{dto::TardisContext, field::TrimString, result::TardisResult},
@@ -26,14 +20,11 @@ use crate::{
             iam_account_dto::IamAccountDetailAggResp,
             iam_filer_dto::{IamAccountFilterReq, IamTenantFilterReq},
         },
-        serv::{
-            iam_account_serv::IamAccountServ, iam_role_serv::IamRoleServ, iam_set_serv::IamSetServ,
-            iam_tenant_serv::IamTenantServ,
-        },
+        serv::{iam_account_serv::IamAccountServ, iam_role_serv::IamRoleServ, iam_set_serv::IamSetServ, iam_tenant_serv::IamTenantServ},
     },
     iam_config::IamConfig,
     iam_constants,
-    iam_enumeration::{IamSetKind},
+    iam_enumeration::IamSetKind,
     iam_initializer::{default_search_avatar, ws_search_client},
 };
 pub struct IamSearchClient;
@@ -148,8 +139,7 @@ impl IamSearchClient {
         };
         for set_id in set_ids {
             let set_items = IamSetServ::find_set_items(Some(set_id), None, Some(account_id.to_string()), None, true, None, funs, &mock_ctx).await?;
-            account_resp_dept_id
-                .extend(set_items.iter().filter_map(|s| s.rel_rbum_set_cate_id.clone()).collect::<Vec<_>>());
+            account_resp_dept_id.extend(set_items.iter().filter_map(|s| s.rel_rbum_set_cate_id.clone()).collect::<Vec<_>>());
         }
 
         let tag = funs.conf::<IamConfig>().spi.search_account_tag.clone();
