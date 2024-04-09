@@ -7,7 +7,7 @@
 409-rbum-*-name-exist	名称已存在
 404-rbum-*-ownership-illegal	无效的所有权
 404-rbum-*-scope-illegal	无效的作用域
-409-rbum-*-downgrade-error	作用领降级错误
+409-rbum-*-downgrade-error	作用域降级错误
 406-rbum-*-enum-init-error	输入的枚举值错误
 
 500-rbum-crud-id-type	数据类型无效，目前仅支持字符串
@@ -35,8 +35,6 @@
 400-rbum-cert-conf-sk-rule-not-match	凭证密钥不满足规则
 400-rbum-cert-sk-vcode-only-one	凭证密钥与动态码只能二选一
 400-rbum-cert-reset-sk-duplicate	重置密钥不能重复
-400-rbum-cert-sk-contains-ak	密码不能包含用户名
-400-rbum-cert-lock	账号已锁定
 401-rbum-cert-lock	账号已锁定
 409-rbum-cert-sk-expire	凭证密钥已过期
 404-rbum-cert-conf-not-exist	找不到对应的凭证配置
@@ -49,6 +47,10 @@
 400-rbum-cert-sk-need-empty	动态密钥模式下凭证密钥不用填写
 400-rbum-cert-vcode-require	动态码不能为空
 409-rbum-cert-ak-duplicate	平台已存在相同用户名
+
+404-rbum-req-ctx-not-exist	请求上下文不存在或不完整
+401-rbum-req-ctx-permission-denied	请求上下文权限不合法
+403-rbum-req-ctx-owner-is-not-empty	请求下文中不能存在所有者
 
 400-basic-cond-check-format-err	条件检查时存在格式错误
 400-stop-task-error	任务可能已经结束
