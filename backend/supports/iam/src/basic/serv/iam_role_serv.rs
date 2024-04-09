@@ -349,7 +349,7 @@ impl RbumItemCrudOperation<iam_role::ActiveModel, IamRoleAddReq, IamRoleModifyRe
     async fn get_item(id: &str, filter: &IamRoleFilterReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<IamRoleDetailResp> {
         if let Some(role) = funs.cache().get(&format!("{}{}", funs.conf::<IamConfig>().cache_key_role_info_, id)).await? {
             let role = TardisFuns::json.str_to_obj::<IamRoleDetailResp>(&role)?;
-            if rbum_scope_helper::check_scope(&role.own_paths, Some(role.scope_level.to_int()), &filter.basic, ctx) {
+            if rbum_scope_helper::check_scope(&role.own_paths, Some(role.scope_level.to_int()), &filter.basic, &ctx.own_paths) {
                 return Ok(role);
             }
         }

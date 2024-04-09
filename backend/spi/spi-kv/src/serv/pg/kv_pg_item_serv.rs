@@ -79,7 +79,7 @@ WHERE
                 ignore_scope: false,
                 ..Default::default()
             },
-            ctx,
+            &ctx.own_paths,
         ) {
             return Ok(None);
         }
@@ -123,7 +123,7 @@ WHERE
                     ignore_scope: false,
                     ..Default::default()
                 },
-                ctx,
+                &ctx.own_paths,
             )
         })
         .collect();
@@ -237,7 +237,7 @@ WHERE
                         ignore_scope: false,
                         ..Default::default()
                     },
-                    ctx,
+                    &ctx.own_paths,
                 )
         })
         .collect::<TardisResult<Vec<_>>>()?;

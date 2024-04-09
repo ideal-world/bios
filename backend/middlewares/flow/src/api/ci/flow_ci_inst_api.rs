@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use bios_basic::helper::bios_ctx_helper::unsafe_fill_ctx;
+use bios_basic::rbum::helper::rbum_scope_helper::check_without_owner_and_unsafe_fill_ctx;
 use tardis::log::debug;
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem::web::Path;
@@ -27,7 +27,7 @@ impl FlowCiInstApi {
     #[oai(path = "/", method = "post")]
     async fn start(&self, add_req: Json<FlowInstStartReq>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<String> {
         let mut funs = flow_constants::get_tardis_inst();
-        unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
+        check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         funs.begin().await?;
         let result = FlowInstServ::start(&add_req.0, None, &funs, &ctx.0).await?;
         funs.commit().await?;
@@ -38,7 +38,7 @@ impl FlowCiInstApi {
     #[oai(path = "/:flow_inst_id", method = "get")]
     async fn get(&self, flow_inst_id: Path<String>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<FlowInstDetailResp> {
         let funs = flow_constants::get_tardis_inst();
-        unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
+        check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         let result = FlowInstServ::get(&flow_inst_id.0, &funs, &ctx.0).await?;
         TardisResp::ok(result)
     }
@@ -52,7 +52,7 @@ impl FlowCiInstApi {
         request: &Request,
     ) -> TardisApiResult<Vec<FlowInstFindStateAndTransitionsResp>> {
         let funs = flow_constants::get_tardis_inst();
-        unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
+        check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         let result = FlowInstServ::find_state_and_next_transitions(&find_req.0, &funs, &ctx.0).await?;
         TardisResp::ok(result)
     }
@@ -61,7 +61,7 @@ impl FlowCiInstApi {
     #[oai(path = "/:flow_inst_id", method = "put")]
     async fn abort(&self, flow_inst_id: Path<String>, abort_req: Json<FlowInstAbortReq>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         let mut funs = flow_constants::get_tardis_inst();
-        unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
+        check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         funs.begin().await?;
         FlowInstServ::abort(&flow_inst_id.0, &abort_req.0, &funs, &ctx.0).await?;
         funs.commit().await?;
@@ -78,7 +78,7 @@ impl FlowCiInstApi {
         request: &Request,
     ) -> TardisApiResult<FlowInstTransferResp> {
         let mut funs = flow_constants::get_tardis_inst();
-        unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
+        check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         let mut transfer = transfer_req.0;
         FlowInstServ::check_transfer_vars(&flow_inst_id.0, &mut transfer, &funs, &ctx.0).await?;
         funs.begin().await?;
@@ -97,7 +97,7 @@ impl FlowCiInstApi {
         request: &Request,
     ) -> TardisApiResult<Vec<FlowInstTransferResp>> {
         let mut funs = flow_constants::get_tardis_inst();
-        unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
+        check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         debug!("batch transfer request: {:?}", request);
         let mut result = vec![];
         let flow_inst_ids: Vec<_> = flow_inst_ids.split(',').collect();
@@ -126,7 +126,7 @@ impl FlowCiInstApi {
         request: &Request,
     ) -> TardisApiResult<Void> {
         let mut funs = flow_constants::get_tardis_inst();
-        unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
+        check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         funs.begin().await?;
         FlowInstServ::modify_assigned(&flow_inst_id.0, &modify_req.0.current_assigned, &funs, &ctx.0).await?;
         funs.commit().await?;
@@ -143,7 +143,7 @@ impl FlowCiInstApi {
         request: &Request,
     ) -> TardisApiResult<Void> {
         let mut funs = flow_constants::get_tardis_inst();
-        unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
+        check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         funs.begin().await?;
         FlowInstServ::modify_current_vars(&flow_inst_id.0, &modify_req.0.vars, &funs, &ctx.0).await?;
         funs.commit().await?;
@@ -154,7 +154,7 @@ impl FlowCiInstApi {
     #[oai(path = "/bind", method = "post")]
     async fn bind(&self, add_req: Json<FlowInstBindReq>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<String> {
         let mut funs = flow_constants::get_tardis_inst();
-        unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
+        check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         let inst_id = FlowInstServ::get_inst_ids_by_rel_business_obj_id(vec![add_req.0.rel_business_obj_id.clone()], &funs, &ctx.0).await?.pop();
         let result = if let Some(inst_id) = inst_id {
             inst_id
@@ -182,7 +182,7 @@ impl FlowCiInstApi {
     #[oai(path = "/batch_bind", method = "post")]
     async fn batch_bind(&self, add_req: Json<FlowInstBatchBindReq>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Vec<FlowInstBatchBindResp>> {
         let mut funs = flow_constants::get_tardis_inst();
-        unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
+        check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         funs.begin().await?;
         let result = FlowInstServ::batch_bind(&add_req.0, &funs, &ctx.0).await?;
         funs.commit().await?;
@@ -193,7 +193,7 @@ impl FlowCiInstApi {
     #[oai(path = "/find_detail_by_obj_ids", method = "get")]
     async fn find_detail_by_obj_ids(&self, obj_ids: Query<String>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Vec<FlowInstDetailResp>> {
         let funs = flow_constants::get_tardis_inst();
-        unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
+        check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         let rel_business_obj_ids: Vec<_> = obj_ids.0.split(',').map(|id| id.to_string()).collect();
         let inst_ids = FlowInstServ::get_inst_ids_by_rel_business_obj_id(rel_business_obj_ids, &funs, &ctx.0).await?;
         let mut result = vec![];
