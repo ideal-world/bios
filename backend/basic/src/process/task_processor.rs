@@ -266,7 +266,7 @@ impl TaskProcessor {
                 Some(handle) => {
                     handle.abort();
                 }
-                None => return Err(TardisError::bad_request("task not found,may task is end", "400-stop-task-error")),
+                None => return Err(TardisError::bad_request("task not found,may task is end", "400-task-stop-error")),
             }
         }
         match TaskProcessor::set_status_with_event(cache_key, task_id, true, cache_client, ws_client, from_avatar, to_avatars).await {

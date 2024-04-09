@@ -1,5 +1,6 @@
 406-iam-ldap-addr-error	LDAP服务地址格式错误
 400-iam-account-field-missing	缺少必填字段信息
+409-iam-delete-conflict	不能删除存在关联记录的数据
 
 409-iam-current-can-not-account-delete	登录人无法删除自己的账号
 

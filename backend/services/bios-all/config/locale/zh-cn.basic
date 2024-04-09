@@ -1,5 +1,4 @@
 409-rbum-*-delete-conflict	不能删除存在关联记录的数据
-409-iam-delete-conflict	不能删除存在关联记录的数据
 404-rbum-*-obj-not-exist	找不到指定的数据
 409-rbum-*-obj-multi-exist	找到多条相同的数据
 400-rbum-*-code-illegal	无效的编码
@@ -53,4 +52,6 @@
 403-rbum-req-ctx-owner-is-not-empty	请求下文中不能存在所有者
 
 400-basic-cond-check-format-err	条件检查时存在格式错误
-400-stop-task-error	任务可能已经结束
+
+400-task-stop-error	任务可能已经结束
+400-task-id-too-large	任务ID过大
