@@ -68,7 +68,7 @@ impl IamCiOpenApi {
 
     /// Get account rule info / 获取账号规则信息
     #[oai(path = "/", method = "get")]
-    async fn get_rule_info(&self, cert_id: Query<Option<String>>, ak: Query<Option<String>>, request: &Request) -> TardisApiResult<IamOpenRuleResp> {
+    async fn get_rule_info(&self, cert_id: Query<Option<String>>, ak: Query<Option<String>>, _request: &Request) -> TardisApiResult<IamOpenRuleResp> {
         let mut funs = iam_constants::get_tardis_inst();
         let global_ctx = TardisContext {
             own_paths: "".to_string(),

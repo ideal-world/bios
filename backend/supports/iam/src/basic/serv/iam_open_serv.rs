@@ -445,6 +445,10 @@ impl IamOpenServ {
         // let spec_id = IamRelServ::find_from_id_rels(&IamRelKind::IamCertSpec, false, &cert_id, None, None, funs, ctx).await?.pop().unwrap_or_default();
         let spec_id = RbumRelServ::find_detail_rbums(
             &RbumRelFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
                 from_rbum_id: Some(cert_id.to_string()),
                 from_rbum_kind: Some(RbumRelFromKind::Cert),
                 tag: Some(IamRelKind::IamCertSpec.to_string()),
@@ -463,6 +467,7 @@ impl IamOpenServ {
         let spec_code = IamResServ::find_one_detail_item(
             &IamResFilterReq {
                 basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
                     ids: Some(vec![spec_id]),
                     ..Default::default()
                 },
