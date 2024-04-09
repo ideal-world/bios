@@ -409,6 +409,10 @@ impl IamOpenServ {
         } else {
             RbumCertServ::find_one_detail_rbum(
                 &RbumCertFilterReq {
+                    basic: RbumBasicFilterReq {
+                        with_sub_own_paths: true,
+                        ..Default::default()
+                    },
                     ak: ak_req.clone(),
                     ..Default::default()
                 },
@@ -424,6 +428,10 @@ impl IamOpenServ {
         } else {
             RbumCertServ::find_one_detail_rbum(
                 &RbumCertFilterReq {
+                    basic: RbumBasicFilterReq {
+                        with_sub_own_paths: true,
+                        ..Default::default()
+                    },
                     id: cert_id_req.clone(),
                     ..Default::default()
                 },
