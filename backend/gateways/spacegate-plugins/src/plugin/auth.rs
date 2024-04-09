@@ -193,11 +193,17 @@ impl AuthPlugin {
             .flatten()
             .unwrap_or(false)
     }
-}
 
-impl AuthPlugin {
+    // # Security function
+    // Before request auth, must remove all auth headers.
+    fn remove_auth_header(&self, header_map: &mut HeaderMap<HeaderValue>) {
+        header_map.remove(&self.auth_config.head_key_context);
+        header_map.remove(&self.auth_config.head_key_auth_ident);
+    }
+
     async fn req(&self, mut req: Request<SgBody>) -> Result<Request<SgBody>, Response<SgBody>> {
         req.extensions_mut().get_mut::<Reflect>().expect("missing reflect").insert(RequestCryptoParam::default());
+        self.remove_auth_header(req.headers_mut());
 
         for exclude_path in self.auth_config.exclude_encrypt_decrypt_path.clone() {
             if req.uri().path().starts_with(&exclude_path) {
@@ -431,8 +437,14 @@ fn success_auth_result_to_req(auth_result: AuthResult, config: &AuthConfig, req:
         }
     }
 
+    let ak_option = auth_result.ctx.as_ref().and_then(|ctx| ctx.ak.clone());
     let auth_resp: AuthResp = auth_result.into();
-    parts.headers.extend(hashmap_header_to_headermap(auth_resp.headers.clone())?);
+    let mut auth_headers = auth_resp.headers.clone();
+
+    if let Some(ak) = ak_option {
+        auth_headers.insert(config.head_key_auth_ident.clone(), ak);
+    }
+    parts.headers.extend(hashmap_header_to_headermap(auth_headers)?);
     if let Some(new_body) = auth_resp.body {
         parts.headers.insert(
             header::CONTENT_LENGTH,
@@ -522,8 +534,6 @@ impl Plugin for AuthPlugin {
             Err(resp) => resp,
         })
     }
-    // fn create(_: Option<String>, value: JsonValue) -> Result<Self::MakeLayer, BoxError> {
-    // }
 }
 
 #[cfg(test)]
