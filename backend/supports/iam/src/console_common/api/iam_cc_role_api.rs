@@ -10,7 +10,7 @@ use crate::basic::dto::iam_role_dto::IamRoleBoneResp;
 use crate::basic::serv::iam_role_serv::IamRoleServ;
 use crate::iam_constants;
 use crate::iam_enumeration::IamRoleKind;
-use bios_basic::helper::request_helper::add_remote_ip;
+use bios_basic::helper::request_helper::try_set_real_ip_from_req_to_ctx;
 use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use tardis::web::poem::Request;
@@ -39,7 +39,7 @@ impl IamCcRoleApi {
         ctx: TardisContextExtractor,
         request: &Request,
     ) -> TardisApiResult<TardisPage<IamRoleBoneResp>> {
-        add_remote_ip(request, &ctx.0).await?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         let funs = iam_constants::get_tardis_inst();
         let result = IamRoleServ::paginate_items(
             &IamRoleFilterReq {
@@ -98,7 +98,7 @@ impl IamCcRoleApi {
         ctx: TardisContextExtractor,
         request: &Request,
     ) -> TardisApiResult<Vec<RbumRelBoneResp>> {
-        add_remote_ip(request, &ctx.0).await?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         let mut ctx = ctx.0;
         ctx.own_paths = "".to_string();
         let funs = iam_constants::get_tardis_inst();
@@ -138,7 +138,7 @@ impl IamCcRoleApi {
         ctx: TardisContextExtractor,
         request: &Request,
     ) -> TardisApiResult<Vec<String>> {
-        add_remote_ip(request, &ctx.0).await?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         let funs = iam_constants::get_tardis_inst();
         let ids = ids.0.split(',').map(|s| s.to_string()).collect();
         let result = IamRoleServ::find_name_by_ids(ids, &funs, &ctx.0).await?;
@@ -149,7 +149,7 @@ impl IamCcRoleApi {
     /// Get Embed Subrole Id
     #[oai(path = "/get_embed_subrole_id", method = "get")]
     async fn get_embed_subrole_id(&self, id: Query<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<String> {
-        add_remote_ip(request, &ctx.0).await?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         let funs = iam_constants::get_tardis_inst();
         let result = IamRoleServ::get_embed_subrole_id(&id, &funs, &ctx.0).await?;
         ctx.0.execute_task().await?;

@@ -1,4 +1,4 @@
-use bios_basic::helper::request_helper::add_remote_ip;
+use bios_basic::helper::request_helper::try_set_real_ip_from_req_to_ctx;
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem::web::Json;
 use tardis::web::poem::Request;
@@ -42,7 +42,7 @@ impl IamCcAccountApi {
         ctx: TardisContextExtractor,
         request: &Request,
     ) -> TardisApiResult<TardisPage<IamAccountBoneResp>> {
-        add_remote_ip(request, &ctx.0).await?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         let funs = iam_constants::get_tardis_inst();
         let rel = role_id.0.map(|role_id| RbumItemRelFilterReq {
             rel_by_from: true,
@@ -101,7 +101,7 @@ impl IamCcAccountApi {
     /// Get Account
     #[oai(path = "/:id", method = "get")]
     async fn get(&self, id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<IamAccountDetailAggResp> {
-        add_remote_ip(request, &ctx.0).await?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         let funs = iam_constants::get_tardis_inst();
         let result = IamAccountServ::get_account_detail_aggs(
             &id.0,
@@ -133,7 +133,7 @@ impl IamCcAccountApi {
         ctx: TardisContextExtractor,
         request: &Request,
     ) -> TardisApiResult<Vec<String>> {
-        add_remote_ip(request, &ctx.0).await?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         let funs = iam_constants::get_tardis_inst();
         let ids = ids.0.split(',').map(|s| s.to_string()).collect();
         let result = IamAccountServ::find_name_by_ids(ids, &funs, &ctx.0).await?;
@@ -152,7 +152,7 @@ impl IamCcAccountApi {
         ctx: TardisContextExtractor,
         request: &Request,
     ) -> TardisApiResult<Vec<String>> {
-        add_remote_ip(request, &ctx.0).await?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         let funs = iam_constants::get_tardis_inst();
         let ids = ids.0.split(',').map(|s| s.to_string()).collect();
         let result = IamAccountServ::find_account_online_by_ids(ids, &funs, &ctx.0).await?;
@@ -171,7 +171,7 @@ impl IamCcAccountApi {
         ctx: TardisContextExtractor,
         request: &Request,
     ) -> TardisApiResult<Vec<String>> {
-        add_remote_ip(request, &ctx.0).await?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         let funs = iam_constants::get_tardis_inst();
         let ids = ids.0.split(',').map(|s| s.to_string()).collect();
         let result = IamAccountServ::find_account_lock_state_by_ids(ids, &funs, &ctx.0).await?;
@@ -194,7 +194,7 @@ impl IamCcAccountLdapApi {
         ctx: TardisContextExtractor,
         request: &Request,
     ) -> TardisApiResult<Vec<IamAccountExtSysResp>> {
-        add_remote_ip(request, &ctx.0).await?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         let funs = iam_constants::get_tardis_inst();
         let result = IamCertLdapServ::search_accounts(&name.0, tenant_id.0, &code.0, &funs, &ctx.0).await?;
         ctx.0.execute_task().await?;
@@ -210,7 +210,7 @@ impl IamCcAccountLdapApi {
         ctx: TardisContextExtractor,
         request: &Request,
     ) -> TardisApiResult<IamAccountAddByLdapResp> {
-        add_remote_ip(request, &ctx.0).await?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         let result = IamCertLdapServ::batch_get_or_add_account_without_verify(add_req.0, tenant_id.0, &funs, &ctx.0).await?;

@@ -1,4 +1,4 @@
-use bios_basic::helper::request_helper::{add_ip, get_remote_ip};
+use bios_basic::helper::request_helper::{add_ip, get_real_ip_from_ctx};
 use bios_basic::process::task_processor::TaskProcessor;
 use bios_basic::rbum::dto::rbum_rel_agg_dto::RbumRelAggAddReq;
 use bios_basic::rbum::serv::rbum_rel_serv::RbumRelServ;
@@ -922,7 +922,7 @@ impl IamCertServ {
         )
         .await?;
         let result = RbumCertServ::delete_rbum(id, funs, ctx).await?;
-        IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(&cert.rel_rbum_id, get_remote_ip(ctx).await?, funs).await?;
+        IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(&cert.rel_rbum_id, get_real_ip_from_ctx(ctx).await?, funs).await?;
         Ok(result)
     }
 

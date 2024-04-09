@@ -17,7 +17,7 @@ use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_cert_user_pwd_serv::IamCertUserPwdServ;
 use crate::iam_constants;
 use crate::iam_enumeration::{IamCertExtKind, IamCertKernelKind};
-use bios_basic::helper::request_helper::add_remote_ip;
+use bios_basic::helper::request_helper::try_set_real_ip_from_req_to_ctx;
 use tardis::web::poem::Request;
 #[derive(Clone, Default)]
 pub struct IamCsCertApi;
@@ -36,7 +36,7 @@ impl IamCsCertApi {
         request: &Request,
     ) -> TardisApiResult<Void> {
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
-        add_remote_ip(request, &ctx).await?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx).await?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         let ctx = IamAccountServ::is_global_account_context(&account_id.0, &funs, &ctx).await?;
@@ -57,7 +57,7 @@ impl IamCsCertApi {
         request: &Request,
     ) -> TardisApiResult<Vec<RbumCertSummaryResp>> {
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
-        add_remote_ip(request, &ctx).await?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx).await?;
         let funs = iam_constants::get_tardis_inst();
         let rbum_certs = IamCertServ::find_certs(
             &RbumCertFilterReq {
@@ -83,7 +83,7 @@ impl IamCsCertApi {
         ctx: TardisContextExtractor,
         request: &Request,
     ) -> TardisApiResult<RbumCertSummaryWithSkResp> {
-        add_remote_ip(request, &ctx.0).await?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         let funs = iam_constants::get_tardis_inst();
         let resp = IamCertServ::get_kernel_cert(&account_id.0, &IamCertKernelKind::UserPwd, &funs, &ctx.0).await;
         ctx.0.execute_task().await?;
@@ -99,7 +99,7 @@ impl IamCsCertApi {
     /// Delete Cert Conf By Id
     #[oai(path = "/conf/:id", method = "delete")]
     async fn delete_cert_conf(&self, id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
-        add_remote_ip(request, &ctx.0).await?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         IamCertServ::delete_cert_conf(&id.0, &funs, &ctx.0).await?;
@@ -111,7 +111,7 @@ impl IamCsCertApi {
     /// Force Delete Cert And Cert-Conf By Conf Id
     #[oai(path = "/conf/force/:id", method = "delete")]
     async fn delete_cert_and_conf(&self, id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Option<String>> {
-        add_remote_ip(request, &ctx.0).await?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         IamCertServ::delete_cert_and_conf_by_conf_id(&id.0, &funs, &ctx.0).await?;
@@ -132,7 +132,7 @@ impl IamCsCertApi {
         ctx: TardisContextExtractor,
         request: &Request,
     ) -> TardisApiResult<Void> {
-        add_remote_ip(request, &ctx.0).await?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         IamCertServ::add_or_modify_sync_third_integration_config(req.0, &funs, &ctx.0).await?;
@@ -144,7 +144,7 @@ impl IamCsCertApi {
     ///Get Sync Config
     #[oai(path = "/sync", method = "get")]
     async fn get_sync_third_integration_config(&self, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Option<Vec<IamThirdIntegrationConfigDto>>> {
-        add_remote_ip(request, &ctx.0).await?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         let funs = iam_constants::get_tardis_inst();
         let result = IamCertServ::get_sync_third_integration_config(&funs, &ctx.0).await?;
         ctx.0.execute_task().await?;
@@ -167,7 +167,7 @@ impl IamCsCertApi {
     /// 手动触发第三方集成同步，如果有其他同步正在进行中，那么就会返回错误。
     #[oai(path = "/sync", method = "post")]
     async fn manual_third_integration_sync(&self, account_sync_from: Json<IamCertExtKind>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Option<String>> {
-        add_remote_ip(request, &ctx.0).await?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         IamCertServ::manual_third_integration_sync(account_sync_from.0, &funs, &ctx.0).await?;
@@ -190,7 +190,7 @@ impl IamCsCertConfigLdapApi {
     /// Add Ldap Cert Conf
     #[oai(path = "/", method = "post")]
     async fn add_ldap_cert(&self, add_req: Json<IamCertConfLdapAddOrModifyReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<String> {
-        add_remote_ip(request, &ctx.0).await?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         let resp = IamCertLdapServ::add_cert_conf(&add_req.0, None, &funs, &ctx.0).await?;
@@ -200,7 +200,7 @@ impl IamCsCertConfigLdapApi {
     /// Modify Ldap Cert Conf
     #[oai(path = "/:id", method = "put")]
     async fn modify_ldap_cert(&self, id: Path<String>, modify_req: Json<IamCertConfLdapAddOrModifyReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
-        add_remote_ip(request, &ctx.0).await?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         IamCertLdapServ::modify_cert_conf(&id.0, &modify_req.0, &funs, &ctx.0).await?;
@@ -210,7 +210,7 @@ impl IamCsCertConfigLdapApi {
     /// Get Ldap Cert Conf
     #[oai(path = "/", method = "get")]
     async fn get_ldap_cert(&self, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Option<IamCertConfLdapResp>> {
-        add_remote_ip(request, &ctx.0).await?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         let resp = IamCertLdapServ::get_cert_conf_by_ctx(&funs, &ctx.0).await?;

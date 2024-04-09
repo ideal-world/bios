@@ -8,7 +8,7 @@ use crate::basic::serv::iam_res_serv::IamResServ;
 use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::iam_constants;
 use crate::iam_enumeration::{IamRelKind, IamResKind, IamSetKind};
-use bios_basic::helper::request_helper::add_remote_ip;
+use bios_basic::helper::request_helper::try_set_real_ip_from_req_to_ctx;
 use bios_basic::rbum::dto::rbum_filer_dto::RbumSetTreeFilterReq;
 use bios_basic::rbum::dto::rbum_rel_dto::RbumRelBoneResp;
 use bios_basic::rbum::dto::rbum_set_dto::RbumSetTreeResp;
@@ -34,7 +34,7 @@ impl IamCsResApi {
     /// Add Res
     #[oai(path = "/", method = "post")]
     async fn add(&self, mut add_req: Json<IamResAggAddReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<String> {
-        add_remote_ip(request, &ctx.0).await?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Res, &funs, &ctx.0).await?;
@@ -47,7 +47,7 @@ impl IamCsResApi {
     /// Add Res Cate
     #[oai(path = "/cate", method = "post")]
     async fn add_cate(&self, add_req: Json<IamSetCateAddReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<String> {
-        add_remote_ip(request, &ctx.0).await?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         let set_cate_sys_code_node_len = funs.rbum_conf_set_cate_sys_code_node_len();
@@ -81,7 +81,7 @@ impl IamCsResApi {
     /// Add Api Res To Res
     #[oai(path = "/:id/res/:res_api_id", method = "put")]
     async fn add_rel_res(&self, id: Path<String>, res_api_id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
-        add_remote_ip(request, &ctx.0).await?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         IamRelServ::add_simple_rel(&IamRelKind::IamResApi, &res_api_id.0, &id.0, None, None, false, false, &funs, &ctx.0).await?;
@@ -93,7 +93,7 @@ impl IamCsResApi {
     /// Count Api Res By Res Id
     #[oai(path = "/:id/res/total", method = "get")]
     async fn count_rel_res(&self, id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<u64> {
-        add_remote_ip(request, &ctx.0).await?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         let funs = iam_constants::get_tardis_inst();
         let result = IamRelServ::count_to_rels(&IamRelKind::IamResApi, &id.0, &funs, &ctx.0).await?;
         ctx.0.execute_task().await?;
@@ -103,7 +103,7 @@ impl IamCsResApi {
     /// Delete Res By Res Id
     #[oai(path = "/:id", method = "delete")]
     async fn delete(&self, id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
-        add_remote_ip(request, &ctx.0).await?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         IamResServ::delete_res(&id.0, &funs, &ctx.0).await?;
@@ -115,7 +115,7 @@ impl IamCsResApi {
     /// Delete Res Cate By Res Cate Id
     #[oai(path = "/cate/:id", method = "delete")]
     async fn delete_cate(&self, id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
-        add_remote_ip(request, &ctx.0).await?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         IamSetServ::delete_set_cate(&id.0, &funs, &ctx.0).await?;
@@ -127,7 +127,7 @@ impl IamCsResApi {
     /// Delete Api Res By Res Id
     #[oai(path = "/:id/res/:res_api_id", method = "delete")]
     async fn delete_rel_res(&self, id: Path<String>, res_api_id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
-        add_remote_ip(request, &ctx.0).await?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         IamRelServ::delete_simple_rel(&IamRelKind::IamResApi, &res_api_id.0, &id.0, &funs, &ctx.0).await?;
@@ -146,7 +146,7 @@ impl IamCsResApi {
         ctx: TardisContextExtractor,
         request: &Request,
     ) -> TardisApiResult<Vec<IamResSummaryResp>> {
-        add_remote_ip(request, &ctx.0).await?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         let funs = iam_constants::get_tardis_inst();
         let result = IamResServ::find_items(
             &IamResFilterReq {
@@ -174,7 +174,7 @@ impl IamCsResApi {
         ctx: TardisContextExtractor,
         request: &Request,
     ) -> TardisApiResult<TardisPage<IamResSummaryResp>> {
-        add_remote_ip(request, &ctx.0).await?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         let funs = iam_constants::get_tardis_inst();
         let result = IamResServ::paginate_items(
             &IamResFilterReq {
@@ -203,7 +203,7 @@ impl IamCsResApi {
         ctx: TardisContextExtractor,
         request: &Request,
     ) -> TardisApiResult<Vec<IamResDetailResp>> {
-        add_remote_ip(request, &ctx.0).await?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         let funs = iam_constants::get_tardis_inst();
         let result = IamResServ::find_rel_res(&IamRelKind::IamResApi, &id.0, desc_by_create.0, desc_by_update.0, &funs, &ctx.0).await?;
         ctx.0.execute_task().await?;
@@ -220,7 +220,7 @@ impl IamCsResApi {
         ctx: TardisContextExtractor,
         request: &Request,
     ) -> TardisApiResult<Vec<RbumRelBoneResp>> {
-        add_remote_ip(request, &ctx.0).await?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         let funs = iam_constants::get_tardis_inst();
         let result = IamResServ::find_from_simple_rel_roles(&IamRelKind::IamResRole, false, &id.0, desc_by_create.0, desc_by_update.0, &funs, &ctx.0).await?;
         ctx.0.execute_task().await?;
@@ -230,7 +230,7 @@ impl IamCsResApi {
     /// Find Element Rel Apis By Res Ids
     #[oai(path = "/get_res_apis/:ids", method = "get")]
     async fn get_res_apis(&self, ids: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<HashMap<String, Vec<IamResDetailResp>>> {
-        add_remote_ip(request, &ctx.0).await?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         let funs = iam_constants::get_tardis_inst();
         let id_list = ids.split(',').collect_vec();
         let result = IamResServ::find_to_multi_rel_roles(&IamRelKind::IamResApi, id_list, &funs, &ctx.0).await?;
@@ -241,7 +241,7 @@ impl IamCsResApi {
     /// Get Res By Res Id
     #[oai(path = "/:id", method = "get")]
     async fn get(&self, id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<IamResDetailResp> {
-        add_remote_ip(request, &ctx.0).await?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         let funs = iam_constants::get_tardis_inst();
         let result = IamResServ::get_item(&id.0, &IamResFilterReq::default(), &funs, &ctx.0).await?;
         ctx.0.execute_task().await?;
@@ -251,7 +251,7 @@ impl IamCsResApi {
     /// Find Api Tree
     #[oai(path = "/tree/api", method = "get")]
     async fn get_api_tree(&self, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<RbumSetTreeResp> {
-        add_remote_ip(request, &ctx.0).await?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         let funs = iam_constants::get_tardis_inst();
         let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Res, &funs, &ctx.0).await?;
         let result = IamSetServ::get_api_tree(&set_id, &funs, &ctx.0).await?;
@@ -262,7 +262,7 @@ impl IamCsResApi {
     /// Find Menu Tree
     #[oai(path = "/tree/menu", method = "get")]
     async fn get_menu_tree(&self, exts: Query<Option<String>>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<RbumSetTreeResp> {
-        add_remote_ip(request, &ctx.0).await?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         let funs = iam_constants::get_tardis_inst();
         let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Res, &funs, &ctx.0).await?;
         let result = IamSetServ::get_menu_tree(&set_id, exts.0, &funs, &ctx.0).await?;
@@ -276,7 +276,7 @@ impl IamCsResApi {
     /// * ``parent_sys_code=true`` : query only the next level. This can be used to query level by level when the tree is too large
     #[oai(path = "/tree", method = "get")]
     async fn get_tree(&self, parent_sys_code: Query<Option<String>>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<RbumSetTreeResp> {
-        add_remote_ip(request, &ctx.0).await?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         let funs = iam_constants::get_tardis_inst();
         let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Res, &funs, &ctx.0).await?;
         let result = IamSetServ::get_tree(
@@ -299,7 +299,7 @@ impl IamCsResApi {
     /// Modify Res By Res Id
     #[oai(path = "/:id", method = "put")]
     async fn modify(&self, id: Path<String>, mut modify_req: Json<IamResModifyReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
-        add_remote_ip(request, &ctx.0).await?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         IamResServ::modify_item(&id.0, &mut modify_req.0, &funs, &ctx.0).await?;
@@ -311,7 +311,7 @@ impl IamCsResApi {
     /// Modify Res Cate By Res Cate Id
     #[oai(path = "/cate/:id", method = "put")]
     async fn modify_set_cate(&self, id: Path<String>, modify_req: Json<IamSetCateModifyReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
-        add_remote_ip(request, &ctx.0).await?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         IamSetServ::modify_set_cate(&id.0, &modify_req.0, &funs, &ctx.0).await?;

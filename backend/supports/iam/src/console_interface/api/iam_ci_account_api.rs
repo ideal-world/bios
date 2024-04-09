@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 
-use bios_basic::helper::bios_ctx_helper::unsafe_fill_ctx;
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumCertFilterReq, RbumItemRelFilterReq, RbumSetCateFilterReq, RbumSetItemFilterReq, RbumSetItemRelFilterReq};
 use bios_basic::rbum::dto::rbum_set_item_dto::RbumSetItemDetailResp;
+use bios_basic::rbum::helper::rbum_scope_helper::check_without_owner_and_unsafe_fill_ctx;
 use bios_basic::rbum::rbum_enumeration::{RbumRelFromKind, RbumSetCateLevelQueryKind};
 use bios_basic::rbum::serv::rbum_set_serv::RbumSetItemServ;
 use tardis::web::context_extractor::TardisContextExtractor;
@@ -20,7 +20,7 @@ use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::iam_config::IamBasicConfigApi;
 use crate::iam_constants;
 use crate::iam_enumeration::{IamRelKind, IamSetKind};
-use bios_basic::helper::request_helper::add_remote_ip;
+use bios_basic::helper::request_helper::try_set_real_ip_from_req_to_ctx;
 use bios_basic::rbum::serv::rbum_cert_serv::RbumCertServ;
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
@@ -52,9 +52,9 @@ impl IamCiAccountApi {
         request: &Request,
     ) -> TardisApiResult<TardisPage<IamAccountSummaryAggResp>> {
         let funs = iam_constants::get_tardis_inst();
-        unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
+        check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0.clone())?;
-        add_remote_ip(request, &ctx).await?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx).await?;
         let rel = role_ids.0.map(|role_ids| {
             let role_ids = role_ids.split(',').map(|r| r.to_string()).collect::<Vec<_>>();
             RbumItemRelFilterReq {
@@ -127,8 +127,8 @@ impl IamCiAccountApi {
     #[oai(path = "/:id/ctx", method = "get")]
     async fn get_account_context(&self, id: Path<String>, app_id: Query<Option<String>>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<String> {
         let funs = iam_constants::get_tardis_inst();
-        unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
-        add_remote_ip(request, &ctx.0).await?;
+        check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         let mut ctx_resp = IamIdentCacheServ::get_account_context(&id.0, &app_id.0.unwrap_or((&"").to_string()), &funs).await?;
         ctx_resp.own_paths = ctx.0.own_paths;
         TardisResp::ok(TardisFuns::crypto.base64.encode(TardisFuns::json.obj_to_string(&ctx_resp).unwrap_or_default()))
@@ -138,9 +138,9 @@ impl IamCiAccountApi {
     #[oai(path = "/:id", method = "get")]
     async fn get(&self, id: Path<String>, tenant_id: Query<Option<String>>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<IamAccountDetailAggResp> {
         let funs = iam_constants::get_tardis_inst();
-        unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
+        check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
-        add_remote_ip(request, &ctx).await?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx).await?;
         let result = IamAccountServ::get_account_detail_aggs(
             &id.0,
             &IamAccountFilterReq {
@@ -174,9 +174,9 @@ impl IamCiAccountApi {
         request: &Request,
     ) -> TardisApiResult<Option<IamAccountDetailResp>> {
         let funs = iam_constants::get_tardis_inst();
-        unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
+        check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0.clone())?;
-        add_remote_ip(request, &ctx).await?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx).await?;
         let supplier = supplier.0.unwrap_or_default();
         let kind = kind.0.unwrap_or_else(|| "UserPwd".to_string());
         let kind = if kind.is_empty() { "UserPwd".to_string() } else { kind };
@@ -234,9 +234,9 @@ impl IamCiAccountApi {
         request: &Request,
     ) -> TardisApiResult<Vec<RbumSetItemDetailResp>> {
         let funs = iam_constants::get_tardis_inst();
-        unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
+        check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         let ctx = IamCertServ::use_sys_or_tenant_ctx_unsafe(ctx.0)?;
-        add_remote_ip(request, &ctx).await?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx).await?;
         let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Apps, &funs, &ctx).await?;
         let cate_codes = RbumSetItemServ::find_detail_rbums(
             &RbumSetItemFilterReq {
@@ -301,9 +301,9 @@ impl IamCiAccountApi {
         request: &Request,
     ) -> TardisApiResult<Vec<RbumSetItemDetailResp>> {
         let funs = iam_constants::get_tardis_inst();
-        unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
+        check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         let ctx = IamCertServ::use_sys_or_tenant_ctx_unsafe(ctx.0)?;
-        add_remote_ip(request, &ctx).await?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx).await?;
         let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Apps, &funs, &ctx).await?;
         let result = RbumSetItemServ::find_detail_rbums(
             &RbumSetItemFilterReq {

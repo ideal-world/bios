@@ -23,7 +23,7 @@ use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::iam_constants;
 use crate::iam_enumeration::{IamAccountLockStateKind, IamAccountStatusKind, IamRelKind};
-use bios_basic::helper::request_helper::add_remote_ip;
+use bios_basic::helper::request_helper::try_set_real_ip_from_req_to_ctx;
 use tardis::web::poem::Request;
 #[derive(Clone, Default)]
 pub struct IamCsAccountApi;
@@ -35,7 +35,7 @@ impl IamCsAccountApi {
     #[oai(path = "/", method = "post")]
     async fn add(&self, tenant_id: Query<Option<String>>, add_req: Json<IamAccountAggAddReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<String> {
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
-        add_remote_ip(request, &ctx).await?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx).await?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         let result = IamAccountServ::add_account_agg(&add_req.0, false, &funs, &ctx).await?;
@@ -56,7 +56,7 @@ impl IamCsAccountApi {
         request: &Request,
     ) -> TardisApiResult<Void> {
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
-        add_remote_ip(request, &ctx).await?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx).await?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         IamAccountServ::modify_account_agg(&id.0, &modify_req.0, &funs, &ctx).await?;
@@ -73,7 +73,7 @@ impl IamCsAccountApi {
     #[oai(path = "/:id", method = "get")]
     async fn get(&self, id: Path<String>, tenant_id: Query<Option<String>>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<IamAccountDetailAggResp> {
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0.clone())?;
-        add_remote_ip(request, &ctx).await?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx).await?;
         let funs = iam_constants::get_tardis_inst();
         let result = IamAccountServ::get_account_detail_aggs(
             &id.0,
@@ -114,7 +114,7 @@ impl IamCsAccountApi {
         request: &Request,
     ) -> TardisApiResult<TardisPage<IamAccountSummaryAggResp>> {
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0.clone())?;
-        add_remote_ip(request, &ctx).await?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx).await?;
         let funs = iam_constants::get_tardis_inst();
         let rel = role_ids.0.map(|role_ids| {
             let role_ids = role_ids.split(',').map(|r| r.to_string()).collect::<Vec<_>>();
@@ -188,7 +188,7 @@ impl IamCsAccountApi {
     #[oai(path = "/:id", method = "delete")]
     async fn delete(&self, id: Path<String>, tenant_id: Query<Option<String>>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Option<String>> {
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
-        add_remote_ip(request, &ctx).await?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx).await?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         IamAccountServ::delete_item_with_all_rels(&id.0, &funs, &ctx).await?;
@@ -206,7 +206,7 @@ impl IamCsAccountApi {
     #[oai(path = "/:id/token", method = "delete")]
     async fn offline(&self, id: Path<String>, tenant_id: Query<Option<String>>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
-        add_remote_ip(request, &ctx).await?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx).await?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         IamAccountServ::delete_tokens(&id.0, &funs, &ctx).await?;
@@ -219,7 +219,7 @@ impl IamCsAccountApi {
     #[oai(path = "/total", method = "get")]
     async fn count(&self, tenant_id: Query<Option<String>>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<u64> {
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
-        add_remote_ip(request, &ctx).await?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx).await?;
         let funs = iam_constants::get_tardis_inst();
         let result = IamAccountServ::count_items(
             &IamAccountFilterReq {
@@ -240,7 +240,7 @@ impl IamCsAccountApi {
     ///Get account's tenant_info by account id
     #[oai(path = "/:id/tenant", method = "get")]
     async fn get_account_tenant_info(&self, id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<AccountTenantInfoResp> {
-        add_remote_ip(request, &ctx.0).await?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         let funs = iam_constants::get_tardis_inst();
         let result = IamAccountServ::get_account_tenant_info(&id.0, &funs, &ctx.0).await?;
         ctx.0.execute_task().await?;
@@ -251,7 +251,7 @@ impl IamCsAccountApi {
     #[oai(path = "/:id/active", method = "put")]
     async fn active_account(&self, id: Path<String>, tenant_id: Query<Option<String>>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
-        add_remote_ip(request, &ctx).await?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx).await?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         IamAccountServ::modify_item(
@@ -280,7 +280,7 @@ impl IamCsAccountApi {
     #[oai(path = "/:id/logout", method = "put")]
     async fn logout_account(&self, id: Path<String>, tenant_id: Query<Option<String>>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
-        add_remote_ip(request, &ctx).await?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx).await?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         IamAccountServ::modify_item(
@@ -309,7 +309,7 @@ impl IamCsAccountApi {
     #[oai(path = "/:id/lock", method = "put")]
     async fn lock_account(&self, id: Path<String>, tenant_id: Query<Option<String>>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
-        add_remote_ip(request, &ctx).await?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx).await?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         IamAccountServ::modify_item(
@@ -346,7 +346,7 @@ impl IamCsAccountApi {
     #[oai(path = "/:id/unlock", method = "post")]
     async fn unlock_account(&self, id: Path<String>, tenant_id: Query<Option<String>>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
-        add_remote_ip(request, &ctx).await?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx).await?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         IamAccountServ::unlock_account(&id.0, &funs, &ctx).await?;

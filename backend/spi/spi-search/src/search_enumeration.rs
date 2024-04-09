@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use bios_basic::{basic_enumeration::BasicQueryOpKind, helper::db_helper};
+use bios_basic::{enumeration::BasicQueryOpKind, helper::db_helper};
 use serde::{Deserialize, Serialize};
 use tardis::{
     basic::{error::TardisError, result::TardisResult},

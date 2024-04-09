@@ -6,17 +6,17 @@ use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::iam_config::IamBasicConfigApi;
 use crate::iam_constants::{self};
 use crate::iam_enumeration::IamSetKind;
-use bios_basic::helper::bios_ctx_helper::unsafe_fill_ctx;
 use bios_basic::process::task_processor::TaskProcessor;
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumSetItemFilterReq};
 use bios_basic::rbum::dto::rbum_set_item_dto::RbumSetItemDetailResp;
+use bios_basic::rbum::helper::rbum_scope_helper::check_without_owner_and_unsafe_fill_ctx;
 use bios_basic::rbum::rbum_enumeration::RbumSetCateLevelQueryKind;
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use bios_basic::rbum::serv::rbum_set_serv::RbumSetItemServ;
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem_openapi;
 
-use bios_basic::helper::request_helper::add_remote_ip;
+use bios_basic::helper::request_helper::try_set_real_ip_from_req_to_ctx;
 use tardis::web::poem::Request;
 use tardis::web::poem_openapi::param::Query;
 use tardis::web::poem_openapi::payload::Json;
@@ -33,8 +33,8 @@ impl IamCiAppApi {
     #[oai(path = "/", method = "post")]
     async fn add(&self, add_req: Json<IamAppAggAddReq>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<String> {
         let mut funs = iam_constants::get_tardis_inst();
-        unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
-        add_remote_ip(request, &ctx.0).await?;
+        check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         funs.begin().await?;
         let result = IamAppServ::add_app_agg(&add_req.0, &funs, &ctx.0).await?;
         funs.commit().await?;
@@ -48,8 +48,8 @@ impl IamCiAppApi {
     #[oai(path = "/", method = "put")]
     async fn modify(&self, modify_req: Json<IamAppAggModifyReq>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Option<String>> {
         let mut funs = iam_constants::get_tardis_inst();
-        unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
-        add_remote_ip(request, &ctx.0).await?;
+        check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         funs.begin().await?;
 
         IamAppServ::modify_app_agg(&IamAppServ::get_id_by_ctx(&ctx.0, &funs)?, &modify_req, &funs, &ctx.0).await?;
@@ -72,9 +72,9 @@ impl IamCiAppApi {
         request: &Request,
     ) -> TardisApiResult<Vec<RbumSetItemDetailResp>> {
         let funs = iam_constants::get_tardis_inst();
-        unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
+        check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         let ctx = IamCertServ::use_sys_or_tenant_ctx_unsafe(ctx.0)?;
-        add_remote_ip(request, &ctx).await?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx).await?;
         let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Apps, &funs, &ctx).await?;
         let cate_codes = RbumSetItemServ::find_detail_rbums(
             &RbumSetItemFilterReq {
@@ -139,9 +139,9 @@ impl IamCiAppApi {
         request: &Request,
     ) -> TardisApiResult<Vec<RbumSetItemDetailResp>> {
         let funs = iam_constants::get_tardis_inst();
-        unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
+        check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         let ctx = IamCertServ::use_sys_or_tenant_ctx_unsafe(ctx.0)?;
-        add_remote_ip(request, &ctx).await?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx).await?;
         let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Apps, &funs, &ctx).await?;
         let result = RbumSetItemServ::find_detail_rbums(
             &RbumSetItemFilterReq {

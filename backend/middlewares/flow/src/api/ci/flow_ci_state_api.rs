@@ -1,6 +1,5 @@
-use bios_basic::helper::bios_ctx_helper::unsafe_fill_ctx;
 use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
-use bios_basic::rbum::helper::rbum_scope_helper;
+use bios_basic::rbum::helper::rbum_scope_helper::{self, check_without_owner_and_unsafe_fill_ctx};
 use bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use tardis::web::context_extractor::TardisContextExtractor;
@@ -41,7 +40,7 @@ impl FlowCiStateApi {
         request: &Request,
     ) -> TardisApiResult<TardisPage<FlowStateSummaryResp>> {
         let funs = flow_constants::get_tardis_inst();
-        unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
+        check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
 
         let (scope_level, with_sub_own_paths) = if let Some(is_global) = is_global.0 {
             if is_global {
@@ -93,7 +92,7 @@ impl FlowCiStateApi {
         request: &Request,
     ) -> TardisApiResult<Vec<FlowStateCountGroupByStateResp>> {
         let mut funs = flow_constants::get_tardis_inst();
-        unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
+        check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         funs.begin().await?;
         let result = FlowStateServ::count_group_by_state(&req.0, &funs, &ctx.0).await?;
         funs.commit().await?;

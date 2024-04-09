@@ -11,7 +11,7 @@ use crate::basic::dto::iam_attr_dto::IamKindAttrAddReq;
 use crate::basic::serv::iam_attr_serv::IamAttrServ;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::iam_constants;
-use bios_basic::helper::request_helper::add_remote_ip;
+use bios_basic::helper::request_helper::try_set_real_ip_from_req_to_ctx;
 use tardis::web::poem::Request;
 #[derive(Clone, Default)]
 pub struct IamCsAccountAttrApi;
@@ -25,7 +25,7 @@ impl IamCsAccountAttrApi {
     #[oai(path = "/", method = "post")]
     async fn add_attr(&self, tenant_id: Query<Option<String>>, add_req: Json<IamKindAttrAddReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<String> {
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
-        add_remote_ip(request, &ctx).await?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx).await?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         let result = IamAttrServ::add_account_attr(&add_req.0, &funs, &ctx).await?;
@@ -45,7 +45,7 @@ impl IamCsAccountAttrApi {
         request: &Request,
     ) -> TardisApiResult<Void> {
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
-        add_remote_ip(request, &ctx).await?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx).await?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         IamAttrServ::modify_account_attr(&id.0, &mut modify_req.0, &funs, &ctx).await?;
@@ -58,7 +58,7 @@ impl IamCsAccountAttrApi {
     #[oai(path = "/:id", method = "get")]
     async fn get_attr(&self, id: Path<String>, tenant_id: Query<Option<String>>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<RbumKindAttrDetailResp> {
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
-        add_remote_ip(request, &ctx).await?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx).await?;
         let funs = iam_constants::get_tardis_inst();
         let result = IamAttrServ::get_account_attr(&id.0, true, &funs, &ctx).await?;
         ctx.execute_task().await?;
@@ -69,7 +69,7 @@ impl IamCsAccountAttrApi {
     #[oai(path = "/", method = "get")]
     async fn find_attrs(&self, tenant_id: Query<Option<String>>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Vec<RbumKindAttrSummaryResp>> {
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
-        add_remote_ip(request, &ctx).await?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx).await?;
         let funs = iam_constants::get_tardis_inst();
         let result = IamAttrServ::find_account_attrs(&funs, &ctx).await?;
         ctx.execute_task().await?;
@@ -80,7 +80,7 @@ impl IamCsAccountAttrApi {
     #[oai(path = "/:id", method = "delete")]
     async fn delete_attr(&self, id: Path<String>, tenant_id: Query<Option<String>>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
-        add_remote_ip(request, &ctx).await?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx).await?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         IamAttrServ::delete_account_attr(&id.0, &funs, &ctx).await?;
@@ -99,7 +99,7 @@ impl IamCsAccountAttrApi {
         request: &Request,
     ) -> TardisApiResult<HashMap<String, String>> {
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
-        add_remote_ip(request, &ctx).await?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx).await?;
         let funs = iam_constants::get_tardis_inst();
         let result = IamAttrServ::find_account_attr_values(&account_id.0, &funs, &ctx).await?;
         ctx.execute_task().await?;

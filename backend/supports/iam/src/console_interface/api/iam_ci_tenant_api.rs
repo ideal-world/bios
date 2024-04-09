@@ -1,7 +1,7 @@
-use bios_basic::helper::bios_ctx_helper::unsafe_fill_ctx;
-use bios_basic::helper::request_helper::add_remote_ip;
+use bios_basic::helper::request_helper::try_set_real_ip_from_req_to_ctx;
 use bios_basic::rbum::dto::rbum_filer_dto::RbumSetTreeFilterReq;
 use bios_basic::rbum::dto::rbum_set_dto::RbumSetTreeMainResp;
+use bios_basic::rbum::helper::rbum_scope_helper::check_without_owner_and_unsafe_fill_ctx;
 use bios_basic::rbum::rbum_enumeration::RbumSetCateLevelQueryKind;
 
 use tardis::web::poem::web::Query;
@@ -32,8 +32,8 @@ impl IamCiTenantApi {
     #[oai(path = "/", method = "get")]
     async fn get(&self, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<IamTenantAggDetailResp> {
         let funs = iam_constants::get_tardis_inst();
-        unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
-        add_remote_ip(request, &ctx.0).await?;
+        check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         let result = IamTenantServ::get_tenant_agg(&IamTenantServ::get_id_by_ctx(&ctx.0, &funs)?, &IamTenantFilterReq::default(), &funs, &ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
@@ -52,9 +52,9 @@ impl IamCiTenantApi {
         request: &Request,
     ) -> TardisApiResult<Vec<RbumSetTreeMainResp>> {
         let funs = iam_constants::get_tardis_inst();
-        unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
+        check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         let ctx = IamSetServ::try_get_rel_ctx_by_set_id(set_id.0, &funs, ctx.0).await?;
-        add_remote_ip(request, &ctx).await?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx).await?;
         let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, &funs, &ctx).await?;
         let result = IamSetServ::get_tree(
             &set_id,

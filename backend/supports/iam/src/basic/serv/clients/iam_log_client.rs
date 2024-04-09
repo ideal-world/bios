@@ -1,5 +1,5 @@
 use bios_basic::{
-    helper::request_helper::get_remote_ip,
+    helper::request_helper::get_real_ip_from_ctx,
     rbum::{
         dto::rbum_filer_dto::{RbumBasicFilterReq, RbumSetCateFilterReq},
         serv::{rbum_crud_serv::RbumCrudOperation, rbum_item_serv::RbumItemCrudOperation, rbum_set_serv::RbumSetCateServ},
@@ -77,7 +77,7 @@ impl IamLogClient {
                 let task_handle = tokio::spawn(async move {
                     let funs = iam_constants::get_tardis_inst();
                     let mut ip = "".to_string();
-                    if let Ok(remote_ip) = get_remote_ip(&ctx_clone).await {
+                    if let Ok(remote_ip) = get_real_ip_from_ctx(&ctx_clone).await {
                         ip = remote_ip.unwrap_or_default();
                     }
                     IamLogClient::add_item(

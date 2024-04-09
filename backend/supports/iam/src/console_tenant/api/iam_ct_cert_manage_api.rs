@@ -13,7 +13,7 @@ use crate::basic::dto::iam_cert_dto::{IamCertManageAddReq, IamCertManageModifyRe
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::iam_constants;
 use crate::iam_enumeration::IamCertExtKind;
-use bios_basic::helper::request_helper::add_remote_ip;
+use bios_basic::helper::request_helper::try_set_real_ip_from_req_to_ctx;
 use tardis::web::poem::Request;
 #[derive(Clone, Default)]
 pub struct IamCtCertManageApi;
@@ -42,7 +42,7 @@ impl IamCtCertManageApi {
     /// Add Manage Cert
     #[oai(path = "/", method = "post")]
     async fn add_manage_cert(&self, add_req: Json<IamCertManageAddReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<String> {
-        add_remote_ip(request, &ctx.0).await?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         let id = IamCertServ::add_manage_cert(&add_req.0, &funs, &ctx.0.clone()).await?;
@@ -70,7 +70,7 @@ impl IamCtCertManageApi {
     /// modify manage cert
     #[oai(path = "/:id", method = "put")]
     async fn modify_manage_cert(&self, id: Path<String>, modify_req: Json<IamCertManageModifyReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
-        add_remote_ip(request, &ctx.0).await?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         IamCertServ::modify_manage_cert(&id.0, &modify_req.0, &funs, &ctx.0).await?;
@@ -98,7 +98,7 @@ impl IamCtCertManageApi {
     /// modify manage cert ext
     #[oai(path = "/ext/:id", method = "put")]
     async fn modify_manage_cert_ext(&self, id: Path<String>, ext: Query<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
-        add_remote_ip(request, &ctx.0).await?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         IamCertServ::modify_manage_cert_ext(&id.0, &ext.0, &funs, &ctx.0).await?;
@@ -112,7 +112,7 @@ impl IamCtCertManageApi {
     async fn get_manage_cert(&self, id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<RbumCertSummaryWithSkResp> {
         let funs = iam_constants::get_tardis_inst();
         let ctx = IamCertServ::use_sys_or_tenant_ctx_unsafe(ctx.0)?;
-        add_remote_ip(request, &ctx).await?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx).await?;
         let cert = IamCertServ::get_3th_kind_cert_by_id(&id.0, &funs, &ctx).await?;
         ctx.execute_task().await?;
         TardisResp::ok(cert)
@@ -121,7 +121,7 @@ impl IamCtCertManageApi {
     /// delete manage cert ext
     #[oai(path = "/:id", method = "delete")]
     async fn delete_manage_cert_ext(&self, id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
-        add_remote_ip(request, &ctx.0).await?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         let cert = IamCertServ::get_3th_kind_cert_by_id(&id.0, &funs, &ctx.0).await?;
@@ -157,7 +157,7 @@ impl IamCtCertManageApi {
         ctx: TardisContextExtractor,
         request: &Request,
     ) -> TardisApiResult<TardisPage<RbumCertDetailResp>> {
-        add_remote_ip(request, &ctx.0).await?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         let funs = iam_constants::get_tardis_inst();
         let result = IamCertServ::paginate_certs(
             &RbumCertFilterReq {
@@ -189,7 +189,7 @@ impl IamCtCertManageApi {
         ctx: TardisContextExtractor,
         request: &Request,
     ) -> TardisApiResult<Void> {
-        add_remote_ip(request, &ctx.0).await?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         IamCertServ::add_rel_cert(&id.0, &item_id.0, note.0, ext.0, own_paths.0, &funs, &ctx.0).await?;
@@ -201,7 +201,7 @@ impl IamCtCertManageApi {
     /// Delete Manage rel cert
     #[oai(path = "/:id/rel/:item_id", method = "delete")]
     async fn delete_rel_item(&self, id: Path<String>, item_id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
-        add_remote_ip(request, &ctx.0).await?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         IamCertServ::delete_rel_cert(&id.0, &item_id.0, &funs, &ctx.0).await?;
@@ -215,7 +215,7 @@ impl IamCtCertManageApi {
     async fn find_certs(&self, item_id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Vec<RbumRelBoneResp>> {
         let funs = iam_constants::get_tardis_inst();
         let ctx = IamCertServ::use_sys_or_tenant_ctx_unsafe(ctx.0)?;
-        add_remote_ip(request, &ctx).await?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx).await?;
         let rbum_certs = IamCertServ::find_to_simple_rel_cert(&item_id.0, None, None, &funs, &ctx).await?;
         ctx.execute_task().await?;
         TardisResp::ok(rbum_certs)
