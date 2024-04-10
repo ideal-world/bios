@@ -115,7 +115,7 @@ impl SpiBsInstExtractor for TardisFunsInst {
     /// ```
     async fn bs<'a>(&self, ctx: &'a TardisContext) -> TardisResult<Arc<SpiBsInst>> {
         let cache_key = format!("{}-{}", self.module_code(), ctx.owner);
-        Ok(get_spi_bs_caches().read().await.get(&cache_key).unwrap().clone())
+        Ok(get_spi_bs_caches().read().await.get(&cache_key).expect("ignore").clone())
     }
 
     /// Initialize the backend service instance and fetch it
