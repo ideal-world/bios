@@ -1,3 +1,5 @@
+//! SPI backend service instance initialization and extraction
+//! SPI后端服务实例初始化和提取
 use async_trait::async_trait;
 use std::any::Any;
 use std::collections::HashMap;
