@@ -23,23 +23,39 @@ pub async fn try_set_real_ip_from_req_to_ctx(request: &Request, ctx: &TardisCont
     Ok(())
 }
 
+/// Parse the Forwarded header to get the IP
+/// Forwarded format： `Forwarded: by=<identifier>; for=<identifier><,for=<identifier>>; host=<host>; proto=<http|https>`
+///
+/// ```
+/// use bios_basic::helper::request_helper::parse_forwarded_ip;
+/// assert_eq!(parse_forwarded_ip("Forwarded: for=192.168.0.11; proto=http").unwrap().to_string(),"192.168.0.11");
+/// assert_eq!(parse_forwarded_ip("Forwarded: for=192.168.0.9, 192.168.0.11; proto=http").unwrap().to_string(), "192.168.0.9");
+/// assert_eq!(parse_forwarded_ip("Forwarded: proto=http; for=192.168.0.12").unwrap().to_string(), "192.168.0.12");
+/// assert_eq!(parse_forwarded_ip("Forwarded: for=192.168.0.10").unwrap().to_string(), "192.168.0.10");
+/// assert_eq!(parse_forwarded_ip("Forwarded: proto=http; for=192.168.0"), None);
+/// ```
+pub fn parse_forwarded_ip(forwarded_value: &str) -> Option<IpAddr> {
+    forwarded_value
+        .strip_prefix("Forwarded: ")
+        .map(|forwarded_value| {
+            forwarded_value
+                .split(";")
+                .find(|part| part.trim().starts_with("for="))
+                .map(|part| part.trim()[4..].split(",").next().map(|ip_str| IpAddr::from_str(ip_str).ok()).flatten())
+                .flatten()
+        })
+        .flatten()
+}
+
 /// Try to get real ip from request
+///
+/// This method only parses the main request headers and cannot guarantee that the real IP can be obtained.
 pub async fn try_get_real_ip_from_req(request: &Request) -> TardisResult<Option<String>> {
-    fn parse_forwarded_ip(field: &str) -> Option<IpAddr> {
-        if let Some(pos) = field.find("for=") {
-            let ip_str = &field[pos + 4..];
-            if let Ok(ip) = IpAddr::from_str(ip_str) {
-                return Some(ip);
-            }
-        }
-        None
-    }
+    // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Forwarded
     if let Some(forwarded_header) = request.headers().get(FORWARDED) {
         if let Ok(forwarded_value) = forwarded_header.to_str() {
-            for field in forwarded_value.split(',') {
-                if let Some(ip) = parse_forwarded_ip(field.trim()) {
-                    return Ok(Some(ip.to_string()));
-                }
+            if let Some(ip) = parse_forwarded_ip(forwarded_value.trim()) {
+                return Ok(Some(ip.to_string()));
             }
         }
     }
@@ -50,9 +66,9 @@ pub async fn try_get_real_ip_from_req(request: &Request) -> TardisResult<Option<
             }
         }
     }
-    if let Some(xff_header) = request.headers().get("X-Real-IP") {
-        if let Ok(xff_value) = xff_header.to_str() {
-            if let Some(ip) = xff_value.split(',').next().and_then(|s| IpAddr::from_str(s.trim()).ok()) {
+    if let Some(xrp_header) = request.headers().get("X-Real-IP") {
+        if let Ok(xrp_value) = xrp_header.to_str() {
+            if let Some(ip) = xrp_value.split(',').next().and_then(|s| IpAddr::from_str(s.trim()).ok()) {
                 return Ok(Some(ip.to_string()));
             }
         }

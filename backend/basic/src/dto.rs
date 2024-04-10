@@ -1,3 +1,4 @@
+//! Basic DTOs
 use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
@@ -7,17 +8,25 @@ use crate::enumeration::BasicQueryOpKind;
 #[cfg(feature = "default")]
 use tardis::web::poem_openapi;
 
+/// Basic query condition object
+/// 基础的查询条件对象
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[cfg_attr(feature = "default", derive(poem_openapi::Object))]
 pub struct BasicQueryCondInfo {
+    /// Query field
     #[oai(validator(min_length = "1"))]
     pub field: String,
+    /// Query operator
     pub op: BasicQueryOpKind,
+    /// Query value
     pub value: Value,
 }
 
 impl BasicQueryCondInfo {
-    // The outer level is the `OR` relationship, the inner level is the `AND` relationship
+    /// Check if the ``check_vars`` passed in meet the conditions in ``conds``
+    /// 检查传入的 ``check_vars`` 是否满足 ``conds`` 中的条件
+    ///
+    ///  The outer level is the `OR` relationship, the inner level is the `AND` relationship
     pub fn check_or_and_conds(conds: &Vec<Vec<BasicQueryCondInfo>>, check_vars: &HashMap<String, Value>) -> TardisResult<bool> {
         let is_match = conds.iter().any(|and_conds| {
             and_conds.iter().all(|cond| match check_vars.get(&cond.field) {
@@ -93,7 +102,7 @@ mod tests {
 
     use tardis::{basic::result::TardisResult, serde_json::json};
 
-    use crate::{enumeration::BasicQueryOpKind, dto::BasicQueryCondInfo};
+    use crate::{dto::BasicQueryCondInfo, enumeration::BasicQueryOpKind};
 
     #[test]
     fn test_check_or_and_conds() -> TardisResult<()> {
