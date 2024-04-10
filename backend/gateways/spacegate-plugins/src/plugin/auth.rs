@@ -15,9 +15,9 @@ use spacegate_shell::{
         http::{HeaderMap, HeaderName, HeaderValue, StatusCode},
         Method, Request, Response,
     },
-    kernel::{extension::Reflect, helper_layers::function::Inner},
+    kernel::{extension::Reflect, helper_layers::function::Inner, SgRequest},
     plugin::{Plugin, PluginConfig, PluginError},
-    BoxError, SgBody,
+    BoxError, SgBody, SgRequestExt,
 };
 use std::{
     collections::HashMap,
@@ -26,6 +26,7 @@ use std::{
 };
 use tardis::{
     basic::{error::TardisError, result::TardisResult},
+    cache::AsyncCommands as _,
     config::config_dto::CacheModuleConfig,
     log::{self, warn},
     serde_json::{self, json},
@@ -55,6 +56,8 @@ pub struct SgPluginAuthConfig {
     pub cors_allow_methods: String,
     pub cors_allow_headers: String,
     pub header_is_mix_req: String,
+    pub header_is_same_req: String,
+    pub cache_key_is_same_req: String,
     pub fetch_server_config_path: String,
     pub mix_replace_url: String,
     pub auth_path_ignore_prefix: String,
@@ -118,6 +121,8 @@ impl Default for SgPluginAuthConfig {
             fetch_server_config_path: "/starsysApi/apis".to_string(),
             mix_replace_url: "apis".to_string(),
             auth_path_ignore_prefix: "/starsysApi".to_string(),
+            header_is_same_req: "IS_SAME_REQ".to_string(),
+            cache_key_is_same_req: "sg:plugin:auth:".to_string(),
         }
     }
 }
@@ -128,6 +133,9 @@ pub struct AuthPlugin {
     cors_allow_methods: HeaderValue,
     cors_allow_headers: HeaderValue,
     header_is_mix_req: HeaderName,
+    header_is_same_req: HeaderName,
+    /// key=format!({cache_key}{req_id})
+    cache_key_is_same_req: String,
     fetch_server_config_path: String,
     /// Specify the part of the mix request url that needs to be replaced.
     /// Default is `apis`
@@ -153,9 +161,11 @@ impl From<SgPluginAuthConfig> for AuthPlugin {
             cors_allow_methods: HeaderValue::from_str(&value.cors_allow_methods).expect("cors_allow_methods is invalid"),
             cors_allow_headers: HeaderValue::from_str(&value.cors_allow_headers).expect("cors_allow_headers is invalid"),
             header_is_mix_req: HeaderName::from_str(&value.header_is_mix_req).expect("header_is_mix_req is invalid"),
+            header_is_same_req: HeaderName::from_str(&value.header_is_same_req).expect("header_is_mix_req is invalid"),
             fetch_server_config_path: value.fetch_server_config_path,
             mix_replace_url: value.mix_replace_url,
             auth_path_ignore_prefix: value.auth_path_ignore_prefix,
+            cache_key_is_same_req: value.cache_key_is_same_req,
         }
     }
 }
@@ -193,11 +203,37 @@ impl AuthPlugin {
             .flatten()
             .unwrap_or(false)
     }
-}
 
-impl AuthPlugin {
-    async fn req(&self, mut req: Request<SgBody>) -> Result<Request<SgBody>, Response<SgBody>> {
+    // 用于过滤和管理同一个请求多次通过本插件的情况
+    // 如果是多次请求，那么直接返回跳过本插件
+    async fn is_same_req(&self, req: &mut SgRequest) -> Result<bool, BoxError> {
+        let cache = req.get_redis_client_by_gateway_name().ok_or("missing gateway name")?;
+        let mut conn = cache.get_conn().await;
+        if let Some(is_same) = req.headers().get(&self.header_is_same_req) {
+            if conn.exists(format!("{}{}", self.cache_key_is_same_req, is_same.to_str()?)).await? {
+                return Ok(true);
+            }
+        }
+
+        let req_id = TardisFuns::crypto.key.rand_16_hex();
+        req.headers_mut().insert(self.header_is_same_req.clone(), HeaderValue::from_str(&req_id)?);
+        conn.set_ex(format!("{}{}", self.cache_key_is_same_req, req_id), "", 5).await?;
+        Ok(false)
+    }
+
+    // # Security function
+    // Before request auth, must remove all auth headers.
+    fn remove_auth_header(&self, header_map: &mut HeaderMap<HeaderValue>) {
+        header_map.remove(&self.auth_config.head_key_context);
+        header_map.remove(&self.auth_config.head_key_auth_ident);
+    }
+
+    async fn req(&self, mut req: SgRequest) -> Result<SgRequest, Response<SgBody>> {
         req.extensions_mut().get_mut::<Reflect>().expect("missing reflect").insert(RequestCryptoParam::default());
+        if self.is_same_req(&mut req).await.map_err(PluginError::internal_error::<AuthPlugin>)? {
+            return Ok(req);
+        }
+        self.remove_auth_header(req.headers_mut());
 
         for exclude_path in self.auth_config.exclude_encrypt_decrypt_path.clone() {
             if req.uri().path().starts_with(&exclude_path) {
@@ -311,7 +347,7 @@ impl AuthPlugin {
     }
 }
 
-async fn handle_mix_req(auth_config: &AuthConfig, mix_replace_url: &str, req: Request<SgBody>) -> Result<Request<SgBody>, BoxError> {
+async fn handle_mix_req(auth_config: &AuthConfig, mix_replace_url: &str, req: SgRequest) -> Result<SgRequest, BoxError> {
     let (mut parts, mut body) = req.into_parts();
     if !body.is_dumped() {
         body = body.dump().await?;
@@ -366,7 +402,7 @@ async fn handle_mix_req(auth_config: &AuthConfig, mix_replace_url: &str, req: Re
 /// # Convert Request to AuthReq
 /// Prepare the AuthReq required for the authentication process.
 /// The authentication process requires a URL that has not been rewritten.
-async fn req_to_auth_req(ignore_prefix: &str, req: Request<SgBody>) -> TardisResult<(AuthReq, Request<SgBody>)> {
+async fn req_to_auth_req(ignore_prefix: &str, req: SgRequest) -> TardisResult<(AuthReq, SgRequest)> {
     let (parts, mut body) = req.into_parts();
     if !body.is_dumped() {
         body = body.dump().await.map_err(|e| TardisError::wrap(&format!("[SG.Filter.Auth] dump body error: {e}"), ""))?;
@@ -377,10 +413,16 @@ async fn req_to_auth_req(ignore_prefix: &str, req: Request<SgBody>) -> TardisRes
     let req_body = body.get_dumped().expect("missing dump body");
     let string_body = String::from_utf8_lossy(req_body).trim_matches('"').to_string();
 
+    let path = if url.path().starts_with(ignore_prefix) {
+        url.path().replace(ignore_prefix, "").to_string()
+    } else {
+        url.path().to_string()
+    };
+
     Ok((
         AuthReq {
             scheme: scheme.clone(),
-            path: url.path().replace(ignore_prefix, "").to_string(),
+            path,
             query: url
                 .query()
                 .filter(|q| !q.is_empty())
@@ -403,7 +445,7 @@ async fn req_to_auth_req(ignore_prefix: &str, req: Request<SgBody>) -> TardisRes
     ))
 }
 
-fn success_auth_result_to_req(auth_result: AuthResult, config: &AuthConfig, req: Request<SgBody>) -> TardisResult<Request<SgBody>> {
+fn success_auth_result_to_req(auth_result: AuthResult, config: &AuthConfig, req: SgRequest) -> TardisResult<SgRequest> {
     let (mut parts, mut body) = req.into_parts();
     let cert_info = CertInfo {
         id: auth_result.ctx.as_ref().and_then(|ctx| ctx.account_id.clone().or(ctx.ak.clone())).unwrap_or_default(),
@@ -431,8 +473,14 @@ fn success_auth_result_to_req(auth_result: AuthResult, config: &AuthConfig, req:
         }
     }
 
+    let ak_option = auth_result.ctx.as_ref().and_then(|ctx| ctx.ak.clone());
     let auth_resp: AuthResp = auth_result.into();
-    parts.headers.extend(hashmap_header_to_headermap(auth_resp.headers.clone())?);
+    let mut auth_headers = auth_resp.headers.clone();
+
+    if let Some(ak) = ak_option {
+        auth_headers.insert(config.head_key_auth_ident.clone(), ak);
+    }
+    parts.headers.extend(hashmap_header_to_headermap(auth_headers)?);
     if let Some(new_body) = auth_resp.body {
         parts.headers.insert(
             header::CONTENT_LENGTH,
@@ -511,7 +559,7 @@ impl Plugin for AuthPlugin {
         }
         Ok(plugin)
     }
-    async fn call(&self, req: Request<SgBody>, inner: Inner) -> Result<Response<SgBody>, BoxError> {
+    async fn call(&self, req: SgRequest, inner: Inner) -> Result<Response<SgBody>, BoxError> {
         let req = match self.req(req).await {
             Ok(req) => req,
             Err(resp) => return Ok(resp),
@@ -522,8 +570,6 @@ impl Plugin for AuthPlugin {
             Err(resp) => resp,
         })
     }
-    // fn create(_: Option<String>, value: JsonValue) -> Result<Self::MakeLayer, BoxError> {
-    // }
 }
 
 #[cfg(test)]

@@ -57,9 +57,6 @@ fn check(req: &mut AuthReq) -> TardisResult<bool> {
 }
 
 async fn ident(req: &mut AuthReq, config: &AuthConfig, cache_client: &TardisCacheClient) -> TardisResult<AuthContext> {
-    // Do not allow external header information to be used internally
-    req.headers.remove(&config.head_key_auth_ident);
-
     let rbum_kind = if let Some(rbum_kind) = req.headers.get(&config.head_key_protocol).or_else(|| req.headers.get(&config.head_key_protocol.to_lowercase())) {
         rbum_kind.to_string()
     } else {
@@ -116,7 +113,7 @@ async fn ident(req: &mut AuthReq, config: &AuthConfig, cache_client: &TardisCach
 
         let mut own_paths = cache_tenant_id.clone();
         if !app_id.is_empty() {
-            if app_id != cache_appid {
+            if !cache_appid.is_empty() && app_id != cache_appid {
                 return Err(TardisError::unauthorized(
                     &format!("Ak [{ak}]  with App [{app_id}] is not legal"),
                     "401-auth-req-ak-or-app-not-exist",
@@ -124,8 +121,6 @@ async fn ident(req: &mut AuthReq, config: &AuthConfig, cache_client: &TardisCach
             }
             own_paths = format!("{cache_tenant_id}/{app_id}")
         }
-
-        req.headers.insert(config.head_key_auth_ident.clone(), ak_authorization.clone());
 
         Ok(AuthContext {
             rbum_uri,
@@ -333,6 +328,15 @@ async fn check_ak_signature(ak: &str, cache_sk: &str, signature: &str, req_date:
     let calc_signature = TardisFuns::crypto
         .base64
         .encode(TardisFuns::crypto.digest.hmac_sha256(format!("{}\n{}\n{}\n{}", req.method, req_date, req.path, sorted_req_query).to_lowercase(), cache_sk)?);
+    trace!(
+        "[Auth] check_ak_signature method: {}, date: {}, path: {}, query: {}, calc_signature: {}, signature: {}",
+        req.method,
+        req_date,
+        req.path,
+        sorted_req_query,
+        calc_signature,
+        signature
+    );
     if calc_signature != signature {
         return Err(TardisError::unauthorized(&format!("Ak [{ak}] authentication failed"), "401-auth-req-authenticate-fail"));
     }

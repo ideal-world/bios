@@ -61,7 +61,7 @@ pub struct AuditLogPlugin {
 
 impl AuditLogPlugin {
     async fn get_log_content(&self, mut resp: Response<SgBody>) -> TardisResult<(Response<SgBody>, Option<LogParamContent>)> {
-        let Some(param) = resp.extensions_mut().remove::<AuditLogParam>() else {
+        let Some(param) = resp.extensions_mut().get::<AuditLogParam>().cloned() else {
             warn!("[Plugin.AuditLog] missing audit log param");
             return Ok((resp, None));
         };
