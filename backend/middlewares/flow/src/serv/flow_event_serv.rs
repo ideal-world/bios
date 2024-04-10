@@ -220,6 +220,9 @@ impl FlowEventServ {
             return Ok(());
         }
 
+        // merge modify field
+        let mut modify_self_field_params = vec![];
+
         for post_change in post_changes {
             let post_change = FlowTransitionActionChangeAgg::from(post_change);
             match post_change.kind {
@@ -275,40 +278,14 @@ impl FlowEventServ {
                                 }
                             }
                         } else {
-                            FlowExternalServ::do_modify_field(
-                                &flow_model.tag,
-                                &next_transition_detail,
-                                &flow_inst_detail.rel_business_obj_id,
-                                &flow_inst_detail.id,
-                                FlowExternalCallbackOp::PostAction,
-                                next_flow_state.name.clone(),
-                                next_flow_state.sys_state.clone(),
-                                prev_flow_state.name.clone(),
-                                prev_flow_state.sys_state.clone(),
-                                vec![FlowExternalParams {
-                                    rel_kind: None,
-                                    rel_tag: None,
-                                    var_id: None,
-                                    var_name: Some(change_info.var_name.clone()),
-                                    value: change_info.changed_val.clone(),
-                                    changed_kind: change_info.changed_kind,
-                                }],
-                                ctx,
-                                funs,
-                            )
-                            .await?;
-                            if let Some(ws_client) = ws_flow_client().await {
-                                ws_client
-                                    .publish_front_change(
-                                        flow_inst_detail.id.clone(),
-                                        default_flow_avatar().await.clone(),
-                                        funs.conf::<FlowConfig>().invoke.spi_app_id.clone(),
-                                        ctx,
-                                    )
-                                    .await?;
-                            } else {
-                                FlowEventServ::do_front_change(&flow_inst_detail.id, ctx, funs).await?;
-                            }
+                            modify_self_field_params.push(FlowExternalParams {
+                                rel_kind: None,
+                                rel_tag: None,
+                                var_id: None,
+                                var_name: Some(change_info.var_name.clone()),
+                                value: change_info.changed_val.clone(),
+                                changed_kind: change_info.changed_kind,
+                            });
                         }
                     }
                 }
@@ -329,6 +306,36 @@ impl FlowEventServ {
                         }
                     }
                 }
+            }
+        }
+
+        if !modify_self_field_params.is_empty() {
+            FlowExternalServ::do_modify_field(
+                &flow_model.tag,
+                &next_transition_detail,
+                &flow_inst_detail.rel_business_obj_id,
+                &flow_inst_detail.id,
+                FlowExternalCallbackOp::PostAction,
+                next_flow_state.name.clone(),
+                next_flow_state.sys_state.clone(),
+                prev_flow_state.name.clone(),
+                prev_flow_state.sys_state.clone(),
+                modify_self_field_params,
+                ctx,
+                funs,
+            )
+            .await?;
+            if let Some(ws_client) = ws_flow_client().await {
+                ws_client
+                    .publish_front_change(
+                        flow_inst_detail.id.clone(),
+                        default_flow_avatar().await.clone(),
+                        funs.conf::<FlowConfig>().invoke.spi_app_id.clone(),
+                        ctx,
+                    )
+                    .await?;
+            } else {
+                FlowEventServ::do_front_change(&flow_inst_detail.id, ctx, funs).await?;
             }
         }
 

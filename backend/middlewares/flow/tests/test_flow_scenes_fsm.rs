@@ -87,6 +87,9 @@ pub async fn test(flow_client: &mut TestHttpClient) -> TardisResult<()> {
         .await;
     assert!(result.into_iter().find(|resp| resp.tag == "MOCK").unwrap().model_id.is_none());
 
+    ctx.owner = "".to_string();
+    flow_client.set_auth(&ctx)?;
+
     let rel_business_obj_id = TardisFuns::field.nanoid();
     let _: String = flow_client
         .post(
@@ -138,6 +141,7 @@ pub async fn test(flow_client: &mut TestHttpClient) -> TardisResult<()> {
         )
         .await;
     // 2. enter tenant
+    ctx.owner = "u001".to_string();
     ctx.own_paths = "t1".to_string();
     flow_client.set_auth(&ctx)?;
     // 2-1. Get states list
@@ -806,6 +810,8 @@ pub async fn test(flow_client: &mut TestHttpClient) -> TardisResult<()> {
             }),
         )
         .await;
+    ctx.owner = "".to_string();
+    flow_client.set_auth(&ctx)?;
     let _: Void = flow_client.get("/ci/inst/trigger_front_action").await;
     tokio::time::sleep(tokio::time::Duration::from_secs(3)).await;
     let state_and_next_transitions: Vec<FlowInstFindStateAndTransitionsResp> = flow_client
