@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use bios_basic::basic_enumeration::BasicQueryOpKind;
+use bios_basic::enumeration::BasicQueryOpKind;
 use serde::{Deserialize, Serialize};
 use tardis::{
     chrono::{DateTime, Utc},

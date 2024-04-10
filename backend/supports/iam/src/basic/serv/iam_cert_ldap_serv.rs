@@ -21,7 +21,7 @@ use crate::{
     iam_config::IamBasicConfigApi,
     iam_constants,
 };
-use bios_basic::helper::request_helper::get_remote_ip;
+use bios_basic::helper::request_helper::get_real_ip_from_ctx;
 use bios_basic::rbum::dto::rbum_cert_dto::RbumCertSummaryResp;
 use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
 use bios_basic::rbum::rbum_enumeration::RbumCertStatusKind::Enabled;
@@ -636,7 +636,7 @@ impl IamCertLdapServ {
                 false,
                 Some("".to_string()),
                 Some(vec![&IamCertKernelKind::UserPwd.to_string()]),
-                get_remote_ip(ctx).await?,
+                get_real_ip_from_ctx(ctx).await?,
                 funs,
             )
             .await;
@@ -649,7 +649,7 @@ impl IamCertLdapServ {
                     false,
                     Some(tenant_id.to_string()),
                     Some(vec![&IamCertKernelKind::UserPwd.to_string()]),
-                    get_remote_ip(ctx).await?,
+                    get_real_ip_from_ctx(ctx).await?,
                     funs,
                 )
                 .await;
@@ -672,7 +672,7 @@ impl IamCertLdapServ {
                 false,
                 Some("".to_string()),
                 Some(vec![&IamCertKernelKind::UserPwd.to_string()]),
-                get_remote_ip(ctx).await?,
+                get_real_ip_from_ctx(ctx).await?,
                 funs,
             )
             .await?

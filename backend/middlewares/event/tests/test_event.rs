@@ -2,7 +2,7 @@ use std::env;
 use std::time::Duration;
 
 use bios_basic::rbum::rbum_config::RbumConfig;
-use bios_basic::test::init_rbum_test_container;
+use bios_basic::test::init_test_container;
 use bios_basic::test::test_http_client::TestHttpClient;
 use bios_mw_event::event_constants::DOMAIN_CODE;
 use bios_mw_event::event_initializer;
@@ -20,7 +20,7 @@ async fn test_event() -> TardisResult<()> {
     env::set_var("RUST_LOG", "debug,tardis=trace,bios_mw_event=trace,test_event=trace,sqlx::query=off");
 
     let docker = testcontainers::clients::Cli::default();
-    let _x = init_rbum_test_container::init(&docker, None).await?;
+    let _x = init_test_container::init(&docker, None).await?;
     set_local_node_id(TardisFuns::field.nanoid());
 
     init_data().await?;

@@ -1,7 +1,7 @@
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::iam_constants;
-use bios_basic::helper::request_helper::add_remote_ip;
+use bios_basic::helper::request_helper::try_set_real_ip_from_req_to_ctx;
 use bios_basic::rbum::dto::rbum_filer_dto::RbumSetTreeFilterReq;
 use bios_basic::rbum::dto::rbum_set_dto::RbumSetTreeResp;
 use bios_basic::rbum::rbum_enumeration::RbumSetCateLevelQueryKind;
@@ -31,7 +31,7 @@ impl IamCcOrgApi {
         ctx: TardisContextExtractor,
         request: &Request,
     ) -> TardisApiResult<RbumSetTreeResp> {
-        add_remote_ip(request, &ctx.0).await?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         let funs = iam_constants::get_tardis_inst();
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
         let code = if ctx.own_paths.is_empty() {
@@ -69,7 +69,7 @@ impl IamCcOrgApi {
         ctx: TardisContextExtractor,
         request: &Request,
     ) -> TardisApiResult<Vec<String>> {
-        add_remote_ip(request, &ctx.0).await?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         let funs = iam_constants::get_tardis_inst();
         let ids = ids.0.split(',').map(|s| s.to_string()).collect();
         let result = IamSetServ::find_set_cate_name_by_cate_ids(ids, &funs, &ctx.0).await?;

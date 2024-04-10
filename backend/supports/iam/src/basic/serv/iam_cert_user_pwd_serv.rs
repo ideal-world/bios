@@ -1,4 +1,4 @@
-use bios_basic::helper::request_helper::get_remote_ip;
+use bios_basic::helper::request_helper::get_real_ip_from_ctx;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
@@ -219,7 +219,7 @@ impl IamCertUserPwdServ {
                 ctx,
             )
             .await;
-            IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(rel_iam_item_id, get_remote_ip(ctx).await?, funs).await
+            IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(rel_iam_item_id, get_real_ip_from_ctx(ctx).await?, funs).await
         } else {
             Err(funs.err().not_found(
                 "iam_cert_user_pwd",
@@ -331,7 +331,7 @@ impl IamCertUserPwdServ {
                 ctx,
             )
             .await?;
-            let result = IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(rel_iam_item_id, get_remote_ip(ctx).await?, funs).await;
+            let result = IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(rel_iam_item_id, get_real_ip_from_ctx(ctx).await?, funs).await;
 
             let _ = IamLogClient::add_ctx_task(
                 LogParamTag::IamAccount,

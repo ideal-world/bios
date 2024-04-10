@@ -12,7 +12,7 @@ use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_cert_user_pwd_serv::IamCertUserPwdServ;
 use crate::iam_constants;
 use crate::iam_enumeration::IamCertKernelKind;
-use bios_basic::helper::request_helper::add_remote_ip;
+use bios_basic::helper::request_helper::try_set_real_ip_from_req_to_ctx;
 use tardis::web::poem::Request;
 #[derive(Clone, Default)]
 pub struct IamCtCertApi;
@@ -31,7 +31,7 @@ impl IamCtCertApi {
         request: &Request,
     ) -> TardisApiResult<Void> {
         let ctx = IamCertServ::try_use_app_ctx(ctx.0, app_id.0)?;
-        add_remote_ip(request, &ctx).await?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx).await?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         let rbum_cert_conf_id = IamCertServ::get_cert_conf_id_by_kind(IamCertKernelKind::UserPwd.to_string().as_str(), get_max_level_id_by_context(&ctx), &funs).await?;
@@ -51,7 +51,7 @@ impl IamCtCertApi {
         request: &Request,
     ) -> TardisApiResult<Vec<RbumCertSummaryResp>> {
         let ctx = IamCertServ::try_use_app_ctx(ctx.0, app_id.0)?;
-        add_remote_ip(request, &ctx).await?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx).await?;
         let funs = iam_constants::get_tardis_inst();
         let rbum_certs = IamCertServ::find_certs(
             &RbumCertFilterReq {
@@ -79,7 +79,7 @@ impl IamCtCertApi {
         request: &Request,
     ) -> TardisApiResult<RbumCertSummaryWithSkResp> {
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
-        add_remote_ip(request, &ctx).await?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx).await?;
         let funs = iam_constants::get_tardis_inst();
         let rbum_cert = IamCertServ::get_3th_kind_cert_by_rel_rbum_id(&account_id.0, vec![cert_supplier.0], &funs, &ctx).await?;
         ctx.execute_task().await?;

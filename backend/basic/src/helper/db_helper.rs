@@ -1,9 +1,14 @@
+//! Database operations helper.
 use tardis::{
     chrono::{DateTime, ParseError, Utc},
     db::sea_orm,
+    log::warn,
     serde_json,
 };
 
+/// Convert JSON value to SeaORM value.
+///
+/// When the JSON value is a string, you can specify whether to add % on both sides of the string through the ``like_by_str`` parameter.
 pub fn json_to_sea_orm_value(json_value: &serde_json::Value, like_by_str: bool) -> Option<Vec<sea_orm::Value>> {
     match json_value {
         serde_json::Value::Null => None,
@@ -23,29 +28,27 @@ pub fn json_to_sea_orm_value(json_value: &serde_json::Value, like_by_str: bool) 
             }
         },
         serde_json::Value::Array(val) => {
+            // If the array is empty, return None.
             if val.is_empty() {
                 return None;
             }
-            let _dt = match val.first().unwrap() {
-                serde_json::Value::Bool(_) => sea_orm::sea_query::ArrayType::Bool,
-                serde_json::Value::Number(n) if n.is_i64() => sea_orm::sea_query::ArrayType::BigInt,
-                serde_json::Value::Number(n) if n.is_u64() => sea_orm::sea_query::ArrayType::BigInt,
-                serde_json::Value::Number(n) if n.is_f64() => sea_orm::sea_query::ArrayType::Double,
-                serde_json::Value::String(_) => sea_orm::sea_query::ArrayType::String,
-                serde_json::Value::Object(_) => sea_orm::sea_query::ArrayType::Json,
-                _ => return None,
-            };
+            // Convert each element in the array to SeaORM value.
             let vals = val.iter().map(|json| json_to_sea_orm_value(json, like_by_str)).collect::<Vec<Option<Vec<sea_orm::Value>>>>();
             if vals.iter().any(|v| v.is_none()) {
+                warn!("[Basic] json_to_sea_orm_value: json array conversion failed.");
                 return None;
             }
-            let vals = vals.into_iter().flat_map(|v| v.unwrap().into_iter()).collect::<Vec<sea_orm::Value>>();
+            let vals = vals.into_iter().flat_map(|v| v.expect("ignore").into_iter()).collect::<Vec<sea_orm::Value>>();
             Some(vals)
         }
-        _ => None,
+        _ => {
+            warn!("[Basic] json_to_sea_orm_value: json conversion failed.");
+            None
+        }
     }
 }
 
-fn str_to_datetime(input: &str) -> Result<DateTime<Utc>, ParseError> {
+/// Convert string to DateTime<Utc>.
+pub fn str_to_datetime(input: &str) -> Result<DateTime<Utc>, ParseError> {
     DateTime::parse_from_rfc3339(input).map(|dt| dt.with_timezone(&Utc))
 }

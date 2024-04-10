@@ -11,7 +11,7 @@ use tardis::log::info;
 use tardis::web::web_resp::TardisPage;
 use tardis::{tokio, TardisFuns, TardisFunsInst};
 
-use bios_basic::helper::request_helper::get_remote_ip;
+use bios_basic::helper::request_helper::get_real_ip_from_ctx;
 use bios_basic::process::task_processor::TaskProcessor;
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumRelFilterReq};
 use bios_basic::rbum::dto::rbum_item_dto::{RbumItemKernelAddReq, RbumItemKernelModifyReq};
@@ -185,7 +185,7 @@ impl RbumItemCrudOperation<iam_role::ActiveModel, IamRoleAddReq, IamRoleModifyRe
                             ids = page.records;
                         }
                         for id in ids {
-                            IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(&id, get_remote_ip(&ctx_clone).await?, &funs).await?;
+                            IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(&id, get_real_ip_from_ctx(&ctx_clone).await?, &funs).await?;
                         }
                         page_number += 1;
                         count -= 100;
@@ -297,7 +297,7 @@ impl RbumItemCrudOperation<iam_role::ActiveModel, IamRoleAddReq, IamRoleModifyRe
                         ids = page.records;
                     }
                     for id in ids {
-                        IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(&id, get_remote_ip(&ctx_clone).await?, &funs).await?;
+                        IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(&id, get_real_ip_from_ctx(&ctx_clone).await?, &funs).await?;
                     }
                     page_number += 1;
                     count -= 100;

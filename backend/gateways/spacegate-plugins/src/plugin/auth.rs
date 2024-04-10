@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 use spacegate_shell::{
     hyper::{
         self, header,
-        http::{self, HeaderMap, HeaderName, HeaderValue, StatusCode},
+        http::{HeaderMap, HeaderName, HeaderValue, StatusCode},
         Method, Request, Response,
     },
     kernel::{extension::Reflect, helper_layers::function::Inner},

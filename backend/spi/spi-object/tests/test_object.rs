@@ -3,7 +3,7 @@ use std::time::Duration;
 
 use bios_basic::rbum::serv::rbum_kind_serv::RbumKindServ;
 use bios_basic::spi::dto::spi_bs_dto::SpiBsAddReq;
-use bios_basic::test::init_rbum_test_container;
+use bios_basic::test::init_test_container;
 use bios_basic::test::test_http_client::TestHttpClient;
 use bios_spi_object::object_constants::{self, DOMAIN_CODE};
 use bios_spi_object::object_initializer;
@@ -23,7 +23,7 @@ async fn test_object() -> TardisResult<()> {
     let docker = testcontainers::clients::Cli::default();
     let minio = TardisTestContainer::minio_custom(&docker);
     let minio_url = format!("http://127.0.0.1:{}", minio.get_host_port_ipv4(9000));
-    let _x = init_rbum_test_container::init(&docker, None).await?;
+    let _x = init_test_container::init(&docker, None).await?;
 
     init_data(&minio_url).await?;
 

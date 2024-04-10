@@ -11,7 +11,7 @@ use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_role_serv::IamRoleServ;
 use crate::iam_config::IamBasicConfigApi;
 use crate::iam_constants::{self, RBUM_SCOPE_LEVEL_APP};
-use bios_basic::helper::request_helper::add_remote_ip;
+use bios_basic::helper::request_helper::try_set_real_ip_from_req_to_ctx;
 use bios_basic::process::task_processor::TaskProcessor;
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumCertFilterReq};
 use tardis::tokio;
@@ -33,7 +33,7 @@ impl IamCiRoleApi {
     async fn get_verify_role_tenant_admin(&self, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<bool> {
         let funs = iam_constants::get_tardis_inst();
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
-        add_remote_ip(request, &ctx.0).await?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         let mut verify_tenant_admin = false;
         for role in &ctx.0.roles {
             if role.contains(&funs.iam_basic_role_tenant_admin_id()) {
@@ -48,7 +48,7 @@ impl IamCiRoleApi {
     async fn batch_add_rel_account(&self, id: Path<String>, account_ids: Path<String>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
-        add_remote_ip(request, &ctx.0).await?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         funs.begin().await?;
         let app_id = IamAppServ::get_id_by_ctx(&ctx.0, &funs)?;
         let split = account_ids.0.split(',').collect::<Vec<_>>();
@@ -66,7 +66,7 @@ impl IamCiRoleApi {
     async fn batch_delete_rel_account(&self, id: Path<String>, account_ids: Path<String>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
-        add_remote_ip(request, &ctx.0).await?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         funs.begin().await?;
         let split = account_ids.0.split(',').collect::<Vec<_>>();
         for s in split {
@@ -82,7 +82,7 @@ impl IamCiRoleApi {
     async fn delete_rel_account(&self, id: Path<String>, account_id: Path<String>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
-        add_remote_ip(request, &ctx.0).await?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         funs.begin().await?;
         IamRoleServ::delete_rel_account(&id.0, &account_id.0, Some(RBUM_SCOPE_LEVEL_APP), &funs, &ctx.0).await?;
         funs.commit().await?;
@@ -102,7 +102,7 @@ impl IamCiRoleApi {
     ) -> TardisApiResult<Option<String>> {
         let funs = iam_constants::get_tardis_inst();
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
-        add_remote_ip(request, &ctx.0).await?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         let ctx = ctx.0;
         let ctx_clone = ctx.clone();
         ctx.add_async_task(Box::new(|| {
@@ -151,7 +151,7 @@ impl IamCiRoleApi {
     ) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
-        add_remote_ip(request, &ctx.0).await?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         let ctx = ctx.0;
         funs.begin().await?;
         let apps_split: Vec<&str> = app_ids.0.split(',').collect::<Vec<_>>();
@@ -172,7 +172,7 @@ impl IamCiRoleApi {
     async fn get_rel_accounts(&self, role_code: Path<String>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Vec<IamRoleRelAccountCertResp>> {
         let funs = iam_constants::get_tardis_inst();
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
-        add_remote_ip(request, &ctx.0).await?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         let role_id = RbumItemServ::find_one_rbum(
             &RbumBasicFilterReq {
                 code: Some(role_code.0),
@@ -234,7 +234,7 @@ impl IamCiRoleApi {
         let funs = iam_constants::get_tardis_inst();
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         let ctx = IamCertServ::try_use_app_ctx(ctx.0, app_id.0)?;
-        add_remote_ip(request, &ctx).await?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx).await?;
         let result = IamRoleServ::paginate_items(
             &IamRoleFilterReq {
                 basic: RbumBasicFilterReq {

@@ -16,7 +16,7 @@ schema = ["spacegate-plugin/schema"]
 [dependencies]
 serde.workspace = true
 lazy_static.workspace = true
-spacegate-shell.workspace = true
+spacegate-shell = { workspace = true, features = ["cache", "k8s", "ext-redis"] }
 spacegate-plugin = { workspace = true, features = ["schema"], optional = true }
 
 bios-sdk-invoke = { path = "../../../frontend/sdks/invoke", features = [
