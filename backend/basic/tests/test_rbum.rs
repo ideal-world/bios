@@ -9,7 +9,7 @@ use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use bios_basic::rbum::serv::rbum_domain_serv::RbumDomainServ;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemServ;
 use bios_basic::rbum::serv::rbum_kind_serv::RbumKindServ;
-use bios_basic::test::init_rbum_test_container;
+use bios_basic::test::init_test_container;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
@@ -35,7 +35,7 @@ mod test_scope;
 async fn test_rbum() -> TardisResult<()> {
     env::set_var("RUST_LOG", "debug,test_iam_serv=trace,sqlx::query=off");
     let docker = testcontainers::clients::Cli::default();
-    let _x = init_rbum_test_container::init(&docker, None).await?;
+    let _x = init_test_container::init(&docker, None).await?;
     let ctx = init_test_data().await?;
     test_scope::test().await?;
     test_rbum_domain::test(&ctx).await?;

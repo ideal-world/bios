@@ -3,7 +3,7 @@ use std::rc::Rc;
 use std::time::Duration;
 
 use bios_basic::rbum::rbum_config::RbumConfig;
-use bios_basic::test::init_rbum_test_container;
+use bios_basic::test::init_test_container;
 use bios_basic::test::test_http_client::TestHttpClient;
 use bios_mw_event::event_constants::DOMAIN_CODE;
 use bios_mw_event::event_initializer;

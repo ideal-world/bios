@@ -4,7 +4,7 @@ use std::time::Duration;
 use bios_basic::rbum::serv::rbum_kind_serv::RbumKindServ;
 use bios_basic::spi::dto::spi_bs_dto::SpiBsAddReq;
 use bios_basic::spi::spi_constants;
-use bios_basic::test::init_rbum_test_container;
+use bios_basic::test::init_test_container;
 use bios_basic::test::test_http_client::TestHttpClient;
 use bios_spi_graph::graph_constants::DOMAIN_CODE;
 use bios_spi_graph::graph_initializer;
@@ -24,7 +24,7 @@ async fn test_graph() -> TardisResult<()> {
     env::set_var("RUST_LOG", "debug,test_graph=trace,sqlx::query=off");
 
     let docker = testcontainers::clients::Cli::default();
-    let _x = init_rbum_test_container::init(&docker, Some(format!("{}config", root_path))).await?;
+    let _x = init_test_container::init(&docker, Some(format!("{}config", root_path))).await?;
 
     init_data().await?;
 

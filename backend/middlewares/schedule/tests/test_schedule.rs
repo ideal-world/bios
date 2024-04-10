@@ -1,7 +1,7 @@
 use std::env;
 use std::time::Duration;
 
-use bios_basic::test::init_rbum_test_container;
+use bios_basic::test::init_test_container;
 
 use bios_mw_schedule::schedule_constants::DOMAIN_CODE;
 use bios_mw_schedule::schedule_initializer;
@@ -21,7 +21,7 @@ async fn test_log() -> TardisResult<()> {
     // for debug
     // env::set_current_dir("middlewares/schedule").unwrap();
     let docker = testcontainers::clients::Cli::default();
-    let container_hold = init_rbum_test_container::init(&docker, None).await?;
+    let container_hold = init_test_container::init(&docker, None).await?;
     env::set_var("RUST_LOG", "debug,test_schedual=trace,sqlx::query=off,bios_mw_schedule=trace,bios_spi_kv=trace");
 
     init_data().await?;

@@ -2,7 +2,7 @@ use std::env;
 use std::time::Duration;
 
 use bios_basic::rbum::rbum_initializer::get_first_account_context;
-use bios_basic::test::init_rbum_test_container;
+use bios_basic::test::init_test_container;
 use bios_iam::iam_constants;
 use tardis::basic::result::TardisResult;
 use tardis::tokio::time::sleep;
@@ -33,7 +33,7 @@ async fn test_iam_serv() -> TardisResult<()> {
     env::set_var("RUST_LOG", "debug,test_iam_serv=trace,sqlx::query=off");
 
     let docker = testcontainers::clients::Cli::default();
-    let _x = init_rbum_test_container::init(&docker, None).await?;
+    let _x = init_test_container::init(&docker, None).await?;
     let _y = test_basic::init(&docker).await?;
 
     let funs = iam_constants::get_tardis_inst();
