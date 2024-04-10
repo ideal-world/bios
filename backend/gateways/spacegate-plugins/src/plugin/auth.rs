@@ -383,10 +383,16 @@ async fn req_to_auth_req(ignore_prefix: &str, req: Request<SgBody>) -> TardisRes
     let req_body = body.get_dumped().expect("missing dump body");
     let string_body = String::from_utf8_lossy(req_body).trim_matches('"').to_string();
 
+    let path = if url.path().starts_with(ignore_prefix) {
+        url.path().replace(ignore_prefix, "").to_string()
+    } else {
+        url.path().to_string()
+    };
+
     Ok((
         AuthReq {
             scheme: scheme.clone(),
-            path: url.path().replace(ignore_prefix, "").to_string(),
+            path,
             query: url
                 .query()
                 .filter(|q| !q.is_empty())
