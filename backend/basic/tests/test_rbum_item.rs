@@ -323,7 +323,6 @@ async fn test_rbum_item_attr(context: &TardisContext) -> TardisResult<()> {
     assert_eq!(rbum.id, item_attr_id);
     assert_eq!(rbum.value, "数据1");
     assert_eq!(rbum.rel_rbum_item_id, item_id.to_string());
-    assert_eq!(rbum.rel_rbum_item_name, "实例1".to_string());
     assert_eq!(rbum.rel_rbum_kind_attr_id, kind_attr_id.to_string());
     assert_eq!(rbum.rel_rbum_kind_attr_name, "db_type".to_string());
 

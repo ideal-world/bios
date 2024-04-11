@@ -16,7 +16,7 @@ pub struct IamRoleAggAddReq {
     pub res_ids: Option<Vec<String>>,
 }
 
-#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
 pub struct IamRoleAddReq {
     pub code: Option<TrimString>,
     #[oai(validator(min_length = "2", max_length = "255"))]

@@ -51,7 +51,6 @@ impl RbumCrudOperation<rbum_cert_conf::ActiveModel, RbumCertConfAddReq, RbumCert
             sk_encrypted: Set(add_req.sk_encrypted.unwrap_or(false)),
             repeatable: Set(add_req.repeatable.unwrap_or(true)),
             is_basic: Set(add_req.is_basic.unwrap_or(true)),
-            is_ak_repeatable: Set(add_req.is_ak_repeatable.unwrap_or(false)),
             rest_by_kinds: Set(add_req.rest_by_kinds.as_ref().unwrap_or(&"".to_string()).to_string()),
             expire_sec: Set(add_req.expire_sec.unwrap_or(3600 * 24 * 365)),
             sk_lock_cycle_sec: Set(add_req.sk_lock_cycle_sec.unwrap_or(0)),
@@ -282,7 +281,6 @@ impl RbumCrudOperation<rbum_cert_conf::ActiveModel, RbumCertConfAddReq, RbumCert
                 (rbum_cert_conf::Entity, rbum_cert_conf::Column::SkEncrypted),
                 (rbum_cert_conf::Entity, rbum_cert_conf::Column::Repeatable),
                 (rbum_cert_conf::Entity, rbum_cert_conf::Column::IsBasic),
-                (rbum_cert_conf::Entity, rbum_cert_conf::Column::IsAkRepeatable),
                 (rbum_cert_conf::Entity, rbum_cert_conf::Column::RestByKinds),
                 (rbum_cert_conf::Entity, rbum_cert_conf::Column::ExpireSec),
                 (rbum_cert_conf::Entity, rbum_cert_conf::Column::SkLockCycleSec),
@@ -1207,20 +1205,19 @@ impl RbumCertServ {
                 ));
             }
         }
-        if !rbum_cert_conf.is_ak_repeatable
-            && funs
-                .db()
-                .count(
-                    Query::select()
-                        .column(rbum_cert::Column::Id)
-                        .from(rbum_cert::Entity)
-                        .and_where(Expr::col(rbum_cert::Column::RelRbumKind).eq(add_req.rel_rbum_kind.to_int()))
-                        .and_where(Expr::col(rbum_cert::Column::Ak).eq(add_req.ak.as_str()))
-                        .and_where(Expr::col(rbum_cert::Column::RelRbumCertConfId).eq(add_req.rel_rbum_cert_conf_id.clone()))
-                        .and_where(Expr::col(rbum_cert::Column::OwnPaths).like(format!("{}%", ctx.own_paths).as_str())),
-                )
-                .await?
-                > 0
+        if funs
+            .db()
+            .count(
+                Query::select()
+                    .column(rbum_cert::Column::Id)
+                    .from(rbum_cert::Entity)
+                    .and_where(Expr::col(rbum_cert::Column::RelRbumKind).eq(add_req.rel_rbum_kind.to_int()))
+                    .and_where(Expr::col(rbum_cert::Column::Ak).eq(add_req.ak.as_str()))
+                    .and_where(Expr::col(rbum_cert::Column::RelRbumCertConfId).eq(add_req.rel_rbum_cert_conf_id.clone()))
+                    .and_where(Expr::col(rbum_cert::Column::OwnPaths).like(format!("{}%", ctx.own_paths).as_str())),
+            )
+            .await?
+            > 0
         {
             return Err(funs.err().conflict(&Self::get_obj_name(), "add", "ak is used", "409-rbum-cert-ak-duplicate"));
         }
@@ -1266,8 +1263,7 @@ impl RbumCertServ {
                 ));
             }
         }
-        if !rbum_cert_conf.is_ak_repeatable
-            && modify_req.ak.is_some()
+        if modify_req.ak.is_some()
             && funs
                 .db()
                 .count(
