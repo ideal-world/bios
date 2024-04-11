@@ -30,7 +30,7 @@ impl ReldbCiExecApi {
         TardisResp::ok(Void {})
     }
 
-    /// Rollack Transaction
+    /// Rollback Transaction
     #[oai(path = "/tx", method = "delete")]
     async fn tx_rollback(&self, tx_id: Query<String>) -> TardisApiResult<Void> {
         reldb_exec_serv::tx_rollback(tx_id.0).await?;

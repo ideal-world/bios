@@ -1,4 +1,6 @@
 //! Async task processor
+//! 
+//! 异步任务处理器
 use std::{collections::HashMap, future::Future, sync::Arc};
 
 use lazy_static::lazy_static;
@@ -34,6 +36,7 @@ pub struct TaskProcessor;
 
 impl TaskProcessor {
     /// Initialize the asynchronous task status
+    /// 
     /// 初始化异步任务状态
     pub async fn init_status(cache_key: &str, task_id: Option<u64>, cache_client: &TardisCacheClient) -> TardisResult<u64> {
         let task_id = task_id.unwrap_or(Local::now().timestamp_nanos_opt().expect("maybe in 23rd century") as u64);
@@ -48,6 +51,7 @@ impl TaskProcessor {
     }
 
     /// Check the status of the asynchronous task (whether it is completed)
+    /// 
     /// 检查异步任务状态（是否完成）
     pub async fn check_status(cache_key: &str, task_id: u64, cache_client: &TardisCacheClient) -> TardisResult<bool> {
         let result1 = cache_client.getbit(&format!("{cache_key}:1"), (task_id / u32::MAX as u64) as usize).await?;
@@ -56,6 +60,7 @@ impl TaskProcessor {
     }
 
     /// Set the status of the asynchronous task (whether it is completed)
+    /// 
     /// 设置异步任务状态（是否完成）
     pub async fn set_status(cache_key: &str, task_id: u64, status: bool, cache_client: &TardisCacheClient) -> TardisResult<()> {
         cache_client.setbit(&format!("{cache_key}:1"), (task_id / u32::MAX as u64) as usize, status).await?;
@@ -64,6 +69,7 @@ impl TaskProcessor {
     }
 
     /// Set the status of the asynchronous task (whether it is completed) and send an event
+    /// 
     /// 设置异步任务状态（是否完成）并发送事件
     pub async fn set_status_with_event(
         cache_key: &str,
@@ -90,6 +96,7 @@ impl TaskProcessor {
     }
 
     /// Set the processing data of the asynchronous task
+    /// 
     /// 设置异步任务处理数据
     pub async fn set_process_data(cache_key: &str, task_id: u64, data: Value, cache_client: &TardisCacheClient) -> TardisResult<()> {
         cache_client.set_ex(&format!("{cache_key}:{task_id}"), &TardisFuns::json.json_to_string(data)?, TASK_PROCESSOR_DATA_EX_SEC).await?;
@@ -97,6 +104,7 @@ impl TaskProcessor {
     }
 
     /// Set the processing data of the asynchronous task and send an event
+    /// 
     /// 设置异步任务处理数据并发送事件
     pub async fn set_process_data_with_event(
         cache_key: &str,
@@ -124,6 +132,7 @@ impl TaskProcessor {
     }
 
     /// Fetch the processing data of the asynchronous task
+    /// 
     /// 获取异步任务处理数据
     pub async fn get_process_data(cache_key: &str, task_id: u64, cache_client: &TardisCacheClient) -> TardisResult<Value> {
         if let Some(result) = cache_client.get(&format!("{cache_key}:{task_id}")).await? {
@@ -134,6 +143,7 @@ impl TaskProcessor {
     }
 
     /// Execute asynchronous task
+    /// 
     /// 执行异步任务
     pub async fn execute_task<P, T>(cache_key: &str, process_fun: P, cache_client: &Arc<TardisCacheClient>) -> TardisResult<u64>
     where
@@ -144,6 +154,7 @@ impl TaskProcessor {
     }
 
     /// Execute asynchronous task and send event
+    /// 
     /// 执行异步任务并发送事件
     pub async fn execute_task_with_ctx<P, T>(
         cache_key: &str,
@@ -216,6 +227,7 @@ impl TaskProcessor {
     }
 
     /// Execute asynchronous task (without asynchronous function, only used to mark the start of the task)
+    /// 
     /// 执行异步任务（不带异步函数，仅用于标记任务开始执行）
     pub async fn execute_task_without_fun(
         cache_key: &str,
@@ -242,12 +254,14 @@ impl TaskProcessor {
     }
 
     /// Stop asynchronous task
+    /// 
     /// 停止异步任务
     pub async fn stop_task(cache_key: &str, task_id: u64, cache_client: &TardisCacheClient) -> TardisResult<()> {
         Self::stop_task_with_event(cache_key, task_id, cache_client, None, "".to_string(), None).await
     }
 
     /// Stop asynchronous task and send event
+    /// 
     /// 停止异步任务并发送事件
     pub async fn stop_task_with_event(
         cache_key: &str,
@@ -277,9 +291,11 @@ impl TaskProcessor {
     }
 
     /// Fetch the asynchronous task IDs in the context
+    /// 
     /// 获取异步任务IDs
     ///
     /// Use ``,`` to separate multiple tasks
+    /// 
     /// 多个任务使用``,``分隔
     pub async fn get_task_id_with_ctx(ctx: &TardisContext) -> TardisResult<Option<String>> {
         ctx.get_ext(TASK_IN_CTX_FLAG).await

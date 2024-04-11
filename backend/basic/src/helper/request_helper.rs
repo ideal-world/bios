@@ -1,4 +1,6 @@
 //! Http request helper
+//! 
+//! Http请求辅助操作
 use std::{collections::HashMap, net::IpAddr, str::FromStr};
 
 use itertools::Itertools;
@@ -24,6 +26,7 @@ pub async fn try_set_real_ip_from_req_to_ctx(request: &Request, ctx: &TardisCont
 }
 
 /// Parse the Forwarded header to get the IP
+/// 
 /// Forwarded format： `Forwarded: by=<identifier>; for=<identifier><,for=<identifier>>; host=<host>; proto=<http|https>`
 ///
 /// ```

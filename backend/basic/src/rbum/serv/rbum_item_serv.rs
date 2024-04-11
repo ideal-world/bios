@@ -1100,13 +1100,8 @@ impl RbumCrudOperation<rbum_item_attr::ActiveModel, RbumItemAttrAddReq, RbumItem
                 (rbum_item_attr::Entity, rbum_item_attr::Column::CreateTime),
                 (rbum_item_attr::Entity, rbum_item_attr::Column::UpdateTime),
             ])
-            // .expr_as(Expr::col((rbum_item::Entity, rbum_item::Column::Name)), Alias::new("rel_rbum_item_name"))
             .expr_as(Expr::col((rbum_kind_attr::Entity, rbum_kind_attr::Column::Name)), Alias::new("rel_rbum_kind_attr_name"))
             .from(rbum_item_attr::Entity)
-            // .inner_join(
-            //     rbum_item::Entity,
-            //     Expr::col((rbum_item::Entity, rbum_item::Column::Id)).equals((rbum_item_attr::Entity, rbum_item_attr::Column::RelRbumItemId)),
-            // )
             .inner_join(
                 rbum_kind_attr::Entity,
                 Expr::col((rbum_kind_attr::Entity, rbum_kind_attr::Column::Id)).equals((rbum_item_attr::Entity, rbum_item_attr::Column::RelRbumKindAttrId)),
