@@ -1,13 +1,13 @@
 //! Basic library for BIOS
 //! BIOS的基础库
-//! 
+//!
 //! This library provides the following functions:
 //! 1. RBUM (Resource-Based Unified Model) model and implementation of common operations.
 //! 1. SPI (Service Provider Interface) model and implementation of common operations.
 //! 1. Common enumeration types.
 //! 1. Common utility functions.
 //! 1. Basic test support.
-//! 
+//!
 //! 此类库提供了下功能：
 //! 1. RBUM（基于资源的统一模型）模型及公共操作的实现
 //! 1. SPI（服务提供接口）模型及公共操作的实现

@@ -69,7 +69,7 @@ impl RbumItemCrudOperation<spi_bs::ActiveModel, SpiBsAddReq, SpiBsModifyReq, Spi
 
     async fn after_add_item(id: &str, add_req: &mut SpiBsAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         // Add certificate information
-        // 添加认证信息 
+        // 添加认证信息
         RbumCertServ::add_rbum(
             &mut RbumCertAddReq {
                 ak: add_req.ak.clone(),

@@ -982,4 +982,17 @@ impl IamRoleServ {
         .await
         .map(|r| r.into_iter().map(|r| format!("{},{}", r.id, r.name)).collect())
     }
+
+    pub async fn add_base_embed_role(add_req: &IamRoleAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        // let base_embed_role_id = Self::add_role_agg(&mut IamRoleAggAddReq {
+        //     role: add_req.clone(),
+        //     res_ids: None,
+        // }, funs, ctx).await?;
+        // if let Some(kind) = add_req.kind {
+        //     match kind {
+
+        //     }
+        // }
+        Ok(())
+    }
 }

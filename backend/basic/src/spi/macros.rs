@@ -1,6 +1,5 @@
 //! SPI macros
 
-
 #[macro_export]
 macro_rules! spi_service_call {
     ($mod:path, $fun:ident, $funs:ident, $ctx:ident, $inst:ident, @args: {$($args: ident),*}) => {
@@ -37,7 +36,7 @@ macro_rules! spi_dispatch_function {
 
 /// SPI request dispatch macro
 /// SPI请求分发宏
-/// 
+///
 /// Used to generate request dispatch code in the SPI service
 /// 用于批量生成请求分发代码
 #[macro_export]

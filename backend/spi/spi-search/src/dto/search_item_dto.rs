@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::search_enumeration::{SearchDataTypeKind, SearchQueryAggFunKind, SearchQueryTimeWindowKind};
-use bios_basic::{enumeration::BasicQueryOpKind, dto::BasicQueryCondInfo};
+use bios_basic::{dto::BasicQueryCondInfo, enumeration::BasicQueryOpKind};
 use serde::{Deserialize, Serialize};
 use tardis::{
     basic::field::TrimString,

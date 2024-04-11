@@ -371,7 +371,7 @@ impl IamIdentCacheServ {
         Ok(())
     }
 
-    pub async fn add_gateway_rule_info(ak: &str, rule_name: &str, match_method: Option<&str>, value: &str, funs: &TardisFunsInst) -> TardisResult<()> {
+    pub async fn add_or_modify_gateway_rule_info(ak: &str, rule_name: &str, match_method: Option<&str>, value: &str, funs: &TardisFunsInst) -> TardisResult<()> {
         log::trace!(
             "add gateway_rule_info: ak={},rule_name={},match_method={},value={}",
             ak,
