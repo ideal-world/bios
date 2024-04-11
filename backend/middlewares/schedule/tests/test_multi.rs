@@ -1,7 +1,7 @@
 mod test_common;
 use std::sync::atomic::Ordering;
 
-use bios_basic::test::init_rbum_test_container;
+use bios_basic::test::init_test_container;
 use bios_mw_schedule::{dto::schedule_job_dto::ScheduleJobAddOrModifyReq, schedule_config::ScheduleConfig};
 use tardis::chrono::{self, Utc};
 use tardis::rand::seq::SliceRandom;
@@ -24,7 +24,7 @@ async fn test_multi() -> TardisResult<()> {
     // std::env::set_current_dir("middlewares/schedule").unwrap();
     std::env::set_var("RUST_LOG", "info,sqlx=off,sea_orm=INFO,bios_mw_schedule=TRACE,tardis=off");
     let docker = testcontainers::clients::Cli::default();
-    let container_hold = init_rbum_test_container::init(&docker, None).await?;
+    let container_hold = init_test_container::init(&docker, None).await?;
     let config = ScheduleConfig::default();
 
     init_tardis().await?;

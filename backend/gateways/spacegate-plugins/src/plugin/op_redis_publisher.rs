@@ -69,14 +69,12 @@ impl Plugin for RedisPublisherPlugin {
         let Some(client) = req.get_redis_client_by_gateway_name() else {
             return Err("missing redis client".into());
         };
-        let spec_id = RedisPublisherPlugin::parse_spec_id(&req);
 
         let resp = inner.call(req).await;
 
         let (resp, content) = self.op_log(resp).await?;
 
-        if let Some(mut content) = content {
-            content.spec_id = spec_id;
+        if let Some(content) = content {
             let key = self.key.clone();
             let script = self.script.clone();
             tokio::task::spawn(async move {
@@ -104,18 +102,6 @@ impl Plugin for RedisPublisherPlugin {
 }
 
 impl RedisPublisherPlugin {
-    fn parse_spec_id(req: &SgRequest) -> Option<String> {
-        let segments: Vec<_> = req.uri().path().split('/').collect();
-        //找到segment为op-api的下一个segment就是spec_id
-        if let Some(index) = segments.iter().position(|&seg| seg == "op-api") {
-            // 确保 "op-api" 后面还有段
-            if let Some(spec_id) = segments.get(index + 1) {
-                return Some(spec_id.to_string());
-            }
-        }
-        None
-    }
-
     async fn op_log(&self, mut resp: SgResponse) -> Result<(SgResponse, Option<OpLogContent>), BoxError> {
         let body_string = if let Some(raw_body) = resp.extensions().get::<BeforeEncryptBody>().map(|b| b.clone().get()) {
             serde_json::from_str::<Value>(&String::from_utf8_lossy(&raw_body))
@@ -186,7 +172,6 @@ impl RedisPublisherPlugin {
             resp_status: resp.status().as_u16().to_string(),
             success,
             own_paths: resp.extensions().get::<CertInfo>().and_then(|info| info.own_paths.clone()),
-            spec_id: None,
         };
         Ok((resp, Some(content)))
     }
@@ -205,5 +190,4 @@ struct OpLogContent {
     pub resp_status: String,
     //Indicates whether the business operation was successful.
     pub success: bool,
-    pub spec_id: Option<String>,
 }

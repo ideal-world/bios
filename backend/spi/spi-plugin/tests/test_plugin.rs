@@ -8,7 +8,7 @@ use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use bios_basic::rbum::serv::rbum_kind_serv::{RbumKindAttrServ, RbumKindServ};
 use bios_basic::spi::dto::spi_bs_dto::SpiBsAddReq;
 use bios_basic::spi::spi_initializer;
-use bios_basic::test::init_rbum_test_container;
+use bios_basic::test::init_test_container;
 use bios_basic::test::test_http_client::TestHttpClient;
 use bios_spi_plugin::dto::plugin_api_dto::PluginApiAddOrModifyReq;
 use bios_spi_plugin::dto::plugin_bs_dto::PluginBsAddReq;
@@ -27,7 +27,7 @@ async fn test_plugin() -> TardisResult<()> {
     env::set_var("RUST_LOG", "debug,test_plugin=trace,sqlx::query=off");
 
     let docker = testcontainers::clients::Cli::default();
-    let _x = init_rbum_test_container::init(&docker, None).await?;
+    let _x = init_test_container::init(&docker, None).await?;
     init_data().await?;
 
     Ok(())

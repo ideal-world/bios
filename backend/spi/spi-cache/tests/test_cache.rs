@@ -3,7 +3,7 @@ use std::time::Duration;
 
 use bios_basic::rbum::serv::rbum_kind_serv::RbumKindServ;
 use bios_basic::spi::dto::spi_bs_dto::SpiBsAddReq;
-use bios_basic::test::init_rbum_test_container;
+use bios_basic::test::init_test_container;
 use bios_basic::test::test_http_client::TestHttpClient;
 use bios_spi_cache::cache_constants::{self, DOMAIN_CODE};
 use bios_spi_cache::cache_initializer;
@@ -20,7 +20,7 @@ async fn test_cache() -> TardisResult<()> {
     env::set_var("RUST_LOG", "debug,test_cache=trace,sqlx::query=off");
 
     let docker = testcontainers::clients::Cli::default();
-    let _x = init_rbum_test_container::init(&docker, None).await?;
+    let _x = init_test_container::init(&docker, None).await?;
 
     init_data().await?;
 

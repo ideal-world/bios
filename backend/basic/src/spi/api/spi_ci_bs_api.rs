@@ -1,3 +1,5 @@
+//! SPI common operation interface
+//! SPI公共操作接口
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem::Request;
 use tardis::web::poem_openapi;
@@ -16,7 +18,14 @@ pub struct SpiCiBsApi;
 /// Interface Console Backend Service API
 #[poem_openapi::OpenApi(prefix_path = "/ci/manage/bs", tag = "crate::ApiTag::Interface")]
 impl SpiCiBsApi {
-    /// Add Backend Service
+    /// Add backend service
+    /// 添加后端服务实例
+    ///
+    /// # Parameters
+    /// - add_req: add request
+    ///
+    /// # Returns
+    /// Backend service id
     #[oai(path = "/", method = "post")]
     async fn add(&self, mut add_req: Json<SpiBsAddReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<String> {
         let mut funs = request.tardis_fun_inst();
@@ -26,7 +35,12 @@ impl SpiCiBsApi {
         TardisResp::ok(result)
     }
 
-    /// Modify Backend Service
+    /// Modify backend service
+    /// 修改后端服务
+    ///
+    /// # Parameters
+    /// - id: Backend service id
+    /// - modify_req: modify request
     #[oai(path = "/:id", method = "patch")]
     async fn modify(&self, id: Path<String>, mut modify_req: Json<SpiBsModifyReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         let mut funs = request.tardis_fun_inst();
@@ -36,7 +50,14 @@ impl SpiCiBsApi {
         TardisResp::ok(Void {})
     }
 
-    /// Get Backend Service
+    /// Get backend service
+    /// 获取后端服务
+    ///
+    /// # Parameters
+    /// - id: Backend service id
+    ///
+    /// # Returns
+    /// Backend service detail
     #[oai(path = "/:id", method = "get")]
     async fn get(&self, id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<SpiBsDetailResp> {
         let funs = request.tardis_fun_inst();
@@ -44,7 +65,19 @@ impl SpiCiBsApi {
         TardisResp::ok(result)
     }
 
-    /// Find Backend Services
+    /// Find backend services
+    /// 查找后端服务
+    ///
+    /// # Parameters
+    /// - id: Backend service id
+    /// - name: Backend service name
+    /// - page_number: Page number, start from 1
+    /// - page_size: Page size
+    /// - desc_by_create: Desc by create time
+    /// - desc_by_update: Desc by update time
+    ///
+    /// # Returns
+    /// Backend service list
     #[oai(path = "/", method = "get")]
     async fn paginate(
         &self,
@@ -79,7 +112,11 @@ impl SpiCiBsApi {
         TardisResp::ok(result)
     }
 
-    /// Delete Backend Service
+    /// Delete backend service
+    /// 删除后端服务
+    ///
+    /// # Parameters
+    /// - id: Backend service id
     #[oai(path = "/:id", method = "delete")]
     async fn delete(&self, id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         let mut funs = request.tardis_fun_inst();
@@ -89,7 +126,12 @@ impl SpiCiBsApi {
         TardisResp::ok(Void {})
     }
 
-    /// Add Backend Service Rel App/Tenant
+    /// Bind Backend Service to App/Tenant
+    /// 绑定后端服务到应用/租户
+    ///
+    /// # Parameters
+    /// - id: Backend service id
+    /// - app_tenant_id: App/Tenant id
     #[oai(path = "/:id/rel/:app_tenant_id", method = "put")]
     async fn add_rel(&self, id: Path<String>, app_tenant_id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         let mut funs = request.tardis_fun_inst();
@@ -99,7 +141,12 @@ impl SpiCiBsApi {
         TardisResp::ok(Void {})
     }
 
-    /// Delete Backend Service Rel App/Tenant
+    /// Unbind Backend Service from App/Tenant
+    /// 解绑后端服务与应用/租户
+    ///
+    /// # Parameters
+    /// - id: Backend service id
+    /// - app_tenant_id: App/Tenant id
     #[oai(path = "/:id/rel/:app_tenant_id", method = "delete")]
     async fn delete_rel(&self, id: Path<String>, app_tenant_id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         let mut funs = request.tardis_fun_inst();
