@@ -370,10 +370,11 @@ impl IamRoleServ {
         TardisFuns::field.nanoid_len(RBUM_ITEM_ID_SUB_ROLE_LEN as usize)
     }
 
-    pub async fn copy_role_agg(tenant_or_app_id: &str, kind: &IamRoleKind, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    pub async fn copy_role_agg(tenant_or_app_id: &str, spec_role_ids: Option<Vec<String>>, kind: &IamRoleKind, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let base_roles = Self::find_detail_items(
             &IamRoleFilterReq {
                 basic: RbumBasicFilterReq {
+                    ids: spec_role_ids,
                     ignore_scope: true,
                     with_sub_own_paths: false,
                     own_paths: Some("".to_string()),
@@ -416,7 +417,7 @@ impl IamRoleServ {
     }
 
     pub async fn add_app_copy_role_agg(app_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        Self::copy_role_agg(app_id, &IamRoleKind::App, funs, ctx).await?;
+        Self::copy_role_agg(app_id, None, &IamRoleKind::App, funs, ctx).await?;
         let tenant_ctx = IamCertServ::use_sys_or_tenant_ctx_unsafe(ctx.clone())?;
         let tenant_app_roles = Self::find_detail_items(
             &IamRoleFilterReq {
@@ -995,10 +996,10 @@ impl IamRoleServ {
         )
         .await?;
         if let Some(kind) = &add_req.kind {
-            match kind {
-                IamRoleKind::System => {}
-                IamRoleKind::Tenant => {
-                    let tenant_ids = IamTenantServ::find_id_items(
+            let tenant_or_app_ids = match kind {
+                IamRoleKind::System => None,
+                IamRoleKind::Tenant => Some(
+                    IamTenantServ::find_id_items(
                         &IamTenantFilterReq {
                             basic: RbumBasicFilterReq {
                                 with_sub_own_paths: true,
@@ -1011,32 +1012,10 @@ impl IamRoleServ {
                         funs,
                         ctx,
                     )
-                    .await?;
-                    for tenant_id in tenant_ids {
-                        Self::add_role_agg(
-                            &mut IamRoleAggAddReq {
-                                role: IamRoleAddReq {
-                                    code: Some(TrimString::from(format!("{}:{}", tenant_id, add_req.code.clone().unwrap_or_default()))),
-                                    name: add_req.name.clone(),
-                                    icon: add_req.icon.clone(),
-                                    sort: add_req.sort,
-                                    kind: add_req.kind.clone(),
-                                    scope_level: Some(RbumScopeLevelKind::Private),
-                                    in_embed: add_req.in_embed,
-                                    extend_role_id: Some(base_embed_role_id.clone()),
-                                    disabled: add_req.disabled,
-                                    in_base: Some(false),
-                                },
-                                res_ids: None,
-                            },
-                            funs,
-                            ctx,
-                        )
-                        .await?;
-                    }
-                }
-                IamRoleKind::App => {
-                    let app_ids = IamAppServ::find_id_items(
+                    .await?,
+                ),
+                IamRoleKind::App => Some(
+                    IamAppServ::find_id_items(
                         &IamAppFilterReq {
                             basic: RbumBasicFilterReq {
                                 with_sub_own_paths: true,
@@ -1049,31 +1028,14 @@ impl IamRoleServ {
                         funs,
                         ctx,
                     )
-                    .await?;
-                    for app_id in app_ids {
-                        Self::add_role_agg(
-                            &mut IamRoleAggAddReq {
-                                role: IamRoleAddReq {
-                                    code: Some(TrimString::from(format!("{}:{}", app_id, add_req.code.clone().unwrap_or_default()))),
-                                    name: add_req.name.clone(),
-                                    icon: add_req.icon.clone(),
-                                    sort: add_req.sort,
-                                    kind: add_req.kind.clone(),
-                                    scope_level: Some(RbumScopeLevelKind::Private),
-                                    in_embed: add_req.in_embed,
-                                    extend_role_id: Some(base_embed_role_id.clone()),
-                                    disabled: add_req.disabled,
-                                    in_base: Some(false),
-                                },
-                                res_ids: None,
-                            },
-                            funs,
-                            ctx,
-                        )
-                        .await?;
-                    }
-                }
+                    .await?,
+                ),
             };
+            if let Some(tenant_or_app_ids) = tenant_or_app_ids {
+                for tenant_or_app_id in tenant_or_app_ids {
+                    Self::copy_role_agg(&tenant_or_app_id, Some(vec![base_embed_role_id.clone()]), kind, funs, ctx).await?;
+                }
+            }
         }
         Ok(())
     }

@@ -105,7 +105,7 @@ impl IamCcRoleTaskServ {
                         continue;
                     }
                     info!("execute_role_task: tenant_id: {}, tenant_name: {}", tenant.id, tenant.name);
-                    IamRoleServ::copy_role_agg(&tenant.id, &IamRoleKind::Tenant, &funs, &tenant_ctx).await?;
+                    IamRoleServ::copy_role_agg(&tenant.id, None, &IamRoleKind::Tenant, &funs, &tenant_ctx).await?;
                     for base_tenant_role_id in &base_tenant_role_ids {
                         let rel_account_roles = IamRelServ::find_to_simple_rels(&IamRelKind::IamAccountRole, &base_tenant_role_id, None, None, &funs, &tenant_ctx).await?;
                         for rel_account_role in rel_account_roles {
@@ -172,7 +172,7 @@ impl IamCcRoleTaskServ {
                         continue;
                     }
                     info!("execute_role_task: app_id: {}, app_name: {}", app.id, app.name);
-                    IamRoleServ::copy_role_agg(&app.id, &IamRoleKind::App, &funs, &app_ctx).await?;
+                    IamRoleServ::copy_role_agg(&app.id, None, &IamRoleKind::App, &funs, &app_ctx).await?;
                     for base_app_role_id in &base_app_role_ids {
                         let rel_account_roles = IamRelServ::find_to_simple_rels(&IamRelKind::IamAccountRole, base_app_role_id, None, None, &funs, &app_ctx).await?;
                         for rel_account_role in rel_account_roles {

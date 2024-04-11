@@ -290,7 +290,7 @@ impl IamTenantServ {
             });
         }
         IamConfigServ::add_or_modify_batch(&tenant_id, reqs, funs, &tenant_ctx).await?;
-        IamRoleServ::copy_role_agg(&tenant_id, &IamRoleKind::Tenant, funs, &tenant_ctx).await?;
+        IamRoleServ::copy_role_agg(&tenant_id, None, &IamRoleKind::Tenant, funs, &tenant_ctx).await?;
         let tenant_admin_role_id = IamRoleServ::get_embed_subrole_id(&funs.iam_basic_role_tenant_admin_id(), funs, &tenant_ctx).await?;
         let tenant_audit_role_id = IamRoleServ::get_embed_subrole_id(&funs.iam_basic_role_tenant_audit_id(), funs, &tenant_ctx).await?;
         // Init admin pwd
