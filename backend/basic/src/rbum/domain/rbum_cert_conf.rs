@@ -149,7 +149,6 @@ pub struct Model {
     /// 同一个`rel_rbum_item_id`下最多只能有一个基础认证，如果为true，则该记录的sk将为同一个`rel_rbum_item_id`下的公共sk，支持同一个`rel_rbum_item_id`下不同凭证配置的ak + 该记录的sk的登录方式。
     /// 比如可以将密码作为基础sk，这样可以实现手机号验证码、用户名密码以及手机号+密码的登录方式。
     pub is_basic: bool,
-    pub is_ak_repeatable: bool,
     /// Support reset the cert configuration type(corresponding to the ``code`` value) of the basic sk
     ///
     /// 支持重置基础sk的凭证配置类型（对应`code`值）
@@ -261,7 +260,6 @@ impl TardisActiveModel for ActiveModel {
             .col(ColumnDef::new(Column::SkEncrypted).not_null().boolean())
             .col(ColumnDef::new(Column::Repeatable).not_null().boolean())
             .col(ColumnDef::new(Column::IsBasic).not_null().boolean())
-            .col(ColumnDef::new(Column::IsAkRepeatable).not_null().boolean())
             .col(ColumnDef::new(Column::RestByKinds).not_null().string())
             .col(ColumnDef::new(Column::ExpireSec).not_null().big_integer())
             .col(ColumnDef::new(Column::SkLockCycleSec).not_null().integer())
