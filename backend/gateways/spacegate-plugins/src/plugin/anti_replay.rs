@@ -12,7 +12,7 @@ use spacegate_shell::{BoxError, SgBody, SgRequestExt, SgResponseExt};
 use tardis::serde_json;
 use tardis::{
     basic::result::TardisResult,
-    tokio::{self},
+    tokio,
 };
 
 #[cfg(feature = "schema")]
