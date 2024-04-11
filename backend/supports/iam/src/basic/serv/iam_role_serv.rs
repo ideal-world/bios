@@ -23,7 +23,7 @@ use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use bios_basic::rbum::serv::rbum_rel_serv::RbumRelServ;
 
 use crate::basic::domain::iam_role;
-use crate::basic::dto::iam_filer_dto::{IamAppFilterReq, IamRoleFilterReq};
+use crate::basic::dto::iam_filer_dto::{IamAppFilterReq, IamRoleFilterReq, IamTenantFilterReq};
 use crate::basic::dto::iam_role_dto::{IamRoleAddReq, IamRoleAggAddReq, IamRoleAggModifyReq, IamRoleDetailResp, IamRoleModifyReq, IamRoleSummaryResp};
 use crate::basic::serv::iam_app_serv::IamAppServ;
 use crate::basic::serv::iam_key_cache_serv::IamIdentCacheServ;
@@ -37,6 +37,7 @@ use crate::iam_initializer::{default_iam_send_avatar, ws_iam_send_client};
 use super::clients::iam_log_client::{IamLogClient, LogParamTag};
 use super::clients::iam_search_client::IamSearchClient;
 use super::iam_cert_serv::IamCertServ;
+use super::iam_tenant_serv::IamTenantServ;
 
 pub struct IamRoleServ;
 
@@ -984,15 +985,96 @@ impl IamRoleServ {
     }
 
     pub async fn add_base_embed_role(add_req: &IamRoleAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        // let base_embed_role_id = Self::add_role_agg(&mut IamRoleAggAddReq {
-        //     role: add_req.clone(),
-        //     res_ids: None,
-        // }, funs, ctx).await?;
-        // if let Some(kind) = add_req.kind {
-        //     match kind {
-
-        //     }
-        // }
+        let base_embed_role_id = Self::add_role_agg(
+            &mut IamRoleAggAddReq {
+                role: add_req.clone(),
+                res_ids: None,
+            },
+            funs,
+            ctx,
+        )
+        .await?;
+        if let Some(kind) = &add_req.kind {
+            match kind {
+                IamRoleKind::System => {}
+                IamRoleKind::Tenant => {
+                    let tenant_ids = IamTenantServ::find_id_items(
+                        &IamTenantFilterReq {
+                            basic: RbumBasicFilterReq {
+                                with_sub_own_paths: true,
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        },
+                        None,
+                        None,
+                        funs,
+                        ctx,
+                    )
+                    .await?;
+                    for tenant_id in tenant_ids {
+                        Self::add_role_agg(
+                            &mut IamRoleAggAddReq {
+                                role: IamRoleAddReq {
+                                    code: Some(TrimString::from(format!("{}:{}", tenant_id, add_req.code.clone().unwrap_or_default()))),
+                                    name: add_req.name.clone(),
+                                    icon: add_req.icon.clone(),
+                                    sort: add_req.sort,
+                                    kind: add_req.kind.clone(),
+                                    scope_level: Some(RbumScopeLevelKind::Private),
+                                    in_embed: add_req.in_embed,
+                                    extend_role_id: Some(base_embed_role_id.clone()),
+                                    disabled: add_req.disabled,
+                                    in_base: Some(false),
+                                },
+                                res_ids: None,
+                            },
+                            funs,
+                            ctx,
+                        )
+                        .await?;
+                    }
+                }
+                IamRoleKind::App => {
+                    let app_ids = IamAppServ::find_id_items(
+                        &IamAppFilterReq {
+                            basic: RbumBasicFilterReq {
+                                with_sub_own_paths: true,
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        },
+                        None,
+                        None,
+                        funs,
+                        ctx,
+                    )
+                    .await?;
+                    for app_id in app_ids {
+                        Self::add_role_agg(
+                            &mut IamRoleAggAddReq {
+                                role: IamRoleAddReq {
+                                    code: Some(TrimString::from(format!("{}:{}", app_id, add_req.code.clone().unwrap_or_default()))),
+                                    name: add_req.name.clone(),
+                                    icon: add_req.icon.clone(),
+                                    sort: add_req.sort,
+                                    kind: add_req.kind.clone(),
+                                    scope_level: Some(RbumScopeLevelKind::Private),
+                                    in_embed: add_req.in_embed,
+                                    extend_role_id: Some(base_embed_role_id.clone()),
+                                    disabled: add_req.disabled,
+                                    in_base: Some(false),
+                                },
+                                res_ids: None,
+                            },
+                            funs,
+                            ctx,
+                        )
+                        .await?;
+                    }
+                }
+            };
+        }
         Ok(())
     }
 }
