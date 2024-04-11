@@ -1036,7 +1036,7 @@ impl FlowInstServ {
                                             crate::dto::flow_var_dto::DefaultValueType::Custom => default.value,
                                             crate::dto::flow_var_dto::DefaultValueType::AssociatedAttr => {
                                                 if let Some(current_vars) = flow_inst.current_vars.as_ref() {
-                                                    current_vars.get(&var.name).cloned().unwrap_or_default()
+                                                    current_vars.get(default.value.as_str().unwrap_or(&var.name)).cloned().unwrap_or_default()
                                                 } else {
                                                     Value::String("".to_string())
                                                 }
