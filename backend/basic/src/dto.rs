@@ -1,4 +1,6 @@
 //! Basic DTOs
+//! 
+//! 基础的DTOs
 use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
@@ -9,6 +11,7 @@ use crate::enumeration::BasicQueryOpKind;
 use tardis::web::poem_openapi;
 
 /// Basic query condition object
+/// 
 /// 基础的查询条件对象
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[cfg_attr(feature = "default", derive(poem_openapi::Object))]
@@ -24,6 +27,7 @@ pub struct BasicQueryCondInfo {
 
 impl BasicQueryCondInfo {
     /// Check if the ``check_vars`` passed in meet the conditions in ``conds``
+    /// 
     /// 检查传入的 ``check_vars`` 是否满足 ``conds`` 中的条件
     ///
     ///  The outer level is the `OR` relationship, the inner level is the `AND` relationship

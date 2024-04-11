@@ -77,7 +77,6 @@ impl SpiBsInstExtractor for TardisFunsInst {
     /// # Return
     ///
     /// the backend service instance kind
-    /// ```
     async fn init<'a, F, T>(&self, ctx: &'a TardisContext, mgr: bool, init_fun: F) -> TardisResult<Arc<SpiBsInst>>
     where
         F: Fn(SpiBsCertResp, &'a TardisContext, bool) -> T + Send + Sync,
@@ -114,7 +113,6 @@ impl SpiBsInstExtractor for TardisFunsInst {
     /// # Return
     ///
     /// the backend service instance
-    /// ```
     async fn bs<'a>(&self, ctx: &'a TardisContext) -> TardisResult<Arc<SpiBsInst>> {
         let cache_key = format!("{}-{}", self.module_code(), ctx.owner);
         Ok(get_spi_bs_caches().read().await.get(&cache_key).expect("ignore").clone())
@@ -131,7 +129,6 @@ impl SpiBsInstExtractor for TardisFunsInst {
     /// # Return
     ///
     /// the backend service instance
-    /// ```
     async fn init_bs<'a, F, T>(&self, ctx: &'a TardisContext, mgr: bool, init_fun: F) -> TardisResult<Arc<SpiBsInst>>
     where
         F: Fn(SpiBsCertResp, &'a TardisContext, bool) -> T + Send + Sync,

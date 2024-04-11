@@ -38,7 +38,6 @@ impl IamCertAkSkServ {
                 sk_encrypted: Some(false),
                 repeatable: None,
                 is_basic: Some(false),
-                is_ak_repeatable: None,
                 rest_by_kinds: None,
                 expire_sec: add_req.expire_sec,
                 sk_lock_cycle_sec: None,

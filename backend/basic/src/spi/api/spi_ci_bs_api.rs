@@ -1,4 +1,5 @@
 //! SPI common operation interface
+//! 
 //! SPI公共操作接口
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem::Request;
@@ -16,9 +17,12 @@ use crate::TardisFunInstExtractor;
 pub struct SpiCiBsApi;
 
 /// Interface Console Backend Service API
+/// 
+/// 接口控制台后端服务API
 #[poem_openapi::OpenApi(prefix_path = "/ci/manage/bs", tag = "crate::ApiTag::Interface")]
 impl SpiCiBsApi {
     /// Add backend service
+    /// 
     /// 添加后端服务实例
     ///
     /// # Parameters
@@ -36,6 +40,7 @@ impl SpiCiBsApi {
     }
 
     /// Modify backend service
+    /// 
     /// 修改后端服务
     ///
     /// # Parameters
@@ -51,6 +56,7 @@ impl SpiCiBsApi {
     }
 
     /// Get backend service
+    /// 
     /// 获取后端服务
     ///
     /// # Parameters
@@ -66,6 +72,7 @@ impl SpiCiBsApi {
     }
 
     /// Find backend services
+    /// 
     /// 查找后端服务
     ///
     /// # Parameters
@@ -113,6 +120,7 @@ impl SpiCiBsApi {
     }
 
     /// Delete backend service
+    /// 
     /// 删除后端服务
     ///
     /// # Parameters
@@ -127,6 +135,7 @@ impl SpiCiBsApi {
     }
 
     /// Bind Backend Service to App/Tenant
+    /// 
     /// 绑定后端服务到应用/租户
     ///
     /// # Parameters
@@ -142,6 +151,7 @@ impl SpiCiBsApi {
     }
 
     /// Unbind Backend Service from App/Tenant
+    /// 
     /// 解绑后端服务与应用/租户
     ///
     /// # Parameters

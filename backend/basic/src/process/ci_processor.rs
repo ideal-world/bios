@@ -1,6 +1,9 @@
 //! CI (Interface Console) Processor
+//! 
+//! CI (接口控制台) 处理器
 //!
 //! The CI type interface is mostly used for calls between systems, and the interface is authenticated by Ak/Sk to ensure the security of the interface.
+//! 
 //! CI类型的接口多用于系统之间的调用，通过Ak/Sk进行签名认证，保证接口的安全性。
 use serde::{Deserialize, Serialize};
 use tardis::{basic::result::TardisResult, chrono::Utc, TardisFuns};
