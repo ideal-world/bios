@@ -32,11 +32,15 @@ pub struct Model {
     #[index]
     pub rel_rbum_rel_id: String,
 
+    #[fill_ctx(fill = "own_paths")]
     pub own_paths: String,
+    #[fill_ctx]
     pub owner: String,
     pub create_time: chrono::DateTime<Utc>,
     pub update_time: chrono::DateTime<Utc>,
+    #[fill_ctx]
     pub create_by: String,
+    #[fill_ctx(insert_only = false)]
     pub update_by: String,
 }
 

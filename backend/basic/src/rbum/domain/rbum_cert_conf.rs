@@ -5,18 +5,20 @@ use tardis::db::sea_orm;
 use tardis::db::sea_orm::prelude::*;
 use tardis::db::sea_orm::sea_query::{ColumnDef, IndexCreateStatement, Table, TableCreateStatement};
 use tardis::db::sea_orm::*;
-use tardis::TardisCreateIndex;
+use tardis::{TardisCreateEntity, TardisEmptyBehavior, TardisEmptyRelation};
 
 /// Credential or authentication configuration model
 ///
 /// Uniform use of cert refers to credentials or authentication
-#[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel, TardisCreateIndex)]
+#[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel, TardisCreateEntity, TardisEmptyBehavior, TardisEmptyRelation)]
 #[sea_orm(table_name = "rbum_cert_conf")]
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
     pub id: String,
+    #[tardis_entity(custom_len = "127")]
     #[index(index_id = "id_2", unique)]
     pub kind: String,
+    #[tardis_entity(custom_len = "127")]
     #[index(index_id = "id_2", unique)]
     pub supplier: String,
     pub name: String,
@@ -25,6 +27,7 @@ pub struct Model {
     pub ak_rule: String,
     pub sk_note: String,
     pub sk_rule: String,
+    #[tardis_entity(custom_type = "text")]
     pub ext: String,
     pub sk_need: bool,
     /// Whether dynamic sk \
@@ -69,82 +72,16 @@ pub struct Model {
     pub rel_rbum_item_id: String,
 
     #[index()]
+    #[fill_ctx(fill = "own_paths")]
     pub own_paths: String,
+    #[fill_ctx]
     pub owner: String,
+    #[sea_orm(extra = "DEFAULT CURRENT_TIMESTAMP")]
     pub create_time: chrono::DateTime<Utc>,
+    #[sea_orm(extra = "DEFAULT CURRENT_TIMESTAMP")]
     pub update_time: chrono::DateTime<Utc>,
+    #[fill_ctx]
     pub create_by: String,
+    #[fill_ctx(insert_only = false)]
     pub update_by: String,
 }
-
-impl TardisActiveModel for ActiveModel {
-    fn fill_ctx(&mut self, ctx: &TardisContext, is_insert: bool) {
-        if is_insert {
-            self.own_paths = Set(ctx.own_paths.to_string());
-            self.owner = Set(ctx.owner.to_string());
-            self.create_by = Set(ctx.owner.to_string());
-        }
-        self.update_by = Set(ctx.owner.to_string());
-    }
-
-    fn create_table_statement(db: DbBackend) -> TableCreateStatement {
-        let mut builder = Table::create();
-        builder
-            .table(Entity.table_ref())
-            .if_not_exists()
-            .col(ColumnDef::new(Column::Id).not_null().string().primary_key())
-            // Specific
-            .col(ColumnDef::new(Column::Kind).not_null().string_len(127))
-            .col(ColumnDef::new(Column::Supplier).not_null().string_len(127))
-            .col(ColumnDef::new(Column::Name).not_null().string())
-            .col(ColumnDef::new(Column::Note).not_null().string())
-            .col(ColumnDef::new(Column::AkNote).not_null().string())
-            .col(ColumnDef::new(Column::AkRule).not_null().string())
-            .col(ColumnDef::new(Column::SkNote).not_null().string())
-            .col(ColumnDef::new(Column::SkRule).not_null().string())
-            .col(ColumnDef::new(Column::Ext).text())
-            .col(ColumnDef::new(Column::SkNeed).not_null().boolean())
-            .col(ColumnDef::new(Column::SkDynamic).not_null().boolean())
-            .col(ColumnDef::new(Column::SkEncrypted).not_null().boolean())
-            .col(ColumnDef::new(Column::Repeatable).not_null().boolean())
-            .col(ColumnDef::new(Column::IsBasic).not_null().boolean())
-            .col(ColumnDef::new(Column::IsAkRepeatable).not_null().boolean())
-            .col(ColumnDef::new(Column::RestByKinds).not_null().string())
-            .col(ColumnDef::new(Column::ExpireSec).not_null().big_integer())
-            .col(ColumnDef::new(Column::SkLockCycleSec).not_null().integer())
-            .col(ColumnDef::new(Column::SkLockErrTimes).not_null().small_integer())
-            .col(ColumnDef::new(Column::SkLockDurationSec).not_null().integer())
-            .col(ColumnDef::new(Column::CoexistNum).not_null().small_integer())
-            .col(ColumnDef::new(Column::ConnUri).not_null().string())
-            .col(ColumnDef::new(Column::RelRbumDomainId).not_null().string())
-            .col(ColumnDef::new(Column::RelRbumItemId).not_null().string())
-            .col(ColumnDef::new(Column::Status).not_null().small_integer())
-            // Basic
-            .col(ColumnDef::new(Column::OwnPaths).not_null().string())
-            .col(ColumnDef::new(Column::Owner).not_null().string())
-            .col(ColumnDef::new(Column::CreateBy).not_null().string())
-            .col(ColumnDef::new(Column::UpdateBy).not_null().string());
-        if db == DatabaseBackend::Postgres {
-            builder
-                .col(ColumnDef::new(Column::CreateTime).extra("DEFAULT CURRENT_TIMESTAMP".to_string()).timestamp_with_time_zone())
-                .col(ColumnDef::new(Column::UpdateTime).extra("DEFAULT CURRENT_TIMESTAMP".to_string()).timestamp_with_time_zone());
-        } else {
-            builder
-                .engine("InnoDB")
-                .character_set("utf8mb4")
-                .collate("utf8mb4_0900_as_cs")
-                .col(ColumnDef::new(Column::CreateTime).extra("DEFAULT CURRENT_TIMESTAMP".to_string()).timestamp())
-                .col(ColumnDef::new(Column::UpdateTime).extra("DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP".to_string()).timestamp());
-        }
-        builder.to_owned()
-    }
-
-    fn create_index_statement() -> Vec<IndexCreateStatement> {
-        tardis_create_index_statement()
-    }
-}
-
-impl ActiveModelBehavior for ActiveModel {}
-
-#[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
-pub enum Relation {}

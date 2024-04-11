@@ -5,7 +5,7 @@ use tardis::db::sea_orm;
 use tardis::db::sea_orm::prelude::*;
 use tardis::db::sea_orm::sea_query::{ColumnDef, IndexCreateStatement, Table, TableCreateStatement};
 use tardis::db::sea_orm::*;
-use tardis::TardisCreateIndex;
+use tardis::{TardisCreateEntity, TardisEmptyBehavior, TardisEmptyRelation};
 
 /// Resource kind extended attribute definition model
 ///
@@ -23,7 +23,7 @@ use tardis::TardisCreateIndex;
 /// 6. before the resource object is saved, if secret = true and an attribute variable substitution in the url, call the url and return the corresponding value
 ///
 /// For security reasons, step 6 must be done by the server side.
-#[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel, TardisCreateIndex)]
+#[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel, TardisCreateEntity, TardisEmptyBehavior, TardisEmptyRelation)]
 #[sea_orm(table_name = "rbum_kind_attr")]
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
@@ -79,24 +79,21 @@ pub struct Model {
 
     pub scope_level: i16,
 
+    #[fill_ctx(fill = "own_paths")]
     pub own_paths: String,
+    #[fill_ctx]
     pub owner: String,
+    #[sea_orm(extra = "DEFAULT CURRENT_TIMESTAMP")]
     pub create_time: chrono::DateTime<Utc>,
+    #[sea_orm(extra = "DEFAULT CURRENT_TIMESTAMP")]
     pub update_time: chrono::DateTime<Utc>,
+    #[fill_ctx]
     pub create_by: String,
+    #[fill_ctx(insert_only = false)]
     pub update_by: String,
 }
 
-impl TardisActiveModel for ActiveModel {
-    fn fill_ctx(&mut self, ctx: &TardisContext, is_insert: bool) {
-        if is_insert {
-            self.own_paths = Set(ctx.own_paths.to_string());
-            self.owner = Set(ctx.owner.to_string());
-            self.create_by = Set(ctx.owner.to_string());
-        }
-        self.update_by = Set(ctx.owner.to_string());
-    }
-
+impl Model {
     fn create_table_statement(db: DbBackend) -> TableCreateStatement {
         let mut builder = Table::create();
         builder
@@ -119,6 +116,7 @@ impl TardisActiveModel for ActiveModel {
             .col(ColumnDef::new(Column::Idx).not_null().boolean().default(false))
             .col(ColumnDef::new(Column::DataType).not_null().string())
             .col(ColumnDef::new(Column::WidgetType).not_null().string())
+            // todo!() default
             .col(ColumnDef::new(Column::WidgetColumns).not_null().small_integer().default(1))
             .col(ColumnDef::new(Column::DefaultValue).not_null().string().default(""))
             .col(ColumnDef::new(Column::DynDefaultValue).not_null().string().default(""))
@@ -157,8 +155,3 @@ impl TardisActiveModel for ActiveModel {
         tardis_create_index_statement()
     }
 }
-
-impl ActiveModelBehavior for ActiveModel {}
-
-#[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
-pub enum Relation {}
