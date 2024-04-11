@@ -53,6 +53,7 @@ impl RbumItemCrudOperation<spi_bs::ActiveModel, SpiBsAddReq, SpiBsModifyReq, Spi
             rel_rbum_domain_id: Some(domain_id),
             disabled: add_req.disabled,
             // SPI backend service is a global scope, and the permission is determined by its own binding relationship
+            //
             // SPI后端服务都为全局作用域，通过自身的绑定关系判定权限
             scope_level: Some(RbumScopeLevelKind::Root),
             ..Default::default()
@@ -69,6 +70,7 @@ impl RbumItemCrudOperation<spi_bs::ActiveModel, SpiBsAddReq, SpiBsModifyReq, Spi
 
     async fn after_add_item(id: &str, add_req: &mut SpiBsAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         // Add certificate information
+        //
         // 添加认证信息 
         RbumCertServ::add_rbum(
             &mut RbumCertAddReq {

@@ -1,4 +1,6 @@
-//! Database operations helper.
+//! Database operations helper
+//! 
+//! 数据库操作辅助操作
 use tardis::{
     chrono::{DateTime, ParseError, Utc},
     db::sea_orm,
@@ -48,7 +50,7 @@ pub fn json_to_sea_orm_value(json_value: &serde_json::Value, like_by_str: bool) 
     }
 }
 
-/// Convert string to DateTime<Utc>.
+/// Convert string to ``DateTime<Utc>``
 pub fn str_to_datetime(input: &str) -> Result<DateTime<Utc>, ParseError> {
     DateTime::parse_from_rfc3339(input).map(|dt| dt.with_timezone(&Utc))
 }
