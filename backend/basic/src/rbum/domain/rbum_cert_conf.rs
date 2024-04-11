@@ -99,7 +99,6 @@ pub struct Model {
     /// Such as database connection pool configuration.
     ///
     /// 比如数据库连接池配置。
-    pub sk_rule: String,
     #[tardis_entity(custom_type = "text")]
     pub ext: String,
     /// Whether sk is required
