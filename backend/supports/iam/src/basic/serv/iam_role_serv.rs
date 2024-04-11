@@ -1013,7 +1013,10 @@ impl IamRoleServ {
                         funs,
                         ctx,
                     )
-                    .await?.into_iter().map(|tenant| (tenant.id, tenant.own_paths)).collect_vec()
+                    .await?
+                    .into_iter()
+                    .map(|tenant| (tenant.id, tenant.own_paths))
+                    .collect_vec(),
                 ),
                 IamRoleKind::App => Some(
                     IamAppServ::find_detail_items(
@@ -1029,15 +1032,15 @@ impl IamRoleServ {
                         funs,
                         ctx,
                     )
-                    .await?.into_iter().map(|app| (app.id, app.own_paths)).collect_vec()
+                    .await?
+                    .into_iter()
+                    .map(|app| (app.id, app.own_paths))
+                    .collect_vec(),
                 ),
             };
             if let Some(tenant_or_app_ids) = tenant_or_app_ids {
                 for (tenant_or_app_id, own_paths) in tenant_or_app_ids {
-                    let tenant_or_app_ctx = TardisContext {
-                        own_paths,
-                        ..ctx.clone()
-                    };
+                    let tenant_or_app_ctx = TardisContext { own_paths, ..ctx.clone() };
                     Self::copy_role_agg(&tenant_or_app_id, Some(vec![base_embed_role_id.clone()]), kind, funs, &tenant_or_app_ctx).await?;
                 }
             }

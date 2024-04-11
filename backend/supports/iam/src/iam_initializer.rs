@@ -183,6 +183,12 @@ async fn init_basic_info<'a>(funs: &TardisFunsInst, ctx: &TardisContext) -> Tard
 
     let roles = RbumItemServ::paginate_rbums(
         &RbumBasicFilterReq {
+            codes: Some(vec![
+                iam_constants::RBUM_ITEM_NAME_SYS_ADMIN_ROLE.to_string(),
+                iam_constants::RBUM_ITEM_NAME_TENANT_ADMIN_ROLE.to_string(),
+                iam_constants::RBUM_ITEM_NAME_TENANT_AUDIT_ROLE.to_string(),
+                iam_constants::RBUM_ITEM_NAME_APP_ADMIN_ROLE.to_string(),
+            ]),
             rbum_kind_id: Some(kind_role_id.clone()),
             rbum_domain_id: Some(domain_iam_id.clone()),
             ..Default::default()
