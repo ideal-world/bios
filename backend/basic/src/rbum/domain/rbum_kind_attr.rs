@@ -51,6 +51,7 @@ pub struct Model {
     pub data_type: String,
     /// Associated [resource kind](crate::rbum::rbum_enumeration::RbumWidgetTypeKind)
     pub widget_type: String,
+    #[tardis_entity(default_value = 1)]
     pub widget_columns: i16,
     pub default_value: String,
     /// Dynamic default value
