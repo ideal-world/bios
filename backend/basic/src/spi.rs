@@ -9,7 +9,8 @@
 //! BIOS中的SPI用于提供面向不同场景的能力。这些能力抽象成标准化的服务接口，供其他模块调用。基于这些标准化的服务接口，可扩展对接不同的后端实现。
 //!
 //! # Example of invoke flow: full-text search service / 调用流程举例：全文搜索服务:
-//!    
+//!
+//! ```text
 //!                                                                 +------------------+   
 //!                                 +-----------+ +----------+    +-+backend-postgresql|   
 //!                                 | spi-basic | |spi-search+----+ +------------------+--+
@@ -36,6 +37,7 @@
 //!                                       |            |                                   
 //!                                       |            | 10. Response data                 
 //!                                       |            |   
+//! ```
 //!    
 //! # Key design:
 //! 1. Reuse RBUM's ability

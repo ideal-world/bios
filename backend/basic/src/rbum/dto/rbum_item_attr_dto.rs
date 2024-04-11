@@ -42,7 +42,6 @@ pub struct RbumItemAttrSummaryResp {
     pub id: String,
     pub value: String,
     pub rel_rbum_item_id: String,
-    pub rel_rbum_item_name: String,
     pub rel_rbum_kind_attr_id: String,
     pub rel_rbum_kind_attr_name: String,
 
@@ -58,7 +57,6 @@ pub struct RbumItemAttrDetailResp {
     pub id: String,
     pub value: String,
     pub rel_rbum_item_id: String,
-    pub rel_rbum_item_name: String,
     pub rel_rbum_kind_attr_id: String,
     pub rel_rbum_kind_attr_name: String,
 
