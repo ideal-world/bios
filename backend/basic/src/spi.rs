@@ -1,38 +1,44 @@
-//! SPI (Service Provider Interface) module.
+//! SPI (Service Provider Interface) module
+//! 
+//! SPI (服务提供接口) 模块
 //!
 //! The SPI in BIOS is used to provide different scenario-oriented capabilities.
 //! These capabilities are abstracted into standardized service interfaces for other modules to call.
 //! Based on these standardized service interfaces, different backend implementations can be extended and interfaced.
+//! 
 //! BIOS中的SPI用于提供面向不同场景的能力。这些能力抽象成标准化的服务接口，供其他模块调用。基于这些标准化的服务接口，可扩展对接不同的后端实现。
 //!
 //! # Example of invoke flow: full-text search service / 调用流程举例：全文搜索服务:
 //!
-//!                                                             +------------------+   
-//!                             +-----------+ +----------+    +-+backend-postgresql|   
-//!                             | spi-basic | |spi-search+----+ +------------------+--+
-//!                             +-----+-----+ +----+-----+    +-+backend-elasticsearch|
-//!                    1. Init domain |            |            +---------------------+
-//!                                   |            | 2. Init special entity            
-//!                                   |            |                                   
-//!                                   |            | 3. Init special API               
-//!                4. Init common API |            |                                   
-//!                                   |            |                                   
-//!                  +----------+     |            |                                   
-//!             ---->|Common API+---> |            |                                   
-//!                  +----------+     |            |                                   
-//!            5. Add backend service |            |                                   
-//!              (POST /ci/manage/bs) |            |                                   
-//!                                   |            |     +-----------+                 
-//!         6. Add cert to tenant/app |            | <---+Special API|<----            
-//!     (PUT /:id/rel/:app_tenant_id) |            |     +-----------+                 
-//!                                   |            | 7. Request some apis              
-//!                                   |            |                                   
-//! 8. Init and return backend client |            |                                   
-//!                        (spi_funs) |            | 9. Call client to execute request
-//!                                   |            |                                   
-//!                                   |            | 10. Response data                 
-//!                                   |            |   
-//!
+//! ```text
+//!                                                                 +------------------+   
+//!                                 +-----------+ +----------+    +-+backend-postgresql|   
+//!                                 | spi-basic | |spi-search+----+ +------------------+--+
+//!                                 +-----+-----+ +----+-----+    +-+backend-elasticsearch|
+//!                        1. Init domain |            |            +---------------------+
+//!                                       |            | 2. Init special entity            
+//!                                       |            |                                   
+//!                                       |            | 3. Init special API               
+//!                    4. Init common API |            |                                   
+//!                                       |            |                                   
+//!                      +----------+     |            |                                   
+//!                 ---->|Common API+---> |            |                                   
+//!                      +----------+     |            |                                   
+//!                5. Add backend service |            |                                   
+//!                  (POST /ci/manage/bs) |            |                                   
+//!                                       |            |     +-----------+                 
+//!             6. Add cert to tenant/app |            | <---+Special API|<----            
+//!         (PUT /:id/rel/:app_tenant_id) |            |     +-----------+                 
+//!                                       |            | 7. Request some apis              
+//!                                       |            |                                   
+//!     8. Init and return backend client |            |                                   
+//!                            (spi_funs) |            | 
+//!                                       |            | 9. Call client to execute request
+//!                                       |            |                                   
+//!                                       |            | 10. Response data                 
+//!                                       |            |   
+//! ```
+//!    
 //! # Key design:
 //! 1. Reuse RBUM's ability
 //!     1. Each SPI service has a ``rbum_domain`` for initializing domain objects.
