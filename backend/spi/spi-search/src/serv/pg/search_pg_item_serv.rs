@@ -13,7 +13,7 @@ use tardis::{
     TardisFuns, TardisFunsInst,
 };
 
-use bios_basic::{enumeration::BasicQueryOpKind, dto::BasicQueryCondInfo, helper::db_helper, spi::spi_funs::SpiBsInst};
+use bios_basic::{dto::BasicQueryCondInfo, enumeration::BasicQueryOpKind, helper::db_helper, spi::spi_funs::SpiBsInst};
 
 use crate::{
     dto::search_item_dto::{

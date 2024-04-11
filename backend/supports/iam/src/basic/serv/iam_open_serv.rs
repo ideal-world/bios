@@ -85,6 +85,7 @@ impl IamOpenServ {
                     ctx,
                 )
                 .await?;
+                Self::set_rel_ak_cache(&spec.id, funs, ctx).await?;
             } else {
                 let spec_id = IamResServ::add_item(
                     &mut IamResAddReq {
@@ -346,6 +347,25 @@ impl IamOpenServ {
         Ok(())
     }
 
+    async fn set_rel_ak_cache(spec_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        for rel in RbumRelServ::find_detail_rbums(
+            &RbumRelFilterReq {
+                to_rbum_item_id: Some(spec_id.to_string()),
+                tag: Some(IamRelKind::IamCertSpec.to_string()),
+                ..Default::default()
+            },
+            None,
+            None,
+            funs,
+            ctx,
+        )
+        .await?
+        {
+            Self::set_rules_cache(&rel.from_rbum_id, spec_id, None, None, None, None, funs, ctx).await?;
+        }
+        Ok(())
+    }
+
     async fn set_rules_cache(
         cert_id: &str,
         spec_id: &str,
@@ -368,7 +388,7 @@ impl IamOpenServ {
         .ok_or_else(|| funs.err().internal_error("iam_open", "set_rules_cache", "illegal response", "401-iam-cert-code-not-exist"))?
         .ak;
         if start_time.is_some() && end_time.is_some() {
-            IamIdentCacheServ::add_gateway_rule_info(
+            IamIdentCacheServ::add_or_modify_gateway_rule_info(
                 &ak,
                 OPENAPI_GATEWAY_PLUGIN_TIME_RANGE,
                 None,
@@ -378,10 +398,10 @@ impl IamOpenServ {
             .await?;
         }
         if let Some(frequency) = api_call_frequency {
-            IamIdentCacheServ::add_gateway_rule_info(&ak, OPENAPI_GATEWAY_PLUGIN_LIMIT, None, &frequency.to_string(), funs).await?;
+            IamIdentCacheServ::add_or_modify_gateway_rule_info(&ak, OPENAPI_GATEWAY_PLUGIN_LIMIT, None, &frequency.to_string(), funs).await?;
         }
         if let Some(count) = api_call_count {
-            IamIdentCacheServ::add_gateway_rule_info(&ak, OPENAPI_GATEWAY_PLUGIN_COUNT, None, &count.to_string(), funs).await?;
+            IamIdentCacheServ::add_or_modify_gateway_rule_info(&ak, OPENAPI_GATEWAY_PLUGIN_COUNT, None, &count.to_string(), funs).await?;
         }
         let spec = IamResServ::find_one_detail_item(
             &IamResFilterReq {
@@ -396,7 +416,7 @@ impl IamOpenServ {
         )
         .await?
         .ok_or_else(|| funs.err().internal_error("iam_open", "set_rules_cache", "illegal response", "404-iam-res-not-exist"))?;
-        IamIdentCacheServ::add_gateway_rule_info(&ak, OPENAPI_GATEWAY_PLUGIN_DYNAMIC_ROUTE, None, &spec.ext, funs).await?;
+        IamIdentCacheServ::add_or_modify_gateway_rule_info(&ak, OPENAPI_GATEWAY_PLUGIN_DYNAMIC_ROUTE, None, &spec.ext, funs).await?;
         Ok(())
     }
 

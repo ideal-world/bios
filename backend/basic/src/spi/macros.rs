@@ -37,7 +37,7 @@ macro_rules! spi_dispatch_function {
 /// SPI request dispatch macro
 /// 
 /// SPI请求分发宏
-/// 
+///
 /// Used to generate request dispatch code in the SPI service
 /// 
 /// 用于批量生成请求分发代码

@@ -627,7 +627,7 @@ impl FlowModelServ {
                 JoinType::LeftJoin,
                 flow_state::Entity,
                 to_state_table.clone(),
-                Cond::all().add(Expr::col((to_state_table.clone(), ID_FIELD.clone())).equals((flow_transition::Entity, flow_transition::Column::FromFlowStateId))),
+                Cond::all().add(Expr::col((to_state_table.clone(), ID_FIELD.clone())).equals((flow_transition::Entity, flow_transition::Column::ToFlowStateId))),
             )
             .and_where(Expr::col((flow_transition::Entity, flow_transition::Column::RelFlowModelId)).eq(flow_model_id));
         if let Some(specified_state_ids) = specified_state_ids {

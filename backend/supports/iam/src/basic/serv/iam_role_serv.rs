@@ -1,6 +1,7 @@
 use std::ops::Add;
 
 use async_trait::async_trait;
+use itertools::Itertools;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
@@ -23,7 +24,7 @@ use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use bios_basic::rbum::serv::rbum_rel_serv::RbumRelServ;
 
 use crate::basic::domain::iam_role;
-use crate::basic::dto::iam_filer_dto::{IamAppFilterReq, IamRoleFilterReq};
+use crate::basic::dto::iam_filer_dto::{IamAppFilterReq, IamRoleFilterReq, IamTenantFilterReq};
 use crate::basic::dto::iam_role_dto::{IamRoleAddReq, IamRoleAggAddReq, IamRoleAggModifyReq, IamRoleDetailResp, IamRoleModifyReq, IamRoleSummaryResp};
 use crate::basic::serv::iam_app_serv::IamAppServ;
 use crate::basic::serv::iam_key_cache_serv::IamIdentCacheServ;
@@ -37,6 +38,7 @@ use crate::iam_initializer::{default_iam_send_avatar, ws_iam_send_client};
 use super::clients::iam_log_client::{IamLogClient, LogParamTag};
 use super::clients::iam_search_client::IamSearchClient;
 use super::iam_cert_serv::IamCertServ;
+use super::iam_tenant_serv::IamTenantServ;
 
 pub struct IamRoleServ;
 
@@ -369,10 +371,11 @@ impl IamRoleServ {
         TardisFuns::field.nanoid_len(RBUM_ITEM_ID_SUB_ROLE_LEN as usize)
     }
 
-    pub async fn copy_role_agg(tenant_or_app_id: &str, kind: &IamRoleKind, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    pub async fn copy_role_agg(tenant_or_app_id: &str, spec_role_ids: Option<Vec<String>>, kind: &IamRoleKind, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let base_roles = Self::find_detail_items(
             &IamRoleFilterReq {
                 basic: RbumBasicFilterReq {
+                    ids: spec_role_ids,
                     ignore_scope: true,
                     with_sub_own_paths: false,
                     own_paths: Some("".to_string()),
@@ -415,7 +418,7 @@ impl IamRoleServ {
     }
 
     pub async fn add_app_copy_role_agg(app_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        Self::copy_role_agg(app_id, &IamRoleKind::App, funs, ctx).await?;
+        Self::copy_role_agg(app_id, None, &IamRoleKind::App, funs, ctx).await?;
         let tenant_ctx = IamCertServ::use_sys_or_tenant_ctx_unsafe(ctx.clone())?;
         let tenant_app_roles = Self::find_detail_items(
             &IamRoleFilterReq {
@@ -981,5 +984,64 @@ impl IamRoleServ {
         )
         .await
         .map(|r| r.into_iter().map(|r| format!("{},{}", r.id, r.name)).collect())
+    }
+
+    pub async fn add_base_embed_role(add_req: &IamRoleAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let base_embed_role_id = Self::add_role_agg(
+            &mut IamRoleAggAddReq {
+                role: add_req.clone(),
+                res_ids: None,
+            },
+            funs,
+            ctx,
+        )
+        .await?;
+        if let Some(kind) = &add_req.kind {
+            let tenant_or_app_ids = match kind {
+                IamRoleKind::System => None,
+                IamRoleKind::Tenant => Some(
+                    IamTenantServ::find_detail_items(
+                        &IamTenantFilterReq {
+                            basic: RbumBasicFilterReq {
+                                with_sub_own_paths: true,
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        },
+                        None,
+                        None,
+                        funs,
+                        ctx,
+                    )
+                    .await?.into_iter().map(|tenant| (tenant.id, tenant.own_paths)).collect_vec()
+                ),
+                IamRoleKind::App => Some(
+                    IamAppServ::find_detail_items(
+                        &IamAppFilterReq {
+                            basic: RbumBasicFilterReq {
+                                with_sub_own_paths: true,
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        },
+                        None,
+                        None,
+                        funs,
+                        ctx,
+                    )
+                    .await?.into_iter().map(|app| (app.id, app.own_paths)).collect_vec()
+                ),
+            };
+            if let Some(tenant_or_app_ids) = tenant_or_app_ids {
+                for (tenant_or_app_id, own_paths) in tenant_or_app_ids {
+                    let tenant_or_app_ctx = TardisContext {
+                        own_paths,
+                        ..ctx.clone()
+                    };
+                    Self::copy_role_agg(&tenant_or_app_id, Some(vec![base_embed_role_id.clone()]), kind, funs, &tenant_or_app_ctx).await?;
+                }
+            }
+        }
+        Ok(())
     }
 }
