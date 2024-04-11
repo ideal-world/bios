@@ -307,7 +307,7 @@ impl IamCsRoleApi {
 
     /// add base embed role
     #[oai(path = "/add_base_embed_role", method = "post")]
-    async fn add_base_embed_role(&self, mut add_req: Json<IamRoleAddReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
+    async fn add_base_embed_role(&self, mut add_req: Json<IamRoleAddReq>, ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         add_req.0.in_embed = Some(true);

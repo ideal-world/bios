@@ -1,6 +1,7 @@
 use std::ops::Add;
 
 use async_trait::async_trait;
+use itertools::Itertools;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
@@ -999,7 +1000,7 @@ impl IamRoleServ {
             let tenant_or_app_ids = match kind {
                 IamRoleKind::System => None,
                 IamRoleKind::Tenant => Some(
-                    IamTenantServ::find_id_items(
+                    IamTenantServ::find_detail_items(
                         &IamTenantFilterReq {
                             basic: RbumBasicFilterReq {
                                 with_sub_own_paths: true,
@@ -1012,10 +1013,10 @@ impl IamRoleServ {
                         funs,
                         ctx,
                     )
-                    .await?,
+                    .await?.into_iter().map(|tenant| (tenant.id, tenant.own_paths)).collect_vec()
                 ),
                 IamRoleKind::App => Some(
-                    IamAppServ::find_id_items(
+                    IamAppServ::find_detail_items(
                         &IamAppFilterReq {
                             basic: RbumBasicFilterReq {
                                 with_sub_own_paths: true,
@@ -1028,12 +1029,16 @@ impl IamRoleServ {
                         funs,
                         ctx,
                     )
-                    .await?,
+                    .await?.into_iter().map(|app| (app.id, app.own_paths)).collect_vec()
                 ),
             };
             if let Some(tenant_or_app_ids) = tenant_or_app_ids {
-                for tenant_or_app_id in tenant_or_app_ids {
-                    Self::copy_role_agg(&tenant_or_app_id, Some(vec![base_embed_role_id.clone()]), kind, funs, ctx).await?;
+                for (tenant_or_app_id, own_paths) in tenant_or_app_ids {
+                    let tenant_or_app_ctx = TardisContext {
+                        own_paths,
+                        ..ctx.clone()
+                    };
+                    Self::copy_role_agg(&tenant_or_app_id, Some(vec![base_embed_role_id.clone()]), kind, funs, &tenant_or_app_ctx).await?;
                 }
             }
         }
