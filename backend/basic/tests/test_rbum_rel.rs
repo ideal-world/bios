@@ -228,7 +228,7 @@ async fn test_rbum_rel(context: &TardisContext) -> TardisResult<()> {
     assert_eq!(rbums.page_number, 1);
     assert_eq!(rbums.page_size, 10);
     assert_eq!(rbums.total_size, 1);
-    assert_eq!(rbums.records.get(0).unwrap().tag, "alloc");
+    assert_eq!(rbums.records.first().unwrap().tag, "alloc");
 
     info!("【test_rbum_rel】 : Test Delete : RbumRelServ::delete_rbum");
     RbumRelServ::delete_rbum(&id, &funs, context).await?;
@@ -651,9 +651,9 @@ async fn test_rbum_rel_attr(context: &TardisContext) -> TardisResult<()> {
     assert_eq!(rbums.page_number, 1);
     assert_eq!(rbums.page_size, 10);
     assert_eq!(rbums.total_size, 1);
-    assert!(rbums.records.get(0).unwrap().is_from);
-    assert_eq!(rbums.records.get(0).unwrap().value, "tidb");
-    assert_eq!(rbums.records.get(0).unwrap().name, "db_type");
+    assert!(rbums.records.first().unwrap().is_from);
+    assert_eq!(rbums.records.first().unwrap().value, "tidb");
+    assert_eq!(rbums.records.first().unwrap().name, "db_type");
 
     info!("【test_rbum_rel_attr】 : Test Delete : RbumRelAttrServ::delete_rbum");
     RbumRelAttrServ::delete_rbum(&id, &funs, context).await?;
@@ -833,9 +833,9 @@ async fn test_rbum_rel_env(context: &TardisContext) -> TardisResult<()> {
     assert_eq!(rbums.page_number, 1);
     assert_eq!(rbums.page_size, 10);
     assert_eq!(rbums.total_size, 1);
-    assert_eq!(rbums.records.get(0).unwrap().kind, RbumRelEnvKind::DatetimeRange);
-    assert_eq!(rbums.records.get(0).unwrap().value1, start_time);
-    assert_eq!(rbums.records.get(0).unwrap().value2, end_time);
+    assert_eq!(rbums.records.first().unwrap().kind, RbumRelEnvKind::DatetimeRange);
+    assert_eq!(rbums.records.first().unwrap().value1, start_time);
+    assert_eq!(rbums.records.first().unwrap().value2, end_time);
 
     info!("【test_rbum_rel_env】 : Test Delete : RbumRelEnvServ::delete_rbum");
     RbumRelEnvServ::delete_rbum(&id, &funs, context).await?;
@@ -1020,32 +1020,32 @@ async fn test_rbum_rel_use(context: &TardisContext) -> TardisResult<()> {
     assert_eq!(rbums.page_number, 1);
     assert_eq!(rbums.page_size, 10);
     assert_eq!(rbums.total_size, 1);
-    assert_eq!(rbums.records.get(0).unwrap().rel.tag, "bind");
-    assert_eq!(rbums.records.get(0).unwrap().rel.to_own_paths, context.own_paths.to_string());
-    assert_eq!(rbums.records.get(0).unwrap().rel.own_paths, context.own_paths.to_string());
-    assert_eq!(rbums.records.get(0).unwrap().attrs.len(), 1);
-    assert_eq!(rbums.records.get(0).unwrap().attrs.get(0).unwrap().value, "mysql");
-    assert_eq!(rbums.records.get(0).unwrap().attrs.get(0).unwrap().name, "db_type");
-    assert_eq!(rbums.records.get(0).unwrap().envs.len(), 1);
-    assert_eq!(rbums.records.get(0).unwrap().envs.get(0).unwrap().kind, RbumRelEnvKind::DatetimeRange);
-    assert_eq!(rbums.records.get(0).unwrap().envs.get(0).unwrap().value1, start_time);
-    assert_eq!(rbums.records.get(0).unwrap().envs.get(0).unwrap().value2, end_time);
+    assert_eq!(rbums.records.first().unwrap().rel.tag, "bind");
+    assert_eq!(rbums.records.first().unwrap().rel.to_own_paths, context.own_paths.to_string());
+    assert_eq!(rbums.records.first().unwrap().rel.own_paths, context.own_paths.to_string());
+    assert_eq!(rbums.records.first().unwrap().attrs.len(), 1);
+    assert_eq!(rbums.records.first().unwrap().attrs.first().unwrap().value, "mysql");
+    assert_eq!(rbums.records.first().unwrap().attrs.first().unwrap().name, "db_type");
+    assert_eq!(rbums.records.first().unwrap().envs.len(), 1);
+    assert_eq!(rbums.records.first().unwrap().envs.first().unwrap().kind, RbumRelEnvKind::DatetimeRange);
+    assert_eq!(rbums.records.first().unwrap().envs.first().unwrap().value1, start_time);
+    assert_eq!(rbums.records.first().unwrap().envs.first().unwrap().value2, end_time);
 
     info!("【test_rbum_rel_use】 : Test Find To Rels : RbumRelServ::find_to_rels");
     let rbums = RbumRelServ::paginate_to_rels("bind", item_account_a1_id.as_str(), 1, 10, None, None, &funs, context).await?;
     assert_eq!(rbums.page_number, 1);
     assert_eq!(rbums.page_size, 10);
     assert_eq!(rbums.total_size, 1);
-    assert_eq!(rbums.records.get(0).unwrap().rel.tag, "bind");
-    assert_eq!(rbums.records.get(0).unwrap().rel.to_own_paths, context.own_paths.to_string());
-    assert_eq!(rbums.records.get(0).unwrap().rel.own_paths, context.own_paths.as_str());
-    assert_eq!(rbums.records.get(0).unwrap().attrs.len(), 1);
-    assert_eq!(rbums.records.get(0).unwrap().attrs.get(0).unwrap().value, "mysql");
-    assert_eq!(rbums.records.get(0).unwrap().attrs.get(0).unwrap().name, "db_type");
-    assert_eq!(rbums.records.get(0).unwrap().envs.len(), 1);
-    assert_eq!(rbums.records.get(0).unwrap().envs.get(0).unwrap().kind, RbumRelEnvKind::DatetimeRange);
-    assert_eq!(rbums.records.get(0).unwrap().envs.get(0).unwrap().value1, start_time);
-    assert_eq!(rbums.records.get(0).unwrap().envs.get(0).unwrap().value2, end_time);
+    assert_eq!(rbums.records.first().unwrap().rel.tag, "bind");
+    assert_eq!(rbums.records.first().unwrap().rel.to_own_paths, context.own_paths.to_string());
+    assert_eq!(rbums.records.first().unwrap().rel.own_paths, context.own_paths.as_str());
+    assert_eq!(rbums.records.first().unwrap().attrs.len(), 1);
+    assert_eq!(rbums.records.first().unwrap().attrs.first().unwrap().value, "mysql");
+    assert_eq!(rbums.records.first().unwrap().attrs.first().unwrap().name, "db_type");
+    assert_eq!(rbums.records.first().unwrap().envs.len(), 1);
+    assert_eq!(rbums.records.first().unwrap().envs.first().unwrap().kind, RbumRelEnvKind::DatetimeRange);
+    assert_eq!(rbums.records.first().unwrap().envs.first().unwrap().value1, start_time);
+    assert_eq!(rbums.records.first().unwrap().envs.first().unwrap().value2, end_time);
 
     info!("【test_rbum_rel_use】 : Test Check Rel : RbumRelServ::check_rel");
     assert!(

@@ -1207,7 +1207,7 @@ impl RbumItemAttrServ {
                     )
                     .await?;
                 } else {
-                    Self::modify_rbum(exist_item_attr_ids.get(0).unwrap(), &mut RbumItemAttrModifyReq { value: column_val }, funs, ctx).await?;
+                    Self::modify_rbum(exist_item_attr_ids.first().unwrap(), &mut RbumItemAttrModifyReq { value: column_val }, funs, ctx).await?;
                 }
             }
         }
@@ -1256,7 +1256,7 @@ impl RbumItemAttrServ {
                     )
                     .await?;
                 } else {
-                    Self::modify_rbum(secret_item_attr_ids.get(0).unwrap(), &mut RbumItemAttrModifyReq { value: result }, funs, ctx).await?;
+                    Self::modify_rbum(secret_item_attr_ids.first().unwrap(), &mut RbumItemAttrModifyReq { value: result }, funs, ctx).await?;
                 }
             }
         }

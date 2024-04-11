@@ -1,11 +1,8 @@
-use tardis::basic::dto::TardisContext;
 use tardis::chrono::{self, Utc};
-use tardis::db::reldb_client::TardisActiveModel;
 use tardis::db::sea_orm;
 use tardis::db::sea_orm::prelude::*;
-use tardis::db::sea_orm::sea_query::{ColumnDef, IndexCreateStatement, Table, TableCreateStatement};
 use tardis::db::sea_orm::*;
-use tardis::{TardisCreateEntity, TardisCreateIndex, TardisEmptyBehavior, TardisEmptyRelation};
+use tardis::{TardisCreateEntity, TardisEmptyBehavior, TardisEmptyRelation};
 
 /// Resource extended attribute value model
 #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel, TardisCreateEntity, TardisEmptyBehavior, TardisEmptyRelation)]

@@ -169,7 +169,7 @@ async fn test_rbum_item(context: &TardisContext) -> TardisResult<()> {
     assert_eq!(rbums.page_number, 1);
     assert_eq!(rbums.page_size, 10);
     assert_eq!(rbums.total_size, 1);
-    assert_eq!(rbums.records.get(0).unwrap().name, "数据库实例1");
+    assert_eq!(rbums.records.first().unwrap().name, "数据库实例1");
 
     info!("【test_rbum_item】 : Test Delete : RbumItemServ::delete_rbum");
     RbumItemServ::delete_rbum(&id, &funs, context).await?;
@@ -336,7 +336,7 @@ async fn test_rbum_item_attr(context: &TardisContext) -> TardisResult<()> {
     assert_eq!(rbums.page_number, 1);
     assert_eq!(rbums.page_size, 10);
     assert_eq!(rbums.total_size, 1);
-    assert_eq!(rbums.records.get(0).unwrap().value, "数据3");
+    assert_eq!(rbums.records.first().unwrap().value, "数据3");
 
     info!("【test_rbum_item_attr】 : Test Delete : RbumItemAttrServ::delete_rbum");
     RbumItemAttrServ::delete_rbum(&item_attr_id, &funs, context).await?;
@@ -567,7 +567,7 @@ async fn test_rbum_item_attr_has_main_table(context: &TardisContext) -> TardisRe
     )
     .await?;
     assert_eq!(ext_values.len(), 1);
-    assert_eq!(ext_values.get(0).unwrap().value, "中国杭州");
+    assert_eq!(ext_values.first().unwrap().value, "中国杭州");
 
     let main_values = funs
         .db()
@@ -608,7 +608,7 @@ async fn test_rbum_item_attr_has_main_table(context: &TardisContext) -> TardisRe
     )
     .await?;
     assert_eq!(ext_values.len(), 1);
-    assert_eq!(ext_values.get(0).unwrap().value, "杭州");
+    assert_eq!(ext_values.first().unwrap().value, "杭州");
 
     let main_values = funs
         .db()

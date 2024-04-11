@@ -234,7 +234,7 @@ async fn test_rbum_cert_conf(context: &TardisContext) -> TardisResult<()> {
     assert_eq!(rbums.page_number, 1);
     assert_eq!(rbums.page_size, 10);
     assert_eq!(rbums.total_size, 1);
-    assert_eq!(rbums.records.get(0).unwrap().name, "用户名+密码");
+    assert_eq!(rbums.records.first().unwrap().name, "用户名+密码");
 
     info!("【test_rbum_cert_conf】 : Test Delete : RbumCertConfServ::delete_rbum");
     assert!(RbumCertConfServ::delete_rbum(&id, &funs, context).await.is_err());
