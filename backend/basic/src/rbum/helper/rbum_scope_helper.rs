@@ -256,7 +256,7 @@ pub fn check_without_owner_and_unsafe_fill_ctx(request: &tardis::web::poem::Requ
     use tardis::log::warn;
 
     if !ctx.owner.is_empty() {
-        warn!("[Auth.Check] ctx.owner is not empty, ctx: {:?}", ctx);
+        warn!("[Auth.Check] ctx.owner is not empty, ctx: {:?}", ctx.owner);
         // return Err(TardisError::forbidden("[Basic] Request context owner is not empty", "403-rbum-req-ctx-owner-is-not-empty"));
     }
     unsafe_fill_ctx(request, funs, ctx)
