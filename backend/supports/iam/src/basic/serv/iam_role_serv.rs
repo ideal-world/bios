@@ -1023,6 +1023,7 @@ impl IamRoleServ {
                         &IamAppFilterReq {
                             basic: RbumBasicFilterReq {
                                 with_sub_own_paths: true,
+                                enabled: Some(true),
                                 ..Default::default()
                             },
                             ..Default::default()

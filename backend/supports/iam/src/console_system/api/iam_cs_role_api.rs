@@ -19,6 +19,7 @@ use crate::iam_constants;
 use crate::iam_enumeration::IamRoleKind;
 use bios_basic::helper::request_helper::try_set_real_ip_from_req_to_ctx;
 use tardis::web::poem::Request;
+use tardis::{log, tokio};
 #[derive(Clone, Default)]
 pub struct IamCsRoleApi;
 
@@ -309,11 +310,19 @@ impl IamCsRoleApi {
     #[oai(path = "/add_base_embed_role", method = "post")]
     async fn add_base_embed_role(&self, mut add_req: Json<IamRoleAddReq>, ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
-        funs.begin().await?;
-        add_req.0.in_embed = Some(true);
-        IamRoleServ::add_base_embed_role(&add_req.0, &funs, &ctx.0).await?;
-        funs.commit().await?;
-        ctx.0.execute_task().await?;
+        tokio::spawn(async move {
+            funs.begin().await.unwrap();
+            add_req.0.in_embed = Some(true);
+            match IamRoleServ::add_base_embed_role(&add_req.0, &funs, &ctx.0).await {
+                Ok(_) => {
+                    log::trace!("[Iam.Cs] add log success")
+                }
+                Err(e) => {
+                    log::warn!("[Iam.Cs] failed to add log:{e}")
+                }
+            }
+            funs.commit().await.unwrap();
+        });
 
         TardisResp::ok(Void {})
     }
