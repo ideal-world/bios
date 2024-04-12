@@ -980,7 +980,10 @@ impl IamCertLdapServ {
                     WayToDelete::DeleteAccount => IamAccountServ::delete_item_with_all_rels(&cert.rel_rbum_id, &funs, ctx).await.map(|_| ()),
                 };
                 match delete_result {
-                    Ok(_) => success += 1,
+                    Ok(_) => {
+                        let _ = IamSearchClient::async_add_or_modify_account_search(&cert.rel_rbum_id, Box::new(true), "", &funs, &ctx).await;
+                        success += 1;
+                    }
                     Err(_) => {
                         failed += 1;
                     }
@@ -1165,7 +1168,7 @@ impl IamCertLdapServ {
             ctx,
         )
         .await?;
-        IamSearchClient::async_add_or_modify_account_search(account_id.clone(), Box::new(false), "".to_string(), funs, ctx).await?;
+        IamSearchClient::async_add_or_modify_account_search(&account_id, Box::new(false), "", funs, ctx).await?;
         Ok(account_id)
     }
 
