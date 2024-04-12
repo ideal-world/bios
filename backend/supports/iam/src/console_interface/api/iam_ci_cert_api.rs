@@ -18,6 +18,7 @@ use bios_basic::rbum::serv::rbum_cert_serv::RbumCertServ;
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::error::TardisError;
+use tardis::log::info;
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem::Request;
 use tardis::web::poem_openapi;
@@ -118,6 +119,7 @@ impl IamCiCertApi {
     ) -> TardisApiResult<RbumCertSummaryWithSkResp> {
         let funs = iam_constants::get_tardis_inst();
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
+        info!("tenant_id: {:?}, ctx.own_paths: {}", tenant_id.0, ctx.0.own_paths);
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0.clone())?;
         try_set_real_ip_from_req_to_ctx(request, &ctx).await?;
         let supplier = supplier.0.unwrap_or_default();
