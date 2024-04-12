@@ -11,9 +11,11 @@ use crate::serv::stats_metric_serv;
 pub struct StatsCiMetricApi;
 
 /// Interface Console Statistics Metric API
+/// 统计指标接口
 #[poem_openapi::OpenApi(prefix_path = "/ci/metric", tag = "bios_basic::ApiTag::Interface")]
 impl StatsCiMetricApi {
     /// Query Metrics
+    /// 查询指标
     #[oai(path = "/", method = "put")]
     async fn query_metrics(&self, query_req: Json<StatsQueryMetricsReq>, ctx: TardisContextExtractor) -> TardisApiResult<StatsQueryMetricsResp> {
         let funs = crate::get_tardis_inst();

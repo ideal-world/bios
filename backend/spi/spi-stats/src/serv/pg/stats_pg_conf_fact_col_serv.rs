@@ -253,16 +253,18 @@ pub(crate) async fn delete(
     Ok(())
 }
 
-pub(in crate::serv::pg) async fn find_by_fact_conf_key(
+pub(crate) async fn find_by_fact_conf_key(
     fact_conf_key: &str,
-    conn: &TardisRelDBlConnection,
+    _funs: &TardisFunsInst,
     ctx: &TardisContext,
-    _inst: &SpiBsInst,
+    inst: &SpiBsInst,
 ) -> TardisResult<Vec<StatsConfFactColInfoResp>> {
-    if !common_pg::check_table_exit("stats_conf_fact_col", conn, ctx).await? {
+    let bs_inst = inst.inst::<TardisRelDBClient>();
+    let (conn, _) = stats_pg_initializer::init_conf_fact_col_table_and_conn(bs_inst, ctx, true).await?;
+    if !common_pg::check_table_exit("stats_conf_fact_col", &conn, ctx).await? {
         return Ok(vec![]);
     }
-    do_paginate(Some(fact_conf_key.to_string()), None, None, None, None, 1, u32::MAX, None, None, conn, ctx).await.map(|page| page.records)
+    do_paginate(Some(fact_conf_key.to_string()), None, None, None, None, 1, u32::MAX, None, None, &conn, ctx).await.map(|page| page.records)
 }
 
 pub(crate) async fn paginate(

@@ -318,7 +318,7 @@ pub(crate) async fn create_inst(fact_conf_key: &str, funs: &TardisFunsInst, ctx:
     let fact_conf = get(fact_conf_key, &conn, ctx)
         .await?
         .ok_or_else(|| funs.err().not_found("fact_conf", "create_inst", "The fact config does not exist.", "404-spi-stats-fact-conf-not-exist"))?;
-    let fact_col_conf = stats_pg_conf_fact_col_serv::find_by_fact_conf_key(&fact_conf.key, &conn, ctx, inst).await?;
+    let fact_col_conf = stats_pg_conf_fact_col_serv::find_by_fact_conf_key(&fact_conf.key, funs, ctx, inst).await?;
     if fact_col_conf.is_empty() {
         return Err(funs.err().not_found(
             "fact_col_conf",

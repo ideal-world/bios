@@ -135,7 +135,7 @@ pub(crate) async fn fact_record_load(
         return Err(funs.err().conflict("fact_record", "load", "The fact config not online.", "409-spi-stats-fact-conf-not-online"));
     }
 
-    let fact_col_conf_set = stats_pg_conf_fact_col_serv::find_by_fact_conf_key(fact_conf_key, &conn, ctx, inst).await?;
+    let fact_col_conf_set = stats_pg_conf_fact_col_serv::find_by_fact_conf_key(fact_conf_key, funs, ctx, inst).await?;
 
     let mut fields = vec!["key".to_string(), "own_paths".to_string(), "ct".to_string()];
     let mut values = vec![Value::from(fact_record_key), Value::from(add_req.own_paths), Value::from(add_req.ct)];
@@ -174,7 +174,7 @@ pub(crate) async fn fact_record_load(
                     "fact_record",
                     "load",
                     &format!("Fail to get dim_conf by key [{key}]"),
-                    "400-spi-stats-fail-to-get-dim-config-key",
+                    "400-spi˚-stats-fail-to-get-dim-config-key",
                 ));
             };
             // TODO check value enum when stable_ds =true
@@ -287,7 +287,7 @@ pub(crate) async fn fact_records_load(
         return Err(funs.err().conflict("fact_record", "load_set", "The fact config not online.", "409-spi-stats-fact-conf-not-online"));
     }
 
-    let fact_col_conf_set = stats_pg_conf_fact_col_serv::find_by_fact_conf_key(fact_conf_key, &conn, ctx, inst).await?;
+    let fact_col_conf_set = stats_pg_conf_fact_col_serv::find_by_fact_conf_key(fact_conf_key, funs, ctx, inst).await?;
 
     let mut has_fields_init = false;
     let mut fields = vec!["key".to_string(), "own_paths".to_string(), "ext".to_string(), "ct".to_string()];
@@ -514,7 +514,7 @@ async fn find_fact_record_key(
     let dim_conf = stats_pg_conf_dim_serv::get(&dim_conf_key, conn, ctx, inst)
         .await?
         .ok_or_else(|| funs.err().not_found("fact_record", "find", "The dimension config does not exist.", "404-spi-stats-dim-conf-not-exist"))?;
-    let fact_conf_col_key = stats_pg_conf_fact_col_serv::find_by_fact_conf_key(&fact_conf_key, conn, ctx, inst)
+    let fact_conf_col_key = stats_pg_conf_fact_col_serv::find_by_fact_conf_key(&fact_conf_key, funs, ctx, inst)
         .await?
         .into_iter()
         .find_or_first(|r| r.dim_rel_conf_dim_key.clone().unwrap_or("".to_string()) == dim_conf_key)
