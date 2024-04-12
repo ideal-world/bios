@@ -23,9 +23,9 @@ use tardis::TardisCreateIndex;
 #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel, TardisCreateIndex)]
 #[sea_orm(table_name = "rbum_cert_conf")]
 pub struct Model {
-    /// Certificate configuration ID
+    /// Certificate configuration id
     ///
-    /// 凭证配置ID
+    /// 凭证配置id
     #[sea_orm(primary_key, auto_increment = false)]
     pub id: String,
     /// Certificate configuration type
@@ -207,7 +207,7 @@ pub struct Model {
     ///
     /// 凭证配置的状态
     ///
-    /// see[`crate::rbum::rbum_enumeration::RbumCertConfStatusKind`]
+    /// see [`crate::rbum::rbum_enumeration::RbumCertConfStatusKind`]
     pub status: i16,
     /// Associated [resource domain](crate::rbum::domain::rbum_domain::Model) id
     ///
