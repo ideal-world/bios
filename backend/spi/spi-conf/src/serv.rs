@@ -174,7 +174,7 @@ pub async fn register(req: RegisterRequest, funs: &TardisFunsInst, ctx: &TardisC
         supplier: Some(ctx.owner.clone()),
         ak: ak.to_owned().into(),
         sk: Some(sk.to_owned().into()),
-        is_ignore_check_sk: false,
+        ignore_check_sk: false,
         vcode: None,
         ext: Some(ext),
         start_time: None,

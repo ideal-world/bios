@@ -15,11 +15,11 @@ use tardis::TardisCreateIndex;
 /// This model is an instantiation model of [`crate::rbum::domain::rbum_cert_conf::Model`].
 ///
 /// 此模型是[`crate::rbum::domain::rbum_cert_conf::Model`]的实例化模型。
-/// 
-/// NOTE: If you do not need to perform unified verification processing on the credentials, 
-/// you can use this model directly without associating the credential configuration. 
+///
+/// NOTE: If you do not need to perform unified verification processing on the credentials,
+/// you can use this model directly without associating the credential configuration.
 /// For example, data connection credentials, depending on business requirements, may not require credential configuration.
-/// 
+///
 /// NOTE: 如果不需要对凭证作统一的校验处理，可以直接使用此模型，不用关联凭证配置。比如数据连接凭证，视业务需求也可以不需要凭证配置。
 #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel, TardisCreateIndex)]
 #[sea_orm(table_name = "rbum_cert")]
@@ -29,22 +29,6 @@ pub struct Model {
     /// 凭证id
     #[sea_orm(primary_key, auto_increment = false)]
     pub id: String,
-    /// Certificate type
-    ///
-    /// 凭证类型
-    /// 
-    /// Different from [`crate::rbum::domain::rbum_cert_conf::Model::kind`], when this data exists, it indicates that the certificate does not need to be associated with the certificate configuration.
-    ///
-    /// 与 [`crate::rbum::domain::rbum_cert_conf::Model::kind`] 不同，当存在此数据时表明该凭证不用关联凭证配置。
-    pub kind: String,
-    /// Certificate supplier
-    ///
-    /// 凭证供应商
-    /// 
-    /// Different from [`crate::rbum::domain::rbum_cert_conf::Model::supplier`], when this data exists, it indicates that the certificate does not need to be associated with the certificate configuration.
-    ///
-    /// 与 [`crate::rbum::domain::rbum_cert_conf::Model::supplier`] 不同，当存在此数据时表明该凭证不用关联凭证配置。
-    pub supplier: String,
     /// Certification access key
     ///
     /// 凭证名
@@ -65,6 +49,22 @@ pub struct Model {
     ///
     /// 在一些安全性要求较高的场景下，可以选择隐藏密钥，如：显示为“******”。
     pub sk_invisible: bool,
+    /// Certificate type
+    ///
+    /// 凭证类型
+    ///
+    /// Different from [`crate::rbum::domain::rbum_cert_conf::Model::kind`], when this data exists, it indicates that the certificate does not need to be associated with the certificate configuration.
+    ///
+    /// 与 [`crate::rbum::domain::rbum_cert_conf::Model::kind`] 不同，当存在此数据时表明该凭证不用关联凭证配置。
+    pub kind: String,
+    /// Certificate supplier
+    ///
+    /// 凭证供应商
+    ///
+    /// Different from [`crate::rbum::domain::rbum_cert_conf::Model::supplier`], when this data exists, it indicates that the certificate does not need to be associated with the certificate configuration.
+    ///
+    /// 与 [`crate::rbum::domain::rbum_cert_conf::Model::supplier`] 不同，当存在此数据时表明该凭证不用关联凭证配置。
+    pub supplier: String,
     /// Certificate extension information
     ///
     /// 凭证扩展信息

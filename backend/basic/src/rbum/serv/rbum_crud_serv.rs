@@ -181,11 +181,11 @@ where
 
     // ----------------------------- Add -------------------------------
 
-    async fn package_add(add_req: &AddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<E>;
-
     async fn before_add_rbum(_: &mut AddReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<()> {
         Ok(())
     }
+
+    async fn package_add(add_req: &AddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<E>;
 
     async fn after_add_rbum(_: &str, _: &AddReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<()> {
         Ok(())
@@ -223,11 +223,11 @@ where
 
     // ----------------------------- Modify -------------------------------
 
-    async fn package_modify(id: &str, modify_req: &ModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<E>;
-
     async fn before_modify_rbum(id: &str, _: &mut ModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         Self::check_ownership(id, funs, ctx).await
     }
+
+    async fn package_modify(id: &str, modify_req: &ModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<E>;
 
     async fn after_modify_rbum(_: &str, _: &mut ModifyReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<()> {
         Ok(())
@@ -245,14 +245,15 @@ where
 
     // ----------------------------- Delete -------------------------------
 
-    async fn package_delete(id: &str, _funs: &TardisFunsInst, _ctx: &TardisContext) -> TardisResult<Select<E::Entity>> {
-        Ok(E::Entity::find().filter(Expr::col(ID_FIELD.clone()).eq(id)))
-    }
-
     async fn before_delete_rbum(id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<DetailResp>> {
         Self::check_ownership(id, funs, ctx).await?;
         Ok(None)
     }
+
+    async fn package_delete(id: &str, _funs: &TardisFunsInst, _ctx: &TardisContext) -> TardisResult<Select<E::Entity>> {
+        Ok(E::Entity::find().filter(Expr::col(ID_FIELD.clone()).eq(id)))
+    }
+
 
     async fn after_delete_rbum(_: &str, _: &Option<DetailResp>, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<()> {
         Ok(())

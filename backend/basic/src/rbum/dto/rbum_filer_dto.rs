@@ -52,7 +52,7 @@ pub struct RbumCertFilterReq {
     /// ak like "ak%"
     pub ak_like: Option<String>,
     pub kind: Option<String>,
-    pub supplier: Option<Vec<String>>,
+    pub suppliers: Option<Vec<String>>,
     pub status: Option<RbumCertStatusKind>,
     pub rel: Option<RbumItemRelFilterReq>,
     pub rel_rbum_kind: Option<RbumCertRelKind>,
