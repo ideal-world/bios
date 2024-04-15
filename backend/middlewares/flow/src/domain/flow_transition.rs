@@ -109,7 +109,7 @@ pub struct Model {
 
     pub sort: i64,
 
-    #[fill_ctx(own_paths)]
+    #[fill_ctx(fill = "own_paths")]
     pub own_paths: String,
 
     /// Creation time / 创建时间
