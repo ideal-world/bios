@@ -36,7 +36,7 @@ impl IamCpAccountApi {
         funs.begin().await?;
         let ctx: tardis::basic::dto::TardisContext = IamCertServ::use_sys_or_tenant_ctx_unsafe(ctx.0)?;
         IamAccountServ::self_modify_account(&mut modify_req.0, &funs, &ctx).await?;
-        IamSearchClient::async_add_or_modify_account_search(ctx.clone().owner, Box::new(true), "".to_string(), &funs, &ctx).await?;
+        IamSearchClient::async_add_or_modify_account_search(&ctx.owner, Box::new(true), "", &funs, &ctx).await?;
         funs.commit().await?;
         ctx.execute_task().await?;
         if let Some(notify_events) = rbum_event_helper::get_notify_event_with_ctx(&ctx).await? {

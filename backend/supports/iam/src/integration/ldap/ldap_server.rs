@@ -49,7 +49,6 @@
 //!   -v /opt/volumes/gitlab/var/opt/gitlab:/var/opt/gitlab \
 //!   -dit gitlab/gitlab-ce
 //!
-use std::convert::TryFrom;
 use std::net;
 use std::str::FromStr;
 use std::sync::Arc;

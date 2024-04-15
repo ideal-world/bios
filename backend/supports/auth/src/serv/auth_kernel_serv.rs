@@ -481,7 +481,7 @@ pub async fn do_auth(ctx: &AuthContext) -> TardisResult<Option<ResContainerLeafI
     } else {
         return Ok(Some(matched_res));
     }
-    // }
+
     if ctx.ak.is_some() {
         //have token,not not have permission
         Err(TardisError::forbidden("[Auth] Permission denied", "403-auth-req-permission-denied"))
