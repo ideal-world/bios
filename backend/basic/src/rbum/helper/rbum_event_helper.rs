@@ -8,6 +8,7 @@ use tardis::basic::result::TardisResult;
 use tardis::chrono::Utc;
 use tardis::{TardisFuns, TardisFunsInst};
 
+#[cfg(feature = "with-mq")]
 use crate::rbum::rbum_config::RbumConfigApi;
 
 const NOTIFY_EVENT_IN_CTX_FLAG: &str = "notify";

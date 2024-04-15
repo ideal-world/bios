@@ -23,6 +23,7 @@ use crate::rbum::dto::rbum_item_dto::{RbumItemAddReq, RbumItemDetailResp, RbumIt
 use crate::rbum::dto::rbum_kind_attr_dto::RbumKindAttrSummaryResp;
 use crate::rbum::dto::rbum_rel_dto::{RbumRelAddReq, RbumRelFindReq};
 use crate::rbum::helper::rbum_event_helper;
+#[cfg(feature = "with-mq")]
 use crate::rbum::rbum_config::RbumConfigApi;
 use crate::rbum::rbum_enumeration::{RbumCertRelKind, RbumRelFromKind, RbumScopeLevelKind};
 use crate::rbum::serv::rbum_cert_serv::{RbumCertConfServ, RbumCertServ};
