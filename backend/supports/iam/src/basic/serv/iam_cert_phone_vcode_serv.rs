@@ -217,7 +217,9 @@ impl IamCertPhoneVCodeServ {
 
     pub async fn resend_activation_phone(account_id: &str, phone: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let vcode = Self::get_vcode();
-        RbumCertServ::add_vcode_to_cache(phone, &vcode, &ctx.own_paths, funs).await?;
+        let rel_rbum_cert_conf_id =
+            IamCertServ::get_cert_conf_id_by_kind(IamCertKernelKind::PhoneVCode.to_string().as_str(), Some(IamTenantServ::get_id_by_ctx(&ctx, funs)?), funs).await?;
+        RbumCertServ::add_vcode_to_cache(phone, &vcode, &ctx.own_paths, &rel_rbum_cert_conf_id, funs, &ctx).await?;
         Self::send_activation_phone(account_id, phone, &vcode, funs, ctx).await
     }
 
@@ -282,11 +284,11 @@ impl IamCertPhoneVCodeServ {
 
     pub async fn send_bind_phone(phone: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let ctx = IamAccountServ::new_context_if_account_is_global(ctx, funs).await?;
-        // let rel_rbum_cert_conf_id =
-        //     IamCertServ::get_cert_conf_id_by_kind(IamCertKernelKind::PhoneVCode.to_string().as_str(), Some(IamTenantServ::get_id_by_ctx(&ctx, funs)?), funs).await?;
+        let rel_rbum_cert_conf_id =
+            IamCertServ::get_cert_conf_id_by_kind(IamCertKernelKind::PhoneVCode.to_string().as_str(), Some(IamTenantServ::get_id_by_ctx(&ctx, funs)?), funs).await?;
         // Self::check_bind_phone(phone, vec![rel_rbum_cert_conf_id], &ctx.owner.clone(), funs, &ctx).await?;
         let vcode = Self::get_vcode();
-        RbumCertServ::add_vcode_to_cache(phone, &vcode, &ctx.own_paths, funs).await?;
+        RbumCertServ::add_vcode_to_cache(phone, &vcode, &ctx.own_paths, &rel_rbum_cert_conf_id, funs, &ctx).await?;
         SmsClient::send_vcode(phone, &vcode, funs, &ctx).await
     }
 
@@ -442,7 +444,7 @@ impl IamCertPhoneVCodeServ {
             > 0
         {
             let vcode = Self::get_vcode();
-            RbumCertServ::add_vcode_to_cache(phone, &vcode, &own_paths, funs).await?;
+            RbumCertServ::add_vcode_to_cache(phone, &vcode, &own_paths, &tenant_rbum_cert_conf_id, funs, &ctx).await?;
             return SmsClient::send_vcode(phone, &vcode, funs, &mock_ctx).await;
         }
 
@@ -465,7 +467,18 @@ impl IamCertPhoneVCodeServ {
             > 0
         {
             let vcode = Self::get_vcode();
-            RbumCertServ::add_vcode_to_cache(phone, &vcode, "", funs).await?;
+            RbumCertServ::add_vcode_to_cache(
+                phone,
+                &vcode,
+                "",
+                &global_rbum_cert_conf_id,
+                funs,
+                &TardisContext {
+                    own_paths: "".to_string(),
+                    ..Default::default()
+                },
+            )
+            .await?;
             return SmsClient::send_vcode(phone, &vcode, funs, &mock_ctx).await;
         }
         return Err(funs.err().not_found("iam_cert_phone_vcode", "send", "phone not find", "404-iam-cert-phone-not-exist"));

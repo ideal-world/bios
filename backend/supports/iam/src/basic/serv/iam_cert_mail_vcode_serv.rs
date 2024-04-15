@@ -193,7 +193,9 @@ impl IamCertMailVCodeServ {
 
     pub async fn resend_activation_mail(account_id: &str, mail: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let vcode = Self::get_vcode();
-        RbumCertServ::add_vcode_to_cache(mail, &vcode, &ctx.own_paths, funs).await?;
+        let rel_rbum_cert_conf_id =
+            IamCertServ::get_cert_conf_id_by_kind(IamCertKernelKind::MailVCode.to_string().as_str(), Some(IamTenantServ::get_id_by_ctx(&ctx, funs)?), funs).await?;
+        RbumCertServ::add_vcode_to_cache(mail, &vcode, &ctx.own_paths, &rel_rbum_cert_conf_id, funs, &ctx).await?;
         Self::send_activation_mail(account_id, mail, &vcode, funs, ctx).await
     }
 
@@ -256,12 +258,12 @@ impl IamCertMailVCodeServ {
 
     pub async fn send_bind_mail(mail: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let ctx = IamAccountServ::new_context_if_account_is_global(ctx, funs).await?;
-        // let rel_rbum_cert_conf_id =
-        //     IamCertServ::get_cert_conf_id_by_kind(IamCertKernelKind::MailVCode.to_string().as_str(), Some(IamTenantServ::get_id_by_ctx(&ctx, funs)?), funs).await?;
+        let rel_rbum_cert_conf_id =
+            IamCertServ::get_cert_conf_id_by_kind(IamCertKernelKind::MailVCode.to_string().as_str(), Some(IamTenantServ::get_id_by_ctx(&ctx, funs)?), funs).await?;
         // Self::check_bind_mail(mail, vec![rel_rbum_cert_conf_id], &ctx.owner, funs, &ctx).await?;
         let vcode = Self::get_vcode();
         let account_name = IamAccountServ::peek_item(&ctx.owner, &IamAccountFilterReq::default(), funs, &ctx).await?.name;
-        RbumCertServ::add_vcode_to_cache(mail, &vcode, &ctx.own_paths, funs).await?;
+        RbumCertServ::add_vcode_to_cache(mail, &vcode, &ctx.own_paths, &rel_rbum_cert_conf_id, funs, &ctx).await?;
         MailClient::send_cert_activate_vcode(mail, Some(account_name), &vcode, funs).await?;
         Ok(())
     }
@@ -419,7 +421,7 @@ impl IamCertMailVCodeServ {
             > 0
         {
             let vcode = Self::get_vcode();
-            RbumCertServ::add_vcode_to_cache(mail, &vcode, &own_paths, funs).await?;
+            RbumCertServ::add_vcode_to_cache(mail, &vcode, &own_paths, &tenant_rbum_cert_conf_id, funs, &ctx).await?;
             MailClient::send_vcode(mail, None, &vcode, funs).await?;
             return Ok(());
         }
@@ -442,7 +444,18 @@ impl IamCertMailVCodeServ {
             > 0
         {
             let vcode = Self::get_vcode();
-            RbumCertServ::add_vcode_to_cache(mail, &vcode, "", funs).await?;
+            RbumCertServ::add_vcode_to_cache(
+                mail,
+                &vcode,
+                "",
+                &global_rbum_cert_conf_id,
+                funs,
+                &TardisContext {
+                    own_paths: "".to_string(),
+                    ..Default::default()
+                },
+            )
+            .await?;
             MailClient::send_vcode(mail, None, &vcode, funs).await?;
             return Ok(());
         }

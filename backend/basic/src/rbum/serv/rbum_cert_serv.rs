@@ -714,13 +714,14 @@ impl RbumCertServ {
     ///
     ///
     /// 添加动态sk（验证码）到缓存
-    pub async fn add_vcode_to_cache(ak: &str, vcode: &str, own_paths: &str, funs: &TardisFunsInst) -> TardisResult<()> {
+    pub async fn add_vcode_to_cache(ak: &str, vcode: &str, own_paths: &str, cert_conf_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let rbum_cert_conf = RbumCertConfServ::peek_rbum(cert_conf_id, &RbumCertConfFilterReq::default(), funs, ctx).await?;
+
         funs.cache()
             .set_ex(
                 format!("{}{}:{}", funs.rbum_conf_cache_key_cert_vcode_info_(), own_paths, ak).as_str(),
                 vcode.to_string().as_str(),
-                // TODO 可否使用 expire_sec？
-                funs.rbum_conf_cache_key_cert_vcode_expire_sec() as u64,
+                rbum_cert_conf.expire_sec as u64,
             )
             .await?;
         Ok(())
