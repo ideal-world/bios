@@ -19,7 +19,7 @@ pub async fn presign_obj_url(
     inst: &SpiBsInst,
 ) -> TardisResult<String> {
     let bs_inst = inst.inst::<TardisOSClient>();
-    let spi_bs = SpiBsServ::get_bs_by_rel(&ctx.owner, None, funs, ctx).await?;
+    let spi_bs = SpiBsServ::get_bs_by_rel(&ctx.ak, None, funs, ctx).await?;
     let client = bs_inst.0;
     let bucket_name = common::get_isolation_flag_from_ext(bs_inst.1).map(|bucket_name_prefix| format!("{}-{}", bucket_name_prefix, if private { "pri" } else { "pub" }));
     match presign_kind {
