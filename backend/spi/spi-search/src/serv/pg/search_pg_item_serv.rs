@@ -82,7 +82,7 @@ pub async fn add(add_req: &mut SearchItemAddReq, funs: &TardisFunsInst, ctx: &Ta
     conn.execute_one(
         &format!(
             r#"INSERT INTO {table_name} 
-    (kind, key, title, title_tsv,content, content_tsv, owner, own_paths, create_time, update_time, ext, visit_keys)
+    (kind, key, title, title_tsv, content, content_tsv, owner, own_paths, create_time, update_time, ext, visit_keys)
 VALUES
     ($1, $2, $3, to_tsvector('{word_combinations_way}', $4), $5, to_tsvector('public.chinese_zh', $6), $7, $8, $9, $10, $11, {})"#,
             if add_req.visit_keys.is_some() { "$12" } else { "null" },
@@ -622,7 +622,7 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
                             return err_not_found(ext_item);
                         }
                         let Some(value) = value.pop() else {
-                            return Err(funs.err().bad_request("item", "search", "Request item using 'IN' operator show hava a value", "400-spi-item-op-in-without-value"));
+                            return Err(funs.err().bad_request("item", "search", "Request item using 'IN' operator show have a value", "400-spi-item-op-in-without-value"));
                         };
                         if let Value::Bool(_) = value {
                             sql_and_where.push(format!("({}::boolean) {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));

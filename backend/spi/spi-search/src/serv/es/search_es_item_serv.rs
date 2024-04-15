@@ -153,10 +153,7 @@ pub async fn modify(tag: &str, key: &str, modify_req: &mut SearchItemModifyReq, 
         adv_query: None,
     })?;
     let mut search_result = client.raw_search(&index, &q, Some(1), Some(0), None).await?;
-    if search_result.hits.hits.is_empty() {
-        return Err(funs.err().conflict("search_es_item_serv", "modify", "not found record", "404-not-found-record"));
-    }
-    let id = search_result.hits.hits.pop().unwrap()._id.clone();
+    let id = search_result.hits.hits.pop().ok_or_else(|| funs.err().conflict("search_es_item_serv", "modify", "not found record", "404-not-found-record"))?._id.clone();
     let mut query = HashMap::new();
     if let Some(kind) = &modify_req.kind {
         query.insert("kind".to_string(), json!(kind.clone()).to_string());
