@@ -112,7 +112,7 @@ pub mod common {
     /// 获取上下文的``owner``作为隔离标识
     pub fn get_isolation_flag_from_context(ctx: &TardisContext) -> String {
         // Fix case insensitivity
-        format!("spi{}", TardisFuns::crypto.hex.encode(&ctx.owner))
+        format!("spi{}", TardisFuns::crypto.hex.encode(&ctx.ak))
     }
 
     /// Set the isolation flag to the extension
