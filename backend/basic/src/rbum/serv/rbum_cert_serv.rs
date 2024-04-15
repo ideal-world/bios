@@ -209,72 +209,6 @@ impl RbumCrudOperation<rbum_cert_conf::ActiveModel, RbumCertConfAddReq, RbumCert
         Ok(rbum_cert_conf)
     }
 
-    // TODO
-    // #[deprecated]
-    async fn after_modify_rbum(id: &str, _: &mut RbumCertConfModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        let rbum_cert_conf = Self::get_rbum(id, &RbumCertConfFilterReq::default(), funs, ctx).await?;
-        let key = &format!(
-            "{}{}",
-            funs.rbum_conf_cache_key_cert_code_(),
-            TardisFuns::crypto.base64.encode(format!(
-                "{}{}{}",
-                &rbum_cert_conf.kind, &rbum_cert_conf.rel_rbum_domain_id, &rbum_cert_conf.rel_rbum_item_id
-            ))
-        );
-        funs.cache()
-            .set_ex(
-                key,
-                &TardisFuns::json.obj_to_string(&RbumCertConfIdAndExtResp {
-                    id: rbum_cert_conf.id.clone(),
-                    ext: rbum_cert_conf.ext.clone(),
-                })?,
-                funs.rbum_conf_cache_key_cert_code_expire_sec() as u64,
-            )
-            .await?;
-        Ok(())
-    }
-
-    async fn before_delete_rbum(id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<RbumCertConfDetailResp>> {
-        if funs
-            .db()
-            .count(
-                Query::select()
-                    .column(rbum_cert_conf::Column::Id)
-                    .from(rbum_cert_conf::Entity)
-                    .and_where(Expr::col(rbum_cert_conf::Column::Id).eq(id))
-                    .and_where(Expr::col(rbum_cert_conf::Column::IsBasic).eq(true)),
-            )
-            .await?
-            > 0
-        {
-            return Err(funs.err().conflict(&Self::get_obj_name(), "delete", "is_basic is true", "409-rbum-cert-conf-basic-delete"));
-        }
-        Self::check_ownership(id, funs, ctx).await?;
-        Self::check_exist_before_delete(id, RbumCertServ::get_table_name(), rbum_cert::Column::RelRbumCertConfId.as_str(), funs).await?;
-        // TODO
-        // #[deprecated]
-        let result = Self::peek_rbum(
-            id,
-            &RbumCertConfFilterReq {
-                basic: RbumBasicFilterReq {
-                    with_sub_own_paths: true,
-                    ..Default::default()
-                },
-                ..Default::default()
-            },
-            funs,
-            ctx,
-        )
-        .await?;
-        let key = &format!(
-            "{}{}",
-            funs.rbum_conf_cache_key_cert_code_(),
-            TardisFuns::crypto.base64.encode(format!("{}{}{}", &result.kind, &result.rel_rbum_domain_id, &result.rel_rbum_item_id))
-        );
-        funs.cache().del(key).await?;
-        Ok(None)
-    }
-
     async fn package_query(is_detail: bool, filter: &RbumCertConfFilterReq, _: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<SelectStatement> {
         let mut query = Query::select();
         query
@@ -343,7 +277,6 @@ impl RbumCrudOperation<rbum_cert_conf::ActiveModel, RbumCertConfAddReq, RbumCert
 }
 
 impl RbumCertConfServ {
-    #[deprecated]
     pub async fn get_rbum_cert_conf_id_and_ext_by_kind_supplier(
         kind: &str,
         supplier: &str,
@@ -363,25 +296,10 @@ impl RbumCertConfServ {
         if !ignore_status {
             conf_info_stat.and_where(Expr::col(rbum_cert_conf::Column::Status).eq(RbumCertConfStatusKind::Enabled.to_int()));
         }
-        //Ldap can be no supplier
-        if kind != "Ldap" || !supplier.is_empty() {
+        if !supplier.is_empty() {
             conf_info_stat.and_where(Expr::col(rbum_cert_conf::Column::Supplier).eq(supplier));
         }
-        let key = &format!(
-            "{}{}",
-            funs.rbum_conf_cache_key_cert_code_(),
-            TardisFuns::crypto.base64.encode(format!("{kind}{supplier}{rbum_domain_id}{rbum_item_id}"))
-        );
-        if let Some(cached_info) = funs.cache().get(key).await? {
-            Ok(Some(TardisFuns::json.str_to_obj(&cached_info)?))
-        } else if let Some(rbum_cert_conf_id_and_ext) = funs.db().get_dto::<RbumCertConfIdAndExtResp>(&conf_info_stat).await? {
-            funs.cache()
-                .set_ex(
-                    key,
-                    &TardisFuns::json.obj_to_string(&rbum_cert_conf_id_and_ext)?,
-                    funs.rbum_conf_cache_key_cert_code_expire_sec() as u64,
-                )
-                .await?;
+        if let Some(rbum_cert_conf_id_and_ext) = funs.db().get_dto::<RbumCertConfIdAndExtResp>(&conf_info_stat).await? {
             Ok(Some(rbum_cert_conf_id_and_ext))
         } else {
             Ok(None)
@@ -828,7 +746,7 @@ impl RbumCertServ {
     }
 
     /// Check whether the certificate is exist
-    /// 
+    ///
     /// 检查凭证是否存在
     pub async fn check_exist(ak: &str, rbum_cert_conf_id: &str, own_paths: &str, funs: &TardisFunsInst) -> TardisResult<bool> {
         let mut query = Query::select();
