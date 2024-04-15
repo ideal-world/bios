@@ -64,7 +64,7 @@ impl IamCcAccountTaskServ {
                     if num % 100 == 0 {
                         tardis::tokio::time::sleep(std::time::Duration::from_secs(1)).await;
                     }
-                    IamSearchClient::async_add_or_modify_account_search(id, Box::new(true), "".to_string(), &funs, &task_ctx).await?;
+                    IamSearchClient::async_add_or_modify_account_search(&id, Box::new(true), "", &funs, &task_ctx).await?;
                     task_ctx.execute_task().await?;
                 }
                 Ok(())
@@ -134,7 +134,7 @@ impl IamCcAccountTaskServ {
                         bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind::L2 => {}
                         bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind::L3 => {}
                     }
-                    IamSearchClient::async_add_or_modify_account_search(id, Box::new(true), "".to_string(), &funs, &task_ctx).await?;
+                    IamSearchClient::async_add_or_modify_account_search(&id, Box::new(true), "", &funs, &task_ctx).await?;
                 }
                 funs.commit().await?;
                 task_ctx.execute_task().await?;

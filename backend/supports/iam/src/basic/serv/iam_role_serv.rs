@@ -630,7 +630,7 @@ impl IamRoleServ {
                 IamRelServ::add_simple_rel(&IamRelKind::IamAccountRole, account_id, role_id, None, None, true, false, funs, ctx).await?;
             }
         }
-        IamSearchClient::async_add_or_modify_account_search(account_id.to_string(), Box::new(true), "".to_string(), funs, ctx).await?;
+        IamSearchClient::async_add_or_modify_account_search(account_id, Box::new(true), "", funs, ctx).await?;
         Ok(())
     }
 
@@ -671,7 +671,7 @@ impl IamRoleServ {
                 IamRelServ::delete_simple_rel(&IamRelKind::IamAccountRole, account_id, role_id, funs, ctx).await?;
             }
         }
-        IamSearchClient::async_add_or_modify_account_search(account_id.to_string(), Box::new(true), "".to_string(), funs, ctx).await?;
+        IamSearchClient::async_add_or_modify_account_search(account_id, Box::new(true), "", funs, ctx).await?;
         Ok(())
     }
 
