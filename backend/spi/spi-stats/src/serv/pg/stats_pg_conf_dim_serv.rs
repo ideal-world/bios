@@ -237,16 +237,18 @@ WHERE
 }
 
 /// Create dimension instance table.
-///
+/// 
+/// 创建维度实例表
+/// 
 /// The table name is `starsys_stats_inst_dim_<dimension key>`
 /// The table fields are:
-/// - key                   the incoming primary key value
-/// - show_name             display name
-/// - hierarchy             number of hierarchy levels
-/// - [key0 .. keyN]        when the hierarchy is greater than 0, it indicates the primary key value of each level, which is used for drilling up and down
-/// - ct                    create time
-/// - et                    expiration time, when the data of a certain dimension is deleted, et will be set as the deletion time
-///
+/// - key                   the incoming primary key value / 维度实例主键值
+/// - show_name             display name / 显示名称
+/// - hierarchy             number of hierarchy levels / 层级数
+/// - [key0 .. keyN]        when the hierarchy is greater than 0, it indicates the primary key value of each level, which is used for drilling up and down / 当层级大于0时，表示每个层级的主键值，用于上下钻
+/// - ct                    create time / 创建时间
+/// - et                    expiration time, when the data of a certain dimension is deleted, et will be set as the deletion time / 过期时间，当某个维度的数据被删除时，et会被设置为删除时间
+/// 
 /// # Examples
 /// ```
 /// CREATE TABLE spi617070303031.starsys_stats_inst_dim_address (

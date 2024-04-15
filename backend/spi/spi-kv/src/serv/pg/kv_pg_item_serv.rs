@@ -3,13 +3,10 @@ use bios_basic::{
     spi::spi_funs::{SpiBsInst, SpiBsInstExtractor},
 };
 use tardis::{
-    basic::{dto::TardisContext, result::TardisResult},
-    db::{reldb_client::TardisRelDBClient, sea_orm::Value},
-    web::web_resp::TardisPage,
-    TardisFunsInst,
+    basic::{dto::TardisContext, result::TardisResult}, db::{reldb_client::TardisRelDBClient, sea_orm::Value}, serde_json::json, web::web_resp::TardisPage, TardisFuns, TardisFunsInst
 };
 
-use crate::dto::kv_item_dto::{KvItemAddOrModifyReq, KvItemDetailResp, KvItemMatchReq, KvItemSummaryResp};
+use crate::{dto::kv_item_dto::{KvItemAddOrModifyReq, KvItemDetailResp, KvItemMatchReq, KvItemSummaryResp, KvNameAddOrModifyReq, KvNameFindResp, KvTagAddOrModifyReq, KvTagFindResp}, kv_constants};
 
 use super::kv_pg_initializer;
 
@@ -53,6 +50,27 @@ DO UPDATE SET
     .await?;
     conn.commit().await?;
     Ok(())
+}
+
+pub async fn add_or_modify_key_name(add_or_modify_req: &mut KvNameAddOrModifyReq, funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
+    let req = KvItemAddOrModifyReq {
+        key: format!("{}{}", kv_constants::KEY_PREFIX_BY_KEY_NAME, add_or_modify_req.key).into(),
+        value: json!(add_or_modify_req.name),
+        scope_level: add_or_modify_req.scope_level,
+        info: None,
+    };
+    self::add_or_modify_item(&req, funs, ctx, inst).await
+}
+
+
+pub async fn add_or_modify_tag(add_or_modify_req: &mut KvTagAddOrModifyReq, funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
+    let req = KvItemAddOrModifyReq {
+        key: format!("{}{}", kv_constants::KEY_PREFIX_BY_TAG, add_or_modify_req.key).into(),
+        value: TardisFuns::json.obj_to_json(&add_or_modify_req.items)?,
+        scope_level: add_or_modify_req.scope_level,
+        info: None,
+    };
+    self::add_or_modify_item(&req, funs, ctx, &inst).await
 }
 
 pub async fn get_item(key: String, extract: Option<String>, _funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<Option<KvItemDetailResp>> {
@@ -130,6 +148,43 @@ WHERE
     Ok(result)
 }
 
+
+pub async fn find_key_names(keys: Vec<String>, funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<Vec<KvNameFindResp>> {
+    let keys = keys.into_iter().map(|key| format!("{}{}", kv_constants::KEY_PREFIX_BY_KEY_NAME, key)).collect();
+    self::find_items(keys, None, funs, ctx, &inst).await
+    .and_then(|items| {
+        items
+            .into_iter()
+            .map::<TardisResult<KvNameFindResp>, _>(|item| {
+                Ok(KvNameFindResp {
+                    key: item.key.strip_prefix(kv_constants::KEY_PREFIX_BY_KEY_NAME).unwrap_or("").to_string(),
+                    name: item.value.as_str().unwrap_or("").to_string(),
+                    create_time: item.create_time,
+                    update_time: item.update_time,
+                })
+            })
+            .collect::<TardisResult<Vec<KvNameFindResp>>>()
+    })
+}
+
+
+pub async fn find_tags(keys: Vec<String>, funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<Vec<KvTagFindResp>> {
+    let keys = keys.iter().map(|r| format!("{}{}", kv_constants::KEY_PREFIX_BY_TAG, r)).collect::<Vec<_>>();
+    self::find_items(keys, None, funs, ctx, &inst).await
+    .and_then(|items| {
+        items
+            .into_iter()
+            .map(|item| {
+                Ok(KvTagFindResp {
+                    key: item.key.strip_prefix(kv_constants::KEY_PREFIX_BY_TAG).unwrap_or("").to_string(),
+                    items: TardisFuns::json.json_to_obj(item.value)?,
+                    create_time: item.create_time,
+                    update_time: item.update_time,
+                })
+            })
+            .collect::<TardisResult<Vec<_>>>()
+    })
+}
 pub async fn match_items(match_req: KvItemMatchReq, _funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<TardisPage<KvItemSummaryResp>> {
     let mut where_fragments: Vec<String> = Vec::new();
     let mut sql_vals: Vec<Value> = vec![];
@@ -256,4 +311,50 @@ pub async fn delete_item(key: String, _funs: &TardisFunsInst, ctx: &TardisContex
     conn.execute_one(&format!("DELETE FROM {table_name} WHERE k = $1"), vec![Value::from(key)]).await?;
     conn.commit().await?;
     Ok(())
+}
+
+pub async fn page_tags(
+    key_prefix: String,
+    page_number: u32,
+    page_size: u16,
+    desc_sort_by_create: Option<bool>,
+    desc_sort_by_update: Option<bool>,
+    funs: &TardisFunsInst,
+    ctx: &TardisContext,
+    inst: &SpiBsInst,
+) -> TardisResult<TardisPage<KvTagFindResp>> {
+    let key_prefix = format!("{}{}", kv_constants::KEY_PREFIX_BY_TAG, key_prefix);
+    self::match_items(
+        KvItemMatchReq {
+            key_prefix,
+            page_number,
+            page_size,
+            desc_sort_by_create,
+            desc_sort_by_update,
+            ..Default::default()
+        },
+        funs,
+        ctx,
+        &inst,
+    )
+    .await
+    .and_then(|items| {
+        Ok(TardisPage {
+            page_size: items.page_size,
+            page_number: items.page_number,
+            total_size: items.total_size,
+            records: items
+                .records
+                .into_iter()
+                .map(|item| {
+                    Ok(KvTagFindResp {
+                        key: item.key.strip_prefix(kv_constants::KEY_PREFIX_BY_TAG).unwrap_or("").to_string(),
+                        items: TardisFuns::json.json_to_obj(item.value)?,
+                        create_time: item.create_time,
+                        update_time: item.update_time,
+                    })
+                })
+                .collect::<TardisResult<Vec<_>>>()?,
+        })
+    })
 }

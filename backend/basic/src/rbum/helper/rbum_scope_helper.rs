@@ -253,7 +253,10 @@ where
 /// Warning: This operation is unsafe, and it should only be used in scenarios where there is no security risk.
 #[cfg(feature = "default")]
 pub fn check_without_owner_and_unsafe_fill_ctx(request: &tardis::web::poem::Request, funs: &TardisFunsInst, ctx: &mut TardisContext) -> TardisResult<()> {
+    use tardis::log::warn;
+
     if !ctx.owner.is_empty() {
+        warn!("[Auth.Check] ctx.owner is not empty, ctx: {:?}", ctx.owner);
         // return Err(TardisError::forbidden("[Basic] Request context owner is not empty", "403-rbum-req-ctx-owner-is-not-empty"));
     }
     unsafe_fill_ctx(request, funs, ctx)

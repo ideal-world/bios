@@ -82,14 +82,14 @@ impl SpiBsInstExtractor for TardisFunsInst {
         F: Fn(SpiBsCertResp, &'a TardisContext, bool) -> T + Send + Sync,
         T: Future<Output = TardisResult<SpiBsInst>> + Send,
     {
-        let cache_key = format!("{}-{}", self.module_code(), ctx.owner);
+        let cache_key = format!("{}-{}", self.module_code(), ctx.ak);
         {
             let read = get_spi_bs_caches().read().await;
             if let Some(inst) = read.get(&cache_key).cloned() {
                 return Ok(inst);
             }
         }
-        let spi_bs = SpiBsServ::get_bs_by_rel(&ctx.owner, None, self, ctx).await?;
+        let spi_bs = SpiBsServ::get_bs_by_rel(&ctx.ak, None, self, ctx).await?;
         info!(
             "[SPI] Init and cache backend service instance [{}]:{}",
             cache_key.clone(),
@@ -114,7 +114,7 @@ impl SpiBsInstExtractor for TardisFunsInst {
     ///
     /// the backend service instance
     async fn bs<'a>(&self, ctx: &'a TardisContext) -> TardisResult<Arc<SpiBsInst>> {
-        let cache_key = format!("{}-{}", self.module_code(), ctx.owner);
+        let cache_key = format!("{}-{}", self.module_code(), ctx.ak);
         Ok(get_spi_bs_caches().read().await.get(&cache_key).expect("ignore").clone())
     }
 
