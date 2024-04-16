@@ -16,11 +16,14 @@ use tardis::web::poem::Request;
 pub struct IamCtAccountAttrApi;
 
 /// Tenant Console Account Attr API
+/// 租户控制台账号属性API
 ///
 /// Note: the current account attr only supports tenant level.
+/// 注意：当前账号属性仅支持租户级别。
 #[poem_openapi::OpenApi(prefix_path = "/ct/account/attr", tag = "bios_basic::ApiTag::Tenant")]
 impl IamCtAccountAttrApi {
     /// Add Account Attr
+    /// 添加账号属性
     #[oai(path = "/", method = "post")]
     async fn add_attr(&self, add_req: Json<IamKindAttrAddReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<String> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
@@ -33,6 +36,7 @@ impl IamCtAccountAttrApi {
     }
 
     /// Modify Account Attr By Account Attr Id
+    /// 修改账号属性
     #[oai(path = "/:id", method = "put")]
     async fn modify_attr(&self, id: Path<String>, mut modify_req: Json<RbumKindAttrModifyReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
@@ -45,6 +49,7 @@ impl IamCtAccountAttrApi {
     }
 
     /// Get Account Attr By Account Attr Id
+    /// 根据账号属性ID获取账号属性
     #[oai(path = "/:id", method = "get")]
     async fn get_attr(&self, id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<RbumKindAttrDetailResp> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
@@ -55,6 +60,7 @@ impl IamCtAccountAttrApi {
     }
 
     /// Find Account Attrs
+    /// 查找账号属性
     #[oai(path = "/", method = "get")]
     async fn find_attrs(&self, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Vec<RbumKindAttrSummaryResp>> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
@@ -65,6 +71,7 @@ impl IamCtAccountAttrApi {
     }
 
     /// Delete Account Attr By Account Attr Id
+    /// 删除账号属性
     #[oai(path = "/:id", method = "delete")]
     async fn delete_attr(&self, id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
@@ -77,6 +84,7 @@ impl IamCtAccountAttrApi {
     }
 
     /// Find Account Ext Attr Values By Account Id
+    /// 查找账号扩展属性值
     #[oai(path = "/value", method = "get")]
     async fn find_account_attr_values(&self, account_id: Query<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<HashMap<String, String>> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;

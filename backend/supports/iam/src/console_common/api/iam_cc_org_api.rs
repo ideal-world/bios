@@ -15,14 +15,19 @@ use tardis::web::web_resp::{TardisApiResult, TardisResp};
 pub struct IamCcOrgApi;
 
 /// Common Console Org API
+/// 通用控制台组织API
 ///
 /// Note: the current org only supports tenant level.
+/// 注意：当前组织仅支持租户级别
 #[poem_openapi::OpenApi(prefix_path = "/cc/org", tag = "bios_basic::ApiTag::Common")]
 impl IamCcOrgApi {
     /// Find Org Tree By Current Tenant
+    /// 查找组织树
     ///
     /// * Without parameters: Query the whole tree
     /// * ``parent_sys_code=true`` : query only the next level. This can be used to query level by level when the tree is too large
+    /// * 无参数：查询整个树
+    /// * ``parent_sys_code=true``：仅查询下一级，当树太大时可以用来逐级查询
     #[oai(path = "/tree", method = "get")]
     async fn get_tree(
         &self,

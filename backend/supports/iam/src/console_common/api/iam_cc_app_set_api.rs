@@ -18,14 +18,18 @@ use tardis::web::poem::Request;
 pub struct IamCcAppSetApi;
 
 /// Tenant Console App Set API
-///
+/// 租户控制台应用集合API
 #[poem_openapi::OpenApi(prefix_path = "/cc/apps", tag = "bios_basic::ApiTag::Common")]
 impl IamCcAppSetApi {
     /// Find App Tree By Current Tenant
+    /// 查找应用树
     ///
     /// * Without parameters: Query the whole tree
     /// * ``parent_sys_code=true`` : query only the next level. This can be used to query level by level when the tree is too large
     /// * ``only_related=true`` : Invalidate the parent_sys_code parameter when this parameter is turned on, it is used to query only the tree nodes with related resources(including children nodes)
+    ///  * 无参数：查询整个树
+    /// * ``parent_sys_code=true``：仅查询下一级，当树太大时可以用来逐级查询
+    /// * ``only_related=true``：打开此参数时失效parent_sys_code参数，用于查询只有相关资源的树节点（包括子节点）
     #[oai(path = "/tree", method = "get")]
     async fn get_tree(
         &self,
@@ -62,6 +66,7 @@ impl IamCcAppSetApi {
     }
 
     /// Find App Set Items (App Or Account)
+    /// 查找应用集合项（应用或账户）
     #[oai(path = "/item", method = "get")]
     async fn find_items(
         &self,

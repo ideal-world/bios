@@ -44,6 +44,7 @@ pub struct IamCpCertApi;
 pub struct IamCpCertLdapApi;
 
 /// Passport Console Cert API
+/// 通行证控制台凭证API
 #[poem_openapi::OpenApi(prefix_path = "/cp", tag = "bios_basic::ApiTag::Passport")]
 impl IamCpCertApi {
     /// Fetch TardisContext By Token
@@ -53,6 +54,14 @@ impl IamCpCertApi {
     /// First access `PUT /cp/login/userpwd` api to get `token` .
     /// This api input  `token` and return base64 encoded `tardis context` ,
     /// set `tardis context` to the `Tardis-Context` request header.
+    /// 
+    /// 获取TardisContext通过Token
+    /// 
+    /// 该API仅用于测试！
+    /// 
+    /// 首先访问 `PUT /cp/login/userpwd` api 获取 `token` 。
+    /// 该api输入 `token` 并返回base64编码的 `tardis context`，
+    /// 将 `tardis context` 设置到请求头的 `Tardis-Context`。
     #[oai(path = "/context", method = "put")]
     async fn fetch_context(&self, fetch_req: Json<IamContextFetchReq>) -> TardisApiResult<String> {
         let funs = iam_constants::get_tardis_inst();
@@ -61,6 +70,8 @@ impl IamCpCertApi {
         TardisResp::ok(ctx)
     }
 
+    /// Login by Phone and VCode
+    /// 手机验证码登录
     #[oai(path = "/login/pwd/status", method = "get")]
     async fn login_status(&self, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<String> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
@@ -71,6 +82,7 @@ impl IamCpCertApi {
     }
 
     /// Login by Username and Password
+    /// 用户名密码登录
     #[oai(path = "/login/userpwd", method = "put")]
     async fn login_by_user_pwd(&self, login_req: Json<IamCpUserPwdLoginReq>, request: &Request) -> TardisApiResult<IamAccountInfoResp> {
         let funs = iam_constants::get_tardis_inst();
@@ -79,6 +91,7 @@ impl IamCpCertApi {
     }
 
     /// Logout By Token
+    /// 通过Token登出
     #[oai(path = "/logout/:token", method = "delete")]
     async fn logout(&self, token: Path<String>, request: &Request) -> TardisApiResult<Void> {
         let funs = iam_constants::get_tardis_inst();
@@ -88,6 +101,7 @@ impl IamCpCertApi {
     }
 
     /// Find Certs By Current Account
+    /// 根据当前账号查找证书
     #[oai(path = "/cert", method = "get")]
     async fn find_certs(&self, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Vec<RbumCertSummaryResp>> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
@@ -118,6 +132,7 @@ impl IamCpCertApi {
     }
 
     /// Find Third-kind Certs By Current Account
+    /// 根据当前账号查找第三方证书
     #[oai(path = "/cert/third-kind", method = "get")]
     async fn get_third_cert(&self, supplier: Query<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<RbumCertSummaryWithSkResp> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
@@ -129,6 +144,7 @@ impl IamCpCertApi {
     }
 
     /// Set New Username(cert_conf kind usrpwd)
+    /// 设置新用户名(cert_conf kind usrpwd)
     #[oai(path = "/cert/username/new", method = "put")]
     async fn new_user_name(&self, pwd_new_req: Json<IamCertUserNameNewReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
@@ -141,6 +157,7 @@ impl IamCpCertApi {
     }
 
     /// Set New Password
+    /// 设置新密码
     #[oai(path = "/cert/userpwd/new", method = "put")]
     async fn new_pwd_without_login(&self, pwd_new_req: Json<IamCertPwdNewReq>, request: &Request) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
@@ -151,8 +168,10 @@ impl IamCpCertApi {
     }
 
     /// new userpwd-cert password by account_id
+    /// 通过账号ID设置新密码
     ///
     /// only for user is global account
+    /// 仅适用于用户是全局账号
     #[oai(path = "/cert/userpwd/reset", method = "put")]
     async fn new_password_for_pending_status(&self, modify_req: Json<IamCertUserPwdRestReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
@@ -168,6 +187,7 @@ impl IamCpCertApi {
     }
 
     /// Modify Password By Current Account
+    /// 通过当前账号修改密码
     #[oai(path = "/cert/userpwd", method = "put")]
     async fn modify_cert_user_pwd(&self, modify_req: Json<IamCertUserPwdModifyReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
@@ -181,6 +201,7 @@ impl IamCpCertApi {
     }
 
     /// Login by general oauth2
+    /// 通用oauth2登录
     #[oai(path = "/login/oauth2/:supplier", method = "put")]
     async fn login_or_register_by_oauth2(&self, supplier: Path<String>, login_req: Json<IamCpOAuth2LoginReq>, request: &Request) -> TardisApiResult<IamAccountInfoResp> {
         let mut funs = iam_constants::get_tardis_inst();
@@ -191,9 +212,10 @@ impl IamCpCertApi {
     }
 
     /// Validate userpwd By Current Account
+    /// 通过当前账号验证用户密码
     ///
     /// when ldap validate , the validate_type is supplier
-    ///
+    /// 当ldap验证时，validate_type为supplier
     #[oai(path = "/validate/userpwd", method = "put")]
     async fn validate_by_user_pwd_and_ldap(&self, req: Json<IamCertGenericValidateSkReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
@@ -209,6 +231,7 @@ impl IamCpCertApi {
     }
 
     /// Validate userpwd By Current Account and ignore expired
+    /// 通过当前账号验证用户密码并忽略过期
     #[oai(path = "/validate/userpwd/ignore/expired", method = "put")]
     async fn validate_by_user_pwd_ignore_expired(&self, req: Json<IamCertGenericValidateSkReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
@@ -237,6 +260,7 @@ impl IamCpCertApi {
     // }
 
     /// exist Mail
+    /// 邮箱是否存在
     #[oai(path = "/exist/mailvcode", method = "put")]
     async fn exist_mail(&self, exist_req: Json<IamCpExistMailVCodeReq>, request: &Request) -> TardisApiResult<bool> {
         let funs = iam_constants::get_tardis_inst();
@@ -249,6 +273,7 @@ impl IamCpCertApi {
     }
 
     /// Send bind Mail
+    /// 发送绑定邮箱
     #[oai(path = "/cert/mailvcode/send", method = "put")]
     async fn send_bind_mail(&self, req: Json<IamCertMailVCodeAddReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
@@ -261,6 +286,7 @@ impl IamCpCertApi {
     }
 
     /// Bind Mail
+    /// 绑定邮箱
     #[oai(path = "/cert/mailvcode/bind", method = "put")]
     async fn bind_mail(&self, req: Json<IamCertMailVCodeActivateReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
@@ -273,6 +299,7 @@ impl IamCpCertApi {
     }
 
     /// Send Login Mail
+    /// 发送登录邮箱验证码
     #[oai(path = "/login/mailvcode/vcode", method = "post")]
     async fn send_login_mail(&self, login_req: Json<IamCpMailVCodeLoginGenVCodeReq>) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
@@ -283,6 +310,7 @@ impl IamCpCertApi {
     }
 
     /// Login by Mail And Vcode
+    /// 邮箱验证码登录
     #[oai(path = "/login/mailvcode", method = "put")]
     async fn login_by_mail_vocde(&self, login_req: Json<IamCpMailVCodeLoginReq>, request: &Request) -> TardisApiResult<IamAccountInfoResp> {
         let mut funs = iam_constants::get_tardis_inst();
@@ -293,6 +321,7 @@ impl IamCpCertApi {
     }
 
     /// exist phone
+    /// 手机是否存在
     #[oai(path = "/exist/phonevcode", method = "put")]
     async fn exist_phone(&self, exist_req: Json<IamCpExistPhoneVCodeReq>, request: &Request) -> TardisApiResult<bool> {
         let funs = iam_constants::get_tardis_inst();
@@ -305,6 +334,7 @@ impl IamCpCertApi {
     }
 
     /// Send bind phone
+    /// 发送绑定手机
     #[oai(path = "/cert/phonevcode/send", method = "put")]
     async fn send_bind_phone(&self, req: Json<IamCertPhoneVCodeAddReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
@@ -317,6 +347,7 @@ impl IamCpCertApi {
     }
 
     /// Bind phone
+    /// 绑定手机
     #[oai(path = "/cert/phonevcode/bind", method = "put")]
     async fn bind_phone(&self, req: Json<IamCertPhoneVCodeBindReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
@@ -329,6 +360,7 @@ impl IamCpCertApi {
     }
 
     /// Send Login Phone
+    /// 发送登录手机验证码
     #[oai(path = "/login/phonecode/vcode", method = "post")]
     async fn send_login_phone(&self, login_req: Json<IamCpPhoneVCodeLoginGenVCodeReq>) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
@@ -339,6 +371,7 @@ impl IamCpCertApi {
     }
 
     /// Login by Phone And Vcode
+    /// 手机验证码登录
     #[oai(path = "/login/phonevcode", method = "put")]
     async fn login_by_phone_vocde(&self, login_req: Json<IamCpPhoneVCodeLoginSendVCodeReq>, request: &Request) -> TardisApiResult<IamAccountInfoResp> {
         let mut funs = iam_constants::get_tardis_inst();
@@ -350,10 +383,12 @@ impl IamCpCertApi {
 }
 
 /// Passport Console Cert LDAP API
+/// 通行证控制台LDAP凭证API
 #[cfg(feature = "ldap_client")]
 #[poem_openapi::OpenApi(prefix_path = "/cp/ldap", tag = "bios_basic::ApiTag::Passport")]
 impl IamCpCertLdapApi {
     /// Login by LDAP
+    /// LDAP登录
     #[oai(path = "/login", method = "put")]
     async fn login_or_register_by_ldap(&self, login_req: Json<IamCpLdapLoginReq>, request: &Request) -> TardisApiResult<IamAccountInfoWithUserPwdAkResp> {
         let mut funs = iam_constants::get_tardis_inst();
@@ -363,6 +398,7 @@ impl IamCpCertLdapApi {
         TardisResp::ok(resp)
     }
     /// Check userpwd cert binding with ldap cert
+    /// 检查用户名密码证书是否绑定LDAP证书
     #[oai(path = "/check-bind", method = "post")]
     async fn check_user_pwd_is_bind(&self, login_req: Json<IamCpUserPwdCheckReq>) -> TardisApiResult<IamCpUserPwdBindResp> {
         let mut funs = iam_constants::get_tardis_inst();
@@ -377,6 +413,12 @@ impl IamCpCertLdapApi {
     /// if ak param is None then create new userpwd cert \
     /// else bind with ldap cert
     /// name-password -ldap login
+    /// 
+    /// 绑定用户名密码证书通过LDAP
+    /// 
+    /// 如果ak参数为None，则创建新的用户密码证书
+    /// 否则与ldap证书绑定
+    /// 用户名-密码-ldap登录
     #[oai(path = "/bind-or-create-userpwd", method = "put")]
     async fn bind_or_create_user_pwd_cert_by_ldap(&self, login_req: Json<IamCpUserPwdBindWithLdapReq>, request: &Request) -> TardisApiResult<IamAccountInfoWithUserPwdAkResp> {
         let mut funs = iam_constants::get_tardis_inst();

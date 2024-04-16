@@ -15,9 +15,11 @@ use crate::iam_constants;
 pub struct IamCcConfigApi;
 
 /// Common Console Config API
+/// 通用控制台配置API
 #[poem_openapi::OpenApi(prefix_path = "/cc/config", tag = "bios_basic::ApiTag::Common")]
 impl IamCcConfigApi {
     /// Get config
+    /// 获取配置
     #[oai(path = "/", method = "get")]
     async fn get(&self, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<IamCertConfUserPwdResp> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;

@@ -27,11 +27,14 @@ use tardis::TardisFuns;
 pub struct IamCsResApi;
 
 /// System Console Res API
+/// 系统控制台资源API
 ///
 /// Note: the current res only supports sys level.
+/// 注意：当前资源仅支持系统级别。
 #[poem_openapi::OpenApi(prefix_path = "/cs/res", tag = "bios_basic::ApiTag::System")]
 impl IamCsResApi {
     /// Add Res
+    /// 添加资源
     #[oai(path = "/", method = "post")]
     async fn add(&self, mut add_req: Json<IamResAggAddReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<String> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
@@ -45,6 +48,7 @@ impl IamCsResApi {
     }
 
     /// Add Res Cate
+    /// 添加资源分类
     #[oai(path = "/cate", method = "post")]
     async fn add_cate(&self, add_req: Json<IamSetCateAddReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<String> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
@@ -79,6 +83,7 @@ impl IamCsResApi {
     }
 
     /// Add Api Res To Res
+    /// 添加资源
     #[oai(path = "/:id/res/:res_api_id", method = "put")]
     async fn add_rel_res(&self, id: Path<String>, res_api_id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
@@ -91,6 +96,7 @@ impl IamCsResApi {
     }
 
     /// Count Api Res By Res Id
+    /// 统计资源
     #[oai(path = "/:id/res/total", method = "get")]
     async fn count_rel_res(&self, id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<u64> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
@@ -101,6 +107,7 @@ impl IamCsResApi {
     }
 
     /// Delete Res By Res Id
+    /// 删除资源
     #[oai(path = "/:id", method = "delete")]
     async fn delete(&self, id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
@@ -113,6 +120,7 @@ impl IamCsResApi {
     }
 
     /// Delete Res Cate By Res Cate Id
+    /// 删除资源分类
     #[oai(path = "/cate/:id", method = "delete")]
     async fn delete_cate(&self, id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
@@ -125,6 +133,7 @@ impl IamCsResApi {
     }
 
     /// Delete Api Res By Res Id
+    /// 删除资源
     #[oai(path = "/:id/res/:res_api_id", method = "delete")]
     async fn delete_rel_res(&self, id: Path<String>, res_api_id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
@@ -136,8 +145,8 @@ impl IamCsResApi {
         TardisResp::ok(Void {})
     }
 
-    // TODO
-    // Find Res Api
+    /// Find Res Api
+    /// 查找资源
     #[oai(path = "/", method = "get")]
     async fn find(
         &self,
@@ -163,7 +172,8 @@ impl IamCsResApi {
         TardisResp::ok(result)
     }
 
-    // page Res Api
+    /// page Res Api
+    /// 分页查找资源
     #[oai(path = "/page", method = "get")]
     async fn paginate(
         &self,
@@ -194,6 +204,7 @@ impl IamCsResApi {
     }
 
     /// Find Api Res By Res Id
+    /// 查找资源
     #[oai(path = "/:id/res", method = "get")]
     async fn find_rel_res(
         &self,
@@ -211,6 +222,7 @@ impl IamCsResApi {
     }
 
     /// Find Rel Roles By Res Id
+    /// 查找关联角色
     #[oai(path = "/:id/role", method = "get")]
     async fn find_rel_roles(
         &self,
@@ -228,6 +240,7 @@ impl IamCsResApi {
     }
 
     /// Find Element Rel Apis By Res Ids
+    /// 查找关联资源
     #[oai(path = "/get_res_apis/:ids", method = "get")]
     async fn get_res_apis(&self, ids: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<HashMap<String, Vec<IamResDetailResp>>> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
@@ -239,6 +252,7 @@ impl IamCsResApi {
     }
 
     /// Get Res By Res Id
+    /// 获取资源
     #[oai(path = "/:id", method = "get")]
     async fn get(&self, id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<IamResDetailResp> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
@@ -249,6 +263,7 @@ impl IamCsResApi {
     }
 
     /// Find Api Tree
+    /// 查找资源树
     #[oai(path = "/tree/api", method = "get")]
     async fn get_api_tree(&self, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<RbumSetTreeResp> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
@@ -260,6 +275,7 @@ impl IamCsResApi {
     }
 
     /// Find Menu Tree
+    /// 查找菜单树
     #[oai(path = "/tree/menu", method = "get")]
     async fn get_menu_tree(&self, exts: Query<Option<String>>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<RbumSetTreeResp> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
@@ -271,9 +287,13 @@ impl IamCsResApi {
     }
 
     /// Find Res Tree
+    /// 查找资源树
     ///
     /// * Without parameters: Query the whole tree
     /// * ``parent_sys_code=true`` : query only the next level. This can be used to query level by level when the tree is too large
+    ///
+    /// * 无参数：查询整个树
+    /// * ``parent_sys_code=true``：仅查询下一级。当树太大时，可以用于逐级查询
     #[oai(path = "/tree", method = "get")]
     async fn get_tree(&self, parent_sys_code: Query<Option<String>>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<RbumSetTreeResp> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
@@ -297,6 +317,7 @@ impl IamCsResApi {
     }
 
     /// Modify Res By Res Id
+    /// 修改资源
     #[oai(path = "/:id", method = "put")]
     async fn modify(&self, id: Path<String>, mut modify_req: Json<IamResModifyReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
@@ -309,6 +330,7 @@ impl IamCsResApi {
     }
 
     /// Modify Res Cate By Res Cate Id
+    /// 修改资源分类
     #[oai(path = "/cate/:id", method = "put")]
     async fn modify_set_cate(&self, id: Path<String>, modify_req: Json<IamSetCateModifyReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;

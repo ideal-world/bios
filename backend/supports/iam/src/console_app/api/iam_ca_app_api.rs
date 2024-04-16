@@ -16,11 +16,14 @@ use tardis::web::poem::Request;
 pub struct IamCaAppApi;
 
 /// App Console App API
+/// 应用控制台应用API
 #[poem_openapi::OpenApi(prefix_path = "/ca/app", tag = "bios_basic::ApiTag::App")]
 impl IamCaAppApi {
     /// Modify Current App
+    /// 修改当前应用
     ///
     /// When code = 202, the return value is the asynchronous task id
+    /// 当 code = 202 时，返回值为异步任务ID
     #[oai(path = "/", method = "put")]
     async fn modify(&self, modify_req: Json<IamAppAggModifyReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Option<String>> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
@@ -37,6 +40,7 @@ impl IamCaAppApi {
     }
 
     /// Get Current App
+    /// 获取当前应用
     #[oai(path = "/", method = "get")]
     async fn get(&self, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<IamAppDetailResp> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
@@ -47,6 +51,7 @@ impl IamCaAppApi {
     }
 
     /// Add App Rel Account
+    /// 添加应用关联账号
     #[oai(path = "/:id/account/:account_id", method = "put")]
     async fn add_rel_account(&self, id: Path<String>, account_id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
@@ -58,6 +63,7 @@ impl IamCaAppApi {
     }
 
     /// Delete App Rel Account
+    /// 删除应用关联账号
     #[oai(path = "/:id/account/:account_id", method = "delete")]
     async fn delete_rel_account(&self, id: Path<String>, account_id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
