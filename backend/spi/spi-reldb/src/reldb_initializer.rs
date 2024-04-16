@@ -55,14 +55,16 @@ pub async fn init_fun(bs_cert: SpiBsCertResp, ctx: &TardisContext, _: bool) -> T
 
     let config = DBModuleConfig {
         url: bs_cert.conn_uri.clone(),
-        max_connections: ext.get("max_connections").and_then(JsonValue::as_u64).ok_or(TardisError::bad_request(
-            "Tardis context ext expect `max_connections` as an unsigned interger number",
-            "400-spi-invalid-tardis-ctx",
-        ))? as u32,
-        min_connections: ext.get("min_connections").and_then(JsonValue::as_u64).ok_or(TardisError::bad_request(
-            "Tardis context ext expect `min_connections` as an unsigned interger number",
-            "400-spi-invalid-tardis-ctx",
-        ))? as u32,
+        max_connections: ext
+            .get("max_connections")
+            .and_then(JsonValue::as_u64)
+            .ok_or_else(|| TardisError::bad_request("Tardis context ext expect `max_connections` as an unsigned integer number", "400-spi-invalid-tardis-ctx"))?
+            as u32,
+        min_connections: ext
+            .get("min_connections")
+            .and_then(JsonValue::as_u64)
+            .ok_or_else(|| TardisError::bad_request("Tardis context ext expect `min_connections` as an unsigned integer number", "400-spi-invalid-tardis-ctx"))?
+            as u32,
         connect_timeout_sec: None,
         idle_timeout_sec: None,
         compatible_type,

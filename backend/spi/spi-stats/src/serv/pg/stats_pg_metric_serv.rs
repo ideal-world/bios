@@ -283,26 +283,32 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
         for or_wheres in wheres {
             let mut sql_part_and_wheres = vec![];
             for and_where in or_wheres {
-                let col_conf = conf_info.get(&format!("{}{}", and_where.code, and_where.rel_external_id.clone().unwrap_or_default())).ok_or(funs.err().internal_error(
-                    "metric",
-                    "query",
-                    &format!("missing config with code [{code}]", code = and_where.code),
-                    "500-spi-stats-internal-error",
-                ))?;
+                let col_conf = conf_info.get(&format!("{}{}", and_where.code, and_where.rel_external_id.clone().unwrap_or_default())).ok_or_else(|| {
+                    funs.err().internal_error(
+                        "metric",
+                        "query",
+                        &format!("missing config with code [{code}]", code = and_where.code),
+                        "500-spi-stats-internal-error",
+                    )
+                })?;
                 let col_data_type = if col_conf.col_kind == StatsFactColKind::Dimension {
-                    col_conf.dim_data_type.as_ref().ok_or(funs.err().internal_error(
-                        "metric",
-                        "query",
-                        &format!("config missing dim_data_type with code [{code}]", code = and_where.code),
-                        "500-spi-stats-internal-error",
-                    ))?
+                    col_conf.dim_data_type.as_ref().ok_or_else(|| {
+                        funs.err().internal_error(
+                            "metric",
+                            "query",
+                            &format!("config missing dim_data_type with code [{code}]", code = and_where.code),
+                            "500-spi-stats-internal-error",
+                        )
+                    })?
                 } else {
-                    col_conf.mes_data_type.as_ref().ok_or(funs.err().internal_error(
-                        "metric",
-                        "query",
-                        &format!("config missing mes_data_type with code [{code}]", code = and_where.code),
-                        "500-spi-stats-internal-error",
-                    ))?
+                    col_conf.mes_data_type.as_ref().ok_or_else(|| {
+                        funs.err().internal_error(
+                            "metric",
+                            "query",
+                            &format!("config missing mes_data_type with code [{code}]", code = and_where.code),
+                            "500-spi-stats-internal-error",
+                        )
+                    })?
                 };
                 info!("col_data_type={:?}", col_data_type);
                 if let Some((sql_part, value)) = col_data_type.to_pg_where(
@@ -372,18 +378,22 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
     // (column name with fun, alias name, show name)
     let mut sql_part_group_infos = vec![];
     for group in &query_req.group {
-        let col_conf = conf_info.get(&format!("{}{}", group.code, group.rel_external_id.clone().unwrap_or_default())).ok_or(funs.err().not_found(
-            "metric",
-            "query",
-            &format!("Missing config for group code [{code}] does not exist.", code = group.code),
-            "500-spi-stats-internal-error",
-        ))?;
-        let col_data_type = col_conf.dim_data_type.as_ref().ok_or(funs.err().not_found(
-            "metric",
-            "query",
-            &format!("Missing col_data_type for group code [{code}] does not exist.", code = group.code),
-            "500-spi-stats-internal-error",
-        ))?;
+        let col_conf = conf_info.get(&format!("{}{}", group.code, group.rel_external_id.clone().unwrap_or_default())).ok_or_else(|| {
+            funs.err().not_found(
+                "metric",
+                "query",
+                &format!("Missing config for group code [{code}] does not exist.", code = group.code),
+                "500-spi-stats-internal-error",
+            )
+        })?;
+        let col_data_type = col_conf.dim_data_type.as_ref().ok_or_else(|| {
+            funs.err().not_found(
+                "metric",
+                "query",
+                &format!("Missing col_data_type for group code [{code}] does not exist.", code = group.code),
+                "500-spi-stats-internal-error",
+            )
+        })?;
         if let Some(column_name_with_fun) = col_data_type.to_pg_group(
             &format!(
                 "_.{}",
@@ -429,18 +439,22 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
         sql_part_outer_select_infos.push((column_name_with_fun, alias_name, show_name, true));
     }
     for select in &query_req.select {
-        let col_conf = conf_info.get(&format!("{}{}", select.code, select.rel_external_id.clone().unwrap_or_default())).ok_or(funs.err().not_found(
-            "metric",
-            "query",
-            &format!("Missing col_data_type for select code [{code}] does not exist.", code = select.code),
-            "500-spi-stats-internal-error",
-        ))?;
-        let col_data_type = col_conf.mes_data_type.as_ref().ok_or(funs.err().not_found(
-            "metric",
-            "query",
-            &format!("Missing col_data_type for select code [{code}] does not exist.", code = select.code),
-            "500-spi-stats-internal-error",
-        ))?;
+        let col_conf = conf_info.get(&format!("{}{}", select.code, select.rel_external_id.clone().unwrap_or_default())).ok_or_else(|| {
+            funs.err().not_found(
+                "metric",
+                "query",
+                &format!("Missing col_data_type for select code [{code}] does not exist.", code = select.code),
+                "500-spi-stats-internal-error",
+            )
+        })?;
+        let col_data_type = col_conf.mes_data_type.as_ref().ok_or_else(|| {
+            funs.err().not_found(
+                "metric",
+                "query",
+                &format!("Missing col_data_type for select code [{code}] does not exist.", code = select.code),
+                "500-spi-stats-internal-error",
+            )
+        })?;
         let column_name_with_fun = col_data_type.to_pg_select(
             &format!(
                 "_.{}",
@@ -470,21 +484,25 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
     let sql_part_havings = if let Some(havings) = &query_req.having {
         let mut sql_part_havings = vec![];
         for having in havings {
-            let col_conf = conf_info.get(&format!("{}{}", having.code, having.rel_external_id.clone().unwrap_or_default())).ok_or(funs.err().not_found(
-                "metric",
-                "query",
-                &format!("Missing config for having code [{code}] does not exist.", code = having.code),
-                "500-spi-stats-internal-error",
-            ))?;
+            let col_conf = conf_info.get(&format!("{}{}", having.code, having.rel_external_id.clone().unwrap_or_default())).ok_or_else(|| {
+                funs.err().not_found(
+                    "metric",
+                    "query",
+                    &format!("Missing config for having code [{code}] does not exist.", code = having.code),
+                    "500-spi-stats-internal-error",
+                )
+            })?;
             if let Some((sql_part, value)) = col_conf
                 .mes_data_type
                 .as_ref()
-                .ok_or(funs.err().not_found(
-                    "metric",
-                    "query",
-                    &format!("Missing mes_data_type for having code [{code}] does not exist.", code = having.code),
-                    "500-spi-stats-internal-error",
-                ))?
+                .ok_or_else(|| {
+                    funs.err().not_found(
+                        "metric",
+                        "query",
+                        &format!("Missing mes_data_type for having code [{code}] does not exist.", code = having.code),
+                        "500-spi-stats-internal-error",
+                    )
+                })?
                 .to_pg_having(
                     false,
                     &format!(
@@ -718,15 +736,15 @@ fn package_groups(
     result: Vec<serde_json::Value>,
 ) -> Result<serde_json::Value, String> {
     if curr_select_dimension_keys.is_empty() {
-        let first_result = result.first().ok_or("result is empty")?;
+        let first_result = result.first().ok_or_else(|| "result is empty")?;
         let mut leaf_node = Map::with_capacity(result.len());
         for measure_key in select_measure_keys {
-            let val = first_result.get(measure_key).ok_or(format!("failed to get key {measure_key}"))?;
+            let val = first_result.get(measure_key).ok_or_else(|| format!("failed to get key {measure_key}"))?;
             let val = if measure_key.ends_with(&format!("{FUNCTION_SUFFIX_FLAG}avg")) {
                 // Fix `avg` function return type error
                 let val = val
                     .as_str()
-                    .ok_or(format!("value of field {measure_key} should be a string"))?
+                    .ok_or_else(|| format!("value of field {measure_key} should be a string"))?
                     .parse::<f64>()
                     .map_err(|_| format!("value of field {measure_key} can not be parsed as a valid f64 number"))?;
                 serde_json::Value::from(val)
@@ -736,13 +754,13 @@ fn package_groups(
             leaf_node.insert(measure_key.to_string(), val.clone());
         }
         if !ignore_group_agg {
-            leaf_node.insert("group".to_string(), first_result.get("group").ok_or("failed to get key group".to_string())?.clone());
+            leaf_node.insert("group".to_string(), first_result.get("group").ok_or_else(|| "failed to get key group".to_string())?.clone());
         }
         return Ok(serde_json::Value::Object(leaf_node));
     }
     let mut node = Map::with_capacity(0);
 
-    let dimension_key = curr_select_dimension_keys.first().ok_or("curr_select_dimension_keys is empty")?;
+    let dimension_key = curr_select_dimension_keys.first().ok_or_else(|| "curr_select_dimension_keys is empty")?;
 
     // todo 下钻 上探
     // let dimension_hierarchy = if let Some(stats_con_info) = conf_info.get(dimension_key.split(FUNCTION_SUFFIX_FLAG).next().unwrap_or("")) {
@@ -816,7 +834,7 @@ fn package_groups_agg(record: serde_json::Value) -> Result<serde_json::Value, St
                 return Ok(serde_json::Value::Null);
             }
             let mut details = Vec::new();
-            let var_agg = agg.as_str().ok_or("field group_agg should be a string")?;
+            let var_agg = agg.as_str().ok_or_else(|| "field group_agg should be a string")?;
             let vars = var_agg.split(',').collect::<Vec<&str>>();
             for var in vars {
                 let fields = var.split(" - ").collect::<Vec<&str>>();

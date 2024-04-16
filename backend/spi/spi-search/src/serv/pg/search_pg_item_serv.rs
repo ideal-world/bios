@@ -1474,15 +1474,15 @@ fn package_groups(
     result: Vec<serde_json::Value>,
 ) -> Result<serde_json::Value, String> {
     if curr_select_dimension_keys.is_empty() {
-        let first_result = result.first().ok_or("result is empty")?;
+        let first_result = result.first().ok_or_else(|| "result is empty")?;
         let mut leaf_node = Map::with_capacity(result.len());
         for measure_key in select_measure_keys {
-            let val = first_result.get(measure_key).ok_or(format!("failed to get key {measure_key}"))?;
+            let val = first_result.get(measure_key).ok_or_else(|| format!("failed to get key {measure_key}"))?;
             let val = if measure_key.ends_with(&format!("{FUNCTION_SUFFIX_FLAG}avg")) {
                 // Fix `avg` function return type error
                 let val = val
                     .as_str()
-                    .ok_or(format!("value of field {measure_key} should be a string"))?
+                    .ok_or_else(|| format!("value of field {measure_key} should be a string"))?
                     .parse::<f64>()
                     .map_err(|_| format!("value of field {measure_key} can not be parsed as a valid f64 number"))?;
                 serde_json::Value::from(val)
@@ -1492,13 +1492,13 @@ fn package_groups(
             leaf_node.insert(measure_key.to_string(), val.clone());
         }
         if !ignore_group_agg {
-            leaf_node.insert("group".to_string(), first_result.get("group").ok_or("failed to get key group".to_string())?.clone());
+            leaf_node.insert("group".to_string(), first_result.get("group").ok_or_else(|| "failed to get key group".to_string())?.clone());
         }
         return Ok(serde_json::Value::Object(leaf_node));
     }
     let mut node = Map::with_capacity(0);
 
-    let dimension_key = curr_select_dimension_keys.first().ok_or("curr_select_dimension_keys is empty")?;
+    let dimension_key = curr_select_dimension_keys.first().ok_or_else(|| "curr_select_dimension_keys is empty")?;
     let mut groups = HashMap::new();
     let mut order = Vec::new();
     for record in result {
@@ -1540,7 +1540,7 @@ fn package_groups_agg(record: serde_json::Value) -> Result<serde_json::Value, St
             }
             println!("{}", agg);
             let mut details = Vec::new();
-            let var_agg = agg.as_str().ok_or("field group_agg should be a string")?;
+            let var_agg = agg.as_str().ok_or_else(|| "field group_agg should be a string")?;
             let vars = var_agg.split(',').collect::<Vec<&str>>();
             for var in vars {
                 let fields = var.split(" - ").collect::<Vec<&str>>();

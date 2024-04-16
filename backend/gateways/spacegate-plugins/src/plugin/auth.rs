@@ -207,7 +207,7 @@ impl AuthPlugin {
     // 用于过滤和管理同一个请求多次通过本插件的情况
     // 如果是多次请求，那么直接返回跳过本插件
     async fn is_same_req(&self, req: &mut SgRequest) -> Result<bool, BoxError> {
-        let cache = req.get_redis_client_by_gateway_name().ok_or("missing gateway name")?;
+        let cache = req.get_redis_client_by_gateway_name().ok_or_else(|| "missing gateway name")?;
         let mut conn = cache.get_conn().await;
         if let Some(is_same) = req.headers().get(&self.header_is_same_req) {
             if conn.exists(format!("{}{}", self.cache_key_is_same_req, is_same.to_str()?)).await? {

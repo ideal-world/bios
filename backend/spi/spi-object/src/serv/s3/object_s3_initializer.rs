@@ -12,15 +12,14 @@ use tardis::serde_json::Value as JsonValue;
 
 pub async fn init(bs_cert: &SpiBsCertResp, ctx: &TardisContext, _: bool) -> TardisResult<SpiBsInst> {
     let ext = TardisFuns::json.str_to_json(&bs_cert.ext)?;
-    let region = ext.get("region").and_then(JsonValue::as_str).ok_or(TardisError::bad_request(
-        "Tardis context ext should have a `region` field with type string",
-        "400-spi-invalid-tardis-ctx",
-    ))?;
+    let region = ext
+        .get("region")
+        .and_then(JsonValue::as_str)
+        .ok_or_else(|| TardisError::bad_request("Tardis context ext should have a `region` field with type string", "400-spi-invalid-tardis-ctx"))?;
     let default_bucket = if let Some(default_bucket) = ext.get("default_bucket") {
-        default_bucket.as_str().ok_or(TardisError::bad_request(
-            "Tardis context ext should have a `default_bucket` field with type string",
-            "400-spi-invalid-tardis-ctx",
-        ))?
+        default_bucket
+            .as_str()
+            .ok_or_else(|| TardisError::bad_request("Tardis context ext should have a `default_bucket` field with type string", "400-spi-invalid-tardis-ctx"))?
     } else {
         ""
     };
