@@ -125,14 +125,20 @@ impl RbumConfigApi for TardisFunsInst {
         RbumConfigManager::get_config(self.module_code(), |conf| conf.cache_key_cert_vcode_info_.to_string())
     }
 
+    // TODO
+    // #[deprecated]
     fn rbum_conf_cache_key_cert_vcode_expire_sec(&self) -> usize {
         RbumConfigManager::get_config(self.module_code(), |conf| conf.cache_key_cert_vcode_expire_sec)
     }
 
+    // TODO
+    // #[deprecated]
     fn rbum_conf_cache_key_cert_code_(&self) -> String {
         RbumConfigManager::get_config(self.module_code(), |conf| conf.cache_key_cert_code_.to_string())
     }
 
+    // TODO
+    // #[deprecated]
     fn rbum_conf_cache_key_cert_code_expire_sec(&self) -> usize {
         RbumConfigManager::get_config(self.module_code(), |conf| conf.cache_key_cert_code_expire_sec)
     }

@@ -135,7 +135,7 @@ impl IamCertOAuth2Serv {
                     sk: None,
                     sk_invisible: None,
 
-                    is_ignore_check_sk: false,
+                    ignore_check_sk: false,
                     ext: None,
                     start_time: None,
                     end_time: None,
@@ -165,7 +165,7 @@ impl IamCertOAuth2Serv {
                     rel_rbum_kind: RbumCertRelKind::Item,
                     rel_rbum_id: account_id.to_string(),
                     is_outside: false,
-                    is_ignore_check_sk: false,
+                    ignore_check_sk: false,
                 },
                 funs,
                 ctx,

@@ -474,7 +474,7 @@ impl IamCertServ {
                 rel_rbum_kind: RbumCertRelKind::Item,
                 rel_rbum_id: ctx.own_paths.to_string(),
                 is_outside: true,
-                is_ignore_check_sk: false,
+                ignore_check_sk: false,
             },
             funs,
             ctx,
@@ -491,7 +491,7 @@ impl IamCertServ {
                 ak: Some(TrimString(modify_req.ak.trim().to_string())),
                 sk: Some(TrimString(modify_req.sk.clone().unwrap_or_default())),
                 sk_invisible: modify_req.sk_invisible,
-                is_ignore_check_sk: false,
+                ignore_check_sk: false,
                 start_time: None,
                 end_time: None,
                 conn_uri: modify_req.conn_uri.clone(),
@@ -513,7 +513,7 @@ impl IamCertServ {
                 sk: None,
                 sk_invisible: None,
 
-                is_ignore_check_sk: false,
+                ignore_check_sk: false,
                 start_time: None,
                 end_time: None,
                 conn_uri: None,
@@ -574,7 +574,7 @@ impl IamCertServ {
                 rel_rbum_kind: RbumCertRelKind::Item,
                 rel_rbum_id: account_id.to_string(),
                 is_outside: true,
-                is_ignore_check_sk: false,
+                ignore_check_sk: false,
             },
             funs,
             ctx,
@@ -632,7 +632,7 @@ impl IamCertServ {
                     ..Default::default()
                 },
                 kind: Some(kind.to_string()),
-                supplier: Some(cert_supplier.clone()),
+                suppliers: Some(cert_supplier.clone()),
                 rel_rbum_id: Some(rel_rbum_id.to_string()),
                 ..Default::default()
             }
@@ -681,7 +681,7 @@ impl IamCertServ {
         let ext_cert = RbumCertServ::find_one_detail_rbum(
             &RbumCertFilterReq {
                 kind: Some(IamCertExtKind::ThirdParty.to_string()),
-                supplier: Some(cert_supplier.clone()),
+                suppliers: Some(cert_supplier.clone()),
                 rel_rbum_id: Some(rel_rbum_id.to_string()),
                 ..Default::default()
             },
@@ -1557,7 +1557,7 @@ impl IamCertServ {
                     sk_invisible: Some(req.sk_invisible),
                     ak: None,
                     sk: None,
-                    is_ignore_check_sk: true,
+                    ignore_check_sk: true,
                     ext: None,
                     start_time: None,
                     end_time: None,
