@@ -25,12 +25,17 @@ pub struct Model {
     /// 更新时间
     #[sea_orm(column_type = "Timestamp")]
     pub update_time: DateTime<Utc>,
+    /// 最大错误次数
     #[sea_orm(column_type = "Integer")]
     pub max_error_times: i32,
+    /// 过期时间
     #[sea_orm(column_type = "Integer")]
     pub expire_sec: i32,
+    /// 验证码长度
     #[sea_orm(column_type = "Integer")]
     pub length: i32,
+    /// TODO: 使用场景?
+    /// 关联触达集合ID
     #[sea_orm(column_type = "String(Some(255))")]
     pub rel_reach_set_id: String,
     /// 资源作用级别

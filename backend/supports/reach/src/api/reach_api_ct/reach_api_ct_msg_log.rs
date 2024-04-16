@@ -13,9 +13,13 @@ use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp};
 #[derive(Clone, Default)]
 /// 消息记录-租户控制台
 pub struct ReachMsgLogCtApi;
+
+/// Tenant Console Reach Message Log API
+/// 租户控制台触达消息记录API
 #[cfg_attr(feature = "simple-client", simple_invoke_client(Client<'_>))]
-#[poem_openapi::OpenApi(prefix_path = "/ct/msg/log", tag = "bios_basic::ApiTag::App")]
+#[poem_openapi::OpenApi(prefix_path = "/ct/msg/log", tag = "bios_basic::ApiTag::Tenant")]
 impl ReachMsgLogCtApi {
+    /// Find all message log data paged
     /// 获取所有消息记录数据
     #[oai(method = "get", path = "/all")]
     pub async fn find_msg_log(&self, reach_message_id: Query<String>, TardisContextExtractor(ctx): TardisContextExtractor) -> TardisApiResult<Vec<ReachMsgLogSummaryResp>> {
@@ -28,7 +32,8 @@ impl ReachMsgLogCtApi {
         TardisResp::ok(resp)
     }
 
-    /// 获取所有消息记录数据
+    /// Page find message log data
+    /// 分页获取消息记录数据
     #[oai(method = "get", path = "/page")]
     pub async fn find_msg_log_paged(
         &self,
@@ -40,7 +45,6 @@ impl ReachMsgLogCtApi {
         let funs = get_tardis_inst();
         let page_number = page_number.unwrap_or(1);
         let page_size = page_size.unwrap_or(10);
-        // filter
         let mut filter = ReachMsgLogFilterReq::default();
         filter.base_filter.basic.with_sub_own_paths = true;
         filter.rel_reach_message_id = reach_message_id.0;
