@@ -27,9 +27,11 @@ use crate::iam_enumeration::{IamRelKind, IamRoleKind};
 pub struct IamCaRoleApi;
 
 /// App Console Role API
+/// 应用控制台角色API
 #[poem_openapi::OpenApi(prefix_path = "/ca/role", tag = "bios_basic::ApiTag::App")]
 impl IamCaRoleApi {
     /// Add Role
+    /// 添加角色
     #[oai(path = "/", method = "post")]
     async fn add(&self, mut add_req: Json<IamRoleAggAddReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<String> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
@@ -43,8 +45,10 @@ impl IamCaRoleApi {
     }
 
     /// Modify Role By Role Id
-    ///
+    /// 根据角色ID修改角色
+    /// 
     /// When code = 202, the return value is the asynchronous task id
+    /// 当 code = 202 时，返回值为异步任务ID
     #[oai(path = "/:id", method = "put")]
     async fn modify(&self, id: Path<String>, mut modify_req: Json<IamRoleAggModifyReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Option<String>> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
@@ -61,6 +65,7 @@ impl IamCaRoleApi {
     }
 
     /// Get Role By Role Id
+    /// 根据角色ID获取角色
     #[oai(path = "/:id", method = "get")]
     async fn get(&self, id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<IamRoleDetailResp> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
@@ -82,6 +87,7 @@ impl IamCaRoleApi {
     }
 
     /// Find Roles
+    /// 查找角色
     #[oai(path = "/", method = "get")]
     async fn paginate(
         &self,
@@ -127,6 +133,7 @@ impl IamCaRoleApi {
     }
 
     /// Delete Role By Role Id
+    /// 根据角色ID删除角色
     #[oai(path = "/:id", method = "delete")]
     async fn delete(&self, id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Option<String>> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
@@ -167,6 +174,7 @@ impl IamCaRoleApi {
     }
 
     /// Add Role Rel Account
+    /// 添加角色关联账号
     #[oai(path = "/:id/account/:account_id", method = "put")]
     async fn add_rel_account(&self, id: Path<String>, account_id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
@@ -181,6 +189,7 @@ impl IamCaRoleApi {
     }
 
     /// Batch add Role Rel Account
+    /// 批量添加角色关联账号
     #[oai(path = "/:id/account/batch/:account_ids", method = "put")]
     async fn batch_add_rel_account(&self, id: Path<String>, account_ids: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
@@ -211,6 +220,7 @@ impl IamCaRoleApi {
     }
 
     /// Delete Role Rel Account
+    /// 删除角色关联账号
     #[oai(path = "/:id/account/:account_id", method = "delete")]
     async fn delete_rel_account(&self, id: Path<String>, account_id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
@@ -223,6 +233,7 @@ impl IamCaRoleApi {
     }
 
     /// Batch delete Role Rel Account
+    /// 批量删除角色关联账号
     #[oai(path = "/:id/account/batch/:account_ids", method = "delete")]
     async fn batch_delete_rel_account(&self, id: Path<String>, account_ids: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
@@ -238,6 +249,7 @@ impl IamCaRoleApi {
     }
 
     /// Count Rel Accounts By Role Id
+    /// 根据角色ID统计关联账号
     #[oai(path = "/:id/account/total", method = "get")]
     async fn count_rel_accounts(&self, id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<u64> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
@@ -263,6 +275,7 @@ impl IamCaRoleApi {
     }
 
     /// Add Role Rel Res
+    /// 添加角色关联资源
     #[oai(path = "/:id/res/:res_id", method = "put")]
     async fn add_rel_res(&self, id: Path<String>, res_id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
@@ -275,6 +288,7 @@ impl IamCaRoleApi {
     }
 
     /// Delete Role Rel Res
+    /// 删除角色关联资源
     #[oai(path = "/:id/res/:res_id", method = "delete")]
     async fn delete_rel_res(&self, id: Path<String>, res_id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
@@ -287,6 +301,7 @@ impl IamCaRoleApi {
     }
 
     /// Count Rel Res By Role Id
+    /// 根据角色ID统计关联资源
     #[oai(path = "/:id/res/total", method = "get")]
     async fn count_rel_res(&self, id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<u64> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
@@ -297,6 +312,7 @@ impl IamCaRoleApi {
     }
 
     /// Find Rel Res By Role Id
+    /// 根据角色ID查找关联资源
     #[oai(path = "/:id/res", method = "get")]
     async fn find_rel_res(
         &self,

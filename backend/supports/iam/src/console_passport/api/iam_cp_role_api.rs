@@ -14,9 +14,11 @@ use tardis::web::poem::Request;
 #[derive(Clone, Default)]
 pub struct IamCpRoleApi;
 
+/// Console Passport Role API
 #[poem_openapi::OpenApi(prefix_path = "/cp", tag = "bios_basic::ApiTag::Passport")]
 impl IamCpRoleApi {
     /// Find Role By CTX
+    /// 查找角色
     #[oai(path = "/", method = "get")]
     async fn find_by_ctx(&self, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Vec<IamRoleBoneResp>> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;

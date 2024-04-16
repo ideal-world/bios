@@ -16,11 +16,14 @@ use tardis::web::poem::Request;
 pub struct IamCaResApi;
 
 /// App Console Res API
+/// 应用控制台资源API
 ///
 /// Note: the current res only supports sys level.
+/// 注意：当前资源仅支持系统级别
 #[poem_openapi::OpenApi(prefix_path = "/ca/res", tag = "bios_basic::ApiTag::App")]
 impl IamCaResApi {
     /// Find Menu Tree
+    /// 查找菜单树
     #[oai(path = "/tree", method = "get")]
     async fn get_menu_tree(&self, exts: Query<Option<String>>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<RbumSetTreeResp> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
@@ -32,6 +35,7 @@ impl IamCaResApi {
     }
 
     /// Find Rel Roles By Res Id
+    /// 根据资源ID查找关联角色
     #[oai(path = "/:id/role", method = "get")]
     async fn find_rel_roles(
         &self,

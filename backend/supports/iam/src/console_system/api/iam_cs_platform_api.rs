@@ -12,9 +12,11 @@ use tardis::web::poem::Request;
 pub struct IamCsPlatformApi;
 
 /// System Console Platform API
+/// 系统控制台平台API
 #[poem_openapi::OpenApi(prefix_path = "/cs/platform", tag = "bios_basic::ApiTag::System")]
 impl IamCsPlatformApi {
     /// modify Platform config
+    /// 修改平台配置
     #[oai(path = "/", method = "put")]
     async fn modify(&self, modify_req: Json<IamPlatformConfigReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
@@ -27,6 +29,7 @@ impl IamCsPlatformApi {
     }
 
     /// Get Platform config
+    /// 获取平台配置
     #[oai(path = "/", method = "get")]
     async fn get(&self, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<IamPlatformConfigResp> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;

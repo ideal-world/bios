@@ -33,11 +33,14 @@ pub struct IamCiCertApi;
 pub struct IamCiLdapCertApi;
 
 /// # Interface Console Manage Cert API
+/// 接口控制台管理证书API
 ///
 /// Allow Management Of aksk (an authentication method between applications)
+/// 允许管理aksk（应用之间的一种认证方式）
 #[poem_openapi::OpenApi(prefix_path = "/private/ci/manage", tag = "bios_basic::ApiTag::Interface")]
 impl IamCiCertManageApi {
     /// Add aksk Cert
+    /// 添加aksk证书
     #[oai(path = "/aksk", method = "post")]
     async fn add_aksk(&self, add_req: Json<IamCertAkSkAddReq>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<IamCertAkSkResp> {
         let mut funs = iam_constants::get_tardis_inst();
@@ -51,6 +54,8 @@ impl IamCiCertManageApi {
         TardisResp::ok(result)
     }
 
+    /// Delete aksk Cert
+    /// 删除aksk证书
     #[oai(path = "/aksk", method = "delete")]
     async fn delete_aksk(&self, id: Query<String>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
@@ -63,6 +68,8 @@ impl IamCiCertManageApi {
         TardisResp::ok(Void {})
     }
 
+    /// Get token
+    /// 获取token
     #[oai(path = "/token", method = "get")]
     async fn get_token(
         &self,
@@ -78,8 +85,12 @@ impl IamCiCertManageApi {
     }
 }
 
+/// # Interface Console Cert API
+/// 接口控制台证书API
 #[poem_openapi::OpenApi(prefix_path = "/ci/cert", tag = "bios_basic::ApiTag::Interface")]
 impl IamCiCertApi {
+    /// Get Cert By Id
+    /// 根据id获取证书
     #[oai(path = "/get/:id", method = "get")]
     async fn get_cert_by_id(&self, id: Path<String>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<IamCertAkSkResp> {
         let funs = iam_constants::get_tardis_inst();
@@ -106,6 +117,13 @@ impl IamCiCertApi {
     /// - `supplier` is only used when kind is `Ldap`
     /// - `ldap_origin` is only used when kind is `Ldap` and default is false.
     /// when true,return ak will be original DN
+    /// 
+    /// 根据kind和supplier查询证书
+    /// 
+    /// 如果kind为空，查询默认kind(UserPwd)
+    /// - `supplier`仅在kind为`Ldap`时使用
+    /// - `ldap_origin`仅在kind为`Ldap`时使用，默认为false
+    /// 当为true时，返回的ak将是原始DN
     #[oai(path = "/:account_id", method = "get")]
     async fn get_cert_by_kind_supplier(
         &self,
@@ -144,6 +162,7 @@ impl IamCiCertApi {
     }
 
     /// Add Third-kind Cert
+    /// 添加第三方证书
     #[oai(path = "/third-kind", method = "put")]
     async fn add_third_cert(
         &self,
@@ -163,6 +182,7 @@ impl IamCiCertApi {
     }
 
     /// Get Third-kind Certs By Account Id
+    /// 根据账号id获取第三方证书
     #[oai(path = "/third-kind", method = "get")]
     async fn get_third_cert(
         &self,
@@ -179,7 +199,7 @@ impl IamCiCertApi {
         TardisResp::ok(rbum_cert)
     }
 
-    ///Auto Sync
+    /// Auto Sync
     ///
     /// 定时任务触发第三方集成同步
     #[oai(path = "/sync", method = "get")]
@@ -193,6 +213,7 @@ impl IamCiCertApi {
     }
 
     /// decode cert
+    /// 解码证书
     #[oai(path = "/decode", method = "post")]
     async fn decode_certs(&self, body: Json<IamCertDecodeRequest>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<HashMap<String, String>> {
         let mut funs = iam_constants::get_tardis_inst();
@@ -206,8 +227,11 @@ impl IamCiCertApi {
     }
 }
 
+/// # Interface Console Ldap Cert API
+/// 接口控制台Ldap证书API
 #[poem_openapi::OpenApi(prefix_path = "/ci/ldap", tag = "bios_basic::ApiTag::Interface")]
 impl IamCiLdapCertApi {
+    /// Query the corresponding displayName according to ldap cn
     /// 根据ldap cn查询对应的displayName
     #[oai(path = "/cert/cn/:cn", method = "get")]
     async fn get_ldap_resp_by_cn(&self, cn: Path<String>) -> TardisApiResult<Vec<IamAccountExtSysResp>> {
@@ -226,6 +250,7 @@ impl IamCiLdapCertApi {
     }
 
     /// Get Ldap Cert Conf
+    /// 获取ldap证书配置
     #[oai(path = "/conf", method = "get")]
     async fn get_ldap_cert(
         &self,

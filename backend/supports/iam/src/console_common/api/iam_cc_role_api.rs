@@ -19,9 +19,11 @@ use tardis::web::poem::Request;
 pub struct IamCcRoleApi;
 
 /// Common Console Role API
+/// 通用控制台角色API
 #[poem_openapi::OpenApi(prefix_path = "/cc/role", tag = "bios_basic::ApiTag::Common")]
 impl IamCcRoleApi {
     /// Find Roles
+    /// 查找角色
     #[oai(path = "/", method = "get")]
     async fn paginate(
         &self,
@@ -89,6 +91,7 @@ impl IamCcRoleApi {
     }
 
     /// Find pub Rel Res By Role Id
+    /// 根据角色ID查找公开关联资源
     #[oai(path = "/:id/pub_res", method = "get")]
     async fn find_rel_res_with_pub(
         &self,
@@ -128,8 +131,10 @@ impl IamCcRoleApi {
     }
 
     /// Find Role Name By Ids
+    /// 根据角色ID查找角色名称
     ///
     /// Return format: ["<id>,<name>"]
+    /// 返回格式：["<id>,<name>"]
     #[oai(path = "/name", method = "get")]
     async fn find_name_by_ids(
         &self,
@@ -147,6 +152,7 @@ impl IamCcRoleApi {
     }
 
     /// Get Embed Subrole Id
+    /// 获取嵌套子角色ID
     #[oai(path = "/get_embed_subrole_id", method = "get")]
     async fn get_embed_subrole_id(&self, id: Query<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<String> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;

@@ -24,9 +24,11 @@ pub struct IamCcAccountApi;
 pub struct IamCcAccountLdapApi;
 
 /// Common Console Account API
+/// 通用控制台账号API
 #[poem_openapi::OpenApi(prefix_path = "/cc/account", tag = "bios_basic::ApiTag::Common")]
 impl IamCcAccountApi {
     /// Find Accounts
+    /// 查找账号
     #[oai(path = "/", method = "get")]
     async fn paginate(
         &self,
@@ -99,6 +101,7 @@ impl IamCcAccountApi {
     }
 
     /// Get Account
+    /// 获取账号
     #[oai(path = "/:id", method = "get")]
     async fn get(&self, id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<IamAccountDetailAggResp> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
@@ -123,12 +126,15 @@ impl IamCcAccountApi {
     }
 
     /// Find Account Name By Ids
+    /// 根据账号ID查找账号名称
     ///
-    /// Return format: ["<id>,<name>"]
+    /// Return format: ["<id>,<name>,<icon>"]
+    /// 返回格式：["<id>,<name>,<icon>"]
     #[oai(path = "/name", method = "get")]
     async fn find_name_by_ids(
         &self,
         // Account Ids, multiple ids separated by ,
+        // 账号ID，多个ID以,分隔
         ids: Query<String>,
         ctx: TardisContextExtractor,
         request: &Request,
@@ -142,12 +148,15 @@ impl IamCcAccountApi {
     }
 
     /// Find Account online By Ids
+    /// 根据账号ID查找账号在线状态
     ///
     /// Return format: ["<id>,<online -> true or false>"]
+    /// 返回格式：["<id>,<online -> true or false>"]
     #[oai(path = "/online", method = "get")]
     async fn find_account_online_by_ids(
         &self,
         // Account Ids, multiple ids separated by ,
+        // 账号ID，多个ID以,分隔
         ids: Query<String>,
         ctx: TardisContextExtractor,
         request: &Request,
@@ -161,12 +170,15 @@ impl IamCcAccountApi {
     }
 
     /// Find Account lock state By Ids
+    /// 根据账号ID查找账号锁定状态
     ///
     /// Return format: ["<id>,<state>"]
+    /// 返回格式：["<id>,<state>"]
     #[oai(path = "/lock/state", method = "get")]
     async fn find_account_lock_state_by_ids(
         &self,
         // Account Ids, multiple ids separated by ,
+        // 账号ID，多个ID以,分隔
         ids: Query<String>,
         ctx: TardisContextExtractor,
         request: &Request,
@@ -181,10 +193,12 @@ impl IamCcAccountApi {
 }
 
 /// Common Console Account LDAP API
+/// 通用控制台账号LDAP API
 #[cfg(feature = "ldap_client")]
 #[poem_openapi::OpenApi(prefix_path = "/cc/account/ldap", tag = "bios_basic::ApiTag::Common")]
 impl IamCcAccountLdapApi {
     /// Find Accounts by LDAP
+    /// 根据LDAP查找账号
     #[oai(path = "/", method = "get")]
     async fn find_from_ldap(
         &self,
@@ -202,6 +216,7 @@ impl IamCcAccountLdapApi {
     }
 
     /// Add Account by LDAP
+    /// 通过LDAP添加账号
     #[oai(path = "/", method = "put")]
     async fn add_account_from_ldap(
         &self,
