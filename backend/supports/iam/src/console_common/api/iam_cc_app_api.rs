@@ -17,9 +17,11 @@ use crate::iam_constants;
 pub struct IamCcAppApi;
 
 /// Common Console App API
+/// 通用控制台应用API
 #[poem_openapi::OpenApi(prefix_path = "/cc/app", tag = "bios_basic::ApiTag::Common")]
 impl IamCcAppApi {
     /// Find Apps
+    /// 查找应用
     #[oai(path = "/", method = "get")]
     async fn paginate(
         &self,
@@ -59,8 +61,10 @@ impl IamCcAppApi {
     }
 
     /// Find App Name and icon By Ids
+    /// 根据应用ID查找应用名称和图标
     ///
     /// Return format: ["<id>,<name>,<icon>"]
+    /// 返回格式：["<id>,<name>,<icon>"]
     #[oai(path = "/name", method = "get")]
     async fn find_name_by_ids(
         &self,

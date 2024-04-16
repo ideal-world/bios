@@ -23,7 +23,7 @@ impl BaseSpiClient {
 
     pub async fn headers(headers: Option<Vec<(String, String)>>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<(String, String)>> {
         let spi_ctx = TardisContext {
-            owner: funs.invoke_conf_spi_app_id(),
+            ak: funs.invoke_conf_spi_app_id(),
             ..ctx.clone()
         };
         let base_ctx = (TARDIS_CONTEXT.to_string(), TardisFuns::crypto.base64.encode(TardisFuns::json.obj_to_string(&spi_ctx)?));

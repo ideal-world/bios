@@ -29,10 +29,12 @@ use tardis::web::poem::Request;
 #[derive(Clone, Default)]
 pub struct IamCiAccountApi;
 
-/// Interface Console Account API	接口控制台帐户API
+/// Interface Console Account API
+/// 接口控制台帐户API
 #[poem_openapi::OpenApi(prefix_path = "/ci/account", tag = "bios_basic::ApiTag::Interface")]
 impl IamCiAccountApi {
     /// Find Accounts
+    /// 查找帐户
     #[oai(path = "/", method = "get")]
     #[allow(clippy::too_many_arguments)]
     async fn paginate(
@@ -123,7 +125,8 @@ impl IamCiAccountApi {
         TardisResp::ok(result)
     }
 
-    /// Get Context By Account Id	根据帐户Id获取上下文
+    /// Get Context By Account Id
+    /// 根据帐户Id获取上下文
     #[oai(path = "/:id/ctx", method = "get")]
     async fn get_account_context(&self, id: Path<String>, app_id: Query<Option<String>>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<String> {
         let funs = iam_constants::get_tardis_inst();
@@ -134,7 +137,8 @@ impl IamCiAccountApi {
         TardisResp::ok(TardisFuns::crypto.base64.encode(TardisFuns::json.obj_to_string(&ctx_resp).unwrap_or_default()))
     }
 
-    /// Get Account By Account Id	通过帐户Id获取帐户
+    /// Get Account By Account Id	
+    /// 通过帐户Id获取帐户
     #[oai(path = "/:id", method = "get")]
     async fn get(&self, id: Path<String>, tenant_id: Query<Option<String>>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<IamAccountDetailAggResp> {
         let funs = iam_constants::get_tardis_inst();
@@ -161,8 +165,10 @@ impl IamCiAccountApi {
     }
 
     /// Find Account Id By Ak
+    /// 通过Ak查找帐户Id
     ///
     /// if kind is none,query default kind(UserPwd)
+    /// 如果kind为空，则查询默认kind(UserPwd)
     #[oai(path = "/:ak/ak", method = "get")]
     async fn find_account_by_ak(
         &self,
@@ -225,6 +231,7 @@ impl IamCiAccountApi {
     }
 
     /// Find App Set Items (Account) ctx
+    /// 查找应用集合项（帐户）上下文
     #[oai(path = "/apps/item/ctx", method = "get")]
     async fn find_items_ctx(
         &self,
@@ -289,6 +296,7 @@ impl IamCiAccountApi {
     }
 
     /// Find App Set Items (Account)
+    /// 查找应用集合项（帐户）
     #[oai(path = "/apps/item", method = "get")]
     async fn find_items(
         &self,

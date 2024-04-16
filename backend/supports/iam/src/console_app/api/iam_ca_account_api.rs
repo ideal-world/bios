@@ -20,9 +20,11 @@ use tardis::web::poem::Request;
 pub struct IamCaAccountApi;
 
 /// App Console Account API
+/// 应用控制台账号API
 #[poem_openapi::OpenApi(prefix_path = "/ca/account", tag = "bios_basic::ApiTag::App")]
 impl IamCaAccountApi {
     /// Get Account By Account Id
+    /// 根据账号ID获取账号
     #[oai(path = "/:id", method = "get")]
     async fn get(&self, id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<IamAccountDetailAggResp> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
@@ -33,6 +35,7 @@ impl IamCaAccountApi {
     }
 
     /// Find Accounts
+    /// 查找账号
     #[oai(path = "/", method = "get")]
     async fn paginate(
         &self,
@@ -86,6 +89,7 @@ impl IamCaAccountApi {
     }
 
     /// Count Accounts
+    /// 统计账号数量
     #[oai(path = "/total", method = "get")]
     async fn count(&self, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<u64> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;

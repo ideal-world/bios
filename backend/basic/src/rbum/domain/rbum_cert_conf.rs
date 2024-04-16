@@ -141,12 +141,12 @@ pub struct Model {
     ///
     /// 是否为基础认证
     ///
-    /// There can only be at most one base certification for the same `rel_rbum_item_id` ,
-    /// If true, the sk of this record will be the public sk of the same `rel_rbum_item_id` ,
-    /// supports a login method like ak of different cert configuration in the same `rel_rbum_item_id` + sk of this record.
+    /// There can only be at most one base certification for the same `rel_rbum_domain_id + rel_rbum_item_id` ,
+    /// If true, the sk of this record will be the public sk of the same `rel_rbum_domain_id + rel_rbum_item_id` ,
+    /// supports a login method like ak of different cert configuration in the same `rel_rbum_domain_id + rel_rbum_item_id` + sk of this record.
     /// For example, the password can be used as the basic sk, so that the login methods of mobile phone verification code, username password, and mobile phone + password can be realized.
     ///
-    /// 同一个`rel_rbum_item_id`下最多只能有一个基础认证，如果为true，则该记录的sk将为同一个`rel_rbum_item_id`下的公共sk，支持同一个`rel_rbum_item_id`下不同凭证配置的ak + 该记录的sk的登录方式。
+    /// 同一个`rel_rbum_domain_id + rel_rbum_item_id`下最多只能有一个基础认证，如果为true，则该记录的sk将为同一个`rel_rbum_domain_id + rel_rbum_item_id`下的公共sk，支持同一个`rel_rbum_domain_id + rel_rbum_item_id`下不同凭证配置的ak + 该记录的sk的登录方式。
     /// 比如可以将密码作为基础sk，这样可以实现手机号验证码、用户名密码以及手机号+密码的登录方式。
     pub is_basic: bool,
     /// Support reset the cert configuration type(corresponding to the ``code`` value) of the basic sk
@@ -162,9 +162,9 @@ pub struct Model {
     ///
     /// sk的过期时间
     pub expire_sec: i64,
-    /// sk被锁定的最大错误次数，超过此次数将被锁定
-    ///
     /// The maximum number of errors that sk can be locked, and it will be locked if it exceeds this number
+    ///
+    /// sk被锁定的最大错误次数，超过此次数将被锁定
     ///
     /// WARING: If an object (such as a user) is bound to multiple credential configurations, and these credential configurations have different sk_lock_err_times, it may be based on the maximum.
     ///
@@ -185,6 +185,10 @@ pub struct Model {
     /// The number of certificates in effect at the same time
     ///
     /// 同时有效的凭证数量
+    ///
+    /// ``0`` means no limit
+    ///
+    /// 为``0``时表示不限制
     ///
     /// If only single terminal login is allowed, you can configure a credential configuration ``coexist_num = 1``, and ensure that all terminals use this configuration when logging in.
     /// If an android, ios, and two web terminals can log in at the same time,

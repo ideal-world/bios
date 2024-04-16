@@ -25,12 +25,16 @@ pub struct IamCsOrgApi;
 pub struct IamCsOrgItemApi;
 
 /// System Console Org API
+/// 系统控制台组织API
 #[poem_openapi::OpenApi(prefix_path = "/cs/org", tag = "bios_basic::ApiTag::System")]
 impl IamCsOrgApi {
     /// Find Org Tree
+    /// 查找组织树
     ///
     /// * Without parameters: Query the whole tree
     /// * ``parent_sys_code=true`` : query only the next level. This can be used to query level by level when the tree is too large
+    /// * 无参数：查询整个树
+    /// * ``parent_sys_code=true`` : 仅查询下一级，当树太大时可以用来逐级查询
     #[oai(path = "/tree", method = "get")]
     async fn get_tree(
         &self,
@@ -60,6 +64,7 @@ impl IamCsOrgApi {
         TardisResp::ok(result)
     }
     /// Add Org Cate
+    /// 添加组织分类
     #[oai(path = "/cate", method = "post")]
     async fn add_cate(&self, mut add_req: Json<IamSetCateAddReq>, tenant_id: Query<Option<String>>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<String> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
@@ -72,6 +77,7 @@ impl IamCsOrgApi {
     }
 
     /// Modify Org Cate By Org Cate Id
+    /// 修改组织分类
     #[oai(path = "/cate/:id", method = "put")]
     async fn modify_set_cate(
         &self,
@@ -92,6 +98,7 @@ impl IamCsOrgApi {
     }
 
     /// Delete Org Cate By Org Cate Id
+    /// 删除组织分类
     #[oai(path = "/cate/:id", method = "delete")]
     async fn delete_cate(&self, id: Path<String>, tenant_id: Query<Option<String>>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
@@ -122,6 +129,7 @@ impl IamCsOrgApi {
     }
 
     /// Unbind Tenant Org
+    /// 解绑租户组织
     #[oai(path = "/cate/:id/rel", method = "delete")]
     async fn unbind_cate_with_tenant(&self, id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
@@ -153,6 +161,7 @@ impl IamCsOrgApi {
     }
 
     /// Query tenant IDs that have already been bound
+    /// 查询已经绑定的租户ID
     #[oai(path = "/tenant/rel", method = "get")]
     async fn find_rel_tenant_org(&self, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Vec<String>> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
@@ -165,9 +174,12 @@ impl IamCsOrgApi {
     }
 }
 /// System Console Org Item API
+/// 系统控制台组织项API
 #[poem_openapi::OpenApi(prefix_path = "/cs/org/item", tag = "bios_basic::ApiTag::System")]
 impl IamCsOrgItemApi {
+
     /// Batch Add Org Item
+    /// 批量添加组织项
     #[oai(path = "/batch", method = "put")]
     async fn batch_add_set_item(
         &self,
@@ -226,6 +238,7 @@ impl IamCsOrgItemApi {
     }
 
     /// Find Org Items
+    /// 查找组织项
     #[oai(path = "/", method = "get")]
     async fn find_items(
         &self,
@@ -249,6 +262,7 @@ impl IamCsOrgItemApi {
     }
 
     /// Delete Org Item By Org Item Id
+    /// 删除组织项
     #[oai(path = "/:id", method = "delete")]
     async fn delete_item(&self, id: Path<String>, tenant_id: Query<Option<String>>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();

@@ -148,7 +148,7 @@ impl IamCertUserPwdServ {
                 sk: Some(add_req.sk.clone()),
                 sk_invisible: None,
 
-                is_ignore_check_sk: add_req.is_ignore_check_sk,
+                ignore_check_sk: add_req.is_ignore_check_sk,
                 kind: None,
                 supplier: None,
                 vcode: None,
@@ -198,7 +198,7 @@ impl IamCertUserPwdServ {
                     ak: None,
                     sk: None,
                     sk_invisible: None,
-                    is_ignore_check_sk: false,
+                    ignore_check_sk: false,
                     ext: None,
                     start_time: None,
                     end_time: None,
@@ -265,7 +265,7 @@ impl IamCertUserPwdServ {
                     sk: Some(modify_req.sk.clone()),
                     sk_invisible: None,
 
-                    is_ignore_check_sk: true,
+                    ignore_check_sk: true,
                     ext: None,
                     start_time: None,
                     end_time: None,
@@ -319,7 +319,7 @@ impl IamCertUserPwdServ {
                     sk: None,
                     sk_invisible: None,
 
-                    is_ignore_check_sk: false,
+                    ignore_check_sk: false,
                     ext: None,
                     start_time: None,
                     end_time: None,
@@ -387,7 +387,7 @@ impl IamCertUserPwdServ {
                     sk: None,
                     sk_invisible: None,
 
-                    is_ignore_check_sk: false,
+                    ignore_check_sk: false,
                     ext: None,
                     start_time: None,
                     end_time: None,

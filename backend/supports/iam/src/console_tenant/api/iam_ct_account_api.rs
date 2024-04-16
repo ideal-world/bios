@@ -28,9 +28,11 @@ use tardis::web::poem::Request;
 pub struct IamCtAccountApi;
 
 /// Tenant Console Account API
+/// 租户控制台账号API
 #[poem_openapi::OpenApi(prefix_path = "/ct/account", tag = "bios_basic::ApiTag::Tenant")]
 impl IamCtAccountApi {
     /// Add Account
+    /// 添加账号
     #[oai(path = "/", method = "post")]
     async fn add(&self, app_id: Query<Option<String>>, add_req: Json<IamAccountAggAddReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<String> {
         let ctx = IamCertServ::try_use_app_ctx(ctx.0, app_id.0)?;
@@ -46,6 +48,7 @@ impl IamCtAccountApi {
     }
 
     /// Modify Account
+    /// 修改账号
     #[oai(path = "/:id", method = "put")]
     async fn modify(
         &self,
@@ -69,7 +72,8 @@ impl IamCtAccountApi {
         TardisResp::ok(Void {})
     }
 
-    /// Get Account
+    /// Get Account By Account Id
+    /// 根据账号ID获取账号
     #[oai(path = "/:id", method = "get")]
     async fn get(&self, id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<IamAccountDetailAggResp> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
@@ -94,6 +98,7 @@ impl IamCtAccountApi {
     }
 
     /// Find Accounts
+    /// 查找账号
     #[oai(path = "/", method = "get")]
     #[allow(clippy::too_many_arguments)]
     async fn paginate(
@@ -197,7 +202,8 @@ impl IamCtAccountApi {
         TardisResp::ok(result)
     }
 
-    /// Delete Account
+    /// Delete Account By Account Id
+    /// 根据账号ID删除账号
     #[oai(path = "/:id", method = "delete")]
     async fn delete(&self, id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
@@ -211,6 +217,7 @@ impl IamCtAccountApi {
     }
 
     /// Delete Token By Account Id
+    /// 根据账号ID删除Token
     #[oai(path = "/:id/token", method = "delete")]
     async fn offline(&self, id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
@@ -223,6 +230,7 @@ impl IamCtAccountApi {
     }
 
     /// Count Accounts
+    /// 统计账号
     #[oai(path = "/total", method = "get")]
     async fn count(&self, app_id: Query<Option<String>>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<u64> {
         let ctx = IamCertServ::try_use_app_ctx(ctx.0, app_id.0)?;
@@ -245,6 +253,7 @@ impl IamCtAccountApi {
     }
 
     /// Active account
+    /// 激活账号
     #[oai(path = "/:id/active", method = "put")]
     async fn active_account(&self, id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
@@ -273,6 +282,7 @@ impl IamCtAccountApi {
     }
 
     /// Logout account
+    /// 注销账号
     #[oai(path = "/:id/logout", method = "put")]
     async fn logout_account(&self, id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
@@ -300,7 +310,8 @@ impl IamCtAccountApi {
         TardisResp::ok(Void {})
     }
 
-    ///lock account
+    /// lock account
+    /// 锁定账号
     #[oai(path = "/:id/lock", method = "put")]
     async fn lock_account(&self, id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
@@ -328,7 +339,8 @@ impl IamCtAccountApi {
         TardisResp::ok(Void {})
     }
 
-    ///unlock account
+    /// unlock account
+    /// 解锁账号
     #[oai(path = "/:id/unlock", method = "post")]
     async fn unlock_account(&self, id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
@@ -342,6 +354,7 @@ impl IamCtAccountApi {
     }
 
     /// paginate App Set Items (account)
+    /// 分页获取应用集合项（账号）
     #[oai(path = "/apps/item", method = "get")]
     async fn paginate_items(
         &self,

@@ -26,9 +26,11 @@ use tardis::web::poem::Request;
 pub struct IamCpAccountApi;
 
 /// Passport Console Account API
+/// 通行证控制台账号API
 #[poem_openapi::OpenApi(prefix_path = "/cp/account", tag = "bios_basic::ApiTag::Passport")]
 impl IamCpAccountApi {
     /// Modify Current Account
+    /// 修改当前账号
     #[oai(path = "/", method = "put")]
     async fn modify(&self, mut modify_req: Json<IamAccountSelfModifyReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
@@ -46,6 +48,7 @@ impl IamCpAccountApi {
     }
 
     /// Get Current Account
+    /// 获取当前账号
     #[oai(path = "/", method = "get")]
     async fn get_current_account_info(&self, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<IamCpAccountInfoResp> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
@@ -56,6 +59,7 @@ impl IamCpAccountApi {
     }
 
     /// Find App Set Items (Account)
+    /// 查找应用集合项（账号）
     #[oai(path = "/apps/item", method = "get")]
     async fn find_apps_items(
         &self,
@@ -119,6 +123,7 @@ impl IamCpAccountApi {
     }
 
     /// Find Org Set Items (Account)
+    /// 查找组织集合项（账号）
     #[oai(path = "/org/item", method = "get")]
     async fn find_org_items(
         &self,

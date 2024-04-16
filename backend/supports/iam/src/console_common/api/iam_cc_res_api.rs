@@ -18,10 +18,11 @@ use tardis::web::web_resp::{TardisApiResult, TardisResp};
 pub struct IamCcResApi;
 
 /// Common Console Res API
-///
+/// 通用控制台资源API
 #[poem_openapi::OpenApi(prefix_path = "/cc/res", tag = "bios_basic::ApiTag::Common")]
 impl IamCcResApi {
     /// Find Menu Tree
+    /// 查找菜单树
     #[oai(path = "/tree", method = "get")]
     async fn get_menu_tree(&self, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<RbumSetTreeResp> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
@@ -33,6 +34,7 @@ impl IamCcResApi {
     }
 
     /// Find res by apps
+    /// 根据应用查找资源
     #[oai(path = "/res", method = "get")]
     async fn get_res_by_app(&self, app_ids: Query<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<HashMap<String, Vec<IamResSummaryResp>>> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
@@ -44,6 +46,7 @@ impl IamCcResApi {
     }
 
     /// Find res by apps and code
+    /// 根据应用和资源编码查找资源
     #[oai(path = "/res", method = "put")]
     async fn get_res_by_app_code(&self, res_req: Json<IamResAppReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<HashMap<String, Vec<IamResSummaryResp>>> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;

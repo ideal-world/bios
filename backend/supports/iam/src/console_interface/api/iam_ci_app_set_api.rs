@@ -19,10 +19,11 @@ use tardis::web::poem::Request;
 pub struct IamCiAppSetApi;
 
 /// Interface Console App Set API
-///
+/// 接口控制台应用集合API
 #[poem_openapi::OpenApi(prefix_path = "/ci/apps", tag = "bios_basic::ApiTag::Interface")]
 impl IamCiAppSetApi {
     /// Find App Set Items (App Or Account)
+    /// 查找应用集合项（应用或账号）
     #[oai(path = "/item", method = "get")]
     async fn find_items(
         &self,
