@@ -12,12 +12,14 @@ use crate::serv::*;
 #[cfg(feature = "simple-client")]
 use crate::reach_invoke::Client;
 #[derive(Clone, Default)]
-/// 用户触达触发实例配置-租户控制台
 pub struct ReachVcodeStrategyCtApi;
 
+/// Tenant Console Reach Vcode Strategy API
+/// 租户控制台触达vcode策略API
 #[cfg_attr(feature = "simple-client", bios_sdk_invoke::simple_invoke_client(Client<'_>))]
-#[poem_openapi::OpenApi(prefix_path = "/ct/vcode/strategy", tag = "bios_basic::ApiTag::App")]
+#[poem_openapi::OpenApi(prefix_path = "/ct/vcode/strategy", tag = "bios_basic::ApiTag::Tenant")]
 impl ReachVcodeStrategyCtApi {
+    /// Add vcode strategy
     /// 添加vcode策略
     #[oai(method = "post", path = "/")]
     pub async fn add_vcode_strategy(&self, json_body: Json<ReachVCodeStrategyAddReq>, TardisContextExtractor(ctx): TardisContextExtractor) -> TardisApiResult<String> {
@@ -27,6 +29,7 @@ impl ReachVcodeStrategyCtApi {
         TardisResp::ok(id)
     }
 
+    /// Modify vcode strategy
     /// 修改vcode策略
     #[oai(method = "put", path = "/:id")]
     pub async fn modify_vcode_strategy(
@@ -41,7 +44,8 @@ impl ReachVcodeStrategyCtApi {
         TardisResp::ok(Void)
     }
 
-    /// 修改vcode策略
+    /// Get vcode strategy
+    /// 获取vcode策略
     #[oai(method = "get", path = "/")]
     pub async fn get_vcode_strategy(
         &self,

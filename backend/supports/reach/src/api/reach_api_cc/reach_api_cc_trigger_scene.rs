@@ -15,9 +15,12 @@ use crate::serv::*;
 #[derive(Clone, Default)]
 pub struct ReachTriggerSceneCcApi;
 
+/// Common Console Reach Trigger Scene API
+/// 通用控制台触达触发场景API
 #[cfg_attr(feature = "simple-client", bios_sdk_invoke::simple_invoke_client(Client<'_>))]
-#[poem_openapi::OpenApi(prefix_path = "/cc/trigger/scene", tag = "bios_basic::ApiTag::App")]
+#[poem_openapi::OpenApi(prefix_path = "/cc/trigger/scene", tag = "bios_basic::ApiTag::Common")]
 impl ReachTriggerSceneCcApi {
+    /// Find trigger scene
     /// 用户触达触发场景-公告`控制台
     #[oai(method = "get", path = "/")]
     pub async fn find_trigger_scene(&self, TardisContextExtractor(ctx): TardisContextExtractor) -> TardisApiResult<Vec<ReachTriggerSceneSummaryResp>> {
@@ -29,6 +32,7 @@ impl ReachTriggerSceneCcApi {
         TardisResp::ok(resp)
     }
 
+    /// Find trigger scene by code
     /// 根据code获取相关用户触达触发场景
     #[oai(method = "get", path = "/code")]
     pub async fn find_trigger_scene_by_code(&self, code: Query<String>, TardisContextExtractor(ctx): TardisContextExtractor) -> TardisApiResult<Vec<ReachTriggerSceneSummaryResp>> {

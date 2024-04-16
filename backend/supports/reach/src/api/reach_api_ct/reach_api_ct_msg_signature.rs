@@ -18,10 +18,15 @@ use super::map_notfound_to_false;
 #[derive(Clone, Default)]
 /// 用户触达签名-租户控制台
 pub struct ReachMsgSignatureCtApi;
+
+/// Tenant Console Reach Msg Signature API
+/// 租户控制台触达消息签名API
 #[cfg_attr(feature = "simple-client", bios_sdk_invoke::simple_invoke_client(Client<'_>))]
-#[poem_openapi::OpenApi(prefix_path = "/ct/msg/signature", tag = "bios_basic::ApiTag::App")]
+#[poem_openapi::OpenApi(prefix_path = "/ct/msg/signature", tag = "bios_basic::ApiTag::Tenant")]
 impl ReachMsgSignatureCtApi {
-    /// 获取所有用户触达消息消息模板数据分页
+
+    /// Page find all user reach message signature data
+    /// 获取所有用户触达消息签名模板数据分页
     #[oai(method = "get", path = "/page")]
     pub async fn paginate_msg_signature(
         &self,
@@ -39,7 +44,8 @@ impl ReachMsgSignatureCtApi {
         TardisResp::ok(page_resp)
     }
 
-    /// 获取所有用户触达消息消息模板数据
+    /// Find all user reach message signature data
+    /// 获取所有用户触达消息签名模板数据
     #[oai(method = "get", path = "/")]
     pub async fn find_msg_signature(&self, TardisContextExtractor(ctx): TardisContextExtractor) -> TardisApiResult<Vec<ReachMsgSignatureSummaryResp>> {
         let funs = get_tardis_inst();
@@ -50,18 +56,19 @@ impl ReachMsgSignatureCtApi {
         TardisResp::ok(resp)
     }
 
-    /// 根据Id获取用户触达消息消息模板数据
+    /// Get user reach message signature data by id
+    /// 根据Id获取用户触达消息签名模板数据
     #[oai(method = "get", path = "/:id")]
     pub async fn get_msg_signature_by_id(&self, id: Path<String>, TardisContextExtractor(ctx): TardisContextExtractor) -> TardisApiResult<ReachMsgSignatureDetailResp> {
         let funs = get_tardis_inst();
-        // filter
         let mut filter = ReachMsgSignatureFilterReq::default();
         filter.base_filter.with_sub_own_paths = true;
         let resp = ReachMessageSignatureServ::get_rbum(&id, &filter, &funs, &ctx).await?;
         TardisResp::ok(resp)
     }
 
-    /// 添加用户触达消息消息模板
+    /// Add user reach message signature data
+    /// 添加用户触达消息签名模板
     #[oai(method = "post", path = "/")]
     pub async fn add_msg_signature(&self, mut agg_req: Json<ReachMsgSignatureAddReq>, TardisContextExtractor(ctx): TardisContextExtractor) -> TardisApiResult<String> {
         let funs = get_tardis_inst();
@@ -69,6 +76,8 @@ impl ReachMsgSignatureCtApi {
         TardisResp::ok(id)
     }
 
+    /// Modify user reach message signature data
+    /// 修改用户触达消息签名模板
     #[oai(method = "put", path = "/:id")]
     pub async fn modify_msg_signature(
         &self,
@@ -81,6 +90,8 @@ impl ReachMsgSignatureCtApi {
         TardisResp::ok(id.0)
     }
 
+    /// Delete user reach message signature data
+    /// 删除用户触达消息签名模板
     #[oai(method = "delete", path = "/:id")]
     pub async fn delete_msg_signature(&self, id: Path<String>, TardisContextExtractor(ctx): TardisContextExtractor) -> TardisApiResult<bool> {
         let funs = get_tardis_inst();
