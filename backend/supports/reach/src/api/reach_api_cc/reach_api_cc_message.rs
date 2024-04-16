@@ -32,9 +32,12 @@ impl Default for ReachMessageCcApi {
     }
 }
 
+/// Common Console Reach Message API
+/// 通用控制台触达消息API
 #[cfg_attr(feature = "simple-client", bios_sdk_invoke::simple_invoke_client(Client<'_>))]
-#[poem_openapi::OpenApi(prefix_path = "/cc/msg", tag = "bios_basic::ApiTag::App")]
+#[poem_openapi::OpenApi(prefix_path = "/cc/msg", tag = "bios_basic::ApiTag::Common")]
 impl ReachMessageCcApi {
+    /// general send
     /// 根据模板id发送信息
     #[oai(method = "put", path = "/general/:to/template/:template_id")]
     #[tardis::log::instrument(skip_all, fields(module = "reach"))]
@@ -52,6 +55,7 @@ impl ReachMessageCcApi {
         TardisResp::ok(VOID)
     }
 
+    /// vcode send
     /// 验证码发送
     #[oai(method = "put", path = "/vcode/:to/:code")]
     pub async fn vcode_send(&self, to: Path<String>, code: Path<String>, TardisContextExtractor(ctx): TardisContextExtractor) -> TardisApiResult<Void> {
@@ -77,6 +81,7 @@ impl ReachMessageCcApi {
         TardisResp::ok(VOID)
     }
 
+    /// pwd send
     /// 密码发送
     #[oai(method = "put", path = "/pwd/:to/:code")]
     pub async fn pwd_send(&self, to: Path<String>, code: Path<String>) -> TardisApiResult<Void> {
@@ -86,6 +91,7 @@ impl ReachMessageCcApi {
         TardisResp::ok(VOID)
     }
 
+    /// mail pwd send
     /// 邮箱发送
     #[oai(method = "put", path = "/mail/:mail")]
     pub async fn mail_pwd_send(&self, mail: Path<String>, message: Query<String>, subject: Query<String>) -> TardisApiResult<Void> {
