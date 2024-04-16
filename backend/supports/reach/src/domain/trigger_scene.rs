@@ -13,6 +13,7 @@ use tardis::{TardisCreateEntity, TardisEmptyBehavior, TardisEmptyRelation};
 #[sea_orm(table_name = "reach_trigger_scene")]
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
+    #[tardis_entity(custom_type = "string")]
     pub id: Nanoid,
     /// 所有者路径
     #[fill_ctx(fill = "own_paths")]
@@ -34,7 +35,7 @@ pub struct Model {
     #[tardis_entity(custom_type = "string", custom_len = "225")]
     /// 名称
     pub name: String,
-    #[tardis_entity(custom_type = "string", custom_len = "2000")]
+    #[tardis_entity(custom_len = "2000")]
     /// 父场景ID
     pub pid: Option<String>,
 }

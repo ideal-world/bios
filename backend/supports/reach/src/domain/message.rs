@@ -14,6 +14,7 @@ use tardis::{TardisCreateEntity, TardisEmptyBehavior, TardisEmptyRelation};
 #[sea_orm(table_name = "reach_message")]
 pub struct Model {
     #[sea_orm(primary_key)]
+    #[tardis_entity(custom_type = "string")]
     pub id: Nanoid,
     /// 所有者路径
     #[fill_ctx(fill = "own_paths")]
