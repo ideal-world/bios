@@ -503,9 +503,9 @@ impl RbumCrudOperation<rbum_cert::ActiveModel, RbumCertAddReq, RbumCertModifyReq
                     }
                 }
             }
-        }
-        if let Some(vcode) = &add_req.vcode {
-            Self::add_vcode_to_cache(add_req.ak.as_str(), vcode.as_str(), &ctx.own_paths, funs).await?;
+            if let Some(vcode) = &add_req.vcode {
+                Self::add_vcode_to_cache(add_req.ak.as_str(), vcode.as_str(), rel_rbum_cert_conf_id, funs, &ctx).await?;
+            }
         }
         Ok(())
     }
@@ -664,11 +664,6 @@ impl RbumCrudOperation<rbum_cert::ActiveModel, RbumCertAddReq, RbumCertModifyReq
                 Expr::col((rbum_cert_conf::Entity, rbum_cert_conf::Column::Name)).if_null(""),
                 Alias::new("rel_rbum_cert_conf_name"),
             )
-            // TODO
-            .expr_as(
-                Expr::col((rbum_cert_conf::Entity, rbum_cert_conf::Column::Name)).if_null(""),
-                Alias::new("rel_rbum_cert_conf_code"),
-            )
             .from(rbum_cert::Entity)
             .left_join(
                 rbum_cert_conf::Entity,
@@ -714,12 +709,12 @@ impl RbumCertServ {
     ///
     ///
     /// 添加动态sk（验证码）到缓存
-    pub async fn add_vcode_to_cache(ak: &str, vcode: &str, own_paths: &str, cert_conf_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    pub async fn add_vcode_to_cache(ak: &str, vcode: &str, cert_conf_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let rbum_cert_conf = RbumCertConfServ::peek_rbum(cert_conf_id, &RbumCertConfFilterReq::default(), funs, ctx).await?;
 
         funs.cache()
             .set_ex(
-                format!("{}{}:{}", funs.rbum_conf_cache_key_cert_vcode_info_(), own_paths, ak).as_str(),
+                format!("{}{}:{}", funs.rbum_conf_cache_key_cert_vcode_info_(), &ctx.own_paths, ak).as_str(),
                 vcode.to_string().as_str(),
                 rbum_cert_conf.expire_sec as u64,
             )

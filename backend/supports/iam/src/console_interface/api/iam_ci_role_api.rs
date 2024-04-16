@@ -201,7 +201,7 @@ impl IamCiRoleApi {
         )
         .await?
         .into_iter()
-        .map(|r| (r.rel_rbum_id, r.rel_rbum_cert_conf_code.unwrap_or_default(), r.ak))
+        .map(|r| (r.rel_rbum_id, r.rel_rbum_cert_conf_name.unwrap_or_default(), r.ak))
         .collect_vec();
         let result = account_ids
             .iter()

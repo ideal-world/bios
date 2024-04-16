@@ -219,7 +219,7 @@ impl IamCertPhoneVCodeServ {
         let vcode = Self::get_vcode();
         let rel_rbum_cert_conf_id =
             IamCertServ::get_cert_conf_id_by_kind(IamCertKernelKind::PhoneVCode.to_string().as_str(), Some(IamTenantServ::get_id_by_ctx(&ctx, funs)?), funs).await?;
-        RbumCertServ::add_vcode_to_cache(phone, &vcode, &ctx.own_paths, &rel_rbum_cert_conf_id, funs, &ctx).await?;
+        RbumCertServ::add_vcode_to_cache(phone, &vcode, &rel_rbum_cert_conf_id, funs, &ctx).await?;
         Self::send_activation_phone(account_id, phone, &vcode, funs, ctx).await
     }
 
@@ -288,7 +288,7 @@ impl IamCertPhoneVCodeServ {
             IamCertServ::get_cert_conf_id_by_kind(IamCertKernelKind::PhoneVCode.to_string().as_str(), Some(IamTenantServ::get_id_by_ctx(&ctx, funs)?), funs).await?;
         // Self::check_bind_phone(phone, vec![rel_rbum_cert_conf_id], &ctx.owner.clone(), funs, &ctx).await?;
         let vcode = Self::get_vcode();
-        RbumCertServ::add_vcode_to_cache(phone, &vcode, &ctx.own_paths, &rel_rbum_cert_conf_id, funs, &ctx).await?;
+        RbumCertServ::add_vcode_to_cache(phone, &vcode, &rel_rbum_cert_conf_id, funs, &ctx).await?;
         SmsClient::send_vcode(phone, &vcode, funs, &ctx).await
     }
 
@@ -434,7 +434,7 @@ impl IamCertPhoneVCodeServ {
                 },
                 ak: Some(phone.to_string()),
                 rel_rbum_kind: Some(RbumCertRelKind::Item),
-                rel_rbum_cert_conf_ids: Some(vec![tenant_rbum_cert_conf_id]),
+                rel_rbum_cert_conf_ids: Some(vec![tenant_rbum_cert_conf_id.clone()]),
                 ..Default::default()
             },
             funs,
@@ -444,7 +444,7 @@ impl IamCertPhoneVCodeServ {
             > 0
         {
             let vcode = Self::get_vcode();
-            RbumCertServ::add_vcode_to_cache(phone, &vcode, &own_paths, &tenant_rbum_cert_conf_id, funs, &ctx).await?;
+            RbumCertServ::add_vcode_to_cache(phone, &vcode, &tenant_rbum_cert_conf_id, funs, &mock_ctx).await?;
             return SmsClient::send_vcode(phone, &vcode, funs, &mock_ctx).await;
         }
 
@@ -457,7 +457,7 @@ impl IamCertPhoneVCodeServ {
                 },
                 ak: Some(phone.to_string()),
                 rel_rbum_kind: Some(RbumCertRelKind::Item),
-                rel_rbum_cert_conf_ids: Some(vec![global_rbum_cert_conf_id]),
+                rel_rbum_cert_conf_ids: Some(vec![global_rbum_cert_conf_id.clone()]),
                 ..Default::default()
             },
             funs,
@@ -470,7 +470,6 @@ impl IamCertPhoneVCodeServ {
             RbumCertServ::add_vcode_to_cache(
                 phone,
                 &vcode,
-                "",
                 &global_rbum_cert_conf_id,
                 funs,
                 &TardisContext {
