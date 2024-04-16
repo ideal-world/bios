@@ -171,7 +171,7 @@ impl AuditLogPlugin {
             request_method: req.method().to_string(),
             request_headers: req.headers().clone(),
             request_scheme: req.uri().scheme().unwrap_or(&Scheme::HTTP).to_string(),
-            request_ip: req.extensions().get::<PeerAddr>().ok_or(PluginError::internal_error::<AuditLogPlugin>("[Plugin.AuditLog] missing peer addr"))?.0.ip().to_string(),
+            request_ip: req.extensions().get::<PeerAddr>().ok_or_else(|| PluginError::internal_error::<AuditLogPlugin>("[Plugin.AuditLog] missing peer addr"))?.0.ip().to_string(),
         };
 
         if let Some(ident) = req.headers().get(self.head_key_auth_ident.clone()) {

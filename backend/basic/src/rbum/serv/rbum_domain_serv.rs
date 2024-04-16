@@ -24,19 +24,6 @@ impl RbumCrudOperation<rbum_domain::ActiveModel, RbumDomainAddReq, RbumDomainMod
         rbum_domain::Entity.table_name()
     }
 
-    async fn package_add(add_req: &RbumDomainAddReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<rbum_domain::ActiveModel> {
-        Ok(rbum_domain::ActiveModel {
-            id: Set(TardisFuns::field.nanoid()),
-            code: Set(add_req.code.to_string()),
-            name: Set(add_req.name.to_string()),
-            note: Set(add_req.note.as_ref().unwrap_or(&"".to_string()).to_string()),
-            icon: Set(add_req.icon.as_ref().unwrap_or(&"".to_string()).to_string()),
-            sort: Set(add_req.sort.unwrap_or(0)),
-            scope_level: Set(add_req.scope_level.as_ref().unwrap_or(&RbumScopeLevelKind::Private).to_int()),
-            ..Default::default()
-        })
-    }
-
     async fn before_add_rbum(add_req: &mut RbumDomainAddReq, funs: &TardisFunsInst, _: &TardisContext) -> TardisResult<()> {
         if !R_URL_PART_CODE.is_match(add_req.code.as_str()) {
             return Err(funs.err().bad_request(&Self::get_obj_name(), "add", &format!("code {} is invalid", add_req.code), "400-rbum-*-code-illegal"));
@@ -50,6 +37,19 @@ impl RbumCrudOperation<rbum_domain::ActiveModel, RbumDomainAddReq, RbumDomainMod
             return Err(funs.err().conflict(&Self::get_obj_name(), "add", &format!("code {} already exists", add_req.code), "409-rbum-*-code-exist"));
         }
         Ok(())
+    }
+
+    async fn package_add(add_req: &RbumDomainAddReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<rbum_domain::ActiveModel> {
+        Ok(rbum_domain::ActiveModel {
+            id: Set(TardisFuns::field.nanoid()),
+            code: Set(add_req.code.to_string()),
+            name: Set(add_req.name.to_string()),
+            note: Set(add_req.note.as_ref().unwrap_or(&"".to_string()).to_string()),
+            icon: Set(add_req.icon.as_ref().unwrap_or(&"".to_string()).to_string()),
+            sort: Set(add_req.sort.unwrap_or(0)),
+            scope_level: Set(add_req.scope_level.as_ref().unwrap_or(&RbumScopeLevelKind::Private).to_int()),
+            ..Default::default()
+        })
     }
 
     async fn package_modify(id: &str, modify_req: &RbumDomainModifyReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<rbum_domain::ActiveModel> {
@@ -103,6 +103,16 @@ impl RbumCrudOperation<rbum_domain::ActiveModel, RbumDomainAddReq, RbumDomainMod
 }
 
 impl RbumDomainServ {
+    /// Get domain id by code
+    ///
+    /// 根据编码获取域id
+    ///
+    /// # Parameters
+    /// - `code` - Domain code
+    /// - `funs` - TardisFunsInst
+    ///
+    /// # Return
+    /// - `Option<String>` - Domain id
     pub async fn get_rbum_domain_id_by_code(code: &str, funs: &TardisFunsInst) -> TardisResult<Option<String>> {
         let resp = funs
             .db()

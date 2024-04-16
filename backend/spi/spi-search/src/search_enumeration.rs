@@ -59,21 +59,21 @@ impl SearchDataTypeKind {
         Ok(match self {
             SearchDataTypeKind::String => {
                 if like_by_str {
-                    sea_orm::Value::from(format!("{}%", json_value.as_str().ok_or(self.err_json_value_type())?))
+                    sea_orm::Value::from(format!("{}%", json_value.as_str().ok_or_else(|| self.err_json_value_type())?))
                 } else {
-                    sea_orm::Value::from(json_value.as_str().ok_or(self.err_json_value_type())?.to_string())
+                    sea_orm::Value::from(json_value.as_str().ok_or_else(|| self.err_json_value_type())?.to_string())
                 }
             }
-            SearchDataTypeKind::Int => sea_orm::Value::from(json_value.as_i64().ok_or(self.err_json_value_type())? as i32),
-            SearchDataTypeKind::Float => sea_orm::Value::from(json_value.as_f64().ok_or(self.err_json_value_type())? as f32),
-            SearchDataTypeKind::Double => sea_orm::Value::from(json_value.as_f64().ok_or(self.err_json_value_type())?),
-            SearchDataTypeKind::Boolean => sea_orm::Value::from(json_value.as_bool().ok_or(self.err_json_value_type())?),
+            SearchDataTypeKind::Int => sea_orm::Value::from(json_value.as_i64().ok_or_else(|| self.err_json_value_type())? as i32),
+            SearchDataTypeKind::Float => sea_orm::Value::from(json_value.as_f64().ok_or_else(|| self.err_json_value_type())? as f32),
+            SearchDataTypeKind::Double => sea_orm::Value::from(json_value.as_f64().ok_or_else(|| self.err_json_value_type())?),
+            SearchDataTypeKind::Boolean => sea_orm::Value::from(json_value.as_bool().ok_or_else(|| self.err_json_value_type())?),
             SearchDataTypeKind::Date => {
-                sea_orm::Value::from(NaiveDate::parse_from_str(json_value.as_str().ok_or(self.err_json_value_type())?, "%Y-%m-%d").map_err(|_| err_parse_time())?)
+                sea_orm::Value::from(NaiveDate::parse_from_str(json_value.as_str().ok_or_else(|| self.err_json_value_type())?, "%Y-%m-%d").map_err(|_| err_parse_time())?)
             }
-            SearchDataTypeKind::DateTime => {
-                sea_orm::Value::from(DateTime::parse_from_rfc3339(json_value.as_str().ok_or(self.err_json_value_type())?).map_err(|_| err_parse_time())?.with_timezone(&Utc))
-            }
+            SearchDataTypeKind::DateTime => sea_orm::Value::from(
+                DateTime::parse_from_rfc3339(json_value.as_str().ok_or_else(|| self.err_json_value_type())?).map_err(|_| err_parse_time())?.with_timezone(&Utc),
+            ),
         })
     }
 
@@ -87,7 +87,8 @@ impl SearchDataTypeKind {
             SearchDataTypeKind::Date => sea_orm::sea_query::ArrayType::TimeDate,
             SearchDataTypeKind::DateTime => sea_orm::sea_query::ArrayType::TimeDateTimeWithTimeZone,
         };
-        let values = json_value.as_array().ok_or(self.err_json_value_type())?.iter().map(|json| self.json_to_sea_orm_value(json, like_by_str)).collect::<TardisResult<Vec<_>>>()?;
+        let values =
+            json_value.as_array().ok_or_else(|| self.err_json_value_type())?.iter().map(|json| self.json_to_sea_orm_value(json, like_by_str)).collect::<TardisResult<Vec<_>>>()?;
         Ok(sea_orm::Value::Array(sea_orm_data_type, Some(Box::new(values))))
     }
 
@@ -129,7 +130,7 @@ impl SearchDataTypeKind {
         }
         let value = if (self == &SearchDataTypeKind::DateTime || self != &SearchDataTypeKind::Date) && value.is_string() {
             if time_window_fun.is_some() {
-                Some(vec![sea_orm::Value::from(value.as_str().ok_or(self.err_json_value_type())?.to_string())])
+                Some(vec![sea_orm::Value::from(value.as_str().ok_or_else(|| self.err_json_value_type())?.to_string())])
             } else {
                 let value = self.json_to_sea_orm_value(value, op == &BasicQueryOpKind::Like)?;
                 Some(vec![value])
