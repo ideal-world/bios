@@ -4,6 +4,7 @@ use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 use tardis::chrono::{DateTime, Duration, TimeDelta, Utc};
+use tardis::db::reldb_client::IdResp;
 use tardis::db::sea_orm::sea_query::*;
 use tardis::db::sea_orm::*;
 use tardis::db::sea_orm::{self, IdenStatic};
@@ -562,26 +563,21 @@ impl RbumCrudOperation<rbum_cert::ActiveModel, RbumCertAddReq, RbumCertModifyReq
                 .await?;
                 // Delete Old Certs
                 if rbum_cert_conf.coexist_num != 0 {
-                    let need_delete_rbum_cert_ids = Self::paginate_id_rbums(
-                        &RbumCertFilterReq {
-                            rel_rbum_kind: Some(add_req.rel_rbum_kind.clone()),
-                            rel_rbum_id: Some(add_req.rel_rbum_id.clone()),
-                            rel_rbum_cert_conf_ids: Some(vec![rel_rbum_cert_conf_id.clone()]),
-                            ..Default::default()
-                        },
-                        // Skip normal records
-                        2,
-                        // TODO
-                        // FIXME
-                        rbum_cert_conf.coexist_num as u32 - 1,
-                        Some(true),
-                        None,
-                        funs,
-                        ctx,
-                    )
-                    .await?;
-                    for need_delete_rbum_cert_id in need_delete_rbum_cert_ids.records {
-                        Self::delete_rbum(&need_delete_rbum_cert_id, funs, ctx).await?;
+                    let need_delete_rbum_cert_ids = funs
+                        .db()
+                        .find_dtos::<IdResp>(
+                            Query::select()
+                                .column(rbum_cert::Column::Id)
+                                .from(rbum_cert::Entity)
+                                .and_where(Expr::col(rbum_cert::Column::RelRbumCertConfId).eq(rel_rbum_cert_conf_id))
+                                .and_where(Expr::col(rbum_cert::Column::RelRbumKind).eq(add_req.rel_rbum_kind.to_int()))
+                                .and_where(Expr::col(rbum_cert::Column::RelRbumId).eq(&add_req.rel_rbum_id))
+                                .order_by((rbum_cert::Entity, rbum_cert::Column::CreateTime), Order::Desc)
+                                .offset(rbum_cert_conf.coexist_num as u64),
+                        )
+                        .await?;
+                    for need_delete_rbum_cert_id in need_delete_rbum_cert_ids {
+                        Self::delete_rbum(&need_delete_rbum_cert_id.id, funs, ctx).await?;
                     }
                 }
             }
@@ -828,7 +824,7 @@ impl RbumCertServ {
     }
 
     /// Check whether the certificate is exist
-    /// 
+    ///
     /// 检查凭证是否存在
     pub async fn check_exist(ak: &str, rbum_cert_conf_id: &str, own_paths: &str, funs: &TardisFunsInst) -> TardisResult<bool> {
         let mut query = Query::select();
