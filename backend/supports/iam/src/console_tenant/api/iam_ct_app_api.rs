@@ -25,9 +25,11 @@ use tardis::web::poem::Request;
 pub struct IamCtAppApi;
 
 /// Tenant Console App API
+/// 租户控制台应用API
 #[poem_openapi::OpenApi(prefix_path = "/ct/app", tag = "bios_basic::ApiTag::Tenant")]
 impl IamCtAppApi {
     /// Add App
+    /// 添加应用
     #[oai(path = "/", method = "post")]
     async fn add(&self, add_req: Json<IamAppAggAddReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<String> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
@@ -40,8 +42,10 @@ impl IamCtAppApi {
     }
 
     /// Modify App By App Id
+    /// 修改应用
     ///
     /// When code = 202, the return value is the asynchronous task id
+    /// 当 code = 202 时，返回值为异步任务id
     #[oai(path = "/:id", method = "put")]
     async fn modify(&self, id: Path<String>, mut modify_req: Json<IamAppModifyReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Option<String>> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
@@ -58,6 +62,7 @@ impl IamCtAppApi {
     }
 
     /// Get App By App Id
+    /// 根据应用ID获取应用
     #[oai(path = "/:id", method = "get")]
     async fn get(&self, id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<IamAppDetailResp> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
@@ -68,6 +73,7 @@ impl IamCtAppApi {
     }
 
     /// Find Apps
+    /// 查找应用
     #[oai(path = "/", method = "get")]
     async fn paginate(
         &self,
@@ -107,6 +113,7 @@ impl IamCtAppApi {
     }
 
     /// Delete App By App Id
+    /// 删除应用
     #[oai(path = "/:id", method = "delete")]
     async fn delete(&self, id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
@@ -119,6 +126,7 @@ impl IamCtAppApi {
     }
 
     /// paginate App Set Items (app)
+    /// 分页查询应用集合项（应用）
     #[oai(path = "/apps/item", method = "get")]
     async fn paginate_items(
         &self,

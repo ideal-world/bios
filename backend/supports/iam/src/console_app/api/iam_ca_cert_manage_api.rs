@@ -15,9 +15,11 @@ use tardis::web::poem::Request;
 pub struct IamCaCertManageApi;
 
 /// Tenant Console Cert manage API
+/// 租户控制台证书管理API
 #[poem_openapi::OpenApi(prefix_path = "/ca/cert/manage", tag = "bios_basic::ApiTag::Tenant")]
 impl IamCaCertManageApi {
     /// get manage cert
+    /// 获取证书
     #[oai(path = "/:id", method = "get")]
     async fn get_manage_cert(&self, id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<RbumCertSummaryWithSkResp> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
@@ -29,6 +31,7 @@ impl IamCaCertManageApi {
     }
 
     /// get manage cert
+    /// 获取证书
     #[oai(path = "/:id", method = "put")]
     async fn modify_sk_visibility(&self, id: Path<String>, body: Json<IamCertModifyVisibilityRequest>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
@@ -42,6 +45,7 @@ impl IamCaCertManageApi {
     }
 
     /// Find Manage Certs By item Id
+    /// 根据item_id查找证书
     #[oai(path = "/rel/:item_id", method = "get")]
     async fn find_certs(&self, item_id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Vec<RbumRelBoneResp>> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;

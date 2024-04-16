@@ -23,9 +23,11 @@ use tardis::web::poem::Request;
 pub struct IamCsCertApi;
 
 /// System Console Cert API
+/// 系统控制台证书API
 #[poem_openapi::OpenApi(prefix_path = "/cs/cert", tag = "bios_basic::ApiTag::System")]
 impl IamCsCertApi {
     /// Rest Password By Account Id
+    /// 重置密码
     #[oai(path = "/user-pwd", method = "put")]
     async fn rest_password(
         &self,
@@ -48,6 +50,7 @@ impl IamCsCertApi {
     }
 
     /// Find Certs By Account Id
+    /// 查找证书
     #[oai(path = "/", method = "get")]
     async fn find_certs(
         &self,
@@ -75,6 +78,7 @@ impl IamCsCertApi {
     }
 
     /// Get UserPwd Certs By Account Id
+    /// 获取用户密码证书
     #[oai(path = "/userpwd", method = "get")]
     async fn get_user_pwd_cert(
         &self,
@@ -97,6 +101,7 @@ impl IamCsCertApi {
     }
 
     /// Delete Cert Conf By Id
+    /// 删除证书配置
     #[oai(path = "/conf/:id", method = "delete")]
     async fn delete_cert_conf(&self, id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
@@ -109,6 +114,7 @@ impl IamCsCertApi {
     }
 
     /// Force Delete Cert And Cert-Conf By Conf Id
+    /// 强制删除证书和证书配置
     #[oai(path = "/conf/force/:id", method = "delete")]
     async fn delete_cert_and_conf(&self, id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Option<String>> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
@@ -124,7 +130,8 @@ impl IamCsCertApi {
         }
     }
 
-    ///Add Or Modify Sync Config
+    /// Add Or Modify Sync Config
+    /// 添加或修改同步配置
     #[oai(path = "/sync", method = "put")]
     async fn add_or_modify_sync_third_integration_config(
         &self,
@@ -141,7 +148,8 @@ impl IamCsCertApi {
         TardisResp::ok(Void {})
     }
 
-    ///Get Sync Config
+    /// Get Sync Config
+    /// 获取同步配置
     #[oai(path = "/sync", method = "get")]
     async fn get_sync_third_integration_config(&self, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Option<Vec<IamThirdIntegrationConfigDto>>> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
@@ -151,7 +159,8 @@ impl IamCsCertApi {
         TardisResp::ok(result)
     }
 
-    ///Get sync status
+    /// Get sync status
+    /// 获取同步状态
     ///
     /// 获取最新的同步状态,如果返回为空，那么就是没有同步记录。
     /// 当total=failed+success被认为同步完成
@@ -162,7 +171,7 @@ impl IamCsCertApi {
         TardisResp::ok(result)
     }
 
-    ///Manual sync
+    /// Manual sync
     ///
     /// 手动触发第三方集成同步，如果有其他同步正在进行中，那么就会返回错误。
     #[oai(path = "/sync", method = "post")]
@@ -184,10 +193,12 @@ impl IamCsCertApi {
 #[derive(Clone, Default)]
 pub struct IamCsCertConfigLdapApi;
 /// System Console Cert Config LDAP API
+/// 系统控制台证书配置LDAP API
 #[cfg(feature = "ldap_client")]
 #[poem_openapi::OpenApi(prefix_path = "/cs/ldap", tag = "bios_basic::ApiTag::System")]
 impl IamCsCertConfigLdapApi {
     /// Add Ldap Cert Conf
+    /// 添加LDAP证书配置
     #[oai(path = "/", method = "post")]
     async fn add_ldap_cert(&self, add_req: Json<IamCertConfLdapAddOrModifyReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<String> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
@@ -197,7 +208,9 @@ impl IamCsCertConfigLdapApi {
         funs.commit().await?;
         TardisResp::ok(resp)
     }
+
     /// Modify Ldap Cert Conf
+    /// 修改LDAP证书配置
     #[oai(path = "/:id", method = "put")]
     async fn modify_ldap_cert(&self, id: Path<String>, modify_req: Json<IamCertConfLdapAddOrModifyReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
@@ -207,7 +220,9 @@ impl IamCsCertConfigLdapApi {
         funs.commit().await?;
         TardisResp::ok(Void {})
     }
+    
     /// Get Ldap Cert Conf
+    /// 获取LDAP证书配置
     #[oai(path = "/", method = "get")]
     async fn get_ldap_cert(&self, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Option<IamCertConfLdapResp>> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;

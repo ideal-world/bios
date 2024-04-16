@@ -21,9 +21,11 @@ use crate::iam_constants;
 pub struct IamCsSpiDataApi;
 
 /// System Console Tenant API
+/// 系统控制台租户API
 #[poem_openapi::OpenApi(prefix_path = "/cs/init/data", tag = "bios_basic::ApiTag::System")]
 impl IamCsSpiDataApi {
     /// Do Init Data
+    /// 初始化数据
     #[oai(path = "/", method = "put")]
     async fn init_spi_data(&self, ctx: TardisContextExtractor) -> TardisApiResult<Option<String>> {
         let mut funs = iam_constants::get_tardis_inst();
@@ -38,6 +40,7 @@ impl IamCsSpiDataApi {
     }
 
     /// Do update Data
+    /// 更新数据
     #[oai(path = "/", method = "patch")]
     async fn update_spi_data(&self, ctx: TardisContextExtractor) -> TardisApiResult<Option<String>> {
         let mut funs = iam_constants::get_tardis_inst();

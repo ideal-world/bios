@@ -18,10 +18,14 @@ use tardis::TardisFuns;
 pub struct IamCiResApi;
 
 /// # Interface Console Manage Cert API
+/// 接口控制台管理证书API
 ///
 /// Allow Management Of aksk (an authentication method between applications)
+/// 允许管理aksk（应用之间的一种认证方式）
 #[poem_openapi::OpenApi(prefix_path = "/ci/res", tag = "bios_basic::ApiTag::Interface")]
 impl IamCiResApi {
+    /// Add Res
+    /// 添加资源
     #[oai(path = "/", method = "post")]
     async fn add(&self, mut add_req: Json<IamResAggAddReq>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<String> {
         let mut funs = iam_constants::get_tardis_inst();
@@ -36,6 +40,7 @@ impl IamCiResApi {
     }
 
     /// Add Res Cate
+    /// 添加资源分类
     #[oai(path = "/cate", method = "post")]
     async fn add_cate(&self, add_req: Json<IamSetCateAddReq>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<String> {
         let mut funs = iam_constants::get_tardis_inst();

@@ -12,11 +12,14 @@ use crate::iam_initializer::{default_iam_send_avatar, ws_iam_send_client};
 pub struct IamCcSystemApi;
 
 /// Common Console System API
+/// 通用控制台系统API
 ///
 /// Use commas to separate multiple task ids
+/// 使用逗号分隔多个任务id
 #[poem_openapi::OpenApi(prefix_path = "/cc/system", tag = "bios_basic::ApiTag::Common")]
 impl IamCcSystemApi {
     /// Get Async Task Status
+    /// 获取异步任务状态
     #[oai(path = "/task/:task_ids", method = "get")]
     async fn task_check_finished(&self, task_ids: Path<String>) -> TardisApiResult<bool> {
         let funs = iam_constants::get_tardis_inst();
@@ -32,6 +35,7 @@ impl IamCcSystemApi {
     }
 
     /// Stop Async Task
+    /// 停止异步任务
     #[oai(path = "/task/:task_ids", method = "delete")]
     async fn stop_task(&self, task_ids: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let funs = iam_constants::get_tardis_inst();
@@ -51,6 +55,8 @@ impl IamCcSystemApi {
         TardisResp::ok(Void {})
     }
 
+    /// Get Task Process Data
+    /// 获取任务处理数据
     #[oai(path = "/task/process/:task_id", method = "get")]
     async fn get_task_process_data(&self, task_id: Path<u64>, _ctx: TardisContextExtractor) -> TardisApiResult<Value> {
         let funs = iam_constants::get_tardis_inst();

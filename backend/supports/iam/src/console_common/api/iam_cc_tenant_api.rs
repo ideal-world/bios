@@ -12,11 +12,14 @@ use tardis::web::poem::Request;
 pub struct IamCcTenantApi;
 
 /// Common Console Tenant API
+/// 通用控制台租户API
 #[poem_openapi::OpenApi(prefix_path = "/cc/tenant", tag = "bios_basic::ApiTag::Common")]
 impl IamCcTenantApi {
     /// Find Tenant Name By Ids
+    /// 根据ID查找租户名称
     ///
     /// Return format: ["<id>,<name>"]
+    /// 返回格式: ["<id>,<name>"]
     #[oai(path = "/name", method = "get")]
     async fn find_name_by_ids(
         &self,

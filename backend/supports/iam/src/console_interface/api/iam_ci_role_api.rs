@@ -25,10 +25,14 @@ use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 pub struct IamCiRoleApi;
 
 /// # Interface Console Manage Cert API
+/// 接口控制台管理证书API
 ///
 /// Allow Management Of aksk (an authentication method between applications)
+/// 允许管理aksk（应用之间的一种认证方式）
 #[poem_openapi::OpenApi(prefix_path = "/ci/role", tag = "bios_basic::ApiTag::Interface")]
 impl IamCiRoleApi {
+    /// Get verify role tenant admin
+    /// 验证角色租户管理员
     #[oai(path = "/verify/tenant/admin", method = "get")]
     async fn get_verify_role_tenant_admin(&self, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<bool> {
         let funs = iam_constants::get_tardis_inst();
@@ -44,6 +48,7 @@ impl IamCiRoleApi {
     }
 
     /// Batch add Role Rel Account
+    /// 批量添加角色关联账号
     #[oai(path = "/:id/account/batch/:account_ids", method = "put")]
     async fn batch_add_rel_account(&self, id: Path<String>, account_ids: Path<String>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
@@ -62,6 +67,7 @@ impl IamCiRoleApi {
     }
 
     /// Batch delete Role Rel Account
+    /// 批量删除角色关联账号
     #[oai(path = "/:id/account/batch/:account_ids", method = "delete")]
     async fn batch_delete_rel_account(&self, id: Path<String>, account_ids: Path<String>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
@@ -78,6 +84,7 @@ impl IamCiRoleApi {
     }
 
     /// Delete Role Rel Account
+    /// 删除角色关联账号
     #[oai(path = "/:id/account/:account_id", method = "delete")]
     async fn delete_rel_account(&self, id: Path<String>, account_id: Path<String>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
@@ -91,6 +98,7 @@ impl IamCiRoleApi {
     }
 
     /// Add Role Rel Account
+    /// 添加角色关联账号
     #[oai(path = "/:id/apps/account/batch", method = "put")]
     async fn batch_add_apps_rel_account(
         &self,
@@ -140,6 +148,7 @@ impl IamCiRoleApi {
     }
 
     /// Add Role Rel Account
+    /// 添加角色关联账号
     #[oai(path = "/:id/apps/account/batch", method = "delete")]
     async fn batch_delete_apps_rel_account(
         &self,
@@ -168,6 +177,7 @@ impl IamCiRoleApi {
     }
 
     /// get Rel Account by role_code
+    /// 根据角色编码获取关联账号
     #[oai(path = "/:role_code/accounts", method = "get")]
     async fn get_rel_accounts(&self, role_code: Path<String>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Vec<IamRoleRelAccountCertResp>> {
         let funs = iam_constants::get_tardis_inst();
@@ -214,6 +224,7 @@ impl IamCiRoleApi {
     }
 
     /// Find Roles
+    /// 查找角色
     #[oai(path = "/", method = "get")]
     async fn paginate(
         &self,
