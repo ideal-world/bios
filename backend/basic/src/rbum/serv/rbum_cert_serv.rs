@@ -210,6 +210,26 @@ impl RbumCrudOperation<rbum_cert_conf::ActiveModel, RbumCertConfAddReq, RbumCert
         Ok(rbum_cert_conf)
     }
 
+    async fn before_delete_rbum(id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<RbumCertConfDetailResp>> {
+        if funs
+            .db()
+            .count(
+                Query::select()
+                    .column(rbum_cert_conf::Column::Id)
+                    .from(rbum_cert_conf::Entity)
+                    .and_where(Expr::col(rbum_cert_conf::Column::Id).eq(id))
+                    .and_where(Expr::col(rbum_cert_conf::Column::IsBasic).eq(true)),
+            )
+            .await?
+            > 0
+        {
+            return Err(funs.err().conflict(&Self::get_obj_name(), "delete", "is_basic is true", "409-rbum-cert-conf-basic-delete"));
+        }
+        Self::check_ownership(id, funs, ctx).await?;
+        Self::check_exist_before_delete(id, RbumCertServ::get_table_name(), rbum_cert::Column::RelRbumCertConfId.as_str(), funs).await?;
+        Ok(None)
+    }
+
     async fn package_query(is_detail: bool, filter: &RbumCertConfFilterReq, _: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<SelectStatement> {
         let mut query = Query::select();
         query
