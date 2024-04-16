@@ -186,6 +186,10 @@ pub struct Model {
     ///
     /// 同时有效的凭证数量
     ///
+    /// ``0`` means no limit
+    ///
+    /// 为``0``时表示不限制
+    ///
     /// If only single terminal login is allowed, you can configure a credential configuration ``coexist_num = 1``, and ensure that all terminals use this configuration when logging in.
     /// If an android, ios, and two web terminals can log in at the same time,
     /// you can configure three credential configurations: ``code = 'cert_android' & coexist_num = 1``, ``code = 'cert_ios' & coexist_num = 1``, ``code = 'cert_web' & coexist_num = 2``,
