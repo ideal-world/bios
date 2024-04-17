@@ -602,6 +602,12 @@ fn gen_query_dsl(search_req: &SearchItemSearchReq) -> TardisResult<String> {
                         "match": {field: cond_info.value.clone()}
                     }));
                 }
+                BasicQueryOpKind::NotLike => {
+                    let field = format!("ext.{}", cond_info.field.clone());
+                    must_not_q.push(json!({
+                        "match": { field: cond_info.value.clone()}
+                    }));
+                }
                 BasicQueryOpKind::In => {
                     let field = format!("ext.{}", cond_info.field.clone());
                     let value = if cond_info.value.is_array() {
@@ -615,14 +621,42 @@ fn gen_query_dsl(search_req: &SearchItemSearchReq) -> TardisResult<String> {
                         }
                     }));
                 }
-                BasicQueryOpKind::NotLike => {}
-                BasicQueryOpKind::NotIn => {}
-                BasicQueryOpKind::IsNull => {}
-                BasicQueryOpKind::IsNotNull => {}
-                BasicQueryOpKind::IsNullOrEmpty => {}
+                BasicQueryOpKind::NotIn => {
+                    let field = format!("ext.{}", cond_info.field.clone());
+                    let value = if cond_info.value.is_array() {
+                        cond_info.value.clone()
+                    } else {
+                        json!(vec![cond_info.value.clone()])
+                    };
+                    must_not_q.push(json!({
+                        "terms": { field: value}
+                    }));
+                }
+                BasicQueryOpKind::IsNull => {
+                    let field = format!("ext.{}", cond_info.field.clone());
+                    must_q.push(json!({
+                        "term": {field: Value::Null}
+                    }));
+                }
+                BasicQueryOpKind::IsNotNull => {
+                    let field = format!("ext.{}", cond_info.field.clone());
+                    must_not_q.push(json!({
+                        "term": {field: Value::Null}
+                    }));
+                }
+                BasicQueryOpKind::IsNullOrEmpty => {
+                    let field = format!("ext.{}", cond_info.field.clone());
+                    should_q.push(json!({
+                        "term": {field.clone(): Value::Null}
+                    }));
+                    should_q.push(json!({
+                        "term": {field: "".to_string()}
+                    }));
+                }
             }
         }
     }
+    if let Some(adv_query) = &search_req.adv_query {}
     if let Some(sorts) = &search_req.sort {
         for sort_item in sorts {
             if sort_item.field.to_lowercase() == "key"

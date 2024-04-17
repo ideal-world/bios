@@ -498,18 +498,10 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
     if let Some(adv_query) = &search_req.adv_query {
         for group_query in adv_query {
             let mut sql_and_where = vec![];
-            let err_not_found = |ext_item: &AdvBasicQueryCondInfo| {
-                Err(funs.err().not_found(
-                    "item",
-                    "search",
-                    &format!("The ext field=[{}] value=[{}] operation=[{}] is not legal.", &ext_item.field, ext_item.value, &ext_item.op,),
-                    "404-spi-search-op-not-legal",
-                ))
-            };
             if let Some(ext) = &group_query.ext {
                 for ext_item in ext {
                     let value = db_helper::json_to_sea_orm_value(&ext_item.value, ext_item.op == BasicQueryOpKind::Like || ext_item.op == BasicQueryOpKind::NotLike);
-                    let Some(mut value) = value else { return err_not_found(ext_item) };
+                    let Some(mut value) = value else { return err_not_found(&ext_item.clone().into()) };
                     if ext_item.in_ext.unwrap_or(true) {
                         if ext_item.op == BasicQueryOpKind::In {
                             if value.len() == 1 {
@@ -549,7 +541,7 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
                             ));
                         } else {
                             if value.len() > 1 {
-                                return err_not_found(ext_item);
+                                return err_not_found(&ext_item.clone().into());
                             }
                             let Some(value) = value.pop() else {
                                 return Err(funs.err().bad_request("item", "search", "Request item using 'IN' operator show hava a value", "400-spi-item-op-in-without-value"));
@@ -619,7 +611,7 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
                         sql_and_where.push(format!("({} is null or {} = '' )", ext_item.field, ext_item.field));
                     } else {
                         if value.len() > 1 {
-                            return err_not_found(ext_item);
+                            return err_not_found(&ext_item.clone().into());
                         }
                         let Some(value) = value.pop() else {
                             return Err(funs.err().bad_request("item", "search", "Request item using 'IN' operator show have a value", "400-spi-item-op-in-without-value"));
@@ -1393,7 +1385,7 @@ pub async fn query_metrics(query_req: &SearchQueryMetricsReq, funs: &TardisFunsI
 
     let bs_inst = inst.inst::<TardisRelDBClient>();
     let (conn, table_name) = search_pg_initializer::init_table_and_conn(bs_inst, &query_req.tag, ctx, false).await?;
-    let ignore_group_agg = !(!sql_part_groups.is_empty() && query_req.group_agg.unwrap_or(false));
+    let ignore_group_agg = sql_part_groups.is_empty() || !query_req.group_agg.unwrap_or(false);
     let final_sql = format!(
         r#"SELECT {sql_part_outer_selects}{}
     FROM (

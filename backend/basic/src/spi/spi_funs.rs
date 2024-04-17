@@ -62,6 +62,8 @@ pub trait SpiBsInstExtractor {
         T: Future<Output = TardisResult<SpiBsInst>> + Send;
 
     fn bs_not_implemented(&self, bs_code: &str) -> TardisError;
+
+    async fn remove_bs_inst_cache<'a>(&self, ctx: &'a TardisContext) -> TardisResult<()>;
 }
 
 #[async_trait]
@@ -140,6 +142,14 @@ impl SpiBsInstExtractor for TardisFunsInst {
 
     fn bs_not_implemented(&self, bs_code: &str) -> TardisError {
         bs_not_implemented(bs_code)
+    }
+
+    async fn remove_bs_inst_cache<'a>(&self, ctx: &'a TardisContext) -> TardisResult<()> {
+        let cache_key = format!("{}-{}", self.module_code(), ctx.ak);
+        info!("[SPI] Remove bs inst cache key:{}", cache_key.clone());
+        let mut write = get_spi_bs_caches().write().await;
+        write.remove(&cache_key);
+        Ok(())
     }
 }
 
