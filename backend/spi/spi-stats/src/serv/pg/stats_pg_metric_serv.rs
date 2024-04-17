@@ -109,6 +109,7 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
     let fact_inst_del_table_name = package_table_name(&format!("stats_inst_fact_{}_del", query_req.from), ctx);
 
     // Fetch config
+    // todo 是否需要在col加入一个dim_data_type字段，用于区分维度和度量
     let conf_info = conn
         .query_all(
             &format!(
@@ -122,7 +123,7 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
     col.mes_data_distinct as mes_data_distinct,
     col.mes_data_type as mes_data_type,
     col.mes_unit as mes_unit,
-    dim.data_type as dim_data_type,
+    COALESCE(dim.data_type,'String') as dim_data_type,
     dim.hierarchy as dim_hierarchy,
     fact.query_limit as query_limit
   FROM
