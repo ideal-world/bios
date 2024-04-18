@@ -16,9 +16,12 @@ use crate::serv::*;
 /// 用户触达消息-公共控制台
 pub struct ReachMessageCtApi;
 
+/// Tenant Console Reach Message API
+/// 租户控制台触达消息API
 #[cfg_attr(feature = "simple-client", bios_sdk_invoke::simple_invoke_client(Client<'_>))]
-#[poem_openapi::OpenApi(prefix_path = "/ct/msg", tag = "bios_basic::ApiTag::App")]
+#[poem_openapi::OpenApi(prefix_path = "/ct/msg", tag = "bios_basic::ApiTag::Tenant")]
 impl ReachMessageCtApi {
+    /// 获取所有用户触达消息数据分页
     /// 获取所有用户触达消息数据分页
     #[oai(method = "get", path = "/page")]
     pub async fn paginate_msg(
@@ -37,6 +40,7 @@ impl ReachMessageCtApi {
         TardisResp::ok(page_resp)
     }
 
+    /// Find all user reach message data
     /// 获取所有用户触达消息数据
     #[oai(method = "get", path = "/")]
     pub async fn find_msg(&self, TardisContextExtractor(ctx): TardisContextExtractor) -> TardisApiResult<Vec<ReachMessageSummaryResp>> {
@@ -47,6 +51,7 @@ impl ReachMessageCtApi {
         TardisResp::ok(resp)
     }
 
+    /// Get user reach message data by id
     /// 根据Id获取用户触达消息数据
     #[oai(method = "get", path = "/:id")]
     pub async fn get_msg_by_id(&self, id: Path<String>, TardisContextExtractor(ctx): TardisContextExtractor) -> TardisApiResult<ReachMessageDetailResp> {
@@ -57,6 +62,7 @@ impl ReachMessageCtApi {
         TardisResp::ok(resp)
     }
 
+    /// Resend message (only for messages with status Fail)
     /// 重新发送消息（仅仅适用于状态为Fail的消息）
     #[oai(method = "put", path = "/resend/:id")]
     pub async fn resend(&self, id: Path<String>, TardisContextExtractor(_ctx): TardisContextExtractor) -> TardisApiResult<bool> {
@@ -66,6 +72,7 @@ impl ReachMessageCtApi {
         TardisResp::ok(success)
     }
 
+    /// Add message
     /// 添加消息
     #[oai(method = "post", path = "/")]
     pub async fn add_message(&self, mut add_req: Json<ReachMessageAddReq>, TardisContextExtractor(ctx): TardisContextExtractor) -> TardisApiResult<String> {

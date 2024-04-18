@@ -24,9 +24,11 @@ use tardis::{log, tokio};
 pub struct IamCsRoleApi;
 
 /// System Console Role API
+/// 系统控制台角色API
 #[poem_openapi::OpenApi(prefix_path = "/cs/role", tag = "bios_basic::ApiTag::System")]
 impl IamCsRoleApi {
     /// Add Role
+    /// 添加角色
     #[oai(path = "/", method = "post")]
     async fn add(&self, tenant_id: Query<Option<String>>, mut add_req: Json<IamRoleAggAddReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<String> {
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
@@ -41,8 +43,10 @@ impl IamCsRoleApi {
     }
 
     /// Modify Role By Role Id
+    /// 根据角色ID修改角色
     ///
     /// When code = 202, the return value is the asynchronous task id
+    /// 当 code = 202 时，返回值为异步任务id
     #[oai(path = "/:id", method = "put")]
     async fn modify(
         &self,
@@ -67,6 +71,7 @@ impl IamCsRoleApi {
     }
 
     /// Get Role By Role Id
+    /// 根据角色ID获取角色
     #[oai(path = "/:id", method = "get")]
     async fn get(&self, id: Path<String>, tenant_id: Query<Option<String>>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<IamRoleDetailResp> {
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
@@ -78,6 +83,7 @@ impl IamCsRoleApi {
     }
 
     /// Find Roles
+    /// 查找角色
     #[oai(path = "/", method = "get")]
     async fn paginate(
         &self,
@@ -126,6 +132,7 @@ impl IamCsRoleApi {
     }
 
     /// Delete Role By Role Id
+    /// 根据角色ID删除角色
     #[oai(path = "/:id", method = "delete")]
     async fn delete(&self, id: Path<String>, tenant_id: Query<Option<String>>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Option<String>> {
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
@@ -143,6 +150,7 @@ impl IamCsRoleApi {
     }
 
     /// Add Role Rel Account
+    /// 添加角色关联账号
     #[oai(path = "/:id/account/:account_id", method = "put")]
     async fn add_rel_account(
         &self,
@@ -163,6 +171,7 @@ impl IamCsRoleApi {
     }
 
     /// Batch Add Role Rel Account
+    /// 批量添加角色关联账号
     #[oai(path = "/:id/account/batch/:account_ids", method = "put")]
     async fn batch_add_rel_account(
         &self,
@@ -186,6 +195,7 @@ impl IamCsRoleApi {
     }
 
     /// Delete Role Rel Account
+    /// 删除角色关联账号
     #[oai(path = "/:id/account/:account_id", method = "delete")]
     async fn delete_rel_account(
         &self,
@@ -206,6 +216,7 @@ impl IamCsRoleApi {
     }
 
     /// Batch delete Role Rel Account
+    /// 批量删除角色关联账号
     #[oai(path = "/:id/account/batch/:account_ids", method = "delete")]
     async fn batch_delete_rel_account(
         &self,
@@ -229,6 +240,7 @@ impl IamCsRoleApi {
     }
 
     /// Count Rel Accounts By Role Id
+    /// 根据角色ID统计关联账号数量
     #[oai(path = "/:id/account/total", method = "get")]
     async fn count_rel_accounts(&self, id: Path<String>, tenant_id: Query<Option<String>>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<u64> {
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
@@ -240,6 +252,7 @@ impl IamCsRoleApi {
     }
 
     /// Add Role Rel Res
+    /// 添加角色关联资源
     #[oai(path = "/:id/res/:res_id", method = "put")]
     async fn add_rel_res(&self, id: Path<String>, res_id: Path<String>, tenant_id: Query<Option<String>>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
@@ -253,6 +266,7 @@ impl IamCsRoleApi {
     }
 
     /// Delete Role Rel Res
+    /// 删除角色关联资源
     #[oai(path = "/:id/res/:res_id", method = "delete")]
     async fn delete_rel_res(
         &self,
@@ -273,6 +287,7 @@ impl IamCsRoleApi {
     }
 
     /// Count Rel Res By Role Id
+    /// 根据角色ID统计关联资源数量
     #[oai(path = "/:id/res/total", method = "get")]
     async fn count_rel_res(&self, id: Path<String>, tenant_id: Query<Option<String>>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<u64> {
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
@@ -284,6 +299,7 @@ impl IamCsRoleApi {
     }
 
     /// Find Rel Res By Role Id
+    /// 根据角色ID查找关联资源
     #[oai(path = "/:id/res", method = "get")]
     async fn find_rel_res(
         &self,
@@ -307,6 +323,7 @@ impl IamCsRoleApi {
     }
 
     /// add base embed role
+    /// 添加基础嵌入角色
     #[oai(path = "/add_base_embed_role", method = "post")]
     async fn add_base_embed_role(&self, mut add_req: Json<IamRoleAddReq>, ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();

@@ -139,14 +139,16 @@ pub(crate) async fn fact_record_load(
 
     let mut fields = vec!["key".to_string(), "own_paths".to_string(), "ct".to_string()];
     let mut values = vec![Value::from(fact_record_key), Value::from(add_req.own_paths), Value::from(add_req.ct)];
-    let req_data = add_req.data.as_object().ok_or(funs.err().bad_request(
-        "fact_record",
-        "load",
-        "
+    let req_data = add_req.data.as_object().ok_or_else(|| {
+        funs.err().bad_request(
+            "fact_record",
+            "load",
+            "
         Data should be an map
     ",
-        "400-spi-stats-invalid-request",
-    ))?;
+            "400-spi-stats-invalid-request",
+        )
+    })?;
     let latest_data_resp = fact_get_latest_record_raw(fact_conf_key, fact_record_key, &conn, ctx).await?;
     fields.push("ext".to_string());
     if let Some(latest_data) = latest_data_resp.as_ref() {

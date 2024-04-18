@@ -9,8 +9,8 @@ use crate::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumItemFilterFetcher
 use crate::spi::spi_funs;
 
 /// Add request for backend service
-///
-/// 添加后端服务的请求
+/// 
+/// 后端服务添加请求
 #[derive(Serialize, Deserialize, Debug)]
 #[cfg_attr(feature = "default", derive(poem_openapi::Object))]
 pub struct SpiBsAddReq {
@@ -52,8 +52,8 @@ pub struct SpiBsAddReq {
 }
 
 /// Modify request for backend service
-///
-/// 修改后端服务的请求
+/// 
+/// 后端服务修改请求
 #[derive(Serialize, Deserialize, Debug)]
 #[cfg_attr(feature = "default", derive(poem_openapi::Object))]
 pub struct SpiBsModifyReq {
@@ -97,8 +97,8 @@ pub struct SpiBsModifyReq {
 }
 
 /// Backend service summary information
-///
-/// 后端服务的概要信息
+/// 
+/// 后端服务概要信息
 #[derive(Serialize, Deserialize, Debug)]
 #[cfg_attr(feature = "default", derive(poem_openapi::Object, sea_orm::FromQueryResult))]
 pub struct SpiBsSummaryResp {
@@ -157,8 +157,8 @@ pub struct SpiBsSummaryResp {
 }
 
 /// Backend service detail information
-///
-/// 后端服务的详细信息
+/// 
+/// 后端服务详细信息
 #[derive(Serialize, Deserialize, Debug)]
 #[cfg_attr(feature = "default", derive(poem_openapi::Object, sea_orm::FromQueryResult))]
 pub struct SpiBsDetailResp {
@@ -221,8 +221,8 @@ pub struct SpiBsDetailResp {
 }
 
 /// Backend service certificate information
-///
-/// 后端服务的凭证信息
+/// 
+/// 后端服务凭证信息
 #[derive(Serialize, Deserialize, Debug)]
 pub struct SpiBsCertResp {
     /// SPI service type code

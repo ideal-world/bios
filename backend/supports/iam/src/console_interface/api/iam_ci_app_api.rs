@@ -25,11 +25,14 @@ use tardis::web::web_resp::{TardisApiResult, TardisResp};
 pub struct IamCiAppApi;
 
 /// # Interface Console Manage Cert API
+/// 接口控制台管理证书API
 ///
 /// Allow Management Of aksk (an authentication method between applications)
+/// 允许管理aksk（应用之间的一种认证方式）
 #[poem_openapi::OpenApi(prefix_path = "/ci/app", tag = "bios_basic::ApiTag::Interface")]
 impl IamCiAppApi {
     /// Add App
+    /// 添加应用
     #[oai(path = "/", method = "post")]
     async fn add(&self, add_req: Json<IamAppAggAddReq>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<String> {
         let mut funs = iam_constants::get_tardis_inst();
@@ -43,8 +46,10 @@ impl IamCiAppApi {
     }
 
     /// Modify Current App
+    /// 修改当前应用
     ///
     /// When code = 202, the return value is the asynchronous task id
+    /// 当code=202时，返回值为异步任务id
     #[oai(path = "/", method = "put")]
     async fn modify(&self, modify_req: Json<IamAppAggModifyReq>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Option<String>> {
         let mut funs = iam_constants::get_tardis_inst();
@@ -63,6 +68,7 @@ impl IamCiAppApi {
     }
 
     /// Find App Set Items (app)
+    /// 查找应用集合项（应用）
     #[oai(path = "/apps/item/ctx", method = "get")]
     async fn find_items_ctx(
         &self,
@@ -127,6 +133,7 @@ impl IamCiAppApi {
     }
 
     /// Find App Set Items (app)
+    /// 查找应用集合项（应用）
     #[oai(path = "/apps/item", method = "get")]
     async fn find_items(
         &self,

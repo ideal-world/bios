@@ -268,7 +268,9 @@ pub fn simple_invoke_client(attr: TokenStream, item: TokenStream) -> TokenStream
                     })
                 });
                 builder.resp = match &func.sig.output {
-                    ReturnType::Type(_, tp) => match_result_t("TardisApiResult", tp).ok_or(syn::Error::new_spanned(&func.sig.output, "expect `TardisApiResult<T>`")).unwrap(),
+                    ReturnType::Type(_, tp) => {
+                        match_result_t("TardisApiResult", tp).ok_or_else(|| syn::Error::new_spanned(&func.sig.output, "expect `TardisApiResult<T>`")).unwrap()
+                    }
                     _ => syn::Type::Tuple(TypeTuple {
                         paren_token: Default::default(),
                         elems: Default::default(),

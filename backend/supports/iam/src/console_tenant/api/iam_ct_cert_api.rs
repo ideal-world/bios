@@ -18,9 +18,11 @@ use tardis::web::poem::Request;
 pub struct IamCtCertApi;
 
 /// Tenant Console Cert API
+/// 租户控制台证书API
 #[poem_openapi::OpenApi(prefix_path = "/ct/cert", tag = "bios_basic::ApiTag::Tenant")]
 impl IamCtCertApi {
     /// Rest Password By Account Id
+    /// 重置密码
     #[oai(path = "/user-pwd", method = "put")]
     async fn rest_password(
         &self,
@@ -42,6 +44,7 @@ impl IamCtCertApi {
     }
 
     /// Find Certs By Account Id
+    /// 根据账号ID获取证书
     #[oai(path = "/", method = "get")]
     async fn find_certs(
         &self,
@@ -69,6 +72,7 @@ impl IamCtCertApi {
     }
 
     /// Find third-kind Certs By Account Id
+    /// 根据账号ID获取第三方证书
     #[oai(path = "/third-kind", method = "get")]
     async fn get_third_cert(
         &self,

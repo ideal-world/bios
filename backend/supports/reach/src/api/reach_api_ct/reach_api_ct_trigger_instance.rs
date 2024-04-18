@@ -14,12 +14,15 @@ use crate::serv::*;
 #[cfg(feature = "simple-client")]
 use crate::reach_invoke::Client;
 #[derive(Clone, Default)]
-/// 用户触达触发实例配置-租户控制台
 pub struct ReachTriggerInstanceConfigCtApi;
 
+/// Tenant Console Reach Trigger Instance Config API
+/// 租户控制台触达触发实例配置API
 #[cfg_attr(feature = "simple-client", bios_sdk_invoke::simple_invoke_client(Client<'_>))]
-#[poem_openapi::OpenApi(prefix_path = "/ct/trigger/instance/config", tag = "bios_basic::ApiTag::App")]
+#[poem_openapi::OpenApi(prefix_path = "/ct/trigger/instance/config", tag = "bios_basic::ApiTag::Tenant")]
 impl ReachTriggerInstanceConfigCtApi {
+
+    /// Find all user reach trigger instance config data
     /// 根据类型获取所有用户触达触发实例配置数据
     #[oai(method = "get", path = "/")]
     pub async fn find_trigger_instance_config(
@@ -36,6 +39,7 @@ impl ReachTriggerInstanceConfigCtApi {
         TardisResp::ok(resp)
     }
 
+    /// Add or modify user reach trigger instance config
     /// 保存用户触达触发实例配置
     #[oai(method = "put", path = "/")]
     pub async fn add_or_modify_instance_config(

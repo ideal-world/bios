@@ -88,7 +88,7 @@ impl RbumItemCrudOperation<spi_bs::ActiveModel, SpiBsAddReq, SpiBsModifyReq, Spi
                 start_time: None,
                 end_time: None,
                 is_outside: false,
-                is_ignore_check_sk: false,
+                ignore_check_sk: false,
             },
             funs,
             ctx,
@@ -127,7 +127,7 @@ impl RbumItemCrudOperation<spi_bs::ActiveModel, SpiBsAddReq, SpiBsModifyReq, Spi
         if let Some(cert) = RbumCertServ::find_one_rbum(
             &RbumCertFilterReq {
                 kind: Some(SPI_CERT_KIND.to_string()),
-                supplier: Some(vec![id.to_string()]),
+                suppliers: Some(vec![id.to_string()]),
                 rel_rbum_kind: Some(RbumCertRelKind::Item),
                 rel_rbum_id: Some(id.to_string()),
                 ..Default::default()
@@ -142,7 +142,7 @@ impl RbumItemCrudOperation<spi_bs::ActiveModel, SpiBsAddReq, SpiBsModifyReq, Spi
                 &mut RbumCertModifyReq {
                     ak: modify_req.ak.clone(),
                     sk: modify_req.sk.clone(),
-                    is_ignore_check_sk: false,
+                    ignore_check_sk: false,
                     conn_uri: modify_req.conn_uri.clone(),
                     ext: modify_req.ext.clone(),
                     status: None,

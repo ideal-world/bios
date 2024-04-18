@@ -41,22 +41,26 @@ impl IamCertOAuth2Spi for IamCertOAuth2SpiWeChatMp {
         }
         let open_id = result
             .get("openid")
-            .ok_or(funs.err().not_found(
-                "oauth_spi_wechat_mp",
-                "get_access_token",
-                "oauth get access token error:missing field [openid]",
-                "500-iam-cert-oauth-get-access-token-error",
-            ))?
+            .ok_or_else(|| {
+                funs.err().not_found(
+                    "oauth_spi_wechat_mp",
+                    "get_access_token",
+                    "oauth get access token error:missing field [openid]",
+                    "500-iam-cert-oauth-get-access-token-error",
+                )
+            })?
             .as_str()
             .unwrap_or("");
         let session_token = result
             .get("session_key")
-            .ok_or(funs.err().not_found(
-                "oauth_spi_wechat_mp",
-                "get_access_token",
-                "oauth get access token error:missing field [session_key]",
-                "500-iam-cert-oauth-get-access-token-error",
-            ))?
+            .ok_or_else(|| {
+                funs.err().not_found(
+                    "oauth_spi_wechat_mp",
+                    "get_access_token",
+                    "oauth get access token error:missing field [session_key]",
+                    "500-iam-cert-oauth-get-access-token-error",
+                )
+            })?
             .as_str()
             .unwrap_or("");
         let union_id = result.get("unionid").map(|r| r.as_str().unwrap_or("").to_string());
@@ -105,42 +109,50 @@ impl IamCertOAuth2Spi for IamCertOAuth2SpiWeChatMp {
         }
         let name = result
             .get("nick_name")
-            .ok_or(funs.err().not_found(
-                "oauth_spi_wechat_mp",
-                "get_access_token",
-                "oauth get access token error:missing field [nick_name]",
-                "500-iam-cert-oauth-get-access-token-error",
-            ))?
+            .ok_or_else(|| {
+                funs.err().not_found(
+                    "oauth_spi_wechat_mp",
+                    "get_access_token",
+                    "oauth get access token error:missing field [nick_name]",
+                    "500-iam-cert-oauth-get-access-token-error",
+                )
+            })?
             .as_str()
             .unwrap_or("");
         let _ = result
             .get("mobile")
-            .ok_or(funs.err().not_found(
-                "oauth_spi_wechat_mp",
-                "get_access_token",
-                "oauth get access token error:missing field [mobile]",
-                "500-iam-cert-oauth-get-access-token-error",
-            ))?
+            .ok_or_else(|| {
+                funs.err().not_found(
+                    "oauth_spi_wechat_mp",
+                    "get_access_token",
+                    "oauth get access token error:missing field [mobile]",
+                    "500-iam-cert-oauth-get-access-token-error",
+                )
+            })?
             .as_str()
             .unwrap_or("");
         let _ = result
             .get("avatar")
-            .ok_or(funs.err().not_found(
-                "oauth_spi_wechat_mp",
-                "get_access_token",
-                "oauth get access token error:missing field [avatar]",
-                "500-iam-cert-oauth-get-access-token-error",
-            ))?
+            .ok_or_else(|| {
+                funs.err().not_found(
+                    "oauth_spi_wechat_mp",
+                    "get_access_token",
+                    "oauth get access token error:missing field [avatar]",
+                    "500-iam-cert-oauth-get-access-token-error",
+                )
+            })?
             .as_str()
             .unwrap_or("");
         let _ = result
             .get("sex")
-            .ok_or(funs.err().not_found(
-                "oauth_spi_wechat_mp",
-                "get_access_token",
-                "oauth get access token error:missing field [sex]",
-                "500-iam-cert-oauth-get-access-token-error",
-            ))?
+            .ok_or_else(|| {
+                funs.err().not_found(
+                    "oauth_spi_wechat_mp",
+                    "get_access_token",
+                    "oauth get access token error:missing field [sex]",
+                    "500-iam-cert-oauth-get-access-token-error",
+                )
+            })?
             .as_str()
             .unwrap_or("");
 

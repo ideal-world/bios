@@ -4,6 +4,7 @@ use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 use tardis::log::info;
+use tardis::tokio::time::sleep;
 use tardis::TardisFuns;
 
 use bios_basic::rbum::dto::rbum_cert_conf_dto::{RbumCertConfAddReq, RbumCertConfModifyReq};
@@ -20,6 +21,7 @@ pub async fn test(context: &TardisContext) -> TardisResult<()> {
     test_rbum_cert_basic(context).await?;
     test_rbum_cert_sk_dynamic(context).await?;
     test_rbum_cert_conf_ak_duplicate(context).await?;
+    test_rbum_cert_conf_coexist_num(context).await?;
     Ok(())
 }
 
@@ -125,7 +127,7 @@ async fn test_rbum_cert_conf(context: &TardisContext) -> TardisResult<()> {
             sk_dynamic: None,
             sk_encrypted: Some(true),
             repeatable: None,
-            is_basic: None,
+            is_basic: Some(true),
             rest_by_kinds: None,
             expire_sec: None,
             coexist_num: None,
@@ -237,128 +239,6 @@ async fn test_rbum_cert_conf(context: &TardisContext) -> TardisResult<()> {
 
     funs.rollback().await?;
 
-    Ok(())
-}
-
-async fn test_rbum_cert_conf_ak_duplicate(context: &TardisContext) -> TardisResult<()> {
-    let mut funs = TardisFuns::inst_with_db_conn("".to_string(), None);
-    funs.begin().await?;
-
-    info!("test_rbum_cert_conf_ak_duplicate : Prepare Domain : RbumDomainServ::add_rbum");
-    let domain_iam_id = RbumDomainServ::add_rbum(
-        &mut RbumDomainAddReq {
-            code: TrimString("iam2".to_string()),
-            name: TrimString("IAM".to_string()),
-            note: None,
-            icon: None,
-            sort: None,
-            scope_level: Some(RbumScopeLevelKind::L2),
-        },
-        &funs,
-        context,
-    )
-    .await?;
-    info!("test_rbum_cert_conf_ak_duplicate : add cert conf : RbumCertConfServ::add_rbum");
-    let ak_duplicate_cert_conf_id = RbumCertConfServ::add_rbum(
-        &mut RbumCertConfAddReq {
-            kind: TrimString("Test".to_string()),
-            supplier: None,
-            name: TrimString("akRepeatableTest".to_string()),
-            note: None,
-            ak_note: None,
-            ak_rule: None,
-            sk_note: None,
-            sk_rule: None,
-            ext: None,
-            sk_need: Some(true),
-            sk_dynamic: None,
-            sk_encrypted: Some(false),
-            repeatable: None,
-            is_basic: None,
-            rest_by_kinds: None,
-            expire_sec: None,
-            coexist_num: None,
-            conn_uri: None,
-            rel_rbum_domain_id: domain_iam_id.to_string(),
-            rel_rbum_item_id: None,
-            sk_lock_cycle_sec: None,
-            sk_lock_err_times: None,
-            sk_lock_duration_sec: None,
-            status: RbumCertConfStatusKind::Enabled,
-        },
-        &funs,
-        context,
-    )
-    .await?;
-
-    let cert_test_id1 = RbumCertServ::add_rbum(
-        &mut RbumCertAddReq {
-            ak: "test".into(),
-            sk: Some("test".into()),
-            vcode: None,
-            ext: None,
-            start_time: None,
-            end_time: None,
-            conn_uri: None,
-            status: RbumCertStatusKind::Enabled,
-            rel_rbum_cert_conf_id: Some(ak_duplicate_cert_conf_id.clone()),
-            rel_rbum_kind: RbumCertRelKind::Item,
-            rel_rbum_id: context.owner.to_string(),
-            is_outside: false,
-            kind: None,
-            supplier: None,
-            is_ignore_check_sk: false,
-            sk_invisible: None,
-        },
-        &funs,
-        context,
-    )
-    .await?;
-
-    assert!(RbumCertServ::add_rbum(
-        &mut RbumCertAddReq {
-            ak: "test".into(),
-            sk: Some("test".into()),
-            vcode: None,
-            ext: None,
-            start_time: None,
-            end_time: None,
-            conn_uri: None,
-            status: RbumCertStatusKind::Enabled,
-            rel_rbum_cert_conf_id: Some(ak_duplicate_cert_conf_id.clone()),
-            rel_rbum_kind: RbumCertRelKind::Item,
-            rel_rbum_id: context.owner.to_string(),
-            is_outside: false,
-            kind: None,
-            supplier: None,
-            is_ignore_check_sk: false,
-            sk_invisible: None,
-        },
-        &funs,
-        context,
-    )
-    .await
-    .is_err());
-
-    assert!(RbumCertServ::modify_rbum(
-        &cert_test_id1,
-        &mut RbumCertModifyReq {
-            ak: Some("test".into()),
-            sk: None,
-            sk_invisible: None,
-            ext: None,
-            start_time: None,
-            end_time: None,
-            conn_uri: None,
-            status: None,
-            is_ignore_check_sk: false,
-        },
-        &funs,
-        context,
-    )
-    .await
-    .is_ok());
-    funs.rollback().await?;
     Ok(())
 }
 
@@ -479,7 +359,7 @@ async fn test_rbum_cert_basic(context: &TardisContext) -> TardisResult<()> {
             is_outside: false,
             kind: None,
             supplier: None,
-            is_ignore_check_sk: false,
+            ignore_check_sk: false,
             sk_invisible: None,
         },
         &funs,
@@ -506,7 +386,7 @@ async fn test_rbum_cert_basic(context: &TardisContext) -> TardisResult<()> {
             is_outside: false,
             kind: None,
             supplier: None,
-            is_ignore_check_sk: false
+            ignore_check_sk: false
         },
         &funs,
         context,
@@ -532,7 +412,7 @@ async fn test_rbum_cert_basic(context: &TardisContext) -> TardisResult<()> {
             is_outside: false,
             kind: None,
             supplier: None,
-            is_ignore_check_sk: false
+            ignore_check_sk: false
         },
         &funs,
         context,
@@ -558,7 +438,7 @@ async fn test_rbum_cert_basic(context: &TardisContext) -> TardisResult<()> {
             is_outside: false,
             kind: None,
             supplier: None,
-            is_ignore_check_sk: false
+            ignore_check_sk: false
         },
         &funs,
         context,
@@ -584,7 +464,7 @@ async fn test_rbum_cert_basic(context: &TardisContext) -> TardisResult<()> {
             is_outside: false,
             kind: None,
             supplier: None,
-            is_ignore_check_sk: false
+            ignore_check_sk: false
         },
         &funs,
         context,
@@ -609,7 +489,7 @@ async fn test_rbum_cert_basic(context: &TardisContext) -> TardisResult<()> {
             is_outside: false,
             kind: None,
             supplier: None,
-            is_ignore_check_sk: false,
+            ignore_check_sk: false,
         },
         &funs,
         context,
@@ -634,7 +514,7 @@ async fn test_rbum_cert_basic(context: &TardisContext) -> TardisResult<()> {
             is_outside: false,
             kind: None,
             supplier: None,
-            is_ignore_check_sk: false
+            ignore_check_sk: false
         },
         &funs,
         context,
@@ -659,7 +539,7 @@ async fn test_rbum_cert_basic(context: &TardisContext) -> TardisResult<()> {
             is_outside: false,
             kind: None,
             supplier: None,
-            is_ignore_check_sk: false,
+            ignore_check_sk: false,
         },
         &funs,
         context,
@@ -688,7 +568,7 @@ async fn test_rbum_cert_basic(context: &TardisContext) -> TardisResult<()> {
             end_time: None,
             conn_uri: None,
             status: None,
-            is_ignore_check_sk: false,
+            ignore_check_sk: false,
         },
         &funs,
         context
@@ -707,7 +587,7 @@ async fn test_rbum_cert_basic(context: &TardisContext) -> TardisResult<()> {
             end_time: None,
             conn_uri: None,
             status: None,
-            is_ignore_check_sk: false,
+            ignore_check_sk: false,
         },
         &funs,
         context,
@@ -744,7 +624,7 @@ async fn test_rbum_cert_basic(context: &TardisContext) -> TardisResult<()> {
     assert!(RbumCertServ::validate_by_spec_cert_conf("gudaoxuri", "11", "111", false, "11", &funs).await.is_err());
     assert!(RbumCertServ::validate_by_spec_cert_conf("gudaoxuri", "11", &cert_conf_user_pwd_id, false, "11", &funs).await.is_err());
     assert!(RbumCertServ::validate_by_spec_cert_conf("gudaoxuri", "11", &cert_conf_user_pwd_id, false, &context.own_paths, &funs).await.is_err());
-    tardis::tokio::time::sleep(Duration::from_secs(1)).await;
+    tardis::tokio::time::sleep(Duration::from_millis(100)).await;
     info!("Test Validate RbumCertServ::validate gudaoxuri abcdefgh");
     assert_eq!(
         RbumCertServ::validate_by_spec_cert_conf("gudaoxuri", "abcdefgh", &cert_conf_user_pwd_id, false, &context.own_paths, &funs).await?.0,
@@ -842,13 +722,13 @@ async fn test_rbum_cert_sk_dynamic(context: &TardisContext) -> TardisResult<()> 
             is_outside: false,
             kind: None,
             supplier: None,
-            is_ignore_check_sk: false,
+            ignore_check_sk: false,
         },
         &funs,
         context,
     )
     .await?;
-    tardis::tokio::time::sleep(Duration::from_secs(1)).await;
+    tardis::tokio::time::sleep(Duration::from_millis(100)).await;
     info!("【test_rbum_cert】 : Test Validate : RbumCertServ::validate with sk_dynamic");
     RbumCertServ::validate_by_spec_cert_conf("i@sunisle.org", "123456", &cert_conf_mail_vcode_id, false, &context.own_paths, &funs).await?;
     // todo will the verification code be deleted if the verification is successful?
@@ -875,5 +755,351 @@ async fn test_rbum_cert_sk_dynamic(context: &TardisContext) -> TardisResult<()> 
 
     funs.rollback().await?;
 
+    Ok(())
+}
+
+async fn test_rbum_cert_conf_ak_duplicate(context: &TardisContext) -> TardisResult<()> {
+    let mut funs = TardisFuns::inst_with_db_conn("".to_string(), None);
+    funs.begin().await?;
+
+    info!("test_rbum_cert_conf_ak_duplicate : Prepare Domain : RbumDomainServ::add_rbum");
+    let domain_iam_id = RbumDomainServ::add_rbum(
+        &mut RbumDomainAddReq {
+            code: TrimString("iam2".to_string()),
+            name: TrimString("IAM".to_string()),
+            note: None,
+            icon: None,
+            sort: None,
+            scope_level: Some(RbumScopeLevelKind::L2),
+        },
+        &funs,
+        context,
+    )
+    .await?;
+    info!("test_rbum_cert_conf_ak_duplicate : add cert conf : RbumCertConfServ::add_rbum");
+    let ak_duplicate_cert_conf_id = RbumCertConfServ::add_rbum(
+        &mut RbumCertConfAddReq {
+            kind: TrimString("Test".to_string()),
+            supplier: None,
+            name: TrimString("akRepeatableTest".to_string()),
+            note: None,
+            ak_note: None,
+            ak_rule: None,
+            sk_note: None,
+            sk_rule: None,
+            ext: None,
+            sk_need: Some(true),
+            sk_dynamic: None,
+            sk_encrypted: Some(false),
+            repeatable: None,
+            is_basic: None,
+            rest_by_kinds: None,
+            expire_sec: None,
+            coexist_num: None,
+            conn_uri: None,
+            rel_rbum_domain_id: domain_iam_id.to_string(),
+            rel_rbum_item_id: None,
+            sk_lock_cycle_sec: None,
+            sk_lock_err_times: None,
+            sk_lock_duration_sec: None,
+            status: RbumCertConfStatusKind::Enabled,
+        },
+        &funs,
+        context,
+    )
+    .await?;
+
+    let cert_test_id1 = RbumCertServ::add_rbum(
+        &mut RbumCertAddReq {
+            ak: "test".into(),
+            sk: Some("test".into()),
+            vcode: None,
+            ext: None,
+            start_time: None,
+            end_time: None,
+            conn_uri: None,
+            status: RbumCertStatusKind::Enabled,
+            rel_rbum_cert_conf_id: Some(ak_duplicate_cert_conf_id.clone()),
+            rel_rbum_kind: RbumCertRelKind::Item,
+            rel_rbum_id: context.owner.to_string(),
+            is_outside: false,
+            kind: None,
+            supplier: None,
+            ignore_check_sk: false,
+            sk_invisible: None,
+        },
+        &funs,
+        context,
+    )
+    .await?;
+
+    assert!(RbumCertServ::add_rbum(
+        &mut RbumCertAddReq {
+            ak: "test".into(),
+            sk: Some("test".into()),
+            vcode: None,
+            ext: None,
+            start_time: None,
+            end_time: None,
+            conn_uri: None,
+            status: RbumCertStatusKind::Enabled,
+            rel_rbum_cert_conf_id: Some(ak_duplicate_cert_conf_id.clone()),
+            rel_rbum_kind: RbumCertRelKind::Item,
+            rel_rbum_id: context.owner.to_string(),
+            is_outside: false,
+            kind: None,
+            supplier: None,
+            ignore_check_sk: false,
+            sk_invisible: None,
+        },
+        &funs,
+        context,
+    )
+    .await
+    .is_err());
+
+    assert!(RbumCertServ::modify_rbum(
+        &cert_test_id1,
+        &mut RbumCertModifyReq {
+            ak: Some("test".into()),
+            sk: None,
+            sk_invisible: None,
+            ext: None,
+            start_time: None,
+            end_time: None,
+            conn_uri: None,
+            status: None,
+            ignore_check_sk: false,
+        },
+        &funs,
+        context,
+    )
+    .await
+    .is_ok());
+    funs.rollback().await?;
+    Ok(())
+}
+
+async fn test_rbum_cert_conf_coexist_num(context: &TardisContext) -> TardisResult<()> {
+    let mut funs = TardisFuns::inst_with_db_conn("".to_string(), None);
+    funs.begin().await?;
+
+    info!("test_rbum_cert_conf_coexist_num : Prepare Domain : RbumDomainServ::add_rbum");
+    let domain_iam_id = RbumDomainServ::add_rbum(
+        &mut RbumDomainAddReq {
+            code: TrimString("iam3".to_string()),
+            name: TrimString("IAM".to_string()),
+            note: None,
+            icon: None,
+            sort: None,
+            scope_level: Some(RbumScopeLevelKind::L2),
+        },
+        &funs,
+        context,
+    )
+    .await?;
+    info!("test_rbum_cert_conf_coexist_num : add cert conf : RbumCertConfServ::add_rbum");
+    let cert_conf_id = RbumCertConfServ::add_rbum(
+        &mut RbumCertConfAddReq {
+            kind: TrimString("Test".to_string()),
+            supplier: None,
+            name: TrimString("".to_string()),
+            note: None,
+            ak_note: None,
+            ak_rule: None,
+            sk_note: None,
+            sk_rule: None,
+            ext: None,
+            sk_need: Some(true),
+            sk_dynamic: None,
+            sk_encrypted: Some(false),
+            repeatable: None,
+            is_basic: None,
+            rest_by_kinds: None,
+            expire_sec: None,
+            // keep 2 versions
+            coexist_num: Some(2),
+            conn_uri: None,
+            rel_rbum_domain_id: domain_iam_id.to_string(),
+            rel_rbum_item_id: None,
+            sk_lock_cycle_sec: None,
+            sk_lock_err_times: None,
+            sk_lock_duration_sec: None,
+            status: RbumCertConfStatusKind::Enabled,
+        },
+        &funs,
+        context,
+    )
+    .await?;
+
+    funs.commit().await?;
+    let mut funs = TardisFuns::inst_with_db_conn("".to_string(), None);
+    funs.begin().await?;
+
+    RbumCertServ::add_rbum(
+        &mut RbumCertAddReq {
+            ak: "test1".into(),
+            sk: Some("test".into()),
+            vcode: None,
+            ext: None,
+            start_time: None,
+            end_time: None,
+            conn_uri: None,
+            status: RbumCertStatusKind::Enabled,
+            rel_rbum_cert_conf_id: Some(cert_conf_id.clone()),
+            rel_rbum_kind: RbumCertRelKind::Item,
+            rel_rbum_id: context.owner.to_string(),
+            is_outside: false,
+            kind: None,
+            supplier: None,
+            ignore_check_sk: false,
+            sk_invisible: None,
+        },
+        &funs,
+        context,
+    )
+    .await?;
+
+    funs.commit().await?;
+    sleep(Duration::from_millis(100)).await;
+
+    let mut funs = TardisFuns::inst_with_db_conn("".to_string(), None);
+    funs.begin().await?;
+
+    RbumCertServ::add_rbum(
+        &mut RbumCertAddReq {
+            ak: "test2".into(),
+            sk: Some("test".into()),
+            vcode: None,
+            ext: None,
+            start_time: None,
+            end_time: None,
+            conn_uri: None,
+            status: RbumCertStatusKind::Enabled,
+            rel_rbum_cert_conf_id: Some(cert_conf_id.clone()),
+            rel_rbum_kind: RbumCertRelKind::Item,
+            rel_rbum_id: context.owner.to_string(),
+            is_outside: false,
+            kind: None,
+            supplier: None,
+            ignore_check_sk: false,
+            sk_invisible: None,
+        },
+        &funs,
+        context,
+    )
+    .await?;
+
+    funs.commit().await?;
+    sleep(Duration::from_millis(100)).await;
+
+    let mut funs = TardisFuns::inst_with_db_conn("".to_string(), None);
+    funs.begin().await?;
+
+    let cert_test_id3 = RbumCertServ::add_rbum(
+        &mut RbumCertAddReq {
+            ak: "test3".into(),
+            sk: Some("test".into()),
+            vcode: None,
+            ext: None,
+            start_time: None,
+            end_time: None,
+            conn_uri: None,
+            status: RbumCertStatusKind::Enabled,
+            rel_rbum_cert_conf_id: Some(cert_conf_id.clone()),
+            rel_rbum_kind: RbumCertRelKind::Item,
+            rel_rbum_id: context.owner.to_string(),
+            is_outside: false,
+            kind: None,
+            supplier: None,
+            ignore_check_sk: false,
+            sk_invisible: None,
+        },
+        &funs,
+        context,
+    )
+    .await?;
+
+    funs.commit().await?;
+    sleep(Duration::from_millis(100)).await;
+
+    let mut funs = TardisFuns::inst_with_db_conn("".to_string(), None);
+    funs.begin().await?;
+
+    RbumCertServ::add_rbum(
+        &mut RbumCertAddReq {
+            ak: "test4".into(),
+            sk: Some("test".into()),
+            vcode: None,
+            ext: None,
+            start_time: None,
+            end_time: None,
+            conn_uri: None,
+            status: RbumCertStatusKind::Enabled,
+            rel_rbum_cert_conf_id: Some(cert_conf_id.clone()),
+            rel_rbum_kind: RbumCertRelKind::Item,
+            rel_rbum_id: "other_rel_rbum_id".to_string(),
+            is_outside: true,
+            kind: None,
+            supplier: None,
+            ignore_check_sk: false,
+            sk_invisible: None,
+        },
+        &funs,
+        context,
+    )
+    .await?;
+
+    funs.commit().await?;
+    sleep(Duration::from_millis(100)).await;
+
+    let mut funs = TardisFuns::inst_with_db_conn("".to_string(), None);
+    funs.begin().await?;
+
+    let cert_test_idx = RbumCertServ::add_rbum(
+        &mut RbumCertAddReq {
+            ak: "testx".into(),
+            sk: Some("test".into()),
+            vcode: None,
+            ext: None,
+            start_time: None,
+            end_time: None,
+            conn_uri: None,
+            status: RbumCertStatusKind::Enabled,
+            rel_rbum_cert_conf_id: Some(cert_conf_id.clone()),
+            rel_rbum_kind: RbumCertRelKind::Item,
+            rel_rbum_id: context.owner.to_string(),
+            is_outside: false,
+            kind: None,
+            supplier: None,
+            ignore_check_sk: false,
+            sk_invisible: None,
+        },
+        &funs,
+        context,
+    )
+    .await?;
+
+    funs.commit().await?;
+    let mut funs = TardisFuns::inst_with_db_conn("".to_string(), None);
+    funs.begin().await?;
+
+    info!("test_rbum_cert_conf_coexist_num : check coexist num");
+
+    let certs = RbumCertServ::find_id_rbums(
+        &RbumCertFilterReq {
+            basic: RbumBasicFilterReq::default(),
+            rel_rbum_id: Some(context.owner.to_string()),
+            ..Default::default()
+        },
+        Some(true),
+        None,
+        &funs,
+        context,
+    )
+    .await?;
+    assert_eq!(certs.len(), 2);
+    assert_eq!(certs, vec![cert_test_idx, cert_test_id3]);
+    funs.rollback().await?;
     Ok(())
 }

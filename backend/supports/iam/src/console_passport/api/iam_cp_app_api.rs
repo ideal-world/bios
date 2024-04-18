@@ -22,9 +22,11 @@ use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp};
 pub struct IamCpAppApi;
 
 /// Passport Console App API
+/// 通行证控制台应用API
 #[poem_openapi::OpenApi(prefix_path = "/cp/app", tag = "bios_basic::ApiTag::Passport")]
 impl IamCpAppApi {
     /// Find Apps by ctx.owner(account_id)
+    /// 查找应用
     #[oai(path = "/", method = "get")]
     async fn paginate(
         &self,
@@ -72,6 +74,7 @@ impl IamCpAppApi {
     }
 
     /// Find App Set Items (app)
+    /// 查找应用集合项（应用）
     #[oai(path = "/apps/item", method = "get")]
     async fn find_items(
         &self,

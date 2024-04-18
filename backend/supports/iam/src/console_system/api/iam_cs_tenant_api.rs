@@ -17,9 +17,11 @@ use tardis::web::poem::Request;
 pub struct IamCsTenantApi;
 
 /// System Console Tenant API
+/// 系统控制台租户API
 #[poem_openapi::OpenApi(prefix_path = "/cs/tenant", tag = "bios_basic::ApiTag::System")]
 impl IamCsTenantApi {
     /// Add Tenant
+    /// 添加租户
     #[oai(path = "/", method = "post")]
     async fn add(&self, add_req: Json<IamTenantAggAddReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<String> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
@@ -32,8 +34,10 @@ impl IamCsTenantApi {
     }
 
     /// Modify Tenant By Tenant Id
+    /// 修改租户
     ///
     /// When code = 202, the return value is the asynchronous task id
+    /// 当 code = 202 时，返回值为异步任务id
     #[oai(path = "/:id", method = "put")]
     async fn modify(
         &self,
@@ -58,6 +62,7 @@ impl IamCsTenantApi {
     }
 
     /// Get Tenant By Tenant Id
+    /// 根据租户ID获取租户
     #[oai(path = "/:id", method = "get")]
     async fn get(&self, id: Path<String>, tenant_id: Query<Option<String>>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<IamTenantAggDetailResp> {
         let funs = iam_constants::get_tardis_inst();
@@ -81,6 +86,7 @@ impl IamCsTenantApi {
     }
 
     /// Find Tenants
+    /// 查找租户
     #[oai(path = "/", method = "get")]
     async fn paginate(
         &self,

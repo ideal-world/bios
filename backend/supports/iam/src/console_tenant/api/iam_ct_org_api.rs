@@ -24,12 +24,16 @@ use tardis::web::poem::Request;
 pub struct IamCtOrgApi;
 
 /// Tenant Console Org API
+/// 租户控制台组织API
 ///
 /// Note: the current org only supports tenant level.
 /// Transferring to another tenant or platform's set_id will result in permission escalation
+/// 注意：当前组织仅支持租户级别。
+/// 转移到其他租户或平台的set_id会导致权限升级
 #[poem_openapi::OpenApi(prefix_path = "/ct/org", tag = "bios_basic::ApiTag::Tenant")]
 impl IamCtOrgApi {
     /// Add Org Cate
+    /// 添加组织分类
     #[oai(path = "/cate", method = "post")]
     async fn add_cate(&self, add_req: Json<IamSetCateAddReq>, set_id: Query<Option<String>>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<String> {
         let mut funs = iam_constants::get_tardis_inst();
@@ -44,6 +48,7 @@ impl IamCtOrgApi {
     }
 
     /// Modify Org Cate By Org Cate Id
+    /// 修改组织分类
     #[oai(path = "/cate/:id", method = "put")]
     async fn modify_set_cate(
         &self,
@@ -67,6 +72,11 @@ impl IamCtOrgApi {
     ///
     /// * Without parameters: Query the whole tree
     /// * ``parent_sys_code=true`` : query only the next level. This can be used to query level by level when the tree is too large
+    /// 
+    /// 根据当前租户查找组织树
+    /// 
+    /// * 无参数：查询整个树
+    /// * ``parent_sys_code=true``：仅查询下一级。当树太大时，可以逐级查询
     #[oai(path = "/tree", method = "get")]
     async fn get_tree(
         &self,
@@ -97,6 +107,7 @@ impl IamCtOrgApi {
     }
 
     /// Delete Org Cate By Org Cate Id
+    /// 删除组织分类
     #[oai(path = "/cate/:id", method = "delete")]
     async fn delete_cate(&self, id: Path<String>, set_id: Query<Option<String>>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
@@ -110,6 +121,7 @@ impl IamCtOrgApi {
     }
 
     /// Current is bound by platform
+    /// 当前是否被平台绑定
     #[oai(path = "/is_bound", method = "get")]
     async fn is_bond_by_platform(&self, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<bool> {
         let mock_ctx = TardisContext {
@@ -137,6 +149,7 @@ impl IamCtOrgApi {
     }
 
     /// Batch Add Org Item
+    /// 批量添加组织项
     #[oai(path = "/item/batch", method = "put")]
     async fn batch_add_set_item(
         &self,
@@ -178,6 +191,7 @@ impl IamCtOrgApi {
     }
 
     /// Find Org Items
+    /// 查询组织项
     #[oai(path = "/item", method = "get")]
     async fn find_items(
         &self,
@@ -196,6 +210,7 @@ impl IamCtOrgApi {
     }
 
     /// Delete Org Item By Org Item Id
+    /// 删除组织项
     #[oai(path = "/item/:id", method = "delete")]
     async fn delete_item(&self, id: Path<String>, set_id: Query<Option<String>>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();

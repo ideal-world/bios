@@ -26,9 +26,12 @@ use crate::{
 #[derive(Clone, Default)]
 pub struct IamCiTenantApi;
 
+/// # Interface Console Tenant API
+/// 接口控制台租户API
 #[poem_openapi::OpenApi(prefix_path = "/ci/tenant", tag = "bios_basic::ApiTag::Tenant")]
 impl IamCiTenantApi {
     /// Get Current Tenant
+    /// 获取当前租户
     #[oai(path = "/", method = "get")]
     async fn get(&self, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<IamTenantAggDetailResp> {
         let funs = iam_constants::get_tardis_inst();
@@ -43,6 +46,11 @@ impl IamCiTenantApi {
     ///
     /// * Without parameters: Query the whole tree
     /// * ``parent_sys_code=true`` : query only the next level. This can be used to query level by level when the tree is too large
+    /// 
+    /// 通过当前租户查找组织树
+    /// 
+    /// * 无参数：查询整个树
+    /// * ``parent_sys_code=true``：仅查询下一级。当树太大时，可以逐级查询
     #[oai(path = "/orgs", method = "get")]
     async fn get_orgs(
         &self,

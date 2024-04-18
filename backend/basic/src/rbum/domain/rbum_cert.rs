@@ -29,22 +29,6 @@ pub struct Model {
     /// 凭证id
     #[sea_orm(primary_key, auto_increment = false)]
     pub id: String,
-    /// Certificate type
-    ///
-    /// 凭证类型
-    ///
-    /// Different from [`crate::rbum::domain::rbum_cert_conf::Model::kind`], when this data exists, it indicates that the certificate does not need to be associated with the certificate configuration.
-    ///
-    /// 与 [`crate::rbum::domain::rbum_cert_conf::Model::kind`] 不同，当存在此数据时表明该凭证不用关联凭证配置。
-    pub kind: String,
-    /// Certificate supplier
-    ///
-    /// 凭证供应商
-    ///
-    /// Different from [`crate::rbum::domain::rbum_cert_conf::Model::supplier`], when this data exists, it indicates that the certificate does not need to be associated with the certificate configuration.
-    ///
-    /// 与 [`crate::rbum::domain::rbum_cert_conf::Model::supplier`] 不同，当存在此数据时表明该凭证不用关联凭证配置。
-    pub supplier: String,
     /// Certification access key
     ///
     /// 凭证名
@@ -65,6 +49,22 @@ pub struct Model {
     ///
     /// 在一些安全性要求较高的场景下，可以选择隐藏密钥，如：显示为“******”。
     pub sk_invisible: bool,
+    /// Certificate type
+    ///
+    /// 凭证类型
+    ///
+    /// Different from [`crate::rbum::domain::rbum_cert_conf::Model::kind`], when this data exists, it indicates that the certificate does not need to be associated with the certificate configuration.
+    ///
+    /// 与 [`crate::rbum::domain::rbum_cert_conf::Model::kind`] 不同，当存在此数据时表明该凭证不用关联凭证配置。
+    pub kind: String,
+    /// Certificate supplier
+    ///
+    /// 凭证供应商
+    ///
+    /// Different from [`crate::rbum::domain::rbum_cert_conf::Model::supplier`], when this data exists, it indicates that the certificate does not need to be associated with the certificate configuration.
+    ///
+    /// 与 [`crate::rbum::domain::rbum_cert_conf::Model::supplier`] 不同，当存在此数据时表明该凭证不用关联凭证配置。
+    pub supplier: String,
     /// Certificate extension information
     ///
     /// 凭证扩展信息

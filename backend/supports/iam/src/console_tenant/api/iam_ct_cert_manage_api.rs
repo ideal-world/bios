@@ -19,27 +19,12 @@ use tardis::web::poem::Request;
 pub struct IamCtCertManageApi;
 
 /// Tenant Console Cert manage API
+/// 租户控制台证书管理API
 #[poem_openapi::OpenApi(prefix_path = "/ct/cert/manage", tag = "bios_basic::ApiTag::Tenant")]
 impl IamCtCertManageApi {
-    // /// Rest Password
-    // #[oai(path = "/rest-sk/", method = "put")]
-    // async fn rest_password(
-    //     &self,
-    //     account_id: Query<String>,
-    //     app_id: Query<Option<String>>,
-    //     modify_req: Json<IamUserPwdCertRestReq>,
-    //     ctx: TardisContextExtractor,
-    // ) -> TardisApiResult<Void> {
-    //     let ctx = IamCertServ::try_use_app_ctx(ctx.0, app_id.0)?;
-    //     let mut funs = iam_constants::get_tardis_inst();
-    //     funs.begin().await?;
-    //     let rbum_cert_conf_id = IamCertServ::get_cert_conf_id_by_code(IamCertKernelKind::UserPwd.to_string().as_str(), get_max_level_id_by_context(&ctx), &funs).await?;
-    //     RbumCertServ::reset_sk(&cert.id, &modify_req.new_sk.0, &RbumCertFilterReq::default(), funs, ctx).await?;
-    //     funs.commit().await?;
-    //     TardisResp::ok(Void {})
-    // }
 
     /// Add Manage Cert
+    /// 添加凭证
     #[oai(path = "/", method = "post")]
     async fn add_manage_cert(&self, add_req: Json<IamCertManageAddReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<String> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
@@ -68,6 +53,7 @@ impl IamCtCertManageApi {
     }
 
     /// modify manage cert
+    /// 修改凭证
     #[oai(path = "/:id", method = "put")]
     async fn modify_manage_cert(&self, id: Path<String>, modify_req: Json<IamCertManageModifyReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
@@ -96,6 +82,7 @@ impl IamCtCertManageApi {
     }
 
     /// modify manage cert ext
+    /// 修改凭证扩展信息
     #[oai(path = "/ext/:id", method = "put")]
     async fn modify_manage_cert_ext(&self, id: Path<String>, ext: Query<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
@@ -108,6 +95,7 @@ impl IamCtCertManageApi {
     }
 
     /// get manage cert
+    /// 获取凭证
     #[oai(path = "/:id", method = "get")]
     async fn get_manage_cert(&self, id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<RbumCertSummaryWithSkResp> {
         let funs = iam_constants::get_tardis_inst();
@@ -119,6 +107,7 @@ impl IamCtCertManageApi {
     }
 
     /// delete manage cert ext
+    /// 删除凭证
     #[oai(path = "/:id", method = "delete")]
     async fn delete_manage_cert_ext(&self, id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
@@ -148,6 +137,7 @@ impl IamCtCertManageApi {
     }
 
     /// Paginate Manage Certs for tenant
+    /// 分页查询凭证
     #[oai(path = "/", method = "get")]
     async fn paginate_certs(
         &self,
@@ -162,7 +152,7 @@ impl IamCtCertManageApi {
         let result = IamCertServ::paginate_certs(
             &RbumCertFilterReq {
                 kind: Some(IamCertExtKind::ThirdParty.to_string()),
-                supplier: Some(supplier.0.split(',').map(|str| str.to_string()).collect()),
+                suppliers: Some(supplier.0.split(',').map(|str| str.to_string()).collect()),
                 ..Default::default()
             },
             page_number.0,
@@ -178,6 +168,7 @@ impl IamCtCertManageApi {
     }
 
     /// Add Manage rel cert
+    /// 添加凭证关联
     #[oai(path = "/:id/rel/:item_id", method = "put")]
     async fn add_rel_item(
         &self,
@@ -199,6 +190,7 @@ impl IamCtCertManageApi {
     }
 
     /// Delete Manage rel cert
+    /// 删除凭证关联
     #[oai(path = "/:id/rel/:item_id", method = "delete")]
     async fn delete_rel_item(&self, id: Path<String>, item_id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
@@ -211,6 +203,7 @@ impl IamCtCertManageApi {
     }
 
     /// Find Manage Certs By item Id
+    /// 根据关联ID获取凭证
     #[oai(path = "/rel/:item_id", method = "get")]
     async fn find_certs(&self, item_id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Vec<RbumRelBoneResp>> {
         let funs = iam_constants::get_tardis_inst();

@@ -59,21 +59,21 @@ impl StatsDataTypeKind {
         Ok(match self {
             StatsDataTypeKind::String => {
                 if like_by_str {
-                    sea_orm::Value::from(format!("{}%", json_value.as_str().ok_or(self.err_json_value_type())?))
+                    sea_orm::Value::from(format!("{}%", json_value.as_str().ok_or_else(|| self.err_json_value_type())?))
                 } else {
-                    sea_orm::Value::from(json_value.as_str().ok_or(self.err_json_value_type())?.to_string())
+                    sea_orm::Value::from(json_value.as_str().ok_or_else(|| self.err_json_value_type())?.to_string())
                 }
             }
-            StatsDataTypeKind::Int => sea_orm::Value::from(json_value.as_i64().ok_or(self.err_json_value_type())? as i32),
-            StatsDataTypeKind::Float => sea_orm::Value::from(json_value.as_f64().ok_or(self.err_json_value_type())? as f32),
-            StatsDataTypeKind::Double => sea_orm::Value::from(json_value.as_f64().ok_or(self.err_json_value_type())?),
-            StatsDataTypeKind::Boolean => sea_orm::Value::from(json_value.as_bool().ok_or(self.err_json_value_type())?),
+            StatsDataTypeKind::Int => sea_orm::Value::from(json_value.as_i64().ok_or_else(|| self.err_json_value_type())? as i32),
+            StatsDataTypeKind::Float => sea_orm::Value::from(json_value.as_f64().ok_or_else(|| self.err_json_value_type())? as f32),
+            StatsDataTypeKind::Double => sea_orm::Value::from(json_value.as_f64().ok_or_else(|| self.err_json_value_type())?),
+            StatsDataTypeKind::Boolean => sea_orm::Value::from(json_value.as_bool().ok_or_else(|| self.err_json_value_type())?),
             StatsDataTypeKind::Date => {
-                sea_orm::Value::from(NaiveDate::parse_from_str(json_value.as_str().ok_or(self.err_json_value_type())?, "%Y-%m-%d").map_err(|_| err_parse_time())?)
+                sea_orm::Value::from(NaiveDate::parse_from_str(json_value.as_str().ok_or_else(|| self.err_json_value_type())?, "%Y-%m-%d").map_err(|_| err_parse_time())?)
             }
-            StatsDataTypeKind::DateTime => {
-                sea_orm::Value::from(DateTime::parse_from_rfc3339(json_value.as_str().ok_or(self.err_json_value_type())?).map_err(|_| err_parse_time())?.with_timezone(&Utc))
-            }
+            StatsDataTypeKind::DateTime => sea_orm::Value::from(
+                DateTime::parse_from_rfc3339(json_value.as_str().ok_or_else(|| self.err_json_value_type())?).map_err(|_| err_parse_time())?.with_timezone(&Utc),
+            ),
         })
     }
 
@@ -87,7 +87,8 @@ impl StatsDataTypeKind {
             StatsDataTypeKind::Date => sea_orm::sea_query::ArrayType::TimeDate,
             StatsDataTypeKind::DateTime => sea_orm::sea_query::ArrayType::TimeDateTimeWithTimeZone,
         };
-        let values = json_value.as_array().ok_or(self.err_json_value_type())?.iter().map(|json| self.json_to_sea_orm_value(json, like_by_str)).collect::<TardisResult<Vec<_>>>()?;
+        let values =
+            json_value.as_array().ok_or_else(|| self.err_json_value_type())?.iter().map(|json| self.json_to_sea_orm_value(json, like_by_str)).collect::<TardisResult<Vec<_>>>()?;
         Ok(sea_orm::Value::Array(sea_orm_data_type, Some(Box::new(values))))
     }
 
@@ -129,7 +130,7 @@ impl StatsDataTypeKind {
         }
         let value = if (self == &StatsDataTypeKind::DateTime || self != &StatsDataTypeKind::Date) && value.is_string() {
             if time_window_fun.is_some() {
-                Some(vec![sea_orm::Value::from(value.as_str().ok_or(self.err_json_value_type())?.to_string())])
+                Some(vec![sea_orm::Value::from(value.as_str().ok_or_else(|| self.err_json_value_type())?.to_string())])
             } else {
                 let value = self.json_to_sea_orm_value(value, op == &BasicQueryOpKind::Like)?;
                 Some(vec![value])
@@ -318,7 +319,7 @@ pub enum StatsQueryAggFunKind {
 impl StatsQueryAggFunKind {
     pub(crate) fn to_sql(&self, column_name: &str) -> String {
         match self {
-            StatsQueryAggFunKind::Sum => format!("sum(COALESCE{column_name}::decimal,0))"),
+            StatsQueryAggFunKind::Sum => format!("sum(COALESCE({column_name}::decimal,0))"),
             StatsQueryAggFunKind::Avg => format!("avg(COALESCE({column_name}::decimal,0))"),
             StatsQueryAggFunKind::Max => format!("max(COALESCE({column_name}::decimal,0))"),
             StatsQueryAggFunKind::Min => format!("min(COALESCE({column_name}::decimal,0))"),
