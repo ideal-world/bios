@@ -254,7 +254,6 @@ where
         Ok(E::Entity::find().filter(Expr::col(ID_FIELD.clone()).eq(id)))
     }
 
-
     async fn after_delete_rbum(_: &str, _: &Option<DetailResp>, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<()> {
         Ok(())
     }

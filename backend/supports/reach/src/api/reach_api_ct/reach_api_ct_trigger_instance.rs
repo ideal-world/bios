@@ -21,7 +21,6 @@ pub struct ReachTriggerInstanceConfigCtApi;
 #[cfg_attr(feature = "simple-client", bios_sdk_invoke::simple_invoke_client(Client<'_>))]
 #[poem_openapi::OpenApi(prefix_path = "/ct/trigger/instance/config", tag = "bios_basic::ApiTag::Tenant")]
 impl ReachTriggerInstanceConfigCtApi {
-
     /// Find all user reach trigger instance config data
     /// 根据类型获取所有用户触达触发实例配置数据
     #[oai(method = "get", path = "/")]

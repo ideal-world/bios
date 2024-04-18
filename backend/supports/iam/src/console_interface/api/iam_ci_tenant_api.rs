@@ -46,9 +46,9 @@ impl IamCiTenantApi {
     ///
     /// * Without parameters: Query the whole tree
     /// * ``parent_sys_code=true`` : query only the next level. This can be used to query level by level when the tree is too large
-    /// 
+    ///
     /// 通过当前租户查找组织树
-    /// 
+    ///
     /// * 无参数：查询整个树
     /// * ``parent_sys_code=true``：仅查询下一级。当树太大时，可以逐级查询
     #[oai(path = "/orgs", method = "get")]

@@ -60,7 +60,7 @@ impl IamCtAppSetApi {
     /// * ``only_related=true`` : Invalidate the parent_sys_code parameter when this parameter is turned on, it is used to query only the tree nodes with related resources(including children nodes)
     ///
     ///  根据当前租户查询应用树
-    /// 
+    ///
     /// * 无参数：查询整个树
     /// * ``parent_sys_code=true``：查询下一级，当树太大时可以用来逐级查询
     /// * ``only_related=true``：打开此参数时失效parent_sys_code参数，用来查询只有相关资源的树节点（包括子节点）

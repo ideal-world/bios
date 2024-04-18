@@ -20,7 +20,7 @@ pub struct IamCiOpenApi;
 /// 接口控制台管理开放API
 #[poem_openapi::OpenApi(prefix_path = "/ci/open", tag = "bios_basic::ApiTag::Interface")]
 impl IamCiOpenApi {
-    /// Add product 
+    /// Add product
     /// 添加产品
     #[oai(path = "/add_or_modify_product", method = "post")]
     async fn add_or_modify_product(&self, req: Json<IamOpenAddOrModifyProductReq>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
@@ -34,7 +34,7 @@ impl IamCiOpenApi {
         TardisResp::ok(Void {})
     }
 
-    /// Cert bind product_and_spec 
+    /// Cert bind product_and_spec
     /// 凭证绑定产品和规格
     #[oai(path = "/:id/bind_cert_product_and_spec", method = "post")]
     async fn bind_cert_product_and_spec(
@@ -54,7 +54,7 @@ impl IamCiOpenApi {
         TardisResp::ok(Void {})
     }
 
-    /// Add aksk Cert by open platform 
+    /// Add aksk Cert by open platform
     /// 生成AKSK通过开放平台
     #[oai(path = "/aksk", method = "post")]
     async fn add_aksk(&self, add_req: Json<IamOpenAkSkAddReq>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<IamOpenAkSkResp> {
@@ -69,7 +69,7 @@ impl IamCiOpenApi {
         TardisResp::ok(result)
     }
 
-    /// Get account rule info 
+    /// Get account rule info
     /// 获取账号规则信息
     #[oai(path = "/", method = "get")]
     async fn get_rule_info(&self, cert_id: Query<Option<String>>, ak: Query<Option<String>>, _request: &Request) -> TardisApiResult<IamOpenRuleResp> {
@@ -85,7 +85,7 @@ impl IamCiOpenApi {
         TardisResp::ok(result)
     }
 
-    /// Refresh cumulative number of api calls 
+    /// Refresh cumulative number of api calls
     /// 刷新API累计调用数 (定时任务)
     #[oai(path = "/refresh_cert_cumulative_count", method = "post")]
     async fn refresh_cert_cumulative_count(&self, _request: &Request) -> TardisApiResult<Void> {

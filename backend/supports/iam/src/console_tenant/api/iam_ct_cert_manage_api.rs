@@ -22,7 +22,6 @@ pub struct IamCtCertManageApi;
 /// 租户控制台证书管理API
 #[poem_openapi::OpenApi(prefix_path = "/ct/cert/manage", tag = "bios_basic::ApiTag::Tenant")]
 impl IamCtCertManageApi {
-
     /// Add Manage Cert
     /// 添加凭证
     #[oai(path = "/", method = "post")]

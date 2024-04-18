@@ -76,11 +76,11 @@ pub struct RbumDomainModifyReq {
     /// 资源域排序
     pub sort: Option<i64>,
     /// Resource domain scope level
-    /// 
+    ///
     /// 资源域作用域级别
-    /// 
+    ///
     /// Default is ``private``
-    /// 
+    ///
     /// 默认为``私有``
     pub scope_level: Option<RbumScopeLevelKind>,
 }
