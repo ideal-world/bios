@@ -421,8 +421,8 @@ impl OwnedScheduleTaskServ {
         let distributed_lock_expire_sec = config.distributed_lock_expire_sec;
         let ctx = TardisContext {
             own_paths: "".to_string(),
-            ak: "".to_string(),
-            owner: config.spi_app_id.clone(),
+            ak: config.spi_app_id.clone(),
+            owner: "".to_string(),
             roles: vec![],
             groups: vec![],
             ..Default::default()
