@@ -321,7 +321,7 @@ pub enum SearchQueryAggFunKind {
 impl SearchQueryAggFunKind {
     pub(crate) fn to_sql(&self, column_name: &str) -> String {
         match self {
-            SearchQueryAggFunKind::Sum => format!("sum(COALESCE{column_name}::decimal,0))"),
+            SearchQueryAggFunKind::Sum => format!("sum(COALESCE({column_name}::decimal,0))"),
             SearchQueryAggFunKind::Avg => format!("avg(COALESCE({column_name}::decimal,0))"),
             SearchQueryAggFunKind::Max => format!("max(COALESCE({column_name}::decimal,0))"),
             SearchQueryAggFunKind::Min => format!("min(COALESCE({column_name}::decimal,0))"),

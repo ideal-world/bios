@@ -319,7 +319,7 @@ pub enum StatsQueryAggFunKind {
 impl StatsQueryAggFunKind {
     pub(crate) fn to_sql(&self, column_name: &str) -> String {
         match self {
-            StatsQueryAggFunKind::Sum => format!("sum(COALESCE{column_name}::decimal,0))"),
+            StatsQueryAggFunKind::Sum => format!("sum(COALESCE({column_name}::decimal,0))"),
             StatsQueryAggFunKind::Avg => format!("avg(COALESCE({column_name}::decimal,0))"),
             StatsQueryAggFunKind::Max => format!("max(COALESCE({column_name}::decimal,0))"),
             StatsQueryAggFunKind::Min => format!("min(COALESCE({column_name}::decimal,0))"),
