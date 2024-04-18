@@ -39,7 +39,7 @@ pub(crate) async fn add_or_modify(add_or_modify: ScheduleJobAddOrModifyReq, funs
     let kv_url = &funs.conf::<ScheduleConfig>().kv_url;
     let code = add_or_modify.code.as_str();
     let spi_ctx = TardisContext {
-        owner: funs.conf::<ScheduleConfig>().spi_app_id.clone(),
+        ak: funs.conf::<ScheduleConfig>().spi_app_id.clone(),
         ..ctx.clone()
     };
     let headers = vec![("Tardis-Context".to_string(), TardisFuns::crypto.base64.encode(TardisFuns::json.obj_to_string(&spi_ctx)?))];
@@ -83,7 +83,7 @@ pub(crate) async fn delete(code: &str, funs: &TardisFunsInst, ctx: &TardisContex
     let log_url = &funs.conf::<ScheduleConfig>().log_url;
     let kv_url = &funs.conf::<ScheduleConfig>().kv_url;
     let spi_ctx = TardisContext {
-        owner: funs.conf::<ScheduleConfig>().spi_app_id.clone(),
+        ak: funs.conf::<ScheduleConfig>().spi_app_id.clone(),
         ..ctx.clone()
     };
     let headers = vec![("Tardis-Context".to_string(), TardisFuns::crypto.base64.encode(TardisFuns::json.obj_to_string(&spi_ctx)?))];
@@ -140,7 +140,7 @@ pub(crate) async fn delete(code: &str, funs: &TardisFunsInst, ctx: &TardisContex
 pub(crate) async fn find_job(code: Option<String>, page_number: u32, page_size: u32, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<TardisPage<ScheduleJobInfoResp>> {
     let kv_url = &funs.conf::<ScheduleConfig>().kv_url;
     let spi_ctx = TardisContext {
-        owner: funs.conf::<ScheduleConfig>().spi_app_id.clone(),
+        ak: funs.conf::<ScheduleConfig>().spi_app_id.clone(),
         ..ctx.clone()
     };
     let headers = [("Tardis-Context".to_string(), TardisFuns::crypto.base64.encode(TardisFuns::json.obj_to_string(&spi_ctx)?))];
@@ -200,7 +200,7 @@ pub(crate) async fn find_job(code: Option<String>, page_number: u32, page_size: 
 pub(crate) async fn find_one_job(code: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<KvScheduleJobItemDetailResp>> {
     let kv_url = &funs.conf::<ScheduleConfig>().kv_url;
     let spi_ctx = TardisContext {
-        owner: funs.conf::<ScheduleConfig>().spi_app_id.clone(),
+        ak: funs.conf::<ScheduleConfig>().spi_app_id.clone(),
         ..ctx.clone()
     };
     let headers = [("Tardis-Context".to_string(), TardisFuns::crypto.base64.encode(TardisFuns::json.obj_to_string(&spi_ctx)?))];
@@ -226,7 +226,7 @@ pub(crate) async fn find_task(
 ) -> TardisResult<TardisPage<ScheduleTaskInfoResp>> {
     let log_url = &funs.conf::<ScheduleConfig>().log_url;
     let spi_ctx = TardisContext {
-        owner: funs.conf::<ScheduleConfig>().spi_app_id.clone(),
+        ak: funs.conf::<ScheduleConfig>().spi_app_id.clone(),
         ..ctx.clone()
     };
     let headers = [("Tardis-Context".to_string(), TardisFuns::crypto.base64.encode(TardisFuns::json.obj_to_string(&spi_ctx)?))];
