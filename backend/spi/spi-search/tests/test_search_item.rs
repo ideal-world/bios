@@ -48,7 +48,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
                 "own_paths":"t001/a001",
                 "create_time":"2022-09-26T23:23:56.000Z",
                 "update_time": "2022-09-27T01:20:20.000Z",
-                "ext":{"start_time":"2022-10-25T14:23:20.000Z","end_time":"2022-10-30T14:23:20.000Z","rel_accounts":["acc01","acc03"],"version":"1.3"},
+                "ext":{"start_time":"2022-10-25T14:23:20.000Z","end_time":"2022-10-30T14:23:20.000Z","rel_accounts":["acc01","acc03"],"version":"1.3", "empty_value":""},
                 "visit_keys":{"apps":["003"],"tenants":["001"],"roles":["sys"]}
             }),
         )
@@ -509,6 +509,82 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
         .await;
     assert_eq!(search_result.total_size, 2);
     assert_eq!(search_result.records[0].key, "002");
+    let search_result: TardisPage<SearchItemSearchResp> = client
+        .put(
+            "/ci/item/search",
+            &json!({
+                        "tag":"feed",
+                        "ctx":{
+                            "apps":["003"],
+                            "tenants":["001"],
+                            "roles":["root","sys"]
+                        },
+                        "adv_query":[
+                            {
+                                "ext": [
+                                    {
+                                        "field": "name",
+                                        "value": "人员",
+                                        "op": "like",
+                                        "in_ext": true
+                                    }
+                                ],
+                                "group_by_or": false
+                            },
+                            {
+                                "ext": [
+                                    {"field": "owner", "value": ["2CEJDI5rGiFWaf6KdHK8a"], "op": "in", "in_ext": false},
+                                    {"field": "priority", "value": ["1"], "op": "in", "in_ext": true}
+                                ],
+                                "group_by_or": true
+                            }
+                        ],
+                        "page":{"number":2,"size":1,"fetch_total":true}
+                    }),
+        )
+        .await;
+    assert_eq!(search_result.total_size, 2);
+    assert_eq!(search_result.records[0].key, "002");
+
+    let search_result: TardisPage<SearchItemSearchResp> = client
+        .put(
+            "/ci/item/search",
+            &json!({
+                "tag":"feed",
+                "ctx":{},
+                "query":{
+                    "ext": [{
+                        "field":"null_field",
+                        "op":"is_null",
+                        "value":""
+                    }]
+                },
+                "sort":[{"field":"key","order":"asc"}],
+                "page":{"number":1,"size":10,"fetch_total":true}
+            }),
+        )
+        .await;
+    assert_eq!(search_result.total_size, 3);
+
+    let search_result: TardisPage<SearchItemSearchResp> = client
+        .put(
+            "/ci/item/search",
+            &json!({
+                "tag":"feed",
+                "ctx":{},
+                "query":{
+                    "ext": [{
+                        "field":"empty_field",
+                        "op":"is_null_or_empty",
+                        "value":""
+                    }]
+                },
+                "sort":[{"field":"key","order":"asc"}],
+                "page":{"number":1,"size":10,"fetch_total":true}
+            }),
+        )
+        .await;
+    assert_eq!(search_result.total_size, 3);
 
     // Delete
     let search_result: TardisPage<SearchItemSearchResp> = client
@@ -525,7 +601,6 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
         )
         .await;
     assert_eq!(search_result.total_size, 1);
-
     client.delete(&format!("/ci/item/{}/{}", "feed", "001")).await;
     sleep(std::time::Duration::from_secs(1)).await;
     let search_result: TardisPage<SearchItemSearchResp> = client

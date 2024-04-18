@@ -600,21 +600,27 @@ fn gen_query_dsl(search_req: &SearchItemSearchReq) -> TardisResult<String> {
                     }));
                 }
                 BasicQueryOpKind::IsNull => {
-                    must_q.push(json!({
-                        "term": {field: Value::Null}
+                    must_not_q.push(json!({
+                        "exists": {"field": field}
                     }));
                 }
                 BasicQueryOpKind::IsNotNull => {
-                    must_not_q.push(json!({
-                        "term": {field: Value::Null}
+                    must_q.push(json!({
+                        "exists": {"field": field}
                     }));
                 }
                 BasicQueryOpKind::IsNullOrEmpty => {
-                    should_q.push(json!({
-                        "term": {field.clone(): Value::Null}
-                    }));
-                    should_q.push(json!({
-                        "term": {field: "".to_string()}
+                    must_q.push(json!({
+                        "bool": {
+                            "should": [
+                                {"term": {field.clone(): "".to_string()}},
+                                {"bool": {
+                                    "must_not": [{
+                                        "exists": {"field": field}
+                                    }],
+                                }}
+                            ]
+                        }
                     }));
                 }
             }
@@ -624,10 +630,10 @@ fn gen_query_dsl(search_req: &SearchItemSearchReq) -> TardisResult<String> {
         let mut adv_query_must_q = vec![];
         let mut adv_query_should_q = vec![];
         for group_query in adv_query {
-            let mut group_query_must_q = vec![];
-            let mut group_query_must_not_q = vec![];
-            let mut group_query_should_q = vec![];
-            let mut group_query_filter_q = vec![];
+            let mut group_query_must_q: Vec<Value> = vec![];
+            let mut group_query_must_not_q: Vec<Value> = vec![];
+            let mut group_query_should_q: Vec<Value> = vec![];
+            let mut group_query_filter_q: Vec<Value> = vec![];
             for cond_info in group_query.ext.clone().unwrap_or_default() {
                 let field = if cond_info.in_ext.unwrap_or(true) {
                     format!("ext.{}", cond_info.field)
@@ -698,21 +704,27 @@ fn gen_query_dsl(search_req: &SearchItemSearchReq) -> TardisResult<String> {
                         }));
                     }
                     BasicQueryOpKind::IsNull => {
-                        group_query_must_q.push(json!({
-                            "term": {field: Value::Null}
+                        group_query_must_not_q.push(json!({
+                            "exists": {"field": field}
                         }));
                     }
                     BasicQueryOpKind::IsNotNull => {
-                        group_query_must_not_q.push(json!({
-                            "term": {field: Value::Null}
+                        group_query_must_q.push(json!({
+                            "exists": {"field": field}
                         }));
                     }
                     BasicQueryOpKind::IsNullOrEmpty => {
-                        group_query_should_q.push(json!({
-                            "term": {field.clone(): Value::Null}
-                        }));
-                        group_query_should_q.push(json!({
-                            "term": {field: "".to_string()}
+                        group_query_must_q.push(json!({
+                            "bool": {
+                                "should": [
+                                    {"term": {field.clone(): "".to_string()}},
+                                    {"bool": {
+                                        "must_not": [{
+                                            "exists": {"field": field}
+                                        }],
+                                    }}
+                                ]
+                            }
                         }));
                     }
                 }
