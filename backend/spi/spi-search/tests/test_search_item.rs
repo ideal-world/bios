@@ -478,20 +478,20 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
             "/ci/item/search",
             &json!({
                 "tag":"feed",
-                "ctx":{
-                    "apps":["003"],
-                    "tenants":["001"],
-                    "roles":["root","sys"]
-                },
+                // "ctx":{
+                //     "apps":["003"],
+                //     "tenants":["001"],
+                //     "roles":["root","sys"]
+                // },
                 "query":{
-                    "q": "新增",
-                    "q_scope": "title_content",
-                    "own_paths":["t001"],
-                    "ext": [{
-                        "field":"end_time",
-                        "op":"<=",
-                        "value":"2022-10-30T14:23:20.000Z"
-                    }]
+                    // "q": "新增",
+                    // "q_scope": "title_content",
+                    "own_paths":["t001/a001", "t001/a002"],
+                    // "ext": [{
+                    //     "field":"end_time",
+                    //     "op":"<=",
+                    //     "value":"2022-10-30T14:23:20.000Z"
+                    // }]
                 },
                 "sort":[{
                     "field":"end_time",

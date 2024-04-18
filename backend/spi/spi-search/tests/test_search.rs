@@ -24,7 +24,7 @@ async fn test_search() -> TardisResult<()> {
 
     let docker = testcontainers::clients::Cli::default();
     let _x = init_search_container::init(&docker).await?;
-    // init_data(spi_constants::SPI_ES_KIND_CODE, &env::var("TARDIS_FW.ES.URL").unwrap()).await?;
+    init_data(spi_constants::SPI_ES_KIND_CODE, &env::var("TARDIS_FW.ES.URL").unwrap()).await?;
     init_data(spi_constants::SPI_PG_KIND_CODE, &env::var("TARDIS_FW.DB.URL").unwrap()).await?;
 
     Ok(())

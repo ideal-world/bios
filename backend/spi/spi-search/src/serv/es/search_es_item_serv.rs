@@ -538,7 +538,7 @@ fn gen_query_dsl(search_req: &SearchItemSearchReq) -> TardisResult<String> {
         let mut own_paths_q = vec![];
         for own_path in own_paths {
             own_paths_q.push(json!({
-                "prefix": {"own_paths": own_path},
+                "term": {"own_paths": own_path},
             }));
         }
         must_q.push(json!({
