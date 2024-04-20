@@ -54,6 +54,7 @@ pub struct KvItemMatchReq {
     pub update_time_end: Option<DateTime<Utc>>,
     pub page_number: u32,
     pub page_size: u16,
+    pub key_like: Option<bool>,
     pub desc_sort_by_create: Option<bool>,
     pub desc_sort_by_update: Option<bool>,
 }
