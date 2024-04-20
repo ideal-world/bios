@@ -45,6 +45,7 @@ impl KvCiItemApi {
         &self,
         key_prefix: Query<String>,
         extract: Query<Option<String>>,
+        key_like: Query<Option<bool>>,
         page_number: Query<u32>,
         page_size: Query<u16>,
         desc_by_create: Query<Option<bool>>,
@@ -58,6 +59,7 @@ impl KvCiItemApi {
                 extract: extract.0,
                 page_number: page_number.0,
                 page_size: page_size.0,
+                key_like: key_like.0,
                 desc_sort_by_create: desc_by_create.0,
                 desc_sort_by_update: desc_by_update.0,
                 ..Default::default()
