@@ -191,8 +191,13 @@ pub async fn match_items(match_req: KvItemMatchReq, _funs: &TardisFunsInst, ctx:
     let mut where_fragments: Vec<String> = Vec::new();
     let mut sql_vals: Vec<Value> = vec![];
     let mut order_fragments: Vec<String> = Vec::new();
-    sql_vals.push(Value::from(format!("{}%", match_req.key_prefix)));
-    where_fragments.push(format!("k LIKE ${}", sql_vals.len()));
+    if match_req.key_like.unwrap_or(true) {
+        sql_vals.push(Value::from(format!("{}%", match_req.key_prefix)));
+        where_fragments.push(format!("k LIKE ${}", sql_vals.len()));
+    } else {
+        sql_vals.push(Value::from(format!("{}", match_req.key_prefix)));
+        where_fragments.push(format!("k = ${}", sql_vals.len()));
+    }
 
     if let Some(query_path) = match_req.query_path {
         let query_values = if let Some(query_values) = match_req.query_values {
@@ -317,6 +322,7 @@ pub async fn delete_item(key: String, _funs: &TardisFunsInst, ctx: &TardisContex
 
 pub async fn page_tags(
     key_prefix: String,
+    key_like: Option<bool>,
     page_number: u32,
     page_size: u16,
     desc_sort_by_create: Option<bool>,
@@ -329,6 +335,7 @@ pub async fn page_tags(
     self::match_items(
         KvItemMatchReq {
             key_prefix,
+            key_like,
             page_number,
             page_size,
             desc_sort_by_create,
