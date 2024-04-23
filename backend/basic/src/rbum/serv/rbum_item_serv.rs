@@ -536,7 +536,7 @@ where
             }
             if let Some(rel_item_ids) = &rbum_item_rel_filter_req.rel_item_ids {
                 if rel_item_ids.len() == 1 {
-                    sub_query.and_where(Expr::col((rbum_rel::Entity, rbum_rel::Column::ToRbumItemId)).eq(rel_item_ids.first().unwrap().to_string()));
+                    sub_query.and_where(Expr::col((rbum_rel::Entity, rbum_rel::Column::ToRbumItemId)).eq(rel_item_ids.first().expect("ignore").to_string()));
                 } else if !rel_item_ids.is_empty() {
                     sub_query.and_where(Expr::col((rbum_rel::Entity, rbum_rel::Column::ToRbumItemId)).is_in(rel_item_ids));
                 }
@@ -564,7 +564,7 @@ where
             }
             if let Some(rel_item_ids) = &rbum_item_rel_filter_req.rel_item_ids {
                 if rel_item_ids.len() == 1 {
-                    sub_query.and_where(Expr::col((rbum_rel::Entity, rbum_rel::Column::FromRbumId)).eq(rel_item_ids.first().unwrap().to_string()));
+                    sub_query.and_where(Expr::col((rbum_rel::Entity, rbum_rel::Column::FromRbumId)).eq(rel_item_ids.first().expect("ignore").to_string()));
                 } else if !rel_item_ids.is_empty() {
                     sub_query.and_where(Expr::col((rbum_rel::Entity, rbum_rel::Column::FromRbumId)).is_in(rel_item_ids));
                 }
@@ -1168,8 +1168,7 @@ impl RbumItemAttrServ {
 
             for in_main_table_attr in in_main_table_attrs {
                 let column_name = Alias::new(&in_main_table_attr.name);
-                // TODO unwrap()
-                let column_val = add_req.values.get(&in_main_table_attr.name).unwrap().clone();
+                let column_val = add_req.values.get(&in_main_table_attr.name).expect("ignore").clone();
                 update_statement.value(column_name, Value::from(column_val));
             }
             update_statement.and_where(Expr::col(ID_FIELD.clone()).eq(add_req.rel_rbum_item_id.as_str()));
@@ -1178,7 +1177,7 @@ impl RbumItemAttrServ {
 
         if !in_ext_table_attrs.is_empty() {
             for in_ext_table_attr in in_ext_table_attrs {
-                let column_val = add_req.values.get(&in_ext_table_attr.name).unwrap().clone();
+                let column_val = add_req.values.get(&in_ext_table_attr.name).expect("ignore").clone();
                 let exist_item_attr_ids = Self::find_id_rbums(
                     &RbumItemAttrFilterReq {
                         basic: Default::default(),
@@ -1203,7 +1202,7 @@ impl RbumItemAttrServ {
                     )
                     .await?;
                 } else {
-                    Self::modify_rbum(exist_item_attr_ids.get(0).unwrap(), &mut RbumItemAttrModifyReq { value: column_val }, funs, ctx).await?;
+                    Self::modify_rbum(exist_item_attr_ids.get(0).expect("ignore"), &mut RbumItemAttrModifyReq { value: column_val }, funs, ctx).await?;
                 }
             }
         }
@@ -1222,6 +1221,7 @@ impl RbumItemAttrServ {
                     ctx,
                 )
                 .await?;
+            // TODO check logic
                 let result = if in_secret_table_attr.dyn_default_value.is_empty() {
                     if RbumKindAttrServ::url_match(&in_secret_table_attr.dyn_default_value).unwrap() {
                         let url = RbumKindAttrServ::url_replace(&in_secret_table_attr.dyn_default_value, add_req.values.clone()).unwrap();
@@ -1252,7 +1252,7 @@ impl RbumItemAttrServ {
                     )
                     .await?;
                 } else {
-                    Self::modify_rbum(secret_item_attr_ids.get(0).unwrap(), &mut RbumItemAttrModifyReq { value: result }, funs, ctx).await?;
+                    Self::modify_rbum(secret_item_attr_ids.get(0).expect("ignore"), &mut RbumItemAttrModifyReq { value: result }, funs, ctx).await?;
                 }
             }
         }

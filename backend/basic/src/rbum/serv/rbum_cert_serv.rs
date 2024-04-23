@@ -658,7 +658,7 @@ impl RbumCrudOperation<rbum_cert::ActiveModel, RbumCertAddReq, RbumCertModifyReq
                             Query::select()
                                 .column(rbum_cert::Column::Id)
                                 .from(rbum_cert::Entity)
-                                .and_where(Expr::col(rbum_cert::Column::Ak).eq(modify_req.ak.as_ref().unwrap().as_str()))
+                                .and_where(Expr::col(rbum_cert::Column::Ak).eq(modify_req.ak.as_ref().expect("ignore").as_str()))
                                 .and_where(Expr::col(rbum_cert::Column::RelRbumCertConfId).eq(rbum_cert_conf.id.clone()))
                                 .and_where(Expr::col(rbum_cert::Column::OwnPaths).like(format!("{}%", ctx.own_paths).as_str()))
                                 .and_where(Expr::col(rbum_cert::Column::Id).ne(id.to_string().as_str())),

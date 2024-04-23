@@ -240,8 +240,8 @@ pub mod common_pg {
         let compatible_type = TardisFuns::json.json_to_obj(ext.get("compatible_type").unwrap_or(&tardis::serde_json::Value::String("None".to_string())).clone())?;
         let client = TardisRelDBClient::init(&DBModuleConfig {
             url: bs_cert.conn_uri.parse().expect("invalid url"),
-            max_connections: ext.get("max_connections").unwrap().as_u64().unwrap() as u32,
-            min_connections: ext.get("min_connections").unwrap().as_u64().unwrap() as u32,
+            max_connections: ext.get("max_connections").map(|c| c.as_u64()).flatten().unwrap_or(5) as u32,
+            min_connections: ext.get("min_connections").map(|c| c.as_u64()).flatten().unwrap_or(1) as u32,
             connect_timeout_sec: None,
             idle_timeout_sec: None,
             compatible_type,
@@ -289,7 +289,7 @@ pub mod common_pg {
     ) -> TardisResult<(TardisRelDBlConnection, String)> {
         let tag = tag.map(|t| format!("_{t}")).unwrap_or_default();
         let conn = bs_inst.0.conn();
-        let schema_name = get_schema_name_from_ext(bs_inst.1).unwrap();
+        let schema_name = get_schema_name_from_ext(bs_inst.1).expect("ignore");
         if check_table_exit(&format!("{table_flag}{tag}"), &conn, ctx).await? {
             return Ok((conn, format!("{schema_name}.{GLOBAL_STORAGE_FLAG}_{table_flag}{tag}")));
         } else if !mgr {
@@ -303,7 +303,7 @@ pub mod common_pg {
     /// 初始化连接
     pub async fn init_conn(bs_inst: TypedSpiBsInst<'_, TardisRelDBClient>) -> TardisResult<(TardisRelDBlConnection, String)> {
         let conn = bs_inst.0.conn();
-        let schema_name = get_schema_name_from_ext(bs_inst.1).unwrap();
+        let schema_name = get_schema_name_from_ext(bs_inst.1).expect("ignore");
         Ok((conn, schema_name))
     }
 
