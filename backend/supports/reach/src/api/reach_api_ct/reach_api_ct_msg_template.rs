@@ -24,7 +24,6 @@ pub struct ReachMessageTemplateCtApi;
 #[cfg_attr(feature = "simple-client", bios_sdk_invoke::simple_invoke_client(Client<'_>))]
 #[poem_openapi::OpenApi(prefix_path = "/ct/msg/template", tag = "bios_basic::ApiTag::Tenant")]
 impl ReachMessageTemplateCtApi {
-
     /// Page find all user reach message message template data
     /// 获取所有用户触达消息消息模板数据分页
     #[oai(method = "get", path = "/page")]

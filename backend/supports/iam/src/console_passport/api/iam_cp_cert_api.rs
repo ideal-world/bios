@@ -54,11 +54,11 @@ impl IamCpCertApi {
     /// First access `PUT /cp/login/userpwd` api to get `token` .
     /// This api input  `token` and return base64 encoded `tardis context` ,
     /// set `tardis context` to the `Tardis-Context` request header.
-    /// 
+    ///
     /// 获取TardisContext通过Token
-    /// 
+    ///
     /// 该API仅用于测试！
-    /// 
+    ///
     /// 首先访问 `PUT /cp/login/userpwd` api 获取 `token` 。
     /// 该api输入 `token` 并返回base64编码的 `tardis context`，
     /// 将 `tardis context` 设置到请求头的 `Tardis-Context`。
@@ -413,9 +413,9 @@ impl IamCpCertLdapApi {
     /// if ak param is None then create new userpwd cert \
     /// else bind with ldap cert
     /// name-password -ldap login
-    /// 
+    ///
     /// 绑定用户名密码证书通过LDAP
-    /// 
+    ///
     /// 如果ak参数为None，则创建新的用户密码证书
     /// 否则与ldap证书绑定
     /// 用户名-密码-ldap登录

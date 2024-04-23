@@ -14,7 +14,7 @@ use tardis::TardisCreateIndex;
 /// This is a general certificate configuration model that describes various types of certificate configurations.
 /// It can handle database connections, web system authentication, host ssh, etc.
 ///
-/// 这是一个通用的凭证配置模型，用于描述各种类型的凭证配置。可处理包含数据库连接、web系统认证、主机ssh谁等。
+/// 这是一个通用的凭证配置模型，用于描述各种类型的凭证配置。可处理包含数据库连接、web系统认证、主机ssh等。
 ///
 /// Certificate configuration is bound to a subject that can be a resource domain [`Self::rel_rbum_domain_id`] or a resource item [`Self::rel_rbum_item_id`].
 /// It is required that the same binding subject has the same certificate configuration type [`Self::kind`] and certificate configuration supplier [`Self::supplier`] unique.

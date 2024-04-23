@@ -253,12 +253,7 @@ pub(crate) async fn delete(
     Ok(())
 }
 
-pub(crate) async fn find_by_fact_conf_key(
-    fact_conf_key: &str,
-    _funs: &TardisFunsInst,
-    ctx: &TardisContext,
-    inst: &SpiBsInst,
-) -> TardisResult<Vec<StatsConfFactColInfoResp>> {
+pub(crate) async fn find_by_fact_conf_key(fact_conf_key: &str, _funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<Vec<StatsConfFactColInfoResp>> {
     let bs_inst = inst.inst::<TardisRelDBClient>();
     let (conn, _) = stats_pg_initializer::init_conf_fact_col_table_and_conn(bs_inst, ctx, true).await?;
     if !common_pg::check_table_exit("stats_conf_fact_col", &conn, ctx).await? {

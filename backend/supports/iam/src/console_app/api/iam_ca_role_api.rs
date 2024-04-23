@@ -46,7 +46,7 @@ impl IamCaRoleApi {
 
     /// Modify Role By Role Id
     /// 根据角色ID修改角色
-    /// 
+    ///
     /// When code = 202, the return value is the asynchronous task id
     /// 当 code = 202 时，返回值为异步任务ID
     #[oai(path = "/:id", method = "put")]

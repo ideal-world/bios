@@ -177,7 +177,6 @@ impl IamCsOrgApi {
 /// 系统控制台组织项API
 #[poem_openapi::OpenApi(prefix_path = "/cs/org/item", tag = "bios_basic::ApiTag::System")]
 impl IamCsOrgItemApi {
-
     /// Batch Add Org Item
     /// 批量添加组织项
     #[oai(path = "/batch", method = "put")]

@@ -1,5 +1,5 @@
 //! Database operations helper
-//! 
+//!
 //! 数据库操作辅助操作
 use tardis::{
     chrono::{DateTime, ParseError, Utc},

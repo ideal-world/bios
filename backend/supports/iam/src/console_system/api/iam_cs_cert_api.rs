@@ -220,7 +220,7 @@ impl IamCsCertConfigLdapApi {
         funs.commit().await?;
         TardisResp::ok(Void {})
     }
-    
+
     /// Get Ldap Cert Conf
     /// 获取LDAP证书配置
     #[oai(path = "/", method = "get")]
