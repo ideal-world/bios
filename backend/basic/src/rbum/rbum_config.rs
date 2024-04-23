@@ -18,9 +18,6 @@ pub struct RbumConfig {
     pub task_mq_topic_event: String,
     // own_paths:ak -> vcode
     pub cache_key_cert_vcode_info_: String,
-    pub cache_key_cert_vcode_expire_sec: usize,
-    pub cache_key_cert_code_: String,
-    pub cache_key_cert_code_expire_sec: usize,
     // set_code -> set_id
     pub cache_key_set_code_: String,
     pub cache_key_set_code_expire_sec: usize,
@@ -42,9 +39,6 @@ impl Default for RbumConfig {
             mq_header_name_operator: "OP".to_string(),
             task_mq_topic_event: "rbum::task::event".to_string(),
             cache_key_cert_vcode_info_: "rbum:cache:cert:vcode:".to_string(),
-            cache_key_cert_vcode_expire_sec: 300,
-            cache_key_cert_code_: "rbum:cache:cert:code:".to_string(),
-            cache_key_cert_code_expire_sec: 60 * 60 * 24,
             cache_key_set_code_: "rbum:cache:set:code:".to_string(),
             cache_key_set_code_expire_sec: 60 * 60 * 24,
             cache_key_cert_locked_: "rbum:cert:locked:".to_string(),
@@ -89,9 +83,6 @@ pub trait RbumConfigApi {
     fn rbum_conf_task_mq_topic_event(&self) -> String;
     fn rbum_conf_mq_header_name_operator(&self) -> String;
     fn rbum_conf_cache_key_cert_vcode_info_(&self) -> String;
-    fn rbum_conf_cache_key_cert_vcode_expire_sec(&self) -> usize;
-    fn rbum_conf_cache_key_cert_code_(&self) -> String;
-    fn rbum_conf_cache_key_cert_code_expire_sec(&self) -> usize;
     fn rbum_conf_cache_key_set_code_(&self) -> String;
     fn rbum_conf_cache_key_set_code_expire_sec(&self) -> usize;
     fn rbum_conf_cache_key_cert_locked_(&self) -> String;
@@ -123,24 +114,6 @@ impl RbumConfigApi for TardisFunsInst {
 
     fn rbum_conf_cache_key_cert_vcode_info_(&self) -> String {
         RbumConfigManager::get_config(self.module_code(), |conf| conf.cache_key_cert_vcode_info_.to_string())
-    }
-
-    // TODO
-    // #[deprecated]
-    fn rbum_conf_cache_key_cert_vcode_expire_sec(&self) -> usize {
-        RbumConfigManager::get_config(self.module_code(), |conf| conf.cache_key_cert_vcode_expire_sec)
-    }
-
-    // TODO
-    // #[deprecated]
-    fn rbum_conf_cache_key_cert_code_(&self) -> String {
-        RbumConfigManager::get_config(self.module_code(), |conf| conf.cache_key_cert_code_.to_string())
-    }
-
-    // TODO
-    // #[deprecated]
-    fn rbum_conf_cache_key_cert_code_expire_sec(&self) -> usize {
-        RbumConfigManager::get_config(self.module_code(), |conf| conf.cache_key_cert_code_expire_sec)
     }
 
     fn rbum_conf_cache_key_set_code_(&self) -> String {
