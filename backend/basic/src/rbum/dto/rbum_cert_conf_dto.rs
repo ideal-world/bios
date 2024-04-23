@@ -664,7 +664,6 @@ pub struct RbumCertConfDetailResp {
 /// 凭证配置id和扩展信息
 #[derive(Serialize, Deserialize, Debug)]
 #[cfg_attr(feature = "default", derive(poem_openapi::Object, sea_orm::FromQueryResult))]
-#[deprecated]
 pub struct RbumCertConfIdAndExtResp {
     /// Certificate configuration id
     ///

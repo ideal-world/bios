@@ -291,8 +291,6 @@ pub struct RbumCertSummaryResp {
     ///
     /// 关联的[凭证配置](crate::rbum::dto::rbum_cert_conf_dto::RbumCertConfDetailResp)名称
     pub rel_rbum_cert_conf_name: Option<String>,
-    // TODO
-    pub rel_rbum_cert_conf_code: Option<String>,
     /// Associated [resource kind](crate::rbum::rbum_enumeration::RbumCertRelKind)
     ///
     /// 关联的[资源类型](crate::rbum::rbum_enumeration::RbumCertRelKind)
@@ -367,8 +365,6 @@ pub struct RbumCertSummaryWithSkResp {
     ///
     /// 关联的[凭证配置](crate::rbum::dto::rbum_cert_conf_dto::RbumCertConfDetailResp)名称
     pub rel_rbum_cert_conf_name: Option<String>,
-    // TODO
-    pub rel_rbum_cert_conf_code: Option<String>,
     /// Associated [resource kind](crate::rbum::rbum_enumeration::RbumCertRelKind)
     ///
     /// 关联的[资源类型](crate::rbum::rbum_enumeration::RbumCertRelKind)
@@ -439,8 +435,6 @@ pub struct RbumCertDetailResp {
     ///
     /// 关联的[凭证配置](crate::rbum::dto::rbum_cert_conf_dto::RbumCertConfDetailResp)名称
     pub rel_rbum_cert_conf_name: Option<String>,
-    // TODO
-    pub rel_rbum_cert_conf_code: Option<String>,
     /// Associated [resource kind](crate::rbum::rbum_enumeration::RbumCertRelKind)
     ///
     /// 关联的[资源类型](crate::rbum::rbum_enumeration::RbumCertRelKind)
