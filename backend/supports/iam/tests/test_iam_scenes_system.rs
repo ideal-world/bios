@@ -479,7 +479,7 @@ pub async fn sys_console_account_mgr_page(client: &mut BIOSWebTestClient) -> Tar
     // Find Certs By Account Id
     let certs: Vec<RbumCertSummaryResp> = client.get(&format!("/cs/cert?account_id={}", account_id)).await;
     assert_eq!(certs.len(), 2);
-    assert!(certs.into_iter().any(|i| i.rel_rbum_cert_conf_code == Some("UserPwd".to_string())));
+    assert!(certs.into_iter().any(|i| i.rel_rbum_cert_conf_name == Some("UserPwd".to_string())));
 
     // Rest Password By Account Id
     let _: Void = client

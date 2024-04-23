@@ -33,12 +33,12 @@ impl SpiBsInst {
     where
         T: 'static,
     {
-        let c = self.client.as_ref().downcast_ref::<T>().unwrap();
+        let c = self.client.as_ref().downcast_ref::<T>().expect("ignore");
         (c, &self.ext, self.kind_code())
     }
 
     pub fn kind_code(&self) -> &str {
-        self.ext.get(spi_constants::SPI_KIND_CODE_FLAG).unwrap()
+        self.ext.get(spi_constants::SPI_KIND_CODE_FLAG).expect("ignore")
     }
 }
 

@@ -210,31 +210,6 @@ impl RbumCrudOperation<rbum_cert_conf::ActiveModel, RbumCertConfAddReq, RbumCert
         Ok(rbum_cert_conf)
     }
 
-    // TODO
-    // #[deprecated]
-    async fn after_modify_rbum(id: &str, _: &mut RbumCertConfModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        let rbum_cert_conf = Self::get_rbum(id, &RbumCertConfFilterReq::default(), funs, ctx).await?;
-        let key = &format!(
-            "{}{}",
-            funs.rbum_conf_cache_key_cert_code_(),
-            TardisFuns::crypto.base64.encode(format!(
-                "{}{}{}",
-                &rbum_cert_conf.kind, &rbum_cert_conf.rel_rbum_domain_id, &rbum_cert_conf.rel_rbum_item_id
-            ))
-        );
-        funs.cache()
-            .set_ex(
-                key,
-                &TardisFuns::json.obj_to_string(&RbumCertConfIdAndExtResp {
-                    id: rbum_cert_conf.id.clone(),
-                    ext: rbum_cert_conf.ext.clone(),
-                })?,
-                funs.rbum_conf_cache_key_cert_code_expire_sec() as u64,
-            )
-            .await?;
-        Ok(())
-    }
-
     async fn before_delete_rbum(id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<RbumCertConfDetailResp>> {
         if funs
             .db()
@@ -252,27 +227,6 @@ impl RbumCrudOperation<rbum_cert_conf::ActiveModel, RbumCertConfAddReq, RbumCert
         }
         Self::check_ownership(id, funs, ctx).await?;
         Self::check_exist_before_delete(id, RbumCertServ::get_table_name(), rbum_cert::Column::RelRbumCertConfId.as_str(), funs).await?;
-        // TODO
-        // #[deprecated]
-        let result = Self::peek_rbum(
-            id,
-            &RbumCertConfFilterReq {
-                basic: RbumBasicFilterReq {
-                    with_sub_own_paths: true,
-                    ..Default::default()
-                },
-                ..Default::default()
-            },
-            funs,
-            ctx,
-        )
-        .await?;
-        let key = &format!(
-            "{}{}",
-            funs.rbum_conf_cache_key_cert_code_(),
-            TardisFuns::crypto.base64.encode(format!("{}{}{}", &result.kind, &result.rel_rbum_domain_id, &result.rel_rbum_item_id))
-        );
-        funs.cache().del(key).await?;
         Ok(None)
     }
 
@@ -344,7 +298,6 @@ impl RbumCrudOperation<rbum_cert_conf::ActiveModel, RbumCertConfAddReq, RbumCert
 }
 
 impl RbumCertConfServ {
-    #[deprecated]
     pub async fn get_rbum_cert_conf_id_and_ext_by_kind_supplier(
         kind: &str,
         supplier: &str,
@@ -364,25 +317,10 @@ impl RbumCertConfServ {
         if !ignore_status {
             conf_info_stat.and_where(Expr::col(rbum_cert_conf::Column::Status).eq(RbumCertConfStatusKind::Enabled.to_int()));
         }
-        //Ldap can be no supplier
-        if kind != "Ldap" || !supplier.is_empty() {
+        if !supplier.is_empty() {
             conf_info_stat.and_where(Expr::col(rbum_cert_conf::Column::Supplier).eq(supplier));
         }
-        let key = &format!(
-            "{}{}",
-            funs.rbum_conf_cache_key_cert_code_(),
-            TardisFuns::crypto.base64.encode(format!("{kind}{supplier}{rbum_domain_id}{rbum_item_id}"))
-        );
-        if let Some(cached_info) = funs.cache().get(key).await? {
-            Ok(Some(TardisFuns::json.str_to_obj(&cached_info)?))
-        } else if let Some(rbum_cert_conf_id_and_ext) = funs.db().get_dto::<RbumCertConfIdAndExtResp>(&conf_info_stat).await? {
-            funs.cache()
-                .set_ex(
-                    key,
-                    &TardisFuns::json.obj_to_string(&rbum_cert_conf_id_and_ext)?,
-                    funs.rbum_conf_cache_key_cert_code_expire_sec() as u64,
-                )
-                .await?;
+        if let Some(rbum_cert_conf_id_and_ext) = funs.db().get_dto::<RbumCertConfIdAndExtResp>(&conf_info_stat).await? {
             Ok(Some(rbum_cert_conf_id_and_ext))
         } else {
             Ok(None)
@@ -581,9 +519,9 @@ impl RbumCrudOperation<rbum_cert::ActiveModel, RbumCertAddReq, RbumCertModifyReq
                     }
                 }
             }
-        }
-        if let Some(vcode) = &add_req.vcode {
-            Self::add_vcode_to_cache(add_req.ak.as_str(), vcode.as_str(), &ctx.own_paths, funs).await?;
+            if let Some(vcode) = &add_req.vcode {
+                Self::add_vcode_to_cache(add_req.ak.as_str(), vcode.as_str(), rel_rbum_cert_conf_id, funs, &ctx).await?;
+            }
         }
         Ok(())
     }
@@ -658,7 +596,7 @@ impl RbumCrudOperation<rbum_cert::ActiveModel, RbumCertAddReq, RbumCertModifyReq
                             Query::select()
                                 .column(rbum_cert::Column::Id)
                                 .from(rbum_cert::Entity)
-                                .and_where(Expr::col(rbum_cert::Column::Ak).eq(modify_req.ak.as_ref().unwrap().as_str()))
+                                .and_where(Expr::col(rbum_cert::Column::Ak).eq(modify_req.ak.as_ref().expect("ignore").as_str()))
                                 .and_where(Expr::col(rbum_cert::Column::RelRbumCertConfId).eq(rbum_cert_conf.id.clone()))
                                 .and_where(Expr::col(rbum_cert::Column::OwnPaths).like(format!("{}%", ctx.own_paths).as_str()))
                                 .and_where(Expr::col(rbum_cert::Column::Id).ne(id.to_string().as_str())),
@@ -742,11 +680,6 @@ impl RbumCrudOperation<rbum_cert::ActiveModel, RbumCertAddReq, RbumCertModifyReq
                 Expr::col((rbum_cert_conf::Entity, rbum_cert_conf::Column::Name)).if_null(""),
                 Alias::new("rel_rbum_cert_conf_name"),
             )
-            // TODO
-            .expr_as(
-                Expr::col((rbum_cert_conf::Entity, rbum_cert_conf::Column::Name)).if_null(""),
-                Alias::new("rel_rbum_cert_conf_code"),
-            )
             .from(rbum_cert::Entity)
             .left_join(
                 rbum_cert_conf::Entity,
@@ -792,13 +725,14 @@ impl RbumCertServ {
     ///
     ///
     /// 添加动态sk（验证码）到缓存
-    pub async fn add_vcode_to_cache(ak: &str, vcode: &str, own_paths: &str, funs: &TardisFunsInst) -> TardisResult<()> {
+    pub async fn add_vcode_to_cache(ak: &str, vcode: &str, cert_conf_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let rbum_cert_conf = RbumCertConfServ::peek_rbum(cert_conf_id, &RbumCertConfFilterReq::default(), funs, ctx).await?;
+
         funs.cache()
             .set_ex(
-                format!("{}{}:{}", funs.rbum_conf_cache_key_cert_vcode_info_(), own_paths, ak).as_str(),
+                format!("{}{}:{}", funs.rbum_conf_cache_key_cert_vcode_info_(), &ctx.own_paths, ak).as_str(),
                 vcode.to_string().as_str(),
-                // TODO 可否使用 expire_sec？
-                funs.rbum_conf_cache_key_cert_vcode_expire_sec() as u64,
+                rbum_cert_conf.expire_sec as u64,
             )
             .await?;
         Ok(())

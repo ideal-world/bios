@@ -191,7 +191,7 @@ pub async fn account_mgr_by_sys_admin(client: &mut BIOSWebTestClient) -> TardisR
     // Find Certs By Current Account
     let certs: Vec<RbumCertSummaryResp> = client.get("/cp/cert").await;
     assert_eq!(certs.len(), 1);
-    assert!(certs.into_iter().any(|i| i.rel_rbum_cert_conf_code == Some("UserPwd".to_string())));
+    assert!(certs.into_iter().any(|i| i.rel_rbum_cert_conf_name == Some("UserPwd".to_string())));
 
     // Modify Account By Current Account
     let _: Void = client
@@ -276,7 +276,7 @@ pub async fn account_mgr_by_tenant_account(client: &mut BIOSWebTestClient) -> Ta
     // Find Certs By Current Account
     let certs: Vec<RbumCertSummaryResp> = client.get("/cp/cert").await;
     assert_eq!(certs.len(), 1);
-    assert!(certs.into_iter().any(|i| i.rel_rbum_cert_conf_code == Some("UserPwd".to_string())));
+    assert!(certs.into_iter().any(|i| i.rel_rbum_cert_conf_name == Some("UserPwd".to_string())));
 
     let _: String = client
         .post(
@@ -408,7 +408,7 @@ pub async fn account_mgr_by_app_account(client: &mut BIOSWebTestClient) -> Tardi
     // Find Certs By Current Account
     let certs: Vec<RbumCertSummaryResp> = client.get("/cp/cert").await;
     assert_eq!(certs.len(), 1);
-    assert!(certs.into_iter().any(|i| i.rel_rbum_cert_conf_code == Some("UserPwd".to_string())));
+    assert!(certs.into_iter().any(|i| i.rel_rbum_cert_conf_name == Some("UserPwd".to_string())));
 
     Ok(())
 }

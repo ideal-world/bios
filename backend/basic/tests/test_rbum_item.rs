@@ -705,7 +705,6 @@ async fn test_rbum_item_with_none_owner_name(context: &TardisContext) -> TardisR
 
 #[derive(Debug, sea_orm::FromQueryResult)]
 pub struct IamAccountResp {
-    pub id: String,
     pub ext1_idx: String,
     pub ext2: String,
 }

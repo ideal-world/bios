@@ -85,8 +85,8 @@ pub async fn get_notify_event_with_ctx(ctx: &TardisContext) -> TardisResult<Opti
     let notify_events = notify_events
         .iter()
         .filter(|(k, _)| k.starts_with(NOTIFY_EVENT_IN_CTX_FLAG))
-        .map(|(_, v)| TardisFuns::json.str_to_obj::<NotifyEventMessage>(v).unwrap())
-        .collect::<Vec<_>>();
+        .map(|(_, v)| TardisFuns::json.str_to_obj::<NotifyEventMessage>(v))
+        .collect::<TardisResult<Vec<_>>>()?;
     if notify_events.is_empty() {
         Ok(None)
     } else {

@@ -143,9 +143,9 @@ impl ConfNacosV1CsApi {
         let ctx = extract_context(request).await?;
         let err_missing = |msg: &str| poem::Error::from_string(format!("missing field {msg}"), poem::http::StatusCode::BAD_REQUEST);
         let mut config_fields = listening_configs.trim_end_matches(1 as char).split(2 as char);
-        let data_id = config_fields.next().ok_or(err_missing("data_id"))?;
-        let group = config_fields.next().ok_or(err_missing("group"))?;
-        let md5 = config_fields.next().ok_or(err_missing("contentMD5"))?;
+        let data_id = config_fields.next().ok_or_else(|| err_missing("data_id"))?;
+        let group = config_fields.next().ok_or_else(|| err_missing("group"))?;
+        let md5 = config_fields.next().ok_or_else(|| err_missing("contentMD5"))?;
         let tenant = config_fields.next().unwrap_or("public");
         let mut descriptor = ConfigDescriptor {
             namespace_id: tenant.to_owned(),

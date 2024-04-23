@@ -7,7 +7,6 @@ use tardis::{basic::field::TrimString, web::poem_openapi};
 pub struct IamOpenAddOrModifyProductReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub code: TrimString,
-    #[oai(validator(min_length = "2", max_length = "255"))]
     pub name: TrimString,
     pub icon: Option<String>,
 
@@ -21,7 +20,6 @@ pub struct IamOpenAddOrModifyProductReq {
 pub struct IamOpenAddSpecReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub code: TrimString,
-    #[oai(validator(min_length = "2", max_length = "255"))]
     pub name: TrimString,
     pub icon: Option<String>,
     pub url: Option<String>,
