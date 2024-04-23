@@ -630,10 +630,7 @@ fn gen_query_dsl(search_req: &SearchItemSearchReq) -> TardisResult<String> {
         let mut adv_query_must_q = vec![];
         let mut adv_query_should_q = vec![];
         for group_query in adv_query {
-            let mut group_query_must_q: Vec<Value> = vec![];
-            let mut group_query_must_not_q: Vec<Value> = vec![];
-            let mut group_query_should_q: Vec<Value> = vec![];
-            let mut group_query_filter_q: Vec<Value> = vec![];
+            let mut group_query_q: Vec<Value> = vec![];
             for cond_info in group_query.ext.clone().unwrap_or_default() {
                 let field = if cond_info.in_ext.unwrap_or(true) {
                     format!("ext.{}", cond_info.field)
@@ -642,43 +639,67 @@ fn gen_query_dsl(search_req: &SearchItemSearchReq) -> TardisResult<String> {
                 };
                 match cond_info.op {
                     BasicQueryOpKind::Eq => {
-                        group_query_must_q.push(json!({
+                        group_query_q.push(json!({
                             "term": {field: cond_info.value.clone()}
                         }));
                     }
                     BasicQueryOpKind::Ne => {
-                        group_query_must_not_q.push(json!({
-                            "term": { field: cond_info.value.clone()}
+                        group_query_q.push(json!({
+                            "bool": {
+                                "must_not": {
+                                    "term": { field: cond_info.value.clone()}
+                                }
+                            }
                         }));
                     }
                     BasicQueryOpKind::Gt => {
-                        group_query_filter_q.push(json!({
-                            "range": {field: {"gt": cond_info.value.clone()}},
+                        group_query_q.push(json!({
+                            "bool": {
+                                "filter": {
+                                    "range": {field: {"gt": cond_info.value.clone()}},
+                                }
+                            }
                         }));
                     }
                     BasicQueryOpKind::Ge => {
-                        group_query_filter_q.push(json!({
-                            "range": {field: {"gte": cond_info.value.clone()}},
+                        group_query_q.push(json!({
+                            "bool": {
+                                "filter": {
+                                    "range": {field: {"gte": cond_info.value.clone()}},
+                                }
+                            }
                         }));
                     }
                     BasicQueryOpKind::Lt => {
-                        group_query_filter_q.push(json!({
-                            "range": {field: {"lt": cond_info.value.clone()}},
+                        group_query_q.push(json!({
+                            "bool": {
+                                "filter": {
+                                    "range": {field: {"lt": cond_info.value.clone()}},
+                                }
+                            }
                         }));
                     }
                     BasicQueryOpKind::Le => {
-                        group_query_filter_q.push(json!({
-                            "range": {field: {"lte": cond_info.value.clone()}},
+                        group_query_q.push(json!({
+                            "bool": {
+                                "filter": {
+                                    "range": {field: {"lte": cond_info.value.clone()}},
+                                }
+                            }
                         }));
                     }
                     BasicQueryOpKind::Like => {
-                        group_query_must_q.push(json!({
+                        group_query_q.push(json!({
                             "match": {field: cond_info.value.clone()}
                         }));
                     }
                     BasicQueryOpKind::NotLike => {
-                        group_query_must_not_q.push(json!({
-                            "match": { field: cond_info.value.clone()}
+                        group_query_q.push(json!({
+                            "bool": {
+                                "must_not": {
+                                    "match": { field: cond_info.value.clone()}
+                                }
+                            }
                         }));
                     }
                     BasicQueryOpKind::In => {
@@ -687,7 +708,7 @@ fn gen_query_dsl(search_req: &SearchItemSearchReq) -> TardisResult<String> {
                         } else {
                             json!(vec![cond_info.value.clone()])
                         };
-                        group_query_must_q.push(json!({
+                        group_query_q.push(json!({
                             "terms": {
                                 field: value
                             }
@@ -699,22 +720,30 @@ fn gen_query_dsl(search_req: &SearchItemSearchReq) -> TardisResult<String> {
                         } else {
                             json!(vec![cond_info.value.clone()])
                         };
-                        group_query_must_not_q.push(json!({
-                            "terms": { field: value}
+                        group_query_q.push(json!({
+                            "bool": {
+                                "must_not": {
+                                    "terms": { field: value}
+                                }
+                            }
                         }));
                     }
                     BasicQueryOpKind::IsNull => {
-                        group_query_must_not_q.push(json!({
-                            "exists": {"field": field}
+                        group_query_q.push(json!({
+                            "bool": {
+                                "must_not": {
+                                    "exists": {"field": field}
+                                }
+                            }
                         }));
                     }
                     BasicQueryOpKind::IsNotNull => {
-                        group_query_must_q.push(json!({
+                        group_query_q.push(json!({
                             "exists": {"field": field}
                         }));
                     }
                     BasicQueryOpKind::IsNullOrEmpty => {
-                        group_query_must_q.push(json!({
+                        group_query_q.push(json!({
                             "bool": {
                                 "should": [
                                     {"term": {field.clone(): "".to_string()}},
@@ -733,20 +762,16 @@ fn gen_query_dsl(search_req: &SearchItemSearchReq) -> TardisResult<String> {
                 true => {
                     adv_query_must_q.push(json!({
                         "bool": {
-                            "must": group_query_must_q,
-                            "must_not": group_query_must_not_q,
-                            "should": group_query_should_q,
-                            "filter": group_query_filter_q,
+                            "must": if group_query.ext_by_or.unwrap_or(false) { group_query_q.clone() } else { vec![] },
+                            "should": if group_query.ext_by_or.unwrap_or(false) { vec![] } else { group_query_q.clone() },
                         }
                     }));
                 }
                 false => {
                     adv_query_should_q.push(json!({
                         "bool": {
-                            "must": group_query_must_q,
-                            "must_not": group_query_must_not_q,
-                            "should": group_query_should_q,
-                            "filter": group_query_filter_q,
+                            "must": if group_query.ext_by_or.unwrap_or(false) { group_query_q.clone() } else { vec![] },
+                            "should": if group_query.ext_by_or.unwrap_or(false) { vec![] } else { group_query_q.clone() },
                         }
                     }));
                 }

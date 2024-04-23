@@ -513,34 +513,34 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
         .put(
             "/ci/item/search",
             &json!({
-                        "tag":"feed",
-                        "ctx":{
-                            "apps":["003"],
-                            "tenants":["001"],
-                            "roles":["root","sys"]
-                        },
-                        "adv_query":[
-                            {
-                                "ext": [
-                                    {
-                                        "field": "name",
-                                        "value": "人员",
-                                        "op": "like",
-                                        "in_ext": true
-                                    }
-                                ],
-                                "group_by_or": false
-                            },
-                            {
-                                "ext": [
-                                    {"field": "owner", "value": ["2CEJDI5rGiFWaf6KdHK8a"], "op": "in", "in_ext": false},
-                                    {"field": "priority", "value": ["1"], "op": "in", "in_ext": true}
-                                ],
-                                "group_by_or": true
-                            }
+                "tag":"feed",
+                "ctx":{
+                    "apps":["003"],
+                    "tenants":["001"],
+                    "roles":["root","sys"]
+                },
+                "query": {},
+                "adv_query":[
+                    {
+                        "ext": [
+                            {"field": "own_paths", "value": ["t001/a001", "t001/a002"], "op": "in", "in_ext": false},
+                            {"field": "end_time", "value": "2022-10-30T14:23:20.000Z", "op": "<=", "in_ext": true},
                         ],
-                        "page":{"number":2,"size":1,"fetch_total":true}
-                    }),
+                        "group_by_or": true
+                    },
+                ],
+                "sort":[{
+                    "field":"end_time",
+                    "order":"asc"
+                },{
+                    "field":"rank_title",
+                    "order":"desc"
+                },{
+                    "field":"rank_content",
+                    "order":"desc"
+                }],
+                "page":{"number":2,"size":1,"fetch_total":true}
+            }),
         )
         .await;
     assert_eq!(search_result.total_size, 2);
