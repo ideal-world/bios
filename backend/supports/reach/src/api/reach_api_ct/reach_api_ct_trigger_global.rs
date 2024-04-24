@@ -21,7 +21,6 @@ pub struct ReachTriggerGlobalConfigCtApi;
 #[cfg_attr(feature = "simple-client", bios_sdk_invoke::simple_invoke_client(Client<'_>))]
 #[poem_openapi::OpenApi(prefix_path = "/ct/trigger/global/config", tag = "bios_basic::ApiTag::Tenant")]
 impl ReachTriggerGlobalConfigCtApi {
-
     /// Find all user reach trigger global config data
     /// 获取所有用户触达触发全局配置数据
     #[oai(method = "get", path = "/")]

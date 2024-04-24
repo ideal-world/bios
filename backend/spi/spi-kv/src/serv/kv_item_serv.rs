@@ -29,6 +29,7 @@ spi_dispatch_service! {
         find_tags(keys: Vec<String>) -> TardisResult<Vec<KvTagFindResp>>;
         page_tags(
             key_prefix: String,
+            key_like: Option<bool>,
             page_number: u32,
             page_size: u16,
             desc_sort_by_create: Option<bool>,

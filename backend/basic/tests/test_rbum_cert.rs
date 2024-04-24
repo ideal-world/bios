@@ -232,7 +232,7 @@ async fn test_rbum_cert_conf(context: &TardisContext) -> TardisResult<()> {
     assert_eq!(rbums.page_number, 1);
     assert_eq!(rbums.page_size, 10);
     assert_eq!(rbums.total_size, 1);
-    assert_eq!(rbums.records.get(0).unwrap().name, "用户名+密码");
+    assert_eq!(rbums.records.first().unwrap().name, "用户名+密码");
 
     info!("【test_rbum_cert_conf】 : Test Delete : RbumCertConfServ::delete_rbum");
     assert!(RbumCertConfServ::delete_rbum(&id, &funs, context).await.is_err());
@@ -737,18 +737,18 @@ async fn test_rbum_cert_sk_dynamic(context: &TardisContext) -> TardisResult<()> 
 
     info!("【test_rbum_cert】 : Test Add : RbumCertServ::get_and_delete_vcode_in_cache");
     assert!(RbumCertServ::get_and_delete_vcode_in_cache("i@sunisle.org", &context.own_paths, &funs).await?.is_none());
-    RbumCertServ::add_vcode_to_cache("i@sunisle.org", "qqqqq", &context.own_paths, &funs).await?;
+    RbumCertServ::add_vcode_to_cache("i@sunisle.org", "qqqqq", &cert_conf_mail_vcode_id, &funs, &context).await?;
     assert_eq!(
         RbumCertServ::get_and_delete_vcode_in_cache("i@sunisle.org", &context.own_paths, &funs).await?.unwrap(),
         "qqqqq"
     );
 
     info!("【test_rbum_cert】 : Test Validate : RbumCertServ::validate with sk_dynamic");
-    RbumCertServ::add_vcode_to_cache("i@sunisle.org", "xxxx", &context.own_paths, &funs).await?;
+    RbumCertServ::add_vcode_to_cache("i@sunisle.org", "xxxx", &cert_conf_mail_vcode_id, &funs, &context).await?;
     RbumCertServ::validate_by_spec_cert_conf("i@sunisle.org", "xxxx", &cert_conf_mail_vcode_id, false, &context.own_paths, &funs).await?;
 
     info!("【test_rbum_cert】 : Test Validate : RbumCertServ::validate with sk_dynamic & expire");
-    RbumCertServ::add_vcode_to_cache("i@sunisle.org", "xxxx", &context.own_paths, &funs).await?;
+    RbumCertServ::add_vcode_to_cache("i@sunisle.org", "xxxx", &cert_conf_mail_vcode_id, &funs, &context).await?;
     // tardis::tokio::time::sleep(Duration::from_secs(120)).await;
     RbumCertServ::get_and_delete_vcode_in_cache("i@sunisle.org", &context.own_paths, &funs).await?;
     assert!(RbumCertServ::validate_by_spec_cert_conf("i@sunisle.org", "xxxx", &cert_conf_mail_vcode_id, false, &context.own_paths, &funs).await.is_err());

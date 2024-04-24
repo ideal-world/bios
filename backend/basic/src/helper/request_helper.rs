@@ -1,5 +1,5 @@
 //! Http request helper
-//! 
+//!
 //! Http请求辅助操作
 use std::{collections::HashMap, net::IpAddr, str::FromStr};
 
@@ -26,7 +26,7 @@ pub async fn try_set_real_ip_from_req_to_ctx(request: &Request, ctx: &TardisCont
 }
 
 /// Parse the Forwarded header to get the IP
-/// 
+///
 /// Forwarded format： `Forwarded: by=<identifier>; for=<identifier><,for=<identifier>>; host=<host>; proto=<http|https>`
 ///
 /// ```
@@ -40,14 +40,12 @@ pub async fn try_set_real_ip_from_req_to_ctx(request: &Request, ctx: &TardisCont
 pub fn parse_forwarded_ip(forwarded_value: &str) -> Option<IpAddr> {
     forwarded_value
         .strip_prefix("Forwarded: ")
-        .map(|forwarded_value| {
+        .and_then(|forwarded_value| {
             forwarded_value
-                .split(";")
+                .split(';')
                 .find(|part| part.trim().starts_with("for="))
-                .map(|part| part.trim()[4..].split(",").next().map(|ip_str| IpAddr::from_str(ip_str).ok()).flatten())
-                .flatten()
+                .and_then(|part| part.trim()[4..].split(',').next().and_then(|ip_str| IpAddr::from_str(ip_str).ok()))
         })
-        .flatten()
 }
 
 /// Try to get real ip from request

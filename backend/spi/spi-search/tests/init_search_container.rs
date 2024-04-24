@@ -31,7 +31,7 @@ pub async fn init(docker: &Cli) -> TardisResult<LifeHold<'_>> {
 
     let es_container = TardisTestContainer::es_custom(docker);
     let port = es_container.get_host_port_ipv4(9200);
-    let url = format!("https://elastic:123456@127.0.0.1:{}", port);
+    let url = format!("http://elastic:123456@127.0.0.1:{}", port);
     env::set_var("TARDIS_FW.ES.URL", url);
 
     let mq_container = TardisTestContainer::rabbit_custom(docker);

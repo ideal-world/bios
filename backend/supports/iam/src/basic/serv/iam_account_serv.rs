@@ -540,7 +540,7 @@ impl IamAccountServ {
             )
             .await?
             .into_iter()
-            .map(|r| (r.rel_rbum_cert_conf_code.unwrap_or("".to_string()), r.ak))
+            .map(|r| (r.rel_rbum_cert_conf_name.unwrap_or("".to_string()), r.ak))
             .collect(),
             orgs: IamSetServ::find_set_paths(&account.id, &set_id, funs, &mock_tenant_ctx).await?.into_iter().map(|r| r.into_iter().map(|rr| rr.name).join("/")).collect(),
             exts: account_attrs
@@ -615,7 +615,7 @@ impl IamAccountServ {
                 )
                 .await?
                 .into_iter()
-                .map(|r| (r.rel_rbum_cert_conf_code.unwrap_or("".to_string()), r.ak))
+                .map(|r| (r.rel_rbum_cert_conf_name.unwrap_or("".to_string()), r.ak))
                 .collect(),
                 orgs: IamSetServ::find_set_paths(&account.id, &set_id, funs, &mock_tenant_ctx).await?.into_iter().map(|r| r.into_iter().map(|rr| rr.name).join("/")).collect(),
             });

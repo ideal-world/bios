@@ -117,9 +117,9 @@ impl IamCiCertApi {
     /// - `supplier` is only used when kind is `Ldap`
     /// - `ldap_origin` is only used when kind is `Ldap` and default is false.
     /// when true,return ak will be original DN
-    /// 
+    ///
     /// 根据kind和supplier查询证书
-    /// 
+    ///
     /// 如果kind为空，查询默认kind(UserPwd)
     /// - `supplier`仅在kind为`Ldap`时使用
     /// - `ldap_origin`仅在kind为`Ldap`时使用，默认为false

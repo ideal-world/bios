@@ -57,7 +57,7 @@ fn gen_data_mappings(ext: &Option<Value>) -> String {
                 "title":{{"type": "text"}},
                 "content":{{"type": "text"}},
                 "owner":{{"type": "keyword"}},
-                "own_paths":{{"type": "text"}},
+                "own_paths":{{"type": "keyword"}},
                 "create_time":{{"type": "date"}},
                 "update_time":{{"type": "date"}},
                 "ext":{{{ext_string}}},
@@ -153,10 +153,7 @@ pub async fn modify(tag: &str, key: &str, modify_req: &mut SearchItemModifyReq, 
         adv_query: None,
     })?;
     let mut search_result = client.raw_search(&index, &q, Some(1), Some(0), None).await?;
-    if search_result.hits.hits.is_empty() {
-        return Err(funs.err().conflict("search_es_item_serv", "modify", "not found record", "404-not-found-record"));
-    }
-    let id = search_result.hits.hits.pop().unwrap()._id.clone();
+    let id = search_result.hits.hits.pop().ok_or_else(|| funs.err().conflict("search_es_item_serv", "modify", "not found record", "404-not-found-record"))?._id.clone();
     let mut query = HashMap::new();
     if let Some(kind) = &modify_req.kind {
         query.insert("kind".to_string(), json!(kind.clone()).to_string());
@@ -499,54 +496,30 @@ fn gen_query_dsl(search_req: &SearchItemSearchReq) -> TardisResult<String> {
         }
     }
     if let Some(kinds) = &search_req.query.kinds {
-        let mut kinds_q = vec![];
-        for kind in kinds {
-            kinds_q.push(json!({
-                "term": {"kind": kind},
-            }));
-        }
         must_q.push(json!({
-            "bool": {
-                "should": kinds_q,
+            "terms": {
+                "kind": kinds.clone()
             }
         }));
     }
     if let Some(keys) = &search_req.query.keys {
-        let mut keys_q = vec![];
-        for key in keys {
-            keys_q.push(json!({
-                "term": {"key": key.to_string()},
-            }));
-        }
         must_q.push(json!({
-            "bool": {
-                "should": keys_q,
+            "terms": {
+                "key": keys.clone()
             }
         }));
     }
     if let Some(owners) = &search_req.query.owners {
-        let mut owners_q = vec![];
-        for owner in owners {
-            owners_q.push(json!({
-                "term": {"owner": owner},
-            }));
-        }
         must_q.push(json!({
-            "bool": {
-                "should": owners_q,
+            "terms": {
+                "owner": owners.clone()
             }
         }));
     }
     if let Some(own_paths) = &search_req.query.own_paths {
-        let mut own_paths_q = vec![];
-        for own_path in own_paths {
-            own_paths_q.push(json!({
-                "prefix": {"own_paths": own_path},
-            }));
-        }
         must_q.push(json!({
-            "bool": {
-                "should": own_paths_q,
+            "terms": {
+                "own_paths": own_paths.clone()
             }
         }));
     }
@@ -562,51 +535,49 @@ fn gen_query_dsl(search_req: &SearchItemSearchReq) -> TardisResult<String> {
     }
     if let Some(ext) = &search_req.query.ext {
         for cond_info in ext {
+            let field = format!("ext.{}", cond_info.field.clone());
             match cond_info.op {
                 BasicQueryOpKind::Eq => {
-                    let field = format!("ext.{}", cond_info.field.clone());
                     must_q.push(json!({
                         "term": {field: cond_info.value.clone()}
                     }));
                 }
                 BasicQueryOpKind::Ne => {
-                    let field = format!("ext.{}", cond_info.field.clone());
                     must_not_q.push(json!({
                         "term": { field: cond_info.value.clone()}
                     }));
                 }
                 BasicQueryOpKind::Gt => {
-                    let field = format!("ext.{}", cond_info.field.clone());
                     filter_q.push(json!({
                         "range": {field: {"gt": cond_info.value.clone()}},
                     }));
                 }
                 BasicQueryOpKind::Ge => {
-                    let field = format!("ext.{}", cond_info.field.clone());
                     filter_q.push(json!({
                         "range": {field: {"gte": cond_info.value.clone()}},
                     }));
                 }
                 BasicQueryOpKind::Lt => {
-                    let field = format!("ext.{}", cond_info.field.clone());
                     filter_q.push(json!({
                         "range": {field: {"lt": cond_info.value.clone()}},
                     }));
                 }
                 BasicQueryOpKind::Le => {
-                    let field = format!("ext.{}", cond_info.field.clone());
                     filter_q.push(json!({
                         "range": {field: {"lte": cond_info.value.clone()}},
                     }));
                 }
                 BasicQueryOpKind::Like => {
-                    let field = format!("ext.{}", cond_info.field.clone());
                     must_q.push(json!({
                         "match": {field: cond_info.value.clone()}
                     }));
                 }
+                BasicQueryOpKind::NotLike => {
+                    must_not_q.push(json!({
+                        "match": { field: cond_info.value.clone()}
+                    }));
+                }
                 BasicQueryOpKind::In => {
-                    let field = format!("ext.{}", cond_info.field.clone());
                     let value = if cond_info.value.is_array() {
                         cond_info.value.clone()
                     } else {
@@ -618,13 +589,200 @@ fn gen_query_dsl(search_req: &SearchItemSearchReq) -> TardisResult<String> {
                         }
                     }));
                 }
-                BasicQueryOpKind::NotLike => {}
-                BasicQueryOpKind::NotIn => {}
-                BasicQueryOpKind::IsNull => {}
-                BasicQueryOpKind::IsNotNull => {}
-                BasicQueryOpKind::IsNullOrEmpty => {}
+                BasicQueryOpKind::NotIn => {
+                    let value = if cond_info.value.is_array() {
+                        cond_info.value.clone()
+                    } else {
+                        json!(vec![cond_info.value.clone()])
+                    };
+                    must_not_q.push(json!({
+                        "terms": { field: value}
+                    }));
+                }
+                BasicQueryOpKind::IsNull => {
+                    must_not_q.push(json!({
+                        "exists": {"field": field}
+                    }));
+                }
+                BasicQueryOpKind::IsNotNull => {
+                    must_q.push(json!({
+                        "exists": {"field": field}
+                    }));
+                }
+                BasicQueryOpKind::IsNullOrEmpty => {
+                    must_q.push(json!({
+                        "bool": {
+                            "should": [
+                                {"term": {field.clone(): "".to_string()}},
+                                {"bool": {
+                                    "must_not": [{
+                                        "exists": {"field": field}
+                                    }],
+                                }}
+                            ]
+                        }
+                    }));
+                }
             }
         }
+    }
+    if let Some(adv_query) = &search_req.adv_query {
+        let mut adv_query_must_q = vec![];
+        let mut adv_query_should_q = vec![];
+        for group_query in adv_query {
+            let mut group_query_q: Vec<Value> = vec![];
+            for cond_info in group_query.ext.clone().unwrap_or_default() {
+                let field = if cond_info.in_ext.unwrap_or(true) {
+                    format!("ext.{}", cond_info.field)
+                } else {
+                    cond_info.field.clone()
+                };
+                match cond_info.op {
+                    BasicQueryOpKind::Eq => {
+                        group_query_q.push(json!({
+                            "term": {field: cond_info.value.clone()}
+                        }));
+                    }
+                    BasicQueryOpKind::Ne => {
+                        group_query_q.push(json!({
+                            "bool": {
+                                "must_not": {
+                                    "term": { field: cond_info.value.clone()}
+                                }
+                            }
+                        }));
+                    }
+                    BasicQueryOpKind::Gt => {
+                        group_query_q.push(json!({
+                            "bool": {
+                                "filter": {
+                                    "range": {field: {"gt": cond_info.value.clone()}},
+                                }
+                            }
+                        }));
+                    }
+                    BasicQueryOpKind::Ge => {
+                        group_query_q.push(json!({
+                            "bool": {
+                                "filter": {
+                                    "range": {field: {"gte": cond_info.value.clone()}},
+                                }
+                            }
+                        }));
+                    }
+                    BasicQueryOpKind::Lt => {
+                        group_query_q.push(json!({
+                            "bool": {
+                                "filter": {
+                                    "range": {field: {"lt": cond_info.value.clone()}},
+                                }
+                            }
+                        }));
+                    }
+                    BasicQueryOpKind::Le => {
+                        group_query_q.push(json!({
+                            "bool": {
+                                "filter": {
+                                    "range": {field: {"lte": cond_info.value.clone()}},
+                                }
+                            }
+                        }));
+                    }
+                    BasicQueryOpKind::Like => {
+                        group_query_q.push(json!({
+                            "match": {field: cond_info.value.clone()}
+                        }));
+                    }
+                    BasicQueryOpKind::NotLike => {
+                        group_query_q.push(json!({
+                            "bool": {
+                                "must_not": {
+                                    "match": { field: cond_info.value.clone()}
+                                }
+                            }
+                        }));
+                    }
+                    BasicQueryOpKind::In => {
+                        let value = if cond_info.value.is_array() {
+                            cond_info.value.clone()
+                        } else {
+                            json!(vec![cond_info.value.clone()])
+                        };
+                        group_query_q.push(json!({
+                            "terms": {
+                                field: value
+                            }
+                        }));
+                    }
+                    BasicQueryOpKind::NotIn => {
+                        let value = if cond_info.value.is_array() {
+                            cond_info.value.clone()
+                        } else {
+                            json!(vec![cond_info.value.clone()])
+                        };
+                        group_query_q.push(json!({
+                            "bool": {
+                                "must_not": {
+                                    "terms": { field: value}
+                                }
+                            }
+                        }));
+                    }
+                    BasicQueryOpKind::IsNull => {
+                        group_query_q.push(json!({
+                            "bool": {
+                                "must_not": {
+                                    "exists": {"field": field}
+                                }
+                            }
+                        }));
+                    }
+                    BasicQueryOpKind::IsNotNull => {
+                        group_query_q.push(json!({
+                            "exists": {"field": field}
+                        }));
+                    }
+                    BasicQueryOpKind::IsNullOrEmpty => {
+                        group_query_q.push(json!({
+                            "bool": {
+                                "should": [
+                                    {"term": {field.clone(): "".to_string()}},
+                                    {"bool": {
+                                        "must_not": [{
+                                            "exists": {"field": field}
+                                        }],
+                                    }}
+                                ]
+                            }
+                        }));
+                    }
+                }
+            }
+            match group_query.group_by_or.unwrap_or(false) {
+                true => {
+                    adv_query_must_q.push(json!({
+                        "bool": {
+                            "must": if group_query.ext_by_or.unwrap_or(false) { group_query_q.clone() } else { vec![] },
+                            "should": if group_query.ext_by_or.unwrap_or(false) { vec![] } else { group_query_q.clone() },
+                        }
+                    }));
+                }
+                false => {
+                    adv_query_should_q.push(json!({
+                        "bool": {
+                            "must": if group_query.ext_by_or.unwrap_or(false) { group_query_q.clone() } else { vec![] },
+                            "should": if group_query.ext_by_or.unwrap_or(false) { vec![] } else { group_query_q.clone() },
+                        }
+                    }));
+                }
+            }
+        }
+        must_q.push(json!({
+                "bool": {
+                    "must": adv_query_must_q,
+                    "should": adv_query_should_q,
+                }
+        }));
     }
     if let Some(sorts) = &search_req.sort {
         for sort_item in sorts {

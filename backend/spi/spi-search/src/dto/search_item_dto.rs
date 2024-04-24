@@ -160,6 +160,16 @@ pub struct AdvBasicQueryCondInfo {
     pub value: Value,
 }
 
+impl From<AdvBasicQueryCondInfo> for BasicQueryCondInfo {
+    fn from(value: AdvBasicQueryCondInfo) -> Self {
+        Self {
+            field: value.field,
+            op: value.op,
+            value: value.value,
+        }
+    }
+}
+
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Default)]
 pub struct SearchItemQueryReq {
     pub in_q_content: Option<bool>,

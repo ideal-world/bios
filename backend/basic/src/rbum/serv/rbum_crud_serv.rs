@@ -19,6 +19,7 @@ use tardis::TardisFunsInst;
 use crate::rbum::domain::rbum_item;
 use crate::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
 use crate::rbum::helper::{rbum_event_helper, rbum_scope_helper};
+#[cfg(feature = "with-mq")]
 use crate::rbum::rbum_config::RbumConfigApi;
 
 lazy_static! {
@@ -253,7 +254,6 @@ where
     async fn package_delete(id: &str, _funs: &TardisFunsInst, _ctx: &TardisContext) -> TardisResult<Select<E::Entity>> {
         Ok(E::Entity::find().filter(Expr::col(ID_FIELD.clone()).eq(id)))
     }
-
 
     async fn after_delete_rbum(_: &str, _: &Option<DetailResp>, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<()> {
         Ok(())

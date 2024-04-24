@@ -10,10 +10,7 @@ use spacegate_shell::spacegate_ext_redis::{redis::AsyncCommands, RedisClient};
 use spacegate_shell::{BoxError, SgBody, SgRequestExt, SgResponseExt};
 
 use tardis::serde_json;
-use tardis::{
-    basic::result::TardisResult,
-    tokio,
-};
+use tardis::{basic::result::TardisResult, tokio};
 
 #[cfg(feature = "schema")]
 use spacegate_plugin::schemars;

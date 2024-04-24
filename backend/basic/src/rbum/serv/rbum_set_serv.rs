@@ -329,7 +329,7 @@ impl RbumSetServ {
                     tree_main
                         .iter()
                         .filter(|c| c.sys_code.starts_with(&cate.sys_code))
-                        .flat_map(|c| items.get(&c.id).unwrap())
+                        .flat_map(|c| items.get(&c.id).expect("ignore"))
                         .group_by(|c| c.rel_rbum_item_kind_id.clone())
                         .into_iter()
                         .map(|(g, c)| (g, c.map(|i| i.rel_rbum_item_id.clone()).collect::<HashSet<String>>().len() as u64))
@@ -377,6 +377,7 @@ impl RbumSetServ {
             .filter(|cate| cate.pid == Some(cate_id.to_string()))
             .flat_map(|cate| Self::filter_exist_items(tree_main, &cate.id, rbum_set_items))
             .collect::<Vec<String>>();
+        // TODO remove unwrap
         let cate = tree_main.iter().find(|cate| cate.id == cate_id).unwrap();
         if sub_cates.is_empty() {
             // leaf node

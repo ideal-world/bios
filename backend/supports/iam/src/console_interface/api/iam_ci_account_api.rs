@@ -137,7 +137,7 @@ impl IamCiAccountApi {
         TardisResp::ok(TardisFuns::crypto.base64.encode(TardisFuns::json.obj_to_string(&ctx_resp).unwrap_or_default()))
     }
 
-    /// Get Account By Account Id	
+    /// Get Account By Account Id
     /// 通过帐户Id获取帐户
     #[oai(path = "/:id", method = "get")]
     async fn get(&self, id: Path<String>, tenant_id: Query<Option<String>>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<IamAccountDetailAggResp> {

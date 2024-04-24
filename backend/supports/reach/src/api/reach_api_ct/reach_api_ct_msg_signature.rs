@@ -24,7 +24,6 @@ pub struct ReachMsgSignatureCtApi;
 #[cfg_attr(feature = "simple-client", bios_sdk_invoke::simple_invoke_client(Client<'_>))]
 #[poem_openapi::OpenApi(prefix_path = "/ct/msg/signature", tag = "bios_basic::ApiTag::Tenant")]
 impl ReachMsgSignatureCtApi {
-
     /// Page find all user reach message signature data
     /// 获取所有用户触达消息签名模板数据分页
     #[oai(method = "get", path = "/page")]

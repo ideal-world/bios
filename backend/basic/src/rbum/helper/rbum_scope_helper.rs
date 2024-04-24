@@ -220,7 +220,7 @@ fn do_unsafe_fill_ctx<F>(request: &tardis::web::poem::Request, f: F, funs: &Tard
 where
     F: FnOnce(TardisContext, &mut TardisContext),
 {
-    let bios_ctx = if let Some(bios_ctx) = request.header(&funs.rbum_head_key_bios_ctx()).or_else(|| request.header(&funs.rbum_head_key_bios_ctx().to_lowercase())) {
+    let bios_ctx = if let Some(bios_ctx) = request.header(&funs.rbum_head_key_bios_ctx()).or_else(|| request.header(funs.rbum_head_key_bios_ctx().to_lowercase())) {
         TardisFuns::json.str_to_obj::<TardisContext>(&TardisFuns::crypto.base64.decode_to_string(bios_ctx)?)?
     } else if ctx.owner.is_empty() && ctx.ak.is_empty() && ctx.own_paths.is_empty() && ctx.roles.is_empty() && ctx.groups.is_empty() {
         return Err(TardisError::unauthorized(
@@ -253,11 +253,8 @@ where
 /// Warning: This operation is unsafe, and it should only be used in scenarios where there is no security risk.
 #[cfg(feature = "default")]
 pub fn check_without_owner_and_unsafe_fill_ctx(request: &tardis::web::poem::Request, funs: &TardisFunsInst, ctx: &mut TardisContext) -> TardisResult<()> {
-    use tardis::log::warn;
-
     if !ctx.owner.is_empty() {
-        warn!("[Auth.Check] ctx.owner is not empty, ctx: {:?}", ctx.owner);
-        // return Err(TardisError::forbidden("[Basic] Request context owner is not empty", "403-rbum-req-ctx-owner-is-not-empty"));
+        return Err(TardisError::forbidden("[Basic] Request context owner is not empty", "403-rbum-req-ctx-owner-is-not-empty"));
     }
     unsafe_fill_ctx(request, funs, ctx)
 }

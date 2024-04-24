@@ -5,6 +5,7 @@ use bios_basic::rbum::rbum_config::RbumConfig;
 use bios_basic::rbum::serv::rbum_kind_serv::RbumKindServ;
 use bios_basic::spi::dto::spi_bs_dto::SpiBsAddReq;
 use bios_basic::spi::spi_constants;
+use bios_basic::spi::spi_funs::SpiBsInstExtractor;
 use bios_basic::test::test_http_client::TestHttpClient;
 use bios_spi_search::search_constants::DOMAIN_CODE;
 use bios_spi_search::search_initializer;
@@ -23,12 +24,13 @@ async fn test_search() -> TardisResult<()> {
 
     let docker = testcontainers::clients::Cli::default();
     let _x = init_search_container::init(&docker).await?;
-    init_data().await?;
+    init_data(spi_constants::SPI_ES_KIND_CODE, &env::var("TARDIS_FW.ES.URL").unwrap()).await?;
+    init_data(spi_constants::SPI_PG_KIND_CODE, &env::var("TARDIS_FW.DB.URL").unwrap()).await?;
 
     Ok(())
 }
 
-async fn init_data() -> TardisResult<()> {
+async fn init_data(code: &str, conn_uri: &str) -> TardisResult<()> {
     // Initialize RBUM
     bios_basic::rbum::rbum_initializer::init(DOMAIN_CODE, RbumConfig::default()).await?;
 
@@ -43,8 +45,8 @@ async fn init_data() -> TardisResult<()> {
     sleep(Duration::from_millis(500)).await;
 
     let funs = TardisFuns::inst_with_db_conn(DOMAIN_CODE.to_string(), None);
-    let kind_id = RbumKindServ::get_rbum_kind_id_by_code(spi_constants::SPI_PG_KIND_CODE, &funs).await?.unwrap();
-    let ctx = TardisContext {
+    let kind_id = RbumKindServ::get_rbum_kind_id_by_code(code, &funs).await?.unwrap();
+    let mut ctx = TardisContext {
         own_paths: "".to_string(),
         ak: "".to_string(),
         roles: vec![],
@@ -63,7 +65,7 @@ async fn init_data() -> TardisResult<()> {
             &SpiBsAddReq {
                 name: TrimString("test-spi".to_string()),
                 kind_id: TrimString(kind_id),
-                conn_uri: env::var("TARDIS_FW.DB.URL").unwrap(),
+                conn_uri: conn_uri.to_string(),
                 ak: TrimString("".to_string()),
                 sk: TrimString("".to_string()),
                 ext: "{\"max_connections\":20,\"min_connections\":10}".to_string(),
@@ -76,6 +78,11 @@ async fn init_data() -> TardisResult<()> {
     let _: Void = client.put(&format!("/ci/manage/bs/{}/rel/app001", bs_id), &Void {}).await;
 
     test_search_item::test(&mut client).await?;
+
+    client.set_auth(&ctx)?;
+    client.delete(&format!("/ci/manage/bs/{}", bs_id)).await;
+    ctx.ak = "app001".to_string();
+    funs.remove_bs_inst_cache(&ctx).await?;
 
     Ok(())
 }

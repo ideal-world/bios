@@ -1,11 +1,8 @@
-use tardis::basic::dto::TardisContext;
 use tardis::chrono::{self, Utc};
-use tardis::db::reldb_client::TardisActiveModel;
 use tardis::db::sea_orm;
 use tardis::db::sea_orm::prelude::*;
-use tardis::db::sea_orm::sea_query::{ColumnDef, IndexCreateStatement, Table, TableCreateStatement};
 use tardis::db::sea_orm::*;
-use tardis::TardisCreateIndex;
+use tardis::{TardisCreateEntity, TardisEmptyBehavior, TardisEmptyRelation};
 
 /// Certificate configuration model
 ///
@@ -14,13 +11,13 @@ use tardis::TardisCreateIndex;
 /// This is a general certificate configuration model that describes various types of certificate configurations.
 /// It can handle database connections, web system authentication, host ssh, etc.
 ///
-/// 这是一个通用的凭证配置模型，用于描述各种类型的凭证配置。可处理包含数据库连接、web系统认证、主机ssh谁等。
+/// 这是一个通用的凭证配置模型，用于描述各种类型的凭证配置。可处理包含数据库连接、web系统认证、主机ssh等。
 ///
 /// Certificate configuration is bound to a subject that can be a resource domain [`Self::rel_rbum_domain_id`] or a resource item [`Self::rel_rbum_item_id`].
 /// It is required that the same binding subject has the same certificate configuration type [`Self::kind`] and certificate configuration supplier [`Self::supplier`] unique.
 ///
 /// 凭证配置绑定的主体可以是某一资源域[`Self::rel_rbum_domain_id`]或资源项[`Self::rel_rbum_item_id`]。要求同一绑定主体下同一凭证配置类型[`Self::kind`]及凭证配置供应商[`Self::supplier`]唯一。
-#[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel, TardisCreateIndex)]
+#[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel, TardisCreateEntity, TardisEmptyBehavior, TardisEmptyRelation)]
 #[sea_orm(table_name = "rbum_cert_conf")]
 pub struct Model {
     /// Certificate configuration id
@@ -35,6 +32,7 @@ pub struct Model {
     /// Used for the classification of certificates, such as: ldap, userpwd, token, oauth2, etc.
     ///
     /// 用于凭证的分类，比如：ldap、userpwd、token、oauth2等。
+    #[tardis_entity(custom_len = "127")]
     #[index(index_id = "id_2", unique)]
     pub kind: String,
     /// Certificate configuration supplier
@@ -45,6 +43,7 @@ pub struct Model {
     /// For example, the certificate of type oauth2 can be further refined into WeChat oauth2, QQ oauth2, Weibo oauth2, etc.
     ///
     /// 一种凭证类型可以有多个供应商。比如 oauth2 类型的凭证，可以进一步细化成 微信oauth2、QQ oauth2、微博 oauth2 等。
+    #[tardis_entity(custom_len = "127")]
     #[index(index_id = "id_2", unique)]
     pub supplier: String,
     /// Certificate configuration name
@@ -100,6 +99,7 @@ pub struct Model {
     /// Such as database connection pool configuration.
     ///
     /// 比如数据库连接池配置。
+    #[tardis_entity(custom_type = "text")]
     pub ext: String,
     /// Whether sk is required
     ///
@@ -225,81 +225,16 @@ pub struct Model {
     pub rel_rbum_item_id: String,
 
     #[index()]
+    #[fill_ctx(fill = "own_paths")]
     pub own_paths: String,
+    #[fill_ctx]
     pub owner: String,
+    #[sea_orm(extra = "DEFAULT CURRENT_TIMESTAMP")]
     pub create_time: chrono::DateTime<Utc>,
+    #[sea_orm(extra = "DEFAULT CURRENT_TIMESTAMP")]
     pub update_time: chrono::DateTime<Utc>,
+    #[fill_ctx]
     pub create_by: String,
+    #[fill_ctx(insert_only = false)]
     pub update_by: String,
 }
-
-impl TardisActiveModel for ActiveModel {
-    fn fill_ctx(&mut self, ctx: &TardisContext, is_insert: bool) {
-        if is_insert {
-            self.own_paths = Set(ctx.own_paths.to_string());
-            self.owner = Set(ctx.owner.to_string());
-            self.create_by = Set(ctx.owner.to_string());
-        }
-        self.update_by = Set(ctx.owner.to_string());
-    }
-
-    fn create_table_statement(db: DbBackend) -> TableCreateStatement {
-        let mut builder = Table::create();
-        builder
-            .table(Entity.table_ref())
-            .if_not_exists()
-            .col(ColumnDef::new(Column::Id).not_null().string().primary_key())
-            // Specific
-            .col(ColumnDef::new(Column::Kind).not_null().string_len(127))
-            .col(ColumnDef::new(Column::Supplier).not_null().string_len(127))
-            .col(ColumnDef::new(Column::Name).not_null().string())
-            .col(ColumnDef::new(Column::Note).not_null().string())
-            .col(ColumnDef::new(Column::AkNote).not_null().string())
-            .col(ColumnDef::new(Column::AkRule).not_null().string())
-            .col(ColumnDef::new(Column::SkNote).not_null().string())
-            .col(ColumnDef::new(Column::SkRule).not_null().string())
-            .col(ColumnDef::new(Column::Ext).text())
-            .col(ColumnDef::new(Column::SkNeed).not_null().boolean())
-            .col(ColumnDef::new(Column::SkDynamic).not_null().boolean())
-            .col(ColumnDef::new(Column::SkEncrypted).not_null().boolean())
-            .col(ColumnDef::new(Column::Repeatable).not_null().boolean())
-            .col(ColumnDef::new(Column::IsBasic).not_null().boolean())
-            .col(ColumnDef::new(Column::RestByKinds).not_null().string())
-            .col(ColumnDef::new(Column::ExpireSec).not_null().big_integer())
-            .col(ColumnDef::new(Column::SkLockCycleSec).not_null().integer())
-            .col(ColumnDef::new(Column::SkLockErrTimes).not_null().small_integer())
-            .col(ColumnDef::new(Column::SkLockDurationSec).not_null().integer())
-            .col(ColumnDef::new(Column::CoexistNum).not_null().small_integer())
-            .col(ColumnDef::new(Column::ConnUri).not_null().string())
-            .col(ColumnDef::new(Column::RelRbumDomainId).not_null().string())
-            .col(ColumnDef::new(Column::RelRbumItemId).not_null().string())
-            .col(ColumnDef::new(Column::Status).not_null().small_integer())
-            // Basic
-            .col(ColumnDef::new(Column::OwnPaths).not_null().string())
-            .col(ColumnDef::new(Column::Owner).not_null().string())
-            .col(ColumnDef::new(Column::CreateBy).not_null().string())
-            .col(ColumnDef::new(Column::UpdateBy).not_null().string());
-        if db == DatabaseBackend::Postgres {
-            builder
-                .col(ColumnDef::new(Column::CreateTime).extra("DEFAULT CURRENT_TIMESTAMP".to_string()).timestamp_with_time_zone())
-                .col(ColumnDef::new(Column::UpdateTime).extra("DEFAULT CURRENT_TIMESTAMP".to_string()).timestamp_with_time_zone());
-        } else {
-            builder
-                .engine("InnoDB")
-                .character_set("utf8mb4")
-                .collate("utf8mb4_0900_as_cs")
-                .col(ColumnDef::new(Column::CreateTime).extra("DEFAULT CURRENT_TIMESTAMP".to_string()).timestamp())
-                .col(ColumnDef::new(Column::UpdateTime).extra("DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP".to_string()).timestamp());
-        }
-        builder.to_owned()
-    }
-
-    fn create_index_statement() -> Vec<IndexCreateStatement> {
-        tardis_create_index_statement()
-    }
-}
-
-impl ActiveModelBehavior for ActiveModel {}
-
-#[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
-pub enum Relation {}

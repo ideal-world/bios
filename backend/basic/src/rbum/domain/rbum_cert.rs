@@ -1,11 +1,8 @@
-use tardis::basic::dto::TardisContext;
 use tardis::chrono::{self, Utc};
-use tardis::db::reldb_client::TardisActiveModel;
 use tardis::db::sea_orm;
 use tardis::db::sea_orm::prelude::*;
-use tardis::db::sea_orm::sea_query::{ColumnDef, IndexCreateStatement, Table, TableCreateStatement};
 use tardis::db::sea_orm::*;
-use tardis::TardisCreateIndex;
+use tardis::{TardisCreateEntity, TardisEmptyBehavior, TardisEmptyRelation};
 
 /// Certification model
 ///
@@ -20,8 +17,9 @@ use tardis::TardisCreateIndex;
 /// you can use this model directly without associating the credential configuration.
 /// For example, data connection credentials, depending on business requirements, may not require credential configuration.
 ///
+///
 /// NOTE: 如果不需要对凭证作统一的校验处理，可以直接使用此模型，不用关联凭证配置。比如数据连接凭证，视业务需求也可以不需要凭证配置。
-#[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel, TardisCreateIndex)]
+#[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel, TardisCreateEntity, TardisEmptyBehavior, TardisEmptyRelation)]
 #[sea_orm(table_name = "rbum_cert")]
 pub struct Model {
     /// Certification id
@@ -138,72 +136,16 @@ pub struct Model {
     #[index(index_id = "id")]
     pub rel_rbum_id: String,
 
+    #[fill_ctx(fill = "own_paths")]
     pub own_paths: String,
+    #[fill_ctx]
     pub owner: String,
+    #[sea_orm(extra = "DEFAULT CURRENT_TIMESTAMP")]
     pub create_time: chrono::DateTime<Utc>,
+    #[sea_orm(extra = "DEFAULT CURRENT_TIMESTAMP")]
     pub update_time: chrono::DateTime<Utc>,
+    #[fill_ctx]
     pub create_by: String,
+    #[fill_ctx(insert_only = false)]
     pub update_by: String,
 }
-
-impl TardisActiveModel for ActiveModel {
-    fn fill_ctx(&mut self, ctx: &TardisContext, is_insert: bool) {
-        if is_insert {
-            self.own_paths = Set(ctx.own_paths.to_string());
-            self.owner = Set(ctx.owner.to_string());
-            self.create_by = Set(ctx.owner.to_string());
-        }
-        self.update_by = Set(ctx.owner.to_string());
-    }
-
-    fn create_table_statement(db: DbBackend) -> TableCreateStatement {
-        let mut builder = Table::create();
-        builder
-            .table(Entity.table_ref())
-            .if_not_exists()
-            .col(ColumnDef::new(Column::Id).not_null().string().primary_key())
-            // Specific
-            .col(ColumnDef::new(Column::Kind).not_null().string())
-            .col(ColumnDef::new(Column::Supplier).not_null().string())
-            .col(ColumnDef::new(Column::Ak).not_null().string())
-            .col(ColumnDef::new(Column::Sk).not_null().string())
-            .col(ColumnDef::new(Column::SkInvisible).not_null().boolean().default(false))
-            .col(ColumnDef::new(Column::Ext).not_null().string())
-            .col(ColumnDef::new(Column::ConnUri).not_null().string())
-            .col(ColumnDef::new(Column::RelRbumCertConfId).not_null().string())
-            .col(ColumnDef::new(Column::RelRbumKind).not_null().small_integer())
-            .col(ColumnDef::new(Column::RelRbumId).not_null().string())
-            // Basic
-            .col(ColumnDef::new(Column::OwnPaths).not_null().string())
-            .col(ColumnDef::new(Column::Owner).not_null().string())
-            .col(ColumnDef::new(Column::Status).not_null().small_integer())
-            .col(ColumnDef::new(Column::CreateBy).not_null().string())
-            .col(ColumnDef::new(Column::UpdateBy).not_null().string());
-        if db == DatabaseBackend::Postgres {
-            builder
-                .col(ColumnDef::new(Column::StartTime).not_null().timestamp_with_time_zone())
-                .col(ColumnDef::new(Column::EndTime).not_null().timestamp_with_time_zone())
-                .col(ColumnDef::new(Column::CreateTime).extra("DEFAULT CURRENT_TIMESTAMP".to_string()).timestamp_with_time_zone())
-                .col(ColumnDef::new(Column::UpdateTime).extra("DEFAULT CURRENT_TIMESTAMP".to_string()).timestamp_with_time_zone());
-        } else {
-            builder
-                .engine("InnoDB")
-                .character_set("utf8mb4")
-                .collate("utf8mb4_0900_as_cs")
-                .col(ColumnDef::new(Column::StartTime).not_null().date_time())
-                .col(ColumnDef::new(Column::EndTime).not_null().date_time())
-                .col(ColumnDef::new(Column::CreateTime).extra("DEFAULT CURRENT_TIMESTAMP".to_string()).timestamp())
-                .col(ColumnDef::new(Column::UpdateTime).extra("DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP".to_string()).timestamp());
-        }
-        builder.to_owned()
-    }
-
-    fn create_index_statement() -> Vec<IndexCreateStatement> {
-        tardis_create_index_statement()
-    }
-}
-
-impl ActiveModelBehavior for ActiveModel {}
-
-#[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
-pub enum Relation {}

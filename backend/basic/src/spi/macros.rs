@@ -35,11 +35,11 @@ macro_rules! spi_dispatch_function {
 }
 
 /// SPI request dispatch macro
-/// 
+///
 /// SPI请求分发宏
 ///
 /// Used to generate request dispatch code in the SPI service
-/// 
+///
 /// 用于批量生成请求分发代码
 #[macro_export]
 macro_rules! spi_dispatch_service {
@@ -48,15 +48,15 @@ macro_rules! spi_dispatch_service {
         /// 是否是管理模式
         @mgr: $mgr: expr,
         /// Backend service initialization method, called when the backend service instance is not initialized
-        /// 
+        ///
         /// 后端服务初始化方法，当后端服务实例未初始化时调用
         @init: $init: expr,
         /// Service object to dispatch to
-        /// 
+        ///
         /// 分发到的服务对象
         @dispatch: $dispatch:tt,
         /// Collection of request methods
-        /// 
+        ///
         /// 请求的方法集合
         @method: {
             $(

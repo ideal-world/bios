@@ -155,7 +155,7 @@ async fn test_rbum_kind(context: &TardisContext) -> TardisResult<()> {
     assert_eq!(rbums.page_number, 1);
     assert_eq!(rbums.page_size, 10);
     assert_eq!(rbums.total_size, 1);
-    assert_eq!(rbums.records.get(0).unwrap().name, "关系型数据库_new");
+    assert_eq!(rbums.records.first().unwrap().name, "关系型数据库_new");
 
     info!("【test_rbum_kind】 : Test Delete : RbumKindServ::delete_rbum");
     RbumKindServ::delete_rbum(&id, &funs, context).await?;
@@ -384,7 +384,7 @@ async fn test_rbum_kind_attr(context: &TardisContext) -> TardisResult<()> {
     assert_eq!(rbums.page_number, 1);
     assert_eq!(rbums.page_size, 10);
     assert_eq!(rbums.total_size, 1);
-    assert!(rbums.records.get(0).unwrap().overload);
+    assert!(rbums.records.first().unwrap().overload);
 
     info!("【test_rbum_kind_attr】 : Test Delete : RbumKindAttrServ::delete_rbum");
     RbumKindAttrServ::delete_rbum(&kind_attr_id, &funs, context).await?;
