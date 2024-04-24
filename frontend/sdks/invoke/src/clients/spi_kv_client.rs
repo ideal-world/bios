@@ -13,7 +13,7 @@ use super::base_spi_client::BaseSpiClient;
 
 pub struct SpiKvClient;
 
-#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+#[derive(poem_openapi::Object, Serialize, Deserialize, Clone, Debug)]
 pub struct KvItemSummaryResp {
     #[oai(validator(min_length = "2"))]
     pub key: String,
@@ -23,7 +23,7 @@ pub struct KvItemSummaryResp {
     pub update_time: DateTime<Utc>,
 }
 
-#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+#[derive(poem_openapi::Object, Serialize, Deserialize, Clone, Debug)]
 pub struct KvItemDetailResp {
     #[oai(validator(min_length = "2"))]
     pub key: String,
@@ -97,5 +97,12 @@ impl SpiKvClient {
         }
         let resp = funs.web_client().get::<TardisResp<KvItemDetailResp>>(&url, headers.clone()).await?;
         BaseSpiClient::package_resp(resp)
+    }
+
+    pub async fn delete_item(key: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let kv_url = BaseSpiClient::module_url(InvokeModuleKind::Kv, funs).await?;
+        let headers = BaseSpiClient::headers(None, funs, ctx).await?;
+        funs.web_client().delete_to_void(&format!("{kv_url}/ci/item?key={key}"), headers.clone()).await?;
+        Ok(())
     }
 }

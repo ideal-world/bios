@@ -3,6 +3,10 @@ use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 use std::vec;
 
+use bios_sdk_invoke::clients::base_spi_client::BaseSpiClient;
+use bios_sdk_invoke::clients::spi_kv_client::{KvItemDetailResp, SpiKvClient};
+use bios_sdk_invoke::clients::spi_log_client::{LogItemFindReq, SpiLogClient};
+use bios_sdk_invoke::invoke_enumeration::InvokeModuleKind;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::error::TardisError;
 use tardis::basic::result::TardisResult;
@@ -16,109 +20,85 @@ use tardis::web::web_resp::{TardisPage, TardisResp};
 use tardis::{TardisFuns, TardisFunsInst};
 use tokio_cron_scheduler::{Job, JobScheduler};
 
-use crate::dto::schedule_job_dto::{
-    KvItemSummaryResp, KvScheduleJobItemDetailResp, ScheduleJobAddOrModifyReq, ScheduleJobInfoResp, ScheduleJobKvSummaryResp, ScheduleTaskInfoResp, ScheduleTaskLogFindResp,
-};
+use crate::dto::schedule_job_dto::{KvScheduleJobItemDetailResp, ScheduleJobAddOrModifyReq, ScheduleJobInfoResp, ScheduleJobKvSummaryResp, ScheduleTaskInfoResp};
 use crate::schedule_config::ScheduleConfig;
 use crate::schedule_constants::{DOMAIN_CODE, KV_KEY_CODE};
 
 /// global service instance
+/// 全局服务实例
 static GLOBAL_SERV: OnceLock<Arc<OwnedScheduleTaskServ>> = OnceLock::new();
 
 /// get service instance without checking if it's initialized
 /// # Safety
 /// if called before init, this function will panic
+///
+/// 获取服务实例，不检查是否初始化
+/// # 安全性
+/// 如果在初始化之前调用，此函数将会panic
 fn service() -> Arc<OwnedScheduleTaskServ> {
     GLOBAL_SERV.get().expect("trying to get scheduler before it's initialized").clone()
 }
 
-// still not good, should manage to merge it with `OwnedScheduleTaskServ::add`
-// same as `delete`
+/// still not good, should manage to merge it with `OwnedScheduleTaskServ::add`
+/// same as `delete`
 pub(crate) async fn add_or_modify(add_or_modify: ScheduleJobAddOrModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-    let log_url = &funs.conf::<ScheduleConfig>().log_url;
-    let kv_url = &funs.conf::<ScheduleConfig>().kv_url;
     let code = add_or_modify.code.as_str();
-    let spi_ctx = TardisContext {
-        owner: funs.conf::<ScheduleConfig>().spi_app_id.clone(),
-        ..ctx.clone()
-    };
-    let headers = vec![("Tardis-Context".to_string(), TardisFuns::crypto.base64.encode(TardisFuns::json.obj_to_string(&spi_ctx)?))];
     // if exist delete it first
+    // 如果存在，先删除
     if service().code_uuid.write().await.get(code).is_some() {
         delete(code, funs, ctx).await?;
     }
     // 1. log add operation
-    funs.web_client()
-        .post_obj_to_str(
-            &format!("{log_url}/ci/item"),
-            &HashMap::from([
-                ("tag", "schedule_job"),
-                ("content", "add job"),
-                ("key", code),
-                ("op", "add"),
-                ("ts", &Utc::now().to_rfc3339()),
-            ]),
-            headers.clone(),
-        )
-        .await?;
+    // 1. 记录添加操作
+    SpiLogClient::add(
+        "schedule_job",
+        "add job",
+        None,
+        Some(code.to_string()),
+        None,
+        Some("add".to_string()),
+        Some(tardis::chrono::Utc::now().to_rfc3339()),
+        Some(Utc::now().to_rfc3339()),
+        None,
+        None,
+        funs,
+        ctx,
+    )
+    .await?;
     let config = funs.conf::<ScheduleConfig>();
     // 2. sync to kv
-    funs.web_client()
-        .put_obj_to_str(
-            &format!("{kv_url}/ci/item"),
-            &HashMap::from([("key", format!("{KV_KEY_CODE}{code}")), ("value", TardisFuns::json.obj_to_string(&add_or_modify)?)]),
-            headers.clone(),
-        )
-        .await?;
+    // 2. 同步到kv
+    SpiKvClient::add_or_modify_item(&format!("{KV_KEY_CODE}{code}"), &add_or_modify, None, None, funs, ctx).await?;
     // 3. notify cache
+    // 3. 通知缓存
     let mut conn = funs.cache().cmd().await?;
     let cache_key_job_changed_info = &config.cache_key_job_changed_info;
     conn.set_ex(&format!("{cache_key_job_changed_info}{code}"), "update", config.cache_key_job_changed_timer_sec as u64).await?;
     // 4. do add at local scheduler
+    // 4. 在本地调度器中添加
     ScheduleTaskServ::add(add_or_modify, &config).await?;
     Ok(())
 }
 
 pub(crate) async fn delete(code: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-    let log_url = &funs.conf::<ScheduleConfig>().log_url;
-    let kv_url = &funs.conf::<ScheduleConfig>().kv_url;
-    let spi_ctx = TardisContext {
-        owner: funs.conf::<ScheduleConfig>().spi_app_id.clone(),
-        ..ctx.clone()
-    };
-    let headers = vec![("Tardis-Context".to_string(), TardisFuns::crypto.base64.encode(TardisFuns::json.obj_to_string(&spi_ctx)?))];
     // 1. log this operation
-    // ws_client()
-    //     .await
-    //     .publish_add_log(
-    //         &LogItemAddReq {
-    //             tag: "schedule_job".to_string(),
-    //             content: "delete job".to_string(),
-    //             key: Some(code.into()),
-    //             op: Some("delete".to_string()),
-    //             ts: Some(Utc::now()),
-    //             ..Default::default()
-    //         },
-    //         default_avatar().await.clone(),
-    //         funs.conf::<ScheduleConfig>().spi_app_id.clone(),
-    //         ctx,
-    //     )
-    //     .await?;
-    TardisFuns::web_client()
-        .post_obj_to_str(
-            &format!("{log_url}/ci/item"),
-            &HashMap::from([
-                ("tag", "schedule_job"),
-                ("content", "delete job"),
-                ("key", code),
-                ("op", "delete"),
-                ("ts", &Utc::now().to_rfc3339()),
-            ]),
-            headers.clone(),
-        )
-        .await?;
+    SpiLogClient::add(
+        "schedule_job",
+        "delete job",
+        None,
+        Some(code.to_string()),
+        None,
+        Some("delete".to_string()),
+        Some(tardis::chrono::Utc::now().to_rfc3339()),
+        Some(Utc::now().to_rfc3339()),
+        None,
+        None,
+        funs,
+        ctx,
+    )
+    .await?;
     // 2. sync to kv
-    TardisFuns::web_client().delete_to_void(&format!("{kv_url}/ci/item?key={KV_KEY_CODE}{code}"), headers.clone()).await?;
+    SpiKvClient::delete_item(&format!("{KV_KEY_CODE}{code}"), funs, ctx).await?;
     // 3. notify cache
     let config = funs.conf::<ScheduleConfig>();
     let mut conn = funs.cache().cmd().await?;
@@ -127,23 +107,21 @@ pub(crate) async fn delete(code: &str, funs: &TardisFunsInst, ctx: &TardisContex
     // 4. do delete at local scheduler
     if service().code_uuid.read().await.get(code).is_some() {
         // delete schedual-task from kv cache first
+        // 先从kv缓存中删除调度任务
         let mut conn = funs.cache().cmd().await?;
         let config = funs.conf::<ScheduleConfig>();
         let cache_key_job_changed_info = &config.cache_key_job_changed_info;
         conn.del(&format!("{cache_key_job_changed_info}{code}")).await?;
         // delete schedual-task from scheduler
+        // 从调度器中删除调度任务
         ScheduleTaskServ::delete(code).await?;
     }
     Ok(())
 }
 
 pub(crate) async fn find_job(code: Option<String>, page_number: u32, page_size: u32, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<TardisPage<ScheduleJobInfoResp>> {
-    let kv_url = &funs.conf::<ScheduleConfig>().kv_url;
-    let spi_ctx = TardisContext {
-        owner: funs.conf::<ScheduleConfig>().spi_app_id.clone(),
-        ..ctx.clone()
-    };
-    let headers = [("Tardis-Context".to_string(), TardisFuns::crypto.base64.encode(TardisFuns::json.obj_to_string(&spi_ctx)?))];
+    let kv_url = BaseSpiClient::module_url(InvokeModuleKind::Kv, funs).await?;
+    let headers = BaseSpiClient::headers(None, funs, ctx).await?;
     let resp = funs
         .web_client()
         .get::<TardisResp<TardisPage<ScheduleJobKvSummaryResp>>>(
@@ -157,10 +135,8 @@ pub(crate) async fn find_job(code: Option<String>, page_number: u32, page_size: 
             headers,
         )
         .await?;
-    let Some(body) = resp.body else {
-        return Err(funs.err().conflict("find_job", "find", "get Job Kv response missing body", ""));
-    };
-    let Some(pages) = body.data else {
+    let body = BaseSpiClient::package_resp(resp)?;
+    let Some(pages) = body else {
         return Err(funs.err().conflict("find_job", "find", "get Job Kv failed", ""));
     };
     Ok(TardisPage {
@@ -198,61 +174,38 @@ pub(crate) async fn find_job(code: Option<String>, page_number: u32, page_size: 
 }
 
 pub(crate) async fn find_one_job(code: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<KvScheduleJobItemDetailResp>> {
-    let kv_url = &funs.conf::<ScheduleConfig>().kv_url;
-    let spi_ctx = TardisContext {
-        owner: funs.conf::<ScheduleConfig>().spi_app_id.clone(),
-        ..ctx.clone()
-    };
-    let headers = [("Tardis-Context".to_string(), TardisFuns::crypto.base64.encode(TardisFuns::json.obj_to_string(&spi_ctx)?))];
-    let resp = funs.web_client().get::<TardisResp<Option<KvItemSummaryResp>>>(&format!("{}/ci/item?key={}", kv_url, format_args!("{}{}", KV_KEY_CODE, code)), headers).await?;
-
-    let Some(body) = resp.body else {
-        return Err(funs.err().internal_error("find_job", "find", "kv response missing body", ""));
-    };
-    let msg = &body.msg;
-    if &body.code != "200" {
-        return Err(funs.err().internal_error("find_job", "find", &format!("fail to get kv resp: {}", msg), ""));
-    }
-    body.data.flatten().map(KvScheduleJobItemDetailResp::try_from).transpose()
+    let kv_url = BaseSpiClient::module_url(InvokeModuleKind::Kv, funs).await?;
+    let headers = BaseSpiClient::headers(None, funs, ctx).await?;
+    let resp = funs.web_client().get::<TardisResp<Option<KvItemDetailResp>>>(&format!("{}/ci/item?key={}", kv_url, format_args!("{}{}", KV_KEY_CODE, code)), headers).await?;
+    let body = BaseSpiClient::package_resp(resp)?;
+    body.flatten().map(KvScheduleJobItemDetailResp::try_from).transpose()
 }
+
 pub(crate) async fn find_task(
     job_code: &str,
     ts_start: Option<chrono::DateTime<Utc>>,
     ts_end: Option<chrono::DateTime<Utc>>,
     page_number: u32,
-    page_size: u32,
+    page_size: u16,
     funs: &TardisFunsInst,
     ctx: &TardisContext,
 ) -> TardisResult<TardisPage<ScheduleTaskInfoResp>> {
-    let log_url = &funs.conf::<ScheduleConfig>().log_url;
-    let spi_ctx = TardisContext {
-        owner: funs.conf::<ScheduleConfig>().spi_app_id.clone(),
-        ..ctx.clone()
-    };
-    let headers = [("Tardis-Context".to_string(), TardisFuns::crypto.base64.encode(TardisFuns::json.obj_to_string(&spi_ctx)?))];
-    let mut url = format!(
-        "{}/ci/item?tag={}&key={}&page_number={}&page_size={}",
-        log_url,
-        "schedule_task",
-        job_code,
-        page_number,
-        (page_size * 2)
-    );
-    if let Some(ts_start) = ts_start {
-        url += &format!("&ts_start={}", ts_start.to_rfc3339());
-    }
-    if let Some(ts_end) = ts_end {
-        url += &format!("&ts_end={}", ts_end.to_rfc3339());
-    }
-    let resp = funs.web_client().get::<TardisResp<TardisPage<ScheduleTaskLogFindResp>>>(&url, headers).await?;
-    if resp.code != 200 {
-        return Err(funs.err().conflict("find_job", "find", &resp.body.map(|x| x.msg).unwrap_or_default(), ""));
-    }
-    let Some(body) = resp.body else {
+    let resp = SpiLogClient::find(
+        LogItemFindReq {
+            tag: "schedule_task".to_string(),
+            keys: Some(vec![job_code.into()]),
+            page_number,
+            page_size: page_size * 2,
+            ts_start,
+            ts_end,
+            ..Default::default()
+        },
+        funs,
+        ctx,
+    )
+    .await?;
+    let Some(page) = resp else {
         return Err(funs.err().conflict("find_job", "find", "task response missing body", ""));
-    };
-    let Some(page) = body.data else {
-        return Err(funs.err().conflict("find_job", "find", &body.msg, ""));
     };
     let mut records = vec![];
     let mut log_iter = page.records.into_iter();
@@ -415,29 +368,27 @@ impl OwnedScheduleTaskServ {
             self.delete(&job_config.code).await?;
         }
         let callback_url = job_config.callback_url.clone();
-        let log_url = config.log_url.clone();
         let code = job_config.code.to_string();
-        let lock_key = OwnedScheduleTaskServ::gen_distributed_lock_key(&code, config);
-        let distributed_lock_expire_sec = config.distributed_lock_expire_sec;
         let ctx = TardisContext {
             own_paths: "".to_string(),
             ak: "".to_string(),
-            owner: config.spi_app_id.clone(),
+            owner: "".to_string(),
             roles: vec![],
             groups: vec![],
             ..Default::default()
         };
         let headers = [("Tardis-Context".to_string(), TardisFuns::crypto.base64.encode(TardisFuns::json.obj_to_string(&ctx)?))];
-
+        let lock_key = OwnedScheduleTaskServ::gen_distributed_lock_key(&code, config);
+        let distributed_lock_expire_sec = config.distributed_lock_expire_sec;
         let enable_time = job_config.enable_time;
         let disable_time = job_config.disable_time;
         // startup cron scheduler
         let job = Job::new_async(job_config.cron.as_str(), move |_uuid, _scheduler| {
             let callback_url = callback_url.clone();
-            let log_url = log_url.clone();
             let code = code.clone();
-            let headers = headers.clone();
             let lock_key = lock_key.clone();
+            let ctx = ctx.clone();
+            let headers = headers.clone();
             if let Some(enable_time) = enable_time {
                 if enable_time > Utc::now() {
                     return Box::pin(async move {
@@ -454,6 +405,7 @@ impl OwnedScheduleTaskServ {
             }
             Box::pin(async move {
                 let cache_client = TardisFuns::cache();
+                let funs = TardisFuns::inst_with_db_conn(DOMAIN_CODE.to_string(), None);
                 // about set and setnx, see:
                 // 1. https://redis.io/commands/set/
                 // 2. https://redis.io/commands/setnx/
@@ -467,19 +419,21 @@ impl OwnedScheduleTaskServ {
                         };
                         trace!("executing schedule task {code}");
                         // 1. write log exec start
-                        let Ok(_) = TardisFuns::web_client()
-                            .post_obj_to_str(
-                                &format!("{log_url}/ci/item"),
-                                &HashMap::from([
-                                    ("tag", "schedule_task"),
-                                    ("content", format!("schedule task {} exec start", code).as_str()),
-                                    ("key", &code),
-                                    ("op", "exec-start"),
-                                    ("ts", &Utc::now().to_rfc3339()),
-                                ]),
-                                headers.clone(),
-                            )
-                            .await
+                        let Ok(_) = SpiLogClient::add(
+                            "schedule_task",
+                            format!("schedule task {} exec start", code).as_str(),
+                            None,
+                            None,
+                            Some(code.to_string()),
+                            Some("exec-start".to_string()),
+                            Some(tardis::chrono::Utc::now().to_rfc3339()),
+                            Some(Utc::now().to_rfc3339()),
+                            None,
+                            None,
+                            &funs,
+                            &ctx,
+                        )
+                        .await
                         else {
                             return;
                         };
@@ -488,19 +442,21 @@ impl OwnedScheduleTaskServ {
                             return;
                         };
                         // 3. write log exec end
-                        let Ok(_) = TardisFuns::web_client()
-                            .post_obj_to_str(
-                                &format!("{log_url}/ci/item"),
-                                &HashMap::from([
-                                    ("tag", "schedule_task"),
-                                    ("content", task_msg.body.unwrap_or_default().as_str()),
-                                    ("key", &code),
-                                    ("op", "exec-end"),
-                                    ("ts", &Utc::now().to_rfc3339()),
-                                ]),
-                                headers,
-                            )
-                            .await
+                        let Ok(_) = SpiLogClient::add(
+                            "schedule_task",
+                            task_msg.body.unwrap_or_default().as_str(),
+                            None,
+                            None,
+                            Some(code.to_string()),
+                            Some("exec-end".to_string()),
+                            Some(tardis::chrono::Utc::now().to_rfc3339()),
+                            Some(Utc::now().to_rfc3339()),
+                            None,
+                            None,
+                            &funs,
+                            &ctx,
+                        )
+                        .await
                         else {
                             return;
                         };

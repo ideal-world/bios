@@ -1,3 +1,4 @@
+use bios_sdk_invoke::clients::spi_kv_client::KvItemDetailResp;
 use serde::{Deserialize, Serialize};
 use tardis::{
     basic::{error::TardisError, field::TrimString},
@@ -64,6 +65,24 @@ impl TryFrom<KvItemSummaryResp> for KvScheduleJobItemDetailResp {
     type Error = TardisError;
 
     fn try_from(resp: KvItemSummaryResp) -> Result<Self, Self::Error> {
+        let Some(s) = &resp.value.as_str() else {
+            return Err(TardisError::internal_error("value are expected to be a string", "schedule-409-bad-schedule-job"));
+        };
+        let req: ScheduleJobAddOrModifyReq =
+            tardis::serde_json::from_str(s).map_err(|e| TardisError::internal_error(&format!("can't parse schedule job json body: {e}"), "schedule-409-bad-schedule-job"))?;
+        Ok(Self {
+            key: resp.key.trim_start_matches(KV_KEY_CODE).to_string(),
+            value: req,
+            info: resp.info,
+            create_time: resp.create_time,
+            update_time: resp.update_time,
+        })
+    }
+}
+impl TryFrom<KvItemDetailResp> for KvScheduleJobItemDetailResp {
+    type Error = TardisError;
+
+    fn try_from(resp: KvItemDetailResp) -> Result<Self, Self::Error> {
         let Some(s) = &resp.value.as_str() else {
             return Err(TardisError::internal_error("value are expected to be a string", "schedule-409-bad-schedule-job"));
         };

@@ -15,9 +15,11 @@ use crate::serv::schedule_job_serv;
 pub struct ScheduleCiJobApi;
 
 /// Interface Console schedule API
+/// 接口控制台调度API
 #[poem_openapi::OpenApi(prefix_path = "/ci/schedule", tag = "bios_basic::ApiTag::Interface")]
 impl ScheduleCiJobApi {
     /// Add or modify schedule job Api
+    /// 添加或修改调度任务
     #[oai(path = "/jobs", method = "put")]
     async fn add_or_modify(&self, add_or_modify_req: Json<ScheduleJobAddOrModifyReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         let funs = request.tardis_fun_inst();
@@ -26,6 +28,7 @@ impl ScheduleCiJobApi {
     }
 
     /// Delete schedule job Api
+    /// 删除调度任务
     #[oai(path = "/jobs/:code", method = "delete")]
     async fn delete(&self, code: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         let funs = request.tardis_fun_inst();
@@ -34,12 +37,13 @@ impl ScheduleCiJobApi {
     }
 
     /// find schedule job Api page
+    /// 查询调度任务分页
     #[oai(path = "/jobs", method = "get")]
     async fn find_job(
         &self,
         code: Query<Option<String>>,
         page_number: Query<u32>,
-        page_size: Query<u32>,
+        page_size: Query<u16>,
         ctx: TardisContextExtractor,
         request: &Request,
     ) -> TardisApiResult<TardisPage<ScheduleJobInfoResp>> {
@@ -49,6 +53,7 @@ impl ScheduleCiJobApi {
     }
 
     /// find schedule task Api page
+    /// 查询调度任务分页
     #[oai(path = "/task", method = "get")]
     async fn find_task(
         &self,
@@ -56,7 +61,7 @@ impl ScheduleCiJobApi {
         ts_start: Query<Option<chrono::DateTime<Utc>>>,
         ts_end: Query<Option<chrono::DateTime<Utc>>>,
         page_number: Query<u32>,
-        page_size: Query<u32>,
+        page_size: Query<u16>,
         ctx: TardisContextExtractor,
         request: &Request,
     ) -> TardisApiResult<TardisPage<ScheduleTaskInfoResp>> {
@@ -66,6 +71,7 @@ impl ScheduleCiJobApi {
     }
 
     /// get job test
+    /// 测试接口
     #[oai(path = "/test/exec/:msg", method = "get")]
     async fn test_exec(&self, msg: Path<String>, _ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<String> {
         for (k, v) in request.headers() {
