@@ -1221,7 +1221,7 @@ impl RbumItemAttrServ {
                     ctx,
                 )
                 .await?;
-                let result = if in_secret_table_attr.dyn_default_value.is_empty() {
+                let result = if !in_secret_table_attr.dyn_default_value.is_empty() {
                     if RbumKindAttrServ::url_match(&in_secret_table_attr.dyn_default_value).unwrap() {
                         let url = RbumKindAttrServ::url_replace(&in_secret_table_attr.dyn_default_value, add_req.values.clone()).unwrap();
                         if RbumKindAttrServ::url_match(&url).unwrap() {
