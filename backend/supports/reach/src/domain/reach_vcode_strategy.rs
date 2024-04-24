@@ -7,23 +7,26 @@ use tardis::db::sea_orm;
 
 use tardis::db::sea_orm::sea_query::{ColumnDef, IndexCreateStatement, Table, TableCreateStatement};
 use tardis::db::sea_orm::*;
-
-#[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]
+use tardis::{TardisCreateEntity, TardisEmptyBehavior, TardisEmptyRelation};
+#[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel, TardisCreateEntity, TardisEmptyBehavior, TardisEmptyRelation)]
 #[sea_orm(table_name = "reach_vcode_strategy")]
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
+    #[tardis_entity(custom_type = "string")]
     pub id: Nanoid,
     /// 所有者路径
-    #[sea_orm(column_type = "String(Some(255))")]
+    #[fill_ctx(fill = "own_paths")]
+    #[tardis_entity(custom_type = "string", custom_len = "255")]
     pub own_paths: String,
     /// 所有者
-    #[sea_orm(column_type = "String(Some(255))")]
+    #[fill_ctx]
+    #[tardis_entity(custom_type = "string", custom_len = "255")]
     pub owner: String,
     /// 创建时间
-    #[sea_orm(column_type = "Timestamp")]
+    #[sea_orm(extra = "DEFAULT CURRENT_TIMESTAMP")]
     pub create_time: DateTime<Utc>,
     /// 更新时间
-    #[sea_orm(column_type = "Timestamp")]
+    #[sea_orm(extra = "DEFAULT CURRENT_TIMESTAMP")]
     pub update_time: DateTime<Utc>,
     /// 最大错误次数
     #[sea_orm(column_type = "Integer")]
@@ -36,7 +39,7 @@ pub struct Model {
     pub length: i32,
     /// TODO: 使用场景?
     /// 关联触达集合ID
-    #[sea_orm(column_type = "String(Some(255))")]
+    #[tardis_entity(custom_type = "string", custom_len = "255")]
     pub rel_reach_set_id: String,
     /// 资源作用级别
     #[sea_orm(column_name = "scope_level")]
@@ -78,46 +81,3 @@ impl From<&ReachVCodeStrategyModifyReq> for ActiveModel {
         model
     }
 }
-impl ActiveModelBehavior for ActiveModel {}
-impl TardisActiveModel for ActiveModel {
-    fn fill_ctx(&mut self, ctx: &TardisContext, is_insert: bool) {
-        if is_insert {
-            self.owner = Set(ctx.owner.to_string());
-            self.own_paths = Set(ctx.own_paths.to_string());
-        }
-    }
-    fn create_table_statement(db: DbBackend) -> TableCreateStatement {
-        let mut builder = Table::create();
-        builder
-            .table(Entity.table_ref())
-            .if_not_exists()
-            .col(ColumnDef::new(Column::Id).not_null().string().primary_key())
-            .col(ColumnDef::new(Column::OwnPaths).not_null().string())
-            .col(ColumnDef::new(Column::Owner).not_null().string())
-            .col(ColumnDef::new(Column::MaxErrorTimes).not_null().integer().default(1))
-            .col(ColumnDef::new(Column::ExpireSec).not_null().integer().default(30))
-            .col(ColumnDef::new(Column::Length).not_null().integer().default(0))
-            .col(ColumnDef::new(Column::RelReachSetId).not_null().string_len(255))
-            .col(ColumnDef::new(Column::ScopeLevel).small_integer());
-
-        if db == DatabaseBackend::Postgres {
-            builder
-                .col(ColumnDef::new(Column::CreateTime).extra("DEFAULT CURRENT_TIMESTAMP".to_string()).timestamp_with_time_zone())
-                .col(ColumnDef::new(Column::UpdateTime).extra("DEFAULT CURRENT_TIMESTAMP".to_string()).timestamp_with_time_zone());
-        } else {
-            builder
-                .engine("InnoDB")
-                .character_set("utf8mb4")
-                .collate("utf8mb4_0900_as_cs")
-                .col(ColumnDef::new(Column::CreateTime).extra("DEFAULT CURRENT_TIMESTAMP".to_string()).timestamp())
-                .col(ColumnDef::new(Column::UpdateTime).extra("DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP".to_string()).timestamp());
-        }
-        builder
-    }
-
-    fn create_index_statement() -> Vec<IndexCreateStatement> {
-        vec![]
-    }
-}
-#[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
-pub enum Relation {}

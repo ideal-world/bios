@@ -19,6 +19,7 @@ use tardis::TardisFunsInst;
 use crate::rbum::domain::rbum_item;
 use crate::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
 use crate::rbum::helper::{rbum_event_helper, rbum_scope_helper};
+#[cfg(feature = "with-mq")]
 use crate::rbum::rbum_config::RbumConfigApi;
 
 lazy_static! {

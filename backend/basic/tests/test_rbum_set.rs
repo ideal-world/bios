@@ -74,7 +74,7 @@ async fn test_rbum_set(context: &TardisContext) -> TardisResult<()> {
     assert_eq!(rbums.page_number, 1);
     assert_eq!(rbums.page_size, 10);
     assert_eq!(rbums.total_size, 1);
-    assert_eq!(rbums.records.get(0).unwrap().name, "测试集合");
+    assert_eq!(rbums.records.first().unwrap().name, "测试集合");
 
     info!("【test_rbum_set】 : Test Delete : RbumSetServ::delete_rbum");
     RbumSetServ::delete_rbum(&id, &funs, context).await?;
@@ -993,8 +993,8 @@ async fn test_rbum_set_item(context: &TardisContext) -> TardisResult<()> {
     let set_paths = RbumSetItemServ::find_set_paths(&item_account_a1_id, &set_id, &funs, context).await?;
     assert_eq!(set_paths.len(), 1);
     assert_eq!(set_paths[0].len(), 2);
-    assert!(set_paths.get(0).unwrap().iter().any(|i| i.name == "l2"));
-    assert!(set_paths.get(0).unwrap().iter().any(|i| i.name == "l1"));
+    assert!(set_paths.first().unwrap().iter().any(|i| i.name == "l2"));
+    assert!(set_paths.first().unwrap().iter().any(|i| i.name == "l1"));
 
     info!("【test_rbum_set_item】 : Test Modify : RbumSetItemServ::modify_rbum");
     RbumSetItemServ::modify_rbum(&id, &mut RbumSetItemModifyReq { sort: 10 }, &funs, context).await?;

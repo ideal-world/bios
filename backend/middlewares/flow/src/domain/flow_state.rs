@@ -75,6 +75,6 @@ pub struct Model {
     #[index]
     pub tags: String,
 
-    #[fill_ctx(own_paths)]
+    #[fill_ctx(fill = "own_paths")]
     pub own_paths: String,
 }

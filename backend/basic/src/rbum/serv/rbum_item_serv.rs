@@ -23,6 +23,7 @@ use crate::rbum::dto::rbum_item_dto::{RbumItemAddReq, RbumItemDetailResp, RbumIt
 use crate::rbum::dto::rbum_kind_attr_dto::RbumKindAttrSummaryResp;
 use crate::rbum::dto::rbum_rel_dto::{RbumRelAddReq, RbumRelFindReq};
 use crate::rbum::helper::rbum_event_helper;
+#[cfg(feature = "with-mq")]
 use crate::rbum::rbum_config::RbumConfigApi;
 use crate::rbum::rbum_enumeration::{RbumCertRelKind, RbumRelFromKind, RbumScopeLevelKind};
 use crate::rbum::serv::rbum_cert_serv::{RbumCertConfServ, RbumCertServ};
@@ -1202,7 +1203,7 @@ impl RbumItemAttrServ {
                     )
                     .await?;
                 } else {
-                    Self::modify_rbum(exist_item_attr_ids.get(0).expect("ignore"), &mut RbumItemAttrModifyReq { value: column_val }, funs, ctx).await?;
+                    Self::modify_rbum(exist_item_attr_ids.first().expect("ignore"), &mut RbumItemAttrModifyReq { value: column_val }, funs, ctx).await?;
                 }
             }
         }
@@ -1221,7 +1222,7 @@ impl RbumItemAttrServ {
                     ctx,
                 )
                 .await?;
-            // TODO check logic
+                // TODO check logic
                 let result = if in_secret_table_attr.dyn_default_value.is_empty() {
                     if RbumKindAttrServ::url_match(&in_secret_table_attr.dyn_default_value).unwrap() {
                         let url = RbumKindAttrServ::url_replace(&in_secret_table_attr.dyn_default_value, add_req.values.clone()).unwrap();
@@ -1252,7 +1253,7 @@ impl RbumItemAttrServ {
                     )
                     .await?;
                 } else {
-                    Self::modify_rbum(secret_item_attr_ids.get(0).expect("ignore"), &mut RbumItemAttrModifyReq { value: result }, funs, ctx).await?;
+                    Self::modify_rbum(secret_item_attr_ids.first().expect("ignore"), &mut RbumItemAttrModifyReq { value: result }, funs, ctx).await?;
                 }
             }
         }

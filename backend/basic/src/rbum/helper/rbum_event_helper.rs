@@ -4,9 +4,11 @@ use std::future::Future;
 use serde::{Deserialize, Serialize};
 use tardis::basic::dto::TardisContext;
 use tardis::basic::result::TardisResult;
+#[cfg(feature = "with-mq")]
 use tardis::chrono::Utc;
 use tardis::{TardisFuns, TardisFunsInst};
 
+#[cfg(feature = "with-mq")]
 use crate::rbum::rbum_config::RbumConfigApi;
 
 const NOTIFY_EVENT_IN_CTX_FLAG: &str = "notify";
@@ -18,6 +20,7 @@ pub async fn try_notifies(event_messages: Vec<NotifyEventMessage>, funs: &Tardis
     Ok(())
 }
 
+#[allow(unused)]
 pub async fn try_notify<'a>(table_name: &str, operate: &str, record_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<bool> {
     #[cfg(feature = "with-mq")]
     {
@@ -44,6 +47,7 @@ pub async fn try_notify<'a>(table_name: &str, operate: &str, record_id: &str, fu
     }
 }
 
+#[allow(unused)]
 pub async fn receive<F, T>(fun: F, funs: &TardisFunsInst) -> TardisResult<bool>
 where
     F: Fn((HashMap<String, String>, String)) -> T + Send + Sync + 'static,

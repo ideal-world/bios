@@ -220,7 +220,7 @@ fn do_unsafe_fill_ctx<F>(request: &tardis::web::poem::Request, f: F, funs: &Tard
 where
     F: FnOnce(TardisContext, &mut TardisContext),
 {
-    let bios_ctx = if let Some(bios_ctx) = request.header(&funs.rbum_head_key_bios_ctx()).or_else(|| request.header(&funs.rbum_head_key_bios_ctx().to_lowercase())) {
+    let bios_ctx = if let Some(bios_ctx) = request.header(&funs.rbum_head_key_bios_ctx()).or_else(|| request.header(funs.rbum_head_key_bios_ctx().to_lowercase())) {
         TardisFuns::json.str_to_obj::<TardisContext>(&TardisFuns::crypto.base64.decode_to_string(bios_ctx)?)?
     } else if ctx.owner.is_empty() && ctx.ak.is_empty() && ctx.own_paths.is_empty() && ctx.roles.is_empty() && ctx.groups.is_empty() {
         return Err(TardisError::unauthorized(
