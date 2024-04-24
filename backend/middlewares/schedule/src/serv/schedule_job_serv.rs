@@ -119,7 +119,7 @@ pub(crate) async fn delete(code: &str, funs: &TardisFunsInst, ctx: &TardisContex
     Ok(())
 }
 
-pub(crate) async fn find_job(code: Option<String>, page_number: u32, page_size: u32, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<TardisPage<ScheduleJobInfoResp>> {
+pub(crate) async fn find_job(code: Option<String>, page_number: u32, page_size: u16, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<TardisPage<ScheduleJobInfoResp>> {
     let kv_url = BaseSpiClient::module_url(InvokeModuleKind::Kv, funs).await?;
     let headers = BaseSpiClient::headers(None, funs, ctx).await?;
     let resp = funs
