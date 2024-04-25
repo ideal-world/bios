@@ -14,7 +14,6 @@ members = [
   "backend/spi/spi-plugin",
   "backend/spi/spi-stats",
   "backend/spi/spi-reldb",
-  "backend/gateways/test",
   "backend/gateways/spacegate-plugins",
   "backend/middlewares/*",
   "backend/supports/iam",
