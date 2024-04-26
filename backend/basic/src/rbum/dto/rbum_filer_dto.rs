@@ -111,62 +111,209 @@ pub struct RbumRelExtFilterReq {
     pub rel_rbum_rel_id: Option<String>,
 }
 
+/// Resource set filter
+///
+/// 资源集过滤器
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
 #[cfg_attr(feature = "default", derive(poem_openapi::Object))]
 pub struct RbumSetFilterReq {
+    /// Basic filter
+    ///
+    /// 基础过滤
     pub basic: RbumBasicFilterReq,
+    /// Resource relation filter
+    ///
+    /// 资源关联过滤
     pub rel: Option<RbumItemRelFilterReq>,
+    /// Include resource kind id
+    ///
+    /// 包含的资源类型id
     pub kind: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, Default)]
-#[cfg_attr(feature = "default", derive(poem_openapi::Object))]
-pub struct RbumSetTreeFilterReq {
-    pub fetch_cate_item: bool,
-    pub hide_item_with_disabled: bool,
-    pub hide_cate_with_empty_item: bool,
-    pub sys_codes: Option<Vec<String>>,
-    pub sys_code_query_kind: Option<RbumSetCateLevelQueryKind>,
-    pub sys_code_query_depth: Option<i16>,
-    pub cate_exts: Option<Vec<String>>,
-    pub rel_rbum_item_ids: Option<Vec<String>>,
-    pub rel_rbum_item_kind_ids: Option<Vec<String>>,
-    pub rel_rbum_item_domain_ids: Option<Vec<String>>,
-}
-
+/// Resource set category(node) filter
+///
+/// 资源集分类（节点）过滤器
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
 #[cfg_attr(feature = "default", derive(poem_openapi::Object))]
 pub struct RbumSetCateFilterReq {
+    /// Basic filter
+    ///
+    /// 基础过滤
     pub basic: RbumBasicFilterReq,
+    /// Resource relation filter
+    ///
+    /// 资源关联过滤
     pub rel: Option<RbumItemRelFilterReq>,
+    /// Include resource set id
+    ///
+    /// 包含的资源集id
     pub rel_rbum_set_id: Option<String>,
+    /// Include resource category (node) sys_codes
+    ///
+    /// 包含的资源分类（节点）sys_code 列表
     pub sys_codes: Option<Vec<String>>,
+    /// Resource set category(node) query kind
+    ///
+    /// 资源集分类（节点）的查询类型
+    ///
+    /// Only valid when ``sys_codes`` exists.
+    ///
+    /// 仅当 ``sys_codes`` 存在时有效。
     pub sys_code_query_kind: Option<RbumSetCateLevelQueryKind>,
+    /// Resource set category(node) query depth
+    ///
+    /// 资源集分类（节点）查询深度
+    ///
+    /// Only valid when ``sys_codes`` exists and ``sys_code_query_kind = CurrentAndSub or Sub``.
+    ///
+    /// 仅当 ``sys_codes`` 存在并且 ``sys_code_query_kind = CurrentAndSub or Sub`` 时有效。
     pub sys_code_query_depth: Option<i16>,
+    /// Include resource category (node) extension information
+    ///
+    /// 包含的资源分类（节点）扩展信息
     pub cate_exts: Option<Vec<String>>,
 }
 
+/// Resource set category(node) mount resource item filter
+///
+/// 资源集分类（节点）挂载资源项的过滤器
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
 #[cfg_attr(feature = "default", derive(poem_openapi::Object))]
 pub struct RbumSetItemFilterReq {
+    /// Basic filter
+    ///
+    /// 基础过滤
     pub basic: RbumBasicFilterReq,
+    /// Include resource set id
+    ///
+    /// 包含的资源集id
     pub rel_rbum_set_id: Option<String>,
+    /// Resource set category(node) query kind
+    ///
+    /// 资源集分类（节点）的查询类型
+    ///
+    /// Only valid when ``sys_codes`` exists.
+    ///
+    /// 仅当 ``sys_codes`` 存在时有效。
     pub sys_code_query_kind: Option<RbumSetCateLevelQueryKind>,
+    /// Resource set category(node) query depth
+    ///
+    /// 资源集分类（节点）查询深度
+    ///
+    /// Only valid when ``sys_codes`` exists and ``sys_code_query_kind = CurrentAndSub or Sub``.
+    ///
+    /// 仅当 ``sys_codes`` 存在并且 ``sys_code_query_kind = CurrentAndSub or Sub`` 时有效。
     pub sys_code_query_depth: Option<i16>,
-    /// rbum_set_cate.sys_code
+    /// Include resource category (node) sys_codes
+    ///
+    /// 包含的资源分类（节点）sys_code 列表
     pub rel_rbum_set_cate_sys_codes: Option<Vec<String>>,
-    /// rbum_set_item.rbum_set_item
-    pub rel_rbum_set_item_cate_code: Option<String>,
-    /// default is inner join
-    pub table_rbum_set_cate_is_left: Option<bool>,
+    /// Include resource category (node) ids
+    ///
+    /// 包含的资源分类（节点）id 列表
     pub rel_rbum_set_cate_ids: Option<Vec<String>>,
-    pub rel_rbum_item_disabled: Option<bool>,
+    /// Include resource category (node) code
+    ///
+    /// 包含的资源分类（节点）code
+    pub rel_rbum_set_item_cate_code: Option<String>,
+    /// Whether the associated resource item can not exist
+    ///
+    /// 关联的资源项是否可以不存在
+    ///
+    /// Default is ``true``
+    ///
+    /// 默认为 ``true``
+    pub rel_rbum_item_can_not_exist: Option<bool>,
+    /// Include the associated resource item ids
+    ///
+    /// 包含关联的资源项id列表
     pub rel_rbum_item_ids: Option<Vec<String>>,
+    /// Include the associated resource item scope level
+    ///
+    /// 包含关联的资源项作用域级别
     pub rel_rbum_item_scope_level: Option<RbumScopeLevelKind>,
+    /// Include the associated resource item kind ids
+    ///
+    /// 包含关联的资源项类型id列表
     pub rel_rbum_item_kind_ids: Option<Vec<String>>,
+    /// Include the associated resource item domain ids
+    ///
+    /// 包含关联的资源项域id列表
+    pub rel_rbum_item_domain_ids: Option<Vec<String>>,
+    /// Whether the associated resource item is disabled
+    ///
+    /// 关联的资源项是否已禁用
+    pub rel_rbum_item_disabled: Option<bool>,
+}
+
+/// Resource set filter
+///
+/// 资源集过滤器
+#[derive(Serialize, Deserialize, Debug, Clone, Default)]
+#[cfg_attr(feature = "default", derive(poem_openapi::Object))]
+pub struct RbumSetTreeFilterReq {
+    /// Whether to get the associated resource items
+    ///
+    /// 是否获取关联的资源项
+    pub fetch_cate_item: bool,
+    /// Whether to not get the associated resource items and the disabled ones
+    ///
+    /// 是否不获取包含关联的且已禁用的资源项
+    ///
+    /// Only valid when ``fetch_cate_item = true``.
+    ///
+    /// 仅当 ``fetch_cate_item = true`` 时有效。
+    pub hide_item_with_disabled: bool,
+    /// Whether to filter out nodes that do not have associated resource items
+    ///
+    /// 返回的树是否过滤掉没有关联资源项的节点
+    ///
+    /// Only valid when ``fetch_cate_item = true``.
+    ///
+    /// 仅当 ``fetch_cate_item = true`` 时有效。
+    pub hide_cate_with_empty_item: bool,
+    /// Include resource category (node) sys_codes
+    ///
+    /// 包含的资源分类（节点）sys_code 列表
+    pub sys_codes: Option<Vec<String>>,
+    /// Resource set category(node) query kind
+    ///
+    /// 资源集分类（节点）的查询类型
+    ///
+    /// Only valid when ``sys_codes`` exists.
+    ///
+    /// 仅当 ``sys_codes`` 存在时有效。
+    pub sys_code_query_kind: Option<RbumSetCateLevelQueryKind>,
+    /// Resource set category(node) query depth
+    ///
+    /// 资源集分类（节点）查询深度
+    ///
+    /// Only valid when ``sys_codes`` exists and ``sys_code_query_kind = CurrentAndSub or Sub``.
+    ///
+    /// 仅当 ``sys_codes`` 存在并且 ``sys_code_query_kind = CurrentAndSub or Sub`` 时有效。
+    pub sys_code_query_depth: Option<i16>,
+    /// Include resource category (node) extension information
+    ///
+    /// 包含的资源分类（节点）扩展信息
+    pub cate_exts: Option<Vec<String>>,
+    /// Include the associated resource item ids
+    ///
+    /// 包含关联的资源项id列表
+    pub rel_rbum_item_ids: Option<Vec<String>>,
+    /// Include the associated resource item kind ids
+    ///
+    /// 包含关联的资源项类型id列表
+    pub rel_rbum_item_kind_ids: Option<Vec<String>>,
+    /// Include the associated resource item domain ids
+    ///
+    /// 包含关联的资源项域id列表
     pub rel_rbum_item_domain_ids: Option<Vec<String>>,
 }
 
+/// Resource relation filter
+///
+/// 资源关联过滤器
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
 #[cfg_attr(feature = "default", derive(poem_openapi::Object))]
 #[serde(default)]

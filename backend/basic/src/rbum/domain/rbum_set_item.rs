@@ -3,23 +3,42 @@ use tardis::db::sea_orm;
 use tardis::db::sea_orm::prelude::*;
 use tardis::db::sea_orm::*;
 use tardis::{TardisCreateEntity, TardisEmptyBehavior, TardisEmptyRelation};
-/// Resource item model
+/// Association model for resource set categories(nodes) and resource items
 ///
-/// Used to bind resources to resource set categories
+/// 资源集分类（节点）挂载资源项的关联模型
+///
+/// Used to bind resource items to resource set categories(nodes).
+///
+/// 用于将资源项绑定到资源集分类（节点）。
 #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel, TardisCreateEntity, TardisEmptyBehavior, TardisEmptyRelation)]
 #[sea_orm(table_name = "rbum_set_cate_item")]
 pub struct Model {
+    /// Association id
+    ///
+    /// 关联id
     #[sea_orm(primary_key, auto_increment = false)]
     pub id: String,
-
+    /// Association sort
+    ///
+    /// 关联排序
     pub sort: i64,
     /// Associated [resource set](crate::rbum::domain::rbum_set::Model) id
+    ///
+    /// 关联[资源集](crate::rbum::domain::rbum_set::Model) id
     #[index(index_id = "unique_index", unique)]
     pub rel_rbum_set_id: String,
     /// Associated [resource set category](crate::rbum::domain::rbum_set_cate::Model) sys_code
+    ///
+    /// 关联[资源集分类](crate::rbum::domain::rbum_set_cate::Model) sys_code
+    ///
+    /// Avoid recursive tree queries by associating with ``sys_code``.
+    ///
+    /// 通过 ``sys_code`` 关联以避免递归树查询。
     #[index(index_id = "unique_index")]
     pub rel_rbum_set_cate_code: String,
     /// Associated [resource](crate::rbum::domain::rbum_item::Model) id
+    ///
+    /// 关联[资源](crate::rbum::domain::rbum_item::Model) id
     #[index(repeat(index_id = "unique_index"))]
     pub rel_rbum_item_id: String,
 

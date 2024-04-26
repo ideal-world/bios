@@ -3,30 +3,74 @@ use std::fmt::Debug;
 use std::sync::Mutex;
 
 use lazy_static::lazy_static;
-use serde::{Deserialize, Serialize};
+use serde::{de, Deserialize, Serialize};
 use tardis::basic::error::TardisError;
 use tardis::basic::result::TardisResult;
 use tardis::TardisFunsInst;
 
+/// Rbum configuration
+///
+/// Rbum 配置
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(default)]
 pub struct RbumConfig {
+    /// The length of the system code of the set category(node)
+    ///
+    /// 集合分类（节点）系统代码的长度
     pub set_cate_sys_code_node_len: usize,
+    /// The topic of the message queue when the entity is deleted
+    ///
+    /// 实体删除时的消息队列主题
+    ///
+    /// TODO
+    #[deprecated]
     pub mq_topic_entity_deleted: String,
+    /// The topic of the message queue when the event occurs
+    ///
+    /// 事件发生时的消息队列主题
     pub mq_topic_event: String,
+    #[deprecated]
     pub mq_header_name_operator: String,
+    #[deprecated]
     pub task_mq_topic_event: String,
-    // own_paths:ak -> vcode
-    pub cache_key_cert_vcode_info_: String,
-    // set_code -> set_id
+    /// Cache key prefix for resource set code
+    ///
+    /// 资源集合代码的缓存键前缀
+    ///
+    /// Format: ``set_code -> set_id``
     pub cache_key_set_code_: String,
+    /// Cache key expiration time for resource set code
+    ///
+    /// 资源集合代码的缓存键过期时间
     pub cache_key_set_code_expire_sec: usize,
-    // rbum_item_id -> nil expired
+    /// Cache key prefix for certificate verification code information
+    ///
+    /// 凭证验证码信息的缓存键前缀
+    ///
+    /// Format: ``own_paths:ak -> vcode``
+    pub cache_key_cert_vcode_info_: String,
+    /// Cache key prefix for locked certificate
+    ///
+    /// 锁定凭证的缓存键前缀
+    ///
+    /// Format: ``rbum_item_id -> nil``
     pub cache_key_cert_locked_: String,
-    // rbum_item_id -> error times by cycle
+    /// Cache key prefix for certificate error times
+    ///
+    /// 凭证错误次数的缓存键前缀
+    ///
+    /// Format: ``rbum_item_id -> error times by cycle``
     pub cache_key_cert_err_times_: String,
-    // table name (supports prefix matching) -> <c><u><d>
+    /// Event domain configuration
+    ///
+    /// 事件域配置
+    ///
+    /// Format: ``table name (supports prefix matching) -> <c><u><d>``
+    /// TODO
     pub event_domains: HashMap<String, String>,
+    /// Header name of BIOS context request
+    ///
+    /// BIOS 上下文的请求头名称
     pub head_key_bios_ctx: String,
 }
 
@@ -76,6 +120,7 @@ impl RbumConfigManager {
     }
 }
 
+// TODO simplify
 pub trait RbumConfigApi {
     fn rbum_conf_set_cate_sys_code_node_len(&self) -> usize;
     fn rbum_conf_mq_topic_entity_deleted(&self) -> String;

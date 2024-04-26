@@ -86,7 +86,6 @@ pub struct ReachMessageSummaryResp {
     pub owner: String,
     pub create_time: DateTime<Utc>,
     pub update_time: DateTime<Utc>,
-    // pub rbum_safe_summary_resp: RbumSafeSummaryResp,
     #[oai(validator(max_length = "2000"))]
     pub from_res: String,
     pub rel_reach_channel: ReachChannelKind,
