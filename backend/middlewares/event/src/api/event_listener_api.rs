@@ -10,8 +10,12 @@ use crate::serv::event_listener_serv;
 pub struct EventListenerApi;
 
 /// Event Listener API
+/// 事件监听器API
 #[poem_openapi::OpenApi(prefix_path = "/listener")]
 impl EventListenerApi {
+
+    /// Register event listener
+    /// 注册事件监听器
     #[oai(path = "/", method = "post")]
     async fn register(&self, listener: Json<EventListenerRegisterReq>) -> TardisApiResult<EventListenerRegisterResp> {
         let funs = get_tardis_inst();
@@ -19,6 +23,8 @@ impl EventListenerApi {
         TardisResp::ok(resp)
     }
 
+    /// Remove event listener
+    /// 移除事件监听器
     #[oai(path = "/:listener_code", method = "delete")]
     async fn remove(&self, listener_code: Path<String>, token: Query<String>) -> TardisApiResult<Void> {
         let funs = get_tardis_inst();
