@@ -13,9 +13,11 @@ use crate::serv::event_topic_serv::EventDefServ;
 pub struct EventTopicApi;
 
 /// Event Topic API
+/// 事件主题API
 #[poem_openapi::OpenApi(prefix_path = "/topic")]
 impl EventTopicApi {
     /// Add Event Definition
+    /// 添加事件主题
     #[oai(path = "/", method = "post")]
     async fn add(&self, mut add_or_modify_req: Json<EventTopicAddOrModifyReq>, ctx: TardisContextExtractor) -> TardisApiResult<String> {
         let funs = get_tardis_inst();
@@ -24,6 +26,7 @@ impl EventTopicApi {
     }
 
     /// Modify Event Definition
+    /// 修改事件主题
     #[oai(path = "/:id", method = "put")]
     async fn modify(&self, id: Path<String>, mut add_or_modify_req: Json<EventTopicAddOrModifyReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let funs = get_tardis_inst();
@@ -32,6 +35,7 @@ impl EventTopicApi {
     }
 
     /// Delete Event Definition
+    /// 删除事件主题
     #[oai(path = "/:id", method = "delete")]
     async fn delete(&self, id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let funs = get_tardis_inst();
@@ -40,6 +44,7 @@ impl EventTopicApi {
     }
 
     /// Find Event Definitions
+    /// 查找事件主题
     #[oai(path = "/", method = "get")]
     async fn paginate(
         &self,
