@@ -52,7 +52,7 @@
 //!     1. The binding relationship between each SPI backend implementation and the corresponding tenant or application must be bound before use,
 //!        and the binding relationship is stored in ``rbum_rel``, with the tag as ``spi_ident``
 //! 1. No request authentication is done.
-//!    The SPI service trusts the authentication information carried by the request (``owner`` in ``TardisContext``, corresponding to the Id of the tenant or application).
+//!    The SPI service trusts the authentication information carried by the request (``ak`` in ``TardisContext``, corresponding to the Id of the tenant or application).
 //!    The authentication logic will be implemented uniformly by the gateway
 //! 1. Delayed initialization.
 //!    The backend implementation of each SPI service is initialized (client generated) only when called for the first time to reduce resource consumption at startup.
@@ -65,7 +65,7 @@
 //!     1. 每个SPI的后端实现可以有多个，对应于``rbum_item及扩展的spi_bs``。如可以为spi-search的``spi-bs-pg``指定多个连接
 //!     1. 每个SPI后端实现的连接信息存储于``rbum_cert``
 //!     1. 每个SPI后端实现的要绑定给对应的租户或应用后才能使用，绑定关系存储于``rbum_rel``，tag为``spi_ident``
-//! 1. 不做请求认证。SPI服务信任请求带来的认证信息（``TardisContext``中的``owner``，对应于租户或应用的Id）。认证的逻辑将由网关统一实现
+//! 1. 不做请求认证。SPI服务信任请求带来的认证信息（``TardisContext``中的``ak``，对应于租户或应用的Id）。认证的逻辑将由网关统一实现
 //! 1. 延时初始化。SPI服务的每个后端实现只有在第一次调用时才会初始化（生成client），以减少启动时的资源消耗。详见 [`crate::spi::spi_funs::SpiBsInst`]                                
 #[cfg(feature = "default")]
 pub mod api;
