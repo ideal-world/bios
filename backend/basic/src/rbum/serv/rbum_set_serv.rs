@@ -243,7 +243,6 @@ impl RbumSetServ {
                     // if the permission is not released, all app will not query the data.
                     own_paths: Some("".to_string()),
                     with_sub_own_paths: true,
-                    desc_by_sort: Some(true),
                     ..Default::default()
                 },
                 rel_rbum_set_id: Some(rbum_set_id.to_string()),

@@ -96,7 +96,6 @@ impl IamAttrServ {
             &RbumKindAttrFilterReq {
                 basic: RbumBasicFilterReq {
                     rbum_kind_id: Some(funs.iam_basic_kind_account_id()),
-                    desc_by_sort: Some(true),
                     ..Default::default()
                 },
                 ..Default::default()

@@ -75,8 +75,6 @@ pub struct RbumBasicFilterReq {
     ///
     /// 资源域id
     pub rbum_domain_id: Option<String>,
-    /// TODO
-    pub desc_by_sort: Option<bool>,
 }
 
 /// Resource certificate configuration filter

@@ -694,9 +694,6 @@ impl RbumCrudQueryPackage for SelectStatement {
         } else {
             self.and_where(Expr::col((Alias::new(table_name), OWN_PATHS_FIELD.clone())).eq(filter_own_paths));
         }
-        if let Some(desc_by_sort) = filter.desc_by_sort {
-            self.order_by((Alias::new(table_name), SORT_FIELD.clone()), if desc_by_sort { Order::Desc } else { Order::Asc });
-        }
         self
     }
 

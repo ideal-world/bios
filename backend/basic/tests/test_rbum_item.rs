@@ -524,7 +524,6 @@ async fn test_rbum_item_attr_has_main_table(context: &TardisContext) -> TardisRe
         &RbumKindAttrFilterReq {
             basic: RbumBasicFilterReq {
                 rbum_kind_id: Some(kind_id.to_string()),
-                desc_by_sort: Some(true),
                 ..Default::default()
             },
             ..Default::default()
