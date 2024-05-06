@@ -12,7 +12,12 @@ publish.workspace = true
 
 [dependencies]
 serde.workspace = true
-tardis = { workspace = true, features = ["web-server", "conf-remote", "cluster", "k8s"] }
+tardis = { workspace = true, features = [
+  "web-server",
+  "conf-remote",
+  "cluster",
+  "k8s",
+] }
 bios-iam = { path = "../../supports/iam", features = ["spi_search", "spi_kv"] }
 bios-auth = { path = "../../supports/auth", features = ["web-server"] }
 bios-reach = { path = "../../supports/reach" }
@@ -33,4 +38,9 @@ bios-mw-flow = { path = "../../middlewares/flow" }
 bios-mw-event = { path = "../../middlewares/event" }
 
 # clients
-bios-client-hwsms = { path = "../../../frontend/clients/hwsms", features = ["reach"] }
+bios-client-hwsms = { path = "../../../frontend/clients/hwsms", features = [
+  "reach",
+] }
+
+# see [issue](https://github.com/kube-rs/kube/issues/1486)
+json-patch = { version = "=1.2.0" }
