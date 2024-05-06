@@ -53,7 +53,7 @@ impl IamCpAppApi {
                 },
                 rel: Some(RbumItemRelFilterReq {
                     rel_by_from: false,
-                    is_left: false,
+                    optional: false,
                     tag: Some(IamRelKind::IamAccountApp.to_string()),
                     from_rbum_kind: Some(RbumRelFromKind::Item),
                     rel_item_id: Some(ctx.0.owner.clone()),

@@ -424,6 +424,14 @@ impl RbumCrudOperation<rbum_set_cate::ActiveModel, RbumSetCateAddReq, RbumSetCat
         rbum_set_cate::Entity.table_name()
     }
 
+    async fn before_add_rbum(add_req: &mut RbumSetCateAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        Self::check_scope(&add_req.rel_rbum_set_id, RbumSetServ::get_table_name(), funs, ctx).await?;
+        if let Some(rbum_parent_cate_id) = &add_req.rbum_parent_cate_id {
+            Self::check_scope(rbum_parent_cate_id, RbumSetCateServ::get_table_name(), funs, ctx).await?;
+        }
+        Ok(())
+    }
+
     async fn package_add(add_req: &RbumSetCateAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<rbum_set_cate::ActiveModel> {
         let sys_code = if let Some(rbum_parent_cate_id) = &add_req.rbum_parent_cate_id {
             Self::package_sys_code(&add_req.rel_rbum_set_id, Some(rbum_parent_cate_id), funs, ctx).await?
@@ -442,14 +450,6 @@ impl RbumCrudOperation<rbum_set_cate::ActiveModel, RbumSetCateAddReq, RbumSetCat
             scope_level: Set(add_req.scope_level.as_ref().unwrap_or(&RbumScopeLevelKind::Private).to_int()),
             ..Default::default()
         })
-    }
-
-    async fn before_add_rbum(add_req: &mut RbumSetCateAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        Self::check_scope(&add_req.rel_rbum_set_id, RbumSetServ::get_table_name(), funs, ctx).await?;
-        if let Some(rbum_parent_cate_id) = &add_req.rbum_parent_cate_id {
-            Self::check_scope(rbum_parent_cate_id, RbumSetCateServ::get_table_name(), funs, ctx).await?;
-        }
-        Ok(())
     }
 
     async fn package_modify(id: &str, modify_req: &RbumSetCateModifyReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<rbum_set_cate::ActiveModel> {
@@ -509,7 +509,7 @@ impl RbumCrudOperation<rbum_set_cate::ActiveModel, RbumSetCateAddReq, RbumSetCat
                 "409-rbum-*-delete-conflict",
             ));
         }
-        let set = Self::peek_rbum(
+        let set_cate = Self::peek_rbum(
             id,
             &RbumSetCateFilterReq {
                 basic: RbumBasicFilterReq {
@@ -529,8 +529,8 @@ impl RbumCrudOperation<rbum_set_cate::ActiveModel, RbumSetCateAddReq, RbumSetCat
                     .column(rbum_set_cate::Column::Id)
                     .from(rbum_set_cate::Entity)
                     .and_where(Expr::col(rbum_set_cate::Column::Id).ne(id))
-                    .and_where(Expr::col(rbum_set_cate::Column::RelRbumSetId).eq(set.rel_rbum_set_id.as_str()))
-                    .and_where(Expr::col(rbum_set_cate::Column::SysCode).like(format!("{}%", set.sys_code.as_str()).as_str())),
+                    .and_where(Expr::col(rbum_set_cate::Column::RelRbumSetId).eq(set_cate.rel_rbum_set_id.as_str()))
+                    .and_where(Expr::col(rbum_set_cate::Column::SysCode).like(format!("{}%", set_cate.sys_code.as_str()).as_str())),
             )
             .await?
             > 0
