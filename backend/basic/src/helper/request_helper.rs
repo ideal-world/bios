@@ -38,14 +38,12 @@ pub async fn try_set_real_ip_from_req_to_ctx(request: &Request, ctx: &TardisCont
 /// assert_eq!(parse_forwarded_ip("Forwarded: proto=http; for=192.168.0"), None);
 /// ```
 pub fn parse_forwarded_ip(forwarded_value: &str) -> Option<IpAddr> {
-    forwarded_value
-        .strip_prefix("Forwarded: ")
-        .and_then(|forwarded_value| {
-            forwarded_value
-                .split(';')
-                .find(|part| part.trim().starts_with("for="))
-                .and_then(|part| part.trim()[4..].split(',').next().and_then(|ip_str| IpAddr::from_str(ip_str).ok()))
-        })
+    forwarded_value.strip_prefix("Forwarded: ").and_then(|forwarded_value| {
+        forwarded_value
+            .split(';')
+            .find(|part| part.trim().starts_with("for="))
+            .and_then(|part| part.trim()[4..].split(',').next().and_then(|ip_str| IpAddr::from_str(ip_str).ok()))
+    })
 }
 
 /// Try to get real ip from request

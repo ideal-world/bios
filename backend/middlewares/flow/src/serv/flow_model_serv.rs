@@ -45,7 +45,6 @@ use crate::{
 use async_trait::async_trait;
 
 use super::{
-    flow_external_serv::FlowExternalServ,
     flow_inst_serv::FlowInstServ,
     flow_rel_serv::{FlowRelKind, FlowRelServ},
 };
@@ -881,19 +880,18 @@ impl FlowModelServ {
             .ok_or_else(|| funs.err().internal_error("flow_model_serv", "add_custom_model", "default model is not exist", "404-flow-model-not-found"))?
         };
 
-        let mut transitions = parent_model.transitions();
         // add model
         let model_id = Self::add_item(
             &mut FlowModelAddReq {
-                name: parent_model.name.into(),
-                icon: Some(parent_model.icon),
-                info: Some(parent_model.info),
-                init_state_id: parent_model.init_state_id,
+                name: parent_model.name.clone().into(),
+                icon: Some(parent_model.icon.clone()),
+                info: Some(parent_model.info.clone()),
+                init_state_id: parent_model.init_state_id.clone(),
                 template: rel_template_id.is_some(),
                 rel_template_id,
                 transitions: None,
                 rel_model_id: Some(parent_model.id.clone()),
-                tag: Some(parent_model.tag),
+                tag: Some(parent_model.tag.clone()),
                 scope_level: None,
                 disabled: Some(parent_model.disabled),
             },
@@ -924,13 +922,7 @@ impl FlowModelServ {
             .await?;
         }
         // add transition
-        // sub role_id instead of role_id
-        for transition in &mut transitions {
-            for role_id in &mut transition.guard_by_spec_role_ids {
-                *role_id = FlowExternalServ::do_find_embed_subrole_id(role_id, ctx, funs).await.unwrap_or(role_id.to_string());
-            }
-        }
-        Self::add_transitions(&model_id, &transitions.into_iter().map(|trans| trans.into()).collect_vec(), funs, ctx).await?;
+        Self::add_transitions(&model_id, &parent_model.transitions().into_iter().map(|trans| trans.into()).collect_vec(), funs, ctx).await?;
 
         Ok(model_id)
     }
