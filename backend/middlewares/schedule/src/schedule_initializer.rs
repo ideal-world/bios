@@ -1,5 +1,6 @@
 use crate::{api::ci::schedule_ci_job_api, schedule_config::ScheduleConfig, schedule_constants::DOMAIN_CODE, serv::schedule_job_serv};
 use bios_basic::spi::{dto::spi_bs_dto::SpiBsCertResp, spi_constants, spi_funs::SpiBsInst, spi_initializer};
+use bios_sdk_invoke::invoke_initializer;
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
     log::error,
@@ -9,6 +10,7 @@ use tardis::{
 
 pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
     let mut funs = TardisFuns::inst_with_db_conn(DOMAIN_CODE.to_string(), None);
+    invoke_initializer::init(funs.module_code(), funs.conf::<ScheduleConfig>().invoke.clone())?;
     funs.begin().await?;
     let ctx = spi_initializer::init(DOMAIN_CODE, &funs).await?;
     schedule_job_serv::init(&funs, &ctx).await?;
