@@ -35,7 +35,7 @@ pub async fn test(flow_client: &mut TestHttpClient) -> TardisResult<()> {
 
     let mut ctx = TardisContext {
         own_paths: "".to_string(),
-        ak: "".to_string(),
+        ak: "u001".to_string(),
         roles: vec![],
         groups: vec![],
         owner: "u001".to_string(),
@@ -663,7 +663,7 @@ pub async fn test(flow_client: &mut TestHttpClient) -> TardisResult<()> {
         flow_client.put(&format!("/cc/inst/{}/transition/next", req_inst_id1), &FlowInstFindNextTransitionsReq { vars: None }).await;
     assert_eq!(next_transitions.len(), 2);
     ctx.owner = "a001".to_string();
-    ctx.roles = vec!["t:admin".to_string()];
+    ctx.roles = vec!["admin:t".to_string()];
     flow_client.set_auth(&ctx)?;
     let next_transitions: Vec<FlowInstFindNextTransitionResp> =
         flow_client.put(&format!("/cc/inst/{}/transition/next", req_inst_id1), &FlowInstFindNextTransitionsReq { vars: None }).await;

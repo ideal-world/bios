@@ -963,9 +963,9 @@ impl FlowInstServ {
                         ctx.roles
                             .clone()
                             .into_iter()
-                            .map(|ctx_role_id| ctx_role_id.split(':').last().unwrap_or(&ctx_role_id).to_string())
+                            .map(|ctx_role_id| ctx_role_id.split(':').collect_vec().first().unwrap_or(&"").to_string())
                             .collect_vec()
-                            .contains(&role_id.split(':').last().unwrap_or(role_id).to_string())
+                            .contains(&role_id.split(':').collect_vec().first().unwrap_or(&"").to_string())
                     })
                 {
                     return true;
