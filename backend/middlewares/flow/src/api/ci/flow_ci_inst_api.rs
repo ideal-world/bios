@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use bios_basic::rbum::helper::rbum_scope_helper::check_without_owner_and_unsafe_fill_ctx;
 use tardis::log::debug;
+use tardis::serde_json::Value;
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem::web::Path;
 use tardis::web::poem::Request;
@@ -128,7 +129,8 @@ impl FlowCiInstApi {
         let mut funs = flow_constants::get_tardis_inst();
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         funs.begin().await?;
-        FlowInstServ::modify_assigned(&flow_inst_id.0, &modify_req.0.current_assigned, &funs, &ctx.0).await?;
+        let vars = HashMap::from([("assigned_to".to_string(), Value::String(modify_req.0.current_assigned))]);
+        FlowInstServ::modify_current_vars(&flow_inst_id.0, &vars, &funs, &ctx.0).await?;
         funs.commit().await?;
         TardisResp::ok(Void {})
     }

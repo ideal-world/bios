@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use serde_json::Value;
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem::Request;
 use tardis::web::poem_openapi;
@@ -20,7 +21,8 @@ pub struct FlowCcInstApi;
 /// Flow instance process API
 #[poem_openapi::OpenApi(prefix_path = "/cc/inst")]
 impl FlowCcInstApi {
-    /// Start Instance / 启动实例
+    /// Start Instance(Return Instance ID)
+    /// 启动实例(返回实例ID)
     #[oai(path = "/", method = "post")]
     async fn start(&self, add_req: Json<FlowInstStartReq>, ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<String> {
         let mut funs = flow_constants::get_tardis_inst();
@@ -30,7 +32,8 @@ impl FlowCcInstApi {
         TardisResp::ok(result)
     }
 
-    /// Abort Instance / 中止实例
+    /// Abort Instance
+    /// 终止实例
     #[oai(path = "/:flow_inst_id", method = "put")]
     async fn abort(&self, flow_inst_id: Path<String>, abort_req: Json<FlowInstAbortReq>, ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<Void> {
         let mut funs = flow_constants::get_tardis_inst();
@@ -40,7 +43,8 @@ impl FlowCcInstApi {
         TardisResp::ok(Void {})
     }
 
-    /// Get Instance By Instance Id / 获取实例信息
+    /// Get Instance By Instance Id
+    /// 获取实例信息
     #[oai(path = "/:flow_inst_id", method = "get")]
     async fn get(&self, flow_inst_id: Path<String>, ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<FlowInstDetailResp> {
         let funs = flow_constants::get_tardis_inst();
@@ -48,7 +52,8 @@ impl FlowCcInstApi {
         TardisResp::ok(result)
     }
 
-    /// Find Instances / 获取实例列表
+    /// Find Instances
+    /// 获取实例列表
     #[oai(path = "/", method = "get")]
     async fn paginate(
         &self,
@@ -66,7 +71,8 @@ impl FlowCcInstApi {
         TardisResp::ok(result)
     }
 
-    /// Find Next Transitions / 获取下一个流转状态列表
+    /// Find Next Transitions
+    /// 获取下一个流转状态列表
     #[oai(path = "/:flow_inst_id/transition/next", method = "put")]
     async fn find_next_transitions(
         &self,
@@ -80,7 +86,8 @@ impl FlowCcInstApi {
         TardisResp::ok(result)
     }
 
-    /// Find the state and transfer information of the specified model in batch / 批量获取指定模型的状态及流转信息
+    /// Find the state and transfer information of the specified model in batch
+    /// 批量获取指定模型的状态及流转信息
     #[oai(path = "/batch/state_transitions", method = "put")]
     async fn find_state_and_next_transitions(
         &self,
@@ -93,7 +100,8 @@ impl FlowCcInstApi {
         TardisResp::ok(result)
     }
 
-    /// Transfer State By State Id / 流转
+    /// Transfer State By Transaction Id
+    /// 通过动作ID流转状态
     #[oai(path = "/:flow_inst_id/transition/transfer", method = "put")]
     async fn transfer(
         &self,
@@ -111,7 +119,8 @@ impl FlowCcInstApi {
         TardisResp::ok(result)
     }
 
-    /// Batch transfer State By State Id / 批量流转
+    /// Batch transfer State By Transaction Id
+    /// 批量流转
     #[oai(path = "/batch/:flow_inst_ids/transition/transfer", method = "put")]
     async fn batch_transfer(
         &self,
@@ -138,7 +147,8 @@ impl FlowCcInstApi {
         TardisResp::ok(result)
     }
 
-    /// Modify Assigned / 同步执行人信息
+    /// Modify Assigned[Deprecated]
+    /// 同步执行人信息[已废弃]
     #[oai(path = "/:flow_inst_id/transition/modify_assigned", method = "post")]
     async fn modify_assigned(
         &self,
@@ -149,12 +159,14 @@ impl FlowCcInstApi {
     ) -> TardisApiResult<Void> {
         let mut funs = flow_constants::get_tardis_inst();
         funs.begin().await?;
-        FlowInstServ::modify_assigned(&flow_inst_id.0, &modify_req.0.current_assigned, &funs, &ctx.0).await?;
+        let vars = HashMap::from([("current_assigned".to_string(), Value::String(modify_req.0.current_assigned))]);
+        FlowInstServ::modify_current_vars(&flow_inst_id.0, &vars, &funs, &ctx.0).await?;
         funs.commit().await?;
         TardisResp::ok(Void {})
     }
 
-    /// Modify list of variables / 同步当前变量列表
+    /// Modify list of variables
+    /// 同步当前变量列表
     #[oai(path = "/:flow_inst_id/modify_current_vars", method = "patch")]
     async fn modify_current_vars(
         &self,

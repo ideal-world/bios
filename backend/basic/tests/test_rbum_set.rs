@@ -991,10 +991,11 @@ async fn test_rbum_set_item(context: &TardisContext) -> TardisResult<()> {
 
     info!("【test_rbum_set_item】 : Test Find Set Paths : RbumSetItemServ::get_rbum");
     let set_paths = RbumSetItemServ::find_set_paths(&item_account_a1_id, &set_id, &funs, context).await?;
-    assert_eq!(set_paths.len(), 1);
-    assert_eq!(set_paths[0].len(), 2);
-    assert!(set_paths.first().unwrap().iter().any(|i| i.name == "l2"));
-    assert!(set_paths.first().unwrap().iter().any(|i| i.name == "l1"));
+    assert_eq!(set_paths.len(), 2);
+    assert_eq!(set_paths[0].len(), 0);
+    assert_eq!(set_paths[1].len(), 2);
+    assert!(set_paths[2].iter().any(|i| i.name == "l2"));
+    assert!(set_paths[2].iter().any(|i| i.name == "l1"));
 
     info!("【test_rbum_set_item】 : Test Modify : RbumSetItemServ::modify_rbum");
     RbumSetItemServ::modify_rbum(&id, &mut RbumSetItemModifyReq { sort: 10 }, &funs, context).await?;

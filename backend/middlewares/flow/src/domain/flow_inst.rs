@@ -59,7 +59,4 @@ pub struct Model {
     pub transitions: Option<Vec<FlowInstTransitionInfo>>,
 
     pub own_paths: String,
-
-    /// Current Assigned  / 指定执行人
-    pub current_assigned: Option<String>,
 }

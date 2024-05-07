@@ -305,7 +305,7 @@ pub struct RbumSetFilterReq {
     /// Resource relation filter
     ///
     /// 资源关联过滤
-    pub rel: Option<RbumItemRelFilterReq>,
+    pub rel: Option<RbumItemRelSimpleFilterReq>,
     /// Resource kind id
     ///
     /// 资源类型id
@@ -325,7 +325,7 @@ pub struct RbumSetCateFilterReq {
     /// Resource relation filter
     ///
     /// 资源关联过滤
-    pub rel: Option<RbumItemRelFilterReq>,
+    pub rel: Option<RbumItemRelSimpleFilterReq>,
     /// Resource set id
     ///
     /// 资源集id
@@ -507,6 +507,31 @@ pub struct RbumSetItemRelFilterReq {
     ///
     /// 关联的对象id集合
     pub rel_item_ids: Option<Vec<String>>,
+}
+
+/// Simple Resource item relation filter
+///
+/// 简单的资源项关联过滤器
+#[derive(Serialize, Deserialize, Debug, Clone, Default)]
+#[cfg_attr(feature = "default", derive(poem_openapi::Object))]
+#[serde(default)]
+pub struct RbumItemRelSimpleFilterReq {
+    /// Whether the related party is a ``from`` party
+    ///
+    /// 关联方是否是 ``from`` 方
+    pub rel_by_from: bool,
+    /// Associated tag
+    ///
+    /// 关联的标签
+    pub tag: Option<String>,
+    /// ``from`` party kind
+    ///
+    /// ``from`` 方的类型
+    pub from_rbum_kind: Option<RbumRelFromKind>,
+    /// Associated object id
+    ///
+    /// 关联的对象id
+    pub rel_item_id: Option<String>,
 }
 
 /// Resource item relation filter

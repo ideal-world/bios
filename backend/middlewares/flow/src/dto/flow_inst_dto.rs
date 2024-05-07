@@ -64,7 +64,6 @@ pub struct FlowInstSummaryResp {
     pub rel_business_obj_id: String,
 
     pub current_state_id: String,
-    pub current_assigned: Option<String>,
 
     pub create_ctx: FlowOperationContext,
     pub create_time: DateTime<Utc>,
@@ -90,7 +89,6 @@ pub struct FlowInstDetailResp {
     pub current_state_kind: Option<FlowSysStateKind>,
     pub current_state_ext: Option<String>,
 
-    pub current_assigned: Option<String>,
     pub current_vars: Option<HashMap<String, Value>>,
 
     pub create_vars: Option<HashMap<String, Value>>,
@@ -141,7 +139,7 @@ pub struct FlowInstFindNextTransitionsReq {
     pub vars: Option<HashMap<String, Value>>,
 }
 
-#[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object, Clone)]
 pub struct FlowInstFindNextTransitionResp {
     pub next_flow_transition_id: String,
     pub next_flow_transition_name: String,
