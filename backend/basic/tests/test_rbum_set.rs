@@ -1050,11 +1050,6 @@ async fn test_rbum_set_item(context: &TardisContext) -> TardisResult<()> {
     assert_eq!(set_infos.ext.as_ref().unwrap().items[&set_infos.main[1].id].len(), 2);
     assert!(set_infos.ext.as_ref().unwrap().items[&set_infos.main[1].id].iter().any(|r| r.rel_rbum_item_name == "用户1"));
 
-    funs.commit().await?;
-
-    let mut funs = TardisFuns::inst_with_db_conn("".to_string(), None);
-    funs.begin().await?;
-    
     info!("【test_rbum_set_item】 : Test Get : RbumSetServ::get_tree_all hide_cate_with_empty_item");
     let set_infos = RbumSetServ::get_tree(
         &set_id,
