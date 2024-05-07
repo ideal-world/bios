@@ -191,13 +191,13 @@ pub struct RbumSetDetailResp {
 #[derive(Serialize, Deserialize, Debug)]
 #[cfg_attr(feature = "default", derive(poem_openapi::Object, sea_orm::FromQueryResult))]
 pub struct RbumSetPathResp {
-    /// Resource set id
+    /// Node id
     ///
-    /// 资源集id
+    /// 节点id
     pub id: String,
-    /// Resource set name
+    /// Node name
     ///
-    /// 资源集名称
+    /// 节点名称
     pub name: String,
 
     pub own_paths: String,

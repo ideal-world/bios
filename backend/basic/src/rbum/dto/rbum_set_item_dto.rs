@@ -67,15 +67,15 @@ pub struct RbumSetItemSummaryResp {
     /// Associated [resource set category(node)](crate::rbum::dto::rbum_set_cate_dto::RbumSetCateDetailResp) id
     ///
     /// 关联[资源集分类（节点）](crate::rbum::dto::rbum_set_cate_dto::RbumSetCateDetailResp) id
-    pub rel_rbum_set_cate_id: String,
+    pub rel_rbum_set_cate_id: Option<String>,
     /// Associated [resource set category(node)](crate::rbum::dto::rbum_set_cate_dto::RbumSetCateDetailResp) sys_code
     ///
     /// 关联[资源集分类（节点）](crate::rbum::dto::rbum_set_cate_dto::RbumSetCateDetailResp) sys_code
-    pub rel_rbum_set_cate_sys_code: String,
+    pub rel_rbum_set_cate_sys_code: Option<String>,
     /// Associated [resource set category(node)](crate::rbum::dto::rbum_set_cate_dto::RbumSetCateDetailResp) name
     ///
     /// 关联[资源集分类（节点）](crate::rbum::dto::rbum_set_cate_dto::RbumSetCateDetailResp) name
-    pub rel_rbum_set_cate_name: String,
+    pub rel_rbum_set_cate_name: Option<String>,
     /// Associated [resource item](crate::rbum::dto::rbum_item_dto::RbumItemDetailResp) id
     ///
     /// 关联[资源项](crate::rbum::dto::rbum_item_dto::RbumItemDetailResp) id

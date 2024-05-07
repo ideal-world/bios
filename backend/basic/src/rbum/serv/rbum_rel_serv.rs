@@ -796,7 +796,7 @@ impl RbumRelServ {
             )
             .await?
             .into_iter()
-            .map(|i| i.rel_rbum_set_cate_id)
+            .map(|i| i.rel_rbum_set_cate_id.unwrap_or_default())
             .collect::<Vec<String>>()
         } else if check_req.from_rbum_kind == RbumRelFromKind::SetCate {
             vec![check_req.from_rbum_id.clone()]

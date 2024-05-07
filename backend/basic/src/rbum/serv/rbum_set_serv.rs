@@ -779,22 +779,6 @@ impl RbumCrudOperation<rbum_set_item::ActiveModel, RbumSetItemAddReq, RbumSetIte
         rbum_set_item::Entity.table_name()
     }
 
-    async fn package_add(add_req: &RbumSetItemAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<rbum_set_item::ActiveModel> {
-        let rel_sys_code = if add_req.rel_rbum_set_cate_id.is_empty() {
-            "".to_string()
-        } else {
-            RbumSetCateServ::get_sys_code(add_req.rel_rbum_set_cate_id.as_str(), funs, ctx).await?
-        };
-        Ok(rbum_set_item::ActiveModel {
-            id: Set(TardisFuns::field.nanoid()),
-            rel_rbum_set_id: Set(add_req.rel_rbum_set_id.to_string()),
-            rel_rbum_set_cate_code: Set(rel_sys_code),
-            rel_rbum_item_id: Set(add_req.rel_rbum_item_id.to_string()),
-            sort: Set(add_req.sort),
-            ..Default::default()
-        })
-    }
-
     async fn before_add_rbum(add_req: &mut RbumSetItemAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         Self::check_scope(&add_req.rel_rbum_set_id, RbumSetServ::get_table_name(), funs, ctx).await?;
         Self::check_scope(&add_req.rel_rbum_item_id, RbumItemServ::get_table_name(), funs, ctx).await?;
@@ -820,6 +804,22 @@ impl RbumCrudOperation<rbum_set_item::ActiveModel, RbumSetItemAddReq, RbumSetIte
             return Err(funs.err().conflict(&Self::get_obj_name(), "add", "item already exists", "409-rbum-set-item-exist"));
         }
         Ok(())
+    }
+
+    async fn package_add(add_req: &RbumSetItemAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<rbum_set_item::ActiveModel> {
+        let rel_sys_code = if add_req.rel_rbum_set_cate_id.is_empty() {
+            "".to_string()
+        } else {
+            RbumSetCateServ::get_sys_code(add_req.rel_rbum_set_cate_id.as_str(), funs, ctx).await?
+        };
+        Ok(rbum_set_item::ActiveModel {
+            id: Set(TardisFuns::field.nanoid()),
+            rel_rbum_set_id: Set(add_req.rel_rbum_set_id.to_string()),
+            rel_rbum_set_cate_code: Set(rel_sys_code),
+            rel_rbum_item_id: Set(add_req.rel_rbum_item_id.to_string()),
+            sort: Set(add_req.sort),
+            ..Default::default()
+        })
     }
 
     async fn package_modify(id: &str, modify_req: &RbumSetItemModifyReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<rbum_set_item::ActiveModel> {
@@ -982,9 +982,32 @@ impl RbumCrudOperation<rbum_set_item::ActiveModel, RbumSetItemAddReq, RbumSetIte
 }
 
 impl RbumSetItemServ {
+    /// Fetch all the paths of the resource item in the resource set
+    ///
+    /// 获取资源项在某一资源集上的所有路径
+    ///
+    /// Return format:
+    ///
+    /// * The first-level array is all the paths corresponding to the resource item (a resource item can hang multiple paths)
+    /// * The second-level data is each node (such as the path is l1/l2/l3, then the corresponding node is l1, l2, l3)
+    ///
+    /// * 第一层数组为资源项对应的所有路径（一个资源项可以挂多个路径）
+    /// * 第二层数据为每个节点（比如路径为 l1/l2/l3， 那么对应的节点为 l1, l2, l3）
+    ///
+    /// ```json
+    /// [
+    ///     [
+    ///         {
+    ///             "id": "Node Id",
+    ///             "name": "Node Name"
+    ///         }
+    ///     ]
+    /// ]
+    /// ```
     pub async fn find_set_paths(rbum_item_id: &str, rbum_set_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<Vec<RbumSetPathResp>>> {
         let rbum_set_cate_sys_codes: Vec<String> = Self::find_rbums(
             &RbumSetItemFilterReq {
+                rel_rbum_item_can_not_exist: Some(true),
                 rel_rbum_set_id: Some(rbum_set_id.to_string()),
                 rel_rbum_item_ids: Some(vec![rbum_item_id.to_string()]),
                 ..Default::default()
@@ -996,10 +1019,15 @@ impl RbumSetItemServ {
         )
         .await?
         .into_iter()
-        .map(|item| item.rel_rbum_set_cate_sys_code)
+        .map(|item| item.rel_rbum_set_cate_sys_code.unwrap_or_default())
         .collect();
         let mut result: Vec<Vec<RbumSetPathResp>> = Vec::with_capacity(rbum_set_cate_sys_codes.len());
         for rbum_set_cate_sys_code in rbum_set_cate_sys_codes {
+            if rbum_set_cate_sys_code.is_empty() {
+                // Mount on the root node and directly give an empty array
+                result.push(vec![]);
+                continue;
+            }
             let rbum_set_paths = RbumSetCateServ::find_rbums(
                 &RbumSetCateFilterReq {
                     rel_rbum_set_id: Some(rbum_set_id.to_string()),
@@ -1065,8 +1093,16 @@ impl RbumSetItemServ {
             ctx,
         )
         .await?;
-        let set_items_a = set_items.iter().filter(|item| item.rel_rbum_item_id == rbum_item_a_id).map(|item| item.rel_rbum_set_cate_sys_code.clone()).collect::<Vec<String>>();
-        let set_items_b = set_items.iter().filter(|item| item.rel_rbum_item_id == rbum_item_b_id).map(|item| item.rel_rbum_set_cate_sys_code.clone()).collect::<Vec<String>>();
+        let set_items_a = set_items
+            .iter()
+            .filter(|item| item.rel_rbum_item_id == rbum_item_a_id)
+            .map(|item| item.rel_rbum_set_cate_sys_code.clone().unwrap_or_default())
+            .collect::<Vec<String>>();
+        let set_items_b = set_items
+            .iter()
+            .filter(|item| item.rel_rbum_item_id == rbum_item_b_id)
+            .map(|item| item.rel_rbum_set_cate_sys_code.clone().unwrap_or_default())
+            .collect::<Vec<String>>();
 
         Ok(set_items_a.iter().any(|sys_code_a| {
             set_items_b.iter().any(|sys_code_b| {
