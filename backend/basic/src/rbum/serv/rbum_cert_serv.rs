@@ -73,8 +73,8 @@ impl RbumCrudOperation<rbum_cert_conf::ActiveModel, RbumCertConfAddReq, RbumCert
                 Query::select()
                     .column(rbum_cert_conf::Column::Id)
                     .from(rbum_cert_conf::Entity)
-                    .and_where(Expr::col(rbum_cert_conf::Column::Kind).eq(add_req.kind.as_str()))
-                    .and_where(Expr::col(rbum_cert_conf::Column::Supplier).eq(add_req.supplier.as_ref().unwrap_or(&TrimString("".to_string())).as_str()))
+                    .and_where(Expr::col(rbum_cert_conf::Column::Kind).eq(add_req.kind.to_string()))
+                    .and_where(Expr::col(rbum_cert_conf::Column::Supplier).eq(add_req.supplier.as_ref().unwrap_or(&TrimString::from("")).to_string()))
                     .and_where(Expr::col(rbum_cert_conf::Column::RelRbumDomainId).eq(add_req.rel_rbum_domain_id.as_str()))
                     .and_where(Expr::col(rbum_cert_conf::Column::RelRbumItemId).eq(add_req.rel_rbum_item_id.as_ref().unwrap_or(&"".to_string()).as_str())),
             )
@@ -415,7 +415,7 @@ impl RbumCrudOperation<rbum_cert::ActiveModel, RbumCertAddReq, RbumCertModifyReq
                         .column(rbum_cert::Column::Id)
                         .from(rbum_cert::Entity)
                         .and_where(Expr::col(rbum_cert::Column::RelRbumKind).eq(add_req.rel_rbum_kind.to_int()))
-                        .and_where(Expr::col(rbum_cert::Column::Ak).eq(add_req.ak.as_str()))
+                        .and_where(Expr::col(rbum_cert::Column::Ak).eq(add_req.ak.to_string()))
                         .and_where(Expr::col(rbum_cert::Column::RelRbumCertConfId).eq(add_req.rel_rbum_cert_conf_id.clone()))
                         .and_where(Expr::col(rbum_cert::Column::OwnPaths).like(format!("{}%", ctx.own_paths).as_str())),
                 )
@@ -520,7 +520,7 @@ impl RbumCrudOperation<rbum_cert::ActiveModel, RbumCertAddReq, RbumCertModifyReq
                 }
             }
             if let Some(vcode) = &add_req.vcode {
-                Self::add_vcode_to_cache(add_req.ak.as_str(), vcode.as_str(), rel_rbum_cert_conf_id, funs, &ctx).await?;
+                Self::add_vcode_to_cache(&add_req.ak, vcode, rel_rbum_cert_conf_id, funs, &ctx).await?;
             }
         }
         Ok(())
@@ -596,7 +596,7 @@ impl RbumCrudOperation<rbum_cert::ActiveModel, RbumCertAddReq, RbumCertModifyReq
                             Query::select()
                                 .column(rbum_cert::Column::Id)
                                 .from(rbum_cert::Entity)
-                                .and_where(Expr::col(rbum_cert::Column::Ak).eq(modify_req.ak.as_ref().expect("ignore").as_str()))
+                                .and_where(Expr::col(rbum_cert::Column::Ak).eq(modify_req.ak.as_ref().expect("ignore").to_string()))
                                 .and_where(Expr::col(rbum_cert::Column::RelRbumCertConfId).eq(rbum_cert_conf.id.clone()))
                                 .and_where(Expr::col(rbum_cert::Column::OwnPaths).like(format!("{}%", ctx.own_paths).as_str()))
                                 .and_where(Expr::col(rbum_cert::Column::Id).ne(id.to_string().as_str())),

@@ -65,7 +65,7 @@ impl RbumCrudOperation<rbum_item::ActiveModel, RbumItemAddReq, RbumItemKernelMod
                             rbum_kind::Entity,
                             Expr::col((rbum_kind::Entity, rbum_kind::Column::Id)).equals((rbum_item::Entity, rbum_item::Column::RelRbumKindId)),
                         )
-                        .and_where(Expr::col((rbum_item::Entity, rbum_item::Column::Code)).eq(code.as_str())),
+                        .and_where(Expr::col((rbum_item::Entity, rbum_item::Column::Code)).eq(code.to_string())),
                 )
                 .await?
                 > 0
@@ -114,7 +114,7 @@ impl RbumCrudOperation<rbum_item::ActiveModel, RbumItemAddReq, RbumItemKernelMod
                             rbum_kind::Entity,
                             Expr::col((rbum_kind::Entity, rbum_kind::Column::Id)).equals((rbum_item::Entity, rbum_item::Column::RelRbumKindId)),
                         )
-                        .and_where(Expr::col((rbum_item::Entity, rbum_item::Column::Code)).eq(code.as_str()))
+                        .and_where(Expr::col((rbum_item::Entity, rbum_item::Column::Code)).eq(code.to_string()))
                         .and_where(Expr::col((rbum_item::Entity, rbum_item::Column::Id)).ne(id)),
                 )
                 .await?
