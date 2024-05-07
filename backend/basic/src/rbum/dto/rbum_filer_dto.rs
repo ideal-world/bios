@@ -434,26 +434,6 @@ pub struct RbumSetItemFilterReq {
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
 #[cfg_attr(feature = "default", derive(poem_openapi::Object))]
 pub struct RbumSetTreeFilterReq {
-    /// Whether to get the associated resource items
-    ///
-    /// 是否获取关联的资源项
-    pub fetch_cate_item: bool,
-    /// Whether to not get the associated resource items and the disabled ones
-    ///
-    /// 是否不获取包含关联的且已禁用的资源项
-    ///
-    /// Only valid when ``fetch_cate_item = true``.
-    ///
-    /// 仅当 ``fetch_cate_item = true`` 时有效。
-    pub hide_item_with_disabled: bool,
-    /// Whether to filter out nodes that do not have associated resource items
-    ///
-    /// 返回的树是否过滤掉没有关联资源项的节点
-    ///
-    /// Only valid when ``fetch_cate_item = true``.
-    ///
-    /// 仅当 ``fetch_cate_item = true`` 时有效。
-    pub hide_cate_with_empty_item: bool,
     /// Resource category (node) sys_codes
     ///
     /// 资源分类（节点）sys_code 列表
@@ -478,17 +458,49 @@ pub struct RbumSetTreeFilterReq {
     ///
     /// 资源分类（节点）扩展信息
     pub cate_exts: Option<Vec<String>>,
+    /// Whether to get the associated resource items
+    ///
+    /// 是否获取关联的资源项
+    pub fetch_cate_item: bool,
+    /// Whether to not get the associated resource items and the disabled ones
+    ///
+    /// 是否不获取包含关联的且已禁用的资源项
+    ///
+    /// Only valid when ``fetch_cate_item = true``.
+    ///
+    /// 仅当 ``fetch_cate_item = true`` 时有效。
+    pub hide_item_with_disabled: bool,
+    /// Whether to filter out nodes that do not have associated resource items
+    ///
+    /// 返回的树是否过滤掉没有关联资源项的节点
+    ///
+    /// Only valid when ``fetch_cate_item = true``.
+    ///
+    /// 仅当 ``fetch_cate_item = true`` 时有效。
+    pub hide_cate_with_empty_item: bool,
     /// Associated resource item ids
     ///
     /// 关联的资源项id列表
+    ///
+    /// Only valid when ``fetch_cate_item = true``.
+    ///
+    /// 仅当 ``fetch_cate_item = true`` 时有效。
     pub rel_rbum_item_ids: Option<Vec<String>>,
     /// Associated resource item kind ids
     ///
     /// 关联的资源项类型id列表
+    ///
+    /// Only valid when ``fetch_cate_item = true``.
+    ///
+    /// 仅当 ``fetch_cate_item = true`` 时有效。
     pub rel_rbum_item_kind_ids: Option<Vec<String>>,
     /// Associated resource item domain ids
     ///
     /// 关联的资源项域id列表
+    ///
+    /// Only valid when ``fetch_cate_item = true``.
+    ///
+    /// 仅当 ``fetch_cate_item = true`` 时有效。
     pub rel_rbum_item_domain_ids: Option<Vec<String>>,
 }
 

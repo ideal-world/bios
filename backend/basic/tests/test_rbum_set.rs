@@ -872,7 +872,23 @@ async fn test_rbum_set_item(context: &TardisContext) -> TardisResult<()> {
             icon: None,
             sort: None,
             ext: None,
-            rbum_parent_cate_id: Some(set_cate_l1_id.to_string()),
+            rbum_parent_cate_id: None,
+            scope_level: Some(RbumScopeLevelKind::L2),
+            rel_rbum_set_id: set_id.to_string(),
+        },
+        &funs,
+        context,
+    )
+    .await?;
+
+    let _set_cate_l3_id = RbumSetCateServ::add_rbum(
+        &mut RbumSetCateAddReq {
+            bus_code: TrimString("".to_string()),
+            name: TrimString("l3".to_string()),
+            icon: None,
+            sort: None,
+            ext: None,
+            rbum_parent_cate_id: None,
             scope_level: Some(RbumScopeLevelKind::L2),
             rel_rbum_set_id: set_id.to_string(),
         },
@@ -995,6 +1011,7 @@ async fn test_rbum_set_item(context: &TardisContext) -> TardisResult<()> {
     //          item_account_a1_id
     // >set_cate_l2_id
     //          item_account_a3_id
+    // >set_cate_l3_id
 
     info!("【test_rbum_set_item】 : Test Get : RbumSetItemServ::check_a_is_parent_of_b");
     assert!(RbumSetItemServ::check_a_is_parent_of_b(&context.owner, &item_account_a1_id, &set_id, &funs, context,).await?);
@@ -1029,6 +1046,27 @@ async fn test_rbum_set_item(context: &TardisContext) -> TardisResult<()> {
         context,
     )
     .await?;
+    assert_eq!(set_infos.main.len(), 4);
+    assert_eq!(set_infos.ext.as_ref().unwrap().items[&set_infos.main[1].id].len(), 2);
+    assert!(set_infos.ext.as_ref().unwrap().items[&set_infos.main[1].id].iter().any(|r| r.rel_rbum_item_name == "用户1"));
+
+    funs.commit().await?;
+
+    let mut funs = TardisFuns::inst_with_db_conn("".to_string(), None);
+    funs.begin().await?;
+    
+    info!("【test_rbum_set_item】 : Test Get : RbumSetServ::get_tree_all hide_cate_with_empty_item");
+    let set_infos = RbumSetServ::get_tree(
+        &set_id,
+        &RbumSetTreeFilterReq {
+            fetch_cate_item: true,
+            hide_cate_with_empty_item: true,
+            ..Default::default()
+        },
+        &funs,
+        context,
+    )
+    .await?;
     assert_eq!(set_infos.main.len(), 3);
     assert_eq!(set_infos.ext.as_ref().unwrap().items[&set_infos.main[1].id].len(), 2);
     assert!(set_infos.ext.as_ref().unwrap().items[&set_infos.main[1].id].iter().any(|r| r.rel_rbum_item_name == "用户1"));
@@ -1049,7 +1087,6 @@ async fn test_rbum_set_item(context: &TardisContext) -> TardisResult<()> {
     assert_eq!(rbum.sort, 0);
     assert_eq!(rbum.rel_rbum_set_cate_name.unwrap_or_default(), "l1-1");
     assert_eq!(rbum.rel_rbum_item_name, "用户1");
-
 
     info!("【test_rbum_set_item】 : Test Modify : RbumSetItemServ::modify_rbum");
     RbumSetItemServ::modify_rbum(&id, &mut RbumSetItemModifyReq { sort: 10 }, &funs, context).await?;

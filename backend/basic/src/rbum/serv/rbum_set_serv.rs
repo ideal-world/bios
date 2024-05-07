@@ -178,6 +178,9 @@ impl RbumCrudOperation<rbum_set::ActiveModel, RbumSetAddReq, RbumSetModifyReq, R
 }
 
 impl RbumSetServ {
+    /// Fetch resource tree
+    ///
+    /// 获取资源树
     pub async fn get_tree(rbum_set_id: &str, filter: &RbumSetTreeFilterReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<RbumSetTreeResp> {
         Self::check_scope(rbum_set_id, RbumSetServ::get_table_name(), funs, ctx).await?;
         // check filter.filter_cate_sys_codes scope
@@ -190,7 +193,7 @@ impl RbumSetServ {
             }
         }
         let set_cate_sys_code_node_len = funs.rbum_conf_set_cate_sys_code_node_len();
-        let mut resp = RbumSetCateServ::find_rbums(
+        let mut rbum_set_cates = RbumSetCateServ::find_rbums(
             &RbumSetCateFilterReq {
                 basic: RbumBasicFilterReq {
                     with_sub_own_paths: true,
@@ -209,9 +212,9 @@ impl RbumSetServ {
             ctx,
         )
         .await?;
-        resp.sort_by(|a, b| a.sys_code.cmp(&b.sys_code));
-        resp.sort_by(|a, b| a.sort.cmp(&b.sort));
-        let mut tree_main = resp
+        rbum_set_cates.sort_by(|a, b| a.sys_code.cmp(&b.sys_code));
+        rbum_set_cates.sort_by(|a, b| a.sort.cmp(&b.sort));
+        let mut tree_main = rbum_set_cates
             .iter()
             .map(|r| RbumSetTreeNodeResp {
                 id: r.id.to_string(),
@@ -224,7 +227,7 @@ impl RbumSetServ {
                 own_paths: r.own_paths.to_string(),
                 owner: r.owner.to_string(),
                 scope_level: r.scope_level.clone(),
-                pid: resp.iter().find(|i| i.sys_code == r.sys_code[..r.sys_code.len() - set_cate_sys_code_node_len]).map(|i| i.id.to_string()),
+                pid: rbum_set_cates.iter().find(|i| i.sys_code == r.sys_code[..r.sys_code.len() - set_cate_sys_code_node_len]).map(|i| i.id.to_string()),
                 rel: None,
             })
             .collect();
@@ -235,7 +238,7 @@ impl RbumSetServ {
         let rbum_set_items = RbumSetItemServ::find_detail_rbums(
             &RbumSetItemFilterReq {
                 basic: RbumBasicFilterReq {
-                    // set cate item is only used for connection,
+                    // Set cate item is only used for connection,
                     // it will do scope checking on both ends of the connection when it is created,
                     // so we can release the own paths restriction here to avoid query errors.
                     // E.g.
@@ -263,9 +266,12 @@ impl RbumSetServ {
         )
         .await?;
         if filter.hide_cate_with_empty_item {
-            let exist_cate_ids =
+            // Filter out nodes without associated resource items
+            //
+            // 过滤掉没有关联资源项的节点
+            let cate_ids_has_item =
                 tree_main.iter().filter(|cate| cate.pid.is_none()).flat_map(|cate| Self::filter_exist_items(&tree_main, &cate.id, &rbum_set_items)).collect::<Vec<String>>();
-            tree_main.retain(|cate| exist_cate_ids.contains(&cate.id));
+            tree_main.retain(|cate| cate_ids_has_item.contains(&cate.id));
         }
         let mut items = tree_main
             .iter()
@@ -334,7 +340,7 @@ impl RbumSetServ {
                 )
             })
             .collect::<HashMap<String, HashMap<String, u64>>>();
-        // add an aggregate to root
+        // Add an aggregate to root
         item_number_agg.insert(
             "".to_string(),
             items
@@ -345,18 +351,41 @@ impl RbumSetServ {
                 .map(|(g, c)| (g, c.map(|i| i.rel_rbum_item_id.clone()).collect::<HashSet<String>>().len() as u64))
                 .collect::<HashMap<String, u64>>(),
         );
-        let kind_ids = items.values().flat_map(|items| items.iter().map(|item| item.rel_rbum_item_kind_id.clone())).collect::<HashSet<String>>();
-        let domain_ids = items.values().flat_map(|items| items.iter().map(|item| item.rel_rbum_item_domain_id.clone())).collect::<HashSet<String>>();
-        let mut item_kinds = HashMap::new();
-        for kind_id in kind_ids {
-            let kind = RbumKindServ::peek_rbum(&kind_id, &RbumKindFilterReq::default(), funs, ctx).await?;
-            item_kinds.insert(kind_id, kind);
-        }
-        let mut item_domains = HashMap::new();
-        for domain_id in domain_ids {
-            let domain = RbumDomainServ::peek_rbum(&domain_id, &RbumBasicFilterReq::default(), funs, ctx).await?;
-            item_domains.insert(domain_id, domain);
-        }
+        let kind_ids = Vec::from_iter(items.values().flat_map(|items| items.iter().map(|item| item.rel_rbum_item_kind_id.clone())).collect::<HashSet<String>>());
+        let item_kinds = RbumKindServ::find_rbums(
+            &RbumKindFilterReq {
+                basic: RbumBasicFilterReq {
+                    ids: Some(kind_ids),
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            None,
+            None,
+            funs,
+            ctx,
+        )
+        .await?
+        .into_iter()
+        .map(|kind| (kind.id.clone(), kind))
+        .collect();
+
+        let domain_ids: Vec<String> = Vec::from_iter(items.values().flat_map(|items| items.iter().map(|item| item.rel_rbum_item_domain_id.clone())).collect::<HashSet<String>>());
+        let item_domains = RbumDomainServ::find_rbums(
+            &RbumBasicFilterReq {
+                ids: Some(domain_ids),
+                ..Default::default()
+            },
+            None,
+            None,
+            funs,
+            ctx,
+        )
+        .await?
+        .into_iter()
+        .map(|domain| (domain.id.clone(), domain))
+        .collect();
+
         Ok(RbumSetTreeResp {
             main: tree_main,
             ext: Some(RbumSetTreeExtResp {
@@ -368,14 +397,17 @@ impl RbumSetServ {
         })
     }
 
+    /// From the first layer node, recursively find the leaf node,
+    /// if the leaf node does not have a related resource item, return empty, otherwise return all node ids from the first layer node to the leaf node.
+    ///
+    /// 从第一层节点递归查找到叶子节点，如果叶子节点没有关联资源项，则返回空，反之返回从第一层节点到叶子节点的所有节点id。
     fn filter_exist_items(tree_main: &Vec<RbumSetTreeNodeResp>, cate_id: &str, rbum_set_items: &Vec<RbumSetItemDetailResp>) -> Vec<String> {
         let mut sub_cates = tree_main
             .iter()
             .filter(|cate| cate.pid == Some(cate_id.to_string()))
             .flat_map(|cate| Self::filter_exist_items(tree_main, &cate.id, rbum_set_items))
             .collect::<Vec<String>>();
-        // TODO remove unwrap
-        let cate = tree_main.iter().find(|cate| cate.id == cate_id).unwrap();
+        let cate = tree_main.iter().find(|cate| cate.id == cate_id).expect("ignore");
         if sub_cates.is_empty() {
             // leaf node
             if !rbum_set_items.iter().any(|item| item.rel_rbum_set_cate_id.clone().unwrap_or_default() == cate.id) {
@@ -389,6 +421,9 @@ impl RbumSetServ {
         }
     }
 
+    /// Get resource set id by resource set code
+    ///
+    /// 根据资源集编码获取对应的id
     pub async fn get_rbum_set_id_by_code(code: &str, with_sub: bool, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<String>> {
         let key = &format!("{}{}", funs.rbum_conf_cache_key_set_code_(), code);
         if let Some(cached_id) = funs.cache().get(key).await? {
@@ -672,6 +707,9 @@ impl RbumCrudOperation<rbum_set_cate::ActiveModel, RbumSetCateAddReq, RbumSetCat
 }
 
 impl RbumSetCateServ {
+    /// Fetch the sys_code of the parent node
+    ///
+    /// 获取父级节点的sys_code集合
     fn get_parent_sys_codes(sys_code: &str, funs: &TardisFunsInst) -> TardisResult<Vec<String>> {
         let set_cate_sys_code_node_len = funs.rbum_conf_set_cate_sys_code_node_len();
         let mut level = sys_code.len() / set_cate_sys_code_node_len - 1;
@@ -686,6 +724,9 @@ impl RbumSetCateServ {
         Ok(sys_code_item)
     }
 
+    /// Fetch the sys_code of the new node
+    ///
+    /// 获取新节点的sys_code
     async fn package_sys_code(rbum_set_id: &str, rbum_set_parent_cate_id: Option<&str>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
         let lock_key = format!("rbum_set_cate_sys_code_{rbum_set_id}");
         while !funs.cache().set_nx(&lock_key, "waiting").await? {
@@ -702,6 +743,9 @@ impl RbumSetCateServ {
         sys_code
     }
 
+    /// Fetch the max sys_code of the current node
+    ///
+    /// 获取当前节点的最大sys_code
     async fn get_max_sys_code_by_level(rbum_set_id: &str, parent_sys_code: Option<&str>, funs: &TardisFunsInst, _: &TardisContext) -> TardisResult<String> {
         let set_cate_sys_code_node_len = funs.rbum_conf_set_cate_sys_code_node_len();
         let mut query = Query::select();
@@ -715,13 +759,13 @@ impl RbumSetCateServ {
             query.and_where(Expr::expr(Func::char_length(Expr::col(rbum_set_cate::Column::SysCode))).eq(set_cate_sys_code_node_len as i32));
         }
         query.order_by(rbum_set_cate::Column::SysCode, Order::Desc);
-        let max_sys_code = funs.db().get_dto::<SysCodeResp>(&query).await?.map(|r| r.sys_code);
-        if let Some(max_sys_code) = max_sys_code {
-            if max_sys_code.len() != set_cate_sys_code_node_len {
+        let current_max_sys_code = funs.db().get_dto::<SysCodeResp>(&query).await?.map(|r| r.sys_code);
+        if let Some(current_max_sys_code) = current_max_sys_code {
+            if current_max_sys_code.len() != set_cate_sys_code_node_len {
                 // if level N (N!=1) not empty
-                let curr_level_sys_code = max_sys_code[max_sys_code.len() - set_cate_sys_code_node_len..].to_string();
-                let parent_sys_code = max_sys_code[..max_sys_code.len() - set_cate_sys_code_node_len].to_string();
-                let curr_level_sys_code = TardisFuns::field.incr_by_base36(&curr_level_sys_code).ok_or_else(|| {
+                let current_level_sys_code = current_max_sys_code[current_max_sys_code.len() - set_cate_sys_code_node_len..].to_string();
+                let parent_sys_code = current_max_sys_code[..current_max_sys_code.len() - set_cate_sys_code_node_len].to_string();
+                let current_level_sys_code = TardisFuns::field.incr_by_base36(&current_level_sys_code).ok_or_else(|| {
                     funs.err().bad_request(
                         &Self::get_obj_name(),
                         "get_sys_code",
@@ -729,10 +773,10 @@ impl RbumSetCateServ {
                         "400-rbum-set-sys-code-saturated",
                     )
                 })?;
-                Ok(format!("{parent_sys_code}{curr_level_sys_code}"))
+                Ok(format!("{parent_sys_code}{current_level_sys_code}"))
             } else {
                 // if level 1 not empty
-                Ok(TardisFuns::field.incr_by_base36(&max_sys_code).ok_or_else(|| {
+                Ok(TardisFuns::field.incr_by_base36(&current_max_sys_code).ok_or_else(|| {
                     funs.err().bad_request(
                         &Self::get_obj_name(),
                         "get_sys_code",
@@ -750,6 +794,9 @@ impl RbumSetCateServ {
         }
     }
 
+    /// Fetch the sys_code of the specified node
+    ///
+    /// 获取指定节点的sys_code
     async fn get_sys_code(rbum_set_cate_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
         Self::check_scope(rbum_set_cate_id, RbumSetCateServ::get_table_name(), funs, ctx).await?;
         let sys_code = funs
