@@ -9,7 +9,6 @@ use tardis::{
     db::sea_orm::{
         self,
         sea_query::{Expr, Query},
-        Set,
     },
     TardisFunsInst,
 };
@@ -166,17 +165,6 @@ impl FlowEventServ {
             ctx,
         )
         .await?;
-        // let flow_transitions = flow_model
-        //     .transitions()
-        //     .into_iter()
-        //     .filter(|trans| trans.from_flow_state_id == flow_inst_detail.current_state_id && !trans.action_by_post_changes().is_empty())
-        //     .sorted_by_key(|trans| trans.sort)
-        //     .collect_vec();
-        // if flow_transitions.is_empty() {
-        //     return Ok(());
-        // }
-        // let next_flow_transition =
-        //     FlowInstServ::do_find_next_transitions(&flow_inst_detail, &flow_model, Some(flow_transition_id.to_string()), &None, true, funs, ctx).await?.next_flow_transitions.pop();
         let next_flow_transition = flow_model.transitions().into_iter().find(|trans| trans.id == flow_transition_id);
         if next_flow_transition.is_none() {
             return Err(funs.err().not_found("flow_inst", "transfer", "no transferable state", "404-flow-inst-transfer-state-not-found"));
@@ -228,9 +216,34 @@ impl FlowEventServ {
             match post_change.kind {
                 FlowTransitionActionChangeKind::Var => {
                     if let Some(mut change_info) = post_change.var_change_info {
-                        if change_info.changed_kind.is_some() && change_info.changed_kind.clone().unwrap() == FlowTransitionActionByVarChangeInfoChangedKind::AutoGetOperateTime {
-                            change_info.changed_val = Some(json!(Utc::now().to_rfc3339_opts(SecondsFormat::Millis, true)));
-                            change_info.changed_kind = Some(FlowTransitionActionByVarChangeInfoChangedKind::ChangeContent);
+                        if change_info.changed_kind.is_some() {
+                            match change_info.changed_kind.clone().unwrap() {
+                                FlowTransitionActionByVarChangeInfoChangedKind::AutoGetOperateTime => {
+                                    change_info.changed_val = Some(json!(Utc::now().to_rfc3339_opts(SecondsFormat::Millis, true)));
+                                    change_info.changed_kind = Some(FlowTransitionActionByVarChangeInfoChangedKind::ChangeContent);
+                                }
+                                FlowTransitionActionByVarChangeInfoChangedKind::AddOrSub => {
+                                    if change_info.changed_val.is_some()
+                                        && change_info.changed_val.clone().unwrap().is_object()
+                                        && flow_inst_detail.current_vars.clone().unwrap_or_default().get(&change_info.var_name).is_some()
+                                        && change_info.changed_val.clone().unwrap().as_object().unwrap().get("value").is_some()
+                                        && change_info.changed_val.clone().unwrap().as_object().unwrap().get("op").is_some()
+                                    {
+                                        let original_map = flow_inst_detail.current_vars.clone().unwrap_or_default();
+                                        let target_value = change_info.changed_val.clone().unwrap().as_object().unwrap().get("value").unwrap().as_i64().unwrap_or_default();
+                                        let changed_op = change_info.changed_val.clone().unwrap().as_object().unwrap().get("op").unwrap().as_str().unwrap_or_default().to_string();
+                                        if let Some(original_value) = original_map.get(&change_info.var_name) {
+                                            change_info.changed_kind = Some(FlowTransitionActionByVarChangeInfoChangedKind::ChangeContent);
+                                            match changed_op.as_str() {
+                                                "add" => change_info.changed_val = Some(json!(original_value.as_i64().unwrap_or_default() + target_value)),
+                                                "sub" => change_info.changed_val = Some(json!(original_value.as_i64().unwrap_or_default() - target_value)),
+                                                _ => {}
+                                            }
+                                        }
+                                    }
+                                }
+                                _ => {}
+                            };
                         }
                         let rel_tag = change_info.obj_tag.unwrap_or_default();
                         if !rel_tag.is_empty() {
@@ -487,36 +500,6 @@ impl FlowEventServ {
                 .await?;
             }
         }
-        Ok(())
-    }
-
-    pub async fn do_modify_assigned(flow_inst_id: &str, assigned_id: &str, ctx: &TardisContext, funs: &TardisFunsInst) -> TardisResult<()> {
-        if funs
-            .db()
-            .count(
-                Query::select()
-                    .column((flow_inst::Entity, flow_inst::Column::Id))
-                    .from(flow_inst::Entity)
-                    .and_where(Expr::col((flow_inst::Entity, flow_inst::Column::Id)).eq(flow_inst_id.to_string()))
-                    .and_where(Expr::col((flow_inst::Entity, flow_inst::Column::OwnPaths)).like(format!("{}%", ctx.own_paths))),
-            )
-            .await?
-            == 0
-        {
-            return Err(funs.err().not_found(
-                "flow_inst",
-                "modify_assigned",
-                &format!("flow instance {} not found", flow_inst_id),
-                "404-flow-inst-not-found",
-            ));
-        }
-        let flow_inst = flow_inst::ActiveModel {
-            id: Set(flow_inst_id.to_string()),
-            current_assigned: Set(Some(assigned_id.to_string())),
-            ..Default::default()
-        };
-        funs.db().update_one(flow_inst, ctx).await?;
-
         Ok(())
     }
 }

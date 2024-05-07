@@ -6,8 +6,7 @@ use bios_basic::test::test_http_client::TestHttpClient;
 use bios_mw_flow::dto::flow_config_dto::FlowConfigModifyReq;
 use bios_mw_flow::dto::flow_inst_dto::{
     FlowInstBatchBindReq, FlowInstBatchBindResp, FlowInstBindRelObjReq, FlowInstBindReq, FlowInstDetailResp, FlowInstFindNextTransitionResp, FlowInstFindNextTransitionsReq,
-    FlowInstFindStateAndTransitionsReq, FlowInstFindStateAndTransitionsResp, FlowInstModifyAssignedReq, FlowInstModifyCurrentVarsReq, FlowInstStartReq, FlowInstTransferReq,
-    FlowInstTransferResp,
+    FlowInstFindStateAndTransitionsReq, FlowInstFindStateAndTransitionsResp, FlowInstModifyCurrentVarsReq, FlowInstStartReq, FlowInstTransferReq, FlowInstTransferResp,
 };
 use bios_mw_flow::dto::flow_model_dto::{
     FlowModelAddCustomModelItemReq, FlowModelAddCustomModelReq, FlowModelAddCustomModelResp, FlowModelAggResp, FlowModelBindStateReq, FlowModelFindRelStateResp,
@@ -25,7 +24,7 @@ use tardis::basic::dto::TardisContext;
 
 use tardis::basic::result::TardisResult;
 use tardis::log::info;
-use tardis::serde_json::json;
+use tardis::serde_json::{json, Value};
 use tardis::tokio;
 use tardis::web::poem_openapi::types::Type;
 use tardis::web::web_resp::{TardisPage, Void};
@@ -264,7 +263,7 @@ pub async fn test(flow_client: &mut TestHttpClient) -> TardisResult<()> {
                         guard_by_his_operators: None,
                         guard_by_assigned: None,
                         guard_by_spec_account_ids: None,
-                        guard_by_spec_role_ids: None,
+                        guard_by_spec_role_ids: Some(vec!["admin".to_string()]),
                         guard_by_spec_org_ids: None,
                         guard_by_other_conds: None,
                         vars_collect: None,
@@ -663,14 +662,9 @@ pub async fn test(flow_client: &mut TestHttpClient) -> TardisResult<()> {
     let next_transitions: Vec<FlowInstFindNextTransitionResp> =
         flow_client.put(&format!("/cc/inst/{}/transition/next", req_inst_id1), &FlowInstFindNextTransitionsReq { vars: None }).await;
     assert_eq!(next_transitions.len(), 2);
-    flow_client.set_auth(&TardisContext {
-        own_paths: "t1/app01".to_string(),
-        ak: "".to_string(),
-        roles: vec!["admin".to_string()],
-        groups: vec![],
-        owner: "a001".to_string(),
-        ..Default::default()
-    })?;
+    ctx.owner = "a001".to_string();
+    ctx.roles = vec!["t:admin".to_string()];
+    flow_client.set_auth(&ctx)?;
     let next_transitions: Vec<FlowInstFindNextTransitionResp> =
         flow_client.put(&format!("/cc/inst/{}/transition/next", req_inst_id1), &FlowInstFindNextTransitionsReq { vars: None }).await;
     assert_eq!(next_transitions.len(), 2);
@@ -769,7 +763,11 @@ pub async fn test(flow_client: &mut TestHttpClient) -> TardisResult<()> {
         .await;
     assert_eq!(state_and_next_transitions[0].next_flow_transitions.len(), 1);
     // handle front change
-    let current_vars = HashMap::from([("status".to_string(), json!(true)), ("handle_time".to_string(), json!("2023-10-10"))]);
+    let current_vars = HashMap::from([
+        ("status".to_string(), json!(true)),
+        ("handle_time".to_string(), json!("2023-10-10")),
+        ("assigned_to".to_string(), Value::String(ctx.owner.clone())),
+    ]);
     let _: Void = flow_client
         .patch(
             &format!("/cc/inst/{}/modify_current_vars", req_inst_id2),
@@ -785,6 +783,7 @@ pub async fn test(flow_client: &mut TestHttpClient) -> TardisResult<()> {
             }],
         )
         .await;
+    assert_eq!(state_and_next_transitions[0].next_flow_transitions.len(), 2);
     //
     let _: Void = flow_client
         .patch(
@@ -792,7 +791,7 @@ pub async fn test(flow_client: &mut TestHttpClient) -> TardisResult<()> {
             &json!({
                 "modify_transitions": [
                     {
-                        "id": state_and_next_transitions[0].next_flow_transitions[0].next_flow_transition_id.clone(),
+                        "id": state_and_next_transitions[0].next_flow_transitions.clone().into_iter().find(|trans| trans.next_flow_state_name == *"已完成").unwrap().next_flow_transition_id,
                         "action_by_front_changes": [
                             {
                                 "relevance_relation": "in",
@@ -826,14 +825,6 @@ pub async fn test(flow_client: &mut TestHttpClient) -> TardisResult<()> {
     assert_eq!(state_and_next_transitions[0].current_flow_state_name, "已完成");
     let flow_inst_list: Vec<FlowInstDetailResp> = flow_client.get(&format!("/ci/inst/find_detail_by_obj_ids?obj_ids={}", req_inst_rel_id2)).await;
     assert_eq!(flow_inst_list[0].id, req_inst_id2);
-    let _: Void = flow_client
-        .post(
-            &format!("/cc/inst/{}/transition/modify_assigned", req_inst_id2),
-            &FlowInstModifyAssignedReq {
-                current_assigned: "xxx".to_string(),
-            },
-        )
-        .await;
 
     Ok(())
 }

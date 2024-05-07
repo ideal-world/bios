@@ -261,22 +261,6 @@ impl FlowInstServ {
         Ok(())
     }
 
-    pub async fn modify_assigned(flow_inst_id: &str, assigned_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        if let Some(ws_client) = ws_flow_client().await {
-            ws_client
-                .publish_modify_assigned(
-                    flow_inst_id.to_string(),
-                    assigned_id.to_string(),
-                    default_flow_avatar().await.clone(),
-                    funs.conf::<FlowConfig>().invoke.spi_app_id.clone(),
-                    ctx,
-                )
-                .await
-        } else {
-            FlowEventServ::do_modify_assigned(flow_inst_id, assigned_id, ctx, funs).await
-        }
-    }
-
     pub async fn get(flow_inst_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<FlowInstDetailResp> {
         let mut flow_insts = Self::find_detail(vec![flow_inst_id.to_string()], funs, ctx).await?;
         if flow_insts.len() == 1 {
@@ -299,7 +283,6 @@ impl FlowInstServ {
             pub current_state_kind: Option<FlowSysStateKind>,
             pub current_state_ext: Option<String>,
 
-            pub current_assigned: Option<String>,
             pub current_vars: Option<Value>,
 
             pub create_vars: Option<Value>,
@@ -338,7 +321,6 @@ impl FlowInstServ {
                 (flow_inst::Entity, flow_inst::Column::OutputMessage),
                 (flow_inst::Entity, flow_inst::Column::Transitions),
                 (flow_inst::Entity, flow_inst::Column::OwnPaths),
-                (flow_inst::Entity, flow_inst::Column::CurrentAssigned),
             ])
             .expr_as(Expr::col((rel_state_table.clone(), NAME_FIELD.clone())).if_null(""), Alias::new("current_state_name"))
             .expr_as(Expr::col((flow_state_table.clone(), Alias::new("color"))).if_null(""), Alias::new("current_state_color"))
@@ -403,7 +385,6 @@ impl FlowInstServ {
                 current_state_color: inst.current_state_color,
                 current_state_kind: inst.current_state_kind,
                 current_state_ext: inst.current_state_ext,
-                current_assigned: inst.current_assigned,
                 current_vars: inst.current_vars.map(|current_vars| TardisFuns::json.json_to_obj(current_vars).unwrap()),
                 rel_business_obj_id: inst.rel_business_obj_id,
             })
@@ -426,6 +407,7 @@ impl FlowInstServ {
             pub rel_flow_model_id: String,
             pub rel_flow_model_name: String,
 
+            pub current_vars: Option<Value>,
             pub current_state_id: String,
             pub rel_business_obj_id: String,
 
@@ -438,7 +420,6 @@ impl FlowInstServ {
             pub output_message: Option<String>,
 
             pub own_paths: String,
-            pub current_assigned: Option<String>,
         }
         let mut query = Query::select();
         query
@@ -446,6 +427,7 @@ impl FlowInstServ {
                 (flow_inst::Entity, flow_inst::Column::Id),
                 (flow_inst::Entity, flow_inst::Column::RelFlowModelId),
                 (flow_inst::Entity, flow_inst::Column::RelBusinessObjId),
+                (flow_inst::Entity, flow_inst::Column::CreateVars),
                 (flow_inst::Entity, flow_inst::Column::CurrentStateId),
                 (flow_inst::Entity, flow_inst::Column::CreateCtx),
                 (flow_inst::Entity, flow_inst::Column::CreateTime),
@@ -454,7 +436,6 @@ impl FlowInstServ {
                 (flow_inst::Entity, flow_inst::Column::FinishAbort),
                 (flow_inst::Entity, flow_inst::Column::OutputMessage),
                 (flow_inst::Entity, flow_inst::Column::OwnPaths),
-                (flow_inst::Entity, flow_inst::Column::CurrentAssigned),
             ])
             .expr_as(Expr::col((RBUM_ITEM_TABLE.clone(), NAME_FIELD.clone())).if_null(""), Alias::new("rel_flow_model_name"))
             .from(flow_inst::Entity)
@@ -504,7 +485,6 @@ impl FlowInstServ {
                     own_paths: inst.own_paths,
                     current_state_id: inst.current_state_id,
                     rel_business_obj_id: inst.rel_business_obj_id,
-                    current_assigned: inst.current_assigned,
                 })
                 .collect_vec(),
         })
@@ -978,15 +958,34 @@ impl FlowInstServ {
                 if !model_transition.guard_by_spec_account_ids.is_empty() && model_transition.guard_by_spec_account_ids.contains(&ctx.owner) {
                     return true;
                 }
-                if !model_transition.guard_by_spec_role_ids.is_empty() && model_transition.guard_by_spec_role_ids.iter().any(|role_ids| ctx.roles.contains(role_ids)) {
+                if !model_transition.guard_by_spec_role_ids.is_empty()
+                    && model_transition.guard_by_spec_role_ids.iter().any(|role_id| {
+                        ctx.roles
+                            .clone()
+                            .into_iter()
+                            .map(|ctx_role_id| ctx_role_id.split(':').last().unwrap_or(&ctx_role_id).to_string())
+                            .collect_vec()
+                            .contains(&role_id.split(':').last().unwrap_or(role_id).to_string())
+                    })
+                {
                     return true;
                 }
-                if !model_transition.guard_by_spec_org_ids.is_empty() && model_transition.guard_by_spec_org_ids.iter().any(|role_ids| ctx.groups.contains(role_ids)) {
+                if !model_transition.guard_by_spec_org_ids.is_empty() && model_transition.guard_by_spec_org_ids.iter().any(|org_id| ctx.groups.contains(org_id)) {
                     return true;
                 }
                 if model_transition.guard_by_assigned
-                    && flow_inst.current_assigned.is_some()
-                    && flow_inst.current_assigned.clone().unwrap().split(',').collect_vec().contains(&ctx.owner.as_str())
+                    && flow_inst.current_vars.clone().unwrap_or_default().get("assigned_to").is_some()
+                    && flow_inst
+                        .current_vars
+                        .clone()
+                        .unwrap_or_default()
+                        .get("assigned_to")
+                        .unwrap()
+                        .as_str()
+                        .unwrap_or_default()
+                        .split(',')
+                        .collect_vec()
+                        .contains(&ctx.owner.as_str())
                 {
                     return true;
                 }
