@@ -1054,14 +1054,23 @@ impl RbumSetItemServ {
         Ok(result)
     }
 
+    /// Check whether resource item a is the parent of resource item b in the specified resource set
+    ///
+    /// 检查在指定资源集中资源项a是否是资源项b的父级
     pub async fn check_a_is_parent_of_b(rbum_item_a_id: &str, rbum_item_b_id: &str, rbum_set_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<bool> {
         Self::check_a_and_b(rbum_item_a_id, rbum_item_b_id, true, false, rbum_set_id, funs, ctx).await
     }
 
+    /// Check whether resource item a is the sibling of resource item b in the specified resource set
+    ///
+    /// 检查在指定资源集中资源项a是否是资源项b的兄弟级
     pub async fn check_a_is_sibling_of_b(rbum_item_a_id: &str, rbum_item_b_id: &str, rbum_set_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<bool> {
         Self::check_a_and_b(rbum_item_a_id, rbum_item_b_id, false, true, rbum_set_id, funs, ctx).await
     }
 
+    /// Check whether resource item a is the parent or sibling of resource item b in the specified resource set
+    ///
+    /// 检查在指定资源集中资源项a是否是资源项b的父级或兄弟级
     pub async fn check_a_is_parent_or_sibling_of_b(
         rbum_item_a_id: &str,
         rbum_item_b_id: &str,
@@ -1093,25 +1102,28 @@ impl RbumSetItemServ {
             ctx,
         )
         .await?;
-        let set_items_a = set_items
+        let set_item_a_sys_codes = set_items
             .iter()
             .filter(|item| item.rel_rbum_item_id == rbum_item_a_id)
             .map(|item| item.rel_rbum_set_cate_sys_code.clone().unwrap_or_default())
             .collect::<Vec<String>>();
-        let set_items_b = set_items
+        let set_item_b_sys_codes = set_items
             .iter()
             .filter(|item| item.rel_rbum_item_id == rbum_item_b_id)
             .map(|item| item.rel_rbum_set_cate_sys_code.clone().unwrap_or_default())
             .collect::<Vec<String>>();
 
-        Ok(set_items_a.iter().any(|sys_code_a| {
-            set_items_b.iter().any(|sys_code_b| {
+        Ok(set_item_a_sys_codes.iter().any(|sys_code_a| {
+            set_item_b_sys_codes.iter().any(|sys_code_b| {
                 if is_parent && is_sibling {
                     sys_code_b.starts_with(sys_code_a)
                 } else if is_parent {
                     sys_code_b.starts_with(sys_code_a) && sys_code_a != sys_code_b
-                } else {
+                } else if is_sibling {
                     sys_code_a == sys_code_b
+                } else {
+                    // !is_parent && !is_sibling
+                    sys_code_a != sys_code_b && !sys_code_b.starts_with(sys_code_a)
                 }
             })
         }))
