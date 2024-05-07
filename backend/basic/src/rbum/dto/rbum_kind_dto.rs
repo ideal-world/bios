@@ -17,9 +17,9 @@ pub struct RbumKindAddReq {
     /// Resource kind module
     ///
     /// 资源类型模块
-    /// 
+    ///
     /// Default is ``empty``
-    /// 
+    ///
     /// 默认为 ``空``
     ///
     /// Used to further divide the resource  kind. For example, there are multiple resource  kinds under the ``cmdb compute`` module, such as ``ecs, ec2, k8s``.

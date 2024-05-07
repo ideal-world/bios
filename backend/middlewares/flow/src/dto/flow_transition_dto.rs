@@ -294,6 +294,8 @@ pub enum FlowTransitionActionByVarChangeInfoChangedKind {
     AutoGetOperator,
     #[sea_orm(string_value = "select_field")]
     SelectField,
+    #[sea_orm(string_value = "and_or_subs")]
+    AddOrSub,
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug, poem_openapi::Object, sea_orm::FromJsonQueryResult)]
