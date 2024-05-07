@@ -53,7 +53,7 @@ impl IamCpAppApi {
                 },
                 rel: Some(RbumItemRelFilterReq {
                     rel_by_from: false,
-                    is_left: false,
+                    optional: false,
                     tag: Some(IamRelKind::IamAccountApp.to_string()),
                     from_rbum_kind: Some(RbumRelFromKind::Item),
                     rel_item_id: Some(ctx.0.owner.clone()),
@@ -94,7 +94,7 @@ impl IamCpAppApi {
                     ..Default::default()
                 },
                 rel_rbum_item_disabled: Some(false),
-                table_rbum_set_cate_is_left: Some(true),
+                rel_rbum_item_can_not_exist: Some(true),
                 rel_rbum_set_id: Some(set_id.clone()),
                 rel_rbum_item_ids: Some(vec![ctx.owner.clone()]),
                 ..Default::default()
@@ -118,7 +118,7 @@ impl IamCpAppApi {
                     ..Default::default()
                 },
                 rel_rbum_item_disabled: Some(false),
-                table_rbum_set_cate_is_left: Some(true),
+                rel_rbum_item_can_not_exist: Some(true),
                 rel_rbum_set_id: Some(set_id.clone()),
                 rel_rbum_set_cate_sys_codes: Some(cate_codes),
                 sys_code_query_kind: Some(RbumSetCateLevelQueryKind::CurrentAndSub),

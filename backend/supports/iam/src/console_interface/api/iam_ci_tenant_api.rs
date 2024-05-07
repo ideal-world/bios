@@ -1,6 +1,6 @@
 use bios_basic::helper::request_helper::try_set_real_ip_from_req_to_ctx;
 use bios_basic::rbum::dto::rbum_filer_dto::RbumSetTreeFilterReq;
-use bios_basic::rbum::dto::rbum_set_dto::RbumSetTreeMainResp;
+use bios_basic::rbum::dto::rbum_set_dto::RbumSetTreeNodeResp;
 use bios_basic::rbum::helper::rbum_scope_helper::check_without_owner_and_unsafe_fill_ctx;
 use bios_basic::rbum::rbum_enumeration::RbumSetCateLevelQueryKind;
 
@@ -58,7 +58,7 @@ impl IamCiTenantApi {
         set_id: Query<Option<String>>,
         mut ctx: TardisContextExtractor,
         request: &Request,
-    ) -> TardisApiResult<Vec<RbumSetTreeMainResp>> {
+    ) -> TardisApiResult<Vec<RbumSetTreeNodeResp>> {
         let funs = iam_constants::get_tardis_inst();
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         let ctx = IamSetServ::try_get_rel_ctx_by_set_id(set_id.0, &funs, ctx.0).await?;

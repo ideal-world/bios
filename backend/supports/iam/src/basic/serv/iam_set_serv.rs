@@ -3,7 +3,7 @@ use std::collections::{HashMap, HashSet};
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumRelFilterReq, RbumSetCateFilterReq, RbumSetFilterReq, RbumSetItemFilterReq, RbumSetTreeFilterReq};
 
 use bios_basic::rbum::dto::rbum_set_cate_dto::{RbumSetCateAddReq, RbumSetCateModifyReq, RbumSetCateSummaryResp};
-use bios_basic::rbum::dto::rbum_set_dto::{RbumSetAddReq, RbumSetPathResp, RbumSetTreeMainResp, RbumSetTreeResp};
+use bios_basic::rbum::dto::rbum_set_dto::{RbumSetAddReq, RbumSetPathResp, RbumSetTreeNodeResp, RbumSetTreeResp};
 use bios_basic::rbum::dto::rbum_set_item_dto::{RbumSetItemAddReq, RbumSetItemDetailResp, RbumSetItemModifyReq};
 use bios_basic::rbum::helper::rbum_scope_helper;
 use bios_basic::rbum::rbum_config::RbumConfigApi;
@@ -371,7 +371,7 @@ impl IamSetServ {
     // find set_cate 对应的set_id,返回set_id下面set_cate
     // 返回的节点里面，如果有通过关联关系而来的cate（不属于此set_id的），会在ext中标识它真正的set_id
     async fn find_rel_set_cate(resp: RbumSetTreeResp, filter: &mut RbumSetTreeFilterReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<RbumSetTreeResp> {
-        let mut result_main: Vec<RbumSetTreeMainResp> = vec![];
+        let mut result_main: Vec<RbumSetTreeNodeResp> = vec![];
         let mut resp_items = HashMap::new();
         let mut resp_item_domains = HashMap::new();
         let mut resp_item_kinds = HashMap::new();
@@ -396,7 +396,7 @@ impl IamSetServ {
             )
             .await?
             {
-                let new_resp = RbumSetTreeMainResp {
+                let new_resp = RbumSetTreeNodeResp {
                     rel: Some(set_rel.to_rbum_item_id.clone()),
                     ..r.clone()
                 };
@@ -418,12 +418,12 @@ impl IamSetServ {
                 }
                 let rel_set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, funs, &mock_ctx).await?;
                 let mut tenant_resp = RbumSetServ::get_tree(&rel_set_id, &set_filter, funs, &mock_ctx).await?;
-                let mut resp_tenant_node: Vec<RbumSetTreeMainResp> = tenant_resp
+                let mut resp_tenant_node: Vec<RbumSetTreeNodeResp> = tenant_resp
                     .main
                     .clone()
                     .iter()
                     .filter(|r_main| r_main.pid.is_none())
-                    .map(|r_main| RbumSetTreeMainResp {
+                    .map(|r_main| RbumSetTreeNodeResp {
                         pid: Some(r.id.clone()),
                         ..r_main.clone()
                     })
@@ -438,7 +438,7 @@ impl IamSetServ {
                             r.ext = json!({"set_id":rel_set_id.clone(),"disable_import":true}).to_string();
                             r
                         })
-                        .collect::<Vec<RbumSetTreeMainResp>>(),
+                        .collect::<Vec<RbumSetTreeNodeResp>>(),
                 );
                 if set_filter.fetch_cate_item {
                     if let Some(ext_resp) = tenant_resp.ext {
@@ -635,7 +635,7 @@ impl IamSetServ {
             &RbumSetItemFilterReq {
                 basic: Default::default(),
                 rel_rbum_item_disabled: Some(false),
-                table_rbum_set_cate_is_left: Some(true),
+                rel_rbum_item_can_not_exist: Some(true),
                 ..Default::default()
             },
             funs,
@@ -696,7 +696,7 @@ impl IamSetServ {
                     with_sub_own_paths: with_sub,
                     ..Default::default()
                 },
-                table_rbum_set_cate_is_left,
+                rel_rbum_item_can_not_exist: table_rbum_set_cate_is_left,
                 rel_rbum_item_disabled: Some(false),
                 rel_rbum_set_id: set_id.clone(),
                 rel_rbum_set_cate_ids: set_cate_id.map(|r| vec![r]),
@@ -730,7 +730,7 @@ impl IamSetServ {
                     rel_rbum_item_disabled: Some(false),
                     rel_rbum_set_id: set_id.clone(),
                     rel_rbum_set_item_cate_code: Some("".to_string()),
-                    table_rbum_set_cate_is_left: Some(true),
+                    rel_rbum_item_can_not_exist: Some(true),
                     rel_rbum_item_ids: item_id.map(|i| vec![i]),
                     ..Default::default()
                 },

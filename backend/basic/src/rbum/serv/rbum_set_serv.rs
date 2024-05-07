@@ -15,9 +15,9 @@ use crate::rbum::domain::{rbum_cert, rbum_item, rbum_rel, rbum_set, rbum_set_cat
 use crate::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumKindFilterReq, RbumSetCateFilterReq, RbumSetFilterReq, RbumSetItemFilterReq, RbumSetTreeFilterReq};
 use crate::rbum::dto::rbum_set_cate_dto::{RbumSetCateAddReq, RbumSetCateDetailResp, RbumSetCateModifyReq, RbumSetCateSummaryResp};
 use crate::rbum::dto::rbum_set_dto::{
-    RbumSetAddReq, RbumSetDetailResp, RbumSetModifyReq, RbumSetPathResp, RbumSetSummaryResp, RbumSetTreeExtResp, RbumSetTreeMainResp, RbumSetTreeResp,
+    RbumSetAddReq, RbumSetDetailResp, RbumSetModifyReq, RbumSetPathResp, RbumSetSummaryResp, RbumSetTreeExtResp, RbumSetTreeNodeResp, RbumSetTreeResp,
 };
-use crate::rbum::dto::rbum_set_item_dto::{RbumSetItemAddReq, RbumSetItemDetailResp, RbumSetItemInfoResp, RbumSetItemModifyReq, RbumSetItemSummaryResp};
+use crate::rbum::dto::rbum_set_item_dto::{RbumSetItemAddReq, RbumSetItemDetailResp, RbumSetItemModifyReq, RbumSetItemRelInfoResp, RbumSetItemSummaryResp};
 use crate::rbum::rbum_config::RbumConfigApi;
 use crate::rbum::rbum_enumeration::{RbumCertRelKind, RbumRelFromKind, RbumScopeLevelKind, RbumSetCateLevelQueryKind};
 use crate::rbum::serv::rbum_cert_serv::RbumCertServ;
@@ -86,6 +86,9 @@ impl RbumCrudOperation<rbum_set::ActiveModel, RbumSetAddReq, RbumSetModifyReq, R
 
     async fn before_delete_rbum(id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<RbumSetDetailResp>> {
         Self::check_ownership(id, funs, ctx).await?;
+        // Cannot be deleted when there are categories (nodes), associated resource items, associated relationships, and associated resource credentials.
+        //
+        // 存在分类（节点）、关联资源项、关联关系、关联资源凭证时不能删除。
         Self::check_exist_before_delete(id, RbumSetCateServ::get_table_name(), rbum_set_cate::Column::RelRbumSetId.as_str(), funs).await?;
         Self::check_exist_before_delete(id, RbumSetItemServ::get_table_name(), rbum_set_item::Column::RelRbumSetId.as_str(), funs).await?;
         Self::check_exist_with_cond_before_delete(
@@ -102,6 +105,7 @@ impl RbumCrudOperation<rbum_set::ActiveModel, RbumSetAddReq, RbumSetModifyReq, R
             funs,
         )
         .await?;
+        // 删除缓存
         let result = Self::peek_rbum(
             id,
             &RbumSetFilterReq {
@@ -178,16 +182,10 @@ impl RbumSetServ {
         Self::check_scope(rbum_set_id, RbumSetServ::get_table_name(), funs, ctx).await?;
         // check filter.filter_cate_sys_codes scope
         if let Some(sys_codes) = &filter.sys_codes {
-            let rbum_set_ids = &vec![rbum_set_id.to_string()];
-            let mut values = HashMap::from([("rel_rbum_set_id".to_string(), rbum_set_ids)]);
-            let mut sys_code_vec = vec![];
-            for sys_code in sys_codes {
-                if !sys_code.is_empty() {
-                    sys_code_vec.push(sys_code.to_string());
-                }
-            }
+            let sys_code_vec: Vec<String> = sys_codes.iter().filter(|sys_code| !sys_code.is_empty()).map(|sys_code| sys_code.to_string()).collect();
             if !sys_code_vec.is_empty() {
-                values.insert("sys_code".to_string(), &sys_code_vec);
+                let tmp_set_ids = vec![rbum_set_id.to_string()];
+                let values = HashMap::from([("rel_rbum_set_id".to_string(), &tmp_set_ids), ("sys_code".to_string(), &sys_code_vec)]);
                 Self::check_scopes(values, sys_code_vec.len() as u64, RbumSetCateServ::get_table_name(), funs, ctx).await?;
             }
         }
@@ -215,7 +213,7 @@ impl RbumSetServ {
         resp.sort_by(|a, b| a.sort.cmp(&b.sort));
         let mut tree_main = resp
             .iter()
-            .map(|r| RbumSetTreeMainResp {
+            .map(|r| RbumSetTreeNodeResp {
                 id: r.id.to_string(),
                 sys_code: r.sys_code.to_string(),
                 bus_code: r.bus_code.to_string(),
@@ -245,11 +243,10 @@ impl RbumSetServ {
                     // if the permission is not released, all app will not query the data.
                     own_paths: Some("".to_string()),
                     with_sub_own_paths: true,
-                    desc_by_sort: Some(true),
                     ..Default::default()
                 },
                 rel_rbum_set_id: Some(rbum_set_id.to_string()),
-                table_rbum_set_cate_is_left: Some(true),
+                rel_rbum_item_can_not_exist: Some(true),
                 sys_code_query_kind: filter.sys_code_query_kind.clone(),
                 sys_code_query_depth: filter.sys_code_query_depth,
                 rel_rbum_set_cate_sys_codes: filter.sys_codes.clone(),
@@ -278,7 +275,7 @@ impl RbumSetServ {
                     rbum_set_items
                         .iter()
                         .filter(|i| i.rel_rbum_set_cate_id.clone().unwrap_or_default() == cate.id)
-                        .map(|i| RbumSetItemInfoResp {
+                        .map(|i| RbumSetItemRelInfoResp {
                             id: i.id.to_string(),
                             sort: i.sort,
                             rel_rbum_item_id: i.rel_rbum_item_id.to_string(),
@@ -297,13 +294,13 @@ impl RbumSetServ {
                         .collect(),
                 )
             })
-            .collect::<HashMap<String, Vec<RbumSetItemInfoResp>>>();
+            .collect::<HashMap<String, Vec<RbumSetItemRelInfoResp>>>();
         items.insert(
             "".to_string(),
             rbum_set_items
                 .iter()
                 .filter(|i| i.rel_rbum_set_cate_id.is_none())
-                .map(|i| RbumSetItemInfoResp {
+                .map(|i| RbumSetItemRelInfoResp {
                     id: i.id.to_string(),
                     sort: i.sort,
                     rel_rbum_item_id: i.rel_rbum_item_id.to_string(),
@@ -371,7 +368,7 @@ impl RbumSetServ {
         })
     }
 
-    fn filter_exist_items(tree_main: &Vec<RbumSetTreeMainResp>, cate_id: &str, rbum_set_items: &Vec<RbumSetItemDetailResp>) -> Vec<String> {
+    fn filter_exist_items(tree_main: &Vec<RbumSetTreeNodeResp>, cate_id: &str, rbum_set_items: &Vec<RbumSetItemDetailResp>) -> Vec<String> {
         let mut sub_cates = tree_main
             .iter()
             .filter(|cate| cate.pid == Some(cate_id.to_string()))
@@ -426,6 +423,14 @@ impl RbumCrudOperation<rbum_set_cate::ActiveModel, RbumSetCateAddReq, RbumSetCat
         rbum_set_cate::Entity.table_name()
     }
 
+    async fn before_add_rbum(add_req: &mut RbumSetCateAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        Self::check_scope(&add_req.rel_rbum_set_id, RbumSetServ::get_table_name(), funs, ctx).await?;
+        if let Some(rbum_parent_cate_id) = &add_req.rbum_parent_cate_id {
+            Self::check_scope(rbum_parent_cate_id, RbumSetCateServ::get_table_name(), funs, ctx).await?;
+        }
+        Ok(())
+    }
+
     async fn package_add(add_req: &RbumSetCateAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<rbum_set_cate::ActiveModel> {
         let sys_code = if let Some(rbum_parent_cate_id) = &add_req.rbum_parent_cate_id {
             Self::package_sys_code(&add_req.rel_rbum_set_id, Some(rbum_parent_cate_id), funs, ctx).await?
@@ -444,14 +449,6 @@ impl RbumCrudOperation<rbum_set_cate::ActiveModel, RbumSetCateAddReq, RbumSetCat
             scope_level: Set(add_req.scope_level.as_ref().unwrap_or(&RbumScopeLevelKind::Private).to_int()),
             ..Default::default()
         })
-    }
-
-    async fn before_add_rbum(add_req: &mut RbumSetCateAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        Self::check_scope(&add_req.rel_rbum_set_id, RbumSetServ::get_table_name(), funs, ctx).await?;
-        if let Some(rbum_parent_cate_id) = &add_req.rbum_parent_cate_id {
-            Self::check_scope(rbum_parent_cate_id, RbumSetCateServ::get_table_name(), funs, ctx).await?;
-        }
-        Ok(())
     }
 
     async fn package_modify(id: &str, modify_req: &RbumSetCateModifyReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<rbum_set_cate::ActiveModel> {
@@ -511,7 +508,7 @@ impl RbumCrudOperation<rbum_set_cate::ActiveModel, RbumSetCateAddReq, RbumSetCat
                 "409-rbum-*-delete-conflict",
             ));
         }
-        let set = Self::peek_rbum(
+        let set_cate = Self::peek_rbum(
             id,
             &RbumSetCateFilterReq {
                 basic: RbumBasicFilterReq {
@@ -531,8 +528,8 @@ impl RbumCrudOperation<rbum_set_cate::ActiveModel, RbumSetCateAddReq, RbumSetCat
                     .column(rbum_set_cate::Column::Id)
                     .from(rbum_set_cate::Entity)
                     .and_where(Expr::col(rbum_set_cate::Column::Id).ne(id))
-                    .and_where(Expr::col(rbum_set_cate::Column::RelRbumSetId).eq(set.rel_rbum_set_id.as_str()))
-                    .and_where(Expr::col(rbum_set_cate::Column::SysCode).like(format!("{}%", set.sys_code.as_str()).as_str())),
+                    .and_where(Expr::col(rbum_set_cate::Column::RelRbumSetId).eq(set_cate.rel_rbum_set_id.as_str()))
+                    .and_where(Expr::col(rbum_set_cate::Column::SysCode).like(format!("{}%", set_cate.sys_code.as_str()).as_str())),
             )
             .await?
             > 0
@@ -835,7 +832,7 @@ impl RbumCrudOperation<rbum_set_item::ActiveModel, RbumSetItemAddReq, RbumSetIte
 
     async fn package_query(is_detail: bool, filter: &RbumSetItemFilterReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<SelectStatement> {
         let rel_item_table = Alias::new("relItem");
-        let rbum_set_cate_join_type = if let Some(true) = filter.table_rbum_set_cate_is_left {
+        let rbum_set_cate_join_type = if let Some(true) = filter.rel_rbum_item_can_not_exist {
             JoinType::LeftJoin
         } else {
             JoinType::InnerJoin

@@ -496,8 +496,7 @@ where
                     filter.basic().rbum_domain_id.clone()
                 } else {
                     Self::get_rbum_domain_id()
-                },
-                desc_by_sort: filter.basic().desc_by_sort,
+                }
             },
             funs,
             ctx,
@@ -544,7 +543,7 @@ where
             }
             sub_query.column((rbum_rel::Entity, rbum_rel::Column::FromRbumId));
             sub_query.group_by_col((rbum_rel::Entity, rbum_rel::Column::FromRbumId));
-            if rbum_item_rel_filter_req.is_left {
+            if rbum_item_rel_filter_req.optional {
                 query.join_subquery(
                     JoinType::LeftJoin,
                     sub_query.take(),
@@ -572,7 +571,7 @@ where
             }
             sub_query.column((rbum_rel::Entity, rbum_rel::Column::ToRbumItemId));
             sub_query.group_by_col((rbum_rel::Entity, rbum_rel::Column::ToRbumItemId));
-            if rbum_item_rel_filter_req.is_left {
+            if rbum_item_rel_filter_req.optional {
                 query.join_subquery(
                     JoinType::LeftJoin,
                     sub_query.take(),

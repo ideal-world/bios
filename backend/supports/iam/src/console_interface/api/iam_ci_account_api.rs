@@ -252,7 +252,7 @@ impl IamCiAccountApi {
                     ..Default::default()
                 },
                 rel_rbum_item_disabled: Some(false),
-                table_rbum_set_cate_is_left: Some(true),
+                rel_rbum_item_can_not_exist: Some(true),
                 rel_rbum_set_id: Some(set_id.clone()),
                 rel_rbum_item_ids: Some(vec![ctx.owner.clone()]),
                 ..Default::default()
@@ -276,7 +276,7 @@ impl IamCiAccountApi {
                     ..Default::default()
                 },
                 rel_rbum_item_disabled: Some(false),
-                table_rbum_set_cate_is_left: Some(true),
+                rel_rbum_item_can_not_exist: Some(true),
                 rel_rbum_set_id: Some(set_id.clone()),
                 rel_rbum_set_cate_sys_codes: Some(cate_codes),
                 sys_code_query_kind: Some(RbumSetCateLevelQueryKind::CurrentAndSub),
@@ -320,7 +320,7 @@ impl IamCiAccountApi {
                     ..Default::default()
                 },
                 rel_rbum_item_disabled: Some(false),
-                table_rbum_set_cate_is_left: Some(true),
+                rel_rbum_item_can_not_exist: Some(true),
                 rel_rbum_set_id: Some(set_id.clone()),
                 rel_rbum_set_cate_sys_codes: cate_sys_codes.0.map(|codes| codes.split(',').map(|code| code.to_string()).collect::<Vec<String>>()),
                 sys_code_query_kind: sys_code_query_kind.0,

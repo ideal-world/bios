@@ -1,4 +1,4 @@
-use bios_basic::rbum::dto::rbum_set_dto::{RbumSetTreeExtResp, RbumSetTreeMainResp};
+use bios_basic::rbum::dto::rbum_set_dto::{RbumSetTreeExtResp, RbumSetTreeNodeResp};
 use serde::{Deserialize, Serialize};
 use tardis::basic::field::TrimString;
 use tardis::web::poem_openapi;
@@ -66,7 +66,7 @@ pub struct IamSetItemAddReq {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[cfg_attr(feature = "default", derive(poem_openapi::Object))]
 pub struct IamSetTreeResp {
-    pub main: Vec<RbumSetTreeMainResp>,
+    pub main: Vec<RbumSetTreeNodeResp>,
     pub ext: Option<RbumSetTreeExtResp>,
     pub rel: Option<String>,
 }

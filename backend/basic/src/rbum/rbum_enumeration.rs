@@ -11,13 +11,43 @@ use tardis::derive_more::Display;
 #[cfg(feature = "default")]
 use tardis::web::poem_openapi;
 
+/// Scope level kind
+///
+/// 作用域层级类型
 #[derive(Display, Clone, Debug, PartialEq, Eq, Serialize)]
 #[cfg_attr(feature = "default", derive(poem_openapi::Enum))]
 pub enum RbumScopeLevelKind {
+    /// Private
+    ///
+    /// 私有
+    ///
+    /// Only the current level is visible.
+    ///
+    /// 仅当前层级可见。
     Private,
+    /// （全局）完全公开
+    ///
+    /// （Global）Fully open
     Root,
+    /// The first level
+    ///
+    /// 第一层
+    ///
+    /// The current level and its descendants are visible.
+    ///
+    /// 当前层及其子孙层可见。
     L1,
+    /// The second level
+    ///
+    /// 第二层
+    ///
+    /// The current level and its descendants are visible.
     L2,
+    /// The third level
+    ///
+    /// 第三层
+    ///
+    /// The current level and its descendants are visible.
     L3,
 }
 
@@ -72,11 +102,24 @@ impl TryGetable for RbumScopeLevelKind {
     }
 }
 
+/// Certificate relationship kind
+///
+///
+/// 凭证关联的类型
 #[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 #[cfg_attr(feature = "default", derive(poem_openapi::Enum))]
 pub enum RbumCertRelKind {
+    /// Resource item
+    ///
+    /// 资源项
     Item,
+    /// Resource set
+    ///
+    /// 资源集
     Set,
+    /// Resource relation
+    ///
+    /// 资源关联
     Rel,
 }
 
@@ -111,12 +154,111 @@ impl TryGetable for RbumCertRelKind {
     }
 }
 
+/// Resource certificate configuration status kind
+///
+/// 资源凭证配置状态类型
+#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[cfg_attr(feature = "default", derive(poem_openapi::Enum))]
+pub enum RbumCertConfStatusKind {
+    /// Disabled
+    ///
+    /// 禁用
+    Disabled,
+    /// Enabled
+    ///
+    /// 启用
+    Enabled,
+}
+
+impl RbumCertConfStatusKind {
+    pub fn from_int(s: i16) -> TardisResult<RbumCertConfStatusKind> {
+        match s {
+            0 => Ok(RbumCertConfStatusKind::Disabled),
+            1 => Ok(RbumCertConfStatusKind::Enabled),
+            _ => Err(TardisError::format_error(&format!("invalid RbumCertConfStatusKind: {s}"), "406-rbum-*-enum-init-error")),
+        }
+    }
+
+    pub fn to_int(&self) -> i16 {
+        match self {
+            RbumCertConfStatusKind::Disabled => 0,
+            RbumCertConfStatusKind::Enabled => 1,
+        }
+    }
+}
+
+/// Resource certificate status kind
+///
+/// 资源凭证状态类型
+#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[cfg_attr(feature = "default", derive(poem_openapi::Enum))]
+pub enum RbumCertStatusKind {
+    /// Disabled
+    ///
+    /// 禁用
+    Disabled,
+    /// Enabled
+    ///
+    /// 启用
+    Enabled,
+    /// Pending
+    ///
+    /// 正在处理
+    Pending,
+}
+
+impl RbumCertStatusKind {
+    pub fn from_int(s: i16) -> TardisResult<RbumCertStatusKind> {
+        match s {
+            0 => Ok(RbumCertStatusKind::Disabled),
+            1 => Ok(RbumCertStatusKind::Enabled),
+            2 => Ok(RbumCertStatusKind::Pending),
+            _ => Err(TardisError::format_error(&format!("invalid RbumCertStatusKind: {s}"), "406-rbum-*-enum-init-error")),
+        }
+    }
+
+    pub fn to_int(&self) -> i16 {
+        match self {
+            RbumCertStatusKind::Disabled => 0,
+            RbumCertStatusKind::Enabled => 1,
+            RbumCertStatusKind::Pending => 2,
+        }
+    }
+}
+
+#[cfg(feature = "default")]
+impl TryGetable for RbumCertStatusKind {
+    fn try_get(res: &QueryResult, pre: &str, col: &str) -> Result<Self, TryGetError> {
+        let s = i16::try_get(res, pre, col)?;
+        RbumCertStatusKind::from_int(s).map_err(|_| TryGetError::DbErr(DbErr::RecordNotFound(format!("{pre}:{col}"))))
+    }
+
+    fn try_get_by<I: sea_orm::ColIdx>(_res: &QueryResult, _index: I) -> Result<Self, TryGetError> {
+        panic!("not implemented")
+    }
+}
+
+/// Resource relation kind
+///
+/// 资源关联的类型
 #[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 #[cfg_attr(feature = "default", derive(poem_openapi::Enum))]
 pub enum RbumRelFromKind {
+    /// Resource item
+    ///
+    /// 资源项
     Item,
+    /// Resource set
+    ///
+    /// 资源集
     Set,
+    /// Resource set category(node)
+    ///
+    /// 资源集分类（节点）
     SetCate,
+    /// Resource certificate
+    ///
+    /// 资源凭证
     Cert,
 }
 
@@ -152,75 +294,36 @@ impl TryGetable for RbumRelFromKind {
         panic!("not implemented")
     }
 }
-#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
-#[cfg_attr(feature = "default", derive(poem_openapi::Enum))]
-pub enum RbumCertConfStatusKind {
-    Disabled,
-    Enabled,
-}
 
-impl RbumCertConfStatusKind {
-    pub fn from_int(s: i16) -> TardisResult<RbumCertConfStatusKind> {
-        match s {
-            0 => Ok(RbumCertConfStatusKind::Disabled),
-            1 => Ok(RbumCertConfStatusKind::Enabled),
-            _ => Err(TardisError::format_error(&format!("invalid RbumCertConfStatusKind: {s}"), "406-rbum-*-enum-init-error")),
-        }
-    }
-
-    pub fn to_int(&self) -> i16 {
-        match self {
-            RbumCertConfStatusKind::Disabled => 0,
-            RbumCertConfStatusKind::Enabled => 1,
-        }
-    }
-}
-#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
-#[cfg_attr(feature = "default", derive(poem_openapi::Enum))]
-pub enum RbumCertStatusKind {
-    Disabled,
-    Enabled,
-    Pending,
-}
-
-impl RbumCertStatusKind {
-    pub fn from_int(s: i16) -> TardisResult<RbumCertStatusKind> {
-        match s {
-            0 => Ok(RbumCertStatusKind::Disabled),
-            1 => Ok(RbumCertStatusKind::Enabled),
-            2 => Ok(RbumCertStatusKind::Pending),
-            _ => Err(TardisError::format_error(&format!("invalid RbumCertStatusKind: {s}"), "406-rbum-*-enum-init-error")),
-        }
-    }
-
-    pub fn to_int(&self) -> i16 {
-        match self {
-            RbumCertStatusKind::Disabled => 0,
-            RbumCertStatusKind::Enabled => 1,
-            RbumCertStatusKind::Pending => 2,
-        }
-    }
-}
-
-#[cfg(feature = "default")]
-impl TryGetable for RbumCertStatusKind {
-    fn try_get(res: &QueryResult, pre: &str, col: &str) -> Result<Self, TryGetError> {
-        let s = i16::try_get(res, pre, col)?;
-        RbumCertStatusKind::from_int(s).map_err(|_| TryGetError::DbErr(DbErr::RecordNotFound(format!("{pre}:{col}"))))
-    }
-
-    fn try_get_by<I: sea_orm::ColIdx>(_res: &QueryResult, _index: I) -> Result<Self, TryGetError> {
-        panic!("not implemented")
-    }
-}
-
+/// Resource relation environment kind
+///
+/// 资源关联环境类型
+///
+/// Used to associate resources with restrictions.
+///
+/// 用于给资源关联加上限制条件。
 #[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 #[cfg_attr(feature = "default", derive(poem_openapi::Enum))]
 pub enum RbumRelEnvKind {
+    /// Datetime range
+    ///
+    /// 日期时间范围
     DatetimeRange,
+    /// Time range
+    ///
+    /// 时间范围
     TimeRange,
+    /// IP list
+    ///
+    /// IP地址
     Ips,
+    /// Call frequency
+    ///
+    /// 调用频率
     CallFrequency,
+    /// Call count
+    ///
+    /// 调用次数
     CallCount,
 }
 
@@ -259,6 +362,37 @@ impl TryGetable for RbumRelEnvKind {
     }
 }
 
+/// Resource set category(node) query kind
+///
+/// 资源集分类（节点）的查询类型
+#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[cfg_attr(feature = "default", derive(poem_openapi::Enum))]
+pub enum RbumSetCateLevelQueryKind {
+    /// Current layer and descendant layer
+    ///
+    /// 当前层及子孙层
+    CurrentAndSub,
+    /// Current layer and grandfather layer
+    ///
+    /// 当前层及祖父层
+    CurrentAndParent,
+    /// Descendant layer
+    ///
+    /// 子孙层
+    Sub,
+    /// Grandfather layer
+    ///
+    /// 祖父层
+    Parent,
+    /// Current layer only
+    ///
+    /// 仅当前层
+    Current,
+}
+
+/// Data kind
+///
+/// 数据类型
 #[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 #[cfg_attr(feature = "default", derive(poem_openapi::Enum, strum::EnumString))]
 pub enum RbumDataTypeKind {
@@ -289,6 +423,9 @@ impl TryGetable for RbumDataTypeKind {
     }
 }
 
+/// Widget kind
+///
+/// （前端）控件类型
 #[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 #[cfg_attr(feature = "default", derive(poem_openapi::Enum, strum::EnumString))]
 pub enum RbumWidgetTypeKind {
@@ -308,9 +445,18 @@ pub enum RbumWidgetTypeKind {
     MultiSelect,
     Link,
     CodeEditor,
-    Container, // Display group subtitles, datatype = String, value is empty
-    Control,   // Json fields : all parent_attr_name = current attribute, datatype = Json
-    Group,     // Sub fields : all parent_attr_name = current attribute, datatype = Array, The value of the json array is stored to the current field.
+    /// Display group subtitles, ``datatype = String & value is empty``
+    ///
+    /// 显示组标题，``datatype = String & 值为空``
+    Container,
+    /// Json fields : ``datatype = Json && all parent_attr_name = current attribute``
+    ///
+    /// Json字段，``datatype = Json && 所有 parent_attr_name = 当前属性``
+    Control,
+    /// Sub fields :  ``datatype = Array && all parent_attr_name = current attribute``, The value of the json array is stored to the current field.
+    ///
+    /// 子字段，``datatype = Array && 所有 parent_attr_name = 当前属性``，将json数组的值存储到当前字段。
+    Group,
 }
 
 #[cfg(feature = "default")]
@@ -323,14 +469,4 @@ impl TryGetable for RbumWidgetTypeKind {
     fn try_get_by<I: sea_orm::ColIdx>(_res: &QueryResult, _index: I) -> Result<Self, TryGetError> {
         panic!("not implemented")
     }
-}
-
-#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
-#[cfg_attr(feature = "default", derive(poem_openapi::Enum))]
-pub enum RbumSetCateLevelQueryKind {
-    CurrentAndSub,
-    CurrentAndParent,
-    Sub,
-    Parent,
-    Current,
 }

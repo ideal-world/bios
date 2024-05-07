@@ -245,7 +245,7 @@ where
 /// Check ``owner`` field of the context and fill the context.
 ///
 /// When using ``ak/sk`` authentication from an internal calling interface (mostly ``ci`` type interfaces),
-/// there is no ``owner`` field,
+/// there is ``ak`` field,
 /// so this method can be used to determine whether it comes from an internal calling interface.
 ///
 /// This method will fetch the context from the request header (default: 'Bios-Ctx') and fill the current context.
@@ -253,7 +253,7 @@ where
 /// Warning: This operation is unsafe, and it should only be used in scenarios where there is no security risk.
 #[cfg(feature = "default")]
 pub fn check_without_owner_and_unsafe_fill_ctx(request: &tardis::web::poem::Request, funs: &TardisFunsInst, ctx: &mut TardisContext) -> TardisResult<()> {
-    if !ctx.owner.is_empty() {
+    if ctx.ak.is_empty() {
         return Err(TardisError::forbidden("[Basic] Request context owner is not empty", "403-rbum-req-ctx-owner-is-not-empty"));
     }
     unsafe_fill_ctx(request, funs, ctx)
