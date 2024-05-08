@@ -4,7 +4,7 @@ use bios_basic::rbum::{
     dto::{
         rbum_filer_dto::{RbumBasicFilterReq, RbumRelFilterReq},
         rbum_rel_agg_dto::{RbumRelAggAddReq, RbumRelEnvAggAddReq},
-        rbum_rel_dto::{RbumRelAddReq, RbumRelBoneResp, RbumRelFindReq},
+        rbum_rel_dto::{RbumRelAddReq, RbumRelSimpleFindReq, RbumRelBoneResp},
     },
     rbum_enumeration::{RbumRelEnvKind, RbumRelFromKind},
     serv::rbum_rel_serv::RbumRelServ,
@@ -104,8 +104,8 @@ impl FlowRelServ {
 
     async fn exist_rels(flow_rel_kind: &FlowRelKind, flow_model_id: &str, flow_state_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<bool> {
         // TODO In-depth inspection
-        RbumRelServ::exist_simple_rel(
-            &RbumRelFindReq {
+        RbumRelServ::check_simple_rel(
+            &RbumRelSimpleFindReq {
                 tag: Some(flow_rel_kind.to_string()),
                 from_rbum_kind: Some(RbumRelFromKind::Item),
                 from_rbum_id: Some(flow_model_id.to_string()),
@@ -168,7 +168,7 @@ impl FlowRelServ {
         ctx: &TardisContext,
     ) -> TardisResult<()> {
         let rel_id = RbumRelServ::find_rel_ids(
-            &RbumRelFindReq {
+            &RbumRelSimpleFindReq {
                 tag: Some(flow_rel_kind.to_string()),
                 from_rbum_kind: Some(RbumRelFromKind::Item),
                 from_rbum_id: Some(flow_model_id.to_string()),
