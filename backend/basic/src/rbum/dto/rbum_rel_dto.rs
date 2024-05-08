@@ -9,82 +9,238 @@ use tardis::web::poem_openapi;
 
 use crate::rbum::rbum_enumeration::RbumRelFromKind;
 
+/// Add request for resource relationship
+///
+/// 资源关联添加请求
 #[derive(Serialize, Deserialize, Debug)]
 #[cfg_attr(feature = "default", derive(poem_openapi::Object))]
 pub struct RbumRelAddReq {
+    /// Relationship tag
+    ///
+    /// 关联标签
+    ///
+    /// Used to distinguish different relationships.
+    ///
+    /// 用于区分不同的关联关系。
     #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
     pub tag: String,
+    /// Relationship note
+    ///
+    /// 关联备注
     #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "1000")))]
     pub note: Option<String>,
+    /// Relationship source type
+    ///
+    /// 关联来源方的类型
     pub from_rbum_kind: RbumRelFromKind,
+    /// Relationship source id
+    ///
+    /// 关联来源方的id
     #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
     pub from_rbum_id: String,
+    /// Relationship target id
+    ///
+    /// 关联目标方的id
     #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
     pub to_rbum_item_id: String,
+    /// Relationship target ownership path
+    ///
+    /// 关联目标方的所有权路径
     #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
     pub to_own_paths: String,
-    pub to_is_outside: bool,
+    /// Relationship extension information
+    ///
+    /// 关联扩展信息
+    ///
+    /// E.g. the record from or to is in another service, to avoid remote calls,
+    /// you can redundantly add the required information to this field.
+    ///
+    /// 例如：记录来源或目标在另一个服务中，为避免远程调用，可以将所需信息冗余添加到此字段。
     #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "1000")))]
     pub ext: Option<String>,
+    /// Whether the target is an external object
+    ///
+    /// 关联目标方是否是外部对象
+    ///
+    /// If ``true``, the validity of the associated target will not be verified.
+    ///
+    /// 当为 ``true`` 不会校验关联目标方的合法性。
+    pub to_is_outside: bool,
 }
 
+/// Modify request for resource relationship
+///
+/// 资源关联修改请求
 #[derive(Serialize, Deserialize, Debug)]
 #[cfg_attr(feature = "default", derive(poem_openapi::Object))]
 pub struct RbumRelModifyReq {
+    /// Relationship tag
+    ///
+    /// 关联标签
+    ///
+    /// Used to distinguish different relationships.
+    ///
+    /// 用于区分不同的关联关系。
     #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
     pub tag: Option<String>,
+    /// Relationship note
+    ///
+    /// 关联备注
     #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "1000")))]
     pub note: Option<String>,
+    /// Relationship extension information
+    ///
+    /// 关联扩展信息
+    ///
+    /// E.g. the record from or to is in another service, to avoid remote calls,
+    /// you can redundantly add the required information to this field.
+    ///
+    /// 例如：记录来源或目标在另一个服务中，为避免远程调用，可以将所需信息冗余添加到此字段。
     #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "1000")))]
     pub ext: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
-#[cfg_attr(feature = "default", derive(poem_openapi::Object))]
-pub struct RbumRelCheckReq {
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
-    pub tag: String,
-    pub from_rbum_kind: RbumRelFromKind,
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
-    pub from_rbum_id: String,
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
-    pub to_rbum_item_id: String,
-    pub from_attrs: HashMap<String, String>,
-    pub to_attrs: HashMap<String, String>,
-}
-
+/// Simple find request for resource relationship
+///
+/// 资源关联简单查找请求
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
 #[cfg_attr(feature = "default", derive(poem_openapi::Object))]
 #[serde(default)]
-pub struct RbumRelFindReq {
+pub struct RbumRelSimpleFindReq {
+    /// Relationship tag
+    ///
+    /// 关联标签
+    ///
+    /// Used to distinguish different relationships.
+    ///
+    /// 用于区分不同的关联关系。
     #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
     pub tag: Option<String>,
+    /// Relationship source type
+    ///
+    /// 关联来源方的类型
     pub from_rbum_kind: Option<RbumRelFromKind>,
+    /// Relationship source id
+    ///
+    /// 关联来源方的id
     #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
     pub from_rbum_id: Option<String>,
+    /// Relationship target id
+    ///
+    /// 关联目标方的id
     #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
     pub to_rbum_item_id: Option<String>,
+    /// Relationship source ownership path
+    ///
+    /// 关联来源方的所有权路径
     #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
     pub from_own_paths: Option<String>,
+    /// Relationship target ownership path
+    ///
+    /// 关联目标方的所有权路径
     #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
     pub to_rbum_own_paths: Option<String>,
 }
 
+/// Check request for resource relationship
+///
+/// 资源关联检查请求
+#[derive(Serialize, Deserialize, Debug)]
+#[cfg_attr(feature = "default", derive(poem_openapi::Object))]
+pub struct RbumRelCheckReq {
+    /// Relationship tag
+    ///
+    /// 关联标签
+    ///
+    /// Used to distinguish different relationships.
+    ///
+    /// 用于区分不同的关联关系。
+    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
+    pub tag: String,
+    /// Relationship source type
+    ///
+    /// 关联来源方的类型
+    pub from_rbum_kind: RbumRelFromKind,
+    /// Relationship source id
+    ///
+    /// 关联来源方的id
+    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
+    pub from_rbum_id: String,
+    /// Relationship target id
+    ///
+    /// 关联目标方的id
+    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
+    pub to_rbum_item_id: String,
+    /// Limit the attributes of the relationship source
+    ///
+    /// 关联来源方的限定属性集合
+    pub from_attrs: HashMap<String, String>,
+    /// Limit the attributes of the relationship target
+    ///
+    /// 关联目标方的限定属性集合
+    pub to_attrs: HashMap<String, String>,
+}
+
+/// Resource relationship bone information
+///
+/// 资源关联骨干信息
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[cfg_attr(feature = "default", derive(poem_openapi::Object, sea_orm::FromQueryResult))]
 pub struct RbumRelBoneResp {
+    /// Relationship tag
+    ///
+    /// 关联标签
     pub tag: String,
+    /// Relationship note
+    ///
+    /// 关联备注
     pub note: String,
+    /// Relationship source type
+    ///
+    /// 关联来源方的类型
     pub from_rbum_kind: RbumRelFromKind,
+    /// Relationship source or target id
+    ///
+    /// 关联来源方或目标方的id
     pub rel_id: String,
+    /// Relationship source or target name
+    ///
+    /// 关联来源方或目标方的名称
+    ///
+    /// When `from_rbum_kind` is [`crate::rbum::rbum_enumeration::RbumRelFromKind::Item`] is the name of the resource item,
+    /// When `from_rbum_kind` is [`crate::rbum::rbum_enumeration::RbumRelFromKind::Set`] is the name of the resource set,
+    /// When `from_rbum_kind` is [`crate::rbum::rbum_enumeration::RbumRelFromKind::SetCate`] is the name of the resource set category(node).
+    ///
+    /// 当 `from_rbum_kind` 为 [`crate::rbum::rbum_enumeration::RbumRelFromKind::Item`] 时是资源项的名称，
+    /// 当 `from_rbum_kind` 为 [`crate::rbum::rbum_enumeration::RbumRelFromKind::Set`] 时是资源集的名称，
+    /// 当 `from_rbum_kind` 为 [`crate::rbum::rbum_enumeration::RbumRelFromKind::SetCate`] 时是资源集分类（节点）的名称。
     pub rel_name: String,
+    /// Relationship source or target ownership path
+    ///
+    /// 关联来源方或目标方的所有权路径
     pub rel_own_paths: String,
+    /// Relationship extension information
+    ///
+    /// 关联扩展信息
+    ///
+    /// E.g. the record from or to is in another service, to avoid remote calls,
+    /// you can redundantly add the required information to this field.
+    ///
+    /// 例如：记录来源或目标在另一个服务中，为避免远程调用，可以将所需信息冗余添加到此字段。
     pub ext: String,
 }
 
 impl RbumRelBoneResp {
-    pub fn new(detail: RbumRelDetailResp, is_from: bool) -> RbumRelBoneResp {
-        if is_from {
+    /// According to the relationship detail information, generate the relationship summary information
+    ///
+    /// 根据关联详细信息生成关联概要信息
+    ///
+    /// # Arguments
+    ///
+    /// * `detail` - Relationship detail information
+    /// * `package_to_info` - If ``true``, generate the summary information of the relationship source side, if ``false``, generate the summary information of the relationship target side
+    pub fn new(detail: RbumRelDetailResp, package_to_info: bool) -> RbumRelBoneResp {
+        if package_to_info {
             RbumRelBoneResp {
                 tag: detail.tag,
                 note: detail.note,
@@ -113,20 +269,71 @@ impl RbumRelBoneResp {
     }
 }
 
+/// Resource relationship detail information
+///
+/// 资源关联详细信息
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[cfg_attr(feature = "default", derive(poem_openapi::Object, sea_orm::FromQueryResult))]
 pub struct RbumRelDetailResp {
+    /// Relationship id
+    ///
+    /// 关联id
     pub id: String,
+    /// Relationship tag
+    ///
+    /// 关联标签
     pub tag: String,
+    /// Relationship note
+    ///
+    /// 关联备注
     pub note: String,
+    /// Relationship source type
+    ///
+    /// 关联来源方的类型
     pub from_rbum_kind: RbumRelFromKind,
+    /// Relationship source id
+    ///
+    /// 关联来源方的id
     pub from_rbum_id: String,
+    /// Relationship source resource item name
+    ///
+    /// 关联来源方的资源项名称
+    ///
+    /// Only valid when `from_rbum_kind` is [`crate::rbum::rbum_enumeration::RbumRelFromKind::Item`].
+    ///
+    /// 仅当 `from_rbum_kind` 为 [`crate::rbum::rbum_enumeration::RbumRelFromKind::Item`] 时有值。
     pub from_rbum_item_name: String,
+    /// Relationship source resource set name
+    ///
+    /// 关联来源方的资源集名称
+    ///
+    /// Only valid when `from_rbum_kind` is [`crate::rbum::rbum_enumeration::RbumRelFromKind::Set`].
+    ///
+    /// 仅当 `from_rbum_kind` 为 [`crate::rbum::rbum_enumeration::RbumRelFromKind::Set`] 时有值。
     pub from_rbum_set_name: String,
+    /// Relationship source resource set category(node) name
+    ///
+    /// 关联来源方的资源集分类（节点）名称
+    ///
+    /// Only valid when `from_rbum_kind` is [`crate::rbum::rbum_enumeration::RbumRelFromKind::SetCate`].
+    ///
+    /// 仅当 `from_rbum_kind` 为 [`crate::rbum::rbum_enumeration::RbumRelFromKind::SetCate`] 时有值。
     pub from_rbum_set_cate_name: String,
+    /// Relationship target id
+    ///
+    /// 关联目标方的id
     pub to_rbum_item_id: String,
+    /// Relationship target id
+    ///
+    /// 关联目标方的id
     pub to_rbum_item_name: String,
+    /// Relationship target ownership path
+    ///
+    /// 关联目标方的所有权路径
     pub to_own_paths: String,
+    /// Relationship extension information
+    ///
+    /// 关联扩展信息
     pub ext: String,
 
     pub own_paths: String,

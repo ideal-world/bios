@@ -17,7 +17,7 @@ use crate::rbum::domain::{rbum_item, rbum_kind_attr, rbum_rel, rbum_rel_attr, rb
 use crate::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumRelExtFilterReq, RbumRelFilterReq, RbumSetCateFilterReq, RbumSetItemFilterReq};
 use crate::rbum::dto::rbum_rel_agg_dto::{RbumRelAggAddReq, RbumRelAggResp};
 use crate::rbum::dto::rbum_rel_attr_dto::{RbumRelAttrAddReq, RbumRelAttrDetailResp, RbumRelAttrModifyReq};
-use crate::rbum::dto::rbum_rel_dto::{RbumRelAddReq, RbumRelBoneResp, RbumRelCheckReq, RbumRelDetailResp, RbumRelFindReq, RbumRelModifyReq};
+use crate::rbum::dto::rbum_rel_dto::{RbumRelAddReq, RbumRelBoneResp, RbumRelCheckReq, RbumRelDetailResp, RbumRelModifyReq, RbumRelSimpleFindReq};
 use crate::rbum::dto::rbum_rel_env_dto::{RbumRelEnvAddReq, RbumRelEnvDetailResp, RbumRelEnvModifyReq};
 use crate::rbum::rbum_enumeration::{RbumRelEnvKind, RbumRelFromKind, RbumSetCateLevelQueryKind};
 use crate::rbum::serv::rbum_crud_serv::{NameResp, RbumCrudOperation, RbumCrudQueryPackage};
@@ -39,6 +39,37 @@ impl RbumCrudOperation<rbum_rel::ActiveModel, RbumRelAddReq, RbumRelModifyReq, R
         rbum_rel::Entity.table_name()
     }
 
+    async fn before_add_rbum(add_req: &mut RbumRelAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let rel_rbum_table_name = match add_req.from_rbum_kind {
+            RbumRelFromKind::Item => RbumItemServ::get_table_name(),
+            RbumRelFromKind::Set => RbumSetServ::get_table_name(),
+            RbumRelFromKind::SetCate => RbumSetCateServ::get_table_name(),
+            RbumRelFromKind::Cert => RbumCertServ::get_table_name(),
+        };
+        if RbumRelFromKind::Cert == add_req.from_rbum_kind {
+            RbumCertServ::check_ownership(&add_req.from_rbum_id, funs, ctx).await?;
+        } else {
+            // The relationship check is changed from check_ownership to check_scope.
+            // for example, the account corresponding to the tenant can be associated to the app,
+            // where the account belongs to the tenant but scope=1, so it can be used by the application.
+            //
+            // 这里的关系检查从check_ownership改为check_scope。
+            // 比如租户对应的账户可以关联到应用，账户属于租户但scope=1，所以可以被应用使用。
+            Self::check_scope(&add_req.from_rbum_id, rel_rbum_table_name, funs, ctx).await?;
+        }
+
+        if add_req.to_rbum_item_id.trim().is_empty() {
+            return Err(funs.err().bad_request(&Self::get_obj_name(), "add", "to_rbum_item_id can not be empty", "400-rbum-rel-not-empty-item"));
+        }
+        // It may not be possible to get the data of to_rbum_item_id when there are multiple database instances.
+        //
+        // 当存在多个数据库实例时，可能无法获取to_rbum_item_id的数据。
+        if !add_req.to_is_outside {
+            Self::check_scope(&add_req.to_rbum_item_id, RbumItemServ::get_table_name(), funs, ctx).await?;
+        }
+        Ok(())
+    }
+
     async fn package_add(add_req: &RbumRelAddReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<rbum_rel::ActiveModel> {
         Ok(rbum_rel::ActiveModel {
             id: Set(TardisFuns::field.nanoid()),
@@ -51,32 +82,6 @@ impl RbumCrudOperation<rbum_rel::ActiveModel, RbumRelAddReq, RbumRelModifyReq, R
             ext: Set(add_req.ext.as_ref().unwrap_or(&"".to_string()).to_string()),
             ..Default::default()
         })
-    }
-
-    async fn before_add_rbum(add_req: &mut RbumRelAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        let rel_rbum_table_name = match add_req.from_rbum_kind {
-            RbumRelFromKind::Item => RbumItemServ::get_table_name(),
-            RbumRelFromKind::Set => RbumSetServ::get_table_name(),
-            RbumRelFromKind::SetCate => RbumSetCateServ::get_table_name(),
-            RbumRelFromKind::Cert => RbumCertServ::get_table_name(),
-        };
-        // The relationship check is changed from check_ownership to check_scope.
-        // for example, the account corresponding to the tenant can be associated to the app,
-        // where the account belongs to the tenant but scope=1, so it can be used by the application.
-        if RbumRelFromKind::Cert == add_req.from_rbum_kind {
-            RbumCertServ::check_ownership(&add_req.from_rbum_id, funs, ctx).await?;
-        } else {
-            Self::check_scope(&add_req.from_rbum_id, rel_rbum_table_name, funs, ctx).await?;
-        }
-
-        if add_req.to_rbum_item_id.trim().is_empty() {
-            return Err(funs.err().bad_request(&Self::get_obj_name(), "add", "to_rbum_item_id can not be empty", "400-rbum-rel-not-empty-item"));
-        }
-        // It may not be possible to get the data of to_rbum_item_id when there are multiple database instances
-        if !add_req.to_is_outside {
-            Self::check_scope(&add_req.to_rbum_item_id, RbumItemServ::get_table_name(), funs, ctx).await?;
-        }
-        Ok(())
     }
 
     async fn package_modify(id: &str, modify_req: &RbumRelModifyReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<rbum_rel::ActiveModel> {
@@ -211,6 +216,13 @@ impl RbumCrudOperation<rbum_rel::ActiveModel, RbumRelAddReq, RbumRelModifyReq, R
 }
 
 impl RbumRelServ {
+    /// Add a simple relationship
+    ///
+    /// 添加简单的关联关系
+    ///
+    /// The relationship source is the ``resource item``.
+    ///
+    /// 关联的来源方为``资源项``。
     pub async fn add_simple_rel(tag: &str, from_rbum_id: &str, to_rbum_item_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         RbumRelServ::add_rbum(
             &mut RbumRelAddReq {
@@ -230,6 +242,9 @@ impl RbumRelServ {
         Ok(())
     }
 
+    /// Add a relationship
+    ///
+    /// 添加关联关系
     pub async fn add_rel(add_req: &mut RbumRelAggAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
         let rbum_rel_id = Self::add_rbum(&mut add_req.rel, funs, ctx).await?;
         for attr in &add_req.attrs {
@@ -263,6 +278,9 @@ impl RbumRelServ {
         Ok(rbum_rel_id)
     }
 
+    /// Find the relationship target ids of the specified condition
+    ///
+    /// 查找指定条件的关联目标id集合
     pub async fn find_from_id_rels(
         tag: &str,
         from_rbum_kind: &RbumRelFromKind,
@@ -278,6 +296,9 @@ impl RbumRelServ {
             .map(|r| r.into_iter().map(|item| item.rel_id).collect())
     }
 
+    /// Find the relationship target summary information set of the specified condition
+    ///
+    /// 查找指定条件的关联目标概要信息集合
     pub async fn find_from_simple_rels(
         tag: &str,
         from_rbum_kind: &RbumRelFromKind,
@@ -308,6 +329,9 @@ impl RbumRelServ {
         .map(|r| r.into_iter().map(|item| RbumRelBoneResp::new(item, true)).collect())
     }
 
+    /// Find the relationship aggregation detail information set of the specified condition
+    ///
+    /// 查找指定条件的关联聚合信息集合
     pub async fn find_from_rels(
         tag: &str,
         from_rbum_kind: &RbumRelFromKind,
@@ -337,6 +361,9 @@ impl RbumRelServ {
         .await
     }
 
+    /// Paging to find the relationship target ids of the specified condition
+    ///
+    /// 分页查找指定条件的关联目标id集合
     pub async fn paginate_from_id_rels(
         tag: &str,
         from_rbum_kind: &RbumRelFromKind,
@@ -370,6 +397,9 @@ impl RbumRelServ {
         })
     }
 
+    /// Paging to find the relationship target summary information set of the specified condition
+    ///
+    /// 分页查找指定条件的关联目标概要信息集合
     pub async fn paginate_from_simple_rels(
         tag: &str,
         from_rbum_kind: &RbumRelFromKind,
@@ -409,6 +439,9 @@ impl RbumRelServ {
         })
     }
 
+    /// Paging to find the relationship aggregation detail information set of the specified condition
+    ///
+    /// 分页查找指定条件的关联聚合信息集合
     pub async fn paginate_from_rels(
         tag: &str,
         from_rbum_kind: &RbumRelFromKind,
@@ -442,6 +475,9 @@ impl RbumRelServ {
         .await
     }
 
+    /// Statistics the number of the specified condition
+    ///
+    /// 统计指定条件的关联记录数
     pub async fn count_from_rels(tag: &str, from_rbum_kind: &RbumRelFromKind, with_sub: bool, from_rbum_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<u64> {
         Self::count_rels(
             &RbumRelFilterReq {
@@ -460,6 +496,9 @@ impl RbumRelServ {
         .await
     }
 
+    /// Find the relationship source ids of the specified condition
+    ///
+    /// 查找指定条件的关联来源id集合
     pub async fn find_to_id_rels(
         tag: &str,
         to_rbum_item_id: &str,
@@ -471,6 +510,9 @@ impl RbumRelServ {
         Self::find_to_simple_rels(tag, to_rbum_item_id, desc_sort_by_create, desc_sort_by_update, funs, ctx).await.map(|r| r.into_iter().map(|item| item.rel_id).collect())
     }
 
+    /// Find the relationship source summary information set of the specified condition
+    ///
+    /// 查找指定条件的关联来源概要信息集合
     pub async fn find_to_simple_rels(
         tag: &str,
         to_rbum_item_id: &str,
@@ -500,6 +542,9 @@ impl RbumRelServ {
         .map(|r| r.into_iter().map(|item| RbumRelBoneResp::new(item, false)).collect())
     }
 
+    /// Find the relationship aggregation detail information set of the specified condition
+    ///
+    /// 查找指定条件的关联聚合信息集合
     pub async fn find_to_rels(
         tag: &str,
         to_rbum_item_id: &str,
@@ -528,6 +573,9 @@ impl RbumRelServ {
         .await
     }
 
+    /// Paging to find the relationship source ids of the specified condition
+    ///
+    /// 分页查找指定条件的关联来源id集合
     pub async fn paginate_to_id_rels(
         tag: &str,
         to_rbum_item_id: &str,
@@ -547,6 +595,9 @@ impl RbumRelServ {
         })
     }
 
+    /// Paging to find the relationship source summary information set of the specified condition
+    ///
+    /// 分页查找指定条件的关联来源概要信息集合
     pub async fn paginate_to_simple_rels(
         tag: &str,
         to_rbum_item_id: &str,
@@ -585,6 +636,9 @@ impl RbumRelServ {
         })
     }
 
+    /// Paging to find the relationship aggregation detail information set of the specified condition
+    ///
+    /// 分页查找指定条件的关联聚合信息集合
     pub async fn paginate_to_rels(
         tag: &str,
         to_rbum_item_id: &str,
@@ -617,6 +671,9 @@ impl RbumRelServ {
         .await
     }
 
+    /// Statistics the number of the specified condition
+    ///
+    /// 统计指定条件的关联记录数
     pub async fn count_to_rels(tag: &str, to_rbum_item_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<u64> {
         Self::count_rels(
             &RbumRelFilterReq {
@@ -636,23 +693,36 @@ impl RbumRelServ {
         .await
     }
 
+    /// Statistics the number of the specified condition
+    ///
+    /// 统计指定条件的关联记录数
     async fn count_rels(filter: &RbumRelFilterReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<u64> {
         RbumRelServ::count_rbums(filter, funs, ctx).await
     }
 
+    /// Find the relationship summary information set of the specified condition
+    ///
+    /// 查找指定条件的关联概要信息集合
+    ///
+    /// If ``package_to_info = true``, return the relationship target information, otherwise, return the relationship source information.
+    ///
+    /// 当 ``package_to_info = true`` 时返回关联目标信息，反之，返回关联来源信息。
     pub async fn find_simple_rels(
         filter: &RbumRelFilterReq,
         desc_sort_by_create: Option<bool>,
         desc_sort_by_update: Option<bool>,
-        is_from: bool,
+        package_to_info: bool,
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<Vec<RbumRelBoneResp>> {
         RbumRelServ::find_rbums(filter, desc_sort_by_create, desc_sort_by_update, funs, ctx)
             .await
-            .map(|r| r.into_iter().map(|item| RbumRelBoneResp::new(item, is_from)).collect())
+            .map(|r| r.into_iter().map(|item| RbumRelBoneResp::new(item, package_to_info)).collect())
     }
 
+    /// Find the relationship aggregation detail information set of the specified condition
+    ///
+    /// 查找指定条件的关联聚合信息集合
     pub async fn find_rels(
         filter: &RbumRelFilterReq,
         desc_sort_by_create: Option<bool>,
@@ -664,13 +734,20 @@ impl RbumRelServ {
         Self::package_agg_rels(rbum_rels, filter, funs, ctx).await
     }
 
+    /// Paging to find the relationship summary information set of the specified condition
+    ///
+    /// 分页查找指定条件的关联概要信息集合
+    ///
+    /// If ``package_to_info = true``, return the relationship target information, otherwise, return the relationship source information.
+    ///
+    /// 当 ``package_to_info = true`` 时返回关联目标信息，反之，返回关联来源信息。
     pub async fn paginate_simple_rels(
         filter: &RbumRelFilterReq,
         page_number: u32,
         page_size: u32,
         desc_sort_by_create: Option<bool>,
         desc_sort_by_update: Option<bool>,
-        is_from: bool,
+        package_to_info: bool,
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<TardisPage<RbumRelBoneResp>> {
@@ -679,10 +756,13 @@ impl RbumRelServ {
             page_size: result.page_size,
             page_number: result.page_number,
             total_size: result.total_size,
-            records: result.records.into_iter().map(|item| RbumRelBoneResp::new(item, is_from)).collect(),
+            records: result.records.into_iter().map(|item| RbumRelBoneResp::new(item, package_to_info)).collect(),
         })
     }
 
+    /// Paging to find the relationship aggregation detail information set of the specified condition
+    ///
+    /// 分页查找指定条件的关联聚合信息集合
     pub async fn paginate_rels(
         filter: &RbumRelFilterReq,
         page_number: u32,
@@ -702,6 +782,9 @@ impl RbumRelServ {
         })
     }
 
+    /// Package relationship aggregation information
+    ///
+    /// 组装关联聚合信息
     async fn package_agg_rels(rels: Vec<RbumRelDetailResp>, filter: &RbumRelFilterReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<RbumRelAggResp>> {
         let mut result = Vec::with_capacity(rels.len());
         for rel in rels {
@@ -736,16 +819,22 @@ impl RbumRelServ {
         Ok(result)
     }
 
-    pub async fn find_rel_ids(find_req: &RbumRelFindReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<String>> {
+    /// Find the relationship ids of the specified condition
+    ///
+    /// 查找指定条件的关联id集合
+    pub async fn find_rel_ids(find_req: &RbumRelSimpleFindReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<String>> {
         let ids = funs.db().find_dtos::<IdResp>(&Self::package_simple_rel_query(find_req, ctx)).await?.iter().map(|i| i.id.to_string()).collect::<Vec<String>>();
         Ok(ids)
     }
 
-    pub async fn exist_simple_rel(find_req: &RbumRelFindReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<bool> {
+    /// Check whether the relationship of the specified simple condition exists
+    ///
+    /// 检查指定的简单条件的关联是否存在
+    pub async fn check_simple_rel(find_req: &RbumRelSimpleFindReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<bool> {
         funs.db().count(&Self::package_simple_rel_query(find_req, ctx)).await.map(|i| i > 0)
     }
 
-    fn package_simple_rel_query(find_req: &RbumRelFindReq, ctx: &TardisContext) -> SelectStatement {
+    fn package_simple_rel_query(find_req: &RbumRelSimpleFindReq, ctx: &TardisContext) -> SelectStatement {
         let mut query = Query::select();
         query.column(rbum_rel::Column::Id).from(rbum_rel::Entity);
         if let Some(tag) = &find_req.tag {
@@ -776,7 +865,9 @@ impl RbumRelServ {
         query
     }
 
-    // TODO cache
+    /// Check whether the relationship of the specified condition exists
+    ///
+    /// 检查指定的条件的关联是否存在
     pub async fn check_rel(check_req: &mut RbumRelCheckReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<bool> {
         if Self::do_check_rel(check_req, funs, ctx).await? {
             return Ok(true);
@@ -846,7 +937,7 @@ impl RbumRelServ {
 
     async fn do_check_rel(check_req: &RbumRelCheckReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<bool> {
         let rbum_rel_ids = Self::find_rel_ids(
-            &RbumRelFindReq {
+            &RbumRelSimpleFindReq {
                 tag: Some(check_req.tag.clone()),
                 from_rbum_kind: Some(check_req.from_rbum_kind.clone()),
                 from_rbum_id: Some(check_req.from_rbum_id.clone()),
@@ -971,6 +1062,12 @@ impl RbumCrudOperation<rbum_rel_attr::ActiveModel, RbumRelAttrAddReq, RbumRelAtt
         rbum_rel_attr::Entity.table_name()
     }
 
+    async fn before_add_rbum(add_req: &mut RbumRelAttrAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        Self::check_ownership_with_table_name(&add_req.rel_rbum_rel_id, RbumRelServ::get_table_name(), funs, ctx).await?;
+        Self::check_scope(&add_req.rel_rbum_kind_attr_id, RbumKindAttrServ::get_table_name(), funs, ctx).await?;
+        Ok(())
+    }
+
     async fn package_add(add_req: &RbumRelAttrAddReq, funs: &TardisFunsInst, _: &TardisContext) -> TardisResult<rbum_rel_attr::ActiveModel> {
         let rbum_rel_attr_name = funs
             .db()
@@ -1000,12 +1097,6 @@ impl RbumCrudOperation<rbum_rel_attr::ActiveModel, RbumRelAttrAddReq, RbumRelAtt
             rel_rbum_rel_id: Set(add_req.rel_rbum_rel_id.to_string()),
             ..Default::default()
         })
-    }
-
-    async fn before_add_rbum(add_req: &mut RbumRelAttrAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        Self::check_ownership_with_table_name(&add_req.rel_rbum_rel_id, RbumRelServ::get_table_name(), funs, ctx).await?;
-        Self::check_scope(&add_req.rel_rbum_kind_attr_id, RbumKindAttrServ::get_table_name(), funs, ctx).await?;
-        Ok(())
     }
 
     async fn package_modify(id: &str, modify_req: &RbumRelAttrModifyReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<rbum_rel_attr::ActiveModel> {
@@ -1058,6 +1149,11 @@ impl RbumCrudOperation<rbum_rel_env::ActiveModel, RbumRelEnvAddReq, RbumRelEnvMo
         rbum_rel_env::Entity.table_name()
     }
 
+    async fn before_add_rbum(add_req: &mut RbumRelEnvAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        Self::check_ownership_with_table_name(&add_req.rel_rbum_rel_id, RbumRelServ::get_table_name(), funs, ctx).await?;
+        Ok(())
+    }
+
     async fn package_add(add_req: &RbumRelEnvAddReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<rbum_rel_env::ActiveModel> {
         Ok(rbum_rel_env::ActiveModel {
             id: Set(TardisFuns::field.nanoid()),
@@ -1067,11 +1163,6 @@ impl RbumCrudOperation<rbum_rel_env::ActiveModel, RbumRelEnvAddReq, RbumRelEnvMo
             rel_rbum_rel_id: Set(add_req.rel_rbum_rel_id.to_string()),
             ..Default::default()
         })
-    }
-
-    async fn before_add_rbum(add_req: &mut RbumRelEnvAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        Self::check_ownership_with_table_name(&add_req.rel_rbum_rel_id, RbumRelServ::get_table_name(), funs, ctx).await?;
-        Ok(())
     }
 
     async fn package_modify(id: &str, modify_req: &RbumRelEnvModifyReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<rbum_rel_env::ActiveModel> {

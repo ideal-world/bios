@@ -21,7 +21,7 @@ use crate::rbum::dto::rbum_filer_dto::{
 use crate::rbum::dto::rbum_item_attr_dto::{RbumItemAttrAddReq, RbumItemAttrDetailResp, RbumItemAttrModifyReq, RbumItemAttrSummaryResp, RbumItemAttrsAddOrModifyReq};
 use crate::rbum::dto::rbum_item_dto::{RbumItemAddReq, RbumItemDetailResp, RbumItemKernelAddReq, RbumItemKernelModifyReq, RbumItemSummaryResp};
 use crate::rbum::dto::rbum_kind_attr_dto::RbumKindAttrSummaryResp;
-use crate::rbum::dto::rbum_rel_dto::{RbumRelAddReq, RbumRelFindReq};
+use crate::rbum::dto::rbum_rel_dto::{RbumRelAddReq, RbumRelSimpleFindReq};
 use crate::rbum::helper::rbum_event_helper;
 #[cfg(feature = "with-mq")]
 use crate::rbum::rbum_config::RbumConfigApi;
@@ -376,7 +376,7 @@ where
     async fn delete_item_with_all_rels(id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<u64> {
         // Delete rels
         let rel_ids = RbumRelServ::find_rel_ids(
-            &RbumRelFindReq {
+            &RbumRelSimpleFindReq {
                 tag: None,
                 from_rbum_kind: Some(RbumRelFromKind::Item),
                 from_rbum_id: Some(id.to_string()),
@@ -391,7 +391,7 @@ where
             RbumRelServ::delete_rel_with_ext(&rel_id, funs, ctx).await?;
         }
         let rel_ids = RbumRelServ::find_rel_ids(
-            &RbumRelFindReq {
+            &RbumRelSimpleFindReq {
                 tag: None,
                 from_rbum_kind: None,
                 from_rbum_id: None,

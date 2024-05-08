@@ -13,7 +13,7 @@ use crate::{
             rbum_filer_dto::{RbumBasicFilterReq, RbumCertFilterReq, RbumItemRelFilterReq, RbumRelFilterReq},
             rbum_item_dto::{RbumItemKernelAddReq, RbumItemKernelModifyReq},
             rbum_rel_agg_dto::{RbumRelAggAddReq, RbumRelAttrAggAddReq, RbumRelEnvAggAddReq},
-            rbum_rel_dto::{RbumRelAddReq, RbumRelFindReq},
+            rbum_rel_dto::{RbumRelAddReq, RbumRelSimpleFindReq},
         },
         rbum_enumeration::{RbumCertRelKind, RbumCertStatusKind, RbumRelFromKind, RbumScopeLevelKind},
         serv::{
@@ -257,8 +257,8 @@ impl SpiBsServ {
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<()> {
-        if !RbumRelServ::exist_simple_rel(
-            &RbumRelFindReq {
+        if !RbumRelServ::check_simple_rel(
+            &RbumRelSimpleFindReq {
                 tag: Some(SPI_IDENT_REL_TAG.to_string()),
                 from_rbum_kind: Some(RbumRelFromKind::Item),
                 from_rbum_id: Some(bs_id.to_string()),
