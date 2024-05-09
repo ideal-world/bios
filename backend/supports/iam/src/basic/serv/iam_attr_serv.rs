@@ -23,14 +23,14 @@ impl IamAttrServ {
     pub async fn add_account_attr(add_req: &IamKindAttrAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
         let idx = add_req.idx.unwrap_or(false);
         let main_column = add_req.main_column.unwrap_or(false);
-        let name = add_req.name.as_str();
+        let name = add_req.name.to_string();
         if idx && !main_column {
             return Err(funs.err().bad_request("iam_account_attr", "add", "only the main table columns supports indexes", "400-iam-attr-idx-not-in-main"));
         }
-        if idx && !ACCOUNT_IDX_MAIN_COLUMN_NAMES.contains(&name) {
+        if idx && !ACCOUNT_IDX_MAIN_COLUMN_NAMES.contains(&name.as_str()) {
             return Err(funs.err().not_found("iam_account_attr", "add", "index column name is invalid", "400-iam-attr-idx-not-exist"));
         }
-        if main_column && !(ACCOUNT_IDX_MAIN_COLUMN_NAMES.contains(&name) || ACCOUNT_NO_IDX_MAIN_COLUMN_NAMES.contains(&name)) {
+        if main_column && !(ACCOUNT_IDX_MAIN_COLUMN_NAMES.contains(&name.as_str()) || ACCOUNT_NO_IDX_MAIN_COLUMN_NAMES.contains(&name.as_str())) {
             return Err(funs.err().not_found("iam_account_attr", "add", "main column name is invalid", "400-iam-attr-main-not-exist"));
         }
         RbumKindAttrServ::add_rbum(
