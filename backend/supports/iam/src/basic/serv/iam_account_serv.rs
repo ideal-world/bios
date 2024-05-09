@@ -85,7 +85,7 @@ impl RbumItemCrudOperation<iam_account::ActiveModel, IamAccountAddReq, IamAccoun
             temporary: Set(add_req.temporary.unwrap_or(false)),
             lock_status: Set(add_req.lock_status.as_ref().unwrap_or(&IamAccountLockStateKind::Unlocked).to_int()),
             logout_type: if add_req.disabled == Some(true) {
-                Set(add_req.logout_type.unwrap_or_default().to_string())
+                Set(add_req.logout_type.clone().unwrap_or_default().to_string())
             } else {
                 Set("".to_string())
             },
