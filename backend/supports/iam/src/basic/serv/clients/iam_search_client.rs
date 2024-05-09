@@ -10,6 +10,8 @@ use itertools::Itertools;
 
 use tardis::{
     basic::{dto::TardisContext, field::TrimString, result::TardisResult},
+    chrono::Utc,
+    db::sea_orm::prelude::DateTimeUtc,
     serde_json::json,
     tokio, TardisFunsInst,
 };
@@ -180,6 +182,8 @@ impl IamSearchClient {
                     "icon":account_resp.icon,
                     "logout_msg":logout_msg,
                     "disabled":account_resp.disabled,
+                    "logout_time":account_resp.logout_time,
+                    "logout_type":account_resp.logout_type,
                     "scope_level":account_resp.scope_level
                 })),
                 ext_override: Some(true),
@@ -224,6 +228,8 @@ impl IamSearchClient {
                     "icon":account_resp.icon,
                     "logout_msg":logout_msg,
                     "disabled":account_resp.disabled,
+                    "logout_time":account_resp.logout_time,
+                    "logout_type":account_resp.logout_type,
                     "scope_level":account_resp.scope_level
                 })),
                 visit_keys: Some(SearchItemVisitKeysReq {

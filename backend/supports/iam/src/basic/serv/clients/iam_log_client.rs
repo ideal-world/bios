@@ -118,7 +118,7 @@ impl IamLogClient {
         ctx: &TardisContext,
     ) -> TardisResult<()> {
         let mut content = content.clone();
-        // find operater info
+        // find operates info
         if let Ok(cert) = IamCertServ::get_cert_detail_by_id_and_kind(ctx.owner.as_str(), &IamCertKernelKind::UserPwd, funs, ctx).await {
             content.ak = cert.ak;
             content.name = cert.owner_name.unwrap_or("".to_string());

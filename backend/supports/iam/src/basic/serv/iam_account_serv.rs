@@ -43,7 +43,7 @@ use crate::basic::serv::iam_role_serv::IamRoleServ;
 use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::basic::serv::iam_tenant_serv::IamTenantServ;
 use crate::iam_config::{IamBasicInfoManager, IamConfig};
-use crate::iam_enumeration::{IamAccountLockStateKind, IamAccountStatusKind, IamCertKernelKind, IamRelKind, IamSetKind};
+use crate::iam_enumeration::{IamAccountLockStateKind, IamAccountLogoutTypeKind, IamAccountStatusKind, IamCertKernelKind, IamRelKind, IamSetKind};
 
 use super::clients::iam_log_client::{IamLogClient, LogParamTag};
 use super::clients::iam_search_client::IamSearchClient;
@@ -84,6 +84,11 @@ impl RbumItemCrudOperation<iam_account::ActiveModel, IamAccountAddReq, IamAccoun
             status: Set(add_req.status.as_ref().unwrap_or(&IamAccountStatusKind::Active).to_int()),
             temporary: Set(add_req.temporary.unwrap_or(false)),
             lock_status: Set(add_req.lock_status.as_ref().unwrap_or(&IamAccountLockStateKind::Unlocked).to_int()),
+            logout_type: if add_req.disabled == Some(true) {
+                Set(add_req.logout_type.unwrap_or_default().to_string())
+            } else {
+                Set("".to_string())
+            },
             ext1_idx: Set("".to_string()),
             ext2_idx: Set("".to_string()),
             ext3_idx: Set("".to_string()),
@@ -104,7 +109,7 @@ impl RbumItemCrudOperation<iam_account::ActiveModel, IamAccountAddReq, IamAccoun
         let disabled = if let Some(status) = modify_req.status.as_ref() {
             match status {
                 IamAccountStatusKind::Active => Some(false),
-                IamAccountStatusKind::Dormant => Some(true),
+                IamAccountStatusKind::Dormant => Some(false),
                 IamAccountStatusKind::Logout => Some(true),
             }
         } else {
@@ -140,6 +145,10 @@ impl RbumItemCrudOperation<iam_account::ActiveModel, IamAccountAddReq, IamAccoun
         }
         if let Some(temporary) = &modify_req.temporary {
             iam_account.temporary = Set(*temporary);
+        }
+        if modify_req.disabled == Some(true) {
+            iam_account.logout_time = Set(Utc::now());
+            iam_account.logout_type = Set(modify_req.logout_type.clone().unwrap_or_default().to_string());
         }
         Ok(Some(iam_account))
     }
@@ -253,6 +262,7 @@ impl IamAccountServ {
                 temporary: add_req.temporary,
                 status: None,
                 lock_status: add_req.lock_status.clone(),
+                logout_type: add_req.logout_type.clone(),
             },
             funs,
             ctx,
@@ -331,6 +341,7 @@ impl IamAccountServ {
                 status: modify_req.status.clone(),
                 is_auto: Some(false),
                 lock_status: None,
+                logout_type: modify_req.logout_type.clone(),
             },
             funs,
             ctx,
@@ -424,6 +435,7 @@ impl IamAccountServ {
                 lock_status: None,
                 is_auto: None,
                 temporary: None,
+                logout_type: modify_req.logout_type.clone(),
             },
             funs,
             &mock_ctx,
@@ -514,6 +526,8 @@ impl IamAccountServ {
             effective_time: account.effective_time,
             scope_level: account.scope_level,
             disabled: account.disabled,
+            logout_time: account.logout_time,
+            logout_type: account.logout_type,
             is_locked: funs.cache().exists(&format!("{}{}", funs.rbum_conf_cache_key_cert_locked_(), &account.id.clone())).await?,
             is_online: IamIdentCacheServ::exist_token_by_account_id(&account.id, funs).await?,
             status: account.status,
@@ -587,6 +601,8 @@ impl IamAccountServ {
                 effective_time: account.effective_time,
                 scope_level: account.scope_level,
                 disabled: account.disabled,
+                logout_time: account.logout_time,
+                logout_type: account.logout_type,
                 is_locked: funs.cache().exists(&format!("{}{}", funs.rbum_conf_cache_key_cert_locked_(), &account.id.clone())).await?,
                 is_online: IamIdentCacheServ::exist_token_by_account_id(&account.id, funs).await?,
                 status: account.status,
@@ -769,6 +785,7 @@ impl IamAccountServ {
                 is_auto: Some(false),
                 lock_status: Some(IamAccountLockStateKind::Unlocked),
                 temporary: None,
+                logout_type: None,
             },
             funs,
             ctx,

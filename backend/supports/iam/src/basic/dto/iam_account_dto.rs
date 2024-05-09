@@ -2,13 +2,13 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 use tardis::basic::field::TrimString;
-use tardis::chrono::{DateTime, Utc};
+use tardis::chrono::{self, DateTime, Utc};
 use tardis::db::sea_orm;
 use tardis::web::poem_openapi;
 
 use crate::basic::dto::iam_cert_conf_dto::IamCertConfLdapResp;
 use crate::basic::serv::iam_cert_ldap_serv::ldap::LdapSearchResp;
-use crate::iam_enumeration::{IamAccountLockStateKind, IamAccountStatusKind};
+use crate::iam_enumeration::{IamAccountLockStateKind, IamAccountLogoutTypeKind, IamAccountStatusKind};
 use bios_basic::rbum::rbum_enumeration::{RbumCertStatusKind, RbumScopeLevelKind};
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
@@ -31,6 +31,7 @@ pub struct IamAccountAggAddReq {
 
     pub scope_level: Option<RbumScopeLevelKind>,
     pub disabled: Option<bool>,
+    pub logout_type: Option<IamAccountLogoutTypeKind>,
 
     pub temporary: Option<bool>,
 
@@ -48,6 +49,7 @@ pub struct IamAccountAddReq {
     pub name: TrimString,
     pub scope_level: Option<RbumScopeLevelKind>,
     pub disabled: Option<bool>,
+    pub logout_type: Option<IamAccountLogoutTypeKind>,
     pub temporary: Option<bool>,
     pub lock_status: Option<IamAccountLockStateKind>,
     pub status: Option<IamAccountStatusKind>,
@@ -61,6 +63,7 @@ pub struct IamAccountAggModifyReq {
     pub name: Option<TrimString>,
     pub scope_level: Option<RbumScopeLevelKind>,
     pub disabled: Option<bool>,
+    pub logout_type: Option<IamAccountLogoutTypeKind>,
     pub temporary: Option<bool>,
     pub status: Option<IamAccountStatusKind>,
     #[oai(validator(min_length = "2", max_length = "1000"))]
@@ -83,6 +86,7 @@ pub struct IamAccountModifyReq {
     pub name: Option<TrimString>,
     pub scope_level: Option<RbumScopeLevelKind>,
     pub disabled: Option<bool>,
+    pub logout_type: Option<IamAccountLogoutTypeKind>,
     pub temporary: Option<bool>,
     pub lock_status: Option<IamAccountLockStateKind>,
 
@@ -97,6 +101,7 @@ pub struct IamAccountSelfModifyReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub name: Option<TrimString>,
     pub disabled: Option<bool>,
+    pub logout_type: Option<IamAccountLogoutTypeKind>,
     // #[oai(validator(min_length = "2", max_length = "1000"))]
     pub icon: Option<String>,
 
@@ -123,6 +128,8 @@ pub struct IamAccountSummaryResp {
 
     pub scope_level: RbumScopeLevelKind,
     pub disabled: bool,
+    pub logout_time: chrono::DateTime<Utc>,
+    pub logout_type: String,
 
     pub temporary: bool,
     pub lock_status: IamAccountLockStateKind,
@@ -144,6 +151,8 @@ pub struct IamAccountDetailResp {
 
     pub scope_level: RbumScopeLevelKind,
     pub disabled: bool,
+    pub logout_time: chrono::DateTime<Utc>,
+    pub logout_type: String,
 
     pub temporary: bool,
     pub lock_status: IamAccountLockStateKind,
@@ -160,6 +169,8 @@ pub struct IamAccountSummaryAggResp {
     pub create_time: DateTime<Utc>,
     pub update_time: DateTime<Utc>,
     pub effective_time: DateTime<Utc>,
+    pub logout_time: chrono::DateTime<Utc>,
+    pub logout_type: String,
 
     pub scope_level: RbumScopeLevelKind,
     pub disabled: bool,
@@ -186,6 +197,8 @@ pub struct IamAccountDetailAggResp {
     pub create_time: DateTime<Utc>,
     pub update_time: DateTime<Utc>,
     pub effective_time: DateTime<Utc>,
+    pub logout_time: chrono::DateTime<Utc>,
+    pub logout_type: String,
 
     pub scope_level: RbumScopeLevelKind,
     pub disabled: bool,

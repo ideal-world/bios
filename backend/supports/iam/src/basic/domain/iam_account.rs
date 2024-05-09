@@ -9,21 +9,26 @@ pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
     pub id: String,
     pub icon: String,
-    // 状态
     /// [data type Kind](crate::iam_enumeration::IamAccountStatusKind)
     pub status: i16,
-    /// Marking of temporary status / 临时状态的标记
+    /// Marking of temporary status
+    ///
+    /// 临时状态的标记
     pub temporary: bool,
     /// [data type Kind](crate::iam_enumeration::IamAccountLockStateKind)
     pub lock_status: i16,
-    /// Expanded fields with index / 索引扩展字段 idx 1-3
+    /// Expanded fields with index
+    ///
+    /// 索引扩展字段 idx 1-3
     #[index]
     pub ext1_idx: String,
     #[index]
     pub ext2_idx: String,
     #[index]
     pub ext3_idx: String,
-    /// Expanded fields / 普通扩展字段 4-9
+    /// Expanded fields
+    ///
+    /// 普通扩展字段 4-9
     pub ext4: String,
     pub ext5: String,
     pub ext6: String,
@@ -32,6 +37,11 @@ pub struct Model {
     pub ext9: String,
     #[sea_orm(extra = "DEFAULT CURRENT_TIMESTAMP")]
     pub effective_time: chrono::DateTime<Utc>,
+
+    #[sea_orm(extra = "DEFAULT CURRENT_TIMESTAMP")]
+    pub logout_time: chrono::DateTime<Utc>,
+    /// [data type Kind](crate::iam_enumeration::IamAccountLogoutTypeKind)
+    pub logout_type: String,
 
     #[fill_ctx(fill = "own_paths")]
     pub own_paths: String,

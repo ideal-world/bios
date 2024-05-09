@@ -234,6 +234,7 @@ impl IamCertOAuth2Serv {
                 status: Some(Pending),
                 temporary: None,
                 lock_status: None,
+                logout_type: None,
             },
             false,
             funs,

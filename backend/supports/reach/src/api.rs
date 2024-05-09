@@ -9,7 +9,7 @@ mod reach_api_ci;
 pub use reach_api_ci::*;
 use tardis::{basic::result::TardisResult, web::web_server::TardisWebServer};
 
-use crate::reach_consts::DOMAIN_CODE;
+use crate::reach_constants::DOMAIN_CODE;
 
 pub type ReachApi = (ReachCcApi, ReachCtApi, ReachMessageCiApi);
 pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
