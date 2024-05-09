@@ -1148,6 +1148,7 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
             status: None,
             temporary: None,
             lock_status: None,
+            logout_type: None,
         },
         false,
         &funs,

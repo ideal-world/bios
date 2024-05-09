@@ -35,7 +35,6 @@ pub struct ConfigQueryRequest {
     pub tag: ::prost::alloc::string::String,
 }
 #[allow(unused_imports)]
-#[poem::async_trait]
 pub trait Request: Send + Sync + 'static {
     async fn request(&self, request: poem_grpc::Request<Payload>) -> ::std::result::Result<poem_grpc::Response<Payload>, poem_grpc::Status>;
 }
@@ -60,7 +59,6 @@ impl<T: Request> poem::IntoEndpoint for RequestServer<T> {
         let mut route = poem::Route::new();
         #[allow(non_camel_case_types)]
         struct RequestrequestService<T>(::std::sync::Arc<T>);
-        #[poem::async_trait]
         impl<T: Request> poem_grpc::service::UnaryService<Payload> for RequestrequestService<T> {
             type Response = Payload;
             async fn call(&self, request: poem_grpc::Request<Payload>) -> Result<poem_grpc::Response<Self::Response>, poem_grpc::Status> {
@@ -90,7 +88,6 @@ impl<T: Request> poem::IntoEndpoint for RequestServer<T> {
     }
 }
 #[allow(unused_imports)]
-#[poem::async_trait]
 pub trait BiRequestStream: Send + Sync + 'static {
     async fn request_bi_stream(
         &self,
@@ -118,7 +115,6 @@ impl<T: BiRequestStream> poem::IntoEndpoint for BiRequestStreamServer<T> {
         let mut route = poem::Route::new();
         #[allow(non_camel_case_types)]
         struct BiRequestStreamrequest_bi_streamService<T>(::std::sync::Arc<T>);
-        #[poem::async_trait]
         impl<T: BiRequestStream> poem_grpc::service::BidirectionalStreamingService<Payload> for BiRequestStreamrequest_bi_streamService<T> {
             type Response = Payload;
             async fn call(

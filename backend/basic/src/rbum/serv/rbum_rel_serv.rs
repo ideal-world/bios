@@ -5,7 +5,6 @@ use itertools::Itertools;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::result::TardisResult;
 use tardis::db::reldb_client::IdResp;
-use tardis::db::sea_orm;
 use tardis::db::sea_orm::sea_query::*;
 use tardis::db::sea_orm::IdenStatic;
 use tardis::db::sea_orm::*;
@@ -1420,18 +1419,4 @@ impl RbumCrudOperation<rbum_rel_env::ActiveModel, RbumRelEnvAddReq, RbumRelEnvMo
         query.with_filter(Self::get_table_name(), &filter.basic, true, false, ctx);
         Ok(query)
     }
-}
-
-#[derive(Debug, sea_orm::FromQueryResult)]
-struct KindAndValueResp {
-    pub kind: RbumRelEnvKind,
-    pub value1: String,
-    pub value2: String,
-}
-
-#[derive(Debug, sea_orm::FromQueryResult)]
-struct NameAndValueResp {
-    pub is_from: bool,
-    pub name: String,
-    pub value: String,
 }
