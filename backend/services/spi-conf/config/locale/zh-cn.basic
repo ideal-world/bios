@@ -21,6 +21,8 @@
 404-rbum-rel-not-exist-kind-attr	找不到指定的资源属性
 400-rbum-rel-not-empty-item	资源项不能为空
 409-rbum-rel-exist	关联关系已存在
+400-rbum-rel-env-value-not-number	关联环境的值必须为数字
+400-rbum-rel-name-require	rel_rbum_kind_attr_id 与 name 不能同时为空
 
 409-rbum-set-item-exist	绑定关系已存在
 400-rbum-set-sys-code-saturated	当前节点的数量已超出范围

@@ -950,6 +950,7 @@ impl IamRoleServ {
                 to_rbum_item_id: role_id.to_string(),
                 from_attrs: Default::default(),
                 to_attrs: Default::default(),
+                envs: Default::default(),
             },
             funs,
             ctx,

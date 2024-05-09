@@ -51,11 +51,11 @@ pub struct RbumRelAttrAggAddReq {
     ///
     /// 关联属性名称
     ///
-    /// Redundant field.
+    /// When ``rel_rbum_kind_attr_id`` exists, use the corresponding [`crate::rbum::dto::rbum_kind_attr_dto::RbumKindAttrDetailResp::name`], otherwise this field is not empty.
     ///
-    /// 冗余字段。
+    /// 当 ``rel_rbum_kind_attr_id`` 存在时使用其对应的 [`crate::rbum::dto::rbum_kind_attr_dto::RbumKindAttrDetailResp::name`]，否则此字段不为空。
     #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
-    pub name: String,
+    pub name: Option<String>,
     /// Whether to only record
     ///
     /// 是否仅记录
@@ -68,7 +68,7 @@ pub struct RbumRelAttrAggAddReq {
     ///
     /// 关联的[资源类型属性](crate::rbum::dto::rbum_kind_attr_dto::RbumKindAttrDetailResp) id
     #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
-    pub rel_rbum_kind_attr_id: String,
+    pub rel_rbum_kind_attr_id: Option<String>,
 }
 
 /// Add request for resource relationship environment aggregation

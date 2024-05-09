@@ -20,20 +20,20 @@ pub struct RbumRelAttrAddReq {
     ///
     /// 如果为true，表示关联来源方的限定，否则为关联目标方资源的限定。
     pub is_from: bool,
+    /// Relationship attribute name
+    ///
+    /// 关联属性名称
+    ///
+    /// When ``rel_rbum_kind_attr_id`` exists, use the corresponding [`crate::rbum::dto::rbum_kind_attr_dto::RbumKindAttrDetailResp::name`], otherwise this field is not empty.
+    ///
+    /// 当 ``rel_rbum_kind_attr_id`` 存在时使用其对应的 [`crate::rbum::dto::rbum_kind_attr_dto::RbumKindAttrDetailResp::name`]，否则此字段不为空。
+    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
+    pub name: Option<String>,
     /// Relationship attribute value
     ///
     /// 关联属性值
     #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
     pub value: String,
-    /// Relationship attribute name
-    ///
-    /// 关联属性名称
-    ///
-    /// Redundant field.
-    ///
-    /// 冗余字段。
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
-    pub name: String,
     /// Whether to only record
     ///
     /// 是否仅记录
@@ -46,7 +46,7 @@ pub struct RbumRelAttrAddReq {
     ///
     /// 关联的[资源类型属性](crate::rbum::dto::rbum_kind_attr_dto::RbumKindAttrDetailResp) id
     #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
-    pub rel_rbum_kind_attr_id: String,
+    pub rel_rbum_kind_attr_id: Option<String>,
     /// Associated [relationship](crate::rbum::dto::rbum_rel_dto::RbumRelDetailResp) id
     ///
     /// 关联的[资源关联](crate::rbum::dto::rbum_rel_dto::RbumRelDetailResp) id
@@ -64,16 +64,7 @@ pub struct RbumRelAttrModifyReq {
     ///
     /// 关联属性值
     #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
-    pub value: Option<String>,
-    /// Relationship attribute name
-    ///
-    /// 关联属性名称
-    ///
-    /// Redundant field.
-    ///
-    /// 冗余字段。
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
-    pub name: Option<String>,
+    pub value: String,
 }
 
 /// Resource relationship attribute condition detail information
@@ -90,14 +81,14 @@ pub struct RbumRelAttrDetailResp {
     ///
     /// 条件限定符
     pub is_from: bool,
-    /// Relationship attribute value
-    ///
-    /// 关联属性值
-    pub value: String,
     /// Relationship attribute name
     ///
     /// 关联属性名称
     pub name: String,
+    /// Relationship attribute value
+    ///
+    /// 关联属性值
+    pub value: String,
     /// Whether to only record
     ///
     /// 是否仅记录

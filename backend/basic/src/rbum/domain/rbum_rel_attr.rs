@@ -28,18 +28,19 @@ pub struct Model {
     ///
     /// 如果为true，表示关联来源方的限定，否则为关联目标方资源的限定。
     pub is_from: bool,
-    /// Relationship attribute value
-    ///
-    /// 关联属性值
-    pub value: String,
     /// Relationship attribute name
     ///
     /// 关联属性名称
     ///
-    /// Redundant field.
+    /// When ``rel_rbum_kind_attr_id`` exists, use the corresponding [`crate::rbum::dto::rbum_kind_attr_dto::RbumKindAttrDetailResp::name`], otherwise this field is not empty.
     ///
-    /// 冗余字段。
+    /// 当 ``rel_rbum_kind_attr_id`` 存在时使用其对应的 [`crate::rbum::dto::rbum_kind_attr_dto::RbumKindAttrDetailResp::name`]，否则此字段不为空。
+    #[index]
     pub name: String,
+    /// Relationship attribute value
+    ///
+    /// 关联属性值
+    pub value: String,
     /// Whether to only record
     ///
     /// 是否仅记录
@@ -49,11 +50,11 @@ pub struct Model {
     /// 如果为true，该条件仅用于记录，不参与判断关联关系是否建立。
     pub record_only: bool,
     /// Associated [resource kind attribute](crate::rbum::domain::rbum_kind_attr::Model) id
-    /// 
+    ///
     /// 关联的[资源类型属性](crate::rbum::domain::rbum_kind_attr::Model) id
     pub rel_rbum_kind_attr_id: String,
     /// Associated [relationship](crate::rbum::domain::rbum_rel::Model) id
-    /// 
+    ///
     /// 关联的[资源关联](crate::rbum::domain::rbum_rel::Model) id
     #[index]
     pub rel_rbum_rel_id: String,
