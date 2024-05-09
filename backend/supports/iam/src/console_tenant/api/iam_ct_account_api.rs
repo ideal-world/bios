@@ -21,7 +21,7 @@ use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::iam_config::IamBasicConfigApi;
 use crate::iam_constants;
-use crate::iam_enumeration::{IamAccountLockStateKind, IamAccountStatusKind, IamRelKind, IamSetKind};
+use crate::iam_enumeration::{IamAccountLockStateKind, IamAccountLogoutTypeKind, IamAccountStatusKind, IamRelKind, IamSetKind};
 use bios_basic::helper::request_helper::try_set_real_ip_from_req_to_ctx;
 use tardis::web::poem::Request;
 #[derive(Clone, Default)]
@@ -270,6 +270,7 @@ impl IamCtAccountApi {
                 scope_level: None,
                 lock_status: None,
                 temporary: None,
+                logout_type: None,
             },
             &funs,
             &ctx.0,
@@ -299,6 +300,7 @@ impl IamCtAccountApi {
                 scope_level: None,
                 lock_status: None,
                 temporary: None,
+                logout_type: Some(IamAccountLogoutTypeKind::ArtificialLogout),
             },
             &funs,
             &ctx.0,
@@ -328,6 +330,7 @@ impl IamCtAccountApi {
                 scope_level: None,
                 status: None,
                 temporary: None,
+                logout_type: None,
             },
             &funs,
             &ctx.0,

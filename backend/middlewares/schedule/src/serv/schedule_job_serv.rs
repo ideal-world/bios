@@ -42,11 +42,11 @@ fn service() -> Arc<OwnedScheduleTaskServ> {
 /// still not good, should manage to merge it with `OwnedScheduleTaskServ::add`
 /// same as `delete`
 pub(crate) async fn add_or_modify(add_or_modify: ScheduleJobAddOrModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-    let code = &add_or_modify.code.to_string();
+    let code = add_or_modify.code.to_string();
     // if exist delete it first
     // 如果存在，先删除
-    if service().code_uuid.write().await.get(code).is_some() {
-        delete(code, funs, ctx).await?;
+    if service().code_uuid.write().await.get(&code).is_some() {
+        delete(&code, funs, ctx).await?;
     }
     // 1. log add operation
     // 1. 记录添加操作

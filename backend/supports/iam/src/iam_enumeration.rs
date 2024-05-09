@@ -209,6 +209,18 @@ pub enum WayToDelete {
     DeleteAccount,
 }
 
+
+#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, strum::EnumString, Default)]
+pub enum IamAccountLogoutTypeKind {
+    /// 未注销
+    #[default]
+    NotLogout,
+    /// 自动注销
+    AutomaticLogout,
+    /// 人工注销
+    ArtificialLogout,
+}
+
 #[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, strum::EnumString, Default)]
 pub enum IamAccountLockStateKind {
     // 未锁定

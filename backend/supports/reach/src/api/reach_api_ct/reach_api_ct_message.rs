@@ -8,7 +8,7 @@ use tardis::web::poem_openapi::payload::Json;
 use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp};
 
 use crate::dto::*;
-use crate::reach_consts::get_tardis_inst;
+use crate::reach_constants::get_tardis_inst;
 #[cfg(feature = "simple-client")]
 use crate::reach_invoke::Client;
 use crate::serv::*;
