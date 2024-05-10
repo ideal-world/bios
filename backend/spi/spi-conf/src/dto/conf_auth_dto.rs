@@ -108,7 +108,7 @@ impl RegisterRequest {
 impl ChangePasswordRequest {
     #[inline]
     pub fn ak(&self) -> &str {
-        self.username.as_str()
+        &self.username
     }
     #[inline]
     pub fn sk(&self) -> Option<&str> {

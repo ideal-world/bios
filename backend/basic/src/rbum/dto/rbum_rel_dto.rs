@@ -7,7 +7,7 @@ use tardis::db::sea_orm;
 #[cfg(feature = "default")]
 use tardis::web::poem_openapi;
 
-use crate::rbum::rbum_enumeration::RbumRelFromKind;
+use crate::rbum::rbum_enumeration::{RbumRelEnvKind, RbumRelFromKind};
 
 /// Add request for resource relationship
 ///
@@ -174,11 +174,39 @@ pub struct RbumRelCheckReq {
     /// Limit the attributes of the relationship source
     ///
     /// 关联来源方的限定属性集合
+    ///
+    /// Format: ``{"Attribute name": "Input value"}``
+    ///
+    /// 格式: ``{"属性名称": "传入的值"}``
     pub from_attrs: HashMap<String, String>,
     /// Limit the attributes of the relationship target
     ///
     /// 关联目标方的限定属性集合
+    ///
+    /// Format: ``{"Attribute name": "Input value"}``
+    ///
+    /// 格式: ``{"属性名称": "传入的值"}``
     pub to_attrs: HashMap<String, String>,
+    /// Limit the environment of the relationship
+    ///
+    /// 关联目标方的限定环境集合
+    pub envs: Vec<RbumRelEnvCheckReq>,
+}
+
+/// Check request for resource relationship environment
+///
+/// 资源关联环境检查请求
+#[derive(Serialize, Deserialize, Debug)]
+#[cfg_attr(feature = "default", derive(poem_openapi::Object))]
+pub struct RbumRelEnvCheckReq {
+    /// Relationship environment type
+    ///
+    /// 关联的环境类型
+    pub kind: RbumRelEnvKind,
+    /// Input value
+    ///
+    /// 传入的关联环境值
+    pub value: String,
 }
 
 /// Resource relationship bone information

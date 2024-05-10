@@ -93,15 +93,22 @@ impl RbumCrudOperation<rbum_set::ActiveModel, RbumSetAddReq, RbumSetModifyReq, R
         Self::check_exist_before_delete(id, RbumSetItemServ::get_table_name(), rbum_set_item::Column::RelRbumSetId.as_str(), funs).await?;
         Self::check_exist_with_cond_before_delete(
             RbumRelServ::get_table_name(),
-            Cond::any()
-                .add(Cond::all().add(Expr::col(rbum_rel::Column::FromRbumKind).eq(RbumRelFromKind::Set.to_int())).add(Expr::col(rbum_rel::Column::FromRbumId).eq(id)))
-                .add(Expr::col(rbum_rel::Column::ToRbumItemId).eq(id)),
+            any![
+                all![
+                    Expr::col(rbum_rel::Column::FromRbumKind).eq(RbumRelFromKind::Set.to_int()),
+                    Expr::col(rbum_rel::Column::FromRbumId).eq(id)
+                ],
+                Expr::col(rbum_rel::Column::ToRbumItemId).eq(id)
+            ],
             funs,
         )
         .await?;
         Self::check_exist_with_cond_before_delete(
             RbumCertServ::get_table_name(),
-            Cond::all().add(Expr::col(rbum_cert::Column::RelRbumKind).eq(RbumCertRelKind::Set.to_int())).add(Expr::col(rbum_cert::Column::RelRbumId).eq(id)),
+            all![
+                Expr::col(rbum_cert::Column::RelRbumKind).eq(RbumCertRelKind::Set.to_int()),
+                Expr::col(rbum_cert::Column::RelRbumId).eq(id)
+            ],
             funs,
         )
         .await?;
@@ -614,12 +621,11 @@ impl RbumCrudOperation<rbum_set_cate::ActiveModel, RbumSetCateAddReq, RbumSetCat
                     RbumSetCateLevelQueryKind::CurrentAndSub => {
                         if let Some(depth) = filter.sys_code_query_depth {
                             for sys_code in sys_codes {
-                                cond = cond.add(
-                                    Cond::all().add(Expr::col((rbum_set_cate::Entity, rbum_set_cate::Column::SysCode)).like(format!("{sys_code}%").as_str())).add(
-                                        Expr::expr(Func::char_length(Expr::col(rbum_set_cate::Column::SysCode)))
-                                            .lte((sys_code.len() + funs.rbum_conf_set_cate_sys_code_node_len() * depth as usize) as i32),
-                                    ),
-                                );
+                                cond = cond.add(all![
+                                    Expr::col((rbum_set_cate::Entity, rbum_set_cate::Column::SysCode)).like(format!("{sys_code}%").as_str()),
+                                    Expr::expr(Func::char_length(Expr::col(rbum_set_cate::Column::SysCode)))
+                                        .lte((sys_code.len() + funs.rbum_conf_set_cate_sys_code_node_len() * depth as usize) as i32),
+                                ]);
                             }
                         } else {
                             for sys_code in sys_codes {
@@ -630,23 +636,19 @@ impl RbumCrudOperation<rbum_set_cate::ActiveModel, RbumSetCateAddReq, RbumSetCat
                     RbumSetCateLevelQueryKind::Sub => {
                         if let Some(depth) = filter.sys_code_query_depth {
                             for sys_code in sys_codes {
-                                cond = cond.add(
-                                    Cond::all()
-                                        .add(Expr::col((rbum_set_cate::Entity, rbum_set_cate::Column::SysCode)).like(format!("{sys_code}%").as_str()))
-                                        .add(Expr::expr(Func::char_length(Expr::col(rbum_set_cate::Column::SysCode))).gt(sys_code.len() as i32))
-                                        .add(
-                                            Expr::expr(Func::char_length(Expr::col(rbum_set_cate::Column::SysCode)))
-                                                .lte((sys_code.len() + funs.rbum_conf_set_cate_sys_code_node_len() * depth as usize) as i32),
-                                        ),
-                                );
+                                cond = cond.add(all![
+                                    Expr::col((rbum_set_cate::Entity, rbum_set_cate::Column::SysCode)).like(format!("{sys_code}%").as_str()),
+                                    Expr::expr(Func::char_length(Expr::col(rbum_set_cate::Column::SysCode))).gt(sys_code.len() as i32),
+                                    Expr::expr(Func::char_length(Expr::col(rbum_set_cate::Column::SysCode)))
+                                        .lte((sys_code.len() + funs.rbum_conf_set_cate_sys_code_node_len() * depth as usize) as i32),
+                                ]);
                             }
                         } else {
                             for sys_code in sys_codes {
-                                cond = cond.add(
-                                    Cond::all()
-                                        .add(Expr::col((rbum_set_cate::Entity, rbum_set_cate::Column::SysCode)).like(format!("{sys_code}%").as_str()))
-                                        .add(Expr::expr(Func::char_length(Expr::col(rbum_set_cate::Column::SysCode))).gt(sys_code.len() as i32)),
-                                );
+                                cond = cond.add(all![
+                                    Expr::col((rbum_set_cate::Entity, rbum_set_cate::Column::SysCode)).like(format!("{sys_code}%").as_str()),
+                                    Expr::expr(Func::char_length(Expr::col(rbum_set_cate::Column::SysCode))).gt(sys_code.len() as i32)
+                                ]);
                             }
                         }
                     }
@@ -669,7 +671,7 @@ impl RbumCrudOperation<rbum_set_cate::ActiveModel, RbumSetCateAddReq, RbumSetCat
                         }
                     }
                 }
-                query.cond_where(Cond::all().add(cond));
+                query.cond_where(all![cond]);
             }
         }
         if let Some(cate_exts) = &filter.cate_exts {
@@ -904,9 +906,10 @@ impl RbumCrudOperation<rbum_set_item::ActiveModel, RbumSetItemAddReq, RbumSetIte
             .join(
                 rbum_set_cate_join_type,
                 rbum_set_cate::Entity,
-                Cond::all()
-                    .add(Expr::col((rbum_set_cate::Entity, rbum_set_cate::Column::SysCode)).equals((rbum_set_item::Entity, rbum_set_item::Column::RelRbumSetCateCode)))
-                    .add(Expr::col((rbum_set_cate::Entity, rbum_set_cate::Column::RelRbumSetId)).equals((rbum_set_item::Entity, rbum_set_item::Column::RelRbumSetId))),
+                all![
+                    Expr::col((rbum_set_cate::Entity, rbum_set_cate::Column::SysCode)).equals((rbum_set_item::Entity, rbum_set_item::Column::RelRbumSetCateCode)),
+                    Expr::col((rbum_set_cate::Entity, rbum_set_cate::Column::RelRbumSetId)).equals((rbum_set_item::Entity, rbum_set_item::Column::RelRbumSetId))
+                ],
             )
             .join_as(
                 JoinType::InnerJoin,
@@ -962,12 +965,11 @@ impl RbumCrudOperation<rbum_set_item::ActiveModel, RbumSetItemAddReq, RbumSetIte
                     RbumSetCateLevelQueryKind::CurrentAndSub => {
                         if let Some(depth) = filter.sys_code_query_depth {
                             for sys_code in sys_codes {
-                                cond = cond.add(
-                                    Cond::all().add(Expr::col((rbum_set_item::Entity, rbum_set_item::Column::RelRbumSetCateCode)).like(format!("{sys_code}%").as_str())).add(
-                                        Expr::expr(Func::char_length(Expr::col(rbum_set_item::Column::RelRbumSetCateCode)))
-                                            .lte((sys_code.len() + funs.rbum_conf_set_cate_sys_code_node_len() * depth as usize) as i32),
-                                    ),
-                                );
+                                cond = cond.add(all![
+                                    Expr::col((rbum_set_item::Entity, rbum_set_item::Column::RelRbumSetCateCode)).like(format!("{sys_code}%").as_str()),
+                                    Expr::expr(Func::char_length(Expr::col(rbum_set_item::Column::RelRbumSetCateCode)))
+                                        .lte((sys_code.len() + funs.rbum_conf_set_cate_sys_code_node_len() * depth as usize) as i32),
+                                ]);
                             }
                         } else {
                             for sys_code in sys_codes {
@@ -978,23 +980,19 @@ impl RbumCrudOperation<rbum_set_item::ActiveModel, RbumSetItemAddReq, RbumSetIte
                     RbumSetCateLevelQueryKind::Sub => {
                         if let Some(depth) = filter.sys_code_query_depth {
                             for sys_code in sys_codes {
-                                cond = cond.add(
-                                    Cond::all()
-                                        .add(Expr::col((rbum_set_item::Entity, rbum_set_item::Column::RelRbumSetCateCode)).like(format!("{sys_code}%").as_str()))
-                                        .add(Expr::expr(Func::char_length(Expr::col(rbum_set_item::Column::RelRbumSetCateCode))).gt(sys_code.len() as i32))
-                                        .add(
-                                            Expr::expr(Func::char_length(Expr::col(rbum_set_item::Column::RelRbumSetCateCode)))
-                                                .lte((sys_code.len() + funs.rbum_conf_set_cate_sys_code_node_len() * depth as usize) as i32),
-                                        ),
-                                );
+                                cond = cond.add(all![
+                                    Expr::col((rbum_set_item::Entity, rbum_set_item::Column::RelRbumSetCateCode)).like(format!("{sys_code}%").as_str()),
+                                    Expr::expr(Func::char_length(Expr::col(rbum_set_item::Column::RelRbumSetCateCode))).gt(sys_code.len() as i32),
+                                    Expr::expr(Func::char_length(Expr::col(rbum_set_item::Column::RelRbumSetCateCode)))
+                                        .lte((sys_code.len() + funs.rbum_conf_set_cate_sys_code_node_len() * depth as usize) as i32),
+                                ]);
                             }
                         } else {
                             for sys_code in sys_codes {
-                                cond = cond.add(
-                                    Cond::all()
-                                        .add(Expr::col((rbum_set_item::Entity, rbum_set_item::Column::RelRbumSetCateCode)).like(format!("{sys_code}%").as_str()))
-                                        .add(Expr::expr(Func::char_length(Expr::col(rbum_set_item::Column::RelRbumSetCateCode))).gt(sys_code.len() as i32)),
-                                );
+                                cond = cond.add(all![
+                                    Expr::col((rbum_set_item::Entity, rbum_set_item::Column::RelRbumSetCateCode)).like(format!("{sys_code}%").as_str()),
+                                    Expr::expr(Func::char_length(Expr::col(rbum_set_item::Column::RelRbumSetCateCode))).gt(sys_code.len() as i32)
+                                ]);
                             }
                         }
                     }
@@ -1017,7 +1015,7 @@ impl RbumCrudOperation<rbum_set_item::ActiveModel, RbumSetItemAddReq, RbumSetIte
                         }
                     }
                 }
-                query.cond_where(Cond::all().add(cond));
+                query.cond_where(all![cond]);
             }
         }
         if let Some(rbum_set_item_cate_code) = &filter.rel_rbum_set_item_cate_code {

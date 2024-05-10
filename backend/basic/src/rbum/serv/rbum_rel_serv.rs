@@ -1,9 +1,9 @@
-use std::str::FromStr;
+use std::collections::HashMap;
 
 use async_trait::async_trait;
+use itertools::Itertools;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::result::TardisResult;
-use tardis::chrono::Utc;
 use tardis::db::reldb_client::IdResp;
 use tardis::db::sea_orm;
 use tardis::db::sea_orm::sea_query::*;
@@ -17,6 +17,7 @@ use crate::rbum::domain::{rbum_item, rbum_kind_attr, rbum_rel, rbum_rel_attr, rb
 use crate::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumRelExtFilterReq, RbumRelFilterReq, RbumSetCateFilterReq, RbumSetItemFilterReq};
 use crate::rbum::dto::rbum_rel_agg_dto::{RbumRelAggAddReq, RbumRelAggResp};
 use crate::rbum::dto::rbum_rel_attr_dto::{RbumRelAttrAddReq, RbumRelAttrDetailResp, RbumRelAttrModifyReq};
+use crate::rbum::dto::rbum_rel_dto::RbumRelEnvCheckReq;
 use crate::rbum::dto::rbum_rel_dto::{RbumRelAddReq, RbumRelBoneResp, RbumRelCheckReq, RbumRelDetailResp, RbumRelModifyReq, RbumRelSimpleFindReq};
 use crate::rbum::dto::rbum_rel_env_dto::{RbumRelEnvAddReq, RbumRelEnvDetailResp, RbumRelEnvModifyReq};
 use crate::rbum::rbum_enumeration::{RbumRelEnvKind, RbumRelFromKind, RbumSetCateLevelQueryKind};
@@ -103,13 +104,10 @@ impl RbumCrudOperation<rbum_rel::ActiveModel, RbumRelAddReq, RbumRelModifyReq, R
 
     async fn before_delete_rbum(id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<RbumRelDetailResp>> {
         let mut query = Query::select();
-        query.column(rbum_rel::Column::Id).from(rbum_rel::Entity).and_where(Expr::col(rbum_rel::Column::Id).eq(id)).cond_where(
-            Cond::all().add(
-                Cond::any()
-                    .add(Expr::col(rbum_rel::Column::OwnPaths).like(format!("{}%", ctx.own_paths).as_str()))
-                    .add(Expr::col(rbum_rel::Column::ToOwnPaths).like(format!("{}%", ctx.own_paths).as_str())),
-            ),
-        );
+        query.column(rbum_rel::Column::Id).from(rbum_rel::Entity).and_where(Expr::col(rbum_rel::Column::Id).eq(id)).cond_where(all![any![
+            Expr::col(rbum_rel::Column::OwnPaths).like(format!("{}%", ctx.own_paths).as_str()),
+            Expr::col(rbum_rel::Column::ToOwnPaths).like(format!("{}%", ctx.own_paths).as_str())
+        ]]);
         if funs.db().count(&query).await? == 0 {
             return Err(funs.err().not_found(
                 &Self::get_obj_name(),
@@ -160,21 +158,24 @@ impl RbumCrudOperation<rbum_rel::ActiveModel, RbumRelAddReq, RbumRelModifyReq, R
                 JoinType::LeftJoin,
                 rbum_item::Entity,
                 from_rbum_item_table.clone(),
-                Cond::all()
-                    .add(Expr::col((from_rbum_item_table.clone(), rbum_item::Column::Id)).equals((rbum_rel::Entity, rbum_rel::Column::FromRbumId)))
-                    .add(Expr::col((rbum_rel::Entity, rbum_rel::Column::FromRbumKind)).eq(RbumRelFromKind::Item.to_int())),
+                all![
+                    Expr::col((from_rbum_item_table.clone(), rbum_item::Column::Id)).equals((rbum_rel::Entity, rbum_rel::Column::FromRbumId)),
+                    Expr::col((rbum_rel::Entity, rbum_rel::Column::FromRbumKind)).eq(RbumRelFromKind::Item.to_int())
+                ],
             )
             .left_join(
                 rbum_set::Entity,
-                Cond::all()
-                    .add(Expr::col((rbum_set::Entity, rbum_set::Column::Id)).equals((rbum_rel::Entity, rbum_rel::Column::FromRbumId)))
-                    .add(Expr::col((rbum_rel::Entity, rbum_rel::Column::FromRbumKind)).eq(RbumRelFromKind::Set.to_int())),
+                all![
+                    Expr::col((rbum_set::Entity, rbum_set::Column::Id)).equals((rbum_rel::Entity, rbum_rel::Column::FromRbumId)),
+                    Expr::col((rbum_rel::Entity, rbum_rel::Column::FromRbumKind)).eq(RbumRelFromKind::Set.to_int())
+                ],
             )
             .left_join(
                 rbum_set_cate::Entity,
-                Cond::all()
-                    .add(Expr::col((rbum_set_cate::Entity, rbum_set_cate::Column::Id)).equals((rbum_rel::Entity, rbum_rel::Column::FromRbumId)))
-                    .add(Expr::col((rbum_rel::Entity, rbum_rel::Column::FromRbumKind)).eq(RbumRelFromKind::SetCate.to_int())),
+                all![
+                    Expr::col((rbum_set_cate::Entity, rbum_set_cate::Column::Id)).equals((rbum_rel::Entity, rbum_rel::Column::FromRbumId)),
+                    Expr::col((rbum_rel::Entity, rbum_rel::Column::FromRbumKind)).eq(RbumRelFromKind::SetCate.to_int())
+                ],
             )
             .join_as(
                 JoinType::LeftJoin,
@@ -252,9 +253,9 @@ impl RbumRelServ {
                 &mut RbumRelAttrAddReq {
                     is_from: attr.is_from,
                     value: attr.value.to_string(),
-                    name: attr.name.to_string(),
+                    name: attr.name.clone(),
                     rel_rbum_rel_id: rbum_rel_id.to_string(),
-                    rel_rbum_kind_attr_id: attr.rel_rbum_kind_attr_id.to_string(),
+                    rel_rbum_kind_attr_id: attr.rel_rbum_kind_attr_id.clone(),
                     record_only: attr.record_only,
                 },
                 funs,
@@ -855,25 +856,41 @@ impl RbumRelServ {
         if let Some(to_rbum_own_paths) = &find_req.to_rbum_own_paths {
             query.and_where(Expr::col(rbum_rel::Column::ToOwnPaths).eq(to_rbum_own_paths.to_string()));
         }
-        query.cond_where(
-            Cond::all().add(
-                Cond::any()
-                    .add(Expr::col(rbum_rel::Column::OwnPaths).like(format!("{}%", ctx.own_paths).as_str()))
-                    .add(Expr::col(rbum_rel::Column::ToOwnPaths).like(format!("{}%", ctx.own_paths).as_str())),
-            ),
-        );
+        query.cond_where(all![any![
+            Expr::col(rbum_rel::Column::OwnPaths).like(format!("{}%", ctx.own_paths).as_str()),
+            Expr::col(rbum_rel::Column::ToOwnPaths).like(format!("{}%", ctx.own_paths).as_str())
+        ]]);
         query
     }
 
     /// Check whether the relationship of the specified condition exists
     ///
     /// 检查指定的条件的关联是否存在
-    pub async fn check_rel(check_req: &mut RbumRelCheckReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<bool> {
-        if Self::do_check_rel(check_req, funs, ctx).await? {
+    pub async fn check_rel(check_req: &RbumRelCheckReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<bool> {
+        // 1. Check whether the direct association exists
+        //
+        // 1. 检查直接关联是否存在
+        if Self::do_check_rel(
+            &check_req.tag,
+            Some(vec![check_req.from_rbum_kind.clone()]),
+            Some(vec![check_req.from_rbum_id.clone()]),
+            Some(check_req.to_rbum_item_id.clone()),
+            &check_req.from_attrs,
+            &check_req.to_attrs,
+            &check_req.envs,
+            funs,
+            ctx,
+        )
+        .await?
+        {
             return Ok(true);
         }
-        let rel_rbum_set_cate_ids = if check_req.from_rbum_kind == RbumRelFromKind::Item {
-            // Check set category
+        // 2. Get the resource set categories(nodes)
+        //
+        // 2. 获取对应的资源集分类（节点）集合
+        //
+        // rel_rbum_set_cates : HashMap<set id, Vec(category id, system code)>
+        let rel_rbum_set_cates = if check_req.from_rbum_kind == RbumRelFromKind::Item {
             RbumSetItemServ::find_rbums(
                 &RbumSetItemFilterReq {
                     basic: Default::default(),
@@ -887,33 +904,34 @@ impl RbumRelServ {
             )
             .await?
             .into_iter()
-            .map(|i| i.rel_rbum_set_cate_id.unwrap_or_default())
-            .collect::<Vec<String>>()
+            .into_group_map_by(|i| i.rel_rbum_set_id.clone())
+            .into_iter()
+            .map(|(set_id, cates)| {
+                (
+                    set_id,
+                    cates.into_iter().map(|cate| (cate.rel_rbum_set_cate_id.unwrap_or_default(), cate.rel_rbum_set_cate_sys_code.unwrap_or_default())).collect(),
+                )
+            })
+            .collect::<HashMap<String, Vec<(String, String)>>>()
         } else if check_req.from_rbum_kind == RbumRelFromKind::SetCate {
-            vec![check_req.from_rbum_id.clone()]
+            let set_item = RbumSetItemServ::peek_rbum(&check_req.from_rbum_id, &RbumSetItemFilterReq::default(), funs, ctx).await?;
+            HashMap::from([(
+                set_item.rel_rbum_set_id.clone(),
+                vec![(set_item.rel_rbum_set_cate_id.unwrap_or_default(), set_item.rel_rbum_set_cate_sys_code.unwrap_or_default())],
+            )])
         } else {
             return Ok(false);
         };
-        for rel_rbum_set_cate_id in rel_rbum_set_cate_ids {
-            let rbum_set_cate_base = RbumSetCateServ::peek_rbum(&rel_rbum_set_cate_id, &RbumSetCateFilterReq::default(), funs, ctx).await?;
-            if check_req.from_rbum_kind != RbumRelFromKind::SetCate {
-                check_req.from_rbum_kind = RbumRelFromKind::SetCate;
-                check_req.from_rbum_id = rbum_set_cate_base.id.clone();
-                // Check directly related records
-                if Self::do_check_rel(check_req, funs, ctx).await? {
-                    return Ok(true);
-                }
-            }
-            check_req.from_rbum_kind = RbumRelFromKind::Set;
-            check_req.from_rbum_id = rbum_set_cate_base.rel_rbum_set_id.clone();
-            if Self::do_check_rel(check_req, funs, ctx).await? {
-                return Ok(true);
-            }
-            let rbum_set_cate_with_rel_ids = RbumSetCateServ::find_id_rbums(
+
+        for (set_id, cates) in rel_rbum_set_cates {
+            // 3. Get the parent id set of the associated resource set category
+            //
+            // 3. 获取关联的资源集分类的父级id集合
+            let mut set_cate_parent_ids = RbumSetCateServ::find_id_rbums(
                 &RbumSetCateFilterReq {
                     basic: Default::default(),
-                    rel_rbum_set_id: Some(rbum_set_cate_base.rel_rbum_set_id.clone()),
-                    sys_codes: Some(vec![rbum_set_cate_base.sys_code.clone()]),
+                    rel_rbum_set_id: Some(set_id.clone()),
+                    sys_codes: Some(cates.iter().map(|i| i.1.clone()).collect()),
                     sys_code_query_kind: Some(RbumSetCateLevelQueryKind::Parent),
                     ..Default::default()
                 },
@@ -923,104 +941,277 @@ impl RbumRelServ {
                 ctx,
             )
             .await?;
-            for rbum_set_cate_with_rel_id in rbum_set_cate_with_rel_ids {
-                check_req.from_rbum_kind = RbumRelFromKind::SetCate;
-                check_req.from_rbum_id = rbum_set_cate_with_rel_id;
-                // Check indirectly related records
-                if Self::do_check_rel(check_req, funs, ctx).await? {
-                    return Ok(true);
-                }
+            if check_req.from_rbum_kind == RbumRelFromKind::Item {
+                // If the source type of the request is ``item``, the source id needs to be added to the parent id set.
+                // Because the source type has been switched, the source id needs to be rejudged.
+                //
+                // 如果请求的来源类型是``item``, 则需要把来源id加入到父级id集合中。因为后续切换了来源类型，故这个来源id需要重新判断。
+                set_cate_parent_ids.insert(0, check_req.from_rbum_id.clone());
+            }
+            // Add the id of the resource set to the parent id set.
+            //
+            // 把资源集的id也添加进来。
+            set_cate_parent_ids.push(set_id);
+
+            // 4. Check whether the association on the resource set/resource set category(node) exists
+            //
+            // 4. 检查资源集/资源集分类（节点）上的关联是否存在
+            if Self::do_check_rel(
+                &check_req.tag,
+                // Two source types are used here, and the ids of these two types are nanoid, so the conflict probability is very low.
+                //
+                // 这里使用了两个来源类型，这两个类型的id都是nanoid，冲突的概率很低。
+                Some(vec![RbumRelFromKind::SetCate, RbumRelFromKind::Set]),
+                Some(set_cate_parent_ids),
+                Some(check_req.to_rbum_item_id.clone()),
+                &check_req.from_attrs,
+                &check_req.to_attrs,
+                &check_req.envs,
+                funs,
+                ctx,
+            )
+            .await?
+            {
+                return Ok(true);
             }
         }
         Ok(false)
     }
 
-    async fn do_check_rel(check_req: &RbumRelCheckReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<bool> {
-        let rbum_rel_ids = Self::find_rel_ids(
-            &RbumRelSimpleFindReq {
-                tag: Some(check_req.tag.clone()),
-                from_rbum_kind: Some(check_req.from_rbum_kind.clone()),
-                from_rbum_id: Some(check_req.from_rbum_id.clone()),
-                to_rbum_item_id: Some(check_req.to_rbum_item_id.clone()),
-                ..Default::default()
-            },
-            funs,
-            ctx,
-        )
-        .await?;
-        for rbum_rel_id in rbum_rel_ids {
-            let mut found = true;
-            let rbum_rel_attrs = funs
-                .db()
-                .find_dtos::<NameAndValueResp>(
-                    Query::select()
-                        .column(rbum_rel_attr::Column::IsFrom)
-                        .column(rbum_rel_attr::Column::Name)
-                        .column(rbum_rel_attr::Column::Value)
-                        .from(rbum_rel_attr::Entity)
-                        .and_where(Expr::col(rbum_rel_attr::Column::RelRbumRelId).eq(rbum_rel_id.clone()))
-                        .and_where(Expr::col(rbum_rel_attr::Column::RecordOnly).eq(false)),
-                )
-                .await?;
-            for rbum_rel_attr in rbum_rel_attrs {
-                if rbum_rel_attr.is_from {
-                    if let Some(value) = check_req.from_attrs.get(&rbum_rel_attr.name) {
-                        if value != rbum_rel_attr.value.as_str() {
-                            found = false;
-                            break;
-                        }
-                    } else {
-                        found = false;
-                        break;
-                    }
-                } else if let Some(value) = check_req.to_attrs.get(&rbum_rel_attr.name) {
-                    if value != rbum_rel_attr.value.as_str() {
-                        found = false;
-                        break;
-                    }
-                } else {
-                    found = false;
-                    break;
-                }
-            }
-            let rbum_rel_envs = funs
-                .db()
-                .find_dtos::<KindAndValueResp>(
-                    Query::select()
-                        .column(rbum_rel_env::Column::Kind)
-                        .column(rbum_rel_env::Column::Value1)
-                        .column(rbum_rel_env::Column::Value2)
-                        .from(rbum_rel_env::Entity)
-                        .and_where(Expr::col(rbum_rel_env::Column::RelRbumRelId).eq(rbum_rel_id.clone())),
-                )
-                .await?;
-            for rbum_rel_env in rbum_rel_envs {
-                match rbum_rel_env.kind {
-                    RbumRelEnvKind::DatetimeRange => {
-                        if i64::from_str(rbum_rel_env.value1.as_str())? > Utc::now().timestamp() || i64::from_str(rbum_rel_env.value2.as_str())? < Utc::now().timestamp() {
-                            found = false;
-                            break;
-                        }
-                    }
-                    RbumRelEnvKind::TimeRange => {
-                        // TODO
-                    }
-                    RbumRelEnvKind::Ips => {
-                        // TODO
-                    }
-                    RbumRelEnvKind::CallFrequency => {
-                        // TODO
-                    }
-                    RbumRelEnvKind::CallCount => {
-                        // TODO
-                    }
-                }
-            }
-            if found {
-                return Ok(true);
-            }
+    /// Execute the relationship check
+    ///
+    ///
+    /// 执行关联关系检查
+    ///
+    /// This function's core SQL is similar to the following:
+    ///
+    /// ```sql
+    /// select
+    ///  rel.id,
+    ///  attr_cond.attr_count,
+    ///  attr_all.attr_count
+    ///from
+    ///  rbum_rel rel
+    /// -- Fetch the number of related attribute records with matching conditions
+    ///  left join (
+    ///    select
+    ///      rel_rbum_rel_id,
+    ///      count(1) attr_count
+    ///    from
+    ///      rbum_rel_attr attr
+    ///    where
+    ///      attr.rel_rbum_kind_attr_id = 'a001'
+    ///      and attr.value = 'jzy'
+    ///      or attr.rel_rbum_kind_attr_id = 'a002'
+    ///      and attr.value = '30'
+    ///    GROUP by
+    ///      rel_rbum_rel_id
+    ///  ) attr_cond on attr_cond.rel_rbum_rel_id = rel.id
+    /// -- Fetch the number of records of all related attributes
+    ///  left join (
+    ///    select
+    ///      rel_rbum_rel_id,
+    ///      count(1) attr_count
+    ///    from
+    ///      rbum_rel_attr attr
+    ///    GROUP by
+    ///      rel_rbum_rel_id
+    ///  ) attr_all on attr_all.rel_rbum_rel_id = rel.id
+    ///where
+    ///  rel.from_rbum_id = 'f01'
+    ///  and (
+    ///  -- The number of related attribute records with matching conditions is equal to the number of all related attribute records
+    ///    attr_cond is null and attr_all is null
+    ///    or attr_cond.attr_count = attr_all.attr_count
+    ///  )
+    ///
+    /// ```
+    async fn do_check_rel(
+        tag: &str,
+        from_rbum_kinds: Option<Vec<RbumRelFromKind>>,
+        from_rbum_ids: Option<Vec<String>>,
+        to_rbum_item_id: Option<String>,
+        from_attrs: &HashMap<String, String>,
+        to_attrs: &HashMap<String, String>,
+        envs: &Vec<RbumRelEnvCheckReq>,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<bool> {
+        let mut query = Query::select();
+        query.column((rbum_rel::Entity, rbum_rel::Column::Id)).from(rbum_rel::Entity);
+        query.and_where(Expr::col((rbum_rel::Entity, rbum_rel::Column::Tag)).eq(tag));
+        if let Some(from_rbum_kinds) = from_rbum_kinds {
+            query.and_where(Expr::col((rbum_rel::Entity, rbum_rel::Column::FromRbumKind)).is_in(from_rbum_kinds.into_iter().map(|i| i.to_int()).collect::<Vec<_>>()));
         }
-        Ok(false)
+        if let Some(from_rbum_ids) = from_rbum_ids {
+            query.and_where(Expr::col((rbum_rel::Entity, rbum_rel::Column::FromRbumId)).is_in(from_rbum_ids));
+        }
+        if let Some(to_rbum_item_id) = to_rbum_item_id {
+            query.and_where(Expr::col((rbum_rel::Entity, rbum_rel::Column::ToRbumItemId)).eq(to_rbum_item_id));
+        }
+        query.cond_where(all![any![
+            Expr::col((rbum_rel::Entity, rbum_rel::Column::OwnPaths)).like(format!("{}%", ctx.own_paths).as_str()),
+            Expr::col((rbum_rel::Entity, rbum_rel::Column::ToOwnPaths)).like(format!("{}%", ctx.own_paths).as_str())
+        ]]);
+        if !from_attrs.is_empty() || !from_attrs.is_empty() {
+            let attr_table_without_cond = Alias::new(format!("{}_without_cond", RbumRelAttrServ::get_table_name()));
+            let attr_table_with_cond = Alias::new(format!("{}_with_cond", RbumRelAttrServ::get_table_name()));
+
+            query.join_subquery(
+                JoinType::LeftJoin,
+                Query::select()
+                    .column(rbum_rel_attr::Column::RelRbumRelId)
+                    .expr_as(Expr::col(rbum_rel_attr::Column::RelRbumRelId).count(), Alias::new("attr_count"))
+                    .from(rbum_rel_attr::Entity)
+                    .and_where(Expr::col(rbum_rel_attr::Column::RecordOnly).eq(false))
+                    .group_by_col(rbum_rel_attr::Column::RelRbumRelId)
+                    .take(),
+                attr_table_without_cond.clone(),
+                Expr::col((attr_table_without_cond.clone(), rbum_rel_attr::Column::RelRbumRelId)).equals((rbum_rel::Entity, rbum_rel::Column::Id)),
+            );
+
+            let mut attr_conds = Cond::any();
+            for (name, value) in from_attrs {
+                attr_conds = attr_conds.add(all![
+                    Expr::col(rbum_rel_attr::Column::Name).eq(name),
+                    Expr::col(rbum_rel_attr::Column::Value).eq(value),
+                    Expr::col(rbum_rel_attr::Column::IsFrom).eq(true)
+                ]);
+            }
+            for (name, value) in to_attrs {
+                attr_conds = attr_conds.add(all![
+                    Expr::col(rbum_rel_attr::Column::Name).eq(name),
+                    Expr::col(rbum_rel_attr::Column::Value).eq(value),
+                    Expr::col(rbum_rel_attr::Column::IsFrom).eq(false)
+                ]);
+            }
+            query.join_subquery(
+                JoinType::LeftJoin,
+                Query::select()
+                    .column(rbum_rel_attr::Column::RelRbumRelId)
+                    .expr_as(Expr::col(rbum_rel_attr::Column::RelRbumRelId).count(), Alias::new("attr_count"))
+                    .from(rbum_rel_attr::Entity)
+                    .and_where(Expr::col(rbum_rel_attr::Column::RecordOnly).eq(false))
+                    .cond_where(attr_conds)
+                    .group_by_col(rbum_rel_attr::Column::RelRbumRelId)
+                    .take(),
+                attr_table_with_cond.clone(),
+                Expr::col((attr_table_with_cond.clone(), rbum_rel_attr::Column::RelRbumRelId)).equals((rbum_rel::Entity, rbum_rel::Column::Id)),
+            );
+
+            query.cond_where(any![
+                all![
+                    Expr::col((attr_table_without_cond.clone(), Alias::new("attr_count"))).is_null(),
+                    Expr::col((attr_table_with_cond.clone(), Alias::new("attr_count"))).is_null()
+                ],
+                Expr::col((attr_table_without_cond.clone(), Alias::new("attr_count"))).eq(Expr::col((attr_table_with_cond.clone(), Alias::new("attr_count"))))
+            ]);
+        } else {
+            // The incoming association property is empty, so the actual association property is also required to be empty
+            //
+            // 传入的关联属性为空，所以要求实际的关联属性也为空
+            query.left_join(
+                rbum_rel_attr::Entity,
+                all![
+                    Expr::col((rbum_rel_attr::Entity, rbum_rel_attr::Column::RelRbumRelId)).equals((rbum_rel::Entity, rbum_rel::Column::Id)),
+                    Expr::col((rbum_rel_attr::Entity, rbum_rel_attr::Column::RecordOnly)).eq(false)
+                ],
+            );
+
+            query.and_where(Expr::col((rbum_rel_attr::Entity, rbum_rel_attr::Column::Id)).is_null());
+        }
+
+        if !envs.is_empty() {
+            let env_table_without_cond = Alias::new(format!("{}_without_cond", RbumRelEnvServ::get_table_name()));
+            let env_table_with_cond = Alias::new(format!("{}_with_cond", RbumRelEnvServ::get_table_name()));
+
+            query.join_subquery(
+                JoinType::LeftJoin,
+                Query::select()
+                    .column(rbum_rel_env::Column::RelRbumRelId)
+                    .expr_as(Expr::col(rbum_rel_env::Column::RelRbumRelId).count(), Alias::new("env_count"))
+                    .from(rbum_rel_env::Entity)
+                    .group_by_col(rbum_rel_env::Column::RelRbumRelId)
+                    .take(),
+                env_table_without_cond.clone(),
+                Expr::col((env_table_without_cond.clone(), rbum_rel_env::Column::RelRbumRelId)).equals((rbum_rel::Entity, rbum_rel::Column::Id)),
+            );
+            let mut env_conds = Cond::any();
+            for env in envs {
+                match env.kind {
+                    RbumRelEnvKind::DatetimeRange | RbumRelEnvKind::TimeRange => match env.value.parse::<i64>() {
+                        Ok(num) => {
+                            env_conds = env_conds.add(all![
+                                Expr::col(rbum_rel_env::Column::Kind).eq(env.kind.to_int()),
+                                Expr::expr(Func::cast_as(Expr::col(rbum_rel_env::Column::Value1), Alias::new("INTEGER"))).lte(num),
+                                Expr::expr(Func::cast_as(Expr::col(rbum_rel_env::Column::Value2), Alias::new("INTEGER"))).gte(num)
+                            ]);
+                        }
+                        Err(_) => {
+                            return Err(funs.err().bad_request(
+                                &Self::get_obj_name(),
+                                "check",
+                                &format!("env value {} is not a number", env.value),
+                                "400-rbum-rel-env-value-not-number",
+                            ));
+                        }
+                    },
+                    RbumRelEnvKind::CallFrequency | RbumRelEnvKind::CallCount => match env.value.parse::<i64>() {
+                        Ok(num) => {
+                            env_conds = env_conds.add(all![
+                                Expr::col(rbum_rel_env::Column::Kind).eq(env.kind.to_int()),
+                                Expr::expr(Func::cast_as(Expr::col(rbum_rel_env::Column::Value1), Alias::new("INTEGER"))).gte(num)
+                            ]);
+                        }
+                        Err(_) => {
+                            return Err(funs.err().bad_request(
+                                &Self::get_obj_name(),
+                                "check",
+                                &format!("env value {} is not a number", env.value),
+                                "400-rbum-rel-env-value-not-number",
+                            ));
+                        }
+                    },
+                    RbumRelEnvKind::Ips => {
+                        env_conds = env_conds.add(all![
+                            Expr::col(rbum_rel_env::Column::Kind).eq(env.kind.to_int()),
+                            Expr::col(rbum_rel_env::Column::Value1).like(format!("%{}%", env.value))
+                        ]);
+                    }
+                }
+            }
+            query.join_subquery(
+                JoinType::LeftJoin,
+                Query::select()
+                    .column(rbum_rel_env::Column::RelRbumRelId)
+                    .expr_as(Expr::col(rbum_rel_env::Column::RelRbumRelId).count(), Alias::new("env_count"))
+                    .from(rbum_rel_env::Entity)
+                    .cond_where(env_conds)
+                    .group_by_col(rbum_rel_env::Column::RelRbumRelId)
+                    .take(),
+                env_table_with_cond.clone(),
+                Expr::col((env_table_with_cond.clone(), rbum_rel_env::Column::RelRbumRelId)).equals((rbum_rel::Entity, rbum_rel::Column::Id)),
+            );
+            query.cond_where(any![
+                all![
+                    Expr::col((env_table_without_cond.clone(), Alias::new("env_count"))).is_null(),
+                    Expr::col((env_table_with_cond.clone(), Alias::new("env_count"))).is_null()
+                ],
+                Expr::col((env_table_without_cond.clone(), Alias::new("env_count"))).eq(Expr::col((env_table_with_cond.clone(), Alias::new("env_count"))))
+            ]);
+        } else {
+            // The incoming association environment is empty, so the actual association environment is also required to be empty
+            //
+            // 传入的关联环境为空，所以要求实际的关联环境也为空
+            query.left_join(
+                rbum_rel_env::Entity,
+                Expr::col((rbum_rel_env::Entity, rbum_rel_env::Column::RelRbumRelId)).equals((rbum_rel::Entity, rbum_rel::Column::Id)),
+            );
+
+            query.and_where(Expr::col((rbum_rel_env::Entity, rbum_rel_env::Column::Id)).is_null());
+        }
+
+        funs.db().count(&query).await.map(|i| i > 0)
     }
 
     pub async fn delete_rel_with_ext(id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<u64> {
@@ -1064,36 +1255,66 @@ impl RbumCrudOperation<rbum_rel_attr::ActiveModel, RbumRelAttrAddReq, RbumRelAtt
 
     async fn before_add_rbum(add_req: &mut RbumRelAttrAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         Self::check_ownership_with_table_name(&add_req.rel_rbum_rel_id, RbumRelServ::get_table_name(), funs, ctx).await?;
-        Self::check_scope(&add_req.rel_rbum_kind_attr_id, RbumKindAttrServ::get_table_name(), funs, ctx).await?;
+        if let Some(rel_rbum_kind_attr_id) = &add_req.rel_rbum_kind_attr_id {
+            Self::check_scope(rel_rbum_kind_attr_id, RbumKindAttrServ::get_table_name(), funs, ctx).await?;
+        }
         Ok(())
     }
 
     async fn package_add(add_req: &RbumRelAttrAddReq, funs: &TardisFunsInst, _: &TardisContext) -> TardisResult<rbum_rel_attr::ActiveModel> {
-        let rbum_rel_attr_name = funs
+        let rbum_rel_attr_name = if let Some(rel_rbum_kind_attr_id) = &add_req.rel_rbum_kind_attr_id {
+            funs.db()
+                .get_dto::<NameResp>(
+                    Query::select().column(rbum_kind_attr::Column::Name).from(rbum_kind_attr::Entity).and_where(Expr::col(rbum_kind_attr::Column::Id).eq(rel_rbum_kind_attr_id)),
+                )
+                .await?
+                .ok_or_else(|| {
+                    funs.err().not_found(
+                        &Self::get_obj_name(),
+                        "add",
+                        &format!("not found rbum_kind_attr {}", rel_rbum_kind_attr_id),
+                        "404-rbum-rel-not-exist-kind-attr",
+                    )
+                })?
+                .name
+        } else if let Some(name) = &add_req.name {
+            name.to_string()
+        } else {
+            return Err(funs.err().not_found(
+                &Self::get_obj_name(),
+                "add",
+                "[rel_rbum_kind_attr_id] and [name] cannot be empty at the same time",
+                "400-rbum-rel-name-require",
+            ));
+        };
+
+        if funs
             .db()
-            .get_dto::<NameResp>(
+            .count(
                 Query::select()
-                    .column(rbum_kind_attr::Column::Name)
-                    .from(rbum_kind_attr::Entity)
-                    .and_where(Expr::col(rbum_kind_attr::Column::Id).eq(add_req.rel_rbum_kind_attr_id.as_str())),
+                    .column(rbum_rel_attr::Column::Id)
+                    .from(rbum_rel_attr::Entity)
+                    .and_where(Expr::col(rbum_rel_attr::Column::RelRbumRelId).eq(&add_req.rel_rbum_rel_id))
+                    .and_where(Expr::col(rbum_rel_attr::Column::Name).eq(&rbum_rel_attr_name)),
             )
             .await?
-            .ok_or_else(|| {
-                funs.err().not_found(
-                    &Self::get_obj_name(),
-                    "add",
-                    &format!("not found rbum_kind_attr {}", add_req.rel_rbum_kind_attr_id.as_str()),
-                    "404-rbum-rel-not-exist-kind-attr",
-                )
-            })?
-            .name;
+            > 0
+        {
+            return Err(funs.err().conflict(
+                &Self::get_obj_name(),
+                "add",
+                &format!("name {} already exists", rbum_rel_attr_name),
+                "409-rbum-*-name-exist",
+            ));
+        }
+
         Ok(rbum_rel_attr::ActiveModel {
             id: Set(TardisFuns::field.nanoid()),
             is_from: Set(add_req.is_from),
             value: Set(add_req.value.to_string()),
             name: Set(rbum_rel_attr_name),
             record_only: Set(add_req.record_only),
-            rel_rbum_kind_attr_id: Set(add_req.rel_rbum_kind_attr_id.to_string()),
+            rel_rbum_kind_attr_id: Set(add_req.rel_rbum_kind_attr_id.as_ref().unwrap_or(&"".to_string()).to_string()),
             rel_rbum_rel_id: Set(add_req.rel_rbum_rel_id.to_string()),
             ..Default::default()
         })
@@ -1104,12 +1325,7 @@ impl RbumCrudOperation<rbum_rel_attr::ActiveModel, RbumRelAttrAddReq, RbumRelAtt
             id: Set(id.to_string()),
             ..Default::default()
         };
-        if let Some(value) = &modify_req.value {
-            rbum_rel_attr.value = Set(value.to_string());
-        }
-        if let Some(name) = &modify_req.name {
-            rbum_rel_attr.name = Set(name.to_string());
-        }
+        rbum_rel_attr.value = Set(modify_req.value.to_string());
         Ok(rbum_rel_attr)
     }
 
@@ -1129,9 +1345,12 @@ impl RbumCrudOperation<rbum_rel_attr::ActiveModel, RbumRelAttrAddReq, RbumRelAtt
                 (rbum_rel_attr::Entity, rbum_rel_attr::Column::CreateTime),
                 (rbum_rel_attr::Entity, rbum_rel_attr::Column::UpdateTime),
             ])
-            .expr_as(Expr::col((rbum_kind_attr::Entity, rbum_kind_attr::Column::Name)), Alias::new("rel_rbum_kind_attr_name"))
+            .expr_as(
+                Expr::col((rbum_kind_attr::Entity, rbum_kind_attr::Column::Name)).if_null(""),
+                Alias::new("rel_rbum_kind_attr_name"),
+            )
             .from(rbum_rel_attr::Entity)
-            .inner_join(
+            .left_join(
                 rbum_kind_attr::Entity,
                 Expr::col((rbum_kind_attr::Entity, rbum_kind_attr::Column::Id)).equals((rbum_rel_attr::Entity, rbum_rel_attr::Column::RelRbumKindAttrId)),
             );
