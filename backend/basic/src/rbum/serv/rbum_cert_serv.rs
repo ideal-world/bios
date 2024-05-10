@@ -520,7 +520,7 @@ impl RbumCrudOperation<rbum_cert::ActiveModel, RbumCertAddReq, RbumCertModifyReq
                 }
             }
             if let Some(vcode) = &add_req.vcode {
-                Self::add_vcode_to_cache(&add_req.ak, vcode, rel_rbum_cert_conf_id, funs, &ctx).await?;
+                Self::add_vcode_to_cache(&add_req.ak, vcode, rel_rbum_cert_conf_id, funs, ctx).await?;
             }
         }
         Ok(())

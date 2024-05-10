@@ -276,7 +276,7 @@ pub fn unsafe_fill_ctx(request: &tardis::web::poem::Request, funs: &TardisFunsIn
                     roles.push(extend_role.to_string());
                 }
             }
-            ctx.owner = bios_ctx.owner.clone();
+            ctx.owner.clone_from(&bios_ctx.owner);
             ctx.roles = roles;
             ctx.groups = bios_ctx.groups;
             ctx.own_paths = bios_ctx.own_paths;
@@ -296,7 +296,7 @@ pub fn unsafe_fill_owner_only(request: &tardis::web::poem::Request, funs: &Tardi
     do_unsafe_fill_ctx(
         request,
         |bios_ctx, ctx| {
-            ctx.owner = bios_ctx.owner.clone();
+            ctx.owner.clone_from(&bios_ctx.owner);
         },
         funs,
         ctx,
