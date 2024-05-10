@@ -76,15 +76,9 @@ impl SgPluginAuthConfig {
             }
         }
 
-        let cache_url: Url = if self.cache_url.is_empty() {
-            //TODO get from gateways
-            // init_dto.gateway_parameters.redis_url.as_deref().unwrap_or("redis://127.0.0.1:6379")
-            "redis://127.0.0.1:6379"
-        } else {
-            self.cache_url.as_str()
-        }
-        .parse()
-        .map_err(|e| TardisError::internal_error(&format!("[SG.Filter.Auth]invalid redis url: {e:?}"), "-1"))?;
+        let cache_url: Url = if self.cache_url.is_empty() { "redis://127.0.0.1:6379" } else { self.cache_url.as_str() }
+            .parse()
+            .map_err(|e| TardisError::internal_error(&format!("[SG.Filter.Auth]invalid redis url: {e:?}"), "-1"))?;
 
         let mut tardis_config = tardis::TardisFuns::clone_config();
         tardis_config.cs.insert(bios_auth::auth_constants::DOMAIN_CODE.to_string(), serde_json::to_value(self.auth_config.clone())?);

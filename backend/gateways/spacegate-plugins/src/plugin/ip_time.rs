@@ -11,7 +11,7 @@ use spacegate_shell::plugin::Plugin;
 use spacegate_shell::{BoxError, SgBody, SgResponseExt};
 
 use tardis::{log, serde_json};
-pub const CODE: &str = "ip_time";
+pub const CODE: &str = "ip-time";
 
 mod ip_time_rule;
 #[cfg(test)]
@@ -116,9 +116,4 @@ impl Plugin for IpTimePlugin {
         }
         Ok(inner.call(req).await)
     }
-    // fn create(_: Option<String>, value: JsonValue) -> Result<Self::MakeLayer, BoxError> {
-    //     let config: SgFilterIpTimeConfig = serde_json::from_value(value)?;
-    //     let filter: SgFilterIpTime = config.into();
-    //     Ok(filter)
-    // }
 }
