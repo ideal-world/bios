@@ -1421,17 +1421,3 @@ impl RbumCrudOperation<rbum_rel_env::ActiveModel, RbumRelEnvAddReq, RbumRelEnvMo
         Ok(query)
     }
 }
-
-#[derive(Debug, sea_orm::FromQueryResult)]
-struct KindAndValueResp {
-    pub kind: RbumRelEnvKind,
-    pub value1: String,
-    pub value2: String,
-}
-
-#[derive(Debug, sea_orm::FromQueryResult)]
-struct NameAndValueResp {
-    pub is_from: bool,
-    pub name: String,
-    pub value: String,
-}
