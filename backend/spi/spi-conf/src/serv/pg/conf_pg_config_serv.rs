@@ -13,6 +13,7 @@ use tardis::{
             Value,
         },
     },
+    log::warn,
     tokio::{sync::RwLock, time::Instant},
     TardisFunsInst,
 };
@@ -39,8 +40,31 @@ fn md5(content: &str) -> String {
     use tardis::crypto::crypto_digest::TardisCryptoDigest;
     TardisCryptoDigest.md5(content).expect("md5 digest shouldn't fail")
 }
-
+pub async fn fix_md5(descriptor: &ConfigDescriptor, md5: &str, ctx: &TardisContext, bs_inst: &SpiBsInst) -> TardisResult<()> {
+    let data_id = &descriptor.data_id;
+    let group = &descriptor.group;
+    let namespace = &descriptor.namespace_id;
+    let typed_inst = bs_inst.inst::<TardisRelDBClient>();
+    let conns = conf_pg_initializer::init_table_and_conn(typed_inst, ctx, true).await?;
+    let (conn, table_name) = conns.config;
+    let fields_and_values = vec![("md5", Value::from(md5))];
+    let key_params = vec![("data_id", Value::from(data_id)), ("grp", Value::from(group)), ("namespace_id", Value::from(namespace))];
+    let (fields, placeholders, values) = super::gen_update_sql_stmt(fields_and_values, key_params);
+    conn
+        .execute_one(
+            &format!(
+                r#"UPDATE {table_name}
+SET {fields}
+WHERE {placeholders}"#,
+            ),
+            values,
+        )
+        .await?;
+    MD5_CACHE.write().await.insert(descriptor.clone(), (md5.to_string(), Instant::now()));
+    Ok(())
+}
 pub async fn get_config(descriptor: &mut ConfigDescriptor, _funs: &TardisFunsInst, ctx: &TardisContext, bs_inst: &SpiBsInst) -> TardisResult<String> {
+    use md5 as gen_md5;
     descriptor.fix_namespace_id();
     let data_id = &descriptor.data_id;
     let group = &descriptor.group;
@@ -51,7 +75,7 @@ pub async fn get_config(descriptor: &mut ConfigDescriptor, _funs: &TardisFunsIns
     let qry_result = conn
         .query_one(
             &format!(
-                r#"SELECT (content) FROM {table_name} cc
+                r#"SELECT (content, md5) FROM {table_name} cc
 WHERE cc.namespace_id=$1 AND cc.grp=$2 AND cc.data_id=$3
 	"#,
             ),
@@ -60,10 +84,20 @@ WHERE cc.namespace_id=$1 AND cc.grp=$2 AND cc.data_id=$3
         .await?
         .ok_or_else(|| TardisError::not_found("config not found", error::NAMESPACE_NOTFOUND))?;
     let content = qry_result.try_get::<String>("", "content")?;
+    let md5 = qry_result.try_get::<String>("", "md5")?;
+    // fix md5 automatically
+    let real_md5 = gen_md5(&content);
+    if md5 != real_md5 {
+        let update_result = fix_md5(descriptor, &real_md5, ctx, bs_inst).await;
+        if let Err(e) = update_result {
+            warn!("[Bios.spi-conf] update md5 failed: {}", e);
+        }
+    }
     Ok(content)
 }
 
 pub async fn get_config_detail(descriptor: &mut ConfigDescriptor, _funs: &TardisFunsInst, ctx: &TardisContext, bs_inst: &SpiBsInst) -> TardisResult<ConfigItem> {
+    use md5 as gen_md5;
     descriptor.fix_namespace_id();
     let data_id = &descriptor.data_id;
     let group = &descriptor.group;
@@ -98,12 +132,20 @@ WHERE c.namespace_id=$1 AND c.grp=$2 AND c.data_id=$3"#,
         tags: Option<String>,
     });
     let config_tags = tags.map(|tags| tags.split(',').filter(|s| !s.is_empty()).map(String::from).collect()).unwrap_or_default();
+    // fix md5 automatically
+    let real_md5 = gen_md5(&content);
+    if md5 != real_md5 {
+        let update_result = fix_md5(descriptor, &real_md5, ctx, bs_inst).await;
+        if let Err(e) = update_result {
+            warn!("[Bios.spi-conf] update md5 failed: {}", e);
+        }
+    }
     Ok(ConfigItem {
         data_id: data_id.clone(),
         namespace: namespace.clone(),
         group: group.clone(),
         id: id.to_string(),
-        md5,
+        md5: real_md5,
         content,
         created_time,
         last_modified_time: modified_time,
