@@ -19,7 +19,7 @@ use crate::{
 
 use super::auth_crypto_serv;
 
-//todo Change to asynchronous lock or spin when obtaining lock/改成异步锁或者是获取锁的时候自旋
+//TODO Change to asynchronous lock or spin when obtaining lock/改成异步锁或者是获取锁的时候自旋
 lazy_static! {
     static ref RES_CONTAINER: RwLock<Option<ResContainerNode>> = RwLock::new(None);
     static ref RES_APIS: RwLock<Option<HashMap<String, Api>>> = RwLock::new(None);

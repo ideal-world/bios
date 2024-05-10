@@ -83,7 +83,7 @@ impl PluginBsServ {
                 RbumRelAttrServ::delete_rbum(&attrs.id, funs, ctx).await?;
             }
             if let Some(attrs) = add_req.attrs.clone() {
-                // todo check attrs
+                // TODO check attrs
                 for attr in &attrs {
                     RbumRelAttrServ::add_rbum(
                         &mut RbumRelAttrAddReq {

@@ -77,7 +77,7 @@ impl SgPluginAuthConfig {
         }
 
         let cache_url: Url = if self.cache_url.is_empty() {
-            //todo get from gateways
+            //TODO get from gateways
             // init_dto.gateway_parameters.redis_url.as_deref().unwrap_or("redis://127.0.0.1:6379")
             "redis://127.0.0.1:6379"
         } else {

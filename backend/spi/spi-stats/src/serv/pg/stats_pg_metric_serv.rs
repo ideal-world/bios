@@ -109,7 +109,7 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
     let fact_inst_del_table_name = package_table_name(&format!("stats_inst_fact_{}_del", query_req.from), ctx);
 
     // Fetch config
-    // todo 是否需要在col加入一个dim_data_type字段，用于区分维度和度量
+    // TODO 是否需要在col加入一个dim_data_type字段，用于区分维度和度量
     let conf_info = conn
         .query_all(
             &format!(
@@ -604,7 +604,7 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
     };
     // package limit
     let query_limit = if let Some(limit) = &query_req.limit { format!("LIMIT {limit}") } else { "".to_string() };
-    let ignore_group_agg = !(!sql_part_groups.is_empty() && query_req.group_agg.unwrap_or(false));
+    let ignore_group_agg = sql_part_groups.is_empty() || !query_req.group_agg.unwrap_or(false);
     let own_paths_placeholder = (1..=own_paths_count).map(|idx| format!("${}", idx)).collect::<Vec<String>>().join(", ");
     let create_time_placeholder = format!("${}", own_paths_count + 1);
     let end_time_placeholder = format!("${}", own_paths_count + 2);
@@ -696,7 +696,7 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
     })
 }
 
-// todo 下钻 上探
+// TODO 下钻 上探
 async fn package_dim_record_agg(
     conf_info: HashMap<String, StatsConfInfo>,
     funs: &TardisFunsInst,
@@ -713,7 +713,7 @@ async fn package_dim_record_agg(
         } else {
             None
         };
-        if dimension_hierarchy.unwrap_or(vec![]).len() > 0 {
+        if !dimension_hierarchy.unwrap_or(vec![]).is_empty() {
             let dim: HashMap<String, serde_json::Value> = dim_record_paginate(dimension_key.clone(), None, None, 1, 9999, None, None, funs, ctx)
                 .await?
                 .records
@@ -737,7 +737,7 @@ fn package_groups(
     result: Vec<serde_json::Value>,
 ) -> Result<serde_json::Value, String> {
     if curr_select_dimension_keys.is_empty() {
-        let first_result = result.first().ok_or_else(|| "result is empty")?;
+        let first_result = result.first().ok_or("result is empty")?;
         let mut leaf_node = Map::with_capacity(result.len());
         for measure_key in select_measure_keys {
             let val = first_result.get(measure_key).ok_or_else(|| format!("failed to get key {measure_key}"))?;
@@ -761,9 +761,9 @@ fn package_groups(
     }
     let mut node = Map::with_capacity(0);
 
-    let dimension_key = curr_select_dimension_keys.first().ok_or_else(|| "curr_select_dimension_keys is empty")?;
+    let dimension_key = curr_select_dimension_keys.first().ok_or("curr_select_dimension_keys is empty")?;
 
-    // todo 下钻 上探
+    // TODO 下钻 上探
     // let dimension_hierarchy = if let Some(stats_con_info) = conf_info.get(dimension_key.split(FUNCTION_SUFFIX_FLAG).next().unwrap_or("")) {
     //     stats_con_info.dim_hierarchy.clone()
     // } else {
@@ -805,7 +805,7 @@ fn package_groups(
             ignore_group_agg,
             group.to_vec(),
         )?;
-        // todo 下钻 上探
+        // TODO 下钻 上探
         // println!("dimension_key:[{}],key[{}]", dimension_key, key);
         // if let Some(dim_record_map) = dim_record_agg.get(dimension_key) {
         //     println!("dim_record_map:{:?}", dim_record_map);
@@ -835,7 +835,7 @@ fn package_groups_agg(record: serde_json::Value) -> Result<serde_json::Value, St
                 return Ok(serde_json::Value::Null);
             }
             let mut details = Vec::new();
-            let var_agg = agg.as_str().ok_or_else(|| "field group_agg should be a string")?;
+            let var_agg = agg.as_str().ok_or("field group_agg should be a string")?;
             let vars = var_agg.split(',').collect::<Vec<&str>>();
             for var in vars {
                 let fields = var.split(" - ").collect::<Vec<&str>>();
