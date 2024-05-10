@@ -5,7 +5,6 @@ use tardis::{
     basic::{error::TardisError, result::TardisResult},
     futures_util::StreamExt,
     log, serde_json,
-    web::poem,
 };
 #[allow(non_snake_case)]
 mod proto;
@@ -22,7 +21,6 @@ use crate::{
 #[derive(Clone, Default)]
 pub struct RequestProtoImpl;
 
-#[poem::async_trait]
 impl RequestProto for RequestProtoImpl {
     async fn request(&self, request: Request<Payload>) -> Result<Response<Payload>, Status> {
         let Some(metadata) = &request.metadata else {
@@ -47,7 +45,6 @@ impl RequestProto for RequestProtoImpl {
 #[derive(Clone, Default)]
 pub struct BiRequestStreamProtoImpl;
 
-#[poem::async_trait]
 impl BiRequestStreamProto for BiRequestStreamProtoImpl {
     async fn request_bi_stream(&self, mut request_stream: Request<poem_grpc::Streaming<Payload>>) -> Result<Response<poem_grpc::Streaming<Payload>>, Status> {
         let (mut _tx, rx) = tardis::tokio::sync::mpsc::unbounded_channel::<Result<Payload, Status>>();

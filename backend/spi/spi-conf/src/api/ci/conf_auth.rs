@@ -76,7 +76,7 @@ impl ConfCiAuthApi {
                     &default_ctx,
                 )
                 .await?
-                .ok_or_else(|| funs.err().not_found(&SpiBsServ::get_obj_name(), "register", "not found spi-conf domain", "404-spi-bs-not-exist"))?;
+                .ok_or_else(|| funs.err().not_found(&SpiBsServ::get_obj_name(), "register_bundle", "not found spi-conf domain", "404-spi-bs-not-exist"))?;
                 let bs = RbumItemServ::find_one_rbum(
                     &RbumBasicFilterReq {
                         enabled: Some(true),
@@ -87,7 +87,7 @@ impl ConfCiAuthApi {
                     &default_ctx,
                 )
                 .await?
-                .ok_or_else(|| funs.err().not_found(&SpiBsServ::get_obj_name(), "register", "not found backend service", "404-spi-bs-not-exist"))?;
+                .ok_or_else(|| funs.err().not_found(&SpiBsServ::get_obj_name(), "register_bundle", "not found backend service", "404-spi-bs-not-exist"))?;
                 bs.id
             }
             BackendServiceSource::New { name } => {
@@ -96,7 +96,7 @@ impl ConfCiAuthApi {
                 let kind_code = spi_constants::SPI_PG_KIND_CODE.to_string();
                 let kind_id = RbumKindServ::get_rbum_kind_id_by_code(&kind_code, &funs)
                     .await?
-                    .ok_or_else(|| funs.err().not_found(&SpiBsServ::get_obj_name(), "register", "db spi kind not found", "404-spi-bs-not-exist"))?;
+                    .ok_or_else(|| funs.err().not_found(&SpiBsServ::get_obj_name(), "register_bundle", "db spi kind not found", "404-spi-bs-not-exist"))?;
                 let conn_uri = tardis::TardisFuns::fw_config().db().default.url.clone();
                 let mut req = SpiBsAddReq {
                     name: name.unwrap_or(format!("spi-conf-{}", tardis::crypto::crypto_key::TardisCryptoKey.rand_8_hex())).into(),
