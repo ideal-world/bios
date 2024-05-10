@@ -468,6 +468,7 @@ pub async fn test(sysadmin_info: (&str, &str), system_admin_context: &TardisCont
             icon: Some("/static/images/avatar.png".to_string()),
             disabled: Some(true),
             exts: Default::default(),
+            logout_type: None,
         },
         &funs,
         &system_admin_context,

@@ -184,23 +184,23 @@ async fn init_data() -> TardisResult<()> {
         RbumRelAttrAggAddReq {
             is_from: true,
             value: "http://xxx".to_string(),
-            name: "url".to_string(),
+            name: Some("url".to_string()),
             record_only: true,
-            rel_rbum_kind_attr_id: kind_attr_1,
+            rel_rbum_kind_attr_id: Some(kind_attr_1),
         },
         RbumRelAttrAggAddReq {
             is_from: true,
             value: "ak123".to_string(),
-            name: "ak".to_string(),
+            name: Some("ak".to_string()),
             record_only: true,
-            rel_rbum_kind_attr_id: kind_attr_2,
+            rel_rbum_kind_attr_id: Some(kind_attr_2),
         },
         RbumRelAttrAggAddReq {
             is_from: true,
             value: "sk123".to_string(),
-            name: "sk".to_string(),
+            name: Some("sk".to_string()),
             record_only: true,
-            rel_rbum_kind_attr_id: kind_attr_3,
+            rel_rbum_kind_attr_id: Some(kind_attr_3),
         },
     ];
     let _: String = client
