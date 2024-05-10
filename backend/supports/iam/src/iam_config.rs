@@ -55,9 +55,14 @@ pub struct IamConfig {
     pub mail_template_cert_login_content: String,
     pub mail_template_cert_random_pwd_title: String,
     pub mail_template_cert_random_pwd_content: String,
+    //TODO remove?
+    #[deprecated]
     pub phone_template_cert_activate_title: String,
+    #[deprecated]
     pub phone_template_cert_activate_content: String,
+    #[deprecated]
     pub phone_template_cert_login_title: String,
+    #[deprecated]
     pub phone_template_cert_login_content: String,
     pub sms_base_url: String,
     pub sms_path: String,

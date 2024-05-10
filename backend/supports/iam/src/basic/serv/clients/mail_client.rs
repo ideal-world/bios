@@ -9,6 +9,7 @@ use crate::iam_constants;
 pub struct MailClient;
 
 impl MailClient {
+    //TODO remove?
     pub async fn async_send_cert_activate_vcode(mail: &str, account_name: Option<String>, vcode: &str, _funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let mail_clone = mail.to_string();
         let vcode_clone = vcode.to_string();
@@ -37,6 +38,7 @@ impl MailClient {
         Self::send_mail(mail, subject, content, funs).await
     }
 
+    //TODO remove?
     pub async fn async_send_vcode(mail: &str, account_name: Option<String>, vcode: &str, _funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let mail_clone = mail.to_string();
         let vcode_clone = vcode.to_string();
