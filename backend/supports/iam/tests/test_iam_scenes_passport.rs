@@ -118,6 +118,7 @@ pub async fn test(sysadmin_name: &str, sysadmin_password: &str, client: &mut BIO
                 status: None,
                 temporary: None,
                 lock_status: None,
+                logout_type: None,
             },
         )
         .await;
@@ -202,6 +203,7 @@ pub async fn account_mgr_by_sys_admin(client: &mut BIOSWebTestClient) -> TardisR
                 disabled: None,
                 icon: None,
                 exts: HashMap::new(),
+                logout_type: None,
             },
         )
         .await;
@@ -314,6 +316,7 @@ pub async fn account_mgr_by_tenant_account(client: &mut BIOSWebTestClient) -> Ta
                 disabled: None,
                 icon: None,
                 exts: HashMap::from([("ext9".to_string(), "00001".to_string())]),
+                logout_type: None,
             },
         )
         .await;
@@ -878,6 +881,7 @@ pub async fn login_by_ldap(client: &mut BIOSWebTestClient) -> TardisResult<()> {
                 status: None,
                 temporary: None,
                 lock_status: None,
+                logout_type: None,
             },
         )
         .await;
@@ -981,6 +985,7 @@ pub async fn login_by_ldap(client: &mut BIOSWebTestClient) -> TardisResult<()> {
                 status: None,
                 temporary: None,
                 lock_status: None,
+                logout_type: None,
             },
         )
         .await;
