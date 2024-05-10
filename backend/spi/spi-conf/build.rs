@@ -1,7 +1,7 @@
 use std::io::Result;
 
 fn main() -> Result<()> {
-    // std::env::set_var("OUT_DIR", "tests/grpc/rust");
+    // std::env::set_var("OUT_DIR", "./src/api/nacos/grpc");
     let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap();
     let proto_dir = format!("{}/proto", manifest_dir);
     poem_grpc_build::Config::new()

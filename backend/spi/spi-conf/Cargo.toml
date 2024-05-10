@@ -46,4 +46,4 @@ bios-basic = { path = "../../basic", features = ["default", "test"] }
 testcontainers-modules = { workspace = true }
 
 [build-dependencies]
-poem-grpc-build = "0.3"
+poem-grpc-build = "0.4"

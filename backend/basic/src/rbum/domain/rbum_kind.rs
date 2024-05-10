@@ -34,9 +34,9 @@ pub struct Model {
     ///
     /// 资源类型编码
     ///
-    /// Resource kind code, which is required to conform to the scheme specification in the uri, matching the regular: ``^[a-z0-9-.]+$`` .
+    /// Which is required to conform to the scheme specification in the uri, matching the regular: ``^[a-z0-9-.]+$`` .
     ///
-    /// 资源类型编码，需要符合uri中的scheme规范，匹配正则：``^[a-z0-9-.]+$`` 。
+    /// 需要符合uri中的scheme规范，匹配正则：``^[a-z0-9-.]+$`` 。
     #[index(unique)]
     pub code: String,
     /// Resource kind name
