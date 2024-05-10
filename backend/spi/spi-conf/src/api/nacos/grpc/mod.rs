@@ -5,7 +5,6 @@ use tardis::{
     basic::{error::TardisError, result::TardisResult},
     futures_util::StreamExt,
     log, serde_json,
-    web::poem,
 };
 #[allow(non_snake_case)]
 mod proto;
