@@ -48,6 +48,12 @@ impl RbumCrudOperation<rbum_item::ActiveModel, RbumItemAddReq, RbumItemKernelMod
         rbum_item::Entity.table_name()
     }
 
+    async fn before_add_rbum(add_req: &mut RbumItemAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        Self::check_scope(&add_req.rel_rbum_kind_id, RbumKindServ::get_table_name(), funs, ctx).await?;
+        Self::check_scope(&add_req.rel_rbum_domain_id, RbumDomainServ::get_table_name(), funs, ctx).await?;
+        Ok(())
+    }
+
     async fn package_add(add_req: &RbumItemAddReq, funs: &TardisFunsInst, _: &TardisContext) -> TardisResult<rbum_item::ActiveModel> {
         let id = if let Some(id) = &add_req.id { id.to_string() } else { TardisFuns::field.nanoid() };
         let code = if let Some(code) = &add_req.code {
@@ -86,12 +92,6 @@ impl RbumCrudOperation<rbum_item::ActiveModel, RbumItemAddReq, RbumItemKernelMod
             disabled: Set(add_req.disabled.unwrap_or(false)),
             ..Default::default()
         })
-    }
-
-    async fn before_add_rbum(add_req: &mut RbumItemAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        Self::check_scope(&add_req.rel_rbum_kind_id, RbumKindServ::get_table_name(), funs, ctx).await?;
-        Self::check_scope(&add_req.rel_rbum_domain_id, RbumDomainServ::get_table_name(), funs, ctx).await?;
-        Ok(())
     }
 
     async fn package_modify(id: &str, modify_req: &RbumItemKernelModifyReq, funs: &TardisFunsInst, _: &TardisContext) -> TardisResult<rbum_item::ActiveModel> {
@@ -141,9 +141,13 @@ impl RbumCrudOperation<rbum_item::ActiveModel, RbumItemAddReq, RbumItemKernelMod
         Self::check_exist_before_delete(id, RbumItemAttrServ::get_table_name(), rbum_item_attr::Column::RelRbumItemId.as_str(), funs).await?;
         Self::check_exist_with_cond_before_delete(
             RbumRelServ::get_table_name(),
-            Cond::any()
-                .add(Cond::all().add(Expr::col(rbum_rel::Column::FromRbumKind).eq(RbumRelFromKind::Item.to_int())).add(Expr::col(rbum_rel::Column::FromRbumId).eq(id)))
-                .add(Expr::col(rbum_rel::Column::ToRbumItemId).eq(id)),
+            any![
+                all![
+                    Expr::col(rbum_rel::Column::FromRbumKind).eq(RbumRelFromKind::Item.to_int()),
+                    Expr::col(rbum_rel::Column::FromRbumId).eq(id)
+                ],
+                Expr::col(rbum_rel::Column::ToRbumItemId).eq(id)
+            ],
             funs,
         )
         .await?;
@@ -151,7 +155,10 @@ impl RbumCrudOperation<rbum_item::ActiveModel, RbumItemAddReq, RbumItemKernelMod
         Self::check_exist_before_delete(id, RbumCertConfServ::get_table_name(), rbum_cert_conf::Column::RelRbumItemId.as_str(), funs).await?;
         Self::check_exist_with_cond_before_delete(
             RbumCertServ::get_table_name(),
-            Cond::all().add(Expr::col(rbum_cert::Column::RelRbumKind).eq(RbumCertRelKind::Item.to_int())).add(Expr::col(rbum_cert::Column::RelRbumId).eq(id)),
+            all![
+                Expr::col(rbum_cert::Column::RelRbumKind).eq(RbumCertRelKind::Item.to_int()),
+                Expr::col(rbum_cert::Column::RelRbumId).eq(id)
+            ],
             funs,
         )
         .await?;
@@ -194,6 +201,9 @@ impl RbumCrudOperation<rbum_item::ActiveModel, RbumItemAddReq, RbumItemKernelMod
     }
 }
 
+/// Resource item extended common operation
+///
+/// 资源项扩展公共操作
 #[async_trait]
 pub trait RbumItemCrudOperation<EXT, AddReq, ModifyReq, SummaryResp, DetailResp, ItemFilterReq>
 where
@@ -204,20 +214,35 @@ where
     DetailResp: FromQueryResult + ParseFromJSON + ToJSON + Serialize + Send + Sync,
     ItemFilterReq: Sync + Send + RbumItemFilterFetcher,
 {
+    /// Get the name of the extended table
+    ///
+    /// 获取扩展表的名称
     fn get_ext_table_name() -> &'static str;
 
+    /// Get the name of the extended object
+    ///
+    /// 获取扩展对象的名称
+    ///
+    /// Mostly used for printing log identifiers.
+    ///
+    /// 多用于打印日志的标识。
     fn get_obj_name() -> String {
         Self::get_ext_table_name().to_string()
     }
 
-    /// Get default kind
+    /// Get default resource kind
+    ///
+    /// 获取默认的资源类型
     fn get_rbum_kind_id() -> Option<String>;
 
-    /// Get default domain
+    /// Get default resource domain
+    ///
+    /// 获取默认的资源域
     fn get_rbum_domain_id() -> Option<String>;
 
     // ----------------------------- Add -------------------------------
 
+    
     async fn package_item_add(add_req: &AddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<RbumItemKernelAddReq>;
 
     async fn package_ext_add(id: &str, add_req: &AddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<EXT>;
@@ -334,7 +359,7 @@ where
     // ----------------------------- Delete -------------------------------
 
     async fn package_delete(id: &str, _funs: &TardisFunsInst, _ctx: &TardisContext) -> TardisResult<Select<EXT::Entity>> {
-        Ok(EXT::Entity::find().filter(Expr::col(ID_FIELD.clone()).eq(id)))
+        Ok(<EXT::Entity as EntityTrait>::find().filter(Expr::col(ID_FIELD.clone()).eq(id)))
     }
 
     async fn before_delete_item(_: &str, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<Option<DetailResp>> {
@@ -496,7 +521,7 @@ where
                     filter.basic().rbum_domain_id.clone()
                 } else {
                     Self::get_rbum_domain_id()
-                }
+                },
             },
             funs,
             ctx,
