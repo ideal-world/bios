@@ -159,6 +159,39 @@ impl FlowRelServ {
         .await
     }
 
+    pub async fn find_simple_rels(
+        flow_rel_kind: &FlowRelKind,
+        flow_model_id: Option<&str>,
+        flow_state_id: Option<&str>,
+        is_from: bool,
+        desc_sort_by_create: Option<bool>,
+        desc_sort_by_update: Option<bool>,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<Vec<RbumRelBoneResp>> {
+        let mock_ctx = TardisContext {
+            own_paths: "".to_string(),
+            ..ctx.clone()
+        };
+        let mut filter_req = RbumRelFilterReq {
+            basic: RbumBasicFilterReq {
+                with_sub_own_paths: true,
+                ..Default::default()
+            },
+            tag: Some(flow_rel_kind.to_string()),
+            ..Default::default()
+        };
+        if flow_model_id.is_some() {
+            filter_req.from_rbum_kind = Some(RbumRelFromKind::Item);
+            filter_req.from_rbum_id = flow_model_id.map(|s| s.to_string());
+        }
+        if flow_state_id.is_some() {
+            filter_req.to_rbum_item_id = flow_state_id.map(|s| s.to_string());
+        }
+
+        RbumRelServ::find_simple_rels(&filter_req, desc_sort_by_create, desc_sort_by_update, is_from, funs, &mock_ctx).await
+    }
+
     pub async fn modify_simple_rel(
         flow_rel_kind: &FlowRelKind,
         flow_model_id: &str,

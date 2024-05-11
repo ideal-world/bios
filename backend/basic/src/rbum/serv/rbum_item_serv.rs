@@ -496,7 +496,7 @@ where
                     filter.basic().rbum_domain_id.clone()
                 } else {
                     Self::get_rbum_domain_id()
-                }
+                },
             },
             funs,
             ctx,

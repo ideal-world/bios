@@ -3,7 +3,7 @@ use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use strum::Display;
 use tardis::{
-    basic::field::TrimString,
+    basic::{error::TardisError, field::TrimString},
     db::sea_orm::{self, EnumIter},
     serde_json::Value,
     web::poem_openapi,
@@ -45,7 +45,7 @@ pub struct FlowTransitionAddReq {
     pub sort: Option<i64>,
 }
 
-#[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object, Default)]
 pub struct FlowTransitionModifyReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub id: TrimString,
@@ -345,8 +345,8 @@ impl From<TagRelKind> for String {
 
 #[derive(Default)]
 pub struct FlowTransitionInitInfo {
-    pub from_flow_state_name: String,
-    pub to_flow_state_name: String,
+    pub from_flow_state_id: String,
+    pub to_flow_state_id: String,
     pub name: String,
     pub transfer_by_auto: Option<bool>,
     pub transfer_by_timer: Option<String>,
@@ -369,6 +369,36 @@ pub struct FlowTransitionInitInfo {
     pub action_by_front_changes: Vec<FlowTransitionFrontActionInfo>,
 
     pub sort: Option<i64>,
+}
+
+impl TryFrom<FlowTransitionInitInfo> for FlowTransitionAddReq {
+    type Error = TardisError;
+
+    fn try_from(value: FlowTransitionInitInfo) -> Result<Self, Self::Error> {
+        Ok(FlowTransitionAddReq {
+            from_flow_state_id: value.from_flow_state_id,
+            to_flow_state_id: value.to_flow_state_id,
+            name: Some(value.name.into()),
+            is_notify: Some(true),
+            transfer_by_auto: value.transfer_by_auto,
+            transfer_by_timer: value.transfer_by_timer,
+            guard_by_creator: value.guard_by_creator,
+            guard_by_his_operators: value.guard_by_his_operators,
+            guard_by_assigned: value.guard_by_assigned,
+            guard_by_spec_account_ids: value.guard_by_spec_account_ids,
+            guard_by_spec_role_ids: value.guard_by_spec_role_ids,
+            guard_by_spec_org_ids: value.guard_by_spec_org_ids,
+            guard_by_other_conds: value.guard_by_other_conds,
+            vars_collect: value.vars_collect,
+            action_by_pre_callback: value.action_by_pre_callback,
+            action_by_post_callback: value.action_by_post_callback,
+            action_by_post_changes: Some(value.action_by_post_changes),
+            action_by_front_changes: Some(value.action_by_front_changes),
+            double_check: value.double_check,
+
+            sort: value.sort,
+        })
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug, poem_openapi::Object, sea_orm::FromJsonQueryResult)]
