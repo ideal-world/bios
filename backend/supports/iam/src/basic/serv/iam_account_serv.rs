@@ -228,6 +228,8 @@ impl RbumItemCrudOperation<iam_account::ActiveModel, IamAccountAddReq, IamAccoun
         query.column((iam_account::Entity, iam_account::Column::Ext8));
         query.column((iam_account::Entity, iam_account::Column::Ext9));
         query.column((iam_account::Entity, iam_account::Column::EffectiveTime));
+        query.column((iam_account::Entity, iam_account::Column::LogoutTime));
+        query.column((iam_account::Entity, iam_account::Column::LogoutType));
         if let Some(icon) = &filter.icon {
             query.and_where(Expr::col(iam_account::Column::Icon).eq(icon.as_str()));
         }
