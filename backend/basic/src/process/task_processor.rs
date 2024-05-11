@@ -312,9 +312,9 @@ impl TaskProcessor {
         Ok(())
     }
 
-    /// Fetch the asynchronous task IDs in the context
+    /// Fetch the asynchronous task id set in the context
     ///
-    /// 获取异步任务IDs
+    /// 获取异步任务id集合
     ///
     /// Use ``,`` to separate multiple tasks
     ///

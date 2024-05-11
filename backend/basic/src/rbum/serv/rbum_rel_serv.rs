@@ -362,7 +362,7 @@ impl RbumRelServ {
         .await
     }
 
-    /// Paging to find the relationship target ids of the specified condition
+    /// Page to get the relationship target ids of the specified condition
     ///
     /// 分页查找指定条件的关联目标id集合
     pub async fn paginate_from_id_rels(
@@ -398,7 +398,7 @@ impl RbumRelServ {
         })
     }
 
-    /// Paging to find the relationship target summary information set of the specified condition
+    /// Page to get the relationship target summary information set of the specified condition
     ///
     /// 分页查找指定条件的关联目标概要信息集合
     pub async fn paginate_from_simple_rels(
@@ -440,7 +440,7 @@ impl RbumRelServ {
         })
     }
 
-    /// Paging to find the relationship aggregation detail information set of the specified condition
+    /// Page to get the relationship aggregation detail information set of the specified condition
     ///
     /// 分页查找指定条件的关联聚合信息集合
     pub async fn paginate_from_rels(
@@ -574,7 +574,7 @@ impl RbumRelServ {
         .await
     }
 
-    /// Paging to find the relationship source ids of the specified condition
+    /// Page to get the relationship source ids of the specified condition
     ///
     /// 分页查找指定条件的关联来源id集合
     pub async fn paginate_to_id_rels(
@@ -596,7 +596,7 @@ impl RbumRelServ {
         })
     }
 
-    /// Paging to find the relationship source summary information set of the specified condition
+    /// Page to get the relationship source summary information set of the specified condition
     ///
     /// 分页查找指定条件的关联来源概要信息集合
     pub async fn paginate_to_simple_rels(
@@ -637,7 +637,7 @@ impl RbumRelServ {
         })
     }
 
-    /// Paging to find the relationship aggregation detail information set of the specified condition
+    /// Page to get the relationship aggregation detail information set of the specified condition
     ///
     /// 分页查找指定条件的关联聚合信息集合
     pub async fn paginate_to_rels(
@@ -735,7 +735,7 @@ impl RbumRelServ {
         Self::package_agg_rels(rbum_rels, filter, funs, ctx).await
     }
 
-    /// Paging to find the relationship summary information set of the specified condition
+    /// Page to get the relationship summary information set of the specified condition
     ///
     /// 分页查找指定条件的关联概要信息集合
     ///
@@ -761,7 +761,7 @@ impl RbumRelServ {
         })
     }
 
-    /// Paging to find the relationship aggregation detail information set of the specified condition
+    /// Page to get the relationship aggregation detail information set of the specified condition
     ///
     /// 分页查找指定条件的关联聚合信息集合
     pub async fn paginate_rels(
@@ -820,7 +820,7 @@ impl RbumRelServ {
         Ok(result)
     }
 
-    /// Find the relationship ids of the specified condition
+    /// Find the relationship id set of the specified condition
     ///
     /// 查找指定条件的关联id集合
     pub async fn find_rel_ids(find_req: &RbumRelSimpleFindReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<String>> {
@@ -1214,6 +1214,9 @@ impl RbumRelServ {
         funs.db().count(&query).await.map(|i| i > 0)
     }
 
+    /// Delete the relationship(Including all conditions)
+    ///
+    /// 删除关联关系（包含所有限定条件）
     pub async fn delete_rel_with_ext(id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<u64> {
         let rbum_rel_env_ids = RbumRelEnvServ::find_id_rbums(
             &RbumRelExtFilterReq {

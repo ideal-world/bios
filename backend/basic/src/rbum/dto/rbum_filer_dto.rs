@@ -43,7 +43,7 @@ pub struct RbumBasicFilterReq {
     ///
     /// 所有权路径
     pub own_paths: Option<String>,
-    /// Object ids
+    /// Object id set
     ///
     /// 对象id集合
     pub ids: Option<Vec<String>>,
@@ -157,11 +157,11 @@ pub struct RbumCertFilterReq {
     ///
     /// 关联的对象id
     pub rel_rbum_id: Option<String>,
-    /// Associated object ids
+    /// Associated object id set
     ///
     /// 关联的对象id集合
     pub rel_rbum_ids: Option<Vec<String>>,
-    /// Associated resource certificate configuration ids
+    /// Associated resource certificate configuration id set
     ///
     /// 关联的凭证配置id集合
     pub rel_rbum_cert_conf_ids: Option<Vec<String>>,
@@ -390,7 +390,7 @@ pub struct RbumSetItemFilterReq {
     ///
     /// 资源分类（节点）sys_code 列表
     pub rel_rbum_set_cate_sys_codes: Option<Vec<String>>,
-    /// Resource category (node) ids
+    /// Resource category (node) id set
     ///
     /// 资源分类（节点）id 列表
     pub rel_rbum_set_cate_ids: Option<Vec<String>>,
@@ -406,19 +406,18 @@ pub struct RbumSetItemFilterReq {
     ///
     /// 默认为 ``true``
     pub rel_rbum_item_can_not_exist: Option<bool>,
-    /// Associated resource item ids
-    ///
+    /// Associated resource item id set
     /// 关联的资源项id列表
     pub rel_rbum_item_ids: Option<Vec<String>>,
     /// Associated resource item scope level
     ///
     /// 关联的资源项作用域级别
     pub rel_rbum_item_scope_level: Option<RbumScopeLevelKind>,
-    /// Associated resource item kind ids
+    /// Associated resource item kind id set
     ///
     /// 关联的资源项类型id列表
     pub rel_rbum_item_kind_ids: Option<Vec<String>>,
-    /// Associated resource item domain ids
+    /// Associated resource item domain id set
     ///
     /// 关联的资源项域id列表
     pub rel_rbum_item_domain_ids: Option<Vec<String>>,
@@ -478,7 +477,7 @@ pub struct RbumSetTreeFilterReq {
     ///
     /// 仅当 ``fetch_cate_item = true`` 时有效。
     pub hide_cate_with_empty_item: bool,
-    /// Associated resource item ids
+    /// Associated resource item id set
     ///
     /// 关联的资源项id列表
     ///
@@ -486,7 +485,7 @@ pub struct RbumSetTreeFilterReq {
     ///
     /// 仅当 ``fetch_cate_item = true`` 时有效。
     pub rel_rbum_item_ids: Option<Vec<String>>,
-    /// Associated resource item kind ids
+    /// Associated resource item kind id set
     ///
     /// 关联的资源项类型id列表
     ///
@@ -494,7 +493,7 @@ pub struct RbumSetTreeFilterReq {
     ///
     /// 仅当 ``fetch_cate_item = true`` 时有效。
     pub rel_rbum_item_kind_ids: Option<Vec<String>>,
-    /// Associated resource item domain ids
+    /// Associated resource item domain id set
     ///
     /// 关联的资源项域id列表
     ///
@@ -510,12 +509,19 @@ pub struct RbumSetTreeFilterReq {
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone, Default)]
 #[serde(default)]
 pub struct RbumSetItemRelFilterReq {
-    /// 同时根据set_id cate_code 二元组限制
-    /// TODO
+    /// Resource set id and resource category (node) id set
+    ///
+    /// 资源集Id与资源分类（节点）Id集合
+    ///
+    /// There is an ``or`` relationship between different resource sets, and the Id set of each resource category (node) in the same resource set is an ``or`` relationship.
+    ///
+    /// 不同资源集之间为 ``or`` 关系，同一资源集的每个资源分类（节点）Id集合为 ``or`` 关系。
     pub set_ids_and_cate_codes: Option<HashMap<String, Vec<String>>>,
-    /// TODO
+    /// Whether the resource category (node) is associated with descendants
+    ///
+    /// 资源分类（节点）是否包含子孙级
     pub with_sub_set_cate_codes: bool,
-    /// Associated object ids
+    /// Associated object id set
     ///
     /// 关联的对象id集合
     pub rel_item_ids: Option<Vec<String>>,
@@ -578,7 +584,7 @@ pub struct RbumItemRelFilterReq {
     ///
     /// 关联的对象id
     pub rel_item_id: Option<String>,
-    /// Associated object ids
+    /// Associated object id set
     ///
     /// 关联的对象id集合
     pub rel_item_ids: Option<Vec<String>>,
