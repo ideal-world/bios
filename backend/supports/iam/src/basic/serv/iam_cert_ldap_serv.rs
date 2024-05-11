@@ -10,7 +10,7 @@ use crate::basic::serv::iam_cert_mail_vcode_serv::IamCertMailVCodeServ;
 use crate::basic::serv::iam_cert_user_pwd_serv::IamCertUserPwdServ;
 use crate::console_passport::dto::iam_cp_cert_dto::IamCpUserPwdBindWithLdapReq;
 use crate::console_passport::serv::iam_cp_cert_user_pwd_serv::IamCpCertUserPwdServ;
-use crate::iam_enumeration::{IamCertExtKind, IamCertKernelKind, WayToAdd, WayToDelete};
+use crate::iam_enumeration::{IamAccountLogoutTypeKind, IamAccountStatusKind, IamCertExtKind, IamCertKernelKind, WayToAdd, WayToDelete};
 use crate::{
     basic::dto::{
         iam_account_dto::{IamAccountAggAddReq, IamAccountExtSysResp},
@@ -967,10 +967,11 @@ impl IamCertLdapServ {
                                 role_ids: None,
                                 org_cate_ids: None,
                                 exts: None,
-                                status: None,
+                                status: Some(IamAccountStatusKind::Logout),
                                 cert_phone: None,
                                 cert_mail: None,
                                 temporary: None,
+                                logout_type: Some(IamAccountLogoutTypeKind::AutomaticLogout),
                             },
                             &funs,
                             ctx,
@@ -1151,6 +1152,7 @@ impl IamCertLdapServ {
                 status: Some(RbumCertStatusKind::Pending),
                 temporary: None,
                 lock_status: None,
+                logout_type: None,
             },
             false,
             funs,

@@ -305,7 +305,7 @@ pub struct RbumSetFilterReq {
     /// Resource relation filter
     ///
     /// 资源关联过滤
-    pub rel: Option<RbumItemRelFilterReq>,
+    pub rel: Option<RbumItemRelSimpleFilterReq>,
     /// Resource kind id
     ///
     /// 资源类型id
@@ -325,7 +325,7 @@ pub struct RbumSetCateFilterReq {
     /// Resource relation filter
     ///
     /// 资源关联过滤
-    pub rel: Option<RbumItemRelFilterReq>,
+    pub rel: Option<RbumItemRelSimpleFilterReq>,
     /// Resource set id
     ///
     /// 资源集id
@@ -434,26 +434,6 @@ pub struct RbumSetItemFilterReq {
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
 #[cfg_attr(feature = "default", derive(poem_openapi::Object))]
 pub struct RbumSetTreeFilterReq {
-    /// Whether to get the associated resource items
-    ///
-    /// 是否获取关联的资源项
-    pub fetch_cate_item: bool,
-    /// Whether to not get the associated resource items and the disabled ones
-    ///
-    /// 是否不获取包含关联的且已禁用的资源项
-    ///
-    /// Only valid when ``fetch_cate_item = true``.
-    ///
-    /// 仅当 ``fetch_cate_item = true`` 时有效。
-    pub hide_item_with_disabled: bool,
-    /// Whether to filter out nodes that do not have associated resource items
-    ///
-    /// 返回的树是否过滤掉没有关联资源项的节点
-    ///
-    /// Only valid when ``fetch_cate_item = true``.
-    ///
-    /// 仅当 ``fetch_cate_item = true`` 时有效。
-    pub hide_cate_with_empty_item: bool,
     /// Resource category (node) sys_codes
     ///
     /// 资源分类（节点）sys_code 列表
@@ -478,17 +458,49 @@ pub struct RbumSetTreeFilterReq {
     ///
     /// 资源分类（节点）扩展信息
     pub cate_exts: Option<Vec<String>>,
+    /// Whether to get the associated resource items
+    ///
+    /// 是否获取关联的资源项
+    pub fetch_cate_item: bool,
+    /// Whether to not get the associated resource items and the disabled ones
+    ///
+    /// 是否不获取包含关联的且已禁用的资源项
+    ///
+    /// Only valid when ``fetch_cate_item = true``.
+    ///
+    /// 仅当 ``fetch_cate_item = true`` 时有效。
+    pub hide_item_with_disabled: bool,
+    /// Whether to filter out nodes that do not have associated resource items
+    ///
+    /// 返回的树是否过滤掉没有关联资源项的节点
+    ///
+    /// Only valid when ``fetch_cate_item = true``.
+    ///
+    /// 仅当 ``fetch_cate_item = true`` 时有效。
+    pub hide_cate_with_empty_item: bool,
     /// Associated resource item ids
     ///
     /// 关联的资源项id列表
+    ///
+    /// Only valid when ``fetch_cate_item = true``.
+    ///
+    /// 仅当 ``fetch_cate_item = true`` 时有效。
     pub rel_rbum_item_ids: Option<Vec<String>>,
     /// Associated resource item kind ids
     ///
     /// 关联的资源项类型id列表
+    ///
+    /// Only valid when ``fetch_cate_item = true``.
+    ///
+    /// 仅当 ``fetch_cate_item = true`` 时有效。
     pub rel_rbum_item_kind_ids: Option<Vec<String>>,
     /// Associated resource item domain ids
     ///
     /// 关联的资源项域id列表
+    ///
+    /// Only valid when ``fetch_cate_item = true``.
+    ///
+    /// 仅当 ``fetch_cate_item = true`` 时有效。
     pub rel_rbum_item_domain_ids: Option<Vec<String>>,
 }
 
@@ -507,6 +519,31 @@ pub struct RbumSetItemRelFilterReq {
     ///
     /// 关联的对象id集合
     pub rel_item_ids: Option<Vec<String>>,
+}
+
+/// Simple Resource item relation filter
+///
+/// 简单的资源项关联过滤器
+#[derive(Serialize, Deserialize, Debug, Clone, Default)]
+#[cfg_attr(feature = "default", derive(poem_openapi::Object))]
+#[serde(default)]
+pub struct RbumItemRelSimpleFilterReq {
+    /// Whether the related party is a ``from`` party
+    ///
+    /// 关联方是否是 ``from`` 方
+    pub rel_by_from: bool,
+    /// Associated tag
+    ///
+    /// 关联的标签
+    pub tag: Option<String>,
+    /// ``from`` party kind
+    ///
+    /// ``from`` 方的类型
+    pub from_rbum_kind: Option<RbumRelFromKind>,
+    /// Associated object id
+    ///
+    /// 关联的对象id
+    pub rel_item_id: Option<String>,
 }
 
 /// Resource item relation filter

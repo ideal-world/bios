@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 
-use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use tardis::web::poem_openapi;
 use tardis::{
@@ -27,13 +26,12 @@ impl Middleware<BoxEndpoint<'static>> for EncryptMW {
     type Output = BoxEndpoint<'static>;
 
     fn transform(&self, ep: BoxEndpoint<'static>) -> Self::Output {
-        Box::new(EncryptMWImpl(ep))
+        Box::new(poem::endpoint::ToDynEndpoint(EncryptMWImpl(ep)))
     }
 }
 
 pub struct EncryptMWImpl<E>(E);
 
-#[async_trait]
 impl<E: Endpoint> Endpoint for EncryptMWImpl<E> {
     type Output = Response;
 

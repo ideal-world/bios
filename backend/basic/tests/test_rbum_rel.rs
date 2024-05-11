@@ -15,7 +15,7 @@ use bios_basic::rbum::dto::rbum_kind_attr_dto::RbumKindAttrAddReq;
 use bios_basic::rbum::dto::rbum_kind_dto::RbumKindAddReq;
 use bios_basic::rbum::dto::rbum_rel_agg_dto::{RbumRelAggAddReq, RbumRelAttrAggAddReq, RbumRelEnvAggAddReq};
 use bios_basic::rbum::dto::rbum_rel_attr_dto::{RbumRelAttrAddReq, RbumRelAttrModifyReq};
-use bios_basic::rbum::dto::rbum_rel_dto::{RbumRelAddReq, RbumRelCheckReq, RbumRelModifyReq};
+use bios_basic::rbum::dto::rbum_rel_dto::{RbumRelAddReq, RbumRelCheckReq, RbumRelEnvCheckReq, RbumRelModifyReq};
 use bios_basic::rbum::dto::rbum_rel_env_dto::{RbumRelEnvAddReq, RbumRelEnvModifyReq};
 use bios_basic::rbum::dto::rbum_set_cate_dto::RbumSetCateAddReq;
 use bios_basic::rbum::dto::rbum_set_dto::RbumSetAddReq;
@@ -331,7 +331,8 @@ async fn test_rbum_rel_with_set(context: &TardisContext) -> TardisResult<()> {
                 from_rbum_id: context.owner.to_string(),
                 to_rbum_item_id: "xxxx".to_string(),
                 from_attrs: Default::default(),
-                to_attrs: Default::default()
+                to_attrs: Default::default(),
+                envs: Default::default(),
             },
             &funs,
             context
@@ -365,7 +366,8 @@ async fn test_rbum_rel_with_set(context: &TardisContext) -> TardisResult<()> {
                 from_rbum_id: context.owner.to_string(),
                 to_rbum_item_id: "xxxx".to_string(),
                 from_attrs: Default::default(),
-                to_attrs: Default::default()
+                to_attrs: Default::default(),
+                envs: Default::default(),
             },
             &funs,
             context
@@ -385,7 +387,8 @@ async fn test_rbum_rel_with_set(context: &TardisContext) -> TardisResult<()> {
                 from_rbum_id: context.owner.to_string(),
                 to_rbum_item_id: "xxxx".to_string(),
                 from_attrs: Default::default(),
-                to_attrs: Default::default()
+                to_attrs: Default::default(),
+                envs: Default::default(),
             },
             &funs,
             context
@@ -417,7 +420,8 @@ async fn test_rbum_rel_with_set(context: &TardisContext) -> TardisResult<()> {
                 from_rbum_id: context.owner.to_string(),
                 to_rbum_item_id: "xxxx".to_string(),
                 from_attrs: Default::default(),
-                to_attrs: Default::default()
+                to_attrs: Default::default(),
+                envs: Default::default(),
             },
             &funs,
             context
@@ -588,9 +592,9 @@ async fn test_rbum_rel_attr(context: &TardisContext) -> TardisResult<()> {
         &mut RbumRelAttrAddReq {
             is_from: true,
             value: "mysql".to_string(),
-            name: "".to_string(),
+            name: None,
             rel_rbum_rel_id: "".to_string(),
-            rel_rbum_kind_attr_id: "".to_string(),
+            rel_rbum_kind_attr_id: None,
             record_only: false
         },
         &funs,
@@ -603,9 +607,9 @@ async fn test_rbum_rel_attr(context: &TardisContext) -> TardisResult<()> {
         &mut RbumRelAttrAddReq {
             is_from: true,
             value: "mysql".to_string(),
-            name: "".to_string(),
+            name: None,
             rel_rbum_rel_id: rel_id.to_string(),
-            rel_rbum_kind_attr_id: "".to_string(),
+            rel_rbum_kind_attr_id: None,
             record_only: false
         },
         &funs,
@@ -618,9 +622,9 @@ async fn test_rbum_rel_attr(context: &TardisContext) -> TardisResult<()> {
         &mut RbumRelAttrAddReq {
             is_from: true,
             value: "mysql".to_string(),
-            name: "".to_string(),
+            name: None,
             rel_rbum_rel_id: rel_id.to_string(),
-            rel_rbum_kind_attr_id: kind_attr_db_type_id.to_string(),
+            rel_rbum_kind_attr_id: Some(kind_attr_db_type_id.to_string()),
             record_only: false,
         },
         &funs,
@@ -635,16 +639,7 @@ async fn test_rbum_rel_attr(context: &TardisContext) -> TardisResult<()> {
     assert_eq!(rbum.name, "db_type");
 
     info!("【test_rbum_rel_attr】 : Test Modify : RbumRelAttrServ::modify_rbum");
-    RbumRelAttrServ::modify_rbum(
-        &id,
-        &mut RbumRelAttrModifyReq {
-            value: Some("tidb".to_string()),
-            name: None,
-        },
-        &funs,
-        context,
-    )
-    .await?;
+    RbumRelAttrServ::modify_rbum(&id, &mut RbumRelAttrModifyReq { value: "tidb".to_string() }, &funs, context).await?;
 
     info!("【test_rbum_rel_attr】 : Test Find : RbumRelAttrServ::paginate_rbums");
     let rbums = RbumRelAttrServ::paginate_rbums(&RbumRelExtFilterReq::default(), 1, 10, None, None, &funs, context).await?;
@@ -997,18 +992,39 @@ async fn test_rbum_rel_use(context: &TardisContext) -> TardisResult<()> {
                 to_is_outside: false,
                 ext: None,
             },
-            attrs: vec![RbumRelAttrAggAddReq {
-                is_from: true,
-                value: "mysql".to_string(),
-                name: "".to_string(),
-                record_only: false,
-                rel_rbum_kind_attr_id: kind_attr_db_type_id.to_string(),
-            }],
-            envs: vec![RbumRelEnvAggAddReq {
-                kind: RbumRelEnvKind::DatetimeRange,
-                value1: start_time.clone(),
-                value2: Some(end_time.clone()),
-            }],
+            attrs: vec![
+                RbumRelAttrAggAddReq {
+                    is_from: true,
+                    value: "mysql".to_string(),
+                    name: None,
+                    record_only: false,
+                    rel_rbum_kind_attr_id: Some(kind_attr_db_type_id.to_string()),
+                },
+                RbumRelAttrAggAddReq {
+                    is_from: true,
+                    value: "8.0".to_string(),
+                    name: Some("db_version".to_string()),
+                    record_only: false,
+                    rel_rbum_kind_attr_id: None,
+                },
+            ],
+            envs: vec![
+                RbumRelEnvAggAddReq {
+                    kind: RbumRelEnvKind::DatetimeRange,
+                    value1: start_time.clone(),
+                    value2: Some(end_time.clone()),
+                },
+                RbumRelEnvAggAddReq {
+                    kind: RbumRelEnvKind::CallCount,
+                    value1: "10".to_string(),
+                    value2: None,
+                },
+                RbumRelEnvAggAddReq {
+                    kind: RbumRelEnvKind::Ips,
+                    value1: "192.168.0.1,192.168.0.100".to_string(),
+                    value2: None,
+                },
+            ],
         },
         &funs,
         context,
@@ -1023,10 +1039,10 @@ async fn test_rbum_rel_use(context: &TardisContext) -> TardisResult<()> {
     assert_eq!(rbums.records.first().unwrap().rel.tag, "bind");
     assert_eq!(rbums.records.first().unwrap().rel.to_own_paths, context.own_paths.to_string());
     assert_eq!(rbums.records.first().unwrap().rel.own_paths, context.own_paths.to_string());
-    assert_eq!(rbums.records.first().unwrap().attrs.len(), 1);
+    assert_eq!(rbums.records.first().unwrap().attrs.len(), 2);
     assert_eq!(rbums.records.first().unwrap().attrs.first().unwrap().value, "mysql");
     assert_eq!(rbums.records.first().unwrap().attrs.first().unwrap().name, "db_type");
-    assert_eq!(rbums.records.first().unwrap().envs.len(), 1);
+    assert_eq!(rbums.records.first().unwrap().envs.len(), 3);
     assert_eq!(rbums.records.first().unwrap().envs.first().unwrap().kind, RbumRelEnvKind::DatetimeRange);
     assert_eq!(rbums.records.first().unwrap().envs.first().unwrap().value1, start_time);
     assert_eq!(rbums.records.first().unwrap().envs.first().unwrap().value2, end_time);
@@ -1039,10 +1055,10 @@ async fn test_rbum_rel_use(context: &TardisContext) -> TardisResult<()> {
     assert_eq!(rbums.records.first().unwrap().rel.tag, "bind");
     assert_eq!(rbums.records.first().unwrap().rel.to_own_paths, context.own_paths.to_string());
     assert_eq!(rbums.records.first().unwrap().rel.own_paths, context.own_paths.as_str());
-    assert_eq!(rbums.records.first().unwrap().attrs.len(), 1);
+    assert_eq!(rbums.records.first().unwrap().attrs.len(), 2);
     assert_eq!(rbums.records.first().unwrap().attrs.first().unwrap().value, "mysql");
     assert_eq!(rbums.records.first().unwrap().attrs.first().unwrap().name, "db_type");
-    assert_eq!(rbums.records.first().unwrap().envs.len(), 1);
+    assert_eq!(rbums.records.first().unwrap().envs.len(), 3);
     assert_eq!(rbums.records.first().unwrap().envs.first().unwrap().kind, RbumRelEnvKind::DatetimeRange);
     assert_eq!(rbums.records.first().unwrap().envs.first().unwrap().value1, start_time);
     assert_eq!(rbums.records.first().unwrap().envs.first().unwrap().value2, end_time);
@@ -1056,7 +1072,8 @@ async fn test_rbum_rel_use(context: &TardisContext) -> TardisResult<()> {
                 from_rbum_id: "".to_string(),
                 to_rbum_item_id: "".to_string(),
                 from_attrs: Default::default(),
-                to_attrs: Default::default()
+                to_attrs: Default::default(),
+                envs: Default::default(),
             },
             &funs,
             context
@@ -1064,6 +1081,7 @@ async fn test_rbum_rel_use(context: &TardisContext) -> TardisResult<()> {
         .await?
     );
 
+    // Attributes and environment not match
     assert!(
         !RbumRelServ::check_rel(
             &mut RbumRelCheckReq {
@@ -1072,7 +1090,8 @@ async fn test_rbum_rel_use(context: &TardisContext) -> TardisResult<()> {
                 from_rbum_id: item_reldb_inst1_id.to_string(),
                 to_rbum_item_id: item_account_a1_id.to_string(),
                 from_attrs: Default::default(),
-                to_attrs: Default::default()
+                to_attrs: Default::default(),
+                envs: Default::default(),
             },
             &funs,
             context
@@ -1080,6 +1099,7 @@ async fn test_rbum_rel_use(context: &TardisContext) -> TardisResult<()> {
         .await?
     );
 
+    // Attributes and environment not match
     assert!(
         !RbumRelServ::check_rel(
             &mut RbumRelCheckReq {
@@ -1088,7 +1108,83 @@ async fn test_rbum_rel_use(context: &TardisContext) -> TardisResult<()> {
                 from_rbum_id: item_reldb_inst1_id.to_string(),
                 to_rbum_item_id: item_account_a1_id.to_string(),
                 from_attrs: HashMap::from([("db_type".to_string(), "tidb".to_string()),]),
-                to_attrs: Default::default()
+                to_attrs: Default::default(),
+                envs: Default::default(),
+            },
+            &funs,
+            context
+        )
+        .await?
+    );
+
+    // Attributes and environment not match
+    assert!(
+        !RbumRelServ::check_rel(
+            &mut RbumRelCheckReq {
+                tag: "bind".to_string(),
+                from_rbum_kind: RbumRelFromKind::Item,
+                from_rbum_id: item_reldb_inst1_id.to_string(),
+                to_rbum_item_id: item_account_a1_id.to_string(),
+                from_attrs: HashMap::from([("db_type".to_string(), "tidb".to_string()),]),
+                to_attrs: Default::default(),
+                envs: Default::default(),
+            },
+            &funs,
+            context
+        )
+        .await?
+    );
+
+    // Attributes and environment not match
+    assert!(
+        !RbumRelServ::check_rel(
+            &mut RbumRelCheckReq {
+                tag: "bind".to_string(),
+                from_rbum_kind: RbumRelFromKind::Item,
+                from_rbum_id: item_reldb_inst1_id.to_string(),
+                to_rbum_item_id: item_account_a1_id.to_string(),
+                from_attrs: HashMap::from([("db_type".to_string(), "mysql".to_string()),]),
+                to_attrs: Default::default(),
+                envs: Default::default(),
+            },
+            &funs,
+            context
+        )
+        .await?
+    );
+
+    // Environment not match
+    assert!(
+        !RbumRelServ::check_rel(
+            &mut RbumRelCheckReq {
+                tag: "bind".to_string(),
+                from_rbum_kind: RbumRelFromKind::Item,
+                from_rbum_id: item_reldb_inst1_id.to_string(),
+                to_rbum_item_id: item_account_a1_id.to_string(),
+                from_attrs: HashMap::from([("db_type".to_string(), "mysql".to_string()), ("db_version".to_string(), "8.0".to_string())]),
+                to_attrs: Default::default(),
+                envs: Default::default(),
+            },
+            &funs,
+            context
+        )
+        .await?
+    );
+
+    // Environment not match
+    assert!(
+        !RbumRelServ::check_rel(
+            &mut RbumRelCheckReq {
+                tag: "bind".to_string(),
+                from_rbum_kind: RbumRelFromKind::Item,
+                from_rbum_id: item_reldb_inst1_id.to_string(),
+                to_rbum_item_id: item_account_a1_id.to_string(),
+                from_attrs: HashMap::from([("db_type".to_string(), "mysql".to_string()), ("db_version".to_string(), "8.0".to_string())]),
+                to_attrs: Default::default(),
+                envs: vec![RbumRelEnvCheckReq {
+                    kind: RbumRelEnvKind::DatetimeRange,
+                    value: Utc::now().timestamp().to_string(),
+                }],
             },
             &funs,
             context
@@ -1103,14 +1199,33 @@ async fn test_rbum_rel_use(context: &TardisContext) -> TardisResult<()> {
                 from_rbum_kind: RbumRelFromKind::Item,
                 from_rbum_id: item_reldb_inst1_id.to_string(),
                 to_rbum_item_id: item_account_a1_id.to_string(),
-                from_attrs: HashMap::from([("db_type".to_string(), "mysql".to_string()),]),
-                to_attrs: Default::default()
+                from_attrs: HashMap::from([("db_type".to_string(), "mysql".to_string()), ("db_version".to_string(), "8.0".to_string())]),
+                to_attrs: Default::default(),
+                envs: vec![
+                    RbumRelEnvCheckReq {
+                        kind: RbumRelEnvKind::DatetimeRange,
+                        value: Utc::now().timestamp().to_string(),
+                    },
+                    RbumRelEnvCheckReq {
+                        kind: RbumRelEnvKind::CallCount,
+                        value: "9".to_string(),
+                    },
+                    RbumRelEnvCheckReq {
+                        kind: RbumRelEnvKind::Ips,
+                        value: "192.168.0.100".to_string(),
+                    }
+                ],
             },
             &funs,
             context
         )
         .await?
     );
+
+    // funs.commit().await?;
+
+    // let mut funs = TardisFuns::inst_with_db_conn("".to_string(), None);
+    // funs.begin().await?;
 
     tardis::tokio::time::sleep(Duration::from_secs(3)).await;
 
@@ -1121,8 +1236,22 @@ async fn test_rbum_rel_use(context: &TardisContext) -> TardisResult<()> {
                 from_rbum_kind: RbumRelFromKind::Item,
                 from_rbum_id: item_reldb_inst1_id.to_string(),
                 to_rbum_item_id: item_account_a1_id.to_string(),
-                from_attrs: HashMap::from([("db_type".to_string(), "mysql".to_string()),]),
-                to_attrs: Default::default()
+                from_attrs: HashMap::from([("db_type".to_string(), "mysql".to_string()), ("db_version".to_string(), "8.0".to_string())]),
+                to_attrs: Default::default(),
+                envs: vec![
+                    RbumRelEnvCheckReq {
+                        kind: RbumRelEnvKind::DatetimeRange,
+                        value: Utc::now().timestamp().to_string(),
+                    },
+                    RbumRelEnvCheckReq {
+                        kind: RbumRelEnvKind::CallCount,
+                        value: "9".to_string(),
+                    },
+                    RbumRelEnvCheckReq {
+                        kind: RbumRelEnvKind::Ips,
+                        value: "192.168.0.100".to_string(),
+                    }
+                ],
             },
             &funs,
             context

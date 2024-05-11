@@ -47,7 +47,7 @@ pub struct IamOpenServ;
 
 impl IamOpenServ {
     pub async fn add_or_modify_product(req: &IamOpenAddOrModifyProductReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        if let Some(product) = Self::get_res_detail(req.code.as_str(), IamResKind::Product, funs, ctx).await? {
+        if let Some(product) = Self::get_res_detail(&req.code.to_string(), IamResKind::Product, funs, ctx).await? {
             Self::modify_product(req, &product, funs, ctx).await?;
         } else {
             Self::add_product(req, funs, ctx).await?;
@@ -70,7 +70,7 @@ impl IamOpenServ {
         )
         .await?;
         for spec_req in &modify_req.specifications {
-            if let Some(spec) = Self::get_res_detail(spec_req.code.as_str(), IamResKind::Spec, funs, ctx).await? {
+            if let Some(spec) = Self::get_res_detail(&spec_req.code.to_string(), IamResKind::Spec, funs, ctx).await? {
                 IamResServ::modify_item(
                     &spec.id,
                     &mut IamResModifyReq {

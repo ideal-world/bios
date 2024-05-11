@@ -308,22 +308,40 @@ pub enum RbumRelEnvKind {
     /// Datetime range
     ///
     /// 日期时间范围
+    ///
+    /// Format: ``UNIX timestamp``
     DatetimeRange,
     /// Time range
     ///
     /// 时间范围
+    ///
+    /// Format: ``hhmmss``.
+    ///
+    /// hh   = two digits of hour (00 through 23) (am/pm NOT allowed)
+    /// mm   = two digits of minute (00 through 59)
+    /// ss   = two digits of second (00 through 59)
     TimeRange,
     /// IP list
     ///
     /// IP地址
+    ///
+    /// Format: ``ip1,ip2,ip3``
     Ips,
     /// Call frequency
     ///
     /// 调用频率
+    ///
+    /// Request value must be less than or equal to the set value.
+    ///
+    /// 请求的值要小于等于设置的值。
     CallFrequency,
     /// Call count
     ///
     /// 调用次数
+    ///
+    /// Request value must be less than or equal to the set value.
+    ///
+    /// 请求的值要小于等于设置的值。
     CallCount,
 }
 

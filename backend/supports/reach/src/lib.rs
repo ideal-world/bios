@@ -5,7 +5,7 @@ mod api;
 mod domain;
 pub mod dto;
 pub mod reach_config;
-pub mod reach_consts;
+pub mod reach_constants;
 mod reach_init;
 pub mod reach_send_channel;
 

@@ -6,7 +6,7 @@ use std::{
 use bios_reach::{
     dto::{ContentReplace, ReachChannelKind},
     reach_config::ReachConfig,
-    reach_consts::MODULE_CODE,
+    reach_constants::MODULE_CODE,
     reach_send_channel::{GenericTemplate, SendChannel},
 };
 use tardis::{

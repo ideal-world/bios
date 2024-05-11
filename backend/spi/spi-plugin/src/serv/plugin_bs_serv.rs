@@ -89,9 +89,9 @@ impl PluginBsServ {
                         &mut RbumRelAttrAddReq {
                             is_from: attr.is_from,
                             value: attr.value.to_string(),
-                            name: attr.name.to_string(),
+                            name: attr.name.clone(),
                             rel_rbum_rel_id: rel_agg.rel.id.to_string(),
-                            rel_rbum_kind_attr_id: attr.rel_rbum_kind_attr_id.to_string(),
+                            rel_rbum_kind_attr_id: attr.rel_rbum_kind_attr_id.clone(),
                             record_only: attr.record_only,
                         },
                         funs,

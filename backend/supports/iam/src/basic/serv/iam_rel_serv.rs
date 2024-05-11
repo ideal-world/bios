@@ -7,7 +7,7 @@ use tardis::TardisFunsInst;
 
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumRelFilterReq};
 use bios_basic::rbum::dto::rbum_rel_agg_dto::{RbumRelAggAddReq, RbumRelAggResp, RbumRelEnvAggAddReq};
-use bios_basic::rbum::dto::rbum_rel_dto::{RbumRelAddReq, RbumRelBoneResp, RbumRelFindReq};
+use bios_basic::rbum::dto::rbum_rel_dto::{RbumRelAddReq, RbumRelSimpleFindReq, RbumRelBoneResp};
 use bios_basic::rbum::rbum_enumeration::{RbumRelEnvKind, RbumRelFromKind};
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
@@ -738,8 +738,8 @@ impl IamRelServ {
 
     pub async fn exist_rels(rel_kind: &IamRelKind, from_iam_item_id: &str, to_iam_item_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<bool> {
         // TODO In-depth inspection
-        RbumRelServ::exist_simple_rel(
-            &RbumRelFindReq {
+        RbumRelServ::check_simple_rel(
+            &RbumRelSimpleFindReq {
                 tag: Some(rel_kind.to_string()),
                 from_rbum_kind: Some(RbumRelFromKind::Item),
                 from_rbum_id: Some(from_iam_item_id.to_string()),

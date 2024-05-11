@@ -4,7 +4,7 @@ use std::time::Duration;
 use tardis::{basic::result::TardisResult, testcontainers, tokio};
 
 mod test_reach_common;
-use bios_reach::{reach_consts::*, reach_invoke};
+use bios_reach::{reach_constants::*, reach_invoke};
 use test_reach_common::*;
 #[derive(Deserialize)]
 pub struct TestConfig {

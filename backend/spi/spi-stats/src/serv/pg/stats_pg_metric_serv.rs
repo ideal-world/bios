@@ -762,7 +762,6 @@ fn package_groups(
     let mut node = Map::with_capacity(0);
 
     let dimension_key = curr_select_dimension_keys.first().ok_or_else(|| "curr_select_dimension_keys is empty")?;
-
     // todo 下钻 上探
     // let dimension_hierarchy = if let Some(stats_con_info) = conf_info.get(dimension_key.split(FUNCTION_SUFFIX_FLAG).next().unwrap_or("")) {
     //     stats_con_info.dim_hierarchy.clone()
@@ -774,7 +773,7 @@ fn package_groups(
     let mut order = Vec::new();
     for record in result {
         let key = {
-            let key = record.get(dimension_key).unwrap_or(&json!(null));
+            let key = record.get(dimension_key.to_lowercase()).unwrap_or(&json!(null));
             match key {
                 serde_json::Value::Null => "ROLLUP".to_string(),
                 serde_json::Value::String(s) => s.clone(),
