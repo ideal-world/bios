@@ -27,7 +27,7 @@ use crate::rbum::helper::rbum_event_helper;
 use crate::rbum::rbum_config::RbumConfigApi;
 use crate::rbum::rbum_enumeration::{RbumCertRelKind, RbumRelFromKind, RbumScopeLevelKind};
 use crate::rbum::serv::rbum_cert_serv::{RbumCertConfServ, RbumCertServ};
-use crate::rbum::serv::rbum_crud_serv::{RbumCrudOperation, RbumCrudQueryPackage, CREATE_TIME_FIELD, ID_FIELD, UPDATE_TIME_FIELD};
+use crate::rbum::serv::rbum_crud_serv::{RbumCrudOperation, RbumCrudQueryPackage, ID_FIELD_NAME};
 use crate::rbum::serv::rbum_domain_serv::RbumDomainServ;
 use crate::rbum::serv::rbum_kind_serv::{RbumKindAttrServ, RbumKindServ};
 use crate::rbum::serv::rbum_rel_serv::RbumRelServ;
@@ -242,48 +242,77 @@ where
 
     // ----------------------------- Add -------------------------------
 
-    
+    /// Package add request of the kernel part of the resource item
+    ///
+    /// 组装资源项核心部分的添加请求
+    /// 
+    /// # Example
+    /// ```
+    /// async fn package_item_add(add_req: &IamAppAddReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<RbumItemKernelAddReq> {
+///     Ok(RbumItemKernelAddReq {
+///         id: add_req.id.clone(),
+///         name: add_req.name.clone(),
+///         disabled: add_req.disabled,
+///         scope_level: add_req.scope_level.clone(),
+///         ..Default::default()
+///     })
+/// }
+    /// ```
     async fn package_item_add(add_req: &AddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<RbumItemKernelAddReq>;
 
+    /// Package add request of the extended part of the resource item
+    ///
+    /// 组装资源项扩展部分的添加请求
     async fn package_ext_add(id: &str, add_req: &AddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<EXT>;
 
+    /// Pre-processing of the add request
+    ///
+    /// 添加请求的前置处理
     async fn before_add_item(_: &mut AddReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<()> {
         Ok(())
     }
 
+    /// Post-processing of the add request
+    ///
+    /// 添加请求的后置处理
     async fn after_add_item(_: &str, _: &mut AddReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<()> {
         Ok(())
     }
 
+    /// Add resource item
+    ///
+    /// 添加资源项
     async fn add_item(add_req: &mut AddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
         Self::before_add_item(add_req, funs, ctx).await?;
-        let item_add_req = Self::package_item_add(add_req, funs, ctx).await?;
+        let add_kernel_req = Self::package_item_add(add_req, funs, ctx).await?;
         let mut item_add_req = RbumItemAddReq {
-            id: item_add_req.id.clone(),
-            code: item_add_req.code.clone(),
-            name: item_add_req.name.clone(),
-            rel_rbum_kind_id: if let Some(rel_rbum_kind_id) = &item_add_req.rel_rbum_kind_id {
+            id: add_kernel_req.id.clone(),
+            code: add_kernel_req.code.clone(),
+            name: add_kernel_req.name.clone(),
+            rel_rbum_kind_id: if let Some(rel_rbum_kind_id) = &add_kernel_req.rel_rbum_kind_id {
                 rel_rbum_kind_id.to_string()
             } else {
                 Self::get_rbum_kind_id().ok_or_else(|| funs.err().bad_request(&Self::get_obj_name(), "add_item", "kind is required", "400-rbum-kind-require"))?
             },
-            rel_rbum_domain_id: if let Some(rel_rbum_domain_id) = &item_add_req.rel_rbum_domain_id {
+            rel_rbum_domain_id: if let Some(rel_rbum_domain_id) = &add_kernel_req.rel_rbum_domain_id {
                 rel_rbum_domain_id.to_string()
             } else {
                 Self::get_rbum_domain_id().ok_or_else(|| funs.err().bad_request(&Self::get_obj_name(), "add_item", "domain is required", "400-rbum-domain-require"))?
             },
-            scope_level: item_add_req.scope_level.clone(),
-            disabled: item_add_req.disabled,
+            scope_level: add_kernel_req.scope_level.clone(),
+            disabled: add_kernel_req.disabled,
         };
         let id = RbumItemServ::add_rbum(&mut item_add_req, funs, ctx).await?;
-        let ext_domain = Self::package_ext_add(&id, add_req, funs, ctx).await?;
-        funs.db().insert_one(ext_domain, ctx).await?;
+        let add_ext_req = Self::package_ext_add(&id, add_req, funs, ctx).await?;
+        funs.db().insert_one(add_ext_req, ctx).await?;
         Self::after_add_item(&id, add_req, funs, ctx).await?;
         rbum_event_helper::add_notify_event(Self::get_ext_table_name(), "c", id.as_str(), ctx).await?;
-        // rbum_event_helper::try_notify(Self::get_ext_table_name(), "c", &id, funs, ctx).await?;
         Ok(id)
     }
 
+    /// Add resource item with simple relationship (the added resource item is the source party)
+    ///
+    /// 添加资源项及其简单关系（添加的资源项为来源方）
     async fn add_item_with_simple_rel_by_from(add_req: &mut AddReq, tag: &str, to_rbum_item_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
         let id = Self::add_item(add_req, funs, ctx).await?;
         RbumRelServ::add_rbum(
@@ -304,6 +333,9 @@ where
         Ok(id)
     }
 
+    /// Add resource item with simple relationship (the added resource item is the target party)
+    ///
+    /// 添加资源项及其简单关系（添加的资源项为目标方）
     async fn add_item_with_simple_rel_by_to(add_req: &mut AddReq, tag: &str, from_rbum_item_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
         let id = Self::add_item(add_req, funs, ctx).await?;
         RbumRelServ::add_rbum(
@@ -326,56 +358,75 @@ where
 
     // ----------------------------- Modify -------------------------------
 
+    /// Package modify request of the kernel part of the resource item
+    ///
+    /// 组装资源项核心部分的修改请求
     async fn package_item_modify(id: &str, modify_req: &ModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<RbumItemKernelModifyReq>>;
 
+    /// Package modify request of the extended part of the resource item
+    ///
+    /// 组装资源项扩展部分的修改请求
     async fn package_ext_modify(id: &str, modify_req: &ModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<EXT>>;
 
+    ///  Pre-processing of the modify request
+    ///
+    /// 修改请求的前置处理
     async fn before_modify_item(_: &str, _: &mut ModifyReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<()> {
         Ok(())
     }
 
+    /// Post-processing of the modify request
+    ///
+    /// 修改请求的后置处理
     async fn after_modify_item(_: &str, _: &mut ModifyReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<()> {
         Ok(())
     }
 
+    /// Modify resource item
+    ///
+    /// 修改资源项
     async fn modify_item(id: &str, modify_req: &mut ModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         Self::before_modify_item(id, modify_req, funs, ctx).await?;
-        let item_modify_req = Self::package_item_modify(id, modify_req, funs, ctx).await?;
-        if let Some(mut item_modify_req) = item_modify_req {
+        let modify_kernel_req = Self::package_item_modify(id, modify_req, funs, ctx).await?;
+        if let Some(mut item_modify_req) = modify_kernel_req {
             RbumItemServ::modify_rbum(id, &mut item_modify_req, funs, ctx).await?;
         } else {
             RbumItemServ::check_ownership(id, funs, ctx).await?;
         }
-        let ext_domain = Self::package_ext_modify(id, modify_req, funs, ctx).await?;
-        if let Some(ext_domain) = ext_domain {
+        let modify_ext_req = Self::package_ext_modify(id, modify_req, funs, ctx).await?;
+        if let Some(ext_domain) = modify_ext_req {
             funs.db().update_one(ext_domain, ctx).await?;
         }
         Self::after_modify_item(id, modify_req, funs, ctx).await?;
         rbum_event_helper::add_notify_event(Self::get_ext_table_name(), "u", id, ctx).await?;
-        // rbum_event_helper::try_notify(Self::get_ext_table_name(), "u", id, funs, ctx).await?;
         Ok(())
     }
 
     // ----------------------------- Delete -------------------------------
 
-    async fn package_delete(id: &str, _funs: &TardisFunsInst, _ctx: &TardisContext) -> TardisResult<Select<EXT::Entity>> {
-        Ok(<EXT::Entity as EntityTrait>::find().filter(Expr::col(ID_FIELD.clone()).eq(id)))
-    }
-
+    /// Pre-processing of the delete request
+    ///
+    /// 删除请求的前置处理
     async fn before_delete_item(_: &str, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<Option<DetailResp>> {
         Ok(None)
     }
 
+    /// Post-processing of the delete request
+    ///
+    /// 删除请求的后置处理
     async fn after_delete_item(_: &str, _: &Option<DetailResp>, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<()> {
         Ok(())
     }
 
+    /// Delete resource item
+    ///
+    /// 删除资源项
     async fn delete_item(id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<u64> {
         let deleted_item = Self::before_delete_item(id, funs, ctx).await?;
-        let select = Self::package_delete(id, funs, ctx).await?;
+        let item_select_req = <EXT::Entity as EntityTrait>::find().filter(Expr::col(ID_FIELD.clone()).eq(id)).await?;
         #[cfg(feature = "with-mq")]
         {
-            let delete_records = funs.db().soft_delete_custom(select, "id").await?;
+            let delete_records = funs.db().soft_delete_custom(item_select_req, ID_FIELD_NAME).await?;
             RbumItemServ::delete_rbum(id, funs, ctx).await?;
             let mq_topic_entity_deleted = &funs.rbum_conf_mq_topic_entity_deleted();
             let mq_header = std::collections::HashMap::from([(funs.rbum_conf_mq_header_name_operator(), ctx.owner.clone())]);
@@ -384,16 +435,14 @@ where
             }
             Self::after_delete_item(id, &deleted_item, funs, ctx).await?;
             rbum_event_helper::add_notify_event(Self::get_ext_table_name(), "d", id, ctx).await?;
-            // rbum_event_helper::try_notify(Self::get_ext_table_name(), "d", id, funs, ctx).await?;
             Ok(delete_records.len() as u64)
         }
         #[cfg(not(feature = "with-mq"))]
         {
-            let delete_records = funs.db().soft_delete(select, &ctx.owner).await?;
+            let delete_records = funs.db().soft_delete(item_select_req, &ctx.owner).await?;
             RbumItemServ::delete_rbum(id, funs, ctx).await?;
             Self::after_delete_item(id, &deleted_item, funs, ctx).await?;
             rbum_event_helper::add_notify_event(Self::get_ext_table_name(), "d", id, ctx).await?;
-            // rbum_event_helper::try_notify(Self::get_ext_table_name(), "d", &id, funs, ctx).await?;
             Ok(delete_records)
         }
     }

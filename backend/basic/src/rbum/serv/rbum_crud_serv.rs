@@ -22,9 +22,11 @@ use crate::rbum::helper::{rbum_event_helper, rbum_scope_helper};
 #[cfg(feature = "with-mq")]
 use crate::rbum::rbum_config::RbumConfigApi;
 
+pub const ID_FIELD_NAME:&str = "id";
+
 lazy_static! {
     pub static ref OWNER_TABLE: Alias = Alias::new("t_owner");
-    pub static ref ID_FIELD: Alias = Alias::new("id");
+    pub static ref ID_FIELD: Alias = Alias::new(ID_FIELD_NAME);
     pub static ref OWNER_FIELD: Alias = Alias::new("owner");
     pub static ref OWN_PATHS_FIELD: Alias = Alias::new("own_paths");
     pub static ref CREATE_TIME_FIELD: Alias = Alias::new("create_time");
