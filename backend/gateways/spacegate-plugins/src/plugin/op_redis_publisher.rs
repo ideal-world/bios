@@ -42,6 +42,12 @@ pub struct RedisPublisherPlugin {
 impl Plugin for RedisPublisherPlugin {
     const CODE: &'static str = "op_redis_publisher";
 
+    fn meta() -> spacegate_plugin::PluginMetaData {
+        spacegate_plugin::plugin_meta!(
+            description: "Build for open platform, and it depend on plugin audit-log"
+        )
+    }
+
     fn create(config: PluginConfig) -> Result<Self, BoxError> {
         let layer_config = serde_json::from_value::<RedisPublisherConfig>(config.spec.clone())?;
 

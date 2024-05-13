@@ -2,11 +2,11 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
+use spacegate_shell::ext_redis::{redis::AsyncCommands, RedisClient};
 use spacegate_shell::hyper::{Request, Response, StatusCode};
 use spacegate_shell::kernel::extension::PeerAddr;
 use spacegate_shell::kernel::helper_layers::function::Inner;
 use spacegate_shell::plugin::{Plugin, PluginError};
-use spacegate_shell::ext_redis::{redis::AsyncCommands, RedisClient};
 use spacegate_shell::{BoxError, SgBody, SgRequestExt, SgResponseExt};
 
 use tardis::serde_json;
@@ -15,7 +15,7 @@ use tardis::{basic::result::TardisResult, tokio};
 #[cfg(feature = "schema")]
 use spacegate_plugin::schemars;
 #[cfg(feature = "schema")]
-spacegate_plugin::schema!(AntiReplayPlugin, SgFilterAntiReplay);
+spacegate_plugin::schema!(AntiReplayPlugin, AntiReplayPlugin);
 #[derive(Serialize, Deserialize, Clone)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default)]
@@ -81,6 +81,13 @@ async fn get_status(md5: &str, cache_key: &str, cache_client: &RedisClient) -> T
 
 impl Plugin for AntiReplayPlugin {
     const CODE: &'static str = "anti-replay";
+
+    fn meta() -> spacegate_plugin::PluginMetaData {
+        spacegate_plugin::plugin_meta!(
+            description: "Anti-replay plugin for Spacegate. It can prevent replay attacks by checking the MD5 hash of the request."
+        )
+    }
+
     fn create(plugin_config: spacegate_shell::plugin::PluginConfig) -> Result<Self, BoxError> {
         let config: AntiReplayPlugin = serde_json::from_value(plugin_config.spec)?;
         Ok(config)
