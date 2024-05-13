@@ -166,7 +166,8 @@ pub async fn register(req: RegisterRequest, funs: &TardisFunsInst, ctx: &TardisC
     // add a cert
     let ext = json!({
         "owner": ctx.owner,
-        "own_paths": ctx.own_paths
+        "own_paths": ctx.own_paths,
+        "ak": ctx.ak
     })
     .to_string();
     let mut add_cert_req = RbumCertAddReq {
@@ -228,8 +229,10 @@ pub async fn auth(ak: &str, sk: &str, funs: &TardisFunsInst) -> TardisResult<Tar
     let ext: serde_json::Value = serde_json::from_str(&cert.ext).map_err(|_| funs.err().internal_error("spi-conf", "auth", "invalid ext", "500-conf-invalid-cert-ext"))?;
     let owner = ext.get("owner").and_then(serde_json::Value::as_str).unwrap_or_default();
     let own_paths = ext.get("own_paths").and_then(serde_json::Value::as_str).unwrap_or_default();
+    let ak = ext.get("ak").and_then(serde_json::Value::as_str).unwrap_or_default();
     owner.clone_into(&mut ctx.owner);
     own_paths.clone_into(&mut ctx.own_paths);
+    ctx.ak = ak.to_owned();
     Ok(ctx)
 }
 

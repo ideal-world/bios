@@ -49,7 +49,7 @@ async fn spi_conf_namespace_test() -> TardisResult<()> {
     log::info!("username: {username}, password: {password}");
     client.set_auth(&TardisContext {
         own_paths: "t1/app001".to_string(),
-        ak: "".to_string(),
+        ak: "app001".to_string(),
         roles: vec![],
         groups: vec![],
         owner: "app001".to_string(),
@@ -119,7 +119,7 @@ pub async fn test_listener(client: &mut TestHttpClient) -> TardisResult<()> {
     let update_counter = Arc::new(AtomicUsize::new(0));
     let ctx_raw = Arc::new(TardisContext {
         own_paths: "t1/app001".to_string(),
-        ak: "".to_string(),
+        ak: "app001".to_string(),
         roles: vec![],
         groups: vec![],
         owner: "app001".to_string(),

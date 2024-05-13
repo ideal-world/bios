@@ -9,8 +9,8 @@ mod plugin;
 
 pub const PACKAGE_NAME: &str = "spacegate_lib";
 use plugin::op_redis_publisher;
-use spacegate_shell::plugin::SgPluginRepository;
-pub fn register_lib_plugins(repo: &SgPluginRepository) {
+use spacegate_shell::plugin::PluginRepository;
+pub fn register_lib_plugins(repo: &PluginRepository) {
     repo.register::<ip_time::IpTimePlugin>();
     repo.register::<anti_replay::AntiReplayPlugin>();
     repo.register::<anti_xss::AntiXssPlugin>();
