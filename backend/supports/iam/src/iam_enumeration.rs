@@ -209,7 +209,6 @@ pub enum WayToDelete {
     DeleteAccount,
 }
 
-
 #[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, strum::EnumString, Default)]
 pub enum IamAccountLogoutTypeKind {
     /// 未注销
