@@ -147,8 +147,8 @@ impl FlowCcInstApi {
         TardisResp::ok(result)
     }
 
-    /// Modify Assigned[Deprecated]
-    /// 同步执行人信息[已废弃]
+    /// Modify Assigned [Deprecated]
+    /// 同步执行人信息 [已废弃]
     #[oai(path = "/:flow_inst_id/transition/modify_assigned", method = "post")]
     async fn modify_assigned(
         &self,

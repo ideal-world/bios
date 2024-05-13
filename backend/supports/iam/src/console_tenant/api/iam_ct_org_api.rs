@@ -7,7 +7,7 @@ use tardis::futures::future::join_all;
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem_openapi;
 use tardis::web::poem_openapi::{param::Path, param::Query, payload::Json};
-use tardis::web::web_resp::{TardisApiResult, TardisResp, Void};
+use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 
 use bios_basic::rbum::dto::rbum_set_item_dto::RbumSetItemDetailResp;
 use bios_basic::rbum::rbum_enumeration::{RbumRelFromKind, RbumSetCateLevelQueryKind};
@@ -205,6 +205,28 @@ impl IamCtOrgApi {
         try_set_real_ip_from_req_to_ctx(request, &ctx).await?;
         let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, &funs, &ctx).await?;
         let result = IamSetServ::find_set_items(Some(set_id), cate_id.0, None, None, false, None, &funs, &ctx).await?;
+        ctx.execute_task().await?;
+        TardisResp::ok(result)
+    }
+
+    /// paginate Org Items
+    ///
+    /// 分页获取组织项
+    #[oai(path = "/", method = "get")]
+    async fn paginate(
+        &self,
+        cate_id: Query<Option<String>>,
+        set_id: Query<Option<String>>,
+        page_number: Query<u32>,
+        page_size: Query<u32>,
+        ctx: TardisContextExtractor,
+        request: &Request,
+    ) -> TardisApiResult<TardisPage<RbumSetItemDetailResp>> {
+        let funs = iam_constants::get_tardis_inst();
+        let ctx = IamSetServ::try_get_rel_ctx_by_set_id(set_id.0, &funs, ctx.0).await?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx).await?;
+        let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, &funs, &ctx).await?;
+        let result = IamSetServ::paginate_set_items(Some(set_id), cate_id.0, None, None, false, None, page_number.0, page_size.0, &funs, &ctx).await?;
         ctx.execute_task().await?;
         TardisResp::ok(result)
     }

@@ -29,7 +29,7 @@ use crate::{
     },
     flow_config::{BasicInfo, FlowBasicInfoManager, FlowConfig},
     flow_constants,
-    serv::flow_model_serv::FlowModelServ,
+    serv::{flow_model_serv::FlowModelServ, flow_state_serv::FlowStateServ},
 };
 
 pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
@@ -196,20 +196,21 @@ pub async fn init_flow_model(funs: &TardisFunsInst, ctx: &TardisContext) -> Tard
     .pop();
     if ticket_init_model.is_none() {
         // 工单模板初始化
+        let mut bind_states = vec![];
+        bind_states.push(FlowStateServ::init_state("TICKET", "待处理", FlowSysStateKind::Start, "", funs, ctx).await?);
+        bind_states.push(FlowStateServ::init_state("TICKET", "处理中", FlowSysStateKind::Progress, "", funs, ctx).await?);
+        bind_states.push(FlowStateServ::init_state("TICKET", "待确认", FlowSysStateKind::Progress, "", funs, ctx).await?);
+        bind_states.push(FlowStateServ::init_state("TICKET", "已关闭", FlowSysStateKind::Finish, "", funs, ctx).await?);
+        bind_states.push(FlowStateServ::init_state("TICKET", "已撤销", FlowSysStateKind::Finish, "", funs, ctx).await?);
         FlowModelServ::init_model(
             "TICKET",
-            vec![
-                ("待处理", FlowSysStateKind::Start, ""),
-                ("处理中", FlowSysStateKind::Progress, ""),
-                ("待确认", FlowSysStateKind::Progress, ""),
-                ("已关闭", FlowSysStateKind::Finish, ""),
-                ("已撤销", FlowSysStateKind::Finish, ""),
-            ],
+            bind_states[0].clone(),
+            bind_states.clone(),
             "待处理-处理中-待确认-已关闭-已撤销",
             vec![
                 FlowTransitionInitInfo {
-                    from_flow_state_name: "待处理".to_string(),
-                    to_flow_state_name: "处理中".to_string(),
+                    from_flow_state_id: bind_states[0].clone(),
+                    to_flow_state_id: bind_states[1].clone(),
                     name: "立即处理".to_string(),
                     double_check: Some(FlowTransitionDoubleCheckInfo {
                         is_open: true,
@@ -218,8 +219,8 @@ pub async fn init_flow_model(funs: &TardisFunsInst, ctx: &TardisContext) -> Tard
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
-                    from_flow_state_name: "待处理".to_string(),
-                    to_flow_state_name: "已撤销".to_string(),
+                    from_flow_state_id: bind_states[0].clone(),
+                    to_flow_state_id: bind_states[4].clone(),
                     name: "撤销".to_string(),
                     double_check: Some(FlowTransitionDoubleCheckInfo {
                         is_open: true,
@@ -228,8 +229,8 @@ pub async fn init_flow_model(funs: &TardisFunsInst, ctx: &TardisContext) -> Tard
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
-                    from_flow_state_name: "待处理".to_string(),
-                    to_flow_state_name: "待确认".to_string(),
+                    from_flow_state_id: bind_states[0].clone(),
+                    to_flow_state_id: bind_states[2].clone(),
                     name: "处理完成".to_string(),
                     double_check: Some(FlowTransitionDoubleCheckInfo {
                         is_open: true,
@@ -239,8 +240,8 @@ pub async fn init_flow_model(funs: &TardisFunsInst, ctx: &TardisContext) -> Tard
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
-                    from_flow_state_name: "待处理".to_string(),
-                    to_flow_state_name: "已关闭".to_string(),
+                    from_flow_state_id: bind_states[0].clone(),
+                    to_flow_state_id: bind_states[3].clone(),
                     name: "关闭".to_string(),
                     double_check: Some(FlowTransitionDoubleCheckInfo {
                         is_open: true,
@@ -249,8 +250,8 @@ pub async fn init_flow_model(funs: &TardisFunsInst, ctx: &TardisContext) -> Tard
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
-                    from_flow_state_name: "待确认".to_string(),
-                    to_flow_state_name: "已关闭".to_string(),
+                    from_flow_state_id: bind_states[2].clone(),
+                    to_flow_state_id: bind_states[3].clone(),
                     name: "确认解决".into(),
                     double_check: Some(FlowTransitionDoubleCheckInfo {
                         is_open: true,
@@ -259,8 +260,8 @@ pub async fn init_flow_model(funs: &TardisFunsInst, ctx: &TardisContext) -> Tard
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
-                    from_flow_state_name: "待确认".to_string(),
-                    to_flow_state_name: "处理中".to_string(),
+                    from_flow_state_id: bind_states[2].clone(),
+                    to_flow_state_id: bind_states[1].clone(),
                     name: "未解决".to_string(),
                     double_check: Some(FlowTransitionDoubleCheckInfo {
                         is_open: true,
@@ -291,20 +292,21 @@ pub async fn init_flow_model(funs: &TardisFunsInst, ctx: &TardisContext) -> Tard
     .records
     .pop();
     if req_init_model.is_none() {
+        let mut bind_states = vec![];
+        bind_states.push(FlowStateServ::init_state("REQ", "待开始", FlowSysStateKind::Start, "", funs, ctx).await?);
+        bind_states.push(FlowStateServ::init_state("REQ", "进行中", FlowSysStateKind::Progress, "", funs, ctx).await?);
+        bind_states.push(FlowStateServ::init_state("REQ", "已完成", FlowSysStateKind::Finish, "", funs, ctx).await?);
+        bind_states.push(FlowStateServ::init_state("REQ", "已关闭", FlowSysStateKind::Finish, "", funs, ctx).await?);
         // 需求模板初始化
         FlowModelServ::init_model(
             "REQ",
-            vec![
-                ("待开始", FlowSysStateKind::Start, ""),
-                ("进行中", FlowSysStateKind::Progress, ""),
-                ("已完成", FlowSysStateKind::Finish, ""),
-                ("已关闭", FlowSysStateKind::Finish, ""),
-            ],
+            bind_states[0].clone(),
+            bind_states.clone(),
             "待开始-进行中-已完成-已关闭",
             vec![
                 FlowTransitionInitInfo {
-                    from_flow_state_name: "待开始".to_string(),
-                    to_flow_state_name: "进行中".to_string(),
+                    from_flow_state_id: bind_states[0].clone(),
+                    to_flow_state_id: bind_states[1].clone(),
                     name: "开始".to_string(),
                     double_check: Some(FlowTransitionDoubleCheckInfo {
                         is_open: true,
@@ -313,8 +315,8 @@ pub async fn init_flow_model(funs: &TardisFunsInst, ctx: &TardisContext) -> Tard
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
-                    from_flow_state_name: "待开始".to_string(),
-                    to_flow_state_name: "已关闭".to_string(),
+                    from_flow_state_id: bind_states[0].clone(),
+                    to_flow_state_id: bind_states[3].clone(),
                     name: "关闭".to_string(),
                     double_check: Some(FlowTransitionDoubleCheckInfo {
                         is_open: true,
@@ -323,8 +325,8 @@ pub async fn init_flow_model(funs: &TardisFunsInst, ctx: &TardisContext) -> Tard
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
-                    from_flow_state_name: "进行中".to_string(),
-                    to_flow_state_name: "已完成".to_string(),
+                    from_flow_state_id: bind_states[1].clone(),
+                    to_flow_state_id: bind_states[2].clone(),
                     name: "完成".to_string(),
                     double_check: Some(FlowTransitionDoubleCheckInfo {
                         is_open: true,
@@ -333,8 +335,8 @@ pub async fn init_flow_model(funs: &TardisFunsInst, ctx: &TardisContext) -> Tard
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
-                    from_flow_state_name: "进行中".to_string(),
-                    to_flow_state_name: "已关闭".to_string(),
+                    from_flow_state_id: bind_states[1].clone(),
+                    to_flow_state_id: bind_states[3].clone(),
                     name: "关闭".to_string(),
                     double_check: Some(FlowTransitionDoubleCheckInfo {
                         is_open: true,
@@ -343,8 +345,8 @@ pub async fn init_flow_model(funs: &TardisFunsInst, ctx: &TardisContext) -> Tard
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
-                    from_flow_state_name: "已完成".to_string(),
-                    to_flow_state_name: "进行中".to_string(),
+                    from_flow_state_id: bind_states[2].clone(),
+                    to_flow_state_id: bind_states[1].clone(),
                     name: "重新处理".into(),
                     double_check: Some(FlowTransitionDoubleCheckInfo {
                         is_open: true,
@@ -353,8 +355,8 @@ pub async fn init_flow_model(funs: &TardisFunsInst, ctx: &TardisContext) -> Tard
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
-                    from_flow_state_name: "已完成".to_string(),
-                    to_flow_state_name: "已关闭".to_string(),
+                    from_flow_state_id: bind_states[2].clone(),
+                    to_flow_state_id: bind_states[3].clone(),
                     name: "关闭".to_string(),
                     double_check: Some(FlowTransitionDoubleCheckInfo {
                         is_open: true,
@@ -363,8 +365,8 @@ pub async fn init_flow_model(funs: &TardisFunsInst, ctx: &TardisContext) -> Tard
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
-                    from_flow_state_name: "已关闭".to_string(),
-                    to_flow_state_name: "待开始".to_string(),
+                    from_flow_state_id: bind_states[3].clone(),
+                    to_flow_state_id: bind_states[0].clone(),
                     name: "激活".to_string(),
                     double_check: Some(FlowTransitionDoubleCheckInfo {
                         is_open: true,
@@ -395,21 +397,22 @@ pub async fn init_flow_model(funs: &TardisFunsInst, ctx: &TardisContext) -> Tard
     .records
     .pop();
     if product_init_model.is_none() {
+        let mut bind_states = vec![];
+        bind_states.push(FlowStateServ::init_state("PROJ", "待开始", FlowSysStateKind::Start, "", funs, ctx).await?);
+        bind_states.push(FlowStateServ::init_state("PROJ", "进行中", FlowSysStateKind::Progress, "", funs, ctx).await?);
+        bind_states.push(FlowStateServ::init_state("PROJ", "存在风险", FlowSysStateKind::Progress, "", funs, ctx).await?);
+        bind_states.push(FlowStateServ::init_state("PROJ", "已完成", FlowSysStateKind::Progress, "", funs, ctx).await?);
+        bind_states.push(FlowStateServ::init_state("PROJ", "已关闭", FlowSysStateKind::Finish, "", funs, ctx).await?);
+        bind_states.push(FlowStateServ::init_state("PROJ", "已归档", FlowSysStateKind::Finish, "", funs, ctx).await?);
         FlowModelServ::init_model(
             "PROJ",
-            vec![
-                ("待开始", FlowSysStateKind::Start, ""),
-                ("进行中", FlowSysStateKind::Progress, ""),
-                ("存在风险", FlowSysStateKind::Progress, ""),
-                ("已完成", FlowSysStateKind::Progress, ""),
-                ("已关闭", FlowSysStateKind::Finish, ""),
-                ("已归档", FlowSysStateKind::Finish, ""),
-            ],
+            bind_states[0].clone(),
+            bind_states.clone(),
             "待开始-进行中-存在风险-已完成-已关闭-已归档",
             vec![
                 FlowTransitionInitInfo {
-                    from_flow_state_name: "待开始".to_string(),
-                    to_flow_state_name: "进行中".to_string(),
+                    from_flow_state_id: bind_states[0].clone(),
+                    to_flow_state_id: bind_states[1].clone(),
                     name: "开始".to_string(),
                     double_check: Some(FlowTransitionDoubleCheckInfo {
                         is_open: true,
@@ -418,8 +421,8 @@ pub async fn init_flow_model(funs: &TardisFunsInst, ctx: &TardisContext) -> Tard
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
-                    from_flow_state_name: "待开始".to_string(),
-                    to_flow_state_name: "已关闭".to_string(),
+                    from_flow_state_id: bind_states[0].clone(),
+                    to_flow_state_id: bind_states[4].clone(),
                     name: "关闭".to_string(),
                     double_check: Some(FlowTransitionDoubleCheckInfo {
                         is_open: true,
@@ -428,8 +431,8 @@ pub async fn init_flow_model(funs: &TardisFunsInst, ctx: &TardisContext) -> Tard
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
-                    from_flow_state_name: "进行中".to_string(),
-                    to_flow_state_name: "已完成".to_string(),
+                    from_flow_state_id: bind_states[1].clone(),
+                    to_flow_state_id: bind_states[3].clone(),
                     name: "完成".to_string(),
                     double_check: Some(FlowTransitionDoubleCheckInfo {
                         is_open: true,
@@ -438,8 +441,8 @@ pub async fn init_flow_model(funs: &TardisFunsInst, ctx: &TardisContext) -> Tard
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
-                    from_flow_state_name: "进行中".to_string(),
-                    to_flow_state_name: "存在风险".to_string(),
+                    from_flow_state_id: bind_states[1].clone(),
+                    to_flow_state_id: bind_states[2].clone(),
                     name: "有风险".to_string(),
                     double_check: Some(FlowTransitionDoubleCheckInfo {
                         is_open: true,
@@ -448,8 +451,8 @@ pub async fn init_flow_model(funs: &TardisFunsInst, ctx: &TardisContext) -> Tard
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
-                    from_flow_state_name: "进行中".to_string(),
-                    to_flow_state_name: "已关闭".to_string(),
+                    from_flow_state_id: bind_states[1].clone(),
+                    to_flow_state_id: bind_states[4].clone(),
                     name: "关闭".to_string(),
                     double_check: Some(FlowTransitionDoubleCheckInfo {
                         is_open: true,
@@ -458,8 +461,8 @@ pub async fn init_flow_model(funs: &TardisFunsInst, ctx: &TardisContext) -> Tard
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
-                    from_flow_state_name: "存在风险".to_string(),
-                    to_flow_state_name: "进行中".to_string(),
+                    from_flow_state_id: bind_states[2].clone(),
+                    to_flow_state_id: bind_states[1].clone(),
                     name: "正常".to_string(),
                     double_check: Some(FlowTransitionDoubleCheckInfo {
                         is_open: true,
@@ -468,8 +471,8 @@ pub async fn init_flow_model(funs: &TardisFunsInst, ctx: &TardisContext) -> Tard
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
-                    from_flow_state_name: "存在风险".to_string(),
-                    to_flow_state_name: "已完成".to_string(),
+                    from_flow_state_id: bind_states[2].clone(),
+                    to_flow_state_id: bind_states[3].clone(),
                     name: "完成".to_string(),
                     double_check: Some(FlowTransitionDoubleCheckInfo {
                         is_open: true,
@@ -478,8 +481,8 @@ pub async fn init_flow_model(funs: &TardisFunsInst, ctx: &TardisContext) -> Tard
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
-                    from_flow_state_name: "存在风险".to_string(),
-                    to_flow_state_name: "已关闭".to_string(),
+                    from_flow_state_id: bind_states[2].clone(),
+                    to_flow_state_id: bind_states[4].clone(),
                     name: "关闭".to_string(),
                     double_check: Some(FlowTransitionDoubleCheckInfo {
                         is_open: true,
@@ -488,8 +491,8 @@ pub async fn init_flow_model(funs: &TardisFunsInst, ctx: &TardisContext) -> Tard
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
-                    from_flow_state_name: "已完成".to_string(),
-                    to_flow_state_name: "进行中".to_string(),
+                    from_flow_state_id: bind_states[3].clone(),
+                    to_flow_state_id: bind_states[1].clone(),
                     name: "重新处理".to_string(),
                     double_check: Some(FlowTransitionDoubleCheckInfo {
                         is_open: true,
@@ -498,8 +501,8 @@ pub async fn init_flow_model(funs: &TardisFunsInst, ctx: &TardisContext) -> Tard
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
-                    from_flow_state_name: "已完成".to_string(),
-                    to_flow_state_name: "已关闭".to_string(),
+                    from_flow_state_id: bind_states[3].clone(),
+                    to_flow_state_id: bind_states[4].clone(),
                     name: "关闭".to_string(),
                     double_check: Some(FlowTransitionDoubleCheckInfo {
                         is_open: true,
@@ -508,8 +511,8 @@ pub async fn init_flow_model(funs: &TardisFunsInst, ctx: &TardisContext) -> Tard
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
-                    from_flow_state_name: "已完成".to_string(),
-                    to_flow_state_name: "已归档".to_string(),
+                    from_flow_state_id: bind_states[3].clone(),
+                    to_flow_state_id: bind_states[5].clone(),
                     name: "归档".to_string(),
                     double_check: Some(FlowTransitionDoubleCheckInfo {
                         is_open: true,
@@ -518,8 +521,8 @@ pub async fn init_flow_model(funs: &TardisFunsInst, ctx: &TardisContext) -> Tard
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
-                    from_flow_state_name: "已关闭".to_string(),
-                    to_flow_state_name: "待开始".to_string(),
+                    from_flow_state_id: bind_states[4].clone(),
+                    to_flow_state_id: bind_states[0].clone(),
                     name: "激活".to_string(),
                     double_check: Some(FlowTransitionDoubleCheckInfo {
                         is_open: true,
@@ -528,8 +531,8 @@ pub async fn init_flow_model(funs: &TardisFunsInst, ctx: &TardisContext) -> Tard
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
-                    from_flow_state_name: "已关闭".to_string(),
-                    to_flow_state_name: "已归档".to_string(),
+                    from_flow_state_id: bind_states[4].clone(),
+                    to_flow_state_id: bind_states[5].clone(),
                     name: "归档".to_string(),
                     double_check: Some(FlowTransitionDoubleCheckInfo {
                         is_open: true,
@@ -538,8 +541,8 @@ pub async fn init_flow_model(funs: &TardisFunsInst, ctx: &TardisContext) -> Tard
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
-                    from_flow_state_name: "已归档".to_string(),
-                    to_flow_state_name: "进行中".to_string(),
+                    from_flow_state_id: bind_states[5].clone(),
+                    to_flow_state_id: bind_states[1].clone(),
                     name: "重新激活".to_string(),
                     double_check: Some(FlowTransitionDoubleCheckInfo {
                         is_open: true,
@@ -548,8 +551,8 @@ pub async fn init_flow_model(funs: &TardisFunsInst, ctx: &TardisContext) -> Tard
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
-                    from_flow_state_name: "已归档".to_string(),
-                    to_flow_state_name: "已关闭".to_string(),
+                    from_flow_state_id: bind_states[5].clone(),
+                    to_flow_state_id: bind_states[4].clone(),
                     name: "关闭".to_string(),
                     double_check: Some(FlowTransitionDoubleCheckInfo {
                         is_open: true,
@@ -580,20 +583,21 @@ pub async fn init_flow_model(funs: &TardisFunsInst, ctx: &TardisContext) -> Tard
     .records
     .pop();
     if iter_init_model.is_none() {
+        let mut bind_states = vec![];
+        bind_states.push(FlowStateServ::init_state("ITER", "待开始", FlowSysStateKind::Start, "", funs, ctx).await?);
+        bind_states.push(FlowStateServ::init_state("ITER", "进行中", FlowSysStateKind::Progress, "", funs, ctx).await?);
+        bind_states.push(FlowStateServ::init_state("ITER", "存在风险", FlowSysStateKind::Progress, "", funs, ctx).await?);
+        bind_states.push(FlowStateServ::init_state("ITER", "已完成", FlowSysStateKind::Progress, "", funs, ctx).await?);
+        bind_states.push(FlowStateServ::init_state("ITER", "已关闭", FlowSysStateKind::Finish, "", funs, ctx).await?);
         FlowModelServ::init_model(
             "ITER",
-            vec![
-                ("待开始", FlowSysStateKind::Start, ""),
-                ("进行中", FlowSysStateKind::Progress, ""),
-                ("存在风险", FlowSysStateKind::Progress, ""),
-                ("已完成", FlowSysStateKind::Progress, ""),
-                ("已关闭", FlowSysStateKind::Finish, ""),
-            ],
+            bind_states[0].clone(),
+            bind_states.clone(),
             "待开始-进行中-存在风险-已完成-已关闭",
             vec![
                 FlowTransitionInitInfo {
-                    from_flow_state_name: "待开始".to_string(),
-                    to_flow_state_name: "进行中".to_string(),
+                    from_flow_state_id: bind_states[0].clone(),
+                    to_flow_state_id: bind_states[1].clone(),
                     name: "开始".to_string(),
                     double_check: Some(FlowTransitionDoubleCheckInfo {
                         is_open: true,
@@ -602,8 +606,8 @@ pub async fn init_flow_model(funs: &TardisFunsInst, ctx: &TardisContext) -> Tard
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
-                    from_flow_state_name: "待开始".to_string(),
-                    to_flow_state_name: "已关闭".to_string(),
+                    from_flow_state_id: bind_states[0].clone(),
+                    to_flow_state_id: bind_states[4].clone(),
                     name: "关闭".to_string(),
                     double_check: Some(FlowTransitionDoubleCheckInfo {
                         is_open: true,
@@ -612,8 +616,8 @@ pub async fn init_flow_model(funs: &TardisFunsInst, ctx: &TardisContext) -> Tard
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
-                    from_flow_state_name: "进行中".to_string(),
-                    to_flow_state_name: "已完成".to_string(),
+                    from_flow_state_id: bind_states[1].clone(),
+                    to_flow_state_id: bind_states[3].clone(),
                     name: "完成".to_string(),
                     double_check: Some(FlowTransitionDoubleCheckInfo {
                         is_open: true,
@@ -622,8 +626,8 @@ pub async fn init_flow_model(funs: &TardisFunsInst, ctx: &TardisContext) -> Tard
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
-                    from_flow_state_name: "进行中".to_string(),
-                    to_flow_state_name: "存在风险".to_string(),
+                    from_flow_state_id: bind_states[1].clone(),
+                    to_flow_state_id: bind_states[2].clone(),
                     name: "有风险".to_string(),
                     double_check: Some(FlowTransitionDoubleCheckInfo {
                         is_open: true,
@@ -632,8 +636,8 @@ pub async fn init_flow_model(funs: &TardisFunsInst, ctx: &TardisContext) -> Tard
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
-                    from_flow_state_name: "进行中".to_string(),
-                    to_flow_state_name: "已关闭".to_string(),
+                    from_flow_state_id: bind_states[1].clone(),
+                    to_flow_state_id: bind_states[4].clone(),
                     name: "关闭".to_string(),
                     double_check: Some(FlowTransitionDoubleCheckInfo {
                         is_open: true,
@@ -642,8 +646,8 @@ pub async fn init_flow_model(funs: &TardisFunsInst, ctx: &TardisContext) -> Tard
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
-                    from_flow_state_name: "存在风险".to_string(),
-                    to_flow_state_name: "进行中".to_string(),
+                    from_flow_state_id: bind_states[2].clone(),
+                    to_flow_state_id: bind_states[1].clone(),
                     name: "正常".to_string(),
                     double_check: Some(FlowTransitionDoubleCheckInfo {
                         is_open: true,
@@ -652,8 +656,8 @@ pub async fn init_flow_model(funs: &TardisFunsInst, ctx: &TardisContext) -> Tard
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
-                    from_flow_state_name: "存在风险".to_string(),
-                    to_flow_state_name: "已完成".to_string(),
+                    from_flow_state_id: bind_states[2].clone(),
+                    to_flow_state_id: bind_states[3].clone(),
                     name: "完成".to_string(),
                     double_check: Some(FlowTransitionDoubleCheckInfo {
                         is_open: true,
@@ -662,8 +666,8 @@ pub async fn init_flow_model(funs: &TardisFunsInst, ctx: &TardisContext) -> Tard
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
-                    from_flow_state_name: "存在风险".to_string(),
-                    to_flow_state_name: "已关闭".to_string(),
+                    from_flow_state_id: bind_states[2].clone(),
+                    to_flow_state_id: bind_states[4].clone(),
                     name: "关闭".to_string(),
                     double_check: Some(FlowTransitionDoubleCheckInfo {
                         is_open: true,
@@ -672,8 +676,8 @@ pub async fn init_flow_model(funs: &TardisFunsInst, ctx: &TardisContext) -> Tard
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
-                    from_flow_state_name: "已完成".to_string(),
-                    to_flow_state_name: "进行中".to_string(),
+                    from_flow_state_id: bind_states[3].clone(),
+                    to_flow_state_id: bind_states[1].clone(),
                     name: "重新处理".to_string(),
                     double_check: Some(FlowTransitionDoubleCheckInfo {
                         is_open: true,
@@ -682,8 +686,8 @@ pub async fn init_flow_model(funs: &TardisFunsInst, ctx: &TardisContext) -> Tard
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
-                    from_flow_state_name: "已完成".to_string(),
-                    to_flow_state_name: "已关闭".to_string(),
+                    from_flow_state_id: bind_states[3].clone(),
+                    to_flow_state_id: bind_states[4].clone(),
                     name: "关闭".to_string(),
                     double_check: Some(FlowTransitionDoubleCheckInfo {
                         is_open: true,
@@ -692,8 +696,8 @@ pub async fn init_flow_model(funs: &TardisFunsInst, ctx: &TardisContext) -> Tard
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
-                    from_flow_state_name: "已关闭".to_string(),
-                    to_flow_state_name: "待开始".to_string(),
+                    from_flow_state_id: bind_states[4].clone(),
+                    to_flow_state_id: bind_states[0].clone(),
                     name: "激活".to_string(),
                     double_check: Some(FlowTransitionDoubleCheckInfo {
                         is_open: true,
@@ -724,20 +728,21 @@ pub async fn init_flow_model(funs: &TardisFunsInst, ctx: &TardisContext) -> Tard
     .records
     .pop();
     if task_init_model.is_none() {
+        let mut bind_states = vec![];
+        bind_states.push(FlowStateServ::init_state("TASK", "待开始", FlowSysStateKind::Start, "", funs, ctx).await?);
+        bind_states.push(FlowStateServ::init_state("TASK", "进行中", FlowSysStateKind::Progress, "", funs, ctx).await?);
+        bind_states.push(FlowStateServ::init_state("TASK", "存在风险", FlowSysStateKind::Progress, "", funs, ctx).await?);
+        bind_states.push(FlowStateServ::init_state("TASK", "已完成", FlowSysStateKind::Progress, "", funs, ctx).await?);
+        bind_states.push(FlowStateServ::init_state("TASK", "已关闭", FlowSysStateKind::Finish, "", funs, ctx).await?);
         FlowModelServ::init_model(
             "TASK",
-            vec![
-                ("待开始", FlowSysStateKind::Start, ""),
-                ("进行中", FlowSysStateKind::Progress, ""),
-                ("存在风险", FlowSysStateKind::Progress, ""),
-                ("已完成", FlowSysStateKind::Progress, ""),
-                ("已关闭", FlowSysStateKind::Finish, ""),
-            ],
+            bind_states[0].clone(),
+            bind_states.clone(),
             "待开始-进行中-存在风险-已完成-已关闭",
             vec![
                 FlowTransitionInitInfo {
-                    from_flow_state_name: "待开始".to_string(),
-                    to_flow_state_name: "进行中".to_string(),
+                    from_flow_state_id: bind_states[0].clone(),
+                    to_flow_state_id: bind_states[1].clone(),
                     name: "开始".to_string(),
                     double_check: Some(FlowTransitionDoubleCheckInfo {
                         is_open: true,
@@ -746,8 +751,8 @@ pub async fn init_flow_model(funs: &TardisFunsInst, ctx: &TardisContext) -> Tard
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
-                    from_flow_state_name: "待开始".to_string(),
-                    to_flow_state_name: "已关闭".to_string(),
+                    from_flow_state_id: bind_states[0].clone(),
+                    to_flow_state_id: bind_states[4].clone(),
                     name: "关闭".to_string(),
                     double_check: Some(FlowTransitionDoubleCheckInfo {
                         is_open: true,
@@ -756,8 +761,8 @@ pub async fn init_flow_model(funs: &TardisFunsInst, ctx: &TardisContext) -> Tard
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
-                    from_flow_state_name: "进行中".to_string(),
-                    to_flow_state_name: "已完成".to_string(),
+                    from_flow_state_id: bind_states[1].clone(),
+                    to_flow_state_id: bind_states[3].clone(),
                     name: "完成".to_string(),
                     double_check: Some(FlowTransitionDoubleCheckInfo {
                         is_open: true,
@@ -766,8 +771,8 @@ pub async fn init_flow_model(funs: &TardisFunsInst, ctx: &TardisContext) -> Tard
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
-                    from_flow_state_name: "进行中".to_string(),
-                    to_flow_state_name: "存在风险".to_string(),
+                    from_flow_state_id: bind_states[1].clone(),
+                    to_flow_state_id: bind_states[2].clone(),
                     name: "有风险".to_string(),
                     double_check: Some(FlowTransitionDoubleCheckInfo {
                         is_open: true,
@@ -776,8 +781,8 @@ pub async fn init_flow_model(funs: &TardisFunsInst, ctx: &TardisContext) -> Tard
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
-                    from_flow_state_name: "进行中".to_string(),
-                    to_flow_state_name: "已关闭".to_string(),
+                    from_flow_state_id: bind_states[1].clone(),
+                    to_flow_state_id: bind_states[4].clone(),
                     name: "关闭".to_string(),
                     double_check: Some(FlowTransitionDoubleCheckInfo {
                         is_open: true,
@@ -786,8 +791,8 @@ pub async fn init_flow_model(funs: &TardisFunsInst, ctx: &TardisContext) -> Tard
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
-                    from_flow_state_name: "存在风险".to_string(),
-                    to_flow_state_name: "进行中".to_string(),
+                    from_flow_state_id: bind_states[2].clone(),
+                    to_flow_state_id: bind_states[1].clone(),
                     name: "正常".to_string(),
                     double_check: Some(FlowTransitionDoubleCheckInfo {
                         is_open: true,
@@ -796,8 +801,8 @@ pub async fn init_flow_model(funs: &TardisFunsInst, ctx: &TardisContext) -> Tard
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
-                    from_flow_state_name: "存在风险".to_string(),
-                    to_flow_state_name: "已完成".to_string(),
+                    from_flow_state_id: bind_states[2].clone(),
+                    to_flow_state_id: bind_states[3].clone(),
                     name: "完成".to_string(),
                     double_check: Some(FlowTransitionDoubleCheckInfo {
                         is_open: true,
@@ -806,8 +811,8 @@ pub async fn init_flow_model(funs: &TardisFunsInst, ctx: &TardisContext) -> Tard
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
-                    from_flow_state_name: "存在风险".to_string(),
-                    to_flow_state_name: "已关闭".to_string(),
+                    from_flow_state_id: bind_states[2].clone(),
+                    to_flow_state_id: bind_states[4].clone(),
                     name: "关闭".to_string(),
                     double_check: Some(FlowTransitionDoubleCheckInfo {
                         is_open: true,
@@ -816,8 +821,8 @@ pub async fn init_flow_model(funs: &TardisFunsInst, ctx: &TardisContext) -> Tard
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
-                    from_flow_state_name: "已完成".to_string(),
-                    to_flow_state_name: "进行中".to_string(),
+                    from_flow_state_id: bind_states[3].clone(),
+                    to_flow_state_id: bind_states[1].clone(),
                     name: "重新处理".to_string(),
                     double_check: Some(FlowTransitionDoubleCheckInfo {
                         is_open: true,
@@ -826,8 +831,8 @@ pub async fn init_flow_model(funs: &TardisFunsInst, ctx: &TardisContext) -> Tard
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
-                    from_flow_state_name: "已完成".to_string(),
-                    to_flow_state_name: "已关闭".to_string(),
+                    from_flow_state_id: bind_states[3].clone(),
+                    to_flow_state_id: bind_states[4].clone(),
                     name: "关闭".to_string(),
                     double_check: Some(FlowTransitionDoubleCheckInfo {
                         is_open: true,
@@ -836,8 +841,8 @@ pub async fn init_flow_model(funs: &TardisFunsInst, ctx: &TardisContext) -> Tard
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
-                    from_flow_state_name: "已关闭".to_string(),
-                    to_flow_state_name: "待开始".to_string(),
+                    from_flow_state_id: bind_states[4].clone(),
+                    to_flow_state_id: bind_states[0].clone(),
                     name: "激活".to_string(),
                     double_check: Some(FlowTransitionDoubleCheckInfo {
                         is_open: true,

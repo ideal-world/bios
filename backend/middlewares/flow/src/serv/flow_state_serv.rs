@@ -6,6 +6,7 @@ use bios_basic::rbum::{
         rbum_item_dto::{RbumItemKernelAddReq, RbumItemKernelModifyReq},
     },
     helper::rbum_scope_helper,
+    rbum_enumeration::RbumScopeLevelKind,
     serv::rbum_item_serv::RbumItemCrudOperation,
 };
 use itertools::Itertools;
@@ -25,7 +26,7 @@ use crate::{
         flow_model_dto::FlowModelFilterReq,
         flow_state_dto::{
             FlowStateAddReq, FlowStateCountGroupByStateReq, FlowStateCountGroupByStateResp, FlowStateDetailResp, FlowStateFilterReq, FlowStateKind, FlowStateModifyReq,
-            FlowStateNameResp, FlowStateSummaryResp,
+            FlowStateNameResp, FlowStateSummaryResp, FlowSysStateKind,
         },
     },
     flow_config::FlowBasicInfoManager,
@@ -215,6 +216,28 @@ impl RbumItemCrudOperation<flow_state::ActiveModel, FlowStateAddReq, FlowStateMo
 }
 
 impl FlowStateServ {
+    pub async fn init_state(tag: &str, state_name: &str, sys_state: FlowSysStateKind, color: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
+        FlowStateServ::add_item(
+            &mut FlowStateAddReq {
+                id_prefix: None,
+                name: Some(state_name.into()),
+                icon: None,
+                color: Some(color.to_string()),
+                sys_state,
+                info: None,
+                state_kind: None,
+                kind_conf: None,
+                template: None,
+                rel_state_id: None,
+                tags: Some(vec![tag.to_string()]),
+                scope_level: Some(RbumScopeLevelKind::Root),
+                disabled: None,
+            },
+            funs,
+            ctx,
+        )
+        .await
+    }
     pub(crate) async fn find_names(
         ids: Option<Vec<String>>,
         tag: Option<String>,
@@ -322,11 +345,6 @@ impl FlowStateServ {
                     count: inst_ids.len().to_string(),
                     inst_ids,
                 });
-            // result.push(FlowStateCountGroupByStateResp {
-            //     state_name,
-            //     count: inst_ids.len().to_string(),
-            //     inst_ids,
-            // });
         }
         Ok(result.into_values().collect_vec())
     }
