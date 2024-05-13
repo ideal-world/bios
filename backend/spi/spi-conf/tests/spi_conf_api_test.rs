@@ -31,7 +31,7 @@ async fn spi_conf_namespace_test() -> TardisResult<()> {
     let mut client = TestHttpClient::new("https://127.0.0.1:8080/spi-conf".to_string());
     client.set_auth(&TardisContext {
         own_paths: "t1/app001".to_string(),
-        ak: "".to_string(),
+        ak: "app001".to_string(),
         roles: vec![],
         groups: vec![],
         owner: "app001".to_string(),

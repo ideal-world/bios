@@ -75,7 +75,7 @@ pub async fn get_config(descriptor: &mut ConfigDescriptor, _funs: &TardisFunsIns
     let qry_result = conn
         .query_one(
             &format!(
-                r#"SELECT (content, md5) FROM {table_name} cc
+                r#"SELECT "content", "md5" FROM {table_name} cc
 WHERE cc.namespace_id=$1 AND cc.grp=$2 AND cc.data_id=$3
 	"#,
             ),
