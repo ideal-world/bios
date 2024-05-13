@@ -49,11 +49,10 @@ impl Plugin for RedisPublisherPlugin {
     }
 
     fn create(config: PluginConfig) -> Result<Self, BoxError> {
-        let id = config.id;
         let layer_config = serde_json::from_value::<RedisPublisherConfig>(config.spec.clone())?;
 
         Ok(Self {
-            key: id.redis_prefix(),
+            key: config.id.redis_prefix(),
             jsonpath_inst: if let Ok(jsonpath_inst) = JsonPathInst::from_str(&layer_config.success_json_path).map_err(|e| log::error!("[Plugin.AuditLog] invalid json path:{e}")) {
                 Some(jsonpath_inst)
             } else {

@@ -3,6 +3,7 @@ use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
 use spacegate_shell::ext_redis::RedisClient;
+use spacegate_shell::ext_redis::{redis::AsyncCommands, RedisClient};
 use spacegate_shell::hyper::{Request, Response, StatusCode};
 use spacegate_shell::kernel::extension::PeerAddr;
 use spacegate_shell::kernel::helper_layers::function::Inner;
