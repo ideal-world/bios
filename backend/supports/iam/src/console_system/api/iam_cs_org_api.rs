@@ -18,7 +18,7 @@ use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem::Request;
 use tardis::web::poem_openapi;
 use tardis::web::poem_openapi::{param::Path, param::Query, payload::Json};
-use tardis::web::web_resp::{TardisApiResult, TardisResp, Void};
+use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 #[derive(Clone, Default)]
 pub struct IamCsOrgApi;
 #[derive(Clone, Default)]
@@ -175,11 +175,11 @@ impl IamCsOrgApi {
 }
 /// System Console Org Item API
 /// 系统控制台组织项API
-#[poem_openapi::OpenApi(prefix_path = "/cs/org/item", tag = "bios_basic::ApiTag::System")]
+#[poem_openapi::OpenApi(prefix_path = "/cs/org", tag = "bios_basic::ApiTag::System")]
 impl IamCsOrgItemApi {
     /// Batch Add Org Item
     /// 批量添加组织项
-    #[oai(path = "/batch", method = "put")]
+    #[oai(path = "/item/batch", method = "put")]
     async fn batch_add_set_item(
         &self,
         add_req: Json<IamSetItemWithDefaultSetAddReq>,
@@ -214,23 +214,6 @@ impl IamCsOrgItemApi {
         .await
         .into_iter()
         .collect::<Result<Vec<String>, TardisError>>()?;
-        // let split = add_req.rel_rbum_item_id.split(',').collect::<Vec<_>>();
-        // let mut result = vec![];
-        // for s in split {
-        //     result.push(
-        //         IamSetServ::add_set_item(
-        //             &IamSetItemAddReq {
-        //                 set_id: set_id.clone(),
-        //                 set_cate_id: add_req.set_cate_id.clone().unwrap_or_default(),
-        //                 sort: add_req.sort,
-        //                 rel_rbum_item_id: s.to_string(),
-        //             },
-        //             &funs,
-        //             &ctx,
-        //         )
-        //         .await?,
-        //     );
-        // }
         funs.commit().await?;
         ctx.execute_task().await?;
         TardisResp::ok(result)
@@ -238,7 +221,7 @@ impl IamCsOrgItemApi {
 
     /// Find Org Items
     /// 查找组织项
-    #[oai(path = "/", method = "get")]
+    #[oai(path = "/item", method = "get")]
     async fn find_items(
         &self,
         cate_id: Query<Option<String>>,
@@ -260,9 +243,36 @@ impl IamCsOrgItemApi {
         TardisResp::ok(result)
     }
 
+    /// paginate Org Items
+    ///
+    /// 分页获取组织项
+    #[oai(path = "/", method = "get")]
+    async fn paginate(
+        &self,
+        cate_id: Query<Option<String>>,
+        tenant_id: Query<Option<String>>,
+        page_number: Query<u32>,
+        page_size: Query<u32>,
+        ctx: TardisContextExtractor,
+        request: &Request,
+    ) -> TardisApiResult<TardisPage<RbumSetItemDetailResp>> {
+        let funs = iam_constants::get_tardis_inst();
+        let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0.clone())?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx).await?;
+        let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, &funs, &ctx).await?;
+        let scope_level = if tenant_id.is_none() || tenant_id.0.clone().unwrap_or_default().is_empty() {
+            None
+        } else {
+            Some(RbumScopeLevelKind::Root)
+        };
+        let result = IamSetServ::paginate_set_items(Some(set_id), cate_id.0, None, scope_level, false, None, page_number.0, page_size.0, &funs, &ctx).await?;
+        ctx.execute_task().await?;
+        TardisResp::ok(result)
+    }
+
     /// Delete Org Item By Org Item Id
     /// 删除组织项
-    #[oai(path = "/:id", method = "delete")]
+    #[oai(path = "/item/:id", method = "delete")]
     async fn delete_item(&self, id: Path<String>, tenant_id: Query<Option<String>>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
