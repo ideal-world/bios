@@ -6,7 +6,7 @@ use spacegate_shell::hyper::{Request, Response, StatusCode};
 use spacegate_shell::kernel::extension::PeerAddr;
 use spacegate_shell::kernel::helper_layers::function::Inner;
 use spacegate_shell::plugin::{Plugin, PluginError};
-use spacegate_shell::spacegate_ext_redis::{redis::AsyncCommands, RedisClient};
+use spacegate_shell::ext_redis::{redis::AsyncCommands, RedisClient};
 use spacegate_shell::{BoxError, SgBody, SgRequestExt, SgResponseExt};
 
 use tardis::serde_json;
