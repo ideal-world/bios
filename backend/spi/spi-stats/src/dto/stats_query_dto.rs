@@ -17,6 +17,9 @@ pub struct StatsQueryMetricsReq {
     /// 事实编码
     /// Fact code
     pub from: String,
+    /// 关联外部动态id,用于ext扩展字段
+    /// Associated external dynamic id, used for ext extended fields
+    pub rel_external_id: Option<String>,
     /// 字段列表
     /// List of fields
     pub select: Vec<StatsQueryMetricsSelectReq>,

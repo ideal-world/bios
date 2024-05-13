@@ -12,7 +12,7 @@ use tardis::web::poem_openapi::types::{ParseFromJSON, ToJSON};
 use tardis::web::web_resp::TardisPage;
 use tardis::{TardisFuns, TardisFunsInst};
 
-use super::rbum_crud_serv::IdNameResp;
+use super::rbum_crud_serv::{IdNameResp, CREATE_TIME_FIELD, ID_FIELD, UPDATE_TIME_FIELD};
 use crate::rbum::domain::{rbum_cert, rbum_cert_conf, rbum_domain, rbum_item, rbum_item_attr, rbum_kind, rbum_kind_attr, rbum_rel, rbum_set_item};
 use crate::rbum::dto::rbum_filer_dto::{
     RbumBasicFilterReq, RbumCertConfFilterReq, RbumCertFilterReq, RbumItemAttrFilterReq, RbumItemFilterFetcher, RbumItemRelFilterReq, RbumKindAttrFilterReq, RbumKindFilterReq,
@@ -27,7 +27,7 @@ use crate::rbum::helper::rbum_event_helper;
 use crate::rbum::rbum_config::RbumConfigApi;
 use crate::rbum::rbum_enumeration::{RbumCertRelKind, RbumRelFromKind, RbumScopeLevelKind};
 use crate::rbum::serv::rbum_cert_serv::{RbumCertConfServ, RbumCertServ};
-use crate::rbum::serv::rbum_crud_serv::{RbumCrudOperation, RbumCrudQueryPackage, CREATE_TIME_FIELD, ID_FIELD, UPDATE_TIME_FIELD};
+use crate::rbum::serv::rbum_crud_serv::{RbumCrudOperation, RbumCrudQueryPackage, ID_FIELD_NAME};
 use crate::rbum::serv::rbum_domain_serv::RbumDomainServ;
 use crate::rbum::serv::rbum_kind_serv::{RbumKindAttrServ, RbumKindServ};
 use crate::rbum::serv::rbum_rel_serv::RbumRelServ;
@@ -242,48 +242,92 @@ where
 
     // ----------------------------- Add -------------------------------
 
-    
+    /// Package add request of the kernel part of the resource item
+    ///
+    /// 组装资源项核心部分的添加请求
+    ///
+    /// # Examples:
+    ///
+    /// ```
+    /// async fn package_item_add(add_req: &IamAppAddReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<RbumItemKernelAddReq> {
+    ///     Ok(RbumItemKernelAddReq {
+    ///         id: add_req.id.clone(),
+    ///         name: add_req.name.clone(),
+    ///         disabled: add_req.disabled,
+    ///         scope_level: add_req.scope_level.clone(),
+    ///         ..Default::default()
+    ///     })
+    /// }
+    /// ```
     async fn package_item_add(add_req: &AddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<RbumItemKernelAddReq>;
 
+    /// Package add request of the extended part of the resource item
+    ///
+    /// 组装资源项扩展部分的添加请求
+    ///
+    /// # Examples:
+    ///
+    /// ```
+    /// async fn package_ext_add(id: &str, add_req: &IamAppAddReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<iam_app::ActiveModel> {
+    ///     Ok(iam_app::ActiveModel {
+    ///         id: Set(id.to_string()),
+    ///         icon: Set(add_req.icon.as_ref().unwrap_or(&"".to_string()).to_string()),
+    ///         sort: Set(add_req.sort.unwrap_or(0)),
+    ///         contact_phone: Set(add_req.contact_phone.as_ref().unwrap_or(&"".to_string()).to_string()),
+    ///         ..Default::default()
+    ///     })
+    /// }
+    /// ```
     async fn package_ext_add(id: &str, add_req: &AddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<EXT>;
 
+    /// Pre-processing of the add request
+    ///
+    /// 添加请求的前置处理
     async fn before_add_item(_: &mut AddReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<()> {
         Ok(())
     }
 
+    /// Post-processing of the add request
+    ///
+    /// 添加请求的后置处理
     async fn after_add_item(_: &str, _: &mut AddReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<()> {
         Ok(())
     }
 
+    /// Add resource item
+    ///
+    /// 添加资源项
     async fn add_item(add_req: &mut AddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
         Self::before_add_item(add_req, funs, ctx).await?;
-        let item_add_req = Self::package_item_add(add_req, funs, ctx).await?;
+        let add_kernel_req = Self::package_item_add(add_req, funs, ctx).await?;
         let mut item_add_req = RbumItemAddReq {
-            id: item_add_req.id.clone(),
-            code: item_add_req.code.clone(),
-            name: item_add_req.name.clone(),
-            rel_rbum_kind_id: if let Some(rel_rbum_kind_id) = &item_add_req.rel_rbum_kind_id {
+            id: add_kernel_req.id.clone(),
+            code: add_kernel_req.code.clone(),
+            name: add_kernel_req.name.clone(),
+            rel_rbum_kind_id: if let Some(rel_rbum_kind_id) = &add_kernel_req.rel_rbum_kind_id {
                 rel_rbum_kind_id.to_string()
             } else {
                 Self::get_rbum_kind_id().ok_or_else(|| funs.err().bad_request(&Self::get_obj_name(), "add_item", "kind is required", "400-rbum-kind-require"))?
             },
-            rel_rbum_domain_id: if let Some(rel_rbum_domain_id) = &item_add_req.rel_rbum_domain_id {
+            rel_rbum_domain_id: if let Some(rel_rbum_domain_id) = &add_kernel_req.rel_rbum_domain_id {
                 rel_rbum_domain_id.to_string()
             } else {
                 Self::get_rbum_domain_id().ok_or_else(|| funs.err().bad_request(&Self::get_obj_name(), "add_item", "domain is required", "400-rbum-domain-require"))?
             },
-            scope_level: item_add_req.scope_level.clone(),
-            disabled: item_add_req.disabled,
+            scope_level: add_kernel_req.scope_level.clone(),
+            disabled: add_kernel_req.disabled,
         };
         let id = RbumItemServ::add_rbum(&mut item_add_req, funs, ctx).await?;
-        let ext_domain = Self::package_ext_add(&id, add_req, funs, ctx).await?;
-        funs.db().insert_one(ext_domain, ctx).await?;
+        let add_ext_req = Self::package_ext_add(&id, add_req, funs, ctx).await?;
+        funs.db().insert_one(add_ext_req, ctx).await?;
         Self::after_add_item(&id, add_req, funs, ctx).await?;
         rbum_event_helper::add_notify_event(Self::get_ext_table_name(), "c", id.as_str(), ctx).await?;
-        // rbum_event_helper::try_notify(Self::get_ext_table_name(), "c", &id, funs, ctx).await?;
         Ok(id)
     }
 
+    /// Add resource item with simple relationship (the added resource item is the source party)
+    ///
+    /// 添加资源项及其简单关系（添加的资源项为来源方）
     async fn add_item_with_simple_rel_by_from(add_req: &mut AddReq, tag: &str, to_rbum_item_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
         let id = Self::add_item(add_req, funs, ctx).await?;
         RbumRelServ::add_rbum(
@@ -304,6 +348,9 @@ where
         Ok(id)
     }
 
+    /// Add resource item with simple relationship (the added resource item is the target party)
+    ///
+    /// 添加资源项及其简单关系（添加的资源项为目标方）
     async fn add_item_with_simple_rel_by_to(add_req: &mut AddReq, tag: &str, from_rbum_item_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
         let id = Self::add_item(add_req, funs, ctx).await?;
         RbumRelServ::add_rbum(
@@ -326,78 +373,140 @@ where
 
     // ----------------------------- Modify -------------------------------
 
+    /// Package modify request of the kernel part of the resource item
+    ///
+    /// 组装资源项核心部分的修改请求
+    ///
+    /// # Examples:
+    ///
+    /// ```
+    /// async fn package_item_modify(_: &str, modify_req: &IamAppModifyReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<Option<RbumItemKernelModifyReq>> {
+    ///     if modify_req.name.is_none() && modify_req.scope_level.is_none() && modify_req.disabled.is_none() {
+    ///         return Ok(None);
+    ///     }
+    ///     Ok(Some(RbumItemKernelModifyReq {
+    ///         code: None,
+    ///         name: modify_req.name.clone(),
+    ///         scope_level: modify_req.scope_level.clone(),
+    ///         disabled: modify_req.disabled,
+    ///     }))
+    /// }
+    /// ```
     async fn package_item_modify(id: &str, modify_req: &ModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<RbumItemKernelModifyReq>>;
 
+    /// Package modify request of the extended part of the resource item
+    ///
+    /// 组装资源项扩展部分的修改请求
+    ///
+    /// # Examples:
+    ///
+    /// ```
+    /// async fn package_ext_modify(id: &str, modify_req: &IamAppModifyReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<Option<iam_app::ActiveModel>> {
+    ///     if modify_req.icon.is_none() && modify_req.sort.is_none() && modify_req.contact_phone.is_none() {
+    ///         return Ok(None);
+    ///     }
+    ///     let mut iam_app = iam_app::ActiveModel {
+    ///         id: Set(id.to_string()),
+    ///         ..Default::default()
+    ///     };
+    ///     if let Some(icon) = &modify_req.icon {
+    ///         iam_app.icon = Set(icon.to_string());
+    ///     }
+    ///     if let Some(sort) = modify_req.sort {
+    ///         iam_app.sort = Set(sort);
+    ///     }
+    ///     if let Some(contact_phone) = &modify_req.contact_phone {
+    ///         iam_app.contact_phone = Set(contact_phone.to_string());
+    ///     }
+    ///     Ok(Some(iam_app))
+    /// }
+    /// ```
     async fn package_ext_modify(id: &str, modify_req: &ModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<EXT>>;
 
+    ///  Pre-processing of the modify request
+    ///
+    /// 修改请求的前置处理
     async fn before_modify_item(_: &str, _: &mut ModifyReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<()> {
         Ok(())
     }
 
+    /// Post-processing of the modify request
+    ///
+    /// 修改请求的后置处理
     async fn after_modify_item(_: &str, _: &mut ModifyReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<()> {
         Ok(())
     }
 
+    /// Modify resource item
+    ///
+    /// 修改资源项
     async fn modify_item(id: &str, modify_req: &mut ModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         Self::before_modify_item(id, modify_req, funs, ctx).await?;
-        let item_modify_req = Self::package_item_modify(id, modify_req, funs, ctx).await?;
-        if let Some(mut item_modify_req) = item_modify_req {
+        let modify_kernel_req = Self::package_item_modify(id, modify_req, funs, ctx).await?;
+        if let Some(mut item_modify_req) = modify_kernel_req {
             RbumItemServ::modify_rbum(id, &mut item_modify_req, funs, ctx).await?;
         } else {
             RbumItemServ::check_ownership(id, funs, ctx).await?;
         }
-        let ext_domain = Self::package_ext_modify(id, modify_req, funs, ctx).await?;
-        if let Some(ext_domain) = ext_domain {
+        let modify_ext_req = Self::package_ext_modify(id, modify_req, funs, ctx).await?;
+        if let Some(ext_domain) = modify_ext_req {
             funs.db().update_one(ext_domain, ctx).await?;
         }
         Self::after_modify_item(id, modify_req, funs, ctx).await?;
         rbum_event_helper::add_notify_event(Self::get_ext_table_name(), "u", id, ctx).await?;
-        // rbum_event_helper::try_notify(Self::get_ext_table_name(), "u", id, funs, ctx).await?;
         Ok(())
     }
 
     // ----------------------------- Delete -------------------------------
 
-    async fn package_delete(id: &str, _funs: &TardisFunsInst, _ctx: &TardisContext) -> TardisResult<Select<EXT::Entity>> {
-        Ok(<EXT::Entity as EntityTrait>::find().filter(Expr::col(ID_FIELD.clone()).eq(id)))
-    }
-
+    /// Pre-processing of the delete request
+    ///
+    /// 删除请求的前置处理
     async fn before_delete_item(_: &str, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<Option<DetailResp>> {
         Ok(None)
     }
 
+    /// Post-processing of the delete request
+    ///
+    /// 删除请求的后置处理
     async fn after_delete_item(_: &str, _: &Option<DetailResp>, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<()> {
         Ok(())
     }
 
+    /// Delete resource item
+    ///
+    /// 删除资源项
+    ///
+    /// TODO remove mq and send detail data to event.
     async fn delete_item(id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<u64> {
         let deleted_item = Self::before_delete_item(id, funs, ctx).await?;
-        let select = Self::package_delete(id, funs, ctx).await?;
+        let item_select_req = <EXT::Entity as EntityTrait>::find().filter(Expr::col(ID_FIELD.clone()).eq(id));
         #[cfg(feature = "with-mq")]
         {
-            let delete_records = funs.db().soft_delete_custom(select, "id").await?;
+            let deleted_ext_records = funs.db().soft_delete_custom(item_select_req, ID_FIELD_NAME).await?;
             RbumItemServ::delete_rbum(id, funs, ctx).await?;
             let mq_topic_entity_deleted = &funs.rbum_conf_mq_topic_entity_deleted();
             let mq_header = std::collections::HashMap::from([(funs.rbum_conf_mq_header_name_operator(), ctx.owner.clone())]);
-            for delete_record in &delete_records {
+            for delete_record in &deleted_ext_records {
                 funs.mq().publish(mq_topic_entity_deleted, TardisFuns::json.obj_to_string(delete_record)?, &mq_header).await?;
             }
             Self::after_delete_item(id, &deleted_item, funs, ctx).await?;
             rbum_event_helper::add_notify_event(Self::get_ext_table_name(), "d", id, ctx).await?;
-            // rbum_event_helper::try_notify(Self::get_ext_table_name(), "d", id, funs, ctx).await?;
-            Ok(delete_records.len() as u64)
+            Ok(deleted_ext_records.len() as u64)
         }
         #[cfg(not(feature = "with-mq"))]
         {
-            let delete_records = funs.db().soft_delete(select, &ctx.owner).await?;
+            let deleted_ext_records = funs.db().soft_delete(item_select_req, &ctx.owner).await?;
             RbumItemServ::delete_rbum(id, funs, ctx).await?;
             Self::after_delete_item(id, &deleted_item, funs, ctx).await?;
             rbum_event_helper::add_notify_event(Self::get_ext_table_name(), "d", id, ctx).await?;
-            // rbum_event_helper::try_notify(Self::get_ext_table_name(), "d", &id, funs, ctx).await?;
-            Ok(delete_records)
+            Ok(deleted_ext_records)
         }
     }
 
+    /// Delete resource item with all relationships
+    ///
+    /// 删除资源项及其所有关系
     async fn delete_item_with_all_rels(id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<u64> {
         // Delete rels
         let rel_ids = RbumRelServ::find_rel_ids(
@@ -497,6 +606,9 @@ where
 
     // ----------------------------- Query -------------------------------
 
+    /// Package query request of the kernel part of the resource item
+    ///
+    /// 组装资源项核心部分的查询请求
     async fn package_item_query(is_detail: bool, filter: &ItemFilterReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<SelectStatement> {
         let mut query = RbumItemServ::package_query(
             is_detail,
@@ -537,6 +649,9 @@ where
         Ok(query)
     }
 
+    /// Package condition of the relationship
+    ///
+    /// 组装关联关系的查询条件
     fn package_rel(query: &mut SelectStatement, rel_table: Alias, rbum_item_rel_filter_req: &RbumItemRelFilterReq) {
         let mut binding = Query::select();
         let sub_query = binding.from(rbum_rel::Entity);
@@ -568,6 +683,7 @@ where
             }
             sub_query.column((rbum_rel::Entity, rbum_rel::Column::FromRbumId));
             sub_query.group_by_col((rbum_rel::Entity, rbum_rel::Column::FromRbumId));
+
             if rbum_item_rel_filter_req.optional {
                 query.join_subquery(
                     JoinType::LeftJoin,
@@ -596,6 +712,7 @@ where
             }
             sub_query.column((rbum_rel::Entity, rbum_rel::Column::ToRbumItemId));
             sub_query.group_by_col((rbum_rel::Entity, rbum_rel::Column::ToRbumItemId));
+
             if rbum_item_rel_filter_req.optional {
                 query.join_subquery(
                     JoinType::LeftJoin,
@@ -614,34 +731,39 @@ where
         }
     }
 
+    /// Package condition of the resource set
+    ///
+    /// 组装资源集的查询条件
     fn package_set_rel(query: &mut SelectStatement, rel_table: Alias, rbum_set_rel_filter_req: &RbumSetItemRelFilterReq) {
         let mut binding = Query::select();
         let sub_query = binding.from(rbum_set_item::Entity);
         if let Some(set_ids_and_cate_codes) = rbum_set_rel_filter_req.set_ids_and_cate_codes.clone() {
-            let mut condition = Condition::any();
+            let mut cond_by_sets = Condition::any();
             for set_id in set_ids_and_cate_codes.keys() {
-                let expr = Expr::col((rbum_set_item::Entity, rbum_set_item::Column::RelRbumSetId)).eq(set_id).and(if rbum_set_rel_filter_req.with_sub_set_cate_codes {
-                    if let Some(cate_code) = set_ids_and_cate_codes.get(set_id) {
-                        let like_clauses: Vec<_> = cate_code
-                            .iter()
-                            .map(|cate_code| Expr::col((rbum_set_item::Entity, rbum_set_item::Column::RelRbumSetCateCode)).like(format!("{}%", cate_code)))
-                            .collect();
-                        // Join LIKE clauses with OR
-                        like_clauses.into_iter().fold(Expr::col((rbum_set_item::Entity, rbum_set_item::Column::RelRbumSetCateCode)).into(), |acc, exprx| {
-                            acc.or(exprx)
-                        })
+                let mut cond_by_a_set = Condition::all();
+                cond_by_a_set = cond_by_a_set.add(Expr::col((rbum_set_item::Entity, rbum_set_item::Column::RelRbumSetId)).eq(set_id));
+                if rbum_set_rel_filter_req.with_sub_set_cate_codes {
+                    if let Some(cate_codes) = set_ids_and_cate_codes.get(set_id) {
+                        let mut cond = Condition::any();
+                        for cate_code in cate_codes {
+                            cond = cond.add(Expr::col((rbum_set_item::Entity, rbum_set_item::Column::RelRbumSetCateCode)).like(format!("{}%", cate_code)));
+                        }
+                        cond_by_a_set = cond_by_a_set.add(Cond::all().add(cond));
                     } else {
-                        Expr::col((rbum_set_item::Entity, rbum_set_item::Column::RelRbumSetCateCode)).like(format!("{}%", ""))
+                        // 包含所有子集
                     }
                 } else {
-                    Expr::col((rbum_set_item::Entity, rbum_set_item::Column::RelRbumSetCateCode)).is_in(set_ids_and_cate_codes.get(set_id).unwrap_or(&Vec::<String>::new()))
-                });
-                condition = condition.add(expr);
+                    cond_by_a_set = cond_by_a_set.add(
+                        Expr::col((rbum_set_item::Entity, rbum_set_item::Column::RelRbumSetCateCode)).is_in(set_ids_and_cate_codes.get(set_id).unwrap_or(&Vec::<String>::new())),
+                    );
+                }
+                cond_by_sets = cond_by_sets.add(cond_by_a_set);
             }
-            sub_query.cond_where(condition);
+            sub_query.cond_where(cond_by_sets);
         }
         sub_query.column((rbum_set_item::Entity, rbum_set_item::Column::RelRbumItemId));
         sub_query.group_by_col((rbum_set_item::Entity, rbum_set_item::Column::RelRbumItemId));
+
         query.join_subquery(
             JoinType::InnerJoin,
             sub_query.take(),
@@ -649,12 +771,39 @@ where
             Expr::col((rel_table, rbum_set_item::Column::RelRbumItemId)).equals((rbum_item::Entity, rbum_item::Column::Id)),
         );
     }
+
+    /// Package query request of the extended part of the resource item
+    ///
+    /// 组装资源项扩展部分的查询请求
+    ///
+    /// # Examples:
+    ///
+    /// ```
+    /// async fn package_ext_query(query: &mut SelectStatement, _: bool, filter: &IamAppFilterReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<()> {
+    ///     query.column((iam_app::Entity, iam_app::Column::ContactPhone));
+    ///     query.column((iam_app::Entity, iam_app::Column::Icon));
+    ///     query.column((iam_app::Entity, iam_app::Column::Sort));
+    ///     if let Some(contact_phone) = &filter.contact_phone {
+    ///         query.and_where(Expr::col(iam_app::Column::ContactPhone).eq(contact_phone.as_str()));
+    /// }
+    /// Ok(())
+    /// ```
     async fn package_ext_query(query: &mut SelectStatement, is_detail: bool, filter: &ItemFilterReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()>;
 
+    /// Query and get a resource item summary
+    ///
+    /// 查询并获取一条资源项概要信息
     async fn peek_item(id: &str, filter: &ItemFilterReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<SummaryResp> {
         Self::do_peek_item(id, filter, funs, ctx).await
     }
 
+    /// Query and get a resource item summary
+    ///
+    /// 查询并获取一条资源项概要信息
+    ///
+    /// NOTE: Internal method, not recommended to override.
+    ///
+    /// NOTE： 内部方法，不建议重写。
     async fn do_peek_item(id: &str, filter: &ItemFilterReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<SummaryResp> {
         let mut query = Self::package_item_query(false, filter, funs, ctx).await?;
         query.inner_join(
@@ -675,10 +824,20 @@ where
         }
     }
 
+    /// Query and get a resource item detail
+    ///
+    /// 查询并获取一条资源项详细信息
     async fn get_item(id: &str, filter: &ItemFilterReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<DetailResp> {
         Self::do_get_item(id, filter, funs, ctx).await
     }
 
+    /// Query and get a resource item detail
+    ///
+    /// 查询并获取一条资源项详细信息
+    ///
+    /// NOTE: Internal method, not recommended to override.
+    ///
+    /// NOTE： 内部方法，不建议重写。
     async fn do_get_item(id: &str, filter: &ItemFilterReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<DetailResp> {
         let mut query = Self::package_item_query(true, filter, funs, ctx).await?;
         query.inner_join(
@@ -699,6 +858,9 @@ where
         }
     }
 
+    /// Query and page to get the resource item id set
+    ///
+    /// 查询并分页获取资源项id集合
     async fn paginate_id_items(
         filter: &ItemFilterReq,
         page_number: u32,
@@ -711,6 +873,13 @@ where
         Self::do_paginate_id_items(filter, page_number, page_size, desc_sort_by_create, desc_sort_by_update, funs, ctx).await
     }
 
+    /// Query and page to get the resource item id set
+    ///
+    /// 查询并分页获取资源项id集合
+    ///
+    /// NOTE: Internal method, not recommended to override.
+    ///
+    /// NOTE： 内部方法，不建议重写。
     async fn do_paginate_id_items(
         filter: &ItemFilterReq,
         page_number: u32,
@@ -743,6 +912,9 @@ where
         })
     }
 
+    /// Query and page to get the resource item id and name set
+    ///
+    /// 查询并分页获取资源项id和名称集合
     async fn paginate_id_name_items(
         filter: &ItemFilterReq,
         page_number: u32,
@@ -755,6 +927,13 @@ where
         Self::do_paginate_id_name_items(filter, page_number, page_size, desc_sort_by_create, desc_sort_by_update, funs, ctx).await
     }
 
+    /// Query and page to get the resource item id and name set
+    ///
+    /// 查询并分页获取资源项id和名称集合
+    ///
+    /// NOTE: Internal method, not recommended to override.
+    ///
+    /// NOTE： 内部方法，不建议重写。
     async fn do_paginate_id_name_items(
         filter: &ItemFilterReq,
         page_number: u32,
@@ -787,6 +966,9 @@ where
         })
     }
 
+    /// Query and page to get the resource item summary set
+    ///
+    /// 查询并分页获取资源项概要信息集合
     async fn paginate_items(
         filter: &ItemFilterReq,
         page_number: u32,
@@ -799,6 +981,13 @@ where
         Self::do_paginate_items(filter, page_number, page_size, desc_sort_by_create, desc_sort_by_update, funs, ctx).await
     }
 
+    /// Query and page to get the resource item summary set
+    ///
+    /// 查询并分页获取资源项概要信息集合
+    ///
+    /// NOTE: Internal method, not recommended to override.
+    ///
+    /// NOTE： 内部方法，不建议重写。
     async fn do_paginate_items(
         filter: &ItemFilterReq,
         page_number: u32,
@@ -829,6 +1018,9 @@ where
         })
     }
 
+    /// Query and page to get the resource item detail set
+    ///
+    /// 查询并分页获取资源项详细信息集合
     async fn paginate_detail_items(
         filter: &ItemFilterReq,
         page_number: u32,
@@ -841,6 +1033,13 @@ where
         Self::do_paginate_detail_items(filter, page_number, page_size, desc_sort_by_create, desc_sort_by_update, funs, ctx).await
     }
 
+    /// Query and page to get the resource item detail set
+    ///
+    /// 查询并分页获取资源项详细信息集合
+    ///
+    /// NOTE: Internal method, not recommended to override.
+    ///
+    /// NOTE： 内部方法，不建议重写。
     async fn do_paginate_detail_items(
         filter: &ItemFilterReq,
         page_number: u32,
@@ -871,10 +1070,20 @@ where
         })
     }
 
+    /// Query and get a resource item summary
+    ///
+    /// 查询并获取一条资源项概要信息
     async fn find_one_item(filter: &ItemFilterReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<SummaryResp>> {
         Self::do_find_one_item(filter, funs, ctx).await
     }
 
+    /// Query and get a resource item summary
+    ///
+    /// 查询并获取一条资源项概要信息
+    ///
+    /// NOTE: Internal method, not recommended to override.
+    ///
+    /// NOTE： 内部方法，不建议重写。
     async fn do_find_one_item(filter: &ItemFilterReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<SummaryResp>> {
         let result = Self::find_items(filter, None, None, funs, ctx).await?;
         if result.len() > 1 {
@@ -884,6 +1093,9 @@ where
         }
     }
 
+    /// Query and get the resource item id set
+    ///
+    /// 查询并获取资源项id集合
     async fn find_id_items(
         filter: &ItemFilterReq,
         desc_sort_by_create: Option<bool>,
@@ -894,6 +1106,13 @@ where
         Self::do_find_id_items(filter, desc_sort_by_create, desc_sort_by_update, funs, ctx).await
     }
 
+    /// Query and get the resource item id set
+    ///
+    /// 查询并获取资源项id集合
+    ///
+    /// NOTE: Internal method, not recommended to override.
+    ///
+    /// NOTE： 内部方法，不建议重写。
     async fn do_find_id_items(
         filter: &ItemFilterReq,
         desc_sort_by_create: Option<bool>,
@@ -918,6 +1137,9 @@ where
         Ok(funs.db().find_dtos::<IdResp>(&query).await?.into_iter().map(|resp| resp.id).collect())
     }
 
+    /// Query and get the resource item id and name set
+    ///
+    /// 查询并获取资源项id和名称集合
     async fn find_id_name_items(
         filter: &ItemFilterReq,
         desc_sort_by_create: Option<bool>,
@@ -928,6 +1150,13 @@ where
         Self::do_find_id_name_items(filter, desc_sort_by_create, desc_sort_by_update, funs, ctx).await
     }
 
+    /// Query and get the resource item id and name set
+    ///
+    /// 查询并获取资源项id和名称集合
+    ///
+    /// NOTE: Internal method, not recommended to override.
+    ///
+    /// NOTE： 内部方法，不建议重写。
     async fn do_find_id_name_items(
         filter: &ItemFilterReq,
         desc_sort_by_create: Option<bool>,
@@ -952,6 +1181,9 @@ where
         Ok(funs.db().find_dtos::<IdNameResp>(&query).await?.into_iter().map(|resp| (resp.id, resp.name)).collect())
     }
 
+    /// Query and get the resource item summary set
+    ///
+    /// 查询并获取资源项概要信息集合
     async fn find_items(
         filter: &ItemFilterReq,
         desc_sort_by_create: Option<bool>,
@@ -962,6 +1194,13 @@ where
         Self::do_find_items(filter, desc_sort_by_create, desc_sort_by_update, funs, ctx).await
     }
 
+    /// Query and get the resource item summary set
+    ///
+    /// 查询并获取资源项概要信息集合
+    ///
+    /// NOTE: Internal method, not recommended to override.
+    ///
+    /// NOTE： 内部方法，不建议重写。
     async fn do_find_items(
         filter: &ItemFilterReq,
         desc_sort_by_create: Option<bool>,
@@ -984,10 +1223,20 @@ where
         Ok(funs.db().find_dtos(&query).await?)
     }
 
+    /// Query and get a resource item detail
+    ///
+    /// 查询并获取一条资源项详细信息
     async fn find_one_detail_item(filter: &ItemFilterReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<DetailResp>> {
         Self::do_find_one_detail_item(filter, funs, ctx).await
     }
 
+    /// Query and get a resource item detail
+    ///
+    /// 查询并获取一条资源项详细信息
+    ///
+    /// NOTE: Internal method, not recommended to override.
+    ///
+    /// NOTE： 内部方法，不建议重写。
     async fn do_find_one_detail_item(filter: &ItemFilterReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<DetailResp>> {
         let result = Self::find_detail_items(filter, None, None, funs, ctx).await?;
         if result.len() > 1 {
@@ -997,6 +1246,9 @@ where
         }
     }
 
+    /// Query and get the resource item detail set
+    ///
+    /// 查询并获取资源项详细信息集合
     async fn find_detail_items(
         filter: &ItemFilterReq,
         desc_sort_by_create: Option<bool>,
@@ -1007,6 +1259,13 @@ where
         Self::do_find_detail_items(filter, desc_sort_by_create, desc_sort_by_update, funs, ctx).await
     }
 
+    /// Query and get the resource item detail set
+    ///
+    /// 查询并获取资源项详细信息集合
+    ///
+    /// NOTE: Internal method, not recommended to override.
+    ///
+    /// NOTE： 内部方法，不建议重写。
     async fn do_find_detail_items(
         filter: &ItemFilterReq,
         desc_sort_by_create: Option<bool>,
@@ -1029,10 +1288,20 @@ where
         Ok(funs.db().find_dtos(&query).await?)
     }
 
+    /// Query and count the number of resource items
+    ///
+    /// 查询并统计资源项数量
     async fn count_items(filter: &ItemFilterReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<u64> {
         Self::do_count_items(filter, funs, ctx).await
     }
 
+    /// Query and count the number of resource items
+    ///
+    /// 查询并统计资源项数量
+    ///
+    /// NOTE: Internal method, not recommended to override.
+    ///
+    /// NOTE： 内部方法，不建议重写。
     async fn do_count_items(filter: &ItemFilterReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<u64> {
         let mut query = Self::package_item_query(false, filter, funs, ctx).await?;
         query.inner_join(
@@ -1043,6 +1312,9 @@ where
         funs.db().count(&query).await
     }
 
+    /// Whether the resource item is disabled
+    ///
+    /// 判断资源项是否被禁用
     async fn is_disabled(id: &str, funs: &TardisFunsInst) -> TardisResult<bool> {
         #[derive(Debug, sea_orm::FromQueryResult)]
         pub struct StatusResp {
@@ -1071,16 +1343,6 @@ impl RbumCrudOperation<rbum_item_attr::ActiveModel, RbumItemAttrAddReq, RbumItem
         rbum_item_attr::Entity.table_name()
     }
 
-    async fn package_add(add_req: &RbumItemAttrAddReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<rbum_item_attr::ActiveModel> {
-        Ok(rbum_item_attr::ActiveModel {
-            id: Set(TardisFuns::field.nanoid()),
-            value: Set(add_req.value.to_string()),
-            rel_rbum_item_id: Set(add_req.rel_rbum_item_id.to_string()),
-            rel_rbum_kind_attr_id: Set(add_req.rel_rbum_kind_attr_id.to_string()),
-            ..Default::default()
-        })
-    }
-
     async fn before_add_rbum(add_req: &mut RbumItemAttrAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         Self::check_scope(&add_req.rel_rbum_item_id, RbumItemServ::get_table_name(), funs, ctx).await?;
         Self::check_scope(&add_req.rel_rbum_kind_attr_id, RbumKindAttrServ::get_table_name(), funs, ctx).await?;
@@ -1102,6 +1364,16 @@ impl RbumCrudOperation<rbum_item_attr::ActiveModel, RbumItemAttrAddReq, RbumItem
             ));
         }
         Ok(())
+    }
+
+    async fn package_add(add_req: &RbumItemAttrAddReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<rbum_item_attr::ActiveModel> {
+        Ok(rbum_item_attr::ActiveModel {
+            id: Set(TardisFuns::field.nanoid()),
+            value: Set(add_req.value.to_string()),
+            rel_rbum_item_id: Set(add_req.rel_rbum_item_id.to_string()),
+            rel_rbum_kind_attr_id: Set(add_req.rel_rbum_kind_attr_id.to_string()),
+            ..Default::default()
+        })
     }
 
     async fn package_modify(id: &str, modify_req: &RbumItemAttrModifyReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<rbum_item_attr::ActiveModel> {
@@ -1143,12 +1415,15 @@ impl RbumCrudOperation<rbum_item_attr::ActiveModel, RbumItemAttrAddReq, RbumItem
 }
 
 impl RbumItemAttrServ {
-    pub async fn find_item_attr_defs_by_item_id(
+    /// Get resource kind id and resource kind attribute definitions corresponding to resource item id
+    ///
+    /// 获取资源项对应资源类型id及资源类型所有属性定义
+    async fn find_res_kind_id_and_res_kind_attrs_by_item_id(
         rbum_item_id: &str,
         secret: Option<bool>,
         funs: &TardisFunsInst,
         ctx: &TardisContext,
-    ) -> TardisResult<Vec<RbumKindAttrSummaryResp>> {
+    ) -> TardisResult<(String, Vec<RbumKindAttrSummaryResp>)> {
         let rel_rbum_kind_id = RbumItemServ::peek_rbum(
             rbum_item_id,
             &RbumBasicFilterReq {
@@ -1160,10 +1435,10 @@ impl RbumItemAttrServ {
         )
         .await?
         .rel_rbum_kind_id;
-        RbumKindAttrServ::find_rbums(
+        let rbum_kind_attrs = RbumKindAttrServ::find_rbums(
             &RbumKindAttrFilterReq {
                 basic: RbumBasicFilterReq {
-                    rbum_kind_id: Some(rel_rbum_kind_id),
+                    rbum_kind_id: Some(rel_rbum_kind_id.clone()),
                     ..Default::default()
                 },
                 secret,
@@ -1174,26 +1449,35 @@ impl RbumItemAttrServ {
             funs,
             ctx,
         )
-        .await
+        .await?;
+        Ok((rel_rbum_kind_id, rbum_kind_attrs))
     }
 
+    /// Add or modify resource item extended attributes
+    ///
+    /// 添加或修改资源项扩展属性
     pub async fn add_or_modify_item_attrs(add_req: &RbumItemAttrsAddOrModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         // Implicit rel_rbum_kind_attr scope check
-        let rbum_kind_attrs = Self::find_item_attr_defs_by_item_id(&add_req.rel_rbum_item_id, None, funs, ctx).await?;
-        let in_main_table_attrs = rbum_kind_attrs.iter().filter(|i| add_req.values.contains_key(&i.name) && i.main_column && !i.secret).collect::<Vec<&RbumKindAttrSummaryResp>>();
-        let in_ext_table_attrs = rbum_kind_attrs.iter().filter(|i| add_req.values.contains_key(&i.name) && !i.main_column && !i.secret).collect::<Vec<&RbumKindAttrSummaryResp>>();
-        let in_secret_table_attrs = rbum_kind_attrs.iter().filter(|i| i.secret).collect::<Vec<&RbumKindAttrSummaryResp>>();
+        let (rel_rbum_kind_id, rbum_kind_attrs) = Self::find_res_kind_id_and_res_kind_attrs_by_item_id(&add_req.rel_rbum_item_id, None, funs, ctx).await?;
+        let in_main_table_attrs = rbum_kind_attrs.iter().filter(|i| add_req.values.contains_key(&i.name) && i.main_column).collect::<Vec<&RbumKindAttrSummaryResp>>();
+        let in_ext_table_attrs = rbum_kind_attrs.iter().filter(|i| add_req.values.contains_key(&i.name) && !i.main_column).collect::<Vec<&RbumKindAttrSummaryResp>>();
         if !in_main_table_attrs.is_empty() {
             // Implicit rel_rbum_item scope check
-            let rel_rbum_kind_id = RbumItemServ::peek_rbum(&add_req.rel_rbum_item_id, &RbumBasicFilterReq::default(), funs, ctx).await?.rel_rbum_kind_id;
             let main_table_name = RbumKindServ::peek_rbum(&rel_rbum_kind_id, &RbumKindFilterReq::default(), funs, ctx).await?.ext_table_name;
 
             let mut update_statement = Query::update();
             update_statement.table(Alias::new(&main_table_name));
 
             for in_main_table_attr in in_main_table_attrs {
+                let column_val = if in_main_table_attr.secret && !in_main_table_attr.dyn_default_value.is_empty() {
+                    Self::replace_url_placeholder(&in_main_table_attr.dyn_default_value, &add_req.values, funs).await?
+                } else if in_main_table_attr.secret {
+                    in_main_table_attr.default_value.clone()
+                } else {
+                    add_req.values.get(&in_main_table_attr.name).expect("ignore").clone()
+                };
+
                 let column_name = Alias::new(&in_main_table_attr.name);
-                let column_val = add_req.values.get(&in_main_table_attr.name).expect("ignore").clone();
                 update_statement.value(column_name, Value::from(column_val));
             }
             update_statement.and_where(Expr::col(ID_FIELD.clone()).eq(add_req.rel_rbum_item_id.as_str()));
@@ -1202,7 +1486,14 @@ impl RbumItemAttrServ {
 
         if !in_ext_table_attrs.is_empty() {
             for in_ext_table_attr in in_ext_table_attrs {
-                let column_val = add_req.values.get(&in_ext_table_attr.name).expect("ignore").clone();
+                let column_val = if in_ext_table_attr.secret && !in_ext_table_attr.dyn_default_value.is_empty() {
+                    Self::replace_url_placeholder(&in_ext_table_attr.dyn_default_value, &add_req.values, funs).await?
+                } else if in_ext_table_attr.secret {
+                    in_ext_table_attr.default_value.clone()
+                } else {
+                    add_req.values.get(&in_ext_table_attr.name).expect("ignore").clone()
+                };
+
                 let exist_item_attr_ids = Self::find_id_rbums(
                     &RbumItemAttrFilterReq {
                         basic: Default::default(),
@@ -1232,66 +1523,23 @@ impl RbumItemAttrServ {
             }
         }
 
-        if !in_secret_table_attrs.is_empty() {
-            for in_secret_table_attr in in_secret_table_attrs {
-                let secret_item_attr_ids = Self::find_id_rbums(
-                    &RbumItemAttrFilterReq {
-                        basic: Default::default(),
-                        rel_rbum_item_id: Some(add_req.rel_rbum_item_id.to_string()),
-                        rel_rbum_kind_attr_id: Some(in_secret_table_attr.id.to_string()),
-                    },
-                    None,
-                    None,
-                    funs,
-                    ctx,
-                )
-                .await?;
-                let result = if !in_secret_table_attr.dyn_default_value.is_empty() {
-                    if RbumKindAttrServ::url_match(&in_secret_table_attr.dyn_default_value).unwrap() {
-                        let url = RbumKindAttrServ::url_replace(&in_secret_table_attr.dyn_default_value, add_req.values.clone()).unwrap();
-                        if RbumKindAttrServ::url_match(&url).unwrap() {
-                            return Err(funs.err().bad_request(
-                                &Self::get_obj_name(),
-                                "add_or_modify_item_attrs",
-                                "url processing failure",
-                                "400-rbum-kind-attr-dyn-url-illegal",
-                            ));
-                        }
-                        funs.web_client().get_to_str(&url, None).await.unwrap().body.unwrap()
-                    } else {
-                        funs.web_client().get_to_str(&in_secret_table_attr.dyn_default_value, None).await.unwrap().body.unwrap()
-                    }
-                } else {
-                    in_secret_table_attr.default_value.clone()
-                };
-                if secret_item_attr_ids.is_empty() {
-                    Self::add_rbum(
-                        &mut RbumItemAttrAddReq {
-                            value: result.clone(),
-                            rel_rbum_item_id: add_req.rel_rbum_item_id.to_string(),
-                            rel_rbum_kind_attr_id: in_secret_table_attr.id.to_string(),
-                        },
-                        funs,
-                        ctx,
-                    )
-                    .await?;
-                } else {
-                    Self::modify_rbum(secret_item_attr_ids.first().expect("ignore"), &mut RbumItemAttrModifyReq { value: result }, funs, ctx).await?;
-                }
-            }
-        }
-
         Ok(())
     }
 
+    /// Get resource item extended attributes
+    ///
+    /// 获取资源项扩展属性集合
+    ///
+    /// # Returns
+    ///
+    /// The key is the attribute name, and the value is the attribute value.
     pub async fn find_item_attr_values(rbum_item_id: &str, secret: Option<bool>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<HashMap<String, String>> {
-        let rbum_kind_attrs = Self::find_item_attr_defs_by_item_id(rbum_item_id, secret, funs, ctx).await?;
+        let (rel_rbum_kind_id, rbum_kind_attrs) = Self::find_res_kind_id_and_res_kind_attrs_by_item_id(rbum_item_id, secret, funs, ctx).await?;
         let in_main_table_attrs = rbum_kind_attrs.iter().filter(|i| i.main_column).collect::<Vec<&RbumKindAttrSummaryResp>>();
         let has_in_ext_table_attrs = rbum_kind_attrs.iter().any(|i| !i.main_column);
 
         let mut values: HashMap<String, String> = HashMap::new();
         if !in_main_table_attrs.is_empty() {
-            let rel_rbum_kind_id = RbumItemServ::peek_rbum(rbum_item_id, &RbumBasicFilterReq::default(), funs, ctx).await?.rel_rbum_kind_id;
             let ext_table_name = RbumKindServ::peek_rbum(&rel_rbum_kind_id, &RbumKindFilterReq::default(), funs, ctx).await?.ext_table_name;
 
             let mut select_statement = Query::select();
@@ -1327,6 +1575,34 @@ impl RbumItemAttrServ {
             }
         }
         Ok(values)
+    }
+
+    async fn replace_url_placeholder(url: &str, values: &HashMap<String, String>, funs: &TardisFunsInst) -> TardisResult<String> {
+        let resp = if RbumKindAttrServ::url_has_placeholder(url)? {
+            let url: String = RbumKindAttrServ::url_replace(url, values)?;
+            if RbumKindAttrServ::url_has_placeholder(&url)? {
+                return Err(funs.err().bad_request(
+                    &Self::get_obj_name(),
+                    "replace_url_placeholder",
+                    "url processing failure",
+                    "400-rbum-kind-attr-dyn-url-illegal",
+                ));
+            }
+            funs.web_client().get_to_str(&url, None).await
+        } else {
+            funs.web_client().get_to_str(url, None).await
+        };
+        match resp {
+            Ok(resp) => Ok(resp.body.unwrap_or_else(|| "".to_string())),
+            Err(e) => {
+                return Err(funs.err().bad_request(
+                    &Self::get_obj_name(),
+                    "replace_url_placeholder",
+                    &format!("url processing failure: {}", e),
+                    "400-rbum-kind-attr-dyn-url-illegal",
+                ));
+            }
+        }
     }
 }
 

@@ -139,7 +139,7 @@ impl FlowCcStateApi {
         TardisResp::ok(Void {})
     }
 
-    /// Find Names By Ids
+    /// Find Names By id set
     #[oai(path = "/names", method = "get")]
     async fn find_names(
         &self,

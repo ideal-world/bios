@@ -53,9 +53,9 @@ pub struct RbumItemAttrsAddOrModifyReq {
     ///
     /// 添加或修改的值集合
     ///
-    /// Format: ``{ "field name": "field value" }``
+    /// Format: ``{ "attribute name": "attribute value" }``
     ///
-    /// ``field name``: [`crate::rbum::dto::rbum_kind_attr_dto::RbumKindAttrDetailResp::name`]
+    /// ``attribute name``: [`crate::rbum::dto::rbum_kind_attr_dto::RbumKindAttrDetailResp::name`]
     pub values: HashMap<String, String>,
     /// Associated [resource item](crate::rbum::dto::rbum_item_dto::RbumItemDetailResp) id
     ///

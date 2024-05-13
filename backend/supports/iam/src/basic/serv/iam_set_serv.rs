@@ -18,6 +18,7 @@ use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 
 use tardis::serde_json::json;
+use tardis::web::web_resp::TardisPage;
 use tardis::{TardisFuns, TardisFunsInst};
 
 use crate::basic::dto::iam_filer_dto::IamAccountFilterReq;
@@ -678,6 +679,42 @@ impl IamSetServ {
         )
         .await
         .map(|r| r.into_iter().map(|r| format!("{},{}", r.id, r.name)).collect())
+    }
+
+    pub async fn paginate_set_items(
+        set_id: Option<String>,
+        set_cate_id: Option<String>,
+        item_id: Option<String>,
+        scope_level: Option<RbumScopeLevelKind>,
+        with_sub: bool,
+        table_rbum_set_cate_is_left: Option<bool>,
+        page_number: u32,
+        page_size: u32,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<TardisPage<RbumSetItemDetailResp>> {
+        RbumSetItemServ::paginate_detail_rbums(
+            &RbumSetItemFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: with_sub,
+                    ..Default::default()
+                },
+                rel_rbum_item_can_not_exist: table_rbum_set_cate_is_left,
+                rel_rbum_item_disabled: Some(false),
+                rel_rbum_set_id: set_id.clone(),
+                rel_rbum_set_cate_ids: set_cate_id.map(|r| vec![r]),
+                rel_rbum_item_ids: item_id.map(|i| vec![i]),
+                rel_rbum_item_scope_level: scope_level,
+                ..Default::default()
+            },
+            page_number,
+            page_size,
+            None,
+            None,
+            funs,
+            ctx,
+        )
+        .await
     }
 
     pub async fn find_set_items(
