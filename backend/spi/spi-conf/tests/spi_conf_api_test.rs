@@ -36,7 +36,6 @@ async fn spi_conf_namespace_test() -> TardisResult<()> {
         groups: vec![],
         owner: "app001".to_string(),
         ..Default::default()
-
     })?;
     let funs = TardisFuns::inst_with_db_conn(DOMAIN_CODE.to_string(), None);
     std::io::stdin().read_line(&mut String::default()).expect("fail to read");

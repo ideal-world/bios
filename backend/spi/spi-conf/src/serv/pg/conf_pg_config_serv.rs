@@ -50,16 +50,15 @@ pub async fn fix_md5(descriptor: &ConfigDescriptor, md5: &str, ctx: &TardisConte
     let fields_and_values = vec![("md5", Value::from(md5))];
     let key_params = vec![("data_id", Value::from(data_id)), ("grp", Value::from(group)), ("namespace_id", Value::from(namespace))];
     let (fields, placeholders, values) = super::gen_update_sql_stmt(fields_and_values, key_params);
-    conn
-        .execute_one(
-            &format!(
-                r#"UPDATE {table_name}
+    conn.execute_one(
+        &format!(
+            r#"UPDATE {table_name}
 SET {fields}
 WHERE {placeholders}"#,
-            ),
-            values,
-        )
-        .await?;
+        ),
+        values,
+    )
+    .await?;
     MD5_CACHE.write().await.insert(descriptor.clone(), (md5.to_string(), Instant::now()));
     Ok(())
 }
