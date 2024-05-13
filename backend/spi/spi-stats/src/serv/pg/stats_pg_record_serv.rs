@@ -10,6 +10,7 @@ use tardis::{
         reldb_client::{TardisRelDBClient, TardisRelDBlConnection},
         sea_orm::{FromQueryResult, Value},
     },
+    log::info,
     serde_json,
     web::web_resp::TardisPage,
     TardisFuns, TardisFunsInst,
@@ -211,47 +212,76 @@ pub(crate) async fn fact_record_load(
         }
         // TODO check data type
     }
+    info!("fact_col_conf_set={0},req_data={1}", fact_col_conf_set.len(), req_data.len());
     if fact_col_conf_set.len() != req_data.len() {
-        let latest_data = latest_data_resp.ok_or_else(|| {
-            funs.err().not_found(
-                "fact_record",
-                "load",
-                &format!("The fact latest instance record [{}][{}] not exists.", &fact_conf_key, &fact_record_key),
-                "404-spi-stats-fact-inst-record-not-exist",
-            )
-        })?;
-        for fact_col_conf in fact_col_conf_set {
-            if !req_data.contains_key(&fact_col_conf.key) {
-                fields.push(fact_col_conf.key.to_string());
-                if fact_col_conf.kind == StatsFactColKind::Dimension {
-                    let Some(dim_rel_conf_dim_key) = &fact_col_conf.dim_rel_conf_dim_key else {
-                        return Err(funs.err().internal_error("fact_record", "load", "dim_rel_conf_dim_key unexpectedly being empty", "500-spi-stats-internal-error"));
-                    };
-                    let Some(dim_conf) = stats_pg_conf_dim_serv::get(dim_rel_conf_dim_key, &conn, ctx, inst).await? else {
-                        return Err(funs.err().internal_error(
-                            "fact_record",
-                            "load",
-                            &format!("key [{dim_rel_conf_dim_key}] missing corresponding config "),
-                            "500-spi-stats-internal-error",
-                        ));
-                    };
-                    if fact_col_conf.dim_multi_values.unwrap_or(false) {
-                        values.push(dim_conf.data_type.result_to_sea_orm_value_array(&latest_data, &fact_col_conf.key)?);
+        if let Some(latest_data) = latest_data_resp {
+            for fact_col_conf in fact_col_conf_set {
+                if !req_data.contains_key(&fact_col_conf.key) {
+                    fields.push(fact_col_conf.key.to_string());
+                    if fact_col_conf.kind == StatsFactColKind::Dimension {
+                        let Some(dim_rel_conf_dim_key) = &fact_col_conf.dim_rel_conf_dim_key else {
+                            return Err(funs.err().internal_error("fact_record", "load", "dim_rel_conf_dim_key unexpectedly being empty", "500-spi-stats-internal-error"));
+                        };
+                        let Some(dim_conf) = stats_pg_conf_dim_serv::get(dim_rel_conf_dim_key, &conn, ctx, inst).await? else {
+                            return Err(funs.err().internal_error(
+                                "fact_record",
+                                "load",
+                                &format!("key [{dim_rel_conf_dim_key}] missing corresponding config "),
+                                "500-spi-stats-internal-error",
+                            ));
+                        };
+                        if fact_col_conf.dim_multi_values.unwrap_or(false) {
+                            values.push(dim_conf.data_type.result_to_sea_orm_value_array(&latest_data, &fact_col_conf.key)?);
+                        } else {
+                            values.push(dim_conf.data_type.result_to_sea_orm_value(&latest_data, &fact_col_conf.key)?);
+                        }
+                    } else if fact_col_conf.kind == StatsFactColKind::Measure {
+                        let Some(mes_data_type) = fact_col_conf.mes_data_type.as_ref() else {
+                            return Err(funs.err().bad_request(
+                                "fact_record",
+                                "load",
+                                "Col_conf.mes_data_type shouldn't be empty while fact_col_conf.kind is Measure",
+                                "400-spi-stats-invalid-request",
+                            ));
+                        };
+                        values.push(mes_data_type.result_to_sea_orm_value(&latest_data, &fact_col_conf.key)?);
                     } else {
-                        values.push(dim_conf.data_type.result_to_sea_orm_value(&latest_data, &fact_col_conf.key)?);
+                        values.push(Value::from(latest_data.try_get::<String>("", &fact_col_conf.key)?));
                     }
-                } else if fact_col_conf.kind == StatsFactColKind::Measure {
-                    let Some(mes_data_type) = fact_col_conf.mes_data_type.as_ref() else {
-                        return Err(funs.err().bad_request(
-                            "fact_record",
-                            "load",
-                            "Col_conf.mes_data_type shouldn't be empty while fact_col_conf.kind is Measure",
-                            "400-spi-stats-invalid-request",
-                        ));
-                    };
-                    values.push(mes_data_type.result_to_sea_orm_value(&latest_data, &fact_col_conf.key)?);
-                } else {
-                    values.push(Value::from(latest_data.try_get::<String>("", &fact_col_conf.key)?));
+                }
+            }
+        } else {
+            for fact_col_conf in fact_col_conf_set {
+                if !req_data.contains_key(&fact_col_conf.key) {
+                    fields.push(fact_col_conf.key.to_string());
+                    if fact_col_conf.kind == StatsFactColKind::Dimension {
+                        let Some(dim_rel_conf_dim_key) = &fact_col_conf.dim_rel_conf_dim_key else {
+                            return Err(funs.err().internal_error("fact_record", "load", "dim_rel_conf_dim_key unexpectedly being empty", "500-spi-stats-internal-error"));
+                        };
+                        let Some(dim_conf) = stats_pg_conf_dim_serv::get(dim_rel_conf_dim_key, &conn, ctx, inst).await? else {
+                            return Err(funs.err().internal_error(
+                                "fact_record",
+                                "load",
+                                &format!("key [{dim_rel_conf_dim_key}] missing corresponding config "),
+                                "500-spi-stats-internal-error",
+                            ));
+                        };
+                        if fact_col_conf.dim_multi_values.unwrap_or(false) {
+                            values.push(dim_conf.data_type.result_to_sea_orm_value_array_default()?);
+                        } else {
+                            values.push(dim_conf.data_type.result_to_sea_orm_value_default()?);
+                        }
+                    } else if fact_col_conf.kind == StatsFactColKind::Measure {
+                        let Some(mes_data_type) = fact_col_conf.mes_data_type.as_ref() else {
+                            return Err(funs.err().bad_request(
+                                "fact_record",
+                                "load",
+                                "Col_conf.mes_data_type shouldn't be empty while fact_col_conf.kind is Measure",
+                                "400-spi-stats-invalid-request",
+                            ));
+                        };
+                        values.push(mes_data_type.result_to_sea_orm_value_default()?);
+                    }
                 }
             }
         }

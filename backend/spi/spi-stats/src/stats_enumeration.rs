@@ -4,8 +4,8 @@ use bios_basic::{enumeration::BasicQueryOpKind, helper::db_helper};
 use serde::{Deserialize, Serialize};
 use tardis::{
     basic::{error::TardisError, result::TardisResult},
-    chrono::{DateTime, NaiveDate, Utc},
-    db::sea_orm::{self, prelude::DateTimeWithTimeZone, DbErr, QueryResult, TryGetError, TryGetable},
+    chrono::{DateTime, Local, NaiveDate, Utc},
+    db::sea_orm::{self, prelude::DateTimeWithTimeZone, sea_query::ArrayType, DbErr, QueryResult, TryGetError, TryGetable},
     derive_more::Display,
     serde_json,
     web::poem_openapi,
@@ -113,6 +113,38 @@ impl StatsDataTypeKind {
             StatsDataTypeKind::Boolean => sea_orm::Value::from(query_result.try_get::<Vec<bool>>("", key)?),
             StatsDataTypeKind::Date => sea_orm::Value::from(query_result.try_get::<Vec<NaiveDate>>("", key)?),
             StatsDataTypeKind::DateTime => sea_orm::Value::from(query_result.try_get::<Vec<DateTimeWithTimeZone>>("", key)?),
+        })
+    }
+
+    pub fn result_to_sea_orm_value_default(&self) -> TardisResult<sea_orm::Value> {
+        Ok(match self {
+            StatsDataTypeKind::String => sea_orm::Value::String(Some(Box::new("".to_string()))),
+            StatsDataTypeKind::Int => sea_orm::Value::Int(Some(*Box::new(0))),
+            StatsDataTypeKind::Float => sea_orm::Value::Float(Some(*Box::new(0.0))),
+            StatsDataTypeKind::Double => sea_orm::Value::Double(Some(*Box::new(0.0))),
+            StatsDataTypeKind::Boolean => sea_orm::Value::Bool(Some(*Box::new(false))),
+            StatsDataTypeKind::Date => sea_orm::Value::ChronoDate(Some(Box::new(Local::now().with_timezone(&Utc).date_naive()))),
+            StatsDataTypeKind::DateTime => sea_orm::Value::ChronoDateTimeWithTimeZone(Some(Box::new(Local::now().with_timezone(&Utc).fixed_offset()))),
+        })
+    }
+
+    pub fn result_to_sea_orm_value_array_default(&self) -> TardisResult<sea_orm::Value> {
+        Ok(match self {
+            StatsDataTypeKind::String => sea_orm::Value::Array(ArrayType::String, Some(Box::new(vec!["".to_string().into()]))),
+            StatsDataTypeKind::Int => sea_orm::Value::Array(ArrayType::Int, Some(Box::new(vec![sea_orm::Value::Int(Some(*Box::new(0)))]))),
+            StatsDataTypeKind::Float => sea_orm::Value::Array(ArrayType::Float, Some(Box::new(vec![sea_orm::Value::Float(Some(*Box::new(0.0)))]))),
+            StatsDataTypeKind::Double => sea_orm::Value::Array(ArrayType::Double, Some(Box::new(vec![sea_orm::Value::Double(Some(*Box::new(0.0)))]))),
+            StatsDataTypeKind::Boolean => sea_orm::Value::Array(ArrayType::Bool, Some(Box::new(vec![sea_orm::Value::Bool(Some(*Box::new(false)))]))),
+            StatsDataTypeKind::Date => sea_orm::Value::Array(
+                ArrayType::ChronoDate,
+                Some(Box::new(vec![sea_orm::Value::ChronoDate(Some(Box::new(Local::now().with_timezone(&Utc).date_naive())))])),
+            ),
+            StatsDataTypeKind::DateTime => sea_orm::Value::Array(
+                ArrayType::ChronoDateTimeWithTimeZone,
+                Some(Box::new(vec![sea_orm::Value::ChronoDateTimeWithTimeZone(Some(Box::new(
+                    Local::now().with_timezone(&Utc).fixed_offset(),
+                )))])),
+            ),
         })
     }
 
