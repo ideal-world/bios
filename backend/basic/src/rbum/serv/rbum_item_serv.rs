@@ -1415,15 +1415,15 @@ impl RbumCrudOperation<rbum_item_attr::ActiveModel, RbumItemAttrAddReq, RbumItem
 }
 
 impl RbumItemAttrServ {
-    /// Get all attribute definitions of the resource item corresponding to the resource kind
+    /// Get resource kind id and resource kind attribute definitions corresponding to resource item id
     ///
-    /// 获取资源项对应资源类型的所有属性定义
-    pub async fn find_item_attr_defs_by_item_id(
+    /// 获取资源项对应资源类型id及资源类型所有属性定义
+    async fn find_res_kind_id_and_res_kind_attrs_by_item_id(
         rbum_item_id: &str,
         secret: Option<bool>,
         funs: &TardisFunsInst,
         ctx: &TardisContext,
-    ) -> TardisResult<Vec<RbumKindAttrSummaryResp>> {
+    ) -> TardisResult<(String, Vec<RbumKindAttrSummaryResp>)> {
         let rel_rbum_kind_id = RbumItemServ::peek_rbum(
             rbum_item_id,
             &RbumBasicFilterReq {
@@ -1435,10 +1435,10 @@ impl RbumItemAttrServ {
         )
         .await?
         .rel_rbum_kind_id;
-        RbumKindAttrServ::find_rbums(
+        let rbum_kind_attrs = RbumKindAttrServ::find_rbums(
             &RbumKindAttrFilterReq {
                 basic: RbumBasicFilterReq {
-                    rbum_kind_id: Some(rel_rbum_kind_id),
+                    rbum_kind_id: Some(rel_rbum_kind_id.clone()),
                     ..Default::default()
                 },
                 secret,
@@ -1449,7 +1449,8 @@ impl RbumItemAttrServ {
             funs,
             ctx,
         )
-        .await
+        .await?;
+        Ok((rel_rbum_kind_id, rbum_kind_attrs))
     }
 
     /// Add or modify resource item extended attributes
@@ -1457,21 +1458,26 @@ impl RbumItemAttrServ {
     /// 添加或修改资源项扩展属性
     pub async fn add_or_modify_item_attrs(add_req: &RbumItemAttrsAddOrModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         // Implicit rel_rbum_kind_attr scope check
-        let rbum_kind_attrs = Self::find_item_attr_defs_by_item_id(&add_req.rel_rbum_item_id, None, funs, ctx).await?;
-        let in_main_table_attrs = rbum_kind_attrs.iter().filter(|i| add_req.values.contains_key(&i.name) && i.main_column && !i.secret).collect::<Vec<&RbumKindAttrSummaryResp>>();
-        let in_ext_table_attrs = rbum_kind_attrs.iter().filter(|i| add_req.values.contains_key(&i.name) && !i.main_column && !i.secret).collect::<Vec<&RbumKindAttrSummaryResp>>();
-        let in_secret_table_attrs = rbum_kind_attrs.iter().filter(|i| i.secret).collect::<Vec<&RbumKindAttrSummaryResp>>();
+        let (rel_rbum_kind_id, rbum_kind_attrs) = Self::find_res_kind_id_and_res_kind_attrs_by_item_id(&add_req.rel_rbum_item_id, None, funs, ctx).await?;
+        let in_main_table_attrs = rbum_kind_attrs.iter().filter(|i| add_req.values.contains_key(&i.name) && i.main_column).collect::<Vec<&RbumKindAttrSummaryResp>>();
+        let in_ext_table_attrs = rbum_kind_attrs.iter().filter(|i| add_req.values.contains_key(&i.name) && !i.main_column).collect::<Vec<&RbumKindAttrSummaryResp>>();
         if !in_main_table_attrs.is_empty() {
             // Implicit rel_rbum_item scope check
-            let rel_rbum_kind_id = RbumItemServ::peek_rbum(&add_req.rel_rbum_item_id, &RbumBasicFilterReq::default(), funs, ctx).await?.rel_rbum_kind_id;
             let main_table_name = RbumKindServ::peek_rbum(&rel_rbum_kind_id, &RbumKindFilterReq::default(), funs, ctx).await?.ext_table_name;
 
             let mut update_statement = Query::update();
             update_statement.table(Alias::new(&main_table_name));
 
             for in_main_table_attr in in_main_table_attrs {
+                let column_val = if in_main_table_attr.secret && !in_main_table_attr.dyn_default_value.is_empty() {
+                    Self::replace_url_placeholder(&in_main_table_attr.dyn_default_value, &add_req.values, funs).await?
+                } else if in_main_table_attr.secret {
+                    in_main_table_attr.default_value.clone()
+                } else {
+                    add_req.values.get(&in_main_table_attr.name).expect("ignore").clone()
+                };
+
                 let column_name = Alias::new(&in_main_table_attr.name);
-                let column_val = add_req.values.get(&in_main_table_attr.name).expect("ignore").clone();
                 update_statement.value(column_name, Value::from(column_val));
             }
             update_statement.and_where(Expr::col(ID_FIELD.clone()).eq(add_req.rel_rbum_item_id.as_str()));
@@ -1480,7 +1486,14 @@ impl RbumItemAttrServ {
 
         if !in_ext_table_attrs.is_empty() {
             for in_ext_table_attr in in_ext_table_attrs {
-                let column_val = add_req.values.get(&in_ext_table_attr.name).expect("ignore").clone();
+                let column_val = if in_ext_table_attr.secret && !in_ext_table_attr.dyn_default_value.is_empty() {
+                    Self::replace_url_placeholder(&in_ext_table_attr.dyn_default_value, &add_req.values, funs).await?
+                } else if in_ext_table_attr.secret {
+                    in_ext_table_attr.default_value.clone()
+                } else {
+                    add_req.values.get(&in_ext_table_attr.name).expect("ignore").clone()
+                };
+
                 let exist_item_attr_ids = Self::find_id_rbums(
                     &RbumItemAttrFilterReq {
                         basic: Default::default(),
@@ -1510,66 +1523,23 @@ impl RbumItemAttrServ {
             }
         }
 
-        if !in_secret_table_attrs.is_empty() {
-            for in_secret_table_attr in in_secret_table_attrs {
-                let secret_item_attr_ids = Self::find_id_rbums(
-                    &RbumItemAttrFilterReq {
-                        basic: Default::default(),
-                        rel_rbum_item_id: Some(add_req.rel_rbum_item_id.to_string()),
-                        rel_rbum_kind_attr_id: Some(in_secret_table_attr.id.to_string()),
-                    },
-                    None,
-                    None,
-                    funs,
-                    ctx,
-                )
-                .await?;
-                let result = if !in_secret_table_attr.dyn_default_value.is_empty() {
-                    if RbumKindAttrServ::url_match(&in_secret_table_attr.dyn_default_value).unwrap() {
-                        let url = RbumKindAttrServ::url_replace(&in_secret_table_attr.dyn_default_value, add_req.values.clone()).unwrap();
-                        if RbumKindAttrServ::url_match(&url).unwrap() {
-                            return Err(funs.err().bad_request(
-                                &Self::get_obj_name(),
-                                "add_or_modify_item_attrs",
-                                "url processing failure",
-                                "400-rbum-kind-attr-dyn-url-illegal",
-                            ));
-                        }
-                        funs.web_client().get_to_str(&url, None).await.unwrap().body.unwrap()
-                    } else {
-                        funs.web_client().get_to_str(&in_secret_table_attr.dyn_default_value, None).await.unwrap().body.unwrap()
-                    }
-                } else {
-                    in_secret_table_attr.default_value.clone()
-                };
-                if secret_item_attr_ids.is_empty() {
-                    Self::add_rbum(
-                        &mut RbumItemAttrAddReq {
-                            value: result.clone(),
-                            rel_rbum_item_id: add_req.rel_rbum_item_id.to_string(),
-                            rel_rbum_kind_attr_id: in_secret_table_attr.id.to_string(),
-                        },
-                        funs,
-                        ctx,
-                    )
-                    .await?;
-                } else {
-                    Self::modify_rbum(secret_item_attr_ids.first().expect("ignore"), &mut RbumItemAttrModifyReq { value: result }, funs, ctx).await?;
-                }
-            }
-        }
-
         Ok(())
     }
 
+    /// Get resource item extended attributes
+    ///
+    /// 获取资源项扩展属性集合
+    ///
+    /// # Returns
+    ///
+    /// The key is the attribute name, and the value is the attribute value.
     pub async fn find_item_attr_values(rbum_item_id: &str, secret: Option<bool>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<HashMap<String, String>> {
-        let rbum_kind_attrs = Self::find_item_attr_defs_by_item_id(rbum_item_id, secret, funs, ctx).await?;
+        let (rel_rbum_kind_id, rbum_kind_attrs) = Self::find_res_kind_id_and_res_kind_attrs_by_item_id(rbum_item_id, secret, funs, ctx).await?;
         let in_main_table_attrs = rbum_kind_attrs.iter().filter(|i| i.main_column).collect::<Vec<&RbumKindAttrSummaryResp>>();
         let has_in_ext_table_attrs = rbum_kind_attrs.iter().any(|i| !i.main_column);
 
         let mut values: HashMap<String, String> = HashMap::new();
         if !in_main_table_attrs.is_empty() {
-            let rel_rbum_kind_id = RbumItemServ::peek_rbum(rbum_item_id, &RbumBasicFilterReq::default(), funs, ctx).await?.rel_rbum_kind_id;
             let ext_table_name = RbumKindServ::peek_rbum(&rel_rbum_kind_id, &RbumKindFilterReq::default(), funs, ctx).await?.ext_table_name;
 
             let mut select_statement = Query::select();
@@ -1605,6 +1575,34 @@ impl RbumItemAttrServ {
             }
         }
         Ok(values)
+    }
+
+    async fn replace_url_placeholder(url: &str, values: &HashMap<String, String>, funs: &TardisFunsInst) -> TardisResult<String> {
+        let resp = if RbumKindAttrServ::url_has_placeholder(url)? {
+            let url: String = RbumKindAttrServ::url_replace(url, values)?;
+            if RbumKindAttrServ::url_has_placeholder(&url)? {
+                return Err(funs.err().bad_request(
+                    &Self::get_obj_name(),
+                    "replace_url_placeholder",
+                    "url processing failure",
+                    "400-rbum-kind-attr-dyn-url-illegal",
+                ));
+            }
+            funs.web_client().get_to_str(&url, None).await
+        } else {
+            funs.web_client().get_to_str(url, None).await
+        };
+        match resp {
+            Ok(resp) => Ok(resp.body.unwrap_or_else(|| "".to_string())),
+            Err(e) => {
+                return Err(funs.err().bad_request(
+                    &Self::get_obj_name(),
+                    "replace_url_placeholder",
+                    &format!("url processing failure: {}", e),
+                    "400-rbum-kind-attr-dyn-url-illegal",
+                ));
+            }
+        }
     }
 }
 

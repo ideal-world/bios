@@ -41,7 +41,8 @@ impl RbumCrudOperation<rbum_kind::ActiveModel, RbumKindAddReq, RbumKindModifyReq
         if !R_URL_PART_CODE.is_match(&add_req.code) {
             return Err(funs.err().bad_request(&Self::get_obj_name(), "add", &format!("code {} is invalid", add_req.code), "400-rbum-*-code-illegal"));
         }
-        if funs.db().count(Query::select().column(rbum_kind::Column::Id).from(rbum_kind::Entity).and_where(Expr::col(rbum_kind::Column::Code).eq(add_req.code.to_string()))).await? > 0
+        if funs.db().count(Query::select().column(rbum_kind::Column::Id).from(rbum_kind::Entity).and_where(Expr::col(rbum_kind::Column::Code).eq(add_req.code.to_string()))).await?
+            > 0
         {
             return Err(funs.err().conflict(&Self::get_obj_name(), "add", &format!("code {} already exists", add_req.code), "409-rbum-*-code-exist"));
         }
@@ -346,7 +347,14 @@ impl RbumCrudOperation<rbum_kind_attr::ActiveModel, RbumKindAttrAddReq, RbumKind
 }
 
 impl RbumKindAttrServ {
-    pub fn url_replace(uri: &str, values: HashMap<String, String>) -> TardisResult<String> {
+    /// URL replace
+    ///
+    /// URL替换
+    ///
+    /// Replace ``{key}`` in the URL with the value in values.
+    ///
+    /// 将URL中的 ``{key}`` 替换为values中的值。
+    pub fn url_replace(uri: &str, values: &HashMap<String, String>) -> TardisResult<String> {
         let mut new_uri = uri.to_string();
         for mat in EXTRACT_R.captures_iter(uri) {
             let old_key = mat.get(0).expect("ignore").as_str();
@@ -358,7 +366,10 @@ impl RbumKindAttrServ {
         Ok(new_uri)
     }
 
-    pub fn url_match(uri: &str) -> TardisResult<bool> {
+    /// Whether the URL contains unreplaced placeholders
+    ///
+    /// URL中是否包含未替换的占位符
+    pub fn url_has_placeholder(uri: &str) -> TardisResult<bool> {
         Ok(!EXTRACT_R.is_match(uri))
     }
 }
