@@ -12,7 +12,7 @@ use bios_mw_flow::dto::flow_model_dto::{
     FlowModelAddCustomModelItemReq, FlowModelAddCustomModelReq, FlowModelAddCustomModelResp, FlowModelAggResp, FlowModelBindStateReq, FlowModelFindRelStateResp,
     FlowModelModifyReq, FlowModelSortStateInfoReq, FlowModelSortStatesReq, FlowModelSummaryResp, FlowModelUnbindStateReq, FlowTemplateModelResp,
 };
-use bios_mw_flow::dto::flow_state_dto::{FlowStateAddReq, FlowStateSummaryResp, FlowSysStateKind};
+use bios_mw_flow::dto::flow_state_dto::{FlowStateAddReq, FlowStateRelModelExt, FlowStateSummaryResp, FlowSysStateKind};
 use bios_mw_flow::dto::flow_transition_dto::{
     FlowTransitionActionByVarChangeInfoChangedKind, FlowTransitionActionChangeInfo, FlowTransitionActionChangeKind, FlowTransitionAddReq, FlowTransitionDoubleCheckInfo,
     FlowTransitionModifyReq, FlowTransitionSortStateInfoReq, FlowTransitionSortStatesReq, StateChangeCondition, StateChangeConditionItem, StateChangeConditionOp,
@@ -149,7 +149,12 @@ pub async fn test(flow_client: &mut TestHttpClient) -> TardisResult<()> {
 
     let mock_template_id = "mock_template_id".to_string();
     // 2-2. create flow models by template_id
-    let result: HashMap<String, FlowTemplateModelResp> = flow_client.get(&format!("/cc/model/get_models?tag_ids=REQ,TICKET,ITER,PROJ&temp_id={}", mock_template_id)).await;
+    let result: HashMap<String, FlowTemplateModelResp> = flow_client
+        .put(
+            &format!("/cc/model/find_or_add_models?tag_ids=REQ,TICKET,ITER,PROJ&is_shared=true&temp_id={}", mock_template_id),
+            &json!(""),
+        )
+        .await;
     let req_model_id = result.get("REQ").unwrap().id.clone();
     let req_model_agg: FlowModelAggResp = flow_client.get(&format!("/cc/model/{}", req_model_id)).await;
     let ticket_model_id = result.get("TICKET").unwrap().id.clone();
@@ -455,7 +460,12 @@ pub async fn test(flow_client: &mut TestHttpClient) -> TardisResult<()> {
         )
         .await;
     let share_template_id = "share_template_id".to_string();
-    let share_template_models: HashMap<String, FlowTemplateModelResp> = flow_client.get(&format!("/cc/model/get_models?tag_ids=REQ&temp_id={}", share_template_id)).await;
+    let share_template_models: HashMap<String, FlowTemplateModelResp> = flow_client
+        .put(
+            &format!("/cc/model/find_or_add_models?tag_ids=REQ&is_shared=true&temp_id={}", share_template_id),
+            &json!(""),
+        )
+        .await;
     let req_share_model_id = share_template_models.get("REQ").unwrap().id.clone();
     let req_share_model_agg: FlowModelAggResp = flow_client.get(&format!("/cc/model/{}", req_share_model_id)).await;
     let _: Void = flow_client
@@ -463,7 +473,7 @@ pub async fn test(flow_client: &mut TestHttpClient) -> TardisResult<()> {
             &format!("/cc/model/{}/bind_state", &req_share_model_id),
             &FlowModelBindStateReq {
                 state_id: custom_state_id.clone(),
-                sort: 1,
+                ext: FlowStateRelModelExt { sort: 1, show_btns: None },
             },
         )
         .await;
@@ -479,7 +489,12 @@ pub async fn test(flow_client: &mut TestHttpClient) -> TardisResult<()> {
 
     ctx.own_paths = "t2".to_string();
     flow_client.set_auth(&ctx)?;
-    let other_models: HashMap<String, FlowTemplateModelResp> = flow_client.get(&format!("/cc/model/get_models?tag_ids=REQ&temp_id={}", share_template_id)).await;
+    let other_models: HashMap<String, FlowTemplateModelResp> = flow_client
+        .put(
+            &format!("/cc/model/find_or_add_models?tag_ids=REQ&is_shared=true&temp_id={}", share_template_id),
+            &json!(""),
+        )
+        .await;
     assert_eq!(req_share_model_id, other_models.get("REQ").unwrap().id.clone());
 
     ctx.own_paths = "t3/app03".to_string();
@@ -511,7 +526,7 @@ pub async fn test(flow_client: &mut TestHttpClient) -> TardisResult<()> {
             },
         )
         .await;
-    let share_template_models: HashMap<String, FlowTemplateModelResp> = flow_client.get("/cc/model/get_models?tag_ids=REQ").await;
+    let share_template_models: HashMap<String, FlowTemplateModelResp> = flow_client.put("/cc/model/find_or_add_models?tag_ids=REQ", &json!("")).await;
     assert_eq!(share_model_id.as_str(), share_template_models.get("REQ").unwrap().id.as_str());
 
     let share_model_agg: FlowModelAggResp = flow_client.get(&format!("/cc/model/{}", share_model_id)).await;
@@ -559,11 +574,11 @@ pub async fn test(flow_client: &mut TestHttpClient) -> TardisResult<()> {
             &format!("/cc/model/{}/bind_state", &share_model_id),
             &FlowModelBindStateReq {
                 state_id: custom_state_id.clone(),
-                sort: 1,
+                ext: FlowStateRelModelExt { sort: 1, show_btns: None },
             },
         )
         .await;
-    assert_eq!(state_bind_error.code, "500-flow-flow_model_serv-bind_state");
+    assert_eq!(state_bind_error.code, "409-flow-FlowModelState-add_simple_rel");
     // reset share model
     ctx.own_paths = "t1".to_string();
     flow_client.set_auth(&ctx)?;
@@ -598,7 +613,8 @@ pub async fn test(flow_client: &mut TestHttpClient) -> TardisResult<()> {
             },
         )
         .await;
-    let models: HashMap<String, FlowTemplateModelResp> = flow_client.get("/cc/model/get_models?tag_ids=REQ,PROJ,ITER,TICKET").await;
+    let models: HashMap<String, FlowTemplateModelResp> = flow_client.put("/cc/model/find_or_add_models?tag_ids=REQ,PROJ,ITER,TICKET", &json!("")).await;
+    let req_model_id_app = &models.get("REQ").unwrap().id;
     assert_eq!(
         models.get("REQ").unwrap().id,
         result.into_iter().find(|model| model.tag == "REQ").unwrap().model_id.unwrap()
@@ -711,13 +727,13 @@ pub async fn test(flow_client: &mut TestHttpClient) -> TardisResult<()> {
     // check state is used
     let state_unbind_error = flow_client
         .post_resp::<FlowModelUnbindStateReq, Void>(
-            &format!("/cc/model/{}/unbind_state", &req_model_id),
+            &format!("/cc/model/{}/unbind_state", &req_model_id_app),
             &FlowModelUnbindStateReq {
                 state_id: transfer.new_flow_state_id.clone(),
             },
         )
         .await;
-    assert_eq!(state_unbind_error.code, "500-flow-flow_model_serv-unbind_state");
+    assert_eq!(state_unbind_error.code, "409-flow-flow_model-unbind_state");
     // 6. post action
     // check original instance
     let ticket: FlowInstDetailResp = flow_client.get(&format!("/cc/inst/{}", ticket_inst_id)).await;

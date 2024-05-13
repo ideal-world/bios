@@ -14,7 +14,6 @@ pub struct EventListenerApi;
 /// 事件监听器API
 #[poem_openapi::OpenApi(prefix_path = "/listener")]
 impl EventListenerApi {
-
     /// Register event listener
     /// 
     /// 注册事件监听器

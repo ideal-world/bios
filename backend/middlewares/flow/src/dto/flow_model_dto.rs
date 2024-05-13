@@ -13,7 +13,7 @@ use tardis::{
 };
 
 use super::{
-    flow_state_dto::FlowStateRelModelExt,
+    flow_state_dto::{FlowStateRelModelExt, FlowStateRelModelModifyReq},
     flow_transition_dto::{FlowTransitionAddReq, FlowTransitionDetailResp, FlowTransitionModifyReq},
 };
 
@@ -31,6 +31,8 @@ pub struct FlowModelAddReq {
     pub rel_template_id: Option<String>,
 
     pub transitions: Option<Vec<FlowTransitionAddReq>>,
+
+    pub states: Option<Vec<FlowModelBindStateReq>>,
 
     pub template: bool,
     pub rel_model_id: Option<String>,
@@ -57,6 +59,10 @@ pub struct FlowModelModifyReq {
     pub add_transitions: Option<Vec<FlowTransitionAddReq>>,
     pub modify_transitions: Option<Vec<FlowTransitionModifyReq>>,
     pub delete_transitions: Option<Vec<String>>,
+
+    pub bind_states: Option<Vec<FlowModelBindStateReq>>,
+    pub unbind_states: Option<Vec<String>>,
+    pub modify_states: Option<Vec<FlowStateRelModelModifyReq>>,
 
     pub tag: Option<String>,
 
@@ -180,7 +186,7 @@ pub struct FlowTemplateModelResp {
 #[derive(Serialize, Deserialize, Debug, Default, poem_openapi::Object)]
 pub struct FlowModelBindStateReq {
     pub state_id: String,
-    pub sort: i64,
+    pub ext: FlowStateRelModelExt,
 }
 
 #[derive(Serialize, Deserialize, Debug, Default, poem_openapi::Object)]
@@ -188,12 +194,12 @@ pub struct FlowModelUnbindStateReq {
     pub state_id: String,
 }
 
-#[derive(Serialize, Deserialize, Debug, Default, poem_openapi::Object)]
+#[derive(Serialize, Deserialize, Clone, Debug, Default, poem_openapi::Object)]
 pub struct FlowModelSortStatesReq {
     pub sort_states: Vec<FlowModelSortStateInfoReq>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Default, poem_openapi::Object)]
+#[derive(Serialize, Deserialize, Debug, Default, Clone, poem_openapi::Object)]
 pub struct FlowModelSortStateInfoReq {
     pub state_id: String,
     pub sort: i64,

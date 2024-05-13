@@ -12,7 +12,6 @@ pub struct EventProcApi;
 /// 事件处理API
 #[poem_openapi::OpenApi(prefix_path = "/proc")]
 impl EventProcApi {
-
     /// Process event
     /// 
     /// 处理事件
