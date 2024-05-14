@@ -36,7 +36,7 @@ pub(crate) async fn add(fact_conf_key: &str, add_req: &StatsConfFactColAddReq, f
             "409-spi-stats-fact-inst-exist",
         ));
     }
-    let conf_params = if let Some(rel_external_ids) = add_req.rel_external_id {
+    let conf_params = if let Some(rel_external_ids) = add_req.rel_external_id.clone() {
         vec![
             Value::from(&add_req.key),
             Value::from(fact_conf_key),
@@ -51,7 +51,7 @@ pub(crate) async fn add(fact_conf_key: &str, add_req: &StatsConfFactColAddReq, f
         .count_by_sql(
             &format!(
                 "SELECT 1 FROM {table_name} WHERE key = $1 AND rel_conf_fact_key = $2 AND kind =$3 {}",
-                if let Some(rel_external_id) = &add_req.rel_external_id {
+                if add_req.rel_external_id.is_some() {
                     format!("AND rel_external_id IN ($4,$5)")
                 } else {
                     "AND rel_external_id  = ''".to_string()
