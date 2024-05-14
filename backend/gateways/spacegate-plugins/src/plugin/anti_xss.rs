@@ -159,6 +159,7 @@ pub struct AntiXssPlugin {
 impl Plugin for AntiXssPlugin {
     const CODE: &'static str = "anti-xss";
 
+    #[cfg(feature = "schema")]
     fn meta() -> spacegate_plugin::PluginMetaData {
         spacegate_plugin::plugin_meta!(
             description: "Anti XSS plugin"

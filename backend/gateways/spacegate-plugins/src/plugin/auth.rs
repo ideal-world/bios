@@ -354,7 +354,7 @@ async fn handle_mix_req(auth_config: &AuthConfig, mix_replace_url: &str, req: Sg
     }
     let string_body = String::from_utf8_lossy(body.get_dumped().expect("not expect code")).trim_matches('"').to_string();
     if string_body.is_empty() {
-        TardisError::custom("500", "[SG.Filter.Auth.MixReq] body can't be empty", "500-parse_mix_req-parse-error");
+        return Err("[SG.Filter.Auth.MixReq] body can't be empty".into());
     }
     let mut req_headers = parts.headers.iter().map(|(k, v)| (k.as_str().to_string(), v.to_str().expect("error parse header value to str").to_string())).collect();
     let (body, crypto_headers) = auth_crypto_serv::decrypt_req(&req_headers, &Some(string_body), true, true, auth_config).await?;
@@ -537,6 +537,7 @@ fn headermap_to_hashmap(old_headers: &HeaderMap<HeaderValue>) -> TardisResult<Ha
 impl Plugin for AuthPlugin {
     const CODE: &'static str = CODE;
 
+    #[cfg(feature = "schema")]
     fn meta() -> spacegate_plugin::PluginMetaData {
         spacegate_plugin::plugin_meta!(
             description: "Auth plugin for spacegate, it is used to authenticate the request"

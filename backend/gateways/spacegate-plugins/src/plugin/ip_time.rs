@@ -100,6 +100,7 @@ impl IpTimePlugin {
 impl Plugin for IpTimePlugin {
     const CODE: &'static str = CODE;
 
+    #[cfg(feature = "schema")]
     fn meta() -> spacegate_plugin::PluginMetaData {
         spacegate_plugin::plugin_meta!(
             description: "Block/Allow IP by time rule"

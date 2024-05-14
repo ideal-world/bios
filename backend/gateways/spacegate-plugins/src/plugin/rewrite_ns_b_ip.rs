@@ -69,6 +69,7 @@ impl Default for RewriteNsConfig {
 impl Plugin for RewriteNsPlugin {
     const CODE: &'static str = "rewrite-ns";
 
+    #[cfg(feature = "schema")]
     fn meta() -> spacegate_plugin::PluginMetaData {
         spacegate_plugin::plugin_meta!(
             description: "Rewrite namespace for request.Kubernetes available only!"

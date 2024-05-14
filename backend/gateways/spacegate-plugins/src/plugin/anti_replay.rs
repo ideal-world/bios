@@ -82,6 +82,7 @@ async fn get_status(md5: &str, cache_key: &str, cache_client: &RedisClient) -> T
 impl Plugin for AntiReplayPlugin {
     const CODE: &'static str = "anti-replay";
 
+    #[cfg(feature = "schema")]
     fn meta() -> spacegate_plugin::PluginMetaData {
         spacegate_plugin::plugin_meta!(
             description: "Anti-replay plugin for Spacegate. It can prevent replay attacks by checking the MD5 hash of the request."
