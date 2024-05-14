@@ -7,15 +7,18 @@ use tardis::web::poem_openapi::{
 
 use super::{flow_state_dto::FlowSysStateKind, flow_transition_dto::FlowTransitionActionByVarChangeInfoChangedKind};
 
+/// External data exchange requests
+/// 
+/// 对外数据交换请求
 #[derive(Serialize, Deserialize, Debug, Default, poem_openapi::Object)]
 pub struct FlowExternalReq {
-    /// Type of request initiated, ex: query field, modification field, status change notification...
-    /// 
-    /// 发起请求的类型，例：查询字段，修改字段，状态变更通知..
+    /// Associated [enum](FlowExternalKind)
+    ///
+    /// 关联的[枚举](FlowExternalKind)
     pub kind: FlowExternalKind,
-    /// When kind is ModifyField, the field is modified in a specific way, for example: validate the content, post action, precondition trigger ...
-    /// 
-    /// 当 kind 为 ModifyField 时，字段被修改的具体操作方式，例：验证内容，后置动作，前置条件触发..
+    /// Associated [enum](FlowExternalCallbackOp)
+    ///
+    /// 关联的[枚举](FlowExternalCallbackOp)
     pub callback_op: Option<FlowExternalCallbackOp>,
     /// The tag corresponding to the current business
     /// 
@@ -25,25 +28,25 @@ pub struct FlowExternalReq {
     /// 
     /// 当前业务ID
     pub curr_bus_obj_id: String,
-    /// Workflow Instance ID
-    /// 
-    /// 工作流实例ID
+    /// Associated [flow_instance](super::flow_inst_dto::FlowInstDetailResp) id
+    ///
+    /// 关联的[工作流实例](super::flow_inst_dto::FlowInstDetailResp) id
     pub inst_id: String,
     /// Modified State ID
     /// 
     /// 修改后的状态ID
     pub target_state: Option<String>,
-    /// Modified state type
-    /// 
-    /// 修改后的状态类型
+    /// Associated [enum](super::flow_state_dto::FlowSysStateKind)
+    ///
+    /// 关联的[枚举](super::flow_state_dto::FlowSysStateKind)
     pub target_sys_state: Option<FlowSysStateKind>,
     /// Status ID before modification
     /// 
     /// 修改前的状态ID
     pub original_state: Option<String>,
-    /// Type of state before modification
-    /// 
-    /// 修改前的状态类型
+    /// Associated [enum](super::flow_state_dto::FlowSysStateKind)
+    ///
+    /// 关联的[枚举](super::flow_state_dto::FlowSysStateKind)
     pub original_sys_state: Option<FlowSysStateKind>,
     /// Name of the action actually triggered (business side logging operation)
     /// 
@@ -64,31 +67,53 @@ pub struct FlowExternalReq {
     pub params: Vec<FlowExternalParams>,
 }
 
+/// Type of request initiated, ex: query field, modification field, status change notification...
+/// 
+/// 发起请求的类型，例：查询字段，修改字段，状态变更通知..
 #[derive(Clone, Debug, Default, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum)]
 pub enum FlowExternalKind {
     #[default]
+    /// 获取关联业务对象
     FetchRelObj,
+    /// 修改字段
     ModifyField,
+    /// 状态变更通知
     NotifyChanges,
+    /// 查询字段值
     QueryField,
 }
 
+/// When kind is ModifyField, the field is modified in a specific way, for example: validate the content, post action, precondition trigger ...
+/// 
+/// 当 kind 为 ModifyField 时，字段被修改的具体操作方式，例：验证内容，后置动作，前置条件触发..
 #[derive(Copy, Clone, Debug, Default, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum)]
 pub enum FlowExternalCallbackOp {
     #[default]
     Default,
+    /// 后置动作
     PostAction,
+    /// 验证内容
     VerifyContent,
+    /// 条件触发
     ConditionalTrigger,
 }
 
+/// 扩展字段
+/// 
+/// Extended params
 #[derive(Debug, Deserialize, Serialize, poem_openapi::Object, Clone)]
 pub struct FlowExternalParams {
+    /// 关联的 Tag
     pub rel_tag: Option<String>,
+    /// 关联类型 TagRelKind
     pub rel_kind: Option<String>,
+    /// 字段ID
     pub var_id: Option<String>,
+    /// 字段名
     pub var_name: Option<String>,
+    /// 修改成的值
     pub value: Option<Value>,
+    /// 修改方式
     pub changed_kind: Option<FlowTransitionActionByVarChangeInfoChangedKind>,
 }
 
@@ -104,14 +129,19 @@ where
 
 #[derive(Default, Serialize, Deserialize, Debug, poem_openapi::Object)]
 pub struct FlowExternalFetchRelObjResp {
+    /// 当前Tag
     pub curr_tag: String,
+    /// 当前业务ID
     pub curr_bus_obj_id: String,
+    /// 关联业务对象
     pub rel_bus_objs: Vec<RelBusObjResp>,
 }
 
 #[derive(Default, Serialize, Deserialize, Debug, poem_openapi::Object)]
 pub struct RelBusObjResp {
+    /// 关联对象的Tag
     pub rel_tag: String,
+    /// 关联业务对象ID
     pub rel_bus_obj_ids: Vec<String>,
 }
 
