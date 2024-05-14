@@ -536,7 +536,13 @@ fn headermap_to_hashmap(old_headers: &HeaderMap<HeaderValue>) -> TardisResult<Ha
 
 impl Plugin for AuthPlugin {
     const CODE: &'static str = CODE;
-    // type MakeLayer = SgPluginAuth;
+
+    fn meta() -> spacegate_plugin::PluginMetaData {
+        spacegate_plugin::plugin_meta!(
+            description: "Auth plugin for spacegate, it is used to authenticate the request"
+        )
+    }
+
     fn create(plugin_config: PluginConfig) -> Result<Self, BoxError> {
         let config: SgPluginAuthConfig = serde_json::from_value(plugin_config.spec.clone())?;
         let plugin: AuthPlugin = config.clone().into();

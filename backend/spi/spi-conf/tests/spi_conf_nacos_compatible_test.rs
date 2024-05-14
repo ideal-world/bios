@@ -22,7 +22,7 @@ const SCHEMA: &str = "https";
 async fn spi_conf_namespace_test() -> TardisResult<()> {
     std::env::set_var(
         "RUST_LOG",
-        "info,tardis=debug,spi_conf_listener_test=debug,sqlx=off,sea_orm=off,bios_spi_conf=DEBUG,poem_grpc=TRACE,tonic=TRACE",
+        "info,tardis=debug,spi_conf_listener_test=debug,sqlx=off,sea_orm=debug,bios_spi_conf=DEBUG,poem_grpc=TRACE,tonic=TRACE",
     );
     std::env::set_var("PROFILE", "nacos");
     let docker = testcontainers::clients::Cli::default();
@@ -51,7 +51,7 @@ async fn spi_conf_namespace_test() -> TardisResult<()> {
     log::info!("username: {username}, password: {password}");
     client.set_auth(&TardisContext {
         own_paths: "t1/app001".to_string(),
-        ak: "".to_string(),
+        ak: "app001".to_string(),
         roles: vec![],
         groups: vec![],
         owner: "app001".to_string(),
@@ -71,7 +71,7 @@ async fn test_tardis_compatibility(_test_client: &TestHttpClient) -> TardisResul
     let config = TardisFuns::fw_config();
     let ctx = TardisContext {
         own_paths: "t1/app001".to_string(),
-        ak: "".to_string(),
+        ak: "app001".to_string(),
         roles: vec![],
         groups: vec![],
         owner: "app001".to_string(),
@@ -196,7 +196,7 @@ async fn test_tardis_compatibility(_test_client: &TestHttpClient) -> TardisResul
     let _resp = nacos_client
         .publish_config(
             &NacosConfigDescriptor::new("hc-db.yaml", "hc", &(Default::default())),
-            &mut std::fs::File::open("tests/config/test-prod.yaml").expect("fail to open"),
+            &mut std::fs::File::open("tests/config/conf-nacos.toml").expect("fail to open"),
         )
         .await
         .expect("publish failed");

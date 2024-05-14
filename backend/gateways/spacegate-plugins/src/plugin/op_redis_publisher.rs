@@ -42,12 +42,17 @@ pub struct RedisPublisherPlugin {
 impl Plugin for RedisPublisherPlugin {
     const CODE: &'static str = "op_redis_publisher";
 
+    fn meta() -> spacegate_plugin::PluginMetaData {
+        spacegate_plugin::plugin_meta!(
+            description: "Build for open platform, and it depend on plugin audit-log"
+        )
+    }
+
     fn create(config: PluginConfig) -> Result<Self, BoxError> {
-        let id = config.none_mono_id();
         let layer_config = serde_json::from_value::<RedisPublisherConfig>(config.spec.clone())?;
 
         Ok(Self {
-            key: id.redis_prefix(),
+            key: config.id.redis_prefix(),
             jsonpath_inst: if let Ok(jsonpath_inst) = JsonPathInst::from_str(&layer_config.success_json_path).map_err(|e| log::error!("[Plugin.AuditLog] invalid json path:{e}")) {
                 Some(jsonpath_inst)
             } else {
