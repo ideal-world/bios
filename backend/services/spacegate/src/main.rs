@@ -1,6 +1,6 @@
 use serde::Deserialize;
 use spacegate_plugins::register_lib_plugins;
-use spacegate_shell::plugin::SgPluginRepository;
+use spacegate_shell::plugin::PluginRepository;
 use spacegate_shell::BoxError;
 use tardis::basic::tracing::TardisTracing;
 use tardis::tokio;
@@ -25,14 +25,9 @@ fn main() -> Result<(), BoxError> {
     }
     let rt = builder.build().expect("fail to build runtime");
     let namespaces = std::env::args().nth(1).or(config.spacegate_ns);
-    register_lib_plugins(SgPluginRepository::global());
+    register_lib_plugins(PluginRepository::global());
     rt.block_on(async move {
         let local_set = tokio::task::LocalSet::new();
-        local_set
-            .run_until(async move {
-                let join_handle = spacegate_shell::startup_k8s(namespaces.as_deref()).await.expect("fail to start spacegate");
-                join_handle.await.expect("join handle error")
-            })
-            .await
+        local_set.run_until(async move { spacegate_shell::startup_k8s(namespaces.as_deref()).await }).await
     })
 }

@@ -99,6 +99,13 @@ impl IpTimePlugin {
 }
 impl Plugin for IpTimePlugin {
     const CODE: &'static str = CODE;
+
+    fn meta() -> spacegate_plugin::PluginMetaData {
+        spacegate_plugin::plugin_meta!(
+            description: "Block/Allow IP by time rule"
+        )
+    }
+
     fn create(config: spacegate_shell::plugin::PluginConfig) -> Result<Self, BoxError> {
         let ip_time_config: SgFilterIpTimeConfig = serde_json::from_value(config.spec.clone())?;
         let plugin: IpTimePlugin = ip_time_config.into();
@@ -116,9 +123,4 @@ impl Plugin for IpTimePlugin {
         }
         Ok(inner.call(req).await)
     }
-    // fn create(_: Option<String>, value: JsonValue) -> Result<Self::MakeLayer, BoxError> {
-    //     let config: SgFilterIpTimeConfig = serde_json::from_value(value)?;
-    //     let filter: SgFilterIpTime = config.into();
-    //     Ok(filter)
-    // }
 }

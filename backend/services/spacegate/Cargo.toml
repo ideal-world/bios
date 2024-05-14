@@ -19,7 +19,7 @@ spacegate-shell = { workspace = true, features = [
   "k8s",
   "plugin-all",
   "ext-redis",
-  # "ext-axum",
+  "ext-axum",
   "cache",
 ] }
 tardis = { workspace = true }
