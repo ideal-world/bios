@@ -558,17 +558,8 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
             sql_part_orders.extend(group_orders);
         }
         if let Some(orders) = &query_req.metrics_order {
-            let metrics_orders = orders
-                .iter()
-                .map(|order| {
-                    format!(
-                        "{}{FUNCTION_SUFFIX_FLAG}{} {}",
-                        order.code.clone(),
-                        order.fun,
-                        if order.asc { "ASC" } else { "DESC" }
-                    )
-                })
-                .collect::<Vec<String>>();
+            let metrics_orders =
+                orders.iter().map(|order| format!("{}{FUNCTION_SUFFIX_FLAG}{} {}", order.code.clone(), order.fun, if order.asc { "ASC" } else { "DESC" })).collect::<Vec<String>>();
             sql_part_orders.extend(metrics_orders);
         }
         format!("ORDER BY {}", sql_part_orders.join(","))
@@ -839,11 +830,13 @@ fn package_rel_external_id_agg(query_req: &StatsQueryMetricsReq) -> Option<HashS
             rel_external_ids.insert(rel_external_id.clone());
         }
     });
-    if let Some(orders) = query_req.group_order.as_ref() { orders.iter().for_each(|i| {
+    if let Some(orders) = query_req.group_order.as_ref() {
+        orders.iter().for_each(|i| {
             if let Some(rel_external_id) = &i.rel_external_id {
                 rel_external_ids.insert(rel_external_id.clone());
             }
-        }) }
+        })
+    }
     if let Some(metrics_order) = &query_req.metrics_order {
         metrics_order.iter().for_each(|i| {
             if let Some(rel_external_id) = &i.rel_external_id {
