@@ -674,6 +674,7 @@ impl IamCertServ {
     pub async fn get_3th_kind_cert_by_rel_rbum_id(
         rel_rbum_id: &str,
         cert_supplier: Vec<String>,
+        show_sk: bool,
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<RbumCertSummaryWithSkResp> {
@@ -689,8 +690,12 @@ impl IamCertServ {
         )
         .await?;
         if let Some(ext_cert) = ext_cert {
-            let now_sk = RbumCertServ::show_sk(ext_cert.id.as_str(), &RbumCertFilterReq::default(), funs, ctx).await?;
-            let encoded_sk = encode_cert(&ext_cert.id, now_sk, ext_cert.sk_invisible)?;
+            let encoded_sk = if show_sk {
+                let now_sk = RbumCertServ::show_sk(ext_cert.id.as_str(), &RbumCertFilterReq::default(), funs, ctx).await?;
+                encode_cert(&ext_cert.id, now_sk, ext_cert.sk_invisible)?
+            } else {
+                "".to_string()
+            };
             Ok(RbumCertSummaryWithSkResp {
                 id: ext_cert.id,
                 ak: ext_cert.ak,
@@ -723,7 +728,7 @@ impl IamCertServ {
     }
 
     /// 通过cert id 查询三方凭证
-    pub async fn get_3th_kind_cert_by_id(id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<RbumCertSummaryWithSkResp> {
+    pub async fn get_3th_kind_cert_by_id(id: &str, show_sk: bool, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<RbumCertSummaryWithSkResp> {
         // query rel ,get owner
         let rels = IamRelServ::find_rels(
             &RbumRelFilterReq {
@@ -762,9 +767,12 @@ impl IamCertServ {
         )
         .await?;
         if let Some(ext_cert) = ext_cert {
-            let now_sk = RbumCertServ::show_sk(ext_cert.id.as_str(), &RbumCertFilterReq::default(), funs, &mock_ctx).await?;
-            let encoded_sk = encode_cert(&ext_cert.id, now_sk, ext_cert.sk_invisible)?;
-            // let encoded_sk = now_sk;
+            let encoded_sk = if show_sk {
+                let now_sk = RbumCertServ::show_sk(ext_cert.id.as_str(), &RbumCertFilterReq::default(), funs, ctx).await?;
+                encode_cert(&ext_cert.id, now_sk, ext_cert.sk_invisible)?
+            } else {
+                "".to_string()
+            };
             Ok(RbumCertSummaryWithSkResp {
                 id: ext_cert.id,
                 ak: ext_cert.ak,
@@ -797,7 +805,7 @@ impl IamCertServ {
     }
 
     /// 通过ak supplier 查询三方凭证
-    pub async fn get_3th_kind_cert_by_ak(supplier: &str, ak: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<RbumCertSummaryWithSkResp> {
+    pub async fn get_3th_kind_cert_by_ak(supplier: &str, ak: &str, show_sk: bool, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<RbumCertSummaryWithSkResp> {
         let query_cert = RbumCertServ::find_one_detail_rbum(
             &RbumCertFilterReq {
                 basic: RbumBasicFilterReq {
@@ -815,8 +823,12 @@ impl IamCertServ {
         )
         .await?;
         if let Some(ext_cert) = query_cert {
-            let now_sk = RbumCertServ::show_sk(ext_cert.id.as_str(), &RbumCertFilterReq::default(), funs, ctx).await?;
-            let encoded_sk = encode_cert(&ext_cert.id, now_sk, ext_cert.sk_invisible)?;
+            let encoded_sk = if show_sk {
+                let now_sk = RbumCertServ::show_sk(ext_cert.id.as_str(), &RbumCertFilterReq::default(), funs, ctx).await?;
+                encode_cert(&ext_cert.id, now_sk, ext_cert.sk_invisible)?
+            } else {
+                "".to_string()
+            };
             Ok(RbumCertSummaryWithSkResp {
                 id: ext_cert.id,
                 ak: ext_cert.ak,
