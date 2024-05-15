@@ -1466,7 +1466,7 @@ fn package_groups(
     result: Vec<serde_json::Value>,
 ) -> Result<serde_json::Value, String> {
     if curr_select_dimension_keys.is_empty() {
-        let first_result = result.first().ok_or_else(|| "result is empty")?;
+        let first_result = result.first().ok_or("result is empty")?;
         let mut leaf_node = Map::with_capacity(result.len());
         for measure_key in select_measure_keys {
             let val = first_result.get(measure_key).ok_or_else(|| format!("failed to get key {measure_key}"))?;
@@ -1490,7 +1490,7 @@ fn package_groups(
     }
     let mut node = Map::with_capacity(0);
 
-    let dimension_key = curr_select_dimension_keys.first().ok_or_else(|| "curr_select_dimension_keys is empty")?;
+    let dimension_key = curr_select_dimension_keys.first().ok_or("curr_select_dimension_keys is empty")?;
     let mut groups = HashMap::new();
     let mut order = Vec::new();
     for record in result {
@@ -1532,7 +1532,7 @@ fn package_groups_agg(record: serde_json::Value) -> Result<serde_json::Value, St
             }
             println!("{}", agg);
             let mut details = Vec::new();
-            let var_agg = agg.as_str().ok_or_else(|| "field group_agg should be a string")?;
+            let var_agg = agg.as_str().ok_or("field group_agg should be a string")?;
             let vars = var_agg.split(',').collect::<Vec<&str>>();
             for var in vars {
                 let fields = var.split(" - ").collect::<Vec<&str>>();
