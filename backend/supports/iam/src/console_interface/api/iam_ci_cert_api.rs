@@ -162,6 +162,7 @@ impl IamCiCertApi {
     }
 
     /// Add Third-kind Cert
+    ///
     /// 添加第三方证书
     #[oai(path = "/third-kind", method = "put")]
     async fn add_third_cert(
@@ -182,6 +183,7 @@ impl IamCiCertApi {
     }
 
     /// Get Third-kind Certs By Account Id
+    ///
     /// 根据账号id获取第三方证书
     #[oai(path = "/third-kind", method = "get")]
     async fn get_third_cert(
@@ -212,7 +214,8 @@ impl IamCiCertApi {
         TardisResp::ok(msg)
     }
 
-    /// decode cert
+    /// Decode cert
+    ///
     /// 解码证书
     #[oai(path = "/decode", method = "post")]
     async fn decode_certs(&self, body: Json<IamCertDecodeRequest>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<HashMap<String, String>> {

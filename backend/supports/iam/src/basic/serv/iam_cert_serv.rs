@@ -796,25 +796,25 @@ impl IamCertServ {
         }
     }
 
-    /// 通过ext supplier 查询三方凭证
-    pub async fn get_3th_kind_cert_by_ext(supplier: &str, ext: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<RbumCertSummaryWithSkResp> {
-        let ext_cert = RbumCertServ::find_one_detail_rbum(
+    /// 通过ak supplier 查询三方凭证
+    pub async fn get_3th_kind_cert_by_ak(supplier: &str, ak: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<RbumCertSummaryWithSkResp> {
+        let query_cert = RbumCertServ::find_one_detail_rbum(
             &RbumCertFilterReq {
                 basic: RbumBasicFilterReq {
                     own_paths: Some(ctx.own_paths.clone()),
                     ..Default::default()
                 },
+                ak: Some(ak.to_string()),
                 status: Some(RbumCertStatusKind::Enabled),
                 kind: Some(IamCertExtKind::ThirdParty.to_string()),
                 suppliers: Some(vec![supplier.to_string()]),
-                ext: Some(ext.to_string()),
                 ..Default::default()
             },
             funs,
             ctx,
         )
         .await?;
-        if let Some(ext_cert) = ext_cert {
+        if let Some(ext_cert) = query_cert {
             let now_sk = RbumCertServ::show_sk(ext_cert.id.as_str(), &RbumCertFilterReq::default(), funs, ctx).await?;
             let encoded_sk = encode_cert(&ext_cert.id, now_sk, ext_cert.sk_invisible)?;
             Ok(RbumCertSummaryWithSkResp {
@@ -842,7 +842,7 @@ impl IamCertServ {
             Err(funs.err().not_found(
                 "iam_cert",
                 "get_3th_kind_cert_by_rel_rbum_id",
-                &format!("not found credential of ext {ext}"),
+                &format!("not found credential of ak {ak}"),
                 "404-iam-cert-kind-not-exist",
             ))
         }

@@ -230,15 +230,14 @@ impl IamCiAccountApi {
         TardisResp::ok(result)
     }
 
-    /// Find Account By ThirdParty Cert ext and supplier
-    /// 通过三方凭证查找帐户
+    /// Find Account By ThirdParty Cert ak
+    /// 通过三方凭证ak查找帐户
     ///
-    ///
-    #[oai(path = "/:supplier/third-party", method = "get")]
-    async fn find_by_third_party(&self, supplier: Path<String>, ext: Query<String>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<IamAccountDetailResp> {
+    #[oai(path = "/:supplier/:ak/third-party", method = "get")]
+    async fn find_by_third_party(&self, supplier: Path<String>, ak: Path<String>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<IamAccountDetailResp> {
         let funs = iam_constants::get_tardis_inst();
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
-        let cert = IamCertServ::get_3th_kind_cert_by_ext(&supplier.0, &ext.0, &funs, &ctx.0).await?;
+        let cert = IamCertServ::get_3th_kind_cert_by_ak(&supplier.0, &ak.0, &funs, &ctx.0).await?;
         let result = IamAccountServ::get_item(
             &cert.rel_rbum_id,
             &IamAccountFilterReq {
