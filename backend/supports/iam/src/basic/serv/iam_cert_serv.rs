@@ -751,7 +751,7 @@ impl IamCertServ {
         .await?;
         let mut mock_ctx = TardisContext { ..ctx.clone() };
         if let Some(rel) = rels.first() {
-            mock_ctx.own_paths = rel.rel.own_paths.clone()
+            mock_ctx.own_paths.clone_from(&rel.rel.own_paths)
         }
         let ext_cert = RbumCertServ::do_find_one_detail_rbum(
             &RbumCertFilterReq {
@@ -1556,7 +1556,7 @@ impl IamCertServ {
                     };
                     let mut mock_ctx = TardisContext { ..ctx.clone() };
                     if let Some(rel) = rels.first() {
-                        mock_ctx.own_paths = rel.rel.own_paths.clone()
+                        mock_ctx.own_paths.clone_from(&rel.rel.own_paths)
                     }
                     let Ok(sk) = RbumCertServ::show_sk(&id, &RbumCertFilterReq::default(), funs, &mock_ctx).await else {
                         return None;
@@ -1600,7 +1600,7 @@ impl IamCertServ {
         .await?;
         let mut mock_ctx = TardisContext { ..ctx.clone() };
         if let Some(rel) = rels.first() {
-            mock_ctx.own_paths = rel.rel.own_paths.clone()
+            mock_ctx.own_paths.clone_from(&rel.rel.own_paths)
         }
         let ext_cert = RbumCertServ::do_find_one_detail_rbum(
             &RbumCertFilterReq {
