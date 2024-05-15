@@ -1,6 +1,6 @@
 #![warn(clippy::unwrap_used)]
 
-use crate::plugin::{anti_replay, anti_xss, audit_log, auth, ip_time, rewrite_ns_b_ip};
+pub use crate::plugin::{anti_replay, anti_xss, audit_log, auth, ip_time, rewrite_ns_b_ip};
 
 mod consts;
 mod extension;
