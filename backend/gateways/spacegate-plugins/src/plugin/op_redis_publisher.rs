@@ -42,6 +42,7 @@ pub struct RedisPublisherPlugin {
 impl Plugin for RedisPublisherPlugin {
     const CODE: &'static str = "op_redis_publisher";
 
+    #[cfg(feature = "schema")]
     fn meta() -> spacegate_plugin::PluginMetaData {
         spacegate_plugin::plugin_meta!(
             description: "Build for open platform, and it depend on plugin audit-log"

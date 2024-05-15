@@ -262,6 +262,7 @@ impl Default for AuditLogPlugin {
 impl Plugin for AuditLogPlugin {
     const CODE: &'static str = CODE;
 
+    #[cfg(feature = "schema")]
     fn meta() -> spacegate_plugin::PluginMetaData {
         spacegate_plugin::plugin_meta!(
             description: "Audit log for spacegate, it's base on spi-log"
