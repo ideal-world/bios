@@ -246,11 +246,11 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
 
     let conf_limit = query_limit;
     let conf_info = conf_info.into_iter().map(|v| (v.col_key.clone().to_string(), v)).collect::<HashMap<String, StatsConfInfo>>();
-    if query_req.select.iter().any(|i| !conf_info.contains_key(&(&i.code).to_string()))
+    if query_req.select.iter().any(|i| !conf_info.contains_key(&i.code.to_string()))
         // should be equivalent: 
         // original: || query_req.group.iter().any(|i| !conf_info.contains_key(&i.code) || conf_info.get(&i.code).unwrap().col_kind != StatsFactColKind::Dimension))
         // (!contain || not_dim) => !(contain && is_dim)
-        || query_req.group.iter().any(|i| !conf_info.get(&(&i.code).to_string()).is_some_and(|i|i.col_kind == StatsFactColKind::Dimension))
+        || query_req.group.iter().any(|i| !conf_info.get(&i.code.to_string()).is_some_and(|i|i.col_kind == StatsFactColKind::Dimension))
         || query_req
             .group_order
             .as_ref()
