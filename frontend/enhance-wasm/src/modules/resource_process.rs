@@ -31,7 +31,7 @@ pub fn match_res(res_container: &ResContainerNode, res_action: &str, res_uri: &s
     Ok(matched_uris)
 }
 
-fn do_match_res(res_action: &str, res_container: &ResContainerNode, res_items: &Vec<String>, multi_wildcard: bool, matched_uris: &mut Vec<ResContainerLeafInfo>) {
+fn do_match_res(res_action: &str, res_container: &ResContainerNode, res_items: &[String], multi_wildcard: bool, matched_uris: &mut Vec<ResContainerLeafInfo>) {
     // TODO "res_items[0] == "?"" approach will ignore the query, there needs to be a better way
     if res_container.has_child("$") && (res_items.is_empty() || multi_wildcard || res_items[0] == "?") {
         // matched
