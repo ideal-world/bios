@@ -12,6 +12,8 @@ use std::net::IpAddr;
 use std::str::FromStr;
 use std::sync::Arc;
 
+#[cfg(feature = "schema")]
+use spacegate_plugin::schemars;
 use tardis::{log, serde_json};
 
 /// Kube available only!
@@ -66,6 +68,14 @@ impl Default for RewriteNsConfig {
 
 impl Plugin for RewriteNsPlugin {
     const CODE: &'static str = "rewrite-ns";
+
+    #[cfg(feature = "schema")]
+    fn meta() -> spacegate_plugin::PluginMetaData {
+        spacegate_plugin::plugin_meta!(
+            description: "Rewrite namespace for request.Kubernetes available only!"
+        )
+    }
+
     fn create(plugin_config: PluginConfig) -> Result<Self, spacegate_shell::BoxError> {
         let config: RewriteNsConfig = serde_json::from_value(plugin_config.spec)?;
         let ip_list: Vec<IpNet> = config
@@ -119,6 +129,7 @@ impl RewriteNsPlugin {
 mod test {
 
     use http::{Method, Request, Uri, Version};
+    use spacegate_plugin::{PluginInstanceId, PluginInstanceName};
     use spacegate_shell::{
         config::K8sServiceData,
         extension::k8s_service::K8sService,
@@ -133,9 +144,11 @@ mod test {
     #[tokio::test]
     async fn test() {
         let plugin = RewriteNsPlugin::create(PluginConfig {
-            code: "rewrite-ns".into(),
+            id: PluginInstanceId {
+                code: "rewrite-ns".into(),
+                name: PluginInstanceName::mono(),
+            },
             spec: json!({"ip_list":["198.168.1.0/24"],"target_ns":"target"}),
-            name: None,
         })
         .unwrap();
 

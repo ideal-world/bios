@@ -20,7 +20,8 @@ macro_rules! append_value {
 use spacegate_plugin::schemars;
 use tardis::serde_json;
 #[cfg(feature = "schema")]
-spacegate_plugin::schema!(AntiXssPlugin, SgFilterAntiXSS);
+spacegate_plugin::schema!(AntiXssPlugin, CSPConfig);
+
 #[derive(Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default)]
@@ -157,6 +158,14 @@ pub struct AntiXssPlugin {
 
 impl Plugin for AntiXssPlugin {
     const CODE: &'static str = "anti-xss";
+
+    #[cfg(feature = "schema")]
+    fn meta() -> spacegate_plugin::PluginMetaData {
+        spacegate_plugin::plugin_meta!(
+            description: "Anti XSS plugin"
+        )
+    }
+
     fn create(plugin_config: spacegate_shell::plugin::PluginConfig) -> Result<Self, BoxError> {
         let config: AntiXssConfig = serde_json::from_value(plugin_config.spec)?;
         let header = header::HeaderValue::from_str(&config.csp_config.to_string_header_value())?;

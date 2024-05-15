@@ -670,9 +670,11 @@ impl IamCertServ {
         }
     }
 
+    /// 通过关联rbum_item id 查询三方凭证
     pub async fn get_3th_kind_cert_by_rel_rbum_id(
         rel_rbum_id: &str,
         cert_supplier: Vec<String>,
+        show_sk: bool,
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<RbumCertSummaryWithSkResp> {
@@ -688,8 +690,12 @@ impl IamCertServ {
         )
         .await?;
         if let Some(ext_cert) = ext_cert {
-            let now_sk = RbumCertServ::show_sk(ext_cert.id.as_str(), &RbumCertFilterReq::default(), funs, ctx).await?;
-            let encoded_sk = encode_cert(&ext_cert.id, now_sk, ext_cert.sk_invisible)?;
+            let encoded_sk = if show_sk {
+                let now_sk = RbumCertServ::show_sk(ext_cert.id.as_str(), &RbumCertFilterReq::default(), funs, ctx).await?;
+                encode_cert(&ext_cert.id, now_sk, ext_cert.sk_invisible)?
+            } else {
+                "".to_string()
+            };
             Ok(RbumCertSummaryWithSkResp {
                 id: ext_cert.id,
                 ak: ext_cert.ak,
@@ -721,7 +727,8 @@ impl IamCertServ {
         }
     }
 
-    pub async fn get_3th_kind_cert_by_id(id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<RbumCertSummaryWithSkResp> {
+    /// 通过cert id 查询三方凭证
+    pub async fn get_3th_kind_cert_by_id(id: &str, show_sk: bool, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<RbumCertSummaryWithSkResp> {
         // query rel ,get owner
         let rels = IamRelServ::find_rels(
             &RbumRelFilterReq {
@@ -760,9 +767,12 @@ impl IamCertServ {
         )
         .await?;
         if let Some(ext_cert) = ext_cert {
-            let now_sk = RbumCertServ::show_sk(ext_cert.id.as_str(), &RbumCertFilterReq::default(), funs, &mock_ctx).await?;
-            let encoded_sk = encode_cert(&ext_cert.id, now_sk, ext_cert.sk_invisible)?;
-            // let encoded_sk = now_sk;
+            let encoded_sk = if show_sk {
+                let now_sk = RbumCertServ::show_sk(ext_cert.id.as_str(), &RbumCertFilterReq::default(), funs, ctx).await?;
+                encode_cert(&ext_cert.id, now_sk, ext_cert.sk_invisible)?
+            } else {
+                "".to_string()
+            };
             Ok(RbumCertSummaryWithSkResp {
                 id: ext_cert.id,
                 ak: ext_cert.ak,
@@ -790,6 +800,62 @@ impl IamCertServ {
                 "get_3th_kind_cert_by_id",
                 &format!("not found credential by id {id}"),
                 "404-rbum-cert-not-exist",
+            ))
+        }
+    }
+
+    /// 通过ak supplier 查询三方凭证
+    pub async fn get_3th_kind_cert_by_ak(supplier: &str, ak: &str, show_sk: bool, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<RbumCertSummaryWithSkResp> {
+        let query_cert = RbumCertServ::find_one_detail_rbum(
+            &RbumCertFilterReq {
+                basic: RbumBasicFilterReq {
+                    own_paths: Some(ctx.own_paths.clone()),
+                    ..Default::default()
+                },
+                ak: Some(ak.to_string()),
+                status: Some(RbumCertStatusKind::Enabled),
+                kind: Some(IamCertExtKind::ThirdParty.to_string()),
+                suppliers: Some(vec![supplier.to_string()]),
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?;
+        if let Some(ext_cert) = query_cert {
+            let encoded_sk = if show_sk {
+                let now_sk = RbumCertServ::show_sk(ext_cert.id.as_str(), &RbumCertFilterReq::default(), funs, ctx).await?;
+                encode_cert(&ext_cert.id, now_sk, ext_cert.sk_invisible)?
+            } else {
+                "".to_string()
+            };
+            Ok(RbumCertSummaryWithSkResp {
+                id: ext_cert.id,
+                ak: ext_cert.ak,
+                sk: encoded_sk,
+                sk_invisible: ext_cert.sk_invisible,
+                ext: ext_cert.ext,
+                conn_uri: ext_cert.conn_uri,
+                start_time: ext_cert.start_time,
+                end_time: ext_cert.end_time,
+                status: ext_cert.status,
+                kind: ext_cert.kind,
+                supplier: ext_cert.supplier,
+                rel_rbum_cert_conf_id: ext_cert.rel_rbum_cert_conf_id,
+                rel_rbum_cert_conf_name: ext_cert.rel_rbum_cert_conf_name,
+                rel_rbum_kind: ext_cert.rel_rbum_kind,
+                rel_rbum_id: ext_cert.rel_rbum_id,
+                own_paths: ext_cert.own_paths,
+                owner: ext_cert.owner,
+                create_time: ext_cert.create_time,
+                update_time: ext_cert.update_time,
+            })
+        } else {
+            Err(funs.err().not_found(
+                "iam_cert",
+                "get_3th_kind_cert_by_rel_rbum_id",
+                &format!("not found credential of ak {ak}"),
+                "404-iam-cert-kind-not-exist",
             ))
         }
     }

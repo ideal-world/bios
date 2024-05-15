@@ -39,7 +39,7 @@ pub const CODE: &str = "audit-log";
 #[cfg(feature = "schema")]
 use spacegate_plugin::schemars;
 #[cfg(feature = "schema")]
-spacegate_plugin::schema!(AuditLogPlugin, SgFilterAuditLog);
+spacegate_plugin::schema!(AuditLogPlugin, AuditLogPlugin);
 
 #[derive(Serialize, Deserialize, Clone)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
@@ -260,8 +260,14 @@ impl Default for AuditLogPlugin {
 }
 
 impl Plugin for AuditLogPlugin {
-    // type MakeLayer = SgFilterAuditLog;
     const CODE: &'static str = CODE;
+
+    #[cfg(feature = "schema")]
+    fn meta() -> spacegate_plugin::PluginMetaData {
+        spacegate_plugin::plugin_meta!(
+            description: "Audit log for spacegate, it's base on spi-log"
+        )
+    }
 
     fn create(config: spacegate_shell::plugin::PluginConfig) -> Result<Self, BoxError> {
         let mut plugin: AuditLogPlugin = serde_json::from_value(config.spec.clone()).map_err(|e| -> BoxError { format!("[Plugin.AuditLog] deserialize error:{e}").into() })?;
