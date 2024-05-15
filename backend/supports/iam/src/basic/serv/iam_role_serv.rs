@@ -943,7 +943,7 @@ impl IamRoleServ {
 
     pub async fn need_role(role_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let exist = RbumRelServ::check_rel(
-            &mut RbumRelCheckReq {
+            &RbumRelCheckReq {
                 tag: IamRelKind::IamAccountRole.to_string(),
                 from_rbum_kind: RbumRelFromKind::Item,
                 from_rbum_id: ctx.owner.clone(),
