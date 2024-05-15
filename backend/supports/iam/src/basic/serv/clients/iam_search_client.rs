@@ -124,10 +124,8 @@ impl IamSearchClient {
                     set_ids.push(set_id);
                 }
             }
-        } else {
-            if let Ok(set_id) = IamSetServ::get_set_id_by_code(&IamSetServ::get_default_code(&IamSetKind::Org, &account_resp.own_paths), true, funs, &mock_ctx).await {
-                set_ids.push(set_id);
-            }
+        } else if let Ok(set_id) = IamSetServ::get_set_id_by_code(&IamSetServ::get_default_code(&IamSetKind::Org, &account_resp.own_paths), true, funs, &mock_ctx).await {
+            set_ids.push(set_id);
         };
         for set_id in set_ids {
             let set_items = IamSetServ::find_set_items(Some(set_id), None, Some(account_id.to_string()), None, true, None, funs, &mock_ctx).await?;
