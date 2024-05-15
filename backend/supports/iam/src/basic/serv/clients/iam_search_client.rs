@@ -125,7 +125,7 @@ impl IamSearchClient {
                 }
             }
         } else {
-            if let Some(set_id) = IamSetServ::get_set_id_by_code(&IamSetServ::get_default_code(&IamSetKind::Org, &account_resp.own_paths), true, funs, &mock_ctx).await {
+            if let Ok(set_id) = IamSetServ::get_set_id_by_code(&IamSetServ::get_default_code(&IamSetKind::Org, &account_resp.own_paths), true, funs, &mock_ctx).await {
                 set_ids.push(set_id);
             }
         };
