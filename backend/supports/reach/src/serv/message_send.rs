@@ -65,18 +65,21 @@ pub async fn message_send(send_req: ReachMsgSendReq, funs: &TardisFunsInst, ctx:
         return Ok(());
     }
 
-    let other_receive_collect = receive_group_code.into_iter().fold(HashMap::new(), |mut other_receive_collect, (group_code, receives)| {
-        if let Some(instance_list) = instance_group_code.get_mut(&group_code) {
-            if !instance_list.is_empty() {
-                for i in instance_list {
-                    for r in &receives {
-                        other_receive_collect.entry((r.receive_kind, i.rel_reach_channel)).or_insert(Vec::new()).extend(r.receive_ids.clone())
+    let other_receive_collect = receive_group_code.into_iter().fold(
+        HashMap::<(ReachReceiveKind, ReachChannelKind), Vec<_>>::new(),
+        |mut other_receive_collect: HashMap<(ReachReceiveKind, ReachChannelKind), Vec<_>>, (group_code, receives)| {
+            if let Some(instance_list) = instance_group_code.get_mut(&group_code) {
+                if !instance_list.is_empty() {
+                    for i in instance_list {
+                        for r in &receives {
+                            other_receive_collect.entry((r.receive_kind, i.rel_reach_channel)).or_default().extend(r.receive_ids.clone())
+                        }
                     }
                 }
             }
-        }
-        other_receive_collect
-    });
+            other_receive_collect
+        },
+    );
     //TODO remove?
     // let (other_receive_collect, other_group_code) = receive_group_code.into_iter().fold(
     //     (HashMap::new(), HashSet::new()),
