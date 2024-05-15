@@ -232,7 +232,7 @@ pub async fn auth(ak: &str, sk: &str, funs: &TardisFunsInst) -> TardisResult<Tar
     let ak = ext.get("ak").and_then(serde_json::Value::as_str).unwrap_or_default();
     owner.clone_into(&mut ctx.owner);
     own_paths.clone_into(&mut ctx.own_paths);
-    ctx.ak = ak.to_owned();
+    ak.clone_into(&mut ctx.ak);
     Ok(ctx)
 }
 
