@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::path::Path;
 
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use bios_basic::rbum::serv::rbum_kind_serv::RbumKindServ;

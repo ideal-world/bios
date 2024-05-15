@@ -113,6 +113,7 @@ impl PluginRelServ {
         .await
     }
 
+    //TODO not used. remove?
     pub async fn find_to_simple_rels(
         tag: &PluginAppBindRelKind,
         to_rbum_item_id: &str,
@@ -188,6 +189,7 @@ impl PluginRelServ {
         Ok(rel)
     }
 
+    //TODO not used.remove?
     pub async fn get_rel_agg(id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<RbumRelAggResp> {
         let filter = RbumRelFilterReq {
             basic: RbumBasicFilterReq {

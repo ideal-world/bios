@@ -118,8 +118,7 @@ impl PluginKindServ {
                 funs,
                 ctx,
             )
-            .await?
-            .get(0)
+            .await?.first()
             {
                 match PluginRelServ::get_rel(&rel_bind.rel_id, funs, ctx).await {
                     Ok(rel) => {
