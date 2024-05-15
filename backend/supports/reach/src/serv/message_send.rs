@@ -77,6 +77,7 @@ pub async fn message_send(send_req: ReachMsgSendReq, funs: &TardisFunsInst, ctx:
         }
         other_receive_collect
     });
+    //TODO remove?
     // let (other_receive_collect, other_group_code) = receive_group_code.into_iter().fold(
     //     (HashMap::new(), HashSet::new()),
     //     |(mut other_receive_collect, mut other_group_code), (group_code, receives)| {
