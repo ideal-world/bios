@@ -225,58 +225,52 @@ impl IamCcAccountTaskServ {
         ctx: &TardisContext,
     ) -> TardisResult<()> {
         let current_time = Utc::now();
-        match old_time.checked_add_signed(Duration::try_days(expire_day).expect("TimeDelta::days out of bounds")) {
-            Some(new_time) => {
-                if current_time < new_time {
-                    IamAccountServ::modify_item(
-                        account_id,
-                        &mut IamAccountModifyReq {
-                            status: Some(next_status),
-                            name: None,
-                            scope_level: None,
-                            disabled: None,
-                            lock_status: None,
-                            is_auto: None,
-                            icon: None,
-                            temporary: None,
-                            logout_type: None,
-                        },
-                        funs,
-                        ctx,
-                    )
-                    .await?;
-                }
+        if let Some(new_time) = old_time.checked_add_signed(Duration::try_days(expire_day).expect("TimeDelta::days out of bounds")) {
+            if current_time < new_time {
+                IamAccountServ::modify_item(
+                    account_id,
+                    &mut IamAccountModifyReq {
+                        status: Some(next_status),
+                        name: None,
+                        scope_level: None,
+                        disabled: None,
+                        lock_status: None,
+                        is_auto: None,
+                        icon: None,
+                        temporary: None,
+                        logout_type: None,
+                    },
+                    funs,
+                    ctx,
+                )
+                .await?;
             }
-            None => {}
         }
         Ok(())
     }
 
     async fn account_lock(account_id: &str, old_time: DateTime<Utc>, expire_day: i64, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let current_time = Utc::now();
-        match old_time.checked_add_signed(Duration::try_days(expire_day).expect("TimeDelta::days out of bounds")) {
-            Some(new_time) => {
-                if current_time < new_time {
-                    IamAccountServ::modify_item(
-                        account_id,
-                        &mut IamAccountModifyReq {
-                            status: None,
-                            name: None,
-                            scope_level: None,
-                            disabled: None,
-                            lock_status: Some(IamAccountLockStateKind::LongTimeNoLoginLocked),
-                            is_auto: None,
-                            icon: None,
-                            temporary: None,
-                            logout_type: None,
-                        },
-                        funs,
-                        ctx,
-                    )
-                    .await?;
-                }
+        if let Some(new_time) = old_time.checked_add_signed(Duration::try_days(expire_day).expect("TimeDelta::days out of bounds")) {
+            if current_time < new_time {
+                IamAccountServ::modify_item(
+                    account_id,
+                    &mut IamAccountModifyReq {
+                        status: None,
+                        name: None,
+                        scope_level: None,
+                        disabled: None,
+                        lock_status: Some(IamAccountLockStateKind::LongTimeNoLoginLocked),
+                        is_auto: None,
+                        icon: None,
+                        temporary: None,
+                        logout_type: None,
+                    },
+                    funs,
+                    ctx,
+                )
+                .await?;
             }
-            None => {}
         }
         Ok(())
     }

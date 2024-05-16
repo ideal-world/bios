@@ -57,7 +57,7 @@ pub struct IamCertServ;
 
 impl IamCertServ {
     pub fn get_new_pwd() -> String {
-        // todo 等待 bios_basic::field::nanoid_len(10) 支持自定义 alphabet
+        // TODO 等待 bios_basic::field::nanoid_len(10) 支持自定义 alphabet
         // TardisFuns::field.nanoid_len(10)
         let alphabet: [char; 62] = [
             '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w',
@@ -454,7 +454,7 @@ impl IamCertServ {
         Ok(())
     }
 
-    /// todo 需要精简代码 统一使用 3th 的方法
+    /// TODO 需要精简代码 统一使用 3th 的方法
     pub async fn add_manage_cert(add_req: &IamCertManageAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
         let id = RbumCertServ::add_rbum(
             &mut RbumCertAddReq {
@@ -751,7 +751,7 @@ impl IamCertServ {
         .await?;
         let mut mock_ctx = TardisContext { ..ctx.clone() };
         if let Some(rel) = rels.first() {
-            mock_ctx.own_paths = rel.rel.own_paths.clone()
+            mock_ctx.own_paths.clone_from(&rel.rel.own_paths)
         }
         let ext_cert = RbumCertServ::do_find_one_detail_rbum(
             &RbumCertFilterReq {
@@ -1370,7 +1370,7 @@ impl IamCertServ {
         }
     }
 
-    // todo fixme 这是干什么？
+    // TODO fixme 这是干什么？
     pub async fn get_third_intg_sync_status(task_id: &str, funs: &TardisFunsInst) -> TardisResult<Option<IamThirdIntegrationSyncStatusDto>> {
         let mut result = None;
         let task_id = task_id.parse().map_err(|_| funs.err().format_error("system", "task", "task id format error", "406-iam-task-id-format"))?;
@@ -1556,7 +1556,7 @@ impl IamCertServ {
                     };
                     let mut mock_ctx = TardisContext { ..ctx.clone() };
                     if let Some(rel) = rels.first() {
-                        mock_ctx.own_paths = rel.rel.own_paths.clone()
+                        mock_ctx.own_paths.clone_from(&rel.rel.own_paths)
                     }
                     let Ok(sk) = RbumCertServ::show_sk(&id, &RbumCertFilterReq::default(), funs, &mock_ctx).await else {
                         return None;
@@ -1600,7 +1600,7 @@ impl IamCertServ {
         .await?;
         let mut mock_ctx = TardisContext { ..ctx.clone() };
         if let Some(rel) = rels.first() {
-            mock_ctx.own_paths = rel.rel.own_paths.clone()
+            mock_ctx.own_paths.clone_from(&rel.rel.own_paths)
         }
         let ext_cert = RbumCertServ::do_find_one_detail_rbum(
             &RbumCertFilterReq {

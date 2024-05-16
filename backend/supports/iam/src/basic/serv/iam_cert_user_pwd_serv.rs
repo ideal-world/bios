@@ -288,7 +288,7 @@ impl IamCertUserPwdServ {
         }
     }
 
-    //todo 统一reset_sk_for_pending_status方法
+    //TODO 统一reset_sk_for_pending_status方法
     //可进行重置后的状态：Pending、Enabled、Disabled
     pub async fn reset_sk(modify_req: &IamCertUserPwdRestReq, rel_iam_item_id: &str, rel_rbum_cert_conf_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let new_sk = if let Some(new_sk) = &modify_req.new_sk {
@@ -418,7 +418,7 @@ impl IamCertUserPwdServ {
         Ok(())
     }
 
-    //todo 限定conf
+    //TODO 限定conf
     pub async fn rename_ak_if_duplicate(ak: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<TrimString> {
         // \_ sql 转义-> _
         let mut count_duplicate_ak = RbumCertServ::count_rbums(

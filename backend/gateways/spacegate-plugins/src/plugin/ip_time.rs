@@ -11,7 +11,7 @@ use spacegate_shell::plugin::Plugin;
 use spacegate_shell::{BoxError, SgBody, SgResponseExt};
 
 use tardis::{log, serde_json};
-pub const CODE: &str = "ip_time";
+pub const CODE: &str = "ip-time";
 
 mod ip_time_rule;
 #[cfg(test)]

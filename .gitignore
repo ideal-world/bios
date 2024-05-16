@@ -38,3 +38,4 @@ backend/services/spacegate/devsh/
 .pre-commit-config.yaml
 
 .uuid
+backend/services/bios-all/dev.sh

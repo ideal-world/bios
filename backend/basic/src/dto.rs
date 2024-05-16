@@ -31,7 +31,7 @@ impl BasicQueryCondInfo {
     /// 检查传入的 ``check_vars`` 是否满足 ``conds`` 中的条件
     ///
     ///  The outer level is the `OR` relationship, the inner level is the `AND` relationship
-    pub fn check_or_and_conds(conds: &Vec<Vec<BasicQueryCondInfo>>, check_vars: &HashMap<String, Value>) -> TardisResult<bool> {
+    pub fn check_or_and_conds(conds: &[Vec<BasicQueryCondInfo>], check_vars: &HashMap<String, Value>) -> TardisResult<bool> {
         let is_match = conds.iter().any(|and_conds| {
             and_conds.iter().all(|cond| match check_vars.get(&cond.field) {
                 Some(check_val) => match &cond.op {

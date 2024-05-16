@@ -52,7 +52,7 @@ pub(crate) async fn add(fact_conf_key: &str, add_req: &StatsConfFactColAddReq, f
             &format!(
                 "SELECT 1 FROM {table_name} WHERE key = $1 AND rel_conf_fact_key = $2 AND kind =$3 {}",
                 if add_req.rel_external_id.is_some() {
-                    format!("AND rel_external_id IN ($4,$5)")
+                    "AND rel_external_id IN ($4,$5)".to_string()
                 } else {
                     "AND rel_external_id  = ''".to_string()
                 }

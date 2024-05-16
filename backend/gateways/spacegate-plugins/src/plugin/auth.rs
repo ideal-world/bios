@@ -76,15 +76,9 @@ impl SgPluginAuthConfig {
             }
         }
 
-        let cache_url: Url = if self.cache_url.is_empty() {
-            //todo get from gateways
-            // init_dto.gateway_parameters.redis_url.as_deref().unwrap_or("redis://127.0.0.1:6379")
-            "redis://127.0.0.1:6379"
-        } else {
-            self.cache_url.as_str()
-        }
-        .parse()
-        .map_err(|e| TardisError::internal_error(&format!("[SG.Filter.Auth]invalid redis url: {e:?}"), "-1"))?;
+        let cache_url: Url = if self.cache_url.is_empty() { "redis://127.0.0.1:6379" } else { self.cache_url.as_str() }
+            .parse()
+            .map_err(|e| TardisError::internal_error(&format!("[SG.Filter.Auth]invalid redis url: {e:?}"), "-1"))?;
 
         let mut tardis_config = tardis::TardisFuns::clone_config();
         tardis_config.cs.insert(bios_auth::auth_constants::DOMAIN_CODE.to_string(), serde_json::to_value(self.auth_config.clone())?);
@@ -207,7 +201,7 @@ impl AuthPlugin {
     // 用于过滤和管理同一个请求多次通过本插件的情况
     // 如果是多次请求，那么直接返回跳过本插件
     async fn is_same_req(&self, req: &mut SgRequest) -> Result<bool, BoxError> {
-        let cache = req.get_redis_client_by_gateway_name().ok_or_else(|| "missing gateway name")?;
+        let cache = req.get_redis_client_by_gateway_name().ok_or("missing gateway name")?;
         let mut conn = cache.get_conn().await;
         if let Some(is_same) = req.headers().get(&self.header_is_same_req) {
             if conn.exists(format!("{}{}", self.cache_key_is_same_req, is_same.to_str()?)).await? {

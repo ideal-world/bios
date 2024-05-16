@@ -34,7 +34,7 @@ use crate::extension::audit_log_param::{AuditLogParam, LogParamContent};
 use crate::extension::before_encrypt_body::BeforeEncryptBody;
 use crate::extension::cert_info::CertInfo;
 
-pub const CODE: &str = "audit_log";
+pub const CODE: &str = "audit-log";
 
 #[cfg(feature = "schema")]
 use spacegate_plugin::schemars;

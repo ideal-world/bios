@@ -28,7 +28,6 @@ impl AuthApi {
         let _ = SpiLogClient::add_item(
             LogParamContent {
                 op: "auth".to_string(),
-                ext: None,
                 addr: request.remote_addr().to_string(),
                 auth_req: Some(req.0),
                 ..Default::default()
@@ -49,7 +48,6 @@ impl AuthApi {
         let _ = SpiLogClient::add_item(
             LogParamContent {
                 op: "mix-apis".to_string(),
-                ext: None,
                 addr: request.remote_addr().to_string(),
                 auth_req: Some(req.0),
                 ..Default::default()

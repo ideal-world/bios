@@ -104,7 +104,7 @@ LIMIT $2 OFFSET $3
         )
         .await?;
     let total;
-    if let Some(first) = result.get(0) {
+    if let Some(first) = result.first() {
         total = first.try_get("", "total")?;
     } else {
         total = 0;

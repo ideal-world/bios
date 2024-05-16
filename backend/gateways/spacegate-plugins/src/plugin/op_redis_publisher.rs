@@ -40,6 +40,7 @@ pub struct RedisPublisherPlugin {
 }
 
 impl Plugin for RedisPublisherPlugin {
+    //FIXME fix code to kebab-case
     const CODE: &'static str = "op_redis_publisher";
 
     #[cfg(feature = "schema")]

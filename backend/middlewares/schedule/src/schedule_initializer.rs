@@ -30,7 +30,7 @@ pub async fn init_fun(bs_cert: SpiBsCertResp, ctx: &TardisContext, mgr: bool) ->
         _ => Err(bs_cert.bs_not_implemented())?,
     }
 }
-
+//TODO not used.remove?
 async fn init_ws_client() -> TardisWSClient {
     while !TardisFuns::web_server().is_running().await {
         tardis::tokio::task::yield_now().await

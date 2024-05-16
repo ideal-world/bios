@@ -194,8 +194,8 @@ impl IamCertMailVCodeServ {
     pub async fn resend_activation_mail(account_id: &str, mail: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let vcode = Self::get_vcode();
         let rel_rbum_cert_conf_id =
-            IamCertServ::get_cert_conf_id_by_kind(IamCertKernelKind::MailVCode.to_string().as_str(), Some(IamTenantServ::get_id_by_ctx(&ctx, funs)?), funs).await?;
-        RbumCertServ::add_vcode_to_cache(mail, &vcode, &rel_rbum_cert_conf_id, funs, &ctx).await?;
+            IamCertServ::get_cert_conf_id_by_kind(IamCertKernelKind::MailVCode.to_string().as_str(), Some(IamTenantServ::get_id_by_ctx(ctx, funs)?), funs).await?;
+        RbumCertServ::add_vcode_to_cache(mail, &vcode, &rel_rbum_cert_conf_id, funs, ctx).await?;
         Self::send_activation_mail(account_id, mail, &vcode, funs, ctx).await
     }
 

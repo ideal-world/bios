@@ -527,7 +527,7 @@ impl IamResServ {
     pub async fn add_res_agg(add_req: &mut IamResAggAddReq, set_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
         if add_req.res.kind == IamResKind::Menu {
             let set_cate_sys_code_node_len = funs.rbum_conf_set_cate_sys_code_node_len();
-            // todo: check menu cate
+            // TODO: check menu cate
             let menu_ids = &Self::find_id_items(
                 &IamResFilterReq {
                     basic: RbumBasicFilterReq {
@@ -604,7 +604,7 @@ impl IamResServ {
             let app_ctx = IamCertServ::try_use_app_ctx(ctx.clone(), Some(app_id.clone()))?;
             let app_role_ids =
                 roles.iter().filter(|r| r.rel_own_paths == app_ctx.own_paths || r.rel_own_paths == ctx.own_paths).map(|r| r.rel_id.to_string()).collect::<Vec<String>>();
-            // todo default empty res
+            // TODO default empty res
             res_ids.insert("".to_string());
             for role_id in app_role_ids {
                 let rel_res_ids = IamRelServ::find_to_id_rels(&IamRelKind::IamResRole, &role_id, None, None, funs, &global_ctx).await?;

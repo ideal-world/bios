@@ -1,6 +1,5 @@
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumCertConfFilterReq, RbumCertFilterReq};
 
-use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
@@ -17,7 +16,6 @@ use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 
 use crate::basic::dto::iam_cert_conf_dto::IamCertConfPhoneVCodeAddOrModifyReq;
 use crate::basic::dto::iam_cert_dto::{IamCertPhoneVCodeAddReq, IamCertPhoneVCodeModifyReq};
-use crate::basic::dto::iam_filer_dto::IamAccountFilterReq;
 use crate::iam_config::IamBasicConfigApi;
 use crate::iam_enumeration::IamCertKernelKind;
 
@@ -122,8 +120,7 @@ impl IamCertPhoneVCodeServ {
             ctx,
         )
         .await?;
-        // TODO send vcode
-        Self::send_activation_phone(account_id, &add_req.phone, &vcode, funs, ctx).await?;
+        Self::send_activation_phone(&add_req.phone, &vcode, funs, ctx).await?;
         Ok(id)
     }
 
@@ -215,17 +212,16 @@ impl IamCertPhoneVCodeServ {
         Ok(id)
     }
 
-    pub async fn resend_activation_phone(account_id: &str, phone: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    //TODO remove?
+    pub async fn resend_activation_phone(phone: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let vcode = Self::get_vcode();
         let rel_rbum_cert_conf_id =
-            IamCertServ::get_cert_conf_id_by_kind(IamCertKernelKind::PhoneVCode.to_string().as_str(), Some(IamTenantServ::get_id_by_ctx(&ctx, funs)?), funs).await?;
-        RbumCertServ::add_vcode_to_cache(phone, &vcode, &rel_rbum_cert_conf_id, funs, &ctx).await?;
-        Self::send_activation_phone(account_id, phone, &vcode, funs, ctx).await
+            IamCertServ::get_cert_conf_id_by_kind(IamCertKernelKind::PhoneVCode.to_string().as_str(), Some(IamTenantServ::get_id_by_ctx(ctx, funs)?), funs).await?;
+        RbumCertServ::add_vcode_to_cache(phone, &vcode, &rel_rbum_cert_conf_id, funs, ctx).await?;
+        Self::send_activation_phone(phone, &vcode, funs, ctx).await
     }
 
-    async fn send_activation_phone(account_id: &str, phone: &str, vcode: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        let _account_name = IamAccountServ::peek_item(account_id, &IamAccountFilterReq::default(), funs, ctx).await?.name;
-        // TODO send activation
+    async fn send_activation_phone(phone: &str, vcode: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         SmsClient::send_vcode(phone, vcode, funs, ctx).await?;
         Ok(())
     }

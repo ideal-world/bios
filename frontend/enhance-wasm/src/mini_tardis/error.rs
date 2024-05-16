@@ -149,9 +149,9 @@ impl<P> From<PoisonError<RwLockWriteGuard<'_, P>>> for TardisError {
 impl From<TardisError> for JsValue {
     fn from(error: TardisError) -> Self {
         if *HIDE_ERROR_DETAIL.read().unwrap() {
-            JsValue::try_from(JsError::new("Abnormal operation")).unwrap()
+            JsValue::from(JsError::new("Abnormal operation"))
         } else {
-            JsValue::try_from(JsError::new(&format!("[{}]{}", error.code, error.message))).unwrap()
+            JsValue::from(JsError::new(&format!("[{}]{}", error.code, error.message)))
         }
     }
 }

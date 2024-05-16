@@ -325,7 +325,7 @@ async fn test_rbum_rel_with_set(context: &TardisContext) -> TardisResult<()> {
 
     assert!(
         !RbumRelServ::check_rel(
-            &mut RbumRelCheckReq {
+            &RbumRelCheckReq {
                 tag: "bind".to_string(),
                 from_rbum_kind: RbumRelFromKind::Item,
                 from_rbum_id: context.owner.to_string(),
@@ -1156,7 +1156,7 @@ async fn test_rbum_rel_use(context: &TardisContext) -> TardisResult<()> {
     // Environment not match
     assert!(
         !RbumRelServ::check_rel(
-            &mut RbumRelCheckReq {
+            &RbumRelCheckReq {
                 tag: "bind".to_string(),
                 from_rbum_kind: RbumRelFromKind::Item,
                 from_rbum_id: item_reldb_inst1_id.to_string(),
@@ -1174,7 +1174,7 @@ async fn test_rbum_rel_use(context: &TardisContext) -> TardisResult<()> {
     // Environment not match
     assert!(
         !RbumRelServ::check_rel(
-            &mut RbumRelCheckReq {
+            &RbumRelCheckReq {
                 tag: "bind".to_string(),
                 from_rbum_kind: RbumRelFromKind::Item,
                 from_rbum_id: item_reldb_inst1_id.to_string(),
@@ -1194,7 +1194,7 @@ async fn test_rbum_rel_use(context: &TardisContext) -> TardisResult<()> {
 
     assert!(
         RbumRelServ::check_rel(
-            &mut RbumRelCheckReq {
+            &RbumRelCheckReq {
                 tag: "bind".to_string(),
                 from_rbum_kind: RbumRelFromKind::Item,
                 from_rbum_id: item_reldb_inst1_id.to_string(),
@@ -1231,7 +1231,7 @@ async fn test_rbum_rel_use(context: &TardisContext) -> TardisResult<()> {
 
     assert!(
         !RbumRelServ::check_rel(
-            &mut RbumRelCheckReq {
+            &RbumRelCheckReq {
                 tag: "bind".to_string(),
                 from_rbum_kind: RbumRelFromKind::Item,
                 from_rbum_id: item_reldb_inst1_id.to_string(),
