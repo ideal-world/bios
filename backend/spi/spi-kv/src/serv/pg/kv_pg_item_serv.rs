@@ -76,7 +76,7 @@ pub async fn add_or_modify_tag(add_or_modify_req: &mut KvTagAddOrModifyReq, funs
         scope_level: add_or_modify_req.scope_level,
         info: None,
     };
-    self::add_or_modify_item(&req, funs, ctx, &inst).await
+    self::add_or_modify_item(&req, funs, ctx, inst).await
 }
 
 pub async fn get_item(key: String, extract: Option<String>, _funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<Option<KvItemDetailResp>> {
@@ -156,7 +156,7 @@ WHERE
 
 pub async fn find_key_names(keys: Vec<String>, funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<Vec<KvNameFindResp>> {
     let keys = keys.into_iter().map(|key| format!("{}{}", kv_constants::KEY_PREFIX_BY_KEY_NAME, key)).collect();
-    self::find_items(keys, None, funs, ctx, &inst).await.and_then(|items| {
+    self::find_items(keys, None, funs, ctx, inst).await.and_then(|items| {
         items
             .into_iter()
             .map::<TardisResult<KvNameFindResp>, _>(|item| {
@@ -173,7 +173,7 @@ pub async fn find_key_names(keys: Vec<String>, funs: &TardisFunsInst, ctx: &Tard
 
 pub async fn find_tags(keys: Vec<String>, funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<Vec<KvTagFindResp>> {
     let keys = keys.iter().map(|r| format!("{}{}", kv_constants::KEY_PREFIX_BY_TAG, r)).collect::<Vec<_>>();
-    self::find_items(keys, None, funs, ctx, &inst).await.and_then(|items| {
+    self::find_items(keys, None, funs, ctx, inst).await.and_then(|items| {
         items
             .into_iter()
             .map(|item| {
@@ -195,7 +195,7 @@ pub async fn match_items(match_req: KvItemMatchReq, _funs: &TardisFunsInst, ctx:
         sql_vals.push(Value::from(format!("{}%", match_req.key_prefix)));
         where_fragments.push(format!("k LIKE ${}", sql_vals.len()));
     } else {
-        sql_vals.push(Value::from(format!("{}", match_req.key_prefix)));
+        sql_vals.push(Value::from(match_req.key_prefix.to_string()));
         where_fragments.push(format!("k = ${}", sql_vals.len()));
     }
 
@@ -344,7 +344,7 @@ pub async fn page_tags(
         },
         funs,
         ctx,
-        &inst,
+        inst,
     )
     .await
     .and_then(|items| {

@@ -35,6 +35,7 @@ impl PluginExecApi {
         }
         TardisResp::ok(PluginExecReq {
             body: Some(tardis::serde_json::Value::String(msg.0)),
+            query: None,
             header: None,
         })
     }

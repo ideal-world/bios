@@ -34,7 +34,7 @@ pub struct Model {
     /// 验证码长度
     #[sea_orm(column_type = "Integer")]
     pub length: i32,
-    /// TODO: 使用场景?
+    /// TODO remove? 使用场景?
     /// 关联触达集合ID
     #[tardis_entity(custom_type = "string", custom_len = "255")]
     pub rel_reach_set_id: String,

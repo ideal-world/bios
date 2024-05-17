@@ -21,11 +21,11 @@ pub struct FlowExternalReq {
     /// 关联的[枚举](FlowExternalCallbackOp)
     pub callback_op: Option<FlowExternalCallbackOp>,
     /// The tag corresponding to the current business
-    /// 
+    ///
     /// 当前业务对应的 tag
     pub curr_tag: String,
     /// Current Business ID
-    /// 
+    ///
     /// 当前业务ID
     pub curr_bus_obj_id: String,
     /// Associated [flow_instance](super::flow_inst_dto::FlowInstDetailResp) id
@@ -33,7 +33,7 @@ pub struct FlowExternalReq {
     /// 关联的[工作流实例](super::flow_inst_dto::FlowInstDetailResp) id
     pub inst_id: String,
     /// Modified State ID
-    /// 
+    ///
     /// 修改后的状态ID
     pub target_state: Option<String>,
     /// Associated [enum](super::flow_state_dto::FlowSysStateKind)
@@ -41,7 +41,7 @@ pub struct FlowExternalReq {
     /// 关联的[枚举](super::flow_state_dto::FlowSysStateKind)
     pub target_sys_state: Option<FlowSysStateKind>,
     /// Status ID before modification
-    /// 
+    ///
     /// 修改前的状态ID
     pub original_state: Option<String>,
     /// Associated [enum](super::flow_state_dto::FlowSysStateKind)
@@ -49,20 +49,20 @@ pub struct FlowExternalReq {
     /// 关联的[枚举](super::flow_state_dto::FlowSysStateKind)
     pub original_sys_state: Option<FlowSysStateKind>,
     /// Name of the action actually triggered (business side logging operation)
-    /// 
+    ///
     /// 实际触发的动作名称（业务方记录操作日志）
     pub transition_name: Option<String>,
     pub owner_paths: String,
     /// When kind is QueryField, batch pass business IDs
-    /// 
+    ///
     /// 当 kind 为 QueryField 时，批量传入业务ID
     pub obj_ids: Vec<String>,
     /// Whether the request triggers a notification
-    /// 
+    ///
     /// 请求是否触发通知
     pub notify: Option<bool>,
     /// 扩展字段
-    /// 
+    ///
     /// Extended params
     pub params: Vec<FlowExternalParams>,
 }

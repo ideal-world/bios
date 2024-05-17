@@ -76,15 +76,9 @@ impl SgPluginAuthConfig {
             }
         }
 
-        let cache_url: Url = if self.cache_url.is_empty() {
-            //todo get from gateways
-            // init_dto.gateway_parameters.redis_url.as_deref().unwrap_or("redis://127.0.0.1:6379")
-            "redis://127.0.0.1:6379"
-        } else {
-            self.cache_url.as_str()
-        }
-        .parse()
-        .map_err(|e| TardisError::internal_error(&format!("[SG.Filter.Auth]invalid redis url: {e:?}"), "-1"))?;
+        let cache_url: Url = if self.cache_url.is_empty() { "redis://127.0.0.1:6379" } else { self.cache_url.as_str() }
+            .parse()
+            .map_err(|e| TardisError::internal_error(&format!("[SG.Filter.Auth]invalid redis url: {e:?}"), "-1"))?;
 
         let mut tardis_config = tardis::TardisFuns::clone_config();
         tardis_config.cs.insert(bios_auth::auth_constants::DOMAIN_CODE.to_string(), serde_json::to_value(self.auth_config.clone())?);
@@ -207,7 +201,7 @@ impl AuthPlugin {
     // 用于过滤和管理同一个请求多次通过本插件的情况
     // 如果是多次请求，那么直接返回跳过本插件
     async fn is_same_req(&self, req: &mut SgRequest) -> Result<bool, BoxError> {
-        let cache = req.get_redis_client_by_gateway_name().ok_or_else(|| "missing gateway name")?;
+        let cache = req.get_redis_client_by_gateway_name().ok_or("missing gateway name")?;
         let mut conn = cache.get_conn().await;
         if let Some(is_same) = req.headers().get(&self.header_is_same_req) {
             if conn.exists(format!("{}{}", self.cache_key_is_same_req, is_same.to_str()?)).await? {
@@ -354,7 +348,7 @@ async fn handle_mix_req(auth_config: &AuthConfig, mix_replace_url: &str, req: Sg
     }
     let string_body = String::from_utf8_lossy(body.get_dumped().expect("not expect code")).trim_matches('"').to_string();
     if string_body.is_empty() {
-        TardisError::custom("500", "[SG.Filter.Auth.MixReq] body can't be empty", "500-parse_mix_req-parse-error");
+        return Err("[SG.Filter.Auth.MixReq] body can't be empty".into());
     }
     let mut req_headers = parts.headers.iter().map(|(k, v)| (k.as_str().to_string(), v.to_str().expect("error parse header value to str").to_string())).collect();
     let (body, crypto_headers) = auth_crypto_serv::decrypt_req(&req_headers, &Some(string_body), true, true, auth_config).await?;
@@ -537,6 +531,7 @@ fn headermap_to_hashmap(old_headers: &HeaderMap<HeaderValue>) -> TardisResult<Ha
 impl Plugin for AuthPlugin {
     const CODE: &'static str = CODE;
 
+    #[cfg(feature = "schema")]
     fn meta() -> spacegate_plugin::PluginMetaData {
         spacegate_plugin::plugin_meta!(
             description: "Auth plugin for spacegate, it is used to authenticate the request"

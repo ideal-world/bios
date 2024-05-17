@@ -82,6 +82,7 @@ impl IamCtRoleApi {
 
     /// Find Roles
     /// 查找角色
+    #[allow(clippy::too_many_arguments)]
     #[oai(path = "/", method = "get")]
     async fn paginate(
         &self,

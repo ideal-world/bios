@@ -36,10 +36,28 @@ pub(crate) async fn add(fact_conf_key: &str, add_req: &StatsConfFactColAddReq, f
             "409-spi-stats-fact-inst-exist",
         ));
     }
+    let conf_params = if let Some(rel_external_ids) = add_req.rel_external_id.clone() {
+        vec![
+            Value::from(&add_req.key),
+            Value::from(fact_conf_key),
+            Value::from(add_req.kind.to_string()),
+            Value::from("".to_string()),
+            Value::from(rel_external_ids),
+        ]
+    } else {
+        vec![Value::from(&add_req.key), Value::from(fact_conf_key), Value::from(add_req.kind.to_string())]
+    };
     if conn
         .count_by_sql(
-            &format!("SELECT 1 FROM {table_name} WHERE key = $1 AND rel_conf_fact_key = $2"),
-            vec![Value::from(&add_req.key), Value::from(fact_conf_key)],
+            &format!(
+                "SELECT 1 FROM {table_name} WHERE key = $1 AND rel_conf_fact_key = $2 AND kind =$3 {}",
+                if add_req.rel_external_id.is_some() {
+                    "AND rel_external_id IN ($4,$5)".to_string()
+                } else {
+                    "AND rel_external_id  = ''".to_string()
+                }
+            ),
+            conf_params,
         )
         .await?
         != 0

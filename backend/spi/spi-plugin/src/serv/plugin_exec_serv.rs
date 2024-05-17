@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use bios_basic::rbum::serv::rbum_kind_serv::RbumKindServ;
 use tardis::basic::dto::TardisContext;
@@ -27,6 +29,7 @@ impl PluginExecServ {
                 &spi_bs.conn_uri,
                 Self::build_url(
                     &format!("{}{}", if spi_api.path_and_query.starts_with('/') { "" } else { "/" }, &spi_api.path_and_query),
+                    exec_req.query,
                     exec_req.body.clone(),
                     funs,
                 )?
@@ -64,14 +67,25 @@ impl PluginExecServ {
                 }
             }
             if spi_api.save_message {
-                // todo 日志记录 至 spi-log 暂存疑
+                // TODO 日志记录 至 spi-log 暂存疑
             }
             return Ok(result);
         }
         return Err(funs.err().not_found(&PluginApiServ::get_obj_name(), "exec", "exec api is not fond", ""));
     }
 
-    fn build_url(path: &str, body: Option<Value>, funs: &TardisFunsInst) -> TardisResult<String> {
+    fn build_url(path: &str, query: Option<HashMap<String, String>>, body: Option<Value>, funs: &TardisFunsInst) -> TardisResult<String> {
+        let mut path = path.to_string();
+        if let Some(query) = query {
+            let query_str = query.iter().map(|(k, v)| format!("{}={}", k, v)).collect::<Vec<String>>().join("&");
+            if path.ends_with('?') {
+                path.push_str(&query_str);
+            } else if path.contains('?') {
+                path.push_str(&format!("&{}", query_str));
+            } else {
+                path.push_str(&format!("?{}", query_str));
+            }
+        }
         if !path.contains(':') {
             return Ok(path.to_string());
         }

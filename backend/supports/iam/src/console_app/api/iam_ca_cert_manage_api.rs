@@ -25,7 +25,7 @@ impl IamCaCertManageApi {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         let funs = iam_constants::get_tardis_inst();
         let ctx = IamCertServ::use_sys_or_tenant_ctx_unsafe(ctx.0)?;
-        let cert = IamCertServ::get_3th_kind_cert_by_id(&id.0, &funs, &ctx).await?;
+        let cert = IamCertServ::get_3th_kind_cert_by_id(&id.0, true, &funs, &ctx).await?;
         ctx.execute_task().await?;
         TardisResp::ok(cert)
     }

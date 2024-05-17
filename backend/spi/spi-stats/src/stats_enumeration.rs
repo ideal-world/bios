@@ -361,12 +361,14 @@ impl StatsQueryAggFunKind {
 }
 
 impl TryGetable for StatsQueryAggFunKind {
+    //TODO not_used
     fn try_get(res: &QueryResult, pre: &str, col: &str) -> Result<Self, TryGetError> {
         let s = String::try_get(res, pre, col)?;
         StatsQueryAggFunKind::from_str(&s).map_err(|_| TryGetError::DbErr(DbErr::RecordNotFound(format!("{pre}:{col}"))))
     }
 
     fn try_get_by<I: sea_orm::ColIdx>(_res: &QueryResult, _index: I) -> Result<Self, TryGetError> {
+        //TODO
         unimplemented!()
     }
 }

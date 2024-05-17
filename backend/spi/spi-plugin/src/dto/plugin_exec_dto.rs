@@ -6,6 +6,7 @@ use tardis::{serde_json::Value, web::poem_openapi};
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct PluginExecReq {
     pub header: Option<HashMap<String, String>>,
+    pub query: Option<HashMap<String, String>>,
     pub body: Option<Value>,
 }
 

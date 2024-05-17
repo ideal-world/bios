@@ -145,6 +145,10 @@ pub struct RbumCertFilterReq {
     ///
     /// 凭证状态
     pub status: Option<RbumCertStatusKind>,
+    /// Certificate extension information
+    ///
+    /// 凭证扩展信息
+    pub ext: Option<String>,
     /// Association type
     ///
     /// 关联类型
