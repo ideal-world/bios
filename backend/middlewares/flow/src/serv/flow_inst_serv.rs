@@ -384,7 +384,7 @@ impl FlowInstServ {
                 current_state_name: inst.current_state_name,
                 current_state_color: inst.current_state_color,
                 current_state_kind: inst.current_state_kind,
-                current_state_ext: inst.current_state_ext,
+                current_state_ext: inst.current_state_ext.map(|ext| TardisFuns::json.str_to_obj::<FlowStateRelModelExt>(&ext).unwrap_or_default()),
                 current_vars: inst.current_vars.map(|current_vars| TardisFuns::json.json_to_obj(current_vars).unwrap()),
                 rel_business_obj_id: inst.rel_business_obj_id,
             })
@@ -1075,7 +1075,7 @@ impl FlowInstServ {
             current_flow_state_name: flow_inst.current_state_name.as_ref().unwrap_or(&"".to_string()).to_string(),
             current_flow_state_color: flow_inst.current_state_color.as_ref().unwrap_or(&"".to_string()).to_string(),
             current_flow_state_kind: flow_inst.current_state_kind.as_ref().unwrap_or(&FlowSysStateKind::Start).clone(),
-            current_flow_state_ext: TardisFuns::json.str_to_obj::<FlowStateRelModelExt>(&flow_inst.current_state_ext.clone().unwrap_or_default())?,
+            current_flow_state_ext: flow_inst.current_state_ext.clone().unwrap_or_default(),
             next_flow_transitions: next_transitions,
         };
         Ok(state_and_next_transitions)

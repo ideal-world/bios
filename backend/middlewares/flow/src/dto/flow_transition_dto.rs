@@ -12,36 +12,57 @@ use tardis::{
 
 use super::flow_var_dto::FlowVarInfo;
 
+/// 添加动作
 #[derive(Serialize, Deserialize, Debug, Default, Clone, poem_openapi::Object)]
 pub struct FlowTransitionAddReq {
+    /// 修改前状态
+    /// Associated [flow_state](super::flow_state_dto::FlowStateDetailResp) id
+    ///
+    /// 关联的[工作流状态](super::flow_state_dto::FlowStateDetailResp) id
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub from_flow_state_id: String,
+    /// 修改后状态
+    /// Associated [flow_state](super::flow_state_dto::FlowStateDetailResp) id
+    ///
+    /// 关联的[工作流状态](super::flow_state_dto::FlowStateDetailResp) id
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub to_flow_state_id: String,
-
+    /// 动作名
     #[oai(validator(min_length = "2", max_length = "200"))]
     pub name: Option<TrimString>,
-
+    /// 为true时，不需要用户干预，在满足条件的前提下自动流转
     pub transfer_by_auto: Option<bool>,
+    /// 存在值时，到达时间后，在满足条件的前提下自动流转
     pub transfer_by_timer: Option<String>,
-
+    /// 权限配置：为true时，创建人可以操作
     pub guard_by_creator: Option<bool>,
+    /// 权限配置：为true时，历史操作人可以操作
     pub guard_by_his_operators: Option<bool>,
+    /// 权限配置：为true时，负责人可以操作
     pub guard_by_assigned: Option<bool>,
+    /// 权限配置：为true时，指定操作人可以操作
     pub guard_by_spec_account_ids: Option<Vec<String>>,
+    /// 权限配置：为true时，指定角色可以操作
     pub guard_by_spec_role_ids: Option<Vec<String>>,
+    /// 权限配置：为true时，指定组织可以操作
     pub guard_by_spec_org_ids: Option<Vec<String>>,
+    /// 权限配置：满足条件时，允许操作
     pub guard_by_other_conds: Option<Vec<Vec<BasicQueryCondInfo>>>,
-
+    /// 二次确认配置信息
     pub double_check: Option<FlowTransitionDoubleCheckInfo>,
+    /// 验证内容
     pub vars_collect: Option<Vec<FlowVarInfo>>,
+    /// 是否通知
     pub is_notify: Option<bool>,
-
+    /// 触发前回调的配置信息
     pub action_by_pre_callback: Option<String>,
+    /// 触发后回调的配置信息
     pub action_by_post_callback: Option<String>,
-    pub action_by_post_changes: Option<Vec<FlowTransitionActionChangeInfo>>,
+    /// 后置动作的配置信息
+    pub action_by_post_changes: Option<Vec<FlowTransitionPostActionInfo>>,
+    /// 前置动作的配置信息
     pub action_by_front_changes: Option<Vec<FlowTransitionFrontActionInfo>>,
-
+    /// 排序
     pub sort: Option<i64>,
 }
 
@@ -51,68 +72,126 @@ pub struct FlowTransitionModifyReq {
     pub id: TrimString,
     #[oai(validator(min_length = "2", max_length = "200"))]
     pub name: Option<TrimString>,
+    /// 修改前状态
+    /// Associated [flow_state](super::flow_state_dto::FlowStateDetailResp) id
+    ///
+    /// 关联的[工作流状态](super::flow_state_dto::FlowStateDetailResp) id
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub from_flow_state_id: Option<String>,
+    /// 修改后状态
+    /// Associated [flow_state](super::flow_state_dto::FlowStateDetailResp) id
+    ///
+    /// 关联的[工作流状态](super::flow_state_dto::FlowStateDetailResp) id
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub to_flow_state_id: Option<String>,
-
+    /// 为true时，不需要用户干预，在满足条件的前提下自动流转
     pub transfer_by_auto: Option<bool>,
+    /// 存在值时，到达时间后，在满足条件的前提下自动流转
     pub transfer_by_timer: Option<String>,
-
+    /// 权限配置：为true时，创建人可以操作
     pub guard_by_creator: Option<bool>,
+    /// 权限配置：为true时，历史操作人可以操作
     pub guard_by_his_operators: Option<bool>,
+    /// 权限配置：为true时，负责人可以操作
     pub guard_by_assigned: Option<bool>,
+    /// 权限配置：为true时，指定操作人可以操作
     pub guard_by_spec_account_ids: Option<Vec<String>>,
+    /// 权限配置：为true时，指定角色可以操作
     pub guard_by_spec_role_ids: Option<Vec<String>>,
+    /// 权限配置：为true时，指定组织可以操作
     pub guard_by_spec_org_ids: Option<Vec<String>>,
+    /// 权限配置：满足条件时，允许操作
     pub guard_by_other_conds: Option<Vec<Vec<BasicQueryCondInfo>>>,
-
-    pub vars_collect: Option<Vec<FlowVarInfo>>,
+    /// 二次确认配置信息
     pub double_check: Option<FlowTransitionDoubleCheckInfo>,
-    pub is_notify: Option<bool>,
-
-    pub action_by_pre_callback: Option<String>,
-    pub action_by_post_callback: Option<String>,
-    pub action_by_post_changes: Option<Vec<FlowTransitionActionChangeInfo>>,
-    pub action_by_front_changes: Option<Vec<FlowTransitionFrontActionInfo>>,
-
-    pub sort: Option<i64>,
+    /// 验证内容
+    pub vars_collect: Option<Vec<FlowVarInfo>>,
+   /// 是否通知
+   pub is_notify: Option<bool>,
+   /// 触发前回调的配置信息
+   pub action_by_pre_callback: Option<String>,
+   /// 触发后回调的配置信息
+   pub action_by_post_callback: Option<String>,
+   /// 后置动作的配置信息
+   pub action_by_post_changes: Option<Vec<FlowTransitionPostActionInfo>>,
+   /// 前置动作的配置信息
+   pub action_by_front_changes: Option<Vec<FlowTransitionFrontActionInfo>>,
+   /// 排序
+   pub sort: Option<i64>,
 }
 
 #[derive(Serialize, Deserialize, Default, Debug, Clone, poem_openapi::Object, sea_orm::FromQueryResult)]
 pub struct FlowTransitionDetailResp {
     pub id: String,
     pub name: String,
-
+    /// 修改前状态ID
+    /// Associated [flow_state](super::flow_state_dto::FlowStateDetailResp) id
+    ///
+    /// 关联的[工作流状态](super::flow_state_dto::FlowStateDetailResp) id
     pub from_flow_state_id: String,
+    /// 修改前状态名
+    /// Associated [flow_state](super::flow_state_dto::FlowStateDetailResp) name
+    ///
+    /// 关联的[工作流状态](super::flow_state_dto::FlowStateDetailResp) name
     pub from_flow_state_name: String,
+    /// 修改前状态的标示颜色
+    /// Associated [flow_state](super::flow_state_dto::FlowStateDetailResp) color
+    ///
+    /// 关联的[工作流状态](super::flow_state_dto::FlowStateDetailResp) color
     pub from_flow_state_color: String,
+    /// 修改后状态ID
+    /// Associated [flow_state](super::flow_state_dto::FlowStateDetailResp) id
+    ///
+    /// 关联的[工作流状态](super::flow_state_dto::FlowStateDetailResp) id
     pub to_flow_state_id: String,
+    /// 修改后状态名
+    /// Associated [flow_state](super::flow_state_dto::FlowStateDetailResp) name
+    ///
+    /// 关联的[工作流状态](super::flow_state_dto::FlowStateDetailResp) name
     pub to_flow_state_name: String,
+    /// 修改后状态的标示颜色
+    /// Associated [flow_state](super::flow_state_dto::FlowStateDetailResp) color
+    ///
+    /// 关联的[工作流状态](super::flow_state_dto::FlowStateDetailResp) color
     pub to_flow_state_color: String,
-
+    /// 为true时，不需要用户干预，在满足条件的前提下自动流转
     pub transfer_by_auto: bool,
+    /// 存在值时，到达时间后，在满足条件的前提下自动流转
     pub transfer_by_timer: String,
-
+    /// 权限配置：为true时，创建人可以操作
     pub guard_by_creator: bool,
+    /// 权限配置：为true时，历史操作人可以操作
     pub guard_by_his_operators: bool,
+    /// 权限配置：为true时，负责人可以操作
     pub guard_by_assigned: bool,
+    /// 权限配置：为true时，指定操作人可以操作
     pub guard_by_spec_account_ids: Vec<String>,
+    /// 权限配置：为true时，指定角色可以操作
     pub guard_by_spec_role_ids: Vec<String>,
+    /// 权限配置：为true时，指定组织可以操作
     pub guard_by_spec_org_ids: Vec<String>,
+    /// 权限配置：满足条件时，允许操作
     // TODO
     pub guard_by_other_conds: Value,
-
+    /// 验证内容
     pub vars_collect: Value,
+    /// 二次确认配置信息
     pub double_check: Value,
+    /// 是否通知
     pub is_notify: bool,
-
+    /// 触发前回调的配置信息
     pub action_by_pre_callback: String,
+    /// 触发后回调的配置信息
     pub action_by_post_callback: String,
+    /// 后置动作的配置信息
     pub action_by_post_changes: Value,
+    /// 前置动作的配置信息
     pub action_by_front_changes: Value,
-
+    /// Associated [flow_state](super::flow_model_dto::FlowModelDetailResp) id
+    ///
+    /// 关联的[工作流状态](super::flow_model_dto::FlowModelDetailResp) id
     pub rel_flow_model_id: String,
+    /// 排序
     pub sort: i64,
 }
 
@@ -133,7 +212,7 @@ impl FlowTransitionDetailResp {
         }
     }
 
-    pub fn action_by_post_changes(&self) -> Vec<FlowTransitionActionChangeInfo> {
+    pub fn action_by_post_changes(&self) -> Vec<FlowTransitionPostActionInfo> {
         if self.action_by_post_changes.is_array() && !&self.action_by_post_changes.as_array().unwrap().is_empty() {
             TardisFuns::json.json_to_obj(self.action_by_post_changes.clone()).unwrap_or_default()
         } else {
@@ -190,9 +269,12 @@ impl From<FlowTransitionDetailResp> for FlowTransitionAddReq {
     }
 }
 
+/// 二次确认
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug, Default, poem_openapi::Object, sea_orm::FromJsonQueryResult)]
 pub struct FlowTransitionDoubleCheckInfo {
+    /// 是否开启弹窗
     pub is_open: bool,
+    /// 提示内容
     pub content: Option<String>,
 }
 
@@ -207,23 +289,38 @@ pub struct FlowTransitionSortStateInfoReq {
     pub sort: i64,
 }
 
+/// 后置动作配置信息
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug, poem_openapi::Object, sea_orm::FromJsonQueryResult)]
-pub struct FlowTransitionActionChangeInfo {
+pub struct FlowTransitionPostActionInfo {
+    /// 后置动作类型，目前有状态修改和字段修改两种。
     pub kind: FlowTransitionActionChangeKind,
+    /// 描述
     pub describe: String,
+    /// 对象Tag。为空时，代表触发的业务对象为当前操作的业务对象。有值时，代表触发的业务对象为当前操作的业务对象的关联对象。
+    /// 例：值为req，则代表触发的业务对象为当前操作对象所关联的需求对象。
     pub obj_tag: Option<String>,
+    /// 对象tag的关联类型。当 kind 为 State 时该字段生效，当 kind 为 var 时该字段统一为 default。
+    /// 目前有默认和父子关系两种。为空时，代表是默认关联类型。当值为 Default 时，obj_tag 为 req/issue/test/task等。当值为 ParentOrSub 时，obj_tag 为 parent/sub.
+    /// 例：当值为 ParentOrSub，obj_tag 为 parent。表示为当前操作对象所关联的父级对象。
     pub obj_tag_rel_kind: Option<TagRelKind>,
+    /// 筛选当前状态符合的业务对象。
     pub obj_current_state_id: Option<Vec<String>>,
+    /// 触发动作所需要关联对象符合的条件
     pub change_condition: Option<StateChangeCondition>,
+    /// 当 kind 为 State 时生效，触发修改的目标状态
     pub changed_state_id: String,
+    /// 当 kind 为 Var 时生效，为 false 表示修改当前操作对象字段，为 true 时，表示修改当前操作对象的关联对象字段
     pub current: bool,
+    /// 被修改的字段名
     pub var_name: String,
+    /// 修改内容
     pub changed_val: Option<Value>,
+    /// 修改方式（清空，更改内容，更改为其他字段的值，加减值等）
     pub changed_kind: Option<FlowTransitionActionByVarChangeInfoChangedKind>,
 }
 
-impl From<FlowTransitionActionChangeInfo> for FlowTransitionActionChangeAgg {
-    fn from(value: FlowTransitionActionChangeInfo) -> Self {
+impl From<FlowTransitionPostActionInfo> for FlowTransitionActionChangeAgg {
+    fn from(value: FlowTransitionPostActionInfo) -> Self {
         match value.kind {
             FlowTransitionActionChangeKind::State => FlowTransitionActionChangeAgg {
                 kind: value.kind,
@@ -254,80 +351,130 @@ impl From<FlowTransitionActionChangeInfo> for FlowTransitionActionChangeAgg {
     }
 }
 
+/// 后置动作聚合信息
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug, poem_openapi::Object)]
 pub struct FlowTransitionActionChangeAgg {
+    /// 后置动作类型，目前有状态修改和字段修改两种。
     pub kind: FlowTransitionActionChangeKind,
+    /// 字段修改配置信息
     pub var_change_info: Option<FlowTransitionActionByVarChangeInfo>,
+    /// 状态变更配置信息
     pub state_change_info: Option<FlowTransitionActionByStateChangeInfo>,
 }
 
+/// 后置动作类型，目前有状态修改和字段修改两种。
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, EnumIter, sea_orm::DeriveActiveEnum)]
 #[sea_orm(rs_type = "String", db_type = "String(Some(255))")]
 pub enum FlowTransitionActionChangeKind {
+    /// 字段修改
     #[sea_orm(string_value = "var")]
     Var,
+    /// 状态变更
     #[sea_orm(string_value = "state")]
     State,
 }
 
+/// 字段修改配置信息
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug, poem_openapi::Object, sea_orm::FromJsonQueryResult)]
 pub struct FlowTransitionActionByVarChangeInfo {
+    /// 当 kind 为 Var 时生效，为 false 表示修改当前操作对象字段，为 true 时，表示修改当前操作对象的关联对象字段
     pub current: bool,
+    /// 描述
     pub describe: String,
+    /// 对象Tag。为空时，代表触发的业务对象为当前操作的业务对象。有值时，代表触发的业务对象为当前操作的业务对象的关联对象。
+    /// 例：值为req，则代表触发的业务对象为当前操作对象所关联的需求对象。
     pub obj_tag: Option<String>,
+    /// 对象tag的关联类型。当 kind 为 State 时该字段有效，当 kind 为 var 时该字段统一为 default。
+    /// 目前有默认和父子关系两种。为空时，代表是默认关联类型。当值为 Default 时，obj_tag 为 req/issue/test/task等。当值为 ParentOrSub 时，obj_tag 为 parent/sub.
+    /// 例：当值为 ParentOrSub，obj_tag 为 parent。表示为当前操作对象所关联的父级对象。
     pub obj_tag_rel_kind: Option<TagRelKind>,
+    /// 被修改的字段名
     pub var_name: String,
+    /// 修改内容
     pub changed_val: Option<Value>,
+    /// 修改方式（清空，更改内容，更改为其他字段的值，加减值等）
     pub changed_kind: Option<FlowTransitionActionByVarChangeInfoChangedKind>,
 }
 
+/// 修改方式（清空，更改内容，更改为其他字段的值，加减值等）
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, EnumIter, sea_orm::DeriveActiveEnum)]
 #[sea_orm(rs_type = "String", db_type = "String(Some(255))")]
 pub enum FlowTransitionActionByVarChangeInfoChangedKind {
+    /// 清空
     #[sea_orm(string_value = "clean")]
     Clean,
+    /// 更改为指定内容
     #[sea_orm(string_value = "change_content")]
     ChangeContent,
+    /// 更改为当前时间（仅支持时间格式的字段）
     #[sea_orm(string_value = "auto_get_operate_time")]
     AutoGetOperateTime,
+    /// 更改为当前操作人（仅支持用户相关值得字段）
     #[sea_orm(string_value = "auto_get_operator")]
     AutoGetOperator,
+    /// 更改为指定字段值（仅支持相同类型字段）
     #[sea_orm(string_value = "select_field")]
     SelectField,
+    /// 加某个值或者减某个值（仅支持数值类字段）
     #[sea_orm(string_value = "and_or_subs")]
     AddOrSub,
 }
 
+/// 状态变更的配置信息
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug, poem_openapi::Object, sea_orm::FromJsonQueryResult)]
 pub struct FlowTransitionActionByStateChangeInfo {
+    /// 对象Tag。为空时，代表触发的业务对象为当前操作的业务对象。有值时，代表触发的业务对象为当前操作的业务对象的关联对象。
+    /// 例：值为req，则代表触发的业务对象为当前操作对象所关联的需求对象。
     pub obj_tag: String,
+    /// 对象tag的关联类型。当 kind 为 State 时该字段生效，当 kind 为 var 时该字段统一为 default。
+    /// 目前有默认和父子关系两种。为空时，代表是默认关联类型。当值为 Default 时，obj_tag 为 req/issue/test/task等。当值为 ParentOrSub 时，obj_tag 为 parent/sub.
+    /// 例：当值为 ParentOrSub，obj_tag 为 parent。表示为当前操作对象所关联的父级对象。
     pub obj_tag_rel_kind: Option<TagRelKind>,
+    /// 描述
     pub describe: String,
+    /// 筛选当前状态符合的业务对象。
     pub obj_current_state_id: Option<Vec<String>>,
+    /// 触发动作所需要关联对象符合的条件
     pub change_condition: Option<StateChangeCondition>,
+    /// 修改的目标状态
     pub changed_state_id: String,
 }
 
+/// 触发动作所需要关联对象符合的条件
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug, poem_openapi::Object, sea_orm::FromJsonQueryResult)]
 pub struct StateChangeCondition {
+    /// 是否启用该条件规则
     pub current: bool,
+    /// 筛选条件的配置项
     pub conditions: Vec<StateChangeConditionItem>,
 }
 
+/// 筛选条件的配置项
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug, poem_openapi::Object, sea_orm::FromJsonQueryResult)]
 pub struct StateChangeConditionItem {
+    /// 对象Tag。为空时，代表触发的业务对象为当前操作的业务对象。有值时，代表触发的业务对象为当前操作的业务对象的关联对象。
+    /// 例：值为req，则代表触发的业务对象为当前操作对象所关联的需求对象。
     pub obj_tag: Option<String>,
+    /// 对象tag的关联类型。当 kind 为 State 时该字段生效，当 kind 为 var 时该字段统一为 default。
+    /// 目前有默认和父子关系两种。为空时，代表是默认关联类型。当值为 Default 时，obj_tag 为 req/issue/test/task等。当值为 ParentOrSub 时，obj_tag 为 parent/sub.
+    /// 例：当值为 ParentOrSub，obj_tag 为 parent。表示为当前操作对象所关联的父级对象。
     pub obj_tag_rel_kind: Option<TagRelKind>,
+    /// 需要符合的状态ID
     pub state_id: Vec<String>,
+    /// 实际规则的条件类型
     pub op: StateChangeConditionOp,
 }
 
+/// 实际规则的条件类型
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug, poem_openapi::Enum)]
 pub enum StateChangeConditionOp {
     And,
     Or,
 }
 
+/// 对象tag的关联类型。当 kind 为 State 时该字段生效，当 kind 为 var 时该字段统一为 default。
+    /// 目前有默认和父子关系两种。为空时，代表是默认关联类型。当值为 Default 时，obj_tag 为 req/issue/test/task等。当值为 ParentOrSub 时，obj_tag 为 parent/sub.
+    /// 例：当值为 ParentOrSub，obj_tag 为 parent。表示为当前操作对象所关联的父级对象。
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug, poem_openapi::Enum)]
 pub enum TagRelKind {
     Default,
@@ -365,7 +512,7 @@ pub struct FlowTransitionInitInfo {
 
     pub action_by_pre_callback: Option<String>,
     pub action_by_post_callback: Option<String>,
-    pub action_by_post_changes: Vec<FlowTransitionActionChangeInfo>,
+    pub action_by_post_changes: Vec<FlowTransitionPostActionInfo>,
     pub action_by_front_changes: Vec<FlowTransitionFrontActionInfo>,
 
     pub sort: Option<i64>,
@@ -401,16 +548,26 @@ impl TryFrom<FlowTransitionInitInfo> for FlowTransitionAddReq {
     }
 }
 
+/// 前置条件配置信息
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug, poem_openapi::Object, sea_orm::FromJsonQueryResult)]
 pub struct FlowTransitionFrontActionInfo {
+    /// 关联关系类型
     pub relevance_relation: FlowTransitionFrontActionInfoRelevanceRelation,
+    /// 关联关系名
     pub relevance_label: String,
+    /// 左值
     pub left_value: String,
+    /// 左值字段名
     pub left_label: String,
+    /// 右值类型（某个字段，某个值，当前时间等）
     pub right_value: FlowTransitionFrontActionRightValue,
+    /// 当right_value为SelectField时生效，选择字段。
     pub select_field: Option<String>,
+    /// 当right_value为SelectField时生效，选择字段名。
     pub select_field_label: Option<String>,
+    /// 当right_value为ChangeContent时生效，填写值。
     pub change_content: Option<Value>,
+    /// 当right_value为ChangeContent时生效，填写值的标签。
     pub change_content_label: Option<String>,
 }
 
@@ -490,13 +647,17 @@ impl FlowTransitionFrontActionInfoRelevanceRelation {
     }
 }
 
+/// 右值类型
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug, poem_openapi::Enum)]
 #[serde(rename_all = "snake_case")]
 pub enum FlowTransitionFrontActionRightValue {
+    /// 某个字段
     #[oai(rename = "select_field")]
     SelectField,
+    /// 某个值
     #[oai(rename = "change_content")]
     ChangeContent,
+    /// 当前时间
     #[oai(rename = "real_time")]
     RealTime,
 }
