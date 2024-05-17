@@ -2,23 +2,18 @@ use std::collections::HashMap;
 
 use pinyin::{to_pinyin_vec, Pinyin};
 use tardis::{
-    basic::{dto::TardisContext, error::TardisError, result::TardisResult},
-    chrono::Utc,
-    db::{
+    basic::{dto::TardisContext, error::TardisError, result::TardisResult}, chrono::Utc, db::{
         reldb_client::{TardisRelDBClient, TardisRelDBlConnection},
         sea_orm::{FromQueryResult, Value},
-    },
-    serde_json::{self, json, Map},
-    web::web_resp::TardisPage,
-    TardisFuns, TardisFunsInst,
+    }, futures::future::join_all, serde_json::{self, json, Map}, web::web_resp::TardisPage, TardisFuns, TardisFunsInst
 };
+use itertools::Itertools;
 
 use bios_basic::{dto::BasicQueryCondInfo, enumeration::BasicQueryOpKind, helper::db_helper, spi::spi_funs::SpiBsInst};
 
 use crate::{
     dto::search_item_dto::{
-        AdvBasicQueryCondInfo, SearchItemAddReq, SearchItemModifyReq, SearchItemSearchQScopeKind, SearchItemSearchReq, SearchItemSearchResp, SearchQueryMetricsReq,
-        SearchQueryMetricsResp,
+        AdvBasicQueryCondInfo, SearchItemAddReq, SearchItemModifyReq, SearchItemSearchQScopeKind, SearchItemSearchReq, SearchItemSearchResp, SearchQueryMetricsReq, SearchQueryMetricsResp
     },
     search_config::SearchConfig,
 };
@@ -1546,4 +1541,19 @@ fn package_groups_agg(record: serde_json::Value) -> Result<serde_json::Value, St
         }
         None => Ok(serde_json::Value::Null),
     }
+}
+
+pub async fn refresh_tsv(tag: &str, funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
+    let bs_inst = inst.inst::<TardisRelDBClient>();
+    let (conn, table_name) = search_pg_initializer::init_table_and_conn(bs_inst, tag, ctx, false).await?;
+    let result = conn.query_all(&format!("SELECT key, title FROM {table_name}"), vec![]).await?;
+    join_all(
+        result.into_iter().map(|row| async move {
+            modify(tag, row.try_get::<String>("", "key").unwrap().as_str(), &mut SearchItemModifyReq {
+                title: Some(row.try_get("", "title").unwrap()),
+                ..Default::default()
+            }, funs, ctx, inst).await.unwrap()
+        }).collect_vec(),
+    ).await;
+    Ok(())
 }
