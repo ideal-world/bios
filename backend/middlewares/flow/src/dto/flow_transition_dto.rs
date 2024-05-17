@@ -1,5 +1,4 @@
 use bios_basic::dto::BasicQueryCondInfo;
-use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use strum::Display;
 use tardis::{
@@ -610,6 +609,8 @@ pub enum FlowTransitionFrontActionInfoRelevanceRelation {
 
 impl FlowTransitionFrontActionInfoRelevanceRelation {
     pub fn check_conform(&self, left_value: String, right_value: String) -> bool {
+        use itertools::Itertools;
+
         if left_value.is_empty() || left_value == "null" || right_value == "null" {
             return false;
         }
