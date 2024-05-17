@@ -835,6 +835,6 @@ pub async fn query_metrics(_query_req: &SearchQueryMetricsReq, funs: &TardisFuns
     Err(funs.err().format_error("search_es_item_serv", "query_metrics", "not supports", "500-not-supports"))
 }
 
-pub async fn refresh_tsv(tag: &str, funs: &TardisFunsInst, _ctx: &TardisContext, _inst: &SpiBsInst) -> TardisResult<SearchQueryMetricsResp> {
+pub async fn refresh_tsv(tag: &str, funs: &TardisFunsInst, _ctx: &TardisContext, _inst: &SpiBsInst) -> TardisResult<()> {
     Err(funs.err().format_error("search_es_item_serv", "refresh_tsv", "not supports", "500-not-supports"))
 }

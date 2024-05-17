@@ -1552,7 +1552,7 @@ pub async fn refresh_tsv(tag: &str, funs: &TardisFunsInst, ctx: &TardisContext, 
             modify(tag, row.try_get::<String>("", "key").unwrap().as_str(), &mut SearchItemModifyReq {
                 title: Some(row.try_get("", "title").unwrap()),
                 ..Default::default()
-            }, funs, ctx, inst).await.unwrap()
+            }, funs, ctx, inst).await.expect("modify error")
         }).collect_vec(),
     ).await;
     Ok(())
