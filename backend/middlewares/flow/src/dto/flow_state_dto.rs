@@ -11,6 +11,8 @@ use tardis::{
     web::poem_openapi,
 };
 
+use super::flow_transition_dto::FlowTransitionDetailResp;
+
 #[derive(Serialize, Deserialize, Default, Debug, poem_openapi::Object)]
 pub struct FlowStateAddReq {
     #[oai(validator(min_length = "2", max_length = "200"))]
@@ -185,7 +187,7 @@ pub struct FlowStateCountGroupByStateResp {
     pub inst_ids: Vec<String>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Default, poem_openapi::Object, sea_orm::FromQueryResult)]
+#[derive(Serialize, Clone, Deserialize, Debug, Default, poem_openapi::Object, sea_orm::FromQueryResult)]
 pub struct FlowStateRelModelExt {
     pub sort: i64,
     pub show_btns: Option<Vec<String>>,
@@ -196,4 +198,14 @@ pub struct FlowStateRelModelModifyReq {
     pub id: String,
     pub sort: Option<i64>,
     pub show_btns: Option<Vec<String>>,
+}
+
+/// 工作流状态聚合信息
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct FlowStateAggResp {
+    pub id: String,
+    pub name: String,
+    pub is_init: bool,
+    pub ext: FlowStateRelModelExt,
+    pub transitions: Vec<FlowTransitionDetailResp>,
 }

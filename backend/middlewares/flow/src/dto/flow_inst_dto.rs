@@ -197,58 +197,123 @@ impl FlowOperationContext {
 /// 获取实例下一个动作列表请求
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
 pub struct FlowInstFindNextTransitionsReq {
+    /// 参数列表
     pub vars: Option<HashMap<String, Value>>,
 }
 
 /// 获取实例下一个动作列表请求
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object, Clone)]
 pub struct FlowInstFindNextTransitionResp {
+    /// Associated [flow_transition](super::flow_transition_dto::FlowTransitionDetailResp) id
+    ///
+    /// 关联的[工作流动态](super::flow_transition_dto::FlowTransitionDetailResp) id
     pub next_flow_transition_id: String,
+    /// Associated [flow_transition](super::flow_transition_dto::FlowTransitionDetailResp) name
+    ///
+    /// 关联的[工作流动态](super::flow_transition_dto::FlowTransitionDetailResp) name
     pub next_flow_transition_name: String,
+    /// Associated [flow_state](super::flow_state_dto::FlowStateDetailResp) id
+    ///
+    /// 关联的[工作流状态](super::flow_state_dto::FlowStateDetailResp) id
     pub next_flow_state_id: String,
+    /// Associated [flow_state](super::flow_state_dto::FlowStateDetailResp) name
+    ///
+    /// 关联的[工作流状态](super::flow_state_dto::FlowStateDetailResp) name
     pub next_flow_state_name: String,
+    /// Associated [flow_state](super::flow_state_dto::FlowStateDetailResp) color
+    ///
+    /// 关联的[工作流状态](super::flow_state_dto::FlowStateDetailResp) color
     pub next_flow_state_color: String,
-
+    /// 参数列表
     pub vars_collect: Option<Vec<FlowVarInfo>>,
+    /// Associated [二次确认](FlowTransitionDoubleCheckInfo)
+    ///
+    /// 关联的[二次确认](FlowTransitionDoubleCheckInfo)
     pub double_check: Option<FlowTransitionDoubleCheckInfo>,
 }
 
+/// 获取实例状态及流转信息的请求
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
 pub struct FlowInstFindStateAndTransitionsReq {
+    /// 实例ID
     pub flow_inst_id: String,
+    /// 参数列表
     pub vars: Option<HashMap<String, Value>>,
 }
 
+/// 实例状态及流转信息
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
 pub struct FlowInstFindStateAndTransitionsResp {
+    /// 实例ID
     pub flow_inst_id: String,
+    /// Associated [flow_state](super::flow_state_dto::FlowStateDetailResp) name
+    ///
+    /// 关联的[工作流状态](super::flow_state_dto::FlowStateDetailResp) name
     pub current_flow_state_name: String,
+    /// Associated [flow_state](super::flow_state_dto::FlowStateDetailResp) sys_state
+    ///
+    /// 关联的[工作流状态](super::flow_state_dto::FlowStateDetailResp) sys_state
     pub current_flow_state_kind: FlowSysStateKind,
+    /// Associated [flow_state](super::flow_state_dto::FlowStateDetailResp) color
+    ///
+    /// 关联的[工作流状态](super::flow_state_dto::FlowStateDetailResp) color
     pub current_flow_state_color: String,
+    /// Associated [flow_state_ext](FlowStateRelModelExt)
+    ///
+    /// 关联的[工作流状态扩展](FlowStateRelModelExt)
     pub current_flow_state_ext: FlowStateRelModelExt,
+    /// 结束时间
     pub finish_time: Option<DateTime<Utc>>,
+    /// 流转信息
     pub next_flow_transitions: Vec<FlowInstFindNextTransitionResp>,
 }
 
+/// 流转请求
 #[derive(Serialize, Deserialize, Clone, Debug, poem_openapi::Object)]
 pub struct FlowInstTransferReq {
+    /// 工作流实例ID
     pub flow_transition_id: String,
+    /// 消息内容
     pub message: Option<String>,
+    /// 参数列表
     pub vars: Option<HashMap<String, Value>>,
 }
 
+/// 流转响应
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
 pub struct FlowInstTransferResp {
+    /// Associated [Pre-modification status](super::flow_state_dto::FlowStateDetailResp) id
+    ///
+    /// 关联的[修改前状态](super::flow_state_dto::FlowStateDetailResp) id
     pub prev_flow_state_id: String,
+    /// Associated [Pre-modification status](super::flow_state_dto::FlowStateDetailResp) name
+    ///
+    /// 关联的[修改前状态](super::flow_state_dto::FlowStateDetailResp) name
     pub prev_flow_state_name: String,
+    /// Associated [Pre-modification status](super::flow_state_dto::FlowStateDetailResp) color
+    ///
+    /// 关联的[修改前状态](super::flow_state_dto::FlowStateDetailResp) color
     pub prev_flow_state_color: String,
+    /// Associated [modified state](super::flow_state_dto::FlowStateDetailResp) id
+    ///
+    /// 关联的[修改后状态](super::flow_state_dto::FlowStateDetailResp) id
     pub new_flow_state_id: String,
+    /// Associated [modified state](super::flow_state_dto::FlowStateDetailResp) name
+    ///
+    /// 关联的[修改后状态](super::flow_state_dto::FlowStateDetailResp) name
     pub new_flow_state_name: String,
+    /// Associated [modified state](super::flow_state_dto::FlowStateDetailResp) color
+    ///
+    /// 关联的[修改后状态](super::flow_state_dto::FlowStateDetailResp) color
     pub new_flow_state_color: String,
+    /// 修改后状态扩展信息
     pub new_flow_state_ext: FlowStateRelModelExt,
+    /// 结束时间
     pub finish_time: Option<DateTime<Utc>>,
 
+    /// 参数列表
     pub vars: Option<HashMap<String, Value>>,
+    /// 流转动作列表
     pub next_flow_transitions: Vec<FlowInstFindNextTransitionResp>,
 }
 
@@ -257,7 +322,9 @@ pub struct FlowInstModifyAssignedReq {
     pub current_assigned: String,
 }
 
+/// 修改当前参数列表
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
 pub struct FlowInstModifyCurrentVarsReq {
+    /// 参数列表
     pub vars: HashMap<String, Value>,
 }
