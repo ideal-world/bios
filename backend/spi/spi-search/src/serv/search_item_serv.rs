@@ -29,5 +29,6 @@ spi_dispatch_service! {
         delete_by_ownership(tag: &str, own_paths: &str) -> TardisResult<()>;
         search(search_req: &mut SearchItemSearchReq) -> TardisResult<TardisPage<SearchItemSearchResp>>;
         query_metrics(query_req: &SearchQueryMetricsReq) -> TardisResult<SearchQueryMetricsResp>;
+        refresh_tsv(tag: &str) -> TardisResult<()>;
     }
 }
