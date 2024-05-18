@@ -70,11 +70,11 @@ impl SearchCiItemApi {
     /// Refresh TSV Result By Tag
     /// 
     /// 通过指定 tag 刷新分词结果
-    #[oai(path = "/refresh", method = "put")]
-    async fn refresh_tsv(&self, tag: Query<String>) -> TardisApiResult<Void> {
+    #[oai(path = "/:tag/refresh", method = "put")]
+    async fn refresh_tsv(&self, tag: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let global_ctx = TardisContext {
             own_paths: "".to_string(),
-            ..Default::default()
+            ..ctx.0.clone()
         };
         let funs = crate::get_tardis_inst();
         search_item_serv::refresh_tsv(&tag.0, &funs, &global_ctx).await?;
