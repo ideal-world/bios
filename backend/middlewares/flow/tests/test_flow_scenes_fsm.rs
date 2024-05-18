@@ -10,11 +10,11 @@ use bios_mw_flow::dto::flow_inst_dto::{
 };
 use bios_mw_flow::dto::flow_model_dto::{
     FlowModelAddCustomModelItemReq, FlowModelAddCustomModelReq, FlowModelAddCustomModelResp, FlowModelAggResp, FlowModelBindStateReq, FlowModelFindRelStateResp,
-    FlowModelModifyReq, FlowModelSortStateInfoReq, FlowModelSortStatesReq, FlowModelSummaryResp, FlowModelUnbindStateReq, FlowTemplateModelResp,
+    FlowModelModifyReq, FlowModelSortStateInfoReq, FlowModelSortStatesReq, FlowModelSummaryResp, FlowModelUnbindStateReq,
 };
 use bios_mw_flow::dto::flow_state_dto::{FlowStateAddReq, FlowStateRelModelExt, FlowStateSummaryResp, FlowSysStateKind};
 use bios_mw_flow::dto::flow_transition_dto::{
-    FlowTransitionActionByVarChangeInfoChangedKind, FlowTransitionActionChangeInfo, FlowTransitionActionChangeKind, FlowTransitionAddReq, FlowTransitionDoubleCheckInfo,
+    FlowTransitionActionByVarChangeInfoChangedKind, FlowTransitionPostActionInfo, FlowTransitionActionChangeKind, FlowTransitionAddReq, FlowTransitionDoubleCheckInfo,
     FlowTransitionModifyReq, FlowTransitionSortStateInfoReq, FlowTransitionSortStatesReq, StateChangeCondition, StateChangeConditionItem, StateChangeConditionOp,
 };
 
@@ -72,7 +72,6 @@ pub async fn test(flow_client: &mut TestHttpClient) -> TardisResult<()> {
     for tag in tags {
         modify_configs.push(FlowModelAddCustomModelItemReq {
             tag: tag.to_string(),
-            feature_template_id: None,
         });
     }
     let result: Vec<FlowModelAddCustomModelResp> = flow_client
@@ -149,7 +148,7 @@ pub async fn test(flow_client: &mut TestHttpClient) -> TardisResult<()> {
 
     let mock_template_id = "mock_template_id".to_string();
     // 2-2. create flow models by template_id
-    let result: HashMap<String, FlowTemplateModelResp> = flow_client
+    let result: HashMap<String, FlowModelSummaryResp> = flow_client
         .put(
             &format!("/cc/model/find_or_add_models?tag_ids=REQ,TICKET,ITER,PROJ&is_shared=true&temp_id={}", mock_template_id),
             &json!(""),
@@ -228,14 +227,14 @@ pub async fn test(flow_client: &mut TestHttpClient) -> TardisResult<()> {
                         ]),
                         action_by_pre_callback: None,
                         action_by_post_callback: None,
-                        action_by_post_changes: Some(vec![FlowTransitionActionChangeInfo {
+                        action_by_post_changes: Some(vec![FlowTransitionPostActionInfo {
                             kind: FlowTransitionActionChangeKind::State,
                             describe: "".to_string(),
                             obj_tag: Some("TICKET".to_string()),
                             obj_tag_rel_kind: None,
                             obj_current_state_id: Some(vec![ticket_model_agg.init_state_id.clone()]),
                             change_condition: Some(StateChangeCondition {
-                                current: true,
+                                current: false,
                                 conditions: vec![StateChangeConditionItem {
                                     obj_tag: Some("ITER".to_string()),
                                     obj_tag_rel_kind: None,
@@ -276,7 +275,7 @@ pub async fn test(flow_client: &mut TestHttpClient) -> TardisResult<()> {
                         action_by_post_callback: None,
                         action_by_front_changes: None,
                         action_by_post_changes: Some(vec![
-                            FlowTransitionActionChangeInfo {
+                            FlowTransitionPostActionInfo {
                                 kind: FlowTransitionActionChangeKind::Var,
                                 describe: "".to_string(),
                                 obj_tag: Some("".to_string()),
@@ -289,7 +288,7 @@ pub async fn test(flow_client: &mut TestHttpClient) -> TardisResult<()> {
                                 changed_val: None,
                                 changed_kind: Some(FlowTransitionActionByVarChangeInfoChangedKind::AutoGetOperateTime),
                             },
-                            FlowTransitionActionChangeInfo {
+                            FlowTransitionPostActionInfo {
                                 kind: FlowTransitionActionChangeKind::Var,
                                 describe: "".to_string(),
                                 obj_tag: Some("".to_string()),
@@ -376,7 +375,7 @@ pub async fn test(flow_client: &mut TestHttpClient) -> TardisResult<()> {
                     action_by_pre_callback: None,
                     action_by_post_callback: None,
                     action_by_front_changes: None,
-                    action_by_post_changes: Some(vec![FlowTransitionActionChangeInfo {
+                    action_by_post_changes: Some(vec![FlowTransitionPostActionInfo {
                         kind: FlowTransitionActionChangeKind::State,
                         describe: "".to_string(),
                         obj_tag: Some("TICKET".to_string()),
@@ -421,7 +420,7 @@ pub async fn test(flow_client: &mut TestHttpClient) -> TardisResult<()> {
                     action_by_pre_callback: None,
                     action_by_post_callback: None,
                     action_by_front_changes: None,
-                    action_by_post_changes: Some(vec![FlowTransitionActionChangeInfo {
+                    action_by_post_changes: Some(vec![FlowTransitionPostActionInfo {
                         kind: FlowTransitionActionChangeKind::State,
                         describe: "".to_string(),
                         obj_tag: Some("PROJ".to_string()),
@@ -460,7 +459,7 @@ pub async fn test(flow_client: &mut TestHttpClient) -> TardisResult<()> {
         )
         .await;
     let share_template_id = "share_template_id".to_string();
-    let share_template_models: HashMap<String, FlowTemplateModelResp> = flow_client
+    let share_template_models: HashMap<String, FlowModelSummaryResp> = flow_client
         .put(
             &format!("/cc/model/find_or_add_models?tag_ids=REQ&is_shared=true&temp_id={}", share_template_id),
             &json!(""),
@@ -489,7 +488,7 @@ pub async fn test(flow_client: &mut TestHttpClient) -> TardisResult<()> {
 
     ctx.own_paths = "t2".to_string();
     flow_client.set_auth(&ctx)?;
-    let other_models: HashMap<String, FlowTemplateModelResp> = flow_client
+    let other_models: HashMap<String, FlowModelSummaryResp> = flow_client
         .put(
             &format!("/cc/model/find_or_add_models?tag_ids=REQ&is_shared=true&temp_id={}", share_template_id),
             &json!(""),
@@ -506,7 +505,6 @@ pub async fn test(flow_client: &mut TestHttpClient) -> TardisResult<()> {
                 proj_template_id: Some(share_template_id.clone()),
                 bind_model_objs: vec![FlowModelAddCustomModelItemReq {
                     tag: "REQ".to_string(),
-                    feature_template_id: None,
                 }],
             },
         )
@@ -526,7 +524,7 @@ pub async fn test(flow_client: &mut TestHttpClient) -> TardisResult<()> {
             },
         )
         .await;
-    let share_template_models: HashMap<String, FlowTemplateModelResp> = flow_client.put("/cc/model/find_or_add_models?tag_ids=REQ", &json!("")).await;
+    let share_template_models: HashMap<String, FlowModelSummaryResp> = flow_client.put("/cc/model/find_or_add_models?tag_ids=REQ", &json!("")).await;
     assert_eq!(share_model_id.as_str(), share_template_models.get("REQ").unwrap().id.as_str());
 
     let share_model_agg: FlowModelAggResp = flow_client.get(&format!("/cc/model/{}", share_model_id)).await;
@@ -601,7 +599,6 @@ pub async fn test(flow_client: &mut TestHttpClient) -> TardisResult<()> {
     for tag in tags {
         modify_configs.push(FlowModelAddCustomModelItemReq {
             tag: tag.to_string(),
-            feature_template_id: None,
         });
     }
     let result: Vec<FlowModelAddCustomModelResp> = flow_client
@@ -613,7 +610,7 @@ pub async fn test(flow_client: &mut TestHttpClient) -> TardisResult<()> {
             },
         )
         .await;
-    let models: HashMap<String, FlowTemplateModelResp> = flow_client.put("/cc/model/find_or_add_models?tag_ids=REQ,PROJ,ITER,TICKET", &json!("")).await;
+    let models: HashMap<String, FlowModelSummaryResp> = flow_client.put("/cc/model/find_or_add_models?tag_ids=REQ,PROJ,ITER,TICKET", &json!("")).await;
     let req_model_id_app = &models.get("REQ").unwrap().id;
     assert_eq!(
         models.get("REQ").unwrap().id,
