@@ -43,7 +43,18 @@ pub async fn start_flow_event_service(config: &EventTopicConfig) -> TardisResult
                     }
                 });
             }
-            Some(EVENT_POST_CHANGE) => {}
+            Some(EVENT_POST_CHANGE) => {
+                let Ok((inst_id, next_transition_id, ctx)) = TardisFuns::json.json_to_obj::<(String, String, _)>(msg) else {
+                    return None;
+                };
+                tokio::spawn(async move {
+                    let funs = get_tardis_inst();
+                    let result = FlowEventServ::do_post_change(&inst_id, &next_transition_id, &ctx, &funs).await;
+                    if let Err(err) = result {
+                        error!("[BIOS.Log] failed to do front change: {}, inst_id: {}", err, inst_id);
+                    }
+                });
+            }
             Some(unknown_event) => {
                 warn!("[BIOS.Flow] event receive unknown event {unknown_event}")
             }
