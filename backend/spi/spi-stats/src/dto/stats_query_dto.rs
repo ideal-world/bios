@@ -10,59 +10,70 @@ use tardis::{
 
 use crate::stats_enumeration::{StatsQueryAggFunKind, StatsQueryTimeWindowKind};
 
-/// 查询指标请求
 /// Query Metrics Request
+/// 
+/// 查询指标请求
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct StatsQueryMetricsReq {
-    /// 事实编码
     /// Fact code
+    /// 
+    /// 事实编码
     pub from: String,
-    /// 关联外部动态id,用于ext扩展字段
     /// Associated external dynamic id, used for ext extended fields
+    /// 
+    /// 关联外部动态id,用于ext扩展字段
     pub rel_external_id: Option<String>,
-    /// 字段列表
     /// List of fields
+    /// 
+    /// 字段列表
     pub select: Vec<StatsQueryMetricsSelectReq>,
-    /// 是否忽略distinct key
-    /// 如果为true或null，则不计算distinct key
-    /// 如果为false，则计算distinct key
     /// Ignore distinct key
     /// If true or null, the distinct key will not be counted
     /// If false, the distinct key will be counted
+    /// 
+    /// 是否忽略distinct key
+    /// 如果为true或null，则不计算distinct key
+    /// 如果为false，则计算distinct key
     pub ignore_distinct: Option<bool>,
-    /// 维度列表
-    /// 顺序与返回的层级有关，内部使用ROLLUP处理
     /// List of grouped fields,
     /// the order is related to the returned hierarchy and is handled internally using ROLLUP
+    /// 
+    /// 维度列表
+    /// 顺序与返回的层级有关，内部使用ROLLUP处理
     pub group: Vec<StatsQueryDimensionGroupReq>,
     pub own_paths: Option<Vec<String>>,
-    /// 是否忽略group rollup
-    /// 如果为true或null，则不计算group rollup
-    /// 如果为false，则计算group rollup
     /// Ignore group rollup
     /// If true or null, the group rollup will not be counted
     /// If false, the group rollup will be counted
+    /// 
+    /// 是否忽略group rollup
+    /// 如果为true或null，则不计算group rollup
+    /// 如果为false，则计算group rollup
     pub ignore_group_rollup: Option<bool>,
-    /// 过滤条件, 二维数组, 组内AND, 组间OR
     /// Filter conditions, two-dimensional array, OR between groups, AND within groups
+    /// 
+    /// 过滤条件, 二维数组, 组内AND, 组间OR
     #[oai(rename = "where")]
     pub _where: Option<Vec<Vec<StatsQueryMetricsWhereReq>>>,
     pub dimension_order: Option<Vec<StatsQueryDimensionOrderReq>>,
+    /// Sort conditions
+    /// The code and fun must exist in Select
+    /// 
     /// 排序条件
     /// code和fun必须存在于Select中
+    pub metrics_order: Option<Vec<StatsQueryMetricsOrderReq>>,
     /// Sort conditions
     /// The code and fun must exist in Select
-    pub metrics_order: Option<Vec<StatsQueryMetricsOrderReq>>,
+    /// 
     /// 分组排序条件
     /// code和fun必须存在于Select中
-    /// Sort conditions
-    /// The code and fun must exist in Select
     pub group_order: Option<Vec<StatsQueryDimensionGroupOrderReq>>,
     pub group_agg: Option<bool>,
-    /// 分组后的过滤条件
-    /// code和fun必须存在于Select中
     /// Filter conditions after group
     /// The code and fun must exist in Select
+    /// 
+    /// 分组后的过滤条件
+    /// code和fun必须存在于Select中
     pub having: Option<Vec<StatsQueryMetricsHavingReq>>,
     pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,
@@ -71,117 +82,145 @@ pub struct StatsQueryMetricsReq {
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct StatsQueryMetricsSelectReq {
-    /// 关联外部动态id,用于ext扩展字段
     /// Associated external dynamic id, used for ext extended fields
+    /// 
+    /// 关联外部动态id,用于ext扩展字段
     pub rel_external_id: Option<String>,
-    /// 度量字段编码
     /// Measure column key
+    /// 
+    /// 度量字段编码
     pub code: String,
-    /// 聚合函数
     /// Aggregate function
+    /// 
+    /// 聚合函数
     pub fun: StatsQueryAggFunKind,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct StatsQueryDimensionGroupReq {
-    /// 关联外部动态id,用于ext扩展字段
     /// Associated external dynamic id, used for ext extended fields
+    /// 
+    /// 关联外部动态id,用于ext扩展字段
     pub rel_external_id: Option<String>,
-    /// 维度字段编码
     /// Dimension column key
+    /// 
+    /// 维度字段编码
     pub code: String,
-    /// 时间窗口函数
     /// Time window function
+    /// 
+    /// 时间窗口函数
     pub time_window: Option<StatsQueryTimeWindowKind>,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct StatsQueryMetricsWhereReq {
-    /// 关联外部动态id,用于ext扩展字段
     /// Associated external dynamic id, used for ext extended fields
+    /// 
+    /// 关联外部动态id,用于ext扩展字段
     pub rel_external_id: Option<String>,
-    /// 度量字段编码
     /// Dimension or measure column key
+    /// 
+    /// 度量字段编码
     pub code: String,
-    /// 操作符
     /// Operator
+    /// 
+    /// 操作符
     pub op: BasicQueryOpKind,
-    /// 值
     /// Value
+    /// 
+    /// 值
     pub value: Value,
-    /// 时间窗口函数
     /// Time window function
+    /// 
+    /// 时间窗口函数
     pub time_window: Option<StatsQueryTimeWindowKind>,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct StatsQueryMetricsOrderReq {
-    /// 关联外部动态id,用于ext扩展字段
     /// Associated external dynamic id, used for ext extended fields
+    /// 
+    /// 关联外部动态id,用于ext扩展字段
     pub rel_external_id: Option<String>,
-    /// 度量字段编码
     /// Measure column key
+    /// 
+    /// 度量字段编码
     pub code: String,
     pub fun: StatsQueryAggFunKind,
-    /// 排序方向
     /// Sort direction
+    /// 
+    /// 排序方向
     pub asc: bool,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct StatsQueryDimensionGroupOrderReq {
-    /// 关联外部动态id,用于ext扩展字段
     /// Associated external dynamic id, used for ext extended fields
+    /// 
+    /// 关联外部动态id,用于ext扩展字段
     pub rel_external_id: Option<String>,
-    /// 维度字段编码
     /// Dimension column key
+    /// 
+    /// 维度字段编码
     pub code: String,
-    /// 时间窗口函数
     /// Time window function
+    /// 
+    /// 时间窗口函数
     pub time_window: Option<StatsQueryTimeWindowKind>,
-    /// 排序方向
     /// Sort direction
+    /// 
+    /// 排序方向
     pub asc: bool,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct StatsQueryDimensionOrderReq {
-    /// 关联外部动态id,用于ext扩展字段
     /// Associated external dynamic id, used for ext extended fields
+    /// 
+    /// 关联外部动态id,用于ext扩展字段
     pub rel_external_id: Option<String>,
-    /// 维度字段编码
     /// Dimension column key
+    /// 
+    /// 维度字段编码
     pub code: String,
-    /// 排序方向
     /// Sort direction
+    /// 
+    /// 排序方向
     pub asc: bool,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct StatsQueryMetricsHavingReq {
-    /// 关联外部动态id,用于ext扩展字段
     /// Associated external dynamic id, used for ext extended fields
+    /// 
+    /// 关联外部动态id,用于ext扩展字段
     pub rel_external_id: Option<String>,
-    /// 度量字段编码
     /// Measure Column key
+    /// 
+    /// 度量字段编码
     pub code: String,
-    /// 聚合函数
     /// Aggregate function
+    /// 
+    /// 聚合函数
     pub fun: StatsQueryAggFunKind,
-    /// 操作符
     /// Operator
+    /// 
+    /// 操作符
     pub op: BasicQueryOpKind,
-    /// 值
     /// Value
+    /// 
+    /// 值
     pub value: Value,
 }
 
-/// 查询指标响应
 /// Query Metrics Response
+/// 
+/// 查询指标响应
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct StatsQueryMetricsResp {
-    /// 事实编码
     /// Fact key
+    /// 
+    /// 事实编码
     pub from: String,
     /// Show names
     ///
@@ -305,42 +344,49 @@ pub struct StatsQueryMetricsResp {
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct StatsQueryStatementReq {
-    /// 字段列表
     /// List of fields
+    /// 
+    /// 字段列表
     pub select: Vec<StatsQueryStatementSelectReq>,
-    /// 维度列表
-    /// 顺序与返回的层级有关，内部使用ROLLUP处理
     /// List of grouped fields,
     /// the order is related to the returned hierarchy and is handled internally using ROLLUP
+    /// 
+    /// 维度列表
+    /// 顺序与返回的层级有关，内部使用ROLLUP处理
     pub group: Vec<StatsQueryDimensionGroupReq>,
     pub own_paths: Option<Vec<String>>,
-    /// 是否忽略group rollup
-    /// 如果为true或null，则不计算group rollup
-    /// 如果为false，则计算group rollup
     /// Ignore group rollup
     /// If true or null, the group rollup will not be counted
     /// If false, the group rollup will be counted
+    /// 
+    /// 是否忽略group rollup
+    /// 如果为true或null，则不计算group rollup
+    /// 如果为false，则计算group rollup
     pub ignore_group_rollup: Option<bool>,
-    /// 过滤条件, 二维数组, 组内AND, 组间OR
     /// Filter conditions, two-dimensional array, OR between groups, AND within groups
+    /// 
+    /// 过滤条件, 二维数组, 组内AND, 组间OR
     #[oai(rename = "where")]
     pub _where: Option<Vec<Vec<StatsQueryStatementWhereReq>>>,
     pub dimension_order: Option<Vec<StatsQueryDimensionOrderReq>>,
+    /// Sort conditions
+    /// The code and fun must exist in Select
+    /// 
     /// 排序条件
     /// code和fun必须存在于Select中
+    pub metrics_order: Option<Vec<StatsQueryMetricsOrderReq>>,
     /// Sort conditions
     /// The code and fun must exist in Select
-    pub metrics_order: Option<Vec<StatsQueryMetricsOrderReq>>,
+    /// 
     /// 分组排序条件
     /// code和fun必须存在于Select中
-    /// Sort conditions
-    /// The code and fun must exist in Select
     pub group_order: Option<Vec<StatsQueryDimensionGroupOrderReq>>,
     pub group_agg: Option<bool>,
-    /// 分组后的过滤条件
-    /// code和fun必须存在于Select中
     /// Filter conditions after group
     /// The code and fun must exist in Select
+    /// 
+    /// 分组后的过滤条件
+    /// code和fun必须存在于Select中
     pub having: Option<Vec<StatsQueryStatementHavingReq>>,
     pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,
@@ -349,56 +395,70 @@ pub struct StatsQueryStatementReq {
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct StatsQueryStatementSelectReq {
-    /// 事实编码
     /// Fact code
+    /// 
+    /// 事实编码
     pub from: String,
-    /// 度量字段编码
     /// Measure column key
+    /// 
+    /// 度量字段编码
     pub code: String,
-    /// 聚合函数
     /// Aggregate function
+    /// 
+    /// 聚合函数
     pub fun: StatsQueryAggFunKind,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct StatsQueryStatementWhereReq {
-    /// 事实编码
     /// Fact code
+    /// 
+    /// 事实编码
     pub from: String,
-    /// 度量字段编码
     /// Dimension or measure column key
+    /// 
+    /// 度量字段编码
     pub code: String,
-    /// 操作符
     /// Operator
+    /// 
+    /// 操作符
     pub op: BasicQueryOpKind,
-    /// 值
     /// Value
+    /// 
+    /// 值
     pub value: Value,
-    /// 时间窗口函数
     /// Time window function
+    /// 
+    /// 时间窗口函数
     pub time_window: Option<StatsQueryTimeWindowKind>,
 }
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct StatsQueryStatementHavingReq {
-    /// 事实编码
     /// Fact code
+    /// 
+    /// 事实编码
     pub from: String,
-    /// 度量字段编码
     /// Measure Column key
+    /// 
+    /// 度量字段编码
     pub code: String,
-    /// 聚合函数
     /// Aggregate function
+    /// 
+    /// 聚合函数
     pub fun: StatsQueryAggFunKind,
-    /// 操作符
     /// Operator
+    /// 
+    /// 操作符
     pub op: BasicQueryOpKind,
-    /// 值
     /// Value
+    /// 
+    /// 值
     pub value: Value,
 }
 
-/// 查询指标响应
 /// Query Metrics Response
+/// 
+/// 查询指标响应
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct StatsQueryStatementResp {
     pub group: Value,

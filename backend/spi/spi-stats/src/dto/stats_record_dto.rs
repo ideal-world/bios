@@ -13,18 +13,20 @@ pub struct StatsFactRecordLoadReq {
     pub own_paths: String,
     /// Create time
     pub ct: DateTime<Utc>,
-    /// 字段数据
-    /// Map格式，key=事实表的字段名，value=字段值
     /// Field data
+    /// 字段数据
     ///
     /// Map format，key = field name of the fact table，value = field value
+    /// Map格式，key=事实表的字段名，value=字段值
     pub data: Value,
-    /// 动态数据
     /// Dynamic data
+    /// 
+    /// 动态数据
     pub ext: Option<Value>,
 }
-/// 事实记录加载请求对象
 /// Load Fact Record Request Object
+/// 
+/// 事实记录加载请求对象
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct StatsFactRecordsLoadReq {
     /// Primary key
@@ -33,38 +35,45 @@ pub struct StatsFactRecordsLoadReq {
     pub own_paths: String,
     /// Create time
     pub ct: DateTime<Utc>,
-    /// 字段数据
-    /// Map格式，key=事实表的字段名，value=字段值
     /// Field data
+    /// 字段数据
     ///
     /// Map format，key = field name of the fact table，value = field value
+    /// Map格式，key=事实表的字段名，value=字段值
     pub data: Value,
 
-    /// 动态数据
     /// Dynamic data
+    /// 
+    /// 动态数据
     pub ext: Option<Value>,
 }
 
-/// 添加维度记录请求对象
 /// Add Dimension Record Request Object
+/// 
+/// 添加维度记录请求对象
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct StatsDimRecordAddReq {
-    /// 主键
     /// Primary key
+    /// 
+    /// 主键
     pub key: Value,
-    /// 显示名称
     /// The name of the dimension
+    /// 
+    /// 显示名称
     pub show_name: String,
-    /// 父主键
     /// The parent primary key, if present, indicates that this is a multilevel record
+    /// 
+    /// 父主键，如果存在，表示这是一个多级记录
     pub parent_key: Option<Value>,
 }
 
-/// 删除维度记录请求对象
 /// Delete Dimension Record Request Object
+/// 
+/// 删除维度记录请求对象
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct StatsDimRecordDeleteReq {
-    /// 主键
     /// Primary key
+    /// 
+    /// 主键
     pub key: Value,
 }
