@@ -8,7 +8,7 @@ use tardis::web::poem_openapi::{
 use super::{flow_state_dto::FlowSysStateKind, flow_transition_dto::FlowTransitionActionByVarChangeInfoChangedKind};
 
 /// External data exchange requests
-/// 
+///
 /// 对外数据交换请求
 #[derive(Serialize, Deserialize, Debug, Default, poem_openapi::Object)]
 pub struct FlowExternalReq {
@@ -68,7 +68,7 @@ pub struct FlowExternalReq {
 }
 
 /// Type of request initiated, ex: query field, modification field, status change notification...
-/// 
+///
 /// 发起请求的类型，例：查询字段，修改字段，状态变更通知..
 #[derive(Clone, Debug, Default, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum)]
 pub enum FlowExternalKind {
@@ -84,7 +84,7 @@ pub enum FlowExternalKind {
 }
 
 /// When kind is ModifyField, the field is modified in a specific way, for example: validate the content, post action, precondition trigger ...
-/// 
+///
 /// 当 kind 为 ModifyField 时，字段被修改的具体操作方式，例：验证内容，后置动作，前置条件触发..
 #[derive(Copy, Clone, Debug, Default, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum)]
 pub enum FlowExternalCallbackOp {
@@ -99,7 +99,7 @@ pub enum FlowExternalCallbackOp {
 }
 
 /// 扩展字段
-/// 
+///
 /// Extended params
 #[derive(Debug, Deserialize, Serialize, poem_openapi::Object, Clone)]
 pub struct FlowExternalParams {

@@ -165,13 +165,14 @@ impl FlowEventServ {
             ctx,
         )
         .await?;
-        let next_flow_transition = flow_model.transitions().into_iter().find(|trans| trans.id == flow_transition_id);
+        let model_transition = flow_model.transitions();
+        let next_flow_transition = model_transition.iter().find(|trans| trans.id == flow_transition_id);
         if next_flow_transition.is_none() {
             return Err(funs.err().not_found("flow_inst", "transfer", "no transferable state", "404-flow-inst-transfer-state-not-found"));
         }
         let next_flow_transition = next_flow_transition.unwrap();
         let prev_flow_state = FlowStateServ::get_item(
-            &flow_inst_detail.current_state_id,
+            &next_flow_transition.from_flow_state_id,
             &FlowStateFilterReq {
                 basic: RbumBasicFilterReq {
                     with_sub_own_paths: true,
@@ -197,13 +198,11 @@ impl FlowEventServ {
         )
         .await?;
 
-        let model_transition = flow_model.transitions();
-        let next_transition_detail = model_transition.iter().find(|trans| trans.id == flow_transition_id).unwrap().to_owned();
-        if FlowModelServ::check_post_action_ring(next_transition_detail.clone(), (false, vec![]), funs, ctx).await?.0 {
+        if FlowModelServ::check_post_action_ring(next_flow_transition.clone(), (false, vec![]), funs, ctx).await?.0 {
             return Err(funs.err().not_found("flow_inst", "transfer", "this post action exist endless loop", "500-flow-transition-endless-loop"));
         }
 
-        let post_changes = next_transition_detail.action_by_post_changes();
+        let post_changes = next_flow_transition.action_by_post_changes();
         if post_changes.is_empty() {
             return Ok(());
         }
@@ -225,14 +224,19 @@ impl FlowEventServ {
                                 FlowTransitionActionByVarChangeInfoChangedKind::AddOrSub => {
                                     if change_info.changed_val.is_some()
                                         && change_info.changed_val.clone().unwrap().is_object()
-                                        && flow_inst_detail.current_vars.clone().unwrap_or_default().get(&change_info.var_name).is_some()
                                         && change_info.changed_val.clone().unwrap().as_object().unwrap().get("value").is_some()
                                         && change_info.changed_val.clone().unwrap().as_object().unwrap().get("op").is_some()
                                     {
                                         let original_map = flow_inst_detail.current_vars.clone().unwrap_or_default();
+                                        let original_value = if let Some(original_value) = original_map.get(&change_info.var_name) {
+                                            Some(original_value)
+                                        } else {
+                                            original_map.get(&format!("custom_{}", change_info.var_name))
+                                        };
+                                            
                                         let target_value = change_info.changed_val.clone().unwrap().as_object().unwrap().get("value").unwrap().as_i64().unwrap_or_default();
                                         let changed_op = change_info.changed_val.clone().unwrap().as_object().unwrap().get("op").unwrap().as_str().unwrap_or_default().to_string();
-                                        if let Some(original_value) = original_map.get(&change_info.var_name) {
+                                        if let Some(original_value) = original_value {
                                             change_info.changed_kind = Some(FlowTransitionActionByVarChangeInfoChangedKind::ChangeContent);
                                             match changed_op.as_str() {
                                                 "add" => change_info.changed_val = Some(json!(original_value.as_str().unwrap_or_default().parse::<i64>().unwrap_or_default() + target_value)),
@@ -261,7 +265,7 @@ impl FlowEventServ {
                                     let inst_id = FlowInstServ::get_inst_ids_by_rel_business_obj_id(vec![rel_bus_obj_id.clone()], funs, ctx).await?.pop().unwrap_or_default();
                                     FlowExternalServ::do_modify_field(
                                         &rel_tag,
-                                        &next_transition_detail,
+                                        next_flow_transition,
                                         &rel_bus_obj_id,
                                         &inst_id,
                                         FlowExternalCallbackOp::PostAction,
@@ -325,7 +329,7 @@ impl FlowEventServ {
         if !modify_self_field_params.is_empty() {
             FlowExternalServ::do_modify_field(
                 &flow_model.tag,
-                &next_transition_detail,
+                next_flow_transition,
                 &flow_inst_detail.rel_business_obj_id,
                 &flow_inst_detail.id,
                 FlowExternalCallbackOp::PostAction,

@@ -105,18 +105,18 @@ pub struct FlowTransitionModifyReq {
     pub double_check: Option<FlowTransitionDoubleCheckInfo>,
     /// 验证内容
     pub vars_collect: Option<Vec<FlowVarInfo>>,
-   /// 是否通知
-   pub is_notify: Option<bool>,
-   /// 触发前回调的配置信息
-   pub action_by_pre_callback: Option<String>,
-   /// 触发后回调的配置信息
-   pub action_by_post_callback: Option<String>,
-   /// 后置动作的配置信息
-   pub action_by_post_changes: Option<Vec<FlowTransitionPostActionInfo>>,
-   /// 前置动作的配置信息
-   pub action_by_front_changes: Option<Vec<FlowTransitionFrontActionInfo>>,
-   /// 排序
-   pub sort: Option<i64>,
+    /// 是否通知
+    pub is_notify: Option<bool>,
+    /// 触发前回调的配置信息
+    pub action_by_pre_callback: Option<String>,
+    /// 触发后回调的配置信息
+    pub action_by_post_callback: Option<String>,
+    /// 后置动作的配置信息
+    pub action_by_post_changes: Option<Vec<FlowTransitionPostActionInfo>>,
+    /// 前置动作的配置信息
+    pub action_by_front_changes: Option<Vec<FlowTransitionFrontActionInfo>>,
+    /// 排序
+    pub sort: Option<i64>,
 }
 
 #[derive(Serialize, Deserialize, Default, Debug, Clone, poem_openapi::Object, sea_orm::FromQueryResult)]
@@ -472,8 +472,8 @@ pub enum StateChangeConditionOp {
 }
 
 /// 对象tag的关联类型。当 kind 为 State 时该字段生效，当 kind 为 var 时该字段统一为 default。
-    /// 目前有默认和父子关系两种。为空时，代表是默认关联类型。当值为 Default 时，obj_tag 为 req/issue/test/task等。当值为 ParentOrSub 时，obj_tag 为 parent/sub.
-    /// 例：当值为 ParentOrSub，obj_tag 为 parent。表示为当前操作对象所关联的父级对象。
+/// 目前有默认和父子关系两种。为空时，代表是默认关联类型。当值为 Default 时，obj_tag 为 req/issue/test/task等。当值为 ParentOrSub 时，obj_tag 为 parent/sub.
+/// 例：当值为 ParentOrSub，obj_tag 为 parent。表示为当前操作对象所关联的父级对象。
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug, poem_openapi::Enum)]
 pub enum TagRelKind {
     Default,
