@@ -227,12 +227,7 @@ impl FlowEventServ {
                                         && change_info.changed_val.clone().unwrap().as_object().unwrap().get("value").is_some()
                                         && change_info.changed_val.clone().unwrap().as_object().unwrap().get("op").is_some()
                                     {
-                                        let original_map = flow_inst_detail.current_vars.clone().unwrap_or_default();
-                                        let original_value = if let Some(original_value) = original_map.get(&change_info.var_name) {
-                                            Some(original_value)
-                                        } else {
-                                            original_map.get(&format!("custom_{}", change_info.var_name))
-                                        };
+                                        let original_value = FlowInstServ::find_var_by_inst_id(flow_inst_id, &change_info.var_name, funs, ctx).await?;
                                             
                                         let target_value = change_info.changed_val.clone().unwrap().as_object().unwrap().get("value").unwrap().as_i64().unwrap_or_default();
                                         let changed_op = change_info.changed_val.clone().unwrap().as_object().unwrap().get("op").unwrap().as_str().unwrap_or_default().to_string();
