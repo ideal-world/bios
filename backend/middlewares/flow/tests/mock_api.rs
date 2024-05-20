@@ -88,7 +88,7 @@ where
         }))
     }
 
-    pub fn accepted(data: T) -> MockApiResponse<T> {
+    pub fn _accepted(data: T) -> MockApiResponse<T> {
         MockApiResponse::Ok(Json(MockResp {
             code: TARDIS_RESULT_ACCEPTED_CODE.to_string(),
             message: "".to_string(),
@@ -96,7 +96,7 @@ where
         }))
     }
 
-    pub fn err(error: TardisError) -> MockApiResponse<T> {
+    pub fn _err(error: TardisError) -> MockApiResponse<T> {
         MockApiResponse::Err(error.into())
     }
 }

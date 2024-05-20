@@ -4,7 +4,7 @@ use tardis::db::sea_orm::prelude::Json;
 use tardis::db::sea_orm::*;
 use tardis::{chrono, TardisCreateEntity, TardisEmptyBehavior, TardisEmptyRelation};
 
-use crate::dto::flow_transition_dto::{FlowTransitionActionChangeInfo, FlowTransitionDoubleCheckInfo, FlowTransitionFrontActionInfo};
+use crate::dto::flow_transition_dto::{FlowTransitionPostActionInfo, FlowTransitionDoubleCheckInfo, FlowTransitionFrontActionInfo};
 use crate::dto::flow_var_dto::FlowVarInfo;
 
 /// Transfer / 流转
@@ -91,7 +91,7 @@ pub struct Model {
 
     #[sea_orm(column_type = "Json")]
     #[tardis_entity(custom_type = "Json")]
-    pub action_by_post_changes: Vec<FlowTransitionActionChangeInfo>,
+    pub action_by_post_changes: Vec<FlowTransitionPostActionInfo>,
 
     #[sea_orm(column_type = "Json")]
     #[tardis_entity(custom_type = "Json")]

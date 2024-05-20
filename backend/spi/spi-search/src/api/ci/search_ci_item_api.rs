@@ -1,3 +1,4 @@
+use tardis::basic::dto::TardisContext;
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem::web::Query;
 
@@ -64,5 +65,19 @@ impl SearchCiItemApi {
         let funs = crate::get_tardis_inst();
         let resp = search_item_serv::query_metrics(&query_req.0, &funs, &ctx.0).await?;
         TardisResp::ok(resp)
+    }
+
+    /// Refresh TSV Result By Tag
+    /// 
+    /// 通过指定 tag 刷新分词结果
+    #[oai(path = "/:tag/refresh", method = "put")]
+    async fn refresh_tsv(&self, tag: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+        let global_ctx = TardisContext {
+            own_paths: "".to_string(),
+            ..ctx.0.clone()
+        };
+        let funs = crate::get_tardis_inst();
+        search_item_serv::refresh_tsv(&tag.0, &funs, &global_ctx).await?;
+        TardisResp::ok(Void {})
     }
 }

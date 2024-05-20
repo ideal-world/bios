@@ -1,24 +1,19 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, vec};
 
 use pinyin::{to_pinyin_vec, Pinyin};
 use tardis::{
-    basic::{dto::TardisContext, error::TardisError, result::TardisResult},
-    chrono::Utc,
-    db::{
+    basic::{dto::TardisContext, error::TardisError, result::TardisResult}, chrono::Utc, db::{
         reldb_client::{TardisRelDBClient, TardisRelDBlConnection},
         sea_orm::{FromQueryResult, Value},
-    },
-    serde_json::{self, json, Map},
-    web::web_resp::TardisPage,
-    TardisFuns, TardisFunsInst,
+    }, futures::future::join_all, serde_json::{self, json, Map}, web::web_resp::TardisPage, TardisFuns, TardisFunsInst
 };
+use itertools::Itertools;
 
 use bios_basic::{dto::BasicQueryCondInfo, enumeration::BasicQueryOpKind, helper::db_helper, spi::spi_funs::SpiBsInst};
 
 use crate::{
     dto::search_item_dto::{
-        AdvBasicQueryCondInfo, SearchItemAddReq, SearchItemModifyReq, SearchItemSearchQScopeKind, SearchItemSearchReq, SearchItemSearchResp, SearchQueryMetricsReq,
-        SearchQueryMetricsResp,
+        AdvBasicQueryCondInfo, SearchItemAddReq, SearchItemModifyReq, SearchItemSearchQScopeKind, SearchItemSearchReq, SearchItemSearchResp, SearchQueryMetricsReq, SearchQueryMetricsResp
     },
     search_config::SearchConfig,
 };
@@ -34,20 +29,26 @@ pub async fn add(add_req: &mut SearchItemAddReq, funs: &TardisFunsInst, ctx: &Ta
     params.push(Value::from(add_req.kind.to_string()));
     params.push(Value::from(add_req.key.to_string()));
     params.push(Value::from(add_req.title.as_str()));
+
+    let pinyin_vec = to_pinyin_vec(add_req.title.as_str(), Pinyin::plain);
     if add_req.title.chars().count() > funs.conf::<SearchConfig>().split_strategy_rule_config.specify_word_length.unwrap_or(30) {
         params.push(Value::from(format!(
-            "{} {}",
+            "{} {} {}",
             add_req.title.as_str(),
-            generate_word_combinations(to_pinyin_vec(add_req.title.as_str(), Pinyin::plain)).join(" ")
+            pinyin_vec.clone().into_iter().map(|pinyin| pinyin.chars().next().unwrap_or_default()).join(""),
+            generate_word_combinations(pinyin_vec).join(" ")
         )));
     } else {
+        let content = add_req.title.as_str().split(' ').last().unwrap_or_default();
         params.push(Value::from(format!(
-            "{} {} {} {} {}",
+            "{} {} {} {} {} {} {}",
             add_req.title.as_str(),
-            generate_word_combinations_with_length(add_req.title.as_str(), 1).join(" "),
-            generate_word_combinations_with_length(add_req.title.as_str(), 2).join(" "),
-            generate_word_combinations_with_length(add_req.title.as_str(), 3).join(" "),
-            generate_word_combinations(to_pinyin_vec(add_req.title.as_str(), Pinyin::plain)).join(" ")
+            pinyin_vec.clone().into_iter().map(|pinyin| pinyin.chars().next().unwrap_or_default()).join(""),
+            generate_word_combinations_with_length(content, 1).join(" "),
+            generate_word_combinations_with_length(content, 2).join(" "),
+            generate_word_combinations_with_length(content, 3).join(" "),
+            generate_word_combinations_with_symbol(content, vec!["-", "_"]).join(" "),
+            generate_word_combinations(pinyin_vec).join(" ")
         )));
     }
 
@@ -116,20 +117,26 @@ pub async fn modify(tag: &str, key: &str, modify_req: &mut SearchItemModifyReq, 
             "simple"
         };
         sql_sets.push(format!("title_tsv = to_tsvector('{word_combinations_way}', ${})", params.len() + 1));
-        if title.chars().count() > 15 {
+
+        let pinyin_vec = to_pinyin_vec(title, Pinyin::plain);
+        if title.chars().count() > funs.conf::<SearchConfig>().split_strategy_rule_config.specify_word_length.unwrap_or(30) {
             params.push(Value::from(format!(
-                "{} {}",
+                "{} {} {}",
                 title,
-                generate_word_combinations(to_pinyin_vec(title, Pinyin::plain)).join(" ")
+                pinyin_vec.clone().into_iter().map(|pinyin| pinyin.chars().next().unwrap_or_default()).join(""),
+                generate_word_combinations(pinyin_vec).join(" ")
             )));
         } else {
+            let content = title.split(' ').last().unwrap_or_default();
             params.push(Value::from(format!(
-                "{} {} {} {} {}",
+                "{} {} {} {} {} {} {}",
                 title,
-                generate_word_combinations_with_length(title, 1).join(" "),
-                generate_word_combinations_with_length(title, 2).join(" "),
-                generate_word_combinations_with_length(title, 3).join(" "),
-                generate_word_combinations(to_pinyin_vec(title, Pinyin::plain)).join(" ")
+                pinyin_vec.clone().into_iter().map(|pinyin| pinyin.chars().next().unwrap_or_default()).join(""),
+                generate_word_combinations_with_length(content, 1).join(" "),
+                generate_word_combinations_with_length(content, 2).join(" "),
+                generate_word_combinations_with_length(content, 3).join(" "),
+                generate_word_combinations_with_symbol(content, vec!["-", "_"]).join(" "),
+                generate_word_combinations(pinyin_vec).join(" ")
             )));
         }
     };
@@ -197,6 +204,15 @@ fn generate_word_combinations_with_length(original_str: &str, split_len: usize) 
         }
     }
     combinations
+}
+
+fn generate_word_combinations_with_symbol(original_str: &str, symbols: Vec<&str>) -> Vec<String> {
+    let mut combinations = Vec::new();
+    for symbol in symbols {
+        let mut splited_words = original_str.split(symbol).collect_vec();
+        combinations.append(&mut splited_words);
+    }
+    combinations.into_iter().map(|word| word.to_string()).collect_vec()
 }
 
 fn generate_word_combinations(chars: Vec<&str>) -> Vec<String> {
@@ -1546,4 +1562,19 @@ fn package_groups_agg(record: serde_json::Value) -> Result<serde_json::Value, St
         }
         None => Ok(serde_json::Value::Null),
     }
+}
+
+pub async fn refresh_tsv(tag: &str, funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
+    let bs_inst = inst.inst::<TardisRelDBClient>();
+    let (conn, table_name) = search_pg_initializer::init_table_and_conn(bs_inst, tag, ctx, false).await?;
+    let result = conn.query_all(&format!("SELECT key, title FROM {table_name}"), vec![]).await?;
+    join_all(
+        result.into_iter().map(|row| async move {
+            modify(tag, row.try_get::<String>("", "key").expect("not found key").as_str(), &mut SearchItemModifyReq {
+                title: Some(row.try_get("", "title").expect("not found title")),
+                ..Default::default()
+            }, funs, ctx, inst).await.expect("modify error")
+        }).collect_vec(),
+    ).await;
+    Ok(())
 }
