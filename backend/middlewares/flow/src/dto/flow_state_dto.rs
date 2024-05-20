@@ -114,7 +114,7 @@ pub struct FlowStateDetailResp {
 }
 
 /// Type of state
-/// 
+///
 /// 状态类型
 #[derive(Clone, Default, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, EnumIter, sea_orm::DeriveActiveEnum)]
 #[sea_orm(rs_type = "String", db_type = "String(Some(255))")]

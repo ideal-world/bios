@@ -1223,4 +1223,21 @@ impl FlowInstServ {
 
         Ok(())
     }
+
+    pub async fn find_var_by_inst_id(inst_id: &str, key: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<Value>> {
+        let mut current_vars = Self::get(inst_id, funs, ctx).await?.current_vars;
+        if current_vars.is_none() || current_vars.clone().unwrap_or_default().get(key).is_none() {
+            let new_vars = Self::get_new_vars(inst_id, funs, ctx).await?;
+            Self::modify_current_vars(
+                inst_id,
+                &TardisFuns::json.json_to_obj::<HashMap<String, Value>>(new_vars).unwrap_or_default(),
+                funs,
+                ctx,
+            )
+            .await?;
+            current_vars = Self::get(inst_id, funs, ctx).await?.current_vars;
+        }
+
+        Ok(current_vars.unwrap_or_default().get(key).cloned())
+    }
 }

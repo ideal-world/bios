@@ -120,7 +120,7 @@ impl FlowCcModelApi {
     ) -> TardisApiResult<HashMap<String, FlowModelSummaryResp>> {
         let mut funs = flow_constants::get_tardis_inst();
         funs.begin().await?;
-        let tag_ids= tag_ids.split(',').map(|tag_id| tag_id.to_string()).collect_vec();
+        let tag_ids = tag_ids.split(',').map(|tag_id| tag_id.to_string()).collect_vec();
         let result = FlowModelServ::find_or_add_models(tag_ids, temp_id.0, is_shared.unwrap_or(false), &funs, &ctx.0).await?;
         funs.commit().await?;
         TardisResp::ok(result)

@@ -68,7 +68,7 @@ impl SearchCiItemApi {
     }
 
     /// Refresh TSV Result By Tag
-    /// 
+    ///
     /// 通过指定 tag 刷新分词结果
     #[oai(path = "/:tag/refresh", method = "put")]
     async fn refresh_tsv(&self, tag: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
