@@ -31,7 +31,7 @@ pub async fn main(service_url: &str, config: JsValue) -> Result<(), JsValue> {
 /// uri: path?query eg. /iam/ct/xxx?q=1
 pub fn on_before_request(method: &str, uri: &str, body: JsValue, headers: JsValue, ignore_token: JsValue) -> Result<JsValue, JsValue> {
     if modules::double_auth_process::need_auth(method, uri)? {
-        return Err(JsValue::try_from(JsError::new("Need double auth.")).unwrap());
+        return Err(JsValue::from(JsError::new("Need double auth.")));
     }
     let body = if body == JsValue::NULL {
         "".to_string()
@@ -111,7 +111,7 @@ pub fn on_response_success(method: &str, uri: &str, body: JsValue) -> Result<(),
                 modules::token_process::set_token(&token)?;
                 modules::double_auth_process::remove_latest_authed()?;
             } else {
-                return Err(JsValue::try_from(JsError::new("Body format error.")).unwrap());
+                return Err(JsValue::from(JsError::new("Body format error.")));
             }
         }
         2 => {

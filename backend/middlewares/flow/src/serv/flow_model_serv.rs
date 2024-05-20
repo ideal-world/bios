@@ -32,9 +32,8 @@ use crate::{
     dto::{
         flow_model_dto::{
             FlowModelAddReq, FlowModelAggResp, FlowModelBindStateReq, FlowModelDetailResp, FlowModelFilterReq, FlowModelFindRelStateResp, FlowModelModifyReq, FlowModelSummaryResp,
-            FlowStateAggResp, FlowTemplateModelResp,
         },
-        flow_state_dto::{FlowStateDetailResp, FlowStateFilterReq, FlowStateRelModelExt, FlowStateRelModelModifyReq},
+        flow_state_dto::{FlowStateAggResp, FlowStateDetailResp, FlowStateFilterReq, FlowStateRelModelExt, FlowStateRelModelModifyReq},
         flow_transition_dto::{
             FlowTransitionActionChangeAgg, FlowTransitionActionChangeKind, FlowTransitionAddReq, FlowTransitionDetailResp, FlowTransitionInitInfo, FlowTransitionModifyReq,
         },
@@ -709,26 +708,26 @@ impl FlowModelServ {
 
     // Find the specified models, or add it if it doesn't exist.
     pub async fn find_or_add_models(
-        tags: Vec<&str>,
+        tags: Vec<String>,
         template_id: Option<String>,
         is_shared: bool,
         funs: &TardisFunsInst,
         ctx: &TardisContext,
-    ) -> TardisResult<HashMap<String, FlowTemplateModelResp>> {
+    ) -> TardisResult<HashMap<String, FlowModelSummaryResp>> {
         let global_ctx = TardisContext {
             own_paths: "".to_string(),
             ..ctx.clone()
         };
         let mut result = HashMap::new();
 
-        let models = FlowModelServ::find_items(
+        let models = Self::find_items(
             &FlowModelFilterReq {
                 basic: RbumBasicFilterReq {
                     ignore_scope: true,
                     with_sub_own_paths: true,
                     ..Default::default()
                 },
-                tags: Some(tags.iter().map(|tag| tag.to_string()).collect_vec()),
+                tags: Some(tags.clone()),
                 rel_template_id: template_id.clone(),
                 ..Default::default()
             },
@@ -741,32 +740,28 @@ impl FlowModelServ {
 
         // First iterate over the models
         for model in models {
-            if tags.contains(&model.tag.as_str()) {
+            if tags.contains(&model.tag) {
                 result.insert(
                     model.tag.clone(),
-                    FlowTemplateModelResp {
-                        id: model.id,
-                        name: model.name,
-                        create_time: model.create_time,
-                        update_time: model.update_time,
-                    },
+                    model,
                 );
             }
         }
         // Iterate over the tag based on the existing result and get the default model
         for tag in tags {
-            if !result.contains_key(tag) {
+            if !result.contains_key(&tag) {
                 // copy custom model
-                let model_id = Self::add_custom_model(tag, None, template_id.clone(), funs, ctx).await?;
-                let added_model = Self::get_item(&model_id, &FlowModelFilterReq::default(), funs, ctx).await?;
+                let model_id = Self::add_custom_model(&tag, None, template_id.clone(), funs, ctx).await?;
+                let added_model = Self::find_one_item(&FlowModelFilterReq {
+                    basic: RbumBasicFilterReq {
+                        ids: Some(vec![model_id]),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                }, funs, ctx).await?.unwrap_or_default();
                 result.insert(
                     tag.to_string(),
-                    FlowTemplateModelResp {
-                        id: added_model.id.clone(),
-                        name: added_model.name.clone(),
-                        create_time: added_model.create_time,
-                        update_time: added_model.update_time,
-                    },
+                    added_model,
                 );
             }
         }
@@ -810,7 +805,7 @@ impl FlowModelServ {
         // 首先，获取父级model，若父级model不存在，则获取默认模板
         let parent_model = if let Some(parent_model) = Self::find_one_detail_item(
             // There are shared templates, so you need to ignore the permission judgment of own_path if the parent ID is passed in.
-            // 存在共享模板的情况，所以父级ID传入的情况下需要忽略 own_path 的权限判断
+            // 由于存在共享模板的情况，所以父级ID传入的情况下需要忽略 own_path 的权限判断
             &FlowModelFilterReq {
                 basic: RbumBasicFilterReq {
                     with_sub_own_paths: parent_template_id.is_some(),
@@ -1066,7 +1061,7 @@ impl FlowModelServ {
                     .await?
                     .pop()
                     {
-                        let transitions = FlowModelServ::find_transitions_by_state_id(
+                        let transitions = Self::find_transitions_by_state_id(
                             &flow_model_id,
                             change_info.obj_current_state_id.clone(),
                             Some(vec![change_info.changed_state_id.clone()]),

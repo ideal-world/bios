@@ -137,8 +137,7 @@ impl IamCpCertApi {
     async fn get_third_cert(&self, supplier: Query<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<RbumCertSummaryWithSkResp> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         let funs = iam_constants::get_tardis_inst();
-        // let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
-        let rbum_cert = IamCertServ::get_3th_kind_cert_by_rel_rbum_id(&ctx.0.owner, vec![supplier.0], &funs, &ctx.0).await?;
+        let rbum_cert = IamCertServ::get_3th_kind_cert_by_rel_rbum_id(&ctx.0.owner, vec![supplier.0], true, &funs, &ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(rbum_cert)
     }

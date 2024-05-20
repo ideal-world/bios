@@ -356,14 +356,14 @@ impl OwnedScheduleTaskServ {
         Ok(serv_raw)
     }
 
-    /// genetate distributed lock key for a certain task
+    /// generate distributed lock key for a certain task
     fn gen_distributed_lock_key(code: &str, config: &ScheduleConfig) -> String {
         format!("{}{}", config.distributed_lock_key_prefix, code)
     }
 
     /// add schedule task
     pub async fn add(&self, job_config: ScheduleJobAddOrModifyReq, config: &ScheduleConfig) -> TardisResult<()> {
-        let has_job = { self.code_uuid.read().await.get(&job_config.code.to_string()).is_some() };
+        let has_job = { self.code_uuid.read().await.get::<String>(job_config.code.as_ref()).is_some() };
         if has_job {
             self.delete(&job_config.code).await?;
         }

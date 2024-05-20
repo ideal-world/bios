@@ -34,7 +34,7 @@ use crate::extension::audit_log_param::{AuditLogParam, LogParamContent};
 use crate::extension::before_encrypt_body::BeforeEncryptBody;
 use crate::extension::cert_info::CertInfo;
 
-pub const CODE: &str = "audit_log";
+pub const CODE: &str = "audit-log";
 
 #[cfg(feature = "schema")]
 use spacegate_plugin::schemars;
@@ -262,6 +262,7 @@ impl Default for AuditLogPlugin {
 impl Plugin for AuditLogPlugin {
     const CODE: &'static str = CODE;
 
+    #[cfg(feature = "schema")]
     fn meta() -> spacegate_plugin::PluginMetaData {
         spacegate_plugin::plugin_meta!(
             description: "Audit log for spacegate, it's base on spi-log"

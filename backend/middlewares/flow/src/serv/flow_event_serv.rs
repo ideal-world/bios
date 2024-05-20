@@ -235,8 +235,8 @@ impl FlowEventServ {
                                         if let Some(original_value) = original_map.get(&change_info.var_name) {
                                             change_info.changed_kind = Some(FlowTransitionActionByVarChangeInfoChangedKind::ChangeContent);
                                             match changed_op.as_str() {
-                                                "add" => change_info.changed_val = Some(json!(original_value.as_i64().unwrap_or_default() + target_value)),
-                                                "sub" => change_info.changed_val = Some(json!(original_value.as_i64().unwrap_or_default() - target_value)),
+                                                "add" => change_info.changed_val = Some(json!(original_value.as_str().unwrap_or_default().parse::<i64>().unwrap_or_default() + target_value)),
+                                                "sub" => change_info.changed_val = Some(json!(original_value.as_str().unwrap_or_default().parse::<i64>().unwrap_or_default() - target_value)),
                                                 _ => {}
                                             }
                                         }

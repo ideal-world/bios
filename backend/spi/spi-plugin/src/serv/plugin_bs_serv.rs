@@ -73,7 +73,7 @@ impl PluginBsServ {
                         )
                         .await;
                     });
-                    task_handle.await.unwrap();
+                    let _ = task_handle.await;
                     Ok(())
                 })
             }))
@@ -83,7 +83,7 @@ impl PluginBsServ {
                 RbumRelAttrServ::delete_rbum(&attrs.id, funs, ctx).await?;
             }
             if let Some(attrs) = add_req.attrs.clone() {
-                // todo check attrs
+                // TODO check attrs
                 for attr in &attrs {
                     RbumRelAttrServ::add_rbum(
                         &mut RbumRelAttrAddReq {
@@ -122,7 +122,7 @@ impl PluginBsServ {
                         )
                         .await;
                     });
-                    task_handle.await.unwrap();
+                    let _ = task_handle.await;
                     Ok(())
                 })
             }))
@@ -307,7 +307,7 @@ impl PluginBsServ {
     }
 
     pub async fn get_bs_by_rel_up(kind_code: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<PluginBsCertInfoResp> {
-        let kind_id = RbumKindServ::get_rbum_kind_id_by_code(&kind_code, funs).await?;
+        let kind_id = RbumKindServ::get_rbum_kind_id_by_code(kind_code, funs).await?;
         if let Some(kind_id) = kind_id {
             if let Some(rel_bind) = PluginRelServ::find_from_simple_rels(
                 &PluginAppBindRelKind::PluginAppBindKind,
@@ -321,7 +321,7 @@ impl PluginBsServ {
                 ctx,
             )
             .await?
-            .get(0)
+            .first()
             {
                 let rel = PluginRelServ::get_rel(&rel_bind.rel_id, funs, ctx).await?;
                 return Self::get_cert_bs(&rel.from_rbum_id, &rel.to_rbum_item_id, funs, ctx).await;

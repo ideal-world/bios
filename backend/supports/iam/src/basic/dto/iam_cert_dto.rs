@@ -119,7 +119,6 @@ pub struct IamThirdPartyCertExtAddReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub ak: String,
     #[oai(validator(min_length = "1", max_length = "255"))]
-    // todo change to String
     pub supplier: Option<String>,
     #[oai(validator(min_length = "2", max_length = "10000"))]
     pub sk: Option<String>,

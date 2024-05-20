@@ -114,7 +114,7 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
         vec![Value::from(&query_req.from), Value::from(StatsFactColKind::Ext.to_string())]
     };
     // Fetch config
-    // todo 是否需要在col加入一个dim_data_type字段，用于区分维度和度量
+    // TODO 是否需要在col加入一个dim_data_type字段，用于区分维度和度量
     let conf_info = conn
         .query_all(
             &format!(
@@ -245,12 +245,12 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
     });
 
     let conf_limit = query_limit;
-    let conf_info = conf_info.into_iter().map(|v| (format!("{}", v.col_key.clone()), v)).collect::<HashMap<String, StatsConfInfo>>();
-    if query_req.select.iter().any(|i| !conf_info.contains_key(&format!("{}",&i.code)))
+    let conf_info = conf_info.into_iter().map(|v| (v.col_key.clone().to_string(), v)).collect::<HashMap<String, StatsConfInfo>>();
+    if query_req.select.iter().any(|i| !conf_info.contains_key(&i.code.to_string()))
         // should be equivalent: 
         // original: || query_req.group.iter().any(|i| !conf_info.contains_key(&i.code) || conf_info.get(&i.code).unwrap().col_kind != StatsFactColKind::Dimension))
         // (!contain || not_dim) => !(contain && is_dim)
-        || query_req.group.iter().any(|i| !conf_info.get(&format!("{}",&i.code)).is_some_and(|i|i.col_kind == StatsFactColKind::Dimension))
+        || query_req.group.iter().any(|i| !conf_info.get(&i.code.to_string()).is_some_and(|i|i.col_kind == StatsFactColKind::Dimension))
         || query_req
             .group_order
             .as_ref()
@@ -266,7 +266,7 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
             .as_ref()
             .map(|havings| havings.iter().any(|having| !query_req.select.iter().any(|select| having.code == select.code && having.fun == select.fun)))
             .unwrap_or(false)
-        || query_req._where.as_ref().map(|or_wheres| or_wheres.iter().any(|and_wheres| and_wheres.iter().any(|where_| !conf_info.contains_key(&format!("{}",where_.code))))).unwrap_or(false)
+        || query_req._where.as_ref().map(|or_wheres| or_wheres.iter().any(|and_wheres| and_wheres.iter().any(|where_| !conf_info.contains_key(&where_.code.to_string())))).unwrap_or(false)
     {
         return Err(funs.err().not_found(
             "metric",
@@ -276,7 +276,7 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
         ));
     }
     let mes_distinct = query_req.select.iter().any(|i| {
-        if let Some(conf) = conf_info.get(&format!("{}", i.code)) {
+        if let Some(conf) = conf_info.get(&i.code.to_string()) {
             return conf.mes_data_distinct.unwrap_or(false);
         }
         false
@@ -298,7 +298,7 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
         for or_wheres in wheres {
             let mut sql_part_and_wheres = vec![];
             for and_where in or_wheres {
-                let col_conf = conf_info.get(&format!("{}", and_where.code)).ok_or_else(|| {
+                let col_conf = conf_info.get(&and_where.code.to_string()).ok_or_else(|| {
                     funs.err().internal_error(
                         "metric",
                         "query",
@@ -381,7 +381,7 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
         }
     }
     for group in &query_req.group {
-        let col_conf = conf_info.get(&format!("{}", group.code)).ok_or_else(|| {
+        let col_conf = conf_info.get(&group.code.to_string()).ok_or_else(|| {
             funs.err().not_found(
                 "metric",
                 "query",
@@ -401,7 +401,7 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
     // (column name with fun, alias name, show name)
     let mut sql_part_group_infos = vec![];
     for group in &query_req.group {
-        let col_conf = conf_info.get(&format!("{}", group.code)).ok_or_else(|| {
+        let col_conf = conf_info.get(&group.code.to_string()).ok_or_else(|| {
             funs.err().not_found(
                 "metric",
                 "query",
@@ -447,7 +447,7 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
         sql_part_outer_select_infos.push((column_name_with_fun, alias_name, show_name, true));
     }
     for select in &query_req.select {
-        let col_conf = conf_info.get(&format!("{}", select.code)).ok_or_else(|| {
+        let col_conf = conf_info.get(&select.code.to_string()).ok_or_else(|| {
             funs.err().not_found(
                 "metric",
                 "query",
@@ -474,7 +474,7 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
     let sql_part_havings = if let Some(havings) = &query_req.having {
         let mut sql_part_havings = vec![];
         for having in havings {
-            let col_conf = conf_info.get(&format!("{}", having.code)).ok_or_else(|| {
+            let col_conf = conf_info.get(&having.code.to_string()).ok_or_else(|| {
                 funs.err().not_found(
                     "metric",
                     "query",
@@ -521,7 +521,7 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
     let sql_dimension_orders = if let Some(orders) = &query_req.dimension_order {
         let mut sql_part_orders = vec![];
         for order in orders {
-            let col_conf = conf_info.get(&format!("{}", order.code)).ok_or_else(|| {
+            let col_conf = conf_info.get(&order.code.to_string()).ok_or_else(|| {
                 funs.err().not_found(
                     "metric",
                     "query",
@@ -558,17 +558,8 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
             sql_part_orders.extend(group_orders);
         }
         if let Some(orders) = &query_req.metrics_order {
-            let metrics_orders = orders
-                .iter()
-                .map(|order| {
-                    format!(
-                        "{}{FUNCTION_SUFFIX_FLAG}{} {}",
-                        order.code.clone(),
-                        order.fun.to_string(),
-                        if order.asc { "ASC" } else { "DESC" }
-                    )
-                })
-                .collect::<Vec<String>>();
+            let metrics_orders =
+                orders.iter().map(|order| format!("{}{FUNCTION_SUFFIX_FLAG}{} {}", order.code.clone(), order.fun, if order.asc { "ASC" } else { "DESC" })).collect::<Vec<String>>();
             sql_part_orders.extend(metrics_orders);
         }
         format!("ORDER BY {}", sql_part_orders.join(","))
@@ -577,7 +568,7 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
     };
     // package limit
     let query_limit = if let Some(limit) = &query_req.limit { format!("LIMIT {limit}") } else { "".to_string() };
-    let ignore_group_agg = !(!sql_part_groups.is_empty() && query_req.group_agg.unwrap_or(false));
+    let ignore_group_agg = sql_part_groups.is_empty() || !query_req.group_agg.unwrap_or(false);
     let own_paths_placeholder = (1..=own_paths_count).map(|idx| format!("${}", idx)).collect::<Vec<String>>().join(", ");
     let create_time_placeholder = format!("${}", own_paths_count + 1);
     let end_time_placeholder = format!("${}", own_paths_count + 2);
@@ -669,7 +660,7 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
     })
 }
 
-// todo 下钻 上探
+// TODO 下钻 上探
 async fn package_dim_record_agg(
     conf_info: HashMap<String, StatsConfInfo>,
     funs: &TardisFunsInst,
@@ -686,7 +677,7 @@ async fn package_dim_record_agg(
         } else {
             None
         };
-        if dimension_hierarchy.unwrap_or(vec![]).len() > 0 {
+        if !dimension_hierarchy.unwrap_or(vec![]).is_empty() {
             let dim: HashMap<String, serde_json::Value> = dim_record_paginate(dimension_key.clone(), None, None, 1, 9999, None, None, funs, ctx)
                 .await?
                 .records
@@ -710,7 +701,7 @@ fn package_groups(
     result: Vec<serde_json::Value>,
 ) -> Result<serde_json::Value, String> {
     if curr_select_dimension_keys.is_empty() {
-        let first_result = result.first().ok_or_else(|| "result is empty")?;
+        let first_result = result.first().ok_or("result is empty")?;
         let mut leaf_node = Map::with_capacity(result.len());
         for measure_key in select_measure_keys {
             let val = first_result.get(measure_key).ok_or_else(|| format!("failed to get key {measure_key}"))?;
@@ -734,8 +725,8 @@ fn package_groups(
     }
     let mut node = Map::with_capacity(0);
 
-    let dimension_key = curr_select_dimension_keys.first().ok_or_else(|| "curr_select_dimension_keys is empty")?;
-    // todo 下钻 上探
+    let dimension_key = curr_select_dimension_keys.first().ok_or("curr_select_dimension_keys is empty")?;
+    // TODO 下钻 上探
     // let dimension_hierarchy = if let Some(stats_con_info) = conf_info.get(dimension_key.split(FUNCTION_SUFFIX_FLAG).next().unwrap_or("")) {
     //     stats_con_info.dim_hierarchy.clone()
     // } else {
@@ -777,7 +768,7 @@ fn package_groups(
             ignore_group_agg,
             group.to_vec(),
         )?;
-        // todo 下钻 上探
+        // TODO 下钻 上探
         // println!("dimension_key:[{}],key[{}]", dimension_key, key);
         // if let Some(dim_record_map) = dim_record_agg.get(dimension_key) {
         //     println!("dim_record_map:{:?}", dim_record_map);
@@ -807,7 +798,7 @@ fn package_groups_agg(record: serde_json::Value) -> Result<serde_json::Value, St
                 return Ok(serde_json::Value::Null);
             }
             let mut details = Vec::new();
-            let var_agg = agg.as_str().ok_or_else(|| "field group_agg should be a string")?;
+            let var_agg = agg.as_str().ok_or("field group_agg should be a string")?;
             let vars = var_agg.split(',').collect::<Vec<&str>>();
             for var in vars {
                 let fields = var.split(" - ").collect::<Vec<&str>>();
@@ -839,13 +830,13 @@ fn package_rel_external_id_agg(query_req: &StatsQueryMetricsReq) -> Option<HashS
             rel_external_ids.insert(rel_external_id.clone());
         }
     });
-    query_req.group_order.as_ref().map(|orders| {
+    if let Some(orders) = query_req.group_order.as_ref() {
         orders.iter().for_each(|i| {
             if let Some(rel_external_id) = &i.rel_external_id {
                 rel_external_ids.insert(rel_external_id.clone());
             }
         })
-    });
+    }
     if let Some(metrics_order) = &query_req.metrics_order {
         metrics_order.iter().for_each(|i| {
             if let Some(rel_external_id) = &i.rel_external_id {

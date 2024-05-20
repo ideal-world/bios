@@ -463,7 +463,7 @@ impl IamSetServ {
                     }
                     if let Some(p_node) = result_main.iter_mut().find(|r| pid.is_some() && r.id == pid.clone().unwrap_or_default()) {
                         p_node.ext = json!({"disable_import":true}).to_string();
-                        pid = p_node.pid.clone();
+                        pid.clone_from(&p_node.pid);
                     } else {
                         break;
                     }
@@ -525,7 +525,7 @@ impl IamSetServ {
         let mut res_ids = HashSet::new();
         let mut global_ctx = ctx.clone();
         global_ctx.own_paths = "".to_string();
-        // todo default empty res
+        // TODO default empty res
         res_ids.insert("".to_string());
         for role_id in role_ids {
             let rel_res_ids = IamRelServ::find_to_id_rels(&IamRelKind::IamResRole, role_id, None, None, funs, &global_ctx).await?;

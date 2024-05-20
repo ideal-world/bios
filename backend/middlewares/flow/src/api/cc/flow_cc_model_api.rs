@@ -12,7 +12,7 @@ use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 
 use crate::dto::flow_model_dto::{
     FlowModelAddCustomModelReq, FlowModelAddCustomModelResp, FlowModelAddReq, FlowModelAggResp, FlowModelBindStateReq, FlowModelFilterReq, FlowModelFindRelStateResp,
-    FlowModelModifyReq, FlowModelSortStatesReq, FlowModelSummaryResp, FlowModelUnbindStateReq, FlowTemplateModelResp,
+    FlowModelModifyReq, FlowModelSortStatesReq, FlowModelSummaryResp, FlowModelUnbindStateReq,
 };
 use crate::dto::flow_state_dto::FlowStateRelModelModifyReq;
 use crate::dto::flow_transition_dto::{FlowTransitionModifyReq, FlowTransitionSortStatesReq};
@@ -25,7 +25,7 @@ pub struct FlowCcModelApi;
 #[poem_openapi::OpenApi(prefix_path = "/cc/model")]
 impl FlowCcModelApi {
     /// Add Model
-    /// 
+    ///
     /// 添加模型
     #[oai(path = "/", method = "post")]
     async fn add(&self, mut add_req: Json<FlowModelAddReq>, ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<String> {
@@ -37,7 +37,7 @@ impl FlowCcModelApi {
     }
 
     /// Modify Model By Model Id
-    /// 
+    ///
     /// 修改模型
     #[oai(path = "/:flow_model_id", method = "patch")]
     async fn modify(&self, flow_model_id: Path<String>, mut modify_req: Json<FlowModelModifyReq>, ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<Void> {
@@ -49,7 +49,7 @@ impl FlowCcModelApi {
     }
 
     /// Get Model By Model Id
-    /// 
+    ///
     /// 获取模型
     #[oai(path = "/:flow_model_id", method = "get")]
     async fn get(&self, flow_model_id: Path<String>, ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<FlowModelAggResp> {
@@ -59,7 +59,7 @@ impl FlowCcModelApi {
     }
 
     /// Find Models
-    /// 
+    ///
     /// 获取模型列表
     #[oai(path = "/", method = "get")]
     #[allow(clippy::too_many_arguments)]
@@ -101,9 +101,9 @@ impl FlowCcModelApi {
         TardisResp::ok(result)
     }
 
-    /// Find the specified models, or add it if it doesn't exist.
+    /// Find the specified models, or create it if it doesn't exist.
     ///
-    /// 查找指定model，如果不存在则新增
+    /// 查找指定model，如果不存在则创建。创建规则遵循add_custom_model接口逻辑。
     ///
     /// # Parameters
     /// - `tag_ids` - list of tag_id
@@ -117,17 +117,17 @@ impl FlowCcModelApi {
         is_shared: Query<Option<bool>>,
         ctx: TardisContextExtractor,
         _request: &Request,
-    ) -> TardisApiResult<HashMap<String, FlowTemplateModelResp>> {
+    ) -> TardisApiResult<HashMap<String, FlowModelSummaryResp>> {
         let mut funs = flow_constants::get_tardis_inst();
         funs.begin().await?;
-        let tag_ids: Vec<_> = tag_ids.split(',').collect();
+        let tag_ids= tag_ids.split(',').map(|tag_id| tag_id.to_string()).collect_vec();
         let result = FlowModelServ::find_or_add_models(tag_ids, temp_id.0, is_shared.unwrap_or(false), &funs, &ctx.0).await?;
         funs.commit().await?;
         TardisResp::ok(result)
     }
 
     /// Delete Model By Model Id
-    /// 
+    ///
     /// 删除模型
     ///
     /// Valid only when model is not used
@@ -143,7 +143,7 @@ impl FlowCcModelApi {
     }
 
     /// Bind State By Model Id [Deprecated]
-    /// 
+    ///
     /// 绑定状态 [已废弃]
     #[oai(path = "/:flow_model_id/bind_state", method = "post")]
     async fn bind_state(&self, flow_model_id: Path<String>, req: Json<FlowModelBindStateReq>, ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<Void> {
@@ -164,7 +164,7 @@ impl FlowCcModelApi {
     }
 
     /// Unbind State By Model Id [Deprecated]
-    /// 
+    ///
     /// 解绑状态 [已废弃]
     #[oai(path = "/:flow_model_id/unbind_state", method = "post")]
     async fn unbind_state(&self, flow_model_id: Path<String>, req: Json<FlowModelUnbindStateReq>, ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<Void> {
@@ -185,7 +185,7 @@ impl FlowCcModelApi {
     }
 
     /// Resort states [Deprecated]
-    /// 
+    ///
     /// 状态重新排序 [已废弃]
     #[oai(path = "/:flow_model_id/resort_state", method = "post")]
     async fn resort_state(&self, flow_model_id: Path<String>, req: Json<FlowModelSortStatesReq>, ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<Void> {
@@ -216,7 +216,7 @@ impl FlowCcModelApi {
     }
 
     /// Resort transitions [Deprecated]
-    /// 
+    ///
     /// 动作重新排序 [已废弃]
     #[oai(path = "/:flow_model_id/resort_transition", method = "post")]
     async fn resort_transition(
@@ -252,9 +252,10 @@ impl FlowCcModelApi {
         TardisResp::ok(Void {})
     }
 
-    /// copy parent model to current own_paths 
-    /// 
+    /// copy parent model to current own_paths
+    ///
     /// 复制父级模型到当前 own_paths
+    /// 实际创建规则：按照 tags 创建模型，若传入proj_template_id，则优先寻找对应的父级模型，否则则获取默认模板模型生成对应的自定义模型。
     #[oai(path = "/add_custom_model", method = "post")]
     async fn add_custom_model(&self, req: Json<FlowModelAddCustomModelReq>, ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<Vec<FlowModelAddCustomModelResp>> {
         let mut funs = flow_constants::get_tardis_inst();
@@ -269,7 +270,7 @@ impl FlowCcModelApi {
     }
 
     /// find rel states by model_id
-    /// 
+    ///
     /// 获取关联状态
     #[oai(path = "/find_rel_status", method = "get")]
     async fn find_rel_states(
@@ -286,7 +287,7 @@ impl FlowCcModelApi {
     }
 
     /// modify related state [Deprecated]
-    /// 
+    ///
     /// 编辑关联的状态 [已废弃]
     #[oai(path = "/:flow_model_id/modify_rel_state", method = "patch")]
     async fn modify_rel_state(&self, flow_model_id: Path<String>, req: Json<FlowStateRelModelModifyReq>, ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<Void> {

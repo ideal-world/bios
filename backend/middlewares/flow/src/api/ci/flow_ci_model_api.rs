@@ -18,7 +18,7 @@ pub struct FlowCiModelApi;
 #[poem_openapi::OpenApi(prefix_path = "/ci/model")]
 impl FlowCiModelApi {
     /// Get model detail
-    /// 
+    ///
     /// 获取模型详情
     #[oai(path = "/detail", method = "get")]
     async fn get_detail(
@@ -53,7 +53,7 @@ impl FlowCiModelApi {
     }
 
     /// find rel states by model_id
-    /// 
+    ///
     /// 获取关联状态
     #[oai(path = "/find_rel_status", method = "get")]
     async fn find_rel_states(
@@ -71,7 +71,7 @@ impl FlowCiModelApi {
     }
 
     /// add custom model by template_id
-    /// 
+    ///
     /// 添加自定义模型
     #[oai(path = "/add_custom_model", method = "post")]
     async fn add_custom_model(

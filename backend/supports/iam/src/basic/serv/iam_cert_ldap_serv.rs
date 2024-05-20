@@ -982,7 +982,7 @@ impl IamCertLdapServ {
                 };
                 match delete_result {
                     Ok(_) => {
-                        let _ = IamSearchClient::async_add_or_modify_account_search(&cert.rel_rbum_id, Box::new(true), "", &funs, &ctx).await;
+                        let _ = IamSearchClient::async_add_or_modify_account_search(&cert.rel_rbum_id, Box::new(true), "", &funs, ctx).await;
                         success += 1;
                     }
                     Err(_) => {

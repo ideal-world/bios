@@ -100,7 +100,7 @@ impl IamCtCertManageApi {
         let funs = iam_constants::get_tardis_inst();
         let ctx = IamCertServ::use_sys_or_tenant_ctx_unsafe(ctx.0)?;
         try_set_real_ip_from_req_to_ctx(request, &ctx).await?;
-        let cert = IamCertServ::get_3th_kind_cert_by_id(&id.0, &funs, &ctx).await?;
+        let cert = IamCertServ::get_3th_kind_cert_by_id(&id.0, true, &funs, &ctx).await?;
         ctx.execute_task().await?;
         TardisResp::ok(cert)
     }
@@ -112,7 +112,7 @@ impl IamCtCertManageApi {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        let cert = IamCertServ::get_3th_kind_cert_by_id(&id.0, &funs, &ctx.0).await?;
+        let cert = IamCertServ::get_3th_kind_cert_by_id(&id.0, false, &funs, &ctx.0).await?;
         IamCertServ::delete_manage_cert(&id.0, &funs, &ctx.0).await?;
         let _ = SpiLogClient::add_dynamic_log(
             &LogDynamicContentReq {

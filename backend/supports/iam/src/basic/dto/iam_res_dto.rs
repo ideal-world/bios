@@ -88,8 +88,8 @@ impl IamResModifyReq {
             return self;
         }
         let code = self.code.clone().unwrap();
-        if code.starts_with('/') {
-            self.code = Some(TrimString::new(code[1..].to_string()));
+        if let Some(strip_code) = code.strip_prefix('/') {
+            self.code = Some(TrimString::new(strip_code.to_string()));
         }
         self.code = Some(TrimString(format!("{}/{}/{}", kind.to_int(), method, code)));
         self

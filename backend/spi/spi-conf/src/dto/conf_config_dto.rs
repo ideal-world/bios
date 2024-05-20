@@ -139,9 +139,9 @@ pub struct ConfigItem {
     pub created_time: DateTimeUtc,
     /// 上次修改时间
     pub last_modified_time: DateTimeUtc,
-    ///
+    /// 加密数据key
     pub encrypted_data_key: Option<String>,
-    ///
+    /// 配置tags
     pub config_tags: Vec<String>,
 }
 

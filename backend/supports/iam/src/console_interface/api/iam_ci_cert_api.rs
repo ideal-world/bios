@@ -162,6 +162,7 @@ impl IamCiCertApi {
     }
 
     /// Add Third-kind Cert
+    ///
     /// 添加第三方证书
     #[oai(path = "/third-kind", method = "put")]
     async fn add_third_cert(
@@ -182,6 +183,7 @@ impl IamCiCertApi {
     }
 
     /// Get Third-kind Certs By Account Id
+    ///
     /// 根据账号id获取第三方证书
     #[oai(path = "/third-kind", method = "get")]
     async fn get_third_cert(
@@ -194,7 +196,7 @@ impl IamCiCertApi {
         let funs = iam_constants::get_tardis_inst();
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
-        let rbum_cert = IamCertServ::get_3th_kind_cert_by_rel_rbum_id(&account_id.0, vec![supplier.0], &funs, &ctx.0).await?;
+        let rbum_cert = IamCertServ::get_3th_kind_cert_by_rel_rbum_id(&account_id.0, vec![supplier.0], true, &funs, &ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(rbum_cert)
     }
@@ -212,7 +214,8 @@ impl IamCiCertApi {
         TardisResp::ok(msg)
     }
 
-    /// decode cert
+    /// Decode cert
+    ///
     /// 解码证书
     #[oai(path = "/decode", method = "post")]
     async fn decode_certs(&self, body: Json<IamCertDecodeRequest>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<HashMap<String, String>> {

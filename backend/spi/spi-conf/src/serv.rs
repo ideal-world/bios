@@ -230,9 +230,9 @@ pub async fn auth(ak: &str, sk: &str, funs: &TardisFunsInst) -> TardisResult<Tar
     let owner = ext.get("owner").and_then(serde_json::Value::as_str).unwrap_or_default();
     let own_paths = ext.get("own_paths").and_then(serde_json::Value::as_str).unwrap_or_default();
     let ak = ext.get("ak").and_then(serde_json::Value::as_str).unwrap_or_default();
-    ctx.owner = owner.to_owned();
-    ctx.own_paths = own_paths.to_owned();
-    ctx.ak = ak.to_owned();
+    owner.clone_into(&mut ctx.owner);
+    own_paths.clone_into(&mut ctx.own_paths);
+    ak.clone_into(&mut ctx.ak);
     Ok(ctx)
 }
 
@@ -245,7 +245,7 @@ fn jwt_token_key(token: &str) -> String {
 async fn bind_token_ctx(token: &str, ttl: u64, ctx: &TardisContext) -> TardisResult<()> {
     let funs = crate::get_tardis_inst_ref();
     let ctx_json = tardis::basic::json::TardisJson.obj_to_string(ctx)?;
-    funs.cache().set_ex(&jwt_token_key(token), &ctx_json, ttl as u64).await.map_err(|e| TardisError::internal_error(&format!("{e}"), CACHE_ERROR))
+    funs.cache().set_ex(&jwt_token_key(token), &ctx_json, ttl).await.map_err(|e| TardisError::internal_error(&format!("{e}"), CACHE_ERROR))
 }
 
 /// get the tardis context by jwt token

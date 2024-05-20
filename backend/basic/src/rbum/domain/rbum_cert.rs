@@ -95,7 +95,7 @@ pub struct Model {
     ///
     /// 凭证的状态
     ///
-    /// see [`crate::rbum::rbum_enumeration::RbumCertConfStatusKind`]
+    /// see [`crate::rbum::rbum_enumeration::RbumCertStatusKind`]
     pub status: i16,
     /// Associated [cert configuration](crate::rbum::domain::rbum_cert_conf::Model) id
     ///

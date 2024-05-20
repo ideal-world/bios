@@ -11,7 +11,7 @@ use spacegate_shell::plugin::Plugin;
 use spacegate_shell::{BoxError, SgBody, SgResponseExt};
 
 use tardis::{log, serde_json};
-pub const CODE: &str = "ip_time";
+pub const CODE: &str = "ip-time";
 
 mod ip_time_rule;
 #[cfg(test)]
@@ -100,6 +100,7 @@ impl IpTimePlugin {
 impl Plugin for IpTimePlugin {
     const CODE: &'static str = CODE;
 
+    #[cfg(feature = "schema")]
     fn meta() -> spacegate_plugin::PluginMetaData {
         spacegate_plugin::plugin_meta!(
             description: "Block/Allow IP by time rule"

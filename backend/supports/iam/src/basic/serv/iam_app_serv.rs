@@ -178,7 +178,7 @@ impl IamAppServ {
         .await?;
         IamRoleServ::add_app_copy_role_agg(&app_id, funs, &app_ctx).await?;
         let app_admin_role_id = IamRoleServ::get_embed_subrole_id(&funs.iam_basic_role_app_admin_id(), funs, &app_ctx).await?;
-        // todo 是否需要在这里初始化应用级别的set？
+        // TODO 是否需要在这里初始化应用级别的set？
         IamSetServ::init_set(IamSetKind::Org, RBUM_SCOPE_LEVEL_APP, funs, &app_ctx).await?;
         IamSetServ::init_set(IamSetKind::Apps, RBUM_SCOPE_LEVEL_APP, funs, &app_ctx).await?;
         if let Some(admin_ids) = &add_req.admin_ids {
@@ -293,7 +293,7 @@ impl IamAppServ {
 
     pub async fn delete_rel_account(app_id: &str, account_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         IamRelServ::delete_simple_rel(&IamRelKind::IamAccountApp, account_id, app_id, funs, ctx).await?;
-        // todo delete app rel account and role
+        // TODO delete app rel account and role
         let rel_account_roles =
             RbumRelServ::find_from_simple_rels(&IamRelKind::IamAccountRole.to_string(), &RbumRelFromKind::Item, true, account_id, None, None, funs, ctx).await?;
         if rel_account_roles.is_empty() {

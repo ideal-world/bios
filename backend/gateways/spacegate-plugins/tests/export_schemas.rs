@@ -1,4 +1,5 @@
-use spacegate_plugin::{plugins, Plugin, PluginSchemaExt};
+use spacegate_plugin::{Plugin, PluginSchemaExt};
+use spacegate_plugins::{anti_replay::AntiReplayPlugin, anti_xss::AntiXssPlugin, audit_log::AuditLogPlugin};
 use tardis::serde_json;
 fn export_plugin<P: PluginSchemaExt + Plugin>(dir: std::path::PathBuf) {
     let schema = P::schema();
@@ -18,15 +19,12 @@ macro_rules! export_plugins {
 
 #[test]
 fn export_schema() {
-    use spacegate_lib::plugin::{
-        anti_replay::AntiReplayPlugin, anti_xss::AntiXssPlugin, audit_log::AuditLogPlugin, auth::AuthPlugin, ip_time::IpTimePlugin, rewrite_ns_b_ip::RewriteNsPlugin,
-    };
     export_plugins!("schema":
         AntiReplayPlugin
         AntiXssPlugin
         AuditLogPlugin
         // AuthPlugin
         // SgIpTimePlugin
-        RewriteNsPlugin
+        // RewriteNsPlugin
     );
 }

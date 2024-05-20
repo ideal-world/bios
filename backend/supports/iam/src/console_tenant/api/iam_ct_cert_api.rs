@@ -85,7 +85,7 @@ impl IamCtCertApi {
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
         try_set_real_ip_from_req_to_ctx(request, &ctx).await?;
         let funs = iam_constants::get_tardis_inst();
-        let rbum_cert = IamCertServ::get_3th_kind_cert_by_rel_rbum_id(&account_id.0, vec![cert_supplier.0], &funs, &ctx).await?;
+        let rbum_cert = IamCertServ::get_3th_kind_cert_by_rel_rbum_id(&account_id.0, vec![cert_supplier.0], true, &funs, &ctx).await?;
         ctx.execute_task().await?;
         TardisResp::ok(rbum_cert)
     }

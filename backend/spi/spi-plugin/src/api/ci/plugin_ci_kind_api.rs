@@ -49,11 +49,7 @@ impl PluginKindApi {
     #[oai(path = "/agg", method = "get")]
     async fn find_agg(&self, kind_codes: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<Vec<PluginKindAggResp>> {
         let funs = crate::get_tardis_inst();
-        let kind_codes: Option<Vec<String>> = if let Some(kind_codes) = kind_codes.0 {
-            Some(kind_codes.split(",").map(|kind_code| kind_code.to_string()).collect())
-        } else {
-            None
-        };
+        let kind_codes: Option<Vec<String>> = kind_codes.0.map(|kind_codes| kind_codes.split(',').map(|kind_code| kind_code.to_string()).collect());
         let result = PluginKindServ::find_kind_agg(kind_codes, &rbum_scope_helper::get_max_level_id_by_context(&ctx.0).unwrap_or_default(), &funs, &ctx.0).await?;
         TardisResp::ok(result)
     }

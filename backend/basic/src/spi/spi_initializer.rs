@@ -240,8 +240,8 @@ pub mod common_pg {
         let compatible_type = TardisFuns::json.json_to_obj(ext.get("compatible_type").unwrap_or(&tardis::serde_json::Value::String("None".to_string())).clone())?;
         let client = TardisRelDBClient::init(&DBModuleConfig {
             url: bs_cert.conn_uri.parse().expect("invalid url"),
-            max_connections: ext.get("max_connections").map(|c| c.as_u64()).flatten().unwrap_or(5) as u32,
-            min_connections: ext.get("min_connections").map(|c| c.as_u64()).flatten().unwrap_or(1) as u32,
+            max_connections: ext.get("max_connections").and_then(|c| c.as_u64()).unwrap_or(5) as u32,
+            min_connections: ext.get("min_connections").and_then(|c| c.as_u64()).unwrap_or(1) as u32,
             connect_timeout_sec: None,
             idle_timeout_sec: None,
             compatible_type,

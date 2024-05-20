@@ -351,9 +351,9 @@ pub struct RbumRelDetailResp {
     ///
     /// 关联目标方的id
     pub to_rbum_item_id: String,
-    /// Relationship target id
+    /// Relationship target name
     ///
-    /// 关联目标方的id
+    /// 关联目标方的name
     pub to_rbum_item_name: String,
     /// Relationship target ownership path
     ///

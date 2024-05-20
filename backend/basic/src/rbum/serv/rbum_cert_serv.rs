@@ -520,7 +520,7 @@ impl RbumCrudOperation<rbum_cert::ActiveModel, RbumCertAddReq, RbumCertModifyReq
                 }
             }
             if let Some(vcode) = &add_req.vcode {
-                Self::add_vcode_to_cache(&add_req.ak, vcode, rel_rbum_cert_conf_id, funs, &ctx).await?;
+                Self::add_vcode_to_cache(&add_req.ak, vcode, rel_rbum_cert_conf_id, funs, ctx).await?;
             }
         }
         Ok(())
@@ -702,6 +702,9 @@ impl RbumCrudOperation<rbum_cert::ActiveModel, RbumCertAddReq, RbumCertModifyReq
         }
         if let Some(status) = &filter.status {
             query.and_where(Expr::col((rbum_cert::Entity, rbum_cert::Column::Status)).eq(status.to_int()));
+        }
+        if let Some(ext) = &filter.ext {
+            query.and_where(Expr::col((rbum_cert::Entity, rbum_cert::Column::Ext)).eq(ext.to_string()));
         }
         if let Some(rel_rbum_cert_conf_ids) = &filter.rel_rbum_cert_conf_ids {
             query.and_where(Expr::col((rbum_cert::Entity, rbum_cert::Column::RelRbumCertConfId)).is_in(rel_rbum_cert_conf_ids.clone()));

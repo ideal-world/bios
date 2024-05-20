@@ -33,7 +33,7 @@ pub struct SearchItemAddReq {
     pub visit_keys: Option<SearchItemVisitKeysReq>,
 }
 
-#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Default)]
 pub struct SearchItemModifyReq {
     #[oai(validator(min_length = "2"))]
     pub kind: Option<String>,
@@ -110,7 +110,7 @@ pub struct SearchItemSearchReq {
     pub page: SearchItemSearchPageReq,
 }
 
-#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Default)]
 pub struct SearchItemSearchCtxReq {
     pub accounts: Option<Vec<String>>,
     pub apps: Option<Vec<String>>,
