@@ -913,10 +913,10 @@ impl RbumRelServ {
             })
             .collect::<HashMap<String, Vec<(String, String)>>>()
         } else if check_req.from_rbum_kind == RbumRelFromKind::SetCate {
-            let set_item = RbumSetItemServ::peek_rbum(&check_req.from_rbum_id, &RbumSetItemFilterReq::default(), funs, ctx).await?;
+            let set_cate = RbumSetCateServ::peek_rbum(&check_req.from_rbum_id, &RbumSetCateFilterReq::default(), funs, ctx).await?;
             HashMap::from([(
-                set_item.rel_rbum_set_id.clone(),
-                vec![(set_item.rel_rbum_set_cate_id.unwrap_or_default(), set_item.rel_rbum_set_cate_sys_code.unwrap_or_default())],
+                set_cate.rel_rbum_set_id.clone(),
+                vec![(set_cate.id, set_cate.sys_code)],
             )])
         } else {
             return Ok(false);
@@ -1052,7 +1052,7 @@ impl RbumRelServ {
             Expr::col((rbum_rel::Entity, rbum_rel::Column::OwnPaths)).like(format!("{}%", ctx.own_paths).as_str()),
             Expr::col((rbum_rel::Entity, rbum_rel::Column::ToOwnPaths)).like(format!("{}%", ctx.own_paths).as_str())
         ]]);
-        if !from_attrs.is_empty() || !from_attrs.is_empty() {
+        if !from_attrs.is_empty() || !to_attrs.is_empty() {
             let attr_table_without_cond = Alias::new(format!("{}_without_cond", RbumRelAttrServ::get_table_name()));
             let attr_table_with_cond = Alias::new(format!("{}_with_cond", RbumRelAttrServ::get_table_name()));
 

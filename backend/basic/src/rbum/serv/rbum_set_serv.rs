@@ -474,11 +474,7 @@ impl RbumCrudOperation<rbum_set_cate::ActiveModel, RbumSetCateAddReq, RbumSetCat
     }
 
     async fn package_add(add_req: &RbumSetCateAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<rbum_set_cate::ActiveModel> {
-        let sys_code = if let Some(rbum_parent_cate_id) = &add_req.rbum_parent_cate_id {
-            Self::package_sys_code(&add_req.rel_rbum_set_id, Some(rbum_parent_cate_id), funs, ctx).await?
-        } else {
-            Self::package_sys_code(&add_req.rel_rbum_set_id, None, funs, ctx).await?
-        };
+        let sys_code = Self::package_sys_code(&add_req.rel_rbum_set_id, add_req.rbum_parent_cate_id, funs, ctx).await?;
         Ok(rbum_set_cate::ActiveModel {
             id: Set(TardisFuns::field.nanoid()),
             sys_code: Set(sys_code),
