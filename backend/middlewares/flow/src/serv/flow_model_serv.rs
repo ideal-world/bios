@@ -741,10 +741,7 @@ impl FlowModelServ {
         // First iterate over the models
         for model in models {
             if tags.contains(&model.tag) {
-                result.insert(
-                    model.tag.clone(),
-                    model,
-                );
+                result.insert(model.tag.clone(), model);
             }
         }
         // Iterate over the tag based on the existing result and get the default model
@@ -752,17 +749,20 @@ impl FlowModelServ {
             if !result.contains_key(&tag) {
                 // copy custom model
                 let model_id = Self::add_custom_model(&tag, None, template_id.clone(), funs, ctx).await?;
-                let added_model = Self::find_one_item(&FlowModelFilterReq {
-                    basic: RbumBasicFilterReq {
-                        ids: Some(vec![model_id]),
+                let added_model = Self::find_one_item(
+                    &FlowModelFilterReq {
+                        basic: RbumBasicFilterReq {
+                            ids: Some(vec![model_id]),
+                            ..Default::default()
+                        },
                         ..Default::default()
                     },
-                    ..Default::default()
-                }, funs, ctx).await?.unwrap_or_default();
-                result.insert(
-                    tag.to_string(),
-                    added_model,
-                );
+                    funs,
+                    ctx,
+                )
+                .await?
+                .unwrap_or_default();
+                result.insert(tag.to_string(), added_model);
             }
         }
 

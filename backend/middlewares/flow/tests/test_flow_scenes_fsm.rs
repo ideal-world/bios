@@ -14,8 +14,8 @@ use bios_mw_flow::dto::flow_model_dto::{
 };
 use bios_mw_flow::dto::flow_state_dto::{FlowStateAddReq, FlowStateRelModelExt, FlowStateSummaryResp, FlowSysStateKind};
 use bios_mw_flow::dto::flow_transition_dto::{
-    FlowTransitionActionByVarChangeInfoChangedKind, FlowTransitionPostActionInfo, FlowTransitionActionChangeKind, FlowTransitionAddReq, FlowTransitionDoubleCheckInfo,
-    FlowTransitionModifyReq, FlowTransitionSortStateInfoReq, FlowTransitionSortStatesReq, StateChangeCondition, StateChangeConditionItem, StateChangeConditionOp,
+    FlowTransitionActionByVarChangeInfoChangedKind, FlowTransitionActionChangeKind, FlowTransitionAddReq, FlowTransitionDoubleCheckInfo, FlowTransitionModifyReq,
+    FlowTransitionPostActionInfo, FlowTransitionSortStateInfoReq, FlowTransitionSortStatesReq, StateChangeCondition, StateChangeConditionItem, StateChangeConditionOp,
 };
 
 use bios_mw_flow::dto::flow_var_dto::{FlowVarInfo, RbumDataTypeKind, RbumWidgetTypeKind};
@@ -70,9 +70,7 @@ pub async fn test(flow_client: &mut TestHttpClient) -> TardisResult<()> {
     let mut modify_configs = vec![];
     let tags = vec!["REQ", "PROJ", "ITER", "TICKET", "MOCK"];
     for tag in tags {
-        modify_configs.push(FlowModelAddCustomModelItemReq {
-            tag: tag.to_string(),
-        });
+        modify_configs.push(FlowModelAddCustomModelItemReq { tag: tag.to_string() });
     }
     let result: Vec<FlowModelAddCustomModelResp> = flow_client
         .post(
@@ -503,9 +501,7 @@ pub async fn test(flow_client: &mut TestHttpClient) -> TardisResult<()> {
             "/cc/model/add_custom_model",
             &FlowModelAddCustomModelReq {
                 proj_template_id: Some(share_template_id.clone()),
-                bind_model_objs: vec![FlowModelAddCustomModelItemReq {
-                    tag: "REQ".to_string(),
-                }],
+                bind_model_objs: vec![FlowModelAddCustomModelItemReq { tag: "REQ".to_string() }],
             },
         )
         .await;
@@ -597,9 +593,7 @@ pub async fn test(flow_client: &mut TestHttpClient) -> TardisResult<()> {
     let mut modify_configs = vec![];
     let tags = vec!["REQ", "PROJ", "ITER", "TICKET"];
     for tag in tags {
-        modify_configs.push(FlowModelAddCustomModelItemReq {
-            tag: tag.to_string(),
-        });
+        modify_configs.push(FlowModelAddCustomModelItemReq { tag: tag.to_string() });
     }
     let result: Vec<FlowModelAddCustomModelResp> = flow_client
         .post(

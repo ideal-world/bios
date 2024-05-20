@@ -4,7 +4,7 @@ use tardis::db::sea_orm::prelude::Json;
 use tardis::db::sea_orm::*;
 use tardis::{chrono, TardisCreateEntity, TardisEmptyBehavior, TardisEmptyRelation};
 
-use crate::dto::flow_transition_dto::{FlowTransitionPostActionInfo, FlowTransitionDoubleCheckInfo, FlowTransitionFrontActionInfo};
+use crate::dto::flow_transition_dto::{FlowTransitionDoubleCheckInfo, FlowTransitionFrontActionInfo, FlowTransitionPostActionInfo};
 use crate::dto::flow_var_dto::FlowVarInfo;
 
 /// Transfer / 流转
