@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use bios_basic::process::task_processor::TaskProcessor;
 use bios_basic::rbum::helper::rbum_event_helper;
 
+use tardis::basic::dto::TardisContext;
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem_openapi;
 use tardis::web::poem_openapi::{param::Path, param::Query, payload::Json};
@@ -281,7 +282,26 @@ impl IamCsAccountApi {
             &ctx,
         )
         .await?;
-        IamSearchClient::async_add_or_modify_account_search(&id.0, Box::new(true), "", &funs, &ctx).await?;
+        IamSearchClient::add_or_modify_account_search(IamAccountServ::get_account_detail_aggs(
+            &id.0,
+            &IamAccountFilterReq {
+                basic: RbumBasicFilterReq {
+                    ignore_scope: true,
+                    own_paths: Some("".to_string()),
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            true,
+            true,
+            &funs,
+            &TardisContext {
+                own_paths: "".to_string(),
+                ..ctx.clone()
+            },
+        )
+        .await?, Box::new(true), "", &funs, &ctx).await?;
         funs.commit().await?;
         ctx.execute_task().await?;
         TardisResp::ok(Void {})
