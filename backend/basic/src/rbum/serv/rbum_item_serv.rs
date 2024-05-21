@@ -244,6 +244,13 @@ where
 
     // ----------------------------- Add -------------------------------
 
+    /// Pre-processing of the add request
+    ///
+    /// 添加请求的前置处理
+    async fn before_add_item(_: &mut AddReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<()> {
+        Ok(())
+    }
+
     /// Package add request of the kernel part of the resource item
     ///
     /// 组装资源项核心部分的添加请求
@@ -281,13 +288,6 @@ where
     /// }
     /// ```
     async fn package_ext_add(id: &str, add_req: &AddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<EXT>;
-
-    /// Pre-processing of the add request
-    ///
-    /// 添加请求的前置处理
-    async fn before_add_item(_: &mut AddReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<()> {
-        Ok(())
-    }
 
     /// Post-processing of the add request
     ///
@@ -375,6 +375,13 @@ where
 
     // ----------------------------- Modify -------------------------------
 
+    ///  Pre-processing of the modify request
+    ///
+    /// 修改请求的前置处理
+    async fn before_modify_item(_: &str, _: &mut ModifyReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<()> {
+        Ok(())
+    }
+
     /// Package modify request of the kernel part of the resource item
     ///
     /// 组装资源项核心部分的修改请求
@@ -424,13 +431,6 @@ where
     /// }
     /// ```
     async fn package_ext_modify(id: &str, modify_req: &ModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<EXT>>;
-
-    ///  Pre-processing of the modify request
-    ///
-    /// 修改请求的前置处理
-    async fn before_modify_item(_: &str, _: &mut ModifyReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<()> {
-        Ok(())
-    }
 
     /// Post-processing of the modify request
     ///
