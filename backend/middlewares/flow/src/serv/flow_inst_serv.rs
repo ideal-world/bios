@@ -696,7 +696,7 @@ impl FlowInstServ {
                 });
             }
             if !params.is_empty() {
-                FlowExternalServ::do_modify_field(
+                FlowExternalServ::do_async_modify_field(
                     &flow_model.tag,
                     &next_transition_detail,
                     &flow_inst_detail.rel_business_obj_id,
