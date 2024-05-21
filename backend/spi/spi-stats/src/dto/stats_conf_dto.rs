@@ -40,7 +40,7 @@ pub struct StatsConfDimAddReq {
 }
 
 /// Modify Dimension Configuration Request Object
-/// 
+///
 /// 修改维度配置请求对象
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct StatsConfDimModifyReq {
@@ -51,13 +51,13 @@ pub struct StatsConfDimModifyReq {
     /// Whether it is a stable dataset,
     /// if true the dimension data is recorded in the corresponding dimension table,
     /// if false the dimension data is recorded in the fact table
-    /// 
+    ///
     /// 是否为稳定数据集，
     /// 如果为true，则维度数据记录在对应的维度表中，
     /// 如果为false，则维度数据记录在事实表中
     pub stable_ds: Option<bool>,
     /// Dimension data type
-    /// 
+    ///
     /// 维度数据类型
     pub data_type: Option<StatsDataTypeKind>,
     /// 层级，从0开始，用于上卷/下卷。
@@ -72,7 +72,7 @@ pub struct StatsConfDimModifyReq {
 }
 
 /// Dimension Configuration Response Object
-/// 
+///
 /// 维度配置响应对象
 #[derive(poem_openapi::Object, sea_orm::FromQueryResult, Serialize, Deserialize, Debug)]
 pub struct StatsConfDimInfoResp {
@@ -84,23 +84,23 @@ pub struct StatsConfDimInfoResp {
     /// The name of the dimension
     #[oai(validator(min_length = "2"))]
     pub show_name: String,
-    
+
     /// Whether it is a stable dataset,
     /// if true the dimension data is recorded in the corresponding dimension table,
     /// if false the dimension data is recorded in the fact table
-    /// 
+    ///
     /// 是否为稳定数据集，
     /// 如果为true，则维度数据记录在对应的维度表中，
     /// 如果为false，则维度数据记录在事实表中
     pub stable_ds: bool,
     /// Dimension data type
-    /// 
+    ///
     /// 维度数据类型
     pub data_type: StatsDataTypeKind,
     /// Hierarchy, starting from 0, for up-rolls/down-rolls.
     /// Multiple fields can be defined for each dimension.
     /// e.g. address dimension can be province-city-district, etc.
-    /// 
+    ///
     /// 层级，从0开始，用于上卷/下卷。
     /// 每个维度可以定义多个字段。
     /// 例如地址维度可以是省-市-区等
@@ -117,17 +117,17 @@ pub struct StatsConfDimInfoResp {
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct StatsConfFactAddReq {
     /// The primary key or encoding passed in from the external system
-    /// 
+    ///
     /// 外部系统传入的主键或编码
     #[oai(validator(pattern = r"^[a-z0-9_]+$"))]
     pub key: String,
     /// The name of the fact
-    /// 
+    ///
     /// 事实的名称
     #[oai(validator(min_length = "2"))]
     pub show_name: String,
     /// The default maximum number of queries
-    /// 
+    ///
     /// 默认最大查询次数
     #[oai(validator(minimum(value = "1", exclusive = "false")))]
     pub query_limit: i32,
@@ -141,12 +141,12 @@ pub struct StatsConfFactAddReq {
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Default)]
 pub struct StatsConfFactModifyReq {
     /// The name of the fact
-    /// 
+    ///
     /// 事实的名称
     #[oai(validator(min_length = "2"))]
     pub show_name: Option<String>,
     /// The default maximum number of queries
-    /// 
+    ///
     /// 默认最大查询次数
     #[oai(validator(minimum(value = "1", exclusive = "false")))]
     pub query_limit: Option<i32>,
@@ -159,17 +159,17 @@ pub struct StatsConfFactModifyReq {
 #[derive(poem_openapi::Object, sea_orm::FromQueryResult, Serialize, Deserialize, Debug)]
 pub struct StatsConfFactInfoResp {
     /// The primary key or encoding passed in from the external system
-    /// 
+    ///
     /// 外部系统传入的主键或编码
     #[oai(validator(pattern = r"^[a-z0-9_]+$"))]
     pub key: String,
     /// The name of the fact
-    /// 
+    ///
     /// 事实的名称
     #[oai(validator(min_length = "2"))]
     pub show_name: String,
     /// The default maximum number of queries
-    /// 
+    ///
     /// 默认最大查询次数
     #[oai(validator(minimum(value = "1", exclusive = "false")))]
     pub query_limit: i32,
@@ -186,65 +186,77 @@ pub struct StatsConfFactInfoResp {
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct StatsConfFactColAddReq {
     /// The primary key or encoding passed in from the external system
-    /// 
+    ///
     /// 外部系统传入的主键或编码
     #[oai(validator(pattern = r"^[a-z0-9_]+$"))]
     pub key: String,
     /// The name of the fact column
-    /// 
+    ///
     /// 事实列的名称
     #[oai(validator(min_length = "2"))]
     pub show_name: String,
     /// kind = Dimension, with index
     /// kind = Measure, without index
     /// kind = Ext, for recording data only, character type, without index
-    /// 
+    ///
     /// 类型 = 维度，带索引
     /// 类型 = 度量，不带索引
     /// 类型 = 扩展，仅用于记录数据，字符类型，不带索引
     pub kind: StatsFactColKind,
     /// Valid when kind = Dimension, used to specify the associated dimension configuration table
-    /// 
+    ///
     /// 当kind = Dimension时有效，用于指定关联的维度配置表
     pub dim_rel_conf_dim_key: Option<String>,
     /// valid when kind = Dimension, whether to allow multiple values.
     /// When true, the corresponding data format is an array type, and uses the gin type index
-    /// 
+    ///
     /// 当kind = Dimension时有效，是否允许多值。
     /// 当为true时，对应的数据格式为数组类型，使用gin类型索引
     pub dim_multi_values: Option<bool>,
-    /// Valid when kind = Measure, Whether to carry out weight distinct
+
+    /// Valid when kind = Dimension, used to specify the data type
+    /// dynamic dimension when valid
     /// 
+    /// 当kind = Dimension时有效，用于指定数据类型
+    /// 且是动态维度时有效
+    pub dim_data_type: Option<StatsDataTypeKind>,
+    /// Valid when kind = Dimension, Used to specify the dynamic URL
+    /// dynamic dimension when valid
+    /// 
+    /// 当kind = Dimension时有效，用于指定动态URL
+    /// 且是动态维度时有效
+    pub dim_dynamic_url: Option<String>,
+    /// Valid when kind = Measure, Whether to carry out weight distinct
+    ///
     /// 当kind = 度量时有效，是否进行权重去重
     pub mes_data_distinct: Option<bool>,
     /// Valid when kind = Measure, Used to specify the data type
-    /// 
+    ///
     /// 当kind = 度量时有效，用于指定数据类型
     pub mes_data_type: Option<StatsDataTypeKind>,
-    
     /// Valid when kind = Measure, Used to specify the data update frequency.
     /// E.g. RT(Real Time),1H(Hour),1D(Day),1M(Month)
-    /// 
+    ///
     /// 当kind = 度量时有效，用于指定数据更新频率。
     /// 例如 RT(实时)，1H(小时)，1D(天)，1M(月)
     pub mes_frequency: Option<String>,
     /// Valid when kind = Measure, Used to specify the measure unit
-    /// 
+    ///
     /// 当kind = 度量时有效，用于指定度量单位
     pub mes_unit: Option<String>,
     /// Valid when kind = Measure, Used to specify the measure activation (only active when all specified dimensions are present)
-    /// 
+    ///
     /// 当kind = 度量时有效，用于指定度量激活（仅在所有指定维度都存在时激活）
     pub mes_act_by_dim_conf_keys: Option<Vec<String>>,
     /// Associated fact and fact column configuration.
     /// Format: <fact configuration table key>.<fact field configuration table key>
-    /// 
+    ///
     /// 关联的事实和事实列配置。
     /// 格式：<事实配置表key>.<事实字段配置表key>
     pub rel_conf_fact_and_col_key: Option<String>,
     /// The primary key or encoding passed in from the external system
     /// Used to extend the fact column of the ext field
-    /// 
+    ///
     /// 关联外部系统传入的主键或编码
     /// 用于扩展ext字段的事实列
     pub rel_external_id: Option<String>,
@@ -253,65 +265,77 @@ pub struct StatsConfFactColAddReq {
 }
 
 /// Modify Fact Column Configuration Request Object
-/// 
+///
 /// 修改事实列配置请求对象
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct StatsConfFactColModifyReq {
     /// The name of the fact column
-    /// 
+    ///
     /// 事实列的名称
     #[oai(validator(min_length = "2"))]
     pub show_name: Option<String>,
     /// kind = Dimension, with index
     /// kind = Measure, without index
     /// kind = Ext, for recording data only, character type, without index
-    /// 
+    ///
     /// 类型 = 维度，带索引
     /// 类型 = 度量，不带索引
     /// 类型 = 扩展，仅用于记录数据，字符类型，不带索引
     pub kind: Option<StatsFactColKind>,
     /// Valid when kind = Dimension, used to specify the associated dimension configuration table
-    /// 
+    ///
     /// 当kind = Dimension时有效，用于指定关联的维度配置表
     pub dim_rel_conf_dim_key: Option<String>,
     /// Valid when kind = Measure, Whether to carry out weight distinct
-    /// 
+    ///
     /// 当kind = Dimension时有效，是否允许多值。
     pub mes_data_distinct: Option<bool>,
     /// valid when kind = Dimension, whether to allow multiple values.
     /// When true, the corresponding data format is an array type, and uses the gin type index
-    /// 
+    ///
     /// 当kind = Measure时有效，用于指定数据类型
     /// 如果为true时，对应的数据格式为数组类型，使用gin类型索引
     pub dim_multi_values: Option<bool>,
     pub dim_exclusive_rec: Option<bool>,
-    /// Valid when kind = Measure, Used to specify the data type
+    /// Valid when kind = Dimension, used to specify the data type
+    /// dynamic dimension when valid
     /// 
+    /// 当kind = Dimension时有效，用于指定数据类型
+    /// 且是动态维度时有效
+    pub dim_data_type: Option<StatsDataTypeKind>,
+    /// Valid when kind = Dimension, Used to specify the dynamic URL
+    /// dynamic dimension when valid
+    /// 
+    /// 当kind = Dimension时有效，用于指定动态URL
+    /// 且是动态维度时有效
+    pub dim_dynamic_url: Option<String>,
+    /// Valid when kind = Measure, Used to specify the data type
+    ///
     /// 当kind = Measure时有效，用于指定数据类型
     pub mes_data_type: Option<StatsDataTypeKind>,
     /// Valid when kind = Measure, Used to specify the data update frequency.
     /// E.g. RT(Real Time),1H(Hour),1D(Day),1M(Month)
-    /// 
+    ///
     /// 当kind = Measure时有效，用于指定数据更新频率。
     /// 例如 RT(实时)，1H(小时)，1D(天)，1M(月)
     pub mes_frequency: Option<String>,
     /// Valid when kind = Measure, Used to specify the measure unit
-    /// 
+    ///
     /// 当kind = Measure时有效，用于指定度量单位
     pub mes_unit: Option<String>,
     /// Valid when kind = Measure, Used to specify the measure activation (only active when all specified dimensions are present)
-    /// 
+    ///
     /// 当kind = Measure时有效，用于指定度量激活（仅在所有指定维度都存在时激活）
     pub mes_act_by_dim_conf_keys: Option<Vec<String>>,
     /// Associated fact and fact column configuration.
     /// Format: <fact configuration table key>.<fact field configuration table key>
-    /// 
+    ///
     /// 关联的事实和事实列配置。
     /// 格式：<事实配置表key>.<事实字段配置表key>
     pub rel_conf_fact_and_col_key: Option<String>,
     /// The primary key or encoding passed in from the external system
     /// Used to extend the fact column of the ext field
-    /// 
+    ///
     /// 关联外部系统传入的主键或编码
     /// 用于扩展ext字段的事实列
     pub rel_external_id: Option<String>,
@@ -319,69 +343,81 @@ pub struct StatsConfFactColModifyReq {
 }
 
 /// Fact Column Configuration Response Object
-/// 
+///
 /// 事实列配置响应对象
 #[derive(poem_openapi::Object, sea_orm::FromQueryResult, Serialize, Deserialize, Debug)]
 pub struct StatsConfFactColInfoResp {
     /// The primary key or encoding passed in from the external system
-    /// 
+    ///
     /// 外部系统传入的主键或编码
     #[oai(validator(pattern = r"^[a-z0-9_]+$"))]
     pub key: String,
     /// The name of the fact column
-    /// 
+    ///
     /// 事实列的名称
     #[oai(validator(min_length = "2"))]
     pub show_name: String,
     /// kind = Dimension, with index
     /// kind = Measure, without index
     /// kind = Ext, for recording data only, character type, without index
-    /// 
+    ///
     /// 类型 = 维度，带索引
     /// 类型 = 度量，不带索引
     /// 类型 = 扩展，仅用于记录数据，字符类型，不带索引
     pub kind: StatsFactColKind,
     /// Valid when kind = Dimension, used to specify the associated dimension configuration table
-    /// 
+    ///
     /// 当kind = Dimension时有效，用于指定关联的维度配置表
     pub dim_rel_conf_dim_key: Option<String>,
     /// valid when kind = Dimension, whether to allow multiple values.
     /// When true, the corresponding data format is an array type, and uses the gin type index
-    /// 
+    ///
     /// 当kind = Dimension时有效，是否允许多值。
     /// 当为true时，对应的数据格式为数组类型，使用gin类型索引
     pub dim_multi_values: Option<bool>,
-    /// Valid when kind = Measure, Whether to carry out weight distinct
+    /// Valid when kind = Dimension, used to specify the data type
+    /// dynamic dimension when valid
     /// 
+    /// 当kind = Dimension时有效，用于指定数据类型
+    /// 且是动态维度时有效
+    pub dim_data_type: Option<StatsDataTypeKind>,
+    /// Valid when kind = Dimension, Used to specify the dynamic URL
+    /// dynamic dimension when valid
+    /// 
+    /// 当kind = Dimension时有效，用于指定动态URL
+    /// 且是动态维度时有效
+    pub dim_dynamic_url: Option<String>,
+    /// Valid when kind = Measure, Whether to carry out weight distinct
+    ///
     /// 当kind = 度量时有效，是否进行权重去重
     pub mes_data_distinct: Option<bool>,
     /// Valid when kind = Measure, Used to specify the data type
-    /// 
+    ///
     /// 当kind = 度量时有效，用于指定数据类型
     pub mes_data_type: Option<StatsDataTypeKind>,
     /// Valid when kind = Measure, Used to specify the data update frequency.
     /// E.g. RT(Real Time),1H(Hour),1D(Day),1M(Month)
-    /// 
+    ///
     /// 当kind = 度量时有效，用于指定数据更新频率。
     /// 例如 RT(实时)，1H(小时)，1D(天)，1M(月)
     pub mes_frequency: Option<String>,
     /// Valid when kind = Measure, Used to specify the measure unit
-    /// 
+    ///
     /// 当kind = 度量时有效，用于指定度量单位
     pub mes_unit: Option<String>,
     /// Valid when kind = Measure, Used to specify the measure activation (only active when all specified dimensions are present)
-    /// 
+    ///
     /// 当kind = 度量时有效，用于指定度量激活（仅在所有指定维度都存在时激活）
     pub mes_act_by_dim_conf_keys: Option<Vec<String>>,
     /// Associated fact and fact column configuration.
     /// Format: <fact configuration table key>.<fact field configuration table key>
-    /// 
+    ///
     /// 关联的事实和事实列配置。
     /// 格式：<事实配置表key>.<事实字段配置表key>
     pub rel_conf_fact_and_col_key: Option<String>,
     /// The primary key or encoding passed in from the external system
     /// Used to extend the fact column of the ext field
-    /// 
+    ///
     /// 关联外部系统传入的主键或编码
     /// 用于扩展ext字段的事实列
     pub rel_external_id: Option<String>,

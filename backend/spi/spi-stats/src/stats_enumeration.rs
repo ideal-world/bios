@@ -293,7 +293,15 @@ impl StatsDataTypeKind {
             }
             Some(time_window_fun.to_sql(column_name, self == &StatsDataTypeKind::DateTime))
         } else {
-            Some(column_name.to_string())
+            match self {
+                StatsDataTypeKind::String => Some(format!("COALESCE({},'')", column_name.to_string())),
+                StatsDataTypeKind::Int => Some(format!("COALESCE({}::decimal,0)", column_name.to_string())),
+                StatsDataTypeKind::Float => Some(format!("COALESCE({}::decimal,0)", column_name.to_string())),
+                StatsDataTypeKind::Double => Some(format!("COALESCE({}::decimal,0)", column_name.to_string())),
+                StatsDataTypeKind::Boolean => Some(format!("COALESCE({}::bool,false)", column_name.to_string())),
+                StatsDataTypeKind::Date => Some(column_name.to_string()),
+                StatsDataTypeKind::DateTime => Some(column_name.to_string()),
+            }
         }
     }
 
