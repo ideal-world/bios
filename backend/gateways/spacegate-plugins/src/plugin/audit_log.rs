@@ -36,13 +36,11 @@ use crate::extension::cert_info::CertInfo;
 
 pub const CODE: &str = "audit-log";
 
-#[cfg(feature = "schema")]
-use spacegate_plugin::schemars;
-#[cfg(feature = "schema")]
-spacegate_plugin::schema!(AuditLogPlugin, AuditLogPlugin);
+use spacegate_shell::plugin::schemars;
 
-#[derive(Serialize, Deserialize, Clone)]
-#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
+spacegate_shell::plugin::schema!(AuditLogPlugin, AuditLogPlugin);
+
+#[derive(Serialize, Deserialize, Clone, schemars::JsonSchema)]
 #[serde(default)]
 pub struct AuditLogPlugin {
     log_url: String,
@@ -262,9 +260,8 @@ impl Default for AuditLogPlugin {
 impl Plugin for AuditLogPlugin {
     const CODE: &'static str = CODE;
 
-    #[cfg(feature = "schema")]
-    fn meta() -> spacegate_plugin::PluginMetaData {
-        spacegate_plugin::plugin_meta!(
+    fn meta() -> spacegate_shell::plugin::PluginMetaData {
+        spacegate_shell::plugin::plugin_meta!(
             description: "Audit log for spacegate, it's base on spi-log"
         )
     }

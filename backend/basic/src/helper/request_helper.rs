@@ -1,7 +1,11 @@
 //! Http request helper
 //!
 //! Http请求辅助操作
-use std::{collections::HashMap, net::IpAddr, str::FromStr};
+use std::{
+    collections::HashMap,
+    net::{IpAddr, Ipv4Addr},
+    str::FromStr,
+};
 
 use itertools::Itertools;
 use tardis::{
@@ -46,6 +50,36 @@ pub fn parse_forwarded_ip(forwarded_value: &str) -> Option<IpAddr> {
     })
 }
 
+/// Convert IPv4-mapped IPv6 to ipv4
+/// e.g
+/// ::ffff:192.168.0.11 => 192.168.0.11
+/// ```
+/// use std::{
+/// net::IpAddr,
+/// str::FromStr,
+/// };
+/// use bios_basic::helper::request_helper::mapped_ipv6_to_ipv4;
+/// assert_eq!(mapped_ipv6_to_ipv4(IpAddr::from_str("::ffff:192.168.0.11").unwrap()),IpAddr::from_str("192.168.0.11").unwrap() );
+/// assert_eq!(mapped_ipv6_to_ipv4(IpAddr::from_str("::ffff:c0a8:000b").unwrap()),IpAddr::from_str("192.168.0.11").unwrap() );
+/// assert_eq!(mapped_ipv6_to_ipv4(IpAddr::from_str("192.168.0.11").unwrap()),IpAddr::from_str("192.168.0.11").unwrap());
+/// assert_eq!(mapped_ipv6_to_ipv4(IpAddr::from_str("fd00::1a2b:3c4d:5e6f:7a8b").unwrap()),IpAddr::from_str("fd00::1a2b:3c4d:5e6f:7a8b").unwrap());
+/// assert_eq!(mapped_ipv6_to_ipv4(IpAddr::from_str("::1").unwrap()),IpAddr::from_str("::1").unwrap());
+/// ```
+pub fn mapped_ipv6_to_ipv4(ip_addr: IpAddr) -> IpAddr {
+    match ip_addr {
+        IpAddr::V6(ip_addr) => {
+            let segments = ip_addr.segments();
+            if segments[0] == 0 && segments[1] == 0 && segments[2] == 0 && segments[3] == 0 && segments[4] == 0 && segments[5] == 0xffff {
+                // 提取并返回 IPv4 地址部分
+                IpAddr::V4(Ipv4Addr::new(ip_addr.octets()[12], ip_addr.octets()[13], ip_addr.octets()[14], ip_addr.octets()[15]))
+            } else {
+                IpAddr::V6(ip_addr)
+            }
+        }
+        IpAddr::V4(ip_addr) => IpAddr::V4(ip_addr),
+    }
+}
+
 /// Try to get real ip from request
 ///
 /// This method only parses the main request headers and cannot guarantee that the real IP can be obtained.
@@ -54,25 +88,25 @@ pub async fn try_get_real_ip_from_req(request: &Request) -> TardisResult<Option<
     if let Some(forwarded_header) = request.headers().get(FORWARDED) {
         if let Ok(forwarded_value) = forwarded_header.to_str() {
             if let Some(ip) = parse_forwarded_ip(forwarded_value.trim()) {
-                return Ok(Some(ip.to_string()));
+                return Ok(Some(mapped_ipv6_to_ipv4(ip).to_string()));
             }
         }
     }
     if let Some(xff_header) = request.headers().get("X-Forwarded-For") {
         if let Ok(xff_value) = xff_header.to_str() {
             if let Some(ip) = xff_value.split(',').next().and_then(|s| IpAddr::from_str(s.trim()).ok()) {
-                return Ok(Some(ip.to_string()));
+                return Ok(Some(mapped_ipv6_to_ipv4(ip).to_string()));
             }
         }
     }
     if let Some(xrp_header) = request.headers().get("X-Real-IP") {
         if let Ok(xrp_value) = xrp_header.to_str() {
             if let Some(ip) = xrp_value.split(',').next().and_then(|s| IpAddr::from_str(s.trim()).ok()) {
-                return Ok(Some(ip.to_string()));
+                return Ok(Some(mapped_ipv6_to_ipv4(ip).to_string()));
             }
         }
     }
-    Ok(request.remote_addr().as_socket_addr().map(|addr| addr.ip().to_string()))
+    Ok(request.remote_addr().as_socket_addr().map(|addr| mapped_ipv6_to_ipv4(addr.ip()).to_string()))
 }
 
 /// Get real ip from context

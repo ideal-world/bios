@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use spacegate_shell::{
     hyper::{header, Response},
     kernel::helper_layers::function::Inner,
-    plugin::Plugin,
+    plugin::{schemars, Plugin},
     BoxError, SgBody,
 };
 
@@ -16,21 +16,17 @@ macro_rules! append_value {
     };
 }
 
-#[cfg(feature = "schema")]
-use spacegate_plugin::schemars;
 use tardis::serde_json;
-#[cfg(feature = "schema")]
-spacegate_plugin::schema!(AntiXssPlugin, CSPConfig);
 
-#[derive(Default, Serialize, Deserialize)]
-#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
+spacegate_shell::plugin::schema!(AntiXssPlugin, CSPConfig);
+
+#[derive(Default, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(default)]
 pub struct AntiXssConfig {
     csp_config: CSPConfig,
 }
 
-#[derive(Serialize, Deserialize)]
-#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
+#[derive(Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(default)]
 pub struct CSPConfig {
     default_src: String,
@@ -115,8 +111,7 @@ impl Default for CSPConfig {
     }
 }
 
-#[derive(Default, Serialize, Deserialize)]
-#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
+#[derive(Default, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum SandBoxValue {
     #[default]
@@ -159,9 +154,8 @@ pub struct AntiXssPlugin {
 impl Plugin for AntiXssPlugin {
     const CODE: &'static str = "anti-xss";
 
-    #[cfg(feature = "schema")]
-    fn meta() -> spacegate_plugin::PluginMetaData {
-        spacegate_plugin::plugin_meta!(
+    fn meta() -> spacegate_shell::model::PluginMetaData {
+        spacegate_shell::model::plugin_meta!(
             description: "Anti XSS plugin"
         )
     }

@@ -128,7 +128,7 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
     col.mes_data_distinct as mes_data_distinct,
     col.mes_data_type as mes_data_type,
     col.mes_unit as mes_unit,
-    COALESCE(dim.data_type,'String') as dim_data_type,
+    COALESCE(dim.data_type,COALESCE(col.dim_data_type,'String')) as dim_data_type,
     dim.hierarchy as dim_hierarchy,
     fact.query_limit as query_limit
   FROM
@@ -245,12 +245,22 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
     });
 
     let conf_limit = query_limit;
+    // Dimension configuration, used for group and group_order
+    // 纬度配置,用于group以及group_order
+    let dim_conf_info =
+        conf_info.iter().filter(|i| i.col_kind == StatsFactColKind::Dimension).map(|v| (v.col_key.clone().to_string(), v.clone())).collect::<HashMap<String, StatsConfInfo>>();
+    // Measure configuration, used for select and metrics_order
+    // 度量配置,用于select以及metrics_order
+    let measure_conf_info =
+        conf_info.iter().filter(|i| i.col_kind == StatsFactColKind::Measure).map(|v| (v.col_key.clone().to_string(), v.clone())).collect::<HashMap<String, StatsConfInfo>>();
+    // Not distinguish between dimensions and measures, used for fields in where and having conditions
+    // 不区分维度和度量,用于where及having条件的字段
     let conf_info = conf_info.into_iter().map(|v| (v.col_key.clone().to_string(), v)).collect::<HashMap<String, StatsConfInfo>>();
-    if query_req.select.iter().any(|i| !conf_info.contains_key(&i.code.to_string()))
+    if query_req.select.iter().any(|i| !measure_conf_info.contains_key(&i.code.to_string()))
         // should be equivalent: 
-        // original: || query_req.group.iter().any(|i| !conf_info.contains_key(&i.code) || conf_info.get(&i.code).unwrap().col_kind != StatsFactColKind::Dimension))
+        // original: || query_req.group.iter().any(|i| !dim_conf_info.contains_key(&i.code) || dim_conf_info.get(&i.code).unwrap().col_kind != StatsFactColKind::Dimension))
         // (!contain || not_dim) => !(contain && is_dim)
-        || query_req.group.iter().any(|i| !conf_info.get(&i.code.to_string()).is_some_and(|i|i.col_kind == StatsFactColKind::Dimension))
+        || query_req.group.iter().any(|i| !dim_conf_info.get(&i.code.to_string()).is_some_and(|i|i.col_kind == StatsFactColKind::Dimension))
         || query_req
             .group_order
             .as_ref()
@@ -366,7 +376,7 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
     // Add measures
     let mut sql_part_inner_selects = vec![];
     for select in &query_req.select {
-        let col_conf = conf_info.get(&select.code).ok_or_else(|| {
+        let col_conf = measure_conf_info.get(&select.code).ok_or_else(|| {
             funs.err().not_found(
                 "metric",
                 "query",
@@ -381,7 +391,7 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
         }
     }
     for group in &query_req.group {
-        let col_conf = conf_info.get(&group.code.to_string()).ok_or_else(|| {
+        let col_conf = dim_conf_info.get(&group.code.to_string()).ok_or_else(|| {
             funs.err().not_found(
                 "metric",
                 "query",
@@ -401,7 +411,7 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
     // (column name with fun, alias name, show name)
     let mut sql_part_group_infos = vec![];
     for group in &query_req.group {
-        let col_conf = conf_info.get(&group.code.to_string()).ok_or_else(|| {
+        let col_conf = dim_conf_info.get(&group.code.to_string()).ok_or_else(|| {
             funs.err().not_found(
                 "metric",
                 "query",
@@ -447,7 +457,7 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
         sql_part_outer_select_infos.push((column_name_with_fun, alias_name, show_name, true));
     }
     for select in &query_req.select {
-        let col_conf = conf_info.get(&select.code.to_string()).ok_or_else(|| {
+        let col_conf = measure_conf_info.get(&select.code.to_string()).ok_or_else(|| {
             funs.err().not_found(
                 "metric",
                 "query",
@@ -521,7 +531,7 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
     let sql_dimension_orders = if let Some(orders) = &query_req.dimension_order {
         let mut sql_part_orders = vec![];
         for order in orders {
-            let col_conf = conf_info.get(&order.code.to_string()).ok_or_else(|| {
+            let col_conf = dim_conf_info.get(&order.code.to_string()).ok_or_else(|| {
                 funs.err().not_found(
                     "metric",
                     "query",
