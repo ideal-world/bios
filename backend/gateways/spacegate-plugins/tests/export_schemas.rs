@@ -1,5 +1,5 @@
-use spacegate_plugin::{Plugin, PluginSchemaExt};
 use spacegate_plugins::{anti_replay::AntiReplayPlugin, anti_xss::AntiXssPlugin, audit_log::AuditLogPlugin};
+use spacegate_shell::{Plugin, PluginSchemaExt};
 use tardis::serde_json;
 fn export_plugin<P: PluginSchemaExt + Plugin>(dir: std::path::PathBuf) {
     let schema = P::schema();
