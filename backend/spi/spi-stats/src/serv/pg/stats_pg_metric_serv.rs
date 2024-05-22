@@ -335,10 +335,14 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
                         )
                     })?
                 };
-                info!("col_data_type={:?}", col_data_type);
+                let column_name = if and_where.rel_external_id.clone().is_some_and(|i| !i.is_empty()) {
+                    format!("fact.ext ->> '{}'", &and_where.code)
+                } else {
+                    format!("fact.{}", &and_where.code)
+                };
                 if let Some((sql_part, value)) = col_data_type.to_pg_where(
                     col_conf.dim_multi_values.unwrap_or(false),
-                    &format!("fact.{}", &and_where.code),
+                    &column_name,
                     &and_where.op,
                     params.len() + 1,
                     &and_where.value,
