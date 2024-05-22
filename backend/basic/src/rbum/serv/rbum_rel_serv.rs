@@ -914,10 +914,7 @@ impl RbumRelServ {
             .collect::<HashMap<String, Vec<(String, String)>>>()
         } else if check_req.from_rbum_kind == RbumRelFromKind::SetCate {
             let set_cate = RbumSetCateServ::peek_rbum(&check_req.from_rbum_id, &RbumSetCateFilterReq::default(), funs, ctx).await?;
-            HashMap::from([(
-                set_cate.rel_rbum_set_id.clone(),
-                vec![(set_cate.id, set_cate.sys_code)],
-            )])
+            HashMap::from([(set_cate.rel_rbum_set_id.clone(), vec![(set_cate.id, set_cate.sys_code)])])
         } else {
             return Ok(false);
         };

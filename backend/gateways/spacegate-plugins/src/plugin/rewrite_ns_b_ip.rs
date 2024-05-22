@@ -6,14 +6,12 @@ use spacegate_shell::hyper::{http::uri, Response};
 use spacegate_shell::kernel::extension::PeerAddr;
 use spacegate_shell::kernel::helper_layers::function::Inner;
 use spacegate_shell::kernel::SgRequest;
-use spacegate_shell::plugin::{Plugin, PluginConfig, PluginError};
+use spacegate_shell::plugin::{schemars, Plugin, PluginConfig, PluginError};
 use spacegate_shell::{BoxError, SgBody};
 use std::net::IpAddr;
 use std::str::FromStr;
 use std::sync::Arc;
 
-#[cfg(feature = "schema")]
-use spacegate_plugin::schemars;
 use tardis::{log, serde_json};
 
 /// Kube available only!
@@ -23,8 +21,7 @@ pub struct RewriteNsPlugin {
     pub target_ns: String,
 }
 
-#[derive(Serialize, Deserialize)]
-#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
+#[derive(Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(default)]
 pub struct RewriteNsConfig {
     pub ip_list: Vec<String>,
@@ -69,9 +66,8 @@ impl Default for RewriteNsConfig {
 impl Plugin for RewriteNsPlugin {
     const CODE: &'static str = "rewrite-ns";
 
-    #[cfg(feature = "schema")]
-    fn meta() -> spacegate_plugin::PluginMetaData {
-        spacegate_plugin::plugin_meta!(
+    fn meta() -> spacegate_shell::model::PluginMetaData {
+        spacegate_shell::model::plugin_meta!(
             description: "Rewrite namespace for request.Kubernetes available only!"
         )
     }
@@ -129,11 +125,11 @@ impl RewriteNsPlugin {
 mod test {
 
     use http::{Method, Request, Uri, Version};
-    use spacegate_plugin::{PluginInstanceId, PluginInstanceName};
     use spacegate_shell::{
         config::K8sServiceData,
         extension::k8s_service::K8sService,
         kernel::extension::PeerAddr,
+        model::{PluginInstanceId, PluginInstanceName},
         plugin::{Plugin as _, PluginConfig},
         SgBody,
     };

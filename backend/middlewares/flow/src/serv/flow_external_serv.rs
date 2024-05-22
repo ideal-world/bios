@@ -3,7 +3,7 @@ use itertools::Itertools;
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
     log::debug,
-    TardisFuns, TardisFunsInst,
+    TardisFuns, TardisFunsInst,tokio
 };
 
 use crate::{
@@ -64,6 +64,37 @@ impl FlowExternalServ {
         } else {
             Err(funs.err().internal_error("flow_external", "do_fetch_rel_obj", "illegal response", "500-external-illegal-response"))
         }
+    }
+
+    pub async fn do_async_modify_field(
+        tag: &str,
+        transition_detail: &FlowTransitionDetailResp,
+        rel_business_obj_id: &str,
+        inst_id: &str,
+        callback_op: FlowExternalCallbackOp,
+        target_state: String,
+        target_sys_state: FlowSysStateKind,
+        original_state: String,
+        original_sys_state: FlowSysStateKind,
+        params: Vec<FlowExternalParams>,
+        ctx: &TardisContext,
+        _funs: &TardisFunsInst,
+    ) -> TardisResult<()> {
+        let tag = tag.to_string();
+        let transition_detail = transition_detail.clone();
+        let rel_business_obj_id = rel_business_obj_id.to_string();
+        let inst_id = inst_id.to_string();
+        let transition_detail = transition_detail.clone();
+        let transition_detail = transition_detail.clone();
+        let ctx_clone = ctx.clone();
+        tokio::spawn(async move {
+            let funs = flow_constants::get_tardis_inst();
+            let result = Self::do_modify_field(&tag, &transition_detail, &rel_business_obj_id, &inst_id, callback_op, target_state, target_sys_state, original_state, original_sys_state, params, &ctx_clone, &funs).await;
+            if let Err(err) = result {
+                tardis::log::error!("[BIOS.Flow] failed to ModifyField event: {}", err);
+            }
+        });
+        Ok(())
     }
 
     pub async fn do_modify_field(

@@ -340,7 +340,7 @@ impl RbumSetServ {
                         .iter()
                         .filter(|c| c.sys_code.starts_with(&cate.sys_code))
                         .flat_map(|c| items.get(&c.id).expect("ignore"))
-                        .group_by(|c| c.rel_rbum_item_kind_id.clone())
+                        .chunk_by(|c| c.rel_rbum_item_kind_id.clone())
                         .into_iter()
                         .map(|(g, c)| (g, c.map(|i| i.rel_rbum_item_id.clone()).collect::<HashSet<String>>().len() as u64))
                         .collect::<HashMap<String, u64>>(),
@@ -353,7 +353,7 @@ impl RbumSetServ {
             items
                 .values()
                 .flat_map(|item| item.iter())
-                .group_by(|c| c.rel_rbum_item_kind_id.clone())
+                .chunk_by(|c| c.rel_rbum_item_kind_id.clone())
                 .into_iter()
                 .map(|(g, c)| (g, c.map(|i| i.rel_rbum_item_id.clone()).collect::<HashSet<String>>().len() as u64))
                 .collect::<HashMap<String, u64>>(),
