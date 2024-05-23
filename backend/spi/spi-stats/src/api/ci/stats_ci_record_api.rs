@@ -14,12 +14,12 @@ use crate::serv::stats_record_serv;
 pub struct StatsCiRecordApi;
 
 /// Interface Console Statistics Record API
-/// 
+///
 /// 统计记录接口
 #[poem_openapi::OpenApi(prefix_path = "/ci/record", tag = "bios_basic::ApiTag::Interface")]
 impl StatsCiRecordApi {
     /// Load Fact Record
-    /// 
+    ///
     /// 加载事实记录
     #[oai(path = "/fact/:fact_key/latest/:record_key", method = "get")]
     async fn get_fact_record_latest(&self, fact_key: Path<String>, record_key: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<serde_json::Value> {
@@ -28,7 +28,7 @@ impl StatsCiRecordApi {
     }
 
     /// Load Fact Record
-    /// 
+    ///
     /// 加载事实记录
     #[oai(path = "/fact/:fact_key/latest", method = "get")]
     async fn get_fact_record_latest_many(&self, fact_key: Path<String>, record_keys: Query<String>, ctx: TardisContextExtractor) -> TardisApiResult<Vec<serde_json::Value>> {
@@ -37,7 +37,7 @@ impl StatsCiRecordApi {
     }
 
     /// Get Fact Record Paginated
-    /// 
+    ///
     /// 获取事实记录分页
     #[oai(path = "/fact/:fact_key/:record_key", method = "get")]
     async fn get_fact_record_paginated(
@@ -54,7 +54,7 @@ impl StatsCiRecordApi {
     }
 
     /// Load Fact Record
-    /// 
+    ///
     /// 加载事实记录
     #[oai(path = "/fact/:fact_key/:record_key", method = "put")]
     async fn fact_record_load(
@@ -70,7 +70,7 @@ impl StatsCiRecordApi {
     }
 
     /// Delete Fact Record
-    /// 
+    ///
     /// 删除事实记录
     #[oai(path = "/fact/:fact_key/:record_key", method = "delete")]
     async fn fact_record_delete(&self, fact_key: Path<String>, record_key: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
@@ -80,7 +80,7 @@ impl StatsCiRecordApi {
     }
 
     /// Load Fact Records
-    /// 
+    ///
     /// 批量加载事实记录
     #[oai(path = "/fact/:fact_key/batch/load", method = "put")]
     async fn fact_records_load(&self, fact_key: Path<String>, add_req: Json<Vec<StatsFactRecordsLoadReq>>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
@@ -90,7 +90,7 @@ impl StatsCiRecordApi {
     }
 
     /// Delete Fact Records
-    /// 
+    ///
     /// 批量删除事实记录
     #[oai(path = "/fact/:fact_key/batch/remove", method = "put")]
     async fn fact_records_delete(&self, fact_key: Path<String>, delete_req: Json<Vec<String>>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
@@ -101,7 +101,7 @@ impl StatsCiRecordApi {
 
     /// Delete Fact Records
     /// Note:This operation will physically delete all fact records and cannot be recovered, please use caution!
-    /// 
+    ///
     /// 删除事实记录
     /// 注意:此操作将物理删除所有事实记录，且无法恢复，请谨慎使用!
     #[oai(path = "/fact/:fact_key/ownership/remove", method = "delete")]
@@ -112,7 +112,7 @@ impl StatsCiRecordApi {
     }
 
     /// Delete Fact Records
-    /// 
+    ///
     /// 删除事实记录
     #[oai(path = "/fact/:fact_key/dim/:dim_conf_key/batch/remove", method = "put")]
     async fn fact_records_delete_by_dim_key(
@@ -129,7 +129,7 @@ impl StatsCiRecordApi {
 
     /// Clean Fact Records
     /// Note:This operation will physically delete all fact records and cannot be recovered, please use caution!
-    /// 
+    ///
     /// 清空事实记录
     /// 注意:此操作将物理删除所有事实记录，且无法恢复，请谨慎使用!
     #[oai(path = "/fact/:fact_key/batch/clean", method = "delete")]
@@ -140,7 +140,7 @@ impl StatsCiRecordApi {
     }
 
     /// Add Dimension Record
-    /// 
+    ///
     /// 添加维度记录
     #[oai(path = "/dim/:dim_key", method = "put")]
     async fn dim_record_add(&self, dim_key: Path<String>, add_req: Json<StatsDimRecordAddReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
@@ -150,7 +150,7 @@ impl StatsCiRecordApi {
     }
 
     /// Find Dimension Records
-    /// 
+    ///
     /// 查找维度记录
     #[oai(path = "/dim/:dim_key", method = "get")]
     async fn dim_record_paginate(
@@ -169,7 +169,7 @@ impl StatsCiRecordApi {
     }
 
     /// Delete Dimension Record
-    /// 
+    ///
     /// 删除维度记录
     #[oai(path = "/dim/:dim_key/remove", method = "put")]
     async fn dim_record_delete(&self, dim_key: Path<String>, delete_req: Json<StatsDimRecordDeleteReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
@@ -180,7 +180,7 @@ impl StatsCiRecordApi {
 
     /// Delete Dimension Record
     /// Note:This operation is a real delete and cannot be recovered, please use caution!
-    /// 
+    ///
     /// 删除维度记录
     /// 注意:该操作是进行真实删除，不可恢复，请谨慎使用!
     #[oai(path = "/dim/:dim_key/remove", method = "delete")]
