@@ -162,7 +162,7 @@ pub fn degrade_own_paths(mut ctx: TardisContext, new_own_paths: &str) -> TardisR
 /// 1. If ``record_scope_level`` exists, then get the prefix path of the ``standard_own_paths`` based on the value of ``record_scope_level``, and this prefix path must be the same as or a sub-path of ``record_own_paths``.
 ///
 /// # Examples
-/// 
+///
 /// ```
 /// use bios_basic::rbum::helper::rbum_scope_helper::check_scope;
 /// use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;

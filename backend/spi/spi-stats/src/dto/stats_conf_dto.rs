@@ -216,13 +216,13 @@ pub struct StatsConfFactColAddReq {
 
     /// Valid when kind = Dimension, used to specify the data type
     /// dynamic dimension when valid
-    /// 
+    ///
     /// 当kind = Dimension时有效，用于指定数据类型
     /// 且是动态维度时有效
     pub dim_data_type: Option<StatsDataTypeKind>,
     /// Valid when kind = Dimension, Used to specify the dynamic URL
     /// dynamic dimension when valid
-    /// 
+    ///
     /// 当kind = Dimension时有效，用于指定动态URL
     /// 且是动态维度时有效
     pub dim_dynamic_url: Option<String>,
@@ -299,13 +299,13 @@ pub struct StatsConfFactColModifyReq {
     pub dim_exclusive_rec: Option<bool>,
     /// Valid when kind = Dimension, used to specify the data type
     /// dynamic dimension when valid
-    /// 
+    ///
     /// 当kind = Dimension时有效，用于指定数据类型
     /// 且是动态维度时有效
     pub dim_data_type: Option<StatsDataTypeKind>,
     /// Valid when kind = Dimension, Used to specify the dynamic URL
     /// dynamic dimension when valid
-    /// 
+    ///
     /// 当kind = Dimension时有效，用于指定动态URL
     /// 且是动态维度时有效
     pub dim_dynamic_url: Option<String>,
@@ -377,13 +377,13 @@ pub struct StatsConfFactColInfoResp {
     pub dim_multi_values: Option<bool>,
     /// Valid when kind = Dimension, used to specify the data type
     /// dynamic dimension when valid
-    /// 
+    ///
     /// 当kind = Dimension时有效，用于指定数据类型
     /// 且是动态维度时有效
     pub dim_data_type: Option<StatsDataTypeKind>,
     /// Valid when kind = Dimension, Used to specify the dynamic URL
     /// dynamic dimension when valid
-    /// 
+    ///
     /// 当kind = Dimension时有效，用于指定动态URL
     /// 且是动态维度时有效
     pub dim_dynamic_url: Option<String>,

@@ -282,26 +282,33 @@ impl IamCsAccountApi {
             &ctx,
         )
         .await?;
-        IamSearchClient::add_or_modify_account_search(IamAccountServ::get_account_detail_aggs(
-            &id.0,
-            &IamAccountFilterReq {
-                basic: RbumBasicFilterReq {
-                    ignore_scope: true,
-                    own_paths: Some("".to_string()),
-                    with_sub_own_paths: true,
+        IamSearchClient::add_or_modify_account_search(
+            IamAccountServ::get_account_detail_aggs(
+                &id.0,
+                &IamAccountFilterReq {
+                    basic: RbumBasicFilterReq {
+                        ignore_scope: true,
+                        own_paths: Some("".to_string()),
+                        with_sub_own_paths: true,
+                        ..Default::default()
+                    },
                     ..Default::default()
                 },
-                ..Default::default()
-            },
-            true,
-            true,
+                true,
+                true,
+                &funs,
+                &TardisContext {
+                    own_paths: "".to_string(),
+                    ..ctx.clone()
+                },
+            )
+            .await?,
+            Box::new(true),
+            "",
             &funs,
-            &TardisContext {
-                own_paths: "".to_string(),
-                ..ctx.clone()
-            },
+            &ctx,
         )
-        .await?, Box::new(true), "", &funs, &ctx).await?;
+        .await?;
         funs.commit().await?;
         ctx.execute_task().await?;
         TardisResp::ok(Void {})

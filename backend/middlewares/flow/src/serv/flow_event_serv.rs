@@ -4,14 +4,18 @@ use async_recursion::async_recursion;
 use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
 use serde_json::{json, Value};
 use tardis::{
-    basic::{dto::TardisContext, result::TardisResult}, chrono::{SecondsFormat, Utc}, db::sea_orm::{
+    basic::{dto::TardisContext, result::TardisResult},
+    chrono::{SecondsFormat, Utc},
+    db::sea_orm::{
         self,
         sea_query::{Expr, Query},
-    }, TardisFunsInst
+    },
+    TardisFunsInst,
 };
 
 use crate::{
-    domain::flow_inst, dto::{
+    domain::flow_inst,
+    dto::{
         flow_external_dto::{FlowExternalCallbackOp, FlowExternalParams},
         flow_inst_dto::{FlowInstDetailResp, FlowInstTransferReq},
         flow_model_dto::{FlowModelDetailResp, FlowModelFilterReq},
@@ -20,7 +24,9 @@ use crate::{
             FlowTransitionActionByStateChangeInfo, FlowTransitionActionByVarChangeInfoChangedKind, FlowTransitionActionChangeAgg, FlowTransitionActionChangeKind,
             FlowTransitionFrontActionInfo, FlowTransitionFrontActionRightValue, StateChangeConditionOp, TagRelKind,
         },
-    }, flow_config::FlowConfig, flow_initializer::{default_flow_avatar, ws_flow_client}
+    },
+    flow_config::FlowConfig,
+    flow_initializer::{default_flow_avatar, ws_flow_client},
 };
 
 use super::{
@@ -70,7 +76,6 @@ impl FlowEventServ {
                     },
                     true,
                     FlowExternalCallbackOp::ConditionalTrigger,
-                    funs,
                     ctx,
                 )
                 .await?;
@@ -221,7 +226,8 @@ impl FlowEventServ {
                                         && change_info.changed_val.clone().unwrap().as_object().unwrap().get("value").is_some()
                                         && change_info.changed_val.clone().unwrap().as_object().unwrap().get("op").is_some()
                                     {
-                                        let original_value = if let Some(original_value) = FlowInstServ::find_var_by_inst_id(flow_inst_id, &format!("custom_{}", change_info.var_name), funs, ctx).await?
+                                        let original_value = if let Some(original_value) =
+                                            FlowInstServ::find_var_by_inst_id(flow_inst_id, &format!("custom_{}", change_info.var_name), funs, ctx).await?
                                         {
                                             Some(original_value)
                                         } else {
@@ -498,7 +504,6 @@ impl FlowEventServ {
                     },
                     true,
                     FlowExternalCallbackOp::PostAction,
-                    funs,
                     ctx,
                 )
                 .await?;
