@@ -236,18 +236,18 @@ impl FlowEventServ {
                                             Some(json!(""))
                                         };
 
-                                        let target_value = change_info.changed_val.clone().unwrap().as_object().unwrap().get("value").unwrap().as_i64().unwrap_or_default();
+                                        let target_value = change_info.changed_val.clone().unwrap().as_object().unwrap().get("value").unwrap().as_f64().unwrap_or_default();
                                         let changed_op = change_info.changed_val.clone().unwrap().as_object().unwrap().get("op").unwrap().as_str().unwrap_or_default().to_string();
                                         if let Some(original_value) = original_value {
                                             change_info.changed_kind = Some(FlowTransitionActionByVarChangeInfoChangedKind::ChangeContent);
                                             match changed_op.as_str() {
                                                 "add" => {
                                                     change_info.changed_val =
-                                                        Some(json!(original_value.as_str().unwrap_or_default().parse::<i64>().unwrap_or_default() + target_value))
+                                                        Some(json!(original_value.as_str().unwrap_or_default().parse::<f64>().unwrap_or_default() + target_value))
                                                 }
                                                 "sub" => {
                                                     change_info.changed_val =
-                                                        Some(json!(original_value.as_str().unwrap_or_default().parse::<i64>().unwrap_or_default() - target_value))
+                                                        Some(json!(original_value.as_str().unwrap_or_default().parse::<f64>().unwrap_or_default() - target_value))
                                                 }
                                                 _ => {}
                                             }
