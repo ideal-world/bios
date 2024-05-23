@@ -119,6 +119,14 @@ pub(crate) async fn add(fact_conf_key: &str, add_req: &StatsConfFactColAddReq, f
         params.push(Value::from(dim_exclusive_rec));
         sql_fields.push("dim_exclusive_rec");
     }
+    if let Some(dim_data_type) = &add_req.dim_data_type {
+        params.push(Value::from(dim_data_type.to_string()));
+        sql_fields.push("dim_data_type");
+    }
+    if let Some(dim_dynamic_url) = &add_req.dim_dynamic_url {
+        params.push(Value::from(dim_dynamic_url.to_string()));
+        sql_fields.push("dim_dynamic_url");
+    }
     conn.execute_one(
         &format!(
             r#"INSERT INTO {table_name}
@@ -213,6 +221,14 @@ pub(crate) async fn modify(
     if let Some(dim_exclusive_rec) = modify_req.dim_exclusive_rec {
         sql_sets.push(format!("rel_conf_fact_and_col_key = ${}", params.len() + 1));
         params.push(Value::from(dim_exclusive_rec));
+    }
+    if let Some(dim_data_type) = &modify_req.dim_data_type {
+        sql_sets.push(format!("dim_data_type = ${}", params.len() + 1));
+        params.push(Value::from(dim_data_type.to_string()));
+    }
+    if let Some(dim_dynamic_url) = &modify_req.dim_dynamic_url {
+        sql_sets.push(format!("dim_dynamic_url = ${}", params.len() + 1));
+        params.push(Value::from(dim_dynamic_url.to_string()));
     }
     conn.execute_one(
         &format!(
