@@ -269,7 +269,7 @@ impl FlowEventServ {
                             if !resp.rel_bus_objs.is_empty() {
                                 for rel_bus_obj_id in resp.rel_bus_objs.pop().unwrap().rel_bus_obj_ids {
                                     let inst_id = FlowInstServ::get_inst_ids_by_rel_business_obj_id(vec![rel_bus_obj_id.clone()], funs, ctx).await?.pop().unwrap_or_default();
-                                    FlowExternalServ::do_async_modify_field(
+                                    FlowExternalServ::do_modify_field(
                                         &rel_tag,
                                         next_flow_transition,
                                         &rel_bus_obj_id,
@@ -333,7 +333,7 @@ impl FlowEventServ {
         }
 
         if !modify_self_field_params.is_empty() {
-            FlowExternalServ::do_async_modify_field(
+            FlowExternalServ::do_modify_field(
                 &flow_model.tag,
                 next_flow_transition,
                 &flow_inst_detail.rel_business_obj_id,
