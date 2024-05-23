@@ -248,8 +248,8 @@ impl IamAccountLockStateKind {
         match self {
             IamAccountLockStateKind::Unlocked => 0,
             IamAccountLockStateKind::PasswordLocked => 1,
-            IamAccountLockStateKind::ManualLocked => 2,
-            IamAccountLockStateKind::LongTimeNoLoginLocked => 3,
+            IamAccountLockStateKind::LongTimeNoLoginLocked => 2,
+            IamAccountLockStateKind::ManualLocked => 3,
         }
     }
 }
