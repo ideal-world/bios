@@ -16,12 +16,12 @@ use crate::stats_enumeration::StatsFactColKind;
 pub struct StatsCiConfApi;
 
 /// Interface Console Statistics Configuration API
-/// 
+///
 /// 接口控制台统计配置 API
 #[poem_openapi::OpenApi(prefix_path = "/ci/conf", tag = "bios_basic::ApiTag::Interface")]
 impl StatsCiConfApi {
     /// Add Dimension Configuration
-    /// 
+    ///
     /// 添加维度配置
     #[oai(path = "/dim", method = "put")]
     async fn dim_add(&self, add_req: Json<StatsConfDimAddReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
@@ -31,7 +31,7 @@ impl StatsCiConfApi {
     }
 
     /// Modify Dimension Configuration
-    /// 
+    ///
     /// 修改维度配置
     #[oai(path = "/dim/:dim_key", method = "patch")]
     async fn dim_modify(&self, dim_key: Path<String>, modify_req: Json<StatsConfDimModifyReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
@@ -41,7 +41,7 @@ impl StatsCiConfApi {
     }
 
     /// Delete Dimension Configuration
-    /// 
+    ///
     /// 删除维度配置
     #[oai(path = "/dim/:dim_key", method = "delete")]
     async fn dim_delete(&self, dim_key: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
@@ -51,7 +51,7 @@ impl StatsCiConfApi {
     }
 
     /// Find Dimension Configurations
-    /// 
+    ///
     /// 查询维度配置
     #[oai(path = "/dim", method = "get")]
     async fn dim_paginate(
@@ -70,7 +70,7 @@ impl StatsCiConfApi {
     }
 
     /// Add Fact Configuration
-    /// 
+    ///
     /// 添加事实配置
     #[oai(path = "/fact", method = "put")]
     async fn fact_add(&self, add_req: Json<StatsConfFactAddReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
@@ -80,7 +80,7 @@ impl StatsCiConfApi {
     }
 
     /// Modify Fact Configuration
-    /// 
+    ///
     /// 修改事实配置
     #[oai(path = "/fact/:fact_key", method = "patch")]
     async fn fact_modify(&self, fact_key: Path<String>, modify_req: Json<StatsConfFactModifyReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
@@ -90,7 +90,7 @@ impl StatsCiConfApi {
     }
 
     /// Delete Fact Configuration
-    /// 
+    ///
     /// 删除事实配置
     #[oai(path = "/fact/:fact_key", method = "delete")]
     async fn fact_delete(&self, fact_key: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
@@ -100,7 +100,7 @@ impl StatsCiConfApi {
     }
 
     /// Find Fact Configurations
-    /// 
+    ///
     /// 查询事实配置
     #[oai(path = "/fact", method = "get")]
     async fn fact_paginate(
@@ -135,7 +135,7 @@ impl StatsCiConfApi {
     }
 
     /// Add Fact Column Configuration
-    /// 
+    ///
     /// 添加事实列配置
     #[oai(path = "/fact/:fact_key/col", method = "put")]
     async fn fact_col_add(&self, fact_key: Path<String>, add_req: Json<StatsConfFactColAddReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
@@ -145,7 +145,7 @@ impl StatsCiConfApi {
     }
 
     /// Modify Fact Column Configuration
-    /// 
+    ///
     /// 修改事实列配置
     #[oai(path = "/fact/:fact_key/col/:fact_col_key", method = "patch")]
     async fn fact_col_modify(
@@ -161,7 +161,7 @@ impl StatsCiConfApi {
     }
 
     /// Delete Fact Column Configuration
-    /// 
+    ///
     /// 删除事实列配置
     #[oai(path = "/fact/:fact_key/col/:fact_col_key", method = "delete")]
     async fn fact_col_delete(
@@ -177,7 +177,7 @@ impl StatsCiConfApi {
     }
 
     /// Delete Fact Column Configuration
-    /// 
+    ///
     /// 删除事实列配置
     #[oai(path = "/fact/:fact_key/col/:fact_col_key/kind/:kind", method = "delete")]
     async fn fact_col_kind_delete(
@@ -194,7 +194,7 @@ impl StatsCiConfApi {
     }
 
     /// Delete All Column Configuration
-    /// 
+    ///
     /// 删除所有列配置
     #[oai(path = "/fact/:fact_key/kind/:kind", method = "delete")]
     async fn fact_col_delete_by_kind(
@@ -210,7 +210,7 @@ impl StatsCiConfApi {
     }
 
     /// Find Fact Column Configurations
-    /// 
+    ///
     /// 查询事实列配置
     #[oai(path = "/fact/:fact_key/col", method = "get")]
     async fn fact_col_paginate(
@@ -244,7 +244,7 @@ impl StatsCiConfApi {
     }
 
     /// Find Fact Column Configurations
-    /// 
+    ///
     /// 查询事实列配置
     #[oai(path = "/dim/:dim_key/col", method = "get")]
     async fn fact_col_paginate_by_dim(
@@ -279,7 +279,7 @@ impl StatsCiConfApi {
     }
 
     /// Online dimension configuration
-    /// 
+    ///
     /// 上线维度配置
     #[oai(path = "/dim/:dim_key/online", method = "put")]
     async fn dim_online(&self, dim_key: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
@@ -289,7 +289,7 @@ impl StatsCiConfApi {
     }
 
     /// Online Fact Configuration
-    /// 
+    ///
     /// 上线事实配置
     #[oai(path = "/fact/:fact_key/online", method = "put")]
     async fn fact_online(&self, fact_key: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {

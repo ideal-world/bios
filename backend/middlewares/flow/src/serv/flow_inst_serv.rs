@@ -46,6 +46,7 @@ use crate::{
         flow_var_dto::FillType,
     },
     flow_config::FlowConfig,
+    flow_constants,
     flow_initializer::{default_flow_avatar, ws_flow_client},
     serv::{flow_model_serv::FlowModelServ, flow_state_serv::FlowStateServ},
 };
@@ -588,18 +589,25 @@ impl FlowInstServ {
         Ok(())
     }
 
+    #[async_recursion]
     pub async fn transfer(
         flow_inst_id: &str,
         transfer_req: &FlowInstTransferReq,
         skip_filter: bool,
         callback_kind: FlowExternalCallbackOp,
-        funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<FlowInstTransferResp> {
-        Self::do_transfer(flow_inst_id, transfer_req, skip_filter, callback_kind, funs, ctx).await
+        let mut funs = flow_constants::get_tardis_inst();
+        funs.begin().await?;
+        let result = Self::do_transfer(flow_inst_id, transfer_req, skip_filter, callback_kind, &funs, ctx).await;
+        funs.commit().await?;
+
+        let funs = flow_constants::get_tardis_inst();
+        Self::handle_post_changes(flow_inst_id, &transfer_req.flow_transition_id, ctx, &funs).await?;
+        Self::handle_front_changes(flow_inst_id, ctx, &funs).await?;
+        result
     }
 
-    #[async_recursion]
     async fn do_transfer(
         flow_inst_id: &str,
         transfer_req: &FlowInstTransferReq,
@@ -780,48 +788,40 @@ impl FlowInstServ {
             .await?;
         }
 
-        let post_changes =
-            model_transition.into_iter().find(|model_transition| model_transition.id == next_flow_transition.next_flow_transition_id).unwrap_or_default().action_by_post_changes();
-        if !post_changes.is_empty() {
-            if let Some(ws_client) = ws_flow_client().await {
-                ws_client
-                    .publish_post_change(
-                        flow_inst_detail.id.clone(),
-                        next_transition_detail.id.clone(),
-                        default_flow_avatar().await.clone(),
-                        funs.conf::<FlowConfig>().invoke.spi_app_id.clone(),
-                        ctx,
-                    )
-                    .await?;
-            } else {
-                FlowEventServ::do_post_change(&flow_inst_detail.id, &next_transition_detail.id, ctx, funs).await?;
-                // Self::do_post_change(
-                //     &flow_inst_detail,
-                //     &flow_model,
-                //     &next_transition_detail,
-                //     &prev_flow_state,
-                //     &next_flow_state,
-                //     post_changes,
-                //     ctx,
-                //     funs,
-                // )
-                // .await?;
-            }
-        }
+        Self::gen_transfer_resp(flow_inst_id, &prev_flow_state.id, ctx, funs).await
+    }
+
+    pub async fn handle_post_changes(inst_id: &str, transition_id: &str, ctx: &TardisContext, funs: &TardisFunsInst) -> TardisResult<()> {
         if let Some(ws_client) = ws_flow_client().await {
             ws_client
-                .publish_front_change(
-                    flow_inst_id.to_string(),
+                .publish_post_change(
+                    inst_id.to_string(),
+                    transition_id.to_string(),
                     default_flow_avatar().await.clone(),
                     funs.conf::<FlowConfig>().invoke.spi_app_id.clone(),
                     ctx,
                 )
                 .await?;
         } else {
-            FlowEventServ::do_front_change(flow_inst_id, ctx, funs).await?;
+            FlowEventServ::do_post_change(inst_id, transition_id, ctx, funs).await?;
         }
+        Ok(())
+    }
 
-        Self::gen_transfer_resp(flow_inst_id, &prev_flow_state.id, ctx, funs).await
+    pub async fn handle_front_changes(inst_id: &str, ctx: &TardisContext, funs: &TardisFunsInst) -> TardisResult<()> {
+        if let Some(ws_client) = ws_flow_client().await {
+            ws_client
+                .publish_front_change(
+                    inst_id.to_string(),
+                    default_flow_avatar().await.clone(),
+                    funs.conf::<FlowConfig>().invoke.spi_app_id.clone(),
+                    ctx,
+                )
+                .await?;
+        } else {
+            FlowEventServ::do_front_change(inst_id, ctx, funs).await?;
+        }
+        Ok(())
     }
 
     async fn gen_transfer_resp(flow_inst_id: &str, prev_flow_state_id: &str, ctx: &TardisContext, funs: &TardisFunsInst) -> TardisResult<FlowInstTransferResp> {
