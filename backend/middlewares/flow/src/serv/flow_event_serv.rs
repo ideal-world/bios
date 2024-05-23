@@ -226,12 +226,14 @@ impl FlowEventServ {
                                         && change_info.changed_val.clone().unwrap().as_object().unwrap().get("value").is_some()
                                         && change_info.changed_val.clone().unwrap().as_object().unwrap().get("op").is_some()
                                     {
-                                        let original_value = if let Some(original_value) =
+                                        let original_value = if let Some(custom_value) =
                                             FlowInstServ::find_var_by_inst_id(flow_inst_id, &format!("custom_{}", change_info.var_name), funs, ctx).await?
                                         {
+                                            Some(custom_value)
+                                        } else if let Some(original_value) = FlowInstServ::find_var_by_inst_id(flow_inst_id, &change_info.var_name, funs, ctx).await? {
                                             Some(original_value)
                                         } else {
-                                            FlowInstServ::find_var_by_inst_id(flow_inst_id, &change_info.var_name, funs, ctx).await?
+                                            Some(json!(""))
                                         };
 
                                         let target_value = change_info.changed_val.clone().unwrap().as_object().unwrap().get("value").unwrap().as_i64().unwrap_or_default();
