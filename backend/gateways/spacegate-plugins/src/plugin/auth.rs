@@ -531,7 +531,6 @@ fn headermap_to_hashmap(old_headers: &HeaderMap<HeaderValue>) -> TardisResult<Ha
 impl Plugin for AuthPlugin {
     const CODE: &'static str = CODE;
 
-    
     fn meta() -> spacegate_shell::model::PluginMetaData {
         spacegate_shell::model::plugin_meta!(
             description: "Auth plugin for spacegate, it is used to authenticate the request"

@@ -3,7 +3,7 @@ use itertools::Itertools;
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
     log::debug,
-    TardisFuns, TardisFunsInst,tokio
+    tokio, TardisFuns, TardisFunsInst,
 };
 
 use crate::{
@@ -89,7 +89,21 @@ impl FlowExternalServ {
         let ctx_clone = ctx.clone();
         tokio::spawn(async move {
             let funs = flow_constants::get_tardis_inst();
-            let result = Self::do_modify_field(&tag, &transition_detail, &rel_business_obj_id, &inst_id, callback_op, target_state, target_sys_state, original_state, original_sys_state, params, &ctx_clone, &funs).await;
+            let result = Self::do_modify_field(
+                &tag,
+                &transition_detail,
+                &rel_business_obj_id,
+                &inst_id,
+                callback_op,
+                target_state,
+                target_sys_state,
+                original_state,
+                original_sys_state,
+                params,
+                &ctx_clone,
+                &funs,
+            )
+            .await;
             if let Err(err) = result {
                 tardis::log::error!("[BIOS.Flow] failed to ModifyField event: {}", err);
             }
