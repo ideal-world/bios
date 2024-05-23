@@ -96,7 +96,6 @@ impl IamIdentCacheServ {
             funs.cache().hdel(format!("{}{}", funs.conf::<IamConfig>().cache_key_account_rel_, iam_item_id).as_str(), token).await?;
 
             let mut mock_ctx = TardisContext::default();
-            add_ip(ip, &mock_ctx).await?;
             if let Ok(account_context) = Self::get_account_context(iam_item_id, "", funs).await {
                 mock_ctx = account_context;
             } else {
@@ -116,6 +115,7 @@ impl IamIdentCacheServ {
                 .own_paths;
                 mock_ctx.own_paths = own_paths;
             }
+            add_ip(ip, &mock_ctx).await?;
 
             let _ = IamLogClient::add_ctx_task(
                 LogParamTag::IamAccount,
