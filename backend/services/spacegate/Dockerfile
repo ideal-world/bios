@@ -1,5 +1,7 @@
 FROM ubuntu:22.04
 
+LABEL org.opencontainers.image.source https://github.com/ideal-world/bios
+
 # Set time zone
 RUN apt-get update && \
   apt-get install -yq tzdata && \
