@@ -412,30 +412,43 @@ impl StatsQueryTimeWindowKind {
     pub fn to_sql(&self, column_name: &str, is_date_time: bool) -> String {
         if is_date_time {
             match self {
-                StatsQueryTimeWindowKind::Date => format!("date(timezone('Asia/Shanghai', coalesce({column_name},'1970-01-01 00:00:00 +00:00')::timestamp with time zone))"),
+                StatsQueryTimeWindowKind::Date => format!("date({})", Self::is_null_empty_column(column_name, None)),
                 // StatsQueryTimeWindowKind::Hour => format!("date_part('hour',timezone('UTC', {column_name}))"),
                 StatsQueryTimeWindowKind::Hour => format!(
-                    "CONCAT(date_part('year', timezone('Asia/Shanghai', coalesce({column_name},'1970-01-01 00:00:00 +00:00')::timestamp with time zone)), '-',
-                LPAD(date_part('month', timezone('Asia/Shanghai', coalesce({column_name},'1970-01-01 00:00:00 +00:00')::timestamp with time zone))::text, 2, '0'), '-',
-                LPAD(date_part('day', timezone('Asia/Shanghai', coalesce({column_name},'1970-01-01 00:00:00 +00:00')::timestamp with time zone))::text, 2, '0'), ' ',
-                LPAD(date_part('hour', timezone('Asia/Shanghai', coalesce({column_name},'1970-01-01 00:00:00 +00:00')::timestamp with time zone))::text, 2, '0'))"
+                    "CONCAT(date_part('year', {}), '-',
+                LPAD(date_part('month', {})::text, 2, '0'), '-',
+                LPAD(date_part('day', {})::text, 2, '0'), ' ',
+                LPAD(date_part('hour', {})::text, 2, '0'))",
+                    Self::is_null_empty_column(column_name, None),
+                    Self::is_null_empty_column(column_name, None),
+                    Self::is_null_empty_column(column_name, None),
+                    Self::is_null_empty_column(column_name, None)
                 ),
                 // StatsQueryTimeWindowKind::Day => format!("date_part('day',timezone('UTC', {column_name}))"),
                 StatsQueryTimeWindowKind::Day => format!(
-                    "CONCAT(date_part('year', timezone('Asia/Shanghai', coalesce({column_name},'1970-01-01 00:00:00 +00:00')::timestamp with time zone)), '-',
-                LPAD(date_part('month', timezone('Asia/Shanghai', coalesce({column_name},'1970-01-01 00:00:00 +00:00')::timestamp with time zone))::text, 2, '0'), '-',
-                LPAD(date_part('day', timezone('Asia/Shanghai', coalesce({column_name},'1970-01-01 00:00:00 +00:00')::timestamp with time zone))::text, 2, '0'))"
+                    "CONCAT(date_part('year', {}), '-',
+                LPAD(date_part('month', {})::text, 2, '0'), '-',
+                LPAD(date_part('day', {})::text, 2, '0'))",
+                    Self::is_null_empty_column(column_name, None),
+                    Self::is_null_empty_column(column_name, None),
+                    Self::is_null_empty_column(column_name, None)
                 ),
                 StatsQueryTimeWindowKind::Week => format!(
-                    "CONCAT(date_part('year', timezone('Asia/Shanghai', coalesce({column_name},'1970-01-01 00:00:00 +00:00')::timestamp with time zone)), ' ',
-                    date_part('week', timezone('Asia/Shanghai', coalesce({column_name},'1970-01-01 00:00:00 +00:00')::timestamp with time zone)))"
+                    "CONCAT(date_part('year', {}), ' ',
+                    date_part('week', {}))",
+                    Self::is_null_empty_column(column_name, None),
+                    Self::is_null_empty_column(column_name, None)
                 ),
                 // StatsQueryTimeWindowKind::Month => format!("date_part('month',timezone('UTC', {column_name}))"),
                 StatsQueryTimeWindowKind::Month => {
-                    format!("CONCAT(date_part('year', timezone('Asia/Shanghai',coalesce({column_name},'1970-01-01 00:00:00 +00:00')::timestamp with time zone)), '-',LPAD(date_part('month', timezone('Asia/Shanghai', coalesce({column_name},'1970-01-01 00:00:00 +00:00')::timestamp with time zone))::text, 2, '0'))")
+                    format!(
+                        "CONCAT(date_part('year', {}), '-',LPAD(date_part('month', {})::text, 2, '0'))",
+                        Self::is_null_empty_column(column_name, None),
+                        Self::is_null_empty_column(column_name, None)
+                    )
                 }
                 StatsQueryTimeWindowKind::Year => {
-                    format!("CONCAT(date_part('year',timezone('Asia/Shanghai', coalesce({column_name},'1970-01-01 00:00:00 +00:00')::timestamp with time zone)),'')")
+                    format!("CONCAT(date_part('year',{}),'')", Self::is_null_empty_column(column_name, None))
                 }
             }
         } else {
@@ -446,30 +459,48 @@ impl StatsQueryTimeWindowKind {
                 // StatsQueryTimeWindowKind::Month => format!("date_part('month', {column_name})"),
                 // StatsQueryTimeWindowKind::Year => format!("date_part('year', {column_name})"),
                 StatsQueryTimeWindowKind::Hour => format!(
-                    "CONCAT(date_part('year', timezone('Asia/Shanghai', coalesce({column_name},'1970-01-01 00:00:00 +00:00')::timestamp with time zone)), '-',
-                LPAD(date_part('month', timezone('Asia/Shanghai', coalesce({column_name},'1970-01-01 00:00:00 +00:00')::timestamp with time zone))::text, 2, '0'), '-',
-                LPAD(date_part('day', timezone('Asia/Shanghai', coalesce({column_name},'1970-01-01 00:00:00 +00:00')::timestamp with time zone))::text, 2, '0'), ' ',
-                LPAD(date_part('hour', timezone('Asia/Shanghai', coalesce({column_name},'1970-01-01 00:00:00 +00:00')::timestamp with time zone))::text, 2, '0'))"
+                    "CONCAT(date_part('year', {}), '-',
+                LPAD(date_part('month', {})::text, 2, '0'), '-',
+                LPAD(date_part('day', {})::text, 2, '0'), ' ',
+                LPAD(date_part('hour', {})::text, 2, '0'))",
+                    Self::is_null_empty_column(column_name, None),
+                    Self::is_null_empty_column(column_name, None),
+                    Self::is_null_empty_column(column_name, None),
+                    Self::is_null_empty_column(column_name, None)
                 ),
                 StatsQueryTimeWindowKind::Day => format!(
-                    "CONCAT(date_part('year', timezone('Asia/Shanghai', coalesce({column_name},'1970-01-01 00:00:00 +00:00')::timestamp with time zone)), '-',
-                LPAD(date_part('month', timezone('Asia/Shanghai', coalesce({column_name},'1970-01-01 00:00:00 +00:00')::timestamp with time zone))::text, 2, '0'), '-',
-                LPAD(date_part('day', timezone('Asia/Shanghai', coalesce({column_name},'1970-01-01 00:00:00 +00:00')::timestamp with time zone))::text, 2, '0'))"
+                    "CONCAT(date_part('year', {}), '-',
+                LPAD(date_part('month', {})::text, 2, '0'), '-',
+                LPAD(date_part('day', {})::text, 2, '0'))",
+                    Self::is_null_empty_column(column_name, None),
+                    Self::is_null_empty_column(column_name, None),
+                    Self::is_null_empty_column(column_name, None)
                 ),
                 StatsQueryTimeWindowKind::Week => format!(
-                    "CONCAT(date_part('year', timezone('Asia/Shanghai', coalesce({column_name},'1970-01-01 00:00:00 +00:00')::timestamp with time zone)), ' ',
-                    date_part('week', timezone('Asia/Shanghai', coalesce({column_name},'1970-01-01 00:00:00 +00:00')::timestamp with time zone)))"
+                    "CONCAT(date_part('year', {}), ' ',
+                    date_part('week', {}))",
+                    Self::is_null_empty_column(column_name, None),
+                    Self::is_null_empty_column(column_name, None)
                 ),
                 StatsQueryTimeWindowKind::Month => {
                     format!(
-                        "CONCAT(date_part('year', timezone('Asia/Shanghai',coalesce({column_name},'1970-01-01 00:00:00 +00:00')::timestamp with time zone)), '-',LPAD(date_part('month', timezone('Asia/Shanghai', coalesce({column_name},'1970-01-01 00:00:00 +00:00')::timestamp with time zone))::text, 2, '0'))"
+                        "CONCAT(date_part('year', {}), '-',LPAD(date_part('month', {})::text, 2, '0'))",
+                        Self::is_null_empty_column(column_name, None),
+                        Self::is_null_empty_column(column_name, None)
                     )
                 }
                 StatsQueryTimeWindowKind::Year => {
-                    format!("CONCAT(date_part('year',timezone('Asia/Shanghai', coalesce({column_name},'1970-01-01 00:00:00 +00:00')::timestamp with time zone)),'')")
+                    format!("CONCAT(date_part('year',{}),'')", Self::is_null_empty_column(column_name, None))
                 }
             }
         }
+    }
+
+    pub fn is_null_empty_column(column_name: &str, time_zone: Option<String>) -> String {
+        format!(
+            "timezone('{}', coalesce({column_name},'1970-01-01 00:00:00 +00:00')::timestamp with time zone)",
+            time_zone.unwrap_or("Asia/Shanghai".to_string())
+        )
     }
 }
 
