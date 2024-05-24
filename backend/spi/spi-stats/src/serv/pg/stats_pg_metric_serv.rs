@@ -339,7 +339,14 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
                     })?
                 };
                 let column_name = if and_where.rel_external_id.clone().is_some_and(|i| !i.is_empty()) {
-                    format!("fact.ext ->> '{}'", &and_where.code)
+                    if col_conf.dim_multi_values.unwrap_or(false) {
+                        format!(
+                            "ARRAY(SELECT jsonb_array_elements_text(COALESCE((fact.ext ->> '{}')::jsonb, '[]'::jsonb)))",
+                            &and_where.code
+                        )
+                    } else {
+                        format!("fact.ext ->> '{}'", &and_where.code)
+                    }
                 } else {
                     format!("fact.{}", &and_where.code)
                 };
