@@ -434,7 +434,12 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
                 "500-spi-stats-internal-error",
             )
         })?;
-        if let Some(column_name_with_fun) = col_data_type.to_pg_group(&format!("_.{}", group.code.clone()), col_conf.dim_multi_values.unwrap_or(false), &group.time_window) {
+        let column_name = if col_conf.rel_external_id.clone().is_some_and(|i| !i.is_empty()) && col_conf.dim_multi_values.unwrap_or(false) {
+            format!("ARRAY(SELECT jsonb_array_elements_text(COALESCE(_.{}::jsonb, '[]'::jsonb)))", &group.code.clone())
+        } else {
+            format!("_.{}", group.code.clone())
+        };
+        if let Some(column_name_with_fun) = col_data_type.to_pg_group(&column_name, col_conf.dim_multi_values.unwrap_or(false), &group.time_window) {
             let alias_name = format!(
                 "{}{FUNCTION_SUFFIX_FLAG}{}",
                 group.code.clone(),
