@@ -50,7 +50,6 @@ strip = true
 [workspace.dependencies]
 # basic
 async-recursion = { version = "1.0.4" }
-bigdecimal = { version = "0.4.3" }
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1" }
 async-trait = { version = "0.1" }
@@ -58,6 +57,8 @@ lazy_static = { version = "1" }
 itertools = { version = "0" }
 fancy-regex = { version = "0" }
 run_script = { version = "0.10" }
+rust_decimal = { version = "1" }
+rust_decimal_macros = { version = "1" }
 testcontainers-modules = { version = "0.3", features = ["redis"] }
 strum = { version = "0.26", features = ["derive"] }
 # tardis
