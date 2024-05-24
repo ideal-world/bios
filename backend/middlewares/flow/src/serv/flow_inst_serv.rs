@@ -1106,7 +1106,7 @@ impl FlowInstServ {
     pub async fn modify_current_vars(flow_inst_id: &str, current_vars: &HashMap<String, Value>, ctx: &TardisContext) -> TardisResult<()> {
         let mut funs = flow_constants::get_tardis_inst();
         funs.begin().await?;
-        let flow_inst_detail = Self::get(flow_inst_id, funs, ctx).await?;
+        let flow_inst_detail = Self::get(flow_inst_id, &funs, ctx).await?;
         let mut new_vars: HashMap<String, Value> = HashMap::new();
         if let Some(old_current_vars) = &flow_inst_detail.current_vars {
             new_vars.extend(old_current_vars.clone());
