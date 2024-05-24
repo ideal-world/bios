@@ -221,6 +221,7 @@ fn extract_cn(dn: &str) -> Option<String> {
     }
 }
 
+#[allow(clippy::blocks_in_conditions)]
 async fn handle_client(socket: TcpStream, _addr: net::SocketAddr, config: Arc<IamConfig>) {
     let config = &config.ldap;
     let (r, w) = tokio::io::split(socket);

@@ -20,6 +20,8 @@ serde.workspace = true
 serde_json.workspace = true
 async-trait.workspace = true
 async-recursion.workspace = true
+rust_decimal.workspace = true
+rust_decimal_macros.workspace = true
 lazy_static.workspace = true
 itertools.workspace = true
 tardis = { workspace = true, features = ["reldb-postgres", "web-client"] }

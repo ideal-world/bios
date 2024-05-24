@@ -1,5 +1,6 @@
 FROM ubuntu:22.04
 
+LABEL org.opencontainers.image.source https://github.com/ideal-world/bios
 ENV TZ=Asia/Shanghai
 
 RUN apt-get update && \

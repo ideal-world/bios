@@ -1,7 +1,8 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, str::FromStr};
 
 use async_recursion::async_recursion;
 use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
+use rust_decimal::Decimal;
 use serde_json::{json, Value};
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
@@ -242,12 +243,16 @@ impl FlowEventServ {
                                             change_info.changed_kind = Some(FlowTransitionActionByVarChangeInfoChangedKind::ChangeContent);
                                             match changed_op.as_str() {
                                                 "add" => {
-                                                    change_info.changed_val =
-                                                        Some(json!(original_value.as_str().unwrap_or_default().parse::<f64>().unwrap_or_default() + target_value))
+                                                    change_info.changed_val = Some(json!(
+                                                        (Decimal::from_str(&original_value.as_str().unwrap_or_default().parse::<f64>().unwrap_or_default().to_string()).unwrap()
+                                                            + Decimal::from_str(&target_value.to_string()).unwrap())
+                                                    ))
                                                 }
                                                 "sub" => {
-                                                    change_info.changed_val =
-                                                        Some(json!(original_value.as_str().unwrap_or_default().parse::<f64>().unwrap_or_default() - target_value))
+                                                    change_info.changed_val = Some(json!(
+                                                        (Decimal::from_str(&original_value.as_str().unwrap_or_default().parse::<f64>().unwrap_or_default().to_string()).unwrap()
+                                                            - Decimal::from_str(&target_value.to_string()).unwrap())
+                                                    ))
                                                 }
                                                 _ => {}
                                             }
