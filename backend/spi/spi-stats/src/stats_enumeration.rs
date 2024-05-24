@@ -216,7 +216,15 @@ impl StatsDataTypeKind {
                     .join(", ");
                 Some((format!("{column_name} {} ({})", op.to_sql(), param_sql), value))
             } else if self == &StatsDataTypeKind::DateTime || self == &StatsDataTypeKind::Date {
-                value.pop().map(|value| (format!("coalesce({column_name},'1970-01-01 00:00:00 +00:00')::timestamp with time zone {} ${param_idx}", op.to_sql()), vec![value]))
+                value.pop().map(|value| {
+                    (
+                        format!(
+                            "coalesce({column_name},'1970-01-01 00:00:00 +00:00')::timestamp with time zone {} ${param_idx}",
+                            op.to_sql()
+                        ),
+                        vec![value],
+                    )
+                })
             } else {
                 value.pop().map(|value| (format!("{column_name} {} ${param_idx}", op.to_sql()), vec![value]))
             },
@@ -426,7 +434,9 @@ impl StatsQueryTimeWindowKind {
                 StatsQueryTimeWindowKind::Month => {
                     format!("CONCAT(date_part('year', timezone('Asia/Shanghai',coalesce({column_name},'1970-01-01 00:00:00 +00:00')::timestamp with time zone)), '-',LPAD(date_part('month', timezone('Asia/Shanghai', coalesce({column_name},'1970-01-01 00:00:00 +00:00')::timestamp with time zone))::text, 2, '0'))")
                 }
-                StatsQueryTimeWindowKind::Year => format!("CONCAT(date_part('year',timezone('Asia/Shanghai', coalesce({column_name},'1970-01-01 00:00:00 +00:00')::timestamp with time zone)),'')"),
+                StatsQueryTimeWindowKind::Year => {
+                    format!("CONCAT(date_part('year',timezone('Asia/Shanghai', coalesce({column_name},'1970-01-01 00:00:00 +00:00')::timestamp with time zone)),'')")
+                }
             }
         } else {
             match self {
@@ -455,7 +465,9 @@ impl StatsQueryTimeWindowKind {
                         "CONCAT(date_part('year', timezone('Asia/Shanghai',coalesce({column_name},'1970-01-01 00:00:00 +00:00')::timestamp with time zone)), '-',LPAD(date_part('month', timezone('Asia/Shanghai', coalesce({column_name},'1970-01-01 00:00:00 +00:00')::timestamp with time zone))::text, 2, '0'))"
                     )
                 }
-                StatsQueryTimeWindowKind::Year => format!("CONCAT(date_part('year',timezone('Asia/Shanghai', coalesce({column_name},'1970-01-01 00:00:00 +00:00')::timestamp with time zone)),'')"),
+                StatsQueryTimeWindowKind::Year => {
+                    format!("CONCAT(date_part('year',timezone('Asia/Shanghai', coalesce({column_name},'1970-01-01 00:00:00 +00:00')::timestamp with time zone)),'')")
+                }
             }
         }
     }
