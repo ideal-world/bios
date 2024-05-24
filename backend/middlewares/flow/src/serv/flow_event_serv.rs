@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use async_recursion::async_recursion;
+use bigdecimal::{BigDecimal, FromPrimitive, ToPrimitive};
 use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
 use serde_json::{json, Value};
 use tardis::{
@@ -242,12 +243,22 @@ impl FlowEventServ {
                                             change_info.changed_kind = Some(FlowTransitionActionByVarChangeInfoChangedKind::ChangeContent);
                                             match changed_op.as_str() {
                                                 "add" => {
-                                                    change_info.changed_val =
-                                                        Some(json!(original_value.as_str().unwrap_or_default().parse::<f64>().unwrap_or_default() + target_value))
+                                                    change_info.changed_val = Some(json!((BigDecimal::from_f64(
+                                                        original_value.as_str().unwrap_or_default().parse::<f64>().unwrap_or_default()
+                                                    )
+                                                    .unwrap()
+                                                        + BigDecimal::from_f64(target_value).unwrap())
+                                                    .to_f64()
+                                                    .unwrap()))
                                                 }
                                                 "sub" => {
-                                                    change_info.changed_val =
-                                                        Some(json!(original_value.as_str().unwrap_or_default().parse::<f64>().unwrap_or_default() - target_value))
+                                                    change_info.changed_val = Some(json!((BigDecimal::from_f64(
+                                                        original_value.as_str().unwrap_or_default().parse::<f64>().unwrap_or_default()
+                                                    )
+                                                    .unwrap()
+                                                        - BigDecimal::from_f64(target_value).unwrap())
+                                                    .to_f64()
+                                                    .unwrap()))
                                                 }
                                                 _ => {}
                                             }
