@@ -40,8 +40,7 @@ pub struct RedisPublisherPlugin {
 }
 
 impl Plugin for RedisPublisherPlugin {
-    //FIXME fix code to kebab-case
-    const CODE: &'static str = "op_redis_publisher";
+    const CODE: &'static str = "op-redis-publisher";
 
     fn meta() -> spacegate_shell::model::PluginMetaData {
         spacegate_shell::model::plugin_meta!(
