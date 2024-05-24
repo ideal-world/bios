@@ -168,7 +168,7 @@ pub async fn find(find_req: &mut LogItemFindReq, funs: &TardisFunsInst, ctx: &Ta
             } else if ext_item.op == BasicQueryOpKind::IsNull {
                 where_fragments.push(format!("ext ->> '{}' is null", ext_item.field));
             } else if ext_item.op == BasicQueryOpKind::IsNotNull {
-                where_fragments.push(format!("ext ->> '{}' is not null", ext_item.field));
+                where_fragments.push(format!("(ext ->> '{}' is not null or ext ->> '{}' != '')", ext_item.field, ext_item.field));
             } else if ext_item.op == BasicQueryOpKind::IsNullOrEmpty {
                 where_fragments.push(format!("(ext ->> '{}' is null or ext ->> '{}' = '')", ext_item.field, ext_item.field));
             } else {
@@ -391,7 +391,7 @@ pub async fn find(find_req: &mut LogItemFindReq, funs: &TardisFunsInst, ctx: &Ta
                     } else if ext_item.op == BasicQueryOpKind::IsNull {
                         sql_and_where.push(format!("{} is null", ext_item.field));
                     } else if ext_item.op == BasicQueryOpKind::IsNotNull {
-                        sql_and_where.push(format!("{} is not null", ext_item.field));
+                        sql_and_where.push(format!("({} is not null or {} != '' )", ext_item.field, ext_item.field));
                     } else if ext_item.op == BasicQueryOpKind::IsNullOrEmpty {
                         sql_and_where.push(format!("({} is null or {} = '' )", ext_item.field, ext_item.field));
                     } else {
