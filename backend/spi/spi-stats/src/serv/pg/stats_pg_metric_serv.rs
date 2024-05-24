@@ -289,8 +289,8 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
         ));
     }
     let mes_distinct = query_req.select.iter().any(|i| {
-        if let Some(conf) = conf_info.get(&i.code.to_string()) {
-            return conf.mes_data_distinct.unwrap_or(false);
+        if let Some(conf) = measure_conf_info.get(&i.code.to_string()) {
+            return conf.mes_data_distinct.unwrap_or(true);
         }
         false
     });
