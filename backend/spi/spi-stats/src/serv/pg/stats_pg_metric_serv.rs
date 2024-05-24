@@ -12,6 +12,7 @@ use tardis::{
         reldb_client::TardisRelDBClient,
         sea_orm::{self, FromQueryResult, Value},
     },
+    log::info,
     serde_json::{self, json, Map},
     TardisFunsInst,
 };
