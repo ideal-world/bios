@@ -140,7 +140,7 @@ impl FlowCiInstApi {
     ) -> TardisApiResult<Void> {
         let funs = flow_constants::get_tardis_inst();
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
-        FlowInstServ::modify_current_vars(&flow_inst_id.0, &modify_req.0.vars, &funs, &ctx.0).await?;
+        FlowInstServ::modify_current_vars(&flow_inst_id.0, &modify_req.0.vars, &ctx.0).await?;
         TardisResp::ok(Void {})
     }
 
