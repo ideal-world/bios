@@ -1131,7 +1131,7 @@ impl FlowInstServ {
                 )
                 .await?;
         } else {
-            FlowEventServ::do_front_change(flow_inst_id, ctx, funs).await?;
+            FlowEventServ::do_front_change(flow_inst_id, ctx, &funs).await?;
         }
 
         Ok(())
