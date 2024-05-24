@@ -138,6 +138,9 @@ impl RbumItemCrudOperation<iam_account::ActiveModel, IamAccountAddReq, IamAccoun
             iam_account.status = Set(status.to_int());
             if status == &IamAccountStatusKind::Active {
                 iam_account.effective_time = Set(Utc::now());
+            } else if status == &IamAccountStatusKind::Logout {
+                iam_account.logout_time = Set(Utc::now());
+                iam_account.logout_type = Set(modify_req.logout_type.clone().unwrap_or_default().to_string());
             }
         }
         if let Some(lock_status) = &modify_req.lock_status {
