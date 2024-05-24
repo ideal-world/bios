@@ -110,12 +110,10 @@ impl FlowCcInstApi {
         ctx: TardisContextExtractor,
         _request: &Request,
     ) -> TardisApiResult<FlowInstTransferResp> {
-        let mut funs = flow_constants::get_tardis_inst();
+        let funs = flow_constants::get_tardis_inst();
         let mut transfer = transfer_req.0;
         FlowInstServ::check_transfer_vars(&flow_inst_id.0, &mut transfer, &funs, &ctx.0).await?;
-        funs.begin().await?;
-        let result = FlowInstServ::transfer(&flow_inst_id.0, &transfer, false, FlowExternalCallbackOp::Default, &funs, &ctx.0).await?;
-        funs.commit().await?;
+        let result = FlowInstServ::transfer(&flow_inst_id.0, &transfer, false, FlowExternalCallbackOp::Default, &ctx.0).await?;
         TardisResp::ok(result)
     }
 
@@ -129,21 +127,19 @@ impl FlowCcInstApi {
         ctx: TardisContextExtractor,
         _request: &Request,
     ) -> TardisApiResult<Vec<FlowInstTransferResp>> {
-        let mut funs = flow_constants::get_tardis_inst();
+        let funs = flow_constants::get_tardis_inst();
         let mut result = vec![];
         let flow_inst_ids: Vec<_> = flow_inst_ids.split(',').collect();
         let raw_transfer_req = transfer_req.0;
         let mut flow_inst_id_transfer_map = HashMap::new();
-        funs.begin().await?;
         for flow_inst_id in &flow_inst_ids {
             let mut transfer_req = raw_transfer_req.clone();
             FlowInstServ::check_transfer_vars(flow_inst_id, &mut transfer_req, &funs, &ctx.0).await?;
             flow_inst_id_transfer_map.insert(flow_inst_id, transfer_req);
         }
         for (flow_inst_id, transfer_req) in flow_inst_id_transfer_map {
-            result.push(FlowInstServ::transfer(flow_inst_id, &transfer_req, false, FlowExternalCallbackOp::Default, &funs, &ctx.0).await?);
+            result.push(FlowInstServ::transfer(flow_inst_id, &transfer_req, false, FlowExternalCallbackOp::Default, &ctx.0).await?);
         }
-        funs.commit().await?;
         TardisResp::ok(result)
     }
 

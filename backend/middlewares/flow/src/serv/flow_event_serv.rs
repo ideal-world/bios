@@ -76,7 +76,6 @@ impl FlowEventServ {
                     },
                     true,
                     FlowExternalCallbackOp::ConditionalTrigger,
-                    funs,
                     ctx,
                 )
                 .await?;
@@ -227,26 +226,28 @@ impl FlowEventServ {
                                         && change_info.changed_val.clone().unwrap().as_object().unwrap().get("value").is_some()
                                         && change_info.changed_val.clone().unwrap().as_object().unwrap().get("op").is_some()
                                     {
-                                        let original_value = if let Some(original_value) =
+                                        let original_value = if let Some(custom_value) =
                                             FlowInstServ::find_var_by_inst_id(flow_inst_id, &format!("custom_{}", change_info.var_name), funs, ctx).await?
                                         {
+                                            Some(custom_value)
+                                        } else if let Some(original_value) = FlowInstServ::find_var_by_inst_id(flow_inst_id, &change_info.var_name, funs, ctx).await? {
                                             Some(original_value)
                                         } else {
-                                            FlowInstServ::find_var_by_inst_id(flow_inst_id, &change_info.var_name, funs, ctx).await?
+                                            Some(json!(""))
                                         };
 
-                                        let target_value = change_info.changed_val.clone().unwrap().as_object().unwrap().get("value").unwrap().as_i64().unwrap_or_default();
+                                        let target_value = change_info.changed_val.clone().unwrap().as_object().unwrap().get("value").unwrap().as_f64().unwrap_or_default();
                                         let changed_op = change_info.changed_val.clone().unwrap().as_object().unwrap().get("op").unwrap().as_str().unwrap_or_default().to_string();
                                         if let Some(original_value) = original_value {
                                             change_info.changed_kind = Some(FlowTransitionActionByVarChangeInfoChangedKind::ChangeContent);
                                             match changed_op.as_str() {
                                                 "add" => {
                                                     change_info.changed_val =
-                                                        Some(json!(original_value.as_str().unwrap_or_default().parse::<i64>().unwrap_or_default() + target_value))
+                                                        Some(json!(original_value.as_str().unwrap_or_default().parse::<f64>().unwrap_or_default() + target_value))
                                                 }
                                                 "sub" => {
                                                     change_info.changed_val =
-                                                        Some(json!(original_value.as_str().unwrap_or_default().parse::<i64>().unwrap_or_default() - target_value))
+                                                        Some(json!(original_value.as_str().unwrap_or_default().parse::<f64>().unwrap_or_default() - target_value))
                                                 }
                                                 _ => {}
                                             }
@@ -270,7 +271,7 @@ impl FlowEventServ {
                             if !resp.rel_bus_objs.is_empty() {
                                 for rel_bus_obj_id in resp.rel_bus_objs.pop().unwrap().rel_bus_obj_ids {
                                     let inst_id = FlowInstServ::get_inst_ids_by_rel_business_obj_id(vec![rel_bus_obj_id.clone()], funs, ctx).await?.pop().unwrap_or_default();
-                                    FlowExternalServ::do_async_modify_field(
+                                    FlowExternalServ::do_modify_field(
                                         &rel_tag,
                                         next_flow_transition,
                                         &rel_bus_obj_id,
@@ -334,7 +335,7 @@ impl FlowEventServ {
         }
 
         if !modify_self_field_params.is_empty() {
-            FlowExternalServ::do_async_modify_field(
+            FlowExternalServ::do_modify_field(
                 &flow_model.tag,
                 next_flow_transition,
                 &flow_inst_detail.rel_business_obj_id,
@@ -505,7 +506,6 @@ impl FlowEventServ {
                     },
                     true,
                     FlowExternalCallbackOp::PostAction,
-                    funs,
                     ctx,
                 )
                 .await?;
