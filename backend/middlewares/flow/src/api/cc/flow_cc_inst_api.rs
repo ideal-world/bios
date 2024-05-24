@@ -153,11 +153,8 @@ impl FlowCcInstApi {
         ctx: TardisContextExtractor,
         _request: &Request,
     ) -> TardisApiResult<Void> {
-        let mut funs = flow_constants::get_tardis_inst();
-        funs.begin().await?;
         let vars = HashMap::from([("current_assigned".to_string(), Value::String(modify_req.0.current_assigned))]);
-        FlowInstServ::modify_current_vars(&flow_inst_id.0, &vars, &funs, &ctx.0).await?;
-        funs.commit().await?;
+        FlowInstServ::modify_current_vars(&flow_inst_id.0, &vars, &ctx.0).await?;
         TardisResp::ok(Void {})
     }
 
@@ -172,9 +169,7 @@ impl FlowCcInstApi {
         _request: &Request,
     ) -> TardisApiResult<Void> {
         let mut funs = flow_constants::get_tardis_inst();
-        funs.begin().await?;
-        FlowInstServ::modify_current_vars(&flow_inst_id.0, &modify_req.0.vars, &funs, &ctx.0).await?;
-        funs.commit().await?;
+        FlowInstServ::modify_current_vars(&flow_inst_id.0, &modify_req.0.vars, &ctx.0).await?;
         TardisResp::ok(Void {})
     }
 }
