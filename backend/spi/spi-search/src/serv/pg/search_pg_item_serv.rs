@@ -635,7 +635,7 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
                     } else if ext_item.op == BasicQueryOpKind::IsNull {
                         sql_and_where.push(format!("{} is null", ext_item.field));
                     } else if ext_item.op == BasicQueryOpKind::IsNotNull {
-                        sql_and_where.push(format!("({} is not null or {} != '' )", ext_item.field, ext_item.field));
+                        sql_and_where.push(format!("({} is not null)", ext_item.field));
                     } else if ext_item.op == BasicQueryOpKind::IsNullOrEmpty {
                         sql_and_where.push(format!("({} is null or {} = '' )", ext_item.field, ext_item.field));
                     } else {
