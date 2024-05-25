@@ -38,6 +38,7 @@ pub async fn add(add_req: &mut SearchItemAddReq, funs: &TardisFunsInst, ctx: &Ta
     params.push(Value::from(add_req.title.as_str()));
 
     let pinyin_vec = to_pinyin_vec(add_req.title.as_str(), Pinyin::plain);
+    let content = add_req.title.as_str().split(' ').last().unwrap_or_default();
     if add_req.title.chars().count() > funs.conf::<SearchConfig>().split_strategy_rule_config.specify_word_length.unwrap_or(30) {
         params.push(Value::from(format!(
             "{} {} {} {}",
@@ -47,7 +48,6 @@ pub async fn add(add_req: &mut SearchItemAddReq, funs: &TardisFunsInst, ctx: &Ta
             generate_word_combinations(pinyin_vec).join(" ")
         )));
     } else {
-        let content = add_req.title.as_str().split(' ').last().unwrap_or_default();
         params.push(Value::from(format!(
             "{} {} {} {} {} {} {}",
             add_req.title.as_str(),
@@ -127,6 +127,7 @@ pub async fn modify(tag: &str, key: &str, modify_req: &mut SearchItemModifyReq, 
         sql_sets.push(format!("title_tsv = to_tsvector('{word_combinations_way}', ${})", params.len() + 1));
 
         let pinyin_vec = to_pinyin_vec(title, Pinyin::plain);
+        let content = title.split(' ').last().unwrap_or_default();
         if title.chars().count() > funs.conf::<SearchConfig>().split_strategy_rule_config.specify_word_length.unwrap_or(30) {
             params.push(Value::from(format!(
                 "{} {} {} {}",
@@ -136,7 +137,6 @@ pub async fn modify(tag: &str, key: &str, modify_req: &mut SearchItemModifyReq, 
                 generate_word_combinations(pinyin_vec).join(" ")
             )));
         } else {
-            let content = title.split(' ').last().unwrap_or_default();
             params.push(Value::from(format!(
                 "{} {} {} {} {} {} {}",
                 title,
@@ -451,7 +451,7 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
                 where_fragments.push(format!("ext ->> '{}' is null", ext_item.field));
             } else if ext_item.op == BasicQueryOpKind::IsNotNull {
                 where_fragments.push(format!(
-                    "ext ->> '{}' is not null or ext ->> '{}' != '' or ext ->> '{}' != '[]'",
+                    "(ext ->> '{}' is not null or ext ->> '{}' != '' or ext ->> '{}' != '[]')",
                     ext_item.field, ext_item.field, ext_item.field
                 ));
             } else if ext_item.op == BasicQueryOpKind::IsNullOrEmpty {
@@ -562,7 +562,7 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
                             sql_and_where.push(format!("ext ->> '{}' is null", ext_item.field));
                         } else if ext_item.op == BasicQueryOpKind::IsNotNull {
                             where_fragments.push(format!(
-                                "ext ->> '{}' is not null or ext ->> '{}' != '' or ext ->> '{}' != '[]'",
+                                "(ext ->> '{}' is not null or ext ->> '{}' != '' or ext ->> '{}' != '[]')",
                                 ext_item.field, ext_item.field, ext_item.field
                             ));
                         } else if ext_item.op == BasicQueryOpKind::IsNullOrEmpty {
@@ -637,7 +637,7 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
                     } else if ext_item.op == BasicQueryOpKind::IsNull {
                         sql_and_where.push(format!("{} is null", ext_item.field));
                     } else if ext_item.op == BasicQueryOpKind::IsNotNull {
-                        sql_and_where.push(format!("({} is not null or {} != '' )", ext_item.field, ext_item.field));
+                        sql_and_where.push(format!("({} is not null)", ext_item.field));
                     } else if ext_item.op == BasicQueryOpKind::IsNullOrEmpty {
                         sql_and_where.push(format!("({} is null or {} = '' )", ext_item.field, ext_item.field));
                     } else {
