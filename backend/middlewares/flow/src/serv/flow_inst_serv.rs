@@ -1103,8 +1103,10 @@ impl FlowInstServ {
         }
     }
 
-    pub async fn modify_current_vars(flow_inst_id: &str, current_vars: &HashMap<String, Value>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        let flow_inst_detail = Self::get(flow_inst_id, funs, ctx).await?;
+    pub async fn modify_current_vars(flow_inst_id: &str, current_vars: &HashMap<String, Value>, ctx: &TardisContext) -> TardisResult<()> {
+        let mut funs = flow_constants::get_tardis_inst();
+        funs.begin().await?;
+        let flow_inst_detail = Self::get(flow_inst_id, &funs, ctx).await?;
         let mut new_vars: HashMap<String, Value> = HashMap::new();
         if let Some(old_current_vars) = &flow_inst_detail.current_vars {
             new_vars.extend(old_current_vars.clone());
@@ -1116,7 +1118,9 @@ impl FlowInstServ {
             ..Default::default()
         };
         funs.db().update_one(flow_inst, ctx).await.unwrap();
+        funs.commit().await?;
 
+        let funs = flow_constants::get_tardis_inst();
         if let Some(ws_client) = ws_flow_client().await {
             ws_client
                 .publish_front_change(
@@ -1127,7 +1131,7 @@ impl FlowInstServ {
                 )
                 .await?;
         } else {
-            FlowEventServ::do_front_change(flow_inst_id, ctx, funs).await?;
+            FlowEventServ::do_front_change(flow_inst_id, ctx, &funs).await?;
         }
 
         Ok(())
@@ -1214,7 +1218,6 @@ impl FlowInstServ {
                 Self::modify_current_vars(
                     &flow_inst.id,
                     &TardisFuns::json.json_to_obj::<HashMap<String, Value>>(new_vars).unwrap_or_default(),
-                    funs,
                     &ctx,
                 )
                 .await?;
@@ -1228,7 +1231,7 @@ impl FlowInstServ {
         let mut current_vars = Self::get(inst_id, funs, ctx).await?.current_vars;
         if current_vars.is_none() || !current_vars.clone().unwrap_or_default().contains_key(key) {
             let new_vars = Self::get_new_vars(inst_id, funs, ctx).await?;
-            Self::modify_current_vars(inst_id, &TardisFuns::json.json_to_obj::<HashMap<String, Value>>(new_vars).unwrap_or_default(), funs, ctx).await?;
+            Self::modify_current_vars(inst_id, &TardisFuns::json.json_to_obj::<HashMap<String, Value>>(new_vars).unwrap_or_default(), ctx).await?;
             current_vars = Self::get(inst_id, funs, ctx).await?.current_vars;
         }
 

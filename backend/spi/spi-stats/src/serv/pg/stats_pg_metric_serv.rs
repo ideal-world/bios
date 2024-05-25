@@ -256,9 +256,6 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
     // Not distinguish between dimensions and measures, used for fields in where and having conditions
     // 不区分维度和度量,用于where及having条件的字段
     let conf_info = conf_info.into_iter().map(|v| (v.col_key.clone().to_string(), v)).collect::<HashMap<String, StatsConfInfo>>();
-    info!("conf_info: {:?}", conf_info.keys());
-    info!("dim_conf_info: {:?}", dim_conf_info.keys());
-    info!("measure_conf_info: {:?}", measure_conf_info.keys());
     if query_req.select.iter().any(|i| !measure_conf_info.contains_key(&i.code.to_string()))
         // should be equivalent: 
         // original: || query_req.group.iter().any(|i| !dim_conf_info.contains_key(&i.code) || dim_conf_info.get(&i.code).unwrap().col_kind != StatsFactColKind::Dimension))
@@ -339,7 +336,14 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
                     })?
                 };
                 let column_name = if and_where.rel_external_id.clone().is_some_and(|i| !i.is_empty()) {
-                    format!("fact.ext ->> '{}'", &and_where.code)
+                    if col_conf.dim_multi_values.unwrap_or(false) {
+                        format!(
+                            "ARRAY(SELECT jsonb_array_elements_text(COALESCE((fact.ext ->> '{}')::jsonb, '[]'::jsonb)))",
+                            &and_where.code
+                        )
+                    } else {
+                        format!("fact.ext ->> '{}'", &and_where.code)
+                    }
                 } else {
                     format!("fact.{}", &and_where.code)
                 };
