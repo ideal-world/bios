@@ -38,16 +38,16 @@ pub async fn add(add_req: &mut SearchItemAddReq, funs: &TardisFunsInst, ctx: &Ta
     params.push(Value::from(add_req.title.as_str()));
 
     let pinyin_vec = to_pinyin_vec(add_req.title.as_str(), Pinyin::plain);
-    let content = add_req.title.as_str().split(' ').last().unwrap_or_default();
     if add_req.title.chars().count() > funs.conf::<SearchConfig>().split_strategy_rule_config.specify_word_length.unwrap_or(30) {
         params.push(Value::from(format!(
             "{} {} {} {}",
             add_req.title.as_str(),
             pinyin_vec.clone().into_iter().map(|pinyin| pinyin.chars().next().unwrap_or_default()).join(""),
-            generate_word_combinations_with_symbol(content, vec!["-", "_"]).join(" "),
+            generate_word_combinations_with_symbol(add_req.title.as_str(), vec!["-", "_"]).join(" "),
             generate_word_combinations(pinyin_vec).join(" ")
         )));
     } else {
+        let content = add_req.title.as_str().split(' ').last().unwrap_or_default();
         params.push(Value::from(format!(
             "{} {} {} {} {} {} {}",
             add_req.title.as_str(),
@@ -55,7 +55,7 @@ pub async fn add(add_req: &mut SearchItemAddReq, funs: &TardisFunsInst, ctx: &Ta
             generate_word_combinations_with_length(content, 1).join(" "),
             generate_word_combinations_with_length(content, 2).join(" "),
             generate_word_combinations_with_length(content, 3).join(" "),
-            generate_word_combinations_with_symbol(content, vec!["-", "_"]).join(" "),
+            generate_word_combinations_with_symbol(add_req.title.as_str(), vec!["-", "_"]).join(" "),
             generate_word_combinations(pinyin_vec).join(" ")
         )));
     }
@@ -127,16 +127,16 @@ pub async fn modify(tag: &str, key: &str, modify_req: &mut SearchItemModifyReq, 
         sql_sets.push(format!("title_tsv = to_tsvector('{word_combinations_way}', ${})", params.len() + 1));
 
         let pinyin_vec = to_pinyin_vec(title, Pinyin::plain);
-        let content = title.split(' ').last().unwrap_or_default();
         if title.chars().count() > funs.conf::<SearchConfig>().split_strategy_rule_config.specify_word_length.unwrap_or(30) {
             params.push(Value::from(format!(
                 "{} {} {} {}",
                 title,
                 pinyin_vec.clone().into_iter().map(|pinyin| pinyin.chars().next().unwrap_or_default()).join(""),
-                generate_word_combinations_with_symbol(content, vec!["-", "_"]).join(" "),
+                generate_word_combinations_with_symbol(title.as_str(), vec!["-", "_"]).join(" "),
                 generate_word_combinations(pinyin_vec).join(" ")
             )));
         } else {
+            let content = title.split(' ').last().unwrap_or_default();
             params.push(Value::from(format!(
                 "{} {} {} {} {} {} {}",
                 title,
@@ -144,7 +144,7 @@ pub async fn modify(tag: &str, key: &str, modify_req: &mut SearchItemModifyReq, 
                 generate_word_combinations_with_length(content, 1).join(" "),
                 generate_word_combinations_with_length(content, 2).join(" "),
                 generate_word_combinations_with_length(content, 3).join(" "),
-                generate_word_combinations_with_symbol(content, vec!["-", "_"]).join(" "),
+                generate_word_combinations_with_symbol(title.as_str(), vec!["-", "_"]).join(" "),
                 generate_word_combinations(pinyin_vec).join(" ")
             )));
         }
