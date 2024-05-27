@@ -44,7 +44,7 @@ pub async fn add(add_req: &mut SearchItemAddReq, funs: &TardisFunsInst, ctx: &Ta
             "{} {} {} {}",
             add_req.title.as_str(),
             pinyin_vec.clone().into_iter().map(|pinyin| pinyin.chars().next().unwrap_or_default()).join(""),
-            generate_word_combinations_with_symbol(content, vec!["-", "_"]).join(" "),
+            generate_word_combinations_with_symbol(add_req.title.as_str(), vec!["-", "_"]).join(" "),
             generate_word_combinations(pinyin_vec).join(" ")
         )));
     } else {
@@ -55,7 +55,7 @@ pub async fn add(add_req: &mut SearchItemAddReq, funs: &TardisFunsInst, ctx: &Ta
             generate_word_combinations_with_length(content, 1).join(" "),
             generate_word_combinations_with_length(content, 2).join(" "),
             generate_word_combinations_with_length(content, 3).join(" "),
-            generate_word_combinations_with_symbol(content, vec!["-", "_"]).join(" "),
+            generate_word_combinations_with_symbol(add_req.title.as_str(), vec!["-", "_"]).join(" "),
             generate_word_combinations(pinyin_vec).join(" ")
         )));
     }
@@ -133,7 +133,7 @@ pub async fn modify(tag: &str, key: &str, modify_req: &mut SearchItemModifyReq, 
                 "{} {} {} {}",
                 title,
                 pinyin_vec.clone().into_iter().map(|pinyin| pinyin.chars().next().unwrap_or_default()).join(""),
-                generate_word_combinations_with_symbol(content, vec!["-", "_"]).join(" "),
+                generate_word_combinations_with_symbol(title.as_str(), vec!["-", "_"]).join(" "),
                 generate_word_combinations(pinyin_vec).join(" ")
             )));
         } else {
@@ -144,7 +144,7 @@ pub async fn modify(tag: &str, key: &str, modify_req: &mut SearchItemModifyReq, 
                 generate_word_combinations_with_length(content, 1).join(" "),
                 generate_word_combinations_with_length(content, 2).join(" "),
                 generate_word_combinations_with_length(content, 3).join(" "),
-                generate_word_combinations_with_symbol(content, vec!["-", "_"]).join(" "),
+                generate_word_combinations_with_symbol(title.as_str(), vec!["-", "_"]).join(" "),
                 generate_word_combinations(pinyin_vec).join(" ")
             )));
         }
