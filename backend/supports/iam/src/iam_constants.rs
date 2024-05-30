@@ -56,6 +56,8 @@ pub const OPENAPI_GATEWAY_PLUGIN_LIMIT: &str = "redis-limit:opres-limit";
 pub const OPENAPI_GATEWAY_PLUGIN_COUNT: &str = "redis-count:opres-count";
 pub const OPENAPI_GATEWAY_PLUGIN_DYNAMIC_ROUTE: &str = "redis-dynamic-route:opres-dynamic-route";
 
+pub const DEFAULT_V_CODE_CD_IN_SEC: u32 = 60;
+
 pub fn get_tardis_inst() -> TardisFunsInst {
     TardisFuns::inst_with_db_conn(COMPONENT_CODE.to_string(), None)
 }

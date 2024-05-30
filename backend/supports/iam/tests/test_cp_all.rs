@@ -379,7 +379,7 @@ pub async fn test(sysadmin_info: (&str, &str), system_admin_context: &TardisCont
     assert!(vcode.is_some());
 
     info!("【test_cp_all】 : Resend Activation Mail");
-    IamCertMailVCodeServ::resend_activation_mail(&tenant_admin_context.owner, "i@sunisle.org", &funs, &tenant_admin_context).await?;
+    IamCertMailVCodeServ::resend_activation_mail(&tenant_admin_context.owner, "i@sunisle.org", None, &funs, &tenant_admin_context).await?;
 
     let vcode = RbumCertServ::get_vcode_in_cache("i@sunisle.org", &tenant_admin_context.own_paths, &funs).await?;
     assert!(vcode.is_some());
@@ -388,7 +388,7 @@ pub async fn test(sysadmin_info: (&str, &str), system_admin_context: &TardisCont
     IamCertMailVCodeServ::activate_mail("i@sunisle.org", &vcode.unwrap(), &funs, &tenant_admin_context).await?;
 
     info!("【test_cp_all】 : Send Login Mail");
-    IamCertMailVCodeServ::send_login_mail("i@sunisle.org", &tenant_admin_context.own_paths, &funs).await?;
+    IamCertMailVCodeServ::send_login_mail("i@sunisle.org", &tenant_admin_context.own_paths, None,&funs).await?;
     let vcode = RbumCertServ::get_vcode_in_cache("i@sunisle.org", &tenant_admin_context.own_paths, &funs).await?;
     assert!(vcode.is_some());
 
@@ -431,7 +431,7 @@ pub async fn test(sysadmin_info: (&str, &str), system_admin_context: &TardisCont
     assert!(IamCpCertUserPwdServ::validate_by_user_pwd(sysadmin_info.1, false, &funs, &tenant_admin_context).await.is_err());
     IamCpCertUserPwdServ::validate_by_user_pwd(tenant_admin_pwd.as_str(), false, &funs, &tenant_admin_context).await?;
     info!("【test_cp_all】 : Send Bind Mail");
-    IamCertMailVCodeServ::send_bind_mail("i@sunisle.org", &funs, &tenant_admin_context).await?;
+    IamCertMailVCodeServ::send_bind_mail("i@sunisle.org", None,&funs, &tenant_admin_context).await?;
 
     let vcode = RbumCertServ::get_vcode_in_cache("i@sunisle.org", &tenant_admin_context.own_paths, &funs).await?;
     assert!(vcode.is_some());
@@ -440,7 +440,7 @@ pub async fn test(sysadmin_info: (&str, &str), system_admin_context: &TardisCont
     let mail_vcode_cert_id = IamCertMailVCodeServ::bind_mail("i@sunisle.org", &vcode.unwrap(), &funs, &tenant_admin_context).await?;
 
     info!("【test_cp_all】 : Send Login Mail");
-    IamCertMailVCodeServ::send_login_mail("i@sunisle.org", &tenant_admin_context.own_paths, &funs).await?;
+    IamCertMailVCodeServ::send_login_mail("i@sunisle.org", &tenant_admin_context.own_paths, None, &funs).await?;
     let vcode = RbumCertServ::get_vcode_in_cache("i@sunisle.org", &tenant_admin_context.own_paths, &funs).await?;
     assert!(vcode.is_some());
 

@@ -153,6 +153,9 @@ pub(crate) async fn find_job(code: Option<String>, page_number: u32, page_size: 
                         code: record.key.replace(KV_KEY_CODE, ""),
                         cron: job.cron,
                         callback_url: job.callback_url,
+                        callback_headers: job.callback_headers,
+                        callback_method: job.callback_method,
+                        callback_body: job.callback_body,
                         create_time: Some(record.create_time),
                         update_time: Some(record.update_time),
                         enable_time: job.enable_time,
@@ -162,6 +165,9 @@ pub(crate) async fn find_job(code: Option<String>, page_number: u32, page_size: 
                         code: record.key.replace(KV_KEY_CODE, ""),
                         cron: "".to_string(),
                         callback_url: "".to_string(),
+                        callback_headers: HashMap::new(),
+                        callback_method: "GET".to_string(),
+                        callback_body: None,
                         create_time: Some(record.create_time),
                         update_time: Some(record.update_time),
                         enable_time: None,
@@ -367,7 +373,7 @@ impl OwnedScheduleTaskServ {
         if has_job {
             self.delete(&job_config.code).await?;
         }
-        let callback_url = job_config.callback_url.clone();
+        let callback_req = job_config.build_request()?;
         let code = job_config.code.to_string();
         let ctx = TardisContext {
             own_paths: "".to_string(),
@@ -377,18 +383,16 @@ impl OwnedScheduleTaskServ {
             groups: vec![],
             ..Default::default()
         };
-        let headers = [("Tardis-Context".to_string(), TardisFuns::crypto.base64.encode(TardisFuns::json.obj_to_string(&ctx)?))];
         let lock_key = OwnedScheduleTaskServ::gen_distributed_lock_key(&code, config);
         let distributed_lock_expire_sec = config.distributed_lock_expire_sec;
         let enable_time = job_config.enable_time;
         let disable_time = job_config.disable_time;
         // startup cron scheduler
         let job = Job::new_async(job_config.cron.as_str(), move |_uuid, _scheduler| {
-            let callback_url = callback_url.clone();
+            let callback_req = callback_req.try_clone().expect("body should be a string");
             let code = code.clone();
             let lock_key = lock_key.clone();
             let ctx = ctx.clone();
-            let headers = headers.clone();
             if let Some(enable_time) = enable_time {
                 if enable_time > Utc::now() {
                     return Box::pin(async move {
@@ -438,28 +442,52 @@ impl OwnedScheduleTaskServ {
                             return;
                         };
                         // 2. request webhook
-                        let Ok(task_msg) = TardisFuns::web_client().get_to_str(callback_url.as_str(), headers.clone()).await else {
-                            return;
-                        };
-                        // 3. write log exec end
-                        let Ok(_) = SpiLogClient::add(
-                            "schedule_task",
-                            task_msg.body.unwrap_or_default().as_str(),
-                            None,
-                            None,
-                            Some(code.to_string()),
-                            Some("exec-end".to_string()),
-                            Some(tardis::chrono::Utc::now().to_rfc3339()),
-                            Some(Utc::now().to_rfc3339()),
-                            None,
-                            None,
-                            &funs,
-                            &ctx,
-                        )
-                        .await
-                        else {
-                            return;
-                        };
+                        match TardisFuns::web_client().raw().execute(callback_req).await {
+                            Ok(resp) => {
+                                let code = resp.status();
+                                let content = resp.text().await.unwrap_or_default();
+                                // 3.1. write log exec end
+                                let Ok(_) = SpiLogClient::add(
+                                    "schedule_task",
+                                    &content,
+                                    None,
+                                    None,
+                                    Some(code.to_string()),
+                                    Some("exec-end".to_string()),
+                                    Some(tardis::chrono::Utc::now().to_rfc3339()),
+                                    Some(Utc::now().to_rfc3339()),
+                                    None,
+                                    None,
+                                    &funs,
+                                    &ctx,
+                                )
+                                .await
+                                else {
+                                    return;
+                                };
+                            }
+                            Err(e) => {
+                                // 3.2. write log exec end
+                                let Ok(_) = SpiLogClient::add(
+                                    "schedule_task",
+                                    &e.to_string(),
+                                    None,
+                                    None,
+                                    Some(code.to_string()),
+                                    Some("exec-fail".to_string()),
+                                    Some(tardis::chrono::Utc::now().to_rfc3339()),
+                                    Some(Utc::now().to_rfc3339()),
+                                    None,
+                                    None,
+                                    &funs,
+                                    &ctx,
+                                )
+                                .await
+                                else {
+                                    return;
+                                };
+                            }
+                        }
                         trace!("executed schedule task {code}");
                     }
                     Ok(false) => {

@@ -64,6 +64,7 @@ pub struct IamConfig {
     pub phone_template_cert_login_title: String,
     #[deprecated]
     pub phone_template_cert_login_content: String,
+    pub vcode_cd_in_sec: u32,
     pub sms_base_url: String,
     pub sms_path: String,
     pub sms_pwd_path: String,
@@ -183,6 +184,7 @@ impl Default for IamConfig {
             crypto_conf: CryptoConf::default(),
             cache_key_gateway_rule_info_: "sg:plugin:".to_string(),
             gateway_openapi_path: "/op-api".to_string(),
+            vcode_cd_in_sec: crate::iam_constants::DEFAULT_V_CODE_CD_IN_SEC,
         }
     }
 }
