@@ -16,6 +16,7 @@ fn new_task(code: &str) -> ScheduleJobAddOrModifyReq {
         callback_url: "https://127.0.0.1:8080/callback/inc".into(),
         enable_time: Utc::now().checked_add_signed(chrono::Duration::seconds(5)),
         disable_time: Utc::now().checked_add_signed(chrono::Duration::seconds(10)),
+        ..Default::default()
     }
 }
 
