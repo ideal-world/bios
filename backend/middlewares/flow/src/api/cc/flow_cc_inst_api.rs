@@ -22,6 +22,7 @@ pub struct FlowCcInstApi;
 #[poem_openapi::OpenApi(prefix_path = "/cc/inst")]
 impl FlowCcInstApi {
     /// Start Instance(Return Instance ID)
+    ///
     /// 启动实例(返回实例ID)
     #[oai(path = "/", method = "post")]
     async fn start(&self, add_req: Json<FlowInstStartReq>, ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<String> {
@@ -33,6 +34,7 @@ impl FlowCcInstApi {
     }
 
     /// Abort Instance
+    ///
     /// 终止实例
     #[oai(path = "/:flow_inst_id", method = "put")]
     async fn abort(&self, flow_inst_id: Path<String>, abort_req: Json<FlowInstAbortReq>, ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<Void> {
@@ -44,6 +46,7 @@ impl FlowCcInstApi {
     }
 
     /// Get Instance By Instance Id
+    ///
     /// 获取实例信息
     #[oai(path = "/:flow_inst_id", method = "get")]
     async fn get(&self, flow_inst_id: Path<String>, ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<FlowInstDetailResp> {
@@ -53,6 +56,7 @@ impl FlowCcInstApi {
     }
 
     /// Find Instances
+    ///
     /// 获取实例列表
     #[oai(path = "/", method = "get")]
     async fn paginate(
@@ -72,6 +76,7 @@ impl FlowCcInstApi {
     }
 
     /// Find Next Transitions
+    ///
     /// 获取下一个流转状态列表
     #[oai(path = "/:flow_inst_id/transition/next", method = "put")]
     async fn find_next_transitions(
@@ -87,6 +92,7 @@ impl FlowCcInstApi {
     }
 
     /// Find the state and transfer information of the specified model in batch
+    ///
     /// 批量获取指定模型的状态及流转信息
     #[oai(path = "/batch/state_transitions", method = "put")]
     async fn find_state_and_next_transitions(
@@ -101,6 +107,7 @@ impl FlowCcInstApi {
     }
 
     /// Transfer State By Transaction Id
+    ///
     /// 通过动作ID流转状态
     #[oai(path = "/:flow_inst_id/transition/transfer", method = "put")]
     async fn transfer(
@@ -118,6 +125,7 @@ impl FlowCcInstApi {
     }
 
     /// Batch transfer State By Transaction Id
+    ///
     /// 批量流转
     #[oai(path = "/batch/:flow_inst_ids/transition/transfer", method = "put")]
     async fn batch_transfer(
@@ -144,6 +152,7 @@ impl FlowCcInstApi {
     }
 
     /// Modify Assigned [Deprecated]
+    ///
     /// 同步执行人信息 [已废弃]
     #[oai(path = "/:flow_inst_id/transition/modify_assigned", method = "post")]
     async fn modify_assigned(
@@ -159,6 +168,7 @@ impl FlowCcInstApi {
     }
 
     /// Modify list of variables
+    ///
     /// 同步当前变量列表
     #[oai(path = "/:flow_inst_id/modify_current_vars", method = "patch")]
     async fn modify_current_vars(
@@ -168,7 +178,6 @@ impl FlowCcInstApi {
         ctx: TardisContextExtractor,
         _request: &Request,
     ) -> TardisApiResult<Void> {
-        let mut funs = flow_constants::get_tardis_inst();
         FlowInstServ::modify_current_vars(&flow_inst_id.0, &modify_req.0.vars, &ctx.0).await?;
         TardisResp::ok(Void {})
     }
