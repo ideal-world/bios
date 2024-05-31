@@ -151,6 +151,10 @@ pub async fn merge_state_by_name(funs: &TardisFunsInst, ctx: &TardisContext) -> 
                     .await?
                     .into_iter()
                     .map(|rel| async move {
+                        let mock_ctx = TardisContext {
+                            own_paths: rel.rel.own_paths,
+                            ..Default::default()
+                        };
                         FlowRelServ::add_simple_rel(
                             &FlowRelKind::FlowModelState,
                             &rel.rel.from_rbum_id,
@@ -161,11 +165,11 @@ pub async fn merge_state_by_name(funs: &TardisFunsInst, ctx: &TardisContext) -> 
                             true,
                             Some(json!(rel.rel.ext).to_string()),
                             funs,
-                            ctx,
+                            &mock_ctx,
                         )
                         .await
                         .unwrap();
-                        FlowRelServ::delete_simple_rel(&FlowRelKind::FlowModelState, &rel.rel.from_rbum_id, &rel.rel.to_rbum_item_id, funs, ctx).await.unwrap();
+                        FlowRelServ::delete_simple_rel(&FlowRelKind::FlowModelState, &rel.rel.from_rbum_id, &rel.rel.to_rbum_item_id, funs, &mock_ctx).await.unwrap();
                     })
                     .collect::<Vec<_>>(),
             )
