@@ -516,7 +516,7 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
             {
                 order_fragments.push(format!("{} {}", sort_item.field, sort_item.order.to_sql()));
             } else {
-                order_fragments.push(format!("ext -> '{}' {}", sort_item.field, sort_item.order.to_sql()));
+                order_fragments.push(format!("ext ->> '{}' {}", sort_item.field, sort_item.order.to_sql()));
             }
         }
     }
@@ -1183,7 +1183,7 @@ pub async fn query_metrics(query_req: &SearchQueryMetricsReq, funs: &TardisFunsI
                     } else if ext_item.op == BasicQueryOpKind::IsNull {
                         sql_and_where.push(format!("fact.{} is null", ext_item.field));
                     } else if ext_item.op == BasicQueryOpKind::IsNotNull {
-                        sql_and_where.push(format!("(fact.{} is not null or {} != '')", ext_item.field, ext_item.field));
+                        sql_and_where.push(format!("(fact.{} is not null)", ext_item.field));
                     } else if ext_item.op == BasicQueryOpKind::IsNullOrEmpty {
                         sql_and_where.push(format!("(fact.{} is null or {} = '')", ext_item.field, ext_item.field));
                     } else {
