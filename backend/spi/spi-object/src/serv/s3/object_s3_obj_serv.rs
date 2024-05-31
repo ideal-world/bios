@@ -13,7 +13,8 @@ pub async fn presign_obj_url(
     _max_width: Option<String>,
     _max_height: Option<String>,
     exp_secs: u32,
-    private: bool,
+    private: Option<bool>,
+    special: Option<bool>,
     funs: &TardisFunsInst,
     ctx: &TardisContext,
     inst: &SpiBsInst,
@@ -21,12 +22,24 @@ pub async fn presign_obj_url(
     let bs_inst = inst.inst::<TardisOSClient>();
     let spi_bs = SpiBsServ::get_bs_by_rel(&ctx.ak, None, funs, ctx).await?;
     let client = bs_inst.0;
-    let bucket_name = common::get_isolation_flag_from_ext(bs_inst.1).map(|bucket_name_prefix| format!("{}-{}", bucket_name_prefix, if private { "pri" } else { "pub" }));
+    let bucket_name = common::get_isolation_flag_from_ext(bs_inst.1).map(|bucket_name_prefix| {
+        format!(
+            "{}-{}",
+            bucket_name_prefix,
+            if special.unwrap_or_else(|| false) {
+                "spe"
+            } else if private.unwrap_or_else(|| true) {
+                "pri"
+            } else {
+                "pub"
+            }
+        )
+    });
     match presign_kind {
         ObjectObjPresignKind::Upload => client.object_create_url(object_path, exp_secs, bucket_name.as_deref()),
         ObjectObjPresignKind::Delete => client.object_delete_url(object_path, exp_secs, bucket_name.as_deref()),
         ObjectObjPresignKind::View => {
-            if private {
+            if private.unwrap_or_else(|| true) {
                 client.object_get_url(object_path, exp_secs, bucket_name.as_deref())
             } else {
                 let Some(bucket_name) = bucket_name else {
