@@ -1,11 +1,17 @@
+use std::{collections::HashMap, str::FromStr};
+
 use bios_sdk_invoke::clients::spi_kv_client::KvItemDetailResp;
 use serde::{Deserialize, Serialize};
 use tardis::{
-    basic::{error::TardisError, field::TrimString},
+    basic::{error::TardisError, field::TrimString, result::TardisResult},
     chrono::{self, DateTime, Utc},
     db::sea_orm,
     serde_json::Value,
-    web::poem_openapi,
+    url::Url,
+    web::{
+        poem_openapi,
+        reqwest::{header, Method, Version},
+    },
 };
 
 use crate::schedule_constants::KV_KEY_CODE;
@@ -20,7 +26,7 @@ pub(crate) struct KvItemSummaryResp {
     pub update_time: DateTime<Utc>,
 }
 
-#[derive(poem_openapi::Object, Serialize, Deserialize, Clone, Debug)]
+#[derive(poem_openapi::Object, Serialize, Deserialize, Clone, Debug, Default)]
 pub struct ScheduleJobAddOrModifyReq {
     #[oai(validator(min_length = "2"))]
     pub code: TrimString,
@@ -28,8 +34,34 @@ pub struct ScheduleJobAddOrModifyReq {
     pub cron: String,
     #[oai(validator(min_length = "2"))]
     pub callback_url: String,
+    #[oai(default)]
+    #[serde(default)]
+    pub callback_headers: HashMap<String, String>,
+    #[oai(default)]
+    #[serde(default)]
+    pub callback_method: String,
+    #[oai(default)]
+    #[serde(default)]
+    pub callback_body: Option<String>,
+    #[oai(default)]
+    #[serde(default)]
     pub enable_time: Option<DateTime<Utc>>,
+    #[oai(default)]
+    #[serde(default)]
     pub disable_time: Option<DateTime<Utc>>,
+}
+
+impl ScheduleJobAddOrModifyReq {
+    pub fn build_request(&self) -> TardisResult<tardis::web::reqwest::Request> {
+        let method = Method::from_bytes(self.callback_method.as_bytes()).unwrap_or(Method::GET);
+        let url = Url::parse(&self.callback_url)?;
+        let mut request = tardis::web::reqwest::Request::new(method, url);
+        if let Some(body) = &self.callback_body {
+            request.body_mut().replace(tardis::web::reqwest::Body::from(body.to_string()));
+        }
+        request.headers_mut().extend(self.callback_headers.iter().filter_map(|(k, v)| Some((header::HeaderName::from_str(k).ok()?, header::HeaderValue::from_str(v).ok()?))));
+        Ok(request)
+    }
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Clone, Debug)]
@@ -46,6 +78,9 @@ pub struct ScheduleJobInfoResp {
     pub code: String,
     pub cron: String,
     pub callback_url: String,
+    pub callback_headers: HashMap<String, String>,
+    pub callback_method: String,
+    pub callback_body: Option<String>,
     pub enable_time: Option<DateTime<Utc>>,
     pub disable_time: Option<DateTime<Utc>>,
     pub create_time: Option<chrono::DateTime<Utc>>,
@@ -104,6 +139,9 @@ impl ScheduleJobInfoResp {
             code: self.code.clone().into(),
             cron: self.cron.clone(),
             callback_url: self.callback_url.clone(),
+            callback_headers: self.callback_headers.clone(),
+            callback_method: self.callback_method.clone(),
+            callback_body: self.callback_body.clone(),
             enable_time: self.enable_time,
             disable_time: self.disable_time,
         }
