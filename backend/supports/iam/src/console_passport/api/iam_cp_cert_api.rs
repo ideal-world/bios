@@ -277,8 +277,9 @@ impl IamCpCertApi {
     async fn send_bind_mail(&self, req: Json<IamCertMailVCodeAddReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         let mut funs = iam_constants::get_tardis_inst();
+        let config = funs.conf::<crate::iam_config::IamConfig>();
         funs.begin().await?;
-        IamCertMailVCodeServ::send_bind_mail(&req.0.mail, &funs, &ctx.0).await?;
+        IamCertMailVCodeServ::send_bind_mail(&req.0.mail, Some(config.vcode_cd_in_sec), &funs, &ctx.0).await?;
         funs.commit().await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
@@ -302,8 +303,9 @@ impl IamCpCertApi {
     #[oai(path = "/login/mailvcode/vcode", method = "post")]
     async fn send_login_mail(&self, login_req: Json<IamCpMailVCodeLoginGenVCodeReq>) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
+        let config = funs.conf::<crate::iam_config::IamConfig>();
         funs.begin().await?;
-        IamCertMailVCodeServ::send_login_mail(&login_req.0.mail, &login_req.0.tenant_id.unwrap_or("".to_string()), &funs).await?;
+        IamCertMailVCodeServ::send_login_mail(&login_req.0.mail, &login_req.0.tenant_id.unwrap_or("".to_string()), Some(config.vcode_cd_in_sec), &funs).await?;
         funs.commit().await?;
         TardisResp::ok(Void {})
     }
@@ -338,8 +340,9 @@ impl IamCpCertApi {
     async fn send_bind_phone(&self, req: Json<IamCertPhoneVCodeAddReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         let mut funs = iam_constants::get_tardis_inst();
+        let config = funs.conf::<crate::iam_config::IamConfig>();
         funs.begin().await?;
-        IamCertPhoneVCodeServ::send_bind_phone(&req.0.phone, &funs, &ctx.0).await?;
+        IamCertPhoneVCodeServ::send_bind_phone(&req.0.phone, Some(config.vcode_cd_in_sec), &funs, &ctx.0).await?;
         funs.commit().await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
@@ -363,8 +366,9 @@ impl IamCpCertApi {
     #[oai(path = "/login/phonecode/vcode", method = "post")]
     async fn send_login_phone(&self, login_req: Json<IamCpPhoneVCodeLoginGenVCodeReq>) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
+        let config = funs.conf::<crate::iam_config::IamConfig>();
         funs.begin().await?;
-        IamCertPhoneVCodeServ::send_login_phone(&login_req.0.phone, &login_req.0.tenant_id.unwrap_or("".to_string()), &funs).await?;
+        IamCertPhoneVCodeServ::send_login_phone(&login_req.0.phone, &login_req.0.tenant_id.unwrap_or("".to_string()), Some(config.vcode_cd_in_sec), &funs).await?;
         funs.commit().await?;
         TardisResp::ok(Void {})
     }
