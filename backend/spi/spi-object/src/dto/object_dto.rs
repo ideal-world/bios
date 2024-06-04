@@ -38,3 +38,12 @@ pub struct ObjectCompleteMultipartUploadReq {
     pub private: Option<bool>,
     pub special: Option<bool>,
 }
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct ObjectCopyReq {
+    pub specified_bucket_name: Option<String>,
+    pub from: String,
+    pub to: String,
+    pub private: Option<bool>,
+    pub special: Option<bool>,
+}

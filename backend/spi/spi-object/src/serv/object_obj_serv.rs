@@ -54,32 +54,80 @@ pub async fn initiate_multipart_upload(req: ObjectInitiateMultipartUploadReq, fu
     }
 }
 
-pub async fn batch_build_create_presign_url(
-    req: ObjectBatchBuildCreatePresignUrlReq,
-    funs: &TardisFunsInst,
-    ctx: &TardisContext,
-) -> TardisResult<Vec<String>> {
+pub async fn batch_build_create_presign_url(req: ObjectBatchBuildCreatePresignUrlReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<String>> {
     let inst = funs.init(ctx, true, object_initializer::init_fun).await?;
     match inst.kind_code() {
         #[cfg(feature = "spi-s3")]
         object_constants::SPI_S3_KIND_CODE => {
-            s3::object_s3_obj_serv::batch_build_create_presign_url(req.specified_bucket_name, &req.object_path, &req.upload_id, req.part_number, req.expire_sec, req.private, req.special, funs, ctx, &inst).await
+            s3::object_s3_obj_serv::batch_build_create_presign_url(
+                req.specified_bucket_name,
+                &req.object_path,
+                &req.upload_id,
+                req.part_number,
+                req.expire_sec,
+                req.private,
+                req.special,
+                funs,
+                ctx,
+                &inst,
+            )
+            .await
         }
         kind_code => Err(funs.bs_not_implemented(kind_code)),
     }
 }
 
-pub async fn complete_multipart_upload(
-    req: ObjectCompleteMultipartUploadReq,
+pub async fn complete_multipart_upload(req: ObjectCompleteMultipartUploadReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    let inst = funs.init(ctx, true, object_initializer::init_fun).await?;
+    match inst.kind_code() {
+        #[cfg(feature = "spi-s3")]
+        object_constants::SPI_S3_KIND_CODE => {
+            s3::object_s3_obj_serv::complete_multipart_upload(
+                req.specified_bucket_name,
+                &req.object_path,
+                &req.upload_id,
+                req.parts,
+                req.private,
+                req.special,
+                funs,
+                ctx,
+                &inst,
+            )
+            .await
+        }
+        kind_code => Err(funs.bs_not_implemented(kind_code)),
+    }
+}
+
+pub async fn object_delete(
+    specified_bucket_name: Option<String>,
+    object_path: String,
+    private: Option<bool>,
+    special: Option<bool>,
     funs: &TardisFunsInst,
     ctx: &TardisContext,
 ) -> TardisResult<()> {
     let inst = funs.init(ctx, true, object_initializer::init_fun).await?;
     match inst.kind_code() {
         #[cfg(feature = "spi-s3")]
-        object_constants::SPI_S3_KIND_CODE => {
-            s3::object_s3_obj_serv::complete_multipart_upload(req.specified_bucket_name, &req.object_path, &req.upload_id, req.parts, req.private, req.special, funs, ctx, &inst).await
-        }
+        object_constants::SPI_S3_KIND_CODE => s3::object_s3_obj_serv::object_delete(specified_bucket_name, &object_path, private, special, funs, ctx, &inst).await,
+        kind_code => Err(funs.bs_not_implemented(kind_code)),
+    }
+}
+
+pub async fn object_copy(
+    specified_bucket_name: Option<String>,
+    from: String,
+    to: String,
+    private: Option<bool>,
+    special: Option<bool>,
+    funs: &TardisFunsInst,
+    ctx: &TardisContext,
+) -> TardisResult<()> {
+    let inst = funs.init(ctx, true, object_initializer::init_fun).await?;
+    match inst.kind_code() {
+        #[cfg(feature = "spi-s3")]
+        object_constants::SPI_S3_KIND_CODE => s3::object_s3_obj_serv::object_copy(specified_bucket_name, &from, &to, private, special, funs, ctx, &inst).await,
         kind_code => Err(funs.bs_not_implemented(kind_code)),
     }
 }

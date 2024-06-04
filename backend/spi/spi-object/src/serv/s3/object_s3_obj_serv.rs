@@ -43,6 +43,37 @@ pub async fn presign_obj_url(
     }
 }
 
+pub async fn object_delete(
+    specified_bucket_name: Option<String>,
+    object_path: &str,
+    private: Option<bool>,
+    special: Option<bool>,
+    _funs: &TardisFunsInst,
+    _ctx: &TardisContext,
+    inst: &SpiBsInst,
+) -> TardisResult<()> {
+    let bs_inst = inst.inst::<TardisOSClient>();
+    let client = bs_inst.0;
+    let bucket_name = get_bucket_name(specified_bucket_name, private, special, inst);
+    client.object_delete(object_path, bucket_name.as_deref()).await
+}
+
+pub async fn object_copy(
+    specified_bucket_name: Option<String>,
+    from: &str,
+    to: &str,
+    private: Option<bool>,
+    special: Option<bool>,
+    _funs: &TardisFunsInst,
+    _ctx: &TardisContext,
+    inst: &SpiBsInst,
+) -> TardisResult<()> {
+    let bs_inst = inst.inst::<TardisOSClient>();
+    let client = bs_inst.0;
+    let bucket_name = get_bucket_name(specified_bucket_name, private, special, inst);
+    client.object_copy(from, to, bucket_name.as_deref()).await
+}
+
 pub async fn initiate_multipart_upload(
     specified_bucket_name: Option<String>,
     object_path: &str,
