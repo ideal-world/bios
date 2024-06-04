@@ -13,6 +13,8 @@ pub struct EventConfig {
     pub event_url: String,
     pub event_bus_sk: String,
     pub spi_app_id: String,
+    pub resend_threshold: u32,
+    pub resend_interval_sec: Option<u32>,
 }
 
 impl Default for EventConfig {
@@ -24,6 +26,8 @@ impl Default for EventConfig {
             event_url: "".to_string(),
             event_bus_sk: "".to_string(),
             spi_app_id: "".to_string(),
+            resend_threshold: 3,
+            resend_interval_sec: None,
         }
     }
 }
