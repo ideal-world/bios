@@ -1215,12 +1215,7 @@ impl FlowInstServ {
                     ..global_ctx.clone()
                 };
                 let new_vars = Self::get_new_vars(&flow_inst.id, funs, &ctx).await?;
-                Self::modify_current_vars(
-                    &flow_inst.id,
-                    &TardisFuns::json.json_to_obj::<HashMap<String, Value>>(new_vars).unwrap_or_default(),
-                    &ctx,
-                )
-                .await?;
+                Self::modify_current_vars(&flow_inst.id, &TardisFuns::json.json_to_obj::<HashMap<String, Value>>(new_vars).unwrap_or_default(), &ctx).await?;
             }
         }
 

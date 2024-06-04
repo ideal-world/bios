@@ -1,10 +1,11 @@
 use tardis::web::context_extractor::TardisContextExtractor;
 
+use tardis::web::poem::web::Json;
 use tardis::web::poem_openapi;
 use tardis::web::poem_openapi::param::Query;
-use tardis::web::web_resp::{TardisApiResult, TardisResp};
+use tardis::web::web_resp::{TardisApiResult, TardisResp, Void};
 
-use crate::dto::object_dto::ObjectObjPresignKind;
+use crate::dto::object_dto::{ObjectBatchBuildCreatePresignUrlReq, ObjectCompleteMultipartUploadReq, ObjectInitiateMultipartUploadReq, ObjectObjPresignKind};
 use crate::serv::object_obj_serv;
 #[derive(Clone)]
 pub struct ObjectCiObjApi;
@@ -17,6 +18,7 @@ impl ObjectCiObjApi {
     async fn presign_put_obj_url(
         &self,
         object_path: Query<String>,
+        bucket_name: Query<Option<String>>,
         exp_secs: Query<u32>,
         private: Query<Option<bool>>,
         special: Query<Option<bool>>,
@@ -25,6 +27,7 @@ impl ObjectCiObjApi {
         let funs = crate::get_tardis_inst();
         let url = object_obj_serv::presign_obj_url(
             ObjectObjPresignKind::Upload,
+            bucket_name.0,
             object_path.0.trim(),
             None,
             None,
@@ -43,6 +46,7 @@ impl ObjectCiObjApi {
     async fn presign_delete_obj_url(
         &self,
         object_path: Query<String>,
+        bucket_name: Query<Option<String>>,
         exp_secs: Query<u32>,
         private: Query<Option<bool>>,
         special: Query<Option<bool>>,
@@ -51,6 +55,7 @@ impl ObjectCiObjApi {
         let funs = crate::get_tardis_inst();
         let url = object_obj_serv::presign_obj_url(
             ObjectObjPresignKind::Delete,
+            bucket_name.0,
             object_path.0.trim(),
             None,
             None,
@@ -69,6 +74,7 @@ impl ObjectCiObjApi {
     async fn presign_view_obj_url(
         &self,
         object_path: Query<String>,
+        bucket_name: Query<Option<String>>,
         exp_secs: Query<u32>,
         private: Query<Option<bool>>,
         special: Query<Option<bool>>,
@@ -77,6 +83,7 @@ impl ObjectCiObjApi {
         let funs = crate::get_tardis_inst();
         let url = object_obj_serv::presign_obj_url(
             ObjectObjPresignKind::View,
+            bucket_name.0,
             object_path.0.trim(),
             None,
             None,
@@ -88,6 +95,30 @@ impl ObjectCiObjApi {
         )
         .await?;
         TardisResp::ok(url)
+    }
+
+    /// Initiate a Multipart Upload Task
+    #[oai(path = "/multi_upload/initiate_multipart_upload", method = "post")]
+    async fn initiate_multipart_upload(&self, req: Json<ObjectInitiateMultipartUploadReq>, ctx: TardisContextExtractor) -> TardisApiResult<String> {
+        let funs = crate::get_tardis_inst();
+        let upload_id = object_obj_serv::initiate_multipart_upload(req.0, &funs, &ctx.0).await?;
+        TardisResp::ok(upload_id)
+    }
+
+    /// Create pre-signed URLs for each part
+    #[oai(path = "/multi_upload/batch_build_create_presign_url", method = "post")]
+    async fn batch_build_create_presign_url(&self, req: Json<ObjectBatchBuildCreatePresignUrlReq>, ctx: TardisContextExtractor) -> TardisApiResult<Vec<String>> {
+        let funs = crate::get_tardis_inst();
+        let presign_urls = object_obj_serv::batch_build_create_presign_url(req.0, &funs, &ctx.0).await?;
+        TardisResp::ok(presign_urls)
+    }
+
+    /// Complete Multipart Upload Task
+    #[oai(path = "/multi_upload/batch_build_create_presign_url", method = "post")]
+    async fn complete_multipart_upload(&self, req: Json<ObjectCompleteMultipartUploadReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+        let funs = crate::get_tardis_inst();
+        object_obj_serv::complete_multipart_upload(req.0, &funs, &ctx.0).await?;
+        TardisResp::ok(Void)
     }
 
     // /// Fetch URL for temporary authorization of thumbnail
