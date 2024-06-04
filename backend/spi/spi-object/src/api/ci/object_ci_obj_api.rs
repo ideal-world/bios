@@ -135,7 +135,6 @@ impl ObjectCiObjApi {
         &self,
         bucket_name: Query<Option<String>>,
         object_path: Query<String>,
-        exp_secs: Query<u32>,
         private: Query<Option<bool>>,
         special: Query<Option<bool>>,
         ctx: TardisContextExtractor,
