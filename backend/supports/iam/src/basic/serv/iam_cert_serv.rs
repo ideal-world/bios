@@ -1432,10 +1432,9 @@ impl IamCertServ {
                 match sync_config.account_sync_from {
                     IamCertExtKind::Ldap => {
                         IamCertLdapServ::iam_sync_ldap_user_to_iam(sync_config, &funs, &task_ctx).await?;
-                        Ok(())
                     }
                     _ => {
-                        funs.err().not_implemented("third_integration", "sync", "501-sync-from-is-not-implemented", "501-sync-from-is-not-implemented");
+                        let _ = funs.err().not_implemented("third_integration", "sync", "501-sync-from-is-not-implemented", "501-sync-from-is-not-implemented");
                     }
                 };
                 drop(sync);
