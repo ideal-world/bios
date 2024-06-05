@@ -1,6 +1,4 @@
 use std::{collections::VecDeque, env, sync::atomic::Ordering, time::Duration};
-
-use bios_basic::test::init_test_container;
 use bios_mw_schedule::{dto::schedule_job_dto::ScheduleJobAddOrModifyReq, schedule_config::ScheduleConfig, serv::schedule_job_serv::ScheduleTaskServ};
 
 use tardis::{
@@ -53,7 +51,7 @@ async fn test_add_delete(config: &ScheduleConfig, test_env: &TestEnv) {
         ScheduleJobAddOrModifyReq {
             code: code.into(),
             // do every 2 seconds
-            cron: "1/2 * * * * *".into(),
+            cron: vec!["1/2 * * * * *".to_string()],
             callback_url: "https://127.0.0.1:8080/callback/inc".into(),
             ..Default::default()
         },
@@ -77,7 +75,7 @@ async fn test_random_ops(config: &ScheduleConfig, test_env: &TestEnv) {
         // let period = random::<u8>() % 5 + 1;
         ScheduleJobAddOrModifyReq {
             code: code.clone().into(),
-            cron: format!("1/{period} * * * * *", period = 2),
+            cron: vec![format!("1/{period} * * * * *", period = 2)],
             callback_url: "https://127.0.0.1:8080/callback/inc".into(),
             enable_time: Utc::now().checked_add_signed(chrono::Duration::seconds(5)),
             ..Default::default()
