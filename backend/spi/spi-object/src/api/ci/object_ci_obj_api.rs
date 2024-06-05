@@ -18,7 +18,6 @@ impl ObjectCiObjApi {
     async fn presign_put_obj_url(
         &self,
         object_path: Query<String>,
-        bucket_name: Query<Option<String>>,
         exp_secs: Query<u32>,
         private: Query<Option<bool>>,
         special: Query<Option<bool>>,
@@ -27,7 +26,6 @@ impl ObjectCiObjApi {
         let funs = crate::get_tardis_inst();
         let url = object_obj_serv::presign_obj_url(
             ObjectObjPresignKind::Upload,
-            bucket_name.0,
             object_path.0.trim(),
             None,
             None,
@@ -46,7 +44,6 @@ impl ObjectCiObjApi {
     async fn presign_delete_obj_url(
         &self,
         object_path: Query<String>,
-        bucket_name: Query<Option<String>>,
         exp_secs: Query<u32>,
         private: Query<Option<bool>>,
         special: Query<Option<bool>>,
@@ -55,7 +52,6 @@ impl ObjectCiObjApi {
         let funs = crate::get_tardis_inst();
         let url = object_obj_serv::presign_obj_url(
             ObjectObjPresignKind::Delete,
-            bucket_name.0,
             object_path.0.trim(),
             None,
             None,
@@ -74,7 +70,6 @@ impl ObjectCiObjApi {
     async fn presign_view_obj_url(
         &self,
         object_path: Query<String>,
-        bucket_name: Query<Option<String>>,
         exp_secs: Query<u32>,
         private: Query<Option<bool>>,
         special: Query<Option<bool>>,
@@ -83,7 +78,6 @@ impl ObjectCiObjApi {
         let funs = crate::get_tardis_inst();
         let url = object_obj_serv::presign_obj_url(
             ObjectObjPresignKind::View,
-            bucket_name.0,
             object_path.0.trim(),
             None,
             None,
@@ -125,7 +119,7 @@ impl ObjectCiObjApi {
     #[oai(path = "/object/copy", method = "post")]
     async fn object_copy(&self, req: Json<ObjectCopyReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let funs = crate::get_tardis_inst();
-        object_obj_serv::object_copy(req.0.specified_bucket_name, req.0.from, req.0.to, req.0.private, req.0.special, &funs, &ctx.0).await?;
+        object_obj_serv::object_copy(req.0.from, req.0.to, req.0.private, req.0.special, &funs, &ctx.0).await?;
         TardisResp::ok(Void)
     }
 
@@ -133,14 +127,13 @@ impl ObjectCiObjApi {
     #[oai(path = "/object", method = "delete")]
     async fn object_delete(
         &self,
-        bucket_name: Query<Option<String>>,
         object_path: Query<String>,
         private: Query<Option<bool>>,
         special: Query<Option<bool>>,
         ctx: TardisContextExtractor,
     ) -> TardisApiResult<Void> {
         let funs = crate::get_tardis_inst();
-        object_obj_serv::object_delete(bucket_name.0, object_path.0, private.0, special.0, &funs, &ctx.0).await?;
+        object_obj_serv::object_delete(object_path.0, private.0, special.0, &funs, &ctx.0).await?;
         TardisResp::ok(Void)
     }
 

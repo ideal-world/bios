@@ -10,7 +10,6 @@ use super::s3;
 
 pub async fn presign_obj_url(
     presign_kind: ObjectObjPresignKind,
-    specified_bucket_name: Option<String>,
     object_path: &str,
     max_width: Option<String>,
     max_height: Option<String>,
@@ -26,7 +25,6 @@ pub async fn presign_obj_url(
         object_constants::SPI_S3_KIND_CODE => {
             s3::object_s3_obj_serv::presign_obj_url(
                 presign_kind,
-                specified_bucket_name,
                 object_path,
                 max_width,
                 max_height,
@@ -48,7 +46,7 @@ pub async fn initiate_multipart_upload(req: ObjectInitiateMultipartUploadReq, fu
     match inst.kind_code() {
         #[cfg(feature = "spi-s3")]
         object_constants::SPI_S3_KIND_CODE => {
-            s3::object_s3_obj_serv::initiate_multipart_upload(req.bucket_name, &req.object_path, req.content_type, req.private, req.special, funs, ctx, &inst).await
+            s3::object_s3_obj_serv::initiate_multipart_upload(&req.object_path, req.content_type, req.private, req.special, funs, ctx, &inst).await
         }
         kind_code => Err(funs.bs_not_implemented(kind_code)),
     }
@@ -60,7 +58,6 @@ pub async fn batch_build_create_presign_url(req: ObjectBatchBuildCreatePresignUr
         #[cfg(feature = "spi-s3")]
         object_constants::SPI_S3_KIND_CODE => {
             s3::object_s3_obj_serv::batch_build_create_presign_url(
-                req.specified_bucket_name,
                 &req.object_path,
                 &req.upload_id,
                 req.part_number,
@@ -83,7 +80,6 @@ pub async fn complete_multipart_upload(req: ObjectCompleteMultipartUploadReq, fu
         #[cfg(feature = "spi-s3")]
         object_constants::SPI_S3_KIND_CODE => {
             s3::object_s3_obj_serv::complete_multipart_upload(
-                req.specified_bucket_name,
                 &req.object_path,
                 &req.upload_id,
                 req.parts,
@@ -100,7 +96,6 @@ pub async fn complete_multipart_upload(req: ObjectCompleteMultipartUploadReq, fu
 }
 
 pub async fn object_delete(
-    specified_bucket_name: Option<String>,
     object_path: String,
     private: Option<bool>,
     special: Option<bool>,
@@ -110,13 +105,12 @@ pub async fn object_delete(
     let inst = funs.init(ctx, true, object_initializer::init_fun).await?;
     match inst.kind_code() {
         #[cfg(feature = "spi-s3")]
-        object_constants::SPI_S3_KIND_CODE => s3::object_s3_obj_serv::object_delete(specified_bucket_name, &object_path, private, special, funs, ctx, &inst).await,
+        object_constants::SPI_S3_KIND_CODE => s3::object_s3_obj_serv::object_delete(&object_path, private, special, funs, ctx, &inst).await,
         kind_code => Err(funs.bs_not_implemented(kind_code)),
     }
 }
 
 pub async fn object_copy(
-    specified_bucket_name: Option<String>,
     from: String,
     to: String,
     private: Option<bool>,
@@ -127,7 +121,7 @@ pub async fn object_copy(
     let inst = funs.init(ctx, true, object_initializer::init_fun).await?;
     match inst.kind_code() {
         #[cfg(feature = "spi-s3")]
-        object_constants::SPI_S3_KIND_CODE => s3::object_s3_obj_serv::object_copy(specified_bucket_name, &from, &to, private, special, funs, ctx, &inst).await,
+        object_constants::SPI_S3_KIND_CODE => s3::object_s3_obj_serv::object_copy(&from, &to, private, special, funs, ctx, &inst).await,
         kind_code => Err(funs.bs_not_implemented(kind_code)),
     }
 }

@@ -12,7 +12,6 @@ pub enum ObjectObjPresignKind {
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct ObjectInitiateMultipartUploadReq {
     pub object_path: String,
-    pub bucket_name: Option<String>,
     pub content_type: Option<String>,
     pub private: Option<bool>,
     pub special: Option<bool>,
@@ -20,7 +19,6 @@ pub struct ObjectInitiateMultipartUploadReq {
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct ObjectBatchBuildCreatePresignUrlReq {
-    pub specified_bucket_name: Option<String>,
     pub object_path: String,
     pub upload_id: String,
     pub part_number: u32,
@@ -31,7 +29,6 @@ pub struct ObjectBatchBuildCreatePresignUrlReq {
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct ObjectCompleteMultipartUploadReq {
-    pub specified_bucket_name: Option<String>,
     pub object_path: String,
     pub upload_id: String,
     pub parts: Vec<String>,
@@ -41,7 +38,6 @@ pub struct ObjectCompleteMultipartUploadReq {
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct ObjectCopyReq {
-    pub specified_bucket_name: Option<String>,
     pub from: String,
     pub to: String,
     pub private: Option<bool>,
