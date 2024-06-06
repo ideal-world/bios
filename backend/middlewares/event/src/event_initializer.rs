@@ -18,7 +18,7 @@ use crate::{
     dto::event_dto::EventTopicAddOrModifyReq,
     event_config::{EventConfig, EventInfo, EventInfoManager},
     event_constants::{DOMAIN_CODE, KIND_CODE},
-    serv::{self, event_proc_serv::CreateRemoteSenderSubscriber, event_topic_serv::EventDefServ},
+    serv::{self, event_proc_serv::CreateRemoteSenderHandler, event_topic_serv::EventDefServ},
 };
 
 pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
@@ -36,7 +36,9 @@ pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
     funs.begin().await?;
     init_db(DOMAIN_CODE.to_string(), KIND_CODE.to_string(), &funs, &ctx).await?;
     EventDefServ::init(&funs, &ctx).await?;
-    funs.commit().await
+    funs.commit().await?;
+    init_scan_and_resend_task();
+    Ok(())
 }
 
 async fn init_db(domain_code: String, kind_code: String, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
@@ -115,7 +117,24 @@ async fn init_cluster_resource() {
     subscribe(listeners().clone()).await;
     subscribe(mgr_listeners().clone()).await;
     subscribe(topics().clone()).await;
-    subscribe(CreateRemoteSenderSubscriber).await;
+    subscribe(CreateRemoteSenderHandler).await;
+}
+
+fn init_scan_and_resend_task() {
+    let funs = TardisFuns::inst_with_db_conn(DOMAIN_CODE.to_string(), None);
+
+    let config = funs.conf::<EventConfig>();
+    let Some(interval_sec) = config.resend_interval_sec else {
+        return;
+    };
+    let mut interval = tardis::tokio::time::interval(tardis::tokio::time::Duration::from_secs(interval_sec as u64));
+    tardis::tokio::spawn(async move {
+        loop {
+            interval.tick().await;
+            let funs = TardisFuns::inst_with_db_conn(DOMAIN_CODE.to_string(), None);
+            let _ = crate::serv::event_proc_serv::scan_and_resend(funs.into()).await;
+        }
+    });
 }
 
 async fn init_log_ws_client() -> TardisWSClient {

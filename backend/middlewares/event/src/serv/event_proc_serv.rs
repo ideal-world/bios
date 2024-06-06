@@ -1,28 +1,28 @@
+use std::collections::HashMap;
 use std::sync::Arc;
-use std::{borrow::Cow, collections::HashMap};
 
 use serde::{Deserialize, Serialize};
-use tardis::basic::dto::TardisContext;
+use tardis::basic::error::TardisError;
 use tardis::basic::result::TardisResult;
 use tardis::cluster::cluster_processor::{ClusterEventTarget, TardisClusterMessageReq};
 use tardis::cluster::cluster_publish::publish_event_no_response;
-use tardis::log::{info, warn};
+use tardis::futures::StreamExt;
+use tardis::log::warn;
 use tardis::serde_json::Value;
 use tardis::tokio::sync::RwLock;
 use tardis::web::poem::web::websocket::{BoxWebSocketUpgraded, WebSocket};
-use tardis::web::ws_processor::{ws_broadcast, ws_echo, TardisWebsocketMgrMessage, TardisWebsocketResp};
+use tardis::web::ws_processor::{ws_echo, TardisWebsocketMgrMessage, TardisWebsocketReq, TardisWebsocketResp, WsBroadcast, WsBroadcastContext, WsHooks};
 use tardis::{
-    cluster::{cluster_broadcast::ClusterBroadcastChannel, cluster_processor::TardisClusterSubscriber},
+    cluster::{cluster_broadcast::ClusterBroadcastChannel, cluster_processor::ClusterHandler},
     tardis_static,
 };
 use tardis::{TardisFuns, TardisFunsInst};
 
 use crate::dto::event_dto::EventMessageMgrWrap;
 use crate::event_config::EventConfig;
-use crate::event_constants::DOMAIN_CODE;
-use crate::event_initializer::{default_log_avatar, ws_log_client};
 
 use super::event_listener_serv::{listeners, mgr_listeners};
+use super::event_persistent_serv::PersistentMessage;
 use super::event_topic_serv::topics;
 
 tardis_static! {
@@ -36,14 +36,13 @@ pub struct CreateRemoteSenderEvent {
     pub capacity: usize,
 }
 
-pub struct CreateRemoteSenderSubscriber;
+pub struct CreateRemoteSenderHandler;
 
-#[async_trait::async_trait]
-impl TardisClusterSubscriber for CreateRemoteSenderSubscriber {
-    fn event_name(&self) -> Cow<'static, str> {
+impl ClusterHandler for CreateRemoteSenderHandler {
+    fn event_name(&self) -> String {
         "bios/event/create_remote_sender".into()
     }
-    async fn subscribe(&self, message_req: TardisClusterMessageReq) -> TardisResult<Option<Value>> {
+    async fn handle(self: Arc<Self>, message_req: TardisClusterMessageReq) -> TardisResult<Option<Value>> {
         let CreateRemoteSenderEvent { topic_code, capacity } = TardisFuns::json.json_to_obj(message_req.msg)?;
 
         let clst_bc_tx = ClusterBroadcastChannel::new(topic_code.clone(), capacity);
@@ -66,7 +65,7 @@ pub async fn get_or_init_sender(topic_code: String, capacity: usize) -> Arc<Clus
         drop(wg);
         if TardisFuns::fw_config().cluster.is_some() {
             let _ = publish_event_no_response(
-                CreateRemoteSenderSubscriber.event_name(),
+                CreateRemoteSenderHandler.event_name(),
                 TardisFuns::json.obj_to_json(&CreateRemoteSenderEvent { topic_code, capacity }).expect("invalid json"),
                 ClusterEventTarget::Broadcast,
             )
@@ -76,99 +75,103 @@ pub async fn get_or_init_sender(topic_code: String, capacity: usize) -> Arc<Clus
     }
 }
 
-pub(crate) async fn ws_process(listener_code: String, token: String, websocket: WebSocket, funs: &TardisFunsInst) -> BoxWebSocketUpgraded {
+pub struct Hooks {
+    persistent: bool,
+    need_mgr: bool,
+    topic_code: String,
+    funs: Arc<TardisFunsInst>,
+}
+
+impl WsHooks for Hooks {
+    async fn on_fail(&self, id: String, error: TardisError, _context: &WsBroadcastContext) {
+        if self.persistent {
+            let result = super::event_persistent_serv::EventPersistentServ::send_fail(id, error.to_string(), &self.funs).await;
+            if let Err(error) = result {
+                warn!("[Event] send fail failed: {error}");
+            }
+        }
+    }
+    async fn on_success(&self, id: String, _context: &WsBroadcastContext) {
+        if self.persistent {
+            let result = super::event_persistent_serv::EventPersistentServ::send_success(id, &self.funs).await;
+            if let Err(error) = result {
+                warn!("[Event] send fail failed: {error}");
+            }
+        }
+    }
+    async fn on_process(&self, req_msg: TardisWebsocketReq, context: &WsBroadcastContext) -> Option<TardisWebsocketResp> {
+        if self.persistent {
+            let result = super::event_persistent_serv::EventPersistentServ::save_message(
+                PersistentMessage {
+                    req: req_msg.clone(),
+                    context: context.clone(),
+                    topic: self.topic_code.clone(),
+                },
+                &self.funs,
+            )
+            .await;
+            if let Err(error) = result {
+                warn!("[Event] save message failed: {error}");
+            }
+        }
+        if !self.need_mgr || context.mgr_node {
+            return Some(TardisWebsocketResp {
+                msg: req_msg.msg,
+                to_avatars: req_msg.to_avatars.unwrap_or_default(),
+                ignore_avatars: vec![],
+            });
+        }
+        // TODO set cache
+        let topic_code = self.topic_code.clone();
+        let msg_avatar = if let Some(req_event_code) = req_msg.event.clone() {
+            mgr_listeners().get((topic_code.clone(), req_event_code)).await
+        } else {
+            mgr_listeners().get((topic_code.clone(), Default::default())).await
+        };
+        let Ok(Some(msg_avatar)) = msg_avatar else {
+            warn!(
+                "[Event] topic [{}] event code [{}] management node not found",
+                topic_code,
+                &req_msg.event.unwrap_or_default()
+            );
+            return None;
+        };
+        Some(TardisWebsocketResp {
+            msg: TardisFuns::json
+                .obj_to_json(&EventMessageMgrWrap {
+                    msg: req_msg.msg,
+                    ori_from_avatar: req_msg.from_avatar,
+                    ori_to_avatars: req_msg.to_avatars,
+                })
+                .expect("EventMessageMgrWrap not a valid json value"),
+            to_avatars: vec![msg_avatar.clone()],
+            ignore_avatars: vec![],
+        })
+    }
+}
+
+pub(crate) async fn ws_process(listener_code: String, token: String, websocket: WebSocket, funs: TardisFunsInst) -> BoxWebSocketUpgraded {
     let Ok(Some(listener)) = listeners().get(listener_code.clone()).await else {
         return ws_error(listener_code, "listener not found", websocket);
     };
     if listener.token != token {
         return ws_error(listener_code, "permission check failed", websocket);
     }
-
     let Ok(Some(topic)) = topics().get(listener.topic_code.clone()).await else {
         return ws_error(listener_code, "topic not found", websocket);
     };
-    let need_mgr = topic.need_mgr;
-    let save_message = topic.save_message;
-    let is_mgr = listener.mgr;
-
     let sender = get_or_init_sender(listener.topic_code.clone(), topic.queue_size as usize).await;
-    ws_broadcast(
-        listener.avatars.clone(),
-        listener.mgr,
-        listener.subscribe_mode,
-        HashMap::from([
-            ("listener_code".to_string(), listener_code),
-            ("topic_code".to_string(), listener.topic_code.clone()),
-            ("spi_app_id".to_string(), funs.conf::<EventConfig>().spi_app_id.clone()),
-        ]),
-        websocket,
+    WsBroadcast::new(
         sender,
-        move |req_msg, ext| async move {
-            if save_message {
-                let spi_app_id = ext.get("spi_app_id").expect("spi_app_id was modified unexpectedly");
-                if spi_app_id.is_empty() {
-                    info!("[Event] MESSAGE LOG: {}", TardisFuns::json.obj_to_string(&req_msg).expect("req_msg not a valid json value"));
-                } else {
-                    use bios_sdk_invoke::clients::spi_log_client::{LogItemAddReq, SpiLogEventExt};
-                    let ws_client = ws_log_client().await;
-                    let ctx = TardisContext {
-                        owner: spi_app_id.clone(),
-                        ..Default::default()
-                    };
-                    let req = LogItemAddReq {
-                        tag: DOMAIN_CODE.to_string(),
-                        content: TardisFuns::json.obj_to_string(&req_msg).expect("req_msg not a valid json value"),
-                        kind: None,
-                        ext: None,
-                        key: None,
-                        op: None,
-                        rel_key: None,
-                        id: None,
-                        ts: None,
-                        owner: Some(ctx.owner.clone()),
-                        own_paths: Some(ctx.own_paths.clone()),
-                    };
-                    if let Err(e) = ws_client.publish_add_log(&req, default_log_avatar().await.clone(), spi_app_id.clone(), &ctx).await {
-                        warn!("[BIOS.Event] publish log fail: {}", e);
-                    }
-                }
-            }
-            if !need_mgr || is_mgr {
-                return Some(TardisWebsocketResp {
-                    msg: req_msg.msg,
-                    to_avatars: req_msg.to_avatars.unwrap_or_default(),
-                    ignore_avatars: vec![],
-                });
-            }
-            // TODO set cache
-            let topic_code = ext.get("topic_code").expect("topic_code was modified unexpectedly");
-            let msg_avatar = if let Some(req_event_code) = req_msg.event.clone() {
-                mgr_listeners().get((topic_code.clone(), req_event_code)).await
-            } else {
-                mgr_listeners().get((topic_code.clone(), Default::default())).await
-            };
-            let Ok(Some(msg_avatar)) = msg_avatar else {
-                warn!(
-                    "[Event] topic [{}] event code [{}] management node not found",
-                    topic_code,
-                    &req_msg.event.unwrap_or_default()
-                );
-                return None;
-            };
-            Some(TardisWebsocketResp {
-                msg: TardisFuns::json
-                    .obj_to_json(&EventMessageMgrWrap {
-                        msg: req_msg.msg,
-                        ori_from_avatar: req_msg.from_avatar,
-                        ori_to_avatars: req_msg.to_avatars,
-                    })
-                    .expect("EventMessageMgrWrap not a valid json value"),
-                to_avatars: vec![msg_avatar.clone()],
-                ignore_avatars: vec![],
-            })
+        Hooks {
+            persistent: topic.save_message,
+            need_mgr: topic.need_mgr,
+            topic_code: listener.topic_code.clone(),
+            funs: Arc::new(funs),
         },
-        |_, _| async move {},
+        WsBroadcastContext::new(listener.mgr, listener.subscribe_mode),
     )
+    .run(listener.avatars.clone(), websocket)
     .await
 }
 
@@ -184,4 +187,42 @@ fn ws_error(req_session: String, error: &str, websocket: WebSocket) -> BoxWebSoc
         },
         |_, _| async move {},
     )
+}
+
+pub async fn scan_and_resend(funs: Arc<TardisFunsInst>) -> TardisResult<()> {
+    let config = funs.conf::<EventConfig>();
+    let threshold = config.resend_threshold;
+    let scanner = super::event_persistent_serv::EventPersistentServ::scan_failed(&funs, threshold as i32).await?;
+    let mut scanner = std::pin::pin!(scanner);
+    while let Some(PersistentMessage { req, context, topic }) = scanner.next().await {
+        let funs = funs.clone();
+        tardis::tokio::spawn(async move {
+            let Some(id) = req.msg_id.clone() else {
+                warn!("[Bios.Event] msg_id not found: {req:?}");
+                return Ok(());
+            };
+            let Ok(Some(topic_resp)) = topics().get(topic.clone()).await else {
+                warn!("[Bios.Event] topic not found: {topic}");
+                return Ok(());
+            };
+            let sender = get_or_init_sender(topic_resp.code.clone(), topic_resp.queue_size as usize).await;
+            super::event_persistent_serv::EventPersistentServ::sending(id.clone(), &funs).await?;
+            let broadcast = WsBroadcast::new(
+                sender,
+                Hooks {
+                    persistent: topic_resp.save_message,
+                    need_mgr: topic_resp.need_mgr,
+                    topic_code: topic_resp.code,
+                    funs: funs.clone(),
+                },
+                context,
+            );
+            let resend_result = broadcast.handle_req(req).await;
+            if let Err(error) = resend_result {
+                super::event_persistent_serv::EventPersistentServ::send_fail(id, error, &funs).await?;
+            }
+            TardisResult::Ok(())
+        });
+    }
+    Ok(())
 }
