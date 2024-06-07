@@ -459,6 +459,13 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
                     "(ext ->> '{}' is null or ext ->> '{}' = '' or ext ->> '{}' = '[]' )",
                     ext_item.field, ext_item.field, ext_item.field
                 ));
+            } else if ext_item.op == BasicQueryOpKind::Len {
+                let Some(first_value) = if value.get(0) {
+                    sql_and_where.push(format!("(length(ext->>'{}')={})", ext_item.field, sql_vals.len() + 1));
+                    sql_vals.push(first_value);
+                } else {
+                    return err_not_found(ext_item);
+                };
             } else {
                 if value.len() > 1 {
                     return err_not_found(ext_item);
