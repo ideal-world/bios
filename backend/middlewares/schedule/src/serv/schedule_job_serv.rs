@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::future::Future;
+use std::net::SocketAddr;
 use std::pin::Pin;
 use std::sync::{Arc, OnceLock};
 use std::time::Duration;
@@ -19,7 +20,7 @@ use tardis::log::{error, info, trace, warn};
 use tardis::tokio::sync::RwLock;
 use tardis::tokio::time;
 use tardis::web::web_resp::{TardisPage, TardisResp};
-use tardis::{TardisFuns, TardisFunsInst};
+use tardis::{serde_json, TardisFuns, TardisFunsInst};
 use tokio_cron_scheduler::{Job, JobScheduler};
 
 use crate::dto::schedule_job_dto::{KvScheduleJobItemDetailResp, ScheduleJobAddOrModifyReq, ScheduleJobInfoResp, ScheduleJobKvSummaryResp, ScheduleTaskInfoResp};
@@ -56,10 +57,10 @@ pub(crate) async fn add_or_modify(add_or_modify: ScheduleJobAddOrModifyReq, funs
         "schedule_job",
         "add job",
         None,
-        Some(code.to_string()),
         None,
+        Some(code.to_string()),
         Some("add".to_string()),
-        Some(tardis::chrono::Utc::now().to_rfc3339()),
+        None,
         Some(Utc::now().to_rfc3339()),
         None,
         None,
@@ -88,10 +89,10 @@ pub(crate) async fn delete(code: &str, funs: &TardisFunsInst, ctx: &TardisContex
         "schedule_job",
         "delete job",
         None,
-        Some(code.to_string()),
         None,
+        Some(code.to_string()),
         Some("delete".to_string()),
-        Some(tardis::chrono::Utc::now().to_rfc3339()),
+        None,
         Some(Utc::now().to_rfc3339()),
         None,
         None,
@@ -437,17 +438,33 @@ impl OwnedScheduleTaskServ {
                             // 2. request webhook
                             match TardisFuns::web_client().raw().execute(callback_req).await {
                                 Ok(resp) => {
-                                    let code = resp.status();
+                                    let status_code = resp.status();
+                                    let remote_addr = resp.remote_addr().as_ref().map(SocketAddr::to_string);
+                                    let response_header: HashMap<String, String> = resp
+                                        .headers()
+                                        .into_iter()
+                                        .filter_map(|(k, v)| {
+                                            let v = v.to_str().ok()?.to_string();
+                                            Some((k.to_string(), v))
+                                        })
+                                        .collect();
+                                    let ext = serde_json::json! {
+                                        {
+                                            "remote_addr": remote_addr,
+                                            "status_code": status_code.to_string(),
+                                            "headers": response_header
+                                        }
+                                    };
                                     let content = resp.text().await.unwrap_or_default();
                                     // 3.1. write log exec end
                                     let Ok(_) = SpiLogClient::add(
                                         "schedule_task",
                                         &content,
-                                        None,
+                                        Some(ext),
                                         None,
                                         Some(code.to_string()),
                                         Some("exec-end".to_string()),
-                                        Some(tardis::chrono::Utc::now().to_rfc3339()),
+                                        None,
                                         Some(Utc::now().to_rfc3339()),
                                         None,
                                         None,
@@ -468,7 +485,7 @@ impl OwnedScheduleTaskServ {
                                         None,
                                         Some(code.to_string()),
                                         Some("exec-fail".to_string()),
-                                        Some(tardis::chrono::Utc::now().to_rfc3339()),
+                                        None,
                                         Some(Utc::now().to_rfc3339()),
                                         None,
                                         None,
