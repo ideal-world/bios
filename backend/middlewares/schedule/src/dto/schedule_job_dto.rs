@@ -26,7 +26,7 @@ pub(crate) struct KvItemSummaryResp {
     pub update_time: DateTime<Utc>,
 }
 
-#[derive(poem_openapi::Object, Serialize, Deserialize, Clone, Debug, Default)]
+#[derive(poem_openapi::Object, Serialize, Deserialize, Clone, Debug)]
 pub struct ScheduleJobAddOrModifyReq {
     #[oai(validator(min_length = "2"))]
     pub code: TrimString,
@@ -48,6 +48,20 @@ pub struct ScheduleJobAddOrModifyReq {
     #[oai(default)]
     #[serde(default)]
     pub disable_time: Option<DateTime<Utc>>,
+}
+impl Default for ScheduleJobAddOrModifyReq {
+    fn default() -> Self {
+        Self {
+            code: Default::default(),
+            cron: Default::default(),
+            callback_url: Default::default(),
+            callback_headers: Default::default(),
+            callback_method: "GET".to_string(),
+            callback_body: Default::default(),
+            enable_time: Default::default(),
+            disable_time: Default::default(),
+        }
+    }
 }
 
 impl ScheduleJobAddOrModifyReq {
