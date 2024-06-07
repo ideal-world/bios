@@ -54,7 +54,7 @@ pub async fn object_delete(object_path: &str, private: Option<bool>, special: Op
 }
 
 pub async fn batch_object_delete(
-    object_paths: Vec<&str>,
+    object_paths: Vec<String>,
     private: Option<bool>,
     special: Option<bool>,
     _funs: &TardisFunsInst,
@@ -64,8 +64,8 @@ pub async fn batch_object_delete(
     let failed_object_paths = join_all(
         object_paths
             .into_iter()
-            .map(|object_path| async {
-                let result = object_delete(object_path, private, special, _funs, _ctx, inst).await;
+            .map(|object_path| async move {
+                let result = object_delete(&object_path, private, special, _funs, _ctx, inst).await;
                 if result.is_err() {
                     object_path.to_string()
                 } else {
@@ -100,7 +100,7 @@ pub async fn object_exist(object_path: &str, private: Option<bool>, special: Opt
 }
 
 pub async fn batch_get_presign_obj_url(
-    object_paths: Vec<&str>,
+    object_paths: Vec<String>,
     exp_secs: u32,
     private: Option<bool>,
     special: Option<bool>,
@@ -112,7 +112,7 @@ pub async fn batch_get_presign_obj_url(
         object_paths
             .into_iter()
             .map(|object_path| async move {
-                let result = presign_obj_url(ObjectObjPresignKind::View, object_path, None, None, exp_secs, private, special, _funs, _ctx, inst).await;
+                let result = presign_obj_url(ObjectObjPresignKind::View, &object_path, None, None, exp_secs, private, special, _funs, _ctx, inst).await;
                 if let Ok(presign_obj_url) = result {
                     (object_path.to_string(), presign_obj_url)
                 } else {
