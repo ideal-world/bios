@@ -30,7 +30,7 @@ pub async fn presign_obj_url(
         ObjectObjPresignKind::Upload => client.object_create_url(object_path, exp_secs, bucket_name.as_deref()).await,
         ObjectObjPresignKind::Delete => client.object_delete_url(object_path, exp_secs, bucket_name.as_deref()).await,
         ObjectObjPresignKind::View => {
-            if private.unwrap_or(true) {
+            if private.unwrap_or(true) || special.unwrap_or(false) {
                 client.object_get_url(object_path, exp_secs, bucket_name.as_deref()).await
             } else {
                 let spi_bs = SpiBsServ::get_bs_by_rel(&ctx.ak, None, funs, ctx).await?;

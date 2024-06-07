@@ -97,7 +97,7 @@ impl ObjectCiObjApi {
     }
 
     /// Batch fetch URL for temporary authorization of file
-    #[oai(path = "/presign/batch_view", method = "get")]
+    #[oai(path = "/presign/batch_view", method = "post")]
     async fn batch_presign_view_obj_url(&self, req: Json<ObjectPresignBatchViewReq>, ctx: TardisContextExtractor) -> TardisApiResult<HashMap<String, String>> {
         let funs = crate::get_tardis_inst();
         let url = object_obj_serv::batch_get_presign_obj_url(req.0.object_path, req.0.expire_sec, req.0.private, req.0.special, &funs, &ctx.0).await?;
