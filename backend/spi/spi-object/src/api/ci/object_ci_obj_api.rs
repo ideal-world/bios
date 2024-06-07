@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 
-use itertools::Itertools;
 use tardis::web::context_extractor::TardisContextExtractor;
 
 use tardis::web::poem::web::Json;
@@ -8,7 +7,10 @@ use tardis::web::poem_openapi;
 use tardis::web::poem_openapi::param::Query;
 use tardis::web::web_resp::{TardisApiResult, TardisResp, Void};
 
-use crate::dto::object_dto::{ObjectBatchBuildCreatePresignUrlReq, ObjectCompleteMultipartUploadReq, ObjectCopyReq, ObjectInitiateMultipartUploadReq, ObjectObjPresignKind};
+use crate::dto::object_dto::{
+    ObjectBatchBuildCreatePresignUrlReq, ObjectBatchDeleteReq, ObjectCompleteMultipartUploadReq, ObjectCopyReq, ObjectInitiateMultipartUploadReq, ObjectObjPresignKind,
+    ObjectPresignBatchViewReq,
+};
 use crate::serv::object_obj_serv;
 #[derive(Clone)]
 pub struct ObjectCiObjApi;
@@ -94,18 +96,11 @@ impl ObjectCiObjApi {
         TardisResp::ok(url)
     }
 
-    /// Fetch URL for temporary authorization of file upload
-    #[oai(path = "/presign/put", method = "get")]
-    async fn batch_get_presign_obj_url(
-        &self,
-        object_path: Query<String>,
-        exp_secs: Query<u32>,
-        private: Query<Option<bool>>,
-        special: Query<Option<bool>>,
-        ctx: TardisContextExtractor,
-    ) -> TardisApiResult<HashMap<String, String>> {
+    /// Batch fetch URL for temporary authorization of file
+    #[oai(path = "/presign/batch_view", method = "get")]
+    async fn batch_presign_view_obj_url(&self, req: Json<ObjectPresignBatchViewReq>, ctx: TardisContextExtractor) -> TardisApiResult<HashMap<String, String>> {
         let funs = crate::get_tardis_inst();
-        let url = object_obj_serv::batch_get_presign_obj_url(object_path.0.split(',').collect_vec(), exp_secs.0, private.0, special.0, &funs, &ctx.0).await?;
+        let url = object_obj_serv::batch_get_presign_obj_url(req.0.object_path, req.0.expire_sec, req.0.private, req.0.special, &funs, &ctx.0).await?;
         TardisResp::ok(url)
     }
 
@@ -151,15 +146,9 @@ impl ObjectCiObjApi {
 
     /// Deleting Objects
     #[oai(path = "/object/batch_delete", method = "delete")]
-    async fn batch_object_delete(
-        &self,
-        object_path: Query<String>,
-        private: Query<Option<bool>>,
-        special: Query<Option<bool>>,
-        ctx: TardisContextExtractor,
-    ) -> TardisApiResult<Vec<String>> {
+    async fn batch_object_delete(&self, req: Json<ObjectBatchDeleteReq>, ctx: TardisContextExtractor) -> TardisApiResult<Vec<String>> {
         let funs = crate::get_tardis_inst();
-        TardisResp::ok(object_obj_serv::batch_object_delete(object_path.0.split(',').collect_vec(), private.0, special.0, &funs, &ctx.0).await?)
+        TardisResp::ok(object_obj_serv::batch_object_delete(req.0.object_path, req.0.private, req.0.special, &funs, &ctx.0).await?)
     }
 
     /// Check object is exist

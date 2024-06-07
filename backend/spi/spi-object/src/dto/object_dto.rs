@@ -43,3 +43,18 @@ pub struct ObjectCopyReq {
     pub private: Option<bool>,
     pub special: Option<bool>,
 }
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct ObjectBatchDeleteReq {
+    pub object_path: Vec<String>,
+    pub private: Option<bool>,
+    pub special: Option<bool>,
+}
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct ObjectPresignBatchViewReq {
+    pub object_path: Vec<String>,
+    pub expire_sec: u32,
+    pub private: Option<bool>,
+    pub special: Option<bool>,
+}
