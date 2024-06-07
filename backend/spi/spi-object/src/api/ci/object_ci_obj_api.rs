@@ -95,7 +95,7 @@ impl ObjectCiObjApi {
     }
 
     /// Fetch URL for temporary authorization of file upload
-    #[oai(path = "/presign/put", method = "get")]
+    #[oai(path = "/presign/put", method = "post")]
     async fn batch_get_presign_obj_url(
         &self,
         object_path: Query<String>,
