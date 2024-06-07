@@ -1,4 +1,3 @@
-
 use serde::{Deserialize, Serialize};
 use tardis::chrono::Utc;
 use tardis::db::sea_orm::{self, DeriveEntityModel, DerivePrimaryKey, DeriveRelation, EntityName, EntityTrait, EnumIter, PrimaryKeyTrait};
@@ -41,7 +40,7 @@ impl Status {
             Status::Sending => "Sending",
             Status::Success => "Success",
             Status::Failed => "Failed",
-            _ => "Unknown"
+            _ => "Unknown",
         }
     }
 }
