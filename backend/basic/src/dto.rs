@@ -81,10 +81,7 @@ impl BasicQueryCondInfo {
                             false
                         }
                     }
-                    BasicQueryOpKind::Like => {
-                        check_val.as_str().map(|check_val_str| cond.value.as_str().map(|cond_val_str| check_val_str.contains(cond_val_str)).unwrap_or(false)).unwrap_or(false)
-                    }
-                    BasicQueryOpKind::NotLike => {
+                    BasicQueryOpKind::Like | BasicQueryOpKind::LLike | BasicQueryOpKind::RLike | BasicQueryOpKind::NotLike => {
                         check_val.as_str().map(|check_val_str| cond.value.as_str().map(|cond_val_str| check_val_str.contains(cond_val_str)).unwrap_or(false)).unwrap_or(false)
                     }
                     BasicQueryOpKind::In => check_val.as_array().map(|check_val_arr| check_val_arr.contains(&cond.value)).unwrap_or(false),
@@ -92,6 +89,7 @@ impl BasicQueryCondInfo {
                     BasicQueryOpKind::IsNull => false,
                     BasicQueryOpKind::IsNotNull => false,
                     BasicQueryOpKind::IsNullOrEmpty => false,
+                    BasicQueryOpKind::Len => false,
                 },
                 None => false,
             })

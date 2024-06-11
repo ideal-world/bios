@@ -134,7 +134,7 @@ pub async fn find(find_req: &mut LogItemFindReq, funs: &TardisFunsInst, ctx: &Ta
     let err_op_in_without_value = || Err(funs.err().bad_request("item", "log", "Request item using 'IN' operator show hava a value", "400-spi-item-op-in-without-value"));
     if let Some(ext) = &find_req.ext {
         for ext_item in ext {
-            let value = db_helper::json_to_sea_orm_value(&ext_item.value, ext_item.op == BasicQueryOpKind::Like);
+            let value = db_helper::json_to_sea_orm_value(&ext_item.value, &ext_item.op);
             let Some(mut value) = value else {
                 return err_notfound(ext_item);
             };
@@ -211,7 +211,7 @@ pub async fn find(find_req: &mut LogItemFindReq, funs: &TardisFunsInst, ctx: &Ta
     if let Some(ext_or) = &find_req.ext_or {
         let mut or_fragments = vec![];
         for ext_or_item in ext_or {
-            let value = db_helper::json_to_sea_orm_value(&ext_or_item.value, ext_or_item.op == BasicQueryOpKind::Like);
+            let value = db_helper::json_to_sea_orm_value(&ext_or_item.value, &ext_or_item.op);
 
             let Some(mut value) = value else {
                 return err_notfound(ext_or_item);
@@ -288,7 +288,7 @@ pub async fn find(find_req: &mut LogItemFindReq, funs: &TardisFunsInst, ctx: &Ta
             };
             if let Some(ext) = &group_query.ext {
                 for ext_item in ext {
-                    let value = db_helper::json_to_sea_orm_value(&ext_item.value, ext_item.op == BasicQueryOpKind::Like || ext_item.op == BasicQueryOpKind::NotLike);
+                    let value = db_helper::json_to_sea_orm_value(&ext_item.value, &ext_item.op);
                     let Some(mut value) = value else { return err_not_found(ext_item) };
                     if ext_item.in_ext.unwrap_or(true) {
                         if ext_item.op == BasicQueryOpKind::In {
