@@ -8,10 +8,12 @@ use tardis::{
     serde_json,
 };
 
+use crate::enumeration::BasicQueryOpKind;
+
 /// Convert JSON value to SeaORM value.
 ///
 /// When the JSON value is a string, you can specify whether to add % on both sides of the string through the ``like_by_str`` parameter.
-pub fn json_to_sea_orm_value(json_value: &serde_json::Value, like_by_str: bool) -> Option<Vec<sea_orm::Value>> {
+pub fn json_to_sea_orm_value(json_value: &serde_json::Value, like_kind: &BasicQueryOpKind) -> Option<Vec<sea_orm::Value>> {
     match json_value {
         serde_json::Value::Null => None,
         serde_json::Value::Bool(val) => Some(vec![sea_orm::Value::from(*val)]),
@@ -22,8 +24,12 @@ pub fn json_to_sea_orm_value(json_value: &serde_json::Value, like_by_str: bool) 
         serde_json::Value::String(val) => match str_to_datetime(val) {
             Ok(val) => Some(vec![sea_orm::Value::from(val)]),
             Err(_) => {
-                if like_by_str {
+                if like_kind == &BasicQueryOpKind::Like || like_kind == &BasicQueryOpKind::NotLike {
                     Some(vec![sea_orm::Value::from(format!("%{val}%"))])
+                } else if like_kind == &BasicQueryOpKind::LLike {
+                    Some(vec![sea_orm::Value::from(format!("%{val}"))])
+                } else if like_kind == &BasicQueryOpKind::RLike {
+                    Some(vec![sea_orm::Value::from(format!("{val}%"))])
                 } else {
                     Some(vec![sea_orm::Value::from(val)])
                 }
@@ -35,7 +41,7 @@ pub fn json_to_sea_orm_value(json_value: &serde_json::Value, like_by_str: bool) 
                 return None;
             }
             // Convert each element in the array to SeaORM value.
-            let vals = val.iter().map(|json| json_to_sea_orm_value(json, like_by_str)).collect::<Vec<Option<Vec<sea_orm::Value>>>>();
+            let vals = val.iter().map(|json| json_to_sea_orm_value(json, like_kind)).collect::<Vec<Option<Vec<sea_orm::Value>>>>();
             if vals.iter().any(|v| v.is_none()) {
                 warn!("[Basic] json_to_sea_orm_value: json array conversion failed.");
                 return None;
