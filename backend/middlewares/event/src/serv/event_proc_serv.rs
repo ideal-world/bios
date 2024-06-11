@@ -7,7 +7,7 @@ use tardis::basic::result::TardisResult;
 use tardis::cluster::cluster_processor::{ClusterEventTarget, TardisClusterMessageReq};
 use tardis::cluster::cluster_publish::publish_event_no_response;
 use tardis::futures::StreamExt;
-use tardis::log::warn;
+use tardis::log::{self as tracing, debug, info, instrument, warn};
 use tardis::serde_json::Value;
 use tardis::tokio::sync::RwLock;
 use tardis::web::poem::web::websocket::{BoxWebSocketUpgraded, WebSocket};
@@ -99,7 +99,9 @@ impl WsHooks for Hooks {
             }
         }
     }
+    #[instrument(skip(self))]
     async fn on_process(&self, req_msg: TardisWebsocketReq, context: &WsBroadcastContext) -> Option<TardisWebsocketResp> {
+        debug!("[Bios.Event] processing new message");
         if self.persistent {
             let result = super::event_persistent_serv::EventPersistentServ::save_message(
                 PersistentMessage {
@@ -161,6 +163,7 @@ pub(crate) async fn ws_process(listener_code: String, token: String, websocket: 
         return ws_error(listener_code, "topic not found", websocket);
     };
     let sender = get_or_init_sender(listener.topic_code.clone(), topic.queue_size as usize).await;
+    info!("[Bios.Event] create {topic:?} process for {token}");
     WsBroadcast::new(
         sender,
         Hooks {

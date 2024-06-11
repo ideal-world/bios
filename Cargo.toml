@@ -63,8 +63,8 @@ testcontainers-modules = { version = "0.3", features = ["redis"] }
 strum = { version = "0.26", features = ["derive"] }
 # tardis
 # tardis = { version = "0.1.0-rc.15" }
-# tardis = { path = "../tardis/tardis" }
-tardis = { git = "https://github.com/ideal-world/tardis.git", rev = "1b4768a" }
+tardis = { path = "../tardis/tardis" }
+# tardis = { git = "https://github.com/ideal-world/tardis.git", rev = "1b4768a" }
 #spacegate
 
 # spacegate-shell = { path = "../spacegate/crates/shell", features = [

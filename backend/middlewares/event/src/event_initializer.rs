@@ -14,7 +14,7 @@ use tardis::{
 
 use crate::{
     api::{event_listener_api, event_proc_api, event_topic_api},
-    domain::event_topic,
+    domain::{event_persistent, event_topic},
     dto::event_dto::EventTopicAddOrModifyReq,
     event_config::{EventConfig, EventInfo, EventInfoManager},
     event_constants::{DOMAIN_CODE, KIND_CODE},
@@ -48,6 +48,13 @@ async fn init_db(domain_code: String, kind_code: String, funs: &TardisFunsInst, 
         return Ok(());
     }
 
+    funs.db()
+        .init(event_persistent::ActiveModel::init(
+            TardisFuns::reldb().backend(),
+            None,
+            TardisFuns::reldb().compatible_type(),
+        ))
+        .await?;
     // Initialize event component RBUM item table and indexs
     funs.db().init(event_topic::ActiveModel::init(TardisFuns::reldb().backend(), None, TardisFuns::reldb().compatible_type())).await?;
     // Initialize event component RBUM domain data
