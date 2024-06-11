@@ -101,7 +101,6 @@ impl WsHooks for Hooks {
     }
     #[instrument(skip(self))]
     async fn on_process(&self, req_msg: TardisWebsocketReq, context: &WsBroadcastContext) -> Option<TardisWebsocketResp> {
-        debug!("[Bios.Event] processing new message");
         if self.persistent {
             let result = super::event_persistent_serv::EventPersistentServ::save_message(
                 PersistentMessage {
@@ -163,7 +162,7 @@ pub(crate) async fn ws_process(listener_code: String, token: String, websocket: 
         return ws_error(listener_code, "topic not found", websocket);
     };
     let sender = get_or_init_sender(listener.topic_code.clone(), topic.queue_size as usize).await;
-    info!("[Bios.Event] create {topic:?} process for {token}");
+    tardis::log::trace!("[Bios.Event] create {topic:?} process for {token}");
     WsBroadcast::new(
         sender,
         Hooks {
