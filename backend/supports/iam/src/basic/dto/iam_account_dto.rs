@@ -33,6 +33,8 @@ pub struct IamAccountAggAddReq {
     pub disabled: Option<bool>,
     pub logout_type: Option<IamAccountLogoutTypeKind>,
 
+    pub labor_type: Option<String>,
+
     pub temporary: Option<bool>,
 
     #[oai(validator(min_length = "2", max_length = "1000"))]
@@ -50,6 +52,7 @@ pub struct IamAccountAddReq {
     pub scope_level: Option<RbumScopeLevelKind>,
     pub disabled: Option<bool>,
     pub logout_type: Option<IamAccountLogoutTypeKind>,
+    pub labor_type: Option<String>,
     pub temporary: Option<bool>,
     pub lock_status: Option<IamAccountLockStateKind>,
     pub status: Option<IamAccountStatusKind>,
@@ -57,13 +60,14 @@ pub struct IamAccountAddReq {
     pub icon: Option<String>,
 }
 
-#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Default)]
 pub struct IamAccountAggModifyReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub name: Option<TrimString>,
     pub scope_level: Option<RbumScopeLevelKind>,
     pub disabled: Option<bool>,
     pub logout_type: Option<IamAccountLogoutTypeKind>,
+    pub labor_type: Option<String>,
     pub temporary: Option<bool>,
     pub status: Option<IamAccountStatusKind>,
     #[oai(validator(min_length = "2", max_length = "1000"))]
@@ -87,6 +91,7 @@ pub struct IamAccountModifyReq {
     pub scope_level: Option<RbumScopeLevelKind>,
     pub disabled: Option<bool>,
     pub logout_type: Option<IamAccountLogoutTypeKind>,
+    pub labor_type: Option<String>,
     pub temporary: Option<bool>,
     pub lock_status: Option<IamAccountLockStateKind>,
 
@@ -102,6 +107,7 @@ pub struct IamAccountSelfModifyReq {
     pub name: Option<TrimString>,
     pub disabled: Option<bool>,
     pub logout_type: Option<IamAccountLogoutTypeKind>,
+    pub labor_type: Option<String>,
     // #[oai(validator(min_length = "2", max_length = "1000"))]
     pub icon: Option<String>,
 
@@ -130,6 +136,7 @@ pub struct IamAccountSummaryResp {
     pub disabled: bool,
     pub logout_time: chrono::DateTime<Utc>,
     pub logout_type: String,
+    pub labor_type: String,
 
     pub temporary: bool,
     pub lock_status: IamAccountLockStateKind,
@@ -153,6 +160,7 @@ pub struct IamAccountDetailResp {
     pub disabled: bool,
     pub logout_time: chrono::DateTime<Utc>,
     pub logout_type: String,
+    pub labor_type: String,
 
     pub temporary: bool,
     pub lock_status: IamAccountLockStateKind,
@@ -171,6 +179,7 @@ pub struct IamAccountSummaryAggResp {
     pub effective_time: DateTime<Utc>,
     pub logout_time: chrono::DateTime<Utc>,
     pub logout_type: String,
+    pub labor_type: String,
 
     pub scope_level: RbumScopeLevelKind,
     pub disabled: bool,
@@ -199,6 +208,7 @@ pub struct IamAccountDetailAggResp {
     pub effective_time: DateTime<Utc>,
     pub logout_time: chrono::DateTime<Utc>,
     pub logout_type: String,
+    pub labor_type: String,
 
     pub scope_level: RbumScopeLevelKind,
     pub disabled: bool,
@@ -258,6 +268,7 @@ pub struct IamAccountExtSysResp {
     pub display_name: String,
     pub mobile: String,
     pub email: String,
+    pub labor_type: String,
 }
 
 impl IamAccountExtSysResp {
@@ -272,6 +283,7 @@ impl IamAccountExtSysResp {
             },
             mobile: resp.get_simple_attr(&config.account_field_map.field_mobile).unwrap_or_default(),
             email: resp.get_simple_attr(&config.account_field_map.field_email).unwrap_or_default(),
+            labor_type: resp.get_simple_attr(&config.account_field_map.field_labor_type).unwrap_or_default(),
         }
     }
 }
