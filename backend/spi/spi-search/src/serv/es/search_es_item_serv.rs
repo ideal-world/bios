@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use tardis::{
-    basic::{dto::TardisContext, result::TardisResult},
+    basic::{dto::TardisContext, error::TardisError, result::TardisResult},
     search::search_client::TardisSearchClient,
     serde_json::{self, json, Value},
     web::web_resp::TardisPage,
@@ -618,9 +618,16 @@ fn gen_query_dsl(search_req: &SearchItemSearchReq) -> TardisResult<String> {
                         }
                     }));
                 }
-                BasicQueryOpKind::Len => Err(funs.err().format_error("search_es_item_serv", "len op", "not supports", "500-not-supports")),
+                BasicQueryOpKind::Len => {
+                    return Err(TardisError {
+                        code: "500-not-supports".to_owned(),
+                        message: "search_es_item_serv len op not supports".to_owned(),
+                    });
+                }
+            }
         }
     }
+
     if let Some(adv_query) = &search_req.adv_query {
         let mut adv_query_must_q = vec![];
         let mut adv_query_should_q = vec![];
@@ -751,7 +758,12 @@ fn gen_query_dsl(search_req: &SearchItemSearchReq) -> TardisResult<String> {
                             }
                         }));
                     }
-                    BasicQueryOpKind::Len => Err(funs.err().format_error("search_es_item_serv", "len op", "not supports", "500-not-supports")),
+                    BasicQueryOpKind::Len => {
+                        return Err(TardisError {
+                            code: "500-not-supports".to_owned(),
+                            message: "search_es_item_serv len op not supports".to_owned(),
+                        })
+                    }
                 }
             }
             match group_query.group_by_or.unwrap_or(false) {
