@@ -145,6 +145,9 @@ pub struct FlowModelFilterReq {
     pub own_paths: Option<Vec<String>>,
     /// 指定状态ID(用于过滤动作)
     pub specified_state_ids: Option<Vec<String>>,
+
+    pub rel: Option<RbumItemRelFilterReq>,
+    pub rel2: Option<RbumItemRelFilterReq>,
 }
 
 impl RbumItemFilterFetcher for FlowModelFilterReq {
@@ -152,10 +155,10 @@ impl RbumItemFilterFetcher for FlowModelFilterReq {
         &self.basic
     }
     fn rel(&self) -> &Option<RbumItemRelFilterReq> {
-        &None
+        &self.rel
     }
     fn rel2(&self) -> &Option<RbumItemRelFilterReq> {
-        &None
+        &self.rel2
     }
 }
 
