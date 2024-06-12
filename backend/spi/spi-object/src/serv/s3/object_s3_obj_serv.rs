@@ -89,14 +89,7 @@ pub async fn object_exist(object_path: &str, private: Option<bool>, special: Opt
     let bs_inst = inst.inst::<TardisOSClient>();
     let client = bs_inst.0;
     let bucket_name = get_bucket_name(private, special, inst);
-    let result = client.object_get(object_path, bucket_name.as_deref()).await;
-    if result.is_err() && result.clone().expect_err("unreachable").code == "404" {
-        Ok(false)
-    } else if result.is_ok() {
-        Ok(true)
-    } else {
-        result.map(|_| true)
-    }
+    client.object_exist(object_path, bucket_name.as_deref()).await
 }
 
 pub async fn batch_get_presign_obj_url(
