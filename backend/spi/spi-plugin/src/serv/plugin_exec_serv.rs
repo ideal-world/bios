@@ -95,16 +95,22 @@ impl PluginExecServ {
                 .split('/')
                 .map(|r| {
                     if !r.starts_with(':') {
-                        return r;
+                        return r.into();
                     }
                     let new_r = r.replace(':', "");
                     if let Some(new_r) = body.get(&new_r) {
-                        return new_r.as_str().unwrap_or("");
+                        match new_r {
+                            Value::Bool(v) => return if *v { "true" } else { "false" }.into(),
+                            Value::Number(v) => return v.to_string().into(),
+                            Value::String(v) => return v.into(),
+                            // TODO: Support more types: Null, Array, Object
+                            _ => return "".into(),
+                        }
                     }
                     is_ok = false;
-                    r
+                    r.into()
                 })
-                .collect::<Vec<&str>>()
+                .collect::<Vec<std::borrow::Cow<'_, str>>>()
                 .join("/");
             if !new_path.contains(':') && is_ok {
                 return Ok(new_path);
