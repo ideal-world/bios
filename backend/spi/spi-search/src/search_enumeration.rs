@@ -136,7 +136,7 @@ impl SearchDataTypeKind {
                 Some(vec![value])
             }
         } else {
-            db_helper::json_to_sea_orm_value(value, op == &BasicQueryOpKind::Like)
+            db_helper::json_to_sea_orm_value(value, op)
         };
         let Some(mut value) = value else {
             return Err(TardisError::internal_error("json_to_sea_orm_value result is empty", "spi-stats-inaternal-error"));
@@ -206,7 +206,7 @@ impl SearchDataTypeKind {
             let value = self.json_to_sea_orm_value(value, op == &BasicQueryOpKind::Like)?;
             Some(vec![value])
         } else {
-            db_helper::json_to_sea_orm_value(value, op == &BasicQueryOpKind::Like)
+            db_helper::json_to_sea_orm_value(value, op)
         };
 
         let Some(mut value) = value else {
