@@ -33,6 +33,7 @@ impl EventPersistentServ {
         let query = Query::update()
             .table(event_persistent::Entity)
             .value(event_persistent::Column::RetryTimes, Expr::col(event_persistent::Column::RetryTimes).add(1))
+            .value(event_persistent::Column::Status, event_persistent::Status::Sending.to_string())
             .cond_where(event_persistent::Column::Id.eq(id))
             .to_owned();
         let statement = StatementBuilder::build(&query, &db.get_database_backend());
