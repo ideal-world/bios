@@ -121,7 +121,7 @@ impl ObjectCiObjApi {
     }
 
     /// Complete Multipart Upload Task
-    #[oai(path = "/multi_upload/batch_build_create_presign_url", method = "post")]
+    #[oai(path = "/multi_upload/complete_multipart_upload", method = "post")]
     async fn complete_multipart_upload(&self, req: Json<ObjectCompleteMultipartUploadReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let funs = crate::get_tardis_inst();
         object_obj_serv::complete_multipart_upload(req.0, &funs, &ctx.0).await?;
