@@ -76,14 +76,32 @@ impl PluginExecServ {
 
     fn build_url(path: &str, query: Option<HashMap<String, String>>, body: Option<Value>, funs: &TardisFunsInst) -> TardisResult<String> {
         let mut path = path.to_string();
+        fn enc(s: &str) -> percent_encoding::PercentEncode<'_> {
+            percent_encoding::utf8_percent_encode(s, percent_encoding::NON_ALPHANUMERIC)
+        }
         if let Some(query) = query {
-            let query_str = query.iter().map(|(k, v)| format!("{}={}", k, v)).collect::<Vec<String>>().join("&");
+            let query_str = query.iter().fold(String::default(), |mut s, (k, v)| {
+                if k.is_empty() {
+                    return s;
+                }
+                if !s.is_empty() {
+                    s.push('&')
+                }
+                s.extend(enc(k));
+                if !v.is_empty() {
+                    s.push('=');
+                    s.extend(enc(v));
+                }
+                s
+            });
             if path.ends_with('?') {
                 path.push_str(&query_str);
             } else if path.contains('?') {
-                path.push_str(&format!("&{}", query_str));
+                path.push('&');
+                path.push_str(&query_str);
             } else {
-                path.push_str(&format!("?{}", query_str));
+                path.push('?');
+                path.push_str(&query_str);
             }
         }
         if !path.contains(':') {
@@ -102,7 +120,7 @@ impl PluginExecServ {
                         match new_r {
                             Value::Bool(v) => return if *v { "true" } else { "false" }.into(),
                             Value::Number(v) => return v.to_string().into(),
-                            Value::String(v) => return v.into(),
+                            Value::String(v) => return enc(v).to_string().into(),
                             // TODO: Support more types: Null, Array, Object
                             _ => return "".into(),
                         }
