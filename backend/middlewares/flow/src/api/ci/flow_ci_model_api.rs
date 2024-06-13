@@ -11,6 +11,7 @@ use tardis::web::web_resp::{TardisApiResult, TardisResp};
 use crate::dto::flow_model_dto::{FlowModelAddCustomModelReq, FlowModelAddCustomModelResp, FlowModelAggResp, FlowModelFilterReq, FlowModelFindRelStateResp};
 use crate::flow_constants;
 use crate::serv::flow_model_serv::FlowModelServ;
+use crate::serv::flow_rel_serv::FlowRelServ;
 #[derive(Clone)]
 pub struct FlowCiModelApi;
 
@@ -38,7 +39,7 @@ impl FlowCiModelApi {
                     ..Default::default()
                 },
                 tags: tag.0.map(|tag| vec![tag]),
-                rel_template_id: rel_template_id.0,
+                rel: FlowRelServ::get_template_rel_filter(rel_template_id.0.as_deref()),
                 ..Default::default()
             },
             &funs,

@@ -7,9 +7,8 @@ use async_recursion::async_recursion;
 use bios_basic::{
     dto::BasicQueryCondInfo,
     rbum::{
-        dto::rbum_filer_dto::{RbumBasicFilterReq, RbumItemRelFilterReq},
+        dto::rbum_filer_dto::RbumBasicFilterReq,
         helper::rbum_scope_helper,
-        rbum_enumeration::RbumRelFromKind,
         serv::{
             rbum_crud_serv::{ID_FIELD, NAME_FIELD, REL_DOMAIN_ID_FIELD, REL_KIND_ID_FIELD},
             rbum_item_serv::{RbumItemCrudOperation, RBUM_ITEM_TABLE},
@@ -64,7 +63,7 @@ pub struct FlowInstServ;
 impl FlowInstServ {
     pub async fn start(start_req: &FlowInstStartReq, current_state_name: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
         // get model by own_paths
-        let flow_model_id = Self::get_model_id_by_own_paths_and_proj_template_id(&start_req.tag, None, funs, ctx).await?;
+        let flow_model_id = Self::get_model_id_by_own_paths_and_rel_template_id(&start_req.tag, None, funs, ctx).await?;
         let flow_model = FlowModelServ::get_item(
             &flow_model_id,
             &FlowModelFilterReq {
@@ -127,7 +126,7 @@ impl FlowInstServ {
             }
             current_ctx.own_paths = rel_business_obj.own_paths.clone().unwrap_or_default();
             current_ctx.owner = rel_business_obj.owner.clone().unwrap_or_default();
-            let flow_model_id = Self::get_model_id_by_own_paths_and_proj_template_id(&batch_bind_req.tag, None, funs, ctx).await?;
+            let flow_model_id = Self::get_model_id_by_own_paths_and_rel_template_id(&batch_bind_req.tag, None, funs, ctx).await?;
 
             let current_state_id = FlowStateServ::match_state_id_by_name(
                 &batch_bind_req.tag,
@@ -183,21 +182,9 @@ impl FlowInstServ {
         Ok(result)
     }
 
-    pub async fn get_model_id_by_own_paths_and_proj_template_id(tag: &str, proj_template_id: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
+    pub async fn get_model_id_by_own_paths_and_rel_template_id(tag: &str, rel_template_id: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
         let mut own_paths = ctx.own_paths.clone();
         let mut scope_level = rbum_scope_helper::get_scope_level_by_context(ctx)?.to_int();
-        let rel_filter = if proj_template_id.is_some() {
-            Some(RbumItemRelFilterReq {
-                optional: false,
-                rel_by_from: true,
-                tag: Some(FlowRelKind::FlowModelProjTemplate.to_string()),
-                from_rbum_kind: Some(RbumRelFromKind::Item),
-                rel_item_id: proj_template_id.clone(),
-                ..Default::default()
-            })
-        } else {
-            None
-        };
 
         let mut result = None;
         // try get model in tenant path or app path
@@ -210,8 +197,8 @@ impl FlowInstServ {
                         ..Default::default()
                     },
                     tags: Some(vec![tag.to_string()]),
-                    template: Some(proj_template_id.is_some()),
-                    rel: rel_filter.clone(),
+                    template: Some(rel_template_id.is_some()),
+                    rel: FlowRelServ::get_template_rel_filter(rel_template_id.as_deref()),
                     ..Default::default()
                 },
                 funs,

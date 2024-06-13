@@ -1,3 +1,4 @@
+use bios_basic::rbum::dto::rbum_filer_dto::RbumItemRelFilterReq;
 use bios_basic::rbum::dto::rbum_rel_dto::RbumRelModifyReq;
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use bios_basic::rbum::{
@@ -15,16 +16,16 @@ use strum::Display;
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
     chrono::{Duration, Utc},
+    web::poem_openapi,
     TardisFunsInst,
 };
 
 pub struct FlowRelServ;
 
-#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, strum::EnumString)]
+#[derive(poem_openapi::Enum, Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, strum::EnumString)]
 pub enum FlowRelKind {
     FlowModelState,
-    FlowModelFeedTemplate,
-    FlowModelProjTemplate,
+    FlowModelTemplate,
 }
 
 impl FlowRelServ {
@@ -121,7 +122,7 @@ impl FlowRelServ {
         .await
     }
 
-    pub async fn _find_to_simple_rels(
+    pub async fn find_to_simple_rels(
         flow_rel_kind: &FlowRelKind,
         to_rbum_id: &str,
         desc_sort_by_create: Option<bool>,
@@ -222,5 +223,20 @@ impl FlowRelServ {
             return Err(funs.err().conflict(&flow_rel_kind.to_string(), "modify_simple_rel", "rel not found", "404-rel-not-found"));
         }
         Ok(())
+    }
+
+    pub fn get_template_rel_filter(rel_template_id: Option<&str>) -> Option<RbumItemRelFilterReq> {
+        if rel_template_id.is_some() {
+            Some(RbumItemRelFilterReq {
+                optional: false,
+                rel_by_from: true,
+                tag: Some(FlowRelKind::FlowModelTemplate.to_string()),
+                from_rbum_kind: Some(RbumRelFromKind::Item),
+                rel_item_id: rel_template_id.map(|id| id.to_string()),
+                ..Default::default()
+            })
+        } else {
+            None
+        }
     }
 }

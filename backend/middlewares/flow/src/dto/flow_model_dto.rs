@@ -28,8 +28,8 @@ pub struct FlowModelAddReq {
     pub info: Option<String>,
     /// 初始化状态ID
     pub init_state_id: String,
-    /// 关联模板ID
-    pub rel_template_id: Option<String>,
+    /// 关联模板ID（目前可能是页面模板ID，或者是项目模板ID）
+    pub rel_template_ids: Option<Vec<String>>,
     /// 绑定的动作
     pub transitions: Option<Vec<FlowTransitionAddReq>>,
     /// 绑定的状态
@@ -72,6 +72,8 @@ pub struct FlowModelModifyReq {
     pub modify_states: Option<Vec<FlowStateRelModelModifyReq>>,
     /// 标签
     pub tag: Option<String>,
+    /// 关联模板ID（目前可能是页面模板ID，或者是项目模板ID）
+    pub rel_template_ids: Option<Vec<String>>,
 
     pub scope_level: Option<RbumScopeLevelKind>,
     pub disabled: Option<bool>,
@@ -105,8 +107,8 @@ pub struct FlowModelDetailResp {
     pub info: String,
     /// 初始化状态ID
     pub init_state_id: String,
-    /// 关联模板ID
-    pub rel_template_id: String,
+    /// 关联模板ID（目前可能是页面模板ID，或者是项目模板ID）
+    pub rel_template_ids: Vec<String>,
     // 动作信息
     pub transitions: Option<Value>,
 
@@ -138,8 +140,7 @@ pub struct FlowModelFilterReq {
     pub basic: RbumBasicFilterReq,
     /// 标签集合
     pub tags: Option<Vec<String>>,
-    /// 关联模板ID
-    pub rel_template_id: Option<String>,
+
     /// 是否作为模板使用
     pub template: Option<bool>,
     pub own_paths: Option<Vec<String>>,
@@ -171,8 +172,8 @@ pub struct FlowModelAggResp {
     pub info: String,
     /// 初始化状态ID
     pub init_state_id: String,
-    /// 关联模板ID
-    pub rel_template_id: String,
+    /// 关联模板ID（目前可能是页面模板ID，或者是项目模板ID）
+    pub rel_template_ids: Vec<String>,
     /// 绑定的状态
     pub states: Vec<FlowStateAggResp>,
 
