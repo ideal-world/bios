@@ -23,6 +23,8 @@ pub struct FlowRelServ;
 #[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, strum::EnumString)]
 pub enum FlowRelKind {
     FlowModelState,
+    FlowModelFeedTemplate,
+    FlowModelProjTemplate,
 }
 
 impl FlowRelServ {
