@@ -107,6 +107,10 @@ pub struct FlowModelDetailResp {
     pub info: String,
     /// 初始化状态ID
     pub init_state_id: String,
+    /// 是否作为模板使用
+    pub template: bool,
+    /// 关联父级模型ID
+    pub rel_model_id: String,
     /// 关联模板ID（目前可能是页面模板ID，或者是项目模板ID）
     pub rel_template_ids: Vec<String>,
     // 动作信息
@@ -172,6 +176,10 @@ pub struct FlowModelAggResp {
     pub info: String,
     /// 初始化状态ID
     pub init_state_id: String,
+    /// 是否作为模板使用
+    pub template: bool,
+    /// 关联父级模型ID
+    pub rel_model_id: String,
     /// 关联模板ID（目前可能是页面模板ID，或者是项目模板ID）
     pub rel_template_ids: Vec<String>,
     /// 绑定的状态

@@ -49,7 +49,7 @@ impl FlowCiModelApi {
         .ok_or_else(|| funs.err().internal_error("flow_ci_model_api", "get_detail", "model is not exist", "404-flow-model-not-found"))?
         .id;
         let result = FlowModelServ::get_item_detail_aggs(&model_id, &funs, &ctx.0).await?;
-
+        ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
 
@@ -67,7 +67,7 @@ impl FlowCiModelApi {
         let funs = flow_constants::get_tardis_inst();
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         let result = FlowModelServ::find_rel_states(tag.0.split(',').collect(), rel_template_id.0, &funs, &ctx.0).await?;
-
+        ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
 
@@ -91,6 +91,7 @@ impl FlowCiModelApi {
             result.push(FlowModelAddCustomModelResp { tag: item.tag, model_id });
         }
         funs.commit().await?;
+        ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
 }

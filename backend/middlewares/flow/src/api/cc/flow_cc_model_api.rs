@@ -33,6 +33,7 @@ impl FlowCcModelApi {
         funs.begin().await?;
         let result = FlowModelServ::add_item(&mut add_req.0, &funs, &ctx.0).await?;
         funs.commit().await?;
+        ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
 
@@ -45,6 +46,7 @@ impl FlowCcModelApi {
         funs.begin().await?;
         FlowModelServ::modify_model(&flow_model_id.0, &mut modify_req.0, &funs, &ctx.0).await?;
         funs.commit().await?;
+        ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
     }
 
@@ -55,6 +57,7 @@ impl FlowCcModelApi {
     async fn get(&self, flow_model_id: Path<String>, ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<FlowModelAggResp> {
         let funs = flow_constants::get_tardis_inst();
         let result = FlowModelServ::get_item_detail_aggs(&flow_model_id.0, &funs, &ctx.0).await?;
+        ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
 
@@ -98,6 +101,7 @@ impl FlowCcModelApi {
             &ctx.0,
         )
         .await?;
+        ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
 
@@ -123,6 +127,7 @@ impl FlowCcModelApi {
         let tag_ids = tag_ids.split(',').map(|tag_id| tag_id.to_string()).collect_vec();
         let result = FlowModelServ::find_or_add_models(tag_ids, temp_id.0, is_shared.unwrap_or(false), &funs, &ctx.0).await?;
         funs.commit().await?;
+        ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
 
@@ -139,6 +144,7 @@ impl FlowCcModelApi {
         funs.begin().await?;
         FlowModelServ::delete_item(&flow_model_id.0, &funs, &ctx.0).await?;
         funs.commit().await?;
+        ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
     }
 
@@ -160,6 +166,7 @@ impl FlowCcModelApi {
         )
         .await?;
         funs.commit().await?;
+        ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
     }
 
@@ -181,6 +188,7 @@ impl FlowCcModelApi {
         )
         .await?;
         funs.commit().await?;
+        ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
     }
 
@@ -212,6 +220,7 @@ impl FlowCcModelApi {
         )
         .await?;
         funs.commit().await?;
+        ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
     }
 
@@ -249,6 +258,7 @@ impl FlowCcModelApi {
         )
         .await?;
         funs.commit().await?;
+        ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
     }
 
@@ -282,7 +292,7 @@ impl FlowCcModelApi {
     ) -> TardisApiResult<Vec<FlowModelFindRelStateResp>> {
         let funs = flow_constants::get_tardis_inst();
         let result = FlowModelServ::find_rel_states(tag.0.split(',').collect(), rel_template_id.0, &funs, &ctx.0).await?;
-
+        ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
 
@@ -295,6 +305,7 @@ impl FlowCcModelApi {
         funs.begin().await?;
         FlowModelServ::modify_rel_state_ext(&flow_model_id.0, &req.0, &funs, &ctx.0).await?;
         funs.commit().await?;
+        ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
     }
 }
