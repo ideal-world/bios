@@ -27,19 +27,18 @@ impl EventPersistentServ {
         }
         Ok(())
     }
-    pub async fn sending(id: String, funs: &TardisFunsInst) -> TardisResult<()> {
+    pub async fn sending(id: String, funs: &TardisFunsInst) -> TardisResult<bool> {
         use tardis::db::sea_orm::StatementBuilder;
         let db = funs.db().raw_conn();
         let query = Query::update()
             .table(event_persistent::Entity)
             .value(event_persistent::Column::RetryTimes, Expr::col(event_persistent::Column::RetryTimes).add(1))
             .value(event_persistent::Column::Status, event_persistent::Status::Sending.to_string())
-            .cond_where(event_persistent::Column::Id.eq(id))
+            .cond_where(event_persistent::Column::Id.eq(id).and(event_persistent::Column::Status.eq(event_persistent::Status::Failed.to_string())))
             .to_owned();
         let statement = StatementBuilder::build(&query, &db.get_database_backend());
-        db.execute(statement).await?;
-
-        Ok(())
+        let success = db.execute(statement).await?.rows_affected() >= 1;
+        Ok(success)
     }
     pub async fn send_success(id: String, funs: &TardisFunsInst) -> TardisResult<()> {
         let db = funs.db().raw_conn();
@@ -57,7 +56,7 @@ impl EventPersistentServ {
         let db = funs.db().raw_conn();
         event_persistent::Entity::update(event_persistent::ActiveModel {
             id: Set(id),
-            status: Set(event_persistent::Status::Success.to_string()),
+            status: Set(event_persistent::Status::Failed.to_string()),
             error: Set(Some(error.into())),
             ..Default::default()
         })
