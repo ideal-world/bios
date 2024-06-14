@@ -1,11 +1,23 @@
 use std::vec;
 
 use bios_basic::rbum::{dto::rbum_filer_dto::RbumBasicFilterReq, helper::rbum_scope_helper, rbum_enumeration::RbumScopeLevelKind, serv::rbum_item_serv::RbumItemCrudOperation};
-use bios_sdk_invoke::{clients::spi_search_client::{SpiSearchClient, SpiSearchEventExt}, dto::search_item_dto::{SearchItemAddReq, SearchItemModifyReq, SearchItemVisitKeysReq}, invoke_config::InvokeConfigApi};
+use bios_sdk_invoke::{
+    clients::spi_search_client::{SpiSearchClient, SpiSearchEventExt},
+    dto::search_item_dto::{SearchItemAddReq, SearchItemModifyReq, SearchItemVisitKeysReq},
+    invoke_config::InvokeConfigApi,
+};
 use serde_json::json;
-use tardis::{basic::{dto::TardisContext, field::TrimString, result::TardisResult}, tokio, TardisFunsInst};
+use tardis::{
+    basic::{dto::TardisContext, field::TrimString, result::TardisResult},
+    tokio, TardisFunsInst,
+};
 
-use crate::{dto::flow_model_dto::{FlowModelDetailResp, FlowModelFilterReq}, flow_constants, flow_initializer::{default_search_avatar, ws_search_client}, serv::flow_model_serv::FlowModelServ};
+use crate::{
+    dto::flow_model_dto::{FlowModelDetailResp, FlowModelFilterReq},
+    flow_constants,
+    flow_initializer::{default_search_avatar, ws_search_client},
+    serv::flow_model_serv::FlowModelServ,
+};
 
 const SEARCH_TAG: &str = "flow_model";
 
@@ -32,7 +44,8 @@ impl IamSearchClient {
             funs,
             &mock_ctx,
         )
-        .await? {
+        .await?
+        {
             ctx.add_async_task(Box::new(|| {
                 Box::pin(async move {
                     let task_handle = tokio::spawn(async move {
@@ -47,16 +60,10 @@ impl IamSearchClient {
         } else {
             Ok(())
         }
-        
     }
 
     // flow model 全局搜索埋点方法
-    pub async fn add_or_modify_model_search(
-        model_resp: &FlowModelDetailResp,
-        is_modify: Box<bool>,
-        funs: &TardisFunsInst,
-        ctx: &TardisContext,
-    ) -> TardisResult<()> {
+    pub async fn add_or_modify_model_search(model_resp: &FlowModelDetailResp, is_modify: Box<bool>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let model_id = &model_resp.id;
 
         let key = model_id.clone();
@@ -79,14 +86,27 @@ impl IamSearchClient {
                 ext_override: Some(true),
                 visit_keys: Some(SearchItemVisitKeysReq {
                     accounts: None,
-                    apps: Some(vec![rbum_scope_helper::get_path_item(RbumScopeLevelKind::L2.to_int(), &model_resp.own_paths).unwrap_or_default()]),
-                    tenants: Some(vec![rbum_scope_helper::get_path_item(RbumScopeLevelKind::L1.to_int(), &model_resp.own_paths).unwrap_or_default()]),
+                    apps: Some(vec![
+                        rbum_scope_helper::get_path_item(RbumScopeLevelKind::L2.to_int(), &model_resp.own_paths).unwrap_or_default()
+                    ]),
+                    tenants: Some(vec![
+                        rbum_scope_helper::get_path_item(RbumScopeLevelKind::L1.to_int(), &model_resp.own_paths).unwrap_or_default()
+                    ]),
                     roles: None,
                     groups: None,
                 }),
             };
             if let Some(ws_client) = ws_search_client().await {
-                ws_client.publish_modify_item(SEARCH_TAG.to_string(), key, &modify_req, default_search_avatar().await.clone(), funs.invoke_conf_spi_app_id(), ctx).await?;
+                ws_client
+                    .publish_modify_item(
+                        SEARCH_TAG.to_string(),
+                        key,
+                        &modify_req,
+                        default_search_avatar().await.clone(),
+                        funs.invoke_conf_spi_app_id(),
+                        ctx,
+                    )
+                    .await?;
             } else {
                 SpiSearchClient::modify_item(SEARCH_TAG, &key, &modify_req, funs, ctx).await?;
             }
@@ -110,8 +130,12 @@ impl IamSearchClient {
                 })),
                 visit_keys: Some(SearchItemVisitKeysReq {
                     accounts: None,
-                    apps: Some(vec![rbum_scope_helper::get_path_item(RbumScopeLevelKind::L2.to_int(), &model_resp.own_paths).unwrap_or_default()]),
-                    tenants: Some(vec![rbum_scope_helper::get_path_item(RbumScopeLevelKind::L1.to_int(), &model_resp.own_paths).unwrap_or_default()]),
+                    apps: Some(vec![
+                        rbum_scope_helper::get_path_item(RbumScopeLevelKind::L2.to_int(), &model_resp.own_paths).unwrap_or_default()
+                    ]),
+                    tenants: Some(vec![
+                        rbum_scope_helper::get_path_item(RbumScopeLevelKind::L1.to_int(), &model_resp.own_paths).unwrap_or_default()
+                    ]),
                     roles: None,
                     groups: None,
                 }),

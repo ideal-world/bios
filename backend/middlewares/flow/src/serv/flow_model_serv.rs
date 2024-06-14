@@ -45,7 +45,9 @@ use crate::{
 use async_trait::async_trait;
 
 use super::{
-    clients::search_client::IamSearchClient, flow_inst_serv::FlowInstServ, flow_rel_serv::{FlowRelKind, FlowRelServ}
+    clients::search_client::IamSearchClient,
+    flow_inst_serv::FlowInstServ,
+    flow_rel_serv::{FlowRelKind, FlowRelServ},
 };
 
 pub struct FlowModelServ;
