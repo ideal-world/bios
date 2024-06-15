@@ -7,7 +7,7 @@ use tardis::basic::result::TardisResult;
 use tardis::cluster::cluster_processor::{ClusterEventTarget, TardisClusterMessageReq};
 use tardis::cluster::cluster_publish::publish_event_no_response;
 use tardis::futures::StreamExt;
-use tardis::log::{self as tracing, debug, info, instrument, warn};
+use tardis::log::{self as tracing, instrument, warn};
 use tardis::serde_json::Value;
 use tardis::tokio::sync::RwLock;
 use tardis::web::poem::web::websocket::{BoxWebSocketUpgraded, WebSocket};
@@ -208,7 +208,10 @@ pub async fn scan_and_resend(funs: Arc<TardisFunsInst>) -> TardisResult<()> {
                 return Ok(());
             };
             let sender = get_or_init_sender(topic_resp.code.clone(), topic_resp.queue_size as usize).await;
-            super::event_persistent_serv::EventPersistentServ::sending(id.clone(), &funs).await?;
+            if !super::event_persistent_serv::EventPersistentServ::sending(id.clone(), &funs).await? {
+                // state conflict
+                return TardisResult::Ok(());
+            }
             let broadcast = WsBroadcast::new(
                 sender,
                 Hooks {
