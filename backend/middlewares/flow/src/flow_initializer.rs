@@ -981,7 +981,7 @@ async fn init_ws_search_client() -> Option<TardisWSClient> {
     }
     let funs = flow_constants::get_tardis_inst();
     let conf = funs.conf::<FlowConfig>();
-    if conf.event.is_none() {
+    if conf.search_event.is_none() {
         set_default_flow_avatar("".to_owned());
         return None;
     }

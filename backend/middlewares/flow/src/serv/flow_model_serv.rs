@@ -270,6 +270,13 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
         Ok(())
     }
 
+    async fn after_delete_item(flow_model_id: &str, detail: &Option<FlowModelDetailResp>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        if detail.is_some() && detail.as_ref().unwrap().template && detail.as_ref().unwrap().rel_model_id.is_empty() {
+            IamSearchClient::async_delete_model_search(flow_model_id.to_string(), funs, ctx).await?;
+        }
+        Ok(())
+    }
+
     async fn package_ext_query(query: &mut SelectStatement, _: bool, filter: &FlowModelFilterReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<()> {
         query.column((flow_model::Entity, flow_model::Column::Icon));
         query.column((flow_model::Entity, flow_model::Column::Info));

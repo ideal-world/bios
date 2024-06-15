@@ -58,6 +58,21 @@ impl IamSearchClient {
         .await
     }
 
+    pub async fn async_delete_model_search(model_id: String, _funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let ctx_clone = ctx.clone();
+        ctx.add_async_task(Box::new(|| {
+            Box::pin(async move {
+                let task_handle = tokio::spawn(async move {
+                    let funs = flow_constants::get_tardis_inst();
+                    let _ = Self::delete_model_search(&model_id, &funs, &ctx_clone).await;
+                });
+                task_handle.await.unwrap();
+                Ok(())
+            })
+        }))
+        .await
+    }
+
     // flow model 全局搜索埋点方法
     pub async fn add_or_modify_model_search(model_resp: &FlowModelDetailResp, is_modify: Box<bool>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let model_id = &model_resp.id;
@@ -141,6 +156,24 @@ impl IamSearchClient {
             } else {
                 SpiSearchClient::add_item(&add_req, funs, ctx).await?;
             }
+        }
+        Ok(())
+    }
+
+    // model 全局搜索删除埋点方法
+    pub async fn delete_model_search(model_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        if let Some(ws_client) = ws_search_client().await {
+            ws_client
+                .publish_delete_item(
+                    SEARCH_TAG.to_string(),
+                    model_id.to_string(),
+                    default_search_avatar().await.clone(),
+                    funs.invoke_conf_spi_app_id(),
+                    ctx,
+                )
+                .await?;
+        } else {
+            SpiSearchClient::delete_item(SEARCH_TAG, model_id, funs, ctx).await?;
         }
         Ok(())
     }
