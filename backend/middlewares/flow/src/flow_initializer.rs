@@ -124,7 +124,7 @@ async fn rebind_model_with_template(funs: &TardisFunsInst, ctx: &TardisContext) 
                 Query::select()
                     .columns([flow_model::Column::Id, flow_model::Column::RelTemplateId, flow_model::Column::OwnPaths])
                     .from(flow_model::Entity)
-                    .and_where(Expr::col(flow_model::Column::RelTemplateId).is_not("")),
+                    .and_where(Expr::col(flow_model::Column::RelTemplateId).ne("")),
             )
             .await?
             .into_iter()
@@ -981,6 +981,10 @@ async fn init_ws_search_client() -> Option<TardisWSClient> {
     }
     let funs = flow_constants::get_tardis_inst();
     let conf = funs.conf::<FlowConfig>();
+    if conf.event.is_none() {
+        set_default_flow_avatar("".to_owned());
+        return None;
+    }
     let mut event_conf = conf.search_event.clone().unwrap();
     if !event_conf.in_event {
         set_default_search_avatar("".to_owned());
