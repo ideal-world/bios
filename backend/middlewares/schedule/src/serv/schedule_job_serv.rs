@@ -1,4 +1,7 @@
 use std::collections::HashMap;
+use std::future::Future;
+use std::net::SocketAddr;
+use std::pin::Pin;
 use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 use std::vec;
@@ -17,7 +20,7 @@ use tardis::log::{error, info, trace, warn};
 use tardis::tokio::sync::RwLock;
 use tardis::tokio::time;
 use tardis::web::web_resp::{TardisPage, TardisResp};
-use tardis::{TardisFuns, TardisFunsInst};
+use tardis::{serde_json, TardisFuns, TardisFunsInst};
 use tokio_cron_scheduler::{Job, JobScheduler};
 
 use crate::dto::schedule_job_dto::{KvScheduleJobItemDetailResp, ScheduleJobAddOrModifyReq, ScheduleJobInfoResp, ScheduleJobKvSummaryResp, ScheduleTaskInfoResp};
@@ -54,10 +57,10 @@ pub(crate) async fn add_or_modify(add_or_modify: ScheduleJobAddOrModifyReq, funs
         "schedule_job",
         "add job",
         None,
-        Some(code.to_string()),
         None,
+        Some(code.to_string()),
         Some("add".to_string()),
-        Some(tardis::chrono::Utc::now().to_rfc3339()),
+        None,
         Some(Utc::now().to_rfc3339()),
         None,
         None,
@@ -86,10 +89,10 @@ pub(crate) async fn delete(code: &str, funs: &TardisFunsInst, ctx: &TardisContex
         "schedule_job",
         "delete job",
         None,
-        Some(code.to_string()),
         None,
+        Some(code.to_string()),
         Some("delete".to_string()),
-        Some(tardis::chrono::Utc::now().to_rfc3339()),
+        None,
         Some(Utc::now().to_rfc3339()),
         None,
         None,
@@ -147,32 +150,18 @@ pub(crate) async fn find_job(code: Option<String>, page_number: u32, page_size: 
             .records
             .into_iter()
             .map(|record| {
-                let job = record.value.as_str().map(|json_str| TardisFuns::json.str_to_obj::<ScheduleJobAddOrModifyReq>(json_str));
-                match job {
-                    Some(Ok(job)) => ScheduleJobInfoResp {
-                        code: record.key.replace(KV_KEY_CODE, ""),
-                        cron: job.cron,
-                        callback_url: job.callback_url,
-                        callback_headers: job.callback_headers,
-                        callback_method: job.callback_method,
-                        callback_body: job.callback_body,
-                        create_time: Some(record.create_time),
-                        update_time: Some(record.update_time),
-                        enable_time: job.enable_time,
-                        disable_time: job.disable_time,
-                    },
-                    _ => ScheduleJobInfoResp {
-                        code: record.key.replace(KV_KEY_CODE, ""),
-                        cron: "".to_string(),
-                        callback_url: "".to_string(),
-                        callback_headers: HashMap::new(),
-                        callback_method: "GET".to_string(),
-                        callback_body: None,
-                        create_time: Some(record.create_time),
-                        update_time: Some(record.update_time),
-                        enable_time: None,
-                        disable_time: None,
-                    },
+                let job = ScheduleJobAddOrModifyReq::parse_from_json(&record.value);
+                ScheduleJobInfoResp {
+                    code: record.key.replace(KV_KEY_CODE, ""),
+                    cron: job.cron,
+                    callback_url: job.callback_url,
+                    callback_headers: job.callback_headers,
+                    callback_method: job.callback_method,
+                    callback_body: job.callback_body,
+                    create_time: Some(record.create_time),
+                    update_time: Some(record.update_time),
+                    enable_time: job.enable_time,
+                    disable_time: job.disable_time,
                 }
             })
             .collect(),
@@ -258,7 +247,7 @@ impl ScheduleTaskServ {
 #[derive(Clone)]
 pub struct OwnedScheduleTaskServ {
     #[allow(clippy::type_complexity)]
-    pub code_uuid: Arc<RwLock<HashMap<String, (Uuid, String, String)>>>,
+    pub code_uuid: Arc<RwLock<HashMap<String, Vec<(Uuid, String)>>>>,
     pub scheduler: Arc<JobScheduler>,
 }
 
@@ -273,7 +262,7 @@ impl OwnedScheduleTaskServ {
         }));
         scheduler.init().await.expect("fail to init job scheduler for schedule mw");
         scheduler.start().await.expect("fail to start job scheduler for schedule mw");
-        let code_uuid_cache_raw = Arc::new(RwLock::new(HashMap::<String, (Uuid, String, String)>::new()));
+        let code_uuid_cache_raw = Arc::new(RwLock::new(HashMap::<String, Vec<(Uuid, String)>>::new()));
         let serv_raw = Arc::new(Self {
             code_uuid: code_uuid_cache_raw,
             scheduler: Arc::new(scheduler),
@@ -388,138 +377,162 @@ impl OwnedScheduleTaskServ {
         let enable_time = job_config.enable_time;
         let disable_time = job_config.disable_time;
         // startup cron scheduler
-        let job = Job::new_async(job_config.cron.as_str(), move |_uuid, _scheduler| {
+        for cron in job_config.cron {
             let callback_req = callback_req.try_clone().expect("body should be a string");
             let code = code.clone();
-            let lock_key = lock_key.clone();
             let ctx = ctx.clone();
-            if let Some(enable_time) = enable_time {
-                if enable_time > Utc::now() {
-                    return Box::pin(async move {
-                        trace!("schedule task {code} is not enabled yet, skip", code = code);
-                    });
+            let lock_key = lock_key.clone();
+            let job = Job::new_async(cron.as_str(), move |_uuid: Uuid, _scheduler: JobScheduler| -> Pin<Box<dyn Future<Output = ()> + Send>> {
+                let callback_req = callback_req.try_clone().expect("body should be a string");
+                let code = code.clone();
+                let lock_key = lock_key.clone();
+                let ctx = ctx.clone();
+                if let Some(enable_time) = enable_time {
+                    if enable_time > Utc::now() {
+                        return Box::pin(async move {
+                            trace!("schedule task {code} is not enabled yet, skip", code = code);
+                        });
+                    }
                 }
-            }
-            if let Some(disable_time) = disable_time {
-                if disable_time < Utc::now() {
-                    return Box::pin(async move {
-                        trace!("schedule task {code} is disabled, skip", code = code);
-                    });
+                if let Some(disable_time) = disable_time {
+                    if disable_time < Utc::now() {
+                        return Box::pin(async move {
+                            trace!("schedule task {code} is disabled, skip", code = code);
+                        });
+                    }
                 }
-            }
-            Box::pin(async move {
-                let cache_client = TardisFuns::cache();
-                let funs = TardisFuns::inst_with_db_conn(DOMAIN_CODE.to_string(), None);
-                // about set and setnx, see:
-                // 1. https://redis.io/commands/set/
-                // 2. https://redis.io/commands/setnx/
-                // At Redis version 2.6.12, setnx command is regarded as deprecated. see: https://redis.io/commands/setnx/
-                // "executing" could be any string now, it's just a placeholder
-                match cache_client.set_nx(&lock_key, "executing").await {
-                    Ok(true) => {
-                        // safety: it's ok to unwrap in this closure, scheduler will restart this job when after panic
-                        let Ok(()) = cache_client.expire(&lock_key, distributed_lock_expire_sec as i64).await else {
-                            return;
-                        };
-                        trace!("executing schedule task {code}");
-                        // 1. write log exec start
-                        let Ok(_) = SpiLogClient::add(
-                            "schedule_task",
-                            format!("schedule task {} exec start", code).as_str(),
-                            None,
-                            None,
-                            Some(code.to_string()),
-                            Some("exec-start".to_string()),
-                            Some(tardis::chrono::Utc::now().to_rfc3339()),
-                            Some(Utc::now().to_rfc3339()),
-                            None,
-                            None,
-                            &funs,
-                            &ctx,
-                        )
-                        .await
-                        else {
-                            return;
-                        };
-                        // 2. request webhook
-                        match TardisFuns::web_client().raw().execute(callback_req).await {
-                            Ok(resp) => {
-                                let code = resp.status();
-                                let content = resp.text().await.unwrap_or_default();
-                                // 3.1. write log exec end
-                                let Ok(_) = SpiLogClient::add(
-                                    "schedule_task",
-                                    &content,
-                                    None,
-                                    None,
-                                    Some(code.to_string()),
-                                    Some("exec-end".to_string()),
-                                    Some(tardis::chrono::Utc::now().to_rfc3339()),
-                                    Some(Utc::now().to_rfc3339()),
-                                    None,
-                                    None,
-                                    &funs,
-                                    &ctx,
-                                )
-                                .await
-                                else {
-                                    return;
-                                };
+                Box::pin(async move {
+                    let cache_client = TardisFuns::cache();
+                    let funs = TardisFuns::inst_with_db_conn(DOMAIN_CODE.to_string(), None);
+                    // about set and setnx, see:
+                    // 1. https://redis.io/commands/set/
+                    // 2. https://redis.io/commands/setnx/
+                    // At Redis version 2.6.12, setnx command is regarded as deprecated. see: https://redis.io/commands/setnx/
+                    // "executing" could be any string now, it's just a placeholder
+                    match cache_client.set_nx(&lock_key, "executing").await {
+                        Ok(true) => {
+                            // safety: it's ok to unwrap in this closure, scheduler will restart this job when after panic
+                            let Ok(()) = cache_client.expire(&lock_key, distributed_lock_expire_sec as i64).await else {
+                                return;
+                            };
+                            trace!("executing schedule task {code}");
+                            // 1. write log exec start
+                            let Ok(_) = SpiLogClient::add(
+                                "schedule_task",
+                                format!("schedule task {} exec start", code).as_str(),
+                                None,
+                                None,
+                                Some(code.to_string()),
+                                Some("exec-start".to_string()),
+                                Some(tardis::chrono::Utc::now().to_rfc3339()),
+                                Some(Utc::now().to_rfc3339()),
+                                None,
+                                None,
+                                &funs,
+                                &ctx,
+                            )
+                            .await
+                            else {
+                                return;
+                            };
+                            // 2. request webhook
+                            match TardisFuns::web_client().raw().execute(callback_req).await {
+                                Ok(resp) => {
+                                    let status_code = resp.status();
+                                    let remote_addr = resp.remote_addr().as_ref().map(SocketAddr::to_string);
+                                    let response_header: HashMap<String, String> = resp
+                                        .headers()
+                                        .into_iter()
+                                        .filter_map(|(k, v)| {
+                                            let v = v.to_str().ok()?.to_string();
+                                            Some((k.to_string(), v))
+                                        })
+                                        .collect();
+                                    let ext = serde_json::json! {
+                                        {
+                                            "remote_addr": remote_addr,
+                                            "status_code": status_code.to_string(),
+                                            "headers": response_header
+                                        }
+                                    };
+                                    let content = resp.text().await.unwrap_or_default();
+                                    // 3.1. write log exec end
+                                    let Ok(_) = SpiLogClient::add(
+                                        "schedule_task",
+                                        &content,
+                                        Some(ext),
+                                        None,
+                                        Some(code.to_string()),
+                                        Some("exec-end".to_string()),
+                                        None,
+                                        Some(Utc::now().to_rfc3339()),
+                                        None,
+                                        None,
+                                        &funs,
+                                        &ctx,
+                                    )
+                                    .await
+                                    else {
+                                        return;
+                                    };
+                                }
+                                Err(e) => {
+                                    // 3.2. write log exec end
+                                    let Ok(_) = SpiLogClient::add(
+                                        "schedule_task",
+                                        &e.to_string(),
+                                        None,
+                                        None,
+                                        Some(code.to_string()),
+                                        Some("exec-fail".to_string()),
+                                        None,
+                                        Some(Utc::now().to_rfc3339()),
+                                        None,
+                                        None,
+                                        &funs,
+                                        &ctx,
+                                    )
+                                    .await
+                                    else {
+                                        return;
+                                    };
+                                }
                             }
-                            Err(e) => {
-                                // 3.2. write log exec end
-                                let Ok(_) = SpiLogClient::add(
-                                    "schedule_task",
-                                    &e.to_string(),
-                                    None,
-                                    None,
-                                    Some(code.to_string()),
-                                    Some("exec-fail".to_string()),
-                                    Some(tardis::chrono::Utc::now().to_rfc3339()),
-                                    Some(Utc::now().to_rfc3339()),
-                                    None,
-                                    None,
-                                    &funs,
-                                    &ctx,
-                                )
-                                .await
-                                else {
-                                    return;
-                                };
-                            }
+                            trace!("executed schedule task {code}");
                         }
-                        trace!("executed schedule task {code}");
+                        Ok(false) => {
+                            trace!("schedule task {} is executed by other nodes, skip", code);
+                        }
+                        Err(e) => {
+                            error!("cannot set lock to schedule task {code}, error: {e}");
+                        }
                     }
-                    Ok(false) => {
-                        trace!("schedule task {} is executed by other nodes, skip", code);
-                    }
-                    Err(e) => {
-                        error!("cannot set lock to schedule task {code}, error: {e}");
-                    }
-                }
+                })
             })
-        })
-        .map_err(|err| {
-            let msg = format!("fail to create job: {}", err);
-            TardisError::internal_error(&msg, "500-middlewares-schedual-create-task-failed")
-        })?;
-        let uuid = self.scheduler.add(job).await.map_err(|err| {
-            let msg = format!("fail to add job: {}", err);
-            TardisError::internal_error(&msg, "500-middlewares-schedual-create-task-failed")
-        })?;
-        {
-            self.code_uuid.write().await.insert(job_config.code.to_string(), (uuid, job_config.cron.clone(), job_config.callback_url.clone()));
+            .map_err(|err| {
+                let msg = format!("fail to create job: {}", err);
+                TardisError::internal_error(&msg, "500-middlewares-schedual-create-task-failed")
+            })?;
+            let uuid = self.scheduler.add(job).await.map_err(|err| {
+                let msg = format!("fail to add job: {}", err);
+                TardisError::internal_error(&msg, "500-middlewares-schedual-create-task-failed")
+            })?;
+            {
+                self.code_uuid.write().await.entry(job_config.code.to_string()).or_default().push((uuid, cron.clone()));
+            }
         }
         Ok(())
     }
 
     pub async fn delete(&self, code: &str) -> TardisResult<()> {
         let mut uuid_cache = self.code_uuid.write().await;
-        if let Some((uuid, _, _)) = uuid_cache.get(code) {
-            self.scheduler.remove(uuid).await.map_err(|err| {
-                let msg = format!("fail to add job: {}", err);
-                TardisError::internal_error(&msg, "500-middlewares-schedual-create-task-failed")
-            })?;
+        if let Some(tasks) = uuid_cache.get(code) {
+            for (uuid, _) in tasks {
+                self.scheduler.remove(uuid).await.map_err(|err| {
+                    let msg = format!("fail to add job: {}", err);
+                    TardisError::internal_error(&msg, "500-middlewares-schedual-create-task-failed")
+                })?;
+            }
             uuid_cache.remove(code);
         }
         Ok(())

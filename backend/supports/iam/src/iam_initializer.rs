@@ -871,7 +871,12 @@ pub async fn init_ws_iam_event_client() -> TardisResult<()> {
         tardis::tokio::time::sleep(std::time::Duration::from_secs(10)).await;
     };
     let ws_client = TardisFuns::ws_client(&addr, |message| async move {
-        let Ok(json_str) = message.to_text() else { return None };
+        if !message.is_text() {
+            return None;
+        }
+        let Ok(json_str) = message.to_text() else {
+            return None;
+        };
         info!("[BIOS.Iam] event msg: {json_str}");
         let Ok(TardisWebsocketMessage { msg, event, .. }) = TardisFuns::json.str_to_obj(json_str) else {
             return None;

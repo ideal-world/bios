@@ -12,7 +12,7 @@ fn new_task(code: &str) -> ScheduleJobAddOrModifyReq {
     // let period = random::<u8>() % 5 + 1;
     ScheduleJobAddOrModifyReq {
         code: code.into(),
-        cron: format!("1/{period} * * * * *", period = 2),
+        cron: vec![format!("1/{period} * * * * *", period = 2)],
         callback_url: "https://127.0.0.1:8080/callback/inc".into(),
         enable_time: Utc::now().checked_add_signed(chrono::Duration::seconds(5)),
         disable_time: Utc::now().checked_add_signed(chrono::Duration::seconds(10)),

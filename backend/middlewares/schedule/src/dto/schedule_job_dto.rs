@@ -6,11 +6,11 @@ use tardis::{
     basic::{error::TardisError, field::TrimString, result::TardisResult},
     chrono::{self, DateTime, Utc},
     db::sea_orm,
-    serde_json::Value,
+    serde_json::{self, Value},
     url::Url,
     web::{
         poem_openapi,
-        reqwest::{header, Method, Version},
+        reqwest::{header, Method},
     },
 };
 
@@ -26,12 +26,11 @@ pub(crate) struct KvItemSummaryResp {
     pub update_time: DateTime<Utc>,
 }
 
-#[derive(poem_openapi::Object, Serialize, Deserialize, Clone, Debug, Default)]
+#[derive(poem_openapi::Object, Serialize, Deserialize, Clone, Debug)]
 pub struct ScheduleJobAddOrModifyReq {
     #[oai(validator(min_length = "2"))]
     pub code: TrimString,
-    #[oai(validator(min_length = "2"))]
-    pub cron: String,
+    pub cron: Vec<String>,
     #[oai(validator(min_length = "2"))]
     pub callback_url: String,
     #[oai(default)]
@@ -50,8 +49,62 @@ pub struct ScheduleJobAddOrModifyReq {
     #[serde(default)]
     pub disable_time: Option<DateTime<Utc>>,
 }
+impl Default for ScheduleJobAddOrModifyReq {
+    fn default() -> Self {
+        Self {
+            code: Default::default(),
+            cron: Default::default(),
+            callback_url: Default::default(),
+            callback_headers: Default::default(),
+            callback_method: "GET".to_string(),
+            callback_body: Default::default(),
+            enable_time: Default::default(),
+            disable_time: Default::default(),
+        }
+    }
+}
 
 impl ScheduleJobAddOrModifyReq {
+    pub fn parse_time_from_json_value(value: &Value) -> Option<DateTime<Utc>> {
+        match value {
+            Value::String(s) => Some(chrono::DateTime::parse_from_rfc3339(s).or_else(|_| chrono::DateTime::parse_from_rfc2822(s)).ok()?.to_utc()),
+            _ => None,
+        }
+    }
+    // for the compatibility with the old version, we need to parse this manually
+    pub fn parse_from_json(value: &serde_json::Value) -> Self {
+        let code = value.get("code").and_then(|v| v.as_str()).unwrap_or_default();
+        let cron = value
+            .get("cron")
+            .map(|v| match v {
+                serde_json::Value::Array(arr) => arr.iter().filter_map(|v| v.as_str()).map(|s| s.to_string()).collect(),
+                serde_json::Value::String(s) => vec![s.to_string()],
+                _ => vec![],
+            })
+            .unwrap_or_default();
+        let callback_url = value.get("callback_url").and_then(|v| v.as_str()).unwrap_or_default();
+        let callback_headers = value
+            .get("callback_headers")
+            .map(|v| match v {
+                serde_json::Value::Object(obj) => obj.iter().map(|(k, v)| (k.to_string(), v.as_str().unwrap_or_default().to_string())).collect(),
+                _ => HashMap::new(),
+            })
+            .unwrap_or_default();
+        let callback_method = value.get("callback_method").and_then(|v| v.as_str()).unwrap_or("GET");
+        let callback_body = value.get("callback_body").and_then(|v| v.as_str()).map(|s| s.to_string());
+        let enable_time = value.get("enable_time").and_then(ScheduleJobAddOrModifyReq::parse_time_from_json_value);
+        let disable_time = value.get("disable_time").and_then(ScheduleJobAddOrModifyReq::parse_time_from_json_value);
+        Self {
+            code: code.into(),
+            cron,
+            callback_url: callback_url.into(),
+            callback_headers,
+            callback_method: callback_method.into(),
+            callback_body,
+            enable_time,
+            disable_time,
+        }
+    }
     pub fn build_request(&self) -> TardisResult<tardis::web::reqwest::Request> {
         let method = Method::from_bytes(self.callback_method.as_bytes()).unwrap_or(Method::GET);
         let url = Url::parse(&self.callback_url)?;
@@ -76,7 +129,7 @@ pub struct ScheduleJobKvSummaryResp {
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Default)]
 pub struct ScheduleJobInfoResp {
     pub code: String,
-    pub cron: String,
+    pub cron: Vec<String>,
     pub callback_url: String,
     pub callback_headers: HashMap<String, String>,
     pub callback_method: String,

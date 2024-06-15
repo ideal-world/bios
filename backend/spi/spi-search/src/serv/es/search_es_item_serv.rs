@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use tardis::{
-    basic::{dto::TardisContext, result::TardisResult},
+    basic::{dto::TardisContext, error::TardisError, result::TardisResult},
     search::search_client::TardisSearchClient,
     serde_json::{self, json, Value},
     web::web_resp::TardisPage,
@@ -567,14 +567,9 @@ fn gen_query_dsl(search_req: &SearchItemSearchReq) -> TardisResult<String> {
                         "range": {field: {"lte": cond_info.value.clone()}},
                     }));
                 }
-                BasicQueryOpKind::Like => {
+                BasicQueryOpKind::Like | BasicQueryOpKind::LLike | BasicQueryOpKind::RLike | BasicQueryOpKind::NotLike => {
                     must_q.push(json!({
                         "match": {field: cond_info.value.clone()}
-                    }));
-                }
-                BasicQueryOpKind::NotLike => {
-                    must_not_q.push(json!({
-                        "match": { field: cond_info.value.clone()}
                     }));
                 }
                 BasicQueryOpKind::In => {
@@ -623,9 +618,16 @@ fn gen_query_dsl(search_req: &SearchItemSearchReq) -> TardisResult<String> {
                         }
                     }));
                 }
+                BasicQueryOpKind::Len => {
+                    return Err(TardisError {
+                        code: "500-not-supports".to_owned(),
+                        message: "search_es_item_serv len op not supports".to_owned(),
+                    });
+                }
             }
         }
     }
+
     if let Some(adv_query) = &search_req.adv_query {
         let mut adv_query_must_q = vec![];
         let mut adv_query_should_q = vec![];
@@ -688,7 +690,7 @@ fn gen_query_dsl(search_req: &SearchItemSearchReq) -> TardisResult<String> {
                             }
                         }));
                     }
-                    BasicQueryOpKind::Like => {
+                    BasicQueryOpKind::Like | BasicQueryOpKind::LLike | BasicQueryOpKind::RLike => {
                         group_query_q.push(json!({
                             "match": {field: cond_info.value.clone()}
                         }));
@@ -755,6 +757,12 @@ fn gen_query_dsl(search_req: &SearchItemSearchReq) -> TardisResult<String> {
                                 ]
                             }
                         }));
+                    }
+                    BasicQueryOpKind::Len => {
+                        return Err(TardisError {
+                            code: "500-not-supports".to_owned(),
+                            message: "search_es_item_serv len op not supports".to_owned(),
+                        })
                     }
                 }
             }

@@ -168,7 +168,6 @@ impl FlowCcInstApi {
         ctx: TardisContextExtractor,
         _request: &Request,
     ) -> TardisApiResult<Void> {
-        let mut funs = flow_constants::get_tardis_inst();
         FlowInstServ::modify_current_vars(&flow_inst_id.0, &modify_req.0.vars, &ctx.0).await?;
         TardisResp::ok(Void {})
     }
