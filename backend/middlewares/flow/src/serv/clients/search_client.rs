@@ -30,10 +30,10 @@ impl IamSearchClient {
             own_paths: "".to_string(),
             ..ctx.clone()
         };
-        if let Some(model_resp) = FlowModelServ::find_one_detail_item(
+        let model_resp = FlowModelServ::get_item(
+            model_id,
             &FlowModelFilterReq {
                 basic: RbumBasicFilterReq {
-                    ids: Some(vec![model_id.to_string()]),
                     ignore_scope: true,
                     own_paths: Some("".to_string()),
                     with_sub_own_paths: true,
@@ -44,22 +44,18 @@ impl IamSearchClient {
             funs,
             &mock_ctx,
         )
-        .await?
-        {
-            ctx.add_async_task(Box::new(|| {
-                Box::pin(async move {
-                    let task_handle = tokio::spawn(async move {
-                        let funs = flow_constants::get_tardis_inst();
-                        let _ = Self::add_or_modify_model_search(&model_resp, is_modify, &funs, &ctx_clone).await;
-                    });
-                    task_handle.await.unwrap();
-                    Ok(())
-                })
-            }))
-            .await
-        } else {
-            Ok(())
-        }
+        .await?;
+        ctx.add_async_task(Box::new(|| {
+            Box::pin(async move {
+                let task_handle = tokio::spawn(async move {
+                    let funs = flow_constants::get_tardis_inst();
+                    let _ = Self::add_or_modify_model_search(&model_resp, is_modify, &funs, &ctx_clone).await;
+                });
+                task_handle.await.unwrap();
+                Ok(())
+            })
+        }))
+        .await
     }
 
     // flow model 全局搜索埋点方法
