@@ -76,6 +76,7 @@ pub async fn test(flow_client: &mut TestHttpClient) -> TardisResult<()> {
             "/cc/model/add_custom_model",
             &FlowModelAddCustomModelReq {
                 proj_template_id: Some(template_id.clone()),
+                rel_template_id: None,
                 bind_model_objs: modify_configs,
             },
         )
@@ -500,6 +501,7 @@ pub async fn test(flow_client: &mut TestHttpClient) -> TardisResult<()> {
             "/cc/model/add_custom_model",
             &FlowModelAddCustomModelReq {
                 proj_template_id: Some(share_template_id.clone()),
+                rel_template_id: None,
                 bind_model_objs: vec![FlowModelAddCustomModelItemReq { tag: "REQ".to_string() }],
             },
         )
@@ -599,6 +601,7 @@ pub async fn test(flow_client: &mut TestHttpClient) -> TardisResult<()> {
             "/cc/model/add_custom_model",
             &FlowModelAddCustomModelReq {
                 proj_template_id: Some(mock_template_id.clone()),
+                rel_template_id: None,
                 bind_model_objs: modify_configs,
             },
         )

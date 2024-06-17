@@ -237,6 +237,8 @@ pub struct FlowModelSortStateInfoReq {
 pub struct FlowModelAddCustomModelReq {
     /// 模板ID
     pub proj_template_id: Option<String>,
+    /// 关联模板ID
+    pub rel_template_id: Option<String>,
     /// 绑定模型的对象
     pub bind_model_objs: Vec<FlowModelAddCustomModelItemReq>,
 }

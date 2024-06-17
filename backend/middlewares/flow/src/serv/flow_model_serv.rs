@@ -270,6 +270,21 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
         Ok(())
     }
 
+    async fn before_delete_item(flow_model_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<FlowModelDetailResp>> {
+        let detail = Self::get_item(flow_model_id, &FlowModelFilterReq::default(), funs, ctx).await?;
+        join_all(
+            FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelTemplate, flow_model_id, None, None, funs, ctx)
+                .await?
+                .into_iter()
+                .map(|rel| async move { FlowRelServ::delete_simple_rel(&FlowRelKind::FlowModelTemplate, flow_model_id, &rel.rel_id, funs, ctx).await })
+                .collect_vec(),
+        )
+        .await
+        .into_iter()
+        .collect::<TardisResult<Vec<()>>>()?;
+        Ok(Some(detail))
+    }
+
     async fn after_delete_item(flow_model_id: &str, detail: &Option<FlowModelDetailResp>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         if detail.is_some() && detail.as_ref().unwrap().template && detail.as_ref().unwrap().rel_model_id.is_empty() {
             IamSearchClient::async_delete_model_search(flow_model_id.to_string(), funs, ctx).await?;
@@ -874,8 +889,8 @@ impl FlowModelServ {
                     ..Default::default()
                 },
                 tags: Some(vec![tag.to_string()]),
-                // When no parent ID is passed, indicating that the default template is directly obtained, rel_template_id is passed into the empty string
-                // 没有传入父级ID时，说明直接获取默认模板，则 rel_template_id 传入空字符串
+                // When no parent ID is passed, indicating that the default template is directly obtained, parent_template_id is passed into the empty string
+                // 没有传入父级ID时，说明直接获取默认模板，则 parent_template_id 传入空字符串
                 rel: FlowRelServ::get_template_rel_filter(Some(&parent_template_id.unwrap_or_default())),
                 template: Some(true),
                 ..Default::default()
