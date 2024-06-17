@@ -293,14 +293,15 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
     }
 
     async fn package_ext_query(query: &mut SelectStatement, _: bool, filter: &FlowModelFilterReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<()> {
-        query.column((flow_model::Entity, flow_model::Column::Icon));
-        query.column((flow_model::Entity, flow_model::Column::Info));
-        query.column((flow_model::Entity, flow_model::Column::InitStateId));
-        query.column((flow_model::Entity, flow_model::Column::Template));
-        query.column((flow_model::Entity, flow_model::Column::RelModelId));
-        query.column((flow_model::Entity, flow_model::Column::Tag));
-        query.expr_as(Expr::val(json! {()}), Alias::new("transitions"));
-        query.expr_as(Expr::val(vec!["".to_string()]), Alias::new("rel_template_ids"));
+        query
+            .column((flow_model::Entity, flow_model::Column::Icon))
+            .column((flow_model::Entity, flow_model::Column::Info))
+            .column((flow_model::Entity, flow_model::Column::InitStateId))
+            .column((flow_model::Entity, flow_model::Column::Template))
+            .column((flow_model::Entity, flow_model::Column::RelModelId))
+            .column((flow_model::Entity, flow_model::Column::Tag))
+            .expr_as(Expr::val(json! {()}), Alias::new("transitions"))
+            .expr_as(Expr::val(vec!["".to_string()]), Alias::new("rel_template_ids"));
         if let Some(tags) = filter.tags.clone() {
             query.and_where(Expr::col(flow_model::Column::Tag).is_in(tags));
         }
