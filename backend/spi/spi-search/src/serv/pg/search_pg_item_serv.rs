@@ -461,7 +461,7 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
                 ));
             } else if ext_item.op == BasicQueryOpKind::Len {
                 if let Some(first_value) = value.pop() {
-                    where_fragments.push(format!("(length(ext->>'{}')={})", ext_item.field, sql_vals.len() + 1));
+                    where_fragments.push(format!("(length(ext->>'{}') = ${})", ext_item.field, sql_vals.len() + 1));
                     sql_vals.push(first_value);
                 } else {
                     return err_not_found(ext_item);
@@ -523,7 +523,7 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
             {
                 order_fragments.push(format!("{} {}", sort_item.field, sort_item.order.to_sql()));
             } else {
-                order_fragments.push(format!("ext ->> '{}' {}", sort_item.field, sort_item.order.to_sql()));
+                order_fragments.push(format!("ext -> '{}' {}", sort_item.field, sort_item.order.to_sql()));
             }
         }
     }
