@@ -1,3 +1,4 @@
+use bios_basic::rbum::dto::rbum_filer_dto::RbumItemRelFilterReq;
 use bios_basic::rbum::dto::rbum_rel_dto::RbumRelModifyReq;
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use bios_basic::rbum::{
@@ -15,23 +16,23 @@ use strum::Display;
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
     chrono::{Duration, Utc},
+    web::poem_openapi,
     TardisFunsInst,
 };
 
 pub struct FlowRelServ;
 
-#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, strum::EnumString)]
+#[derive(poem_openapi::Enum, Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, strum::EnumString)]
 pub enum FlowRelKind {
     FlowModelState,
-    FlowModelFeedTemplate,
-    FlowModelProjTemplate,
+    FlowModelTemplate,
 }
 
 impl FlowRelServ {
     pub async fn add_simple_rel(
         flow_rel_kind: &FlowRelKind,
-        flow_model_id: &str,
-        flow_state_id: &str,
+        from_rbum_id: &str,
+        to_rbum_item_id: &str,
         start_timestamp: Option<i64>,
         end_timestamp: Option<i64>,
         ignore_exist_error: bool,
@@ -40,7 +41,7 @@ impl FlowRelServ {
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<()> {
-        if Self::exist_rels(flow_rel_kind, flow_model_id, flow_state_id, funs, ctx).await? {
+        if Self::exist_rels(flow_rel_kind, from_rbum_id, to_rbum_item_id, funs, ctx).await? {
             return if ignore_exist_error {
                 Ok(())
             } else {
@@ -54,8 +55,8 @@ impl FlowRelServ {
                 tag: flow_rel_kind.to_string(),
                 note: None,
                 from_rbum_kind: RbumRelFromKind::Item,
-                from_rbum_id: flow_model_id.to_string(),
-                to_rbum_item_id: flow_state_id.to_string(),
+                from_rbum_id: from_rbum_id.to_string(),
+                to_rbum_item_id: to_rbum_item_id.to_string(),
                 to_own_paths: ctx.own_paths.to_string(),
                 to_is_outside,
                 ext,
@@ -75,7 +76,7 @@ impl FlowRelServ {
         Ok(())
     }
 
-    pub async fn delete_simple_rel(flow_rel_kind: &FlowRelKind, flow_model_id: &str, flow_state_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    pub async fn delete_simple_rel(flow_rel_kind: &FlowRelKind, from_rbum_id: &str, to_rbum_item_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let rel_ids = RbumRelServ::find_id_rbums(
             &RbumRelFilterReq {
                 basic: RbumBasicFilterReq {
@@ -84,8 +85,8 @@ impl FlowRelServ {
                 },
                 tag: Some(flow_rel_kind.to_string()),
                 from_rbum_kind: Some(RbumRelFromKind::Item),
-                from_rbum_id: Some(flow_model_id.to_string()),
-                to_rbum_item_id: Some(flow_state_id.to_string()),
+                from_rbum_id: Some(from_rbum_id.to_string()),
+                to_rbum_item_id: Some(to_rbum_item_id.to_string()),
                 ..Default::default()
             },
             None,
@@ -104,14 +105,14 @@ impl FlowRelServ {
         Ok(())
     }
 
-    async fn exist_rels(flow_rel_kind: &FlowRelKind, flow_model_id: &str, flow_state_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<bool> {
+    async fn exist_rels(flow_rel_kind: &FlowRelKind, from_rbum_id: &str, to_rbum_item_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<bool> {
         // TODO In-depth inspection
         RbumRelServ::check_simple_rel(
             &RbumRelSimpleFindReq {
                 tag: Some(flow_rel_kind.to_string()),
                 from_rbum_kind: Some(RbumRelFromKind::Item),
-                from_rbum_id: Some(flow_model_id.to_string()),
-                to_rbum_item_id: Some(flow_state_id.to_string()),
+                from_rbum_id: Some(from_rbum_id.to_string()),
+                to_rbum_item_id: Some(to_rbum_item_id.to_string()),
                 from_own_paths: Some(ctx.own_paths.to_string()),
                 ..Default::default()
             },
@@ -121,9 +122,9 @@ impl FlowRelServ {
         .await
     }
 
-    pub async fn _find_to_simple_rels(
+    pub async fn find_to_simple_rels(
         flow_rel_kind: &FlowRelKind,
-        flow_model_id: &str,
+        to_rbum_id: &str,
         desc_sort_by_create: Option<bool>,
         desc_sort_by_update: Option<bool>,
         funs: &TardisFunsInst,
@@ -133,12 +134,12 @@ impl FlowRelServ {
             own_paths: "".to_string(),
             ..ctx.clone()
         };
-        RbumRelServ::find_to_simple_rels(&flow_rel_kind.to_string(), flow_model_id, desc_sort_by_create, desc_sort_by_update, funs, &mock_ctx).await
+        RbumRelServ::find_to_simple_rels(&flow_rel_kind.to_string(), to_rbum_id, desc_sort_by_create, desc_sort_by_update, funs, &mock_ctx).await
     }
 
     pub async fn find_from_simple_rels(
         flow_rel_kind: &FlowRelKind,
-        flow_model_id: &str,
+        from_rbum_id: &str,
         desc_sort_by_create: Option<bool>,
         desc_sort_by_update: Option<bool>,
         funs: &TardisFunsInst,
@@ -152,7 +153,7 @@ impl FlowRelServ {
             &flow_rel_kind.to_string(),
             &RbumRelFromKind::Item,
             true,
-            flow_model_id,
+            from_rbum_id,
             desc_sort_by_create,
             desc_sort_by_update,
             funs,
@@ -163,8 +164,8 @@ impl FlowRelServ {
 
     pub async fn find_simple_rels(
         flow_rel_kind: &FlowRelKind,
-        flow_model_id: Option<&str>,
-        flow_state_id: Option<&str>,
+        from_rbum_id: Option<&str>,
+        to_rbum_item_id: Option<&str>,
         is_from: bool,
         desc_sort_by_create: Option<bool>,
         desc_sort_by_update: Option<bool>,
@@ -183,12 +184,12 @@ impl FlowRelServ {
             tag: Some(flow_rel_kind.to_string()),
             ..Default::default()
         };
-        if flow_model_id.is_some() {
+        if from_rbum_id.is_some() {
             filter_req.from_rbum_kind = Some(RbumRelFromKind::Item);
-            filter_req.from_rbum_id = flow_model_id.map(|s| s.to_string());
+            filter_req.from_rbum_id = from_rbum_id.map(|s| s.to_string());
         }
-        if flow_state_id.is_some() {
-            filter_req.to_rbum_item_id = flow_state_id.map(|s| s.to_string());
+        if to_rbum_item_id.is_some() {
+            filter_req.to_rbum_item_id = to_rbum_item_id.map(|s| s.to_string());
         }
 
         RbumRelServ::find_simple_rels(&filter_req, desc_sort_by_create, desc_sort_by_update, is_from, funs, &mock_ctx).await
@@ -196,8 +197,8 @@ impl FlowRelServ {
 
     pub async fn modify_simple_rel(
         flow_rel_kind: &FlowRelKind,
-        flow_model_id: &str,
-        flow_state_id: &str,
+        from_rbum_id: &str,
+        to_rbum_item_id: &str,
         modify_req: &mut RbumRelModifyReq,
         funs: &TardisFunsInst,
         ctx: &TardisContext,
@@ -206,8 +207,8 @@ impl FlowRelServ {
             &RbumRelSimpleFindReq {
                 tag: Some(flow_rel_kind.to_string()),
                 from_rbum_kind: Some(RbumRelFromKind::Item),
-                from_rbum_id: Some(flow_model_id.to_string()),
-                to_rbum_item_id: Some(flow_state_id.to_string()),
+                from_rbum_id: Some(from_rbum_id.to_string()),
+                to_rbum_item_id: Some(to_rbum_item_id.to_string()),
                 from_own_paths: None,
                 to_rbum_own_paths: None,
             },
@@ -222,5 +223,20 @@ impl FlowRelServ {
             return Err(funs.err().conflict(&flow_rel_kind.to_string(), "modify_simple_rel", "rel not found", "404-rel-not-found"));
         }
         Ok(())
+    }
+
+    pub fn get_template_rel_filter(rel_template_id: Option<&str>) -> Option<RbumItemRelFilterReq> {
+        if rel_template_id.is_some() {
+            Some(RbumItemRelFilterReq {
+                optional: false,
+                rel_by_from: true,
+                tag: Some(FlowRelKind::FlowModelTemplate.to_string()),
+                from_rbum_kind: Some(RbumRelFromKind::Item),
+                rel_item_id: rel_template_id.map(|id| id.to_string()),
+                ..Default::default()
+            })
+        } else {
+            None
+        }
     }
 }
