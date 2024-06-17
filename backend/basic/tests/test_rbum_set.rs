@@ -1066,7 +1066,11 @@ async fn test_rbum_set_item(context: &TardisContext) -> TardisResult<()> {
     assert_eq!(set_infos.ext.as_ref().unwrap().items[&set_infos.main[1].id].len(), 2);
     assert!(set_infos.ext.as_ref().unwrap().items[&set_infos.main[1].id].iter().any(|r| r.rel_rbum_item_name == "用户1"));
 
-    info!("【test_rbum_set_item】 : Test Get : RbumSetItemServ::get_rbum");
+    let set_info_tree = set_infos.to_trees();
+    assert_eq!(set_info_tree.cate_tree.len(), 2);
+    assert_eq!(set_info_tree.cate_tree[0].node.len(), 1);
+    assert_eq!(set_info_tree.ext.as_ref().unwrap().items[&set_info_tree.cate_tree[0].node[0].id].len(), 2);
+    assert!(set_info_tree.ext.as_ref().unwrap().items[&set_info_tree.cate_tree[0].node[0].id].iter().any(|r| r.rel_rbum_item_name == "用户1"));
     let rbum = RbumSetItemServ::get_rbum(
         &id,
         &RbumSetItemFilterReq {

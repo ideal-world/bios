@@ -219,6 +219,68 @@ pub struct RbumSetTreeResp {
     pub ext: Option<RbumSetTreeExtResp>,
 }
 
+impl RbumSetTreeResp {
+    pub fn to_trees(&self) -> RbumSetTreeCateResp {
+        let mut nodes_map: HashMap<String, RbumSetTreeCateNodeResp> = HashMap::new();
+        let mut child_map: HashMap<String, Vec<String>> = HashMap::new();
+        let mut roots: Vec<String> = Vec::new();
+
+        // 初始化所有节点
+        for node in &self.main {
+            nodes_map.insert(
+                node.id.clone(),
+                RbumSetTreeCateNodeResp {
+                    id: node.id.clone(),
+                    sys_code: node.sys_code.clone(),
+                    bus_code: node.bus_code.clone(),
+                    name: node.name.clone(),
+                    icon: node.icon.clone(),
+                    sort: node.sort,
+                    ext: node.ext.clone(),
+                    node: vec![],
+                    own_paths: node.own_paths.clone(),
+                    owner: node.owner.clone(),
+                    create_time: node.create_time,
+                    update_time: node.update_time,
+                    scope_level: node.scope_level.clone(),
+                },
+            );
+            if let Some(parent_id) = node.pid.as_ref() {
+                child_map.entry(parent_id.to_string()).or_default().push(node.id.clone());
+            } else {
+                roots.push(node.id.clone());
+            }
+        }
+        // 递归方法构建树
+        fn build_tree(node_id: String, nodes_map: &mut HashMap<String, RbumSetTreeCateNodeResp>, child_map: &HashMap<String, Vec<String>>) -> Option<RbumSetTreeCateNodeResp> {
+            if let Some(mut node) = nodes_map.remove(&node_id) {
+                if let Some(children) = child_map.get(&node_id) {
+                    for child_id in children.clone() {
+                        let child_node = build_tree(child_id, nodes_map, child_map);
+                        if let Some(child_node) = child_node {
+                            node.node.push(child_node);
+                        }
+                    }
+                }
+                Some(node)
+            } else {
+                None
+            }
+        }
+        // 构建根节点的树结构
+        let mut trees: Vec<RbumSetTreeCateNodeResp> = Vec::new();
+        for root_id in roots {
+            if let Some(root_node) = build_tree(root_id, &mut nodes_map, &child_map) {
+                trees.push(root_node);
+            }
+        }
+        RbumSetTreeCateResp {
+            cate_tree: trees,
+            ext: self.ext.clone(),
+        }
+    }
+}
+
 /// Resource tree node information
 ///
 /// 资源树节点信息
@@ -272,6 +334,8 @@ pub struct RbumSetTreeNodeResp {
 
     pub own_paths: String,
     pub owner: String,
+    pub create_time: DateTime<Utc>,
+    pub update_time: DateTime<Utc>,
 
     pub scope_level: RbumScopeLevelKind,
 }
@@ -306,4 +370,78 @@ pub struct RbumSetTreeExtResp {
     ///
     /// Format: ``domain.id -> domain summary info``
     pub item_domains: HashMap<String, RbumDomainSummaryResp>,
+}
+
+/// Resource tree information
+///
+/// 资源目录树信息
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[cfg_attr(feature = "default", derive(poem_openapi::Object))]
+pub struct RbumSetTreeCateResp {
+    /// Resource cate tree node information
+    ///
+    /// 资源目录树节点信息
+    pub cate_tree: Vec<RbumSetTreeCateNodeResp>,
+    /// Resource tree extension information
+    ///
+    /// 资源树扩展信息
+    pub ext: Option<RbumSetTreeExtResp>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[cfg_attr(feature = "default", derive(poem_openapi::Object))]
+/// Resource tree cate structure information
+///
+/// 资源树目录结构信息
+pub struct RbumSetTreeCateNodeResp {
+    /// Node id
+    ///
+    /// 节点id
+    pub id: String,
+
+    /// System (internal) code
+    ///
+    /// 系统（内部）编码
+    ///
+    /// using regular hierarchical code to avoid recursive tree queries.
+    ///
+    /// 使用规则的层级编码，避免递归树查询。
+    pub sys_code: String,
+
+    /// Business code for custom
+    ///
+    /// 自定义业务编码
+    pub bus_code: String,
+
+    /// Node name
+    ///
+    /// 节点名称
+    pub name: String,
+
+    /// Node icon
+    ///
+    /// 节点图标
+    pub icon: String,
+
+    /// Node sort
+    ///
+    /// 节点排序
+    pub sort: i64,
+
+    /// Node extension information
+    ///
+    /// 节点扩展信息
+    pub ext: String,
+
+    pub node: Vec<RbumSetTreeCateNodeResp>,
+
+    pub own_paths: String,
+
+    pub owner: String,
+
+    pub create_time: DateTime<Utc>,
+
+    pub update_time: DateTime<Utc>,
+
+    pub scope_level: RbumScopeLevelKind,
 }
