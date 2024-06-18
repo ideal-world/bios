@@ -25,9 +25,7 @@ use tardis::{
 
 use crate::{
     api::{
-        cc::{flow_cc_inst_api, flow_cc_model_api, flow_cc_state_api},
-        ci::{flow_ci_inst_api, flow_ci_model_api, flow_ci_state_api},
-        cs::flow_cs_config_api,
+        ca::flow_ca_model_api, cc::{flow_cc_inst_api, flow_cc_model_api, flow_cc_state_api}, ci::{flow_ci_inst_api, flow_ci_model_api, flow_ci_state_api}, cs::flow_cs_config_api, ct::flow_ct_model_api
     },
     domain::{flow_inst, flow_model, flow_state, flow_transition},
     dto::{
@@ -56,6 +54,8 @@ async fn init_api(web_server: &TardisWebServer) -> TardisResult<()> {
         .add_module(
             flow_constants::DOMAIN_CODE,
             (
+                flow_ca_model_api::FlowCaModelApi,
+                flow_ct_model_api::FlowCtModelApi,
                 flow_cc_state_api::FlowCcStateApi,
                 flow_cc_model_api::FlowCcModelApi,
                 flow_cc_inst_api::FlowCcInstApi,
