@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, vec};
 
 use async_recursion::async_recursion;
 use bios_basic::rbum::{
@@ -32,7 +32,8 @@ use crate::{
     domain::{flow_model, flow_state, flow_transition},
     dto::{
         flow_model_dto::{
-            FlowModelAddReq, FlowModelAggResp, FlowModelBindStateReq, FlowModelDetailResp, FlowModelFilterReq, FlowModelFindRelStateResp, FlowModelModifyReq, FlowModelSummaryResp,
+            FlowModelAddReq, FlowModelAggResp, FlowModelAssociativeOperationKind, FlowModelBindStateReq, FlowModelDetailResp, FlowModelFilterReq, FlowModelFindRelStateResp,
+            FlowModelModifyReq, FlowModelSummaryResp,
         },
         flow_state_dto::{FlowStateAggResp, FlowStateDetailResp, FlowStateFilterReq, FlowStateRelModelExt, FlowStateRelModelModifyReq},
         flow_transition_dto::{
@@ -301,6 +302,7 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
             .column((flow_model::Entity, flow_model::Column::RelModelId))
             .column((flow_model::Entity, flow_model::Column::Tag))
             .expr_as(Expr::val(json! {()}), Alias::new("transitions"))
+            .expr_as(Expr::val(json! {()}), Alias::new("states"))
             .expr_as(Expr::val(vec!["".to_string()]), Alias::new("rel_template_ids"));
         if let Some(tags) = filter.tags.clone() {
             query.and_where(Expr::col(flow_model::Column::Tag).is_in(tags));
@@ -319,6 +321,17 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
         let mut flow_model = Self::do_get_item(flow_model_id, filter, funs, ctx).await?;
         let flow_transitions = Self::find_transitions(flow_model_id, filter.specified_state_ids.as_deref(), funs, ctx).await?;
         flow_model.transitions = Some(TardisFuns::json.obj_to_json(&flow_transitions)?);
+
+        let flow_states = FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelState, flow_model_id, None, None, funs, ctx)
+            .await?
+            .into_iter()
+            .sorted_by_key(|rel| TardisFuns::json.str_to_obj::<FlowStateRelModelExt>(&rel.ext).unwrap_or_default().sort)
+            .map(|rel| FlowModelBindStateReq {
+                state_id: rel.rel_id.clone(),
+                ext: TardisFuns::json.str_to_obj::<FlowStateRelModelExt>(&rel.ext).unwrap_or_default(),
+            })
+            .collect_vec();
+        flow_model.states = Some(TardisFuns::json.obj_to_json(&flow_states)?);
 
         let rel_template_ids =
             FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelTemplate, flow_model_id, None, None, funs, ctx).await?.into_iter().map(|rel| rel.rel_id).collect_vec();
@@ -846,6 +859,72 @@ impl FlowModelServ {
         Ok(result)
     }
 
+    // 创建或引用模型（rel_model_id：关联模型ID, op：关联模型操作类型（复制或者引用），is_create_copy：是否创建副本（当op为复制时需指定，默认不需要））
+    pub async fn copy_or_reference_model(
+        rel_model_id: &str,
+        op: FlowModelAssociativeOperationKind,
+        is_create_copy: Option<bool>,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<String> {
+        let rel_model = FlowModelServ::find_one_detail_item(
+            &FlowModelFilterReq {
+                basic: RbumBasicFilterReq {
+                    ids: Some(vec![rel_model_id.to_string()]),
+                    ignore_scope: true,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?
+        .ok_or_else(|| funs.err().not_found(&Self::get_obj_name(), "copy_or_reference_model", "rel model not found", "404-flow-model-not-found"))?;
+        let result = match op {
+            FlowModelAssociativeOperationKind::Reference => {
+                if is_create_copy.unwrap_or(false) {
+                    Self::add_item(
+                        &mut FlowModelAddReq {
+                            rel_model_id: Some(rel_model_id.to_string()),
+                            ..rel_model.clone().into()
+                        },
+                        funs,
+                        ctx,
+                    )
+                    .await?
+                } else {
+                    FlowRelServ::add_simple_rel(
+                        &FlowRelKind::FlowModelApp,
+                        rel_model_id,
+                        &rbum_scope_helper::get_path_item(RbumScopeLevelKind::L2.to_int(), &ctx.own_paths).unwrap_or_default(),
+                        None,
+                        None,
+                        false,
+                        true,
+                        None,
+                        funs,
+                        ctx,
+                    )
+                    .await?;
+                    rel_model_id.to_string()
+                }
+            }
+            FlowModelAssociativeOperationKind::Copy => {
+                Self::add_item(
+                    &mut FlowModelAddReq {
+                        rel_model_id: None,
+                        ..rel_model.clone().into()
+                    },
+                    funs,
+                    ctx,
+                )
+                .await?
+            }
+        };
+        Ok(result)
+    }
+
     // copy model by template model
     // rel_template_id: Associated parent template id
     // current_template_id: Current template id
@@ -938,7 +1017,7 @@ impl FlowModelServ {
                             state_id: rel.rel_id.clone(),
                             ext: TardisFuns::json.str_to_obj::<FlowStateRelModelExt>(&rel.ext).unwrap_or_default(),
                         })
-                        .collect::<Vec<_>>(),
+                        .collect_vec(),
                 ),
                 rel_model_id: Some(parent_model.id.clone()),
                 tag: Some(parent_model.tag.clone()),
