@@ -469,6 +469,7 @@ pub async fn test(sysadmin_info: (&str, &str), system_admin_context: &TardisCont
             disabled: Some(true),
             exts: Default::default(),
             logout_type: None,
+            labor_type: None,
         },
         &funs,
         &system_admin_context,

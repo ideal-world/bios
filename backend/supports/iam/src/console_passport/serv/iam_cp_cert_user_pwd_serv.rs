@@ -92,6 +92,7 @@ impl IamCpCertUserPwdServ {
                 lock_status: None,
                 temporary: None,
                 logout_type: None,
+                labor_type: None,
             },
             funs,
             &ctx,

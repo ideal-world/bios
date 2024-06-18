@@ -43,6 +43,11 @@ pub struct Model {
     /// [data type Kind](crate::iam_enumeration::IamAccountLogoutTypeKind)
     pub logout_type: String,
 
+    /// Nature of labor
+    ///
+    /// 用工性质
+    pub labor_type: String,
+
     #[fill_ctx(fill = "own_paths")]
     pub own_paths: String,
 }

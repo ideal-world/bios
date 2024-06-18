@@ -89,6 +89,7 @@ impl RbumItemCrudOperation<iam_account::ActiveModel, IamAccountAddReq, IamAccoun
             } else {
                 Set("".to_string())
             },
+            labor_type: Set(add_req.labor_type.as_ref().unwrap_or(&"".to_string()).to_string()),
             ext1_idx: Set("".to_string()),
             ext2_idx: Set("".to_string()),
             ext3_idx: Set("".to_string()),
@@ -152,6 +153,9 @@ impl RbumItemCrudOperation<iam_account::ActiveModel, IamAccountAddReq, IamAccoun
         if modify_req.disabled == Some(true) {
             iam_account.logout_time = Set(Utc::now());
             iam_account.logout_type = Set(modify_req.logout_type.clone().unwrap_or_default().to_string());
+        }
+        if let Some(labor_type) = &modify_req.labor_type {
+            iam_account.labor_type = Set(labor_type.clone());
         }
         Ok(Some(iam_account))
     }
@@ -233,6 +237,7 @@ impl RbumItemCrudOperation<iam_account::ActiveModel, IamAccountAddReq, IamAccoun
         query.column((iam_account::Entity, iam_account::Column::EffectiveTime));
         query.column((iam_account::Entity, iam_account::Column::LogoutTime));
         query.column((iam_account::Entity, iam_account::Column::LogoutType));
+        query.column((iam_account::Entity, iam_account::Column::LaborType));
         if let Some(icon) = &filter.icon {
             query.and_where(Expr::col(iam_account::Column::Icon).eq(icon.as_str()));
         }
@@ -268,6 +273,7 @@ impl IamAccountServ {
                 status: None,
                 lock_status: add_req.lock_status.clone(),
                 logout_type: add_req.logout_type.clone(),
+                labor_type: add_req.labor_type.clone(),
             },
             funs,
             ctx,
@@ -347,6 +353,7 @@ impl IamAccountServ {
                 is_auto: Some(false),
                 lock_status: None,
                 logout_type: modify_req.logout_type.clone(),
+                labor_type: modify_req.labor_type.clone(),
             },
             funs,
             ctx,
@@ -441,6 +448,7 @@ impl IamAccountServ {
                 is_auto: None,
                 temporary: None,
                 logout_type: modify_req.logout_type.clone(),
+                labor_type: modify_req.labor_type.clone(),
             },
             funs,
             &mock_ctx,
@@ -533,6 +541,7 @@ impl IamAccountServ {
             disabled: account.disabled,
             logout_time: account.logout_time,
             logout_type: account.logout_type,
+            labor_type: account.labor_type,
             is_locked: funs.cache().exists(&format!("{}{}", funs.rbum_conf_cache_key_cert_locked_(), &account.id.clone())).await?,
             is_online: IamIdentCacheServ::exist_token_by_account_id(&account.id, funs).await?,
             status: account.status,
@@ -608,6 +617,7 @@ impl IamAccountServ {
                 disabled: account.disabled,
                 logout_time: account.logout_time,
                 logout_type: account.logout_type,
+                labor_type: account.labor_type,
                 is_locked: funs.cache().exists(&format!("{}{}", funs.rbum_conf_cache_key_cert_locked_(), &account.id.clone())).await?,
                 is_online: IamIdentCacheServ::exist_token_by_account_id(&account.id, funs).await?,
                 status: account.status,
@@ -791,6 +801,7 @@ impl IamAccountServ {
                 lock_status: Some(IamAccountLockStateKind::Unlocked),
                 temporary: None,
                 logout_type: None,
+                labor_type: None,
             },
             funs,
             ctx,
