@@ -4,6 +4,8 @@ use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumItemRelFilte
 use bios_basic::rbum::rbum_enumeration::RbumRelFromKind;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use itertools::Itertools;
+use tardis::basic::dto::TardisContext;
+use tardis::futures::future::join_all;
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem::Request;
 use tardis::web::poem_openapi;
@@ -19,7 +21,7 @@ use crate::dto::flow_state_dto::FlowStateRelModelModifyReq;
 use crate::dto::flow_transition_dto::{FlowTransitionModifyReq, FlowTransitionSortStatesReq};
 use crate::flow_constants;
 use crate::serv::flow_model_serv::FlowModelServ;
-use crate::serv::flow_rel_serv::FlowRelKind;
+use crate::serv::flow_rel_serv::{FlowRelKind, FlowRelServ};
 #[derive(Clone)]
 pub struct FlowCcModelApi;
 
@@ -74,28 +76,47 @@ impl FlowCcModelApi {
     async fn find_models_by_rel_template_id(
         &self,
         tag: Query<String>,
+        template: Query<Option<bool>>,
         rel_template_id: Query<Option<String>>,
         ctx: TardisContextExtractor,
         _request: &Request,
     ) -> TardisApiResult<Vec<FlowModelSummaryResp>> {
         let funs = flow_constants::get_tardis_inst();
         let mut result = vec![];
-        let mut not_bind_template_models = FlowModelServ::find_items(
-            &FlowModelFilterReq {
-                tags: Some(vec![tag.0.clone()]),
-                ..Default::default()
-            },
-            Some(true),
-            None,
-            &funs,
-            &ctx.0,
+        let mut not_bind_template_models = join_all(
+            FlowModelServ::find_items(
+                &FlowModelFilterReq {
+                    tags: Some(vec![tag.0.clone()]),
+                    template: template.0,
+                    ..Default::default()
+                },
+                Some(true),
+                None,
+                &funs,
+                &ctx.0,
+            )
+            .await?
+            .into_iter()
+            .map(|model| async move {
+                let funs = flow_constants::get_tardis_inst();
+                let global_ctx: TardisContext = TardisContext::default();
+                if FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelTemplate, &model.id, None, None, &funs, &global_ctx).await.unwrap().is_empty() {
+                    Some(model)
+                } else {
+                    None
+                }
+            }),
         )
-        .await?;
+        .await
+        .into_iter()
+        .flatten()
+        .collect_vec();
         result.append(&mut not_bind_template_models);
         if let Some(rel_template_id) = rel_template_id.0 {
             let mut rel_template_models = FlowModelServ::find_items(
                 &FlowModelFilterReq {
                     tags: Some(vec![tag.0.clone()]),
+                    template: template.0,
                     rel: Some(RbumItemRelFilterReq {
                         optional: false,
                         rel_by_from: true,
