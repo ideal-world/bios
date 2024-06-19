@@ -329,6 +329,6 @@ pub enum FlowModelAssociativeOperationKind {
 /// 创建或引用模型请求
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
 pub struct FlowModelCopyOrReferenceReq {
-    pub rel_model_id: String,
+    pub rel_model_ids: Vec<String>,
     pub op: FlowModelAssociativeOperationKind,
 }

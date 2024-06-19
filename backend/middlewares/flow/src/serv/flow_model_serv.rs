@@ -887,7 +887,7 @@ impl FlowModelServ {
     // 创建或引用模型（rel_model_id：关联模型ID, op：关联模型操作类型（复制或者引用），is_create_copy：是否创建副本（当op为复制时需指定，默认不需要））
     pub async fn copy_or_reference_model(
         rel_model_id: &str,
-        op: FlowModelAssociativeOperationKind,
+        op: &FlowModelAssociativeOperationKind,
         is_create_copy: Option<bool>,
         funs: &TardisFunsInst,
         ctx: &TardisContext,
