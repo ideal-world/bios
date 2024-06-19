@@ -364,9 +364,12 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
             .await?
             .into_iter()
             .sorted_by_key(|rel| TardisFuns::json.str_to_obj::<FlowStateRelModelExt>(&rel.ext).unwrap_or_default().sort)
-            .map(|rel| FlowModelBindStateReq {
-                state_id: rel.rel_id.clone(),
+            .map(|rel| FlowStateAggResp {
+                id: rel.rel_id.clone(),
+                name: rel.rel_name.clone(),
+                is_init: flow_model.init_state_id == rel.rel_id,
                 ext: TardisFuns::json.str_to_obj::<FlowStateRelModelExt>(&rel.ext).unwrap_or_default(),
+                transitions: flow_transitions.clone().into_iter().filter(|tran| tran.from_flow_state_id == rel.rel_id).collect_vec(),
             })
             .collect_vec();
         flow_model.states = Some(TardisFuns::json.obj_to_json(&flow_states)?);
@@ -1356,7 +1359,9 @@ impl FlowModelServ {
         .await?
         .into_iter()
         .map(|rel| rel.rel_id)
-        .collect_vec().pop() {
+        .collect_vec()
+        .pop()
+        {
             return Ok(rel_model_id);
         }
         // try get model in tenant path or app path
