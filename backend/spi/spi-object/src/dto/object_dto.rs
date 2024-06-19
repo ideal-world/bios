@@ -49,6 +49,7 @@ pub struct ObjectBatchDeleteReq {
     pub object_path: Vec<String>,
     pub private: Option<bool>,
     pub special: Option<bool>,
+    pub obj_exp: Option<u32>,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
@@ -57,4 +58,5 @@ pub struct ObjectPresignBatchViewReq {
     pub expire_sec: u32,
     pub private: Option<bool>,
     pub special: Option<bool>,
+    pub obj_exp: Option<u32>,
 }
