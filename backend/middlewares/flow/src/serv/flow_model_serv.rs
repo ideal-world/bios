@@ -268,18 +268,21 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
 
         // 同步修改所有引用的下级模型
         if model.template {
-            let child_model_ids = Self::find_id_items(&FlowModelFilterReq {
+            let child_models = Self::find_detail_items(&FlowModelFilterReq {
                 rel_model_ids: Some(vec![flow_model_id.to_string()]),
                 ..Default::default()
             }, None, None, funs, ctx).await?;
-            for child_model_id in child_model_ids {
-                let ctx_clone = ctx.clone();
+            for child_model in child_models {
+                let ctx_clone = TardisContext {
+                    own_paths: child_model.own_paths,
+                    ..ctx.clone()
+                };
                 let mut modify_req_clone = modify_req.clone();
                 ctx.add_async_task(Box::new(|| {
                     Box::pin(async move {
                         let task_handle = tokio::spawn(async move {
                             let funs = flow_constants::get_tardis_inst();
-                            let _ = Self::modify_item(&child_model_id, &mut modify_req_clone, &funs, &ctx_clone).await;
+                            let _ = Self::modify_item(&child_model.id, &mut modify_req_clone, &funs, &ctx_clone).await;
                         });
                         task_handle.await.unwrap();
                         Ok(())
