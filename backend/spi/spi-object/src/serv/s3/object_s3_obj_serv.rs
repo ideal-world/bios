@@ -5,12 +5,16 @@ use itertools::Itertools;
 use tardis::{
     basic::{dto::TardisContext, error::TardisError, result::TardisResult},
     futures::future::join_all,
-    os::os_client::TardisOSClient,
+    os::{
+        os_client::TardisOSClient,
+        serde_types::{BucketLifecycleConfiguration, Expiration, LifecycleFilter, LifecycleRule},
+    },
     TardisFunsInst,
 };
 
 use crate::dto::object_dto::ObjectObjPresignKind;
-
+///
+/// obj_exp: 设置obj的过期时间 单位为天
 pub async fn presign_obj_url(
     presign_kind: ObjectObjPresignKind,
     object_path: &str,
@@ -19,19 +23,24 @@ pub async fn presign_obj_url(
     exp_secs: u32,
     private: Option<bool>,
     special: Option<bool>,
+    obj_exp: Option<u32>,
     funs: &TardisFunsInst,
     ctx: &TardisContext,
     inst: &SpiBsInst,
 ) -> TardisResult<String> {
     let bs_inst = inst.inst::<TardisOSClient>();
     let client = bs_inst.0;
-    let bucket_name = get_bucket_name(private, special, inst);
+    let bucket_name = get_bucket_name(private, special, obj_exp.clone().map(|_| true), inst);
     match presign_kind {
-        ObjectObjPresignKind::Upload => client.object_create_url(object_path, exp_secs, bucket_name.as_deref()).await,
-        ObjectObjPresignKind::Delete => client.object_delete_url(object_path, exp_secs, bucket_name.as_deref()).await,
+        ObjectObjPresignKind::Upload => {
+            client.object_create_url(&rebuild_path(bucket_name.as_deref(), object_path, obj_exp, client).await?, exp_secs, bucket_name.as_deref()).await
+        }
+        ObjectObjPresignKind::Delete => {
+            client.object_delete_url(&rebuild_path(bucket_name.as_deref(), object_path, obj_exp, client).await?, exp_secs, bucket_name.as_deref()).await
+        }
         ObjectObjPresignKind::View => {
             if private.unwrap_or(true) || special.unwrap_or(false) {
-                client.object_get_url(object_path, exp_secs, bucket_name.as_deref()).await
+                client.object_get_url(&rebuild_path(bucket_name.as_deref(), object_path, obj_exp, client).await?, exp_secs, bucket_name.as_deref()).await
             } else {
                 let spi_bs = SpiBsServ::get_bs_by_rel(&ctx.ak, None, funs, ctx).await?;
                 let Some(bucket_name) = bucket_name else {
@@ -46,10 +55,18 @@ pub async fn presign_obj_url(
     }
 }
 
-pub async fn object_delete(object_path: &str, private: Option<bool>, special: Option<bool>, _funs: &TardisFunsInst, _ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
+pub async fn object_delete(
+    object_path: &str,
+    private: Option<bool>,
+    special: Option<bool>,
+    obj_exp: Option<u32>,
+    _funs: &TardisFunsInst,
+    _ctx: &TardisContext,
+    inst: &SpiBsInst,
+) -> TardisResult<()> {
     let bs_inst = inst.inst::<TardisOSClient>();
     let client = bs_inst.0;
-    let bucket_name = get_bucket_name(private, special, inst);
+    let bucket_name = get_bucket_name(private, special, obj_exp.clone().map(|_| true), inst);
     client.object_delete(object_path, bucket_name.as_deref()).await
 }
 
@@ -57,6 +74,7 @@ pub async fn batch_object_delete(
     object_paths: Vec<String>,
     private: Option<bool>,
     special: Option<bool>,
+    obj_exp: Option<u32>,
     _funs: &TardisFunsInst,
     _ctx: &TardisContext,
     inst: &SpiBsInst,
@@ -65,7 +83,7 @@ pub async fn batch_object_delete(
         object_paths
             .into_iter()
             .map(|object_path| async move {
-                let result = object_delete(&object_path, private, special, _funs, _ctx, inst).await;
+                let result = object_delete(&object_path, private, special, obj_exp, _funs, _ctx, inst).await;
                 if result.is_err() {
                     object_path.to_string()
                 } else {
@@ -81,14 +99,22 @@ pub async fn batch_object_delete(
 pub async fn object_copy(from: &str, to: &str, private: Option<bool>, special: Option<bool>, _funs: &TardisFunsInst, _ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
     let bs_inst = inst.inst::<TardisOSClient>();
     let client = bs_inst.0;
-    let bucket_name = get_bucket_name(private, special, inst);
+    let bucket_name = get_bucket_name(private, special, None, inst);
     client.object_copy(from, to, bucket_name.as_deref()).await
 }
 
-pub async fn object_exist(object_path: &str, private: Option<bool>, special: Option<bool>, _funs: &TardisFunsInst, _ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<bool> {
+pub async fn object_exist(
+    object_path: &str,
+    private: Option<bool>,
+    special: Option<bool>,
+    obj_exp: Option<u32>,
+    _funs: &TardisFunsInst,
+    _ctx: &TardisContext,
+    inst: &SpiBsInst,
+) -> TardisResult<bool> {
     let bs_inst = inst.inst::<TardisOSClient>();
     let client = bs_inst.0;
-    let bucket_name = get_bucket_name(private, special, inst);
+    let bucket_name = get_bucket_name(private, special, obj_exp.clone().map(|_| true), inst);
     client.object_exist(object_path, bucket_name.as_deref()).await
 }
 
@@ -97,6 +123,7 @@ pub async fn batch_get_presign_obj_url(
     exp_secs: u32,
     private: Option<bool>,
     special: Option<bool>,
+    obj_exp: Option<u32>,
     _funs: &TardisFunsInst,
     _ctx: &TardisContext,
     inst: &SpiBsInst,
@@ -105,7 +132,7 @@ pub async fn batch_get_presign_obj_url(
         object_paths
             .into_iter()
             .map(|object_path| async move {
-                let result = presign_obj_url(ObjectObjPresignKind::View, &object_path, None, None, exp_secs, private, special, _funs, _ctx, inst).await;
+                let result = presign_obj_url(ObjectObjPresignKind::View, &object_path, None, None, exp_secs, private, special, obj_exp, _funs, _ctx, inst).await;
                 if let Ok(presign_obj_url) = result {
                     (object_path.to_string(), presign_obj_url)
                 } else {
@@ -129,7 +156,7 @@ pub async fn initiate_multipart_upload(
 ) -> TardisResult<String> {
     let bs_inst = inst.inst::<TardisOSClient>();
     let client = bs_inst.0;
-    let bucket_name = get_bucket_name(private, special, inst);
+    let bucket_name = get_bucket_name(private, special, None, inst);
     client.initiate_multipart_upload(object_path, content_type.as_deref(), bucket_name.as_deref()).await
 }
 
@@ -146,7 +173,7 @@ pub async fn batch_build_create_presign_url(
 ) -> TardisResult<Vec<String>> {
     let bs_inst = inst.inst::<TardisOSClient>();
     let client = bs_inst.0;
-    let bucket_name = get_bucket_name(private, special, inst);
+    let bucket_name = get_bucket_name(private, special, None, inst);
     client.batch_build_create_presign_url(object_path, upload_id, part_number, expire_sec, bucket_name.as_deref()).await
 }
 
@@ -162,11 +189,11 @@ pub async fn complete_multipart_upload(
 ) -> TardisResult<()> {
     let bs_inst = inst.inst::<TardisOSClient>();
     let client = bs_inst.0;
-    let bucket_name = get_bucket_name(private, special, inst);
+    let bucket_name = get_bucket_name(private, special, None, inst);
     client.complete_multipart_upload(object_path, upload_id, parts, bucket_name.as_deref()).await
 }
 
-fn get_bucket_name(private: Option<bool>, special: Option<bool>, inst: &SpiBsInst) -> Option<String> {
+fn get_bucket_name(private: Option<bool>, special: Option<bool>, tamp: Option<bool>, inst: &SpiBsInst) -> Option<String> {
     let bs_inst = inst.inst::<TardisOSClient>();
     common::get_isolation_flag_from_ext(bs_inst.1).map(|bucket_name_prefix| {
         format!(
@@ -174,6 +201,8 @@ fn get_bucket_name(private: Option<bool>, special: Option<bool>, inst: &SpiBsIns
             bucket_name_prefix,
             if special.unwrap_or(false) {
                 "spe"
+            } else if tamp.unwrap_or(false) {
+                "tamp"
             } else if private.unwrap_or(true) {
                 "pri"
             } else {
@@ -181,4 +210,52 @@ fn get_bucket_name(private: Option<bool>, special: Option<bool>, inst: &SpiBsIns
             }
         )
     })
+}
+async fn rebuild_path(bucket_name: Option<&str>, origin_path: &str, obj_exp: Option<u32>, client: &TardisOSClient) -> TardisResult<String> {
+    if let Some(obj_exp) = obj_exp {
+        let resp = client.get_lifecycle(bucket_name).await;
+        match resp {
+            Ok(config) => {
+                let mut rules = config.rules;
+                let prefix = if let Some(is_have_prefix) = rules
+                    .iter()
+                    .filter(|r| r.status == "Enabled".to_string() && r.expiration.clone().is_some_and(|exp| exp.days.is_some_and(|days| days == obj_exp)))
+                    .filter_map(|r| r.filter.clone())
+                    .find_map(|f| f.prefix)
+                {
+                    is_have_prefix
+                } else {
+                    let rand_id = tardis::rand::random::<usize>().to_string();
+                    //add rule
+                    let add_rule = LifecycleRule::builder("Enabled")
+                        .id(&rand_id)
+                        .expiration(Expiration::new(None, Some(obj_exp), None))
+                        .filter(LifecycleFilter::new(None, None, None, Some(rand_id.clone()), None))
+                        .build();
+                    rules.push(add_rule);
+                    client.put_lifecycle(bucket_name, BucketLifecycleConfiguration::new(rules)).await?;
+                    rand_id
+                };
+                Ok(format!("{}/{}", prefix, origin_path))
+            }
+            Err(e) => {
+                if e.code != "404" {
+                    return Err(TardisError::internal_error(&format!("Bucket {:?} get lifecycle failed", bucket_name), &format!("{:?}", e)));
+                }
+                let mut rules = vec![];
+                let rand_id = tardis::rand::random::<usize>().to_string();
+                //add rule
+                let add_rule = LifecycleRule::builder("Enabled")
+                    .id(&rand_id)
+                    .expiration(Expiration::new(None, Some(obj_exp), None))
+                    .filter(LifecycleFilter::new(None, None, None, Some(rand_id.clone()), None))
+                    .build();
+                rules.push(add_rule);
+                client.put_lifecycle(bucket_name, BucketLifecycleConfiguration::new(rules)).await?;
+                Ok(format!("{}/{}", rand_id, origin_path))
+            }
+        }
+    } else {
+        Ok(origin_path.to_string())
+    }
 }

@@ -26,6 +26,7 @@ impl ObjectCiObjApi {
         exp_secs: Query<u32>,
         private: Query<Option<bool>>,
         special: Query<Option<bool>>,
+        obj_exp: Query<Option<u32>>,
         ctx: TardisContextExtractor,
     ) -> TardisApiResult<String> {
         let funs = crate::get_tardis_inst();
@@ -37,6 +38,7 @@ impl ObjectCiObjApi {
             exp_secs.0,
             private.0,
             special.0,
+            obj_exp.0,
             &funs,
             &ctx.0,
         )
@@ -52,6 +54,7 @@ impl ObjectCiObjApi {
         exp_secs: Query<u32>,
         private: Query<Option<bool>>,
         special: Query<Option<bool>>,
+        obj_exp: Query<Option<u32>>,
         ctx: TardisContextExtractor,
     ) -> TardisApiResult<String> {
         let funs = crate::get_tardis_inst();
@@ -63,6 +66,7 @@ impl ObjectCiObjApi {
             exp_secs.0,
             private.0,
             special.0,
+            obj_exp.0,
             &funs,
             &ctx.0,
         )
@@ -78,6 +82,7 @@ impl ObjectCiObjApi {
         exp_secs: Query<u32>,
         private: Query<Option<bool>>,
         special: Query<Option<bool>>,
+        obj_exp: Query<Option<u32>>,
         ctx: TardisContextExtractor,
     ) -> TardisApiResult<String> {
         let funs = crate::get_tardis_inst();
@@ -89,6 +94,7 @@ impl ObjectCiObjApi {
             exp_secs.0,
             private.0,
             special.0,
+            obj_exp.0,
             &funs,
             &ctx.0,
         )
@@ -100,7 +106,7 @@ impl ObjectCiObjApi {
     #[oai(path = "/presign/batch_view", method = "post")]
     async fn batch_presign_view_obj_url(&self, req: Json<ObjectPresignBatchViewReq>, ctx: TardisContextExtractor) -> TardisApiResult<HashMap<String, String>> {
         let funs = crate::get_tardis_inst();
-        let url = object_obj_serv::batch_get_presign_obj_url(req.0.object_path, req.0.expire_sec, req.0.private, req.0.special, &funs, &ctx.0).await?;
+        let url = object_obj_serv::batch_get_presign_obj_url(req.0.object_path, req.0.expire_sec, req.0.private, req.0.special, req.0.obj_exp, &funs, &ctx.0).await?;
         TardisResp::ok(url)
     }
 
@@ -138,9 +144,16 @@ impl ObjectCiObjApi {
 
     /// Deleting A Single Object
     #[oai(path = "/object", method = "delete")]
-    async fn object_delete(&self, object_path: Query<String>, private: Query<Option<bool>>, special: Query<Option<bool>>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+    async fn object_delete(
+        &self,
+        object_path: Query<String>,
+        private: Query<Option<bool>>,
+        special: Query<Option<bool>>,
+        obj_exp: Query<Option<u32>>,
+        ctx: TardisContextExtractor,
+    ) -> TardisApiResult<Void> {
         let funs = crate::get_tardis_inst();
-        object_obj_serv::object_delete(object_path.0, private.0, special.0, &funs, &ctx.0).await?;
+        object_obj_serv::object_delete(object_path.0, private.0, special.0, obj_exp.0, &funs, &ctx.0).await?;
         TardisResp::ok(Void)
     }
 
@@ -148,14 +161,21 @@ impl ObjectCiObjApi {
     #[oai(path = "/object/batch_delete", method = "delete")]
     async fn batch_object_delete(&self, req: Json<ObjectBatchDeleteReq>, ctx: TardisContextExtractor) -> TardisApiResult<Vec<String>> {
         let funs = crate::get_tardis_inst();
-        TardisResp::ok(object_obj_serv::batch_object_delete(req.0.object_path, req.0.private, req.0.special, &funs, &ctx.0).await?)
+        TardisResp::ok(object_obj_serv::batch_object_delete(req.0.object_path, req.0.private, req.0.special, req.0.obj_exp, &funs, &ctx.0).await?)
     }
 
     /// Check object is exist
     #[oai(path = "/object/exist", method = "get")]
-    async fn object_exist(&self, object_path: Query<String>, private: Query<Option<bool>>, special: Query<Option<bool>>, ctx: TardisContextExtractor) -> TardisApiResult<bool> {
+    async fn object_exist(
+        &self,
+        object_path: Query<String>,
+        private: Query<Option<bool>>,
+        special: Query<Option<bool>>,
+        obj_exp: Query<Option<u32>>,
+        ctx: TardisContextExtractor,
+    ) -> TardisApiResult<bool> {
         let funs = crate::get_tardis_inst();
-        TardisResp::ok(object_obj_serv::object_exist(object_path.0, private.0, special.0, &funs, &ctx.0).await?)
+        TardisResp::ok(object_obj_serv::object_exist(object_path.0, private.0, special.0, obj_exp.0, &funs, &ctx.0).await?)
     }
 
     // /// Fetch URL for temporary authorization of thumbnail
