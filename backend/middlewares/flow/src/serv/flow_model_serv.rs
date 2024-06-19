@@ -24,13 +24,14 @@ use tardis::{
     },
     futures::future::join_all,
     serde_json::json,
-    web::web_resp::TardisPage,
     tokio,
+    web::web_resp::TardisPage,
     TardisFuns, TardisFunsInst,
 };
 
 use crate::{
-    domain::{flow_model, flow_state, flow_transition}, dto::{
+    domain::{flow_model, flow_state, flow_transition},
+    dto::{
         flow_model_dto::{
             FlowModelAddReq, FlowModelAggResp, FlowModelAssociativeOperationKind, FlowModelBindStateReq, FlowModelDetailResp, FlowModelFilterReq, FlowModelFindRelStateResp,
             FlowModelModifyReq, FlowModelSummaryResp,
@@ -39,7 +40,10 @@ use crate::{
         flow_transition_dto::{
             FlowTransitionActionChangeAgg, FlowTransitionActionChangeKind, FlowTransitionAddReq, FlowTransitionDetailResp, FlowTransitionInitInfo, FlowTransitionModifyReq,
         },
-    }, flow_config::FlowBasicInfoManager, flow_constants, serv::flow_state_serv::FlowStateServ
+    },
+    flow_config::FlowBasicInfoManager,
+    flow_constants,
+    serv::flow_state_serv::FlowStateServ,
 };
 use async_trait::async_trait;
 
@@ -268,10 +272,17 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
 
         // 同步修改所有引用的下级模型
         if model.template {
-            let child_models = Self::find_detail_items(&FlowModelFilterReq {
-                rel_model_ids: Some(vec![flow_model_id.to_string()]),
-                ..Default::default()
-            }, None, None, funs, ctx).await?;
+            let child_models = Self::find_detail_items(
+                &FlowModelFilterReq {
+                    rel_model_ids: Some(vec![flow_model_id.to_string()]),
+                    ..Default::default()
+                },
+                None,
+                None,
+                funs,
+                ctx,
+            )
+            .await?;
             for child_model in child_models {
                 let ctx_clone = TardisContext {
                     own_paths: child_model.own_paths,
@@ -290,7 +301,6 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
                 }))
                 .await?;
             }
-            
         }
 
         Ok(())
@@ -1334,6 +1344,21 @@ impl FlowModelServ {
         let mut scope_level = rbum_scope_helper::get_scope_level_by_context(ctx)?.to_int();
 
         let mut result = None;
+        // Prioritize confirming the existence of mods related to own_paths
+        if let Some(rel_model_id) = FlowRelServ::find_to_simple_rels(
+            &FlowRelKind::FlowModelApp,
+            &rbum_scope_helper::get_path_item(RbumScopeLevelKind::L2.to_int(), &ctx.own_paths).unwrap_or_default(),
+            None,
+            None,
+            funs,
+            ctx,
+        )
+        .await?
+        .into_iter()
+        .map(|rel| rel.rel_id)
+        .collect_vec().pop() {
+            return Ok(rel_model_id);
+        }
         // try get model in tenant path or app path
         while !own_paths.is_empty() {
             result = FlowModelServ::find_one_item(
