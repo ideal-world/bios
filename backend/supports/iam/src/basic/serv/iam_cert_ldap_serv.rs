@@ -1527,6 +1527,7 @@ pub struct AccountFieldMap {
     pub field_mobile_remarks: String,
     pub field_email_remarks: String,
     pub field_labor_type: String,
+    pub field_labor_type_map: Option<HashMap<String, String>>,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
