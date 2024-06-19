@@ -28,8 +28,8 @@ pub struct FlowModelAddReq {
     pub info: Option<String>,
     /// 初始化状态ID
     pub init_state_id: String,
-    /// 关联模板ID
-    pub rel_template_id: Option<String>,
+    /// 关联模板ID（目前可能是页面模板ID，或者是项目模板ID）
+    pub rel_template_ids: Option<Vec<String>>,
     /// 绑定的动作
     pub transitions: Option<Vec<FlowTransitionAddReq>>,
     /// 绑定的状态
@@ -72,6 +72,8 @@ pub struct FlowModelModifyReq {
     pub modify_states: Option<Vec<FlowStateRelModelModifyReq>>,
     /// 标签
     pub tag: Option<String>,
+    /// 关联模板ID（目前可能是页面模板ID，或者是项目模板ID）
+    pub rel_template_ids: Option<Vec<String>>,
 
     pub scope_level: Option<RbumScopeLevelKind>,
     pub disabled: Option<bool>,
@@ -105,8 +107,12 @@ pub struct FlowModelDetailResp {
     pub info: String,
     /// 初始化状态ID
     pub init_state_id: String,
-    /// 关联模板ID
-    pub rel_template_id: String,
+    /// 是否作为模板使用
+    pub template: bool,
+    /// 关联父级模型ID
+    pub rel_model_id: String,
+    /// 关联模板ID（目前可能是页面模板ID，或者是项目模板ID）
+    pub rel_template_ids: Vec<String>,
     // 动作信息
     pub transitions: Option<Value>,
 
@@ -138,13 +144,15 @@ pub struct FlowModelFilterReq {
     pub basic: RbumBasicFilterReq,
     /// 标签集合
     pub tags: Option<Vec<String>>,
-    /// 关联模板ID
-    pub rel_template_id: Option<String>,
+
     /// 是否作为模板使用
     pub template: Option<bool>,
     pub own_paths: Option<Vec<String>>,
     /// 指定状态ID(用于过滤动作)
     pub specified_state_ids: Option<Vec<String>>,
+
+    pub rel: Option<RbumItemRelFilterReq>,
+    pub rel2: Option<RbumItemRelFilterReq>,
 }
 
 impl RbumItemFilterFetcher for FlowModelFilterReq {
@@ -152,10 +160,10 @@ impl RbumItemFilterFetcher for FlowModelFilterReq {
         &self.basic
     }
     fn rel(&self) -> &Option<RbumItemRelFilterReq> {
-        &None
+        &self.rel
     }
     fn rel2(&self) -> &Option<RbumItemRelFilterReq> {
-        &None
+        &self.rel2
     }
 }
 
@@ -168,8 +176,12 @@ pub struct FlowModelAggResp {
     pub info: String,
     /// 初始化状态ID
     pub init_state_id: String,
-    /// 关联模板ID
-    pub rel_template_id: String,
+    /// 是否作为模板使用
+    pub template: bool,
+    /// 关联父级模型ID
+    pub rel_model_id: String,
+    /// 关联模板ID（目前可能是页面模板ID，或者是项目模板ID）
+    pub rel_template_ids: Vec<String>,
     /// 绑定的状态
     pub states: Vec<FlowStateAggResp>,
 
@@ -225,6 +237,8 @@ pub struct FlowModelSortStateInfoReq {
 pub struct FlowModelAddCustomModelReq {
     /// 模板ID
     pub proj_template_id: Option<String>,
+    /// 关联模板ID
+    pub rel_template_id: Option<String>,
     /// 绑定模型的对象
     pub bind_model_objs: Vec<FlowModelAddCustomModelItemReq>,
 }

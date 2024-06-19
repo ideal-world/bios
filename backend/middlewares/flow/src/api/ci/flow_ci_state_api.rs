@@ -79,7 +79,7 @@ impl FlowCiStateApi {
             &ctx.0,
         )
         .await?;
-
+        ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
 
@@ -96,6 +96,7 @@ impl FlowCiStateApi {
         funs.begin().await?;
         let result = FlowStateServ::count_group_by_state(&req.0, &funs, &ctx.0).await?;
         funs.commit().await?;
+        ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
 }

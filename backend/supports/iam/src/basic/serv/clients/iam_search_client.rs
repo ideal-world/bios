@@ -171,6 +171,7 @@ impl IamSearchClient {
                     "disabled":account_resp.disabled,
                     "logout_time":account_resp.logout_time,
                     "logout_type":account_resp.logout_type,
+                    "labor_type":account_resp.labor_type,
                     "scope_level":account_resp.scope_level
                 })),
                 ext_override: Some(true),
@@ -217,6 +218,7 @@ impl IamSearchClient {
                     "disabled":account_resp.disabled,
                     "logout_time":account_resp.logout_time,
                     "logout_type":account_resp.logout_type,
+                    "labor_type":account_resp.labor_type,
                     "scope_level":account_resp.scope_level
                 })),
                 visit_keys: Some(SearchItemVisitKeysReq {

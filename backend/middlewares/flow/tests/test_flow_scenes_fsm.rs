@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::str::FromStr;
 
 use bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind;
 use bios_basic::test::test_http_client::TestHttpClient;
@@ -21,7 +20,6 @@ use bios_mw_flow::dto::flow_transition_dto::{
 
 use bios_mw_flow::dto::flow_var_dto::{FlowVarInfo, RbumDataTypeKind, RbumWidgetTypeKind};
 use bios_sdk_invoke::clients::spi_kv_client::KvItemSummaryResp;
-use rust_decimal::Decimal;
 use tardis::basic::dto::TardisContext;
 
 use tardis::basic::result::TardisResult;
@@ -78,6 +76,7 @@ pub async fn test(flow_client: &mut TestHttpClient) -> TardisResult<()> {
             "/cc/model/add_custom_model",
             &FlowModelAddCustomModelReq {
                 proj_template_id: Some(template_id.clone()),
+                rel_template_id: None,
                 bind_model_objs: modify_configs,
             },
         )
@@ -502,6 +501,7 @@ pub async fn test(flow_client: &mut TestHttpClient) -> TardisResult<()> {
             "/cc/model/add_custom_model",
             &FlowModelAddCustomModelReq {
                 proj_template_id: Some(share_template_id.clone()),
+                rel_template_id: None,
                 bind_model_objs: vec![FlowModelAddCustomModelItemReq { tag: "REQ".to_string() }],
             },
         )
@@ -601,6 +601,7 @@ pub async fn test(flow_client: &mut TestHttpClient) -> TardisResult<()> {
             "/cc/model/add_custom_model",
             &FlowModelAddCustomModelReq {
                 proj_template_id: Some(mock_template_id.clone()),
+                rel_template_id: None,
                 bind_model_objs: modify_configs,
             },
         )

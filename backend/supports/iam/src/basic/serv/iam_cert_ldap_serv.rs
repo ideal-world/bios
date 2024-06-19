@@ -420,6 +420,7 @@ impl IamCertLdapServ {
                 &account.get_simple_attr(&cert_conf.account_field_map.field_user_name).unwrap_or_default(),
                 &format!("{}0Pw$", TardisFuns::field.nanoid_len(6)),
                 &cert_conf_id,
+                &account.get_simple_attr(&cert_conf.account_field_map.field_labor_type).unwrap_or_default(),
                 RbumCertStatusKind::Enabled,
                 funs,
                 &mock_ctx,
@@ -597,6 +598,7 @@ impl IamCertLdapServ {
                     &account.get_simple_attr(&cert_conf.account_field_map.field_user_name).unwrap_or_default(),
                     login_req.bind_user_pwd.sk.as_ref(),
                     &cert_conf_id,
+                    &account.get_simple_attr(&cert_conf.account_field_map.field_labor_type).unwrap_or_default(),
                     RbumCertStatusKind::Enabled,
                     funs,
                     &mock_ctx,
@@ -783,7 +785,26 @@ impl IamCertLdapServ {
                 //     ldap_id_to_account_map.remove(&local_ldap_id);
                 //     continue;
                 // }
-
+                if !iam_account_ext_sys_resp.labor_type.is_empty() {
+                    let modify_result = IamAccountServ::modify_account_agg(
+                        &cert.rel_rbum_id,
+                        &IamAccountAggModifyReq {
+                            labor_type: Some(iam_account_ext_sys_resp.labor_type.clone()),
+                            ..Default::default()
+                        },
+                        &funs,
+                        ctx,
+                    )
+                    .await;
+                    if modify_result.is_err() {
+                        let err_msg = format!("modify labor_type id:{} failed:{}", cert.rel_rbum_id, modify_result.err().unwrap());
+                        tardis::log::error!("{}", err_msg);
+                        msg = format!("{msg}{err_msg}\n");
+                        funs.rollback().await?;
+                        ldap_id_to_account_map.remove(&local_ldap_id);
+                        continue;
+                    }
+                }
                 if !iam_account_ext_sys_resp.mobile.is_empty() {
                     // 如果有手机号配置那么就更新手机号
                     let phone_cert_conf_id = IamCertServ::get_cert_conf_id_by_kind(&IamCertKernelKind::PhoneVCode.to_string(), Some(ctx.own_paths.clone()), &funs).await?;
@@ -807,7 +828,7 @@ impl IamCertLdapServ {
                     .await?
                     {
                         if phone_cert.ak != iam_account_ext_sys_resp.mobile {
-                            let modify_result = RbumCertServ::modify_rbum(
+                            let modify_result: Result<(), tardis::basic::error::TardisError> = RbumCertServ::modify_rbum(
                                 &phone_cert.id,
                                 &mut RbumCertModifyReq {
                                     ak: Some(TrimString(iam_account_ext_sys_resp.mobile.clone())),
@@ -960,18 +981,10 @@ impl IamCertLdapServ {
                         IamAccountServ::modify_account_agg(
                             &cert.rel_rbum_id,
                             &IamAccountAggModifyReq {
-                                name: None,
-                                scope_level: None,
                                 disabled: Some(true),
-                                icon: None,
-                                role_ids: None,
-                                org_cate_ids: None,
-                                exts: None,
                                 status: Some(IamAccountStatusKind::Logout),
-                                cert_phone: None,
-                                cert_mail: None,
-                                temporary: None,
                                 logout_type: Some(IamAccountLogoutTypeKind::AutomaticLogout),
+                                ..Default::default()
                             },
                             &funs,
                             ctx,
@@ -1023,6 +1036,7 @@ impl IamCertLdapServ {
                         &ldap_resp.user_name,
                         &format!("{}0Pw$", TardisFuns::field.nanoid_len(6)),
                         &cert_conf_id,
+                        &ldap_resp.labor_type,
                         RbumCertStatusKind::Enabled,
                         &funs,
                         &mock_ctx,
@@ -1074,6 +1088,7 @@ impl IamCertLdapServ {
                         &ldap_resp.user_name,
                         &format!("{}0Pw$", TardisFuns::field.nanoid_len(6)),
                         &cert_conf_id,
+                        &ldap_resp.labor_type,
                         RbumCertStatusKind::Disabled,
                         &funs,
                         &mock_ctx,
@@ -1131,6 +1146,7 @@ impl IamCertLdapServ {
         cert_user_name: &str,
         userpwd_password: &str,
         ldap_cert_conf_id: &str,
+        labor_type: &str,
         cert_status: RbumCertStatusKind,
         funs: &TardisFunsInst,
         ctx: &TardisContext,
@@ -1153,6 +1169,7 @@ impl IamCertLdapServ {
                 temporary: None,
                 lock_status: None,
                 logout_type: None,
+                labor_type: Some(labor_type.to_string()),
             },
             false,
             funs,
@@ -1509,6 +1526,8 @@ pub struct AccountFieldMap {
     pub field_display_name_remarks: String,
     pub field_mobile_remarks: String,
     pub field_email_remarks: String,
+    pub field_labor_type: String,
+    pub field_labor_type_map: Option<HashMap<String, String>>,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]

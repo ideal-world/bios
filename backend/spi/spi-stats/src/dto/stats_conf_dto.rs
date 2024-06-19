@@ -11,34 +11,34 @@ use crate::stats_enumeration::{StatsDataTypeKind, StatsFactColKind};
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct StatsConfDimAddReq {
     /// The primary key or encoding passed in from the external system
-    /// 
+    ///
     /// 外部系统传入的主键或编码
     #[oai(validator(pattern = r"^[a-z0-9_]+$"))]
     pub key: String,
     /// The name of the dimension
-    /// 
+    ///
     /// 维度名称
     #[oai(validator(min_length = "2"))]
     pub show_name: String,
-    
+
     /// Whether it is a stable dataset,
     /// if true the dimension data is recorded in the corresponding dimension table,
     /// if false the dimension data is recorded in the fact table
-    /// 
+    ///
     /// 是否为稳定数据集，
     /// 如果为true，则维度数据记录在对应的维度表中，
     /// 如果为false，则维度数据记录在事实表中
     pub stable_ds: bool,
 
     /// Dimension data type
-    /// 
+    ///
     /// 维度数据类型
     pub data_type: StatsDataTypeKind,
-    
+
     /// Hierarchy, starting from 0, for up-rolls/down-rolls.
     /// Multiple fields can be defined for each dimension.
     /// e.g. address dimension can be province-city-district, etc.
-    /// 
+    ///
     /// 层级，从0开始，用于上卷/下卷。
     /// 每个维度可以定义多个字段。
     /// 例如地址维度可以是省-市-区等
@@ -47,7 +47,7 @@ pub struct StatsConfDimAddReq {
     pub dynamic_url: Option<String>,
 
     /// is_tree = true, the dimension is a tree structure
-    /// 
+    ///
     /// 该纬度是否是树形结构
     pub is_tree: bool,
     pub tree_dynamic_url: Option<String>,
@@ -87,13 +87,12 @@ pub struct StatsConfDimModifyReq {
     pub dynamic_url: Option<String>,
 
     /// is_tree = true, the dimension is a tree structure
-    /// 
+    ///
     /// 该纬度是否是树形结构
     pub is_tree: Option<bool>,
     pub tree_dynamic_url: Option<String>,
     pub rel_attribute_code: Option<Vec<String>>,
     pub rel_attribute_url: Option<String>,
-
 }
 
 /// Dimension Configuration Response Object
@@ -136,7 +135,7 @@ pub struct StatsConfDimInfoResp {
     pub dynamic_url: Option<String>,
 
     /// is_tree = true, the dimension is a tree structure
-    /// 
+    ///
     /// 该纬度是否是树形结构
     pub is_tree: bool,
     pub tree_dynamic_url: Option<String>,

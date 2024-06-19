@@ -119,6 +119,7 @@ pub async fn test(sysadmin_name: &str, sysadmin_password: &str, client: &mut BIO
                 temporary: None,
                 lock_status: None,
                 logout_type: None,
+                labor_type: None,
             },
         )
         .await;
@@ -204,6 +205,7 @@ pub async fn account_mgr_by_sys_admin(client: &mut BIOSWebTestClient) -> TardisR
                 icon: None,
                 exts: HashMap::new(),
                 logout_type: None,
+                labor_type: None,
             },
         )
         .await;
@@ -317,6 +319,7 @@ pub async fn account_mgr_by_tenant_account(client: &mut BIOSWebTestClient) -> Ta
                 icon: None,
                 exts: HashMap::from([("ext9".to_string(), "00001".to_string())]),
                 logout_type: None,
+                labor_type: None,
             },
         )
         .await;
@@ -843,6 +846,7 @@ pub async fn login_by_ldap(client: &mut BIOSWebTestClient) -> TardisResult<()> {
                 field_display_name_remarks: "".to_string(),
                 field_mobile_remarks: "".to_string(),
                 field_email_remarks: "".to_string(),
+                field_labor_type: "".to_string(),
             },
             // org_unique_id: "ou".to_string(),
             // org_field_map: OrgFieldMap {
@@ -882,6 +886,7 @@ pub async fn login_by_ldap(client: &mut BIOSWebTestClient) -> TardisResult<()> {
                 temporary: None,
                 lock_status: None,
                 logout_type: None,
+                labor_type: None,
             },
         )
         .await;
@@ -945,6 +950,7 @@ pub async fn login_by_ldap(client: &mut BIOSWebTestClient) -> TardisResult<()> {
                         field_display_name_remarks: "".to_string(),
                         field_mobile_remarks: "".to_string(),
                         field_email_remarks: "".to_string(),
+                        field_labor_type: "".to_string(),
                     },
                     // org_unique_id: "ou".to_string(),
                     // org_field_map: OrgFieldMap {
@@ -986,6 +992,7 @@ pub async fn login_by_ldap(client: &mut BIOSWebTestClient) -> TardisResult<()> {
                 temporary: None,
                 lock_status: None,
                 logout_type: None,
+                labor_type: None,
             },
         )
         .await;

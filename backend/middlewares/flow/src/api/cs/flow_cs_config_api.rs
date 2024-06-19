@@ -21,6 +21,7 @@ impl FlowCsConfigApi {
         funs.begin().await?;
         FlowConfigServ::modify_config(&req.0, &funs, &ctx.0).await?;
         funs.commit().await?;
+        ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
     }
 
@@ -31,6 +32,7 @@ impl FlowCsConfigApi {
         funs.begin().await?;
         let result = FlowConfigServ::get_config(&funs, &ctx.0).await?;
         funs.commit().await?;
+        ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
 }
