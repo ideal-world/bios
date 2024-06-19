@@ -68,7 +68,7 @@ impl From<FlowModelDetailResp> for FlowModelAddReq {
 }
 
 /// 修改请求
-#[derive(Serialize, Deserialize, Debug, Default, poem_openapi::Object)]
+#[derive(Serialize, Deserialize, Debug, Default, poem_openapi::Object, Clone)]
 pub struct FlowModelModifyReq {
     #[oai(validator(min_length = "2", max_length = "200"))]
     pub name: Option<TrimString>,
@@ -181,6 +181,8 @@ pub struct FlowModelFilterReq {
     pub own_paths: Option<Vec<String>>,
     /// 指定状态ID(用于过滤动作)
     pub specified_state_ids: Option<Vec<String>>,
+    /// 关联模型ID
+    pub rel_model_ids: Option<Vec<String>>,
 
     pub rel: Option<RbumItemRelFilterReq>,
     pub rel2: Option<RbumItemRelFilterReq>,
@@ -228,7 +230,7 @@ pub struct FlowModelAggResp {
 }
 
 /// 绑定状态
-#[derive(Serialize, Deserialize, Debug, Default, poem_openapi::Object)]
+#[derive(Serialize, Deserialize, Debug, Default, poem_openapi::Object, Clone)]
 pub struct FlowModelBindStateReq {
     /// Associated [flow_state](super::flow_state_dto::FlowStateDetailResp) id
     ///

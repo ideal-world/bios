@@ -25,12 +25,12 @@ use tardis::{
     futures::future::join_all,
     serde_json::json,
     web::web_resp::TardisPage,
+    tokio,
     TardisFuns, TardisFunsInst,
 };
 
 use crate::{
-    domain::{flow_model, flow_state, flow_transition},
-    dto::{
+    domain::{flow_model, flow_state, flow_transition}, dto::{
         flow_model_dto::{
             FlowModelAddReq, FlowModelAggResp, FlowModelAssociativeOperationKind, FlowModelBindStateReq, FlowModelDetailResp, FlowModelFilterReq, FlowModelFindRelStateResp,
             FlowModelModifyReq, FlowModelSummaryResp,
@@ -39,9 +39,7 @@ use crate::{
         flow_transition_dto::{
             FlowTransitionActionChangeAgg, FlowTransitionActionChangeKind, FlowTransitionAddReq, FlowTransitionDetailResp, FlowTransitionInitInfo, FlowTransitionModifyReq,
         },
-    },
-    flow_config::FlowBasicInfoManager,
-    serv::flow_state_serv::FlowStateServ,
+    }, flow_config::FlowBasicInfoManager, flow_constants, serv::flow_state_serv::FlowStateServ
 };
 use async_trait::async_trait;
 
@@ -268,6 +266,30 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
             IamSearchClient::async_add_or_modify_model_search(flow_model_id, Box::new(true), funs, ctx).await?;
         }
 
+        // 同步修改所有引用的下级模型
+        if model.template {
+            let child_model_ids = Self::find_id_items(&FlowModelFilterReq {
+                rel_model_ids: Some(vec![flow_model_id.to_string()]),
+                ..Default::default()
+            }, None, None, funs, ctx).await?;
+            for child_model_id in child_model_ids {
+                let ctx_clone = ctx.clone();
+                let mut modify_req_clone = modify_req.clone();
+                ctx.add_async_task(Box::new(|| {
+                    Box::pin(async move {
+                        let task_handle = tokio::spawn(async move {
+                            let funs = flow_constants::get_tardis_inst();
+                            let _ = Self::modify_item(&child_model_id, &mut modify_req_clone, &funs, &ctx_clone).await;
+                        });
+                        task_handle.await.unwrap();
+                        Ok(())
+                    })
+                }))
+                .await?;
+            }
+            
+        }
+
         Ok(())
     }
 
@@ -312,6 +334,9 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
         }
         if let Some(own_paths) = filter.own_paths.clone() {
             query.and_where(Expr::col((flow_model::Entity, flow_model::Column::OwnPaths)).is_in(own_paths));
+        }
+        if let Some(rel_model_ids) = filter.rel_model_ids.clone() {
+            query.and_where(Expr::col(flow_model::Column::RelModelId).is_in(rel_model_ids));
         }
 
         Ok(())
