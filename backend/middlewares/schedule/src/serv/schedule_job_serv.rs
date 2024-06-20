@@ -109,12 +109,6 @@ pub(crate) async fn delete(code: &str, funs: &TardisFunsInst, ctx: &TardisContex
     conn.set_ex(&format!("{cache_key_job_changed_info}{code}"), "delete", config.cache_key_job_changed_timer_sec as u64).await?;
     // 4. do delete at local scheduler
     if service().code_uuid.read().await.get(code).is_some() {
-        // delete schedual-task from kv cache first
-        // 先从kv缓存中删除调度任务
-        let mut conn = funs.cache().cmd().await?;
-        let config = funs.conf::<ScheduleConfig>();
-        let cache_key_job_changed_info = &config.cache_key_job_changed_info;
-        conn.del(&format!("{cache_key_job_changed_info}{code}")).await?;
         // delete schedual-task from scheduler
         // 从调度器中删除调度任务
         ScheduleTaskServ::delete(code).await?;
@@ -282,7 +276,7 @@ impl OwnedScheduleTaskServ {
                     if let Ok(job_resp) = self::find_job(None, 1, 9999, &funs, &sync_db_ctx).await {
                         let jobs = job_resp.records;
                         for job in jobs {
-                            serv.add(job.create_add_or_mod_req(), &config).await.map_err(|e| error!("fail to delete schedule task: {e}")).unwrap_or_default();
+                            serv.add(job.create_add_or_mod_req(), &config).await.map_err(|e| error!("fail to add schedule task: {e}")).unwrap_or_default();
                         }
                         info!("synced all jobs from kv");
                         break;
@@ -332,7 +326,7 @@ impl OwnedScheduleTaskServ {
                             match self::find_one_job(code, &funs, &ctx).await {
                                 Ok(Some(resp)) => {
                                     // if we have this job code in local cache, update or add it
-                                    serv.add(resp.value, &config).await.map_err(|e| error!("fail to delete schedule task: {e}")).unwrap_or_default();
+                                    serv.add(resp.value, &config).await.map_err(|e| error!("fail to add schedule task: {e}")).unwrap_or_default();
                                 }
                                 Ok(None) => {
                                     // if we don't have this job code in local cache, remove it
@@ -529,7 +523,7 @@ impl OwnedScheduleTaskServ {
         if let Some(tasks) = uuid_cache.get(code) {
             for (uuid, _) in tasks {
                 self.scheduler.remove(uuid).await.map_err(|err| {
-                    let msg = format!("fail to add job: {}", err);
+                    let msg = format!("fail to remove job: {}", err);
                     TardisError::internal_error(&msg, "500-middlewares-schedual-create-task-failed")
                 })?;
             }
