@@ -900,19 +900,29 @@ impl FlowModelServ {
         Ok(result)
     }
 
-    // 创建或引用模型（rel_model_id：关联模型ID, op：关联模型操作类型（复制或者引用），is_create_copy：是否创建副本（当op为复制时需指定，默认不需要））
+    /// 创建或引用模型
+    /// params:
+    /// rel_model_id：关联模型ID
+    /// rel_template_id: 绑定模板ID,可选参数（仅在创建模型，即创建副本或op为复制时生效）
+    /// rel_own_paths: 绑定实例ID（仅在引用且不创建模型时生效）
+    /// （rel_model_id：关联模型ID, rel_template_id: 绑定模板ID,可选参数（仅在创建模型，即创建副本或op为复制时生效）, op：关联模型操作类型（复制或者引用），is_create_copy：是否创建副本（当op为复制时需指定，默认不需要））
     pub async fn copy_or_reference_model(
         rel_model_id: &str,
+        rel_template_id: Option<String>,
+        rel_own_paths: Option<String>,
         op: &FlowModelAssociativeOperationKind,
         is_create_copy: Option<bool>,
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<String> {
-        let rel_model = FlowModelServ::find_one_detail_item(
+        let rel_model = FlowModelServ::get_item(
+            rel_model_id,
             &FlowModelFilterReq {
                 basic: RbumBasicFilterReq {
                     ids: Some(vec![rel_model_id.to_string()]),
                     ignore_scope: true,
+                    // own_paths: Some("".to_string()),
+                    // with_sub_own_paths: true,
                     ..Default::default()
                 },
                 ..Default::default()
@@ -920,14 +930,15 @@ impl FlowModelServ {
             funs,
             ctx,
         )
-        .await?
-        .ok_or_else(|| funs.err().not_found(&Self::get_obj_name(), "copy_or_reference_model", "rel model not found", "404-flow-model-not-found"))?;
+        .await?;
+        // .ok_or_else(|| funs.err().not_found(&Self::get_obj_name(), "copy_or_reference_model", "rel model not found", "404-flow-model-not-found"))?;
         let result = match op {
             FlowModelAssociativeOperationKind::Reference => {
                 if is_create_copy.unwrap_or(false) {
                     Self::add_item(
                         &mut FlowModelAddReq {
                             rel_model_id: Some(rel_model_id.to_string()),
+                            rel_template_ids: None,
                             ..rel_model.clone().into()
                         },
                         funs,
@@ -936,9 +947,9 @@ impl FlowModelServ {
                     .await?
                 } else {
                     FlowRelServ::add_simple_rel(
-                        &FlowRelKind::FlowModelApp,
+                        &FlowRelKind::FlowModelPath,
                         rel_model_id,
-                        &rbum_scope_helper::get_path_item(RbumScopeLevelKind::L2.to_int(), &ctx.own_paths).unwrap_or_default(),
+                        &rel_own_paths.unwrap_or_default(),
                         None,
                         None,
                         false,
@@ -955,6 +966,7 @@ impl FlowModelServ {
                 Self::add_item(
                     &mut FlowModelAddReq {
                         rel_model_id: None,
+                        rel_template_ids: None,
                         ..rel_model.clone().into()
                     },
                     funs,
@@ -963,6 +975,12 @@ impl FlowModelServ {
                 .await?
             }
         };
+        if *op == FlowModelAssociativeOperationKind::Copy || (*op == FlowModelAssociativeOperationKind::Reference && is_create_copy.unwrap_or(false)) {
+            if let Some(rel_template_id) = rel_template_id {
+                FlowRelServ::add_simple_rel(&FlowRelKind::FlowModelTemplate, &result, &rel_template_id, None, None, false, true, None, funs, ctx).await?;
+            }
+        }
+
         Ok(result)
     }
 
@@ -1348,19 +1366,8 @@ impl FlowModelServ {
 
         let mut result = None;
         // Prioritize confirming the existence of mods related to own_paths
-        if let Some(rel_model_id) = FlowRelServ::find_to_simple_rels(
-            &FlowRelKind::FlowModelApp,
-            &rbum_scope_helper::get_path_item(RbumScopeLevelKind::L2.to_int(), &ctx.own_paths).unwrap_or_default(),
-            None,
-            None,
-            funs,
-            ctx,
-        )
-        .await?
-        .into_iter()
-        .map(|rel| rel.rel_id)
-        .collect_vec()
-        .pop()
+        if let Some(rel_model_id) =
+            FlowRelServ::find_to_simple_rels(&FlowRelKind::FlowModelPath, &ctx.own_paths, None, None, funs, ctx).await?.into_iter().map(|rel| rel.rel_id).collect_vec().pop()
         {
             return Ok(rel_model_id);
         }
