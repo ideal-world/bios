@@ -847,6 +847,7 @@ pub async fn login_by_ldap(client: &mut BIOSWebTestClient) -> TardisResult<()> {
                 field_mobile_remarks: "".to_string(),
                 field_email_remarks: "".to_string(),
                 field_labor_type: "".to_string(),
+                field_labor_type_map: None,
             },
             // org_unique_id: "ou".to_string(),
             // org_field_map: OrgFieldMap {
@@ -951,6 +952,7 @@ pub async fn login_by_ldap(client: &mut BIOSWebTestClient) -> TardisResult<()> {
                         field_mobile_remarks: "".to_string(),
                         field_email_remarks: "".to_string(),
                         field_labor_type: "".to_string(),
+                        field_labor_type_map: None,
                     },
                     // org_unique_id: "ou".to_string(),
                     // org_field_map: OrgFieldMap {
