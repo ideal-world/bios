@@ -89,6 +89,7 @@ impl IamSearchClient {
                 create_time: Some(model_resp.create_time),
                 update_time: Some(model_resp.update_time),
                 ext: Some(json!({
+                    "tag": model_resp.tag,
                     "icon": model_resp.icon,
                     "info": model_resp.info,
                     "rel_template_ids": model_resp.rel_template_ids,
@@ -134,6 +135,7 @@ impl IamSearchClient {
                 create_time: Some(model_resp.create_time),
                 update_time: Some(model_resp.update_time),
                 ext: Some(json!({
+                    "tag": model_resp.tag,
                     "icon": model_resp.icon,
                     "info": model_resp.info,
                     "rel_template_ids": model_resp.rel_template_ids,

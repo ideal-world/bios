@@ -65,7 +65,7 @@ pub struct FlowTransitionAddReq {
     pub sort: Option<i64>,
 }
 
-#[derive(Serialize, Deserialize, Debug, poem_openapi::Object, Default)]
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object, Default, Clone)]
 pub struct FlowTransitionModifyReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub id: TrimString,
