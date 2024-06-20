@@ -319,7 +319,7 @@ pub struct FlowModelFindRelStateResp {
 }
 
 /// 工作流关联操作类型
-#[derive(Serialize, Deserialize, Debug, Default, poem_openapi::Enum)]
+#[derive(Serialize, Deserialize, Debug, Default, PartialEq, poem_openapi::Enum)]
 pub enum FlowModelAssociativeOperationKind {
     #[default]
     Reference,
@@ -330,5 +330,6 @@ pub enum FlowModelAssociativeOperationKind {
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
 pub struct FlowModelCopyOrReferenceReq {
     pub rel_model_ids: Vec<String>,
+    pub rel_template_id: Option<String>,
     pub op: FlowModelAssociativeOperationKind,
 }

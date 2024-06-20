@@ -26,7 +26,7 @@ pub struct FlowRelServ;
 pub enum FlowRelKind {
     FlowModelState,
     FlowModelTemplate,
-    FlowModelApp,
+    FlowModelPath,
 }
 
 impl FlowRelServ {

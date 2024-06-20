@@ -26,7 +26,7 @@ impl FlowCtModelApi {
         for rel_model_id in req.0.rel_model_ids {
             result.insert(
                 rel_model_id.clone(),
-                FlowModelServ::copy_or_reference_model(&rel_model_id, &req.0.op, Some(true), &funs, &ctx.0).await?,
+                FlowModelServ::copy_or_reference_model(&rel_model_id, req.0.rel_template_id.clone(), None, &req.0.op, Some(true), &funs, &ctx.0).await?,
             );
         }
         funs.commit().await?;
