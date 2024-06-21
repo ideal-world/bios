@@ -184,7 +184,7 @@ impl FlowCcModelApi {
 
     /// Find the specified models, or create it if it doesn't exist.
     ///
-    /// 查找指定model，如果不存在则创建。创建规则遵循add_custom_model接口逻辑。
+    /// 查找关联的model，如果不存在则创建。创建规则遵循add_custom_model接口逻辑。
     ///
     /// # Parameters
     /// - `tag_ids` - list of tag_id
@@ -203,6 +203,32 @@ impl FlowCcModelApi {
         funs.begin().await?;
         let tag_ids = tag_ids.split(',').map(|tag_id| tag_id.to_string()).collect_vec();
         let result = FlowModelServ::find_or_add_models(tag_ids, temp_id.0, is_shared.unwrap_or(false), &funs, &ctx.0).await?;
+        funs.commit().await?;
+        ctx.0.execute_task().await?;
+        TardisResp::ok(result)
+    }
+
+    /// Find the specified models, or create it if it doesn't exist.
+    ///
+    /// 查找关联的model。
+    ///
+    /// # Parameters
+    /// - `tag_ids` - list of tag_id
+    /// - `temp_id` - associated template_id
+    /// - `is_shared` - whether the associated template is shared
+    #[oai(path = "/find_or_add_models", method = "put")]
+    async fn find_rel_models(
+        &self,
+        tag_ids: Query<String>,
+        temp_id: Query<Option<String>>,
+        is_shared: Query<Option<bool>>,
+        ctx: TardisContextExtractor,
+        _request: &Request,
+    ) -> TardisApiResult<HashMap<String, FlowModelSummaryResp>> {
+        let mut funs = flow_constants::get_tardis_inst();
+        funs.begin().await?;
+        let tag_ids = tag_ids.split(',').map(|tag_id| tag_id.to_string()).collect_vec();
+        let result = FlowModelServ::find_rel_models(tag_ids, temp_id.0, is_shared.unwrap_or(false), &funs, &ctx.0).await?;
         funs.commit().await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)

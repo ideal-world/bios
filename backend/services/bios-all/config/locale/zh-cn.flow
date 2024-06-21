@@ -10,5 +10,6 @@
 404-flow-inst-rel-model-not-found	找不到实例关联的模型
 404-flow-inst-transfer-state-not-found	没有可流转的状态
 500-external-illegal-response	对外接口响应异常
+500-flow_model-prohibit-delete  当前模型不可删除
 500-flow-transition-endless-loop	状态流转出现死循环
 409-rbum-rel-exist	状态关联已存在

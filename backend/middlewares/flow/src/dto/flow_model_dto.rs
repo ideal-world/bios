@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use bios_basic::rbum::{
     dto::rbum_filer_dto::{RbumBasicFilterReq, RbumItemFilterFetcher, RbumItemRelFilterReq},
     rbum_enumeration::RbumScopeLevelKind,
@@ -329,7 +331,11 @@ pub enum FlowModelAssociativeOperationKind {
 /// 创建或引用模型请求
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
 pub struct FlowModelCopyOrReferenceReq {
+    /// 关联的模型ID列表
     pub rel_model_ids: Vec<String>,
+    /// 关联的模板ID
     pub rel_template_id: Option<String>,
+    /// 修改的模板ID
+    pub modify_model_ids: Option<HashMap<String, String>>,
     pub op: FlowModelAssociativeOperationKind,
 }

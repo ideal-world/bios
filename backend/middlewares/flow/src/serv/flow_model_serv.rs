@@ -307,7 +307,31 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
     }
 
     async fn before_delete_item(flow_model_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<FlowModelDetailResp>> {
+        if !Self::find_id_items(
+            &FlowModelFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    own_paths: Some("".to_string()),
+                    ..Default::default()
+                },
+                rel_model_ids: Some(vec![flow_model_id.to_string()]),
+                ..Default::default()
+            },
+            None,
+            None,
+            funs,
+            ctx,
+        )
+        .await?
+        .is_empty()
+        {
+            return Err(funs.err().not_found(&Self::get_obj_name(), "delete_item", "the model prohibit delete", "500-flow_model-prohibit-delete"));
+        }
+        if !FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelPath, flow_model_id, None, None, funs, ctx).await?.is_empty() {
+            return Err(funs.err().not_found(&Self::get_obj_name(), "delete_item", "the model prohibit delete", "500-flow_model-prohibit-delete"));
+        }
         let detail = Self::get_item(flow_model_id, &FlowModelFilterReq::default(), funs, ctx).await?;
+
         join_all(
             FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelTemplate, flow_model_id, None, None, funs, ctx)
                 .await?
@@ -318,6 +342,7 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
         .await
         .into_iter()
         .collect::<TardisResult<Vec<()>>>()?;
+
         Ok(Some(detail))
     }
 
@@ -841,7 +866,7 @@ impl FlowModelServ {
     pub async fn find_or_add_models(
         tags: Vec<String>,
         template_id: Option<String>,
-        is_shared: bool,
+        mut is_shared: bool,
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<HashMap<String, FlowModelSummaryResp>> {
@@ -851,9 +876,16 @@ impl FlowModelServ {
         };
         let mut result = HashMap::new();
 
+        let filter_ids = if template_id.is_none() {
+            is_shared = true;
+            Some(FlowRelServ::find_to_simple_rels(&FlowRelKind::FlowModelPath, &ctx.own_paths, None, None, funs, ctx).await?.into_iter().map(|rel| rel.rel_id).collect_vec())
+        } else {
+            None
+        };
         let models = Self::find_items(
             &FlowModelFilterReq {
                 basic: RbumBasicFilterReq {
+                    ids: filter_ids,
                     ignore_scope: true,
                     with_sub_own_paths: true,
                     ..Default::default()
@@ -900,6 +932,55 @@ impl FlowModelServ {
         Ok(result)
     }
 
+    // Find the rel models.
+    pub async fn find_rel_models(
+        tags: Vec<String>,
+        template_id: Option<String>,
+        mut is_shared: bool,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<HashMap<String, FlowModelSummaryResp>> {
+        let global_ctx = TardisContext {
+            own_paths: "".to_string(),
+            ..ctx.clone()
+        };
+        let mut result = HashMap::new();
+
+        let filter_ids = if template_id.is_none() {
+            is_shared = true;
+            Some(FlowRelServ::find_to_simple_rels(&FlowRelKind::FlowModelPath, &ctx.own_paths, None, None, funs, ctx).await?.into_iter().map(|rel| rel.rel_id).collect_vec())
+        } else {
+            None
+        };
+        let models = Self::find_items(
+            &FlowModelFilterReq {
+                basic: RbumBasicFilterReq {
+                    ids: filter_ids,
+                    ignore_scope: true,
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                tags: Some(tags.clone()),
+                rel: FlowRelServ::get_template_rel_filter(template_id.as_deref()),
+                ..Default::default()
+            },
+            None,
+            None,
+            funs,
+            if is_shared { &global_ctx } else { ctx },
+        )
+        .await?;
+
+        // First iterate over the models
+        for model in models {
+            if tags.contains(&model.tag) {
+                result.insert(model.tag.clone(), model);
+            }
+        }
+
+        Ok(result)
+    }
+
     /// 创建或引用模型
     /// params:
     /// rel_model_id：关联模型ID
@@ -908,7 +989,6 @@ impl FlowModelServ {
     /// （rel_model_id：关联模型ID, rel_template_id: 绑定模板ID,可选参数（仅在创建模型，即创建副本或op为复制时生效）, op：关联模型操作类型（复制或者引用），is_create_copy：是否创建副本（当op为复制时需指定，默认不需要））
     pub async fn copy_or_reference_model(
         rel_model_id: &str,
-        rel_template_id: Option<String>,
         rel_own_paths: Option<String>,
         op: &FlowModelAssociativeOperationKind,
         is_create_copy: Option<bool>,
@@ -975,11 +1055,6 @@ impl FlowModelServ {
                 .await?
             }
         };
-        if *op == FlowModelAssociativeOperationKind::Copy || (*op == FlowModelAssociativeOperationKind::Reference && is_create_copy.unwrap_or(false)) {
-            if let Some(rel_template_id) = rel_template_id {
-                FlowRelServ::add_simple_rel(&FlowRelKind::FlowModelTemplate, &result, &rel_template_id, None, None, false, true, None, funs, ctx).await?;
-            }
-        }
 
         Ok(result)
     }

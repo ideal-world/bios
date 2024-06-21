@@ -13,6 +13,7 @@ use bios_mw_flow::dto::flow_state_dto::{FlowStateRelModelExt, FlowStateSummaryRe
 
 use bios_mw_flow::dto::flow_transition_dto::FlowTransitionAddReq;
 use bios_sdk_invoke::clients::spi_kv_client::KvItemSummaryResp;
+use serde_json::json;
 use tardis::basic::dto::TardisContext;
 
 use tardis::basic::result::TardisResult;
@@ -164,6 +165,7 @@ pub async fn test(flow_client: &mut TestHttpClient) -> TardisResult<()> {
             &FlowModelCopyOrReferenceReq {
                 rel_model_ids: vec![req_model_template_id.clone()],
                 rel_template_id: Some(project_template_id1.to_string()),
+                modify_model_ids: None,
                 op: FlowModelAssociativeOperationKind::Reference,
             },
         )
@@ -171,6 +173,13 @@ pub async fn test(flow_client: &mut TestHttpClient) -> TardisResult<()> {
     info!("result: {:?}", result);
     let project_req_model_template_id = result.get(&req_model_template_id).unwrap().to_owned();
     assert_ne!(req_model_template_id, project_req_model_template_id);
+    let result: HashMap<String, FlowModelSummaryResp> = flow_client
+        .put(
+            &format!("/cc/model/find_or_add_models?tag_ids=REQ&is_shared=false&temp_id={}", project_template_id1),
+            &json!(""),
+        )
+        .await;
+    assert_eq!(project_req_model_template_id, result.get("REQ").unwrap().id.clone());
     // 2-3. modify flow temoplate
     let _: Void = flow_client
         .patch(
@@ -194,6 +203,7 @@ pub async fn test(flow_client: &mut TestHttpClient) -> TardisResult<()> {
             &FlowModelCopyOrReferenceReq {
                 rel_model_ids: vec![],
                 rel_template_id: Some(project_template_id1.to_string()),
+                modify_model_ids: None,
                 op: FlowModelAssociativeOperationKind::Reference,
             },
         )
@@ -214,5 +224,9 @@ pub async fn test(flow_client: &mut TestHttpClient) -> TardisResult<()> {
     let req_inst1: FlowInstDetailResp = flow_client.get(&format!("/cc/inst/{}", req_inst_id1)).await;
     info!("req_inst1: {:?}", req_inst1);
     assert_eq!(req_inst1.rel_flow_model_id, project_req_model_template_id);
+
+    let result: HashMap<String, FlowModelSummaryResp> = flow_client.put("/cc/model/find_or_add_models?tag_ids=REQ&is_shared=false", &json!("")).await;
+    let req_model_id = result.get("REQ").unwrap().id.clone();
+    assert_eq!(project_req_model_template_id, req_model_id);
     Ok(())
 }

@@ -123,7 +123,7 @@ impl FlowCiModelApi {
         for rel_model_id in rel_model_ids {
             result.insert(
                 rel_model_id.clone(),
-                FlowModelServ::copy_or_reference_model(&rel_model_id, None, Some(ctx.0.own_paths.clone()), &req.0.op, Some(false), &funs, &mock_ctx).await?,
+                FlowModelServ::copy_or_reference_model(&rel_model_id, Some(ctx.0.own_paths.clone()), &req.0.op, Some(false), &funs, &mock_ctx).await?,
             );
         }
         funs.commit().await?;
