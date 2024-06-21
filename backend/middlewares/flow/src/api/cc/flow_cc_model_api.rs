@@ -216,7 +216,7 @@ impl FlowCcModelApi {
     /// - `tag_ids` - list of tag_id
     /// - `temp_id` - associated template_id
     /// - `is_shared` - whether the associated template is shared
-    #[oai(path = "/find_or_add_models", method = "put")]
+    #[oai(path = "/find_rel_models", method = "put")]
     async fn find_rel_models(
         &self,
         tag_ids: Query<String>,

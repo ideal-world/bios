@@ -870,43 +870,7 @@ impl FlowModelServ {
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<HashMap<String, FlowModelSummaryResp>> {
-        let global_ctx = TardisContext {
-            own_paths: "".to_string(),
-            ..ctx.clone()
-        };
-        let mut result = HashMap::new();
-
-        let filter_ids = if template_id.is_none() {
-            is_shared = true;
-            Some(FlowRelServ::find_to_simple_rels(&FlowRelKind::FlowModelPath, &ctx.own_paths, None, None, funs, ctx).await?.into_iter().map(|rel| rel.rel_id).collect_vec())
-        } else {
-            None
-        };
-        let models = Self::find_items(
-            &FlowModelFilterReq {
-                basic: RbumBasicFilterReq {
-                    ids: filter_ids,
-                    ignore_scope: true,
-                    with_sub_own_paths: true,
-                    ..Default::default()
-                },
-                tags: Some(tags.clone()),
-                rel: FlowRelServ::get_template_rel_filter(template_id.as_deref()),
-                ..Default::default()
-            },
-            None,
-            None,
-            funs,
-            if is_shared { &global_ctx } else { ctx },
-        )
-        .await?;
-
-        // First iterate over the models
-        for model in models {
-            if tags.contains(&model.tag) {
-                result.insert(model.tag.clone(), model);
-            }
-        }
+        let mut result = Self::find_rel_models(tags.clone(), template_id.clone(), is_shared, funs, ctx).await?;
         // Iterate over the tag based on the existing result and get the default model
         for tag in tags {
             if !result.contains_key(&tag) {
