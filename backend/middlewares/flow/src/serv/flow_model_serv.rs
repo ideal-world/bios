@@ -866,7 +866,7 @@ impl FlowModelServ {
     pub async fn find_or_add_models(
         tags: Vec<String>,
         template_id: Option<String>,
-        mut is_shared: bool,
+        is_shared: bool,
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<HashMap<String, FlowModelSummaryResp>> {
