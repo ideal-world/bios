@@ -332,10 +332,18 @@ pub enum FlowModelAssociativeOperationKind {
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
 pub struct FlowModelCopyOrReferenceReq {
     /// 关联的模型ID列表
-    pub rel_model_ids: Vec<String>,
+    pub rel_model_ids: HashMap<String, String>,
     /// 关联的模板ID
     pub rel_template_id: Option<String>,
     /// 修改的模板ID
-    pub modify_model_ids: Option<HashMap<String, String>>,
+    pub op: FlowModelAssociativeOperationKind,
+}
+
+/// 创建或引用模型请求
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
+pub struct FlowModelCopyOrReferenceCiReq {
+    /// 关联的模板ID
+    pub rel_template_id: Option<String>,
+    /// 修改的模板ID
     pub op: FlowModelAssociativeOperationKind,
 }

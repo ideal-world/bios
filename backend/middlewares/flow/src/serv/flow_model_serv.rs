@@ -30,8 +30,9 @@ use tardis::{
 };
 
 use crate::{
-    domain::{flow_model, flow_state, flow_transition},
+    domain::{flow_inst, flow_model, flow_state, flow_transition},
     dto::{
+        flow_inst_dto::FlowInstFilterReq,
         flow_model_dto::{
             FlowModelAddReq, FlowModelAggResp, FlowModelAssociativeOperationKind, FlowModelBindStateReq, FlowModelDetailResp, FlowModelFilterReq, FlowModelFindRelStateResp,
             FlowModelModifyReq, FlowModelSummaryResp,
@@ -952,21 +953,20 @@ impl FlowModelServ {
     /// rel_own_paths: 绑定实例ID（仅在引用且不创建模型时生效）
     /// （rel_model_id：关联模型ID, rel_template_id: 绑定模板ID,可选参数（仅在创建模型，即创建副本或op为复制时生效）, op：关联模型操作类型（复制或者引用），is_create_copy：是否创建副本（当op为复制时需指定，默认不需要））
     pub async fn copy_or_reference_model(
+        orginal_model_id: Option<String>,
         rel_model_id: &str,
         rel_own_paths: Option<String>,
         op: &FlowModelAssociativeOperationKind,
         is_create_copy: Option<bool>,
         funs: &TardisFunsInst,
         ctx: &TardisContext,
-    ) -> TardisResult<String> {
+    ) -> TardisResult<FlowModelAggResp> {
         let rel_model = FlowModelServ::get_item(
             rel_model_id,
             &FlowModelFilterReq {
                 basic: RbumBasicFilterReq {
                     ids: Some(vec![rel_model_id.to_string()]),
                     ignore_scope: true,
-                    // own_paths: Some("".to_string()),
-                    // with_sub_own_paths: true,
                     ..Default::default()
                 },
                 ..Default::default()
@@ -1019,8 +1019,66 @@ impl FlowModelServ {
                 .await?
             }
         };
+        let new_model = Self::get_item_detail_aggs(&result, funs, ctx).await?;
 
-        Ok(result)
+        if let Some(orginal_model_id) = orginal_model_id {
+            let orginal_model_detail = Self::get_item(
+                &orginal_model_id,
+                &FlowModelFilterReq {
+                    basic: RbumBasicFilterReq {
+                        ids: Some(vec![orginal_model_id.to_string()]),
+                        ignore_scope: true,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                funs,
+                ctx,
+            )
+            .await?;
+            // delete model
+            for rel in FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelPath, &orginal_model_id, None, None, funs, ctx).await? {
+                FlowRelServ::delete_simple_rel(&FlowRelKind::FlowModelPath, &orginal_model_id, &rel.rel_id, funs, ctx).await?;
+            }
+            if orginal_model_detail.own_paths == ctx.own_paths {
+                for rel in FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelTemplate, &orginal_model_id, None, None, funs, ctx).await? {
+                    FlowRelServ::delete_simple_rel(&FlowRelKind::FlowModelPath, &orginal_model_id, &rel.rel_id, funs, ctx).await?;
+                }
+                Self::delete_item(&orginal_model_id, funs, ctx).await?;
+            }
+            // modify instance rel_model_id and state_id
+            for modify_state in orginal_model_detail.states().into_iter().filter(|state| !new_model.states.iter().any(|new_state| new_state.id == state.id)).collect_vec() {
+                join_all(
+                    FlowInstServ::find_details(
+                        &FlowInstFilterReq {
+                            flow_model_id: Some(orginal_model_detail.id.clone()),
+                            current_state_id: Some(modify_state.id.clone()),
+                            ..Default::default()
+                        },
+                        funs,
+                        ctx,
+                    )
+                    .await?
+                    .iter()
+                    .map(|inst: &crate::dto::flow_inst_dto::FlowInstSummaryResult| async {
+                        let flow_inst = flow_inst::ActiveModel {
+                            id: Set(inst.id.clone()),
+                            current_state_id: Set(new_model.init_state_id.clone()),
+                            transitions: Set(Some(vec![])),
+                            ..Default::default()
+                        };
+
+                        funs.db().update_one(flow_inst, ctx).await
+                    })
+                    .collect_vec(),
+                )
+                .await
+                .into_iter()
+                .collect::<TardisResult<Vec<()>>>()?;
+            }
+        }
+
+        Ok(new_model)
     }
 
     // copy model by template model

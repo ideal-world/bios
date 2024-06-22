@@ -63,6 +63,7 @@ impl FlowCcInstApi {
         flow_model_id: Query<Option<String>>,
         tag: Query<Option<String>>,
         finish: Query<Option<bool>>,
+        current_state_id: Query<Option<String>>,
         with_sub: Query<Option<bool>>,
         page_number: Query<u32>,
         page_size: Query<u32>,
@@ -70,7 +71,7 @@ impl FlowCcInstApi {
         _request: &Request,
     ) -> TardisApiResult<TardisPage<FlowInstSummaryResp>> {
         let funs = flow_constants::get_tardis_inst();
-        let result = FlowInstServ::paginate(flow_model_id.0, tag.0, finish.0, with_sub.0, page_number.0, page_size.0, &funs, &ctx.0).await?;
+        let result = FlowInstServ::paginate(flow_model_id.0, tag.0, finish.0, current_state_id.0, with_sub.0, page_number.0, page_size.0, &funs, &ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }

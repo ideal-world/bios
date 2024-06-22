@@ -7,7 +7,8 @@ use bios_mw_flow::dto::flow_config_dto::FlowConfigModifyReq;
 
 use bios_mw_flow::dto::flow_inst_dto::{FlowInstDetailResp, FlowInstStartReq};
 use bios_mw_flow::dto::flow_model_dto::{
-    FlowModelAddReq, FlowModelAggResp, FlowModelAssociativeOperationKind, FlowModelBindStateReq, FlowModelCopyOrReferenceReq, FlowModelModifyReq, FlowModelSummaryResp,
+    FlowModelAddReq, FlowModelAggResp, FlowModelAssociativeOperationKind, FlowModelBindStateReq, FlowModelCopyOrReferenceCiReq, FlowModelCopyOrReferenceReq, FlowModelModifyReq,
+    FlowModelSummaryResp,
 };
 use bios_mw_flow::dto::flow_state_dto::{FlowStateRelModelExt, FlowStateSummaryResp};
 
@@ -159,19 +160,20 @@ pub async fn test(flow_client: &mut TestHttpClient) -> TardisResult<()> {
         )
         .await;
     // 2-2. flow template bind project template
-    let result: HashMap<String, String> = flow_client
+    let mut rel_model_ids = HashMap::new();
+    rel_model_ids.insert("REQ".to_string(), req_model_template_id.clone());
+    let result: HashMap<String, FlowModelAggResp> = flow_client
         .post(
             "/ct/model/copy_or_reference_model",
             &FlowModelCopyOrReferenceReq {
-                rel_model_ids: vec![req_model_template_id.clone()],
+                rel_model_ids,
                 rel_template_id: Some(project_template_id1.to_string()),
-                modify_model_ids: None,
                 op: FlowModelAssociativeOperationKind::Reference,
             },
         )
         .await;
     info!("result: {:?}", result);
-    let project_req_model_template_id = result.get(&req_model_template_id).unwrap().to_owned();
+    let project_req_model_template_id = result.get(&req_model_template_id).unwrap().id.clone();
     assert_ne!(req_model_template_id, project_req_model_template_id);
     let result: HashMap<String, FlowModelSummaryResp> = flow_client
         .put(
@@ -200,10 +202,8 @@ pub async fn test(flow_client: &mut TestHttpClient) -> TardisResult<()> {
     let result: HashMap<String, String> = flow_client
         .post(
             "/ci/model/copy_or_reference_model",
-            &FlowModelCopyOrReferenceReq {
-                rel_model_ids: vec![],
+            &FlowModelCopyOrReferenceCiReq {
                 rel_template_id: Some(project_template_id1.to_string()),
-                modify_model_ids: None,
                 op: FlowModelAssociativeOperationKind::Reference,
             },
         )
