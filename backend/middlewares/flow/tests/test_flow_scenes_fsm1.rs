@@ -17,6 +17,7 @@ use bios_sdk_invoke::clients::spi_kv_client::KvItemSummaryResp;
 use serde_json::json;
 use tardis::basic::dto::TardisContext;
 
+use std::time::Duration;
 use tardis::basic::result::TardisResult;
 use tardis::log::info;
 use tardis::web::web_resp::{TardisPage, Void};
@@ -197,6 +198,7 @@ pub async fn test(flow_client: &mut TestHttpClient) -> TardisResult<()> {
     let req_model_template: FlowModelAggResp = flow_client.get(&format!("/cc/model/{}", &req_model_template_id)).await;
     let project_req_model_template: FlowModelAggResp = flow_client.get(&format!("/cc/model/{}", &project_req_model_template_id)).await;
     assert_eq!(req_model_template.info, "xxx1".to_string());
+    tardis::tokio::time::sleep(Duration::from_millis(100)).await;
     assert_eq!(req_model_template.info, project_req_model_template.info);
     // copy models by project template id
     let result: HashMap<String, FlowModelSummaryResp> = flow_client
@@ -239,5 +241,24 @@ pub async fn test(flow_client: &mut TestHttpClient) -> TardisResult<()> {
     let result: HashMap<String, FlowModelSummaryResp> = flow_client.put("/cc/model/find_or_add_models?tag_ids=REQ&is_shared=false", &json!("")).await;
     let req_model_id = result.get("REQ").unwrap().id.clone();
     assert_eq!(project_req_model_template_id, req_model_id);
+    // copy project template to app
+    let result: HashMap<String, FlowModelAggResp> = flow_client
+        .post(
+            "/ca/model/copy_or_reference_model",
+            &FlowModelCopyOrReferenceReq {
+                rel_model_ids: HashMap::from([("REQ".to_string(), req_model_id.clone())]),
+                rel_template_id: None,
+                op: FlowModelAssociativeOperationKind::Copy,
+            },
+        )
+        .await;
+    let app_req_model_id = result.get(&req_model_id).unwrap().id.clone();
+    assert_ne!(req_model_id.clone(), app_req_model_id.clone());
+    // exit app
+    ctx.owner = "u001".to_string();
+    ctx.own_paths = "t1".to_string();
+    flow_client.set_auth(&ctx)?;
+    let req_models: Vec<FlowModelSummaryResp> = flow_client.get(&format!("/cc/model/find_by_rel_template_id?tag=REQ&template=true&rel_template_id={}", req_template_id1)).await;
+    assert!(!req_models.into_iter().any(|model| model.id == app_req_model_id.clone()));
     Ok(())
 }

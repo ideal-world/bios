@@ -966,6 +966,8 @@ impl FlowModelServ {
             &FlowModelFilterReq {
                 basic: RbumBasicFilterReq {
                     ids: Some(vec![rel_model_id.to_string()]),
+                    own_paths: Some("".to_string()),
+                    with_sub_own_paths: true,
                     ignore_scope: true,
                     ..Default::default()
                 },
@@ -978,6 +980,11 @@ impl FlowModelServ {
         // .ok_or_else(|| funs.err().not_found(&Self::get_obj_name(), "copy_or_reference_model", "rel model not found", "404-flow-model-not-found"))?;
         let result = match op {
             FlowModelAssociativeOperationKind::Reference => {
+                let mock_ctx = if let Some(own_paths) = rel_own_paths.clone() {
+                    TardisContext { own_paths, ..ctx.clone() }
+                } else {
+                    ctx.clone()
+                };
                 if is_create_copy.unwrap_or(false) {
                     Self::add_item(
                         &mut FlowModelAddReq {
@@ -986,7 +993,7 @@ impl FlowModelServ {
                             ..rel_model.clone().into()
                         },
                         funs,
-                        ctx,
+                        &mock_ctx,
                     )
                     .await?
                 } else {
@@ -1022,27 +1029,32 @@ impl FlowModelServ {
         let new_model = Self::get_item_detail_aggs(&result, funs, ctx).await?;
 
         if let Some(orginal_model_id) = orginal_model_id {
+            let global_ctx = TardisContext {
+                own_paths: "".to_string(),
+                ..ctx.clone()
+            };
             let orginal_model_detail = Self::get_item(
                 &orginal_model_id,
                 &FlowModelFilterReq {
                     basic: RbumBasicFilterReq {
                         ids: Some(vec![orginal_model_id.to_string()]),
                         ignore_scope: true,
+                        with_sub_own_paths: true,
                         ..Default::default()
                     },
                     ..Default::default()
                 },
                 funs,
-                ctx,
+                &global_ctx,
             )
             .await?;
             // delete model
-            for rel in FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelPath, &orginal_model_id, None, None, funs, ctx).await? {
-                FlowRelServ::delete_simple_rel(&FlowRelKind::FlowModelPath, &orginal_model_id, &rel.rel_id, funs, ctx).await?;
+            for rel in FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelPath, &orginal_model_id, None, None, funs, &global_ctx).await? {
+                FlowRelServ::delete_simple_rel(&FlowRelKind::FlowModelPath, &orginal_model_id, &rel.rel_id, funs, &global_ctx).await?;
             }
             if orginal_model_detail.own_paths == ctx.own_paths {
-                for rel in FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelTemplate, &orginal_model_id, None, None, funs, ctx).await? {
-                    FlowRelServ::delete_simple_rel(&FlowRelKind::FlowModelPath, &orginal_model_id, &rel.rel_id, funs, ctx).await?;
+                for rel in FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelTemplate, &orginal_model_id, None, None, funs, &global_ctx).await? {
+                    FlowRelServ::delete_simple_rel(&FlowRelKind::FlowModelPath, &orginal_model_id, &rel.rel_id, funs, &global_ctx).await?;
                 }
                 Self::delete_item(&orginal_model_id, funs, ctx).await?;
             }
