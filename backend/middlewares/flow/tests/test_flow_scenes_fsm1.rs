@@ -68,7 +68,8 @@ pub async fn test(flow_client: &mut TestHttpClient) -> TardisResult<()> {
     let req_template_id1 = "template_req_1";
     let req_template_id2 = "template_req_2";
     let project_template_id1 = "template_project_1";
-    let req_model_template_id: String = flow_client
+    let project_template_id2 = "template_project_2";
+    let req_model_template_aggs: FlowModelAggResp = flow_client
         .post(
             "/cc/model",
             &FlowModelAddReq {
@@ -87,6 +88,7 @@ pub async fn test(flow_client: &mut TestHttpClient) -> TardisResult<()> {
             },
         )
         .await;
+    let req_model_template_id = req_model_template_aggs.id.clone();
     // 2-3 config new flow template
     let _: Void = flow_client
         .patch(
@@ -175,13 +177,13 @@ pub async fn test(flow_client: &mut TestHttpClient) -> TardisResult<()> {
     info!("result: {:?}", result);
     let project_req_model_template_id = result.get(&req_model_template_id).unwrap().id.clone();
     assert_ne!(req_model_template_id, project_req_model_template_id);
-    let result: HashMap<String, FlowModelSummaryResp> = flow_client
+    let project_result: HashMap<String, FlowModelSummaryResp> = flow_client
         .put(
-            &format!("/cc/model/find_or_add_models?tag_ids=REQ&is_shared=false&temp_id={}", project_template_id1),
+            &format!("/cc/model/find_rel_models?tag_ids=REQ&is_shared=false&temp_id={}", project_template_id1),
             &json!(""),
         )
         .await;
-    assert_eq!(project_req_model_template_id, result.get("REQ").unwrap().id.clone());
+    assert_eq!(project_req_model_template_id, project_result.get("REQ").unwrap().id.clone());
     // 2-3. modify flow temoplate
     let _: Void = flow_client
         .patch(
@@ -196,9 +198,18 @@ pub async fn test(flow_client: &mut TestHttpClient) -> TardisResult<()> {
     let project_req_model_template: FlowModelAggResp = flow_client.get(&format!("/cc/model/{}", &project_req_model_template_id)).await;
     assert_eq!(req_model_template.info, "xxx1".to_string());
     assert_eq!(req_model_template.info, project_req_model_template.info);
-    // 2-4 create project
+    // copy models by project template id
+    let result: HashMap<String, FlowModelSummaryResp> = flow_client
+        .post(
+            &format!("/ct/model/copy_models_by_template_id/{}/{}", project_template_id1, project_template_id2),
+            &json!(""),
+        )
+        .await;
+    assert!(result.get(&req_model_template_id).is_some());
+    // 3. enter project
     ctx.own_paths = "t1/app01".to_string();
     flow_client.set_auth(&ctx)?;
+    // 3-1 create project
     let result: HashMap<String, String> = flow_client
         .post(
             "/ci/model/copy_or_reference_model",
@@ -209,7 +220,7 @@ pub async fn test(flow_client: &mut TestHttpClient) -> TardisResult<()> {
         )
         .await;
     info!("result: {:?}", result);
-    // 2-5 Start a instance
+    // 3-2 Start a instance
     let req_inst_id1: String = flow_client
         .post(
             "/cc/inst",

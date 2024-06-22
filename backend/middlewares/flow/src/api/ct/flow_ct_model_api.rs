@@ -1,15 +1,16 @@
 use std::collections::HashMap;
 
+use bios_basic::rbum::{dto::rbum_filer_dto::RbumBasicFilterReq, serv::rbum_item_serv::RbumItemCrudOperation};
 use itertools::Itertools;
 use tardis::web::{
     context_extractor::TardisContextExtractor,
     poem::{web::Json, Request},
-    poem_openapi,
+    poem_openapi::{self, param::Path},
     web_resp::{TardisApiResult, TardisResp},
 };
 
 use crate::{
-    dto::flow_model_dto::{FlowModelAggResp, FlowModelCopyOrReferenceReq},
+    dto::flow_model_dto::{FlowModelAggResp, FlowModelAssociativeOperationKind, FlowModelCopyOrReferenceReq, FlowModelFilterReq},
     flow_constants,
     serv::{
         flow_model_serv::FlowModelServ,
@@ -64,6 +65,64 @@ impl FlowCtModelApi {
                 .await?;
             }
             result.insert(rel_model_id.clone(), added_model);
+        }
+        funs.commit().await?;
+        ctx.0.execute_task().await?;
+        TardisResp::ok(result)
+    }
+
+    /// Creating or referencing models
+    ///
+    /// 创建或引用模型
+    #[oai(path = "/copy_models_by_template_id/:from_template_id/:to_template_id", method = "post")]
+    async fn copy_models_by_template_id(
+        &self,
+        from_template_id: Path<String>,
+        to_template_id: Path<String>,
+        ctx: TardisContextExtractor,
+        _request: &Request,
+    ) -> TardisApiResult<HashMap<String, FlowModelAggResp>> {
+        let mut funs = flow_constants::get_tardis_inst();
+        funs.begin().await?;
+        let mut result = HashMap::new();
+        for form_model in FlowModelServ::find_detail_items(
+            &FlowModelFilterReq {
+                basic: RbumBasicFilterReq {
+                    ids: Some(
+                        FlowRelServ::find_to_simple_rels(&FlowRelKind::FlowModelTemplate, &from_template_id.0, None, None, &funs, &ctx.0)
+                            .await?
+                            .into_iter()
+                            .map(|rel| rel.rel_id)
+                            .collect_vec(),
+                    ),
+                    ignore_scope: true,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            None,
+            None,
+            &funs,
+            &ctx.0,
+        )
+        .await?
+        {
+            let added_model =
+                FlowModelServ::copy_or_reference_model(None, &form_model.rel_model_id, None, &FlowModelAssociativeOperationKind::Copy, Some(true), &funs, &ctx.0).await?;
+            FlowRelServ::add_simple_rel(
+                &FlowRelKind::FlowModelTemplate,
+                &added_model.id,
+                &to_template_id.0,
+                None,
+                None,
+                false,
+                true,
+                None,
+                &funs,
+                &ctx.0,
+            )
+            .await?;
+            result.insert(form_model.rel_model_id.clone(), added_model);
         }
         funs.commit().await?;
         ctx.0.execute_task().await?;

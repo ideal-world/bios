@@ -32,10 +32,11 @@ impl FlowCcModelApi {
     ///
     /// 添加模型
     #[oai(path = "/", method = "post")]
-    async fn add(&self, mut add_req: Json<FlowModelAddReq>, ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<String> {
+    async fn add(&self, mut add_req: Json<FlowModelAddReq>, ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<FlowModelAggResp> {
         let mut funs = flow_constants::get_tardis_inst();
         funs.begin().await?;
-        let result = FlowModelServ::add_item(&mut add_req.0, &funs, &ctx.0).await?;
+        let model_id = FlowModelServ::add_item(&mut add_req.0, &funs, &ctx.0).await?;
+        let result = FlowModelServ::get_item_detail_aggs(&model_id, &funs, &ctx.0).await?;
         funs.commit().await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)

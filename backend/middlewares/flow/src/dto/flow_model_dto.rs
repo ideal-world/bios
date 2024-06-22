@@ -27,7 +27,7 @@ pub struct FlowModelAddReq {
     pub name: TrimString,
     #[oai(validator(min_length = "2", max_length = "2000"))]
     pub icon: Option<String>,
-    #[oai(validator(min_length = "2", max_length = "2000"))]
+    #[oai(validator(max_length = "2000"))]
     pub info: Option<String>,
     /// 初始化状态ID
     pub init_state_id: String,
