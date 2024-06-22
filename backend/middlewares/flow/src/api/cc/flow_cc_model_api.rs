@@ -88,6 +88,7 @@ impl FlowCcModelApi {
             FlowModelServ::find_items(
                 &FlowModelFilterReq {
                     basic: RbumBasicFilterReq {
+                        ignore_scope: true,
                         with_sub_own_paths: false,
                         ..Default::default()
                     },
@@ -121,6 +122,7 @@ impl FlowCcModelApi {
             let mut rel_template_models = FlowModelServ::find_items(
                 &FlowModelFilterReq {
                     basic: RbumBasicFilterReq {
+                        ignore_scope: true,
                         with_sub_own_paths: false,
                         ..Default::default()
                     },
