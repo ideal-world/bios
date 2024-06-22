@@ -19,7 +19,7 @@ use tardis::{
     basic::{dto::TardisContext, result::TardisResult}, chrono::Utc, db::sea_orm::{
         sea_query::{Alias, Cond, Expr, Query, SelectStatement},
         EntityName, EntityTrait, JoinType, Order, QueryFilter, Set,
-    }, futures::future::join_all, log::warn, serde_json::json, tokio, web::web_resp::TardisPage, TardisFuns, TardisFunsInst
+    }, futures::future::join_all, serde_json::json, tokio, web::web_resp::TardisPage, TardisFuns, TardisFunsInst
 };
 
 use crate::{
@@ -954,7 +954,6 @@ impl FlowModelServ {
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<FlowModelAggResp> {
-        warn!("ctx:{:?}", ctx);
         let rel_model = FlowModelServ::get_item(
             rel_model_id,
             &FlowModelFilterReq {

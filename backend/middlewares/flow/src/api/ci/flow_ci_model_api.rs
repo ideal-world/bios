@@ -107,6 +107,7 @@ impl FlowCiModelApi {
     /// 创建或引用模型（rel_model_id：关联模型ID, op：关联模型操作类型（复制或者引用），is_create_copy：是否创建副本（当op为复制时需指定，默认不需要））
     #[oai(path = "/copy_or_reference_model", method = "post")]
     async fn copy_or_reference_model(&self, req: Json<FlowModelCopyOrReferenceCiReq>, ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<HashMap<String, String>> {
+        warn!("ctx:{:?}", ctx.0);
         let mut funs = flow_constants::get_tardis_inst();
         funs.begin().await?;
         // find rel models
