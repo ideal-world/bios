@@ -16,17 +16,10 @@ use bios_basic::rbum::{
 };
 use itertools::Itertools;
 use tardis::{
-    basic::{dto::TardisContext, result::TardisResult},
-    chrono::Utc,
-    db::sea_orm::{
+    basic::{dto::TardisContext, result::TardisResult}, chrono::Utc, db::sea_orm::{
         sea_query::{Alias, Cond, Expr, Query, SelectStatement},
         EntityName, EntityTrait, JoinType, Order, QueryFilter, Set,
-    },
-    futures::future::join_all,
-    serde_json::json,
-    tokio,
-    web::web_resp::TardisPage,
-    TardisFuns, TardisFunsInst,
+    }, futures::future::join_all, log::warn, serde_json::json, tokio, web::web_resp::TardisPage, TardisFuns, TardisFunsInst
 };
 
 use crate::{
@@ -961,11 +954,11 @@ impl FlowModelServ {
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<FlowModelAggResp> {
+        warn!("ctx:{:?}", ctx);
         let rel_model = FlowModelServ::get_item(
             rel_model_id,
             &FlowModelFilterReq {
                 basic: RbumBasicFilterReq {
-                    ids: Some(vec![rel_model_id.to_string()]),
                     own_paths: Some("".to_string()),
                     with_sub_own_paths: true,
                     ignore_scope: true,
