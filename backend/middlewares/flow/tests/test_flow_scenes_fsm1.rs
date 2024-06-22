@@ -205,7 +205,7 @@ pub async fn test(flow_client: &mut TestHttpClient) -> TardisResult<()> {
             &json!(""),
         )
         .await;
-    assert!(result.get(&req_model_template_id).is_some());
+    assert!(result.contains_key(&req_model_template_id));
     // 3. enter project
     ctx.own_paths = "t1/app01".to_string();
     flow_client.set_auth(&ctx)?;

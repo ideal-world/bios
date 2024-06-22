@@ -87,6 +87,10 @@ impl FlowCcModelApi {
         let mut not_bind_template_models = join_all(
             FlowModelServ::find_items(
                 &FlowModelFilterReq {
+                    basic: RbumBasicFilterReq {
+                        with_sub_own_paths: false,
+                        ..Default::default()
+                    },
                     tags: Some(vec![tag.0.clone()]),
                     template: template.0,
                     ..Default::default()
@@ -116,6 +120,10 @@ impl FlowCcModelApi {
         if let Some(rel_template_id) = rel_template_id.0 {
             let mut rel_template_models = FlowModelServ::find_items(
                 &FlowModelFilterReq {
+                    basic: RbumBasicFilterReq {
+                        with_sub_own_paths: false,
+                        ..Default::default()
+                    },
                     tags: Some(vec![tag.0.clone()]),
                     template: template.0,
                     rel: Some(RbumItemRelFilterReq {
