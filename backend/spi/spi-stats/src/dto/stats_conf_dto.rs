@@ -49,7 +49,7 @@ pub struct StatsConfDimAddReq {
     /// is_tree = true, the dimension is a tree structure
     ///
     /// 该纬度是否是树形结构
-    pub is_tree: bool,
+    pub is_tree: Option<bool>,
     pub tree_dynamic_url: Option<String>,
     pub rel_attribute_code: Option<Vec<String>>,
     pub rel_attribute_url: Option<String>,

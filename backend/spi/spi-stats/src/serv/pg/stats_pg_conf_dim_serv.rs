@@ -42,7 +42,7 @@ pub(crate) async fn add(add_req: &StatsConfDimAddReq, funs: &TardisFunsInst, ctx
         Value::from(add_req.hierarchy.as_ref().unwrap_or(&vec![]).clone()),
         Value::from(add_req.remark.as_ref().unwrap_or(&"".to_string()).as_str()),
         Value::from(add_req.dynamic_url.as_deref()),
-        Value::from(add_req.is_tree),
+        Value::from(add_req.is_tree.unwrap_or(false)),
         Value::from(add_req.tree_dynamic_url.as_deref()),
         Value::from(add_req.rel_attribute_code.as_ref().unwrap_or(&vec![]).clone()),
         Value::from(add_req.rel_attribute_url.as_deref()),
