@@ -59,7 +59,7 @@ impl From<FlowModelDetailResp> for FlowModelAddReq {
             init_state_id: value.init_state_id,
             rel_template_ids: Some(value.rel_template_ids.clone()),
             transitions: if transitions.is_empty() { None } else { Some(transitions) },
-            states: if states.is_empty() { None } else { Some(trstatesnsitions) },
+            states: if states.is_empty() { None } else { Some(states) },
             template: value.template,
             rel_model_id: None,
             tag: Some(value.tag.clone()),
