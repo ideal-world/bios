@@ -16,10 +16,17 @@ use bios_basic::rbum::{
 };
 use itertools::Itertools;
 use tardis::{
-    basic::{dto::TardisContext, result::TardisResult}, chrono::Utc, db::sea_orm::{
+    basic::{dto::TardisContext, result::TardisResult},
+    chrono::Utc,
+    db::sea_orm::{
         sea_query::{Alias, Cond, Expr, Query, SelectStatement},
         EntityName, EntityTrait, JoinType, Order, QueryFilter, Set,
-    }, futures::future::join_all, serde_json::json, tokio, web::web_resp::TardisPage, TardisFuns, TardisFunsInst
+    },
+    futures::future::join_all,
+    serde_json::json,
+    tokio,
+    web::web_resp::TardisPage,
+    TardisFuns, TardisFunsInst,
 };
 
 use crate::{
@@ -331,6 +338,16 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
                 .await?
                 .into_iter()
                 .map(|rel| async move { FlowRelServ::delete_simple_rel(&FlowRelKind::FlowModelTemplate, flow_model_id, &rel.rel_id, funs, ctx).await })
+                .collect_vec(),
+        )
+        .await
+        .into_iter()
+        .collect::<TardisResult<Vec<()>>>()?;
+        join_all(
+            FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelState, flow_model_id, None, None, funs, ctx)
+                .await?
+                .into_iter()
+                .map(|rel| async move { FlowRelServ::delete_simple_rel(&FlowRelKind::FlowModelState, flow_model_id, &rel.rel_id, funs, ctx).await })
                 .collect_vec(),
         )
         .await
