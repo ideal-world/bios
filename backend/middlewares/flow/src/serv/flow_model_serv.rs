@@ -293,18 +293,18 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
                 };
                 let child_model_transitions = child_model.transitions();
                 let mut modify_req_clone = modify_req.clone();
-                if let Some(ref mut modify_transitions) = &mut modify_req.modify_transitions {
+                if let Some(ref mut modify_transitions) = &mut modify_req_clone.modify_transitions {
                     for modify_transition in modify_transitions.iter_mut() {
                         let parent_model_transition = parent_model_transitions.iter().find(|trans| trans.id == modify_transition.id.to_string()).unwrap();
                         modify_transition.id = child_model_transitions
                             .iter()
-                            .find(|tran| tran.from_flow_state_id == parent_model_transition.from_flow_state_id && tran.to_flow_state_id == parent_model_transition.to_flow_state_id)
+                            .find(|child_tran| child_tran.from_flow_state_id == parent_model_transition.from_flow_state_id && child_tran.to_flow_state_id == parent_model_transition.to_flow_state_id)
                             .map(|trans| trans.id.clone())
                             .unwrap_or_default()
                             .into();
                     }
                 }
-                if let Some(delete_transitions) = &mut modify_req.delete_transitions {
+                if let Some(delete_transitions) = &mut modify_req_clone.delete_transitions {
                     let mut child_delete_transitions = vec![];
                     for delete_transition_id in delete_transitions.iter_mut() {
                         let parent_model_transition = parent_model_transitions.iter().find(|trans| trans.id == delete_transition_id.clone()).unwrap();
@@ -318,7 +318,7 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
                                 .unwrap_or_default(),
                         );
                     }
-                    modify_req.delete_transitions = Some(child_delete_transitions);
+                    modify_req_clone.delete_transitions = Some(child_delete_transitions);
                 }
                 ctx.add_async_task(Box::new(|| {
                     Box::pin(async move {

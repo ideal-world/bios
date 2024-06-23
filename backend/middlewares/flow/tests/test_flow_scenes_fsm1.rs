@@ -12,7 +12,7 @@ use bios_mw_flow::dto::flow_model_dto::{
 };
 use bios_mw_flow::dto::flow_state_dto::{FlowStateRelModelExt, FlowStateSummaryResp};
 
-use bios_mw_flow::dto::flow_transition_dto::FlowTransitionAddReq;
+use bios_mw_flow::dto::flow_transition_dto::{FlowTransitionAddReq, FlowTransitionModifyReq};
 use bios_sdk_invoke::clients::spi_kv_client::KvItemSummaryResp;
 use serde_json::json;
 use tardis::basic::dto::TardisContext;
@@ -162,6 +162,7 @@ pub async fn test(flow_client: &mut TestHttpClient) -> TardisResult<()> {
             },
         )
         .await;
+    let req_model_template: FlowModelAggResp = flow_client.get(&format!("/cc/model/{}", &req_model_template_id)).await;
     // 2-2. flow template bind project template
     let mut rel_model_ids = HashMap::new();
     rel_model_ids.insert("REQ".to_string(), req_model_template_id.clone());
@@ -190,16 +191,18 @@ pub async fn test(flow_client: &mut TestHttpClient) -> TardisResult<()> {
         .patch(
             &format!("/cc/model/{}", req_model_template_id.clone()),
             &FlowModelModifyReq {
-                info: Some("xxx1".to_string()),
+                modify_transitions: Some(vec![FlowTransitionModifyReq {
+                    id: req_model_template.states.iter().find(|state| state.id == init_state_id.clone()).unwrap().transitions[0].id.clone().into(),
+                    name: Some("111".into()),
+                    ..Default::default()
+                }]),
                 ..Default::default()
             },
         )
         .await;
-    let req_model_template: FlowModelAggResp = flow_client.get(&format!("/cc/model/{}", &req_model_template_id)).await;
-    let project_req_model_template: FlowModelAggResp = flow_client.get(&format!("/cc/model/{}", &project_req_model_template_id)).await;
-    assert_eq!(req_model_template.info, "xxx1".to_string());
     tardis::tokio::time::sleep(Duration::from_millis(100)).await;
-    assert_eq!(req_model_template.info, project_req_model_template.info);
+    let project_req_model_template: FlowModelAggResp = flow_client.get(&format!("/cc/model/{}", &project_req_model_template_id)).await;
+    assert!(project_req_model_template.states.iter().find(|state| state.id == init_state_id.clone()).unwrap().transitions.iter().any(|tran| tran.name == "111"));
     // copy models by project template id
     let result: HashMap<String, FlowModelSummaryResp> = flow_client
         .post(
