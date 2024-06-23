@@ -6,7 +6,7 @@ use tardis::web::{
     context_extractor::TardisContextExtractor,
     poem::{web::Json, Request},
     poem_openapi::{self, param::Path},
-    web_resp::{TardisApiResult, TardisResp},
+    web_resp::{TardisApiResult, TardisResp, Void},
 };
 
 use crate::{
@@ -127,5 +127,20 @@ impl FlowCtModelApi {
         funs.commit().await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
+    }
+
+    /// batch delete models by rel_template_id
+    ///
+    /// 通过关联模板ID删除模型
+    #[oai(path = "/delete_by_rel_template_id/:rel_template_id", method = "delete")]
+    async fn delete_by_rel_template_id(&self, rel_template_id: Path<String>, ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<Void> {
+        let mut funs = flow_constants::get_tardis_inst();
+        funs.begin().await?;
+        for rel in FlowRelServ::find_to_simple_rels(&FlowRelKind::FlowModelTemplate, &rel_template_id.0, None, None, &funs, &ctx.0).await? {
+            FlowModelServ::delete_item(&rel.rel_id, &funs, &ctx.0).await?;
+        }
+        funs.commit().await?;
+        ctx.0.execute_task().await?;
+        TardisResp::ok(Void)
     }
 }
