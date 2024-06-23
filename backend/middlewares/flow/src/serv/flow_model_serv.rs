@@ -1046,7 +1046,7 @@ impl FlowModelServ {
             }
             if orginal_model_detail.own_paths == ctx.own_paths {
                 for rel in FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelTemplate, &orginal_model_id, None, None, funs, &global_ctx).await? {
-                    FlowRelServ::delete_simple_rel(&FlowRelKind::FlowModelPath, &orginal_model_id, &rel.rel_id, funs, &global_ctx).await?;
+                    FlowRelServ::delete_simple_rel(&FlowRelKind::FlowModelTemplate, &orginal_model_id, &rel.rel_id, funs, &global_ctx).await?;
                 }
                 Self::delete_item(&orginal_model_id, funs, ctx).await?;
             }
