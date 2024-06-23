@@ -199,6 +199,7 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
     }
 
     async fn after_modify_item(flow_model_id: &str, modify_req: &mut FlowModelModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let model_detail = Self::get_item(flow_model_id, &FlowModelFilterReq::default(), funs, ctx).await?;
         let mut refresh_model_name_by_sorted_states = false;
         if let Some(bind_states) = &modify_req.bind_states {
             for bind_state in bind_states {
@@ -273,6 +274,7 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
 
         // 同步修改所有引用的下级模型
         if model.template {
+            let parent_model_transitions = model_detail.transitions();
             let child_models = Self::find_detail_items(
                 &FlowModelFilterReq {
                     rel_model_ids: Some(vec![flow_model_id.to_string()]),
@@ -286,10 +288,38 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
             .await?;
             for child_model in child_models {
                 let ctx_clone = TardisContext {
-                    own_paths: child_model.own_paths,
+                    own_paths: child_model.own_paths.clone(),
                     ..ctx.clone()
                 };
+                let child_model_transitions = child_model.transitions();
                 let mut modify_req_clone = modify_req.clone();
+                if let Some(ref mut modify_transitions) = &mut modify_req.modify_transitions {
+                    for modify_transition in modify_transitions.iter_mut() {
+                        let parent_model_transition = parent_model_transitions.iter().find(|trans| trans.id == modify_transition.id.to_string()).unwrap();
+                        modify_transition.id = child_model_transitions
+                            .iter()
+                            .find(|tran| tran.from_flow_state_id == parent_model_transition.from_flow_state_id && tran.to_flow_state_id == parent_model_transition.to_flow_state_id)
+                            .map(|trans| trans.id.clone())
+                            .unwrap_or_default()
+                            .into();
+                    }
+                }
+                if let Some(delete_transitions) = &mut modify_req.delete_transitions {
+                    let mut child_delete_transitions = vec![];
+                    for delete_transition_id in delete_transitions.iter_mut() {
+                        let parent_model_transition = parent_model_transitions.iter().find(|trans| trans.id == delete_transition_id.clone()).unwrap();
+                        child_delete_transitions.push(
+                            child_model_transitions
+                                .iter()
+                                .find(|tran| {
+                                    tran.from_flow_state_id == parent_model_transition.from_flow_state_id && tran.to_flow_state_id == parent_model_transition.to_flow_state_id
+                                })
+                                .map(|trans| trans.id.clone())
+                                .unwrap_or_default(),
+                        );
+                    }
+                    modify_req.delete_transitions = Some(child_delete_transitions);
+                }
                 ctx.add_async_task(Box::new(|| {
                     Box::pin(async move {
                         let task_handle = tokio::spawn(async move {
