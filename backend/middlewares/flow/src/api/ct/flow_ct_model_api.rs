@@ -85,7 +85,7 @@ impl FlowCtModelApi {
         let mut funs = flow_constants::get_tardis_inst();
         funs.begin().await?;
         let mut result = HashMap::new();
-        for form_model in FlowModelServ::find_detail_items(
+        for from_model in FlowModelServ::find_detail_items(
             &FlowModelFilterReq {
                 basic: RbumBasicFilterReq {
                     ids: Some(
@@ -108,7 +108,7 @@ impl FlowCtModelApi {
         .await?
         {
             let added_model =
-                FlowModelServ::copy_or_reference_model(None, &form_model.rel_model_id, None, &FlowModelAssociativeOperationKind::Copy, Some(true), &funs, &ctx.0).await?;
+                FlowModelServ::copy_or_reference_model(None, &from_model.rel_model_id, None, &FlowModelAssociativeOperationKind::Copy, Some(true), &funs, &ctx.0).await?;
             FlowRelServ::add_simple_rel(
                 &FlowRelKind::FlowModelTemplate,
                 &added_model.id,
@@ -122,7 +122,7 @@ impl FlowCtModelApi {
                 &ctx.0,
             )
             .await?;
-            result.insert(form_model.rel_model_id.clone(), added_model);
+            result.insert(from_model.rel_model_id.clone(), added_model);
         }
         funs.commit().await?;
         ctx.0.execute_task().await?;

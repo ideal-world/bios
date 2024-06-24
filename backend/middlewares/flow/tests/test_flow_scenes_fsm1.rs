@@ -263,7 +263,6 @@ pub async fn test(flow_client: &mut TestHttpClient) -> TardisResult<()> {
     let req_model_aggs: FlowModelAggResp = flow_client.get(&format!("/cc/model/{}", req_model_id)).await;
     assert_eq!(req_model_aggs.rel_model_id, "".to_string());
     // 3-4 exit app and return tenant
-    ctx.owner = "u001".to_string();
     ctx.own_paths = "t1".to_string();
     flow_client.set_auth(&ctx)?;
     let req_models: Vec<FlowModelSummaryResp> = flow_client.get(&format!("/cc/model/find_by_rel_template_id?tag=REQ&template=true&rel_template_id={}", req_template_id1)).await;
@@ -271,6 +270,7 @@ pub async fn test(flow_client: &mut TestHttpClient) -> TardisResult<()> {
     // 4 return app
     ctx.own_paths = "t1/app01".to_string();
     flow_client.set_auth(&ctx)?;
+    // 4-1 find models by project template id
     let project_result: HashMap<String, FlowModelSummaryResp> = flow_client
         .put(
             &format!("/cc/model/find_rel_models?tag_ids=REQ&is_shared=false&temp_id={}", project_template_id1),
@@ -278,5 +278,17 @@ pub async fn test(flow_client: &mut TestHttpClient) -> TardisResult<()> {
         )
         .await;
     assert_eq!(project_req_model_template_id, project_result.get("REQ").unwrap().id.clone());
+    // 4-2 rebind project template
+    let result: HashMap<String, FlowModelAggResp> = flow_client
+        .post(
+            "/ca/model/copy_or_reference_model",
+            &FlowModelCopyOrReferenceReq {
+                rel_model_ids: HashMap::from([("REQ".to_string(), project_req_model_template_id.clone())]),
+                rel_template_id: Some(project_template_id1.to_string()),
+                op: FlowModelAssociativeOperationKind::Reference,
+            },
+        )
+        .await;
+    assert_eq!(project_req_model_template_id, result.get(&project_req_model_template_id).unwrap().id.clone());
     Ok(())
 }

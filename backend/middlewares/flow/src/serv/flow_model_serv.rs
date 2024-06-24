@@ -1001,6 +1001,11 @@ impl FlowModelServ {
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<FlowModelAggResp> {
+        let mock_ctx = if let Some(own_paths) = rel_own_paths.clone() {
+            TardisContext { own_paths, ..ctx.clone() }
+        } else {
+            ctx.clone()
+        };
         let rel_model = FlowModelServ::get_item(
             rel_model_id,
             &FlowModelFilterReq {
@@ -1019,11 +1024,6 @@ impl FlowModelServ {
         // .ok_or_else(|| funs.err().not_found(&Self::get_obj_name(), "copy_or_reference_model", "rel model not found", "404-flow-model-not-found"))?;
         let result = match op {
             FlowModelAssociativeOperationKind::Reference => {
-                let mock_ctx = if let Some(own_paths) = rel_own_paths.clone() {
-                    TardisContext { own_paths, ..ctx.clone() }
-                } else {
-                    ctx.clone()
-                };
                 if is_create_copy.unwrap_or(false) {
                     Self::add_item(
                         &mut FlowModelAddReq {
@@ -1060,7 +1060,7 @@ impl FlowModelServ {
                         ..rel_model.clone().into()
                     },
                     funs,
-                    ctx,
+                    &mock_ctx,
                 )
                 .await?
             }
@@ -1098,12 +1098,12 @@ impl FlowModelServ {
                             ..Default::default()
                         },
                         funs,
-                        ctx,
+                        &mock_ctx,
                     )
                     .await?
                     .iter()
                     .map(|inst| async {
-                        FlowInstServ::unsafe_update_state_by_inst_id(inst.id.clone(), new_model.id.clone(), new_model.init_state_id.clone(), funs, ctx).await
+                        FlowInstServ::unsafe_update_state_by_inst_id(inst.id.clone(), new_model.id.clone(), new_model.init_state_id.clone(), funs, &mock_ctx).await
                     })
                     .collect_vec(),
                 )
@@ -1116,11 +1116,11 @@ impl FlowModelServ {
             for rel in FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelPath, &orginal_model_id, None, None, funs, &global_ctx).await? {
                 FlowRelServ::delete_simple_rel(&FlowRelKind::FlowModelPath, &orginal_model_id, &rel.rel_id, funs, &global_ctx).await?;
             }
-            if orginal_model_detail.own_paths == ctx.own_paths {
+            if orginal_model_detail.own_paths == mock_ctx.own_paths {
                 for rel in FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelTemplate, &orginal_model_id, None, None, funs, &global_ctx).await? {
                     FlowRelServ::delete_simple_rel(&FlowRelKind::FlowModelTemplate, &orginal_model_id, &rel.rel_id, funs, &global_ctx).await?;
                 }
-                Self::delete_item(&orginal_model_id, funs, ctx).await?;
+                Self::delete_item(&orginal_model_id, funs, &mock_ctx).await?;
             }
         }
 
