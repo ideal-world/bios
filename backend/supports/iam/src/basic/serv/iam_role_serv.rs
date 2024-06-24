@@ -118,7 +118,7 @@ impl RbumItemCrudOperation<iam_role::ActiveModel, IamRoleAddReq, IamRoleModifyRe
             ctx,
         )
         .await;
-        IamKvClient::async_add_or_modify_item(id.to_string(), json!(role.name.clone()), None, Some(role.scope_level), funs, ctx).await?;
+        IamKvClient::async_add_or_modify_item(id.to_string(), json!(role.name.clone()), None, Some(role.scope_level.clone()), funs, ctx).await?;
 
         Ok(())
     }
