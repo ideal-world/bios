@@ -957,24 +957,36 @@ impl FlowModelServ {
         } else {
             None
         };
-        let models = Self::find_items(
-            &FlowModelFilterReq {
-                basic: RbumBasicFilterReq {
-                    ids: filter_ids,
-                    ignore_scope: true,
-                    with_sub_own_paths: true,
-                    ..Default::default()
-                },
-                tags: Some(tags.clone()),
-                rel: FlowRelServ::get_template_rel_filter(template_id.as_deref()),
+        let mut filter = FlowModelFilterReq {
+            basic: RbumBasicFilterReq {
+                ids: filter_ids,
+                ignore_scope: true,
+                with_sub_own_paths: true,
                 ..Default::default()
             },
+            tags: Some(tags.clone()),
+            rel: FlowRelServ::get_template_rel_filter(template_id.as_deref()),
+            ..Default::default()
+        };
+        let mut models = Self::find_items(
+            &filter,
             None,
             None,
             funs,
             if is_shared { &global_ctx } else { ctx },
         )
         .await?;
+        if models.is_empty() {
+            filter.basic.ids = None;
+            models = Self::find_items(
+                &filter,
+                None,
+                None,
+                funs,
+                ctx,
+            )
+            .await?;
+        }
 
         // First iterate over the models
         for model in models {

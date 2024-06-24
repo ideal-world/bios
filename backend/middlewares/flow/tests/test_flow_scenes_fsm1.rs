@@ -241,7 +241,7 @@ pub async fn test(flow_client: &mut TestHttpClient) -> TardisResult<()> {
     info!("req_inst1: {:?}", req_inst1);
     assert_eq!(req_inst1.rel_flow_model_id, project_req_model_template_id);
 
-    let result: HashMap<String, FlowModelSummaryResp> = flow_client.put("/cc/model/find_or_add_models?tag_ids=REQ&is_shared=false", &json!("")).await;
+    let result: HashMap<String, FlowModelSummaryResp> = flow_client.put("/cc/model/find_rel_models?tag_ids=REQ&is_shared=false", &json!("")).await;
     let req_model_id = result.get("REQ").unwrap().id.clone();
     assert_eq!(project_req_model_template_id, req_model_id);
     // copy project template to app
@@ -257,6 +257,9 @@ pub async fn test(flow_client: &mut TestHttpClient) -> TardisResult<()> {
         .await;
     let app_req_model_id = result.get(&req_model_id).unwrap().id.clone();
     assert_ne!(req_model_id.clone(), app_req_model_id.clone());
+    let result: HashMap<String, FlowModelSummaryResp> = flow_client.put("/cc/model/find_rel_models?tag_ids=REQ&is_shared=false", &json!("")).await;
+    let req_model_id = result.get("REQ").unwrap().id.clone();
+    assert_eq!(app_req_model_id, req_model_id);
     // exit app
     ctx.owner = "u001".to_string();
     ctx.own_paths = "t1".to_string();
