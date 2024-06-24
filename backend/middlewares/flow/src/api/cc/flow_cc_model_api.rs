@@ -36,7 +36,7 @@ impl FlowCcModelApi {
         let mut funs = flow_constants::get_tardis_inst();
         funs.begin().await?;
         let model_id = FlowModelServ::add_item(&mut add_req.0, &funs, &ctx.0).await?;
-        let result = FlowModelServ::get_item_detail_aggs(&model_id, &funs, &ctx.0).await?;
+        let result = FlowModelServ::get_item_detail_aggs(&model_id, true, &funs, &ctx.0).await?;
         funs.commit().await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
@@ -61,7 +61,7 @@ impl FlowCcModelApi {
     #[oai(path = "/:flow_model_id", method = "get")]
     async fn get(&self, flow_model_id: Path<String>, ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<FlowModelAggResp> {
         let funs = flow_constants::get_tardis_inst();
-        let result = FlowModelServ::get_item_detail_aggs(&flow_model_id.0, &funs, &ctx.0).await?;
+        let result = FlowModelServ::get_item_detail_aggs(&flow_model_id.0, true, &funs, &ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
@@ -224,13 +224,11 @@ impl FlowCcModelApi {
     /// 查找关联的model。
     ///
     /// # Parameters
-    /// - `tag_ids` - list of tag_id
     /// - `temp_id` - associated template_id
     /// - `is_shared` - whether the associated template is shared
     #[oai(path = "/find_rel_models", method = "put")]
     async fn find_rel_models(
         &self,
-        tag_ids: Query<String>,
         temp_id: Query<Option<String>>,
         is_shared: Query<Option<bool>>,
         ctx: TardisContextExtractor,
@@ -238,8 +236,7 @@ impl FlowCcModelApi {
     ) -> TardisApiResult<HashMap<String, FlowModelSummaryResp>> {
         let mut funs = flow_constants::get_tardis_inst();
         funs.begin().await?;
-        let tag_ids = tag_ids.split(',').map(|tag_id| tag_id.to_string()).collect_vec();
-        let result = FlowModelServ::find_rel_models(tag_ids, temp_id.0, is_shared.unwrap_or(false), &funs, &ctx.0).await?;
+        let result = FlowModelServ::find_rel_models(temp_id.0, is_shared.unwrap_or(false), &funs, &ctx.0).await?;
         funs.commit().await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)

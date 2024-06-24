@@ -1201,12 +1201,10 @@ impl FlowInstServ {
                 "404-flow-inst-not-found",
             )
         })?;
-        let orginal_model_detail = FlowModelServ::get_item(&flow_inst_detail.rel_flow_model_id, &FlowModelFilterReq::default(), funs, ctx).await?;
 
         let flow_inst = flow_inst::ActiveModel {
             id: Set(inst_id.clone()),
             current_state_id: Set(state_id.clone()),
-            rel_flow_model_id: Set(modify_model_id.clone()),
             transitions: Set(Some(vec![])),
             ..Default::default()
         };

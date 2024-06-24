@@ -20,7 +20,7 @@ use tardis::{
     chrono::Utc,
     db::sea_orm::{
         sea_query::{Alias, Cond, Expr, Query, SelectStatement},
-        EntityName, EntityTrait, JoinType, Order, QueryFilter, Set,
+        EntityName, EntityTrait, JoinType, Order, QueryFilter, Set, Value,
     },
     futures::future::join_all,
     serde_json::json,
@@ -30,7 +30,7 @@ use tardis::{
 };
 
 use crate::{
-    domain::{flow_model, flow_state, flow_transition},
+    domain::{flow_inst, flow_model, flow_state, flow_transition},
     dto::{
         flow_inst_dto::FlowInstFilterReq,
         flow_model_dto::{
@@ -267,7 +267,7 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
         if refresh_model_name_by_sorted_states {
             Self::refresh_model_name_by_sorted_states(flow_model_id, funs, ctx).await?;
         }
-        let model = Self::get_item_detail_aggs(flow_model_id, funs, ctx).await?;
+        let model = Self::get_item_detail_aggs(flow_model_id, false, funs, ctx).await?;
         if model.template && model.rel_model_id.is_empty() {
             IamSearchClient::async_add_or_modify_model_search(flow_model_id, Box::new(true), funs, ctx).await?;
         }
@@ -841,7 +841,7 @@ impl FlowModelServ {
         }
     }
 
-    pub async fn get_item_detail_aggs(flow_model_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<FlowModelAggResp> {
+    pub async fn get_item_detail_aggs(flow_model_id: &str, is_state_detail: bool, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<FlowModelAggResp> {
         let model_detail = Self::get_item(
             flow_model_id,
             &FlowModelFilterReq {
@@ -857,29 +857,31 @@ impl FlowModelServ {
         )
         .await?;
 
-        // find rel state
-        let state_ids = FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelState, flow_model_id, None, None, funs, ctx)
-            .await?
-            .iter()
-            .sorted_by_key(|rel| TardisFuns::json.str_to_obj::<FlowStateRelModelExt>(&rel.ext).unwrap_or_default().sort)
-            .map(|rel| {
-                (
-                    rel.rel_id.clone(),
-                    rel.rel_name.clone(),
-                    TardisFuns::json.str_to_obj::<FlowStateRelModelExt>(&rel.ext).unwrap_or_default(),
-                )
-            })
-            .collect::<Vec<_>>();
         let mut states = Vec::new();
-        for (state_id, state_name, ext) in state_ids {
-            let state_detail = FlowStateAggResp {
-                id: state_id.clone(),
-                name: state_name,
-                ext,
-                is_init: model_detail.init_state_id == state_id,
-                transitions: model_detail.transitions().into_iter().filter(|transition| transition.from_flow_state_id == state_id.clone()).collect_vec(),
-            };
-            states.push(state_detail);
+        if is_state_detail {
+            // find rel state
+            let state_ids = FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelState, flow_model_id, None, None, funs, ctx)
+                .await?
+                .iter()
+                .sorted_by_key(|rel| TardisFuns::json.str_to_obj::<FlowStateRelModelExt>(&rel.ext).unwrap_or_default().sort)
+                .map(|rel| {
+                    (
+                        rel.rel_id.clone(),
+                        rel.rel_name.clone(),
+                        TardisFuns::json.str_to_obj::<FlowStateRelModelExt>(&rel.ext).unwrap_or_default(),
+                    )
+                })
+                .collect::<Vec<_>>();
+            for (state_id, state_name, ext) in state_ids {
+                let state_detail = FlowStateAggResp {
+                    id: state_id.clone(),
+                    name: state_name,
+                    ext,
+                    is_init: model_detail.init_state_id == state_id,
+                    transitions: model_detail.transitions().into_iter().filter(|transition| transition.from_flow_state_id == state_id.clone()).collect_vec(),
+                };
+                states.push(state_detail);
+            }
         }
 
         Ok(FlowModelAggResp {
@@ -914,7 +916,7 @@ impl FlowModelServ {
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<HashMap<String, FlowModelSummaryResp>> {
-        let mut result = Self::find_rel_models(tags.clone(), template_id.clone(), is_shared, funs, ctx).await?;
+        let mut result = Self::find_rel_models(template_id.clone(), is_shared, funs, ctx).await?;
         // Iterate over the tag based on the existing result and get the default model
         for tag in tags {
             if !result.contains_key(&tag) {
@@ -941,13 +943,7 @@ impl FlowModelServ {
     }
 
     // Find the rel models.
-    pub async fn find_rel_models(
-        tags: Vec<String>,
-        template_id: Option<String>,
-        _is_shared: bool,
-        funs: &TardisFunsInst,
-        ctx: &TardisContext,
-    ) -> TardisResult<HashMap<String, FlowModelSummaryResp>> {
+    pub async fn find_rel_models(template_id: Option<String>, _is_shared: bool, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<HashMap<String, FlowModelSummaryResp>> {
         let global_ctx = TardisContext {
             own_paths: "".to_string(),
             ..ctx.clone()
@@ -966,7 +962,6 @@ impl FlowModelServ {
                 with_sub_own_paths: true,
                 ..Default::default()
             },
-            tags: Some(tags.clone()),
             rel: FlowRelServ::get_template_rel_filter(template_id.as_deref()),
             ..Default::default()
         };
@@ -978,9 +973,7 @@ impl FlowModelServ {
 
         // First iterate over the models
         for model in models {
-            if tags.contains(&model.tag) {
-                result.insert(model.tag.clone(), model);
-            }
+            result.insert(model.tag.clone(), model);
         }
 
         Ok(result)
@@ -1065,7 +1058,7 @@ impl FlowModelServ {
                 .await?
             }
         };
-        let new_model = Self::get_item_detail_aggs(&result, funs, ctx).await?;
+        let new_model = Self::get_item_detail_aggs(&result, true, funs, ctx).await?;
 
         if let Some(orginal_model_id) = orginal_model_id {
             let global_ctx = TardisContext {
@@ -1089,6 +1082,11 @@ impl FlowModelServ {
             .await?;
 
             // modify instance rel_model_id and state_id
+            let mut update_statement = Query::update();
+            update_statement.table(flow_inst::Entity);
+            update_statement.value(flow_inst::Column::RelFlowModelId, Value::from(new_model.id.clone()));
+            update_statement.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::RelFlowModelId)).eq(orginal_model_detail.id.as_str()));
+            funs.db().execute(&update_statement).await?;
             for modify_state in orginal_model_detail.states().into_iter().filter(|state| !new_model.states.iter().any(|new_state| new_state.id == state.id)).collect_vec() {
                 join_all(
                     FlowInstServ::find_details(

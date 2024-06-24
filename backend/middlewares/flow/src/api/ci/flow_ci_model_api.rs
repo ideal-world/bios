@@ -6,7 +6,6 @@ use bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use itertools::Itertools;
 use tardis::basic::dto::TardisContext;
-use tardis::log::warn;
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem::Request;
 use tardis::web::poem_openapi;
@@ -15,7 +14,8 @@ use tardis::web::poem_openapi::payload::Json;
 use tardis::web::web_resp::{TardisApiResult, TardisResp};
 
 use crate::dto::flow_model_dto::{
-    FlowModelAddCustomModelReq, FlowModelAddCustomModelResp, FlowModelAggResp, FlowModelCopyOrReferenceCiReq, FlowModelFilterReq, FlowModelFindRelStateResp,
+    FlowModelAddCustomModelReq, FlowModelAddCustomModelResp, FlowModelAggResp, FlowModelAssociativeOperationKind, FlowModelCopyOrReferenceCiReq, FlowModelFilterReq,
+    FlowModelFindRelStateResp,
 };
 use crate::flow_constants;
 use crate::serv::flow_model_serv::FlowModelServ;
@@ -56,7 +56,7 @@ impl FlowCiModelApi {
         .await?
         .ok_or_else(|| funs.err().internal_error("flow_ci_model_api", "get_detail", "model is not exist", "404-flow-model-not-found"))?
         .id;
-        let result = FlowModelServ::get_item_detail_aggs(&model_id, &funs, &ctx.0).await?;
+        let result = FlowModelServ::get_item_detail_aggs(&model_id, true, &funs, &ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
@@ -115,22 +115,43 @@ impl FlowCiModelApi {
     ) -> TardisApiResult<HashMap<String, String>> {
         let mut funs = flow_constants::get_tardis_inst();
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
-        warn!("ctx:{:?}", ctx.0);
         funs.begin().await?;
         // find rel models
-        let rel_model_ids = FlowRelServ::find_to_simple_rels(&FlowRelKind::FlowModelTemplate, &req.0.rel_template_id.unwrap_or_default(), None, None, &funs, &ctx.0)
-            .await?
-            .into_iter()
-            .map(|rel| rel.rel_id)
-            .collect_vec();
+        let rel_model_ids = FlowRelServ::find_to_simple_rels(
+            &FlowRelKind::FlowModelTemplate,
+            &req.0.rel_template_id.clone().unwrap_or_default(),
+            None,
+            None,
+            &funs,
+            &ctx.0,
+        )
+        .await?
+        .into_iter()
+        .map(|rel| rel.rel_id)
+        .collect_vec();
         let mut result = HashMap::new();
-        let mock_ctx = TardisContext {
-            own_paths: rbum_scope_helper::get_path_item(RbumScopeLevelKind::L1.to_int(), &ctx.0.own_paths).unwrap_or_default(),
-            ..ctx.0.clone()
-        };
+        let mut orginal_models = HashMap::new();
+        let mut mock_ctx = ctx.0.clone();
+        if rbum_scope_helper::get_scope_level_by_context(&ctx.0)? == RbumScopeLevelKind::L1 {
+            orginal_models = FlowModelServ::find_rel_models(req.0.rel_template_id.clone(), true, &funs, &ctx.0).await?;
+        } else if rbum_scope_helper::get_scope_level_by_context(&ctx.0)? == RbumScopeLevelKind::L2 {
+            orginal_models = FlowModelServ::find_rel_models(None, true, &funs, &ctx.0).await?;
+            mock_ctx = match req.0.op {
+                FlowModelAssociativeOperationKind::Copy => ctx.0.clone(),
+                FlowModelAssociativeOperationKind::Reference => TardisContext {
+                    own_paths: rbum_scope_helper::get_path_item(RbumScopeLevelKind::L1.to_int(), &ctx.0.own_paths).unwrap_or_default(),
+                    ..ctx.0.clone()
+                },
+            };
+        }
+
         for rel_model_id in rel_model_ids {
-            let added_model = FlowModelServ::copy_or_reference_model(None, &rel_model_id, Some(ctx.0.own_paths.clone()), &req.0.op, Some(false), &funs, &mock_ctx).await?;
-            result.insert(rel_model_id.clone(), added_model.id.clone());
+            let tag = FlowModelServ::get_item_detail_aggs(&rel_model_id, false, &funs, &mock_ctx).await?.tag;
+            let orginal_model_id = orginal_models.get(&tag).map(|orginal_model| orginal_model.id.clone());
+            result.insert(
+                rel_model_id.clone(),
+                FlowModelServ::copy_or_reference_model(orginal_model_id, &rel_model_id, Some(ctx.0.own_paths.clone()), &req.0.op, Some(false), &funs, &mock_ctx).await?.id,
+            );
         }
         funs.commit().await?;
         ctx.0.execute_task().await?;

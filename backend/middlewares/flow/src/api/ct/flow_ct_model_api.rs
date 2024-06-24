@@ -37,14 +37,7 @@ impl FlowCtModelApi {
         let mut funs = flow_constants::get_tardis_inst();
         funs.begin().await?;
         let mut result = HashMap::new();
-        let orginal_models = FlowModelServ::find_rel_models(
-            req.0.rel_model_ids.clone().keys().map(|tag| tag.to_string()).collect_vec(),
-            req.0.rel_template_id.clone(),
-            true,
-            &funs,
-            &ctx.0,
-        )
-        .await?;
+        let orginal_models = FlowModelServ::find_rel_models(req.0.rel_template_id.clone(), true, &funs, &ctx.0).await?;
         for (tag, rel_model_id) in req.0.rel_model_ids {
             let orginal_model_id = orginal_models.get(&tag).map(|orginal_model| orginal_model.id.clone());
 

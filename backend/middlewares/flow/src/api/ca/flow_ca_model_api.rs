@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 
 use bios_basic::rbum::{helper::rbum_scope_helper, rbum_enumeration::RbumScopeLevelKind};
-use itertools::Itertools;
 use tardis::{
     basic::dto::TardisContext,
     web::{
@@ -37,7 +36,7 @@ impl FlowCaModelApi {
         let mut funs = flow_constants::get_tardis_inst();
         funs.begin().await?;
         let mut result = HashMap::new();
-        let orginal_models = FlowModelServ::find_rel_models(req.0.rel_model_ids.clone().keys().map(|tag| tag.to_string()).collect_vec(), None, true, &funs, &ctx.0).await?;
+        let orginal_models = FlowModelServ::find_rel_models(None, true, &funs, &ctx.0).await?;
         let mock_ctx = match req.0.op {
             FlowModelAssociativeOperationKind::Copy => ctx.0.clone(),
             FlowModelAssociativeOperationKind::Reference => TardisContext {
