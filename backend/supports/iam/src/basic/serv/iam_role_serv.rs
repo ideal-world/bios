@@ -209,7 +209,7 @@ impl RbumItemCrudOperation<iam_role::ActiveModel, IamRoleAddReq, IamRoleModifyRe
         let mut op_describe = String::new();
         let mut op_kind = String::new();
         if modify_req.name.is_some() {
-            if Self::is_custom_role(role.kind, role.scope_level) {
+            if Self::is_custom_role(role.kind, role.scope_level.clone()) {
                 op_describe = format!("编辑自定义角色名称为{}", modify_req.name.as_ref().unwrap_or(&TrimString::from("")));
                 op_kind = "ModifyCustomizeRoleName".to_string();
             } else {
