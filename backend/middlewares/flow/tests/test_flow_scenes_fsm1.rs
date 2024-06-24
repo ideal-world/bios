@@ -244,7 +244,7 @@ pub async fn test(flow_client: &mut TestHttpClient) -> TardisResult<()> {
     let result: HashMap<String, FlowModelSummaryResp> = flow_client.put("/cc/model/find_rel_models?tag_ids=REQ&is_shared=false", &json!("")).await;
     let req_model_id = result.get("REQ").unwrap().id.clone();
     assert_eq!(project_req_model_template_id, req_model_id);
-    // copy project template to app
+    // 3-3 copy project template to app
     let result: HashMap<String, FlowModelAggResp> = flow_client
         .post(
             "/ca/model/copy_or_reference_model",
@@ -262,11 +262,21 @@ pub async fn test(flow_client: &mut TestHttpClient) -> TardisResult<()> {
     assert_eq!(app_req_model_id, req_model_id);
     let req_model_aggs: FlowModelAggResp = flow_client.get(&format!("/cc/model/{}", req_model_id)).await;
     assert_eq!(req_model_aggs.rel_model_id, "".to_string());
-    // exit app
+    // 3-4 exit app and return tenant
     ctx.owner = "u001".to_string();
     ctx.own_paths = "t1".to_string();
     flow_client.set_auth(&ctx)?;
     let req_models: Vec<FlowModelSummaryResp> = flow_client.get(&format!("/cc/model/find_by_rel_template_id?tag=REQ&template=true&rel_template_id={}", req_template_id1)).await;
     assert!(!req_models.into_iter().any(|model| model.id == app_req_model_id.clone()));
+    // 4 return app
+    ctx.own_paths = "t1/app01".to_string();
+    flow_client.set_auth(&ctx)?;
+    let project_result: HashMap<String, FlowModelSummaryResp> = flow_client
+        .put(
+            &format!("/cc/model/find_rel_models?tag_ids=REQ&is_shared=false&temp_id={}", project_template_id1),
+            &json!(""),
+        )
+        .await;
+    assert_eq!(project_req_model_template_id, project_result.get("REQ").unwrap().id.clone());
     Ok(())
 }

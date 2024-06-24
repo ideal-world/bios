@@ -944,7 +944,7 @@ impl FlowModelServ {
     pub async fn find_rel_models(
         tags: Vec<String>,
         template_id: Option<String>,
-        mut is_shared: bool,
+        _is_shared: bool,
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<HashMap<String, FlowModelSummaryResp>> {
@@ -955,7 +955,6 @@ impl FlowModelServ {
         let mut result = HashMap::new();
 
         let filter_ids = if template_id.is_none() {
-            is_shared = true;
             Some(FlowRelServ::find_to_simple_rels(&FlowRelKind::FlowModelPath, &ctx.own_paths, None, None, funs, ctx).await?.into_iter().map(|rel| rel.rel_id).collect_vec())
         } else {
             None
@@ -971,7 +970,7 @@ impl FlowModelServ {
             rel: FlowRelServ::get_template_rel_filter(template_id.as_deref()),
             ..Default::default()
         };
-        let mut models = Self::find_items(&filter, None, None, funs, if is_shared { &global_ctx } else { ctx }).await?;
+        let mut models = Self::find_items(&filter, None, None, funs, &global_ctx).await?;
         if models.is_empty() {
             filter.basic.ids = None;
             models = Self::find_items(&filter, None, None, funs, ctx).await?;
