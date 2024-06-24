@@ -30,7 +30,7 @@ use tardis::{
 };
 
 use crate::{
-    domain::{flow_inst, flow_model, flow_state, flow_transition},
+    domain::{flow_model, flow_state, flow_transition},
     dto::{
         flow_inst_dto::FlowInstFilterReq,
         flow_model_dto::{
@@ -298,7 +298,10 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
                         let parent_model_transition = parent_model_transitions.iter().find(|trans| trans.id == modify_transition.id.to_string()).unwrap();
                         modify_transition.id = child_model_transitions
                             .iter()
-                            .find(|child_tran| child_tran.from_flow_state_id == parent_model_transition.from_flow_state_id && child_tran.to_flow_state_id == parent_model_transition.to_flow_state_id)
+                            .find(|child_tran| {
+                                child_tran.from_flow_state_id == parent_model_transition.from_flow_state_id
+                                    && child_tran.to_flow_state_id == parent_model_transition.to_flow_state_id
+                            })
                             .map(|trans| trans.id.clone())
                             .unwrap_or_default()
                             .into();
@@ -968,24 +971,10 @@ impl FlowModelServ {
             rel: FlowRelServ::get_template_rel_filter(template_id.as_deref()),
             ..Default::default()
         };
-        let mut models = Self::find_items(
-            &filter,
-            None,
-            None,
-            funs,
-            if is_shared { &global_ctx } else { ctx },
-        )
-        .await?;
+        let mut models = Self::find_items(&filter, None, None, funs, if is_shared { &global_ctx } else { ctx }).await?;
         if models.is_empty() {
             filter.basic.ids = None;
-            models = Self::find_items(
-                &filter,
-                None,
-                None,
-                funs,
-                ctx,
-            )
-            .await?;
+            models = Self::find_items(&filter, None, None, funs, ctx).await?;
         }
 
         // First iterate over the models
@@ -1099,16 +1088,7 @@ impl FlowModelServ {
                 &global_ctx,
             )
             .await?;
-            // delete model
-            for rel in FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelPath, &orginal_model_id, None, None, funs, &global_ctx).await? {
-                FlowRelServ::delete_simple_rel(&FlowRelKind::FlowModelPath, &orginal_model_id, &rel.rel_id, funs, &global_ctx).await?;
-            }
-            if orginal_model_detail.own_paths == ctx.own_paths {
-                for rel in FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelTemplate, &orginal_model_id, None, None, funs, &global_ctx).await? {
-                    FlowRelServ::delete_simple_rel(&FlowRelKind::FlowModelTemplate, &orginal_model_id, &rel.rel_id, funs, &global_ctx).await?;
-                }
-                Self::delete_item(&orginal_model_id, funs, ctx).await?;
-            }
+
             // modify instance rel_model_id and state_id
             for modify_state in orginal_model_detail.states().into_iter().filter(|state| !new_model.states.iter().any(|new_state| new_state.id == state.id)).collect_vec() {
                 join_all(
@@ -1123,21 +1103,25 @@ impl FlowModelServ {
                     )
                     .await?
                     .iter()
-                    .map(|inst: &crate::dto::flow_inst_dto::FlowInstSummaryResult| async {
-                        let flow_inst = flow_inst::ActiveModel {
-                            id: Set(inst.id.clone()),
-                            current_state_id: Set(new_model.init_state_id.clone()),
-                            transitions: Set(Some(vec![])),
-                            ..Default::default()
-                        };
-
-                        funs.db().update_one(flow_inst, ctx).await
+                    .map(|inst| async {
+                        FlowInstServ::unsafe_update_state_by_inst_id(inst.id.clone(), new_model.id.clone(), new_model.init_state_id.clone(), funs, ctx).await
                     })
                     .collect_vec(),
                 )
                 .await
                 .into_iter()
                 .collect::<TardisResult<Vec<()>>>()?;
+            }
+
+            // delete model
+            for rel in FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelPath, &orginal_model_id, None, None, funs, &global_ctx).await? {
+                FlowRelServ::delete_simple_rel(&FlowRelKind::FlowModelPath, &orginal_model_id, &rel.rel_id, funs, &global_ctx).await?;
+            }
+            if orginal_model_detail.own_paths == ctx.own_paths {
+                for rel in FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelTemplate, &orginal_model_id, None, None, funs, &global_ctx).await? {
+                    FlowRelServ::delete_simple_rel(&FlowRelKind::FlowModelTemplate, &orginal_model_id, &rel.rel_id, funs, &global_ctx).await?;
+                }
+                Self::delete_item(&orginal_model_id, funs, ctx).await?;
             }
         }
 

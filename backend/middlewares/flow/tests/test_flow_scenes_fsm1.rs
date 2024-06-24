@@ -260,6 +260,8 @@ pub async fn test(flow_client: &mut TestHttpClient) -> TardisResult<()> {
     let result: HashMap<String, FlowModelSummaryResp> = flow_client.put("/cc/model/find_rel_models?tag_ids=REQ&is_shared=false", &json!("")).await;
     let req_model_id = result.get("REQ").unwrap().id.clone();
     assert_eq!(app_req_model_id, req_model_id);
+    let req_model_aggs: FlowModelAggResp = flow_client.get(&format!("/cc/model/{}", req_model_id)).await;
+    assert_eq!(req_model_aggs.rel_model_id, "".to_string());
     // exit app
     ctx.owner = "u001".to_string();
     ctx.own_paths = "t1".to_string();

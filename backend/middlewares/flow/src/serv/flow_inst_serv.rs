@@ -1187,4 +1187,73 @@ impl FlowInstServ {
 
         Ok(current_vars.unwrap_or_default().get(key).cloned())
     }
+
+    pub async fn unsafe_update_state_by_inst_id(inst_id: String, modify_model_id: String, state_id: String, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let global_ctx = TardisContext {
+            own_paths: "".to_string(),
+            ..ctx.clone()
+        };
+        let flow_inst_detail = Self::find_detail(vec![inst_id.clone()], funs, ctx).await?.pop().ok_or_else(|| {
+            funs.err().not_found(
+                "flow_inst",
+                "unsafe_update_state_by_inst_id",
+                &format!("flow instance {} not found", inst_id.clone()),
+                "404-flow-inst-not-found",
+            )
+        })?;
+        let orginal_model_detail = FlowModelServ::get_item(&flow_inst_detail.rel_flow_model_id, &FlowModelFilterReq::default(), funs, ctx).await?;
+
+        let flow_inst = flow_inst::ActiveModel {
+            id: Set(inst_id.clone()),
+            current_state_id: Set(state_id.clone()),
+            rel_flow_model_id: Set(modify_model_id.clone()),
+            transitions: Set(Some(vec![])),
+            ..Default::default()
+        };
+        funs.db().update_one(flow_inst, ctx).await?;
+        let modify_model_detail = FlowModelServ::get_item(&modify_model_id, &FlowModelFilterReq::default(), funs, ctx).await?;
+        let prev_flow_state = FlowStateServ::get_item(
+            &flow_inst_detail.current_state_id,
+            &FlowStateFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            funs,
+            &global_ctx,
+        )
+        .await?;
+        let next_flow_state = FlowStateServ::get_item(
+            &modify_model_detail.init_state_id,
+            &FlowStateFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            funs,
+            &global_ctx,
+        )
+        .await?;
+
+        FlowExternalServ::do_notify_changes(
+            &modify_model_detail.tag,
+            &flow_inst_detail.id,
+            &flow_inst_detail.rel_business_obj_id,
+            prev_flow_state.name.clone(),
+            prev_flow_state.sys_state,
+            next_flow_state.name.clone(),
+            next_flow_state.sys_state,
+            "".to_string(),
+            false,
+            None,
+            ctx,
+            funs,
+        )
+        .await?;
+        Ok(())
+    }
 }
