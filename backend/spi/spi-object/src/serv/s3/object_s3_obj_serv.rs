@@ -226,17 +226,18 @@ async fn rebuild_path(bucket_name: Option<&str>, origin_path: &str, obj_exp: Opt
                     is_have_prefix
                 } else {
                     let rand_id = tardis::rand::random::<usize>().to_string();
+                    let prefix=format!("{}/", rand_id);
                     //add rule
                     let add_rule = LifecycleRule::builder("Enabled")
                         .id(&rand_id)
                         .expiration(Expiration::new(None, Some(obj_exp), None))
-                        .filter(LifecycleFilter::new(None, None, None, Some(rand_id.clone()), None))
+                        .filter(LifecycleFilter::new(None, None, None, Some(prefix.clone()), None))
                         .build();
                     rules.push(add_rule);
                     client.put_lifecycle(bucket_name, BucketLifecycleConfiguration::new(rules)).await?;
-                    rand_id
+                    prefix
                 };
-                Ok(format!("{}/{}", prefix, origin_path))
+                Ok(format!("{}{}", prefix, origin_path))
             }
             Err(e) => {
                 if e.code != "404" {
@@ -244,15 +245,16 @@ async fn rebuild_path(bucket_name: Option<&str>, origin_path: &str, obj_exp: Opt
                 }
                 let mut rules = vec![];
                 let rand_id = tardis::rand::random::<usize>().to_string();
+                let prefix=format!("{}/", rand_id);
                 //add rule
                 let add_rule = LifecycleRule::builder("Enabled")
                     .id(&rand_id)
                     .expiration(Expiration::new(None, Some(obj_exp), None))
-                    .filter(LifecycleFilter::new(None, None, None, Some(rand_id.clone()), None))
+                    .filter(LifecycleFilter::new(None, None, None, Some(prefix.clone()), None))
                     .build();
                 rules.push(add_rule);
                 client.put_lifecycle(bucket_name, BucketLifecycleConfiguration::new(rules)).await?;
-                Ok(format!("{}/{}", rand_id, origin_path))
+                Ok(format!("{}{}", prefix, origin_path))
             }
         }
     } else {
