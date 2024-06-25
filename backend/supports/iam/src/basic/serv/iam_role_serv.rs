@@ -9,6 +9,7 @@ use tardis::db::sea_orm::prelude::Expr;
 use tardis::db::sea_orm::sea_query::SelectStatement;
 use tardis::db::sea_orm::*;
 use tardis::log::info;
+use tardis::serde_json::json;
 use tardis::web::web_resp::TardisPage;
 use tardis::{tokio, TardisFuns, TardisFunsInst};
 
@@ -35,6 +36,7 @@ use crate::iam_constants::{RBUM_SCOPE_LEVEL_APP, RBUM_SCOPE_LEVEL_TENANT};
 use crate::iam_enumeration::{IamRelKind, IamRoleKind};
 use crate::iam_initializer::{default_iam_send_avatar, ws_iam_send_client};
 
+use super::clients::iam_kv_client::IamKvClient;
 use super::clients::iam_log_client::{IamLogClient, LogParamTag};
 use super::clients::iam_search_client::IamSearchClient;
 use super::iam_cert_serv::IamCertServ;
@@ -116,6 +118,7 @@ impl RbumItemCrudOperation<iam_role::ActiveModel, IamRoleAddReq, IamRoleModifyRe
             ctx,
         )
         .await;
+        IamKvClient::async_add_or_modify_item(id.to_string(), json!(role.name.clone()), None, Some(role.scope_level.clone()), funs, ctx).await?;
 
         Ok(())
     }
@@ -206,7 +209,7 @@ impl RbumItemCrudOperation<iam_role::ActiveModel, IamRoleAddReq, IamRoleModifyRe
         let mut op_describe = String::new();
         let mut op_kind = String::new();
         if modify_req.name.is_some() {
-            if Self::is_custom_role(role.kind, role.scope_level) {
+            if Self::is_custom_role(role.kind, role.scope_level.clone()) {
                 op_describe = format!("编辑自定义角色名称为{}", modify_req.name.as_ref().unwrap_or(&TrimString::from("")));
                 op_kind = "ModifyCustomizeRoleName".to_string();
             } else {
@@ -218,6 +221,7 @@ impl RbumItemCrudOperation<iam_role::ActiveModel, IamRoleAddReq, IamRoleModifyRe
         if !op_describe.is_empty() {
             let _ = IamLogClient::add_ctx_task(LogParamTag::IamRole, Some(id.to_string()), op_describe, Some(op_kind), ctx).await;
         }
+        IamKvClient::async_add_or_modify_item(id.to_string(), json!(role.name.clone()), None, Some(role.scope_level.clone()), funs, ctx).await?;
 
         Ok(())
     }
@@ -322,6 +326,7 @@ impl RbumItemCrudOperation<iam_role::ActiveModel, IamRoleAddReq, IamRoleModifyRe
             ctx,
         )
         .await;
+        IamKvClient::async_delete_item(id.to_string(), funs, ctx).await?;
 
         Ok(())
     }
