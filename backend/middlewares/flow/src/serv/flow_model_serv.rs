@@ -1086,6 +1086,7 @@ impl FlowModelServ {
             update_statement.table(flow_inst::Entity);
             update_statement.value(flow_inst::Column::RelFlowModelId, Value::from(new_model.id.clone()));
             update_statement.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::RelFlowModelId)).eq(orginal_model_detail.id.as_str()));
+            update_statement.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::OwnPaths)).eq(mock_ctx.own_paths.as_str()));
             funs.db().execute(&update_statement).await?;
             for modify_state in orginal_model_detail.states().into_iter().filter(|state| !new_model.states.iter().any(|new_state| new_state.id == state.id)).collect_vec() {
                 join_all(
