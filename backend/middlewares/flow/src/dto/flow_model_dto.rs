@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use bios_basic::rbum::{
     dto::rbum_filer_dto::{RbumBasicFilterReq, RbumItemFilterFetcher, RbumItemRelFilterReq},
     rbum_enumeration::RbumScopeLevelKind,
@@ -25,7 +27,7 @@ pub struct FlowModelAddReq {
     pub name: TrimString,
     #[oai(validator(min_length = "2", max_length = "2000"))]
     pub icon: Option<String>,
-    #[oai(validator(min_length = "2", max_length = "2000"))]
+    #[oai(validator(max_length = "2000"))]
     pub info: Option<String>,
     /// 初始化状态ID
     pub init_state_id: String,
@@ -56,8 +58,8 @@ impl From<FlowModelDetailResp> for FlowModelAddReq {
             info: Some(value.info.clone()),
             init_state_id: value.init_state_id,
             rel_template_ids: Some(value.rel_template_ids.clone()),
-            transitions: Some(transitions),
-            states: Some(states),
+            transitions: if transitions.is_empty() { None } else { Some(transitions) },
+            states: if states.is_empty() { None } else { Some(states) },
             template: value.template,
             rel_model_id: None,
             tag: Some(value.tag.clone()),
@@ -329,7 +331,19 @@ pub enum FlowModelAssociativeOperationKind {
 /// 创建或引用模型请求
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
 pub struct FlowModelCopyOrReferenceReq {
-    pub rel_model_ids: Vec<String>,
+    /// 关联的模型ID列表
+    pub rel_model_ids: HashMap<String, String>,
+    /// 关联的模板ID
     pub rel_template_id: Option<String>,
+    /// 修改的模板ID
+    pub op: FlowModelAssociativeOperationKind,
+}
+
+/// 创建或引用模型请求
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
+pub struct FlowModelCopyOrReferenceCiReq {
+    /// 关联的模板ID
+    pub rel_template_id: Option<String>,
+    /// 修改的模板ID
     pub op: FlowModelAssociativeOperationKind,
 }

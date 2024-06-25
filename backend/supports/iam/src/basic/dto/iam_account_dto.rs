@@ -273,6 +273,11 @@ pub struct IamAccountExtSysResp {
 
 impl IamAccountExtSysResp {
     pub fn form_ldap_search_resp(resp: LdapSearchResp, config: &IamCertConfLdapResp) -> IamAccountExtSysResp {
+        let labor_type = if let Some(field_labor_type_map) = config.account_field_map.field_labor_type_map.clone() {
+            field_labor_type_map.into_iter().find(|(_, value)| *value == resp.get_simple_attr(&config.account_field_map.field_labor_type).unwrap_or_default()).unwrap_or_default().0
+        } else {
+            "".to_string()
+        };
         IamAccountExtSysResp {
             user_name: resp.get_simple_attr(&config.account_field_map.field_user_name).unwrap_or_default(),
             display_name: resp.get_simple_attr(&config.account_field_map.field_display_name).unwrap_or_default(),
@@ -283,7 +288,7 @@ impl IamAccountExtSysResp {
             },
             mobile: resp.get_simple_attr(&config.account_field_map.field_mobile).unwrap_or_default(),
             email: resp.get_simple_attr(&config.account_field_map.field_email).unwrap_or_default(),
-            labor_type: resp.get_simple_attr(&config.account_field_map.field_labor_type).unwrap_or_default(),
+            labor_type,
         }
     }
 }
