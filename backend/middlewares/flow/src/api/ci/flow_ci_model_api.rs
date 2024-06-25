@@ -9,9 +9,9 @@ use tardis::basic::dto::TardisContext;
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem::Request;
 use tardis::web::poem_openapi;
-use tardis::web::poem_openapi::param::Query;
+use tardis::web::poem_openapi::param::{Path, Query};
 use tardis::web::poem_openapi::payload::Json;
-use tardis::web::web_resp::{TardisApiResult, TardisResp};
+use tardis::web::web_resp::{TardisApiResult, TardisResp, Void};
 
 use crate::dto::flow_model_dto::{
     FlowModelAddCustomModelReq, FlowModelAddCustomModelResp, FlowModelAggResp, FlowModelAssociativeOperationKind, FlowModelCopyOrReferenceCiReq, FlowModelFilterReq,
@@ -156,5 +156,80 @@ impl FlowCiModelApi {
         funs.commit().await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
+    }
+
+    /// batch copy models by template_id
+    ///
+    /// 通过模板ID复制模型
+    #[oai(path = "/copy_models_by_template_id/:from_template_id/:to_template_id", method = "post")]
+    async fn copy_models_by_template_id(
+        &self,
+        from_template_id: Path<String>,
+        to_template_id: Path<String>,
+        mut ctx: TardisContextExtractor,
+        request: &Request,
+    ) -> TardisApiResult<HashMap<String, FlowModelAggResp>> {
+        let mut funs = flow_constants::get_tardis_inst();
+        check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
+        funs.begin().await?;
+        let mut result = HashMap::new();
+        for from_model in FlowModelServ::find_detail_items(
+            &FlowModelFilterReq {
+                basic: RbumBasicFilterReq {
+                    ids: Some(
+                        FlowRelServ::find_to_simple_rels(&FlowRelKind::FlowModelTemplate, &from_template_id.0, None, None, &funs, &ctx.0)
+                            .await?
+                            .into_iter()
+                            .map(|rel| rel.rel_id)
+                            .collect_vec(),
+                    ),
+                    ignore_scope: true,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            None,
+            None,
+            &funs,
+            &ctx.0,
+        )
+        .await?
+        {
+            let added_model =
+                FlowModelServ::copy_or_reference_model(None, &from_model.rel_model_id, None, &FlowModelAssociativeOperationKind::Copy, Some(true), &funs, &ctx.0).await?;
+            FlowRelServ::add_simple_rel(
+                &FlowRelKind::FlowModelTemplate,
+                &added_model.id,
+                &to_template_id.0,
+                None,
+                None,
+                false,
+                true,
+                None,
+                &funs,
+                &ctx.0,
+            )
+            .await?;
+            result.insert(from_model.rel_model_id.clone(), added_model);
+        }
+        funs.commit().await?;
+        ctx.0.execute_task().await?;
+        TardisResp::ok(result)
+    }
+
+    /// batch delete models by rel_template_id
+    ///
+    /// 通过关联模板ID删除模型
+    #[oai(path = "/delete_by_rel_template_id/:rel_template_id", method = "delete")]
+    async fn delete_by_rel_template_id(&self, rel_template_id: Path<String>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
+        let mut funs = flow_constants::get_tardis_inst();
+        check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
+        funs.begin().await?;
+        for rel in FlowRelServ::find_to_simple_rels(&FlowRelKind::FlowModelTemplate, &rel_template_id.0, None, None, &funs, &ctx.0).await? {
+            FlowModelServ::delete_item(&rel.rel_id, &funs, &ctx.0).await?;
+        }
+        funs.commit().await?;
+        ctx.0.execute_task().await?;
+        TardisResp::ok(Void)
     }
 }
