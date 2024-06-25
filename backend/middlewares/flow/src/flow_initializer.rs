@@ -143,7 +143,7 @@ async fn rebind_model_with_template(funs: &TardisFunsInst, ctx: &TardisContext) 
                     &result.rel_template_id,
                     None,
                     None,
-                    false,
+                    true,
                     true,
                     None,
                     funs,

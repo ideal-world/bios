@@ -7,14 +7,17 @@ use bios_mw_flow::dto::flow_config_dto::FlowConfigModifyReq;
 
 use bios_mw_flow::dto::flow_inst_dto::{FlowInstDetailResp, FlowInstStartReq};
 use bios_mw_flow::dto::flow_model_dto::{
-    FlowModelAddReq, FlowModelAggResp, FlowModelAssociativeOperationKind, FlowModelBindStateReq, FlowModelCopyOrReferenceReq, FlowModelModifyReq, FlowModelSummaryResp,
+    FlowModelAddReq, FlowModelAggResp, FlowModelAssociativeOperationKind, FlowModelBindStateReq, FlowModelCopyOrReferenceCiReq, FlowModelCopyOrReferenceReq, FlowModelModifyReq,
+    FlowModelSummaryResp,
 };
 use bios_mw_flow::dto::flow_state_dto::{FlowStateRelModelExt, FlowStateSummaryResp};
 
-use bios_mw_flow::dto::flow_transition_dto::FlowTransitionAddReq;
+use bios_mw_flow::dto::flow_transition_dto::{FlowTransitionAddReq, FlowTransitionModifyReq};
 use bios_sdk_invoke::clients::spi_kv_client::KvItemSummaryResp;
+use serde_json::json;
 use tardis::basic::dto::TardisContext;
 
+use std::time::Duration;
 use tardis::basic::result::TardisResult;
 use tardis::log::info;
 use tardis::web::web_resp::{TardisPage, Void};
@@ -66,7 +69,8 @@ pub async fn test(flow_client: &mut TestHttpClient) -> TardisResult<()> {
     let req_template_id1 = "template_req_1";
     let req_template_id2 = "template_req_2";
     let project_template_id1 = "template_project_1";
-    let req_model_template_id: String = flow_client
+    let project_template_id2 = "template_project_2";
+    let req_model_template_aggs: FlowModelAggResp = flow_client
         .post(
             "/cc/model",
             &FlowModelAddReq {
@@ -85,6 +89,7 @@ pub async fn test(flow_client: &mut TestHttpClient) -> TardisResult<()> {
             },
         )
         .await;
+    let req_model_template_id = req_model_template_aggs.id.clone();
     // 2-3 config new flow template
     let _: Void = flow_client
         .patch(
@@ -157,49 +162,70 @@ pub async fn test(flow_client: &mut TestHttpClient) -> TardisResult<()> {
             },
         )
         .await;
+    let req_model_template: FlowModelAggResp = flow_client.get(&format!("/cc/model/{}", &req_model_template_id)).await;
     // 2-2. flow template bind project template
-    let result: HashMap<String, String> = flow_client
+    let mut rel_model_ids = HashMap::new();
+    rel_model_ids.insert("REQ".to_string(), req_model_template_id.clone());
+    let result: HashMap<String, FlowModelAggResp> = flow_client
         .post(
             "/ct/model/copy_or_reference_model",
             &FlowModelCopyOrReferenceReq {
-                rel_model_ids: vec![req_model_template_id.clone()],
+                rel_model_ids,
                 rel_template_id: Some(project_template_id1.to_string()),
                 op: FlowModelAssociativeOperationKind::Reference,
             },
         )
         .await;
     info!("result: {:?}", result);
-    let project_req_model_template_id = result.get(&req_model_template_id).unwrap().to_owned();
+    let project_req_model_template_id = result.get(&req_model_template_id).unwrap().id.clone();
     assert_ne!(req_model_template_id, project_req_model_template_id);
+    let project_result: HashMap<String, FlowModelSummaryResp> = flow_client
+        .put(
+            &format!("/cc/model/find_rel_models?tag_ids=REQ&is_shared=false&temp_id={}", project_template_id1),
+            &json!(""),
+        )
+        .await;
+    assert_eq!(project_req_model_template_id, project_result.get("REQ").unwrap().id.clone());
     // 2-3. modify flow temoplate
     let _: Void = flow_client
         .patch(
             &format!("/cc/model/{}", req_model_template_id.clone()),
             &FlowModelModifyReq {
-                info: Some("xxx1".to_string()),
+                modify_transitions: Some(vec![FlowTransitionModifyReq {
+                    id: req_model_template.states.iter().find(|state| state.id == init_state_id.clone()).unwrap().transitions[0].id.clone().into(),
+                    name: Some("111".into()),
+                    ..Default::default()
+                }]),
                 ..Default::default()
             },
         )
         .await;
-    let req_model_template: FlowModelAggResp = flow_client.get(&format!("/cc/model/{}", &req_model_template_id)).await;
+    tardis::tokio::time::sleep(Duration::from_millis(100)).await;
     let project_req_model_template: FlowModelAggResp = flow_client.get(&format!("/cc/model/{}", &project_req_model_template_id)).await;
-    assert_eq!(req_model_template.info, "xxx1".to_string());
-    assert_eq!(req_model_template.info, project_req_model_template.info);
-    // 2-4 create project
+    assert!(project_req_model_template.states.iter().find(|state| state.id == init_state_id.clone()).unwrap().transitions.iter().any(|tran| tran.name == "111"));
+    // copy models by project template id
+    let result: HashMap<String, FlowModelSummaryResp> = flow_client
+        .post(
+            &format!("/ct/model/copy_models_by_template_id/{}/{}", project_template_id1, project_template_id2),
+            &json!(""),
+        )
+        .await;
+    assert!(result.contains_key(&req_model_template_id));
+    // 3. enter project
     ctx.own_paths = "t1/app01".to_string();
     flow_client.set_auth(&ctx)?;
+    // 3-1 create project
     let result: HashMap<String, String> = flow_client
         .post(
             "/ci/model/copy_or_reference_model",
-            &FlowModelCopyOrReferenceReq {
-                rel_model_ids: vec![],
+            &FlowModelCopyOrReferenceCiReq {
                 rel_template_id: Some(project_template_id1.to_string()),
                 op: FlowModelAssociativeOperationKind::Reference,
             },
         )
         .await;
     info!("result: {:?}", result);
-    // 2-5 Start a instance
+    // 3-2 Start a instance
     let req_inst_id1: String = flow_client
         .post(
             "/cc/inst",
@@ -214,5 +240,61 @@ pub async fn test(flow_client: &mut TestHttpClient) -> TardisResult<()> {
     let req_inst1: FlowInstDetailResp = flow_client.get(&format!("/cc/inst/{}", req_inst_id1)).await;
     info!("req_inst1: {:?}", req_inst1);
     assert_eq!(req_inst1.rel_flow_model_id, project_req_model_template_id);
+
+    let result: HashMap<String, FlowModelSummaryResp> = flow_client.put("/cc/model/find_rel_models?tag_ids=REQ&is_shared=false", &json!("")).await;
+    let req_model_id = result.get("REQ").unwrap().id.clone();
+    assert_eq!(project_req_model_template_id, req_model_id);
+    // 3-3 copy project template to app
+    let result: HashMap<String, FlowModelAggResp> = flow_client
+        .post(
+            "/ca/model/copy_or_reference_model",
+            &FlowModelCopyOrReferenceReq {
+                rel_model_ids: HashMap::from([("REQ".to_string(), req_model_id.clone())]),
+                rel_template_id: None,
+                op: FlowModelAssociativeOperationKind::Copy,
+            },
+        )
+        .await;
+    let app_req_model_id = result.get(&req_model_id).unwrap().id.clone();
+    assert_ne!(req_model_id.clone(), app_req_model_id.clone());
+    let req_inst1: FlowInstDetailResp = flow_client.get(&format!("/cc/inst/{}", req_inst_id1)).await;
+    info!("req_inst1: {:?}", req_inst1);
+    assert_eq!(req_inst1.rel_flow_model_id, app_req_model_id);
+    let result: HashMap<String, FlowModelSummaryResp> = flow_client.put("/cc/model/find_rel_models?tag_ids=REQ&is_shared=false", &json!("")).await;
+    let req_model_id = result.get("REQ").unwrap().id.clone();
+    assert_eq!(app_req_model_id, req_model_id);
+    let req_model_aggs: FlowModelAggResp = flow_client.get(&format!("/cc/model/{}", req_model_id)).await;
+    assert_eq!(req_model_aggs.rel_model_id, "".to_string());
+    // 3-4 exit app and return tenant
+    ctx.own_paths = "t1".to_string();
+    flow_client.set_auth(&ctx)?;
+    let req_models: Vec<FlowModelSummaryResp> = flow_client.get(&format!("/cc/model/find_by_rel_template_id?tag=REQ&template=true&rel_template_id={}", req_template_id1)).await;
+    assert!(!req_models.into_iter().any(|model| model.id == app_req_model_id.clone()));
+    // 4 return app
+    ctx.own_paths = "t1/app01".to_string();
+    flow_client.set_auth(&ctx)?;
+    // 4-1 find models by project template id
+    let project_result: HashMap<String, FlowModelSummaryResp> = flow_client
+        .put(
+            &format!("/cc/model/find_rel_models?tag_ids=REQ&is_shared=false&temp_id={}", project_template_id1),
+            &json!(""),
+        )
+        .await;
+    assert_eq!(project_req_model_template_id, project_result.get("REQ").unwrap().id.clone());
+    // 4-2 rebind project template
+    let result: HashMap<String, FlowModelAggResp> = flow_client
+        .post(
+            "/ca/model/copy_or_reference_model",
+            &FlowModelCopyOrReferenceReq {
+                rel_model_ids: HashMap::from([("REQ".to_string(), project_req_model_template_id.clone())]),
+                rel_template_id: Some(project_template_id1.to_string()),
+                op: FlowModelAssociativeOperationKind::Reference,
+            },
+        )
+        .await;
+    assert_eq!(project_req_model_template_id, result.get(&project_req_model_template_id).unwrap().id.clone());
+
+    // check inst modify rel_model_id
+
     Ok(())
 }
