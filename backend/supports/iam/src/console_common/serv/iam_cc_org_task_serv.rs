@@ -64,7 +64,12 @@ impl IamCcOrgTaskServ {
                         &task_ctx,
                     )
                     .await?;
+                    let mut num = 0;
                     for org_set_cate_id in base_org_set_cate_ids {
+                        num += 1;
+                        if num % 100 == 0 {
+                            tardis::tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+                        }
                         IamStatsClient::async_org_fact_record_load(org_set_cate_id, &funs, &task_ctx).await?;
                     }
                 }
