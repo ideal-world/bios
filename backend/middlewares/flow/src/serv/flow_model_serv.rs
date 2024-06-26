@@ -20,7 +20,7 @@ use tardis::{
     chrono::Utc,
     db::sea_orm::{
         sea_query::{Alias, Cond, Expr, Query, SelectStatement},
-        EntityName, EntityTrait, JoinType, Order, QueryFilter, Set,
+        EntityName, EntityTrait, JoinType, Order, QueryFilter, Set, Value,
     },
     futures::future::join_all,
     serde_json::json,
@@ -30,8 +30,9 @@ use tardis::{
 };
 
 use crate::{
-    domain::{flow_model, flow_state, flow_transition},
+    domain::{flow_inst, flow_model, flow_state, flow_transition},
     dto::{
+        flow_inst_dto::FlowInstFilterReq,
         flow_model_dto::{
             FlowModelAddReq, FlowModelAggResp, FlowModelAssociativeOperationKind, FlowModelBindStateReq, FlowModelDetailResp, FlowModelFilterReq, FlowModelFindRelStateResp,
             FlowModelModifyReq, FlowModelSummaryResp,
@@ -198,6 +199,7 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
     }
 
     async fn after_modify_item(flow_model_id: &str, modify_req: &mut FlowModelModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let model_detail = Self::get_item(flow_model_id, &FlowModelFilterReq::default(), funs, ctx).await?;
         let mut refresh_model_name_by_sorted_states = false;
         if let Some(bind_states) = &modify_req.bind_states {
             for bind_state in bind_states {
@@ -265,13 +267,14 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
         if refresh_model_name_by_sorted_states {
             Self::refresh_model_name_by_sorted_states(flow_model_id, funs, ctx).await?;
         }
-        let model = Self::get_item_detail_aggs(flow_model_id, funs, ctx).await?;
+        let model = Self::get_item_detail_aggs(flow_model_id, false, funs, ctx).await?;
         if model.template && model.rel_model_id.is_empty() {
             IamSearchClient::async_add_or_modify_model_search(flow_model_id, Box::new(true), funs, ctx).await?;
         }
 
         // 同步修改所有引用的下级模型
         if model.template {
+            let parent_model_transitions = model_detail.transitions();
             let child_models = Self::find_detail_items(
                 &FlowModelFilterReq {
                     rel_model_ids: Some(vec![flow_model_id.to_string()]),
@@ -285,10 +288,41 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
             .await?;
             for child_model in child_models {
                 let ctx_clone = TardisContext {
-                    own_paths: child_model.own_paths,
+                    own_paths: child_model.own_paths.clone(),
                     ..ctx.clone()
                 };
+                let child_model_transitions = child_model.transitions();
                 let mut modify_req_clone = modify_req.clone();
+                if let Some(ref mut modify_transitions) = &mut modify_req_clone.modify_transitions {
+                    for modify_transition in modify_transitions.iter_mut() {
+                        let parent_model_transition = parent_model_transitions.iter().find(|trans| trans.id == modify_transition.id.to_string()).unwrap();
+                        modify_transition.id = child_model_transitions
+                            .iter()
+                            .find(|child_tran| {
+                                child_tran.from_flow_state_id == parent_model_transition.from_flow_state_id
+                                    && child_tran.to_flow_state_id == parent_model_transition.to_flow_state_id
+                            })
+                            .map(|trans| trans.id.clone())
+                            .unwrap_or_default()
+                            .into();
+                    }
+                }
+                if let Some(delete_transitions) = &mut modify_req_clone.delete_transitions {
+                    let mut child_delete_transitions = vec![];
+                    for delete_transition_id in delete_transitions.iter_mut() {
+                        let parent_model_transition = parent_model_transitions.iter().find(|trans| trans.id == delete_transition_id.clone()).unwrap();
+                        child_delete_transitions.push(
+                            child_model_transitions
+                                .iter()
+                                .find(|tran| {
+                                    tran.from_flow_state_id == parent_model_transition.from_flow_state_id && tran.to_flow_state_id == parent_model_transition.to_flow_state_id
+                                })
+                                .map(|trans| trans.id.clone())
+                                .unwrap_or_default(),
+                        );
+                    }
+                    modify_req_clone.delete_transitions = Some(child_delete_transitions);
+                }
                 ctx.add_async_task(Box::new(|| {
                     Box::pin(async move {
                         let task_handle = tokio::spawn(async move {
@@ -307,7 +341,31 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
     }
 
     async fn before_delete_item(flow_model_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<FlowModelDetailResp>> {
+        if !Self::find_id_items(
+            &FlowModelFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    own_paths: Some("".to_string()),
+                    ..Default::default()
+                },
+                rel_model_ids: Some(vec![flow_model_id.to_string()]),
+                ..Default::default()
+            },
+            None,
+            None,
+            funs,
+            ctx,
+        )
+        .await?
+        .is_empty()
+        {
+            return Err(funs.err().not_found(&Self::get_obj_name(), "delete_item", "the model prohibit delete", "500-flow_model-prohibit-delete"));
+        }
+        if !FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelPath, flow_model_id, None, None, funs, ctx).await?.is_empty() {
+            return Err(funs.err().not_found(&Self::get_obj_name(), "delete_item", "the model prohibit delete", "500-flow_model-prohibit-delete"));
+        }
         let detail = Self::get_item(flow_model_id, &FlowModelFilterReq::default(), funs, ctx).await?;
+
         join_all(
             FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelTemplate, flow_model_id, None, None, funs, ctx)
                 .await?
@@ -318,6 +376,17 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
         .await
         .into_iter()
         .collect::<TardisResult<Vec<()>>>()?;
+        join_all(
+            FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelState, flow_model_id, None, None, funs, ctx)
+                .await?
+                .into_iter()
+                .map(|rel| async move { FlowRelServ::delete_simple_rel(&FlowRelKind::FlowModelState, flow_model_id, &rel.rel_id, funs, ctx).await })
+                .collect_vec(),
+        )
+        .await
+        .into_iter()
+        .collect::<TardisResult<Vec<()>>>()?;
+
         Ok(Some(detail))
     }
 
@@ -772,7 +841,7 @@ impl FlowModelServ {
         }
     }
 
-    pub async fn get_item_detail_aggs(flow_model_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<FlowModelAggResp> {
+    pub async fn get_item_detail_aggs(flow_model_id: &str, is_state_detail: bool, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<FlowModelAggResp> {
         let model_detail = Self::get_item(
             flow_model_id,
             &FlowModelFilterReq {
@@ -788,29 +857,31 @@ impl FlowModelServ {
         )
         .await?;
 
-        // find rel state
-        let state_ids = FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelState, flow_model_id, None, None, funs, ctx)
-            .await?
-            .iter()
-            .sorted_by_key(|rel| TardisFuns::json.str_to_obj::<FlowStateRelModelExt>(&rel.ext).unwrap_or_default().sort)
-            .map(|rel| {
-                (
-                    rel.rel_id.clone(),
-                    rel.rel_name.clone(),
-                    TardisFuns::json.str_to_obj::<FlowStateRelModelExt>(&rel.ext).unwrap_or_default(),
-                )
-            })
-            .collect::<Vec<_>>();
         let mut states = Vec::new();
-        for (state_id, state_name, ext) in state_ids {
-            let state_detail = FlowStateAggResp {
-                id: state_id.clone(),
-                name: state_name,
-                ext,
-                is_init: model_detail.init_state_id == state_id,
-                transitions: model_detail.transitions().into_iter().filter(|transition| transition.from_flow_state_id == state_id.clone()).collect_vec(),
-            };
-            states.push(state_detail);
+        if is_state_detail {
+            // find rel state
+            let state_ids = FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelState, flow_model_id, None, None, funs, ctx)
+                .await?
+                .iter()
+                .sorted_by_key(|rel| TardisFuns::json.str_to_obj::<FlowStateRelModelExt>(&rel.ext).unwrap_or_default().sort)
+                .map(|rel| {
+                    (
+                        rel.rel_id.clone(),
+                        rel.rel_name.clone(),
+                        TardisFuns::json.str_to_obj::<FlowStateRelModelExt>(&rel.ext).unwrap_or_default(),
+                    )
+                })
+                .collect::<Vec<_>>();
+            for (state_id, state_name, ext) in state_ids {
+                let state_detail = FlowStateAggResp {
+                    id: state_id.clone(),
+                    name: state_name,
+                    ext,
+                    is_init: model_detail.init_state_id == state_id,
+                    transitions: model_detail.transitions().into_iter().filter(|transition| transition.from_flow_state_id == state_id.clone()).collect_vec(),
+                };
+                states.push(state_detail);
+            }
         }
 
         Ok(FlowModelAggResp {
@@ -845,36 +916,7 @@ impl FlowModelServ {
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<HashMap<String, FlowModelSummaryResp>> {
-        let global_ctx = TardisContext {
-            own_paths: "".to_string(),
-            ..ctx.clone()
-        };
-        let mut result = HashMap::new();
-
-        let models = Self::find_items(
-            &FlowModelFilterReq {
-                basic: RbumBasicFilterReq {
-                    ignore_scope: true,
-                    with_sub_own_paths: true,
-                    ..Default::default()
-                },
-                tags: Some(tags.clone()),
-                rel: FlowRelServ::get_template_rel_filter(template_id.as_deref()),
-                ..Default::default()
-            },
-            None,
-            None,
-            funs,
-            if is_shared { &global_ctx } else { ctx },
-        )
-        .await?;
-
-        // First iterate over the models
-        for model in models {
-            if tags.contains(&model.tag) {
-                result.insert(model.tag.clone(), model);
-            }
-        }
+        let mut result = Self::find_rel_models(template_id.clone(), is_shared, funs, ctx).await?;
         // Iterate over the tag based on the existing result and get the default model
         for tag in tags {
             if !result.contains_key(&tag) {
@@ -900,6 +942,43 @@ impl FlowModelServ {
         Ok(result)
     }
 
+    // Find the rel models.
+    pub async fn find_rel_models(template_id: Option<String>, _is_shared: bool, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<HashMap<String, FlowModelSummaryResp>> {
+        let global_ctx = TardisContext {
+            own_paths: "".to_string(),
+            ..ctx.clone()
+        };
+        let mut result = HashMap::new();
+
+        let filter_ids = if template_id.is_none() {
+            Some(FlowRelServ::find_to_simple_rels(&FlowRelKind::FlowModelPath, &ctx.own_paths, None, None, funs, ctx).await?.into_iter().map(|rel| rel.rel_id).collect_vec())
+        } else {
+            None
+        };
+        let mut filter = FlowModelFilterReq {
+            basic: RbumBasicFilterReq {
+                ids: filter_ids,
+                ignore_scope: true,
+                with_sub_own_paths: true,
+                ..Default::default()
+            },
+            rel: FlowRelServ::get_template_rel_filter(template_id.as_deref()),
+            ..Default::default()
+        };
+        let mut models = Self::find_items(&filter, None, None, funs, &global_ctx).await?;
+        if models.is_empty() {
+            filter.basic.ids = None;
+            models = Self::find_items(&filter, None, None, funs, ctx).await?;
+        }
+
+        // First iterate over the models
+        for model in models {
+            result.insert(model.tag.clone(), model);
+        }
+
+        Ok(result)
+    }
+
     /// 创建或引用模型
     /// params:
     /// rel_model_id：关联模型ID
@@ -907,22 +986,26 @@ impl FlowModelServ {
     /// rel_own_paths: 绑定实例ID（仅在引用且不创建模型时生效）
     /// （rel_model_id：关联模型ID, rel_template_id: 绑定模板ID,可选参数（仅在创建模型，即创建副本或op为复制时生效）, op：关联模型操作类型（复制或者引用），is_create_copy：是否创建副本（当op为复制时需指定，默认不需要））
     pub async fn copy_or_reference_model(
+        orginal_model_id: Option<String>,
         rel_model_id: &str,
-        rel_template_id: Option<String>,
         rel_own_paths: Option<String>,
         op: &FlowModelAssociativeOperationKind,
         is_create_copy: Option<bool>,
         funs: &TardisFunsInst,
         ctx: &TardisContext,
-    ) -> TardisResult<String> {
+    ) -> TardisResult<FlowModelAggResp> {
+        let mock_ctx = if let Some(own_paths) = rel_own_paths.clone() {
+            TardisContext { own_paths, ..ctx.clone() }
+        } else {
+            ctx.clone()
+        };
         let rel_model = FlowModelServ::get_item(
             rel_model_id,
             &FlowModelFilterReq {
                 basic: RbumBasicFilterReq {
-                    ids: Some(vec![rel_model_id.to_string()]),
+                    own_paths: Some("".to_string()),
+                    with_sub_own_paths: true,
                     ignore_scope: true,
-                    // own_paths: Some("".to_string()),
-                    // with_sub_own_paths: true,
                     ..Default::default()
                 },
                 ..Default::default()
@@ -942,7 +1025,7 @@ impl FlowModelServ {
                             ..rel_model.clone().into()
                         },
                         funs,
-                        ctx,
+                        &mock_ctx,
                     )
                     .await?
                 } else {
@@ -970,18 +1053,77 @@ impl FlowModelServ {
                         ..rel_model.clone().into()
                     },
                     funs,
-                    ctx,
+                    &mock_ctx,
                 )
                 .await?
             }
         };
-        if *op == FlowModelAssociativeOperationKind::Copy || (*op == FlowModelAssociativeOperationKind::Reference && is_create_copy.unwrap_or(false)) {
-            if let Some(rel_template_id) = rel_template_id {
-                FlowRelServ::add_simple_rel(&FlowRelKind::FlowModelTemplate, &result, &rel_template_id, None, None, false, true, None, funs, ctx).await?;
+        let new_model = Self::get_item_detail_aggs(&result, true, funs, ctx).await?;
+
+        if let Some(orginal_model_id) = orginal_model_id {
+            let global_ctx = TardisContext {
+                own_paths: "".to_string(),
+                ..ctx.clone()
+            };
+            let orginal_model_detail = Self::get_item(
+                &orginal_model_id,
+                &FlowModelFilterReq {
+                    basic: RbumBasicFilterReq {
+                        ids: Some(vec![orginal_model_id.to_string()]),
+                        ignore_scope: true,
+                        with_sub_own_paths: true,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                funs,
+                &global_ctx,
+            )
+            .await?;
+
+            // modify instance rel_model_id and state_id
+            let mut update_statement = Query::update();
+            update_statement.table(flow_inst::Entity);
+            update_statement.value(flow_inst::Column::RelFlowModelId, Value::from(new_model.id.clone()));
+            update_statement.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::RelFlowModelId)).eq(orginal_model_detail.id.as_str()));
+            update_statement.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::OwnPaths)).eq(mock_ctx.own_paths.as_str()));
+            funs.db().execute(&update_statement).await?;
+            for modify_state in orginal_model_detail.states().into_iter().filter(|state| !new_model.states.iter().any(|new_state| new_state.id == state.id)).collect_vec() {
+                join_all(
+                    FlowInstServ::find_details(
+                        &FlowInstFilterReq {
+                            flow_model_id: Some(orginal_model_detail.id.clone()),
+                            current_state_id: Some(modify_state.id.clone()),
+                            ..Default::default()
+                        },
+                        funs,
+                        &mock_ctx,
+                    )
+                    .await?
+                    .iter()
+                    .map(|inst| async {
+                        FlowInstServ::unsafe_update_state_by_inst_id(inst.id.clone(), new_model.id.clone(), new_model.init_state_id.clone(), funs, &mock_ctx).await
+                    })
+                    .collect_vec(),
+                )
+                .await
+                .into_iter()
+                .collect::<TardisResult<Vec<()>>>()?;
+            }
+
+            // delete model
+            for rel in FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelPath, &orginal_model_id, None, None, funs, &global_ctx).await? {
+                FlowRelServ::delete_simple_rel(&FlowRelKind::FlowModelPath, &orginal_model_id, &rel.rel_id, funs, &global_ctx).await?;
+            }
+            if orginal_model_detail.own_paths == mock_ctx.own_paths {
+                for rel in FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelTemplate, &orginal_model_id, None, None, funs, &global_ctx).await? {
+                    FlowRelServ::delete_simple_rel(&FlowRelKind::FlowModelTemplate, &orginal_model_id, &rel.rel_id, funs, &global_ctx).await?;
+                }
+                Self::delete_item(&orginal_model_id, funs, &mock_ctx).await?;
             }
         }
 
-        Ok(result)
+        Ok(new_model)
     }
 
     // copy model by template model
