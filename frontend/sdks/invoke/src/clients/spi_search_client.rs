@@ -38,6 +38,7 @@ impl SpiSearchClient {
         let search_url = BaseSpiClient::module_url(InvokeModuleKind::Search, funs).await?;
         let headers = BaseSpiClient::headers(None, funs, ctx).await?;
         funs.web_client().delete_to_void(&format!("{search_url}/ci/item/{tag}/{key}"), headers.clone()).await?;
+        SpiKvClient::delete_item(&format!("__k_n__:{tag}:{key}"), funs, ctx).await?;
         Ok(())
     }
 }
