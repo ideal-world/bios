@@ -20,7 +20,7 @@ use tardis::{
     chrono::{DateTime, Utc},
     db::sea_orm::{
         self,
-        sea_query::{Alias, Cond, Expr, Query},
+        sea_query::{Alias, Cond, Expr, Query, SelectStatement},
         JoinType, Set,
     },
     futures_util::future::join_all,
@@ -35,9 +35,9 @@ use crate::{
     dto::{
         flow_external_dto::{FlowExternalCallbackOp, FlowExternalParams},
         flow_inst_dto::{
-            FlowInstAbortReq, FlowInstBatchBindReq, FlowInstBatchBindResp, FlowInstDetailResp, FlowInstFindNextTransitionResp, FlowInstFindNextTransitionsReq,
-            FlowInstFindStateAndTransitionsReq, FlowInstFindStateAndTransitionsResp, FlowInstStartReq, FlowInstSummaryResp, FlowInstTransferReq, FlowInstTransferResp,
-            FlowInstTransitionInfo, FlowOperationContext,
+            FlowInstAbortReq, FlowInstBatchBindReq, FlowInstBatchBindResp, FlowInstDetailResp, FlowInstFilterReq, FlowInstFindNextTransitionResp, FlowInstFindNextTransitionsReq,
+            FlowInstFindStateAndTransitionsReq, FlowInstFindStateAndTransitionsResp, FlowInstStartReq, FlowInstSummaryResp, FlowInstSummaryResult, FlowInstTransferReq,
+            FlowInstTransferResp, FlowInstTransitionInfo, FlowOperationContext,
         },
         flow_model_dto::{FlowModelDetailResp, FlowModelFilterReq},
         flow_state_dto::{FlowStateFilterReq, FlowStateRelModelExt, FlowSysStateKind},
@@ -162,6 +162,63 @@ impl FlowInstServ {
         }
 
         Ok(result)
+    }
+
+    async fn package_ext_query(query: &mut SelectStatement, filter: &FlowInstFilterReq, _: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        query
+            .columns([
+                (flow_inst::Entity, flow_inst::Column::Id),
+                (flow_inst::Entity, flow_inst::Column::RelFlowModelId),
+                (flow_inst::Entity, flow_inst::Column::RelBusinessObjId),
+                (flow_inst::Entity, flow_inst::Column::CreateVars),
+                (flow_inst::Entity, flow_inst::Column::CurrentStateId),
+                (flow_inst::Entity, flow_inst::Column::CreateCtx),
+                (flow_inst::Entity, flow_inst::Column::CreateTime),
+                (flow_inst::Entity, flow_inst::Column::FinishCtx),
+                (flow_inst::Entity, flow_inst::Column::FinishTime),
+                (flow_inst::Entity, flow_inst::Column::FinishAbort),
+                (flow_inst::Entity, flow_inst::Column::OutputMessage),
+                (flow_inst::Entity, flow_inst::Column::OwnPaths),
+            ])
+            .expr_as(Expr::col((RBUM_ITEM_TABLE.clone(), NAME_FIELD.clone())).if_null(""), Alias::new("rel_flow_model_name"))
+            .from(flow_inst::Entity)
+            .left_join(
+                RBUM_ITEM_TABLE.clone(),
+                Expr::col((RBUM_ITEM_TABLE.clone(), ID_FIELD.clone())).equals((flow_inst::Entity, flow_inst::Column::RelFlowModelId)),
+            )
+            .left_join(
+                flow_model::Entity,
+                Expr::col((flow_model::Entity, flow_model::Column::Id)).equals((flow_inst::Entity, flow_inst::Column::RelFlowModelId)),
+            );
+        if filter.with_sub.unwrap_or(false) {
+            query.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::OwnPaths)).like(format!("{}%", ctx.own_paths)));
+        } else {
+            query.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::OwnPaths)).eq(ctx.own_paths.as_str()));
+        }
+        if let Some(flow_model_id) = &filter.flow_model_id {
+            query.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::RelFlowModelId)).eq(flow_model_id));
+        }
+        if let Some(tag) = &filter.tag {
+            query.and_where(Expr::col((flow_model::Entity, flow_model::Column::Tag)).eq(tag));
+        }
+        if let Some(finish) = filter.finish {
+            if finish {
+                query.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::FinishTime)).is_not_null());
+            } else {
+                query.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::FinishTime)).is_null());
+            }
+        }
+        if let Some(current_state_id) = &filter.current_state_id {
+            query.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::CurrentStateId)).eq(current_state_id));
+        }
+
+        Ok(())
+    }
+
+    pub async fn find_details(filter: &FlowInstFilterReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<FlowInstSummaryResult>> {
+        let mut query = Query::select();
+        Self::package_ext_query(&mut query, filter, funs, ctx).await?;
+        funs.db().find_dtos::<FlowInstSummaryResult>(&query).await
     }
 
     pub async fn get_inst_ids_by_rel_business_obj_id(rel_business_obj_ids: Vec<String>, funs: &TardisFunsInst, _ctx: &TardisContext) -> TardisResult<Vec<String>> {
@@ -343,76 +400,27 @@ impl FlowInstServ {
         flow_model_id: Option<String>,
         tag: Option<String>,
         finish: Option<bool>,
+        current_state_id: Option<String>,
         with_sub: Option<bool>,
         page_number: u32,
         page_size: u32,
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<TardisPage<FlowInstSummaryResp>> {
-        #[derive(sea_orm::FromQueryResult)]
-        pub struct FlowInstSummaryResult {
-            pub id: String,
-            pub rel_flow_model_id: String,
-            pub rel_flow_model_name: String,
-
-            pub current_vars: Option<Value>,
-            pub current_state_id: String,
-            pub rel_business_obj_id: String,
-
-            pub create_ctx: Value,
-            pub create_time: DateTime<Utc>,
-
-            pub finish_ctx: Option<Value>,
-            pub finish_time: Option<DateTime<Utc>>,
-            pub finish_abort: Option<bool>,
-            pub output_message: Option<String>,
-
-            pub own_paths: String,
-        }
         let mut query = Query::select();
-        query
-            .columns([
-                (flow_inst::Entity, flow_inst::Column::Id),
-                (flow_inst::Entity, flow_inst::Column::RelFlowModelId),
-                (flow_inst::Entity, flow_inst::Column::RelBusinessObjId),
-                (flow_inst::Entity, flow_inst::Column::CreateVars),
-                (flow_inst::Entity, flow_inst::Column::CurrentStateId),
-                (flow_inst::Entity, flow_inst::Column::CreateCtx),
-                (flow_inst::Entity, flow_inst::Column::CreateTime),
-                (flow_inst::Entity, flow_inst::Column::FinishCtx),
-                (flow_inst::Entity, flow_inst::Column::FinishTime),
-                (flow_inst::Entity, flow_inst::Column::FinishAbort),
-                (flow_inst::Entity, flow_inst::Column::OutputMessage),
-                (flow_inst::Entity, flow_inst::Column::OwnPaths),
-            ])
-            .expr_as(Expr::col((RBUM_ITEM_TABLE.clone(), NAME_FIELD.clone())).if_null(""), Alias::new("rel_flow_model_name"))
-            .from(flow_inst::Entity)
-            .left_join(
-                RBUM_ITEM_TABLE.clone(),
-                Expr::col((RBUM_ITEM_TABLE.clone(), ID_FIELD.clone())).equals((flow_inst::Entity, flow_inst::Column::RelFlowModelId)),
-            )
-            .left_join(
-                flow_model::Entity,
-                Expr::col((flow_model::Entity, flow_model::Column::Id)).equals((flow_inst::Entity, flow_inst::Column::RelFlowModelId)),
-            );
-        if with_sub.unwrap_or(false) {
-            query.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::OwnPaths)).like(format!("{}%", ctx.own_paths)));
-        } else {
-            query.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::OwnPaths)).eq(ctx.own_paths.as_str()));
-        }
-        if let Some(flow_model_id) = flow_model_id {
-            query.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::RelFlowModelId)).eq(flow_model_id));
-        }
-        if let Some(tag) = &tag {
-            query.and_where(Expr::col((flow_model::Entity, flow_model::Column::Tag)).eq(tag));
-        }
-        if let Some(finish) = finish {
-            if finish {
-                query.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::FinishTime)).is_not_null());
-            } else {
-                query.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::FinishTime)).is_null());
-            }
-        }
+        Self::package_ext_query(
+            &mut query,
+            &FlowInstFilterReq {
+                flow_model_id,
+                tag,
+                finish,
+                current_state_id,
+                with_sub,
+            },
+            funs,
+            ctx,
+        )
+        .await?;
         let (flow_insts, total_size) = funs.db().paginate_dtos::<FlowInstSummaryResult>(&query, page_number as u64, page_size as u64).await?;
         Ok(TardisPage {
             page_size: page_size as u64,
@@ -1178,5 +1186,72 @@ impl FlowInstServ {
         }
 
         Ok(current_vars.unwrap_or_default().get(key).cloned())
+    }
+
+    pub async fn unsafe_update_state_by_inst_id(inst_id: String, modify_model_id: String, state_id: String, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let global_ctx = TardisContext {
+            own_paths: "".to_string(),
+            ..ctx.clone()
+        };
+        let flow_inst_detail = Self::find_detail(vec![inst_id.clone()], funs, ctx).await?.pop().ok_or_else(|| {
+            funs.err().not_found(
+                "flow_inst",
+                "unsafe_update_state_by_inst_id",
+                &format!("flow instance {} not found", inst_id.clone()),
+                "404-flow-inst-not-found",
+            )
+        })?;
+
+        let flow_inst = flow_inst::ActiveModel {
+            id: Set(inst_id.clone()),
+            current_state_id: Set(state_id.clone()),
+            transitions: Set(Some(vec![])),
+            ..Default::default()
+        };
+        funs.db().update_one(flow_inst, ctx).await?;
+        let modify_model_detail = FlowModelServ::get_item(&modify_model_id, &FlowModelFilterReq::default(), funs, ctx).await?;
+        let prev_flow_state = FlowStateServ::get_item(
+            &flow_inst_detail.current_state_id,
+            &FlowStateFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            funs,
+            &global_ctx,
+        )
+        .await?;
+        let next_flow_state = FlowStateServ::get_item(
+            &modify_model_detail.init_state_id,
+            &FlowStateFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            funs,
+            &global_ctx,
+        )
+        .await?;
+
+        FlowExternalServ::do_notify_changes(
+            &modify_model_detail.tag,
+            &flow_inst_detail.id,
+            &flow_inst_detail.rel_business_obj_id,
+            prev_flow_state.name.clone(),
+            prev_flow_state.sys_state,
+            next_flow_state.name.clone(),
+            next_flow_state.sys_state,
+            "".to_string(),
+            false,
+            None,
+            ctx,
+            funs,
+        )
+        .await?;
+        Ok(())
     }
 }

@@ -32,10 +32,11 @@ impl FlowCcModelApi {
     ///
     /// 添加模型
     #[oai(path = "/", method = "post")]
-    async fn add(&self, mut add_req: Json<FlowModelAddReq>, ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<String> {
+    async fn add(&self, mut add_req: Json<FlowModelAddReq>, ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<FlowModelAggResp> {
         let mut funs = flow_constants::get_tardis_inst();
         funs.begin().await?;
-        let result = FlowModelServ::add_item(&mut add_req.0, &funs, &ctx.0).await?;
+        let model_id = FlowModelServ::add_item(&mut add_req.0, &funs, &ctx.0).await?;
+        let result = FlowModelServ::get_item_detail_aggs(&model_id, true, &funs, &ctx.0).await?;
         funs.commit().await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
@@ -60,7 +61,7 @@ impl FlowCcModelApi {
     #[oai(path = "/:flow_model_id", method = "get")]
     async fn get(&self, flow_model_id: Path<String>, ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<FlowModelAggResp> {
         let funs = flow_constants::get_tardis_inst();
-        let result = FlowModelServ::get_item_detail_aggs(&flow_model_id.0, &funs, &ctx.0).await?;
+        let result = FlowModelServ::get_item_detail_aggs(&flow_model_id.0, true, &funs, &ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
@@ -86,6 +87,11 @@ impl FlowCcModelApi {
         let mut not_bind_template_models = join_all(
             FlowModelServ::find_items(
                 &FlowModelFilterReq {
+                    basic: RbumBasicFilterReq {
+                        ignore_scope: true,
+                        with_sub_own_paths: false,
+                        ..Default::default()
+                    },
                     tags: Some(vec![tag.0.clone()]),
                     template: template.0,
                     ..Default::default()
@@ -115,6 +121,11 @@ impl FlowCcModelApi {
         if let Some(rel_template_id) = rel_template_id.0 {
             let mut rel_template_models = FlowModelServ::find_items(
                 &FlowModelFilterReq {
+                    basic: RbumBasicFilterReq {
+                        ignore_scope: true,
+                        with_sub_own_paths: false,
+                        ..Default::default()
+                    },
                     tags: Some(vec![tag.0.clone()]),
                     template: template.0,
                     rel: Some(RbumItemRelFilterReq {
@@ -184,7 +195,7 @@ impl FlowCcModelApi {
 
     /// Find the specified models, or create it if it doesn't exist.
     ///
-    /// 查找指定model，如果不存在则创建。创建规则遵循add_custom_model接口逻辑。
+    /// 查找关联的model，如果不存在则创建。创建规则遵循add_custom_model接口逻辑。
     ///
     /// # Parameters
     /// - `tag_ids` - list of tag_id
@@ -203,6 +214,29 @@ impl FlowCcModelApi {
         funs.begin().await?;
         let tag_ids = tag_ids.split(',').map(|tag_id| tag_id.to_string()).collect_vec();
         let result = FlowModelServ::find_or_add_models(tag_ids, temp_id.0, is_shared.unwrap_or(false), &funs, &ctx.0).await?;
+        funs.commit().await?;
+        ctx.0.execute_task().await?;
+        TardisResp::ok(result)
+    }
+
+    /// Find the specified models, or create it if it doesn't exist.
+    ///
+    /// 查找关联的model。
+    ///
+    /// # Parameters
+    /// - `temp_id` - associated template_id
+    /// - `is_shared` - whether the associated template is shared
+    #[oai(path = "/find_rel_models", method = "put")]
+    async fn find_rel_models(
+        &self,
+        temp_id: Query<Option<String>>,
+        is_shared: Query<Option<bool>>,
+        ctx: TardisContextExtractor,
+        _request: &Request,
+    ) -> TardisApiResult<HashMap<String, FlowModelSummaryResp>> {
+        let mut funs = flow_constants::get_tardis_inst();
+        funs.begin().await?;
+        let result = FlowModelServ::find_rel_models(temp_id.0, is_shared.unwrap_or(false), &funs, &ctx.0).await?;
         funs.commit().await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
