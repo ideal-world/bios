@@ -105,7 +105,7 @@ impl IamStatsClient {
             }),
             ext: None,
         };
-        SpiStatsClient::fact_record_load(&funs.conf::<IamConfig>().spi.kv_orgs_prefix.clone(), &org_id, add_req, funs, ctx).await?;
+        SpiStatsClient::fact_record_load(&funs.conf::<IamConfig>().spi.stats_orgs_prefix.clone(), &org_id, add_req, funs, ctx).await?;
         Ok(())
     }
 
@@ -126,7 +126,7 @@ impl IamStatsClient {
     }
 
     pub async fn org_fact_record_remove(org_id: String, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        SpiStatsClient::fact_record_delete(&funs.conf::<IamConfig>().spi.kv_orgs_prefix.clone(), &org_id, funs, ctx).await?;
+        SpiStatsClient::fact_record_delete(&funs.conf::<IamConfig>().spi.stats_orgs_prefix.clone(), &org_id, funs, ctx).await?;
         Ok(())
     }
 }
