@@ -34,6 +34,26 @@ impl IamKvClient {
         .await
     }
 
+    pub async fn async_add_or_modify_key_name(
+        key: String,
+        name: String,
+        _funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<()> {
+        let ctx_clone = ctx.clone();
+        ctx.add_async_task(Box::new(|| {
+            Box::pin(async move {
+                let task_handle = tokio::spawn(async move {
+                    let funs = iam_constants::get_tardis_inst();
+                    let _ = Self::add_or_modify_key_name(&key, &name, &funs, &ctx_clone).await;
+                });
+                task_handle.await.unwrap();
+                Ok(())
+            })
+        }))
+        .await
+    }
+
     pub async fn async_delete_item(key: String, _funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let ctx_clone = ctx.clone();
         ctx.add_async_task(Box::new(|| {
@@ -58,6 +78,15 @@ impl IamKvClient {
         ctx: &TardisContext,
     ) -> TardisResult<()> {
         SpiKvClient::add_or_modify_item(key, value, info, scope_level.map(|kind| kind.to_int()), funs, ctx).await
+    }
+
+    pub async fn add_or_modify_key_name(
+        key: &str,
+        name: &str,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<()> {
+        SpiKvClient::add_or_modify_key_name(key, name, funs, ctx).await
     }
 
     pub async fn delete_item(key: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
