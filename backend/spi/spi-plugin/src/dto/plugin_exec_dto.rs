@@ -8,6 +8,9 @@ pub struct PluginExecReq {
     pub header: Option<HashMap<String, String>>,
     pub query: Option<HashMap<String, String>>,
     pub body: Option<Value>,
+    #[serde(default)]
+    #[oai(default)]
+    pub percent_encode: Option<bool>,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
