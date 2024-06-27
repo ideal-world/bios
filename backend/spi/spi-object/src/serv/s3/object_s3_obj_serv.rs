@@ -30,7 +30,7 @@ pub async fn presign_obj_url(
 ) -> TardisResult<String> {
     let bs_inst = inst.inst::<TardisOSClient>();
     let client = bs_inst.0;
-    let bucket_name = get_bucket_name(private, special, obj_exp.clone().map(|_| true), inst);
+    let bucket_name = get_bucket_name(private, special, obj_exp.map(|_| true), inst);
     match presign_kind {
         ObjectObjPresignKind::Upload => {
             client.object_create_url(&rebuild_path(bucket_name.as_deref(), object_path, obj_exp, client).await?, exp_secs, bucket_name.as_deref()).await
@@ -66,7 +66,7 @@ pub async fn object_delete(
 ) -> TardisResult<()> {
     let bs_inst = inst.inst::<TardisOSClient>();
     let client = bs_inst.0;
-    let bucket_name = get_bucket_name(private, special, obj_exp.clone().map(|_| true), inst);
+    let bucket_name = get_bucket_name(private, special, obj_exp.map(|_| true), inst);
     client.object_delete(object_path, bucket_name.as_deref()).await
 }
 
@@ -114,7 +114,7 @@ pub async fn object_exist(
 ) -> TardisResult<bool> {
     let bs_inst = inst.inst::<TardisOSClient>();
     let client = bs_inst.0;
-    let bucket_name = get_bucket_name(private, special, obj_exp.clone().map(|_| true), inst);
+    let bucket_name = get_bucket_name(private, special, obj_exp.map(|_| true), inst);
     client.object_exist(object_path, bucket_name.as_deref()).await
 }
 
@@ -219,14 +219,14 @@ async fn rebuild_path(bucket_name: Option<&str>, origin_path: &str, obj_exp: Opt
                 let mut rules = config.rules;
                 let prefix = if let Some(is_have_prefix) = rules
                     .iter()
-                    .filter(|r| r.status == "Enabled".to_string() && r.expiration.clone().is_some_and(|exp| exp.days.is_some_and(|days| days == obj_exp)))
+                    .filter(|r| r.status == *"Enabled" && r.expiration.clone().is_some_and(|exp| exp.days.is_some_and(|days| days == obj_exp)))
                     .filter_map(|r| r.filter.clone())
                     .find_map(|f| f.prefix)
                 {
                     is_have_prefix
                 } else {
                     let rand_id = tardis::rand::random::<usize>().to_string();
-                    let prefix=format!("{}/", rand_id);
+                    let prefix = format!("{}/", rand_id);
                     //add rule
                     let add_rule = LifecycleRule::builder("Enabled")
                         .id(&rand_id)
@@ -245,7 +245,7 @@ async fn rebuild_path(bucket_name: Option<&str>, origin_path: &str, obj_exp: Opt
                 }
                 let mut rules = vec![];
                 let rand_id = tardis::rand::random::<usize>().to_string();
-                let prefix=format!("{}/", rand_id);
+                let prefix = format!("{}/", rand_id);
                 //add rule
                 let add_rule = LifecycleRule::builder("Enabled")
                     .id(&rand_id)
