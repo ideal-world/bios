@@ -125,7 +125,7 @@ impl RbumItemCrudOperation<iam_account::ActiveModel, IamAccountAddReq, IamAccoun
     }
 
     async fn package_ext_modify(id: &str, modify_req: &IamAccountModifyReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<Option<iam_account::ActiveModel>> {
-        if modify_req.icon.is_none() && modify_req.status.is_none() && modify_req.lock_status.is_none() && modify_req.temporary.is_none() {
+        if modify_req.icon.is_none() && modify_req.status.is_none() && modify_req.lock_status.is_none() && modify_req.temporary.is_none() && modify_req.labor_type.is_none() {
             return Ok(None);
         }
         let mut iam_account = iam_account::ActiveModel {
@@ -150,13 +150,14 @@ impl RbumItemCrudOperation<iam_account::ActiveModel, IamAccountAddReq, IamAccoun
         if let Some(temporary) = &modify_req.temporary {
             iam_account.temporary = Set(*temporary);
         }
+        if let Some(labor_type) = &modify_req.labor_type {
+            iam_account.labor_type = Set(labor_type.clone());
+        }
         if modify_req.disabled == Some(true) {
             iam_account.logout_time = Set(Utc::now());
             iam_account.logout_type = Set(modify_req.logout_type.clone().unwrap_or_default().to_string());
         }
-        if let Some(labor_type) = &modify_req.labor_type {
-            iam_account.labor_type = Set(labor_type.clone());
-        }
+
         Ok(Some(iam_account))
     }
 
