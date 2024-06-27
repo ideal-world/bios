@@ -1,6 +1,6 @@
 use crate::{
     basic::serv::clients::iam_stats_client::IamStatsClient,
-    iam_config::IamConfig,
+    iam_config::{IamBasicConfigApi, IamConfig},
     iam_constants,
     iam_enumeration::IamSetKind,
     iam_initializer::{default_iam_send_avatar, ws_iam_send_client},
@@ -8,14 +8,15 @@ use crate::{
 use bios_basic::{
     process::task_processor::TaskProcessor,
     rbum::{
-        dto::rbum_filer_dto::{RbumBasicFilterReq, RbumSetCateFilterReq, RbumSetFilterReq},
+        dto::rbum_filer_dto::{RbumBasicFilterReq, RbumSetCateFilterReq, RbumSetFilterReq, RbumSetItemFilterReq},
         serv::{
             rbum_crud_serv::RbumCrudOperation,
-            rbum_set_serv::{RbumSetCateServ, RbumSetServ},
+            rbum_set_serv::{RbumSetCateServ, RbumSetItemServ, RbumSetServ},
         },
     },
 };
 
+use bios_sdk_invoke::clients::spi_kv_client::SpiKvClient;
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
     TardisFunsInst,
@@ -48,7 +49,7 @@ impl IamCcOrgTaskServ {
                 )
                 .await?;
                 for org_set_id in base_org_set_ids {
-                    let base_org_set_cate_ids = RbumSetCateServ::find_id_rbums(
+                    let base_org_set_cates = RbumSetCateServ::find_rbums(
                         &RbumSetCateFilterReq {
                             basic: RbumBasicFilterReq {
                                 own_paths: Some("".to_string()),
@@ -65,12 +66,45 @@ impl IamCcOrgTaskServ {
                     )
                     .await?;
                     let mut num = 0;
-                    for org_set_cate_id in base_org_set_cate_ids {
+                    for org_set_cate in base_org_set_cates {
+                        let mock_ctx = TardisContext {
+                            own_paths: org_set_cate.own_paths,
+                            ..task_ctx.clone()
+                        };
                         num += 1;
-                        if num % 100 == 0 {
-                            tardis::tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+                        if num % 50 == 0 {
+                            tardis::tokio::time::sleep(std::time::Duration::from_secs(10)).await;
                         }
-                        IamStatsClient::async_org_fact_record_load(org_set_cate_id, &funs, &task_ctx).await?;
+                        let account_ids = RbumSetItemServ::find_rbums(
+                            &RbumSetItemFilterReq {
+                                basic: RbumBasicFilterReq {
+                                    with_sub_own_paths: true,
+                                    own_paths: Some("".to_owned()),
+                                    ..Default::default()
+                                },
+                                rel_rbum_item_disabled: Some(false),
+                                // rel_rbum_set_id: Some(org_set_id),
+                                rel_rbum_set_cate_ids: Some(vec![org_set_cate.id.clone()]),
+                                rel_rbum_item_kind_ids: Some(vec![funs.iam_basic_kind_account_id()]),
+                                ..Default::default()
+                            },
+                            None,
+                            None,
+                            &funs,
+                            &task_ctx,
+                        )
+                        .await?
+                        .into_iter()
+                        .map(|resp| resp.rel_rbum_item_id)
+                        .collect();
+                        IamStatsClient::org_fact_record_load(org_set_cate.id.clone(), account_ids, &funs, &mock_ctx).await?;
+                        SpiKvClient::add_or_modify_key_name(
+                            &format!("{}:{}", funs.conf::<IamConfig>().spi.kv_orgs_prefix.clone(), org_set_cate.id),
+                            &org_set_cate.name,
+                            &funs,
+                            &mock_ctx,
+                        )
+                        .await?;
                     }
                 }
                 funs.commit().await?;
