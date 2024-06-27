@@ -18,7 +18,9 @@ pub struct FlowCiStateApi;
 /// Flow Config process API
 #[poem_openapi::OpenApi(prefix_path = "/ci/state")]
 impl FlowCiStateApi {
-    /// Find States / 获取状态列表
+    /// Find States
+    ///
+    /// 获取状态列表
     #[oai(path = "/", method = "get")]
     #[allow(clippy::too_many_arguments)]
     async fn paginate(
@@ -83,7 +85,9 @@ impl FlowCiStateApi {
         TardisResp::ok(result)
     }
 
-    /// Count Group By State / 按状态分组统计
+    /// Count Group By State
+    ///
+    /// 按状态分组统计
     #[oai(path = "/count_group_by_state", method = "post")]
     async fn count_group_by_state(
         &self,
