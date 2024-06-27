@@ -347,3 +347,10 @@ pub struct FlowModelCopyOrReferenceCiReq {
     /// 修改的模板ID
     pub op: FlowModelAssociativeOperationKind,
 }
+
+/// 检查关联模板请求
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
+pub struct FlowModelExistRelByTemplateIdsReq {
+    /// 关联的模板ID
+    pub rel_template_ids: Vec<String>,
+}

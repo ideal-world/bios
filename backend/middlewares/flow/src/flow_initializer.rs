@@ -7,16 +7,15 @@ use bios_basic::rbum::{
 use bios_sdk_invoke::invoke_initializer;
 
 use itertools::Itertools;
-use serde_json::json;
 
 use tardis::{
     basic::{dto::TardisContext, field::TrimString, result::TardisResult},
     db::{
         reldb_client::TardisActiveModel,
         sea_orm::{
-            ColumnTrait, EntityTrait, QueryFilter,
             self,
             sea_query::{Expr, Query, Table},
+            ColumnTrait, EntityTrait, QueryFilter,
         },
     },
     futures::future::join_all,
@@ -170,7 +169,7 @@ pub async fn merge_state_by_name(funs: &TardisFunsInst, ctx: &TardisContext) -> 
                             None,
                             false,
                             true,
-                            Some(json!(rel.rel.ext).to_string()),
+                            Some(rel.rel.ext),
                             funs,
                             &mock_ctx,
                         )

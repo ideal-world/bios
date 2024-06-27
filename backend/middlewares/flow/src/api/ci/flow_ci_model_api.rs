@@ -1,10 +1,18 @@
 use std::collections::HashMap;
 
+use crate::dto::flow_model_dto::{
+    FlowModelAddCustomModelReq, FlowModelAddCustomModelResp, FlowModelAggResp, FlowModelAssociativeOperationKind, FlowModelCopyOrReferenceCiReq, FlowModelExistRelByTemplateIdsReq,
+    FlowModelFilterReq, FlowModelFindRelStateResp,
+};
+use crate::flow_constants;
+use crate::serv::flow_model_serv::FlowModelServ;
+use crate::serv::flow_rel_serv::{FlowRelKind, FlowRelServ};
 use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
 use bios_basic::rbum::helper::rbum_scope_helper::{self, check_without_owner_and_unsafe_fill_ctx};
 use bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use itertools::Itertools;
+use std::iter::Iterator;
 use tardis::basic::dto::TardisContext;
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem::Request;
@@ -12,14 +20,6 @@ use tardis::web::poem_openapi;
 use tardis::web::poem_openapi::param::{Path, Query};
 use tardis::web::poem_openapi::payload::Json;
 use tardis::web::web_resp::{TardisApiResult, TardisResp, Void};
-
-use crate::dto::flow_model_dto::{
-    FlowModelAddCustomModelReq, FlowModelAddCustomModelResp, FlowModelAggResp, FlowModelAssociativeOperationKind, FlowModelCopyOrReferenceCiReq, FlowModelFilterReq,
-    FlowModelFindRelStateResp,
-};
-use crate::flow_constants;
-use crate::serv::flow_model_serv::FlowModelServ;
-use crate::serv::flow_rel_serv::{FlowRelKind, FlowRelServ};
 #[derive(Clone)]
 pub struct FlowCiModelApi;
 
@@ -231,5 +231,22 @@ impl FlowCiModelApi {
         funs.commit().await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void)
+    }
+
+    /// batch delete models by rel_template_id
+    ///
+    /// 通过模板ID检查是否存在关联，返回关联的模板ID
+    #[oai(path = "/exist_rel_by_template_ids", method = "post")]
+    async fn exist_rel_by_template_ids(&self, req: Json<FlowModelExistRelByTemplateIdsReq>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Vec<String>> {
+        let funs = flow_constants::get_tardis_inst();
+        check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
+        let mut result = vec![];
+        for rel_template_id in req.0.rel_template_ids {
+            if !FlowRelServ::find_to_simple_rels(&FlowRelKind::FlowModelTemplate, &rel_template_id, None, None, &funs, &ctx.0).await?.is_empty() {
+                result.push(rel_template_id.clone());
+            }
+        }
+
+        TardisResp::ok(result)
     }
 }
