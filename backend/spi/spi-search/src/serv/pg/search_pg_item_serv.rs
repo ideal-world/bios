@@ -417,7 +417,7 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
     };
     if let Some(ext) = &search_req.query.ext {
         for ext_item in ext {
-            let value = db_helper::json_to_sea_orm_value(&ext_item.value, ext_item.op == BasicQueryOpKind::Like || ext_item.op == BasicQueryOpKind::NotLike);
+            let value = db_helper::json_to_sea_orm_value(&ext_item.value, &ext_item.op);
             let Some(mut value) = value else { return err_not_found(ext_item) };
             if ext_item.op == BasicQueryOpKind::In {
                 let value = value.clone();
@@ -459,6 +459,13 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
                     "(ext ->> '{}' is null or ext ->> '{}' = '' or ext ->> '{}' = '[]' )",
                     ext_item.field, ext_item.field, ext_item.field
                 ));
+            } else if ext_item.op == BasicQueryOpKind::Len {
+                if let Some(first_value) = value.pop() {
+                    where_fragments.push(format!("(length(ext->>'{}') = ${})", ext_item.field, sql_vals.len() + 1));
+                    sql_vals.push(first_value);
+                } else {
+                    return err_not_found(ext_item);
+                };
             } else {
                 if value.len() > 1 {
                     return err_not_found(ext_item);
@@ -528,7 +535,7 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
             let mut sql_and_where = vec![];
             if let Some(ext) = &group_query.ext {
                 for ext_item in ext {
-                    let value = db_helper::json_to_sea_orm_value(&ext_item.value, ext_item.op == BasicQueryOpKind::Like || ext_item.op == BasicQueryOpKind::NotLike);
+                    let value = db_helper::json_to_sea_orm_value(&ext_item.value, &ext_item.op);
                     let Some(mut value) = value else { return err_not_found(&ext_item.clone().into()) };
                     if ext_item.in_ext.unwrap_or(true) {
                         if ext_item.op == BasicQueryOpKind::In {
@@ -957,7 +964,7 @@ pub async fn query_metrics(query_req: &SearchQueryMetricsReq, funs: &TardisFunsI
     };
     if let Some(ext) = &query_req.query.ext {
         for ext_item in ext {
-            let value = db_helper::json_to_sea_orm_value(&ext_item.value, ext_item.op == BasicQueryOpKind::Like || ext_item.op == BasicQueryOpKind::NotLike);
+            let value = db_helper::json_to_sea_orm_value(&ext_item.value, &ext_item.op);
             let Some(mut value) = value else { return err_not_found(ext_item) };
             if ext_item.op == BasicQueryOpKind::In {
                 let value = value.clone();
@@ -1069,7 +1076,7 @@ pub async fn query_metrics(query_req: &SearchQueryMetricsReq, funs: &TardisFunsI
             };
             if let Some(ext) = &group_query.ext {
                 for ext_item in ext {
-                    let value = db_helper::json_to_sea_orm_value(&ext_item.value, ext_item.op == BasicQueryOpKind::Like || ext_item.op == BasicQueryOpKind::NotLike);
+                    let value = db_helper::json_to_sea_orm_value(&ext_item.value, &ext_item.op);
                     let Some(mut value) = value else { return err_not_found(ext_item) };
                     if ext_item.in_ext.unwrap_or(true) {
                         if ext_item.op == BasicQueryOpKind::In {
@@ -1183,7 +1190,7 @@ pub async fn query_metrics(query_req: &SearchQueryMetricsReq, funs: &TardisFunsI
                     } else if ext_item.op == BasicQueryOpKind::IsNull {
                         sql_and_where.push(format!("fact.{} is null", ext_item.field));
                     } else if ext_item.op == BasicQueryOpKind::IsNotNull {
-                        sql_and_where.push(format!("(fact.{} is not null or {} != '')", ext_item.field, ext_item.field));
+                        sql_and_where.push(format!("(fact.{} is not null)", ext_item.field));
                     } else if ext_item.op == BasicQueryOpKind::IsNullOrEmpty {
                         sql_and_where.push(format!("(fact.{} is null or {} = '')", ext_item.field, ext_item.field));
                     } else {

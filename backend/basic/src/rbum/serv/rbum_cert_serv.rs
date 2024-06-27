@@ -3,6 +3,7 @@ use fancy_regex::Regex;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
+use tardis::cache::AsyncCommands;
 use tardis::chrono::{DateTime, Duration, TimeDelta, Utc};
 use tardis::db::reldb_client::IdResp;
 use tardis::db::sea_orm::sea_query::*;
@@ -520,7 +521,8 @@ impl RbumCrudOperation<rbum_cert::ActiveModel, RbumCertAddReq, RbumCertModifyReq
                 }
             }
             if let Some(vcode) = &add_req.vcode {
-                Self::add_vcode_to_cache(&add_req.ak, vcode, rel_rbum_cert_conf_id, funs, ctx).await?;
+                // here we don't add cool down limit for vcode
+                Self::add_vcode_to_cache(&add_req.ak, vcode, rel_rbum_cert_conf_id, None, funs, ctx).await?;
             }
         }
         Ok(())
@@ -728,9 +730,8 @@ impl RbumCertServ {
     ///
     ///
     /// 添加动态sk（验证码）到缓存
-    pub async fn add_vcode_to_cache(ak: &str, vcode: &str, cert_conf_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    pub async fn add_vcode_to_cache(ak: &str, vcode: &str, cert_conf_id: &str, cool_down_in_sec: Option<u32>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let rbum_cert_conf = RbumCertConfServ::peek_rbum(cert_conf_id, &RbumCertConfFilterReq::default(), funs, ctx).await?;
-
         funs.cache()
             .set_ex(
                 format!("{}{}:{}", funs.rbum_conf_cache_key_cert_vcode_info_(), &ctx.own_paths, ak).as_str(),
@@ -738,6 +739,17 @@ impl RbumCertServ {
                 rbum_cert_conf.expire_sec as u64,
             )
             .await?;
+        // check vcode cool down
+        let cool_down_key = format!("{}{}:{}:cd", funs.rbum_conf_cache_key_cert_vcode_info_(), &ctx.own_paths, ak);
+        let ttl: i32 = funs.cache().cmd().await?.ttl(&cool_down_key).await?;
+        if ttl > 0 {
+            let message = format!("vcode send still cooling down until {} secs latter", ttl);
+            return Err(funs.err().bad_request(&Self::get_obj_name(), "add_vcode_to_cache", &message, "400-rbum-cert-vcode-cool-down"));
+        } else if let Some(cool_down_in_sec) = cool_down_in_sec {
+            // set cool down key
+            funs.cache().set_ex(&cool_down_key, "", cool_down_in_sec as u64).await?;
+        }
+
         Ok(())
     }
 

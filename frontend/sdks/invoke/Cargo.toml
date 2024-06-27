@@ -15,11 +15,12 @@ name = "bios_sdk_invoke"
 path = "src/lib.rs"
 
 [features]
-default = ["spi_kv", "spi_log", "spi_search", "iam", "event"]
+default = ["spi_kv", "spi_log", "spi_search", "spi_stats", "iam", "event"]
 spi_base = []
 spi_kv = ["spi_base"]
 spi_log = ["spi_base"]
 spi_search = ["spi_base"]
+spi_stats = ["spi_base"]
 iam = []
 event = []
 macro = ["dep:simple-invoke-client-macro"]

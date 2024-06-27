@@ -328,3 +328,40 @@ pub struct FlowInstModifyCurrentVarsReq {
     /// 参数列表
     pub vars: HashMap<String, Value>,
 }
+
+/// 工作流实例过滤器
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone, Default)]
+#[serde(default)]
+pub struct FlowInstFilterReq {
+    /// 关联模型ID
+    pub flow_model_id: Option<String>,
+    /// 标签
+    pub tag: Option<String>,
+
+    /// 是否结束
+    pub finish: Option<bool>,
+    /// 当前状态ID
+    pub current_state_id: Option<String>,
+    pub with_sub: Option<bool>,
+}
+
+#[derive(sea_orm::FromQueryResult)]
+pub struct FlowInstSummaryResult {
+    pub id: String,
+    pub rel_flow_model_id: String,
+    pub rel_flow_model_name: String,
+
+    pub current_vars: Option<Value>,
+    pub current_state_id: String,
+    pub rel_business_obj_id: String,
+
+    pub create_ctx: Value,
+    pub create_time: DateTime<Utc>,
+
+    pub finish_ctx: Option<Value>,
+    pub finish_time: Option<DateTime<Utc>>,
+    pub finish_abort: Option<bool>,
+    pub output_message: Option<String>,
+
+    pub own_paths: String,
+}

@@ -21,6 +21,8 @@ pub mod spi_kv_client;
 pub mod spi_log_client;
 #[cfg(feature = "spi_search")]
 pub mod spi_search_client;
+#[cfg(feature = "spi_stats")]
+pub mod spi_stats_client;
 
 #[cfg(feature = "iam")]
 pub mod iam_client;

@@ -42,14 +42,18 @@ pub(crate) async fn add(add_req: &StatsConfDimAddReq, funs: &TardisFunsInst, ctx
         Value::from(add_req.hierarchy.as_ref().unwrap_or(&vec![]).clone()),
         Value::from(add_req.remark.as_ref().unwrap_or(&"".to_string()).as_str()),
         Value::from(add_req.dynamic_url.as_deref()),
+        Value::from(add_req.is_tree.unwrap_or(false)),
+        Value::from(add_req.tree_dynamic_url.as_deref()),
+        Value::from(add_req.rel_attribute_code.as_ref().unwrap_or(&vec![]).clone()),
+        Value::from(add_req.rel_attribute_url.as_deref()),
     ];
 
     conn.execute_one(
         &format!(
             r#"INSERT INTO {table_name}
-(key, show_name, stable_ds, data_type, hierarchy, remark, dynamic_url)
+(key, show_name, stable_ds, data_type, hierarchy, remark, dynamic_url, is_tree, tree_dynamic_url, rel_attribute_code, rel_attribute_url)
 VALUES
-($1, $2, $3, $4, $5, $6, $7)
+($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 "#,
         ),
         params,
@@ -96,6 +100,22 @@ pub(crate) async fn modify(dim_conf_key: &str, modify_req: &StatsConfDimModifyRe
     if let Some(dynamic_url) = &modify_req.dynamic_url {
         sql_sets.push(format!("dynamic_url = ${}", params.len() + 1));
         params.push(Value::from(dynamic_url));
+    }
+    if let Some(is_tree) = modify_req.is_tree {
+        sql_sets.push(format!("is_tree = ${}", params.len() + 1));
+        params.push(Value::from(is_tree));
+    }
+    if let Some(tree_dynamic_url) = &modify_req.tree_dynamic_url {
+        sql_sets.push(format!("tree_dynamic_url = ${}", params.len() + 1));
+        params.push(Value::from(tree_dynamic_url));
+    }
+    if let Some(rel_attribute_code) = &modify_req.rel_attribute_code {
+        sql_sets.push(format!("rel_attribute_code = ${}", params.len() + 1));
+        params.push(Value::from(rel_attribute_code.clone()));
+    }
+    if let Some(rel_attribute_url) = &modify_req.rel_attribute_url {
+        sql_sets.push(format!("rel_attribute_url = ${}", params.len() + 1));
+        params.push(Value::from(rel_attribute_url));
     }
     conn.execute_one(
         &format!(
@@ -192,7 +212,7 @@ async fn do_paginate(
     let result = conn
         .query_all(
             &format!(
-                r#"SELECT key, show_name, stable_ds, data_type, hierarchy, remark, dynamic_url, create_time, update_time, count(*) OVER() AS total
+                r#"SELECT key, show_name, stable_ds, data_type, hierarchy, remark, dynamic_url, is_tree, tree_dynamic_url, rel_attribute_code, rel_attribute_url, create_time, update_time, count(*) OVER() AS total
 FROM {table_name}
 WHERE 
     {}
@@ -226,6 +246,10 @@ WHERE
             update_time: item.try_get("", "update_time")?,
             online: online(&item.try_get::<String>("", "key")?, conn, ctx).await?,
             dynamic_url: item.try_get("", "dynamic_url")?,
+            is_tree: item.try_get("", "is_tree")?,
+            tree_dynamic_url: item.try_get("", "tree_dynamic_url")?,
+            rel_attribute_code: item.try_get("", "rel_attribute_code")?,
+            rel_attribute_url: item.try_get("", "rel_attribute_url")?,
         });
     }
     Ok(TardisPage {

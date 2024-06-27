@@ -193,7 +193,7 @@ pub struct FlowStateRelModelExt {
     pub show_btns: Option<Vec<String>>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Default, poem_openapi::Object, sea_orm::FromQueryResult)]
+#[derive(Serialize, Deserialize, Debug, Default, poem_openapi::Object, sea_orm::FromQueryResult, Clone)]
 pub struct FlowStateRelModelModifyReq {
     pub id: String,
     pub sort: Option<i64>,

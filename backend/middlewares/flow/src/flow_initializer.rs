@@ -8,13 +8,15 @@ use bios_sdk_invoke::invoke_initializer;
 
 use itertools::Itertools;
 use serde_json::json;
+
 use tardis::{
     basic::{dto::TardisContext, field::TrimString, result::TardisResult},
     db::{
         reldb_client::TardisActiveModel,
         sea_orm::{
-            sea_query::{Expr, Table},
             ColumnTrait, EntityTrait, QueryFilter,
+            self,
+            sea_query::{Expr, Query, Table},
         },
     },
     futures::future::join_all,
@@ -26,9 +28,11 @@ use tardis::{
 
 use crate::{
     api::{
+        ca::flow_ca_model_api,
         cc::{flow_cc_inst_api, flow_cc_model_api, flow_cc_state_api},
         ci::{flow_ci_inst_api, flow_ci_model_api, flow_ci_state_api},
         cs::flow_cs_config_api,
+        ct::flow_ct_model_api,
     },
     domain::{flow_inst, flow_model, flow_state, flow_transition},
     dto::{
@@ -57,6 +61,8 @@ async fn init_api(web_server: &TardisWebServer) -> TardisResult<()> {
         .add_module(
             flow_constants::DOMAIN_CODE,
             (
+                flow_ca_model_api::FlowCaModelApi,
+                flow_ct_model_api::FlowCtModelApi,
                 flow_cc_state_api::FlowCcStateApi,
                 flow_cc_model_api::FlowCcModelApi,
                 flow_cc_inst_api::FlowCcInstApi,
@@ -85,6 +91,7 @@ pub async fn init_db(mut funs: TardisFunsInst) -> TardisResult<()> {
     if check_initialized(&funs, &ctx).await? {
         init_basic_info(&funs).await?;
         merge_state_by_name(&funs, &ctx).await?;
+        rebind_model_with_template(&funs, &ctx).await?;
     } else {
         let db_kind = TardisFuns::reldb().backend();
         let compatible_type = TardisFuns::reldb().compatible_type();
@@ -205,6 +212,51 @@ async fn check_initialized(funs: &TardisFunsInst, ctx: &TardisContext) -> Tardis
         ctx,
     )
     .await
+}
+
+async fn rebind_model_with_template(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    #[derive(sea_orm::FromQueryResult)]
+    pub struct FlowModelRelTemolateResult {
+        id: String,
+        rel_template_id: String,
+        own_paths: String,
+    }
+    join_all(
+        funs.db()
+            .find_dtos::<FlowModelRelTemolateResult>(
+                Query::select()
+                    .columns([flow_model::Column::Id, flow_model::Column::RelTemplateId, flow_model::Column::OwnPaths])
+                    .from(flow_model::Entity)
+                    .and_where(Expr::col(flow_model::Column::RelTemplateId).ne("")),
+            )
+            .await?
+            .into_iter()
+            .map(|result| async move {
+                let custom_ctx = TardisContext {
+                    own_paths: result.own_paths,
+                    ..ctx.clone()
+                };
+                FlowRelServ::add_simple_rel(
+                    &FlowRelKind::FlowModelTemplate,
+                    &result.id,
+                    &result.rel_template_id,
+                    None,
+                    None,
+                    true,
+                    true,
+                    None,
+                    funs,
+                    &custom_ctx,
+                )
+                .await
+            })
+            .collect_vec(),
+    )
+    .await
+    .into_iter()
+    .collect::<TardisResult<Vec<()>>>()?;
+
+    Ok(())
 }
 
 async fn init_basic_info<'a>(funs: &TardisFunsInst) -> TardisResult<()> {
@@ -1026,8 +1078,52 @@ async fn init_ws_flow_client() -> Option<TardisWSClient> {
     }
 }
 
+async fn init_ws_search_client() -> Option<TardisWSClient> {
+    while !TardisFuns::web_server().is_running().await {
+        tardis::tokio::task::yield_now().await
+    }
+    let funs = flow_constants::get_tardis_inst();
+    let conf = funs.conf::<FlowConfig>();
+    if conf.search_event.is_none() {
+        set_default_flow_avatar("".to_owned());
+        return None;
+    }
+    let mut event_conf = conf.search_event.clone().unwrap();
+    if !event_conf.in_event {
+        set_default_search_avatar("".to_owned());
+        return None;
+    }
+    if event_conf.avatars.is_empty() {
+        event_conf.avatars.push(format!("{}/{}", event_conf.topic_code, env!("CARGO_PKG_NAME")))
+    }
+    let default_avatar = event_conf.avatars[0].clone();
+    set_default_search_avatar(default_avatar);
+    let client = bios_sdk_invoke::clients::event_client::EventClient::new(&event_conf.base_url, &funs);
+    loop {
+        let addr = loop {
+            if let Ok(result) = client.register(&event_conf.clone().into()).await {
+                break result.ws_addr;
+            }
+            tardis::tokio::time::sleep(std::time::Duration::from_secs(10)).await;
+        };
+        let ws_client = TardisFuns::ws_client(&addr, |_| async move { None }).await;
+        match ws_client {
+            Ok(ws_client) => {
+                info!("[BIOS.Flow] connected to server");
+                return Some(ws_client);
+            }
+            Err(err) => {
+                error!("[BIOS.Flow] failed to connect to event server: {}", err);
+                tardis::tokio::time::sleep(std::time::Duration::from_secs(10)).await;
+            }
+        }
+    }
+}
+
 use std::{collections::HashMap, sync::OnceLock};
 tardis::tardis_static! {
     pub(crate) async ws_flow_client: Option<TardisWSClient> = init_ws_flow_client();
+    pub(crate) async ws_search_client: Option<TardisWSClient> = init_ws_search_client();
     pub(crate) async set default_flow_avatar: String;
+    pub(crate) async set default_search_avatar: String;
 }

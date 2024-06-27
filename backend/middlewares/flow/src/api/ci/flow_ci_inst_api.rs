@@ -34,6 +34,7 @@ impl FlowCiInstApi {
         funs.begin().await?;
         let result = FlowInstServ::start(&add_req.0, None, &funs, &ctx.0).await?;
         funs.commit().await?;
+        ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
 
@@ -45,6 +46,7 @@ impl FlowCiInstApi {
         let funs = flow_constants::get_tardis_inst();
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         let result = FlowInstServ::get(&flow_inst_id.0, &funs, &ctx.0).await?;
+        ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
 
@@ -61,6 +63,7 @@ impl FlowCiInstApi {
         let funs = flow_constants::get_tardis_inst();
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         let result = FlowInstServ::find_state_and_next_transitions(&find_req.0, &funs, &ctx.0).await?;
+        ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
 
@@ -74,6 +77,7 @@ impl FlowCiInstApi {
         funs.begin().await?;
         FlowInstServ::abort(&flow_inst_id.0, &abort_req.0, &funs, &ctx.0).await?;
         funs.commit().await?;
+        ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
     }
 
@@ -93,6 +97,7 @@ impl FlowCiInstApi {
         let mut transfer = transfer_req.0;
         FlowInstServ::check_transfer_vars(&flow_inst_id.0, &mut transfer, &funs, &ctx.0).await?;
         let result = FlowInstServ::transfer(&flow_inst_id.0, &transfer, false, FlowExternalCallbackOp::Default, &ctx.0).await?;
+        ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
 
@@ -122,6 +127,7 @@ impl FlowCiInstApi {
         for (flow_inst_id, transfer_req) in flow_inst_id_transfer_map {
             result.push(FlowInstServ::transfer(flow_inst_id, &transfer_req, false, FlowExternalCallbackOp::Default, &ctx.0).await?);
         }
+        ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
 
@@ -140,6 +146,7 @@ impl FlowCiInstApi {
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         let vars = HashMap::from([("assigned_to".to_string(), Value::String(modify_req.0.current_assigned))]);
         FlowInstServ::modify_current_vars(&flow_inst_id.0, &vars, &ctx.0).await?;
+        ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
     }
 
@@ -157,6 +164,7 @@ impl FlowCiInstApi {
         let funs = flow_constants::get_tardis_inst();
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         FlowInstServ::modify_current_vars(&flow_inst_id.0, &modify_req.0.vars, &ctx.0).await?;
+        ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
     }
 
@@ -186,7 +194,7 @@ impl FlowCiInstApi {
             funs.commit().await?;
             inst_id
         };
-
+        ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
 
@@ -200,6 +208,7 @@ impl FlowCiInstApi {
         funs.begin().await?;
         let result = FlowInstServ::batch_bind(&add_req.0, &funs, &ctx.0).await?;
         funs.commit().await?;
+        ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
 
@@ -218,6 +227,7 @@ impl FlowCiInstApi {
                 result.push(inst_detail);
             }
         }
+        ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
 
@@ -237,7 +247,6 @@ impl FlowCiInstApi {
                 }
             }
         });
-
         TardisResp::ok(Void {})
     }
 }

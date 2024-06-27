@@ -1,7 +1,10 @@
+use std::collections::HashMap;
+
 use bios_basic::rbum::{
     dto::rbum_filer_dto::{RbumBasicFilterReq, RbumItemFilterFetcher, RbumItemRelFilterReq},
     rbum_enumeration::RbumScopeLevelKind,
 };
+use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use tardis::{
     basic::field::TrimString,
@@ -24,12 +27,12 @@ pub struct FlowModelAddReq {
     pub name: TrimString,
     #[oai(validator(min_length = "2", max_length = "2000"))]
     pub icon: Option<String>,
-    #[oai(validator(min_length = "2", max_length = "2000"))]
+    #[oai(validator(max_length = "2000"))]
     pub info: Option<String>,
     /// 初始化状态ID
     pub init_state_id: String,
-    /// 关联模板ID
-    pub rel_template_id: Option<String>,
+    /// 关联模板ID（目前可能是页面模板ID，或者是项目模板ID）
+    pub rel_template_ids: Option<Vec<String>>,
     /// 绑定的动作
     pub transitions: Option<Vec<FlowTransitionAddReq>>,
     /// 绑定的状态
@@ -45,8 +48,29 @@ pub struct FlowModelAddReq {
     pub disabled: Option<bool>,
 }
 
+impl From<FlowModelDetailResp> for FlowModelAddReq {
+    fn from(value: FlowModelDetailResp) -> Self {
+        let transitions = value.transitions().into_iter().map(FlowTransitionAddReq::from).collect_vec();
+        let states = value.states().into_iter().map(FlowModelBindStateReq::from).collect_vec();
+        Self {
+            name: value.name.as_str().into(),
+            icon: Some(value.icon.clone()),
+            info: Some(value.info.clone()),
+            init_state_id: value.init_state_id,
+            rel_template_ids: Some(value.rel_template_ids.clone()),
+            transitions: if transitions.is_empty() { None } else { Some(transitions) },
+            states: if states.is_empty() { None } else { Some(states) },
+            template: value.template,
+            rel_model_id: None,
+            tag: Some(value.tag.clone()),
+            scope_level: Some(value.scope_level),
+            disabled: Some(value.disabled),
+        }
+    }
+}
+
 /// 修改请求
-#[derive(Serialize, Deserialize, Debug, Default, poem_openapi::Object)]
+#[derive(Serialize, Deserialize, Debug, Default, poem_openapi::Object, Clone)]
 pub struct FlowModelModifyReq {
     #[oai(validator(min_length = "2", max_length = "200"))]
     pub name: Option<TrimString>,
@@ -72,6 +96,8 @@ pub struct FlowModelModifyReq {
     pub modify_states: Option<Vec<FlowStateRelModelModifyReq>>,
     /// 标签
     pub tag: Option<String>,
+    /// 关联模板ID（目前可能是页面模板ID，或者是项目模板ID）
+    pub rel_template_ids: Option<Vec<String>>,
 
     pub scope_level: Option<RbumScopeLevelKind>,
     pub disabled: Option<bool>,
@@ -105,10 +131,16 @@ pub struct FlowModelDetailResp {
     pub info: String,
     /// 初始化状态ID
     pub init_state_id: String,
-    /// 关联模板ID
-    pub rel_template_id: String,
+    /// 是否作为模板使用
+    pub template: bool,
+    /// 关联父级模型ID
+    pub rel_model_id: String,
+    /// 关联模板ID（目前可能是页面模板ID，或者是项目模板ID）
+    pub rel_template_ids: Vec<String>,
     // 动作信息
     pub transitions: Option<Value>,
+    // 状态信息
+    pub states: Option<Value>,
 
     pub own_paths: String,
     pub owner: String,
@@ -128,6 +160,13 @@ impl FlowModelDetailResp {
             None => vec![],
         }
     }
+
+    pub fn states(&self) -> Vec<FlowStateAggResp> {
+        match &self.states {
+            Some(states) => TardisFuns::json.json_to_obj(states.clone()).unwrap(),
+            None => vec![],
+        }
+    }
 }
 
 /// 工作流模型过滤器
@@ -138,13 +177,17 @@ pub struct FlowModelFilterReq {
     pub basic: RbumBasicFilterReq,
     /// 标签集合
     pub tags: Option<Vec<String>>,
-    /// 关联模板ID
-    pub rel_template_id: Option<String>,
+
     /// 是否作为模板使用
     pub template: Option<bool>,
     pub own_paths: Option<Vec<String>>,
     /// 指定状态ID(用于过滤动作)
     pub specified_state_ids: Option<Vec<String>>,
+    /// 关联模型ID
+    pub rel_model_ids: Option<Vec<String>>,
+
+    pub rel: Option<RbumItemRelFilterReq>,
+    pub rel2: Option<RbumItemRelFilterReq>,
 }
 
 impl RbumItemFilterFetcher for FlowModelFilterReq {
@@ -152,10 +195,10 @@ impl RbumItemFilterFetcher for FlowModelFilterReq {
         &self.basic
     }
     fn rel(&self) -> &Option<RbumItemRelFilterReq> {
-        &None
+        &self.rel
     }
     fn rel2(&self) -> &Option<RbumItemRelFilterReq> {
-        &None
+        &self.rel2
     }
 }
 
@@ -168,8 +211,12 @@ pub struct FlowModelAggResp {
     pub info: String,
     /// 初始化状态ID
     pub init_state_id: String,
-    /// 关联模板ID
-    pub rel_template_id: String,
+    /// 是否作为模板使用
+    pub template: bool,
+    /// 关联父级模型ID
+    pub rel_model_id: String,
+    /// 关联模板ID（目前可能是页面模板ID，或者是项目模板ID）
+    pub rel_template_ids: Vec<String>,
     /// 绑定的状态
     pub states: Vec<FlowStateAggResp>,
 
@@ -185,13 +232,22 @@ pub struct FlowModelAggResp {
 }
 
 /// 绑定状态
-#[derive(Serialize, Deserialize, Debug, Default, poem_openapi::Object)]
+#[derive(Serialize, Deserialize, Debug, Default, poem_openapi::Object, Clone)]
 pub struct FlowModelBindStateReq {
     /// Associated [flow_state](super::flow_state_dto::FlowStateDetailResp) id
     ///
     /// 关联的[工作流状态](super::flow_state_dto::FlowStateDetailResp) id
     pub state_id: String,
     pub ext: FlowStateRelModelExt,
+}
+
+impl From<FlowStateAggResp> for FlowModelBindStateReq {
+    fn from(value: FlowStateAggResp) -> Self {
+        Self {
+            state_id: value.id,
+            ext: value.ext,
+        }
+    }
 }
 
 /// 解绑状态
@@ -225,6 +281,8 @@ pub struct FlowModelSortStateInfoReq {
 pub struct FlowModelAddCustomModelReq {
     /// 模板ID
     pub proj_template_id: Option<String>,
+    /// 关联模板ID
+    pub rel_template_id: Option<String>,
     /// 绑定模型的对象
     pub bind_model_objs: Vec<FlowModelAddCustomModelItemReq>,
 }
@@ -260,4 +318,32 @@ pub struct FlowModelFindRelStateResp {
     ///
     /// 关联的[工作流状态](super::flow_state_dto::FlowStateDetailResp) color
     pub color: String,
+}
+
+/// 工作流关联操作类型
+#[derive(Serialize, Deserialize, Debug, Default, PartialEq, poem_openapi::Enum)]
+pub enum FlowModelAssociativeOperationKind {
+    #[default]
+    Reference,
+    Copy,
+}
+
+/// 创建或引用模型请求
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
+pub struct FlowModelCopyOrReferenceReq {
+    /// 关联的模型ID列表
+    pub rel_model_ids: HashMap<String, String>,
+    /// 关联的模板ID
+    pub rel_template_id: Option<String>,
+    /// 修改的模板ID
+    pub op: FlowModelAssociativeOperationKind,
+}
+
+/// 创建或引用模型请求
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
+pub struct FlowModelCopyOrReferenceCiReq {
+    /// 关联的模板ID
+    pub rel_template_id: Option<String>,
+    /// 修改的模板ID
+    pub op: FlowModelAssociativeOperationKind,
 }

@@ -25,7 +25,7 @@ tardis = { workspace = true, features = ["reldb-postgres", "web-server"] }
 bios-basic = { path = "../../basic", features = ["default"] }
 bios-sdk-invoke = { path = "../../../frontend/sdks/invoke", features = ["default"] }
 strum = { workspace = true, features = ["derive"] }
-
+percent-encoding = "2"
 [dev-dependencies]
 tardis = { workspace = true, features = ["test", "ws-client"] }
 bios-basic = { path = "../../basic", features = ["default", "test"] }

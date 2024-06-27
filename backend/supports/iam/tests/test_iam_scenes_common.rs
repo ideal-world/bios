@@ -87,6 +87,9 @@ pub async fn test(sysadmin_name: &str, sysadmin_password: &str, client: &mut BIO
                         field_display_name_remarks: "".to_string(),
                         field_mobile_remarks: "".to_string(),
                         field_email_remarks: "".to_string(),
+                        field_labor_type: "".to_string(),
+                        field_labor_type_remarks: "".to_string(),
+                        field_labor_type_map: None,
                     },
                     // org_unique_id: "ou".to_string(),
                     // org_field_map: OrgFieldMap {
@@ -153,6 +156,7 @@ pub async fn test(sysadmin_name: &str, sysadmin_password: &str, client: &mut BIO
                 temporary: None,
                 lock_status: None,
                 logout_type: None,
+                labor_type: None,
             },
         )
         .await;

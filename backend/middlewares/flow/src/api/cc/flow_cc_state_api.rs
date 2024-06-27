@@ -30,6 +30,7 @@ impl FlowCcStateApi {
         funs.begin().await?;
         let result = FlowStateServ::add_item(&mut add_req.0, &funs, &ctx.0).await?;
         funs.commit().await?;
+        ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
 
@@ -42,6 +43,7 @@ impl FlowCcStateApi {
         funs.begin().await?;
         FlowStateServ::modify_item(&id.0, &mut modify_req.0, &funs, &ctx.0).await?;
         funs.commit().await?;
+        ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
     }
 
@@ -64,6 +66,7 @@ impl FlowCcStateApi {
             &ctx.0,
         )
         .await?;
+        ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
 
@@ -129,7 +132,7 @@ impl FlowCcStateApi {
             &ctx.0,
         )
         .await?;
-
+        ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
 
@@ -144,6 +147,7 @@ impl FlowCcStateApi {
         funs.begin().await?;
         FlowStateServ::delete_item(&id.0, &funs, &ctx.0).await?;
         funs.commit().await?;
+        ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
     }
 
@@ -168,6 +172,7 @@ impl FlowCcStateApi {
             &ctx.0,
         )
         .await?;
+        ctx.0.execute_task().await?;
         TardisResp::ok(resp)
     }
 
@@ -185,6 +190,7 @@ impl FlowCcStateApi {
         funs.begin().await?;
         let result = FlowStateServ::count_group_by_state(&req.0, &funs, &ctx.0).await?;
         funs.commit().await?;
+        ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
 }

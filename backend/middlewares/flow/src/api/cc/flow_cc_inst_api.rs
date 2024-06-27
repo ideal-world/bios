@@ -30,6 +30,7 @@ impl FlowCcInstApi {
         funs.begin().await?;
         let result = FlowInstServ::start(&add_req.0, None, &funs, &ctx.0).await?;
         funs.commit().await?;
+        ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
 
@@ -42,6 +43,7 @@ impl FlowCcInstApi {
         funs.begin().await?;
         FlowInstServ::abort(&flow_inst_id.0, &abort_req.0, &funs, &ctx.0).await?;
         funs.commit().await?;
+        ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
     }
 
@@ -52,6 +54,7 @@ impl FlowCcInstApi {
     async fn get(&self, flow_inst_id: Path<String>, ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<FlowInstDetailResp> {
         let funs = flow_constants::get_tardis_inst();
         let result = FlowInstServ::get(&flow_inst_id.0, &funs, &ctx.0).await?;
+        ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
 
@@ -64,6 +67,7 @@ impl FlowCcInstApi {
         flow_model_id: Query<Option<String>>,
         tag: Query<Option<String>>,
         finish: Query<Option<bool>>,
+        current_state_id: Query<Option<String>>,
         with_sub: Query<Option<bool>>,
         page_number: Query<u32>,
         page_size: Query<u32>,
@@ -71,7 +75,8 @@ impl FlowCcInstApi {
         _request: &Request,
     ) -> TardisApiResult<TardisPage<FlowInstSummaryResp>> {
         let funs = flow_constants::get_tardis_inst();
-        let result = FlowInstServ::paginate(flow_model_id.0, tag.0, finish.0, with_sub.0, page_number.0, page_size.0, &funs, &ctx.0).await?;
+        let result = FlowInstServ::paginate(flow_model_id.0, tag.0, finish.0, current_state_id.0, with_sub.0, page_number.0, page_size.0, &funs, &ctx.0).await?;
+        ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
 
@@ -88,6 +93,7 @@ impl FlowCcInstApi {
     ) -> TardisApiResult<Vec<FlowInstFindNextTransitionResp>> {
         let funs = flow_constants::get_tardis_inst();
         let result = FlowInstServ::find_next_transitions(&flow_inst_id.0, &next_req.0, &funs, &ctx.0).await?;
+        ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
 
@@ -103,6 +109,7 @@ impl FlowCcInstApi {
     ) -> TardisApiResult<Vec<FlowInstFindStateAndTransitionsResp>> {
         let funs = flow_constants::get_tardis_inst();
         let result = FlowInstServ::find_state_and_next_transitions(&find_req.0, &funs, &ctx.0).await?;
+        ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
 
@@ -121,6 +128,7 @@ impl FlowCcInstApi {
         let mut transfer = transfer_req.0;
         FlowInstServ::check_transfer_vars(&flow_inst_id.0, &mut transfer, &funs, &ctx.0).await?;
         let result = FlowInstServ::transfer(&flow_inst_id.0, &transfer, false, FlowExternalCallbackOp::Default, &ctx.0).await?;
+        ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
 
@@ -148,6 +156,7 @@ impl FlowCcInstApi {
         for (flow_inst_id, transfer_req) in flow_inst_id_transfer_map {
             result.push(FlowInstServ::transfer(flow_inst_id, &transfer_req, false, FlowExternalCallbackOp::Default, &ctx.0).await?);
         }
+        ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
 
@@ -164,6 +173,7 @@ impl FlowCcInstApi {
     ) -> TardisApiResult<Void> {
         let vars = HashMap::from([("current_assigned".to_string(), Value::String(modify_req.0.current_assigned))]);
         FlowInstServ::modify_current_vars(&flow_inst_id.0, &vars, &ctx.0).await?;
+        ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
     }
 
@@ -179,6 +189,7 @@ impl FlowCcInstApi {
         _request: &Request,
     ) -> TardisApiResult<Void> {
         FlowInstServ::modify_current_vars(&flow_inst_id.0, &modify_req.0.vars, &ctx.0).await?;
+        ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
     }
 }

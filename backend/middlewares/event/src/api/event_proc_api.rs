@@ -18,6 +18,6 @@ impl EventProcApi {
     #[oai(path = "/:listener_code", method = "get")]
     async fn ws_process(&self, listener_code: Path<String>, token: Query<String>, websocket: WebSocket) -> BoxWebSocketUpgraded {
         let funs = get_tardis_inst();
-        event_proc_serv::ws_process(listener_code.0, token.0, websocket, &funs).await
+        event_proc_serv::ws_process(listener_code.0, token.0, websocket, funs).await
     }
 }

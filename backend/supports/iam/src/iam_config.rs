@@ -64,6 +64,7 @@ pub struct IamConfig {
     pub phone_template_cert_login_title: String,
     #[deprecated]
     pub phone_template_cert_login_content: String,
+    pub vcode_cd_in_sec: u32,
     pub sms_base_url: String,
     pub sms_path: String,
     pub sms_pwd_path: String,
@@ -107,6 +108,7 @@ pub struct IamSpiConfig {
     pub search_url: String,
     pub log_url: String,
     pub search_account_tag: String,
+    pub stats_orgs_prefix: String,
     pub kv_url: String,
     pub kv_tenant_prefix: String,
     pub kv_account_prefix: String,
@@ -124,6 +126,7 @@ impl Default for IamSpiConfig {
             search_url: "http://127.0.0.1:8080/spi-search".to_string(),
             log_url: "http://127.0.0.1:8080/spi-log".to_string(),
             search_account_tag: "iam_account".to_string(),
+            stats_orgs_prefix: "iam_orgs".to_string(),
             kv_url: "http://127.0.0.1:8080/spi-kv".to_string(),
             kv_tenant_prefix: "iam_tenant".to_string(),
             kv_account_prefix: "iam_account".to_string(),
@@ -183,6 +186,7 @@ impl Default for IamConfig {
             crypto_conf: CryptoConf::default(),
             cache_key_gateway_rule_info_: "sg:plugin:".to_string(),
             gateway_openapi_path: "/op-api".to_string(),
+            vcode_cd_in_sec: crate::iam_constants::DEFAULT_V_CODE_CD_IN_SEC,
         }
     }
 }

@@ -10,33 +10,49 @@ use crate::stats_enumeration::{StatsDataTypeKind, StatsFactColKind};
 /// Add Dimension Configuration Request Object
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct StatsConfDimAddReq {
-    /// 外部系统传入的主键或编码
     /// The primary key or encoding passed in from the external system
+    ///
+    /// 外部系统传入的主键或编码
     #[oai(validator(pattern = r"^[a-z0-9_]+$"))]
     pub key: String,
-    /// 维度名称
     /// The name of the dimension
+    ///
+    /// 维度名称
     #[oai(validator(min_length = "2"))]
     pub show_name: String,
-    /// 是否为稳定数据集，
-    /// 如果为true，则维度数据记录在对应的维度表中，
-    /// 如果为false，则维度数据记录在事实表中
+
     /// Whether it is a stable dataset,
     /// if true the dimension data is recorded in the corresponding dimension table,
     /// if false the dimension data is recorded in the fact table
+    ///
+    /// 是否为稳定数据集，
+    /// 如果为true，则维度数据记录在对应的维度表中，
+    /// 如果为false，则维度数据记录在事实表中
     pub stable_ds: bool,
-    /// 维度数据类型
+
     /// Dimension data type
+    ///
+    /// 维度数据类型
     pub data_type: StatsDataTypeKind,
-    /// 层级，从0开始，用于上卷/下卷。
-    /// 每个维度可以定义多个字段。
-    /// 例如地址维度可以是省-市-区等
+
     /// Hierarchy, starting from 0, for up-rolls/down-rolls.
     /// Multiple fields can be defined for each dimension.
     /// e.g. address dimension can be province-city-district, etc.
+    ///
+    /// 层级，从0开始，用于上卷/下卷。
+    /// 每个维度可以定义多个字段。
+    /// 例如地址维度可以是省-市-区等
     pub hierarchy: Option<Vec<String>>,
     pub remark: Option<String>,
     pub dynamic_url: Option<String>,
+
+    /// is_tree = true, the dimension is a tree structure
+    ///
+    /// 该纬度是否是树形结构
+    pub is_tree: Option<bool>,
+    pub tree_dynamic_url: Option<String>,
+    pub rel_attribute_code: Option<Vec<String>>,
+    pub rel_attribute_url: Option<String>,
 }
 
 /// Modify Dimension Configuration Request Object
@@ -69,6 +85,14 @@ pub struct StatsConfDimModifyReq {
     pub hierarchy: Option<Vec<String>>,
     pub remark: Option<String>,
     pub dynamic_url: Option<String>,
+
+    /// is_tree = true, the dimension is a tree structure
+    ///
+    /// 该纬度是否是树形结构
+    pub is_tree: Option<bool>,
+    pub tree_dynamic_url: Option<String>,
+    pub rel_attribute_code: Option<Vec<String>>,
+    pub rel_attribute_url: Option<String>,
 }
 
 /// Dimension Configuration Response Object
@@ -109,6 +133,15 @@ pub struct StatsConfDimInfoResp {
     pub online: bool,
     pub remark: Option<String>,
     pub dynamic_url: Option<String>,
+
+    /// is_tree = true, the dimension is a tree structure
+    ///
+    /// 该纬度是否是树形结构
+    pub is_tree: bool,
+    pub tree_dynamic_url: Option<String>,
+    pub rel_attribute_code: Option<Vec<String>>,
+    pub rel_attribute_url: Option<String>,
+
     pub create_time: DateTime<Utc>,
     pub update_time: DateTime<Utc>,
 }

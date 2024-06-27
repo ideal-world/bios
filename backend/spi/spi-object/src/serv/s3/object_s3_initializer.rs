@@ -46,6 +46,24 @@ pub async fn init(bs_cert: &SpiBsCertResp, ctx: &TardisContext, _: bool) -> Tard
                 ));
             }
         }
+        let resp = client.bucket_create_simple(&format!("{bucket_name_prefix}-spe"), false).await;
+        if let Err(e) = resp {
+            if e.code != "409" {
+                return Err(TardisError::internal_error(
+                    &format!("Bucket {bucket_name_prefix}-spe creation failed"),
+                    &format!("{:?}", e),
+                ));
+            }
+        }
+        let resp = client.bucket_create_simple(&format!("{bucket_name_prefix}-tamp"), false).await;
+        if let Err(e) = resp {
+            if e.code != "409" {
+                return Err(TardisError::internal_error(
+                    &format!("Bucket {bucket_name_prefix}-tamp creation failed"),
+                    &format!("{:?}", e),
+                ));
+            }
+        }
         spi_initializer::common::set_isolation_flag_to_ext(&bucket_name_prefix, &mut ext);
     };
     Ok(SpiBsInst { client: Box::new(client), ext })

@@ -1,8 +1,11 @@
 use std::collections::HashMap;
 
-use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
+use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumItemRelFilterReq};
+use bios_basic::rbum::rbum_enumeration::RbumRelFromKind;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use itertools::Itertools;
+use tardis::basic::dto::TardisContext;
+use tardis::futures::future::join_all;
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem::Request;
 use tardis::web::poem_openapi;
@@ -18,6 +21,7 @@ use crate::dto::flow_state_dto::FlowStateRelModelModifyReq;
 use crate::dto::flow_transition_dto::{FlowTransitionModifyReq, FlowTransitionSortStatesReq};
 use crate::flow_constants;
 use crate::serv::flow_model_serv::FlowModelServ;
+use crate::serv::flow_rel_serv::{FlowRelKind, FlowRelServ};
 #[derive(Clone)]
 pub struct FlowCcModelApi;
 
@@ -28,11 +32,13 @@ impl FlowCcModelApi {
     ///
     /// 添加模型
     #[oai(path = "/", method = "post")]
-    async fn add(&self, mut add_req: Json<FlowModelAddReq>, ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<String> {
+    async fn add(&self, mut add_req: Json<FlowModelAddReq>, ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<FlowModelAggResp> {
         let mut funs = flow_constants::get_tardis_inst();
         funs.begin().await?;
-        let result = FlowModelServ::add_item(&mut add_req.0, &funs, &ctx.0).await?;
+        let model_id = FlowModelServ::add_item(&mut add_req.0, &funs, &ctx.0).await?;
+        let result = FlowModelServ::get_item_detail_aggs(&model_id, true, &funs, &ctx.0).await?;
         funs.commit().await?;
+        ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
 
@@ -45,6 +51,7 @@ impl FlowCcModelApi {
         funs.begin().await?;
         FlowModelServ::modify_model(&flow_model_id.0, &mut modify_req.0, &funs, &ctx.0).await?;
         funs.commit().await?;
+        ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
     }
 
@@ -54,7 +61,91 @@ impl FlowCcModelApi {
     #[oai(path = "/:flow_model_id", method = "get")]
     async fn get(&self, flow_model_id: Path<String>, ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<FlowModelAggResp> {
         let funs = flow_constants::get_tardis_inst();
-        let result = FlowModelServ::get_item_detail_aggs(&flow_model_id.0, &funs, &ctx.0).await?;
+        let result = FlowModelServ::get_item_detail_aggs(&flow_model_id.0, true, &funs, &ctx.0).await?;
+        ctx.0.execute_task().await?;
+        TardisResp::ok(result)
+    }
+
+    /// Get the list of models by template ID.
+    /// Specific rules: If no template ID is specified, then get the template with empty template ID in the corresponding tag.
+    /// Even if the template ID is specified, we need to get the template with empty template ID in the corresponding tag.
+    ///
+    /// 通过模板ID获取模型列表。
+    /// 具体规则：未指定模板ID，则获取对应tag中置空模板ID的模板。
+    /// 即使是指定模板ID，也需要获取对应tag中置空模板ID的模板
+    #[oai(path = "/find_by_rel_template_id", method = "get")]
+    async fn find_models_by_rel_template_id(
+        &self,
+        tag: Query<String>,
+        template: Query<Option<bool>>,
+        rel_template_id: Query<Option<String>>,
+        ctx: TardisContextExtractor,
+        _request: &Request,
+    ) -> TardisApiResult<Vec<FlowModelSummaryResp>> {
+        let funs = flow_constants::get_tardis_inst();
+        let mut result = vec![];
+        let mut not_bind_template_models = join_all(
+            FlowModelServ::find_items(
+                &FlowModelFilterReq {
+                    basic: RbumBasicFilterReq {
+                        ignore_scope: true,
+                        with_sub_own_paths: false,
+                        ..Default::default()
+                    },
+                    tags: Some(vec![tag.0.clone()]),
+                    template: template.0,
+                    ..Default::default()
+                },
+                Some(true),
+                None,
+                &funs,
+                &ctx.0,
+            )
+            .await?
+            .into_iter()
+            .map(|model| async move {
+                let funs = flow_constants::get_tardis_inst();
+                let global_ctx: TardisContext = TardisContext::default();
+                if FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelTemplate, &model.id, None, None, &funs, &global_ctx).await.unwrap().is_empty() {
+                    Some(model)
+                } else {
+                    None
+                }
+            }),
+        )
+        .await
+        .into_iter()
+        .flatten()
+        .collect_vec();
+        result.append(&mut not_bind_template_models);
+        if let Some(rel_template_id) = rel_template_id.0 {
+            let mut rel_template_models = FlowModelServ::find_items(
+                &FlowModelFilterReq {
+                    basic: RbumBasicFilterReq {
+                        ignore_scope: true,
+                        with_sub_own_paths: false,
+                        ..Default::default()
+                    },
+                    tags: Some(vec![tag.0.clone()]),
+                    template: template.0,
+                    rel: Some(RbumItemRelFilterReq {
+                        optional: false,
+                        rel_by_from: true,
+                        tag: Some(FlowRelKind::FlowModelTemplate.to_string()),
+                        from_rbum_kind: Some(RbumRelFromKind::Item),
+                        rel_item_id: Some(rel_template_id),
+                        ..Default::default()
+                    }),
+                    ..Default::default()
+                },
+                Some(true),
+                None,
+                &funs,
+                &ctx.0,
+            )
+            .await?;
+            result.append(&mut rel_template_models);
+        }
         TardisResp::ok(result)
     }
 
@@ -98,12 +189,13 @@ impl FlowCcModelApi {
             &ctx.0,
         )
         .await?;
+        ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
 
     /// Find the specified models, or create it if it doesn't exist.
     ///
-    /// 查找指定model，如果不存在则创建。创建规则遵循add_custom_model接口逻辑。
+    /// 查找关联的model，如果不存在则创建。创建规则遵循add_custom_model接口逻辑。
     ///
     /// # Parameters
     /// - `tag_ids` - list of tag_id
@@ -123,6 +215,30 @@ impl FlowCcModelApi {
         let tag_ids = tag_ids.split(',').map(|tag_id| tag_id.to_string()).collect_vec();
         let result = FlowModelServ::find_or_add_models(tag_ids, temp_id.0, is_shared.unwrap_or(false), &funs, &ctx.0).await?;
         funs.commit().await?;
+        ctx.0.execute_task().await?;
+        TardisResp::ok(result)
+    }
+
+    /// Find the specified models, or create it if it doesn't exist.
+    ///
+    /// 查找关联的model。
+    ///
+    /// # Parameters
+    /// - `temp_id` - associated template_id
+    /// - `is_shared` - whether the associated template is shared
+    #[oai(path = "/find_rel_models", method = "put")]
+    async fn find_rel_models(
+        &self,
+        temp_id: Query<Option<String>>,
+        is_shared: Query<Option<bool>>,
+        ctx: TardisContextExtractor,
+        _request: &Request,
+    ) -> TardisApiResult<HashMap<String, FlowModelSummaryResp>> {
+        let mut funs = flow_constants::get_tardis_inst();
+        funs.begin().await?;
+        let result = FlowModelServ::find_rel_models(temp_id.0, is_shared.unwrap_or(false), &funs, &ctx.0).await?;
+        funs.commit().await?;
+        ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
 
@@ -139,6 +255,7 @@ impl FlowCcModelApi {
         funs.begin().await?;
         FlowModelServ::delete_item(&flow_model_id.0, &funs, &ctx.0).await?;
         funs.commit().await?;
+        ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
     }
 
@@ -160,6 +277,7 @@ impl FlowCcModelApi {
         )
         .await?;
         funs.commit().await?;
+        ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
     }
 
@@ -181,6 +299,7 @@ impl FlowCcModelApi {
         )
         .await?;
         funs.commit().await?;
+        ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
     }
 
@@ -212,6 +331,7 @@ impl FlowCcModelApi {
         )
         .await?;
         funs.commit().await?;
+        ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
     }
 
@@ -249,6 +369,7 @@ impl FlowCcModelApi {
         )
         .await?;
         funs.commit().await?;
+        ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
     }
 
@@ -262,7 +383,7 @@ impl FlowCcModelApi {
         funs.begin().await?;
         let mut result = vec![];
         for item in &req.0.bind_model_objs {
-            let model_id = FlowModelServ::add_custom_model(&item.tag, req.0.proj_template_id.clone(), None, &funs, &ctx.0).await.ok();
+            let model_id = FlowModelServ::add_custom_model(&item.tag, req.0.proj_template_id.clone(), req.0.rel_template_id.clone(), &funs, &ctx.0).await.ok();
             result.push(FlowModelAddCustomModelResp { tag: item.tag.clone(), model_id });
         }
         funs.commit().await?;
@@ -282,7 +403,7 @@ impl FlowCcModelApi {
     ) -> TardisApiResult<Vec<FlowModelFindRelStateResp>> {
         let funs = flow_constants::get_tardis_inst();
         let result = FlowModelServ::find_rel_states(tag.0.split(',').collect(), rel_template_id.0, &funs, &ctx.0).await?;
-
+        ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
 
@@ -295,6 +416,7 @@ impl FlowCcModelApi {
         funs.begin().await?;
         FlowModelServ::modify_rel_state_ext(&flow_model_id.0, &req.0, &funs, &ctx.0).await?;
         funs.commit().await?;
+        ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
     }
 }
