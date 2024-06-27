@@ -187,6 +187,7 @@ impl IamCertConfLdapResp {
             &self.account_field_map.field_display_name,
             &self.account_field_map.field_email,
             &self.account_field_map.field_mobile,
+            &self.account_field_map.field_labor_type,
         ];
         [vec, vec1].concat()
     }
