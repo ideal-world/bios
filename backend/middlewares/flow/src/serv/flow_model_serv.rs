@@ -200,24 +200,20 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
 
     async fn after_modify_item(flow_model_id: &str, modify_req: &mut FlowModelModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let model_detail = Self::get_item(flow_model_id, &FlowModelFilterReq::default(), funs, ctx).await?;
-        let mut refresh_model_name_by_sorted_states = false;
         if let Some(bind_states) = &modify_req.bind_states {
             for bind_state in bind_states {
                 Self::bind_state(flow_model_id, bind_state, funs, ctx).await?;
             }
-            refresh_model_name_by_sorted_states = true;
         }
         if let Some(unbind_states) = &modify_req.unbind_states {
             for unbind_state in unbind_states {
                 Self::unbind_state(flow_model_id, unbind_state, funs, ctx).await?;
             }
-            refresh_model_name_by_sorted_states = true;
         }
         if let Some(modify_states) = &modify_req.modify_states {
             for modify_state in modify_states {
                 Self::modify_rel_state_ext(flow_model_id, modify_state, funs, ctx).await?;
             }
-            refresh_model_name_by_sorted_states = true;
         }
         if let Some(add_transitions) = &modify_req.add_transitions {
             Self::add_transitions(flow_model_id, add_transitions, funs, ctx).await?;
@@ -263,9 +259,6 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
                     ));
                 }
             }
-        }
-        if refresh_model_name_by_sorted_states {
-            Self::refresh_model_name_by_sorted_states(flow_model_id, funs, ctx).await?;
         }
         let model = Self::get_item_detail_aggs(flow_model_id, false, funs, ctx).await?;
         if model.template && model.rel_model_id.is_empty() {
@@ -1559,19 +1552,5 @@ impl FlowModelServ {
             Some(model) => Ok(model.id),
             None => Err(funs.err().not_found("flow_inst_serv", "get_model_id_by_own_paths", "model not found", "404-flow-model-not-found")),
         }
-    }
-
-    async fn refresh_model_name_by_sorted_states(flow_model_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        Self::modify_item(
-            flow_model_id,
-            &mut FlowModelModifyReq {
-                name: Some(Self::find_sorted_rel_states_by_model_id(flow_model_id, funs, ctx).await?.into_iter().map(|state| state.name).collect_vec().join("-").into()),
-                ..Default::default()
-            },
-            funs,
-            ctx,
-        )
-        .await?;
-        Ok(())
     }
 }
