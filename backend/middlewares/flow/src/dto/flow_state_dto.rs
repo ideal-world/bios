@@ -39,7 +39,7 @@ pub struct FlowStateAddReq {
     pub disabled: Option<bool>,
 }
 
-#[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object, Default)]
 pub struct FlowStateModifyReq {
     #[oai(validator(min_length = "2", max_length = "200"))]
     pub name: Option<TrimString>,
