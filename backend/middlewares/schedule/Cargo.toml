@@ -27,10 +27,8 @@ bios-basic = { path = "../../basic", features = ["default"] }
 bios-sdk-invoke = { path = "../../../frontend/sdks/invoke", features = [
     "spi_log", "spi_kv", "event"
 ], default-features = false }
-[dependencies.tokio-cron-scheduler]
-git = "https://github.com/4t145/tokio-cron-scheduler.git"
-branch = "time-local"
-features = ["cron_local"]
+tsuki-scheduler = { version = "0.1.3", features= ["cron", "tokio", "async-scheduler"]}
+
 [dev-dependencies]
 tardis = { workspace = true, features = ["test", "ws-client"] }
 bios-basic = { path = "../../basic", features = ["default", "test"] }
