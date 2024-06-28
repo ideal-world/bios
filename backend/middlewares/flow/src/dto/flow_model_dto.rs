@@ -354,3 +354,10 @@ pub struct FlowModelExistRelByTemplateIdsReq {
     /// 关联的模板ID
     pub rel_template_ids: Vec<String>,
 }
+
+/// 获取关联的模型名请求
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
+pub struct FlowModelFindRelNameByTemplateIdsReq {
+    /// 关联的模板ID
+    pub rel_template_ids: Vec<String>,
+}

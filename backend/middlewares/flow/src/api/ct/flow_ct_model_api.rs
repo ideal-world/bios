@@ -10,7 +10,10 @@ use tardis::web::{
 };
 
 use crate::{
-    dto::flow_model_dto::{FlowModelAggResp, FlowModelAssociativeOperationKind, FlowModelCopyOrReferenceReq, FlowModelFilterReq},
+    dto::flow_model_dto::{
+        FlowModelAggResp, FlowModelAssociativeOperationKind, FlowModelCopyOrReferenceReq, FlowModelExistRelByTemplateIdsReq, FlowModelFilterReq,
+        FlowModelFindRelNameByTemplateIdsReq,
+    },
     flow_constants,
     serv::{
         flow_model_serv::FlowModelServ,
@@ -135,5 +138,31 @@ impl FlowCtModelApi {
         funs.commit().await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void)
+    }
+
+    /// Get associated model names by template ID, multiple comma separated
+    ///
+    /// 通过模板ID获取关联的模型名，多个逗号隔开
+    #[oai(path = "/find_rel_name_by_template_ids", method = "post")]
+    async fn find_rel_name_by_template_ids(
+        &self,
+        req: Json<FlowModelFindRelNameByTemplateIdsReq>,
+        mut ctx: TardisContextExtractor,
+        request: &Request,
+    ) -> TardisApiResult<HashMap<String, Vec<String>>> {
+        let funs = flow_constants::get_tardis_inst();
+        let mut result = HashMap::new();
+        for rel_template_id in req.0.rel_template_ids {
+            result.insert(
+                rel_template_id.clone(),
+                FlowRelServ::find_to_simple_rels(&FlowRelKind::FlowModelTemplate, &rel_template_id, None, None, &funs, &ctx.0)
+                    .await?
+                    .into_iter()
+                    .map(|rel| rel.rel_name)
+                    .collect_vec(),
+            );
+        }
+
+        TardisResp::ok(result)
     }
 }
