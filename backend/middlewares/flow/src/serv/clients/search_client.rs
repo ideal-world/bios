@@ -8,7 +8,9 @@ use bios_sdk_invoke::{
 };
 use serde_json::json;
 use tardis::{
-    basic::{dto::TardisContext, field::TrimString, result::TardisResult}, log::field::Visit, tokio, TardisFunsInst
+    basic::{dto::TardisContext, field::TrimString, result::TardisResult},
+    log::field::Visit,
+    tokio, TardisFunsInst,
 };
 
 use crate::{
@@ -76,8 +78,8 @@ impl IamSearchClient {
     pub async fn add_or_modify_model_search(model_resp: &FlowModelDetailResp, is_modify: Box<bool>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let model_id = &model_resp.id;
         // 数据共享权限处理
-        let mut visit_apps = vec![rbum_scope_helper::get_path_item(RbumScopeLevelKind::L2.to_int(), &model_resp.own_paths).unwrap_or_default()];
-        let mut visit_tenants = vec![rbum_scope_helper::get_path_item(RbumScopeLevelKind::L1.to_int(), &model_resp.own_paths).unwrap_or_default()];
+        let mut visit_tenants = rbum_scope_helper::get_path_item(RbumScopeLevelKind::L1.to_int(), &model_resp.own_paths).map(|tenant| vec![tenant]).unwrap_or_default();
+        let mut visit_apps = rbum_scope_helper::get_path_item(RbumScopeLevelKind::L2.to_int(), &model_resp.own_paths).map(|app| vec![app]).unwrap_or_default();
         let mut own_paths = Some(model_resp.own_paths.clone());
         if model_resp.scope_level == RbumScopeLevelKind::Root {
             visit_apps.push("".to_string());
