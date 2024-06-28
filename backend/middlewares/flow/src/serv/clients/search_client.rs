@@ -9,7 +9,6 @@ use bios_sdk_invoke::{
 use serde_json::json;
 use tardis::{
     basic::{dto::TardisContext, field::TrimString, result::TardisResult},
-    log::field::Visit,
     tokio, TardisFunsInst,
 };
 
