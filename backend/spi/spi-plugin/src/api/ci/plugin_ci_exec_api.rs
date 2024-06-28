@@ -37,6 +37,7 @@ impl PluginExecApi {
             body: Some(tardis::serde_json::Value::String(msg.0)),
             query: None,
             header: None,
+            percent_encode: None,
         })
     }
 }

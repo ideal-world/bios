@@ -804,6 +804,7 @@ impl IamCertLdapServ {
                         ldap_id_to_account_map.remove(&local_ldap_id);
                         continue;
                     }
+                    IamSearchClient::async_add_or_modify_account_search(&cert.rel_rbum_id, Box::new(true), "", &funs, ctx).await?;
                 }
                 if !iam_account_ext_sys_resp.mobile.is_empty() {
                     // 如果有手机号配置那么就更新手机号
