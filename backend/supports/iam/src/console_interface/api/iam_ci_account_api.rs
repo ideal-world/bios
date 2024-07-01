@@ -259,7 +259,7 @@ impl IamCiAccountApi {
     /// Batch Find Account By ThirdParty Cert ak
     /// 通过三方凭证ak批量查找帐户
     ///
-    #[oai(path = "/third-party", method = "get")]
+    #[oai(path = "/batch-third-party", method = "get")]
     async fn batch_by_third_party(&self, supplier: Query<String>, aks: Query<String>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Vec<IamAccountDetailResp>> {
         let funs = iam_constants::get_tardis_inst();
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
