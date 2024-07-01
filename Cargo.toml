@@ -62,9 +62,10 @@ rust_decimal_macros = { version = "1" }
 testcontainers-modules = { version = "0.3", features = ["redis"] }
 strum = { version = "0.26", features = ["derive"] }
 # tardis
-# tardis = { version = "0.1.0-rc.15" }
+tardis = { version = "0.1.0-rc.16" }
 # tardis = { path = "../tardis/tardis" }
-tardis = { git = "https://github.com/ideal-world/tardis.git", rev = "9e02713" }
+# tardis = { git = "https://github.com/ideal-world/tardis.git", rev = "4eb5ef9" }
+
 #spacegate
 
 # spacegate-shell = { path = "../spacegate/crates/shell", features = [

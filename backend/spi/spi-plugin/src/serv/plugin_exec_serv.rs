@@ -31,6 +31,7 @@ impl PluginExecServ {
                     &format!("{}{}", if spi_api.path_and_query.starts_with('/') { "" } else { "/" }, &spi_api.path_and_query),
                     exec_req.query,
                     exec_req.body.clone(),
+                    exec_req.percent_encode.unwrap_or(false),
                     funs,
                 )?
             );
@@ -74,10 +75,14 @@ impl PluginExecServ {
         return Err(funs.err().not_found(&PluginApiServ::get_obj_name(), "exec", "exec api is not fond", ""));
     }
 
-    fn build_url(path: &str, query: Option<HashMap<String, String>>, body: Option<Value>, funs: &TardisFunsInst) -> TardisResult<String> {
+    fn build_url(path: &str, query: Option<HashMap<String, String>>, body: Option<Value>, percent_encode: bool, funs: &TardisFunsInst) -> TardisResult<String> {
         let mut path = path.to_string();
-        fn enc(s: &str) -> percent_encoding::PercentEncode<'_> {
-            percent_encoding::utf8_percent_encode(s, percent_encoding::NON_ALPHANUMERIC)
+        let enc = if percent_encode { percent_encode_fn } else { not_encode_fn };
+        fn percent_encode_fn(s: &str) -> String {
+            percent_encoding::utf8_percent_encode(s, percent_encoding::NON_ALPHANUMERIC).to_string()
+        }
+        fn not_encode_fn(s: &str) -> String {
+            s.to_string()
         }
         if let Some(query) = query {
             let query_str = query.iter().fold(String::default(), |mut s, (k, v)| {
@@ -87,10 +92,10 @@ impl PluginExecServ {
                 if !s.is_empty() {
                     s.push('&')
                 }
-                s.extend(enc(k));
+                s.push_str(&enc(k));
                 if !v.is_empty() {
                     s.push('=');
-                    s.extend(enc(v));
+                    s.push_str(&enc(v));
                 }
                 s
             });
