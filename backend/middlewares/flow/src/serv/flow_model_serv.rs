@@ -49,7 +49,10 @@ use crate::{
 use async_trait::async_trait;
 
 use super::{
-    clients::{log_client::{FlowLogClient, LogParamContent, LogParamTag}, search_client::FlowSearchClient},
+    clients::{
+        log_client::{FlowLogClient, LogParamContent, LogParamTag},
+        search_client::FlowSearchClient,
+    },
     flow_inst_serv::FlowInstServ,
     flow_rel_serv::{FlowRelKind, FlowRelServ},
 };
@@ -132,11 +135,33 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
         }
         if add_req.template && add_req.rel_model_id.is_none() {
             FlowSearchClient::async_add_or_modify_model_search(flow_model_id, Box::new(false), funs, ctx).await?;
-            FlowLogClient::add_ctx_task(LogParamTag::DynamicLog, Some(flow_model_id.to_string()), LogParamContent {
-                subject: "工作流模板".to_string(),
-                name: add_req.name.to_string(),
-                sub_kind: "flow_template".to_string(), 
-            }, Some("dynamic_log_tenant_config".to_string()), Some("新建".to_string()), rbum_scope_helper::get_path_item(RbumScopeLevelKind::L1.to_int(), &ctx.own_paths), ctx).await?;
+            FlowLogClient::add_ctx_task(
+                LogParamTag::DynamicLog,
+                Some(flow_model_id.to_string()),
+                LogParamContent {
+                    subject: "工作流模板".to_string(),
+                    name: add_req.name.to_string(),
+                    sub_kind: "flow_template".to_string(),
+                    // id=nImib1jBLmBgw8wKxpgnC&
+                    // name=t%E5%B7%B2%E5%AE%8C%E6%88%901-%E7%A7%9F%E6%88%B7%E5%BE%85%E5%BC%80%E5%A7%8B1
+                    // &info=AA&rel_template_ids=01c72f409e01baf165bc55ac018f91de
+                    // &rel_template_ids=245e12dc0248366325529280b0b0c2c7
+                    // &scope_level=L1
+                    // &tag=REQ
+                },
+                Some(json!({
+                    "name": add_req.name.to_string(),
+                    "info": add_req.info.clone().unwrap_or_default(),
+                    "rel_template_ids":add_req.rel_template_ids.clone().unwrap_or_default(),
+                    "scope_level": add_req.scope_level.clone(),
+                    "tag": add_req.tag.clone().unwrap_or_default(),
+                })),
+                Some("dynamic_log_tenant_config".to_string()),
+                Some("新建".to_string()),
+                rbum_scope_helper::get_path_item(RbumScopeLevelKind::L1.to_int(), &ctx.own_paths),
+                ctx,
+            )
+            .await?;
         }
 
         Ok(())
@@ -268,11 +293,27 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
         let model = Self::get_item_detail_aggs(flow_model_id, false, funs, ctx).await?;
         if model.template && model.rel_model_id.is_empty() {
             FlowSearchClient::async_add_or_modify_model_search(flow_model_id, Box::new(true), funs, ctx).await?;
-            FlowLogClient::add_ctx_task(LogParamTag::DynamicLog, Some(flow_model_id.to_string()), LogParamContent {
-                subject: "工作流模板".to_string(),
-                name: model.name.clone(),
-                sub_kind: "flow_template".to_string(), 
-            }, Some("dynamic_log_tenant_config".to_string()), Some("编辑".to_string()), rbum_scope_helper::get_path_item(RbumScopeLevelKind::L1.to_int(), &ctx.own_paths), ctx).await?;
+            FlowLogClient::add_ctx_task(
+                LogParamTag::DynamicLog,
+                Some(flow_model_id.to_string()),
+                LogParamContent {
+                    subject: "工作流模板".to_string(),
+                    name: model.name.clone(),
+                    sub_kind: "flow_template".to_string(),
+                },
+                Some(json!({
+                    "name": model.name.to_string(),
+                    "info": model.info.clone(),
+                    "rel_template_ids":model.rel_template_ids.clone(),
+                    "scope_level": model.scope_level.clone(),
+                    "tag": model.tag.clone(),
+                })),
+                Some("dynamic_log_tenant_config".to_string()),
+                Some("编辑".to_string()),
+                rbum_scope_helper::get_path_item(RbumScopeLevelKind::L1.to_int(), &ctx.own_paths),
+                ctx,
+            )
+            .await?;
         }
 
         // 同步修改所有引用的下级模型
@@ -396,11 +437,27 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
     async fn after_delete_item(flow_model_id: &str, detail: &Option<FlowModelDetailResp>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         if detail.is_some() && detail.as_ref().unwrap().template && detail.as_ref().unwrap().rel_model_id.is_empty() {
             FlowSearchClient::async_delete_model_search(flow_model_id.to_string(), funs, ctx).await?;
-            FlowLogClient::add_ctx_task(LogParamTag::DynamicLog, Some(flow_model_id.to_string()), LogParamContent {
-                subject: "工作流模板".to_string(),
-                name: detail.as_ref().unwrap().name.clone(),
-                sub_kind: "flow_template".to_string(), 
-            }, Some("dynamic_log_tenant_config".to_string()), Some("删除".to_string()), rbum_scope_helper::get_path_item(RbumScopeLevelKind::L1.to_int(), &ctx.own_paths), ctx).await?;
+            FlowLogClient::add_ctx_task(
+                LogParamTag::DynamicLog,
+                Some(flow_model_id.to_string()),
+                LogParamContent {
+                    subject: "工作流模板".to_string(),
+                    name: detail.as_ref().unwrap().name.clone(),
+                    sub_kind: "flow_template".to_string(),
+                },
+                Some(json!({
+                    "name": detail.as_ref().unwrap().name.to_string(),
+                    "info": detail.as_ref().unwrap().info.clone(),
+                    "rel_template_ids":detail.as_ref().unwrap().rel_template_ids.clone(),
+                    "scope_level": detail.as_ref().unwrap().scope_level.clone(),
+                    "tag": detail.as_ref().unwrap().tag.clone(),
+                })),
+                Some("dynamic_log_tenant_config".to_string()),
+                Some("删除".to_string()),
+                rbum_scope_helper::get_path_item(RbumScopeLevelKind::L1.to_int(), &ctx.own_paths),
+                ctx,
+            )
+            .await?;
         }
         Ok(())
     }
@@ -1569,7 +1626,13 @@ impl FlowModelServ {
         }
     }
 
-    pub async fn find_models_by_rel_template_id(tag: String, template: Option<bool>, rel_template_id: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<FlowModelSummaryResp>> {
+    pub async fn find_models_by_rel_template_id(
+        tag: String,
+        template: Option<bool>,
+        rel_template_id: Option<String>,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<Vec<FlowModelSummaryResp>> {
         let mut result = vec![];
         let mut not_bind_template_models = join_all(
             FlowModelServ::find_items(

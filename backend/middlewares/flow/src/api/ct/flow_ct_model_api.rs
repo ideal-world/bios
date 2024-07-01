@@ -10,10 +10,7 @@ use tardis::web::{
 };
 
 use crate::{
-    dto::flow_model_dto::{
-        FlowModelAggResp, FlowModelAssociativeOperationKind, FlowModelCopyOrReferenceReq, FlowModelFilterReq,
-        FlowModelFindRelNameByTemplateIdsReq,
-    },
+    dto::flow_model_dto::{FlowModelAggResp, FlowModelAssociativeOperationKind, FlowModelCopyOrReferenceReq, FlowModelFilterReq, FlowModelFindRelNameByTemplateIdsReq},
     flow_constants,
     serv::{
         flow_model_serv::FlowModelServ,

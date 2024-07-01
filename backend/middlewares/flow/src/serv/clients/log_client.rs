@@ -1,6 +1,7 @@
 use bios_sdk_invoke::clients::spi_log_client::SpiLogClient;
 use serde::Serialize;
 
+use serde_json::Value;
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
     tokio, TardisFuns, TardisFunsInst,
@@ -29,7 +30,16 @@ impl From<LogParamTag> for String {
 }
 
 impl FlowLogClient {
-    pub async fn add_ctx_task(tag: LogParamTag, key: Option<String>, content: LogParamContent, kind: Option<String>, op_kind: Option<String>, rel_key: Option<String>, ctx: &TardisContext) -> TardisResult<()> {
+    pub async fn add_ctx_task(
+        tag: LogParamTag,
+        key: Option<String>,
+        content: LogParamContent,
+        ext: Option<Value>,
+        kind: Option<String>,
+        op_kind: Option<String>,
+        rel_key: Option<String>,
+        ctx: &TardisContext,
+    ) -> TardisResult<()> {
         let ctx_clone = ctx.clone();
         ctx.add_async_task(Box::new(|| {
             Box::pin(async move {
@@ -38,6 +48,7 @@ impl FlowLogClient {
                     Self::add_item(
                         tag,
                         content,
+                        ext,
                         kind,
                         key.clone(),
                         op_kind,
@@ -59,6 +70,7 @@ impl FlowLogClient {
     pub async fn add_item(
         tag: LogParamTag,
         content: LogParamContent,
+        ext: Option<Value>,
         kind: Option<String>,
         key: Option<String>,
         op: Option<String>,
@@ -74,7 +86,7 @@ impl FlowLogClient {
         SpiLogClient::add(
             &tag,
             &TardisFuns::json.obj_to_string(&content).expect("req_msg not a valid json value"),
-            None,
+            ext,
             kind,
             key,
             op,
