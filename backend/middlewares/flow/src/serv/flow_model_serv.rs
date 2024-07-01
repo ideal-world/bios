@@ -3,12 +3,12 @@ use std::{collections::HashMap, vec};
 use async_recursion::async_recursion;
 use bios_basic::rbum::{
     dto::{
-        rbum_filer_dto::RbumBasicFilterReq,
+        rbum_filer_dto::{RbumBasicFilterReq, RbumItemRelFilterReq},
         rbum_item_dto::{RbumItemKernelAddReq, RbumItemKernelModifyReq},
         rbum_rel_dto::RbumRelModifyReq,
     },
     helper::rbum_scope_helper,
-    rbum_enumeration::RbumScopeLevelKind,
+    rbum_enumeration::{RbumRelFromKind, RbumScopeLevelKind},
     serv::{
         rbum_crud_serv::{ID_FIELD, NAME_FIELD, REL_DOMAIN_ID_FIELD, REL_KIND_ID_FIELD},
         rbum_item_serv::{RbumItemCrudOperation, RBUM_ITEM_TABLE},
@@ -49,7 +49,7 @@ use crate::{
 use async_trait::async_trait;
 
 use super::{
-    clients::search_client::IamSearchClient,
+    clients::{log_client::{FlowLogClient, LogParamContent, LogParamTag}, search_client::FlowSearchClient},
     flow_inst_serv::FlowInstServ,
     flow_rel_serv::{FlowRelKind, FlowRelServ},
 };
@@ -131,7 +131,12 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
             }
         }
         if add_req.template && add_req.rel_model_id.is_none() {
-            IamSearchClient::async_add_or_modify_model_search(flow_model_id, Box::new(false), funs, ctx).await?;
+            FlowSearchClient::async_add_or_modify_model_search(flow_model_id, Box::new(false), funs, ctx).await?;
+            FlowLogClient::add_ctx_task(LogParamTag::DynamicLog, Some(flow_model_id.to_string()), LogParamContent {
+                subject: "工作流模板".to_string(),
+                name: add_req.name.to_string(),
+                sub_kind: "flow_template".to_string(), 
+            }, Some("dynamic_log_tenant_config".to_string()), Some("新建".to_string()), rbum_scope_helper::get_path_item(RbumScopeLevelKind::L1.to_int(), &ctx.own_paths), ctx).await?;
         }
 
         Ok(())
@@ -262,7 +267,12 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
         }
         let model = Self::get_item_detail_aggs(flow_model_id, false, funs, ctx).await?;
         if model.template && model.rel_model_id.is_empty() {
-            IamSearchClient::async_add_or_modify_model_search(flow_model_id, Box::new(true), funs, ctx).await?;
+            FlowSearchClient::async_add_or_modify_model_search(flow_model_id, Box::new(true), funs, ctx).await?;
+            FlowLogClient::add_ctx_task(LogParamTag::DynamicLog, Some(flow_model_id.to_string()), LogParamContent {
+                subject: "工作流模板".to_string(),
+                name: model.name.clone(),
+                sub_kind: "flow_template".to_string(), 
+            }, Some("dynamic_log_tenant_config".to_string()), Some("编辑".to_string()), rbum_scope_helper::get_path_item(RbumScopeLevelKind::L1.to_int(), &ctx.own_paths), ctx).await?;
         }
 
         // 同步修改所有引用的下级模型
@@ -385,7 +395,12 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
 
     async fn after_delete_item(flow_model_id: &str, detail: &Option<FlowModelDetailResp>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         if detail.is_some() && detail.as_ref().unwrap().template && detail.as_ref().unwrap().rel_model_id.is_empty() {
-            IamSearchClient::async_delete_model_search(flow_model_id.to_string(), funs, ctx).await?;
+            FlowSearchClient::async_delete_model_search(flow_model_id.to_string(), funs, ctx).await?;
+            FlowLogClient::add_ctx_task(LogParamTag::DynamicLog, Some(flow_model_id.to_string()), LogParamContent {
+                subject: "工作流模板".to_string(),
+                name: detail.as_ref().unwrap().name.clone(),
+                sub_kind: "flow_template".to_string(), 
+            }, Some("dynamic_log_tenant_config".to_string()), Some("删除".to_string()), rbum_scope_helper::get_path_item(RbumScopeLevelKind::L1.to_int(), &ctx.own_paths), ctx).await?;
         }
         Ok(())
     }
@@ -1552,5 +1567,75 @@ impl FlowModelServ {
             Some(model) => Ok(model.id),
             None => Err(funs.err().not_found("flow_inst_serv", "get_model_id_by_own_paths", "model not found", "404-flow-model-not-found")),
         }
+    }
+
+    pub async fn find_models_by_rel_template_id(tag: String, template: Option<bool>, rel_template_id: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<FlowModelSummaryResp>> {
+        let mut result = vec![];
+        let mut not_bind_template_models = join_all(
+            FlowModelServ::find_items(
+                &FlowModelFilterReq {
+                    basic: RbumBasicFilterReq {
+                        ignore_scope: true,
+                        with_sub_own_paths: false,
+                        ..Default::default()
+                    },
+                    tags: Some(vec![tag.clone()]),
+                    template,
+                    rel_model_ids: Some(vec!["".to_string()]), // rel_model_id is empty and template is true, which means it is a workflow template.
+                    ..Default::default()
+                },
+                Some(true),
+                None,
+                funs,
+                ctx,
+            )
+            .await?
+            .into_iter()
+            .map(|model| async move {
+                let funs = flow_constants::get_tardis_inst();
+                let global_ctx: TardisContext = TardisContext::default();
+                if FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelTemplate, &model.id, None, None, &funs, &global_ctx).await.unwrap().is_empty() {
+                    Some(model)
+                } else {
+                    None
+                }
+            }),
+        )
+        .await
+        .into_iter()
+        .flatten()
+        .collect_vec();
+        result.append(&mut not_bind_template_models);
+        if let Some(rel_template_id) = rel_template_id {
+            let mut rel_template_models = FlowModelServ::find_items(
+                &FlowModelFilterReq {
+                    basic: RbumBasicFilterReq {
+                        ignore_scope: true,
+                        with_sub_own_paths: false,
+                        ..Default::default()
+                    },
+                    tags: Some(vec![tag.clone()]),
+                    template,
+                    rel_model_ids: Some(vec!["".to_string()]), // rel_model_id is empty and template is true, which means it is a workflow template.
+                    rel: Some(RbumItemRelFilterReq {
+                        optional: false,
+                        rel_by_from: true,
+                        tag: Some(FlowRelKind::FlowModelTemplate.to_string()),
+                        from_rbum_kind: Some(RbumRelFromKind::Item),
+                        rel_item_id: Some(rel_template_id),
+                        ..Default::default()
+                    }),
+                    ..Default::default()
+                },
+                Some(true),
+                None,
+                funs,
+                ctx,
+            )
+            .await?;
+            result.append(&mut rel_template_models);
+        }
+
+        Ok(result.into_iter().filter(|model| !model.init_state_id.is_empty()).collect_vec())
     }
 }

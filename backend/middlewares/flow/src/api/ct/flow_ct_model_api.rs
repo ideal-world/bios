@@ -11,7 +11,7 @@ use tardis::web::{
 
 use crate::{
     dto::flow_model_dto::{
-        FlowModelAggResp, FlowModelAssociativeOperationKind, FlowModelCopyOrReferenceReq, FlowModelExistRelByTemplateIdsReq, FlowModelFilterReq,
+        FlowModelAggResp, FlowModelAssociativeOperationKind, FlowModelCopyOrReferenceReq, FlowModelFilterReq,
         FlowModelFindRelNameByTemplateIdsReq,
     },
     flow_constants,
@@ -147,8 +147,8 @@ impl FlowCtModelApi {
     async fn find_rel_name_by_template_ids(
         &self,
         req: Json<FlowModelFindRelNameByTemplateIdsReq>,
-        mut ctx: TardisContextExtractor,
-        request: &Request,
+        ctx: TardisContextExtractor,
+        _request: &Request,
     ) -> TardisApiResult<HashMap<String, Vec<String>>> {
         let funs = flow_constants::get_tardis_inst();
         let mut result = HashMap::new();

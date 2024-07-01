@@ -34,9 +34,7 @@ use crate::{
 use async_trait::async_trait;
 
 use super::{
-    flow_inst_serv::FlowInstServ,
-    flow_model_serv::FlowModelServ,
-    flow_rel_serv::{FlowRelKind, FlowRelServ},
+    clients::log_client::{FlowLogClient, LogParamContent, LogParamTag}, flow_inst_serv::FlowInstServ, flow_model_serv::FlowModelServ, flow_rel_serv::{FlowRelKind, FlowRelServ}
 };
 
 pub struct FlowStateServ;
@@ -86,6 +84,15 @@ impl RbumItemCrudOperation<flow_state::ActiveModel, FlowStateAddReq, FlowStateMo
         })
     }
 
+    async fn after_add_item(id: &str, add_req: &mut FlowStateAddReq, _funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        FlowLogClient::add_ctx_task(LogParamTag::DynamicLog, Some(id.to_string()), LogParamContent {
+            subject: "工作流状态".to_string(),
+            name: add_req.name.clone().unwrap_or_default().to_string(),
+            sub_kind: "flow_state".to_string(), 
+        }, Some("dynamic_log_tenant_config".to_string()), Some("新建".to_string()), rbum_scope_helper::get_path_item(RbumScopeLevelKind::L1.to_int(), &ctx.own_paths), ctx).await?;
+        Ok(())
+    }
+
     async fn before_modify_item(_id: &str, _modify_req: &mut FlowStateModifyReq, _funs: &TardisFunsInst, _ctx: &TardisContext) -> TardisResult<()> {
         // Modifications are allowed only where non-key fields are modified or not used
         // if (modify_req.scope_level.is_some()
@@ -100,6 +107,14 @@ impl RbumItemCrudOperation<flow_state::ActiveModel, FlowStateAddReq, FlowStateMo
         Ok(())
     }
 
+    async fn after_modify_item(id: &str, _: &mut FlowStateModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        FlowLogClient::add_ctx_task(LogParamTag::DynamicLog, Some(id.to_string()), LogParamContent {
+            subject: "工作流状态".to_string(),
+            name: Self::get_item(id, &FlowStateFilterReq::default(), funs, ctx).await?.name,
+            sub_kind: "flow_state".to_string(), 
+        }, Some("dynamic_log_tenant_config".to_string()), Some("编辑".to_string()), rbum_scope_helper::get_path_item(RbumScopeLevelKind::L1.to_int(), &ctx.own_paths), ctx).await?;
+        Ok(())
+    }
     async fn package_item_modify(_: &str, modify_req: &FlowStateModifyReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<Option<RbumItemKernelModifyReq>> {
         if modify_req.name.is_none() && modify_req.scope_level.is_none() && modify_req.disabled.is_none() {
             return Ok(None);
@@ -164,7 +179,18 @@ impl RbumItemCrudOperation<flow_state::ActiveModel, FlowStateAddReq, FlowStateMo
         if FlowModelServ::state_is_used(id, funs, ctx).await? {
             return Err(funs.err().conflict(&Self::get_obj_name(), "delete", &format!("state {id} already used"), "409-flow-state-already-used"));
         }
-        Ok(None)
+        Ok(Some(Self::get_item(id, &FlowStateFilterReq::default(), funs, ctx).await?))
+    }
+
+    async fn after_delete_item(id: &str, detail: &Option<FlowStateDetailResp>, _funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        if let Some(detail) = detail {
+            FlowLogClient::add_ctx_task(LogParamTag::DynamicLog, Some(id.to_string()), LogParamContent {
+                subject: "工作流状态".to_string(),
+                name: detail.name.clone(),
+                sub_kind: "flow_state".to_string(), 
+            }, Some("dynamic_log_tenant_config".to_string()), Some("删除".to_string()), rbum_scope_helper::get_path_item(RbumScopeLevelKind::L1.to_int(), &ctx.own_paths), ctx).await?;
+        }
+        Ok(())
     }
 
     async fn package_ext_query(query: &mut SelectStatement, _: bool, filter: &FlowStateFilterReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
