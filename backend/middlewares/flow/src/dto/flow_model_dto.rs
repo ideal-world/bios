@@ -76,7 +76,7 @@ pub struct FlowModelModifyReq {
     pub name: Option<TrimString>,
     #[oai(validator(min_length = "2", max_length = "2000"))]
     pub icon: Option<String>,
-    #[oai(validator(min_length = "2", max_length = "2000"))]
+    #[oai(validator(max_length = "2000"))]
     pub info: Option<String>,
     /// 初始化状态ID
     pub init_state_id: Option<String>,
@@ -351,6 +351,13 @@ pub struct FlowModelCopyOrReferenceCiReq {
 /// 检查关联模板请求
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
 pub struct FlowModelExistRelByTemplateIdsReq {
+    /// 关联的模板ID
+    pub rel_template_ids: Vec<String>,
+}
+
+/// 获取关联的模型名请求
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
+pub struct FlowModelFindRelNameByTemplateIdsReq {
     /// 关联的模板ID
     pub rel_template_ids: Vec<String>,
 }

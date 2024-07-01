@@ -6,6 +6,7 @@ use super::{iam_account_serv::IamAccountServ, iam_cert_serv::IamCertServ, iam_te
 use crate::basic::dto::iam_account_dto::{IamAccountAddByLdapResp, IamAccountAggModifyReq, IamAccountExtSysAddReq, IamAccountExtSysBatchAddReq};
 use crate::basic::dto::iam_cert_dto::IamCertMailVCodeAddReq;
 use crate::basic::dto::iam_cert_dto::{IamCertPhoneVCodeAddReq, IamThirdIntegrationConfigDto, IamThirdIntegrationSyncStatusDto};
+use crate::basic::dto::iam_filer_dto::IamAccountFilterReq;
 use crate::basic::serv::iam_cert_mail_vcode_serv::IamCertMailVCodeServ;
 use crate::basic::serv::iam_cert_user_pwd_serv::IamCertUserPwdServ;
 use crate::console_passport::dto::iam_cp_cert_dto::IamCpUserPwdBindWithLdapReq;
@@ -804,6 +805,30 @@ impl IamCertLdapServ {
                         ldap_id_to_account_map.remove(&local_ldap_id);
                         continue;
                     }
+                    IamSearchClient::add_or_modify_account_search(
+                        IamAccountServ::get_account_detail_aggs(
+                            &cert.rel_rbum_id,
+                            &IamAccountFilterReq {
+                                basic: RbumBasicFilterReq {
+                                    ignore_scope: true,
+                                    own_paths: Some("".to_string()),
+                                    with_sub_own_paths: true,
+                                    ..Default::default()
+                                },
+                                ..Default::default()
+                            },
+                            true,
+                            true,
+                            &funs,
+                            ctx,
+                        )
+                        .await?,
+                        Box::new(true),
+                        "",
+                        &funs,
+                        ctx,
+                    )
+                    .await?;
                 }
                 if !iam_account_ext_sys_resp.mobile.is_empty() {
                     // 如果有手机号配置那么就更新手机号

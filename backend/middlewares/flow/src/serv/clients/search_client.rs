@@ -76,7 +76,15 @@ impl IamSearchClient {
     // flow model 全局搜索埋点方法
     pub async fn add_or_modify_model_search(model_resp: &FlowModelDetailResp, is_modify: Box<bool>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let model_id = &model_resp.id;
-
+        // 数据共享权限处理
+        let mut visit_tenants = rbum_scope_helper::get_path_item(RbumScopeLevelKind::L1.to_int(), &model_resp.own_paths).map(|tenant| vec![tenant]).unwrap_or_default();
+        let mut visit_apps = rbum_scope_helper::get_path_item(RbumScopeLevelKind::L2.to_int(), &model_resp.own_paths).map(|app| vec![app]).unwrap_or_default();
+        let mut own_paths = Some(model_resp.own_paths.clone());
+        if model_resp.scope_level == RbumScopeLevelKind::Root {
+            visit_apps.push("".to_string());
+            visit_tenants.push("".to_string());
+            own_paths = None;
+        }
         let key = model_id.clone();
         if *is_modify {
             let modify_req = SearchItemModifyReq {
@@ -85,7 +93,7 @@ impl IamSearchClient {
                 name: Some(model_resp.name.clone()),
                 content: Some(model_resp.name.clone()),
                 owner: Some(model_resp.owner.clone()),
-                own_paths: Some(model_resp.own_paths.clone()),
+                own_paths,
                 create_time: Some(model_resp.create_time),
                 update_time: Some(model_resp.update_time),
                 ext: Some(json!({
@@ -98,12 +106,8 @@ impl IamSearchClient {
                 ext_override: Some(true),
                 visit_keys: Some(SearchItemVisitKeysReq {
                     accounts: None,
-                    apps: Some(vec![
-                        rbum_scope_helper::get_path_item(RbumScopeLevelKind::L2.to_int(), &model_resp.own_paths).unwrap_or_default()
-                    ]),
-                    tenants: Some(vec![
-                        rbum_scope_helper::get_path_item(RbumScopeLevelKind::L1.to_int(), &model_resp.own_paths).unwrap_or_default()
-                    ]),
+                    apps: Some(visit_apps),
+                    tenants: Some(visit_tenants),
                     roles: None,
                     groups: None,
                 }),
@@ -131,7 +135,7 @@ impl IamSearchClient {
                 name: Some(model_resp.name.clone()),
                 content: model_resp.name.clone(),
                 owner: Some(model_resp.owner.clone()),
-                own_paths: Some(model_resp.own_paths.clone()),
+                own_paths,
                 create_time: Some(model_resp.create_time),
                 update_time: Some(model_resp.update_time),
                 ext: Some(json!({
@@ -143,12 +147,8 @@ impl IamSearchClient {
                 })),
                 visit_keys: Some(SearchItemVisitKeysReq {
                     accounts: None,
-                    apps: Some(vec![
-                        rbum_scope_helper::get_path_item(RbumScopeLevelKind::L2.to_int(), &model_resp.own_paths).unwrap_or_default()
-                    ]),
-                    tenants: Some(vec![
-                        rbum_scope_helper::get_path_item(RbumScopeLevelKind::L1.to_int(), &model_resp.own_paths).unwrap_or_default()
-                    ]),
+                    apps: Some(visit_apps),
+                    tenants: Some(visit_tenants),
                     roles: None,
                     groups: None,
                 }),

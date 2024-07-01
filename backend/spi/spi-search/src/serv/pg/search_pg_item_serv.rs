@@ -281,23 +281,30 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
             })
             .collect::<String>();
         sql_vals.push(Value::from(q.as_str()));
-        from_fragments = format!(", to_tsquery('public.chinese_zh', ${}) AS query", sql_vals.len());
+        from_fragments = format!(
+            ", plainto_tsquery('public.chinese_zh', ${}) AS query1, plainto_tsquery('simple', ${}) AS query2",
+            sql_vals.len(),
+            sql_vals.len()
+        );
+
+        let rank_title = "GREATEST(COALESCE(ts_rank(title_tsv, query1), 0 :: float4), COALESCE(ts_rank(title_tsv, query2), 0 :: float4)) AS rank_title";
+        let rank_content = "GREATEST(COALESCE(ts_rank(content_tsv, query1), 0 :: float4), COALESCE(ts_rank(content_tsv, query2), 0 :: float4)) AS rank_content";
         match search_req.query.q_scope.as_ref().unwrap_or(&SearchItemSearchQScopeKind::Title) {
             SearchItemSearchQScopeKind::Title => {
-                select_fragments = ", COALESCE(ts_rank(title_tsv, query), 0::float4) AS rank_title, 0::float4 AS rank_content".to_string();
-                where_fragments.push("(query @@ title_tsv)".to_string());
+                select_fragments = format!(", {}, 0::float4 AS rank_content", rank_title);
+                where_fragments.push("(query1 @@ title_tsv OR query2 @@ title_tsv)".to_string());
                 // sql_vals.push(Value::from(format!("%{q}%")));
                 // where_fragments.push(format!("(query @@ title_tsv OR title LIKE ${})", sql_vals.len()));
             }
             SearchItemSearchQScopeKind::Content => {
-                select_fragments = ", 0::float4 AS rank_title, COALESCE(ts_rank(content_tsv, query), 0::float4) AS rank_content".to_string();
-                where_fragments.push("(query @@ content_tsv)".to_string());
+                select_fragments = format!(", 0::float4 AS rank_title, {}", rank_content);
+                where_fragments.push("(query1 @@ content_tsv OR query2 @@ content_tsv)".to_string());
                 // sql_vals.push(Value::from(format!("%{q}%")));
                 // where_fragments.push(format!("(query @@ content_tsv OR content LIKE ${})", sql_vals.len()));
             }
             SearchItemSearchQScopeKind::TitleContent => {
-                select_fragments = ", COALESCE(ts_rank(title_tsv, query), 0::float4) AS rank_title, COALESCE(ts_rank(content_tsv, query), 0::float4) AS rank_content".to_string();
-                where_fragments.push("(query @@ title_tsv OR query @@ content_tsv)".to_string());
+                select_fragments = format!(", {}, {}", rank_title, rank_content);
+                where_fragments.push("((query1 @@ title_tsv OR query2 @@ title_tsv) OR (query1 @@ content_tsv OR query2 @@ content_tsv))".to_string());
                 // sql_vals.push(Value::from(format!("%{q}%")));
                 // where_fragments.push(format!(
                 //     "(query @@ title_tsv OR query @@ content_tsv OR title LIKE ${} OR content LIKE ${})",
@@ -794,7 +801,7 @@ pub async fn query_metrics(query_req: &SearchQueryMetricsReq, funs: &TardisFunsI
             })
             .collect::<String>();
         params.push(Value::from(q.as_str()));
-        from_fragments = format!(", to_tsquery('public.chinese_zh', ${}) AS query", params.len());
+        from_fragments = format!(", plainto_tsquery('public.chinese_zh', ${}) AS query", params.len());
         match query_req.query.q_scope.as_ref().unwrap_or(&SearchItemSearchQScopeKind::Title) {
             SearchItemSearchQScopeKind::Title => {
                 select_fragments = ", COALESCE(ts_rank(title_tsv, query), 0::float4) AS rank_title, 0::float4 AS rank_content".to_string();

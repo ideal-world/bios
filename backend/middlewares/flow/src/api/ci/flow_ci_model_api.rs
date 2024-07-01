@@ -233,7 +233,7 @@ impl FlowCiModelApi {
         TardisResp::ok(Void)
     }
 
-    /// batch delete models by rel_template_id
+    /// Check if there is an association by template ID, return the associated template ID
     ///
     /// 通过模板ID检查是否存在关联，返回关联的模板ID
     #[oai(path = "/exist_rel_by_template_ids", method = "post")]
