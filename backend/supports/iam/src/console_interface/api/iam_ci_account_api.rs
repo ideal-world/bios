@@ -256,6 +256,35 @@ impl IamCiAccountApi {
         TardisResp::ok(result)
     }
 
+    /// Batch Find Account By ThirdParty Cert ak
+    /// 通过三方凭证ak批量查找帐户
+    ///
+    #[oai(path = "/third-party", method = "get")]
+    async fn batch_by_third_party(&self, supplier: Query<String>, aks: Query<String>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Vec<IamAccountDetailResp>> {
+        let funs = iam_constants::get_tardis_inst();
+        check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
+        let mut result=vec![];
+        for ak in aks.0.split(','){
+          let cert = IamCertServ::get_3th_kind_cert_by_ak(&supplier.0, &ak, true, &funs, &ctx.0).await?;
+          result.push(IamAccountServ::get_item(
+              &cert.rel_rbum_id,
+              &IamAccountFilterReq {
+                  basic: RbumBasicFilterReq {
+                      own_paths: Some("".to_string()),
+                      with_sub_own_paths: true,
+                      ..Default::default()
+                  },
+                  ..Default::default()
+              },
+              &funs,
+              &ctx.0,
+          )
+          .await?);
+        }
+
+        TardisResp::ok(result)
+    }
+
     /// Find App Set Items (Account) ctx
     /// 查找应用集合项（帐户）上下文
     #[oai(path = "/apps/item/ctx", method = "get")]
