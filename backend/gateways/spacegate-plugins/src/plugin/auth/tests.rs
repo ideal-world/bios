@@ -68,7 +68,7 @@ async fn test() {
 //     let req_body = before_filter_ctx.response.take_body_into_bytes().await.unwrap();
 //     let req_body = String::from_utf8_lossy(&req_body).to_string();
 //     assert!(!req_body.is_empty());
-//     assert_eq!(req_body, "{\"code\":\"401-gateways-cert-error\",\"message\":\"[Auth] Token [aaa] is not legal\"}");
+//     assert_eq!(req_body, "{\"code\":\"401-gateway-cert-error\",\"message\":\"[Auth] Token [aaa] is not legal\"}");
 
 //     cache_client.set(&format!("{}tokenxxx", filter_auth.auth_config.cache_key_token_info), "default,accountxxx").await.unwrap();
 //     cache_client
