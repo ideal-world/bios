@@ -442,6 +442,10 @@ pub struct StatsConfFactColInfoResp {
     ///
     /// 当kind = 度量时有效，用于指定度量激活（仅在所有指定维度都存在时激活）
     pub mes_act_by_dim_conf_keys: Option<Vec<String>>,
+    /// Associated fact key
+    /// 
+    /// 关联的事实key
+    pub rel_conf_fact_key: Option<String>,
     /// Associated fact and fact column configuration.
     /// Format: <fact configuration table key>.<fact field configuration table key>
     ///

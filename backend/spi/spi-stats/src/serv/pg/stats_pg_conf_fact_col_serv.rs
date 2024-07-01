@@ -381,7 +381,7 @@ async fn do_paginate(
     let result = conn
         .query_all(
             &format!(
-                r#"SELECT key, show_name, kind, remark, dim_rel_conf_dim_key, rel_external_id, dim_multi_values, dim_exclusive_rec, dim_data_type, dim_dynamic_url, mes_data_distinct, mes_data_type, mes_frequency, mes_unit, mes_act_by_dim_conf_keys, rel_conf_fact_and_col_key, create_time, update_time, count(*) OVER() AS total
+                r#"SELECT key, show_name, kind, remark, dim_rel_conf_dim_key, rel_external_id, dim_multi_values, dim_exclusive_rec, dim_data_type, dim_dynamic_url, mes_data_distinct, mes_data_type, mes_frequency, mes_unit, mes_act_by_dim_conf_keys, rel_conf_fact_key, rel_conf_fact_and_col_key, create_time, update_time, count(*) OVER() AS total
 FROM {table_name}
 WHERE 
     {}
@@ -426,6 +426,7 @@ WHERE
                 mes_frequency: item.try_get("", "mes_frequency")?,
                 mes_unit: item.try_get("", "mes_unit")?,
                 mes_act_by_dim_conf_keys: item.try_get("", "mes_act_by_dim_conf_keys")?,
+                rel_conf_fact_key: item.try_get("", "rel_conf_fact_key")?,
                 rel_conf_fact_and_col_key: item.try_get("", "rel_conf_fact_and_col_key")?,
                 remark: item.try_get("", "remark")?,
                 create_time: item.try_get("", "create_time")?,
