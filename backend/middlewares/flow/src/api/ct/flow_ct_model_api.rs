@@ -40,7 +40,9 @@ impl FlowCtModelApi {
         let orginal_models = FlowModelServ::find_rel_models(req.0.rel_template_id.clone(), true, &funs, &ctx.0).await?;
         for (tag, rel_model_id) in req.0.rel_model_ids {
             let orginal_model_id = orginal_models.get(&tag).map(|orginal_model| orginal_model.id.clone());
-
+            if orginal_model_id.unwrap_or_default() == rel_model_id {
+                continue;
+            }
             let added_model = FlowModelServ::copy_or_reference_model(orginal_model_id, &rel_model_id, None, &req.0.op, Some(true), &funs, &ctx.0).await?;
             if let Some(rel_template_id) = &req.0.rel_template_id {
                 FlowRelServ::add_simple_rel(
