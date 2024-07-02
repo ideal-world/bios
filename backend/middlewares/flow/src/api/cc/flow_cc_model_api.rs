@@ -347,7 +347,16 @@ impl FlowCcModelApi {
     async fn modify_rel_state(&self, flow_model_id: Path<String>, req: Json<FlowStateRelModelModifyReq>, ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<Void> {
         let mut funs = flow_constants::get_tardis_inst();
         funs.begin().await?;
-        FlowModelServ::modify_rel_state_ext(&flow_model_id.0, &req.0, &funs, &ctx.0).await?;
+        FlowModelServ::modify_model(
+            &flow_model_id.0,
+            &mut FlowModelModifyReq {
+                modify_states: Some(vec![req.0]),
+                ..Default::default()
+            },
+            &funs,
+            &ctx.0,
+        )
+        .await?;
         funs.commit().await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void {})

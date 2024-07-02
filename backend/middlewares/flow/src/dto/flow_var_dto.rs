@@ -49,6 +49,7 @@ pub struct DefaultValue {
     pub value_type: DefaultValueType,
     pub value: Value,
     pub ext: Value,
+    pub value_name: Option<String>,
 }
 
 #[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, strum::EnumString)]
