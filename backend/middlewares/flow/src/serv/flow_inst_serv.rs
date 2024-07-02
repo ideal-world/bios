@@ -1257,7 +1257,14 @@ impl FlowInstServ {
     pub async fn reflesh_inst_tag(funs: &TardisFunsInst) -> TardisResult<()> {
         let global_ctx = TardisContext::default();
         let mut page_number = 0;
-        let query = Query::select();
+        let mut query = Query::select();
+        Self::package_ext_query(
+            &mut query,
+            &FlowInstFilterReq::default(),
+            funs,
+            &global_ctx,
+        )
+        .await?;
         loop {
             let (flow_insts, _) = funs.db().paginate_dtos::<FlowInstSummaryResult>(&query, page_number as u64, 2000).await?;
             if flow_insts.is_empty() {
