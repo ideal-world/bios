@@ -32,7 +32,6 @@ use tardis::{
 use crate::{
     domain::{flow_inst, flow_model, flow_state, flow_transition},
     dto::{
-        flow_inst_dto::FlowInstFilterReq,
         flow_model_dto::{
             FlowModelAddReq, FlowModelAggResp, FlowModelAssociativeOperationKind, FlowModelBindStateReq, FlowModelDetailResp, FlowModelFilterReq, FlowModelFindRelStateResp,
             FlowModelModifyReq, FlowModelSummaryResp,
@@ -249,7 +248,7 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
             Self::add_transitions(flow_model_id, add_transitions, funs, ctx).await?;
         }
         if let Some(modify_transitions) = &modify_req.modify_transitions {
-            Self::modify_transitions(flow_model_id, modify_transitions, funs, ctx).await?;
+            Self::modify_transitions(flow_model_id, modify_transitions, &model_detail, funs, ctx).await?;
         }
         if let Some(delete_transitions) = &modify_req.delete_transitions {
             Self::delete_transitions(flow_model_id, delete_transitions, funs, ctx).await?;
@@ -643,7 +642,7 @@ impl FlowModelServ {
         funs.db().insert_many(flow_transitions, ctx).await
     }
 
-    pub async fn modify_transitions(flow_model_id: &str, modify_req: &[FlowTransitionModifyReq], funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    pub async fn modify_transitions(flow_model_id: &str, modify_req: &[FlowTransitionModifyReq], model_detail: &FlowModelDetailResp, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let flow_state_ids = modify_req
             .iter()
             .filter(|req| req.from_flow_state_id.is_some())
@@ -693,8 +692,13 @@ impl FlowModelServ {
                 "404-flow-transition-rel-model-not-legal",
             ));
         }
-
+        let model_transitions = model_detail.transitions();
         for req in modify_req {
+            let transiton = model_transitions.iter().find(|trans| trans.id == req.id.to_string());
+            if transiton.is_none() {
+                continue;
+            }
+
             let mut flow_transition = flow_transition::ActiveModel {
                 id: Set(req.id.to_string()),
                 ..Default::default()
@@ -752,6 +756,18 @@ impl FlowModelServ {
                 flow_transition.action_by_front_changes = Set(action_by_front_changes.clone());
             }
             if let Some(action_by_post_changes) = &req.action_by_post_changes {
+                flow_transition.action_by_post_changes = Set(action_by_post_changes.clone());
+            }
+            if let Some(action_by_post_var_changes) = &req.action_by_post_var_changes {
+                let mut state_post_changes= transiton.unwrap().action_by_post_changes().into_iter().filter(|post| post.kind == FlowTransitionActionChangeKind::State).collect_vec();
+                let mut action_by_post_changes = action_by_post_var_changes.clone();
+                action_by_post_changes.append(&mut state_post_changes);
+                flow_transition.action_by_post_changes = Set(action_by_post_changes.clone());
+            }
+            if let Some(action_by_post_state_changes) = &req.action_by_post_state_changes {
+                let mut var_post_changes= transiton.unwrap().action_by_post_changes().into_iter().filter(|post| post.kind == FlowTransitionActionChangeKind::Var).collect_vec();
+                let mut action_by_post_changes = action_by_post_state_changes.clone();
+                action_by_post_changes.append(&mut var_post_changes);
                 flow_transition.action_by_post_changes = Set(action_by_post_changes.clone());
             }
             if let Some(double_check) = &req.double_check {
@@ -1051,7 +1067,6 @@ impl FlowModelServ {
     /// rel_own_paths: 绑定实例ID（仅在引用且不创建模型时生效）
     /// （rel_model_id：关联模型ID, rel_template_id: 绑定模板ID,可选参数（仅在创建模型，即创建副本或op为复制时生效）, op：关联模型操作类型（复制或者引用），is_create_copy：是否创建副本（当op为复制时需指定，默认不需要））
     pub async fn copy_or_reference_model(
-        orginal_model_id: Option<String>,
         rel_model_id: &str,
         rel_own_paths: Option<String>,
         op: &FlowModelAssociativeOperationKind,
@@ -1125,68 +1140,15 @@ impl FlowModelServ {
         };
         let new_model = Self::get_item_detail_aggs(&result, true, funs, ctx).await?;
 
-        if let Some(orginal_model_id) = orginal_model_id {
-            let global_ctx = TardisContext {
-                own_paths: "".to_string(),
-                ..ctx.clone()
-            };
-            let orginal_model_detail = Self::get_item(
-                &orginal_model_id,
-                &FlowModelFilterReq {
-                    basic: RbumBasicFilterReq {
-                        ids: Some(vec![orginal_model_id.to_string()]),
-                        ignore_scope: true,
-                        with_sub_own_paths: true,
-                        ..Default::default()
-                    },
-                    ..Default::default()
-                },
-                funs,
-                &global_ctx,
-            )
-            .await?;
+        // modify instance rel_model_id and state_id
+        let mut update_statement = Query::update();
+        update_statement.table(flow_inst::Entity);
+        update_statement.value(flow_inst::Column::RelFlowModelId, Value::from(new_model.id.clone()));
+        update_statement.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::Tag)).eq(new_model.tag.as_str()));
+        // update_statement.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::OwnPaths)).eq(mock_ctx.own_paths.as_str()));
+        funs.db().execute(&update_statement).await?;
 
-            // modify instance rel_model_id and state_id
-            let mut update_statement = Query::update();
-            update_statement.table(flow_inst::Entity);
-            update_statement.value(flow_inst::Column::RelFlowModelId, Value::from(new_model.id.clone()));
-            update_statement.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::RelFlowModelId)).eq(orginal_model_detail.id.as_str()));
-            // update_statement.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::OwnPaths)).eq(mock_ctx.own_paths.as_str()));
-            funs.db().execute(&update_statement).await?;
-            for modify_state in orginal_model_detail.states().into_iter().filter(|state| !new_model.states.iter().any(|new_state| new_state.id == state.id)).collect_vec() {
-                join_all(
-                    FlowInstServ::find_details(
-                        &FlowInstFilterReq {
-                            flow_model_id: Some(orginal_model_detail.id.clone()),
-                            current_state_id: Some(modify_state.id.clone()),
-                            ..Default::default()
-                        },
-                        funs,
-                        &mock_ctx,
-                    )
-                    .await?
-                    .iter()
-                    .map(|inst| async {
-                        FlowInstServ::unsafe_update_state_by_inst_id(inst.id.clone(), new_model.id.clone(), new_model.init_state_id.clone(), funs, &mock_ctx).await
-                    })
-                    .collect_vec(),
-                )
-                .await
-                .into_iter()
-                .collect::<TardisResult<Vec<()>>>()?;
-            }
-
-            // delete model
-            for rel in FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelPath, &orginal_model_id, None, None, funs, &global_ctx).await? {
-                FlowRelServ::delete_simple_rel(&FlowRelKind::FlowModelPath, &orginal_model_id, &rel.rel_id, funs, &global_ctx).await?;
-            }
-            if orginal_model_detail.own_paths == mock_ctx.own_paths {
-                for rel in FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelTemplate, &orginal_model_id, None, None, funs, &global_ctx).await? {
-                    FlowRelServ::delete_simple_rel(&FlowRelKind::FlowModelTemplate, &orginal_model_id, &rel.rel_id, funs, &global_ctx).await?;
-                }
-                Self::delete_item(&orginal_model_id, funs, &mock_ctx).await?;
-            }
-        }
+        FlowInstServ::unsafe_update_state_by_tag(&new_model.tag, &new_model.id, new_model.states.clone(), &new_model.init_state_id, funs, &mock_ctx).await?;
 
         Ok(new_model)
     }
@@ -1700,5 +1662,35 @@ impl FlowModelServ {
         }
 
         Ok(result.into_iter().filter(|model| !model.init_state_id.is_empty()).collect_vec())
+    }
+
+    // 清除当前关联的模型数据（用于更新配置）
+    /**
+     * 当rel_template_id为空时：
+     * 1、去除ModelPath引用关系
+     * 2、删除当前own_path下的model
+     * 当rel_template_id不为空时：
+     * 1、去除ModelTemplate引用关系
+     * 2、删除当前rel_template_id下的model
+     */
+    pub async fn clean_rel_models(rel_template_id: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext,) -> TardisResult<()> {
+        let global_ctx = TardisContext {
+            own_paths: "".to_string(),
+            ..ctx.clone()
+        };
+        let models = Self::find_rel_models(rel_template_id.clone(), false, funs, ctx).await?;
+        for (_, model) in models {
+            if rel_template_id.clone().is_some() {
+                for rel in FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelTemplate, &model.id, None, None, funs, &global_ctx).await? {
+                    FlowRelServ::delete_simple_rel(&FlowRelKind::FlowModelTemplate, &model.id, &rel.rel_id, funs, &global_ctx).await?;
+                }
+            } else {
+                for rel in FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelPath, &model.id, None, None, funs, &global_ctx).await? {
+                    FlowRelServ::delete_simple_rel(&FlowRelKind::FlowModelPath, &model.id, &rel.rel_id, funs, &global_ctx).await?;
+                }
+            }
+            Self::delete_item(&model.id, funs, ctx).await?;
+        }
+        Ok(())
     }
 }

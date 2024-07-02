@@ -201,7 +201,7 @@ pub struct FlowStateRelModelModifyReq {
 }
 
 /// 工作流状态聚合信息
-#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
 pub struct FlowStateAggResp {
     pub id: String,
     pub name: String,

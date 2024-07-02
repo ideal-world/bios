@@ -105,7 +105,7 @@ impl FlowCiModelApi {
 
     /// Creating or referencing models
     ///
-    /// 创建或引用模型（rel_model_id：关联模型ID, op：关联模型操作类型（复制或者引用），is_create_copy：是否创建副本（当op为复制时需指定，默认不需要））
+    ///
     #[oai(path = "/copy_or_reference_model", method = "post")]
     async fn copy_or_reference_model(
         &self,
@@ -116,6 +116,7 @@ impl FlowCiModelApi {
         let mut funs = flow_constants::get_tardis_inst();
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         funs.begin().await?;
+        FlowModelServ::clean_rel_models(None, &funs, &ctx.0).await?;
         // find rel models
         let rel_model_ids = FlowRelServ::find_to_simple_rels(
             &FlowRelKind::FlowModelTemplate,
@@ -130,12 +131,8 @@ impl FlowCiModelApi {
         .map(|rel| rel.rel_id)
         .collect_vec();
         let mut result = HashMap::new();
-        let mut orginal_models = HashMap::new();
         let mut mock_ctx = ctx.0.clone();
-        if rbum_scope_helper::get_scope_level_by_context(&ctx.0)? == RbumScopeLevelKind::L1 {
-            orginal_models = FlowModelServ::find_rel_models(req.0.rel_template_id.clone(), true, &funs, &ctx.0).await?;
-        } else if rbum_scope_helper::get_scope_level_by_context(&ctx.0)? == RbumScopeLevelKind::L2 {
-            orginal_models = FlowModelServ::find_rel_models(None, true, &funs, &ctx.0).await?;
+        if rbum_scope_helper::get_scope_level_by_context(&ctx.0)? == RbumScopeLevelKind::L2 {
             mock_ctx = match req.0.op {
                 FlowModelAssociativeOperationKind::Copy => ctx.0.clone(),
                 FlowModelAssociativeOperationKind::Reference => TardisContext {
@@ -144,13 +141,10 @@ impl FlowCiModelApi {
                 },
             };
         }
-
         for rel_model_id in rel_model_ids {
-            let tag = FlowModelServ::get_item_detail_aggs(&rel_model_id, false, &funs, &mock_ctx).await?.tag;
-            let orginal_model_id = orginal_models.get(&tag).map(|orginal_model| orginal_model.id.clone());
             result.insert(
                 rel_model_id.clone(),
-                FlowModelServ::copy_or_reference_model(orginal_model_id, &rel_model_id, Some(ctx.0.own_paths.clone()), &req.0.op, Some(false), &funs, &mock_ctx).await?.id,
+                FlowModelServ::copy_or_reference_model(&rel_model_id, Some(ctx.0.own_paths.clone()), &req.0.op, Some(false), &funs, &mock_ctx).await?.id,
             );
         }
         funs.commit().await?;
@@ -196,7 +190,7 @@ impl FlowCiModelApi {
         .await?
         {
             let added_model =
-                FlowModelServ::copy_or_reference_model(None, &from_model.rel_model_id, None, &FlowModelAssociativeOperationKind::Copy, Some(true), &funs, &ctx.0).await?;
+                FlowModelServ::copy_or_reference_model(&from_model.rel_model_id, None, &FlowModelAssociativeOperationKind::Copy, Some(true), &funs, &ctx.0).await?;
             FlowRelServ::add_simple_rel(
                 &FlowRelKind::FlowModelTemplate,
                 &added_model.id,

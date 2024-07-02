@@ -249,4 +249,23 @@ impl FlowCiInstApi {
         });
         TardisResp::ok(Void {})
     }
+
+    ///Script: update tag information for current instance
+    ///
+    /// 数据修复脚本：更新当前实例的tag信息 
+    #[oai(path = "/reflesh_inst_tag", method = "post")]
+    async fn reflesh_inst_tag(&self) -> TardisApiResult<Void> {
+        let funs = flow_constants::get_tardis_inst();
+        tokio::spawn(async move {
+            match FlowInstServ::reflesh_inst_tag(&funs).await {
+                Ok(_) => {
+                    log::trace!("[Flow.Inst] add log success")
+                }
+                Err(e) => {
+                    log::warn!("[Flow.Inst] failed to add log:{e}")
+                }
+            }
+        });
+        TardisResp::ok(Void {})
+    }
 }
