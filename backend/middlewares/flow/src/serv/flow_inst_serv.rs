@@ -1256,11 +1256,14 @@ impl FlowInstServ {
 
     pub async fn reflesh_inst_tag(funs: &TardisFunsInst) -> TardisResult<()> {
         let global_ctx = TardisContext::default();
-        let mut page_number = 0;
+        let mut page_number = 1;
         let mut query = Query::select();
         Self::package_ext_query(
             &mut query,
-            &FlowInstFilterReq::default(),
+            &FlowInstFilterReq {
+                with_sub: Some(true),
+                ..Default::default()
+            },
             funs,
             &global_ctx,
         )
@@ -1271,7 +1274,13 @@ impl FlowInstServ {
                 break;
             }
             join_all(flow_insts.iter().map(|inst| async {
-                let model = FlowModelServ::get_item(&inst.rel_flow_model_id, &FlowModelFilterReq::default(), funs, &global_ctx).await;
+                let model = FlowModelServ::get_item(&inst.rel_flow_model_id, &FlowModelFilterReq{
+                    basic: RbumBasicFilterReq {
+                        with_sub_own_paths: true,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                }, funs, &global_ctx).await;
                 if let Ok(model) = model {
                     let flow_inst = flow_inst::ActiveModel {
                         id: Set(inst.id.clone()),
