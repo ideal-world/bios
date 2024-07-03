@@ -1673,13 +1673,18 @@ impl FlowModelServ {
      * 1、去除ModelTemplate引用关系
      * 2、删除当前rel_template_id下的model
      */
-    pub async fn clean_rel_models(rel_template_id: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext,) -> TardisResult<()> {
+    pub async fn clean_rel_models(rel_template_id: Option<String>, orginal_model_ids: Option<Vec<String>>, funs: &TardisFunsInst, ctx: &TardisContext,) -> TardisResult<()> {
         let global_ctx = TardisContext {
             own_paths: "".to_string(),
             ..ctx.clone()
         };
         let models = Self::find_rel_models(rel_template_id.clone(), false, funs, ctx).await?;
         for (_, model) in models {
+            if let Some(orginal_model_ids) = orginal_model_ids {
+                if orginal_model_ids.contains(&model.id) {
+                    continue;
+                }
+            }
             if rel_template_id.clone().is_some() {
                 for rel in FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelTemplate, &model.id, None, None, funs, &global_ctx).await? {
                     FlowRelServ::delete_simple_rel(&FlowRelKind::FlowModelTemplate, &model.id, &rel.rel_id, funs, &global_ctx).await?;

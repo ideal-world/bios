@@ -1207,7 +1207,7 @@ impl FlowInstServ {
             funs.db().update_one(flow_inst, ctx).await.unwrap();
             let modify_model_detail = FlowModelServ::get_item(modify_model_id, &FlowModelFilterReq::default(), funs, ctx).await.unwrap();
             let next_flow_state = FlowStateServ::get_item(
-                &modify_model_detail.init_state_id,
+                state_id,
                 &FlowStateFilterReq {
                     basic: RbumBasicFilterReq {
                         with_sub_own_paths: true,

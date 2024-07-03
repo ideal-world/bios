@@ -118,7 +118,7 @@ impl FlowCiModelApi {
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         funs.begin().await?;
         warn!("ci copy_or_reference_model req: {:?}", req.0);
-        FlowModelServ::clean_rel_models(None, &funs, &ctx.0).await?;
+        FlowModelServ::clean_rel_models(None, None, &funs, &ctx.0).await?;
         // find rel models
         let rel_model_ids = FlowRelServ::find_to_simple_rels(
             &FlowRelKind::FlowModelTemplate,

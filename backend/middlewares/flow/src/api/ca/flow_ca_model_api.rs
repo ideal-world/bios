@@ -35,7 +35,7 @@ impl FlowCaModelApi {
     ) -> TardisApiResult<HashMap<String, FlowModelAggResp>> {
         let mut funs = flow_constants::get_tardis_inst();
         funs.begin().await?;
-        FlowModelServ::clean_rel_models(None, &funs, &ctx.0).await?;
+        FlowModelServ::clean_rel_models(None, None, &funs, &ctx.0).await?;
         let mut result = HashMap::new();
         let mock_ctx = match req.0.op {
             FlowModelAssociativeOperationKind::Copy => ctx.0.clone(),
