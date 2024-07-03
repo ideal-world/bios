@@ -1230,7 +1230,7 @@ impl FlowInstServ {
                 next_flow_state.sys_state,
                 "".to_string(),
                 false,
-                None,
+                Some(FlowExternalCallbackOp::Default),
                 ctx,
                 funs,
             )
