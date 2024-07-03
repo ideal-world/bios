@@ -1689,7 +1689,9 @@ impl FlowModelServ {
                     FlowRelServ::delete_simple_rel(&FlowRelKind::FlowModelPath, &model.id, &rel.rel_id, funs, &global_ctx).await?;
                 }
             }
-            Self::delete_item(&model.id, funs, ctx).await?;
+            if ctx.own_paths == model.own_paths {
+                Self::delete_item(&model.id, funs, ctx).await?;
+            }
         }
         Ok(())
     }

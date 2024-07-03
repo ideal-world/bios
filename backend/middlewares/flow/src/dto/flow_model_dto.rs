@@ -114,6 +114,7 @@ pub struct FlowModelSummaryResp {
     pub init_state_id: String,
 
     pub owner: String,
+    pub own_paths: String,
     pub create_time: DateTime<Utc>,
     pub update_time: DateTime<Utc>,
     /// 标签
