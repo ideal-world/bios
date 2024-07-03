@@ -1680,7 +1680,7 @@ impl FlowModelServ {
         };
         let models = Self::find_rel_models(rel_template_id.clone(), false, funs, ctx).await?;
         for (_, model) in models {
-            if let Some(orginal_model_ids) = orginal_model_ids {
+            if let Some(orginal_model_ids) = orginal_model_ids.clone() {
                 if orginal_model_ids.contains(&model.id) {
                     continue;
                 }

@@ -39,7 +39,7 @@ impl FlowCtModelApi {
             return TardisResp::err(TardisError::bad_request("rel_template_id can't be empty", ""));
         }
         funs.begin().await?;
-        FlowModelServ::clean_rel_models(req.0.rel_template_id.clone(), Some(req.0.rel_model_ids.values().collect_vec()), &funs, &ctx.0).await?;
+        FlowModelServ::clean_rel_models(req.0.rel_template_id.clone(), Some(req.0.rel_model_ids.clone().values().cloned().collect_vec()), &funs, &ctx.0).await?;
         let mut result = HashMap::new();
         let orginal_models = FlowModelServ::find_rel_models(req.0.rel_template_id.clone(), true, &funs, &ctx.0).await?;
         for (tag, rel_model_id) in req.0.rel_model_ids {
