@@ -1200,7 +1200,7 @@ impl FlowInstServ {
     ) -> TardisResult<()> {
         let mut update_statement = Query::update();
         update_statement.table(flow_inst::Entity);
-        update_statement.value(flow_inst::Column::RelFlowModelId, Value::from(modify_model_id));
+        update_statement.value(flow_inst::Column::RelFlowModelId, modify_model_id);
         update_statement.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::Tag)).eq(tag));
         if let Some(original_model_id) = &original_model_id {
             update_statement.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::RelFlowModelId)).eq(original_model_id));
