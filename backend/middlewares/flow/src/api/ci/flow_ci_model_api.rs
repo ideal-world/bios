@@ -12,9 +12,9 @@ use bios_basic::rbum::helper::rbum_scope_helper::{self, check_without_owner_and_
 use bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use itertools::Itertools;
-use tardis::log::warn;
 use std::iter::Iterator;
 use tardis::basic::dto::TardisContext;
+use tardis::log::warn;
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem::Request;
 use tardis::web::poem_openapi;
@@ -191,8 +191,7 @@ impl FlowCiModelApi {
         )
         .await?
         {
-            let added_model =
-                FlowModelServ::copy_or_reference_model(&from_model.rel_model_id, None, &FlowModelAssociativeOperationKind::Copy, Some(true), &funs, &ctx.0).await?;
+            let added_model = FlowModelServ::copy_or_reference_model(&from_model.rel_model_id, None, &FlowModelAssociativeOperationKind::Copy, Some(true), &funs, &ctx.0).await?;
             FlowRelServ::add_simple_rel(
                 &FlowRelKind::FlowModelTemplate,
                 &added_model.id,
@@ -236,10 +235,41 @@ impl FlowCiModelApi {
     async fn exist_rel_by_template_ids(&self, req: Json<FlowModelExistRelByTemplateIdsReq>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Vec<String>> {
         let funs = flow_constants::get_tardis_inst();
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
+        warn!("ci exist_rel_by_template_ids req: {:?}", req.0);
+        let support_tags = req.0.support_tags;
         let mut result = vec![];
-        for rel_template_id in req.0.rel_template_ids {
-            if !FlowRelServ::find_to_simple_rels(&FlowRelKind::FlowModelTemplate, &rel_template_id, None, None, &funs, &ctx.0).await?.is_empty() {
-                result.push(rel_template_id.clone());
+        for (rel_template_id, current_tags) in req.0.rel_tag_by_template_ids {
+            // 当前模板tag和需要支持的tag取交集，得到当前模板tag中需要检查的tag列表
+            let tags = current_tags.into_iter().filter(|current_tag| support_tags.contains(current_tag)).collect_vec();
+            if !tags.is_empty() {
+                // 当前模板关联的模型所支持的tag
+                let rel_model_tags = FlowModelServ::find_items(
+                    &FlowModelFilterReq {
+                        basic: RbumBasicFilterReq {
+                            ids: Some(
+                                FlowRelServ::find_to_simple_rels(&FlowRelKind::FlowModelTemplate, &rel_template_id, None, None, &funs, &ctx.0)
+                                    .await?
+                                    .into_iter()
+                                    .map(|rel| rel.rel_id)
+                                    .collect_vec(),
+                            ),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                    None,
+                    None,
+                    &funs,
+                    &ctx.0,
+                )
+                .await?
+                .into_iter()
+                .map(|model| model.tag.clone())
+                .collect_vec();
+                // 如果出现了当前模板tag中需要检查的tag没有被当前模板关联，则说明当前关联模板不是可用状态
+                if tags.into_iter().filter(|tag| !rel_model_tags.contains(tag)).collect_vec().is_empty() {
+                    result.push(rel_template_id.clone());
+                }
             }
         }
 

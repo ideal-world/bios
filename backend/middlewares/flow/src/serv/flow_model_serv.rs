@@ -642,7 +642,13 @@ impl FlowModelServ {
         funs.db().insert_many(flow_transitions, ctx).await
     }
 
-    pub async fn modify_transitions(flow_model_id: &str, modify_req: &[FlowTransitionModifyReq], model_detail: &FlowModelDetailResp, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    pub async fn modify_transitions(
+        flow_model_id: &str,
+        modify_req: &[FlowTransitionModifyReq],
+        model_detail: &FlowModelDetailResp,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<()> {
         let flow_state_ids = modify_req
             .iter()
             .filter(|req| req.from_flow_state_id.is_some())
@@ -759,13 +765,14 @@ impl FlowModelServ {
                 flow_transition.action_by_post_changes = Set(action_by_post_changes.clone());
             }
             if let Some(action_by_post_var_changes) = &req.action_by_post_var_changes {
-                let mut state_post_changes= transiton.unwrap().action_by_post_changes().into_iter().filter(|post| post.kind == FlowTransitionActionChangeKind::State).collect_vec();
+                let mut state_post_changes =
+                    transiton.unwrap().action_by_post_changes().into_iter().filter(|post| post.kind == FlowTransitionActionChangeKind::State).collect_vec();
                 let mut action_by_post_changes = action_by_post_var_changes.clone();
                 action_by_post_changes.append(&mut state_post_changes);
                 flow_transition.action_by_post_changes = Set(action_by_post_changes.clone());
             }
             if let Some(action_by_post_state_changes) = &req.action_by_post_state_changes {
-                let mut var_post_changes= transiton.unwrap().action_by_post_changes().into_iter().filter(|post| post.kind == FlowTransitionActionChangeKind::Var).collect_vec();
+                let mut var_post_changes = transiton.unwrap().action_by_post_changes().into_iter().filter(|post| post.kind == FlowTransitionActionChangeKind::Var).collect_vec();
                 let mut action_by_post_changes = action_by_post_state_changes.clone();
                 action_by_post_changes.append(&mut var_post_changes);
                 flow_transition.action_by_post_changes = Set(action_by_post_changes.clone());
@@ -1673,7 +1680,7 @@ impl FlowModelServ {
      * 1、去除ModelTemplate引用关系
      * 2、删除当前rel_template_id下的model
      */
-    pub async fn clean_rel_models(rel_template_id: Option<String>, orginal_model_ids: Option<Vec<String>>, funs: &TardisFunsInst, ctx: &TardisContext,) -> TardisResult<()> {
+    pub async fn clean_rel_models(rel_template_id: Option<String>, orginal_model_ids: Option<Vec<String>>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let global_ctx = TardisContext {
             own_paths: "".to_string(),
             ..ctx.clone()
