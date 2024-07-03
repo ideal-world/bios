@@ -1203,8 +1203,8 @@ impl FlowInstServ {
                 transitions: Set(Some(vec![])),
                 ..Default::default()
             };
-            let flow_inst_detail = Self::get(&inst.id, funs, ctx).await.unwrap();
             funs.db().update_one(flow_inst, ctx).await.unwrap();
+            let flow_inst_detail = Self::get(&inst.id, funs, ctx).await.unwrap();
             let modify_model_detail = FlowModelServ::get_item(modify_model_id, &FlowModelFilterReq::default(), funs, ctx).await.unwrap();
             let next_flow_state = FlowStateServ::get_item(
                 state_id,
