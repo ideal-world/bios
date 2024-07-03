@@ -89,6 +89,7 @@ impl FlowInstServ {
         };
         let flow_inst: flow_inst::ActiveModel = flow_inst::ActiveModel {
             id: Set(inst_id.clone()),
+            tag: Set(Some(flow_model.tag.clone())),
             rel_flow_model_id: Set(flow_model_id.to_string()),
             rel_business_obj_id: Set(start_req.rel_business_obj_id.to_string()),
 
@@ -1261,6 +1262,7 @@ impl FlowInstServ {
         Self::package_ext_query(
             &mut query,
             &FlowInstFilterReq {
+                tag: Some("".to_string()),
                 with_sub: Some(true),
                 ..Default::default()
             },

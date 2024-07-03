@@ -12,6 +12,7 @@ use bios_basic::rbum::helper::rbum_scope_helper::{self, check_without_owner_and_
 use bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use itertools::Itertools;
+use tardis::log::warn;
 use std::iter::Iterator;
 use tardis::basic::dto::TardisContext;
 use tardis::web::context_extractor::TardisContextExtractor;
@@ -116,6 +117,7 @@ impl FlowCiModelApi {
         let mut funs = flow_constants::get_tardis_inst();
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         funs.begin().await?;
+        warn!("ci copy_or_reference_model req: {:?}", req.0);
         FlowModelServ::clean_rel_models(None, &funs, &ctx.0).await?;
         // find rel models
         let rel_model_ids = FlowRelServ::find_to_simple_rels(
