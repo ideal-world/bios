@@ -1685,13 +1685,12 @@ impl FlowModelServ {
                     continue;
                 }
             }
+            for rel in FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelPath, &model.id, None, None, funs, &global_ctx).await? {
+                FlowRelServ::delete_simple_rel(&FlowRelKind::FlowModelPath, &model.id, &rel.rel_id, funs, &global_ctx).await?;
+            }
             if rel_template_id.clone().is_some() {
                 for rel in FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelTemplate, &model.id, None, None, funs, &global_ctx).await? {
                     FlowRelServ::delete_simple_rel(&FlowRelKind::FlowModelTemplate, &model.id, &rel.rel_id, funs, &global_ctx).await?;
-                }
-            } else {
-                for rel in FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelPath, &model.id, None, None, funs, &global_ctx).await? {
-                    FlowRelServ::delete_simple_rel(&FlowRelKind::FlowModelPath, &model.id, &rel.rel_id, funs, &global_ctx).await?;
                 }
             }
             if ctx.own_paths == model.own_paths {
