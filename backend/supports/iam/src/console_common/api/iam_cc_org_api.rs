@@ -1,10 +1,14 @@
+use std::collections::HashMap;
+
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::iam_constants;
 use bios_basic::helper::request_helper::try_set_real_ip_from_req_to_ctx;
-use bios_basic::rbum::dto::rbum_filer_dto::RbumSetTreeFilterReq;
+use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumSetCateFilterReq, RbumSetTreeFilterReq};
 use bios_basic::rbum::dto::rbum_set_dto::{RbumSetTreeCateNodeResp, RbumSetTreeResp};
 use bios_basic::rbum::rbum_enumeration::RbumSetCateLevelQueryKind;
+use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
+use bios_basic::rbum::serv::rbum_set_serv::RbumSetCateServ;
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem::Request;
 use tardis::web::poem_openapi;
@@ -105,6 +109,43 @@ impl IamCcOrgApi {
         TardisResp::ok(result.to_trees().cate_tree)
     }
 
+    #[oai(path = "/cate/name", method = "get")]
+    async fn find_cate_name(
+        &self, // Cate Ids, multiple ids separated by ,
+        ids: Query<Option<String>>,
+        tenant_id: Query<Option<String>>,
+        ctx: TardisContextExtractor,
+        request: &Request,
+    ) -> TardisApiResult<HashMap<String, String>> {
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
+        let funs = iam_constants::get_tardis_inst();
+        let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
+        let code = if ctx.own_paths.is_empty() {
+            IamSetServ::get_default_org_code_by_system()
+        } else {
+            IamSetServ::get_default_org_code_by_tenant(&funs, &ctx)?
+        };
+        let set_id = IamSetServ::get_set_id_by_code(&code, true, &funs, &ctx).await?;
+        let result = RbumSetCateServ::find_detail_rbums(
+            &RbumSetCateFilterReq {
+                basic: RbumBasicFilterReq {
+                    ids: ids.0.map(|r| r.split(',').map(|s| s.to_string()).collect()),
+                    ..Default::default()
+                },
+                rel_rbum_set_id: Some(set_id),
+                ..Default::default()
+            },
+            None,
+            None,
+            &funs,
+            &ctx,
+        )
+        .await?;
+        let cate_id_name_map = result.into_iter().map(|r| (r.id, r.name)).collect();
+        ctx.execute_task().await?;
+        TardisResp::ok(cate_id_name_map)
+    }
+
     /// Find Org Cate Name By Cate Ids
     ///
     /// Return format: ["<id>,<name>"]
@@ -119,7 +160,18 @@ impl IamCcOrgApi {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         let funs = iam_constants::get_tardis_inst();
         let ids = ids.0.split(',').map(|s| s.to_string()).collect();
-        let result = IamSetServ::find_set_cate_name_by_cate_ids(ids, &funs, &ctx.0).await?;
+        let result = IamSetServ::find_set_cate_name(
+            &RbumSetCateFilterReq {
+                basic: RbumBasicFilterReq {
+                    ids: Some(ids),
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            &funs,
+            &ctx.0,
+        )
+        .await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }

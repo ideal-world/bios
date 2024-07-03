@@ -659,22 +659,8 @@ impl IamSetServ {
         result
     }
 
-    pub async fn find_set_cate_name_by_cate_ids(cate_ids: Vec<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<String>> {
-        RbumSetCateServ::find_detail_rbums(
-            &RbumSetCateFilterReq {
-                basic: RbumBasicFilterReq {
-                    ids: Some(cate_ids),
-                    ..Default::default()
-                },
-                ..Default::default()
-            },
-            None,
-            None,
-            funs,
-            ctx,
-        )
-        .await
-        .map(|r| r.into_iter().map(|r| format!("{},{}", r.id, r.name)).collect())
+    pub async fn find_set_cate_name(filter_req: &RbumSetCateFilterReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<String>> {
+        RbumSetCateServ::find_detail_rbums(filter_req, None, None, funs, ctx).await.map(|r| r.into_iter().map(|r| format!("{},{}", r.id, r.name)).collect())
     }
 
     pub async fn paginate_set_items(
