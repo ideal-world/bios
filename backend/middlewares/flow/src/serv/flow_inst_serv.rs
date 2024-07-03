@@ -1196,7 +1196,6 @@ impl FlowInstServ {
         }, funs, ctx).await?.into_iter().filter(|inst| !modify_model_states.iter().any(|state| state.id == inst.current_state_id)).collect_vec();
         join_all(insts.iter().map(|inst| async {
             let global_ctx = TardisContext::default();
-            let flow_inst_detail = Self::get(&inst.id, funs, ctx).await.unwrap();
 
             let flow_inst = flow_inst::ActiveModel {
                 id: Set(inst.id.clone()),
@@ -1204,21 +1203,9 @@ impl FlowInstServ {
                 transitions: Set(Some(vec![])),
                 ..Default::default()
             };
+            let flow_inst_detail = Self::get(&inst.id, funs, ctx).await.unwrap();
             funs.db().update_one(flow_inst, ctx).await.unwrap();
             let modify_model_detail = FlowModelServ::get_item(modify_model_id, &FlowModelFilterReq::default(), funs, ctx).await.unwrap();
-            let prev_flow_state = FlowStateServ::get_item(
-                &flow_inst_detail.current_state_id,
-                &FlowStateFilterReq {
-                    basic: RbumBasicFilterReq {
-                        with_sub_own_paths: true,
-                        ..Default::default()
-                    },
-                    ..Default::default()
-                },
-                funs,
-                &global_ctx,
-            )
-            .await.unwrap();
             let next_flow_state = FlowStateServ::get_item(
                 &modify_model_detail.init_state_id,
                 &FlowStateFilterReq {
@@ -1237,8 +1224,8 @@ impl FlowInstServ {
                 &modify_model_detail.tag,
                 &flow_inst_detail.id,
                 &flow_inst_detail.rel_business_obj_id,
-                prev_flow_state.name.clone(),
-                prev_flow_state.sys_state,
+                "".to_string(),
+                FlowSysStateKind::default(),
                 next_flow_state.name.clone(),
                 next_flow_state.sys_state,
                 "".to_string(),
