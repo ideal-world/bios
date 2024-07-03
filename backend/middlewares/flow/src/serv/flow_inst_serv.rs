@@ -1257,12 +1257,10 @@ impl FlowInstServ {
 
     pub async fn reflesh_inst_tag(funs: &TardisFunsInst) -> TardisResult<()> {
         let global_ctx = TardisContext::default();
-        let mut page_number = 1;
         let mut query = Query::select();
         Self::package_ext_query(
             &mut query,
             &FlowInstFilterReq {
-                tag: Some("".to_string()),
                 with_sub: Some(true),
                 ..Default::default()
             },
@@ -1270,8 +1268,9 @@ impl FlowInstServ {
             &global_ctx,
         )
         .await?;
+        query.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::Tag)).is_null());
         loop {
-            let (flow_insts, _) = funs.db().paginate_dtos::<FlowInstSummaryResult>(&query, page_number as u64, 2000).await?;
+            let (flow_insts, _) = funs.db().paginate_dtos::<FlowInstSummaryResult>(&query, 1, 2000).await?;
             if flow_insts.is_empty() {
                 break;
             }
@@ -1297,7 +1296,6 @@ impl FlowInstServ {
                 .await
                 .into_iter()
                 .collect::<TardisResult<Vec<()>>>()?;
-            page_number += 1;
         }
         Ok(())
     }
