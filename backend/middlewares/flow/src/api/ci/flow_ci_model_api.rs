@@ -147,7 +147,11 @@ impl FlowCiModelApi {
         for rel_model_id in rel_model_ids {
             let new_model = FlowModelServ::copy_or_reference_model(&rel_model_id, Some(ctx.0.own_paths.clone()), &req.0.op, Some(false), &funs, &mock_ctx).await?;
             FlowInstServ::batch_update_when_switch_model(
-                orginal_models.get(&new_model.tag).map(|model| model.id.clone()),
+                if rbum_scope_helper::get_scope_level_by_context(&ctx.0)? == RbumScopeLevelKind::L2 {
+                    None
+                } else {
+                    orginal_models.get(&new_model.tag).map(|model| model.id.clone())
+                },
                 &new_model.tag,
                 &new_model.id,
                 new_model.states.clone(),
