@@ -490,7 +490,7 @@ impl FlowStateServ {
                 Self::modify_item(
                     &exists_state.id,
                     &mut FlowStateModifyReq {
-                        tags: Some([exists_state.tags.clone().split(',').map(|s| s.to_string()).collect_vec(), vec![state.tags]].concat()),
+                        tags: Some(vec![]),
                         ..Default::default()
                     },
                     funs,
