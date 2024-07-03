@@ -5,6 +5,7 @@ use crate::dto::flow_model_dto::{
     FlowModelFilterReq, FlowModelFindRelStateResp,
 };
 use crate::flow_constants;
+use crate::serv::flow_inst_serv::FlowInstServ;
 use crate::serv::flow_model_serv::FlowModelServ;
 use crate::serv::flow_rel_serv::{FlowRelKind, FlowRelServ};
 use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
@@ -118,7 +119,7 @@ impl FlowCiModelApi {
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         funs.begin().await?;
         warn!("ci copy_or_reference_model req: {:?}", req.0);
-        FlowModelServ::clean_rel_models(None, None, &funs, &ctx.0).await?;
+        let orginal_models = FlowModelServ::clean_rel_models(None, None, &funs, &ctx.0).await?;
         // find rel models
         let rel_model_ids = FlowRelServ::find_to_simple_rels(
             &FlowRelKind::FlowModelTemplate,
@@ -144,10 +145,18 @@ impl FlowCiModelApi {
             };
         }
         for rel_model_id in rel_model_ids {
-            result.insert(
-                rel_model_id.clone(),
-                FlowModelServ::copy_or_reference_model(&rel_model_id, Some(ctx.0.own_paths.clone()), &req.0.op, Some(false), &funs, &mock_ctx).await?.id,
-            );
+            let new_model = FlowModelServ::copy_or_reference_model(&rel_model_id, Some(ctx.0.own_paths.clone()), &req.0.op, Some(false), &funs, &mock_ctx).await?;
+            FlowInstServ::batch_update_when_switch_model(
+                orginal_models.get(&new_model.tag).map(|model| model.id.clone()),
+                &new_model.tag,
+                &new_model.id,
+                new_model.states.clone(),
+                &new_model.init_state_id,
+                &funs,
+                &ctx.0,
+            )
+            .await?;
+            result.insert(rel_model_id.clone(), new_model.id.clone());
         }
         funs.commit().await?;
         ctx.0.execute_task().await?;

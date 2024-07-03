@@ -20,7 +20,7 @@ use tardis::{
     chrono::Utc,
     db::sea_orm::{
         sea_query::{Alias, Cond, Expr, Query, SelectStatement},
-        EntityName, EntityTrait, JoinType, Order, QueryFilter, Set, Value,
+        EntityName, EntityTrait, JoinType, Order, QueryFilter, Set,
     },
     futures::future::join_all,
     serde_json::json,
@@ -30,7 +30,7 @@ use tardis::{
 };
 
 use crate::{
-    domain::{flow_inst, flow_model, flow_state, flow_transition},
+    domain::{flow_model, flow_state, flow_transition},
     dto::{
         flow_model_dto::{
             FlowModelAddReq, FlowModelAggResp, FlowModelAssociativeOperationKind, FlowModelBindStateReq, FlowModelDetailResp, FlowModelFilterReq, FlowModelFindRelStateResp,
@@ -1147,16 +1147,6 @@ impl FlowModelServ {
         };
         let new_model = Self::get_item_detail_aggs(&result, true, funs, ctx).await?;
 
-        // modify instance rel_model_id and state_id
-        let mut update_statement = Query::update();
-        update_statement.table(flow_inst::Entity);
-        update_statement.value(flow_inst::Column::RelFlowModelId, Value::from(new_model.id.clone()));
-        update_statement.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::Tag)).eq(new_model.tag.as_str()));
-        // update_statement.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::OwnPaths)).eq(mock_ctx.own_paths.as_str()));
-        funs.db().execute(&update_statement).await?;
-
-        FlowInstServ::unsafe_update_state_by_tag(&new_model.tag, &new_model.id, new_model.states.clone(), &new_model.init_state_id, funs, &mock_ctx).await?;
-
         Ok(new_model)
     }
 
@@ -1678,15 +1668,21 @@ impl FlowModelServ {
      * 2、删除当前own_path下的model
      * 当rel_template_id不为空时：
      * 1、去除ModelTemplate引用关系
-     * 2、删除当前rel_template_id下的model
+     * 2、去除ModelPath引用关系
+     * 3、删除当前rel_template_id下的model
      */
-    pub async fn clean_rel_models(rel_template_id: Option<String>, orginal_model_ids: Option<Vec<String>>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    pub async fn clean_rel_models(
+        rel_template_id: Option<String>,
+        orginal_model_ids: Option<Vec<String>>,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<HashMap<String, FlowModelSummaryResp>> {
         let global_ctx = TardisContext {
             own_paths: "".to_string(),
             ..ctx.clone()
         };
         let models = Self::find_rel_models(rel_template_id.clone(), false, funs, ctx).await?;
-        for (_, model) in models {
+        for (_, model) in models.iter() {
             if let Some(orginal_model_ids) = orginal_model_ids.clone() {
                 if orginal_model_ids.contains(&model.id) {
                     continue;
@@ -1704,6 +1700,6 @@ impl FlowModelServ {
                 Self::delete_item(&model.id, funs, ctx).await?;
             }
         }
-        Ok(())
+        Ok(models)
     }
 }

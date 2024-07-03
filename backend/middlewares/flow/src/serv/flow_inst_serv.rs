@@ -1189,7 +1189,32 @@ impl FlowInstServ {
         Ok(current_vars.unwrap_or_default().get(key).cloned())
     }
 
-    pub async fn unsafe_update_state_by_tag(
+    pub async fn batch_update_when_switch_model(
+        original_model_id: Option<String>,
+        tag: &str,
+        modify_model_id: &str,
+        modify_model_states: Vec<FlowStateAggResp>,
+        state_id: &str,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<()> {
+        let mut update_statement = Query::update();
+        update_statement.table(flow_inst::Entity);
+        update_statement.value(flow_inst::Column::RelFlowModelId, Value::from(modify_model_id));
+        update_statement.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::Tag)).eq(tag));
+        if let Some(original_model_id) = &original_model_id {
+            update_statement.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::RelFlowModelId)).eq(original_model_id));
+        } else {
+            update_statement.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::OwnPaths)).eq(ctx.own_paths.as_str()));
+        }
+        funs.db().execute(&update_statement).await?;
+
+        FlowInstServ::unsafe_update_state_by_tag(original_model_id, tag, modify_model_id, modify_model_states, state_id, funs, ctx).await?;
+        Ok(())
+    }
+
+    async fn unsafe_update_state_by_tag(
+        original_model_id: Option<String>,
         tag: &str,
         modify_model_id: &str,
         modify_model_states: Vec<FlowStateAggResp>,
@@ -1199,6 +1224,7 @@ impl FlowInstServ {
     ) -> TardisResult<()> {
         let insts = Self::find_details(
             &FlowInstFilterReq {
+                flow_model_id: original_model_id,
                 tag: Some(tag.to_string()),
                 ..Default::default()
             },
