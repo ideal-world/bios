@@ -280,10 +280,11 @@ impl FlowCiModelApi {
                 .map(|model| model.tag.clone())
                 .collect_vec();
                 // 如果出现了当前模板tag中需要检查的tag没有被当前模板关联，则说明当前关联模板不是可用状态
-                if tags.into_iter().filter(|tag| !rel_model_tags.contains(tag)).collect_vec().is_empty() {
-                    result.push(rel_template_id.clone());
+                if !tags.into_iter().filter(|tag| !rel_model_tags.contains(tag)).collect_vec().is_empty() {
+                    continue;
                 }
             }
+            result.push(rel_template_id.clone());
         }
 
         TardisResp::ok(result)
