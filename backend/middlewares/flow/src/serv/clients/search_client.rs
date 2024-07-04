@@ -21,9 +21,9 @@ use crate::{
 
 const SEARCH_TAG: &str = "flow_model";
 
-pub struct IamSearchClient;
+pub struct FlowSearchClient;
 
-impl IamSearchClient {
+impl FlowSearchClient {
     pub async fn async_add_or_modify_model_search(model_id: &str, is_modify: Box<bool>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let ctx_clone = ctx.clone();
         let mock_ctx = TardisContext {

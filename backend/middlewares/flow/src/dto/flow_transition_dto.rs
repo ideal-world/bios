@@ -113,6 +113,8 @@ pub struct FlowTransitionModifyReq {
     pub action_by_post_callback: Option<String>,
     /// 后置动作的配置信息
     pub action_by_post_changes: Option<Vec<FlowTransitionPostActionInfo>>,
+    pub action_by_post_var_changes: Option<Vec<FlowTransitionPostActionInfo>>,
+    pub action_by_post_state_changes: Option<Vec<FlowTransitionPostActionInfo>>,
     /// 前置动作的配置信息
     pub action_by_front_changes: Option<Vec<FlowTransitionFrontActionInfo>>,
     /// 排序

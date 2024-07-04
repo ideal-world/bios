@@ -12,9 +12,9 @@ use tardis::{
 };
 
 use crate::{
-    dto::flow_model_dto::{FlowModelAggResp, FlowModelAssociativeOperationKind, FlowModelCopyOrReferenceReq},
+    dto::flow_model_dto::{FlowModelAggResp, FlowModelAssociativeOperationKind, FlowModelCopyOrReferenceReq, FlowModelSingleCopyOrReferenceReq},
     flow_constants,
-    serv::flow_model_serv::FlowModelServ,
+    serv::{flow_inst_serv::FlowInstServ, flow_model_serv::FlowModelServ},
 };
 
 #[derive(Clone)]
@@ -35,8 +35,8 @@ impl FlowCaModelApi {
     ) -> TardisApiResult<HashMap<String, FlowModelAggResp>> {
         let mut funs = flow_constants::get_tardis_inst();
         funs.begin().await?;
+        let _orginal_models = FlowModelServ::clean_rel_models(None, None, None, &funs, &ctx.0).await?;
         let mut result = HashMap::new();
-        let orginal_models = FlowModelServ::find_rel_models(None, true, &funs, &ctx.0).await?;
         let mock_ctx = match req.0.op {
             FlowModelAssociativeOperationKind::Copy => ctx.0.clone(),
             FlowModelAssociativeOperationKind::Reference => TardisContext {
@@ -44,15 +44,43 @@ impl FlowCaModelApi {
                 ..ctx.0.clone()
             },
         };
-        for (tag, rel_model_id) in req.0.rel_model_ids {
-            let orginal_model_id = orginal_models.get(&tag).map(|orginal_model| orginal_model.id.clone());
-            result.insert(
-                rel_model_id.clone(),
-                FlowModelServ::copy_or_reference_model(orginal_model_id, &rel_model_id, Some(ctx.0.own_paths.clone()), &req.0.op, Some(false), &funs, &mock_ctx).await?,
-            );
+        for (_, rel_model_id) in req.0.rel_model_ids {
+            let new_model = FlowModelServ::copy_or_reference_model(&rel_model_id, Some(ctx.0.own_paths.clone()), &req.0.op, Some(false), &funs, &mock_ctx).await?;
+            FlowInstServ::batch_update_when_switch_model(None, &new_model.tag, &new_model.id, new_model.states.clone(), &new_model.init_state_id, &funs, &ctx.0).await?;
+
+            result.insert(rel_model_id.clone(), new_model);
         }
+
         funs.commit().await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
+    }
+
+    /// Creating or referencing single model
+    ///
+    /// 创建或引用单个模型
+    #[oai(path = "/copy_or_reference_single_model", method = "post")]
+    async fn copy_or_reference_single_model(
+        &self,
+        req: Json<FlowModelSingleCopyOrReferenceReq>,
+        ctx: TardisContextExtractor,
+        _request: &Request,
+    ) -> TardisApiResult<FlowModelAggResp> {
+        let mut funs = flow_constants::get_tardis_inst();
+        funs.begin().await?;
+        let _orginal_models = FlowModelServ::clean_rel_models(None, None, Some(vec![req.0.tag.clone()]), &funs, &ctx.0).await?;
+        let mock_ctx = match req.0.op {
+            FlowModelAssociativeOperationKind::Copy => ctx.0.clone(),
+            FlowModelAssociativeOperationKind::Reference => TardisContext {
+                own_paths: rbum_scope_helper::get_path_item(RbumScopeLevelKind::L1.to_int(), &ctx.0.own_paths).unwrap_or_default(),
+                ..ctx.0.clone()
+            },
+        };
+        let new_model = FlowModelServ::copy_or_reference_model(&req.0.rel_model_id, Some(ctx.0.own_paths.clone()), &req.0.op, Some(false), &funs, &mock_ctx).await?;
+        FlowInstServ::batch_update_when_switch_model(None, &new_model.tag, &new_model.id, new_model.states.clone(), &new_model.init_state_id, &funs, &ctx.0).await?;
+
+        funs.commit().await?;
+        ctx.0.execute_task().await?;
+        TardisResp::ok(new_model)
     }
 }

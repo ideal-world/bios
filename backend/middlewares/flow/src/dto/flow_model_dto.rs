@@ -114,6 +114,7 @@ pub struct FlowModelSummaryResp {
     pub init_state_id: String,
 
     pub owner: String,
+    pub own_paths: String,
     pub create_time: DateTime<Utc>,
     pub update_time: DateTime<Utc>,
     /// 标签
@@ -335,7 +336,18 @@ pub struct FlowModelCopyOrReferenceReq {
     pub rel_model_ids: HashMap<String, String>,
     /// 关联的模板ID
     pub rel_template_id: Option<String>,
-    /// 修改的模板ID
+    /// 关联操作
+    pub op: FlowModelAssociativeOperationKind,
+}
+
+/// 创建或引用模型请求
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
+pub struct FlowModelSingleCopyOrReferenceReq {
+    /// 关联的模型ID列表
+    pub tag: String,
+    /// 关联的模型ID
+    pub rel_model_id: String,
+    /// 关联操作
     pub op: FlowModelAssociativeOperationKind,
 }
 
@@ -344,15 +356,17 @@ pub struct FlowModelCopyOrReferenceReq {
 pub struct FlowModelCopyOrReferenceCiReq {
     /// 关联的模板ID
     pub rel_template_id: Option<String>,
-    /// 修改的模板ID
+    /// 关联操作
     pub op: FlowModelAssociativeOperationKind,
 }
 
 /// 检查关联模板请求
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
 pub struct FlowModelExistRelByTemplateIdsReq {
-    /// 关联的模板ID
-    pub rel_template_ids: Vec<String>,
+    /// 关联的模板中的tag信息
+    pub rel_tag_by_template_ids: HashMap<String, Vec<String>>,
+    /// 需要支持关联的tag
+    pub support_tags: Vec<String>,
 }
 
 /// 获取关联的模型名请求

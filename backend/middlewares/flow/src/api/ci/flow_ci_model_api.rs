@@ -5,6 +5,7 @@ use crate::dto::flow_model_dto::{
     FlowModelFilterReq, FlowModelFindRelStateResp,
 };
 use crate::flow_constants;
+use crate::serv::flow_inst_serv::FlowInstServ;
 use crate::serv::flow_model_serv::FlowModelServ;
 use crate::serv::flow_rel_serv::{FlowRelKind, FlowRelServ};
 use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
@@ -14,6 +15,7 @@ use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use itertools::Itertools;
 use std::iter::Iterator;
 use tardis::basic::dto::TardisContext;
+use tardis::log::warn;
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem::Request;
 use tardis::web::poem_openapi;
@@ -105,7 +107,7 @@ impl FlowCiModelApi {
 
     /// Creating or referencing models
     ///
-    /// 创建或引用模型（rel_model_id：关联模型ID, op：关联模型操作类型（复制或者引用），is_create_copy：是否创建副本（当op为复制时需指定，默认不需要））
+    ///
     #[oai(path = "/copy_or_reference_model", method = "post")]
     async fn copy_or_reference_model(
         &self,
@@ -116,6 +118,8 @@ impl FlowCiModelApi {
         let mut funs = flow_constants::get_tardis_inst();
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         funs.begin().await?;
+        warn!("ci copy_or_reference_model req: {:?}", req.0);
+        let orginal_models = FlowModelServ::clean_rel_models(None, None, None, &funs, &ctx.0).await?;
         // find rel models
         let rel_model_ids = FlowRelServ::find_to_simple_rels(
             &FlowRelKind::FlowModelTemplate,
@@ -130,12 +134,8 @@ impl FlowCiModelApi {
         .map(|rel| rel.rel_id)
         .collect_vec();
         let mut result = HashMap::new();
-        let mut orginal_models = HashMap::new();
         let mut mock_ctx = ctx.0.clone();
-        if rbum_scope_helper::get_scope_level_by_context(&ctx.0)? == RbumScopeLevelKind::L1 {
-            orginal_models = FlowModelServ::find_rel_models(req.0.rel_template_id.clone(), true, &funs, &ctx.0).await?;
-        } else if rbum_scope_helper::get_scope_level_by_context(&ctx.0)? == RbumScopeLevelKind::L2 {
-            orginal_models = FlowModelServ::find_rel_models(None, true, &funs, &ctx.0).await?;
+        if rbum_scope_helper::get_scope_level_by_context(&ctx.0)? == RbumScopeLevelKind::L2 {
             mock_ctx = match req.0.op {
                 FlowModelAssociativeOperationKind::Copy => ctx.0.clone(),
                 FlowModelAssociativeOperationKind::Reference => TardisContext {
@@ -144,14 +144,23 @@ impl FlowCiModelApi {
                 },
             };
         }
-
         for rel_model_id in rel_model_ids {
-            let tag = FlowModelServ::get_item_detail_aggs(&rel_model_id, false, &funs, &mock_ctx).await?.tag;
-            let orginal_model_id = orginal_models.get(&tag).map(|orginal_model| orginal_model.id.clone());
-            result.insert(
-                rel_model_id.clone(),
-                FlowModelServ::copy_or_reference_model(orginal_model_id, &rel_model_id, Some(ctx.0.own_paths.clone()), &req.0.op, Some(false), &funs, &mock_ctx).await?.id,
-            );
+            let new_model = FlowModelServ::copy_or_reference_model(&rel_model_id, Some(ctx.0.own_paths.clone()), &req.0.op, Some(false), &funs, &mock_ctx).await?;
+            FlowInstServ::batch_update_when_switch_model(
+                if rbum_scope_helper::get_scope_level_by_context(&ctx.0)? == RbumScopeLevelKind::L2 {
+                    None
+                } else {
+                    orginal_models.get(&new_model.tag).map(|model| model.id.clone())
+                },
+                &new_model.tag,
+                &new_model.id,
+                new_model.states.clone(),
+                &new_model.init_state_id,
+                &funs,
+                &ctx.0,
+            )
+            .await?;
+            result.insert(rel_model_id.clone(), new_model.id.clone());
         }
         funs.commit().await?;
         ctx.0.execute_task().await?;
@@ -195,8 +204,7 @@ impl FlowCiModelApi {
         )
         .await?
         {
-            let added_model =
-                FlowModelServ::copy_or_reference_model(None, &from_model.rel_model_id, None, &FlowModelAssociativeOperationKind::Copy, Some(true), &funs, &ctx.0).await?;
+            let added_model = FlowModelServ::copy_or_reference_model(&from_model.rel_model_id, None, &FlowModelAssociativeOperationKind::Copy, Some(true), &funs, &ctx.0).await?;
             FlowRelServ::add_simple_rel(
                 &FlowRelKind::FlowModelTemplate,
                 &added_model.id,
@@ -240,11 +248,43 @@ impl FlowCiModelApi {
     async fn exist_rel_by_template_ids(&self, req: Json<FlowModelExistRelByTemplateIdsReq>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Vec<String>> {
         let funs = flow_constants::get_tardis_inst();
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
+        warn!("ci exist_rel_by_template_ids req: {:?}", req.0);
+        let support_tags = req.0.support_tags;
         let mut result = vec![];
-        for rel_template_id in req.0.rel_template_ids {
-            if !FlowRelServ::find_to_simple_rels(&FlowRelKind::FlowModelTemplate, &rel_template_id, None, None, &funs, &ctx.0).await?.is_empty() {
-                result.push(rel_template_id.clone());
+        for (rel_template_id, current_tags) in req.0.rel_tag_by_template_ids {
+            // 当前模板tag和需要支持的tag取交集，得到当前模板tag中需要检查的tag列表
+            let tags = current_tags.into_iter().filter(|current_tag| support_tags.contains(current_tag)).collect_vec();
+            if !tags.is_empty() {
+                // 当前模板关联的模型所支持的tag
+                let rel_model_tags = FlowModelServ::find_items(
+                    &FlowModelFilterReq {
+                        basic: RbumBasicFilterReq {
+                            ids: Some(
+                                FlowRelServ::find_to_simple_rels(&FlowRelKind::FlowModelTemplate, &rel_template_id, None, None, &funs, &ctx.0)
+                                    .await?
+                                    .into_iter()
+                                    .map(|rel| rel.rel_id)
+                                    .collect_vec(),
+                            ),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                    None,
+                    None,
+                    &funs,
+                    &ctx.0,
+                )
+                .await?
+                .into_iter()
+                .map(|model| model.tag.clone())
+                .collect_vec();
+                // 如果出现了当前模板tag中需要检查的tag没有被当前模板关联，则说明当前关联模板不是可用状态
+                if !tags.into_iter().filter(|tag| !rel_model_tags.contains(tag)).collect_vec().is_empty() {
+                    continue;
+                }
             }
+            result.push(rel_template_id.clone());
         }
 
         TardisResp::ok(result)
