@@ -473,7 +473,7 @@ impl FlowStateServ {
                                 &exists_state.id,
                                 None,
                                 None,
-                                false,
+                                true,
                                 true,
                                 Some(rel.rel.ext),
                                 funs,

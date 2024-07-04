@@ -141,12 +141,6 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
                     subject: "工作流模板".to_string(),
                     name: add_req.name.to_string(),
                     sub_kind: "flow_template".to_string(),
-                    // id=nImib1jBLmBgw8wKxpgnC&
-                    // name=t%E5%B7%B2%E5%AE%8C%E6%88%901-%E7%A7%9F%E6%88%B7%E5%BE%85%E5%BC%80%E5%A7%8B1
-                    // &info=AA&rel_template_ids=01c72f409e01baf165bc55ac018f91de
-                    // &rel_template_ids=245e12dc0248366325529280b0b0c2c7
-                    // &scope_level=L1
-                    // &tag=REQ
                 },
                 Some(json!({
                     "name": add_req.name.to_string(),
@@ -1451,7 +1445,7 @@ impl FlowModelServ {
                             funs,
                             ctx,
                         )
-                        .await?;
+                        .await?.into_iter().filter(|tran| tran.id != transition_detail.id).collect_vec();
                         for transition_detail in transitions {
                             (is_ring, current_chain) = Self::check_post_action_ring(transition_detail, (is_ring, current_chain.clone()), funs, ctx).await?;
                             if is_ring {

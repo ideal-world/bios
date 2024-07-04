@@ -104,7 +104,16 @@ impl FlowEventServ {
     fn do_check_front_condition(current_vars: &HashMap<String, Value>, condition: &FlowTransitionFrontActionInfo) -> TardisResult<bool> {
         match condition.right_value {
             FlowTransitionFrontActionRightValue::ChangeContent => {
-                if let Some(left_value) = current_vars.get(&condition.left_value) {
+                let left_value = if let Some(custom_value) =
+                current_vars.get(&format!("custom_{}", condition.left_value))
+                {
+                    Some(custom_value)
+                } else if let Some(original_value) = current_vars.get(&condition.left_value) {
+                    Some(original_value)
+                } else {
+                    None
+                };
+                if let Some(left_value) = left_value {
                     Ok(condition.relevance_relation.check_conform(
                         left_value.as_str().unwrap_or(left_value.to_string().as_str()).to_string(),
                         condition
