@@ -1532,7 +1532,25 @@ impl FlowModelServ {
 
         let mut result = None;
         // Prioritize confirming the existence of mods related to own_paths
-        if let Some((_rel_model_tag, rel_model)) = FlowModelServ::find_rel_models(None, true, funs, ctx).await?.into_iter().find(|(rel_model_tag, _rel_model)| rel_model_tag == tag)
+        if let Some(rel_model) = Self::find_items(
+            &FlowModelFilterReq {
+                basic: RbumBasicFilterReq {
+                    ids: Some(
+                        FlowRelServ::find_to_simple_rels(&FlowRelKind::FlowModelPath, &ctx.own_paths, None, None, funs, ctx).await?.into_iter().map(|rel| rel.rel_id).collect_vec(),
+                    ),
+                    ignore_scope: true,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            None,
+            None,
+            funs,
+            ctx,
+        )
+        .await?
+        .into_iter()
+        .find(|rel_model| rel_model.tag.as_str() == tag)
         {
             return Ok(rel_model.id);
         }
