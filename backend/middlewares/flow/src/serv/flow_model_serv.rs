@@ -1673,6 +1673,7 @@ impl FlowModelServ {
     pub async fn clean_rel_models(
         rel_template_id: Option<String>,
         orginal_model_ids: Option<Vec<String>>,
+        spec_tags: Option<Vec<String>>,
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<HashMap<String, FlowModelSummaryResp>> {
@@ -1681,7 +1682,12 @@ impl FlowModelServ {
             ..ctx.clone()
         };
         let models = Self::find_rel_models(rel_template_id.clone(), false, funs, ctx).await?;
-        for (_, model) in models.iter() {
+        for (tag, model) in models.iter() {
+            if let Some(spec_tags) = spec_tags.clone() {
+                if !spec_tags.contains(tag) {
+                    continue;
+                }
+            }
             if let Some(orginal_model_ids) = orginal_model_ids.clone() {
                 if orginal_model_ids.contains(&model.id) {
                     continue;

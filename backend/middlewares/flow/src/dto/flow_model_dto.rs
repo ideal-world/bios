@@ -336,7 +336,18 @@ pub struct FlowModelCopyOrReferenceReq {
     pub rel_model_ids: HashMap<String, String>,
     /// 关联的模板ID
     pub rel_template_id: Option<String>,
-    /// 修改的模板ID
+    /// 关联操作
+    pub op: FlowModelAssociativeOperationKind,
+}
+
+/// 创建或引用模型请求
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
+pub struct FlowModelSingleCopyOrReferenceReq {
+    /// 关联的模型ID列表
+    pub tag: String,
+    /// 关联的模型ID
+    pub rel_model_id: String,
+    /// 关联操作
     pub op: FlowModelAssociativeOperationKind,
 }
 
@@ -345,7 +356,7 @@ pub struct FlowModelCopyOrReferenceReq {
 pub struct FlowModelCopyOrReferenceCiReq {
     /// 关联的模板ID
     pub rel_template_id: Option<String>,
-    /// 修改的模板ID
+    /// 关联操作
     pub op: FlowModelAssociativeOperationKind,
 }
 

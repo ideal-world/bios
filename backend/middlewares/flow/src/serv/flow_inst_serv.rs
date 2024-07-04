@@ -1248,7 +1248,6 @@ impl FlowInstServ {
                         ..Default::default()
                     };
                     funs.db().update_one(flow_inst, ctx).await.unwrap();
-                    let flow_inst_detail = Self::get(&inst.id, funs, ctx).await.unwrap();
                     let modify_model_detail = FlowModelServ::get_item(modify_model_id, &FlowModelFilterReq::default(), funs, ctx).await.unwrap();
                     let next_flow_state = FlowStateServ::get_item(
                         state_id,
@@ -1267,8 +1266,8 @@ impl FlowInstServ {
 
                     FlowExternalServ::do_notify_changes(
                         &modify_model_detail.tag,
-                        &flow_inst_detail.id,
-                        &flow_inst_detail.rel_business_obj_id,
+                        &inst.id,
+                        &inst.rel_business_obj_id,
                         "".to_string(),
                         FlowSysStateKind::default(),
                         next_flow_state.name.clone(),
