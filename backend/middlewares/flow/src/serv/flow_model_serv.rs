@@ -1131,7 +1131,7 @@ impl FlowModelServ {
                     &mut FlowModelAddReq {
                         rel_model_id: None,
                         rel_template_ids: None,
-                        template: rbum_scope_helper::get_scope_level_by_context(&mock_ctx)? == RbumScopeLevelKind::L2,
+                        template: rbum_scope_helper::get_scope_level_by_context(&mock_ctx)? != RbumScopeLevelKind::L2,
                         ..rel_model.clone().into()
                     },
                     funs,
