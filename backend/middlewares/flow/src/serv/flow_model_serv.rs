@@ -1534,6 +1534,8 @@ impl FlowModelServ {
                         FlowRelServ::find_to_simple_rels(&FlowRelKind::FlowModelPath, &ctx.own_paths, None, None, funs, ctx).await?.into_iter().map(|rel| rel.rel_id).collect_vec(),
                     ),
                     ignore_scope: true,
+                    own_paths: Some("".to_string()),
+                    with_sub_own_paths: true,
                     ..Default::default()
                 },
                 ..Default::default()
