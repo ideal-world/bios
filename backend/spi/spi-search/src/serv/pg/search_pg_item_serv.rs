@@ -218,8 +218,16 @@ fn generate_word_combinations_with_length(original_str: &str, split_len: usize) 
 fn generate_word_combinations_with_symbol(original_str: &str, symbols: Vec<&str>) -> Vec<String> {
     let mut combinations = Vec::new();
     for symbol in symbols {
-        let mut splited_words = original_str.split(symbol).collect_vec();
-        combinations.append(&mut splited_words);
+        let splited_words = original_str.split(symbol).collect_vec();
+        if splited_words.len() == 1 {
+            continue;
+        }
+        for i in 0..splited_words.len() {
+            for j in i..splited_words.len() {
+                let word = splited_words[i..=j].join(symbol);
+                combinations.push(word);
+            }
+        }
     }
     combinations.into_iter().map(|word| word.to_string()).collect_vec()
 }

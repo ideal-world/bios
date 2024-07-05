@@ -2,7 +2,7 @@ use bios_basic::rbum::{
     dto::{rbum_domain_dto::RbumDomainAddReq, rbum_filer_dto::RbumBasicFilterReq, rbum_kind_dto::RbumKindAddReq},
     rbum_enumeration::RbumScopeLevelKind,
     rbum_initializer,
-    serv::{rbum_crud_serv::RbumCrudOperation, rbum_domain_serv::RbumDomainServ, rbum_item_serv::RbumItemCrudOperation, rbum_kind_serv::RbumKindServ, rbum_rel_serv::RbumRelServ},
+    serv::{rbum_crud_serv::RbumCrudOperation, rbum_domain_serv::RbumDomainServ, rbum_item_serv::RbumItemCrudOperation, rbum_kind_serv::RbumKindServ},
 };
 use bios_sdk_invoke::invoke_initializer;
 
@@ -15,7 +15,6 @@ use tardis::{
         sea_orm::{
             self,
             sea_query::{Expr, Query, Table},
-            ColumnTrait, EntityTrait, QueryFilter,
         },
     },
     futures::future::join_all,
@@ -36,7 +35,7 @@ use crate::{
     domain::{flow_inst, flow_model, flow_state, flow_transition},
     dto::{
         flow_model_dto::FlowModelFilterReq,
-        flow_state_dto::{FlowStateFilterReq, FlowStateModifyReq, FlowStateSummaryResp, FlowSysStateKind},
+        flow_state_dto::FlowSysStateKind,
         flow_transition_dto::{FlowTransitionDoubleCheckInfo, FlowTransitionInitInfo},
     },
     flow_config::{BasicInfo, FlowBasicInfoManager, FlowConfig},
@@ -89,7 +88,6 @@ pub async fn init_db(mut funs: TardisFunsInst) -> TardisResult<()> {
     funs.begin().await?;
     if check_initialized(&funs, &ctx).await? {
         init_basic_info(&funs).await?;
-        merge_state_by_name(&funs, &ctx).await?;
         rebind_model_with_template(&funs, &ctx).await?;
     } else {
         let db_kind = TardisFuns::reldb().backend();
@@ -101,101 +99,6 @@ pub async fn init_db(mut funs: TardisFunsInst) -> TardisResult<()> {
         init_rbum_data(&funs, &ctx).await?;
     };
     funs.commit().await?;
-    Ok(())
-}
-
-pub async fn merge_state_by_name(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-    let kind_state_id = RbumKindServ::get_rbum_kind_id_by_code(flow_constants::RBUM_KIND_STATE_CODE, funs)
-        .await?
-        .ok_or_else(|| funs.err().not_found("flow", "merge_state_by_name", "not found state kind", ""))?;
-    let states = FlowStateServ::find_items(
-        &FlowStateFilterReq {
-            basic: RbumBasicFilterReq {
-                ignore_scope: true,
-                own_paths: Some("".to_string()),
-                rel_ctx_owner: true,
-                rbum_kind_id: Some(kind_state_id),
-                ..Default::default()
-            },
-            ..Default::default()
-        },
-        None,
-        None,
-        funs,
-        ctx,
-    )
-    .await?;
-    let mut exists_states: HashMap<String, FlowStateSummaryResp> = HashMap::new();
-    for state in states {
-        if let Some(exists_state) = exists_states.get(&state.name) {
-            // flow inst
-            flow_inst::Entity::update_many()
-                .col_expr(flow_inst::Column::CurrentStateId, Expr::value(exists_state.id.as_str()))
-                .filter(flow_inst::Column::CurrentStateId.eq(&state.id))
-                .exec(funs.db().raw_conn())
-                .await?;
-            // flow model
-            flow_model::Entity::update_many()
-                .col_expr(flow_model::Column::InitStateId, Expr::value(exists_state.id.as_str()))
-                .filter(flow_model::Column::InitStateId.eq(&state.id))
-                .exec(funs.db().raw_conn())
-                .await?;
-            // flow transition
-            flow_transition::Entity::update_many()
-                .col_expr(flow_transition::Column::FromFlowStateId, Expr::value(exists_state.id.as_str()))
-                .filter(flow_transition::Column::FromFlowStateId.eq(&state.id))
-                .exec(funs.db().raw_conn())
-                .await?;
-            flow_transition::Entity::update_many()
-                .col_expr(flow_transition::Column::ToFlowStateId, Expr::value(exists_state.id.as_str()))
-                .filter(flow_transition::Column::ToFlowStateId.eq(&state.id))
-                .exec(funs.db().raw_conn())
-                .await?;
-            // rbum rel
-            join_all(
-                RbumRelServ::find_to_rels("FlowModelState", &state.id, None, None, funs, ctx)
-                    .await?
-                    .into_iter()
-                    .map(|rel| async move {
-                        let mock_ctx = TardisContext {
-                            own_paths: rel.rel.own_paths,
-                            ..Default::default()
-                        };
-                        FlowRelServ::add_simple_rel(
-                            &FlowRelKind::FlowModelState,
-                            &rel.rel.from_rbum_id,
-                            &exists_state.id,
-                            None,
-                            None,
-                            false,
-                            true,
-                            Some(rel.rel.ext),
-                            funs,
-                            &mock_ctx,
-                        )
-                        .await
-                        .unwrap();
-                        FlowRelServ::delete_simple_rel(&FlowRelKind::FlowModelState, &rel.rel.from_rbum_id, &rel.rel.to_rbum_item_id, funs, &mock_ctx).await.unwrap();
-                    })
-                    .collect::<Vec<_>>(),
-            )
-            .await;
-            // flow state
-            FlowStateServ::modify_item(
-                &exists_state.id,
-                &mut FlowStateModifyReq {
-                    tags: Some([exists_state.tags.clone().split(',').map(|s| s.to_string()).collect_vec(), vec![state.tags]].concat()),
-                    ..Default::default()
-                },
-                funs,
-                ctx,
-            )
-            .await?;
-            FlowStateServ::delete_item(&state.id, funs, ctx).await?;
-        } else {
-            exists_states.insert(state.name.clone(), state);
-        }
-    }
     Ok(())
 }
 
@@ -1119,7 +1022,7 @@ async fn init_ws_search_client() -> Option<TardisWSClient> {
     }
 }
 
-use std::{collections::HashMap, sync::OnceLock};
+use std::sync::OnceLock;
 tardis::tardis_static! {
     pub(crate) async ws_flow_client: Option<TardisWSClient> = init_ws_flow_client();
     pub(crate) async ws_search_client: Option<TardisWSClient> = init_ws_search_client();

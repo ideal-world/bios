@@ -1,11 +1,8 @@
 use std::collections::HashMap;
 
-use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumItemRelFilterReq};
-use bios_basic::rbum::rbum_enumeration::RbumRelFromKind;
+use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use itertools::Itertools;
-use tardis::basic::dto::TardisContext;
-use tardis::futures::future::join_all;
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem::Request;
 use tardis::web::poem_openapi;
@@ -21,7 +18,6 @@ use crate::dto::flow_state_dto::FlowStateRelModelModifyReq;
 use crate::dto::flow_transition_dto::{FlowTransitionModifyReq, FlowTransitionSortStatesReq};
 use crate::flow_constants;
 use crate::serv::flow_model_serv::FlowModelServ;
-use crate::serv::flow_rel_serv::{FlowRelKind, FlowRelServ};
 #[derive(Clone)]
 pub struct FlowCcModelApi;
 
@@ -83,70 +79,7 @@ impl FlowCcModelApi {
         _request: &Request,
     ) -> TardisApiResult<Vec<FlowModelSummaryResp>> {
         let funs = flow_constants::get_tardis_inst();
-        let mut result = vec![];
-        let mut not_bind_template_models = join_all(
-            FlowModelServ::find_items(
-                &FlowModelFilterReq {
-                    basic: RbumBasicFilterReq {
-                        ignore_scope: true,
-                        with_sub_own_paths: false,
-                        ..Default::default()
-                    },
-                    tags: Some(vec![tag.0.clone()]),
-                    template: template.0,
-                    ..Default::default()
-                },
-                Some(true),
-                None,
-                &funs,
-                &ctx.0,
-            )
-            .await?
-            .into_iter()
-            .map(|model| async move {
-                let funs = flow_constants::get_tardis_inst();
-                let global_ctx: TardisContext = TardisContext::default();
-                if FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelTemplate, &model.id, None, None, &funs, &global_ctx).await.unwrap().is_empty() {
-                    Some(model)
-                } else {
-                    None
-                }
-            }),
-        )
-        .await
-        .into_iter()
-        .flatten()
-        .collect_vec();
-        result.append(&mut not_bind_template_models);
-        if let Some(rel_template_id) = rel_template_id.0 {
-            let mut rel_template_models = FlowModelServ::find_items(
-                &FlowModelFilterReq {
-                    basic: RbumBasicFilterReq {
-                        ignore_scope: true,
-                        with_sub_own_paths: false,
-                        ..Default::default()
-                    },
-                    tags: Some(vec![tag.0.clone()]),
-                    template: template.0,
-                    rel: Some(RbumItemRelFilterReq {
-                        optional: false,
-                        rel_by_from: true,
-                        tag: Some(FlowRelKind::FlowModelTemplate.to_string()),
-                        from_rbum_kind: Some(RbumRelFromKind::Item),
-                        rel_item_id: Some(rel_template_id),
-                        ..Default::default()
-                    }),
-                    ..Default::default()
-                },
-                Some(true),
-                None,
-                &funs,
-                &ctx.0,
-            )
-            .await?;
-            result.append(&mut rel_template_models);
-        }
-        TardisResp::ok(result)
+        TardisResp::ok(FlowModelServ::find_models_by_rel_template_id(tag.0, template.0, rel_template_id.0, &funs, &ctx.0).await?)
     }
 
     /// Find Models
@@ -414,7 +347,16 @@ impl FlowCcModelApi {
     async fn modify_rel_state(&self, flow_model_id: Path<String>, req: Json<FlowStateRelModelModifyReq>, ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<Void> {
         let mut funs = flow_constants::get_tardis_inst();
         funs.begin().await?;
-        FlowModelServ::modify_rel_state_ext(&flow_model_id.0, &req.0, &funs, &ctx.0).await?;
+        FlowModelServ::modify_model(
+            &flow_model_id.0,
+            &mut FlowModelModifyReq {
+                modify_states: Some(vec![req.0]),
+                ..Default::default()
+            },
+            &funs,
+            &ctx.0,
+        )
+        .await?;
         funs.commit().await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void {})

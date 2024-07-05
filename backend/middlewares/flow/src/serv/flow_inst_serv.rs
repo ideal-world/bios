@@ -40,7 +40,7 @@ use crate::{
             FlowInstTransferResp, FlowInstTransitionInfo, FlowOperationContext,
         },
         flow_model_dto::{FlowModelDetailResp, FlowModelFilterReq},
-        flow_state_dto::{FlowStateFilterReq, FlowStateRelModelExt, FlowSysStateKind},
+        flow_state_dto::{FlowStateAggResp, FlowStateFilterReq, FlowStateRelModelExt, FlowSysStateKind},
         flow_transition_dto::{FlowTransitionDetailResp, FlowTransitionFrontActionInfo},
         flow_var_dto::FillType,
     },
@@ -89,6 +89,7 @@ impl FlowInstServ {
         };
         let flow_inst: flow_inst::ActiveModel = flow_inst::ActiveModel {
             id: Set(inst_id.clone()),
+            tag: Set(Some(flow_model.tag.clone())),
             rel_flow_model_id: Set(flow_model_id.to_string()),
             rel_business_obj_id: Set(start_req.rel_business_obj_id.to_string()),
 
@@ -199,7 +200,7 @@ impl FlowInstServ {
             query.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::RelFlowModelId)).eq(flow_model_id));
         }
         if let Some(tag) = &filter.tag {
-            query.and_where(Expr::col((flow_model::Entity, flow_model::Column::Tag)).eq(tag));
+            query.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::Tag)).eq(tag));
         }
         if let Some(finish) = filter.finish {
             if finish {
@@ -1188,70 +1189,158 @@ impl FlowInstServ {
         Ok(current_vars.unwrap_or_default().get(key).cloned())
     }
 
-    pub async fn unsafe_update_state_by_inst_id(inst_id: String, modify_model_id: String, state_id: String, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        let global_ctx = TardisContext {
-            own_paths: "".to_string(),
-            ..ctx.clone()
-        };
-        let flow_inst_detail = Self::find_detail(vec![inst_id.clone()], funs, ctx).await?.pop().ok_or_else(|| {
-            funs.err().not_found(
-                "flow_inst",
-                "unsafe_update_state_by_inst_id",
-                &format!("flow instance {} not found", inst_id.clone()),
-                "404-flow-inst-not-found",
-            )
-        })?;
+    pub async fn batch_update_when_switch_model(
+        original_model_id: Option<String>,
+        tag: &str,
+        modify_model_id: &str,
+        modify_model_states: Vec<FlowStateAggResp>,
+        state_id: &str,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<()> {
+        let mut update_statement = Query::update();
+        update_statement.table(flow_inst::Entity);
+        update_statement.value(flow_inst::Column::RelFlowModelId, modify_model_id);
+        update_statement.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::Tag)).eq(tag));
+        if let Some(original_model_id) = &original_model_id {
+            update_statement.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::RelFlowModelId)).eq(original_model_id));
+        } else {
+            update_statement.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::OwnPaths)).eq(ctx.own_paths.as_str()));
+        }
+        funs.db().execute(&update_statement).await?;
 
-        let flow_inst = flow_inst::ActiveModel {
-            id: Set(inst_id.clone()),
-            current_state_id: Set(state_id.clone()),
-            transitions: Set(Some(vec![])),
-            ..Default::default()
-        };
-        funs.db().update_one(flow_inst, ctx).await?;
-        let modify_model_detail = FlowModelServ::get_item(&modify_model_id, &FlowModelFilterReq::default(), funs, ctx).await?;
-        let prev_flow_state = FlowStateServ::get_item(
-            &flow_inst_detail.current_state_id,
-            &FlowStateFilterReq {
-                basic: RbumBasicFilterReq {
-                    with_sub_own_paths: true,
-                    ..Default::default()
-                },
+        FlowInstServ::unsafe_update_state_by_tag(original_model_id, tag, modify_model_id, modify_model_states, state_id, funs, ctx).await?;
+        Ok(())
+    }
+
+    async fn unsafe_update_state_by_tag(
+        original_model_id: Option<String>,
+        tag: &str,
+        modify_model_id: &str,
+        modify_model_states: Vec<FlowStateAggResp>,
+        state_id: &str,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<()> {
+        let insts = Self::find_details(
+            &FlowInstFilterReq {
+                flow_model_id: original_model_id,
+                tag: Some(tag.to_string()),
                 ..Default::default()
             },
             funs,
-            &global_ctx,
-        )
-        .await?;
-        let next_flow_state = FlowStateServ::get_item(
-            &modify_model_detail.init_state_id,
-            &FlowStateFilterReq {
-                basic: RbumBasicFilterReq {
-                    with_sub_own_paths: true,
-                    ..Default::default()
-                },
-                ..Default::default()
-            },
-            funs,
-            &global_ctx,
-        )
-        .await?;
-
-        FlowExternalServ::do_notify_changes(
-            &modify_model_detail.tag,
-            &flow_inst_detail.id,
-            &flow_inst_detail.rel_business_obj_id,
-            prev_flow_state.name.clone(),
-            prev_flow_state.sys_state,
-            next_flow_state.name.clone(),
-            next_flow_state.sys_state,
-            "".to_string(),
-            false,
-            None,
             ctx,
+        )
+        .await?
+        .into_iter()
+        .filter(|inst| !modify_model_states.iter().any(|state| state.id == inst.current_state_id))
+        .collect_vec();
+        join_all(
+            insts
+                .iter()
+                .map(|inst| async {
+                    let global_ctx = TardisContext::default();
+
+                    let flow_inst = flow_inst::ActiveModel {
+                        id: Set(inst.id.clone()),
+                        current_state_id: Set(state_id.to_string()),
+                        transitions: Set(Some(vec![])),
+                        ..Default::default()
+                    };
+                    funs.db().update_one(flow_inst, ctx).await.unwrap();
+                    let modify_model_detail = FlowModelServ::get_item(modify_model_id, &FlowModelFilterReq::default(), funs, ctx).await.unwrap();
+                    let next_flow_state = FlowStateServ::get_item(
+                        state_id,
+                        &FlowStateFilterReq {
+                            basic: RbumBasicFilterReq {
+                                with_sub_own_paths: true,
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        },
+                        funs,
+                        &global_ctx,
+                    )
+                    .await
+                    .unwrap();
+
+                    FlowExternalServ::do_notify_changes(
+                        &modify_model_detail.tag,
+                        &inst.id,
+                        &inst.rel_business_obj_id,
+                        "".to_string(),
+                        FlowSysStateKind::default(),
+                        next_flow_state.name.clone(),
+                        next_flow_state.sys_state,
+                        "".to_string(),
+                        false,
+                        Some(FlowExternalCallbackOp::Default),
+                        ctx,
+                        funs,
+                    )
+                    .await
+                })
+                .collect_vec(),
+        )
+        .await
+        .into_iter()
+        .collect::<TardisResult<Vec<_>>>()?;
+        Ok(())
+    }
+
+    pub async fn reflesh_inst_tag(funs: &TardisFunsInst) -> TardisResult<()> {
+        let global_ctx = TardisContext::default();
+        let mut query = Query::select();
+        Self::package_ext_query(
+            &mut query,
+            &FlowInstFilterReq {
+                with_sub: Some(true),
+                ..Default::default()
+            },
             funs,
+            &global_ctx,
         )
         .await?;
+        query.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::Tag)).is_null());
+        loop {
+            let (flow_insts, _) = funs.db().paginate_dtos::<FlowInstSummaryResult>(&query, 1, 2000).await?;
+            if flow_insts.is_empty() {
+                break;
+            }
+            join_all(
+                flow_insts
+                    .iter()
+                    .map(|inst| async {
+                        let model = FlowModelServ::get_item(
+                            &inst.rel_flow_model_id,
+                            &FlowModelFilterReq {
+                                basic: RbumBasicFilterReq {
+                                    with_sub_own_paths: true,
+                                    ..Default::default()
+                                },
+                                ..Default::default()
+                            },
+                            funs,
+                            &global_ctx,
+                        )
+                        .await;
+                        if let Ok(model) = model {
+                            let flow_inst = flow_inst::ActiveModel {
+                                id: Set(inst.id.clone()),
+                                tag: Set(Some(model.tag.clone())),
+                                ..Default::default()
+                            };
+                            funs.db().update_one(flow_inst, &global_ctx).await
+                        } else {
+                            Ok(())
+                        }
+                    })
+                    .collect_vec(),
+            )
+            .await
+            .into_iter()
+            .collect::<TardisResult<Vec<()>>>()?;
+        }
         Ok(())
     }
 }

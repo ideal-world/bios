@@ -18,6 +18,13 @@ pub struct Model {
     #[index(unique = true)]
     pub rel_business_obj_id: String,
 
+    /// Tags / 标签
+    ///
+    /// Used for model classification
+    /// 用于模型分类
+    #[index]
+    #[tardis_entity(custom_type = "String")]
+    pub tag: Option<String>,
     /// Current state / 当前状态
     ///
     /// This state needs to be updated after each transfer

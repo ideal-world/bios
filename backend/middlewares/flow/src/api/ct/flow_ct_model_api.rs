@@ -2,20 +2,21 @@ use std::collections::HashMap;
 
 use bios_basic::rbum::{dto::rbum_filer_dto::RbumBasicFilterReq, serv::rbum_item_serv::RbumItemCrudOperation};
 use itertools::Itertools;
-use tardis::web::{
-    context_extractor::TardisContextExtractor,
-    poem::{web::Json, Request},
-    poem_openapi::{self, param::Path},
-    web_resp::{TardisApiResult, TardisResp, Void},
+use tardis::{
+    basic::error::TardisError,
+    web::{
+        context_extractor::TardisContextExtractor,
+        poem::{web::Json, Request},
+        poem_openapi::{self, param::Path},
+        web_resp::{TardisApiResult, TardisResp, Void},
+    },
 };
 
 use crate::{
-    dto::flow_model_dto::{
-        FlowModelAggResp, FlowModelAssociativeOperationKind, FlowModelCopyOrReferenceReq, FlowModelExistRelByTemplateIdsReq, FlowModelFilterReq,
-        FlowModelFindRelNameByTemplateIdsReq,
-    },
+    dto::flow_model_dto::{FlowModelAggResp, FlowModelAssociativeOperationKind, FlowModelCopyOrReferenceReq, FlowModelFilterReq, FlowModelFindRelNameByTemplateIdsReq},
     flow_constants,
     serv::{
+        flow_inst_serv::FlowInstServ,
         flow_model_serv::FlowModelServ,
         flow_rel_serv::{FlowRelKind, FlowRelServ},
     },
@@ -38,17 +39,29 @@ impl FlowCtModelApi {
         _request: &Request,
     ) -> TardisApiResult<HashMap<String, FlowModelAggResp>> {
         let mut funs = flow_constants::get_tardis_inst();
+        if req.0.rel_template_id.is_none() {
+            return TardisResp::err(TardisError::bad_request("rel_template_id can't be empty", ""));
+        }
         funs.begin().await?;
+        let orginal_models = FlowModelServ::clean_rel_models(
+            req.0.rel_template_id.clone(),
+            Some(req.0.rel_model_ids.clone().values().cloned().collect_vec()),
+            None,
+            &funs,
+            &ctx.0,
+        )
+        .await?;
         let mut result = HashMap::new();
-        let orginal_models = FlowModelServ::find_rel_models(req.0.rel_template_id.clone(), true, &funs, &ctx.0).await?;
         for (tag, rel_model_id) in req.0.rel_model_ids {
             let orginal_model_id = orginal_models.get(&tag).map(|orginal_model| orginal_model.id.clone());
-
-            let added_model = FlowModelServ::copy_or_reference_model(orginal_model_id, &rel_model_id, None, &req.0.op, Some(true), &funs, &ctx.0).await?;
+            if orginal_model_id.clone().unwrap_or_default() == rel_model_id {
+                continue;
+            }
+            let new_model = FlowModelServ::copy_or_reference_model(&rel_model_id, None, &req.0.op, Some(true), &funs, &ctx.0).await?;
             if let Some(rel_template_id) = &req.0.rel_template_id {
                 FlowRelServ::add_simple_rel(
                     &FlowRelKind::FlowModelTemplate,
-                    &added_model.id,
+                    &new_model.id,
                     rel_template_id,
                     None,
                     None,
@@ -60,7 +73,17 @@ impl FlowCtModelApi {
                 )
                 .await?;
             }
-            result.insert(rel_model_id.clone(), added_model);
+            FlowInstServ::batch_update_when_switch_model(
+                orginal_model_id,
+                &new_model.tag,
+                &new_model.id,
+                new_model.states.clone(),
+                &new_model.init_state_id,
+                &funs,
+                &ctx.0,
+            )
+            .await?;
+            result.insert(rel_model_id.clone(), new_model);
         }
         funs.commit().await?;
         ctx.0.execute_task().await?;
@@ -80,6 +103,7 @@ impl FlowCtModelApi {
     ) -> TardisApiResult<HashMap<String, FlowModelAggResp>> {
         let mut funs = flow_constants::get_tardis_inst();
         funs.begin().await?;
+        let orginal_models = FlowModelServ::clean_rel_models(Some(to_template_id.0.clone()), None, None, &funs, &ctx.0).await?;
         let mut result = HashMap::new();
         for from_model in FlowModelServ::find_detail_items(
             &FlowModelFilterReq {
@@ -103,11 +127,10 @@ impl FlowCtModelApi {
         )
         .await?
         {
-            let added_model =
-                FlowModelServ::copy_or_reference_model(None, &from_model.rel_model_id, None, &FlowModelAssociativeOperationKind::Copy, Some(true), &funs, &ctx.0).await?;
+            let new_model = FlowModelServ::copy_or_reference_model(&from_model.rel_model_id, None, &FlowModelAssociativeOperationKind::Copy, Some(true), &funs, &ctx.0).await?;
             FlowRelServ::add_simple_rel(
                 &FlowRelKind::FlowModelTemplate,
-                &added_model.id,
+                &new_model.id,
                 &to_template_id.0,
                 None,
                 None,
@@ -118,7 +141,17 @@ impl FlowCtModelApi {
                 &ctx.0,
             )
             .await?;
-            result.insert(from_model.rel_model_id.clone(), added_model);
+            FlowInstServ::batch_update_when_switch_model(
+                orginal_models.get(&new_model.tag).map(|orginal_model| orginal_model.id.clone()),
+                &new_model.tag,
+                &new_model.id,
+                new_model.states.clone(),
+                &new_model.init_state_id,
+                &funs,
+                &ctx.0,
+            )
+            .await?;
+            result.insert(from_model.rel_model_id.clone(), new_model);
         }
         funs.commit().await?;
         ctx.0.execute_task().await?;
@@ -147,8 +180,8 @@ impl FlowCtModelApi {
     async fn find_rel_name_by_template_ids(
         &self,
         req: Json<FlowModelFindRelNameByTemplateIdsReq>,
-        mut ctx: TardisContextExtractor,
-        request: &Request,
+        ctx: TardisContextExtractor,
+        _request: &Request,
     ) -> TardisApiResult<HashMap<String, Vec<String>>> {
         let funs = flow_constants::get_tardis_inst();
         let mut result = HashMap::new();
