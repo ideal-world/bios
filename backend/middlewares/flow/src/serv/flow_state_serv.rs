@@ -268,9 +268,7 @@ impl RbumItemCrudOperation<flow_state::ActiveModel, FlowStateAddReq, FlowStateMo
                 state_id.extend(rel_state_id.into_iter());
             }
 
-            if !state_id.is_empty() {
-                query.and_where(Expr::col((flow_state::Entity, flow_state::Column::Id)).is_in(state_id));
-            }
+            query.and_where(Expr::col((flow_state::Entity, flow_state::Column::Id)).is_in(state_id));
         }
         Ok(())
     }
