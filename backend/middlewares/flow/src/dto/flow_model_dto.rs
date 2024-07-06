@@ -98,6 +98,8 @@ pub struct FlowModelModifyReq {
     pub tag: Option<String>,
     /// 关联模板ID（目前可能是页面模板ID，或者是项目模板ID）
     pub rel_template_ids: Option<Vec<String>>,
+    /// 关联父级工作流模板ID
+    pub rel_model_id: Option<String>,
 
     pub scope_level: Option<RbumScopeLevelKind>,
     pub disabled: Option<bool>,
