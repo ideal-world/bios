@@ -173,7 +173,7 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
     }
 
     async fn package_ext_modify(id: &str, modify_req: &FlowModelModifyReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<Option<flow_model::ActiveModel>> {
-        if modify_req.icon.is_none() && modify_req.info.is_none() && modify_req.init_state_id.is_none() && modify_req.tag.is_none() {
+        if modify_req.icon.is_none() && modify_req.info.is_none() && modify_req.init_state_id.is_none() && modify_req.tag.is_none() && modify_req.rel_model_id.is_none() {
             return Ok(None);
         }
         let mut flow_model = flow_model::ActiveModel {
@@ -191,6 +191,9 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
         }
         if let Some(tag) = &modify_req.tag {
             flow_model.tag = Set(Some(tag.clone()));
+        }
+        if let Some(rel_model_id) = &modify_req.rel_model_id {
+            flow_model.rel_model_id = Set(rel_model_id.clone());
         }
         Ok(Some(flow_model))
     }
@@ -1446,7 +1449,10 @@ impl FlowModelServ {
                             funs,
                             ctx,
                         )
-                        .await?.into_iter().filter(|tran| tran.id != transition_detail.id).collect_vec();
+                        .await?
+                        .into_iter()
+                        .filter(|tran| tran.id != transition_detail.id)
+                        .collect_vec();
                         for transition_detail in transitions {
                             (is_ring, current_chain) = Self::check_post_action_ring(transition_detail, (is_ring, current_chain.clone()), funs, ctx).await?;
                             if is_ring {

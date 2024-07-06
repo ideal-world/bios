@@ -13,7 +13,9 @@ use tardis::{
 };
 
 use crate::{
-    dto::flow_model_dto::{FlowModelAggResp, FlowModelAssociativeOperationKind, FlowModelCopyOrReferenceReq, FlowModelFilterReq, FlowModelFindRelNameByTemplateIdsReq},
+    dto::flow_model_dto::{
+        FlowModelAggResp, FlowModelAssociativeOperationKind, FlowModelCopyOrReferenceReq, FlowModelFilterReq, FlowModelFindRelNameByTemplateIdsReq, FlowModelModifyReq,
+    },
     flow_constants,
     serv::{
         flow_inst_serv::FlowInstServ,
@@ -137,6 +139,16 @@ impl FlowCtModelApi {
                 false,
                 true,
                 None,
+                &funs,
+                &ctx.0,
+            )
+            .await?;
+            FlowModelServ::modify_item(
+                &new_model.id,
+                &mut FlowModelModifyReq {
+                    rel_model_id: Some(from_model.rel_model_id.clone()),
+                    ..Default::default()
+                },
                 &funs,
                 &ctx.0,
             )

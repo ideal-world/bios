@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use crate::dto::flow_model_dto::{
     FlowModelAddCustomModelReq, FlowModelAddCustomModelResp, FlowModelAggResp, FlowModelAssociativeOperationKind, FlowModelCopyOrReferenceCiReq, FlowModelExistRelByTemplateIdsReq,
-    FlowModelFilterReq, FlowModelFindRelStateResp,
+    FlowModelFilterReq, FlowModelFindRelStateResp, FlowModelModifyReq,
 };
 use crate::flow_constants;
 use crate::serv::flow_inst_serv::FlowInstServ;
@@ -214,6 +214,16 @@ impl FlowCiModelApi {
                 false,
                 true,
                 None,
+                &funs,
+                &ctx.0,
+            )
+            .await?;
+            FlowModelServ::modify_item(
+                &added_model.id,
+                &mut FlowModelModifyReq {
+                    rel_model_id: Some(from_model.rel_model_id.clone()),
+                    ..Default::default()
+                },
                 &funs,
                 &ctx.0,
             )
