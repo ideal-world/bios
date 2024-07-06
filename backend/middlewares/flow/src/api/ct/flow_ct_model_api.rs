@@ -143,6 +143,16 @@ impl FlowCtModelApi {
                 &ctx.0,
             )
             .await?;
+            FlowModelServ::modify_item(
+                &new_model.id,
+                &mut FlowModelModifyReq {
+                    rel_model_id: Some(from_model.rel_model_id.clone()),
+                    ..Default::default()
+                },
+                &funs,
+                &ctx.0,
+            )
+            .await?;
             FlowInstServ::batch_update_when_switch_model(
                 orginal_models.get(&new_model.tag).map(|orginal_model| orginal_model.id.clone()),
                 &new_model.tag,
