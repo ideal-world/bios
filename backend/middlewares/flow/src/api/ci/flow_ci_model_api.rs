@@ -218,6 +218,16 @@ impl FlowCiModelApi {
                 &ctx.0,
             )
             .await?;
+            FlowModelServ::modify_item(
+                &added_model.id,
+                &mut FlowModelModifyReq {
+                    rel_model_id: Some(from_model.rel_model_id.clone()),
+                    ..Default::default()
+                },
+                &funs,
+                &ctx.0,
+            )
+            .await?;
             result.insert(from_model.rel_model_id.clone(), added_model);
         }
         funs.commit().await?;
