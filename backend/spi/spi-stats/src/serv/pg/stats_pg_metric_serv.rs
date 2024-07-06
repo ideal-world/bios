@@ -8,6 +8,7 @@ use bios_basic::spi::{
 use itertools::Itertools;
 use tardis::{
     basic::{dto::TardisContext, error::TardisError, result::TardisResult},
+    chrono::format,
     db::{
         reldb_client::TardisRelDBClient,
         sea_orm::{self, FromQueryResult, Value},
@@ -243,7 +244,8 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
         rel_external_id: None,
         query_limit,
     });
-
+    // todo 需要更改使用with
+    let ct_agg = query_req.group.iter().any(|i| i.code == "ct");
     let conf_limit = query_limit;
     // Dimension configuration, used for group and group_order
     // 纬度配置,用于group以及group_order
@@ -449,7 +451,7 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
                 group.code.clone(),
                 group.time_window.as_ref().map(|i| i.to_string().to_lowercase()).unwrap_or("".to_string())
             );
-            sql_part_group_infos.push((column_name_with_fun, alias_name, col_conf.show_name.clone()));
+            sql_part_group_infos.push((column_name_with_fun, alias_name, col_conf.show_name.clone(), col_conf.col_key.clone()));
         } else {
             return Err(funs.err().not_found(
                 "metric",
@@ -464,12 +466,12 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
             ));
         }
     }
-    let sql_part_groups = sql_part_group_infos.iter().map(|group| group.1.clone()).collect::<Vec<String>>().join(",");
+    let mut sql_part_groups = sql_part_group_infos.iter().map(|group| group.1.clone()).collect::<Vec<String>>().join(",");
 
     // Package outer select
     // (column name with fun, alias name, show_name, is dimension)
     let mut sql_part_outer_select_infos = vec![];
-    for (column_name_with_fun, alias_name, show_name) in sql_part_group_infos {
+    for (column_name_with_fun, alias_name, show_name, _) in sql_part_group_infos.clone() {
         sql_part_outer_select_infos.push((column_name_with_fun, alias_name, show_name, true));
     }
     for select in &query_req.select {
@@ -489,7 +491,35 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
                 "500-spi-stats-internal-error",
             )
         })?;
-        let column_name_with_fun = col_data_type.to_pg_select(&format!("_.{}", select.code.clone()), &select.fun);
+        let column_name_with_fun = if ct_agg {
+            if select.code != "_count" {
+                sql_part_groups = format!("{},_.{}", sql_part_groups, select.code.clone());
+            }
+            let mut partition_dim = vec![];
+            let mut order_dim = "".to_string();
+            for (column_name_with_fun, _, _, col_key) in sql_part_group_infos.clone() {
+                if col_key == "ct" {
+                    order_dim = column_name_with_fun.clone();
+                } else {
+                    partition_dim.push(column_name_with_fun);
+                }
+            }
+            format!(
+                "{} OVER ({})",
+                col_data_type.to_pg_select(
+                    &format!("_.{}", if select.code == "_count" { "count".to_string() } else { select.code.clone() }),
+                    &select.fun
+                ),
+                if partition_dim.len() > 0 {
+                    format!("PARTITION BY {} ORDER BY {}", partition_dim.join(","), order_dim)
+                } else {
+                    format!("ORDER BY {}", order_dim)
+                }
+            )
+        } else {
+            col_data_type.to_pg_select(&format!("_.{}", select.code.clone()), &select.fun)
+        };
+        // let column_name_with_fun = col_data_type.to_pg_select(&format!("_.{}", select.code.clone()), &select.fun);
         let alias_name = format!("{}{FUNCTION_SUFFIX_FLAG}{}", select.code.clone(), select.fun.to_string().to_lowercase());
         sql_part_outer_select_infos.push((column_name_with_fun, alias_name, col_conf.show_name.clone(), false));
     }
@@ -603,6 +633,7 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
     } else {
         "fact.own_paths LIKE $1".to_string()
     };
+    // todo 提供另一种with语法的实现,用于 ct 统计全表数据
     let final_sql = format!(
         r#"SELECT {sql_part_outer_selects}{}
     FROM (
@@ -640,14 +671,22 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
         if query_req.ignore_distinct.unwrap_or(false) {
             ""
         } else if mes_distinct {
-            "DISTINCT ON (fact.key) fact.key AS _key,"
+            if ct_agg {
+                "DISTINCT ON (fact.key,date_part('day',fact.ct)) fact.key AS _key,"
+            } else {
+                "DISTINCT ON (fact.key) fact.key AS _key,"
+            }
         } else {
             ""
         },
         if query_req.ignore_distinct.unwrap_or(false) {
             ""
         } else if mes_distinct {
-            "_key,"
+            if ct_agg {
+                "_key,date_part('day',fact.ct),"
+            } else {
+                "_key,"
+            }
         } else {
             ""
         },
