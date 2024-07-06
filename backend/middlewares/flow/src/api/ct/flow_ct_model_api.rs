@@ -13,7 +13,9 @@ use tardis::{
 };
 
 use crate::{
-    dto::flow_model_dto::{FlowModelAggResp, FlowModelAssociativeOperationKind, FlowModelCopyOrReferenceReq, FlowModelFilterReq, FlowModelFindRelNameByTemplateIdsReq},
+    dto::flow_model_dto::{
+        FlowModelAggResp, FlowModelAssociativeOperationKind, FlowModelCopyOrReferenceReq, FlowModelFilterReq, FlowModelFindRelNameByTemplateIdsReq, FlowModelModifyReq,
+    },
     flow_constants,
     serv::{
         flow_inst_serv::FlowInstServ,
