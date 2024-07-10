@@ -17,6 +17,7 @@ use tardis::{
 
 use crate::{clients::base_spi_client::BaseSpiClient, invoke_constants::DYNAMIC_LOG, invoke_enumeration::InvokeModuleKind};
 
+#[derive(Debug, Default,Clone)]
 pub struct SpiLogClient;
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Default, Debug)]

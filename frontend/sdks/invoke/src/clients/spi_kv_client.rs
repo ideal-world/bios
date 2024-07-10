@@ -10,7 +10,7 @@ use tardis::TardisFunsInst;
 use crate::invoke_enumeration::InvokeModuleKind;
 
 use super::base_spi_client::BaseSpiClient;
-
+#[derive(Clone, Debug, Default)]
 pub struct SpiKvClient;
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Clone, Debug)]
