@@ -1,4 +1,5 @@
 use bios_basic::TardisFunInstExtractor;
+use tardis::basic::error::TardisError;
 use tardis::chrono::{self, Utc};
 use tardis::log::info;
 use tardis::web::context_extractor::TardisContextExtractor;
@@ -8,8 +9,8 @@ use tardis::web::poem_openapi::param::{Path, Query};
 use tardis::web::poem_openapi::payload::Json;
 use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 
-use crate::dto::schedule_job_dto::{ScheduleJobAddOrModifyReq, ScheduleJobInfoResp, ScheduleTaskInfoResp};
-use crate::serv::schedule_job_serv;
+use crate::dto::schedule_job_dto::{ScheduleJob, ScheduleJobInfoResp, ScheduleTaskInfoResp};
+use crate::serv::{schedule_job_serv, schedule_job_serv_v2};
 
 #[derive(Clone)]
 pub struct ScheduleCiJobApi;
@@ -21,9 +22,13 @@ impl ScheduleCiJobApi {
     /// Add or modify schedule job Api
     /// 添加或修改调度任务
     #[oai(path = "/jobs", method = "put")]
-    async fn add_or_modify(&self, add_or_modify_req: Json<ScheduleJobAddOrModifyReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
+    async fn add_or_modify(&self, add_or_modify_req: Json<ScheduleJob>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         let funs = request.tardis_fun_inst();
-        schedule_job_serv::add_or_modify(add_or_modify_req.0, &funs, &ctx.0).await?;
+        let req = add_or_modify_req.0;
+        if req.cron.iter().any(|s| s.trim().starts_with('*')) {
+            return TardisResp::err(TardisError::bad_request("cron that start with * is forbidden", "schedule-bad-cron"));
+        }
+        schedule_job_serv_v2::add_or_modify(req, funs, ctx.0).await?;
         TardisResp::ok(Void {})
     }
 
@@ -32,7 +37,7 @@ impl ScheduleCiJobApi {
     #[oai(path = "/jobs/:code", method = "delete")]
     async fn delete(&self, code: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         let funs = request.tardis_fun_inst();
-        schedule_job_serv::delete(&code.0, &funs, &ctx.0).await?;
+        schedule_job_serv_v2::delete(&code.0, funs, ctx.0).await?;
         TardisResp::ok(Void {})
     }
 

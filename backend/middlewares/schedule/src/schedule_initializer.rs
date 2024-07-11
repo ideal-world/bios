@@ -1,4 +1,4 @@
-use crate::{api::ci::schedule_ci_job_api, schedule_config::ScheduleConfig, schedule_constants::DOMAIN_CODE, serv::schedule_job_serv};
+use crate::{api::ci::schedule_ci_job_api, schedule_config::ScheduleConfig, schedule_constants::DOMAIN_CODE, serv::schedule_job_serv_v2};
 use bios_basic::spi::{dto::spi_bs_dto::SpiBsCertResp, spi_constants, spi_funs::SpiBsInst, spi_initializer};
 use bios_sdk_invoke::invoke_initializer;
 use tardis::{
@@ -12,8 +12,7 @@ pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
     let mut funs = TardisFuns::inst_with_db_conn(DOMAIN_CODE.to_string(), None);
     invoke_initializer::init(funs.module_code(), funs.conf::<ScheduleConfig>().invoke.clone())?;
     funs.begin().await?;
-    let ctx = spi_initializer::init(DOMAIN_CODE, &funs).await?;
-    schedule_job_serv::init(&funs, &ctx).await?;
+    schedule_job_serv_v2::init();
     funs.commit().await?;
     init_api(web_server).await
 }
@@ -30,6 +29,7 @@ pub async fn init_fun(bs_cert: SpiBsCertResp, ctx: &TardisContext, mgr: bool) ->
         _ => Err(bs_cert.bs_not_implemented())?,
     }
 }
+
 //TODO not used.remove?
 async fn init_ws_client() -> TardisWSClient {
     while !TardisFuns::web_server().is_running().await {
