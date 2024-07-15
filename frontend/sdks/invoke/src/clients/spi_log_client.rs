@@ -5,7 +5,7 @@ use tardis::{
     basic::{dto::TardisContext, field::TrimString, result::TardisResult},
     chrono::{DateTime, Utc},
     log::info,
-    serde_json::{json, Value},
+    serde_json::Value,
     web::{
         poem_openapi,
         web_resp::{TardisPage, TardisResp},
@@ -118,7 +118,7 @@ impl SpiLogClient {
         Ok(())
     }
 
-    #[deprecated = "use [`SpiLogClient::add`] instead"]
+    #[deprecated = "this function has too many parameters, use `SpiLogClient::add` instead"]
     pub async fn add_with_many_params(
         tag: &str,
         content: &str,

@@ -9,7 +9,6 @@ use crate::dto::search_item_dto::{SearchEventItemDeleteReq, SearchEventItemModif
 use crate::invoke_enumeration::InvokeModuleKind;
 
 use super::base_spi_client::BaseSpiClient;
-use super::event_client::{ContextEvent, Event};
 use super::spi_kv_client::SpiKvClient;
 
 pub struct SpiSearchClient;

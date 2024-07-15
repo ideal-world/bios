@@ -11,18 +11,7 @@ use crate::invoke_enumeration::InvokeModuleKind;
 
 use super::base_spi_client::BaseSpiClient;
 
-
-pub mod event {
-    use crate::{
-        clients::event_client::{ContextEvent, Event},
-        
-    };
-
-    const EVENT_ADD_SEARCH: &str = "spi-search/add";
-    const EVENT_MODIFY_SEARCH: &str = "spi-search/modify";
-    const EVENT_DELETE_SEARCH: &str = "spi-search/delete";
-    
-}
+pub mod event {}
 #[derive(Clone, Debug, Default)]
 pub struct SpiKvClient;
 
