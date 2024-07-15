@@ -17,7 +17,7 @@ pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
     let ctx = spi_initializer::init(DOMAIN_CODE, &funs).await?;
     init_db(&funs, &ctx).await?;
     funs.commit().await?;
-    tokio::spawn(init_event());
+    crate::event::register_log_event();
     init_api(web_server).await?;
     info!("[BIOS.Log] Module initialized");
     Ok(())
@@ -44,21 +44,7 @@ pub async fn init_fun(bs_cert: SpiBsCertResp, ctx: &TardisContext, mgr: bool) ->
     Ok(inst)
 }
 
-async fn init_event() -> TardisResult<()> {
-    let funs = crate::get_tardis_inst();
-    let conf = funs.conf::<LogConfig>();
-    if let Some(event_config) = conf.event.as_ref() {
-        loop {
-            if TardisFuns::web_server().is_running().await {
-                break;
-            } else {
-                tokio::task::yield_now().await
-            }
-        }
-        crate::event::start_log_event_service(event_config).await?;
-    }
-    Ok(())
-}
+
 
 #[inline]
 pub(crate) fn get_tardis_inst() -> TardisFunsInst {

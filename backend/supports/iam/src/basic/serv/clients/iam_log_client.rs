@@ -142,11 +142,11 @@ impl IamLogClient {
             let req = LogItemAddReq {
                 tag,
                 content: TardisFuns::json.obj_to_string(&content).expect("req_msg not a valid json value"),
-                kind: kind.map(TrimString),
+                kind: kind,
                 ext: Some(search_ext),
-                key: key.map(TrimString),
+                key: key,
                 op,
-                rel_key: rel_key.map(TrimString),
+                rel_key: rel_key,
                 id: None,
                 ts: ts.map(|ts| DateTime::parse_from_rfc3339(&ts).unwrap_or_default().with_timezone(&Utc)),
                 owner: Some(ctx.owner.clone()),
@@ -154,7 +154,7 @@ impl IamLogClient {
             };
             ws_client.publish_add_log(&req, default_log_avatar().await.clone(), funs.invoke_conf_spi_app_id(), ctx).await?;
         } else {
-            SpiLogClient::add(
+            SpiLogClient::add_with_many_params(
                 &tag,
                 &TardisFuns::json.obj_to_string(&content).expect("req_msg not a valid json value"),
                 Some(search_ext),

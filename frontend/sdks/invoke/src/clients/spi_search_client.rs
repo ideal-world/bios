@@ -9,9 +9,32 @@ use crate::dto::search_item_dto::{SearchEventItemDeleteReq, SearchEventItemModif
 use crate::invoke_enumeration::InvokeModuleKind;
 
 use super::base_spi_client::BaseSpiClient;
+use super::event_client::{ContextEvent, Event};
 use super::spi_kv_client::SpiKvClient;
 
 pub struct SpiSearchClient;
+pub mod event {
+    use crate::{
+        clients::event_client::{ContextEvent, Event},
+        dto::search_item_dto::{SearchEventItemDeleteReq, SearchItemAddReq, SearchItemModifyReq},
+    };
+
+    const EVENT_ADD_SEARCH: &str = "spi-search/add";
+    const EVENT_MODIFY_SEARCH: &str = "spi-search/modify";
+    const EVENT_DELETE_SEARCH: &str = "spi-search/delete";
+    pub type SearchItemAddEvent = ContextEvent<SearchItemAddReq>;
+    pub type SearchItemModifyEvent = ContextEvent<(String, String, SearchItemModifyReq)>;
+    pub type SearchItemDeleteEvent = ContextEvent<SearchEventItemDeleteReq>;
+    impl Event for SearchItemAddEvent {
+        const CODE: &'static str = EVENT_ADD_SEARCH;
+    }
+    impl Event for SearchItemModifyEvent {
+        const CODE: &'static str = EVENT_MODIFY_SEARCH;
+    }
+    impl Event for SearchItemDeleteEvent {
+        const CODE: &'static str = EVENT_DELETE_SEARCH;
+    }
+}
 
 impl SpiSearchClient {
     pub async fn add_item(add_req: &SearchItemAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {

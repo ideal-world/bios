@@ -1,9 +1,10 @@
 use std::time::Duration;
 
 use bios_sdk_invoke::{
-    clients::event_client::{self, EventTopicConfig},
+    clients::{event_client::{self, BiosEventCenter, ContextEvent, Event, EventCenter, EventTopicConfig, FnEventHandler}, spi_search_client::event::SearchItemAddEvent},
     dto::search_item_dto::{SearchEventItemDeleteReq, SearchEventItemModifyReq},
 };
+use serde::{Deserialize, Serialize};
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
     log::{error, info, warn},
@@ -13,12 +14,11 @@ use tardis::{
 };
 
 use crate::{
-    search_constants::{EVENT_ADD_SEARCH, EVENT_DELETE_SEARCH, EVENT_MODIFY_SEARCH},
-    search_initializer::get_tardis_inst,
-    serv,
+    search_constants::{EVENT_ADD_SEARCH, EVENT_DELETE_SEARCH, EVENT_MODIFY_SEARCH}, search_initializer::get_tardis_inst, serv
 };
 
 pub const RECONNECT_INTERVAL: Duration = Duration::from_secs(10);
+
 
 pub async fn start_search_event_service(config: &EventTopicConfig) -> TardisResult<()> {
     info!("[BIOS.Search] starting event service");

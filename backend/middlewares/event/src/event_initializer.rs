@@ -3,7 +3,7 @@ use bios_basic::rbum::{
     rbum_enumeration::RbumScopeLevelKind,
     serv::{rbum_crud_serv::RbumCrudOperation, rbum_domain_serv::RbumDomainServ, rbum_item_serv::RbumItemCrudOperation, rbum_kind_serv::RbumKindServ},
 };
-use bios_sdk_invoke::clients::event_client::TOPIC_EVENT_BUS;
+use bios_sdk_invoke::clients::event_client::{BiosEventCenter, EventCenter, TOPIC_EVENT_BUS};
 use tardis::{
     basic::{dto::TardisContext, field::TrimString, result::TardisResult},
     db::reldb_client::TardisActiveModel,
@@ -22,6 +22,7 @@ use crate::{
 };
 
 pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
+    create_event_center()?;
     let mut funs = TardisFuns::inst_with_db_conn(DOMAIN_CODE.to_string(), None);
     init_api(web_server).await?;
     init_cluster_resource().await;
@@ -142,6 +143,13 @@ fn init_scan_and_resend_task() {
             let _ = crate::serv::event_proc_serv::scan_and_resend(funs.into()).await;
         }
     });
+}
+
+fn create_event_center() -> TardisResult<()> {
+    let bios_event_center = BiosEventCenter::default();
+    bios_event_center.init()?;
+    TardisFuns::store().insert_singleton(bios_event_center);
+    Ok(())
 }
 
 async fn init_log_ws_client() -> TardisWSClient {

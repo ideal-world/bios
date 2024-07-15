@@ -83,7 +83,7 @@ impl FlowLogClient {
         let tag: String = tag.into();
         let own_paths = if ctx.own_paths.len() < 2 { None } else { Some(ctx.own_paths.clone()) };
         let owner = if ctx.owner.len() < 2 { None } else { Some(ctx.owner.clone()) };
-        SpiLogClient::add(
+        SpiLogClient::add_with_many_params(
             &tag,
             &TardisFuns::json.obj_to_string(&content).expect("req_msg not a valid json value"),
             ext,

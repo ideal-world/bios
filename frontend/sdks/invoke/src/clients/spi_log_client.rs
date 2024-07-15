@@ -17,7 +17,17 @@ use tardis::{
 
 use crate::{clients::base_spi_client::BaseSpiClient, invoke_constants::DYNAMIC_LOG, invoke_enumeration::InvokeModuleKind};
 
-#[derive(Debug, Default,Clone)]
+pub mod event {
+    use crate::clients::event_client::{ContextEvent, Event};
+
+    const EVENT_ADD_LOG: &str = "spi-log/add";
+    pub type AddLogEvent = ContextEvent<super::LogItemAddReq>;
+
+    impl Event for AddLogEvent {
+        const CODE: &'static str = EVENT_ADD_LOG;
+    }
+}
+#[derive(Debug, Default, Clone)]
 pub struct SpiLogClient;
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Default, Debug)]
@@ -56,6 +66,21 @@ pub struct LogDynamicContentReq {
     pub content: Option<String>,
 }
 
+#[derive(Serialize, Deserialize, Debug)]
+pub struct LogItemAddReq {
+    pub tag: String,
+    pub content: String,
+    pub kind: Option<String>,
+    pub ext: Option<Value>,
+    pub key: Option<String>,
+    pub op: Option<String>,
+    pub rel_key: Option<String>,
+    pub id: Option<String>,
+    pub ts: Option<DateTime<Utc>>,
+    pub owner: Option<String>,
+    pub own_paths: Option<String>,
+}
+
 impl SpiLogClient {
     pub async fn add_dynamic_log(
         content: &LogDynamicContentReq,
@@ -68,7 +93,7 @@ impl SpiLogClient {
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<()> {
-        Self::add(
+        Self::add_with_many_params(
             DYNAMIC_LOG,
             &TardisFuns::json.obj_to_string(content)?,
             ext,
@@ -86,7 +111,15 @@ impl SpiLogClient {
         Ok(())
     }
 
-    pub async fn add(
+    pub async fn add(req: &LogItemAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let log_url: String = BaseSpiClient::module_url(InvokeModuleKind::Log, funs).await?;
+        let headers = BaseSpiClient::headers(None, funs, ctx).await?;
+        funs.web_client().post_obj_to_str(&format!("{log_url}/ci/item"), &req, headers.clone()).await?;
+        Ok(())
+    }
+
+    #[deprecated = "use [`SpiLogClient::add`] instead"]
+    pub async fn add_with_many_params(
         tag: &str,
         content: &str,
         ext: Option<Value>,
@@ -100,22 +133,20 @@ impl SpiLogClient {
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<()> {
-        let log_url: String = BaseSpiClient::module_url(InvokeModuleKind::Log, funs).await?;
-        let headers = BaseSpiClient::headers(None, funs, ctx).await?;
-        let body = json!({
-            "tag": tag,
-            "content": content,
-            "owner": owner,
-            "own_paths":own_paths,
-            "kind": kind,
-            "ext": ext,
-            "key": key,
-            "op": op,
-            "rel_key": rel_key,
-            "ts": ts,
-        });
-        funs.web_client().post_obj_to_str(&format!("{log_url}/ci/item"), &body, headers.clone()).await?;
-        Ok(())
+        let req = LogItemAddReq {
+            tag: tag.to_string(),
+            content: content.to_string(),
+            kind,
+            ext,
+            key,
+            op,
+            rel_key,
+            id: None,
+            ts: ts.map(|ts| DateTime::parse_from_rfc3339(&ts).unwrap_or_default().with_timezone(&Utc)),
+            owner,
+            own_paths,
+        };
+        Self::add(&req, funs, ctx).await
     }
 
     pub async fn find(find_req: LogItemFindReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<TardisPage<LogItemFindResp>>> {
@@ -127,22 +158,6 @@ impl SpiLogClient {
 }
 
 pub struct LogEventClient {}
-
-#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Default)]
-pub struct LogItemAddReq {
-    pub tag: String,
-    // #[oai(validator(min_length = "2"))]
-    pub content: String,
-    pub kind: Option<TrimString>,
-    pub ext: Option<Value>,
-    pub key: Option<TrimString>,
-    pub op: Option<String>,
-    pub rel_key: Option<TrimString>,
-    pub id: Option<String>,
-    pub ts: Option<DateTime<Utc>>,
-    pub owner: Option<String>,
-    pub own_paths: Option<String>,
-}
 
 #[async_trait]
 pub trait SpiLogEventExt {

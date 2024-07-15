@@ -40,7 +40,7 @@ impl EventComponent for SpiLog {
         let ctx = self.ctx.clone();
         let code = code.to_string();
         let _handle = tokio::spawn(async move {
-            let result = SpiLogClient::add(
+            let result = SpiLogClient::add_with_many_params(
                 JOB_TAG,
                 "add job",
                 None,
@@ -67,7 +67,7 @@ impl EventComponent for SpiLog {
         let ctx = self.ctx.clone();
         let code = code.to_string();
         let _handle = tokio::spawn(async move {
-            let result = SpiLogClient::add(
+            let result = SpiLogClient::add_with_many_params(
                 JOB_TAG,
                 "delete job",
                 None,
@@ -94,7 +94,7 @@ impl EventComponent for SpiLog {
         let ctx = self.ctx.clone();
         let code = code.to_string();
         let _handle = tokio::spawn(async move {
-            let result = SpiLogClient::add(
+            let result = SpiLogClient::add_with_many_params(
                 TASK_TAG,
                 "start request",
                 None,
@@ -121,7 +121,7 @@ impl EventComponent for SpiLog {
         let ctx = self.ctx.clone();
         let code = code.to_string();
         let _handle = tokio::spawn(async move {
-            let result = SpiLogClient::add(
+            let result = SpiLogClient::add_with_many_params(
                 TASK_TAG,
                 &message,
                 Some(ext),
