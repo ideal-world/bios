@@ -2,6 +2,7 @@ use std::{
     collections::HashMap,
     future::Future,
     iter,
+    marker::PhantomData,
     pin::Pin,
     sync::{Arc, OnceLock},
     time::Duration,
@@ -11,7 +12,7 @@ use crossbeam::sync::ShardedLock;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use tardis::{
     basic::{dto::TardisContext, error::TardisError, result::TardisResult},
-    log::warn,
+    log::{debug, warn},
     serde_json, tokio,
     web::{
         poem_openapi::{self, Object},
@@ -120,12 +121,82 @@ impl<T> ContextEvent<T> {
 }
 pub trait Event: Serialize + DeserializeOwned {
     const CODE: &'static str;
+    fn source(&self) -> String {
+        String::default()
+    }
+    fn targets(&self) -> Option<Vec<String>> {
+        Self::CODE.split_once('/').map(|(service, _)| vec![service.to_string()])
+    }
 }
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
+pub struct WithSource<E> {
+    #[serde(flatten)]
+    inner: E,
+    #[serde(skip)]
+    source: String,
+}
+
+impl<E> Event for WithSource<E>
+where
+    E: Event,
+{
+    const CODE: &'static str = E::CODE;
+    fn source(&self) -> String {
+        self.source.clone()
+    }
+    fn targets(&self) -> Option<Vec<String>> {
+        self.inner.targets()
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
+pub struct WithTargets<E> {
+    #[serde(flatten)]
+    inner: E,
+    #[serde(skip)]
+    targets: Option<Vec<String>>,
+}
+
+impl<E> Event for WithTargets<E>
+where
+    E: Event,
+{
+    const CODE: &'static str = E::CODE;
+    fn source(&self) -> String {
+        self.inner.source()
+    }
+    fn targets(&self) -> Option<Vec<String>> {
+        self.targets.clone()
+    }
+}
+
+pub trait EventExt {
+    fn with_source(self, source: impl Into<String>) -> WithSource<Self>
+    where
+        Self: Sized,
+    {
+        WithSource {
+            inner: self,
+            source: source.into(),
+        }
+    }
+    fn with_targets(self, targets: impl Into<Option<Vec<String>>>) -> WithTargets<Self>
+    where
+        Self: Sized,
+    {
+        WithTargets {
+            inner: self,
+            targets: targets.into(),
+        }
+    }
+}
+
+impl<E> EventExt for E where E: Event {}
 
 pub trait EventCenter {
     fn init(&self) -> TardisResult<()>;
-    fn publish<E: Event>(&self, source: impl Into<String>, payload: E) -> impl Future<Output = TardisResult<()>>;
-    fn subscribe<E: Event, H: EventHandler<E>>(&self, handler: H);
+    fn publish<E: Event>(&self, event: E) -> impl Future<Output = TardisResult<()>>;
+    fn subscribe<A, H: EventHandler<A>>(&self, handler: H);
 }
 
 impl<T> EventCenter for Arc<T>
@@ -136,11 +207,11 @@ where
         T::init(self)
     }
 
-    fn publish<E: Event>(&self, source: impl Into<String>, payload: E) -> impl Future<Output = TardisResult<()>> {
-        self.as_ref().publish(source, payload)
+    fn publish<E: Event>(&self, event: E) -> impl Future<Output = TardisResult<()>> {
+        self.as_ref().publish(event)
     }
 
-    fn subscribe<E: Event, H: EventHandler<E>>(&self, handler: H) {
+    fn subscribe<A, H: EventHandler<A>>(&self, handler: H) {
         self.as_ref().subscribe(handler)
     }
 }
@@ -159,27 +230,48 @@ impl EventCenter for BiosEventCenter {
     fn init(&self) -> TardisResult<()> {
         self.inner.init()
     }
-    async fn publish<E: Event>(&self, source: impl Into<String>, payload: E) -> TardisResult<()> {
-        self.inner.publish(source, payload).await
+    async fn publish<E: Event>(&self, event: E) -> TardisResult<()> {
+        self.inner.publish(event).await
     }
 
-    fn subscribe<E: Event, H: EventHandler<E>>(&self, handler: H) {
+    fn subscribe<A, H: EventHandler<A>>(&self, handler: H) {
+        debug!("subscribe event handler for event [{}]", H::Event::CODE);
         self.inner.subscribe(handler);
     }
 }
 
-pub trait EventHandler<E>: Clone + Sync + Send + 'static {
-    fn handle(self, event: E) -> impl Future<Output = TardisResult<()>> + Send;
+pub trait EventHandler<A>: Clone + Sync + Send + 'static {
+    type Event: Event;
+    fn handle(self, event: Self::Event) -> impl Future<Output = TardisResult<()>> + Send;
 }
+/// Adapter for event without a tardis context
 #[derive(Debug, Clone)]
-pub struct FnEventHandler<F>(pub F);
-impl<E, F, Fut> EventHandler<E> for FnEventHandler<F>
+pub struct FnEventHandler<E>(PhantomData<E>);
+impl<E, F, Fut> EventHandler<FnEventHandler<E>> for F
 where
-    F: Fn(E) -> Fut + Send + Sync + Clone + 'static,
+    E: Event,
+    F: Fn(E) -> Fut + Clone + Send + Sync + 'static,
     Fut: Future<Output = TardisResult<()>> + Send,
 {
+    type Event = E;
     fn handle(self, event: E) -> impl Future<Output = TardisResult<()>> + Send {
-        (self.0.clone())(event)
+        (self)(event)
+    }
+}
+
+/// Adapter for event with a tardis context
+#[derive(Debug, Clone)]
+pub struct FnContextEventHandler<E>(PhantomData<E>);
+impl<E, F, Fut> EventHandler<FnContextEventHandler<E>> for F
+where
+    ContextEvent<E>: Event,
+    F: Fn(E, TardisContext) -> Fut + Clone + Send + Sync + 'static,
+    Fut: Future<Output = TardisResult<()>> + Send,
+{
+    type Event = ContextEvent<E>;
+    fn handle(self, event: ContextEvent<E>) -> impl Future<Output = TardisResult<()>> + Send {
+        let (ctx, evt) = event.unpack();
+        (self)(evt, ctx)
     }
 }
 
@@ -214,8 +306,6 @@ impl EventCenter for WsEventCenter {
             let config = TardisFuns::cs_config::<WsEventCenterConfig>(EVENT_CENTER_MODULE);
             let url = config.base_url.as_str();
             let funs = TardisFuns::inst("", None);
-
-            let client = EventClient::new(url, &funs);
             // wait for web server to start
             loop {
                 if TardisFuns::web_server().is_running().await {
@@ -224,13 +314,15 @@ impl EventCenter for WsEventCenter {
                     tokio::task::yield_now().await
                 }
             }
+            let events = this.handlers.read().expect("never poisoned").keys().map(|s| String::from(*s)).collect::<Vec<_>>();
+            let client = EventClient::new(url, &funs);
             let resp = client
                 .register(&EventListenerRegisterReq {
                     topic_code: TOPIC_EVENT_BUS.to_string(),
                     topic_sk: Some(config.topic_sk.clone()),
-                    events: None,
+                    events: Some(events),
                     avatars: config.avatars.clone(),
-                    subscribe_mode: true,
+                    subscribe_mode: false,
                 })
                 .await
                 .expect("fail to register event center");
@@ -282,14 +374,13 @@ impl EventCenter for WsEventCenter {
         });
         Ok(())
     }
-    async fn publish<E: Event>(&self, source: impl Into<String>, payload: E) -> TardisResult<()> {
-        let code = E::CODE;
+    async fn publish<E: Event>(&self, event: E) -> TardisResult<()> {
         if let Some(client) = self.ws_client.get() {
             client
                 .send_obj(&TardisWebsocketReq {
-                    msg: TardisFuns::json.obj_to_json(&payload)?,
-                    from_avatar: source.into(),
-                    to_avatars: code.split_once('/').map(|(service, _)| vec![service.to_string()]),
+                    msg: TardisFuns::json.obj_to_json(&event)?,
+                    from_avatar: event.source(),
+                    to_avatars: event.targets(),
                     event: Some(E::CODE.to_string()),
                     ..Default::default()
                 })
@@ -299,15 +390,15 @@ impl EventCenter for WsEventCenter {
         }
     }
 
-    fn subscribe<E: Event, H: EventHandler<E>>(&self, handler: H) {
+    fn subscribe<A, H: EventHandler<A>>(&self, handler: H) {
         let wrapped_handler: Arc<WsEventCenterHandler> = Arc::new(move |value: serde_json::Value| {
             let handler = handler.clone();
             Box::pin(async move {
-                let event: E = serde_json::from_value(value).map_err(|e| TardisError::internal_error(&format!("can't deserialize event message: {e}"), ""))?;
+                let event: H::Event = serde_json::from_value(value).map_err(|e| TardisError::internal_error(&format!("can't deserialize event message: {e}"), ""))?;
                 handler.handle(event).await
             })
         });
-        let key = E::CODE;
+        let key = H::Event::CODE;
         self.handlers.write().expect("never poisoned").entry(key).or_default().push(wrapped_handler);
     }
 }

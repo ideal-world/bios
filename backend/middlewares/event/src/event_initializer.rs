@@ -7,8 +7,7 @@ use bios_sdk_invoke::clients::event_client::{BiosEventCenter, EventCenter, TOPIC
 use tardis::{
     basic::{dto::TardisContext, field::TrimString, result::TardisResult},
     db::reldb_client::TardisActiveModel,
-    log::error,
-    web::{web_server::TardisWebServer, ws_client::TardisWSClient},
+    web::web_server::TardisWebServer,
     TardisFuns, TardisFunsInst,
 };
 
@@ -22,8 +21,12 @@ use crate::{
 };
 
 pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
-    create_event_center()?;
     let mut funs = TardisFuns::inst_with_db_conn(DOMAIN_CODE.to_string(), None);
+    let config = funs.conf::<EventConfig>();
+    if !config.enable {
+        return Ok(());
+    }
+    create_event_center()?;
     init_api(web_server).await?;
     init_cluster_resource().await;
     let ctx = TardisContext {
@@ -150,51 +153,4 @@ fn create_event_center() -> TardisResult<()> {
     bios_event_center.init()?;
     TardisFuns::store().insert_singleton(bios_event_center);
     Ok(())
-}
-
-async fn init_log_ws_client() -> TardisWSClient {
-    while !TardisFuns::web_server().is_running().await {
-        tardis::tokio::task::yield_now().await
-    }
-    let funs = TardisFuns::inst_with_db_conn(DOMAIN_CODE.to_string(), None);
-    let conf = funs.conf::<EventConfig>();
-    let mut event_conf = conf.log_event.clone();
-    if event_conf.avatars.is_empty() {
-        event_conf.avatars.push(format!("{}/{}", event_conf.topic_code, env!("CARGO_PKG_NAME")))
-    }
-    let default_avatar = event_conf.avatars[0].clone();
-    set_default_log_avatar(default_avatar);
-    let client = bios_sdk_invoke::clients::event_client::EventClient::new(&event_conf.base_url, &funs);
-    loop {
-        let addr = loop {
-            if let Ok(result) = client
-                .register(&bios_sdk_invoke::clients::event_client::EventListenerRegisterReq {
-                    topic_code: event_conf.topic_code.to_string(),
-                    topic_sk: event_conf.topic_sk.clone(),
-                    events: event_conf.events.clone(),
-                    avatars: event_conf.avatars.clone(),
-                    subscribe_mode: event_conf.subscribe_mode,
-                })
-                .await
-            {
-                break result.ws_addr;
-            }
-            tardis::tokio::time::sleep(std::time::Duration::from_secs(10)).await;
-        };
-        let ws_client = TardisFuns::ws_client(&addr, |_| async move { None }).await;
-        match ws_client {
-            Ok(ws_client) => {
-                return ws_client;
-            }
-            Err(err) => {
-                error!("[BIOS.Event] failed to connect to event server: {}", err);
-                tardis::tokio::time::sleep(std::time::Duration::from_secs(10)).await;
-            }
-        }
-    }
-}
-use std::sync::OnceLock;
-tardis::tardis_static! {
-    pub(crate) async ws_log_client: TardisWSClient = init_log_ws_client();
-    pub(crate) async set default_log_avatar: String;
 }

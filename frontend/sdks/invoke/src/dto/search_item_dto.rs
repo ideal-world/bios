@@ -6,7 +6,7 @@ use tardis::{
     web::poem_openapi,
 };
 
-#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
 pub struct SearchItemAddReq {
     #[oai(validator(pattern = r"^[a-z0-9-_]+$"))]
     pub tag: String,
@@ -16,8 +16,6 @@ pub struct SearchItemAddReq {
     pub key: TrimString,
     #[oai(validator(min_length = "2"))]
     pub title: String,
-    #[oai(validator(min_length = "2"))]
-    pub name: Option<String>,
     // #[oai(validator(min_length = "2"))]
     pub content: String,
     #[oai(validator(min_length = "2"))]
@@ -61,19 +59,15 @@ pub struct SearchItemVisitKeysReq {
     pub groups: Option<Vec<String>>,
 }
 
-#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct SearchEventItemModifyReq {
-    #[oai(validator(pattern = r"^[a-z0-9-_]+$"))]
     pub tag: String,
-    #[oai(validator(min_length = "2"))]
     pub key: String,
-    pub item: Value,
+    pub item: SearchItemModifyReq,
 }
 
-#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct SearchEventItemDeleteReq {
-    #[oai(validator(pattern = r"^[a-z0-9-_]+$"))]
     pub tag: String,
-    #[oai(validator(min_length = "2"))]
     pub key: String,
 }

@@ -6,7 +6,6 @@ use crate::{
     iam_config::IamConfig,
     iam_constants,
     iam_enumeration::{IamRelKind, IamRoleKind},
-    iam_initializer::{default_iam_send_avatar, ws_iam_send_client},
 };
 use bios_basic::{
     process::task_processor::TaskProcessor,
@@ -204,7 +203,6 @@ impl IamCcRoleTaskServ {
                 Ok(())
             },
             &funs.cache(),
-            None,
             default_iam_send_avatar().await.clone(),
             Some(vec![format!("account/{}", ctx.owner)]),
             ctx,

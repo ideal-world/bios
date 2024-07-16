@@ -18,9 +18,8 @@ use tardis::{
         },
     },
     futures::future::join_all,
-    log::{error, info},
-    tokio,
-    web::{web_server::TardisWebServer, ws_client::TardisWSClient},
+    log::info,
+    web::web_server::TardisWebServer,
     TardisFuns, TardisFunsInst,
 };
 
@@ -38,6 +37,7 @@ use crate::{
         flow_state_dto::FlowSysStateKind,
         flow_transition_dto::{FlowTransitionDoubleCheckInfo, FlowTransitionInitInfo},
     },
+    event::flow_register_events,
     flow_config::{BasicInfo, FlowBasicInfoManager, FlowConfig},
     flow_constants,
     serv::{
@@ -50,7 +50,7 @@ use crate::{
 pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
     let funs = flow_constants::get_tardis_inst();
     init_db(funs).await?;
-    tokio::spawn(init_event());
+    flow_register_events();
     init_api(web_server).await
 }
 
@@ -921,111 +921,4 @@ pub async fn init_flow_model(funs: &TardisFunsInst, ctx: &TardisContext) -> Tard
     }
 
     Ok(())
-}
-
-async fn init_event() -> TardisResult<()> {
-    let funs = flow_constants::get_tardis_inst();
-    let conf = funs.conf::<FlowConfig>();
-    if let Some(event_config) = conf.event.as_ref() {
-        loop {
-            if TardisFuns::web_server().is_running().await {
-                break;
-            } else {
-                tokio::task::yield_now().await
-            }
-        }
-        crate::event::start_flow_event_service(event_config).await?;
-    }
-    Ok(())
-}
-
-async fn init_ws_flow_client() -> Option<TardisWSClient> {
-    while !TardisFuns::web_server().is_running().await {
-        tardis::tokio::task::yield_now().await
-    }
-    let funs = flow_constants::get_tardis_inst();
-    let conf = funs.conf::<FlowConfig>();
-    if conf.event.is_none() {
-        set_default_flow_avatar("".to_owned());
-        return None;
-    }
-    let mut event_conf = conf.event.clone().unwrap();
-    if !event_conf.in_event {
-        set_default_flow_avatar("".to_owned());
-        return None;
-    }
-    if event_conf.avatars.is_empty() {
-        event_conf.avatars.push(format!("{}/{}", event_conf.topic_code, env!("CARGO_PKG_NAME")))
-    }
-    let default_avatar = event_conf.avatars[0].clone();
-    set_default_flow_avatar(default_avatar);
-    let client = bios_sdk_invoke::clients::event_client::EventClient::new(&event_conf.base_url, &funs);
-    loop {
-        let addr = loop {
-            if let Ok(result) = client.register(&event_conf.clone().into()).await {
-                break result.ws_addr;
-            }
-            tardis::tokio::time::sleep(std::time::Duration::from_secs(10)).await;
-        };
-        let ws_client = TardisFuns::ws_client(&addr, |_| async move { None }).await;
-        match ws_client {
-            Ok(ws_client) => {
-                return Some(ws_client);
-            }
-            Err(err) => {
-                error!("[BIOS.Iam] failed to connect to event server: {}", err);
-                tardis::tokio::time::sleep(std::time::Duration::from_secs(10)).await;
-            }
-        }
-    }
-}
-
-async fn init_ws_search_client() -> Option<TardisWSClient> {
-    while !TardisFuns::web_server().is_running().await {
-        tardis::tokio::task::yield_now().await
-    }
-    let funs = flow_constants::get_tardis_inst();
-    let conf = funs.conf::<FlowConfig>();
-    if conf.search_event.is_none() {
-        set_default_flow_avatar("".to_owned());
-        return None;
-    }
-    let mut event_conf = conf.search_event.clone().unwrap();
-    if !event_conf.in_event {
-        set_default_search_avatar("".to_owned());
-        return None;
-    }
-    if event_conf.avatars.is_empty() {
-        event_conf.avatars.push(format!("{}/{}", event_conf.topic_code, env!("CARGO_PKG_NAME")))
-    }
-    let default_avatar = event_conf.avatars[0].clone();
-    set_default_search_avatar(default_avatar);
-    let client = bios_sdk_invoke::clients::event_client::EventClient::new(&event_conf.base_url, &funs);
-    loop {
-        let addr = loop {
-            if let Ok(result) = client.register(&event_conf.clone().into()).await {
-                break result.ws_addr;
-            }
-            tardis::tokio::time::sleep(std::time::Duration::from_secs(10)).await;
-        };
-        let ws_client = TardisFuns::ws_client(&addr, |_| async move { None }).await;
-        match ws_client {
-            Ok(ws_client) => {
-                info!("[BIOS.Flow] connected to server");
-                return Some(ws_client);
-            }
-            Err(err) => {
-                error!("[BIOS.Flow] failed to connect to event server: {}", err);
-                tardis::tokio::time::sleep(std::time::Duration::from_secs(10)).await;
-            }
-        }
-    }
-}
-
-use std::sync::OnceLock;
-tardis::tardis_static! {
-    pub(crate) async ws_flow_client: Option<TardisWSClient> = init_ws_flow_client();
-    pub(crate) async ws_search_client: Option<TardisWSClient> = init_ws_search_client();
-    pub(crate) async set default_flow_avatar: String;
-    pub(crate) async set default_search_avatar: String;
 }

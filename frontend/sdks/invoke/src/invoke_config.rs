@@ -1,6 +1,7 @@
 use crate::invoke_enumeration::InvokeModuleKind;
 use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
+use tardis::basic::dto::TardisContext;
 use std::sync::Mutex;
 use std::{collections::HashMap, fmt::Debug};
 use tardis::basic::{error::TardisError, result::TardisResult};
@@ -60,6 +61,7 @@ pub trait InvokeConfigApi {
     fn invoke_conf_spi_app_id(&self) -> String;
     fn invoke_conf_module_url(&self) -> HashMap<String, String>;
     fn invoke_conf_match_module_url(&self, module_url: &str) -> bool;
+    fn invoke_conf_inject_context(&self, context: &TardisContext) -> TardisContext;
 }
 
 impl InvokeConfigApi for TardisFunsInst {
@@ -73,5 +75,11 @@ impl InvokeConfigApi for TardisFunsInst {
 
     fn invoke_conf_match_module_url(&self, module_url: &str) -> bool {
         InvokeConfigManager::match_module_url(self.module_code(), module_url)
+    }
+
+    fn invoke_conf_inject_context(&self, context: &TardisContext) -> TardisContext {
+        let mut ctx = context.clone();
+        ctx.owner = self.invoke_conf_spi_app_id();
+        ctx
     }
 }

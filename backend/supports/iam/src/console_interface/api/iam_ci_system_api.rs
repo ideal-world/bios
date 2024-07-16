@@ -9,7 +9,6 @@ use tardis::web::poem_openapi::payload::Json;
 use tardis::web::web_resp::{TardisApiResult, TardisResp, Void};
 
 use crate::iam_constants;
-use crate::iam_initializer::{default_iam_send_avatar, ws_iam_send_client};
 #[derive(Clone, Default)]
 pub struct IamCiSystemApi;
 
@@ -46,7 +45,6 @@ impl IamCiSystemApi {
             &cache_key.0,
             task_id.0,
             &funs.cache(),
-            ws_iam_send_client().await.clone(),
             default_iam_send_avatar().await.clone(),
             Some(vec![format!("account/{}", ctx.0.owner)]),
         )
@@ -67,7 +65,6 @@ impl IamCiSystemApi {
                 &cache_key.0,
                 task_id,
                 &funs.cache(),
-                ws_iam_send_client().await.clone(),
                 default_iam_send_avatar().await.clone(),
                 Some(vec![format!("account/{}", ctx.0.owner)]),
             )
@@ -94,7 +91,6 @@ impl IamCiSystemApi {
             task_id.0,
             data.0,
             &funs.cache(),
-            ws_iam_send_client().await.clone(),
             default_iam_send_avatar().await.clone(),
             Some(vec![format!("account/{}", ctx.0.owner)]),
         )

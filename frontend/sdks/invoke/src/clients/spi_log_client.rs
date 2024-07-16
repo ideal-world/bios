@@ -21,9 +21,9 @@ pub mod event {
     use crate::clients::event_client::{ContextEvent, Event};
 
     const EVENT_ADD_LOG: &str = "spi-log/add";
-    pub type AddLogEvent = ContextEvent<super::LogItemAddReq>;
+    pub type LogItemAddEvent = ContextEvent<super::LogItemAddReq>;
 
-    impl Event for AddLogEvent {
+    impl Event for LogItemAddEvent {
         const CODE: &'static str = EVENT_ADD_LOG;
     }
 }

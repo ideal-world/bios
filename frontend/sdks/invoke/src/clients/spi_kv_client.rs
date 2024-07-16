@@ -11,9 +11,35 @@ use crate::invoke_enumeration::InvokeModuleKind;
 
 use super::base_spi_client::BaseSpiClient;
 
-pub mod event {}
+pub mod event {
+    use crate::clients::event_client::{ContextEvent, Event};
+
+    const EVENT_ADD_KV: &str = "spi-kv/add";
+    const EVENT_DELETE_KV: &str = "spi-kv/delete";
+    pub type KvItemAddOrModifyEvent = ContextEvent<super::KvItemAddOrModifyReq>;
+    
+    impl Event for KvItemAddOrModifyEvent {
+        const CODE: &'static str = EVENT_ADD_KV;
+    }
+    pub type KvItemDeleteEvent = ContextEvent<super::KvItemDeleteReq>;
+    impl Event for KvItemDeleteEvent {
+        const CODE: &'static str = EVENT_DELETE_KV;
+    }
+}
 #[derive(Clone, Debug, Default)]
 pub struct SpiKvClient;
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct KvItemAddOrModifyReq {
+    pub key: String,
+    pub value: Value,
+    pub info: Option<String>,
+    pub scope_level: Option<i16>,
+}
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct KvItemDeleteReq {
+    pub key: String,
+}
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Clone, Debug)]
 pub struct KvItemSummaryResp {

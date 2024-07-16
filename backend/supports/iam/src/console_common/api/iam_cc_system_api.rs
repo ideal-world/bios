@@ -7,7 +7,6 @@ use tardis::web::web_resp::{TardisApiResult, TardisResp, Void};
 
 use crate::iam_config::IamConfig;
 use crate::iam_constants;
-use crate::iam_initializer::{default_iam_send_avatar, ws_iam_send_client};
 #[derive(Clone, Default)]
 pub struct IamCcSystemApi;
 
@@ -46,7 +45,6 @@ impl IamCcSystemApi {
                 &funs.conf::<IamConfig>().cache_key_async_task_status,
                 task_id,
                 &funs.cache(),
-                ws_iam_send_client().await.clone(),
                 default_iam_send_avatar().await.clone(),
                 Some(vec![format!("account/{}", ctx.0.owner)]),
             )
