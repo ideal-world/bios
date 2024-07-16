@@ -205,7 +205,7 @@ impl FlowEventServ {
         )
         .await?;
 
-        if FlowModelServ::check_post_action_ring(next_flow_transition.clone(), (false, vec![]), funs, ctx).await?.0 {
+        if FlowModelServ::check_post_action_ring(&flow_model, funs, ctx).await? {
             return Err(funs.err().not_found("flow_inst", "transfer", "this post action exist endless loop", "500-flow-transition-endless-loop"));
         }
 
