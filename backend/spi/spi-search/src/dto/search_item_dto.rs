@@ -19,7 +19,7 @@ pub struct SearchItemAddReq {
     pub kind: String,
     #[oai(validator(min_length = "2"))]
     pub key: TrimString,
-    #[oai(validator(min_length = "2"))]
+    #[oai(validator(min_length = "1"))]
     pub title: String,
     // #[oai(validator(min_length = "2"))]
     pub content: String,
@@ -37,7 +37,7 @@ pub struct SearchItemAddReq {
 pub struct SearchItemModifyReq {
     #[oai(validator(min_length = "2"))]
     pub kind: Option<String>,
-    #[oai(validator(min_length = "2"))]
+    #[oai(validator(min_length = "1"))]
     pub title: Option<String>,
     // #[oai(validator(min_length = "2"))]
     pub content: Option<String>,
