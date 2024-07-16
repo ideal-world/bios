@@ -18,7 +18,6 @@ use crate::dto::flow_model_dto::{
 use crate::dto::flow_state_dto::FlowStateRelModelModifyReq;
 use crate::dto::flow_transition_dto::{FlowTransitionModifyReq, FlowTransitionSortStatesReq};
 use crate::flow_constants;
-use crate::helper::loop_check_helper;
 use crate::serv::flow_model_serv::FlowModelServ;
 #[derive(Clone)]
 pub struct FlowCcModelApi;
@@ -361,34 +360,6 @@ impl FlowCcModelApi {
         .await?;
         funs.commit().await?;
         ctx.0.execute_task().await?;
-        TardisResp::ok(Void {})
-    }
-
-    /// 测试循环检查
-    #[oai(path = "/check_loop", method = "get")]
-    async fn check_loop(&self, temp_id: Query<Option<String>>, ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<Void> {
-        let funs = flow_constants::get_tardis_inst();
-        let models = FlowModelServ::find_rel_models(temp_id.0, false, &funs, &ctx.0).await?;
-        let mut model_details = HashMap::new();
-        for (tag, model) in models {
-            let model_detail = FlowModelServ::find_one_detail_item(
-                &FlowModelFilterReq {
-                    basic: RbumBasicFilterReq {
-                        ids: Some(vec![model.id]),
-                        ..Default::default()
-                    },
-                    ..Default::default()
-                },
-                &funs,
-                &ctx.0,
-            )
-            .await?
-            .unwrap();
-            model_details.insert(tag, model_detail);
-        }
-        let result = loop_check_helper::check(&model_details);
-        warn!("result: {:?}", result);
-
         TardisResp::ok(Void {})
     }
 }
