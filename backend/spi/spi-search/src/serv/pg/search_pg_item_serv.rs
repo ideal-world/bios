@@ -1620,6 +1620,7 @@ pub async fn refresh_tsv(tag: &str, funs: &TardisFunsInst, ctx: &TardisContext, 
                     row.try_get::<String>("", "key").expect("not found key").as_str(),
                     &mut SearchItemModifyReq {
                         title: Some(row.try_get("", "title").expect("not found title")),
+                        update_time: Some(Utc::now()),
                         ..Default::default()
                     },
                     funs,
