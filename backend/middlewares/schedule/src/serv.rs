@@ -13,3 +13,4 @@
 /// - 写的时候先写远程缓存，再写本地缓存 / Write to remote cache first, then write to local cache
 /// - 读的时候同一代码以远程为准，远程没有再读本地 / When reading, the remote is the same code, and the local is read if the remote is not
 pub mod schedule_job_serv;
+pub mod schedule_job_serv_v2;
