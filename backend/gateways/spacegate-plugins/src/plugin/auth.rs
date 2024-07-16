@@ -287,7 +287,7 @@ impl AuthPlugin {
                     let err_resp = Response::builder()
                         .header(http::header::CONTENT_TYPE, HeaderValue::from_static("application/json"))
                         .status(StatusCode::from_str(&e.code).unwrap_or(StatusCode::BAD_GATEWAY))
-                        .body(SgBody::full(json!({"code":format!("{}-gateways-cert-error",e.code),"message":e.message}).to_string()))
+                        .body(SgBody::full(json!({"code":format!("{}-gateway-cert-error",e.code),"message":e.message}).to_string()))
                         .map_err(PluginError::internal_error::<AuthPlugin>)?;
                     return Err(err_resp);
                 };
