@@ -1,6 +1,5 @@
 use std::{collections::HashMap, vec};
 
-use async_recursion::async_recursion;
 use bios_basic::rbum::{
     dto::{
         rbum_filer_dto::{RbumBasicFilterReq, RbumItemRelFilterReq},
@@ -37,12 +36,11 @@ use crate::{
             FlowModelModifyReq, FlowModelSummaryResp,
         },
         flow_state_dto::{FlowStateAggResp, FlowStateDetailResp, FlowStateFilterReq, FlowStateRelModelExt, FlowStateRelModelModifyReq},
-        flow_transition_dto::{
-            FlowTransitionActionChangeAgg, FlowTransitionActionChangeKind, FlowTransitionAddReq, FlowTransitionDetailResp, FlowTransitionInitInfo, FlowTransitionModifyReq,
-        },
+        flow_transition_dto::{FlowTransitionActionChangeKind, FlowTransitionAddReq, FlowTransitionDetailResp, FlowTransitionInitInfo, FlowTransitionModifyReq},
     },
     flow_config::FlowBasicInfoManager,
     flow_constants,
+    helper::loop_check_helper,
     serv::flow_state_serv::FlowStateServ,
 };
 use async_trait::async_trait;
@@ -121,15 +119,14 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
         if let Some(transitions) = &add_req.transitions {
             Self::add_transitions(flow_model_id, transitions, funs, ctx).await?;
             // check transition post action endless loop
-            for transition_detail in Self::get_item(flow_model_id, &FlowModelFilterReq::default(), funs, ctx).await?.transitions() {
-                if Self::check_post_action_ring(transition_detail, (false, vec![]), funs, ctx).await?.0 {
-                    return Err(funs.err().not_found(
-                        "flow_model_Serv",
-                        "after_add_item",
-                        "this post action exist endless loop",
-                        "500-flow-transition-endless-loop",
-                    ));
-                }
+            let model_desp = Self::get_item(flow_model_id, &FlowModelFilterReq::default(), funs, ctx).await?;
+            if Self::check_post_action_ring(&model_desp, funs, ctx).await? {
+                return Err(funs.err().not_found(
+                    "flow_model_Serv",
+                    "after_add_item",
+                    "this post action exist endless loop",
+                    "500-flow-transition-endless-loop",
+                ));
             }
         }
         if add_req.template && add_req.rel_model_id.is_none() {
@@ -275,15 +272,13 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
         }
         if modify_req.add_transitions.is_some() || modify_req.modify_transitions.is_some() {
             // check transition post action endless loop
-            for transition_detail in Self::get_item(flow_model_id, &FlowModelFilterReq::default(), funs, ctx).await?.transitions() {
-                if Self::check_post_action_ring(transition_detail, (false, vec![]), funs, ctx).await?.0 {
-                    return Err(funs.err().not_found(
-                        "flow_model_Serv",
-                        "after_modify_item",
-                        "this post action exist endless loop",
-                        "500-flow-transition-endless-loop",
-                    ));
-                }
+            if Self::check_post_action_ring(&model_detail, funs, ctx).await? {
+                return Err(funs.err().not_found(
+                    "flow_model_Serv",
+                    "after_modify_item",
+                    "this post action exist endless loop",
+                    "500-flow-transition-endless-loop",
+                ));
             }
         }
         let model = Self::get_item_detail_aggs(flow_model_id, false, funs, ctx).await?;
@@ -1132,7 +1127,11 @@ impl FlowModelServ {
             FlowModelAssociativeOperationKind::Copy => {
                 Self::add_item(
                     &mut FlowModelAddReq {
-                        rel_model_id: if rbum_scope_helper::get_scope_level_by_context(&mock_ctx)? != RbumScopeLevelKind::L2 { Some(rel_model_id.to_string()) } else { None },
+                        rel_model_id: if rbum_scope_helper::get_scope_level_by_context(&mock_ctx)? != RbumScopeLevelKind::L2 {
+                            Some(rel_model_id.to_string())
+                        } else {
+                            None
+                        },
                         rel_template_ids: None,
                         template: rbum_scope_helper::get_scope_level_by_context(&mock_ctx)? != RbumScopeLevelKind::L2,
                         ..rel_model.clone().into()
@@ -1394,90 +1393,39 @@ impl FlowModelServ {
             .collect_vec())
     }
 
-    #[async_recursion]
-    pub async fn check_post_action_ring(
-        transition_detail: FlowTransitionDetailResp,
-        current_result: (bool, Vec<String>),
-        funs: &TardisFunsInst,
-        ctx: &TardisContext,
-    ) -> TardisResult<(bool, Vec<String>)> {
-        let (mut is_ring, mut current_chain) = current_result.clone();
-        if is_ring || current_chain.iter().any(|trans_id| trans_id == &transition_detail.id) {
-            return Ok((true, current_chain));
-        }
-        current_chain.push(transition_detail.id.clone());
+    // 1、template_id为None，则根据own_paths批量获取关联模型
+    // 2、template_id为单元素数组，则表示
+    pub async fn check_post_action_ring(model_desp: &FlowModelDetailResp, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<bool> {
+        let mut model_details = HashMap::new();
+        if model_desp.template && model_desp.rel_model_id.is_empty() {
+            model_details.insert(model_desp.tag.clone(), model_desp.clone());
+        } else {
+            let template_ids = if model_desp.rel_template_ids.is_empty() {
+                None
+            } else {
+                model_desp.rel_template_ids.clone().pop()
+            };
+            let models = Self::find_rel_models(template_ids, false, funs, ctx).await?;
 
-        let model_detail = Self::get_item(&transition_detail.rel_flow_model_id, &FlowModelFilterReq::default(), funs, ctx).await?;
-        // check post changes
-        let post_changes = transition_detail
-            .action_by_post_changes()
-            .into_iter()
-            .filter(|trans| trans.kind == FlowTransitionActionChangeKind::State)
-            .map(FlowTransitionActionChangeAgg::from)
-            .collect_vec();
-        if !post_changes.is_empty() {
-            for post_change in post_changes {
-                if let Some(change_info) = &post_change.state_change_info {
-                    if let Some(flow_model_id) = Self::find_id_items(
-                        &FlowModelFilterReq {
-                            basic: RbumBasicFilterReq {
-                                ignore_scope: true,
-                                ..Default::default()
-                            },
-                            tags: Some(vec![change_info.obj_tag.clone()]),
-                            rel: FlowRelServ::get_template_rel_filter(
-                                FlowRelServ::find_to_simple_rels(&FlowRelKind::FlowModelTemplate, &model_detail.id, None, None, funs, ctx)
-                                    .await?
-                                    .pop()
-                                    .map(|rel| rel.rel_id)
-                                    .as_deref(),
-                            ),
+            for (tag, model) in models {
+                let model_detail = Self::find_one_detail_item(
+                    &FlowModelFilterReq {
+                        basic: RbumBasicFilterReq {
+                            ids: Some(vec![model.id]),
                             ..Default::default()
                         },
-                        None,
-                        None,
-                        funs,
-                        ctx,
-                    )
-                    .await?
-                    .pop()
-                    {
-                        let transitions = Self::find_transitions_by_state_id(
-                            &flow_model_id,
-                            change_info.obj_current_state_id.clone(),
-                            Some(vec![change_info.changed_state_id.clone()]),
-                            funs,
-                            ctx,
-                        )
-                        .await?
-                        .into_iter()
-                        .filter(|tran| tran.id != transition_detail.id)
-                        .collect_vec();
-                        for transition_detail in transitions {
-                            (is_ring, current_chain) = Self::check_post_action_ring(transition_detail, (is_ring, current_chain.clone()), funs, ctx).await?;
-                            if is_ring {
-                                return Ok((true, current_chain));
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        // check front changes
-        let flow_transitions = model_detail
-            .transitions()
-            .into_iter()
-            .filter(|trans| trans.from_flow_state_id == transition_detail.to_flow_state_id && !trans.action_by_front_changes().is_empty())
-            .sorted_by_key(|trans| trans.sort)
-            .collect_vec();
-        for transition_detail in flow_transitions {
-            (is_ring, current_chain) = Self::check_post_action_ring(transition_detail, (is_ring, current_chain.clone()), funs, ctx).await?;
-            if is_ring {
-                return Ok((true, current_chain));
+                        ..Default::default()
+                    },
+                    funs,
+                    ctx,
+                )
+                .await?
+                .unwrap();
+                model_details.insert(tag, model_detail);
             }
         }
 
-        Ok((is_ring, current_chain))
+        Ok(loop_check_helper::check(&model_details))
     }
 
     pub async fn find_rel_states(tags: Vec<&str>, rel_template_id: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<FlowModelFindRelStateResp>> {
