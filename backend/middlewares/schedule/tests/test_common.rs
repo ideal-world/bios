@@ -11,7 +11,11 @@ use bios_basic::{
     spi::{dto::spi_bs_dto::SpiBsAddReq, spi_constants, spi_initializer},
     test::test_http_client::TestHttpClient,
 };
-use bios_mw_schedule::{schedule_constants::DOMAIN_CODE, schedule_initializer, serv::schedule_job_serv::OwnedScheduleTaskServ};
+use bios_mw_schedule::{
+    schedule_constants::DOMAIN_CODE,
+    schedule_initializer,
+    serv::schedule_job_serv_v2::{event::SpiLog, repo::SpiKv, service::ScheduleJobService},
+};
 use bios_spi_kv::kv_initializer;
 use bios_spi_log::log_initializer;
 use tardis::{
@@ -62,13 +66,12 @@ pub async fn mock_webserver() -> TardisResult<Arc<AtomicUsize>> {
     Ok(cb_counter)
 }
 #[allow(dead_code)]
-pub async fn init_task_serve_group(size: usize) -> TardisResult<Vec<Arc<OwnedScheduleTaskServ>>> {
+pub async fn init_task_serve_group(size: usize) -> TardisResult<Vec<ScheduleJobService<SpiKv, SpiLog>>> {
     let mut funs = TardisFuns::inst_with_db_conn(DOMAIN_CODE.to_string(), None);
     let mut collector = vec![];
     funs.begin().await?;
-    let ctx = spi_initializer::init(DOMAIN_CODE, &funs).await?;
     for _ in 0..size {
-        collector.push(OwnedScheduleTaskServ::init(&funs, &ctx).await?);
+        collector.push(ScheduleJobService::<SpiKv, SpiLog>::new());
     }
     funs.commit().await?;
     Ok(collector)
@@ -78,7 +81,7 @@ pub async fn init_client() -> TardisResult<TestHttpClient> {
     let mut client = TestHttpClient::new(format!("https://127.0.0.1:8080/{}", DOMAIN_CODE));
     client.set_auth(&TardisContext {
         own_paths: "t1/app001".to_string(),
-        ak: "".to_string(),
+        ak: "app001".to_string(),
         roles: vec![],
         groups: vec![],
         owner: "app001".to_string(),

@@ -27,7 +27,7 @@ pub(crate) struct KvItemSummaryResp {
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Clone, Debug)]
-pub struct ScheduleJobAddOrModifyReq {
+pub struct ScheduleJob {
     #[oai(validator(min_length = "2"))]
     pub code: TrimString,
     pub cron: Vec<String>,
@@ -49,7 +49,8 @@ pub struct ScheduleJobAddOrModifyReq {
     #[serde(default)]
     pub disable_time: Option<DateTime<Utc>>,
 }
-impl Default for ScheduleJobAddOrModifyReq {
+
+impl Default for ScheduleJob {
     fn default() -> Self {
         Self {
             code: Default::default(),
@@ -64,7 +65,7 @@ impl Default for ScheduleJobAddOrModifyReq {
     }
 }
 
-impl ScheduleJobAddOrModifyReq {
+impl ScheduleJob {
     pub fn parse_time_from_json_value(value: &Value) -> Option<DateTime<Utc>> {
         match value {
             Value::String(s) => Some(chrono::DateTime::parse_from_rfc3339(s).or_else(|_| chrono::DateTime::parse_from_rfc2822(s)).ok()?.to_utc()),
@@ -92,8 +93,8 @@ impl ScheduleJobAddOrModifyReq {
             .unwrap_or_default();
         let callback_method = value.get("callback_method").and_then(|v| v.as_str()).unwrap_or("GET");
         let callback_body = value.get("callback_body").and_then(|v| v.as_str()).map(|s| s.to_string());
-        let enable_time = value.get("enable_time").and_then(ScheduleJobAddOrModifyReq::parse_time_from_json_value);
-        let disable_time = value.get("disable_time").and_then(ScheduleJobAddOrModifyReq::parse_time_from_json_value);
+        let enable_time = value.get("enable_time").and_then(ScheduleJob::parse_time_from_json_value);
+        let disable_time = value.get("disable_time").and_then(ScheduleJob::parse_time_from_json_value);
         Self {
             code: code.into(),
             cron,
@@ -143,7 +144,7 @@ pub struct ScheduleJobInfoResp {
 #[derive(poem_openapi::Object, Deserialize, Debug, Serialize)]
 pub(crate) struct KvScheduleJobItemDetailResp {
     pub key: String,
-    pub value: ScheduleJobAddOrModifyReq,
+    pub value: ScheduleJob,
     pub info: String,
     pub create_time: DateTime<Utc>,
     pub update_time: DateTime<Utc>,
@@ -153,7 +154,7 @@ impl TryFrom<KvItemSummaryResp> for KvScheduleJobItemDetailResp {
     type Error = TardisError;
 
     fn try_from(resp: KvItemSummaryResp) -> Result<Self, Self::Error> {
-        let value = ScheduleJobAddOrModifyReq::parse_from_json(&resp.value);
+        let value = ScheduleJob::parse_from_json(&resp.value);
         Ok(Self {
             key: resp.key.trim_start_matches(KV_KEY_CODE).to_string(),
             value,
@@ -167,7 +168,7 @@ impl TryFrom<KvItemDetailResp> for KvScheduleJobItemDetailResp {
     type Error = TardisError;
 
     fn try_from(resp: KvItemDetailResp) -> Result<Self, Self::Error> {
-        let value = ScheduleJobAddOrModifyReq::parse_from_json(&resp.value);
+        let value = ScheduleJob::parse_from_json(&resp.value);
         Ok(Self {
             key: resp.key.trim_start_matches(KV_KEY_CODE).to_string(),
             value,
@@ -179,8 +180,8 @@ impl TryFrom<KvItemDetailResp> for KvScheduleJobItemDetailResp {
 }
 
 impl ScheduleJobInfoResp {
-    pub fn create_add_or_mod_req(&self) -> ScheduleJobAddOrModifyReq {
-        ScheduleJobAddOrModifyReq {
+    pub fn create_add_or_mod_req(&self) -> ScheduleJob {
+        ScheduleJob {
             code: self.code.clone().into(),
             cron: self.cron.clone(),
             callback_url: self.callback_url.clone(),
