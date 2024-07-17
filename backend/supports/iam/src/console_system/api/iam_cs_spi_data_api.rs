@@ -15,7 +15,7 @@ use crate::basic::serv::iam_account_serv::IamAccountServ;
 use crate::basic::serv::iam_app_serv::IamAppServ;
 use crate::basic::serv::iam_tenant_serv::IamTenantServ;
 use crate::iam_config::IamConfig;
-use crate::iam_constants;
+use crate::iam_constants::{self, IAM_AVATAR};
 #[derive(Clone, Default)]
 pub struct IamCsSpiDataApi;
 
@@ -160,7 +160,7 @@ impl IamCsSpiDataApi {
                     Ok(())
                 },
                 &funs.cache(),
-                default_iam_send_avatar().await.clone(),
+                IAM_AVATAR.to_owned(),
                 Some(vec![format!("account/{}", ctx.owner)]),
                 ctx,
             )

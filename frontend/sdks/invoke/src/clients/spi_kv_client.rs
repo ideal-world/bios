@@ -16,13 +16,11 @@ pub mod event {
 
     const EVENT_ADD_KV: &str = "spi-kv/add";
     const EVENT_DELETE_KV: &str = "spi-kv/delete";
-    pub type KvItemAddOrModifyEvent = ContextEvent<super::KvItemAddOrModifyReq>;
     
-    impl Event for KvItemAddOrModifyEvent {
+    impl Event for super::KvItemAddOrModifyReq {
         const CODE: &'static str = EVENT_ADD_KV;
     }
-    pub type KvItemDeleteEvent = ContextEvent<super::KvItemDeleteReq>;
-    impl Event for KvItemDeleteEvent {
+    impl Event for super::KvItemDeleteReq {
         const CODE: &'static str = EVENT_DELETE_KV;
     }
 }

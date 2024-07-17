@@ -1,16 +1,12 @@
 use serde::{Deserialize, Serialize};
 
 use tardis::{
-    async_trait::async_trait,
     basic::{dto::TardisContext, field::TrimString, result::TardisResult},
     chrono::{DateTime, Utc},
-    log::info,
     serde_json::Value,
     web::{
         poem_openapi,
         web_resp::{TardisPage, TardisResp},
-        ws_client::TardisWSClient,
-        ws_processor::TardisWebsocketReq,
     },
     TardisFuns, TardisFunsInst,
 };
@@ -18,12 +14,11 @@ use tardis::{
 use crate::{clients::base_spi_client::BaseSpiClient, invoke_constants::DYNAMIC_LOG, invoke_enumeration::InvokeModuleKind};
 
 pub mod event {
-    use crate::clients::event_client::{ContextEvent, Event};
+    use crate::clients::event_client::Event;
 
     const EVENT_ADD_LOG: &str = "spi-log/add";
-    pub type LogItemAddEvent = ContextEvent<super::LogItemAddReq>;
 
-    impl Event for LogItemAddEvent {
+    impl Event for super::LogItemAddReq {
         const CODE: &'static str = EVENT_ADD_LOG;
     }
 }
@@ -154,29 +149,5 @@ impl SpiLogClient {
         let headers = BaseSpiClient::headers(None, funs, ctx).await?;
         let resp = funs.web_client().put::<LogItemFindReq, TardisResp<TardisPage<LogItemFindResp>>>(&format!("{log_url}/ci/item/find"), &find_req, headers.clone()).await?;
         BaseSpiClient::package_resp(resp)
-    }
-}
-
-pub struct LogEventClient {}
-
-#[async_trait]
-pub trait SpiLogEventExt {
-    async fn publish_add_log(&self, req: &LogItemAddReq, from: String, spi_app_id: String, ctx: &TardisContext) -> TardisResult<()>;
-}
-
-#[async_trait]
-impl SpiLogEventExt for TardisWSClient {
-    async fn publish_add_log(&self, req: &LogItemAddReq, from: String, spi_app_id: String, ctx: &TardisContext) -> TardisResult<()> {
-        let spi_ctx = TardisContext { owner: spi_app_id, ..ctx.clone() };
-        let req = TardisWebsocketReq {
-            msg: TardisFuns::json.obj_to_json(&(req, spi_ctx)).expect("invalid json"),
-            to_avatars: Some(vec!["spi-log/service".into()]),
-            from_avatar: from,
-            event: Some("spi-log/add".into()),
-            ..Default::default()
-        };
-        info!("event add log {}", TardisFuns::json.obj_to_string(&req).expect("invalid json"));
-        self.send_obj(&req).await?;
-        return Ok(());
     }
 }

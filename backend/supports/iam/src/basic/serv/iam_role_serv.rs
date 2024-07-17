@@ -30,10 +30,9 @@ use crate::basic::serv::iam_app_serv::IamAppServ;
 use crate::basic::serv::iam_key_cache_serv::IamIdentCacheServ;
 use crate::basic::serv::iam_rel_serv::IamRelServ;
 use crate::iam_config::{IamBasicConfigApi, IamBasicInfoManager, IamConfig};
-use crate::iam_constants::{self, RBUM_ITEM_ID_SUB_ROLE_LEN};
+use crate::iam_constants::{self, IAM_AVATAR, RBUM_ITEM_ID_SUB_ROLE_LEN};
 use crate::iam_constants::{RBUM_SCOPE_LEVEL_APP, RBUM_SCOPE_LEVEL_TENANT};
 use crate::iam_enumeration::{IamRelKind, IamRoleKind};
-use crate::iam_initializer::{default_iam_send_avatar, ws_iam_send_client};
 
 use super::clients::iam_kv_client::IamKvClient;
 use super::clients::iam_log_client::{IamLogClient, LogParamTag};
@@ -197,8 +196,7 @@ impl RbumItemCrudOperation<iam_role::ActiveModel, IamRoleAddReq, IamRoleModifyRe
                     Ok(())
                 },
                 &funs.cache(),
-                ws_iam_send_client().await.clone(),
-                default_iam_send_avatar().await.clone(),
+                IAM_AVATAR.to_owned(),
                 Some(vec![format!("account/{}", ctx.owner)]),
                 ctx,
             )
@@ -310,8 +308,7 @@ impl RbumItemCrudOperation<iam_role::ActiveModel, IamRoleAddReq, IamRoleModifyRe
                 Ok(())
             },
             &funs.cache(),
-            ws_iam_send_client().await.clone(),
-            default_iam_send_avatar().await.clone(),
+            IAM_AVATAR.to_owned(),
             Some(vec![format!("account/{}", ctx.owner)]),
             ctx,
         )

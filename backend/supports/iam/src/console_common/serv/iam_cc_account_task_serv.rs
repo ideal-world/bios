@@ -14,7 +14,7 @@ use crate::{
         },
     },
     iam_config::{IamBasicConfigApi, IamConfig},
-    iam_constants,
+    iam_constants::{self, IAM_AVATAR},
     iam_enumeration::{IamAccountLockStateKind, IamRelKind},
 };
 use bios_basic::{
@@ -69,7 +69,7 @@ impl IamCcAccountTaskServ {
                 Ok(())
             },
             &funs.cache(),
-            default_iam_send_avatar().await.clone(),
+            IAM_AVATAR.to_owned(),
             Some(vec![format!("account/{}", ctx.owner)]),
             ctx,
         )
@@ -139,7 +139,7 @@ impl IamCcAccountTaskServ {
                 Ok(())
             },
             &funs.cache(),
-            default_iam_send_avatar().await.clone(),
+            IAM_AVATAR.to_owned(),
             Some(vec![format!("account/{}", ctx.owner)]),
             ctx,
         )

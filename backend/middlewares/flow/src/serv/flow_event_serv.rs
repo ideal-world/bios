@@ -4,8 +4,8 @@ use async_recursion::async_recursion;
 use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
 use bios_sdk_invoke::{
     clients::{
-        event_client::{BiosEventCenter, EventCenter},
-        flow_client::{event::FlowFrontChangeEvent, FlowFrontChangeReq},
+        event_client::{BiosEventCenter, EventCenter, EventExt},
+        flow_client::{event::FLOW_AVATAR, FlowFrontChangeReq},
     },
     invoke_config::InvokeConfigApi,
 };
@@ -33,7 +33,6 @@ use crate::{
             FlowTransitionFrontActionInfo, FlowTransitionFrontActionRightValue, StateChangeConditionOp, TagRelKind,
         },
     },
-    event::FLOW_AVATAR,
 };
 
 use super::{flow_external_serv::FlowExternalServ, flow_inst_serv::FlowInstServ, flow_model_serv::FlowModelServ, flow_state_serv::FlowStateServ};
@@ -321,15 +320,7 @@ impl FlowEventServ {
                                     )
                                     .await?;
                                     if let Some(event_center) = TardisFuns::store().get_singleton::<BiosEventCenter>() {
-                                        event_center
-                                            .publish(
-                                                FLOW_AVATAR,
-                                                FlowFrontChangeEvent {
-                                                    ctx: funs.invoke_conf_inject_context(ctx),
-                                                    event: FlowFrontChangeReq { inst_id: inst_id.to_string() },
-                                                },
-                                            )
-                                            .await?;
+                                        event_center.publish(FlowFrontChangeReq { inst_id: inst_id.to_string() }.with_source(FLOW_AVATAR).inject_context(funs, ctx)).await?;
                                     } else {
                                         FlowEventServ::do_front_change(&inst_id, ctx, funs).await?;
                                     }
@@ -383,16 +374,14 @@ impl FlowEventServ {
                 funs,
             )
             .await?;
-            if let Some(event_center) = TardisFuns::store().get_singleton::<BiosEventCenter>() {
+            if let Some(event_center) = BiosEventCenter::global() {
                 event_center
                     .publish(
-                        FLOW_AVATAR,
-                        FlowFrontChangeEvent {
-                            ctx: funs.invoke_conf_inject_context(ctx),
-                            event: FlowFrontChangeReq {
-                                inst_id: flow_inst_detail.id.to_string(),
-                            },
-                        },
+                        FlowFrontChangeReq {
+                            inst_id: flow_inst_detail.id.to_string(),
+                        }
+                        .with_source(FLOW_AVATAR)
+                        .inject_context(funs, ctx),
                     )
                     .await?;
             } else {

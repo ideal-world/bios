@@ -11,7 +11,6 @@ use tardis::{
 
 use crate::{flow_constants::get_tardis_inst, serv::flow_event_serv::FlowEventServ};
 
-pub const FLOW_AVATAR: &str = env!("CARGO_PKG_NAME");
 pub const RECONNECT_INTERVAL: Duration = Duration::from_secs(10);
 
 pub fn flow_register_events() {

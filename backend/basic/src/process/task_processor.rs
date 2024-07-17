@@ -3,7 +3,7 @@
 //! 异步任务处理器
 use std::{collections::HashMap, future::Future, sync::Arc};
 
-use bios_sdk_invoke::clients::event_client::{BiosEventCenter, Event, EventCenter};
+use bios_sdk_invoke::clients::event_client::{BiosEventCenter, Event, EventCenter, EventExt};
 use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
 use tardis::{
@@ -13,7 +13,6 @@ use tardis::{
     log,
     serde_json::Value,
     tokio::{sync::RwLock, task::JoinHandle},
-    web::{ws_client::TardisWSClient, ws_processor::TardisWebsocketReq},
     TardisFuns,
 };
 
@@ -103,17 +102,19 @@ impl TaskProcessor {
         to_avatars: Option<Vec<String>>,
     ) -> TardisResult<()> {
         Self::set_status(cache_key, task_id, status, cache_client).await?;
-        Self::send_event(
-            TaskWsEventReq {
-                task_id,
-                data: Value::Bool(status),
-                msg: format!("task status: {}", status),
-            },
-            Some(EVENT_SET_TASK_STATUS_FLAG.to_owned()),
-            from_avatar,
-            to_avatars,
-        )
-        .await
+        if let Some(ec) = BiosEventCenter::global() {
+            ec.publish(
+                TaskSetStatusEventReq {
+                    task_id,
+                    data: status,
+                    msg: format!("task status: {}", status),
+                }
+                .with_source(from_avatar)
+                .with_targets(to_avatars),
+            )
+            .await?;
+        }
+        Ok(())
     }
 
     /// Set the processing data of the asynchronous task
@@ -136,17 +137,10 @@ impl TaskProcessor {
         to_avatars: Option<Vec<String>>,
     ) -> TardisResult<()> {
         Self::set_process_data(cache_key, task_id, data.clone(), cache_client).await?;
-        Self::send_event(
-            TaskWsEventReq {
-                task_id,
-                data: data.clone(),
-                msg: format!("set task process: {}", &TardisFuns::json.json_to_string(data)?),
-            },
-            Some(EVENT_SET_TASK_PROCESS_DATA_FLAG.to_owned()),
-            from_avatar,
-            to_avatars,
-        )
-        .await?;
+        if let Some(ec) = BiosEventCenter::global() {
+            let msg = format!("set task process: {}", &TardisFuns::json.json_to_string(data.clone())?);
+            ec.publish(TaskSetProcessDataEventReq { task_id, data, msg }.with_source(from_avatar).with_targets(to_avatars)).await?;
+        }
         Ok(())
     }
 
@@ -169,7 +163,7 @@ impl TaskProcessor {
         P: FnOnce(u64) -> T + Send + Sync + 'static,
         T: Future<Output = TardisResult<()>> + Send + 'static,
     {
-        Self::do_execute_task_with_ctx(cache_key, process_fun, cache_client,  "".to_string(), None, None).await
+        Self::do_execute_task_with_ctx(cache_key, process_fun, cache_client, "".to_string(), None, None).await
     }
 
     /// Execute asynchronous task and send event
@@ -220,17 +214,17 @@ impl TaskProcessor {
             }
         });
         TASK_HANDLE.write().await.insert(task_id, handle);
-        Self::send_event(
-            TaskWsEventReq {
-                task_id,
-                data: ().into(),
-                msg: "execute task start".to_owned(),
-            },
-            Some(EVENT_EXECUTE_TASK_FLAG.to_owned()),
-            from_avatar_clone,
-            to_avatars_clone,
-        )
-        .await?;
+        if let Some(ec) = BiosEventCenter::global() {
+            ec.publish(
+                TaskExecuteEventReq {
+                    task_id,
+                    msg: "execute task start".to_owned(),
+                }
+                .with_source(from_avatar_clone)
+                .with_targets(to_avatars_clone),
+            )
+            .await?;
+        }
         if let Some(ctx) = ctx {
             if let Some(exist_task_ids) = ctx.get_ext(TASK_IN_CTX_FLAG).await? {
                 ctx.add_ext(TASK_IN_CTX_FLAG, &format!("{exist_task_ids},{task_id}")).await?;
@@ -252,17 +246,17 @@ impl TaskProcessor {
         to_avatars: Option<Vec<String>>,
     ) -> TardisResult<u64> {
         let task_id = TaskProcessor::init_status(cache_key, Some(task_id), cache_client).await?;
-        Self::send_event(
-            TaskWsEventReq {
-                task_id,
-                data: ().into(),
-                msg: "execute task start".to_owned(),
-            },
-            Some(EVENT_EXECUTE_TASK_FLAG.to_owned()),
-            from_avatar,
-            to_avatars,
-        )
-        .await?;
+        if let Some(ec) = BiosEventCenter::global() {
+            ec.publish(
+                TaskExecuteEventReq {
+                    task_id,
+                    msg: "execute task start".to_owned(),
+                }
+                .with_source(from_avatar)
+                .with_targets(to_avatars),
+            )
+            .await?;
+        }
         Ok(task_id)
     }
 
@@ -276,13 +270,7 @@ impl TaskProcessor {
     /// Stop asynchronous task and send event
     ///
     /// 停止异步任务并发送事件
-    pub async fn stop_task_with_event(
-        cache_key: &str,
-        task_id: u64,
-        cache_client: &TardisCacheClient,
-        from_avatar: String,
-        to_avatars: Option<Vec<String>>,
-    ) -> TardisResult<()> {
+    pub async fn stop_task_with_event(cache_key: &str, task_id: u64, cache_client: &TardisCacheClient, from_avatar: String, to_avatars: Option<Vec<String>>) -> TardisResult<()> {
         if TaskProcessor::check_status(cache_key, task_id, cache_client).await? {
             TASK_HANDLE.write().await.remove(&task_id);
             return Ok(());
@@ -312,33 +300,36 @@ impl TaskProcessor {
     pub async fn get_task_id_with_ctx(ctx: &TardisContext) -> TardisResult<Option<String>> {
         ctx.get_ext(TASK_IN_CTX_FLAG).await
     }
-
-    async fn send_event(msg: TaskWsEventReq, event: Option<String>, from_avatar: String, to_avatars: Option<Vec<String>>) -> TardisResult<()> {
-        if let Some(event_center) = TardisFuns::store().get_singleton::<BiosEventCenter>() {
-            event_center.publish(msg, from_avatar, to_avatars, event).await?;
-        }
-        if let Some(ws_client) = ws_client {
-            let req = TardisWebsocketReq {
-                msg: tardis::serde_json::Value::String(TardisFuns::json.obj_to_string(&msg)?),
-                to_avatars,
-                from_avatar,
-                event,
-                ..Default::default()
-            };
-            ws_client.send_obj(&req).await?;
-        }
-        Ok(())
-    }
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
-struct TaskWsEventReq {
+struct TaskSetStatusEventReq {
+    pub task_id: u64,
+    pub data: bool,
+    pub msg: String,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+struct TaskSetProcessDataEventReq {
     pub task_id: u64,
     pub data: Value,
     pub msg: String,
 }
 
+#[derive(Clone, Debug, Deserialize, Serialize)]
+struct TaskExecuteEventReq {
+    pub task_id: u64,
+    pub msg: String,
+}
 
-impl Event for TaskWsEventReq {
-    
+impl Event for TaskSetStatusEventReq {
+    const CODE: &'static str = EVENT_SET_TASK_STATUS_FLAG;
+}
+
+impl Event for TaskSetProcessDataEventReq {
+    const CODE: &'static str = EVENT_SET_TASK_PROCESS_DATA_FLAG;
+}
+
+impl Event for TaskExecuteEventReq {
+    const CODE: &'static str = EVENT_EXECUTE_TASK_FLAG;
 }

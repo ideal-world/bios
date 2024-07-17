@@ -2,7 +2,7 @@ use std::vec;
 
 use bios_basic::rbum::{dto::rbum_filer_dto::RbumBasicFilterReq, helper::rbum_scope_helper, rbum_enumeration::RbumScopeLevelKind, serv::rbum_item_serv::RbumItemCrudOperation};
 use bios_sdk_invoke::{
-    clients::{event_client::BiosEventCenter, spi_search_client::SpiSearchClient},
+    clients::{event_client::BiosEventCenter, flow_client::event::FLOW_AVATAR, spi_search_client::SpiSearchClient},
     dto::search_item_dto::{SearchItemAddReq, SearchItemModifyReq, SearchItemVisitKeysReq},
 };
 use serde_json::json;
@@ -13,7 +13,6 @@ use tardis::{
 
 use crate::{
     dto::flow_model_dto::{FlowModelDetailResp, FlowModelFilterReq},
-    event::FLOW_AVATAR,
     flow_constants,
     serv::flow_model_serv::FlowModelServ,
 };

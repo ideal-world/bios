@@ -7,8 +7,8 @@ use bios_basic::{
 };
 use bios_sdk_invoke::{
     clients::{
-        event_client::{BiosEventCenter, EventCenter},
-        spi_log_client::{event::LogItemAddEvent, LogItemAddReq, SpiLogClient, SpiLogEventExt},
+        event_client::{BiosEventCenter, EventCenter, EventExt},
+        spi_log_client::{LogItemAddReq, SpiLogClient},
     },
     invoke_config::InvokeConfigApi,
 };
@@ -154,15 +154,7 @@ impl IamLogClient {
             own_paths,
         };
         if let Some(ws_client) = TardisFuns::store().get_singleton::<BiosEventCenter>() {
-            ws_client
-                .publish(
-                    IAM_AVATAR,
-                    LogItemAddEvent {
-                        ctx: funs.invoke_conf_inject_context(ctx),
-                        event: add_req,
-                    },
-                )
-                .await?;
+            ws_client.publish(add_req.with_source(IAM_AVATAR).inject_context(funs, ctx)).await?;
         } else {
             SpiLogClient::add(&add_req, funs, ctx).await?;
         }

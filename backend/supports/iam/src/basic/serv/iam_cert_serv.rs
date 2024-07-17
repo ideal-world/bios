@@ -1439,7 +1439,7 @@ impl IamCertServ {
                 Ok(())
             },
             &funs.cache(),
-            default_iam_send_avatar().await.clone(),
+            IAM_AVATAR.to_owned(),
             Some(vec![format!("account/{}", ctx.owner)]),
             ctx,
         )

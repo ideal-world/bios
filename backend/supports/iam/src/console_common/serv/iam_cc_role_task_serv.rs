@@ -4,7 +4,7 @@ use crate::{
         serv::{iam_account_serv::IamAccountServ, iam_app_serv::IamAppServ, iam_rel_serv::IamRelServ, iam_role_serv::IamRoleServ, iam_tenant_serv::IamTenantServ},
     },
     iam_config::IamConfig,
-    iam_constants,
+    iam_constants::{self, IAM_AVATAR},
     iam_enumeration::{IamRelKind, IamRoleKind},
 };
 use bios_basic::{
@@ -203,7 +203,7 @@ impl IamCcRoleTaskServ {
                 Ok(())
             },
             &funs.cache(),
-            default_iam_send_avatar().await.clone(),
+            IAM_AVATAR.to_owned(),
             Some(vec![format!("account/{}", ctx.owner)]),
             ctx,
         )

@@ -1,7 +1,7 @@
 use crate::{
     basic::serv::clients::iam_stats_client::IamStatsClient,
     iam_config::{IamBasicConfigApi, IamConfig},
-    iam_constants,
+    iam_constants::{self, IAM_AVATAR},
     iam_enumeration::IamSetKind,
 };
 use bios_basic::{
@@ -111,7 +111,7 @@ impl IamCcOrgTaskServ {
                 Ok(())
             },
             &funs.cache(),
-            default_iam_send_avatar().await.clone(),
+            IAM_AVATAR.to_owned(),
             Some(vec![format!("account/{}", ctx.owner)]),
             ctx,
         )

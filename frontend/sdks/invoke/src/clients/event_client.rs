@@ -24,6 +24,8 @@ use tardis::{
     TardisFuns, TardisFunsInst,
 };
 
+use crate::invoke_config::InvokeConfigApi;
+
 #[derive(Clone)]
 pub struct EventClient<'a> {
     pub funs: &'a TardisFunsInst,
@@ -107,18 +109,6 @@ impl From<EventTopicConfig> for EventListenerRegisterReq {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct ContextEvent<T> {
-    pub ctx: TardisContext,
-    pub event: T,
-}
-
-impl<T> ContextEvent<T> {
-    #[inline(always)]
-    pub fn unpack(self) -> (TardisContext, T) {
-        (self.ctx, self.event)
-    }
-}
 pub trait Event: Serialize + DeserializeOwned {
     const CODE: &'static str;
     fn source(&self) -> String {
@@ -170,6 +160,28 @@ where
     }
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ContextEvent<T> {
+    pub ctx: TardisContext,
+    pub event: T,
+}
+
+impl<T> ContextEvent<T> {
+    #[inline(always)]
+    pub fn unpack(self) -> (TardisContext, T) {
+        (self.ctx, self.event)
+    }
+}
+
+impl<E: Event> Event for ContextEvent<E> {
+    const CODE: &'static str = E::CODE;
+    fn source(&self) -> String {
+        self.event.source()
+    }
+    fn targets(&self) -> Option<Vec<String>> {
+        self.event.targets()
+    }
+}
 pub trait EventExt {
     fn with_source(self, source: impl Into<String>) -> WithSource<Self>
     where
@@ -187,6 +199,21 @@ pub trait EventExt {
         WithTargets {
             inner: self,
             targets: targets.into(),
+        }
+    }
+    fn with_context(self, ctx: TardisContext) -> ContextEvent<Self>
+    where
+        Self: Sized,
+    {
+        ContextEvent { ctx, event: self }
+    }
+    fn inject_context(self, funs: &TardisFunsInst, ctx: &TardisContext) -> ContextEvent<Self>
+    where
+        Self: Sized,
+    {
+        ContextEvent {
+            ctx: funs.invoke_conf_inject_context(ctx),
+            event: self,
         }
     }
 }
@@ -223,6 +250,9 @@ pub struct BiosEventCenter {
 impl BiosEventCenter {
     pub fn new() -> Self {
         Self { inner: WsEventCenter::default() }
+    }
+    pub fn global() -> Option<Self>{
+        TardisFuns::store().get_singleton::<Self>()
     }
 }
 
