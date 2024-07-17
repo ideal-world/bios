@@ -113,9 +113,9 @@ impl TransactionGraph {
     }
 
     pub fn remove_empty_ele(&mut self) {
-        let mut is_modify = false;
         let mut rels = self.rels.clone();
         while !self.rels.is_empty() {
+            let mut is_modify = false;
             for (from_tran, to_trans) in &rels {
                 if to_trans.is_empty() || (to_trans.len() == 1 && to_trans[0] == *from_tran) {
                     self.rels.remove(from_tran);
@@ -124,9 +124,9 @@ impl TransactionGraph {
             }
             rels.clone_from(&self.rels);
             for (_from_tran, to_trans) in self.rels.iter_mut() {
-                for (i, tran) in to_trans.clone().iter().enumerate() {
-                    if !rels.clone().contains_key(tran) {
-                        to_trans.remove(i);
+                for tran in to_trans.clone() {
+                    if !rels.clone().contains_key(&tran) {
+                        to_trans.retain(|to_tran| *to_tran != tran);
                         is_modify = true;
                     }
                 }
