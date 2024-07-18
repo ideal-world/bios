@@ -26,6 +26,7 @@ pub mod event {
     const EVENT_ADD_SEARCH: &str = "spi-search/add";
     const EVENT_MODIFY_SEARCH: &str = "spi-search/modify";
     const EVENT_DELETE_SEARCH: &str = "spi-search/delete";
+    pub const SEARCH_AVATAR: &str = "spi-search";
 
     impl Event for SearchItemAddReq {
         const CODE: &'static str = EVENT_ADD_SEARCH;

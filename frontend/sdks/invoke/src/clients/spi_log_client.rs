@@ -17,6 +17,7 @@ pub mod event {
     use crate::clients::event_client::Event;
 
     const EVENT_ADD_LOG: &str = "spi-log/add";
+    pub const LOG_AVATAR: &str = "spi-log";
 
     impl Event for super::LogItemAddReq {
         const CODE: &'static str = EVENT_ADD_LOG;

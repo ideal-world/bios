@@ -24,7 +24,9 @@ use tardis::{
     TardisFuns, TardisFunsInst,
 };
 
-use crate::invoke_config::InvokeConfigApi;
+use crate::{invoke_config::InvokeConfigApi, invoke_enumeration::InvokeModuleKind};
+
+use super::base_spi_client::BaseSpiClient;
 
 /******************************************************************************************************************
  *                                                Http Client
@@ -41,6 +43,21 @@ impl<'a> EventClient<'a> {
         Self { base_url: url, funs }
     }
 
+    pub async fn add_topic(&self, req: &EventTopicAddOrModifyReq) -> TardisResult<()> {
+        let url = format!("{}/topic", self.base_url.trim_end_matches('/'));
+        let ctx = TardisContext::default();
+        let headers = BaseSpiClient::headers(None, self.funs, &ctx).await?;
+        let resp = self.funs.web_client().post::<EventTopicAddOrModifyReq, TardisResp<String>>(&url, req, headers).await?;
+        if let Some(resp) = resp.body {
+            if resp.data.is_some() {
+                Ok(())
+            } else {
+                Err(self.funs.err().internal_error("event", "add_topic", &resp.msg, ""))
+            }
+        } else {
+            Err(self.funs.err().internal_error("event", "add_topic", "failed to add event topic", ""))
+        }
+    }
     pub async fn register(&self, req: &EventListenerRegisterReq) -> TardisResult<EventListenerRegisterResp> {
         let url = format!("{}/listener", self.base_url.trim_end_matches('/'));
 
@@ -85,6 +102,17 @@ pub struct EventListenerRegisterResp {
     pub ws_addr: String,
     pub listener_code: String,
 }
+#[derive(Serialize, Deserialize, Debug)]
+pub struct EventTopicAddOrModifyReq {
+    // #[oai(validator(pattern = r"^[a-z0-9]+$"))]
+    pub code: String,
+    pub name: String,
+    pub save_message: bool,
+    pub need_mgr: bool,
+    pub queue_size: i32,
+    pub use_sk: Option<String>,
+    pub mgr_sk: Option<String>,
+}
 
 /******************************************************************************************************************
  *                                                Event Client
@@ -126,10 +154,10 @@ pub struct EventCenterConfig {
     pub topic_sk: String,
     pub topic_code: String,
     /// The phrase "subscribe" here is **extremely** bad.
-    /// 
-    /// The difference between subscribe and not subscribe is actually 
+    ///
+    /// The difference between subscribe and not subscribe is actually
     /// the difference between a pub/sub system and a worker queue.
-    /// 
+    ///
     /// We may need to change this to a more meaningful name.
     pub subscribe: bool,
     pub avatars: Vec<String>,
@@ -153,12 +181,14 @@ type WsHandlersMap = HashMap<&'static str, Vec<Arc<WsEventCenterHandler>>>;
 struct WsEventCenter {
     cfg: Arc<EventCenterConfig>,
     handlers: Arc<ShardedLock<WsHandlersMap>>,
+    avatars: Arc<ShardedLock<Vec<String>>>,
     ws_client: Arc<OnceLock<TardisWSClient>>,
 }
 
 impl From<EventCenterConfig> for WsEventCenter {
     fn from(cfg: EventCenterConfig) -> Self {
         Self {
+            avatars: Arc::new(ShardedLock::new(cfg.avatars.clone())),
             cfg: Arc::new(cfg),
             handlers: Arc::new(ShardedLock::new(HashMap::new())),
             ws_client: Arc::new(OnceLock::new()),
@@ -169,9 +199,10 @@ impl From<EventCenterConfig> for WsEventCenter {
 impl From<Arc<EventCenterConfig>> for WsEventCenter {
     fn from(cfg: Arc<EventCenterConfig>) -> Self {
         Self {
-            cfg,
+            avatars: Arc::new(ShardedLock::new(cfg.avatars.clone())),
             handlers: Arc::new(ShardedLock::new(HashMap::new())),
             ws_client: Arc::new(OnceLock::new()),
+            cfg,
         }
     }
 }
@@ -185,6 +216,9 @@ impl std::fmt::Debug for WsEventCenter {
 
 impl EventCenter for WsEventCenter {
     fn init(&self) -> TardisResult<()> {
+        if self.ws_client.get().is_some() {
+            return Ok(());
+        }
         let this = self.clone();
         const RETRY_INTERVAL: Duration = Duration::from_secs(1);
         tokio::spawn(async move {
@@ -200,13 +234,14 @@ impl EventCenter for WsEventCenter {
                 }
             }
             let events = this.handlers.read().expect("never poisoned").keys().map(|s| String::from(*s)).collect::<Vec<_>>();
+            let avatars = this.avatars.read().expect("never poisoned").clone();
             let client = EventClient::new(url, &funs);
             let resp = client
                 .register(&EventListenerRegisterReq {
                     topic_code: config.topic_code.to_string(),
                     topic_sk: Some(config.topic_sk.clone()),
                     events: Some(events),
-                    avatars: config.avatars.clone(),
+                    avatars,
                     subscribe_mode: config.subscribe,
                 })
                 .await
@@ -319,6 +354,9 @@ pub struct BiosEventCenter {
 }
 
 impl BiosEventCenter {
+    pub fn add_avatar(&self, avatar: impl Into<String>) {
+        self.inner.avatars.write().expect("never poisoned").push(avatar.into());
+    }
     pub fn from_config(config: EventCenterConfig) -> Self {
         Self {
             inner: WsEventCenter::from(config),

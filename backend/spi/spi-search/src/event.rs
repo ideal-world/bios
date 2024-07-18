@@ -1,5 +1,8 @@
 use bios_sdk_invoke::{
-    clients::event_client::{BiosEventCenter, EventCenter},
+    clients::{
+        event_client::{BiosEventCenter, EventCenter},
+        spi_search_client::event::SEARCH_AVATAR,
+    },
     dto::search_item_dto::{SearchEventItemDeleteReq, SearchEventItemModifyReq, SearchItemAddReq},
 };
 
@@ -30,5 +33,6 @@ pub(crate) fn register_search_events() {
         bios_event_center.subscribe(handle_modify_event);
         bios_event_center.subscribe(handle_add_event);
         bios_event_center.subscribe(handle_delete_event);
+        bios_event_center.add_avatar(SEARCH_AVATAR);
     }
 }

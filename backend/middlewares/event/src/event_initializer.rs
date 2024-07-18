@@ -40,8 +40,44 @@ pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
     funs.begin().await?;
     init_db(DOMAIN_CODE.to_string(), KIND_CODE.to_string(), &funs, &ctx).await?;
     EventDefServ::init(&funs, &ctx).await?;
+    init_topic(&funs, &ctx).await?;
     funs.commit().await?;
     init_scan_and_resend_task();
+    Ok(())
+}
+
+async fn init_topic(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    let config = funs.conf::<EventConfig>();
+    // create bios worker queue topic
+    let _result = serv::event_topic_serv::EventDefServ::add_item(
+        &mut EventTopicAddOrModifyReq {
+            code: TOPIC_BIOS_WORKER_QUEUE.into(),
+            name: TOPIC_BIOS_WORKER_QUEUE.into(),
+            save_message: false,
+            need_mgr: false,
+            queue_size: 1024,
+            use_sk: Some(config.event_bus_sk.clone()),
+            mgr_sk: None,
+        },
+        funs,
+        ctx,
+    )
+    .await;
+    // create bios pub sub topic
+    let _result = serv::event_topic_serv::EventDefServ::add_item(
+        &mut EventTopicAddOrModifyReq {
+            code: TOPIC_BIOS_PUB_SUB.into(),
+            name: TOPIC_BIOS_PUB_SUB.into(),
+            save_message: false,
+            need_mgr: false,
+            queue_size: 1024,
+            use_sk: Some(config.event_bus_sk.clone()),
+            mgr_sk: None,
+        },
+        funs,
+        ctx,
+    )
+    .await;
     Ok(())
 }
 
@@ -92,37 +128,6 @@ async fn init_db(domain_code: String, kind_code: String, funs: &TardisFunsInst, 
     )
     .await?;
     EventInfoManager::set(EventInfo { kind_id, domain_id })?;
-    let config = funs.conf::<EventConfig>();
-    // create bios worker queue topic
-    serv::event_topic_serv::EventDefServ::add_item(
-        &mut EventTopicAddOrModifyReq {
-            code: TOPIC_BIOS_WORKER_QUEUE.into(),
-            name: TOPIC_BIOS_WORKER_QUEUE.into(),
-            save_message: false,
-            need_mgr: false,
-            queue_size: 1024,
-            use_sk: Some(config.event_bus_sk.clone()),
-            mgr_sk: None,
-        },
-        funs,
-        ctx,
-    )
-    .await?;
-    // create bios pub sub topic
-    serv::event_topic_serv::EventDefServ::add_item(
-        &mut EventTopicAddOrModifyReq {
-            code: TOPIC_BIOS_PUB_SUB.into(),
-            name: TOPIC_BIOS_PUB_SUB.into(),
-            save_message: false,
-            need_mgr: false,
-            queue_size: 1024,
-            use_sk: Some(config.event_bus_sk.clone()),
-            mgr_sk: None,
-        },
-        funs,
-        ctx,
-    )
-    .await?;
     Ok(())
 }
 
@@ -166,7 +171,7 @@ fn init_scan_and_resend_task() {
 fn create_event_center() -> TardisResult<()> {
     let config = TardisFuns::cs_config::<EventConfig>(DOMAIN_CODE);
     let pubsub_config = EventCenterConfig {
-        base_url: config.event_url.clone(),
+        base_url: config.base_url.clone(),
         topic_sk: config.event_bus_sk.clone(),
         topic_code: TOPIC_BIOS_PUB_SUB.to_owned(),
         subscribe: true,
@@ -177,7 +182,7 @@ fn create_event_center() -> TardisResult<()> {
     pubsub.set_as_worker_queue();
 
     let wq_config = EventCenterConfig {
-        base_url: config.event_url.clone(),
+        base_url: config.base_url.clone(),
         topic_sk: config.event_bus_sk.clone(),
         topic_code: TOPIC_BIOS_WORKER_QUEUE.to_owned(),
         subscribe: false,

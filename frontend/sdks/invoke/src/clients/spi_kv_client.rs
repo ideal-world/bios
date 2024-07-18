@@ -13,6 +13,7 @@ use super::base_spi_client::BaseSpiClient;
 
 pub mod event {
     use crate::clients::event_client::Event;
+    pub const KV_AVATAR: &str = "spi-kv";
 
     const EVENT_ADD_KV: &str = "spi-kv/add";
     const EVENT_DELETE_KV: &str = "spi-kv/delete";

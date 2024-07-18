@@ -61,7 +61,9 @@ impl RbumItemCrudOperation<event_topic::ActiveModel, EventTopicAddOrModifyReq, E
         let key = add_req.code.to_string();
         let value = Self::get_item(id, &EventTopicFilterReq::default(), funs, ctx).await?;
         // topics().local().write().await.insert(key, value);
-        topics().insert(key, value).await?;
+        tardis::tokio::spawn(async {
+            let _ = topics().insert(key, value).await;
+        });
         Ok(())
     }
 

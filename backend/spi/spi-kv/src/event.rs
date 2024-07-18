@@ -1,7 +1,7 @@
 use crate::{get_tardis_inst, serv};
 use bios_sdk_invoke::clients::{
     event_client::{BiosEventCenter, EventCenter},
-    spi_kv_client::{KvItemAddOrModifyReq, KvItemDeleteReq},
+    spi_kv_client::{event::KV_AVATAR, KvItemAddOrModifyReq, KvItemDeleteReq},
 };
 use tardis::basic::result::TardisResult;
 use tardis::{
@@ -21,10 +21,11 @@ async fn handle_kv_delete_event(req: KvItemDeleteReq, ctx: TardisContext) -> Tar
     serv::kv_item_serv::delete_item(req.key.trim().to_string(), &funs, &ctx).await?;
     Ok(())
 }
-
 pub fn register_kv_events() {
     if let Some(bios_event_center) = BiosEventCenter::worker_queue() {
         bios_event_center.subscribe(handle_kv_add_event);
         bios_event_center.subscribe(handle_kv_delete_event);
+        bios_event_center.add_avatar(KV_AVATAR);
+
     }
 }

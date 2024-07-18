@@ -3,13 +3,13 @@ use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
 use std::{fmt::Debug, sync::Mutex};
 use tardis::basic::{error::TardisError, result::TardisResult};
-use bios_sdk_invoke::clients::event_client::{EventCenterConfig};
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(default)]
 pub struct EventConfig {
     pub rbum: RbumConfig,
     pub enable: bool,
     pub event_url: String,
+    pub base_url: String,
     pub event_bus_sk: String,
     pub avatars: Vec<String>,
     pub resend_threshold: u32,
@@ -21,6 +21,7 @@ impl Default for EventConfig {
         EventConfig {
             rbum: Default::default(),
             enable: false,
+            base_url: "http://localhost:8080/event".to_string(),
             avatars: Vec::new(),
             event_url: "".to_string(),
             event_bus_sk: "".to_string(),
