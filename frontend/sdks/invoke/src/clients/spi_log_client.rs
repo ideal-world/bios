@@ -61,7 +61,7 @@ pub struct LogDynamicContentReq {
     pub content: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Default)]
 pub struct LogItemAddReq {
     pub tag: String,
     pub content: String,

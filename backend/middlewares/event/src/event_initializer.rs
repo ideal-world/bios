@@ -3,7 +3,7 @@ use bios_basic::rbum::{
     rbum_enumeration::RbumScopeLevelKind,
     serv::{rbum_crud_serv::RbumCrudOperation, rbum_domain_serv::RbumDomainServ, rbum_item_serv::RbumItemCrudOperation, rbum_kind_serv::RbumKindServ},
 };
-use bios_sdk_invoke::clients::event_client::{BiosEventCenter, EventCenter, TOPIC_EVENT_BUS};
+use bios_sdk_invoke::clients::event_client::{BiosEventCenter, EventCenter, EventCenterConfig, TOPIC_BIOS_PUB_SUB, TOPIC_BIOS_WORKER_QUEUE};
 use tardis::{
     basic::{dto::TardisContext, field::TrimString, result::TardisResult},
     db::reldb_client::TardisActiveModel,
@@ -93,11 +93,26 @@ async fn init_db(domain_code: String, kind_code: String, funs: &TardisFunsInst, 
     .await?;
     EventInfoManager::set(EventInfo { kind_id, domain_id })?;
     let config = funs.conf::<EventConfig>();
-    // create event bus topic
+    // create bios worker queue topic
     serv::event_topic_serv::EventDefServ::add_item(
         &mut EventTopicAddOrModifyReq {
-            code: TOPIC_EVENT_BUS.into(),
-            name: TOPIC_EVENT_BUS.into(),
+            code: TOPIC_BIOS_WORKER_QUEUE.into(),
+            name: TOPIC_BIOS_WORKER_QUEUE.into(),
+            save_message: false,
+            need_mgr: false,
+            queue_size: 1024,
+            use_sk: Some(config.event_bus_sk.clone()),
+            mgr_sk: None,
+        },
+        funs,
+        ctx,
+    )
+    .await?;
+    // create bios pub sub topic
+    serv::event_topic_serv::EventDefServ::add_item(
+        &mut EventTopicAddOrModifyReq {
+            code: TOPIC_BIOS_PUB_SUB.into(),
+            name: TOPIC_BIOS_PUB_SUB.into(),
             save_message: false,
             need_mgr: false,
             queue_size: 1024,
@@ -149,8 +164,27 @@ fn init_scan_and_resend_task() {
 }
 
 fn create_event_center() -> TardisResult<()> {
-    let bios_event_center = BiosEventCenter::from_domain(DOMAIN_CODE);
-    bios_event_center.init()?;
-    bios_event_center.set_event_bus();
+    let config = TardisFuns::cs_config::<EventConfig>(DOMAIN_CODE);
+    let pubsub_config = EventCenterConfig {
+        base_url: config.event_url.clone(),
+        topic_sk: config.event_bus_sk.clone(),
+        topic_code: TOPIC_BIOS_PUB_SUB.to_owned(),
+        subscribe: true,
+        avatars: config.avatars.clone(),
+    };
+    let pubsub = BiosEventCenter::from_config(pubsub_config);
+    pubsub.init()?;
+    pubsub.set_as_worker_queue();
+
+    let wq_config = EventCenterConfig {
+        base_url: config.event_url.clone(),
+        topic_sk: config.event_bus_sk.clone(),
+        topic_code: TOPIC_BIOS_WORKER_QUEUE.to_owned(),
+        subscribe: false,
+        avatars: config.avatars.clone(),
+    };
+    let wq = BiosEventCenter::from_config(wq_config);
+    wq.init()?;
+    wq.set_as_worker_queue();
     Ok(())
 }

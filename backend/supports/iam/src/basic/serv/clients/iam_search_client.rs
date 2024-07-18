@@ -181,7 +181,7 @@ impl IamSearchClient {
                     groups: Some(account_resp_dept_id),
                 }),
             };
-            if let Some(event_center) = BiosEventCenter::event_bus() {
+            if let Some(event_center) = BiosEventCenter::worker_queue() {
                 event_center.modify_item_and_name(IAM_AVATAR, &tag, &key, &modify_req, funs, ctx).await?;
             } else {
                 SpiSearchClient::modify_item_and_name(&tag, &key, &modify_req, funs, ctx).await?;
@@ -226,7 +226,7 @@ impl IamSearchClient {
                     groups: Some(account_resp_dept_id),
                 }),
             };
-            if let Some(event_center) = BiosEventCenter::event_bus() {
+            if let Some(event_center) = BiosEventCenter::worker_queue() {
                 event_center.add_item_and_name(IAM_AVATAR, &add_req, Some(account_resp.name), funs, ctx).await?;
             } else {
                 SpiSearchClient::add_item_and_name(&add_req, Some(account_resp.name), funs, ctx).await?;
@@ -238,7 +238,7 @@ impl IamSearchClient {
     // account 全局搜索删除埋点方法
     pub async fn delete_account_search(account_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let tag = funs.conf::<IamConfig>().spi.search_account_tag.clone();
-        if let Some(event_center) = BiosEventCenter::event_bus() {
+        if let Some(event_center) = BiosEventCenter::worker_queue() {
             event_center.delete_item_and_name(IAM_AVATAR, &tag, account_id, funs, ctx).await?;
         } else {
             SpiSearchClient::delete_item_and_name(&tag, account_id, funs, ctx).await?;

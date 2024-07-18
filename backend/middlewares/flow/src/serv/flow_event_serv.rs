@@ -369,7 +369,7 @@ impl FlowEventServ {
                 funs,
             )
             .await?;
-            if let Some(event_center) = BiosEventCenter::event_bus() {
+            if let Some(event_center) = BiosEventCenter::worker_queue() {
                 event_center
                     .publish(
                         FlowFrontChangeReq {

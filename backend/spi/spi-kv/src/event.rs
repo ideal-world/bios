@@ -23,7 +23,7 @@ async fn handle_kv_delete_event(req: KvItemDeleteReq, ctx: TardisContext) -> Tar
 }
 
 pub fn register_kv_events() {
-    if let Some(bios_event_center) = BiosEventCenter::event_bus() {
+    if let Some(bios_event_center) = BiosEventCenter::worker_queue() {
         bios_event_center.subscribe(handle_kv_add_event);
         bios_event_center.subscribe(handle_kv_delete_event);
     }

@@ -26,7 +26,7 @@ async fn handle_delete_event(req: SearchEventItemDeleteReq, ctx: TardisContext) 
 }
 
 pub(crate) fn register_search_events() {
-    if let Some(bios_event_center) = BiosEventCenter::event_bus() {
+    if let Some(bios_event_center) = BiosEventCenter::worker_queue() {
         bios_event_center.subscribe(handle_modify_event);
         bios_event_center.subscribe(handle_add_event);
         bios_event_center.subscribe(handle_delete_event);

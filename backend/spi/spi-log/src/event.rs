@@ -18,7 +18,7 @@ async fn handle_add_event(req: LogItemAddReq, ctx: TardisContext) -> TardisResul
 }
 
 pub fn register_log_event() {
-    if let Some(bios_event_center) = BiosEventCenter::event_bus() {
+    if let Some(bios_event_center) = BiosEventCenter::worker_queue() {
         bios_event_center.subscribe(handle_add_event);
     }
 }

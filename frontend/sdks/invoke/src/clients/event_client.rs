@@ -91,7 +91,8 @@ pub struct EventListenerRegisterResp {
  ******************************************************************************************************************/
 
 // GLOBAL EVENT BUS
-pub const TOPIC_EVENT_BUS: &str = "event_bus";
+pub const TOPIC_BIOS_WORKER_QUEUE: &str = "bios/worker-queue";
+pub const TOPIC_BIOS_PUB_SUB: &str = "bios/pub-sub";
 pub const TOPIC_PUBLIC: &str = "public";
 
 #[derive(Serialize, Deserialize, Debug, Default, Clone)]
@@ -119,13 +120,32 @@ impl From<EventTopicConfig> for EventListenerRegisterReq {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(default)]
 pub struct EventCenterConfig {
-    base_url: String,
-    topic_sk: String,
-    topic_code: String,
-    avatars: Vec<String>,
+    pub base_url: String,
+    pub topic_sk: String,
+    pub topic_code: String,
+    /// The phrase "subscribe" here is **extremely** bad.
+    /// 
+    /// The difference between subscribe and not subscribe is actually 
+    /// the difference between a pub/sub system and a worker queue.
+    /// 
+    /// We may need to change this to a more meaningful name.
+    pub subscribe: bool,
+    pub avatars: Vec<String>,
 }
 
+impl Default for EventCenterConfig {
+    fn default() -> Self {
+        Self {
+            base_url: "http://localhost:8080".to_string(),
+            topic_sk: String::default(),
+            topic_code: TOPIC_BIOS_WORKER_QUEUE.to_string(),
+            subscribe: false,
+            avatars: vec![],
+        }
+    }
+}
 type WsEventCenterHandler = dyn Fn(serde_json::Value) -> Pin<Box<dyn Future<Output = TardisResult<()>> + Send>> + Send + Sync;
 type WsHandlersMap = HashMap<&'static str, Vec<Arc<WsEventCenterHandler>>>;
 
@@ -183,11 +203,11 @@ impl EventCenter for WsEventCenter {
             let client = EventClient::new(url, &funs);
             let resp = client
                 .register(&EventListenerRegisterReq {
-                    topic_code: TOPIC_EVENT_BUS.to_string(),
+                    topic_code: config.topic_code.to_string(),
                     topic_sk: Some(config.topic_sk.clone()),
                     events: Some(events),
                     avatars: config.avatars.clone(),
-                    subscribe_mode: false,
+                    subscribe_mode: config.subscribe,
                 })
                 .await
                 .expect("fail to register event center");
@@ -319,12 +339,20 @@ impl BiosEventCenter {
         TardisFuns::store().get_singleton::<Self>()
     }
     #[inline(always)]
-    pub fn event_bus() -> Option<Self> {
-        TardisFuns::store().get(TOPIC_EVENT_BUS.as_bytes())
+    pub fn worker_queue() -> Option<Self> {
+        TardisFuns::store().get(TOPIC_BIOS_WORKER_QUEUE.as_bytes())
     }
     #[inline(always)]
-    pub fn set_event_bus(self) {
-        TardisFuns::store().insert(ComponentKey::named(TOPIC_EVENT_BUS.as_bytes()), self);
+    pub fn set_as_worker_queue(&self) {
+        TardisFuns::store().insert(ComponentKey::named(TOPIC_BIOS_WORKER_QUEUE.as_bytes()), self.clone());
+    }
+    #[inline(always)]
+    pub fn pub_sub() -> Option<Self> {
+        TardisFuns::store().get(TOPIC_BIOS_PUB_SUB.as_bytes())
+    }
+    #[inline(always)]
+    pub fn set_pub_sub(self) {
+        TardisFuns::store().insert(ComponentKey::named(TOPIC_BIOS_PUB_SUB.as_bytes()), self);
     }
     #[inline(always)]
     pub fn public() -> Option<Self> {

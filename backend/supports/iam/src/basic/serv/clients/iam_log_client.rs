@@ -150,7 +150,7 @@ impl IamLogClient {
             owner,
             own_paths,
         };
-        if let Some(ws_client) = BiosEventCenter::event_bus() {
+        if let Some(ws_client) = BiosEventCenter::worker_queue() {
             ws_client.publish(add_req.with_source(IAM_AVATAR).inject_context(funs, ctx)).await?;
         } else {
             SpiLogClient::add(&add_req, funs, ctx).await?;
