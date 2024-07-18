@@ -76,9 +76,7 @@ pub struct KvItemDeleteReq {
 
 impl From<bios_sdk_invoke::clients::spi_kv_client::KvItemDeleteReq> for KvItemDeleteReq {
     fn from(value: bios_sdk_invoke::clients::spi_kv_client::KvItemDeleteReq) -> Self {
-        KvItemDeleteReq {
-            key: value.key.into()
-        }
+        KvItemDeleteReq { key: value.key.into() }
     }
 }
 

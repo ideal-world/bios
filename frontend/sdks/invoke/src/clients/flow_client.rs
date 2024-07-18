@@ -1,13 +1,12 @@
 use serde::{Deserialize, Serialize};
 
 pub mod event {
-    use crate::clients::event_client::{ContextEvent, Event};
+    use crate::clients::event_client::Event;
 
     use super::{FlowFrontChangeReq, FlowPostChangeReq};
     pub const FLOW_AVATAR: &str = "flow";
     pub const EVENT_FRONT_CHANGE: &str = "flow/front_change";
     pub const EVENT_POST_CHANGE: &str = "flow/post_change";
-
 
     impl Event for FlowFrontChangeReq {
         const CODE: &'static str = EVENT_FRONT_CHANGE;

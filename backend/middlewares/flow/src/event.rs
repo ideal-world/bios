@@ -1,5 +1,3 @@
-use std::time::Duration;
-
 use bios_sdk_invoke::clients::{
     event_client::{BiosEventCenter, EventCenter},
     flow_client::{FlowFrontChangeReq, FlowPostChangeReq},
@@ -10,8 +8,6 @@ use tardis::{
 };
 
 use crate::{flow_constants::get_tardis_inst, serv::flow_event_serv::FlowEventServ};
-
-pub const RECONNECT_INTERVAL: Duration = Duration::from_secs(10);
 
 pub fn flow_register_events() {
     if let Some(event_center) = TardisFuns::store().get_singleton::<BiosEventCenter>() {

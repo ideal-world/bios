@@ -94,7 +94,7 @@ macro_rules! spi_dispatch_service {
             kind_code => Err($funs.bs_not_implemented(kind_code)),
         }
     };
-    (@call 
+    (@call
         $mod:path, $fun:ident, $funs:ident, $ctx:ident, $inst:ident, @args: {$($args: ident),*}) => {
         {
             use $mod::*;

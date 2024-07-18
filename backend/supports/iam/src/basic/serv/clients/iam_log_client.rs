@@ -5,17 +5,14 @@ use bios_basic::{
         serv::{rbum_crud_serv::RbumCrudOperation, rbum_item_serv::RbumItemCrudOperation, rbum_set_serv::RbumSetCateServ},
     },
 };
-use bios_sdk_invoke::{
-    clients::{
-        event_client::{BiosEventCenter, EventCenter, EventExt},
-        spi_log_client::{LogItemAddReq, SpiLogClient},
-    },
-    invoke_config::InvokeConfigApi,
+use bios_sdk_invoke::clients::{
+    event_client::{BiosEventCenter, EventCenter, EventExt},
+    spi_log_client::{LogItemAddReq, SpiLogClient},
 };
 use serde::Serialize;
 
 use tardis::{
-    basic::{dto::TardisContext, field::TrimString, result::TardisResult},
+    basic::{dto::TardisContext, result::TardisResult},
     chrono::{DateTime, Utc},
     serde_json::json,
     tokio, TardisFuns, TardisFunsInst,
@@ -153,7 +150,7 @@ impl IamLogClient {
             owner,
             own_paths,
         };
-        if let Some(ws_client) = TardisFuns::store().get_singleton::<BiosEventCenter>() {
+        if let Some(ws_client) = BiosEventCenter::event_bus() {
             ws_client.publish(add_req.with_source(IAM_AVATAR).inject_context(funs, ctx)).await?;
         } else {
             SpiLogClient::add(&add_req, funs, ctx).await?;

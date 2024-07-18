@@ -12,11 +12,11 @@ use crate::invoke_enumeration::InvokeModuleKind;
 use super::base_spi_client::BaseSpiClient;
 
 pub mod event {
-    use crate::clients::event_client::{ContextEvent, Event};
+    use crate::clients::event_client::Event;
 
     const EVENT_ADD_KV: &str = "spi-kv/add";
     const EVENT_DELETE_KV: &str = "spi-kv/delete";
-    
+
     impl Event for super::KvItemAddOrModifyReq {
         const CODE: &'static str = EVENT_ADD_KV;
     }

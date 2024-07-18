@@ -1,9 +1,9 @@
 use crate::invoke_enumeration::InvokeModuleKind;
 use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
-use tardis::basic::dto::TardisContext;
 use std::sync::Mutex;
 use std::{collections::HashMap, fmt::Debug};
+use tardis::basic::dto::TardisContext;
 use tardis::basic::{error::TardisError, result::TardisResult};
 use tardis::TardisFunsInst;
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -79,7 +79,7 @@ impl InvokeConfigApi for TardisFunsInst {
 
     fn invoke_conf_inject_context(&self, context: &TardisContext) -> TardisContext {
         let mut ctx = context.clone();
-        ctx.owner = self.invoke_conf_spi_app_id();
+        ctx.ak = self.invoke_conf_spi_app_id();
         ctx
     }
 }

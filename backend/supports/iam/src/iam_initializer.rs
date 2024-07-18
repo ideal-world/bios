@@ -1,4 +1,3 @@
-use bios_basic::process::task_processor::TaskProcessor;
 use bios_basic::rbum::rbum_enumeration::{RbumCertStatusKind, RbumScopeLevelKind};
 use bios_sdk_invoke::invoke_initializer;
 use tardis::basic::dto::TardisContext;
@@ -6,13 +5,9 @@ use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 use tardis::db::reldb_client::TardisActiveModel;
 use tardis::db::sea_orm::sea_query::Table;
-use tardis::log as tracing;
-use tardis::log::{error, info, instrument, warn};
-use tardis::serde_json::Value;
+use tardis::log::info;
 use tardis::web::web_server::{TardisWebServer, WebServerModule};
-use tardis::web::ws_client::TardisWSClient;
-use tardis::web::ws_processor::TardisWebsocketMessage;
-use tardis::{tokio, TardisFuns, TardisFunsInst};
+use tardis::{TardisFuns, TardisFunsInst};
 
 use bios_basic::rbum::dto::rbum_domain_dto::RbumDomainAddReq;
 use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
@@ -53,7 +48,7 @@ use crate::console_tenant::api::{
 };
 use crate::iam_config::{BasicInfo, IamBasicInfoManager, IamConfig};
 use crate::iam_constants::RBUM_SCOPE_LEVEL_GLOBAL;
-use crate::iam_constants::{self, EVENT_EXECUTE_TASK_EXTERNAL, EVENT_SET_TASK_PROCESS_DATA_EXTERNAL, EVENT_STOP_TASK_EXTERNAL};
+use crate::iam_constants::{self};
 use crate::iam_enumeration::{IamResKind, IamRoleKind, IamSetKind};
 
 pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {

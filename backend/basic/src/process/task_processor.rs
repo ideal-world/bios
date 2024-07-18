@@ -102,7 +102,7 @@ impl TaskProcessor {
         to_avatars: Option<Vec<String>>,
     ) -> TardisResult<()> {
         Self::set_status(cache_key, task_id, status, cache_client).await?;
-        if let Some(ec) = BiosEventCenter::global() {
+        if let Some(ec) = BiosEventCenter::public() {
             ec.publish(
                 TaskSetStatusEventReq {
                     task_id,
@@ -137,7 +137,7 @@ impl TaskProcessor {
         to_avatars: Option<Vec<String>>,
     ) -> TardisResult<()> {
         Self::set_process_data(cache_key, task_id, data.clone(), cache_client).await?;
-        if let Some(ec) = BiosEventCenter::global() {
+        if let Some(ec) = BiosEventCenter::public() {
             let msg = format!("set task process: {}", &TardisFuns::json.json_to_string(data.clone())?);
             ec.publish(TaskSetProcessDataEventReq { task_id, data, msg }.with_source(from_avatar).with_targets(to_avatars)).await?;
         }
@@ -214,7 +214,7 @@ impl TaskProcessor {
             }
         });
         TASK_HANDLE.write().await.insert(task_id, handle);
-        if let Some(ec) = BiosEventCenter::global() {
+        if let Some(ec) = BiosEventCenter::public() {
             ec.publish(
                 TaskExecuteEventReq {
                     task_id,
@@ -246,7 +246,7 @@ impl TaskProcessor {
         to_avatars: Option<Vec<String>>,
     ) -> TardisResult<u64> {
         let task_id = TaskProcessor::init_status(cache_key, Some(task_id), cache_client).await?;
-        if let Some(ec) = BiosEventCenter::global() {
+        if let Some(ec) = BiosEventCenter::public() {
             ec.publish(
                 TaskExecuteEventReq {
                     task_id,

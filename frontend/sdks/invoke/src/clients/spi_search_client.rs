@@ -3,7 +3,6 @@ use tardis::basic::result::TardisResult;
 use tardis::TardisFunsInst;
 
 use crate::dto::search_item_dto::{SearchEventItemDeleteReq, SearchEventItemModifyReq, SearchItemAddReq, SearchItemModifyReq};
-use crate::invoke_config::InvokeConfigApi;
 use crate::invoke_enumeration::InvokeModuleKind;
 
 use super::base_spi_client::BaseSpiClient;
@@ -15,7 +14,7 @@ pub mod event {
     use serde::{Deserialize, Serialize};
 
     use crate::{
-        clients::event_client::{ContextEvent, Event},
+        clients::event_client::Event,
         dto::search_item_dto::{SearchEventItemDeleteReq, SearchEventItemModifyReq, SearchItemAddReq, SearchItemModifyReq},
     };
     #[derive(Debug, Clone, Serialize, Deserialize)]

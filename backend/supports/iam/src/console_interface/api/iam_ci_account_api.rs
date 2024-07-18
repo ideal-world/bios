@@ -271,7 +271,7 @@ impl IamCiAccountApi {
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         let mut result = vec![];
         for ak in aks.0.split(',') {
-            let cert = IamCertServ::get_3th_kind_cert_by_ak(&supplier.0, &ak, true, &funs, &ctx.0).await?;
+            let cert = IamCertServ::get_3th_kind_cert_by_ak(&supplier.0, ak, true, &funs, &ctx.0).await?;
             result.push(
                 IamAccountServ::get_item(
                     &cert.rel_rbum_id,

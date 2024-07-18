@@ -11,8 +11,8 @@ use std::{
 use crossbeam::sync::ShardedLock;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use tardis::{
-    basic::{dto::TardisContext, error::TardisError, result::TardisResult},
-    log::{debug, warn},
+    basic::{component::ComponentKey, dto::TardisContext, error::TardisError, result::TardisResult},
+    log::{debug, trace, warn},
     serde_json, tokio,
     web::{
         poem_openapi::{self, Object},
@@ -25,6 +25,10 @@ use tardis::{
 };
 
 use crate::invoke_config::InvokeConfigApi;
+
+/******************************************************************************************************************
+ *                                                Http Client
+ ******************************************************************************************************************/
 
 #[derive(Clone)]
 pub struct EventClient<'a> {
@@ -82,8 +86,13 @@ pub struct EventListenerRegisterResp {
     pub listener_code: String,
 }
 
+/******************************************************************************************************************
+ *                                                Event Client
+ ******************************************************************************************************************/
+
 // GLOBAL EVENT BUS
 pub const TOPIC_EVENT_BUS: &str = "event_bus";
+pub const TOPIC_PUBLIC: &str = "public";
 
 #[derive(Serialize, Deserialize, Debug, Default, Clone)]
 #[serde(default)]
@@ -109,208 +118,42 @@ impl From<EventTopicConfig> for EventListenerRegisterReq {
     }
 }
 
-pub trait Event: Serialize + DeserializeOwned {
-    const CODE: &'static str;
-    fn source(&self) -> String {
-        String::default()
-    }
-    fn targets(&self) -> Option<Vec<String>> {
-        Self::CODE.split_once('/').map(|(service, _)| vec![service.to_string()])
-    }
-}
-#[derive(Debug, Serialize, Deserialize, Clone, Default)]
-pub struct WithSource<E> {
-    #[serde(flatten)]
-    inner: E,
-    #[serde(skip)]
-    source: String,
-}
-
-impl<E> Event for WithSource<E>
-where
-    E: Event,
-{
-    const CODE: &'static str = E::CODE;
-    fn source(&self) -> String {
-        self.source.clone()
-    }
-    fn targets(&self) -> Option<Vec<String>> {
-        self.inner.targets()
-    }
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone, Default)]
-pub struct WithTargets<E> {
-    #[serde(flatten)]
-    inner: E,
-    #[serde(skip)]
-    targets: Option<Vec<String>>,
-}
-
-impl<E> Event for WithTargets<E>
-where
-    E: Event,
-{
-    const CODE: &'static str = E::CODE;
-    fn source(&self) -> String {
-        self.inner.source()
-    }
-    fn targets(&self) -> Option<Vec<String>> {
-        self.targets.clone()
-    }
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct ContextEvent<T> {
-    pub ctx: TardisContext,
-    pub event: T,
-}
-
-impl<T> ContextEvent<T> {
-    #[inline(always)]
-    pub fn unpack(self) -> (TardisContext, T) {
-        (self.ctx, self.event)
-    }
-}
-
-impl<E: Event> Event for ContextEvent<E> {
-    const CODE: &'static str = E::CODE;
-    fn source(&self) -> String {
-        self.event.source()
-    }
-    fn targets(&self) -> Option<Vec<String>> {
-        self.event.targets()
-    }
-}
-pub trait EventExt {
-    fn with_source(self, source: impl Into<String>) -> WithSource<Self>
-    where
-        Self: Sized,
-    {
-        WithSource {
-            inner: self,
-            source: source.into(),
-        }
-    }
-    fn with_targets(self, targets: impl Into<Option<Vec<String>>>) -> WithTargets<Self>
-    where
-        Self: Sized,
-    {
-        WithTargets {
-            inner: self,
-            targets: targets.into(),
-        }
-    }
-    fn with_context(self, ctx: TardisContext) -> ContextEvent<Self>
-    where
-        Self: Sized,
-    {
-        ContextEvent { ctx, event: self }
-    }
-    fn inject_context(self, funs: &TardisFunsInst, ctx: &TardisContext) -> ContextEvent<Self>
-    where
-        Self: Sized,
-    {
-        ContextEvent {
-            ctx: funs.invoke_conf_inject_context(ctx),
-            event: self,
-        }
-    }
-}
-
-impl<E> EventExt for E where E: Event {}
-
-pub trait EventCenter {
-    fn init(&self) -> TardisResult<()>;
-    fn publish<E: Event>(&self, event: E) -> impl Future<Output = TardisResult<()>>;
-    fn subscribe<A, H: EventHandler<A>>(&self, handler: H);
-}
-
-impl<T> EventCenter for Arc<T>
-where
-    T: EventCenter,
-{
-    fn init(&self) -> TardisResult<()> {
-        T::init(self)
-    }
-
-    fn publish<E: Event>(&self, event: E) -> impl Future<Output = TardisResult<()>> {
-        self.as_ref().publish(event)
-    }
-
-    fn subscribe<A, H: EventHandler<A>>(&self, handler: H) {
-        self.as_ref().subscribe(handler)
-    }
-}
-#[derive(Debug, Clone, Default)]
-pub struct BiosEventCenter {
-    inner: WsEventCenter,
-}
-
-impl BiosEventCenter {
-    pub fn new() -> Self {
-        Self { inner: WsEventCenter::default() }
-    }
-    pub fn global() -> Option<Self>{
-        TardisFuns::store().get_singleton::<Self>()
-    }
-}
-
-impl EventCenter for BiosEventCenter {
-    fn init(&self) -> TardisResult<()> {
-        self.inner.init()
-    }
-    async fn publish<E: Event>(&self, event: E) -> TardisResult<()> {
-        self.inner.publish(event).await
-    }
-
-    fn subscribe<A, H: EventHandler<A>>(&self, handler: H) {
-        debug!("subscribe event handler for event [{}]", H::Event::CODE);
-        self.inner.subscribe(handler);
-    }
-}
-
-pub trait EventHandler<A>: Clone + Sync + Send + 'static {
-    type Event: Event;
-    fn handle(self, event: Self::Event) -> impl Future<Output = TardisResult<()>> + Send;
-}
-/// Adapter for event without a tardis context
-#[derive(Debug, Clone)]
-pub struct FnEventHandler<E>(PhantomData<E>);
-impl<E, F, Fut> EventHandler<FnEventHandler<E>> for F
-where
-    E: Event,
-    F: Fn(E) -> Fut + Clone + Send + Sync + 'static,
-    Fut: Future<Output = TardisResult<()>> + Send,
-{
-    type Event = E;
-    fn handle(self, event: E) -> impl Future<Output = TardisResult<()>> + Send {
-        (self)(event)
-    }
-}
-
-/// Adapter for event with a tardis context
-#[derive(Debug, Clone)]
-pub struct FnContextEventHandler<E>(PhantomData<E>);
-impl<E, F, Fut> EventHandler<FnContextEventHandler<E>> for F
-where
-    ContextEvent<E>: Event,
-    F: Fn(E, TardisContext) -> Fut + Clone + Send + Sync + 'static,
-    Fut: Future<Output = TardisResult<()>> + Send,
-{
-    type Event = ContextEvent<E>;
-    fn handle(self, event: ContextEvent<E>) -> impl Future<Output = TardisResult<()>> + Send {
-        let (ctx, evt) = event.unpack();
-        (self)(evt, ctx)
-    }
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct EventCenterConfig {
+    base_url: String,
+    topic_sk: String,
+    topic_code: String,
+    avatars: Vec<String>,
 }
 
 type WsEventCenterHandler = dyn Fn(serde_json::Value) -> Pin<Box<dyn Future<Output = TardisResult<()>> + Send>> + Send + Sync;
 type WsHandlersMap = HashMap<&'static str, Vec<Arc<WsEventCenterHandler>>>;
-#[derive(Clone, Default)]
+
+#[derive(Clone)]
 struct WsEventCenter {
+    cfg: Arc<EventCenterConfig>,
     handlers: Arc<ShardedLock<WsHandlersMap>>,
-    ws_client: OnceLock<TardisWSClient>,
+    ws_client: Arc<OnceLock<TardisWSClient>>,
+}
+
+impl From<EventCenterConfig> for WsEventCenter {
+    fn from(cfg: EventCenterConfig) -> Self {
+        Self {
+            cfg: Arc::new(cfg),
+            handlers: Arc::new(ShardedLock::new(HashMap::new())),
+            ws_client: Arc::new(OnceLock::new()),
+        }
+    }
+}
+
+impl From<Arc<EventCenterConfig>> for WsEventCenter {
+    fn from(cfg: Arc<EventCenterConfig>) -> Self {
+        Self {
+            cfg,
+            handlers: Arc::new(ShardedLock::new(HashMap::new())),
+            ws_client: Arc::new(OnceLock::new()),
+        }
+    }
 }
 
 impl std::fmt::Debug for WsEventCenter {
@@ -320,20 +163,12 @@ impl std::fmt::Debug for WsEventCenter {
     }
 }
 
-const EVENT_CENTER_MODULE: &str = "ws-event-center";
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct WsEventCenterConfig {
-    base_url: String,
-    topic_sk: String,
-    avatars: Vec<String>,
-}
 impl EventCenter for WsEventCenter {
     fn init(&self) -> TardisResult<()> {
         let this = self.clone();
         const RETRY_INTERVAL: Duration = Duration::from_secs(1);
         tokio::spawn(async move {
-            let config = TardisFuns::cs_config::<WsEventCenterConfig>(EVENT_CENTER_MODULE);
+            let config = this.cfg.clone();
             let url = config.base_url.as_str();
             let funs = TardisFuns::inst("", None);
             // wait for web server to start
@@ -408,10 +243,12 @@ impl EventCenter for WsEventCenter {
         if let Some(client) = self.ws_client.get() {
             client
                 .send_obj(&TardisWebsocketReq {
+                    msg_id: event.id(),
                     msg: TardisFuns::json.obj_to_json(&event)?,
                     from_avatar: event.source(),
                     to_avatars: event.targets(),
                     event: Some(E::CODE.to_string()),
+                    ignore_self: Some(false),
                     ..Default::default()
                 })
                 .await
@@ -424,11 +261,293 @@ impl EventCenter for WsEventCenter {
         let wrapped_handler: Arc<WsEventCenterHandler> = Arc::new(move |value: serde_json::Value| {
             let handler = handler.clone();
             Box::pin(async move {
+                trace!("[EventCenter] handling event [{code}]: {req}", code = H::Event::CODE, req = value);
                 let event: H::Event = serde_json::from_value(value).map_err(|e| TardisError::internal_error(&format!("can't deserialize event message: {e}"), ""))?;
                 handler.handle(event).await
             })
         });
         let key = H::Event::CODE;
         self.handlers.write().expect("never poisoned").entry(key).or_default().push(wrapped_handler);
+    }
+}
+
+pub trait EventCenter {
+    fn init(&self) -> TardisResult<()>;
+    fn publish<E: Event>(&self, event: E) -> impl Future<Output = TardisResult<()>>;
+    fn subscribe<A, H: EventHandler<A>>(&self, handler: H);
+}
+
+impl<T> EventCenter for Arc<T>
+where
+    T: EventCenter,
+{
+    fn init(&self) -> TardisResult<()> {
+        T::init(self)
+    }
+
+    fn publish<E: Event>(&self, event: E) -> impl Future<Output = TardisResult<()>> {
+        self.as_ref().publish(event)
+    }
+
+    fn subscribe<A, H: EventHandler<A>>(&self, handler: H) {
+        self.as_ref().subscribe(handler)
+    }
+}
+#[derive(Debug, Clone)]
+pub struct BiosEventCenter {
+    inner: WsEventCenter,
+}
+
+impl BiosEventCenter {
+    pub fn from_config(config: EventCenterConfig) -> Self {
+        Self {
+            inner: WsEventCenter::from(config),
+        }
+    }
+    pub fn from_domain(domain: &str) -> Self {
+        #[derive(Deserialize)]
+        struct EventConfigView {
+            event_center: EventCenterConfig,
+        }
+        let cfg = TardisFuns::cs_config::<EventConfigView>(domain);
+        Self {
+            inner: WsEventCenter::from(cfg.event_center.clone()),
+        }
+    }
+    #[deprecated = "There's no global instance by now..."]
+    pub fn global() -> Option<Self> {
+        TardisFuns::store().get_singleton::<Self>()
+    }
+    #[inline(always)]
+    pub fn event_bus() -> Option<Self> {
+        TardisFuns::store().get(TOPIC_EVENT_BUS.as_bytes())
+    }
+    #[inline(always)]
+    pub fn set_event_bus(self) {
+        TardisFuns::store().insert(ComponentKey::named(TOPIC_EVENT_BUS.as_bytes()), self);
+    }
+    #[inline(always)]
+    pub fn public() -> Option<Self> {
+        TardisFuns::store().get(TOPIC_PUBLIC.as_bytes())
+    }
+    #[inline(always)]
+    pub fn set_public(self) {
+        TardisFuns::store().insert(ComponentKey::named(TOPIC_PUBLIC.as_bytes()), self);
+    }
+}
+
+impl EventCenter for BiosEventCenter {
+    fn init(&self) -> TardisResult<()> {
+        self.inner.init()
+    }
+    async fn publish<E: Event>(&self, event: E) -> TardisResult<()> {
+        self.inner.publish(event).await
+    }
+
+    fn subscribe<A, H: EventHandler<A>>(&self, handler: H) {
+        debug!("subscribe event handler for event [{}]", H::Event::CODE);
+        self.inner.subscribe(handler);
+    }
+}
+
+/******************************************************************************************************************
+ *                                                Event Trait
+ ******************************************************************************************************************/
+
+pub trait Event: Serialize + DeserializeOwned {
+    const CODE: &'static str;
+    fn source(&self) -> String {
+        String::default()
+    }
+    fn targets(&self) -> Option<Vec<String>> {
+        Self::CODE.split_once('/').map(|(service, _)| vec![service.to_string()])
+    }
+    fn id(&self) -> Option<String> {
+        None
+    }
+}
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
+pub struct WithSource<E> {
+    #[serde(flatten)]
+    inner: E,
+    #[serde(skip)]
+    source: String,
+}
+
+impl<E> Event for WithSource<E>
+where
+    E: Event,
+{
+    const CODE: &'static str = E::CODE;
+    fn source(&self) -> String {
+        self.source.clone()
+    }
+    fn targets(&self) -> Option<Vec<String>> {
+        self.inner.targets()
+    }
+    fn id(&self) -> Option<String> {
+        self.inner.id()
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
+pub struct WithTargets<E> {
+    #[serde(flatten)]
+    inner: E,
+    #[serde(skip)]
+    targets: Option<Vec<String>>,
+}
+
+impl<E> Event for WithTargets<E>
+where
+    E: Event,
+{
+    const CODE: &'static str = E::CODE;
+    fn source(&self) -> String {
+        self.inner.source()
+    }
+    fn targets(&self) -> Option<Vec<String>> {
+        self.targets.clone()
+    }
+    fn id(&self) -> Option<String> {
+        self.inner.id()
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
+pub struct WithId<E> {
+    #[serde(flatten)]
+    inner: E,
+    #[serde(skip)]
+    id: Option<String>,
+}
+
+impl<E> Event for WithId<E>
+where
+    E: Event,
+{
+    const CODE: &'static str = E::CODE;
+    fn source(&self) -> String {
+        self.inner.source()
+    }
+    fn targets(&self) -> Option<Vec<String>> {
+        self.inner.targets()
+    }
+    fn id(&self) -> Option<String> {
+        self.id.clone()
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ContextEvent<T> {
+    pub ctx: TardisContext,
+    pub event: T,
+}
+
+impl<T> ContextEvent<T> {
+    #[inline(always)]
+    pub fn unpack(self) -> (TardisContext, T) {
+        (self.ctx, self.event)
+    }
+}
+
+impl<E: Event> Event for ContextEvent<E> {
+    const CODE: &'static str = E::CODE;
+    fn source(&self) -> String {
+        self.event.source()
+    }
+    fn targets(&self) -> Option<Vec<String>> {
+        self.event.targets()
+    }
+}
+pub trait EventExt {
+    fn with_source(self, source: impl Into<String>) -> WithSource<Self>
+    where
+        Self: Sized,
+    {
+        WithSource {
+            inner: self,
+            source: source.into(),
+        }
+    }
+    fn with_targets(self, targets: impl Into<Option<Vec<String>>>) -> WithTargets<Self>
+    where
+        Self: Sized,
+    {
+        WithTargets {
+            inner: self,
+            targets: targets.into(),
+        }
+    }
+    fn with_context(self, ctx: TardisContext) -> ContextEvent<Self>
+    where
+        Self: Sized,
+    {
+        ContextEvent { ctx, event: self }
+    }
+    fn inject_context(self, funs: &TardisFunsInst, ctx: &TardisContext) -> ContextEvent<Self>
+    where
+        Self: Sized,
+    {
+        ContextEvent {
+            ctx: funs.invoke_conf_inject_context(ctx),
+            event: self,
+        }
+    }
+    fn with_id(self, id: Option<String>) -> WithId<Self>
+    where
+        Self: Sized,
+    {
+        WithId { inner: self, id }
+    }
+    fn with_nanoid(self) -> WithId<Self>
+    where
+        Self: Sized,
+    {
+        WithId {
+            inner: self,
+            id: Some(TardisFuns::field.nanoid()),
+        }
+    }
+}
+
+impl<E> EventExt for E where E: Event {}
+
+/******************************************************************************************************************
+ *                                                Event Handler
+ ******************************************************************************************************************/
+
+pub trait EventHandler<A>: Clone + Sync + Send + 'static {
+    type Event: Event;
+    fn handle(self, event: Self::Event) -> impl Future<Output = TardisResult<()>> + Send;
+}
+/// Adapter for event without a tardis context
+#[derive(Debug, Clone)]
+pub struct FnEventHandler<E>(PhantomData<E>);
+impl<E, F, Fut> EventHandler<FnEventHandler<E>> for F
+where
+    E: Event,
+    F: Fn(E) -> Fut + Clone + Send + Sync + 'static,
+    Fut: Future<Output = TardisResult<()>> + Send,
+{
+    type Event = E;
+    fn handle(self, event: E) -> impl Future<Output = TardisResult<()>> + Send {
+        (self)(event)
+    }
+}
+
+/// Adapter for event with a tardis context
+#[derive(Debug, Clone)]
+pub struct FnContextEventHandler<E>(PhantomData<E>);
+impl<E, F, Fut> EventHandler<FnContextEventHandler<E>> for F
+where
+    ContextEvent<E>: Event,
+    F: Fn(E, TardisContext) -> Fut + Clone + Send + Sync + 'static,
+    Fut: Future<Output = TardisResult<()>> + Send,
+{
+    type Event = ContextEvent<E>;
+    fn handle(self, event: ContextEvent<E>) -> impl Future<Output = TardisResult<()>> + Send {
+        let (ctx, evt) = event.unpack();
+        (self)(evt, ctx)
     }
 }

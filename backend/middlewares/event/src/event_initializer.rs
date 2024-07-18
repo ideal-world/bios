@@ -149,8 +149,8 @@ fn init_scan_and_resend_task() {
 }
 
 fn create_event_center() -> TardisResult<()> {
-    let bios_event_center = BiosEventCenter::default();
+    let bios_event_center = BiosEventCenter::from_domain(DOMAIN_CODE);
     bios_event_center.init()?;
-    TardisFuns::store().insert_singleton(bios_event_center);
+    bios_event_center.set_event_bus();
     Ok(())
 }

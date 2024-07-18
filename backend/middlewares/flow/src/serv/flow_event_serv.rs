@@ -2,12 +2,9 @@ use std::{collections::HashMap, str::FromStr};
 
 use async_recursion::async_recursion;
 use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
-use bios_sdk_invoke::{
-    clients::{
-        event_client::{BiosEventCenter, EventCenter, EventExt},
-        flow_client::{event::FLOW_AVATAR, FlowFrontChangeReq},
-    },
-    invoke_config::InvokeConfigApi,
+use bios_sdk_invoke::clients::{
+    event_client::{BiosEventCenter, EventCenter, EventExt},
+    flow_client::{event::FLOW_AVATAR, FlowFrontChangeReq},
 };
 use rust_decimal::Decimal;
 use serde_json::{json, Value};
@@ -109,10 +106,8 @@ impl FlowEventServ {
             FlowTransitionFrontActionRightValue::ChangeContent => {
                 let left_value = if let Some(custom_value) = current_vars.get(&format!("custom_{}", condition.left_value)) {
                     Some(custom_value)
-                } else if let Some(original_value) = current_vars.get(&condition.left_value) {
-                    Some(original_value)
                 } else {
-                    None
+                    current_vars.get(&condition.left_value)
                 };
                 if let Some(left_value) = left_value {
                     Ok(condition.relevance_relation.check_conform(
@@ -374,7 +369,7 @@ impl FlowEventServ {
                 funs,
             )
             .await?;
-            if let Some(event_center) = BiosEventCenter::global() {
+            if let Some(event_center) = BiosEventCenter::event_bus() {
                 event_center
                     .publish(
                         FlowFrontChangeReq {

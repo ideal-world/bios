@@ -42,19 +42,25 @@ impl EventPersistentServ {
     }
     pub async fn send_success(id: String, funs: &TardisFunsInst) -> TardisResult<()> {
         let db = funs.db().raw_conn();
-        event_persistent::Entity::update(event_persistent::ActiveModel {
+        let result = event_persistent::Entity::update(event_persistent::ActiveModel {
             id: Set(id),
             status: Set(event_persistent::Status::Success.to_string()),
             ..Default::default()
         })
         .filter(event_persistent::Column::Status.eq(event_persistent::Status::Sending.as_str()))
         .exec(db)
-        .await?;
+        .await;
+        // Missing this record implies that we have never processed it, witch it's ok.
+        if matches!(result, Err(tardis::db::sea_orm::DbErr::RecordNotUpdated)) {
+            return Ok(());
+        } else {
+            result?;
+        }
         Ok(())
     }
     pub async fn send_fail(id: String, error: impl Into<String>, funs: &TardisFunsInst) -> TardisResult<()> {
         let db = funs.db().raw_conn();
-        event_persistent::Entity::update(event_persistent::ActiveModel {
+        let result = event_persistent::Entity::update(event_persistent::ActiveModel {
             id: Set(id),
             status: Set(event_persistent::Status::Failed.to_string()),
             error: Set(Some(error.into())),
@@ -62,7 +68,13 @@ impl EventPersistentServ {
         })
         .filter(event_persistent::Column::Status.eq(event_persistent::Status::Sending.as_str()))
         .exec(db)
-        .await?;
+        .await;
+        // Missing this record implies that we have never processed it, witch it's ok.
+        if matches!(result, Err(tardis::db::sea_orm::DbErr::RecordNotUpdated)) {
+            return Ok(());
+        } else {
+            result?;
+        }
         Ok(())
     }
 

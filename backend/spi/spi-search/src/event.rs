@@ -3,10 +3,7 @@ use bios_sdk_invoke::{
     dto::search_item_dto::{SearchEventItemDeleteReq, SearchEventItemModifyReq, SearchItemAddReq},
 };
 
-use tardis::{
-    basic::{dto::TardisContext, result::TardisResult},
-    TardisFuns,
-};
+use tardis::basic::{dto::TardisContext, result::TardisResult};
 
 use crate::{search_initializer::get_tardis_inst, serv};
 
@@ -29,7 +26,7 @@ async fn handle_delete_event(req: SearchEventItemDeleteReq, ctx: TardisContext) 
 }
 
 pub(crate) fn register_search_events() {
-    if let Some(bios_event_center) = TardisFuns::store().get_singleton::<BiosEventCenter>() {
+    if let Some(bios_event_center) = BiosEventCenter::event_bus() {
         bios_event_center.subscribe(handle_modify_event);
         bios_event_center.subscribe(handle_add_event);
         bios_event_center.subscribe(handle_delete_event);

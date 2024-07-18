@@ -194,7 +194,7 @@ impl IamSetServ {
             )
             .await?;
         } else if kind == IamSetKind::Org.to_string() && result.is_ok() {
-            IamStatsClient::async_org_fact_record_load(result.clone().unwrap(), &funs, &ctx).await?;
+            IamStatsClient::async_org_fact_record_load(result.clone().unwrap(), funs, ctx).await?;
         }
         if result.is_ok() {
             kind.make_ascii_lowercase();
@@ -264,7 +264,7 @@ impl IamSetServ {
                 )
                 .await?;
             } else if kind == IamSetKind::Org.to_string() && result.is_ok() {
-                IamStatsClient::async_org_fact_record_load(set_cate_id.to_owned(), &funs, &ctx).await?;
+                IamStatsClient::async_org_fact_record_load(set_cate_id.to_owned(), funs, ctx).await?;
             }
             kind.make_ascii_lowercase();
             match kind.as_str() {
@@ -330,7 +330,7 @@ impl IamSetServ {
         if result.is_ok() {
             let mut kind = item.kind;
             if kind == IamSetKind::Org.to_string() {
-                IamStatsClient::async_org_fact_record_remove(set_cate_id.to_owned(), &funs, &ctx).await?;
+                IamStatsClient::async_org_fact_record_remove(set_cate_id.to_owned(), funs, ctx).await?;
             }
             kind.make_ascii_lowercase();
             let (op_describe, tag, op_kind) = match kind.as_str() {
@@ -613,7 +613,7 @@ impl IamSetServ {
             )
             .await;
             let _ = IamSearchClient::async_add_or_modify_account_search(&add_req.rel_rbum_item_id, Box::new(true), "", funs, ctx).await;
-            IamStatsClient::async_org_fact_record_load(set_cate_id.clone(), &funs, &ctx).await?;
+            IamStatsClient::async_org_fact_record_load(set_cate_id.clone(), funs, ctx).await?;
         }
 
         result
@@ -641,7 +641,7 @@ impl IamSetServ {
 
         if result.is_ok() && item.rel_rbum_item_kind_id == funs.iam_basic_kind_account_id() {
             if let Some(cate_id) = item.rel_rbum_set_cate_id.clone() {
-                IamStatsClient::async_org_fact_record_load(cate_id, &funs, &ctx).await?;
+                IamStatsClient::async_org_fact_record_load(cate_id, funs, ctx).await?;
             }
             if let Ok(account) = IamAccountServ::get_item(item.rel_rbum_item_id.clone().as_str(), &IamAccountFilterReq::default(), funs, ctx).await {
                 let _ = IamLogClient::add_ctx_task(

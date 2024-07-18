@@ -16,8 +16,9 @@ impl EventProcApi {
     ///
     /// 处理事件
     #[oai(path = "/:listener_code", method = "get")]
-    async fn ws_process(&self, listener_code: Path<String>, token: Query<String>, websocket: WebSocket) -> BoxWebSocketUpgraded {
+    async fn ws_process(&self, listener_code: Path<String>, token: Query<String>, websocket: WebSocket) -> Result<BoxWebSocketUpgraded, tardis::web::poem::Error> {
         let funs = get_tardis_inst();
-        event_proc_serv::ws_process(listener_code.0, token.0, websocket, funs).await
+        let upgraded = event_proc_serv::ws_process(listener_code.0, token.0, websocket, funs).await?;
+        Ok(upgraded)
     }
 }

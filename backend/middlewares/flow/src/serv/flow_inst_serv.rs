@@ -15,9 +15,9 @@ use bios_basic::{
     },
 };
 use bios_sdk_invoke::clients::{
-        event_client::{BiosEventCenter, EventCenter, EventExt},
-        flow_client::{event::FLOW_AVATAR, FlowFrontChangeReq, FlowPostChangeReq},
-    };
+    event_client::{BiosEventCenter, EventCenter, EventExt},
+    flow_client::{event::FLOW_AVATAR, FlowFrontChangeReq, FlowPostChangeReq},
+};
 use itertools::Itertools;
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},

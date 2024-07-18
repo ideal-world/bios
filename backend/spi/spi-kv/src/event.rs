@@ -1,7 +1,13 @@
-use tardis::{basic::dto::TardisContext, log::{self as tracing, instrument}, TardisFuns};
-use bios_sdk_invoke::clients::{event_client::{BiosEventCenter, EventCenter}, spi_kv_client::{KvItemAddOrModifyReq, KvItemDeleteReq}};
-use tardis::basic::result::TardisResult;
 use crate::{get_tardis_inst, serv};
+use bios_sdk_invoke::clients::{
+    event_client::{BiosEventCenter, EventCenter},
+    spi_kv_client::{KvItemAddOrModifyReq, KvItemDeleteReq},
+};
+use tardis::basic::result::TardisResult;
+use tardis::{
+    basic::dto::TardisContext,
+    log::{self as tracing, instrument},
+};
 #[instrument]
 async fn handle_kv_add_event(req: KvItemAddOrModifyReq, ctx: TardisContext) -> TardisResult<()> {
     let funs = get_tardis_inst();
@@ -17,7 +23,7 @@ async fn handle_kv_delete_event(req: KvItemDeleteReq, ctx: TardisContext) -> Tar
 }
 
 pub fn register_kv_events() {
-    if let Some(bios_event_center) = TardisFuns::store().get_singleton::<BiosEventCenter>() {
+    if let Some(bios_event_center) = BiosEventCenter::event_bus() {
         bios_event_center.subscribe(handle_kv_add_event);
         bios_event_center.subscribe(handle_kv_delete_event);
     }

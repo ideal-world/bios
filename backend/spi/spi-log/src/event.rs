@@ -7,10 +7,8 @@ use bios_sdk_invoke::clients::{
 };
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
-    TardisFuns,
     {log as tracing, log::instrument},
 };
-pub const RECONNECT_INTERVAL: Duration = Duration::from_secs(10);
 
 #[instrument]
 async fn handle_add_event(req: LogItemAddReq, ctx: TardisContext) -> TardisResult<()> {
@@ -20,7 +18,7 @@ async fn handle_add_event(req: LogItemAddReq, ctx: TardisContext) -> TardisResul
 }
 
 pub fn register_log_event() {
-    if let Some(bios_event_center) = TardisFuns::store().get_singleton::<BiosEventCenter>() {
+    if let Some(bios_event_center) = BiosEventCenter::event_bus() {
         bios_event_center.subscribe(handle_add_event);
     }
 }

@@ -61,14 +61,7 @@ impl IamCiSystemApi {
         let task_ids = task_ids.0.split(',');
         for task_id in task_ids {
             let task_id = task_id.parse().map_err(|_| funs.err().format_error("system", "task", "task id format error", "406-iam-task-id-format"))?;
-            TaskProcessor::stop_task_with_event(
-                &cache_key.0,
-                task_id,
-                &funs.cache(),
-                IAM_AVATAR.to_owned(),
-                Some(vec![format!("account/{}", ctx.0.owner)]),
-            )
-            .await?;
+            TaskProcessor::stop_task_with_event(&cache_key.0, task_id, &funs.cache(), IAM_AVATAR.to_owned(), Some(vec![format!("account/{}", ctx.0.owner)])).await?;
         }
         TardisResp::ok(Void {})
     }

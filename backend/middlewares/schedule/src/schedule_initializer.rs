@@ -3,8 +3,7 @@ use bios_basic::spi::{dto::spi_bs_dto::SpiBsCertResp, spi_constants, spi_funs::S
 use bios_sdk_invoke::invoke_initializer;
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
-    log::error,
-    web::{web_server::TardisWebServer, ws_client::TardisWSClient},
+    web::web_server::TardisWebServer,
     TardisFuns,
 };
 

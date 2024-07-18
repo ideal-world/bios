@@ -9,7 +9,6 @@ use bios_sdk_invoke::{
     clients::{spi_kv_client::SpiKvClient, spi_stats_client::SpiStatsClient},
     dto::stats_record_dto::StatsFactRecordLoadReq,
 };
-use itertools::Itertools;
 
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
@@ -23,7 +22,6 @@ use crate::{
     iam_enumeration::IamSetKind,
 };
 
-use super::iam_kv_client::IamKvClient;
 pub struct IamStatsClient;
 
 impl IamStatsClient {
