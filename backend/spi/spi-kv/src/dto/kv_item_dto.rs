@@ -12,6 +12,7 @@ pub struct KvItemAddOrModifyReq {
     #[oai(validator(min_length = "2"))]
     pub key: TrimString,
     pub value: Value,
+    pub disable: Option<bool>,
     pub info: Option<String>,
     pub scope_level: Option<i16>,
 }
@@ -24,6 +25,7 @@ pub struct KvItemDetailResp {
     pub info: String,
     pub owner: String,
     pub own_paths: String,
+    pub disable: bool,
     pub scope_level: i16,
     pub create_time: DateTime<Utc>,
     pub update_time: DateTime<Utc>,
@@ -37,6 +39,7 @@ pub struct KvItemSummaryResp {
     pub info: String,
     pub owner: String,
     pub own_paths: String,
+    pub disable: bool,
     pub scope_level: i16,
     pub create_time: DateTime<Utc>,
     pub update_time: DateTime<Utc>,
@@ -54,6 +57,7 @@ pub struct KvItemMatchReq {
     pub update_time_end: Option<DateTime<Utc>>,
     pub page_number: u32,
     pub page_size: u16,
+    pub disable: Option<bool>,
     pub key_like: Option<bool>,
     pub desc_sort_by_create: Option<bool>,
     pub desc_sort_by_update: Option<bool>,
@@ -70,6 +74,7 @@ pub struct KvNameAddOrModifyReq {
     #[oai(validator(min_length = "2"))]
     pub key: TrimString,
     pub name: String,
+    pub disable: Option<bool>,
     pub scope_level: Option<i16>,
 }
 
@@ -77,6 +82,7 @@ pub struct KvNameAddOrModifyReq {
 pub struct KvNameFindResp {
     pub key: String,
     pub name: String,
+    pub disable: bool,
     pub create_time: DateTime<Utc>,
     pub update_time: DateTime<Utc>,
 }
@@ -86,6 +92,7 @@ pub struct KvTagAddOrModifyReq {
     #[oai(validator(min_length = "2"))]
     pub key: TrimString,
     pub items: Vec<KvTagItemAddReq>,
+    pub disable: Option<bool>,
     pub scope_level: Option<i16>,
 }
 
@@ -103,6 +110,7 @@ pub struct KvTagItemAddReq {
 pub struct KvTagFindResp {
     pub key: String,
     pub items: Vec<KvTagItemFindResp>,
+    pub disable: bool,
     pub create_time: DateTime<Utc>,
     pub update_time: DateTime<Utc>,
 }

@@ -24,6 +24,7 @@ pub async fn add_or_modify_item(add_or_modify_req: &KvItemAddOrModifyReq, _funs:
         Value::from(add_or_modify_req.info.as_ref().unwrap_or(&"".to_string()).as_str()),
         Value::from(ctx.owner.clone()),
         Value::from(ctx.own_paths.clone()),
+        Value::from(add_or_modify_req.disable.unwrap_or(false)),
         Value::from(add_or_modify_req.scope_level.unwrap_or(0)),
     ];
     let mut update_opt_fragments: Vec<&str> = Vec::new();
@@ -33,8 +34,11 @@ pub async fn add_or_modify_item(add_or_modify_req: &KvItemAddOrModifyReq, _funs:
     }
     update_opt_fragments.push("owner = $4");
     update_opt_fragments.push("own_paths = $5");
+    if add_or_modify_req.disable.is_some() {
+        update_opt_fragments.push("disable = $6");
+    }
     if add_or_modify_req.scope_level.is_some() {
-        update_opt_fragments.push("scope_level = $6");
+        update_opt_fragments.push("scope_level = $7");
     }
     let bs_inst = inst.inst::<TardisRelDBClient>();
     let (mut conn, table_name) = kv_pg_initializer::init_table_and_conn(bs_inst, ctx, true).await?;
@@ -42,9 +46,9 @@ pub async fn add_or_modify_item(add_or_modify_req: &KvItemAddOrModifyReq, _funs:
     conn.execute_one(
         &format!(
             r#"INSERT INTO {} 
-    (k, v, info, owner, own_paths, scope_level)
+    (k, v, info, owner, own_paths, disable, scope_level)
 VALUES
-    ($1, $2, $3, $4, $5, $6)
+    ($1, $2, $3, $4, $5, $6, $7)
 ON CONFLICT (k)
 DO UPDATE SET
     {}
@@ -64,6 +68,7 @@ pub async fn add_or_modify_key_name(add_or_modify_req: &mut KvNameAddOrModifyReq
         key: format!("{}{}", kv_constants::KEY_PREFIX_BY_KEY_NAME, add_or_modify_req.key).into(),
         value: json!(add_or_modify_req.name),
         scope_level: add_or_modify_req.scope_level,
+        disable: add_or_modify_req.disable,
         info: None,
     };
     self::add_or_modify_item(&req, funs, ctx, inst).await
@@ -75,6 +80,7 @@ pub async fn add_or_modify_tag(add_or_modify_req: &mut KvTagAddOrModifyReq, funs
         value: TardisFuns::json.obj_to_json(&add_or_modify_req.items)?,
         scope_level: add_or_modify_req.scope_level,
         info: None,
+        disable: add_or_modify_req.disable,
     };
     self::add_or_modify_item(&req, funs, ctx, inst).await
 }
@@ -85,7 +91,7 @@ pub async fn get_item(key: String, extract: Option<String>, _funs: &TardisFunsIn
     let result = conn
         .get_dto_by_sql::<KvItemDetailResp>(
             &format!(
-                r#"SELECT k AS key, v{} AS value, info, owner, own_paths, scope_level, create_time, update_time
+                r#"SELECT k AS key, v{} AS value, info, owner, own_paths, disable, scope_level, create_time, update_time
 FROM {}
 WHERE 
     k = $1"#,
@@ -127,7 +133,7 @@ pub async fn find_items(keys: Vec<String>, extract: Option<String>, funs: &Tardi
     let result = conn
         .find_dtos_by_sql::<KvItemSummaryResp>(
             &format!(
-                r#"SELECT k AS key, v{} AS value, info, owner, own_paths, scope_level, create_time, update_time
+                r#"SELECT k AS key, v{} AS value, info, owner, own_paths, disable, scope_level, create_time, update_time
 FROM {}
 WHERE 
     k IN ({})"#,
@@ -163,6 +169,7 @@ pub async fn find_key_names(keys: Vec<String>, funs: &TardisFunsInst, ctx: &Tard
                 Ok(KvNameFindResp {
                     key: item.key.strip_prefix(kv_constants::KEY_PREFIX_BY_KEY_NAME).unwrap_or("").to_string(),
                     name: item.value.as_str().unwrap_or("").to_string(),
+                    disable: item.disable,
                     create_time: item.create_time,
                     update_time: item.update_time,
                 })
@@ -180,6 +187,7 @@ pub async fn find_tags(keys: Vec<String>, funs: &TardisFunsInst, ctx: &TardisCon
                 Ok(KvTagFindResp {
                     key: item.key.strip_prefix(kv_constants::KEY_PREFIX_BY_TAG).unwrap_or("").to_string(),
                     items: TardisFuns::json.json_to_obj(item.value)?,
+                    disable: item.disable,
                     create_time: item.create_time,
                     update_time: item.update_time,
                 })
@@ -231,6 +239,10 @@ pub async fn match_items(match_req: KvItemMatchReq, _funs: &TardisFunsInst, ctx:
         sql_vals.push(Value::from(update_time_end));
         where_fragments.push(format!("update_time <= ${}", sql_vals.len()));
     }
+    if let Some(disable) = match_req.disable {
+        sql_vals.push(Value::from(disable));
+        where_fragments.push(format!("disable = ${}", sql_vals.len()));
+    }
     if let Some(desc_sort_by_create) = match_req.desc_sort_by_create {
         order_fragments.push(format!("create_time {}", if desc_sort_by_create { "DESC" } else { "ASC" }));
     }
@@ -247,7 +259,7 @@ pub async fn match_items(match_req: KvItemMatchReq, _funs: &TardisFunsInst, ctx:
     let result = conn
         .query_all(
             &format!(
-                r#"SELECT k, v{} AS v, info, owner, own_paths, scope_level, create_time, update_time, count(*) OVER() AS total
+                r#"SELECT k, v{} AS v, info, owner, own_paths, disable, scope_level, create_time, update_time, count(*) OVER() AS total
 FROM {}
 WHERE 
     {}
@@ -285,6 +297,7 @@ WHERE
                 info: item.try_get("", "info")?,
                 owner: item.try_get("", "owner")?,
                 own_paths: item.try_get("", "own_paths")?,
+                disable: item.try_get("", "disable")?,
                 scope_level: item.try_get("", "scope_level")?,
                 create_time: item.try_get("", "create_time")?,
                 update_time: item.try_get("", "update_time")?,
@@ -320,11 +333,30 @@ pub async fn delete_item(key: String, _funs: &TardisFunsInst, ctx: &TardisContex
     Ok(())
 }
 
+pub async fn disable_item(key: String, _funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
+    let bs_inst = inst.inst::<TardisRelDBClient>();
+    let (mut conn, table_name) = kv_pg_initializer::init_table_and_conn(bs_inst, ctx, true).await?;
+    conn.begin().await?;
+    conn.execute_one(&format!("UPDATE {table_name} SET disable = true WHERE k = $1"), vec![Value::from(key)]).await?;
+    conn.commit().await?;
+    Ok(())
+}
+
+pub async fn enabled_item(key: String, _funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
+    let bs_inst = inst.inst::<TardisRelDBClient>();
+    let (mut conn, table_name) = kv_pg_initializer::init_table_and_conn(bs_inst, ctx, true).await?;
+    conn.begin().await?;
+    conn.execute_one(&format!("UPDATE {table_name} SET disable = false WHERE k = $1"), vec![Value::from(key)]).await?;
+    conn.commit().await?;
+    Ok(())
+}
+
 pub async fn page_tags(
     key_prefix: String,
     key_like: Option<bool>,
     page_number: u32,
     page_size: u16,
+    disable: Option<bool>,
     desc_sort_by_create: Option<bool>,
     desc_sort_by_update: Option<bool>,
     funs: &TardisFunsInst,
@@ -338,6 +370,7 @@ pub async fn page_tags(
             key_like,
             page_number,
             page_size,
+            disable,
             desc_sort_by_create,
             desc_sort_by_update,
             ..Default::default()
@@ -359,6 +392,7 @@ pub async fn page_tags(
                     Ok(KvTagFindResp {
                         key: item.key.strip_prefix(kv_constants::KEY_PREFIX_BY_TAG).unwrap_or("").to_string(),
                         items: TardisFuns::json.json_to_obj(item.value)?,
+                        disable: item.disable,
                         create_time: item.create_time,
                         update_time: item.update_time,
                     })
