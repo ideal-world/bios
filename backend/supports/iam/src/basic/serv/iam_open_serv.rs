@@ -13,7 +13,6 @@ use bios_basic::rbum::{
         rbum_rel_serv::{RbumRelEnvServ, RbumRelServ},
     },
 };
-use bios_sdk_invoke::clients::spi_kv_client::SpiKvClient;
 use itertools::Itertools;
 use tardis::{
     basic::{dto::TardisContext, field::TrimString, result::TardisResult},
@@ -39,8 +38,8 @@ use crate::{
 };
 
 use super::{
-    iam_cert_aksk_serv::IamCertAkSkServ, iam_cert_serv::IamCertServ, iam_key_cache_serv::IamIdentCacheServ, iam_rel_serv::IamRelServ, iam_res_serv::IamResServ,
-    iam_tenant_serv::IamTenantServ,
+    clients::iam_kv_client::IamKvClient, iam_cert_aksk_serv::IamCertAkSkServ, iam_cert_serv::IamCertServ, iam_key_cache_serv::IamIdentCacheServ, iam_rel_serv::IamRelServ,
+    iam_res_serv::IamResServ, iam_tenant_serv::IamTenantServ,
 };
 
 pub struct IamOpenServ;
@@ -584,9 +583,11 @@ impl IamOpenServ {
                     .await
                     {
                         let count = IamIdentCacheServ::get_gateway_cumulative_count(&cert.ak, None, funs).await.unwrap_or_default();
-                        let _ = SpiKvClient::add_or_modify_key_name(
-                            &format!("{}:{}", funs.conf::<IamConfig>().spi.kv_api_call_count_prefix.clone(), cert.id.as_str()),
+                        let _ = IamKvClient::add_or_modify_key_name(
+                            &funs.conf::<IamConfig>().spi.kv_api_call_count_prefix.clone(),
+                            cert.id.as_str(),
                             &count.unwrap_or_default(),
+                            None,
                             funs,
                             ctx,
                         )

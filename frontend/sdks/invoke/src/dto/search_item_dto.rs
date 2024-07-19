@@ -26,6 +26,7 @@ pub struct SearchItemAddReq {
     pub update_time: Option<DateTime<Utc>>,
     pub ext: Option<Value>,
     pub visit_keys: Option<SearchItemVisitKeysReq>,
+    pub kv_disable: Option<bool>,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
@@ -48,6 +49,7 @@ pub struct SearchItemModifyReq {
     // Overwrites the original content when it is true
     pub ext_override: Option<bool>,
     pub visit_keys: Option<SearchItemVisitKeysReq>,
+    pub kv_disable: Option<bool>,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]

@@ -12,7 +12,6 @@ use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use bios_basic::rbum::serv::rbum_rel_serv::RbumRelServ;
 use bios_basic::rbum::serv::rbum_set_serv::{RbumSetCateServ, RbumSetItemServ, RbumSetServ};
-use bios_sdk_invoke::clients::spi_kv_client::SpiKvClient;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
@@ -27,6 +26,7 @@ use crate::iam_config::{IamBasicConfigApi, IamConfig};
 use crate::iam_constants::{RBUM_SCOPE_LEVEL_APP, RBUM_SCOPE_LEVEL_TENANT};
 use crate::iam_enumeration::{IamRelKind, IamSetCateKind, IamSetKind};
 
+use super::clients::iam_kv_client::IamKvClient;
 use super::clients::iam_log_client::{IamLogClient, LogParamTag};
 use super::clients::iam_search_client::IamSearchClient;
 use super::clients::iam_stats_client::IamStatsClient;
@@ -186,13 +186,7 @@ impl IamSetServ {
         let mut kind = item.kind;
 
         if kind == IamSetKind::Apps.to_string() && result.is_ok() {
-            SpiKvClient::add_or_modify_key_name(
-                &format!("{}:{}", funs.conf::<IamConfig>().spi.kv_apps_prefix.clone(), result.clone().unwrap()),
-                &add_req.name,
-                funs,
-                ctx,
-            )
-            .await?;
+            IamKvClient::add_or_modify_key_name(&funs.conf::<IamConfig>().spi.kv_apps_prefix.clone(), &result.clone()?, &add_req.name, None, funs, ctx).await?;
         } else if kind == IamSetKind::Org.to_string() && result.is_ok() {
             IamStatsClient::async_org_fact_record_load(result.clone().unwrap(), funs, ctx).await?;
         }
@@ -205,7 +199,7 @@ impl IamSetServ {
             };
 
             if let Some(tag) = tag {
-                let _ = IamLogClient::add_ctx_task(tag, Some(result.clone().unwrap_or_default()), op_describe, op_kind, ctx).await;
+                let _ = IamLogClient::add_ctx_task(tag, Some(result.clone()?), op_describe, op_kind, ctx).await;
             }
         }
 
@@ -256,9 +250,11 @@ impl IamSetServ {
             .await?;
             let mut kind = item.kind;
             if kind == IamSetKind::Apps.to_string() {
-                SpiKvClient::add_or_modify_key_name(
-                    &format!("{}:{}", funs.conf::<IamConfig>().spi.kv_apps_prefix.clone(), &set_cate_id),
+                IamKvClient::add_or_modify_key_name(
+                    &funs.conf::<IamConfig>().spi.kv_apps_prefix.clone(),
+                    &set_cate_id,
                     &set_cate_item.name.clone(),
+                    None,
                     funs,
                     ctx,
                 )

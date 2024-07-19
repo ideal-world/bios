@@ -615,7 +615,7 @@ impl FlowInstServ {
         }
         let model_transition = flow_model.transitions();
         let next_transition_detail = model_transition.iter().find(|trans| trans.id == transfer_req.flow_transition_id).unwrap().to_owned();
-        if FlowModelServ::check_post_action_ring(next_transition_detail.clone(), (false, vec![]), funs, ctx).await?.0 {
+        if FlowModelServ::check_post_action_ring(&flow_model, funs, ctx).await? {
             return Err(funs.err().not_found("flow_inst", "transfer", "this post action exist endless loop", "500-flow-transition-endless-loop"));
         }
 
@@ -727,23 +727,21 @@ impl FlowInstServ {
         .await?;
 
         // notify change state
-        if transfer_req.vars.is_none() || transfer_req.vars.as_ref().unwrap().is_empty() {
-            FlowExternalServ::do_notify_changes(
-                &flow_model.tag,
-                &flow_inst_detail.id,
-                &flow_inst_detail.rel_business_obj_id,
-                next_flow_state.name.clone(),
-                next_flow_state.sys_state.clone(),
-                prev_flow_state.name.clone(),
-                prev_flow_state.sys_state.clone(),
-                next_transition_detail.name.clone(),
-                next_transition_detail.is_notify,
-                Some(callback_kind),
-                ctx,
-                funs,
-            )
-            .await?;
-        }
+        FlowExternalServ::do_notify_changes(
+            &flow_model.tag,
+            &flow_inst_detail.id,
+            &flow_inst_detail.rel_business_obj_id,
+            next_flow_state.name.clone(),
+            next_flow_state.sys_state.clone(),
+            prev_flow_state.name.clone(),
+            prev_flow_state.sys_state.clone(),
+            next_transition_detail.name.clone(),
+            next_transition_detail.is_notify,
+            Some(callback_kind),
+            ctx,
+            funs,
+        )
+        .await?;
 
         Self::gen_transfer_resp(flow_inst_id, &prev_flow_state.id, ctx, funs).await
     }

@@ -116,7 +116,7 @@ impl RbumItemCrudOperation<iam_role::ActiveModel, IamRoleAddReq, IamRoleModifyRe
             ctx,
         )
         .await;
-        IamKvClient::async_add_or_modify_key_name("iam_role".to_string(), id.to_string(), role.name.clone(), funs, ctx).await?;
+        IamKvClient::async_add_or_modify_key_name(funs.conf::<IamConfig>().spi.kv_role_prefix.clone(), id.to_string(), role.name.clone(), funs, ctx).await?;
 
         Ok(())
     }
@@ -218,7 +218,7 @@ impl RbumItemCrudOperation<iam_role::ActiveModel, IamRoleAddReq, IamRoleModifyRe
         if !op_describe.is_empty() {
             let _ = IamLogClient::add_ctx_task(LogParamTag::IamRole, Some(id.to_string()), op_describe, Some(op_kind), ctx).await;
         }
-        IamKvClient::async_add_or_modify_key_name("iam_role".to_string(), id.to_string(), role.name.clone(), funs, ctx).await?;
+        IamKvClient::async_add_or_modify_key_name(funs.conf::<IamConfig>().spi.kv_role_prefix.clone(), id.to_string(), role.name.clone(), funs, ctx).await?;
 
         Ok(())
     }
@@ -322,7 +322,7 @@ impl RbumItemCrudOperation<iam_role::ActiveModel, IamRoleAddReq, IamRoleModifyRe
             ctx,
         )
         .await;
-        IamKvClient::async_delete_key_name("iam_role".to_string(), id.to_string(), funs, ctx).await?;
+        IamKvClient::async_delete_key_name(funs.conf::<IamConfig>().spi.kv_role_prefix.clone(), id.to_string(), funs, ctx).await?;
         Ok(())
     }
 

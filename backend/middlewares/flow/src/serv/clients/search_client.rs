@@ -109,6 +109,7 @@ impl FlowSearchClient {
                     roles: None,
                     groups: None,
                 }),
+                kv_disable: None,
             };
             if let Some(event_center) = TardisFuns::store().get_singleton::<BiosEventCenter>() {
                 event_center.modify_item_and_name(FLOW_AVATAR, SEARCH_TAG, &key, &modify_req, funs, ctx).await?;
@@ -140,6 +141,7 @@ impl FlowSearchClient {
                     roles: None,
                     groups: None,
                 }),
+                kv_disable: None,
             };
             if let Some(event_center) = TardisFuns::store().get_singleton::<BiosEventCenter>() {
                 event_center.add_item_and_name(FLOW_AVATAR, &add_req, Some(model_resp.name.clone()), funs, ctx).await?;
