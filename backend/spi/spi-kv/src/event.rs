@@ -26,6 +26,5 @@ pub fn register_kv_events() {
         bios_event_center.subscribe(handle_kv_add_event);
         bios_event_center.subscribe(handle_kv_delete_event);
         bios_event_center.add_avatar(KV_AVATAR);
-
     }
 }

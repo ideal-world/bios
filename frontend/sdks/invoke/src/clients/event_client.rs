@@ -24,7 +24,7 @@ use tardis::{
     TardisFuns, TardisFunsInst,
 };
 
-use crate::{invoke_config::InvokeConfigApi, invoke_enumeration::InvokeModuleKind};
+use crate::invoke_config::InvokeConfigApi;
 
 use super::base_spi_client::BaseSpiClient;
 
@@ -294,7 +294,9 @@ impl EventCenter for WsEventCenter {
         });
         Ok(())
     }
+
     async fn publish<E: Event>(&self, event: E) -> TardisResult<()> {
+        trace!("[EventCenter] publish event [{code}]: {req:?}", code = E::CODE, req = event);
         if let Some(client) = self.ws_client.get() {
             client
                 .send_obj(&TardisWebsocketReq {
@@ -403,13 +405,17 @@ impl BiosEventCenter {
 }
 
 impl EventCenter for BiosEventCenter {
+    /// 异步初始化，启动一个初始化任务，将会在webserver加载后运行
     fn init(&self) -> TardisResult<()> {
         self.inner.init()
     }
+
+    /// 发布事件
     async fn publish<E: Event>(&self, event: E) -> TardisResult<()> {
         self.inner.publish(event).await
     }
 
+    /// 订阅事件
     fn subscribe<A, H: EventHandler<A>>(&self, handler: H) {
         debug!("subscribe event handler for event [{}]", H::Event::CODE);
         self.inner.subscribe(handler);
@@ -420,7 +426,7 @@ impl EventCenter for BiosEventCenter {
  *                                                Event Trait
  ******************************************************************************************************************/
 
-pub trait Event: Serialize + DeserializeOwned {
+pub trait Event: Serialize + DeserializeOwned + std::fmt::Debug {
     const CODE: &'static str;
     fn source(&self) -> String {
         String::default()
@@ -519,14 +525,17 @@ impl<T> ContextEvent<T> {
 
 impl<E: Event> Event for ContextEvent<E> {
     const CODE: &'static str = E::CODE;
+    #[inline(always)]
     fn source(&self) -> String {
         self.event.source()
     }
+    #[inline(always)]
     fn targets(&self) -> Option<Vec<String>> {
         self.event.targets()
     }
 }
 pub trait EventExt {
+    #[inline(always)]
     fn with_source(self, source: impl Into<String>) -> WithSource<Self>
     where
         Self: Sized,
@@ -536,6 +545,7 @@ pub trait EventExt {
             source: source.into(),
         }
     }
+    #[inline(always)]
     fn with_targets(self, targets: impl Into<Option<Vec<String>>>) -> WithTargets<Self>
     where
         Self: Sized,
@@ -545,12 +555,14 @@ pub trait EventExt {
             targets: targets.into(),
         }
     }
+    #[inline(always)]
     fn with_context(self, ctx: TardisContext) -> ContextEvent<Self>
     where
         Self: Sized,
     {
         ContextEvent { ctx, event: self }
     }
+    #[inline(always)]
     fn inject_context(self, funs: &TardisFunsInst, ctx: &TardisContext) -> ContextEvent<Self>
     where
         Self: Sized,
@@ -560,12 +572,14 @@ pub trait EventExt {
             event: self,
         }
     }
+    #[inline(always)]
     fn with_id(self, id: Option<String>) -> WithId<Self>
     where
         Self: Sized,
     {
         WithId { inner: self, id }
     }
+    #[inline(always)]
     fn with_nanoid(self) -> WithId<Self>
     where
         Self: Sized,

@@ -23,11 +23,11 @@ pub struct ScheduleEventCenter {
 }
 
 const SCHEDULE_AVATAR: &str = "schedule";
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct AddTaskEvent {
     pub code: String,
 }
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct DeleteTaskEvent {
     pub code: String,
 }

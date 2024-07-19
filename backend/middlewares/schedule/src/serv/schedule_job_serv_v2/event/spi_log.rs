@@ -13,7 +13,6 @@ use crate::schedule_constants::*;
 
 use super::EventComponent;
 
-
 #[derive(Clone)]
 pub struct SpiLog {
     funs: Arc<TardisFunsInst>,
