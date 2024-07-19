@@ -5,7 +5,6 @@ use bios_basic::rbum::dto::rbum_rel_dto::RbumRelBoneResp;
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use bios_basic::rbum::serv::rbum_rel_serv::RbumRelServ;
 use bios_basic::rbum::serv::rbum_set_serv::RbumSetItemServ;
-use bios_sdk_invoke::clients::spi_kv_client::SpiKvClient;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;

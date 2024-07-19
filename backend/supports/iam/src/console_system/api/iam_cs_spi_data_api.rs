@@ -5,7 +5,6 @@ use crate::iam_initializer::{default_iam_send_avatar, ws_iam_send_client};
 use bios_basic::process::task_processor::TaskProcessor;
 use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
-use bios_sdk_invoke::clients::spi_kv_client::SpiKvClient;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::result::TardisResult;
 use tardis::web::context_extractor::TardisContextExtractor;

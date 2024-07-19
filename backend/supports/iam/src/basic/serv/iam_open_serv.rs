@@ -13,7 +13,6 @@ use bios_basic::rbum::{
         rbum_rel_serv::{RbumRelEnvServ, RbumRelServ},
     },
 };
-use bios_sdk_invoke::clients::spi_kv_client::SpiKvClient;
 use itertools::Itertools;
 use tardis::{
     basic::{dto::TardisContext, field::TrimString, result::TardisResult},

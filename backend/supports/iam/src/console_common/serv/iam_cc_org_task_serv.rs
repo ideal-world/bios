@@ -16,7 +16,6 @@ use bios_basic::{
     },
 };
 
-use bios_sdk_invoke::clients::spi_kv_client::SpiKvClient;
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
     TardisFunsInst,

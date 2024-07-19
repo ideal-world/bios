@@ -146,7 +146,11 @@ impl IamSearchClient {
         if *is_modify {
             let modify_req = SearchItemModifyReq {
                 kind: Some(funs.conf::<IamConfig>().spi.search_account_tag.clone()),
-                title: Some(account_resp.name.clone()),
+                title: if account_resp.disabled {
+                    Some(format!("{}(已注销)", account_resp.name.clone()))
+                } else {
+                    Some(account_resp.name.clone())
+                },
                 name: if account_resp.disabled {
                     Some(format!("{}(已注销)", account_resp.name.clone()))
                 } else {
@@ -198,7 +202,11 @@ impl IamSearchClient {
                 tag,
                 kind: funs.conf::<IamConfig>().spi.search_account_tag.clone(),
                 key: TrimString(key),
-                title: account_resp.name.clone(),
+                title: if account_resp.disabled {
+                    format!("{}(已注销)", account_resp.name.clone())
+                } else {
+                    account_resp.name.clone()
+                },
                 name: if account_resp.disabled {
                     Some(format!("{}(已注销)", account_resp.name.clone()))
                 } else {

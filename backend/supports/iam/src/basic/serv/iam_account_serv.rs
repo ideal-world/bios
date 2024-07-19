@@ -2,7 +2,6 @@ use async_trait::async_trait;
 use bios_basic::helper::request_helper::get_real_ip_from_ctx;
 use bios_basic::rbum::rbum_config::RbumConfigApi;
 use bios_basic::rbum::rbum_enumeration::RbumRelFromKind;
-use bios_sdk_invoke::clients::spi_kv_client::SpiKvClient;
 use itertools::Itertools;
 use tardis::chrono::Utc;
 
@@ -45,7 +44,6 @@ use crate::basic::serv::iam_tenant_serv::IamTenantServ;
 use crate::iam_config::{IamBasicInfoManager, IamConfig};
 use crate::iam_enumeration::{IamAccountLockStateKind, IamAccountStatusKind, IamCertKernelKind, IamRelKind, IamSetKind};
 
-use super::clients::iam_kv_client::IamKvClient;
 use super::clients::iam_log_client::{IamLogClient, LogParamTag};
 use super::clients::iam_search_client::IamSearchClient;
 use super::clients::mail_client::MailClient;
@@ -193,7 +191,7 @@ impl RbumItemCrudOperation<iam_account::ActiveModel, IamAccountAddReq, IamAccoun
         Ok(())
     }
 
-    async fn after_add_item(id: &str, add_req: &mut IamAccountAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    async fn after_add_item(id: &str, add_req: &mut IamAccountAddReq, _funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let mut op_describe = "添加长期账号".to_string();
         let mut op_kind = "AddLongTermAccount".to_string();
         if add_req.temporary == Some(true) {
