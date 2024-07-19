@@ -19,7 +19,7 @@ impl SpiSearchClient {
         let headers = BaseSpiClient::headers(None, funs, ctx).await?;
         funs.web_client().put_obj_to_str(&format!("{search_url}/ci/item"), add_req, headers.clone()).await?;
         let name = if let Some(name) = add_req.name.clone() { name } else { add_req.title.clone() };
-        SpiKvClient::add_or_modify_key_name(&format!("{}:{}", add_req.tag, add_req.key), &name, funs, ctx).await?;
+        SpiKvClient::add_or_modify_key_name(&format!("{}:{}", add_req.tag, add_req.key), &name, add_req.kv_disable, funs, ctx).await?;
         Ok(())
     }
 
@@ -29,7 +29,7 @@ impl SpiSearchClient {
         funs.web_client().put_obj_to_str(&format!("{search_url}/ci/item/{tag}/{key}"), modify_req, headers.clone()).await?;
         if modify_req.title.is_some() || modify_req.name.is_some() {
             let name = modify_req.name.clone().unwrap_or(modify_req.title.clone().unwrap_or("".to_string()));
-            SpiKvClient::add_or_modify_key_name(&format!("{tag}:{key}"), &name, funs, ctx).await?;
+            SpiKvClient::add_or_modify_key_name(&format!("{tag}:{key}"), &name, modify_req.kv_disable, funs, ctx).await?;
         }
         Ok(())
     }
