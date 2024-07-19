@@ -15,7 +15,7 @@
 //! }
 
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use tardis::log::warn;
 
 use crate::dto::{
@@ -70,16 +70,13 @@ impl TransactionGraph {
                         let current_rels_by_tag = state_rels.inner.get(obj_tag).cloned().unwrap_or_default();
                         if let Some(obj_current_state_ids) = state_change_info.obj_current_state_id {
                             for obj_current_state_id in obj_current_state_ids {
-                                current_rels_by_tag.get(&obj_current_state_id).map(|target_states| {
-                                    target_states
-                                        .iter()
-                                        .filter(|target_state| **target_state == state_change_info.changed_state_id)
-                                        .map(|target_state| rel.push((format!("{}-{}", obj_tag, obj_current_state_id.clone()), format!("{}-{}", obj_tag, target_state.clone()))))
-                                });
+                                for target_state in current_rels_by_tag.get(&obj_current_state_id).cloned().unwrap_or_default().into_iter().filter(|target_state| *target_state == state_change_info.changed_state_id) {
+                                    rel.push((format!("{}-{}", obj_tag, obj_current_state_id.clone()), format!("{}-{}", obj_tag, target_state.clone())));
+                                }
                             }
                         } else {
-                            for (original_state_id, tatarget_states) in current_rels_by_tag {
-                                if tatarget_states.contains(&state_change_info.changed_state_id) {
+                            for (original_state_id, target_states) in current_rels_by_tag {
+                                if target_states.contains(&state_change_info.changed_state_id) {
                                     rel.push((
                                         format!("{}-{}", obj_tag, original_state_id.clone()),
                                         format!("{}-{}", obj_tag, state_change_info.changed_state_id.clone()),
@@ -107,6 +104,9 @@ impl TransactionGraph {
             }
         }
 
+        for (from_tran,to_trans) in rels.iter_mut() {
+            to_trans.retain(|to_tran| *to_tran != *from_tran);
+        }
         Self {
             rels: rels.into_iter().filter(|(_original_trans, target_trans)| !target_trans.is_empty()).collect(),
         }
@@ -137,6 +137,37 @@ impl TransactionGraph {
             }
         }
     }
+
+    pub fn check_state_loop(&self) -> bool {
+        let mut state_chains :HashSet<Vec<String>> = HashSet::new();
+        for ((from_tran_from_state, from_tran_to_state), to_trans) in &self.rels {
+            state_chains.insert(vec![from_tran_from_state.clone(), from_tran_to_state.clone()]);
+            for (to_tran_from_state, to_tran_to_state) in to_trans {
+                state_chains.insert(vec![to_tran_from_state.clone(), to_tran_to_state.clone()]);
+                for state_tran in state_chains.clone() {
+                    if state_tran.last().unwrap() == to_tran_from_state {
+                        let mut insert_chain = state_tran.clone();
+                        insert_chain.push(to_tran_to_state.clone());
+                        state_chains.insert(insert_chain);
+                    }
+                }
+            }
+        }
+        warn!("check state loop state_chains: {:?}", state_chains);
+        for state_chain in state_chains {
+            let mut tran_chain = vec![];
+            let mut from_state = state_chain[0].clone();
+            for state in &state_chain[1..] {
+                if tran_chain.contains(&(from_state.clone(), state.clone())) {
+                    return false;
+                }
+                tran_chain.push((from_state.clone(), state.clone()));
+                from_state.clone_from(state);
+            }
+        }
+
+        true
+    }
 }
 
 pub fn check(models: &HashMap<String, FlowModelDetailResp>) -> bool {
@@ -144,5 +175,6 @@ pub fn check(models: &HashMap<String, FlowModelDetailResp>) -> bool {
     warn!("debug before remove: {:?}", transation_graph);
     transation_graph.remove_empty_ele();
     warn!("debug after remove: {:?}", transation_graph);
-    transation_graph.rels.is_empty()
+    
+    transation_graph.check_state_loop()
 }
