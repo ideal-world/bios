@@ -25,7 +25,7 @@ impl IamKvClient {
             Box::pin(async move {
                 let task_handle = tokio::spawn(async move {
                     let funs = iam_constants::get_tardis_inst();
-                    let _ = Self::add_or_modify_item(&key, &value, info, scope_level, &funs, &ctx_clone).await;
+                    let _ = Self::add_or_modify_item(&key, &value, info, None, scope_level, &funs, &ctx_clone).await;
                 });
                 task_handle.await.unwrap();
                 Ok(())
@@ -40,7 +40,7 @@ impl IamKvClient {
             Box::pin(async move {
                 let task_handle = tokio::spawn(async move {
                     let funs = iam_constants::get_tardis_inst();
-                    let _ = Self::add_or_modify_key_name(&tag, &key, &name, &funs, &ctx_clone).await;
+                    let _ = Self::add_or_modify_key_name(&tag, &key, &name, None, &funs, &ctx_clone).await;
                 });
                 task_handle.await.unwrap();
                 Ok(())
@@ -83,22 +83,27 @@ impl IamKvClient {
         key: &str,
         value: &Value,
         info: Option<String>,
+        disable: Option<bool>,
         scope_level: Option<RbumScopeLevelKind>,
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<()> {
-        SpiKvClient::add_or_modify_item(key, value, info, scope_level.map(|kind| kind.to_int()), funs, ctx).await
+        #[cfg(feature = "spi_kv")]
+        SpiKvClient::add_or_modify_item(key, value, info, disable, scope_level.map(|kind| kind.to_int()), funs, ctx).await
     }
 
-    pub async fn add_or_modify_key_name(tag: &str, key: &str, name: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        SpiKvClient::add_or_modify_key_name(&format!("{}:{}", tag, key), name, funs, ctx).await
+    pub async fn add_or_modify_key_name(tag: &str, key: &str, name: &str, disable: Option<bool>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        #[cfg(feature = "spi_kv")]
+        SpiKvClient::add_or_modify_key_name(&format!("{}:{}", tag, key), name, disable, funs, ctx).await
     }
 
     pub async fn delete_key_name(tag: &str, key: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        #[cfg(feature = "spi_kv")]
         SpiKvClient::delete_item(&format!("__k_n__:{}:{}", tag, key), funs, ctx).await
     }
 
     pub async fn delete_item(key: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        #[cfg(feature = "spi_kv")]
         SpiKvClient::delete_item(key, funs, ctx).await
     }
 }

@@ -45,6 +45,7 @@ use crate::basic::serv::iam_tenant_serv::IamTenantServ;
 use crate::iam_config::{IamBasicInfoManager, IamConfig};
 use crate::iam_enumeration::{IamAccountLockStateKind, IamAccountStatusKind, IamCertKernelKind, IamRelKind, IamSetKind};
 
+use super::clients::iam_kv_client::IamKvClient;
 use super::clients::iam_log_client::{IamLogClient, LogParamTag};
 use super::clients::iam_search_client::IamSearchClient;
 use super::clients::mail_client::MailClient;
@@ -188,8 +189,6 @@ impl RbumItemCrudOperation<iam_account::ActiveModel, IamAccountAddReq, IamAccoun
         for (op_describe, op_kind) in tasks {
             let _ = IamLogClient::add_ctx_task(LogParamTag::IamAccount, Some(id.to_string()), op_describe, Some(op_kind), ctx).await;
         }
-        #[cfg(feature = "spi_kv")]
-        Self::add_or_modify_account_kv(id, funs, ctx).await?;
 
         Ok(())
     }
@@ -202,9 +201,6 @@ impl RbumItemCrudOperation<iam_account::ActiveModel, IamAccountAddReq, IamAccoun
             op_kind = "AddTempAccount".to_string();
         }
         let _ = IamLogClient::add_ctx_task(LogParamTag::IamAccount, Some(id.to_string()), op_describe, Some(op_kind), ctx).await;
-
-        #[cfg(feature = "spi_kv")]
-        Self::add_or_modify_account_kv(id, funs, ctx).await?;
 
         Ok(())
     }
@@ -864,30 +860,4 @@ impl IamAccountServ {
         }
     }
 
-    async fn add_or_modify_account_kv(account_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        let account = Self::get_item(
-            account_id,
-            &IamAccountFilterReq {
-                basic: RbumBasicFilterReq {
-                    ignore_scope: true,
-                    own_paths: Some("".to_owned()),
-                    with_sub_own_paths: true,
-                    ..Default::default()
-                },
-                ..Default::default()
-            },
-            funs,
-            ctx,
-        )
-        .await?;
-        SpiKvClient::add_or_modify_key_name(
-            &format!("{}:{account_id}", funs.conf::<IamConfig>().spi.kv_account_prefix.clone()),
-            &account.name,
-            funs,
-            ctx,
-        )
-        .await?;
-
-        Ok(())
-    }
 }

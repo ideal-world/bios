@@ -64,7 +64,7 @@ pub struct KvItemMatchReq {
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
-pub struct KvItemDeleteReq {
+pub struct KvItemKeyReq {
     #[oai(validator(min_length = "2"))]
     pub key: TrimString,
 }

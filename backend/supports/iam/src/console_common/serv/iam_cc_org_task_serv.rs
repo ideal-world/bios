@@ -1,5 +1,5 @@
 use crate::{
-    basic::serv::clients::iam_stats_client::IamStatsClient,
+    basic::serv::clients::{iam_kv_client::IamKvClient, iam_stats_client::IamStatsClient},
     iam_config::{IamBasicConfigApi, IamConfig},
     iam_constants,
     iam_enumeration::IamSetKind,
@@ -98,9 +98,11 @@ impl IamCcOrgTaskServ {
                         .map(|resp| resp.rel_rbum_item_id)
                         .collect();
                         IamStatsClient::org_fact_record_load(org_set_cate.id.clone(), account_ids, &funs, &mock_ctx).await?;
-                        SpiKvClient::add_or_modify_key_name(
-                            &format!("{}:{}", funs.conf::<IamConfig>().spi.kv_orgs_prefix.clone(), org_set_cate.id),
+                        IamKvClient::add_or_modify_key_name(
+                            &funs.conf::<IamConfig>().spi.kv_orgs_prefix.clone(),
+                            &org_set_cate.id,
                             &org_set_cate.name,
+                            None,
                             &funs,
                             &mock_ctx,
                         )

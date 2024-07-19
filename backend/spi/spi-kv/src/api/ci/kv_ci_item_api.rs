@@ -5,7 +5,7 @@ use tardis::web::poem_openapi::payload::Json;
 use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 
 use crate::dto::kv_item_dto::{
-    KvItemAddOrModifyReq, KvItemDeleteReq, KvItemDetailResp, KvItemMatchReq, KvItemSummaryResp, KvNameAddOrModifyReq, KvNameFindResp, KvTagAddOrModifyReq, KvTagFindResp,
+    KvItemAddOrModifyReq, KvItemKeyReq, KvItemDetailResp, KvItemMatchReq, KvItemSummaryResp, KvNameAddOrModifyReq, KvNameFindResp, KvTagAddOrModifyReq, KvTagFindResp,
 };
 use crate::serv::kv_item_serv;
 
@@ -103,33 +103,13 @@ impl KvCiItemApi {
         TardisResp::ok(Void {})
     }
 
-    /// Disable Item
-    ///
-    /// 禁用Item
-    #[oai(path = "/disable/item", method = "delete")]
-    async fn disable_item(&self, key: Query<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
-        let funs = crate::get_tardis_inst();
-        kv_item_serv::disable_item(key.0, &funs, &ctx.0).await?;
-        TardisResp::ok(Void {})
-    }
-
-    /// enable Item
-    ///
-    /// 启用Item
-    #[oai(path = "/enable/item", method = "delete")]
-    async fn enabled_item(&self, key: Query<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
-        let funs = crate::get_tardis_inst();
-        kv_item_serv::enabled_item(key.0, &funs, &ctx.0).await?;
-        TardisResp::ok(Void {})
-    }
-
     /// Delete Item Body
     /// ps: key may contain special characters such as spaces, so you need to use body to receive
     ///
     /// 删除Item
     /// ps: key可能会存在空格等特殊字符,所以需要使用 body 进行接收
     #[oai(path = "/item/delete", method = "put")]
-    async fn delete_item_body(&self, delete_req: Json<KvItemDeleteReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+    async fn delete_item_body(&self, delete_req: Json<KvItemKeyReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let funs = crate::get_tardis_inst();
         kv_item_serv::delete_item(delete_req.0.key.to_string(), &funs, &ctx.0).await?;
         TardisResp::ok(Void {})
@@ -141,7 +121,7 @@ impl KvCiItemApi {
     /// 禁用Item body
     /// ps: key可能会存在空格等特殊字符,所以需要使用 body 进行接收
     #[oai(path = "/item/disable", method = "put")]
-    async fn disable_item_body(&self, delete_req: Json<KvItemDeleteReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+    async fn disable_item_body(&self, delete_req: Json<KvItemKeyReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let funs = crate::get_tardis_inst();
         kv_item_serv::disable_item(delete_req.0.key.to_string(), &funs, &ctx.0).await?;
         TardisResp::ok(Void {})
@@ -153,7 +133,7 @@ impl KvCiItemApi {
     /// 启用Item body
     /// ps: key可能会存在空格等特殊字符,所以需要使用 body 进行接收
     #[oai(path = "/item/disable", method = "put")]
-    async fn enable_item_body(&self, delete_req: Json<KvItemDeleteReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+    async fn enable_item_body(&self, delete_req: Json<KvItemKeyReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let funs = crate::get_tardis_inst();
         kv_item_serv::enabled_item(delete_req.0.key.to_string(), &funs, &ctx.0).await?;
         TardisResp::ok(Void {})

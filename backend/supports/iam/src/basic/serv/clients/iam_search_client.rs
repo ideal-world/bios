@@ -147,7 +147,11 @@ impl IamSearchClient {
             let modify_req = SearchItemModifyReq {
                 kind: Some(funs.conf::<IamConfig>().spi.search_account_tag.clone()),
                 title: Some(account_resp.name.clone()),
-                name: Some(account_resp.name.clone()),
+                name: if account_resp.disabled {
+                    Some(format!("{}(已注销)", account_resp.name.clone()))
+                } else {
+                    Some(account_resp.name.clone())
+                },
                 content: Some(format!("{},{:?}", account_resp.name, account_certs,)),
                 owner: Some(account_resp.owner),
                 own_paths: if !account_resp.own_paths.is_empty() {
@@ -182,6 +186,7 @@ impl IamSearchClient {
                     roles: Some(account_roles),
                     groups: Some(account_resp_dept_id),
                 }),
+                kv_disable: Some(account_resp.disabled),
             };
             if let Some(ws_client) = ws_search_client().await {
                 ws_client.publish_modify_item(tag, key, &modify_req, default_search_avatar().await.clone(), funs.invoke_conf_spi_app_id(), ctx).await?;
@@ -194,7 +199,11 @@ impl IamSearchClient {
                 kind: funs.conf::<IamConfig>().spi.search_account_tag.clone(),
                 key: TrimString(key),
                 title: account_resp.name.clone(),
-                name: Some(account_resp.name.clone()),
+                name: if account_resp.disabled {
+                    Some(format!("{}(已注销)", account_resp.name.clone()))
+                } else {
+                    Some(account_resp.name.clone())
+                },
                 content: format!("{},{:?}", account_resp.name, account_certs,),
                 owner: Some(account_resp.owner),
                 own_paths: if !account_resp.own_paths.is_empty() {
@@ -228,6 +237,7 @@ impl IamSearchClient {
                     roles: Some(account_roles),
                     groups: Some(account_resp_dept_id),
                 }),
+                kv_disable: Some(account_resp.disabled),
             };
             if let Some(ws_client) = ws_search_client().await {
                 ws_client.publish_add_item(&add_req, default_search_avatar().await.clone(), funs.invoke_conf_spi_app_id(), ctx).await?;

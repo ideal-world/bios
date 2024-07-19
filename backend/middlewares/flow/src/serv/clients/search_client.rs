@@ -111,6 +111,7 @@ impl FlowSearchClient {
                     roles: None,
                     groups: None,
                 }),
+                kv_disable: None,
             };
             if let Some(ws_client) = ws_search_client().await {
                 ws_client
@@ -152,6 +153,7 @@ impl FlowSearchClient {
                     roles: None,
                     groups: None,
                 }),
+                kv_disable: None,
             };
             if let Some(ws_client) = ws_search_client().await {
                 ws_client.publish_add_item(&add_req, default_search_avatar().await.clone(), funs.invoke_conf_spi_app_id(), ctx).await?;
