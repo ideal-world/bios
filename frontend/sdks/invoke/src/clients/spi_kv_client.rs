@@ -10,8 +10,35 @@ use tardis::TardisFunsInst;
 use crate::invoke_enumeration::InvokeModuleKind;
 
 use super::base_spi_client::BaseSpiClient;
+
+pub mod event {
+    use crate::clients::event_client::Event;
+    pub const KV_AVATAR: &str = "spi-kv";
+
+    const EVENT_ADD_KV: &str = "spi-kv/add";
+    const EVENT_DELETE_KV: &str = "spi-kv/delete";
+
+    impl Event for super::KvItemAddOrModifyReq {
+        const CODE: &'static str = EVENT_ADD_KV;
+    }
+    impl Event for super::KvItemDeleteReq {
+        const CODE: &'static str = EVENT_DELETE_KV;
+    }
+}
 #[derive(Clone, Debug, Default)]
 pub struct SpiKvClient;
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct KvItemAddOrModifyReq {
+    pub key: String,
+    pub value: Value,
+    pub info: Option<String>,
+    pub scope_level: Option<i16>,
+}
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct KvItemDeleteReq {
+    pub key: String,
+}
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Clone, Debug)]
 pub struct KvItemSummaryResp {

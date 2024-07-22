@@ -1,18 +1,14 @@
 use std::env;
-use std::rc::Rc;
 use std::time::Duration;
 
 use bios_basic::rbum::rbum_config::RbumConfig;
-use bios_basic::test::init_test_container;
 use bios_basic::test::test_http_client::TestHttpClient;
 use bios_mw_event::event_constants::DOMAIN_CODE;
 use bios_mw_event::event_initializer;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::result::TardisResult;
 use tardis::cluster::cluster_processor::set_local_node_id;
-use tardis::config::config_dto::TardisConfig;
 use tardis::test::test_container::TardisTestContainer;
-use tardis::tokio::time::sleep;
 use tardis::{testcontainers, tokio, TardisFuns};
 
 use tokio::io::AsyncReadExt;
@@ -124,7 +120,7 @@ async fn server_side() -> TardisResult<()> {
 
     let web_server = TardisFuns::web_server();
     // Initialize Event
-    let _event_init_result = event_initializer::init(web_server.as_ref()).await.expect("fail to initialize");
+    event_initializer::init(web_server.as_ref()).await.expect("fail to initialize");
     web_server.start().await?;
     web_server.await;
     Ok(())

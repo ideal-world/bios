@@ -50,6 +50,7 @@ pub const RBUM_CERT_CONF_TOKEN_DEFAULT_COEXIST_NUM: i16 = 5;
 pub const EVENT_EXECUTE_TASK_EXTERNAL: &str = "iam/execute_task_external";
 pub const EVENT_STOP_TASK_EXTERNAL: &str = "iam/stop_task_external";
 pub const EVENT_SET_TASK_PROCESS_DATA_EXTERNAL: &str = "iam/set_task_process_data";
+pub const IAM_AVATAR: &str = env!("CARGO_PKG_NAME");
 
 pub const OPENAPI_GATEWAY_PLUGIN_TIME_RANGE: &str = "redis-time-range:opres-time-range";
 pub const OPENAPI_GATEWAY_PLUGIN_LIMIT: &str = "redis-limit:opres-limit";

@@ -7,11 +7,11 @@ use tardis::basic::result::TardisResult;
 use tardis::cluster::cluster_processor::{ClusterEventTarget, TardisClusterMessageReq};
 use tardis::cluster::cluster_publish::publish_event_no_response;
 use tardis::futures::StreamExt;
-use tardis::log::{self as tracing, instrument, warn};
+use tardis::log::{self as tracing, debug, instrument, warn};
 use tardis::serde_json::Value;
 use tardis::tokio::sync::RwLock;
 use tardis::web::poem::web::websocket::{BoxWebSocketUpgraded, WebSocket};
-use tardis::web::ws_processor::{ws_echo, TardisWebsocketMgrMessage, TardisWebsocketReq, TardisWebsocketResp, WsBroadcast, WsBroadcastContext, WsHooks};
+use tardis::web::ws_processor::{TardisWebsocketMgrMessage, TardisWebsocketReq, TardisWebsocketResp, WsBroadcast, WsBroadcastContext, WsHooks};
 use tardis::{
     cluster::{cluster_broadcast::ClusterBroadcastChannel, cluster_processor::ClusterHandler},
     tardis_static,
@@ -84,18 +84,20 @@ pub struct Hooks {
 
 impl WsHooks for Hooks {
     async fn on_fail(&self, id: String, error: TardisError, _context: &WsBroadcastContext) {
+        debug!("[Event] message {id} send out fail");
         if self.persistent {
             let result = super::event_persistent_serv::EventPersistentServ::send_fail(id, error.to_string(), &self.funs).await;
             if let Err(error) = result {
-                warn!("[Event] send fail failed: {error}");
+                warn!("[Event] store status failed: {error}");
             }
         }
     }
     async fn on_success(&self, id: String, _context: &WsBroadcastContext) {
+        debug!("[Event] message {id} send out success");
         if self.persistent {
             let result = super::event_persistent_serv::EventPersistentServ::send_success(id, &self.funs).await;
             if let Err(error) = result {
-                warn!("[Event] send fail failed: {error}");
+                warn!("[Event] store status failed: {error}");
             }
         }
     }
@@ -151,19 +153,19 @@ impl WsHooks for Hooks {
     }
 }
 
-pub(crate) async fn ws_process(listener_code: String, token: String, websocket: WebSocket, funs: TardisFunsInst) -> BoxWebSocketUpgraded {
+pub(crate) async fn ws_process(listener_code: String, token: String, websocket: WebSocket, funs: TardisFunsInst) -> TardisResult<BoxWebSocketUpgraded> {
     let Ok(Some(listener)) = listeners().get(listener_code.clone()).await else {
-        return ws_error(listener_code, "listener not found", websocket);
+        return Err(TardisError::bad_request(&format!("listener {} not found", listener_code), "ws-upgrade-error"));
     };
     if listener.token != token {
-        return ws_error(listener_code, "permission check failed", websocket);
+        return Err(TardisError::bad_request(&format!("invalid token {} ", token), "ws-upgrade-error"));
     }
     let Ok(Some(topic)) = topics().get(listener.topic_code.clone()).await else {
-        return ws_error(listener_code, "topic not found", websocket);
+        return Err(TardisError::bad_request(&format!("topic not found {} ", token), "ws-upgrade-error"));
     };
     let sender = get_or_init_sender(listener.topic_code.clone(), topic.queue_size as usize).await;
     tardis::log::trace!("[Bios.Event] create {topic:?} process for {token}");
-    WsBroadcast::new(
+    Ok(WsBroadcast::new(
         sender,
         Hooks {
             persistent: topic.save_message,
@@ -174,21 +176,7 @@ pub(crate) async fn ws_process(listener_code: String, token: String, websocket: 
         WsBroadcastContext::new(listener.mgr, listener.subscribe_mode),
     )
     .run(listener.avatars.clone(), websocket)
-    .await
-}
-
-fn ws_error(req_session: String, error: &str, websocket: WebSocket) -> BoxWebSocketUpgraded {
-    ws_echo(
-        req_session,
-        HashMap::from([("error".to_string(), error.to_string())]),
-        websocket,
-        |_, _, ext| async move {
-            let error = ext.get("error").expect("error was modified unexpectedly");
-            warn!("[Event] Websocket connection error: {}", error);
-            Some(format!("Websocket connection error: {}", error))
-        },
-        |_, _| async move {},
-    )
+    .await)
 }
 
 pub async fn scan_and_resend(funs: Arc<TardisFunsInst>) -> TardisResult<()> {

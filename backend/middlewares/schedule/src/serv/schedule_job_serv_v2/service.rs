@@ -17,7 +17,10 @@ use tsuki_scheduler::{
 
 use crate::{dto::schedule_job_dto::ScheduleJob, schedule_config::ScheduleConfig, schedule_constants::DOMAIN_CODE};
 
-use super::{event::{self, EventComponent}, repo::Repository};
+use super::{
+    event::{self, EventComponent},
+    repo::Repository,
+};
 #[derive(Clone)]
 pub struct ScheduleJobService<R, E> {
     pub repository: PhantomData<fn(R)>,

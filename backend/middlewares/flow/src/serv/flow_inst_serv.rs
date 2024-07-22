@@ -14,6 +14,10 @@ use bios_basic::{
         },
     },
 };
+use bios_sdk_invoke::clients::{
+    event_client::{BiosEventCenter, EventCenter, EventExt},
+    flow_client::{event::FLOW_AVATAR, FlowFrontChangeReq, FlowPostChangeReq},
+};
 use itertools::Itertools;
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
@@ -44,14 +48,11 @@ use crate::{
         flow_transition_dto::{FlowTransitionDetailResp, FlowTransitionFrontActionInfo},
         flow_var_dto::FillType,
     },
-    flow_config::FlowConfig,
     flow_constants,
-    flow_initializer::{default_flow_avatar, ws_flow_client},
     serv::{flow_model_serv::FlowModelServ, flow_state_serv::FlowStateServ},
 };
 
 use super::{
-    clients::event_client::FlowEventExt,
     flow_event_serv::FlowEventServ,
     flow_external_serv::FlowExternalServ,
     flow_rel_serv::{FlowRelKind, FlowRelServ},
@@ -746,14 +747,15 @@ impl FlowInstServ {
     }
 
     pub async fn handle_post_changes(inst_id: &str, transition_id: &str, ctx: &TardisContext, funs: &TardisFunsInst) -> TardisResult<()> {
-        if let Some(ws_client) = ws_flow_client().await {
-            ws_client
-                .publish_post_change(
-                    inst_id.to_string(),
-                    transition_id.to_string(),
-                    default_flow_avatar().await.clone(),
-                    funs.conf::<FlowConfig>().invoke.spi_app_id.clone(),
-                    ctx,
+        if let Some(event_center) = TardisFuns::store().get_singleton::<BiosEventCenter>() {
+            event_center
+                .publish(
+                    FlowPostChangeReq {
+                        inst_id: inst_id.to_string(),
+                        next_transition_id: transition_id.to_string(),
+                    }
+                    .with_source(FLOW_AVATAR)
+                    .inject_context(funs, ctx),
                 )
                 .await?;
         } else {
@@ -763,15 +765,8 @@ impl FlowInstServ {
     }
 
     pub async fn handle_front_changes(inst_id: &str, ctx: &TardisContext, funs: &TardisFunsInst) -> TardisResult<()> {
-        if let Some(ws_client) = ws_flow_client().await {
-            ws_client
-                .publish_front_change(
-                    inst_id.to_string(),
-                    default_flow_avatar().await.clone(),
-                    funs.conf::<FlowConfig>().invoke.spi_app_id.clone(),
-                    ctx,
-                )
-                .await?;
+        if let Some(event_center) = TardisFuns::store().get_singleton::<BiosEventCenter>() {
+            event_center.publish(FlowFrontChangeReq { inst_id: inst_id.to_string() }.with_source(FLOW_AVATAR).inject_context(funs, ctx)).await?;
         } else {
             FlowEventServ::do_front_change(inst_id, ctx, funs).await?;
         }
@@ -1075,13 +1070,14 @@ impl FlowInstServ {
         funs.commit().await?;
 
         let funs = flow_constants::get_tardis_inst();
-        if let Some(ws_client) = ws_flow_client().await {
-            ws_client
-                .publish_front_change(
-                    flow_inst_id.to_string(),
-                    default_flow_avatar().await.clone(),
-                    funs.conf::<FlowConfig>().invoke.spi_app_id.clone(),
-                    ctx,
+        if let Some(event_center) = TardisFuns::store().get_singleton::<BiosEventCenter>() {
+            event_center
+                .publish(
+                    FlowFrontChangeReq {
+                        inst_id: flow_inst_id.to_string(),
+                    }
+                    .with_source(FLOW_AVATAR)
+                    .inject_context(&funs, ctx),
                 )
                 .await?;
         } else {

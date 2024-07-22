@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use crate::dto::flow_model_dto::{
     FlowModelAddCustomModelReq, FlowModelAddCustomModelResp, FlowModelAggResp, FlowModelAssociativeOperationKind, FlowModelCopyOrReferenceCiReq, FlowModelExistRelByTemplateIdsReq,
-    FlowModelFilterReq, FlowModelFindRelStateResp, FlowModelModifyReq,
+    FlowModelFilterReq, FlowModelFindRelStateResp,
 };
 use crate::flow_constants;
 use crate::serv::flow_inst_serv::FlowInstServ;
