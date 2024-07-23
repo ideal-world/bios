@@ -380,29 +380,19 @@ impl FlowStateServ {
     }
 
     pub async fn count_group_by_state(req: &FlowStateCountGroupByStateReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<FlowStateCountGroupByStateResp>> {
-        let states = Self::find_id_name_items(
-            &FlowStateFilterReq {
-                tag: Some(req.tag.clone()),
-                ..Default::default()
-            },
-            None,
-            None,
-            funs,
-            ctx,
-        )
-        .await?;
+        let states = FlowModelServ::find_rel_states(vec![&req.tag], None, funs, ctx).await?;
         let mut result = HashMap::new();
         let insts = FlowInstServ::find_detail(req.inst_ids.clone(), funs, ctx).await?;
-        for (state_id, state_name) in states {
-            let mut inst_ids = insts.iter().filter(|inst| inst.current_state_id == state_id).map(|inst| inst.id.clone()).collect_vec();
+        for state in states {
+            let mut inst_ids = insts.iter().filter(|inst| inst.current_state_id == state.id).map(|inst| inst.id.clone()).collect_vec();
             result
-                .entry(state_name.clone())
+                .entry(state.name.clone())
                 .and_modify(|resp: &mut FlowStateCountGroupByStateResp| {
                     resp.inst_ids.append(&mut inst_ids);
                     resp.count = (resp.count.parse::<usize>().unwrap_or_default() + inst_ids.len()).to_string()
                 })
                 .or_insert(FlowStateCountGroupByStateResp {
-                    state_name,
+                    state_name: state.name,
                     count: inst_ids.len().to_string(),
                     inst_ids,
                 });
