@@ -3,12 +3,11 @@ use bios_basic::rbum::{
     rbum_enumeration::RbumScopeLevelKind,
     serv::{rbum_crud_serv::RbumCrudOperation, rbum_domain_serv::RbumDomainServ, rbum_item_serv::RbumItemCrudOperation, rbum_kind_serv::RbumKindServ},
 };
-use bios_sdk_invoke::clients::event_client::TOPIC_EVENT_BUS;
+use bios_sdk_invoke::clients::event_client::{BiosEventCenter, EventCenter, EventCenterConfig, TOPIC_BIOS_PUB_SUB, TOPIC_BIOS_WORKER_QUEUE};
 use tardis::{
     basic::{dto::TardisContext, field::TrimString, result::TardisResult},
     db::reldb_client::TardisActiveModel,
-    log::error,
-    web::{web_server::TardisWebServer, ws_client::TardisWSClient},
+    web::web_server::TardisWebServer,
     TardisFuns, TardisFunsInst,
 };
 
@@ -23,6 +22,11 @@ use crate::{
 
 pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
     let mut funs = TardisFuns::inst_with_db_conn(DOMAIN_CODE.to_string(), None);
+    let config = funs.conf::<EventConfig>();
+    if !config.enable {
+        return Ok(());
+    }
+    create_event_center()?;
     init_api(web_server).await?;
     init_cluster_resource().await;
     let ctx = TardisContext {
@@ -36,8 +40,44 @@ pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
     funs.begin().await?;
     init_db(DOMAIN_CODE.to_string(), KIND_CODE.to_string(), &funs, &ctx).await?;
     EventDefServ::init(&funs, &ctx).await?;
+    init_topic(&funs, &ctx).await?;
     funs.commit().await?;
     init_scan_and_resend_task();
+    Ok(())
+}
+
+async fn init_topic(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    let config = funs.conf::<EventConfig>();
+    // create bios worker queue topic
+    let _result = serv::event_topic_serv::EventDefServ::add_item(
+        &mut EventTopicAddOrModifyReq {
+            code: TOPIC_BIOS_WORKER_QUEUE.into(),
+            name: TOPIC_BIOS_WORKER_QUEUE.into(),
+            save_message: false,
+            need_mgr: false,
+            queue_size: 1024,
+            use_sk: Some(config.event_bus_sk.clone()),
+            mgr_sk: None,
+        },
+        funs,
+        ctx,
+    )
+    .await;
+    // create bios pub sub topic
+    let _result = serv::event_topic_serv::EventDefServ::add_item(
+        &mut EventTopicAddOrModifyReq {
+            code: TOPIC_BIOS_PUB_SUB.into(),
+            name: TOPIC_BIOS_PUB_SUB.into(),
+            save_message: false,
+            need_mgr: false,
+            queue_size: 1024,
+            use_sk: Some(config.event_bus_sk.clone()),
+            mgr_sk: None,
+        },
+        funs,
+        ctx,
+    )
+    .await;
     Ok(())
 }
 
@@ -88,22 +128,6 @@ async fn init_db(domain_code: String, kind_code: String, funs: &TardisFunsInst, 
     )
     .await?;
     EventInfoManager::set(EventInfo { kind_id, domain_id })?;
-    let config = funs.conf::<EventConfig>();
-    // create event bus topic
-    serv::event_topic_serv::EventDefServ::add_item(
-        &mut EventTopicAddOrModifyReq {
-            code: TOPIC_EVENT_BUS.into(),
-            name: TOPIC_EVENT_BUS.into(),
-            save_message: false,
-            need_mgr: false,
-            queue_size: 1024,
-            use_sk: Some(config.event_bus_sk.clone()),
-            mgr_sk: None,
-        },
-        funs,
-        ctx,
-    )
-    .await?;
     Ok(())
 }
 
@@ -144,49 +168,28 @@ fn init_scan_and_resend_task() {
     });
 }
 
-async fn init_log_ws_client() -> TardisWSClient {
-    while !TardisFuns::web_server().is_running().await {
-        tardis::tokio::task::yield_now().await
-    }
-    let funs = TardisFuns::inst_with_db_conn(DOMAIN_CODE.to_string(), None);
-    let conf = funs.conf::<EventConfig>();
-    let mut event_conf = conf.log_event.clone();
-    if event_conf.avatars.is_empty() {
-        event_conf.avatars.push(format!("{}/{}", event_conf.topic_code, env!("CARGO_PKG_NAME")))
-    }
-    let default_avatar = event_conf.avatars[0].clone();
-    set_default_log_avatar(default_avatar);
-    let client = bios_sdk_invoke::clients::event_client::EventClient::new(&event_conf.base_url, &funs);
-    loop {
-        let addr = loop {
-            if let Ok(result) = client
-                .register(&bios_sdk_invoke::clients::event_client::EventListenerRegisterReq {
-                    topic_code: event_conf.topic_code.to_string(),
-                    topic_sk: event_conf.topic_sk.clone(),
-                    events: event_conf.events.clone(),
-                    avatars: event_conf.avatars.clone(),
-                    subscribe_mode: event_conf.subscribe_mode,
-                })
-                .await
-            {
-                break result.ws_addr;
-            }
-            tardis::tokio::time::sleep(std::time::Duration::from_secs(10)).await;
-        };
-        let ws_client = TardisFuns::ws_client(&addr, |_| async move { None }).await;
-        match ws_client {
-            Ok(ws_client) => {
-                return ws_client;
-            }
-            Err(err) => {
-                error!("[BIOS.Event] failed to connect to event server: {}", err);
-                tardis::tokio::time::sleep(std::time::Duration::from_secs(10)).await;
-            }
-        }
-    }
-}
-use std::sync::OnceLock;
-tardis::tardis_static! {
-    pub(crate) async ws_log_client: TardisWSClient = init_log_ws_client();
-    pub(crate) async set default_log_avatar: String;
+fn create_event_center() -> TardisResult<()> {
+    let config = TardisFuns::cs_config::<EventConfig>(DOMAIN_CODE);
+    let pubsub_config = EventCenterConfig {
+        base_url: config.base_url.clone(),
+        topic_sk: config.event_bus_sk.clone(),
+        topic_code: TOPIC_BIOS_PUB_SUB.to_owned(),
+        subscribe: true,
+        avatars: config.avatars.clone(),
+    };
+    let pubsub = BiosEventCenter::from_config(pubsub_config);
+    pubsub.init()?;
+    pubsub.set_as_worker_queue();
+
+    let wq_config = EventCenterConfig {
+        base_url: config.base_url.clone(),
+        topic_sk: config.event_bus_sk.clone(),
+        topic_code: TOPIC_BIOS_WORKER_QUEUE.to_owned(),
+        subscribe: false,
+        avatars: config.avatars.clone(),
+    };
+    let wq = BiosEventCenter::from_config(wq_config);
+    wq.init()?;
+    wq.set_as_worker_queue();
+    Ok(())
 }

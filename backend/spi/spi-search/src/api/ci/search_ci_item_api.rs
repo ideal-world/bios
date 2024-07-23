@@ -85,7 +85,7 @@ impl SearchCiItemApi {
                 error!("[BIOS.Search] failed to refresh: {}", err);
             }
         });
-        
+
         TardisResp::ok(Void {})
     }
 }

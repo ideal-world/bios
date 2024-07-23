@@ -36,6 +36,7 @@ tardis = { workspace = true, features = [
   "ws-client",
 ] }
 simple-invoke-client-macro = { path = "../simple-invoke-client-macro", optional = true }
+crossbeam = "0.8"
 [dev-dependencies]
 tardis = { workspace = true, features = ["test"] }
 simple-invoke-client-macro = { path = "../simple-invoke-client-macro" }

@@ -2,20 +2,18 @@ use std::vec;
 
 use bios_basic::rbum::{dto::rbum_filer_dto::RbumBasicFilterReq, helper::rbum_scope_helper, rbum_enumeration::RbumScopeLevelKind, serv::rbum_item_serv::RbumItemCrudOperation};
 use bios_sdk_invoke::{
-    clients::spi_search_client::{SpiSearchClient, SpiSearchEventExt},
+    clients::{event_client::BiosEventCenter, flow_client::event::FLOW_AVATAR, spi_search_client::SpiSearchClient},
     dto::search_item_dto::{SearchItemAddReq, SearchItemModifyReq, SearchItemVisitKeysReq},
-    invoke_config::InvokeConfigApi,
 };
 use serde_json::json;
 use tardis::{
     basic::{dto::TardisContext, field::TrimString, result::TardisResult},
-    tokio, TardisFunsInst,
+    tokio, TardisFuns, TardisFunsInst,
 };
 
 use crate::{
     dto::flow_model_dto::{FlowModelDetailResp, FlowModelFilterReq},
     flow_constants,
-    flow_initializer::{default_search_avatar, ws_search_client},
     serv::flow_model_serv::FlowModelServ,
 };
 
@@ -113,19 +111,10 @@ impl FlowSearchClient {
                 }),
                 kv_disable: None,
             };
-            if let Some(ws_client) = ws_search_client().await {
-                ws_client
-                    .publish_modify_item(
-                        SEARCH_TAG.to_string(),
-                        key,
-                        &modify_req,
-                        default_search_avatar().await.clone(),
-                        funs.invoke_conf_spi_app_id(),
-                        ctx,
-                    )
-                    .await?;
+            if let Some(event_center) = TardisFuns::store().get_singleton::<BiosEventCenter>() {
+                event_center.modify_item_and_name(FLOW_AVATAR, SEARCH_TAG, &key, &modify_req, funs, ctx).await?;
             } else {
-                SpiSearchClient::modify_item(SEARCH_TAG, &key, &modify_req, funs, ctx).await?;
+                SpiSearchClient::modify_item_and_name(SEARCH_TAG, &key, &modify_req, funs, ctx).await?;
             }
         } else {
             let add_req = SearchItemAddReq {
@@ -133,7 +122,6 @@ impl FlowSearchClient {
                 kind: SEARCH_TAG.to_string(),
                 key: TrimString(key),
                 title: model_resp.name.clone(),
-                name: Some(model_resp.name.clone()),
                 content: model_resp.name.clone(),
                 owner: Some(model_resp.owner.clone()),
                 own_paths,
@@ -155,10 +143,10 @@ impl FlowSearchClient {
                 }),
                 kv_disable: None,
             };
-            if let Some(ws_client) = ws_search_client().await {
-                ws_client.publish_add_item(&add_req, default_search_avatar().await.clone(), funs.invoke_conf_spi_app_id(), ctx).await?;
+            if let Some(event_center) = TardisFuns::store().get_singleton::<BiosEventCenter>() {
+                event_center.add_item_and_name(FLOW_AVATAR, &add_req, Some(model_resp.name.clone()), funs, ctx).await?;
             } else {
-                SpiSearchClient::add_item(&add_req, funs, ctx).await?;
+                SpiSearchClient::add_item_and_name(&add_req, Some(model_resp.name.clone()), funs, ctx).await?;
             }
         }
         Ok(())
@@ -166,18 +154,10 @@ impl FlowSearchClient {
 
     // model 全局搜索删除埋点方法
     pub async fn delete_model_search(model_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        if let Some(ws_client) = ws_search_client().await {
-            ws_client
-                .publish_delete_item(
-                    SEARCH_TAG.to_string(),
-                    model_id.to_string(),
-                    default_search_avatar().await.clone(),
-                    funs.invoke_conf_spi_app_id(),
-                    ctx,
-                )
-                .await?;
+        if let Some(event_center) = TardisFuns::store().get_singleton::<BiosEventCenter>() {
+            event_center.delete_item_and_name(FLOW_AVATAR, SEARCH_TAG, model_id, funs, ctx).await?;
         } else {
-            SpiSearchClient::delete_item(SEARCH_TAG, model_id, funs, ctx).await?;
+            SpiSearchClient::delete_item_and_name(SEARCH_TAG, model_id, funs, ctx).await?;
         }
         Ok(())
     }

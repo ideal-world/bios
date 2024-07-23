@@ -24,9 +24,8 @@ use crate::basic::serv::iam_app_serv::IamAppServ;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_rel_serv::IamRelServ;
 use crate::iam_config::IamConfig;
-use crate::iam_constants;
+use crate::iam_constants::{self, IAM_AVATAR};
 use crate::iam_enumeration::{IamCertTokenKind, IamRelKind};
-use crate::iam_initializer::{default_iam_send_avatar, ws_iam_send_client};
 pub struct IamIdentCacheServ;
 
 impl IamIdentCacheServ {
@@ -213,8 +212,7 @@ impl IamIdentCacheServ {
                 Ok(())
             },
             &funs.cache(),
-            ws_iam_send_client().await.clone(),
-            default_iam_send_avatar().await.clone(),
+            IAM_AVATAR.to_owned(),
             Some(vec![format!("account/{}", ctx.owner)]),
             ctx,
         )

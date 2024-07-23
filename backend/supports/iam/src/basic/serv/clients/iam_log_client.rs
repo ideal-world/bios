@@ -5,14 +5,14 @@ use bios_basic::{
         serv::{rbum_crud_serv::RbumCrudOperation, rbum_item_serv::RbumItemCrudOperation, rbum_set_serv::RbumSetCateServ},
     },
 };
-use bios_sdk_invoke::{
-    clients::spi_log_client::{LogItemAddReq, SpiLogClient, SpiLogEventExt},
-    invoke_config::InvokeConfigApi,
+use bios_sdk_invoke::clients::{
+    event_client::{BiosEventCenter, EventCenter, EventExt},
+    spi_log_client::{LogItemAddReq, SpiLogClient},
 };
 use serde::Serialize;
 
 use tardis::{
-    basic::{dto::TardisContext, field::TrimString, result::TardisResult},
+    basic::{dto::TardisContext, result::TardisResult},
     chrono::{DateTime, Utc},
     serde_json::json,
     tokio, TardisFuns, TardisFunsInst,
@@ -23,9 +23,8 @@ use crate::{
         dto::iam_filer_dto::{IamAccountFilterReq, IamResFilterReq, IamRoleFilterReq, IamTenantFilterReq},
         serv::{iam_account_serv::IamAccountServ, iam_cert_serv::IamCertServ, iam_res_serv::IamResServ, iam_role_serv::IamRoleServ, iam_tenant_serv::IamTenantServ},
     },
-    iam_constants,
+    iam_constants::{self, IAM_AVATAR},
     iam_enumeration::IamCertKernelKind,
-    iam_initializer::{default_log_avatar, ws_log_client},
 };
 pub struct IamLogClient;
 
@@ -138,37 +137,23 @@ impl IamLogClient {
         let tag: String = tag.into();
         let own_paths = if ctx.own_paths.len() < 2 { None } else { Some(ctx.own_paths.clone()) };
         let owner = if ctx.owner.len() < 2 { None } else { Some(ctx.owner.clone()) };
-        if let Some(ws_client) = ws_log_client().await {
-            let req = LogItemAddReq {
-                tag,
-                content: TardisFuns::json.obj_to_string(&content).expect("req_msg not a valid json value"),
-                kind: kind.map(TrimString),
-                ext: Some(search_ext),
-                key: key.map(TrimString),
-                op,
-                rel_key: rel_key.map(TrimString),
-                id: None,
-                ts: ts.map(|ts| DateTime::parse_from_rfc3339(&ts).unwrap_or_default().with_timezone(&Utc)),
-                owner: Some(ctx.owner.clone()),
-                own_paths: Some(ctx.own_paths.clone()),
-            };
-            ws_client.publish_add_log(&req, default_log_avatar().await.clone(), funs.invoke_conf_spi_app_id(), ctx).await?;
+        let add_req = LogItemAddReq {
+            tag,
+            content: TardisFuns::json.obj_to_string(&content).expect("req_msg not a valid json value"),
+            kind,
+            ext: Some(search_ext),
+            key,
+            op,
+            rel_key,
+            id: None,
+            ts: ts.map(|ts| DateTime::parse_from_rfc3339(&ts).unwrap_or_default().with_timezone(&Utc)),
+            owner,
+            own_paths,
+        };
+        if let Some(ws_client) = BiosEventCenter::worker_queue() {
+            ws_client.publish(add_req.with_source(IAM_AVATAR).inject_context(funs, ctx)).await?;
         } else {
-            SpiLogClient::add(
-                &tag,
-                &TardisFuns::json.obj_to_string(&content).expect("req_msg not a valid json value"),
-                Some(search_ext),
-                kind,
-                key,
-                op,
-                rel_key,
-                ts,
-                owner,
-                own_paths,
-                funs,
-                ctx,
-            )
-            .await?;
+            SpiLogClient::add(&add_req, funs, ctx).await?;
         }
         Ok(())
     }

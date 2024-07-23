@@ -207,7 +207,7 @@ impl AuditLogPlugin {
 
                 let tag = self.tag.clone();
                 tokio::task::spawn(async move {
-                    match spi_log_client::SpiLogClient::add(
+                    match spi_log_client::SpiLogClient::add_with_many_params(
                         &tag,
                         &TardisFuns::json.obj_to_string(&content).unwrap_or_default(),
                         Some(content.to_value()),

@@ -29,7 +29,23 @@ pub struct LogItemAddReq {
     pub owner: Option<String>,
     pub own_paths: Option<String>,
 }
-
+impl From<bios_sdk_invoke::clients::spi_log_client::LogItemAddReq> for LogItemAddReq {
+    fn from(value: bios_sdk_invoke::clients::spi_log_client::LogItemAddReq) -> Self {
+        Self {
+            tag: value.tag,
+            content: value.content,
+            kind: value.kind.map(Into::into),
+            ext: value.ext,
+            key: value.key.map(Into::into),
+            op: value.op,
+            rel_key: value.rel_key.map(Into::into),
+            id: value.id,
+            ts: value.ts,
+            owner: value.owner,
+            own_paths: value.own_paths,
+        }
+    }
+}
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct LogItemFindReq {
     #[oai(validator(pattern = r"^[a-z0-9_]+$"))]

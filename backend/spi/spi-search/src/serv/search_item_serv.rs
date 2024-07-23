@@ -12,7 +12,6 @@ use crate::search_initializer;
 use super::es;
 #[cfg(feature = "spi-pg")]
 use super::pg;
-
 spi_dispatch_service! {
     @mgr: true,
     @init: search_initializer::init_fun,

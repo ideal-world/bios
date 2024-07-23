@@ -168,7 +168,7 @@ impl ConfCiConfigServiceApi {
         ctx: TardisContextExtractor,
     ) -> TardisApiResult<ConfigListResponse> {
         let funs = crate::get_tardis_inst();
-        let page_size = page_size.0.unwrap_or(100).min(500).max(1);
+        let page_size = page_size.0.unwrap_or(100).clamp(1, 500);
         let page_number = page_no.0.unwrap_or(1).max(0);
         let mode = mode.0.as_deref().unwrap_or_default().into();
         let request = ConfigListRequest {
@@ -212,7 +212,7 @@ impl ConfCiConfigServiceApi {
             ..Default::default()
         };
         let funs = crate::get_tardis_inst();
-        let page_size = page_size.0.unwrap_or(100).min(500).max(1);
+        let page_size = page_size.0.unwrap_or(100).clamp(1, 500);
         let page_number = page_no.0.unwrap_or(1).max(0);
         let mut request = ConfigHistoryListRequest {
             descriptor,

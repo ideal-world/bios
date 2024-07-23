@@ -33,6 +33,23 @@ pub struct SearchItemAddReq {
     pub visit_keys: Option<SearchItemVisitKeysReq>,
 }
 
+impl From<bios_sdk_invoke::dto::search_item_dto::SearchItemAddReq> for SearchItemAddReq {
+    fn from(value: bios_sdk_invoke::dto::search_item_dto::SearchItemAddReq) -> Self {
+        Self {
+            tag: value.tag,
+            kind: value.kind,
+            key: value.key,
+            title: value.title,
+            content: value.content,
+            owner: value.owner,
+            own_paths: value.own_paths,
+            create_time: value.create_time,
+            update_time: value.update_time,
+            ext: value.ext,
+            visit_keys: value.visit_keys.map(Into::into),
+        }
+    }
+}
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Default)]
 pub struct SearchItemModifyReq {
     #[oai(validator(min_length = "2"))]
@@ -52,7 +69,22 @@ pub struct SearchItemModifyReq {
     pub ext_override: Option<bool>,
     pub visit_keys: Option<SearchItemVisitKeysReq>,
 }
-
+impl From<bios_sdk_invoke::dto::search_item_dto::SearchItemModifyReq> for SearchItemModifyReq {
+    fn from(value: bios_sdk_invoke::dto::search_item_dto::SearchItemModifyReq) -> Self {
+        Self {
+            kind: value.kind,
+            title: value.title,
+            content: value.content,
+            owner: value.owner,
+            own_paths: value.own_paths,
+            create_time: value.create_time,
+            update_time: value.update_time,
+            ext: value.ext,
+            ext_override: value.ext_override,
+            visit_keys: value.visit_keys.map(Into::into),
+        }
+    }
+}
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
 pub struct SearchItemVisitKeysReq {
     pub accounts: Option<Vec<String>>,
@@ -60,6 +92,17 @@ pub struct SearchItemVisitKeysReq {
     pub tenants: Option<Vec<String>>,
     pub roles: Option<Vec<String>>,
     pub groups: Option<Vec<String>>,
+}
+impl From<bios_sdk_invoke::dto::search_item_dto::SearchItemVisitKeysReq> for SearchItemVisitKeysReq {
+    fn from(value: bios_sdk_invoke::dto::search_item_dto::SearchItemVisitKeysReq) -> Self {
+        Self {
+            accounts: value.accounts,
+            apps: value.apps,
+            tenants: value.tenants,
+            roles: value.roles,
+            groups: value.groups,
+        }
+    }
 }
 
 impl SearchItemVisitKeysReq {
