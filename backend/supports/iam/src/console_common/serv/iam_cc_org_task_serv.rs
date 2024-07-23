@@ -1,9 +1,8 @@
 use crate::{
     basic::serv::clients::{iam_kv_client::IamKvClient, iam_stats_client::IamStatsClient},
     iam_config::{IamBasicConfigApi, IamConfig},
-    iam_constants,
+    iam_constants::{self, IAM_AVATAR},
     iam_enumeration::IamSetKind,
-    iam_initializer::{default_iam_send_avatar, ws_iam_send_client},
 };
 use bios_basic::{
     process::task_processor::TaskProcessor,
@@ -16,7 +15,6 @@ use bios_basic::{
     },
 };
 
-use bios_sdk_invoke::clients::spi_kv_client::SpiKvClient;
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
     TardisFunsInst,
@@ -114,8 +112,7 @@ impl IamCcOrgTaskServ {
                 Ok(())
             },
             &funs.cache(),
-            ws_iam_send_client().await.clone(),
-            default_iam_send_avatar().await.clone(),
+            IAM_AVATAR.to_owned(),
             Some(vec![format!("account/{}", ctx.owner)]),
             ctx,
         )

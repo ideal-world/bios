@@ -29,6 +29,7 @@ pub mod iam_client;
 
 #[cfg(feature = "event")]
 pub mod event_client;
+pub mod flow_client;
 
 #[macro_export]
 ///

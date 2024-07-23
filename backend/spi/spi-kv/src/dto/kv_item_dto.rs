@@ -16,7 +16,17 @@ pub struct KvItemAddOrModifyReq {
     pub info: Option<String>,
     pub scope_level: Option<i16>,
 }
-
+impl From<bios_sdk_invoke::clients::spi_kv_client::KvItemAddOrModifyReq> for KvItemAddOrModifyReq {
+    fn from(req: bios_sdk_invoke::clients::spi_kv_client::KvItemAddOrModifyReq) -> Self {
+        Self {
+            key: req.key.into(),
+            value: req.value,
+            info: req.info,
+            scope_level: req.scope_level,
+            disable: None,
+        }
+    }
+}
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug, sea_orm::FromQueryResult)]
 pub struct KvItemDetailResp {
     #[oai(validator(min_length = "2"))]
@@ -67,6 +77,12 @@ pub struct KvItemMatchReq {
 pub struct KvItemKeyReq {
     #[oai(validator(min_length = "2"))]
     pub key: TrimString,
+}
+
+impl From<bios_sdk_invoke::clients::spi_kv_client::KvItemDeleteReq> for KvItemKeyReq {
+    fn from(value: bios_sdk_invoke::clients::spi_kv_client::KvItemDeleteReq) -> Self {
+        KvItemKeyReq { key: value.key.into() }
+    }
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]

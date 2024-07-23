@@ -8,7 +8,7 @@ use std::{
 
 use bios_basic::{
     rbum::serv::rbum_kind_serv::RbumKindServ,
-    spi::{dto::spi_bs_dto::SpiBsAddReq, spi_constants, spi_initializer},
+    spi::{dto::spi_bs_dto::SpiBsAddReq, spi_constants},
     test::test_http_client::TestHttpClient,
 };
 use bios_mw_schedule::{

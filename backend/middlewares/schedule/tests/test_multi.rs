@@ -3,10 +3,10 @@ use std::sync::atomic::Ordering;
 use std::sync::Arc;
 
 use bios_basic::test::init_test_container;
+use bios_mw_schedule::dto::schedule_job_dto::ScheduleJob;
 use bios_mw_schedule::schedule_constants::DOMAIN_CODE;
 use bios_mw_schedule::serv::schedule_job_serv_v2::event::{EventComponent, SpiLog};
 use bios_mw_schedule::serv::schedule_job_serv_v2::repo::{Repository, SpiKv};
-use bios_mw_schedule::{dto::schedule_job_dto::ScheduleJob, schedule_config::ScheduleConfig};
 use tardis::basic::dto::TardisContext;
 use tardis::chrono::{self, Utc};
 use tardis::rand::seq::SliceRandom;

@@ -1,4 +1,3 @@
-use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -9,11 +8,9 @@ use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 use tardis::log::info;
 use tardis::serde_json::json;
-use tardis::tokio::time::sleep;
-use tardis::web::tokio_tungstenite;
 use tardis::web::tokio_tungstenite::tungstenite::Message;
-use tardis::web::ws_processor::{TardisWebsocketMessage, TardisWebsocketMgrMessage, TardisWebsocketReq, WS_SYSTEM_EVENT_AVATAR_ADD};
-use tardis::{futures, rand, tardis_static, TardisFuns};
+use tardis::web::ws_processor::{TardisWebsocketMessage, TardisWebsocketMgrMessage, TardisWebsocketReq};
+use tardis::{rand, tardis_static, TardisFuns};
 use tokio::sync::Mutex;
 
 pub const USR_SK: &str = "ut001";

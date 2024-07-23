@@ -2,7 +2,6 @@ use async_trait::async_trait;
 use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
 use bios_basic::rbum::rbum_enumeration::RbumCertStatusKind;
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
-use bios_sdk_invoke::clients::spi_kv_client::SpiKvClient;
 use std::collections::HashMap;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
@@ -292,8 +291,8 @@ impl IamTenantServ {
         }
         IamConfigServ::add_or_modify_batch(&tenant_id, reqs, funs, &tenant_ctx).await?;
         IamRoleServ::copy_role_agg(&tenant_id, None, &IamRoleKind::Tenant, funs, &tenant_ctx).await?;
-        let tenant_admin_role_id = IamRoleServ::get_embed_subrole_id(&funs.iam_basic_role_tenant_admin_id(), funs, &tenant_ctx).await?;
-        let tenant_audit_role_id = IamRoleServ::get_embed_subrole_id(&funs.iam_basic_role_tenant_audit_id(), funs, &tenant_ctx).await?;
+        let tenant_admin_role_id = IamRoleServ::get_embed_sub_role_id(&funs.iam_basic_role_tenant_admin_id(), funs, &tenant_ctx).await?;
+        let tenant_audit_role_id = IamRoleServ::get_embed_sub_role_id(&funs.iam_basic_role_tenant_audit_id(), funs, &tenant_ctx).await?;
         // Init admin pwd
         let admin_pwd: String = if let Some(admin_password) = &add_req.admin_password {
             admin_password.to_string()

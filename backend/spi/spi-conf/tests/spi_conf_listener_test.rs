@@ -3,11 +3,7 @@ use std::{
     sync::{atomic::AtomicUsize, Arc},
 };
 
-use bios_basic::{
-    rbum::serv::rbum_kind_serv::RbumKindServ,
-    spi::{dto::spi_bs_dto::SpiBsAddReq, spi_constants},
-    test::test_http_client::TestHttpClient,
-};
+use bios_basic::test::test_http_client::TestHttpClient;
 use bios_spi_conf::dto::{conf_auth_dto::RegisterResponse, conf_config_dto::ConfigDescriptor};
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
@@ -15,8 +11,6 @@ use tardis::{
     rand,
     serde_json::json,
     testcontainers, tokio,
-    web::web_resp::Void,
-    TardisFuns,
 };
 mod spi_conf_test_common;
 use spi_conf_test_common::*;

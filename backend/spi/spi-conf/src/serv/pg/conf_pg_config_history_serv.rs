@@ -63,7 +63,7 @@ pub async fn get_history_list_by_namespace(
     // query config history list by a ConfigDescriptor
     let ConfigHistoryListRequest { descriptor, page_no, page_size } = req;
     descriptor.fix_namespace_id();
-    let limit = (*page_size).min(500).max(1);
+    let limit = (*page_size).clamp(1, 500);
     let page_number = (*page_no).max(1);
     let offset = (page_number - 1) * limit;
     let data_id = &descriptor.data_id;

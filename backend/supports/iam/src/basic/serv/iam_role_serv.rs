@@ -30,10 +30,9 @@ use crate::basic::serv::iam_app_serv::IamAppServ;
 use crate::basic::serv::iam_key_cache_serv::IamIdentCacheServ;
 use crate::basic::serv::iam_rel_serv::IamRelServ;
 use crate::iam_config::{IamBasicConfigApi, IamBasicInfoManager, IamConfig};
-use crate::iam_constants::{self, RBUM_ITEM_ID_SUB_ROLE_LEN};
+use crate::iam_constants::{self, IAM_AVATAR, RBUM_ITEM_ID_SUB_ROLE_LEN};
 use crate::iam_constants::{RBUM_SCOPE_LEVEL_APP, RBUM_SCOPE_LEVEL_TENANT};
 use crate::iam_enumeration::{IamRelKind, IamRoleKind};
-use crate::iam_initializer::{default_iam_send_avatar, ws_iam_send_client};
 
 use super::clients::iam_kv_client::IamKvClient;
 use super::clients::iam_log_client::{IamLogClient, LogParamTag};
@@ -197,8 +196,7 @@ impl RbumItemCrudOperation<iam_role::ActiveModel, IamRoleAddReq, IamRoleModifyRe
                     Ok(())
                 },
                 &funs.cache(),
-                ws_iam_send_client().await.clone(),
-                default_iam_send_avatar().await.clone(),
+                IAM_AVATAR.to_owned(),
                 Some(vec![format!("account/{}", ctx.owner)]),
                 ctx,
             )
@@ -310,8 +308,7 @@ impl RbumItemCrudOperation<iam_role::ActiveModel, IamRoleAddReq, IamRoleModifyRe
                 Ok(())
             },
             &funs.cache(),
-            ws_iam_send_client().await.clone(),
-            default_iam_send_avatar().await.clone(),
+            IAM_AVATAR.to_owned(),
             Some(vec![format!("account/{}", ctx.owner)]),
             ctx,
         )
@@ -462,7 +459,7 @@ impl IamRoleServ {
         Ok(())
     }
 
-    pub async fn get_embed_subrole_id(extend_role_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
+    pub async fn get_embed_sub_role_id(extend_role_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
         let scope_level = get_scope_level_by_context(ctx)?;
         info!(
             "【get_embed_subrole_id】 : extend_role_id = {}, scope_level = {}, own_paths = {}",
@@ -471,8 +468,8 @@ impl IamRoleServ {
         let kind = if scope_level == RBUM_SCOPE_LEVEL_APP { IamRoleKind::App } else { IamRoleKind::Tenant };
         if let Some(base_role) = Self::find_one_item(
             &IamRoleFilterReq {
-                kind: Some(kind),
-                in_embed: Some(true),
+                kind: Some(kind),         
+                // in_embed: Some(true),
                 extend_role_id: Some(extend_role_id.to_string()),
                 ..Default::default()
             },
@@ -598,8 +595,8 @@ impl IamRoleServ {
     pub async fn add_rel_account(role_id: &str, account_id: &str, spec_scope_level: Option<RbumScopeLevelKind>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let scope_level = get_scope_level_by_context(ctx)?;
         let sub_tenant_admin_role_id = match scope_level {
-            RBUM_SCOPE_LEVEL_APP => Self::get_embed_subrole_id(&funs.iam_basic_role_tenant_admin_id(), funs, &IamCertServ::use_sys_or_tenant_ctx_unsafe(ctx.clone())?).await?,
-            RBUM_SCOPE_LEVEL_TENANT => Self::get_embed_subrole_id(&funs.iam_basic_role_tenant_admin_id(), funs, ctx).await?,
+            RBUM_SCOPE_LEVEL_APP => Self::get_embed_sub_role_id(&funs.iam_basic_role_tenant_admin_id(), funs, &IamCertServ::use_sys_or_tenant_ctx_unsafe(ctx.clone())?).await?,
+            RBUM_SCOPE_LEVEL_TENANT => Self::get_embed_sub_role_id(&funs.iam_basic_role_tenant_admin_id(), funs, ctx).await?,
             _ => "".to_string(),
         };
         if scope_level == RBUM_SCOPE_LEVEL_APP
@@ -609,7 +606,7 @@ impl IamRoleServ {
             return Err(funs.err().conflict(&Self::get_obj_name(), "add_rel_account", "associated role is invalid", "409-iam-role-rel-conflict"));
         }
 
-        match Self::get_embed_subrole_id(role_id, funs, ctx).await {
+        match Self::get_embed_sub_role_id(role_id, funs, ctx).await {
             Ok(sub_role_id) => {
                 if let Some(spec_scope_level) = spec_scope_level {
                     let role = Self::peek_item(&sub_role_id, &IamRoleFilterReq::default(), funs, ctx).await?;
@@ -647,8 +644,8 @@ impl IamRoleServ {
         }
         let scope_level = get_scope_level_by_context(ctx)?;
         let sub_role_id = match scope_level {
-            RBUM_SCOPE_LEVEL_APP => Self::get_embed_subrole_id(&funs.iam_basic_role_app_admin_id(), funs, ctx).await?,
-            RBUM_SCOPE_LEVEL_TENANT => Self::get_embed_subrole_id(&funs.iam_basic_role_tenant_admin_id(), funs, ctx).await?,
+            RBUM_SCOPE_LEVEL_APP => Self::get_embed_sub_role_id(&funs.iam_basic_role_app_admin_id(), funs, ctx).await?,
+            RBUM_SCOPE_LEVEL_TENANT => Self::get_embed_sub_role_id(&funs.iam_basic_role_tenant_admin_id(), funs, ctx).await?,
             _ => "".to_string(),
         };
         if funs.iam_basic_role_sys_admin_id() == role_id
@@ -666,7 +663,7 @@ impl IamRoleServ {
                 ));
             }
         }
-        match Self::get_embed_subrole_id(role_id, funs, ctx).await {
+        match Self::get_embed_sub_role_id(role_id, funs, ctx).await {
             Ok(sub_role_id) => {
                 IamRelServ::delete_simple_rel(&IamRelKind::IamAccountRole, account_id, &sub_role_id, funs, ctx).await?;
             }

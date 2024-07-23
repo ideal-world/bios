@@ -1,6 +1,6 @@
 use std::{sync::Arc, task::ready, time::Duration};
 
-use bios_sdk_invoke::clients::spi_log_client::{LogItemFindReq, SpiLogClient};
+use bios_sdk_invoke::clients::spi_log_client::{LogItemAddReq, LogItemFindReq, SpiLogClient};
 use tardis::{
     basic::dto::TardisContext,
     chrono::Utc,
@@ -9,15 +9,9 @@ use tardis::{
     tokio, TardisFuns, TardisFunsInst,
 };
 
-use crate::schedule_constants::DOMAIN_CODE;
+use crate::schedule_constants::*;
 
 use super::EventComponent;
-const JOB_TAG: &str = "schedule_job";
-const TASK_TAG: &str = "schedule_task";
-const OP_ADD: &str = "add";
-const OP_DELETE: &str = "delete";
-const OP_EXECUTE_START: &str = "exec-start";
-const OP_EXECUTE_END: &str = "exec-end";
 
 #[derive(Clone)]
 pub struct SpiLog {
@@ -41,16 +35,14 @@ impl EventComponent for SpiLog {
         let code = code.to_string();
         let _handle = tokio::spawn(async move {
             let result = SpiLogClient::add(
-                JOB_TAG,
-                "add job",
-                None,
-                None,
-                Some(code.to_string()),
-                Some(OP_ADD.to_string()),
-                None,
-                Some(Utc::now().to_rfc3339()),
-                None,
-                None,
+                &LogItemAddReq {
+                    tag: JOB_TAG.to_string(),
+                    content: "add job".into(),
+                    key: Some(code.to_string()),
+                    op: Some(OP_ADD.to_string()),
+                    ts: Some(Utc::now()),
+                    ..Default::default()
+                },
                 &funs,
                 &ctx,
             )
@@ -68,16 +60,14 @@ impl EventComponent for SpiLog {
         let code = code.to_string();
         let _handle = tokio::spawn(async move {
             let result = SpiLogClient::add(
-                JOB_TAG,
-                "delete job",
-                None,
-                None,
-                Some(code.to_string()),
-                Some(OP_DELETE.to_string()),
-                None,
-                Some(Utc::now().to_rfc3339()),
-                None,
-                None,
+                &LogItemAddReq {
+                    tag: JOB_TAG.to_string(),
+                    content: "delete job".into(),
+                    key: Some(code.to_string()),
+                    op: Some(OP_DELETE.to_string()),
+                    ts: Some(Utc::now()),
+                    ..Default::default()
+                },
                 &funs,
                 &ctx,
             )
@@ -95,16 +85,14 @@ impl EventComponent for SpiLog {
         let code = code.to_string();
         let _handle = tokio::spawn(async move {
             let result = SpiLogClient::add(
-                TASK_TAG,
-                "start request",
-                None,
-                None,
-                Some(code.to_string()),
-                Some(OP_EXECUTE_START.to_string()),
-                None,
-                Some(Utc::now().to_rfc3339()),
-                None,
-                None,
+                &LogItemAddReq {
+                    tag: TASK_TAG.to_string(),
+                    content: "start request".into(),
+                    key: Some(code.to_string()),
+                    op: Some(OP_EXECUTE_START.to_string()),
+                    ts: Some(Utc::now()),
+                    ..Default::default()
+                },
                 &funs,
                 &ctx,
             )
@@ -122,20 +110,20 @@ impl EventComponent for SpiLog {
         let code = code.to_string();
         let _handle = tokio::spawn(async move {
             let result = SpiLogClient::add(
-                TASK_TAG,
-                &message,
-                Some(ext),
-                None,
-                Some(code.to_string()),
-                Some(OP_EXECUTE_END.to_string()),
-                None,
-                Some(Utc::now().to_rfc3339()),
-                None,
-                None,
+                &LogItemAddReq {
+                    tag: TASK_TAG.to_string(),
+                    content: message,
+                    ext: Some(ext),
+                    key: Some(code.to_string()),
+                    op: Some(OP_EXECUTE_END.to_string()),
+                    ts: Some(Utc::now()),
+                    ..Default::default()
+                },
                 &funs,
                 &ctx,
             )
             .await;
+
             if let Err(e) = result {
                 error!("notify_create error: {:?}", e);
             }

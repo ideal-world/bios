@@ -70,7 +70,13 @@ impl TransactionGraph {
                         let current_rels_by_tag = state_rels.inner.get(obj_tag).cloned().unwrap_or_default();
                         if let Some(obj_current_state_ids) = state_change_info.obj_current_state_id {
                             for obj_current_state_id in obj_current_state_ids {
-                                for target_state in current_rels_by_tag.get(&obj_current_state_id).cloned().unwrap_or_default().into_iter().filter(|target_state| *target_state == state_change_info.changed_state_id) {
+                                for target_state in current_rels_by_tag
+                                    .get(&obj_current_state_id)
+                                    .cloned()
+                                    .unwrap_or_default()
+                                    .into_iter()
+                                    .filter(|target_state| *target_state == state_change_info.changed_state_id)
+                                {
                                     rel.push((format!("{}-{}", obj_tag, obj_current_state_id.clone()), format!("{}-{}", obj_tag, target_state.clone())));
                                 }
                             }
@@ -104,7 +110,7 @@ impl TransactionGraph {
             }
         }
 
-        for (from_tran,to_trans) in rels.iter_mut() {
+        for (from_tran, to_trans) in rels.iter_mut() {
             to_trans.retain(|to_tran| *to_tran != *from_tran);
         }
         Self {
@@ -139,7 +145,7 @@ impl TransactionGraph {
     }
 
     pub fn check_state_loop(&self) -> bool {
-        let mut state_chains :HashSet<Vec<String>> = HashSet::new();
+        let mut state_chains: HashSet<Vec<String>> = HashSet::new();
         for ((from_tran_from_state, from_tran_to_state), to_trans) in &self.rels {
             state_chains.insert(vec![from_tran_from_state.clone(), from_tran_to_state.clone()]);
             for (to_tran_from_state, to_tran_to_state) in to_trans {
@@ -175,6 +181,6 @@ pub fn check(models: &HashMap<String, FlowModelDetailResp>) -> bool {
     warn!("debug before remove: {:?}", transation_graph);
     transation_graph.remove_empty_ele();
     warn!("debug after remove: {:?}", transation_graph);
-    
+
     transation_graph.check_state_loop()
 }
