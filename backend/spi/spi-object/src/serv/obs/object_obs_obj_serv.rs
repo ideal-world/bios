@@ -6,11 +6,13 @@ use tardis::{
     },
 };
 
-pub(crate) struct S3Service;
-impl super::S3 for S3Service {
+use crate::serv::s3::S3;
+
+pub(crate) struct OBSService;
+impl S3 for OBSService {
     async fn rebuild_path(bucket_name: Option<&str>, origin_path: &str, obj_exp: Option<u32>, client: &TardisOSClient) -> TardisResult<String> {
         if let Some(obj_exp) = obj_exp {
-            let resp = client.get_lifecycle(bucket_name).await;
+            let resp = client.get_lifecycle(Option::Some("")).await;
             match resp {
                 Ok(config) => {
                     let mut rules = config.rules;
@@ -31,7 +33,7 @@ impl super::S3 for S3Service {
                             .filter(LifecycleFilter::new(None, None, None, Some(prefix.clone()), None))
                             .build();
                         rules.push(add_rule);
-                        client.put_lifecycle(bucket_name, BucketLifecycleConfiguration::new(rules)).await?;
+                        client.put_lifecycle(Option::Some(""), BucketLifecycleConfiguration::new(rules)).await?;
                         prefix
                     };
                     Ok(format!("{}{}", prefix, origin_path))
