@@ -204,7 +204,7 @@ impl IamCcRoleTaskServ {
                 Ok(())
             },
             &funs.cache(),
-            ws_iam_send_client().await.clone(),
+            None,
             default_iam_send_avatar().await.clone(),
             Some(vec![format!("account/{}", ctx.owner)]),
             ctx,

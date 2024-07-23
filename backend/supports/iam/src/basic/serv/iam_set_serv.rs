@@ -27,8 +27,10 @@ use crate::iam_config::{IamBasicConfigApi, IamConfig};
 use crate::iam_constants::{RBUM_SCOPE_LEVEL_APP, RBUM_SCOPE_LEVEL_TENANT};
 use crate::iam_enumeration::{IamRelKind, IamSetCateKind, IamSetKind};
 
+use super::clients::iam_kv_client::IamKvClient;
 use super::clients::iam_log_client::{IamLogClient, LogParamTag};
 use super::clients::iam_search_client::IamSearchClient;
+use super::clients::iam_stats_client::IamStatsClient;
 use super::iam_account_serv::IamAccountServ;
 use super::iam_rel_serv::IamRelServ;
 
@@ -185,21 +187,9 @@ impl IamSetServ {
         let mut kind = item.kind;
 
         if kind == IamSetKind::Apps.to_string() && result.is_ok() {
-            SpiKvClient::add_or_modify_key_name(
-                &format!("{}:{}", funs.conf::<IamConfig>().spi.kv_apps_prefix.clone(), result.clone().unwrap()),
-                &add_req.name,
-                funs,
-                ctx,
-            )
-            .await?;
+            IamKvClient::add_or_modify_key_name(&funs.conf::<IamConfig>().spi.kv_apps_prefix.clone(), &result.clone()?, &add_req.name, None, funs, ctx).await?;
         } else if kind == IamSetKind::Org.to_string() && result.is_ok() {
-            SpiKvClient::add_or_modify_key_name(
-                &format!("{}:{}", funs.conf::<IamConfig>().spi.kv_orgs_prefix.clone(), result.clone().unwrap()),
-                &add_req.name,
-                funs,
-                ctx,
-            )
-            .await?;
+            IamStatsClient::async_org_fact_record_load(result.clone().unwrap(), &funs, &ctx).await?;
         }
         if result.is_ok() {
             kind.make_ascii_lowercase();
@@ -210,7 +200,7 @@ impl IamSetServ {
             };
 
             if let Some(tag) = tag {
-                let _ = IamLogClient::add_ctx_task(tag, Some(result.clone().unwrap_or_default()), op_describe, op_kind, ctx).await;
+                let _ = IamLogClient::add_ctx_task(tag, Some(result.clone()?), op_describe, op_kind, ctx).await;
             }
         }
 
@@ -261,21 +251,17 @@ impl IamSetServ {
             .await?;
             let mut kind = item.kind;
             if kind == IamSetKind::Apps.to_string() {
-                SpiKvClient::add_or_modify_key_name(
-                    &format!("{}:{}", funs.conf::<IamConfig>().spi.kv_apps_prefix.clone(), &set_cate_id),
+                IamKvClient::add_or_modify_key_name(
+                    &funs.conf::<IamConfig>().spi.kv_apps_prefix.clone(),
+                    &set_cate_id,
                     &set_cate_item.name.clone(),
+                    None,
                     funs,
                     ctx,
                 )
                 .await?;
             } else if kind == IamSetKind::Org.to_string() && result.is_ok() {
-                SpiKvClient::add_or_modify_key_name(
-                    &format!("{}:{}", funs.conf::<IamConfig>().spi.kv_orgs_prefix.clone(), &set_cate_id),
-                    &set_cate_item.name.clone(),
-                    funs,
-                    ctx,
-                )
-                .await?;
+                IamStatsClient::async_org_fact_record_load(set_cate_id.to_owned(), &funs, &ctx).await?;
             }
             kind.make_ascii_lowercase();
             match kind.as_str() {
@@ -340,6 +326,9 @@ impl IamSetServ {
 
         if result.is_ok() {
             let mut kind = item.kind;
+            if kind == IamSetKind::Org.to_string() {
+                IamStatsClient::async_org_fact_record_remove(set_cate_id.to_owned(), &funs, &ctx).await?;
+            }
             kind.make_ascii_lowercase();
             let (op_describe, tag, op_kind) = match kind.as_str() {
                 "org" => ("删除部门".to_string(), Some(LogParamTag::IamOrg), Some("Delete".to_string())),
@@ -621,6 +610,7 @@ impl IamSetServ {
             )
             .await;
             let _ = IamSearchClient::async_add_or_modify_account_search(&add_req.rel_rbum_item_id, Box::new(true), "", funs, ctx).await;
+            IamStatsClient::async_org_fact_record_load(set_cate_id.clone(), &funs, &ctx).await?;
         }
 
         result
@@ -647,6 +637,9 @@ impl IamSetServ {
         let result = RbumSetItemServ::delete_rbum(set_item_id, funs, ctx).await;
 
         if result.is_ok() && item.rel_rbum_item_kind_id == funs.iam_basic_kind_account_id() {
+            if let Some(cate_id) = item.rel_rbum_set_cate_id.clone() {
+                IamStatsClient::async_org_fact_record_load(cate_id, &funs, &ctx).await?;
+            }
             if let Ok(account) = IamAccountServ::get_item(item.rel_rbum_item_id.clone().as_str(), &IamAccountFilterReq::default(), funs, ctx).await {
                 let _ = IamLogClient::add_ctx_task(
                     LogParamTag::IamOrg,
@@ -663,22 +656,8 @@ impl IamSetServ {
         result
     }
 
-    pub async fn find_set_cate_name_by_cate_ids(cate_ids: Vec<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<String>> {
-        RbumSetCateServ::find_detail_rbums(
-            &RbumSetCateFilterReq {
-                basic: RbumBasicFilterReq {
-                    ids: Some(cate_ids),
-                    ..Default::default()
-                },
-                ..Default::default()
-            },
-            None,
-            None,
-            funs,
-            ctx,
-        )
-        .await
-        .map(|r| r.into_iter().map(|r| format!("{},{}", r.id, r.name)).collect())
+    pub async fn find_set_cate_name(filter_req: &RbumSetCateFilterReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<String>> {
+        RbumSetCateServ::find_detail_rbums(filter_req, None, None, funs, ctx).await.map(|r| r.into_iter().map(|r| format!("{},{}", r.id, r.name)).collect())
     }
 
     pub async fn paginate_set_items(

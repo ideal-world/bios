@@ -21,27 +21,35 @@ pub struct FlowCcStateApi;
 /// Flow state process API
 #[poem_openapi::OpenApi(prefix_path = "/cc/state")]
 impl FlowCcStateApi {
-    /// Add State / 添加状态
+    /// Add State
+    ///
+    /// 添加状态
     #[oai(path = "/", method = "post")]
     async fn add(&self, mut add_req: Json<FlowStateAddReq>, ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<String> {
         let mut funs = flow_constants::get_tardis_inst();
         funs.begin().await?;
         let result = FlowStateServ::add_item(&mut add_req.0, &funs, &ctx.0).await?;
         funs.commit().await?;
+        ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
 
-    /// Modify State By State Id / 修改状态
+    /// Modify State By State Id
+    ///
+    /// 修改状态
     #[oai(path = "/:id", method = "patch")]
     async fn modify(&self, id: Path<String>, mut modify_req: Json<FlowStateModifyReq>, ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<Void> {
         let mut funs = flow_constants::get_tardis_inst();
         funs.begin().await?;
         FlowStateServ::modify_item(&id.0, &mut modify_req.0, &funs, &ctx.0).await?;
         funs.commit().await?;
+        ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
     }
 
-    /// Get State By State Id / 获取状态
+    /// Get State By State Id
+    ///
+    /// 获取状态
     #[oai(path = "/:id", method = "get")]
     async fn get(&self, id: Path<String>, ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<FlowStateDetailResp> {
         let funs = flow_constants::get_tardis_inst();
@@ -58,10 +66,13 @@ impl FlowCcStateApi {
             &ctx.0,
         )
         .await?;
+        ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
 
-    /// Find States / 获取状态列表
+    /// Find States
+    ///
+    /// 获取状态列表
     #[oai(path = "/", method = "get")]
     #[allow(clippy::too_many_arguments)]
     async fn paginate(
@@ -121,7 +132,7 @@ impl FlowCcStateApi {
             &ctx.0,
         )
         .await?;
-
+        ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
 
@@ -136,10 +147,13 @@ impl FlowCcStateApi {
         funs.begin().await?;
         FlowStateServ::delete_item(&id.0, &funs, &ctx.0).await?;
         funs.commit().await?;
+        ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
     }
 
     /// Find Names By id set
+    ///
+    /// 通过id查找名称集合
     #[oai(path = "/names", method = "get")]
     async fn find_names(
         &self,
@@ -158,10 +172,13 @@ impl FlowCcStateApi {
             &ctx.0,
         )
         .await?;
+        ctx.0.execute_task().await?;
         TardisResp::ok(resp)
     }
 
-    /// Count Group By State / 按状态分组统计
+    /// Count Group By State
+    ///
+    /// 按状态分组统计
     #[oai(path = "/count_group_by_state", method = "post")]
     async fn count_group_by_state(
         &self,
@@ -173,6 +190,7 @@ impl FlowCcStateApi {
         funs.begin().await?;
         let result = FlowStateServ::count_group_by_state(&req.0, &funs, &ctx.0).await?;
         funs.commit().await?;
+        ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
 }

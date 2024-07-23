@@ -101,7 +101,7 @@ pub enum FlowExternalCallbackOp {
 /// 扩展字段
 ///
 /// Extended params
-#[derive(Debug, Deserialize, Serialize, poem_openapi::Object, Clone)]
+#[derive(Debug, Deserialize, Serialize, poem_openapi::Object, Clone, Default)]
 pub struct FlowExternalParams {
     /// 关联的 Tag
     pub rel_tag: Option<String>,

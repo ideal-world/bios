@@ -218,8 +218,16 @@ fn generate_word_combinations_with_length(original_str: &str, split_len: usize) 
 fn generate_word_combinations_with_symbol(original_str: &str, symbols: Vec<&str>) -> Vec<String> {
     let mut combinations = Vec::new();
     for symbol in symbols {
-        let mut splited_words = original_str.split(symbol).collect_vec();
-        combinations.append(&mut splited_words);
+        let splited_words = original_str.split(symbol).collect_vec();
+        if splited_words.len() == 1 {
+            continue;
+        }
+        for i in 0..splited_words.len() {
+            for j in i..splited_words.len() {
+                let word = splited_words[i..=j].join(symbol);
+                combinations.push(word);
+            }
+        }
     }
     combinations.into_iter().map(|word| word.to_string()).collect_vec()
 }
@@ -281,23 +289,30 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
             })
             .collect::<String>();
         sql_vals.push(Value::from(q.as_str()));
-        from_fragments = format!(", to_tsquery('public.chinese_zh', ${}) AS query", sql_vals.len());
+        from_fragments = format!(
+            ", plainto_tsquery('public.chinese_zh', ${}) AS query1, plainto_tsquery('simple', ${}) AS query2",
+            sql_vals.len(),
+            sql_vals.len()
+        );
+
+        let rank_title = "GREATEST(COALESCE(ts_rank(title_tsv, query1), 0 :: float4), COALESCE(ts_rank(title_tsv, query2), 0 :: float4)) AS rank_title";
+        let rank_content = "GREATEST(COALESCE(ts_rank(content_tsv, query1), 0 :: float4), COALESCE(ts_rank(content_tsv, query2), 0 :: float4)) AS rank_content";
         match search_req.query.q_scope.as_ref().unwrap_or(&SearchItemSearchQScopeKind::Title) {
             SearchItemSearchQScopeKind::Title => {
-                select_fragments = ", COALESCE(ts_rank(title_tsv, query), 0::float4) AS rank_title, 0::float4 AS rank_content".to_string();
-                where_fragments.push("(query @@ title_tsv)".to_string());
+                select_fragments = format!(", {}, 0::float4 AS rank_content", rank_title);
+                where_fragments.push("(query1 @@ title_tsv OR query2 @@ title_tsv)".to_string());
                 // sql_vals.push(Value::from(format!("%{q}%")));
                 // where_fragments.push(format!("(query @@ title_tsv OR title LIKE ${})", sql_vals.len()));
             }
             SearchItemSearchQScopeKind::Content => {
-                select_fragments = ", 0::float4 AS rank_title, COALESCE(ts_rank(content_tsv, query), 0::float4) AS rank_content".to_string();
-                where_fragments.push("(query @@ content_tsv)".to_string());
+                select_fragments = format!(", 0::float4 AS rank_title, {}", rank_content);
+                where_fragments.push("(query1 @@ content_tsv OR query2 @@ content_tsv)".to_string());
                 // sql_vals.push(Value::from(format!("%{q}%")));
                 // where_fragments.push(format!("(query @@ content_tsv OR content LIKE ${})", sql_vals.len()));
             }
             SearchItemSearchQScopeKind::TitleContent => {
-                select_fragments = ", COALESCE(ts_rank(title_tsv, query), 0::float4) AS rank_title, COALESCE(ts_rank(content_tsv, query), 0::float4) AS rank_content".to_string();
-                where_fragments.push("(query @@ title_tsv OR query @@ content_tsv)".to_string());
+                select_fragments = format!(", {}, {}", rank_title, rank_content);
+                where_fragments.push("((query1 @@ title_tsv OR query2 @@ title_tsv) OR (query1 @@ content_tsv OR query2 @@ content_tsv))".to_string());
                 // sql_vals.push(Value::from(format!("%{q}%")));
                 // where_fragments.push(format!(
                 //     "(query @@ title_tsv OR query @@ content_tsv OR title LIKE ${} OR content LIKE ${})",
@@ -417,7 +432,7 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
     };
     if let Some(ext) = &search_req.query.ext {
         for ext_item in ext {
-            let value = db_helper::json_to_sea_orm_value(&ext_item.value, ext_item.op == BasicQueryOpKind::Like || ext_item.op == BasicQueryOpKind::NotLike);
+            let value = db_helper::json_to_sea_orm_value(&ext_item.value, &ext_item.op);
             let Some(mut value) = value else { return err_not_found(ext_item) };
             if ext_item.op == BasicQueryOpKind::In {
                 let value = value.clone();
@@ -459,6 +474,13 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
                     "(ext ->> '{}' is null or ext ->> '{}' = '' or ext ->> '{}' = '[]' )",
                     ext_item.field, ext_item.field, ext_item.field
                 ));
+            } else if ext_item.op == BasicQueryOpKind::Len {
+                if let Some(first_value) = value.pop() {
+                    where_fragments.push(format!("(length(ext->>'{}') = ${})", ext_item.field, sql_vals.len() + 1));
+                    sql_vals.push(first_value);
+                } else {
+                    return err_not_found(ext_item);
+                };
             } else {
                 if value.len() > 1 {
                     return err_not_found(ext_item);
@@ -516,7 +538,7 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
             {
                 order_fragments.push(format!("{} {}", sort_item.field, sort_item.order.to_sql()));
             } else {
-                order_fragments.push(format!("ext ->> '{}' {}", sort_item.field, sort_item.order.to_sql()));
+                order_fragments.push(format!("ext -> '{}' {}", sort_item.field, sort_item.order.to_sql()));
             }
         }
     }
@@ -528,7 +550,7 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
             let mut sql_and_where = vec![];
             if let Some(ext) = &group_query.ext {
                 for ext_item in ext {
-                    let value = db_helper::json_to_sea_orm_value(&ext_item.value, ext_item.op == BasicQueryOpKind::Like || ext_item.op == BasicQueryOpKind::NotLike);
+                    let value = db_helper::json_to_sea_orm_value(&ext_item.value, &ext_item.op);
                     let Some(mut value) = value else { return err_not_found(&ext_item.clone().into()) };
                     if ext_item.in_ext.unwrap_or(true) {
                         if ext_item.op == BasicQueryOpKind::In {
@@ -787,7 +809,7 @@ pub async fn query_metrics(query_req: &SearchQueryMetricsReq, funs: &TardisFunsI
             })
             .collect::<String>();
         params.push(Value::from(q.as_str()));
-        from_fragments = format!(", to_tsquery('public.chinese_zh', ${}) AS query", params.len());
+        from_fragments = format!(", plainto_tsquery('public.chinese_zh', ${}) AS query", params.len());
         match query_req.query.q_scope.as_ref().unwrap_or(&SearchItemSearchQScopeKind::Title) {
             SearchItemSearchQScopeKind::Title => {
                 select_fragments = ", COALESCE(ts_rank(title_tsv, query), 0::float4) AS rank_title, 0::float4 AS rank_content".to_string();
@@ -957,7 +979,7 @@ pub async fn query_metrics(query_req: &SearchQueryMetricsReq, funs: &TardisFunsI
     };
     if let Some(ext) = &query_req.query.ext {
         for ext_item in ext {
-            let value = db_helper::json_to_sea_orm_value(&ext_item.value, ext_item.op == BasicQueryOpKind::Like || ext_item.op == BasicQueryOpKind::NotLike);
+            let value = db_helper::json_to_sea_orm_value(&ext_item.value, &ext_item.op);
             let Some(mut value) = value else { return err_not_found(ext_item) };
             if ext_item.op == BasicQueryOpKind::In {
                 let value = value.clone();
@@ -1069,7 +1091,7 @@ pub async fn query_metrics(query_req: &SearchQueryMetricsReq, funs: &TardisFunsI
             };
             if let Some(ext) = &group_query.ext {
                 for ext_item in ext {
-                    let value = db_helper::json_to_sea_orm_value(&ext_item.value, ext_item.op == BasicQueryOpKind::Like || ext_item.op == BasicQueryOpKind::NotLike);
+                    let value = db_helper::json_to_sea_orm_value(&ext_item.value, &ext_item.op);
                     let Some(mut value) = value else { return err_not_found(ext_item) };
                     if ext_item.in_ext.unwrap_or(true) {
                         if ext_item.op == BasicQueryOpKind::In {
@@ -1598,6 +1620,7 @@ pub async fn refresh_tsv(tag: &str, funs: &TardisFunsInst, ctx: &TardisContext, 
                     row.try_get::<String>("", "key").expect("not found key").as_str(),
                     &mut SearchItemModifyReq {
                         title: Some(row.try_get("", "title").expect("not found title")),
+                        update_time: Some(Utc::now()),
                         ..Default::default()
                     },
                     funs,

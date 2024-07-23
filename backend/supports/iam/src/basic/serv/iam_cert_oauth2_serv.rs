@@ -235,6 +235,7 @@ impl IamCertOAuth2Serv {
                 temporary: None,
                 lock_status: None,
                 logout_type: None,
+                labor_type: None,
             },
             false,
             funs,

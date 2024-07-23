@@ -104,7 +104,14 @@ impl FlowEventServ {
     fn do_check_front_condition(current_vars: &HashMap<String, Value>, condition: &FlowTransitionFrontActionInfo) -> TardisResult<bool> {
         match condition.right_value {
             FlowTransitionFrontActionRightValue::ChangeContent => {
-                if let Some(left_value) = current_vars.get(&condition.left_value) {
+                let left_value = if let Some(custom_value) = current_vars.get(&format!("custom_{}", condition.left_value)) {
+                    Some(custom_value)
+                } else if let Some(original_value) = current_vars.get(&condition.left_value) {
+                    Some(original_value)
+                } else {
+                    None
+                };
+                if let Some(left_value) = left_value {
                     Ok(condition.relevance_relation.check_conform(
                         left_value.as_str().unwrap_or(left_value.to_string().as_str()).to_string(),
                         condition
@@ -198,7 +205,7 @@ impl FlowEventServ {
         )
         .await?;
 
-        if FlowModelServ::check_post_action_ring(next_flow_transition.clone(), (false, vec![]), funs, ctx).await?.0 {
+        if FlowModelServ::check_post_action_ring(&flow_model, funs, ctx).await? {
             return Err(funs.err().not_found("flow_inst", "transfer", "this post action exist endless loop", "500-flow-transition-endless-loop"));
         }
 

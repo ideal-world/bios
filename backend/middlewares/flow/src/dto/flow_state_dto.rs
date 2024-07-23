@@ -39,7 +39,7 @@ pub struct FlowStateAddReq {
     pub disabled: Option<bool>,
 }
 
-#[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object, Default)]
 pub struct FlowStateModifyReq {
     #[oai(validator(min_length = "2", max_length = "200"))]
     pub name: Option<TrimString>,
@@ -193,7 +193,7 @@ pub struct FlowStateRelModelExt {
     pub show_btns: Option<Vec<String>>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Default, poem_openapi::Object, sea_orm::FromQueryResult)]
+#[derive(Serialize, Deserialize, Debug, Default, poem_openapi::Object, sea_orm::FromQueryResult, Clone)]
 pub struct FlowStateRelModelModifyReq {
     pub id: String,
     pub sort: Option<i64>,
@@ -201,7 +201,7 @@ pub struct FlowStateRelModelModifyReq {
 }
 
 /// 工作流状态聚合信息
-#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
 pub struct FlowStateAggResp {
     pub id: String,
     pub name: String,

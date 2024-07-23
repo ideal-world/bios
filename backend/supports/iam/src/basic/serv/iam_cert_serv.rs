@@ -768,7 +768,7 @@ impl IamCertServ {
         .await?;
         if let Some(ext_cert) = ext_cert {
             let encoded_sk = if show_sk {
-                let now_sk = RbumCertServ::show_sk(ext_cert.id.as_str(), &RbumCertFilterReq::default(), funs, ctx).await?;
+                let now_sk = RbumCertServ::show_sk(ext_cert.id.as_str(), &RbumCertFilterReq::default(), funs, &mock_ctx).await?;
                 encode_cert(&ext_cert.id, now_sk, ext_cert.sk_invisible)?
             } else {
                 "".to_string()
@@ -1429,15 +1429,16 @@ impl IamCertServ {
                     return Err(funs.err().conflict("ldap_account", "sync", "should have sync config!", "iam-not-found-sync-config"));
                 };
 
-                let result = match sync_config.account_sync_from {
+                match sync_config.account_sync_from {
                     IamCertExtKind::Ldap => {
                         IamCertLdapServ::iam_sync_ldap_user_to_iam(sync_config, &funs, &task_ctx).await?;
-                        Ok(())
                     }
-                    _ => Err(funs.err().not_implemented("third_integration", "sync", "501-sync-from-is-not-implemented", "501-sync-from-is-not-implemented")),
+                    _ => {
+                        let _ = funs.err().not_implemented("third_integration", "sync", "501-sync-from-is-not-implemented", "501-sync-from-is-not-implemented");
+                    }
                 };
                 drop(sync);
-                result
+                Ok(())
             },
             &funs.cache(),
             ws_iam_send_client().await.clone(),

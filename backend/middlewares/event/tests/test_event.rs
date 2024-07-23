@@ -57,6 +57,5 @@ async fn init_data() -> TardisResult<()> {
     test_event_without_mgr::test(&[&client]).await?;
     test_event_with_event_code::test(&[&client]).await?;
     test_event_with_im::test(&[&client]).await?;
-
     Ok(())
 }

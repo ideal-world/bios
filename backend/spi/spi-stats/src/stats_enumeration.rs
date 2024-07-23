@@ -168,7 +168,7 @@ impl StatsDataTypeKind {
                 Some(vec![value])
             }
         } else {
-            db_helper::json_to_sea_orm_value(value, op == &BasicQueryOpKind::Like)
+            db_helper::json_to_sea_orm_value(value, &op)
         };
         let Some(mut value) = value else {
             return Err(TardisError::internal_error("json_to_sea_orm_value result is empty", "spi-stats-inaternal-error"));
@@ -244,7 +244,7 @@ impl StatsDataTypeKind {
             let value = self.json_to_sea_orm_value(value, op == &BasicQueryOpKind::Like)?;
             Some(vec![value])
         } else {
-            db_helper::json_to_sea_orm_value(value, op == &BasicQueryOpKind::Like)
+            db_helper::json_to_sea_orm_value(value, op)
         };
 
         let Some(mut value) = value else {
@@ -296,7 +296,7 @@ impl StatsDataTypeKind {
 
     pub(crate) fn to_pg_group(&self, column_name: &str, multi_values: bool, time_window_fun: &Option<StatsQueryTimeWindowKind>) -> Option<String> {
         if multi_values {
-            Some(format!("unnest({})", column_name))
+            Some(format!("unnest(array_append({},''))", column_name))
         } else if let Some(time_window_fun) = time_window_fun {
             if self != &StatsDataTypeKind::Date && self != &StatsDataTypeKind::DateTime {
                 return None;

@@ -1,4 +1,5 @@
 use crate::basic::dto::iam_filer_dto::{IamAccountFilterReq, IamAppFilterReq, IamTenantFilterReq};
+use crate::basic::serv::clients::iam_kv_client::IamKvClient;
 use crate::basic::serv::clients::iam_search_client::IamSearchClient;
 use crate::iam_initializer::{default_iam_send_avatar, ws_iam_send_client};
 use bios_basic::process::task_processor::TaskProcessor;
@@ -83,13 +84,7 @@ impl IamCsSpiDataApi {
                     )
                     .await?;
                     for app in list {
-                        SpiKvClient::add_or_modify_key_name(
-                            &format!("{}:{}", funs.conf::<IamConfig>().spi.kv_app_prefix.clone(), app.id),
-                            &app.name.clone(),
-                            &funs,
-                            &task_ctx,
-                        )
-                        .await?;
+                        IamKvClient::add_or_modify_key_name(&funs.conf::<IamConfig>().spi.kv_app_prefix.clone(), &app.id, &app.name.clone(), None, &funs, &task_ctx).await?;
                     }
 
                     //tenant kv
@@ -111,9 +106,11 @@ impl IamCsSpiDataApi {
                     )
                     .await?;
                     for tenant in list {
-                        SpiKvClient::add_or_modify_key_name(
-                            &format!("{}:{}", funs.conf::<IamConfig>().spi.kv_tenant_prefix.clone(), tenant.name),
+                        IamKvClient::add_or_modify_key_name(
+                            &funs.conf::<IamConfig>().spi.kv_tenant_prefix.clone(),
+                            &tenant.id,
                             &tenant.name.clone(),
+                            None,
                             &funs,
                             &task_ctx,
                         )

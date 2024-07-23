@@ -2,12 +2,15 @@ use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
 use bios_basic::rbum::helper::rbum_scope_helper::{self, check_without_owner_and_unsafe_fill_ctx};
 use bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
+use tardis::basic::dto::TardisContext;
+use tardis::log;
+use tardis::tokio;
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem::Request;
 use tardis::web::poem_openapi;
 use tardis::web::poem_openapi::param::Query;
 use tardis::web::poem_openapi::payload::Json;
-use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp};
+use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 
 use crate::dto::flow_state_dto::{FlowStateCountGroupByStateReq, FlowStateCountGroupByStateResp, FlowStateFilterReq, FlowStateKind, FlowStateSummaryResp, FlowSysStateKind};
 use crate::flow_constants;
@@ -18,7 +21,9 @@ pub struct FlowCiStateApi;
 /// Flow Config process API
 #[poem_openapi::OpenApi(prefix_path = "/ci/state")]
 impl FlowCiStateApi {
-    /// Find States / 获取状态列表
+    /// Find States
+    ///
+    /// 获取状态列表
     #[oai(path = "/", method = "get")]
     #[allow(clippy::too_many_arguments)]
     async fn paginate(
@@ -79,11 +84,13 @@ impl FlowCiStateApi {
             &ctx.0,
         )
         .await?;
-
+        ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
 
-    /// Count Group By State / 按状态分组统计
+    /// Count Group By State
+    ///
+    /// 按状态分组统计
     #[oai(path = "/count_group_by_state", method = "post")]
     async fn count_group_by_state(
         &self,
@@ -96,6 +103,27 @@ impl FlowCiStateApi {
         funs.begin().await?;
         let result = FlowStateServ::count_group_by_state(&req.0, &funs, &ctx.0).await?;
         funs.commit().await?;
+        ctx.0.execute_task().await?;
         TardisResp::ok(result)
+    }
+
+    ///Script: merge global states with the same name
+    ///
+    /// 脚本：合并相同名称的全局状态
+    #[oai(path = "/merge_state_by_name", method = "post")]
+    async fn merge_state_by_name(&self) -> TardisApiResult<Void> {
+        let funs = flow_constants::get_tardis_inst();
+        let global_ctx = TardisContext::default();
+        tokio::spawn(async move {
+            match FlowStateServ::merge_state_by_name(&funs, &global_ctx).await {
+                Ok(_) => {
+                    log::trace!("[Flow.Inst] add log success")
+                }
+                Err(e) => {
+                    log::warn!("[Flow.Inst] failed to add log:{e}")
+                }
+            }
+        });
+        TardisResp::ok(Void {})
     }
 }

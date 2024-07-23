@@ -31,7 +31,7 @@ pub struct Model {
     ///
     /// his function is used to associate this template with other templates, e.g. if the template refers to a template, then this association corresponds to the Id of the template
     /// 此功能用于将该模型与模板关联，比如该模型引用于某个模板，则此关联对应于模板的Id
-    pub rel_template_id: String,
+    pub rel_template_id: Option<String>,
 
     /// Whether it is a template / 是否是模板
     ///

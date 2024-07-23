@@ -1,10 +1,4 @@
-use std::env;
-
-use bios_basic::{
-    rbum::serv::rbum_kind_serv::RbumKindServ,
-    spi::{dto::spi_bs_dto::SpiBsAddReq, spi_constants},
-    test::test_http_client::TestHttpClient,
-};
+use bios_basic::test::test_http_client::TestHttpClient;
 use bios_spi_conf::{
     conf_constants::DOMAIN_CODE,
     dto::{
@@ -38,7 +32,6 @@ async fn spi_conf_namespace_test() -> TardisResult<()> {
         ..Default::default()
     })?;
     let funs = TardisFuns::inst_with_db_conn(DOMAIN_CODE.to_string(), None);
-    std::io::stdin().read_line(&mut String::default()).expect("fail to read");
     let RegisterResponse { username, password } = client
         .put(
             "/ci/auth/register_bundle",

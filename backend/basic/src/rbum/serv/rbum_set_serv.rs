@@ -236,6 +236,8 @@ impl RbumSetServ {
                 scope_level: r.scope_level.clone(),
                 pid: rbum_set_cates.iter().find(|i| i.sys_code == r.sys_code[..r.sys_code.len() - set_cate_sys_code_node_len]).map(|i| i.id.to_string()),
                 rel: None,
+                create_time: r.create_time,
+                update_time: r.update_time,
             })
             .collect();
         if !filter.fetch_cate_item {
@@ -340,7 +342,7 @@ impl RbumSetServ {
                         .iter()
                         .filter(|c| c.sys_code.starts_with(&cate.sys_code))
                         .flat_map(|c| items.get(&c.id).expect("ignore"))
-                        .chunk_by(|c| c.rel_rbum_item_kind_id.clone())
+                        .group_by(|c| c.rel_rbum_item_kind_id.clone())
                         .into_iter()
                         .map(|(g, c)| (g, c.map(|i| i.rel_rbum_item_id.clone()).collect::<HashSet<String>>().len() as u64))
                         .collect::<HashMap<String, u64>>(),
@@ -353,7 +355,7 @@ impl RbumSetServ {
             items
                 .values()
                 .flat_map(|item| item.iter())
-                .chunk_by(|c| c.rel_rbum_item_kind_id.clone())
+                .group_by(|c| c.rel_rbum_item_kind_id.clone())
                 .into_iter()
                 .map(|(g, c)| (g, c.map(|i| i.rel_rbum_item_id.clone()).collect::<HashSet<String>>().len() as u64))
                 .collect::<HashMap<String, u64>>(),

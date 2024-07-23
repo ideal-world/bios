@@ -40,6 +40,7 @@ use crate::iam_constants;
 use crate::iam_constants::{RBUM_ITEM_ID_TENANT_LEN, RBUM_SCOPE_LEVEL_TENANT};
 use crate::iam_enumeration::{IamCertExtKind, IamCertKernelKind, IamCertOAuth2Supplier, IamCertTokenKind, IamConfigDataTypeKind, IamConfigKind, IamRoleKind, IamSetKind};
 
+use super::clients::iam_kv_client::IamKvClient;
 use super::clients::iam_log_client::{IamLogClient, LogParamTag};
 use super::clients::iam_search_client::IamSearchClient;
 use super::iam_cert_oauth2_serv::IamCertOAuth2Serv;
@@ -317,6 +318,7 @@ impl IamTenantServ {
                 temporary: None,
                 lock_status: None,
                 logout_type: None,
+                labor_type: None,
             },
             true,
             funs,
@@ -347,6 +349,7 @@ impl IamTenantServ {
                 temporary: None,
                 lock_status: None,
                 logout_type: None,
+                labor_type: None,
             },
             true,
             funs,
@@ -656,7 +659,7 @@ impl IamTenantServ {
             ctx,
         )
         .await?;
-        SpiKvClient::add_or_modify_key_name(&format!("{}:{tenant_id}", funs.conf::<IamConfig>().spi.kv_tenant_prefix.clone()), &tenant.name, funs, ctx).await?;
+        IamKvClient::add_or_modify_key_name(&funs.conf::<IamConfig>().spi.kv_tenant_prefix.clone(), &tenant_id, &tenant.name, None, funs, ctx).await?;
         Ok(())
     }
 }

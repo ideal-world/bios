@@ -33,6 +33,8 @@ use crate::iam_config::{IamBasicConfigApi, IamBasicInfoManager, IamConfig};
 use crate::iam_constants::{self, RBUM_SCOPE_LEVEL_PRIVATE};
 use crate::iam_constants::{RBUM_ITEM_ID_APP_LEN, RBUM_SCOPE_LEVEL_APP};
 use crate::iam_enumeration::{IamRelKind, IamSetKind};
+
+use super::clients::iam_kv_client::IamKvClient;
 pub struct IamAppServ;
 
 #[async_trait]
@@ -340,8 +342,7 @@ impl IamAppServ {
             ctx,
         )
         .await?;
-        SpiKvClient::add_or_modify_key_name(&format!("{}:{app_id}", funs.conf::<IamConfig>().spi.kv_app_prefix.clone()), &app.name, funs, ctx).await?;
-
+        IamKvClient::add_or_modify_key_name(&funs.conf::<IamConfig>().spi.kv_app_prefix.clone(), app_id, &app.name, None, funs, ctx).await?;
         Ok(())
     }
 }

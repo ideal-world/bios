@@ -24,7 +24,9 @@ pub struct FlowCiInstApi;
 /// Flow Config process API
 #[poem_openapi::OpenApi(prefix_path = "/ci/inst")]
 impl FlowCiInstApi {
-    /// Start Instance / 启动实例
+    /// Start Instance
+    ///
+    /// 启动实例
     #[oai(path = "/", method = "post")]
     async fn start(&self, add_req: Json<FlowInstStartReq>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<String> {
         let mut funs = flow_constants::get_tardis_inst();
@@ -32,19 +34,25 @@ impl FlowCiInstApi {
         funs.begin().await?;
         let result = FlowInstServ::start(&add_req.0, None, &funs, &ctx.0).await?;
         funs.commit().await?;
+        ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
 
-    /// Get Instance By Instance Id / 获取实例信息
+    /// Get Instance By Instance Id
+    ///
+    /// 获取实例信息
     #[oai(path = "/:flow_inst_id", method = "get")]
     async fn get(&self, flow_inst_id: Path<String>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<FlowInstDetailResp> {
         let funs = flow_constants::get_tardis_inst();
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         let result = FlowInstServ::get(&flow_inst_id.0, &funs, &ctx.0).await?;
+        ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
 
-    /// Find the state and transfer information of the specified model in batch / 批量获取指定模型的状态及流转信息
+    /// Find the state and transfer information of the specified model in batch
+    ///
+    /// 批量获取指定模型的状态及流转信息
     #[oai(path = "/batch/state_transitions", method = "put")]
     async fn find_state_and_next_transitions(
         &self,
@@ -55,10 +63,13 @@ impl FlowCiInstApi {
         let funs = flow_constants::get_tardis_inst();
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         let result = FlowInstServ::find_state_and_next_transitions(&find_req.0, &funs, &ctx.0).await?;
+        ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
 
-    /// Abort Instance / 中止实例
+    /// Abort Instance
+    ///
+    /// 中止实例
     #[oai(path = "/:flow_inst_id", method = "put")]
     async fn abort(&self, flow_inst_id: Path<String>, abort_req: Json<FlowInstAbortReq>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         let mut funs = flow_constants::get_tardis_inst();
@@ -66,10 +77,13 @@ impl FlowCiInstApi {
         funs.begin().await?;
         FlowInstServ::abort(&flow_inst_id.0, &abort_req.0, &funs, &ctx.0).await?;
         funs.commit().await?;
+        ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
     }
 
-    /// Transfer State By State Id / 流转
+    /// Transfer State By State Id
+    ///
+    /// 流转
     #[oai(path = "/:flow_inst_id/transition/transfer", method = "put")]
     async fn transfer(
         &self,
@@ -83,10 +97,13 @@ impl FlowCiInstApi {
         let mut transfer = transfer_req.0;
         FlowInstServ::check_transfer_vars(&flow_inst_id.0, &mut transfer, &funs, &ctx.0).await?;
         let result = FlowInstServ::transfer(&flow_inst_id.0, &transfer, false, FlowExternalCallbackOp::Default, &ctx.0).await?;
+        ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
 
-    /// Batch transfer State By State Id / 批量流转
+    /// Batch transfer State By State Id
+    ///
+    /// 批量流转
     #[oai(path = "/batch/:flow_inst_ids/transition/transfer", method = "put")]
     async fn batch_transfer(
         &self,
@@ -110,10 +127,13 @@ impl FlowCiInstApi {
         for (flow_inst_id, transfer_req) in flow_inst_id_transfer_map {
             result.push(FlowInstServ::transfer(flow_inst_id, &transfer_req, false, FlowExternalCallbackOp::Default, &ctx.0).await?);
         }
+        ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
 
-    /// Modify Assigned / 同步执行人信息
+    /// Modify Assigned
+    ///
+    /// 同步执行人信息
     #[oai(path = "/:flow_inst_id/transition/modify_assigned", method = "post")]
     async fn modify_assigned(
         &self,
@@ -126,10 +146,13 @@ impl FlowCiInstApi {
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         let vars = HashMap::from([("assigned_to".to_string(), Value::String(modify_req.0.current_assigned))]);
         FlowInstServ::modify_current_vars(&flow_inst_id.0, &vars, &ctx.0).await?;
+        ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
     }
 
-    /// Modify list of variables / 同步当前变量列表
+    /// Modify list of variables
+    ///
+    /// 同步当前变量列表
     #[oai(path = "/:flow_inst_id/modify_current_vars", method = "patch")]
     async fn modify_current_vars(
         &self,
@@ -141,10 +164,13 @@ impl FlowCiInstApi {
         let funs = flow_constants::get_tardis_inst();
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         FlowInstServ::modify_current_vars(&flow_inst_id.0, &modify_req.0.vars, &ctx.0).await?;
+        ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
     }
 
-    /// Bind Single Instance / 绑定单个实例
+    /// Bind Single Instance
+    ///
+    /// 绑定单个实例
     #[oai(path = "/bind", method = "post")]
     async fn bind(&self, add_req: Json<FlowInstBindReq>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<String> {
         let mut funs = flow_constants::get_tardis_inst();
@@ -168,11 +194,13 @@ impl FlowCiInstApi {
             funs.commit().await?;
             inst_id
         };
-
+        ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
 
-    /// Batch Bind Instance / 批量绑定实例 （初始化）
+    /// Batch Bind Instance
+    ///
+    /// 批量绑定实例 （初始化）
     #[oai(path = "/batch_bind", method = "post")]
     async fn batch_bind(&self, add_req: Json<FlowInstBatchBindReq>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Vec<FlowInstBatchBindResp>> {
         let mut funs = flow_constants::get_tardis_inst();
@@ -180,10 +208,13 @@ impl FlowCiInstApi {
         funs.begin().await?;
         let result = FlowInstServ::batch_bind(&add_req.0, &funs, &ctx.0).await?;
         funs.commit().await?;
+        ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
 
-    /// Get list of instance id by rel_business_obj_id / 通过业务ID获取实例信息
+    /// Get list of instance id by rel_business_obj_id
+    ///
+    /// 通过业务ID获取实例信息
     #[oai(path = "/find_detail_by_obj_ids", method = "get")]
     async fn find_detail_by_obj_ids(&self, obj_ids: Query<String>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Vec<FlowInstDetailResp>> {
         let funs = flow_constants::get_tardis_inst();
@@ -196,10 +227,13 @@ impl FlowCiInstApi {
                 result.push(inst_detail);
             }
         }
+        ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
 
-    /// trigger instance front action / 触发前置动作
+    /// trigger instance front action
+    ///
+    /// 触发前置动作
     #[oai(path = "/trigger_front_action", method = "get")]
     async fn trigger_front_action(&self) -> TardisApiResult<Void> {
         let funs = flow_constants::get_tardis_inst();
@@ -213,7 +247,25 @@ impl FlowCiInstApi {
                 }
             }
         });
+        TardisResp::ok(Void {})
+    }
 
+    ///Script: update tag information for current instance
+    ///
+    /// 数据修复脚本：更新当前实例的tag信息
+    #[oai(path = "/reflesh_inst_tag", method = "post")]
+    async fn reflesh_inst_tag(&self) -> TardisApiResult<Void> {
+        let funs = flow_constants::get_tardis_inst();
+        tokio::spawn(async move {
+            match FlowInstServ::reflesh_inst_tag(&funs).await {
+                Ok(_) => {
+                    log::trace!("[Flow.Inst] add log success")
+                }
+                Err(e) => {
+                    log::warn!("[Flow.Inst] failed to add log:{e}")
+                }
+            }
+        });
         TardisResp::ok(Void {})
     }
 }
