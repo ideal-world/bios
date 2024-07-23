@@ -125,7 +125,7 @@ impl PluginExecServ {
                         match new_r {
                             Value::Bool(v) => return if *v { "true" } else { "false" }.into(),
                             Value::Number(v) => return v.to_string().into(),
-                            Value::String(v) => return enc(v).to_string().into(),
+                            Value::String(v) => return v.to_string().into(),
                             // TODO: Support more types: Null, Array, Object
                             _ => return "".into(),
                         }
