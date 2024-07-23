@@ -7,11 +7,11 @@ use bios_spi_conf::{
 };
 use tardis::web::reqwest::{self, header::HeaderName};
 use tardis::{
-    basic::{dto::TardisContext, field::TrimString, result::TardisResult},
+    basic::{dto::TardisContext, result::TardisResult},
     log,
     serde_json::json,
     testcontainers, tokio,
-    web::web_resp::{TardisResp, Void},
+    web::web_resp::TardisResp,
     TardisFuns,
 };
 

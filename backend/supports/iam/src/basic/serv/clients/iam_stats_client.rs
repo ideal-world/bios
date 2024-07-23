@@ -9,7 +9,6 @@ use bios_sdk_invoke::{
     clients::{spi_kv_client::SpiKvClient, spi_stats_client::SpiStatsClient},
     dto::stats_record_dto::StatsFactRecordLoadReq,
 };
-use itertools::Itertools;
 
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
@@ -24,6 +23,7 @@ use crate::{
 };
 
 use super::iam_kv_client::IamKvClient;
+
 pub struct IamStatsClient;
 
 impl IamStatsClient {
@@ -92,13 +92,7 @@ impl IamStatsClient {
                 let task_handle = tokio::spawn(async move {
                     let funs = iam_constants::get_tardis_inst();
                     let _ = Self::org_fact_record_load(org_cate_id.clone(), account_ids, &funs, &mock_ctx).await;
-                    let _ = SpiKvClient::add_or_modify_key_name(
-                        &format!("{}:{}", funs.conf::<IamConfig>().spi.kv_orgs_prefix.clone(), org_cate_id),
-                        &org_cate.name,
-                        &funs,
-                        &mock_ctx,
-                    )
-                    .await;
+                    let _ = IamKvClient::async_add_or_modify_key_name(funs.conf::<IamConfig>().spi.kv_orgs_prefix.clone(), org_cate_id, org_cate.name, &funs, &mock_ctx).await;
                 });
                 task_handle.await.unwrap();
                 Ok(())

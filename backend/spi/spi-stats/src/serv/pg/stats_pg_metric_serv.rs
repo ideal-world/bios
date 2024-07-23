@@ -8,12 +8,10 @@ use bios_basic::spi::{
 use itertools::Itertools;
 use tardis::{
     basic::{dto::TardisContext, error::TardisError, result::TardisResult},
-    chrono::format,
     db::{
         reldb_client::TardisRelDBClient,
         sea_orm::{self, FromQueryResult, Value},
     },
-    log::info,
     serde_json::{self, json, Map},
     TardisFunsInst,
 };
@@ -499,7 +497,7 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
             let mut order_dim = "".to_string();
             for (column_name_with_fun, _, _, col_key) in sql_part_group_infos.clone() {
                 if col_key == "ct" {
-                    order_dim = column_name_with_fun.clone();
+                    order_dim.clone_from(&column_name_with_fun);
                 } else {
                     partition_dim.push(column_name_with_fun);
                 }
@@ -510,7 +508,7 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
                     &format!("_.{}", if select.code == "_count" { "count".to_string() } else { select.code.clone() }),
                     &select.fun
                 ),
-                if partition_dim.len() > 0 {
+                if !partition_dim.is_empty() {
                     format!("PARTITION BY {} ORDER BY {}", partition_dim.join(","), order_dim)
                 } else {
                     format!("ORDER BY {}", order_dim)

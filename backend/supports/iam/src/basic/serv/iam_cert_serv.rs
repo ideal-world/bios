@@ -46,9 +46,8 @@ use crate::basic::serv::iam_cert_token_serv::IamCertTokenServ;
 use crate::basic::serv::iam_cert_user_pwd_serv::IamCertUserPwdServ;
 use crate::basic::serv::iam_key_cache_serv::IamIdentCacheServ;
 use crate::iam_config::{IamBasicConfigApi, IamConfig};
-use crate::iam_constants::{self, RBUM_SCOPE_LEVEL_TENANT};
+use crate::iam_constants::{self, IAM_AVATAR, RBUM_SCOPE_LEVEL_TENANT};
 use crate::iam_enumeration::{IamAccountLockStateKind, IamCertExtKind, IamCertKernelKind, IamCertTokenKind, IamRelKind, IamResKind};
-use crate::iam_initializer::{default_iam_send_avatar, ws_iam_send_client};
 
 lazy_static! {
     static ref SYNC_LOCK: Arc<Mutex<Option<usize>>> = Arc::new(Mutex::new(None));
@@ -419,8 +418,7 @@ impl IamCertServ {
                 Ok(())
             },
             &funs.cache(),
-            ws_iam_send_client().await.clone(),
-            default_iam_send_avatar().await.clone(),
+            IAM_AVATAR.to_string(),
             Some(vec![format!("account/{}", ctx.owner)]),
             ctx,
         )
@@ -1446,8 +1444,7 @@ impl IamCertServ {
                 Ok(())
             },
             &funs.cache(),
-            ws_iam_send_client().await.clone(),
-            default_iam_send_avatar().await.clone(),
+            IAM_AVATAR.to_owned(),
             Some(vec![format!("account/{}", ctx.owner)]),
             ctx,
         )

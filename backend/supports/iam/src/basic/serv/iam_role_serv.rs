@@ -30,10 +30,9 @@ use crate::basic::serv::iam_app_serv::IamAppServ;
 use crate::basic::serv::iam_key_cache_serv::IamIdentCacheServ;
 use crate::basic::serv::iam_rel_serv::IamRelServ;
 use crate::iam_config::{IamBasicConfigApi, IamBasicInfoManager, IamConfig};
-use crate::iam_constants::{self, RBUM_ITEM_ID_SUB_ROLE_LEN};
+use crate::iam_constants::{self, IAM_AVATAR, RBUM_ITEM_ID_SUB_ROLE_LEN};
 use crate::iam_constants::{RBUM_SCOPE_LEVEL_APP, RBUM_SCOPE_LEVEL_TENANT};
 use crate::iam_enumeration::{IamRelKind, IamRoleKind};
-use crate::iam_initializer::{default_iam_send_avatar, ws_iam_send_client};
 
 use super::clients::iam_kv_client::IamKvClient;
 use super::clients::iam_log_client::{IamLogClient, LogParamTag};
@@ -117,7 +116,7 @@ impl RbumItemCrudOperation<iam_role::ActiveModel, IamRoleAddReq, IamRoleModifyRe
             ctx,
         )
         .await;
-        IamKvClient::async_add_or_modify_key_name("iam_role".to_string(), id.to_string(), role.name.clone(), funs, ctx).await?;
+        IamKvClient::async_add_or_modify_key_name(funs.conf::<IamConfig>().spi.kv_role_prefix.clone(), id.to_string(), role.name.clone(), funs, ctx).await?;
 
         Ok(())
     }
@@ -197,8 +196,7 @@ impl RbumItemCrudOperation<iam_role::ActiveModel, IamRoleAddReq, IamRoleModifyRe
                     Ok(())
                 },
                 &funs.cache(),
-                ws_iam_send_client().await.clone(),
-                default_iam_send_avatar().await.clone(),
+                IAM_AVATAR.to_owned(),
                 Some(vec![format!("account/{}", ctx.owner)]),
                 ctx,
             )
@@ -220,7 +218,7 @@ impl RbumItemCrudOperation<iam_role::ActiveModel, IamRoleAddReq, IamRoleModifyRe
         if !op_describe.is_empty() {
             let _ = IamLogClient::add_ctx_task(LogParamTag::IamRole, Some(id.to_string()), op_describe, Some(op_kind), ctx).await;
         }
-        IamKvClient::async_add_or_modify_key_name("iam_role".to_string(), id.to_string(), role.name.clone(), funs, ctx).await?;
+        IamKvClient::async_add_or_modify_key_name(funs.conf::<IamConfig>().spi.kv_role_prefix.clone(), id.to_string(), role.name.clone(), funs, ctx).await?;
 
         Ok(())
     }
@@ -310,8 +308,7 @@ impl RbumItemCrudOperation<iam_role::ActiveModel, IamRoleAddReq, IamRoleModifyRe
                 Ok(())
             },
             &funs.cache(),
-            ws_iam_send_client().await.clone(),
-            default_iam_send_avatar().await.clone(),
+            IAM_AVATAR.to_owned(),
             Some(vec![format!("account/{}", ctx.owner)]),
             ctx,
         )
@@ -325,7 +322,7 @@ impl RbumItemCrudOperation<iam_role::ActiveModel, IamRoleAddReq, IamRoleModifyRe
             ctx,
         )
         .await;
-        IamKvClient::async_delete_key_name("iam_role".to_string(), id.to_string(), funs, ctx).await?;
+        IamKvClient::async_delete_key_name(funs.conf::<IamConfig>().spi.kv_role_prefix.clone(), id.to_string(), funs, ctx).await?;
         Ok(())
     }
 

@@ -1,5 +1,4 @@
-use bios_basic::{process::ci_processor::AppKeyConfig, rbum::rbum_config::RbumConfig};
-use bios_sdk_invoke::clients::event_client::EventTopicConfig;
+use bios_basic::rbum::rbum_config::RbumConfig;
 use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
 use std::{fmt::Debug, sync::Mutex};
@@ -8,11 +7,11 @@ use tardis::basic::{error::TardisError, result::TardisResult};
 #[serde(default)]
 pub struct EventConfig {
     pub rbum: RbumConfig,
-    pub log_event: EventTopicConfig,
-    pub app_key: AppKeyConfig,
+    pub enable: bool,
     pub event_url: String,
+    pub base_url: String,
     pub event_bus_sk: String,
-    pub spi_app_id: String,
+    pub avatars: Vec<String>,
     pub resend_threshold: u32,
     pub resend_interval_sec: Option<u32>,
 }
@@ -21,11 +20,11 @@ impl Default for EventConfig {
     fn default() -> Self {
         EventConfig {
             rbum: Default::default(),
-            log_event: Default::default(),
-            app_key: Default::default(),
+            enable: false,
+            base_url: "http://localhost:8080/event".to_string(),
+            avatars: Vec::new(),
             event_url: "".to_string(),
             event_bus_sk: "".to_string(),
-            spi_app_id: "".to_string(),
             resend_threshold: 3,
             resend_interval_sec: None,
         }

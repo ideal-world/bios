@@ -1,10 +1,9 @@
 use crate::basic::dto::iam_filer_dto::{IamAccountFilterReq, IamAppFilterReq, IamTenantFilterReq};
+use crate::basic::serv::clients::iam_kv_client::IamKvClient;
 use crate::basic::serv::clients::iam_search_client::IamSearchClient;
-use crate::iam_initializer::{default_iam_send_avatar, ws_iam_send_client};
 use bios_basic::process::task_processor::TaskProcessor;
 use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
-use bios_sdk_invoke::clients::spi_kv_client::SpiKvClient;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::result::TardisResult;
 use tardis::web::context_extractor::TardisContextExtractor;
@@ -16,7 +15,7 @@ use crate::basic::serv::iam_account_serv::IamAccountServ;
 use crate::basic::serv::iam_app_serv::IamAppServ;
 use crate::basic::serv::iam_tenant_serv::IamTenantServ;
 use crate::iam_config::IamConfig;
-use crate::iam_constants;
+use crate::iam_constants::{self, IAM_AVATAR};
 #[derive(Clone, Default)]
 pub struct IamCsSpiDataApi;
 
@@ -83,13 +82,7 @@ impl IamCsSpiDataApi {
                     )
                     .await?;
                     for app in list {
-                        SpiKvClient::add_or_modify_key_name(
-                            &format!("{}:{}", funs.conf::<IamConfig>().spi.kv_app_prefix.clone(), app.id),
-                            &app.name.clone(),
-                            &funs,
-                            &task_ctx,
-                        )
-                        .await?;
+                        IamKvClient::add_or_modify_key_name(&funs.conf::<IamConfig>().spi.kv_app_prefix.clone(), &app.id, &app.name.clone(), None, &funs, &task_ctx).await?;
                     }
 
                     //tenant kv
@@ -111,9 +104,11 @@ impl IamCsSpiDataApi {
                     )
                     .await?;
                     for tenant in list {
-                        SpiKvClient::add_or_modify_key_name(
-                            &format!("{}:{}", funs.conf::<IamConfig>().spi.kv_tenant_prefix.clone(), tenant.name),
+                        IamKvClient::add_or_modify_key_name(
+                            &funs.conf::<IamConfig>().spi.kv_tenant_prefix.clone(),
+                            &tenant.id,
                             &tenant.name.clone(),
+                            None,
                             &funs,
                             &task_ctx,
                         )
@@ -161,8 +156,7 @@ impl IamCsSpiDataApi {
                     Ok(())
                 },
                 &funs.cache(),
-                ws_iam_send_client().await.clone(),
-                default_iam_send_avatar().await.clone(),
+                IAM_AVATAR.to_owned(),
                 Some(vec![format!("account/{}", ctx.owner)]),
                 ctx,
             )

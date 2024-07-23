@@ -32,10 +32,13 @@ spi_dispatch_service! {
             key_like: Option<bool>,
             page_number: u32,
             page_size: u16,
+            disable: Option<bool>,
             desc_sort_by_create: Option<bool>,
             desc_sort_by_update: Option<bool>
         ) -> TardisResult<TardisPage<KvTagFindResp>>;
         match_items(match_req: KvItemMatchReq) -> TardisResult<TardisPage<KvItemSummaryResp>>;
         delete_item(key: String) -> TardisResult<()>;
+        disable_item(key: String) -> TardisResult<()>;
+        enabled_item(key: String) -> TardisResult<()>;
     }
 }

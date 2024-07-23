@@ -17,6 +17,7 @@ impl FlowConfigServ {
                 &format!("{}:config:{}", flow_constants::DOMAIN_CODE, req.code.clone()),
                 &req.value,
                 None,
+                None,
                 Some(RbumScopeLevelKind::Root.to_int()),
                 funs,
                 ctx,
@@ -28,7 +29,7 @@ impl FlowConfigServ {
 
     pub async fn get_config(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<TardisPage<KvItemSummaryResp>>> {
         let prefix = format!("{}:config:", flow_constants::DOMAIN_CODE);
-        let mut result = SpiKvClient::match_items_by_key_prefix(prefix.clone(), None, 1, 100, funs, ctx).await?;
+        let mut result = SpiKvClient::match_items_by_key_prefix(prefix.clone(), None, 1, 100, Some(true), funs, ctx).await?;
         result.as_mut().map(|configs| configs.records.iter_mut().map(|config| config.key = config.key.replace(&prefix, "")).collect::<Vec<_>>());
         Ok(result)
     }

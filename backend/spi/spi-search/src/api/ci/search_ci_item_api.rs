@@ -2,6 +2,8 @@ use tardis::basic::dto::TardisContext;
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem::web::Query;
 
+use tardis::log::error;
+use tardis::tokio;
 use tardis::web::poem_openapi;
 use tardis::web::poem_openapi::param::Path;
 use tardis::web::poem_openapi::payload::Json;
@@ -76,8 +78,14 @@ impl SearchCiItemApi {
             own_paths: "".to_string(),
             ..ctx.0.clone()
         };
-        let funs = crate::get_tardis_inst();
-        search_item_serv::refresh_tsv(&tag.0, &funs, &global_ctx).await?;
+        tokio::spawn(async move {
+            let funs = crate::get_tardis_inst();
+            let result = search_item_serv::refresh_tsv(&tag.0, &funs, &global_ctx).await;
+            if let Err(err) = result {
+                error!("[BIOS.Search] failed to refresh: {}", err);
+            }
+        });
+
         TardisResp::ok(Void {})
     }
 }

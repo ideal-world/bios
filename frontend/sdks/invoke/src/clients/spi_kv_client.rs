@@ -10,8 +10,35 @@ use tardis::TardisFunsInst;
 use crate::invoke_enumeration::InvokeModuleKind;
 
 use super::base_spi_client::BaseSpiClient;
+
+pub mod event {
+    use crate::clients::event_client::Event;
+    pub const KV_AVATAR: &str = "spi-kv";
+
+    const EVENT_ADD_KV: &str = "spi-kv/add";
+    const EVENT_DELETE_KV: &str = "spi-kv/delete";
+
+    impl Event for super::KvItemAddOrModifyReq {
+        const CODE: &'static str = EVENT_ADD_KV;
+    }
+    impl Event for super::KvItemDeleteReq {
+        const CODE: &'static str = EVENT_DELETE_KV;
+    }
+}
 #[derive(Clone, Debug, Default)]
 pub struct SpiKvClient;
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct KvItemAddOrModifyReq {
+    pub key: String,
+    pub value: Value,
+    pub info: Option<String>,
+    pub scope_level: Option<i16>,
+}
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct KvItemDeleteReq {
+    pub key: String,
+}
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Clone, Debug)]
 pub struct KvItemSummaryResp {
@@ -19,6 +46,7 @@ pub struct KvItemSummaryResp {
     pub key: String,
     pub value: Value,
     pub info: String,
+    pub disable: bool,
     pub create_time: DateTime<Utc>,
     pub update_time: DateTime<Utc>,
 }
@@ -29,6 +57,7 @@ pub struct KvItemDetailResp {
     pub key: String,
     pub value: Value,
     pub info: String,
+    pub disable: bool,
     pub create_time: DateTime<Utc>,
     pub update_time: DateTime<Utc>,
 }
@@ -38,6 +67,7 @@ impl SpiKvClient {
         key: &str,
         value: &T,
         info: Option<String>,
+        disable: Option<bool>,
         scope_level: Option<i16>,
         funs: &TardisFunsInst,
         ctx: &TardisContext,
@@ -48,13 +78,14 @@ impl SpiKvClient {
             "key":key.to_string(),
             "value":value,
             "info":info,
+            "disable":disable,
             "scope_level":scope_level,
         });
         funs.web_client().put_obj_to_str(&format!("{kv_url}/ci/item"), &json, headers.clone()).await?;
         Ok(())
     }
 
-    pub async fn add_or_modify_key_name(key: &str, name: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    pub async fn add_or_modify_key_name(key: &str, name: &str, disable: Option<bool>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let kv_url = BaseSpiClient::module_url(InvokeModuleKind::Kv, funs).await?;
         let headers = BaseSpiClient::headers(None, funs, ctx).await?;
         funs.web_client()
@@ -62,7 +93,8 @@ impl SpiKvClient {
                 &format!("{kv_url}/ci/scene/key-name"),
                 &json!({
                     "key":key.to_string(),
-                    "name": name.to_string()
+                    "name": name.to_string(),
+                    "disable": disable,
                 }),
                 headers.clone(),
             )
@@ -75,6 +107,7 @@ impl SpiKvClient {
         extract: Option<String>,
         page_number: u32,
         page_size: u16,
+        disable: Option<bool>,
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<Option<TardisPage<KvItemSummaryResp>>> {
@@ -83,6 +116,9 @@ impl SpiKvClient {
         let mut url = format!("{kv_url}/ci/item/match?key_prefix={key_prefix}&page_number={page_number}&page_size={page_size}");
         if let Some(extract) = extract {
             url = format!("{url}&={}", extract);
+        }
+        if let Some(disable) = disable {
+            url = format!("{url}&disable={disable}");
         }
         let resp = funs.web_client().get::<TardisResp<TardisPage<KvItemSummaryResp>>>(&url, headers.clone()).await?;
         BaseSpiClient::package_resp(resp)
@@ -103,6 +139,38 @@ impl SpiKvClient {
         let kv_url = BaseSpiClient::module_url(InvokeModuleKind::Kv, funs).await?;
         let headers = BaseSpiClient::headers(None, funs, ctx).await?;
         funs.web_client().delete_to_void(&format!("{kv_url}/ci/item?key={key}"), headers.clone()).await?;
+        Ok(())
+    }
+
+    pub async fn disable_item(key: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let kv_url = BaseSpiClient::module_url(InvokeModuleKind::Kv, funs).await?;
+        let headers = BaseSpiClient::headers(None, funs, ctx).await?;
+        let _ = funs
+            .web_client()
+            .put_obj_to_str(
+                &format!("{kv_url}/ci/disable/item?key={key}"),
+                &json!({
+                    "key":key.to_string()
+                }),
+                headers.clone(),
+            )
+            .await?;
+        Ok(())
+    }
+
+    pub async fn enabled_item(key: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let kv_url = BaseSpiClient::module_url(InvokeModuleKind::Kv, funs).await?;
+        let headers = BaseSpiClient::headers(None, funs, ctx).await?;
+        let _ = funs
+            .web_client()
+            .put_obj_to_str(
+                &format!("{kv_url}/ci/enabled/item"),
+                &json!({
+                    "key":key.to_string()
+                }),
+                headers.clone(),
+            )
+            .await?;
         Ok(())
     }
 }

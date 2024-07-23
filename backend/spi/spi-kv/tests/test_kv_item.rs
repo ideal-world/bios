@@ -11,7 +11,7 @@ use tardis::web::web_resp::{TardisPage, TardisResp, Void};
 pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
     let mut ctx = TardisContext {
         own_paths: "t1/app001".to_string(),
-        ak: "".to_string(),
+        ak: "app001".to_string(),
         roles: vec![],
         groups: vec![],
         owner: "app001".to_string(),

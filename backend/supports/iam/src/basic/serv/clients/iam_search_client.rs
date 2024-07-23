@@ -2,9 +2,8 @@ use std::collections::HashSet;
 
 use bios_basic::rbum::{dto::rbum_filer_dto::RbumBasicFilterReq, serv::rbum_item_serv::RbumItemCrudOperation};
 use bios_sdk_invoke::{
-    clients::spi_search_client::{SpiSearchClient, SpiSearchEventExt},
+    clients::{event_client::BiosEventCenter, spi_search_client::SpiSearchClient},
     dto::search_item_dto::{SearchItemAddReq, SearchItemModifyReq, SearchItemVisitKeysReq},
-    invoke_config::InvokeConfigApi,
 };
 use itertools::Itertools;
 
@@ -23,9 +22,8 @@ use crate::{
         serv::{iam_account_serv::IamAccountServ, iam_role_serv::IamRoleServ, iam_set_serv::IamSetServ, iam_tenant_serv::IamTenantServ},
     },
     iam_config::IamConfig,
-    iam_constants,
+    iam_constants::{self, IAM_AVATAR},
     iam_enumeration::IamSetKind,
-    iam_initializer::{default_search_avatar, ws_search_client},
 };
 pub struct IamSearchClient;
 
@@ -146,8 +144,16 @@ impl IamSearchClient {
         if *is_modify {
             let modify_req = SearchItemModifyReq {
                 kind: Some(funs.conf::<IamConfig>().spi.search_account_tag.clone()),
-                title: Some(account_resp.name.clone()),
-                name: Some(account_resp.name.clone()),
+                title: if account_resp.disabled {
+                    Some(format!("{}(已注销)", account_resp.name.clone()))
+                } else {
+                    Some(account_resp.name.clone())
+                },
+                name: if account_resp.disabled {
+                    Some(format!("{}(已注销)", account_resp.name.clone()))
+                } else {
+                    Some(account_resp.name.clone())
+                },
                 content: Some(format!("{},{:?}", account_resp.name, account_certs,)),
                 owner: Some(account_resp.owner),
                 own_paths: if !account_resp.own_paths.is_empty() {
@@ -182,19 +188,24 @@ impl IamSearchClient {
                     roles: Some(account_roles),
                     groups: Some(account_resp_dept_id),
                 }),
+                kv_disable: Some(account_resp.disabled),
             };
-            if let Some(ws_client) = ws_search_client().await {
-                ws_client.publish_modify_item(tag, key, &modify_req, default_search_avatar().await.clone(), funs.invoke_conf_spi_app_id(), ctx).await?;
+            if let Some(event_center) = BiosEventCenter::worker_queue() {
+                event_center.modify_item_and_name(IAM_AVATAR, &tag, &key, &modify_req, funs, ctx).await?;
             } else {
-                SpiSearchClient::modify_item(&tag, &key, &modify_req, funs, ctx).await?;
+                SpiSearchClient::modify_item_and_name(&tag, &key, &modify_req, funs, ctx).await?;
             }
         } else {
+            let name = if account_resp.disabled {
+                format!("{}(已注销)", account_resp.name.clone())
+            } else {
+                account_resp.name.clone()
+            };
             let add_req = SearchItemAddReq {
                 tag,
                 kind: funs.conf::<IamConfig>().spi.search_account_tag.clone(),
                 key: TrimString(key),
-                title: account_resp.name.clone(),
-                name: Some(account_resp.name.clone()),
+                title: name.clone(),
                 content: format!("{},{:?}", account_resp.name, account_certs,),
                 owner: Some(account_resp.owner),
                 own_paths: if !account_resp.own_paths.is_empty() {
@@ -228,11 +239,12 @@ impl IamSearchClient {
                     roles: Some(account_roles),
                     groups: Some(account_resp_dept_id),
                 }),
+                kv_disable: Some(account_resp.disabled),
             };
-            if let Some(ws_client) = ws_search_client().await {
-                ws_client.publish_add_item(&add_req, default_search_avatar().await.clone(), funs.invoke_conf_spi_app_id(), ctx).await?;
+            if let Some(event_center) = BiosEventCenter::worker_queue() {
+                event_center.add_item_and_name(IAM_AVATAR, &add_req, Some(name), funs, ctx).await?;
             } else {
-                SpiSearchClient::add_item(&add_req, funs, ctx).await?;
+                SpiSearchClient::add_item_and_name(&add_req, Some(name), funs, ctx).await?;
             }
         }
         Ok(())
@@ -241,10 +253,10 @@ impl IamSearchClient {
     // account 全局搜索删除埋点方法
     pub async fn delete_account_search(account_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let tag = funs.conf::<IamConfig>().spi.search_account_tag.clone();
-        if let Some(ws_client) = ws_search_client().await {
-            ws_client.publish_delete_item(tag, account_id.to_owned(), default_search_avatar().await.clone(), funs.invoke_conf_spi_app_id(), ctx).await?;
+        if let Some(event_center) = BiosEventCenter::worker_queue() {
+            event_center.delete_item_and_name(IAM_AVATAR, &tag, account_id, funs, ctx).await?;
         } else {
-            SpiSearchClient::delete_item(&tag, account_id, funs, ctx).await?;
+            SpiSearchClient::delete_item_and_name(&tag, account_id, funs, ctx).await?;
         }
         Ok(())
     }

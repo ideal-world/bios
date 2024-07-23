@@ -8,7 +8,7 @@ use bios_spi_conf::{
     },
 };
 use tardis::{
-    basic::{dto::TardisContext, field::TrimString, result::TardisResult},
+    basic::{dto::TardisContext, result::TardisResult},
     log,
     serde_json::{json, Value},
     testcontainers, tokio, TardisFuns,
