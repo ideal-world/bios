@@ -9,6 +9,7 @@ use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 use tardis::futures_util::future::join_all;
+use tardis::serde_json::json;
 use tardis::tokio::sync::Mutex;
 
 use tardis::web::web_resp::TardisPage;
@@ -1302,7 +1303,8 @@ impl IamCertServ {
     }
 
     pub async fn add_or_modify_sync_third_integration_config(reqs: Vec<IamThirdIntegrationSyncAddReq>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        let headers = vec![("Tardis-Context".to_string(), TardisFuns::crypto.base64.encode(TardisFuns::json.obj_to_string(&ctx)?))];
+        let tardis_ctx = TardisFuns::crypto.base64.encode(TardisFuns::json.obj_to_string(&ctx)?);
+        let headers = vec![("Tardis-Context".to_string(), tardis_ctx.clone())];
         let schedule_url = funs.conf::<IamConfig>().spi.schedule_url.clone();
         if schedule_url.is_empty() {
             return Err(funs.err().not_implemented("third_integration_config", "add_or_modify", "schedule is not impl!", "501-iam-schedule_not_impl_error"));
@@ -1314,11 +1316,14 @@ impl IamCertServ {
                     funs.web_client()
                         .put_obj_to_str(
                             &format!("{schedule_url}/ci/schedule/jobs"),
-                            &HashMap::from([
-                                ("code", funs.conf::<IamConfig>().third_integration_schedule_code.clone()),
-                                ("cron", sync_cron),
-                                ("callback_url", format!("{}/ci/cert/sync", funs.conf::<IamConfig>().iam_base_url,)),
-                            ]),
+                            &json!({
+                                            "code": funs.conf::<IamConfig>().third_integration_schedule_code.clone(),
+                                            "cron": sync_cron,
+                                            "callback_url": format!("{}/ci/cert/sync", funs.conf::<IamConfig>().iam_base_url,),
+                                            "callback_headers":{
+                                              "Tardis-Context":tardis_ctx
+                                            }
+                            }),
                             headers.clone(),
                         )
                         .await?;
