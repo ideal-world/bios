@@ -138,8 +138,13 @@ pub(crate) async fn fact_record_load(
 
     let fact_col_conf_set = stats_pg_conf_fact_col_serv::find_by_fact_conf_key(fact_conf_key, funs, ctx, inst).await?;
 
-    let mut fields = vec!["key".to_string(), "own_paths".to_string(), "ct".to_string()];
-    let mut values = vec![Value::from(fact_record_key), Value::from(add_req.own_paths), Value::from(add_req.ct)];
+    let mut fields = vec!["key".to_string(), "own_paths".to_string(), "ct".to_string(), "idempotent_id".to_string()];
+    let mut values = vec![
+        Value::from(fact_record_key),
+        Value::from(add_req.own_paths),
+        Value::from(add_req.ct),
+        Value::from(add_req.idempotent_id.clone().unwrap_or_default()),
+    ];
     let req_data = add_req.data.as_object().ok_or_else(|| {
         funs.err().bad_request(
             "fact_record",
@@ -150,6 +155,13 @@ pub(crate) async fn fact_record_load(
             "400-spi-stats-invalid-request",
         )
     })?;
+    // 如果存在幂等id 且已经存在对应数据,则丢弃数据
+    if let Some(idempotent_id) = add_req.idempotent_id {
+        let idempotent_data_resp = fact_get_idempotent_record_raw(fact_conf_key, fact_record_key, &idempotent_id, &conn, ctx).await?;
+        if idempotent_data_resp.is_some() {
+            return Ok(());
+        }
+    }
     let latest_data_resp = fact_get_latest_record_raw(fact_conf_key, fact_record_key, &conn, ctx).await?;
     fields.push("ext".to_string());
     if let Some(latest_data) = latest_data_resp.as_ref() {
@@ -180,7 +192,7 @@ pub(crate) async fn fact_record_load(
                     "400-spi˚-stats-fail-to-get-dim-config-key",
                 ));
             };
-            // TODO check value enum when stable_ds =true
+            // TODO check value enum when stable_ds = true
             fields.push(req_fact_col_key.to_string());
             if fact_col_conf.dim_multi_values.unwrap_or(false) {
                 values.push(dim_conf.data_type.json_to_sea_orm_value_array(req_fact_col_value, false)?);
@@ -322,10 +334,17 @@ pub(crate) async fn fact_records_load(
     let fact_col_conf_set = stats_pg_conf_fact_col_serv::find_by_fact_conf_key(fact_conf_key, funs, ctx, inst).await?;
 
     let mut has_fields_init = false;
-    let mut fields = vec!["key".to_string(), "own_paths".to_string(), "ext".to_string(), "ct".to_string()];
+    let mut fields = vec!["key".to_string(), "own_paths".to_string(), "ext".to_string(), "ct".to_string(), "idempotent_id".to_string()];
     let mut value_sets = vec![];
 
     for add_req in add_req_set {
+        // 如果存在幂等id 且已经存在对应数据,则丢弃数据
+        if let Some(idempotent_id) = add_req.idempotent_id.clone() {
+            let idempotent_data_resp = fact_get_idempotent_record_raw(fact_conf_key, &add_req.key, &idempotent_id, &conn, ctx).await?;
+            if idempotent_data_resp.is_some() {
+                continue;
+            }
+        }
         let Some(req_data) = add_req.data.as_object() else {
             return Err(funs.err().bad_request(
                 "fact_record",
@@ -343,6 +362,7 @@ pub(crate) async fn fact_records_load(
                 TardisFuns::json.str_to_json("{}")?
             }),
             Value::from(add_req.ct),
+            Value::from(add_req.idempotent_id.unwrap_or_default()),
         ];
 
         for fact_col_conf in &fact_col_conf_set {
@@ -862,6 +882,23 @@ async fn fact_get_latest_record_raw(
 ) -> TardisResult<Option<tardis::db::sea_orm::QueryResult>> {
     let table_name = package_table_name(&format!("stats_inst_fact_{fact_conf_key}"), ctx);
     let result = conn.query_one(&format!("SELECT * FROM {table_name} WHERE key = $1 ORDER BY ct DESC"), vec![Value::from(dim_record_key)]).await?;
+    Ok(result)
+}
+
+async fn fact_get_idempotent_record_raw(
+    fact_conf_key: &str,
+    dim_record_key: &str,
+    idempotent_id: &str,
+    conn: &TardisRelDBlConnection,
+    ctx: &TardisContext,
+) -> TardisResult<Option<tardis::db::sea_orm::QueryResult>> {
+    let table_name = package_table_name(&format!("stats_inst_fact_{fact_conf_key}"), ctx);
+    let result = conn
+        .query_one(
+            &format!("SELECT * FROM {table_name} WHERE key = $1 and idempotent_id = $2 ORDER BY ct DESC"),
+            vec![Value::from(dim_record_key), Value::from(idempotent_id)],
+        )
+        .await?;
     Ok(result)
 }
 

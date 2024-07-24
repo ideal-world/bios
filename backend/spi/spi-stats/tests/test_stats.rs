@@ -76,7 +76,7 @@ async fn init_data() -> TardisResult<()> {
 
     client.set_auth(&TardisContext {
         own_paths: "t1/a1".to_string(),
-        ak: "".to_string(),
+        ak: "app001".to_string(),
         roles: vec![],
         groups: vec![],
         owner: "app001".to_string(),

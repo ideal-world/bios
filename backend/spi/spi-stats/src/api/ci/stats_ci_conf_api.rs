@@ -263,8 +263,8 @@ impl StatsCiConfApi {
         let funs = crate::get_tardis_inst();
         let resp = stats_conf_fact_col_serv::paginate(
             fact_key.0,
-            Some(dim_key.0),
             key.0,
+            Some(dim_key.0),
             show_name.0,
             rel_external_id.0,
             page_number.0,
