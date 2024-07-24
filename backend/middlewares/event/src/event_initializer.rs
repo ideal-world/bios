@@ -23,10 +23,9 @@ use crate::{
 pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
     let mut funs = TardisFuns::inst_with_db_conn(DOMAIN_CODE.to_string(), None);
     let config = funs.conf::<EventConfig>();
-    if !config.enable {
-        return Ok(());
+    if config.enable {
+        create_event_center()?;
     }
-    create_event_center()?;
     init_api(web_server).await?;
     init_cluster_resource().await;
     let ctx = TardisContext {
