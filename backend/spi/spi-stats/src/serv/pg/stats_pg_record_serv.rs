@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use bios_basic::spi::{
     spi_funs::SpiBsInst,
     spi_initializer::common_pg::{self, package_table_name},
@@ -171,6 +173,9 @@ pub(crate) async fn fact_record_load(
     } else {
         values.push(add_req.ext.unwrap_or(TardisFuns::json.str_to_json("{}")?).into());
     }
+    // Because Dimension and Measure may share the same field
+    // Existing fields are not stored in duplicate
+    let mut exist_fields = HashSet::new();
     for (req_fact_col_key, req_fact_col_value) in req_data {
         let fact_col_conf = fact_col_conf_set.iter().find(|c| &c.key == req_fact_col_key).ok_or_else(|| {
             funs.err().not_found(
@@ -180,6 +185,10 @@ pub(crate) async fn fact_record_load(
                 "404-spi-stats-fact-col-conf-not-exist",
             )
         })?;
+        if exist_fields.contains(req_fact_col_key) {
+            continue;
+        }
+        exist_fields.insert(req_fact_col_key.to_string());
         if fact_col_conf.kind == StatsFactColKind::Dimension {
             let Some(key) = fact_col_conf.dim_rel_conf_dim_key.as_ref() else {
                 return Err(funs.err().not_found("fact_record", "load", "Fail to get conf_dim_key", "400-spi-stats-fail-to-get-dim-config-key"));
@@ -229,6 +238,10 @@ pub(crate) async fn fact_record_load(
         if let Some(latest_data) = latest_data_resp {
             for fact_col_conf in fact_col_conf_set {
                 if !req_data.contains_key(&fact_col_conf.key) {
+                    if exist_fields.contains(&fact_col_conf.key) {
+                        continue;
+                    }
+                    exist_fields.insert(fact_col_conf.key.clone());
                     fields.push(fact_col_conf.key.to_string());
                     if fact_col_conf.kind == StatsFactColKind::Dimension {
                         let Some(dim_rel_conf_dim_key) = &fact_col_conf.dim_rel_conf_dim_key else {
@@ -265,6 +278,10 @@ pub(crate) async fn fact_record_load(
         } else {
             for fact_col_conf in fact_col_conf_set {
                 if !req_data.contains_key(&fact_col_conf.key) {
+                    if exist_fields.contains(&fact_col_conf.key) {
+                        continue;
+                    }
+                    exist_fields.insert(fact_col_conf.key.clone());
                     fields.push(fact_col_conf.key.to_string());
                     if fact_col_conf.kind == StatsFactColKind::Dimension {
                         let Some(dim_rel_conf_dim_key) = &fact_col_conf.dim_rel_conf_dim_key else {
@@ -364,8 +381,14 @@ pub(crate) async fn fact_records_load(
             Value::from(add_req.ct),
             Value::from(add_req.idempotent_id.unwrap_or_default()),
         ];
-
+        // Because Dimension and Measure may share the same field
+        // Existing fields are not stored in duplicate
+        let mut exist_fields = HashSet::new();
         for fact_col_conf in &fact_col_conf_set {
+            if exist_fields.contains(&fact_col_conf.key) {
+                continue;
+            }
+            exist_fields.insert(fact_col_conf.key.clone());
             if !has_fields_init {
                 fields.push(fact_col_conf.key.to_string());
             }
