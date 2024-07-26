@@ -12,7 +12,7 @@ use tardis::{
         reldb_client::{TardisRelDBClient, TardisRelDBlConnection},
         sea_orm::{FromQueryResult, Value},
     },
-    log::info,
+    log::{info, trace},
     serde_json,
     web::web_resp::TardisPage,
     TardisFuns, TardisFunsInst,
@@ -159,7 +159,7 @@ pub(crate) async fn fact_record_load(
     })?;
     // 如果存在幂等id 且已经存在对应数据,则丢弃数据
     if let Some(idempotent_id) = add_req.idempotent_id {
-        let idempotent_data_resp = fact_get_idempotent_record_raw(fact_conf_key, fact_record_key, &idempotent_id, &conn, ctx).await?;
+        let idempotent_data_resp = fact_get_idempotent_record_raw(fact_conf_key, &idempotent_id, &conn, ctx).await?;
         if idempotent_data_resp.is_some() {
             return Ok(());
         }
@@ -357,7 +357,7 @@ pub(crate) async fn fact_records_load(
     for add_req in add_req_set {
         // 如果存在幂等id 且已经存在对应数据,则丢弃数据
         if let Some(idempotent_id) = add_req.idempotent_id.clone() {
-            let idempotent_data_resp = fact_get_idempotent_record_raw(fact_conf_key, &add_req.key, &idempotent_id, &conn, ctx).await?;
+            let idempotent_data_resp = fact_get_idempotent_record_raw(fact_conf_key, &idempotent_id, &conn, ctx).await?;
             if idempotent_data_resp.is_some() {
                 continue;
             }
@@ -910,7 +910,6 @@ async fn fact_get_latest_record_raw(
 
 async fn fact_get_idempotent_record_raw(
     fact_conf_key: &str,
-    dim_record_key: &str,
     idempotent_id: &str,
     conn: &TardisRelDBlConnection,
     ctx: &TardisContext,
@@ -918,8 +917,8 @@ async fn fact_get_idempotent_record_raw(
     let table_name = package_table_name(&format!("stats_inst_fact_{fact_conf_key}"), ctx);
     let result = conn
         .query_one(
-            &format!("SELECT * FROM {table_name} WHERE key = $1 and idempotent_id = $2 ORDER BY ct DESC"),
-            vec![Value::from(dim_record_key), Value::from(idempotent_id)],
+            &format!("SELECT * FROM {table_name} WHERE and idempotent_id = $2 ORDER BY ct DESC"),
+            vec![Value::from(idempotent_id)],
         )
         .await?;
     Ok(result)
