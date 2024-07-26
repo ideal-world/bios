@@ -720,7 +720,7 @@ impl IamAccountServ {
             ctx,
         )
         .await
-        .map(|r| r.into_iter().map(|r| format!("{},{},{}", r.id, r.name, r.icon)).collect())
+        .map(|r| r.into_iter().map(|r| format!("{},{},{}", r.id, if r.disabled { format!("{}(已注销)", r.name) } else { r.name }, r.icon)).collect())
     }
 
     pub async fn find_account_online_by_ids(ids: Vec<String>, funs: &TardisFunsInst, _ctx: &TardisContext) -> TardisResult<Vec<String>> {
