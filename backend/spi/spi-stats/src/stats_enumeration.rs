@@ -296,7 +296,9 @@ impl StatsDataTypeKind {
 
     pub(crate) fn to_pg_group(&self, column_name: &str, multi_values: bool, time_window_fun: &Option<StatsQueryTimeWindowKind>) -> Option<String> {
         if multi_values {
-            Some(format!("unnest(array_append({},''))", column_name))
+            Some(format!(
+                "unnest(case when array_length({column_name},1) is null then array_append({column_name},'') else {column_name} end)"
+            ))
         } else if let Some(time_window_fun) = time_window_fun {
             if self != &StatsDataTypeKind::Date && self != &StatsDataTypeKind::DateTime {
                 return None;

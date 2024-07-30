@@ -13,6 +13,13 @@ pub struct StatsFactRecordLoadReq {
     pub own_paths: String,
     /// Create time
     pub ct: DateTime<Utc>,
+
+    /// Idempotent id
+    /// ps: The idempotent id is used to ensure that the same request is not processed repeatedly
+    /// 幂等id
+    /// ps: 幂等id用于确保同一个请求不会重复处理
+    pub idempotent_id: Option<String>,
+    
     /// Field data
     /// 字段数据
     ///
@@ -35,6 +42,12 @@ pub struct StatsFactRecordsLoadReq {
     pub own_paths: String,
     /// Create time
     pub ct: DateTime<Utc>,
+    /// Idempotent id
+    /// ps: The idempotent id is used to ensure that the same request is not processed repeatedly
+    ///
+    /// 幂等id
+    /// ps: 幂等id用于确保同一个请求不会重复处理
+    pub idempotent_id: Option<String>,
     /// Field data
     /// 字段数据
     ///
