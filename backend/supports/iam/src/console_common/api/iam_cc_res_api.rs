@@ -6,7 +6,7 @@ use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::iam_constants;
 use crate::iam_enumeration::IamSetKind;
 use bios_basic::helper::request_helper::try_set_real_ip_from_req_to_ctx;
-use bios_basic::rbum::dto::rbum_set_dto::RbumSetTreeResp;
+use bios_basic::rbum::dto::rbum_set_dto::{RbumSetTreeCateResp, RbumSetTreeResp};
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem::web::Json;
 use tardis::web::poem::Request;
@@ -31,6 +31,18 @@ impl IamCcResApi {
         let result = IamSetServ::get_menu_tree_by_roles(&set_id, &ctx.0.roles, &funs, &ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
+    }
+
+    /// build Menu Tree
+    /// 构造菜单树
+    #[oai(path = "/tree/build", method = "get")]
+    async fn build_menu_tree(&self, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<RbumSetTreeCateResp> {
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
+        let funs = iam_constants::get_tardis_inst();
+        let set_id = IamSetServ::get_set_id_by_code(&IamSetServ::get_default_code(&IamSetKind::Res, ""), true, &funs, &ctx.0).await?;
+        let result = IamSetServ::get_menu_tree_by_roles(&set_id, &ctx.0.roles, &funs, &ctx.0).await?;
+        ctx.0.execute_task().await?;
+        TardisResp::ok(result.to_trees())
     }
 
     /// Find res by apps
