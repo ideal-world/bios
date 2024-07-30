@@ -19,7 +19,7 @@ pub struct SearchItemAddReq {
     pub kind: String,
     #[oai(validator(min_length = "2"))]
     pub key: TrimString,
-    #[oai(validator(min_length = "2"))]
+    #[oai(validator(min_length = "1"))]
     pub title: String,
     // #[oai(validator(min_length = "2"))]
     pub content: String,
@@ -54,7 +54,7 @@ impl From<bios_sdk_invoke::dto::search_item_dto::SearchItemAddReq> for SearchIte
 pub struct SearchItemModifyReq {
     #[oai(validator(min_length = "2"))]
     pub kind: Option<String>,
-    #[oai(validator(min_length = "2"))]
+    #[oai(validator(min_length = "1"))]
     pub title: Option<String>,
     // #[oai(validator(min_length = "2"))]
     pub content: Option<String>,
