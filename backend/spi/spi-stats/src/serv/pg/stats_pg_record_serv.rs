@@ -917,7 +917,7 @@ async fn fact_get_idempotent_record_raw(
     let table_name = package_table_name(&format!("stats_inst_fact_{fact_conf_key}"), ctx);
     let result = conn
         .query_one(
-            &format!("SELECT * FROM {table_name} WHERE idempotent_id = $2 ORDER BY ct DESC"),
+            &format!("SELECT * FROM {table_name} WHERE idempotent_id = $1 ORDER BY ct DESC"),
             vec![Value::from(idempotent_id)],
         )
         .await?;

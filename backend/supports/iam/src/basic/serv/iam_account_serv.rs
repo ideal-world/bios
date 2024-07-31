@@ -525,7 +525,7 @@ impl IamAccountServ {
         let groups = IamSetServ::find_flat_set_items(&org_set_id, &account.id, false, funs, &mock_tenant_ctx).await?;
         let account = IamAccountDetailAggResp {
             id: account.id.clone(),
-            name: account.name,
+            name: if account.disabled { format!("{}(已注销)", account.name) } else { account.name },
             own_paths: account.own_paths,
             owner: account.owner,
             owner_name: account.owner_name,
@@ -602,7 +602,7 @@ impl IamAccountServ {
         for account in accounts.records {
             account_aggs.push(IamAccountSummaryAggResp {
                 id: account.id.clone(),
-                name: account.name,
+                name: if account.disabled { format!("{}(已注销)", account.name) } else { account.name },
                 own_paths: account.own_paths,
                 owner: account.owner,
                 create_time: account.create_time,
