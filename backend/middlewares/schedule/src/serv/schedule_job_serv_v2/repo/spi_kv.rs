@@ -44,7 +44,7 @@ impl super::Repository for SpiKv {
     }
 
     async fn get_paged(&self, page: u32, size: u16) -> Result<TardisPage<ScheduleJob>, TardisError> {
-        let resp = SpiKvClient::match_items_by_key_prefix(KV_KEY_CODE.to_string(), None, page, size, Some(true), &self.funs, &self.ctx).await?;
+        let resp = SpiKvClient::match_items_by_key_prefix(KV_KEY_CODE.to_string(), None, page, size, Some(false), &self.funs, &self.ctx).await?;
         let Some(pages) = resp else {
             return Err(self.funs.err().conflict("find_job", "find", "get Job Kv failed", ""));
         };

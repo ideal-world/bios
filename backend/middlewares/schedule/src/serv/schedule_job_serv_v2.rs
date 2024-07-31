@@ -47,28 +47,33 @@ pub(crate) fn init() {
         let max_retry_time = 5;
         let repo = SpiKv::from_context(funs.clone(), TardisContext::default());
         let spi_log = SpiLog::from_context(funs, Arc::new(TardisContext::default()));
+        // 等待webserver启动
+        loop {
+            if !TardisFuns::web_server().is_running().await {
+                tardis::tokio::task::yield_now().await;
+            } else {
+                break
+            }
+        }
         // 五秒钟轮询一次
         loop {
-            // 等待webserver启动
-            if TardisFuns::web_server().is_running().await {
-                // 从仓库同步所有任务
-                if let Ok(jobs) = repo.get_all().await {
-                    for job in jobs {
-                        if let Ok(task) = service.make_task(&job, spi_log.clone()) {
-                            service.local_set_job(&job.code, task).await;
-                        } else {
-                            error!("fail to create task for job {job:?}");
-                        }
+            // 从仓库同步所有任务
+            if let Ok(jobs) = repo.get_all().await {
+                for job in jobs {
+                    if let Ok(task) = service.make_task(&job, spi_log.clone()) {
+                        service.local_set_job(&job.code, task).await;
+                    } else {
+                        error!("fail to create task for job {job:?}");
                     }
-                    info!("synced all jobs from kv");
+                }
+                info!("synced all jobs from kv");
+                break;
+            } else {
+                warn!("encounter an error while init schedule middlewares: fail to find job {retry_time}/{max_retry_time}");
+                retry_time += 1;
+                if retry_time >= max_retry_time {
+                    error!("fail to sync jobs from kv, schedule running without history jobs");
                     break;
-                } else {
-                    warn!("encounter an error while init schedule middlewares: fail to find job {retry_time}/{max_retry_time}");
-                    retry_time += 1;
-                    if retry_time >= max_retry_time {
-                        error!("fail to sync jobs from kv, schedule running without history jobs");
-                        break;
-                    }
                 }
             }
             interval.tick().await;

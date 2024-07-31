@@ -1397,7 +1397,7 @@ impl FlowModelServ {
     // 2、template_id为单元素数组，则表示
     pub async fn check_post_action_ring(model_desp: &FlowModelDetailResp, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<bool> {
         let mut model_details = HashMap::new();
-        if model_desp.template && model_desp.rel_model_id.is_empty() {
+        if model_desp.template {
             model_details.insert(model_desp.tag.clone(), model_desp.clone());
         } else {
             let template_ids = if model_desp.rel_template_ids.is_empty() {
