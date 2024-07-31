@@ -1,3 +1,4 @@
+use itertools::Itertools;
 use tardis::{
     basic::{error::TardisError, result::TardisResult},
     os::{
@@ -22,7 +23,12 @@ impl S3 for OBSService {
                         .filter_map(|r| r.filter.clone())
                         .find_map(|f| f.prefix)
                     {
-                        is_have_prefix
+                        let prefix_split=is_have_prefix.split('/');
+                        if prefix_split.clone().count()==3 {
+                          prefix_split.skip(1).join("/")
+                        }else {
+                          is_have_prefix
+                        }
                     } else {
                         let rand_id = tardis::rand::random::<usize>().to_string();
                         let prefix = format!("{}/", rand_id);
@@ -30,7 +36,7 @@ impl S3 for OBSService {
                         let add_rule = LifecycleRule::builder("Enabled")
                             .id(&rand_id)
                             .expiration(Expiration::new(None, Some(obj_exp), None))
-                            .filter(LifecycleFilter::new(None, None, None, Some(prefix.clone()), None))
+                            .filter(LifecycleFilter::new(None, None, None, Some(format!("{}/{}",bucket_name.unwrap_or_default(), prefix)), None))
                             .build();
                         rules.push(add_rule);
                         client.put_lifecycle(Option::Some(""), BucketLifecycleConfiguration::new(rules)).await?;
@@ -49,10 +55,10 @@ impl S3 for OBSService {
                     let add_rule = LifecycleRule::builder("Enabled")
                         .id(&rand_id)
                         .expiration(Expiration::new(None, Some(obj_exp), None))
-                        .filter(LifecycleFilter::new(None, None, None, Some(prefix.clone()), None))
+                        .filter(LifecycleFilter::new(None, None, None, Some(format!("{}/{}",bucket_name.unwrap_or_default(), prefix)), None))
                         .build();
                     rules.push(add_rule);
-                    client.put_lifecycle(bucket_name, BucketLifecycleConfiguration::new(rules)).await?;
+                    client.put_lifecycle(Option::Some(""), BucketLifecycleConfiguration::new(rules)).await?;
                     Ok(format!("{}{}", prefix, origin_path))
                 }
             }
