@@ -41,6 +41,8 @@ pub async fn init_fun(bs_cert: SpiBsCertResp, ctx: &TardisContext, mgr: bool) ->
     let inst = match bs_cert.kind_code.as_str() {
         #[cfg(feature = "spi-s3")]
         object_constants::SPI_S3_KIND_CODE => serv::s3::object_s3_initializer::init(&bs_cert, ctx, mgr).await,
+        #[cfg(feature = "spi-s3")]
+        object_constants::SPI_OBS_KIND_CODE => serv::obs::object_obs_initializer::init(&bs_cert, ctx, mgr).await,
         _ => Err(bs_cert.bs_not_implemented())?,
     }?;
     info!("[BIOS.Object] Fun [{}]({}) initialized", bs_cert.kind_code, bs_cert.conn_uri);

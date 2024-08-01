@@ -262,7 +262,7 @@ pub async fn test_metric_query(client: &mut TestHttpClient) -> TardisResult<()> 
     assert_eq!(resp.group.as_object().unwrap()["ROLLUP"]["plan_hours__sum"], "200");
     assert_eq!(resp.group.as_object().unwrap()["hangzhou"]["key__count"], 8);
     assert_eq!(resp.group.as_object().unwrap()["hangzhou"]["plan_hours__sum"], "160");
-    
+
     // todo The following test case is problematic
     // test simple two dimensions
     let resp: StatsQueryMetricsResp = client

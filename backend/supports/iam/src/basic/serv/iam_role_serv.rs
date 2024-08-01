@@ -468,7 +468,7 @@ impl IamRoleServ {
         let kind = if scope_level == RBUM_SCOPE_LEVEL_APP { IamRoleKind::App } else { IamRoleKind::Tenant };
         if let Some(base_role) = Self::find_one_item(
             &IamRoleFilterReq {
-                kind: Some(kind),         
+                kind: Some(kind),
                 // in_embed: Some(true),
                 extend_role_id: Some(extend_role_id.to_string()),
                 ..Default::default()

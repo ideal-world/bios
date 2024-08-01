@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use std::str::FromStr;
 use std::time::Instant;
 
-use bios_sdk_invoke::clients::spi_log_client;
+use bios_sdk_invoke::clients::spi_log_client::{self, LogItemAddReq};
 use bios_sdk_invoke::invoke_config::InvokeConfig;
 use bios_sdk_invoke::invoke_enumeration::InvokeModuleKind;
 use bios_sdk_invoke::invoke_initializer;
@@ -141,14 +141,16 @@ impl AuditLogPlugin {
     }
 
     fn init(&mut self) -> Result<(), TardisError> {
-        if !self.log_url.is_empty() && !self.spi_app_id.is_empty() {
-            if let Ok(jsonpath_inst) = JsonPathInst::from_str(&self.success_json_path).map_err(|e| log::error!("[Plugin.AuditLog] invalid json path:{e}")) {
-                self.jsonpath_inst = Some(jsonpath_inst);
-            } else {
-                self.enabled = false;
-                return Ok(());
-            };
-            self.enabled = true;
+        if let Ok(jsonpath_inst) = JsonPathInst::from_str(&self.success_json_path).map_err(|e| log::error!("[Plugin.AuditLog] invalid json path:{e}")) {
+            self.jsonpath_inst = Some(jsonpath_inst);
+        } else {
+            self.enabled = false;
+            return Err(TardisError::bad_request("[Plugin.AuditLog] plugin is not active, miss log_url or spi_app_id.", ""));
+        };
+        self.enabled = true;
+        if self.log_url.is_empty() || self.spi_app_id.is_empty() {
+            warn!("[Plugin.AuditLog] log_url or spi_app_id is empty!");
+        } else {
             invoke_initializer::init(
                 CODE,
                 InvokeConfig {
@@ -156,11 +158,9 @@ impl AuditLogPlugin {
                     module_urls: HashMap::from([(InvokeModuleKind::Log.to_string(), self.log_url.clone())]),
                 },
             )?;
-            Ok(())
-        } else {
-            self.enabled = false;
-            Err(TardisError::bad_request("[Plugin.AuditLog] plugin is not active, miss log_url or spi_app_id.", ""))
         }
+
+        Ok(())
     }
 
     fn req(&self, mut req: Request<SgBody>) -> Result<Request<SgBody>, Response<SgBody>> {
@@ -206,31 +206,36 @@ impl AuditLogPlugin {
                 };
 
                 let tag = self.tag.clone();
-                tokio::task::spawn(async move {
-                    match spi_log_client::SpiLogClient::add_with_many_params(
-                        &tag,
-                        &TardisFuns::json.obj_to_string(&content).unwrap_or_default(),
-                        Some(content.to_value()),
-                        None,
-                        None,
-                        Some(content.op),
-                        None,
-                        Some(tardis::chrono::Utc::now().to_rfc3339()),
-                        content.user_id,
-                        None,
-                        &funs,
-                        &spi_ctx,
-                    )
-                    .await
-                    {
-                        Ok(_) => {
-                            log::trace!("[Plugin.AuditLog] add log success")
-                        }
-                        Err(e) => {
-                            log::warn!("[Plugin.AuditLog] failed to add log:{e}")
-                        }
-                    };
-                });
+                if !self.log_url.is_empty() && !self.spi_app_id.is_empty() {
+                    tokio::task::spawn(async move {
+                        match spi_log_client::SpiLogClient::add(
+                            &LogItemAddReq {
+                                tag,
+                                content: TardisFuns::json.obj_to_string(&content).unwrap_or_default(),
+                                kind: None,
+                                ext: Some(content.to_value()),
+                                key: None,
+                                op: Some(content.op),
+                                rel_key: None,
+                                id: None,
+                                ts: Some(tardis::chrono::Utc::now()),
+                                owner: content.user_id,
+                                own_paths: None,
+                            },
+                            &funs,
+                            &spi_ctx,
+                        )
+                        .await
+                        {
+                            Ok(_) => {
+                                log::trace!("[Plugin.AuditLog] add log success")
+                            }
+                            Err(e) => {
+                                log::warn!("[Plugin.AuditLog] failed to add log:{e}")
+                            }
+                        };
+                    });
+                }
             }
 
             Ok(resp)
