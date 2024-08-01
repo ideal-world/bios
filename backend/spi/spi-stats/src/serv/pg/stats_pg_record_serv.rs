@@ -5,6 +5,7 @@ use bios_basic::spi::{
     spi_initializer::common_pg::{self, package_table_name},
 };
 use itertools::Itertools;
+use serde_json::Map;
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
     chrono::{DateTime, Utc},
@@ -12,14 +13,17 @@ use tardis::{
         reldb_client::{TardisRelDBClient, TardisRelDBlConnection},
         sea_orm::{FromQueryResult, Value},
     },
-    log::{info, trace},
+    log::info,
     serde_json,
     web::web_resp::TardisPage,
     TardisFuns, TardisFunsInst,
 };
 
 use crate::{
-    dto::stats_record_dto::{StatsDimRecordAddReq, StatsFactRecordLoadReq, StatsFactRecordsLoadReq},
+    dto::{
+        stats_conf_dto::StatsConfFactColInfoResp,
+        stats_record_dto::{StatsDimRecordAddReq, StatsFactRecordLoadReq, StatsFactRecordsLoadReq},
+    },
     stats_enumeration::StatsFactColKind,
 };
 
@@ -157,10 +161,14 @@ pub(crate) async fn fact_record_load(
             "400-spi-stats-invalid-request",
         )
     })?;
-    // 如果存在幂等id 且已经存在对应数据,则丢弃数据
-    if let Some(idempotent_id) = add_req.idempotent_id {
+
+    // 如果存在幂等id 且已经存在对应数据,则根据丢弃数据
+    if let Some(idempotent_id) = add_req.idempotent_id.clone() {
         let idempotent_data_resp = fact_get_idempotent_record_raw(fact_conf_key, &idempotent_id, &conn, ctx).await?;
         if idempotent_data_resp.is_some() {
+            if !add_req.ignore_updates.unwrap_or(true) {
+                return self::fact_records_modify(fact_conf_key, &idempotent_id, req_data.clone(), fact_col_conf_set, conn, funs, ctx, inst).await;
+            }
             return Ok(());
         }
     }
@@ -355,13 +363,6 @@ pub(crate) async fn fact_records_load(
     let mut value_sets = vec![];
 
     for add_req in add_req_set {
-        // 如果存在幂等id 且已经存在对应数据,则丢弃数据
-        if let Some(idempotent_id) = add_req.idempotent_id.clone() {
-            let idempotent_data_resp = fact_get_idempotent_record_raw(fact_conf_key, &idempotent_id, &conn, ctx).await?;
-            if idempotent_data_resp.is_some() {
-                continue;
-            }
-        }
         let Some(req_data) = add_req.data.as_object() else {
             return Err(funs.err().bad_request(
                 "fact_record",
@@ -370,6 +371,16 @@ pub(crate) async fn fact_records_load(
                 "400-spi-stats-invalid-request",
             ));
         };
+        // 如果存在幂等id 且已经存在对应数据,则丢弃数据
+        if let Some(idempotent_id) = add_req.idempotent_id.clone() {
+            let idempotent_data_resp = fact_get_idempotent_record_raw(fact_conf_key, &idempotent_id, &conn, ctx).await?;
+            if idempotent_data_resp.is_some() {
+                if !add_req.ignore_updates.unwrap_or(true) {
+                    return self::fact_records_modify(fact_conf_key, &idempotent_id, req_data.clone(), fact_col_conf_set, conn, funs, ctx, inst).await;
+                }
+                continue;
+            }
+        }
         let mut values = vec![
             Value::from(&add_req.key),
             Value::from(add_req.own_paths),
@@ -465,6 +476,88 @@ pub(crate) async fn fact_records_load(
         )
         .await?;
     }
+    conn.commit().await?;
+    Ok(())
+}
+
+async fn fact_records_modify(
+    fact_conf_key: &str,
+    idempotent_id: &str,
+    req_data: Map<String, serde_json::Value>,
+    fact_col_conf_set: Vec<StatsConfFactColInfoResp>,
+    conn: TardisRelDBlConnection,
+    funs: &TardisFunsInst,
+    ctx: &TardisContext,
+    inst: &SpiBsInst,
+) -> TardisResult<()> {
+    let mut sql_sets = vec![];
+    let mut params = vec![Value::from(idempotent_id.to_string())];
+    for (req_fact_col_key, req_fact_col_value) in req_data {
+        let fact_col_conf = fact_col_conf_set.iter().find(|c| c.key == req_fact_col_key).ok_or_else(|| {
+            funs.err().not_found(
+                "fact_record",
+                "load",
+                &format!("The fact column config [{req_fact_col_key}] not exists."),
+                "404-spi-stats-fact-col-conf-not-exist",
+            )
+        })?;
+        if fact_col_conf.kind == StatsFactColKind::Dimension {
+            let Some(key) = fact_col_conf.dim_rel_conf_dim_key.as_ref() else {
+                return Err(funs.err().not_found("fact_record", "load", "Fail to get conf_dim_key", "400-spi-stats-fail-to-get-dim-config-key"));
+            };
+            let Some(dim_conf) = stats_pg_conf_dim_serv::get(key, &conn, ctx, inst).await? else {
+                return Err(funs.err().not_found(
+                    "fact_record",
+                    "load",
+                    &format!("Fail to get dim_conf by key [{key}]"),
+                    "400-spi˚-stats-fail-to-get-dim-config-key",
+                ));
+            };
+            // TODO check value enum when stable_ds = true
+            sql_sets.push(format!("{} = ${}", req_fact_col_key.to_string(), params.len() + 1));
+            if fact_col_conf.dim_multi_values.unwrap_or(false) {
+                params.push(dim_conf.data_type.json_to_sea_orm_value_array(&req_fact_col_value, false)?);
+            } else {
+                params.push(dim_conf.data_type.json_to_sea_orm_value(&req_fact_col_value, false)?);
+            }
+        } else if fact_col_conf.kind == StatsFactColKind::Measure {
+            let Some(mes_data_type) = fact_col_conf.mes_data_type.as_ref() else {
+                return Err(funs.err().bad_request(
+                    "fact_record",
+                    "load",
+                    "Col_conf.mes_data_type shouldn't be empty while fact_col_conf.kind is Measure",
+                    "400-spi-stats-invalid-request",
+                ));
+            };
+            sql_sets.push(format!("{} = ${}", req_fact_col_key.to_string(), params.len() + 1));
+            params.push(mes_data_type.json_to_sea_orm_value(&req_fact_col_value, false)?);
+        } else {
+            let Some(req_fact_col_value) = req_fact_col_value.as_str() else {
+                return Err(funs.err().bad_request(
+                    "fact_record",
+                    "load",
+                    &format!("For the key [{req_fact_col_key}], value: [{req_fact_col_value}] is not a string"),
+                    "400-spi-stats-invalid-request",
+                ));
+            };
+            sql_sets.push(format!("{} = ${}", req_fact_col_key.to_string(), params.len() + 1));
+            params.push(req_fact_col_value.into());
+        }
+    }
+    if sql_sets.is_empty() {
+        return Err(funs.err().bad_request("fact_record", "load", &format!("The fact column no data"), "400-spi-stats-invalid-request"));
+    }
+    let table_name = package_table_name(&format!("stats_inst_fact_{fact_conf_key}"), ctx);
+    conn.execute_one(
+        &format!(
+            r#"UPDATE {table_name}
+SET {}
+WHERE idempotent_id = $1"#,
+            sql_sets.join(",")
+        ),
+        params,
+    )
+    .await?;
     conn.commit().await?;
     Ok(())
 }

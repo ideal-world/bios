@@ -114,6 +114,7 @@ pub async fn test_fact_record(client: &mut TestHttpClient) -> TardisResult<()> {
                     data: json!({}),
                     ext: None,
                     idempotent_id: None,
+                    ignore_updates: None
                 },
             )
             .await
@@ -132,6 +133,7 @@ pub async fn test_fact_record(client: &mut TestHttpClient) -> TardisResult<()> {
                     data: json!({"xx":1}),
                     ext: Some(json!({"xx":1})),
                     idempotent_id: None,
+                    ignore_updates: None
                 },
             )
             .await
@@ -195,6 +197,35 @@ pub async fn test_fact_record(client: &mut TestHttpClient) -> TardisResult<()> {
                     "priority":1,
                     "tag":["t1","t2"],
                     "creator":"acc001",
+                    "act_hours": 41,
+                    "plan_hours": 45
+                }),
+                ext: Some(json!({
+                    "source":"zhejiang",
+                    "status": "open",
+                    "priority":1,
+                    "tag":["t1","t2"],
+                    "creator":"acc001",
+                    "act_hours": 40,
+                    "plan_hours": 45
+                })),
+                idempotent_id: Some("1".to_string()),
+                ignore_updates: Some(false),
+            },
+        )
+        .await;
+    let _: Void = client
+        .put(
+            "/ci/record/fact/req/rec1",
+            &StatsFactRecordLoadReq {
+                own_paths: "t1/a1".to_string(),
+                ct: Utc::now(),
+                data: json!({
+                    "source":"zhejiang",
+                    "status": "open",
+                    "priority":1,
+                    "tag":["t1","t2"],
+                    "creator":"acc001",
                     "act_hours": 40,
                     "plan_hours": 45
                 }),
@@ -207,7 +238,8 @@ pub async fn test_fact_record(client: &mut TestHttpClient) -> TardisResult<()> {
                     "act_hours": 40,
                     "plan_hours": 45
                 })),
-                idempotent_id: None,
+                idempotent_id: Some("1".to_string()),
+                ignore_updates: Some(false),
             },
         )
         .await;
@@ -236,6 +268,7 @@ pub async fn test_fact_record(client: &mut TestHttpClient) -> TardisResult<()> {
                     "plan_hours": 10
                 })),
                 idempotent_id: None,
+                ignore_updates: None,
             },
         )
         .await;
@@ -258,6 +291,7 @@ pub async fn test_fact_record(client: &mut TestHttpClient) -> TardisResult<()> {
                     "status": "progress",
                 })),
                 idempotent_id: None,
+                ignore_updates: None,
             },
         )
         .await;
@@ -275,6 +309,7 @@ pub async fn test_fact_record(client: &mut TestHttpClient) -> TardisResult<()> {
                     "priority": 1,
                 })),
                 idempotent_id: None,
+                ignore_updates: None,
             },
         )
         .await;
@@ -293,6 +328,7 @@ pub async fn test_fact_record(client: &mut TestHttpClient) -> TardisResult<()> {
                     data: json!({}),
                     ext: None,
                     idempotent_id: None,
+                    ignore_updates: None
                 }],
             )
             .await
@@ -312,6 +348,7 @@ pub async fn test_fact_record(client: &mut TestHttpClient) -> TardisResult<()> {
                     data: json!({}),
                     ext: None,
                     idempotent_id: None,
+                    ignore_updates: None
                 }],
             )
             .await
@@ -371,6 +408,7 @@ pub async fn test_fact_record(client: &mut TestHttpClient) -> TardisResult<()> {
                         "plan_hours": 45
                     })),
                     idempotent_id: None,
+                    ignore_updates: None,
                 },
                 StatsFactRecordsLoadReq {
                     key: "rec4".to_string(),
@@ -395,6 +433,7 @@ pub async fn test_fact_record(client: &mut TestHttpClient) -> TardisResult<()> {
                         "plan_hours": 45
                     })),
                     idempotent_id: None,
+                    ignore_updates: None,
                 },
             ],
         )
