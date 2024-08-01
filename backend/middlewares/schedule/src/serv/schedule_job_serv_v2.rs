@@ -52,7 +52,7 @@ pub(crate) fn init() {
             if !TardisFuns::web_server().is_running().await {
                 tardis::tokio::task::yield_now().await;
             } else {
-                break
+                break;
             }
         }
         // 五秒钟轮询一次

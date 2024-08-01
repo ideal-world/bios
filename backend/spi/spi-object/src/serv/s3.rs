@@ -8,9 +8,7 @@ use itertools::Itertools;
 use tardis::{
     basic::{dto::TardisContext, error::TardisError, result::TardisResult},
     futures::future::join_all,
-    os::{
-        os_client::TardisOSClient,
-    },
+    os::os_client::TardisOSClient,
     TardisFunsInst,
 };
 
