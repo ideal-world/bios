@@ -149,7 +149,7 @@ impl AuditLogPlugin {
         };
         self.enabled = true;
         if self.log_url.is_empty() || self.spi_app_id.is_empty() {
-            warn!("log_url or spi_app_id is empty!");
+            warn!("[Plugin.AuditLog] log_url or spi_app_id is empty!");
         } else {
             invoke_initializer::init(
                 CODE,
