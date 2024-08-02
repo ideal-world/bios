@@ -563,7 +563,7 @@ impl IamRoleServ {
                 }
             }
             for stored_res_id in stored_res_ids {
-                if !input_res_ids.contains(&stored_res_id) {
+                if input_res_ids.contains(&stored_res_id) {
                     Self::delete_rel_res(id, &stored_res_id, funs, ctx).await?;
                 }
             }
