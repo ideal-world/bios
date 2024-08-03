@@ -882,10 +882,10 @@ impl IamCertServ {
         }
     }
 
-    /// 通过关联id获取所有相关三方凭证
-    pub async fn find_3th_kind_cert_by_rel_rbum_id(
-        rel_rbum_id: &str,
-        supplier: Option<Vec<String>>,
+    /// 获取相关厂商三方凭证
+    pub async fn find_3th_kind_cert(
+        rel_rbum_id: Option<String>,
+        suppliers: Option<Vec<String>>,
         show_sk: bool,
         funs: &TardisFunsInst,
         ctx: &TardisContext,
@@ -900,8 +900,8 @@ impl IamCertServ {
                 },
                 status: Some(RbumCertStatusKind::Enabled),
                 kind: Some(IamCertExtKind::ThirdParty.to_string()),
-                suppliers: supplier,
-                rel_rbum_id: Some(rel_rbum_id.to_string()),
+                suppliers,
+                rel_rbum_id,
                 ..Default::default()
             },
             None,
