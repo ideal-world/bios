@@ -174,8 +174,8 @@ async fn test_single_level(context: &TardisContext, ak: &str, another_context: &
             supplier: Some("gitlab".to_string()),
             sk: Some("ssssssssss".to_string()),
             ext: None,
+            rel_rbum_id: account_info.account_id.clone(),
         },
-        &account_info.account_id,
         &funs,
         context,
     )

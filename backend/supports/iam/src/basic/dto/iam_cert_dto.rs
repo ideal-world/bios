@@ -117,6 +117,8 @@ pub struct IamCertPhoneVCodeBindReq {
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct IamThirdPartyCertExtAddReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
+    pub rel_rbum_id: String,
+    #[oai(validator(min_length = "2", max_length = "255"))]
     pub ak: String,
     #[oai(validator(min_length = "1", max_length = "255"))]
     pub supplier: Option<String>,
@@ -124,6 +126,20 @@ pub struct IamThirdPartyCertExtAddReq {
     pub sk: Option<String>,
     pub ext: Option<String>,
 }
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct IamThirdPartyCertExtModifyReq {
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    pub rel_rbum_id: String,
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    pub ak: String,
+    #[oai(validator(min_length = "1", max_length = "255"))]
+    pub supplier: String,
+    #[oai(validator(min_length = "2", max_length = "10000"))]
+    pub sk: Option<String>,
+    pub ext: Option<String>,
+}
+
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct IamThirdIntegrationSyncAddReq {
     pub account_sync_from: IamCertExtKind,

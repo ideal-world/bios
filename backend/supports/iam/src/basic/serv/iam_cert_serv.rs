@@ -2,9 +2,11 @@ use bios_basic::helper::request_helper::{add_ip, get_real_ip_from_ctx};
 use bios_basic::process::task_processor::TaskProcessor;
 use bios_basic::rbum::dto::rbum_rel_agg_dto::RbumRelAggAddReq;
 use bios_basic::rbum::serv::rbum_rel_serv::RbumRelServ;
+use itertools::Itertools;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use std::time::Duration;
+use std::vec;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
@@ -35,7 +37,7 @@ use crate::basic::dto::iam_cert_conf_dto::{
 };
 use crate::basic::dto::iam_cert_dto::{
     IamCertManageAddReq, IamCertManageModifyReq, IamCertModifyVisibilityRequest, IamThirdIntegrationConfigDto, IamThirdIntegrationSyncAddReq, IamThirdIntegrationSyncStatusDto,
-    IamThirdPartyCertExtAddReq,
+    IamThirdPartyCertExtAddReq, IamThirdPartyCertExtModifyReq,
 };
 use crate::basic::dto::iam_filer_dto::{IamAccountFilterReq, IamResFilterReq, IamRoleFilterReq};
 use crate::basic::serv::iam_account_serv::IamAccountServ;
@@ -554,7 +556,7 @@ impl IamCertServ {
         Ok(())
     }
 
-    pub async fn add_3th_kind_cert(add_req: &mut IamThirdPartyCertExtAddReq, account_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
+    pub async fn add_3th_kind_cert(add_req: &mut IamThirdPartyCertExtAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
         let id = RbumCertServ::add_rbum(
             &mut RbumCertAddReq {
                 ak: TrimString(add_req.ak.trim().to_string()),
@@ -570,7 +572,7 @@ impl IamCertServ {
                 status: RbumCertStatusKind::Enabled,
                 rel_rbum_cert_conf_id: None,
                 rel_rbum_kind: RbumCertRelKind::Item,
-                rel_rbum_id: account_id.to_string(),
+                rel_rbum_id: add_req.rel_rbum_id.clone(),
                 is_outside: true,
                 ignore_check_sk: false,
             },
@@ -579,6 +581,27 @@ impl IamCertServ {
         )
         .await?;
         Ok(id)
+    }
+
+    pub async fn modify_3th_kind_cert(modify_req: &mut IamThirdPartyCertExtModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let cert_3th = Self::get_3th_kind_cert_by_rel_rbum_id(&modify_req.rel_rbum_id, vec![modify_req.supplier.clone()], false, funs, ctx).await?;
+        RbumCertServ::modify_rbum(
+            &cert_3th.id,
+            &mut RbumCertModifyReq {
+                ak: Some(TrimString(modify_req.ak.trim().to_string())),
+                sk: modify_req.sk.as_ref().map(|sk| TrimString(sk.trim().to_string())),
+                sk_invisible: None,
+                conn_uri: None,
+                ignore_check_sk: false,
+                ext: modify_req.ext.clone(),
+                start_time: None,
+                end_time: None,
+                status: None,
+            },
+            funs,
+            ctx,
+        )
+        .await
     }
 
     /// Get general cert method \
@@ -857,6 +880,66 @@ impl IamCertServ {
                 "404-iam-cert-kind-not-exist",
             ))
         }
+    }
+
+    /// 通过关联id获取所有相关三方凭证
+    pub async fn find_3th_kind_cert_by_rel_rbum_id(
+        rel_rbum_id: &str,
+        supplier: Option<Vec<String>>,
+        show_sk: bool,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<Vec<RbumCertSummaryWithSkResp>> {
+        let mut find_cert = vec![];
+        let query_cert = RbumCertServ::find_detail_rbums(
+            &RbumCertFilterReq {
+                basic: RbumBasicFilterReq {
+                    own_paths: Some("".to_string()),
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                status: Some(RbumCertStatusKind::Enabled),
+                kind: Some(IamCertExtKind::ThirdParty.to_string()),
+                suppliers: supplier,
+                rel_rbum_id: Some(rel_rbum_id.to_string()),
+                ..Default::default()
+            },
+            None,
+            None,
+            funs,
+            ctx,
+        )
+        .await?;
+        for ext_cert in query_cert {
+            let encoded_sk = if show_sk {
+                let now_sk = RbumCertServ::show_sk(ext_cert.id.as_str(), &RbumCertFilterReq::default(), funs, ctx).await?;
+                encode_cert(&ext_cert.id, now_sk, ext_cert.sk_invisible)?
+            } else {
+                "".to_string()
+            };
+            find_cert.push(RbumCertSummaryWithSkResp {
+                id: ext_cert.id,
+                ak: ext_cert.ak,
+                sk: encoded_sk,
+                sk_invisible: ext_cert.sk_invisible,
+                ext: ext_cert.ext,
+                conn_uri: ext_cert.conn_uri,
+                start_time: ext_cert.start_time,
+                end_time: ext_cert.end_time,
+                status: ext_cert.status,
+                kind: ext_cert.kind,
+                supplier: ext_cert.supplier,
+                rel_rbum_cert_conf_id: ext_cert.rel_rbum_cert_conf_id,
+                rel_rbum_cert_conf_name: ext_cert.rel_rbum_cert_conf_name,
+                rel_rbum_kind: ext_cert.rel_rbum_kind,
+                rel_rbum_id: ext_cert.rel_rbum_id,
+                own_paths: ext_cert.own_paths,
+                owner: ext_cert.owner,
+                create_time: ext_cert.create_time,
+                update_time: ext_cert.update_time,
+            });
+        }
+        Ok(find_cert)
     }
 
     pub async fn paginate_certs(

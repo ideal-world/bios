@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use crate::basic::dto::iam_account_dto::IamAccountExtSysResp;
 use crate::basic::dto::iam_cert_conf_dto::IamCertConfLdapResp;
-use crate::basic::dto::iam_cert_dto::{IamCertAkSkAddReq, IamCertAkSkResp, IamCertDecodeRequest, IamOauth2AkSkResp, IamThirdPartyCertExtAddReq};
+use crate::basic::dto::iam_cert_dto::{IamCertAkSkAddReq, IamCertAkSkResp, IamCertDecodeRequest, IamOauth2AkSkResp, IamThirdPartyCertExtAddReq, IamThirdPartyCertExtModifyReq};
 use crate::basic::serv::iam_account_serv::IamAccountServ;
 use crate::basic::serv::iam_cert_ldap_serv::IamCertLdapServ;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
@@ -164,22 +164,50 @@ impl IamCiCertApi {
     /// Add Third-kind Cert
     ///
     /// 添加第三方证书
-    #[oai(path = "/third-kind", method = "put")]
-    async fn add_third_cert(
-        &self,
-        account_id: Query<String>,
-        mut add_req: Json<IamThirdPartyCertExtAddReq>,
-        mut ctx: TardisContextExtractor,
-        request: &Request,
-    ) -> TardisApiResult<Void> {
+    #[oai(path = "/third-kind", method = "post")]
+    async fn add_third_cert(&self, mut add_req: Json<IamThirdPartyCertExtAddReq>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         funs.begin().await?;
-        IamCertServ::add_3th_kind_cert(&mut add_req.0, &account_id.0, &funs, &ctx.0).await?;
+        IamCertServ::add_3th_kind_cert(&mut add_req.0, &funs, &ctx.0).await?;
         funs.commit().await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
+    }
+
+    /// modify Third-kind Cert
+    ///
+    /// 修改第三方证书
+    #[oai(path = "/third-kind", method = "put")]
+    async fn modify_third_cert(&self, mut modify_req: Json<IamThirdPartyCertExtModifyReq>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
+        let mut funs = iam_constants::get_tardis_inst();
+        check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
+        funs.begin().await?;
+        IamCertServ::modify_3th_kind_cert(&mut modify_req.0, &funs, &ctx.0).await?;
+        funs.commit().await?;
+        ctx.0.execute_task().await?;
+        TardisResp::ok(Void {})
+    }
+
+    /// find Third-kind Certs By Account Id
+    ///
+    /// 根据账号id获取第三方证书
+    #[oai(path = "/find/third-kind", method = "get")]
+    async fn find_third_cert(
+        &self,
+        account_id: Query<String>,
+        supplier: Query<String>,
+        mut ctx: TardisContextExtractor,
+        request: &Request,
+    ) -> TardisApiResult<Vec<RbumCertSummaryWithSkResp>> {
+        let funs = iam_constants::get_tardis_inst();
+        check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
+        let rbum_cert = IamCertServ::find_3th_kind_cert_by_rel_rbum_id(&account_id.0, Some(vec![supplier.0]), true, &funs, &ctx.0).await?;
+        ctx.0.execute_task().await?;
+        TardisResp::ok(rbum_cert)
     }
 
     /// Get Third-kind Certs By Account Id
