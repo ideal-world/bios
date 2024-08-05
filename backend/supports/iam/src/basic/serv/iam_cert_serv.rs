@@ -912,7 +912,20 @@ impl IamCertServ {
         .await?;
         for ext_cert in query_cert {
             let encoded_sk = if show_sk {
-                let now_sk = RbumCertServ::show_sk(ext_cert.id.as_str(), &RbumCertFilterReq::default(), funs, ctx).await?;
+                let now_sk = RbumCertServ::show_sk(
+                    ext_cert.id.as_str(),
+                    &RbumCertFilterReq {
+                        basic: RbumBasicFilterReq {
+                            own_paths: Some("".to_string()),
+                            with_sub_own_paths: true,
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                    funs,
+                    ctx,
+                )
+                .await?;
                 encode_cert(&ext_cert.id, now_sk, ext_cert.sk_invisible)?
             } else {
                 "".to_string()
