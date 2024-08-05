@@ -205,7 +205,7 @@ impl IamCiCertApi {
         let funs = iam_constants::get_tardis_inst();
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
-        let rbum_cert = IamCertServ::find_3th_kind_cert(rel_rbum_id.0, Some(vec![supplier.0]), true, &funs, &ctx.0).await?;
+        let rbum_cert = IamCertServ::find_3th_kind_cert(rel_rbum_id.0, Some(vec![supplier.0]), false, &funs, &ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(rbum_cert)
     }
