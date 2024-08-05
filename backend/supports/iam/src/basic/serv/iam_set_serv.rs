@@ -522,6 +522,7 @@ impl IamSetServ {
         let mut filter = RbumSetTreeFilterReq {
             fetch_cate_item: true,
             hide_cate_with_empty_item: true,
+            hide_item_with_disabled: true,
             sys_codes: Some(vec![menu_sys_code]),
             sys_code_query_kind: Some(RbumSetCateLevelQueryKind::CurrentAndSub),
             ..Default::default()
