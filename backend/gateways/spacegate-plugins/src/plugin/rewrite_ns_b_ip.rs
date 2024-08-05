@@ -11,6 +11,7 @@ use spacegate_shell::{BoxError, SgBody};
 use std::net::IpAddr;
 use std::str::FromStr;
 use std::sync::Arc;
+use tardis::log::{trace, warn};
 
 use tardis::{log, serde_json};
 
@@ -98,24 +99,45 @@ impl Plugin for RewriteNsPlugin {
 }
 impl RewriteNsPlugin {
     fn req(&self, req: &mut SgRequest) -> Result<(), BoxError> {
-        'change_ns: {
-            if let Some(k8s_service) = req.extensions().get::<K8sService>().cloned() {
-                let Some(ref ns) = k8s_service.0.namespace else { break 'change_ns };
-                let ip = req.extensions().get::<PeerAddr>().expect("missing peer addr").0.ip();
-                if self.ip_list.iter().any(|ipnet| ipnet.contains(&ip)) {
+        let ip = req
+            .headers()
+            .get_all("x-forwarded-for")
+            .iter()
+            .next()
+            .and_then(|s| IpAddr::from_str(s.to_str().unwrap_or_default().trim()).ok())
+            .unwrap_or_else(|| req.extensions().get::<PeerAddr>().expect("peer addr should be settled").0.ip());
+        if self.ip_list.iter().any(|ipnet| ipnet.contains(&ip)) {
+            let defer = req.extensions_mut().get_or_insert_default::<spacegate_shell::kernel::extension::Defer>();
+            let target_ns = self.target_ns.clone();
+            defer.push_back(move |mut req| {
+                if let Some(k8s_service) = req.extensions().get::<K8sService>().cloned() {
+                    let k8s_service = k8s_service.0;
+                    let Some(ref ns) = k8s_service.namespace else {
+                        return req;
+                    };
                     let uri = req.uri().clone();
                     let mut parts = uri.into_parts();
-                    let new_authority = if let Some(prev_host) = parts.authority.as_ref().and_then(|a| a.port_u16()) {
-                        format!("{svc}.{ns}:{port}", svc = k8s_service.0.name, ns = self.target_ns, port = prev_host)
+                    let new_authority = if let Some(prev_port) = parts.authority.as_ref().and_then(|a| a.port_u16()) {
+                        format!("{svc}.{ns}:{port}", svc = k8s_service.name, ns = target_ns, port = prev_port)
                     } else {
-                        format!("{svc}.{ns}", svc = k8s_service.0.name, ns = self.target_ns)
+                        format!("{svc}.{ns}", svc = k8s_service.name, ns = target_ns)
                     };
-                    let new_authority = uri::Authority::from_str(&new_authority).map_err(PluginError::internal_error::<RewriteNsPlugin>)?;
+                    let Ok(new_authority) = uri::Authority::from_str(&new_authority) else {
+                        warn!("Failed to rewrite ns: invalid url");
+                        return req;
+                    };
                     parts.authority.replace(new_authority);
-                    *req.uri_mut() = uri::Uri::from_parts(parts).map_err(PluginError::internal_error::<RewriteNsPlugin>)?;
-                    log::debug!("[SG.Filter.Auth.Rewrite_Ns] change namespace from {} to {}", ns, self.target_ns);
+                    let Ok(uri) = uri::Uri::from_parts(parts) else {
+                        warn!("Failed to rewrite ns: invalid url");
+                        return req;
+                    };
+                    *req.uri_mut() = uri;
+                    log::debug!("change namespace from {} to {}", ns, target_ns);
+                } else {
+                    trace!("No k8s service found, skip rewrite ns");
                 }
-            }
+                req
+            });
         }
         Ok(())
     }
