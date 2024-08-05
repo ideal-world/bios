@@ -51,7 +51,7 @@
 
 404-rbum-req-ctx-not-exist	请求上下文不存在或不完整
 401-rbum-req-ctx-permission-denied	请求上下文权限不合法
-403-rbum-req-ctx-owner-is-not-empty	请求下文中不能存在所有者
+403-rbum-req-ctx-ak-is-not-empty	请求下文中不能存在ak
 
 400-basic-cond-check-format-err	条件检查时存在格式错误
 

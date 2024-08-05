@@ -255,7 +255,7 @@ where
 #[cfg(feature = "default")]
 pub fn check_without_owner_and_unsafe_fill_ctx(request: &tardis::web::poem::Request, funs: &TardisFunsInst, ctx: &mut TardisContext) -> TardisResult<()> {
     if ctx.ak.is_empty() {
-        return Err(TardisError::forbidden("[Basic] Request context owner is not empty", "403-rbum-req-ctx-owner-is-not-empty"));
+        return Err(TardisError::forbidden("[Basic] Request contex ak is not empty", "403-rbum-req-ctx-ak-is-not-empty"));
     }
     unsafe_fill_ctx(request, funs, ctx)
 }
