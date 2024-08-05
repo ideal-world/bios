@@ -74,4 +74,20 @@ impl IamCaAppApi {
         ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
     }
+
+    /// Batch Delete App Rel Account
+    /// 批量删除应用关联账号
+    #[oai(path = "/:id/account/batch/:account_ids", method = "delete")]
+    async fn batch_delete_rel_account(&self, id: Path<String>, account_ids: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
+        let mut funs = iam_constants::get_tardis_inst();
+        funs.begin().await?;
+        let split = account_ids.0.split(',').collect::<Vec<_>>();
+        for s in split {
+            IamAppServ::delete_rel_account(&id.0, s, &funs, &ctx.0).await?;
+        }
+        funs.commit().await?;
+        ctx.0.execute_task().await?;
+        TardisResp::ok(Void {})
+    }
 }
