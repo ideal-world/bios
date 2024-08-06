@@ -563,9 +563,9 @@ impl IamRoleServ {
                     Self::add_rel_res(id, input_res_id, funs, ctx).await?;
                 }
             }
-            for diff_res_id in stored_res_ids {
-                if !input_res_ids.contains(&diff_res_id) {
-                    Self::delete_rel_res(id, &diff_res_id, funs, ctx).await?;
+            for stored_res_id in stored_res_ids {
+                if !input_res_ids.contains(&stored_res_id) {
+                    Self::delete_rel_res(id, &stored_res_id, funs, ctx).await?;
                 }
             }
 
