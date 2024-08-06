@@ -24,7 +24,7 @@ use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use bios_basic::rbum::serv::rbum_rel_serv::RbumRelServ;
 
 use crate::basic::domain::iam_role;
-use crate::basic::dto::iam_filer_dto::{IamAppFilterReq, IamRoleFilterReq, IamTenantFilterReq};
+use crate::basic::dto::iam_filer_dto::{IamAppFilterReq, IamResFilterReq, IamRoleFilterReq, IamTenantFilterReq};
 use crate::basic::dto::iam_role_dto::{IamRoleAddReq, IamRoleAggAddReq, IamRoleAggModifyReq, IamRoleDetailResp, IamRoleModifyReq, IamRoleSummaryResp};
 use crate::basic::serv::iam_app_serv::IamAppServ;
 use crate::basic::serv::iam_key_cache_serv::IamIdentCacheServ;
@@ -32,12 +32,13 @@ use crate::basic::serv::iam_rel_serv::IamRelServ;
 use crate::iam_config::{IamBasicConfigApi, IamBasicInfoManager, IamConfig};
 use crate::iam_constants::{self, IAM_AVATAR, RBUM_ITEM_ID_SUB_ROLE_LEN};
 use crate::iam_constants::{RBUM_SCOPE_LEVEL_APP, RBUM_SCOPE_LEVEL_TENANT};
-use crate::iam_enumeration::{IamRelKind, IamRoleKind};
+use crate::iam_enumeration::{IamRelKind, IamResKind, IamRoleKind};
 
 use super::clients::iam_kv_client::IamKvClient;
 use super::clients::iam_log_client::{IamLogClient, LogParamTag};
 use super::clients::iam_search_client::IamSearchClient;
 use super::iam_cert_serv::IamCertServ;
+use super::iam_res_serv::IamResServ;
 use super::iam_tenant_serv::IamTenantServ;
 
 pub struct IamRoleServ;
@@ -557,14 +558,36 @@ impl IamRoleServ {
         if let Some(input_res_ids) = &modify_req.res_ids {
             let stored_res = Self::find_simple_rel_res(id, None, None, funs, ctx).await?;
             let stored_res_ids: Vec<String> = stored_res.into_iter().map(|x| x.rel_id).collect();
+            // 获取api资源,用于排除掉,因为其他res绑定删除关系是同时对api关联进行操作.
+            let api_res_ids = IamResServ::find_items(
+                &IamResFilterReq {
+                    basic: RbumBasicFilterReq {
+                        ids: Some(stored_res_ids.clone()),
+                        own_paths: Some("".to_string()),
+                        with_sub_own_paths: true,
+                        ..Default::default()
+                    },
+                    kind: Some(IamResKind::Api),
+                    ..Default::default()
+                },
+                None,
+                None,
+                funs,
+                ctx,
+            )
+            .await?
+            .into_iter()
+            .map(|x| x.id)
+            .collect::<Vec<String>>();
+            let diff_res_ids = stored_res_ids.iter().filter(|x| !api_res_ids.contains(x)).cloned().collect::<Vec<String>>();
             for input_res_id in input_res_ids {
-                if !stored_res_ids.contains(input_res_id) {
+                if !diff_res_ids.contains(input_res_id) {
                     Self::add_rel_res(id, input_res_id, funs, ctx).await?;
                 }
             }
-            for stored_res_id in stored_res_ids {
-                if !input_res_ids.contains(&stored_res_id) {
-                    Self::delete_rel_res(id, &stored_res_id, funs, ctx).await?;
+            for diff_res_id in diff_res_ids {
+                if !input_res_ids.contains(&diff_res_id) {
+                    Self::delete_rel_res(id, &diff_res_id, funs, ctx).await?;
                 }
             }
 
