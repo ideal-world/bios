@@ -344,6 +344,9 @@ impl IamCsAccountApi {
         IamSearchClient::async_add_or_modify_account_search(&id.0, Box::new(true), "Manual cancellation.", &funs, &ctx).await?;
         funs.commit().await?;
         ctx.execute_task().await?;
+        if let Some(notify_events) = rbum_event_helper::get_notify_event_with_ctx(&ctx).await? {
+            rbum_event_helper::try_notifies(notify_events, &iam_constants::get_tardis_inst(), &ctx).await?;
+        }
         TardisResp::ok(Void {})
     }
 
