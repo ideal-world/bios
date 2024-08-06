@@ -509,7 +509,7 @@ impl FlowEventServ {
                 ctx,
             )
             .await?;
-            let transition_resp = FlowInstServ::do_find_next_transitions(&rel_inst, &flow_model, None, &None, false, funs, ctx)
+            let transition_resp = FlowInstServ::do_find_next_transitions(&rel_inst, &flow_model, None, &None, true, funs, ctx)
                 .await?
                 .next_flow_transitions
                 .into_iter()
