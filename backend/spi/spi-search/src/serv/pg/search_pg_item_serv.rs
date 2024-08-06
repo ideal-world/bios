@@ -1611,27 +1611,38 @@ pub async fn refresh_tsv(tag: &str, funs: &TardisFunsInst, ctx: &TardisContext, 
     let bs_inst = inst.inst::<TardisRelDBClient>();
     let (conn, table_name) = search_pg_initializer::init_table_and_conn(bs_inst, tag, ctx, false).await?;
     let result = conn.query_all(&format!("SELECT key, title FROM {table_name}"), vec![]).await?;
-    join_all(
-        result
-            .into_iter()
-            .map(|row| async move {
-                modify(
-                    tag,
-                    row.try_get::<String>("", "key").expect("not found key").as_str(),
-                    &mut SearchItemModifyReq {
-                        title: Some(row.try_get("", "title").expect("not found title")),
-                        update_time: Some(Utc::now()),
-                        ..Default::default()
-                    },
-                    funs,
-                    ctx,
-                    inst,
-                )
-                .await
-                .expect("modify error")
-            })
-            .collect_vec(),
-    )
-    .await;
+    let max_size = result.len();
+    let mut page = 0;
+    let page_size = 2000;
+    loop {
+        let current_result = &result[((page*page_size).min(max_size))..(((page+1)*page_size).min(max_size))];
+        if current_result.is_empty() {
+            break;
+        }
+        join_all(
+            current_result
+                .iter()
+                .map(|row| async move {
+                    modify(
+                        tag,
+                        row.try_get::<String>("", "key").expect("not found key").as_str(),
+                        &mut SearchItemModifyReq {
+                            title: Some(row.try_get("", "title").expect("not found title")),
+                            update_time: Some(Utc::now()),
+                            ..Default::default()
+                        },
+                        funs,
+                        ctx,
+                        inst,
+                    )
+                    .await
+                    .expect("modify error")
+                })
+                .collect_vec(),
+        )
+        .await;
+        page += 1;
+    }
+
     Ok(())
 }
