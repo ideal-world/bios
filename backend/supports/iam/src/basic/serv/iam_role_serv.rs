@@ -558,34 +558,12 @@ impl IamRoleServ {
         if let Some(input_res_ids) = &modify_req.res_ids {
             let stored_res = Self::find_simple_rel_res(id, None, None, funs, ctx).await?;
             let stored_res_ids: Vec<String> = stored_res.into_iter().map(|x| x.rel_id).collect();
-            // 获取api资源,用于排除掉,因为其他res绑定删除关系是同时对api关联进行操作.
-            let api_res_ids = IamResServ::find_items(
-                &IamResFilterReq {
-                    basic: RbumBasicFilterReq {
-                        ids: Some(stored_res_ids.clone()),
-                        own_paths: Some("".to_string()),
-                        with_sub_own_paths: true,
-                        ..Default::default()
-                    },
-                    kind: Some(IamResKind::Api),
-                    ..Default::default()
-                },
-                None,
-                None,
-                funs,
-                ctx,
-            )
-            .await?
-            .into_iter()
-            .map(|x| x.id)
-            .collect::<Vec<String>>();
-            let diff_res_ids = stored_res_ids.iter().filter(|x| !api_res_ids.contains(x)).cloned().collect::<Vec<String>>();
             for input_res_id in input_res_ids {
-                if !diff_res_ids.contains(input_res_id) {
+                if !stored_res_ids.contains(input_res_id) {
                     Self::add_rel_res(id, input_res_id, funs, ctx).await?;
                 }
             }
-            for diff_res_id in diff_res_ids {
+            for diff_res_id in stored_res_ids {
                 if !input_res_ids.contains(&diff_res_id) {
                     Self::delete_rel_res(id, &diff_res_id, funs, ctx).await?;
                 }
