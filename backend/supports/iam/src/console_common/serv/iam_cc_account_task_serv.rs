@@ -39,7 +39,7 @@ impl IamCcAccountTaskServ {
             &funs.conf::<IamConfig>().cache_key_async_task_status,
             move |_task_id| async move {
                 let funs = iam_constants::get_tardis_inst();
-                let account_liet = IamAccountServ::find_id_items(
+                let account_list = IamAccountServ::find_id_items(
                     &IamAccountFilterReq {
                         basic: RbumBasicFilterReq {
                             ignore_scope: false,
@@ -57,7 +57,7 @@ impl IamCcAccountTaskServ {
                 )
                 .await?;
                 let mut num = 0;
-                for account in account_liet {
+                for account in account_list {
                     let id = account;
                     num += 1;
                     if num % 100 == 0 {
@@ -76,6 +76,7 @@ impl IamCcAccountTaskServ {
         .await?;
         Ok(None)
     }
+    
     pub async fn execute_account_task(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<String>> {
         let task_ctx = ctx.clone();
         TaskProcessor::execute_task_with_ctx(
@@ -83,7 +84,7 @@ impl IamCcAccountTaskServ {
             move |_task_id| async move {
                 let mut funs = iam_constants::get_tardis_inst();
                 funs.begin().await?;
-                let account_liet = IamAccountServ::find_items(
+                let account_list = IamAccountServ::find_items(
                     &IamAccountFilterReq {
                         basic: RbumBasicFilterReq {
                             ignore_scope: false,
@@ -107,7 +108,7 @@ impl IamCcAccountTaskServ {
                     .collect::<Vec<String>>();
                 let platform_config = IamPlatformServ::get_platform_config_agg(&funs, &task_ctx).await?;
                 let mut num = 0;
-                for account in account_liet {
+                for account in account_list {
                     let id = account.id.clone();
                     if admin_account_list.contains(&id) {
                         continue;
