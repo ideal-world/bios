@@ -13,6 +13,7 @@ use crate::iam_enumeration::Oauth2GrantType;
 use bios_basic::helper::request_helper::try_set_real_ip_from_req_to_ctx;
 use bios_basic::rbum::dto::rbum_cert_dto::RbumCertSummaryWithSkResp;
 use bios_basic::rbum::dto::rbum_filer_dto::RbumCertFilterReq;
+use bios_basic::rbum::helper::rbum_event_helper;
 use bios_basic::rbum::helper::rbum_scope_helper::check_without_owner_and_unsafe_fill_ctx;
 use bios_basic::rbum::serv::rbum_cert_serv::RbumCertServ;
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
@@ -239,6 +240,9 @@ impl IamCiCertApi {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         let msg = IamCertServ::third_integration_sync_without_config(&funs, &ctx.0).await?;
         ctx.0.execute_task().await?;
+        if let Some(notify_events) = rbum_event_helper::get_notify_event_with_ctx(&ctx.0).await? {
+            rbum_event_helper::try_notifies(notify_events, &iam_constants::get_tardis_inst(), &ctx.0).await?;
+        }
         TardisResp::ok(msg)
     }
 
