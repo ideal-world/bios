@@ -3,11 +3,11 @@ use serde::{Deserialize, Serialize};
 
 use spacegate_shell::extension::k8s_service::K8sService;
 use spacegate_shell::hyper::{http::uri, Response};
-use spacegate_shell::kernel::extension::PeerAddr;
+use spacegate_shell::kernel::extension::OriginalIpAddr;
 use spacegate_shell::kernel::helper_layers::function::Inner;
 use spacegate_shell::kernel::SgRequest;
-use spacegate_shell::plugin::{schemars, Plugin, PluginConfig, PluginError};
-use spacegate_shell::{BoxError, SgBody};
+use spacegate_shell::plugin::{schemars, Plugin, PluginConfig};
+use spacegate_shell::{BoxError, SgBody, SgRequestExt};
 use std::net::IpAddr;
 use std::str::FromStr;
 use std::sync::Arc;
@@ -99,14 +99,9 @@ impl Plugin for RewriteNsPlugin {
 }
 impl RewriteNsPlugin {
     fn req(&self, req: &mut SgRequest) -> Result<(), BoxError> {
-        let ip = req
-            .headers()
-            .get_all("x-forwarded-for")
-            .iter()
-            .next()
-            .and_then(|s| IpAddr::from_str(s.to_str().unwrap_or_default().trim()).ok())
-            .unwrap_or_else(|| req.extensions().get::<PeerAddr>().expect("peer addr should be settled").0.ip());
-        if self.ip_list.iter().any(|ipnet| ipnet.contains(&ip)) {
+        let original_ip = req
+                    .extract::<OriginalIpAddr>().into_inner();
+        if self.ip_list.iter().any(|ipnet| ipnet.contains(&original_ip)) {
             let defer = req.extensions_mut().get_or_insert_default::<spacegate_shell::kernel::extension::Defer>();
             let target_ns = self.target_ns.clone();
             defer.push_back(move |mut req| {
