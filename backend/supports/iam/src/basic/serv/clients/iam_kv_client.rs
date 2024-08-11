@@ -1,5 +1,5 @@
 use bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind;
-use bios_sdk_invoke::clients::spi_kv_client::SpiKvClient;
+use bios_sdk_invoke::clients::spi_kv_client::{KvItemDetailResp, SpiKvClient};
 use tardis::tokio;
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
@@ -105,5 +105,10 @@ impl IamKvClient {
     pub async fn delete_item(key: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         #[cfg(feature = "spi_kv")]
         SpiKvClient::delete_item(key, funs, ctx).await
+    }
+
+    pub async fn get_item(key: String, extract: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<KvItemDetailResp>> {
+        #[cfg(feature = "spi_kv")]
+        SpiKvClient::get_item(key, extract, funs, ctx).await
     }
 }

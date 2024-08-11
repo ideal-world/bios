@@ -2,6 +2,7 @@ use async_trait::async_trait;
 use bios_basic::helper::request_helper::get_real_ip_from_ctx;
 use bios_basic::rbum::rbum_config::RbumConfigApi;
 use bios_basic::rbum::rbum_enumeration::RbumRelFromKind;
+use bios_sdk_invoke::clients::spi_kv_client::SpiKvClient;
 use itertools::Itertools;
 use tardis::chrono::Utc;
 
@@ -42,6 +43,7 @@ use crate::basic::serv::iam_role_serv::IamRoleServ;
 use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::basic::serv::iam_tenant_serv::IamTenantServ;
 use crate::iam_config::{IamBasicInfoManager, IamConfig};
+use crate::iam_constants::{LOG_IAM_ACCOUNT_OP_ACTIVATEACCOUNT, LOG_IAM_ACCOUNT_OP_ADDLONGTERMACCOUNT, LOG_IAM_ACCOUNT_OP_ADDTEMPACCOUNT, LOG_IAM_ACCOUNT_OP_DORMANTACCOUNT, LOG_IAM_ACCOUNT_OP_LOGOUT, LOG_IAM_ACCOUNT_OP_MODIFYACCOUNTICON, LOG_IAM_ACCOUNT_OP_MODIFYNAME, LOG_IAM_ACCOUNT_OP_UNLOCKACCOUNT};
 use crate::iam_enumeration::{IamAccountLockStateKind, IamAccountStatusKind, IamCertKernelKind, IamRelKind, IamSetKind};
 
 use super::clients::iam_log_client::{IamLogClient, LogParamTag};
@@ -167,38 +169,41 @@ impl RbumItemCrudOperation<iam_account::ActiveModel, IamAccountAddReq, IamAccoun
 
         let mut tasks = vec![];
         if modify_req.status == Some(IamAccountStatusKind::Logout) {
-            tasks.push(("注销账号".to_string(), "Logout".to_string()));
+            tasks.push((None, LOG_IAM_ACCOUNT_OP_LOGOUT.to_string()));
         }
         if modify_req.status == Some(IamAccountStatusKind::Dormant) {
-            tasks.push(("休眠账号".to_string(), "DormantAccount".to_string()));
+            tasks.push((None, LOG_IAM_ACCOUNT_OP_DORMANTACCOUNT.to_string()));
         }
         if modify_req.status == Some(IamAccountStatusKind::Active) {
-            tasks.push(("激活账号".to_string(), "ActivateAccount".to_string()));
+            tasks.push((None, LOG_IAM_ACCOUNT_OP_ACTIVATEACCOUNT.to_string()));
         }
         if modify_req.lock_status == Some(IamAccountLockStateKind::Unlocked) {
-            tasks.push(("解锁账号".to_string(), "UnlockAccount".to_string()));
+            tasks.push((None, LOG_IAM_ACCOUNT_OP_UNLOCKACCOUNT.to_string()));
         }
         if modify_req.icon.is_some() {
-            tasks.push(("修改账号头像".to_string(), "ModifyAccountIcon".to_string()));
+            tasks.push((None, LOG_IAM_ACCOUNT_OP_MODIFYACCOUNTICON.to_string()));
         }
         if let Some(name) = modify_req.name.as_ref() {
-            tasks.push((format!("修改姓名为{}", name), "ModifyName".to_string()));
+            tasks.push((Some(name.to_string()), LOG_IAM_ACCOUNT_OP_MODIFYNAME.to_string()));
         }
         for (op_describe, op_kind) in tasks {
             let _ = IamLogClient::add_ctx_task(LogParamTag::IamAccount, Some(id.to_string()), op_describe, Some(op_kind), ctx).await;
         }
+        #[cfg(feature = "spi_kv")]
+        Self::add_or_modify_account_kv(id, funs, ctx).await?;
 
         Ok(())
     }
 
-    async fn after_add_item(id: &str, add_req: &mut IamAccountAddReq, _funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        let mut op_describe = "添加长期账号".to_string();
-        let mut op_kind = "AddLongTermAccount".to_string();
+    async fn after_add_item(id: &str, add_req: &mut IamAccountAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let mut op_kind = LOG_IAM_ACCOUNT_OP_ADDLONGTERMACCOUNT.to_string();
         if add_req.temporary == Some(true) {
-            op_describe = "添加临时账号".to_string();
-            op_kind = "AddTempAccount".to_string();
+            op_kind = LOG_IAM_ACCOUNT_OP_ADDTEMPACCOUNT.to_string();
         }
-        let _ = IamLogClient::add_ctx_task(LogParamTag::IamAccount, Some(id.to_string()), op_describe, Some(op_kind), ctx).await;
+        let _ = IamLogClient::add_ctx_task(LogParamTag::IamAccount, Some(id.to_string()), None, Some(op_kind), ctx).await;
+
+        #[cfg(feature = "spi_kv")]
+        Self::add_or_modify_account_kv(id, funs, ctx).await?;
 
         Ok(())
     }
@@ -525,7 +530,7 @@ impl IamAccountServ {
         let groups = IamSetServ::find_flat_set_items(&org_set_id, &account.id, false, funs, &mock_tenant_ctx).await?;
         let account = IamAccountDetailAggResp {
             id: account.id.clone(),
-            name: if account.disabled { format!("{}(已注销)", account.name) } else { account.name },
+            name: account.name,
             own_paths: account.own_paths,
             owner: account.owner,
             owner_name: account.owner_name,
@@ -602,7 +607,7 @@ impl IamAccountServ {
         for account in accounts.records {
             account_aggs.push(IamAccountSummaryAggResp {
                 id: account.id.clone(),
-                name: if account.disabled { format!("{}(已注销)", account.name) } else { account.name },
+                name: account.name,
                 own_paths: account.own_paths,
                 owner: account.owner,
                 create_time: account.create_time,
@@ -720,7 +725,7 @@ impl IamAccountServ {
             ctx,
         )
         .await
-        .map(|r| r.into_iter().map(|r| format!("{},{},{}", r.id, if r.disabled { format!("{}(已注销)", r.name) } else { r.name }, r.icon)).collect())
+        .map(|r| r.into_iter().map(|r| format!("{},{},{}", r.id, r.name, r.icon)).collect())
     }
 
     pub async fn find_account_online_by_ids(ids: Vec<String>, funs: &TardisFunsInst, _ctx: &TardisContext) -> TardisResult<Vec<String>> {
@@ -856,5 +861,33 @@ impl IamAccountServ {
         } else {
             Ok(ctx.clone())
         }
+    }
+
+    async fn add_or_modify_account_kv(account_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let account = Self::get_item(
+            account_id,
+            &IamAccountFilterReq {
+                basic: RbumBasicFilterReq {
+                    ignore_scope: true,
+                    own_paths: Some("".to_owned()),
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?;
+        SpiKvClient::add_or_modify_key_name(
+            &format!("{}:{account_id}", funs.conf::<IamConfig>().spi.kv_account_prefix.clone()),
+            &account.name,
+            None,
+            funs,
+            ctx,
+        )
+        .await?;
+
+        Ok(())
     }
 }

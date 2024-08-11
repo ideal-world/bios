@@ -23,7 +23,7 @@ use tardis::{TardisFuns, TardisFunsInst};
 use crate::basic::dto::iam_filer_dto::IamAccountFilterReq;
 use crate::basic::dto::iam_set_dto::{IamSetCateAddReq, IamSetCateModifyReq, IamSetItemAddReq};
 use crate::iam_config::{IamBasicConfigApi, IamConfig};
-use crate::iam_constants::{RBUM_SCOPE_LEVEL_APP, RBUM_SCOPE_LEVEL_TENANT};
+use crate::iam_constants::{LOG_IAM_ORG_OP_ADD, LOG_IAM_ORG_OP_ADDACCOUNT, LOG_IAM_ORG_OP_DELETE, LOG_IAM_ORG_OP_REMOVEACCOUNT, LOG_IAM_ORG_OP_RENAME, LOG_IAM_RES_OP_ADD, LOG_IAM_RES_OP_DELETE, LOG_IAM_RES_OP_MODIFYCONTENT, RBUM_SCOPE_LEVEL_APP, RBUM_SCOPE_LEVEL_TENANT};
 use crate::iam_enumeration::{IamRelKind, IamSetCateKind, IamSetKind};
 
 use super::clients::iam_kv_client::IamKvClient;
@@ -192,14 +192,14 @@ impl IamSetServ {
         }
         if result.is_ok() {
             kind.make_ascii_lowercase();
-            let (op_describe, tag, op_kind) = match kind.as_str() {
-                "org" => ("添加部门".to_string(), Some(LogParamTag::IamOrg), Some("Add".to_string())),
-                "res" => ("添加目录".to_string(), Some(LogParamTag::IamRes), Some("Add".to_string())),
-                _ => (String::new(), None, None),
+            let (tag, op_kind) = match kind.as_str() {
+                "org" => (Some(LogParamTag::IamOrg), Some(LOG_IAM_ORG_OP_ADD.to_string())),
+                "res" => (Some(LogParamTag::IamRes), Some(LOG_IAM_RES_OP_ADD.to_string())),
+                _ => (None, None),
             };
 
             if let Some(tag) = tag {
-                let _ = IamLogClient::add_ctx_task(tag, Some(result.clone()?), op_describe, op_kind, ctx).await;
+                let _ = IamLogClient::add_ctx_task(tag, Some(result.clone()?), None, op_kind, ctx).await;
             }
         }
 
@@ -269,8 +269,8 @@ impl IamSetServ {
                         let _ = IamLogClient::add_ctx_task(
                             LogParamTag::IamOrg,
                             Some(set_cate_id.to_string()),
-                            format!("重命名部门为{}", name),
-                            Some("Rename".to_string()),
+                            Some(name.to_string()),
+                            Some(LOG_IAM_ORG_OP_RENAME.to_string()),
                             ctx,
                         )
                         .await;
@@ -280,8 +280,8 @@ impl IamSetServ {
                     let _ = IamLogClient::add_ctx_task(
                         LogParamTag::IamRes,
                         Some(set_cate_id.to_string()),
-                        "编辑目录".to_string(),
-                        Some("ModifyContent".to_string()),
+                        None,
+                        Some(LOG_IAM_RES_OP_MODIFYCONTENT.to_string()),
                         ctx,
                     )
                     .await;
@@ -329,13 +329,13 @@ impl IamSetServ {
                 IamStatsClient::async_org_fact_record_remove(set_cate_id.to_owned(), funs, ctx).await?;
             }
             kind.make_ascii_lowercase();
-            let (op_describe, tag, op_kind) = match kind.as_str() {
-                "org" => ("删除部门".to_string(), Some(LogParamTag::IamOrg), Some("Delete".to_string())),
-                "res" => ("删除目录".to_string(), Some(LogParamTag::IamRes), Some("Delete".to_string())),
-                _ => (String::new(), None, None),
+            let (tag, op_kind) = match kind.as_str() {
+                "org" => (Some(LogParamTag::IamOrg), Some(LOG_IAM_ORG_OP_DELETE.to_string())),
+                "res" => (Some(LogParamTag::IamRes), Some(LOG_IAM_RES_OP_DELETE.to_string())),
+                _ => (None, None),
             };
             if let Some(tag) = tag {
-                let _ = IamLogClient::add_ctx_task(tag, Some(set_cate_id.to_string()), op_describe, op_kind, ctx).await;
+                let _ = IamLogClient::add_ctx_task(tag, Some(set_cate_id.to_string()), None, op_kind, ctx).await;
             }
         }
 
@@ -604,8 +604,8 @@ impl IamSetServ {
             let _ = IamLogClient::add_ctx_task(
                 LogParamTag::IamOrg,
                 Some(set_cate_id.clone()),
-                format!("添加部门人员{}", account.name.clone()),
-                Some("AddAccount".to_string()),
+                Some(account.name.clone()),
+                Some(LOG_IAM_ORG_OP_ADDACCOUNT.to_string()),
                 ctx,
             )
             .await;
@@ -644,8 +644,8 @@ impl IamSetServ {
                 let _ = IamLogClient::add_ctx_task(
                     LogParamTag::IamOrg,
                     Some(item.rel_rbum_set_cate_id.unwrap_or_default().clone()),
-                    format!("移除部门人员{}", account.name.clone()),
-                    Some("RemoveAccount".to_string()),
+                    Some(account.name.clone()),
+                    Some(LOG_IAM_ORG_OP_REMOVEACCOUNT.to_string()),
                     ctx,
                 )
                 .await;

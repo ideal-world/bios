@@ -9,7 +9,7 @@ use bios_sdk_invoke::clients::{
     event_client::{BiosEventCenter, EventCenter, EventExt},
     spi_log_client::{LogItemAddReq, SpiLogClient},
 };
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
@@ -26,7 +26,17 @@ use crate::{
     iam_constants::{self, IAM_AVATAR},
     iam_enumeration::IamCertKernelKind,
 };
+
+use super::iam_kv_client::IamKvClient;
 pub struct IamLogClient;
+
+#[derive(Deserialize, Serialize, Default, Debug, Clone)]
+struct LogConfig {
+    code: String,
+    icon: String,
+    color: String,
+    label: String,
+}
 
 #[derive(Serialize, Default, Debug, Clone)]
 pub struct LogParamContent {
@@ -38,6 +48,7 @@ pub struct LogParamContent {
     pub key_name: Option<String>,
 }
 
+#[derive(Clone)]
 pub enum LogParamTag {
     IamTenant,
     IamOrg,
@@ -69,7 +80,7 @@ impl From<LogParamTag> for String {
 }
 
 impl IamLogClient {
-    pub async fn add_ctx_task(tag: LogParamTag, key: Option<String>, op_describe: String, op_kind: Option<String>, ctx: &TardisContext) -> TardisResult<()> {
+    pub async fn add_ctx_task(tag: LogParamTag, key: Option<String>, op_describe: Option<String>, op_kind: Option<String>, ctx: &TardisContext) -> TardisResult<()> {
         let ctx_clone = ctx.clone();
         ctx.add_async_task(Box::new(|| {
             Box::pin(async move {
@@ -79,10 +90,31 @@ impl IamLogClient {
                     if let Ok(remote_ip) = get_real_ip_from_ctx(&ctx_clone).await {
                         ip = remote_ip.unwrap_or_default();
                     }
+                    let op_label = IamKvClient::get_item(format!("__tag__:_:{}", String::from(tag.clone())), None, &funs, &ctx_clone)
+                        .await
+                        .unwrap_or_default()
+                        .map(|kv_desp| {
+                            TardisFuns::json
+                                .json_to_obj::<Vec<LogConfig>>(kv_desp.value)
+                                .unwrap_or_default()
+                                .into_iter()
+                                .find(|conf| conf.code == op_kind.clone().unwrap_or_default())
+                                .map(|conf| conf.label)
+                                .unwrap_or_default()
+                        })
+                        .unwrap_or_default();
                     IamLogClient::add_item(
                         tag,
                         LogParamContent {
-                            op: op_describe,
+                            op: if let Some(op_describe) = op_describe {
+                                format!("{}:{}", op_label, op_describe)
+                            } else {
+                                if op_label.is_empty() && op_describe.is_some() {
+                                    op_describe.unwrap_or_default()
+                                } else {
+                                    op_label
+                                }
+                            },
                             key: key.clone(),
                             ip,
                             ..Default::default()
@@ -105,12 +137,12 @@ impl IamLogClient {
         .await
     }
 
-    pub async fn add_item(
+    async fn add_item(
         tag: LogParamTag,
         content: LogParamContent,
         kind: Option<String>,
         key: Option<String>,
-        op: Option<String>,
+        op_kind: Option<String>,
         rel_key: Option<String>,
         ts: Option<String>,
         funs: &TardisFunsInst,
@@ -131,7 +163,7 @@ impl IamLogClient {
             "ip":content.ip,
             "key":content.key,
             "ts":ts,
-            "op":op,
+            "op":op_kind,
         });
         // generate log item
         let tag: String = tag.into();
@@ -143,7 +175,7 @@ impl IamLogClient {
             kind,
             ext: Some(search_ext),
             key,
-            op,
+            op: op_kind,
             rel_key,
             id: None,
             ts: ts.map(|ts| DateTime::parse_from_rfc3339(&ts).unwrap_or_default().with_timezone(&Utc)),

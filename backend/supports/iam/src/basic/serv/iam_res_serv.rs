@@ -32,7 +32,7 @@ use crate::basic::serv::iam_key_cache_serv::IamResCacheServ;
 use crate::basic::serv::iam_rel_serv::IamRelServ;
 use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::iam_config::IamBasicInfoManager;
-use crate::iam_constants;
+use crate::iam_constants::{self, LOG_IAM_RES_OP_ADDAPI, LOG_IAM_RES_OP_ADDCONTENTPAGEASPERSONAL, LOG_IAM_RES_OP_ADDCONTENTPAGEBUTTON, LOG_IAM_RES_OP_ADDPROJECT, LOG_IAM_RES_OP_ADDSPECIFICATION, LOG_IAM_RES_OP_DELETEAPI, LOG_IAM_RES_OP_DELETECONTENTPAGEASPERSONAL, LOG_IAM_RES_OP_MODIFYAPI, LOG_IAM_RES_OP_MODIFYCONTENTPAGE, LOG_IAM_RES_OP_MODIFYELE, LOG_IAM_RES_OP_MODIFYPROJECT, LOG_IAM_RES_OP_MODIFYSPECIFICATION, LOG_IAM_RES_OP_REMOVECONTENTPAGEBUTTON, LOG_IAM_RES_OP_REMOVEPROJECT, LOG_IAM_RES_OP_REMOVESPECIFICATION};
 use crate::iam_enumeration::{IamRelKind, IamResKind, IamSetCateKind};
 
 use super::clients::iam_log_client::{IamLogClient, LogParamTag};
@@ -110,16 +110,14 @@ impl RbumItemCrudOperation<iam_res::ActiveModel, IamResAddReq, IamResModifyReq, 
         if res.kind == IamResKind::Api {
             IamResCacheServ::add_res(&res.code, &res.method, res.crypto_req, res.crypto_resp, res.double_auth, res.need_login, funs).await?;
         }
-        let (op_describe, op_kind) = match res.kind {
-            IamResKind::Menu => ("添加目录页面".to_string(), "AddContentPageaspersonal".to_string()),
-            IamResKind::Api => ("添加API".to_string(), "AddApi".to_string()),
-            IamResKind::Ele => ("添加目录页面按钮".to_string(), "AddContentPageButton".to_string()),
-            IamResKind::Product => ("添加产品".to_string(), "AddProduct".to_string()),
-            IamResKind::Spec => ("添加产品规格".to_string(), "AddSpecification".to_string()),
+        let op_kind = match res.kind {
+            IamResKind::Menu => LOG_IAM_RES_OP_ADDCONTENTPAGEASPERSONAL.to_string(),
+            IamResKind::Api => LOG_IAM_RES_OP_ADDAPI.to_string(),
+            IamResKind::Ele => LOG_IAM_RES_OP_ADDCONTENTPAGEBUTTON.to_string(),
+            IamResKind::Product => LOG_IAM_RES_OP_ADDPROJECT.to_string(),
+            IamResKind::Spec => LOG_IAM_RES_OP_ADDSPECIFICATION.to_string(),
         };
-        if !op_describe.is_empty() {
-            let _ = IamLogClient::add_ctx_task(LogParamTag::IamRes, Some(id.to_string()), op_describe, Some(op_kind), ctx).await;
-        }
+        let _ = IamLogClient::add_ctx_task(LogParamTag::IamRes, Some(id.to_string()), None, Some(op_kind), ctx).await;
 
         Ok(())
     }
@@ -259,16 +257,14 @@ impl RbumItemCrudOperation<iam_res::ActiveModel, IamResAddReq, IamResModifyReq, 
                 }
             }
         }
-        let (op_describe, op_kind) = match res.kind {
-            IamResKind::Menu => ("编辑目录页面".to_string(), "ModifyContentPage".to_string()),
-            IamResKind::Api => ("编辑API".to_string(), "ModifyApi".to_string()),
-            IamResKind::Ele => ("编辑操作".to_string(), "ModifyEle".to_string()),
-            IamResKind::Product => ("编辑产品".to_string(), "ModifyProduct".to_string()),
-            IamResKind::Spec => ("编辑产品规格".to_string(), "ModifySpecification".to_string()),
+        let op_kind = match res.kind {
+            IamResKind::Menu => LOG_IAM_RES_OP_MODIFYCONTENTPAGE.to_string(),
+            IamResKind::Api => LOG_IAM_RES_OP_MODIFYAPI.to_string(),
+            IamResKind::Ele => LOG_IAM_RES_OP_MODIFYELE.to_string(),
+            IamResKind::Product => LOG_IAM_RES_OP_MODIFYPROJECT.to_string(),
+            IamResKind::Spec => LOG_IAM_RES_OP_MODIFYSPECIFICATION.to_string(),
         };
-        if !op_describe.is_empty() {
-            let _ = IamLogClient::add_ctx_task(LogParamTag::IamRes, Some(id.to_string()), op_describe, Some(op_kind), ctx).await;
-        }
+        let _ = IamLogClient::add_ctx_task(LogParamTag::IamRes, Some(id.to_string()), None, Some(op_kind), ctx).await;
 
         Ok(())
     }
@@ -296,16 +292,14 @@ impl RbumItemCrudOperation<iam_res::ActiveModel, IamResAddReq, IamResModifyReq, 
             if deleted_item.kind == IamResKind::Api {
                 IamResCacheServ::delete_res(&deleted_item.code, &deleted_item.method, funs).await?;
             }
-            let (op_describe, op_kind) = match deleted_item.kind {
-                IamResKind::Menu => ("删除目录页面".to_string(), "DeleteContentPageAsPersonal".to_string()),
-                IamResKind::Api => ("删除API".to_string(), "DeleteApi".to_string()),
-                IamResKind::Ele => ("移除目录页面按钮".to_string(), "RemoveContentPageButton".to_string()),
-                IamResKind::Product => ("移除产品".to_string(), "RemoveProduct".to_string()),
-                IamResKind::Spec => ("移除产品规格".to_string(), "RemoveSpecification".to_string()),
+            let op_kind = match deleted_item.kind {
+                IamResKind::Menu => LOG_IAM_RES_OP_DELETECONTENTPAGEASPERSONAL.to_string(),
+                IamResKind::Api => LOG_IAM_RES_OP_DELETEAPI.to_string(),
+                IamResKind::Ele => LOG_IAM_RES_OP_REMOVECONTENTPAGEBUTTON.to_string(),
+                IamResKind::Product => LOG_IAM_RES_OP_REMOVEPROJECT.to_string(),
+                IamResKind::Spec => LOG_IAM_RES_OP_REMOVESPECIFICATION.to_string(),
             };
-            if !op_describe.is_empty() {
-                let _ = IamLogClient::add_ctx_task(LogParamTag::IamRes, Some(deleted_item.id.to_string()), op_describe, Some(op_kind), ctx).await;
-            }
+            let _ = IamLogClient::add_ctx_task(LogParamTag::IamRes, Some(deleted_item.id.to_string()), None, Some(op_kind), ctx).await;
 
             Ok(())
         } else {

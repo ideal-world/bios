@@ -17,6 +17,7 @@ use crate::basic::dto::iam_filer_dto::{IamAccountFilterReq, IamResFilterReq};
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_key_cache_serv::{IamCacheResRelAddOrModifyReq, IamCacheResRelDeleteReq, IamIdentCacheServ, IamResCacheServ};
 use crate::basic::serv::iam_res_serv::IamResServ;
+use crate::iam_constants::{LOG_IAM_ACCOUNT_OP_ADDTENANTROLEASADMIN, LOG_IAM_ACCOUNT_OP_REMOVETENANTROLEASADMIN, LOG_IAM_RES_OP_ADDCONTENTPAGEAPI, LOG_IAM_RES_OP_ADDELEMENTAPI, LOG_IAM_RES_OP_REMOVECONTENTPAGEAPI, LOG_IAM_RES_OP_REMOVEELEMENTAPI, LOG_IAM_ROLE_OP_ADDROLEACCOUNT, LOG_IAM_ROLE_OP_REMOVEROLEACCOUNT};
 use crate::iam_enumeration::{IamRelKind, IamResKind};
 
 use super::clients::iam_log_client::{IamLogClient, LogParamTag};
@@ -82,8 +83,8 @@ impl IamRelServ {
             let _ = IamLogClient::add_ctx_task(
                 LogParamTag::IamAccount,
                 Some(from_iam_item_id.to_string()),
-                "增加账号租户角色为管理员".to_string(),
-                Some("AddTenantRoleAsAdmin".to_string()),
+                None,
+                Some(LOG_IAM_ACCOUNT_OP_ADDTENANTROLEASADMIN.to_string()),
                 ctx,
             )
             .await;
@@ -106,8 +107,8 @@ impl IamRelServ {
             let _ = IamLogClient::add_ctx_task(
                 LogParamTag::IamRole,
                 Some(to_iam_item_id.to_string()),
-                format!("添加角色人员{}", account_name),
-                Some("AddRoleAccount".to_string()),
+                Some(account_name),
+                Some(LOG_IAM_ROLE_OP_ADDROLEACCOUNT.to_string()),
                 ctx,
             )
             .await;
@@ -259,16 +260,15 @@ impl IamRelServ {
             )
             .await?;
 
-            let (op_describe, op_kind) = match res_other.kind {
-                IamResKind::Api => ("", ""),
-                IamResKind::Ele => ("添加操作API", "AddElementApi"),
-                IamResKind::Menu => ("添加目录页面API", "AddContentPageApi"),
-                _ => ("", ""),
+            let op_kind = match res_other.kind {
+                IamResKind::Ele => LOG_IAM_RES_OP_ADDELEMENTAPI,
+                IamResKind::Menu => LOG_IAM_RES_OP_ADDCONTENTPAGEAPI,
+                _ => "",
             };
             let _ = IamLogClient::add_ctx_task(
                 LogParamTag::IamRes,
                 Some(from_iam_item_id.to_string()),
-                op_describe.to_string(),
+                None,
                 Some(op_kind.to_string()),
                 ctx,
             )
@@ -477,16 +477,15 @@ impl IamRelServ {
                 )
                 .await?;
 
-                let (op_describe, op_kind) = match res_other.kind {
-                    IamResKind::Api => ("", ""),
-                    IamResKind::Ele => ("移除操作API", "RemoveElementApi"),
-                    IamResKind::Menu => ("移除目录页面API", "RemoveContentPageApi"),
-                    _ => ("", ""),
+                let op_kind = match res_other.kind {
+                    IamResKind::Ele => LOG_IAM_RES_OP_REMOVEELEMENTAPI,
+                    IamResKind::Menu => LOG_IAM_RES_OP_REMOVECONTENTPAGEAPI,
+                    _ => "",
                 };
                 let _ = IamLogClient::add_ctx_task(
                     LogParamTag::IamRes,
                     Some(from_iam_item_id.to_string()),
-                    op_describe.to_string(),
+                    None,
                     Some(op_kind.to_string()),
                     ctx,
                 )
@@ -497,8 +496,8 @@ impl IamRelServ {
                 let _ = IamLogClient::add_ctx_task(
                     LogParamTag::IamAccount,
                     Some(from_iam_item_id.to_string()),
-                    "移除账号租户角色为管理员".to_string(),
-                    Some("RemoveTenantRoleAsAdmin".to_string()),
+                    None,
+                    Some(LOG_IAM_ACCOUNT_OP_REMOVETENANTROLEASADMIN.to_string()),
                     ctx,
                 )
                 .await;
@@ -521,8 +520,8 @@ impl IamRelServ {
                 let _ = IamLogClient::add_ctx_task(
                     LogParamTag::IamRole,
                     Some(to_iam_item_id.to_string()),
-                    format!("移除角色人员{}", account_name),
-                    Some("RemoveRoleAccount".to_string()),
+                    Some(account_name),
+                    Some(LOG_IAM_ROLE_OP_REMOVEROLEACCOUNT.to_string()),
                     ctx,
                 )
                 .await;

@@ -22,7 +22,7 @@ use crate::basic::serv::clients::iam_search_client::IamSearchClient;
 use crate::basic::serv::iam_account_serv::IamAccountServ;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_set_serv::IamSetServ;
-use crate::iam_constants;
+use crate::iam_constants::{self, LOG_IAM_ACCOUNT_OP_MANUALLYLOCKACCOUNT};
 use crate::iam_enumeration::{IamAccountLockStateKind, IamAccountStatusKind, IamRelKind};
 use bios_basic::helper::request_helper::try_set_real_ip_from_req_to_ctx;
 use tardis::web::poem::Request;
@@ -380,8 +380,8 @@ impl IamCsAccountApi {
         let _ = IamLogClient::add_ctx_task(
             LogParamTag::IamAccount,
             Some(id.0.clone()),
-            "人工锁定账号".to_string(),
-            Some("ManuallyLockAccount".to_string()),
+            None,
+            Some(LOG_IAM_ACCOUNT_OP_MANUALLYLOCKACCOUNT.to_string()),
             &ctx,
         )
         .await;

@@ -14,6 +14,7 @@ use crate::basic::dto::iam_cert_conf_dto::{IamCertConfTokenAddReq, IamCertConfTo
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_key_cache_serv::IamIdentCacheServ;
 use crate::iam_config::IamBasicConfigApi;
+use crate::iam_constants::LOG_SECURITY_VISIT_OP_LOGIN;
 use crate::iam_enumeration::{IamCertTokenKind, IamConfigDataTypeKind, IamConfigKind};
 
 use super::clients::iam_log_client::{IamLogClient, LogParamTag};
@@ -118,8 +119,8 @@ impl IamCertTokenServ {
             ctx,
         )
         .await?;
-        let _ = IamLogClient::add_ctx_task(LogParamTag::Token, Some(token.to_string()), "add token".to_string(), None, ctx).await;
-        let _ = IamLogClient::add_ctx_task(LogParamTag::SecurityVisit, Some(ctx.owner.clone()), "登录".to_string(), Some("Login".to_string()), ctx).await;
+        let _ = IamLogClient::add_ctx_task(LogParamTag::Token, Some(token.to_string()), Some("add token".to_string()), None, ctx).await;
+        let _ = IamLogClient::add_ctx_task(LogParamTag::SecurityVisit, Some(ctx.owner.clone()), None, Some(LOG_SECURITY_VISIT_OP_LOGIN.to_string()), ctx).await;
         // 根据安全配置的Token Expire，计算token的活化有效期
         if let Some(config) =
             IamConfigServ::get_config_by_code_and_item_id(&IamConfigKind::TokenExpire, &get_max_level_id_by_context(ctx).unwrap_or("".to_string()), funs, ctx).await?

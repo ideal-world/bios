@@ -2,7 +2,6 @@ use bios_basic::helper::request_helper::{add_ip, get_real_ip_from_ctx};
 use bios_basic::process::task_processor::TaskProcessor;
 use bios_basic::rbum::dto::rbum_rel_agg_dto::RbumRelAggAddReq;
 use bios_basic::rbum::serv::rbum_rel_serv::RbumRelServ;
-use itertools::Itertools;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use std::time::Duration;
@@ -48,7 +47,7 @@ use crate::basic::serv::iam_cert_token_serv::IamCertTokenServ;
 use crate::basic::serv::iam_cert_user_pwd_serv::IamCertUserPwdServ;
 use crate::basic::serv::iam_key_cache_serv::IamIdentCacheServ;
 use crate::iam_config::{IamBasicConfigApi, IamConfig};
-use crate::iam_constants::{self, IAM_AVATAR, RBUM_SCOPE_LEVEL_TENANT};
+use crate::iam_constants::{self, IAM_AVATAR, LOG_IAM_ACCOUNT_OP_PASSWORDLOCKACCOUNT, LOG_SECURITY_VISIT_OP_CONTINULOGINFAIL, RBUM_SCOPE_LEVEL_TENANT};
 use crate::iam_enumeration::{IamAccountLockStateKind, IamCertExtKind, IamCertKernelKind, IamCertTokenKind, IamRelKind, IamResKind};
 
 lazy_static! {
@@ -1605,16 +1604,16 @@ impl IamCertServ {
                 let _ = IamLogClient::add_ctx_task(
                     LogParamTag::IamAccount,
                     None,
-                    "密码锁定账号".to_string(),
-                    Some("PasswordLockAccount".to_string()),
+                    None,
+                    Some(LOG_IAM_ACCOUNT_OP_PASSWORDLOCKACCOUNT.to_string()),
                     &mock_ctx,
                 )
                 .await;
                 let _ = IamLogClient::add_ctx_task(
                     LogParamTag::SecurityVisit,
                     None,
-                    "连续登录失败".to_string(),
-                    Some("ContinuLoginFail".to_string()),
+                    None,
+                    Some(LOG_SECURITY_VISIT_OP_CONTINULOGINFAIL.to_string()),
                     &mock_ctx,
                 )
                 .await;

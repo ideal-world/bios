@@ -15,6 +15,7 @@ use crate::basic::dto::iam_cert_conf_dto::IamCertConfUserPwdAddOrModifyReq;
 use crate::basic::dto::iam_cert_dto::{IamCertUserNameNewReq, IamCertUserPwdAddReq, IamCertUserPwdModifyReq, IamCertUserPwdRestReq};
 use crate::basic::serv::iam_key_cache_serv::IamIdentCacheServ;
 use crate::iam_config::IamBasicConfigApi;
+use crate::iam_constants::{LOG_IAM_ACCOUNT_OP_MODIFYPASSWORD, LOG_IAM_ACCOUNT_OP_RESETACCOUNTPASSWORD, LOG_SECURITY_ALARM_OP_MODIFYPASSWORDCOMPLEXITY, LOG_SECURITY_ALARM_OP_MODIFYPASSWORDERRORSETTING, LOG_SECURITY_ALARM_OP_MODIFYPASSWORDLENGTH, LOG_SECURITY_ALARM_OP_MODIFYPASSWORDVALIDTYPERIOD};
 use crate::iam_enumeration::IamCertKernelKind;
 
 use super::clients::iam_log_client::{IamLogClient, LogParamTag};
@@ -67,8 +68,8 @@ impl IamCertUserPwdServ {
         let mut log_tasks = vec![];
         if modify_req.sk_rule_len_max != ext.sk_rule_len_max || modify_req.sk_rule_len_min != ext.sk_rule_len_min {
             log_tasks.push((
-                format!("修改密码长度{}-{}", modify_req.sk_rule_len_min, modify_req.sk_rule_len_max),
-                "ModifyPasswordLength".to_string(),
+                Some(format!("{}-{}", modify_req.sk_rule_len_min, modify_req.sk_rule_len_max)),
+                LOG_SECURITY_ALARM_OP_MODIFYPASSWORDLENGTH.to_string(),
             ));
         }
         if modify_req.sk_rule_need_num != ext.sk_rule_need_num
@@ -76,23 +77,23 @@ impl IamCertUserPwdServ {
             || modify_req.sk_rule_need_lowercase != ext.sk_rule_need_lowercase
             || modify_req.sk_rule_need_spec_char != ext.sk_rule_need_spec_char
         {
-            log_tasks.push(("修改密码复杂度".to_string(), "ModifyPasswordComplexity".to_string()));
+            log_tasks.push((None, LOG_SECURITY_ALARM_OP_MODIFYPASSWORDCOMPLEXITY.to_string()));
         }
         if modify_req.expire_sec != ext.expire_sec {
-            log_tasks.push((format!("修改密码有效期为{}", modify_req.expire_sec / 86400), "ModifyPasswordValidityPeriod".to_string()));
+            log_tasks.push((Some(format!("{}天", modify_req.expire_sec / 86400)), LOG_SECURITY_ALARM_OP_MODIFYPASSWORDVALIDTYPERIOD.to_string()));
         }
         if modify_req.sk_lock_cycle_sec != ext.sk_lock_cycle_sec
             || modify_req.sk_lock_err_times != ext.sk_lock_err_times
             || modify_req.sk_lock_duration_sec != ext.sk_lock_duration_sec
         {
             log_tasks.push((
-                format!(
-                    "修改密码错误设定为{}分钟内连续错误{}次即被锁定{}分钟",
+                Some(format!(
+                    "{}分钟内连续错误{}次即被锁定{}分钟",
                     modify_req.sk_lock_cycle_sec / 60,
                     modify_req.sk_lock_err_times,
                     modify_req.sk_lock_duration_sec / 60
-                ),
-                "ModifyPasswordErrorSetting".to_string(),
+                )),
+                LOG_SECURITY_ALARM_OP_MODIFYPASSWORDERRORSETTING.to_string(),
             ));
         }
         for (op_describe, op_kind) in log_tasks {
@@ -213,8 +214,8 @@ impl IamCertUserPwdServ {
             let _ = IamLogClient::add_ctx_task(
                 LogParamTag::IamAccount,
                 Some(ctx.owner.clone()),
-                "修改密码".to_string(),
-                Some("ModifyPassword".to_string()),
+                None,
+                Some(LOG_IAM_ACCOUNT_OP_MODIFYPASSWORD.to_string()),
                 ctx,
             )
             .await;
@@ -335,8 +336,8 @@ impl IamCertUserPwdServ {
             let _ = IamLogClient::add_ctx_task(
                 LogParamTag::IamAccount,
                 Some(rel_iam_item_id.to_string()),
-                "重置账号密码".to_string(),
-                Some("ResetAccountPassword".to_string()),
+                None,
+                Some(LOG_IAM_ACCOUNT_OP_RESETACCOUNTPASSWORD.to_string()),
                 ctx,
             )
             .await;
@@ -402,8 +403,8 @@ impl IamCertUserPwdServ {
             let _ = IamLogClient::add_ctx_task(
                 LogParamTag::IamAccount,
                 Some(rel_iam_item_id.to_string()),
-                "重置账号密码".to_string(),
-                Some("ResetAccountPassword".to_string()),
+                None,
+                Some(LOG_IAM_ACCOUNT_OP_RESETACCOUNTPASSWORD.to_string()),
                 ctx,
             )
             .await;

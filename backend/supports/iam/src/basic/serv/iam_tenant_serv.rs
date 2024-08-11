@@ -35,7 +35,7 @@ use crate::basic::serv::iam_cert_user_pwd_serv::IamCertUserPwdServ;
 use crate::basic::serv::iam_key_cache_serv::IamIdentCacheServ;
 use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::iam_config::{IamBasicConfigApi, IamBasicInfoManager, IamConfig};
-use crate::iam_constants;
+use crate::iam_constants::{self, LOG_IAM_TENANT_OP_ADD, LOG_IAM_TENANT_OP_DISABLED, LOG_IAM_TENANT_OP_ENABLED, LOG_IAM_TENANT_OP_MODIFY, LOG_SECURITY_ALARM_OP_MODIFYCERTIFIEDWAY};
 use crate::iam_constants::{RBUM_ITEM_ID_TENANT_LEN, RBUM_SCOPE_LEVEL_TENANT};
 use crate::iam_enumeration::{IamCertExtKind, IamCertKernelKind, IamCertOAuth2Supplier, IamCertTokenKind, IamConfigDataTypeKind, IamConfigKind, IamRoleKind, IamSetKind};
 
@@ -127,7 +127,7 @@ impl RbumItemCrudOperation<iam_tenant::ActiveModel, IamTenantAddReq, IamTenantMo
     async fn after_add_item(id: &str, _: &mut IamTenantAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         #[cfg(feature = "spi_kv")]
         Self::add_or_modify_tenant_kv(id, funs, ctx).await?;
-        let _ = IamLogClient::add_ctx_task(LogParamTag::IamTenant, Some(id.to_string()), "添加租户".to_string(), Some("Add".to_string()), ctx).await;
+        let _ = IamLogClient::add_ctx_task(LogParamTag::IamTenant, Some(id.to_string()), None, Some(LOG_IAM_TENANT_OP_ADD.to_string()), ctx).await;
 
         Ok(())
     }
@@ -138,16 +138,13 @@ impl RbumItemCrudOperation<iam_tenant::ActiveModel, IamTenantAddReq, IamTenantMo
         #[cfg(feature = "spi_kv")]
         Self::add_or_modify_tenant_kv(id, funs, ctx).await?;
 
-        let mut op_describe = "编辑租户".to_string();
-        let mut op_kind = "Modify".to_string();
+        let mut op_kind = LOG_IAM_TENANT_OP_MODIFY.to_string();
         if modify_req.disabled == Some(false) {
-            op_describe = "禁用租户".to_string();
-            op_kind = "Disabled".to_string();
+            op_kind = LOG_IAM_TENANT_OP_DISABLED.to_string();
         } else if modify_req.disabled == Some(true) {
-            op_describe = "启用租户".to_string();
-            op_kind = "Enabled".to_string();
+            op_kind = LOG_IAM_TENANT_OP_ENABLED.to_string();
         }
-        let _ = IamLogClient::add_ctx_task(LogParamTag::IamTenant, Some(id.to_string()), op_describe, Some(op_kind), ctx).await;
+        let _ = IamLogClient::add_ctx_task(LogParamTag::IamTenant, Some(id.to_string()), None, Some(op_kind), ctx).await;
 
         Ok(())
     }
@@ -396,10 +393,10 @@ impl IamTenantServ {
 
         let mut log_tasks = vec![];
         if modify_req.cert_conf_by_phone_vcode.is_some() {
-            log_tasks.push(("修改认证方式为手机号".to_string(), "ModifyCertifiedWay".to_string()));
+            log_tasks.push((Some("手机号".to_string()), LOG_SECURITY_ALARM_OP_MODIFYCERTIFIEDWAY.to_string()));
         }
         if modify_req.cert_conf_by_mail_vcode.is_some() {
-            log_tasks.push(("修改认证方式为邮箱".to_string(), "ModifyCertifiedWay".to_string()));
+            log_tasks.push((Some("邮箱".to_string()), LOG_SECURITY_ALARM_OP_MODIFYCERTIFIEDWAY.to_string()));
         }
         for (op_describe, op_kind) in log_tasks {
             let _ = IamLogClient::add_ctx_task(LogParamTag::SecurityAlarm, None, op_describe, Some(op_kind), ctx).await;

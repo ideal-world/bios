@@ -24,21 +24,20 @@ use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use bios_basic::rbum::serv::rbum_rel_serv::RbumRelServ;
 
 use crate::basic::domain::iam_role;
-use crate::basic::dto::iam_filer_dto::{IamAppFilterReq, IamResFilterReq, IamRoleFilterReq, IamTenantFilterReq};
+use crate::basic::dto::iam_filer_dto::{IamAppFilterReq, IamRoleFilterReq, IamTenantFilterReq};
 use crate::basic::dto::iam_role_dto::{IamRoleAddReq, IamRoleAggAddReq, IamRoleAggModifyReq, IamRoleDetailResp, IamRoleModifyReq, IamRoleSummaryResp};
 use crate::basic::serv::iam_app_serv::IamAppServ;
 use crate::basic::serv::iam_key_cache_serv::IamIdentCacheServ;
 use crate::basic::serv::iam_rel_serv::IamRelServ;
 use crate::iam_config::{IamBasicConfigApi, IamBasicInfoManager, IamConfig};
-use crate::iam_constants::{self, IAM_AVATAR, RBUM_ITEM_ID_SUB_ROLE_LEN};
+use crate::iam_constants::{self, IAM_AVATAR, LOG_IAM_ROLE_OP_ADDCUSTOMIZEROLE, LOG_IAM_ROLE_OP_DELETECUSTOMIZEROLE, LOG_IAM_ROLE_OP_MODIFYBUILTROLENAME, LOG_IAM_ROLE_OP_MODIFYBUILTROLEPERMISSIONS, LOG_IAM_ROLE_OP_MODIFYCUSTOMIZEROLENAME, LOG_IAM_ROLE_OP_MODIFYCUSTOMIZEROLEPERMISSIONS, RBUM_ITEM_ID_SUB_ROLE_LEN};
 use crate::iam_constants::{RBUM_SCOPE_LEVEL_APP, RBUM_SCOPE_LEVEL_TENANT};
-use crate::iam_enumeration::{IamRelKind, IamResKind, IamRoleKind};
+use crate::iam_enumeration::{IamRelKind, IamRoleKind};
 
 use super::clients::iam_kv_client::IamKvClient;
 use super::clients::iam_log_client::{IamLogClient, LogParamTag};
 use super::clients::iam_search_client::IamSearchClient;
 use super::iam_cert_serv::IamCertServ;
-use super::iam_res_serv::IamResServ;
 use super::iam_tenant_serv::IamTenantServ;
 
 pub struct IamRoleServ;
@@ -112,8 +111,8 @@ impl RbumItemCrudOperation<iam_role::ActiveModel, IamRoleAddReq, IamRoleModifyRe
         let _ = IamLogClient::add_ctx_task(
             LogParamTag::IamRole,
             Some(id.to_string()),
-            "添加自定义角色".to_string(),
-            Some("AddCustomizeRole".to_string()),
+            None,
+            Some(LOG_IAM_ROLE_OP_ADDCUSTOMIZEROLE.to_string()),
             ctx,
         )
         .await;
@@ -204,20 +203,20 @@ impl RbumItemCrudOperation<iam_role::ActiveModel, IamRoleAddReq, IamRoleModifyRe
             .await?;
         }
 
-        let mut op_describe = String::new();
-        let mut op_kind = String::new();
+        let mut op_describe = None;
+        let mut op_kind = None;
         if modify_req.name.is_some() {
             if Self::is_custom_role(role.kind, role.scope_level.clone()) {
-                op_describe = format!("编辑自定义角色名称为{}", modify_req.name.as_ref().unwrap_or(&TrimString::from("")));
-                op_kind = "ModifyCustomizeRoleName".to_string();
+                op_describe = Some(modify_req.name.as_ref().unwrap_or(&TrimString::from("")).to_string());
+                op_kind = Some(LOG_IAM_ROLE_OP_MODIFYCUSTOMIZEROLENAME.to_string());
             } else {
-                op_describe = format!("编辑内置角色名称为{}", modify_req.name.as_ref().unwrap_or(&TrimString::from("")));
-                op_kind = "ModifyBuiltRoleName".to_string();
+                op_describe = Some(modify_req.name.as_ref().unwrap_or(&TrimString::from("")).to_string());
+                op_kind = Some(LOG_IAM_ROLE_OP_MODIFYBUILTROLENAME.to_string());
             }
         }
 
-        if !op_describe.is_empty() {
-            let _ = IamLogClient::add_ctx_task(LogParamTag::IamRole, Some(id.to_string()), op_describe, Some(op_kind), ctx).await;
+        if !op_describe.is_some() {
+            let _ = IamLogClient::add_ctx_task(LogParamTag::IamRole, Some(id.to_string()), op_describe, op_kind, ctx).await;
         }
         IamKvClient::async_add_or_modify_key_name(funs.conf::<IamConfig>().spi.kv_role_prefix.clone(), id.to_string(), role.name.clone(), funs, ctx).await?;
 
@@ -318,8 +317,8 @@ impl RbumItemCrudOperation<iam_role::ActiveModel, IamRoleAddReq, IamRoleModifyRe
         let _ = IamLogClient::add_ctx_task(
             LogParamTag::IamRole,
             Some(id.to_string()),
-            "删除自定义角色".to_string(),
-            Some("DeleteCustomizeRole".to_string()),
+            None,
+            Some(LOG_IAM_ROLE_OP_DELETECUSTOMIZEROLE.to_string()),
             ctx,
         )
         .await;
@@ -583,12 +582,12 @@ impl IamRoleServ {
             )
             .await?;
 
-            let (op_describe, op_kind) = if Self::is_custom_role(role.kind, role.scope_level) {
-                ("编辑自定义角色权限".to_string(), "ModifyCustomizeRolePermissions".to_string())
+            let op_kind = if Self::is_custom_role(role.kind, role.scope_level) {
+                LOG_IAM_ROLE_OP_MODIFYCUSTOMIZEROLEPERMISSIONS.to_string()
             } else {
-                ("编辑内置角色权限".to_string(), "ModifyBuiltRolePermissions".to_string())
+                LOG_IAM_ROLE_OP_MODIFYBUILTROLEPERMISSIONS.to_string()
             };
-            let _ = IamLogClient::add_ctx_task(LogParamTag::IamRole, Some(id.to_string()), op_describe, Some(op_kind), ctx).await;
+            let _ = IamLogClient::add_ctx_task(LogParamTag::IamRole, Some(id.to_string()), None, Some(op_kind), ctx).await;
         }
         Ok(())
     }

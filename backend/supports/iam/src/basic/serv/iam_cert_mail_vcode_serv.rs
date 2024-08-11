@@ -19,6 +19,7 @@ use crate::basic::serv::iam_account_serv::IamAccountServ;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_tenant_serv::IamTenantServ;
 use crate::iam_config::IamBasicConfigApi;
+use crate::iam_constants::LOG_IAM_ACCOUNT_OP_BINDMAILBOX;
 use crate::iam_enumeration::IamCertKernelKind;
 
 use super::clients::iam_log_client::{IamLogClient, LogParamTag};
@@ -335,8 +336,7 @@ impl IamCertMailVCodeServ {
                     .await?;
                     id
                 };
-                let op_describe = format!("绑定邮箱为{}", mail);
-                let _ = IamLogClient::add_ctx_task(LogParamTag::IamAccount, Some(ctx.owner.to_string()), op_describe, Some("BindMailbox".to_string()), &ctx).await;
+                let _ = IamLogClient::add_ctx_task(LogParamTag::IamAccount, Some(ctx.owner.to_string()), Some(mail.to_string()), Some(LOG_IAM_ACCOUNT_OP_BINDMAILBOX.to_string()), &ctx).await;
 
                 return Ok(id);
             }

@@ -24,7 +24,7 @@ use crate::basic::serv::iam_app_serv::IamAppServ;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_rel_serv::IamRelServ;
 use crate::iam_config::IamConfig;
-use crate::iam_constants::{self, IAM_AVATAR};
+use crate::iam_constants::{self, IAM_AVATAR, LOG_IAM_ACCOUNT_OP_OFFLINEACCOUNT, LOG_IAM_ACCOUNT_OP_QUIT};
 use crate::iam_enumeration::{IamCertTokenKind, IamRelKind};
 pub struct IamIdentCacheServ;
 
@@ -119,16 +119,16 @@ impl IamIdentCacheServ {
             let _ = IamLogClient::add_ctx_task(
                 LogParamTag::IamAccount,
                 Some(iam_item_id.to_string()),
-                "下线账号".to_string(),
-                Some("OfflineAccount".to_string()),
+                None,
+                Some(LOG_IAM_ACCOUNT_OP_OFFLINEACCOUNT.to_string()),
                 &mock_ctx,
             )
             .await;
             let _ = IamLogClient::add_ctx_task(
                 LogParamTag::SecurityVisit,
                 Some(iam_item_id.to_string()),
-                "退出".to_string(),
-                Some("Quit".to_string()),
+                None,
+                Some(LOG_IAM_ACCOUNT_OP_QUIT.to_string()),
                 &mock_ctx,
             )
             .await;
@@ -234,8 +234,8 @@ impl IamIdentCacheServ {
         let _ = IamLogClient::add_ctx_task(
             LogParamTag::IamAccount,
             Some(account_id.to_string()),
-            "下线账号".to_string(),
-            Some("OfflineAccount".to_string()),
+            None,
+            Some(LOG_IAM_ACCOUNT_OP_OFFLINEACCOUNT.to_string()),
             &mock_ctx,
         )
         .await;

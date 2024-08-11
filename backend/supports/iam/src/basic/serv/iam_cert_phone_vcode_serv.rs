@@ -17,6 +17,7 @@ use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use crate::basic::dto::iam_cert_conf_dto::IamCertConfPhoneVCodeAddOrModifyReq;
 use crate::basic::dto::iam_cert_dto::{IamCertPhoneVCodeAddReq, IamCertPhoneVCodeModifyReq};
 use crate::iam_config::IamBasicConfigApi;
+use crate::iam_constants::LOG_IAM_ACCOUNT_OP_BINDPHONE;
 use crate::iam_enumeration::IamCertKernelKind;
 
 use super::clients::iam_log_client::{IamLogClient, LogParamTag};
@@ -355,8 +356,7 @@ impl IamCertPhoneVCodeServ {
                     .await?;
                     id
                 };
-                let op_describe = format!("绑定手机号为{}", phone);
-                let _ = IamLogClient::add_ctx_task(LogParamTag::IamAccount, Some(ctx.owner.to_string()), op_describe, Some("BindPhone".to_string()), &ctx).await;
+                let _ = IamLogClient::add_ctx_task(LogParamTag::IamAccount, Some(ctx.owner.to_string()), Some(phone.to_string()), Some(LOG_IAM_ACCOUNT_OP_BINDPHONE.to_string()), &ctx).await;
                 return Ok(id);
             }
         }

@@ -19,8 +19,7 @@ use crate::{
             iam_config_dto::{IamConfigAddReq, IamConfigAggOrModifyReq, IamConfigDetailResp, IamConfigModifyReq, IamConfigSummaryResp},
             iam_filer_dto::IamConfigFilterReq,
         },
-    },
-    iam_enumeration::IamConfigKind,
+    }, iam_constants::{LOG_SECURITY_ALARM_OP_SETUPSESSIONINVALIDATION, LOG_SECURITY_ALARM_OP_SETUPTMPACCOUNTUSEPERIOD, LOG_SECURITY_ALARM_OP_SETUPUNUSEDACCOUNTSTOLOCK}, iam_enumeration::IamConfigKind
 };
 
 use super::clients::iam_log_client::{IamLogClient, LogParamTag};
@@ -130,20 +129,20 @@ impl IamConfigServ {
             let config_id = Self::get_config_id_by_code_and_item_id(&config.code, rel_item_id, funs).await?;
             let (op_describe, op_kind) = match &config.code {
                 IamConfigKind::AccountInactivityLock => (
-                    format!("设置{}个月未使用的账号进行锁定或将其转为休眠账号", config.value1.clone().unwrap_or(0.to_string())),
-                    "SetUpUnusedAccountsToLock".to_string(),
+                    Some(format!("{}个月", config.value1.clone().unwrap_or(0.to_string()))),
+                    LOG_SECURITY_ALARM_OP_SETUPUNUSEDACCOUNTSTOLOCK.to_string(),
                 ),
                 IamConfigKind::TokenExpire => (
-                    format!("设置{}分钟不活动则会话失效", config.value1.clone().unwrap_or(0.to_string())),
-                    "SetUpSessionInvalidation".to_string(),
+                    Some(format!("{}分钟", config.value1.clone().unwrap_or(0.to_string()))),
+                    LOG_SECURITY_ALARM_OP_SETUPSESSIONINVALIDATION.to_string(),
                 ),
                 IamConfigKind::AccountTemporaryExpire => (
-                    format!("设置临时账号使用期限为{}个月", config.value1.clone().unwrap_or(0.to_string())),
-                    "SetUpUnusedAccountsToLock".to_string(),
+                    Some(format!("{}个月", config.value1.clone().unwrap_or(0.to_string()))),
+                    LOG_SECURITY_ALARM_OP_SETUPTMPACCOUNTUSEPERIOD.to_string(),
                 ),
-                _ => ("".to_string(), "".to_string()),
+                _ => (None, "".to_string()),
             };
-            if !op_describe.is_empty() {
+            if !op_describe.is_some() {
                 let _ = IamLogClient::add_ctx_task(LogParamTag::SecurityAlarm, None, op_describe, Some(op_kind), ctx).await;
             }
             if let Some(id) = config_id {

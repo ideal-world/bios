@@ -12,6 +12,7 @@ use crate::basic::serv::iam_cert_phone_vcode_serv::IamCertPhoneVCodeServ;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 
 use crate::iam_config::IamConfig;
+use crate::iam_constants::LOG_SECURITY_ALARM_OP_MODIFYCERTIFIEDWAY;
 use crate::iam_enumeration::{IamCertKernelKind, IamCertTokenKind};
 
 use super::clients::iam_log_client::{IamLogClient, LogParamTag};
@@ -34,10 +35,10 @@ impl IamPlatformServ {
 
         let mut log_tasks = vec![];
         if modify_req.cert_conf_by_phone_vcode.is_some() {
-            log_tasks.push(("修改认证方式为手机号".to_string(), "ModifyCertifiedWay".to_string()));
+            log_tasks.push((Some("手机号".to_string()), LOG_SECURITY_ALARM_OP_MODIFYCERTIFIEDWAY.to_string()));
         }
         if modify_req.cert_conf_by_mail_vcode.is_some() {
-            log_tasks.push(("修改认证方式为邮箱".to_string(), "ModifyCertifiedWay".to_string()));
+            log_tasks.push((Some("邮箱".to_string()), LOG_SECURITY_ALARM_OP_MODIFYCERTIFIEDWAY.to_string()));
         }
         for (op_describe, op_kind) in log_tasks {
             let _ = IamLogClient::add_ctx_task(LogParamTag::SecurityAlarm, None, op_describe, Some(op_kind), ctx).await;

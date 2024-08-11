@@ -20,6 +20,7 @@ use crate::basic::serv::iam_cert_user_pwd_serv::IamCertUserPwdServ;
 use crate::basic::serv::iam_key_cache_serv::IamIdentCacheServ;
 use crate::basic::serv::iam_tenant_serv::IamTenantServ;
 use crate::console_passport::dto::iam_cp_cert_dto::IamCpUserPwdLoginReq;
+use crate::iam_constants::LOG_IAM_ACCOUNT_OP_MODIFYUSERNAME;
 use crate::iam_enumeration::{IamAccountStatusKind, IamCertKernelKind};
 
 pub struct IamCpCertUserPwdServ;
@@ -138,8 +139,8 @@ impl IamCpCertUserPwdServ {
         IamCertUserPwdServ::modify_ak_cert(&ctx.owner, req, &rbum_cert_conf_id, funs, &ctx).await?;
 
         let id = ctx.owner.to_string();
-        let op_describe = format!("修改用户名为{}", req.new_ak);
-        let _ = IamLogClient::add_ctx_task(LogParamTag::IamAccount, Some(id), op_describe, Some("ModifyUserName".to_string()), &ctx).await;
+        let op_describe = Some(req.new_ak.to_string());
+        let _ = IamLogClient::add_ctx_task(LogParamTag::IamAccount, Some(id), op_describe, Some(LOG_IAM_ACCOUNT_OP_MODIFYUSERNAME.to_string()), &ctx).await;
 
         Ok(())
     }

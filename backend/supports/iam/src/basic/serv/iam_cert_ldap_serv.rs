@@ -11,6 +11,7 @@ use crate::basic::serv::iam_cert_mail_vcode_serv::IamCertMailVCodeServ;
 use crate::basic::serv::iam_cert_user_pwd_serv::IamCertUserPwdServ;
 use crate::console_passport::dto::iam_cp_cert_dto::IamCpUserPwdBindWithLdapReq;
 use crate::console_passport::serv::iam_cp_cert_user_pwd_serv::IamCpCertUserPwdServ;
+use crate::iam_constants::{LOG_IAM_ACCOUNT_OP_BIND5AACCOUNT, LOG_IAM_ACCOUNT_OP_BINDACCOUNT};
 use crate::iam_enumeration::{IamAccountLogoutTypeKind, IamAccountStatusKind, IamCertExtKind, IamCertKernelKind, WayToAdd, WayToDelete};
 use crate::{
     basic::dto::{
@@ -94,8 +95,8 @@ impl IamCertLdapServ {
             let _ = IamLogClient::add_ctx_task(
                 LogParamTag::IamAccount,
                 Some(ctx.owner.clone()),
-                "绑定账号".to_string(),
-                Some("BindAccount".to_string()),
+                None,
+                Some(LOG_IAM_ACCOUNT_OP_BINDACCOUNT.to_string()),
                 ctx,
             )
             .await;
@@ -137,8 +138,8 @@ impl IamCertLdapServ {
             let _ = IamLogClient::add_ctx_task(
                 LogParamTag::IamAccount,
                 Some(ctx.owner.clone()),
-                "绑定5A账号".to_string(),
-                Some("Bind5aAccount".to_string()),
+                None,
+                Some(LOG_IAM_ACCOUNT_OP_BIND5AACCOUNT.to_string()),
                 ctx,
             )
             .await;
