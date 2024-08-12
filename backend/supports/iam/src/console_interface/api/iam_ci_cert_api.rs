@@ -234,9 +234,8 @@ impl IamCiCertApi {
     ///
     /// 定时任务触发第三方集成同步
     #[oai(path = "/sync", method = "get")]
-    async fn third_integration_sync(&self, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<String> {
+    async fn third_integration_sync(&self, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<String> {
         let funs = iam_constants::get_tardis_inst();
-        check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         let msg = IamCertServ::third_integration_sync_without_config(&funs, &ctx.0).await?;
         ctx.0.execute_task().await?;
