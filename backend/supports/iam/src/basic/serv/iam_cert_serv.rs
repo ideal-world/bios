@@ -1411,7 +1411,7 @@ impl IamCertServ {
                         .put_obj_to_str(
                             &format!("{schedule_url}/ci/schedule/jobs"),
                             &json!({"code": funs.conf::<IamConfig>().third_integration_schedule_code.clone(),
-                            "cron": sync_cron,
+                            "cron": vec![sync_cron],
                             "callback_url": format!("{}/ci/cert/sync", funs.conf::<IamConfig>().iam_base_url,),
                             "callback_headers":{
                               "Tardis-Context":tardis_ctx
