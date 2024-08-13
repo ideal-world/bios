@@ -4,11 +4,11 @@ use std::sync::Arc;
 use ipnet::IpNet;
 use serde::{Deserialize, Serialize};
 use spacegate_shell::hyper::{Request, Response, StatusCode};
-use spacegate_shell::kernel::extension::PeerAddr;
+use spacegate_shell::kernel::extension::OriginalIpAddr;
 use spacegate_shell::kernel::helper_layers::function::Inner;
 use spacegate_shell::plugin::Plugin;
 
-use spacegate_shell::{BoxError, SgBody, SgResponseExt};
+use spacegate_shell::{BoxError, SgBody, SgRequestExt, SgResponseExt};
 
 use tardis::{log, serde_json};
 pub const CODE: &str = "ip-time";
@@ -112,12 +112,9 @@ impl Plugin for IpTimePlugin {
         Ok(plugin)
     }
     async fn call(&self, req: Request<SgBody>, inner: Inner) -> Result<Response<SgBody>, BoxError> {
-        let Some(socket_addr) = req.extensions().get::<PeerAddr>() else {
-            return Err("Cannot get peer address, it's a implementation bug".into());
-        };
-        let socket_addr = socket_addr.0;
-        let passed = self.check_ip(&socket_addr.ip());
-        log::trace!("[{CODE}] Check ip time rule from {socket_addr}, passed {passed}");
+        let original_addr = req.extract::<OriginalIpAddr>().into_inner();
+        let passed = self.check_ip(&original_addr);
+        log::trace!("[{CODE}] Check ip time rule from {original_addr}, passed {passed}");
         if !passed {
             return Ok(Response::with_code_message(StatusCode::FORBIDDEN, "Blocked by ip-time plugin"));
         }
