@@ -322,6 +322,7 @@ async fn test_rbum_set_cate(context: &TardisContext) -> TardisResult<()> {
             icon: None,
             sort: None,
             ext: None,
+            rbum_parent_cate_id: None,
             scope_level: None,
         },
         &funs,

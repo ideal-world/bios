@@ -342,7 +342,7 @@ impl RbumSetServ {
                         .iter()
                         .filter(|c| c.sys_code.starts_with(&cate.sys_code))
                         .flat_map(|c| items.get(&c.id).expect("ignore"))
-                        .group_by(|c| c.rel_rbum_item_kind_id.clone())
+                        .chunk_by(|c| c.rel_rbum_item_kind_id.clone())
                         .into_iter()
                         .map(|(g, c)| (g, c.map(|i| i.rel_rbum_item_id.clone()).collect::<HashSet<String>>().len() as u64))
                         .collect::<HashMap<String, u64>>(),
@@ -355,7 +355,7 @@ impl RbumSetServ {
             items
                 .values()
                 .flat_map(|item| item.iter())
-                .group_by(|c| c.rel_rbum_item_kind_id.clone())
+                .chunk_by(|c| c.rel_rbum_item_kind_id.clone())
                 .into_iter()
                 .map(|(g, c)| (g, c.map(|i| i.rel_rbum_item_id.clone()).collect::<HashSet<String>>().len() as u64))
                 .collect::<HashMap<String, u64>>(),
@@ -491,11 +491,23 @@ impl RbumCrudOperation<rbum_set_cate::ActiveModel, RbumSetCateAddReq, RbumSetCat
         })
     }
 
-    async fn package_modify(id: &str, modify_req: &RbumSetCateModifyReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<rbum_set_cate::ActiveModel> {
+    async fn package_modify(id: &str, modify_req: &RbumSetCateModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<rbum_set_cate::ActiveModel> {
         let mut rbum_set_cate = rbum_set_cate::ActiveModel {
             id: Set(id.to_string()),
             ..Default::default()
         };
+        if let Some(rbum_parent_cate_id) = &modify_req.rbum_parent_cate_id {
+            if let Some(detail) = Self::find_one_detail_rbum(&RbumSetCateFilterReq {
+                basic: RbumBasicFilterReq {
+                    ids: Some(vec![rbum_parent_cate_id.to_string()]),
+                    ..Default::default()
+                },
+                ..Default::default()
+            }, funs, ctx).await? {
+                let sys_code = Self::package_sys_code(&detail.rel_rbum_set_id, Some(rbum_parent_cate_id.as_str()), funs, ctx).await?;
+                rbum_set_cate.sys_code = Set(sys_code.to_string());
+            }
+        }
         if let Some(bus_code) = &modify_req.bus_code {
             rbum_set_cate.bus_code = Set(bus_code.to_string());
         }

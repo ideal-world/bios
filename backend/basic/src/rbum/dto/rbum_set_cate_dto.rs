@@ -83,6 +83,12 @@ pub struct RbumSetCateModifyReq {
     #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "1000")))]
     pub ext: Option<String>,
 
+    /// Parent node id
+    ///
+    /// 父节点id
+    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "1000")))]
+    pub rbum_parent_cate_id: Option<String>,
+
     pub scope_level: Option<RbumScopeLevelKind>,
 }
 

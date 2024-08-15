@@ -341,4 +341,17 @@ impl IamCsResApi {
         ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
     }
+
+    /// Modify Parent Cate Id By Res Cate Id
+    /// 
+    #[oai(path = "/cate/:id/parent/:parent_cate_id", method = "put")]
+    async fn modify_parent_by_set_cate_id(&self, id: Path<String>, parent_cate_id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
+        let mut funs = iam_constants::get_tardis_inst();
+        funs.begin().await?;
+        IamSetServ::modify_parent_by_set_cate_id(&id.0, &parent_cate_id.0, &funs, &ctx.0).await?;
+        funs.commit().await?;
+        ctx.0.execute_task().await?;
+        TardisResp::ok(Void {})
+    }
 }
