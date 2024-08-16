@@ -40,10 +40,15 @@ pub struct RbumSetItemAddReq {
 #[derive(Serialize, Deserialize, Debug)]
 #[cfg_attr(feature = "default", derive(poem_openapi::Object))]
 pub struct RbumSetItemModifyReq {
+    /// Associated [resource set category(node)](crate::rbum::dto::rbum_set_cate_dto::RbumSetCateDetailResp) id
+    ///
+    /// 关联[资源集分类（节点）](crate::rbum::dto::rbum_set_cate_dto::RbumSetCateDetailResp) id
+    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
+    pub rel_rbum_set_cate_id: Option<String>,
     /// Association sort
     ///
     /// 关联排序
-    pub sort: i64,
+    pub sort: Option<i64>,
 }
 
 /// Summary information of the association between resource set category(node) and resource item

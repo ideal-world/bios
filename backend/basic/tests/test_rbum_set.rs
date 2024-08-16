@@ -1089,7 +1089,7 @@ async fn test_rbum_set_item(context: &TardisContext) -> TardisResult<()> {
     assert_eq!(rbum.rel_rbum_item_name, "用户1");
 
     info!("【test_rbum_set_item】 : Test Modify : RbumSetItemServ::modify_rbum");
-    RbumSetItemServ::modify_rbum(&id, &mut RbumSetItemModifyReq { sort: 10 }, &funs, context).await?;
+    RbumSetItemServ::modify_rbum(&id, &mut RbumSetItemModifyReq { sort: Some(10), rel_rbum_set_cate_id: None, }, &funs, context).await?;
 
     info!("【test_rbum_set_item】 : Test Find : RbumSetItemServ::paginate_rbums");
     let rbums = RbumSetItemServ::paginate_rbums(

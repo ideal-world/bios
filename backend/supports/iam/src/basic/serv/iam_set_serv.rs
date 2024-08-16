@@ -1,6 +1,5 @@
 use std::collections::{HashMap, HashSet};
 
-use async_recursion::async_recursion;
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumRelFilterReq, RbumSetCateFilterReq, RbumSetFilterReq, RbumSetItemFilterReq, RbumSetTreeFilterReq};
 
 use bios_basic::rbum::dto::rbum_set_cate_dto::{RbumSetCateAddReq, RbumSetCateModifyReq, RbumSetCateSummaryResp};
@@ -295,48 +294,8 @@ impl IamSetServ {
         result
     }
 
-    #[async_recursion]
-    pub async fn modify_parent_by_set_cate_id(set_cate_id: &str, parent_cate_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        let set_cate_detail = RbumSetCateServ::get_rbum(
-            set_cate_id,
-            &RbumSetCateFilterReq {
-                basic: RbumBasicFilterReq {
-                    with_sub_own_paths: true,
-                    ..Default::default()
-                },
-                ..Default::default()
-            },
-            funs,
-            ctx,
-        )
-        .await?;
-        let result = RbumSetCateServ::modify_rbum(
-            set_cate_id,
-            &mut RbumSetCateModifyReq {
-                bus_code: None,
-                name: None,
-                icon: None,
-                sort: None,
-                ext: None,
-                rbum_parent_cate_id: Some(parent_cate_id.to_string()),
-                scope_level: None,
-            },
-            funs,
-            ctx,
-        )
-        .await;
-        let child_set_cates = RbumSetServ::get_tree(&set_cate_detail.rel_rbum_set_id, &RbumSetTreeFilterReq {
-            fetch_cate_item: false,
-            sys_codes: Some(vec![set_cate_detail.sys_code.clone()]),
-            sys_code_query_kind: Some(RbumSetCateLevelQueryKind::Sub),
-            sys_code_query_depth: Some(1),
-            ..Default::default()
-        }, funs, ctx).await?.main;
-        for child_set_cate in child_set_cates {
-            Self::modify_parent_by_set_cate_id(&child_set_cate.id, &set_cate_detail.id, funs, ctx).await?;
-        }
-        
-        result
+    pub async fn move_set_cate(set_cate_id: &str, parent_set_cate_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        RbumSetCateServ::move_set_cate(set_cate_id, parent_set_cate_id, funs, ctx).await
     }
 
     pub async fn delete_set_cate(set_cate_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<u64> {
