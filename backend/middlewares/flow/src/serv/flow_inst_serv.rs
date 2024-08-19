@@ -1217,14 +1217,16 @@ impl FlowInstServ {
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<()> {
+        let gloabl_ctx = TardisContext::default();
         let insts = Self::find_details(
             &FlowInstFilterReq {
-                flow_model_id: original_model_id,
+                flow_model_id: original_model_id.clone(),
                 tag: Some(tag.to_string()),
+                with_sub: Some(true),
                 ..Default::default()
             },
             funs,
-            ctx,
+            if original_model_id.is_some() { &gloabl_ctx } else { ctx },
         )
         .await?
         .into_iter()
@@ -1234,6 +1236,10 @@ impl FlowInstServ {
             insts
                 .iter()
                 .map(|inst| async {
+                    let mock_ctx = TardisContext{
+                        own_paths: inst.own_paths.clone(),
+                        ..ctx.clone()
+                    };
                     let global_ctx = TardisContext::default();
 
                     let flow_inst = flow_inst::ActiveModel {
@@ -1242,8 +1248,8 @@ impl FlowInstServ {
                         transitions: Set(Some(vec![])),
                         ..Default::default()
                     };
-                    funs.db().update_one(flow_inst, ctx).await.unwrap();
-                    let modify_model_detail = FlowModelServ::get_item(modify_model_id, &FlowModelFilterReq::default(), funs, ctx).await.unwrap();
+                    funs.db().update_one(flow_inst, &mock_ctx).await.unwrap();
+                    let model_tag = FlowModelServ::get_item(modify_model_id, &FlowModelFilterReq::default(), funs, ctx).await.map(|detail| detail.tag);
                     let next_flow_state = FlowStateServ::get_item(
                         state_id,
                         &FlowStateFilterReq {
@@ -1260,7 +1266,7 @@ impl FlowInstServ {
                     .unwrap();
 
                     FlowExternalServ::do_notify_changes(
-                        &modify_model_detail.tag,
+                        model_tag.unwrap_or_default().as_str(),
                         &inst.id,
                         &inst.rel_business_obj_id,
                         "".to_string(),
