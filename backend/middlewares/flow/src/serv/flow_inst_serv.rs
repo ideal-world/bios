@@ -615,9 +615,9 @@ impl FlowInstServ {
         }
         let model_transition = flow_model.transitions();
         let next_transition_detail = model_transition.iter().find(|trans| trans.id == transfer_req.flow_transition_id).unwrap().to_owned();
-        if FlowModelServ::check_post_action_ring(&flow_model, funs, ctx).await? {
-            return Err(funs.err().not_found("flow_inst", "transfer", "this post action exist endless loop", "500-flow-transition-endless-loop"));
-        }
+        // if FlowModelServ::check_post_action_ring(&flow_model, funs, ctx).await? {
+        //     return Err(funs.err().not_found("flow_inst", "transfer", "this post action exist endless loop", "500-flow-transition-endless-loop"));
+        // }
 
         let next_flow_transition = next_flow_transition.unwrap();
         let prev_flow_state = FlowStateServ::get_item(
@@ -1192,6 +1192,8 @@ impl FlowInstServ {
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<()> {
+        FlowInstServ::unsafe_update_state_by_tag(original_model_id.clone(), tag, modify_model_id, modify_model_states, state_id, funs, ctx).await?;
+
         let mut update_statement = Query::update();
         update_statement.table(flow_inst::Entity);
         update_statement.value(flow_inst::Column::RelFlowModelId, modify_model_id);
@@ -1203,7 +1205,6 @@ impl FlowInstServ {
         }
         funs.db().execute(&update_statement).await?;
 
-        FlowInstServ::unsafe_update_state_by_tag(original_model_id, tag, modify_model_id, modify_model_states, state_id, funs, ctx).await?;
         Ok(())
     }
 

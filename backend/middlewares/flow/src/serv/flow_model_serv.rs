@@ -396,9 +396,6 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
         {
             return Err(funs.err().not_found(&Self::get_obj_name(), "delete_item", "the model prohibit delete", "500-flow_model-prohibit-delete"));
         }
-        if !FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelPath, flow_model_id, None, None, funs, ctx).await?.is_empty() {
-            return Err(funs.err().not_found(&Self::get_obj_name(), "delete_item", "the model prohibit delete", "500-flow_model-prohibit-delete"));
-        }
         let detail = Self::get_item(flow_model_id, &FlowModelFilterReq::default(), funs, ctx).await?;
 
         join_all(
@@ -1031,7 +1028,11 @@ impl FlowModelServ {
         let mut result = HashMap::new();
 
         let filter_ids = if template_id.is_none() {
-            Some(FlowRelServ::find_to_simple_rels(&FlowRelKind::FlowModelPath, &ctx.own_paths, None, None, funs, ctx).await?.into_iter().map(|rel| rel.rel_id).collect_vec())
+            if let Some(app_id) = Self::get_app_id_by_ctx(ctx) {
+                Some(FlowRelServ::find_model_ids_by_app_id(&app_id, funs, ctx).await.unwrap_or_default())
+            } else {
+                Some(vec![])
+            }
         } else {
             None
         };
@@ -1108,19 +1109,23 @@ impl FlowModelServ {
                     )
                     .await?
                 } else {
-                    FlowRelServ::add_simple_rel(
-                        &FlowRelKind::FlowModelPath,
-                        rel_model_id,
-                        &rel_own_paths.unwrap_or_default(),
-                        None,
-                        None,
-                        false,
-                        true,
-                        None,
-                        funs,
-                        ctx,
-                    )
-                    .await?;
+                    if let Some(template_id) = FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelTemplate, rel_model_id, None, None, funs, ctx).await?.pop().map(|rel| rel.rel_id) {
+                        if !FlowRelServ::exist_rels(&FlowRelKind::FlowAppTemplate, &template_id, Self::get_app_id_by_ctx(ctx).unwrap_or_default().as_str(), funs, ctx).await? {
+                            FlowRelServ::add_simple_rel(
+                                &FlowRelKind::FlowAppTemplate,
+                                Self::get_app_id_by_ctx(&mock_ctx).unwrap_or_default().as_str(),
+                                &template_id,
+                                None,
+                                None,
+                                true,
+                                true,
+                                None,
+                                funs,
+                                ctx,
+                            )
+                            .await?;
+                        }
+                    }
                     rel_model_id.to_string()
                 }
             }
@@ -1484,9 +1489,7 @@ impl FlowModelServ {
         if let Some(rel_model) = Self::find_items(
             &FlowModelFilterReq {
                 basic: RbumBasicFilterReq {
-                    ids: Some(
-                        FlowRelServ::find_to_simple_rels(&FlowRelKind::FlowModelPath, &ctx.own_paths, None, None, funs, ctx).await?.into_iter().map(|rel| rel.rel_id).collect_vec(),
-                    ),
+                    ids: Some(FlowRelServ::find_model_ids_by_app_id(Self::get_app_id_by_ctx(ctx).unwrap_or_default().as_str(), funs, ctx).await.unwrap_or_default()),
                     ignore_scope: true,
                     own_paths: Some("".to_string()),
                     with_sub_own_paths: true,
@@ -1662,12 +1665,14 @@ impl FlowModelServ {
                     continue;
                 }
             }
-            for rel in FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelPath, &model.id, None, None, funs, &global_ctx).await? {
-                FlowRelServ::delete_simple_rel(&FlowRelKind::FlowModelPath, &model.id, &rel.rel_id, funs, &global_ctx).await?;
-            }
             if rel_template_id.clone().is_some() {
                 for rel in FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelTemplate, &model.id, None, None, funs, &global_ctx).await? {
                     FlowRelServ::delete_simple_rel(&FlowRelKind::FlowModelTemplate, &model.id, &rel.rel_id, funs, &global_ctx).await?;
+                }
+            } else {
+                // clean reference template rel
+                for rel in FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowAppTemplate, Self::get_app_id_by_ctx(&ctx).unwrap_or_default().as_str(), None, None, funs, &global_ctx).await?.into_iter() {
+                    FlowRelServ::delete_simple_rel(&FlowRelKind::FlowAppTemplate, Self::get_app_id_by_ctx(&ctx).unwrap_or_default().as_str(), &rel.rel_id, funs, &global_ctx).await?;
                 }
             }
             if ctx.own_paths == model.own_paths {
@@ -1675,5 +1680,9 @@ impl FlowModelServ {
             }
         }
         Ok(models)
+    }
+
+    fn get_app_id_by_ctx(ctx: &TardisContext) -> Option<String> {
+        rbum_scope_helper::get_max_level_id_by_context(ctx)
     }
 }
