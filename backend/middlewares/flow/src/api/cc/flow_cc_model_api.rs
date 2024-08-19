@@ -1,8 +1,10 @@
 use std::collections::HashMap;
 
-use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
+use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumRelFilterReq};
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
+use bios_basic::rbum::serv::rbum_rel_serv::RbumRelServ;
 use itertools::Itertools;
+use tardis::basic::dto::TardisContext;
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem::Request;
 use tardis::web::poem_openapi;
@@ -18,6 +20,7 @@ use crate::dto::flow_state_dto::FlowStateRelModelModifyReq;
 use crate::dto::flow_transition_dto::{FlowTransitionModifyReq, FlowTransitionSortStatesReq};
 use crate::flow_constants;
 use crate::serv::flow_model_serv::FlowModelServ;
+use crate::serv::flow_rel_serv::{FlowRelKind, FlowRelServ};
 #[derive(Clone)]
 pub struct FlowCcModelApi;
 
@@ -360,5 +363,48 @@ impl FlowCcModelApi {
         funs.commit().await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
+    }
+
+    /// batch add rels with template and app
+    ///
+    /// 批量添加模板和应用的关联关系
+    #[oai(path = "/batch_add_template_app_rels", method = "get")]
+    async fn batch_add_template_app_rels(&self, _request: &Request) -> TardisApiResult<Void> {
+        let mut funs = flow_constants::get_tardis_inst();
+        let global_ctx = TardisContext::default();
+        funs.begin().await?;
+        let rels = RbumRelServ::find_rels(&RbumRelFilterReq {
+            basic: RbumBasicFilterReq {
+                with_sub_own_paths: true,
+                ..Default::default()
+            },
+            tag: Some("FlowModelPath".to_string()),
+            ..Default::default()
+        }, None, None, &funs, &global_ctx).await?;
+        for rel in rels {
+            let ctx = TardisContext {
+                own_paths: rel.rel.own_paths,
+                owner: rel.rel.owner,
+                ..Default::default()
+            };
+            let rel_model_id = rel.rel.from_rbum_id;
+            if let Some(template_id) = FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelTemplate, &rel_model_id, None, None, &funs, &ctx).await?.pop().map(|rel| rel.rel_id) {
+                FlowRelServ::add_simple_rel(
+                    &FlowRelKind::FlowAppTemplate,
+                    &rel.rel.to_rbum_item_id.split('/').collect::<Vec<&str>>().last().map(|s| s.to_string()).unwrap_or_default(),
+                    &template_id,
+                    None,
+                    None,
+                    true,
+                    true,
+                    None,
+                    &funs,
+                    &ctx,
+                )
+                .await?;
+            }
+        }
+        funs.commit().await?;
+        TardisResp::ok(Void)
     }
 }
