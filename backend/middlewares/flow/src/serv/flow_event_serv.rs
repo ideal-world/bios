@@ -203,9 +203,9 @@ impl FlowEventServ {
         )
         .await?;
 
-        if FlowModelServ::check_post_action_ring(&flow_model, funs, ctx).await? {
-            return Err(funs.err().not_found("flow_inst", "transfer", "this post action exist endless loop", "500-flow-transition-endless-loop"));
-        }
+        // if FlowModelServ::check_post_action_ring(&flow_model, funs, ctx).await? {
+        //     return Err(funs.err().not_found("flow_inst", "transfer", "this post action exist endless loop", "500-flow-transition-endless-loop"));
+        // }
 
         let post_changes = next_flow_transition.action_by_post_changes();
         if post_changes.is_empty() {
