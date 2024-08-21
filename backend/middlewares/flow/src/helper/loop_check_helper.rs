@@ -145,21 +145,20 @@ impl TransactionGraph {
     }
 
     pub fn check_state_loop(&self) -> bool {
+        //init
         let mut state_chains: HashSet<Vec<String>> = HashSet::new();
         for ((from_tran_from_state, from_tran_to_state), to_trans) in &self.rels {
-            state_chains.insert(vec![from_tran_from_state.clone(), from_tran_to_state.clone()]);
+            let init_state_tran = vec![from_tran_from_state.clone(), from_tran_to_state.clone()];
             for (to_tran_from_state, to_tran_to_state) in to_trans {
-                state_chains.insert(vec![to_tran_from_state.clone(), to_tran_to_state.clone()]);
-                for state_tran in state_chains.clone() {
-                    if state_tran.last().unwrap() == to_tran_from_state {
-                        let mut insert_chain = state_tran.clone();
-                        insert_chain.push(to_tran_to_state.clone());
-                        state_chains.insert(insert_chain);
-                    }
-                }
+                state_chains.insert(init_state_tran.iter().cloned().chain(vec![to_tran_from_state.clone(), to_tran_to_state.clone()].iter().cloned()).collect());
             }
         }
         warn!("check state loop state_chains: {:?}", state_chains);
+        for init_state_tran in state_chains.clone() {
+            let state_chain = init_state_tran.clone();
+            
+        }
+
         for state_chain in state_chains {
             let mut tran_chain = vec![];
             let mut from_state = state_chain[0].clone();

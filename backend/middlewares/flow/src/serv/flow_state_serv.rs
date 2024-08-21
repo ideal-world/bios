@@ -361,17 +361,7 @@ impl FlowStateServ {
     }
 
     // For the old data migration, this function match id by old state name
-    pub(crate) async fn match_state_id_by_name(tag: &str, flow_model_id: &str, mut name: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
-        if tag == "ISSUE" {
-            name = match name {
-                "待开始" => "待处理",
-                "进行中" => "修复中",
-                "存在风险" => "修复中",
-                "已完成" => "已解决",
-                "已关闭" => "已关闭",
-                _ => name,
-            };
-        }
+    pub(crate) async fn match_state_id_by_name(flow_model_id: &str, name: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
         Ok(FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelState, flow_model_id, None, None, funs, ctx)
             .await?
             .into_iter()

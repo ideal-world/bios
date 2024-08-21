@@ -83,7 +83,7 @@ impl FlowInstServ {
             if current_state_name.is_empty() {
                 flow_model.init_state_id.clone()
             } else {
-                FlowStateServ::match_state_id_by_name(&start_req.tag, &flow_model_id, current_state_name, funs, ctx).await?
+                FlowStateServ::match_state_id_by_name(&flow_model_id, current_state_name, funs, ctx).await?
             }
         } else {
             flow_model.init_state_id.clone()
@@ -130,7 +130,6 @@ impl FlowInstServ {
             let flow_model_id = FlowModelServ::get_model_id_by_own_paths_and_rel_template_id(&batch_bind_req.tag, None, funs, ctx).await?;
 
             let current_state_id = FlowStateServ::match_state_id_by_name(
-                &batch_bind_req.tag,
                 &flow_model_id,
                 &rel_business_obj.current_state_name.clone().unwrap_or_default(),
                 funs,
