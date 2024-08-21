@@ -77,6 +77,7 @@ pub struct AdvLogItemQueryReq {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[cfg_attr(feature = "default", derive(poem_openapi::Object))]
 pub struct AdvBasicQueryCondInfo {
+    pub in_content: Option<bool>,
     pub in_ext: Option<bool>,
     #[oai(validator(min_length = "1"))]
     pub field: String,

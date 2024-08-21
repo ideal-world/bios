@@ -290,13 +290,21 @@ pub async fn find(find_req: &mut LogItemFindReq, funs: &TardisFunsInst, ctx: &Ta
                 for ext_item in ext {
                     let value = db_helper::json_to_sea_orm_value(&ext_item.value, &ext_item.op);
                     let Some(mut value) = value else { return err_not_found(ext_item) };
-                    if ext_item.in_ext.unwrap_or(true) {
+                    if ext_item.in_ext.unwrap_or(true) || ext_item.in_content.unwrap_or(false) {
+                        let field = if ext_item.in_ext.unwrap_or(true) {
+                            "ext"
+                        } else if ext_item.in_content.unwrap_or(false) {
+                            "content::json"
+                        } else {
+                            return err_not_found(ext_item);
+                        };
                         if ext_item.op == BasicQueryOpKind::In {
                             if value.len() == 1 {
-                                sql_and_where.push(format!("ext -> '{}' ? ${}", ext_item.field, sql_vals.len() + 1));
+                                sql_and_where.push(format!("{} -> '{}' ? ${}", field, ext_item.field, sql_vals.len() + 1));
                             } else {
                                 sql_and_where.push(format!(
-                                    "ext -> '{}' ?| array[{}]",
+                                    "{} -> '{}' ?| array[{}]",
+                                    field,
                                     ext_item.field,
                                     (0..value.len()).map(|idx| format!("${}", sql_vals.len() + idx + 1)).collect::<Vec<String>>().join(", ")
                                 ));
@@ -307,10 +315,11 @@ pub async fn find(find_req: &mut LogItemFindReq, funs: &TardisFunsInst, ctx: &Ta
                         } else if ext_item.op == BasicQueryOpKind::NotIn {
                             let value = value.clone();
                             if value.len() == 1 {
-                                sql_and_where.push(format!("not (ext -> '{}' ? ${})", ext_item.field, sql_vals.len() + 1));
+                                sql_and_where.push(format!("not ({} -> '{}' ? ${})", field, ext_item.field, sql_vals.len() + 1));
                             } else {
                                 sql_and_where.push(format!(
-                                    "not (ext -> '{}' ?| array[{}])",
+                                    "not ({} -> '{}' ?| array[{}])",
+                                    field,
                                     ext_item.field,
                                     (0..value.len()).map(|idx| format!("${}", sql_vals.len() + idx + 1)).collect::<Vec<String>>().join(", ")
                                 ));
@@ -319,11 +328,11 @@ pub async fn find(find_req: &mut LogItemFindReq, funs: &TardisFunsInst, ctx: &Ta
                                 sql_vals.push(val);
                             }
                         } else if ext_item.op == BasicQueryOpKind::IsNull {
-                            sql_and_where.push(format!("ext ->> '{}' is null", ext_item.field));
+                            sql_and_where.push(format!("{} ->> '{}' is null", field, ext_item.field));
                         } else if ext_item.op == BasicQueryOpKind::IsNotNull {
-                            sql_and_where.push(format!("ext ->> '{}' is not null", ext_item.field));
+                            sql_and_where.push(format!("{} ->> '{}' is not null", field, ext_item.field));
                         } else if ext_item.op == BasicQueryOpKind::IsNullOrEmpty {
-                            sql_and_where.push(format!("(ext ->> '{}' is null or ext ->> '{}' = '' or (jsonb_typeof(ext -> '{}') = 'array' and (jsonb_array_length(ext-> '{}') is null or jsonb_array_length(ext-> '{}') = 0)))", ext_item.field, ext_item.field, ext_item.field, ext_item.field, ext_item.field));
+                            sql_and_where.push(format!("({field} ->> '{}' is null or {field} ->> '{}' = '' or (jsonb_typeof({field} -> '{}') = 'array' and (jsonb_array_length({field}-> '{}') is null or jsonb_array_length({field}-> '{}') = 0)))", ext_item.field, ext_item.field, ext_item.field, ext_item.field, ext_item.field));
                         } else {
                             if value.len() > 1 {
                                 return err_not_found(ext_item);
@@ -332,37 +341,44 @@ pub async fn find(find_req: &mut LogItemFindReq, funs: &TardisFunsInst, ctx: &Ta
                                 return Err(funs.err().bad_request("item", "search", "Request item using 'IN' operator show hava a value", "400-spi-item-op-in-without-value"));
                             };
                             if let Value::Bool(_) = value {
-                                sql_and_where.push(format!("(ext ->> '{}')::boolean {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
+                                sql_and_where.push(format!("{} ->> '{}')::boolean {} ${}", field, ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
                             } else if let Value::TinyInt(_) = value {
-                                sql_and_where.push(format!("(ext ->> '{}')::smallint {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
+                                sql_and_where.push(format!("{} ->> '{}')::smallint {} ${}", field, ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
                             } else if let Value::SmallInt(_) = value {
-                                sql_and_where.push(format!("(ext ->> '{}')::smallint {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
+                                sql_and_where.push(format!("{} ->> '{}')::smallint {} ${}", field, ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
                             } else if let Value::Int(_) = value {
-                                sql_and_where.push(format!("(ext ->> '{}')::integer {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
+                                sql_and_where.push(format!("{} ->> '{}')::integer {} ${}", field, ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
                             } else if let Value::BigInt(_) = value {
-                                sql_and_where.push(format!("(ext ->> '{}')::bigint {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
+                                sql_and_where.push(format!("{} ->> '{}')::bigint {} ${}", field, ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
                             } else if let Value::TinyUnsigned(_) = value {
-                                sql_and_where.push(format!("(ext ->> '{}')::smallint {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
+                                sql_and_where.push(format!("{} ->> '{}')::smallint {} ${}", field, ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
                             } else if let Value::SmallUnsigned(_) = value {
-                                sql_and_where.push(format!("(ext ->> '{}')::integer {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
+                                sql_and_where.push(format!("{} ->> '{}')::integer {} ${}", field, ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
                             } else if let Value::Unsigned(_) = value {
-                                sql_and_where.push(format!("(ext ->> '{}')::bigint {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
+                                sql_and_where.push(format!("{} ->> '{}')::bigint {} ${}", field, ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
                             } else if let Value::BigUnsigned(_) = value {
                                 // TODO
-                                sql_and_where.push(format!("(ext ->> '{}')::bigint {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
+                                sql_and_where.push(format!("{} ->> '{}')::bigint {} ${}", field, ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
                             } else if let Value::Float(_) = value {
-                                sql_and_where.push(format!("(ext ->> '{}')::real {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
+                                sql_and_where.push(format!("{} ->> '{}')::real {} ${}", field, ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
                             } else if let Value::Double(_) = value {
-                                sql_and_where.push(format!("(ext ->> '{}')::double precision {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
+                                sql_and_where.push(format!(
+                                    "{} ->> '{}')::double precision {} ${}",
+                                    field,
+                                    ext_item.field,
+                                    ext_item.op.to_sql(),
+                                    sql_vals.len() + 1
+                                ));
                             } else if value.is_chrono_date_time_utc() {
                                 sql_and_where.push(format!(
-                                    "(ext ->> '{}')::timestamp with time zone {} ${}",
+                                    "({} ->> '{}')::timestamp with time zone {} ${}",
+                                    field,
                                     ext_item.field,
                                     ext_item.op.to_sql(),
                                     sql_vals.len() + 1
                                 ));
                             } else {
-                                sql_and_where.push(format!("ext ->> '{}' {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
+                                sql_and_where.push(format!("{} ->> '{}' {} ${}", field, ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
                             }
                             sql_vals.push(value);
                         }
