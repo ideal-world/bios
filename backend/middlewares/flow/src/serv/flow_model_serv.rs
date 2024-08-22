@@ -1683,7 +1683,7 @@ impl FlowModelServ {
                 // clean reference template rel
                 for rel in FlowRelServ::find_from_simple_rels(
                     &FlowRelKind::FlowAppTemplate,
-                    Self::get_app_id_by_ctx(&ctx).unwrap_or_default().as_str(),
+                    Self::get_app_id_by_ctx(ctx).unwrap_or_default().as_str(),
                     None,
                     None,
                     funs,
@@ -1694,7 +1694,7 @@ impl FlowModelServ {
                 {
                     FlowRelServ::delete_simple_rel(
                         &FlowRelKind::FlowAppTemplate,
-                        Self::get_app_id_by_ctx(&ctx).unwrap_or_default().as_str(),
+                        Self::get_app_id_by_ctx(ctx).unwrap_or_default().as_str(),
                         &rel.rel_id,
                         funs,
                         &global_ctx,
