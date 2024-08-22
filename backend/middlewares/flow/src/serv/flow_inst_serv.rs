@@ -1236,7 +1236,7 @@ impl FlowInstServ {
             insts
                 .iter()
                 .map(|inst| async {
-                    let mock_ctx = TardisContext{
+                    let mock_ctx = TardisContext {
                         own_paths: inst.own_paths.clone(),
                         ..ctx.clone()
                     };

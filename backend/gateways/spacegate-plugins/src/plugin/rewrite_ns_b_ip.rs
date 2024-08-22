@@ -99,8 +99,7 @@ impl Plugin for RewriteNsPlugin {
 }
 impl RewriteNsPlugin {
     fn req(&self, req: &mut SgRequest) -> Result<(), BoxError> {
-        let original_ip = req
-                    .extract::<OriginalIpAddr>().into_inner();
+        let original_ip = req.extract::<OriginalIpAddr>().into_inner();
         if self.ip_list.iter().any(|ipnet| ipnet.contains(&original_ip)) {
             let defer = req.extensions_mut().get_or_insert_default::<spacegate_shell::kernel::extension::Defer>();
             let target_ns = self.target_ns.clone();

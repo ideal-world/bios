@@ -1,9 +1,4 @@
-use tardis::{
-    basic::{result::TardisResult},
-    os::{
-        os_client::TardisOSClient,
-    },
-};
+use tardis::{basic::result::TardisResult, os::os_client::TardisOSClient};
 
 use crate::serv::s3::S3;
 

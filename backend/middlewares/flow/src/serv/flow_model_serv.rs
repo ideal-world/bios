@@ -1109,8 +1109,18 @@ impl FlowModelServ {
                     )
                     .await?
                 } else {
-                    if let Some(template_id) = FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelTemplate, rel_model_id, None, None, funs, ctx).await?.pop().map(|rel| rel.rel_id) {
-                        if !FlowRelServ::exist_rels(&FlowRelKind::FlowAppTemplate, &template_id, Self::get_app_id_by_ctx(ctx).unwrap_or_default().as_str(), funs, ctx).await? {
+                    if let Some(template_id) =
+                        FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelTemplate, rel_model_id, None, None, funs, ctx).await?.pop().map(|rel| rel.rel_id)
+                    {
+                        if !FlowRelServ::exist_rels(
+                            &FlowRelKind::FlowAppTemplate,
+                            &template_id,
+                            Self::get_app_id_by_ctx(ctx).unwrap_or_default().as_str(),
+                            funs,
+                            ctx,
+                        )
+                        .await?
+                        {
                             FlowRelServ::add_simple_rel(
                                 &FlowRelKind::FlowAppTemplate,
                                 Self::get_app_id_by_ctx(&mock_ctx).unwrap_or_default().as_str(),
@@ -1671,8 +1681,25 @@ impl FlowModelServ {
                 }
             } else {
                 // clean reference template rel
-                for rel in FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowAppTemplate, Self::get_app_id_by_ctx(&ctx).unwrap_or_default().as_str(), None, None, funs, &global_ctx).await?.into_iter() {
-                    FlowRelServ::delete_simple_rel(&FlowRelKind::FlowAppTemplate, Self::get_app_id_by_ctx(&ctx).unwrap_or_default().as_str(), &rel.rel_id, funs, &global_ctx).await?;
+                for rel in FlowRelServ::find_from_simple_rels(
+                    &FlowRelKind::FlowAppTemplate,
+                    Self::get_app_id_by_ctx(&ctx).unwrap_or_default().as_str(),
+                    None,
+                    None,
+                    funs,
+                    &global_ctx,
+                )
+                .await?
+                .into_iter()
+                {
+                    FlowRelServ::delete_simple_rel(
+                        &FlowRelKind::FlowAppTemplate,
+                        Self::get_app_id_by_ctx(&ctx).unwrap_or_default().as_str(),
+                        &rel.rel_id,
+                        funs,
+                        &global_ctx,
+                    )
+                    .await?;
                 }
             }
             if ctx.own_paths == model.own_paths {

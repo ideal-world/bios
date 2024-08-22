@@ -343,7 +343,7 @@ impl IamCsResApi {
     }
 
     /// Modify Parent Cate Id By Res Cate Id
-    /// 
+    ///
     #[oai(path = "/cate/:id/parent/:parent_cate_id", method = "put")]
     async fn move_set_cate(&self, id: Path<String>, parent_cate_id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
