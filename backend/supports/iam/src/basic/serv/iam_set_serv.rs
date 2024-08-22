@@ -253,7 +253,7 @@ impl IamSetServ {
             if kind == IamSetKind::Apps.to_string() {
                 IamKvClient::add_or_modify_key_name(
                     &funs.conf::<IamConfig>().spi.kv_apps_prefix.clone(),
-                    &set_cate_id,
+                    set_cate_id,
                     &set_cate_item.name.clone(),
                     None,
                     funs,

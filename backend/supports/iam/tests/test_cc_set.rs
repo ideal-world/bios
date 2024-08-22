@@ -182,8 +182,27 @@ async fn test_single_level(context: &TardisContext, another_context: &TardisCont
     .is_err());
 
     info!("【test_ca_set】 : test_single_level : Modify Set Item By Id");
-    assert!(IamSetServ::modify_set_item(&item_id1, &mut RbumSetItemModifyReq { sort: Some(10), rel_rbum_set_cate_id: None, }, &funs, another_context).await.is_err());
-    IamSetServ::modify_set_item(&item_id1, &mut RbumSetItemModifyReq { sort: Some(10), rel_rbum_set_cate_id: None, }, &funs, context).await?;
+    assert!(IamSetServ::modify_set_item(
+        &item_id1,
+        &mut RbumSetItemModifyReq {
+            sort: Some(10),
+            rel_rbum_set_cate_id: None,
+        },
+        &funs,
+        another_context
+    )
+    .await
+    .is_err());
+    IamSetServ::modify_set_item(
+        &item_id1,
+        &mut RbumSetItemModifyReq {
+            sort: Some(10),
+            rel_rbum_set_cate_id: None,
+        },
+        &funs,
+        context,
+    )
+    .await?;
 
     info!("【test_ca_set】 : test_single_level : Find Set Item");
     let items = IamSetServ::find_set_items(None, Some(set_cate_id1.clone()), None, None, false, None, &funs, context).await?;

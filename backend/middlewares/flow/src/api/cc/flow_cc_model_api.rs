@@ -373,14 +373,21 @@ impl FlowCcModelApi {
         let mut funs = flow_constants::get_tardis_inst();
         let global_ctx = TardisContext::default();
         funs.begin().await?;
-        let rels = RbumRelServ::find_rels(&RbumRelFilterReq {
-            basic: RbumBasicFilterReq {
-                with_sub_own_paths: true,
+        let rels = RbumRelServ::find_rels(
+            &RbumRelFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                tag: Some("FlowModelPath".to_string()),
                 ..Default::default()
             },
-            tag: Some("FlowModelPath".to_string()),
-            ..Default::default()
-        }, None, None, &funs, &global_ctx).await?;
+            None,
+            None,
+            &funs,
+            &global_ctx,
+        )
+        .await?;
         for rel in rels {
             let ctx = TardisContext {
                 own_paths: rel.rel.own_paths,
@@ -388,7 +395,9 @@ impl FlowCcModelApi {
                 ..Default::default()
             };
             let rel_model_id = rel.rel.from_rbum_id;
-            if let Some(template_id) = FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelTemplate, &rel_model_id, None, None, &funs, &ctx).await?.pop().map(|rel| rel.rel_id) {
+            if let Some(template_id) =
+                FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelTemplate, &rel_model_id, None, None, &funs, &ctx).await?.pop().map(|rel| rel.rel_id)
+            {
                 FlowRelServ::add_simple_rel(
                     &FlowRelKind::FlowAppTemplate,
                     &rel.rel.to_rbum_item_id.split('/').collect::<Vec<&str>>().last().map(|s| s.to_string()).unwrap_or_default(),

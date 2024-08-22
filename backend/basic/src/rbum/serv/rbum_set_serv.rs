@@ -498,13 +498,19 @@ impl RbumCrudOperation<rbum_set_cate::ActiveModel, RbumSetCateAddReq, RbumSetCat
             ..Default::default()
         };
         if let Some(rbum_parent_cate_id) = &modify_req.rbum_parent_cate_id {
-            if let Some(detail) = Self::find_one_detail_rbum(&RbumSetCateFilterReq {
-                basic: RbumBasicFilterReq {
-                    ids: Some(vec![rbum_parent_cate_id.to_string()]),
+            if let Some(detail) = Self::find_one_detail_rbum(
+                &RbumSetCateFilterReq {
+                    basic: RbumBasicFilterReq {
+                        ids: Some(vec![rbum_parent_cate_id.to_string()]),
+                        ..Default::default()
+                    },
                     ..Default::default()
                 },
-                ..Default::default()
-            }, funs, ctx).await? {
+                funs,
+                ctx,
+            )
+            .await?
+            {
                 let sys_code = Self::package_sys_code(&detail.rel_rbum_set_id, Some(rbum_parent_cate_id.as_str()), funs, ctx).await?;
                 rbum_set_cate.sys_code = Set(sys_code.to_string());
             }
@@ -873,17 +879,31 @@ impl RbumSetCateServ {
             funs,
             ctx,
         )
-        .await?.sys_code;
-        let set_item_ids = RbumSetItemServ::find_id_rbums(&RbumSetItemFilterReq {
-            sys_code_query_kind: Some(RbumSetCateLevelQueryKind::Current),
-            rel_rbum_set_cate_sys_codes: Some(vec![]),
-            ..Default::default()
-        }, None, None, funs, ctx).await?;
+        .await?
+        .sys_code;
+        let set_item_ids = RbumSetItemServ::find_id_rbums(
+            &RbumSetItemFilterReq {
+                sys_code_query_kind: Some(RbumSetCateLevelQueryKind::Current),
+                rel_rbum_set_cate_sys_codes: Some(vec![]),
+                ..Default::default()
+            },
+            None,
+            None,
+            funs,
+            ctx,
+        )
+        .await?;
         for set_item_id in set_item_ids {
-            RbumSetItemServ::modify_rbum(&set_item_id, &mut RbumSetItemModifyReq {
-                rel_rbum_set_cate_id: Some(new_sys_code.clone()),
-                sort: None,
-            }, funs, ctx).await?;
+            RbumSetItemServ::modify_rbum(
+                &set_item_id,
+                &mut RbumSetItemModifyReq {
+                    rel_rbum_set_cate_id: Some(new_sys_code.clone()),
+                    sort: None,
+                },
+                funs,
+                ctx,
+            )
+            .await?;
         }
 
         let child_set_cates = Self::find_rbums(
@@ -975,7 +995,7 @@ impl RbumCrudOperation<rbum_set_item::ActiveModel, RbumSetItemAddReq, RbumSetIte
         if let Some(rel_rbum_set_cate_id) = &modify_req.rel_rbum_set_cate_id {
             rbum_set_item.rel_rbum_set_cate_code = Set(RbumSetCateServ::get_sys_code(rel_rbum_set_cate_id.as_str(), funs, ctx).await?);
         }
-        
+
         Ok(rbum_set_item)
     }
 
