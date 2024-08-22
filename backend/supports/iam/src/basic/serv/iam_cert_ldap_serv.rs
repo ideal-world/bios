@@ -778,6 +778,7 @@ impl IamCertLdapServ {
                     //判断是否需要更新labor_type、status等
                     //如果需要更新其他信息，比如用户名也写在这里面
                     if (!iam_account_ext_sys_resp.labor_type.is_empty() && iam_account_ext_sys_resp.labor_type != local_account.labor_type)
+                        || local_account.disabled
                         || local_account.status == IamAccountStatusKind::Logout
                     {
                         let mut account_modify_req = IamAccountAggModifyReq {
@@ -787,9 +788,10 @@ impl IamCertLdapServ {
                         if !iam_account_ext_sys_resp.labor_type.is_empty() && iam_account_ext_sys_resp.labor_type != local_account.labor_type {
                             account_modify_req.labor_type = Some(iam_account_ext_sys_resp.labor_type.clone());
                         }
-                        if local_account.status == IamAccountStatusKind::Logout {
+                        if local_account.disabled || local_account.status == IamAccountStatusKind::Logout {
                             account_modify_req.status = Some(IamAccountStatusKind::Active);
                             account_modify_req.logout_type = Some(IamAccountLogoutTypeKind::NotLogout);
+                            account_modify_req.disabled = Some(false);
                         }
                         let modify_result = IamAccountServ::modify_account_agg(&cert.rel_rbum_id, &account_modify_req, &funs, ctx).await;
                         if modify_result.is_err() {
