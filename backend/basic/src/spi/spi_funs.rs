@@ -49,7 +49,7 @@ fn get_spi_bs_caches() -> &'static RwLock<HashMap<String, Arc<SpiBsInst>>> {
 
 #[async_trait]
 pub trait SpiBsInstExtractor {
-    async fn init<'a, F, T>(&self, ctx: &'a TardisContext, mgr: bool, init_funs: F) -> TardisResult<Arc<SpiBsInst>>
+    async fn init<'a, F, T>(&self, custom_cache_key: Option<String>, ctx: &'a TardisContext, mgr: bool, init_funs: F) -> TardisResult<Arc<SpiBsInst>>
     where
         F: Fn(SpiBsCertResp, &'a TardisContext, bool) -> T + Send + Sync,
         T: Future<Output = TardisResult<SpiBsInst>> + Send;
@@ -72,6 +72,7 @@ impl SpiBsInstExtractor for TardisFunsInst {
     ///
     /// # Arguments
     ///
+    /// * `custom_cache_key` - Customize the cache key, if it is none, the default cache key will be used.
     /// * `ctx` - Request Context
     /// * `mgr` - Whether it is a managed request
     /// * `init_fun` - The initialization function called when the backend service instance is not initialized
@@ -79,12 +80,12 @@ impl SpiBsInstExtractor for TardisFunsInst {
     /// # Return
     ///
     /// the backend service instance kind
-    async fn init<'a, F, T>(&self, ctx: &'a TardisContext, mgr: bool, init_fun: F) -> TardisResult<Arc<SpiBsInst>>
+    async fn init<'a, F, T>(&self, custom_cache_key: Option<String>, ctx: &'a TardisContext, mgr: bool, init_fun: F) -> TardisResult<Arc<SpiBsInst>>
     where
         F: Fn(SpiBsCertResp, &'a TardisContext, bool) -> T + Send + Sync,
         T: Future<Output = TardisResult<SpiBsInst>> + Send,
     {
-        let cache_key = format!("{}-{}", self.module_code(), ctx.ak);
+        let cache_key = if let Some(custom_cache_key) = custom_cache_key { format!("{}-{}-{}", self.module_code(), ctx.ak, custom_cache_key) } else { format!("{}-{}", self.module_code(), ctx.ak) };
         {
             let read = get_spi_bs_caches().read().await;
             if let Some(inst) = read.get(&cache_key).cloned() {
@@ -136,7 +137,7 @@ impl SpiBsInstExtractor for TardisFunsInst {
         F: Fn(SpiBsCertResp, &'a TardisContext, bool) -> T + Send + Sync,
         T: Future<Output = TardisResult<SpiBsInst>> + Send,
     {
-        self.init(ctx, mgr, init_fun).await?;
+        self.init(None, ctx, mgr, init_fun).await?;
         self.bs(ctx).await
     }
 
