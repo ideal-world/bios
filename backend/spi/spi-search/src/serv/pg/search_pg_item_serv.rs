@@ -1615,7 +1615,7 @@ pub async fn refresh_tsv(tag: &str, funs: &TardisFunsInst, ctx: &TardisContext, 
     let mut page = 0;
     let page_size = 2000;
     loop {
-        let current_result = &result[((page*page_size).min(max_size))..(((page+1)*page_size).min(max_size))];
+        let current_result = &result[((page * page_size).min(max_size))..(((page + 1) * page_size).min(max_size))];
         if current_result.is_empty() {
             break;
         }
