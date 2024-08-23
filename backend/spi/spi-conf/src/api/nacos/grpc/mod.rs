@@ -290,7 +290,7 @@ pub async fn dispatch_request(type_info: &str, value: &str, access_token: Option
             match get_config_detail(&mut descriptor, &funs, &ctx).await {
                 Ok(mut data) => {
                     if let Some(ip) = ip {
-                        data.content = render_content_for_ip(data.content, ip, &funs, &ctx).await?;
+                        data.content = render_content_for_ip(&descriptor, data.content, ip, &funs, &ctx).await?;
                     }
                     ConfigQueryResponse::from(data).as_payload()
                 }

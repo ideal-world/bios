@@ -50,7 +50,7 @@ impl ConfCiConfigServiceApi {
         let funs = crate::get_tardis_inst();
         let mut content = get_config(&mut descriptor, &funs, &ctx.0).await?;
         if let Some(ip) = real_ip.0 {
-            content = render_content_for_ip(content, ip, &funs, &ctx.0).await?;
+            content = render_content_for_ip(&descriptor, content, ip, &funs, &ctx.0).await?;
         }
         TardisResp::ok(content)
     }
@@ -82,7 +82,7 @@ impl ConfCiConfigServiceApi {
         let funs = crate::get_tardis_inst();
         let mut config_item = get_config_detail(&mut descriptor, &funs, &ctx.0).await?;
         if let Some(ip) = real_ip.0 {
-            config_item.content = render_content_for_ip(config_item.content, ip, &funs, &ctx.0).await?;
+            config_item.content = render_content_for_ip(&descriptor, config_item.content, ip, &funs, &ctx.0).await?;
         }
         TardisResp::ok(config_item)
     }

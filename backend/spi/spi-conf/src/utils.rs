@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crate::conf_constants::*;
 
 /// gen random string by given charset (those are supposed to be ascii char)
@@ -34,4 +36,37 @@ pub(crate) fn parse_tags(tags: &str) -> Vec<String> {
         .collect::<Vec<_>>();
     v.dedup();
     v
+}
+
+pub(crate) fn dot_env_parser(config: &str) -> HashMap<String, String> {
+    let mut map = HashMap::new();
+    for line in config.lines() {
+        let line = line.trim();
+        if line.is_empty() || line.starts_with('#') {
+            continue;
+        }
+        let Some((key, value)) = line.split_once('=') else {
+            continue;
+        };
+        map.insert(key.trim().to_string(), value.trim().to_string());
+    }
+    map
+}
+
+
+#[cfg(test)]
+#[test]
+fn test_dot_env_parser() {
+    let test_config = r#"
+TYPE=ALPHA
+VALUE=123
+URL=http://www.baidu.com
+# this is a comment
+"#;
+    let map = dot_env_parser(test_config);
+    assert_eq!(map.len(), 3);
+    assert_eq!(map.get("TYPE"), Some(&"ALPHA".to_string()));
+    assert_eq!(map.get("VALUE"), Some(&"123".to_string()));
+    assert_eq!(map.get("URL"), Some(&"http://www.baidu.com".to_string()));
+
 }
