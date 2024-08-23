@@ -171,10 +171,10 @@ pub async fn object_copy(from: String, to: String, private: Option<bool>, specia
         ext: Arc::new(RwLock::new(HashMap::from([(USE_REGION_ENDPOINT.to_string(), "true".to_string())]))),
         ..ctx.clone()
     };
-    let inst = funs.init(Some(USE_REGION_ENDPOINT.to_string()), ctx, true, object_initializer::init_fun).await?;
+    let inst = funs.init(Some(USE_REGION_ENDPOINT.to_string()), &mock_ctx, true, object_initializer::init_fun).await?;
     match inst.kind_code() {
         #[cfg(feature = "spi-s3")]
-        object_constants::SPI_S3_KIND_CODE => s3::object_s3_obj_serv::S3Service::object_copy(&from, &to, private, special, funs, ctx, &inst).await,
+        object_constants::SPI_S3_KIND_CODE => s3::object_s3_obj_serv::S3Service::object_copy(&from, &to, private, special, funs, &mock_ctx, &inst).await,
         #[cfg(feature = "spi-s3")]
         object_constants::SPI_OBS_KIND_CODE => {
             obs::object_obs_obj_serv::OBSService::object_copy(&from, &to, private, special, funs, &mock_ctx, &inst).await
