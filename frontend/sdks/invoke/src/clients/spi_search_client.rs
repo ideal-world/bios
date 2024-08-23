@@ -2,40 +2,35 @@ use tardis::basic::dto::TardisContext;
 use tardis::basic::result::TardisResult;
 use tardis::TardisFunsInst;
 
+use crate::clients::event_client::mq_error;
 use crate::dto::search_item_dto::{SearchEventItemDeleteReq, SearchEventItemModifyReq, SearchItemAddReq, SearchItemModifyReq};
 use crate::invoke_enumeration::InvokeModuleKind;
 
 use super::base_spi_client::BaseSpiClient;
-use super::event_client::{BiosEventCenter, EventCenter, EventExt};
+use super::event_client::{mq_node, ContextEvent, EventAttributeExt, EventCenterClient};
 use super::spi_kv_client::{KvItemAddOrModifyReq, KvItemDeleteReq, SpiKvClient};
 
 pub struct SpiSearchClient;
 pub mod event {
+    use crate::dto::search_item_dto::{SearchEventItemDeleteReq, SearchEventItemModifyReq, SearchItemAddReq, SearchItemModifyReq};
+    use asteroid_mq::prelude::*;
     use serde::{Deserialize, Serialize};
-
-    use crate::{
-        clients::event_client::Event,
-        dto::search_item_dto::{SearchEventItemDeleteReq, SearchEventItemModifyReq, SearchItemAddReq, SearchItemModifyReq},
-    };
     #[derive(Debug, Clone, Serialize, Deserialize)]
     pub struct SearchItemModifyEventPayload {
         pub tag: String,
         pub key: String,
         pub req: SearchItemModifyReq,
     }
-    const EVENT_ADD_SEARCH: &str = "spi-search/add";
-    const EVENT_MODIFY_SEARCH: &str = "spi-search/modify";
-    const EVENT_DELETE_SEARCH: &str = "spi-search/delete";
-    pub const SEARCH_AVATAR: &str = "spi-search";
 
-    impl Event for SearchItemAddReq {
-        const CODE: &'static str = EVENT_ADD_SEARCH;
+
+    impl EventAttribute for SearchItemAddReq {
+        const SUBJECT: Subject = Subject::const_new(b"spi-search/add");
     }
-    impl Event for SearchEventItemModifyReq {
-        const CODE: &'static str = EVENT_MODIFY_SEARCH;
+    impl EventAttribute for SearchEventItemModifyReq {
+        const SUBJECT: Subject = Subject::const_new(b"spi-search/modify");
     }
-    impl Event for SearchEventItemDeleteReq {
-        const CODE: &'static str = EVENT_DELETE_SEARCH;
+    impl EventAttribute for SearchEventItemDeleteReq {
+        const SUBJECT: Subject = Subject::const_new(b"spi-search/delete");
     }
 }
 
@@ -69,68 +64,83 @@ impl SpiSearchClient {
     }
 }
 
-impl BiosEventCenter {
-    pub async fn add_item_and_name(&self, source: &str, add_req: &SearchItemAddReq, name: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        self.publish(add_req.clone().with_source(source).inject_context(funs, ctx)).await?;
+impl EventCenterClient {
+    pub async fn add_item_and_name(&self, add_req: &SearchItemAddReq, name: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let topic = self.get_topic()?;
+        use super::event_client::EventAttributeExt;
+        topic.send_event(add_req.clone().inject_context(funs, ctx).json()).await.map_err(mq_error)?;
         let name = if let Some(name) = name.clone() { name } else { add_req.title.clone() };
-        self.publish(
-            KvItemAddOrModifyReq {
-                key: format!("{}:{}", add_req.tag, add_req.key),
-                value: tardis::serde_json::Value::String(name),
-                ..Default::default()
-            }
-            .with_source(source)
-            .inject_context(funs, ctx),
-        )
-        .await?;
-        Ok(())
-    }
-
-    pub async fn modify_item_and_name(&self, source: &str, tag: &str, key: &str, modify_req: &SearchItemModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        self.publish(
-            SearchEventItemModifyReq {
-                tag: tag.to_string(),
-                key: key.to_string(),
-                item: modify_req.clone(),
-            }
-            .with_source(source)
-            .inject_context(funs, ctx),
-        )
-        .await?;
-        if modify_req.title.is_some() || modify_req.name.is_some() {
-            let name = modify_req.name.clone().unwrap_or(modify_req.title.clone().unwrap_or("".to_string()));
-            self.publish(
+        topic
+            .send_event(
                 KvItemAddOrModifyReq {
-                    key: format!("{}:{}", tag, key),
+                    key: format!("{}:{}", add_req.tag, add_req.key),
                     value: tardis::serde_json::Value::String(name),
                     ..Default::default()
                 }
-                .with_source(source)
-                .inject_context(funs, ctx),
+                .inject_context(funs, ctx)
+                .json(),
             )
-            .await?;
+            .await
+            .map_err(mq_error)?;
+
+        Ok(())
+    }
+
+    pub async fn modify_item_and_name(&self, tag: &str, key: &str, modify_req: &SearchItemModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let topic = self.get_topic()?;
+        topic
+            .send_event(
+                SearchEventItemModifyReq {
+                    tag: tag.to_string(),
+                    key: key.to_string(),
+                    item: modify_req.clone(),
+                }
+                .inject_context(funs, ctx)
+                .json(),
+            )
+            .await
+            .map_err(mq_error)?;
+        if modify_req.title.is_some() || modify_req.name.is_some() {
+            let name = modify_req.name.clone().unwrap_or(modify_req.title.clone().unwrap_or("".to_string()));
+            topic
+                .send_event(
+                    KvItemAddOrModifyReq {
+                        key: format!("{}:{}", tag, key),
+                        value: tardis::serde_json::Value::String(name),
+                        ..Default::default()
+                    }
+                    .inject_context(funs, ctx)
+                    .json(),
+                )
+                .await
+                .map_err(mq_error)?;
         }
         Ok(())
     }
 
-    pub async fn delete_item_and_name(&self, source: &str, tag: &str, key: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        self.publish(
-            SearchEventItemDeleteReq {
-                tag: tag.to_string(),
-                key: key.to_string(),
-            }
-            .with_source(source)
-            .inject_context(funs, ctx),
-        )
-        .await?;
-        self.publish(
-            KvItemDeleteReq {
-                key: format!("__k_n__:{}:{}", tag, key),
-            }
-            .with_source(source)
-            .inject_context(funs, ctx),
-        )
-        .await?;
+    pub async fn delete_item_and_name(&self, tag: &str, key: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let topic = self.get_topic()?;
+        topic
+            .send_event(
+                SearchEventItemDeleteReq {
+                    tag: tag.to_string(),
+                    key: key.to_string(),
+                }
+                .inject_context(funs, ctx)
+                .json(),
+            )
+            .await
+            .map_err(mq_error)?;
+        topic
+            .send_event(
+                KvItemDeleteReq {
+                    key: format!("__k_n__:{}:{}", tag, key),
+                }
+                .inject_context(funs, ctx)
+                .json(),
+            )
+            .await
+            .map_err(mq_error)?;
         Ok(())
     }
 }

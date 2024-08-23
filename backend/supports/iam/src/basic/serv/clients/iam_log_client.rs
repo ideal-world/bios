@@ -6,16 +6,13 @@ use bios_basic::{
     },
 };
 use bios_sdk_invoke::clients::{
-    event_client::{BiosEventCenter, EventCenter, EventExt},
+    event_client::{get_topic, mq_error, EventAttributeExt, SPI_RPC_TOPIC},
     spi_log_client::{LogItemAddReq, SpiLogClient},
 };
 use serde::Serialize;
 
 use tardis::{
-    basic::{dto::TardisContext, result::TardisResult},
-    chrono::{DateTime, Utc},
-    serde_json::json,
-    tokio, TardisFuns, TardisFunsInst,
+    basic::{dto::TardisContext, result::TardisResult}, chrono::{DateTime, Utc}, futures::TryFutureExt, serde_json::json, tokio, TardisFuns, TardisFunsInst
 };
 
 use crate::{
@@ -150,8 +147,8 @@ impl IamLogClient {
             owner,
             own_paths,
         };
-        if let Some(ws_client) = BiosEventCenter::worker_queue() {
-            ws_client.publish(add_req.with_source(IAM_AVATAR).inject_context(funs, ctx)).await?;
+        if let Some(topic) = get_topic(&SPI_RPC_TOPIC) {
+            topic.send_event(add_req.inject_context(funs, ctx).json()).map_err(mq_error).await?;
         } else {
             SpiLogClient::add(&add_req, funs, ctx).await?;
         }

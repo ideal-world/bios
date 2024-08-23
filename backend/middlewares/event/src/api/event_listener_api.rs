@@ -1,3 +1,4 @@
+use tardis::basic::error::TardisError;
 use tardis::web::poem_openapi;
 use tardis::web::poem_openapi::param::{Path, Query};
 use tardis::web::poem_openapi::payload::Json;
@@ -19,9 +20,8 @@ impl EventListenerApi {
     /// 注册事件监听器
     #[oai(path = "/", method = "post")]
     async fn register(&self, listener: Json<EventListenerRegisterReq>) -> TardisApiResult<EventListenerRegisterResp> {
-        let funs = get_tardis_inst();
-        let resp = event_listener_serv::register(listener.0, &funs).await?;
-        TardisResp::ok(resp)
+
+        TardisResp::err(TardisError::not_implemented("unimplemented", "unimplemented"))
     }
 
     /// Remove event listener
@@ -29,8 +29,7 @@ impl EventListenerApi {
     /// 移除事件监听器
     #[oai(path = "/:listener_code", method = "delete")]
     async fn remove(&self, listener_code: Path<String>, token: Query<String>) -> TardisApiResult<Void> {
-        let funs = get_tardis_inst();
-        event_listener_serv::remove(&listener_code.0, &token.0, &funs).await?;
-        TardisResp::ok(Void {})
+        TardisResp::err(TardisError::not_implemented("unimplemented", "unimplemented"))
+
     }
 }

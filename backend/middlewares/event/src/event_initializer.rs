@@ -1,9 +1,12 @@
+use std::vec;
+
+use asteroid_mq::{prelude::TopicConfig, protocol::topic::durable_message::LoadTopic};
 use bios_basic::rbum::{
     dto::{rbum_domain_dto::RbumDomainAddReq, rbum_kind_dto::RbumKindAddReq},
     rbum_enumeration::RbumScopeLevelKind,
-    serv::{rbum_crud_serv::RbumCrudOperation, rbum_domain_serv::RbumDomainServ, rbum_item_serv::RbumItemCrudOperation, rbum_kind_serv::RbumKindServ},
+    serv::{rbum_crud_serv::RbumCrudOperation, rbum_domain_serv::RbumDomainServ, rbum_kind_serv::RbumKindServ},
 };
-use bios_sdk_invoke::clients::event_client::{BiosEventCenter, EventCenter, EventCenterConfig, TOPIC_BIOS_PUB_SUB, TOPIC_BIOS_WORKER_QUEUE};
+use bios_sdk_invoke::clients::event_client::SPI_RPC_TOPIC;
 use tardis::{
     basic::{dto::TardisContext, field::TrimString, result::TardisResult},
     db::reldb_client::TardisActiveModel,
@@ -13,21 +16,16 @@ use tardis::{
 
 use crate::{
     api::{event_listener_api, event_proc_api, event_topic_api},
-    domain::{event_persistent, event_topic},
-    dto::event_dto::EventTopicAddOrModifyReq,
+    domain::event_topic,
     event_config::{EventConfig, EventInfo, EventInfoManager},
     event_constants::{DOMAIN_CODE, KIND_CODE},
-    serv::{self, event_proc_serv::CreateRemoteSenderHandler, event_topic_serv::EventDefServ},
 };
 
 pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
     let mut funs = TardisFuns::inst_with_db_conn(DOMAIN_CODE.to_string(), None);
     let config = funs.conf::<EventConfig>();
-    if config.enable {
-        create_event_center()?;
-    }
+
     init_api(web_server).await?;
-    init_cluster_resource().await;
     let ctx = TardisContext {
         own_paths: "".to_string(),
         ak: "".to_string(),
@@ -38,45 +36,11 @@ pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
     };
     funs.begin().await?;
     init_db(DOMAIN_CODE.to_string(), KIND_CODE.to_string(), &funs, &ctx).await?;
-    EventDefServ::init(&funs, &ctx).await?;
-    init_topic(&funs, &ctx).await?;
-    funs.commit().await?;
-    init_scan_and_resend_task();
-    Ok(())
-}
 
-async fn init_topic(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-    let config = funs.conf::<EventConfig>();
-    // create bios worker queue topic
-    let _result = serv::event_topic_serv::EventDefServ::add_item(
-        &mut EventTopicAddOrModifyReq {
-            code: TOPIC_BIOS_WORKER_QUEUE.into(),
-            name: TOPIC_BIOS_WORKER_QUEUE.into(),
-            save_message: false,
-            need_mgr: false,
-            queue_size: 1024,
-            use_sk: Some(config.event_bus_sk.clone()),
-            mgr_sk: None,
-        },
-        funs,
-        ctx,
-    )
-    .await;
-    // create bios pub sub topic
-    let _result = serv::event_topic_serv::EventDefServ::add_item(
-        &mut EventTopicAddOrModifyReq {
-            code: TOPIC_BIOS_PUB_SUB.into(),
-            name: TOPIC_BIOS_PUB_SUB.into(),
-            save_message: false,
-            need_mgr: false,
-            queue_size: 1024,
-            use_sk: Some(config.event_bus_sk.clone()),
-            mgr_sk: None,
-        },
-        funs,
-        ctx,
-    )
-    .await;
+    funs.commit().await?;
+    if config.enable {
+        init_mq_cluster(&config.svc).await?;
+    }
     Ok(())
 }
 
@@ -87,15 +51,15 @@ async fn init_db(domain_code: String, kind_code: String, funs: &TardisFunsInst, 
         return Ok(());
     }
 
-    funs.db()
-        .init(event_persistent::ActiveModel::init(
-            TardisFuns::reldb().backend(),
-            None,
-            TardisFuns::reldb().compatible_type(),
-        ))
-        .await?;
     // Initialize event component RBUM item table and indexs
     funs.db().init(event_topic::ActiveModel::init(TardisFuns::reldb().backend(), None, TardisFuns::reldb().compatible_type())).await?;
+    // funs.db()
+    //     .init(event_persistent::ActiveModel::init(
+    //         TardisFuns::reldb().backend(),
+    //         None,
+    //         TardisFuns::reldb().compatible_type(),
+    //     ))
+    //     .await?;
     // Initialize event component RBUM domain data
     let domain_id = RbumDomainServ::add_rbum(
         &mut RbumDomainAddReq {
@@ -119,7 +83,7 @@ async fn init_db(domain_code: String, kind_code: String, funs: &TardisFunsInst, 
             icon: None,
             sort: None,
             module: None,
-            ext_table_name: Some("event_topic".to_lowercase()),
+            ext_table_name: Some("mq_topic".to_lowercase()),
             scope_level: Some(RbumScopeLevelKind::Root),
         },
         funs,
@@ -140,55 +104,31 @@ async fn init_api(web_server: &TardisWebServer) -> TardisResult<()> {
     Ok(())
 }
 
-async fn init_cluster_resource() {
-    use crate::serv::event_listener_serv::{listeners, mgr_listeners};
-    use crate::serv::event_topic_serv::topics;
-    use tardis::cluster::cluster_processor::subscribe;
-    subscribe(listeners().clone()).await;
-    subscribe(mgr_listeners().clone()).await;
-    subscribe(topics().clone()).await;
-    subscribe(CreateRemoteSenderHandler).await;
-}
-
-fn init_scan_and_resend_task() {
-    let funs = TardisFuns::inst_with_db_conn(DOMAIN_CODE.to_string(), None);
-
-    let config = funs.conf::<EventConfig>();
-    let Some(interval_sec) = config.resend_interval_sec else {
-        return;
-    };
-    let mut interval = tardis::tokio::time::interval(tardis::tokio::time::Duration::from_secs(interval_sec as u64));
-    tardis::tokio::spawn(async move {
-        loop {
-            interval.tick().await;
-            let funs = TardisFuns::inst_with_db_conn(DOMAIN_CODE.to_string(), None);
-            let _ = crate::serv::event_proc_serv::scan_and_resend(funs.into()).await;
-        }
-    });
-}
-
-fn create_event_center() -> TardisResult<()> {
-    let config = TardisFuns::cs_config::<EventConfig>(DOMAIN_CODE);
-    let pubsub_config = EventCenterConfig {
-        base_url: config.base_url.clone(),
-        topic_sk: config.event_bus_sk.clone(),
-        topic_code: TOPIC_BIOS_PUB_SUB.to_owned(),
-        subscribe: true,
-        avatars: config.avatars.clone(),
-    };
-    let pubsub = BiosEventCenter::from_config(pubsub_config);
-    pubsub.init()?;
-    pubsub.set_as_worker_queue();
-
-    let wq_config = EventCenterConfig {
-        base_url: config.base_url.clone(),
-        topic_sk: config.event_bus_sk.clone(),
-        topic_code: TOPIC_BIOS_WORKER_QUEUE.to_owned(),
-        subscribe: false,
-        avatars: config.avatars.clone(),
-    };
-    let wq = BiosEventCenter::from_config(wq_config);
-    wq.init()?;
-    wq.set_as_worker_queue();
+async fn init_mq_cluster(svc_name: &str) -> TardisResult<()> {
+    use bios_sdk_invoke::clients::event_client::mq_error;
+    let mq_node = init_mq_node(svc_name).await;
+    mq_node
+        .load_topic(LoadTopic {
+            config: TopicConfig {
+                code: SPI_RPC_TOPIC,
+                overflow_config: None,
+                blocking: false,
+            },
+            queue: vec![],
+        })
+        .await
+        .map_err(mq_error)?;
     Ok(())
+}
+
+pub async fn init_mq_node(svc_name: &str) -> asteroid_mq::prelude::Node {
+    if let Some(node) = TardisFuns::store().get_singleton::<asteroid_mq::prelude::Node>() {
+        node
+    } else {
+        let cluster_provider = asteroid_mq::protocol::cluster::k8s::K8sClusterProvider::new(svc_name.to_string(), asteroid_mq::DEFAULT_TCP_PORT).await;
+        let uid = std::env::var("POD_UID").expect("POD_UID is required");
+        let node = cluster_provider.run(uid).await.expect("failed to run k8s cluster");
+        TardisFuns::store().insert_singleton(node.clone());
+        node
+    }
 }

@@ -2,7 +2,11 @@ use std::vec;
 
 use bios_basic::rbum::{dto::rbum_filer_dto::RbumBasicFilterReq, helper::rbum_scope_helper, rbum_enumeration::RbumScopeLevelKind, serv::rbum_item_serv::RbumItemCrudOperation};
 use bios_sdk_invoke::{
-    clients::{event_client::BiosEventCenter, flow_client::event::FLOW_AVATAR, spi_search_client::SpiSearchClient},
+    clients::{
+        event_client::{get_topic, EventCenterClient, SPI_RPC_TOPIC},
+        flow_client::event::FLOW_AVATAR,
+        spi_search_client::SpiSearchClient,
+    },
     dto::search_item_dto::{SearchItemAddReq, SearchItemModifyReq, SearchItemVisitKeysReq},
 };
 use serde_json::json;
@@ -111,8 +115,8 @@ impl FlowSearchClient {
                 }),
                 kv_disable: None,
             };
-            if let Some(event_center) = TardisFuns::store().get_singleton::<BiosEventCenter>() {
-                event_center.modify_item_and_name(FLOW_AVATAR, SEARCH_TAG, &key, &modify_req, funs, ctx).await?;
+            if let Some(_topic) = get_topic(&SPI_RPC_TOPIC) {
+                EventCenterClient { topic_code: SPI_RPC_TOPIC }.modify_item_and_name(SEARCH_TAG, &key, &modify_req, funs, ctx).await?;
             } else {
                 SpiSearchClient::modify_item_and_name(SEARCH_TAG, &key, &modify_req, funs, ctx).await?;
             }
@@ -143,8 +147,8 @@ impl FlowSearchClient {
                 }),
                 kv_disable: None,
             };
-            if let Some(event_center) = TardisFuns::store().get_singleton::<BiosEventCenter>() {
-                event_center.add_item_and_name(FLOW_AVATAR, &add_req, Some(model_resp.name.clone()), funs, ctx).await?;
+            if let Some(_topic) = get_topic(&SPI_RPC_TOPIC) {
+                EventCenterClient { topic_code: SPI_RPC_TOPIC }.add_item_and_name(&add_req, Some(model_resp.name.clone()), funs, ctx).await?;
             } else {
                 SpiSearchClient::add_item_and_name(&add_req, Some(model_resp.name.clone()), funs, ctx).await?;
             }
@@ -154,9 +158,9 @@ impl FlowSearchClient {
 
     // model 全局搜索删除埋点方法
     pub async fn delete_model_search(model_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        if let Some(event_center) = TardisFuns::store().get_singleton::<BiosEventCenter>() {
-            event_center.delete_item_and_name(FLOW_AVATAR, SEARCH_TAG, model_id, funs, ctx).await?;
-        } else {
+        if let Some(_topic) = get_topic(&SPI_RPC_TOPIC) {
+            EventCenterClient { topic_code: SPI_RPC_TOPIC }.delete_item_and_name(SEARCH_TAG, model_id, funs, ctx).await?;
+        }  else {
             SpiSearchClient::delete_item_and_name(SEARCH_TAG, model_id, funs, ctx).await?;
         }
         Ok(())

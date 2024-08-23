@@ -13,6 +13,7 @@ use crate::conf_config::ConfConfig;
 
 tardis_static! {
     pub place_holder_regex: Regex = Regex::new(r"\$CERT\{(.+)\}").expect("invalid content replace regex");
+    pub env_place_holder_regex: Regex = Regex::new(r"\$ENV\{(.+)\}").expect("invalid content replace regex");
 }
 
 #[derive(Debug, Clone, Copy)]

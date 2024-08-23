@@ -2,7 +2,10 @@ use std::collections::HashSet;
 
 use bios_basic::rbum::{dto::rbum_filer_dto::RbumBasicFilterReq, serv::rbum_item_serv::RbumItemCrudOperation};
 use bios_sdk_invoke::{
-    clients::{event_client::BiosEventCenter, spi_search_client::SpiSearchClient},
+    clients::{
+        event_client::{get_topic, EventCenterClient, SPI_RPC_TOPIC},
+        spi_search_client::SpiSearchClient,
+    },
     dto::search_item_dto::{SearchItemAddReq, SearchItemModifyReq, SearchItemVisitKeysReq},
 };
 use itertools::Itertools;
@@ -182,8 +185,8 @@ impl IamSearchClient {
                 }),
                 kv_disable: Some(account_resp.disabled),
             };
-            if let Some(event_center) = BiosEventCenter::worker_queue() {
-                event_center.modify_item_and_name(IAM_AVATAR, &tag, &key, &modify_req, funs, ctx).await?;
+            if let Some(_topic) = get_topic(&SPI_RPC_TOPIC) {
+                EventCenterClient { topic_code: SPI_RPC_TOPIC }.modify_item_and_name(&tag, &key, &modify_req, funs, ctx).await?;
             } else {
                 SpiSearchClient::modify_item_and_name(&tag, &key, &modify_req, funs, ctx).await?;
             }
@@ -228,8 +231,8 @@ impl IamSearchClient {
                 }),
                 kv_disable: Some(account_resp.disabled),
             };
-            if let Some(event_center) = BiosEventCenter::worker_queue() {
-                event_center.add_item_and_name(IAM_AVATAR, &add_req, Some(account_resp.name), funs, ctx).await?;
+            if let Some(_topic) = get_topic(&SPI_RPC_TOPIC) {
+                EventCenterClient { topic_code: SPI_RPC_TOPIC }.add_item_and_name(&add_req, Some(account_resp.name), funs, ctx).await?;
             } else {
                 SpiSearchClient::add_item_and_name(&add_req, Some(account_resp.name), funs, ctx).await?;
             }
@@ -240,8 +243,8 @@ impl IamSearchClient {
     // account 全局搜索删除埋点方法
     pub async fn delete_account_search(account_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let tag = funs.conf::<IamConfig>().spi.search_account_tag.clone();
-        if let Some(event_center) = BiosEventCenter::worker_queue() {
-            event_center.delete_item_and_name(IAM_AVATAR, &tag, account_id, funs, ctx).await?;
+        if let Some(_topic) = get_topic(&SPI_RPC_TOPIC) {
+            EventCenterClient { topic_code: SPI_RPC_TOPIC }.delete_item_and_name( &tag, account_id, funs, ctx).await?;
         } else {
             SpiSearchClient::delete_item_and_name(&tag, account_id, funs, ctx).await?;
         }

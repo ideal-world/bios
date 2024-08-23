@@ -37,6 +37,7 @@ tardis = { workspace = true, features = [
 ] }
 simple-invoke-client-macro = { path = "../simple-invoke-client-macro", optional = true }
 crossbeam = "0.8"
+asteroid-mq = { workspace = true, features = ["cluster-k8s", "json"] }
 [dev-dependencies]
 tardis = { workspace = true, features = ["test"] }
 simple-invoke-client-macro = { path = "../simple-invoke-client-macro" }
@@ -44,3 +45,4 @@ simple-invoke-client-macro = { path = "../simple-invoke-client-macro" }
 [[test]]
 name = "test_macros"
 required-features = ["macro"]
+

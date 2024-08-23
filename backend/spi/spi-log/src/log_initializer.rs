@@ -16,7 +16,7 @@ pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
     let ctx = spi_initializer::init(DOMAIN_CODE, &funs).await?;
     init_db(&funs, &ctx).await?;
     funs.commit().await?;
-    crate::event::register_log_event();
+    crate::event::handle_events().await?;
     init_api(web_server).await?;
     info!("[BIOS.Log] Module initialized");
     Ok(())
