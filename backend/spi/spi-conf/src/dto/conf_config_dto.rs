@@ -33,7 +33,6 @@ pub struct ConfigDescriptor {
     #[oai(default, validator(min_length = 1, max_length = 256))]
     pub namespace_id: NamespaceId,
     /// 配置分组名
-    #[oai(validator(min_length = 1, max_length = 256))]
     pub group: String,
     /// 配置名
     #[oai(validator(min_length = 1, max_length = 256))]
@@ -102,11 +101,8 @@ pub struct ConfigPublishRequest {
     pub config_tags: Vec<String>,
     /// 配置描述
     pub desc: Option<String>,
-    ///
     pub r#use: Option<String>,
-    ///
     pub effect: Option<String>,
-    /// -
     pub schema: Option<String>,
 }
 

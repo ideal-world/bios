@@ -31,7 +31,7 @@ async fn spi_conf_namespace_test() -> TardisResult<()> {
         owner: "app001".to_string(),
         ..Default::default()
     })?;
-    let funs = TardisFuns::inst_with_db_conn(DOMAIN_CODE.to_string(), None);
+    let _funs = TardisFuns::inst_with_db_conn(DOMAIN_CODE.to_string(), None);
     let RegisterResponse { username, password } = client
         .put(
             "/ci/auth/register_bundle",
@@ -320,6 +320,92 @@ pub async fn test_curd(client: &mut TestHttpClient) -> TardisResult<()> {
     assert_eq!(response[0].data_id, "conf-2");
     assert_eq!(response[1].data_id, "conf-1");
     assert_eq!(response[2].data_id, "conf-0");
+
+    // 12 test .env file
+    const ENV_TEST_NAMESPACE_ID: &str = "test config";
+    let _response = client
+        .post::<_, bool>(
+            "/ci/namespace",
+            &NamespaceAttribute {
+                namespace: ENV_TEST_NAMESPACE_ID.into(),
+                namespace_show_name: "测试环境变量命名空间".to_string(),
+                namespace_desc: Some("测试环境变量命名空间".to_string()),
+            },
+        )
+        .await;
+    let _response = client
+        .post::<_, bool>(
+            "/ci/cs/config",
+            &json!( {
+                "content": r#"
+TYPE=ALPHA
+VALUE=123
+URL=http://www.baidu.com
+# this is a comment
+"#,
+                "group": "".to_string(),
+                "data_id": ".env".to_string(),
+                "schema": "env",
+                "namespace_id": NAMESPACE_ID.to_string(),
+            }),
+        )
+        .await;
+    let config_to_be_render = r#"
+[conf]
+type=$ENV{TYPE}
+value=$ENV{VALUE}
+url=$ENV{URL}
+"#;
+    let _response = client
+        .post::<_, bool>(
+            "/ci/cs/config",
+            &json!( {
+                "content": config_to_be_render,
+                "namespace_id": NAMESPACE_ID.to_string(),
+                "group": "DEFAULT-GROUP".to_string(),
+                "data_id": "conf-env".to_string(),
+                "schema": "toml",
+            }),
+        )
+        .await;
+    let response = client.get::<ConfigItem>(&format!("/ci/cs/config/detail?namespace_id={NAMESPACE_ID}&group=DEFAULT-GROUP&data_id=conf-env")).await;
+    assert_eq!(
+        response.content,
+        r#"
+[conf]
+type=ALPHA
+value=123
+url=http://www.baidu.com
+"#
+    );
+    // UPDATE the .env file
+    let _response = client
+        .post::<_, bool>(
+            "/ci/cs/config",
+            &json!( {
+                "content": r#"
+TYPE=BETA
+VALUE=456
+URL=http://www.google.com
+"#,
+                "group": "".to_string(),
+                "data_id": ".env".to_string(),
+                "schema": "env",
+                "namespace_id": NAMESPACE_ID.to_string(),
+            }),
+        )
+        .await;
+    let response = client.get::<ConfigItem>(&format!("/ci/cs/config/detail?namespace_id={NAMESPACE_ID}&group=DEFAULT-GROUP&data_id=conf-env")).await;
+    assert_eq!(
+        response.content,
+        r#"
+[conf]
+type=BETA
+value=456
+url=http://www.google.com
+"#
+    );
+
     Ok(())
 }
 
