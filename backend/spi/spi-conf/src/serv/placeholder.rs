@@ -111,7 +111,7 @@ async fn get_env_kvmap(namespace: &str, codes: HashSet<&str>, config: &ConfConfi
         static MD5: RefCell<String> = "".to_string().into();
         static MAP: RefCell<HashMap<String, String>> = HashMap::new().into();
     };
-    let db_md5: String = super::get_md5(&mut env_config_descriptor, funs, ctx).await?;
+    let db_md5: String = super::get_raw_md5(&mut env_config_descriptor, funs, ctx).await?;
     let md5_equal = MD5.with(|md5| md5.borrow().as_str() == db_md5.as_str());
     let extract = || {
         MAP.with_borrow(|map| {
@@ -141,13 +141,13 @@ pub fn has_placeholder_auth(source_addr: IpAddr, funs: &tardis::TardisFunsInst) 
 pub async fn render_content_for_ip(
     raw_descriptor: &ConfigDescriptor,
     content: String,
-    source_addr: IpAddr,
+    source_addr: Option<IpAddr>,
     funs: &tardis::TardisFunsInst,
     ctx: &tardis::basic::dto::TardisContext,
 ) -> TardisResult<String> {
     let cfg = funs.conf::<ConfConfig>();
     // let level = get_scope_level_by_context(ctx)?;
-    let render_cert = has_placeholder_auth(source_addr, funs);
+    let render_cert = source_addr.map(|ip|has_placeholder_auth(ip, funs)).unwrap_or(false);
     let render_env = true;
     let render_policy = RenderPolicy { render_cert, render_env };
     tardis::tracing::trace!(?source_addr, ?ctx, ?render_policy, "[BIOS.Spi-Config] Trying to render config");
