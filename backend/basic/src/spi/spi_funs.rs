@@ -85,7 +85,11 @@ impl SpiBsInstExtractor for TardisFunsInst {
         F: Fn(SpiBsCertResp, &'a TardisContext, bool) -> T + Send + Sync,
         T: Future<Output = TardisResult<SpiBsInst>> + Send,
     {
-        let cache_key = if let Some(custom_cache_key) = custom_cache_key { format!("{}-{}-{}", self.module_code(), ctx.ak, custom_cache_key) } else { format!("{}-{}", self.module_code(), ctx.ak) };
+        let cache_key = if let Some(custom_cache_key) = custom_cache_key {
+            format!("{}-{}-{}", self.module_code(), ctx.ak, custom_cache_key)
+        } else {
+            format!("{}-{}", self.module_code(), ctx.ak)
+        };
         {
             let read = get_spi_bs_caches().read().await;
             if let Some(inst) = read.get(&cache_key).cloned() {

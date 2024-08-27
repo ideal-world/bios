@@ -1,7 +1,12 @@
 use std::collections::HashMap;
 
 use bios_basic::spi::{dto::spi_bs_dto::SpiBsCertResp, spi_funs::SpiBsInst, spi_initializer};
-use tardis::{basic::{dto::TardisContext, error::TardisError, result::TardisResult}, config::config_dto::OSModuleConfig, os::os_client::TardisOSClient, TardisFuns};
+use tardis::{
+    basic::{dto::TardisContext, error::TardisError, result::TardisResult},
+    config::config_dto::OSModuleConfig,
+    os::os_client::TardisOSClient,
+    TardisFuns,
+};
 
 use crate::object_constants::USE_REGION_ENDPOINT;
 
@@ -18,7 +23,7 @@ use tardis::serde_json::Value as JsonValue;
 /// 举例说明：假设obs服务的 Regional endpoint: obs.ap-southeast-1.myhuaweicloud.com 。业务使用的桶为 bios-test 。桶中存在文件路径为 pri/test.txt 。
 /// 1、使用桶域名访问该文件，endpoint为bios-test.obs.ap-southeast-1.myhuaweicloud.com。bucket_name传pri,object_path为text.txt。
 /// 2、使用区域域名访问该文件，endpoint为obs.ap-southeast-1.myhuaweicloud.com。bucket_name传bios-test,object_path为 pri/test.txt。
-/// 
+///
 /// The obs storage does not support buckets under the Regional endpoint.
 /// So in order to keep the logic of the built-in services uniform, we use the bucket domain name as the endpoint for s3 to create the connection.
 /// At this point there is no need to initialize the bucket building operation, we specify the bucket under the bucket domain name and obs will treat the specified bucket name as a first level directory.
@@ -45,7 +50,7 @@ pub async fn init(bs_cert: &SpiBsCertResp, ctx: &TardisContext, mgr: bool) -> Ta
             .get("region_endpoint")
             .and_then(JsonValue::as_str)
             .ok_or_else(|| TardisError::bad_request("Tardis context ext should have a `region_endpoint` field with type string", "400-spi-invalid-tardis-ctx"))?;
-        init_obs_spi_bs(&conn_uri, &bs_cert.ak, &bs_cert.sk, region,& default_bucket, bs_cert.private, ctx, mgr).await
+        init_obs_spi_bs(&conn_uri, &bs_cert.ak, &bs_cert.sk, region, &default_bucket, bs_cert.private, ctx, mgr).await
     } else {
         // When using a bucket domain, default_bucket is set to empty
         let default_bucket = "";

@@ -176,9 +176,7 @@ pub async fn object_copy(from: String, to: String, private: Option<bool>, specia
         #[cfg(feature = "spi-s3")]
         object_constants::SPI_S3_KIND_CODE => s3::object_s3_obj_serv::S3Service::object_copy(&from, &to, private, special, funs, &mock_ctx, &inst).await,
         #[cfg(feature = "spi-s3")]
-        object_constants::SPI_OBS_KIND_CODE => {
-            obs::object_obs_obj_serv::OBSService::object_copy(&from, &to, private, special, funs, &mock_ctx, &inst).await
-        },
+        object_constants::SPI_OBS_KIND_CODE => obs::object_obs_obj_serv::OBSService::object_copy(&from, &to, private, special, funs, &mock_ctx, &inst).await,
         kind_code => Err(funs.bs_not_implemented(kind_code)),
     }
 }
