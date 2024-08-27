@@ -10,6 +10,10 @@ use tardis::{
 
 use tardis::serde_json::Value as JsonValue;
 
+/// s3 引擎初始化
+/// 使用 Regional endpoint 建立连接，默认桶允许置空。
+/// s3 engine initialization
+/// Use regional endpoint to establish connection, default bucket is allowed to be empty.
 pub async fn init(bs_cert: &SpiBsCertResp, ctx: &TardisContext, _: bool) -> TardisResult<SpiBsInst> {
     let ext = TardisFuns::json.str_to_json(&bs_cert.ext)?;
     let region = ext
