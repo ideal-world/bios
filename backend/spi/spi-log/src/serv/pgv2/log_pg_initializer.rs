@@ -5,34 +5,28 @@ use tardis::{
 
 use bios_basic::spi::{spi_funs::TypedSpiBsInst, spi_initializer};
 
+use crate::log_constants;
+
 pub async fn init_table_and_conn(bs_inst: TypedSpiBsInst<'_, TardisRelDBClient>, tag: &str, ctx: &TardisContext, mgr: bool) -> TardisResult<(TardisRelDBlConnection, String)> {
     spi_initializer::common_pg::init_table_and_conn(
         bs_inst,
         ctx,
         mgr,
         Some(tag),
-        crate::log_constants::TABLE_LOG_FLAG,
-        r#"ts timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    id character varying NOT NULL,
-    key character varying NOT NULL,
-    op character varying NOT NULL,
-    content text NOT NULL,
-    kind character varying NOT NULL,
-    owner character varying NOT NULL,
-    own_paths character varying NOT NULL,
-    ext jsonb NOT NULL,
-    rel_key character varying NOT NULL"#,
-        None,
+        log_constants::TABLE_LOG_FLAG_V2,
+        r#""#,
+        Some(crate::log_constants::PARENT_TABLE_NAME.to_string()),
         vec![
             ("kind", "btree"),
             ("ts", "btree"),
             ("key", "btree"),
-            ("op", "btree"),
+            ("content", "gin"),
             ("ext", "gin"),
             ("owner", "btree"),
             ("own_paths", "btree"),
             ("rel_key", "btree"),
-            ("id", "btree"),
+            ("idempotent_id", "btree"),
+            ("disable", "btree"),
         ],
         None,
         None,

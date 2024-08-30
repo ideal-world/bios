@@ -279,6 +279,7 @@ pub mod common_pg {
         table_flag: &str,
         // Create table DDL
         table_create_content: &str,
+        table_inherits: Option<String>,
         // Table index
         // Format: field name -> index type
         indexes: Vec<(&str, &str)>,
@@ -295,7 +296,18 @@ pub mod common_pg {
         } else if !mgr {
             return Err(TardisError::bad_request("The requested tag does not exist", ""));
         }
-        do_init_table(&schema_name, &conn, &tag, table_flag, table_create_content, indexes, primary_keys, update_time_field).await?;
+        do_init_table(
+            &schema_name,
+            &conn,
+            &tag,
+            table_flag,
+            table_create_content,
+            table_inherits,
+            indexes,
+            primary_keys,
+            update_time_field,
+        )
+        .await?;
         Ok((conn, format!("{schema_name}.{GLOBAL_STORAGE_FLAG}_{table_flag}{tag}")))
     }
 
@@ -322,7 +334,7 @@ pub mod common_pg {
     ) -> TardisResult<()> {
         let tag = tag.map(|t| format!("_{t}")).unwrap_or_default();
         let schema_name = get_schema_name_from_context(ctx);
-        do_init_table(&schema_name, conn, &tag, table_flag, table_create_content, indexes, primary_keys, update_time_field).await
+        do_init_table(&schema_name, conn, &tag, table_flag, table_create_content, None, indexes, primary_keys, update_time_field).await
     }
 
     async fn do_init_table(
@@ -331,6 +343,7 @@ pub mod common_pg {
         tag: &str,
         table_flag: &str,
         table_create_content: &str,
+        table_inherits: Option<String>,
         // field_name_or_fun -> index type
         indexes: Vec<(&str, &str)>,
         primary_keys: Option<Vec<&str>>,
@@ -341,7 +354,12 @@ pub mod common_pg {
                 r#"CREATE TABLE {schema_name}.{GLOBAL_STORAGE_FLAG}_{table_flag}{tag}
 (
     {table_create_content}
-)"#
+            ){}"#,
+                if let Some(inherits) = table_inherits {
+                    format!(" inherits {inherits}")
+                } else {
+                    "".to_string()
+                }
             ),
             vec![],
         )
