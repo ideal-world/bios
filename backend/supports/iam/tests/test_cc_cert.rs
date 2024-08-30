@@ -175,6 +175,8 @@ async fn test_single_level(context: &TardisContext, ak: &str, another_context: &
             sk: Some("ssssssssss".to_string()),
             ext: None,
             rel_rbum_id: account_info.account_id.clone(),
+            start_time: None,
+            end_time: None,
         },
         &funs,
         context,
