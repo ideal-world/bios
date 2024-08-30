@@ -37,7 +37,7 @@ use crate::{
         flow_state_dto::FlowSysStateKind,
         flow_transition_dto::{FlowTransitionDoubleCheckInfo, FlowTransitionInitInfo},
     },
-    event::flow_register_events,
+    event::handle_events,
     flow_config::{BasicInfo, FlowBasicInfoManager, FlowConfig},
     flow_constants,
     serv::{
@@ -50,7 +50,7 @@ use crate::{
 pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
     let funs = flow_constants::get_tardis_inst();
     init_db(funs).await?;
-    flow_register_events();
+    handle_events().await?;
     init_api(web_server).await
 }
 

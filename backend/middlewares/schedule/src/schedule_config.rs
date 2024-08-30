@@ -1,5 +1,5 @@
 use bios_basic::{process::ci_processor::AppKeyConfig, rbum::rbum_config::RbumConfig};
-use bios_sdk_invoke::{clients::event_client::EventTopicConfig, invoke_config::InvokeConfig};
+use bios_sdk_invoke::{invoke_config::InvokeConfig};
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 
@@ -15,7 +15,6 @@ pub struct ScheduleConfig {
     pub distributed_lock_expire_sec: u32,
     /// The expire key prefix of the distributed lock, default "schedual:job:lock:"
     pub distributed_lock_key_prefix: String,
-    pub event: EventTopicConfig,
 }
 
 impl Default for ScheduleConfig {
@@ -28,7 +27,6 @@ impl Default for ScheduleConfig {
             cache_key_job_changed_timer_sec: 30,
             distributed_lock_expire_sec: 30,
             distributed_lock_key_prefix: "schedual:job:lock:".to_string(),
-            event: EventTopicConfig::default(),
         }
     }
 }

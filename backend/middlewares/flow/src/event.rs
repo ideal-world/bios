@@ -1,19 +1,27 @@
 use bios_sdk_invoke::clients::{
-    event_client::{BiosEventCenter, EventCenter},
+    event_client::{asteroid_mq::prelude::TopicCode, get_topic, mq_error, ContextHandler},
     flow_client::{event::FLOW_AVATAR, FlowFrontChangeReq, FlowPostChangeReq},
 };
-use tardis::basic::{dto::TardisContext, result::TardisResult};
+use tardis::basic::{dto::TardisContext, error::TardisError, result::TardisResult};
 
 use crate::{flow_constants::get_tardis_inst, serv::flow_event_serv::FlowEventServ};
+pub const FLOW_TOPIC: TopicCode = TopicCode::const_new("flow");
 
-pub fn flow_register_events() {
-    if let Some(event_center) = BiosEventCenter::worker_queue() {
-        event_center.subscribe(handle_front_change);
-        event_center.subscribe(handle_post_change);
-        event_center.add_avatar(FLOW_AVATAR);
+pub async fn handle_events() -> TardisResult<()> {
+    use bios_sdk_invoke::clients::event_client::asteroid_mq::prelude::*;
+    if let Some(topic) = get_topic(&FLOW_TOPIC) {
+        topic
+            .create_endpoint([Interest::new("*")])
+            .await
+            .map_err(mq_error)?
+            .create_event_loop()
+            .with_handler(ContextHandler(handle_front_change))
+            .with_handler(ContextHandler(handle_post_change))
+            .spawn();
     }
-}
 
+    Ok(())
+}
 async fn handle_front_change(req: FlowFrontChangeReq, ctx: TardisContext) -> TardisResult<()> {
     let funs = get_tardis_inst();
     FlowEventServ::do_front_change(&req.inst_id, &ctx, &funs).await?;

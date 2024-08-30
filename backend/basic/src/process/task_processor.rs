@@ -3,7 +3,10 @@
 //! 异步任务处理器
 use std::{collections::HashMap, future::Future, sync::Arc};
 
-use bios_sdk_invoke::clients::event_client::{BiosEventCenter, Event, EventCenter, EventExt};
+use bios_sdk_invoke::clients::event_client::{
+    asteroid_mq::prelude::{EventAttribute, Subject, TopicCode},
+    get_topic, EventAttributeExt,
+};
 use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
 use tardis::{
@@ -21,7 +24,7 @@ lazy_static! {
 }
 const TASK_PROCESSOR_DATA_EX_SEC: u64 = 60 * 60 * 24;
 const TASK_IN_CTX_FLAG: &str = "task_id";
-
+const TASK_TOPIC: TopicCode = TopicCode::const_new("task");
 /// Set task status event flag
 /// 设置任务状态事件标识
 pub const EVENT_SET_TASK_STATUS_FLAG: &str = "task/set_status";
@@ -102,17 +105,19 @@ impl TaskProcessor {
         to_avatars: Option<Vec<String>>,
     ) -> TardisResult<()> {
         Self::set_status(cache_key, task_id, status, cache_client).await?;
-        if let Some(ec) = BiosEventCenter::public() {
-            ec.publish(
-                TaskSetStatusEventReq {
-                    task_id,
-                    data: status,
-                    msg: format!("task status: {}", status),
-                }
-                .with_source(from_avatar)
-                .with_targets(to_avatars),
-            )
-            .await?;
+        if let Some(topic) = get_topic(&TASK_TOPIC) {
+            // todo: broadcast event to users
+            // topic
+            //     .send_event(
+            //         TaskSetStatusEventReq {
+            //             task_id,
+            //             data: status,
+            //             msg: format!("task status: {}", status),
+            //         }
+            //         .json(),
+            //     )
+            //     .await
+            //     .map_err(mq_error)?;
         }
         Ok(())
     }
@@ -137,9 +142,8 @@ impl TaskProcessor {
         to_avatars: Option<Vec<String>>,
     ) -> TardisResult<()> {
         Self::set_process_data(cache_key, task_id, data.clone(), cache_client).await?;
-        if let Some(ec) = BiosEventCenter::public() {
-            let msg = format!("set task process: {}", &TardisFuns::json.json_to_string(data.clone())?);
-            ec.publish(TaskSetProcessDataEventReq { task_id, data, msg }.with_source(from_avatar).with_targets(to_avatars)).await?;
+        if let Some(topic) = get_topic(&TASK_TOPIC) {
+            // todo: broadcast event to users
         }
         Ok(())
     }
@@ -214,16 +218,8 @@ impl TaskProcessor {
             }
         });
         TASK_HANDLE.write().await.insert(task_id, handle);
-        if let Some(ec) = BiosEventCenter::public() {
-            ec.publish(
-                TaskExecuteEventReq {
-                    task_id,
-                    msg: "execute task start".to_owned(),
-                }
-                .with_source(from_avatar_clone)
-                .with_targets(to_avatars_clone),
-            )
-            .await?;
+        if let Some(topic) = get_topic(&TASK_TOPIC) {
+            // todo: broadcast event to users
         }
         if let Some(ctx) = ctx {
             if let Some(exist_task_ids) = ctx.get_ext(TASK_IN_CTX_FLAG).await? {
@@ -246,16 +242,8 @@ impl TaskProcessor {
         to_avatars: Option<Vec<String>>,
     ) -> TardisResult<u64> {
         let task_id = TaskProcessor::init_status(cache_key, Some(task_id), cache_client).await?;
-        if let Some(ec) = BiosEventCenter::public() {
-            ec.publish(
-                TaskExecuteEventReq {
-                    task_id,
-                    msg: "execute task start".to_owned(),
-                }
-                .with_source(from_avatar)
-                .with_targets(to_avatars),
-            )
-            .await?;
+        if let Some(topic) = get_topic(&TASK_TOPIC) {
+            // todo: broadcast event to users
         }
         Ok(task_id)
     }
@@ -322,14 +310,14 @@ struct TaskExecuteEventReq {
     pub msg: String,
 }
 
-impl Event for TaskSetStatusEventReq {
-    const CODE: &'static str = EVENT_SET_TASK_STATUS_FLAG;
+impl EventAttribute for TaskSetStatusEventReq {
+    const SUBJECT: Subject = Subject::const_new(EVENT_SET_TASK_STATUS_FLAG.as_bytes());
 }
 
-impl Event for TaskSetProcessDataEventReq {
-    const CODE: &'static str = EVENT_SET_TASK_PROCESS_DATA_FLAG;
+impl EventAttribute for TaskSetProcessDataEventReq {
+    const SUBJECT: Subject = Subject::const_new(EVENT_SET_TASK_PROCESS_DATA_FLAG.as_bytes());
 }
 
-impl Event for TaskExecuteEventReq {
-    const CODE: &'static str = EVENT_EXECUTE_TASK_FLAG;
+impl EventAttribute for TaskExecuteEventReq {
+    const SUBJECT: Subject = Subject::const_new(EVENT_EXECUTE_TASK_FLAG.as_bytes());
 }

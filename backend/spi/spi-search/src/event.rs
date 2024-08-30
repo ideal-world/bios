@@ -1,7 +1,7 @@
 use bios_sdk_invoke::{
     clients::{
-        event_client::{BiosEventCenter, EventCenter},
-        spi_search_client::event::SEARCH_AVATAR,
+        event_client::{get_topic, mq_error,ContextHandler, SPI_RPC_TOPIC},
+
     },
     dto::search_item_dto::{SearchEventItemDeleteReq, SearchEventItemModifyReq, SearchItemAddReq},
 };
@@ -28,11 +28,18 @@ async fn handle_delete_event(req: SearchEventItemDeleteReq, ctx: TardisContext) 
     Ok(())
 }
 
-pub(crate) fn register_search_events() {
-    if let Some(bios_event_center) = BiosEventCenter::worker_queue() {
-        bios_event_center.subscribe(handle_modify_event);
-        bios_event_center.subscribe(handle_add_event);
-        bios_event_center.subscribe(handle_delete_event);
-        bios_event_center.add_avatar(SEARCH_AVATAR);
-    }
+pub async fn handle_events() -> TardisResult<()> {
+    use bios_sdk_invoke::clients::event_client::asteroid_mq::prelude::*;
+    let topic = get_topic(&SPI_RPC_TOPIC).expect("topic not initialized");
+
+    topic
+        .create_endpoint([Interest::new("search/*")])
+        .await
+        .map_err(mq_error)?
+        .create_event_loop()
+        .with_handler(ContextHandler(handle_modify_event))
+        .with_handler(ContextHandler(handle_add_event))
+        .with_handler(ContextHandler(handle_delete_event))
+        .spawn();
+    Ok(())
 }

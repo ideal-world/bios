@@ -11,7 +11,7 @@ use crate::{api::ci::search_ci_item_api, search_config::SearchConfig, search_con
 pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
     info!("[BIOS.Search] Module initializing");
     let mut funs = crate::get_tardis_inst();
-    crate::event::register_search_events();
+    crate::event::handle_events().await?;
     bios_basic::rbum::rbum_initializer::init(funs.module_code(), funs.conf::<SearchConfig>().rbum.clone()).await?;
     funs.begin().await?;
     let ctx = spi_initializer::init(DOMAIN_CODE, &funs).await?;
