@@ -39,3 +39,6 @@ backend/services/spacegate/devsh/
 
 .uuid
 backend/services/bios-all/dev.sh
+
+# front end
+package-lock.json

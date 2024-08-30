@@ -1,36 +1,77 @@
+use std::num::NonZeroU32;
+
+use asteroid_mq::prelude::{TopicCode, TopicConfig, TopicOverflowConfig, TopicOverflowPolicy};
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumItemFilterFetcher};
 use serde::{Deserialize, Serialize};
 use tardis::{
     basic::field::TrimString,
-    db::sea_orm::{self},
+    db::sea_orm::{self, FromQueryResult},
     serde_json::Value,
     web::poem_openapi,
 };
 
-#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
-pub struct EventTopicAddOrModifyReq {
-    // #[oai(validator(pattern = r"^[a-z0-9]+$"))]
-    pub code: TrimString,
-    pub name: TrimString,
-    pub save_message: bool,
-    pub need_mgr: bool,
-    #[oai(validator(minimum(value = "1", exclusive = "false")))]
-    pub queue_size: i32,
-    pub use_sk: Option<String>,
-    pub mgr_sk: Option<String>,
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
+pub struct EventTopicConfig {
+    pub code: String,
+    pub blocking: bool,
+    pub topic_code: String,
+    pub overflow_policy: String,
+    pub overflow_size: i32,
 }
 
-#[derive(poem_openapi::Object, sea_orm::FromQueryResult, Serialize, Deserialize, Debug, Clone)]
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone, FromQueryResult)]
+
+pub struct EventTopicAddOrModifyReq {
+    pub code: String,
+    pub name: String,
+    pub blocking: bool,
+    pub topic_code: String,
+    pub overflow_policy: String,
+    pub overflow_size: i32,
+}
+impl EventTopicAddOrModifyReq {
+    pub fn into_topic_config(self) -> TopicConfig {
+        TopicConfig {
+            code: TopicCode::new(self.topic_code),
+            blocking: self.blocking,
+            overflow_config: Some(TopicOverflowConfig {
+                policy: match self.overflow_policy.as_str() {
+                    "RejectNew" => TopicOverflowPolicy::RejectNew,
+                    "DropOld" => TopicOverflowPolicy::DropOld,
+                    _ => TopicOverflowPolicy::default(),
+                },
+                size: NonZeroU32::new(self.overflow_size.clamp(1, i32::MAX) as u32).expect("clamped"),
+            }),
+        }
+    }
+}
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone, FromQueryResult)]
 pub struct EventTopicInfoResp {
     // #[oai(validator(pattern = r"^[a-z0-9]+$"))]
     pub code: String,
     pub name: String,
-    pub save_message: bool,
-    pub need_mgr: bool,
-    #[oai(validator(minimum(value = "1", exclusive = "false")))]
-    pub queue_size: i32,
-    pub use_sk: String,
-    pub mgr_sk: String,
+    pub blocking: bool,
+    pub topic_code: String,
+    pub overflow_policy: String,
+    pub overflow_size: i32,
+}
+
+impl EventTopicInfoResp {
+    pub fn into_topic_config(self) -> TopicConfig {
+        TopicConfig {
+            code: TopicCode::new(self.topic_code),
+            blocking: self.blocking,
+            overflow_config: Some(TopicOverflowConfig {
+                policy: match self.overflow_policy.as_str() {
+                    "RejectNew" => TopicOverflowPolicy::RejectNew,
+                    "DropOld" => TopicOverflowPolicy::DropOld,
+                    _ => TopicOverflowPolicy::default(),
+                },
+                size: NonZeroU32::new(self.overflow_size.clamp(1, i32::MAX) as u32).expect("clamped"),
+            }),
+        }
+    }
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone, Default)]

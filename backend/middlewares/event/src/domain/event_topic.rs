@@ -1,69 +1,36 @@
-use tardis::basic::dto::TardisContext;
-use tardis::db::reldb_client::TardisActiveModel;
+use std::num::NonZeroU32;
 use tardis::db::sea_orm;
-use tardis::db::sea_orm::sea_query::{ColumnDef, IndexCreateStatement, Table, TableCreateStatement};
+use tardis::db::sea_orm::prelude::*;
 use tardis::db::sea_orm::*;
 
-/// Event Topic model
-///
-/// 事件主题模型
-#[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]
-#[sea_orm(table_name = "event_topic")]
+use asteroid_mq::prelude::{TopicCode, TopicConfig, TopicOverflowConfig, TopicOverflowPolicy};
+use tardis::{TardisCreateEntity, TardisEmptyBehavior, TardisEmptyRelation};
+#[derive(Clone, Debug, PartialEq, DeriveEntityModel, TardisCreateEntity, TardisEmptyBehavior, TardisEmptyRelation)]
+#[sea_orm(table_name = "mq_topic")]
 pub struct Model {
-    #[sea_orm(primary_key, auto_increment = false)]
+    #[sea_orm(primary_key, auto_increment = true)]
     pub id: String,
-    /// Whether to save messages
-    ///
-    /// 是否保存消息
-    pub save_message: bool,
-    /// Whether a management node is required
-    ///
-    /// 是否需要管理节点
-    pub need_mgr: bool,
-    pub queue_size: i32,
-    /// If need_mgr is false, this field is used when registering
-    ///
-    /// 如果 need_mgr 为 false，则在注册时使用该sk
-    pub use_sk: String,
-    /// If need_mgr is true, this field is used when registering
-    ///
-    /// 如果 need_mgr 为 true，则在注册时使用该sk
-    pub mgr_sk: String,
-
+    pub blocking: bool,
+    pub topic_code: String,
+    pub overflow_policy: String,
+    pub overflow_size: i32,
+    #[fill_ctx]
     pub own_paths: String,
 }
 
-impl TardisActiveModel for ActiveModel {
-    fn fill_ctx(&mut self, ctx: &TardisContext, is_insert: bool) {
-        if is_insert {
-            self.own_paths = Set(ctx.own_paths.to_string());
+impl Model {
+    pub fn into_topic_config(self) -> TopicConfig {
+        TopicConfig {
+            code: TopicCode::new(self.topic_code),
+            blocking: self.blocking,
+            overflow_config: Some(TopicOverflowConfig {
+                policy: match self.overflow_policy.as_str() {
+                    "RejectNew" => TopicOverflowPolicy::RejectNew,
+                    "DropOld" => TopicOverflowPolicy::DropOld,
+                    _ => TopicOverflowPolicy::default(),
+                },
+                size: NonZeroU32::new(self.overflow_size.clamp(1, i32::MAX) as u32).expect("clamped"),
+            }),
         }
-    }
-
-    fn create_table_statement(db: DbBackend) -> TableCreateStatement {
-        let mut builder = Table::create();
-        builder
-            .table(Entity.table_ref())
-            .if_not_exists()
-            .col(ColumnDef::new(Column::Id).not_null().string().primary_key())
-            .col(ColumnDef::new(Column::SaveMessage).not_null().boolean())
-            .col(ColumnDef::new(Column::NeedMgr).not_null().boolean())
-            .col(ColumnDef::new(Column::QueueSize).not_null().integer())
-            .col(ColumnDef::new(Column::UseSk).not_null().string())
-            .col(ColumnDef::new(Column::MgrSk).not_null().string())
-            .col(ColumnDef::new(Column::OwnPaths).not_null().string());
-        if db == DatabaseBackend::MySql {
-            builder.engine("InnoDB").character_set("utf8mb4").collate("utf8mb4_0900_as_cs");
-        }
-        builder.to_owned()
-    }
-
-    fn create_index_statement() -> Vec<IndexCreateStatement> {
-        vec![]
     }
 }
-
-impl ActiveModelBehavior for ActiveModel {}
-
-#[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
-pub enum Relation {}

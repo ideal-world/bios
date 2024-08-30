@@ -1,7 +1,6 @@
 use std::fmt::Debug;
 use std::sync::Mutex;
 
-use bios_sdk_invoke::clients::event_client::EventTopicConfig;
 use bios_sdk_invoke::invoke_config::InvokeConfig;
 use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
@@ -18,10 +17,6 @@ use tardis::web::poem::http::HeaderName;
 pub struct IamConfig {
     pub rbum: RbumConfig,
     pub in_event: bool,
-    pub iam_event_bus: EventTopicConfig,
-    pub iam_send_event_bus: EventTopicConfig,
-    pub log_event: EventTopicConfig,
-    pub search_event: EventTopicConfig,
     pub invoke: InvokeConfig,
     // token -> (token_kind, account_id)
     // accessToken(token_kind = TokenOauth2) -> (token_kind, rel_iam_item_id, ak, SetCateIds)
@@ -146,10 +141,6 @@ impl Default for IamConfig {
         IamConfig {
             rbum: Default::default(),
             in_event: false,
-            iam_event_bus: EventTopicConfig::default(),
-            iam_send_event_bus: EventTopicConfig::default(),
-            log_event: EventTopicConfig::default(),
-            search_event: EventTopicConfig::default(),
             invoke: InvokeConfig::default(),
             cache_key_token_info_: "iam:cache:token:info:".to_string(),
             cache_key_aksk_info_: "iam:cache:aksk:info:".to_string(),
