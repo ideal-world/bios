@@ -16,16 +16,42 @@ use crate::serv::object_obj_serv;
 pub struct ObjectCiObjApi;
 
 /// Interface Console Object API
+///
+/// When the built-in service is initialized, 4 buckets are created by default: pub,pri,spe,tamp.
+///     pub bucket, we recommend setting it to public read and private write permissions, when is_private passes false, the bucket will be operated.
+///     pri bucket, it is recommended to set it to private read-private write, use temporary address to manipulate the object to ensure data security. When is_private passes true, operate the bucket.
+///     spe bucket, recommended for large files. When is_special passes true, manipulate this bucket.
+///     The tamp bucket, recommended for temporary files, when obj_exp is passed true.
+/// 接口控制台对象服务API
+/// 内置服务初始化时，默认创建4个桶：pub,pri,spe,tamp
+///     pub桶，建议设置为公共读私有写权限，当is_private传false时，操作该桶。
+///     pri桶，建议设置为私有读私有写，使用临时地址操作对象，保证数据安全。当is_private传true时，操作该桶。
+///     spe桶，建议操作大文件时使用该桶。当is_special传true时，操作该桶。
+///     tamp桶，建议操作临时文件时使用该桶，当obj_exp传入时，操作该桶。
 #[poem_openapi::OpenApi(prefix_path = "/ci/obj", tag = "bios_basic::ApiTag::Interface")]
 impl ObjectCiObjApi {
     /// Fetch URL for temporary authorization of file upload
+    ///
+    /// 获取用于临时授权上传文件的 URL
     #[oai(path = "/presign/put", method = "get")]
     async fn presign_put_obj_url(
         &self,
+        // 对象的路径
+        // path of object
         object_path: Query<String>,
+        // 临时上传url的生效时长
+        // The length of time a temporary upload url is in effect
         exp_secs: Query<u32>,
+        // 是否私有
+        // private or not
         private: Query<Option<bool>>,
+        // 是否特殊
+        //Special or not
         special: Query<Option<bool>>,
+        // 是否临时，数字表示文件生效时长。
+        // 使用obs时，传入数值不生效，仅表示使用tamp桶。
+        // Whether or not it is temporary, the number indicates the length of time the file will be in effect.
+        // When using obs, passing in a value does not take effect, it only indicates the use of the tamp bucket.
         obj_exp: Query<Option<u32>>,
         ctx: TardisContextExtractor,
     ) -> TardisApiResult<String> {
@@ -47,13 +73,27 @@ impl ObjectCiObjApi {
     }
 
     /// Fetch URL for temporary authorization of file delete
+    ///
+    /// 获取文件删除临时授权的 URL
     #[oai(path = "/presign/delete", method = "get")]
     async fn presign_delete_obj_url(
         &self,
+        // 对象的路径
+        // path of object
         object_path: Query<String>,
+        // 临时上传url的生效时长
+        // The length of time a temporary upload url is in effect
         exp_secs: Query<u32>,
+        // 是否私有
+        // private or not
         private: Query<Option<bool>>,
+        // 是否特殊
+        //Special or not
         special: Query<Option<bool>>,
+        // 是否临时，数字表示文件生效时长。
+        // 使用obs时，传入数值不生效，仅表示使用tamp桶。
+        // Whether or not it is temporary, the number indicates the length of time the file will be in effect.
+        // When using obs, passing in a value does not take effect, it only indicates the use of the tamp bucket.
         obj_exp: Query<Option<u32>>,
         ctx: TardisContextExtractor,
     ) -> TardisApiResult<String> {
@@ -75,13 +115,27 @@ impl ObjectCiObjApi {
     }
 
     /// Fetch URL for temporary authorization of file
+    ///
+    /// 获取文件临时授权的 URL
     #[oai(path = "/presign/view", method = "get")]
     async fn presign_view_obj_url(
         &self,
+        // 对象的路径
+        // path of object
         object_path: Query<String>,
+        // 临时上传url的生效时长
+        // The length of time a temporary upload url is in effect
         exp_secs: Query<u32>,
+        // 是否私有
+        // private or not
         private: Query<Option<bool>>,
+        // 是否特殊
+        //Special or not
         special: Query<Option<bool>>,
+        // 是否临时，数字表示文件生效时长。
+        // 使用obs时，传入数值不生效，仅表示使用tamp桶。
+        // Whether or not it is temporary, the number indicates the length of time the file will be in effect.
+        // When using obs, passing in a value does not take effect, it only indicates the use of the tamp bucket.
         obj_exp: Query<Option<u32>>,
         ctx: TardisContextExtractor,
     ) -> TardisApiResult<String> {
@@ -103,6 +157,8 @@ impl ObjectCiObjApi {
     }
 
     /// Batch fetch URL for temporary authorization of file
+    ///
+    /// 批量获取文件临时授权的 URL
     #[oai(path = "/presign/batch_view", method = "post")]
     async fn batch_presign_view_obj_url(&self, req: Json<ObjectPresignBatchViewReq>, ctx: TardisContextExtractor) -> TardisApiResult<HashMap<String, String>> {
         let funs = crate::get_tardis_inst();
@@ -110,7 +166,9 @@ impl ObjectCiObjApi {
         TardisResp::ok(url)
     }
 
-    /// Initiate a Multipart Upload Task
+    /// Multipart Upload:Initiate a Multipart Upload Task
+    ///
+    /// 分片上传： 启动分片上传任务
     #[oai(path = "/multi_upload/initiate_multipart_upload", method = "post")]
     async fn initiate_multipart_upload(&self, req: Json<ObjectInitiateMultipartUploadReq>, ctx: TardisContextExtractor) -> TardisApiResult<String> {
         let funs = crate::get_tardis_inst();
@@ -118,7 +176,9 @@ impl ObjectCiObjApi {
         TardisResp::ok(upload_id)
     }
 
-    /// Create pre-signed URLs for each part
+    /// Multipart Upload:Create pre-signed URLs for each part
+    ///
+    /// 分片上传： 为每个部分创建预签名 URL
     #[oai(path = "/multi_upload/batch_build_create_presign_url", method = "post")]
     async fn batch_build_create_presign_url(&self, req: Json<ObjectBatchBuildCreatePresignUrlReq>, ctx: TardisContextExtractor) -> TardisApiResult<Vec<String>> {
         let funs = crate::get_tardis_inst();
@@ -126,7 +186,9 @@ impl ObjectCiObjApi {
         TardisResp::ok(presign_urls)
     }
 
-    /// Complete Multipart Upload Task
+    /// Multipart Upload:Complete Multipart Upload Task
+    ///
+    /// 分片上传： 完成分片上传任务
     #[oai(path = "/multi_upload/complete_multipart_upload", method = "post")]
     async fn complete_multipart_upload(&self, req: Json<ObjectCompleteMultipartUploadReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let funs = crate::get_tardis_inst();
@@ -135,6 +197,8 @@ impl ObjectCiObjApi {
     }
 
     /// Create A Copy Of An Object That Is Already Stored
+    ///
+    /// 创建已存储对象的副本
     #[oai(path = "/object/copy", method = "post")]
     async fn object_copy(&self, req: Json<ObjectCopyReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let funs = crate::get_tardis_inst();
@@ -143,12 +207,24 @@ impl ObjectCiObjApi {
     }
 
     /// Deleting A Single Object
+    ///
+    /// 删除单个对象
     #[oai(path = "/object", method = "delete")]
     async fn object_delete(
         &self,
+        // 对象的路径
+        // path of object
         object_path: Query<String>,
+        // 是否私有
+        // private or not
         private: Query<Option<bool>>,
+        // 是否特殊
+        //Special or not
         special: Query<Option<bool>>,
+        // 是否临时，数字表示文件生效时长。
+        // 使用obs时，传入数值不生效，仅表示使用tamp桶。
+        // Whether or not it is temporary, the number indicates the length of time the file will be in effect.
+        // When using obs, passing in a value does not take effect, it only indicates the use of the tamp bucket.
         obj_exp: Query<Option<u32>>,
         ctx: TardisContextExtractor,
     ) -> TardisApiResult<Void> {
@@ -157,7 +233,9 @@ impl ObjectCiObjApi {
         TardisResp::ok(Void)
     }
 
-    /// Deleting Objects
+    /// Batch deleting Objects
+    ///
+    /// 批量删除对象
     #[oai(path = "/object/batch_delete", method = "delete")]
     async fn batch_object_delete(&self, req: Json<ObjectBatchDeleteReq>, ctx: TardisContextExtractor) -> TardisApiResult<Vec<String>> {
         let funs = crate::get_tardis_inst();
@@ -165,12 +243,24 @@ impl ObjectCiObjApi {
     }
 
     /// Check object is exist
+    ///
+    /// 检查对象是否存在
     #[oai(path = "/object/exist", method = "get")]
     async fn object_exist(
         &self,
+        // 对象的路径
+        // path of object
         object_path: Query<String>,
+        // 是否私有
+        // private or not
         private: Query<Option<bool>>,
+        // 是否特殊
+        //Special or not
         special: Query<Option<bool>>,
+        // 是否临时，数字表示文件生效时长。
+        // 使用obs时，传入数值不生效，仅表示使用tamp桶。
+        // Whether or not it is temporary, the number indicates the length of time the file will be in effect.
+        // When using obs, passing in a value does not take effect, it only indicates the use of the tamp bucket.
         obj_exp: Query<Option<u32>>,
         ctx: TardisContextExtractor,
     ) -> TardisApiResult<bool> {

@@ -42,7 +42,7 @@ pub async fn delete_rels(
             "400-spi-graph-key-require",
         ));
     }
-    let inst = funs.init(ctx, true, graph_initializer::init_fun).await?;
+    let inst = funs.init(None, ctx, true, graph_initializer::init_fun).await?;
     match inst.kind_code() {
         #[cfg(feature = "spi-pg")]
         spi_constants::SPI_PG_KIND_CODE => pg::graph_pg_basic_serv::delete_rels(tag, from_key, to_key, from_version, to_version, funs, ctx, &inst).await,

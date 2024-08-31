@@ -8,6 +8,7 @@ use tardis::basic::{error::TardisError, result::TardisResult};
 pub struct EventConfig {
     pub rbum: RbumConfig,
     pub enable: bool,
+    pub svc: String,
     pub event_url: String,
     pub base_url: String,
     pub event_bus_sk: String,
@@ -22,6 +23,7 @@ impl Default for EventConfig {
             rbum: Default::default(),
             enable: false,
             base_url: "http://localhost:8080/event".to_string(),
+            svc: "bios".to_string(),
             avatars: Vec::new(),
             event_url: "".to_string(),
             event_bus_sk: "".to_string(),

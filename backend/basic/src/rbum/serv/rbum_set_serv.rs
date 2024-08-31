@@ -1,6 +1,7 @@
 use std::collections::{HashMap, HashSet};
 use std::time::Duration;
 
+use async_recursion::async_recursion;
 use async_trait::async_trait;
 use itertools::Itertools;
 use tardis::basic::dto::TardisContext;
@@ -342,7 +343,7 @@ impl RbumSetServ {
                         .iter()
                         .filter(|c| c.sys_code.starts_with(&cate.sys_code))
                         .flat_map(|c| items.get(&c.id).expect("ignore"))
-                        .group_by(|c| c.rel_rbum_item_kind_id.clone())
+                        .chunk_by(|c| c.rel_rbum_item_kind_id.clone())
                         .into_iter()
                         .map(|(g, c)| (g, c.map(|i| i.rel_rbum_item_id.clone()).collect::<HashSet<String>>().len() as u64))
                         .collect::<HashMap<String, u64>>(),
@@ -355,7 +356,7 @@ impl RbumSetServ {
             items
                 .values()
                 .flat_map(|item| item.iter())
-                .group_by(|c| c.rel_rbum_item_kind_id.clone())
+                .chunk_by(|c| c.rel_rbum_item_kind_id.clone())
                 .into_iter()
                 .map(|(g, c)| (g, c.map(|i| i.rel_rbum_item_id.clone()).collect::<HashSet<String>>().len() as u64))
                 .collect::<HashMap<String, u64>>(),
@@ -491,11 +492,29 @@ impl RbumCrudOperation<rbum_set_cate::ActiveModel, RbumSetCateAddReq, RbumSetCat
         })
     }
 
-    async fn package_modify(id: &str, modify_req: &RbumSetCateModifyReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<rbum_set_cate::ActiveModel> {
+    async fn package_modify(id: &str, modify_req: &RbumSetCateModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<rbum_set_cate::ActiveModel> {
         let mut rbum_set_cate = rbum_set_cate::ActiveModel {
             id: Set(id.to_string()),
             ..Default::default()
         };
+        if let Some(rbum_parent_cate_id) = &modify_req.rbum_parent_cate_id {
+            if let Some(detail) = Self::find_one_detail_rbum(
+                &RbumSetCateFilterReq {
+                    basic: RbumBasicFilterReq {
+                        ids: Some(vec![rbum_parent_cate_id.to_string()]),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                funs,
+                ctx,
+            )
+            .await?
+            {
+                let sys_code = Self::package_sys_code(&detail.rel_rbum_set_id, Some(rbum_parent_cate_id.as_str()), funs, ctx).await?;
+                rbum_set_cate.sys_code = Set(sys_code.to_string());
+            }
+        }
         if let Some(bus_code) = &modify_req.bus_code {
             rbum_set_cate.bus_code = Set(bus_code.to_string());
         }
@@ -816,6 +835,87 @@ impl RbumSetCateServ {
             .sys_code;
         Ok(sys_code)
     }
+
+    #[async_recursion]
+    pub async fn move_set_cate(set_cate_id: &str, parent_set_cate_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let set_cate_detail = Self::get_rbum(
+            set_cate_id,
+            &RbumSetCateFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?;
+        let set_item_ids = RbumSetItemServ::find_id_rbums(
+            &RbumSetItemFilterReq {
+                sys_code_query_kind: Some(RbumSetCateLevelQueryKind::Current),
+                rel_rbum_set_cate_sys_codes: Some(vec![set_cate_detail.sys_code.clone()]),
+                ..Default::default()
+            },
+            None,
+            None,
+            funs,
+            ctx,
+        )
+        .await?;
+        let result = Self::modify_rbum(
+            set_cate_id,
+            &mut RbumSetCateModifyReq {
+                bus_code: None,
+                name: None,
+                icon: None,
+                sort: None,
+                ext: None,
+                rbum_parent_cate_id: Some(parent_set_cate_id.to_string()),
+                scope_level: None,
+            },
+            funs,
+            ctx,
+        )
+        .await;
+        for set_item_id in set_item_ids {
+            RbumSetItemServ::modify_rbum(
+                &set_item_id,
+                &mut RbumSetItemModifyReq {
+                    rel_rbum_set_cate_id: Some(set_cate_id.to_string()),
+                    sort: None,
+                },
+                funs,
+                ctx,
+            )
+            .await?;
+        }
+
+        let child_set_cates = Self::find_rbums(
+            &RbumSetCateFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                rel_rbum_set_id: Some(set_cate_detail.rel_rbum_set_id.clone()),
+                sys_codes: Some(vec![set_cate_detail.sys_code.clone()]),
+                sys_code_query_kind: Some(RbumSetCateLevelQueryKind::Sub),
+                sys_code_query_depth: Some(1),
+                cate_exts: None,
+                ..Default::default()
+            },
+            None,
+            None,
+            funs,
+            ctx,
+        )
+        .await?;
+        for child_set_cate in child_set_cates {
+            Self::move_set_cate(&child_set_cate.id, &set_cate_detail.id, funs, ctx).await?;
+        }
+
+        result
+    }
 }
 
 #[async_trait]
@@ -869,12 +969,19 @@ impl RbumCrudOperation<rbum_set_item::ActiveModel, RbumSetItemAddReq, RbumSetIte
         })
     }
 
-    async fn package_modify(id: &str, modify_req: &RbumSetItemModifyReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<rbum_set_item::ActiveModel> {
-        Ok(rbum_set_item::ActiveModel {
+    async fn package_modify(id: &str, modify_req: &RbumSetItemModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<rbum_set_item::ActiveModel> {
+        let mut rbum_set_item = rbum_set_item::ActiveModel {
             id: Set(id.to_string()),
-            sort: Set(modify_req.sort),
             ..Default::default()
-        })
+        };
+        if let Some(sort) = modify_req.sort {
+            rbum_set_item.sort = Set(sort);
+        }
+        if let Some(rel_rbum_set_cate_id) = &modify_req.rel_rbum_set_cate_id {
+            rbum_set_item.rel_rbum_set_cate_code = Set(RbumSetCateServ::get_sys_code(rel_rbum_set_cate_id.as_str(), funs, ctx).await?);
+        }
+
+        Ok(rbum_set_item)
     }
 
     async fn package_query(is_detail: bool, filter: &RbumSetItemFilterReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<SelectStatement> {

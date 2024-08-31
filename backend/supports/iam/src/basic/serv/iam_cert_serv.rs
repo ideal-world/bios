@@ -2,7 +2,6 @@ use bios_basic::helper::request_helper::{add_ip, get_real_ip_from_ctx};
 use bios_basic::process::task_processor::TaskProcessor;
 use bios_basic::rbum::dto::rbum_rel_agg_dto::RbumRelAggAddReq;
 use bios_basic::rbum::serv::rbum_rel_serv::RbumRelServ;
-use itertools::Itertools;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use std::time::Duration;
@@ -566,8 +565,8 @@ impl IamCertServ {
                 supplier: add_req.supplier.clone(),
                 vcode: None,
                 ext: add_req.ext.clone(),
-                start_time: None,
-                end_time: None,
+                start_time: add_req.start_time,
+                end_time: add_req.end_time,
                 conn_uri: None,
                 status: RbumCertStatusKind::Enabled,
                 rel_rbum_cert_conf_id: None,
@@ -594,8 +593,8 @@ impl IamCertServ {
                 conn_uri: None,
                 ignore_check_sk: false,
                 ext: modify_req.ext.clone(),
-                start_time: None,
-                end_time: None,
+                start_time: modify_req.start_time,
+                end_time: modify_req.start_time,
                 status: None,
             },
             funs,
@@ -887,6 +886,7 @@ impl IamCertServ {
         rel_rbum_id: Option<String>,
         suppliers: Option<Vec<String>>,
         show_sk: bool,
+        ext: Option<String>,
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<Vec<RbumCertSummaryWithSkResp>> {
@@ -900,6 +900,7 @@ impl IamCertServ {
                 },
                 status: Some(RbumCertStatusKind::Enabled),
                 kind: Some(IamCertExtKind::ThirdParty.to_string()),
+                ext,
                 suppliers,
                 rel_rbum_id,
                 ..Default::default()

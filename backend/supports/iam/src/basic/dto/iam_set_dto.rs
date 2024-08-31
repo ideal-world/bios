@@ -28,7 +28,6 @@ pub struct IamSetCateModifyReq {
     pub scope_level: Option<RbumScopeLevelKind>,
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub bus_code: Option<TrimString>,
-    #[oai(validator(min_length = "2", max_length = "1000"))]
     pub icon: Option<String>,
     pub sort: Option<i64>,
     #[oai(validator(min_length = "2", max_length = "1000"))]

@@ -4,6 +4,7 @@ use crate::iam_enumeration::{IamCertExtKind, WayToAdd, WayToDelete};
 use bios_basic::rbum::rbum_enumeration::RbumCertStatusKind;
 use serde::{Deserialize, Serialize};
 use tardis::basic::field::TrimString;
+use tardis::chrono::{DateTime, Utc};
 use tardis::web::poem_openapi;
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
@@ -125,6 +126,25 @@ pub struct IamThirdPartyCertExtAddReq {
     #[oai(validator(min_length = "2", max_length = "10000"))]
     pub sk: Option<String>,
     pub ext: Option<String>,
+    /// Certificate effective time
+    ///
+    /// Default is ``Current time``
+    ///
+    /// 默认为 ``当前时间``
+    ///
+    /// 凭证的生效时间
+    pub start_time: Option<DateTime<Utc>>,
+    /// Certificate expiration time
+    ///
+    /// When associated with [certificate configuration](crate::rbum::dto::rbum_cert_conf_dto::RbumCertConfDetailResp), it defaults to ``start_time + expiration time of the certificate configuration``,
+    /// otherwise it defaults to ``start_time + 100 years``.
+    ///
+    /// 当关联了 [凭证配置](crate::rbum::dto::rbum_cert_conf_dto::RbumCertConfDetailResp) 时，默认为 ``start_time + 凭证配置的过期时间``, 否则默认为 ``start_time + 100年``。
+    ///
+    /// NOTE: When associated with [certificate configuration](crate::rbum::dto::rbum_cert_conf_dto::RbumCertConfDetailResp) and ``is dynamic sk``, it defaults to ``start_time + 100 years``.
+    ///
+    /// NOTE: 当关联了 [凭证配置](crate::rbum::dto::rbum_cert_conf_dto::RbumCertConfDetailResp) 且 ``为动态sk时`` 默认为 ``start_time + 100年``
+    pub end_time: Option<DateTime<Utc>>,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
@@ -138,6 +158,25 @@ pub struct IamThirdPartyCertExtModifyReq {
     #[oai(validator(min_length = "2", max_length = "10000"))]
     pub sk: Option<String>,
     pub ext: Option<String>,
+    /// Certificate effective time
+    ///
+    /// Default is ``Current time``
+    ///
+    /// 默认为 ``当前时间``
+    ///
+    /// 凭证的生效时间
+    pub start_time: Option<DateTime<Utc>>,
+    /// Certificate expiration time
+    ///
+    /// When associated with [certificate configuration](crate::rbum::dto::rbum_cert_conf_dto::RbumCertConfDetailResp), it defaults to ``start_time + expiration time of the certificate configuration``,
+    /// otherwise it defaults to ``start_time + 100 years``.
+    ///
+    /// 当关联了 [凭证配置](crate::rbum::dto::rbum_cert_conf_dto::RbumCertConfDetailResp) 时，默认为 ``start_time + 凭证配置的过期时间``, 否则默认为 ``start_time + 100年``。
+    ///
+    /// NOTE: When associated with [certificate configuration](crate::rbum::dto::rbum_cert_conf_dto::RbumCertConfDetailResp) and ``is dynamic sk``, it defaults to ``start_time + 100 years``.
+    ///
+    /// NOTE: 当关联了 [凭证配置](crate::rbum::dto::rbum_cert_conf_dto::RbumCertConfDetailResp) 且 ``为动态sk时`` 默认为 ``start_time + 100年``
+    pub end_time: Option<DateTime<Utc>>,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]

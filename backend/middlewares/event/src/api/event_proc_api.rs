@@ -2,8 +2,7 @@ use tardis::web::poem::web::websocket::{BoxWebSocketUpgraded, WebSocket};
 use tardis::web::poem_openapi;
 use tardis::web::poem_openapi::param::{Path, Query};
 
-use crate::event_constants::get_tardis_inst;
-use crate::serv::event_proc_serv;
+
 #[derive(Clone)]
 pub struct EventProcApi;
 
@@ -17,8 +16,6 @@ impl EventProcApi {
     /// 处理事件
     #[oai(path = "/:listener_code", method = "get")]
     async fn ws_process(&self, listener_code: Path<String>, token: Query<String>, websocket: WebSocket) -> Result<BoxWebSocketUpgraded, tardis::web::poem::Error> {
-        let funs = get_tardis_inst();
-        let upgraded = event_proc_serv::ws_process(listener_code.0, token.0, websocket, funs).await?;
-        Ok(upgraded)
+        Err(tardis::web::poem::Error::from_status(tardis::web::poem::http::StatusCode::NOT_IMPLEMENTED))
     }
 }

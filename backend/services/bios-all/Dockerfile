@@ -33,6 +33,7 @@ EXPOSE 8080
 EXPOSE 8848
 # for nacos grpc
 EXPOSE 9848
+EXPOSE 9559
 EXPOSE 10389
 
 CMD ["./bios-serv-all"]

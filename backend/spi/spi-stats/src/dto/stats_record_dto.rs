@@ -22,11 +22,11 @@ pub struct StatsFactRecordLoadReq {
 
     /// ignore updates
     /// ps: If idempotent_id has a value and the record is hit, this field takes effect to ignore or update, default is true to ignore updates
-    /// 
+    ///
     /// 忽略更新
     /// ps: 如果 idempotent_id 有值并且命中纪录,则该字段生效忽略或者进行更新,默认为 true 忽略更新
     pub ignore_updates: Option<bool>,
-    
+
     /// Field data
     /// 字段数据
     ///
@@ -57,7 +57,7 @@ pub struct StatsFactRecordsLoadReq {
     pub idempotent_id: Option<String>,
     /// ignore updates
     /// ps: If idempotent_id has a value and the record is hit, this field takes effect to ignore or update, default is true to ignore updates
-    /// 
+    ///
     /// 忽略更新
     /// ps: 如果 idempotent_id 有值并且命中纪录,则该字段生效忽略或者进行更新,默认为 true 忽略更新
     pub ignore_updates: Option<bool>,

@@ -14,13 +14,13 @@ use tardis::{
 use crate::{clients::base_spi_client::BaseSpiClient, invoke_constants::DYNAMIC_LOG, invoke_enumeration::InvokeModuleKind};
 
 pub mod event {
-    use crate::clients::event_client::Event;
+    use asteroid_mq::prelude::*;
 
-    const EVENT_ADD_LOG: &str = "spi-log/add";
+
     pub const LOG_AVATAR: &str = "spi-log";
 
-    impl Event for super::LogItemAddReq {
-        const CODE: &'static str = EVENT_ADD_LOG;
+    impl EventAttribute for super::LogItemAddReq {
+        const SUBJECT: Subject = Subject::const_new(b"log/add");
     }
 }
 #[derive(Debug, Default, Clone)]
