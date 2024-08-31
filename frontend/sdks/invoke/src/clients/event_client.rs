@@ -197,7 +197,6 @@ pub fn get_topic(code: &TopicCode) -> Option<Topic> {
 }
 pub const SPI_RPC_TOPIC: TopicCode = TopicCode::const_new("spi");
 
-
 pub fn mq_error(err: asteroid_mq::Error) -> TardisError {
     TardisError::internal_error(&err.to_string(), "mq-error")
 }

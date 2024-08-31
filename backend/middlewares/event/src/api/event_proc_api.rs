@@ -2,7 +2,6 @@ use tardis::web::poem::web::websocket::{BoxWebSocketUpgraded, WebSocket};
 use tardis::web::poem_openapi;
 use tardis::web::poem_openapi::param::{Path, Query};
 
-
 #[derive(Clone)]
 pub struct EventProcApi;
 

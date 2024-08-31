@@ -308,36 +308,21 @@ impl FlowStateServ {
         ctx: &TardisContext,
     ) -> TardisResult<Vec<FlowStateNameResp>> {
         let mut flow_model_ids = None;
+        let tenant_own_path = rbum_scope_helper::get_path_item(1, &ctx.own_paths);
         if let Some(app_ids) = app_ids {
-            let tenant_own_path = rbum_scope_helper::get_path_item(1, &ctx.own_paths);
-            if let Some(tenant_own_path) = tenant_own_path {
-                // collect app own path
-                let app_own_paths = app_ids.into_iter().map(|app_id| format!("{}/{}", &tenant_own_path, &app_id)).collect_vec();
-                // find flow models
-                flow_model_ids = Some(
-                    FlowModelServ::find_id_items(
-                        &FlowModelFilterReq {
-                            basic: RbumBasicFilterReq {
-                                with_sub_own_paths: true,
-                                ..Default::default()
-                            },
-                            tags: tag.clone().map(|tag| vec![tag]),
-                            own_paths: Some(app_own_paths),
-                            ..Default::default()
-                        },
-                        None,
-                        None,
-                        funs,
-                        ctx,
-                    )
-                    .await?,
-                );
+            if let Some(app_own_paths) = app_ids.pop().map(|app_id| format!("{}/{}", &tenant_own_path, &app_id)) {
+                let mock_ctx = TardisContext {
+                    own_paths: app_own_path,
+                    ..ctx.clone()
+                };
+                flow_model_ids = Some(FlowModelServ::find_rel_models(None, is_shared, funs, &mock_ctx).await?.into_iter().map(|(tag, model)| model.id).collect_vec());
             }
         }
         let names = Self::find_detail_items(
             &FlowStateFilterReq {
                 basic: RbumBasicFilterReq {
                     ids,
+                    ignore_scope: true,
                     with_sub_own_paths: true,
                     ..Default::default()
                 },

@@ -156,7 +156,6 @@ impl TransactionGraph {
         warn!("check state loop state_chains: {:?}", state_chains);
         for init_state_tran in state_chains.clone() {
             let state_chain = init_state_tran.clone();
-            
         }
 
         for state_chain in state_chains {

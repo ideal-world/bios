@@ -1,5 +1,5 @@
 use bios_basic::{process::ci_processor::AppKeyConfig, rbum::rbum_config::RbumConfig};
-use bios_sdk_invoke::{invoke_config::InvokeConfig};
+use bios_sdk_invoke::invoke_config::InvokeConfig;
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 

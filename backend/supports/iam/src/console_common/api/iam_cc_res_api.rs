@@ -106,7 +106,7 @@ impl IamCcResApi {
         funs.begin().await?;
         warn!("rebuild_menu_res: begin task");
         let mut bind_res = vec![]; // 绑定的资源ID
-        // find old menu res
+                                   // find old menu res
         let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Res, &funs, &global_ctx).await?;
         let old_menus = IamSetServ::get_menu_tree(&set_id, None, &funs, &global_ctx).await?.main.into_iter().filter(|menu| menu.sys_code != "0000").collect_vec();
         for old_menu in &old_menus {
@@ -137,8 +137,8 @@ impl IamCcResApi {
                     continue;
                 }
                 match IamSetServ::delete_set_cate(&old_menu.id, &funs, &global_ctx).await {
-                    Err(_) => {},
-                    Ok(_) => deleted_menus.push(old_menu.id.clone())
+                    Err(_) => {}
+                    Ok(_) => deleted_menus.push(old_menu.id.clone()),
                 };
             }
             warn!("rebuild_menu_res: deleting set cate deleted_menus:{:?}", deleted_menus);
@@ -159,7 +159,11 @@ impl IamCcResApi {
                     icon: None,
                     sort: None,
                     ext: Some(new_menu.ext.clone()),
-                    rbum_parent_cate_id: if new_menu.pid.is_empty() { Some(menu_root_id.clone()) } else { new_menu_map.get(&new_menu.pid).cloned() },
+                    rbum_parent_cate_id: if new_menu.pid.is_empty() {
+                        Some(menu_root_id.clone())
+                    } else {
+                        new_menu_map.get(&new_menu.pid).cloned()
+                    },
                 },
                 &funs,
                 &global_ctx,
@@ -167,37 +171,45 @@ impl IamCcResApi {
             .await?;
             new_menu_map.insert(new_menu.id.clone(), set_cate_id.clone());
             // add page res
-            let page_id = IamResServ::add_res_agg(&mut IamResAggAddReq {
-                res: IamResAddReq {
-                    code: new_menu.name.into(),
-                    hide: Some(false),
-                    kind: IamResKind::Menu,
-                    name: new_menu.title.into(),
-                    scope_level: Some(RbumScopeLevelKind::Root),
-                    ..Default::default()
+            let page_id = IamResServ::add_res_agg(
+                &mut IamResAggAddReq {
+                    res: IamResAddReq {
+                        code: new_menu.name.into(),
+                        hide: Some(false),
+                        kind: IamResKind::Menu,
+                        name: new_menu.title.into(),
+                        scope_level: Some(RbumScopeLevelKind::Root),
+                        ..Default::default()
+                    },
+                    set: IamSetItemAggAddReq { set_cate_id: set_cate_id.clone() },
                 },
-                set: IamSetItemAggAddReq {
-                    set_cate_id: set_cate_id.clone(),
-                },
-            }, &set_id, &funs, &global_ctx).await?;
+                &set_id,
+                &funs,
+                &global_ctx,
+            )
+            .await?;
             if new_menu.ext == "Root" || new_menu.ext == "System" {
                 bind_res.push(page_id.clone());
             }
             // add ele res
             if let Some(res) = new_menu.res {
                 for ele in res {
-                    let ele_id = IamResServ::add_res_agg(&mut IamResAggAddReq {
-                        res: IamResAddReq {
-                            code: ele.code.into(),
-                            kind: IamResKind::Ele,
-                            name: ele.name.into(),
-                            scope_level: Some(RbumScopeLevelKind::Root),
-                            ..Default::default()
+                    let ele_id = IamResServ::add_res_agg(
+                        &mut IamResAggAddReq {
+                            res: IamResAddReq {
+                                code: ele.code.into(),
+                                kind: IamResKind::Ele,
+                                name: ele.name.into(),
+                                scope_level: Some(RbumScopeLevelKind::Root),
+                                ..Default::default()
+                            },
+                            set: IamSetItemAggAddReq { set_cate_id: set_cate_id.clone() },
                         },
-                        set: IamSetItemAggAddReq {
-                            set_cate_id: set_cate_id.clone(),
-                        },
-                    }, &set_id, &funs, &global_ctx).await?;
+                        &set_id,
+                        &funs,
+                        &global_ctx,
+                    )
+                    .await?;
                     if new_menu.ext == "Root" || new_menu.ext == "System" {
                         bind_res.push(ele_id);
                     }
@@ -205,10 +217,16 @@ impl IamCcResApi {
             }
             if let Some(apis) = new_menu.api {
                 for api_code in apis {
-                    if let Some(api) = RbumItemServ::find_one_rbum(&RbumBasicFilterReq {
-                        code: Some(api_code),
-                        ..Default::default()
-                    }, &funs, &global_ctx).await? {
+                    if let Some(api) = RbumItemServ::find_one_rbum(
+                        &RbumBasicFilterReq {
+                            code: Some(api_code),
+                            ..Default::default()
+                        },
+                        &funs,
+                        &global_ctx,
+                    )
+                    .await?
+                    {
                         IamRelServ::add_simple_rel(&IamRelKind::IamResApi, &api.id, &page_id, None, None, false, false, &funs, &global_ctx).await?;
                     }
                 }
@@ -216,17 +234,30 @@ impl IamCcResApi {
         }
         warn!("rebuild_menu_res: add set cate finished");
         // bind res with sys_admin_role
-        let sys_role_id = IamRoleServ::find_one_item(&IamRoleFilterReq {
-            basic: RbumBasicFilterReq {
-                code: Some("sys_admin".to_string()),
+        let sys_role_id = IamRoleServ::find_one_item(
+            &IamRoleFilterReq {
+                basic: RbumBasicFilterReq {
+                    code: Some("sys_admin".to_string()),
+                    ..Default::default()
+                },
                 ..Default::default()
             },
-            ..Default::default()
-        }, &funs, &global_ctx).await?.map(|role| role.id).unwrap_or_default();
-        IamRoleServ::modify_role_agg(&sys_role_id, &mut IamRoleAggModifyReq {
-            role: None,
-            res_ids: Some(bind_res),
-        }, &funs, &global_ctx).await?;
+            &funs,
+            &global_ctx,
+        )
+        .await?
+        .map(|role| role.id)
+        .unwrap_or_default();
+        IamRoleServ::modify_role_agg(
+            &sys_role_id,
+            &mut IamRoleAggModifyReq {
+                role: None,
+                res_ids: Some(bind_res),
+            },
+            &funs,
+            &global_ctx,
+        )
+        .await?;
         warn!("rebuild_menu_res: bind res with sys_admin_role finished");
         funs.commit().await?;
         TardisResp::ok(Void {})

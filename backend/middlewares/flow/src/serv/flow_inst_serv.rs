@@ -130,13 +130,7 @@ impl FlowInstServ {
             current_ctx.owner = rel_business_obj.owner.clone().unwrap_or_default();
             let flow_model_id = FlowModelServ::get_model_id_by_own_paths_and_rel_template_id(&batch_bind_req.tag, None, funs, ctx).await?;
 
-            let current_state_id = FlowStateServ::match_state_id_by_name(
-                &flow_model_id,
-                &rel_business_obj.current_state_name.clone().unwrap_or_default(),
-                funs,
-                ctx,
-            )
-            .await?;
+            let current_state_id = FlowStateServ::match_state_id_by_name(&flow_model_id, &rel_business_obj.current_state_name.clone().unwrap_or_default(), funs, ctx).await?;
             let mut inst_id = Self::get_inst_ids_by_rel_business_obj_id(vec![rel_business_obj.rel_business_obj_id.clone().unwrap_or_default()], funs, ctx).await?.pop();
             if inst_id.is_none() {
                 let id = TardisFuns::field.nanoid();
