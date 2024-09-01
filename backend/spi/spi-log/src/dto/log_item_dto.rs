@@ -98,3 +98,10 @@ pub struct LogItemFindResp {
     pub rel_key: String,
     pub ts: DateTime<Utc>,
 }
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct LogConfigReq {
+    #[oai(validator(pattern = r"^[a-z0-9_]+$"))]
+    pub tag: String,
+    pub ref_field: String,
+}

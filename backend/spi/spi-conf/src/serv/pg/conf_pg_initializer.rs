@@ -21,6 +21,7 @@ pub async fn init_table_and_conn_namespace(bs_inst: TypedSpiBsInst<'_, TardisRel
     show_name character varying NOT NULL,
     description text,
     tp smallint NOT NULL DEFAULT 0"#,
+        None,
         vec![("show_name", "btree")],
         None,
         None,

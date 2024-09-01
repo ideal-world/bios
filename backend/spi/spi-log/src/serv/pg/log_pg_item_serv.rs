@@ -7,7 +7,7 @@ use tardis::{
 
 use bios_basic::{dto::BasicQueryCondInfo, enumeration::BasicQueryOpKind, helper::db_helper, spi::spi_funs::SpiBsInst};
 
-use crate::dto::log_item_dto::{AdvBasicQueryCondInfo, LogItemAddReq, LogItemFindReq, LogItemFindResp};
+use crate::dto::log_item_dto::{AdvBasicQueryCondInfo, LogConfigReq, LogItemAddReq, LogItemFindReq, LogItemFindResp};
 
 use super::log_pg_initializer;
 

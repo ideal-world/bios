@@ -5,7 +5,7 @@ use std::fmt::Debug;
 #[derive(Debug, Serialize, Deserialize, Default, Clone)]
 #[serde(default)]
 pub struct LogConfig {
-    pub rbum: RbumConfig
+    pub rbum: RbumConfig,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

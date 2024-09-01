@@ -1,8 +1,5 @@
 use bios_sdk_invoke::{
-    clients::{
-        event_client::{get_topic, mq_error,ContextHandler, SPI_RPC_TOPIC},
-
-    },
+    clients::event_client::{get_topic, mq_error, ContextHandler, SPI_RPC_TOPIC},
     dto::search_item_dto::{SearchEventItemDeleteReq, SearchEventItemModifyReq, SearchItemAddReq},
 };
 

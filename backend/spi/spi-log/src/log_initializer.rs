@@ -9,7 +9,7 @@ use tardis::{
 use crate::{
     api::ci::log_ci_item_api,
     log_config::LogConfig,
-    log_constants::{self, DOMAIN_CODE},
+    log_constants::{self, CONFIG_TABLE_NAME, DOMAIN_CODE},
 };
 
 pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
@@ -59,7 +59,7 @@ async fn init_db(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()>
             &format!(
                 r#"CREATE TABLE IF NOT EXISTS {schema_name}.{CONFIG_TABLE_NAME}(
                     table_name VARCHAR NOT NULL,
-                    ref_fields VARCHAR NOT NULL,
+                    ref_field VARCHAR NOT NULL,
                   );"#
             ),
             vec![],

@@ -15,7 +15,6 @@ pub mod event {
     use asteroid_mq::prelude::*;
     impl EventAttribute for super::KvItemAddOrModifyReq {
         const SUBJECT: Subject = Subject::const_new(b"kv/add");
-        
     }
     impl EventAttribute for super::KvItemDeleteReq {
         const SUBJECT: Subject = Subject::const_new(b"kv/delete");
