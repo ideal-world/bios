@@ -567,7 +567,12 @@ fn gen_query_dsl(search_req: &SearchItemSearchReq) -> TardisResult<String> {
                         "range": {field: {"lte": cond_info.value.clone()}},
                     }));
                 }
-                BasicQueryOpKind::Like | BasicQueryOpKind::LLike | BasicQueryOpKind::RLike | BasicQueryOpKind::NotLike => {
+                BasicQueryOpKind::Like
+                | BasicQueryOpKind::LLike
+                | BasicQueryOpKind::RLike
+                | BasicQueryOpKind::NotLike
+                | BasicQueryOpKind::NotLLike
+                | BasicQueryOpKind::NotRLike => {
                     must_q.push(json!({
                         "match": {field: cond_info.value.clone()}
                     }));
@@ -695,7 +700,7 @@ fn gen_query_dsl(search_req: &SearchItemSearchReq) -> TardisResult<String> {
                             "match": {field: cond_info.value.clone()}
                         }));
                     }
-                    BasicQueryOpKind::NotLike => {
+                    BasicQueryOpKind::NotLike | BasicQueryOpKind::NotLLike | BasicQueryOpKind::NotRLike => {
                         group_query_q.push(json!({
                             "bool": {
                                 "must_not": {

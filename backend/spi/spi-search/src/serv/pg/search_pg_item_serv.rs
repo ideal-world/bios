@@ -580,6 +580,27 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
                             for val in value {
                                 sql_vals.push(val);
                             }
+                        } else if ext_item.op == BasicQueryOpKind::Like || ext_item.op == BasicQueryOpKind::NotLike {
+                            if let Some(first_value) = value.pop() {
+                                where_fragments.push(format!("ext ->> '{}' {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
+                                sql_vals.push(format!("%{first_value}%"));
+                            } else {
+                                return err_not_found(ext_item);
+                            };
+                        } else if ext_item.op == BasicQueryOpKind::LLike || ext_item.op == BasicQueryOpKind::NotLLike {
+                            if let Some(first_value) = value.pop() {
+                                where_fragments.push(format!("ext ->> '{}' {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
+                                sql_vals.push(format!("{first_value}%"));
+                            } else {
+                                return err_not_found(ext_item);
+                            };
+                        } else if ext_item.op == BasicQueryOpKind::RLike || ext_item.op == BasicQueryOpKind::NotRLike {
+                            if let Some(first_value) = value.pop() {
+                                where_fragments.push(format!("ext ->> '{}' {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
+                                sql_vals.push(format!("%{first_value}"));
+                            } else {
+                                return err_not_found(ext_item);
+                            };
                         } else if ext_item.op == BasicQueryOpKind::IsNull {
                             sql_and_where.push(format!("ext ->> '{}' is null", ext_item.field));
                         } else if ext_item.op == BasicQueryOpKind::IsNotNull {
@@ -656,6 +677,27 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
                                 sql_vals.push(val);
                             }
                         }
+                    } else if ext_item.op == BasicQueryOpKind::Like || ext_item.op == BasicQueryOpKind::NotLike {
+                        if let Some(first_value) = value.pop() {
+                            sql_and_where.push(format!("{} {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
+                            sql_vals.push(format!("%{first_value}%"));
+                        } else {
+                            return err_not_found(ext_item);
+                        };
+                    } else if ext_item.op == BasicQueryOpKind::LLike || ext_item.op == BasicQueryOpKind::NotLLike {
+                        if let Some(first_value) = value.pop() {
+                            sql_and_where.push(format!("{} {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
+                            sql_vals.push(format!("{first_value}%"));
+                        } else {
+                            return err_not_found(ext_item);
+                        };
+                    } else if ext_item.op == BasicQueryOpKind::RLike || ext_item.op == BasicQueryOpKind::NotRLike {
+                        if let Some(first_value) = value.pop() {
+                            sql_and_where.push(format!("{} {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
+                            sql_vals.push(format!("%{first_value}"));
+                        } else {
+                            return err_not_found(ext_item);
+                        };
                     } else if ext_item.op == BasicQueryOpKind::IsNull {
                         sql_and_where.push(format!("{} is null", ext_item.field));
                     } else if ext_item.op == BasicQueryOpKind::IsNotNull {
