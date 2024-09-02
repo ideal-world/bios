@@ -10,6 +10,7 @@ use bios_basic::rbum::{
     rbum_enumeration::{RbumRelEnvKind, RbumRelFromKind},
     serv::rbum_rel_serv::RbumRelServ,
 };
+use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 
 use strum::Display;
@@ -27,6 +28,7 @@ pub enum FlowRelKind {
     FlowModelState,
     FlowModelTemplate,
     FlowModelPath,
+    FlowAppTemplate,
 }
 
 impl FlowRelServ {
@@ -106,7 +108,7 @@ impl FlowRelServ {
         Ok(())
     }
 
-    async fn exist_rels(flow_rel_kind: &FlowRelKind, from_rbum_id: &str, to_rbum_item_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<bool> {
+    pub async fn exist_rels(flow_rel_kind: &FlowRelKind, from_rbum_id: &str, to_rbum_item_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<bool> {
         // TODO In-depth inspection
         RbumRelServ::check_simple_rel(
             &RbumRelSimpleFindReq {
@@ -238,6 +240,24 @@ impl FlowRelServ {
             })
         } else {
             None
+        }
+    }
+
+    pub async fn find_model_ids_by_app_id(app_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<String>> {
+        let template_id = Self::find_from_simple_rels(&FlowRelKind::FlowAppTemplate, app_id, None, None, funs, ctx).await?.pop().map(|rel| rel.rel_id);
+        if let Some(template_id) = template_id {
+            Ok(Self::find_to_simple_rels(&FlowRelKind::FlowModelTemplate, &template_id, None, None, funs, ctx).await?.into_iter().map(|rel| rel.rel_id).collect_vec())
+        } else {
+            Err(funs.err().conflict(&FlowRelKind::FlowAppTemplate.to_string(), "find_models_by_app_id", "rel not found", "404-rel-not-found"))
+        }
+    }
+
+    pub async fn find_app_ids_by_model_id(model_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<String>> {
+        let template_id = Self::find_from_simple_rels(&FlowRelKind::FlowModelTemplate, model_id, None, None, funs, ctx).await?.pop().map(|rel| rel.rel_id);
+        if let Some(template_id) = template_id {
+            Ok(Self::find_to_simple_rels(&FlowRelKind::FlowAppTemplate, &template_id, None, None, funs, ctx).await?.into_iter().map(|rel| rel.rel_id).collect_vec())
+        } else {
+            Err(funs.err().conflict(&FlowRelKind::FlowModelTemplate.to_string(), "find_models_by_app_id", "rel not found", "404-rel-not-found"))
         }
     }
 }

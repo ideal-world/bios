@@ -658,7 +658,7 @@ impl IamTenantServ {
             ctx,
         )
         .await?;
-        IamKvClient::add_or_modify_key_name(&funs.conf::<IamConfig>().spi.kv_tenant_prefix.clone(), &tenant_id, &tenant.name, None, funs, ctx).await?;
+        IamKvClient::add_or_modify_key_name(&funs.conf::<IamConfig>().spi.kv_tenant_prefix.clone(), tenant_id, &tenant.name, None, funs, ctx).await?;
         Ok(())
     }
 }

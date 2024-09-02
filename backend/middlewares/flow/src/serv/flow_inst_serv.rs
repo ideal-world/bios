@@ -15,7 +15,7 @@ use bios_basic::{
     },
 };
 use bios_sdk_invoke::clients::{
-    event_client::{BiosEventCenter, EventCenter, EventExt},
+    event_client::{get_topic, mq_error, EventAttributeExt},
     flow_client::{event::FLOW_AVATAR, FlowFrontChangeReq, FlowPostChangeReq},
 };
 use itertools::Itertools;
@@ -48,6 +48,7 @@ use crate::{
         flow_transition_dto::{FlowTransitionDetailResp, FlowTransitionFrontActionInfo},
         flow_var_dto::FillType,
     },
+    event::FLOW_TOPIC,
     flow_constants,
     serv::{flow_model_serv::FlowModelServ, flow_state_serv::FlowStateServ},
 };
@@ -615,9 +616,9 @@ impl FlowInstServ {
         }
         let model_transition = flow_model.transitions();
         let next_transition_detail = model_transition.iter().find(|trans| trans.id == transfer_req.flow_transition_id).unwrap().to_owned();
-        if FlowModelServ::check_post_action_ring(&flow_model, funs, ctx).await? {
-            return Err(funs.err().not_found("flow_inst", "transfer", "this post action exist endless loop", "500-flow-transition-endless-loop"));
-        }
+        // if FlowModelServ::check_post_action_ring(&flow_model, funs, ctx).await? {
+        //     return Err(funs.err().not_found("flow_inst", "transfer", "this post action exist endless loop", "500-flow-transition-endless-loop"));
+        // }
 
         let next_flow_transition = next_flow_transition.unwrap();
         let prev_flow_state = FlowStateServ::get_item(
@@ -747,17 +748,18 @@ impl FlowInstServ {
     }
 
     pub async fn handle_post_changes(inst_id: &str, transition_id: &str, ctx: &TardisContext, funs: &TardisFunsInst) -> TardisResult<()> {
-        if let Some(event_center) = TardisFuns::store().get_singleton::<BiosEventCenter>() {
-            event_center
-                .publish(
+        if let Some(topic) = get_topic(&FLOW_TOPIC) {
+            topic
+                .send_event(
                     FlowPostChangeReq {
                         inst_id: inst_id.to_string(),
                         next_transition_id: transition_id.to_string(),
                     }
-                    .with_source(FLOW_AVATAR)
-                    .inject_context(funs, ctx),
+                    .inject_context(funs, ctx)
+                    .json(),
                 )
-                .await?;
+                .await
+                .map_err(mq_error)?;
         } else {
             FlowEventServ::do_post_change(inst_id, transition_id, ctx, funs).await?;
         }
@@ -765,8 +767,8 @@ impl FlowInstServ {
     }
 
     pub async fn handle_front_changes(inst_id: &str, ctx: &TardisContext, funs: &TardisFunsInst) -> TardisResult<()> {
-        if let Some(event_center) = TardisFuns::store().get_singleton::<BiosEventCenter>() {
-            event_center.publish(FlowFrontChangeReq { inst_id: inst_id.to_string() }.with_source(FLOW_AVATAR).inject_context(funs, ctx)).await?;
+        if let Some(topic) = get_topic(&FLOW_TOPIC) {
+            topic.send_event(FlowFrontChangeReq { inst_id: inst_id.to_string() }.inject_context(funs, ctx).json()).await.map_err(mq_error)?;
         } else {
             FlowEventServ::do_front_change(inst_id, ctx, funs).await?;
         }
@@ -1070,16 +1072,18 @@ impl FlowInstServ {
         funs.commit().await?;
 
         let funs = flow_constants::get_tardis_inst();
-        if let Some(event_center) = TardisFuns::store().get_singleton::<BiosEventCenter>() {
-            event_center
-                .publish(
+
+        if let Some(topic) = get_topic(&FLOW_TOPIC) {
+            topic
+                .send_event(
                     FlowFrontChangeReq {
                         inst_id: flow_inst_id.to_string(),
                     }
-                    .with_source(FLOW_AVATAR)
-                    .inject_context(&funs, ctx),
+                    .inject_context(&funs, ctx)
+                    .json(),
                 )
-                .await?;
+                .await
+                .map_err(mq_error)?;
         } else {
             FlowEventServ::do_front_change(flow_inst_id, ctx, &funs).await?;
         }
@@ -1192,6 +1196,8 @@ impl FlowInstServ {
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<()> {
+        FlowInstServ::unsafe_update_state_by_tag(original_model_id.clone(), tag, modify_model_id, modify_model_states, state_id, funs, ctx).await?;
+
         let mut update_statement = Query::update();
         update_statement.table(flow_inst::Entity);
         update_statement.value(flow_inst::Column::RelFlowModelId, modify_model_id);
@@ -1203,7 +1209,6 @@ impl FlowInstServ {
         }
         funs.db().execute(&update_statement).await?;
 
-        FlowInstServ::unsafe_update_state_by_tag(original_model_id, tag, modify_model_id, modify_model_states, state_id, funs, ctx).await?;
         Ok(())
     }
 
@@ -1216,14 +1221,16 @@ impl FlowInstServ {
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<()> {
+        let gloabl_ctx = TardisContext::default();
         let insts = Self::find_details(
             &FlowInstFilterReq {
-                flow_model_id: original_model_id,
+                flow_model_id: original_model_id.clone(),
                 tag: Some(tag.to_string()),
+                with_sub: Some(true),
                 ..Default::default()
             },
             funs,
-            ctx,
+            if original_model_id.is_some() { &gloabl_ctx } else { ctx },
         )
         .await?
         .into_iter()
@@ -1233,6 +1240,10 @@ impl FlowInstServ {
             insts
                 .iter()
                 .map(|inst| async {
+                    let mock_ctx = TardisContext {
+                        own_paths: inst.own_paths.clone(),
+                        ..ctx.clone()
+                    };
                     let global_ctx = TardisContext::default();
 
                     let flow_inst = flow_inst::ActiveModel {
@@ -1241,8 +1252,8 @@ impl FlowInstServ {
                         transitions: Set(Some(vec![])),
                         ..Default::default()
                     };
-                    funs.db().update_one(flow_inst, ctx).await.unwrap();
-                    let modify_model_detail = FlowModelServ::get_item(modify_model_id, &FlowModelFilterReq::default(), funs, ctx).await.unwrap();
+                    funs.db().update_one(flow_inst, &mock_ctx).await.unwrap();
+                    let model_tag = FlowModelServ::get_item(modify_model_id, &FlowModelFilterReq::default(), funs, ctx).await.map(|detail| detail.tag);
                     let next_flow_state = FlowStateServ::get_item(
                         state_id,
                         &FlowStateFilterReq {
@@ -1259,7 +1270,7 @@ impl FlowInstServ {
                     .unwrap();
 
                     FlowExternalServ::do_notify_changes(
-                        &modify_model_detail.tag,
+                        model_tag.unwrap_or_default().as_str(),
                         &inst.id,
                         &inst.rel_business_obj_id,
                         "".to_string(),

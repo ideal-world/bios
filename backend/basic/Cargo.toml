@@ -32,6 +32,7 @@ test = ["tardis/test"]
 [dependencies]
 serde.workspace = true
 async-trait.workspace = true
+async-recursion.workspace = true
 lazy_static.workspace = true
 itertools.workspace = true
 fancy-regex.workspace = true

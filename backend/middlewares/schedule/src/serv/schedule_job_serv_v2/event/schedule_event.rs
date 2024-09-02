@@ -1,7 +1,6 @@
 use std::sync::Arc;
 
 use bios_sdk_invoke::clients::{
-    event_client::{BiosEventCenter, Event, EventCenter, EventExt},
     spi_log_client::LogItemAddReq,
 };
 use serde::{Deserialize, Serialize};

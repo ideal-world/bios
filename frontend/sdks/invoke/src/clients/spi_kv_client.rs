@@ -12,17 +12,13 @@ use crate::invoke_enumeration::InvokeModuleKind;
 use super::base_spi_client::BaseSpiClient;
 
 pub mod event {
-    use crate::clients::event_client::Event;
-    pub const KV_AVATAR: &str = "spi-kv";
-
-    const EVENT_ADD_KV: &str = "spi-kv/add";
-    const EVENT_DELETE_KV: &str = "spi-kv/delete";
-
-    impl Event for super::KvItemAddOrModifyReq {
-        const CODE: &'static str = EVENT_ADD_KV;
+    use asteroid_mq::prelude::*;
+    impl EventAttribute for super::KvItemAddOrModifyReq {
+        const SUBJECT: Subject = Subject::const_new(b"kv/add");
+        
     }
-    impl Event for super::KvItemDeleteReq {
-        const CODE: &'static str = EVENT_DELETE_KV;
+    impl EventAttribute for super::KvItemDeleteReq {
+        const SUBJECT: Subject = Subject::const_new(b"kv/delete");
     }
 }
 #[derive(Clone, Debug, Default)]

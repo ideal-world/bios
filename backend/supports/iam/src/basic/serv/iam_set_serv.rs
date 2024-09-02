@@ -215,6 +215,7 @@ impl IamSetServ {
                 icon: modify_req.icon.clone(),
                 sort: modify_req.sort,
                 ext: modify_req.ext.clone(),
+                rbum_parent_cate_id: None,
                 scope_level: modify_req.scope_level.clone(),
             },
             funs,
@@ -252,7 +253,7 @@ impl IamSetServ {
             if kind == IamSetKind::Apps.to_string() {
                 IamKvClient::add_or_modify_key_name(
                     &funs.conf::<IamConfig>().spi.kv_apps_prefix.clone(),
-                    &set_cate_id,
+                    set_cate_id,
                     &set_cate_item.name.clone(),
                     None,
                     funs,
@@ -291,6 +292,10 @@ impl IamSetServ {
         }
 
         result
+    }
+
+    pub async fn move_set_cate(set_cate_id: &str, parent_set_cate_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        RbumSetCateServ::move_set_cate(set_cate_id, parent_set_cate_id, funs, ctx).await
     }
 
     pub async fn delete_set_cate(set_cate_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<u64> {
