@@ -583,7 +583,7 @@ impl IamCertServ {
     }
 
     pub async fn modify_3th_kind_cert(modify_req: &mut IamThirdPartyCertExtModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        let cert_3th = Self::get_3th_kind_cert_by_rel_rbum_id(&modify_req.rel_rbum_id, vec![modify_req.supplier.clone()], false, funs, ctx).await?;
+        let cert_3th = Self::get_3th_kind_cert_by_rel_rbum_id(&modify_req.rel_rbum_id, vec![modify_req.supplier.clone()], false, None, funs, ctx).await?;
         RbumCertServ::modify_rbum(
             &cert_3th.id,
             &mut RbumCertModifyReq {
@@ -696,6 +696,7 @@ impl IamCertServ {
         rel_rbum_id: &str,
         cert_supplier: Vec<String>,
         show_sk: bool,
+        ext: Option<String>,
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<RbumCertSummaryWithSkResp> {
@@ -704,6 +705,7 @@ impl IamCertServ {
                 kind: Some(IamCertExtKind::ThirdParty.to_string()),
                 suppliers: Some(cert_supplier.clone()),
                 rel_rbum_id: Some(rel_rbum_id.to_string()),
+                ext,
                 ..Default::default()
             },
             funs,
