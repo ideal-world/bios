@@ -211,7 +211,7 @@ impl AuditLogPlugin {
                         match spi_log_client::SpiLogClient::add(
                             &LogItemAddReq {
                                 tag,
-                                content: TardisFuns::json.obj_to_string(&content).unwrap_or_default(),
+                                content: TardisFuns::json.obj_to_json(&content).unwrap_or_default(),
                                 kind: None,
                                 ext: Some(content.to_value()),
                                 key: None,
@@ -221,6 +221,7 @@ impl AuditLogPlugin {
                                 ts: Some(tardis::chrono::Utc::now()),
                                 owner: content.user_id,
                                 own_paths: None,
+                                msg: None,
                             },
                             &funs,
                             &spi_ctx,

@@ -11,3 +11,5 @@ pub const TABLE_LOG_FLAG_V2: &str = "logv2";
 pub const PARENT_TABLE_NAME: &str = "spi_log_parent";
 //配置表名
 pub const CONFIG_TABLE_NAME: &str = "spi_log_config";
+//ref flag  __STARSYS_LOG_REF__@{ts}#{key}
+pub const LOG_REF_FLAG: &str = "__STARSYS_LOG_REF__";

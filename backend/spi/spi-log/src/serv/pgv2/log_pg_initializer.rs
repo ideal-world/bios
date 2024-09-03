@@ -5,7 +5,7 @@ use tardis::{
 
 use bios_basic::spi::{spi_funs::TypedSpiBsInst, spi_initializer};
 
-use crate::log_constants;
+use crate::log_constants::{self, CONFIG_TABLE_NAME};
 
 pub async fn init_table_and_conn(bs_inst: TypedSpiBsInst<'_, TardisRelDBClient>, tag: &str, ctx: &TardisContext, mgr: bool) -> TardisResult<(TardisRelDBlConnection, String)> {
     //添加父表
@@ -27,6 +27,7 @@ pub async fn init_table_and_conn(bs_inst: TypedSpiBsInst<'_, TardisRelDBClient>,
                   rel_key       varchar NOT NULL,
                   ext           jsonb NOT NULL,
                   disable       boolean NOT NULL DEFAULT false,
+                  msg           varchar NOT NULL,
                 );"#,
                 log_constants::PARENT_TABLE_NAME
             ),

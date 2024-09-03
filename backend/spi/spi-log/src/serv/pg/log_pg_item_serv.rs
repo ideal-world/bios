@@ -492,6 +492,7 @@ ORDER BY ts DESC
                 kind: item.try_get("", "kind")?,
                 owner: item.try_get("", "owner")?,
                 own_paths: item.try_get("", "own_paths")?,
+                msg: String::new(),
             })
         })
         .collect::<TardisResult<Vec<_>>>()?;

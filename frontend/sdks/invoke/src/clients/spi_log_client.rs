@@ -74,6 +74,7 @@ pub struct LogItemAddReq {
     pub ts: Option<DateTime<Utc>>,
     pub owner: Option<String>,
     pub own_paths: Option<String>,
+    pub msg: Option<String>,
 }
 
 impl SpiLogClient {
@@ -140,6 +141,7 @@ impl SpiLogClient {
             ts: ts.map(|ts| DateTime::parse_from_rfc3339(&ts).unwrap_or_default().with_timezone(&Utc)),
             owner,
             own_paths,
+            msg: None,
         };
         Self::add(&req, funs, ctx).await
     }

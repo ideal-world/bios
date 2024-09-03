@@ -27,6 +27,7 @@ pub struct LogItemAddReq {
     #[oai(validator(min_length = "2"))]
     pub owner: Option<String>,
     pub own_paths: Option<String>,
+    pub msg: Option<String>,
 }
 impl From<bios_sdk_invoke::clients::spi_log_client::LogItemAddReq> for LogItemAddReq {
     fn from(value: bios_sdk_invoke::clients::spi_log_client::LogItemAddReq) -> Self {
@@ -42,6 +43,7 @@ impl From<bios_sdk_invoke::clients::spi_log_client::LogItemAddReq> for LogItemAd
             ts: value.ts,
             owner: value.owner,
             own_paths: value.own_paths,
+            msg: value.msg,
         }
     }
 }
@@ -96,6 +98,7 @@ pub struct LogItemFindResp {
     pub op: String,
     pub rel_key: String,
     pub ts: DateTime<Utc>,
+    pub msg: String,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
