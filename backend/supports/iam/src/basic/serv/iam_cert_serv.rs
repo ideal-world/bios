@@ -583,7 +583,7 @@ impl IamCertServ {
     }
 
     pub async fn modify_3th_kind_cert(modify_req: &mut IamThirdPartyCertExtModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        let cert_3th = Self::get_3th_kind_cert_by_rel_rbum_id(&modify_req.rel_rbum_id, vec![modify_req.supplier.clone()], false, None, funs, ctx).await?;
+        let cert_3th = Self::get_3th_kind_cert_by_rel_rbum_id(Some(modify_req.rel_rbum_id.clone()), Some(vec![modify_req.supplier.clone()]), false, None, funs, ctx).await?;
         RbumCertServ::modify_rbum(
             &cert_3th.id,
             &mut RbumCertModifyReq {
@@ -693,8 +693,8 @@ impl IamCertServ {
 
     /// 通过关联rbum_item id 查询三方凭证
     pub async fn get_3th_kind_cert_by_rel_rbum_id(
-        rel_rbum_id: &str,
-        cert_supplier: Vec<String>,
+        rel_rbum_id: Option<String>,
+        cert_supplier: Option<Vec<String>>,
         show_sk: bool,
         ext: Option<String>,
         funs: &TardisFunsInst,
@@ -703,8 +703,8 @@ impl IamCertServ {
         let ext_cert = RbumCertServ::find_one_detail_rbum(
             &RbumCertFilterReq {
                 kind: Some(IamCertExtKind::ThirdParty.to_string()),
-                suppliers: Some(cert_supplier.clone()),
-                rel_rbum_id: Some(rel_rbum_id.to_string()),
+                suppliers: cert_supplier.clone(),
+                rel_rbum_id,
                 ext,
                 ..Default::default()
             },

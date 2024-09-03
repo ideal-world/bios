@@ -149,22 +149,14 @@ impl FlowSearchClient {
                 }),
                 kv_disable: None,
             };
-            if let Some(_topic) = get_topic(&SPI_RPC_TOPIC) {
-                EventCenterClient { topic_code: SPI_RPC_TOPIC }.add_item_and_name(&add_req, Some(model_resp.name.clone()), funs, ctx).await?;
-            } else {
-                SpiSearchClient::add_item_and_name(&add_req, Some(model_resp.name.clone()), funs, ctx).await?;
-            }
+            SpiSearchClient::add_item_and_name(&add_req, Some(model_resp.name.clone()), funs, ctx).await?;
         }
         Ok(())
     }
 
     // model 全局搜索删除埋点方法
     pub async fn delete_model_search(model_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        if let Some(_topic) = get_topic(&SPI_RPC_TOPIC) {
-            EventCenterClient { topic_code: SPI_RPC_TOPIC }.delete_item_and_name(SEARCH_TAG, model_id, funs, ctx).await?;
-        } else {
-            SpiSearchClient::delete_item_and_name(SEARCH_TAG, model_id, funs, ctx).await?;
-        }
+        SpiSearchClient::delete_item_and_name(SEARCH_TAG, model_id, funs, ctx).await?;
         Ok(())
     }
 }
