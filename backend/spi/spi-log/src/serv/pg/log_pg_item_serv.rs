@@ -503,3 +503,11 @@ ORDER BY ts DESC
         records: result,
     })
 }
+
+pub async fn add_config(req: &LogConfigReq, funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
+    return Ok(());
+}
+
+pub async fn delete_config(config: &mut LogConfigReq, funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
+    return Ok(());
+}

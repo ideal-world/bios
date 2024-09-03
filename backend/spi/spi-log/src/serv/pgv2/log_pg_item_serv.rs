@@ -1,7 +1,13 @@
+use std::vec;
+
+use bios_sdk_invoke::clients::event_client::asteroid_mq::event_handler::json;
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
-    db::{reldb_client::TardisRelDBClient, sea_orm::Value},
-    web::web_resp::{TardisPage},
+    db::{
+        reldb_client::{TardisRelDBClient, TardisRelDBlConnection},
+        sea_orm::Value,
+    },
+    web::web_resp::TardisPage,
     TardisFuns, TardisFunsInst,
 };
 
@@ -13,12 +19,39 @@ use super::log_pg_initializer;
 
 pub async fn add(add_req: &mut LogItemAddReq, _funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<String> {
     let id = add_req.id.clone().unwrap_or(TardisFuns::field.nanoid());
+
+    let bs_inst = inst.inst::<TardisRelDBClient>();
+    let (mut conn, table_name) = log_pg_initializer::init_table_and_conn(bs_inst, &add_req.tag, ctx, true).await?;
+    conn.begin().await?;
+    let get_last_record = conn
+        .query_one(
+            &format!(
+                r#"
+    select key,content from {table_name} where key = $1 order by ts desc limit 1
+    "#
+            ),
+            vec![Value::from(add_req.key)],
+        )
+        .await?;
+
+    let json_value: JsonValue = Value::from(id.clone()).into();
+    let a = json_value.get("age");
+
+    if let Some(last_record) = get_last_record {
+        get!(last_record => {
+            content: Value,
+        });
+        let ref_fields = get_ref_fields_by_table_name(conn, &table_name).await?;
+        Value::from(id.clone());
+
+        // content.
+    }
     let mut params = vec![
         Value::from(id.clone()),
         Value::from(add_req.kind.as_ref().unwrap_or(&"".into()).to_string()),
         Value::from(add_req.key.as_ref().unwrap_or(&"".into()).to_string()),
         Value::from(add_req.op.as_ref().unwrap_or(&"".to_string()).as_str()),
-        Value::from(add_req.content.as_str()),
+        add_req.content,
         Value::from(add_req.owner.as_ref().unwrap_or(&"".to_string()).as_str()),
         Value::from(add_req.own_paths.as_ref().unwrap_or(&"".to_string()).as_str()),
         Value::from(if let Some(ext) = &add_req.ext {
@@ -31,10 +64,6 @@ pub async fn add(add_req: &mut LogItemAddReq, _funs: &TardisFunsInst, ctx: &Tard
     if let Some(ts) = add_req.ts {
         params.push(Value::from(ts));
     }
-
-    let bs_inst = inst.inst::<TardisRelDBClient>();
-    let (mut conn, table_name) = log_pg_initializer::init_table_and_conn(bs_inst, &add_req.tag, ctx, true).await?;
-    conn.begin().await?;
     conn.execute_one(
         &format!(
             r#"INSERT INTO {table_name}
@@ -505,10 +534,51 @@ ORDER BY ts DESC
 }
 
 pub async fn add_config(req: &LogConfigReq, funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
-
-    return Ok(());
+    let table_full_name = get_table_full_name(inst.ext, TABLE_LOG_FLAG, req.tag).await?;
+    let bs_inst = inst.inst::<TardisRelDBClient>();
+    if let Some(query_result) = bs_inst
+        .0
+        .conn()
+        .query_one(
+            &format!("select table_name,ref_field from {schema_name}.{CONFIG_TABLE_NAME} where table_name = $1 and ref_field = $2"),
+            vec![Value::from(table_full_name), Value::from(req.ref_field)],
+        )
+        .await?
+    {
+        return Ok(());
+    } else {
+        //新增记录
+        bs_inst
+            .0
+            .conn()
+            .execute_one(
+                &format!("insert into {schema_name}.{CONFIG_TABLE_NAME}(table_name,ref_field) VALUES ($1,$2)"),
+                vec![Value::from(table_full_name), Value::from(req.ref_field)],
+            )
+            .await?;
+        return Ok(());
+    };
 }
 
 pub async fn delete_config(config: &mut LogConfigReq, funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
+    let table_full_name = get_table_full_name(inst.ext, TABLE_LOG_FLAG, req.tag).await?;
+    let bs_inst = inst.inst::<TardisRelDBClient>();
+    bs_inst
+        .0
+        .conn()
+        .execute_one(
+            &format!("delete from {schema_name}.{CONFIG_TABLE_NAME} where table_name = $1 and ref_field = $2"),
+            vec![Value::from(table_full_name), Value::from(req.ref_field)],
+        )
+        .await?;
     return Ok(());
+}
+
+async fn get_ref_fields_by_table_name(conn: TardisRelDBlConnection, table_name: &str) -> TardisResult<Vec<String>> {
+    if let Some(query_result) = conn.query_one(&format!("select ref_field from {table_name} where table_name = $1"), vec![Value::from(table_full_name)]).await? {
+        let ref_fields = query_result.try_get_many("", &["ref_field".to_string()])?;
+        return Ok(ref_fields);
+    } else {
+        return Ok(vec![]);
+    };
 }

@@ -178,6 +178,13 @@ pub mod common_pg {
         common::get_isolation_flag_from_ext(ext)
     }
 
+    /// Get the table full name from the extension
+    /// 根据入参生成对应表全限定名
+    pub fn get_table_full_name(ext: &HashMap<String, String>, table_flag: String, tag: String) -> String {
+        let schema_name = get_schema_name_from_ext(ext).expect("ignore");
+        return format!("{schema_name}.{GLOBAL_STORAGE_FLAG}_{table_flag}{tag}");
+    }
+
     /// Check if the schema exists
     /// 检查schema是否存在
     pub async fn check_schema_exit(client: &TardisRelDBClient, ctx: &TardisContext) -> TardisResult<bool> {

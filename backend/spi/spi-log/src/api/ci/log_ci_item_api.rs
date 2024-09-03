@@ -40,7 +40,7 @@ impl LogCiItemApi {
     #[oai(path = "/config", method = "delete")]
     async fn delete_config(&self, mut find_req: Json<LogConfigReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let funs = crate::get_tardis_inst();
-        let resp = log_item_serv::delete_config(&mut find_req.0, &funs, &ctx.0).await?;
-        TardisResp::ok(resp)
+        log_item_serv::delete_config(&mut find_req.0, &funs, &ctx.0).await?;
+        TardisResp::ok(Void {})
     }
 }

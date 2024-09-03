@@ -64,7 +64,7 @@ pub struct LogDynamicContentReq {
 #[derive(Serialize, Deserialize, Debug, Default)]
 pub struct LogItemAddReq {
     pub tag: String,
-    pub content: String,
+    pub content: Value,
     pub kind: Option<String>,
     pub ext: Option<Value>,
     pub key: Option<String>,
@@ -90,7 +90,7 @@ impl SpiLogClient {
     ) -> TardisResult<()> {
         Self::add_with_many_params(
             DYNAMIC_LOG,
-            &TardisFuns::json.obj_to_string(content)?,
+            TardisFuns::json.obj_to_json(content)?,
             ext,
             kind,
             key,
@@ -116,7 +116,7 @@ impl SpiLogClient {
     #[deprecated = "this function has too many parameters, use `SpiLogClient::add` instead"]
     pub async fn add_with_many_params(
         tag: &str,
-        content: &str,
+        content: Value,
         ext: Option<Value>,
         kind: Option<String>,
         key: Option<String>,
@@ -130,7 +130,7 @@ impl SpiLogClient {
     ) -> TardisResult<()> {
         let req = LogItemAddReq {
             tag: tag.to_string(),
-            content: content.to_string(),
+            content: content,
             kind,
             ext,
             key,

@@ -29,54 +29,6 @@ pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
 async fn init_db(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
     spi_initializer::add_kind(spi_constants::SPI_PG_KIND_CODE, funs, ctx).await?;
     spi_initializer::add_kind(log_constants::SPI_PG_V2_KIND_CODE, funs, ctx).await?;
-    //添加父表
-    let schema_name = spi_initializer::common_pg::get_schema_name_from_context(ctx);
-    funs.db()
-        .execute_one(
-            &format!(
-                r#"CREATE TABLE IF NOT EXISTS {schema_name}.{}(
-                    idempotent_id varchar NOT NULL,
-                    ts            timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                    key           varchar NOT NULL,
-                    kind          varchar NOT NULL,
-                    op            varchar NOT NULL,
-                    content       jsonb NOT NULL,
-                    owner         varchar NOT NULL,
-                    own_paths     varchar NOT NULL,
-                    rel_key       varchar NOT NULL,
-                    ext           jsonb NOT NULL,
-                    disable       boolean NOT NULL DEFAULT false,
-                  );"#,
-                log_constants::PARENT_TABLE_NAME
-            ),
-            vec![],
-        )
-        .await?;
-
-    //添加配置表
-    funs.db()
-        .execute_one(
-            &format!(
-                r#"CREATE TABLE IF NOT EXISTS {schema_name}.{CONFIG_TABLE_NAME}(
-                    table_name VARCHAR NOT NULL,
-                    ref_field VARCHAR NOT NULL,
-                  );"#
-            ),
-            vec![],
-        )
-        .await?;
-
-    //添加配置表索引
-    funs.db()
-        .execute_one(
-            &format!(
-                r#"
-      CREATE INDEX IF NOT EXISTS {CONFIG_TABLE_NAME}_index1 ON {schema_name}.{CONFIG_TABLE_NAME} USING btree (table_name);
-      "#
-            ),
-            vec![],
-        )
-        .await?;
     Ok(())
 }
 
