@@ -1,5 +1,6 @@
-use std::{str::FromStr, vec};
+use std::{collections::HashMap, str::FromStr, vec};
 
+use bios_sdk_invoke::clients::event_client::asteroid_mq::event_handler::json::Json;
 use tardis::{
     basic::{dto::TardisContext, error::TardisError, result::TardisResult},
     chrono::{DateTime, Utc},
@@ -552,7 +553,7 @@ ORDER BY ts DESC
 
     let mut total_size: i64 = 0;
 
-    let result = result
+    let mut result = result
         .into_iter()
         .map(|item| {
             if total_size == 0 {
@@ -574,7 +575,34 @@ ORDER BY ts DESC
         })
         .collect::<TardisResult<Vec<_>>>()?;
 
-    //TODO 把字段引用转换为真实的值
+    // Cache the ref_value to true_value
+    let mut cache_value = HashMap::<String, JsonValue>::new();
+
+    for log in &mut result {
+        if let Some(json_map) = log.content.as_object_mut() {
+            for (k, v) in json_map {
+                if is_log_ref(v) {
+                    if let Some(v_str) = v.as_str() {
+                        let ref_string = v_str.to_string();
+                        if let Some(true_value) = cache_value.get(&ref_string) {
+                            *v = true_value.clone();
+                        } else {
+                            let (ts, key) = parse_ref_ts_key(v_str)?;
+                            if let Some(query_result) =
+                                conn.query_one(&format!("select content from {table_name} where ts=$1 and key=$2"), vec![Value::from(ts), Value::from(key)]).await?
+                            {
+                                let query_content: JsonValue = query_result.try_get("", "content")?;
+                                if let Some(query_true_value) = query_content.get(k) {
+                                    *v = query_true_value.clone();
+                                    cache_value.insert(ref_string, query_true_value.clone());
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
 
     Ok(TardisPage {
         page_size: find_req.page_size as u64,

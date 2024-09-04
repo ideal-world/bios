@@ -505,10 +505,10 @@ ORDER BY ts DESC
     })
 }
 
-pub async fn add_config(req: &LogConfigReq, funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
+pub async fn add_config(_req: &LogConfigReq, _funs: &TardisFunsInst, _ctx: &TardisContext, _inst: &SpiBsInst) -> TardisResult<()> {
     return Ok(());
 }
 
-pub async fn delete_config(config: &mut LogConfigReq, funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
+pub async fn delete_config(_config: &mut LogConfigReq, _funs: &TardisFunsInst, _ctx: &TardisContext, _inst: &SpiBsInst) -> TardisResult<()> {
     return Ok(());
 }
