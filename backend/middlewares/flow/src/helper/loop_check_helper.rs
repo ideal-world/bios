@@ -145,19 +145,21 @@ impl TransactionGraph {
     }
 
     pub fn check_state_loop(&self) -> bool {
-        //init
         let mut state_chains: HashSet<Vec<String>> = HashSet::new();
         for ((from_tran_from_state, from_tran_to_state), to_trans) in &self.rels {
-            let init_state_tran = vec![from_tran_from_state.clone(), from_tran_to_state.clone()];
+            state_chains.insert(vec![from_tran_from_state.clone(), from_tran_to_state.clone()]);
             for (to_tran_from_state, to_tran_to_state) in to_trans {
-                state_chains.insert(init_state_tran.iter().cloned().chain(vec![to_tran_from_state.clone(), to_tran_to_state.clone()].iter().cloned()).collect());
+                state_chains.insert(vec![to_tran_from_state.clone(), to_tran_to_state.clone()]);
+                for state_tran in state_chains.clone() {
+                    if state_tran.last().unwrap() == to_tran_from_state {
+                        let mut insert_chain = state_tran.clone();
+                        insert_chain.push(to_tran_to_state.clone());
+                        state_chains.insert(insert_chain);
+                    }
+                }
             }
         }
         warn!("check state loop state_chains: {:?}", state_chains);
-        for init_state_tran in state_chains.clone() {
-            let state_chain = init_state_tran.clone();
-        }
-
         for state_chain in state_chains {
             let mut tran_chain = vec![];
             let mut from_state = state_chain[0].clone();
@@ -172,6 +174,69 @@ impl TransactionGraph {
 
         true
     }
+
+    pub fn check_state_loop1(&self) -> bool {
+        // init trans_chain
+        let mut trans_chain = vec![];
+        for ((from_tran_from_state, from_tran_to_state), to_trans) in &self.rels {
+            for (to_tran_from_state, to_tran_to_state) in to_trans {
+                trans_chain.push(Vec::from([(from_tran_from_state.clone(), from_tran_to_state.clone()), (to_tran_from_state.clone(), to_tran_to_state.clone())]));
+            }
+        }
+        warn!("check state loop init trans_chain: {:?}", trans_chain);
+        // complate trans_chain
+        loop {
+            let mut is_modify = false;
+            let mut new_trans_chain = vec![];
+            for tran_chain in trans_chain.iter() {
+                let from_tran = tran_chain.last().cloned().unwrap_or_default();
+                if let Some(to_trans) = self.rels.get(&from_tran) {
+                    for to_tran in to_trans {
+                        if !tran_chain.contains(to_tran) {
+                            let mut new_tran_chain = tran_chain.clone();
+                            new_tran_chain.push(to_tran.clone());
+                            if !trans_chain.contains(&new_tran_chain) {
+                                is_modify = true;
+                                new_trans_chain.push(new_tran_chain);
+                            }
+                        } else {
+                            new_trans_chain.push(tran_chain.clone());
+                        }
+                    }
+                } else {
+                    new_trans_chain.push(tran_chain.clone());
+                }
+            }
+            trans_chain = new_trans_chain;
+            if !is_modify {
+                break;
+            }
+            warn!("check state loop trans_chain: {:?}", trans_chain);
+        }
+
+        #[derive(Debug)]
+        struct  StateChain {
+            chain: Vec<String>,
+            current_state: String,
+        }
+        for tran_chain in trans_chain {
+            let mut state_chains:Vec<StateChain> = vec![];
+            for (from_state, to_state) in tran_chain {
+                if let Some(state_chain) = state_chains.iter_mut().find(|state_chain| state_chain.current_state == from_state) {
+                    state_chain.chain.push(to_state.clone());
+                    state_chain.current_state = to_state.clone();
+                } else {
+                    state_chains.push(StateChain {
+                        chain: vec![from_state, to_state.clone()],
+                        current_state: to_state.clone(),
+                    })
+                }
+            }
+            warn!("check state loop state_chains: {:?}", state_chains);
+        }
+
+        true
+    }
 }
 
 pub fn check(models: &HashMap<String, FlowModelDetailResp>) -> bool {
@@ -180,5 +245,5 @@ pub fn check(models: &HashMap<String, FlowModelDetailResp>) -> bool {
     transation_graph.remove_empty_ele();
     warn!("debug after remove: {:?}", transation_graph);
 
-    transation_graph.check_state_loop()
+    transation_graph.check_state_loop1()
 }
