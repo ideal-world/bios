@@ -26,9 +26,9 @@ pub fn json_to_sea_orm_value(json_value: &serde_json::Value, like_kind: &BasicQu
             Err(_) => {
                 if like_kind == &BasicQueryOpKind::Like || like_kind == &BasicQueryOpKind::NotLike {
                     Some(vec![sea_orm::Value::from(format!("%{val}%"))])
-                } else if like_kind == &BasicQueryOpKind::LLike {
+                } else if like_kind == &BasicQueryOpKind::LLike || like_kind == &BasicQueryOpKind::NotLLike {
                     Some(vec![sea_orm::Value::from(format!("%{val}"))])
-                } else if like_kind == &BasicQueryOpKind::RLike {
+                } else if like_kind == &BasicQueryOpKind::RLike || like_kind == &BasicQueryOpKind::NotRLike {
                     Some(vec![sea_orm::Value::from(format!("{val}%"))])
                 } else {
                     Some(vec![sea_orm::Value::from(val)])

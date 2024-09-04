@@ -62,12 +62,16 @@ pub enum BasicQueryOpKind {
     Le,
     #[oai(rename = "like")]
     Like,
-    #[oai(rename = "l_like")]
-    LLike,
-    #[oai(rename = "r_like")]
-    RLike,
     #[oai(rename = "not_like")]
     NotLike,
+    #[oai(rename = "l_like")]
+    LLike,
+    #[oai(rename = "not_l_like")]
+    NotLLike,
+    #[oai(rename = "r_like")]
+    RLike,
+    #[oai(rename = "not_r_like")]
+    NotRLike,
     #[oai(rename = "in")]
     In,
     #[oai(rename = "not_in")]
@@ -92,9 +96,11 @@ impl BasicQueryOpKind {
             BasicQueryOpKind::Lt => "<".to_string(),
             BasicQueryOpKind::Le => "<=".to_string(),
             BasicQueryOpKind::Like => "LIKE".to_string(),
-            BasicQueryOpKind::LLike => "LIKE".to_string(),
-            BasicQueryOpKind::RLike => "LIKE".to_string(),
             BasicQueryOpKind::NotLike => "NOT LIKE".to_string(),
+            BasicQueryOpKind::LLike => "LIKE".to_string(),
+            BasicQueryOpKind::NotLLike => "NOT LIKE".to_string(),
+            BasicQueryOpKind::RLike => "LIKE".to_string(),
+            BasicQueryOpKind::NotRLike => "NOT LIKE".to_string(),
             BasicQueryOpKind::In => "IN".to_string(),
             BasicQueryOpKind::NotIn => "NOT IN".to_string(),
             BasicQueryOpKind::IsNull => "IS NULL".to_string(),

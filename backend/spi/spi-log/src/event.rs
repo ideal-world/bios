@@ -22,5 +22,12 @@ pub async fn handle_events() -> TardisResult<()> {
     }
     // let topic = get_topic(&SPI_RPC_TOPIC).expect("topic not initialized");
 
+    topic
+        .create_endpoint([Interest::new("spi-log/*")])
+        .await
+        .map_err(mq_error)?
+        .create_event_loop()
+        .with_handler(ContextHandler(handle_add_event))
+        .spawn();
     Ok(())
 }
