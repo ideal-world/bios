@@ -29,7 +29,7 @@ pub async fn handle_events() -> TardisResult<()> {
     use bios_sdk_invoke::clients::event_client::asteroid_mq::prelude::*;
     if let Some(topic) = get_topic(&SPI_RPC_TOPIC) {
         topic
-            .create_endpoint([Interest::new("search/*")])
+            .create_endpoint([Interest::new("spi-search/*")])
             .await
             .map_err(mq_error)?
             .create_event_loop()
@@ -38,16 +38,6 @@ pub async fn handle_events() -> TardisResult<()> {
             .with_handler(ContextHandler(handle_delete_event))
             .spawn();
     }
-    // let topic = get_topic(&SPI_RPC_TOPIC).expect("topic not initialized");
 
-    topic
-        .create_endpoint([Interest::new("spi-search/*")])
-        .await
-        .map_err(mq_error)?
-        .create_event_loop()
-        .with_handler(ContextHandler(handle_modify_event))
-        .with_handler(ContextHandler(handle_add_event))
-        .with_handler(ContextHandler(handle_delete_event))
-        .spawn();
     Ok(())
 }
