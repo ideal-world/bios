@@ -71,7 +71,7 @@ async fn init_data() -> TardisResult<()> {
         )
         .await;
 
-        let bs_v2_id: String = client
+    let bs_v2_id: String = client
         .post(
             "/ci/manage/bs",
             &SpiBsAddReq {

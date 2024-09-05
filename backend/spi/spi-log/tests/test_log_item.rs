@@ -262,16 +262,16 @@ pub async fn test_v2(client: &mut TestHttpClient) -> TardisResult<()> {
         owner: "app002".to_string(),
         ..Default::default()
     })?;
-    
+
     let _: Void = client
-    .post(
-        "/ci/item",
-        &json!({
-            "tag":"audit",
-            "content": "账号[xxxx]登录系统",
-            "op":"login"
-        }),
-    )
-    .await;
+        .post(
+            "/ci/item",
+            &json!({
+                "tag":"audit",
+                "content": "账号[xxxx]登录系统",
+                "op":"login"
+            }),
+        )
+        .await;
     Ok(())
 }
