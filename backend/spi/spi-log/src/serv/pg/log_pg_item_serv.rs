@@ -18,7 +18,7 @@ pub async fn add(add_req: &mut LogItemAddReq, _funs: &TardisFunsInst, ctx: &Tard
         Value::from(add_req.kind.as_ref().unwrap_or(&"".into()).to_string()),
         Value::from(add_req.key.as_ref().unwrap_or(&"".into()).to_string()),
         Value::from(add_req.op.as_ref().unwrap_or(&"".to_string()).as_str()),
-        Value::from(add_req.content.as_str()),
+        Value::from(TardisFuns::json.json_to_string(add_req.content.clone())?.as_str()),
         Value::from(add_req.owner.as_ref().unwrap_or(&"".to_string()).as_str()),
         Value::from(add_req.own_paths.as_ref().unwrap_or(&"".to_string()).as_str()),
         Value::from(if let Some(ext) = &add_req.ext {
@@ -481,13 +481,15 @@ ORDER BY ts DESC
             if total_size == 0 {
                 total_size = item.try_get("", "total")?;
             }
+            let content:String = item.try_get("", "content")?;
+            let content = TardisFuns::json.str_to_json(&content)?;
             Ok(LogItemFindResp {
                 ts: item.try_get("", "ts")?,
                 id: item.try_get("", "id")?,
                 key: item.try_get("", "key")?,
                 op: item.try_get("", "op")?,
                 ext: item.try_get("", "ext")?,
-                content: item.try_get("", "content")?,
+                content,
                 rel_key: item.try_get("", "rel_key")?,
                 kind: item.try_get("", "kind")?,
                 owner: item.try_get("", "owner")?,

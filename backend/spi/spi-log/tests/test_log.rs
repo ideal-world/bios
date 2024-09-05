@@ -92,7 +92,7 @@ async fn init_data() -> TardisResult<()> {
     let _: Void = client.put(&format!("/ci/manage/bs/{}/rel/{}", bs_id, app001), &Void {}).await;
     let _: Void = client.put(&format!("/ci/manage/bs/{}/rel/{}", bs_v2_id, app002), &Void {}).await;
 
-    // test_log_item::test(app001, &mut client).await?;
+    test_log_item::test(app001, &mut client).await?;
     test_log_item::test(app002, &mut client).await?;
     Ok(())
 }
