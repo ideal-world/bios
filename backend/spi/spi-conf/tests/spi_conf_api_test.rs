@@ -18,14 +18,14 @@ use spi_conf_test_common::*;
 
 #[tokio::test]
 async fn spi_conf_namespace_test() -> TardisResult<()> {
-    std::env::set_var("RUST_LOG", "info,sqlx=off,sea_orm=debug,spi_conf_namespace_test=DEBUG,bios_spi_conf=TRACE");
+    std::env::set_var("RUST_LOG", "info,sqlx=off,sea_orm=info,spi_conf_namespace_test=info,bios_spi_conf=TRACE");
     let docker = testcontainers::clients::Cli::default();
     let container_hold = init_tardis(&docker).await?;
     start_web_server().await?;
     let mut client = TestHttpClient::new("https://127.0.0.1:8080/spi-conf".to_string());
     client.set_auth(&TardisContext {
         own_paths: "t1/app001".to_string(),
-        ak: "app001".to_string(),
+        // ak: "app001".to_string(),
         roles: vec![],
         groups: vec![],
         owner: "app001".to_string(),
@@ -36,19 +36,25 @@ async fn spi_conf_namespace_test() -> TardisResult<()> {
         .put(
             "/ci/auth/register_bundle",
             &json!({
-                "app_tenant_id": "app001",
                 "username": "nacos",
                 "backend_service": {
-                    "type": "new",
-                    "value": {
-                        "name": "spi-nacos-app01",
-                    }
+                    "type": "new"
+                    // "value": {
+                    //     "name": "spi-nacos-app01",
+                    // }
                 }
             }),
         )
         .await;
     log::info!("username: {username}, password: {password}");
-
+    client.set_auth(&TardisContext {
+        own_paths: "t1/app001".to_string(),
+        ak: "app001".to_string(),
+        roles: vec![],
+        groups: vec![],
+        owner: "app001".to_string(),
+        ..Default::default()
+    })?;
     test_register(&mut client).await?;
     test_curd(&mut client).await?;
     test_tags(&mut client).await?;
@@ -343,7 +349,7 @@ VALUE=123
 URL=http://www.baidu.com
 # this is a comment
 "#,
-                "group": "".to_string(),
+                "group": "DEFAULT-GROUP".to_string(),
                 "data_id": ".env".to_string(),
                 "schema": "env",
                 "namespace_id": NAMESPACE_ID.to_string(),
@@ -388,7 +394,7 @@ TYPE=BETA
 VALUE=456
 URL=http://www.google.com
 "#,
-                "group": "".to_string(),
+                "group": "DEFAULT-GROUP".to_string(),
                 "data_id": ".env".to_string(),
                 "schema": "env",
                 "namespace_id": NAMESPACE_ID.to_string(),

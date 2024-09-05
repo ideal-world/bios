@@ -16,6 +16,7 @@ use super::ConfigDescriptor;
 
 tardis_static! {
     pub place_holder_regex: Regex = Regex::new(r"\$(CERT|ENV)\{(.*?)\}").expect("invalid content replace regex");
+    pub cert_holder_regex: Regex = Regex::new(r"\$CERT\{(.*?)\}").expect("invalid content replace regex");
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -23,6 +24,12 @@ enum Segment<'s> {
     Raw(&'s str),
     CertReplace { key: &'s str },
     EnvReplace { key: &'s str },
+}
+
+impl Segment<'_> {
+    pub fn is_raw(&self) -> bool {
+        matches!(self, Segment::Raw(_))
+    }
 }
 
 fn parse_content(content: &str) -> Vec<Segment<'_>> {
@@ -46,19 +53,18 @@ fn parse_content(content: &str) -> Vec<Segment<'_>> {
 }
 
 #[derive(Debug)]
-pub struct RenderPolicy {
+struct RenderPolicy {
     pub render_cert: bool,
     pub render_env: bool,
 }
-pub async fn render_content(
+async fn render_content(
     descriptor: &ConfigDescriptor,
-    content: String,
+    segments: Vec<Segment<'_>>,
     config: &ConfConfig,
     policy: RenderPolicy,
     funs: &tardis::TardisFunsInst,
     ctx: &TardisContext,
 ) -> TardisResult<String> {
-    let segments = parse_content(&content);
     // render
     let cert_keys = segments.iter().fold(HashSet::new(), |mut set, seg| {
         if let Segment::CertReplace { key } = seg {
@@ -72,16 +78,16 @@ pub async fn render_content(
         }
         set
     });
-    let kv_cert_map = if cert_keys.is_empty() || !policy.render_cert {
-        HashMap::new()
-    } else {
-        get_cert_kvmap(cert_keys, config, funs, ctx).await.unwrap_or_default()
-    };
-
     let kv_env_map = if env_keys.is_empty() || !policy.render_env {
         HashMap::new()
     } else {
         get_env_kvmap(&descriptor.namespace_id, env_keys, config, funs, ctx).await.unwrap_or_default()
+    };
+
+    let kv_cert_map = if cert_keys.is_empty() || !policy.render_cert {
+        HashMap::new()
+    } else {
+        get_cert_kvmap(cert_keys, config, funs, ctx).await.unwrap_or_default()
     };
 
     let content = segments.into_iter().fold(String::new(), |content, seg| match seg {
@@ -103,8 +109,8 @@ async fn get_cert_kvmap(codes: HashSet<&str>, config: &ConfConfig, funs: &tardis
 async fn get_env_kvmap(namespace: &str, codes: HashSet<&str>, config: &ConfConfig, funs: &tardis::TardisFunsInst, ctx: &TardisContext) -> TardisResult<HashMap<String, String>> {
     let mut env_config_descriptor = ConfigDescriptor {
         namespace_id: namespace.to_string(),
-        group: String::new(),
-        data_id: config.namespace_env_config.to_string(),
+        group: config.group_env_config.to_string(),
+        data_id: config.data_id_env_config.to_string(),
         ..Default::default()
     };
     thread_local! {
@@ -140,18 +146,27 @@ pub fn has_placeholder_auth(source_addr: IpAddr, funs: &tardis::TardisFunsInst) 
 
 pub async fn render_content_for_ip(
     raw_descriptor: &ConfigDescriptor,
-    content: String,
+    mut content: String,
     source_addr: Option<IpAddr>,
     funs: &tardis::TardisFunsInst,
     ctx: &tardis::basic::dto::TardisContext,
 ) -> TardisResult<String> {
     let cfg = funs.conf::<ConfConfig>();
     // let level = get_scope_level_by_context(ctx)?;
-    let render_cert = source_addr.map(|ip|has_placeholder_auth(ip, funs)).unwrap_or(false);
-    let render_env = true;
+    let render_cert = source_addr.map(|ip| has_placeholder_auth(ip, funs)).unwrap_or(false);
+    let render_env = render_cert;
     let render_policy = RenderPolicy { render_cert, render_env };
     tardis::tracing::trace!(?source_addr, ?ctx, ?render_policy, "[BIOS.Spi-Config] Trying to render config");
-    render_content(raw_descriptor, content, cfg.as_ref(), RenderPolicy { render_cert, render_env }, funs, ctx).await
+    let segments = parse_content(&content);
+    content = render_content(raw_descriptor, segments, cfg.as_ref(), RenderPolicy { render_cert, render_env }, funs, ctx).await?;
+    let segments_order_2 = parse_content(&content);
+    if segments_order_2.iter().all(Segment::is_raw) {
+        return Ok(content);
+    } else {
+        // second order render for it
+        content = render_content(raw_descriptor, segments_order_2, cfg.as_ref(), RenderPolicy { render_cert, render_env }, funs, ctx).await?;
+    }
+    Ok(content)
 }
 
 #[test]
