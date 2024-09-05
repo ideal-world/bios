@@ -29,7 +29,7 @@ pub async fn handle_events() -> TardisResult<()> {
     use bios_sdk_invoke::clients::event_client::asteroid_mq::prelude::*;
     if let Some(topic) = get_topic(&SPI_RPC_TOPIC) {
         topic
-            .create_endpoint([Interest::new("spi-search/*")])
+            .create_endpoint([Interest::new("search/*")])
             .await
             .map_err(mq_error)?
             .create_event_loop()
