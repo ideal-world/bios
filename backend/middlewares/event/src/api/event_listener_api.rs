@@ -20,7 +20,6 @@ impl EventListenerApi {
     /// 注册事件监听器
     #[oai(path = "/", method = "post")]
     async fn register(&self, listener: Json<EventListenerRegisterReq>) -> TardisApiResult<EventListenerRegisterResp> {
-
         TardisResp::err(TardisError::not_implemented("unimplemented", "unimplemented"))
     }
 
@@ -30,6 +29,5 @@ impl EventListenerApi {
     #[oai(path = "/:listener_code", method = "delete")]
     async fn remove(&self, listener_code: Path<String>, token: Query<String>) -> TardisApiResult<Void> {
         TardisResp::err(TardisError::not_implemented("unimplemented", "unimplemented"))
-
     }
 }

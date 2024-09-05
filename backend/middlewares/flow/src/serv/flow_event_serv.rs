@@ -3,7 +3,8 @@ use std::{collections::HashMap, str::FromStr};
 use async_recursion::async_recursion;
 use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
 use bios_sdk_invoke::clients::{
-    event_client::{get_topic, mq_error, EventAttributeExt}, flow_client::{event::FLOW_AVATAR, FlowFrontChangeReq}
+    event_client::{get_topic, mq_error, EventAttributeExt},
+    flow_client::{event::FLOW_AVATAR, FlowFrontChangeReq},
 };
 use rust_decimal::Decimal;
 use serde_json::{json, Value};
@@ -28,7 +29,8 @@ use crate::{
             FlowTransitionActionByStateChangeInfo, FlowTransitionActionByVarChangeInfoChangedKind, FlowTransitionActionChangeAgg, FlowTransitionActionChangeKind,
             FlowTransitionFrontActionInfo, FlowTransitionFrontActionRightValue, StateChangeConditionOp, TagRelKind,
         },
-    }, event::FLOW_TOPIC,
+    },
+    event::FLOW_TOPIC,
 };
 
 use super::{flow_external_serv::FlowExternalServ, flow_inst_serv::FlowInstServ, flow_model_serv::FlowModelServ, flow_state_serv::FlowStateServ};
@@ -369,8 +371,16 @@ impl FlowEventServ {
             )
             .await?;
             if let Some(topic) = get_topic(&FLOW_TOPIC) {
-                topic.send_event(FlowFrontChangeReq { inst_id: flow_inst_detail.id.to_string() }.inject_context(funs, ctx).json()).await.map_err(mq_error)?;
-                
+                topic
+                    .send_event(
+                        FlowFrontChangeReq {
+                            inst_id: flow_inst_detail.id.to_string(),
+                        }
+                        .inject_context(funs, ctx)
+                        .json(),
+                    )
+                    .await
+                    .map_err(mq_error)?;
             } else {
                 FlowEventServ::do_front_change(&flow_inst_detail.id, ctx, funs).await?;
             }

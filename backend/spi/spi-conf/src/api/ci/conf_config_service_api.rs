@@ -49,9 +49,8 @@ impl ConfCiConfigServiceApi {
         };
         let funs = crate::get_tardis_inst();
         let mut content = get_config(&mut descriptor, &funs, &ctx.0).await?;
-        if let Some(ip) = real_ip.0 {
-            content = render_content_for_ip(content, ip, &funs, &ctx.0).await?;
-        }
+        content = render_content_for_ip(&descriptor, content, real_ip.0, &funs, &ctx.0).await?;
+
         TardisResp::ok(content)
     }
     #[oai(path = "/config/detail", method = "get")]
@@ -81,9 +80,9 @@ impl ConfCiConfigServiceApi {
         };
         let funs = crate::get_tardis_inst();
         let mut config_item = get_config_detail(&mut descriptor, &funs, &ctx.0).await?;
-        if let Some(ip) = real_ip.0 {
-            config_item.content = render_content_for_ip(config_item.content, ip, &funs, &ctx.0).await?;
-        }
+        config_item.content = render_content_for_ip(&descriptor, config_item.content, real_ip.0, &funs, &ctx.0).await?;
+        config_item.md5 = gen_md5(&config_item.content);
+
         TardisResp::ok(config_item)
     }
     #[oai(path = "/config", method = "post")]
@@ -127,6 +126,7 @@ impl ConfCiConfigServiceApi {
         data_id: Query<String>,
         md5: Query<Option<String>>,
         ctx: TardisContextExtractor,
+        real_ip: RealIp,
     ) -> TardisApiResult<Option<ConfigDescriptor>> {
         let mut namespace_id = namespace_id.0.or(tenant.0).unwrap_or("public".into());
         if namespace_id.is_empty() {
@@ -140,7 +140,7 @@ impl ConfCiConfigServiceApi {
         };
         let md5 = md5.0.unwrap_or_default();
         let funs = crate::get_tardis_inst();
-        let config = if md5.is_empty() || md5 != get_md5(&mut descriptor, &funs, &ctx.0).await? {
+        let config = if md5.is_empty() || md5 != get_md5(&mut descriptor, real_ip.0, &funs, &ctx.0).await? {
             // if md5 is empty or changed, return descriptor
             Some(descriptor)
         } else {

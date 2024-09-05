@@ -141,16 +141,6 @@ impl FlowCtModelApi {
                 &ctx.0,
             )
             .await?;
-            FlowInstServ::batch_update_when_switch_model(
-                orginal_models.get(&new_model.tag).map(|orginal_model| orginal_model.id.clone()),
-                &new_model.tag,
-                &new_model.id,
-                new_model.states.clone(),
-                &new_model.init_state_id,
-                &funs,
-                &ctx.0,
-            )
-            .await?;
             result.insert(from_model.rel_model_id.clone(), new_model);
         }
         funs.commit().await?;

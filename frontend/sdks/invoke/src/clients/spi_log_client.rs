@@ -16,11 +16,10 @@ use crate::{clients::base_spi_client::BaseSpiClient, invoke_constants::DYNAMIC_L
 pub mod event {
     use asteroid_mq::prelude::*;
 
-
     pub const LOG_AVATAR: &str = "spi-log";
 
     impl EventAttribute for super::LogItemAddReq {
-        const SUBJECT: Subject = Subject::const_new(b"spi-log/add");
+        const SUBJECT: Subject = Subject::const_new(b"spi/add");
     }
 }
 #[derive(Debug, Default, Clone)]
