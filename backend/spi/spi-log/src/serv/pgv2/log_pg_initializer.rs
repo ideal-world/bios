@@ -27,7 +27,7 @@ pub async fn init_table_and_conn(bs_inst: TypedSpiBsInst<'_, TardisRelDBClient>,
                   rel_key       varchar NOT NULL,
                   ext           jsonb NOT NULL,
                   disable       boolean NOT NULL DEFAULT false,
-                  msg           varchar NOT NULL,
+                  msg           varchar NOT NULL
                 );"#,
                 log_constants::PARENT_TABLE_NAME
             ),
@@ -43,7 +43,7 @@ pub async fn init_table_and_conn(bs_inst: TypedSpiBsInst<'_, TardisRelDBClient>,
             &format!(
                 r#"CREATE TABLE IF NOT EXISTS {schema_name}.{CONFIG_TABLE_NAME}(
                   table_name VARCHAR NOT NULL,
-                  ref_field VARCHAR NOT NULL,
+                  ref_field VARCHAR NOT NULL
                 );"#
             ),
             vec![],
@@ -70,8 +70,8 @@ pub async fn init_table_and_conn(bs_inst: TypedSpiBsInst<'_, TardisRelDBClient>,
         mgr,
         Some(tag),
         log_constants::TABLE_LOG_FLAG_V2,
-        r#""#,
-        Some(crate::log_constants::PARENT_TABLE_NAME.to_string()),
+        "",
+        Some(format!("{schema_name}.{}", crate::log_constants::PARENT_TABLE_NAME)),
         vec![
             ("kind", "btree"),
             ("ts", "btree"),

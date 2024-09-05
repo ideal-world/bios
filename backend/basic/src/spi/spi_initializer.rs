@@ -182,7 +182,7 @@ pub mod common_pg {
     /// 根据入参生成对应表全限定名
     pub fn get_table_full_name(ext: &HashMap<String, String>, table_flag: String, tag: String) -> String {
         let schema_name = get_schema_name_from_ext(ext).expect("ignore");
-        return format!("{schema_name}.{GLOBAL_STORAGE_FLAG}_{table_flag}{tag}");
+        return format!("{schema_name}.{GLOBAL_STORAGE_FLAG}_{table_flag}_{tag}");
     }
 
     /// Check if the schema exists
@@ -363,7 +363,7 @@ pub mod common_pg {
     {table_create_content}
             ){}"#,
                 if let Some(inherits) = table_inherits {
-                    format!(" inherits {inherits}")
+                    format!(" INHERITS ({inherits})")
                 } else {
                     "".to_string()
                 }

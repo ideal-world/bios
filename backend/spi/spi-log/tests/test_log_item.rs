@@ -5,13 +5,13 @@ use tardis::basic::result::TardisResult;
 use tardis::serde_json::json;
 use tardis::web::web_resp::{TardisPage, TardisResp, Void};
 
-pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
+pub async fn test(app: &str, client: &mut TestHttpClient) -> TardisResult<()> {
     client.set_auth(&TardisContext {
-        own_paths: "t1/app001".to_string(),
-        ak: "app001".to_string(),
+        own_paths: format!("t1/{}", app),
+        ak: app.to_string(),
         roles: vec![],
         groups: vec![],
-        owner: "app001".to_string(),
+        owner: app.to_string(),
         ..Default::default()
     })?;
 
@@ -40,6 +40,27 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
         )
         .await;
 
+    // add ref_field config
+    let _: Void = client
+        .post(
+            "/ci/item/config",
+            &json!({
+                "tag":"feed",
+                "ref_field": "content"
+            }),
+        )
+        .await;
+
+    let _: Void = client
+        .post(
+            "/ci/item/config",
+            &json!({
+                "tag":"feed",
+                "ref_field": "title"
+            }),
+        )
+        .await;
+
     let _: Void = client
         .post(
             "/ci/item",
@@ -49,6 +70,20 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
                 "content": {"assign_to":"account004"},
                 "op":"modify",
                 "ts":"2022-09-27T23:23:59.000Z",
+                "rel_key":"app001"
+            }),
+        )
+        .await;
+
+    let _: Void = client
+        .post(
+            "/ci/item",
+            &json!({
+                "tag":"feed",
+                "key": "001",
+                "content": {"content":"在项目管理系统中，当用户点击任务卡片时，弹出一个详细信息窗口，显示任务的优先级、截止日期、负责人等关键信息。用户可以直接在窗口中编辑这些字段，系统会实时保存更改并通知相关人员。"},
+                "op":"modify",
+                "ts":"2022-09-28T23:23:59.000Z",
                 "rel_key":"app001"
             }),
         )
@@ -118,7 +153,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
             }),
         )
         .await;
-    assert_eq!(find_result.total_size, 3);
+    assert_eq!(find_result.total_size, 4);
     assert_eq!(find_result.records[0].key, "001");
     assert_eq!(find_result.records[0].op, "modify");
 
@@ -133,7 +168,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
             }),
         )
         .await;
-    assert_eq!(find_result.total_size, 2);
+    assert_eq!(find_result.total_size, 3);
     assert_eq!(find_result.records[0].key, "001");
     assert_eq!(find_result.records[0].op, "modify");
 
@@ -164,7 +199,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
             }),
         )
         .await;
-    assert_eq!(find_result.total_size, 2);
+    assert_eq!(find_result.total_size, 3);
     assert_eq!(find_result.records[0].key, "001");
     assert_eq!(find_result.records[0].op, "modify");
 
@@ -197,7 +232,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
             }),
         )
         .await;
-    assert_eq!(find_result.total_size, 2);
+    assert_eq!(find_result.total_size, 3);
     assert_eq!(find_result.records[0].key, "001");
     assert_eq!(find_result.records[0].op, "modify");
 
@@ -250,28 +285,5 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
     assert_eq!(find_result.total_size, 1);
     assert_eq!(find_result.records[0].key, "001");
     assert_eq!(find_result.records[0].op, "init");
-    Ok(())
-}
-
-pub async fn test_v2(client: &mut TestHttpClient) -> TardisResult<()> {
-    client.set_auth(&TardisContext {
-        own_paths: "t1/app002".to_string(),
-        ak: "".to_string(),
-        roles: vec![],
-        groups: vec![],
-        owner: "app002".to_string(),
-        ..Default::default()
-    })?;
-
-    let _: Void = client
-        .post(
-            "/ci/item",
-            &json!({
-                "tag":"audit",
-                "content": "账号[xxxx]登录系统",
-                "op":"login"
-            }),
-        )
-        .await;
     Ok(())
 }

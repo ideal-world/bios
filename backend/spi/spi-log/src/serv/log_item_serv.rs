@@ -1,5 +1,4 @@
 use tardis::basic::result::TardisResult;
-use tardis::web::web_resp::{TardisPage, Void};
 
 use bios_basic::spi::spi_constants;
 use bios_basic::spi::spi_funs::SpiBsInstExtractor;
@@ -7,6 +6,7 @@ use bios_basic::spi_dispatch_service;
 
 use crate::dto::log_item_dto::{LogConfigReq, LogItemAddReq, LogItemFindReq, LogItemFindResp};
 use crate::log_initializer;
+use tardis::web::web_resp::TardisPage;
 
 use super::super::log_constants;
 use super::pg;

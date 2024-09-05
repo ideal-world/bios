@@ -13,11 +13,16 @@ use tardis::{
     TardisFuns, TardisFunsInst,
 };
 
-use bios_basic::{dto::BasicQueryCondInfo, enumeration::BasicQueryOpKind, helper::db_helper, spi::spi_funs::SpiBsInst};
+use bios_basic::{
+    dto::BasicQueryCondInfo,
+    enumeration::BasicQueryOpKind,
+    helper::db_helper,
+    spi::{spi_funs::SpiBsInst, spi_initializer::common_pg::get_schema_name_from_ext},
+};
 
 use crate::{
     dto::log_item_dto::{AdvBasicQueryCondInfo, LogConfigReq, LogItemAddReq, LogItemFindReq, LogItemFindResp},
-    log_constants::{LOG_REF_FLAG, TABLE_LOG_FLAG},
+    log_constants::{CONFIG_TABLE_NAME, LOG_REF_FLAG, TABLE_LOG_FLAG_V2},
 };
 
 use super::log_pg_initializer;
@@ -45,7 +50,7 @@ pub async fn add(add_req: &mut LogItemAddReq, _funs: &TardisFunsInst, ctx: &Tard
             let last_content: JsonValue = last_record.try_get("", "content")?;
             let last_ts: DateTime<Utc> = last_record.try_get("", "ts")?;
             let last_key: String = last_record.try_get("", "key")?;
-            let ref_fields = get_ref_fields_by_table_name(&conn, &table_name).await?;
+            let ref_fields = get_ref_fields_by_table_name(&conn, &get_schema_name_from_ext(&inst.ext).expect("ignore"), &table_name).await?;
             insert_content = last_content;
             for ref_field in ref_fields {
                 if let Some(field_value) = insert_content.get_mut(&ref_field) {
@@ -575,7 +580,7 @@ ORDER BY ts DESC
         })
         .collect::<TardisResult<Vec<_>>>()?;
 
-    // Cache the ref_value to true_value
+    // Stores the mapping relationship between ref_value and true_value
     let mut cache_value = HashMap::<String, JsonValue>::new();
 
     for log in &mut result {
@@ -584,8 +589,10 @@ ORDER BY ts DESC
                 if is_log_ref(v) {
                     if let Some(v_str) = v.as_str() {
                         let ref_string = v_str.to_string();
-                        if let Some(true_value) = cache_value.get(&ref_string) {
-                            *v = true_value.clone();
+                        if let Some(true_content) = cache_value.get(&ref_string) {
+                            if let Some(true_value) = true_content.get(k) {
+                                *v = true_value.clone();
+                            }
                         } else {
                             let (ts, key) = parse_ref_ts_key(v_str)?;
                             if let Some(query_result) =
@@ -594,8 +601,8 @@ ORDER BY ts DESC
                                 let query_content: JsonValue = query_result.try_get("", "content")?;
                                 if let Some(query_true_value) = query_content.get(k) {
                                     *v = query_true_value.clone();
-                                    cache_value.insert(ref_string, query_true_value.clone());
                                 }
+                                cache_value.insert(ref_string, query_content);
                             }
                         }
                     }
@@ -613,13 +620,14 @@ ORDER BY ts DESC
 }
 
 pub async fn add_config(req: &LogConfigReq, _funs: &TardisFunsInst, _ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
-    let table_full_name = bios_basic::spi::spi_initializer::common_pg::get_table_full_name(&inst.ext, TABLE_LOG_FLAG.to_string(), req.tag.clone());
+    let table_full_name = bios_basic::spi::spi_initializer::common_pg::get_table_full_name(&inst.ext, TABLE_LOG_FLAG_V2.to_string(), req.tag.clone());
+    let schema_name = get_schema_name_from_ext(&inst.ext).expect("ignore");
     let bs_inst = inst.inst::<TardisRelDBClient>();
     if bs_inst
         .0
         .conn()
         .query_one(
-            &format!("select table_name,ref_field from {table_full_name} where table_name = $1 and ref_field = $2"),
+            &format!("select table_name,ref_field from {schema_name}.{CONFIG_TABLE_NAME} where table_name = $1 and ref_field = $2"),
             vec![Value::from(table_full_name.clone()), Value::from(req.ref_field.clone())],
         )
         .await?
@@ -632,7 +640,7 @@ pub async fn add_config(req: &LogConfigReq, _funs: &TardisFunsInst, _ctx: &Tardi
             .0
             .conn()
             .execute_one(
-                &format!("insert into {table_full_name}(table_name,ref_field) VALUES ($1,$2)"),
+                &format!("insert into {schema_name}.{CONFIG_TABLE_NAME}(table_name,ref_field) VALUES ($1,$2)"),
                 vec![Value::from(table_full_name), Value::from(req.ref_field.clone())],
             )
             .await?;
@@ -641,26 +649,35 @@ pub async fn add_config(req: &LogConfigReq, _funs: &TardisFunsInst, _ctx: &Tardi
 }
 
 pub async fn delete_config(config: &mut LogConfigReq, _funs: &TardisFunsInst, _ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
-    let table_full_name = bios_basic::spi::spi_initializer::common_pg::get_table_full_name(&inst.ext, TABLE_LOG_FLAG.to_string(), config.tag.clone());
+    let table_full_name = bios_basic::spi::spi_initializer::common_pg::get_table_full_name(&inst.ext, TABLE_LOG_FLAG_V2.to_string(), config.tag.clone());
+    let schema_name = get_schema_name_from_ext(&inst.ext).expect("ignore");
     let bs_inst = inst.inst::<TardisRelDBClient>();
     bs_inst
         .0
         .conn()
         .execute_one(
-            &format!("delete from {table_full_name} where table_name = $1 and ref_field = $2"),
+            &format!("delete from {schema_name}.{CONFIG_TABLE_NAME} where table_name = $1 and ref_field = $2"),
             vec![Value::from(table_full_name), Value::from(config.ref_field.clone())],
         )
         .await?;
     return Ok(());
 }
 
-async fn get_ref_fields_by_table_name(conn: &TardisRelDBlConnection, table_name: &str) -> TardisResult<Vec<String>> {
-    if let Some(query_result) = conn.query_one(&format!("select ref_field from {table_name} where table_name = $1"), vec![Value::from(table_name)]).await? {
-        let ref_fields = query_result.try_get_many("", &["ref_field".to_string()])?;
-        return Ok(ref_fields);
-    } else {
-        return Ok(vec![]);
-    };
+async fn get_ref_fields_by_table_name(conn: &TardisRelDBlConnection, schema_name: &str, table_full_name: &str) -> TardisResult<Vec<String>> {
+    let query_results = conn
+        .query_all(
+            &format!("select ref_field from {schema_name}.{CONFIG_TABLE_NAME} where table_name = $1"),
+            vec![Value::from(table_full_name)],
+        )
+        .await?;
+
+    let mut ref_fields = Vec::new();
+    for row in query_results {
+        let ref_field: String = row.try_get("", "ref_field")?;
+        ref_fields.push(ref_field);
+    }
+
+    Ok(ref_fields)
 }
 
 #[cfg(test)]
