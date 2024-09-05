@@ -244,7 +244,7 @@ impl IamSearchClient {
     pub async fn delete_account_search(account_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let tag = funs.conf::<IamConfig>().spi.search_account_tag.clone();
         if let Some(_topic) = get_topic(&SPI_RPC_TOPIC) {
-            EventCenterClient { topic_code: SPI_RPC_TOPIC }.delete_item_and_name( &tag, account_id, funs, ctx).await?;
+            EventCenterClient { topic_code: SPI_RPC_TOPIC }.delete_item_and_name(&tag, account_id, funs, ctx).await?;
         } else {
             SpiSearchClient::delete_item_and_name(&tag, account_id, funs, ctx).await?;
         }

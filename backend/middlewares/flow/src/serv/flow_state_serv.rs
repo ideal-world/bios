@@ -23,12 +23,9 @@ use tardis::{
 
 use crate::{
     domain::{flow_inst, flow_model, flow_state, flow_transition},
-    dto::{
-        flow_model_dto::FlowModelFilterReq,
-        flow_state_dto::{
-            FlowStateAddReq, FlowStateCountGroupByStateReq, FlowStateCountGroupByStateResp, FlowStateDetailResp, FlowStateFilterReq, FlowStateKind, FlowStateModifyReq,
-            FlowStateNameResp, FlowStateSummaryResp, FlowSysStateKind,
-        },
+    dto::flow_state_dto::{
+        FlowStateAddReq, FlowStateCountGroupByStateReq, FlowStateCountGroupByStateResp, FlowStateDetailResp, FlowStateFilterReq, FlowStateKind, FlowStateModifyReq,
+        FlowStateNameResp, FlowStateSummaryResp, FlowSysStateKind,
     },
     flow_config::FlowBasicInfoManager,
     flow_constants,
@@ -308,36 +305,30 @@ impl FlowStateServ {
         ctx: &TardisContext,
     ) -> TardisResult<Vec<FlowStateNameResp>> {
         let mut flow_model_ids = None;
-        if let Some(app_ids) = app_ids {
-            let tenant_own_path = rbum_scope_helper::get_path_item(1, &ctx.own_paths);
-            if let Some(tenant_own_path) = tenant_own_path {
-                // collect app own path
-                let app_own_paths = app_ids.into_iter().map(|app_id| format!("{}/{}", &tenant_own_path, &app_id)).collect_vec();
-                // find flow models
-                flow_model_ids = Some(
-                    FlowModelServ::find_id_items(
-                        &FlowModelFilterReq {
-                            basic: RbumBasicFilterReq {
-                                with_sub_own_paths: true,
-                                ..Default::default()
-                            },
-                            tags: tag.clone().map(|tag| vec![tag]),
-                            own_paths: Some(app_own_paths),
-                            ..Default::default()
-                        },
-                        None,
-                        None,
-                        funs,
-                        ctx,
-                    )
-                    .await?,
-                );
+        if let Some(tenant_own_path) = rbum_scope_helper::get_path_item(1, &ctx.own_paths) {
+            if let Some(mut app_ids) = app_ids {
+                if let Some(app_own_paths) = app_ids.pop().map(|app_id| format!("{}/{}", &tenant_own_path, &app_id)) {
+                    let mock_ctx = TardisContext {
+                        own_paths: app_own_paths,
+                        ..ctx.clone()
+                    };
+                    flow_model_ids = Some(
+                        FlowModelServ::find_rel_models(None, false, funs, &mock_ctx)
+                            .await?
+                            .into_iter()
+                            .filter(|(current_tag, _model)| tag.is_none() || tag.clone().unwrap_or_default() == *current_tag)
+                            .map(|(_tag, model)| model.id)
+                            .collect_vec(),
+                    );
+                }
             }
         }
         let names = Self::find_detail_items(
             &FlowStateFilterReq {
                 basic: RbumBasicFilterReq {
                     ids,
+                    own_paths: Some("".to_string()),
+                    ignore_scope: true,
                     with_sub_own_paths: true,
                     ..Default::default()
                 },
@@ -361,17 +352,7 @@ impl FlowStateServ {
     }
 
     // For the old data migration, this function match id by old state name
-    pub(crate) async fn match_state_id_by_name(tag: &str, flow_model_id: &str, mut name: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
-        if tag == "ISSUE" {
-            name = match name {
-                "待开始" => "待处理",
-                "进行中" => "修复中",
-                "存在风险" => "修复中",
-                "已完成" => "已解决",
-                "已关闭" => "已关闭",
-                _ => name,
-            };
-        }
+    pub(crate) async fn match_state_id_by_name(flow_model_id: &str, name: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
         Ok(FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelState, flow_model_id, None, None, funs, ctx)
             .await?
             .into_iter()
