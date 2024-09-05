@@ -1,5 +1,6 @@
 use std::{
     collections::{HashMap, HashSet},
+    net::IpAddr,
     time::Duration,
 };
 
@@ -21,6 +22,7 @@ use tardis::{
 use crate::{
     conf_constants::*,
     dto::{conf_config_dto::*, conf_namespace_dto::*},
+    serv::{gen_md5, placeholder::render_content_for_ip},
 };
 
 // local memory cached md5
@@ -63,7 +65,6 @@ WHERE {placeholders}"#,
     Ok(())
 }
 pub async fn get_config(descriptor: &mut ConfigDescriptor, _funs: &TardisFunsInst, ctx: &TardisContext, bs_inst: &SpiBsInst) -> TardisResult<String> {
-    use md5 as gen_md5;
     descriptor.fix_namespace_id();
     let data_id = &descriptor.data_id;
     let group = &descriptor.group;
@@ -83,15 +84,6 @@ WHERE cc.namespace_id=$1 AND cc.grp=$2 AND cc.data_id=$3
         .await?
         .ok_or_else(|| TardisError::not_found("config not found", error::NAMESPACE_NOTFOUND))?;
     let content = qry_result.try_get::<String>("", "content")?;
-    let md5 = qry_result.try_get::<String>("", "md5")?;
-    // fix md5 automatically
-    let real_md5 = gen_md5(&content);
-    if md5 != real_md5 {
-        let update_result = fix_md5(descriptor, &real_md5, ctx, bs_inst).await;
-        if let Err(e) = update_result {
-            warn!("[Bios.spi-conf] update md5 failed: {}", e);
-        }
-    }
     Ok(content)
 }
 
@@ -153,7 +145,13 @@ WHERE c.namespace_id=$1 AND c.grp=$2 AND c.data_id=$3"#,
         ..Default::default()
     })
 }
-pub async fn get_md5(descriptor: &mut ConfigDescriptor, _funs: &TardisFunsInst, ctx: &TardisContext, bs_inst: &SpiBsInst) -> TardisResult<String> {
+pub async fn get_md5(descriptor: &mut ConfigDescriptor, source_addr: Option<IpAddr>, funs: &TardisFunsInst, ctx: &TardisContext, bs_inst: &SpiBsInst) -> TardisResult<String> {
+    let content = get_config(descriptor, funs, ctx, bs_inst).await?;
+    let content = render_content_for_ip(descriptor, content, source_addr, funs, ctx).await?;
+    Ok(gen_md5(&content))
+}
+
+pub async fn get_raw_md5(descriptor: &mut ConfigDescriptor, _funs: &TardisFunsInst, ctx: &TardisContext, bs_inst: &SpiBsInst) -> TardisResult<String> {
     descriptor.fix_namespace_id();
     const EXPIRE: Duration = Duration::from_secs(1);
     // try get from cache
