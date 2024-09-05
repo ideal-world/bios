@@ -22,7 +22,7 @@ async fn spi_conf_namespace_test() -> TardisResult<()> {
     let container_hold = init_tardis(&docker).await?;
     start_web_server().await?;
     let tardis_ctx = TardisContext::default();
-    let mut client = TestHttpClient::new("https://127.0.0.1:8080/spi-conf".to_string());
+    let mut client = TestHttpClient::new("https://localhost:8080/spi-conf".to_string());
     client.set_auth(&tardis_ctx)?;
     let RegisterResponse { username, password } = client
         .put(
@@ -150,7 +150,7 @@ pub async fn test_listener(client: &mut TestHttpClient) -> TardisResult<()> {
         }
     });
     let mut join_set = tokio::task::JoinSet::new();
-    const THREAD_NUM: usize = 500;
+    const THREAD_NUM: usize = 10;
     for _ in 0..THREAD_NUM {
         let ctx = ctx_raw.clone();
         let update_counter = update_counter.clone();

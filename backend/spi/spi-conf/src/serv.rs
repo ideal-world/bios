@@ -75,7 +75,8 @@ spi_dispatch_service! {
         /// get config detail
         get_config_detail(descriptor: &mut ConfigDescriptor) -> TardisResult<ConfigItem>;
         /// get content's md5 value by descriptor
-        get_md5(descriptor: &mut ConfigDescriptor) -> TardisResult<String>;
+        get_md5(descriptor: &mut ConfigDescriptor, source_addr: Option<std::net::IpAddr>) -> TardisResult<String>;
+        get_raw_md5(descriptor: &mut ConfigDescriptor) -> TardisResult<String>;
         /// delete config
         delete_config(descriptor: &mut ConfigDescriptor) -> TardisResult<bool>;
         /// get config by namespace
@@ -97,6 +98,12 @@ spi_dispatch_service! {
 lazy_static::lazy_static! {
     static ref TOKEN_CTX_MAP: Arc<RwLock<BTreeMap<String, (TardisContext, Instant)>>> = Default::default();
     static ref MAP_CLEANER_TASK: OnceCell<JoinHandle<()>> = Default::default();
+}
+
+
+pub fn gen_md5(content: &str) -> String {
+    use tardis::crypto::crypto_digest::TardisCryptoDigest;
+    TardisCryptoDigest.md5(content).expect("md5 digest shouldn't fail")
 }
 
 /// register a cert for nacos

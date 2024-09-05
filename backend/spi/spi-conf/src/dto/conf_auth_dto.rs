@@ -1,5 +1,9 @@
 use serde::{Deserialize, Serialize};
-use tardis::{basic::field::TrimString, serde_json, web::poem_openapi};
+use tardis::{
+    basic::field::TrimString,
+    serde_json::{self, json},
+    web::poem_openapi,
+};
 
 use super::conf_config_nacos_dto::{NacosCreateNamespaceRequest, NacosDeleteNamespaceRequest, NacosEditNamespaceRequest, PublishConfigForm};
 
@@ -79,7 +83,15 @@ pub enum BackendServiceSource {
         // kind_code: Option<String>,
     },
 }
-
+#[test]
+fn test_deserde() {
+    let source: BackendServiceSource = serde_json::from_value(json!(
+        {
+            "type": "new"
+        }
+    ))
+    .expect("msg");
+}
 #[derive(Debug, Serialize, Deserialize, poem_openapi::Object, Default)]
 pub struct ChangePasswordRequest {
     #[oai(validator(pattern = r"^[a-zA-Z\d_]{5,16}$"))]

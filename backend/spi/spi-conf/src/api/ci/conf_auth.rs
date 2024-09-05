@@ -56,8 +56,11 @@ impl ConfCiAuthApi {
         let req = json.0;
         let mut funs = crate::get_tardis_inst();
         let mut ctx = ctx.0;
+        if ctx.ak.is_empty() {
+            ctx.ak = ctx.owner.clone();
+        };
         let source = if let Some(source) = req.backend_service {
-            serde_json::from_value(source).unwrap_or_default()
+            serde_json::from_value(source).unwrap_or(BackendServiceSource::New { name: None })
         } else {
             BackendServiceSource::Default
         };
@@ -120,16 +123,20 @@ impl ConfCiAuthApi {
         ctx.owner = app_tenant_id.to_string();
         let resp = register(req.register_request, &funs, &ctx).await?;
         if let Some((_, app)) = ctx.own_paths.split_once('/') {
-            create_namespace(
-                &mut NamespaceAttribute {
-                    namespace: app.to_string(),
-                    namespace_show_name: app.to_string(),
-                    namespace_desc: None,
-                },
-                &funs,
-                &ctx,
-            )
-            .await?;
+            if let Ok(ns) = get_namespace(&mut NamespaceDescriptor { namespace_id: app.to_string() }, &funs, &ctx).await {
+                // skip
+            } else {
+                create_namespace(
+                    &mut NamespaceAttribute {
+                        namespace: app.to_string(),
+                        namespace_show_name: app.to_string(),
+                        namespace_desc: None,
+                    },
+                    &funs,
+                    &ctx,
+                )
+                .await?;
+            }
         }
         funs.commit().await?;
         TardisResp::ok(resp)
