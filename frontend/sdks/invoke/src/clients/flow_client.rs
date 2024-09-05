@@ -3,7 +3,6 @@ use serde::{Deserialize, Serialize};
 pub mod event {
     use asteroid_mq::prelude::*;
 
-
     use super::{FlowFrontChangeReq, FlowPostChangeReq};
     pub const FLOW_AVATAR: &str = "flow";
     pub const EVENT_FRONT_CHANGE: &str = "flow/front_change";

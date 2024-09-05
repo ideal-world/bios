@@ -1,4 +1,4 @@
-use tardis::{poem_grpc};
+use tardis::poem_grpc;
 use tardis::web::poem;
 
 use crate::api;
@@ -11,10 +11,7 @@ pub struct Metadata {
     #[prost(string, tag = "8")]
     pub client_ip: ::prost::alloc::string::String,
     #[prost(map = "string, string", tag = "7")]
-    pub headers: ::std::collections::HashMap<
-        ::prost::alloc::string::String,
-        ::prost::alloc::string::String,
-    >,
+    pub headers: ::std::collections::HashMap<::prost::alloc::string::String, ::prost::alloc::string::String>,
 }
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -38,12 +35,7 @@ pub struct ConfigQueryRequest {
 }
 #[allow(unused_imports)]
 pub trait Request: Send + Sync + 'static {
-    fn request(
-        &self,
-        request: poem_grpc::Request<Payload>,
-    ) -> impl ::std::future::Future<
-        Output = ::std::result::Result<poem_grpc::Response<Payload>, poem_grpc::Status>,
-    > + Send;
+    fn request(&self, request: poem_grpc::Request<Payload>) -> impl ::std::future::Future<Output = ::std::result::Result<poem_grpc::Response<Payload>, poem_grpc::Status>> + Send;
 }
 #[allow(unused_imports)]
 #[derive(Clone)]
@@ -66,46 +58,31 @@ impl<T: Request> poem::IntoEndpoint for RequestServer<T> {
         let mut route = poem::Route::new();
         #[allow(non_camel_case_types)]
         struct RequestrequestService<T>(::std::sync::Arc<T>);
-        impl<T: Request> poem_grpc::service::UnaryService<Payload>
-        for RequestrequestService<T> {
+        impl<T: Request> poem_grpc::service::UnaryService<Payload> for RequestrequestService<T> {
             type Response = Payload;
-            async fn call(
-                &self,
-                request: poem_grpc::Request<Payload>,
-            ) -> Result<poem_grpc::Response<Self::Response>, poem_grpc::Status> {
+            async fn call(&self, request: poem_grpc::Request<Payload>) -> Result<poem_grpc::Response<Self::Response>, poem_grpc::Status> {
                 self.0.request(request).await
             }
         }
-        route = route
-            .at(
-                "/request",
-                poem::endpoint::make({
-                    let svc = self.0.clone();
-                    move |req| {
-                        let svc = svc.clone();
-                        async move {
-                            let codec = <poem_grpc::codec::ProstCodec<
-                                _,
-                                _,
-                            > as ::std::default::Default>::default();
-                            poem_grpc::server::GrpcServer::new(codec)
-                                .unary(RequestrequestService(svc.clone()), req)
-                                .await
-                        }
+        route = route.at(
+            "/request",
+            poem::endpoint::make({
+                let svc = self.0.clone();
+                move |req| {
+                    let svc = svc.clone();
+                    async move {
+                        let codec = <poem_grpc::codec::ProstCodec<_, _> as ::std::default::Default>::default();
+                        poem_grpc::server::GrpcServer::new(codec).unary(RequestrequestService(svc.clone()), req).await
                     }
-                }),
-            );
-        let ep = route
-            .before(|req| async move {
-                if req.version() != poem::http::Version::HTTP_2 {
-                    return Err(
-                        poem::Error::from_status(
-                            poem::http::StatusCode::HTTP_VERSION_NOT_SUPPORTED,
-                        ),
-                    );
                 }
-                Ok(req)
-            });
+            }),
+        );
+        let ep = route.before(|req| async move {
+            if req.version() != poem::http::Version::HTTP_2 {
+                return Err(poem::Error::from_status(poem::http::StatusCode::HTTP_VERSION_NOT_SUPPORTED));
+            }
+            Ok(req)
+        });
         ep.boxed()
     }
 }
@@ -114,12 +91,7 @@ pub trait BiRequestStream: Send + Sync + 'static {
     fn request_bi_stream(
         &self,
         request: poem_grpc::Request<poem_grpc::Streaming<Payload>>,
-    ) -> impl ::std::future::Future<
-        Output = ::std::result::Result<
-            poem_grpc::Response<poem_grpc::Streaming<Payload>>,
-            poem_grpc::Status,
-        >,
-    > + Send;
+    ) -> impl ::std::future::Future<Output = ::std::result::Result<poem_grpc::Response<poem_grpc::Streaming<Payload>>, poem_grpc::Status>> + Send;
 }
 #[allow(unused_imports)]
 #[derive(Clone)]
@@ -142,54 +114,34 @@ impl<T: BiRequestStream> poem::IntoEndpoint for BiRequestStreamServer<T> {
         let mut route = poem::Route::new();
         #[allow(non_camel_case_types)]
         struct BiRequestStreamrequest_bi_streamService<T>(::std::sync::Arc<T>);
-        impl<
-            T: BiRequestStream,
-        > poem_grpc::service::BidirectionalStreamingService<Payload>
-        for BiRequestStreamrequest_bi_streamService<T> {
+        impl<T: BiRequestStream> poem_grpc::service::BidirectionalStreamingService<Payload> for BiRequestStreamrequest_bi_streamService<T> {
             type Response = Payload;
             async fn call(
                 &self,
                 request: poem_grpc::Request<poem_grpc::Streaming<Payload>>,
-            ) -> Result<
-                poem_grpc::Response<poem_grpc::Streaming<Self::Response>>,
-                poem_grpc::Status,
-            > {
+            ) -> Result<poem_grpc::Response<poem_grpc::Streaming<Self::Response>>, poem_grpc::Status> {
                 self.0.request_bi_stream(request).await
             }
         }
-        route = route
-            .at(
-                "/requestBiStream",
-                poem::endpoint::make({
-                    let svc = self.0.clone();
-                    move |req| {
-                        let svc = svc.clone();
-                        async move {
-                            let codec = <poem_grpc::codec::ProstCodec<
-                                _,
-                                _,
-                            > as ::std::default::Default>::default();
-                            poem_grpc::server::GrpcServer::new(codec)
-                                .bidirectional_streaming(
-                                    BiRequestStreamrequest_bi_streamService(svc.clone()),
-                                    req,
-                                )
-                                .await
-                        }
+        route = route.at(
+            "/requestBiStream",
+            poem::endpoint::make({
+                let svc = self.0.clone();
+                move |req| {
+                    let svc = svc.clone();
+                    async move {
+                        let codec = <poem_grpc::codec::ProstCodec<_, _> as ::std::default::Default>::default();
+                        poem_grpc::server::GrpcServer::new(codec).bidirectional_streaming(BiRequestStreamrequest_bi_streamService(svc.clone()), req).await
                     }
-                }),
-            );
-        let ep = route
-            .before(|req| async move {
-                if req.version() != poem::http::Version::HTTP_2 {
-                    return Err(
-                        poem::Error::from_status(
-                            poem::http::StatusCode::HTTP_VERSION_NOT_SUPPORTED,
-                        ),
-                    );
                 }
-                Ok(req)
-            });
+            }),
+        );
+        let ep = route.before(|req| async move {
+            if req.version() != poem::http::Version::HTTP_2 {
+                return Err(poem::Error::from_status(poem::http::StatusCode::HTTP_VERSION_NOT_SUPPORTED));
+            }
+            Ok(req)
+        });
         ep.boxed()
     }
 }

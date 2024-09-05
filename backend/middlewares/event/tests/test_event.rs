@@ -11,7 +11,6 @@ use tardis::basic::result::TardisResult;
 use tardis::tokio::time::sleep;
 use tardis::{testcontainers, tokio, TardisFuns};
 
-
 #[tokio::test(flavor = "multi_thread")]
 async fn test_event() -> TardisResult<()> {
     env::set_var("RUST_LOG", "debug,tardis=trace,bios_mw_event=trace,test_event=trace,sqlx::query=off");

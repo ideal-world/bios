@@ -22,7 +22,6 @@ pub mod event {
         pub req: SearchItemModifyReq,
     }
 
-
     impl EventAttribute for SearchItemAddReq {
         const SUBJECT: Subject = Subject::const_new(b"search/add");
     }

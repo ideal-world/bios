@@ -24,15 +24,17 @@ async fn handle_kv_delete_event(req: KvItemDeleteReq, ctx: TardisContext) -> Tar
 
 pub async fn handle_events() -> TardisResult<()> {
     use bios_sdk_invoke::clients::event_client::asteroid_mq::prelude::*;
-    let topic = get_topic(&SPI_RPC_TOPIC).expect("topic not initialized");
+    if let Some(topic) = get_topic(&SPI_RPC_TOPIC) {
+        topic
+            .create_endpoint([Interest::new("kv/*")])
+            .await
+            .map_err(mq_error)?
+            .create_event_loop()
+            .with_handler(ContextHandler(handle_kv_add_event))
+            .with_handler(ContextHandler(handle_kv_delete_event))
+            .spawn();
+    }
+    // let topic = get_topic(&SPI_RPC_TOPIC).expect("topic not initialized");
 
-    topic
-        .create_endpoint([Interest::new("kv/*")])
-        .await
-        .map_err(mq_error)?
-        .create_event_loop()
-        .with_handler(ContextHandler(handle_kv_add_event))
-        .with_handler(ContextHandler(handle_kv_delete_event))
-        .spawn();
     Ok(())
 }
