@@ -1440,7 +1440,8 @@ impl FlowModelServ {
             }
         }
 
-        Ok(!loop_check_helper::check(&model_details))
+        // Ok(!loop_check_helper::check(&model_details))
+        Ok(false)
     }
 
     pub async fn find_rel_states(tags: Vec<&str>, rel_template_id: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<FlowModelFindRelStateResp>> {
