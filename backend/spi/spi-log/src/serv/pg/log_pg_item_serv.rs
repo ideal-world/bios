@@ -506,9 +506,9 @@ ORDER BY ts DESC
 }
 
 pub async fn add_config(_req: &LogConfigReq, _funs: &TardisFunsInst, _ctx: &TardisContext, _inst: &SpiBsInst) -> TardisResult<()> {
-    return Ok(());
+    Ok(())
 }
 
 pub async fn delete_config(_config: &mut LogConfigReq, _funs: &TardisFunsInst, _ctx: &TardisContext, _inst: &SpiBsInst) -> TardisResult<()> {
-    return Ok(());
+    Ok(())
 }

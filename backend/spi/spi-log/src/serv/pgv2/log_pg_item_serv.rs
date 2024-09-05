@@ -1,6 +1,5 @@
 use std::{collections::HashMap, str::FromStr, vec};
 
-use bios_sdk_invoke::clients::event_client::asteroid_mq::event_handler::json::Json;
 use tardis::{
     basic::{dto::TardisContext, error::TardisError, result::TardisResult},
     chrono::{DateTime, Utc},
@@ -106,7 +105,7 @@ VALUES
 
 fn get_ref_filed_value(ref_log_record_ts: &DateTime<Utc>, ref_log_record_key: &str) -> String {
     let ref_log_record_ts = ref_log_record_ts.to_string();
-    return format!("{LOG_REF_FLAG}@{ref_log_record_ts}#{ref_log_record_key}");
+    format!("{LOG_REF_FLAG}@{ref_log_record_ts}#{ref_log_record_key}")
 }
 
 /// check if the value is referenced
@@ -117,7 +116,7 @@ fn is_log_ref(value: &JsonValue) -> bool {
             return true;
         }
     }
-    return false;
+    false
 }
 
 fn parse_ref_ts_key(ref_key: &str) -> TardisResult<(DateTime<Utc>, String)> {
@@ -633,7 +632,7 @@ pub async fn add_config(req: &LogConfigReq, _funs: &TardisFunsInst, _ctx: &Tardi
         .await?
         .is_some()
     {
-        return Ok(());
+        Ok(())
     } else {
         //新增记录
         bs_inst
@@ -644,8 +643,8 @@ pub async fn add_config(req: &LogConfigReq, _funs: &TardisFunsInst, _ctx: &Tardi
                 vec![Value::from(table_full_name), Value::from(req.ref_field.clone())],
             )
             .await?;
-        return Ok(());
-    };
+        Ok(())
+    }
 }
 
 pub async fn delete_config(config: &mut LogConfigReq, _funs: &TardisFunsInst, _ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
@@ -660,7 +659,7 @@ pub async fn delete_config(config: &mut LogConfigReq, _funs: &TardisFunsInst, _c
             vec![Value::from(table_full_name), Value::from(config.ref_field.clone())],
         )
         .await?;
-    return Ok(());
+    Ok(())
 }
 
 async fn get_ref_fields_by_table_name(conn: &TardisRelDBlConnection, schema_name: &str, table_full_name: &str) -> TardisResult<Vec<String>> {

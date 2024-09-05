@@ -9,7 +9,7 @@ use tardis::{
 use crate::{
     api::ci::log_ci_item_api,
     log_config::LogConfig,
-    log_constants::{self, CONFIG_TABLE_NAME, DOMAIN_CODE},
+    log_constants::{self, DOMAIN_CODE},
 };
 
 pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
