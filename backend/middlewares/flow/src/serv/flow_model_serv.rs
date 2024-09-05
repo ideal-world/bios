@@ -1149,6 +1149,7 @@ impl FlowModelServ {
                         },
                         rel_template_ids: None,
                         template: rbum_scope_helper::get_scope_level_by_context(&mock_ctx)? != RbumScopeLevelKind::L2,
+                        scope_level: if rbum_scope_helper::get_scope_level_by_context(&mock_ctx)? != RbumScopeLevelKind::L2 { Some(rel_model.clone().scope_level) } else { None },
                         ..rel_model.clone().into()
                     },
                     funs,
@@ -1579,7 +1580,6 @@ impl FlowModelServ {
             FlowModelServ::find_items(
                 &FlowModelFilterReq {
                     basic: RbumBasicFilterReq {
-                        ignore_scope: true,
                         with_sub_own_paths: false,
                         ..Default::default()
                     },
@@ -1614,7 +1614,6 @@ impl FlowModelServ {
             let mut rel_template_models = FlowModelServ::find_items(
                 &FlowModelFilterReq {
                     basic: RbumBasicFilterReq {
-                        ignore_scope: true,
                         with_sub_own_paths: false,
                         ..Default::default()
                     },

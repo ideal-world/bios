@@ -96,6 +96,8 @@ pub struct FlowInstSummaryResp {
     pub output_message: Option<String>,
 
     pub own_paths: String,
+
+    pub tag: String,
 }
 
 /// 工作流详细信息
@@ -364,4 +366,6 @@ pub struct FlowInstSummaryResult {
     pub output_message: Option<String>,
 
     pub own_paths: String,
+
+    pub tag: String,
 }
