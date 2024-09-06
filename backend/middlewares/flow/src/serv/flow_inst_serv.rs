@@ -14,10 +14,6 @@ use bios_basic::{
         },
     },
 };
-use bios_sdk_invoke::clients::{
-    event_client::{get_topic, mq_error, EventAttributeExt},
-    flow_client::{event::FLOW_AVATAR, FlowFrontChangeReq, FlowPostChangeReq},
-};
 use itertools::Itertools;
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
@@ -48,7 +44,6 @@ use crate::{
         flow_transition_dto::{FlowTransitionDetailResp, FlowTransitionFrontActionInfo},
         flow_var_dto::FillType,
     },
-    event::FLOW_TOPIC,
     flow_constants,
     serv::{flow_model_serv::FlowModelServ, flow_state_serv::FlowStateServ},
 };
@@ -743,30 +738,12 @@ impl FlowInstServ {
     }
 
     pub async fn handle_post_changes(inst_id: &str, transition_id: &str, ctx: &TardisContext, funs: &TardisFunsInst) -> TardisResult<()> {
-        if let Some(topic) = get_topic(&FLOW_TOPIC) {
-            topic
-                .send_event(
-                    FlowPostChangeReq {
-                        inst_id: inst_id.to_string(),
-                        next_transition_id: transition_id.to_string(),
-                    }
-                    .inject_context(funs, ctx)
-                    .json(),
-                )
-                .await
-                .map_err(mq_error)?;
-        } else {
-            FlowEventServ::do_post_change(inst_id, transition_id, ctx, funs).await?;
-        }
+        FlowEventServ::do_post_change(inst_id, transition_id, ctx, funs).await?;
         Ok(())
     }
 
     pub async fn handle_front_changes(inst_id: &str, ctx: &TardisContext, funs: &TardisFunsInst) -> TardisResult<()> {
-        if let Some(topic) = get_topic(&FLOW_TOPIC) {
-            topic.send_event(FlowFrontChangeReq { inst_id: inst_id.to_string() }.inject_context(funs, ctx).json()).await.map_err(mq_error)?;
-        } else {
-            FlowEventServ::do_front_change(inst_id, ctx, funs).await?;
-        }
+        FlowEventServ::do_front_change(inst_id, ctx, funs).await?;
         Ok(())
     }
 
@@ -1068,20 +1045,7 @@ impl FlowInstServ {
 
         let funs = flow_constants::get_tardis_inst();
 
-        if let Some(topic) = get_topic(&FLOW_TOPIC) {
-            topic
-                .send_event(
-                    FlowFrontChangeReq {
-                        inst_id: flow_inst_id.to_string(),
-                    }
-                    .inject_context(&funs, ctx)
-                    .json(),
-                )
-                .await
-                .map_err(mq_error)?;
-        } else {
-            FlowEventServ::do_front_change(flow_inst_id, ctx, &funs).await?;
-        }
+        FlowEventServ::do_front_change(flow_inst_id, ctx, &funs).await?;
 
         Ok(())
     }
