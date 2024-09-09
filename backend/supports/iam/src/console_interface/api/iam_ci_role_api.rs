@@ -51,7 +51,7 @@ impl IamCiRoleApi {
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         let tenant_admin_role_id =
-            IamRoleServ::get_embed_sub_role_id(&funs.iam_basic_role_tenant_admin_id(), &funs, &IamCertServ::use_sys_or_tenant_ctx_unsafe(ctx.clone())?).await?;
+            IamRoleServ::get_embed_sub_role_id(&funs.iam_basic_role_tenant_admin_id(), &funs, &IamCertServ::use_sys_or_tenant_ctx_unsafe(ctx.0.clone())?).await?;
         TardisResp::ok(tenant_admin_role_id)
     }
 
@@ -63,7 +63,7 @@ impl IamCiRoleApi {
         let funs = iam_constants::get_tardis_inst();
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
-        let app_admin_role_id = IamRoleServ::get_embed_sub_role_id(&funs.iam_basic_role_app_admin_id(), &funs, ctx).await?;
+        let app_admin_role_id = IamRoleServ::get_embed_sub_role_id(&funs.iam_basic_role_app_admin_id(), &funs, &ctx.0).await?;
         TardisResp::ok(app_admin_role_id)
     }
 
