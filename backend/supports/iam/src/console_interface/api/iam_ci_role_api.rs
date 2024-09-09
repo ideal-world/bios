@@ -39,8 +39,6 @@ impl IamCiRoleApi {
         let funs = iam_constants::get_tardis_inst();
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
-        IamRoleServ::get_embed_sub_role_id(&funs.iam_basic_role_tenant_admin_id(), &funs, &IamCertServ::use_sys_or_tenant_ctx_unsafe(ctx.clone())?).await?;
-        IamRoleServ::get_embed_sub_role_id(&funs.iam_basic_role_tenant_admin_id(), &funs, ctx).await?;
         TardisResp::ok(funs.iam_basic_role_sys_admin_id())
     }
 
