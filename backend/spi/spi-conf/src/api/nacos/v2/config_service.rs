@@ -44,9 +44,7 @@ impl ConfNacosV2CsApi {
         let funs = crate::get_tardis_inst();
         let ctx = extract_context(request).await?;
         let mut content = get_config(&mut descriptor, &funs, &ctx).await.map_err(tardis_err_to_poem_err)?;
-        if let Some(ip) = real_ip.0 {
-            content = render_content_for_ip(content, ip, &funs, &ctx).await?;
-        }
+        content = render_content_for_ip(&descriptor, content, real_ip.0, &funs, &ctx).await?;
         Ok(Json(NacosResponse::ok(content)))
     }
     #[oai(path = "/configs", method = "post")]

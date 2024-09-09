@@ -85,7 +85,7 @@ impl FlowSearchClient {
         if model_resp.scope_level == RbumScopeLevelKind::Root {
             visit_apps.push("".to_string());
             visit_tenants.push("".to_string());
-            own_paths = None;
+            own_paths = Some("".to_string());
         }
         let key = model_id.clone();
         if *is_modify {
@@ -104,6 +104,7 @@ impl FlowSearchClient {
                     "info": model_resp.info,
                     "rel_template_ids": model_resp.rel_template_ids,
                     "scope_level": model_resp.scope_level,
+                    "tenant_id": model_resp.own_paths.clone(),
                 })),
                 ext_override: Some(true),
                 visit_keys: Some(SearchItemVisitKeysReq {
@@ -137,6 +138,7 @@ impl FlowSearchClient {
                     "info": model_resp.info,
                     "rel_template_ids": model_resp.rel_template_ids,
                     "scope_level": model_resp.scope_level,
+                    "tenant_id": model_resp.own_paths.clone(),
                 })),
                 visit_keys: Some(SearchItemVisitKeysReq {
                     accounts: None,

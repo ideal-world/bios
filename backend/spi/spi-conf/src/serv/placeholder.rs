@@ -1,5 +1,6 @@
 // Placeholder $bios{KEY}
 
+use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::net::IpAddr;
 
@@ -11,55 +12,93 @@ use tardis::tardis_static;
 
 use crate::conf_config::ConfConfig;
 
+use super::ConfigDescriptor;
+
 tardis_static! {
-    pub place_holder_regex: Regex = Regex::new(r"\$CERT\{(.+)\}").expect("invalid content replace regex");
-    pub env_place_holder_regex: Regex = Regex::new(r"\$ENV\{(.+)\}").expect("invalid content replace regex");
+    pub place_holder_regex: Regex = Regex::new(r"\$(CERT|ENV)\{(.*?)\}").expect("invalid content replace regex");
+    pub cert_holder_regex: Regex = Regex::new(r"\$CERT\{(.*?)\}").expect("invalid content replace regex");
 }
 
 #[derive(Debug, Clone, Copy)]
 enum Segment<'s> {
     Raw(&'s str),
-    Replace { key: &'s str },
+    CertReplace { key: &'s str },
+    EnvReplace { key: &'s str },
+}
+
+impl Segment<'_> {
+    pub fn is_raw(&self) -> bool {
+        matches!(self, Segment::Raw(_))
+    }
 }
 
 fn parse_content(content: &str) -> Vec<Segment<'_>> {
-    let matcher = place_holder_regex().find_iter(content);
+    let captures = place_holder_regex().captures_iter(content);
     let mut idx = 0;
     let mut result = Vec::new();
-    for mat in matcher {
-        result.push(Segment::Raw(&content[idx..mat.start()]));
-        let key = &content[(mat.start() + 6)..(mat.end() - 1)];
-        result.push(Segment::Replace { key });
-        idx = mat.end();
+    for capture in captures {
+        let replace = capture.get(0).expect("capture error");
+        let kind = capture.get(1).expect("capture error");
+        let key = capture.get(2).expect("capture error");
+        result.push(Segment::Raw(&content[idx..replace.start()]));
+        match kind.as_str() {
+            "CERT" => result.push(Segment::CertReplace { key: key.as_str() }),
+            "ENV" => result.push(Segment::EnvReplace { key: key.as_str() }),
+            _ => result.push(Segment::Raw(replace.as_str())),
+        }
+        idx = replace.end();
     }
     result.push(Segment::Raw(&content[idx..]));
     result
 }
 
-pub async fn render_content(content: String, config: &ConfConfig, funs: &tardis::TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
-    let segments = parse_content(&content);
+#[derive(Debug)]
+struct RenderPolicy {
+    pub render_cert: bool,
+    pub render_env: bool,
+}
+async fn render_content(
+    descriptor: &ConfigDescriptor,
+    segments: Vec<Segment<'_>>,
+    config: &ConfConfig,
+    policy: RenderPolicy,
+    funs: &tardis::TardisFunsInst,
+    ctx: &TardisContext,
+) -> TardisResult<String> {
     // render
-    let keys = segments.iter().fold(HashSet::new(), |mut set, seg| {
-        if let Segment::Replace { key } = seg {
+    let cert_keys = segments.iter().fold(HashSet::new(), |mut set, seg| {
+        if let Segment::CertReplace { key } = seg {
             set.insert(*key);
         }
         set
     });
-    // no need for render
-    if keys.is_empty() {
-        return Ok(content);
-    }
-    // enhancement: this can be depart from function, KvSource should be trait
-    let kvmap = get_kvmap(keys, config, funs, ctx).await?;
+    let env_keys = segments.iter().fold(HashSet::new(), |mut set, seg| {
+        if let Segment::EnvReplace { key } = seg {
+            set.insert(*key);
+        }
+        set
+    });
+    let kv_env_map = if env_keys.is_empty() || !policy.render_env {
+        HashMap::new()
+    } else {
+        get_env_kvmap(&descriptor.namespace_id, env_keys, config, funs, ctx).await.unwrap_or_default()
+    };
+
+    let kv_cert_map = if cert_keys.is_empty() || !policy.render_cert {
+        HashMap::new()
+    } else {
+        get_cert_kvmap(cert_keys, config, funs, ctx).await.unwrap_or_default()
+    };
 
     let content = segments.into_iter().fold(String::new(), |content, seg| match seg {
         Segment::Raw(raw) => content + raw,
-        Segment::Replace { key } => content + kvmap.get(key).map(String::as_str).unwrap_or(key),
+        Segment::CertReplace { key } => content + kv_cert_map.get(key).map(String::as_str).unwrap_or(key),
+        Segment::EnvReplace { key } => content + kv_env_map.get(key).map(String::as_str).unwrap_or_default(),
     });
     Ok(content)
 }
 
-async fn get_kvmap(codes: HashSet<&str>, config: &ConfConfig, funs: &tardis::TardisFunsInst, ctx: &TardisContext) -> TardisResult<HashMap<String, String>> {
+async fn get_cert_kvmap(codes: HashSet<&str>, config: &ConfConfig, funs: &tardis::TardisFunsInst, ctx: &TardisContext) -> TardisResult<HashMap<String, String>> {
     let url = config.iam_client.base_url.as_str();
     let client = IamClient::new("", funs, ctx, url);
     let codes = codes.into_iter().map(|s| s.to_string()).collect::<HashSet<String>>();
@@ -67,22 +106,67 @@ async fn get_kvmap(codes: HashSet<&str>, config: &ConfConfig, funs: &tardis::Tar
     let response = client.batch_decode_cert(&req).await?;
     Ok(response)
 }
-
+async fn get_env_kvmap(namespace: &str, codes: HashSet<&str>, config: &ConfConfig, funs: &tardis::TardisFunsInst, ctx: &TardisContext) -> TardisResult<HashMap<String, String>> {
+    let mut env_config_descriptor = ConfigDescriptor {
+        namespace_id: namespace.to_string(),
+        group: config.group_env_config.to_string(),
+        data_id: config.data_id_env_config.to_string(),
+        ..Default::default()
+    };
+    thread_local! {
+        static MD5: RefCell<String> = "".to_string().into();
+        static MAP: RefCell<HashMap<String, String>> = HashMap::new().into();
+    };
+    let db_md5: String = super::get_raw_md5(&mut env_config_descriptor, funs, ctx).await?;
+    let md5_equal = MD5.with(|md5| md5.borrow().as_str() == db_md5.as_str());
+    let extract = || {
+        MAP.with_borrow(|map| {
+            codes.iter().fold(HashMap::default(), |mut collect_map, key| {
+                if let Some(val) = map.get(*key) {
+                    collect_map.insert(key.to_string(), val.to_string());
+                }
+                collect_map
+            })
+        })
+    };
+    if md5_equal {
+        Ok(extract())
+    } else {
+        let config: String = super::get_config(&mut env_config_descriptor, funs, ctx).await?;
+        let map_now = crate::utils::dot_env_parser(&config);
+        MAP.with(|map| map.replace(map_now.clone()));
+        MD5.with(|md5| md5.replace(db_md5));
+        Ok(extract())
+    }
+}
 pub fn has_placeholder_auth(source_addr: IpAddr, funs: &tardis::TardisFunsInst) -> bool {
     let cfg = funs.conf::<ConfConfig>();
     cfg.placeholder_white_list.iter().any(|net| net.contains(&source_addr))
 }
 
-pub async fn render_content_for_ip(content: String, source_addr: IpAddr, funs: &tardis::TardisFunsInst, ctx: &tardis::basic::dto::TardisContext) -> TardisResult<String> {
+pub async fn render_content_for_ip(
+    raw_descriptor: &ConfigDescriptor,
+    mut content: String,
+    source_addr: Option<IpAddr>,
+    funs: &tardis::TardisFunsInst,
+    ctx: &tardis::basic::dto::TardisContext,
+) -> TardisResult<String> {
     let cfg = funs.conf::<ConfConfig>();
     // let level = get_scope_level_by_context(ctx)?;
-    let is_render = has_placeholder_auth(source_addr, funs);
-    tardis::tracing::trace!("[BIOS.Spi-Config] Trying to render config for ip: {source_addr}, ctx: {ctx:?}, render: {is_render}");
-    if is_render {
-        render_content(content, cfg.as_ref(), funs, ctx).await
+    let render_cert = source_addr.map(|ip| has_placeholder_auth(ip, funs)).unwrap_or(false);
+    let render_env = render_cert;
+    let render_policy = RenderPolicy { render_cert, render_env };
+    tardis::tracing::trace!(?source_addr, ?ctx, ?render_policy, "[BIOS.Spi-Config] Trying to render config");
+    let segments = parse_content(&content);
+    content = render_content(raw_descriptor, segments, cfg.as_ref(), RenderPolicy { render_cert, render_env }, funs, ctx).await?;
+    let segments_order_2 = parse_content(&content);
+    if segments_order_2.iter().all(Segment::is_raw) {
+        return Ok(content);
     } else {
-        Ok(content)
+        // second order render for it
+        content = render_content(raw_descriptor, segments_order_2, cfg.as_ref(), RenderPolicy { render_cert, render_env }, funs, ctx).await?;
     }
+    Ok(content)
 }
 
 #[test]
@@ -90,6 +174,10 @@ pub async fn render_content_for_ip(content: String, source_addr: IpAddr, funs: &
 fn test() {
     let test_config = r#"
 The Code is $CERT{CODE} and the value is $CERT{VALUE}
+The Code is $ENV{CODE} and the value is $ENV{VALUE}
+L
 "#;
-    parse_content(test_config);
+    let segs = parse_content(test_config);
+    println!("{:?}", segs);
+    assert_eq!(segs.len(), 9);
 }

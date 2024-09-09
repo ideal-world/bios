@@ -289,9 +289,8 @@ pub async fn dispatch_request(type_info: &str, value: &str, access_token: Option
             };
             match get_config_detail(&mut descriptor, &funs, &ctx).await {
                 Ok(mut data) => {
-                    if let Some(ip) = ip {
-                        data.content = render_content_for_ip(data.content, ip, &funs, &ctx).await?;
-                    }
+                    data.content = render_content_for_ip(&descriptor, data.content, ip, &funs, &ctx).await?;
+                    data.md5 = gen_md5(&data.content);
                     ConfigQueryResponse::from(data).as_payload()
                 }
                 Err(_) => ConfigQueryResponseNotFound::default().as_payload(),
@@ -310,7 +309,7 @@ pub async fn dispatch_request(type_info: &str, value: &str, access_token: Option
                         data_id: config.data_id,
                         ..Default::default()
                     };
-                    let server_side_md5 = get_md5(&mut descriptor, &funs, &ctx).await?;
+                    let server_side_md5 = get_md5(&mut descriptor, ip, &funs, &ctx).await?;
                     if server_side_md5 != config.md5 {
                         changed_configs.push(ConfigContext {
                             group: descriptor.group,

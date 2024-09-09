@@ -21,6 +21,8 @@ pub struct ConfConfig {
     pub nacos_host: IpAddr,
     pub placeholder_white_list: Vec<IpNet>,
     pub iam_client: IamClientConfig,
+    pub data_id_env_config: String,
+    pub group_env_config: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, Default)]
@@ -55,6 +57,8 @@ impl Default for ConfConfig {
             nacos_host: IP_UNSPECIFIED,
             placeholder_white_list: vec![IpNet::from(IP_LOCALHOST)],
             iam_client: Default::default(),
+            data_id_env_config: ".env".to_string(),
+            group_env_config: "DEFAULT-GROUP".to_string(),
         }
     }
 }
