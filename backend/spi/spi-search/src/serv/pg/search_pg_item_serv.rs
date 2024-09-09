@@ -84,16 +84,17 @@ pub async fn add(add_req: &mut SearchItemAddReq, funs: &TardisFunsInst, ctx: &Ta
     let (mut conn, table_name) = search_pg_initializer::init_table_and_conn(bs_inst, &add_req.tag, ctx, true).await?;
     conn.begin().await?;
     let word_combinations_way = if add_req.title.chars().count() > funs.conf::<SearchConfig>().split_strategy_rule_config.specify_word_length.unwrap_or(30) {
-        "public.chinese_zh"
+        get_tokenizer()
     } else {
-        "simple"
+        "simple".to_string()
     };
     conn.execute_one(
         &format!(
             r#"INSERT INTO {table_name} 
     (kind, key, title, title_tsv, content, content_tsv, owner, own_paths, create_time, update_time, ext, visit_keys)
 VALUES
-    ($1, $2, $3, to_tsvector('{word_combinations_way}', $4), $5, to_tsvector('public.chinese_zh', $6), $7, $8, $9, $10, $11, {})"#,
+    ($1, $2, $3, to_tsvector('{word_combinations_way}', $4), $5, to_tsvector('{}', $6), $7, $8, $9, $10, $11, {})"#,
+            get_tokenizer(),
             if add_req.visit_keys.is_some() { "$12" } else { "null" },
         ),
         params,
@@ -120,9 +121,9 @@ pub async fn modify(tag: &str, key: &str, modify_req: &mut SearchItemModifyReq, 
         sql_sets.push(format!("title = ${}", params.len() + 1));
         params.push(Value::from(title));
         let word_combinations_way = if title.chars().count() > funs.conf::<SearchConfig>().split_strategy_rule_config.specify_word_length.unwrap_or(30) {
-            "public.chinese_zh"
+            get_tokenizer()
         } else {
-            "simple"
+            "simple".to_string()
         };
         sql_sets.push(format!("title_tsv = to_tsvector('{word_combinations_way}', ${})", params.len() + 1));
 
@@ -151,7 +152,7 @@ pub async fn modify(tag: &str, key: &str, modify_req: &mut SearchItemModifyReq, 
     };
     if let Some(content) = &modify_req.content {
         sql_sets.push(format!("content = ${}", params.len() + 1));
-        sql_sets.push(format!("content_tsv = to_tsvector('public.chinese_zh', ${})", params.len() + 1));
+        sql_sets.push(format!("content_tsv = to_tsvector('{}', ${})", get_tokenizer(), params.len() + 1));
         params.push(Value::from(content));
         // params.push(Value::from(format!("{},{}", content, to_pinyin_vec(content, Pinyin::plain).join(","))));
     };
@@ -290,7 +291,8 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
             .collect::<String>();
         sql_vals.push(Value::from(q.as_str()));
         from_fragments = format!(
-            ", plainto_tsquery('public.chinese_zh', ${}) AS query1, plainto_tsquery('simple', ${}) AS query2",
+            ", plainto_tsquery('{}', ${}) AS query1, plainto_tsquery('simple', ${}) AS query2",
+            get_tokenizer(),
             sql_vals.len(),
             sql_vals.len()
         );
@@ -809,7 +811,7 @@ pub async fn query_metrics(query_req: &SearchQueryMetricsReq, funs: &TardisFunsI
             })
             .collect::<String>();
         params.push(Value::from(q.as_str()));
-        from_fragments = format!(", plainto_tsquery('public.chinese_zh', ${}) AS query", params.len());
+        from_fragments = format!(", plainto_tsquery('{}', ${}) AS query", get_tokenizer(), params.len());
         match query_req.query.q_scope.as_ref().unwrap_or(&SearchItemSearchQScopeKind::Title) {
             SearchItemSearchQScopeKind::Title => {
                 select_fragments = ", COALESCE(ts_rank(title_tsv, query), 0::float4) AS rank_title, 0::float4 AS rank_content".to_string();
@@ -1645,4 +1647,15 @@ pub async fn refresh_tsv(tag: &str, funs: &TardisFunsInst, ctx: &TardisContext, 
     }
 
     Ok(())
+}
+
+fn get_tokenizer() -> String {
+    #[cfg(feature = "with-cn-tokenizer")]
+    {
+        "public.chinese_zh".to_string()
+    }
+    #[cfg(not(feature = "with-cn-tokenizer"))]
+    {
+        "simple".to_string()
+    }
 }

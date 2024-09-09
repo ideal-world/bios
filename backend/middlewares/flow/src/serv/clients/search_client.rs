@@ -4,7 +4,6 @@ use bios_basic::rbum::{dto::rbum_filer_dto::RbumBasicFilterReq, helper::rbum_sco
 use bios_sdk_invoke::{
     clients::{
         event_client::{get_topic, EventCenterClient, SPI_RPC_TOPIC},
-        flow_client::event::FLOW_AVATAR,
         spi_search_client::SpiSearchClient,
     },
     dto::search_item_dto::{SearchItemAddReq, SearchItemModifyReq, SearchItemVisitKeysReq},
@@ -12,7 +11,7 @@ use bios_sdk_invoke::{
 use serde_json::json;
 use tardis::{
     basic::{dto::TardisContext, field::TrimString, result::TardisResult},
-    tokio, TardisFuns, TardisFunsInst,
+    tokio, TardisFunsInst,
 };
 
 use crate::{

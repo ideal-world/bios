@@ -551,8 +551,8 @@ impl FlowInstServ {
         funs.commit().await?;
 
         let funs = flow_constants::get_tardis_inst();
-        Self::handle_post_changes(flow_inst_id, &transfer_req.flow_transition_id, ctx, &funs).await?;
-        Self::handle_front_changes(flow_inst_id, ctx, &funs).await?;
+        FlowEventServ::do_post_change(flow_inst_id, &transfer_req.flow_transition_id, ctx, &funs).await?;
+        FlowEventServ::do_front_change(flow_inst_id, ctx, &funs).await?;
         result
     }
 
@@ -735,16 +735,6 @@ impl FlowInstServ {
         .await?;
 
         Self::gen_transfer_resp(flow_inst_id, &prev_flow_state.id, ctx, funs).await
-    }
-
-    pub async fn handle_post_changes(inst_id: &str, transition_id: &str, ctx: &TardisContext, funs: &TardisFunsInst) -> TardisResult<()> {
-        FlowEventServ::do_post_change(inst_id, transition_id, ctx, funs).await?;
-        Ok(())
-    }
-
-    pub async fn handle_front_changes(inst_id: &str, ctx: &TardisContext, funs: &TardisFunsInst) -> TardisResult<()> {
-        FlowEventServ::do_front_change(inst_id, ctx, funs).await?;
-        Ok(())
     }
 
     async fn gen_transfer_resp(flow_inst_id: &str, prev_flow_state_id: &str, ctx: &TardisContext, funs: &TardisFunsInst) -> TardisResult<FlowInstTransferResp> {
