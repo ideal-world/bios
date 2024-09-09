@@ -23,7 +23,7 @@ pub struct InstancesTransition {
 
 impl InstancesTransition {
     pub fn check(&mut self, inst_id: String, tran_id: String) -> bool {
-        let tran_ids = self.inner.entry(inst_id).or_insert_with(Vec::new);
+        let tran_ids = self.inner.entry(inst_id).or_default();
 
         if tran_ids.contains(&tran_id) {
             return false;
