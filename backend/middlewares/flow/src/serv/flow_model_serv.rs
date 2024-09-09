@@ -1149,7 +1149,11 @@ impl FlowModelServ {
                         },
                         rel_template_ids: None,
                         template: rbum_scope_helper::get_scope_level_by_context(&mock_ctx)? != RbumScopeLevelKind::L2,
-                        scope_level: if rbum_scope_helper::get_scope_level_by_context(&mock_ctx)? != RbumScopeLevelKind::L2 { Some(rel_model.clone().scope_level) } else { None },
+                        scope_level: if rbum_scope_helper::get_scope_level_by_context(&mock_ctx)? != RbumScopeLevelKind::L2 {
+                            Some(rel_model.clone().scope_level)
+                        } else {
+                            None
+                        },
                         ..rel_model.clone().into()
                     },
                     funs,

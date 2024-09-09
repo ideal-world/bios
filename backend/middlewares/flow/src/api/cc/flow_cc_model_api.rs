@@ -13,7 +13,8 @@ use tardis::web::poem_openapi::payload::Json;
 use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 
 use crate::dto::flow_model_dto::{
-    FlowModelAddCustomModelReq, FlowModelAddCustomModelResp, FlowModelAddReq, FlowModelAggResp, FlowModelBindStateReq, FlowModelFilterReq, FlowModelFindRelStateResp, FlowModelModifyReq, FlowModelSortStatesReq, FlowModelSummaryResp, FlowModelUnbindStateReq
+    FlowModelAddCustomModelReq, FlowModelAddCustomModelResp, FlowModelAddReq, FlowModelAggResp, FlowModelBindStateReq, FlowModelFilterReq, FlowModelFindRelStateResp,
+    FlowModelModifyReq, FlowModelSortStatesReq, FlowModelSummaryResp, FlowModelUnbindStateReq,
 };
 use crate::dto::flow_state_dto::FlowStateRelModelModifyReq;
 use crate::dto::flow_transition_dto::{FlowTransitionModifyReq, FlowTransitionSortStatesReq};
@@ -75,14 +76,7 @@ impl FlowCcModelApi {
             &ctx.0,
         )
         .await?;
-        let new_model_id = FlowModelServ::add_item(
-            &mut FlowModelAddReq {
-                ..rel_model.clone().into()
-            },
-            &funs,
-            &ctx.0,
-        )
-        .await?;
+        let new_model_id = FlowModelServ::add_item(&mut FlowModelAddReq { ..rel_model.clone().into() }, &funs, &ctx.0).await?;
         let new_model = FlowModelServ::get_item_detail_aggs(&new_model_id, true, &funs, &ctx.0).await?;
         funs.commit().await?;
         ctx.0.execute_task().await?;

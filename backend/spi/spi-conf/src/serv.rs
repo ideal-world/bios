@@ -100,7 +100,6 @@ lazy_static::lazy_static! {
     static ref MAP_CLEANER_TASK: OnceCell<JoinHandle<()>> = Default::default();
 }
 
-
 pub fn gen_md5(content: &str) -> String {
     use tardis::crypto::crypto_digest::TardisCryptoDigest;
     TardisCryptoDigest.md5(content).expect("md5 digest shouldn't fail")

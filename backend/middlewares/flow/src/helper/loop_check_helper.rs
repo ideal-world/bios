@@ -149,7 +149,10 @@ impl TransactionGraph {
         let mut trans_chain = vec![];
         for ((from_tran_from_state, from_tran_to_state), to_trans) in &self.rels {
             for (to_tran_from_state, to_tran_to_state) in to_trans {
-                trans_chain.push(Vec::from([(from_tran_from_state.clone(), from_tran_to_state.clone()), (to_tran_from_state.clone(), to_tran_to_state.clone())]));
+                trans_chain.push(Vec::from([
+                    (from_tran_from_state.clone(), from_tran_to_state.clone()),
+                    (to_tran_from_state.clone(), to_tran_to_state.clone()),
+                ]));
             }
         }
         warn!("check state loop init trans_chain: {:?}", trans_chain);
@@ -184,12 +187,12 @@ impl TransactionGraph {
         }
 
         #[derive(Debug)]
-        struct  StateChain {
+        struct StateChain {
             chain: Vec<String>,
             current_state: String,
         }
         for tran_chain in trans_chain {
-            let mut state_chains:Vec<StateChain> = vec![];
+            let mut state_chains: Vec<StateChain> = vec![];
             for (from_state, to_state) in tran_chain.iter() {
                 if let Some(state_chain) = state_chains.iter_mut().find(|state_chain| state_chain.current_state == from_state.clone()) {
                     if state_chain.chain.iter().any(|state| state == to_state) {

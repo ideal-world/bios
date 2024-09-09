@@ -67,14 +67,22 @@ impl FlowCsConfigApi {
                 ("TP", "idp_test"),
                 ("TS", "idp_test"),
             ]);
-            let states = FlowStateServ::find_id_name_items(&FlowStateFilterReq {
-                basic: RbumBasicFilterReq {
-                    ignore_scope: true,
-                    with_sub_own_paths: true,
+            let states = FlowStateServ::find_id_name_items(
+                &FlowStateFilterReq {
+                    basic: RbumBasicFilterReq {
+                        ignore_scope: true,
+                        with_sub_own_paths: true,
+                        ..Default::default()
+                    },
                     ..Default::default()
                 },
-                ..Default::default()
-            }, None, None, &funs, &global_ctx).await.unwrap();
+                None,
+                None,
+                &funs,
+                &global_ctx,
+            )
+            .await
+            .unwrap();
             let mut page = 1;
             loop {
                 let insts = FlowInstServ::paginate(None, None, None, None, Some(true), page, 200, &funs, &global_ctx).await.unwrap().records;
@@ -83,29 +91,37 @@ impl FlowCsConfigApi {
                 }
                 for inst in insts {
                     let state_name = states.get(&inst.current_state_id).cloned().unwrap_or_default();
-                    if let Some(table) = tag_search_map.get(&inst.tag.as_str()) {                        
-                        SpiSearchClient::modify_item_and_name(table, &inst.rel_business_obj_id, &SearchItemModifyReq {
-                            kind: None,
-                            title: None,
-                            name: None,
-                            content: None,
-                            owner: None,
-                            own_paths: None,
-                            create_time: None,
-                            update_time: None,
-                            ext: Some(json!({
-                                "state": state_name,
-                            })),
-                            ext_override: None,
-                            visit_keys: None,
-                            kv_disable: None,
-                        }, &funs, &global_ctx).await.unwrap_or_default();
+                    if let Some(table) = tag_search_map.get(&inst.tag.as_str()) {
+                        SpiSearchClient::modify_item_and_name(
+                            table,
+                            &inst.rel_business_obj_id,
+                            &SearchItemModifyReq {
+                                kind: None,
+                                title: None,
+                                name: None,
+                                content: None,
+                                owner: None,
+                                own_paths: None,
+                                create_time: None,
+                                update_time: None,
+                                ext: Some(json!({
+                                    "state": state_name,
+                                })),
+                                ext_override: None,
+                                visit_keys: None,
+                                kv_disable: None,
+                            },
+                            &funs,
+                            &global_ctx,
+                        )
+                        .await
+                        .unwrap_or_default();
                     }
                 }
                 page += 1;
             }
         });
         ctx.0.execute_task().await?;
-        TardisResp::ok(Void{})
+        TardisResp::ok(Void {})
     }
 }

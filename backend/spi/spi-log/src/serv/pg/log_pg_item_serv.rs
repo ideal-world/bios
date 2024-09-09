@@ -481,7 +481,7 @@ ORDER BY ts DESC
             if total_size == 0 {
                 total_size = item.try_get("", "total")?;
             }
-            let content:String = item.try_get("", "content")?;
+            let content: String = item.try_get("", "content")?;
             let content = TardisFuns::json.str_to_json(&content)?;
             Ok(LogItemFindResp {
                 ts: item.try_get("", "ts")?,
