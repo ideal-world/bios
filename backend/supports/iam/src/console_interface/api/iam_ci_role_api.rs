@@ -31,6 +31,42 @@ pub struct IamCiRoleApi;
 /// 允许管理aksk（应用之间的一种认证方式）
 #[poem_openapi::OpenApi(prefix_path = "/ci/role", tag = "bios_basic::ApiTag::Interface")]
 impl IamCiRoleApi {
+    /// Get role system admin
+    ///
+    /// 获取角色租户管理员
+    #[oai(path = "/system/admin", method = "get")]
+    async fn get_role_tenant_admin(&self, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<String> {
+        let funs = iam_constants::get_tardis_inst();
+        check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
+        TardisResp::ok(funs.iam_basic_role_sys_admin_id())
+    }
+
+    /// Get role tenant admin
+    ///
+    /// 获取角色租户管理员
+    #[oai(path = "/tenant/admin", method = "get")]
+    async fn get_sub_role_tenant_admin(&self, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<String> {
+        let funs = iam_constants::get_tardis_inst();
+        check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
+        let tenant_admin_role_id =
+            IamRoleServ::get_embed_sub_role_id(&funs.iam_basic_role_tenant_admin_id(), &funs, &IamCertServ::use_sys_or_tenant_ctx_unsafe(ctx.clone())?).await?;
+        TardisResp::ok(tenant_admin_role_id)
+    }
+
+    /// Get role app admin
+    ///
+    /// 获取角色项目管理员
+    #[oai(path = "/app/admin", method = "get")]
+    async fn get_role_app_admin(&self, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<String> {
+        let funs = iam_constants::get_tardis_inst();
+        check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
+        let app_admin_role_id = IamRoleServ::get_embed_sub_role_id(&funs.iam_basic_role_app_admin_id(), &funs, ctx).await?;
+        TardisResp::ok(app_admin_role_id)
+    }
+
     /// Get verify role tenant admin
     /// 验证角色租户管理员
     #[oai(path = "/verify/tenant/admin", method = "get")]
