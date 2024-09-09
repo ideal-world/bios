@@ -20,6 +20,7 @@ use crate::iam_config::IamBasicConfigApi;
 use crate::iam_enumeration::IamCertKernelKind;
 
 use super::clients::iam_log_client::{IamLogClient, LogParamTag};
+use super::clients::iam_search_client::IamSearchClient;
 use super::clients::sms_client::SmsClient;
 use super::iam_account_serv::IamAccountServ;
 use super::iam_cert_serv::IamCertServ;
@@ -355,6 +356,7 @@ impl IamCertPhoneVCodeServ {
                     .await?;
                     id
                 };
+                IamSearchClient::async_add_or_modify_account_search(&ctx.owner, Box::new(true), "", funs, &ctx).await?;
                 let op_describe = format!("绑定手机号为{}", phone);
                 let _ = IamLogClient::add_ctx_task(LogParamTag::IamAccount, Some(ctx.owner.to_string()), op_describe, Some("BindPhone".to_string()), &ctx).await;
                 return Ok(id);

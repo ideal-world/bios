@@ -2,10 +2,6 @@ use std::{collections::HashMap, str::FromStr};
 
 use async_recursion::async_recursion;
 use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
-use bios_sdk_invoke::clients::{
-    event_client::{get_topic, mq_error, EventAttributeExt},
-    flow_client::{event::FLOW_AVATAR, FlowFrontChangeReq},
-};
 use rust_decimal::Decimal;
 use serde_json::{json, Value};
 use tardis::{
@@ -15,7 +11,7 @@ use tardis::{
         self,
         sea_query::{Expr, Query},
     },
-    TardisFuns, TardisFunsInst,
+    TardisFunsInst,
 };
 
 use crate::{
@@ -29,8 +25,7 @@ use crate::{
             FlowTransitionActionByStateChangeInfo, FlowTransitionActionByVarChangeInfoChangedKind, FlowTransitionActionChangeAgg, FlowTransitionActionChangeKind,
             FlowTransitionFrontActionInfo, FlowTransitionFrontActionRightValue, StateChangeConditionOp, TagRelKind,
         },
-    },
-    event::FLOW_TOPIC,
+    }, helper::loop_check_helper,
 };
 
 use super::{flow_external_serv::FlowExternalServ, flow_inst_serv::FlowInstServ, flow_model_serv::FlowModelServ, flow_state_serv::FlowStateServ};
@@ -42,7 +37,7 @@ pub struct FlowEventServ;
 
 impl FlowEventServ {
     #[async_recursion]
-    pub async fn do_front_change(flow_inst_id: &str, ctx: &TardisContext, funs: &TardisFunsInst) -> TardisResult<()> {
+    pub async fn do_front_change(flow_inst_id: &str, modified_instance_transations: loop_check_helper::InstancesTransition, ctx: &TardisContext, funs: &TardisFunsInst) -> TardisResult<()> {
         let flow_inst_detail = FlowInstServ::get(flow_inst_id, funs, ctx).await?;
         let flow_model = FlowModelServ::get_item(
             &flow_inst_detail.rel_flow_model_id,
@@ -78,6 +73,7 @@ impl FlowEventServ {
                     },
                     true,
                     FlowExternalCallbackOp::ConditionalTrigger,
+                    modified_instance_transations.clone(),
                     ctx,
                 )
                 .await?;
@@ -151,7 +147,7 @@ impl FlowEventServ {
         }
     }
 
-    pub async fn do_post_change(flow_inst_id: &str, flow_transition_id: &str, ctx: &TardisContext, funs: &TardisFunsInst) -> TardisResult<()> {
+    pub async fn do_post_change(flow_inst_id: &str, flow_transition_id: &str, modified_instance_transations: loop_check_helper::InstancesTransition, ctx: &TardisContext, funs: &TardisFunsInst) -> TardisResult<()> {
         let flow_inst_detail = FlowInstServ::get(flow_inst_id, funs, ctx).await?;
         let global_ctx = TardisContext {
             own_paths: "".to_string(),
@@ -315,11 +311,7 @@ impl FlowEventServ {
                                         funs,
                                     )
                                     .await?;
-                                    if let Some(topic) = get_topic(&FLOW_TOPIC) {
-                                        topic.send_event(FlowFrontChangeReq { inst_id: inst_id.to_string() }.inject_context(funs, ctx).json()).await.map_err(mq_error)?;
-                                    } else {
-                                        FlowEventServ::do_front_change(&inst_id, ctx, funs).await?;
-                                    }
+                                    FlowEventServ::do_front_change(&inst_id, modified_instance_transations.clone(),ctx, funs).await?;
                                 }
                             }
                         } else {
@@ -347,7 +339,7 @@ impl FlowEventServ {
                         .await?;
                         if !resp.rel_bus_objs.is_empty() {
                             let inst_ids = Self::find_inst_ids_by_rel_obj_ids(&flow_model, resp.rel_bus_objs.pop().unwrap().rel_bus_obj_ids, &change_info, funs, ctx).await?;
-                            Self::do_modify_state_by_post_action(inst_ids, &change_info, funs, ctx).await?;
+                            Self::do_modify_state_by_post_action(inst_ids, &change_info, modified_instance_transations.clone(), funs, ctx).await?;
                         }
                     }
                 }
@@ -370,20 +362,7 @@ impl FlowEventServ {
                 funs,
             )
             .await?;
-            if let Some(topic) = get_topic(&FLOW_TOPIC) {
-                topic
-                    .send_event(
-                        FlowFrontChangeReq {
-                            inst_id: flow_inst_detail.id.to_string(),
-                        }
-                        .inject_context(funs, ctx)
-                        .json(),
-                    )
-                    .await
-                    .map_err(mq_error)?;
-            } else {
-                FlowEventServ::do_front_change(&flow_inst_detail.id, ctx, funs).await?;
-            }
+            FlowEventServ::do_front_change(&flow_inst_detail.id, modified_instance_transations.clone(), ctx, funs).await?;
         }
 
         Ok(())
@@ -458,7 +437,6 @@ impl FlowEventServ {
     ) -> TardisResult<Vec<String>> {
         #[derive(sea_orm::FromQueryResult)]
         pub struct FlowInstRelObjIdsResult {
-            pub id: String,
             pub current_state_id: String,
             pub rel_business_obj_id: String,
         }
@@ -466,7 +444,7 @@ impl FlowEventServ {
             .db()
             .find_dtos::<FlowInstRelObjIdsResult>(
                 Query::select()
-                    .columns([flow_inst::Column::Id, flow_inst::Column::CurrentStateId, flow_inst::Column::RelBusinessObjId])
+                    .columns([flow_inst::Column::CurrentStateId, flow_inst::Column::RelBusinessObjId])
                     .from(flow_inst::Entity)
                     .and_where(Expr::col(flow_inst::Column::RelBusinessObjId).is_in(rel_bus_obj_ids)),
             )
@@ -491,6 +469,7 @@ impl FlowEventServ {
     async fn do_modify_state_by_post_action(
         rel_inst_ids: Vec<String>,
         change_info: &FlowTransitionActionByStateChangeInfo,
+        modified_instance_transations: loop_check_helper::InstancesTransition,
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<()> {
@@ -528,6 +507,7 @@ impl FlowEventServ {
                     },
                     true,
                     FlowExternalCallbackOp::PostAction,
+                    modified_instance_transations.clone(),
                     ctx,
                 )
                 .await?;

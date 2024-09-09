@@ -18,6 +18,7 @@ path = "src/lib.rs"
 default = ["spi-pg", "spi-es"]
 spi-pg = ["tardis/reldb-postgres"]
 spi-es = ["tardis/web-client"]
+with-cn-tokenizer = []
 
 [dependencies]
 serde.workspace = true
