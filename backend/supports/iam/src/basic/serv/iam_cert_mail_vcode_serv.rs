@@ -22,6 +22,7 @@ use crate::iam_config::IamBasicConfigApi;
 use crate::iam_enumeration::IamCertKernelKind;
 
 use super::clients::iam_log_client::{IamLogClient, LogParamTag};
+use super::clients::iam_search_client::IamSearchClient;
 use super::clients::mail_client::MailClient;
 
 pub struct IamCertMailVCodeServ;
@@ -335,6 +336,7 @@ impl IamCertMailVCodeServ {
                     .await?;
                     id
                 };
+                IamSearchClient::async_add_or_modify_account_search(&ctx.owner, Box::new(true), "", funs, &ctx).await?;
                 let op_describe = format!("绑定邮箱为{}", mail);
                 let _ = IamLogClient::add_ctx_task(LogParamTag::IamAccount, Some(ctx.owner.to_string()), op_describe, Some("BindMailbox".to_string()), &ctx).await;
 
