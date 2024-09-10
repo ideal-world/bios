@@ -40,7 +40,7 @@ pub struct IamRoleAggModifyReq {
     pub res_ids: Option<Vec<String>>,
 }
 
-#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Default)]
 pub struct IamRoleModifyReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub name: Option<TrimString>,
