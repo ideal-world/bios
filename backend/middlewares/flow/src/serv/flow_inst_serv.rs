@@ -1237,7 +1237,14 @@ impl FlowInstServ {
                         ..Default::default()
                     };
                     funs.db().update_one(flow_inst, &mock_ctx).await.unwrap();
-                    let model_tag = FlowModelServ::get_item(modify_model_id, &FlowModelFilterReq::default(), funs, ctx).await.map(|detail| detail.tag);
+                    let model_tag = FlowModelServ::get_item(modify_model_id, &FlowModelFilterReq {
+                        basic: RbumBasicFilterReq {
+                            own_paths: Some("".to_string()),
+                            with_sub_own_paths: true,
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    }, funs, ctx).await.map(|detail| detail.tag);
                     let next_flow_state = FlowStateServ::get_item(
                         state_id,
                         &FlowStateFilterReq {
