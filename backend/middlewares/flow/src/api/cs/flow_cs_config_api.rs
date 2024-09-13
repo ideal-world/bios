@@ -15,7 +15,6 @@ use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 
 use crate::dto::flow_config_dto::FlowConfigModifyReq;
 
-use crate::dto::flow_inst_dto::FlowInstFilterReq;
 use crate::dto::flow_state_dto::FlowStateFilterReq;
 use crate::flow_constants;
 use crate::serv::flow_config_serv::FlowConfigServ;
@@ -94,7 +93,7 @@ impl FlowCsConfigApi {
                             create_time: None,
                             update_time: None,
                             ext: Some(json!({
-                                "state": state_name,
+                                "status": state_name,
                             })),
                             ext_override: None,
                             visit_keys: None,
