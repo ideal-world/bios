@@ -82,7 +82,7 @@ impl FlowCsConfigApi {
                 }
                 for inst in insts {
                     let state_name = states.get(&inst.current_state_id).cloned().unwrap_or_default();
-                    if let Some(table) = tag_search_map.get(&inst.tag.as_str()) {                        
+                    if let Some(table) = tag_search_map.get(&inst.tag.as_str()) {
                         SpiSearchClient::modify_item_and_name(table, &inst.rel_business_obj_id, &SearchItemModifyReq {
                             kind: None,
                             title: None,
