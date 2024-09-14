@@ -468,7 +468,7 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
                 where_fragments.push(format!("ext ->> '{}' is null", ext_item.field));
             } else if ext_item.op == BasicQueryOpKind::IsNotNull {
                 where_fragments.push(format!(
-                    "(ext ->> '{}' is not null or ext ->> '{}' != '' or ext ->> '{}' != '[]')",
+                    "(ext ->> '{}' is not null and ext ->> '{}' != '' and ext ->> '{}' != '[]')",
                     ext_item.field, ext_item.field, ext_item.field
                 ));
             } else if ext_item.op == BasicQueryOpKind::IsNullOrEmpty {
@@ -586,7 +586,7 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
                             sql_and_where.push(format!("ext ->> '{}' is null", ext_item.field));
                         } else if ext_item.op == BasicQueryOpKind::IsNotNull {
                             sql_and_where.push(format!(
-                                "(ext ->> '{}' is not null or ext ->> '{}' != '' or ext ->> '{}' != '[]')",
+                                "(ext ->> '{}' is not null and ext ->> '{}' != '' and ext ->> '{}' != '[]')",
                                 ext_item.field, ext_item.field, ext_item.field
                             ));
                         } else if ext_item.op == BasicQueryOpKind::IsNullOrEmpty {
@@ -1015,7 +1015,7 @@ pub async fn query_metrics(query_req: &SearchQueryMetricsReq, funs: &TardisFunsI
                 sql_part_wheres.push(format!("fact.ext ->> '{}' is null", ext_item.field));
             } else if ext_item.op == BasicQueryOpKind::IsNotNull {
                 sql_part_wheres.push(format!(
-                    "(fact.ext ->> '{}' is not null or fact.ext ->> '{}' != '' or fact.ext ->> '{}' != '[]')",
+                    "(fact.ext ->> '{}' is not null and fact.ext ->> '{}' != '' and fact.ext ->> '{}' != '[]')",
                     ext_item.field, ext_item.field, ext_item.field
                 ));
             } else if ext_item.op == BasicQueryOpKind::IsNullOrEmpty {
@@ -1127,7 +1127,7 @@ pub async fn query_metrics(query_req: &SearchQueryMetricsReq, funs: &TardisFunsI
                             sql_and_where.push(format!("fact.ext ->> '{}' is null", ext_item.field));
                         } else if ext_item.op == BasicQueryOpKind::IsNotNull {
                             sql_and_where.push(format!(
-                                "(fact.ext ->> '{}' is not null or ext ->> '{}' != '' or ext ->> '{}' != '[]')",
+                                "(fact.ext ->> '{}' is not null and ext ->> '{}' != '' and ext ->> '{}' != '[]')",
                                 ext_item.field, ext_item.field, ext_item.field
                             ));
                         } else if ext_item.op == BasicQueryOpKind::IsNullOrEmpty {
