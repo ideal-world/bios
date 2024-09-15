@@ -263,6 +263,8 @@ impl FlowCiModelApi {
                                     .map(|rel| rel.rel_id)
                                     .collect_vec(),
                             ),
+                            own_paths: Some("".to_string()),
+                            with_sub_own_paths: true,
                             ..Default::default()
                         },
                         ..Default::default()

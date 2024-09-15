@@ -15,7 +15,6 @@ use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 
 use crate::dto::flow_config_dto::FlowConfigModifyReq;
 
-use crate::dto::flow_inst_dto::FlowInstFilterReq;
 use crate::dto::flow_state_dto::FlowStateFilterReq;
 use crate::flow_constants;
 use crate::serv::flow_config_serv::FlowConfigServ;
@@ -83,7 +82,7 @@ impl FlowCsConfigApi {
                 }
                 for inst in insts {
                     let state_name = states.get(&inst.current_state_id).cloned().unwrap_or_default();
-                    if let Some(table) = tag_search_map.get(&inst.tag.as_str()) {                        
+                    if let Some(table) = tag_search_map.get(&inst.tag.as_str()) {
                         SpiSearchClient::modify_item_and_name(table, &inst.rel_business_obj_id, &SearchItemModifyReq {
                             kind: None,
                             title: None,
@@ -94,7 +93,7 @@ impl FlowCsConfigApi {
                             create_time: None,
                             update_time: None,
                             ext: Some(json!({
-                                "state": state_name,
+                                "status": state_name,
                             })),
                             ext_override: None,
                             visit_keys: None,
