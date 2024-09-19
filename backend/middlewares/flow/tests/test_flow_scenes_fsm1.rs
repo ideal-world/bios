@@ -308,12 +308,17 @@ pub async fn test(flow_client: &mut TestHttpClient, search_client: &mut TestHttp
     }).await;
     assert_eq!(model_templates.total_size, 1);
     assert_eq!(model_templates.records[0].key, req_default_model_template_id);
-    // check bind model
+    // project template bind flow model
     ctx.owner = "u001".to_string();
-    ctx.own_paths = "t2".to_string();
+    ctx.own_paths = "t1".to_string();
     flow_client.set_auth(&ctx)?;
     search_client.set_auth(&ctx)?;
     // 
+    let req_models: Vec<FlowModelSummaryResp> = flow_client.get(&format!("/cc/model/find_by_rel_template_id?tag=REQ&template=true&rel_template_id={}", req_template_id1)).await;
+    assert_eq!(req_models.len(), 3);
+    assert!(req_models.iter().any(|mdoel| mdoel.id == req_default_model_template_id));
+    assert!(req_models.iter().any(|mdoel| mdoel.id == req_model_template_id));
+    assert!(req_models.iter().all(|mdoel| mdoel.id != req_model_uninit_template_id));
 
     Ok(())
 }

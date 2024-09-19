@@ -77,6 +77,7 @@ impl FlowCcModelApi {
         .await?;
         let new_model_id = FlowModelServ::add_item(
             &mut FlowModelAddReq {
+                name: format!("{}-副本", rel_model.name.clone()).into(),
                 ..rel_model.clone().into()
             },
             &funs,

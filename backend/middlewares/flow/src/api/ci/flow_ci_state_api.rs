@@ -2,15 +2,12 @@ use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
 use bios_basic::rbum::helper::rbum_scope_helper::{self, check_without_owner_and_unsafe_fill_ctx};
 use bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
-use tardis::basic::dto::TardisContext;
-use tardis::log;
-use tardis::tokio;
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem::Request;
 use tardis::web::poem_openapi;
 use tardis::web::poem_openapi::param::Query;
 use tardis::web::poem_openapi::payload::Json;
-use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
+use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp};
 
 use crate::dto::flow_state_dto::{FlowStateCountGroupByStateReq, FlowStateCountGroupByStateResp, FlowStateFilterReq, FlowStateKind, FlowStateSummaryResp, FlowSysStateKind};
 use crate::flow_constants;
@@ -105,25 +102,5 @@ impl FlowCiStateApi {
         funs.commit().await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
-    }
-
-    ///Script: merge global states with the same name
-    ///
-    /// 脚本：合并相同名称的全局状态
-    #[oai(path = "/merge_state_by_name", method = "post")]
-    async fn merge_state_by_name(&self) -> TardisApiResult<Void> {
-        let funs = flow_constants::get_tardis_inst();
-        let global_ctx = TardisContext::default();
-        tokio::spawn(async move {
-            match FlowStateServ::merge_state_by_name(&funs, &global_ctx).await {
-                Ok(_) => {
-                    log::trace!("[Flow.Inst] add log success")
-                }
-                Err(e) => {
-                    log::warn!("[Flow.Inst] failed to add log:{e}")
-                }
-            }
-        });
-        TardisResp::ok(Void {})
     }
 }
