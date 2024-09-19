@@ -14,16 +14,18 @@ use bios_mw_flow::dto::flow_state_dto::{FlowStateRelModelExt, FlowStateSummaryRe
 
 use bios_mw_flow::dto::flow_transition_dto::{FlowTransitionAddReq, FlowTransitionModifyReq};
 use bios_sdk_invoke::clients::spi_kv_client::KvItemSummaryResp;
-use bios_spi_search::dto::search_item_dto::{SearchItemQueryReq, SearchItemSearchCtxReq, SearchItemSearchPageReq, SearchItemSearchQScopeKind, SearchItemSearchReq, SearchItemSearchResp};
+use bios_spi_search::dto::search_item_dto::{
+    SearchItemQueryReq, SearchItemSearchCtxReq, SearchItemSearchPageReq, SearchItemSearchQScopeKind, SearchItemSearchReq, SearchItemSearchResp,
+};
 use serde_json::json;
 use tardis::basic::dto::TardisContext;
 
 use std::time::Duration;
 use tardis::basic::result::TardisResult;
 use tardis::log::{debug, info};
+use tardis::tokio::time::sleep;
 use tardis::web::web_resp::{TardisPage, Void};
 use tardis::TardisFuns;
-use tardis::tokio::time::sleep;
 
 pub async fn test(flow_client: &mut TestHttpClient, search_client: &mut TestHttpClient) -> TardisResult<()> {
     info!("【test_flow_scenes_fsm】");
@@ -190,12 +192,10 @@ pub async fn test(flow_client: &mut TestHttpClient, search_client: &mut TestHttp
             &format!("/cc/model/{}", req_default_model_template_id.clone()),
             &FlowModelModifyReq {
                 init_state_id: Some(init_state_id.to_string()),
-                bind_states: Some(vec![
-                    FlowModelBindStateReq {
-                        state_id: init_state_id.clone(),
-                        ext: FlowStateRelModelExt { sort: 1, show_btns: None },
-                    },
-                ]),
+                bind_states: Some(vec![FlowModelBindStateReq {
+                    state_id: init_state_id.clone(),
+                    ext: FlowStateRelModelExt { sort: 1, show_btns: None },
+                }]),
                 add_transitions: None,
                 ..Default::default()
             },
@@ -222,23 +222,26 @@ pub async fn test(flow_client: &mut TestHttpClient, search_client: &mut TestHttp
         .await;
     let req_model_uninit_template_id = req_model_uninit_template_aggs.id.clone();
     sleep(Duration::from_millis(500)).await;
-    let model_templates: TardisPage<SearchItemSearchResp> = search_client.put("/ci/item/search", &SearchItemSearchReq {
-        tag: "flow_model".to_string(),
-        ctx: SearchItemSearchCtxReq {
-            tenants: Some(vec![ctx.own_paths.clone()]),
-            ..Default::default()
-        },
-        query: SearchItemQueryReq {
-            ..Default::default()
-        },
-        adv_query: None,
-        sort: None,
-        page: SearchItemSearchPageReq {
-            number: 1,
-            size: 20,
-            fetch_total: true,
-        }
-    }).await;
+    let model_templates: TardisPage<SearchItemSearchResp> = search_client
+        .put(
+            "/ci/item/search",
+            &SearchItemSearchReq {
+                tag: "flow_model".to_string(),
+                ctx: SearchItemSearchCtxReq {
+                    tenants: Some(vec![ctx.own_paths.clone()]),
+                    ..Default::default()
+                },
+                query: SearchItemQueryReq { ..Default::default() },
+                adv_query: None,
+                sort: None,
+                page: SearchItemSearchPageReq {
+                    number: 1,
+                    size: 20,
+                    fetch_total: true,
+                },
+            },
+        )
+        .await;
     assert_eq!(model_templates.total_size, 3);
     assert!(model_templates.records.iter().any(|record| record.key == req_default_model_template_id));
     assert!(model_templates.records.iter().any(|record| record.key == req_model_uninit_template_id));
@@ -255,24 +258,30 @@ pub async fn test(flow_client: &mut TestHttpClient, search_client: &mut TestHttp
         )
         .await;
     sleep(Duration::from_millis(500)).await;
-    let model_templates: TardisPage<SearchItemSearchResp> = search_client.put("/ci/item/search", &SearchItemSearchReq {
-        tag: "flow_model".to_string(),
-        ctx: SearchItemSearchCtxReq {
-            tenants: Some(vec![ctx.own_paths.clone()]),
-            ..Default::default()
-        },
-        query: SearchItemQueryReq {
-            ..Default::default()
-        },
-        adv_query: None,
-        sort: None,
-        page: SearchItemSearchPageReq {
-            number: 1,
-            size: 20,
-            fetch_total: true,
-        }
-    }).await;
-    assert_eq!(model_templates.records.iter().find(|record| record.key == req_default_model_template_id).unwrap().title, "测试需求默认模板11".to_string());
+    let model_templates: TardisPage<SearchItemSearchResp> = search_client
+        .put(
+            "/ci/item/search",
+            &SearchItemSearchReq {
+                tag: "flow_model".to_string(),
+                ctx: SearchItemSearchCtxReq {
+                    tenants: Some(vec![ctx.own_paths.clone()]),
+                    ..Default::default()
+                },
+                query: SearchItemQueryReq { ..Default::default() },
+                adv_query: None,
+                sort: None,
+                page: SearchItemSearchPageReq {
+                    number: 1,
+                    size: 20,
+                    fetch_total: true,
+                },
+            },
+        )
+        .await;
+    assert_eq!(
+        model_templates.records.iter().find(|record| record.key == req_default_model_template_id).unwrap().title,
+        "测试需求默认模板11".to_string()
+    );
     // creat share model template
     let _: Void = flow_client
         .patch(
@@ -289,23 +298,26 @@ pub async fn test(flow_client: &mut TestHttpClient, search_client: &mut TestHttp
     flow_client.set_auth(&ctx)?;
     search_client.set_auth(&ctx)?;
     sleep(Duration::from_millis(1000)).await;
-    let model_templates: TardisPage<SearchItemSearchResp> = search_client.put("/ci/item/search", &SearchItemSearchReq {
-        tag: "flow_model".to_string(),
-        ctx: SearchItemSearchCtxReq {
-            tenants: Some(vec![ctx.own_paths.clone(), "".to_string()]),
-            ..Default::default()
-        },
-        query: SearchItemQueryReq {
-            ..Default::default()
-        },
-        adv_query: None,
-        sort: None,
-        page: SearchItemSearchPageReq {
-            number: 1,
-            size: 20,
-            fetch_total: true,
-        }
-    }).await;
+    let model_templates: TardisPage<SearchItemSearchResp> = search_client
+        .put(
+            "/ci/item/search",
+            &SearchItemSearchReq {
+                tag: "flow_model".to_string(),
+                ctx: SearchItemSearchCtxReq {
+                    tenants: Some(vec![ctx.own_paths.clone(), "".to_string()]),
+                    ..Default::default()
+                },
+                query: SearchItemQueryReq { ..Default::default() },
+                adv_query: None,
+                sort: None,
+                page: SearchItemSearchPageReq {
+                    number: 1,
+                    size: 20,
+                    fetch_total: true,
+                },
+            },
+        )
+        .await;
     assert_eq!(model_templates.total_size, 1);
     assert_eq!(model_templates.records[0].key, req_default_model_template_id);
     // project template bind flow model
@@ -313,7 +325,7 @@ pub async fn test(flow_client: &mut TestHttpClient, search_client: &mut TestHttp
     ctx.own_paths = "t1".to_string();
     flow_client.set_auth(&ctx)?;
     search_client.set_auth(&ctx)?;
-    // 
+    //
     let req_models: Vec<FlowModelSummaryResp> = flow_client.get(&format!("/cc/model/find_by_rel_template_id?tag=REQ&template=true&rel_template_id={}", req_template_id1)).await;
     assert_eq!(req_models.len(), 3);
     assert!(req_models.iter().any(|mdoel| mdoel.id == req_default_model_template_id));

@@ -91,22 +91,30 @@ impl FlowCsConfigApi {
                 for inst in insts {
                     let state_name = states.get(&inst.current_state_id).cloned().unwrap_or_default();
                     if let Some(table) = tag_search_map.get(&inst.tag.as_str()) {
-                        SpiSearchClient::modify_item_and_name(table, &inst.rel_business_obj_id, &SearchItemModifyReq {
-                            kind: None,
-                            title: None,
-                            name: None,
-                            content: None,
-                            owner: None,
-                            own_paths: None,
-                            create_time: None,
-                            update_time: None,
-                            ext: Some(json!({
-                                "status": state_name,
-                            })),
-                            ext_override: None,
-                            visit_keys: None,
-                            kv_disable: None,
-                        }, &funs, &global_ctx).await.unwrap_or_default();
+                        SpiSearchClient::modify_item_and_name(
+                            table,
+                            &inst.rel_business_obj_id,
+                            &SearchItemModifyReq {
+                                kind: None,
+                                title: None,
+                                name: None,
+                                content: None,
+                                owner: None,
+                                own_paths: None,
+                                create_time: None,
+                                update_time: None,
+                                ext: Some(json!({
+                                    "status": state_name,
+                                })),
+                                ext_override: None,
+                                visit_keys: None,
+                                kv_disable: None,
+                            },
+                            &funs,
+                            &global_ctx,
+                        )
+                        .await
+                        .unwrap_or_default();
                     }
                 }
                 page += 1;

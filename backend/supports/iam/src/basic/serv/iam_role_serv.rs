@@ -578,10 +578,16 @@ impl IamRoleServ {
                         let task_handle = tokio::spawn(async move {
                             let funs = iam_constants::get_tardis_inst();
                             for role_id in sub_role {
-                                let _ = Self::modify_item(&role_id, &mut IamRoleModifyReq {
-                                    name: Some(name_clone.clone()),
-                                    ..Default::default()
-                                }, &funs, &ctx_clone).await;
+                                let _ = Self::modify_item(
+                                    &role_id,
+                                    &mut IamRoleModifyReq {
+                                        name: Some(name_clone.clone()),
+                                        ..Default::default()
+                                    },
+                                    &funs,
+                                    &ctx_clone,
+                                )
+                                .await;
                             }
                         });
                         task_handle.await.unwrap();

@@ -97,7 +97,15 @@ impl FlowCiInstApi {
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         let mut transfer = transfer_req.0;
         FlowInstServ::check_transfer_vars(&flow_inst_id.0, &mut transfer, &funs, &ctx.0).await?;
-        let result = FlowInstServ::transfer(&flow_inst_id.0, &transfer, false, FlowExternalCallbackOp::Default, loop_check_helper::InstancesTransition::default(), &ctx.0).await?;
+        let result = FlowInstServ::transfer(
+            &flow_inst_id.0,
+            &transfer,
+            false,
+            FlowExternalCallbackOp::Default,
+            loop_check_helper::InstancesTransition::default(),
+            &ctx.0,
+        )
+        .await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
@@ -126,7 +134,17 @@ impl FlowCiInstApi {
             flow_inst_id_transfer_map.insert(flow_inst_id, transfer_req);
         }
         for (flow_inst_id, transfer_req) in flow_inst_id_transfer_map {
-            result.push(FlowInstServ::transfer(flow_inst_id, &transfer_req, false, FlowExternalCallbackOp::Default, loop_check_helper::InstancesTransition::default(), &ctx.0).await?);
+            result.push(
+                FlowInstServ::transfer(
+                    flow_inst_id,
+                    &transfer_req,
+                    false,
+                    FlowExternalCallbackOp::Default,
+                    loop_check_helper::InstancesTransition::default(),
+                    &ctx.0,
+                )
+                .await?,
+            );
         }
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
