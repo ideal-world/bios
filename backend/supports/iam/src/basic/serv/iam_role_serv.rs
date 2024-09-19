@@ -553,6 +553,43 @@ impl IamRoleServ {
     pub async fn modify_role_agg(id: &str, modify_req: &mut IamRoleAggModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         if let Some(role) = modify_req.role.as_mut() {
             Self::modify_item(id, role, funs, ctx).await?;
+            if let Some(name) = &role.name {
+                let sub_role = Self::find_id_items(
+                    &IamRoleFilterReq {
+                        basic: RbumBasicFilterReq {
+                            with_sub_own_paths: true,
+                            ignore_scope: true,
+                            own_paths: Some("".to_string()),
+                            ..Default::default()
+                        },
+                        extend_role_id: Some(id.to_string()),
+                        ..Default::default()
+                    },
+                    None,
+                    None,
+                    funs,
+                    ctx,
+                )
+                .await?;
+                let ctx_clone = ctx.clone();
+                let name_clone = name.clone();
+                ctx.add_async_task(Box::new(|| {
+                    Box::pin(async move {
+                        let task_handle = tokio::spawn(async move {
+                            let funs = iam_constants::get_tardis_inst();
+                            for role_id in sub_role {
+                                let _ = Self::modify_item(&role_id, &mut IamRoleModifyReq {
+                                    name: Some(name_clone.clone()),
+                                    ..Default::default()
+                                }, &funs, &ctx_clone).await;
+                            }
+                        });
+                        task_handle.await.unwrap();
+                        Ok(())
+                    })
+                }))
+                .await?;
+            }
         }
         if let Some(input_res_ids) = &modify_req.res_ids {
             let stored_res = Self::find_simple_rel_res(id, None, None, funs, ctx).await?;

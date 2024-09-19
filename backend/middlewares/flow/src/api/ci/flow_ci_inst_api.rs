@@ -17,6 +17,7 @@ use crate::dto::flow_inst_dto::{
     FlowInstModifyAssignedReq, FlowInstModifyCurrentVarsReq, FlowInstStartReq, FlowInstTransferReq, FlowInstTransferResp,
 };
 use crate::flow_constants;
+use crate::helper::loop_check_helper;
 use crate::serv::flow_inst_serv::FlowInstServ;
 #[derive(Clone)]
 pub struct FlowCiInstApi;
@@ -96,7 +97,7 @@ impl FlowCiInstApi {
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         let mut transfer = transfer_req.0;
         FlowInstServ::check_transfer_vars(&flow_inst_id.0, &mut transfer, &funs, &ctx.0).await?;
-        let result = FlowInstServ::transfer(&flow_inst_id.0, &transfer, false, FlowExternalCallbackOp::Default, &ctx.0).await?;
+        let result = FlowInstServ::transfer(&flow_inst_id.0, &transfer, false, FlowExternalCallbackOp::Default, loop_check_helper::InstancesTransition::default(), &ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
@@ -125,7 +126,7 @@ impl FlowCiInstApi {
             flow_inst_id_transfer_map.insert(flow_inst_id, transfer_req);
         }
         for (flow_inst_id, transfer_req) in flow_inst_id_transfer_map {
-            result.push(FlowInstServ::transfer(flow_inst_id, &transfer_req, false, FlowExternalCallbackOp::Default, &ctx.0).await?);
+            result.push(FlowInstServ::transfer(flow_inst_id, &transfer_req, false, FlowExternalCallbackOp::Default, loop_check_helper::InstancesTransition::default(), &ctx.0).await?);
         }
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
@@ -145,7 +146,7 @@ impl FlowCiInstApi {
         let funs = flow_constants::get_tardis_inst();
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         let vars = HashMap::from([("assigned_to".to_string(), Value::String(modify_req.0.current_assigned))]);
-        FlowInstServ::modify_current_vars(&flow_inst_id.0, &vars, &ctx.0).await?;
+        FlowInstServ::modify_current_vars(&flow_inst_id.0, &vars, loop_check_helper::InstancesTransition::default(), &ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
     }
@@ -163,7 +164,7 @@ impl FlowCiInstApi {
     ) -> TardisApiResult<Void> {
         let funs = flow_constants::get_tardis_inst();
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
-        FlowInstServ::modify_current_vars(&flow_inst_id.0, &modify_req.0.vars, &ctx.0).await?;
+        FlowInstServ::modify_current_vars(&flow_inst_id.0, &modify_req.0.vars, loop_check_helper::InstancesTransition::default(), &ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
     }
@@ -239,25 +240,6 @@ impl FlowCiInstApi {
         let funs = flow_constants::get_tardis_inst();
         tokio::spawn(async move {
             match FlowInstServ::trigger_front_action(&funs).await {
-                Ok(_) => {
-                    log::trace!("[Flow.Inst] add log success")
-                }
-                Err(e) => {
-                    log::warn!("[Flow.Inst] failed to add log:{e}")
-                }
-            }
-        });
-        TardisResp::ok(Void {})
-    }
-
-    ///Script: update tag information for current instance
-    ///
-    /// 数据修复脚本：更新当前实例的tag信息
-    #[oai(path = "/reflesh_inst_tag", method = "post")]
-    async fn reflesh_inst_tag(&self) -> TardisApiResult<Void> {
-        let funs = flow_constants::get_tardis_inst();
-        tokio::spawn(async move {
-            match FlowInstServ::reflesh_inst_tag(&funs).await {
                 Ok(_) => {
                     log::trace!("[Flow.Inst] add log success")
                 }

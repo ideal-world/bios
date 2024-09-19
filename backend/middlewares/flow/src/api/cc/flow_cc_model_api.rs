@@ -76,7 +76,15 @@ impl FlowCcModelApi {
             &ctx.0,
         )
         .await?;
-        let new_model_id = FlowModelServ::add_item(&mut FlowModelAddReq { ..rel_model.clone().into() }, &funs, &ctx.0).await?;
+        let new_model_id = FlowModelServ::add_item(
+            &mut FlowModelAddReq {
+                name: format!("{}-副本", rel_model.name.clone()).into(),
+                ..rel_model.clone().into()
+            },
+            &funs,
+            &ctx.0,
+        )
+        .await?;
         let new_model = FlowModelServ::get_item_detail_aggs(&new_model_id, true, &funs, &ctx.0).await?;
         funs.commit().await?;
         ctx.0.execute_task().await?;

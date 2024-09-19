@@ -74,7 +74,7 @@ impl FlowCtModelApi {
                 .await?;
             }
             FlowInstServ::batch_update_when_switch_model(
-                orginal_model_id,
+                req.0.rel_template_id.clone(),
                 &new_model.tag,
                 &new_model.id,
                 new_model.states.clone(),
@@ -103,7 +103,7 @@ impl FlowCtModelApi {
     ) -> TardisApiResult<HashMap<String, FlowModelAggResp>> {
         let mut funs = flow_constants::get_tardis_inst();
         funs.begin().await?;
-        let orginal_models = FlowModelServ::clean_rel_models(Some(to_template_id.0.clone()), None, None, &funs, &ctx.0).await?;
+        let _orginal_models = FlowModelServ::clean_rel_models(Some(to_template_id.0.clone()), None, None, &funs, &ctx.0).await?;
         let mut result = HashMap::new();
         for from_model in FlowModelServ::find_detail_items(
             &FlowModelFilterReq {

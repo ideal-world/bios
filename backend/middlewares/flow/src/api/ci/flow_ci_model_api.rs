@@ -120,7 +120,7 @@ impl FlowCiModelApi {
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         funs.begin().await?;
         warn!("ci copy_or_reference_model req: {:?}", req.0);
-        let orginal_models = FlowModelServ::clean_rel_models(None, None, None, &funs, &ctx.0).await?;
+        let _orginal_models = FlowModelServ::clean_rel_models(None, None, None, &funs, &ctx.0).await?;
         // find rel models
         let rel_model_ids = FlowRelServ::find_to_simple_rels(
             &FlowRelKind::FlowModelTemplate,
@@ -148,11 +148,7 @@ impl FlowCiModelApi {
         for rel_model_id in rel_model_ids {
             let new_model = FlowModelServ::copy_or_reference_model(&rel_model_id, Some(ctx.0.own_paths.clone()), &req.0.op, Some(false), &funs, &mock_ctx).await?;
             FlowInstServ::batch_update_when_switch_model(
-                if rbum_scope_helper::get_scope_level_by_context(&ctx.0)? == RbumScopeLevelKind::L2 {
-                    None
-                } else {
-                    orginal_models.get(&new_model.tag).map(|model| model.id.clone())
-                },
+                new_model.rel_template_ids.first().cloned(),
                 &new_model.tag,
                 &new_model.id,
                 new_model.states.clone(),
@@ -267,6 +263,8 @@ impl FlowCiModelApi {
                                     .map(|rel| rel.rel_id)
                                     .collect_vec(),
                             ),
+                            own_paths: Some("".to_string()),
+                            with_sub_own_paths: true,
                             ..Default::default()
                         },
                         ..Default::default()
