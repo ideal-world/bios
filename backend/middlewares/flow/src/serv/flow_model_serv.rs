@@ -966,10 +966,16 @@ impl FlowModelServ {
                     transitions: model_detail.transitions().into_iter().filter(|transition| transition.from_flow_state_id == state_id.clone()).map(|transition| {
                         let mut action_by_post_changes = vec![];
                         for action_by_post_change in transition.action_by_post_changes() {
-                            action_by_post_changes.push(FlowTransitionPostActionInfo  {
-                                is_edit: Some(false), // 引用复制时，置为不可编辑
-                                ..action_by_post_change.clone()
-                            });
+                            if action_by_post_change.is_edit.is_none() {
+                                action_by_post_changes.push(FlowTransitionPostActionInfo  {
+                                    is_edit: Some(false), // 默认为不可编辑，若用户需要编辑，可手动处理数据
+                                    ..action_by_post_change.clone()
+                                });
+                            } else {
+                                action_by_post_changes.push(FlowTransitionPostActionInfo  {
+                                    ..action_by_post_change.clone()
+                                });
+                            }
                         }
                         FlowTransitionDetailResp {
                             action_by_post_changes: TardisFuns::json.obj_to_json(&action_by_post_changes).unwrap_or_default(),
