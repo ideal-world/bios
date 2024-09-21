@@ -116,16 +116,18 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
             .collect::<TardisResult<Vec<()>>>()?;
         }
         if let Some(transitions) = &add_req.transitions {
-            Self::add_transitions(flow_model_id, transitions, funs, ctx).await?;
-            // check transition post action endless loop
-            let model_desp = Self::get_item(flow_model_id, &FlowModelFilterReq::default(), funs, ctx).await?;
-            if Self::check_post_action_ring(&model_desp, funs, ctx).await? {
-                return Err(funs.err().not_found(
-                    "flow_model_Serv",
-                    "after_add_item",
-                    "this post action exist endless loop",
-                    "500-flow-transition-endless-loop",
-                ));
+            if !transitions.is_empty() {
+                Self::add_transitions(flow_model_id, transitions, funs, ctx).await?;
+                // check transition post action endless loop
+                let model_desp = Self::get_item(flow_model_id, &FlowModelFilterReq::default(), funs, ctx).await?;
+                if Self::check_post_action_ring(&model_desp, funs, ctx).await? {
+                    return Err(funs.err().not_found(
+                        "flow_model_Serv",
+                        "after_add_item",
+                        "this post action exist endless loop",
+                        "500-flow-transition-endless-loop",
+                    ));
+                }
             }
         }
         if add_req.template && add_req.rel_model_id.is_none() {
