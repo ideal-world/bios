@@ -6,7 +6,8 @@ use bios_basic::rbum::{
         rbum_item_dto::{RbumItemKernelAddReq, RbumItemKernelModifyReq},
     },
     helper::rbum_scope_helper,
-    rbum_enumeration::RbumScopeLevelKind, serv::rbum_item_serv::RbumItemCrudOperation,
+    rbum_enumeration::RbumScopeLevelKind,
+    serv::rbum_item_serv::RbumItemCrudOperation,
 };
 use itertools::Itertools;
 use tardis::{

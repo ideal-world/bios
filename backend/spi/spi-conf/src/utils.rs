@@ -53,7 +53,6 @@ pub(crate) fn dot_env_parser(config: &str) -> HashMap<String, String> {
     map
 }
 
-
 #[cfg(test)]
 #[test]
 fn test_dot_env_parser() {
@@ -68,5 +67,4 @@ URL=http://www.baidu.com
     assert_eq!(map.get("TYPE"), Some(&"ALPHA".to_string()));
     assert_eq!(map.get("VALUE"), Some(&"123".to_string()));
     assert_eq!(map.get("URL"), Some(&"http://www.baidu.com".to_string()));
-
 }

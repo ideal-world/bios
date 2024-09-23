@@ -33,7 +33,6 @@ pub struct IamCiTenantApi;
 /// 接口控制台租户API
 #[poem_openapi::OpenApi(prefix_path = "/ci/tenant", tag = "bios_basic::ApiTag::Tenant")]
 impl IamCiTenantApi {
-
     /// Find Tenants
     /// 查找租户
     #[oai(path = "/all", method = "get")]
