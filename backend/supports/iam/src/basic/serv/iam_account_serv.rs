@@ -29,7 +29,7 @@ use crate::basic::dto::iam_account_dto::{
     IamAccountDetailResp, IamAccountModifyReq, IamAccountSelfModifyReq, IamAccountSummaryAggResp, IamAccountSummaryResp,
 };
 use crate::basic::dto::iam_cert_dto::{IamCertMailVCodeAddReq, IamCertPhoneVCodeAddReq, IamCertUserPwdAddReq};
-use crate::basic::dto::iam_filer_dto::{IamAccountFilterReq, IamAppFilterReq, IamTenantFilterReq};
+use crate::basic::dto::iam_filer_dto::{IamAccountFilterReq, IamAppFilterReq, IamRoleFilterReq, IamTenantFilterReq};
 use crate::basic::dto::iam_set_dto::IamSetItemAddReq;
 use crate::basic::serv::iam_attr_serv::IamAttrServ;
 use crate::basic::serv::iam_cert_mail_vcode_serv::IamCertMailVCodeServ;
@@ -471,13 +471,24 @@ impl IamAccountServ {
             IamSetServ::get_set_id_by_code(&IamSetServ::get_default_code(&IamSetKind::Org, &IamTenantServ::get_id_by_ctx(ctx, funs)?), true, funs, ctx).await?
             // IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, funs, ctx).await?
         };
-        let raw_roles = Self::find_simple_rel_roles(&account.id, true, Some(true), None, funs, ctx).await?;
-        let mut roles: Vec<RbumRelBoneResp> = vec![];
-        for role in raw_roles {
-            if !IamRoleServ::is_disabled(&role.rel_id, funs).await? {
-                roles.push(role)
-            }
-        }
+        let roles = IamRoleServ::find_items(&IamRoleFilterReq {
+            basic: RbumBasicFilterReq {
+                ignore_scope: false,
+                rel_ctx_owner: false,
+                with_sub_own_paths: true,
+                enabled: Some(true),
+                ..Default::default()
+            },
+            rel: Some(RbumItemRelFilterReq {
+                rel_by_from: false,
+                optional: false,
+                tag: Some(IamRelKind::IamAccountRole.to_string()),
+                from_rbum_kind: Some(RbumRelFromKind::Item),
+                rel_item_id: Some(account.id.clone()),
+                ..Default::default()
+            }),
+            ..Default::default()
+        }, None, None, funs, ctx).await?;
 
         let enabled_apps = IamAppServ::find_items(
             &IamAppFilterReq {
@@ -506,16 +517,16 @@ impl IamAccountServ {
         .await?;
         let mut apps: Vec<IamAccountAppInfoResp> = vec![];
         for app in enabled_apps {
-            let mut mock_app_ctx = ctx.clone();
-            mock_app_ctx.own_paths.clone_from(&app.own_paths);
-            let set_id = IamSetServ::get_set_id_by_code(&IamSetServ::get_default_code(&IamSetKind::Org, &app.own_paths), true, funs, &mock_app_ctx).await?;
-            let groups = IamSetServ::find_flat_set_items(&set_id, account_id, true, funs, &mock_app_ctx).await?;
+            // let mut mock_app_ctx = ctx.clone();
+            // mock_app_ctx.own_paths.clone_from(&app.own_paths);
+            // let set_id = IamSetServ::get_set_id_by_code(&IamSetServ::get_default_code(&IamSetKind::Org, &app.own_paths), true, funs, &mock_app_ctx).await?;
+            // let groups = IamSetServ::find_flat_set_items(&set_id, account_id, true, funs, &mock_app_ctx).await?;
             apps.push(IamAccountAppInfoResp {
                 app_id: app.id,
                 app_name: app.name,
                 app_icon: app.icon,
-                roles: roles.iter().filter(|r| r.rel_own_paths == app.own_paths).map(|r| (r.rel_id.to_string(), r.rel_name.to_string())).collect(),
-                groups,
+                roles: roles.iter().filter(|r| r.own_paths == app.own_paths).map(|r| (r.id.to_string(), r.name.to_string())).collect(),
+                groups: HashMap::default(),
             });
         }
         let account_attrs = IamAttrServ::find_account_attrs(funs, ctx).await?;
@@ -543,7 +554,7 @@ impl IamAccountServ {
             temporary: account.temporary,
             lock_status: account.lock_status,
             icon: account.icon,
-            roles: roles.iter().filter(|r| r.rel_own_paths == ctx.own_paths).map(|r| (r.rel_id.to_string(), r.rel_name.to_string())).collect(),
+            roles: roles.iter().filter(|r| r.own_paths == ctx.own_paths).map(|r| (r.id.to_string(), r.name.to_string())).collect(),
             apps,
             groups,
             certs: IamCertServ::find_certs(

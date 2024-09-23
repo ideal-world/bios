@@ -757,15 +757,13 @@ impl IamCertLdapServ {
         .await?;
         for cert in certs {
             let mut funs = iam_constants::get_tardis_inst();
-            funs.begin().await?;
             let local_ldap_id = cert.ak;
             if let Some(iam_account_ext_sys_resp) = ldap_id_to_account_map.get(&local_ldap_id) {
                 //并集 两边都有相同的账号
-
-                if let Ok(Some(local_account)) = IamAccountServ::find_one_item(
+                let local_account_result = IamAccountServ::find_one_item(
                     &IamAccountFilterReq {
                         basic: RbumBasicFilterReq {
-                            ids: Some(vec![]),
+                            ids: Some(vec![cert.rel_rbum_id.clone()]),
                             ..Default::default()
                         },
                         ..Default::default()
@@ -773,66 +771,96 @@ impl IamCertLdapServ {
                     &funs,
                     ctx,
                 )
-                .await
-                {
-                    //判断是否需要更新labor_type、status等
-                    //如果需要更新其他信息，比如用户名也写在这里面
-                    if (!iam_account_ext_sys_resp.labor_type.is_empty() && iam_account_ext_sys_resp.labor_type != local_account.labor_type)
-                        || local_account.disabled
-                        || local_account.status == IamAccountStatusKind::Logout
-                    {
-                        let mut account_modify_req = IamAccountAggModifyReq {
-                            labor_type: Some(iam_account_ext_sys_resp.labor_type.clone()),
-                            ..Default::default()
-                        };
-                        if !iam_account_ext_sys_resp.labor_type.is_empty() && iam_account_ext_sys_resp.labor_type != local_account.labor_type {
-                            account_modify_req.labor_type = Some(iam_account_ext_sys_resp.labor_type.clone());
-                        }
-                        if local_account.disabled || local_account.status == IamAccountStatusKind::Logout {
-                            account_modify_req.status = Some(IamAccountStatusKind::Active);
-                            account_modify_req.logout_type = Some(IamAccountLogoutTypeKind::NotLogout);
-                            account_modify_req.disabled = Some(false);
-                        }
-                        let modify_result = IamAccountServ::modify_account_agg(&cert.rel_rbum_id, &account_modify_req, &funs, ctx).await;
-                        if modify_result.is_err() {
-                            let err_msg = format!("modify account info id:{} failed:{}", cert.rel_rbum_id, modify_result.err().unwrap());
-                            tardis::log::error!("{}", err_msg);
-                            msg = format!("{msg}{err_msg}\n");
-                            funs.rollback().await?;
-                            ldap_id_to_account_map.remove(&local_ldap_id);
-                            continue;
-                        }
-                        IamSearchClient::add_or_modify_account_search(
-                            IamAccountServ::get_account_detail_aggs(
-                                &cert.rel_rbum_id,
-                                &IamAccountFilterReq {
-                                    basic: RbumBasicFilterReq {
-                                        ignore_scope: true,
-                                        own_paths: Some("".to_string()),
-                                        with_sub_own_paths: true,
-                                        ..Default::default()
-                                    },
+                .await;
+                if local_account_result.is_err() || local_account_result.clone()?.is_none() {
+                    let err_msg = format!("get user info failed, id:{} ", cert.rel_rbum_id);
+                    msg = format!("{msg}{err_msg}\n");
+                    ldap_id_to_account_map.remove(&local_ldap_id);
+                    continue;
+                }
+                let local_account = local_account_result.unwrap_or_default().unwrap();
+                // 在事务外单独更新用工性质字段
+                if !iam_account_ext_sys_resp.labor_type.is_empty() && iam_account_ext_sys_resp.labor_type != local_account.labor_type {
+                    let account_modify_req = IamAccountAggModifyReq {
+                        labor_type: Some(iam_account_ext_sys_resp.labor_type.clone()),
+                        ..Default::default()
+                    };
+                    let modify_result = IamAccountServ::modify_account_agg(&cert.rel_rbum_id, &account_modify_req, &funs, ctx).await;
+                    if modify_result.is_err() {
+                        let err_msg = format!("modify account labor_type id:{} failed:{}", cert.rel_rbum_id, modify_result.err().unwrap());
+                        tardis::log::error!("{}", err_msg);
+                        msg = format!("{msg}{err_msg}\n");
+                        ldap_id_to_account_map.remove(&local_ldap_id);
+                        continue;
+                    }
+                    IamSearchClient::add_or_modify_account_search(
+                        IamAccountServ::get_account_detail_aggs(
+                            &cert.rel_rbum_id,
+                            &IamAccountFilterReq {
+                                basic: RbumBasicFilterReq {
+                                    ignore_scope: true,
+                                    own_paths: Some("".to_string()),
+                                    with_sub_own_paths: true,
                                     ..Default::default()
                                 },
-                                true,
-                                true,
-                                &funs,
-                                ctx,
-                            )
-                            .await?,
-                            Box::new(true),
-                            "",
+                                ..Default::default()
+                            },
+                            true,
+                            true,
                             &funs,
                             ctx,
                         )
-                        .await?;
+                        .await?,
+                        Box::new(true),
+                        "",
+                        &funs,
+                        ctx,
+                    )
+                    .await?;
+                }
+                funs.begin().await?;
+                //判断是否需要更新status等
+                //如果需要更新其他信息，比如用户名也写在这里面
+                if local_account.disabled || local_account.status == IamAccountStatusKind::Logout {
+                    let mut account_modify_req = IamAccountAggModifyReq::default();
+                    if local_account.disabled || local_account.status == IamAccountStatusKind::Logout {
+                        account_modify_req.status = Some(IamAccountStatusKind::Active);
+                        account_modify_req.logout_type = Some(IamAccountLogoutTypeKind::NotLogout);
+                        account_modify_req.disabled = Some(false);
                     }
-                } else {
-                    let err_msg = format!("get user info failed, id:{} ", cert.rel_rbum_id);
-                    msg = format!("{msg}{err_msg}\n");
-                    funs.rollback().await?;
-                    ldap_id_to_account_map.remove(&local_ldap_id);
-                    continue;
+                    let modify_result = IamAccountServ::modify_account_agg(&cert.rel_rbum_id, &account_modify_req, &funs, ctx).await;
+                    if modify_result.is_err() {
+                        let err_msg = format!("modify account info id:{} failed:{}", cert.rel_rbum_id, modify_result.err().unwrap());
+                        tardis::log::error!("{}", err_msg);
+                        msg = format!("{msg}{err_msg}\n");
+                        funs.rollback().await?;
+                        ldap_id_to_account_map.remove(&local_ldap_id);
+                        continue;
+                    }
+                    IamSearchClient::add_or_modify_account_search(
+                        IamAccountServ::get_account_detail_aggs(
+                            &cert.rel_rbum_id,
+                            &IamAccountFilterReq {
+                                basic: RbumBasicFilterReq {
+                                    ignore_scope: true,
+                                    own_paths: Some("".to_string()),
+                                    with_sub_own_paths: true,
+                                    ..Default::default()
+                                },
+                                ..Default::default()
+                            },
+                            true,
+                            true,
+                            &funs,
+                            ctx,
+                        )
+                        .await?,
+                        Box::new(true),
+                        "",
+                        &funs,
+                        ctx,
+                    )
+                    .await?;
                 }
 
                 if !iam_account_ext_sys_resp.mobile.is_empty() {
@@ -982,8 +1010,10 @@ impl IamCertLdapServ {
                         &TardisFuns::json.obj_to_string(&IamThirdIntegrationSyncStatusDto { total, success, failed })?,
                     )
                     .await;
+                funs.commit().await?;
             } else {
                 total += 1;
+                funs.begin().await?;
                 //ldap没有 iam有的 需要同步删除
                 let delete_result = match sync_config.account_way_to_delete {
                     WayToDelete::DoNotDelete => Ok(()),
@@ -1039,8 +1069,8 @@ impl IamCertLdapServ {
                         &TardisFuns::json.obj_to_string(&IamThirdIntegrationSyncStatusDto { total, success, failed })?,
                     )
                     .await;
+                funs.commit().await?;
             };
-            funs.commit().await?;
         }
         //ldap有的 但是iam没有的 需要添加
         for ldap_id in ldap_id_to_account_map.keys() {

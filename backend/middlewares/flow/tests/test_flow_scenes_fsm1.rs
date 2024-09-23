@@ -320,5 +320,17 @@ pub async fn test(flow_client: &mut TestHttpClient, search_client: &mut TestHttp
     assert!(req_models.iter().any(|mdoel| mdoel.id == req_model_template_id));
     assert!(req_models.iter().all(|mdoel| mdoel.id != req_model_uninit_template_id));
 
+    let req_models: Vec<FlowModelSummaryResp> = flow_client.get("/cc/model/find_by_rel_template_id?tag=REQ&template=true").await;
+    assert_eq!(req_models.len(), 2);
+    assert!(req_models.iter().any(|mdoel| mdoel.id == req_default_model_template_id));
+    assert!(req_models.iter().all(|mdoel| mdoel.id != req_model_template_id));
+    ctx.owner = "u001".to_string();
+    ctx.own_paths = "t2".to_string();
+    flow_client.set_auth(&ctx)?;
+    search_client.set_auth(&ctx)?;
+    let req_models: Vec<FlowModelSummaryResp> = flow_client.get("/cc/model/find_by_rel_template_id?tag=REQ&template=true").await;
+    assert_eq!(req_models.len(), 2);
+    assert!(req_models.iter().any(|mdoel| mdoel.id == req_default_model_template_id));
+    assert!(req_models.iter().all(|mdoel| mdoel.id != req_model_template_id));
     Ok(())
 }
