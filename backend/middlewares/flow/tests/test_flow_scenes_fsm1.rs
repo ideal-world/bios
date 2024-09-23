@@ -308,6 +308,33 @@ pub async fn test(flow_client: &mut TestHttpClient, search_client: &mut TestHttp
     }).await;
     assert_eq!(model_templates.total_size, 1);
     assert_eq!(model_templates.records[0].key, req_default_model_template_id);
+    let copy_template_model: FlowModelAggResp = flow_client
+        .patch(
+            &format!("/cc/model/copy/{}", req_default_model_template_id.clone()),
+            &json!({}),
+        )
+        .await;
+    sleep(Duration::from_millis(1000)).await;
+    let model_templates: TardisPage<SearchItemSearchResp> = search_client.put("/ci/item/search", &SearchItemSearchReq {
+        tag: "flow_model".to_string(),
+        ctx: SearchItemSearchCtxReq {
+            tenants: Some(vec![ctx.own_paths.clone(), "".to_string()]),
+            ..Default::default()
+        },
+        query: SearchItemQueryReq {
+            ..Default::default()
+        },
+        adv_query: None,
+        sort: None,
+        page: SearchItemSearchPageReq {
+            number: 1,
+            size: 20,
+            fetch_total: true,
+        }
+    }).await;
+    assert_eq!(model_templates.total_size, 2);
+    assert!(model_templates.records.iter().any(|record| record.key == req_default_model_template_id));
+    assert!(model_templates.records.iter().any(|record| record.key == copy_template_model.id));
     // project template bind flow model
     ctx.owner = "u001".to_string();
     ctx.own_paths = "t1".to_string();
@@ -315,13 +342,13 @@ pub async fn test(flow_client: &mut TestHttpClient, search_client: &mut TestHttp
     search_client.set_auth(&ctx)?;
     // 
     let req_models: Vec<FlowModelSummaryResp> = flow_client.get(&format!("/cc/model/find_by_rel_template_id?tag=REQ&template=true&rel_template_id={}", req_template_id1)).await;
-    assert_eq!(req_models.len(), 3);
+    assert_eq!(req_models.len(), 4);
     assert!(req_models.iter().any(|mdoel| mdoel.id == req_default_model_template_id));
     assert!(req_models.iter().any(|mdoel| mdoel.id == req_model_template_id));
     assert!(req_models.iter().all(|mdoel| mdoel.id != req_model_uninit_template_id));
 
     let req_models: Vec<FlowModelSummaryResp> = flow_client.get("/cc/model/find_by_rel_template_id?tag=REQ&template=true").await;
-    assert_eq!(req_models.len(), 2);
+    assert_eq!(req_models.len(), 3);
     assert!(req_models.iter().any(|mdoel| mdoel.id == req_default_model_template_id));
     assert!(req_models.iter().all(|mdoel| mdoel.id != req_model_template_id));
     ctx.owner = "u001".to_string();
@@ -329,7 +356,7 @@ pub async fn test(flow_client: &mut TestHttpClient, search_client: &mut TestHttp
     flow_client.set_auth(&ctx)?;
     search_client.set_auth(&ctx)?;
     let req_models: Vec<FlowModelSummaryResp> = flow_client.get("/cc/model/find_by_rel_template_id?tag=REQ&template=true").await;
-    assert_eq!(req_models.len(), 2);
+    assert_eq!(req_models.len(), 3);
     assert!(req_models.iter().any(|mdoel| mdoel.id == req_default_model_template_id));
     assert!(req_models.iter().all(|mdoel| mdoel.id != req_model_template_id));
     Ok(())
