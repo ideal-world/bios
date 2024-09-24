@@ -112,11 +112,12 @@ impl EventComponent for SpiLog {
             let result = SpiLogClient::add(
                 &LogItemAddReq {
                     tag: TASK_TAG.to_string(),
-                    content: message,
+                    content: tardis::serde_json::Value::Null,
                     ext: Some(ext),
                     key: Some(code.to_string()),
                     op: Some(OP_EXECUTE_END.to_string()),
                     ts: Some(Utc::now()),
+                    msg: Some(message),
                     ..Default::default()
                 },
                 &funs,

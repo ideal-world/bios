@@ -6,7 +6,11 @@ use tardis::{
     TardisFuns, TardisFunsInst,
 };
 
-use crate::{api::ci::log_ci_item_api, log_config::LogConfig, log_constants::DOMAIN_CODE};
+use crate::{
+    api::ci::log_ci_item_api,
+    log_config::LogConfig,
+    log_constants::{self, DOMAIN_CODE},
+};
 
 pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
     info!("[BIOS.Log] Module initializing");
@@ -24,6 +28,7 @@ pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
 
 async fn init_db(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
     spi_initializer::add_kind(spi_constants::SPI_PG_KIND_CODE, funs, ctx).await?;
+    spi_initializer::add_kind(log_constants::SPI_PG_V2_KIND_CODE, funs, ctx).await?;
     Ok(())
 }
 
@@ -37,6 +42,7 @@ pub async fn init_fun(bs_cert: SpiBsCertResp, ctx: &TardisContext, mgr: bool) ->
     let inst = match bs_cert.kind_code.as_str() {
         #[cfg(feature = "spi-pg")]
         spi_constants::SPI_PG_KIND_CODE => spi_initializer::common_pg::init(&bs_cert, ctx, mgr).await,
+        log_constants::SPI_PG_V2_KIND_CODE => spi_initializer::common_pg::init(&bs_cert, ctx, mgr).await,
         _ => Err(bs_cert.bs_not_implemented())?,
     }?;
     info!("[BIOS.Log] Fun [{}]({}) initialized", bs_cert.kind_code, bs_cert.conn_uri);

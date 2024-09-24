@@ -23,6 +23,7 @@ pub async fn init_table_and_conn(bs_inst: TypedSpiBsInst<'_, TardisRelDBClient>,
     update_time timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
     ext jsonb NOT NULL,
     visit_keys jsonb"#,
+        None,
         vec![
             ("kind", "btree"),
             ("key", "btree"),

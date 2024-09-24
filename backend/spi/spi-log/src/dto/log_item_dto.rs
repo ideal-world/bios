@@ -11,8 +11,7 @@ use tardis::{
 pub struct LogItemAddReq {
     #[oai(validator(pattern = r"^[a-z0-9_]+$"))]
     pub tag: String,
-    // #[oai(validator(min_length = "2"))]
-    pub content: String,
+    pub content: Value,
     #[oai(validator(min_length = "2"))]
     pub kind: Option<TrimString>,
     pub ext: Option<Value>,
@@ -28,6 +27,7 @@ pub struct LogItemAddReq {
     #[oai(validator(min_length = "2"))]
     pub owner: Option<String>,
     pub own_paths: Option<String>,
+    pub msg: Option<String>,
 }
 impl From<bios_sdk_invoke::clients::spi_log_client::LogItemAddReq> for LogItemAddReq {
     fn from(value: bios_sdk_invoke::clients::spi_log_client::LogItemAddReq) -> Self {
@@ -43,6 +43,7 @@ impl From<bios_sdk_invoke::clients::spi_log_client::LogItemAddReq> for LogItemAd
             ts: value.ts,
             owner: value.owner,
             own_paths: value.own_paths,
+            msg: value.msg,
         }
     }
 }
@@ -86,8 +87,7 @@ pub struct AdvBasicQueryCondInfo {
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct LogItemFindResp {
-    #[oai(validator(min_length = "2"))]
-    pub content: String,
+    pub content: Value,
     pub kind: String,
     pub ext: Value,
     pub owner: String,
@@ -97,4 +97,12 @@ pub struct LogItemFindResp {
     pub op: String,
     pub rel_key: String,
     pub ts: DateTime<Utc>,
+    pub msg: String,
+}
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct LogConfigReq {
+    #[oai(validator(pattern = r"^[a-z0-9_]+$"))]
+    pub tag: String,
+    pub ref_field: String,
 }

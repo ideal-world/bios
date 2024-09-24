@@ -6,7 +6,7 @@ use bios_basic::spi::dto::spi_bs_dto::SpiBsAddReq;
 use bios_basic::spi::spi_constants;
 use bios_basic::test::init_test_container;
 use bios_basic::test::test_http_client::TestHttpClient;
-use bios_spi_log::log_constants::DOMAIN_CODE;
+use bios_spi_log::log_constants::{DOMAIN_CODE, SPI_PG_V2_KIND_CODE};
 use bios_spi_log::log_initializer;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
@@ -41,6 +41,7 @@ async fn init_data() -> TardisResult<()> {
 
     let funs = TardisFuns::inst_with_db_conn(DOMAIN_CODE.to_string(), None);
     let kind_id = RbumKindServ::get_rbum_kind_id_by_code(spi_constants::SPI_PG_KIND_CODE, &funs).await?.unwrap();
+    let kind_v2_id = RbumKindServ::get_rbum_kind_id_by_code(SPI_PG_V2_KIND_CODE, &funs).await?.unwrap();
     let ctx = TardisContext {
         own_paths: "".to_string(),
         ak: "".to_string(),
@@ -70,9 +71,28 @@ async fn init_data() -> TardisResult<()> {
         )
         .await;
 
-    let _: Void = client.put(&format!("/ci/manage/bs/{}/rel/app001", bs_id), &Void {}).await;
+    let bs_v2_id: String = client
+        .post(
+            "/ci/manage/bs",
+            &SpiBsAddReq {
+                name: TrimString("test-spi".to_string()),
+                kind_id: TrimString(kind_v2_id),
+                conn_uri: env::var("TARDIS_FW.DB.URL").unwrap(),
+                ak: TrimString("".to_string()),
+                sk: TrimString("".to_string()),
+                ext: "{\"max_connections\":20,\"min_connections\":10}".to_string(),
+                private: false,
+                disabled: None,
+            },
+        )
+        .await;
 
-    test_log_item::test(&mut client).await?;
+    let app001 = "app001";
+    let app002 = "app002";
+    let _: Void = client.put(&format!("/ci/manage/bs/{}/rel/{}", bs_id, app001), &Void {}).await;
+    let _: Void = client.put(&format!("/ci/manage/bs/{}/rel/{}", bs_v2_id, app002), &Void {}).await;
 
+    test_log_item::test(app001, &mut client).await?;
+    test_log_item::test(app002, &mut client).await?;
     Ok(())
 }

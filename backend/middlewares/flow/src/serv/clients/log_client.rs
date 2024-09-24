@@ -85,7 +85,7 @@ impl FlowLogClient {
         let owner = if ctx.owner.len() < 2 { None } else { Some(ctx.owner.clone()) };
         SpiLogClient::add_with_many_params(
             &tag,
-            &TardisFuns::json.obj_to_string(&content).expect("req_msg not a valid json value"),
+            TardisFuns::json.obj_to_json(&content).expect("req_msg not a valid json value"),
             ext,
             kind,
             key,

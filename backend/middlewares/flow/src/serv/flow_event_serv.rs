@@ -25,7 +25,8 @@ use crate::{
             FlowTransitionActionByStateChangeInfo, FlowTransitionActionByVarChangeInfoChangedKind, FlowTransitionActionChangeAgg, FlowTransitionActionChangeKind,
             FlowTransitionFrontActionInfo, FlowTransitionFrontActionRightValue, StateChangeConditionOp, TagRelKind,
         },
-    }, helper::loop_check_helper,
+    },
+    helper::loop_check_helper,
 };
 
 use super::{flow_external_serv::FlowExternalServ, flow_inst_serv::FlowInstServ, flow_model_serv::FlowModelServ, flow_state_serv::FlowStateServ};
@@ -37,7 +38,12 @@ pub struct FlowEventServ;
 
 impl FlowEventServ {
     #[async_recursion]
-    pub async fn do_front_change(flow_inst_id: &str, modified_instance_transations: loop_check_helper::InstancesTransition, ctx: &TardisContext, funs: &TardisFunsInst) -> TardisResult<()> {
+    pub async fn do_front_change(
+        flow_inst_id: &str,
+        modified_instance_transations: loop_check_helper::InstancesTransition,
+        ctx: &TardisContext,
+        funs: &TardisFunsInst,
+    ) -> TardisResult<()> {
         let flow_inst_detail = FlowInstServ::get(flow_inst_id, funs, ctx).await?;
         let flow_model = FlowModelServ::get_item(
             &flow_inst_detail.rel_flow_model_id,
@@ -147,7 +153,13 @@ impl FlowEventServ {
         }
     }
 
-    pub async fn do_post_change(flow_inst_id: &str, flow_transition_id: &str, modified_instance_transations: loop_check_helper::InstancesTransition, ctx: &TardisContext, funs: &TardisFunsInst) -> TardisResult<()> {
+    pub async fn do_post_change(
+        flow_inst_id: &str,
+        flow_transition_id: &str,
+        modified_instance_transations: loop_check_helper::InstancesTransition,
+        ctx: &TardisContext,
+        funs: &TardisFunsInst,
+    ) -> TardisResult<()> {
         let flow_inst_detail = FlowInstServ::get(flow_inst_id, funs, ctx).await?;
         let global_ctx = TardisContext {
             own_paths: "".to_string(),
@@ -311,7 +323,7 @@ impl FlowEventServ {
                                         funs,
                                     )
                                     .await?;
-                                    FlowEventServ::do_front_change(&inst_id, modified_instance_transations.clone(),ctx, funs).await?;
+                                    FlowEventServ::do_front_change(&inst_id, modified_instance_transations.clone(), ctx, funs).await?;
                                 }
                             }
                         } else {
