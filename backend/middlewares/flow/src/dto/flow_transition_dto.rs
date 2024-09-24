@@ -291,7 +291,7 @@ pub struct FlowTransitionSortStateInfoReq {
 }
 
 /// 后置动作配置信息
-#[derive(Serialize, Deserialize, Clone, PartialEq, Debug, poem_openapi::Object, sea_orm::FromJsonQueryResult)]
+#[derive(Serialize, Deserialize, Clone, PartialEq, Default, Debug, poem_openapi::Object, sea_orm::FromJsonQueryResult)]
 pub struct FlowTransitionPostActionInfo {
     /// 后置动作类型，目前有状态修改和字段修改两种。
     pub kind: FlowTransitionActionChangeKind,
@@ -318,6 +318,9 @@ pub struct FlowTransitionPostActionInfo {
     pub changed_val: Option<Value>,
     /// 修改方式（清空，更改内容，更改为其他字段的值，加减值等）
     pub changed_kind: Option<FlowTransitionActionByVarChangeInfoChangedKind>,
+
+    /// 是否可修改（前端用于判断当前配置是否可编辑）
+    pub is_edit: Option<bool>,
 }
 
 impl From<FlowTransitionPostActionInfo> for FlowTransitionActionChangeAgg {
@@ -364,10 +367,11 @@ pub struct FlowTransitionActionChangeAgg {
 }
 
 /// 后置动作类型，目前有状态修改和字段修改两种。
-#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, EnumIter, sea_orm::DeriveActiveEnum)]
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Default, Serialize, poem_openapi::Enum, EnumIter, sea_orm::DeriveActiveEnum)]
 #[sea_orm(rs_type = "String", db_type = "String(Some(255))")]
 pub enum FlowTransitionActionChangeKind {
     /// 字段修改
+    #[default]
     #[sea_orm(string_value = "var")]
     Var,
     /// 状态变更
@@ -543,7 +547,6 @@ impl TryFrom<FlowTransitionInitInfo> for FlowTransitionAddReq {
             action_by_post_changes: Some(value.action_by_post_changes),
             action_by_front_changes: Some(value.action_by_front_changes),
             double_check: value.double_check,
-
             sort: value.sort,
         })
     }

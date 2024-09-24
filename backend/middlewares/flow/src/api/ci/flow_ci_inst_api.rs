@@ -1,6 +1,8 @@
 use std::collections::HashMap;
 
 use bios_basic::rbum::helper::rbum_scope_helper::check_without_owner_and_unsafe_fill_ctx;
+use itertools::Itertools;
+use tardis::chrono::Utc;
 use tardis::log::debug;
 use tardis::serde_json::Value;
 use tardis::web::context_extractor::TardisContextExtractor;
@@ -13,8 +15,7 @@ use tardis::{log, tokio};
 
 use crate::dto::flow_external_dto::FlowExternalCallbackOp;
 use crate::dto::flow_inst_dto::{
-    FlowInstAbortReq, FlowInstBatchBindReq, FlowInstBatchBindResp, FlowInstBindReq, FlowInstDetailResp, FlowInstFindStateAndTransitionsReq, FlowInstFindStateAndTransitionsResp,
-    FlowInstModifyAssignedReq, FlowInstModifyCurrentVarsReq, FlowInstStartReq, FlowInstTransferReq, FlowInstTransferResp,
+    FlowInstAbortReq, FlowInstBatchBindReq, FlowInstBatchBindResp, FlowInstBindReq, FlowInstDetailResp, FlowInstFindNextTransitionsReq, FlowInstFindStateAndTransitionsReq, FlowInstFindStateAndTransitionsResp, FlowInstModifyAssignedReq, FlowInstModifyCurrentVarsReq, FlowInstStartReq, FlowInstTransferReq, FlowInstTransferResp, FlowInstTransitionInfo, FlowOperationContext
 };
 use crate::flow_constants;
 use crate::helper::loop_check_helper;
@@ -46,7 +47,18 @@ impl FlowCiInstApi {
     async fn get(&self, flow_inst_id: Path<String>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<FlowInstDetailResp> {
         let funs = flow_constants::get_tardis_inst();
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
-        let result = FlowInstServ::get(&flow_inst_id.0, &funs, &ctx.0).await?;
+        let mut result = FlowInstServ::get(&flow_inst_id.0, &funs, &ctx.0).await?;
+        // @TODO 临时处理方式，后续需增加接口
+        result.transitions = Some(
+            FlowInstServ::find_next_transitions(&flow_inst_id.0, &FlowInstFindNextTransitionsReq {
+                vars: None,
+            }, &funs, &ctx.0).await?.into_iter().map(|tran| FlowInstTransitionInfo {
+                id: tran.next_flow_transition_id,
+                start_time: Utc::now(),
+                op_ctx: FlowOperationContext::default(),
+                output_message: Some(tran.next_flow_transition_name),
+            }).collect_vec()
+        );
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }

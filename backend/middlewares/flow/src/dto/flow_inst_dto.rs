@@ -175,7 +175,7 @@ pub struct FlowInstTransitionInfo {
 }
 
 /// 操作上下文信息
-#[derive(Serialize, Deserialize, Clone, PartialEq, Debug, poem_openapi::Object, sea_orm::FromJsonQueryResult)]
+#[derive(Serialize, Deserialize, Clone, PartialEq, Default, Debug, poem_openapi::Object, sea_orm::FromJsonQueryResult)]
 pub struct FlowOperationContext {
     pub own_paths: String,
     pub ak: String,

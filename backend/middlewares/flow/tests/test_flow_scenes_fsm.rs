@@ -195,17 +195,7 @@ pub async fn test(flow_client: &mut TestHttpClient) -> TardisResult<()> {
                     FlowTransitionModifyReq {
                         id: trans_start.id.clone().into(),
                         name: Some(format!("{}-modify", &trans_start.name).into()),
-                        from_flow_state_id: None,
-                        to_flow_state_id: None,
                         transfer_by_auto: Some(true),
-                        transfer_by_timer: None,
-                        guard_by_creator: None,
-                        guard_by_his_operators: None,
-                        guard_by_assigned: None,
-                        guard_by_spec_account_ids: None,
-                        guard_by_spec_role_ids: None,
-                        guard_by_spec_org_ids: None,
-                        guard_by_other_conds: None,
                         vars_collect: Some(vec![
                             FlowVarInfo {
                                 name: "assigned_to".to_string(),
@@ -223,8 +213,6 @@ pub async fn test(flow_client: &mut TestHttpClient) -> TardisResult<()> {
                                 ..Default::default()
                             },
                         ]),
-                        action_by_pre_callback: None,
-                        action_by_post_callback: None,
                         action_by_post_changes: Some(vec![FlowTransitionPostActionInfo {
                             kind: FlowTransitionActionChangeKind::State,
                             describe: "".to_string(),
@@ -245,35 +233,19 @@ pub async fn test(flow_client: &mut TestHttpClient) -> TardisResult<()> {
                             var_name: "".to_string(),
                             changed_val: None,
                             changed_kind: None,
+                            ..Default::default()
                         }]),
-                        action_by_post_var_changes: None,
-                        action_by_post_state_changes: None,
                         double_check: Some(FlowTransitionDoubleCheckInfo {
                             is_open: true,
                             content: Some("再次确认该操作生效".to_string()),
                         }),
-                        is_notify: None,
-                        action_by_front_changes: None,
-                        sort: None,
+                        ..Default::default()
                     },
                     FlowTransitionModifyReq {
                         id: trans_complate.id.clone().into(),
                         name: Some(format!("{}-modify", &trans_complate.name).into()),
-                        from_flow_state_id: None,
-                        to_flow_state_id: None,
                         transfer_by_auto: Some(true),
-                        transfer_by_timer: None,
-                        guard_by_creator: None,
-                        guard_by_his_operators: None,
-                        guard_by_assigned: None,
-                        guard_by_spec_account_ids: None,
                         guard_by_spec_role_ids: Some(vec!["admin".to_string()]),
-                        guard_by_spec_org_ids: None,
-                        guard_by_other_conds: None,
-                        vars_collect: None,
-                        action_by_pre_callback: None,
-                        action_by_post_callback: None,
-                        action_by_front_changes: None,
                         action_by_post_changes: Some(vec![
                             FlowTransitionPostActionInfo {
                                 kind: FlowTransitionActionChangeKind::Var,
@@ -287,6 +259,7 @@ pub async fn test(flow_client: &mut TestHttpClient) -> TardisResult<()> {
                                 var_name: "id".to_string(),
                                 changed_val: None,
                                 changed_kind: Some(FlowTransitionActionByVarChangeInfoChangedKind::AutoGetOperateTime),
+                                ..Default::default()
                             },
                             FlowTransitionPostActionInfo {
                                 kind: FlowTransitionActionChangeKind::Var,
@@ -300,38 +273,15 @@ pub async fn test(flow_client: &mut TestHttpClient) -> TardisResult<()> {
                                 var_name: "id1".to_string(),
                                 changed_val: Some(json!("status")),
                                 changed_kind: Some(FlowTransitionActionByVarChangeInfoChangedKind::SelectField),
+                                ..Default::default()
                             },
                         ]),
-                        action_by_post_var_changes: None,
-                        action_by_post_state_changes: None,
-                        double_check: None,
-                        is_notify: None,
-                        sort: None,
+                        ..Default::default()
                     },
                     FlowTransitionModifyReq {
                         id: trans_close.id.clone().into(),
-                        name: None,
-                        from_flow_state_id: None,
-                        to_flow_state_id: None,
-                        transfer_by_auto: None,
-                        transfer_by_timer: None,
-                        guard_by_creator: None,
-                        guard_by_his_operators: None,
                         guard_by_assigned: Some(true),
-                        guard_by_spec_account_ids: None,
-                        guard_by_spec_role_ids: None,
-                        guard_by_spec_org_ids: None,
-                        guard_by_other_conds: None,
-                        vars_collect: None,
-                        action_by_pre_callback: None,
-                        action_by_post_callback: None,
-                        action_by_post_changes: None,
-                        action_by_post_var_changes: None,
-                        action_by_post_state_changes: None,
-                        action_by_front_changes: None,
-                        double_check: None,
-                        is_notify: None,
-                        sort: None,
+                        ..Default::default()
                     },
                 ]),
                 ..Default::default()
@@ -363,22 +313,6 @@ pub async fn test(flow_client: &mut TestHttpClient) -> TardisResult<()> {
             &FlowModelModifyReq {
                 modify_transitions: Some(vec![FlowTransitionModifyReq {
                     id: proj_trans.id.clone().into(),
-                    name: None,
-                    from_flow_state_id: None,
-                    to_flow_state_id: None,
-                    transfer_by_auto: None,
-                    transfer_by_timer: None,
-                    guard_by_creator: None,
-                    guard_by_his_operators: None,
-                    guard_by_assigned: None,
-                    guard_by_spec_account_ids: None,
-                    guard_by_spec_role_ids: None,
-                    guard_by_spec_org_ids: None,
-                    guard_by_other_conds: None,
-                    vars_collect: None,
-                    action_by_pre_callback: None,
-                    action_by_post_callback: None,
-                    action_by_front_changes: None,
                     action_by_post_changes: Some(vec![FlowTransitionPostActionInfo {
                         kind: FlowTransitionActionChangeKind::State,
                         describe: "".to_string(),
@@ -391,12 +325,9 @@ pub async fn test(flow_client: &mut TestHttpClient) -> TardisResult<()> {
                         var_name: "".to_string(),
                         changed_val: None,
                         changed_kind: None,
+                        ..Default::default()
                     }]),
-                    action_by_post_var_changes: None,
-                    action_by_post_state_changes: None,
-                    double_check: None,
-                    is_notify: None,
-                    sort: None,
+                    ..Default::default()
                 }]),
                 ..Default::default()
             },
@@ -410,22 +341,6 @@ pub async fn test(flow_client: &mut TestHttpClient) -> TardisResult<()> {
             &FlowModelModifyReq {
                 modify_transitions: Some(vec![FlowTransitionModifyReq {
                     id: ticket_trans.id.clone().into(),
-                    name: None,
-                    from_flow_state_id: None,
-                    to_flow_state_id: None,
-                    transfer_by_auto: None,
-                    transfer_by_timer: None,
-                    guard_by_creator: None,
-                    guard_by_his_operators: None,
-                    guard_by_assigned: None,
-                    guard_by_spec_account_ids: None,
-                    guard_by_spec_role_ids: None,
-                    guard_by_spec_org_ids: None,
-                    guard_by_other_conds: None,
-                    vars_collect: None,
-                    action_by_pre_callback: None,
-                    action_by_post_callback: None,
-                    action_by_front_changes: None,
                     action_by_post_changes: Some(vec![FlowTransitionPostActionInfo {
                         kind: FlowTransitionActionChangeKind::State,
                         describe: "".to_string(),
@@ -438,12 +353,9 @@ pub async fn test(flow_client: &mut TestHttpClient) -> TardisResult<()> {
                         var_name: "".to_string(),
                         changed_val: None,
                         changed_kind: None,
+                        ..Default::default()
                     }]),
-                    action_by_post_var_changes: None,
-                    action_by_post_state_changes: None,
-                    double_check: None,
-                    is_notify: None,
-                    sort: None,
+                    ..Default::default()
                 }]),
                 ..Default::default()
             },
