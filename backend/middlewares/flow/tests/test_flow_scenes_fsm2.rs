@@ -14,16 +14,18 @@ use bios_mw_flow::dto::flow_state_dto::{FlowStateRelModelExt, FlowStateSummaryRe
 
 use bios_mw_flow::dto::flow_transition_dto::{FlowTransitionAddReq, FlowTransitionModifyReq};
 use bios_sdk_invoke::clients::spi_kv_client::KvItemSummaryResp;
-use bios_spi_search::dto::search_item_dto::{SearchItemQueryReq, SearchItemSearchCtxReq, SearchItemSearchPageReq, SearchItemSearchQScopeKind, SearchItemSearchReq, SearchItemSearchResp};
+use bios_spi_search::dto::search_item_dto::{
+    SearchItemQueryReq, SearchItemSearchCtxReq, SearchItemSearchPageReq, SearchItemSearchQScopeKind, SearchItemSearchReq, SearchItemSearchResp,
+};
 use serde_json::json;
 use tardis::basic::dto::TardisContext;
 
 use std::time::Duration;
 use tardis::basic::result::TardisResult;
 use tardis::log::{debug, info};
+use tardis::tokio::time::sleep;
 use tardis::web::web_resp::{TardisPage, Void};
 use tardis::TardisFuns;
-use tardis::tokio::time::sleep;
 
 pub async fn test(flow_client: &mut TestHttpClient, search_client: &mut TestHttpClient) -> TardisResult<()> {
     info!("【test_flow_scenes_fsm】");
@@ -116,20 +118,23 @@ pub async fn test(flow_client: &mut TestHttpClient, search_client: &mut TestHttp
         .await;
     sleep(Duration::from_millis(500)).await;
     let req_default_model_template_id = req_default_model_template_aggs.id.clone();
-    let model_templates: TardisPage<SearchItemSearchResp> = search_client.put("/ci/item/search", &SearchItemSearchReq {
-        tag: "flow_model".to_string(),
-        ctx: SearchItemSearchCtxReq::default(),
-        query: SearchItemQueryReq {
-            ..Default::default()
-        },
-        adv_query: None,
-        sort: None,
-        page: SearchItemSearchPageReq {
-            number: 1,
-            size: 20,
-            fetch_total: true,
-        }
-    }).await;
+    let model_templates: TardisPage<SearchItemSearchResp> = search_client
+        .put(
+            "/ci/item/search",
+            &SearchItemSearchReq {
+                tag: "flow_model".to_string(),
+                ctx: SearchItemSearchCtxReq::default(),
+                query: SearchItemQueryReq { ..Default::default() },
+                adv_query: None,
+                sort: None,
+                page: SearchItemSearchPageReq {
+                    number: 1,
+                    size: 20,
+                    fetch_total: true,
+                },
+            },
+        )
+        .await;
     debug!("model_templates: {:?}", model_templates);
     assert_eq!(model_templates.total_size, 2);
     assert!(model_templates.records.iter().any(|record| record.key == req_default_model_template_id));
