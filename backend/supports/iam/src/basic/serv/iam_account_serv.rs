@@ -471,7 +471,7 @@ impl IamAccountServ {
             IamSetServ::get_set_id_by_code(&IamSetServ::get_default_code(&IamSetKind::Org, &IamTenantServ::get_id_by_ctx(ctx, funs)?), true, funs, ctx).await?
             // IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, funs, ctx).await?
         };
-        let roles = IamRoleServ::find_items(
+        let app_roles = IamRoleServ::find_items(
             &IamRoleFilterReq {
                 basic: RbumBasicFilterReq {
                     ignore_scope: false,
@@ -532,7 +532,7 @@ impl IamAccountServ {
                 app_id: app.id,
                 app_name: app.name,
                 app_icon: app.icon,
-                roles: roles.iter().filter(|r| r.own_paths == app.own_paths).map(|r| (r.id.to_string(), r.name.to_string())).collect(),
+                roles: app_roles.iter().filter(|r| r.own_paths == app.own_paths).map(|r| (r.id.to_string(), r.name.to_string())).collect(),
                 groups: HashMap::default(),
             });
         }
@@ -561,7 +561,35 @@ impl IamAccountServ {
             temporary: account.temporary,
             lock_status: account.lock_status,
             icon: account.icon,
-            roles: roles.iter().filter(|r| r.own_paths == ctx.own_paths).map(|r| (r.id.to_string(), r.name.to_string())).collect(),
+            roles: IamRoleServ::find_items(
+                &IamRoleFilterReq {
+                    basic: RbumBasicFilterReq {
+                        ignore_scope: false,
+                        rel_ctx_owner: false,
+                        with_sub_own_paths: true,
+                        enabled: Some(true),
+                        ..Default::default()
+                    },
+                    rel: Some(RbumItemRelFilterReq {
+                        rel_by_from: false,
+                        optional: false,
+                        tag: Some(IamRelKind::IamAccountRole.to_string()),
+                        from_rbum_kind: Some(RbumRelFromKind::Item),
+                        rel_item_id: Some(account.id.clone()),
+                        own_paths: Some(ctx.own_paths.clone()),
+                        ..Default::default()
+                    }),
+                    ..Default::default()
+                },
+                None,
+                None,
+                funs,
+                ctx,
+            )
+            .await?
+            .iter()
+            .map(|r| (r.id.to_string(), r.name.to_string()))
+            .collect(),
             apps,
             groups,
             certs: IamCertServ::find_certs(
