@@ -311,13 +311,13 @@ struct TaskExecuteEventReq {
 }
 
 impl EventAttribute for TaskSetStatusEventReq {
-    const SUBJECT: Subject = Subject::const_new(EVENT_SET_TASK_STATUS_FLAG.as_bytes());
+    const SUBJECT: Subject = Subject::const_new(EVENT_SET_TASK_STATUS_FLAG);
 }
 
 impl EventAttribute for TaskSetProcessDataEventReq {
-    const SUBJECT: Subject = Subject::const_new(EVENT_SET_TASK_PROCESS_DATA_FLAG.as_bytes());
+    const SUBJECT: Subject = Subject::const_new(EVENT_SET_TASK_PROCESS_DATA_FLAG);
 }
 
 impl EventAttribute for TaskExecuteEventReq {
-    const SUBJECT: Subject = Subject::const_new(EVENT_EXECUTE_TASK_FLAG.as_bytes());
+    const SUBJECT: Subject = Subject::const_new(EVENT_EXECUTE_TASK_FLAG);
 }

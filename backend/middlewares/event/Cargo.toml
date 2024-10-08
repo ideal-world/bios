@@ -29,8 +29,8 @@ bios-sdk-invoke = { path = "../../../frontend/sdks/invoke", features = [
     "spi_log",
     "event",
 ], default-features = false }
-asteroid-mq = { workspace = true, features = ["cluster-k8s", "json"] }
-
+asteroid-mq = { workspace = true, features = ["cluster-k8s"] }
+pin-project-lite = { version = "0.2" }
 
 [dev-dependencies]
 tardis = { workspace = true, features = [

@@ -17,6 +17,7 @@ pub struct EventTopicConfig {
     pub topic_code: String,
     pub overflow_policy: String,
     pub overflow_size: i32,
+    pub check_auth: bool,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone, FromQueryResult)]
@@ -28,6 +29,7 @@ pub struct EventTopicAddOrModifyReq {
     pub topic_code: String,
     pub overflow_policy: String,
     pub overflow_size: i32,
+    pub check_auth: bool,
 }
 impl EventTopicAddOrModifyReq {
     pub fn into_topic_config(self) -> TopicConfig {
@@ -44,6 +46,20 @@ impl EventTopicAddOrModifyReq {
             }),
         }
     }
+    pub fn from_config(config: TopicConfig) -> Self {
+        Self {
+            code: config.code.to_string(),
+            name: config.code.to_string(),
+            blocking: config.blocking,
+            topic_code: config.code.to_string(),
+            overflow_policy: config.overflow_config.as_ref().map_or("".to_string(), |c| match c.policy {
+                TopicOverflowPolicy::RejectNew => "RejectNew".to_string(),
+                TopicOverflowPolicy::DropOld => "DropOld".to_string(),
+            }),
+            overflow_size: config.overflow_config.as_ref().map_or(0, |c| c.size.get() as i32),
+            check_auth: false,
+        }
+    }
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone, FromQueryResult)]
@@ -55,6 +71,7 @@ pub struct EventTopicInfoResp {
     pub topic_code: String,
     pub overflow_policy: String,
     pub overflow_size: i32,
+    pub check_auth: bool,
 }
 
 impl EventTopicInfoResp {
@@ -105,9 +122,8 @@ pub struct EventListenerRegisterReq {
     pub subscribe_mode: bool,
 }
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
-pub struct EventListenerRegisterResp {
-    pub ws_addr: String,
-    pub listener_code: String,
+pub struct EventRegisterResp {
+    pub node_id: String,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -125,4 +141,20 @@ pub struct EventMessageMgrWrap {
     pub msg: Value,
     pub ori_from_avatar: String,
     pub ori_to_avatars: Option<Vec<String>>,
+}
+
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct TopicAuth {
+    pub topic: String,
+    pub ak: String,
+    pub read: bool,
+    pub write: bool,
+}
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct SetTopicAuth {
+    pub topic: String,
+    pub read: bool,
+    pub write: bool,
 }
