@@ -136,10 +136,10 @@ pub struct AuthPlugin {
     ///
     /// e.g
     ///
-    /// |request mix url|replace_url|        result       |
-    /// |---------------|-----------|---------------------|
-    /// |   `/apis`     |  `apis`   |    `/{true_url}`    |
-    /// |`/prefix/apis` |  `apis`   |`/prefix/{true_url}` |
+    /// |request mix url|mix_replace_url|        result       |
+    /// |---------------|---------------|---------------------|
+    /// |   `/apis`     |     `apis`    |    `/{true_url}`    |
+    /// |`/prefix/apis` |     `apis`    |`/prefix/{true_url}` |
     mix_replace_url: String,
     /// Remove prefix of AuthReq path.
     /// use for [ctx_to_auth_req]
@@ -359,6 +359,7 @@ async fn handle_mix_req(auth_config: &AuthConfig, mix_replace_url: &str, req: Sg
 
     let mix_body = TardisFuns::json.str_to_obj::<MixRequestBody>(&body)?;
     // ctx.set_action(SgRouteFilterRequestAction::Redirect);
+    log::trace!("[SG.Filter.Auth.ReqMix] raw url:[{}],to url:[{}]",parts.uri.to_string(),parts.uri.to_string().replace(mix_replace_url, &mix_body.uri));
     let mut true_uri = Url::from_str(&parts.uri.to_string().replace(mix_replace_url, &mix_body.uri))
         .map_err(|e| TardisError::custom("500", &format!("[SG.Filter.Auth.MixReq] url parse err {e}"), "500-parse_mix_req-url-error"))?;
     true_uri.set_path(&true_uri.path().replace("//", "/"));
