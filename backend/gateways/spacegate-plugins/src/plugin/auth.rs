@@ -358,11 +358,10 @@ async fn handle_mix_req(auth_config: &AuthConfig, mix_replace_url: &str, req: Sg
     let body = body.ok_or_else(|| TardisError::custom("500", "[SG.Filter.Auth.MixReq] decrypt body can't be empty", "500-parse_mix_req-parse-error"))?;
 
     let mix_body = TardisFuns::json.str_to_obj::<MixRequestBody>(&body)?;
-    // ctx.set_action(SgRouteFilterRequestAction::Redirect);
-    log::trace!("[SG.Filter.Auth.ReqMix] raw url:[{}],to url:[{}]",parts.uri.to_string(),parts.uri.to_string().replace(mix_replace_url, &mix_body.uri));
-    let mut true_uri = Url::from_str(&parts.uri.to_string().replace(mix_replace_url, &mix_body.uri))
+    let true_uri=parts.uri.to_string().replace(mix_replace_url, &mix_body.uri).replace("//", "/");
+    log::trace!("[SG.Filter.Auth.ReqMix] raw url:[{}],true url:[{}]",parts.uri.to_string(),true_uri);
+    let mut true_uri = Url::from_str(&true_uri)
         .map_err(|e| TardisError::custom("500", &format!("[SG.Filter.Auth.MixReq] url parse err {e}"), "500-parse_mix_req-url-error"))?;
-    true_uri.set_path(&true_uri.path().replace("//", "/"));
     true_uri.set_query(Some(&if let Some(old_query) = true_uri.query() {
         format!("{}&_t={}", old_query, mix_body.ts)
     } else {
