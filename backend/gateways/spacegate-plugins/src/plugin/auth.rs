@@ -8,6 +8,7 @@ use bios_auth::{
     serv::{auth_crypto_serv, auth_kernel_serv, auth_res_serv},
 };
 
+use http::header::HOST;
 use serde::{Deserialize, Serialize};
 use spacegate_shell::{
     hyper::{
@@ -358,17 +359,27 @@ async fn handle_mix_req(auth_config: &AuthConfig, mix_replace_url: &str, req: Sg
     let body = body.ok_or_else(|| TardisError::custom("500", "[SG.Filter.Auth.MixReq] decrypt body can't be empty", "500-parse_mix_req-parse-error"))?;
 
     let mix_body = TardisFuns::json.str_to_obj::<MixRequestBody>(&body)?;
-    let true_uri=parts.uri.to_string().replace(mix_replace_url, &mix_body.uri).replace("//", "/");
-    log::trace!("[SG.Filter.Auth.ReqMix] raw url:[{}],true url:[{}]",parts.uri.to_string(),true_uri);
-    let true_uri = true_uri.parse::<http::Uri>()
-        .map_err(|e| TardisError::custom("500", &format!("[SG.Filter.Auth.MixReq] url parse err {e}"), "500-parse_mix_req-url-error"))?;
+    let true_uri = parts.uri.to_string().replace(mix_replace_url, &mix_body.uri).replace("//", "/");
+    log::trace!("[SG.Filter.Auth.ReqMix] raw url:[{}],true url:[{}]", parts.uri.to_string(), true_uri);
+    let mut true_uri_parts =
+        true_uri.parse::<http::Uri>().map_err(|e| TardisError::custom("500", &format!("[SG.Filter.Auth.MixReq] url parse err {e}"), "500-parse_mix_req-url-error"))?.into_parts();
 
+    let host = parts.uri.host().map(String::from).or(parts.headers.get(HOST).and_then(|x| x.to_str().map(String::from).ok()));
+    if let Some(host) = host {
+        true_uri_parts.authority = Some(http::uri::Authority::from_str(&host).map_err(|e| {
+            TardisError::custom(
+                "500",
+                &format!("[SG.Filter.Auth.MixReq] error parse str {host} to authority :{e}"),
+                "500-parse_mix_req-authority-error",
+            )
+        })?);
+    }
     // let a=if let Some(old_query) = true_uri.query() {
     //     format!("{}&_t={}", old_query, mix_body.ts)
     // } else {
     //     format!("_t={}", mix_body.ts)
     // };
-    parts.uri = true_uri;
+    parts.uri = http::Uri::from_parts(true_uri_parts)?;
     parts.method = Method::from_str(&mix_body.method.to_ascii_uppercase())
         .map_err(|e| TardisError::custom("500", &format!("[SG.Filter.Auth.MixReq] method parse err {e}"), "500-parse_mix_req-method-error"))?;
 
