@@ -32,7 +32,7 @@ use tardis::{
     serde_json::{self, json},
     tokio::{sync::RwLock, task::JoinHandle},
     url::Url,
-    web::web_resp::TardisResp,
+    web::{poem_openapi::types::ParseFromMultipartField, web_resp::TardisResp},
     TardisFuns,
 };
 use tardis::{config::config_dto::TardisComponentConfig, web::poem_openapi::types::Type};
@@ -360,14 +360,15 @@ async fn handle_mix_req(auth_config: &AuthConfig, mix_replace_url: &str, req: Sg
     let mix_body = TardisFuns::json.str_to_obj::<MixRequestBody>(&body)?;
     let true_uri=parts.uri.to_string().replace(mix_replace_url, &mix_body.uri).replace("//", "/");
     log::trace!("[SG.Filter.Auth.ReqMix] raw url:[{}],true url:[{}]",parts.uri.to_string(),true_uri);
-    let mut true_uri = Url::from_str(&true_uri)
+    let true_uri = true_uri.parse::<http::Uri>()
         .map_err(|e| TardisError::custom("500", &format!("[SG.Filter.Auth.MixReq] url parse err {e}"), "500-parse_mix_req-url-error"))?;
-    true_uri.set_query(Some(&if let Some(old_query) = true_uri.query() {
-        format!("{}&_t={}", old_query, mix_body.ts)
-    } else {
-        format!("_t={}", mix_body.ts)
-    }));
-    parts.uri = true_uri.as_str().parse().map_err(|e| TardisError::custom("500", &format!("[SG.Filter.Auth.MixReq] uri parse error: {}", e), ""))?;
+
+    // let a=if let Some(old_query) = true_uri.query() {
+    //     format!("{}&_t={}", old_query, mix_body.ts)
+    // } else {
+    //     format!("_t={}", mix_body.ts)
+    // };
+    parts.uri = true_uri;
     parts.method = Method::from_str(&mix_body.method.to_ascii_uppercase())
         .map_err(|e| TardisError::custom("500", &format!("[SG.Filter.Auth.MixReq] method parse err {e}"), "500-parse_mix_req-method-error"))?;
 
