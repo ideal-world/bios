@@ -411,7 +411,9 @@ async fn handle_mix_req(auth_config: &AuthConfig, mix_replace_url: &str, req: Sg
     let new_body = SgBody::full(mix_body.body);
 
     // ctx.request.set_header_str(&self.header_is_mix_req, "true")?;
-    Ok(Request::from_parts(parts, new_body))
+    let mut new_req=Request::from_parts(parts, new_body);
+    spacegate_shell::kernel::utils::req_length_or_chunked(&mut new_req);
+    Ok(new_req)
 }
 
 /// # Convert Request to AuthReq
