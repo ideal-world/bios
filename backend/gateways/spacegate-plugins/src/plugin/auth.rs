@@ -263,7 +263,7 @@ impl AuthPlugin {
 
         if self.auth_config.strict_security_mode && !is_true_mix_req {
             log::debug!("[SG.Filter.Auth] handle mix request");
-            return Ok(handle_mix_req(&self.auth_config, &self.mix_replace_url, req).await.map_err(PluginError::internal_error::<AuthPlugin>)?);
+            return Ok(handle_mix_req(&self.auth_config, &self.mix_replace_url,&self.header_is_same_req, req).await.map_err(PluginError::internal_error::<AuthPlugin>)?);
         }
         req.headers_mut().append(&self.header_is_mix_req, HeaderValue::from_static("false"));
 
@@ -342,7 +342,7 @@ impl AuthPlugin {
     }
 }
 
-async fn handle_mix_req(auth_config: &AuthConfig, mix_replace_url: &str, req: SgRequest) -> Result<SgRequest, BoxError> {
+async fn handle_mix_req(auth_config: &AuthConfig, mix_replace_url: &str,header_is_same_req:&HeaderName,req: SgRequest) -> Result<SgRequest, BoxError> {
     let (mut parts, mut body) = req.into_parts();
     if !body.is_dumped() {
         body = body.dump().await?;
@@ -407,6 +407,7 @@ async fn handle_mix_req(auth_config: &AuthConfig, mix_replace_url: &str, req: Sg
             })
             .collect::<TardisResult<HeaderMap<HeaderValue>>>()?,
     );
+    parts.headers.remove(header_is_same_req);
 
     let new_body = SgBody::full(mix_body.body);
 
