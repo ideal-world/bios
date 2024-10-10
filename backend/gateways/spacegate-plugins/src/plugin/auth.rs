@@ -1,5 +1,5 @@
 use bios_auth::{
-    auth_config::AuthConfig,
+    auth_config::{self, AuthConfig},
     auth_initializer,
     dto::{
         auth_crypto_dto::AuthEncryptReq,
@@ -263,7 +263,7 @@ impl AuthPlugin {
 
         if self.auth_config.strict_security_mode && !is_true_mix_req {
             log::debug!("[SG.Filter.Auth] handle mix request");
-            return Ok(handle_mix_req(&self.auth_config, &self.mix_replace_url,&self.header_is_same_req, req).await.map_err(PluginError::internal_error::<AuthPlugin>)?);
+            return Ok(handle_mix_req(&self, req).await.map_err(PluginError::internal_error::<AuthPlugin>)?);
         }
         req.headers_mut().append(&self.header_is_mix_req, HeaderValue::from_static("false"));
 
@@ -342,7 +342,8 @@ impl AuthPlugin {
     }
 }
 
-async fn handle_mix_req(auth_config: &AuthConfig, mix_replace_url: &str,header_is_same_req:&HeaderName,req: SgRequest) -> Result<SgRequest, BoxError> {
+async fn handle_mix_req(plugin_config: &AuthPlugin, req: SgRequest) -> Result<SgRequest, BoxError> {
+    let auth_config = &plugin_config.auth_config;
     let (mut parts, mut body) = req.into_parts();
     if !body.is_dumped() {
         body = body.dump().await?;
@@ -359,7 +360,7 @@ async fn handle_mix_req(auth_config: &AuthConfig, mix_replace_url: &str,header_i
     let body = body.ok_or_else(|| TardisError::custom("500", "[SG.Filter.Auth.MixReq] decrypt body can't be empty", "500-parse_mix_req-parse-error"))?;
 
     let mix_body = TardisFuns::json.str_to_obj::<MixRequestBody>(&body)?;
-    let true_uri = parts.uri.to_string().replace(mix_replace_url, &mix_body.uri).replace("//", "/");
+    let true_uri = parts.uri.to_string().replace(&plugin_config.mix_replace_url, &mix_body.uri).replace("//", "/");
     let mut true_uri_parts =
         true_uri.parse::<http::Uri>().map_err(|e| TardisError::custom("500", &format!("[SG.Filter.Auth.MixReq] url parse err {e}"), "500-parse_mix_req-url-error"))?.into_parts();
 
@@ -377,12 +378,12 @@ async fn handle_mix_req(auth_config: &AuthConfig, mix_replace_url: &str,header_i
     let old_scheme = parts.uri.scheme().cloned().unwrap_or_else(|| {
         if let Some(port) = true_uri_parts.authority.clone().and_then(|a| a.port_u16()) {
             if port == 443 {
-              http::uri::Scheme::HTTPS
+                http::uri::Scheme::HTTPS
             } else {
-              http::uri::Scheme::HTTP
+                http::uri::Scheme::HTTP
             }
         } else {
-          http::uri::Scheme::HTTP
+            http::uri::Scheme::HTTP
         }
     });
     true_uri_parts.scheme = Some(old_scheme);
@@ -407,12 +408,12 @@ async fn handle_mix_req(auth_config: &AuthConfig, mix_replace_url: &str,header_i
             })
             .collect::<TardisResult<HeaderMap<HeaderValue>>>()?,
     );
-    parts.headers.remove(header_is_same_req);
+    parts.headers.remove(plugin_config.header_is_same_req.clone());
+    parts.headers.append(plugin_config.header_is_mix_req.clone(), HeaderValue::from_static("true"));
 
     let new_body = SgBody::full(mix_body.body);
 
-    // ctx.request.set_header_str(&self.header_is_mix_req, "true")?;
-    let mut new_req=Request::from_parts(parts, new_body);
+    let mut new_req = Request::from_parts(parts, new_body);
     spacegate_shell::kernel::utils::req_length_or_chunked(&mut new_req);
     Ok(new_req)
 }
