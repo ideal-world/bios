@@ -360,7 +360,6 @@ async fn handle_mix_req(auth_config: &AuthConfig, mix_replace_url: &str, req: Sg
 
     let mix_body = TardisFuns::json.str_to_obj::<MixRequestBody>(&body)?;
     let true_uri = parts.uri.to_string().replace(mix_replace_url, &mix_body.uri).replace("//", "/");
-    log::trace!("[SG.Filter.Auth.ReqMix] raw url:[{}],true url:[{}]", parts.uri.to_string(), true_uri);
     let mut true_uri_parts =
         true_uri.parse::<http::Uri>().map_err(|e| TardisError::custom("500", &format!("[SG.Filter.Auth.MixReq] url parse err {e}"), "500-parse_mix_req-url-error"))?.into_parts();
 
@@ -374,12 +373,22 @@ async fn handle_mix_req(auth_config: &AuthConfig, mix_replace_url: &str, req: Sg
             )
         })?);
     }
-    // let a=if let Some(old_query) = true_uri.query() {
-    //     format!("{}&_t={}", old_query, mix_body.ts)
-    // } else {
-    //     format!("_t={}", mix_body.ts)
-    // };
-    parts.uri = http::Uri::from_parts(true_uri_parts)?;
+
+    let old_scheme = parts.uri.scheme().cloned().unwrap_or_else(|| {
+        if let Some(port) = true_uri_parts.authority.clone().and_then(|a| a.port_u16()) {
+            if port == 443 {
+              http::uri::Scheme::HTTPS
+            } else {
+              http::uri::Scheme::HTTP
+            }
+        } else {
+          http::uri::Scheme::HTTP
+        }
+    });
+    true_uri_parts.scheme = Some(old_scheme);
+    let true_uri = http::Uri::from_parts(true_uri_parts)?;
+    log::trace!("[SG.Filter.Auth.ReqMix] raw url:[{}],true url:[{}]", parts.uri.to_string(), true_uri);
+    parts.uri = true_uri;
     parts.method = Method::from_str(&mix_body.method.to_ascii_uppercase())
         .map_err(|e| TardisError::custom("500", &format!("[SG.Filter.Auth.MixReq] method parse err {e}"), "500-parse_mix_req-method-error"))?;
 
