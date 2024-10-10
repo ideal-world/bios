@@ -241,7 +241,7 @@ impl AuthPlugin {
             return Ok(req);
         }
 
-        log::trace!("[SG.Filter.Auth] request filter info: request path is {}", req.uri().path());
+        log::trace!("[SG.Filter.Auth] request filter info: request url is {}", req.uri());
         if method == http::Method::GET && req.uri().path().trim_matches('/') == self.fetch_server_config_path.as_str().trim_matches('/') {
             log::debug!("[SG.Filter.Auth] request path hit fetch server config path: {}", self.fetch_server_config_path);
             let mock_resp = Response::builder()
