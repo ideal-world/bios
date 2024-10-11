@@ -16,14 +16,16 @@ use spacegate_shell::{
         http::{HeaderMap, HeaderName, HeaderValue, StatusCode},
         Method, Request, Response,
     },
-    kernel::{extension::Reflect, helper_layers::function::Inner, SgRequest},
+    kernel::{
+        extension::{IsEastWestTraffic, Reflect},
+        helper_layers::function::Inner,
+        SgRequest,
+    },
     plugin::{Plugin, PluginConfig, PluginError},
     BoxError, SgBody, SgRequestExt,
 };
 use std::{
-    collections::HashMap,
-    str::FromStr,
-    sync::{Arc, Once, OnceLock},
+    collections::HashMap, ops::Deref, str::FromStr, sync::{Arc, Once, OnceLock}
 };
 use tardis::{
     basic::{error::TardisError, result::TardisResult},
@@ -261,7 +263,8 @@ impl AuthPlugin {
 
         let is_true_mix_req = self.is_mix_req(req.headers());
 
-        if self.auth_config.strict_security_mode && !is_true_mix_req {
+        let is_east_west_traffic = req.extensions().get::<IsEastWestTraffic>().map(Deref::deref).unwrap_or(&false);
+        if self.auth_config.strict_security_mode && !is_true_mix_req && !is_east_west_traffic{
             log::debug!("[SG.Filter.Auth] handle mix request");
             return Ok(handle_mix_req(&self, req).await.map_err(PluginError::internal_error::<AuthPlugin>)?);
         }
