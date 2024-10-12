@@ -4,6 +4,9 @@ use bios_basic::rbum::rbum_config::RbumConfig;
 use serde::{Deserialize, Serialize};
 use std::{fmt::Debug, sync::Mutex};
 use tardis::{basic::{error::TardisError, result::TardisResult}, tardis_static};
+
+
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(default)]
 pub struct EventConfig {
@@ -15,6 +18,12 @@ pub struct EventConfig {
     pub startup_timeout: u64,
     pub durable: bool,
     pub avatars: Vec<String>,
+    pub cluster: Option<String>,
+}
+
+impl EventConfig {
+    pub const CLUSTER_K8S: &str = "k8s";
+    pub const NO_CLUSTER: &str = "singleton";
 }
 
 impl Default for EventConfig {
@@ -26,6 +35,7 @@ impl Default for EventConfig {
             avatars: Vec::new(),
             startup_timeout: 5000,
             durable: true,
+            cluster: Some(Self::CLUSTER_K8S.to_string()),
             raft: openraft::Config {
                 cluster_name: "bios".to_string(),
                 election_timeout_max: 1000,

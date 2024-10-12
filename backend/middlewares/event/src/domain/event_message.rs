@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use tardis::basic::error::TardisError;
+use tardis::chrono::{Utc, DateTime};
 use tardis::db::sea_orm::prelude::*;
 use tardis::{basic::result::TardisResult, db::sea_orm};
 
@@ -19,12 +20,14 @@ pub struct Model {
     pub archived: bool,
     pub ack_kind: i16,
     pub target_kind: i16,
-    pub expire_time: Option<DateTimeUtc>,
+    #[sea_orm(column_type = "DateTime")]
+    pub expire_time: Option<DateTime<Utc>>,
     pub max_receiver: Option<i32>,
     pub subjects: Vec<String>,
     pub payload: Vec<u8>,
     pub status: Vec<u8>,
-    pub time: DateTimeUtc,
+    #[sea_orm(column_type = "DateTime")]
+    pub time: DateTime<Utc>,
 }
 
 const EP_ADDR_SIZE: usize = size_of::<EndpointAddr>();

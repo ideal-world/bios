@@ -1,3 +1,4 @@
+//！ The adapter layer between mq and bios services
 use std::sync::Arc;
 
 use asteroid_mq::{
@@ -15,6 +16,10 @@ use crate::{
     serv::{event_auth_serv::EventAuthServ, event_message_serv::EventMessageServ, event_register_serv::EventRegisterServ, event_topic_serv::EventTopicServ},
 };
 
+
+/*
+Durable Service Adapter
+*/
 pub struct BiosDurableAdapter {
     funs: Arc<TardisFunsInst>,
     message_serv: EventMessageServ,
@@ -82,6 +87,11 @@ impl Durable for BiosDurableAdapter {
         Ok(items.into_iter().map(|item| item.into_topic_config()).collect())
     }
 }
+
+
+/*
+Auth Service Adapter
+*/
 
 pub struct BiosEdgeAuthAdapter {
     funs: Arc<TardisFunsInst>,

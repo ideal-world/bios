@@ -1,7 +1,9 @@
 [cs]
 
 [csm.event]
-event_url = "ws://127.0.0.1:8080/event/"
+enable = true
+cluster = "singleton"
+durable = true
 
 [fw.web_server]
 port = 8080
@@ -13,3 +15,7 @@ doc_urls = [["test env", "http://127.0.0.1:8080/"]]
 [fw.cluster]
 watch_kind = "cache"
 cache_check_interval_sec = 10
+
+[fw.log]
+level = "debug"
+directives = ["openraft=off"]

@@ -4,7 +4,7 @@ use asteroid_mq::{
 };
 use tardis::{
     basic::{error::TardisError, result::TardisResult},
-    db::sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, IntoActiveModel, QueryFilter, QuerySelect, Set},
+    db::sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, IntoActiveModel, QueryFilter, QuerySelect, Set, Unchanged},
     TardisFunsInst,
 };
 
@@ -23,10 +23,10 @@ impl EventMessageServ {
     }
     pub async fn archive(&self, topic: TopicCode, message_id: MessageId, funs: &TardisFunsInst) -> TardisResult<()> {
         let update = Entity::update(ActiveModel {
+            message_id: Unchanged(message_id.to_base64()),
             archived: Set(true),
             ..Default::default()
         })
-        .filter(Column::MessageId.eq(message_id.to_base64()))
         .filter(Column::Topic.eq(topic.to_string()));
         let conn = funs.reldb().conn();
         let raw_conn = conn.raw_conn();
@@ -57,10 +57,10 @@ impl EventMessageServ {
         let mut model = model.ok_or_else(|| TardisError::not_found(&format!("event message {} not found", message_id), "event-message-not-found"))?;
         model.status_update(status);
         Entity::update(ActiveModel {
+            message_id: Unchanged(message_id.to_base64()),
             status: Set(model.status),
             ..Default::default()
         })
-        .filter(Column::MessageId.eq(message_id.to_base64()))
         .filter(Column::Topic.eq(topic.to_string()))
         .exec(raw_conn)
         .await?;

@@ -21,16 +21,19 @@ pub struct EventTopicConfig {
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone, FromQueryResult)]
-
 pub struct EventTopicAddOrModifyReq {
     pub code: String,
     pub name: String,
+    #[oai(default)]
     pub blocking: bool,
     pub topic_code: String,
     pub overflow_policy: String,
     pub overflow_size: i32,
+    #[oai(default)]
     pub check_auth: bool,
 }
+
+
 impl EventTopicAddOrModifyReq {
     pub fn into_topic_config(self) -> TopicConfig {
         TopicConfig {

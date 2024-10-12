@@ -19,7 +19,7 @@ pub struct EventConnectApi {
 /// Event Connect API
 ///
 /// 事件处理API
-#[poem_openapi::OpenApi(prefix_path = "/connect")]
+#[poem_openapi::OpenApi(prefix_path = "/ca/connect")]
 impl EventConnectApi {
     /// Connect client nodes
     ///
