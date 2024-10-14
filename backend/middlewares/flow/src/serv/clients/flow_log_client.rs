@@ -1,10 +1,9 @@
-use bios_sdk_invoke::clients::{iam_client::IamClient, spi_log_client::SpiLogClient};
+use bios_sdk_invoke::clients::{iam_client::IamClient, spi_log_client::{LogItemAddReq, SpiLogClient}};
 use serde::Serialize;
 
 use serde_json::Value;
 use tardis::{
-    basic::{dto::TardisContext, result::TardisResult},
-    tokio, TardisFuns, TardisFunsInst,
+    basic::{dto::TardisContext, result::TardisResult}, chrono::{DateTime, Utc}, tokio, TardisFuns, TardisFunsInst
 };
 
 use crate::{flow_config::FlowConfig, flow_constants};
@@ -93,23 +92,24 @@ impl FlowLogClient {
             &ctx,
             funs.conf::<FlowConfig>().invoke.module_urls.get("iam").expect("missing iam base url"),
         ).get_account(&ctx.owner, &ctx.own_paths).await?.owner_name;
-        SpiLogClient::add_with_many_params(
-            &tag,
-            TardisFuns::json.obj_to_json(&content).expect("req_msg not a valid json value"),
-            ext,
-            kind,
-            key,
-            op,
-            rel_key,
-            ts,
-            owner,
-            own_paths,
-            owner_name,
-            push,
-            funs,
-            ctx,
-        )
-        .await?;
+
+        let req = LogItemAddReq {
+          tag: tag.to_string(),
+          content: TardisFuns::json.obj_to_json(&content).expect("req_msg not a valid json value"),
+          kind,
+          ext,
+          key,
+          op,
+          rel_key,
+          id: None,
+          ts: ts.map(|ts| DateTime::parse_from_rfc3339(&ts).unwrap_or_default().with_timezone(&Utc)),
+          owner,
+          own_paths,
+          msg: None,
+          owner_name,
+          push: push,
+      };
+      SpiLogClient::add(&req, funs, ctx).await?;
         Ok(())
     }
 }

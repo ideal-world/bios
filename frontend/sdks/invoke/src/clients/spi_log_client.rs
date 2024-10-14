@@ -122,42 +122,6 @@ impl SpiLogClient {
         Ok(())
     }
 
-    #[deprecated = "this function has too many parameters, use `SpiLogClient::add` instead"]
-    pub async fn add_with_many_params(
-        tag: &str,
-        content: Value,
-        ext: Option<Value>,
-        kind: Option<String>,
-        key: Option<String>,
-        op: Option<String>,
-        rel_key: Option<String>,
-        ts: Option<String>,
-        owner: Option<String>,
-        owner_name: Option<String>,
-        own_paths: Option<String>,
-        push: bool,
-        funs: &TardisFunsInst,
-        ctx: &TardisContext,
-    ) -> TardisResult<()> {
-        let req = LogItemAddReq {
-            tag: tag.to_string(),
-            content: content,
-            kind,
-            ext,
-            key,
-            op,
-            rel_key,
-            id: None,
-            ts: ts.map(|ts| DateTime::parse_from_rfc3339(&ts).unwrap_or_default().with_timezone(&Utc)),
-            owner,
-            own_paths,
-            msg: None,
-            owner_name: owner_name,
-            push: push,
-        };
-        Self::add(&req, funs, ctx).await
-    }
-
     pub async fn find(find_req: LogItemFindReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<TardisPage<LogItemFindResp>>> {
         let log_url: String = BaseSpiClient::module_url(InvokeModuleKind::Log, funs).await?;
         let headers = BaseSpiClient::headers(None, funs, ctx).await?;
