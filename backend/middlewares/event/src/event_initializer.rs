@@ -1,6 +1,9 @@
-use std::vec;
+use std::{sync::Arc, time::Duration, vec};
 
-use asteroid_mq::{prelude::TopicConfig, protocol::topic::durable_message::LoadTopic};
+use asteroid_mq::{
+    prelude::{DurableService, Node, NodeConfig, NodeId, TopicConfig},
+    protocol::node::{edge::auth::EdgeAuthService, raft::cluster::{K8sClusterProvider, StaticClusterProvider}},
+};
 use bios_basic::rbum::{
     dto::{rbum_domain_dto::RbumDomainAddReq, rbum_kind_dto::RbumKindAddReq},
     rbum_enumeration::RbumScopeLevelKind,
@@ -15,10 +18,14 @@ use tardis::{
 };
 
 use crate::{
-    api::{event_listener_api, event_proc_api, event_topic_api},
-    domain::event_topic,
+    api::{
+        ca::{event_connect_api, event_register_api},
+        ci::event_topic_api,
+    },
+    domain::{event_message, event_topic},
     event_config::{EventConfig, EventInfo, EventInfoManager},
     event_constants::{DOMAIN_CODE, KIND_CODE},
+    mq_adapter::{BiosDurableAdapter, BiosEdgeAuthAdapter},
 };
 
 pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
@@ -39,7 +46,8 @@ pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
 
     funs.commit().await?;
     if config.enable {
-        init_mq_cluster(&config.svc).await?;
+        let funs = TardisFuns::inst_with_db_conn(DOMAIN_CODE.to_string(), None);
+        init_mq_cluster(&config, funs, ctx).await?;
     }
     Ok(())
 }
@@ -52,7 +60,9 @@ async fn init_db(domain_code: String, kind_code: String, funs: &TardisFunsInst, 
     }
 
     // Initialize event component RBUM item table and indexs
-    funs.db().init(event_topic::ActiveModel::init(TardisFuns::reldb().backend(), None, TardisFuns::reldb().compatible_type())).await?;
+    let _ = funs.db().init(event_topic::ActiveModel::init(TardisFuns::reldb().backend(), None, TardisFuns::reldb().compatible_type())).await;
+    let _ = funs.db().init(event_message::ActiveModel::init(TardisFuns::reldb().backend(), None, TardisFuns::reldb().compatible_type())).await;
+
     // funs.db()
     //     .init(event_persistent::ActiveModel::init(
     //         TardisFuns::reldb().backend(),
@@ -98,36 +108,76 @@ async fn init_api(web_server: &TardisWebServer) -> TardisResult<()> {
     web_server
         .add_module(
             DOMAIN_CODE,
-            (event_topic_api::EventTopicApi, event_proc_api::EventProcApi, event_listener_api::EventListenerApi),
+            (
+                event_topic_api::EventTopicApi,
+                event_connect_api::EventConnectApi::default(),
+                event_register_api::EventRegisterApi::default(),
+            ),
         )
         .await;
     Ok(())
 }
 
-async fn init_mq_cluster(svc_name: &str) -> TardisResult<()> {
+async fn init_mq_cluster(config: &EventConfig, funs: TardisFunsInst, ctx: TardisContext) -> TardisResult<()> {
     use bios_sdk_invoke::clients::event_client::mq_error;
-    let mq_node = init_mq_node(svc_name).await;
-    mq_node
-        .load_topic(LoadTopic {
-            config: TopicConfig {
-                code: SPI_RPC_TOPIC,
-                overflow_config: None,
-                blocking: false,
-            },
-            queue: vec![],
-        })
-        .await
-        .map_err(mq_error)?;
+    let mq_node = init_mq_node(config, funs, ctx).await;
+    mq_node.load_from_durable_service().await.map_err(mq_error)?;
+    // it's important to ensure the SPI_RPC_TOPIC is created, many other components depend on it
+    if mq_node.get_topic(&SPI_RPC_TOPIC).is_none() {
+        mq_node
+            .load_topic(
+                TopicConfig {
+                    code: SPI_RPC_TOPIC,
+                    overflow_config: None,
+                    blocking: false,
+                },
+                vec![],
+            )
+            .await
+            .map_err(mq_error)?;
+    }
     Ok(())
 }
 
-pub async fn init_mq_node(svc_name: &str) -> asteroid_mq::prelude::Node {
+pub async fn init_mq_node(config: &EventConfig, funs: TardisFunsInst, ctx: TardisContext) -> asteroid_mq::prelude::Node {
+    let timeout = Duration::from_secs(config.startup_timeout);
+    const ENV_POD_UID: &str = "POD_UID";
     if let Some(node) = TardisFuns::store().get_singleton::<asteroid_mq::prelude::Node>() {
         node
     } else {
-        let cluster_provider = asteroid_mq::protocol::cluster::k8s::K8sClusterProvider::new(svc_name.to_string(), asteroid_mq::DEFAULT_TCP_PORT).await;
-        let uid = std::env::var("POD_UID").expect("POD_UID is required");
-        let node = cluster_provider.run(uid).await.expect("failed to run k8s cluster");
+        let funs = Arc::new(funs);
+        let node = match config.cluster.as_deref() {
+            Some(EventConfig::CLUSTER_K8S) => {
+                let uid = std::env::var(ENV_POD_UID).expect("POD_UID is required");
+                let node = Node::new(NodeConfig {
+                    id: NodeId::sha256(uid.as_bytes()),
+                    raft: config.raft.clone(),
+                    durable: config.durable.then_some(DurableService::new(BiosDurableAdapter::new(funs.clone(), ctx.clone()))),
+                    edge_auth: Some(EdgeAuthService::new(BiosEdgeAuthAdapter::new(funs.clone(), ctx))),
+                    ..Default::default()
+                });
+                let cluster_provider = K8sClusterProvider::new(config.svc.clone(), asteroid_mq::DEFAULT_TCP_PORT).await;
+                node.init_raft(cluster_provider).await.expect("fail to init raft");
+                node
+            }
+            Some(EventConfig::NO_CLUSTER) | None => {
+                let node = Node::new(NodeConfig {
+                    id: NodeId::snowflake(),
+                    raft: config.raft.clone(),
+                    durable: config.durable.then_some(DurableService::new(BiosDurableAdapter::new(funs.clone(), ctx.clone()))),
+                    edge_auth: Some(EdgeAuthService::new(BiosEdgeAuthAdapter::new(funs.clone(), ctx))),
+                    ..Default::default()
+                });
+                // singleton mode
+                let cluster_provider = StaticClusterProvider::singleton(node.config());
+                node.init_raft(cluster_provider).await.expect("fail to init raft");
+                node
+            }
+            Some(unknown_cluster) => {
+                panic!("unknown cluster provider {unknown_cluster}")
+            }
+        };
+        node.raft().await.wait(Some(timeout)).metrics(|rm| rm.state.is_leader() || rm.state.is_follower(), "raft ready").await.expect("fail to wait raft ready");
         TardisFuns::store().insert_singleton(node.clone());
         node
     }

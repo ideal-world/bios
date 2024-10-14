@@ -23,13 +23,13 @@ pub mod event {
     }
 
     impl EventAttribute for SearchItemAddReq {
-        const SUBJECT: Subject = Subject::const_new(b"search/add");
+        const SUBJECT: Subject = Subject::const_new("search/add");
     }
     impl EventAttribute for SearchEventItemModifyReq {
-        const SUBJECT: Subject = Subject::const_new(b"search/modify");
+        const SUBJECT: Subject = Subject::const_new("search/modify");
     }
     impl EventAttribute for SearchEventItemDeleteReq {
-        const SUBJECT: Subject = Subject::const_new(b"search/delete");
+        const SUBJECT: Subject = Subject::const_new("search/delete");
     }
 }
 

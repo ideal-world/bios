@@ -14,10 +14,10 @@ use super::base_spi_client::BaseSpiClient;
 pub mod event {
     use asteroid_mq::prelude::*;
     impl EventAttribute for super::KvItemAddOrModifyReq {
-        const SUBJECT: Subject = Subject::const_new(b"kv/add");
+        const SUBJECT: Subject = Subject::const_new("kv/add");
     }
     impl EventAttribute for super::KvItemDeleteReq {
-        const SUBJECT: Subject = Subject::const_new(b"kv/delete");
+        const SUBJECT: Subject = Subject::const_new("kv/delete");
     }
 }
 #[derive(Clone, Debug, Default)]
