@@ -1187,6 +1187,9 @@ impl FlowInstServ {
                 .into_iter()
                 .map(|rel| format!("{}/{}", rel.rel_own_paths, rel.rel_id))
                 .collect_vec();
+            if own_paths_list.contains(&ctx.own_paths) {
+                own_paths_list = vec![ctx.own_paths.clone()];
+            }
         } else {
             own_paths_list.push(ctx.own_paths.clone());
         }

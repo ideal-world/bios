@@ -132,7 +132,7 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
                 }
             }
         }
-        if add_req.template && add_req.rel_model_id.is_none() {
+        if add_req.template && add_req.rel_model_id.clone().map_or(true, |id| id.is_empty()) {
             FlowSearchClient::async_add_or_modify_model_search(flow_model_id, Box::new(false), funs, ctx).await?;
             FlowLogClient::add_ctx_task(
                 LogParamTag::DynamicLog,
