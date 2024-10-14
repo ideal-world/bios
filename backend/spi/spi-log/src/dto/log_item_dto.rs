@@ -26,7 +26,10 @@ pub struct LogItemAddReq {
     pub ts: Option<DateTime<Utc>>,
     #[oai(validator(min_length = "2"))]
     pub owner: Option<String>,
+    #[oai(validator(min_length = "1"))]
+    pub owner_name: Option<String>,
     pub own_paths: Option<String>,
+    pub push: bool,
     pub msg: Option<String>,
 }
 impl From<bios_sdk_invoke::clients::spi_log_client::LogItemAddReq> for LogItemAddReq {
@@ -44,6 +47,8 @@ impl From<bios_sdk_invoke::clients::spi_log_client::LogItemAddReq> for LogItemAd
             owner: value.owner,
             own_paths: value.own_paths,
             msg: value.msg,
+            owner_name: value.owner_name,
+            push: value.push,
         }
     }
 }

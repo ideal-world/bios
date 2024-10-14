@@ -11,7 +11,9 @@ use tardis::{
     TardisFuns, TardisFunsInst,
 };
 
-use crate::{clients::base_spi_client::BaseSpiClient, invoke_constants::DYNAMIC_LOG, invoke_enumeration::InvokeModuleKind};
+use crate::{clients::base_spi_client::BaseSpiClient, invoke_config::InvokeConfig, invoke_constants::DYNAMIC_LOG, invoke_enumeration::InvokeModuleKind};
+
+use super::iam_client::IamClient;
 
 pub mod event {
     use asteroid_mq::prelude::*;
@@ -73,7 +75,9 @@ pub struct LogItemAddReq {
     pub id: Option<String>,
     pub ts: Option<DateTime<Utc>>,
     pub owner: Option<String>,
+    pub owner_name: Option<String>,
     pub own_paths: Option<String>,
+    pub push: bool,
     pub msg: Option<String>,
 }
 
@@ -89,6 +93,8 @@ impl SpiLogClient {
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<()> {
+        let cfg = funs.conf::<InvokeConfig>();
+        let owner_name = IamClient::new("", funs, &ctx, cfg.module_urls.get("iam").expect("missing iam base url")).get_account(&ctx.owner, &ctx.own_paths).await?.owner_name;
         Self::add_with_many_params(
             DYNAMIC_LOG,
             TardisFuns::json.obj_to_json(content)?,
@@ -99,7 +105,9 @@ impl SpiLogClient {
             rel_key,
             ts,
             Some(ctx.owner.clone()),
+            owner_name,
             Some(ctx.own_paths.clone()),
+            true,
             funs,
             ctx,
         )
@@ -125,7 +133,9 @@ impl SpiLogClient {
         rel_key: Option<String>,
         ts: Option<String>,
         owner: Option<String>,
+        owner_name: Option<String>,
         own_paths: Option<String>,
+        push: bool,
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<()> {
@@ -142,6 +152,8 @@ impl SpiLogClient {
             owner,
             own_paths,
             msg: None,
+            owner_name: owner_name,
+            push: push,
         };
         Self::add(&req, funs, ctx).await
     }

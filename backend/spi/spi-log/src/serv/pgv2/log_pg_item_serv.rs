@@ -71,10 +71,13 @@ pub async fn add(add_req: &mut LogItemAddReq, _funs: &TardisFunsInst, ctx: &Tard
         Value::from(id.clone()),
         Value::from(add_req.kind.as_ref().unwrap_or(&"".into()).to_string()),
         Value::from(add_req.key.as_ref().unwrap_or(&"".into()).to_string()),
+        Value::from(add_req.tag.as_ref().unwrap_or(&"".into()).to_string()),
         Value::from(add_req.op.as_ref().unwrap_or(&"".to_string()).as_str()),
         Value::from(insert_content),
         Value::from(add_req.owner.as_ref().unwrap_or(&"".to_string()).as_str()),
+        Value::from(add_req.owner_name.as_ref().unwrap_or(&"".to_string()).as_str()),
         Value::from(add_req.own_paths.as_ref().unwrap_or(&"".to_string()).as_str()),
+        Value::from(add_req.push),
         Value::from(if let Some(ext) = &add_req.ext {
             ext.clone()
         } else {
@@ -89,17 +92,19 @@ pub async fn add(add_req: &mut LogItemAddReq, _funs: &TardisFunsInst, ctx: &Tard
     conn.execute_one(
         &format!(
             r#"INSERT INTO {table_name}
-  (idempotent_id, kind, key, op, content, owner, own_paths, ext, rel_key, msg{})
+  (idempotent_id, kind, key, tag, op, content, owner, owner_name, own_paths, push, ext, rel_key, msg{})
 VALUES
-  ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10{})
+  ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13{})
 "#,
             if add_req.ts.is_some() { ", ts" } else { "" },
-            if add_req.ts.is_some() { ", $11" } else { "" },
+            if add_req.ts.is_some() { ", $14" } else { "" },
         ),
         params,
     )
     .await?;
     conn.commit().await?;
+    //TODO if push is true, then push to EDA
+    if add_req.push {}
     Ok(id)
 }
 
@@ -677,6 +682,10 @@ async fn get_ref_fields_by_table_name(conn: &TardisRelDBlConnection, schema_name
     }
 
     Ok(ref_fields)
+}
+
+async fn push_to_eda(req: &LogItemAddReq) -> TardisResult<()> {
+    Ok(())
 }
 
 #[cfg(test)]

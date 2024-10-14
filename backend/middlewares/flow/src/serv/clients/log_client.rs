@@ -1,4 +1,4 @@
-use bios_sdk_invoke::clients::spi_log_client::SpiLogClient;
+use bios_sdk_invoke::clients::{iam_client::IamClient, spi_log_client::SpiLogClient};
 use serde::Serialize;
 
 use serde_json::Value;
@@ -39,6 +39,7 @@ impl FlowLogClient {
         op_kind: Option<String>,
         rel_key: Option<String>,
         ctx: &TardisContext,
+        push: bool,
     ) -> TardisResult<()> {
         let ctx_clone = ctx.clone();
         ctx.add_async_task(Box::new(|| {
@@ -56,6 +57,7 @@ impl FlowLogClient {
                         Some(tardis::chrono::Utc::now().to_rfc3339()),
                         &funs,
                         &ctx_clone,
+                        push,
                     )
                     .await
                     .unwrap();
@@ -78,11 +80,18 @@ impl FlowLogClient {
         ts: Option<String>,
         funs: &TardisFunsInst,
         ctx: &TardisContext,
+        push: bool,
     ) -> TardisResult<()> {
         // generate log item
         let tag: String = tag.into();
         let own_paths = if ctx.own_paths.len() < 2 { None } else { Some(ctx.own_paths.clone()) };
         let owner = if ctx.owner.len() < 2 { None } else { Some(ctx.owner.clone()) };
+        let owner_name = IamClient::new(
+            "",
+            funs,
+            &ctx,
+            funs.conf::<FlowConfig>().invoke.module_urls.get("iam").expect("missing iam base url"),
+        ).get_account(&ctx.owner, &ctx.own_paths).await?.owner_name;
         SpiLogClient::add_with_many_params(
             &tag,
             TardisFuns::json.obj_to_json(&content).expect("req_msg not a valid json value"),
@@ -94,6 +103,8 @@ impl FlowLogClient {
             ts,
             owner,
             own_paths,
+            owner_name,
+            push,
             funs,
             ctx,
         )

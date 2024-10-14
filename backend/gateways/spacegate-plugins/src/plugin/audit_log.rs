@@ -222,6 +222,8 @@ impl AuditLogPlugin {
                                 owner: content.user_id,
                                 own_paths: None,
                                 msg: None,
+                                owner_name: None,
+                                push: false,
                             },
                             &funs,
                             &spi_ctx,
