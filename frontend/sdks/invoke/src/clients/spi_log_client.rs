@@ -95,23 +95,23 @@ impl SpiLogClient {
     ) -> TardisResult<()> {
         let cfg = funs.conf::<InvokeConfig>();
         let owner_name = IamClient::new("", funs, &ctx, cfg.module_urls.get("iam").expect("missing iam base url")).get_account(&ctx.owner, &ctx.own_paths).await?.owner_name;
-        Self::add_with_many_params(
-            DYNAMIC_LOG,
-            TardisFuns::json.obj_to_json(content)?,
-            ext,
-            kind,
-            key,
-            op,
-            rel_key,
-            ts,
-            Some(ctx.owner.clone()),
-            owner_name,
-            Some(ctx.own_paths.clone()),
-            true,
-            funs,
-            ctx,
-        )
-        .await?;
+        let req = LogItemAddReq {
+          tag: DYNAMIC_LOG.to_string(),
+          content: TardisFuns::json.obj_to_json(content)?,
+          kind,
+          ext,
+          key,
+          op,
+          rel_key,
+          id: None,
+          ts: ts.map(|ts| DateTime::parse_from_rfc3339(&ts).unwrap_or_default().with_timezone(&Utc)),
+          owner: Some(ctx.owner.clone()),
+          own_paths: Some(ctx.own_paths.clone()),
+          msg: None,
+          owner_name: owner_name,
+          push: false,
+      };
+      Self::add(&req, funs, ctx).await?;
         Ok(())
     }
 
