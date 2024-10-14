@@ -209,7 +209,7 @@ impl AuditLogPlugin {
                 if !self.log_url.is_empty() && !self.spi_app_id.is_empty() {
                     tokio::task::spawn(async move {
                         match spi_log_client::SpiLogClient::add(
-                            &LogItemAddReq {
+                            LogItemAddReq {
                                 tag,
                                 content: TardisFuns::json.obj_to_json(&content).unwrap_or_default(),
                                 kind: None,

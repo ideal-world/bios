@@ -4,7 +4,7 @@ use asteroid_mq::prelude::NodeId;
 use tardis::tokio::sync::RwLock;
 use tardis::{
     basic::{dto::TardisContext, error::TardisError, result::TardisResult},
-    tardis_static, 
+    tardis_static,
 };
 #[derive(Clone, Default, Debug)]
 pub struct EventRegisterServ {}

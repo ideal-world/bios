@@ -6,5 +6,5 @@ pub mod dto;
 pub mod event_config;
 pub mod event_constants;
 pub mod event_initializer;
-mod serv;
 pub mod mq_adapter;
+mod serv;

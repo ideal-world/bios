@@ -7,7 +7,7 @@ use tardis::{
     web::poem_openapi,
 };
 
-#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+#[derive(poem_openapi::Object, Serialize, Deserialize, Clone, Debug)]
 pub struct LogItemAddReq {
     #[oai(validator(pattern = r"^[a-z0-9_]+$"))]
     pub tag: String,
@@ -110,4 +110,35 @@ pub struct LogConfigReq {
     #[oai(validator(pattern = r"^[a-z0-9_]+$"))]
     pub tag: String,
     pub ref_field: String,
+}
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct StatsItemAddReq {
+    #[oai(validator(min_length = "2"))]
+    pub idempotent_id: Option<String>,
+    #[oai(validator(pattern = r"^[a-z0-9_]+$"))]
+    pub tag: String,
+    pub content: Value,
+    pub ext: Option<Value>,
+    #[oai(validator(min_length = "2"))]
+    pub key: Option<TrimString>,
+    pub ts: Option<DateTime<Utc>>,
+    #[oai(validator(min_length = "2"))]
+    pub owner: Option<String>,
+    pub own_paths: Option<String>,
+}
+
+impl From<LogItemAddReq> for StatsItemAddReq {
+    fn from(value: LogItemAddReq) -> Self {
+        StatsItemAddReq {
+            idempotent_id: value.id,
+            tag: value.tag,
+            content: value.content,
+            ext: value.ext,
+            key: value.key,
+            ts: value.ts,
+            owner: value.owner,
+            own_paths: value.own_paths,
+        }
+    }
 }

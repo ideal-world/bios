@@ -132,7 +132,7 @@ impl EventTopicServ {
             ctx,
         )
         .await?
-        .ok_or_else(||TardisError::not_found("topic not found", "event-topic-not-found"))?;
+        .ok_or_else(|| TardisError::not_found("topic not found", "event-topic-not-found"))?;
         let expire = now + EXPIRE_DURATION;
         cache().write().await.insert(code.clone(), (expire, resp.check_auth));
         Ok(resp.check_auth)

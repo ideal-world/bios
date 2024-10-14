@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use tardis::{
     basic::{dto::TardisContext, field::TrimString, result::TardisResult},
     chrono::{DateTime, Utc},
+    futures::TryFutureExt as _,
     serde_json::Value,
     web::{
         poem_openapi,
@@ -13,7 +14,10 @@ use tardis::{
 
 use crate::{clients::base_spi_client::BaseSpiClient, invoke_config::InvokeConfig, invoke_constants::DYNAMIC_LOG, invoke_enumeration::InvokeModuleKind};
 
-use super::iam_client::IamClient;
+use super::{
+    event_client::{get_topic, mq_error, EventAttributeExt, SPI_RPC_TOPIC},
+    iam_client::IamClient,
+};
 
 pub mod event {
     use asteroid_mq::prelude::*;
@@ -96,29 +100,33 @@ impl SpiLogClient {
         let cfg = funs.conf::<InvokeConfig>();
         let owner_name = IamClient::new("", funs, &ctx, cfg.module_urls.get("iam").expect("missing iam base url")).get_account(&ctx.owner, &ctx.own_paths).await?.owner_name;
         let req = LogItemAddReq {
-          tag: DYNAMIC_LOG.to_string(),
-          content: TardisFuns::json.obj_to_json(content)?,
-          kind,
-          ext,
-          key,
-          op,
-          rel_key,
-          id: None,
-          ts: ts.map(|ts| DateTime::parse_from_rfc3339(&ts).unwrap_or_default().with_timezone(&Utc)),
-          owner: Some(ctx.owner.clone()),
-          own_paths: Some(ctx.own_paths.clone()),
-          msg: None,
-          owner_name: owner_name,
-          push: false,
-      };
-      Self::add(&req, funs, ctx).await?;
+            tag: DYNAMIC_LOG.to_string(),
+            content: TardisFuns::json.obj_to_json(content)?,
+            kind,
+            ext,
+            key,
+            op,
+            rel_key,
+            id: None,
+            ts: ts.map(|ts| DateTime::parse_from_rfc3339(&ts).unwrap_or_default().with_timezone(&Utc)),
+            owner: Some(ctx.owner.clone()),
+            own_paths: Some(ctx.own_paths.clone()),
+            msg: None,
+            owner_name: owner_name,
+            push: false,
+        };
+        Self::add(req, funs, ctx).await?;
         Ok(())
     }
 
-    pub async fn add(req: &LogItemAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        let log_url: String = BaseSpiClient::module_url(InvokeModuleKind::Log, funs).await?;
-        let headers = BaseSpiClient::headers(None, funs, ctx).await?;
-        funs.web_client().post_obj_to_str(&format!("{log_url}/ci/item"), &req, headers.clone()).await?;
+    pub async fn add(req: LogItemAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        if let Some(topic) = get_topic(&SPI_RPC_TOPIC) {
+            topic.send_event(req.inject_context(funs, ctx).json()).map_err(mq_error).await?;
+        } else {
+            let log_url: String = BaseSpiClient::module_url(InvokeModuleKind::Log, funs).await?;
+            let headers = BaseSpiClient::headers(None, funs, ctx).await?;
+            funs.web_client().post_obj_to_str(&format!("{log_url}/ci/item"), &req, headers.clone()).await?;
+        }
         Ok(())
     }
 

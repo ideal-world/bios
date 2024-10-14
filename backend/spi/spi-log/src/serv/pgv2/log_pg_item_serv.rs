@@ -1,5 +1,6 @@
 use std::{collections::HashMap, str::FromStr, vec};
 
+use bios_sdk_invoke::clients::event_client::{get_topic, mq_error, EventAttributeExt as _, SPI_RPC_TOPIC};
 use tardis::{
     basic::{dto::TardisContext, error::TardisError, result::TardisResult},
     chrono::{DateTime, Utc},
@@ -7,6 +8,7 @@ use tardis::{
         reldb_client::{TardisRelDBClient, TardisRelDBlConnection},
         sea_orm::Value,
     },
+    futures::TryFutureExt as _,
     serde_json::Value as JsonValue,
     web::web_resp::TardisPage,
     TardisFuns, TardisFunsInst,
@@ -20,13 +22,13 @@ use bios_basic::{
 };
 
 use crate::{
-    dto::log_item_dto::{AdvBasicQueryCondInfo, LogConfigReq, LogItemAddReq, LogItemFindReq, LogItemFindResp},
+    dto::log_item_dto::{AdvBasicQueryCondInfo, LogConfigReq, LogItemAddReq, LogItemFindReq, LogItemFindResp, StatsItemAddReq},
     log_constants::{CONFIG_TABLE_NAME, LOG_REF_FLAG, TABLE_LOG_FLAG_V2},
 };
 
 use super::log_pg_initializer;
 
-pub async fn add(add_req: &mut LogItemAddReq, _funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<String> {
+pub async fn add(add_req: &mut LogItemAddReq, funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<String> {
     let id = add_req.id.clone().unwrap_or(TardisFuns::field.nanoid());
 
     let bs_inst = inst.inst::<TardisRelDBClient>();
@@ -103,8 +105,10 @@ VALUES
     )
     .await?;
     conn.commit().await?;
-    //TODO if push is true, then push to EDA
-    if add_req.push {}
+    //if push is true, then push to EDA
+    if add_req.push {
+        push_to_eda(&add_req, funs, ctx).await?;
+    }
     Ok(id)
 }
 
@@ -684,7 +688,11 @@ async fn get_ref_fields_by_table_name(conn: &TardisRelDBlConnection, schema_name
     Ok(ref_fields)
 }
 
-async fn push_to_eda(req: &LogItemAddReq) -> TardisResult<()> {
+async fn push_to_eda(req: &LogItemAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    if let Some(topic) = get_topic(&SPI_RPC_TOPIC) {
+        let a: StatsItemAddReq = (*req).clone().into();
+        topic.send_event(a.inject_context(funs, ctx).json()).map_err(mq_error).await?;
+    }
     Ok(())
 }
 

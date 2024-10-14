@@ -35,7 +35,7 @@ impl EventComponent for SpiLog {
         let code = code.to_string();
         let _handle = tokio::spawn(async move {
             let result = SpiLogClient::add(
-                &LogItemAddReq {
+                LogItemAddReq {
                     tag: JOB_TAG.to_string(),
                     content: "add job".into(),
                     key: Some(code.to_string()),
@@ -60,7 +60,7 @@ impl EventComponent for SpiLog {
         let code = code.to_string();
         let _handle = tokio::spawn(async move {
             let result = SpiLogClient::add(
-                &LogItemAddReq {
+                LogItemAddReq {
                     tag: JOB_TAG.to_string(),
                     content: "delete job".into(),
                     key: Some(code.to_string()),
@@ -85,7 +85,7 @@ impl EventComponent for SpiLog {
         let code = code.to_string();
         let _handle = tokio::spawn(async move {
             let result = SpiLogClient::add(
-                &LogItemAddReq {
+                LogItemAddReq {
                     tag: TASK_TAG.to_string(),
                     content: "start request".into(),
                     key: Some(code.to_string()),
@@ -110,7 +110,7 @@ impl EventComponent for SpiLog {
         let code = code.to_string();
         let _handle = tokio::spawn(async move {
             let result = SpiLogClient::add(
-                &LogItemAddReq {
+                LogItemAddReq {
                     tag: TASK_TAG.to_string(),
                     content: tardis::serde_json::Value::Null,
                     ext: Some(ext),

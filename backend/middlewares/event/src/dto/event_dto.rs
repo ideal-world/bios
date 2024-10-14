@@ -33,7 +33,6 @@ pub struct EventTopicAddOrModifyReq {
     pub check_auth: bool,
 }
 
-
 impl EventTopicAddOrModifyReq {
     pub fn into_topic_config(self) -> TopicConfig {
         TopicConfig {
@@ -145,7 +144,6 @@ pub struct EventMessageMgrWrap {
     pub ori_from_avatar: String,
     pub ori_to_avatars: Option<Vec<String>>,
 }
-
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct TopicAuth {

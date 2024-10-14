@@ -2,7 +2,10 @@ use std::{sync::Arc, time::Duration, vec};
 
 use asteroid_mq::{
     prelude::{DurableService, Node, NodeConfig, NodeId, TopicConfig},
-    protocol::node::{edge::auth::EdgeAuthService, raft::cluster::{K8sClusterProvider, StaticClusterProvider}},
+    protocol::node::{
+        edge::auth::EdgeAuthService,
+        raft::cluster::{K8sClusterProvider, StaticClusterProvider},
+    },
 };
 use bios_basic::rbum::{
     dto::{rbum_domain_dto::RbumDomainAddReq, rbum_kind_dto::RbumKindAddReq},

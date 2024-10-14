@@ -16,7 +16,6 @@ use crate::{
     serv::{event_auth_serv::EventAuthServ, event_message_serv::EventMessageServ, event_register_serv::EventRegisterServ, event_topic_serv::EventTopicServ},
 };
 
-
 /*
 Durable Service Adapter
 */
@@ -87,7 +86,6 @@ impl Durable for BiosDurableAdapter {
         Ok(items.into_iter().map(|item| item.into_topic_config()).collect())
     }
 }
-
 
 /*
 Auth Service Adapter
