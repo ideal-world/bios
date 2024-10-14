@@ -71,7 +71,7 @@ pub async fn add(add_req: &mut LogItemAddReq, _funs: &TardisFunsInst, ctx: &Tard
         Value::from(id.clone()),
         Value::from(add_req.kind.as_ref().unwrap_or(&"".into()).to_string()),
         Value::from(add_req.key.as_ref().unwrap_or(&"".into()).to_string()),
-        Value::from(add_req.tag.as_ref().unwrap_or(&"".into()).to_string()),
+        Value::from(add_req.tag.clone()),
         Value::from(add_req.op.as_ref().unwrap_or(&"".to_string()).as_str()),
         Value::from(insert_content),
         Value::from(add_req.owner.as_ref().unwrap_or(&"".to_string()).as_str()),

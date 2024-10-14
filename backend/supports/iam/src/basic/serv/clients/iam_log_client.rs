@@ -138,6 +138,7 @@ impl IamLogClient {
         let tag: String = tag.into();
         let own_paths = if ctx.own_paths.len() < 2 { None } else { Some(ctx.own_paths.clone()) };
         let owner = if ctx.owner.len() < 2 { None } else { Some(ctx.owner.clone()) };
+      
         let add_req = LogItemAddReq {
             tag,
             content: TardisFuns::json.obj_to_json(&content).expect("req_msg not a valid json value"),
@@ -151,6 +152,8 @@ impl IamLogClient {
             owner,
             own_paths,
             msg: None,
+            owner_name: None,
+            push: false,
         };
         if let Some(topic) = get_topic(&SPI_RPC_TOPIC) {
             topic.send_event(add_req.inject_context(funs, ctx).json()).map_err(mq_error).await?;

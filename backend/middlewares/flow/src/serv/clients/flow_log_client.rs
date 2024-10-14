@@ -7,7 +7,7 @@ use tardis::{
     tokio, TardisFuns, TardisFunsInst,
 };
 
-use crate::flow_constants;
+use crate::{flow_config::FlowConfig, flow_constants};
 pub struct FlowLogClient;
 
 #[derive(Serialize, Default, Debug, Clone)]
@@ -42,7 +42,8 @@ impl FlowLogClient {
         push: bool,
     ) -> TardisResult<()> {
         let ctx_clone = ctx.clone();
-        ctx.add_async_task(Box::new(|| {
+        let push_clone = push; // 克隆 push 变量
+        ctx.add_async_task(Box::new(move || {
             Box::pin(async move {
                 let task_handle = tokio::spawn(async move {
                     let funs = flow_constants::get_tardis_inst();
@@ -57,7 +58,7 @@ impl FlowLogClient {
                         Some(tardis::chrono::Utc::now().to_rfc3339()),
                         &funs,
                         &ctx_clone,
-                        push,
+                        push_clone, // 使用克隆的 push 变量
                     )
                     .await
                     .unwrap();
