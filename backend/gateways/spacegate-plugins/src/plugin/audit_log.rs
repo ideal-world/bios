@@ -217,7 +217,7 @@ impl AuditLogPlugin {
                                 key: None,
                                 op: Some(content.op),
                                 rel_key: None,
-                                id: None,
+                                idempotent_id: None,
                                 ts: Some(tardis::chrono::Utc::now()),
                                 owner: content.user_id,
                                 own_paths: None,

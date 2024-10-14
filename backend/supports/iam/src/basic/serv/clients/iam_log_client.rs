@@ -147,7 +147,7 @@ impl IamLogClient {
             key,
             op,
             rel_key,
-            id: None,
+            idempotent_id: None,
             ts: ts.map(|ts| DateTime::parse_from_rfc3339(&ts).unwrap_or_default().with_timezone(&Utc)),
             owner,
             own_paths,

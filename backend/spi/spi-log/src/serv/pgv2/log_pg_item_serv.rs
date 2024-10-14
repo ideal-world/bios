@@ -29,7 +29,7 @@ use crate::{
 use super::log_pg_initializer;
 
 pub async fn add(add_req: &mut LogItemAddReq, funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<String> {
-    let id = add_req.id.clone().unwrap_or(TardisFuns::field.nanoid());
+    let id = add_req.idempotent_id.clone().unwrap_or(TardisFuns::field.nanoid());
 
     let bs_inst = inst.inst::<TardisRelDBClient>();
     let mut insert_content = add_req.content.clone();

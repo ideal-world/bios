@@ -12,7 +12,7 @@ use crate::dto::log_item_dto::{AdvBasicQueryCondInfo, LogConfigReq, LogItemAddRe
 use super::log_pg_initializer;
 
 pub async fn add(add_req: &mut LogItemAddReq, _funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<String> {
-    let id = add_req.id.clone().unwrap_or(TardisFuns::field.nanoid());
+    let id = add_req.idempotent_id.clone().unwrap_or(TardisFuns::field.nanoid());
     let mut params = vec![
         Value::from(id.clone()),
         Value::from(add_req.kind.as_ref().unwrap_or(&"".into()).to_string()),

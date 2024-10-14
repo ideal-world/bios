@@ -22,7 +22,7 @@ pub struct LogItemAddReq {
     #[oai(validator(min_length = "2"))]
     pub rel_key: Option<TrimString>,
     #[oai(validator(min_length = "2"))]
-    pub id: Option<String>,
+    pub idempotent_id: Option<String>,
     pub ts: Option<DateTime<Utc>>,
     #[oai(validator(min_length = "2"))]
     pub owner: Option<String>,
@@ -42,7 +42,7 @@ impl From<bios_sdk_invoke::clients::spi_log_client::LogItemAddReq> for LogItemAd
             key: value.key.map(Into::into),
             op: value.op,
             rel_key: value.rel_key.map(Into::into),
-            id: value.id,
+            idempotent_id: value.idempotent_id,
             ts: value.ts,
             owner: value.owner,
             own_paths: value.own_paths,
@@ -132,7 +132,7 @@ pub struct StatsItemAddReq {
 impl From<LogItemAddReq> for StatsItemAddReq {
     fn from(value: LogItemAddReq) -> Self {
         StatsItemAddReq {
-            idempotent_id: value.id,
+            idempotent_id: value.idempotent_id,
             tag: value.tag,
             content: value.content,
             ext: value.ext,
