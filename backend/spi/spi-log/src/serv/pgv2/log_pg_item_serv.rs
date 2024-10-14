@@ -35,6 +35,7 @@ pub async fn add(add_req: &mut LogItemAddReq, funs: &TardisFunsInst, ctx: &Tardi
     let mut insert_content = add_req.content.clone();
     let (mut conn, table_name) = log_pg_initializer::init_table_and_conn(bs_inst, &add_req.tag, ctx, true).await?;
     conn.begin().await?;
+    let ref_fields = get_ref_fields_by_table_name(&conn, &get_schema_name_from_ext(&inst.ext).expect("ignore"), &table_name).await?;
     if let Some(key) = add_req.key.as_ref() {
         let get_last_record = conn
             .query_one(
@@ -51,10 +52,10 @@ pub async fn add(add_req: &mut LogItemAddReq, funs: &TardisFunsInst, ctx: &Tardi
             let last_content: JsonValue = last_record.try_get("", "content")?;
             let last_ts: DateTime<Utc> = last_record.try_get("", "ts")?;
             let last_key: String = last_record.try_get("", "key")?;
-            let ref_fields = get_ref_fields_by_table_name(&conn, &get_schema_name_from_ext(&inst.ext).expect("ignore"), &table_name).await?;
+
             insert_content = last_content;
-            for ref_field in ref_fields {
-                if let Some(field_value) = insert_content.get_mut(&ref_field) {
+            for ref_field in &ref_fields {
+                if let Some(field_value) = insert_content.get_mut(ref_field) {
                     if !is_log_ref(field_value) {
                         *field_value = JsonValue::String(get_ref_filed_value(&last_ts, &last_key));
                     }
@@ -107,7 +108,7 @@ VALUES
     conn.commit().await?;
     //if push is true, then push to EDA
     if add_req.push {
-        push_to_eda(&add_req, funs, ctx).await?;
+        push_to_eda(&add_req, &ref_fields, funs, ctx).await?;
     }
     Ok(id)
 }
@@ -689,10 +690,16 @@ async fn get_ref_fields_by_table_name(conn: &TardisRelDBlConnection, schema_name
     Ok(ref_fields)
 }
 
-async fn push_to_eda(req: &LogItemAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+async fn push_to_eda(req: &LogItemAddReq, ref_fields: &Vec<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
     if let Some(topic) = get_topic(&SPI_RPC_TOPIC) {
-        let a: StatsItemAddReq = (*req).clone().into();
-        topic.send_event(a.inject_context(funs, ctx).json()).map_err(mq_error).await?;
+        let mut req_clone = req.clone();
+        for ref_field in ref_fields {
+            if let Some(content) = req_clone.content.as_object_mut() {
+                content.remove(ref_field);
+            }
+        }
+        let stats_add: StatsItemAddReq = req_clone.into();
+        topic.send_event(stats_add.inject_context(funs, ctx).json()).map_err(mq_error).await?;
     }
     Ok(())
 }

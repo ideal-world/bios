@@ -1,8 +1,6 @@
-use crate::{ get_tardis_inst, serv};
+use crate::{get_tardis_inst, serv};
 use bios_sdk_invoke::clients::{
-    event_client::{
-        get_topic, mq_error, ContextHandler, SPI_RPC_TOPIC,
-    },
+    event_client::{get_topic, mq_error, ContextHandler, SPI_RPC_TOPIC},
     spi_log_client::LogItemAddReq,
 };
 use tardis::{
@@ -13,7 +11,7 @@ use tardis::{
 #[instrument]
 async fn handle_add_event(req: LogItemAddReq, ctx: TardisContext) -> TardisResult<()> {
     let funs = get_tardis_inst();
-    //TODO 
+    //TODO
     Ok(())
 }
 
@@ -25,4 +23,3 @@ pub async fn handle_events() -> TardisResult<()> {
 
     Ok(())
 }
-
