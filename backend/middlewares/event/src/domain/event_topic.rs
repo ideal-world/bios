@@ -14,6 +14,7 @@ pub struct Model {
     pub topic_code: String,
     pub overflow_policy: String,
     pub overflow_size: i32,
+    pub check_auth: bool,
     #[fill_ctx]
     pub own_paths: String,
 }

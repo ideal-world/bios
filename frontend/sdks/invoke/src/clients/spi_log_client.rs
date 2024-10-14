@@ -21,7 +21,7 @@ pub mod event {
     pub const LOG_AVATAR: &str = "spi-log";
 
     impl EventAttribute for super::LogItemAddReq {
-        const SUBJECT: Subject = Subject::const_new(b"log/add");
+        const SUBJECT: Subject = Subject::const_new("log/add");
     }
 }
 #[derive(Debug, Default, Clone)]

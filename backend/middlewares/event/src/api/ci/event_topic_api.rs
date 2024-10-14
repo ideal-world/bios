@@ -6,16 +6,16 @@ use tardis::web::poem_openapi::param::{Path, Query};
 use tardis::web::poem_openapi::payload::Json;
 use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 
-use crate::dto::event_dto::{EventTopicAddOrModifyReq, EventTopicFilterReq, EventTopicInfoResp};
+use crate::dto::event_dto::{EventTopicAddOrModifyReq, EventTopicFilterReq, EventTopicInfoResp, SetTopicAuth};
 use crate::event_constants::get_tardis_inst;
-use crate::serv::event_topic_serv::EventDefServ;
+use crate::serv::event_topic_serv::EventTopicServ;
 #[derive(Clone)]
 pub struct EventTopicApi;
 
 /// Event Topic API
 ///
 /// 事件主题API
-#[poem_openapi::OpenApi(prefix_path = "/topic")]
+#[poem_openapi::OpenApi(prefix_path = "/ci/topic")]
 impl EventTopicApi {
     /// Add Event Definition
     ///
@@ -23,7 +23,7 @@ impl EventTopicApi {
     #[oai(path = "/", method = "post")]
     async fn add(&self, mut add_or_modify_req: Json<EventTopicAddOrModifyReq>, ctx: TardisContextExtractor) -> TardisApiResult<String> {
         let funs = get_tardis_inst();
-        let id = EventDefServ::add_item(&mut add_or_modify_req.0, &funs, &ctx.0).await?;
+        let id = EventTopicServ::add_item(&mut add_or_modify_req.0, &funs, &ctx.0).await?;
         TardisResp::ok(id)
     }
 
@@ -33,7 +33,7 @@ impl EventTopicApi {
     #[oai(path = "/:id", method = "put")]
     async fn modify(&self, id: Path<String>, mut add_or_modify_req: Json<EventTopicAddOrModifyReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let funs = get_tardis_inst();
-        EventDefServ::modify_item(&id.0, &mut add_or_modify_req.0, &funs, &ctx.0).await?;
+        EventTopicServ::modify_item(&id.0, &mut add_or_modify_req.0, &funs, &ctx.0).await?;
         TardisResp::ok(Void {})
     }
 
@@ -43,7 +43,7 @@ impl EventTopicApi {
     #[oai(path = "/:id", method = "delete")]
     async fn delete(&self, id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let funs = get_tardis_inst();
-        EventDefServ::delete_item(&id.0, &funs, &ctx.0).await?;
+        EventTopicServ::delete_item(&id.0, &funs, &ctx.0).await?;
         TardisResp::ok(Void {})
     }
 
@@ -63,7 +63,7 @@ impl EventTopicApi {
         ctx: TardisContextExtractor,
     ) -> TardisApiResult<TardisPage<EventTopicInfoResp>> {
         let funs = get_tardis_inst();
-        let result = EventDefServ::paginate_items(
+        let result = EventTopicServ::paginate_items(
             &EventTopicFilterReq {
                 basic: RbumBasicFilterReq {
                     ids: id.0.map(|id| vec![id]),
@@ -81,5 +81,24 @@ impl EventTopicApi {
         )
         .await?;
         TardisResp::ok(result)
+    }
+
+    /// Register user to topic
+    ///
+    /// 注册用户到主题
+    #[oai(path = "/:topic_code/register", method = "put")]
+    async fn register(&self, topic_code: Path<String>, read: Query<bool>, write: Query<bool>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+        let funs = get_tardis_inst();
+        EventTopicServ::register_user(
+            SetTopicAuth {
+                topic: topic_code.0,
+                read: read.0,
+                write: write.0,
+            },
+            &funs,
+            &ctx.0,
+        )
+        .await?;
+        TardisResp::ok(Void {})
     }
 }
