@@ -96,6 +96,7 @@ pub struct LogItemFindResp {
     pub kind: String,
     pub ext: Value,
     pub owner: String,
+    pub owner_name: String,
     pub own_paths: String,
     pub id: String,
     pub key: String,

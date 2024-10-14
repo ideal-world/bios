@@ -544,7 +544,7 @@ pub async fn find(find_req: &mut LogItemFindReq, funs: &TardisFunsInst, ctx: &Ta
     let result = conn
         .query_all(
             format!(
-                r#"SELECT ts, idempotent_id, key, op, content, kind, ext, owner, own_paths, rel_key, msg, count(*) OVER() AS total
+                r#"SELECT ts, idempotent_id, key, op, content, kind, ext, owner, owner_name, own_paths, rel_key, msg, count(*) OVER() AS total
 FROM {table_name}
 WHERE
   {}
@@ -584,6 +584,7 @@ ORDER BY ts DESC
                 owner: item.try_get("", "owner")?,
                 own_paths: item.try_get("", "own_paths")?,
                 msg: item.try_get("", "msg")?,
+                owner_name: item.try_get("", "owner_name")?,
             })
         })
         .collect::<TardisResult<Vec<_>>>()?;
