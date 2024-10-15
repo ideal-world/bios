@@ -21,6 +21,7 @@ spacegate-shell = { workspace = true, features = [
   "k8s",
   "ext-redis",
   "ext-axum",
+  "plugin-east-west-traffic-white-list",
 ] }
 
 bios-sdk-invoke = { path = "../../../frontend/sdks/invoke", features = [

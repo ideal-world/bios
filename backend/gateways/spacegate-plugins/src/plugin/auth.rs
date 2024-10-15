@@ -367,6 +367,7 @@ async fn handle_mix_req(plugin_config: &AuthPlugin, req: SgRequest) -> Result<Sg
 
     let mix_body = TardisFuns::json.str_to_obj::<MixRequestBody>(&body)?;
     let true_uri = parts.uri.to_string().replace(&plugin_config.mix_replace_url, &mix_body.uri).replace("//", "/");
+    log::trace!("[SG.Filter.Auth.MixReq] string true uri:{}",true_uri);
     let mut true_uri_parts =
         true_uri.parse::<http::Uri>().map_err(|e| TardisError::custom("500", &format!("[SG.Filter.Auth.MixReq] url parse err {e}"), "500-parse_mix_req-url-error"))?.into_parts();
 
