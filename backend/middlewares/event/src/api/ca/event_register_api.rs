@@ -10,7 +10,6 @@ pub struct EventRegisterApi {
     register_serv: event_register_serv::EventRegisterServ,
 }
 
-
 /// Event Node Register API
 ///
 /// 事件注册节点API

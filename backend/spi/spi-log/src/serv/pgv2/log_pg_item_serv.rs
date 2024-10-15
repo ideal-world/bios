@@ -1,55 +1,147 @@
+use std::{collections::HashMap, str::FromStr, vec};
+
+use bios_sdk_invoke::clients::event_client::{get_topic, mq_error, EventAttributeExt as _, SPI_RPC_TOPIC};
 use tardis::{
-    basic::{dto::TardisContext, result::TardisResult},
-    db::{reldb_client::TardisRelDBClient, sea_orm::Value},
+    basic::{dto::TardisContext, error::TardisError, result::TardisResult},
+    chrono::{DateTime, Utc},
+    db::{
+        reldb_client::{TardisRelDBClient, TardisRelDBlConnection},
+        sea_orm::Value,
+    },
+    futures::TryFutureExt as _,
+    serde_json::Value as JsonValue,
     web::web_resp::TardisPage,
     TardisFuns, TardisFunsInst,
 };
 
-use bios_basic::{dto::BasicQueryCondInfo, enumeration::BasicQueryOpKind, helper::db_helper, spi::spi_funs::SpiBsInst};
+use bios_basic::{
+    dto::BasicQueryCondInfo,
+    enumeration::BasicQueryOpKind,
+    helper::db_helper,
+    spi::{spi_funs::SpiBsInst, spi_initializer::common_pg::get_schema_name_from_ext},
+};
 
-use crate::dto::log_item_dto::{AdvBasicQueryCondInfo, LogConfigReq, LogItemAddReq, LogItemFindReq, LogItemFindResp};
+use crate::{
+    dto::log_item_dto::{AdvBasicQueryCondInfo, LogConfigReq, LogItemAddReq, LogItemFindReq, LogItemFindResp, StatsItemAddReq},
+    log_constants::{CONFIG_TABLE_NAME, LOG_REF_FLAG, TABLE_LOG_FLAG_V2},
+};
 
 use super::log_pg_initializer;
 
-pub async fn add(add_req: &mut LogItemAddReq, _funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<String> {
+pub async fn add(add_req: &mut LogItemAddReq, funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<String> {
     let id = add_req.idempotent_id.clone().unwrap_or(TardisFuns::field.nanoid());
+
+    let bs_inst = inst.inst::<TardisRelDBClient>();
+    let mut insert_content = add_req.content.clone();
+    let (mut conn, table_name) = log_pg_initializer::init_table_and_conn(bs_inst, &add_req.tag, ctx, true).await?;
+    conn.begin().await?;
+    let ref_fields = get_ref_fields_by_table_name(&conn, &get_schema_name_from_ext(&inst.ext).expect("ignore"), &table_name).await?;
+    if let Some(key) = add_req.key.as_ref() {
+        let get_last_record = conn
+            .query_one(
+                &format!(
+                    r#"
+  select ts,key,content from {table_name} where key = $1 order by ts desc limit 1
+  "#
+                ),
+                vec![Value::from(key.to_string())],
+            )
+            .await?;
+
+        if let Some(last_record) = get_last_record {
+            let last_content: JsonValue = last_record.try_get("", "content")?;
+            let last_ts: DateTime<Utc> = last_record.try_get("", "ts")?;
+            let last_key: String = last_record.try_get("", "key")?;
+
+            insert_content = last_content;
+            for ref_field in &ref_fields {
+                if let Some(field_value) = insert_content.get_mut(ref_field) {
+                    if !is_log_ref(field_value) {
+                        *field_value = JsonValue::String(get_ref_filed_value(&last_ts, &last_key));
+                    }
+                }
+            }
+
+            if let (Some(insert_content), Some(add_req_content)) = (insert_content.as_object_mut(), add_req.content.as_object()) {
+                for (k, v) in add_req_content {
+                    insert_content.insert(k.to_string(), v.clone());
+                }
+            }
+        }
+    }
+
     let mut params = vec![
         Value::from(id.clone()),
         Value::from(add_req.kind.as_ref().unwrap_or(&"".into()).to_string()),
         Value::from(add_req.key.as_ref().unwrap_or(&"".into()).to_string()),
+        Value::from(add_req.tag.clone()),
         Value::from(add_req.op.as_ref().unwrap_or(&"".to_string()).as_str()),
-        Value::from(TardisFuns::json.json_to_string(add_req.content.clone())?.as_str()),
+        Value::from(insert_content),
         Value::from(add_req.owner.as_ref().unwrap_or(&"".to_string()).as_str()),
+        Value::from(add_req.owner_name.as_ref().unwrap_or(&"".to_string()).as_str()),
         Value::from(add_req.own_paths.as_ref().unwrap_or(&"".to_string()).as_str()),
+        Value::from(add_req.push),
         Value::from(if let Some(ext) = &add_req.ext {
             ext.clone()
         } else {
             TardisFuns::json.str_to_json("{}")?
         }),
         Value::from(add_req.rel_key.as_ref().unwrap_or(&"".into()).to_string()),
+        Value::from(add_req.msg.as_ref().unwrap_or(&"".into()).as_str()),
     ];
     if let Some(ts) = add_req.ts {
         params.push(Value::from(ts));
     }
-
-    let bs_inst = inst.inst::<TardisRelDBClient>();
-    let (mut conn, table_name) = log_pg_initializer::init_table_and_conn(bs_inst, &add_req.tag, ctx, true).await?;
-    conn.begin().await?;
     conn.execute_one(
         &format!(
-            r#"INSERT INTO {table_name} 
-    (id, kind, key, op, content, owner, own_paths, ext, rel_key{})
+            r#"INSERT INTO {table_name}
+  (idempotent_id, kind, key, tag, op, content, owner, owner_name, own_paths, push, ext, rel_key, msg{})
 VALUES
-    ($1, $2, $3, $4, $5, $6, $7, $8, $9{})
-	"#,
+  ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13{})
+"#,
             if add_req.ts.is_some() { ", ts" } else { "" },
-            if add_req.ts.is_some() { ", $10" } else { "" },
+            if add_req.ts.is_some() { ", $14" } else { "" },
         ),
         params,
     )
     .await?;
     conn.commit().await?;
+    //if push is true, then push to EDA
+    if add_req.push {
+        push_to_eda(&add_req, &ref_fields, funs, ctx).await?;
+    }
     Ok(id)
+}
+
+fn get_ref_filed_value(ref_log_record_ts: &DateTime<Utc>, ref_log_record_key: &str) -> String {
+    let ref_log_record_ts = ref_log_record_ts.to_string();
+    format!("{LOG_REF_FLAG}@{ref_log_record_ts}#{ref_log_record_key}")
+}
+
+/// check if the value is referenced
+/// true if the value is referenced
+fn is_log_ref(value: &JsonValue) -> bool {
+    if let Some(value_str) = value.as_str() {
+        if value_str.starts_with(LOG_REF_FLAG) {
+            return true;
+        }
+    }
+    false
+}
+
+fn parse_ref_ts_key(ref_key: &str) -> TardisResult<(DateTime<Utc>, String)> {
+    let split_vec: Vec<&str> = ref_key.split("@").collect();
+    if split_vec.len() != 2 {
+        return Err(TardisError::format_error(&format!("ref_key:{ref_key} format error"), ""));
+    }
+    let split_vec: Vec<&str> = split_vec[1].split("#").collect();
+    if split_vec.len() != 2 {
+        return Err(TardisError::format_error(&format!("ref_key:{ref_key} format error"), ""));
+    }
+    Ok((
+        DateTime::from_str(split_vec[0]).map_err(|e| TardisError::wrap(&format!("parse ts:{} error:{e}", split_vec[0]), ""))?,
+        split_vec[1].to_string(),
+    ))
 }
 
 pub async fn find(find_req: &mut LogItemFindReq, funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<TardisPage<LogItemFindResp>> {
@@ -453,11 +545,11 @@ pub async fn find(find_req: &mut LogItemFindReq, funs: &TardisFunsInst, ctx: &Ta
     let result = conn
         .query_all(
             format!(
-                r#"SELECT ts, id, key, op, content, kind, ext, owner, own_paths, rel_key, count(*) OVER() AS total
+                r#"SELECT ts, idempotent_id, key, op, content, kind, ext, owner, owner_name, own_paths, rel_key, msg, count(*) OVER() AS total
 FROM {table_name}
-WHERE 
-    {}
-    {}
+WHERE
+  {}
+  {}
 ORDER BY ts DESC
 {}"#,
                 where_fragments.join(" AND "),
@@ -475,30 +567,59 @@ ORDER BY ts DESC
 
     let mut total_size: i64 = 0;
 
-    let result = result
+    let mut result = result
         .into_iter()
         .map(|item| {
             if total_size == 0 {
                 total_size = item.try_get("", "total")?;
             }
-            let content: String = item.try_get("", "content")?;
-            let content = TardisFuns::json.str_to_json(&content)?;
             Ok(LogItemFindResp {
                 ts: item.try_get("", "ts")?,
-                id: item.try_get("", "id")?,
+                id: item.try_get("", "idempotent_id")?,
                 key: item.try_get("", "key")?,
                 op: item.try_get("", "op")?,
                 ext: item.try_get("", "ext")?,
-                content,
+                content: item.try_get("", "content")?,
                 rel_key: item.try_get("", "rel_key")?,
                 kind: item.try_get("", "kind")?,
                 owner: item.try_get("", "owner")?,
                 own_paths: item.try_get("", "own_paths")?,
-                msg: String::new(),
-                owner_name: String::new(),
+                msg: item.try_get("", "msg")?,
+                owner_name: item.try_get("", "owner_name")?,
             })
         })
         .collect::<TardisResult<Vec<_>>>()?;
+
+    // Stores the mapping relationship between ref_value and true_value
+    let mut cache_value = HashMap::<String, JsonValue>::new();
+
+    for log in &mut result {
+        if let Some(json_map) = log.content.as_object_mut() {
+            for (k, v) in json_map {
+                if is_log_ref(v) {
+                    if let Some(v_str) = v.as_str() {
+                        let ref_string = v_str.to_string();
+                        if let Some(true_content) = cache_value.get(&ref_string) {
+                            if let Some(true_value) = true_content.get(k) {
+                                *v = true_value.clone();
+                            }
+                        } else {
+                            let (ts, key) = parse_ref_ts_key(v_str)?;
+                            if let Some(query_result) =
+                                conn.query_one(&format!("select content from {table_name} where ts=$1 and key=$2"), vec![Value::from(ts), Value::from(key)]).await?
+                            {
+                                let query_content: JsonValue = query_result.try_get("", "content")?;
+                                if let Some(query_true_value) = query_content.get(k) {
+                                    *v = query_true_value.clone();
+                                }
+                                cache_value.insert(ref_string, query_content);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
 
     Ok(TardisPage {
         page_size: find_req.page_size as u64,
@@ -508,10 +629,97 @@ ORDER BY ts DESC
     })
 }
 
-pub async fn add_config(_req: &LogConfigReq, _funs: &TardisFunsInst, _ctx: &TardisContext, _inst: &SpiBsInst) -> TardisResult<()> {
+pub async fn add_config(req: &LogConfigReq, _funs: &TardisFunsInst, _ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
+    let table_full_name = bios_basic::spi::spi_initializer::common_pg::get_table_full_name(&inst.ext, TABLE_LOG_FLAG_V2.to_string(), req.tag.clone());
+    let schema_name = get_schema_name_from_ext(&inst.ext).expect("ignore");
+    let bs_inst = inst.inst::<TardisRelDBClient>();
+    if bs_inst
+        .0
+        .conn()
+        .query_one(
+            &format!("select table_name,ref_field from {schema_name}.{CONFIG_TABLE_NAME} where table_name = $1 and ref_field = $2"),
+            vec![Value::from(table_full_name.clone()), Value::from(req.ref_field.clone())],
+        )
+        .await?
+        .is_some()
+    {
+        Ok(())
+    } else {
+        //新增记录
+        bs_inst
+            .0
+            .conn()
+            .execute_one(
+                &format!("insert into {schema_name}.{CONFIG_TABLE_NAME}(table_name,ref_field) VALUES ($1,$2)"),
+                vec![Value::from(table_full_name), Value::from(req.ref_field.clone())],
+            )
+            .await?;
+        Ok(())
+    }
+}
+
+pub async fn delete_config(config: &mut LogConfigReq, _funs: &TardisFunsInst, _ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
+    let table_full_name = bios_basic::spi::spi_initializer::common_pg::get_table_full_name(&inst.ext, TABLE_LOG_FLAG_V2.to_string(), config.tag.clone());
+    let schema_name = get_schema_name_from_ext(&inst.ext).expect("ignore");
+    let bs_inst = inst.inst::<TardisRelDBClient>();
+    bs_inst
+        .0
+        .conn()
+        .execute_one(
+            &format!("delete from {schema_name}.{CONFIG_TABLE_NAME} where table_name = $1 and ref_field = $2"),
+            vec![Value::from(table_full_name), Value::from(config.ref_field.clone())],
+        )
+        .await?;
     Ok(())
 }
 
-pub async fn delete_config(_config: &mut LogConfigReq, _funs: &TardisFunsInst, _ctx: &TardisContext, _inst: &SpiBsInst) -> TardisResult<()> {
+async fn get_ref_fields_by_table_name(conn: &TardisRelDBlConnection, schema_name: &str, table_full_name: &str) -> TardisResult<Vec<String>> {
+    let query_results = conn
+        .query_all(
+            &format!("select ref_field from {schema_name}.{CONFIG_TABLE_NAME} where table_name = $1"),
+            vec![Value::from(table_full_name)],
+        )
+        .await?;
+
+    let mut ref_fields = Vec::new();
+    for row in query_results {
+        let ref_field: String = row.try_get("", "ref_field")?;
+        ref_fields.push(ref_field);
+    }
+
+    Ok(ref_fields)
+}
+
+async fn push_to_eda(req: &LogItemAddReq, ref_fields: &Vec<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    if let Some(topic) = get_topic(&SPI_RPC_TOPIC) {
+        let mut req_clone = req.clone();
+        for ref_field in ref_fields {
+            if let Some(content) = req_clone.content.as_object_mut() {
+                content.remove(ref_field);
+            }
+        }
+        let stats_add: StatsItemAddReq = req_clone.into();
+        topic.send_event(stats_add.inject_context(funs, ctx).json()).map_err(mq_error).await?;
+    }
     Ok(())
+}
+
+#[cfg(test)]
+mod test {
+    use tardis::{chrono::Utc, serde_json::Value};
+
+    use crate::serv::pgv2::log_pg_item_serv::{is_log_ref, parse_ref_ts_key};
+
+    use super::get_ref_filed_value;
+
+    #[test]
+    fn test_ref_value() {
+        let ts = Utc::now();
+        let key = "test-key".to_owned();
+        let ref_value = get_ref_filed_value(&ts, &key);
+
+        assert!(is_log_ref(&Value::String(ref_value.clone())));
+        assert!(!is_log_ref(&Value::String(key.to_string())));
+        assert_eq!(parse_ref_ts_key(&ref_value).unwrap(), (ts, key));
+    }
 }

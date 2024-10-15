@@ -21,6 +21,7 @@ pub async fn init_table_and_conn_namespace(bs_inst: TypedSpiBsInst<'_, TardisRel
     show_name character varying NOT NULL,
     description text,
     tp smallint NOT NULL DEFAULT 0"#,
+        None,
         vec![("show_name", "btree")],
         None,
         None,
@@ -61,6 +62,7 @@ created_time timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
 modified_time timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
 tp character varying"#
         ),
+        None,
         vec![("data_id", "btree"), ("grp", "btree"), ("md5", "btree"), ("app_name", "btree")],
         None,
         Some("modified_time"),
@@ -97,6 +99,7 @@ op_type character(1) NOT NULL DEFAULT 'I',
 config_tags text NOT NULL DEFAULT '',
 tp character varying"#
         ),
+        None,
         vec![("data_id", "btree"), ("grp", "btree"), ("md5", "btree"), ("app_name", "btree")],
         None,
         Some("modified_time"),
@@ -105,7 +108,7 @@ tp character varying"#
 }
 
 pub async fn init_table_and_conn_tag(bs_inst: TypedSpiBsInst<'_, TardisRelDBClient>, ctx: &TardisContext, mgr: bool) -> TardisResult<(TardisRelDBlConnection, String)> {
-    spi_initializer::common_pg::init_table_and_conn(bs_inst, ctx, mgr, None, "conf_tag", r#"id character varying PRIMARY KEY"#, vec![], None, None).await
+    spi_initializer::common_pg::init_table_and_conn(bs_inst, ctx, mgr, None, "conf_tag", r#"id character varying PRIMARY KEY"#, None, vec![], None, None).await
 }
 
 pub async fn init_table_and_conn_tag_config_rel(
@@ -126,6 +129,7 @@ pub async fn init_table_and_conn_tag_config_rel(
 tag_id character varying NOT NULL REFERENCES {tag_table_name} ON DELETE CASCADE,
 config_id uuid NOT NULL REFERENCES {config_table_name} ON DELETE CASCADE"#
         ),
+        None,
         vec![],
         None,
         None,

@@ -7,12 +7,11 @@ use tardis::{
     web::poem_openapi,
 };
 
-#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+#[derive(poem_openapi::Object, Serialize, Deserialize, Clone, Debug)]
 pub struct LogItemAddReq {
     #[oai(validator(pattern = r"^[a-z0-9_]+$"))]
     pub tag: String,
-    // #[oai(validator(min_length = "2"))]
-    pub content: String,
+    pub content: Value,
     #[oai(validator(min_length = "2"))]
     pub kind: Option<TrimString>,
     pub ext: Option<Value>,
@@ -23,11 +22,15 @@ pub struct LogItemAddReq {
     #[oai(validator(min_length = "2"))]
     pub rel_key: Option<TrimString>,
     #[oai(validator(min_length = "2"))]
-    pub id: Option<String>,
+    pub idempotent_id: Option<String>,
     pub ts: Option<DateTime<Utc>>,
     #[oai(validator(min_length = "2"))]
     pub owner: Option<String>,
+    #[oai(validator(min_length = "1"))]
+    pub owner_name: Option<String>,
     pub own_paths: Option<String>,
+    pub push: bool,
+    pub msg: Option<String>,
 }
 impl From<bios_sdk_invoke::clients::spi_log_client::LogItemAddReq> for LogItemAddReq {
     fn from(value: bios_sdk_invoke::clients::spi_log_client::LogItemAddReq) -> Self {
@@ -39,10 +42,13 @@ impl From<bios_sdk_invoke::clients::spi_log_client::LogItemAddReq> for LogItemAd
             key: value.key.map(Into::into),
             op: value.op,
             rel_key: value.rel_key.map(Into::into),
-            id: value.id,
+            idempotent_id: value.idempotent_id,
             ts: value.ts,
             owner: value.owner,
             own_paths: value.own_paths,
+            msg: value.msg,
+            owner_name: value.owner_name,
+            push: value.push,
         }
     }
 }
@@ -86,15 +92,54 @@ pub struct AdvBasicQueryCondInfo {
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct LogItemFindResp {
-    #[oai(validator(min_length = "2"))]
-    pub content: String,
+    pub content: Value,
     pub kind: String,
     pub ext: Value,
     pub owner: String,
+    pub owner_name: String,
     pub own_paths: String,
     pub id: String,
     pub key: String,
     pub op: String,
     pub rel_key: String,
     pub ts: DateTime<Utc>,
+    pub msg: String,
+}
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct LogConfigReq {
+    #[oai(validator(pattern = r"^[a-z0-9_]+$"))]
+    pub tag: String,
+    pub ref_field: String,
+}
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct StatsItemAddReq {
+    #[oai(validator(min_length = "2"))]
+    pub idempotent_id: Option<String>,
+    #[oai(validator(pattern = r"^[a-z0-9_]+$"))]
+    pub tag: String,
+    pub content: Value,
+    pub ext: Option<Value>,
+    #[oai(validator(min_length = "2"))]
+    pub key: Option<TrimString>,
+    pub ts: Option<DateTime<Utc>>,
+    #[oai(validator(min_length = "2"))]
+    pub owner: Option<String>,
+    pub own_paths: Option<String>,
+}
+
+impl From<LogItemAddReq> for StatsItemAddReq {
+    fn from(value: LogItemAddReq) -> Self {
+        StatsItemAddReq {
+            idempotent_id: value.idempotent_id,
+            tag: value.tag,
+            content: value.content,
+            ext: value.ext,
+            key: value.key,
+            ts: value.ts,
+            owner: value.owner,
+            own_paths: value.own_paths,
+        }
+    }
 }

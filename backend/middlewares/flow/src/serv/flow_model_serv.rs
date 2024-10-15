@@ -48,7 +48,7 @@ use async_trait::async_trait;
 
 use super::{
     clients::{
-        log_client::{FlowLogClient, LogParamContent, LogParamTag},
+        flow_log_client::{FlowLogClient, LogParamContent, LogParamTag},
         search_client::FlowSearchClient,
     },
     flow_inst_serv::FlowInstServ,
@@ -153,6 +153,7 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
                 Some("新建".to_string()),
                 rbum_scope_helper::get_path_item(RbumScopeLevelKind::L1.to_int(), &ctx.own_paths),
                 ctx,
+                false,
             )
             .await?;
         }
@@ -306,6 +307,7 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
                 Some("编辑".to_string()),
                 rbum_scope_helper::get_path_item(RbumScopeLevelKind::L1.to_int(), &ctx.own_paths),
                 ctx,
+                false,
             )
             .await?;
         }
@@ -456,6 +458,7 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
                 Some("删除".to_string()),
                 rbum_scope_helper::get_path_item(RbumScopeLevelKind::L1.to_int(), &ctx.own_paths),
                 ctx,
+                false,
             )
             .await?;
         }
