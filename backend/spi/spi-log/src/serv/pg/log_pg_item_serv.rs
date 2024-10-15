@@ -1,6 +1,7 @@
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
     db::{reldb_client::TardisRelDBClient, sea_orm::Value},
+    serde_json::Value as JsonValue,
     web::web_resp::TardisPage,
     TardisFuns, TardisFunsInst,
 };
@@ -506,6 +507,10 @@ ORDER BY ts DESC
         total_size: total_size as u64,
         records: result,
     })
+}
+
+pub async fn modify_ext(_tag: &str, _key: &str, _ext: &mut JsonValue, _funs: &TardisFunsInst, _ctx: &TardisContext, _inst: &SpiBsInst) -> TardisResult<()> {
+    Ok(())
 }
 
 pub async fn add_config(_req: &LogConfigReq, _funs: &TardisFunsInst, _ctx: &TardisContext, _inst: &SpiBsInst) -> TardisResult<()> {

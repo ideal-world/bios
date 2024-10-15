@@ -9,7 +9,7 @@ use tardis::{
         sea_orm::Value,
     },
     futures::TryFutureExt as _,
-    serde_json::Value as JsonValue,
+    serde_json::{self, Value as JsonValue},
     web::web_resp::TardisPage,
     TardisFuns, TardisFunsInst,
 };
@@ -627,6 +627,15 @@ ORDER BY ts DESC
         total_size: total_size as u64,
         records: result,
     })
+}
+
+pub async fn modify_ext(tag: &str, key: &str, ext: &mut JsonValue, _funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
+    let bs_inst = inst.inst::<TardisRelDBClient>();
+    let (conn, table_name) = log_pg_initializer::init_table_and_conn(bs_inst, tag, ctx, false).await?;
+
+    let ext_str: String = serde_json::to_string(ext).map_err(|e| TardisError::internal_error(&format!("Fail to parse ext: {e}"), "500-spi-log-internal-error"))?;
+    conn.execute_one(&format!("update {table_name} set ext=ext||$1 where key=$2"), vec![Value::from(ext_str), Value::from(key)]).await?;
+    Ok(())
 }
 
 pub async fn add_config(req: &LogConfigReq, _funs: &TardisFunsInst, _ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {

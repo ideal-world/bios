@@ -11,6 +11,7 @@ use tardis::web::web_resp::TardisPage;
 use super::super::log_constants;
 use super::pg;
 use super::pgv2;
+use tardis::serde_json::Value;
 
 spi_dispatch_service! {
     @mgr: true,
@@ -23,6 +24,7 @@ spi_dispatch_service! {
     @method: {
         add(add_req: &mut LogItemAddReq) -> TardisResult<String>;
         find(find_req: &mut LogItemFindReq) -> TardisResult<TardisPage<LogItemFindResp>>;
+        modify_ext(tag: &str,key: &str, ext: &mut Value) -> TardisResult<()>;
         add_config(config: &mut LogConfigReq) -> TardisResult<()>;
         delete_config(config: &mut LogConfigReq) -> TardisResult<()>;
     }
