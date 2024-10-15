@@ -3,7 +3,6 @@ use serde::{Deserialize, Serialize};
 use tardis::{
     basic::{dto::TardisContext, field::TrimString, result::TardisResult},
     chrono::{DateTime, Utc},
-    futures::TryFutureExt as _,
     serde_json::Value,
     web::{
         poem_openapi,
@@ -14,11 +13,13 @@ use tardis::{
 
 use crate::{clients::base_spi_client::BaseSpiClient, invoke_config::InvokeConfig, invoke_constants::DYNAMIC_LOG, invoke_enumeration::InvokeModuleKind};
 
-use super::{
-    event_client::{get_topic, mq_error, EventAttributeExt, SPI_RPC_TOPIC},
-    iam_client::IamClient,
-};
+#[cfg(feature = "event")]
+use super::event_client::{get_topic, mq_error, EventAttributeExt, SPI_RPC_TOPIC};
+use super::iam_client::IamClient;
+#[cfg(feature = "event")]
+use tardis::futures::TryFutureExt as _;
 
+#[cfg(feature = "event")]
 pub mod event {
     use asteroid_mq::prelude::*;
 
@@ -120,13 +121,14 @@ impl SpiLogClient {
     }
 
     pub async fn add(req: LogItemAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        #[cfg(feature = "event")]
         if let Some(topic) = get_topic(&SPI_RPC_TOPIC) {
             topic.send_event(req.inject_context(funs, ctx).json()).map_err(mq_error).await?;
-        } else {
-            let log_url: String = BaseSpiClient::module_url(InvokeModuleKind::Log, funs).await?;
-            let headers = BaseSpiClient::headers(None, funs, ctx).await?;
-            funs.web_client().post_obj_to_str(&format!("{log_url}/ci/item"), &req, headers.clone()).await?;
+            return Ok(());
         }
+        let log_url: String = BaseSpiClient::module_url(InvokeModuleKind::Log, funs).await?;
+        let headers = BaseSpiClient::headers(None, funs, ctx).await?;
+        funs.web_client().post_obj_to_str(&format!("{log_url}/ci/item"), &req, headers.clone()).await?;
         Ok(())
     }
 

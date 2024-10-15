@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 
+#[cfg(feature = "event")]
 pub mod event {
     use asteroid_mq::prelude::*;
 

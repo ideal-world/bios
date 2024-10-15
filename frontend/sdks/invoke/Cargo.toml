@@ -18,11 +18,11 @@ path = "src/lib.rs"
 default = ["spi_kv", "spi_log", "spi_search", "spi_stats", "iam", "event"]
 spi_base = []
 spi_kv = ["spi_base"]
-spi_log = ["spi_base"]
+spi_log = ["spi_base", "iam"]
 spi_search = ["spi_base"]
 spi_stats = ["spi_base"]
 iam = []
-event = []
+event = ["asteroid-mq"]
 macro = ["dep:simple-invoke-client-macro"]
 
 [dependencies]
@@ -37,7 +37,7 @@ tardis = { workspace = true, features = [
 ] }
 simple-invoke-client-macro = { path = "../simple-invoke-client-macro", optional = true }
 crossbeam = "0.8"
-asteroid-mq = { workspace = true, features = ["cluster-k8s"] }
+asteroid-mq = { workspace = true, features = ["cluster-k8s"], optional = true }
 [dev-dependencies]
 tardis = { workspace = true, features = ["test"] }
 simple-invoke-client-macro = { path = "../simple-invoke-client-macro" }
@@ -45,4 +45,3 @@ simple-invoke-client-macro = { path = "../simple-invoke-client-macro" }
 [[test]]
 name = "test_macros"
 required-features = ["macro"]
-
