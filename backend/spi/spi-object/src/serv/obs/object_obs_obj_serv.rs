@@ -19,10 +19,11 @@ impl S3 for OBSService {
     }
 
     //
-    async fn object_copy(from: &str, to: &str, private: Option<bool>, special: Option<bool>, _funs: &TardisFunsInst, _ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
+    async fn object_copy(from: &str, to: &str, private: Option<bool>, special: Option<bool>, bs_id: Option<&str>,
+        bucket: Option<&str>, _funs: &TardisFunsInst, _ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
         let bs_inst = inst.inst::<TardisOSClient>();
         let client = bs_inst.0;
-        let bucket_name = Self::get_bucket_name(private, special, None, inst).unwrap_or_default();
+        let bucket_name = Self::get_bucket_name(private, special, None, bucket, bs_id, inst).unwrap_or_default();
         client
             .object_copy(
                 &format!("{}/{}", &bucket_name, from.strip_prefix('/').unwrap_or(from),),

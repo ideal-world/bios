@@ -3,7 +3,7 @@ pub mod object_s3_obj_serv;
 
 use std::collections::HashMap;
 
-use bios_basic::spi::{serv::spi_bs_serv::SpiBsServ, spi_funs::SpiBsInst, spi_initializer::common};
+use bios_basic::spi::{dto::spi_bs_dto::SpiBsCertResp, serv::spi_bs_serv::SpiBsServ, spi_funs::SpiBsInst, spi_initializer::common};
 use itertools::Itertools;
 use tardis::{
     basic::{dto::TardisContext, error::TardisError, result::TardisResult},
@@ -17,6 +17,7 @@ use crate::dto::object_dto::ObjectObjPresignKind;
 pub trait S3 {
     ///
     /// obj_exp: 设置obj的过期时间 单位为天
+    #[allow(clippy::too_many_arguments)]
     async fn presign_obj_url(
         presign_kind: ObjectObjPresignKind,
         object_path: &str,
@@ -26,13 +27,15 @@ pub trait S3 {
         private: Option<bool>,
         special: Option<bool>,
         obj_exp: Option<u32>,
+        bs_id: Option<&str>,
+        bucket: Option<&str>,
         funs: &TardisFunsInst,
         ctx: &TardisContext,
         inst: &SpiBsInst,
     ) -> TardisResult<String> {
         let bs_inst = inst.inst::<TardisOSClient>();
         let client = bs_inst.0;
-        let bucket_name = Self::get_bucket_name(private, special, obj_exp.map(|_| true), inst);
+        let bucket_name = Self::get_bucket_name(private, special, obj_exp.map(|_| true),bucket, bs_id, inst);
         let path = Self::rebuild_path(bucket_name.as_deref(), object_path, obj_exp, client).await?;
         match presign_kind {
             ObjectObjPresignKind::Upload => client.object_create_url(&path, exp_secs, bucket_name.as_deref()).await,
@@ -41,7 +44,18 @@ pub trait S3 {
                 if private.unwrap_or(true) || special.unwrap_or(false) {
                     client.object_get_url(&path, exp_secs, bucket_name.as_deref()).await
                 } else {
-                    let spi_bs = SpiBsServ::get_bs_by_rel(&ctx.ak, None, funs, ctx).await?;
+                    let spi_bs = if let Some(bs_id) = bs_id {
+                        SpiBsServ::get_bs(bs_id, funs, ctx).await.map(|spi| SpiBsCertResp {
+                            kind_code: spi.kind_code.clone(),
+                            conn_uri: spi.conn_uri.clone(),
+                            ak: spi.ak.clone(),
+                            sk: spi.sk.clone(),
+                            ext: spi.ext.clone(),
+                            private: spi.private,
+                        })?
+                    } else {
+                        SpiBsServ::get_bs_by_rel(&ctx.ak, None, funs, ctx).await?
+                    };
                     let Some(bucket_name) = bucket_name else {
                         return Err(TardisError::internal_error(
                             "Cannot get public bucket name while presign object url, it may due to the lack of isolation_flag",
@@ -59,13 +73,15 @@ pub trait S3 {
         private: Option<bool>,
         special: Option<bool>,
         obj_exp: Option<u32>,
+        bs_id: Option<&str>,
+        bucket: Option<&str>,
         _funs: &TardisFunsInst,
         _ctx: &TardisContext,
         inst: &SpiBsInst,
     ) -> TardisResult<()> {
         let bs_inst = inst.inst::<TardisOSClient>();
         let client = bs_inst.0;
-        let bucket_name = Self::get_bucket_name(private, special, obj_exp.map(|_| true), inst);
+        let bucket_name = Self::get_bucket_name(private, special, obj_exp.map(|_| true), bucket, bs_id, inst);
         let path = Self::rebuild_path(bucket_name.as_deref(), object_path, obj_exp, client).await?;
         client.object_delete(&path, bucket_name.as_deref()).await
     }
@@ -75,6 +91,8 @@ pub trait S3 {
         private: Option<bool>,
         special: Option<bool>,
         obj_exp: Option<u32>,
+        bs_id: Option<&str>,
+        bucket: Option<&str>,
         _funs: &TardisFunsInst,
         _ctx: &TardisContext,
         inst: &SpiBsInst,
@@ -83,7 +101,7 @@ pub trait S3 {
             object_paths
                 .into_iter()
                 .map(|object_path| async move {
-                    let result = Self::object_delete(&object_path, private, special, obj_exp, _funs, _ctx, inst).await;
+                    let result = Self::object_delete(&object_path, private, special, obj_exp, bs_id, bucket, _funs, _ctx, inst).await;
                     if result.is_err() {
                         object_path.to_string()
                     } else {
@@ -96,10 +114,11 @@ pub trait S3 {
         Ok(failed_object_paths.into_iter().filter(|object_path| !object_path.is_empty()).collect_vec())
     }
 
-    async fn object_copy(from: &str, to: &str, private: Option<bool>, special: Option<bool>, _funs: &TardisFunsInst, _ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
+    async fn object_copy(from: &str, to: &str, private: Option<bool>, special: Option<bool>, bs_id: Option<&str>,
+        bucket: Option<&str>, _funs: &TardisFunsInst, _ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
         let bs_inst = inst.inst::<TardisOSClient>();
         let client = bs_inst.0;
-        let bucket_name = Self::get_bucket_name(private, special, None, inst);
+        let bucket_name = Self::get_bucket_name(private, special, None, bucket, bs_id, inst);
         client.object_copy(from, to, bucket_name.as_deref()).await
     }
 
@@ -108,13 +127,15 @@ pub trait S3 {
         private: Option<bool>,
         special: Option<bool>,
         obj_exp: Option<u32>,
+        bs_id: Option<&str>,
+        bucket: Option<&str>,
         _funs: &TardisFunsInst,
         _ctx: &TardisContext,
         inst: &SpiBsInst,
     ) -> TardisResult<bool> {
         let bs_inst = inst.inst::<TardisOSClient>();
         let client = bs_inst.0;
-        let bucket_name = Self::get_bucket_name(private, special, obj_exp.map(|_| true), inst);
+        let bucket_name = Self::get_bucket_name(private, special, obj_exp.map(|_| true), bucket, bs_id, inst);
         let path = Self::rebuild_path(bucket_name.as_deref(), object_path, obj_exp, client).await?;
         client.object_exist(&path, bucket_name.as_deref()).await
     }
@@ -125,6 +146,8 @@ pub trait S3 {
         private: Option<bool>,
         special: Option<bool>,
         obj_exp: Option<u32>,
+        bs_id: Option<&str>,
+        bucket: Option<&str>,
         _funs: &TardisFunsInst,
         _ctx: &TardisContext,
         inst: &SpiBsInst,
@@ -133,7 +156,7 @@ pub trait S3 {
             object_paths
                 .into_iter()
                 .map(|object_path| async move {
-                    let result = Self::presign_obj_url(ObjectObjPresignKind::View, &object_path, None, None, exp_secs, private, special, obj_exp, _funs, _ctx, inst).await;
+                    let result = Self::presign_obj_url(ObjectObjPresignKind::View, &object_path, None, None, exp_secs, private, special, obj_exp, bs_id, bucket, _funs, _ctx, inst).await;
                     if let Ok(presign_obj_url) = result {
                         (object_path.to_string(), presign_obj_url)
                     } else {
@@ -151,13 +174,15 @@ pub trait S3 {
         content_type: Option<String>,
         private: Option<bool>,
         special: Option<bool>,
+        bs_id: Option<&str>,
+        bucket: Option<&str>,
         _funs: &TardisFunsInst,
         _ctx: &TardisContext,
         inst: &SpiBsInst,
     ) -> TardisResult<String> {
         let bs_inst = inst.inst::<TardisOSClient>();
         let client = bs_inst.0;
-        let bucket_name = Self::get_bucket_name(private, special, None, inst);
+        let bucket_name = Self::get_bucket_name(private, special, None, bucket, bs_id, inst);
         client.initiate_multipart_upload(object_path, content_type.as_deref(), bucket_name.as_deref()).await
     }
 
@@ -168,13 +193,15 @@ pub trait S3 {
         expire_sec: u32,
         private: Option<bool>,
         special: Option<bool>,
+        bs_id: Option<&str>,
+        bucket: Option<&str>,
         _funs: &TardisFunsInst,
         _ctx: &TardisContext,
         inst: &SpiBsInst,
     ) -> TardisResult<Vec<String>> {
         let bs_inst = inst.inst::<TardisOSClient>();
         let client = bs_inst.0;
-        let bucket_name = Self::get_bucket_name(private, special, None, inst);
+        let bucket_name = Self::get_bucket_name(private, special, None, bucket, bs_id, inst);
         client.batch_build_create_presign_url(object_path, upload_id, part_number, expire_sec, bucket_name.as_deref()).await
     }
 
@@ -184,17 +211,23 @@ pub trait S3 {
         parts: Vec<String>,
         private: Option<bool>,
         special: Option<bool>,
+        bs_id: Option<&str>,
+        bucket: Option<&str>,
         _funs: &TardisFunsInst,
         _ctx: &TardisContext,
         inst: &SpiBsInst,
     ) -> TardisResult<()> {
         let bs_inst = inst.inst::<TardisOSClient>();
         let client = bs_inst.0;
-        let bucket_name = Self::get_bucket_name(private, special, None, inst);
+        let bucket_name = Self::get_bucket_name(private, special, None, bucket, bs_id, inst);
         client.complete_multipart_upload(object_path, upload_id, parts, bucket_name.as_deref()).await
     }
 
-    fn get_bucket_name(private: Option<bool>, special: Option<bool>, tamp: Option<bool>, inst: &SpiBsInst) -> Option<String> {
+    fn get_bucket_name(private: Option<bool>, special: Option<bool>, tamp: Option<bool>, bucket_name: Option<&str>, bs_id: Option<&str>, inst: &SpiBsInst) -> Option<String> {
+        // 使用自定义客户端时，不需要遵循内置桶的规则，直接返回传入的桶名
+        if bs_id.is_some() {
+            return bucket_name.map(|s| s.to_string());
+        }
         let bs_inst = inst.inst::<TardisOSClient>();
         common::get_isolation_flag_from_ext(bs_inst.1).map(|bucket_name_prefix| {
             format!(

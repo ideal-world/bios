@@ -50,7 +50,7 @@ pub async fn init(bs_cert: &SpiBsCertResp, ctx: &TardisContext, mgr: bool) -> Ta
             .get("region_endpoint")
             .and_then(JsonValue::as_str)
             .ok_or_else(|| TardisError::bad_request("Tardis context ext should have a `region_endpoint` field with type string", "400-spi-invalid-tardis-ctx"))?;
-        init_obs_spi_bs(&conn_uri, &bs_cert.ak, &bs_cert.sk, region, &default_bucket, bs_cert.private, ctx, mgr).await
+        init_obs_spi_bs(conn_uri, &bs_cert.ak, &bs_cert.sk, region, default_bucket, bs_cert.private, ctx, mgr).await
     } else {
         // When using a bucket domain, default_bucket is set to empty
         let default_bucket = "";

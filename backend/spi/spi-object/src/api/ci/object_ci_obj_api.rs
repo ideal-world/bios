@@ -1,5 +1,10 @@
 use std::collections::HashMap;
 
+use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
+use bios_basic::rbum::serv::rbum_kind_serv::RbumKindServ;
+use bios_basic::spi::dto::spi_bs_dto::SpiBsAddReq;
+use bios_basic::spi::serv::spi_bs_serv::SpiBsServ;
+use tardis::basic::field::TrimString;
 use tardis::web::context_extractor::TardisContextExtractor;
 
 use tardis::web::poem::web::Json;
@@ -8,9 +13,9 @@ use tardis::web::poem_openapi::param::Query;
 use tardis::web::web_resp::{TardisApiResult, TardisResp, Void};
 
 use crate::dto::object_dto::{
-    ObjectBatchBuildCreatePresignUrlReq, ObjectBatchDeleteReq, ObjectCompleteMultipartUploadReq, ObjectCopyReq, ObjectInitiateMultipartUploadReq, ObjectObjPresignKind,
-    ObjectPresignBatchViewReq,
+    ClientCreateReq, ObjectBatchBuildCreatePresignUrlReq, ObjectBatchDeleteReq, ObjectCompleteMultipartUploadReq, ObjectCopyReq, ObjectInitiateMultipartUploadReq, ObjectObjPresignKind, ObjectPresignBatchViewReq
 };
+use crate::object_constants;
 use crate::serv::object_obj_serv;
 #[derive(Clone)]
 pub struct ObjectCiObjApi;
@@ -53,6 +58,12 @@ impl ObjectCiObjApi {
         // Whether or not it is temporary, the number indicates the length of time the file will be in effect.
         // When using obs, passing in a value does not take effect, it only indicates the use of the tamp bucket.
         obj_exp: Query<Option<u32>>,
+        // 服务ID，使用外部自定义服务时，传入该值。
+        // Service ID, pass this value when using an external custom service.
+        bs_id: Query<Option<String>>,
+        // 指定桶，当且仅当使用自定义服务ID时该参数有效。
+        // Specifies the bucket. This parameter is valid when and only when a custom service ID is used.
+        bucket: Query<Option<String>>,
         ctx: TardisContextExtractor,
     ) -> TardisApiResult<String> {
         let funs = crate::get_tardis_inst();
@@ -65,6 +76,8 @@ impl ObjectCiObjApi {
             private.0,
             special.0,
             obj_exp.0,
+            bucket.0,
+            bs_id.0,
             &funs,
             &ctx.0,
         )
@@ -95,6 +108,12 @@ impl ObjectCiObjApi {
         // Whether or not it is temporary, the number indicates the length of time the file will be in effect.
         // When using obs, passing in a value does not take effect, it only indicates the use of the tamp bucket.
         obj_exp: Query<Option<u32>>,
+        // 服务ID，使用外部自定义服务时，传入该值。
+        // Service ID, pass this value when using an external custom service.
+        bs_id: Query<Option<String>>,
+        // 指定桶，当且仅当使用自定义服务ID时该参数有效。
+        // Specifies the bucket. This parameter is valid when and only when a custom service ID is used.
+        bucket: Query<Option<String>>,
         ctx: TardisContextExtractor,
     ) -> TardisApiResult<String> {
         let funs = crate::get_tardis_inst();
@@ -107,6 +126,8 @@ impl ObjectCiObjApi {
             private.0,
             special.0,
             obj_exp.0,
+            bucket.0,
+            bs_id.0,
             &funs,
             &ctx.0,
         )
@@ -137,6 +158,12 @@ impl ObjectCiObjApi {
         // Whether or not it is temporary, the number indicates the length of time the file will be in effect.
         // When using obs, passing in a value does not take effect, it only indicates the use of the tamp bucket.
         obj_exp: Query<Option<u32>>,
+        // 服务ID，使用外部自定义服务时，传入该值。
+        // Service ID, pass this value when using an external custom service.
+        bs_id: Query<Option<String>>,
+        // 指定桶，当且仅当使用自定义服务ID时该参数有效。
+        // Specifies the bucket. This parameter is valid when and only when a custom service ID is used.
+        bucket: Query<Option<String>>,
         ctx: TardisContextExtractor,
     ) -> TardisApiResult<String> {
         let funs = crate::get_tardis_inst();
@@ -149,6 +176,8 @@ impl ObjectCiObjApi {
             private.0,
             special.0,
             obj_exp.0,
+            bucket.0,
+            bs_id.0,
             &funs,
             &ctx.0,
         )
@@ -162,7 +191,7 @@ impl ObjectCiObjApi {
     #[oai(path = "/presign/batch_view", method = "post")]
     async fn batch_presign_view_obj_url(&self, req: Json<ObjectPresignBatchViewReq>, ctx: TardisContextExtractor) -> TardisApiResult<HashMap<String, String>> {
         let funs = crate::get_tardis_inst();
-        let url = object_obj_serv::batch_get_presign_obj_url(req.0.object_path, req.0.expire_sec, req.0.private, req.0.special, req.0.obj_exp, &funs, &ctx.0).await?;
+        let url = object_obj_serv::batch_get_presign_obj_url(req.0.object_path, req.0.expire_sec, req.0.private, req.0.special, req.0.obj_exp, req.0.bucket, req.0.bs_id, &funs, &ctx.0).await?;
         TardisResp::ok(url)
     }
 
@@ -202,7 +231,7 @@ impl ObjectCiObjApi {
     #[oai(path = "/object/copy", method = "post")]
     async fn object_copy(&self, req: Json<ObjectCopyReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let funs = crate::get_tardis_inst();
-        object_obj_serv::object_copy(req.0.from, req.0.to, req.0.private, req.0.special, &funs, &ctx.0).await?;
+        object_obj_serv::object_copy(req.0.from, req.0.to, req.0.private, req.0.special, req.0.bucket, req.0.bs_id, &funs, &ctx.0).await?;
         TardisResp::ok(Void)
     }
 
@@ -226,10 +255,16 @@ impl ObjectCiObjApi {
         // Whether or not it is temporary, the number indicates the length of time the file will be in effect.
         // When using obs, passing in a value does not take effect, it only indicates the use of the tamp bucket.
         obj_exp: Query<Option<u32>>,
+        // 服务ID，使用外部自定义服务时，传入该值。
+        // Service ID, pass this value when using an external custom service.
+        bs_id: Query<Option<String>>,
+        // 指定桶，当且仅当使用自定义服务ID时该参数有效。
+        // Specifies the bucket. This parameter is valid when and only when a custom service ID is used.
+        bucket: Query<Option<String>>,
         ctx: TardisContextExtractor,
     ) -> TardisApiResult<Void> {
         let funs = crate::get_tardis_inst();
-        object_obj_serv::object_delete(object_path.0, private.0, special.0, obj_exp.0, &funs, &ctx.0).await?;
+        object_obj_serv::object_delete(object_path.0, private.0, special.0, obj_exp.0, bucket.0, bs_id.0, &funs, &ctx.0).await?;
         TardisResp::ok(Void)
     }
 
@@ -239,7 +274,7 @@ impl ObjectCiObjApi {
     #[oai(path = "/object/batch_delete", method = "delete")]
     async fn batch_object_delete(&self, req: Json<ObjectBatchDeleteReq>, ctx: TardisContextExtractor) -> TardisApiResult<Vec<String>> {
         let funs = crate::get_tardis_inst();
-        TardisResp::ok(object_obj_serv::batch_object_delete(req.0.object_path, req.0.private, req.0.special, req.0.obj_exp, &funs, &ctx.0).await?)
+        TardisResp::ok(object_obj_serv::batch_object_delete(req.0.object_path, req.0.private, req.0.special, req.0.obj_exp, req.0.bucket, req.0.bs_id, &funs, &ctx.0).await?)
     }
 
     /// Check object is exist
@@ -262,10 +297,38 @@ impl ObjectCiObjApi {
         // Whether or not it is temporary, the number indicates the length of time the file will be in effect.
         // When using obs, passing in a value does not take effect, it only indicates the use of the tamp bucket.
         obj_exp: Query<Option<u32>>,
+        // 服务ID，使用外部自定义服务时，传入该值。
+        // Service ID, pass this value when using an external custom service.
+        bs_id: Query<Option<String>>,
+        // 指定桶，当且仅当使用自定义服务ID时该参数有效。
+        // Specifies the bucket. This parameter is valid when and only when a custom service ID is used.
+        bucket: Query<Option<String>>,
         ctx: TardisContextExtractor,
     ) -> TardisApiResult<bool> {
         let funs = crate::get_tardis_inst();
-        TardisResp::ok(object_obj_serv::object_exist(object_path.0, private.0, special.0, obj_exp.0, &funs, &ctx.0).await?)
+        TardisResp::ok(object_obj_serv::object_exist(object_path.0, private.0, special.0, obj_exp.0, bucket.0, bs_id.0, &funs, &ctx.0).await?)
+    }
+
+    /// Check object is exist
+    ///
+    /// 添加自定义服务实例
+    #[oai(path = "/bs/add", method = "post")]
+    async fn bs_add(&self, add_req: Json<ClientCreateReq>, ctx: TardisContextExtractor,) -> TardisApiResult<String> {
+        let mut funs = crate::get_tardis_inst();
+        funs.begin().await?;
+        let kind_id = RbumKindServ::get_rbum_kind_id_by_code(object_constants::SPI_S3_KIND_CODE, &funs).await?.expect("missing event kind");
+        let result = SpiBsServ::add_item(&mut SpiBsAddReq {
+            name: add_req.0.name,
+            kind_id: TrimString::from(kind_id),
+            conn_uri: add_req.0.conn_uri,
+            ak: add_req.0.ak,
+            sk: add_req.0.sk,
+            ext: add_req.0.ext,
+            private: true,
+            disabled: None,
+        }, &funs, &ctx.0).await?;
+        funs.commit().await?;
+        TardisResp::ok(result)
     }
 
     // /// Fetch URL for temporary authorization of thumbnail

@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use tardis::web::poem_openapi;
+use tardis::{basic::field::TrimString, web::poem_openapi};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub enum ObjectObjPresignKind {
@@ -15,6 +15,12 @@ pub struct ObjectInitiateMultipartUploadReq {
     pub content_type: Option<String>,
     pub private: Option<bool>,
     pub special: Option<bool>,
+    // 服务ID，使用外部自定义服务时，传入该值。
+    // Service ID, pass this value when using an external custom service.
+    pub bs_id: Option<String>,
+    // 指定桶，当且仅当使用自定义服务ID时该参数有效。
+    // Specifies the bucket. This parameter is valid when and only when a custom service ID is used.
+    pub bucket: Option<String>,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
@@ -25,6 +31,12 @@ pub struct ObjectBatchBuildCreatePresignUrlReq {
     pub expire_sec: u32,
     pub private: Option<bool>,
     pub special: Option<bool>,
+    // 服务ID，使用外部自定义服务时，传入该值。
+    // Service ID, pass this value when using an external custom service.
+    pub bs_id: Option<String>,
+    // 指定桶，当且仅当使用自定义服务ID时该参数有效。
+    // Specifies the bucket. This parameter is valid when and only when a custom service ID is used.
+    pub bucket: Option<String>,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
@@ -34,6 +46,12 @@ pub struct ObjectCompleteMultipartUploadReq {
     pub parts: Vec<String>,
     pub private: Option<bool>,
     pub special: Option<bool>,
+    // 服务ID，使用外部自定义服务时，传入该值。
+    // Service ID, pass this value when using an external custom service.
+    pub bs_id: Option<String>,
+    // 指定桶，当且仅当使用自定义服务ID时该参数有效。
+    // Specifies the bucket. This parameter is valid when and only when a custom service ID is used.
+    pub bucket: Option<String>,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
@@ -42,6 +60,12 @@ pub struct ObjectCopyReq {
     pub to: String,
     pub private: Option<bool>,
     pub special: Option<bool>,
+    // 服务ID，使用外部自定义服务时，传入该值。
+    // Service ID, pass this value when using an external custom service.
+    pub bs_id: Option<String>,
+    // 指定桶，当且仅当使用自定义服务ID时该参数有效。
+    // Specifies the bucket. This parameter is valid when and only when a custom service ID is used.
+    pub bucket: Option<String>,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
@@ -50,6 +74,12 @@ pub struct ObjectBatchDeleteReq {
     pub private: Option<bool>,
     pub special: Option<bool>,
     pub obj_exp: Option<u32>,
+    // 服务ID，使用外部自定义服务时，传入该值。
+    // Service ID, pass this value when using an external custom service.
+    pub bs_id: Option<String>,
+    // 指定桶，当且仅当使用自定义服务ID时该参数有效。
+    // Specifies the bucket. This parameter is valid when and only when a custom service ID is used.
+    pub bucket: Option<String>,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
@@ -59,4 +89,19 @@ pub struct ObjectPresignBatchViewReq {
     pub private: Option<bool>,
     pub special: Option<bool>,
     pub obj_exp: Option<u32>,
+    // 服务ID，使用外部自定义服务时，传入该值。
+    // Service ID, pass this value when using an external custom service.
+    pub bs_id: Option<String>,
+    // 指定桶，当且仅当使用自定义服务ID时该参数有效。
+    // Specifies the bucket. This parameter is valid when and only when a custom service ID is used.
+    pub bucket: Option<String>,
+}
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct ClientCreateReq {
+    pub name: TrimString,
+    pub conn_uri: String,
+    pub ak: TrimString,
+    pub sk: TrimString,
+    pub ext: String,
 }
