@@ -166,6 +166,9 @@ async fn init_basic_info<'a>(funs: &TardisFunsInst) -> TardisResult<()> {
     let kind_model_id = RbumKindServ::get_rbum_kind_id_by_code(flow_constants::RBUM_KIND_MODEL_CODE, funs)
         .await?
         .ok_or_else(|| funs.err().not_found("flow", "init", "not found model kind", ""))?;
+    let kind_model_version_id = RbumKindServ::get_rbum_kind_id_by_code(flow_constants::RBUM_KIND_MODEL_VERSION_CODE, funs)
+        .await?
+        .ok_or_else(|| funs.err().not_found("flow", "init", "not found model kind", ""))?;
 
     let domain_flow_id =
         RbumDomainServ::get_rbum_domain_id_by_code(flow_constants::DOMAIN_CODE, funs).await?.ok_or_else(|| funs.err().not_found("flow", "init", "not found flow domain", ""))?;
@@ -173,6 +176,7 @@ async fn init_basic_info<'a>(funs: &TardisFunsInst) -> TardisResult<()> {
     FlowBasicInfoManager::set(BasicInfo {
         kind_state_id,
         kind_model_id,
+        kind_model_version_id,
         domain_flow_id,
     })?;
     Ok(())
@@ -181,12 +185,14 @@ async fn init_basic_info<'a>(funs: &TardisFunsInst) -> TardisResult<()> {
 pub async fn init_rbum_data(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
     let kind_state_id = add_kind(flow_constants::RBUM_KIND_STATE_CODE, flow_constants::RBUM_EXT_TABLE_STATE, funs, ctx).await?;
     let kind_model_id = add_kind(flow_constants::RBUM_KIND_MODEL_CODE, flow_constants::RBUM_EXT_TABLE_MODEL, funs, ctx).await?;
+    let kind_model_version_id = add_kind(flow_constants::RBUM_KIND_MODEL_VERSION_CODE, flow_constants::RBUM_EXT_TABLE_MODEL_VERSION, funs, ctx).await?;
 
     let domain_flow_id = add_domain(funs, ctx).await?;
 
     FlowBasicInfoManager::set(BasicInfo {
         kind_state_id,
         kind_model_id,
+        kind_model_version_id,
         domain_flow_id,
     })?;
 
