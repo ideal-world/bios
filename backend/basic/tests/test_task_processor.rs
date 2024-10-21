@@ -8,8 +8,7 @@ use tardis::{testcontainers, tokio, TardisFuns};
 #[tokio::test]
 async fn test_task_processor() -> TardisResult<()> {
     env::set_var("RUST_LOG", "debug,test_iam_serv=trace,sqlx::query=off,sqlparser=off");
-    let docker = testcontainers::clients::Cli::default();
-    let _x = init_test_container::init(&docker, None).await?;
+    let _x = init_test_container::init(None).await?;
 
     let cache_client = TardisFuns::inst("".to_string(), None).cache();
 

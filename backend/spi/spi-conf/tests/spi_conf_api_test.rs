@@ -19,7 +19,7 @@ use spi_conf_test_common::*;
 #[tokio::test]
 async fn spi_conf_namespace_test() -> TardisResult<()> {
     std::env::set_var("RUST_LOG", "info,sqlx=off,sea_orm=info,spi_conf_namespace_test=info,bios_spi_conf=TRACE");
-    let docker = testcontainers::clients::Cli::default();
+
     let container_hold = init_tardis(&docker).await?;
     start_web_server().await?;
     let mut client = TestHttpClient::new("https://127.0.0.1:8080/spi-conf".to_string());

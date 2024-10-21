@@ -20,8 +20,7 @@ mod test_schedule_item;
 async fn test_log() -> TardisResult<()> {
     // for debug
     // env::set_current_dir("middlewares/schedule").unwrap();
-    let docker = testcontainers::clients::Cli::default();
-    let container_hold = init_test_container::init(&docker, None).await?;
+    let container_hold = init_test_container::init(None).await?;
     env::set_var("RUST_LOG", "debug,test_schedual=trace,sqlx::query=off,bios_mw_schedule=trace,bios_spi_kv=trace");
 
     init_data().await?;

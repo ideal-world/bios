@@ -2,11 +2,11 @@ use std::str::FromStr;
 
 use bios_basic::{enumeration::BasicQueryOpKind, helper::db_helper};
 use serde::{Deserialize, Serialize};
+use strum::Display;
 use tardis::{
     basic::{error::TardisError, result::TardisResult},
     chrono::{DateTime, NaiveDate, Utc},
     db::sea_orm::{self, prelude::DateTimeWithTimeZone, DbErr, QueryResult, TryGetError, TryGetable},
-    derive_more::Display,
     serde_json,
     web::poem_openapi,
 };

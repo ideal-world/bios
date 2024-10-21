@@ -14,7 +14,7 @@ use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 use tardis::tokio::time::sleep;
 use tardis::web::web_resp::Void;
-use tardis::{testcontainers, tokio, TardisFuns};
+use tardis::{tokio, TardisFuns};
 mod init_search_container;
 mod test_search_item;
 
@@ -22,8 +22,7 @@ mod test_search_item;
 async fn test_search() -> TardisResult<()> {
     env::set_var("RUST_LOG", "debug,test_search=trace,sqlx::query=off");
 
-    let docker = testcontainers::clients::Cli::default();
-    let _x = init_search_container::init(&docker).await?;
+    let _x = init_search_container::init().await?;
     init_data(spi_constants::SPI_ES_KIND_CODE, &env::var("TARDIS_FW.ES.URL").unwrap()).await?;
     init_data(spi_constants::SPI_PG_KIND_CODE, &env::var("TARDIS_FW.DB.URL").unwrap()).await?;
 

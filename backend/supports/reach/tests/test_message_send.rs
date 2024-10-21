@@ -10,8 +10,8 @@ pub async fn test_ct_api() -> TardisResult<()> {
     // std::env::set_current_dir("./supports/reach/")?;
     std::env::set_var("RUST_LOG", "debug,bios_reach=trace,sqlx=off,sea_orm=debug,tardis=TRACE");
     // std::env::set_var("RUST_LOG", "test_ct=info");
-    let docker = testcontainers::clients::Cli::default();
-    let holder = init_tardis(&docker).await?;
+
+    let holder = init_tardis().await?;
     let scene_code = "TEST-SCENE-CODE";
     let scene_name = "测试场景";
     bios_reach::reach_initializer::reach_init_trigger_scene(&ReachTriggerSceneTree::new(scene_name, scene_code, [])).await?;

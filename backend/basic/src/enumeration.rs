@@ -1,6 +1,6 @@
 //! Basic enumerations
 use serde::{Deserialize, Serialize};
-use tardis::derive_more::Display;
+use strum::Display;
 #[cfg(feature = "default")]
 use tardis::web::poem_openapi;
 

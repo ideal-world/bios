@@ -20,10 +20,9 @@ mod test_object_obj;
 async fn test_object() -> TardisResult<()> {
     env::set_var("RUST_LOG", "debug,test_object=trace,sqlx::query=off");
 
-    let docker = testcontainers::clients::Cli::default();
-    let minio = TardisTestContainer::minio_custom(&docker);
-    let minio_url = format!("http://127.0.0.1:{}", minio.get_host_port_ipv4(9000));
-    let _x = init_test_container::init(&docker, None).await?;
+    let minio = TardisTestContainer::minio_custom().await?;
+    let minio_url = format!("http://127.0.0.1:{}", minio.get_host_port_ipv4(9000).await?);
+    let _x = init_test_container::init(None).await?;
 
     init_data(&minio_url).await?;
 
