@@ -18,8 +18,7 @@ use tardis::{tardis_static, testcontainers, tokio, TardisFuns};
 async fn test_event() -> Result<(), Box<dyn std::error::Error>> {
     env::set_var("RUST_LOG", "debug,tardis=trace,bios_mw_event=trace,test_event=trace,sqlx::query=off");
 
-    let docker = testcontainers::clients::Cli::default();
-    let _x = init_test_container::init(&docker, None).await?;
+    let _x = init_test_container::init(None).await?;
 
     init_data().await?;
     test_event_topic_api().await?;

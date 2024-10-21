@@ -18,7 +18,7 @@ use spi_conf_test_common::*;
 #[tokio::test]
 async fn spi_conf_namespace_test() -> TardisResult<()> {
     std::env::set_var("RUST_LOG", "error,spi_conf_listener_test=debug,sqlx=off,sea_orm=off,bios_spi_conf=DEBUG");
-    let docker = testcontainers::clients::Cli::default();
+
     let container_hold = init_tardis(&docker).await?;
     start_web_server().await?;
     let tardis_ctx = TardisContext::default();

@@ -25,7 +25,7 @@ async fn spi_conf_namespace_test() -> TardisResult<()> {
         "info,tardis=debug,spi_conf_listener_test=debug,sqlx=off,sea_orm=debug,bios_spi_conf=DEBUG,poem_grpc=TRACE,tonic=TRACE",
     );
     std::env::set_var("PROFILE", "nacos");
-    let docker = testcontainers::clients::Cli::default();
+
     let container_hold = init_tardis(&docker).await?;
     let _web_server_handle = start_web_server().await;
     let tardis_ctx = TardisContext::default();

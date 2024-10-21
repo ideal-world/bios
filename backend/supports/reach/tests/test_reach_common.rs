@@ -12,7 +12,7 @@ use bios_reach::reach_send_channel::SendChannelMap;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::{Arc, OnceLock};
-use tardis::testcontainers::GenericImage;
+use tardis::testcontainers::ContainerAsync;
 use tardis::tokio::sync::RwLock;
 use tardis::web::poem_openapi::param::Path;
 use tardis::web::poem_openapi::payload::{Form, Json};
@@ -22,15 +22,16 @@ use tardis::web::web_server::{WebServerModule, WebServerModuleOption};
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
     test::test_container::TardisTestContainer,
-    testcontainers::{clients::Cli, Container},
     TardisFuns,
 };
 use tardis::{log, rand, serde_json};
+use testcontainers_modules::postgres::Postgres;
+use testcontainers_modules::rabbitmq::RabbitMq;
 use testcontainers_modules::redis::Redis;
-pub struct Holder<'d> {
-    pub db: Container<'d, GenericImage>,
-    pub cache: Container<'d, Redis>,
-    pub mq: Container<'d, GenericImage>,
+pub struct Holder {
+    pub db: ContainerAsync<Postgres>,
+    pub cache: ContainerAsync<Redis>,
+    pub mq: ContainerAsync<RabbitMq>,
     pub sms_mocker: HwSmsMockerApi,
     pub iam_mocker: IamMockerApi,
 }
@@ -45,17 +46,17 @@ pub fn get_test_ctx() -> &'static TardisContext {
 }
 
 #[allow(dead_code)]
-pub async fn init_tardis(docker: &Cli) -> TardisResult<Holder> {
-    let reldb_container = TardisTestContainer::postgres_custom(None, docker);
-    let port = reldb_container.get_host_port_ipv4(5432);
+pub async fn init_tardis() -> TardisResult<Holder> {
+    let reldb_container = TardisTestContainer::postgres_custom(None).await?;
+    let port = reldb_container.get_host_port_ipv4(5432).await?;
     let url = format!("postgres://postgres:123456@127.0.0.1:{port}/test");
     std::env::set_var("TARDIS_FW.DB.URL", url);
-    let redis_container = TardisTestContainer::redis_custom(docker);
-    let port = redis_container.get_host_port_ipv4(6379);
+    let redis_container = TardisTestContainer::redis_custom().await?;
+    let port = redis_container.get_host_port_ipv4(6379).await?;
     let url = format!("redis://127.0.0.1:{port}/0");
     std::env::set_var("TARDIS_FW.CACHE.URL", url);
-    let rabbit_container = TardisTestContainer::rabbit_custom(docker);
-    let port = rabbit_container.get_host_port_ipv4(5672);
+    let rabbit_container = TardisTestContainer::rabbit_custom().await?;
+    let port = rabbit_container.get_host_port_ipv4(5672).await?;
     let url = format!("amqp://guest:guest@127.0.0.1:{port}/%2f");
     std::env::set_var("TARDIS_FW.MQ.URL", url);
 

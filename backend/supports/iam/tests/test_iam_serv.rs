@@ -6,7 +6,7 @@ use bios_basic::test::init_test_container;
 use bios_iam::iam_constants;
 use tardis::basic::result::TardisResult;
 use tardis::tokio::time::sleep;
-use tardis::{testcontainers, tokio, TardisFuns};
+use tardis::{tokio, TardisFuns};
 
 mod test_basic;
 mod test_ca_app;
@@ -32,9 +32,7 @@ mod test_key_cache;
 async fn test_iam_serv() -> TardisResult<()> {
     env::set_var("RUST_LOG", "debug,test_iam_serv=trace,sqlx::query=off");
 
-    let docker = testcontainers::clients::Cli::default();
-    let _x = init_test_container::init(&docker, None).await?;
-    let _y = test_basic::init(&docker).await?;
+    let _y = test_basic::init().await?;
 
     let funs = iam_constants::get_tardis_inst();
     funs.mq().subscribe("rbum::entity_deleted", |(_, _)| async { Ok(()) }).await?;

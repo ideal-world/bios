@@ -24,8 +24,7 @@ mod test_flow_scenes_fsm1;
 async fn test_flow_api() -> TardisResult<()> {
     env::set_var("RUST_LOG", "debug,tardis=trace,bios_mw_event=trace,test_event=trace,sqlx::query=off");
 
-    let docker = testcontainers::clients::Cli::default();
-    let _x = init_test_container::init(&docker, None).await?;
+    let _x = init_test_container::init(None).await?;
 
     let web_server = TardisFuns::web_server();
     flow_initializer::init(&web_server).await.unwrap();

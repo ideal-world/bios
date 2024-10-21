@@ -2,18 +2,17 @@ use std::env;
 
 use tardis::basic::result::TardisResult;
 use tardis::test::test_container::TardisTestContainer;
-use tardis::testcontainers::clients::Cli;
-use tardis::testcontainers::Container;
+use tardis::testcontainers::ContainerAsync;
 use tardis::TardisFuns;
 use testcontainers_modules::redis::Redis;
 
-pub struct LifeHold<'a> {
-    pub redis: Container<'a, Redis>,
+pub struct LifeHold {
+    pub redis: ContainerAsync<Redis>,
 }
 
-pub async fn init(docker: &Cli) -> TardisResult<LifeHold<'_>> {
-    let redis_container = TardisTestContainer::redis_custom(docker);
-    let port = redis_container.get_host_port_ipv4(6379);
+pub async fn init() -> TardisResult<LifeHold> {
+    let redis_container = TardisTestContainer::redis_custom().await?;
+    let port = redis_container.get_host_port_ipv4(6379).await?;
     let url = format!("redis://127.0.0.1:{port}/0",);
     env::set_var("TARDIS_FW.CACHE.URL", url);
 

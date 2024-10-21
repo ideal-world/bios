@@ -11,6 +11,7 @@ use bios_auth::{
 use http::header::HOST;
 use serde::{Deserialize, Serialize};
 use spacegate_shell::{
+    ext_redis::redis::AsyncCommands,
     hyper::{
         self, header,
         http::{HeaderMap, HeaderName, HeaderValue, StatusCode},
@@ -34,9 +35,9 @@ use tardis::{
     basic::{error::TardisError, result::TardisResult},
     cache::AsyncCommands as _,
     config::config_dto::CacheModuleConfig,
-    tracing::{self as tracing, instrument, warn},
     serde_json::{self, json},
     tokio::{sync::RwLock, task::JoinHandle},
+    tracing::{self as tracing, instrument, warn},
     url::Url,
     web::web_resp::TardisResp,
     TardisFuns,
@@ -368,19 +369,15 @@ async fn handle_mix_req(plugin_config: &AuthPlugin, req: SgRequest) -> Result<Sg
 
     let mix_body = TardisFuns::json.str_to_obj::<MixRequestBody>(&body)?;
     let true_uri = parts.uri.to_string().replace(&plugin_config.mix_replace_url, &mix_body.uri).replace("//", "/");
-    tracing::trace!(?true_uri," string true uri:");
-    let mut true_uri_parts =
-        true_uri.parse::<http::Uri>().map_err(|e| TardisError::custom("500", &format!(" url parse err {e}"), "500-parse_mix_req-url-error"))?.into_parts();
+    tracing::trace!(?true_uri, " string true uri:");
+    let mut true_uri_parts = true_uri.parse::<http::Uri>().map_err(|e| TardisError::custom("500", &format!(" url parse err {e}"), "500-parse_mix_req-url-error"))?.into_parts();
 
     let host = parts.uri.host().map(String::from).or(parts.headers.get(HOST).and_then(|x| x.to_str().map(String::from).ok()));
     if let Some(host) = host {
-        true_uri_parts.authority = Some(http::uri::Authority::from_str(&host).map_err(|e| {
-            TardisError::custom(
-                "500",
-                &format!(" error parse str {host} to authority :{e}"),
-                "500-parse_mix_req-authority-error",
-            )
-        })?);
+        true_uri_parts.authority = Some(
+            http::uri::Authority::from_str(&host)
+                .map_err(|e| TardisError::custom("500", &format!(" error parse str {host} to authority :{e}"), "500-parse_mix_req-authority-error"))?,
+        );
     }
     let old_scheme = parts.uri.scheme().cloned().unwrap_or_else(|| {
         if let Some(port) = true_uri_parts.authority.clone().and_then(|a| a.port_u16()) {
@@ -397,8 +394,8 @@ async fn handle_mix_req(plugin_config: &AuthPlugin, req: SgRequest) -> Result<Sg
     let true_uri = http::Uri::from_parts(true_uri_parts)?;
     tracing::trace!(" raw url:[{}],true url:[{}]", parts.uri.to_string(), true_uri);
     parts.uri = true_uri;
-    parts.method = Method::from_str(&mix_body.method.to_ascii_uppercase())
-        .map_err(|e| TardisError::custom("500", &format!(" method parse err {e}"), "500-parse_mix_req-method-error"))?;
+    parts.method =
+        Method::from_str(&mix_body.method.to_ascii_uppercase()).map_err(|e| TardisError::custom("500", &format!(" method parse err {e}"), "500-parse_mix_req-method-error"))?;
 
     let mut headers = req_headers;
     headers.extend(mix_body.headers);
