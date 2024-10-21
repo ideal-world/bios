@@ -1,13 +1,17 @@
-use bios_sdk_invoke::clients::spi_log_client::SpiLogClient;
+use bios_sdk_invoke::clients::{
+    iam_client::IamClient,
+    spi_log_client::{LogItemAddReq, SpiLogClient},
+};
 use serde::Serialize;
 
 use serde_json::Value;
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
+    chrono::{DateTime, Utc},
     tokio, TardisFuns, TardisFunsInst,
 };
 
-use crate::flow_constants;
+use crate::{flow_config::FlowConfig, flow_constants};
 pub struct FlowLogClient;
 
 #[derive(Serialize, Default, Debug, Clone)]
@@ -39,9 +43,11 @@ impl FlowLogClient {
         op_kind: Option<String>,
         rel_key: Option<String>,
         ctx: &TardisContext,
+        push: bool,
     ) -> TardisResult<()> {
         let ctx_clone = ctx.clone();
-        ctx.add_async_task(Box::new(|| {
+        let push_clone = push; // 克隆 push 变量
+        ctx.add_async_task(Box::new(move || {
             Box::pin(async move {
                 let task_handle = tokio::spawn(async move {
                     let funs = flow_constants::get_tardis_inst();
@@ -56,6 +62,7 @@ impl FlowLogClient {
                         Some(tardis::chrono::Utc::now().to_rfc3339()),
                         &funs,
                         &ctx_clone,
+                        push_clone, // 使用克隆的 push 变量
                     )
                     .await
                     .unwrap();
@@ -78,26 +85,34 @@ impl FlowLogClient {
         ts: Option<String>,
         funs: &TardisFunsInst,
         ctx: &TardisContext,
+        push: bool,
     ) -> TardisResult<()> {
         // generate log item
         let tag: String = tag.into();
         let own_paths = if ctx.own_paths.len() < 2 { None } else { Some(ctx.own_paths.clone()) };
         let owner = if ctx.owner.len() < 2 { None } else { Some(ctx.owner.clone()) };
-        SpiLogClient::add_with_many_params(
-            &tag,
-            &TardisFuns::json.obj_to_string(&content).expect("req_msg not a valid json value"),
-            ext,
+        let owner_name = IamClient::new("", funs, &ctx, funs.conf::<FlowConfig>().invoke.module_urls.get("iam").expect("missing iam base url"))
+            .get_account(&ctx.owner, &ctx.own_paths)
+            .await?
+            .owner_name;
+
+        let req = LogItemAddReq {
+            tag: tag.to_string(),
+            content: TardisFuns::json.obj_to_json(&content).expect("req_msg not a valid json value"),
             kind,
+            ext,
             key,
             op,
             rel_key,
-            ts,
+            idempotent_id: None,
+            ts: ts.map(|ts| DateTime::parse_from_rfc3339(&ts).unwrap_or_default().with_timezone(&Utc)),
             owner,
             own_paths,
-            funs,
-            ctx,
-        )
-        .await?;
+            msg: None,
+            owner_name,
+            push: push,
+        };
+        SpiLogClient::add(req, funs, ctx).await?;
         Ok(())
     }
 }

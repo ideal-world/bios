@@ -1,24 +1,25 @@
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
     db::{reldb_client::TardisRelDBClient, sea_orm::Value},
+    serde_json::Value as JsonValue,
     web::web_resp::TardisPage,
     TardisFuns, TardisFunsInst,
 };
 
 use bios_basic::{dto::BasicQueryCondInfo, enumeration::BasicQueryOpKind, helper::db_helper, spi::spi_funs::SpiBsInst};
 
-use crate::dto::log_item_dto::{AdvBasicQueryCondInfo, LogItemAddReq, LogItemFindReq, LogItemFindResp};
+use crate::dto::log_item_dto::{AdvBasicQueryCondInfo, LogConfigReq, LogItemAddReq, LogItemFindReq, LogItemFindResp};
 
 use super::log_pg_initializer;
 
 pub async fn add(add_req: &mut LogItemAddReq, _funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<String> {
-    let id = add_req.id.clone().unwrap_or(TardisFuns::field.nanoid());
+    let id = add_req.idempotent_id.clone().unwrap_or(TardisFuns::field.nanoid());
     let mut params = vec![
         Value::from(id.clone()),
         Value::from(add_req.kind.as_ref().unwrap_or(&"".into()).to_string()),
         Value::from(add_req.key.as_ref().unwrap_or(&"".into()).to_string()),
         Value::from(add_req.op.as_ref().unwrap_or(&"".to_string()).as_str()),
-        Value::from(add_req.content.as_str()),
+        Value::from(TardisFuns::json.json_to_string(add_req.content.clone())?.as_str()),
         Value::from(add_req.owner.as_ref().unwrap_or(&"".to_string()).as_str()),
         Value::from(add_req.own_paths.as_ref().unwrap_or(&"".to_string()).as_str()),
         Value::from(if let Some(ext) = &add_req.ext {
@@ -481,17 +482,21 @@ ORDER BY ts DESC
             if total_size == 0 {
                 total_size = item.try_get("", "total")?;
             }
+            let content: String = item.try_get("", "content")?;
+            let content = TardisFuns::json.str_to_json(&content)?;
             Ok(LogItemFindResp {
                 ts: item.try_get("", "ts")?,
                 id: item.try_get("", "id")?,
                 key: item.try_get("", "key")?,
                 op: item.try_get("", "op")?,
                 ext: item.try_get("", "ext")?,
-                content: item.try_get("", "content")?,
+                content,
                 rel_key: item.try_get("", "rel_key")?,
                 kind: item.try_get("", "kind")?,
                 owner: item.try_get("", "owner")?,
                 own_paths: item.try_get("", "own_paths")?,
+                msg: String::new(),
+                owner_name: String::new(),
             })
         })
         .collect::<TardisResult<Vec<_>>>()?;
@@ -502,4 +507,16 @@ ORDER BY ts DESC
         total_size: total_size as u64,
         records: result,
     })
+}
+
+pub async fn modify_ext(_tag: &str, _key: &str, _ext: &mut JsonValue, _funs: &TardisFunsInst, _ctx: &TardisContext, _inst: &SpiBsInst) -> TardisResult<()> {
+    Ok(())
+}
+
+pub async fn add_config(_req: &LogConfigReq, _funs: &TardisFunsInst, _ctx: &TardisContext, _inst: &SpiBsInst) -> TardisResult<()> {
+    Ok(())
+}
+
+pub async fn delete_config(_config: &mut LogConfigReq, _funs: &TardisFunsInst, _ctx: &TardisContext, _inst: &SpiBsInst) -> TardisResult<()> {
+    Ok(())
 }

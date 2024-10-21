@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 
+#[cfg(feature = "event")]
 pub mod event {
     use asteroid_mq::prelude::*;
 
@@ -9,10 +10,10 @@ pub mod event {
     pub const EVENT_POST_CHANGE: &str = "flow/post_change";
 
     impl EventAttribute for FlowFrontChangeReq {
-        const SUBJECT: Subject = Subject::const_new(b"flow/front_change");
+        const SUBJECT: Subject = Subject::const_new("flow/front_change");
     }
     impl EventAttribute for FlowPostChangeReq {
-        const SUBJECT: Subject = Subject::const_new(b"flow/post_change");
+        const SUBJECT: Subject = Subject::const_new("flow/post_change");
     }
 }
 

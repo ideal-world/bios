@@ -42,6 +42,7 @@ impl<'a> SimpleInvokeClient for IamClient<'a> {
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct IamAccountDetailAggResp {
+    pub owner_name: Option<String>,
     pub roles: HashMap<String, String>,
     pub certs: HashMap<String, String>,
     pub orgs: Vec<String>,

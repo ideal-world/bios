@@ -20,6 +20,7 @@ pub async fn init_table_and_conn(bs_inst: TypedSpiBsInst<'_, TardisRelDBClient>,
     ts timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
     check (from_key <> to_key),  
     unique (from_key, from_version, to_key, to_version, tag)"#,
+        None,
         vec![
             ("tag", "btree"),
             ("from_key", "btree"),

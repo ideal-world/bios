@@ -25,7 +25,7 @@ pub struct SearchItemAddReq {
     pub content: String,
     #[oai(validator(min_length = "2"))]
     pub owner: Option<String>,
-    #[oai(validator(min_length = "2"))]
+    // #[oai(validator(min_length = "2"))]
     pub own_paths: Option<String>,
     pub create_time: Option<DateTime<Utc>>,
     pub update_time: Option<DateTime<Utc>>,

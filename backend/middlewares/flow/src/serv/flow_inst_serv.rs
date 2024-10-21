@@ -31,7 +31,8 @@ use tardis::{
 };
 
 use crate::{
-    domain::{flow_inst, flow_model, flow_transition}, dto::{
+    domain::{flow_inst, flow_model, flow_transition},
+    dto::{
         flow_external_dto::{FlowExternalCallbackOp, FlowExternalParams},
         flow_inst_dto::{
             FlowInstAbortReq, FlowInstBatchBindReq, FlowInstBatchBindResp, FlowInstDetailResp, FlowInstFilterReq, FlowInstFindNextTransitionResp, FlowInstFindNextTransitionsReq,
@@ -42,7 +43,10 @@ use crate::{
         flow_state_dto::{FlowStateAggResp, FlowStateFilterReq, FlowStateRelModelExt, FlowSysStateKind},
         flow_transition_dto::{FlowTransitionDetailResp, FlowTransitionFrontActionInfo},
         flow_var_dto::FillType,
-    }, flow_constants, helper::loop_check_helper, serv::{flow_model_serv::FlowModelServ, flow_state_serv::FlowStateServ}
+    },
+    flow_constants,
+    helper::loop_check_helper,
+    serv::{flow_model_serv::FlowModelServ, flow_state_serv::FlowStateServ},
 };
 
 use super::{
@@ -547,13 +551,7 @@ impl FlowInstServ {
         let mut modified_instance_transations_cp = modified_instance_transations.clone();
         if !modified_instance_transations_cp.check(flow_inst_id.to_string(), transfer_req.flow_transition_id.clone()) {
             let flow_inst_detail = Self::get(flow_inst_id, &funs, ctx).await?;
-            return Self::gen_transfer_resp(
-                flow_inst_id,
-                &flow_inst_detail.current_state_id,
-                ctx,
-                &funs,
-            )
-            .await;
+            return Self::gen_transfer_resp(flow_inst_id, &flow_inst_detail.current_state_id, ctx, &funs).await;
         }
         funs.begin().await?;
         let result = Self::do_transfer(flow_inst_id, transfer_req, skip_filter, callback_kind, &funs, ctx).await;
@@ -1036,7 +1034,12 @@ impl FlowInstServ {
         }
     }
 
-    pub async fn modify_current_vars(flow_inst_id: &str, current_vars: &HashMap<String, Value>, modified_instance_transations: loop_check_helper::InstancesTransition, ctx: &TardisContext) -> TardisResult<()> {
+    pub async fn modify_current_vars(
+        flow_inst_id: &str,
+        current_vars: &HashMap<String, Value>,
+        modified_instance_transations: loop_check_helper::InstancesTransition,
+        ctx: &TardisContext,
+    ) -> TardisResult<()> {
         let mut funs = flow_constants::get_tardis_inst();
         funs.begin().await?;
         let flow_inst_detail = Self::get(flow_inst_id, &funs, ctx).await?;
@@ -1138,7 +1141,13 @@ impl FlowInstServ {
                     ..global_ctx.clone()
                 };
                 let new_vars = Self::get_new_vars(&flow_inst.id, funs, &ctx).await?;
-                Self::modify_current_vars(&flow_inst.id, &TardisFuns::json.json_to_obj::<HashMap<String, Value>>(new_vars).unwrap_or_default(), loop_check_helper::InstancesTransition::default(), &ctx).await?;
+                Self::modify_current_vars(
+                    &flow_inst.id,
+                    &TardisFuns::json.json_to_obj::<HashMap<String, Value>>(new_vars).unwrap_or_default(),
+                    loop_check_helper::InstancesTransition::default(),
+                    &ctx,
+                )
+                .await?;
             }
         }
 
@@ -1149,7 +1158,13 @@ impl FlowInstServ {
         let mut current_vars = Self::get(inst_id, funs, ctx).await?.current_vars;
         if current_vars.is_none() || !current_vars.clone().unwrap_or_default().contains_key(key) {
             let new_vars = Self::get_new_vars(inst_id, funs, ctx).await?;
-            Self::modify_current_vars(inst_id, &TardisFuns::json.json_to_obj::<HashMap<String, Value>>(new_vars).unwrap_or_default(), loop_check_helper::InstancesTransition::default(), ctx).await?;
+            Self::modify_current_vars(
+                inst_id,
+                &TardisFuns::json.json_to_obj::<HashMap<String, Value>>(new_vars).unwrap_or_default(),
+                loop_check_helper::InstancesTransition::default(),
+                ctx,
+            )
+            .await?;
             current_vars = Self::get(inst_id, funs, ctx).await?.current_vars;
         }
 
@@ -1167,15 +1182,19 @@ impl FlowInstServ {
     ) -> TardisResult<()> {
         let mut own_paths_list = vec![];
         if let Some(rel_template_id) = rel_template_id {
-            own_paths_list = FlowRelServ::find_to_simple_rels(&FlowRelKind::FlowAppTemplate, &rel_template_id, None, None, funs, ctx).await?.into_iter().map(|rel| format!("{}/{}", rel.rel_own_paths, rel.rel_id)).collect_vec(); 
+            own_paths_list = FlowRelServ::find_to_simple_rels(&FlowRelKind::FlowAppTemplate, &rel_template_id, None, None, funs, ctx)
+                .await?
+                .into_iter()
+                .map(|rel| format!("{}/{}", rel.rel_own_paths, rel.rel_id))
+                .collect_vec();
+            if own_paths_list.contains(&ctx.own_paths) {
+                own_paths_list = vec![ctx.own_paths.clone()];
+            }
         } else {
             own_paths_list.push(ctx.own_paths.clone());
         }
         for own_paths in own_paths_list {
-            let mock_ctx = TardisContext {
-                own_paths,
-                ..ctx.clone()
-            };
+            let mock_ctx = TardisContext { own_paths, ..ctx.clone() };
             Self::unsafe_modify_state(tag, modify_model_id, modify_model_states.clone(), state_id, funs, &mock_ctx).await?;
             Self::unsafe_modify_rel_model_id(tag, modify_model_id, funs, &mock_ctx).await?;
         }
@@ -1183,12 +1202,7 @@ impl FlowInstServ {
         Ok(())
     }
 
-    async fn unsafe_modify_rel_model_id(
-        tag: &str,
-        modify_model_id: &str,
-        funs: &TardisFunsInst,
-        ctx: &TardisContext,
-    ) -> TardisResult<()> {
+    async fn unsafe_modify_rel_model_id(tag: &str, modify_model_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let mut update_statement = Query::update();
         update_statement.table(flow_inst::Entity);
         update_statement.value(flow_inst::Column::RelFlowModelId, modify_model_id);
@@ -1237,14 +1251,21 @@ impl FlowInstServ {
                         ..Default::default()
                     };
                     funs.db().update_one(flow_inst, &mock_ctx).await.unwrap();
-                    let model_tag = FlowModelServ::get_item(modify_model_id, &FlowModelFilterReq {
-                        basic: RbumBasicFilterReq {
-                            own_paths: Some("".to_string()),
-                            with_sub_own_paths: true,
+                    let model_tag = FlowModelServ::get_item(
+                        modify_model_id,
+                        &FlowModelFilterReq {
+                            basic: RbumBasicFilterReq {
+                                own_paths: Some("".to_string()),
+                                with_sub_own_paths: true,
+                                ..Default::default()
+                            },
                             ..Default::default()
                         },
-                        ..Default::default()
-                    }, funs, ctx).await.map(|detail| detail.tag);
+                        funs,
+                        ctx,
+                    )
+                    .await
+                    .map(|detail| detail.tag);
                     let next_flow_state = FlowStateServ::get_item(
                         state_id,
                         &FlowStateFilterReq {

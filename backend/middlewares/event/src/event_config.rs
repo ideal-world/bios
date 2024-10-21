@@ -1,20 +1,30 @@
+use asteroid_mq::openraft;
 use bios_basic::rbum::rbum_config::RbumConfig;
-use lazy_static::lazy_static;
+
 use serde::{Deserialize, Serialize};
 use std::{fmt::Debug, sync::Mutex};
-use tardis::basic::{error::TardisError, result::TardisResult};
+use tardis::{
+    basic::{error::TardisError, result::TardisResult},
+    tardis_static,
+};
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(default)]
 pub struct EventConfig {
     pub rbum: RbumConfig,
     pub enable: bool,
     pub svc: String,
-    pub event_url: String,
-    pub base_url: String,
-    pub event_bus_sk: String,
+    pub raft: openraft::Config,
+    // default by 5000ms
+    pub startup_timeout: u64,
+    pub durable: bool,
     pub avatars: Vec<String>,
-    pub resend_threshold: u32,
-    pub resend_interval_sec: Option<u32>,
+    pub cluster: Option<String>,
+}
+
+impl EventConfig {
+    pub const CLUSTER_K8S: &str = "k8s";
+    pub const NO_CLUSTER: &str = "singleton";
 }
 
 impl Default for EventConfig {
@@ -22,23 +32,18 @@ impl Default for EventConfig {
         EventConfig {
             rbum: Default::default(),
             enable: false,
-            base_url: "http://localhost:8080/event".to_string(),
             svc: "bios".to_string(),
             avatars: Vec::new(),
-            event_url: "".to_string(),
-            event_bus_sk: "".to_string(),
-            resend_threshold: 3,
-            resend_interval_sec: None,
-        }
-    }
-}
-
-impl EventConfig {
-    pub fn event_url(&self) -> String {
-        if self.event_url.ends_with('/') {
-            self.event_url.clone()
-        } else {
-            format!("{}/", self.event_url)
+            startup_timeout: 5000,
+            durable: true,
+            cluster: Some(Self::CLUSTER_K8S.to_string()),
+            raft: openraft::Config {
+                cluster_name: "bios".to_string(),
+                election_timeout_max: 1000,
+                election_timeout_min: 500,
+                heartbeat_interval: 100,
+                ..Default::default()
+            },
         }
     }
 }
@@ -49,16 +54,16 @@ pub struct EventInfo {
     pub domain_id: String,
 }
 
-lazy_static! {
-    static ref EVENT_INFO: Mutex<Option<EventInfo>> = Mutex::new(None);
+tardis_static! {
+    pub event_info: Mutex<Option<EventInfo>>;
 }
 
 pub struct EventInfoManager;
 
 impl EventInfoManager {
-    pub fn set(event_info: EventInfo) -> TardisResult<()> {
-        let mut conf = EVENT_INFO.lock().map_err(|e| TardisError::internal_error(&format!("{e:?}"), ""))?;
-        *conf = Some(event_info);
+    pub fn set(new_event_info: EventInfo) -> TardisResult<()> {
+        let mut conf = event_info().lock().map_err(|e| TardisError::internal_error(&format!("{e:?}"), ""))?;
+        *conf = Some(new_event_info);
         Ok(())
     }
 
@@ -66,7 +71,7 @@ impl EventInfoManager {
     where
         F: Fn(&EventInfo) -> T,
     {
-        let conf = EVENT_INFO.lock().unwrap_or_else(|e| panic!("event info lock error: {e:?}"));
+        let conf = event_info().lock().unwrap_or_else(|e| panic!("event info lock error: {e:?}"));
         let conf = conf.as_ref().unwrap_or_else(|| panic!("rbum config not set"));
         fun(conf)
     }

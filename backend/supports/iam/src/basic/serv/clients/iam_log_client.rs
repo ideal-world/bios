@@ -138,24 +138,24 @@ impl IamLogClient {
         let tag: String = tag.into();
         let own_paths = if ctx.own_paths.len() < 2 { None } else { Some(ctx.own_paths.clone()) };
         let owner = if ctx.owner.len() < 2 { None } else { Some(ctx.owner.clone()) };
+
         let add_req = LogItemAddReq {
             tag,
-            content: TardisFuns::json.obj_to_string(&content).expect("req_msg not a valid json value"),
+            content: TardisFuns::json.obj_to_json(&content).expect("req_msg not a valid json value"),
             kind,
             ext: Some(search_ext),
             key,
             op,
             rel_key,
-            id: None,
+            idempotent_id: None,
             ts: ts.map(|ts| DateTime::parse_from_rfc3339(&ts).unwrap_or_default().with_timezone(&Utc)),
             owner,
             own_paths,
+            msg: None,
+            owner_name: None,
+            push: false,
         };
-        if let Some(topic) = get_topic(&SPI_RPC_TOPIC) {
-            topic.send_event(add_req.inject_context(funs, ctx).json()).map_err(mq_error).await?;
-        } else {
-            SpiLogClient::add(&add_req, funs, ctx).await?;
-        }
+        SpiLogClient::add(add_req, funs, ctx).await?;
         Ok(())
     }
 

@@ -4,6 +4,7 @@ extern crate lazy_static;
 
 mod api;
 pub mod dto;
+pub mod event;
 mod serv;
 pub mod stats_config;
 pub mod stats_constants;

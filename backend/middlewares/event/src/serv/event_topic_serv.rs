@@ -1,4 +1,10 @@
+use std::collections::HashMap;
+use std::sync::Arc;
+use std::time::{Duration, Instant};
+
+use asteroid_mq::prelude::TopicCode;
 use async_trait::async_trait;
+use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
 use bios_basic::rbum::dto::rbum_item_dto::{RbumItemKernelAddReq, RbumItemKernelModifyReq};
 use bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
@@ -8,17 +14,20 @@ use tardis::basic::error::TardisError;
 use tardis::basic::result::TardisResult;
 use tardis::db::sea_orm::sea_query::SelectStatement;
 use tardis::db::sea_orm::{EntityName, Set};
+use tardis::tokio::sync::RwLock;
 use tardis::TardisFunsInst;
 
 use crate::domain::event_topic;
-use crate::dto::event_dto::{EventTopicAddOrModifyReq, EventTopicFilterReq, EventTopicInfoResp};
+use crate::dto::event_dto::{EventTopicAddOrModifyReq, EventTopicFilterReq, EventTopicInfoResp, SetTopicAuth, TopicAuth};
 use crate::event_config::EventInfoManager;
 
-pub struct EventDefServ;
+use super::event_auth_serv::EventAuthServ;
+
+pub struct EventTopicServ;
 
 #[async_trait]
 impl RbumItemCrudOperation<event_topic::ActiveModel, EventTopicAddOrModifyReq, EventTopicAddOrModifyReq, EventTopicInfoResp, EventTopicInfoResp, EventTopicFilterReq>
-    for EventDefServ
+    for EventTopicServ
 {
     fn get_ext_table_name() -> &'static str {
         event_topic::Entity.table_name()
@@ -48,6 +57,7 @@ impl RbumItemCrudOperation<event_topic::ActiveModel, EventTopicAddOrModifyReq, E
             overflow_policy: Set(add_req.overflow_policy.clone()),
             overflow_size: Set(add_req.overflow_size),
             topic_code: Set(add_req.code.clone()),
+            check_auth: Set(add_req.check_auth),
             ..Default::default()
         })
     }
@@ -55,7 +65,7 @@ impl RbumItemCrudOperation<event_topic::ActiveModel, EventTopicAddOrModifyReq, E
     async fn after_add_item(id: &str, add_req: &mut EventTopicAddOrModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let _key = add_req.code.to_string();
         let value = Self::get_item(id, &EventTopicFilterReq::default(), funs, ctx).await?;
-        mq_node().new_topic(value.into_topic_config()).await.map_err(|e| TardisError::internal_error(&e.to_string(), "event-fail-to-create-topic"))?;
+        mq_node().create_new_topic(value.into_topic_config()).await.map_err(|e| TardisError::internal_error(&e.to_string(), "event-fail-to-create-topic"))?;
         Ok(())
     }
 
@@ -73,6 +83,7 @@ impl RbumItemCrudOperation<event_topic::ActiveModel, EventTopicAddOrModifyReq, E
             overflow_policy: Set(modify_req.overflow_policy.clone()),
             overflow_size: Set(modify_req.overflow_size),
             topic_code: Set(modify_req.code.clone()),
+            check_auth: Set(modify_req.check_auth),
             ..Default::default()
         };
         Ok(Some(event_topic))
@@ -91,14 +102,58 @@ impl RbumItemCrudOperation<event_topic::ActiveModel, EventTopicAddOrModifyReq, E
             .column((event_topic::Entity, event_topic::Column::Blocking))
             .column((event_topic::Entity, event_topic::Column::OverflowPolicy))
             .column((event_topic::Entity, event_topic::Column::OverflowSize))
-            .column((event_topic::Entity, event_topic::Column::TopicCode));
+            .column((event_topic::Entity, event_topic::Column::TopicCode))
+            .column((event_topic::Entity, event_topic::Column::CheckAuth));
         Ok(())
     }
 }
 
-impl EventDefServ {
+impl EventTopicServ {
+    pub async fn is_check_auth(code: &TopicCode, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<bool> {
+        const EXPIRE_DURATION: Duration = Duration::from_secs(60);
+        tardis::tardis_static! {
+            cache: Arc<RwLock<HashMap<TopicCode, (Instant, bool)>>>;
+        }
+        let now = Instant::now();
+        // try query from cache
+        if let Some((expire, check_auth)) = cache().read().await.get(code) {
+            if *expire > now {
+                return Ok(*check_auth);
+            }
+        }
+        let resp = Self::find_one_item(
+            &EventTopicFilterReq {
+                basic: RbumBasicFilterReq {
+                    code: Some(code.to_string()),
+                    ..Default::default()
+                },
+            },
+            funs,
+            ctx,
+        )
+        .await?
+        .ok_or_else(|| TardisError::not_found("topic not found", "event-topic-not-found"))?;
+        let expire = now + EXPIRE_DURATION;
+        cache().write().await.insert(code.clone(), (expire, resp.check_auth));
+        Ok(resp.check_auth)
+    }
     pub async fn init(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         // let defs = Self::find_items(&EventTopicFilterReq::default(), None, None, funs, ctx).await?;
+
+        Ok(())
+    }
+    pub async fn register_user(set_topic_auth: SetTopicAuth, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        EventAuthServ::new()
+            .set_auth(
+                TopicAuth {
+                    topic: set_topic_auth.topic,
+                    ak: ctx.own_paths.clone(),
+                    read: set_topic_auth.read,
+                    write: set_topic_auth.write,
+                },
+                funs,
+            )
+            .await?;
 
         Ok(())
     }

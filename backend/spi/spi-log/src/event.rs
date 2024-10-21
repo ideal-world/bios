@@ -1,7 +1,10 @@
-use crate::{log_initializer::get_tardis_inst, serv};
+use crate::{dto::log_item_dto::StatsItemAddReq, log_initializer::get_tardis_inst, serv};
 use bios_sdk_invoke::clients::{
-    event_client::{get_topic, mq_error, ContextHandler, SPI_RPC_TOPIC},
-    spi_log_client::{event::LOG_AVATAR, LogItemAddReq},
+    event_client::{
+        asteroid_mq::prelude::{EventAttribute, Subject},
+        get_topic, mq_error, ContextHandler, SPI_RPC_TOPIC,
+    },
+    spi_log_client::LogItemAddReq,
 };
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
@@ -20,7 +23,9 @@ pub async fn handle_events() -> TardisResult<()> {
     if let Some(topic) = get_topic(&SPI_RPC_TOPIC) {
         topic.create_endpoint([Interest::new("log/*")]).await.map_err(mq_error)?.create_event_loop().with_handler(ContextHandler(handle_add_event)).spawn();
     }
-    // let topic = get_topic(&SPI_RPC_TOPIC).expect("topic not initialized");
 
     Ok(())
+}
+impl EventAttribute for StatsItemAddReq {
+    const SUBJECT: Subject = Subject::const_new("stats/add");
 }

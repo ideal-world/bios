@@ -36,7 +36,9 @@ use crate::{
             FlowModelModifyReq, FlowModelSummaryResp,
         },
         flow_state_dto::{FlowStateAggResp, FlowStateDetailResp, FlowStateFilterReq, FlowStateRelModelExt, FlowStateRelModelModifyReq},
-        flow_transition_dto::{FlowTransitionActionChangeKind, FlowTransitionAddReq, FlowTransitionDetailResp, FlowTransitionInitInfo, FlowTransitionModifyReq, FlowTransitionPostActionInfo},
+        flow_transition_dto::{
+            FlowTransitionActionChangeKind, FlowTransitionAddReq, FlowTransitionDetailResp, FlowTransitionInitInfo, FlowTransitionModifyReq, FlowTransitionPostActionInfo,
+        },
     },
     flow_config::FlowBasicInfoManager,
     flow_constants,
@@ -46,7 +48,7 @@ use async_trait::async_trait;
 
 use super::{
     clients::{
-        log_client::{FlowLogClient, LogParamContent, LogParamTag},
+        flow_log_client::{FlowLogClient, LogParamContent, LogParamTag},
         search_client::FlowSearchClient,
     },
     flow_inst_serv::FlowInstServ,
@@ -130,7 +132,7 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
                 }
             }
         }
-        if add_req.template && add_req.rel_model_id.is_none() {
+        if add_req.template && add_req.rel_model_id.clone().map_or(true, |id| id.is_empty()) {
             FlowSearchClient::async_add_or_modify_model_search(flow_model_id, Box::new(false), funs, ctx).await?;
             FlowLogClient::add_ctx_task(
                 LogParamTag::DynamicLog,
@@ -151,6 +153,7 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
                 Some("新建".to_string()),
                 rbum_scope_helper::get_path_item(RbumScopeLevelKind::L1.to_int(), &ctx.own_paths),
                 ctx,
+                false,
             )
             .await?;
         }
@@ -304,6 +307,7 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
                 Some("编辑".to_string()),
                 rbum_scope_helper::get_path_item(RbumScopeLevelKind::L1.to_int(), &ctx.own_paths),
                 ctx,
+                false,
             )
             .await?;
         }
@@ -454,6 +458,7 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
                 Some("删除".to_string()),
                 rbum_scope_helper::get_path_item(RbumScopeLevelKind::L1.to_int(), &ctx.own_paths),
                 ctx,
+                false,
             )
             .await?;
         }
@@ -965,25 +970,28 @@ impl FlowModelServ {
                     name: state_name,
                     ext,
                     is_init: model_detail.init_state_id == state_id,
-                    transitions: model_detail.transitions().into_iter().filter(|transition| transition.from_flow_state_id == state_id.clone()).map(|transition| {
-                        let mut action_by_post_changes = vec![];
-                        for action_by_post_change in transition.action_by_post_changes() {
-                            if action_by_post_change.is_edit.is_none() {
-                                action_by_post_changes.push(FlowTransitionPostActionInfo  {
-                                    is_edit: Some(false), // 默认为不可编辑，若用户需要编辑，可手动处理数据
-                                    ..action_by_post_change.clone()
-                                });
-                            } else {
-                                action_by_post_changes.push(FlowTransitionPostActionInfo  {
-                                    ..action_by_post_change.clone()
-                                });
+                    transitions: model_detail
+                        .transitions()
+                        .into_iter()
+                        .filter(|transition| transition.from_flow_state_id == state_id.clone())
+                        .map(|transition| {
+                            let mut action_by_post_changes = vec![];
+                            for action_by_post_change in transition.action_by_post_changes() {
+                                if action_by_post_change.is_edit.is_none() {
+                                    action_by_post_changes.push(FlowTransitionPostActionInfo {
+                                        is_edit: Some(false), // 默认为不可编辑，若用户需要编辑，可手动处理数据
+                                        ..action_by_post_change.clone()
+                                    });
+                                } else {
+                                    action_by_post_changes.push(FlowTransitionPostActionInfo { ..action_by_post_change.clone() });
+                                }
                             }
-                        }
-                        FlowTransitionDetailResp {
-                            action_by_post_changes: TardisFuns::json.obj_to_json(&action_by_post_changes).unwrap_or_default(),
-                            ..transition.clone()
-                        }
-                    }).collect_vec(),
+                            FlowTransitionDetailResp {
+                                action_by_post_changes: TardisFuns::json.obj_to_json(&action_by_post_changes).unwrap_or_default(),
+                                ..transition.clone()
+                            }
+                        })
+                        .collect_vec(),
                 };
                 states.push(state_detail);
             }
@@ -1186,7 +1194,11 @@ impl FlowModelServ {
                         },
                         rel_template_ids: None,
                         template: rbum_scope_helper::get_scope_level_by_context(&mock_ctx)? != RbumScopeLevelKind::L2,
-                        scope_level: if rbum_scope_helper::get_scope_level_by_context(&mock_ctx)? != RbumScopeLevelKind::L2 { Some(rel_model.clone().scope_level) } else { None },
+                        scope_level: if rbum_scope_helper::get_scope_level_by_context(&mock_ctx)? != RbumScopeLevelKind::L2 {
+                            Some(rel_model.clone().scope_level)
+                        } else {
+                            None
+                        },
                         ..rel_model.clone().into()
                     },
                     funs,
@@ -1345,7 +1357,8 @@ impl FlowModelServ {
             funs,
             &global_ctx,
         )
-        .await {
+        .await
+        {
             let model_detail = Self::get_item(flow_model_id, &FlowModelFilterReq::default(), funs, ctx).await?;
             if !state.tags.is_empty() && !state.tags.split(',').collect_vec().contains(&model_detail.tag.as_str()) {
                 return Err(funs.err().internal_error("flow_model_serv", "bind_state", "The flow state is not found", "404-flow-state-not-found"));
