@@ -16,6 +16,13 @@ pub struct IamRoleAggAddReq {
     pub res_ids: Option<Vec<String>>,
 }
 
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct IamRoleAggCopyReq {
+    pub copy_role_id: String,
+    pub role: IamRoleAddReq,
+    pub sync_account: Option<bool>,
+}
+
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
 pub struct IamRoleAddReq {
     pub code: Option<TrimString>,

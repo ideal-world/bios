@@ -12,7 +12,7 @@ use tardis::web::poem_openapi::{param::Path, param::Query, payload::Json};
 use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 
 use crate::basic::dto::iam_filer_dto::IamRoleFilterReq;
-use crate::basic::dto::iam_role_dto::{IamRoleAddReq, IamRoleAggAddReq, IamRoleAggModifyReq, IamRoleDetailResp, IamRoleSummaryResp};
+use crate::basic::dto::iam_role_dto::{IamRoleAddReq, IamRoleAggAddReq, IamRoleAggCopyReq, IamRoleAggModifyReq, IamRoleDetailResp, IamRoleSummaryResp};
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_role_serv::IamRoleServ;
 use crate::iam_constants;
@@ -39,6 +39,20 @@ impl IamCsRoleApi {
         let result = IamRoleServ::add_role_agg(&mut add_req.0, &funs, &ctx).await?;
         funs.commit().await?;
         ctx.execute_task().await?;
+        TardisResp::ok(result)
+    }
+
+    /// copy Role
+    /// 复制角色
+    #[oai(path = "/copy", method = "post")]
+    async fn copy(&self, mut copy_req: Json<IamRoleAggCopyReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<String> {
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
+        let mut funs = iam_constants::get_tardis_inst();
+        funs.begin().await?;
+        copy_req.0.role.kind = Some(IamRoleKind::System);
+        let result = IamRoleServ::copy_role_agg(&mut copy_req.0, &funs, &ctx.0).await?;
+        funs.commit().await?;
+        ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
 

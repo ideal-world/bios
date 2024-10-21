@@ -13,7 +13,7 @@ use bios_basic::rbum::dto::rbum_rel_dto::RbumRelBoneResp;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
 use crate::basic::dto::iam_filer_dto::IamRoleFilterReq;
-use crate::basic::dto::iam_role_dto::{IamRoleAggAddReq, IamRoleAggModifyReq, IamRoleDetailResp, IamRoleSummaryResp};
+use crate::basic::dto::iam_role_dto::{IamRoleAggAddReq, IamRoleAggCopyReq, IamRoleAggModifyReq, IamRoleDetailResp, IamRoleSummaryResp};
 use crate::basic::serv::iam_app_serv::IamAppServ;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_role_serv::IamRoleServ;
@@ -43,6 +43,25 @@ impl IamCtRoleApi {
         } else {
             add_req.0.role.kind = Some(IamRoleKind::Tenant);
             IamRoleServ::add_role_agg(&mut add_req.0, &funs, &ctx.0).await?
+        };
+        funs.commit().await?;
+        ctx.0.execute_task().await?;
+        TardisResp::ok(result)
+    }
+
+    /// copy Role
+    /// 复制角色
+    #[oai(path = "/copy", method = "post")]
+    async fn copy(&self, is_app: Query<Option<bool>>, mut copy_req: Json<IamRoleAggCopyReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<String> {
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
+        let mut funs = iam_constants::get_tardis_inst();
+        funs.begin().await?;
+        let result = if is_app.0.unwrap_or(false) {
+            copy_req.0.role.kind = Some(IamRoleKind::App);
+            IamRoleServ::copy_tenant_add_app_role_agg(&mut copy_req.0, &funs, &ctx.0).await?
+        } else {
+            copy_req.0.role.kind = Some(IamRoleKind::Tenant);
+            IamRoleServ::copy_role_agg(&mut copy_req.0, &funs, &ctx.0).await?
         };
         funs.commit().await?;
         ctx.0.execute_task().await?;
