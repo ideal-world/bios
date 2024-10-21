@@ -22,7 +22,7 @@ use crate::{
         ca::{event_connect_api, event_register_api},
         ci::event_topic_api,
     },
-    domain::{event_message, event_topic},
+    domain::{event_auth, event_message, event_topic},
     event_config::{EventConfig, EventInfo, EventInfoManager},
     event_constants::{DOMAIN_CODE, KIND_CODE},
     mq_adapter::{BiosDurableAdapter, BiosEdgeAuthAdapter},
@@ -62,6 +62,7 @@ async fn init_db(domain_code: String, kind_code: String, funs: &TardisFunsInst, 
     // Initialize event component RBUM item table and indexs
     let _ = funs.db().init(event_topic::ActiveModel::init(TardisFuns::reldb().backend(), None, TardisFuns::reldb().compatible_type())).await;
     let _ = funs.db().init(event_message::ActiveModel::init(TardisFuns::reldb().backend(), None, TardisFuns::reldb().compatible_type())).await;
+    let _ = funs.db().init(event_auth::ActiveModel::init(TardisFuns::reldb().backend(), None, TardisFuns::reldb().compatible_type())).await;
 
     // funs.db()
     //     .init(event_persistent::ActiveModel::init(
