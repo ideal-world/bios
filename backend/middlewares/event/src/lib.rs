@@ -8,3 +8,4 @@ pub mod event_constants;
 pub mod event_initializer;
 pub mod mq_adapter;
 mod serv;
+pub mod mq_adapter;
