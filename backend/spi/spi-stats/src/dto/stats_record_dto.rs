@@ -1,3 +1,4 @@
+use bios_sdk_invoke::clients::spi_log_client::StatsItemAddReq;
 use serde::{Deserialize, Serialize};
 use tardis::{
     chrono::{DateTime, Utc},
@@ -38,6 +39,20 @@ pub struct StatsFactRecordLoadReq {
     /// 动态数据
     pub ext: Option<Value>,
 }
+
+impl From<StatsItemAddReq> for StatsFactRecordLoadReq {
+    fn from(value: StatsItemAddReq) -> Self {
+      StatsFactRecordLoadReq {
+            own_paths: value.own_paths.unwrap_or_default(),
+            ct: value.ts.unwrap_or(Utc::now()),
+            idempotent_id: value.idempotent_id,
+            ignore_updates: None,
+            data: value.content,
+            ext: value.ext,
+        }
+    }
+}
+
 /// Load Fact Record Request Object
 ///
 /// 事实记录加载请求对象

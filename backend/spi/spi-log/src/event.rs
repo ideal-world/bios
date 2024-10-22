@@ -1,7 +1,6 @@
-use crate::{dto::log_item_dto::StatsItemAddReq, log_initializer::get_tardis_inst, serv};
+use crate::{log_initializer::get_tardis_inst, serv};
 use bios_sdk_invoke::clients::{
     event_client::{
-        asteroid_mq::prelude::{EventAttribute, Subject},
         get_topic, mq_error, ContextHandler, SPI_RPC_TOPIC,
     },
     spi_log_client::LogItemAddReq,
@@ -25,7 +24,4 @@ pub async fn handle_events() -> TardisResult<()> {
     }
 
     Ok(())
-}
-impl EventAttribute for StatsItemAddReq {
-    const SUBJECT: Subject = Subject::const_new("stats/add");
 }

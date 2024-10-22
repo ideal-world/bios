@@ -1,3 +1,4 @@
+use asteroid_mq::prelude::{EventAttribute, Subject};
 use serde::{Deserialize, Serialize};
 
 use tardis::{
@@ -84,6 +85,40 @@ pub struct LogItemAddReq {
     pub own_paths: Option<String>,
     pub push: bool,
     pub msg: Option<String>,
+}
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Clone, Debug)]
+pub struct StatsItemAddReq {
+    #[oai(validator(min_length = "2"))]
+    pub idempotent_id: Option<String>,
+    #[oai(validator(pattern = r"^[a-z0-9_]+$"))]
+    pub tag: String,
+    pub content: Value,
+    pub ext: Option<Value>,
+    #[oai(validator(min_length = "2"))]
+    pub key: Option<TrimString>,
+    pub ts: Option<DateTime<Utc>>,
+    #[oai(validator(min_length = "2"))]
+    pub owner: Option<String>,
+    pub own_paths: Option<String>,
+}
+
+impl EventAttribute for StatsItemAddReq {
+    const SUBJECT: Subject = Subject::const_new("stats/add");
+}
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Clone, Debug)]
+pub struct StatsItemDeleteReq {
+    #[oai(validator(min_length = "2"))]
+    pub idempotent_id: Option<String>,
+    #[oai(validator(pattern = r"^[a-z0-9_]+$"))]
+    pub tag: String,
+    #[oai(validator(min_length = "2"))]
+    pub key: Option<TrimString>,
+}
+
+impl EventAttribute for StatsItemDeleteReq {
+    const SUBJECT: Subject = Subject::const_new("stats/delete");
 }
 
 impl SpiLogClient {
