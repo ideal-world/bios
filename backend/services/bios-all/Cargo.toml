@@ -17,7 +17,6 @@ tardis = { workspace = true, features = [
   "conf-remote",
   "cluster",
   "tracing",
-  "k8s",
 ] }
 bios-iam = { path = "../../supports/iam", features = ["spi_search", "spi_kv"] }
 bios-auth = { path = "../../supports/auth", features = ["web-server"] }

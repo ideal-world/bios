@@ -4,10 +4,10 @@ use tardis::basic::field::TrimString;
 use bios_iam::basic::dto::iam_cert_conf_dto::IamCertConfLdapAddOrModifyReq;
 use bios_iam::basic::serv::iam_cert_ldap_serv::AccountFieldMap;
 use tardis::basic::result::TardisResult;
-use tardis::testcontainers::clients::Cli;
 use tardis::testcontainers::core::{ExecCommand, WaitFor};
-use tardis::testcontainers::Container;
+use tardis::testcontainers::runners::AsyncRunner;
 use tardis::testcontainers::GenericImage;
+use tardis::testcontainers::{ContainerAsync, ImageExt};
 use tardis::TardisFuns;
 
 const BASE_LDIF: &str = "dn: cn=Barbara,dc=test,dc=com
@@ -51,12 +51,12 @@ uid: tuser2
 userpassword: 123456";
 //if BASE_LDIF change,LDAP_ACCOUNT_NUB must change too
 pub const LDAP_ACCOUNT_NUB: u64 = 4;
-pub struct LifeHold<'a> {
-    pub ldap: Container<'a, GenericImage>,
+pub struct LifeHold {
+    pub ldap: ContainerAsync<GenericImage>,
 }
 
-pub async fn init(docker: &'_ Cli) -> TardisResult<LifeHold<'_>> {
-    let ldap_container = get_ldap_container(docker);
+pub async fn init() -> TardisResult<LifeHold> {
+    let ldap_container = get_ldap_container().await?;
 
     TardisFuns::init(Some("tests/config")).await?;
     // TardisFuns::init("core/iam/tests/config").await?;
@@ -64,32 +64,30 @@ pub async fn init(docker: &'_ Cli) -> TardisResult<LifeHold<'_>> {
     Ok(LifeHold { ldap: ldap_container })
 }
 
-fn get_ldap_container(docker: &Cli) -> Container<'_, GenericImage> {
+async fn get_ldap_container() -> TardisResult<ContainerAsync<GenericImage>> {
     const ORGANISATION: &str = "test";
     const ADMIN_PASSWORD: &str = "123456";
     let domain: String = format!("{}.com", ORGANISATION);
 
-    let ldap_container = docker.run(
-        GenericImage::new("osixia/openldap", "latest")
-            .with_env_var("LDAP_ORGANISATION", ORGANISATION)
-            .with_env_var("LDAP_DOMAIN", domain)
-            .with_env_var("LDAP_ADMIN_PASSWORD", ADMIN_PASSWORD)
-            .with_wait_for(WaitFor::message_on_stdout("First start is done...")),
-    );
+    let ldap_container = GenericImage::new("osixia/openldap", "latest")
+        .with_wait_for(WaitFor::message_on_stdout("First start is done..."))
+        .with_env_var("LDAP_ORGANISATION", ORGANISATION)
+        .with_env_var("LDAP_DOMAIN", domain)
+        .with_env_var("LDAP_ADMIN_PASSWORD", ADMIN_PASSWORD)
+        .start()
+        .await
+        .expect("ldap container start");
 
-    let port = ldap_container.get_host_port_ipv4(389);
+    let port = ldap_container.get_host_port_ipv4(389).await?;
     let url = "ldap://127.0.0.1".to_string();
     let base_dn = format!("DC={ORGANISATION},DC=com");
     let admin_dn = format!("CN=admin,{base_dn}");
 
-    ldap_container.exec(ExecCommand {
-        cmd: format!("echo \"{BASE_LDIF}\" > /home/base.ldif",),
-        ready_conditions: vec![],
-    });
-    ldap_container.exec(ExecCommand {
-        cmd: format!("ldapadd -x -H ldap://127.0.0.1  -D \"{admin_dn}\" -w {ADMIN_PASSWORD} -f /home/base.ldif "),
-        ready_conditions: vec![WaitFor::millis(5)],
-    });
+    ldap_container.exec(ExecCommand::new(vec![format!("echo \"{BASE_LDIF}\" > /home/base.ldif",)]));
+    ldap_container.exec(
+        ExecCommand::new(vec![format!("ldapadd -x -H ldap://127.0.0.1  -D \"{admin_dn}\" -w {ADMIN_PASSWORD} -f /home/base.ldif ")])
+            .with_container_ready_conditions(vec![WaitFor::millis(5)]),
+    );
 
     env::set_var("TARDIS_FW.LDAP.PORT", port.to_string());
     env::set_var("TARDIS_FW.LDAP.URL", url);
@@ -97,7 +95,7 @@ fn get_ldap_container(docker: &Cli) -> Container<'_, GenericImage> {
     env::set_var("TARDIS_FW.LDAP.ADMIN_DN", admin_dn);
     env::set_var("TARDIS_FW.LDAP.ADMIN_CN", "admin");
     env::set_var("TARDIS_FW.LDAP.ADMIN_PASSWORD", ADMIN_PASSWORD);
-    ldap_container
+    Ok(ldap_container)
 }
 
 //生成测试通用ldap 配置

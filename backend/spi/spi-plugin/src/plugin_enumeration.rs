@@ -1,9 +1,9 @@
 use std::str::FromStr;
 
 use serde::{Deserialize, Serialize};
+use strum::Display;
 use tardis::db::sea_orm;
 use tardis::db::sea_orm::{DbErr, QueryResult, TryGetError, TryGetable};
-use tardis::derive_more::Display;
 use tardis::web::poem_openapi;
 
 #[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, strum::EnumString)]

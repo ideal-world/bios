@@ -26,8 +26,7 @@ pub async fn test_hw_sms() -> TardisResult<()> {
     std::env::set_var("PROFILE", "prod");
     std::env::set_var("RUST_LOG", "info,sqlx=off,sea_orm=debug,tardis=TRACE,bios_reach=trace,reqwest=trace");
 
-    let docker = testcontainers::clients::Cli::default();
-    let holder = init_tardis(&docker).await?;
+    let holder = init_tardis().await?;
     let ctx = get_test_ctx();
     let funs = get_tardis_inst();
     let client = reach_invoke::Client::new("http://127.0.0.1:8080/reach", ctx, &funs);
@@ -46,8 +45,7 @@ pub async fn test_mail() -> TardisResult<()> {
     std::env::set_var("PROFILE", "prod");
     std::env::set_var("RUST_LOG", "info,sqlx=off,sea_orm=debug,tardis=TRACE,bios_reach=trace,reqwest=trace");
 
-    let docker = testcontainers::clients::Cli::default();
-    let holder = init_tardis(&docker).await?;
+    let holder = init_tardis().await?;
     let ctx = get_test_ctx();
     let funs = get_tardis_inst();
     let client = reach_invoke::Client::new("http://127.0.0.1:8080/reach", ctx, &funs);

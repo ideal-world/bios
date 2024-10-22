@@ -137,7 +137,6 @@ impl Plugin for AntiReplayPlugin {
 
 //     #[tokio::test]
 //     async fn test_anti_replay() {
-//         let docker = testcontainers::clients::Cli::default();
 //         let _x = docker_init(&docker).await.unwrap();
 //         let gateway_name = "gateway_aaa_1";
 //         spacegate_shell::functions::cache_client::init(gateway_name, &env::var("TARDIS_FW.CACHE.URL").unwrap()).await.unwrap();

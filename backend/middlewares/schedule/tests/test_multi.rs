@@ -32,8 +32,7 @@ fn funs() -> TardisFunsInst {
 async fn test_multi() -> TardisResult<()> {
     // std::env::set_current_dir("middlewares/schedule").unwrap();
     std::env::set_var("RUST_LOG", "info,sqlx=off,sea_orm=INFO,bios_mw_schedule=TRACE,tardis=off");
-    let docker = testcontainers::clients::Cli::default();
-    let container_hold = init_test_container::init(&docker, None).await?;
+    let container_hold = init_test_container::init(None).await?;
 
     init_tardis().await?;
     let counter = mock_webserver().await?;

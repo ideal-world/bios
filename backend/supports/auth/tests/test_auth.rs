@@ -4,7 +4,7 @@ use std::time::Duration;
 use bios_auth::auth_initializer;
 use tardis::basic::result::TardisResult;
 use tardis::tokio::time::sleep;
-use tardis::{testcontainers, tokio, TardisFuns};
+use tardis::{tokio, TardisFuns};
 mod init_cache_container;
 mod test_auth_encrypt;
 mod test_auth_init;
@@ -17,8 +17,7 @@ async fn test_auth() -> TardisResult<()> {
     env::set_var("RUST_LOG", "debug,bios_auth=trace");
     test_auth_res::test_res()?;
 
-    let docker = testcontainers::clients::Cli::default();
-    let _x = init_cache_container::init(&docker).await?;
+    let _x = init_cache_container::init().await?;
 
     test_auth_match::test_match().await?;
 

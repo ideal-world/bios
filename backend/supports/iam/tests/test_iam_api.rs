@@ -20,9 +20,7 @@ mod test_iam_scenes_tenant;
 async fn test_iam_api() -> TardisResult<()> {
     env::set_var("RUST_LOG", "debug,test_iam_api=trace,sqlx::query=off");
 
-    let docker = testcontainers::clients::Cli::default();
-    let _x = init_test_container::init(&docker, None).await?;
-    let _y = test_basic::init(&docker).await?;
+    let _y = test_basic::init().await?;
 
     let funs = iam_constants::get_tardis_inst();
     funs.mq().subscribe("rbum::event", |(_, _)| async { Ok(()) }).await?;

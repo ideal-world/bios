@@ -1,13 +1,13 @@
 use std::str::FromStr;
 
 use serde::{Deserialize, Serialize};
+use strum::Display;
 use tardis::basic::error::TardisError;
 use tardis::basic::result::TardisResult;
 #[cfg(feature = "default")]
 use tardis::db::sea_orm;
 #[cfg(feature = "default")]
 use tardis::db::sea_orm::{DbErr, QueryResult, TryGetError, TryGetable};
-use tardis::derive_more::Display;
 #[cfg(feature = "default")]
 use tardis::web::poem_openapi;
 
