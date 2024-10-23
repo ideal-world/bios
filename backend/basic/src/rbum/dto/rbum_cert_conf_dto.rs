@@ -1,9 +1,9 @@
 use serde::{Deserialize, Serialize};
 use tardis::basic::field::TrimString;
 use tardis::chrono::{DateTime, Utc};
-#[cfg(feature = "default")]
+
 use tardis::db::sea_orm;
-#[cfg(feature = "default")]
+
 use tardis::web::poem_openapi;
 
 use crate::rbum::rbum_enumeration::RbumCertConfStatusKind;
@@ -12,7 +12,7 @@ use crate::rbum::rbum_enumeration::RbumCertConfStatusKind;
 ///
 /// 凭证配置添加请求
 #[derive(Serialize, Deserialize, Debug)]
-#[cfg_attr(feature = "default", derive(poem_openapi::Object))]
+#[derive(poem_openapi::Object)]
 pub struct RbumCertConfAddReq {
     /// Certificate configuration type
     ///
@@ -21,7 +21,7 @@ pub struct RbumCertConfAddReq {
     /// Used for the classification of certificates, such as: ldap, userpwd, token, oauth2, etc.
     ///
     /// 用于凭证的分类，比如：ldap、userpwd、token、oauth2等。
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
+    #[oai(validator(min_length = "2", max_length = "255"))]
     pub kind: TrimString,
     /// Certificate configuration supplier
     ///
@@ -31,17 +31,17 @@ pub struct RbumCertConfAddReq {
     /// For example, the certificate of type oauth2 can be further refined into WeChat oauth2, QQ oauth2, Weibo oauth2, etc.
     ///
     /// 一种凭证类型可以有多个供应商。比如 oauth2 类型的凭证，可以进一步细化成 微信oauth2、QQ oauth2、微博 oauth2 等。
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
+    #[oai(validator(min_length = "2", max_length = "255"))]
     pub supplier: Option<TrimString>,
     /// Certificate configuration name
     ///
     /// 凭证配置名称
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
+    #[oai(validator(min_length = "2", max_length = "255"))]
     pub name: TrimString,
     /// Certificate configuration description
     ///
     /// 凭证配置描述
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
+    #[oai(validator(min_length = "2", max_length = "2000"))]
     pub note: Option<String>,
     /// Certificate configuration ak rule(verification regular expression)
     ///
@@ -57,12 +57,12 @@ pub struct RbumCertConfAddReq {
     /// # 什么是``AK``
     ///
     /// 对于用户名密码类型的凭证，``AK``指的是用户名；对于token类型的凭证，``AK``为空；对于oauth2类型（授权码模式）的凭证，``AK``指的是client_id值；对于手机号验证码类型的凭证，``AK``指的是手机号等。
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
+    #[oai(validator(min_length = "2", max_length = "2000"))]
     pub ak_rule: Option<String>,
     /// Certificate configuration ak rule description
     ///
     /// 凭证配置ak规则的描述
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
+    #[oai(validator(min_length = "2", max_length = "2000"))]
     pub ak_note: Option<String>,
     /// Certificate configuration sk rule(verification regular expression)
     ///
@@ -78,12 +78,12 @@ pub struct RbumCertConfAddReq {
     /// # 什么是``SK``
     ///
     /// 对于用户名密码类型的凭证，``SK``指的是用户名；对于token类型的凭证，``SK``指的是token值；对于oauth2类型（授权码模式）的凭证，``SK``为access token值；对于手机号验证码类型的凭证，``SK``为空等。
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
+    #[oai(validator(min_length = "2", max_length = "2000"))]
     pub sk_rule: Option<String>,
     /// Certificate configuration sk rule description
     ///
     /// 凭证配置sk规则的描述
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
+    #[oai(validator(min_length = "2", max_length = "2000"))]
     pub sk_note: Option<String>,
     /// Certificate configuration extension information
     ///
@@ -173,7 +173,7 @@ pub struct RbumCertConfAddReq {
     /// Multiple values are separated by commas.
     ///
     /// 多个值用逗号分隔。
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
+    #[oai(validator(min_length = "2", max_length = "2000"))]
     pub rest_by_kinds: Option<String>,
     /// The expiration time of the sk
     ///
@@ -182,7 +182,7 @@ pub struct RbumCertConfAddReq {
     /// Default is ``1 year``
     ///
     /// 默认为 ``1年``
-    #[cfg_attr(feature = "default", oai(validator(minimum(value = "1", exclusive = "false"))))]
+    #[oai(validator(minimum(value = "1", exclusive = "false")))]
     pub expire_sec: Option<i64>,
     /// The maximum number of errors that sk can be locked, and it will be locked if it exceeds this number
     ///
@@ -195,7 +195,7 @@ pub struct RbumCertConfAddReq {
     /// WARING: If an object (such as a user) is bound to multiple credential configurations, and these credential configurations have different sk_lock_err_times, it may be based on the maximum.
     ///
     /// WARING: 如果某个对象（比如用户）绑定了多个凭证配置，且这些凭证配置了不同的sk_lock_err_times，那有可能会以最大的为准。
-    #[cfg_attr(feature = "default", oai(validator(minimum(value = "0", exclusive = "false"))))]
+    #[oai(validator(minimum(value = "0", exclusive = "false")))]
     pub sk_lock_err_times: Option<i16>,
     /// sk lock duration
     ///
@@ -204,7 +204,7 @@ pub struct RbumCertConfAddReq {
     /// Only valid when ``sk_lock_err_times`` is greater than ``0`` .
     ///
     /// 仅在``sk_lock_err_times``大于 ``0`` 时有效。
-    #[cfg_attr(feature = "default", oai(validator(minimum(value = "1", exclusive = "false"))))]
+    #[oai(validator(minimum(value = "1", exclusive = "false")))]
     pub sk_lock_duration_sec: Option<i32>,
     /// sk validation error count cycle
     ///
@@ -217,7 +217,7 @@ pub struct RbumCertConfAddReq {
     /// Only valid when ``sk_lock_err_times`` is greater than ``0`` .
     ///
     /// 仅在``sk_lock_err_times``大于 ``0`` 时有效。
-    #[cfg_attr(feature = "default", oai(validator(minimum(value = "1", exclusive = "false"))))]
+    #[oai(validator(minimum(value = "1", exclusive = "false")))]
     pub sk_lock_cycle_sec: Option<i32>,
     /// The number of certificates in effect at the same time
     ///
@@ -247,7 +247,7 @@ pub struct RbumCertConfAddReq {
     /// For example, the authentication address of oauth2, the database connection address, etc.
     ///
     /// 比如oauth2的认证地址、数据库连接地址等。
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
+    #[oai(validator(min_length = "2", max_length = "2000"))]
     pub conn_uri: Option<String>,
     /// Credential configuration status
     ///
@@ -256,12 +256,12 @@ pub struct RbumCertConfAddReq {
     /// Associated [resource domain](crate::rbum::dto::rbum_domain_dto::RbumDomainDetailResp) id
     ///
     /// 关联的[资源域](crate::rbum::dto::rbum_domain_dto::RbumDomainDetailResp) id
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
+    #[oai(validator(min_length = "2", max_length = "255"))]
     pub rel_rbum_domain_id: String,
     /// Associated [resource item](crate::rbum::dto::rbum_item_dto::RbumItemDetailResp) id
     ///
     /// 关联的[资源项](crate::rbum::dto::rbum_item_dto::RbumItemDetailResp) id
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
+    #[oai(validator(min_length = "2", max_length = "255"))]
     pub rel_rbum_item_id: Option<String>,
 }
 
@@ -269,17 +269,17 @@ pub struct RbumCertConfAddReq {
 ///
 /// 凭证配置修改请求
 #[derive(Serialize, Deserialize, Debug)]
-#[cfg_attr(feature = "default", derive(poem_openapi::Object))]
+#[derive(poem_openapi::Object)]
 pub struct RbumCertConfModifyReq {
     /// Certificate configuration name
     ///
     /// 凭证配置名称
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
+    #[oai(validator(min_length = "2", max_length = "255"))]
     pub name: Option<TrimString>,
     /// Certificate configuration description
     ///
     /// 凭证配置描述
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
+    #[oai(validator(min_length = "2", max_length = "2000"))]
     pub note: Option<String>,
     /// Certificate configuration ak rule(verification regular expression)
     ///
@@ -295,12 +295,12 @@ pub struct RbumCertConfModifyReq {
     /// # 什么是``AK``
     ///
     /// 对于用户名密码类型的凭证，``AK``指的是用户名；对于token类型的凭证，``AK``为空；对于oauth2类型（授权码模式）的凭证，``AK``指的是client_id值；对于手机号验证码类型的凭证，``AK``指的是手机号等。
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
+    #[oai(validator(min_length = "2", max_length = "2000"))]
     pub ak_rule: Option<String>,
     /// Certificate configuration ak rule description
     ///
     /// 凭证配置ak规则的描述
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
+    #[oai(validator(min_length = "2", max_length = "2000"))]
     pub ak_note: Option<String>,
     /// Certificate configuration sk rule(verification regular expression)
     ///
@@ -316,12 +316,12 @@ pub struct RbumCertConfModifyReq {
     /// # 什么是``SK``
     ///
     /// 对于用户名密码类型的凭证，``SK``指的是用户名；对于token类型的凭证，``SK``指的是token值；对于oauth2类型（授权码模式）的凭证，``SK``为access token值；对于手机号验证码类型的凭证，``SK``为空等。
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
+    #[oai(validator(min_length = "2", max_length = "2000"))]
     pub sk_rule: Option<String>,
     /// Certificate configuration sk rule description
     ///
     /// 凭证配置sk规则的描述
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
+    #[oai(validator(min_length = "2", max_length = "2000"))]
     pub sk_note: Option<String>,
     /// Certificate configuration extension information
     ///
@@ -375,12 +375,12 @@ pub struct RbumCertConfModifyReq {
     /// Multiple values are separated by commas.
     ///
     /// 多个值用逗号分隔。
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
+    #[oai(validator(min_length = "2", max_length = "2000"))]
     pub rest_by_kinds: Option<String>,
     /// The expiration time of the sk
     ///
     /// sk的过期时间
-    #[cfg_attr(feature = "default", oai(validator(minimum(value = "1", exclusive = "false"))))]
+    #[oai(validator(minimum(value = "1", exclusive = "false")))]
     pub expire_sec: Option<i64>,
     /// The maximum number of errors that sk can be locked, and it will be locked if it exceeds this number
     ///
@@ -389,12 +389,12 @@ pub struct RbumCertConfModifyReq {
     /// WARING: If an object (such as a user) is bound to multiple credential configurations, and these credential configurations have different sk_lock_err_times, it may be based on the maximum.
     ///
     /// WARING: 如果某个对象（比如用户）绑定了多个凭证配置，且这些凭证配置了不同的sk_lock_err_times，那有可能会以最大的为准。
-    #[cfg_attr(feature = "default", oai(validator(minimum(value = "0", exclusive = "false"))))]
+    #[oai(validator(minimum(value = "0", exclusive = "false")))]
     pub sk_lock_err_times: Option<i16>,
     /// sk lock duration
     ///
     /// sk被锁定的持续时间
-    #[cfg_attr(feature = "default", oai(validator(minimum(value = "1", exclusive = "false"))))]
+    #[oai(validator(minimum(value = "1", exclusive = "false")))]
     pub sk_lock_duration_sec: Option<i32>,
     /// sk validation error count cycle
     ///
@@ -403,7 +403,7 @@ pub struct RbumCertConfModifyReq {
     /// If the time of the last error is greater than this cycle, the count is reset.
     ///
     /// 如果上次发生错误的时间大于此周期，则重新计数。
-    #[cfg_attr(feature = "default", oai(validator(minimum(value = "1", exclusive = "false"))))]
+    #[oai(validator(minimum(value = "1", exclusive = "false")))]
     pub sk_lock_cycle_sec: Option<i32>,
     /// The number of certificates in effect at the same time
     ///
@@ -429,7 +429,7 @@ pub struct RbumCertConfModifyReq {
     /// For example, the authentication address of oauth2, the database connection address, etc.
     ///
     /// 比如oauth2的认证地址、数据库连接地址等。
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
+    #[oai(validator(min_length = "2", max_length = "2000"))]
     pub conn_uri: Option<String>,
     /// Credential configuration status
     ///
@@ -443,7 +443,7 @@ pub struct RbumCertConfModifyReq {
 ///
 /// 凭证配置概要信息
 #[derive(Serialize, Deserialize, Debug)]
-#[cfg_attr(feature = "default", derive(poem_openapi::Object, sea_orm::FromQueryResult))]
+#[derive(poem_openapi::Object, sea_orm::FromQueryResult)]
 pub struct RbumCertConfSummaryResp {
     /// Certificate configuration id
     ///
@@ -544,7 +544,7 @@ pub struct RbumCertConfSummaryResp {
 ///
 /// 凭证配置详细信息
 #[derive(Serialize, Deserialize, Debug)]
-#[cfg_attr(feature = "default", derive(poem_openapi::Object, sea_orm::FromQueryResult))]
+#[derive(poem_openapi::Object, sea_orm::FromQueryResult)]
 pub struct RbumCertConfDetailResp {
     /// Certificate configuration id
     ///
@@ -663,7 +663,7 @@ pub struct RbumCertConfDetailResp {
 ///
 /// 凭证配置id和扩展信息
 #[derive(Serialize, Deserialize, Debug)]
-#[cfg_attr(feature = "default", derive(poem_openapi::Object, sea_orm::FromQueryResult))]
+#[derive(poem_openapi::Object, sea_orm::FromQueryResult)]
 pub struct RbumCertConfIdAndExtResp {
     /// Certificate configuration id
     ///

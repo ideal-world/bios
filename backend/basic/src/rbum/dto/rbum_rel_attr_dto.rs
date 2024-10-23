@@ -1,15 +1,15 @@
 use serde::{Deserialize, Serialize};
 use tardis::chrono::{DateTime, Utc};
-#[cfg(feature = "default")]
+
 use tardis::db::sea_orm;
-#[cfg(feature = "default")]
+
 use tardis::web::poem_openapi;
 
 /// Add request for resource relationship attribute condition
 ///
 /// 资源关联属性条件添加请求
 #[derive(Serialize, Deserialize, Debug)]
-#[cfg_attr(feature = "default", derive(poem_openapi::Object))]
+#[derive(poem_openapi::Object)]
 pub struct RbumRelAttrAddReq {
     /// Condition qualifier
     ///
@@ -27,12 +27,12 @@ pub struct RbumRelAttrAddReq {
     /// When ``rel_rbum_kind_attr_id`` exists, use the corresponding [`crate::rbum::dto::rbum_kind_attr_dto::RbumKindAttrDetailResp::name`], otherwise this field is not empty.
     ///
     /// 当 ``rel_rbum_kind_attr_id`` 存在时使用其对应的 [`crate::rbum::dto::rbum_kind_attr_dto::RbumKindAttrDetailResp::name`]，否则此字段不为空。
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
+    #[oai(validator(min_length = "2", max_length = "255"))]
     pub name: Option<String>,
     /// Relationship attribute value
     ///
     /// 关联属性值
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
+    #[oai(validator(min_length = "2", max_length = "2000"))]
     pub value: String,
     /// Whether to only record
     ///
@@ -45,12 +45,12 @@ pub struct RbumRelAttrAddReq {
     /// Associated [resource kind attribute](crate::rbum::dto::rbum_kind_attr_dto::RbumKindAttrDetailResp) id
     ///
     /// 关联的[资源类型属性](crate::rbum::dto::rbum_kind_attr_dto::RbumKindAttrDetailResp) id
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
+    #[oai(validator(min_length = "2", max_length = "255"))]
     pub rel_rbum_kind_attr_id: Option<String>,
     /// Associated [relationship](crate::rbum::dto::rbum_rel_dto::RbumRelDetailResp) id
     ///
     /// 关联的[资源关联](crate::rbum::dto::rbum_rel_dto::RbumRelDetailResp) id
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
+    #[oai(validator(min_length = "2", max_length = "255"))]
     pub rel_rbum_rel_id: String,
 }
 
@@ -58,12 +58,12 @@ pub struct RbumRelAttrAddReq {
 ///
 /// 资源关联属性条件修改请求
 #[derive(Serialize, Deserialize, Debug)]
-#[cfg_attr(feature = "default", derive(poem_openapi::Object))]
+#[derive(poem_openapi::Object)]
 pub struct RbumRelAttrModifyReq {
     /// Relationship attribute value
     ///
     /// 关联属性值
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
+    #[oai(validator(min_length = "2", max_length = "2000"))]
     pub value: String,
 }
 
@@ -71,7 +71,7 @@ pub struct RbumRelAttrModifyReq {
 ///
 /// 资源关联属性条件详细信息
 #[derive(Serialize, Deserialize, Clone, Debug)]
-#[cfg_attr(feature = "default", derive(poem_openapi::Object, sea_orm::FromQueryResult))]
+#[derive(poem_openapi::Object, sea_orm::FromQueryResult)]
 pub struct RbumRelAttrDetailResp {
     /// Relationship attribute id
     ///

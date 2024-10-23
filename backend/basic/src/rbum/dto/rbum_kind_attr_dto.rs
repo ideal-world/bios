@@ -1,9 +1,9 @@
 use serde::{Deserialize, Serialize};
 use tardis::basic::field::TrimString;
 use tardis::chrono::{DateTime, Utc};
-#[cfg(feature = "default")]
+
 use tardis::db::sea_orm;
-#[cfg(feature = "default")]
+
 use tardis::web::poem_openapi;
 
 use crate::rbum::rbum_enumeration::{RbumDataTypeKind, RbumScopeLevelKind, RbumWidgetTypeKind};
@@ -12,7 +12,7 @@ use crate::rbum::rbum_enumeration::{RbumDataTypeKind, RbumScopeLevelKind, RbumWi
 ///
 /// 资源类型属性定义添加请求
 #[derive(Serialize, Deserialize, Debug)]
-#[cfg_attr(feature = "default", derive(poem_openapi::Object))]
+#[derive(poem_openapi::Object)]
 pub struct RbumKindAttrAddReq {
     /// Attribute definition module
     ///
@@ -26,7 +26,7 @@ pub struct RbumKindAttrAddReq {
     /// For example, the ``user`` kind resource, different tenants can have different Attribute definitions.
     ///
     /// 用于区别使用同一资源类型的不同实例。比如 ``用户`` 类型的资源，不同的租户可以有不同的属性定义。
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
+    #[oai(validator(min_length = "2", max_length = "255"))]
     pub module: Option<TrimString>,
     /// Attribute definition name
     ///
@@ -35,7 +35,7 @@ pub struct RbumKindAttrAddReq {
     /// Corresponds to the field name, such as ``<input name=$name />`` .
     ///
     /// 多对应于字段名，如 ``<input name=$name />`` 。
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
+    #[oai(validator(min_length = "2", max_length = "255"))]
     pub name: TrimString,
     /// Attribute definition label
     ///
@@ -44,12 +44,12 @@ pub struct RbumKindAttrAddReq {
     /// Corresponds to the field label, such as ``<label for=$name>$label</label>`` .
     ///
     /// 多对应于字段标签，如 ``<label for="$name">$label</label>`` 。
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
+    #[oai(validator(min_length = "2", max_length = "255"))]
     pub label: String,
     /// Attribute definition note
     ///
     /// 属性定义备注
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
+    #[oai(validator(min_length = "2", max_length = "2000"))]
     pub note: Option<String>,
     /// Attribute definition sort
     ///
@@ -149,7 +149,7 @@ pub struct RbumKindAttrAddReq {
     /// Default is ``0``, indicating self-adaptation
     ///
     /// 默认为 ``0`` ， 表示自适应
-    #[cfg_attr(feature = "default", oai(validator(minimum(value = "0", exclusive = "false"))))]
+    #[oai(validator(minimum(value = "0", exclusive = "false")))]
     pub widget_columns: Option<i16>,
     /// Whether to hide by default
     ///
@@ -176,7 +176,7 @@ pub struct RbumKindAttrAddReq {
     /// Fixed default value
     ///
     /// 固定默认值
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
+    #[oai(validator(min_length = "2", max_length = "2000"))]
     pub default_value: Option<String>,
     /// Dynamic default value
     ///
@@ -231,7 +231,7 @@ pub struct RbumKindAttrAddReq {
     /// Default is ``0``, indicating no limit
     ///
     /// 默认为 ``0`` ， 表示不限制
-    #[cfg_attr(feature = "default", oai(validator(minimum(value = "0", exclusive = "false"))))]
+    #[oai(validator(minimum(value = "0", exclusive = "false")))]
     pub min_length: Option<i32>,
     /// Maximum length
     ///
@@ -240,7 +240,7 @@ pub struct RbumKindAttrAddReq {
     /// Default is ``0``, indicating no limit
     ///
     /// 默认为 ``0`` ， 表示不限制
-    #[cfg_attr(feature = "default", oai(validator(minimum(value = "0", exclusive = "false"))))]
+    #[oai(validator(minimum(value = "0", exclusive = "false")))]
     pub max_length: Option<i32>,
     /// Parent attribute name
     ///
@@ -259,17 +259,17 @@ pub struct RbumKindAttrAddReq {
     ///
     /// 例如：用户选择函数、角色选择函数等。
     /// 自定义行为需要绑定到对应的函数代码。
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
+    #[oai(validator(min_length = "2", max_length = "2000"))]
     pub action: Option<String>,
     /// Extension information
     ///
     /// 扩展信息
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
+    #[oai(validator(min_length = "2", max_length = "2000"))]
     pub ext: Option<String>,
     /// Associated [resource kind](crate::rbum::dto::rbum_kind_dto::RbumKindDetailResp) id
     ///
     /// 关联的 [资源类型](crate::rbum::dto::rbum_kind_dto::RbumKindDetailResp) id
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
+    #[oai(validator(min_length = "2", max_length = "255"))]
     pub rel_rbum_kind_id: String,
 
     pub scope_level: Option<RbumScopeLevelKind>,
@@ -279,7 +279,7 @@ pub struct RbumKindAttrAddReq {
 ///
 /// 资源类型属性定义修改请求
 #[derive(Serialize, Deserialize, Debug)]
-#[cfg_attr(feature = "default", derive(poem_openapi::Object))]
+#[derive(poem_openapi::Object)]
 pub struct RbumKindAttrModifyReq {
     /// Attribute definition label
     ///
@@ -288,12 +288,12 @@ pub struct RbumKindAttrModifyReq {
     /// Corresponds to the field label, such as ``<label for=$name>$label</label>`` .
     ///
     /// 多对应于字段标签，如 ``<label for="$name">$label</label>`` 。
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
+    #[oai(validator(min_length = "2", max_length = "255"))]
     pub label: Option<String>,
     /// Attribute definition note
     ///
     /// 属性定义备注
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
+    #[oai(validator(min_length = "2", max_length = "2000"))]
     pub note: Option<String>,
     /// Attribute definition sort
     ///
@@ -369,7 +369,7 @@ pub struct RbumKindAttrModifyReq {
     /// Default is ``0``, indicating self-adaptation
     ///
     /// 默认为 ``0`` ， 表示自适应
-    #[cfg_attr(feature = "default", oai(validator(minimum(value = "0", exclusive = "false"))))]
+    #[oai(validator(minimum(value = "0", exclusive = "false")))]
     pub widget_columns: Option<i16>,
     /// Whether to hide by default
     ///
@@ -392,7 +392,7 @@ pub struct RbumKindAttrModifyReq {
     /// Fixed default value
     ///
     /// 固定默认值
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
+    #[oai(validator(min_length = "2", max_length = "2000"))]
     pub default_value: Option<String>,
     /// Dynamic default value
     ///
@@ -439,12 +439,12 @@ pub struct RbumKindAttrModifyReq {
     /// Minimum length
     ///
     /// 最小长度
-    #[cfg_attr(feature = "default", oai(validator(minimum(value = "0", exclusive = "false"))))]
+    #[oai(validator(minimum(value = "0", exclusive = "false")))]
     pub min_length: Option<i32>,
     /// Maximum length
     ///
     /// 最大长度
-    #[cfg_attr(feature = "default", oai(validator(minimum(value = "0", exclusive = "false"))))]
+    #[oai(validator(minimum(value = "0", exclusive = "false")))]
     pub max_length: Option<i32>,
     /// Parent attribute name
     ///
@@ -463,12 +463,12 @@ pub struct RbumKindAttrModifyReq {
     ///
     /// 例如：用户选择函数、角色选择函数等。
     /// 自定义行为需要绑定到对应的函数代码。
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
+    #[oai(validator(min_length = "2", max_length = "2000"))]
     pub action: Option<String>,
     /// Extension information
     ///
     /// 扩展信息
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
+    #[oai(validator(min_length = "2", max_length = "2000"))]
     pub ext: Option<String>,
 
     pub scope_level: Option<RbumScopeLevelKind>,
@@ -478,7 +478,7 @@ pub struct RbumKindAttrModifyReq {
 ///
 /// 资源类型属性定义概要信息
 #[derive(Serialize, Deserialize, Debug)]
-#[cfg_attr(feature = "default", derive(poem_openapi::Object, sea_orm::FromQueryResult))]
+#[derive(poem_openapi::Object, sea_orm::FromQueryResult)]
 pub struct RbumKindAttrSummaryResp {
     /// Attribute definition id
     ///
@@ -634,7 +634,7 @@ pub struct RbumKindAttrSummaryResp {
 ///
 /// 资源类型属性定义详细信息
 #[derive(Serialize, Deserialize, Debug)]
-#[cfg_attr(feature = "default", derive(poem_openapi::Object, sea_orm::FromQueryResult))]
+#[derive(poem_openapi::Object, sea_orm::FromQueryResult)]
 pub struct RbumKindAttrDetailResp {
     /// Attribute definition id
     ///

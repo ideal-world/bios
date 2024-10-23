@@ -5,9 +5,9 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use tardis::basic::field::TrimString;
 use tardis::chrono::{DateTime, Utc};
-#[cfg(feature = "default")]
+
 use tardis::db::sea_orm;
-#[cfg(feature = "default")]
+
 use tardis::web::poem_openapi;
 
 use crate::rbum::rbum_enumeration::RbumScopeLevelKind;
@@ -16,32 +16,32 @@ use crate::rbum::rbum_enumeration::RbumScopeLevelKind;
 ///
 /// 资源集添加请求
 #[derive(Serialize, Deserialize, Debug)]
-#[cfg_attr(feature = "default", derive(poem_openapi::Object))]
+#[derive(poem_openapi::Object)]
 pub struct RbumSetAddReq {
     /// Resource set code
     ///
     /// 资源集编码
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
+    #[oai(validator(min_length = "2", max_length = "255"))]
     pub code: TrimString,
     /// Resource set kind
     ///
     /// 资源集类型
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
+    #[oai(validator(min_length = "2", max_length = "255"))]
     pub kind: TrimString,
     /// Resource set name
     ///
     /// 资源集名称
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
+    #[oai(validator(min_length = "2", max_length = "255"))]
     pub name: TrimString,
     /// Resource set note
     ///
     /// 资源集备注
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
+    #[oai(validator(min_length = "2", max_length = "2000"))]
     pub note: Option<String>,
     /// Resource set icon
     ///
     /// 资源集图标
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "1000")))]
+    #[oai(validator(min_length = "2", max_length = "1000"))]
     pub icon: Option<String>,
     /// Resource set sort
     ///
@@ -50,7 +50,7 @@ pub struct RbumSetAddReq {
     /// Resource set extension information
     ///
     /// 资源集扩展信息
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "1000")))]
+    #[oai(validator(min_length = "2", max_length = "1000"))]
     pub ext: Option<String>,
 
     pub scope_level: Option<RbumScopeLevelKind>,
@@ -61,22 +61,22 @@ pub struct RbumSetAddReq {
 ///
 /// 资源集修改请求
 #[derive(Serialize, Deserialize, Debug)]
-#[cfg_attr(feature = "default", derive(poem_openapi::Object))]
+#[derive(poem_openapi::Object)]
 pub struct RbumSetModifyReq {
     /// Resource set name
     ///
     /// 资源集名称
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
+    #[oai(validator(min_length = "2", max_length = "255"))]
     pub name: Option<TrimString>,
     /// Resource set note
     ///
     /// 资源集备注
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
+    #[oai(validator(min_length = "2", max_length = "2000"))]
     pub note: Option<String>,
     /// Resource set icon
     ///
     /// 资源集图标
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "1000")))]
+    #[oai(validator(min_length = "2", max_length = "1000"))]
     pub icon: Option<String>,
     /// Resource set sort
     ///
@@ -85,7 +85,7 @@ pub struct RbumSetModifyReq {
     /// Resource set extension information
     ///
     /// 资源集扩展信息
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "1000")))]
+    #[oai(validator(min_length = "2", max_length = "1000"))]
     pub ext: Option<String>,
 
     pub scope_level: Option<RbumScopeLevelKind>,
@@ -96,7 +96,7 @@ pub struct RbumSetModifyReq {
 ///
 /// 资源集概要信息
 #[derive(Serialize, Deserialize, Debug)]
-#[cfg_attr(feature = "default", derive(poem_openapi::Object, sea_orm::FromQueryResult))]
+#[derive(poem_openapi::Object, sea_orm::FromQueryResult)]
 pub struct RbumSetSummaryResp {
     /// Resource set id
     ///
@@ -140,7 +140,7 @@ pub struct RbumSetSummaryResp {
 ///
 /// 资源集详细信息
 #[derive(Serialize, Deserialize, Debug)]
-#[cfg_attr(feature = "default", derive(poem_openapi::Object, sea_orm::FromQueryResult))]
+#[derive(poem_openapi::Object, sea_orm::FromQueryResult)]
 pub struct RbumSetDetailResp {
     /// Resource set id
     ///
@@ -189,7 +189,7 @@ pub struct RbumSetDetailResp {
 ///
 /// 资源集路径信息
 #[derive(Serialize, Deserialize, Debug)]
-#[cfg_attr(feature = "default", derive(poem_openapi::Object, sea_orm::FromQueryResult))]
+#[derive(poem_openapi::Object, sea_orm::FromQueryResult)]
 pub struct RbumSetPathResp {
     /// Node id
     ///
@@ -207,7 +207,7 @@ pub struct RbumSetPathResp {
 ///
 /// 资源树信息
 #[derive(Serialize, Deserialize, Debug, Clone)]
-#[cfg_attr(feature = "default", derive(poem_openapi::Object))]
+#[derive(poem_openapi::Object)]
 pub struct RbumSetTreeResp {
     /// Resource tree node information
     ///
@@ -285,7 +285,7 @@ impl RbumSetTreeResp {
 ///
 /// 资源树节点信息
 #[derive(Serialize, Deserialize, Debug, Clone)]
-#[cfg_attr(feature = "default", derive(poem_openapi::Object))]
+#[derive(poem_openapi::Object)]
 pub struct RbumSetTreeNodeResp {
     /// Node id
     ///
@@ -344,7 +344,7 @@ pub struct RbumSetTreeNodeResp {
 ///
 /// 资源树扩展信息
 #[derive(Serialize, Deserialize, Debug, Clone)]
-#[cfg_attr(feature = "default", derive(poem_openapi::Object))]
+#[derive(poem_openapi::Object)]
 pub struct RbumSetTreeExtResp {
     /// 节点与资源项的关联信息
     ///
@@ -376,7 +376,7 @@ pub struct RbumSetTreeExtResp {
 ///
 /// 资源目录树信息
 #[derive(Serialize, Deserialize, Debug, Clone)]
-#[cfg_attr(feature = "default", derive(poem_openapi::Object))]
+#[derive(poem_openapi::Object)]
 pub struct RbumSetTreeCateResp {
     /// Resource cate tree node information
     ///
@@ -389,7 +389,7 @@ pub struct RbumSetTreeCateResp {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-#[cfg_attr(feature = "default", derive(poem_openapi::Object))]
+#[derive(poem_openapi::Object)]
 /// Resource tree cate structure information
 ///
 /// 资源树目录结构信息

@@ -216,12 +216,12 @@ pub fn check_scope(record_own_paths: &str, record_scope_level: Option<i16>, filt
 /// This method will fetch the context from the request header (default: 'Bios-Ctx') and fill the current context.
 ///
 /// Warning: This operation is unsafe, and it should only be used in scenarios where there is no security risk.
-#[cfg(feature = "default")]
+
 fn do_unsafe_fill_ctx<F>(request: &tardis::web::poem::Request, f: F, funs: &TardisFunsInst, ctx: &mut TardisContext) -> TardisResult<()>
 where
     F: FnOnce(TardisContext, &mut TardisContext),
 {
-    let bios_ctx = if let Some(bios_ctx) = request.header(&funs.rbum_head_key_bios_ctx()).or_else(|| request.header(funs.rbum_head_key_bios_ctx().to_lowercase())) {
+    let bios_ctx = if let Some(bios_ctx) = request.header(funs.rbum_head_key_bios_ctx()).or_else(|| request.header(funs.rbum_head_key_bios_ctx().to_lowercase())) {
         TardisFuns::json.str_to_obj::<TardisContext>(&TardisFuns::crypto.base64.decode_to_string(bios_ctx)?)?
     } else if ctx.owner.is_empty() && ctx.ak.is_empty() && ctx.own_paths.is_empty() && ctx.roles.is_empty() && ctx.groups.is_empty() {
         return Err(TardisError::unauthorized(
@@ -252,7 +252,7 @@ where
 /// This method will fetch the context from the request header (default: 'Bios-Ctx') and fill the current context.
 ///
 /// Warning: This operation is unsafe, and it should only be used in scenarios where there is no security risk.
-#[cfg(feature = "default")]
+
 pub fn check_without_owner_and_unsafe_fill_ctx(request: &tardis::web::poem::Request, funs: &TardisFunsInst, ctx: &mut TardisContext) -> TardisResult<()> {
     if ctx.ak.is_empty() {
         return Err(TardisError::forbidden("[Basic] Request contex ak is not empty", "403-rbum-req-ctx-ak-is-not-empty"));
@@ -265,7 +265,7 @@ pub fn check_without_owner_and_unsafe_fill_ctx(request: &tardis::web::poem::Requ
 /// This method will fetch the context from the request header (default: 'Bios-Ctx') and fill the current context.
 ///
 /// Warning: This operation is unsafe, and it should only be used in scenarios where there is no security risk.
-#[cfg(feature = "default")]
+
 pub fn unsafe_fill_ctx(request: &tardis::web::poem::Request, funs: &TardisFunsInst, ctx: &mut TardisContext) -> TardisResult<()> {
     do_unsafe_fill_ctx(
         request,
@@ -292,7 +292,7 @@ pub fn unsafe_fill_ctx(request: &tardis::web::poem::Request, funs: &TardisFunsIn
 /// This method will fetch the context from the request header (default: 'Bios-Ctx') and fill the current context.
 ///
 /// Warning: This operation is unsafe, and it should only be used in scenarios where there is no security risk.
-#[cfg(feature = "default")]
+
 pub fn unsafe_fill_owner_only(request: &tardis::web::poem::Request, funs: &TardisFunsInst, ctx: &mut TardisContext) -> TardisResult<()> {
     do_unsafe_fill_ctx(
         request,
@@ -309,7 +309,7 @@ pub fn unsafe_fill_owner_only(request: &tardis::web::poem::Request, funs: &Tardi
 /// This method will fetch the context from the request header (default: 'Bios-Ctx') and fill the current context.
 ///
 /// Warning: This operation is unsafe, and it should only be used in scenarios where there is no security risk.
-#[cfg(feature = "default")]
+
 pub fn unsafe_fill_own_paths_only(request: &tardis::web::poem::Request, funs: &TardisFunsInst, ctx: &mut TardisContext) -> TardisResult<()> {
     do_unsafe_fill_ctx(
         request,
@@ -326,7 +326,7 @@ pub fn unsafe_fill_own_paths_only(request: &tardis::web::poem::Request, funs: &T
 /// This method will fetch the context from the request header (default: 'Bios-Ctx') and fill the current context.
 ///
 /// Warning: This operation is unsafe, and it should only be used in scenarios where there is no security risk.
-#[cfg(feature = "default")]
+
 pub fn unsafe_fill_roles_only(request: &tardis::web::poem::Request, funs: &TardisFunsInst, ctx: &mut TardisContext) -> TardisResult<()> {
     do_unsafe_fill_ctx(
         request,
@@ -350,7 +350,7 @@ pub fn unsafe_fill_roles_only(request: &tardis::web::poem::Request, funs: &Tardi
 /// This method will fetch the context from the request header (default: 'Bios-Ctx') and fill the current context.
 ///
 /// Warning: This operation is unsafe, and it should only be used in scenarios where there is no security risk.
-#[cfg(feature = "default")]
+
 pub fn unsafe_fill_groups_only(request: &tardis::web::poem::Request, funs: &TardisFunsInst, ctx: &mut TardisContext) -> TardisResult<()> {
     do_unsafe_fill_ctx(
         request,

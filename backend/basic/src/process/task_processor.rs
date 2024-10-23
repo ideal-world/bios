@@ -1,14 +1,14 @@
 //! Async task processor
 //!
 //! 异步任务处理器
-use std::{collections::HashMap, future::Future, sync::Arc};
-
+#[cfg(feature = "with-mq")]
 use bios_sdk_invoke::clients::event_client::{
     asteroid_mq::prelude::{EventAttribute, Subject, TopicCode},
-    get_topic, EventAttributeExt,
+    get_topic,
 };
 use lazy_static::lazy_static;
-use serde::{Deserialize, Serialize};
+
+use std::{collections::HashMap, future::Future, sync::Arc};
 use tardis::{
     basic::{dto::TardisContext, error::TardisError, result::TardisResult},
     cache::cache_client::TardisCacheClient,
@@ -24,6 +24,7 @@ lazy_static! {
 }
 const TASK_PROCESSOR_DATA_EX_SEC: u64 = 60 * 60 * 24;
 const TASK_IN_CTX_FLAG: &str = "task_id";
+#[cfg(feature = "with-mq")]
 const TASK_TOPIC: TopicCode = TopicCode::const_new("task");
 /// Set task status event flag
 /// 设置任务状态事件标识
@@ -101,11 +102,12 @@ impl TaskProcessor {
         task_id: u64,
         status: bool,
         cache_client: &TardisCacheClient,
-        from_avatar: String,
-        to_avatars: Option<Vec<String>>,
+        _from_avatar: String,
+        _to_avatars: Option<Vec<String>>,
     ) -> TardisResult<()> {
         Self::set_status(cache_key, task_id, status, cache_client).await?;
-        if let Some(topic) = get_topic(&TASK_TOPIC) {
+        #[cfg(feature = "with-mq")]
+        if let Some(_topic) = get_topic(&TASK_TOPIC) {
             // todo: broadcast event to users
             // topic
             //     .send_event(
@@ -138,11 +140,12 @@ impl TaskProcessor {
         task_id: u64,
         data: Value,
         cache_client: &TardisCacheClient,
-        from_avatar: String,
-        to_avatars: Option<Vec<String>>,
+        _from_avatar: String,
+        _to_avatars: Option<Vec<String>>,
     ) -> TardisResult<()> {
         Self::set_process_data(cache_key, task_id, data.clone(), cache_client).await?;
-        if let Some(topic) = get_topic(&TASK_TOPIC) {
+        #[cfg(feature = "with-mq")]
+        if let Some(_topic) = get_topic(&TASK_TOPIC) {
             // todo: broadcast event to users
         }
         Ok(())
@@ -203,8 +206,8 @@ impl TaskProcessor {
         let cache_client_clone = cache_client.clone();
         let task_id = TaskProcessor::init_status(cache_key, None, cache_client).await?;
         let cache_key = cache_key.to_string();
-        let from_avatar_clone = from_avatar.clone();
-        let to_avatars_clone = to_avatars.clone();
+        let _from_avatar_clone = from_avatar.clone();
+        let _to_avatars_clone = to_avatars.clone();
         let handle = tardis::tokio::spawn(async move {
             let result = process_fun(task_id).await;
             match result {
@@ -218,7 +221,8 @@ impl TaskProcessor {
             }
         });
         TASK_HANDLE.write().await.insert(task_id, handle);
-        if let Some(topic) = get_topic(&TASK_TOPIC) {
+        #[cfg(feature = "with-mq")]
+        if let Some(_topic) = get_topic(&TASK_TOPIC) {
             // todo: broadcast event to users
         }
         if let Some(ctx) = ctx {
@@ -238,11 +242,12 @@ impl TaskProcessor {
         cache_key: &str,
         task_id: u64,
         cache_client: &Arc<TardisCacheClient>,
-        from_avatar: String,
-        to_avatars: Option<Vec<String>>,
+        _from_avatar: String,
+        _to_avatars: Option<Vec<String>>,
     ) -> TardisResult<u64> {
         let task_id = TaskProcessor::init_status(cache_key, Some(task_id), cache_client).await?;
-        if let Some(topic) = get_topic(&TASK_TOPIC) {
+        #[cfg(feature = "with-mq")]
+        if let Some(_topic) = get_topic(&TASK_TOPIC) {
             // todo: broadcast event to users
         }
         Ok(task_id)
@@ -289,34 +294,37 @@ impl TaskProcessor {
         ctx.get_ext(TASK_IN_CTX_FLAG).await
     }
 }
-
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[cfg(feature = "with-mq")]
+#[derive(Clone, Debug, serde::Deserialize, serde::Serialize)]
 struct TaskSetStatusEventReq {
     pub task_id: u64,
     pub data: bool,
     pub msg: String,
 }
-
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[cfg(feature = "with-mq")]
+#[derive(Clone, Debug, serde::Deserialize, serde::Serialize)]
 struct TaskSetProcessDataEventReq {
     pub task_id: u64,
     pub data: Value,
     pub msg: String,
 }
-
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[cfg(feature = "with-mq")]
+#[derive(Clone, Debug, serde::Deserialize, serde::Serialize)]
 struct TaskExecuteEventReq {
     pub task_id: u64,
     pub msg: String,
 }
+#[cfg(feature = "with-mq")]
 
 impl EventAttribute for TaskSetStatusEventReq {
     const SUBJECT: Subject = Subject::const_new(EVENT_SET_TASK_STATUS_FLAG);
 }
+#[cfg(feature = "with-mq")]
 
 impl EventAttribute for TaskSetProcessDataEventReq {
     const SUBJECT: Subject = Subject::const_new(EVENT_SET_TASK_PROCESS_DATA_FLAG);
 }
+#[cfg(feature = "with-mq")]
 
 impl EventAttribute for TaskExecuteEventReq {
     const SUBJECT: Subject = Subject::const_new(EVENT_EXECUTE_TASK_FLAG);

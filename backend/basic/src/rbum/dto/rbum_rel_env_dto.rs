@@ -1,8 +1,8 @@
 use serde::{Deserialize, Serialize};
 use tardis::chrono::{DateTime, Utc};
-#[cfg(feature = "default")]
+
 use tardis::db::sea_orm;
-#[cfg(feature = "default")]
+
 use tardis::web::poem_openapi;
 
 use crate::rbum::rbum_enumeration::RbumRelEnvKind;
@@ -11,7 +11,7 @@ use crate::rbum::rbum_enumeration::RbumRelEnvKind;
 ///
 /// 资源关联环境条件添加请求
 #[derive(Serialize, Deserialize, Debug)]
-#[cfg_attr(feature = "default", derive(poem_openapi::Object))]
+#[derive(poem_openapi::Object)]
 pub struct RbumRelEnvAddReq {
     /// Relationship environment type
     ///
@@ -20,17 +20,17 @@ pub struct RbumRelEnvAddReq {
     /// Relationship environment value1
     ///
     /// 关联环境值1
-    #[cfg_attr(feature = "default", oai(validator(min_length = "1", max_length = "2000")))]
+    #[oai(validator(min_length = "1", max_length = "2000"))]
     pub value1: String,
     /// Relationship environment value2
     ///
     /// 关联环境值2
-    #[cfg_attr(feature = "default", oai(validator(min_length = "1", max_length = "2000")))]
+    #[oai(validator(min_length = "1", max_length = "2000"))]
     pub value2: Option<String>,
     /// Associated [relationship](crate::rbum::dto::rbum_rel_dto::RbumRelDetailResp) id
     ///
     /// 关联的[资源关联](crate::rbum::dto::rbum_rel_dto::RbumRelDetailResp) id
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
+    #[oai(validator(min_length = "2", max_length = "255"))]
     pub rel_rbum_rel_id: String,
 }
 
@@ -38,17 +38,17 @@ pub struct RbumRelEnvAddReq {
 ///
 /// 资源关联环境条件修改请求
 #[derive(Serialize, Deserialize, Debug)]
-#[cfg_attr(feature = "default", derive(poem_openapi::Object))]
+#[derive(poem_openapi::Object)]
 pub struct RbumRelEnvModifyReq {
     /// Relationship environment value1
     ///
     /// 关联环境值1
-    #[cfg_attr(feature = "default", oai(validator(min_length = "1", max_length = "2000")))]
+    #[oai(validator(min_length = "1", max_length = "2000"))]
     pub value1: Option<String>,
     /// Relationship environment value2
     ///
     /// 关联环境值2
-    #[cfg_attr(feature = "default", oai(validator(min_length = "1", max_length = "2000")))]
+    #[oai(validator(min_length = "1", max_length = "2000"))]
     pub value2: Option<String>,
 }
 
@@ -56,7 +56,7 @@ pub struct RbumRelEnvModifyReq {
 ///
 /// 资源关联环境条件详细信息
 #[derive(Serialize, Deserialize, Clone, Debug)]
-#[cfg_attr(feature = "default", derive(poem_openapi::Object, sea_orm::FromQueryResult))]
+#[derive(poem_openapi::Object, sea_orm::FromQueryResult)]
 pub struct RbumRelEnvDetailResp {
     /// Relationship environment id
     ///

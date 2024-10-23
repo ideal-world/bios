@@ -23,14 +23,14 @@ serde.workspace = true
 lazy_static.workspace = true
 # tokio-cron-scheduler = "*"
 tardis = { workspace = true, features = ["reldb-postgres", "web-server"] }
-bios-basic = { path = "../../basic", features = ["default"] }
-bios-sdk-invoke = { path = "../../../frontend/sdks/invoke", features = [
+bios-basic = { version = "0.2.0", path = "../../basic", features = ["default"] }
+bios-sdk-invoke = { version = "0.2.0", path = "../../../frontend/sdks/invoke", features = [
     "spi_log", "spi_kv", "event"
 ], default-features = false }
 tsuki-scheduler = { version = "0.1.3", features= ["cron", "tokio", "async-scheduler"]}
 
 [dev-dependencies]
 tardis = { workspace = true, features = ["test", "ws-client"] }
-bios-basic = { path = "../../basic", features = ["default", "test"] }
-bios-spi-kv = { path = "../../spi/spi-kv" }
-bios-spi-log = { path = "../../spi/spi-log" }
+bios-basic = { version = "0.2.0", path = "../../basic", features = ["default", "test"] }
+bios-spi-kv = { version = "0.2.0", path = "../../spi/spi-kv" }
+bios-spi-log = { version = "0.2.0", path = "../../spi/spi-log" }

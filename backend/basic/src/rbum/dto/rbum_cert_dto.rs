@@ -1,9 +1,9 @@
 use serde::{Deserialize, Serialize};
 use tardis::basic::field::TrimString;
 use tardis::chrono::{DateTime, Utc};
-#[cfg(feature = "default")]
+
 use tardis::db::sea_orm;
-#[cfg(feature = "default")]
+
 use tardis::web::poem_openapi;
 
 use crate::rbum::rbum_enumeration::{RbumCertRelKind, RbumCertStatusKind};
@@ -12,21 +12,21 @@ use crate::rbum::rbum_enumeration::{RbumCertRelKind, RbumCertStatusKind};
 ///
 /// 凭证添加请求
 #[derive(Serialize, Deserialize, Debug)]
-#[cfg_attr(feature = "default", derive(poem_openapi::Object))]
+#[derive(poem_openapi::Object)]
 pub struct RbumCertAddReq {
     /// Certification access key
     ///
     /// 凭证名
     ///
     /// see [`crate::rbum::dto::rbum_cert_conf_dto::RbumCertConfAddReq::ak_rule`]
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
+    #[oai(validator(min_length = "2", max_length = "2000"))]
     pub ak: TrimString,
     /// Certification secret key
     ///
     /// 凭证密钥
     ///
     /// see [`crate::rbum::dto::rbum_cert_conf_dto::RbumCertConfAddReq::sk_rule`]
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "10000")))]
+    #[oai(validator(min_length = "2", max_length = "10000"))]
     pub sk: Option<TrimString>,
     /// Whether to hide the sk
     ///
@@ -75,7 +75,7 @@ pub struct RbumCertAddReq {
     /// Different from [`crate::rbum::dto::rbum_cert_conf_dto::RbumCertConfAddReq::ext`], this field is used to identify the specific extension information of the certificate.
     ///
     /// 与 [`crate::rbum::dto::rbum_cert_conf_dto::RbumCertConfAddReq::ext`] 不同，此字段用于标识该条凭证的特有的扩展信息。
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
+    #[oai(validator(min_length = "2", max_length = "2000"))]
     pub ext: Option<String>,
     /// Certificate effective time
     ///
@@ -103,7 +103,7 @@ pub struct RbumCertAddReq {
     /// Different from [`crate::rbum::dto::rbum_cert_conf_dto::RbumCertConfAddReq::conn_uri`], this field is used to identify the specific connection address of the certificate.
     ///
     /// 与 [`crate::rbum::dto::rbum_cert_conf_dto::RbumCertConfAddReq::conn_uri`] 不同，此字段用于标识该条凭证的特有的连接地址。
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
+    #[oai(validator(min_length = "2", max_length = "2000"))]
     pub conn_uri: Option<String>,
     /// Credential status
     ///
@@ -121,13 +121,13 @@ pub struct RbumCertAddReq {
     /// NOTE: 仅当  [`crate::rbum::dto::rbum_cert_conf_dto::RbumCertConfAddReq::sk_dynamic`] 为 ``true`` 时有效。
     ///
     /// NOTE: 此字段不可与 ``sk`` 字段同时存在。
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
+    #[oai(validator(min_length = "2", max_length = "2000"))]
     pub vcode: Option<TrimString>,
 
     /// Associated [cert configuration](crate::rbum::dto::rbum_cert_conf_dto::RbumCertConfDetailResp) id
     ///
     /// 关联的[凭证配置](crate::rbum::dto::rbum_cert_conf_dto::RbumCertConfDetailResp)id
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
+    #[oai(validator(min_length = "2", max_length = "255"))]
     pub rel_rbum_cert_conf_id: Option<String>,
     /// Associated [resource kind](crate::rbum::rbum_enumeration::RbumCertRelKind)
     ///
@@ -160,7 +160,7 @@ pub struct RbumCertAddReq {
     ///
     /// * 如果 rel_rbum_kind == Rel
     /// - 在 CMDB 服务中，一个资源可以被切片（比如 DB 实例），我们可以指定关联的切片信息
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
+    #[oai(validator(min_length = "2", max_length = "255"))]
     pub rel_rbum_id: String,
     /// Whether ``rel_rbum_id`` is an external value
     ///
@@ -176,21 +176,21 @@ pub struct RbumCertAddReq {
 ///
 /// 凭证修改请求
 #[derive(Serialize, Deserialize, Debug, Default)]
-#[cfg_attr(feature = "default", derive(poem_openapi::Object))]
+#[derive(poem_openapi::Object)]
 pub struct RbumCertModifyReq {
     /// Certification access key
     ///
     /// 凭证名
     ///
     /// see [`crate::rbum::dto::rbum_cert_conf_dto::RbumCertConfModifyReq::ak_rule`]
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
+    #[oai(validator(min_length = "2", max_length = "2000"))]
     pub ak: Option<TrimString>,
     /// Certification secret key
     ///
     /// 凭证密钥
     ///
     /// see [`crate::rbum::dto::rbum_cert_conf_dto::RbumCertConfAddReq::sk_rule`]
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "10000")))]
+    #[oai(validator(min_length = "2", max_length = "10000"))]
     pub sk: Option<TrimString>,
     /// Whether to hide the sk
     ///
@@ -219,7 +219,7 @@ pub struct RbumCertModifyReq {
     /// Different from [`crate::rbum::dto::rbum_cert_conf_dto::RbumCertConfModifyReq::ext`], this field is used to identify the specific extension information of the certificate.
     ///
     /// 与 [`crate::rbum::dto::rbum_cert_conf_dto::RbumCertConfModifyReq::ext`] 不同，此字段用于标识该条凭证的特有的扩展信息。
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
+    #[oai(validator(min_length = "2", max_length = "2000"))]
     pub ext: Option<String>,
     /// Certificate effective time
     ///
@@ -236,7 +236,7 @@ pub struct RbumCertModifyReq {
     /// Different from [`crate::rbum::dto::rbum_cert_conf_dto::RbumCertConfModifyReq::conn_uri`], this field is used to identify the specific connection address of the certificate.
     ///
     /// 与 [`crate::rbum::dto::rbum_cert_conf_dto::RbumCertConfModifyReq::conn_uri`] 不同，此字段用于标识该条凭证的特有的连接地址。
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
+    #[oai(validator(min_length = "2", max_length = "2000"))]
     pub conn_uri: Option<String>,
     /// Credential status
     ///
@@ -248,7 +248,7 @@ pub struct RbumCertModifyReq {
 ///
 /// 凭证概要信息
 #[derive(Serialize, Deserialize, Debug)]
-#[cfg_attr(feature = "default", derive(poem_openapi::Object, sea_orm::FromQueryResult))]
+#[derive(poem_openapi::Object, sea_orm::FromQueryResult)]
 pub struct RbumCertSummaryResp {
     /// Certification id
     ///
@@ -310,7 +310,7 @@ pub struct RbumCertSummaryResp {
 ///
 /// 带有密钥的凭证概要信息
 #[derive(Serialize, Deserialize, Debug)]
-#[cfg_attr(feature = "default", derive(poem_openapi::Object, sea_orm::FromQueryResult))]
+#[derive(poem_openapi::Object, sea_orm::FromQueryResult)]
 pub struct RbumCertSummaryWithSkResp {
     /// Certification id
     ///
@@ -384,7 +384,7 @@ pub struct RbumCertSummaryWithSkResp {
 ///
 /// 凭证详细信息
 #[derive(Serialize, Deserialize, Debug)]
-#[cfg_attr(feature = "default", derive(poem_openapi::Object, sea_orm::FromQueryResult))]
+#[derive(poem_openapi::Object, sea_orm::FromQueryResult)]
 pub struct RbumCertDetailResp {
     /// Certification id
     ///

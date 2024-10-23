@@ -7,14 +7,14 @@ use serde::{Deserialize, Serialize};
 use tardis::{basic::result::TardisResult, serde_json::Value};
 
 use crate::enumeration::BasicQueryOpKind;
-#[cfg(feature = "default")]
+
 use tardis::web::poem_openapi;
 
 /// Basic query condition object
 ///
 /// 基础的查询条件对象
 #[derive(Serialize, Deserialize, Debug, Clone)]
-#[cfg_attr(feature = "default", derive(poem_openapi::Object))]
+#[derive(poem_openapi::Object)]
 pub struct BasicQueryCondInfo {
     /// Query field
     #[oai(validator(min_length = "1"))]

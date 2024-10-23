@@ -29,15 +29,15 @@ tardis = { workspace = true, features = [
     "web-client",
     "openapi-rapidoc",
 ] }
-bios-basic = { path = "../../basic", features = ["default"] }
+bios-basic = { version = "0.2.0", path = "../../basic", features = ["default"] }
 strum = { workspace = true, features = ["derive"] }
 pinyin = { version = "0.10" }
-bios-sdk-invoke = { path = "../../../frontend/sdks/invoke", features = [
+bios-sdk-invoke = { version = "0.2.0", path = "../../../frontend/sdks/invoke", features = [
     "event",
 ], default-features = false }
 
 [dev-dependencies]
 tardis = { workspace = true, features = ["test"] }
-bios-basic = { path = "../../basic", features = ["default", "test"] }
+bios-basic = { version = "0.2.0", path = "../../basic", features = ["default", "test"] }
 testcontainers-modules = { workspace = true }
 pinyin = { version = "0.10" }

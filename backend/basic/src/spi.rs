@@ -67,13 +67,13 @@
 //!     1. 每个SPI后端实现的要绑定给对应的租户或应用后才能使用，绑定关系存储于``rbum_rel``，tag为``spi_ident``
 //! 1. 不做请求认证。SPI服务信任请求带来的认证信息（``TardisContext``中的``ak``，对应于租户或应用的Id）。认证的逻辑将由网关统一实现
 //! 1. 延时初始化。SPI服务的每个后端实现只有在第一次调用时才会初始化（生成client），以减少启动时的资源消耗。详见 [`crate::spi::spi_funs::SpiBsInst`]                                
-#[cfg(feature = "default")]
+
 pub mod api;
-#[cfg(feature = "default")]
+
 mod domain;
 pub mod dto;
 pub mod macros;
-#[cfg(feature = "default")]
+
 pub mod serv;
 pub mod spi_constants;
 pub mod spi_funs;

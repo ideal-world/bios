@@ -1,9 +1,9 @@
 use serde::{Deserialize, Serialize};
 use tardis::basic::field::TrimString;
 use tardis::chrono::{DateTime, Utc};
-#[cfg(feature = "default")]
+
 use tardis::db::sea_orm;
-#[cfg(feature = "default")]
+
 use tardis::web::poem_openapi;
 
 use crate::rbum::rbum_enumeration::RbumScopeLevelKind;
@@ -12,7 +12,7 @@ use crate::rbum::rbum_enumeration::RbumScopeLevelKind;
 ///
 /// 资源类型添加请求
 #[derive(Serialize, Deserialize, Debug)]
-#[cfg_attr(feature = "default", derive(poem_openapi::Object))]
+#[derive(poem_openapi::Object)]
 pub struct RbumKindAddReq {
     /// Resource kind module
     ///
@@ -25,7 +25,7 @@ pub struct RbumKindAddReq {
     /// Used to further divide the resource  kind. For example, there are multiple resource  kinds under the ``cmdb compute`` module, such as ``ecs, ec2, k8s``.
     ///
     /// 用于对资源类型做简单的分类。比如 ``cmdb计算`` 模块下可以有 ``ecs、ec2、k8s`` 等多个资源类型。
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
+    #[oai(validator(min_length = "2", max_length = "255"))]
     pub module: Option<String>,
     /// Resource kind code
     ///
@@ -34,22 +34,22 @@ pub struct RbumKindAddReq {
     /// Resource kind code, which is required to conform to the scheme specification in the uri, matching the regular: ``^[a-z0-9-.]+$`` .
     ///
     /// 资源类型编码，需要符合uri中的scheme规范，匹配正则：``^[a-z0-9-.]+$`` 。
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
+    #[oai(validator(min_length = "2", max_length = "255"))]
     pub code: TrimString,
     /// Resource kind name
     ///
     /// 资源类型名称
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
+    #[oai(validator(min_length = "2", max_length = "255"))]
     pub name: TrimString,
     /// Resource kind note
     ///
     /// 资源类型备注
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
+    #[oai(validator(min_length = "2", max_length = "2000"))]
     pub note: Option<String>,
     /// Resource kind icon
     ///
     /// 资源类型图标
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "1000")))]
+    #[oai(validator(min_length = "2", max_length = "1000"))]
     pub icon: Option<String>,
     /// Resource kind sort
     ///
@@ -62,7 +62,7 @@ pub struct RbumKindAddReq {
     /// Each resource kind can specify an extension table for storing customized data.
     ///
     /// 每个资源类型可以指定一个扩展表用于存储自定义数据。
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
+    #[oai(validator(min_length = "2", max_length = "255"))]
     pub ext_table_name: Option<String>,
 
     pub scope_level: Option<RbumScopeLevelKind>,
@@ -72,7 +72,7 @@ pub struct RbumKindAddReq {
 ///
 /// 资源类型修改请求
 #[derive(Serialize, Deserialize, Debug)]
-#[cfg_attr(feature = "default", derive(poem_openapi::Object))]
+#[derive(poem_openapi::Object)]
 pub struct RbumKindModifyReq {
     /// Resource kind module
     ///
@@ -81,22 +81,22 @@ pub struct RbumKindModifyReq {
     /// Used to further divide the resource  kind. For example, there are multiple resource  kinds under the ``cmdb compute`` module, such as ``ecs, ec2, k8s``.
     ///
     /// 用于对资源类型做简单的分类。比如 ``cmdb计算`` 模块下可以有 ``ecs、ec2、k8s`` 等多个资源类型。
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
+    #[oai(validator(min_length = "2", max_length = "255"))]
     pub module: Option<String>,
     /// Resource kind name
     ///
     /// 资源类型名称
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
+    #[oai(validator(min_length = "2", max_length = "255"))]
     pub name: Option<TrimString>,
     /// Resource kind note
     ///
     /// 资源类型备注
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
+    #[oai(validator(min_length = "2", max_length = "2000"))]
     pub note: Option<String>,
     /// Resource kind icon
     ///
     /// 资源类型图标
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "1000")))]
+    #[oai(validator(min_length = "2", max_length = "1000"))]
     pub icon: Option<String>,
     /// Resource kind sort
     ///
@@ -109,7 +109,7 @@ pub struct RbumKindModifyReq {
     /// Each resource kind can specify an extension table for storing customized data.
     ///
     /// 每个资源类型可以指定一个扩展表用于存储自定义数据。
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
+    #[oai(validator(min_length = "2", max_length = "255"))]
     pub ext_table_name: Option<String>,
 
     pub scope_level: Option<RbumScopeLevelKind>,
@@ -119,7 +119,7 @@ pub struct RbumKindModifyReq {
 ///
 /// 资源类型概要信息
 #[derive(Serialize, Deserialize, Debug, Clone)]
-#[cfg_attr(feature = "default", derive(poem_openapi::Object, sea_orm::FromQueryResult))]
+#[derive(poem_openapi::Object, sea_orm::FromQueryResult)]
 pub struct RbumKindSummaryResp {
     /// Resource kind id
     ///
@@ -162,7 +162,7 @@ pub struct RbumKindSummaryResp {
 ///
 /// 资源类型详细信息
 #[derive(Serialize, Deserialize, Debug, Clone)]
-#[cfg_attr(feature = "default", derive(poem_openapi::Object, sea_orm::FromQueryResult))]
+#[derive(poem_openapi::Object, sea_orm::FromQueryResult)]
 pub struct RbumKindDetailResp {
     /// Resource kind id
     ///
