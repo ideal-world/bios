@@ -3,6 +3,8 @@ use tardis::db::sea_orm::prelude::Json;
 use tardis::db::sea_orm::*;
 use tardis::{TardisCreateEntity, TardisEmptyBehavior, TardisEmptyRelation};
 
+use crate::dto::flow_model_dto::FlowModelKind;
+
 /// Model / 模型
 ///
 /// Used to define processes, each process contains one or more transitions (associated with `flow_transition`)
@@ -21,17 +23,22 @@ pub struct Model {
     /// Model variable list / 模型变量列表
     pub vars: Option<Json>,
 
-    /// Initial state / 初始状态
-    ///
-    /// Define the initial state of each model
-    /// 定义每个模块的初始状态
-    pub init_state_id: String,
+    /// Types of workflow models / 工作流模型类型
+    /// 此功能用于标记工作流模型的类型，目前有仅作为模板，仅作为实例，既可作为模板又可作为实例三种。表示当前模型的用途和功能。
+    #[tardis_entity(custom_type = "String")]
+    pub kind: FlowModelKind,
 
     ///  Associated template / 关联模板
     ///
     /// his function is used to associate this template with other templates, e.g. if the template refers to a template, then this association corresponds to the Id of the template
     /// 此功能用于将该模型与模板关联，比如该模型引用于某个模板，则此关联对应于模板的Id
     pub rel_template_id: Option<String>,
+
+    ///  Currently enabled version ID / 当前启用的版本ID
+    ///
+    /// This field is used to record the version of the model currently in use
+    /// 此字段用于记录当前模型在使用的版本
+    pub current_version_id: String,
 
     /// Whether it is a template / 是否是模板
     ///

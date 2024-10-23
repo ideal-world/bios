@@ -28,6 +28,7 @@ bios-sdk-invoke = { path = "../../../frontend/sdks/invoke", features = [
     "spi_log", "spi_kv", "event"
 ], default-features = false }
 tsuki-scheduler = { version = "0.1.3", features= ["cron", "tokio", "async-scheduler"]}
+testcontainers-modules = { workspace = true, features = ["redis"] }
 
 [dev-dependencies]
 tardis = { workspace = true, features = ["test", "ws-client"] }

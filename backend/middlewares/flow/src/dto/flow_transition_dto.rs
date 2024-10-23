@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use strum::Display;
 use tardis::{
     basic::{error::TardisError, field::TrimString},
-    db::sea_orm::{self, EnumIter},
+    db::sea_orm::{self, prelude::*, EnumIter},
     serde_json::Value,
     web::poem_openapi,
     TardisFuns,
@@ -191,7 +191,7 @@ pub struct FlowTransitionDetailResp {
     /// Associated [flow_state](super::flow_model_dto::FlowModelDetailResp) id
     ///
     /// 关联的[工作流状态](super::flow_model_dto::FlowModelDetailResp) id
-    pub rel_flow_model_id: String,
+    pub rel_flow_model_version_id: String,
     /// 排序
     pub sort: i64,
 }
@@ -368,7 +368,7 @@ pub struct FlowTransitionActionChangeAgg {
 
 /// 后置动作类型，目前有状态修改和字段修改两种。
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Default, Serialize, poem_openapi::Enum, EnumIter, sea_orm::DeriveActiveEnum)]
-#[sea_orm(rs_type = "String", db_type = "Enum", enum_name = "FlowTransitionActionChangeKind")]
+#[sea_orm(rs_type = "String", db_type = "String(StringLen::N(255))")]
 pub enum FlowTransitionActionChangeKind {
     /// 字段修改
     #[default]
@@ -403,7 +403,7 @@ pub struct FlowTransitionActionByVarChangeInfo {
 
 /// 修改方式（清空，更改内容，更改为其他字段的值，加减值等）
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, EnumIter, sea_orm::DeriveActiveEnum)]
-#[sea_orm(rs_type = "String", db_type = "Enum", enum_name = "FlowTransitionActionByVarChangeInfoChangedKind")]
+#[sea_orm(rs_type = "String", db_type = "String(StringLen::N(255))")]
 pub enum FlowTransitionActionByVarChangeInfoChangedKind {
     /// 清空
     #[sea_orm(string_value = "clean")]

@@ -4,6 +4,7 @@ use bios_basic::rbum::{
     dto::{
         rbum_filer_dto::RbumBasicFilterReq,
         rbum_item_dto::{RbumItemKernelAddReq, RbumItemKernelModifyReq},
+        rbum_rel_dto::RbumRelModifyReq,
     },
     helper::rbum_scope_helper,
     rbum_enumeration::RbumScopeLevelKind,
@@ -23,8 +24,8 @@ use tardis::{
 use crate::{
     domain::flow_state,
     dto::flow_state_dto::{
-        FlowStateAddReq, FlowStateCountGroupByStateReq, FlowStateCountGroupByStateResp, FlowStateDetailResp, FlowStateFilterReq, FlowStateKind, FlowStateModifyReq,
-        FlowStateNameResp, FlowStateSummaryResp, FlowSysStateKind,
+        FlowStateAddReq, FlowStateAggResp, FlowStateCountGroupByStateReq, FlowStateCountGroupByStateResp, FlowStateDetailResp, FlowStateFilterReq, FlowStateKind,
+        FlowStateModifyReq, FlowStateNameResp, FlowStateRelModelExt, FlowStateRelModelModifyReq, FlowStateSummaryResp, FlowSysStateKind,
     },
     flow_config::FlowBasicInfoManager,
 };
@@ -35,6 +36,7 @@ use super::{
     flow_inst_serv::FlowInstServ,
     flow_model_serv::FlowModelServ,
     flow_rel_serv::{FlowRelKind, FlowRelServ},
+    flow_transition_serv::FlowTransitionServ,
 };
 
 pub struct FlowStateServ;
@@ -257,11 +259,11 @@ impl RbumItemCrudOperation<flow_state::ActiveModel, FlowStateAddReq, FlowStateMo
         if let Some(template) = filter.template {
             query.and_where(Expr::col(flow_state::Column::Template).eq(template));
         }
-        if let Some(flow_model_ids) = filter.flow_model_ids.clone() {
+        if let Some(flow_version_ids) = filter.flow_version_ids.clone() {
             // find rel state
             let mut state_id = HashSet::new();
-            for flow_model_id in flow_model_ids {
-                let rel_state_id = FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelState, &flow_model_id, None, None, funs, ctx)
+            for flow_version_id in flow_version_ids {
+                let rel_state_id = FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelState, &flow_version_id, None, None, funs, ctx)
                     .await?
                     .iter()
                     .map(|rel| rel.rel_id.clone())
@@ -305,7 +307,7 @@ impl FlowStateServ {
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<Vec<FlowStateNameResp>> {
-        let mut flow_model_ids = None;
+        let mut flow_version_ids = None;
         if let Some(tenant_own_path) = rbum_scope_helper::get_path_item(1, &ctx.own_paths) {
             if let Some(mut app_ids) = app_ids {
                 if let Some(app_own_paths) = app_ids.pop().map(|app_id| format!("{}/{}", &tenant_own_path, &app_id)) {
@@ -313,7 +315,7 @@ impl FlowStateServ {
                         own_paths: app_own_paths,
                         ..ctx.clone()
                     };
-                    flow_model_ids = Some(
+                    flow_version_ids = Some(
                         FlowModelServ::find_rel_models(None, false, funs, &mock_ctx)
                             .await?
                             .into_iter()
@@ -334,7 +336,7 @@ impl FlowStateServ {
                     ..Default::default()
                 },
                 tag,
-                flow_model_ids,
+                flow_version_ids,
                 ..Default::default()
             },
             None,
@@ -381,5 +383,55 @@ impl FlowStateServ {
                 });
         }
         Ok(result.into_values().collect_vec())
+    }
+
+    pub async fn get_rel_state_ext(flow_version_id: &str, state_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<FlowStateRelModelExt> {
+        TardisFuns::json.str_to_obj::<FlowStateRelModelExt>(
+            &FlowRelServ::find_simple_rels(&FlowRelKind::FlowModelState, Some(flow_version_id), Some(state_id), true, None, None, funs, ctx)
+                .await?
+                .pop()
+                .ok_or_else(|| funs.err().internal_error("flow_model_serv", "modify_rel_state", "rel not found", "404-rel-not-found"))?
+                .ext,
+        )
+    }
+
+    pub async fn modify_rel_state_ext(flow_version_id: &str, modify_req: &FlowStateRelModelModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let mut ext = Self::get_rel_state_ext(flow_version_id, &modify_req.id, funs, ctx).await?;
+        if let Some(sort) = modify_req.sort {
+            ext.sort = sort;
+        }
+        if let Some(show_btns) = modify_req.show_btns.clone() {
+            ext.show_btns = Some(show_btns);
+        }
+        FlowRelServ::modify_simple_rel(
+            &FlowRelKind::FlowModelState,
+            flow_version_id,
+            &modify_req.id,
+            &mut RbumRelModifyReq {
+                tag: None,
+                note: None,
+                ext: Some(json!(ext).to_string()),
+            },
+            funs,
+            ctx,
+        )
+        .await?;
+
+        Ok(())
+    }
+
+    pub async fn aggregate(id: &str, flow_version_id: &str, init_state_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<FlowStateAggResp> {
+        let state = Self::get_item(id, &FlowStateFilterReq::default(), funs, ctx).await?;
+        let transitions = FlowTransitionServ::find_transitions(flow_version_id, Some(&[state.id.clone()]), funs, ctx).await?;
+
+        Ok(FlowStateAggResp {
+            id: state.id.clone(),
+            name: state.name,
+            is_init: state.id == init_state_id.to_string(),
+            ext: Self::get_rel_state_ext(flow_version_id, &state.id, funs, ctx).await?,
+            state_kind: state.state_kind,
+            kind_conf: state.kind_conf,
+            transitions,
+        })
     }
 }

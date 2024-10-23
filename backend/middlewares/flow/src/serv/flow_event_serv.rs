@@ -20,6 +20,7 @@ use crate::{
         flow_external_dto::{FlowExternalCallbackOp, FlowExternalParams},
         flow_inst_dto::{FlowInstDetailResp, FlowInstTransferReq},
         flow_model_dto::{FlowModelDetailResp, FlowModelFilterReq},
+        flow_model_version_dto::FlowModelVersionFilterReq,
         flow_state_dto::FlowStateFilterReq,
         flow_transition_dto::{
             FlowTransitionActionByStateChangeInfo, FlowTransitionActionByVarChangeInfoChangedKind, FlowTransitionActionChangeAgg, FlowTransitionActionChangeKind,
@@ -29,7 +30,10 @@ use crate::{
     helper::loop_check_helper,
 };
 
-use super::{flow_external_serv::FlowExternalServ, flow_inst_serv::FlowInstServ, flow_model_serv::FlowModelServ, flow_state_serv::FlowStateServ};
+use super::{
+    flow_external_serv::FlowExternalServ, flow_inst_serv::FlowInstServ, flow_model_serv::FlowModelServ, flow_model_version_serv::FlowModelVersionServ,
+    flow_state_serv::FlowStateServ,
+};
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
 use itertools::Itertools;
@@ -45,9 +49,9 @@ impl FlowEventServ {
         funs: &TardisFunsInst,
     ) -> TardisResult<()> {
         let flow_inst_detail = FlowInstServ::get(flow_inst_id, funs, ctx).await?;
-        let flow_model = FlowModelServ::get_item(
-            &flow_inst_detail.rel_flow_model_id,
-            &FlowModelFilterReq {
+        let flow_version = FlowModelVersionServ::get_item(
+            &flow_inst_detail.rel_flow_version_id,
+            &FlowModelVersionFilterReq {
                 basic: RbumBasicFilterReq {
                     with_sub_own_paths: true,
                     own_paths: Some("".to_string()),
@@ -59,12 +63,12 @@ impl FlowEventServ {
             ctx,
         )
         .await?;
-        let flow_transitions = flow_model
-            .transitions()
+        let flow_transitions = flow_version
+            .states()
             .into_iter()
-            .filter(|trans| trans.from_flow_state_id == flow_inst_detail.current_state_id && !trans.action_by_front_changes().is_empty())
-            .sorted_by_key(|trans| trans.sort)
-            .collect_vec();
+            .find(|state| state.id == flow_inst_detail.current_state_id)
+            .ok_or_else(|| funs.err().not_found("flow_event", "do_front_change", "illegal response", "404-flow-transition-not-found"))?
+            .transitions;
         if flow_transitions.is_empty() {
             return Ok(());
         }
@@ -165,8 +169,22 @@ impl FlowEventServ {
             own_paths: "".to_string(),
             ..ctx.clone()
         };
+        let flow_version = FlowModelVersionServ::get_item(
+            &flow_inst_detail.rel_flow_version_id,
+            &FlowModelVersionFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    own_paths: Some("".to_string()),
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?;
         let flow_model = FlowModelServ::get_item(
-            &flow_inst_detail.rel_flow_model_id,
+            &flow_version.rel_model_id,
             &FlowModelFilterReq {
                 basic: RbumBasicFilterReq {
                     with_sub_own_paths: true,
@@ -179,7 +197,12 @@ impl FlowEventServ {
             ctx,
         )
         .await?;
-        let model_transition = flow_model.transitions();
+        let model_transition = flow_version
+            .states()
+            .into_iter()
+            .find(|state| state.id == flow_inst_detail.current_state_id)
+            .ok_or_else(|| funs.err().not_found("flow_event", "do_front_change", "illegal response", "404-flow-transition-not-found"))?
+            .transitions;
         let next_flow_transition = model_transition.iter().find(|trans| trans.id == flow_transition_id);
         if next_flow_transition.is_none() {
             return Err(funs.err().not_found("flow_inst", "transfer", "no transferable state", "404-flow-inst-transfer-state-not-found"));
@@ -211,10 +234,6 @@ impl FlowEventServ {
             &global_ctx,
         )
         .await?;
-
-        // if FlowModelServ::check_post_action_ring(&flow_model, funs, ctx).await? {
-        //     return Err(funs.err().not_found("flow_inst", "transfer", "this post action exist endless loop", "500-flow-transition-endless-loop"));
-        // }
 
         let post_changes = next_flow_transition.action_by_post_changes();
         if post_changes.is_empty() {
@@ -488,8 +507,8 @@ impl FlowEventServ {
         let insts = FlowInstServ::find_detail(rel_inst_ids, funs, ctx).await?;
         for rel_inst in insts {
             // find transition
-            let flow_model = FlowModelServ::get_item(
-                &rel_inst.rel_flow_model_id,
+            let flow_version = FlowModelServ::get_item(
+                &rel_inst.rel_flow_version_id,
                 &FlowModelFilterReq {
                     basic: RbumBasicFilterReq {
                         with_sub_own_paths: true,
@@ -502,7 +521,7 @@ impl FlowEventServ {
                 ctx,
             )
             .await?;
-            let transition_resp = FlowInstServ::do_find_next_transitions(&rel_inst, &flow_model, None, &None, true, funs, ctx)
+            let transition_resp = FlowInstServ::do_find_next_transitions(&rel_inst, &flow_version, None, &None, true, funs, ctx)
                 .await?
                 .next_flow_transitions
                 .into_iter()

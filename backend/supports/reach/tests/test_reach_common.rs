@@ -12,7 +12,8 @@ use bios_reach::reach_send_channel::SendChannelMap;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::{Arc, OnceLock};
-use tardis::testcontainers::ContainerAsync;
+use tardis::testcontainers::runners::AsyncRunner;
+use tardis::testcontainers::{ContainerAsync, ImageExt};
 use tardis::tokio::sync::RwLock;
 use tardis::web::poem_openapi::param::Path;
 use tardis::web::poem_openapi::payload::{Form, Json};
@@ -47,7 +48,7 @@ pub fn get_test_ctx() -> &'static TardisContext {
 
 #[allow(dead_code)]
 pub async fn init_tardis() -> TardisResult<Holder> {
-    let reldb_container = TardisTestContainer::postgres_custom(None).await?;
+    let reldb_container = Postgres::default().with_tag("latest").with_env_var("POSTGRES_PASSWORD", "123456").with_env_var("POSTGRES_DB", "test").start().await?;
     let port = reldb_container.get_host_port_ipv4(5432).await?;
     let url = format!("postgres://postgres:123456@127.0.0.1:{port}/test");
     std::env::set_var("TARDIS_FW.DB.URL", url);

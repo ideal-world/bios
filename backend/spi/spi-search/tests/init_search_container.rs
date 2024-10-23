@@ -65,7 +65,6 @@ pub async fn postgres_custom<'a>(init_script_path: Option<&str>) -> ContainerAsy
             .start()
             .await
             .expect("zhparser started")
-        // .with_volume(path, "/docker-entrypoint-initdb.d/")
     } else {
         GenericImage::new("abcfy2/zhparser", "15")
             .with_wait_for(WaitFor::message_on_stderr("database system is ready to accept connections"))

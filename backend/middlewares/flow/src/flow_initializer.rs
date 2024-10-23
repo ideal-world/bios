@@ -31,7 +31,7 @@ use crate::{
         cs::flow_cs_config_api,
         ct::flow_ct_model_api,
     },
-    domain::{flow_inst, flow_model, flow_state, flow_transition},
+    domain::{flow_inst, flow_model, flow_model_version, flow_state, flow_transition},
     dto::{
         flow_model_dto::FlowModelFilterReq,
         flow_state_dto::FlowSysStateKind,
@@ -92,6 +92,7 @@ pub async fn init_db(mut funs: TardisFunsInst) -> TardisResult<()> {
         let compatible_type = TardisFuns::reldb().compatible_type();
         funs.db().init(flow_state::ActiveModel::init(db_kind, None, compatible_type)).await?;
         funs.db().init(flow_model::ActiveModel::init(db_kind, None, compatible_type)).await?;
+        funs.db().init(flow_model_version::ActiveModel::init(db_kind, None, compatible_type)).await?;
         funs.db().init(flow_transition::ActiveModel::init(db_kind, None, compatible_type)).await?;
         funs.db().init(flow_inst::ActiveModel::init(db_kind, None, compatible_type)).await?;
         init_rbum_data(&funs, &ctx).await?;

@@ -9,15 +9,16 @@ use serde::{Deserialize, Serialize};
 use tardis::{
     basic::field::TrimString,
     chrono::{DateTime, Utc},
-    db::sea_orm,
+    db::sea_orm::{self, prelude::*},
     serde_json::Value,
     web::poem_openapi,
     TardisFuns,
 };
 
 use super::{
-    flow_state_dto::{FlowStateAggResp, FlowStateRelModelExt, FlowStateRelModelModifyReq},
-    flow_transition_dto::{FlowTransitionAddReq, FlowTransitionDetailResp, FlowTransitionModifyReq},
+    flow_model_version_dto::{FlowModelVersionAddReq, FlowModelVersionBindState, FlowModelVersionModifyReq, FlowModelVesionState},
+    flow_state_dto::{FlowStateAggResp, FlowStateRelModelExt},
+    flow_transition_dto::{FlowTransitionAddReq, FlowTransitionDetailResp},
 };
 
 /// 添加请求
@@ -29,14 +30,15 @@ pub struct FlowModelAddReq {
     pub icon: Option<String>,
     #[oai(validator(max_length = "2000"))]
     pub info: Option<String>,
-    /// 初始化状态ID
-    pub init_state_id: String,
+    /// 工作流模型类型
+    pub kind: FlowModelKind,
     /// 关联模板ID（目前可能是页面模板ID，或者是项目模板ID）
     pub rel_template_ids: Option<Vec<String>>,
-    /// 绑定的动作
-    pub transitions: Option<Vec<FlowTransitionAddReq>>,
-    /// 绑定的状态
-    pub states: Option<Vec<FlowModelBindStateReq>>,
+    /// 关联动作ID（触发当前工作流的动作，若为空则默认表示新建数据时触发）
+    pub rel_transition_ids: Option<Vec<String>>,
+    /// 创建的可用版本
+    pub add_version: Option<FlowModelVersionAddReq>,
+    pub current_version_id: Option<String>,
     /// 是否作为模板使用
     pub template: bool,
     /// 关联父级模型ID
@@ -50,16 +52,41 @@ pub struct FlowModelAddReq {
 
 impl From<FlowModelDetailResp> for FlowModelAddReq {
     fn from(value: FlowModelDetailResp) -> Self {
-        let transitions = value.transitions().into_iter().map(FlowTransitionAddReq::from).collect_vec();
-        let states = value.states().into_iter().map(FlowModelBindStateReq::from).collect_vec();
+        let mut add_transitions = vec![];
+        for transition in value.transitions() {
+            add_transitions.push(FlowTransitionAddReq::from(transition));
+        }
+        let states = value
+            .states()
+            .into_iter()
+            .map(|state| FlowModelVersionBindState {
+                exist_state: Some(FlowModelBindStateReq {
+                    state_id: state.id.clone(),
+                    ext: state.ext,
+                }),
+                new_state: None,
+                add_transitions: Some(add_transitions.clone().into_iter().filter(|tran| tran.from_flow_state_id == state.id).collect_vec()),
+                modify_transitions: None,
+                delete_transitions: None,
+                is_init: value.init_state_id == state.id,
+            })
+            .collect_vec();
         Self {
             name: value.name.as_str().into(),
             icon: Some(value.icon.clone()),
             info: Some(value.info.clone()),
-            init_state_id: value.init_state_id,
+            kind: value.kind,
+            rel_transition_ids: None,
             rel_template_ids: Some(value.rel_template_ids.clone()),
-            transitions: if transitions.is_empty() { None } else { Some(transitions) },
-            states: if states.is_empty() { None } else { Some(states) },
+            add_version: Some(FlowModelVersionAddReq {
+                name: value.name.as_str().into(),
+                rel_model_id: None,
+                bind_states: Some(states),
+                status: FlowModelVesionState::Enabled,
+                scope_level: Some(value.scope_level.clone()),
+                disabled: Some(value.disabled),
+            }),
+            current_version_id: None,
             template: value.template,
             rel_model_id: None,
             tag: Some(value.tag.clone()),
@@ -67,6 +94,18 @@ impl From<FlowModelDetailResp> for FlowModelAddReq {
             disabled: Some(value.disabled),
         }
     }
+}
+
+/// 工作流模型类型
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, EnumIter, sea_orm::DeriveActiveEnum)]
+#[sea_orm(rs_type = "String", db_type = "String(StringLen::N(255))")]
+pub enum FlowModelKind {
+    #[sea_orm(string_value = "as_template")]
+    AsTemplate,
+    #[sea_orm(string_value = "as_model")]
+    AsModel,
+    #[sea_orm(string_value = "as_template_and_as_model")]
+    AsTemplateAndAsModel,
 }
 
 /// 修改请求
@@ -78,22 +117,12 @@ pub struct FlowModelModifyReq {
     pub icon: Option<String>,
     #[oai(validator(max_length = "2000"))]
     pub info: Option<String>,
-    /// 初始化状态ID
-    pub init_state_id: Option<String>,
     /// 是否作为模板使用
     pub template: Option<bool>,
-    /// 添加动作
-    pub add_transitions: Option<Vec<FlowTransitionAddReq>>,
-    /// 修改动作
-    pub modify_transitions: Option<Vec<FlowTransitionModifyReq>>,
-    /// 删除动作
-    pub delete_transitions: Option<Vec<String>>,
-    /// 绑定状态
-    pub bind_states: Option<Vec<FlowModelBindStateReq>>,
-    /// 解绑状态
-    pub unbind_states: Option<Vec<String>>,
-    /// 修改状态
-    pub modify_states: Option<Vec<FlowStateRelModelModifyReq>>,
+    /// 当前版本ID
+    pub current_version_id: Option<String>,
+    /// 修改版本
+    pub modify_version: Option<FlowModelVersionModifyReq>,
     /// 标签
     pub tag: Option<String>,
     /// 关联模板ID（目前可能是页面模板ID，或者是项目模板ID）
@@ -112,9 +141,8 @@ pub struct FlowModelSummaryResp {
     pub name: String,
     pub icon: String,
     pub info: String,
-    /// 初始化状态ID
     pub init_state_id: String,
-
+    pub current_version_id: String,
     pub owner: String,
     pub own_paths: String,
     pub create_time: DateTime<Utc>,
@@ -132,10 +160,12 @@ pub struct FlowModelDetailResp {
     pub name: String,
     pub icon: String,
     pub info: String,
-    /// 初始化状态ID
-    pub init_state_id: String,
+    pub kind: FlowModelKind,
     /// 是否作为模板使用
     pub template: bool,
+
+    pub init_state_id: String,
+    pub current_version_id: String,
     /// 关联父级模型ID
     pub rel_model_id: String,
     /// 关联模板ID（目前可能是页面模板ID，或者是项目模板ID）
@@ -166,7 +196,7 @@ impl FlowModelDetailResp {
 
     pub fn states(&self) -> Vec<FlowStateAggResp> {
         match &self.states {
-            Some(states) => TardisFuns::json.json_to_obj(states.clone()).unwrap(),
+            Some(states) => TardisFuns::json.json_to_obj(states.clone()).unwrap_or_default(),
             None => vec![],
         }
     }
@@ -181,6 +211,7 @@ pub struct FlowModelFilterReq {
     /// 标签集合
     pub tags: Option<Vec<String>>,
 
+    pub kinds: Option<Vec<FlowModelKind>>,
     /// 是否作为模板使用
     pub template: Option<bool>,
     pub own_paths: Option<Vec<String>>,
@@ -212,12 +243,11 @@ pub struct FlowModelAggResp {
     pub name: String,
     pub icon: String,
     pub info: String,
-    /// 初始化状态ID
-    pub init_state_id: String,
     /// 是否作为模板使用
     pub template: bool,
     /// 关联父级模型ID
     pub rel_model_id: String,
+    pub init_state_id: String,
     /// 关联模板ID（目前可能是页面模板ID，或者是项目模板ID）
     pub rel_template_ids: Vec<String>,
     /// 绑定的状态
@@ -329,6 +359,7 @@ pub enum FlowModelAssociativeOperationKind {
     #[default]
     Reference,
     Copy,
+    ReferenceOrCopy,
 }
 
 /// 创建或引用模型请求

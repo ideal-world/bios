@@ -91,7 +91,7 @@ impl FlowLogClient {
         let tag: String = tag.into();
         let own_paths = if ctx.own_paths.len() < 2 { None } else { Some(ctx.own_paths.clone()) };
         let owner = if ctx.owner.len() < 2 { None } else { Some(ctx.owner.clone()) };
-        let owner_name = IamClient::new("", funs, &ctx, funs.conf::<FlowConfig>().invoke.module_urls.get("iam").expect("missing iam base url"))
+        let owner_name = IamClient::new("", funs, ctx, funs.conf::<FlowConfig>().invoke.module_urls.get("iam").expect("missing iam base url"))
             .get_account(&ctx.owner, &ctx.own_paths)
             .await?
             .owner_name;
@@ -110,7 +110,7 @@ impl FlowLogClient {
             own_paths,
             msg: None,
             owner_name,
-            push: push,
+            push,
         };
         SpiLogClient::add(req, funs, ctx).await?;
         Ok(())

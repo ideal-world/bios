@@ -88,7 +88,7 @@ impl FlowInstServ {
         let flow_inst: flow_inst::ActiveModel = flow_inst::ActiveModel {
             id: Set(inst_id.clone()),
             tag: Set(Some(flow_model.tag.clone())),
-            rel_flow_model_id: Set(flow_model_id.to_string()),
+            rel_flow_version_id: Set(flow_model_id.to_string()),
             rel_business_obj_id: Set(start_req.rel_business_obj_id.to_string()),
 
             current_state_id: Set(current_state_id),
@@ -132,7 +132,7 @@ impl FlowInstServ {
                 let id = TardisFuns::field.nanoid();
                 let flow_inst: flow_inst::ActiveModel = flow_inst::ActiveModel {
                     id: Set(id.clone()),
-                    rel_flow_model_id: Set(flow_model_id.to_string()),
+                    rel_flow_version_id: Set(flow_model_id.to_string()),
                     rel_business_obj_id: Set(rel_business_obj.rel_business_obj_id.clone().unwrap_or_default()),
 
                     current_state_id: Set(current_state_id),
@@ -160,7 +160,7 @@ impl FlowInstServ {
         query
             .columns([
                 (flow_inst::Entity, flow_inst::Column::Id),
-                (flow_inst::Entity, flow_inst::Column::RelFlowModelId),
+                (flow_inst::Entity, flow_inst::Column::RelFlowVersionId),
                 (flow_inst::Entity, flow_inst::Column::RelBusinessObjId),
                 (flow_inst::Entity, flow_inst::Column::CreateVars),
                 (flow_inst::Entity, flow_inst::Column::CurrentStateId),
@@ -177,11 +177,11 @@ impl FlowInstServ {
             .from(flow_inst::Entity)
             .left_join(
                 RBUM_ITEM_TABLE.clone(),
-                Expr::col((RBUM_ITEM_TABLE.clone(), ID_FIELD.clone())).equals((flow_inst::Entity, flow_inst::Column::RelFlowModelId)),
+                Expr::col((RBUM_ITEM_TABLE.clone(), ID_FIELD.clone())).equals((flow_inst::Entity, flow_inst::Column::RelFlowVersionId)),
             )
             .left_join(
                 flow_model::Entity,
-                Expr::col((flow_model::Entity, flow_model::Column::Id)).equals((flow_inst::Entity, flow_inst::Column::RelFlowModelId)),
+                Expr::col((flow_model::Entity, flow_model::Column::Id)).equals((flow_inst::Entity, flow_inst::Column::RelFlowVersionId)),
             );
         if filter.with_sub.unwrap_or(false) {
             query.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::OwnPaths)).like(format!("{}%", ctx.own_paths)));
@@ -189,7 +189,7 @@ impl FlowInstServ {
             query.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::OwnPaths)).eq(ctx.own_paths.as_str()));
         }
         if let Some(flow_model_id) = &filter.flow_model_id {
-            query.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::RelFlowModelId)).eq(flow_model_id));
+            query.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::RelFlowVersionId)).eq(flow_model_id));
         }
         if let Some(tag) = &filter.tag {
             query.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::Tag)).eq(tag));
@@ -272,7 +272,7 @@ impl FlowInstServ {
         #[derive(sea_orm::FromQueryResult)]
         pub struct FlowInstDetailResult {
             pub id: String,
-            pub rel_flow_model_id: String,
+            pub rel_flow_version_id: String,
             pub rel_flow_model_name: String,
 
             pub current_state_id: String,
@@ -306,7 +306,7 @@ impl FlowInstServ {
         query
             .columns([
                 (flow_inst::Entity, flow_inst::Column::Id),
-                (flow_inst::Entity, flow_inst::Column::RelFlowModelId),
+                (flow_inst::Entity, flow_inst::Column::RelFlowVersionId),
                 (flow_inst::Entity, flow_inst::Column::RelBusinessObjId),
                 (flow_inst::Entity, flow_inst::Column::CurrentStateId),
                 (flow_inst::Entity, flow_inst::Column::CurrentVars),
@@ -346,7 +346,7 @@ impl FlowInstServ {
                 RBUM_ITEM_TABLE.clone(),
                 rel_model_table.clone(),
                 Cond::all()
-                    .add(Expr::col((rel_model_table.clone(), ID_FIELD.clone())).equals((flow_inst::Entity, flow_inst::Column::RelFlowModelId)))
+                    .add(Expr::col((rel_model_table.clone(), ID_FIELD.clone())).equals((flow_inst::Entity, flow_inst::Column::RelFlowVersionId)))
                     .add(Expr::col((rel_model_table.clone(), REL_KIND_ID_FIELD.clone())).eq(FlowModelServ::get_rbum_kind_id().unwrap()))
                     .add(Expr::col((rel_model_table.clone(), REL_DOMAIN_ID_FIELD.clone())).eq(FlowModelServ::get_rbum_domain_id().unwrap())),
             )
@@ -356,7 +356,7 @@ impl FlowInstServ {
                 rbum_rel_table.clone(),
                 Cond::all()
                     .add(Expr::col((rbum_rel_table.clone(), Alias::new("to_rbum_item_id"))).equals((flow_inst::Entity, flow_inst::Column::CurrentStateId)))
-                    .add(Expr::col((rbum_rel_table.clone(), Alias::new("from_rbum_id"))).equals((flow_inst::Entity, flow_inst::Column::RelFlowModelId)))
+                    .add(Expr::col((rbum_rel_table.clone(), Alias::new("from_rbum_id"))).equals((flow_inst::Entity, flow_inst::Column::RelFlowVersionId)))
                     .add(Expr::col((rbum_rel_table.clone(), Alias::new("tag"))).eq("FlowModelState".to_string())),
             )
             .and_where(Expr::col((flow_inst::Entity, flow_inst::Column::Id)).is_in(flow_inst_ids))
@@ -367,7 +367,7 @@ impl FlowInstServ {
             .into_iter()
             .map(|inst| FlowInstDetailResp {
                 id: inst.id,
-                rel_flow_model_id: inst.rel_flow_model_id,
+                rel_flow_version_id: inst.rel_flow_version_id,
                 rel_flow_model_name: inst.rel_flow_model_name,
                 create_vars: inst.create_vars.map(|create_vars| TardisFuns::json.json_to_obj(create_vars).unwrap()),
                 create_ctx: inst.create_ctx,
@@ -452,7 +452,7 @@ impl FlowInstServ {
         let flow_models = FlowModelServ::find_detail_items(
             &FlowModelFilterReq {
                 basic: RbumBasicFilterReq {
-                    ids: Some(flow_insts.iter().map(|inst| inst.rel_flow_model_id.to_string()).collect::<HashSet<_>>().into_iter().collect()),
+                    ids: Some(flow_insts.iter().map(|inst| inst.rel_flow_version_id.to_string()).collect::<HashSet<_>>().into_iter().collect()),
                     with_sub_own_paths: true,
                     own_paths: Some("".to_string()),
                     ..Default::default()
@@ -471,7 +471,7 @@ impl FlowInstServ {
                 .iter()
                 .map(|flow_inst| async {
                     let req = find_req.iter().find(|req| req.flow_inst_id == flow_inst.id).unwrap();
-                    let flow_model = flow_models.iter().find(|model| model.id == flow_inst.rel_flow_model_id).unwrap();
+                    let flow_model = flow_models.iter().find(|model| model.id == flow_inst.rel_flow_version_id).unwrap();
                     Self::do_find_next_transitions(flow_inst, flow_model, None, &req.vars, false, funs, ctx).await.unwrap()
                 })
                 .collect_vec(),
@@ -488,7 +488,7 @@ impl FlowInstServ {
     ) -> TardisResult<Vec<FlowInstFindNextTransitionResp>> {
         let flow_inst = Self::get(flow_inst_id, funs, ctx).await?;
         let flow_model = FlowModelServ::get_item(
-            &flow_inst.rel_flow_model_id,
+            &flow_inst.rel_flow_version_id,
             &FlowModelFilterReq {
                 basic: RbumBasicFilterReq {
                     with_sub_own_paths: true,
@@ -508,7 +508,7 @@ impl FlowInstServ {
     pub async fn check_transfer_vars(flow_inst_id: &str, transfer_req: &mut FlowInstTransferReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let flow_inst_detail: FlowInstDetailResp = Self::get(flow_inst_id, funs, ctx).await?;
         let flow_model = FlowModelServ::get_item(
-            &flow_inst_detail.rel_flow_model_id,
+            &flow_inst_detail.rel_flow_version_id,
             &FlowModelFilterReq {
                 basic: RbumBasicFilterReq {
                     with_sub_own_paths: true,
@@ -588,7 +588,7 @@ impl FlowInstServ {
         };
         let flow_inst_detail = Self::get(flow_inst_id, funs, ctx).await?;
         let flow_model = FlowModelServ::get_item(
-            &flow_inst_detail.rel_flow_model_id,
+            &flow_inst_detail.rel_flow_version_id,
             &FlowModelFilterReq {
                 basic: RbumBasicFilterReq {
                     with_sub_own_paths: true,
@@ -624,9 +624,6 @@ impl FlowInstServ {
         }
         let model_transition = flow_model.transitions();
         let next_transition_detail = model_transition.iter().find(|trans| trans.id == transfer_req.flow_transition_id).unwrap().to_owned();
-        // if FlowModelServ::check_post_action_ring(&flow_model, funs, ctx).await? {
-        //     return Err(funs.err().not_found("flow_inst", "transfer", "this post action exist endless loop", "500-flow-transition-endless-loop"));
-        // }
 
         let next_flow_transition = next_flow_transition.unwrap();
         let prev_flow_state = FlowStateServ::get_item(
@@ -763,7 +760,7 @@ impl FlowInstServ {
 
         let flow_inst_detail = Self::get(flow_inst_id, funs, ctx).await?;
         let flow_model = FlowModelServ::get_item(
-            &flow_inst_detail.rel_flow_model_id,
+            &flow_inst_detail.rel_flow_version_id,
             &FlowModelFilterReq {
                 basic: RbumBasicFilterReq {
                     with_sub_own_paths: true,
@@ -810,7 +807,7 @@ impl FlowInstServ {
             prev_flow_state_name: prev_flow_state.name,
             prev_flow_state_color: prev_flow_state.color,
             new_flow_state_ext: TardisFuns::json.str_to_obj::<FlowStateRelModelExt>(
-                &FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelState, &flow_inst_detail.rel_flow_model_id, None, None, funs, ctx)
+                &FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelState, &flow_inst_detail.rel_flow_version_id, None, None, funs, ctx)
                     .await?
                     .into_iter()
                     .find(|rel| next_flow_state.id == rel.rel_id)
@@ -1020,7 +1017,7 @@ impl FlowInstServ {
                     .column((flow_inst::Entity, flow_inst::Column::Id))
                     .from(flow_inst::Entity)
                     .and_where(Expr::col((flow_inst::Entity, flow_inst::Column::CurrentStateId)).eq(flow_state_id))
-                    .and_where(Expr::col((flow_inst::Entity, flow_inst::Column::RelFlowModelId)).eq(flow_model_id))
+                    .and_where(Expr::col((flow_inst::Entity, flow_inst::Column::RelFlowVersionId)).eq(flow_model_id))
                     .and_where(
                         Expr::col((flow_inst::Entity, flow_inst::Column::FinishAbort)).ne(true).or(Expr::col((flow_inst::Entity, flow_inst::Column::FinishAbort)).is_null()),
                     ),
@@ -1070,7 +1067,7 @@ impl FlowInstServ {
             .next()
             .ok_or_else(|| funs.err().not_found("flow_inst", "get_new_vars", "illegal response", "404-flow-inst-not-found"))?;
         let flow_model = FlowModelServ::get_item(
-            &flow_inst_detail.rel_flow_model_id,
+            &flow_inst_detail.rel_flow_version_id,
             &FlowModelFilterReq {
                 basic: RbumBasicFilterReq {
                     with_sub_own_paths: true,
@@ -1097,7 +1094,7 @@ impl FlowInstServ {
     pub async fn trigger_front_action(funs: &TardisFunsInst) -> TardisResult<()> {
         #[derive(sea_orm::FromQueryResult)]
         pub struct FloTransitionsResult {
-            rel_flow_model_id: String,
+            rel_flow_version_id: String,
             action_by_front_changes: Value,
             from_flow_state_id: String,
         }
@@ -1113,7 +1110,7 @@ impl FlowInstServ {
             .find_dtos::<FloTransitionsResult>(
                 Query::select()
                     .columns([
-                        flow_transition::Column::RelFlowModelId,
+                        flow_transition::Column::RelFlowModelVersionId,
                         flow_transition::Column::ActionByFrontChanges,
                         flow_transition::Column::FromFlowStateId,
                     ])
@@ -1131,7 +1128,7 @@ impl FlowInstServ {
                     Query::select()
                         .columns([flow_inst::Column::Id, flow_inst::Column::OwnPaths])
                         .from(flow_inst::Entity)
-                        .and_where(Expr::col(flow_inst::Column::RelFlowModelId).eq(&flow_transition.rel_flow_model_id))
+                        .and_where(Expr::col(flow_inst::Column::RelFlowVersionId).eq(&flow_transition.rel_flow_version_id))
                         .and_where(Expr::col(flow_inst::Column::CurrentStateId).eq(&flow_transition.from_flow_state_id)),
                 )
                 .await?;
@@ -1205,7 +1202,7 @@ impl FlowInstServ {
     async fn unsafe_modify_rel_model_id(tag: &str, modify_model_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let mut update_statement = Query::update();
         update_statement.table(flow_inst::Entity);
-        update_statement.value(flow_inst::Column::RelFlowModelId, modify_model_id);
+        update_statement.value(flow_inst::Column::RelFlowVersionId, modify_model_id);
         update_statement.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::Tag)).eq(tag));
         update_statement.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::OwnPaths)).eq(ctx.own_paths.as_str()));
 

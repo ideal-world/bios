@@ -3,7 +3,6 @@ use std::collections::HashMap;
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumRelFilterReq};
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use bios_basic::rbum::serv::rbum_rel_serv::RbumRelServ;
-use itertools::Itertools;
 use tardis::basic::dto::TardisContext;
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem::Request;
@@ -12,12 +11,7 @@ use tardis::web::poem_openapi::param::{Path, Query};
 use tardis::web::poem_openapi::payload::Json;
 use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 
-use crate::dto::flow_model_dto::{
-    FlowModelAddCustomModelReq, FlowModelAddCustomModelResp, FlowModelAddReq, FlowModelAggResp, FlowModelBindStateReq, FlowModelFilterReq, FlowModelFindRelStateResp,
-    FlowModelModifyReq, FlowModelSortStatesReq, FlowModelSummaryResp, FlowModelUnbindStateReq,
-};
-use crate::dto::flow_state_dto::FlowStateRelModelModifyReq;
-use crate::dto::flow_transition_dto::{FlowTransitionModifyReq, FlowTransitionSortStatesReq};
+use crate::dto::flow_model_dto::{FlowModelAddReq, FlowModelAggResp, FlowModelFilterReq, FlowModelFindRelStateResp, FlowModelModifyReq, FlowModelSummaryResp};
 use crate::flow_constants;
 use crate::serv::flow_model_serv::FlowModelServ;
 use crate::serv::flow_rel_serv::{FlowRelKind, FlowRelServ};
@@ -168,32 +162,6 @@ impl FlowCcModelApi {
 
     /// Find the specified models, or create it if it doesn't exist.
     ///
-    /// 查找关联的model，如果不存在则创建。创建规则遵循add_custom_model接口逻辑。
-    ///
-    /// # Parameters
-    /// - `tag_ids` - list of tag_id
-    /// - `temp_id` - associated template_id
-    /// - `is_shared` - whether the associated template is shared
-    #[oai(path = "/find_or_add_models", method = "put")]
-    async fn find_or_add_models(
-        &self,
-        tag_ids: Query<String>,
-        temp_id: Query<Option<String>>,
-        is_shared: Query<Option<bool>>,
-        ctx: TardisContextExtractor,
-        _request: &Request,
-    ) -> TardisApiResult<HashMap<String, FlowModelSummaryResp>> {
-        let mut funs = flow_constants::get_tardis_inst();
-        funs.begin().await?;
-        let tag_ids = tag_ids.split(',').map(|tag_id| tag_id.to_string()).collect_vec();
-        let result = FlowModelServ::find_or_add_models(tag_ids, temp_id.0, is_shared.unwrap_or(false), &funs, &ctx.0).await?;
-        funs.commit().await?;
-        ctx.0.execute_task().await?;
-        TardisResp::ok(result)
-    }
-
-    /// Find the specified models, or create it if it doesn't exist.
-    ///
     /// 查找关联的model。
     ///
     /// # Parameters
@@ -235,133 +203,116 @@ impl FlowCcModelApi {
     /// Bind State By Model Id [Deprecated]
     ///
     /// 绑定状态 [已废弃]
-    #[oai(path = "/:flow_model_id/bind_state", method = "post")]
-    async fn bind_state(&self, flow_model_id: Path<String>, req: Json<FlowModelBindStateReq>, ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<Void> {
-        let mut funs = flow_constants::get_tardis_inst();
-        funs.begin().await?;
-        FlowModelServ::modify_model(
-            &flow_model_id.0,
-            &mut FlowModelModifyReq {
-                bind_states: Some(vec![req.0]),
-                ..Default::default()
-            },
-            &funs,
-            &ctx.0,
-        )
-        .await?;
-        funs.commit().await?;
-        ctx.0.execute_task().await?;
-        TardisResp::ok(Void {})
-    }
+    // #[oai(path = "/:flow_model_id/bind_state", method = "post")]
+    // async fn bind_state(&self, flow_model_id: Path<String>, req: Json<FlowModelBindStateReq>, ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<Void> {
+    //     let mut funs = flow_constants::get_tardis_inst();
+    //     funs.begin().await?;
+    //     FlowModelServ::modify_model(
+    //         &flow_model_id.0,
+    //         &mut FlowModelModifyReq {
+    //             bind_states: Some(vec![req.0]),
+    //             ..Default::default()
+    //         },
+    //         &funs,
+    //         &ctx.0,
+    //     )
+    //     .await?;
+    //     funs.commit().await?;
+    //     ctx.0.execute_task().await?;
+    //     TardisResp::ok(Void {})
+    // }
 
     /// Unbind State By Model Id [Deprecated]
     ///
     /// 解绑状态 [已废弃]
-    #[oai(path = "/:flow_model_id/unbind_state", method = "post")]
-    async fn unbind_state(&self, flow_model_id: Path<String>, req: Json<FlowModelUnbindStateReq>, ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<Void> {
-        let mut funs = flow_constants::get_tardis_inst();
-        funs.begin().await?;
-        FlowModelServ::modify_model(
-            &flow_model_id.0,
-            &mut FlowModelModifyReq {
-                unbind_states: Some(vec![req.state_id.clone()]),
-                ..Default::default()
-            },
-            &funs,
-            &ctx.0,
-        )
-        .await?;
-        funs.commit().await?;
-        ctx.0.execute_task().await?;
-        TardisResp::ok(Void {})
-    }
+    // #[oai(path = "/:flow_model_id/unbind_state", method = "post")]
+    // async fn unbind_state(&self, flow_model_id: Path<String>, req: Json<FlowModelUnbindStateReq>, ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<Void> {
+    //     let mut funs = flow_constants::get_tardis_inst();
+    //     funs.begin().await?;
+    //     FlowModelServ::modify_model(
+    //         &flow_model_id.0,
+    //         &mut FlowModelModifyReq {
+    //             unbind_states: Some(vec![req.state_id.clone()]),
+    //             ..Default::default()
+    //         },
+    //         &funs,
+    //         &ctx.0,
+    //     )
+    //     .await?;
+    //     funs.commit().await?;
+    //     ctx.0.execute_task().await?;
+    //     TardisResp::ok(Void {})
+    // }
 
     /// Resort states [Deprecated]
     ///
     /// 状态重新排序 [已废弃]
-    #[oai(path = "/:flow_model_id/resort_state", method = "post")]
-    async fn resort_state(&self, flow_model_id: Path<String>, req: Json<FlowModelSortStatesReq>, ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<Void> {
-        let mut funs = flow_constants::get_tardis_inst();
-        funs.begin().await?;
-        FlowModelServ::modify_model(
-            &flow_model_id.0,
-            &mut FlowModelModifyReq {
-                modify_states: Some(
-                    req.0
-                        .sort_states
-                        .into_iter()
-                        .map(|state| FlowStateRelModelModifyReq {
-                            id: state.state_id,
-                            sort: Some(state.sort),
-                            show_btns: None,
-                        })
-                        .collect_vec(),
-                ),
-                ..Default::default()
-            },
-            &funs,
-            &ctx.0,
-        )
-        .await?;
-        funs.commit().await?;
-        ctx.0.execute_task().await?;
-        TardisResp::ok(Void {})
-    }
+    // #[oai(path = "/:flow_model_id/resort_state", method = "post")]
+    // async fn resort_state(&self, flow_model_id: Path<String>, req: Json<FlowModelSortStatesReq>, ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<Void> {
+    //     let mut funs = flow_constants::get_tardis_inst();
+    //     funs.begin().await?;
+    //     FlowModelServ::modify_model(
+    //         &flow_model_id.0,
+    //         &mut FlowModelModifyReq {
+    //             modify_states: Some(
+    //                 req.0
+    //                     .sort_states
+    //                     .into_iter()
+    //                     .map(|state| FlowStateRelModelModifyReq {
+    //                         id: state.state_id,
+    //                         sort: Some(state.sort),
+    //                         show_btns: None,
+    //                     })
+    //                     .collect_vec(),
+    //             ),
+    //             ..Default::default()
+    //         },
+    //         &funs,
+    //         &ctx.0,
+    //     )
+    //     .await?;
+    //     funs.commit().await?;
+    //     ctx.0.execute_task().await?;
+    //     TardisResp::ok(Void {})
+    // }
 
     /// Resort transitions [Deprecated]
     ///
     /// 动作重新排序 [已废弃]
-    #[oai(path = "/:flow_model_id/resort_transition", method = "post")]
-    async fn resort_transition(
-        &self,
-        flow_model_id: Path<String>,
-        req: Json<FlowTransitionSortStatesReq>,
-        ctx: TardisContextExtractor,
-        _request: &Request,
-    ) -> TardisApiResult<Void> {
-        let mut funs = flow_constants::get_tardis_inst();
-        funs.begin().await?;
-        let modify_trans = req
-            .0
-            .sort_states
-            .into_iter()
-            .map(|sort_req| FlowTransitionModifyReq {
-                id: sort_req.id.clone().into(),
-                sort: Some(sort_req.sort),
-                ..Default::default()
-            })
-            .collect_vec();
-        FlowModelServ::modify_model(
-            &flow_model_id.0,
-            &mut FlowModelModifyReq {
-                modify_transitions: Some(modify_trans),
-                ..Default::default()
-            },
-            &funs,
-            &ctx.0,
-        )
-        .await?;
-        funs.commit().await?;
-        ctx.0.execute_task().await?;
-        TardisResp::ok(Void {})
-    }
-
-    /// copy parent model to current own_paths
-    ///
-    /// 复制父级模型到当前 own_paths
-    /// 实际创建规则：按照 tags 创建模型，若传入proj_template_id，则优先寻找对应的父级模型，否则则获取默认模板模型生成对应的自定义模型。
-    #[oai(path = "/add_custom_model", method = "post")]
-    async fn add_custom_model(&self, req: Json<FlowModelAddCustomModelReq>, ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<Vec<FlowModelAddCustomModelResp>> {
-        let mut funs = flow_constants::get_tardis_inst();
-        funs.begin().await?;
-        let mut result = vec![];
-        for item in &req.0.bind_model_objs {
-            let model_id = FlowModelServ::add_custom_model(&item.tag, req.0.proj_template_id.clone(), req.0.rel_template_id.clone(), &funs, &ctx.0).await.ok();
-            result.push(FlowModelAddCustomModelResp { tag: item.tag.clone(), model_id });
-        }
-        funs.commit().await?;
-        TardisResp::ok(result)
-    }
+    // #[oai(path = "/:flow_model_id/resort_transition", method = "post")]
+    // async fn resort_transition(
+    //     &self,
+    //     flow_model_id: Path<String>,
+    //     req: Json<FlowTransitionSortStatesReq>,
+    //     ctx: TardisContextExtractor,
+    //     _request: &Request,
+    // ) -> TardisApiResult<Void> {
+    //     let mut funs = flow_constants::get_tardis_inst();
+    //     funs.begin().await?;
+    //     let modify_trans = req
+    //         .0
+    //         .sort_states
+    //         .into_iter()
+    //         .map(|sort_req| FlowTransitionModifyReq {
+    //             id: sort_req.id.clone().into(),
+    //             sort: Some(sort_req.sort),
+    //             ..Default::default()
+    //         })
+    //         .collect_vec();
+    //     FlowModelServ::modify_model(
+    //         &flow_model_id.0,
+    //         &mut FlowModelModifyReq {
+    //             modify_transitions: Some(modify_trans),
+    //             ..Default::default()
+    //         },
+    //         &funs,
+    //         &ctx.0,
+    //     )
+    //     .await?;
+    //     funs.commit().await?;
+    //     ctx.0.execute_task().await?;
+    //     TardisResp::ok(Void {})
+    // }
 
     /// find rel states by model_id
     ///
@@ -383,24 +334,24 @@ impl FlowCcModelApi {
     /// modify related state [Deprecated]
     ///
     /// 编辑关联的状态 [已废弃]
-    #[oai(path = "/:flow_model_id/modify_rel_state", method = "patch")]
-    async fn modify_rel_state(&self, flow_model_id: Path<String>, req: Json<FlowStateRelModelModifyReq>, ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<Void> {
-        let mut funs = flow_constants::get_tardis_inst();
-        funs.begin().await?;
-        FlowModelServ::modify_model(
-            &flow_model_id.0,
-            &mut FlowModelModifyReq {
-                modify_states: Some(vec![req.0]),
-                ..Default::default()
-            },
-            &funs,
-            &ctx.0,
-        )
-        .await?;
-        funs.commit().await?;
-        ctx.0.execute_task().await?;
-        TardisResp::ok(Void {})
-    }
+    // #[oai(path = "/:flow_model_id/modify_rel_state", method = "patch")]
+    // async fn modify_rel_state(&self, flow_model_id: Path<String>, req: Json<FlowStateRelModelModifyReq>, ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<Void> {
+    //     let mut funs = flow_constants::get_tardis_inst();
+    //     funs.begin().await?;
+    //     FlowModelServ::modify_model(
+    //         &flow_model_id.0,
+    //         &mut FlowModelModifyReq {
+    //             modify_states: Some(vec![req.0]),
+    //             ..Default::default()
+    //         },
+    //         &funs,
+    //         &ctx.0,
+    //     )
+    //     .await?;
+    //     funs.commit().await?;
+    //     ctx.0.execute_task().await?;
+    //     TardisResp::ok(Void {})
+    // }
 
     /// batch add rels with template and app
     ///

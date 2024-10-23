@@ -6,14 +6,14 @@ use serde::{Deserialize, Serialize};
 use tardis::{
     basic::field::TrimString,
     chrono::{DateTime, Utc},
-    db::sea_orm::{self, EnumIter},
+    db::sea_orm::{self, prelude::*, EnumIter},
     serde_json::Value,
     web::poem_openapi,
 };
 
 use super::flow_transition_dto::FlowTransitionDetailResp;
 
-#[derive(Serialize, Deserialize, Default, Debug, poem_openapi::Object)]
+#[derive(Clone, Serialize, Deserialize, Default, Debug, poem_openapi::Object)]
 pub struct FlowStateAddReq {
     #[oai(validator(min_length = "2", max_length = "200"))]
     pub id_prefix: Option<TrimString>,
@@ -87,7 +87,7 @@ pub struct FlowStateSummaryResp {
     pub disabled: bool,
 }
 
-#[derive(Serialize, Deserialize, Debug, poem_openapi::Object, sea_orm::FromQueryResult)]
+#[derive(Clone, Serialize, Deserialize, Debug, poem_openapi::Object, sea_orm::FromQueryResult)]
 pub struct FlowStateDetailResp {
     pub id: String,
     pub name: String,
@@ -118,7 +118,7 @@ pub struct FlowStateDetailResp {
 /// 状态类型
 // #[sea_orm(rs_type = "String", db_type = "String(Some(255))")]
 #[derive(Clone, Default, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, EnumIter, sea_orm::DeriveActiveEnum)]
-#[sea_orm(rs_type = "String", db_type = "Enum", enum_name = "FlowSysStateKind")]
+#[sea_orm(rs_type = "String", db_type = "String(StringLen::N(255))")]
 pub enum FlowSysStateKind {
     #[default]
     #[sea_orm(string_value = "start")]
@@ -130,7 +130,7 @@ pub enum FlowSysStateKind {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, EnumIter, sea_orm::DeriveActiveEnum)]
-#[sea_orm(rs_type = "String", db_type = "Enum", enum_name = "FlowStateKind")]
+#[sea_orm(rs_type = "String", db_type = "String(StringLen::N(255))")]
 pub enum FlowStateKind {
     #[sea_orm(string_value = "simple")]
     Simple,
@@ -154,7 +154,7 @@ pub struct FlowStateFilterReq {
     pub tag: Option<String>,
     pub state_kind: Option<FlowStateKind>,
     pub template: Option<bool>,
-    pub flow_model_ids: Option<Vec<String>>,
+    pub flow_version_ids: Option<Vec<String>>,
 }
 
 impl RbumItemFilterFetcher for FlowStateFilterReq {
@@ -208,5 +208,7 @@ pub struct FlowStateAggResp {
     pub name: String,
     pub is_init: bool,
     pub ext: FlowStateRelModelExt,
+    pub state_kind: FlowStateKind,
+    pub kind_conf: Value,
     pub transitions: Vec<FlowTransitionDetailResp>,
 }

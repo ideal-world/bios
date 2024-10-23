@@ -3,7 +3,9 @@ use std::env;
 
 use tardis::basic::result::TardisResult;
 use tardis::test::test_container::TardisTestContainer;
-use tardis::testcontainers::ContainerAsync;
+use tardis::testcontainers::core::Mount;
+use tardis::testcontainers::runners::AsyncRunner;
+use tardis::testcontainers::{ContainerAsync, ImageExt};
 use tardis::TardisFuns;
 use testcontainers_modules::postgres::Postgres;
 use testcontainers_modules::rabbitmq::RabbitMq;
@@ -16,7 +18,7 @@ pub struct LifeHold {
 }
 
 pub async fn init(sql_init_path: Option<String>) -> TardisResult<LifeHold> {
-    let reldb_container = TardisTestContainer::postgres_custom(sql_init_path.as_deref()).await?;
+    let reldb_container = postgres_custom(sql_init_path.as_deref()).await;
     let port = reldb_container.get_host_port_ipv4(5432).await?;
     let url = format!("postgres://postgres:123456@127.0.0.1:{port}/test");
     env::set_var("TARDIS_FW.DB.URL", url);
@@ -38,4 +40,25 @@ pub async fn init(sql_init_path: Option<String>) -> TardisResult<LifeHold> {
         redis: redis_container,
         rabbit: rabbit_container,
     })
+}
+
+async fn postgres_custom(init_script_path: Option<&str>) -> ContainerAsync<Postgres> {
+    if let Some(init_script_path) = init_script_path {
+        let path = env::current_dir()
+            .expect("[Tardis.Test_Container] Current path get error")
+            .join(std::path::Path::new(init_script_path))
+            .to_str()
+            .unwrap_or_else(|| panic!("[Tardis.Test_Container] Script Path [{}] get error", init_script_path))
+            .to_string();
+        Postgres::default()
+            .with_tag("latest")
+            .with_mount(Mount::volume_mount(path, "/docker-entrypoint-initdb.d/"))
+            .with_env_var("POSTGRES_PASSWORD", "123456")
+            .with_env_var("POSTGRES_DB", "test")
+            .start()
+            .await
+            .expect("postgres started")
+    } else {
+        Postgres::default().with_tag("latest").with_env_var("POSTGRES_PASSWORD", "123456").with_env_var("POSTGRES_DB", "test").start().await.expect("postgres started")
+    }
 }

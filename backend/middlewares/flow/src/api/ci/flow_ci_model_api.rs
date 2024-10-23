@@ -1,16 +1,15 @@
 use std::collections::HashMap;
 
 use crate::dto::flow_model_dto::{
-    FlowModelAddCustomModelReq, FlowModelAddCustomModelResp, FlowModelAggResp, FlowModelAssociativeOperationKind, FlowModelCopyOrReferenceCiReq, FlowModelExistRelByTemplateIdsReq,
-    FlowModelFilterReq, FlowModelFindRelStateResp,
+    FlowModelAggResp, FlowModelAssociativeOperationKind, FlowModelCopyOrReferenceCiReq, FlowModelExistRelByTemplateIdsReq, FlowModelFilterReq, FlowModelFindRelStateResp,
+    FlowModelKind,
 };
 use crate::flow_constants;
 use crate::serv::flow_inst_serv::FlowInstServ;
 use crate::serv::flow_model_serv::FlowModelServ;
 use crate::serv::flow_rel_serv::{FlowRelKind, FlowRelServ};
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumRelFilterReq};
-use bios_basic::rbum::helper::rbum_scope_helper::{self, check_without_owner_and_unsafe_fill_ctx};
-use bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind;
+use bios_basic::rbum::helper::rbum_scope_helper::check_without_owner_and_unsafe_fill_ctx;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use bios_basic::rbum::serv::rbum_rel_serv::RbumRelServ;
 use itertools::Itertools;
@@ -85,26 +84,26 @@ impl FlowCiModelApi {
     /// add custom model by template_id
     ///
     /// 添加自定义模型
-    #[oai(path = "/add_custom_model", method = "post")]
-    async fn add_custom_model(
-        &self,
-        req: Json<FlowModelAddCustomModelReq>,
-        mut ctx: TardisContextExtractor,
-        request: &Request,
-    ) -> TardisApiResult<Vec<FlowModelAddCustomModelResp>> {
-        let mut funs = flow_constants::get_tardis_inst();
-        check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
-        funs.begin().await?;
-        let proj_template_id = req.0.proj_template_id;
-        let mut result = vec![];
-        for item in req.0.bind_model_objs {
-            let model_id = FlowModelServ::add_custom_model(&item.tag, proj_template_id.clone(), None, &funs, &ctx.0).await.ok();
-            result.push(FlowModelAddCustomModelResp { tag: item.tag, model_id });
-        }
-        funs.commit().await?;
-        ctx.0.execute_task().await?;
-        TardisResp::ok(result)
-    }
+    // #[oai(path = "/add_custom_model", method = "post")]
+    // async fn add_custom_model(
+    //     &self,
+    //     req: Json<FlowModelAddCustomModelReq>,
+    //     mut ctx: TardisContextExtractor,
+    //     request: &Request,
+    // ) -> TardisApiResult<Vec<FlowModelAddCustomModelResp>> {
+    //     let mut funs = flow_constants::get_tardis_inst();
+    //     check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
+    //     funs.begin().await?;
+    //     let proj_template_id = req.0.proj_template_id;
+    //     let mut result = vec![];
+    //     for item in req.0.bind_model_objs {
+    //         let model_id = FlowModelServ::add_custom_model(&item.tag, proj_template_id.clone(), None, &funs, &ctx.0).await.ok();
+    //         result.push(FlowModelAddCustomModelResp { tag: item.tag, model_id });
+    //     }
+    //     funs.commit().await?;
+    //     ctx.0.execute_task().await?;
+    //     TardisResp::ok(result)
+    // }
 
     /// Creating or referencing models
     ///
@@ -135,18 +134,8 @@ impl FlowCiModelApi {
         .map(|rel| rel.rel_id)
         .collect_vec();
         let mut result = HashMap::new();
-        let mut mock_ctx = ctx.0.clone();
-        if rbum_scope_helper::get_scope_level_by_context(&ctx.0)? == RbumScopeLevelKind::L2 {
-            mock_ctx = match req.0.op {
-                FlowModelAssociativeOperationKind::Copy => ctx.0.clone(),
-                FlowModelAssociativeOperationKind::Reference => TardisContext {
-                    own_paths: rbum_scope_helper::get_path_item(RbumScopeLevelKind::L1.to_int(), &ctx.0.own_paths).unwrap_or_default(),
-                    ..ctx.0.clone()
-                },
-            };
-        }
         for rel_model_id in rel_model_ids {
-            let new_model = FlowModelServ::copy_or_reference_model(&rel_model_id, Some(ctx.0.own_paths.clone()), &req.0.op, Some(false), &funs, &mock_ctx).await?;
+            let new_model = FlowModelServ::copy_or_reference_model1(&rel_model_id, &req.0.op, FlowModelKind::AsModel, &funs, &ctx.0).await?;
             FlowInstServ::batch_update_when_switch_model(
                 new_model.rel_template_ids.first().cloned(),
                 &new_model.tag,
@@ -201,7 +190,14 @@ impl FlowCiModelApi {
         )
         .await?
         {
-            let added_model = FlowModelServ::copy_or_reference_model(&from_model.rel_model_id, None, &FlowModelAssociativeOperationKind::Copy, Some(true), &funs, &ctx.0).await?;
+            let added_model = FlowModelServ::copy_or_reference_model1(
+                &from_model.rel_model_id,
+                &FlowModelAssociativeOperationKind::ReferenceOrCopy,
+                FlowModelKind::AsTemplateAndAsModel,
+                &funs,
+                &ctx.0,
+            )
+            .await?;
             FlowRelServ::add_simple_rel(
                 &FlowRelKind::FlowModelTemplate,
                 &added_model.id,

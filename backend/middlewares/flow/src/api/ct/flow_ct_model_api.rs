@@ -13,7 +13,9 @@ use tardis::{
 };
 
 use crate::{
-    dto::flow_model_dto::{FlowModelAggResp, FlowModelAssociativeOperationKind, FlowModelCopyOrReferenceReq, FlowModelFilterReq, FlowModelFindRelNameByTemplateIdsReq},
+    dto::flow_model_dto::{
+        FlowModelAggResp, FlowModelAssociativeOperationKind, FlowModelCopyOrReferenceReq, FlowModelFilterReq, FlowModelFindRelNameByTemplateIdsReq, FlowModelKind,
+    },
     flow_constants,
     serv::{
         flow_inst_serv::FlowInstServ,
@@ -57,7 +59,7 @@ impl FlowCtModelApi {
             if orginal_model_id.clone().unwrap_or_default() == rel_model_id {
                 continue;
             }
-            let new_model = FlowModelServ::copy_or_reference_model(&rel_model_id, None, &req.0.op, Some(true), &funs, &ctx.0).await?;
+            let new_model = FlowModelServ::copy_or_reference_model1(&rel_model_id, &req.0.op, FlowModelKind::AsModel, &funs, &ctx.0).await?;
             if let Some(rel_template_id) = &req.0.rel_template_id {
                 FlowRelServ::add_simple_rel(
                     &FlowRelKind::FlowModelTemplate,
@@ -127,7 +129,14 @@ impl FlowCtModelApi {
         )
         .await?
         {
-            let new_model = FlowModelServ::copy_or_reference_model(&from_model.rel_model_id, None, &FlowModelAssociativeOperationKind::Copy, Some(true), &funs, &ctx.0).await?;
+            let new_model = FlowModelServ::copy_or_reference_model1(
+                &from_model.rel_model_id,
+                &FlowModelAssociativeOperationKind::ReferenceOrCopy,
+                FlowModelKind::AsTemplateAndAsModel,
+                &funs,
+                &ctx.0,
+            )
+            .await?;
             FlowRelServ::add_simple_rel(
                 &FlowRelKind::FlowModelTemplate,
                 &new_model.id,
