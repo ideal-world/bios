@@ -4,12 +4,12 @@ use http::Response;
 use jsonpath_rust::JsonPathInst;
 use serde::{Deserialize, Serialize};
 use spacegate_shell::{
+    ext_redis::redis::Script,
     kernel::{extension::EnterTime, SgRequest, SgResponse},
     plugin::{Inner, Plugin, PluginConfig},
     BoxError, SgRequestExt as _,
 };
 use tardis::{
-    cache::Script,
     log::{self, warn},
     serde_json::{self, Value},
     tokio,

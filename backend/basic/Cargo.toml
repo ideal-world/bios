@@ -15,19 +15,11 @@ name = "bios_basic"
 path = "src/lib.rs"
 
 [features]
-default = [
-    "tardis",
-    "tardis/crypto",
-    "tardis/web-server",
-    "tardis/web-client",
-    "tardis/reldb-postgres",
-    "tardis/cache",
-    "tardis/mq",
-]
+default = []
 # TODO remvoe
-with-mq = ["tardis/mq"]
-sdk = ["tardis", "tardis/web-client"]
-test = ["tardis/test"]
+with-mq = ["tardis/mq", "bios-sdk-invoke"]
+sdk = ["tardis/web-client"]
+test = ["tardis/test", "testcontainers-modules"]
 
 [dependencies]
 serde.workspace = true
@@ -36,14 +28,14 @@ async-recursion.workspace = true
 lazy_static.workspace = true
 itertools.workspace = true
 fancy-regex.workspace = true
-tardis = { workspace = true, optional = true }
+tardis = { workspace = true, features = ["crypto", "reldb-postgres", "cache", "web-server", "web-client"] }
 strum = { workspace = true }
-testcontainers-modules = { workspace = true, features = ["redis"] }
-bios-sdk-invoke = { path = "../../frontend/sdks/invoke", features = ["default"] }
+testcontainers-modules = { workspace = true, features = ["redis"], optional = true  }
+bios-sdk-invoke = { version = "0.2.0", path = "../../frontend/sdks/invoke", features = ["default"], optional = true }
 
 [dev-dependencies]
 tardis = { workspace = true, features = ["test"] }
-bios-sdk-invoke = { path = "../../frontend/sdks/invoke", features = ["default"] }
+bios-sdk-invoke = { version = "0.2.0", path = "../../frontend/sdks/invoke", features = ["default"] }
 
 [[test]]
 name = "test_rbum"

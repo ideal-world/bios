@@ -24,8 +24,8 @@ tardis = { workspace = true, features = [
     "ws-client",
     "cluster",
 ] }
-bios-basic = { path = "../../basic", features = ["default"] }
-bios-sdk-invoke = { path = "../../../frontend/sdks/invoke", features = [
+bios-basic = { version = "0.2.0", path = "../../basic", features = ["default"] }
+bios-sdk-invoke = { version = "0.2.0", path = "../../../frontend/sdks/invoke", features = [
     "spi_log",
     "event",
 ], default-features = false }
@@ -39,6 +39,6 @@ tardis = { workspace = true, features = [
     "cluster",
     "web-server",
 ] }
-bios-basic = { path = "../../basic", features = ["default", "test"] }
+bios-basic = { version = "0.2.0", path = "../../basic", features = ["default", "test"] }
 tokio = { version = "1", features = ["full"] }
 asteroid-mq-sdk = { workspace = true }

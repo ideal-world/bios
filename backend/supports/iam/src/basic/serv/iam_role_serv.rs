@@ -614,7 +614,7 @@ impl IamRoleServ {
         Ok(role_id)
     }
 
-    pub async fn copy_role_agg(copy_req: &mut IamRoleAggCopyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<(String)> {
+    pub async fn copy_role_agg(copy_req: &mut IamRoleAggCopyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
         let copy_role = Self::get_item(
             &copy_req.copy_role_id,
             &IamRoleFilterReq {

@@ -21,11 +21,11 @@ spi-pg = ["tardis/reldb-postgres"]
 [dependencies]
 serde.workspace = true
 tardis = { workspace = true, features = ["reldb-postgres", "web-server"] }
-bios-basic = { path = "../../basic", features = ["default"] }
-bios-sdk-invoke = { path = "../../../frontend/sdks/invoke", features = [
+bios-basic = { version = "0.2.0", path = "../../basic", features = ["default"] }
+bios-sdk-invoke = { version = "0.2.0", path = "../../../frontend/sdks/invoke", features = [
     "event",
 ], default-features = false }
 
 [dev-dependencies]
 tardis = { workspace = true, features = ["test"] }
-bios-basic = { path = "../../basic", features = ["default", "test"] }
+bios-basic = { version = "0.2.0", path = "../../basic", features = ["default", "test"] }

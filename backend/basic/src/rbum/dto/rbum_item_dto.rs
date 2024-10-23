@@ -1,9 +1,9 @@
 use serde::{Deserialize, Serialize};
 use tardis::basic::field::TrimString;
 use tardis::chrono::{DateTime, Utc};
-#[cfg(feature = "default")]
+
 use tardis::db::sea_orm;
-#[cfg(feature = "default")]
+
 use tardis::web::poem_openapi;
 
 use crate::rbum::rbum_enumeration::RbumScopeLevelKind;
@@ -12,32 +12,32 @@ use crate::rbum::rbum_enumeration::RbumScopeLevelKind;
 ///
 /// 资源项添加请求
 #[derive(Serialize, Deserialize, Debug)]
-#[cfg_attr(feature = "default", derive(poem_openapi::Object))]
+#[derive(poem_openapi::Object)]
 pub struct RbumItemAddReq {
     /// Resource item id
     ///
     /// 资源项id
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
+    #[oai(validator(min_length = "2", max_length = "255"))]
     pub id: Option<TrimString>,
     /// Resource item code
     ///
     /// 资源项编码
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
+    #[oai(validator(min_length = "2", max_length = "255"))]
     pub code: Option<TrimString>,
     /// Resource item name
     ///
     /// 资源项名称
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
+    #[oai(validator(min_length = "2", max_length = "255"))]
     pub name: TrimString,
     /// Associated [resource kind](crate::rbum::dto::rbum_kind_dto::RbumKindDetailResp) id
     ///
     /// 关联的[资源类型](crate::rbum::dto::rbum_kind_dto::RbumKindDetailResp) id
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
+    #[oai(validator(min_length = "2", max_length = "255"))]
     pub rel_rbum_kind_id: String,
     /// Associated [resource domain](crate::rbum::dto::rbum_domain_dto::RbumDomainDetailResp) id
     ///
     /// 关联的[资源域](crate::rbum::dto::rbum_domain_dto::RbumDomainDetailResp) id
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
+    #[oai(validator(min_length = "2", max_length = "255"))]
     pub rel_rbum_domain_id: String,
 
     pub scope_level: Option<RbumScopeLevelKind>,
@@ -140,7 +140,7 @@ pub struct RbumItemKernelModifyReq {
 ///
 /// 资源项概要信息
 #[derive(Serialize, Deserialize, Debug)]
-#[cfg_attr(feature = "default", derive(poem_openapi::Object, sea_orm::FromQueryResult))]
+#[derive(poem_openapi::Object, sea_orm::FromQueryResult)]
 pub struct RbumItemSummaryResp {
     /// Resource item id
     ///
@@ -176,7 +176,7 @@ pub struct RbumItemSummaryResp {
 ///
 /// 资源项详细信息
 #[derive(Serialize, Deserialize, Debug)]
-#[cfg_attr(feature = "default", derive(poem_openapi::Object, sea_orm::FromQueryResult))]
+#[derive(poem_openapi::Object, sea_orm::FromQueryResult)]
 pub struct RbumItemDetailResp {
     /// Resource item id
     ///

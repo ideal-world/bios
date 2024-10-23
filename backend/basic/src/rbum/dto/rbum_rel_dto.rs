@@ -2,9 +2,9 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::default::Default;
 use tardis::chrono::{DateTime, Utc};
-#[cfg(feature = "default")]
+
 use tardis::db::sea_orm;
-#[cfg(feature = "default")]
+
 use tardis::web::poem_openapi;
 
 use crate::rbum::rbum_enumeration::{RbumRelEnvKind, RbumRelFromKind};
@@ -13,7 +13,7 @@ use crate::rbum::rbum_enumeration::{RbumRelEnvKind, RbumRelFromKind};
 ///
 /// 资源关联添加请求
 #[derive(Serialize, Deserialize, Debug)]
-#[cfg_attr(feature = "default", derive(poem_openapi::Object))]
+#[derive(poem_openapi::Object)]
 pub struct RbumRelAddReq {
     /// Relationship tag
     ///
@@ -22,12 +22,12 @@ pub struct RbumRelAddReq {
     /// Used to distinguish different relationships.
     ///
     /// 用于区分不同的关联关系。
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
+    #[oai(validator(min_length = "2", max_length = "255"))]
     pub tag: String,
     /// Relationship note
     ///
     /// 关联备注
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "1000")))]
+    #[oai(validator(min_length = "2", max_length = "1000"))]
     pub note: Option<String>,
     /// Relationship source type
     ///
@@ -36,17 +36,17 @@ pub struct RbumRelAddReq {
     /// Relationship source id
     ///
     /// 关联来源方的id
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
+    #[oai(validator(min_length = "2", max_length = "255"))]
     pub from_rbum_id: String,
     /// Relationship target id
     ///
     /// 关联目标方的id
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
+    #[oai(validator(min_length = "2", max_length = "255"))]
     pub to_rbum_item_id: String,
     /// Relationship target ownership path
     ///
     /// 关联目标方的所有权路径
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
+    #[oai(validator(min_length = "2", max_length = "255"))]
     pub to_own_paths: String,
     /// Relationship extension information
     ///
@@ -56,7 +56,7 @@ pub struct RbumRelAddReq {
     /// you can redundantly add the required information to this field.
     ///
     /// 例如：记录来源或目标在另一个服务中，为避免远程调用，可以将所需信息冗余添加到此字段。
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "1000")))]
+    #[oai(validator(min_length = "2", max_length = "1000"))]
     pub ext: Option<String>,
     /// Whether the target is an external object
     ///
@@ -72,7 +72,7 @@ pub struct RbumRelAddReq {
 ///
 /// 资源关联修改请求
 #[derive(Serialize, Deserialize, Debug)]
-#[cfg_attr(feature = "default", derive(poem_openapi::Object))]
+#[derive(poem_openapi::Object)]
 pub struct RbumRelModifyReq {
     /// Relationship tag
     ///
@@ -81,12 +81,12 @@ pub struct RbumRelModifyReq {
     /// Used to distinguish different relationships.
     ///
     /// 用于区分不同的关联关系。
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
+    #[oai(validator(min_length = "2", max_length = "255"))]
     pub tag: Option<String>,
     /// Relationship note
     ///
     /// 关联备注
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "1000")))]
+    #[oai(validator(min_length = "2", max_length = "1000"))]
     pub note: Option<String>,
     /// Relationship extension information
     ///
@@ -96,7 +96,7 @@ pub struct RbumRelModifyReq {
     /// you can redundantly add the required information to this field.
     ///
     /// 例如：记录来源或目标在另一个服务中，为避免远程调用，可以将所需信息冗余添加到此字段。
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "1000")))]
+    #[oai(validator(min_length = "2", max_length = "1000"))]
     pub ext: Option<String>,
 }
 
@@ -104,7 +104,7 @@ pub struct RbumRelModifyReq {
 ///
 /// 资源关联简单查找请求
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
-#[cfg_attr(feature = "default", derive(poem_openapi::Object))]
+#[derive(poem_openapi::Object)]
 #[serde(default)]
 pub struct RbumRelSimpleFindReq {
     /// Relationship tag
@@ -114,7 +114,7 @@ pub struct RbumRelSimpleFindReq {
     /// Used to distinguish different relationships.
     ///
     /// 用于区分不同的关联关系。
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
+    #[oai(validator(min_length = "2", max_length = "255"))]
     pub tag: Option<String>,
     /// Relationship source type
     ///
@@ -123,22 +123,22 @@ pub struct RbumRelSimpleFindReq {
     /// Relationship source id
     ///
     /// 关联来源方的id
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
+    #[oai(validator(min_length = "2", max_length = "255"))]
     pub from_rbum_id: Option<String>,
     /// Relationship target id
     ///
     /// 关联目标方的id
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
+    #[oai(validator(min_length = "2", max_length = "255"))]
     pub to_rbum_item_id: Option<String>,
     /// Relationship source ownership path
     ///
     /// 关联来源方的所有权路径
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
+    #[oai(validator(min_length = "2", max_length = "255"))]
     pub from_own_paths: Option<String>,
     /// Relationship target ownership path
     ///
     /// 关联目标方的所有权路径
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
+    #[oai(validator(min_length = "2", max_length = "255"))]
     pub to_rbum_own_paths: Option<String>,
 }
 
@@ -146,7 +146,7 @@ pub struct RbumRelSimpleFindReq {
 ///
 /// 资源关联检查请求
 #[derive(Serialize, Deserialize, Debug)]
-#[cfg_attr(feature = "default", derive(poem_openapi::Object))]
+#[derive(poem_openapi::Object)]
 pub struct RbumRelCheckReq {
     /// Relationship tag
     ///
@@ -155,7 +155,7 @@ pub struct RbumRelCheckReq {
     /// Used to distinguish different relationships.
     ///
     /// 用于区分不同的关联关系。
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
+    #[oai(validator(min_length = "2", max_length = "255"))]
     pub tag: String,
     /// Relationship source type
     ///
@@ -164,12 +164,12 @@ pub struct RbumRelCheckReq {
     /// Relationship source id
     ///
     /// 关联来源方的id
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
+    #[oai(validator(min_length = "2", max_length = "255"))]
     pub from_rbum_id: String,
     /// Relationship target id
     ///
     /// 关联目标方的id
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
+    #[oai(validator(min_length = "2", max_length = "255"))]
     pub to_rbum_item_id: String,
     /// Limit the attributes of the relationship source
     ///
@@ -197,7 +197,7 @@ pub struct RbumRelCheckReq {
 ///
 /// 资源关联环境检查请求
 #[derive(Serialize, Deserialize, Debug)]
-#[cfg_attr(feature = "default", derive(poem_openapi::Object))]
+#[derive(poem_openapi::Object)]
 pub struct RbumRelEnvCheckReq {
     /// Relationship environment type
     ///
@@ -213,7 +213,7 @@ pub struct RbumRelEnvCheckReq {
 ///
 /// 资源关联骨干信息
 #[derive(Serialize, Deserialize, Debug, Clone)]
-#[cfg_attr(feature = "default", derive(poem_openapi::Object, sea_orm::FromQueryResult))]
+#[derive(poem_openapi::Object, sea_orm::FromQueryResult)]
 pub struct RbumRelBoneResp {
     /// Relationship tag
     ///
@@ -301,7 +301,7 @@ impl RbumRelBoneResp {
 ///
 /// 资源关联详细信息
 #[derive(Serialize, Deserialize, Clone, Debug)]
-#[cfg_attr(feature = "default", derive(poem_openapi::Object, sea_orm::FromQueryResult))]
+#[derive(poem_openapi::Object, sea_orm::FromQueryResult)]
 pub struct RbumRelDetailResp {
     /// Relationship id
     ///

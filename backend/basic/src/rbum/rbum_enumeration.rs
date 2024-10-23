@@ -4,18 +4,18 @@ use serde::{Deserialize, Serialize};
 use strum::Display;
 use tardis::basic::error::TardisError;
 use tardis::basic::result::TardisResult;
-#[cfg(feature = "default")]
+
 use tardis::db::sea_orm;
-#[cfg(feature = "default")]
+
 use tardis::db::sea_orm::{DbErr, QueryResult, TryGetError, TryGetable};
-#[cfg(feature = "default")]
+
 use tardis::web::poem_openapi;
 
 /// Scope level kind
 ///
 /// 作用域层级类型
 #[derive(Display, Clone, Debug, PartialEq, Eq, Serialize)]
-#[cfg_attr(feature = "default", derive(poem_openapi::Enum))]
+#[derive(poem_openapi::Enum)]
 pub enum RbumScopeLevelKind {
     /// Private
     ///
@@ -90,7 +90,7 @@ impl RbumScopeLevelKind {
     }
 }
 
-#[cfg(feature = "default")]
+
 impl TryGetable for RbumScopeLevelKind {
     fn try_get(res: &QueryResult, pre: &str, col: &str) -> Result<Self, TryGetError> {
         let s = i16::try_get(res, pre, col)?;
@@ -107,7 +107,7 @@ impl TryGetable for RbumScopeLevelKind {
 ///
 /// 凭证关联的类型
 #[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
-#[cfg_attr(feature = "default", derive(poem_openapi::Enum))]
+#[derive(poem_openapi::Enum)]
 pub enum RbumCertRelKind {
     /// Resource item
     ///
@@ -142,7 +142,7 @@ impl RbumCertRelKind {
     }
 }
 
-#[cfg(feature = "default")]
+
 impl TryGetable for RbumCertRelKind {
     fn try_get(res: &QueryResult, pre: &str, col: &str) -> Result<Self, TryGetError> {
         let s = i16::try_get(res, pre, col)?;
@@ -158,7 +158,7 @@ impl TryGetable for RbumCertRelKind {
 ///
 /// 资源凭证配置状态类型
 #[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
-#[cfg_attr(feature = "default", derive(poem_openapi::Enum))]
+#[derive(poem_openapi::Enum)]
 pub enum RbumCertConfStatusKind {
     /// Disabled
     ///
@@ -191,7 +191,7 @@ impl RbumCertConfStatusKind {
 ///
 /// 资源凭证状态类型
 #[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
-#[cfg_attr(feature = "default", derive(poem_openapi::Enum))]
+#[derive(poem_openapi::Enum)]
 pub enum RbumCertStatusKind {
     /// Disabled
     ///
@@ -226,7 +226,7 @@ impl RbumCertStatusKind {
     }
 }
 
-#[cfg(feature = "default")]
+
 impl TryGetable for RbumCertStatusKind {
     fn try_get(res: &QueryResult, pre: &str, col: &str) -> Result<Self, TryGetError> {
         let s = i16::try_get(res, pre, col)?;
@@ -242,7 +242,7 @@ impl TryGetable for RbumCertStatusKind {
 ///
 /// 资源关联的类型
 #[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
-#[cfg_attr(feature = "default", derive(poem_openapi::Enum))]
+#[derive(poem_openapi::Enum)]
 pub enum RbumRelFromKind {
     /// Resource item
     ///
@@ -283,7 +283,7 @@ impl RbumRelFromKind {
     }
 }
 
-#[cfg(feature = "default")]
+
 impl TryGetable for RbumRelFromKind {
     fn try_get(res: &QueryResult, pre: &str, col: &str) -> Result<Self, TryGetError> {
         let s = i16::try_get(res, pre, col)?;
@@ -303,7 +303,7 @@ impl TryGetable for RbumRelFromKind {
 ///
 /// 用于给资源关联加上限制条件。
 #[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
-#[cfg_attr(feature = "default", derive(poem_openapi::Enum))]
+#[derive(poem_openapi::Enum)]
 pub enum RbumRelEnvKind {
     /// Datetime range
     ///
@@ -368,7 +368,7 @@ impl RbumRelEnvKind {
     }
 }
 
-#[cfg(feature = "default")]
+
 impl TryGetable for RbumRelEnvKind {
     fn try_get(res: &QueryResult, pre: &str, col: &str) -> Result<Self, TryGetError> {
         let s = i16::try_get(res, pre, col)?;
@@ -384,7 +384,7 @@ impl TryGetable for RbumRelEnvKind {
 ///
 /// 资源集分类（节点）的查询类型
 #[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
-#[cfg_attr(feature = "default", derive(poem_openapi::Enum))]
+#[derive(poem_openapi::Enum)]
 pub enum RbumSetCateLevelQueryKind {
     /// Current layer and descendant layer
     ///
@@ -412,7 +412,7 @@ pub enum RbumSetCateLevelQueryKind {
 ///
 /// 数据类型
 #[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
-#[cfg_attr(feature = "default", derive(poem_openapi::Enum, strum::EnumString))]
+#[derive(poem_openapi::Enum, strum::EnumString)]
 pub enum RbumDataTypeKind {
     String,
     Number,
@@ -429,7 +429,7 @@ pub enum RbumDataTypeKind {
     Label,
 }
 
-#[cfg(feature = "default")]
+
 impl TryGetable for RbumDataTypeKind {
     fn try_get(res: &QueryResult, pre: &str, col: &str) -> Result<Self, TryGetError> {
         let s = String::try_get(res, pre, col)?;
@@ -445,7 +445,7 @@ impl TryGetable for RbumDataTypeKind {
 ///
 /// （前端）控件类型
 #[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
-#[cfg_attr(feature = "default", derive(poem_openapi::Enum, strum::EnumString))]
+#[derive(poem_openapi::Enum, strum::EnumString)]
 pub enum RbumWidgetTypeKind {
     Input,
     InputTxt,
@@ -477,7 +477,7 @@ pub enum RbumWidgetTypeKind {
     Group,
 }
 
-#[cfg(feature = "default")]
+
 impl TryGetable for RbumWidgetTypeKind {
     fn try_get(res: &QueryResult, pre: &str, col: &str) -> Result<Self, TryGetError> {
         let s = String::try_get(res, pre, col)?;

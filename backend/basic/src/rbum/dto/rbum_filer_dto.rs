@@ -3,7 +3,7 @@ use std::default::Default;
 
 use serde::{Deserialize, Serialize};
 use tardis::basic::field::TrimString;
-#[cfg(feature = "default")]
+
 use tardis::web::poem_openapi;
 
 use crate::rbum::rbum_enumeration::{RbumCertConfStatusKind, RbumCertRelKind, RbumCertStatusKind, RbumRelFromKind, RbumScopeLevelKind, RbumSetCateLevelQueryKind};
@@ -12,7 +12,7 @@ use crate::rbum::rbum_enumeration::{RbumCertConfStatusKind, RbumCertRelKind, Rbu
 ///
 /// 资源基础过滤器
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
-#[cfg_attr(feature = "default", derive(poem_openapi::Object))]
+#[derive(poem_openapi::Object)]
 #[serde(default)]
 pub struct RbumBasicFilterReq {
     /// Whether to ignore the scope
@@ -81,7 +81,7 @@ pub struct RbumBasicFilterReq {
 ///
 /// 资源凭证配置过滤器
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
-#[cfg_attr(feature = "default", derive(poem_openapi::Object))]
+#[derive(poem_openapi::Object)]
 #[serde(default)]
 pub struct RbumCertConfFilterReq {
     /// Basic filter
@@ -114,7 +114,7 @@ pub struct RbumCertConfFilterReq {
 ///
 /// 资源凭证过滤器
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
-#[cfg_attr(feature = "default", derive(poem_openapi::Object))]
+#[derive(poem_openapi::Object)]
 #[serde(default)]
 pub struct RbumCertFilterReq {
     /// Basic filter
@@ -175,7 +175,7 @@ pub struct RbumCertFilterReq {
 ///
 /// 资源类型过滤器
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
-#[cfg_attr(feature = "default", derive(poem_openapi::Object))]
+#[derive(poem_openapi::Object)]
 #[serde(default)]
 pub struct RbumKindFilterReq {
     /// Basic filter
@@ -192,7 +192,7 @@ pub struct RbumKindFilterReq {
 ///
 /// 资源类型属性过滤器
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
-#[cfg_attr(feature = "default", derive(poem_openapi::Object))]
+#[derive(poem_openapi::Object)]
 #[serde(default)]
 pub struct RbumKindAttrFilterReq {
     /// Basic filter
@@ -213,7 +213,7 @@ pub struct RbumKindAttrFilterReq {
 ///
 /// 资源项属性过滤器
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
-#[cfg_attr(feature = "default", derive(poem_openapi::Object))]
+#[derive(poem_openapi::Object)]
 #[serde(default)]
 pub struct RbumItemAttrFilterReq {
     /// Basic filter
@@ -234,7 +234,7 @@ pub struct RbumItemAttrFilterReq {
 ///
 /// 资源关联过滤器
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
-#[cfg_attr(feature = "default", derive(poem_openapi::Object))]
+#[derive(poem_openapi::Object)]
 #[serde(default)]
 pub struct RbumRelFilterReq {
     /// Basic filter
@@ -283,7 +283,7 @@ pub struct RbumRelFilterReq {
 ///
 /// 资源关联扩展过滤器
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
-#[cfg_attr(feature = "default", derive(poem_openapi::Object))]
+#[derive(poem_openapi::Object)]
 #[serde(default)]
 pub struct RbumRelExtFilterReq {
     /// Basic filter
@@ -300,7 +300,7 @@ pub struct RbumRelExtFilterReq {
 ///
 /// 资源集过滤器
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
-#[cfg_attr(feature = "default", derive(poem_openapi::Object))]
+#[derive(poem_openapi::Object)]
 pub struct RbumSetFilterReq {
     /// Basic filter
     ///
@@ -320,7 +320,7 @@ pub struct RbumSetFilterReq {
 ///
 /// 资源集分类（节点）过滤器
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
-#[cfg_attr(feature = "default", derive(poem_openapi::Object))]
+#[derive(poem_openapi::Object)]
 pub struct RbumSetCateFilterReq {
     /// Basic filter
     ///
@@ -364,7 +364,7 @@ pub struct RbumSetCateFilterReq {
 ///
 /// 资源集分类（节点）挂载资源项的过滤器
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
-#[cfg_attr(feature = "default", derive(poem_openapi::Object))]
+#[derive(poem_openapi::Object)]
 pub struct RbumSetItemFilterReq {
     /// Basic filter
     ///
@@ -435,7 +435,7 @@ pub struct RbumSetItemFilterReq {
 ///
 /// 资源集过滤器
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
-#[cfg_attr(feature = "default", derive(poem_openapi::Object))]
+#[derive(poem_openapi::Object)]
 pub struct RbumSetTreeFilterReq {
     /// Resource category (node) sys_codes
     ///
@@ -510,7 +510,8 @@ pub struct RbumSetTreeFilterReq {
 /// Resource set category (node) associated filter for mounted resource items
 ///
 /// 资源集分类（节点）挂载资源项的关联过滤器
-#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone, Default)]
+#[derive(Serialize, Deserialize, Debug, Clone, Default)]
+#[derive(poem_openapi::Object)]
 #[serde(default)]
 pub struct RbumSetItemRelFilterReq {
     /// Resource set id and resource category (node) id set
@@ -535,7 +536,7 @@ pub struct RbumSetItemRelFilterReq {
 ///
 /// 简单的资源项关联过滤器
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
-#[cfg_attr(feature = "default", derive(poem_openapi::Object))]
+#[derive(poem_openapi::Object)]
 #[serde(default)]
 pub struct RbumItemRelSimpleFilterReq {
     /// Whether the related party is a ``from`` party
@@ -560,7 +561,7 @@ pub struct RbumItemRelSimpleFilterReq {
 ///
 /// 资源项关联过滤器
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
-#[cfg_attr(feature = "default", derive(poem_openapi::Object))]
+#[derive(poem_openapi::Object)]
 #[serde(default)]
 pub struct RbumItemRelFilterReq {
     /// Is it optional
@@ -625,7 +626,7 @@ pub trait RbumItemFilterFetcher {
 ///
 /// 资源项基础过滤器
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
-#[cfg_attr(feature = "default", derive(poem_openapi::Object))]
+#[derive(poem_openapi::Object)]
 #[serde(default)]
 pub struct RbumItemBasicFilterReq {
     /// Basic filter

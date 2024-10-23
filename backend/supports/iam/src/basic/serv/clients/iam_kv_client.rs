@@ -89,26 +89,33 @@ impl IamKvClient {
         ctx: &TardisContext,
     ) -> TardisResult<()> {
         #[cfg(feature = "spi_kv")]
-        SpiKvClient::add_or_modify_item(key, value, info, disable, scope_level.map(|kind| kind.to_int()), funs, ctx).await
+        SpiKvClient::add_or_modify_item(key, value, info, disable, scope_level.map(|kind| kind.to_int()), funs, ctx).await?;
+        Ok(())
     }
 
     pub async fn add_or_modify_key_name(tag: &str, key: &str, name: &str, disable: Option<bool>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         #[cfg(feature = "spi_kv")]
-        SpiKvClient::add_or_modify_key_name(&format!("{}:{}", tag, key), name, disable, funs, ctx).await
+        SpiKvClient::add_or_modify_key_name(&format!("{}:{}", tag, key), name, disable, funs, ctx).await?;
+        Ok(())
     }
 
     pub async fn delete_key_name(tag: &str, key: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         #[cfg(feature = "spi_kv")]
-        SpiKvClient::delete_item(&format!("__k_n__:{}:{}", tag, key), funs, ctx).await
+        SpiKvClient::delete_item(&format!("__k_n__:{}:{}", tag, key), funs, ctx).await?;
+        Ok(())
     }
 
     pub async fn delete_item(key: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         #[cfg(feature = "spi_kv")]
-        SpiKvClient::delete_item(key, funs, ctx).await
+        SpiKvClient::delete_item(key, funs, ctx).await?;
+        Ok(())
     }
 
     pub async fn get_item(key: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<KvItemDetailResp>> {
-        #[cfg(feature = "spi_kv")]
-        SpiKvClient::get_item(key.to_string(), None, funs, ctx).await
+        if cfg!(feature = "spi_kv") {
+            SpiKvClient::get_item(key.to_string(), None, funs, ctx).await
+        } else {
+            Ok(None)
+        }
     }
 }

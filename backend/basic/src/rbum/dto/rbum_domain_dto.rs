@@ -1,9 +1,9 @@
 use serde::{Deserialize, Serialize};
 use tardis::basic::field::TrimString;
 use tardis::chrono::{DateTime, Utc};
-#[cfg(feature = "default")]
+
 use tardis::db::sea_orm;
-#[cfg(feature = "default")]
+
 use tardis::web::poem_openapi;
 
 use crate::rbum::rbum_enumeration::RbumScopeLevelKind;
@@ -12,7 +12,7 @@ use crate::rbum::rbum_enumeration::RbumScopeLevelKind;
 ///
 /// 资源域添加请求
 #[derive(Serialize, Deserialize, Debug)]
-#[cfg_attr(feature = "default", derive(poem_openapi::Object))]
+#[derive(poem_openapi::Object)]
 pub struct RbumDomainAddReq {
     /// Resource domain code
     ///
@@ -25,22 +25,22 @@ pub struct RbumDomainAddReq {
     /// Which is required to conform to the host specification in the uri, matching the regular: ^[a-z0-9-.]+$.
     ///
     /// 需要符合uri中的host规范，匹配正则：^[a-z0-9-.]+$。
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
+    #[oai(validator(min_length = "2", max_length = "255"))]
     pub code: TrimString,
     /// Resource domain name
     ///
     /// 资源域名称
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
+    #[oai(validator(min_length = "2", max_length = "255"))]
     pub name: TrimString,
     /// Resource domain note
     ///
     /// 资源域备注
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
+    #[oai(validator(min_length = "2", max_length = "2000"))]
     pub note: Option<String>,
     /// Resource domain icon
     ///
     /// 资源域图标
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "1000")))]
+    #[oai(validator(min_length = "2", max_length = "1000"))]
     pub icon: Option<String>,
     /// Resource domain sort
     ///
@@ -54,22 +54,22 @@ pub struct RbumDomainAddReq {
 ///
 /// 资源域修改请求
 #[derive(Serialize, Deserialize, Debug)]
-#[cfg_attr(feature = "default", derive(poem_openapi::Object))]
+#[derive(poem_openapi::Object)]
 pub struct RbumDomainModifyReq {
     /// Resource domain name
     ///
     /// 资源域名称
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
+    #[oai(validator(min_length = "2", max_length = "255"))]
     pub name: Option<TrimString>,
     /// Resource domain note
     ///
     /// 资源域备注
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
+    #[oai(validator(min_length = "2", max_length = "2000"))]
     pub note: Option<String>,
     /// Resource domain icon
     ///
     /// 资源域图标
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "1000")))]
+    #[oai(validator(min_length = "2", max_length = "1000"))]
     pub icon: Option<String>,
     /// Resource domain sort
     ///
@@ -89,7 +89,7 @@ pub struct RbumDomainModifyReq {
 ///
 /// 资源域概要信息
 #[derive(Serialize, Deserialize, Debug, Clone)]
-#[cfg_attr(feature = "default", derive(poem_openapi::Object, sea_orm::FromQueryResult))]
+#[derive(poem_openapi::Object, sea_orm::FromQueryResult)]
 pub struct RbumDomainSummaryResp {
     /// Resource domain id
     ///
@@ -124,7 +124,7 @@ pub struct RbumDomainSummaryResp {
 ///
 /// 资源域详细信息
 #[derive(Serialize, Deserialize, Debug)]
-#[cfg_attr(feature = "default", derive(poem_openapi::Object, sea_orm::FromQueryResult))]
+#[derive(poem_openapi::Object, sea_orm::FromQueryResult)]
 pub struct RbumDomainDetailResp {
     /// Resource domain id
     ///

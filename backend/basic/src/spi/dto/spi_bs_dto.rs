@@ -12,7 +12,7 @@ use crate::spi::spi_funs;
 ///
 /// 后端服务添加请求
 #[derive(Serialize, Deserialize, Debug)]
-#[cfg_attr(feature = "default", derive(poem_openapi::Object))]
+#[derive(poem_openapi::Object)]
 pub struct SpiBsAddReq {
     /// Service name
     ///
@@ -55,7 +55,7 @@ pub struct SpiBsAddReq {
 ///
 /// 后端服务修改请求
 #[derive(Serialize, Deserialize, Debug)]
-#[cfg_attr(feature = "default", derive(poem_openapi::Object))]
+#[derive(poem_openapi::Object)]
 pub struct SpiBsModifyReq {
     /// Service name
     ///
@@ -100,7 +100,7 @@ pub struct SpiBsModifyReq {
 ///
 /// 后端服务概要信息
 #[derive(Serialize, Deserialize, Debug)]
-#[cfg_attr(feature = "default", derive(poem_openapi::Object, sea_orm::FromQueryResult))]
+#[derive(poem_openapi::Object, sea_orm::FromQueryResult)]
 pub struct SpiBsSummaryResp {
     /// Service Id
     ///
@@ -160,7 +160,7 @@ pub struct SpiBsSummaryResp {
 ///
 /// 后端服务详细信息
 #[derive(Serialize, Deserialize, Debug)]
-#[cfg_attr(feature = "default", derive(poem_openapi::Object, sea_orm::FromQueryResult))]
+#[derive(poem_openapi::Object, sea_orm::FromQueryResult)]
 pub struct SpiBsDetailResp {
     /// Service Id
     ///
@@ -261,7 +261,7 @@ impl SpiBsCertResp {
 ///
 /// 后端服务的查询过滤请求
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
-#[cfg_attr(feature = "default", derive(poem_openapi::Object))]
+#[derive(poem_openapi::Object)]
 #[serde(default)]
 pub struct SpiBsFilterReq {
     /// Basic filter
