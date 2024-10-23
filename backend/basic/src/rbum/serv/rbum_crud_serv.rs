@@ -1121,8 +1121,7 @@ pub struct NameResp {
     pub name: String,
 }
 
-#[derive(Debug, Serialize, Deserialize, sea_orm::FromQueryResult)]
-#[derive(poem_openapi::Object)]
+#[derive(Debug, Serialize, Deserialize, sea_orm::FromQueryResult, poem_openapi::Object)]
 pub struct IdNameResp {
     pub id: String,
     pub name: String,

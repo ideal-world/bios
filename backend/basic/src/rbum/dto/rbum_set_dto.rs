@@ -15,8 +15,7 @@ use crate::rbum::rbum_enumeration::RbumScopeLevelKind;
 /// Add request for resource set
 ///
 /// 资源集添加请求
-#[derive(Serialize, Deserialize, Debug)]
-#[derive(poem_openapi::Object)]
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
 pub struct RbumSetAddReq {
     /// Resource set code
     ///
@@ -60,8 +59,7 @@ pub struct RbumSetAddReq {
 /// Modify request for resource set
 ///
 /// 资源集修改请求
-#[derive(Serialize, Deserialize, Debug)]
-#[derive(poem_openapi::Object)]
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
 pub struct RbumSetModifyReq {
     /// Resource set name
     ///
@@ -95,8 +93,7 @@ pub struct RbumSetModifyReq {
 /// Resource set summary information
 ///
 /// 资源集概要信息
-#[derive(Serialize, Deserialize, Debug)]
-#[derive(poem_openapi::Object, sea_orm::FromQueryResult)]
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object, sea_orm::FromQueryResult)]
 pub struct RbumSetSummaryResp {
     /// Resource set id
     ///
@@ -139,8 +136,7 @@ pub struct RbumSetSummaryResp {
 /// Resource set detail information
 ///
 /// 资源集详细信息
-#[derive(Serialize, Deserialize, Debug)]
-#[derive(poem_openapi::Object, sea_orm::FromQueryResult)]
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object, sea_orm::FromQueryResult)]
 pub struct RbumSetDetailResp {
     /// Resource set id
     ///
@@ -188,8 +184,7 @@ pub struct RbumSetDetailResp {
 /// Resource set path information
 ///
 /// 资源集路径信息
-#[derive(Serialize, Deserialize, Debug)]
-#[derive(poem_openapi::Object, sea_orm::FromQueryResult)]
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object, sea_orm::FromQueryResult)]
 pub struct RbumSetPathResp {
     /// Node id
     ///
@@ -206,8 +201,7 @@ pub struct RbumSetPathResp {
 /// Resource tree information
 ///
 /// 资源树信息
-#[derive(Serialize, Deserialize, Debug, Clone)]
-#[derive(poem_openapi::Object)]
+#[derive(Serialize, Deserialize, Debug, Clone, poem_openapi::Object)]
 pub struct RbumSetTreeResp {
     /// Resource tree node information
     ///
@@ -284,8 +278,7 @@ impl RbumSetTreeResp {
 /// Resource tree node information
 ///
 /// 资源树节点信息
-#[derive(Serialize, Deserialize, Debug, Clone)]
-#[derive(poem_openapi::Object)]
+#[derive(Serialize, Deserialize, Debug, Clone, poem_openapi::Object)]
 pub struct RbumSetTreeNodeResp {
     /// Node id
     ///
@@ -343,8 +336,7 @@ pub struct RbumSetTreeNodeResp {
 /// Resource tree extension information
 ///
 /// 资源树扩展信息
-#[derive(Serialize, Deserialize, Debug, Clone)]
-#[derive(poem_openapi::Object)]
+#[derive(Serialize, Deserialize, Debug, Clone, poem_openapi::Object)]
 pub struct RbumSetTreeExtResp {
     /// 节点与资源项的关联信息
     ///
@@ -375,8 +367,7 @@ pub struct RbumSetTreeExtResp {
 /// Resource tree information
 ///
 /// 资源目录树信息
-#[derive(Serialize, Deserialize, Debug, Clone)]
-#[derive(poem_openapi::Object)]
+#[derive(Serialize, Deserialize, Debug, Clone, poem_openapi::Object)]
 pub struct RbumSetTreeCateResp {
     /// Resource cate tree node information
     ///
@@ -388,8 +379,7 @@ pub struct RbumSetTreeCateResp {
     pub ext: Option<RbumSetTreeExtResp>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
-#[derive(poem_openapi::Object)]
+#[derive(Serialize, Deserialize, Debug, Clone, poem_openapi::Object)]
 /// Resource tree cate structure information
 ///
 /// 资源树目录结构信息

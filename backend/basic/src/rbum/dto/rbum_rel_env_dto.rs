@@ -10,8 +10,7 @@ use crate::rbum::rbum_enumeration::RbumRelEnvKind;
 /// Add request for resource relationship environment condition
 ///
 /// 资源关联环境条件添加请求
-#[derive(Serialize, Deserialize, Debug)]
-#[derive(poem_openapi::Object)]
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
 pub struct RbumRelEnvAddReq {
     /// Relationship environment type
     ///
@@ -37,8 +36,7 @@ pub struct RbumRelEnvAddReq {
 /// Modify request for resource relationship environment condition
 ///
 /// 资源关联环境条件修改请求
-#[derive(Serialize, Deserialize, Debug)]
-#[derive(poem_openapi::Object)]
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
 pub struct RbumRelEnvModifyReq {
     /// Relationship environment value1
     ///
@@ -55,8 +53,7 @@ pub struct RbumRelEnvModifyReq {
 /// Resource relationship environment condition detail information
 ///
 /// 资源关联环境条件详细信息
-#[derive(Serialize, Deserialize, Clone, Debug)]
-#[derive(poem_openapi::Object, sea_orm::FromQueryResult)]
+#[derive(Serialize, Deserialize, Clone, Debug, poem_openapi::Object, sea_orm::FromQueryResult)]
 pub struct RbumRelEnvDetailResp {
     /// Relationship environment id
     ///

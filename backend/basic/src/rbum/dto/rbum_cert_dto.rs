@@ -11,8 +11,7 @@ use crate::rbum::rbum_enumeration::{RbumCertRelKind, RbumCertStatusKind};
 /// Add request for certificate
 ///
 /// 凭证添加请求
-#[derive(Serialize, Deserialize, Debug)]
-#[derive(poem_openapi::Object)]
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
 pub struct RbumCertAddReq {
     /// Certification access key
     ///
@@ -175,8 +174,7 @@ pub struct RbumCertAddReq {
 /// Modify request for certificate
 ///
 /// 凭证修改请求
-#[derive(Serialize, Deserialize, Debug, Default)]
-#[derive(poem_openapi::Object)]
+#[derive(Serialize, Deserialize, Debug, Default, poem_openapi::Object)]
 pub struct RbumCertModifyReq {
     /// Certification access key
     ///
@@ -247,8 +245,7 @@ pub struct RbumCertModifyReq {
 /// Certificate summary information
 ///
 /// 凭证概要信息
-#[derive(Serialize, Deserialize, Debug)]
-#[derive(poem_openapi::Object, sea_orm::FromQueryResult)]
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object, sea_orm::FromQueryResult)]
 pub struct RbumCertSummaryResp {
     /// Certification id
     ///
@@ -309,8 +306,7 @@ pub struct RbumCertSummaryResp {
 /// Certificate summary information with secret key
 ///
 /// 带有密钥的凭证概要信息
-#[derive(Serialize, Deserialize, Debug)]
-#[derive(poem_openapi::Object, sea_orm::FromQueryResult)]
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object, sea_orm::FromQueryResult)]
 pub struct RbumCertSummaryWithSkResp {
     /// Certification id
     ///
@@ -383,8 +379,7 @@ pub struct RbumCertSummaryWithSkResp {
 /// Certificate detail information
 ///
 /// 凭证详细信息
-#[derive(Serialize, Deserialize, Debug)]
-#[derive(poem_openapi::Object, sea_orm::FromQueryResult)]
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object, sea_orm::FromQueryResult)]
 pub struct RbumCertDetailResp {
     /// Certification id
     ///

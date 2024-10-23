@@ -13,8 +13,7 @@ use tardis::web::poem_openapi;
 /// Basic query condition object
 ///
 /// 基础的查询条件对象
-#[derive(Serialize, Deserialize, Debug, Clone)]
-#[derive(poem_openapi::Object)]
+#[derive(Serialize, Deserialize, Debug, Clone, poem_openapi::Object)]
 pub struct BasicQueryCondInfo {
     /// Query field
     #[oai(validator(min_length = "1"))]

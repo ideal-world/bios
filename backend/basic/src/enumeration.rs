@@ -7,8 +7,7 @@ use tardis::web::poem_openapi;
 /// API classification
 ///
 /// API分类
-#[derive(Display, Debug)]
-#[derive(poem_openapi::Tags)]
+#[derive(Display, Debug, poem_openapi::Tags)]
 pub enum ApiTag {
     /// Common Console, mostly starting with ``cc``, generally do not require authentication.
     ///
@@ -45,8 +44,7 @@ pub enum ApiTag {
 /// Basic query operator
 ///
 /// 基础查询操作符
-#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
-#[derive(poem_openapi::Enum)]
+#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum)]
 pub enum BasicQueryOpKind {
     #[oai(rename = "=")]
     Eq,

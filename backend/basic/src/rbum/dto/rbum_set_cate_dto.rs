@@ -11,8 +11,7 @@ use crate::rbum::rbum_enumeration::RbumScopeLevelKind;
 /// Add request for resource set category(node)
 ///
 /// 资源集分类（节点）添加请求
-#[derive(Serialize, Deserialize, Debug)]
-#[derive(poem_openapi::Object)]
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
 pub struct RbumSetCateAddReq {
     /// Business code for custom
     ///
@@ -55,8 +54,7 @@ pub struct RbumSetCateAddReq {
 /// Modify request for resource set category(node)
 ///
 /// 资源集分类（节点）修改请求
-#[derive(Serialize, Deserialize, Debug)]
-#[derive(poem_openapi::Object)]
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
 pub struct RbumSetCateModifyReq {
     /// Business code for custom
     ///
@@ -95,8 +93,7 @@ pub struct RbumSetCateModifyReq {
 /// Resource set category(node) summary information
 ///
 /// 资源集分类（节点）概要信息
-#[derive(Serialize, Deserialize, Debug)]
-#[derive(poem_openapi::Object, sea_orm::FromQueryResult)]
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object, sea_orm::FromQueryResult)]
 pub struct RbumSetCateSummaryResp {
     /// Node id
     ///
@@ -146,8 +143,7 @@ pub struct RbumSetCateSummaryResp {
 /// Resource set category(node) detail information
 ///
 /// 资源集分类（节点）详细信息
-#[derive(Serialize, Deserialize, Debug)]
-#[derive(poem_openapi::Object, sea_orm::FromQueryResult)]
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object, sea_orm::FromQueryResult)]
 pub struct RbumSetCateDetailResp {
     /// Node id
     ///

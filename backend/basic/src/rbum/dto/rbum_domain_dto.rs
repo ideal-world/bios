@@ -11,8 +11,7 @@ use crate::rbum::rbum_enumeration::RbumScopeLevelKind;
 /// Add request for resource domain
 ///
 /// 资源域添加请求
-#[derive(Serialize, Deserialize, Debug)]
-#[derive(poem_openapi::Object)]
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
 pub struct RbumDomainAddReq {
     /// Resource domain code
     ///
@@ -53,8 +52,7 @@ pub struct RbumDomainAddReq {
 /// Modify request for resource domain
 ///
 /// 资源域修改请求
-#[derive(Serialize, Deserialize, Debug)]
-#[derive(poem_openapi::Object)]
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
 pub struct RbumDomainModifyReq {
     /// Resource domain name
     ///
@@ -88,8 +86,7 @@ pub struct RbumDomainModifyReq {
 /// Resource domain summary information
 ///
 /// 资源域概要信息
-#[derive(Serialize, Deserialize, Debug, Clone)]
-#[derive(poem_openapi::Object, sea_orm::FromQueryResult)]
+#[derive(Serialize, Deserialize, Debug, Clone, poem_openapi::Object, sea_orm::FromQueryResult)]
 pub struct RbumDomainSummaryResp {
     /// Resource domain id
     ///
@@ -123,8 +120,7 @@ pub struct RbumDomainSummaryResp {
 /// Resource domain detail information
 ///
 /// 资源域详细信息
-#[derive(Serialize, Deserialize, Debug)]
-#[derive(poem_openapi::Object, sea_orm::FromQueryResult)]
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object, sea_orm::FromQueryResult)]
 pub struct RbumDomainDetailResp {
     /// Resource domain id
     ///

@@ -11,8 +11,7 @@ use crate::rbum::rbum_enumeration::RbumScopeLevelKind;
 /// Add request for resource item
 ///
 /// 资源项添加请求
-#[derive(Serialize, Deserialize, Debug)]
-#[derive(poem_openapi::Object)]
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
 pub struct RbumItemAddReq {
     /// Resource item id
     ///
@@ -139,8 +138,7 @@ pub struct RbumItemKernelModifyReq {
 /// Resource item summary information
 ///
 /// 资源项概要信息
-#[derive(Serialize, Deserialize, Debug)]
-#[derive(poem_openapi::Object, sea_orm::FromQueryResult)]
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object, sea_orm::FromQueryResult)]
 pub struct RbumItemSummaryResp {
     /// Resource item id
     ///
@@ -175,8 +173,7 @@ pub struct RbumItemSummaryResp {
 /// Resource item detail information
 ///
 /// 资源项详细信息
-#[derive(Serialize, Deserialize, Debug)]
-#[derive(poem_openapi::Object, sea_orm::FromQueryResult)]
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object, sea_orm::FromQueryResult)]
 pub struct RbumItemDetailResp {
     /// Resource item id
     ///

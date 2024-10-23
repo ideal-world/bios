@@ -10,8 +10,7 @@ use crate::rbum::rbum_enumeration::RbumScopeLevelKind;
 /// Add request for association between resource set category(node) and resource item
 ///
 /// 添加资源集分类（节点）挂载资源项的关联的请求
-#[derive(Serialize, Deserialize, Debug)]
-#[derive(poem_openapi::Object)]
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
 pub struct RbumSetItemAddReq {
     /// Association sort
     ///
@@ -37,8 +36,7 @@ pub struct RbumSetItemAddReq {
 /// Modify request for association between resource set category(node) and resource item
 ///
 /// 修改资源集分类（节点）挂载资源项的关联的请求
-#[derive(Serialize, Deserialize, Debug)]
-#[derive(poem_openapi::Object)]
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
 pub struct RbumSetItemModifyReq {
     /// Associated [resource set category(node)](crate::rbum::dto::rbum_set_cate_dto::RbumSetCateDetailResp) id
     ///
@@ -54,8 +52,7 @@ pub struct RbumSetItemModifyReq {
 /// Summary information of the association between resource set category(node) and resource item
 ///
 /// 资源集分类（节点）挂载资源项的关联的概要信息
-#[derive(Serialize, Deserialize, Debug)]
-#[derive(poem_openapi::Object, sea_orm::FromQueryResult)]
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object, sea_orm::FromQueryResult)]
 pub struct RbumSetItemSummaryResp {
     /// Association id
     ///
@@ -99,8 +96,7 @@ pub struct RbumSetItemSummaryResp {
 /// Resource item information of the association between resource set category(node) and resource item
 ///
 /// 资源集分类（节点）挂载资源项的关联的资源项信息
-#[derive(Serialize, Deserialize, Debug, Clone)]
-#[derive(poem_openapi::Object, sea_orm::FromQueryResult)]
+#[derive(Serialize, Deserialize, Debug, Clone, poem_openapi::Object, sea_orm::FromQueryResult)]
 pub struct RbumSetItemRelInfoResp {
     /// Association id
     ///
@@ -158,8 +154,7 @@ pub struct RbumSetItemRelInfoResp {
 /// Detail information of the association between resource set category(node) and resource item
 ///
 /// 资源集分类（节点）挂载资源项的关联的详细信息
-#[derive(Serialize, Deserialize, Debug)]
-#[derive(poem_openapi::Object, sea_orm::FromQueryResult)]
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object, sea_orm::FromQueryResult)]
 pub struct RbumSetItemDetailResp {
     /// Association id
     ///
