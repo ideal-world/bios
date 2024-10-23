@@ -10,8 +10,7 @@ use crate::rbum::rbum_enumeration::RbumRelEnvKind;
 /// Add request for resource relationship aggregation
 ///
 /// 资源关联聚合添加请求
-#[derive(Serialize, Deserialize, Debug)]
-#[derive(poem_openapi::Object)]
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
 pub struct RbumRelAggAddReq {
     /// Relationship information
     ///
@@ -30,8 +29,7 @@ pub struct RbumRelAggAddReq {
 /// Add request for resource relationship attribute aggregation
 ///
 /// 资源关联属性聚合添加请求
-#[derive(Serialize, Deserialize, Clone, Debug)]
-#[derive(poem_openapi::Object)]
+#[derive(Serialize, Deserialize, Clone, Debug, poem_openapi::Object)]
 pub struct RbumRelAttrAggAddReq {
     /// Condition qualifier
     ///
@@ -74,8 +72,7 @@ pub struct RbumRelAttrAggAddReq {
 /// Add request for resource relationship environment aggregation
 ///
 /// 资源关联环境聚合添加请求
-#[derive(Serialize, Deserialize, Clone, Debug)]
-#[derive(poem_openapi::Object)]
+#[derive(Serialize, Deserialize, Clone, Debug, poem_openapi::Object)]
 pub struct RbumRelEnvAggAddReq {
     /// Relationship environment type
     ///
@@ -96,8 +93,7 @@ pub struct RbumRelEnvAggAddReq {
 /// Resource relationship aggregation detail information
 ///
 /// 资源关联聚合详细信息
-#[derive(Serialize, Deserialize, Clone, Debug)]
-#[derive(poem_openapi::Object)]
+#[derive(Serialize, Deserialize, Clone, Debug, poem_openapi::Object)]
 pub struct RbumRelAggResp {
     /// Relationship information
     ///

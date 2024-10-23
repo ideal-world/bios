@@ -12,8 +12,7 @@ use crate::rbum::rbum_enumeration::{RbumRelEnvKind, RbumRelFromKind};
 /// Add request for resource relationship
 ///
 /// 资源关联添加请求
-#[derive(Serialize, Deserialize, Debug)]
-#[derive(poem_openapi::Object)]
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
 pub struct RbumRelAddReq {
     /// Relationship tag
     ///
@@ -71,8 +70,7 @@ pub struct RbumRelAddReq {
 /// Modify request for resource relationship
 ///
 /// 资源关联修改请求
-#[derive(Serialize, Deserialize, Debug)]
-#[derive(poem_openapi::Object)]
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
 pub struct RbumRelModifyReq {
     /// Relationship tag
     ///
@@ -103,8 +101,7 @@ pub struct RbumRelModifyReq {
 /// Simple find request for resource relationship
 ///
 /// 资源关联简单查找请求
-#[derive(Serialize, Deserialize, Debug, Clone, Default)]
-#[derive(poem_openapi::Object)]
+#[derive(Serialize, Deserialize, Debug, Clone, Default, poem_openapi::Object)]
 #[serde(default)]
 pub struct RbumRelSimpleFindReq {
     /// Relationship tag
@@ -145,8 +142,7 @@ pub struct RbumRelSimpleFindReq {
 /// Check request for resource relationship
 ///
 /// 资源关联检查请求
-#[derive(Serialize, Deserialize, Debug)]
-#[derive(poem_openapi::Object)]
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
 pub struct RbumRelCheckReq {
     /// Relationship tag
     ///
@@ -196,8 +192,7 @@ pub struct RbumRelCheckReq {
 /// Check request for resource relationship environment
 ///
 /// 资源关联环境检查请求
-#[derive(Serialize, Deserialize, Debug)]
-#[derive(poem_openapi::Object)]
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
 pub struct RbumRelEnvCheckReq {
     /// Relationship environment type
     ///
@@ -212,8 +207,7 @@ pub struct RbumRelEnvCheckReq {
 /// Resource relationship bone information
 ///
 /// 资源关联骨干信息
-#[derive(Serialize, Deserialize, Debug, Clone)]
-#[derive(poem_openapi::Object, sea_orm::FromQueryResult)]
+#[derive(Serialize, Deserialize, Debug, Clone, poem_openapi::Object, sea_orm::FromQueryResult)]
 pub struct RbumRelBoneResp {
     /// Relationship tag
     ///
@@ -300,8 +294,7 @@ impl RbumRelBoneResp {
 /// Resource relationship detail information
 ///
 /// 资源关联详细信息
-#[derive(Serialize, Deserialize, Clone, Debug)]
-#[derive(poem_openapi::Object, sea_orm::FromQueryResult)]
+#[derive(Serialize, Deserialize, Clone, Debug, poem_openapi::Object, sea_orm::FromQueryResult)]
 pub struct RbumRelDetailResp {
     /// Relationship id
     ///

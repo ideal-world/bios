@@ -10,8 +10,7 @@ use tardis::web::poem_openapi;
 /// Add request for resource item extended attribute value
 ///
 /// 资源项扩展属性值添加请求
-#[derive(Serialize, Deserialize, Debug)]
-#[derive(poem_openapi::Object)]
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
 pub struct RbumItemAttrAddReq {
     /// Extended attribute value
     ///
@@ -33,8 +32,7 @@ pub struct RbumItemAttrAddReq {
 /// Modify request for resource item extended attribute value
 ///
 /// 资源项扩展属性值修改请求
-#[derive(Serialize, Deserialize, Debug)]
-#[derive(poem_openapi::Object)]
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
 pub struct RbumItemAttrModifyReq {
     /// Extended attribute value
     ///
@@ -46,8 +44,7 @@ pub struct RbumItemAttrModifyReq {
 /// Batch add or modify request for resource item extended attribute values
 ///
 /// 批量添加或修改资源项扩展属性值请求
-#[derive(Serialize, Deserialize, Debug)]
-#[derive(poem_openapi::Object)]
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
 pub struct RbumItemAttrsAddOrModifyReq {
     /// Add or modify value collection
     ///
@@ -67,8 +64,7 @@ pub struct RbumItemAttrsAddOrModifyReq {
 /// Resource item extended attribute value summary information
 ///
 /// 源项扩展属性值概要信息
-#[derive(Serialize, Deserialize, Debug)]
-#[derive(poem_openapi::Object, sea_orm::FromQueryResult)]
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object, sea_orm::FromQueryResult)]
 pub struct RbumItemAttrSummaryResp {
     /// Extended attribute value id
     ///
@@ -100,8 +96,7 @@ pub struct RbumItemAttrSummaryResp {
 /// Resource item extended attribute value detail information
 ///
 /// 源项扩展属性值详细信息
-#[derive(Serialize, Deserialize, Debug)]
-#[derive(poem_openapi::Object, sea_orm::FromQueryResult)]
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object, sea_orm::FromQueryResult)]
 pub struct RbumItemAttrDetailResp {
     /// Extended attribute value id
     ///

@@ -11,8 +11,7 @@ use crate::rbum::rbum_enumeration::{RbumDataTypeKind, RbumScopeLevelKind, RbumWi
 /// Add request for resource kind attribute definition
 ///
 /// 资源类型属性定义添加请求
-#[derive(Serialize, Deserialize, Debug)]
-#[derive(poem_openapi::Object)]
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
 pub struct RbumKindAttrAddReq {
     /// Attribute definition module
     ///
@@ -278,8 +277,7 @@ pub struct RbumKindAttrAddReq {
 /// Modify request for resource kind attribute definition
 ///
 /// 资源类型属性定义修改请求
-#[derive(Serialize, Deserialize, Debug)]
-#[derive(poem_openapi::Object)]
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
 pub struct RbumKindAttrModifyReq {
     /// Attribute definition label
     ///
@@ -477,8 +475,7 @@ pub struct RbumKindAttrModifyReq {
 /// Resource kind attribute definition summary information
 ///
 /// 资源类型属性定义概要信息
-#[derive(Serialize, Deserialize, Debug)]
-#[derive(poem_openapi::Object, sea_orm::FromQueryResult)]
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object, sea_orm::FromQueryResult)]
 pub struct RbumKindAttrSummaryResp {
     /// Attribute definition id
     ///
@@ -633,8 +630,7 @@ pub struct RbumKindAttrSummaryResp {
 /// Resource kind attribute definition detail information
 ///
 /// 资源类型属性定义详细信息
-#[derive(Serialize, Deserialize, Debug)]
-#[derive(poem_openapi::Object, sea_orm::FromQueryResult)]
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object, sea_orm::FromQueryResult)]
 pub struct RbumKindAttrDetailResp {
     /// Attribute definition id
     ///

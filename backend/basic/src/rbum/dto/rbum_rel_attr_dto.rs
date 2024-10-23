@@ -8,8 +8,7 @@ use tardis::web::poem_openapi;
 /// Add request for resource relationship attribute condition
 ///
 /// 资源关联属性条件添加请求
-#[derive(Serialize, Deserialize, Debug)]
-#[derive(poem_openapi::Object)]
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
 pub struct RbumRelAttrAddReq {
     /// Condition qualifier
     ///
@@ -57,8 +56,7 @@ pub struct RbumRelAttrAddReq {
 /// Modify request for resource relationship attribute condition
 ///
 /// 资源关联属性条件修改请求
-#[derive(Serialize, Deserialize, Debug)]
-#[derive(poem_openapi::Object)]
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
 pub struct RbumRelAttrModifyReq {
     /// Relationship attribute value
     ///
@@ -70,8 +68,7 @@ pub struct RbumRelAttrModifyReq {
 /// Resource relationship attribute condition detail information
 ///
 /// 资源关联属性条件详细信息
-#[derive(Serialize, Deserialize, Clone, Debug)]
-#[derive(poem_openapi::Object, sea_orm::FromQueryResult)]
+#[derive(Serialize, Deserialize, Clone, Debug, poem_openapi::Object, sea_orm::FromQueryResult)]
 pub struct RbumRelAttrDetailResp {
     /// Relationship attribute id
     ///

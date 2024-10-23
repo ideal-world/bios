@@ -2,6 +2,8 @@ name: Publish bios-iam crate
 
 on:
   push:
+    branches:
+      - release-iam
     tags:
       - 'release-*'
 
