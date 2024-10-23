@@ -38,6 +38,7 @@ repository = "https://github.com/ideal-world/bios"
 license = "Apache-2.0"
 edition = "2021"
 readme = "README.md"
+description = "An embeddable message queue system"
 publish = true
 
 [profile.release]
