@@ -127,6 +127,14 @@ pub(crate) async fn add(fact_conf_key: &str, add_req: &StatsConfFactColAddReq, f
         params.push(Value::from(dim_dynamic_url.to_string()));
         sql_fields.push("dim_dynamic_url");
     }
+    if let Some(rel_field) = &add_req.rel_field {
+        params.push(Value::from(rel_field.to_string()));
+        sql_fields.push("rel_field");
+    }
+    if let Some(rel_sql) = &add_req.rel_sql {
+        params.push(Value::from(rel_sql.to_string()));
+        sql_fields.push("rel_sql");
+    }
     conn.execute_one(
         &format!(
             r#"INSERT INTO {table_name}
@@ -229,6 +237,14 @@ pub(crate) async fn modify(
     if let Some(dim_dynamic_url) = &modify_req.dim_dynamic_url {
         sql_sets.push(format!("dim_dynamic_url = ${}", params.len() + 1));
         params.push(Value::from(dim_dynamic_url.to_string()));
+    }
+    if let Some(rel_field) = &modify_req.rel_field {
+        sql_sets.push(format!("rel_field = ${}", params.len() + 1));
+        params.push(Value::from(rel_field.to_string()));
+    }
+    if let Some(rel_sql) = &modify_req.rel_sql {
+        sql_sets.push(format!("rel_sql = ${}", params.len() + 1));
+        params.push(Value::from(rel_sql.to_string()));
     }
     conn.execute_one(
         &format!(

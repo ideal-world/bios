@@ -43,14 +43,17 @@ pub(crate) async fn add(add_req: &StatsConfFactAddReq, funs: &TardisFunsInst, ct
         Value::from(add_req.remark.as_ref().unwrap_or(&"".to_string()).as_str()),
         Value::from(add_req.redirect_path.clone()),
         Value::from(add_req.is_online.unwrap_or_default()),
+        Value::from(add_req.sync_sql.as_ref().unwrap_or(&"".to_string()).as_str()),
+        Value::from(add_req.sync_cron.as_ref().unwrap_or(&"".to_string()).as_str()),
+        Value::from(add_req.sync_on.unwrap_or_default()),
     ];
 
     conn.execute_one(
         &format!(
             r#"INSERT INTO {table_name}
-(key, show_name, query_limit, remark, redirect_path, is_online)
+(key, show_name, query_limit, remark, redirect_path, is_online, sync_sql, sync_cron, sync_on)
 VALUES
-($1, $2, $3, $4, $5, $6)
+($1, $2, $3, $4, $5, $6, $7, $8, $9)
 "#,
         ),
         params,
@@ -91,6 +94,18 @@ pub(crate) async fn modify(fact_conf_key: &str, modify_req: &StatsConfFactModify
         if let Some(redirect_path) = &modify_req.redirect_path {
             sql_sets.push(format!("redirect_path = ${}", params.len() + 1));
             params.push(Value::from(redirect_path));
+        }
+        if let Some(sync_sql) = &modify_req.sync_sql {
+            sql_sets.push(format!("sync_sql = ${}", params.len() + 1));
+            params.push(Value::from(sync_sql.to_string()));
+        }
+        if let Some(sync_cron) = &modify_req.sync_cron {
+            sql_sets.push(format!("sync_cron = ${}", params.len() + 1));
+            params.push(Value::from(sync_cron.to_string()));
+        }
+        if let Some(sync_on) = &modify_req.sync_on {
+            sql_sets.push(format!("sync_on = ${}", params.len() + 1));
+            params.push(Value::from(*sync_on));
         }
     };
 
