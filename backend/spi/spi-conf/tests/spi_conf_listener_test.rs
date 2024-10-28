@@ -10,7 +10,7 @@ use tardis::{
     log::{self, debug},
     rand,
     serde_json::json,
-    testcontainers, tokio,
+    tokio,
 };
 mod spi_conf_test_common;
 use spi_conf_test_common::*;
@@ -19,7 +19,7 @@ use spi_conf_test_common::*;
 async fn spi_conf_namespace_test() -> TardisResult<()> {
     std::env::set_var("RUST_LOG", "error,spi_conf_listener_test=debug,sqlx=off,sea_orm=off,bios_spi_conf=DEBUG");
 
-    let container_hold = init_tardis(&docker).await?;
+    let container_hold = init_tardis().await?;
     start_web_server().await?;
     let tardis_ctx = TardisContext::default();
     let mut client = TestHttpClient::new("https://localhost:8080/spi-conf".to_string());

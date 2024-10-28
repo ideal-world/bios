@@ -1,9 +1,9 @@
 use serde::{Deserialize, Serialize};
 use tardis::basic::field::TrimString;
 use tardis::chrono::{DateTime, Utc};
-#[cfg(feature = "default")]
+
 use tardis::db::sea_orm;
-#[cfg(feature = "default")]
+
 use tardis::web::poem_openapi;
 
 use crate::rbum::rbum_enumeration::RbumScopeLevelKind;
@@ -11,23 +11,22 @@ use crate::rbum::rbum_enumeration::RbumScopeLevelKind;
 /// Add request for resource set category(node)
 ///
 /// 资源集分类（节点）添加请求
-#[derive(Serialize, Deserialize, Debug)]
-#[cfg_attr(feature = "default", derive(poem_openapi::Object))]
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
 pub struct RbumSetCateAddReq {
     /// Business code for custom
     ///
     /// 自定义业务编码
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
+    #[oai(validator(min_length = "2", max_length = "255"))]
     pub bus_code: TrimString,
     /// Node name
     ///
     /// 节点名称
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
+    #[oai(validator(min_length = "2", max_length = "255"))]
     pub name: TrimString,
     /// Node icon
     ///
     /// 节点图标
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "1000")))]
+    #[oai(validator(min_length = "2", max_length = "1000"))]
     pub icon: Option<String>,
     /// Node sort
     ///
@@ -36,17 +35,17 @@ pub struct RbumSetCateAddReq {
     /// Node extension information
     ///
     /// 节点扩展信息
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "1000")))]
+    #[oai(validator(min_length = "2", max_length = "1000"))]
     pub ext: Option<String>,
     /// Associated [resource set](crate::rbum::dto::rbum_set_dto::RbumSetDetailResp) id
     ///
     /// 关联[资源集](crate::rbum::dto::rbum_set_dto::RbumSetDetailResp) id
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
+    #[oai(validator(min_length = "2", max_length = "255"))]
     pub rel_rbum_set_id: String,
     /// Parent node id
     ///
     /// 父节点id
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "1000")))]
+    #[oai(validator(min_length = "2", max_length = "1000"))]
     pub rbum_parent_cate_id: Option<String>,
 
     pub scope_level: Option<RbumScopeLevelKind>,
@@ -55,23 +54,22 @@ pub struct RbumSetCateAddReq {
 /// Modify request for resource set category(node)
 ///
 /// 资源集分类（节点）修改请求
-#[derive(Serialize, Deserialize, Debug)]
-#[cfg_attr(feature = "default", derive(poem_openapi::Object))]
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
 pub struct RbumSetCateModifyReq {
     /// Business code for custom
     ///
     /// 自定义业务编码
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
+    #[oai(validator(min_length = "2", max_length = "255"))]
     pub bus_code: Option<TrimString>,
     /// Node name
     ///
     /// 节点名称
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
+    #[oai(validator(min_length = "2", max_length = "255"))]
     pub name: Option<TrimString>,
     /// Node icon
     ///
     /// 节点图标
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "1000")))]
+    #[oai(validator(min_length = "2", max_length = "1000"))]
     pub icon: Option<String>,
     /// Node sort
     ///
@@ -80,13 +78,13 @@ pub struct RbumSetCateModifyReq {
     /// Node extension information
     ///
     /// 节点扩展信息
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "1000")))]
+    #[oai(validator(min_length = "2", max_length = "1000"))]
     pub ext: Option<String>,
 
     /// Parent node id
     ///
     /// 父节点id
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "1000")))]
+    #[oai(validator(min_length = "2", max_length = "1000"))]
     pub rbum_parent_cate_id: Option<String>,
 
     pub scope_level: Option<RbumScopeLevelKind>,
@@ -95,8 +93,7 @@ pub struct RbumSetCateModifyReq {
 /// Resource set category(node) summary information
 ///
 /// 资源集分类（节点）概要信息
-#[derive(Serialize, Deserialize, Debug)]
-#[cfg_attr(feature = "default", derive(poem_openapi::Object, sea_orm::FromQueryResult))]
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object, sea_orm::FromQueryResult)]
 pub struct RbumSetCateSummaryResp {
     /// Node id
     ///
@@ -146,8 +143,7 @@ pub struct RbumSetCateSummaryResp {
 /// Resource set category(node) detail information
 ///
 /// 资源集分类（节点）详细信息
-#[derive(Serialize, Deserialize, Debug)]
-#[cfg_attr(feature = "default", derive(poem_openapi::Object, sea_orm::FromQueryResult))]
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object, sea_orm::FromQueryResult)]
 pub struct RbumSetCateDetailResp {
     /// Node id
     ///

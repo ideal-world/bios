@@ -1,0 +1,67 @@
+name: Publish bios-iam crate
+
+on:
+  push:
+    branches:
+      - release-iam
+    tags:
+      - 'release-*'
+
+jobs:
+  release-all:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v3
+
+      - name: Init rust environment
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          components: rustfmt, clippy
+      - uses: davidB/rust-cargo-make@v1
+
+      - name: Cache rust
+        uses: Swatinem/rust-cache@v2
+
+      - name: Check format bios-basic
+        run: cargo fmt -p bios-basic -- --check
+      - name: Check format bios-iam
+        run: cargo fmt -p bios-iam -- --check
+      - name: Check clippy bios-basic
+        run: cargo clippy -p bios-basic --all-features
+      - name: Check clippy bios-basic
+        run: cargo clippy -p bios-basic --no-default-features
+      - name: Check clippy bios-iam
+        run: cargo clippy -p bios-iam --all-features
+      - name: Cargo login z
+        run: cargo login ${{ secrets.CRATES_TOKEN }}
+      - name: Package and Release
+        if: ${{ startsWith(github.ref, 'refs/tags/release') }}
+        run: cargo make publish-bios-iam
+      - name: Free Disk Space (Ubuntu)
+        uses: jlumbroso/free-disk-space@main
+        with:
+          # this might remove tools that are actually needed,
+          # if set to "true" but frees about 6 GB
+          tool-cache: false
+
+          # all of these default to true, but feel free to set to
+          # "false" if necessary for your workflow
+          docker-images: false
+          swap-storage: false
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: true
+    
+      - name: Upload to codecov.io
+        uses: codecov/codecov-action@v2
+        with:
+          token: ${{secrets.CODECOV_TOKEN}}
+
+      - name: Archive code coverage results
+        uses: actions/upload-artifact@v3
+        with:
+          name: code-coverage-report
+          path: cobertura.xml

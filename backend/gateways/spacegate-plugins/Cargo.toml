@@ -24,13 +24,13 @@ spacegate-shell = { workspace = true, features = [
   "plugin-east-west-traffic-white-list",
 ] }
 
-bios-sdk-invoke = { path = "../../../frontend/sdks/invoke", features = [
+bios-sdk-invoke = { version = "0.2.0", path = "../../../frontend/sdks/invoke", features = [
   "spi_log",
 ], default-features = false }
 
 
 jsonpath-rust = "0.3.1"
-bios-auth = { path = "../../supports/auth", default-features = false }
+bios-auth = { version = "0.2.0", path = "../../supports/auth", default-features = false }
 tardis = { workspace = true, features = ["web-client"] }
 ipnet = "2.8.0"
 

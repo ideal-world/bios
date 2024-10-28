@@ -1,0 +1,59 @@
+# ref: https://sagiegurari.github.io/cargo-make/
+[env]
+CARGO_MAKE_PROJECT_VERSION = "0.2.0"
+PUBLISH_SCRIPT = "build-scripts/publish.sh"
+
+[tasks.package-bios-basic]
+workspace = false
+command = "cargo"
+args = ["package", "-p", "bios-basic"]
+
+[tasks.publish-bios-basic]
+dependencies = ["publish-bios-sdk-invoke", "package-bios-basic"]
+workspace = false
+command = "bash"
+args = ["${PUBLISH_SCRIPT}", "${CARGO_MAKE_PROJECT_VERSION}", "bios-basic"]
+
+[tasks.package-bios-iam]
+workspace = false
+command = "cargo"
+args = ["package", "-p", "bios-iam"]
+
+[tasks.publish-bios-iam]
+dependencies = ["publish-bios-basic"]
+workspace = false
+command = "bash"
+args = ["${PUBLISH_SCRIPT}", "${CARGO_MAKE_PROJECT_VERSION}", "bios-iam"]
+
+
+[tasks.package-simple-invoke-client-macro]
+workspace = false
+command = "cargo"
+args = ["package", "-p", "simple-invoke-client-macro"]
+
+[tasks.publish-simple-invoke-client-macro]
+workspace = false
+command = "bash"
+args = [
+    "${PUBLISH_SCRIPT}",
+    "${CARGO_MAKE_PROJECT_VERSION}",
+    "simple-invoke-client-macro",
+]
+
+[tasks.package-bios-sdk-invoke]
+workspace = false
+command = "cargo"
+args = ["package", "-p", "bios-sdk-invoke"]
+
+[tasks.publish-bios-sdk-invoke]
+dependencies = ["publish-simple-invoke-client-macro"]
+workspace = false
+command = "bash"
+args = ["${PUBLISH_SCRIPT}", "${CARGO_MAKE_PROJECT_VERSION}", "bios-sdk-invoke"]
+
+
+[tasks.publish]
+dependencies = ["publish-bios-iam"]
+workspace = false
+command = "echo"
+args = ["Publishing completed!"]

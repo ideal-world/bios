@@ -10,7 +10,7 @@ use tardis::db::reldb_client::{IdResp, TardisActiveModel};
 use tardis::db::sea_orm::sea_query::{Alias, Cond, Expr, Func, IntoValueTuple, JoinType, Order, Query, SelectStatement, Value, ValueTuple};
 use tardis::db::sea_orm::{self, Condition, EntityTrait, FromQueryResult, QueryFilter};
 use tardis::regex::Regex;
-#[cfg(feature = "default")]
+
 use tardis::web::poem_openapi;
 use tardis::web::poem_openapi::types::{ParseFromJSON, ToJSON};
 use tardis::web::web_resp::TardisPage;
@@ -1121,8 +1121,7 @@ pub struct NameResp {
     pub name: String,
 }
 
-#[derive(Debug, Serialize, Deserialize, sea_orm::FromQueryResult)]
-#[cfg_attr(feature = "default", derive(poem_openapi::Object))]
+#[derive(Debug, Serialize, Deserialize, sea_orm::FromQueryResult, poem_openapi::Object)]
 pub struct IdNameResp {
     pub id: String,
     pub name: String,

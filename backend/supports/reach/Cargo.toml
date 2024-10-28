@@ -27,20 +27,20 @@ tardis = { workspace = true, features = [
     "mail",
     "mq",
 ] }
-bios-basic = { path = "../../basic", features = ["default"] }
-bios-sdk-invoke = { path = "../../../frontend/sdks/invoke", features = [
+bios-basic = { version = "0.2.0", path = "../../basic", features = ["default"] }
+bios-sdk-invoke = { version = "0.2.0", path = "../../../frontend/sdks/invoke", features = [
     "iam",
     "macro",
 ], default-features = false }
-# simple-invoke-client-macro = { path = "../../sdks/simple-invoke-client-macro" }
+# simple-invoke-client-macro = { version = "0.2.0", path = "../../sdks/simple-invoke-client-macro" }
 [dev-dependencies]
 tardis = { workspace = true, features = ["test"] }
 
-bios-basic = { path = "../../basic", features = ["default", "test"] }
+bios-basic = { version = "0.2.0", path = "../../basic", features = ["default", "test"] }
 
 bios-reach = { path = "./", features = ["simple-client"] }
 toml = "*"
 
-bios-client-hwsms = { path = "../../../frontend/clients/hwsms", features = ["reach"] }
+bios-client-hwsms = { version = "0.2.0", path = "../../../frontend/clients/hwsms", features = ["reach"] }
 
 testcontainers-modules = { workspace = true }

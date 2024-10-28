@@ -9,6 +9,7 @@ license.workspace = true
 edition.workspace = true
 readme.workspace = true
 publish.workspace = true
+description.workspace = true
 
 [lib]
 name = "bios_iam"
@@ -19,8 +20,8 @@ default = ["ldap_server", "ldap_client"]
 ldap_server = ["ldap3_proto", "tardis/future", "tokio-util"]
 ldap_client = ["ldap3"]
 spi_kv = []
-spi_search = []
-
+spi_search = ["event"]
+event = ["bios-sdk-invoke/event", "bios-basic/with-mq"]
 
 [dependencies]
 serde.workspace = true
@@ -35,8 +36,10 @@ tardis = { workspace = true, features = [
     "web-client",
     "mail",
 ] }
-bios-basic = { path = "../../basic", features = ["default", "with-mq"] }
-bios-sdk-invoke = { path = "../../../frontend/sdks/invoke", features = ["default", "event"] }
+bios-basic = { version = "0.2.0", path = "../../basic", features = ["default"] }
+bios-sdk-invoke = { version = "0.2.0", path = "../../../frontend/sdks/invoke", features = [
+    "default",
+] }
 
 # ldap
 ldap3_proto = { version = "0.3", optional = true }
@@ -48,5 +51,7 @@ nanoid = { version = "0.4" }
 strum = { workspace = true, features = ["derive"] }
 [dev-dependencies]
 tardis = { workspace = true, features = ["test"] }
-bios-basic = { path = "../../basic", features = ["default", "test"] }
-bios-sdk-invoke = { path = "../../../frontend/sdks/invoke", features = ["default"] }
+bios-basic = { version = "0.2.0", path = "../../basic", features = ["default", "test"] }
+bios-sdk-invoke = { version = "0.2.0", path = "../../../frontend/sdks/invoke", features = [
+    "default",
+] }

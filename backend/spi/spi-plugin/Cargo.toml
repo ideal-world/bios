@@ -22,11 +22,11 @@ spi-pg = ["tardis/reldb-postgres"]
 serde.workspace = true
 async-trait.workspace = true
 tardis = { workspace = true, features = ["reldb-postgres", "web-server"] }
-bios-basic = { path = "../../basic", features = ["default"] }
-bios-sdk-invoke = { path = "../../../frontend/sdks/invoke", features = ["default"] }
+bios-basic = { version = "0.2.0", path = "../../basic", features = ["default"] }
+bios-sdk-invoke = { version = "0.2.0", path = "../../../frontend/sdks/invoke", features = ["default"] }
 strum = { workspace = true, features = ["derive"] }
 percent-encoding = "2"
 [dev-dependencies]
 tardis = { workspace = true, features = ["test", "ws-client"] }
-bios-basic = { path = "../../basic", features = ["default", "test"] }
-bios-sdk-invoke = { path = "../../../frontend/sdks/invoke", features = ["default"] }
+bios-basic = { version = "0.2.0", path = "../../basic", features = ["default", "test"] }
+bios-sdk-invoke = { version = "0.2.0", path = "../../../frontend/sdks/invoke", features = ["default"] }

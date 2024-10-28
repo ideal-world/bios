@@ -3,27 +3,27 @@ use bios_basic::{
     test::test_http_client::TestHttpClient,
 };
 use bios_spi_conf::{conf_constants::DOMAIN_CODE, conf_initializer};
-use tardis::testcontainers::GenericImage;
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
     test::test_container::TardisTestContainer,
-    testcontainers::{clients::Cli, Container},
+    testcontainers::ContainerAsync,
     TardisFuns,
 };
-use testcontainers_modules::redis::Redis;
-pub struct Holder<'d> {
-    pub pg: Container<'d, GenericImage>,
-    pub redis: Container<'d, Redis>,
+use testcontainers_modules::{postgres::Postgres, redis::Redis};
+#[allow(dead_code)]
+pub struct Holder {
+    pub pg: ContainerAsync<Postgres>,
+    pub redis: ContainerAsync<Redis>,
 }
 
 #[allow(dead_code)]
-pub async fn init_tardis(docker: &Cli) -> TardisResult<Holder> {
-    let reldb_container = TardisTestContainer::postgres_custom(None, docker);
-    let port = reldb_container.get_host_port_ipv4(5432);
+pub async fn init_tardis() -> TardisResult<Holder> {
+    let reldb_container = TardisTestContainer::postgres_custom(None).await?;
+    let port = reldb_container.get_host_port_ipv4(5432).await?;
     let url = format!("postgres://postgres:123456@127.0.0.1:{port}/test");
     std::env::set_var("TARDIS_FW.DB.URL", url);
-    let redis_container = TardisTestContainer::redis_custom(docker);
-    let port = redis_container.get_host_port_ipv4(6379);
+    let redis_container = TardisTestContainer::redis_custom().await?;
+    let port = redis_container.get_host_port_ipv4(6379).await?;
     let url = format!("redis://127.0.0.1:{port}/0");
     std::env::set_var("TARDIS_FW.CACHE.URL", url);
     let holder = Holder {
