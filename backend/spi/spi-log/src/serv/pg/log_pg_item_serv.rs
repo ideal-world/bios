@@ -8,18 +8,18 @@ use tardis::{
 
 use bios_basic::{dto::BasicQueryCondInfo, enumeration::BasicQueryOpKind, helper::db_helper, spi::spi_funs::SpiBsInst};
 
-use crate::dto::log_item_dto::{AdvBasicQueryCondInfo, LogConfigReq, LogItemAddReq, LogItemFindReq, LogItemFindResp};
+use crate::dto::log_item_dto::{AdvBasicQueryCondInfo, LogConfigReq, LogItemAddReq, LogItemAddV2Req, LogItemFindReq, LogItemFindResp};
 
 use super::log_pg_initializer;
 
 pub async fn add(add_req: &mut LogItemAddReq, _funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<String> {
-    let id = add_req.idempotent_id.clone().unwrap_or(TardisFuns::field.nanoid());
+    let id = add_req.id.clone().unwrap_or(TardisFuns::field.nanoid());
     let mut params = vec![
         Value::from(id.clone()),
         Value::from(add_req.kind.as_ref().unwrap_or(&"".into()).to_string()),
         Value::from(add_req.key.as_ref().unwrap_or(&"".into()).to_string()),
         Value::from(add_req.op.as_ref().unwrap_or(&"".to_string()).as_str()),
-        Value::from(TardisFuns::json.json_to_string(add_req.content.clone())?.as_str()),
+        Value::from(add_req.content.clone()),
         Value::from(add_req.owner.as_ref().unwrap_or(&"".to_string()).as_str()),
         Value::from(add_req.own_paths.as_ref().unwrap_or(&"".to_string()).as_str()),
         Value::from(if let Some(ext) = &add_req.ext {
@@ -509,14 +509,22 @@ ORDER BY ts DESC
     })
 }
 
-pub async fn modify_ext(_tag: &str, _key: &str, _ext: &mut JsonValue, _funs: &TardisFunsInst, _ctx: &TardisContext, _inst: &SpiBsInst) -> TardisResult<()> {
-    Ok(())
+pub async fn addv2(add_req: &mut LogItemAddV2Req, funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<String> {
+    Err(funs.err().bad_request("item", "add", "Add v2 is not supported", "400-spi-log-add-v2-not-supported"))
 }
 
-pub async fn add_config(_req: &LogConfigReq, _funs: &TardisFunsInst, _ctx: &TardisContext, _inst: &SpiBsInst) -> TardisResult<()> {
-    Ok(())
+pub async fn findv2(find_req: &mut LogItemFindReq, funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<TardisPage<LogItemFindResp>> {
+    Err(funs.err().bad_request("item", "find", "Find v2 is not supported", "400-spi-log-find-v2-not-supported"))
 }
 
-pub async fn delete_config(_config: &mut LogConfigReq, _funs: &TardisFunsInst, _ctx: &TardisContext, _inst: &SpiBsInst) -> TardisResult<()> {
-    Ok(())
+pub async fn modify_ext(_tag: &str, _key: &str, _ext: &mut JsonValue, funs: &TardisFunsInst, _ctx: &TardisContext, _inst: &SpiBsInst) -> TardisResult<()> {
+    Err(funs.err().bad_request("item", "modify_ext", "Modify ext is not supported", "400-spi-log-modify-ext-not-supported"))
+}
+
+pub async fn add_config(_req: &LogConfigReq, funs: &TardisFunsInst, _ctx: &TardisContext, _inst: &SpiBsInst) -> TardisResult<()> {
+    Err(funs.err().bad_request("item", "add_config", "Add config is not supported", "400-spi-log-add-config-not-supported"))
+}
+
+pub async fn delete_config(_config: &mut LogConfigReq, funs: &TardisFunsInst, _ctx: &TardisContext, _inst: &SpiBsInst) -> TardisResult<()> {
+    Err(funs.err().bad_request("item", "delete_config", "Delete config is not supported", "400-spi-log-delete-config-not-supported"))
 }
