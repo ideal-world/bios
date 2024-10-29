@@ -35,7 +35,7 @@ impl LogCiItemApi {
 }
 
 /// Interface Console Log API V2
-#[poem_openapi::OpenApi(prefix_path = "/ci/item/v2", tag = "bios_basic::ApiTag::Interface")]
+#[poem_openapi::OpenApi(prefix_path = "/ci/v2/item", tag = "bios_basic::ApiTag::Interface")]
 impl LogCiItemApiV2 {
     /// Add Item
     #[oai(path = "/", method = "post")]

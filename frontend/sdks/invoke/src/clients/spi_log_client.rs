@@ -180,7 +180,7 @@ impl SpiLogClient {
         }
         let log_url: String = BaseSpiClient::module_url(InvokeModuleKind::Log, funs).await?;
         let headers = BaseSpiClient::headers(None, funs, ctx).await?;
-        funs.web_client().post_obj_to_str(&format!("{log_url}/ci/item/v2"), &req, headers.clone()).await?;
+        funs.web_client().post_obj_to_str(&format!("{log_url}/ci/v2/item"), &req, headers.clone()).await?;
         Ok(())
     }
 
@@ -190,7 +190,7 @@ impl SpiLogClient {
     }
 
     pub async fn findv2(find_req: LogItemFindReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<TardisPage<LogItemFindResp>>> {
-        Self::do_find(find_req, "/ci/item/v2/find", funs, ctx).await
+        Self::do_find(find_req, "/ci/v2/item/find", funs, ctx).await
     }
 
     async fn do_find(find_req: LogItemFindReq, path: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<TardisPage<LogItemFindResp>>> {
