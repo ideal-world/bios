@@ -131,10 +131,10 @@ impl From<LogItemAddReq> for StatsItemAddReq {
 
 impl From<LogItemAddReq> for StatsItemDeleteReq {
     fn from(value: LogItemAddReq) -> Self {
-      StatsItemDeleteReq {
+        StatsItemDeleteReq {
             idempotent_id: value.idempotent_id,
             tag: value.tag,
             key: value.key,
-      }
-  }
+        }
+    }
 }

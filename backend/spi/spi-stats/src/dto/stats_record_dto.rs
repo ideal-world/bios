@@ -42,7 +42,7 @@ pub struct StatsFactRecordLoadReq {
 
 impl From<StatsItemAddReq> for StatsFactRecordLoadReq {
     fn from(value: StatsItemAddReq) -> Self {
-      StatsFactRecordLoadReq {
+        StatsFactRecordLoadReq {
             own_paths: value.own_paths.unwrap_or_default(),
             ct: value.ts.unwrap_or(Utc::now()),
             idempotent_id: value.idempotent_id,

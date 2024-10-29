@@ -1,4 +1,7 @@
-use crate::{get_tardis_inst, serv::{self, stats_record_serv}};
+use crate::{
+    get_tardis_inst,
+    serv::{self, stats_record_serv},
+};
 use bios_sdk_invoke::clients::{
     event_client::{get_topic, mq_error, ContextHandler, SPI_RPC_TOPIC},
     spi_log_client::{StatsItemAddReq, StatsItemDeleteReq},
@@ -18,7 +21,7 @@ async fn handle_add_event(req: StatsItemAddReq, ctx: TardisContext) -> TardisRes
 }
 #[instrument]
 async fn handle_delete_event(req: StatsItemDeleteReq, ctx: TardisContext) -> TardisResult<()> {
-  let funs = get_tardis_inst();
+    let funs = get_tardis_inst();
     if let Some(ref key) = req.key {
         stats_record_serv::fact_record_delete(&req.tag, &key.to_string(), &funs, &ctx).await?;
     }

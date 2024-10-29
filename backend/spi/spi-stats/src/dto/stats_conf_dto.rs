@@ -493,10 +493,25 @@ pub struct StatsSyncDbConfigAddReq {
 /// 修改同步数据库配置请求对象
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct StatsSyncDbConfigModifyReq {
+    pub fact_conf_key: String,
     pub fact_conf_col_key: Option<String>,
     pub db_url: Option<String>,
     pub db_user: Option<String>,
     pub db_password: Option<String>,
+    pub max_connections: Option<u32>,
+    pub min_connections: Option<u32>,
+}
+
+/// Sync DateBase Config Response Object
+///
+/// 同步数据库配置响应对象
+#[derive(poem_openapi::Object, sea_orm::FromQueryResult, Serialize, Deserialize, Debug)]
+pub struct StatsSyncDbConfigInfoResp {
+    pub fact_conf_key: String,
+    pub fact_conf_col_key: Option<String>,
+    pub db_url: String,
+    pub db_user: String,
+    pub db_password: String,
     pub max_connections: Option<u32>,
     pub min_connections: Option<u32>,
 }
