@@ -26,7 +26,7 @@ pub mod event {
 
     pub const LOG_AVATAR: &str = "spi-log";
 
-    impl EventAttribute for super::LogItemAddReq {
+    impl EventAttribute for super::LogItemAddV2Req {
         const SUBJECT: Subject = Subject::const_new("log/add");
     }
 }
@@ -71,6 +71,21 @@ pub struct LogDynamicContentReq {
 
 #[derive(Serialize, Deserialize, Debug, Default)]
 pub struct LogItemAddReq {
+    pub tag: String,
+    pub content: String,
+    pub kind: Option<String>,
+    pub ext: Option<Value>,
+    pub key: Option<String>,
+    pub op: Option<String>,
+    pub rel_key: Option<String>,
+    pub id: Option<String>,
+    pub ts: Option<DateTime<Utc>>,
+    pub owner: Option<String>,
+    pub own_paths: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default)]
+pub struct LogItemAddV2Req {
     pub tag: String,
     pub content: Value,
     pub kind: Option<String>,
@@ -122,7 +137,36 @@ impl EventAttribute for StatsItemDeleteReq {
 }
 
 impl SpiLogClient {
+    #[deprecated]
     pub async fn add_dynamic_log(
+        content: &LogDynamicContentReq,
+        ext: Option<Value>,
+        kind: Option<String>,
+        key: Option<String>,
+        op: Option<String>,
+        rel_key: Option<String>,
+        ts: Option<String>,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<()> {
+        let req = LogItemAddReq {
+            tag: DYNAMIC_LOG.to_string(),
+            content: TardisFuns::json.obj_to_string(content)?,
+            kind,
+            ext,
+            key,
+            op,
+            rel_key,
+            id: None,
+            ts: ts.map(|ts| DateTime::parse_from_rfc3339(&ts).unwrap_or_default().with_timezone(&Utc)),
+            owner: Some(ctx.owner.clone()),
+            own_paths: Some(ctx.own_paths.clone()),
+        };
+        Self::add(req, funs, ctx).await?;
+        Ok(())
+    }
+
+    pub async fn add_dynamic_log_v2(
         content: &LogDynamicContentReq,
         ext: Option<Value>,
         kind: Option<String>,
@@ -135,7 +179,7 @@ impl SpiLogClient {
     ) -> TardisResult<()> {
         let cfg = funs.conf::<InvokeConfig>();
         let owner_name = IamClient::new("", funs, ctx, cfg.module_urls.get("iam").expect("missing iam base url")).get_account(&ctx.owner, &ctx.own_paths).await?.owner_name;
-        let req = LogItemAddReq {
+        let req = LogItemAddV2Req {
             tag: DYNAMIC_LOG.to_string(),
             content: TardisFuns::json.obj_to_json(content)?,
             kind,
@@ -151,11 +195,19 @@ impl SpiLogClient {
             owner_name,
             push: false,
         };
-        Self::add(req, funs, ctx).await?;
+        Self::addv2(req, funs, ctx).await?;
         Ok(())
     }
 
+    #[deprecated]
     pub async fn add(req: LogItemAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let log_url: String = BaseSpiClient::module_url(InvokeModuleKind::Log, funs).await?;
+        let headers = BaseSpiClient::headers(None, funs, ctx).await?;
+        funs.web_client().post_obj_to_str(&format!("{log_url}/ci/item"), &req, headers.clone()).await?;
+        Ok(())
+    }
+
+    pub async fn addv2(req: LogItemAddV2Req, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         #[cfg(feature = "event")]
         if let Some(topic) = get_topic(&SPI_RPC_TOPIC) {
             topic.send_event(req.inject_context(funs, ctx).json()).map_err(mq_error).await?;
@@ -163,14 +215,23 @@ impl SpiLogClient {
         }
         let log_url: String = BaseSpiClient::module_url(InvokeModuleKind::Log, funs).await?;
         let headers = BaseSpiClient::headers(None, funs, ctx).await?;
-        funs.web_client().post_obj_to_str(&format!("{log_url}/ci/item"), &req, headers.clone()).await?;
+        funs.web_client().post_obj_to_str(&format!("{log_url}/ci/v2/item"), &req, headers.clone()).await?;
         Ok(())
     }
 
+    #[deprecated]
     pub async fn find(find_req: LogItemFindReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<TardisPage<LogItemFindResp>>> {
+        Self::do_find(find_req, "/ci/item/find", funs, ctx).await
+    }
+
+    pub async fn findv2(find_req: LogItemFindReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<TardisPage<LogItemFindResp>>> {
+        Self::do_find(find_req, "/ci/v2/item/find", funs, ctx).await
+    }
+
+    async fn do_find(find_req: LogItemFindReq, path: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<TardisPage<LogItemFindResp>>> {
         let log_url: String = BaseSpiClient::module_url(InvokeModuleKind::Log, funs).await?;
         let headers = BaseSpiClient::headers(None, funs, ctx).await?;
-        let resp = funs.web_client().put::<LogItemFindReq, TardisResp<TardisPage<LogItemFindResp>>>(&format!("{log_url}/ci/item/find"), &find_req, headers.clone()).await?;
+        let resp = funs.web_client().put::<LogItemFindReq, TardisResp<TardisPage<LogItemFindResp>>>(&format!("{log_url}{path}"), &find_req, headers.clone()).await?;
         BaseSpiClient::package_resp(resp)
     }
 }

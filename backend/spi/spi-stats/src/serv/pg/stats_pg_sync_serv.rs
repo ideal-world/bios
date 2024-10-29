@@ -109,12 +109,7 @@ pub(crate) async fn db_config_paginate(page_number: u32, page_size: u32, funs: &
 
   let rbum_cert_list = RbumCertServ::paginate_rbums(
     &RbumCertFilterReq {
-        basic: RbumBasicFilterReq {
-            ids: Some(vec![rbum_cert_add_req.rel_rbum_id.clone()]),
-            ..Default::default()
-        },
         kind: Some(SPI_PG_KIND_CODE.to_string()),
-        suppliers: Some(vec![rbum_cert_add_req.supplier.clone().expect("supplier is required")]),
         ..Default::default()
     },
     page_number,
