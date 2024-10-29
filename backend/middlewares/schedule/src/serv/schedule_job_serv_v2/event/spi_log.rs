@@ -1,6 +1,6 @@
 use std::{sync::Arc, task::ready, time::Duration};
 
-use bios_sdk_invoke::clients::spi_log_client::{LogItemAddReq, LogItemFindReq, SpiLogClient};
+use bios_sdk_invoke::clients::spi_log_client::{LogItemAddReq, LogItemAddV2Req, LogItemFindReq, SpiLogClient};
 use tardis::{
     basic::dto::TardisContext,
     chrono::Utc,
@@ -109,8 +109,8 @@ impl EventComponent for SpiLog {
         let ctx = self.ctx.clone();
         let code = code.to_string();
         let _handle = tokio::spawn(async move {
-            let result = SpiLogClient::add(
-                LogItemAddReq {
+            let result = SpiLogClient::addv2(
+                LogItemAddV2Req {
                     tag: TASK_TAG.to_string(),
                     content: tardis::serde_json::Value::Null,
                     ext: Some(ext),
