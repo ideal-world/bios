@@ -7,8 +7,49 @@ use tardis::{
     web::poem_openapi,
 };
 
-#[derive(poem_openapi::Object, Serialize, Deserialize, Clone, Debug)]
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct LogItemAddReq {
+    #[oai(validator(pattern = r"^[a-z0-9_]+$"))]
+    pub tag: String,
+    // #[oai(validator(min_length = "2"))]
+    pub content: String,
+    #[oai(validator(min_length = "2"))]
+    pub kind: Option<TrimString>,
+    pub ext: Option<Value>,
+    #[oai(validator(min_length = "2"))]
+    pub key: Option<TrimString>,
+    #[oai(validator(min_length = "2"))]
+    pub op: Option<String>,
+    #[oai(validator(min_length = "2"))]
+    pub rel_key: Option<TrimString>,
+    #[oai(validator(min_length = "2"))]
+    pub id: Option<String>,
+    pub ts: Option<DateTime<Utc>>,
+    #[oai(validator(min_length = "2"))]
+    pub owner: Option<String>,
+    pub own_paths: Option<String>,
+}
+
+impl From<bios_sdk_invoke::clients::spi_log_client::LogItemAddReq> for LogItemAddReq {
+    fn from(value: bios_sdk_invoke::clients::spi_log_client::LogItemAddReq) -> Self {
+        Self {
+            tag: value.tag,
+            content: value.content,
+            kind: value.kind.map(Into::into),
+            ext: value.ext,
+            key: value.key.map(Into::into),
+            op: value.op,
+            rel_key: value.rel_key.map(Into::into),
+            id: value.id,
+            ts: value.ts,
+            owner: value.owner,
+            own_paths: value.own_paths,
+        }
+    }
+}
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Clone, Debug)]
+pub struct LogItemAddV2Req {
     #[oai(validator(pattern = r"^[a-z0-9_]+$"))]
     pub tag: String,
     pub content: Value,
@@ -32,8 +73,8 @@ pub struct LogItemAddReq {
     pub push: bool,
     pub msg: Option<String>,
 }
-impl From<bios_sdk_invoke::clients::spi_log_client::LogItemAddReq> for LogItemAddReq {
-    fn from(value: bios_sdk_invoke::clients::spi_log_client::LogItemAddReq) -> Self {
+impl From<bios_sdk_invoke::clients::spi_log_client::LogItemAddV2Req> for LogItemAddV2Req {
+    fn from(value: bios_sdk_invoke::clients::spi_log_client::LogItemAddV2Req) -> Self {
         Self {
             tag: value.tag,
             content: value.content,
@@ -129,8 +170,8 @@ pub struct StatsItemAddReq {
     pub own_paths: Option<String>,
 }
 
-impl From<LogItemAddReq> for StatsItemAddReq {
-    fn from(value: LogItemAddReq) -> Self {
+impl From<LogItemAddV2Req> for StatsItemAddReq {
+    fn from(value: LogItemAddV2Req) -> Self {
         StatsItemAddReq {
             idempotent_id: value.idempotent_id,
             tag: value.tag,

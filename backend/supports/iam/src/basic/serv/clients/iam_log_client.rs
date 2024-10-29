@@ -5,7 +5,7 @@ use bios_basic::{
         serv::{rbum_crud_serv::RbumCrudOperation, rbum_item_serv::RbumItemCrudOperation, rbum_set_serv::RbumSetCateServ},
     },
 };
-use bios_sdk_invoke::clients::spi_log_client::{LogItemAddReq, SpiLogClient};
+use bios_sdk_invoke::clients::spi_log_client::{LogItemAddV2Req, SpiLogClient};
 use serde::Serialize;
 
 use tardis::{
@@ -135,7 +135,7 @@ impl IamLogClient {
         let own_paths = if ctx.own_paths.len() < 2 { None } else { Some(ctx.own_paths.clone()) };
         let owner = if ctx.owner.len() < 2 { None } else { Some(ctx.owner.clone()) };
 
-        let add_req = LogItemAddReq {
+        let add_req = LogItemAddV2Req {
             tag,
             content: TardisFuns::json.obj_to_json(&content).expect("req_msg not a valid json value"),
             kind,
@@ -151,7 +151,7 @@ impl IamLogClient {
             owner_name: None,
             push: false,
         };
-        SpiLogClient::add(add_req, funs, ctx).await?;
+        SpiLogClient::addv2(add_req, funs, ctx).await?;
         Ok(())
     }
 
