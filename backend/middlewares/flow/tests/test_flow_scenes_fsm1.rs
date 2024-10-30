@@ -5,10 +5,10 @@ use bios_basic::test::test_http_client::TestHttpClient;
 
 use bios_mw_flow::dto::flow_config_dto::FlowConfigModifyReq;
 
-use bios_mw_flow::dto::flow_inst_dto::FlowInstStartReq;
+use bios_mw_flow::dto::flow_inst_dto::{FlowInstDetailResp, FlowInstFindStateAndTransitionsReq, FlowInstFindStateAndTransitionsResp, FlowInstStartReq};
 use bios_mw_flow::dto::flow_model_dto::{
     FlowModelAddReq, FlowModelAggResp, FlowModelAssociativeOperationKind, FlowModelBindStateReq, FlowModelCopyOrReferenceCiReq, FlowModelCopyOrReferenceReq, FlowModelKind,
-    FlowModelModifyReq, FlowModelSummaryResp,
+    FlowModelModifyReq, FlowModelStatus, FlowModelSummaryResp,
 };
 use bios_mw_flow::dto::flow_model_version_dto::{FlowModelVersionAddReq, FlowModelVersionBindState, FlowModelVersionModifyReq, FlowModelVesionState};
 use bios_mw_flow::dto::flow_state_dto::{FlowStateRelModelExt, FlowStateSummaryResp};
@@ -82,6 +82,7 @@ pub async fn test(flow_client: &mut TestHttpClient, search_client: &mut TestHttp
             "/cc/model",
             &FlowModelAddReq {
                 kind: FlowModelKind::AsTemplateAndAsModel,
+                status: FlowModelStatus::Enabled,
                 rel_transition_ids: None,
                 add_version: Some(FlowModelVersionAddReq {
                     name: "测试需求模板1".into(),
@@ -203,6 +204,7 @@ pub async fn test(flow_client: &mut TestHttpClient, search_client: &mut TestHttp
                 name: "测试需求默认模板1".into(),
                 info: Some("xxx".to_string()),
                 kind: FlowModelKind::AsTemplateAndAsModel,
+                status: FlowModelStatus::Enabled,
                 rel_transition_ids: None,
                 add_version: None,
                 current_version_id: None,
@@ -251,6 +253,7 @@ pub async fn test(flow_client: &mut TestHttpClient, search_client: &mut TestHttp
                 rel_model_id: None,
                 disabled: None,
                 kind: FlowModelKind::AsTemplateAndAsModel,
+                status: FlowModelStatus::Enabled,
                 rel_transition_ids: None,
                 add_version: None,
                 current_version_id: None,
@@ -406,5 +409,48 @@ pub async fn test(flow_client: &mut TestHttpClient, search_client: &mut TestHttp
     assert_eq!(req_models.len(), 3);
     assert!(req_models.iter().any(|mdoel| mdoel.id == req_default_model_template_id));
     assert!(req_models.iter().all(|mdoel| mdoel.id != req_model_template_id));
+    // enter app
+    ctx.owner = "u001".to_string();
+    ctx.own_paths = "t1/app01".to_string();
+    flow_client.set_auth(&ctx)?;
+    search_client.set_auth(&ctx)?;
+    let result: HashMap<String, String> = flow_client
+        .post(
+            "/ci/model/copy_or_reference_model",
+            &FlowModelCopyOrReferenceCiReq {
+                rel_template_id: Some(req_template_id1.to_string()),
+                op: FlowModelAssociativeOperationKind::Copy,
+            },
+        )
+        .await;
+    info!("result: {:?}", result);
+    let models: HashMap<String, FlowModelSummaryResp> = flow_client.put("/cc/model/find_rel_models?tag_ids=REQ,PROJ,ITER,TICKET&is_shared=false", &json!("")).await;
+    info!("models: {:?}", models);
+    sleep(Duration::from_millis(1000)).await;
+    let req_inst_id1: String = flow_client
+        .post(
+            "/cc/inst",
+            &FlowInstStartReq {
+                tag: "REQ".to_string(),
+                create_vars: None,
+                rel_business_obj_id: TardisFuns::field.nanoid(),
+                transition_id: None,
+            },
+        )
+        .await;
+    info!("req_inst_id1: {:?}", req_inst_id1);
+    let req_inst1: FlowInstDetailResp = flow_client.get(&format!("/cc/inst/{}", req_inst_id1)).await;
+    info!("req_inst1: {:?}", req_inst1);
+    let state_and_next_transitions: Vec<FlowInstFindStateAndTransitionsResp> = flow_client
+        .put(
+            "/cc/inst/batch/state_transitions",
+            &vec![FlowInstFindStateAndTransitionsReq {
+                flow_inst_id: req_inst_id1.clone(),
+                vars: None,
+            }],
+        )
+        .await;
+    assert_eq!(state_and_next_transitions.len(), 1);
+    assert_eq!(state_and_next_transitions[0].current_flow_state_name, "待开始");
     Ok(())
 }

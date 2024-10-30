@@ -123,7 +123,7 @@ impl
     }
 
     async fn package_ext_modify(id: &str, modify_req: &FlowModelVersionModifyReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<Option<flow_model_version::ActiveModel>> {
-        if modify_req.init_state_id.is_none() && modify_req.init_state_id.is_none() && modify_req.status.is_none() {
+        if modify_req.init_state_id.is_none() && modify_req.status.is_none() {
             return Ok(None);
         }
         let mut flow_mode_version = flow_model_version::ActiveModel {
@@ -142,6 +142,27 @@ impl
     async fn after_modify_item(id: &str, modify_req: &mut FlowModelVersionModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         if let Some(bind_states) = &modify_req.bind_states {
             Self::bind_states_and_transitions(id, bind_states, funs, ctx).await?;
+        }
+        if let Some(modify_states) = &modify_req.modify_states {
+            for modify_state in modify_states {
+                if let Some(modify_state) = &modify_state.modify_state {
+                    FlowStateServ::modify_rel_state_ext(&modify_state.id, modify_state, funs, ctx).await?;
+                }
+                if let Some(add_transitions) = &modify_state.add_transitions {
+                    FlowTransitionServ::add_transitions(id, &modify_state.id, add_transitions, funs, ctx).await?;
+                }
+                if let Some(modify_transitions) = &modify_state.modify_transitions {
+                    FlowTransitionServ::modify_transitions(id, modify_transitions, funs, ctx).await?;
+                }
+                if let Some(delete_transitions) = &modify_state.delete_transitions {
+                    FlowTransitionServ::delete_transitions(id, delete_transitions, funs, ctx).await?;
+                }
+            }
+        }
+        if let Some(unbind_states) = &modify_req.unbind_states {
+            for delete_state in unbind_states {
+                Self::unbind_state(id, delete_state, funs, ctx).await?;
+            }
         }
 
         Ok(())

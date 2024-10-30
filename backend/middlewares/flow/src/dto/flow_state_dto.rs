@@ -1,6 +1,9 @@
-use bios_basic::rbum::{
-    dto::rbum_filer_dto::{RbumBasicFilterReq, RbumItemFilterFetcher, RbumItemRelFilterReq},
-    rbum_enumeration::RbumScopeLevelKind,
+use bios_basic::{
+    dto::BasicQueryCondInfo,
+    rbum::{
+        dto::rbum_filer_dto::{RbumBasicFilterReq, RbumItemFilterFetcher, RbumItemRelFilterReq},
+        rbum_enumeration::RbumScopeLevelKind,
+    },
 };
 use serde::{Deserialize, Serialize};
 use tardis::{
@@ -9,6 +12,7 @@ use tardis::{
     db::sea_orm::{self, prelude::*, EnumIter},
     serde_json::Value,
     web::poem_openapi,
+    TardisFuns,
 };
 
 use super::flow_transition_dto::FlowTransitionDetailResp;
@@ -26,7 +30,7 @@ pub struct FlowStateAddReq {
     #[oai(validator(min_length = "2", max_length = "2000"))]
     pub info: Option<String>,
     pub state_kind: Option<FlowStateKind>,
-    pub kind_conf: Option<Value>,
+    pub kind_conf: Option<FLowStateKindConf>,
 
     pub template: Option<bool>,
     #[oai(validator(min_length = "2", max_length = "255"))]
@@ -37,6 +41,125 @@ pub struct FlowStateAddReq {
 
     pub scope_level: Option<RbumScopeLevelKind>,
     pub disabled: Option<bool>,
+}
+
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object, Default, Clone)]
+pub struct FLowStateKindConf {
+    pub form: Option<FlowStateForm>,
+    pub approval: Option<FlowStateApproval>,
+    pub branch: Option<FlowStateBranch>,
+}
+
+/// 录入节点配置信息
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object, Default, Clone)]
+pub struct FlowStateForm {
+    pub nodify: Option<FlowNodifyConf>,
+    /// 权限配置：为true时，创建人可以操作
+    pub guard_by_creator: bool,
+    /// 权限配置：为true时，历史操作人可以操作
+    pub guard_by_his_operators: bool,
+    /// 权限配置：为true时，负责人可以操作
+    pub guard_by_assigned: bool,
+    /// 权限配置：自定义配置
+    pub guard_custom_conf: Option<FlowGuardConf>,
+    /// 当操作人为空时的自动处理策略
+    pub auto_transfer_when_empty_kind: Option<FlowStatusAutoStrategyKind>,
+    /// 当操作人为空且策略选择为指定代理，则当前配置人员权限生效
+    pub auto_transfer_when_empty_guard_custom_conf: Option<FlowGuardConf>,
+    /// 当操作人为空且策略选择为流转节点，则当前配置节点ID生效
+    pub auto_transfer_when_empty_state_id: Option<String>,
+    /// 是否允许转办
+    pub referral: bool,
+    /// 转办自定义人员权限
+    pub referral_guard_custom_conf: Option<FlowGuardConf>,
+    /// 字段配置
+    pub vars_collect: FlowStateVarsCollect,
+}
+
+/// 审批节点配置信息
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object, Default, Clone)]
+pub struct FlowStateApproval {
+    /// 通知
+    pub nodify: Option<FlowNodifyConf>,
+    /// 结果通知
+    pub response_nodify: Option<FlowNodifyConf>,
+    /// 权限配置：为true时，创建人可以操作
+    pub guard_by_creator: bool,
+    /// 权限配置：为true时，历史操作人可以操作
+    pub guard_by_his_operators: bool,
+    /// 权限配置：为true时，负责人可以操作
+    pub guard_by_assigned: bool,
+    /// 当操作人为空时的自动处理策略
+    pub auto_transfer_when_empty_kind: Option<FlowStatusAutoStrategyKind>,
+    /// 当操作人为空且策略选择为指定代理，则当前配置人员权限生效
+    pub auto_transfer_when_empty_guard_custom_conf: Option<FlowGuardConf>,
+    /// 当操作人为空且策略选择为流转节点，则当前配置节点ID生效
+    pub auto_transfer_when_empty_state_id: Option<String>,
+    /// 是否允许撤销
+    pub revoke: bool,
+    /// 是否允许转办
+    pub referral: bool,
+    /// 转办自定义人员权限
+    pub referral_guard_custom_conf: Option<FlowGuardConf>,
+    /// 权限配置：自定义配置
+    pub guard_custom_conf: Option<FlowGuardConf>,
+    /// 字段配置
+    pub vars_collect: FlowStateVarsCollect,
+}
+
+/// 分支节点配置信息
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object, Default, Clone)]
+pub struct FlowStateBranch {
+    /// 分支条件，三维数组表示。第一维表示不同分支，第二维表示分支中的或条件集合，第三维表示分支中的且条件集合
+    pub conditions: Vec<Vec<Vec<BasicQueryCondInfo>>>,
+}
+
+/// 状态节点字段配置
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object, Default, Clone)]
+pub struct FlowStateVarsCollect {
+    pub show: Vec<String>,
+    pub edit: Vec<String>,
+    pub required: Vec<String>,
+}
+
+/// 状态自动处理的策略类型
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Enum, Default, EnumIter, sea_orm::DeriveActiveEnum, Clone)]
+#[sea_orm(rs_type = "String", db_type = "String(StringLen::N(255))")]
+pub enum FlowStatusAutoStrategyKind {
+    /// 自动跳过
+    #[default]
+    #[sea_orm(string_value = "autoskip")]
+    Autoskip,
+    /// 指定代理
+    #[sea_orm(string_value = "specify_agent")]
+    SpecifyAgent,
+    /// 流转节点
+    #[sea_orm(string_value = "transfer_state")]
+    TransferState,
+}
+
+/// 人员权限配置
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object, Default, Clone)]
+pub struct FlowGuardConf {
+    /// 权限配置：为true时，指定操作人可以操作
+    pub guard_by_spec_account_ids: Vec<String>,
+    /// 权限配置：为true时，指定角色可以操作
+    pub guard_by_spec_role_ids: Vec<String>,
+    /// 权限配置：为true时，指定组织可以操作
+    pub guard_by_spec_org_ids: Vec<String>,
+}
+
+// 节点通知配置
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object, Default, Clone)]
+pub struct FlowNodifyConf {
+    /// 权限配置：指定操作人可以操作
+    pub guard_by_owner: bool,
+    /// 权限配置：自定义配置
+    pub guard_custom_conf: Option<FlowGuardConf>,
+    /// 通知方式：短信通知
+    pub send_sms: bool,
+    /// 通知方式：邮箱通知
+    pub send_mail: bool,
 }
 
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object, Default)]
@@ -50,7 +173,7 @@ pub struct FlowStateModifyReq {
     #[oai(validator(min_length = "2", max_length = "2000"))]
     pub info: Option<String>,
     pub state_kind: Option<FlowStateKind>,
-    pub kind_conf: Option<Value>,
+    pub kind_conf: Option<FLowStateKindConf>,
 
     pub template: Option<bool>,
     #[oai(validator(min_length = "2", max_length = "255"))]
@@ -71,9 +194,6 @@ pub struct FlowStateSummaryResp {
     pub color: String,
     pub sys_state: FlowSysStateKind,
     pub info: String,
-
-    pub state_kind: FlowStateKind,
-    pub kind_conf: Value,
 
     pub template: bool,
     pub rel_state_id: String,
@@ -113,6 +233,12 @@ pub struct FlowStateDetailResp {
     pub disabled: bool,
 }
 
+impl FlowStateDetailResp {
+    pub fn kind_conf(&self) -> FLowStateKindConf {
+        TardisFuns::json.json_to_obj(self.kind_conf.clone()).unwrap()
+    }
+}
+
 /// Type of state
 ///
 /// 状态类型
@@ -132,8 +258,10 @@ pub enum FlowSysStateKind {
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, EnumIter, sea_orm::DeriveActiveEnum)]
 #[sea_orm(rs_type = "String", db_type = "String(StringLen::N(255))")]
 pub enum FlowStateKind {
+    /// 普通节点
     #[sea_orm(string_value = "simple")]
     Simple,
+    /// 录入节点
     #[sea_orm(string_value = "form")]
     Form,
     #[sea_orm(string_value = "mail")]
@@ -144,6 +272,18 @@ pub enum FlowStateKind {
     Timer,
     #[sea_orm(string_value = "script")]
     Script,
+    /// 审批节点
+    #[sea_orm(string_value = "approval")]
+    Approval,
+    /// 分支节点
+    #[sea_orm(string_value = "branch")]
+    Branch,
+    /// 开始节点
+    #[sea_orm(string_value = "begin")]
+    Begin,
+    /// 结束节点
+    #[sea_orm(string_value = "Finish")]
+    Finish,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone, Default)]

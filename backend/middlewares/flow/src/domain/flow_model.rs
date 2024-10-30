@@ -3,7 +3,7 @@ use tardis::db::sea_orm::prelude::Json;
 use tardis::db::sea_orm::*;
 use tardis::{TardisCreateEntity, TardisEmptyBehavior, TardisEmptyRelation};
 
-use crate::dto::flow_model_dto::FlowModelKind;
+use crate::dto::flow_model_dto::{FlowModelKind, FlowModelStatus};
 
 /// Model / 模型
 ///
@@ -27,6 +27,11 @@ pub struct Model {
     /// 此功能用于标记工作流模型的类型，目前有仅作为模板，仅作为实例，既可作为模板又可作为实例三种。表示当前模型的用途和功能。
     #[tardis_entity(custom_type = "String")]
     pub kind: FlowModelKind,
+
+    /// Status of workflow models / 工作流模型状态
+    /// 启用/停用
+    #[tardis_entity(custom_type = "String")]
+    pub status: FlowModelStatus,
 
     ///  Associated template / 关联模板
     ///

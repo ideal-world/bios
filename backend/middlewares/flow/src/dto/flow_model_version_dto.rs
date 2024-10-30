@@ -14,7 +14,7 @@ use tardis::{
 
 use super::{
     flow_model_dto::FlowModelBindStateReq,
-    flow_state_dto::{FlowStateAddReq, FlowStateAggResp},
+    flow_state_dto::{FlowStateAddReq, FlowStateAggResp, FlowStateRelModelModifyReq},
     flow_transition_dto::{FlowTransitionAddReq, FlowTransitionModifyReq},
 };
 
@@ -67,13 +67,32 @@ pub struct FlowModelVersionBindState {
     pub is_init: bool,
 }
 
-/// 添加请求
+/// 模型绑定状态节点
+#[derive(Clone, Serialize, Deserialize, Debug, Default, poem_openapi::Object)]
+pub struct FlowModelVersionModifyState {
+    /// 若存在则表示，绑定已有状态节点
+    pub id: String,
+    /// 若存在则表示，新建状态节点
+    pub modify_state: Option<FlowStateRelModelModifyReq>,
+    /// 添加动作
+    pub add_transitions: Option<Vec<FlowTransitionAddReq>>,
+    /// 修改动作
+    pub modify_transitions: Option<Vec<FlowTransitionModifyReq>>,
+    /// 删除动作
+    pub delete_transitions: Option<Vec<String>>,
+}
+
+/// 修改请求
 #[derive(Clone, Serialize, Deserialize, Debug, Default, poem_openapi::Object)]
 pub struct FlowModelVersionModifyReq {
     #[oai(validator(min_length = "2", max_length = "200"))]
     pub name: Option<TrimString>,
-    // 状态信息
+    // 绑定状态
     pub bind_states: Option<Vec<FlowModelVersionBindState>>,
+    // 修改状态
+    pub modify_states: Option<Vec<FlowModelVersionModifyState>>,
+    // 解绑状态
+    pub unbind_states: Option<Vec<String>>,
     /// 定义每个模块的初始状态
     pub init_state_id: Option<String>,
     /// 版本状态

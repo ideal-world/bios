@@ -52,6 +52,7 @@ use crate::{
 use super::{
     flow_event_serv::FlowEventServ,
     flow_external_serv::FlowExternalServ,
+    flow_model_version_serv::FlowModelVersionServ,
     flow_rel_serv::{FlowRelKind, FlowRelServ},
 };
 
@@ -60,27 +61,17 @@ pub struct FlowInstServ;
 impl FlowInstServ {
     pub async fn start(start_req: &FlowInstStartReq, current_state_name: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
         // get model by own_paths
-        let flow_model_id = FlowModelServ::get_model_id_by_own_paths_and_rel_template_id(&start_req.tag, None, funs, ctx).await?;
-        let flow_model = FlowModelServ::get_item(
-            &flow_model_id,
-            &FlowModelFilterReq {
-                basic: RbumBasicFilterReq {
-                    with_sub_own_paths: true,
-                    own_paths: Some("".to_string()),
-                    ..Default::default()
-                },
-                ..Default::default()
-            },
-            funs,
-            ctx,
-        )
-        .await?;
+        let flow_model = if let Some(transition_id) = &start_req.transition_id {
+            FlowModelServ::get_model_id_by_own_paths_and_transition_id(&start_req.tag, transition_id, funs, ctx).await?
+        } else {
+            FlowModelServ::get_model_id_by_own_paths_and_rel_template_id(&start_req.tag, None, funs, ctx).await?
+        };
         let inst_id = TardisFuns::field.nanoid();
         let current_state_id = if let Some(current_state_name) = &current_state_name {
             if current_state_name.is_empty() {
                 flow_model.init_state_id.clone()
             } else {
-                FlowStateServ::match_state_id_by_name(&flow_model_id, current_state_name, funs, ctx).await?
+                FlowStateServ::match_state_id_by_name(&flow_model.id, current_state_name, funs, ctx).await?
             }
         } else {
             flow_model.init_state_id.clone()
@@ -88,7 +79,7 @@ impl FlowInstServ {
         let flow_inst: flow_inst::ActiveModel = flow_inst::ActiveModel {
             id: Set(inst_id.clone()),
             tag: Set(Some(flow_model.tag.clone())),
-            rel_flow_version_id: Set(flow_model_id.to_string()),
+            rel_flow_version_id: Set(flow_model.current_version_id.to_string()),
             rel_business_obj_id: Set(start_req.rel_business_obj_id.to_string()),
 
             current_state_id: Set(current_state_id),
@@ -97,6 +88,7 @@ impl FlowInstServ {
             create_ctx: Set(FlowOperationContext::from_ctx(ctx)),
 
             own_paths: Set(ctx.own_paths.to_string()),
+            main: Set(start_req.transition_id.is_none()),
             ..Default::default()
         };
         funs.db().insert_one(flow_inst, ctx).await?;
@@ -124,7 +116,11 @@ impl FlowInstServ {
             }
             current_ctx.own_paths = rel_business_obj.own_paths.clone().unwrap_or_default();
             current_ctx.owner = rel_business_obj.owner.clone().unwrap_or_default();
-            let flow_model_id = FlowModelServ::get_model_id_by_own_paths_and_rel_template_id(&batch_bind_req.tag, None, funs, ctx).await?;
+            let flow_model_id = if let Some(transition_id) = &batch_bind_req.transition_id {
+                FlowModelServ::get_model_id_by_own_paths_and_transition_id(&batch_bind_req.tag, transition_id, funs, ctx).await?.id
+            } else {
+                FlowModelServ::get_model_id_by_own_paths_and_rel_template_id(&batch_bind_req.tag, None, funs, ctx).await?.id
+            };
 
             let current_state_id = FlowStateServ::match_state_id_by_name(&flow_model_id, &rel_business_obj.current_state_name.clone().unwrap_or_default(), funs, ctx).await?;
             let mut inst_id = Self::get_inst_ids_by_rel_business_obj_id(vec![rel_business_obj.rel_business_obj_id.clone().unwrap_or_default()], funs, ctx).await?.pop();

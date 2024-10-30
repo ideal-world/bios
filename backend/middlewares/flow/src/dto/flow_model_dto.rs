@@ -32,6 +32,8 @@ pub struct FlowModelAddReq {
     pub info: Option<String>,
     /// 工作流模型类型
     pub kind: FlowModelKind,
+    /// 工作流模型状态
+    pub status: FlowModelStatus,
     /// 关联模板ID（目前可能是页面模板ID，或者是项目模板ID）
     pub rel_template_ids: Option<Vec<String>>,
     /// 关联动作ID（触发当前工作流的动作，若为空则默认表示新建数据时触发）
@@ -76,6 +78,7 @@ impl From<FlowModelDetailResp> for FlowModelAddReq {
             icon: Some(value.icon.clone()),
             info: Some(value.info.clone()),
             kind: value.kind,
+            status: value.status,
             rel_transition_ids: None,
             rel_template_ids: Some(value.rel_template_ids.clone()),
             add_version: Some(FlowModelVersionAddReq {
@@ -108,6 +111,16 @@ pub enum FlowModelKind {
     AsTemplateAndAsModel,
 }
 
+/// 工作流模型状态
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, EnumIter, sea_orm::DeriveActiveEnum)]
+#[sea_orm(rs_type = "String", db_type = "String(StringLen::N(255))")]
+pub enum FlowModelStatus {
+    #[sea_orm(string_value = "enabled")]
+    Enabled,
+    #[sea_orm(string_value = "disabled")]
+    Disabled,
+}
+
 /// 修改请求
 #[derive(Serialize, Deserialize, Debug, Default, poem_openapi::Object, Clone)]
 pub struct FlowModelModifyReq {
@@ -119,6 +132,8 @@ pub struct FlowModelModifyReq {
     pub info: Option<String>,
     /// 是否作为模板使用
     pub template: Option<bool>,
+    /// 状态
+    pub status: Option<FlowModelStatus>,
     /// 当前版本ID
     pub current_version_id: Option<String>,
     /// 修改版本
@@ -151,6 +166,14 @@ pub struct FlowModelSummaryResp {
     pub tag: String,
 
     pub disabled: bool,
+    /// 关联动作
+    pub rel_transition: Option<Value>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, poem_openapi::Object, sea_orm::FromQueryResult)]
+pub struct FlowModelRelTransition {
+    pub id: String,
+    pub name: String,
 }
 
 /// 工作流模型详细信息
@@ -161,6 +184,7 @@ pub struct FlowModelDetailResp {
     pub icon: String,
     pub info: String,
     pub kind: FlowModelKind,
+    pub status: FlowModelStatus,
     /// 是否作为模板使用
     pub template: bool,
 
@@ -184,6 +208,8 @@ pub struct FlowModelDetailResp {
 
     pub scope_level: RbumScopeLevelKind,
     pub disabled: bool,
+    /// 关联动作
+    pub rel_transition: Option<Value>,
 }
 
 impl FlowModelDetailResp {
@@ -200,6 +226,10 @@ impl FlowModelDetailResp {
             None => vec![],
         }
     }
+
+    pub fn rel_transition(&self) -> Option<FlowModelRelTransition> {
+        self.rel_transition.clone().map(|rel_transition| TardisFuns::json.json_to_obj(rel_transition.clone()).unwrap())
+    }
 }
 
 /// 工作流模型过滤器
@@ -212,6 +242,7 @@ pub struct FlowModelFilterReq {
     pub tags: Option<Vec<String>>,
 
     pub kinds: Option<Vec<FlowModelKind>>,
+    pub status: Option<FlowModelStatus>,
     /// 是否作为模板使用
     pub template: Option<bool>,
     pub own_paths: Option<Vec<String>>,

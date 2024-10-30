@@ -284,7 +284,7 @@ pub struct FlowTransitionSortStatesReq {
     pub sort_states: Vec<FlowTransitionSortStateInfoReq>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Default, poem_openapi::Object)]
+#[derive(Serialize, Deserialize, Debug, Default, poem_openapi::Object, Clone)]
 pub struct FlowTransitionSortStateInfoReq {
     pub id: String,
     pub sort: i64,

@@ -29,7 +29,7 @@ pub enum FlowRelKind {
     FlowModelTemplate,
     FlowModelPath,
     FlowAppTemplate,
-    FlowNodelTransition,
+    FlowModelTransition,
 }
 
 impl FlowRelServ {

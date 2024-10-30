@@ -220,6 +220,7 @@ impl FlowCiInstApi {
                     rel_business_obj_id: add_req.0.rel_business_obj_id.clone(),
                     tag: add_req.0.tag.clone(),
                     create_vars: add_req.0.create_vars.clone(),
+                    transition_id: None,
                 },
                 add_req.0.current_state_name.clone(),
                 &funs,

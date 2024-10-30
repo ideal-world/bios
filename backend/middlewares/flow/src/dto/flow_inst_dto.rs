@@ -22,6 +22,8 @@ pub struct FlowInstStartReq {
     pub tag: String,
     /// 创建时的参数列表
     pub create_vars: Option<HashMap<String, Value>>,
+    /// 触发的动作ID
+    pub transition_id: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
@@ -39,6 +41,8 @@ pub struct FlowInstBatchBindReq {
     pub tag: String,
     /// 关联业务ID
     pub rel_business_objs: Vec<FlowInstBindRelObjReq>,
+    /// 触发的动作ID
+    pub transition_id: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]

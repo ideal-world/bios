@@ -78,7 +78,7 @@ impl RbumItemCrudOperation<flow_state::ActiveModel, FlowStateAddReq, FlowStateMo
             sys_state: Set(add_req.sys_state.clone()),
             info: Set(add_req.info.as_ref().unwrap_or(&"".to_string()).to_string()),
             state_kind: Set(add_req.state_kind.clone().unwrap_or(FlowStateKind::Simple)),
-            kind_conf: Set(add_req.kind_conf.as_ref().unwrap_or(&json!({})).clone()),
+            kind_conf: Set(TardisFuns::json.obj_to_json(&add_req.kind_conf)?),
             template: Set(add_req.template.unwrap_or(false)),
             rel_state_id: Set(add_req.rel_state_id.as_ref().unwrap_or(&"".to_string()).to_string()),
             tags: Set(add_req.tags.as_ref().unwrap_or(&vec![]).to_vec().join(",")),
@@ -184,7 +184,7 @@ impl RbumItemCrudOperation<flow_state::ActiveModel, FlowStateAddReq, FlowStateMo
             flow_state.state_kind = Set(state_kind.clone());
         }
         if let Some(kind_conf) = &modify_req.kind_conf {
-            flow_state.kind_conf = Set(kind_conf.clone());
+            flow_state.kind_conf = Set(TardisFuns::json.obj_to_json(kind_conf)?);
         }
         if let Some(template) = modify_req.template {
             flow_state.template = Set(template);
@@ -427,7 +427,7 @@ impl FlowStateServ {
         Ok(FlowStateAggResp {
             id: state.id.clone(),
             name: state.name,
-            is_init: state.id == init_state_id.to_string(),
+            is_init: state.id == *init_state_id,
             ext: Self::get_rel_state_ext(flow_version_id, &state.id, funs, ctx).await?,
             state_kind: state.state_kind,
             kind_conf: state.kind_conf,
