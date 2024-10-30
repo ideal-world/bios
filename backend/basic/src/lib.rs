@@ -45,7 +45,7 @@ pub trait TardisFunInstExtractor {
 /// otherwise use the default configuration parameter.
 ///
 /// 从请求路径中找到第一个路径段作为服务域名，如果存在与该服务域名同名的配置参数 ``csm.X``, 则使用该配置参数，否则使用默认配置参数.
-#[cfg(feature = "default")]
+
 impl TardisFunInstExtractor for tardis::web::poem::Request {
     fn tardis_fun_inst(&self) -> TardisFunsInst {
         let serv_domain = self.original_uri().path().split('/').collect::<Vec<&str>>()[1];

@@ -3,14 +3,14 @@ use bios_basic::{
     test::test_http_client::TestHttpClient,
 };
 use bios_spi_conf::{conf_constants::DOMAIN_CODE, conf_initializer};
-use tardis::testcontainers::{runners::AsyncRunner, ContainerAsync, GenericImage, ImageExt};
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
     test::test_container::TardisTestContainer,
-    testcontainers::{clients::Cli, Container},
+    testcontainers::ContainerAsync,
     TardisFuns,
 };
 use testcontainers_modules::{postgres::Postgres, redis::Redis};
+#[allow(dead_code)]
 pub struct Holder {
     pub pg: ContainerAsync<Postgres>,
     pub redis: ContainerAsync<Redis>,
@@ -18,7 +18,7 @@ pub struct Holder {
 
 #[allow(dead_code)]
 pub async fn init_tardis() -> TardisResult<Holder> {
-    let reldb_container = Postgres::default().with_tag("latest").with_env_var("POSTGRES_PASSWORD", "123456").with_env_var("POSTGRES_DB", "test").start().await?;
+    let reldb_container = TardisTestContainer::postgres_custom(None).await?;
     let port = reldb_container.get_host_port_ipv4(5432).await?;
     let url = format!("postgres://postgres:123456@127.0.0.1:{port}/test");
     std::env::set_var("TARDIS_FW.DB.URL", url);

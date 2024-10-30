@@ -1,6 +1,6 @@
 use bios_sdk_invoke::clients::{
     iam_client::IamClient,
-    spi_log_client::{LogItemAddReq, SpiLogClient},
+    spi_log_client::{LogItemAddV2Req, SpiLogClient},
 };
 use serde::Serialize;
 
@@ -96,7 +96,7 @@ impl FlowLogClient {
             .await?
             .owner_name;
 
-        let req = LogItemAddReq {
+        let req = LogItemAddV2Req {
             tag: tag.to_string(),
             content: TardisFuns::json.obj_to_json(&content).expect("req_msg not a valid json value"),
             kind,
@@ -112,7 +112,7 @@ impl FlowLogClient {
             owner_name,
             push,
         };
-        SpiLogClient::add(req, funs, ctx).await?;
+        SpiLogClient::addv2(req, funs, ctx).await?;
         Ok(())
     }
 }

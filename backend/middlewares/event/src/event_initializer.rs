@@ -25,7 +25,7 @@ use crate::{
         ca::{event_connect_api, event_register_api},
         ci::event_topic_api,
     },
-    domain::{event_message, event_topic},
+    domain::{event_auth, event_message, event_topic},
     event_config::{EventConfig, EventInfo, EventInfoManager},
     event_constants::{DOMAIN_CODE, KIND_CODE},
     mq_adapter::{BiosDurableAdapter, BiosEdgeAuthAdapter},
@@ -56,15 +56,15 @@ pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
 }
 
 async fn init_db(domain_code: String, kind_code: String, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    // Initialize event component RBUM item table and indexs
+    let _ = funs.db().init(event_topic::ActiveModel::init(TardisFuns::reldb().backend(), None, TardisFuns::reldb().compatible_type())).await;
+    let _ = funs.db().init(event_message::ActiveModel::init(TardisFuns::reldb().backend(), None, TardisFuns::reldb().compatible_type())).await;
+    let _ = funs.db().init(event_auth::ActiveModel::init(TardisFuns::reldb().backend(), None, TardisFuns::reldb().compatible_type())).await;
     if let Some(domain_id) = RbumDomainServ::get_rbum_domain_id_by_code(&domain_code, funs).await? {
         let kind_id = RbumKindServ::get_rbum_kind_id_by_code(&kind_code, funs).await?.expect("missing event kind");
         EventInfoManager::set(EventInfo { kind_id, domain_id })?;
         return Ok(());
     }
-
-    // Initialize event component RBUM item table and indexs
-    let _ = funs.db().init(event_topic::ActiveModel::init(TardisFuns::reldb().backend(), None, TardisFuns::reldb().compatible_type())).await;
-    let _ = funs.db().init(event_message::ActiveModel::init(TardisFuns::reldb().backend(), None, TardisFuns::reldb().compatible_type())).await;
 
     // funs.db()
     //     .init(event_persistent::ActiveModel::init(

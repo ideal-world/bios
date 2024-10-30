@@ -21,8 +21,8 @@ spi-redis = ["tardis/cache"]
 [dependencies]
 serde.workspace = true
 tardis = { workspace = true, features = ["reldb-postgres", "web-server"] }
-bios-basic = { path = "../../basic", features = ["default"] }
+bios-basic = { version = "0.2.0", path = "../../basic", features = ["default"] }
 
 [dev-dependencies]
 tardis = { workspace = true, features = ["test"] }
-bios-basic = { path = "../../basic", features = ["default", "test"] }
+bios-basic = { version = "0.2.0", path = "../../basic", features = ["default", "test"] }

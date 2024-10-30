@@ -1,18 +1,13 @@
-use std::{future::Future, iter, marker::PhantomData};
+use std::{future::Future, marker::PhantomData};
 
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use tardis::{
     basic::{dto::TardisContext, error::TardisError, result::TardisResult},
-    web::{
-        poem_openapi::{self, Object},
-        web_resp::{TardisResp, Void},
-    },
+    web::poem_openapi::{self, Object},
     TardisFuns, TardisFunsInst,
 };
 
 use crate::invoke_config::InvokeConfigApi;
-
-use super::base_spi_client::BaseSpiClient;
 
 /******************************************************************************************************************
  *                                                Http Client
@@ -27,48 +22,6 @@ pub struct EventClient<'a> {
 impl<'a> EventClient<'a> {
     pub fn new(url: &'a str, funs: &'a TardisFunsInst) -> Self {
         Self { base_url: url, funs }
-    }
-
-    pub async fn add_topic(&self, req: &EventTopicAddOrModifyReq) -> TardisResult<()> {
-        let url = format!("{}/topic", self.base_url.trim_end_matches('/'));
-        let ctx = TardisContext::default();
-        let headers = BaseSpiClient::headers(None, self.funs, &ctx).await?;
-        let resp = self.funs.web_client().post::<EventTopicAddOrModifyReq, TardisResp<String>>(&url, req, headers).await?;
-        if let Some(resp) = resp.body {
-            if resp.data.is_some() {
-                Ok(())
-            } else {
-                Err(self.funs.err().internal_error("event", "add_topic", &resp.msg, ""))
-            }
-        } else {
-            Err(self.funs.err().internal_error("event", "add_topic", "failed to add event topic", ""))
-        }
-    }
-    pub async fn register(&self, req: &EventListenerRegisterReq) -> TardisResult<EventListenerRegisterResp> {
-        let url = format!("{}/listener", self.base_url.trim_end_matches('/'));
-
-        let resp = self.funs.web_client().post::<EventListenerRegisterReq, TardisResp<EventListenerRegisterResp>>(&url, req, iter::empty()).await?;
-        if let Some(resp) = resp.body {
-            if let Some(data) = resp.data {
-                return Ok(data);
-            } else {
-                return Err(self.funs.err().internal_error("event", "register", &resp.msg, ""));
-            }
-        }
-        return Err(self.funs.err().internal_error("event", "register", "failed to register event listener", ""));
-    }
-
-    pub async fn remove(&self, listener_code: &str, token: &str) -> TardisResult<()> {
-        let url = format!("{}/listener/{}?token={}", self.base_url.trim_end_matches('/'), listener_code, token);
-        let resp = self.funs.web_client().delete::<TardisResp<Void>>(&url, iter::empty()).await?;
-        if let Some(resp) = resp.body {
-            if resp.data.is_some() {
-                return Ok(());
-            } else {
-                return Err(self.funs.err().internal_error("event", "register", &resp.msg, ""));
-            }
-        }
-        return Err(self.funs.err().internal_error("event", "register", "failed to register event listener", ""));
     }
 }
 

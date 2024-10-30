@@ -26,15 +26,15 @@ tardis = { workspace = true, features = [
     "crypto",
     "web-server-grpc",
 ] }
-bios-basic = { path = "../../basic", features = ["default"] }
+bios-basic = { version = "0.2.0", path = "../../basic", features = ["default"] }
 lazy_static = { workspace = true }
 jsonwebtoken = "9"
-poem-grpc = { version = "0.4", optional = true }
+poem-grpc = { version = "0.5", optional = true }
 prost-types = "0.13"
 prost = "0.13"
 strum = { version = "0.26", features = ["derive"] }
 tokio-stream = { version = "0.1.14", features = ["sync"] }
-bios-sdk-invoke = { path = "../../../frontend/sdks/invoke", features = [
+bios-sdk-invoke = { version = "0.2.0", path = "../../../frontend/sdks/invoke", features = [
     "iam",
     "macro",
 ], default-features = false }
@@ -42,8 +42,8 @@ ipnet = { version = "2", features = ["serde"] }
 
 [dev-dependencies]
 tardis = { workspace = true, features = ["test", "conf-remote", "mq"] }
-bios-basic = { path = "../../basic", features = ["default", "test"] }
+bios-basic = { version = "0.2.0", path = "../../basic", features = ["default", "test"] }
 testcontainers-modules = { workspace = true }
 
 [build-dependencies]
-poem-grpc-build = "0.4"
+poem-grpc-build = "0.5"

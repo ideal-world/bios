@@ -10,7 +10,7 @@ use tardis::TardisFunsInst;
 use crate::invoke_enumeration::InvokeModuleKind;
 
 use super::base_spi_client::BaseSpiClient;
-
+#[cfg(feature = "event")]
 pub mod event {
     use asteroid_mq::prelude::*;
     impl EventAttribute for super::KvItemAddOrModifyReq {

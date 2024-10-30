@@ -76,12 +76,17 @@ pub async fn test_event_topic_api() -> Result<(), Box<dyn std::error::Error>> {
                 "topic_code": TEST_TOPIC_NAME,
                 "overflow_policy": "RejectNew",
                 "overflow_size": 500,
+                "check_auth": true,
             }},
         )
         .await;
     tracing::info!(?id, "event registered");
     let topics = client.get::<Value>("/ci/topic?page_number=1&page_size=10").await;
     tracing::info!(?topics, "event paged list");
+    let register_auth_result = client.put::<Void, Value>(&format!("/ci/topic/{TEST_TOPIC_NAME}/register?read=true&write=true"), &Void).await;
+
+    tracing::info!(?register_auth_result, "auth registered");
+
     let bind_result = client.put::<Void, Value>("/ca/register", &Void).await;
     let node_id = bind_result["node_id"].as_str().expect("node_id is settled");
     tracing::info!(?node_id, "bind context result");

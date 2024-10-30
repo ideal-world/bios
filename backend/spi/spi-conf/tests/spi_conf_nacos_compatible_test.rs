@@ -10,7 +10,7 @@ use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
     log,
     serde_json::json,
-    testcontainers, tokio,
+    tokio,
     web::web_resp::TardisResp,
     TardisFuns,
 };
@@ -26,12 +26,11 @@ async fn spi_conf_namespace_test() -> TardisResult<()> {
     );
     std::env::set_var("PROFILE", "nacos");
 
-    let container_hold = init_tardis(&docker).await?;
+    let container_hold = init_tardis().await?;
     let _web_server_handle = start_web_server().await;
     let tardis_ctx = TardisContext::default();
     let mut client = TestHttpClient::new(format!("{SCHEMA}://127.0.0.1:8080/spi-conf"));
     client.set_auth(&tardis_ctx)?;
-    let funs = TardisFuns::inst_with_db_conn(DOMAIN_CODE.to_string(), None);
     let RegisterResponse { username, password } = client
         .put(
             "/ci/auth/register_bundle",
