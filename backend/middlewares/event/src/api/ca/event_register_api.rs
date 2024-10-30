@@ -5,9 +5,9 @@ use tardis::web::web_resp::{TardisApiResult, TardisResp};
 use crate::dto::event_dto::EventRegisterResp;
 
 use crate::serv::event_register_serv;
-#[derive(Clone, Default, Debug)]
+#[derive(Clone)]
 pub struct EventRegisterApi {
-    register_serv: event_register_serv::EventRegisterServ,
+    pub(crate) register_serv: event_register_serv::EventRegisterServ,
 }
 
 /// Event Node Register API
@@ -20,8 +20,7 @@ impl EventRegisterApi {
     /// 注册事件监听器
     #[oai(path = "/", method = "put")]
     async fn register(&self, ctx: TardisContextExtractor) -> TardisApiResult<EventRegisterResp> {
-        let node_id = self.register_serv.register_ctx(&ctx.0).await?;
-        let resp = EventRegisterResp { node_id: node_id.to_base64() };
+        let resp = self.register_serv.register_ctx(&ctx.0).await?;
         TardisResp::ok(resp)
     }
 }

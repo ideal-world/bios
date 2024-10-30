@@ -10,12 +10,14 @@ use asteroid_mq::{
 use bios_basic::rbum::{
     dto::{rbum_domain_dto::RbumDomainAddReq, rbum_kind_dto::RbumKindAddReq},
     rbum_enumeration::RbumScopeLevelKind,
-    serv::{rbum_crud_serv::RbumCrudOperation, rbum_domain_serv::RbumDomainServ, rbum_kind_serv::RbumKindServ},
+    serv::{rbum_crud_serv::RbumCrudOperation, rbum_domain_serv::RbumDomainServ, rbum_item_serv::RbumItemCrudOperation, rbum_kind_serv::RbumKindServ},
 };
 use bios_sdk_invoke::clients::event_client::SPI_RPC_TOPIC;
+use tardis::tracing;
 use tardis::{
     basic::{dto::TardisContext, field::TrimString, result::TardisResult},
     db::reldb_client::TardisActiveModel,
+    log::instrument,
     web::web_server::TardisWebServer,
     TardisFuns, TardisFunsInst,
 };
@@ -26,9 +28,11 @@ use crate::{
         ci::event_topic_api,
     },
     domain::{event_auth, event_message, event_topic},
+    dto::event_dto::EventTopicAddOrModifyReq,
     event_config::{EventConfig, EventInfo, EventInfoManager},
     event_constants::{DOMAIN_CODE, KIND_CODE},
     mq_adapter::{BiosDurableAdapter, BiosEdgeAuthAdapter},
+    serv::{event_register_serv, event_topic_serv::EventTopicServ},
 };
 
 pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
@@ -108,47 +112,52 @@ async fn init_db(domain_code: String, kind_code: String, funs: &TardisFunsInst, 
 }
 
 async fn init_api(web_server: &TardisWebServer) -> TardisResult<()> {
+    let funs = Arc::new(TardisFuns::inst_with_db_conn(DOMAIN_CODE.to_string(), None));
+    let register_serv = event_register_serv::EventRegisterServ { funs: funs.clone() };
     web_server
         .add_module(
             DOMAIN_CODE,
             (
                 event_topic_api::EventTopicApi,
-                event_connect_api::EventConnectApi::default(),
-                event_register_api::EventRegisterApi::default(),
+                event_connect_api::EventConnectApi {
+                    register_serv: register_serv.clone(),
+                },
+                event_register_api::EventRegisterApi { register_serv },
             ),
         )
         .await;
     Ok(())
 }
 
+#[instrument(skip(config, funs, ctx))]
 async fn init_mq_cluster(config: &EventConfig, funs: TardisFunsInst, ctx: TardisContext) -> TardisResult<()> {
     use bios_sdk_invoke::clients::event_client::mq_error;
-    let mq_node = init_mq_node(config, funs, ctx).await;
+    tracing::info!(?config, "init mq cluster",);
+    let funs = Arc::new(funs);
+    let mq_node = init_mq_node(config, funs.clone(), &ctx).await;
     mq_node.load_from_durable_service().await.map_err(mq_error)?;
     // it's important to ensure the SPI_RPC_TOPIC is created, many other components depend on it
     if mq_node.get_topic(&SPI_RPC_TOPIC).is_none() {
-        mq_node
-            .load_topic(
-                TopicConfig {
-                    code: SPI_RPC_TOPIC,
-                    overflow_config: None,
-                    blocking: false,
-                },
-                vec![],
-            )
-            .await
-            .map_err(mq_error)?;
+        EventTopicServ::add_item(
+            &mut EventTopicAddOrModifyReq::from_config(TopicConfig {
+                code: SPI_RPC_TOPIC,
+                overflow_config: None,
+                blocking: false,
+            }),
+            &funs,
+            &ctx,
+        )
+        .await?;
     }
     Ok(())
 }
 
-pub async fn init_mq_node(config: &EventConfig, funs: TardisFunsInst, ctx: TardisContext) -> asteroid_mq::prelude::Node {
+pub async fn init_mq_node(config: &EventConfig, funs: Arc<TardisFunsInst>, ctx: &TardisContext) -> asteroid_mq::prelude::Node {
     let timeout = Duration::from_secs(config.startup_timeout);
     const ENV_POD_UID: &str = "POD_UID";
     if let Some(node) = TardisFuns::store().get_singleton::<asteroid_mq::prelude::Node>() {
         node
     } else {
-        let funs = Arc::new(funs);
         let node = match config.cluster.as_deref() {
             Some(EventConfig::CLUSTER_K8S) => {
                 let uid = std::env::var(ENV_POD_UID).expect("POD_UID is required");
@@ -156,7 +165,7 @@ pub async fn init_mq_node(config: &EventConfig, funs: TardisFunsInst, ctx: Tardi
                     id: NodeId::sha256(uid.as_bytes()),
                     raft: config.raft.clone(),
                     durable: config.durable.then_some(DurableService::new(BiosDurableAdapter::new(funs.clone(), ctx.clone()))),
-                    edge_auth: Some(EdgeAuthService::new(BiosEdgeAuthAdapter::new(funs.clone(), ctx))),
+                    edge_auth: Some(EdgeAuthService::new(BiosEdgeAuthAdapter::new(funs.clone(), ctx.clone()))),
                     ..Default::default()
                 });
                 let cluster_provider = K8sClusterProvider::new(config.svc.clone(), asteroid_mq::DEFAULT_TCP_PORT).await;
@@ -168,7 +177,7 @@ pub async fn init_mq_node(config: &EventConfig, funs: TardisFunsInst, ctx: Tardi
                     id: NodeId::snowflake(),
                     raft: config.raft.clone(),
                     durable: config.durable.then_some(DurableService::new(BiosDurableAdapter::new(funs.clone(), ctx.clone()))),
-                    edge_auth: Some(EdgeAuthService::new(BiosEdgeAuthAdapter::new(funs.clone(), ctx))),
+                    edge_auth: Some(EdgeAuthService::new(BiosEdgeAuthAdapter::new(funs.clone(), ctx.clone()))),
                     ..Default::default()
                 });
                 // singleton mode

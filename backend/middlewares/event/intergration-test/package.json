@@ -1,0 +1,17 @@
+{
+  "name": "bios-event-intergration-test",
+  "module": "src/index.ts",
+  "type": "module",
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5.6.3"
+  },
+  "dependencies": {
+    "asteroid-mq-sdk": "^0.1.0-alpha.5"
+  },
+  "scripts": {
+    "build": "bun build src/index.ts --outfile dist/index.mjs"
+  }
+}
