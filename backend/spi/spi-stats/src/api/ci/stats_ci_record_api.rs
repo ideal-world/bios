@@ -9,14 +9,11 @@ use tardis::web::poem_openapi::param::{Path, Query};
 use tardis::web::poem_openapi::payload::Json;
 use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 
-use crate::dto::stats_conf_dto::{StatsSyncDbConfigAddReq, StatsSyncDbConfigInfoResp, StatsSyncDbConfigModifyReq};
 use crate::dto::stats_record_dto::{StatsDimRecordAddReq, StatsDimRecordDeleteReq, StatsFactRecordLoadReq, StatsFactRecordsLoadReq};
-use crate::serv::{stats_record_serv, stats_sync_serv};
+use crate::serv::stats_record_serv;
 
 #[derive(Clone)]
 pub struct StatsCiRecordApi;
-#[derive(Clone)]
-pub struct StatsCiSyncApi;
 
 /// Interface Console Statistics Record API
 ///
@@ -193,60 +190,5 @@ impl StatsCiRecordApi {
         let funs = crate::get_tardis_inst();
         stats_record_serv::dim_record_real_delete(dim_key.0, delete_req.0.key, &funs, &ctx.0).await?;
         TardisResp::ok(Void {})
-    }
-}
-
-/// Interface Console Statistics Sync API
-///
-/// 统计同步接口
-#[poem_openapi::OpenApi(prefix_path = "/ci", tag = "bios_basic::ApiTag::Interface")]
-impl StatsCiSyncApi {
-    /// Sync Fact Record
-    ///
-    /// 同步事实记录
-    #[oai(path = "/fact/:fact_key/sync", method = "put")]
-    async fn fact_record_sync(&self, fact_key: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
-        let funs = crate::get_tardis_inst();
-        stats_sync_serv::fact_record_sync(&fact_key.0, &funs, &ctx.0).await?;
-        TardisResp::ok(Void {})
-    }
-
-    /// Sync Fact Column Record
-    ///
-    /// 同步事实列记录
-    #[oai(path = "/fact/:fact_key/col/:col_key/sync", method = "put")]
-    async fn fact_col_record_sync(&self, fact_key: Path<String>, col_key: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
-        let funs = crate::get_tardis_inst();
-        stats_sync_serv::fact_col_record_sync(&fact_key.0, &col_key.0, &funs, &ctx.0).await?;
-        TardisResp::ok(Void {})
-    }
-
-    /// Add Sync DateBase Config
-    ///
-    /// 添加同步数据库配置
-    #[oai(path = "/sync/db/config", method = "post")]
-    async fn db_config_add(&self, add_req: Json<StatsSyncDbConfigAddReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
-        let funs = crate::get_tardis_inst();
-        stats_sync_serv::db_config_add(add_req.0, &funs, &ctx.0).await?;
-        TardisResp::ok(Void {})
-    }
-
-    /// Modify Sync DateBase Config
-    ///
-    /// 修改同步数据库配置
-    #[oai(path = "/sync/db/config", method = "put")]
-    async fn db_config_modify(&self, modify_req: Json<StatsSyncDbConfigModifyReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
-        let funs = crate::get_tardis_inst();
-        stats_sync_serv::db_config_modify(modify_req.0, &funs, &ctx.0).await?;
-        TardisResp::ok(Void {})
-    }
-
-    /// Paginate Sync DateBase Config
-    ///
-    /// 分页查询同步数据库配置
-    #[oai(path = "/sync/db/config", method = "get")]
-    async fn db_config_paginate(&self, page_number: Query<u32>, page_size: Query<u32>, ctx: TardisContextExtractor) -> TardisApiResult<TardisPage<StatsSyncDbConfigInfoResp>> {
-        let funs = crate::get_tardis_inst();
-        TardisResp::ok(stats_sync_serv::db_config_paginate(page_number.0, page_size.0, &funs, &ctx.0).await?)
     }
 }

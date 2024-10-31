@@ -6,7 +6,6 @@ use bios_basic::spi_dispatch_service;
 use tardis::basic::result::TardisResult;
 use tardis::chrono::{DateTime, Utc};
 use tardis::serde_json::{self, Value};
-use tardis::web::web_resp::TardisPage;
 
 use super::pg;
 
@@ -22,6 +21,6 @@ spi_dispatch_service! {
     fact_col_record_sync(fact_key: &str, col_key: &str) -> TardisResult<()>;
     db_config_add(add_req: StatsSyncDbConfigAddReq) -> TardisResult<()>;
     db_config_modify(modify_req: StatsSyncDbConfigModifyReq) -> TardisResult<()>;
-    db_config_paginate(page_number: u32, page_size: u32) -> TardisResult<TardisPage<StatsSyncDbConfigInfoResp>>;
+    db_config_list() -> TardisResult<Vec<StatsSyncDbConfigInfoResp>>;
   }
 }

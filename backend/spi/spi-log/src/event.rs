@@ -1,8 +1,6 @@
 use crate::{log_initializer::get_tardis_inst, serv};
 use bios_sdk_invoke::clients::{
-    event_client::{
-        get_topic, mq_error, ContextHandler, SPI_RPC_TOPIC,
-    },
+    event_client::{get_topic, mq_error, ContextHandler, SPI_RPC_TOPIC},
     spi_log_client::LogItemAddV2Req,
 };
 use tardis::{

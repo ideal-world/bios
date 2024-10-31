@@ -168,6 +168,7 @@ pub struct StatsConfFactAddReq {
     pub redirect_path: Option<String>,
     /// default value is false
     pub is_online: Option<bool>,
+    pub rel_cert_id: Option<String>,
     pub sync_sql: Option<String>,
     pub sync_cron: Option<String>,
     pub sync_on: Option<bool>,
@@ -189,6 +190,7 @@ pub struct StatsConfFactModifyReq {
     pub remark: Option<String>,
     pub redirect_path: Option<String>,
     pub is_online: Option<bool>,
+    pub rel_cert_id: Option<String>,
     pub sync_sql: Option<String>,
     pub sync_cron: Option<String>,
     pub sync_on: Option<bool>,
@@ -219,6 +221,10 @@ pub struct StatsConfFactInfoResp {
     pub redirect_path: Option<String>,
     pub create_time: DateTime<Utc>,
     pub update_time: DateTime<Utc>,
+    pub rel_cert_id: Option<String>,
+    pub sync_sql: Option<String>,
+    pub sync_cron: Option<String>,
+    pub sync_on: Option<bool>,
 }
 
 /// Add Fact Column Configuration Request Object
@@ -303,6 +309,7 @@ pub struct StatsConfFactColAddReq {
     pub remark: Option<String>,
     pub rel_field: Option<String>,
     pub rel_sql: Option<String>,
+    pub rel_cert_id: Option<String>,
 }
 
 /// Modify Fact Column Configuration Request Object
@@ -383,6 +390,7 @@ pub struct StatsConfFactColModifyReq {
     pub remark: Option<String>,
     pub rel_field: Option<String>,
     pub rel_sql: Option<String>,
+    pub rel_cert_id: Option<String>,
 }
 
 /// Fact Column Configuration Response Object
@@ -472,6 +480,9 @@ pub struct StatsConfFactColInfoResp {
     pub remark: Option<String>,
     pub create_time: DateTime<Utc>,
     pub update_time: DateTime<Utc>,
+    pub rel_field: Option<String>,
+    pub rel_sql: Option<String>,
+    pub rel_cert_id: Option<String>,
 }
 
 /// Add Sync DateBase Config Request Object
@@ -479,8 +490,6 @@ pub struct StatsConfFactColInfoResp {
 /// 添加同步数据库配置请求对象
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct StatsSyncDbConfigAddReq {
-    pub fact_conf_key: String,
-    pub fact_conf_col_key: Option<String>,
     pub db_url: String,
     pub db_user: String,
     pub db_password: String,
@@ -493,8 +502,7 @@ pub struct StatsSyncDbConfigAddReq {
 /// 修改同步数据库配置请求对象
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct StatsSyncDbConfigModifyReq {
-    pub fact_conf_key: String,
-    pub fact_conf_col_key: Option<String>,
+    pub id: String,
     pub db_url: Option<String>,
     pub db_user: Option<String>,
     pub db_password: Option<String>,
@@ -507,11 +515,31 @@ pub struct StatsSyncDbConfigModifyReq {
 /// 同步数据库配置响应对象
 #[derive(poem_openapi::Object, sea_orm::FromQueryResult, Serialize, Deserialize, Debug)]
 pub struct StatsSyncDbConfigInfoResp {
-    pub fact_conf_key: String,
-    pub fact_conf_col_key: Option<String>,
+    pub id: String,
+    pub db_url: String,
+    pub db_user: String,
+    pub max_connections: Option<u32>,
+    pub min_connections: Option<u32>,
+}
+
+/// Sync DateBase Config Response Object
+///
+/// 同步数据库配置响应对象
+#[derive(poem_openapi::Object, sea_orm::FromQueryResult, Serialize, Deserialize, Debug)]
+pub struct StatsSyncDbConfigInfoWithSkResp {
+    pub id: String,
     pub db_url: String,
     pub db_user: String,
     pub db_password: String,
+    pub max_connections: Option<u32>,
+    pub min_connections: Option<u32>,
+}
+
+/// Sync DateBase Config Extension Object
+///
+/// 同步数据库配置扩展对象
+#[derive(Serialize, Deserialize, Debug,Clone)]
+pub struct StatsSyncDbConfigExt {
     pub max_connections: Option<u32>,
     pub min_connections: Option<u32>,
 }

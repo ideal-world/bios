@@ -516,17 +516,3 @@ impl TryGetable for StatsQueryTimeWindowKind {
         panic!("not implemented")
     }
 }
-
-pub enum StatsSyncDbConfigSupplierKind {
-    Fact,
-    FactCol,
-}
-
-impl ToString for StatsSyncDbConfigSupplierKind {
-    fn to_string(&self) -> String {
-        match self {
-            StatsSyncDbConfigSupplierKind::Fact => "fact".to_string(),
-            StatsSyncDbConfigSupplierKind::FactCol => "fact_col".to_string(),
-        }
-    }
-}
