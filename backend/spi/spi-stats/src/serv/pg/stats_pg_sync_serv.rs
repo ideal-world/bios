@@ -123,23 +123,23 @@ async fn find_db_config(cert_id: &str, funs: &TardisFunsInst, ctx: &TardisContex
 }
 
 pub(crate) async fn fact_record_sync(fact_key: &str, funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
-    // let bs_inst = inst.inst::<TardisRelDBClient>();
-    // let (conn, _) = common_pg::init_conn(bs_inst).await?;
+    let bs_inst = inst.inst::<TardisRelDBClient>();
+    let (conn, _) = common_pg::init_conn(bs_inst).await?;
 
-    // conn.begin().await?;
+    conn.begin().await?;
 
-    // todo!();
-    // let fact_col_list = conn
-    //     .query_all(
-    //         &format!("SELECT key FROM starsys_stats_conf_fact_col WHERE rel_conf_fact_key = $1"),
-    //         vec![Value::from(fact_key)],
-    //     )
-    //     .await?;
-    // for col in fact_col_list.iter() {
-    //     let col_key = col.try_get::<String>("", "key")?;
-    //     fact_col_record_sync(fact_key, &col_key, funs, ctx, inst).await?;
-    // }
-    // conn.commit().await?;
+    todo!();
+    let fact_col_list = conn
+        .query_all(
+            &format!("SELECT key FROM starsys_stats_conf_fact_col WHERE rel_conf_fact_key = $1"),
+            vec![Value::from(fact_key)],
+        )
+        .await?;
+    for col in fact_col_list.iter() {
+        let col_key = col.try_get::<String>("", "key")?;
+        fact_col_record_sync(fact_key, &col_key, funs, ctx, inst).await?;
+    }
+    conn.commit().await?;
     Ok(())
 }
 
