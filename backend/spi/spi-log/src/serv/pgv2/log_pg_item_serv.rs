@@ -1,6 +1,9 @@
 use std::{collections::HashMap, str::FromStr, vec};
 
-use bios_sdk_invoke::clients::event_client::{get_topic, mq_error, EventAttributeExt as _, SPI_RPC_TOPIC};
+use bios_sdk_invoke::clients::{
+    event_client::{get_topic, mq_error, EventAttributeExt as _, SPI_RPC_TOPIC},
+    spi_log_client::{StatsItemAddReq, StatsItemDeleteReq},
+};
 use tardis::{
     basic::{dto::TardisContext, error::TardisError, result::TardisResult},
     chrono::{DateTime, Utc},
@@ -22,7 +25,7 @@ use bios_basic::{
 };
 
 use crate::{
-    dto::log_item_dto::{AdvBasicQueryCondInfo, LogConfigReq, LogItemAddReq, LogItemAddV2Req, LogItemFindReq, LogItemFindResp, StatsItemAddReq},
+    dto::log_item_dto::{AdvBasicQueryCondInfo, LogConfigReq, LogItemAddReq, LogItemAddV2Req, LogItemFindReq, LogItemFindResp},
     log_constants::{CONFIG_TABLE_NAME, LOG_REF_FLAG, TABLE_LOG_FLAG_V2},
 };
 
@@ -712,6 +715,13 @@ async fn push_to_eda(req: &LogItemAddV2Req, ref_fields: &Vec<String>, funs: &Tar
         for ref_field in ref_fields {
             if let Some(content) = req_clone.content.as_object_mut() {
                 content.remove(ref_field);
+            }
+        }
+        if let Some(ref op) = req_clone.op {
+            if op.to_lowercase() == "delete" {
+                let stats_delete: StatsItemDeleteReq = req_clone.into();
+                topic.send_event(stats_delete.inject_context(funs, ctx).json()).map_err(mq_error).await?;
+                return Ok(());
             }
         }
         let stats_add: StatsItemAddReq = req_clone.into();
