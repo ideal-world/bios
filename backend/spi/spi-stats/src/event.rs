@@ -1,10 +1,10 @@
 use crate::{
     get_tardis_inst,
-    serv::{self, stats_record_serv},
+    serv::{stats_record_serv},
 };
 use bios_sdk_invoke::clients::{
     event_client::{get_topic, mq_error, ContextHandler, SPI_RPC_TOPIC},
-    spi_log_client::{LogItemAddV2Req, StatsItemAddReq, StatsItemDeleteReq},
+    spi_log_client::{StatsItemAddReq, StatsItemDeleteReq},
 };
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
