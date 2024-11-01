@@ -127,6 +127,18 @@ pub(crate) async fn add(fact_conf_key: &str, add_req: &StatsConfFactColAddReq, f
         params.push(Value::from(dim_dynamic_url.to_string()));
         sql_fields.push("dim_dynamic_url");
     }
+    if let Some(rel_cert_id) = &add_req.rel_cert_id {
+        params.push(Value::from(rel_cert_id.to_string()));
+        sql_fields.push("rel_cert_id");
+    }
+    if let Some(rel_field) = &add_req.rel_field {
+        params.push(Value::from(rel_field.to_string()));
+        sql_fields.push("rel_field");
+    }
+    if let Some(rel_sql) = &add_req.rel_sql {
+        params.push(Value::from(rel_sql.to_string()));
+        sql_fields.push("rel_sql");
+    }
     conn.execute_one(
         &format!(
             r#"INSERT INTO {table_name}
@@ -229,6 +241,18 @@ pub(crate) async fn modify(
     if let Some(dim_dynamic_url) = &modify_req.dim_dynamic_url {
         sql_sets.push(format!("dim_dynamic_url = ${}", params.len() + 1));
         params.push(Value::from(dim_dynamic_url.to_string()));
+    }
+    if let Some(rel_field) = &modify_req.rel_field {
+        sql_sets.push(format!("rel_field = ${}", params.len() + 1));
+        params.push(Value::from(rel_field.to_string()));
+    }
+    if let Some(rel_sql) = &modify_req.rel_sql {
+        sql_sets.push(format!("rel_sql = ${}", params.len() + 1));
+        params.push(Value::from(rel_sql.to_string()));
+    }
+    if let Some(rel_cert_id) = &modify_req.rel_cert_id {
+        sql_sets.push(format!("rel_cert_id = ${}", params.len() + 1));
+        params.push(Value::from(rel_cert_id.to_string()));
     }
     conn.execute_one(
         &format!(
@@ -381,7 +405,7 @@ async fn do_paginate(
     let result = conn
         .query_all(
             &format!(
-                r#"SELECT key, show_name, kind, remark, dim_rel_conf_dim_key, rel_external_id, dim_multi_values, dim_exclusive_rec, dim_data_type, dim_dynamic_url, mes_data_distinct, mes_data_type, mes_frequency, mes_unit, mes_act_by_dim_conf_keys, rel_conf_fact_key, rel_conf_fact_and_col_key, create_time, update_time, count(*) OVER() AS total
+                r#"SELECT key, show_name, kind, remark, dim_rel_conf_dim_key, rel_external_id, dim_multi_values, dim_exclusive_rec, dim_data_type, dim_dynamic_url, mes_data_distinct, mes_data_type, mes_frequency, mes_unit, mes_act_by_dim_conf_keys, rel_conf_fact_key, rel_conf_fact_and_col_key, create_time, update_time,rel_field,rel_cert_id,rel_sql, count(*) OVER() AS total
 FROM {table_name}
 WHERE 
     {}
@@ -432,6 +456,9 @@ WHERE
                 create_time: item.try_get("", "create_time")?,
                 update_time: item.try_get("", "update_time")?,
                 rel_external_id: item.try_get("", "rel_external_id")?,
+                rel_field: item.try_get("", "rel_field")?,
+                rel_sql: item.try_get("", "rel_sql")?,
+                rel_cert_id: item.try_get("", "rel_cert_id")?,
             })
         })
         .collect::<TardisResult<_>>()?;

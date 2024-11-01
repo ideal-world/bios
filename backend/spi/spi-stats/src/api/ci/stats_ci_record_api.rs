@@ -1,3 +1,5 @@
+use bios_basic::rbum::dto::rbum_cert_conf_dto::RbumCertConfAddReq;
+use bios_basic::rbum::dto::rbum_cert_dto::RbumCertAddReq;
 use tardis::chrono::{DateTime, Utc};
 use tardis::serde_json::Value;
 use tardis::web::context_extractor::TardisContextExtractor;

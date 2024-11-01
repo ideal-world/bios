@@ -7,9 +7,9 @@ use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 
 use crate::dto::stats_conf_dto::{
     StatsConfDimAddReq, StatsConfDimInfoResp, StatsConfDimModifyReq, StatsConfFactAddReq, StatsConfFactColAddReq, StatsConfFactColInfoResp, StatsConfFactColModifyReq,
-    StatsConfFactInfoResp, StatsConfFactModifyReq,
+    StatsConfFactInfoResp, StatsConfFactModifyReq, StatsSyncDbConfigAddReq, StatsSyncDbConfigInfoResp, StatsSyncDbConfigModifyReq,
 };
-use crate::serv::{stats_conf_dim_serv, stats_conf_fact_col_serv, stats_conf_fact_serv};
+use crate::serv::{stats_conf_dim_serv, stats_conf_fact_col_serv, stats_conf_fact_serv, stats_sync_serv};
 use crate::stats_enumeration::StatsFactColKind;
 
 #[derive(Clone)]
@@ -296,5 +296,34 @@ impl StatsCiConfApi {
         let funs = crate::get_tardis_inst();
         stats_conf_fact_serv::create_inst(&fact_key.0, &funs, &ctx.0).await?;
         TardisResp::ok(Void {})
+    }
+
+    /// Add Sync DateBase Config
+    ///
+    /// 添加同步数据库配置
+    #[oai(path = "/sync/db", method = "post")]
+    async fn db_config_add(&self, add_req: Json<StatsSyncDbConfigAddReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+        let funs = crate::get_tardis_inst();
+        stats_sync_serv::db_config_add(add_req.0, &funs, &ctx.0).await?;
+        TardisResp::ok(Void {})
+    }
+
+    /// Modify Sync DateBase Config
+    ///
+    /// 修改同步数据库配置
+    #[oai(path = "/sync/db", method = "put")]
+    async fn db_config_modify(&self, modify_req: Json<StatsSyncDbConfigModifyReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+        let funs = crate::get_tardis_inst();
+        stats_sync_serv::db_config_modify(modify_req.0, &funs, &ctx.0).await?;
+        TardisResp::ok(Void {})
+    }
+
+    /// List Sync DateBase Config
+    ///
+    /// 查询同步数据库配置
+    #[oai(path = "/sync/db", method = "get")]
+    async fn db_config_list(&self, ctx: TardisContextExtractor) -> TardisApiResult<Vec<StatsSyncDbConfigInfoResp>> {
+        let funs = crate::get_tardis_inst();
+        TardisResp::ok(stats_sync_serv::db_config_list(&funs, &ctx.0).await?)
     }
 }
