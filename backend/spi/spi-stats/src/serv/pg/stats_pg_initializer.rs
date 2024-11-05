@@ -50,7 +50,7 @@ pub async fn init_conf_fact_table_and_conn(bs_inst: TypedSpiBsInst<'_, TardisRel
     rel_cert_id character varying,
     sync_sql character varying,
     sync_cron character varying,
-    sync_on boolean NOT NULL DEFAULT FALSE"#,
+    is_sync boolean NOT NULL DEFAULT FALSE"#,
         None,
         vec![],
         None,

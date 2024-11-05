@@ -171,7 +171,7 @@ pub struct StatsConfFactAddReq {
     pub rel_cert_id: Option<String>,
     pub sync_sql: Option<String>,
     pub sync_cron: Option<String>,
-    pub sync_on: Option<bool>,
+    pub is_sync: Option<bool>,
 }
 
 /// Modify Fact Configuration Request Object
@@ -193,7 +193,7 @@ pub struct StatsConfFactModifyReq {
     pub rel_cert_id: Option<String>,
     pub sync_sql: Option<String>,
     pub sync_cron: Option<String>,
-    pub sync_on: Option<bool>,
+    pub is_sync: Option<bool>,
 }
 
 /// Fact Configuration Response Object
@@ -224,7 +224,7 @@ pub struct StatsConfFactInfoResp {
     pub rel_cert_id: Option<String>,
     pub sync_sql: Option<String>,
     pub sync_cron: Option<String>,
-    pub sync_on: Option<bool>,
+    pub is_sync: Option<bool>,
 }
 
 /// Add Fact Column Configuration Request Object
@@ -538,7 +538,7 @@ pub struct StatsSyncDbConfigInfoWithSkResp {
 /// Sync DateBase Config Extension Object
 ///
 /// 同步数据库配置扩展对象
-#[derive(Serialize, Deserialize, Debug,Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct StatsSyncDbConfigExt {
     pub max_connections: Option<u32>,
     pub min_connections: Option<u32>,
