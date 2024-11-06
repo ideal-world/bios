@@ -183,28 +183,36 @@ pub(crate) async fn do_fact_col_record_sync(
     ctx: &TardisContext,
     inst: &SpiBsInst,
 ) -> TardisResult<()> {
-    if let Some(cert_id) = conn
+    if let Some(fact_col) = conn
         .query_one(
-            &format!("SELECT rel_cert_id FROM starsys_stats_conf_fact_col WHERE rel_conf_fact_key = $1 AND key = $2"),
+            &format!("SELECT rel_cert_id,rel_sql,rel_field FROM starsys_stats_conf_fact_col WHERE rel_conf_fact_key = $1 AND key = $2"),
             vec![Value::from(fact_key), Value::from(col_key)],
         )
         .await?
     {
-        let cert_id = cert_id.try_get::<String>("", "rel_cert_id")?;
-        let db_config = find_db_config(&cert_id, funs, ctx, inst).await?;
-        let db_client = TardisRelDBClient::init(&DBModuleConfig {
-            url: format!("postgres://{}:{}@{}", db_config.db_user, db_config.db_password, db_config.db_url),
-            max_connections: db_config.max_connections.unwrap_or(20),
-            min_connections: db_config.min_connections.unwrap_or(5),
-            connect_timeout_sec: None,
-            idle_timeout_sec: None,
-            compatible_type: CompatibleType::default(),
-        })
-        .await?;
-        
-        
-        return Ok(());
-    } else {
-        return Err(funs.err().not_found("starsys_stats_conf_fact_col", "find", "fact col not found", "404-fact-col-not-found"));
+        if let Some(cert_id) = fact_col.try_get::<Option<String>>("", "rel_cert_id")? {
+            if let Some(sql) = fact_col.try_get::<Option<String>>("", "rel_sql")? {
+                if let Some(field) = fact_col.try_get::<Option<String>>("", "rel_field")? {
+                    let db_config = find_db_config(&cert_id, funs, ctx, inst).await?;
+                    let db_client = TardisRelDBClient::init(&DBModuleConfig {
+                        url: format!("postgres://{}:{}@{}", db_config.db_user, db_config.db_password, db_config.db_url),
+                        max_connections: db_config.max_connections.unwrap_or(20),
+                        min_connections: db_config.min_connections.unwrap_or(5),
+                        connect_timeout_sec: None,
+                        idle_timeout_sec: None,
+                        compatible_type: CompatibleType::default(),
+                    })
+                    .await?;
+                    if let Some(rel_record) = db_client.conn().query_one(&sql, vec![]).await? {
+                        let rel_record_value = rel_record.try_get::<String>("", &field)?;
+                        //TODO 插入数据
+                    }
+                }
+            }
+            return Ok(());
+        } else {
+            return Err(funs.err().not_found("starsys_stats_conf_fact_col", "find", "fact col not found", "404-fact-col-not-found"));
+        }
     }
+    Ok(())
 }

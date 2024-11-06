@@ -4,6 +4,29 @@ use tardis::{
     db::reldb_client::{TardisRelDBClient, TardisRelDBlConnection},
 };
 
+pub async fn init_conf_dim_group_table_and_conn(bs_inst: TypedSpiBsInst<'_, TardisRelDBClient>, ctx: &TardisContext, mgr: bool) -> TardisResult<(TardisRelDBlConnection, String)> {
+    spi_initializer::common_pg::init_table_and_conn(
+        bs_inst,
+        ctx,
+        mgr,
+        None,
+        "stats_conf_dim_group",
+        r#"key character varying NOT NULL,
+    show_name character varying NOT NULL,
+    data_type character varying NOT NULL,
+    remark character varying NOT NULL,
+    dynamic_url character varying NOT NULL,
+    rel_attribute_code character varying[],
+    rel_attribute_url character varying,
+    create_time timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    update_time timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP"#,
+        None,
+        vec![],
+        None,
+        Some("update_time"),
+    )
+    .await
+}
 pub async fn init_conf_dim_table_and_conn(bs_inst: TypedSpiBsInst<'_, TardisRelDBClient>, ctx: &TardisContext, mgr: bool) -> TardisResult<(TardisRelDBlConnection, String)> {
     spi_initializer::common_pg::init_table_and_conn(
         bs_inst,
@@ -19,6 +42,7 @@ pub async fn init_conf_dim_table_and_conn(bs_inst: TypedSpiBsInst<'_, TardisRelD
     remark character varying NOT NULL,
     dynamic_url character varying,
     is_tree boolean NOT NULL DEFAULT FALSE,
+    dim_group_key character varying NOT NULL,
     tree_dynamic_url character varying,
     rel_attribute_code character varying[],
     rel_attribute_url character varying,

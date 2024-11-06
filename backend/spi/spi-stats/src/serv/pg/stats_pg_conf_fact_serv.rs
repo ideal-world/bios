@@ -394,7 +394,7 @@ async fn create_inst_table(
                     "409-spi-stats-dim-conf-not-online",
                 ));
             }
-            let Some(dim_conf) = stats_pg_conf_dim_serv::get(dim_conf_key, conn, ctx, inst).await? else {
+            let Some(dim_conf) = stats_pg_conf_dim_serv::get(dim_conf_key, None, None, conn, ctx, inst).await? else {
                 return Err(funs.err().conflict(
                     "fact_inst",
                     "create",

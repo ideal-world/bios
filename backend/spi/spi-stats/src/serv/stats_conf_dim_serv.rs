@@ -21,6 +21,8 @@ spi_dispatch_service! {
         delete(dim_conf_key: &str) -> TardisResult<()>;
         paginate(
             dim_conf_key: Option<String>,
+            dim_group_key: Option<String>,
+            dim_group_is_empty: Option<bool>,
             show_name: Option<String>,
             page_number: u32,
             page_size: u32,

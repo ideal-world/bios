@@ -36,6 +36,7 @@ spi_dispatch_service! {
             fact_conf_key: Option<String>,
             fact_col_conf_key: Option<String>,
             dim_key: Option<String>,
+            dim_group_key: Option<String>,
             show_name: Option<String>,
             rel_external_id: Option<String>,
             page_number: u32,
