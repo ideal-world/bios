@@ -9,7 +9,7 @@
     "typescript": "^5.6.3"
   },
   "dependencies": {
-    "asteroid-mq-sdk": "^0.1.0-alpha.5"
+    "asteroid-mq-sdk": "^0.1.0-alpha.9"
   },
   "scripts": {
     "build": "bun build src/index.ts --outfile dist/index.mjs"

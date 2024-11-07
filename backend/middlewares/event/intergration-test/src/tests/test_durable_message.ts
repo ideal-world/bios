@@ -1,13 +1,15 @@
 import { newMessage, MessageTargetKind } from 'asteroid-mq-sdk';
 import { getNode } from '../api';
 import * as consts from '../consts';
-import type { MessageConfig } from 'asteroid-mq-sdk/dist/message';
 
 interface TestMessage {
 }
 const topic = consts.BLOCKING_TOPIC;
 type MessageType = TestMessage;
-const dataMessage = (config: Exclude<MessageConfig['durability'], undefined>) => newMessage<MessageType>(
+const dataMessage = (config: {
+    expire: Date;
+    maxReceiver?: number;
+}) => newMessage<MessageType>(
     {},
     {
         topic,

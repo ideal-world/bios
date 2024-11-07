@@ -4,7 +4,7 @@ use asteroid_mq::{
 };
 use tardis::{
     basic::{error::TardisError, result::TardisResult},
-    db::sea_orm::{ActiveModelTrait, ColumnTrait, DbErr, EntityTrait, IntoActiveModel, QueryFilter, QuerySelect, QueryTrait, Set, Unchanged},
+    db::sea_orm::{ActiveModelTrait, ColumnTrait, DbErr, EntityTrait, IntoActiveModel, QueryFilter, QuerySelect, Set, Unchanged},
     TardisFunsInst,
 };
 

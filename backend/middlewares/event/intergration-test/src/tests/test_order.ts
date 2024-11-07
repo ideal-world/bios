@@ -13,7 +13,7 @@ const dataMessage = (index: number) => newMessage<MessageType>(
     {
         topic,
         subjects: ["event/test_order"],
-        targetKind: MessageTargetKind.Online,
+        targetKind: MessageTargetKind.Push,
         ackKind: MessageAckExpectKind.Processed
     }
 );
@@ -23,7 +23,7 @@ const quitMessage = newMessage<MessageType>(
     {
         topic,
         subjects: ["event/test_order"],
-        targetKind: MessageTargetKind.Available
+        targetKind: MessageTargetKind.Online
     }
 );
 

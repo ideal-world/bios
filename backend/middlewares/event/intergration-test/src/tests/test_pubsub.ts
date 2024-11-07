@@ -13,14 +13,14 @@ const createP2pMessage = (data: string) => newMessage<P2pMessageType>(
     }, {
     topic: NON_BLOCKING_TOPIC,
     subjects: ["event/test_pubsub"],
-    targetKind: MessageTargetKind.Online
+    targetKind: MessageTargetKind.Push
 });
 
 const createQuitMessage = () => newMessage<P2pMessageType>(
     'quit', {
     topic: NON_BLOCKING_TOPIC,
     subjects: ["event/test_pubsub"],
-    targetKind: MessageTargetKind.Available
+    targetKind: MessageTargetKind.Online
 });
 
 const TEST_PUSBUB_MESSAGE_COUNT = 100;

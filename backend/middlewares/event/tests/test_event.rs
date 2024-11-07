@@ -27,6 +27,7 @@ async fn test_event() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
+
 async fn init_data() -> Result<(), Box<dyn std::error::Error>> {
     // Initialize RBUM
     bios_basic::rbum::rbum_initializer::init(DOMAIN_CODE, RbumConfig::default()).await?;

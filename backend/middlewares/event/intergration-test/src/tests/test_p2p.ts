@@ -1,4 +1,4 @@
-import { MessageTargetKind, newMessage } from "asteroid-mq-sdk";
+import { MessageTargetKind, newMessage } from 'asteroid-mq-sdk';
 import { getNode } from "../api";
 import { NON_BLOCKING_TOPIC } from "../consts";
 

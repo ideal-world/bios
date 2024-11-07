@@ -12,7 +12,7 @@ const dataMessage = (data: string) => newMessage<MessageType>(
     {
         topic: NON_BLOCKING_TOPIC,
         subjects: ["event/test_many_nodes"],
-        targetKind: MessageTargetKind.Online
+        targetKind: MessageTargetKind.Push
     }
 );
 
@@ -21,7 +21,7 @@ const quitMessage = newMessage<MessageType>(
     {
         topic: NON_BLOCKING_TOPIC,
         subjects: ["event/test_many_nodes"],
-        targetKind: MessageTargetKind.Available
+        targetKind: MessageTargetKind.Online
     }
 );
 const SENDER_CONCURRENT_SIZE = 1000;

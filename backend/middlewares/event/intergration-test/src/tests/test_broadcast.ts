@@ -13,14 +13,14 @@ const createMessage = (data: string) => newMessage<MessageType>(
     }, {
     topic: NON_BLOCKING_TOPIC,
     subjects: ["event/test_broadcast"],
-    targetKind: MessageTargetKind.Available
+    targetKind: MessageTargetKind.Online
 });
 
 const createQuitMessage = () => newMessage<MessageType>(
     'quit', {
     topic: NON_BLOCKING_TOPIC,
     subjects: ["event/test_broadcast"],
-    targetKind: MessageTargetKind.Available
+    targetKind: MessageTargetKind.Online
 });
 
 
