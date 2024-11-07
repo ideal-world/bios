@@ -37,31 +37,18 @@ export default async () => {
             url: await fetchConnectUrl()
         });
         const ep = await node.createEndpoint(NON_BLOCKING_TOPIC, ["event/test"]);
-        const process = new Promise((resolve, reject) => {
-            (
-                async () => {
-                    try {
-                        for await (const message of ep.messages()) {
-                            if (message !== undefined) {
-                                message.received();
-                                const payload = message.json<MessageType>();
-                                message.processed();
-                                if (payload === 'quit') {
-                                    resolve(undefined)
-                                    break;
-                                }
-                            } else {
-                                resolve(undefined);
-                                break;
-                            }
-                        }
-                    } catch (error) {
-                        reject(error);
-                    }
+        for await (const message of ep.messages()) {
+            if (message !== undefined) {
+                message.received();
+                const payload = message.json<MessageType>();
+                message.processed();
+                if (payload === 'quit') {
+                    break;
                 }
-            )();
-        });
-        await process;
+            } else {
+                break;
+            }
+        }
     }
     const senderNode = async (nodeIdx: number) => {
         const node = Node.connect({

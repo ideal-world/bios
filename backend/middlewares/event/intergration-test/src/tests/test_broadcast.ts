@@ -31,30 +31,18 @@ export default async () => {
     const recvNode = async (_: number) => {
         const node = await getNode();
         const ep = await node.createEndpoint(NON_BLOCKING_TOPIC, ["event/test_broadcast"]);
-        const process = new Promise((resolve, reject) => {
-            (
-                async () => {
-                    try {
-                        for await (const message of ep.messages()) {
-                            if (message !== undefined) {
-                                message.received();
-                                const payload = message.json<MessageType>();
-                                if (payload === 'quit') {
-                                    resolve(undefined);
-                                    break;
-                                }
-                                message.processed();
-                            } else {
-                                resolve(undefined);
-                                break;
-                            }
-                        }
-                    } catch (error) {
-                        reject(error);
-                    }
+        for await (const message of ep.messages()) {
+            if (message !== undefined) {
+                message.received();
+                const payload = message.json<MessageType>();
+                if (payload === 'quit') {
+                    break;
                 }
-            )();
-        });
+                message.processed();
+            } else {
+                break;
+            }
+        }
         return process;
     }
     const tasks = [];

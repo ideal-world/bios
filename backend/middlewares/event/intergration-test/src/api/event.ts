@@ -24,22 +24,22 @@ export async function registerNodeId(): Promise<string> {
     }
     return nodeId;
 }
-export async function createTopic(code: string) {
+export async function createTopic(code: string, blocking: boolean = false): Promise<void> {
     const api = SERVER_URI + '/ci/topic';
     const response = await fetch(api, {
         method: 'POST',
         headers: AUTH_HEADERS,
         body: JSON.stringify({
-            "code": code,
-            "name": `topic/${code}`,
             "topic_code": code,
             "overflow_policy": "RejectNew",
             "overflow_size": 500,
-            "check_auth": true,
+            "check_auth": false,
+            "blocking": blocking
         })
     });
     const responseBody: TardisResponse = await response.json();
-    if (responseBody.code !== '0') {
+    if (!responseBody.code.startsWith('2')) {
+        console.error(responseBody);
         throw new Error(responseBody.msg);
     }
 }

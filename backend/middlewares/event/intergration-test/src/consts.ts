@@ -1,4 +1,4 @@
-const SERVER_URI = process.env['SERVER_URI'] ?? 'http://localhost:3000/event';
+const SERVER_URI = process.env['SERVER_URI'] ?? 'http://localhost:8080/event';
 const TARDIS_CTX = process.env['TARDIS_CTX'] ?? btoa(JSON.stringify({
     "owner": "",
     "own_paths": [],

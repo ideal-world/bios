@@ -29,26 +29,18 @@ export default async () => {
 
     const endpointB = await nodeB.createEndpoint(NON_BLOCKING_TOPIC, ["event/test"]);
 
-    const processTaskB = new Promise((resolve, reject) => {
-        (
-            async () => {
-                try {
-                    for await (const message of endpointB.messages()) {
-                        if (message !== undefined) {
-                            const payload = message.json<TestMessage>();
-                            message.received();
-                            console.log(`Received message of size: ${payload.data.length / 1024} KB`);
-                            message.processed();
-                        } else {
-                            resolve(undefined);
-                        }
-                    }
-                } catch (error) {
-                    reject(error);
-                }
+    const processTaskB = (async () => {
+        for await (const message of endpointB.messages()) {
+            if (message !== undefined) {
+                const payload = message.json<TestMessage>();
+                message.received();
+                console.log(`Received message of size: ${payload.data.length / 1024} KB`);
+                message.processed();
+            } else {
+                break;
             }
-        )();
-    });
+        }
+    })();
 
     // 发送小数据包（1KB）
     await nodeA.sendMessage(createMessage(generateData(1)));

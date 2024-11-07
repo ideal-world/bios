@@ -15,7 +15,16 @@ switch (subcommand) {
         {
             const verb = args[1];
             const topic = args[2];
-            await subcommandTopic(verb, topic);
+            const options = args.slice(3).reduce<Record<string, unknown>>((options, option, _idx, _arr) => {
+                const [k, v] = option.split('=');
+                if (k.startsWith('--')) {
+                    const key = k.slice(2);
+                    const value = v ? JSON.parse(v) : true;
+                    options[key] = value;
+                }
+                return options;
+            }, {} as Record<string, unknown>);
+            await subcommandTopic(verb, topic, options);
         }
         break;
     case 'help':
@@ -24,10 +33,12 @@ switch (subcommand) {
 }
 
 
-async function subcommandTopic(verb: string, topic: string) {
+async function subcommandTopic(verb: string, topic: string, options: {
+    blocking?: boolean
+}) {
     switch (verb) {
         case 'create':
-            await createTopic(topic);
+            await createTopic(topic, options.blocking);
             break;
         default:
             throw new Error(`Unrecognized verb: ${verb}`);
@@ -37,6 +48,7 @@ async function subcommandTest(testCase: string) {
     if (Object.hasOwn(tests, testCase)) {
         const key = testCase as keyof typeof tests;
         await (tests[key])();
+        console.info(`Test case ${testCase} finished`);
     } else {
         console.info(`Available test cases: `);
         for (const key in tests) {

@@ -35,32 +35,20 @@ export default async () => {
         const node = await getNode();
         const ep = await node.createEndpoint(NON_BLOCKING_TOPIC, ["event/test_pubsub"]);
         let messageStream = ep.messages();
-        const process = new Promise((resolve, reject) => {
-            (
-                async () => {
-                    try {
-                        for await (const message of messageStream) {
-                            if (message !== undefined) {
-                                message.received();
-                                const payload = message.json<P2pMessageType>();
-                                if (payload === 'quit') {
-                                    resolve(undefined);
-                                    break;
-                                } else {
-                                    recvCnt++;
-                                }
-                                message.processed();
-                            } else {
-                                resolve(undefined);
-                                break;
-                            }
-                        }
-                    } catch (error) {
-                        reject(error);
-                    }
+        for await (const message of messageStream) {
+            if (message !== undefined) {
+                message.received();
+                const payload = message.json<P2pMessageType>();
+                if (payload === 'quit') {
+                    break;
+                } else {
+                    recvCnt++;
                 }
-            )();
-        });
+                message.processed();
+            } else {
+                break;
+            }
+        }
         await process;
     }
     const subNodeTasks = [];

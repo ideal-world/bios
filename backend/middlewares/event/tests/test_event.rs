@@ -47,7 +47,8 @@ async fn init_data() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     let mut client = TestHttpClient::new(format!("http://127.0.0.1:8080/{}", DOMAIN_CODE));
-
+    let auth = ctx.to_base64()?;
+    tracing::info!(?auth, "auth");
     client.set_auth(&ctx)?;
     tokio::time::sleep(Duration::from_secs(5)).await;
     Ok(())
