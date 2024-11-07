@@ -6,10 +6,11 @@ use tardis::web::poem_openapi::payload::Json;
 use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 
 use crate::dto::stats_conf_dto::{
-    StatsConfDimAddReq, StatsConfDimInfoResp, StatsConfDimModifyReq, StatsConfFactAddReq, StatsConfFactColAddReq, StatsConfFactColInfoResp, StatsConfFactColModifyReq,
-    StatsConfFactInfoResp, StatsConfFactModifyReq, StatsSyncDbConfigAddReq, StatsSyncDbConfigInfoResp, StatsSyncDbConfigModifyReq,
+    StatsConfDimAddReq, StatsConfDimGroupAddReq, StatsConfDimGroupInfoResp, StatsConfDimGroupModifyReq, StatsConfDimInfoResp, StatsConfDimModifyReq, StatsConfFactAddReq,
+    StatsConfFactColAddReq, StatsConfFactColInfoResp, StatsConfFactColModifyReq, StatsConfFactInfoResp, StatsConfFactModifyReq, StatsSyncDbConfigAddReq, StatsSyncDbConfigInfoResp,
+    StatsSyncDbConfigModifyReq,
 };
-use crate::serv::{stats_conf_dim_serv, stats_conf_fact_col_serv, stats_conf_fact_serv, stats_sync_serv};
+use crate::serv::{stats_conf_dim_group_serv, stats_conf_dim_serv, stats_conf_fact_col_serv, stats_conf_fact_serv, stats_sync_serv};
 use crate::stats_enumeration::StatsFactColKind;
 
 #[derive(Clone)]
@@ -20,6 +21,42 @@ pub struct StatsCiConfApi;
 /// 接口控制台统计配置 API
 #[poem_openapi::OpenApi(prefix_path = "/ci/conf", tag = "bios_basic::ApiTag::Interface")]
 impl StatsCiConfApi {
+    /// Add Dimension Group Configuration
+    ///
+    /// 添加维度组配置
+    #[oai(path = "/dim/group", method = "put")]
+    async fn dim_group_add(&self, add_req: Json<StatsConfDimGroupAddReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+        let funs = crate::get_tardis_inst();
+        stats_conf_dim_group_serv::add(&add_req.0, &funs, &ctx.0).await?;
+        TardisResp::ok(Void {})
+    }
+
+    /// Modify Dimension Group Configuration
+    ///
+    /// 修改维度组配置
+    #[oai(path = "/dim/group/:dim_group_key", method = "patch")]
+    async fn dim_group_modify(&self, dim_group_key: Path<String>, modify_req: Json<StatsConfDimGroupModifyReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+        let funs = crate::get_tardis_inst();
+        stats_conf_dim_group_serv::modify(&dim_group_key.0, &modify_req.0, &funs, &ctx.0).await?;
+        TardisResp::ok(Void {})
+    }
+
+    /// Find Dimension Group Configurations
+    ///
+    /// 查询维度组配置
+    #[oai(path = "/dim/group", method = "get")]
+    async fn dim_group_paginate(
+        &self,
+        page_number: Query<u32>,
+        page_size: Query<u32>,
+        desc_by_create: Query<Option<bool>>,
+        desc_by_update: Query<Option<bool>>,
+        ctx: TardisContextExtractor,
+    ) -> TardisApiResult<TardisPage<StatsConfDimGroupInfoResp>> {
+        let funs = crate::get_tardis_inst();
+        TardisResp::ok(stats_conf_dim_group_serv::paginate(page_number.0, page_size.0, desc_by_create.0, desc_by_update.0, &funs, &ctx.0).await?)
+    }
+
     /// Add Dimension Configuration
     ///
     /// 添加维度配置
@@ -57,6 +94,8 @@ impl StatsCiConfApi {
     async fn dim_paginate(
         &self,
         key: Query<Option<String>>,
+        group_key: Query<Option<String>>,
+        group_is_empty: Query<Option<bool>>,
         show_name: Query<Option<String>>,
         page_number: Query<u32>,
         page_size: Query<u32>,
@@ -65,7 +104,19 @@ impl StatsCiConfApi {
         ctx: TardisContextExtractor,
     ) -> TardisApiResult<TardisPage<StatsConfDimInfoResp>> {
         let funs = crate::get_tardis_inst();
-        let resp = stats_conf_dim_serv::paginate(key.0, show_name.0, page_number.0, page_size.0, desc_by_create.0, desc_by_update.0, &funs, &ctx.0).await?;
+        let resp = stats_conf_dim_serv::paginate(
+            key.0,
+            group_key.0,
+            group_is_empty.0,
+            show_name.0,
+            page_number.0,
+            page_size.0,
+            desc_by_create.0,
+            desc_by_update.0,
+            &funs,
+            &ctx.0,
+        )
+        .await?;
         TardisResp::ok(resp)
     }
 
@@ -217,6 +268,7 @@ impl StatsCiConfApi {
         &self,
         fact_key: Path<String>,
         key: Query<Option<String>>,
+        group_key: Query<Option<String>>,
         show_name: Query<Option<String>>,
         rel_external_id: Query<Option<String>>,
         page_number: Query<u32>,
@@ -230,6 +282,7 @@ impl StatsCiConfApi {
             Some(fact_key.0),
             key.0,
             None,
+            group_key.0,
             show_name.0,
             rel_external_id.0,
             page_number.0,
@@ -252,6 +305,7 @@ impl StatsCiConfApi {
         dim_key: Path<String>,
         key: Query<Option<String>>,
         fact_key: Query<Option<String>>,
+        group_key: Query<Option<String>>,
         show_name: Query<Option<String>>,
         rel_external_id: Query<Option<String>>,
         page_number: Query<u32>,
@@ -265,6 +319,7 @@ impl StatsCiConfApi {
             fact_key.0,
             key.0,
             Some(dim_key.0),
+            group_key.0,
             show_name.0,
             rel_external_id.0,
             page_number.0,

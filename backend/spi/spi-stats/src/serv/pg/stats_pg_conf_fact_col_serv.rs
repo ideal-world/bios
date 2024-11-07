@@ -317,13 +317,14 @@ pub(crate) async fn find_by_fact_conf_key(fact_conf_key: &str, _funs: &TardisFun
     if !common_pg::check_table_exit("stats_conf_fact_col", &conn, ctx).await? {
         return Ok(vec![]);
     }
-    do_paginate(Some(fact_conf_key.to_string()), None, None, None, None, 1, u32::MAX, None, None, &conn, ctx).await.map(|page| page.records)
+    do_paginate(Some(fact_conf_key.to_string()), None, None, None, None, None, 1, u32::MAX, None, None, &conn, ctx).await.map(|page| page.records)
 }
 
 pub(crate) async fn paginate(
     fact_conf_key: Option<String>,
     fact_col_conf_key: Option<String>,
     dim_key: Option<String>,
+    dim_group_key: Option<String>,
     show_name: Option<String>,
     rel_external_id: Option<String>,
     page_number: u32,
@@ -341,6 +342,7 @@ pub(crate) async fn paginate(
         fact_conf_key,
         fact_col_conf_key,
         dim_key,
+        dim_group_key,
         show_name,
         rel_external_id,
         page_number,
@@ -357,6 +359,7 @@ async fn do_paginate(
     fact_conf_key: Option<String>,
     fact_col_conf_key: Option<String>,
     dim_key: Option<String>,
+    dim_group_key: Option<String>,
     show_name: Option<String>,
     rel_external_id: Option<String>,
     page_number: u32,
@@ -402,24 +405,49 @@ async fn do_paginate(
         sql_order.push(format!("update_time {}", if desc_by_update { "DESC" } else { "ASC" }));
     }
 
-    let result = conn
-        .query_all(
-            &format!(
-                r#"SELECT key, show_name, kind, remark, dim_rel_conf_dim_key, rel_external_id, dim_multi_values, dim_exclusive_rec, dim_data_type, dim_dynamic_url, mes_data_distinct, mes_data_type, mes_frequency, mes_unit, mes_act_by_dim_conf_keys, rel_conf_fact_key, rel_conf_fact_and_col_key, create_time, update_time,rel_field,rel_cert_id,rel_sql, count(*) OVER() AS total
+    let result;
+    if let Some(dim_group_key) = &dim_group_key {
+        sql_where.push(format!("starsys_stats_conf_dim.dim_group_key = ${}", params.len() + 1));
+        params.push(Value::from(dim_group_key));
+
+        result = conn
+      .query_all(
+          &format!(
+              r#"SELECT {table_name}.key, {table_name}.show_name, {table_name}.kind, {table_name}.remark, {table_name}.dim_rel_conf_dim_key, {table_name}.rel_external_id, {table_name}.dim_multi_values, {table_name}.dim_exclusive_rec, {table_name}.dim_data_type, {table_name}.dim_dynamic_url, {table_name}.mes_data_distinct, {table_name}.mes_data_type, {table_name}.mes_frequency, {table_name}.mes_unit, {table_name}.mes_act_by_dim_conf_keys, {table_name}.rel_conf_fact_key, {table_name}.rel_conf_fact_and_col_key, {table_name}.create_time, {table_name}.update_time, {table_name}.rel_field, {table_name}.rel_cert_id, {table_name}.rel_sql, count(*) OVER() AS total
+FROM {table_name} inner join starsys_stats_conf_dim on {table_name}.dim_rel_conf_dim_key = starsys_stats_conf_dim.key
+WHERE 
+  {}
+{}"#,
+              sql_where.join(" AND "),
+              if sql_order.is_empty() {
+                  "".to_string()
+              } else {
+                  format!("ORDER BY {}", sql_order.join(","))
+              }
+          ),
+          params,
+      )
+      .await?;
+    } else {
+        result = conn
+      .query_all(
+          &format!(
+              r#"SELECT key, show_name, kind, remark, dim_rel_conf_dim_key, rel_external_id, dim_multi_values, dim_exclusive_rec, dim_data_type, dim_dynamic_url, mes_data_distinct, mes_data_type, mes_frequency, mes_unit, mes_act_by_dim_conf_keys, rel_conf_fact_key, rel_conf_fact_and_col_key, create_time, update_time,rel_field,rel_cert_id,rel_sql, count(*) OVER() AS total
 FROM {table_name}
 WHERE 
-    {}
+  {}
 {}"#,
-                sql_where.join(" AND "),
-                if sql_order.is_empty() {
-                    "".to_string()
-                } else {
-                    format!("ORDER BY {}", sql_order.join(","))
-                }
-            ),
-            params,
-        )
-        .await?;
+              sql_where.join(" AND "),
+              if sql_order.is_empty() {
+                  "".to_string()
+              } else {
+                  format!("ORDER BY {}", sql_order.join(","))
+              }
+          ),
+          params,
+      )
+      .await?;
+    }
 
     let mut total_size: i64 = 0;
     let result = result
