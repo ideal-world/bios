@@ -1,4 +1,3 @@
-use asteroid_mq::prelude::{EventAttribute, Subject};
 use serde::{Deserialize, Serialize};
 
 use tardis::{
@@ -28,6 +27,12 @@ pub mod event {
 
     impl EventAttribute for super::LogItemAddV2Req {
         const SUBJECT: Subject = Subject::const_new("log/add");
+    }
+    impl EventAttribute for super::StatsItemAddReq {
+        const SUBJECT: Subject = Subject::const_new("stats/add");
+    }
+    impl EventAttribute for super::StatsItemDeleteReq {
+        const SUBJECT: Subject = Subject::const_new("stats/delete");
     }
 }
 #[derive(Debug, Default, Clone)]
@@ -118,10 +123,6 @@ pub struct StatsItemAddReq {
     pub own_paths: Option<String>,
 }
 
-impl EventAttribute for StatsItemAddReq {
-    const SUBJECT: Subject = Subject::const_new("stats/add");
-}
-
 #[derive(poem_openapi::Object, Serialize, Deserialize, Clone, Debug)]
 pub struct StatsItemDeleteReq {
     #[oai(validator(min_length = "2"))]
@@ -130,10 +131,6 @@ pub struct StatsItemDeleteReq {
     pub tag: String,
     #[oai(validator(min_length = "2"))]
     pub key: Option<TrimString>,
-}
-
-impl EventAttribute for StatsItemDeleteReq {
-    const SUBJECT: Subject = Subject::const_new("stats/delete");
 }
 
 impl SpiLogClient {
