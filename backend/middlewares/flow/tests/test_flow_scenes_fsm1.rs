@@ -10,7 +10,7 @@ use bios_mw_flow::dto::flow_model_dto::{
     FlowModelAddReq, FlowModelAggResp, FlowModelAssociativeOperationKind, FlowModelBindStateReq, FlowModelCopyOrReferenceCiReq, FlowModelCopyOrReferenceReq, FlowModelKind,
     FlowModelModifyReq, FlowModelStatus, FlowModelSummaryResp,
 };
-use bios_mw_flow::dto::flow_model_version_dto::{FlowModelVersionAddReq, FlowModelVersionBindState, FlowModelVersionModifyReq, FlowModelVesionState};
+use bios_mw_flow::dto::flow_model_version_dto::{FlowModelVersionAddReq, FlowModelVersionBindState, FlowModelVersionDetailResp, FlowModelVersionModifyReq, FlowModelVesionState};
 use bios_mw_flow::dto::flow_state_dto::{FlowStateRelModelExt, FlowStateSummaryResp};
 
 use bios_mw_flow::dto::flow_transition_dto::{FlowTransitionAddReq, FlowTransitionModifyReq};
@@ -396,22 +396,22 @@ pub async fn test(flow_client: &mut TestHttpClient, search_client: &mut TestHttp
     //
     let req_models: Vec<FlowModelSummaryResp> = flow_client.get(&format!("/cc/model/find_by_rel_template_id?tag=REQ&template=true&rel_template_id={}", req_template_id1)).await;
     assert_eq!(req_models.len(), 4);
-    assert!(req_models.iter().any(|mdoel| mdoel.id == req_default_model_template_id));
-    assert!(req_models.iter().any(|mdoel| mdoel.id == req_model_template_id));
-    assert!(req_models.iter().all(|mdoel| mdoel.id != req_model_uninit_template_id));
+    assert!(req_models.iter().any(|model| model.id == req_default_model_template_id));
+    assert!(req_models.iter().any(|model| model.id == req_model_template_id));
+    assert!(req_models.iter().all(|model| model.id != req_model_uninit_template_id));
 
     let req_models: Vec<FlowModelSummaryResp> = flow_client.get("/cc/model/find_by_rel_template_id?tag=REQ&template=true").await;
     assert_eq!(req_models.len(), 3);
-    assert!(req_models.iter().any(|mdoel| mdoel.id == req_default_model_template_id));
-    assert!(req_models.iter().all(|mdoel| mdoel.id != req_model_template_id));
+    assert!(req_models.iter().any(|model| model.id == req_default_model_template_id));
+    assert!(req_models.iter().all(|model| model.id != req_model_template_id));
     ctx.owner = "u001".to_string();
     ctx.own_paths = "t2".to_string();
     flow_client.set_auth(&ctx)?;
     search_client.set_auth(&ctx)?;
     let req_models: Vec<FlowModelSummaryResp> = flow_client.get("/cc/model/find_by_rel_template_id?tag=REQ&template=true").await;
     assert_eq!(req_models.len(), 3);
-    assert!(req_models.iter().any(|mdoel| mdoel.id == req_default_model_template_id));
-    assert!(req_models.iter().all(|mdoel| mdoel.id != req_model_template_id));
+    assert!(req_models.iter().any(|model| model.id == req_default_model_template_id));
+    assert!(req_models.iter().all(|model| model.id != req_model_template_id));
     // enter app
     ctx.owner = "u001".to_string();
     ctx.own_paths = "t1/app01".to_string();
@@ -457,7 +457,7 @@ pub async fn test(flow_client: &mut TestHttpClient, search_client: &mut TestHttp
     assert_eq!(state_and_next_transitions[0].current_flow_state_name, "待开始");
 
     // 新建审批流
-    let req_model_template_aggs: FlowModelAggResp = flow_client
+    let req_approval_flow: FlowModelAggResp = flow_client
         .post(
             "/cc/model",
             &FlowModelAddReq {
@@ -479,5 +479,6 @@ pub async fn test(flow_client: &mut TestHttpClient, search_client: &mut TestHttp
             },
         )
         .await;
+    let req_approval_flow_version: FlowModelVersionDetailResp = flow_client.get(&format!("/cc/model_version/{}", req_approval_flow.current_version_id)).await;
     Ok(())
 }

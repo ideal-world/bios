@@ -32,14 +32,13 @@ use crate::{
         flow_model_version_dto::{
             FlowModelVersionAddReq, FlowModelVersionBindState, FlowModelVersionFilterReq, FlowModelVersionModifyReq, FlowModelVersionModifyState, FlowModelVesionState,
         },
-        flow_state_dto::{FLowStateIdAndName, FlowStateAggResp, FlowStateFilterReq, FlowStateRelModelExt},
+        flow_state_dto::{FLowStateIdAndName, FlowStateAddReq, FlowStateAggResp, FlowStateKind, FlowStateRelModelExt, FlowSysStateKind},
         flow_transition_dto::{
             FlowTransitionAddReq, FlowTransitionDetailResp, FlowTransitionInitInfo, FlowTransitionModifyReq, FlowTransitionPostActionInfo, FlowTransitionSortStatesReq,
         },
     },
     flow_config::FlowBasicInfoManager,
     flow_constants,
-    serv::flow_state_serv::FlowStateServ,
 };
 use async_trait::async_trait;
 
@@ -125,11 +124,11 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
                 .await?;
             }
         }
-        
+
         let mut add_version = if let Some(mut add_version) = add_req.add_version.clone() {
             add_version.rel_model_id = Some(flow_model_id.to_string());
             add_version
-        } else {
+        } else if add_req.main {
             FlowModelVersionAddReq {
                 name: add_req.name.clone(),
                 rel_model_id: Some(flow_model_id.to_string()),
@@ -138,10 +137,58 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
                 scope_level: add_req.scope_level.clone(),
                 disabled: add_req.disabled,
             }
+        } else {
+            FlowModelVersionAddReq {
+                name: add_req.name.clone(),
+                rel_model_id: Some(flow_model_id.to_string()),
+                // 初始化时增加开始结束两个节点
+                bind_states: Some(vec![
+                    FlowModelVersionBindState {
+                        new_state: Some(FlowStateAddReq {
+                            name: Some("开始".into()),
+                            sys_state: FlowSysStateKind::Start,
+                            state_kind: Some(FlowStateKind::Start),
+                            tags: Some(vec![add_req.tag.clone().unwrap_or_default()]),
+                            ..Default::default()
+                        }),
+                        add_transitions: Some(vec![
+                            FlowTransitionAddReq {
+                                name: Some("开始".into()),
+                                from_flow_state_id: "".to_string(),
+                                to_flow_state_id: "".to_string(),
+                                transfer_by_auto: Some(true),
+                                ..Default::default()
+                            }
+                        ]),
+                        is_init: true,
+                        ..Default::default()
+                    },
+                    FlowModelVersionBindState {
+                        new_state: Some(FlowStateAddReq {
+                            name: Some("结束".into()),
+                            sys_state: FlowSysStateKind::Finish,
+                            state_kind: Some(FlowStateKind::Finish),
+                            tags: Some(vec![add_req.tag.clone().unwrap_or_default()]),
+                            ..Default::default()
+                        }),
+                        is_init: false,
+                        ..Default::default()
+                    },
+                ]),
+                status: FlowModelVesionState::Editing,
+                scope_level: add_req.scope_level.clone(),
+                disabled: add_req.disabled,
+            }
         };
 
         let version_id = FlowModelVersionServ::add_item(&mut add_version, funs, ctx).await?;
-        FlowModelVersionServ::enable_version(&version_id, funs, ctx).await?;
+        if add_version.status == FlowModelVesionState::Enabled {
+            FlowModelVersionServ::enable_version(&version_id, funs, ctx).await?;
+        }
+        Self::modify_item(flow_model_id, &mut FlowModelModifyReq {
+            current_version_id: Some(version_id),
+            ..Default::default()
+        }, funs, ctx).await?;
         if let Some(rel_template_ids) = &add_req.rel_template_ids {
             join_all(
                 rel_template_ids
@@ -781,6 +828,7 @@ impl FlowModelServ {
             info: model_detail.info,
             init_state_id: model_detail.init_state_id,
             template: model_detail.template,
+            current_version_id: model_detail.current_version_id,
             rel_model_id: model_detail.rel_model_id,
             rel_template_ids: FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelTemplate, &model_detail.id, None, None, funs, ctx)
                 .await?

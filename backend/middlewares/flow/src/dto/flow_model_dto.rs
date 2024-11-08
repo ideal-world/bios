@@ -293,6 +293,7 @@ pub struct FlowModelAggResp {
     /// 关联父级模型ID
     pub rel_model_id: String,
     pub init_state_id: String,
+    pub current_version_id: String,
     /// 关联模板ID（目前可能是页面模板ID，或者是项目模板ID）
     pub rel_template_ids: Vec<String>,
     /// 绑定的状态

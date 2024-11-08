@@ -92,7 +92,7 @@ impl
     }
 
     async fn after_add_item(flow_version_id: &str, add_req: &mut FlowModelVersionAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        let version_detail = Self::get_item(flow_version_id, &FlowModelVersionFilterReq::default(), funs, ctx).await?;
+        let version_detail = Self::peek_item(flow_version_id, &FlowModelVersionFilterReq::default(), funs, ctx).await?;
         FlowModelServ::modify_model(
             &version_detail.rel_model_id,
             &mut FlowModelModifyReq {
@@ -105,6 +105,9 @@ impl
         .await?;
         if let Some(bind_states) = &add_req.bind_states {
             Self::bind_states_and_transitions(flow_version_id, bind_states, funs, ctx).await?;
+        }
+        if add_req.status == FlowModelVesionState::Enabled {
+            Self::enable_version(flow_version_id, funs, ctx).await?;
         }
 
         Ok(())
@@ -140,9 +143,20 @@ impl
     }
 
     async fn after_modify_item(id: &str, modify_req: &mut FlowModelVersionModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let version_detail = Self::get_item(id, &FlowModelVersionFilterReq::default(), funs, ctx).await?;
         if let Some(status) = &modify_req.status {
             if *status == FlowModelVesionState::Enabled {
                 Self::enable_version(id, funs, ctx).await?;
+                FlowModelServ::modify_item(
+                    &version_detail.rel_model_id,
+                    &mut FlowModelModifyReq {
+                        current_version_id: Some(id.to_string()),
+                        ..Default::default()
+                    },
+                    funs,
+                    ctx,
+                )
+                .await?;
             }
         }
         if let Some(bind_states) = &modify_req.bind_states {
@@ -231,7 +245,7 @@ impl FlowModelVersionServ {
         )
         .await
         {
-            let version_detail = Self::get_item(flow_version_id, &FlowModelVersionFilterReq::default(), funs, ctx).await?;
+            let version_detail = Self::peek_item(flow_version_id, &FlowModelVersionFilterReq::default(), funs, ctx).await?;
             let tag = FlowModelServ::get_item(&version_detail.rel_model_id, &FlowModelFilterReq::default(), funs, ctx).await?.tag;
             if !state.tags.is_empty() && !state.tags.split(',').collect_vec().contains(&tag.as_str()) {
                 return Err(funs.err().internal_error("flow_model_serv", "bind_state", "The flow state is not found", "404-flow-state-not-found"));
@@ -297,9 +311,17 @@ impl FlowModelVersionServ {
             Self::bind_state(flow_version_id, &bind_state_req, funs, ctx).await?;
             binded_states.push((state_id, bind_state));
         }
+        let binded_last_state_id = binded_states.last().map(|binded_state| binded_state.0.clone()).unwrap_or_default();
         for (binded_state_id, bind_req) in binded_states {
-            if let Some(add_transitions) = &bind_req.add_transitions {
-                FlowTransitionServ::add_transitions(flow_version_id, &binded_state_id, add_transitions, funs, ctx).await?;
+            if let Some(mut add_transitions) = bind_req.add_transitions.clone() {
+                for add_transition in add_transitions.iter_mut() {
+                    // 凡是from_flow_state_id和to_flow_state_id为空的，则代表需要将当前状态指向结尾状态
+                    if add_transition.from_flow_state_id.is_empty() && add_transition.to_flow_state_id.is_empty() {
+                        add_transition.from_flow_state_id = binded_state_id.clone();
+                        add_transition.to_flow_state_id = binded_last_state_id.clone();
+                    }
+                }
+                FlowTransitionServ::add_transitions(flow_version_id, &binded_state_id, &add_transitions, funs, ctx).await?;
             }
             if let Some(modify_transitions) = &bind_req.modify_transitions {
                 FlowTransitionServ::modify_transitions(flow_version_id, modify_transitions, funs, ctx).await?;
@@ -325,7 +347,7 @@ impl FlowModelVersionServ {
 
     // 版本发布操作（发布时将同模板的其他版本置为关闭状态）
     pub async fn enable_version(flow_version_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        let version_detail = Self::get_item(flow_version_id, &FlowModelVersionFilterReq::default(), funs, ctx).await?;
+        let version_detail = Self::peek_item(flow_version_id, &FlowModelVersionFilterReq::default(), funs, ctx).await?;
         let versions = Self::find_items(
             &FlowModelVersionFilterReq {
                 rel_model_ids: Some(vec![version_detail.rel_model_id.clone()]),
@@ -351,26 +373,6 @@ impl FlowModelVersionServ {
             )
             .await?;
         }
-        Self::modify_item(
-            flow_version_id,
-            &mut FlowModelVersionModifyReq {
-                status: Some(FlowModelVesionState::Enabled),
-                ..Default::default()
-            },
-            funs,
-            ctx,
-        )
-        .await?;
-        FlowModelServ::modify_item(
-            &version_detail.rel_model_id,
-            &mut FlowModelModifyReq {
-                current_version_id: Some(flow_version_id.to_string()),
-                ..Default::default()
-            },
-            funs,
-            ctx,
-        )
-        .await?;
         Ok(())
     }
 
