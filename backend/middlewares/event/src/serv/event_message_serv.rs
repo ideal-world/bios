@@ -4,7 +4,7 @@ use asteroid_mq::{
 };
 use tardis::{
     basic::{error::TardisError, result::TardisResult},
-    db::sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, IntoActiveModel, QueryFilter, QuerySelect, Set, Unchanged},
+    db::sea_orm::{ActiveModelTrait, ColumnTrait, DbErr, EntityTrait, IntoActiveModel, QueryFilter, QuerySelect, Set, Unchanged},
     TardisFunsInst,
 };
 
@@ -30,7 +30,11 @@ impl EventMessageServ {
         .filter(Column::Topic.eq(topic.to_string()));
         let conn = funs.reldb().conn();
         let raw_conn = conn.raw_conn();
-        update.exec(raw_conn).await?;
+        let result = update.exec(raw_conn).await;
+        match result {
+            Err(DbErr::RecordNotUpdated) => return Ok(()),
+            _result => _result,
+        }?;
         Ok(())
     }
     pub async fn batch_retrieve(&self, topic: TopicCode, query: DurableMessageQuery, funs: &TardisFunsInst) -> TardisResult<Vec<DurableMessage>> {
@@ -54,16 +58,17 @@ impl EventMessageServ {
         let conn = funs.reldb().conn();
         let raw_conn = conn.raw_conn();
         let model = select.one(raw_conn).await?;
-        let mut model = model.ok_or_else(|| TardisError::not_found(&format!("event message {} not found", message_id), "event-message-not-found"))?;
-        model.status_update(status);
-        Entity::update(ActiveModel {
-            message_id: Unchanged(message_id.to_base64()),
-            status: Set(model.status),
-            ..Default::default()
-        })
-        .filter(Column::Topic.eq(topic.to_string()))
-        .exec(raw_conn)
-        .await?;
+        if let Some(mut model) = model {
+            model.status_update(status);
+            Entity::update(ActiveModel {
+                message_id: Unchanged(message_id.to_base64()),
+                status: Set(model.status),
+                ..Default::default()
+            })
+            .filter(Column::Topic.eq(topic.to_string()))
+            .exec(raw_conn)
+            .await?;
+        }
         Ok(())
     }
 }

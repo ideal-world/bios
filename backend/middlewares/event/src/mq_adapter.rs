@@ -101,10 +101,10 @@ pub struct BiosEdgeAuthAdapter {
 impl BiosEdgeAuthAdapter {
     pub fn new(funs: Arc<TardisFunsInst>, ctx: TardisContext) -> Self {
         Self {
-            funs,
+            funs: funs.clone(),
             ctx,
             auth_serv: EventAuthServ {},
-            register_serv: EventRegisterServ {},
+            register_serv: EventRegisterServ { funs },
         }
     }
 }

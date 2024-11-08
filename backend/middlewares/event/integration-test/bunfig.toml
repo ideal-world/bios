@@ -1,0 +1,3 @@
+[build]
+entry = "src/index.ts"
+output = "dist/index.mjs"

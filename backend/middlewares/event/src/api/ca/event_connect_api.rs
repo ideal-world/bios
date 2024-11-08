@@ -11,9 +11,9 @@ use tardis::{log as tracing, TardisFuns};
 use crate::serv::event_connect_serv::PoemWs;
 use crate::serv::event_register_serv::EventRegisterServ;
 
-#[derive(Clone, Default, Debug)]
+#[derive(Clone)]
 pub struct EventConnectApi {
-    register_serv: EventRegisterServ,
+    pub(crate) register_serv: EventRegisterServ,
 }
 
 /// Event Connect API
