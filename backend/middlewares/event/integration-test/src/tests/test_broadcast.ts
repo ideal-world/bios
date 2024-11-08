@@ -33,17 +33,16 @@ export default async () => {
         const ep = await node.createEndpoint(NON_BLOCKING_TOPIC, ["event/test_broadcast"]);
         for await (const message of ep.messages()) {
             if (message !== undefined) {
-                message.received();
+                // message.received();
                 const payload = message.json<MessageType>();
                 if (payload === 'quit') {
                     break;
                 }
-                message.processed();
+                // message.processed();
             } else {
                 break;
             }
         }
-        return process;
     }
     const tasks = [];
     for (let i = 0; i < TEST_RECEIVER_COUNT; i++) {

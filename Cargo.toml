@@ -67,9 +67,9 @@ tardis = { version = "0.1.0-rc.17" }
 # tardis = { version = "0.2.0", path = "../tardis/tardis" }
 # tardis = { git = "https://github.com/ideal-world/tardis.git", rev = "9cc9b3e" }
 # asteroid-mq = { git = "https://github.com/4t145/asteroid-mq.git", rev = "d59c64d" }
-asteroid-mq = { git = "https://github.com/4t145/asteroid-mq.git", rev = "149bb0f" }
+asteroid-mq = { git = "https://github.com/4t145/asteroid-mq.git", rev = "8be6be5" }
 # asteroid-mq = { version = "0.1.0-alpha.5" }
-asteroid-mq-sdk = { git = "https://github.com/4t145/asteroid-mq.git", rev = "149bb0f" }
+asteroid-mq-sdk = { git = "https://github.com/4t145/asteroid-mq.git", rev = "8be6be5" }
 # asteroid-mq-sdk = { version = "0.1.0-alpha.5" }
 #spacegate
 

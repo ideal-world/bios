@@ -49,7 +49,6 @@ export default async () => {
                 break;
             }
         }
-        await process;
     }
     const subNodeTasks = [];
     for (let i = 0; i < TEST_SUBSCRIBER_COUNT; i++) {

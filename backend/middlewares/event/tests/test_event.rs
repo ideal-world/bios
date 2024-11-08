@@ -17,7 +17,7 @@ use tardis::{tardis_static, tokio, TardisFuns};
 use tokio::io::AsyncReadExt;
 #[tokio::test(flavor = "multi_thread")]
 async fn test_event() -> Result<(), Box<dyn std::error::Error>> {
-    env::set_var("RUST_LOG", "debug,tardis=trace,bios_mw_event=trace,test_event=trace,sqlx::query=off,asteroid-mq=trace");
+    // env::set_var("RUST_LOG", "debug,tardis=trace,bios_mw_event=trace,test_event=trace,sqlx::query=off,asteroid-mq=info");
 
     let _x = init_test_container::init(None).await?;
 

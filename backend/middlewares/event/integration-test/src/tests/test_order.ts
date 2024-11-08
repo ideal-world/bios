@@ -6,7 +6,7 @@ interface TestMessage {
     index: number;
 }
 const topic = consts.BLOCKING_TOPIC;
-const ORDER_TEST_MESSAGE_COUNT = 3;
+const ORDER_TEST_MESSAGE_COUNT = 20;
 type MessageType = TestMessage | 'quit';
 const dataMessage = (index: number) => newMessage<MessageType>(
     { index },
