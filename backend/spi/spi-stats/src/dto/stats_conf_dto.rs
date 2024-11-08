@@ -7,6 +7,54 @@ use tardis::{
 
 use crate::stats_enumeration::{StatsDataTypeKind, StatsFactColKind};
 
+/// Add Dimension Group Configuration Request Object
+///
+/// 添加维度组配置请求对象
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct StatsConfDimGroupAddReq {
+    /// The primary key or encoding passed in from the external system
+    ///
+    /// 外部系统传入的主键或编码
+    #[oai(validator(pattern = r"^[a-z0-9_]+$"))]
+    pub key: String,
+    pub show_name: String,
+    pub data_type: StatsDataTypeKind,
+    pub remark: Option<String>,
+    pub dynamic_url: Option<String>,
+    pub rel_attribute_code: Option<Vec<String>>,
+    pub rel_attribute_url: Option<String>,
+}
+
+/// Modify Dimension Group Configuration Request Object
+///
+/// 修改维度组配置请求对象
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct StatsConfDimGroupModifyReq {
+    pub show_name: Option<String>,
+    pub data_type: Option<StatsDataTypeKind>,
+    pub remark: Option<String>,
+    pub dynamic_url: Option<String>,
+    pub rel_attribute_code: Option<Vec<String>>,
+    pub rel_attribute_url: Option<String>,
+}
+
+/// Dimension Group Configuration Response Object
+///
+/// 维度组配置响应对象
+#[derive(poem_openapi::Object, sea_orm::FromQueryResult, Serialize, Deserialize, Debug)]
+pub struct StatsConfDimGroupInfoResp {
+    pub key: String,
+    pub show_name: String,
+    pub data_type: StatsDataTypeKind,
+    pub remark: Option<String>,
+    pub dynamic_url: Option<String>,
+    pub rel_attribute_code: Option<Vec<String>>,
+    pub rel_attribute_url: Option<String>,
+
+    pub create_time: DateTime<Utc>,
+    pub update_time: DateTime<Utc>,
+}
+
 /// Add Dimension Configuration Request Object
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct StatsConfDimAddReq {
@@ -44,6 +92,7 @@ pub struct StatsConfDimAddReq {
     /// 例如地址维度可以是省-市-区等
     pub hierarchy: Option<Vec<String>>,
     pub remark: Option<String>,
+    pub dim_group_key: Option<String>,
     pub dynamic_url: Option<String>,
 
     /// is_tree = true, the dimension is a tree structure
@@ -84,6 +133,7 @@ pub struct StatsConfDimModifyReq {
     /// e.g. address dimension can be province-city-district, etc.
     pub hierarchy: Option<Vec<String>>,
     pub remark: Option<String>,
+    pub dim_group_key: Option<String>,
     pub dynamic_url: Option<String>,
 
     /// is_tree = true, the dimension is a tree structure
@@ -132,6 +182,7 @@ pub struct StatsConfDimInfoResp {
     /// Whether the dimension is enabled
     pub online: bool,
     pub remark: Option<String>,
+    pub dim_group_key: Option<String>,
     pub dynamic_url: Option<String>,
 
     /// is_tree = true, the dimension is a tree structure
@@ -171,7 +222,7 @@ pub struct StatsConfFactAddReq {
     pub rel_cert_id: Option<String>,
     pub sync_sql: Option<String>,
     pub sync_cron: Option<String>,
-    pub sync_on: Option<bool>,
+    pub is_sync: Option<bool>,
 }
 
 /// Modify Fact Configuration Request Object
@@ -193,7 +244,7 @@ pub struct StatsConfFactModifyReq {
     pub rel_cert_id: Option<String>,
     pub sync_sql: Option<String>,
     pub sync_cron: Option<String>,
-    pub sync_on: Option<bool>,
+    pub is_sync: Option<bool>,
 }
 
 /// Fact Configuration Response Object
@@ -224,7 +275,7 @@ pub struct StatsConfFactInfoResp {
     pub rel_cert_id: Option<String>,
     pub sync_sql: Option<String>,
     pub sync_cron: Option<String>,
-    pub sync_on: Option<bool>,
+    pub is_sync: Option<bool>,
 }
 
 /// Add Fact Column Configuration Request Object

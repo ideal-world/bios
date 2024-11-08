@@ -46,13 +46,13 @@ pub(crate) async fn add(add_req: &StatsConfFactAddReq, funs: &TardisFunsInst, ct
         Value::from(add_req.rel_cert_id.as_ref().unwrap_or(&"".to_string()).as_str()),
         Value::from(add_req.sync_sql.as_ref().unwrap_or(&"".to_string()).as_str()),
         Value::from(add_req.sync_cron.as_ref().unwrap_or(&"".to_string()).as_str()),
-        Value::from(add_req.sync_on.unwrap_or_default()),
+        Value::from(add_req.is_sync.unwrap_or_default()),
     ];
 
     conn.execute_one(
         &format!(
             r#"INSERT INTO {table_name}
-(key, show_name, query_limit, remark, redirect_path, is_online, rel_cert_id, sync_sql, sync_cron, sync_on)
+(key, show_name, query_limit, remark, redirect_path, is_online, rel_cert_id, sync_sql, sync_cron, is_sync)
 VALUES
 ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 "#,
@@ -108,9 +108,9 @@ pub(crate) async fn modify(fact_conf_key: &str, modify_req: &StatsConfFactModify
             sql_sets.push(format!("sync_cron = ${}", params.len() + 1));
             params.push(Value::from(sync_cron.to_string()));
         }
-        if let Some(sync_on) = &modify_req.sync_on {
-            sql_sets.push(format!("sync_on = ${}", params.len() + 1));
-            params.push(Value::from(*sync_on));
+        if let Some(is_sync) = &modify_req.is_sync {
+            sql_sets.push(format!("is_sync = ${}", params.len() + 1));
+            params.push(Value::from(*is_sync));
         }
     };
 
@@ -251,7 +251,7 @@ async fn do_paginate(
         .query_all(
             &format!(
                 r#"SELECT t.*, count(*) OVER () AS total FROM (
-SELECT distinct fact.key as key, fact.show_name as show_name, fact.query_limit as query_limit, fact.remark as remark, fact.redirect_path as redirect_path, fact.is_online as is_online, fact.rel_cert_id as rel_cert_id, fact.sync_sql as sync_sql, fact.sync_cron as sync_cron, fact.sync_on as sync_on, fact.create_time as create_time, fact.update_time as update_time
+SELECT distinct fact.key as key, fact.show_name as show_name, fact.query_limit as query_limit, fact.remark as remark, fact.redirect_path as redirect_path, fact.is_online as is_online, fact.rel_cert_id as rel_cert_id, fact.sync_sql as sync_sql, fact.sync_cron as sync_cron, fact.is_sync as is_sync, fact.create_time as create_time, fact.update_time as update_time
 FROM {table_name} as fact
 {}
 WHERE 
@@ -291,7 +291,7 @@ LIMIT $1 OFFSET $2
             rel_cert_id: item.try_get("", "rel_cert_id")?,
             sync_sql: item.try_get("", "sync_sql")?,
             sync_cron: item.try_get("", "sync_cron")?,
-            sync_on: item.try_get("", "sync_on")?,
+            is_sync: item.try_get("", "is_sync")?,
         });
     }
     Ok(TardisPage {
@@ -394,7 +394,7 @@ async fn create_inst_table(
                     "409-spi-stats-dim-conf-not-online",
                 ));
             }
-            let Some(dim_conf) = stats_pg_conf_dim_serv::get(dim_conf_key, conn, ctx, inst).await? else {
+            let Some(dim_conf) = stats_pg_conf_dim_serv::get(dim_conf_key, None, None, conn, ctx, inst).await? else {
                 return Err(funs.err().conflict(
                     "fact_inst",
                     "create",

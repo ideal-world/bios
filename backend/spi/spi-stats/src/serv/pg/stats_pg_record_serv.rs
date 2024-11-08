@@ -201,7 +201,7 @@ pub(crate) async fn fact_record_load(
             let Some(key) = fact_col_conf.dim_rel_conf_dim_key.as_ref() else {
                 return Err(funs.err().not_found("fact_record", "load", "Fail to get conf_dim_key", "400-spi-stats-fail-to-get-dim-config-key"));
             };
-            let Some(dim_conf) = stats_pg_conf_dim_serv::get(key, &conn, ctx, inst).await? else {
+            let Some(dim_conf) = stats_pg_conf_dim_serv::get(key, None, None, &conn, ctx, inst).await? else {
                 return Err(funs.err().not_found(
                     "fact_record",
                     "load",
@@ -255,7 +255,7 @@ pub(crate) async fn fact_record_load(
                         let Some(dim_rel_conf_dim_key) = &fact_col_conf.dim_rel_conf_dim_key else {
                             return Err(funs.err().internal_error("fact_record", "load", "dim_rel_conf_dim_key unexpectedly being empty", "500-spi-stats-internal-error"));
                         };
-                        let Some(dim_conf) = stats_pg_conf_dim_serv::get(dim_rel_conf_dim_key, &conn, ctx, inst).await? else {
+                        let Some(dim_conf) = stats_pg_conf_dim_serv::get(dim_rel_conf_dim_key, None, None, &conn, ctx, inst).await? else {
                             return Err(funs.err().internal_error(
                                 "fact_record",
                                 "load",
@@ -295,7 +295,7 @@ pub(crate) async fn fact_record_load(
                         let Some(dim_rel_conf_dim_key) = &fact_col_conf.dim_rel_conf_dim_key else {
                             return Err(funs.err().internal_error("fact_record", "load", "dim_rel_conf_dim_key unexpectedly being empty", "500-spi-stats-internal-error"));
                         };
-                        let Some(dim_conf) = stats_pg_conf_dim_serv::get(dim_rel_conf_dim_key, &conn, ctx, inst).await? else {
+                        let Some(dim_conf) = stats_pg_conf_dim_serv::get(dim_rel_conf_dim_key, None, None, &conn, ctx, inst).await? else {
                             return Err(funs.err().internal_error(
                                 "fact_record",
                                 "load",
@@ -419,7 +419,7 @@ pub(crate) async fn fact_records_load(
                 let Some(key) = fact_col_conf.dim_rel_conf_dim_key.as_ref() else {
                     return Err(funs.err().not_found("fact_record", "load_set", "Fail to get conf_dim_key", "400-spi-stats-fail-to-get-dim-config-key"));
                 };
-                let Some(dim_conf) = stats_pg_conf_dim_serv::get(key, &conn, ctx, inst).await? else {
+                let Some(dim_conf) = stats_pg_conf_dim_serv::get(key, None, None, &conn, ctx, inst).await? else {
                     return Err(funs.err().not_found(
                         "fact_record",
                         "load_set",
@@ -505,7 +505,7 @@ async fn fact_records_modify(
             let Some(key) = fact_col_conf.dim_rel_conf_dim_key.as_ref() else {
                 return Err(funs.err().not_found("fact_record", "load", "Fail to get conf_dim_key", "400-spi-stats-fail-to-get-dim-config-key"));
             };
-            let Some(dim_conf) = stats_pg_conf_dim_serv::get(key, &conn, ctx, inst).await? else {
+            let Some(dim_conf) = stats_pg_conf_dim_serv::get(key, None, None, &conn, ctx, inst).await? else {
                 return Err(funs.err().not_found(
                     "fact_record",
                     "load",
@@ -679,7 +679,7 @@ async fn find_fact_record_key(
     ctx: &TardisContext,
     inst: &SpiBsInst,
 ) -> TardisResult<Vec<String>> {
-    let dim_conf = stats_pg_conf_dim_serv::get(&dim_conf_key, conn, ctx, inst)
+    let dim_conf = stats_pg_conf_dim_serv::get(&dim_conf_key, None, None, conn, ctx, inst)
         .await?
         .ok_or_else(|| funs.err().not_found("fact_record", "find", "The dimension config does not exist.", "404-spi-stats-dim-conf-not-exist"))?;
     let fact_conf_col_key = stats_pg_conf_fact_col_serv::find_by_fact_conf_key(&fact_conf_key, funs, ctx, inst)
@@ -741,7 +741,7 @@ pub(crate) async fn dim_record_add(dim_conf_key: String, add_req: StatsDimRecord
     if !stats_pg_conf_dim_serv::online(&dim_conf_key, &conn, ctx).await? {
         return Err(funs.err().conflict("dim_record", "add", "The dimension config not online.", "409-spi-stats-dim-conf-not-online"));
     }
-    let dim_conf = stats_pg_conf_dim_serv::get(&dim_conf_key, &conn, ctx, inst).await?.expect("Fail to get dim_conf");
+    let dim_conf = stats_pg_conf_dim_serv::get(&dim_conf_key, None, None, &conn, ctx, inst).await?.expect("Fail to get dim_conf");
     if !dim_conf.stable_ds {
         return Err(funs.err().bad_request(
             "dim_record",
@@ -881,7 +881,7 @@ async fn dim_do_record_paginate(
     ctx: &TardisContext,
     inst: &SpiBsInst,
 ) -> TardisResult<TardisPage<serde_json::Value>> {
-    let dim_conf = stats_pg_conf_dim_serv::get(&dim_conf_key, conn, ctx, inst)
+    let dim_conf = stats_pg_conf_dim_serv::get(&dim_conf_key, None, None, conn, ctx, inst)
         .await?
         .ok_or_else(|| funs.err().not_found("dim_record", "find", "The dimension config does not exist.", "404-spi-stats-dim-conf-not-exist"))?;
 
@@ -948,7 +948,7 @@ pub(crate) async fn dim_record_delete(dim_conf_key: String, dim_record_key: serd
     if !stats_pg_conf_dim_serv::online(&dim_conf_key, &conn, ctx).await? {
         return Err(funs.err().conflict("dim_record", "delete", "The dimension config not online.", "409-spi-stats-dim-conf-not-online"));
     }
-    let dim_conf = stats_pg_conf_dim_serv::get(&dim_conf_key, &conn, ctx, inst).await?.expect("Fail to get dim_conf");
+    let dim_conf = stats_pg_conf_dim_serv::get(&dim_conf_key, None, None, &conn, ctx, inst).await?.expect("Fail to get dim_conf");
 
     let table_name = package_table_name(&format!("stats_inst_dim_{}", dim_conf.key), ctx);
     let values = vec![dim_conf.data_type.json_to_sea_orm_value(&dim_record_key, false)?];
@@ -980,7 +980,7 @@ pub(crate) async fn dim_record_real_delete(
     if !stats_pg_conf_dim_serv::online(&dim_conf_key, &conn, ctx).await? {
         return Err(funs.err().conflict("dim_record", "delete", "The dimension config not online.", "409-spi-stats-dim-conf-not-online"));
     }
-    let dim_conf = stats_pg_conf_dim_serv::get(&dim_conf_key, &conn, ctx, inst).await?.expect("Fail to get dim_conf");
+    let dim_conf = stats_pg_conf_dim_serv::get(&dim_conf_key, None, None, &conn, ctx, inst).await?.expect("Fail to get dim_conf");
 
     let table_name = package_table_name(&format!("stats_inst_dim_{}", dim_conf.key), ctx);
     let values = vec![dim_conf.data_type.json_to_sea_orm_value(&dim_record_key, false)?];

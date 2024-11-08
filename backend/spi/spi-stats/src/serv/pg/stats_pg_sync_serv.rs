@@ -11,7 +11,11 @@ use bios_basic::{
 };
 use tardis::{
     basic::{dto::TardisContext, field::TrimString, result::TardisResult},
-    db::{reldb_client::TardisRelDBClient, sea_orm::Value},
+    config::config_dto::{CompatibleType, DBModuleConfig},
+    db::{
+        reldb_client::{TardisRelDBClient, TardisRelDBlConnection},
+        sea_orm::Value,
+    },
     TardisFunsInst,
 };
 
@@ -144,36 +148,71 @@ async fn find_db_config(cert_id: &str, funs: &TardisFunsInst, ctx: &TardisContex
 }
 
 pub(crate) async fn fact_record_sync(fact_key: &str, funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
-    // let bs_inst = inst.inst::<TardisRelDBClient>();
-    // let (conn, _) = common_pg::init_conn(bs_inst).await?;
+    let bs_inst = inst.inst::<TardisRelDBClient>();
+    let (mut conn, _) = common_pg::init_conn(bs_inst).await?;
 
-    // conn.begin().await?;
+    conn.begin().await?;
 
-    // todo!();
-    // let fact_col_list = conn
-    //     .query_all(
-    //         &format!("SELECT key FROM starsys_stats_conf_fact_col WHERE rel_conf_fact_key = $1"),
-    //         vec![Value::from(fact_key)],
-    //     )
-    //     .await?;
-    // for col in fact_col_list.iter() {
-    //     let col_key = col.try_get::<String>("", "key")?;
-    //     fact_col_record_sync(fact_key, &col_key, funs, ctx, inst).await?;
-    // }
-    // conn.commit().await?;
+    todo!();
+    let fact_col_list = conn
+        .query_all(
+            &format!("SELECT key FROM starsys_stats_conf_fact_col WHERE rel_conf_fact_key = $1"),
+            vec![Value::from(fact_key)],
+        )
+        .await?;
+    for col in fact_col_list.iter() {
+        let col_key = col.try_get::<String>("", "key")?;
+        do_fact_col_record_sync(fact_key, &col_key, &mut conn, funs, ctx, inst).await?;
+    }
+    conn.commit().await?;
     Ok(())
 }
 
 pub(crate) async fn fact_col_record_sync(fact_key: &str, col_key: &str, funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
     let bs_inst = inst.inst::<TardisRelDBClient>();
-    let (conn, _) = common_pg::init_conn(bs_inst).await?;
+    let (mut conn, _) = common_pg::init_conn(bs_inst).await?;
 
-    todo!()
+    do_fact_col_record_sync(fact_key, col_key, &mut conn, funs, ctx, inst).await
 }
 
-async fn do_fact_col_record_sync(fact_key: &str, col_key: &str, funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
-    let bs_inst = inst.inst::<TardisRelDBClient>();
-    let (conn, _) = common_pg::init_conn(bs_inst).await?;
-
-    todo!()
+pub(crate) async fn do_fact_col_record_sync(
+    fact_key: &str,
+    col_key: &str,
+    conn: &mut TardisRelDBlConnection,
+    funs: &TardisFunsInst,
+    ctx: &TardisContext,
+    inst: &SpiBsInst,
+) -> TardisResult<()> {
+    if let Some(fact_col) = conn
+        .query_one(
+            &format!("SELECT rel_cert_id,rel_sql,rel_field FROM starsys_stats_conf_fact_col WHERE rel_conf_fact_key = $1 AND key = $2"),
+            vec![Value::from(fact_key), Value::from(col_key)],
+        )
+        .await?
+    {
+        if let Some(cert_id) = fact_col.try_get::<Option<String>>("", "rel_cert_id")? {
+            if let Some(sql) = fact_col.try_get::<Option<String>>("", "rel_sql")? {
+                if let Some(field) = fact_col.try_get::<Option<String>>("", "rel_field")? {
+                    let db_config = find_db_config(&cert_id, funs, ctx, inst).await?;
+                    let db_client = TardisRelDBClient::init(&DBModuleConfig {
+                        url: format!("postgres://{}:{}@{}", db_config.db_user, db_config.db_password, db_config.db_url),
+                        max_connections: db_config.max_connections.unwrap_or(20),
+                        min_connections: db_config.min_connections.unwrap_or(5),
+                        connect_timeout_sec: None,
+                        idle_timeout_sec: None,
+                        compatible_type: CompatibleType::default(),
+                    })
+                    .await?;
+                    if let Some(rel_record) = db_client.conn().query_one(&sql, vec![]).await? {
+                        let rel_record_value = rel_record.try_get::<String>("", &field)?;
+                        //TODO 插入数据
+                    }
+                }
+            }
+            return Ok(());
+        } else {
+            return Err(funs.err().not_found("starsys_stats_conf_fact_col", "find", "fact col not found", "404-fact-col-not-found"));
+        }
+    }
+    Ok(())
 }
