@@ -45,6 +45,10 @@ pub struct Model {
     /// 此字段用于记录当前模型在使用的版本
     pub current_version_id: String,
 
+    /// Whether it is a mainstream process / 是否是主流程
+    ///
+    #[index]
+    pub main: bool,
     /// Whether it is a template / 是否是模板
     ///
     /// Used as a model for the model to be reused in the process

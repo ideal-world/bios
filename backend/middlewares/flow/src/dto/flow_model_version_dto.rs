@@ -14,7 +14,7 @@ use tardis::{
 
 use super::{
     flow_model_dto::FlowModelBindStateReq,
-    flow_state_dto::{FlowStateAddReq, FlowStateAggResp, FlowStateRelModelModifyReq},
+    flow_state_dto::{FlowStateAddReq, FlowStateAggResp, FlowStateModifyReq, FlowStateRelModelModifyReq},
     flow_transition_dto::{FlowTransitionAddReq, FlowTransitionModifyReq},
 };
 
@@ -72,8 +72,8 @@ pub struct FlowModelVersionBindState {
 pub struct FlowModelVersionModifyState {
     /// 若存在则表示，绑定已有状态节点
     pub id: String,
-    /// 若存在则表示，新建状态节点
-    pub modify_state: Option<FlowStateRelModelModifyReq>,
+    pub modify_state: Option<FlowStateModifyReq>,
+    pub modify_rel: Option<FlowStateRelModelModifyReq>,
     /// 添加动作
     pub add_transitions: Option<Vec<FlowTransitionAddReq>>,
     /// 修改动作
@@ -168,7 +168,8 @@ impl FlowModelVersionDetailResp {
 pub struct FlowModelVersionFilterReq {
     /// 基础过滤
     pub basic: RbumBasicFilterReq,
-
+    /// 指定状态ID(用于过滤动作)
+    pub specified_state_ids: Option<Vec<String>>,
     pub own_paths: Option<Vec<String>>,
     pub status: Option<Vec<FlowModelVesionState>>,
     /// 关联模型ID

@@ -26,7 +26,7 @@ use crate::{
             FlowModelVersionAddReq, FlowModelVersionBindState, FlowModelVersionDetailResp, FlowModelVersionFilterReq, FlowModelVersionModifyReq, FlowModelVersionSummaryResp,
             FlowModelVesionState,
         },
-        flow_state_dto::{FlowStateAggResp, FlowStateFilterReq, FlowStateRelModelExt},
+        flow_state_dto::{FlowStateAggResp, FlowStateDetailResp, FlowStateFilterReq, FlowStateRelModelExt},
     },
     flow_config::FlowBasicInfoManager,
 };
@@ -58,7 +58,7 @@ impl
     }
 
     fn get_rbum_kind_id() -> Option<String> {
-        Some(FlowBasicInfoManager::get_config(|conf: &crate::flow_config::BasicInfo| conf.kind_model_id.clone()))
+        Some(FlowBasicInfoManager::get_config(|conf: &crate::flow_config::BasicInfo| conf.kind_model_version_id.clone()))
     }
 
     fn get_rbum_domain_id() -> Option<String> {
@@ -140,13 +140,21 @@ impl
     }
 
     async fn after_modify_item(id: &str, modify_req: &mut FlowModelVersionModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        if let Some(status) = &modify_req.status {
+            if *status == FlowModelVesionState::Enabled {
+                Self::enable_version(id, funs, ctx).await?;
+            }
+        }
         if let Some(bind_states) = &modify_req.bind_states {
             Self::bind_states_and_transitions(id, bind_states, funs, ctx).await?;
         }
         if let Some(modify_states) = &modify_req.modify_states {
             for modify_state in modify_states {
-                if let Some(modify_state) = &modify_state.modify_state {
-                    FlowStateServ::modify_rel_state_ext(&modify_state.id, modify_state, funs, ctx).await?;
+                if let Some(mut modify_state) = modify_state.modify_state.clone() {
+                    FlowStateServ::modify_item(id, &mut modify_state, funs, ctx).await?;
+                }
+                if let Some(modify_rel) = &modify_state.modify_rel {
+                    FlowStateServ::modify_rel_state_ext(id, modify_rel, funs, ctx).await?;
                 }
                 if let Some(add_transitions) = &modify_state.add_transitions {
                     FlowTransitionServ::add_transitions(id, &modify_state.id, add_transitions, funs, ctx).await?;
@@ -195,7 +203,7 @@ impl
     async fn get_item(flow_version_id: &str, filter: &FlowModelVersionFilterReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<FlowModelVersionDetailResp> {
         let mut flow_version = Self::do_get_item(flow_version_id, filter, funs, ctx).await?;
         let init_state_id = flow_version.init_state_id.clone();
-        let flow_states = Self::get_rel_states(flow_version_id, &init_state_id, funs, ctx).await;
+        let flow_states = Self::get_rel_states(flow_version_id, &init_state_id, filter.specified_state_ids.clone(), funs, ctx).await;
 
         flow_version.states = Some(TardisFuns::json.obj_to_json(&flow_states)?);
 
@@ -246,16 +254,23 @@ impl FlowModelVersionServ {
         .await
     }
 
-    async fn get_rel_states(flow_version_id: &str, init_state_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> Vec<FlowStateAggResp> {
+    async fn get_rel_states(
+        flow_version_id: &str,
+        init_state_id: &str,
+        specified_state_ids: Option<Vec<String>>,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> Vec<FlowStateAggResp> {
         join_all(
             FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelState, flow_version_id, None, None, funs, ctx)
                 .await
                 .expect("not found state")
                 .into_iter()
+                .filter(|rel| specified_state_ids.is_none() || (specified_state_ids.is_some() && specified_state_ids.clone().unwrap_or_default().contains(&rel.rel_id)))
                 .sorted_by_key(|rel| TardisFuns::json.str_to_obj::<FlowStateRelModelExt>(&rel.ext).unwrap_or_default().sort)
                 .map(|rel| async {
-                    let rel_id = rel.rel_id;
-                    FlowStateServ::aggregate(&rel_id, flow_version_id, init_state_id, funs, ctx).await.expect("not found state")
+                    let state_id = rel.rel_id;
+                    FlowStateServ::aggregate(&state_id, flow_version_id, init_state_id, funs, ctx).await.expect("not found state")
                 })
                 .collect_vec(),
         )
@@ -384,5 +399,34 @@ impl FlowModelVersionServ {
         FlowTransitionServ::delete_transitions(flow_version_id, &trans_ids, funs, ctx).await?;
 
         FlowRelServ::delete_simple_rel(&FlowRelKind::FlowModelState, flow_version_id, state_id, funs, ctx).await
+    }
+
+    pub async fn find_sorted_rel_states_by_version_id(flow_version_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<FlowStateDetailResp>> {
+        Ok(join_all(
+            FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelState, flow_version_id, None, None, funs, ctx)
+                .await?
+                .into_iter()
+                .sorted_by_key(|rel| TardisFuns::json.str_to_obj::<FlowStateRelModelExt>(&rel.ext).unwrap_or_default().sort)
+                .map(|rel| async move {
+                    FlowStateServ::find_one_detail_item(
+                        &FlowStateFilterReq {
+                            basic: RbumBasicFilterReq {
+                                ids: Some(vec![rel.rel_id]),
+                                with_sub_own_paths: true,
+                                own_paths: Some("".to_string()),
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        },
+                        funs,
+                        ctx,
+                    )
+                    .await
+                    .unwrap_or_default()
+                    .unwrap()
+                })
+                .collect::<Vec<_>>(),
+        )
+        .await)
     }
 }

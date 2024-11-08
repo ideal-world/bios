@@ -538,7 +538,7 @@ pub struct StatsSyncDbConfigInfoWithSkResp {
 /// Sync DateBase Config Extension Object
 ///
 /// 同步数据库配置扩展对象
-#[derive(Serialize, Deserialize, Debug,Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct StatsSyncDbConfigExt {
     pub max_connections: Option<u32>,
     pub min_connections: Option<u32>,

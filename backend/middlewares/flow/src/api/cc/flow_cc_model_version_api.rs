@@ -1,0 +1,45 @@
+use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
+use tardis::web::context_extractor::TardisContextExtractor;
+use tardis::web::poem::Request;
+use tardis::web::poem_openapi;
+use tardis::web::poem_openapi::param::Path;
+use tardis::web::poem_openapi::payload::Json;
+use tardis::web::web_resp::{TardisApiResult, TardisResp, Void};
+use crate::dto::flow_model_version_dto::{FlowModelVersionAddReq, FlowModelVersionDetailResp, FlowModelVersionFilterReq, FlowModelVersionModifyReq};
+use crate::flow_constants;
+use crate::serv::flow_model_version_serv::FlowModelVersionServ;
+
+
+#[derive(Clone)]
+pub struct FlowCcModelVersionApi;
+
+/// Flow model process API
+#[poem_openapi::OpenApi(prefix_path = "/cc/model_version")]
+impl FlowCcModelVersionApi {
+    /// Add Model Version
+    ///
+    /// 添加模型版本
+    #[oai(path = "/", method = "post")]
+    async fn add(&self, mut add_req: Json<FlowModelVersionAddReq>, ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<FlowModelVersionDetailResp> {
+        let mut funs = flow_constants::get_tardis_inst();
+        funs.begin().await?;
+        let version_id = FlowModelVersionServ::add_item(&mut add_req.0, &funs, &ctx.0).await?;
+        let result = FlowModelVersionServ::get_item(&version_id, &FlowModelVersionFilterReq::default(), &funs, &ctx.0).await?;
+        funs.commit().await?;
+        ctx.0.execute_task().await?;
+        TardisResp::ok(result)
+    }
+
+    /// Modify Model Version
+    ///
+    /// 修改模型版本
+    #[oai(path = "/:flow_version_id", method = "patch")]
+    async fn modify(&self, flow_version_id: Path<String>, mut modify_req: Json<FlowModelVersionModifyReq>, ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<Void> {
+        let mut funs = flow_constants::get_tardis_inst();
+        funs.begin().await?;
+        FlowModelVersionServ::modify_item(&flow_version_id.0, &mut modify_req.0, &funs, &ctx.0).await?;
+        funs.commit().await?;
+        ctx.0.execute_task().await?;
+        TardisResp::ok(Void)
+    }
+}

@@ -13,12 +13,11 @@ use tardis::web::poem_openapi::payload::Json;
 use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 
 use crate::dto::flow_model_dto::{
-    FlowModelAddReq, FlowModelAggResp, FlowModelBindStateReq, FlowModelFilterReq, FlowModelFindRelStateResp, FlowModelModifyReq, FlowModelSortStatesReq, FlowModelSummaryResp,
-    FlowModelUnbindStateReq,
+    FlowModelAddReq, FlowModelAggResp, FlowModelBindStateReq, FlowModelDetailResp, FlowModelFilterReq, FlowModelFindRelStateResp, FlowModelModifyReq, FlowModelSortStatesReq, FlowModelSummaryResp, FlowModelUnbindStateReq
 };
 use crate::dto::flow_model_version_dto::{FlowModelVersionBindState, FlowModelVersionModifyReq, FlowModelVersionModifyState};
 use crate::dto::flow_state_dto::FlowStateRelModelModifyReq;
-use crate::dto::flow_transition_dto::FlowTransitionSortStatesReq;
+use crate::dto::flow_transition_dto::{FlowTransitionDetailResp, FlowTransitionSortStatesReq};
 use crate::flow_constants;
 use crate::serv::flow_model_serv::FlowModelServ;
 use crate::serv::flow_rel_serv::{FlowRelKind, FlowRelServ};
@@ -134,6 +133,8 @@ impl FlowCcModelApi {
         name: Query<Option<String>>,
         tag: Query<Option<String>>,
         enabled: Query<Option<bool>>,
+        rel_template_id: Query<Option<String>>,
+        main: Query<Option<bool>>,
         with_sub: Query<Option<bool>>,
         page_number: Query<u32>,
         page_size: Query<u32>,
@@ -141,9 +142,9 @@ impl FlowCcModelApi {
         desc_by_update: Query<Option<bool>>,
         ctx: TardisContextExtractor,
         _request: &Request,
-    ) -> TardisApiResult<TardisPage<FlowModelSummaryResp>> {
+    ) -> TardisApiResult<TardisPage<FlowModelDetailResp>> {
         let funs = flow_constants::get_tardis_inst();
-        let result = FlowModelServ::paginate_items(
+        let result = FlowModelServ::paginate_detail_items(
             &FlowModelFilterReq {
                 basic: RbumBasicFilterReq {
                     ids: flow_model_ids.0.map(|ids| ids.split(',').map(|id| id.to_string()).collect::<Vec<String>>()),
@@ -152,6 +153,8 @@ impl FlowCcModelApi {
                     enabled: enabled.0,
                     ..Default::default()
                 },
+                main: main.0,
+                rel_template_id: rel_template_id.0,
                 tags: tag.0.map(|tag| vec![tag]),
                 ..Default::default()
             },
@@ -167,9 +170,9 @@ impl FlowCcModelApi {
         TardisResp::ok(result)
     }
 
-    /// Find the specified models, or create it if it doesn't exist.
+    /// Find the specified main models, or create it if it doesn't exist.
     ///
-    /// 查找关联的model。
+    /// 查找关联的主流程model。
     ///
     /// # Parameters
     /// - `temp_id` - associated template_id
@@ -277,11 +280,12 @@ impl FlowCcModelApi {
                             .into_iter()
                             .map(|state| FlowModelVersionModifyState {
                                 id: state.state_id.clone(),
-                                modify_state: Some(FlowStateRelModelModifyReq {
+                                modify_rel: Some(FlowStateRelModelModifyReq {
                                     id: state.state_id,
                                     sort: Some(state.sort),
                                     show_btns: None,
                                 }),
+                                modify_state: None,
                                 add_transitions: None,
                                 modify_transitions: None,
                                 delete_transitions: None,
@@ -351,7 +355,8 @@ impl FlowCcModelApi {
                 modify_version: Some(FlowModelVersionModifyReq {
                     modify_states: Some(vec![FlowModelVersionModifyState {
                         id: req.0.id.clone(),
-                        modify_state: Some(req.0),
+                        modify_rel: Some(req.0),
+                        modify_state: None,
                         add_transitions: None,
                         modify_transitions: None,
                         delete_transitions: None,
@@ -419,5 +424,15 @@ impl FlowCcModelApi {
         }
         funs.commit().await?;
         TardisResp::ok(Void)
+    }
+
+    /// Get the operations associated with the model
+    ///
+    /// 获取模型关联的操作
+    #[oai(path = "/:flow_model_id/get_transitions", method = "get")]
+    async fn get_rel_transitions(&self, flow_model_id: Path<String>, ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<Vec<FlowTransitionDetailResp>> {
+        let funs = flow_constants::get_tardis_inst();
+        let result = FlowModelServ::get_rel_transitions(&flow_model_id.0, &funs, &ctx.0).await?;
+        TardisResp::ok(result)
     }
 }

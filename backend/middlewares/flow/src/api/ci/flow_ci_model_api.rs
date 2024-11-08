@@ -135,7 +135,7 @@ impl FlowCiModelApi {
         .collect_vec();
         let mut result = HashMap::new();
         for rel_model_id in rel_model_ids {
-            let new_model = FlowModelServ::copy_or_reference_model1(&rel_model_id, &req.0.op, FlowModelKind::AsModel, &funs, &ctx.0).await?;
+            let new_model = FlowModelServ::copy_or_reference_model(&rel_model_id, &req.0.op, FlowModelKind::AsModel, &funs, &ctx.0).await?;
             FlowInstServ::batch_update_when_switch_model(
                 new_model.rel_template_ids.first().cloned(),
                 &new_model.tag,
@@ -190,7 +190,7 @@ impl FlowCiModelApi {
         )
         .await?
         {
-            let added_model = FlowModelServ::copy_or_reference_model1(
+            let added_model = FlowModelServ::copy_or_reference_model(
                 &from_model.rel_model_id,
                 &FlowModelAssociativeOperationKind::ReferenceOrCopy,
                 FlowModelKind::AsTemplateAndAsModel,

@@ -421,8 +421,22 @@ impl FlowStateServ {
     }
 
     pub async fn aggregate(id: &str, flow_version_id: &str, init_state_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<FlowStateAggResp> {
-        let state = Self::get_item(id, &FlowStateFilterReq::default(), funs, ctx).await?;
-        let transitions = FlowTransitionServ::find_transitions(flow_version_id, Some(&[state.id.clone()]), funs, ctx).await?;
+        let state = Self::get_item(
+            id,
+            &FlowStateFilterReq {
+                basic: RbumBasicFilterReq {
+                    own_paths: Some("".to_string()),
+                    with_sub_own_paths: true,
+                    ignore_scope: true,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?;
+        let transitions = FlowTransitionServ::find_transitions(flow_version_id, Some(vec![state.id.clone()]), funs, ctx).await?;
 
         Ok(FlowStateAggResp {
             id: state.id.clone(),

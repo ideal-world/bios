@@ -162,7 +162,7 @@ pub struct FlowNodifyConf {
     pub send_mail: bool,
 }
 
-#[derive(Serialize, Deserialize, Debug, poem_openapi::Object, Default)]
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object, Default, Clone)]
 pub struct FlowStateModifyReq {
     #[oai(validator(min_length = "2", max_length = "200"))]
     pub name: Option<TrimString>,
@@ -279,8 +279,8 @@ pub enum FlowStateKind {
     #[sea_orm(string_value = "branch")]
     Branch,
     /// 开始节点
-    #[sea_orm(string_value = "begin")]
-    Begin,
+    #[sea_orm(string_value = "strat")]
+    Start,
     /// 结束节点
     #[sea_orm(string_value = "Finish")]
     Finish,
@@ -351,4 +351,10 @@ pub struct FlowStateAggResp {
     pub state_kind: FlowStateKind,
     pub kind_conf: Value,
     pub transitions: Vec<FlowTransitionDetailResp>,
+}
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
+pub struct FLowStateIdAndName {
+    pub id: String,
+    pub name: String,
 }

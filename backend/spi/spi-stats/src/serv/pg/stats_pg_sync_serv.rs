@@ -16,7 +16,8 @@ use tardis::{
 };
 
 use crate::{
-    dto::stats_conf_dto::{StatsSyncDbConfigAddReq, StatsSyncDbConfigExt, StatsSyncDbConfigInfoResp, StatsSyncDbConfigInfoWithSkResp, StatsSyncDbConfigModifyReq}, stats_constants::DOMAIN_CODE, 
+    dto::stats_conf_dto::{StatsSyncDbConfigAddReq, StatsSyncDbConfigExt, StatsSyncDbConfigInfoResp, StatsSyncDbConfigInfoWithSkResp, StatsSyncDbConfigModifyReq},
+    stats_constants::DOMAIN_CODE,
 };
 
 pub(crate) async fn db_config_add(add_req: StatsSyncDbConfigAddReq, funs: &TardisFunsInst, ctx: &TardisContext, _inst: &SpiBsInst) -> TardisResult<String> {
@@ -28,7 +29,11 @@ pub(crate) async fn db_config_add(add_req: StatsSyncDbConfigAddReq, funs: &Tardi
         rel_rbum_id: "".to_string(),
         kind: Some(SPI_PG_KIND_CODE.to_string()),
         supplier: Some(DOMAIN_CODE.to_string()),
-        ext: serde_json::to_string(&StatsSyncDbConfigExt{ max_connections: add_req.max_connections, min_connections: add_req.min_connections }).ok(),
+        ext: serde_json::to_string(&StatsSyncDbConfigExt {
+            max_connections: add_req.max_connections,
+            min_connections: add_req.min_connections,
+        })
+        .ok(),
         sk_invisible: None,
         ignore_check_sk: false,
         start_time: None,
@@ -90,10 +95,19 @@ pub(crate) async fn db_config_list(funs: &TardisFunsInst, ctx: &TardisContext, i
     )
     .await?;
 
-    return Ok(rbum_cert_list.iter().map(|rbum_cert| {
-        let ext = serde_json::from_str::<StatsSyncDbConfigExt>(&rbum_cert.ext).ok();
-        StatsSyncDbConfigInfoResp { id: rbum_cert.id.clone(), db_url: rbum_cert.conn_uri.clone(), db_user: rbum_cert.ak.clone(), max_connections: ext.clone().and_then(|ext| ext.max_connections), min_connections: ext.clone().and_then(|ext| ext.min_connections)  }
-    }).collect());
+    return Ok(rbum_cert_list
+        .iter()
+        .map(|rbum_cert| {
+            let ext = serde_json::from_str::<StatsSyncDbConfigExt>(&rbum_cert.ext).ok();
+            StatsSyncDbConfigInfoResp {
+                id: rbum_cert.id.clone(),
+                db_url: rbum_cert.conn_uri.clone(),
+                db_user: rbum_cert.ak.clone(),
+                max_connections: ext.clone().and_then(|ext| ext.max_connections),
+                min_connections: ext.clone().and_then(|ext| ext.min_connections),
+            }
+        })
+        .collect());
 }
 
 async fn find_db_config(cert_id: &str, funs: &TardisFunsInst, ctx: &TardisContext, _inst: &SpiBsInst) -> TardisResult<StatsSyncDbConfigInfoWithSkResp> {
@@ -116,7 +130,14 @@ async fn find_db_config(cert_id: &str, funs: &TardisFunsInst, ctx: &TardisContex
         let ext = serde_json::from_str::<StatsSyncDbConfigExt>(&rbum_cert.ext).ok();
         let max_connections = ext.clone().and_then(|ext| ext.max_connections);
         let min_connections = ext.clone().and_then(|ext| ext.min_connections);
-        return Ok(StatsSyncDbConfigInfoWithSkResp { id: cert_id.to_string(), db_url: rbum_cert.conn_uri.clone(), db_user: rbum_cert.ak.clone(), db_password: db_password, max_connections, min_connections  });
+        return Ok(StatsSyncDbConfigInfoWithSkResp {
+            id: cert_id.to_string(),
+            db_url: rbum_cert.conn_uri.clone(),
+            db_user: rbum_cert.ak.clone(),
+            db_password: db_password,
+            max_connections,
+            min_connections,
+        });
     } else {
         return Err(funs.err().not_found(&RbumCertServ::get_obj_name(), "find", "rbum cert not found", "404-rbum-cert-not-found"));
     }

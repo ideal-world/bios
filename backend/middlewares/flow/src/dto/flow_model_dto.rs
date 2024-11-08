@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, default};
 
 use bios_basic::rbum::{
     dto::rbum_filer_dto::{RbumBasicFilterReq, RbumItemFilterFetcher, RbumItemRelFilterReq},
@@ -17,7 +17,7 @@ use tardis::{
 
 use super::{
     flow_model_version_dto::{FlowModelVersionAddReq, FlowModelVersionBindState, FlowModelVersionModifyReq, FlowModelVesionState},
-    flow_state_dto::{FlowStateAggResp, FlowStateRelModelExt},
+    flow_state_dto::{FLowStateIdAndName, FlowStateAggResp, FlowStateRelModelExt},
     flow_transition_dto::{FlowTransitionAddReq, FlowTransitionDetailResp},
 };
 
@@ -43,6 +43,8 @@ pub struct FlowModelAddReq {
     pub current_version_id: Option<String>,
     /// 是否作为模板使用
     pub template: bool,
+    /// 是否作为主流程
+    pub main: bool,
     /// 关联父级模型ID
     pub rel_model_id: Option<String>,
     /// 标签
@@ -91,6 +93,7 @@ impl From<FlowModelDetailResp> for FlowModelAddReq {
             }),
             current_version_id: None,
             template: value.template,
+            main: value.main,
             rel_model_id: None,
             tag: Some(value.tag.clone()),
             scope_level: Some(value.scope_level),
@@ -112,9 +115,10 @@ pub enum FlowModelKind {
 }
 
 /// 工作流模型状态
-#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, EnumIter, sea_orm::DeriveActiveEnum)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, EnumIter, sea_orm::DeriveActiveEnum)]
 #[sea_orm(rs_type = "String", db_type = "String(StringLen::N(255))")]
 pub enum FlowModelStatus {
+    #[default]
     #[sea_orm(string_value = "enabled")]
     Enabled,
     #[sea_orm(string_value = "disabled")]
@@ -166,14 +170,18 @@ pub struct FlowModelSummaryResp {
     pub tag: String,
 
     pub disabled: bool,
+    pub status: FlowModelStatus,
+
+    pub states: Value,
     /// 关联动作
     pub rel_transition: Option<Value>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, poem_openapi::Object, sea_orm::FromQueryResult)]
-pub struct FlowModelRelTransition {
+#[derive(Serialize, Deserialize, Debug, Default, Clone, poem_openapi::Object, sea_orm::FromQueryResult)]
+pub struct FlowModelRelTransitionExt {
     pub id: String,
     pub name: String,
+    pub from_flow_state_name: String,
 }
 
 /// 工作流模型详细信息
@@ -187,6 +195,8 @@ pub struct FlowModelDetailResp {
     pub status: FlowModelStatus,
     /// 是否作为模板使用
     pub template: bool,
+    /// 是否主流程
+    pub main: bool,
 
     pub init_state_id: String,
     pub current_version_id: String,
@@ -227,7 +237,7 @@ impl FlowModelDetailResp {
         }
     }
 
-    pub fn rel_transition(&self) -> Option<FlowModelRelTransition> {
+    pub fn rel_transition(&self) -> Option<FlowModelRelTransitionExt> {
         self.rel_transition.clone().map(|rel_transition| TardisFuns::json.json_to_obj(rel_transition.clone()).unwrap())
     }
 }
@@ -245,11 +255,15 @@ pub struct FlowModelFilterReq {
     pub status: Option<FlowModelStatus>,
     /// 是否作为模板使用
     pub template: Option<bool>,
+    /// 是否是主流程
+    pub main: Option<bool>,
     pub own_paths: Option<Vec<String>>,
     /// 指定状态ID(用于过滤动作)
     pub specified_state_ids: Option<Vec<String>>,
     /// 关联模型ID
     pub rel_model_ids: Option<Vec<String>>,
+    /// 关联模板ID
+    pub rel_template_id: Option<String>,
 
     pub rel: Option<RbumItemRelFilterReq>,
     pub rel2: Option<RbumItemRelFilterReq>,

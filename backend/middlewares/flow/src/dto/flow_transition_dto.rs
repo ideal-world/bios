@@ -667,3 +667,13 @@ pub enum FlowTransitionFrontActionRightValue {
     #[oai(rename = "real_time")]
     RealTime,
 }
+
+/// 工作流模型过滤器
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone, Default)]
+#[serde(default)]
+pub struct FlowTransitionFilterReq {
+    pub ids: Option<Vec<String>>,
+    pub flow_version_id: Option<String>,
+    /// 指定状态ID(用于过滤动作)
+    pub specified_state_ids: Option<Vec<String>>,
+}

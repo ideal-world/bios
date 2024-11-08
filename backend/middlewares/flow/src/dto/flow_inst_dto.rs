@@ -77,7 +77,7 @@ pub struct FlowInstSummaryResp {
     /// Associated [flow_model](super::flow_model_dto::FlowModelDetailResp) id
     ///
     /// 关联的[工作流模板](super::flow_model_dto::FlowModelDetailResp) id
-    pub rel_flow_model_id: String,
+    pub rel_flow_version_id: String,
     /// Associated [flow_model](super::flow_model_dto::FlowModelDetailResp) name
     ///
     /// 关联的[工作流模板](super::flow_model_dto::FlowModelDetailResp) 名称
@@ -354,7 +354,7 @@ pub struct FlowInstFilterReq {
 #[derive(sea_orm::FromQueryResult)]
 pub struct FlowInstSummaryResult {
     pub id: String,
-    pub rel_flow_model_id: String,
+    pub rel_flow_version_id: String,
     pub rel_flow_model_name: String,
 
     pub current_vars: Option<Value>,

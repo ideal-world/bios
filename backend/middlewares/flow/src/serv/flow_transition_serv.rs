@@ -8,7 +8,7 @@ use tardis::{
     chrono::Utc,
     db::sea_orm::{
         prelude::Expr,
-        sea_query::{Alias, Cond, Query},
+        sea_query::{Alias, Cond, Query, SelectStatement},
         EntityTrait, JoinType, Order, QueryFilter, Set,
     },
     serde_json::json,
@@ -17,7 +17,7 @@ use tardis::{
 
 use crate::{
     domain::{flow_state, flow_transition},
-    dto::flow_transition_dto::{FlowTransitionActionChangeKind, FlowTransitionAddReq, FlowTransitionDetailResp, FlowTransitionModifyReq},
+    dto::flow_transition_dto::{FlowTransitionActionChangeKind, FlowTransitionAddReq, FlowTransitionDetailResp, FlowTransitionFilterReq, FlowTransitionModifyReq},
 };
 
 use super::{
@@ -257,17 +257,11 @@ impl FlowTransitionServ {
         Ok(())
     }
 
-    pub async fn find_transitions(
-        flow_version_id: &str,
-        specified_state_ids: Option<&[String]>,
-        funs: &TardisFunsInst,
-        _ctx: &TardisContext,
-    ) -> TardisResult<Vec<FlowTransitionDetailResp>> {
+    async fn package_ext_query(query: &mut SelectStatement, filter: &FlowTransitionFilterReq, _: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let from_state_rbum_table = Alias::new("from_state_rbum");
         let from_state_table = Alias::new("from_state");
         let to_state_rbum_table = Alias::new("to_state_rbum");
         let to_state_table = Alias::new("to_state");
-        let mut query = Query::select();
         query
             .columns([
                 (flow_transition::Entity, flow_transition::Column::Id),
@@ -330,11 +324,60 @@ impl FlowTransitionServ {
                 flow_state::Entity,
                 to_state_table.clone(),
                 Cond::all().add(Expr::col((to_state_table.clone(), ID_FIELD.clone())).equals((flow_transition::Entity, flow_transition::Column::ToFlowStateId))),
-            )
-            .and_where(Expr::col((flow_transition::Entity, flow_transition::Column::RelFlowModelVersionId)).eq(flow_version_id));
-        if let Some(specified_state_ids) = specified_state_ids {
+            );
+        if let Some(ids) = &filter.ids {
+            query.and_where(Expr::col((flow_transition::Entity, flow_transition::Column::Id)).is_in(ids));
+        }
+        if let Some(flow_version_id) = &filter.flow_version_id {
+            query.and_where(Expr::col((flow_transition::Entity, flow_transition::Column::RelFlowModelVersionId)).eq(flow_version_id));
+        }
+        if let Some(specified_state_ids) = &filter.specified_state_ids {
             query.and_where(Expr::col((flow_transition::Entity, flow_transition::Column::FromFlowStateId)).is_in(specified_state_ids));
         }
+        Ok(())
+    }
+
+    pub async fn find_detail_items(ids: Vec<String>, desc_sort_by_create: Option<bool>, desc_sort_by_update: Option<bool>, funs: &TardisFunsInst, ctx: &TardisContext,) -> TardisResult<Vec<FlowTransitionDetailResp>> {
+        let mut query = Query::select();
+        Self::package_ext_query(
+            &mut query,
+            &FlowTransitionFilterReq {
+                ids: Some(ids),
+                specified_state_ids: None,
+                flow_version_id: None,
+            },
+            funs,
+            ctx,
+        )
+        .await?;
+        if let Some(sort) = desc_sort_by_create {
+            query.order_by((flow_transition::Entity, flow_transition::Column::CreateTime), if sort { Order::Desc } else { Order::Asc });
+        }
+        if let Some(sort) = desc_sort_by_update {
+            query.order_by((flow_transition::Entity, flow_transition::Column::UpdateTime), if sort { Order::Desc } else { Order::Asc });
+        }
+        Ok(funs.db().find_dtos(&query).await?)
+    }
+
+    pub async fn find_transitions(
+        flow_version_id: &str,
+        specified_state_ids: Option<Vec<String>>,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<Vec<FlowTransitionDetailResp>> {
+        let mut query = Query::select();
+        Self::package_ext_query(
+            &mut query,
+            &FlowTransitionFilterReq {
+                ids: None,
+                specified_state_ids,
+                flow_version_id: Some(flow_version_id.to_string()),
+            },
+            funs,
+            ctx,
+        )
+        .await?;
+
         query
             .order_by((flow_transition::Entity, flow_transition::Column::Sort), Order::Asc)
             .order_by((flow_transition::Entity, flow_transition::Column::CreateTime), Order::Asc)

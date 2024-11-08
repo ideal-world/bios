@@ -507,9 +507,9 @@ impl FlowEventServ {
         let insts = FlowInstServ::find_detail(rel_inst_ids, funs, ctx).await?;
         for rel_inst in insts {
             // find transition
-            let flow_version = FlowModelServ::get_item(
+            let flow_version = FlowModelVersionServ::get_item(
                 &rel_inst.rel_flow_version_id,
-                &FlowModelFilterReq {
+                &FlowModelVersionFilterReq {
                     basic: RbumBasicFilterReq {
                         with_sub_own_paths: true,
                         own_paths: Some("".to_string()),

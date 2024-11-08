@@ -97,6 +97,7 @@ pub async fn test(flow_client: &mut TestHttpClient, search_client: &mut TestHttp
                 info: Some("xxx".to_string()),
                 rel_template_ids: Some(vec![req_template_id1.to_string(), req_template_id2.to_string()]),
                 template: true,
+                main: true,
                 tag: Some("REQ".to_string()),
                 scope_level: Some(RbumScopeLevelKind::Private),
                 icon: None,
@@ -210,6 +211,7 @@ pub async fn test(flow_client: &mut TestHttpClient, search_client: &mut TestHttp
                 current_version_id: None,
                 rel_template_ids: None,
                 template: true,
+                main: true,
                 tag: Some("REQ".to_string()),
                 scope_level: Some(RbumScopeLevelKind::Private),
                 icon: None,
@@ -247,6 +249,7 @@ pub async fn test(flow_client: &mut TestHttpClient, search_client: &mut TestHttp
                 info: Some("xxx".to_string()),
                 rel_template_ids: Some(vec![req_template_id1.to_string(), req_template_id2.to_string()]),
                 template: true,
+                main: true,
                 tag: Some("REQ".to_string()),
                 scope_level: Some(RbumScopeLevelKind::Private),
                 icon: None,
@@ -452,5 +455,29 @@ pub async fn test(flow_client: &mut TestHttpClient, search_client: &mut TestHttp
         .await;
     assert_eq!(state_and_next_transitions.len(), 1);
     assert_eq!(state_and_next_transitions[0].current_flow_state_name, "待开始");
+
+    // 新建审批流
+    let req_model_template_aggs: FlowModelAggResp = flow_client
+        .post(
+            "/cc/model",
+            &FlowModelAddReq {
+                kind: FlowModelKind::AsModel,
+                status: FlowModelStatus::Enabled,
+                rel_transition_ids: None,
+                add_version: None,
+                current_version_id: None,
+                name: "编辑需求审批流".into(),
+                info: Some("xxx".to_string()),
+                rel_template_ids: None,
+                template: false,
+                main: false,
+                tag: Some("REQ".to_string()),
+                scope_level: None,
+                icon: None,
+                rel_model_id: None,
+                disabled: None,
+            },
+        )
+        .await;
     Ok(())
 }
