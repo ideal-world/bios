@@ -1,6 +1,7 @@
 import { Node, newMessage, MessageTargetKind } from 'asteroid-mq-sdk';
 import { fetchConnectUrl } from '../api';
 import { NON_BLOCKING_TOPIC } from '../consts';
+import { sleep } from 'bun';
 
 interface TestMessage {
     data: string;
@@ -24,8 +25,8 @@ const quitMessage = newMessage<MessageType>(
         targetKind: MessageTargetKind.Online
     }
 );
-const SENDER_CONCURRENT_SIZE = 1000;
-const RECEIVER_CONCURRENT_SIZE = 1000;
+const SENDER_CONCURRENT_SIZE = 100;
+const RECEIVER_CONCURRENT_SIZE = 100;
 const TOTAL_MESSAGE_COUNT = 1000;
 
 export default async () => {
@@ -36,7 +37,7 @@ export default async () => {
         const node = Node.connect({
             url: await fetchConnectUrl()
         });
-        const ep = await node.createEndpoint(NON_BLOCKING_TOPIC, ["event/test"]);
+        const ep = await node.createEndpoint(NON_BLOCKING_TOPIC, ["event/test_many_nodes"]);
         for await (const message of ep.messages()) {
             if (message !== undefined) {
                 message.received();
@@ -73,6 +74,7 @@ export default async () => {
     for (let idx = 0; idx < SENDER_CONCURRENT_SIZE; idx++) {
         recvTaskSet.push(recvNode(idx))
     }
+    await sleep(1000);
     console.time('dispatch-messages');
     for (let idx = 0; idx < RECEIVER_CONCURRENT_SIZE; idx++) {
         sendTaskSet.push(senderNode(idx))

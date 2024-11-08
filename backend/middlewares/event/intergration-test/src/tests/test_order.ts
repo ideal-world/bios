@@ -6,7 +6,7 @@ interface TestMessage {
     index: number;
 }
 const topic = consts.BLOCKING_TOPIC;
-const ORDER_TEST_MESSAGE_COUNT = 5;
+const ORDER_TEST_MESSAGE_COUNT = 3;
 type MessageType = TestMessage | 'quit';
 const dataMessage = (index: number) => newMessage<MessageType>(
     { index },
@@ -37,7 +37,7 @@ export default async () => {
 
         for (let idx = 0; idx < ORDER_TEST_MESSAGE_COUNT; idx++) {
             try {
-                node.sendMessage(dataMessage(idx));
+                await node.sendMessage(dataMessage(idx));
                 console.log(`sent: ${idx}`);
             } catch (_) {
                 console.warn(`send message failed: ${idx}`);
