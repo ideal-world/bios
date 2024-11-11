@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fmt::format};
+use std::collections::HashMap;
 
 use bios_basic::spi::{
     spi_funs::SpiBsInst,
@@ -23,7 +23,7 @@ use crate::{
     stats_enumeration::{StatsDataTypeKind, StatsFactColKind},
 };
 
-use super::{stats_pg_conf_dim_serv, stats_pg_conf_fact_col_serv, stats_pg_initializer};
+use super::{stats_pg_conf_dim_serv, stats_pg_conf_fact_col_serv, stats_pg_initializer, stats_pg_sync_serv};
 
 pub async fn online(fact_conf_key: &str, conn: &TardisRelDBlConnection, ctx: &TardisContext) -> TardisResult<bool> {
     common_pg::check_table_exit(&format!("stats_inst_fact_{fact_conf_key}"), conn, ctx).await
@@ -40,6 +40,11 @@ pub(crate) async fn add(add_req: &StatsConfFactAddReq, funs: &TardisFunsInst, ct
             "The fact config already exists, please delete it and then add it.",
             "409-spi-stats-fact-conf-exist",
         ));
+    }
+    if let Some(sync_sql) = &add_req.sync_sql {
+        if !stats_pg_sync_serv::validate_fact_sql(sync_sql) {
+            return Err(funs.err().conflict("fact_conf", "add", "The sync_sql is not a valid sql.", "409-spi-stats-fact-conf-sync-sql-not-valid"));
+        }
     }
     let params = vec![
         Value::from(add_req.key.to_string()),

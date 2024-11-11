@@ -46,7 +46,7 @@ pub(crate) async fn add(add_req: &StatsConfDimGroupAddReq, funs: &TardisFunsInst
     Ok(())
 }
 
-pub(crate) async fn modify(dim_conf_key: &str, modify_req: &StatsConfDimGroupModifyReq, funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
+pub(crate) async fn modify(dim_conf_key: &str, modify_req: &StatsConfDimGroupModifyReq, _funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
     let bs_inst = inst.inst::<TardisRelDBClient>();
     let (mut conn, table_name) = stats_pg_initializer::init_conf_dim_group_table_and_conn(bs_inst, ctx, true).await?;
     conn.begin().await?;

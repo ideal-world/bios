@@ -317,17 +317,28 @@ fn find_single_select_param_fields_from_sql(sql: &str, funs: &TardisFunsInst) ->
 
 /// find select param fields from sql
 /// eg. 'select id,address from table where id= ${app_id} and name = ${name}'  return 'id','address'
+/// eg. 'select id,test as address from table where id= ${app_id} and name = ${name}'  return 'id','address'
 /// eg. 'select * from table where id= ${app_id} and name = ${name}'  return ''
 fn find_select_param_fields_from_sql(sql: &str) -> Vec<String> {
-    let re = Regex::new(r"select\s+([^\*]+?)\s+from").unwrap();
-    let params = re.captures(sql).map(|cap| cap[1].to_string()).unwrap_or("".to_string());
-    params.split(',').map(|s| s.trim().to_string()).collect()
+    let re = Regex::new(r"select\s+([^\*]+?)\s+from").expect("should compile regex");
+    let params = re.captures(&sql.to_ascii_lowercase()).map(|cap| cap[1].to_string()).unwrap_or("".to_string());
+    params
+        .split(',')
+        .map(|s| {
+            let a = s.split("as").collect::<Vec<&str>>();
+            if a.len() > 1 {
+                a[1].trim().to_string()
+            } else {
+                s.trim().to_string()
+            }
+        })
+        .collect()
 }
 
 /// find param fields from sql
 /// eg. 'where id= ${app_id} and name = ${name}'  return 'app_id','name'
 fn find_param_fields_from_sql(sql: &str) -> Vec<String> {
-    let re = Regex::new(r"\$\{([^}]+)\}").unwrap();
+    let re = Regex::new(r"\$\{([^}]+)\}").expect("should compile regex");
     let params = re.captures_iter(sql).map(|cap| cap[1].to_string()).collect();
     params
 }
@@ -404,10 +415,17 @@ fn do_generate_sql_and_params(sql: &str, param_fields: &Vec<String>, fact_record
     Ok((sql, params))
 }
 
+/// validate fact sql
+/// validate sql is select statement and not select *
+pub(crate) fn validate_fact_sql(sql: &str) -> bool {
+    let re = Regex::new(r"^select\s+[^*][\w\s,]+\s+from").expect("should compile regex");
+    re.is_match(&sql.trim().to_lowercase())
+}
+
 /// validate fact col sql
 /// validate sql is select statement and only select one field
 pub(crate) fn validate_fact_col_sql(sql: &str) -> bool {
-    let re = Regex::new(r"^select\s+\$([^,]+)\s+from").unwrap();
+    let re = Regex::new(r"^select\s+\$([^,]+)\s+from").expect("should compile regex");
     re.is_match(sql)
 }
 
@@ -420,12 +438,21 @@ mod tests {
         db::sea_orm::Value,
     };
 
-    use crate::serv::pg::stats_pg_sync_serv::{do_generate_sql_and_params, find_select_param_fields_from_sql, validate_fact_col_sql};
+    use crate::serv::pg::stats_pg_sync_serv::{do_generate_sql_and_params, find_select_param_fields_from_sql, validate_fact_col_sql, validate_fact_sql};
 
     use super::find_param_fields_from_sql;
     #[test]
     fn test_find_select_params_from_sql() {
         let sql = "select id,address from table where id= ${app_id} and name = ${name}";
+        let params = find_select_param_fields_from_sql(&sql);
+        assert_eq!(params, vec!["id", "address"]);
+        let sql = "select id,test as address from table where id= ${app_id} and name = ${name}";
+        let params = find_select_param_fields_from_sql(&sql);
+        assert_eq!(params, vec!["id", "address"]);
+        let sql = "SELECT id,test AS address FROM table WHERE id= ${app_id} and name = ${name}";
+        let params = find_select_param_fields_from_sql(&sql);
+        assert_eq!(params, vec!["id", "address"]);
+        let sql = "SELECT id,ext->>'address' AS address FROM table WHERE id= ${app_id} and name = ${name}";
         let params = find_select_param_fields_from_sql(&sql);
         assert_eq!(params, vec!["id", "address"]);
         let sql = "select * from table where id= ${app_id} and name = ${name}";
@@ -444,6 +471,18 @@ mod tests {
         let sql = "select * from table";
         let params = find_param_fields_from_sql(&sql);
         assert_eq!(params, Vec::<String>::new());
+    }
+
+    #[test]
+    fn test_validate_fact_sql() {
+        let sql = "select id from table";
+        assert_eq!(validate_fact_sql(&sql), true);
+        let sql = "select id,name from table";
+        assert_eq!(validate_fact_sql(&sql), true);
+        let sql = "select * from table";
+        assert_eq!(validate_fact_sql(&sql), false);
+        let sql = "update table set id = ${id} where id = ${id}";
+        assert_eq!(validate_fact_sql(&sql), false);
     }
 
     #[test]
