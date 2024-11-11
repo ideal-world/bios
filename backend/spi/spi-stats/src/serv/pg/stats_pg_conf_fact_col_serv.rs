@@ -17,7 +17,7 @@ use crate::{
     stats_enumeration::StatsFactColKind,
 };
 
-use super::{stats_pg_conf_dim_serv, stats_pg_conf_fact_serv, stats_pg_initializer};
+use super::{stats_pg_conf_dim_serv, stats_pg_conf_fact_serv, stats_pg_initializer, stats_pg_sync_serv};
 
 pub(crate) async fn add(fact_conf_key: &str, add_req: &StatsConfFactColAddReq, funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
     let bs_inst = inst.inst::<TardisRelDBClient>();
@@ -27,6 +27,11 @@ pub(crate) async fn add(fact_conf_key: &str, add_req: &StatsConfFactColAddReq, f
     // check if this fact exists
     if conn.count_by_sql(&format!("SELECT 1 FROM {conf_fact_table} WHERE key = $1"), vec![Value::from(fact_conf_key)]).await? == 0 {
         return Err(funs.err().conflict("fact_col_conf", "add", "The fact config not exists.", "409-spi-stats-fact-conf-not-exist"));
+    }
+    if let Some(rel_sql) = &add_req.rel_sql {
+        if !stats_pg_sync_serv::validate_fact_col_sql(rel_sql) {
+            return Err(funs.err().conflict("fact_col_conf", "add", "The rel_sql is not a valid sql.", "409-spi-stats-fact-col-conf-rel-sql-not-valid"));
+        }
     }
     if add_req.rel_external_id.is_none() && stats_pg_conf_fact_serv::online(fact_conf_key, &conn, ctx).await? {
         return Err(funs.err().conflict(
@@ -178,6 +183,11 @@ pub(crate) async fn modify(
             "The fact instance table already exists, please delete it and then modify it.",
             "409-spi-stats-fact-inst-exist",
         ));
+    }
+    if let Some(rel_sql) = &modify_req.rel_sql {
+        if !stats_pg_sync_serv::validate_fact_col_sql(rel_sql) {
+            return Err(funs.err().conflict("fact_col_conf", "add", "The rel_sql is not a valid sql.", "409-spi-stats-fact-col-conf-rel-sql-not-valid"));
+        }
     }
     let mut sql_sets = vec![];
     let mut params = vec![Value::from(fact_col_conf_key.to_string()), Value::from(fact_conf_key.to_string())];

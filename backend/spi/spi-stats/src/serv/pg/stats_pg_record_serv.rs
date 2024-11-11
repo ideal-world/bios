@@ -127,6 +127,7 @@ LIMIT $2 OFFSET $3
     })
 }
 
+//TODO add rel_field logic
 pub(crate) async fn fact_record_load(
     fact_conf_key: &str,
     fact_record_key: &str,

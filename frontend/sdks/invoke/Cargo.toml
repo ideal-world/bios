@@ -24,6 +24,7 @@ spi_search = ["spi_base"]
 spi_stats = ["spi_base"]
 iam = []
 event = ["asteroid-mq"]
+schedule = []
 macro = ["dep:simple-invoke-client-macro"]
 
 [dependencies]
