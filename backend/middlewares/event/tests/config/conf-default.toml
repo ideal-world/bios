@@ -17,5 +17,5 @@ watch_kind = "cache"
 cache_check_interval_sec = 10
 
 [fw.log]
-level = "debug"
+level = "info"
 directives = ["openraft=off"]

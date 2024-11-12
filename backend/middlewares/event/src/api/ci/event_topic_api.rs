@@ -6,7 +6,7 @@ use tardis::web::poem_openapi::param::{Path, Query};
 use tardis::web::poem_openapi::payload::Json;
 use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 
-use crate::dto::event_dto::{EventTopicAddOrModifyReq, EventTopicFilterReq, EventTopicInfoResp, SetTopicAuth};
+use crate::dto::event_dto::{EventTopicConfig, EventTopicFilterReq, EventTopicInfoResp, SetTopicAuth};
 use crate::event_constants::get_tardis_inst;
 use crate::serv::event_topic_serv::EventTopicServ;
 #[derive(Clone)]
@@ -21,19 +21,21 @@ impl EventTopicApi {
     ///
     /// 添加事件主题
     #[oai(path = "/", method = "post")]
-    async fn add(&self, mut add_or_modify_req: Json<EventTopicAddOrModifyReq>, ctx: TardisContextExtractor) -> TardisApiResult<String> {
+    async fn add(&self, add_or_modify_req: Json<EventTopicConfig>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let funs = get_tardis_inst();
-        let id = EventTopicServ::add_item(&mut add_or_modify_req.0, &funs, &ctx.0).await?;
-        TardisResp::ok(id)
+        let mut add_or_modify_req = add_or_modify_req.0.into_rbum_req();
+        EventTopicServ::add_item(&mut add_or_modify_req, &funs, &ctx.0).await?;
+        TardisResp::ok(Void)
     }
 
     /// Modify Event Definition
     ///
     /// 修改事件主题
     #[oai(path = "/:id", method = "put")]
-    async fn modify(&self, id: Path<String>, mut add_or_modify_req: Json<EventTopicAddOrModifyReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+    async fn modify(&self, id: Path<String>, add_or_modify_req: Json<EventTopicConfig>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let funs = get_tardis_inst();
-        EventTopicServ::modify_item(&id.0, &mut add_or_modify_req.0, &funs, &ctx.0).await?;
+        let mut add_or_modify_req = add_or_modify_req.0.into_rbum_req();
+        EventTopicServ::modify_item(&id.0, &mut add_or_modify_req, &funs, &ctx.0).await?;
         TardisResp::ok(Void {})
     }
 
@@ -54,8 +56,7 @@ impl EventTopicApi {
     async fn paginate(
         &self,
         id: Query<Option<String>>,
-        code: Query<Option<String>>,
-        name: Query<Option<String>>,
+        topic_code: Query<Option<String>>,
         page_number: Query<u32>,
         page_size: Query<u32>,
         desc_by_create: Query<Option<bool>>,
@@ -67,10 +68,11 @@ impl EventTopicApi {
             &EventTopicFilterReq {
                 basic: RbumBasicFilterReq {
                     ids: id.0.map(|id| vec![id]),
-                    name: name.0,
-                    code: code.0,
+                    // name: topic_code.as_ref().map(|code| format_code(&code)),
+                    // code: topic_code.as_ref().map(|code| format_code(&code)),
                     ..Default::default()
                 },
+                topic_code: topic_code.0,
             },
             page_number.0,
             page_size.0,
