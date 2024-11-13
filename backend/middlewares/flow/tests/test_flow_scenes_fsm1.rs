@@ -85,7 +85,7 @@ pub async fn test(flow_client: &mut TestHttpClient, search_client: &mut TestHttp
         .post(
             "/cc/model",
             &FlowModelAddReq {
-                kind: FlowModelKind::AsTemplateAndAsModel,
+                kind: FlowModelKind::AsTemplate,
                 status: FlowModelStatus::Enabled,
                 rel_transition_ids: None,
                 add_version: Some(FlowModelVersionAddReq {
@@ -208,7 +208,7 @@ pub async fn test(flow_client: &mut TestHttpClient, search_client: &mut TestHttp
             &FlowModelAddReq {
                 name: "测试需求默认模板1".into(),
                 info: Some("xxx".to_string()),
-                kind: FlowModelKind::AsTemplateAndAsModel,
+                kind: FlowModelKind::AsTemplate,
                 status: FlowModelStatus::Enabled,
                 rel_transition_ids: None,
                 add_version: None,
@@ -259,7 +259,7 @@ pub async fn test(flow_client: &mut TestHttpClient, search_client: &mut TestHttp
                 icon: None,
                 rel_model_id: None,
                 disabled: None,
-                kind: FlowModelKind::AsTemplateAndAsModel,
+                kind: FlowModelKind::AsTemplate,
                 status: FlowModelStatus::Enabled,
                 rel_transition_ids: None,
                 add_version: None,
@@ -293,6 +293,20 @@ pub async fn test(flow_client: &mut TestHttpClient, search_client: &mut TestHttp
     // assert!(model_templates.records.iter().any(|record| record.key == req_default_model_template_id));
     // assert!(model_templates.records.iter().any(|record| record.key == req_model_uninit_template_id));
     // assert!(model_templates.records.iter().any(|record| record.key == req_model_template_id));
+    // template bind model
+    let mut rel_model_ids = HashMap::new();
+    rel_model_ids.insert("REQ".to_string(), req_model_template_id.clone());
+    let result: HashMap<String, FlowModelAggResp> = flow_client
+        .post(
+            "/ct/model/copy_or_reference_model",
+            &FlowModelCopyOrReferenceReq {
+                rel_model_ids,
+                rel_template_id: Some(project_template_id1.to_string()),
+                op: FlowModelAssociativeOperationKind::ReferenceOrCopy,
+            },
+        )
+        .await;
+    info!("result: {:?}", result);
     let _result: Void = flow_client
         .patch(
             &format!("/cc/model/{}", req_default_model_template_id),
@@ -425,7 +439,7 @@ pub async fn test(flow_client: &mut TestHttpClient, search_client: &mut TestHttp
         .post(
             "/ci/model/copy_or_reference_model",
             &FlowModelCopyOrReferenceCiReq {
-                rel_template_id: Some(req_template_id1.to_string()),
+                rel_template_id: Some(project_template_id1.to_string()),
                 op: FlowModelAssociativeOperationKind::Copy,
                 update_states: None,
             },

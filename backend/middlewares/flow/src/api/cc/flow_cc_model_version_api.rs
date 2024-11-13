@@ -1,3 +1,6 @@
+use crate::dto::flow_model_version_dto::{FlowModelVersionAddReq, FlowModelVersionDetailResp, FlowModelVersionFilterReq, FlowModelVersionModifyReq, FlowModelVesionState};
+use crate::flow_constants;
+use crate::serv::flow_model_version_serv::FlowModelVersionServ;
 use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use tardis::web::context_extractor::TardisContextExtractor;
@@ -6,10 +9,6 @@ use tardis::web::poem_openapi;
 use tardis::web::poem_openapi::param::{Path, Query};
 use tardis::web::poem_openapi::payload::Json;
 use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
-use crate::dto::flow_model_version_dto::{FlowModelVersionAddReq, FlowModelVersionDetailResp, FlowModelVersionFilterReq, FlowModelVersionModifyReq, FlowModelVesionState};
-use crate::flow_constants;
-use crate::serv::flow_model_version_serv::FlowModelVersionServ;
-
 
 #[derive(Clone)]
 pub struct FlowCcModelVersionApi;
@@ -35,7 +34,13 @@ impl FlowCcModelVersionApi {
     ///
     /// 修改模型版本
     #[oai(path = "/:flow_version_id", method = "patch")]
-    async fn modify(&self, flow_version_id: Path<String>, mut modify_req: Json<FlowModelVersionModifyReq>, ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<Void> {
+    async fn modify(
+        &self,
+        flow_version_id: Path<String>,
+        mut modify_req: Json<FlowModelVersionModifyReq>,
+        ctx: TardisContextExtractor,
+        _request: &Request,
+    ) -> TardisApiResult<Void> {
         let mut funs = flow_constants::get_tardis_inst();
         funs.begin().await?;
         FlowModelVersionServ::modify_item(&flow_version_id.0, &mut modify_req.0, &funs, &ctx.0).await?;

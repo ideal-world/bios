@@ -133,16 +133,23 @@ impl FlowCiModelApi {
         .into_iter()
         .map(|rel| rel.rel_id)
         .collect_vec();
-        let rel_models = FlowModelServ::find_items(&FlowModelFilterReq {
-            basic: RbumBasicFilterReq {
-                ids: Some(rel_model_ids),
-                own_paths: Some("".to_string()),
-                with_sub_own_paths: true,
+        let rel_models = FlowModelServ::find_items(
+            &FlowModelFilterReq {
+                basic: RbumBasicFilterReq {
+                    ids: Some(rel_model_ids),
+                    own_paths: Some("".to_string()),
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                main: Some(true),
                 ..Default::default()
             },
-            main: Some(true),
-            ..Default::default()
-        }, None, None, &funs, &ctx.0).await?;
+            None,
+            None,
+            &funs,
+            &ctx.0,
+        )
+        .await?;
         let mut result = HashMap::new();
         for rel_model in rel_models {
             let new_model = FlowModelServ::copy_or_reference_model(&rel_model.id, &req.0.op, FlowModelKind::AsModel, &funs, &ctx.0).await?;

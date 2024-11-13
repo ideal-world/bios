@@ -322,7 +322,10 @@ impl FlowInstServ {
             ])
             .expr_as(Expr::col((rel_state_table.clone(), NAME_FIELD.clone())).if_null(""), Alias::new("current_state_name"))
             .expr_as(Expr::col((flow_state_table.clone(), Alias::new("color"))).if_null(""), Alias::new("current_state_color"))
-            .expr_as(Expr::col((flow_state_table.clone(), Alias::new("sys_state"))).if_null(FlowSysStateKind::Start), Alias::new("current_state_kind"))
+            .expr_as(
+                Expr::col((flow_state_table.clone(), Alias::new("sys_state"))).if_null(FlowSysStateKind::Start),
+                Alias::new("current_state_kind"),
+            )
             .expr_as(Expr::col((rbum_rel_table.clone(), Alias::new("ext"))).if_null(""), Alias::new("current_state_ext"))
             .expr_as(
                 Expr::col((rel_model_version_table.clone(), NAME_FIELD.clone())).if_null(""),
@@ -821,7 +824,8 @@ impl FlowInstServ {
         )
         .await?;
         let rel_flow_versions = FlowTransitionServ::find_rel_model_map(&flow_inst_detail.tag, funs, ctx).await?;
-        let next_flow_transitions = Self::do_find_next_transitions(&flow_inst_detail, &flow_model_version, None, &None, rel_flow_versions, false, funs, ctx).await?.next_flow_transitions;
+        let next_flow_transitions =
+            Self::do_find_next_transitions(&flow_inst_detail, &flow_model_version, None, &None, rel_flow_versions, false, funs, ctx).await?.next_flow_transitions;
 
         Ok(FlowInstTransferResp {
             prev_flow_state_id: prev_flow_state.id,
@@ -1247,13 +1251,7 @@ impl FlowInstServ {
         Ok(())
     }
 
-    pub async fn unsafe_modify_state(
-        tag: &str,
-        modify_model_states: Vec<FlowStateAggResp>,
-        state_id: &str,
-        funs: &TardisFunsInst,
-        ctx: &TardisContext,
-    ) -> TardisResult<()> {
+    pub async fn unsafe_modify_state(tag: &str, modify_model_states: Vec<FlowStateAggResp>, state_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let insts = Self::find_details(
             &FlowInstFilterReq {
                 tag: Some(tag.to_string()),

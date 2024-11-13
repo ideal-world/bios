@@ -123,7 +123,6 @@ pub struct FlowStateApproval {
     pub countersign_conf: FlowStateCountersignConf,
 }
 
-
 /// 分支节点配置信息
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object, Default, Clone)]
 pub struct FlowStateBranch {

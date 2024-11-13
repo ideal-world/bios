@@ -13,7 +13,8 @@ use tardis::web::poem_openapi::payload::Json;
 use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 
 use crate::dto::flow_model_dto::{
-    FlowModelAddReq, FlowModelAggResp, FlowModelBindStateReq, FlowModelDetailResp, FlowModelFilterReq, FlowModelFindRelStateResp, FlowModelModifyReq, FlowModelSortStatesReq, FlowModelSummaryResp, FlowModelUnbindStateReq
+    FlowModelAddReq, FlowModelAggResp, FlowModelBindStateReq, FlowModelDetailResp, FlowModelFilterReq, FlowModelFindRelStateResp, FlowModelModifyReq, FlowModelSortStatesReq,
+    FlowModelSummaryResp, FlowModelUnbindStateReq,
 };
 use crate::dto::flow_model_version_dto::{FlowModelVersionBindState, FlowModelVersionDetailResp, FlowModelVersionModifyReq, FlowModelVersionModifyState};
 use crate::dto::flow_state_dto::FlowStateRelModelModifyReq;
@@ -189,12 +190,7 @@ impl FlowCcModelApi {
     /// - `temp_id` - associated template_id
     /// - `is_shared` - whether the associated template is shared
     #[oai(path = "/find_rel_models", method = "put")]
-    async fn find_rel_models(
-        &self,
-        temp_id: Query<Option<String>>,
-        ctx: TardisContextExtractor,
-        _request: &Request,
-    ) -> TardisApiResult<HashMap<String, FlowModelSummaryResp>> {
+    async fn find_rel_models(&self, temp_id: Query<Option<String>>, ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<HashMap<String, FlowModelSummaryResp>> {
         let mut funs = flow_constants::get_tardis_inst();
         funs.begin().await?;
         let result = FlowModelServ::find_rel_model_map(temp_id.0, true, &funs, &ctx.0).await?;
