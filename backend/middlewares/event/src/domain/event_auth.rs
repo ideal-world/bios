@@ -10,9 +10,9 @@ use crate::dto::event_dto::TopicAuth;
 pub struct Model {
     #[sea_orm(primary_key)]
     pub id: String,
-    #[sea_orm(indexed)]
+    #[index]
     pub topic: String,
-    #[sea_orm(indexed)]
+    #[index]
     pub ak: String,
     pub read: bool,
     pub write: bool,

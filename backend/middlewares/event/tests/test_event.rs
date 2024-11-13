@@ -13,18 +13,20 @@ use tardis::basic::dto::TardisContext;
 use tardis::log as tracing;
 use tardis::serde_json::{json, Value};
 use tardis::web::web_resp::Void;
-use tardis::{tardis_static, testcontainers, tokio, TardisFuns};
+use tardis::{tardis_static, tokio, TardisFuns};
+use tokio::io::AsyncReadExt;
 #[tokio::test(flavor = "multi_thread")]
 async fn test_event() -> Result<(), Box<dyn std::error::Error>> {
-    env::set_var("RUST_LOG", "debug,tardis=trace,bios_mw_event=trace,test_event=trace,sqlx::query=off");
+    // env::set_var("RUST_LOG", "debug,tardis=trace,bios_mw_event=trace,test_event=trace,sqlx::query=off,asteroid-mq=info");
 
     let _x = init_test_container::init(None).await?;
 
     init_data().await?;
+    tokio::io::stdin().read_buf(&mut Vec::new()).await?;
     test_event_topic_api().await?;
-
     Ok(())
 }
+
 
 async fn init_data() -> Result<(), Box<dyn std::error::Error>> {
     // Initialize RBUM
@@ -45,7 +47,8 @@ async fn init_data() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     let mut client = TestHttpClient::new(format!("http://127.0.0.1:8080/{}", DOMAIN_CODE));
-
+    let auth = ctx.to_base64()?;
+    tracing::info!(?auth, "auth");
     client.set_auth(&ctx)?;
     tokio::time::sleep(Duration::from_secs(5)).await;
     Ok(())
@@ -68,11 +71,9 @@ pub async fn test_event_topic_api() -> Result<(), Box<dyn std::error::Error>> {
     let ctx = test_tardis_context();
     client.set_auth(ctx).unwrap();
     let id = client
-        .post::<_, String>(
+        .post::<_, Void>(
             "/ci/topic",
             &json! {{
-                "code": TEST_TOPIC_NAME,
-                "name": "topic/hello",
                 "topic_code": TEST_TOPIC_NAME,
                 "overflow_policy": "RejectNew",
                 "overflow_size": 500,
@@ -81,6 +82,7 @@ pub async fn test_event_topic_api() -> Result<(), Box<dyn std::error::Error>> {
         )
         .await;
     tracing::info!(?id, "event registered");
+    tokio::time::sleep(Duration::from_secs(1)).await;
     let topics = client.get::<Value>("/ci/topic?page_number=1&page_size=10").await;
     tracing::info!(?topics, "event paged list");
     let register_auth_result = client.put::<Void, Value>(&format!("/ci/topic/{TEST_TOPIC_NAME}/register?read=true&write=true"), &Void).await;

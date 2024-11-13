@@ -14,9 +14,9 @@ use tardis::{TardisCreateEntity, TardisEmptyBehavior, TardisEmptyRelation};
 pub struct Model {
     #[sea_orm(primary_key)]
     pub message_id: String,
-    #[sea_orm(indexed)]
+    #[index]
     pub topic: String,
-    #[sea_orm(indexed)]
+    #[index]
     pub archived: bool,
     pub ack_kind: i16,
     pub target_kind: i16,
