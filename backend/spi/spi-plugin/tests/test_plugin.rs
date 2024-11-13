@@ -26,8 +26,7 @@ mod test_plugin_exec;
 async fn test_plugin() -> TardisResult<()> {
     env::set_var("RUST_LOG", "debug,test_plugin=trace,sqlx::query=off");
 
-    let docker = testcontainers::clients::Cli::default();
-    let _x = init_test_container::init(&docker, None).await?;
+    let _x = init_test_container::init(None).await?;
     init_data().await?;
 
     Ok(())

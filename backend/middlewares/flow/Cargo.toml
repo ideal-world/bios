@@ -25,11 +25,11 @@ rust_decimal_macros.workspace = true
 lazy_static.workspace = true
 itertools.workspace = true
 tardis = { workspace = true, features = ["reldb-postgres", "web-client"] }
-bios-basic = { path = "../../basic", features = ["default"] }
-bios-sdk-invoke = { path = "../../../frontend/sdks/invoke", features = ["default"] }
+bios-basic = { version = "0.2.0", path = "../../basic", features = ["default"] }
+bios-sdk-invoke = { version = "0.2.0", path = "../../../frontend/sdks/invoke", features = ["default"] }
 [dev-dependencies]
 tardis = { workspace = true, features = ["test", "web-client"] }
-bios-basic = { path = "../../basic", features = ["default", "test"] }
-bios-sdk-invoke = { path = "../../../frontend/sdks/invoke", features = ["default"] }
-bios-spi-kv = { path = "../../spi/spi-kv" }
-bios-spi-search = { path = "../../spi/spi-search" }
+bios-basic = { version = "0.2.0", path = "../../basic", features = ["default", "test"] }
+bios-sdk-invoke = { version = "0.2.0", path = "../../../frontend/sdks/invoke", features = ["default"] }
+bios-spi-kv = { version = "0.2.0", path = "../../spi/spi-kv" }
+bios-spi-search = { version = "0.2.0", path = "../../spi/spi-search" }

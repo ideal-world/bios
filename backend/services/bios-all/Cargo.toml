@@ -17,29 +17,28 @@ tardis = { workspace = true, features = [
   "conf-remote",
   "cluster",
   "tracing",
-  "k8s",
 ] }
-bios-iam = { path = "../../supports/iam", features = ["spi_search", "spi_kv"] }
-bios-auth = { path = "../../supports/auth", features = ["web-server"] }
-bios-reach = { path = "../../supports/reach" }
+bios-iam = { version = "0.2.0", path = "../../supports/iam", features = ["spi_search", "spi_kv", "event"] }
+bios-auth = { version = "0.2.0", path = "../../supports/auth", features = ["web-server"] }
+bios-reach = { version = "0.2.0", path = "../../supports/reach" }
 
-bios-spi-cache = { path = "../../spi/spi-cache" }
-bios-spi-graph = { path = "../../spi/spi-graph" }
-bios-spi-kv = { path = "../../spi/spi-kv" }
-bios-spi-log = { path = "../../spi/spi-log" }
-bios-spi-object = { path = "../../spi/spi-object" }
-bios-spi-plugin = { path = "../../spi/spi-plugin" }
-bios-spi-reldb = { path = "../../spi/spi-reldb" }
-bios-spi-search = { path = "../../spi/spi-search", features = ["default", "with-cn-tokenizer"] }
-bios-spi-stats = { path = "../../spi/spi-stats" }
-#bios-spi-conf = { path = "../../spi/spi-conf" }
+bios-spi-cache = { version = "0.2.0", path = "../../spi/spi-cache" }
+bios-spi-graph = { version = "0.2.0", path = "../../spi/spi-graph" }
+bios-spi-kv = { version = "0.2.0", path = "../../spi/spi-kv" }
+bios-spi-log = { version = "0.2.0", path = "../../spi/spi-log" }
+bios-spi-object = { version = "0.2.0", path = "../../spi/spi-object" }
+bios-spi-plugin = { version = "0.2.0", path = "../../spi/spi-plugin" }
+bios-spi-reldb = { version = "0.2.0", path = "../../spi/spi-reldb" }
+bios-spi-search = { version = "0.2.0", path = "../../spi/spi-search", features = ["default", "with-cn-tokenizer"] }
+bios-spi-stats = { version = "0.2.0", path = "../../spi/spi-stats" }
+#bios-spi-conf = { version = "0.2.0", path = "../../spi/spi-conf" }
 
-bios-mw-schedule = { path = "../../middlewares/schedule" }
-bios-mw-flow = { path = "../../middlewares/flow" }
-bios-mw-event = { path = "../../middlewares/event" }
+bios-mw-schedule = { version = "0.2.0", path = "../../middlewares/schedule" }
+bios-mw-flow = { version = "0.2.0", path = "../../middlewares/flow" }
+bios-mw-event = { version = "0.2.0", path = "../../middlewares/event" }
 
 # clients
-bios-client-hwsms = { path = "../../../frontend/clients/hwsms", features = [
+bios-client-hwsms = { version = "0.2.0", path = "../../../frontend/clients/hwsms", features = [
   "reach",
 ] }
 

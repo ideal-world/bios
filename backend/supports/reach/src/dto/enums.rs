@@ -3,14 +3,14 @@ use std::{fmt::Display, str::FromStr};
 use serde::{Deserialize, Serialize};
 use tardis::{
     basic::error::TardisError,
-    db::sea_orm::{self, DeriveActiveEnum, EnumIter},
+    db::sea_orm::{self, prelude::*, DeriveActiveEnum, EnumIter},
     web::poem_openapi,
 };
 #[repr(u8)]
 #[derive(Debug, poem_openapi::Enum, EnumIter, Clone, Copy, DeriveActiveEnum, PartialEq, Eq, Serialize, Deserialize, Hash, Default)]
 #[oai(rename_all = "SCREAMING_SNAKE_CASE")]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
-#[sea_orm(rs_type = "String", db_type = "String(Some(255))")]
+#[sea_orm(rs_type = "String", db_type = "String(StringLen::N(255))")]
 pub enum ReachChannelKind {
     #[sea_orm(string_value = "SMS")]
     #[default]
@@ -62,7 +62,7 @@ impl FromStr for ReachChannelKind {
 #[derive(Debug, poem_openapi::Enum, EnumIter, Clone, Copy, DeriveActiveEnum, PartialEq, Eq, Serialize, Deserialize, Hash)]
 #[oai(rename_all = "SCREAMING_SNAKE_CASE")]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
-#[sea_orm(rs_type = "String", db_type = "String(Some(255))")]
+#[sea_orm(rs_type = "String", db_type = "String(StringLen::N(255))")]
 pub enum ReachReceiveKind {
     #[sea_orm(string_value = "ACCOUNT")]
     Account,
@@ -77,7 +77,7 @@ pub enum ReachReceiveKind {
 #[derive(Debug, poem_openapi::Enum, EnumIter, Clone, Copy, DeriveActiveEnum, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[oai(rename_all = "SCREAMING_SNAKE_CASE")]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
-#[sea_orm(rs_type = "String", db_type = "String(Some(255))")]
+#[sea_orm(rs_type = "String", db_type = "String(StringLen::N(255))")]
 pub enum ReachStatusKind {
     #[sea_orm(string_value = "DRAFT")]
     Draft,
@@ -101,7 +101,7 @@ pub enum ReachStatusKind {
 #[derive(Debug, poem_openapi::Enum, EnumIter, Clone, Copy, DeriveActiveEnum, PartialEq, Eq, Serialize, Deserialize)]
 #[oai(rename_all = "SCREAMING_SNAKE_CASE")]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
-#[sea_orm(rs_type = "String", db_type = "String(Some(255))")]
+#[sea_orm(rs_type = "String", db_type = "String(StringLen::N(255))")]
 pub enum ReachDndStrategyKind {
     #[sea_orm(string_value = "IGNORE")]
     Ignore,
@@ -112,7 +112,7 @@ pub enum ReachDndStrategyKind {
 #[derive(Debug, poem_openapi::Enum, EnumIter, Clone, Copy, DeriveActiveEnum, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[oai(rename_all = "SCREAMING_SNAKE_CASE")]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
-#[sea_orm(rs_type = "String", db_type = "String(Some(255))")]
+#[sea_orm(rs_type = "String", db_type = "String(StringLen::N(255))")]
 pub enum ReachLevelKind {
     #[sea_orm(string_value = "URGENT")]
     Urgent,
@@ -128,7 +128,7 @@ pub enum ReachLevelKind {
 #[derive(Debug, poem_openapi::Enum, EnumIter, Clone, Copy, DeriveActiveEnum, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[oai(rename_all = "SCREAMING_SNAKE_CASE")]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
-#[sea_orm(rs_type = "String", db_type = "String(Some(255))")]
+#[sea_orm(rs_type = "String", db_type = "String(StringLen::N(255))")]
 pub enum ReachTimeoutStrategyKind {
     #[sea_orm(string_value = "IGNORE")]
     #[default]
@@ -140,7 +140,7 @@ pub enum ReachTimeoutStrategyKind {
 #[derive(Debug, poem_openapi::Enum, EnumIter, Clone, Copy, DeriveActiveEnum, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[oai(rename_all = "SCREAMING_SNAKE_CASE")]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
-#[sea_orm(rs_type = "String", db_type = "String(Some(255))")]
+#[sea_orm(rs_type = "String", db_type = "String(StringLen::N(255))")]
 pub enum ReachTemplateKind {
     #[sea_orm(string_value = "VCODE")]
     #[default]

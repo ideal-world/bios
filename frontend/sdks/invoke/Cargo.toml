@@ -9,13 +9,14 @@ license.workspace = true
 edition.workspace = true
 readme.workspace = true
 publish.workspace = true
+description.workspace = true
 
 [lib]
 name = "bios_sdk_invoke"
 path = "src/lib.rs"
 
 [features]
-default = ["spi_kv", "spi_log", "spi_search", "spi_stats", "iam", "event"]
+default = ["spi_kv", "spi_log", "spi_search", "spi_stats", "iam"]
 spi_base = []
 spi_kv = ["spi_base"]
 spi_log = ["spi_base", "iam"]
@@ -35,12 +36,12 @@ tardis = { workspace = true, features = [
   "crypto",
   "ws-client",
 ] }
-simple-invoke-client-macro = { path = "../simple-invoke-client-macro", optional = true }
+simple-invoke-client-macro = { version = "0.2.0", path = "../simple-invoke-client-macro", optional = true }
 crossbeam = "0.8"
 asteroid-mq = { workspace = true, features = ["cluster-k8s"], optional = true }
 [dev-dependencies]
 tardis = { workspace = true, features = ["test"] }
-simple-invoke-client-macro = { path = "../simple-invoke-client-macro" }
+simple-invoke-client-macro = { version = "0.2.0", path = "../simple-invoke-client-macro" }
 
 [[test]]
 name = "test_macros"

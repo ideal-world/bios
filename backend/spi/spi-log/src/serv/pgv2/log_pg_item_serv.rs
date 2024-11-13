@@ -1,6 +1,9 @@
 use std::{collections::HashMap, str::FromStr, vec};
 
-use bios_sdk_invoke::clients::event_client::{get_topic, mq_error, EventAttributeExt as _, SPI_RPC_TOPIC};
+use bios_sdk_invoke::clients::{
+    event_client::{get_topic, mq_error, EventAttributeExt as _, SPI_RPC_TOPIC},
+    spi_log_client::{StatsItemAddReq, StatsItemDeleteReq},
+};
 use tardis::{
     basic::{dto::TardisContext, error::TardisError, result::TardisResult},
     chrono::{DateTime, Utc},
@@ -22,13 +25,20 @@ use bios_basic::{
 };
 
 use crate::{
-    dto::log_item_dto::{AdvBasicQueryCondInfo, LogConfigReq, LogItemAddReq, LogItemFindReq, LogItemFindResp, StatsItemAddReq},
+    dto::log_item_dto::{AdvBasicQueryCondInfo, LogConfigReq, LogItemAddReq, LogItemAddV2Req, LogItemFindReq, LogItemFindResp},
     log_constants::{CONFIG_TABLE_NAME, LOG_REF_FLAG, TABLE_LOG_FLAG_V2},
 };
 
 use super::log_pg_initializer;
 
 pub async fn add(add_req: &mut LogItemAddReq, funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<String> {
+    crate::serv::pg::log_pg_item_serv::add(add_req, funs, ctx, inst).await
+}
+pub async fn find(find_req: &mut LogItemFindReq, funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<TardisPage<LogItemFindResp>> {
+    crate::serv::pg::log_pg_item_serv::find(find_req, funs, ctx, inst).await
+}
+
+pub async fn addv2(add_req: &mut LogItemAddV2Req, funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<String> {
     let id = add_req.idempotent_id.clone().unwrap_or(TardisFuns::field.nanoid());
 
     let bs_inst = inst.inst::<TardisRelDBClient>();
@@ -144,7 +154,7 @@ fn parse_ref_ts_key(ref_key: &str) -> TardisResult<(DateTime<Utc>, String)> {
     ))
 }
 
-pub async fn find(find_req: &mut LogItemFindReq, funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<TardisPage<LogItemFindResp>> {
+pub async fn findv2(find_req: &mut LogItemFindReq, funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<TardisPage<LogItemFindResp>> {
     let mut where_fragments: Vec<String> = Vec::new();
     let mut sql_vals: Vec<Value> = vec![];
 
@@ -699,12 +709,19 @@ async fn get_ref_fields_by_table_name(conn: &TardisRelDBlConnection, schema_name
     Ok(ref_fields)
 }
 
-async fn push_to_eda(req: &LogItemAddReq, ref_fields: &Vec<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+async fn push_to_eda(req: &LogItemAddV2Req, ref_fields: &Vec<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
     if let Some(topic) = get_topic(&SPI_RPC_TOPIC) {
         let mut req_clone = req.clone();
         for ref_field in ref_fields {
             if let Some(content) = req_clone.content.as_object_mut() {
                 content.remove(ref_field);
+            }
+        }
+        if let Some(ref op) = req_clone.op {
+            if op.to_lowercase() == "delete" {
+                let stats_delete: StatsItemDeleteReq = req_clone.into();
+                topic.send_event(stats_delete.inject_context(funs, ctx).json()).map_err(mq_error).await?;
+                return Ok(());
             }
         }
         let stats_add: StatsItemAddReq = req_clone.into();

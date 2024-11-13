@@ -29,7 +29,7 @@ pub fn str_to_obj<T: DeserializeOwned>(obj: &str) -> TardisResult<T> {
 
 #[allow(dead_code)]
 
-pub fn copy<T: ?Sized + Serialize + DeserializeOwned>(obj: &T) -> TardisResult<T> {
+pub fn copy<T: Serialize + DeserializeOwned>(obj: &T) -> TardisResult<T> {
     str_to_obj(&obj_to_str(obj)?)
 }
 

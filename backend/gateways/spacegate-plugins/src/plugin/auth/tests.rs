@@ -6,11 +6,7 @@ use super::*;
 
 use tardis::crypto::crypto_sm2_4::{TardisCryptoSm2, TardisCryptoSm2PrivateKey};
 use tardis::serde_json::Value;
-use tardis::{
-    test::test_container::TardisTestContainer,
-    testcontainers::{self, clients::Cli, Container},
-    tokio,
-};
+use tardis::{test::test_container::TardisTestContainer, testcontainers::ContainerAsync, tokio};
 use testcontainers_modules::redis::Redis;
 
 #[tokio::test]
@@ -18,8 +14,7 @@ async fn test() {
     env::set_var("RUST_LOG", "info,spacegate-plugins=trace,bios_auth=trace,tardis=trace");
     tracing_subscriber::fmt::init();
 
-    let docker = testcontainers::clients::Cli::default();
-    let _x = docker_init(&docker).await.unwrap();
+    let _x = docker_init().await.unwrap();
 
     // test_auth_plugin_ctx().await;
     test_auth_plugin_crypto().await;
@@ -133,7 +128,7 @@ async fn test() {
 // }
 
 async fn test_auth_plugin_crypto() {
-    log::info!("========test_auth_plugin_crypto=====");
+    tardis::log::info!("========test_auth_plugin_crypto=====");
 
     let filter_auth = SgPluginAuthConfig {
         cache_url: env::var("TARDIS_FW.CACHE.URL").unwrap(),
@@ -168,7 +163,7 @@ async fn test_auth_plugin_crypto() {
     let test_body_value = r#"test_body_value!@#$%^&*():"中文测试"#;
 
     //========don't need to decrypt======
-    log::info!("========don't need to decrypt=====");
+    tardis::log::info!("========don't need to decrypt=====");
     let req = Request::builder()
         .method(Method::POST)
         .uri(Uri::from_static("http://sg.idealworld.group/test1"))
@@ -183,7 +178,7 @@ async fn test_auth_plugin_crypto() {
     assert_eq!(String::from_utf8_lossy(req_body).to_string(), test_body_value.to_string());
 
     // =========request GET============
-    log::info!("========request GET=====");
+    tardis::log::info!("========request GET=====");
     let (_crypto_data, bios_crypto_value) = crypto_req("", server_public_key.serialize().unwrap().as_ref(), front_pub_key.serialize().unwrap().as_ref(), true);
 
     let req = Request::builder()
@@ -200,7 +195,7 @@ async fn test_auth_plugin_crypto() {
     assert!(req_body.get_dumped().unwrap().bytes().count() == 0);
 
     //=========request POST============
-    log::info!("========request POST=====");
+    tardis::log::info!("========request POST=====");
     let (crypto_data, bios_crypto_value) = crypto_req(
         test_body_value,
         server_public_key.serialize().unwrap().as_ref(),
@@ -225,7 +220,7 @@ async fn test_auth_plugin_crypto() {
     assert_eq!(req_body, test_body_value.to_string());
 
     //======response============
-    log::info!("========response=====");
+    tardis::log::info!("========response=====");
     let mock_resp = r#"mock_resp:test_body_value!@#$%^&*():"中文测试"#;
 
     let mut resp = Response::builder().header("Test_Header", "test_header").status(200).body(SgBody::full(mock_resp)).unwrap();
@@ -381,13 +376,13 @@ fn crypto_resp(body: &str, crypto_header: &str, front_pri_key: &TardisCryptoSm2P
     TardisFuns::crypto.sm4.decrypt_cbc(body, sm4_key, sm4_iv).unwrap()
 }
 
-pub struct LifeHold<'a> {
-    pub redis: Container<'a, Redis>,
+pub struct LifeHold {
+    pub redis: ContainerAsync<Redis>,
 }
 
-async fn docker_init(docker: &Cli) -> TardisResult<LifeHold<'_>> {
-    let redis_container = TardisTestContainer::redis_custom(docker);
-    let port = redis_container.get_host_port_ipv4(6379);
+async fn docker_init() -> TardisResult<LifeHold> {
+    let redis_container = TardisTestContainer::redis_custom().await?;
+    let port = redis_container.get_host_port_ipv4(6379).await?;
     let url = format!("redis://127.0.0.1:{port}/0",);
     env::set_var("TARDIS_FW.CACHE.URL", url);
 

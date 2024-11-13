@@ -41,6 +41,7 @@ pub(crate) async fn add(add_req: &StatsConfDimAddReq, funs: &TardisFunsInst, ctx
         Value::from(add_req.data_type.to_string()),
         Value::from(add_req.hierarchy.as_ref().unwrap_or(&vec![]).clone()),
         Value::from(add_req.remark.as_ref().unwrap_or(&"".to_string()).as_str()),
+        Value::from(add_req.dim_group_key.as_deref()),
         Value::from(add_req.dynamic_url.as_deref()),
         Value::from(add_req.is_tree.unwrap_or(false)),
         Value::from(add_req.tree_dynamic_url.as_deref()),
@@ -51,9 +52,9 @@ pub(crate) async fn add(add_req: &StatsConfDimAddReq, funs: &TardisFunsInst, ctx
     conn.execute_one(
         &format!(
             r#"INSERT INTO {table_name}
-(key, show_name, stable_ds, data_type, hierarchy, remark, dynamic_url, is_tree, tree_dynamic_url, rel_attribute_code, rel_attribute_url)
+(key, show_name, stable_ds, data_type, hierarchy, remark, dim_group_key, dynamic_url, is_tree, tree_dynamic_url, rel_attribute_code, rel_attribute_url)
 VALUES
-($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
 "#,
         ),
         params,
@@ -96,6 +97,10 @@ pub(crate) async fn modify(dim_conf_key: &str, modify_req: &StatsConfDimModifyRe
     if let Some(remark) = &modify_req.remark {
         sql_sets.push(format!("remark = ${}", params.len() + 1));
         params.push(Value::from(remark.to_string()));
+    }
+    if let Some(dim_group_key) = &modify_req.dim_group_key {
+        sql_sets.push(format!("dim_group_key = ${}", params.len() + 1));
+        params.push(Value::from(dim_group_key));
     }
     if let Some(dynamic_url) = &modify_req.dynamic_url {
         sql_sets.push(format!("dynamic_url = ${}", params.len() + 1));
@@ -159,12 +164,21 @@ pub(crate) async fn delete(dim_conf_key: &str, funs: &TardisFunsInst, ctx: &Tard
     Ok(())
 }
 
-pub(in crate::serv::pg) async fn get(dim_conf_key: &str, conn: &TardisRelDBlConnection, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<Option<StatsConfDimInfoResp>> {
-    do_paginate(Some(dim_conf_key.to_string()), None, 1, 1, None, None, conn, ctx, inst).await.map(|page| page.records.into_iter().next())
+pub(in crate::serv::pg) async fn get(
+    dim_conf_key: &str,
+    dim_group_key: Option<String>,
+    dim_group_is_empty: Option<bool>,
+    conn: &TardisRelDBlConnection,
+    ctx: &TardisContext,
+    inst: &SpiBsInst,
+) -> TardisResult<Option<StatsConfDimInfoResp>> {
+    do_paginate(Some(dim_conf_key.to_string()), dim_group_key, dim_group_is_empty, None, 1, 1, None, None, conn, ctx, inst).await.map(|page| page.records.into_iter().next())
 }
 
 pub(crate) async fn paginate(
     dim_conf_key: Option<String>,
+    dim_group_key: Option<String>,
+    dim_group_is_empty: Option<bool>,
     show_name: Option<String>,
     page_number: u32,
     page_size: u32,
@@ -176,11 +190,26 @@ pub(crate) async fn paginate(
 ) -> TardisResult<TardisPage<StatsConfDimInfoResp>> {
     let bs_inst = inst.inst();
     let (conn, _) = stats_pg_initializer::init_conf_dim_table_and_conn(bs_inst, ctx, true).await?;
-    do_paginate(dim_conf_key, show_name, page_number, page_size, desc_by_create, desc_by_update, &conn, ctx, inst).await
+    do_paginate(
+        dim_conf_key,
+        dim_group_key,
+        dim_group_is_empty,
+        show_name,
+        page_number,
+        page_size,
+        desc_by_create,
+        desc_by_update,
+        &conn,
+        ctx,
+        inst,
+    )
+    .await
 }
 
 async fn do_paginate(
     dim_conf_key: Option<String>,
+    dim_group_key: Option<String>,
+    dim_group_is_empty: Option<bool>,
     show_name: Option<String>,
     page_number: u32,
     page_size: u32,
@@ -198,6 +227,17 @@ async fn do_paginate(
         sql_where.push(format!("key = ${}", params.len() + 1));
         params.push(Value::from(dim_conf_key.to_string()));
     }
+    if let Some(dim_group_key) = &dim_group_key {
+        sql_where.push(format!("dim_group_key = ${}", params.len() + 1));
+        params.push(Value::from(dim_group_key.to_string()));
+    } else {
+        if let Some(dim_group_is_empty) = &dim_group_is_empty {
+            if *dim_group_is_empty {
+                sql_where.push("dim_group_key = ''".to_string());
+            }
+        }
+    }
+
     if let Some(show_name) = &show_name {
         sql_where.push(format!("show_name LIKE ${}", params.len() + 1));
         params.push(Value::from(format!("%{show_name}%")));
@@ -212,7 +252,7 @@ async fn do_paginate(
     let result = conn
         .query_all(
             &format!(
-                r#"SELECT key, show_name, stable_ds, data_type, hierarchy, remark, dynamic_url, is_tree, tree_dynamic_url, rel_attribute_code, rel_attribute_url, create_time, update_time, count(*) OVER() AS total
+                r#"SELECT key, show_name, stable_ds, data_type, hierarchy, remark, dim_group_key, dynamic_url, is_tree, tree_dynamic_url, rel_attribute_code, rel_attribute_url, create_time, update_time, count(*) OVER() AS total
 FROM {table_name}
 WHERE 
     {}
@@ -244,6 +284,7 @@ WHERE
             remark: item.try_get("", "remark")?,
             create_time: item.try_get("", "create_time")?,
             update_time: item.try_get("", "update_time")?,
+            dim_group_key: item.try_get("", "dim_group_key")?,
             online: online(&item.try_get::<String>("", "key")?, conn, ctx).await?,
             dynamic_url: item.try_get("", "dynamic_url")?,
             is_tree: item.try_get("", "is_tree")?,
@@ -291,7 +332,7 @@ pub(crate) async fn create_inst(dim_conf_key: &str, funs: &TardisFunsInst, ctx: 
     let (mut conn, _) = common_pg::init_conn(bs_inst).await?;
     conn.begin().await?;
 
-    let dim_conf = get(dim_conf_key, &conn, ctx, inst)
+    let dim_conf = get(dim_conf_key, None, None, &conn, ctx, inst)
         .await?
         .ok_or_else(|| funs.err().not_found("fact_conf", "create_inst", "The dimension config does not exist.", "404-spi-stats-dim-conf-not-exist"))?;
 

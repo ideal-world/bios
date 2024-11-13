@@ -7,7 +7,7 @@ use spacegate_shell::hyper::{Request, Response, StatusCode};
 use spacegate_shell::kernel::extension::PeerAddr;
 use spacegate_shell::kernel::helper_layers::function::Inner;
 use spacegate_shell::plugin::{schemars, Plugin, PluginError};
-use spacegate_shell::{BoxError, SgBody, SgRequestExt, SgResponseExt};
+use spacegate_shell::{BoxError, BoxResult, SgBody, SgRequestExt, SgResponseExt};
 
 use tardis::serde_json;
 use tardis::{basic::result::TardisResult, tokio};
@@ -55,7 +55,7 @@ fn get_md5(req: &Request<SgBody>) -> TardisResult<String> {
     tardis::crypto::crypto_digest::TardisCryptoDigest {}.md5(data)
 }
 
-async fn set_status(md5: &str, cache_key: &str, status: bool, cache_client: &RedisClient) -> TardisResult<()> {
+async fn set_status(md5: &str, cache_key: &str, status: bool, cache_client: &RedisClient) -> BoxResult<()> {
     let (split1, split2) = md5.split_at(16);
     let split1 = u128::from_str_radix(split1, 16)? as u32;
     let split2 = u128::from_str_radix(split2, 16)? as u32;
@@ -65,7 +65,7 @@ async fn set_status(md5: &str, cache_key: &str, status: bool, cache_client: &Red
     Ok(())
 }
 
-async fn get_status(md5: &str, cache_key: &str, cache_client: &RedisClient) -> TardisResult<bool> {
+async fn get_status(md5: &str, cache_key: &str, cache_client: &RedisClient) -> BoxResult<bool> {
     let (split1, split2) = md5.split_at(16);
     let split1 = u128::from_str_radix(split1, 16)? as u32;
     let split2 = u128::from_str_radix(split2, 16)? as u32;
@@ -95,13 +95,13 @@ impl Plugin for AntiReplayPlugin {
                 md5: Arc::from(md5),
                 client: client.clone(),
             };
-            if get_status(&digest.md5, &self.cache_key, &client).await.map_err(PluginError::internal_error::<AntiReplayPlugin>)? {
+            if get_status(&digest.md5, &self.cache_key, &client).await? {
                 return Ok(Response::with_code_message(
                     StatusCode::TOO_MANY_REQUESTS,
                     "[SG.Plugin.Anti_Replay] Request denied due to replay attack. Please refresh and resubmit the request.",
                 ));
             } else {
-                set_status(&digest.md5, &self.cache_key, true, &client).await.map_err(PluginError::internal_error::<AntiReplayPlugin>)?;
+                set_status(&digest.md5, &self.cache_key, true, &client).await?;
             }
             let resp = inner.call(req).await;
             let time = self.time;
@@ -137,7 +137,6 @@ impl Plugin for AntiReplayPlugin {
 
 //     #[tokio::test]
 //     async fn test_anti_replay() {
-//         let docker = testcontainers::clients::Cli::default();
 //         let _x = docker_init(&docker).await.unwrap();
 //         let gateway_name = "gateway_aaa_1";
 //         spacegate_shell::functions::cache_client::init(gateway_name, &env::var("TARDIS_FW.CACHE.URL").unwrap()).await.unwrap();

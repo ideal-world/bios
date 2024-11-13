@@ -1,8 +1,8 @@
 use serde::{Deserialize, Serialize};
 use tardis::chrono::{DateTime, Utc};
-#[cfg(feature = "default")]
+
 use tardis::db::sea_orm;
-#[cfg(feature = "default")]
+
 use tardis::web::poem_openapi;
 
 use crate::rbum::rbum_enumeration::RbumScopeLevelKind;
@@ -10,8 +10,7 @@ use crate::rbum::rbum_enumeration::RbumScopeLevelKind;
 /// Add request for association between resource set category(node) and resource item
 ///
 /// 添加资源集分类（节点）挂载资源项的关联的请求
-#[derive(Serialize, Deserialize, Debug)]
-#[cfg_attr(feature = "default", derive(poem_openapi::Object))]
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
 pub struct RbumSetItemAddReq {
     /// Association sort
     ///
@@ -20,30 +19,29 @@ pub struct RbumSetItemAddReq {
     /// Associated [resource set](crate::rbum::dto::rbum_set_dto::RbumSetDetailResp) id
     ///
     /// 关联[资源集](crate::rbum::dto::rbum_set_dto::RbumSetDetailResp) id
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
+    #[oai(validator(min_length = "2", max_length = "255"))]
     pub rel_rbum_set_id: String,
     /// Associated [resource set category(node)](crate::rbum::dto::rbum_set_cate_dto::RbumSetCateDetailResp) id
     ///
     /// 关联[资源集分类（节点）](crate::rbum::dto::rbum_set_cate_dto::RbumSetCateDetailResp) id
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
+    #[oai(validator(min_length = "2", max_length = "255"))]
     pub rel_rbum_set_cate_id: String,
     /// Associated [resource item](crate::rbum::dto::rbum_item_dto::RbumItemDetailResp) id
     ///
     /// 关联[资源项](crate::rbum::dto::rbum_item_dto::RbumItemDetailResp) id
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
+    #[oai(validator(min_length = "2", max_length = "255"))]
     pub rel_rbum_item_id: String,
 }
 
 /// Modify request for association between resource set category(node) and resource item
 ///
 /// 修改资源集分类（节点）挂载资源项的关联的请求
-#[derive(Serialize, Deserialize, Debug)]
-#[cfg_attr(feature = "default", derive(poem_openapi::Object))]
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
 pub struct RbumSetItemModifyReq {
     /// Associated [resource set category(node)](crate::rbum::dto::rbum_set_cate_dto::RbumSetCateDetailResp) id
     ///
     /// 关联[资源集分类（节点）](crate::rbum::dto::rbum_set_cate_dto::RbumSetCateDetailResp) id
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
+    #[oai(validator(min_length = "2", max_length = "255"))]
     pub rel_rbum_set_cate_id: Option<String>,
     /// Association sort
     ///
@@ -54,8 +52,7 @@ pub struct RbumSetItemModifyReq {
 /// Summary information of the association between resource set category(node) and resource item
 ///
 /// 资源集分类（节点）挂载资源项的关联的概要信息
-#[derive(Serialize, Deserialize, Debug)]
-#[cfg_attr(feature = "default", derive(poem_openapi::Object, sea_orm::FromQueryResult))]
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object, sea_orm::FromQueryResult)]
 pub struct RbumSetItemSummaryResp {
     /// Association id
     ///
@@ -99,8 +96,7 @@ pub struct RbumSetItemSummaryResp {
 /// Resource item information of the association between resource set category(node) and resource item
 ///
 /// 资源集分类（节点）挂载资源项的关联的资源项信息
-#[derive(Serialize, Deserialize, Debug, Clone)]
-#[cfg_attr(feature = "default", derive(poem_openapi::Object, sea_orm::FromQueryResult))]
+#[derive(Serialize, Deserialize, Debug, Clone, poem_openapi::Object, sea_orm::FromQueryResult)]
 pub struct RbumSetItemRelInfoResp {
     /// Association id
     ///
@@ -158,8 +154,7 @@ pub struct RbumSetItemRelInfoResp {
 /// Detail information of the association between resource set category(node) and resource item
 ///
 /// 资源集分类（节点）挂载资源项的关联的详细信息
-#[derive(Serialize, Deserialize, Debug)]
-#[cfg_attr(feature = "default", derive(poem_openapi::Object, sea_orm::FromQueryResult))]
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object, sea_orm::FromQueryResult)]
 pub struct RbumSetItemDetailResp {
     /// Association id
     ///

@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-#[cfg(feature = "default")]
+
 use tardis::web::poem_openapi;
 
 use crate::rbum::dto::rbum_rel_attr_dto::RbumRelAttrDetailResp;
@@ -10,8 +10,7 @@ use crate::rbum::rbum_enumeration::RbumRelEnvKind;
 /// Add request for resource relationship aggregation
 ///
 /// 资源关联聚合添加请求
-#[derive(Serialize, Deserialize, Debug)]
-#[cfg_attr(feature = "default", derive(poem_openapi::Object))]
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
 pub struct RbumRelAggAddReq {
     /// Relationship information
     ///
@@ -30,8 +29,7 @@ pub struct RbumRelAggAddReq {
 /// Add request for resource relationship attribute aggregation
 ///
 /// 资源关联属性聚合添加请求
-#[derive(Serialize, Deserialize, Clone, Debug)]
-#[cfg_attr(feature = "default", derive(poem_openapi::Object))]
+#[derive(Serialize, Deserialize, Clone, Debug, poem_openapi::Object)]
 pub struct RbumRelAttrAggAddReq {
     /// Condition qualifier
     ///
@@ -45,7 +43,7 @@ pub struct RbumRelAttrAggAddReq {
     /// Relationship attribute value
     ///
     /// 关联属性值
-    #[cfg_attr(feature = "default", oai(validator(min_length = "0", max_length = "2000")))]
+    #[oai(validator(min_length = "0", max_length = "2000"))]
     pub value: String,
     /// Relationship attribute name
     ///
@@ -54,7 +52,7 @@ pub struct RbumRelAttrAggAddReq {
     /// When ``rel_rbum_kind_attr_id`` exists, use the corresponding [`crate::rbum::dto::rbum_kind_attr_dto::RbumKindAttrDetailResp::name`], otherwise this field is not empty.
     ///
     /// 当 ``rel_rbum_kind_attr_id`` 存在时使用其对应的 [`crate::rbum::dto::rbum_kind_attr_dto::RbumKindAttrDetailResp::name`]，否则此字段不为空。
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
+    #[oai(validator(min_length = "2", max_length = "255"))]
     pub name: Option<String>,
     /// Whether to only record
     ///
@@ -67,15 +65,14 @@ pub struct RbumRelAttrAggAddReq {
     /// Associated [resource kind attribute](crate::rbum::dto::rbum_kind_attr_dto::RbumKindAttrDetailResp) id
     ///
     /// 关联的[资源类型属性](crate::rbum::dto::rbum_kind_attr_dto::RbumKindAttrDetailResp) id
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
+    #[oai(validator(min_length = "2", max_length = "255"))]
     pub rel_rbum_kind_attr_id: Option<String>,
 }
 
 /// Add request for resource relationship environment aggregation
 ///
 /// 资源关联环境聚合添加请求
-#[derive(Serialize, Deserialize, Clone, Debug)]
-#[cfg_attr(feature = "default", derive(poem_openapi::Object))]
+#[derive(Serialize, Deserialize, Clone, Debug, poem_openapi::Object)]
 pub struct RbumRelEnvAggAddReq {
     /// Relationship environment type
     ///
@@ -84,20 +81,19 @@ pub struct RbumRelEnvAggAddReq {
     /// Relationship environment value1
     ///
     /// 关联环境值1
-    #[cfg_attr(feature = "default", oai(validator(min_length = "1", max_length = "2000")))]
+    #[oai(validator(min_length = "1", max_length = "2000"))]
     pub value1: String,
     /// Relationship environment value2
     ///
     /// 关联环境值2
-    #[cfg_attr(feature = "default", oai(validator(min_length = "1", max_length = "2000")))]
+    #[oai(validator(min_length = "1", max_length = "2000"))]
     pub value2: Option<String>,
 }
 
 /// Resource relationship aggregation detail information
 ///
 /// 资源关联聚合详细信息
-#[derive(Serialize, Deserialize, Clone, Debug)]
-#[cfg_attr(feature = "default", derive(poem_openapi::Object))]
+#[derive(Serialize, Deserialize, Clone, Debug, poem_openapi::Object)]
 pub struct RbumRelAggResp {
     /// Relationship information
     ///

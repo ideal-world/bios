@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use std::str::FromStr;
 use std::time::Instant;
 
-use bios_sdk_invoke::clients::spi_log_client::{self, LogItemAddReq};
+use bios_sdk_invoke::clients::spi_log_client::{self, LogItemAddV2Req};
 use bios_sdk_invoke::invoke_config::InvokeConfig;
 use bios_sdk_invoke::invoke_enumeration::InvokeModuleKind;
 use bios_sdk_invoke::invoke_initializer;
@@ -208,8 +208,8 @@ impl AuditLogPlugin {
                 let tag = self.tag.clone();
                 if !self.log_url.is_empty() && !self.spi_app_id.is_empty() {
                     tokio::task::spawn(async move {
-                        match spi_log_client::SpiLogClient::add(
-                            LogItemAddReq {
+                        match spi_log_client::SpiLogClient::addv2(
+                            LogItemAddV2Req {
                                 tag,
                                 content: TardisFuns::json.obj_to_json(&content).unwrap_or_default(),
                                 kind: None,

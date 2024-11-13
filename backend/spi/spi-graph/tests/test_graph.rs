@@ -23,8 +23,7 @@ async fn test_graph() -> TardisResult<()> {
 
     env::set_var("RUST_LOG", "debug,test_graph=trace,sqlx::query=off");
 
-    let docker = testcontainers::clients::Cli::default();
-    let _x = init_test_container::init(&docker, Some(format!("{}config", root_path))).await?;
+    let _x = init_test_container::init(Some(format!("{}config", root_path))).await?;
 
     init_data().await?;
 

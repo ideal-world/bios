@@ -34,8 +34,7 @@ mod test_scope;
 #[tokio::test]
 async fn test_rbum() -> TardisResult<()> {
     env::set_var("RUST_LOG", "debug,test_iam_serv=trace,sqlx::query=off,sqlparser=off");
-    let docker = testcontainers::clients::Cli::default();
-    let _x = init_test_container::init(&docker, None).await?;
+    let _x = init_test_container::init(None).await?;
     let ctx = init_test_data().await?;
     test_scope::test().await?;
     test_rbum_domain::test(&ctx).await?;
