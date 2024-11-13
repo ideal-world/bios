@@ -60,24 +60,3 @@ pub async fn init(sql_init_path: Option<String>) -> TardisResult<LifeHold> {
         // rabbit: rabbit_container,
     })
 }
-
-async fn postgres_custom(init_script_path: Option<&str>) -> ContainerAsync<Postgres> {
-    if let Some(init_script_path) = init_script_path {
-        let path = env::current_dir()
-            .expect("[Tardis.Test_Container] Current path get error")
-            .join(std::path::Path::new(init_script_path))
-            .to_str()
-            .unwrap_or_else(|| panic!("[Tardis.Test_Container] Script Path [{}] get error", init_script_path))
-            .to_string();
-        Postgres::default()
-            .with_tag("latest")
-            .with_mount(Mount::volume_mount(path, "/docker-entrypoint-initdb.d/"))
-            .with_env_var("POSTGRES_PASSWORD", "123456")
-            .with_env_var("POSTGRES_DB", "test")
-            .start()
-            .await
-            .expect("postgres started")
-    } else {
-        Postgres::default().with_tag("latest").with_env_var("POSTGRES_PASSWORD", "123456").with_env_var("POSTGRES_DB", "test").start().await.expect("postgres started")
-    }
-}
