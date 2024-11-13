@@ -56,11 +56,15 @@ impl RbumItemCrudOperation<flow_state::ActiveModel, FlowStateAddReq, FlowStateMo
     }
 
     async fn package_item_add(add_req: &FlowStateAddReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<RbumItemKernelAddReq> {
-        let id = format!(
-            "{}{}",
-            add_req.id_prefix.as_ref().map(|prefix| format!("{}-", prefix)).unwrap_or("".to_string()),
-            TardisFuns::field.nanoid()
-        );
+        let id = if let Some(id) = &add_req.id {
+            id.to_string()
+        } else {
+            format!(
+                "{}{}",
+                add_req.id_prefix.as_ref().map(|prefix| format!("{}-", prefix)).unwrap_or("".to_string()),
+                TardisFuns::field.nanoid()
+            )
+        };
         Ok(RbumItemKernelAddReq {
             id: Some(TrimString(id)),
             name: add_req.name.as_ref().unwrap_or(&TrimString("".to_string())).clone(),
@@ -281,6 +285,7 @@ impl FlowStateServ {
     pub async fn init_state(tag: &str, state_name: &str, sys_state: FlowSysStateKind, color: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
         FlowStateServ::add_item(
             &mut FlowStateAddReq {
+                id: None,
                 id_prefix: None,
                 name: Some(state_name.into()),
                 icon: None,
@@ -316,7 +321,7 @@ impl FlowStateServ {
                         ..ctx.clone()
                     };
                     flow_version_ids = Some(
-                        FlowModelServ::find_rel_models(None, false, funs, &mock_ctx)
+                        FlowModelServ::find_rel_model_map(None, true, funs, &mock_ctx)
                             .await?
                             .into_iter()
                             .filter(|(current_tag, _model)| tag.is_none() || tag.clone().unwrap_or_default() == *current_tag)
@@ -442,6 +447,10 @@ impl FlowStateServ {
             id: state.id.clone(),
             name: state.name,
             is_init: state.id == *init_state_id,
+            sys_state: state.sys_state,
+            tags: state.tags,
+            scope_level: state.scope_level,
+            disabled: state.disabled,
             ext: Self::get_rel_state_ext(flow_version_id, &state.id, funs, ctx).await?,
             state_kind: state.state_kind,
             kind_conf: state.kind_conf,

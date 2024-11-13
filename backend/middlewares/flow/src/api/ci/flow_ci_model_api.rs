@@ -133,20 +133,30 @@ impl FlowCiModelApi {
         .into_iter()
         .map(|rel| rel.rel_id)
         .collect_vec();
+        let rel_models = FlowModelServ::find_items(&FlowModelFilterReq {
+            basic: RbumBasicFilterReq {
+                ids: Some(rel_model_ids),
+                own_paths: Some("".to_string()),
+                with_sub_own_paths: true,
+                ..Default::default()
+            },
+            main: Some(true),
+            ..Default::default()
+        }, None, None, &funs, &ctx.0).await?;
         let mut result = HashMap::new();
-        for rel_model_id in rel_model_ids {
-            let new_model = FlowModelServ::copy_or_reference_model(&rel_model_id, &req.0.op, FlowModelKind::AsModel, &funs, &ctx.0).await?;
+        for rel_model in rel_models {
+            let new_model = FlowModelServ::copy_or_reference_model(&rel_model.id, &req.0.op, FlowModelKind::AsModel, &funs, &ctx.0).await?;
             FlowInstServ::batch_update_when_switch_model(
                 new_model.rel_template_ids.first().cloned(),
                 &new_model.tag,
-                &new_model.id,
+                &new_model.current_version_id,
                 new_model.states.clone(),
                 &new_model.init_state_id,
                 &funs,
                 &ctx.0,
             )
             .await?;
-            result.insert(rel_model_id.clone(), new_model.id.clone());
+            result.insert(rel_model.id.clone(), new_model.id.clone());
         }
         funs.commit().await?;
         ctx.0.execute_task().await?;

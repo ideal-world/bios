@@ -1,18 +1,16 @@
+use std::collections::HashMap;
+
 use bios_basic::rbum::serv::{
     rbum_crud_serv::{ID_FIELD, NAME_FIELD, REL_DOMAIN_ID_FIELD, REL_KIND_ID_FIELD},
     rbum_item_serv::{RbumItemCrudOperation, RBUM_ITEM_TABLE},
 };
 use itertools::Itertools;
 use tardis::{
-    basic::{dto::TardisContext, result::TardisResult},
-    chrono::Utc,
-    db::sea_orm::{
+    basic::{dto::TardisContext, result::TardisResult}, chrono::Utc, db::sea_orm::{
         prelude::Expr,
         sea_query::{Alias, Cond, Query, SelectStatement},
         EntityTrait, JoinType, Order, QueryFilter, Set,
-    },
-    serde_json::json,
-    TardisFuns, TardisFunsInst,
+    }, futures::future::join_all, serde_json::json, TardisFuns, TardisFunsInst
 };
 
 use crate::{
@@ -21,8 +19,7 @@ use crate::{
 };
 
 use super::{
-    flow_rel_serv::{FlowRelKind, FlowRelServ},
-    flow_state_serv::FlowStateServ,
+    flow_model_serv::FlowModelServ, flow_rel_serv::{FlowRelKind, FlowRelServ}, flow_state_serv::FlowStateServ
 };
 
 pub struct FlowTransitionServ;
@@ -257,11 +254,12 @@ impl FlowTransitionServ {
         Ok(())
     }
 
-    async fn package_ext_query(query: &mut SelectStatement, filter: &FlowTransitionFilterReq, _: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    async fn package_ext_query(query: &mut SelectStatement, filter: &FlowTransitionFilterReq, _: &TardisFunsInst, _ctx: &TardisContext) -> TardisResult<()> {
         let from_state_rbum_table = Alias::new("from_state_rbum");
         let from_state_table = Alias::new("from_state");
         let to_state_rbum_table = Alias::new("to_state_rbum");
         let to_state_table = Alias::new("to_state");
+        let rbum_rel_table = Alias::new("to_state");
         query
             .columns([
                 (flow_transition::Entity, flow_transition::Column::Id),
@@ -356,7 +354,7 @@ impl FlowTransitionServ {
         if let Some(sort) = desc_sort_by_update {
             query.order_by((flow_transition::Entity, flow_transition::Column::UpdateTime), if sort { Order::Desc } else { Order::Asc });
         }
-        Ok(funs.db().find_dtos(&query).await?)
+        funs.db().find_dtos(&query).await
     }
 
     pub async fn find_transitions(
@@ -382,8 +380,7 @@ impl FlowTransitionServ {
             .order_by((flow_transition::Entity, flow_transition::Column::Sort), Order::Asc)
             .order_by((flow_transition::Entity, flow_transition::Column::CreateTime), Order::Asc)
             .order_by((flow_transition::Entity, flow_transition::Column::Id), Order::Asc);
-        let flow_transitions: Vec<FlowTransitionDetailResp> = funs.db().find_dtos(&query).await?;
-        Ok(flow_transitions)
+        funs.db().find_dtos(&query).await
     }
 
     pub async fn find_transitions_by_state_id(
@@ -413,30 +410,22 @@ impl FlowTransitionServ {
             .collect_vec())
     }
 
-    // pub async fn bind_state(transition_id: &str, state_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-    //     FlowRelServ::add_simple_rel(
-    //         &FlowRelKind::FlowStateTransition,
-    //         state_id,
-    //         transition_id,
-    //         None,
-    //         None,
-    //         true,
-    //         false,
-    //         None,
-    //         funs,
-    //         ctx,
-    //     )
-    //     .await
-    // }
-
-    // pub async fn unbind_state(transition_id: &str, state_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-    //     FlowRelServ::delete_simple_rel(
-    //         &FlowRelKind::FlowStateTransition,
-    //         state_id,
-    //         transition_id,
-    //         funs,
-    //         ctx,
-    //     )
-    //     .await
-    // }
+    // 获取动作关联模型
+    pub async fn find_rel_model_map(tag: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<HashMap<String, String>> {
+        let mut rel_transitons = HashMap::new();
+        let model_ids = FlowModelServ::find_rel_models(None, false, Some(vec![tag.to_string()]), funs, ctx).await?.into_iter().filter(|model| model.tag == tag.to_string()).map(|model| model.id).collect_vec();
+        join_all(
+            model_ids.into_iter()
+            .map(|model_id| async move {
+                (FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelTransition, &model_id, None, None, funs, ctx).await
+                .unwrap()
+                .pop()
+                .map(|rel| rel.rel_id)
+                .unwrap_or_default(), model_id.clone())
+            })
+        ).await
+        .into_iter()
+        .map(|(transition_id, model_id)| {rel_transitons.insert(transition_id, model_id);});
+        Ok(rel_transitons)
+    }
 }

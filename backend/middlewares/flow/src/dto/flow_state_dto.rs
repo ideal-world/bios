@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use bios_basic::{
     dto::BasicQueryCondInfo,
     rbum::{
@@ -19,6 +21,8 @@ use super::flow_transition_dto::FlowTransitionDetailResp;
 
 #[derive(Clone, Serialize, Deserialize, Default, Debug, poem_openapi::Object)]
 pub struct FlowStateAddReq {
+    #[oai(validator(min_length = "2", max_length = "200"))]
+    pub id: Option<TrimString>,
     #[oai(validator(min_length = "2", max_length = "200"))]
     pub id_prefix: Option<TrimString>,
     #[oai(validator(min_length = "2", max_length = "200"))]
@@ -53,13 +57,16 @@ pub struct FLowStateKindConf {
 /// 录入节点配置信息
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object, Default, Clone)]
 pub struct FlowStateForm {
-    pub nodify: Option<FlowNodifyConf>,
+    pub nodify: bool,
+    pub nodify_conf: Option<FlowNodifyConf>,
     /// 权限配置：为true时，创建人可以操作
     pub guard_by_creator: bool,
     /// 权限配置：为true时，历史操作人可以操作
     pub guard_by_his_operators: bool,
     /// 权限配置：为true时，负责人可以操作
     pub guard_by_assigned: bool,
+    /// 权限配置：自定义配置
+    pub guard_custom: bool,
     /// 权限配置：自定义配置
     pub guard_custom_conf: Option<FlowGuardConf>,
     /// 当操作人为空时的自动处理策略
@@ -73,22 +80,28 @@ pub struct FlowStateForm {
     /// 转办自定义人员权限
     pub referral_guard_custom_conf: Option<FlowGuardConf>,
     /// 字段配置
-    pub vars_collect: FlowStateVarsCollect,
+    pub vars_collect: HashMap<String, FlowStateVar>,
 }
 
 /// 审批节点配置信息
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object, Default, Clone)]
 pub struct FlowStateApproval {
     /// 通知
-    pub nodify: Option<FlowNodifyConf>,
+    pub nodify: bool,
+    pub nodify_conf: Option<FlowNodifyConf>,
     /// 结果通知
-    pub response_nodify: Option<FlowNodifyConf>,
+    pub response_nodify: bool,
+    pub response_nodify_conf: Option<FlowNodifyConf>,
     /// 权限配置：为true时，创建人可以操作
     pub guard_by_creator: bool,
     /// 权限配置：为true时，历史操作人可以操作
     pub guard_by_his_operators: bool,
     /// 权限配置：为true时，负责人可以操作
     pub guard_by_assigned: bool,
+    /// 权限配置：自定义配置
+    pub guard_custom: bool,
+    /// 权限配置：自定义配置
+    pub guard_custom_conf: Option<FlowGuardConf>,
     /// 当操作人为空时的自动处理策略
     pub auto_transfer_when_empty_kind: Option<FlowStatusAutoStrategyKind>,
     /// 当操作人为空且策略选择为指定代理，则当前配置人员权限生效
@@ -100,26 +113,30 @@ pub struct FlowStateApproval {
     /// 是否允许转办
     pub referral: bool,
     /// 转办自定义人员权限
+    pub referral_guard_custom: bool,
     pub referral_guard_custom_conf: Option<FlowGuardConf>,
-    /// 权限配置：自定义配置
-    pub guard_custom_conf: Option<FlowGuardConf>,
     /// 字段配置
-    pub vars_collect: FlowStateVarsCollect,
+    pub vars_collect: HashMap<String, FlowStateVar>,
+    /// 多人审批策略方式
+    pub multi_approval_kind: FlowStatusMultiApprovalKind,
+    /// 会签配置
+    pub countersign_conf: FlowStateCountersignConf,
 }
+
 
 /// 分支节点配置信息
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object, Default, Clone)]
 pub struct FlowStateBranch {
-    /// 分支条件，三维数组表示。第一维表示不同分支，第二维表示分支中的或条件集合，第三维表示分支中的且条件集合
-    pub conditions: Vec<Vec<Vec<BasicQueryCondInfo>>>,
+    /// 分支条件，key 分支名, value 分支条件
+    pub conditions: Vec<Vec<BasicQueryCondInfo>>,
 }
 
 /// 状态节点字段配置
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object, Default, Clone)]
-pub struct FlowStateVarsCollect {
-    pub show: Vec<String>,
-    pub edit: Vec<String>,
-    pub required: Vec<String>,
+pub struct FlowStateVar {
+    pub show: bool,
+    pub edit: bool,
+    pub required: bool,
 }
 
 /// 状态自动处理的策略类型
@@ -138,6 +155,49 @@ pub enum FlowStatusAutoStrategyKind {
     TransferState,
 }
 
+/// 多人审批策略方式
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Enum, Default, EnumIter, sea_orm::DeriveActiveEnum, Clone)]
+#[sea_orm(rs_type = "String", db_type = "String(StringLen::N(255))")]
+pub enum FlowStatusMultiApprovalKind {
+    /// 或签
+    #[default]
+    #[sea_orm(string_value = "orsign")]
+    Orsign,
+    /// 会签
+    #[sea_orm(string_value = "countersign")]
+    Countersign,
+}
+
+/// 会签配置
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object, Default, Clone)]
+pub struct FlowStateCountersignConf {
+    /// 类型
+    pub kind: FlowStateCountersignKind,
+    /// 多数人通过比例
+    pub most_percent: Option<i8>,
+    /// 审批人权限配置
+    pub guard_custom_conf: Option<FlowGuardConf>,
+    /// 指定人通过即通过
+    pub specified_pass_guard: Option<bool>,
+    pub specified_pass_guard_conf: Option<FlowGuardConf>,
+    /// 指定人拒绝即拒绝
+    pub specified_overrule_guard: Option<bool>,
+    pub specified_overrule_guard_conf: Option<FlowGuardConf>,
+}
+
+/// 多人审批策略方式
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Enum, Default, EnumIter, sea_orm::DeriveActiveEnum, Clone)]
+#[sea_orm(rs_type = "String", db_type = "String(StringLen::N(255))")]
+pub enum FlowStateCountersignKind {
+    /// 所有人签
+    #[default]
+    #[sea_orm(string_value = "all")]
+    All,
+    /// 多数人签
+    #[sea_orm(string_value = "most")]
+    Most,
+}
+
 /// 人员权限配置
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object, Default, Clone)]
 pub struct FlowGuardConf {
@@ -154,6 +214,8 @@ pub struct FlowGuardConf {
 pub struct FlowNodifyConf {
     /// 权限配置：指定操作人可以操作
     pub guard_by_owner: bool,
+    /// 权限配置：自定义配置
+    pub guard_custom: bool,
     /// 权限配置：自定义配置
     pub guard_custom_conf: Option<FlowGuardConf>,
     /// 通知方式：短信通知
@@ -255,10 +317,11 @@ pub enum FlowSysStateKind {
     Finish,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, EnumIter, sea_orm::DeriveActiveEnum)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, EnumIter, sea_orm::DeriveActiveEnum)]
 #[sea_orm(rs_type = "String", db_type = "String(StringLen::N(255))")]
 pub enum FlowStateKind {
     /// 普通节点
+    #[default]
     #[sea_orm(string_value = "simple")]
     Simple,
     /// 录入节点
@@ -279,10 +342,10 @@ pub enum FlowStateKind {
     #[sea_orm(string_value = "branch")]
     Branch,
     /// 开始节点
-    #[sea_orm(string_value = "strat")]
+    #[sea_orm(string_value = "start")]
     Start,
     /// 结束节点
-    #[sea_orm(string_value = "Finish")]
+    #[sea_orm(string_value = "finish")]
     Finish,
 }
 
@@ -350,7 +413,17 @@ pub struct FlowStateAggResp {
     pub ext: FlowStateRelModelExt,
     pub state_kind: FlowStateKind,
     pub kind_conf: Value,
+    pub sys_state: FlowSysStateKind,
+    pub tags: String,
+    pub scope_level: RbumScopeLevelKind,
+    pub disabled: bool,
     pub transitions: Vec<FlowTransitionDetailResp>,
+}
+
+impl FlowStateAggResp {
+    pub fn kind_conf(&self) -> FLowStateKindConf {
+        TardisFuns::json.json_to_obj(self.kind_conf.clone()).unwrap()
+    }
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]

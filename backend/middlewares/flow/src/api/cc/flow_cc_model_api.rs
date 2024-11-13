@@ -15,7 +15,7 @@ use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 use crate::dto::flow_model_dto::{
     FlowModelAddReq, FlowModelAggResp, FlowModelBindStateReq, FlowModelDetailResp, FlowModelFilterReq, FlowModelFindRelStateResp, FlowModelModifyReq, FlowModelSortStatesReq, FlowModelSummaryResp, FlowModelUnbindStateReq
 };
-use crate::dto::flow_model_version_dto::{FlowModelVersionBindState, FlowModelVersionModifyReq, FlowModelVersionModifyState};
+use crate::dto::flow_model_version_dto::{FlowModelVersionBindState, FlowModelVersionDetailResp, FlowModelVersionModifyReq, FlowModelVersionModifyState};
 use crate::dto::flow_state_dto::FlowStateRelModelModifyReq;
 use crate::dto::flow_transition_dto::{FlowTransitionDetailResp, FlowTransitionSortStatesReq};
 use crate::flow_constants;
@@ -52,6 +52,17 @@ impl FlowCcModelApi {
         funs.commit().await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
+    }
+
+    /// GET Editing Model Version By Model Id
+    ///
+    /// 通过模型ID获取正在编辑的模型版本信息
+    #[oai(path = "/:flow_model_id/find_editing_verion", method = "get")]
+    async fn find_editing_verion(&self, flow_model_id: Path<String>, ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<FlowModelVersionDetailResp> {
+        let funs = flow_constants::get_tardis_inst();
+        let result = FlowModelServ::find_editing_verion(&flow_model_id.0, &funs, &ctx.0).await?;
+        ctx.0.execute_task().await?;
+        TardisResp::ok(result)
     }
 
     /// Copy Model By Model Id
@@ -181,13 +192,12 @@ impl FlowCcModelApi {
     async fn find_rel_models(
         &self,
         temp_id: Query<Option<String>>,
-        is_shared: Query<Option<bool>>,
         ctx: TardisContextExtractor,
         _request: &Request,
     ) -> TardisApiResult<HashMap<String, FlowModelSummaryResp>> {
         let mut funs = flow_constants::get_tardis_inst();
         funs.begin().await?;
-        let result = FlowModelServ::find_rel_models(temp_id.0, is_shared.unwrap_or(false), &funs, &ctx.0).await?;
+        let result = FlowModelServ::find_rel_model_map(temp_id.0, true, &funs, &ctx.0).await?;
         funs.commit().await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)

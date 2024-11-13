@@ -7,11 +7,15 @@ use bios_mw_flow::dto::flow_config_dto::FlowConfigModifyReq;
 
 use bios_mw_flow::dto::flow_inst_dto::{FlowInstDetailResp, FlowInstFindStateAndTransitionsReq, FlowInstFindStateAndTransitionsResp, FlowInstStartReq};
 use bios_mw_flow::dto::flow_model_dto::{
-    FlowModelAddReq, FlowModelAggResp, FlowModelAssociativeOperationKind, FlowModelBindStateReq, FlowModelCopyOrReferenceCiReq, FlowModelCopyOrReferenceReq, FlowModelKind,
-    FlowModelModifyReq, FlowModelStatus, FlowModelSummaryResp,
+    FlowModelAddReq, FlowModelAggResp, FlowModelAssociativeOperationKind, FlowModelBindNewStateReq, FlowModelBindStateReq, FlowModelCopyOrReferenceCiReq,
+    FlowModelCopyOrReferenceReq, FlowModelKind, FlowModelModifyReq, FlowModelStatus, FlowModelSummaryResp,
 };
-use bios_mw_flow::dto::flow_model_version_dto::{FlowModelVersionAddReq, FlowModelVersionBindState, FlowModelVersionDetailResp, FlowModelVersionModifyReq, FlowModelVesionState};
-use bios_mw_flow::dto::flow_state_dto::{FlowStateRelModelExt, FlowStateSummaryResp};
+use bios_mw_flow::dto::flow_model_version_dto::{
+    FlowModelVersionAddReq, FlowModelVersionBindState, FlowModelVersionDetailResp, FlowModelVersionModifyReq, FlowModelVersionModifyState, FlowModelVesionState,
+};
+use bios_mw_flow::dto::flow_state_dto::{
+    FlowStateAddReq, FlowStateKind, FlowStateModifyReq, FlowStateRelModelExt, FlowStateRelModelModifyReq, FlowStateSummaryResp, FlowSysStateKind,
+};
 
 use bios_mw_flow::dto::flow_transition_dto::{FlowTransitionAddReq, FlowTransitionModifyReq};
 use bios_sdk_invoke::clients::spi_kv_client::KvItemSummaryResp;
@@ -423,6 +427,7 @@ pub async fn test(flow_client: &mut TestHttpClient, search_client: &mut TestHttp
             &FlowModelCopyOrReferenceCiReq {
                 rel_template_id: Some(req_template_id1.to_string()),
                 op: FlowModelAssociativeOperationKind::Copy,
+                update_states: None,
             },
         )
         .await;
@@ -463,7 +468,7 @@ pub async fn test(flow_client: &mut TestHttpClient, search_client: &mut TestHttp
             &FlowModelAddReq {
                 kind: FlowModelKind::AsModel,
                 status: FlowModelStatus::Enabled,
-                rel_transition_ids: None,
+                rel_transition_ids: Some(vec!["__EDIT__".to_string()]),
                 add_version: None,
                 current_version_id: None,
                 name: "编辑需求审批流".into(),
@@ -479,6 +484,86 @@ pub async fn test(flow_client: &mut TestHttpClient, search_client: &mut TestHttp
             },
         )
         .await;
-    let req_approval_flow_version: FlowModelVersionDetailResp = flow_client.get(&format!("/cc/model_version/{}", req_approval_flow.current_version_id)).await;
+    let req_approval_flow_version: FlowModelVersionDetailResp = flow_client.get(&format!("/cc/model_version/{}", req_approval_flow.edit_version_id)).await;
+    let start_state_id = req_approval_flow_version.states()[0].id.clone();
+    let form_state_id = TardisFuns::field.nanoid();
+    let finish_state_id = req_approval_flow_version.states()[1].id.clone();
+    let start_transition_id = req_approval_flow_version.states()[0].transitions[0].id.clone();
+    let _: Void = flow_client
+        .patch(
+            &format!("/cc/model_version/{}", req_approval_flow.edit_version_id),
+            &FlowModelVersionModifyReq {
+                bind_states: Some(vec![FlowModelVersionBindState {
+                    bind_new_state: Some(FlowModelBindNewStateReq {
+                        new_state: FlowStateAddReq {
+                            id: Some(form_state_id.clone().into()),
+                            name: Some("录入".into()),
+                            sys_state: FlowSysStateKind::Progress,
+                            state_kind: Some(FlowStateKind::Form),
+                            tags: Some(vec![req_approval_flow.tag.clone()]),
+                            ..Default::default()
+                        },
+                        ext: FlowStateRelModelExt { sort: 1, show_btns: None },
+                    }),
+                    add_transitions: Some(vec![FlowTransitionAddReq {
+                        name: Some("提交".into()),
+                        from_flow_state_id: form_state_id.clone(),
+                        to_flow_state_id: finish_state_id.clone(),
+                        ..Default::default()
+                    }]),
+                    ..Default::default()
+                }]),
+                modify_states: Some(vec![
+                    FlowModelVersionModifyState {
+                        id: start_state_id.clone(),
+                        modify_transitions: Some(vec![FlowTransitionModifyReq {
+                            id: start_transition_id.into(),
+                            to_flow_state_id: Some(form_state_id.clone()),
+                            ..Default::default()
+                        }]),
+                        ..Default::default()
+                    },
+                    FlowModelVersionModifyState {
+                        id: finish_state_id.clone(),
+                        modify_rel: Some(FlowStateRelModelModifyReq {
+                            id: finish_state_id.clone(),
+                            sort: Some(2),
+                            show_btns: None,
+                        }),
+                        ..Default::default()
+                    },
+                ]),
+                ..Default::default()
+            },
+        )
+        .await;
+    let req_approval_flow_version: FlowModelVersionDetailResp = flow_client.get(&format!("/cc/model_version/{}", req_approval_flow.edit_version_id)).await;
+    info!(
+        "req_approval_flow_version: {:?}",
+        TardisFuns::json.obj_to_json(&req_approval_flow_version).unwrap().to_string()
+    );
+    let _: Void = flow_client
+        .patch(
+            &format!("/cc/model_version/{}", req_approval_flow.edit_version_id),
+            &FlowModelVersionModifyReq {
+                status: Some(FlowModelVesionState::Enabled),
+                ..Default::default()
+            },
+        )
+        .await;
+    let _versions: TardisPage<FlowModelVersionDetailResp> = flow_client.get(&format!("/cc/model_version?rel_model_id={}&page_number=1&page_size=100", req_approval_flow.id)).await;
+    let state_and_next_transitions: Vec<FlowInstFindStateAndTransitionsResp> = flow_client
+        .put(
+            "/cc/inst/batch/state_transitions",
+            &vec![FlowInstFindStateAndTransitionsReq {
+                flow_inst_id: req_inst_id1.clone(),
+                vars: None,
+            }],
+        )
+        .await;
+    info!(
+        "state_and_next_transitions: {:?}",
+        TardisFuns::json.obj_to_json(&state_and_next_transitions).unwrap().to_string()
+    );
     Ok(())
 }

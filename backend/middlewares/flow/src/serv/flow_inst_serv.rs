@@ -270,6 +270,7 @@ impl FlowInstServ {
         #[derive(sea_orm::FromQueryResult)]
         pub struct FlowInstDetailResult {
             pub id: String,
+            pub tag: String,
             pub rel_flow_version_id: String,
             pub rel_flow_model_name: String,
 
@@ -304,6 +305,7 @@ impl FlowInstServ {
         query
             .columns([
                 (flow_inst::Entity, flow_inst::Column::Id),
+                (flow_inst::Entity, flow_inst::Column::Tag),
                 (flow_inst::Entity, flow_inst::Column::RelFlowVersionId),
                 (flow_inst::Entity, flow_inst::Column::RelBusinessObjId),
                 (flow_inst::Entity, flow_inst::Column::CurrentStateId),
@@ -320,7 +322,7 @@ impl FlowInstServ {
             ])
             .expr_as(Expr::col((rel_state_table.clone(), NAME_FIELD.clone())).if_null(""), Alias::new("current_state_name"))
             .expr_as(Expr::col((flow_state_table.clone(), Alias::new("color"))).if_null(""), Alias::new("current_state_color"))
-            .expr_as(Expr::col((flow_state_table.clone(), Alias::new("sys_state"))).if_null(""), Alias::new("current_state_kind"))
+            .expr_as(Expr::col((flow_state_table.clone(), Alias::new("sys_state"))).if_null(FlowSysStateKind::Start), Alias::new("current_state_kind"))
             .expr_as(Expr::col((rbum_rel_table.clone(), Alias::new("ext"))).if_null(""), Alias::new("current_state_ext"))
             .expr_as(
                 Expr::col((rel_model_version_table.clone(), NAME_FIELD.clone())).if_null(""),
@@ -370,6 +372,7 @@ impl FlowInstServ {
                 id: inst.id,
                 rel_flow_version_id: inst.rel_flow_version_id,
                 rel_flow_model_name: inst.rel_flow_model_name,
+                tag: inst.tag,
                 create_vars: inst.create_vars.map(|create_vars| TardisFuns::json.json_to_obj(create_vars).unwrap()),
                 create_ctx: inst.create_ctx,
                 create_time: inst.create_time,
@@ -467,13 +470,21 @@ impl FlowInstServ {
             ctx,
         )
         .await?;
+        let mut rel_flow_version_map = HashMap::new();
+        for flow_inst in flow_insts.iter() {
+            if !rel_flow_version_map.contains_key(&flow_inst.tag) {
+                let rel_flow_versions = FlowTransitionServ::find_rel_model_map(&flow_inst.tag, funs, ctx).await?;
+                rel_flow_version_map.insert(flow_inst.tag.clone(), rel_flow_versions);
+            }
+        }
         let state_and_next_transitions = join_all(
             flow_insts
                 .iter()
                 .map(|flow_inst| async {
                     let req = find_req.iter().find(|req| req.flow_inst_id == flow_inst.id).unwrap();
-                    let flowflow_model_version = flow_model_versions.iter().find(|version| version.id == flow_inst.rel_flow_version_id).unwrap();
-                    Self::do_find_next_transitions(flow_inst, flowflow_model_version, None, &req.vars, false, funs, ctx).await.unwrap()
+                    let flow_model_version = flow_model_versions.iter().find(|version| version.id == flow_inst.rel_flow_version_id).unwrap();
+                    let rel_flow_versions = rel_flow_version_map.get(&flow_inst.tag).unwrap().clone();
+                    Self::do_find_next_transitions(flow_inst, flow_model_version, None, &req.vars, rel_flow_versions, false, funs, ctx).await.unwrap()
                 })
                 .collect_vec(),
         )
@@ -502,7 +513,8 @@ impl FlowInstServ {
             ctx,
         )
         .await?;
-        let state_and_next_transitions = Self::do_find_next_transitions(&flow_inst, &flow_model_version, None, &next_req.vars, false, funs, ctx).await?;
+        let rel_flow_versions = FlowTransitionServ::find_rel_model_map(&flow_inst.tag, funs, ctx).await?;
+        let state_and_next_transitions = Self::do_find_next_transitions(&flow_inst, &flow_model_version, None, &next_req.vars, rel_flow_versions, false, funs, ctx).await?;
         Ok(state_and_next_transitions.next_flow_transitions)
     }
 
@@ -602,26 +614,13 @@ impl FlowInstServ {
             ctx,
         )
         .await?;
-        let flow_model_tag = FlowModelServ::get_item(
-            &flow_model_version.rel_model_id,
-            &FlowModelFilterReq {
-                basic: RbumBasicFilterReq {
-                    with_sub_own_paths: true,
-                    own_paths: Some("".to_string()),
-                    ..Default::default()
-                },
-                ..Default::default()
-            },
-            funs,
-            ctx,
-        )
-        .await?
-        .tag;
+        let rel_flow_versions = FlowTransitionServ::find_rel_model_map(&flow_inst_detail.tag, funs, ctx).await?;
         let next_flow_transition = Self::do_find_next_transitions(
             &flow_inst_detail,
             &flow_model_version,
             Some(transfer_req.flow_transition_id.to_string()),
             &transfer_req.vars,
+            rel_flow_versions,
             skip_filter,
             funs,
             ctx,
@@ -689,7 +688,7 @@ impl FlowInstServ {
             }
             if !params.is_empty() {
                 FlowExternalServ::do_async_modify_field(
-                    &flow_model_tag,
+                    &flow_inst_detail.tag,
                     &next_transition_detail,
                     &flow_inst_detail.rel_business_obj_id,
                     &flow_inst_detail.id,
@@ -755,7 +754,7 @@ impl FlowInstServ {
 
         // notify change state
         FlowExternalServ::do_notify_changes(
-            &flow_model_tag,
+            &flow_inst_detail.tag,
             &flow_inst_detail.id,
             &flow_inst_detail.rel_business_obj_id,
             next_flow_state.name.clone(),
@@ -821,7 +820,8 @@ impl FlowInstServ {
             &global_ctx,
         )
         .await?;
-        let next_flow_transitions = Self::do_find_next_transitions(&flow_inst_detail, &flow_model_version, None, &None, false, funs, ctx).await?.next_flow_transitions;
+        let rel_flow_versions = FlowTransitionServ::find_rel_model_map(&flow_inst_detail.tag, funs, ctx).await?;
+        let next_flow_transitions = Self::do_find_next_transitions(&flow_inst_detail, &flow_model_version, None, &None, rel_flow_versions, false, funs, ctx).await?.next_flow_transitions;
 
         Ok(FlowInstTransferResp {
             prev_flow_state_id: prev_flow_state.id,
@@ -876,6 +876,7 @@ impl FlowInstServ {
         flow_model_version: &FlowModelVersionDetailResp,
         spec_flow_transition_id: Option<String>,
         req_vars: &Option<HashMap<String, Value>>,
+        rel_flow_versions: HashMap<String, String>,
         skip_filter: bool,
         funs: &TardisFunsInst,
         ctx: &TardisContext,
@@ -1026,6 +1027,7 @@ impl FlowInstServ {
             current_flow_state_kind: flow_inst.current_state_kind.as_ref().unwrap_or(&FlowSysStateKind::Start).clone(),
             current_flow_state_ext: flow_inst.current_state_ext.clone().unwrap_or_default(),
             next_flow_transitions: next_transitions,
+            rel_flow_versions,
         };
         Ok(state_and_next_transitions)
     }
@@ -1205,7 +1207,7 @@ impl FlowInstServ {
     pub async fn batch_update_when_switch_model(
         rel_template_id: Option<String>,
         tag: &str,
-        modify_model_id: &str,
+        modify_version_id: &str,
         modify_model_states: Vec<FlowStateAggResp>,
         state_id: &str,
         funs: &TardisFunsInst,
@@ -1226,17 +1228,17 @@ impl FlowInstServ {
         }
         for own_paths in own_paths_list {
             let mock_ctx = TardisContext { own_paths, ..ctx.clone() };
-            Self::unsafe_modify_state(tag, modify_model_id, modify_model_states.clone(), state_id, funs, &mock_ctx).await?;
-            Self::unsafe_modify_rel_model_id(tag, modify_model_id, funs, &mock_ctx).await?;
+            Self::unsafe_modify_state(tag, modify_model_states.clone(), state_id, funs, &mock_ctx).await?;
+            Self::unsafe_modify_rel_model_id(tag, modify_version_id, funs, &mock_ctx).await?;
         }
 
         Ok(())
     }
 
-    async fn unsafe_modify_rel_model_id(tag: &str, modify_model_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    async fn unsafe_modify_rel_model_id(tag: &str, modify_version_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let mut update_statement = Query::update();
         update_statement.table(flow_inst::Entity);
-        update_statement.value(flow_inst::Column::RelFlowVersionId, modify_model_id);
+        update_statement.value(flow_inst::Column::RelFlowVersionId, modify_version_id);
         update_statement.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::Tag)).eq(tag));
         update_statement.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::OwnPaths)).eq(ctx.own_paths.as_str()));
 
@@ -1247,7 +1249,6 @@ impl FlowInstServ {
 
     pub async fn unsafe_modify_state(
         tag: &str,
-        modify_model_id: &str,
         modify_model_states: Vec<FlowStateAggResp>,
         state_id: &str,
         funs: &TardisFunsInst,
@@ -1282,21 +1283,6 @@ impl FlowInstServ {
                         ..Default::default()
                     };
                     funs.db().update_one(flow_inst, &mock_ctx).await.unwrap();
-                    let model_tag = FlowModelServ::get_item(
-                        modify_model_id,
-                        &FlowModelFilterReq {
-                            basic: RbumBasicFilterReq {
-                                own_paths: Some("".to_string()),
-                                with_sub_own_paths: true,
-                                ..Default::default()
-                            },
-                            ..Default::default()
-                        },
-                        funs,
-                        ctx,
-                    )
-                    .await
-                    .map(|detail| detail.tag);
                     let next_flow_state = FlowStateServ::get_item(
                         state_id,
                         &FlowStateFilterReq {
@@ -1313,7 +1299,7 @@ impl FlowInstServ {
                     .unwrap();
 
                     FlowExternalServ::do_notify_changes(
-                        model_tag.unwrap_or_default().as_str(),
+                        &inst.tag,
                         &inst.id,
                         &inst.rel_business_obj_id,
                         "".to_string(),

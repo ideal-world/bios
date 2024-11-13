@@ -13,8 +13,8 @@ use tardis::{
 };
 
 use super::{
-    flow_model_dto::FlowModelBindStateReq,
-    flow_state_dto::{FlowStateAddReq, FlowStateAggResp, FlowStateModifyReq, FlowStateRelModelModifyReq},
+    flow_model_dto::{FlowModelBindNewStateReq, FlowModelBindStateReq},
+    flow_state_dto::{FlowStateAggResp, FlowStateModifyReq, FlowStateRelModelModifyReq},
     flow_transition_dto::{FlowTransitionAddReq, FlowTransitionModifyReq},
 };
 
@@ -35,7 +35,7 @@ pub enum FlowModelVesionState {
 }
 
 /// 添加请求
-#[derive(Clone, Serialize, Deserialize, Debug, poem_openapi::Object)]
+#[derive(Clone, Serialize, Deserialize, Debug, Default, poem_openapi::Object)]
 pub struct FlowModelVersionAddReq {
     #[oai(validator(min_length = "2", max_length = "200"))]
     pub name: TrimString,
@@ -56,7 +56,7 @@ pub struct FlowModelVersionBindState {
     /// 若存在则表示，绑定已有状态节点
     pub exist_state: Option<FlowModelBindStateReq>,
     /// 若存在则表示，新建状态节点
-    pub new_state: Option<FlowStateAddReq>,
+    pub bind_new_state: Option<FlowModelBindNewStateReq>,
     /// 添加动作
     pub add_transitions: Option<Vec<FlowTransitionAddReq>>,
     /// 修改动作
@@ -141,7 +141,9 @@ pub struct FlowModelVersionDetailResp {
     pub init_state_id: String,
     /// 关联父级模型ID
     pub rel_model_id: String,
-    // 状态信息
+    /// 状态
+    pub status: FlowModelVesionState,
+    /// 节点信息
     pub states: Option<Value>,
 
     pub own_paths: String,

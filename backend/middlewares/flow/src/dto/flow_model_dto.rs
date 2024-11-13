@@ -17,7 +17,7 @@ use tardis::{
 
 use super::{
     flow_model_version_dto::{FlowModelVersionAddReq, FlowModelVersionBindState, FlowModelVersionModifyReq, FlowModelVesionState},
-    flow_state_dto::{FLowStateIdAndName, FlowStateAggResp, FlowStateRelModelExt},
+    flow_state_dto::{FLowStateIdAndName, FlowStateAddReq, FlowStateAggResp, FlowStateRelModelExt},
     flow_transition_dto::{FlowTransitionAddReq, FlowTransitionDetailResp},
 };
 
@@ -68,7 +68,7 @@ impl From<FlowModelDetailResp> for FlowModelAddReq {
                     state_id: state.id.clone(),
                     ext: state.ext,
                 }),
-                new_state: None,
+                bind_new_state: None,
                 add_transitions: Some(add_transitions.clone().into_iter().filter(|tran| tran.from_flow_state_id == state.id).collect_vec()),
                 modify_transitions: None,
                 delete_transitions: None,
@@ -294,6 +294,7 @@ pub struct FlowModelAggResp {
     pub rel_model_id: String,
     pub init_state_id: String,
     pub current_version_id: String,
+    pub edit_version_id: String,
     /// 关联模板ID（目前可能是页面模板ID，或者是项目模板ID）
     pub rel_template_ids: Vec<String>,
     /// 绑定的状态
@@ -327,6 +328,16 @@ impl From<FlowStateAggResp> for FlowModelBindStateReq {
             ext: value.ext,
         }
     }
+}
+
+/// 绑定状态
+#[derive(Serialize, Deserialize, Debug, Default, poem_openapi::Object, Clone)]
+pub struct FlowModelBindNewStateReq {
+    /// Associated [flow_state](super::flow_state_dto::FlowStateDetailResp) id
+    ///
+    /// 关联的[工作流状态](super::flow_state_dto::FlowStateDetailResp) id
+    pub new_state: FlowStateAddReq,
+    pub ext: FlowStateRelModelExt,
 }
 
 /// 解绑状态
@@ -437,6 +448,8 @@ pub struct FlowModelCopyOrReferenceCiReq {
     pub rel_template_id: Option<String>,
     /// 关联操作
     pub op: FlowModelAssociativeOperationKind,
+    /// 切换模板时，状态更新映射 
+    pub update_states: Option<HashMap<String, HashMap<String, String>>>,
 }
 
 /// 检查关联模板请求

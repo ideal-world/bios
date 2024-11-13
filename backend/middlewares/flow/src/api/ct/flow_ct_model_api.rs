@@ -59,7 +59,7 @@ impl FlowCtModelApi {
             if orginal_model_id.clone().unwrap_or_default() == rel_model_id {
                 continue;
             }
-            let new_model = FlowModelServ::copy_or_reference_model(&rel_model_id, &req.0.op, FlowModelKind::AsModel, &funs, &ctx.0).await?;
+            let new_model = FlowModelServ::copy_or_reference_model(&rel_model_id, &FlowModelAssociativeOperationKind::ReferenceOrCopy, FlowModelKind::AsTemplateAndAsModel, &funs, &ctx.0).await?;
             if let Some(rel_template_id) = &req.0.rel_template_id {
                 FlowRelServ::add_simple_rel(
                     &FlowRelKind::FlowModelTemplate,
@@ -78,7 +78,7 @@ impl FlowCtModelApi {
             FlowInstServ::batch_update_when_switch_model(
                 req.0.rel_template_id.clone(),
                 &new_model.tag,
-                &new_model.id,
+                &new_model.current_version_id,
                 new_model.states.clone(),
                 &new_model.init_state_id,
                 &funs,

@@ -32,7 +32,7 @@ use crate::{
 
 use super::{
     flow_external_serv::FlowExternalServ, flow_inst_serv::FlowInstServ, flow_model_serv::FlowModelServ, flow_model_version_serv::FlowModelVersionServ,
-    flow_state_serv::FlowStateServ,
+    flow_state_serv::FlowStateServ, flow_transition_serv::FlowTransitionServ,
 };
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
@@ -521,7 +521,8 @@ impl FlowEventServ {
                 ctx,
             )
             .await?;
-            let transition_resp = FlowInstServ::do_find_next_transitions(&rel_inst, &flow_version, None, &None, true, funs, ctx)
+            let rel_flow_versions = FlowTransitionServ::find_rel_model_map(&rel_inst.tag, funs, ctx).await?;
+            let transition_resp = FlowInstServ::do_find_next_transitions(&rel_inst, &flow_version, None, &None, rel_flow_versions, true, funs, ctx)
                 .await?
                 .next_flow_transitions
                 .into_iter()

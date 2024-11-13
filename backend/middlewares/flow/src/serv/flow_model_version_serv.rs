@@ -93,21 +93,21 @@ impl
 
     async fn after_add_item(flow_version_id: &str, add_req: &mut FlowModelVersionAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let version_detail = Self::peek_item(flow_version_id, &FlowModelVersionFilterReq::default(), funs, ctx).await?;
-        FlowModelServ::modify_model(
-            &version_detail.rel_model_id,
-            &mut FlowModelModifyReq {
-                current_version_id: Some(flow_version_id.to_string()),
-                ..Default::default()
-            },
-            funs,
-            ctx,
-        )
-        .await?;
         if let Some(bind_states) = &add_req.bind_states {
             Self::bind_states_and_transitions(flow_version_id, bind_states, funs, ctx).await?;
         }
         if add_req.status == FlowModelVesionState::Enabled {
             Self::enable_version(flow_version_id, funs, ctx).await?;
+            FlowModelServ::modify_model(
+                &version_detail.rel_model_id,
+                &mut FlowModelModifyReq {
+                    current_version_id: Some(flow_version_id.to_string()),
+                    ..Default::default()
+                },
+                funs,
+                ctx,
+            )
+            .await?;
         }
 
         Ok(())
@@ -164,8 +164,9 @@ impl
         }
         if let Some(modify_states) = &modify_req.modify_states {
             for modify_state in modify_states {
+                let state_id = &modify_state.id;
                 if let Some(mut modify_state) = modify_state.modify_state.clone() {
-                    FlowStateServ::modify_item(id, &mut modify_state, funs, ctx).await?;
+                    FlowStateServ::modify_item(state_id, &mut modify_state, funs, ctx).await?;
                 }
                 if let Some(modify_rel) = &modify_state.modify_rel {
                     FlowStateServ::modify_rel_state_ext(id, modify_rel, funs, ctx).await?;
@@ -296,13 +297,13 @@ impl FlowModelVersionServ {
         for bind_state in states {
             let (state_id, bind_state_req) = if let Some(bind_req) = bind_state.exist_state.clone() {
                 (bind_req.state_id.clone(), bind_req)
-            } else if let Some(mut new_state) = bind_state.new_state.clone() {
-                let state_id = FlowStateServ::add_item(&mut new_state, funs, ctx).await?;
+            } else if let Some(mut bind_new_state) = bind_state.bind_new_state.clone() {
+                let state_id = FlowStateServ::add_item(&mut bind_new_state.new_state, funs, ctx).await?;
                 (
                     state_id.clone(),
                     FlowModelBindStateReq {
                         state_id,
-                        ext: FlowStateRelModelExt { sort: 0, show_btns: None },
+                        ext: bind_new_state.ext,
                     },
                 )
             } else {
@@ -311,16 +312,8 @@ impl FlowModelVersionServ {
             Self::bind_state(flow_version_id, &bind_state_req, funs, ctx).await?;
             binded_states.push((state_id, bind_state));
         }
-        let binded_last_state_id = binded_states.last().map(|binded_state| binded_state.0.clone()).unwrap_or_default();
         for (binded_state_id, bind_req) in binded_states {
-            if let Some(mut add_transitions) = bind_req.add_transitions.clone() {
-                for add_transition in add_transitions.iter_mut() {
-                    // 凡是from_flow_state_id和to_flow_state_id为空的，则代表需要将当前状态指向结尾状态
-                    if add_transition.from_flow_state_id.is_empty() && add_transition.to_flow_state_id.is_empty() {
-                        add_transition.from_flow_state_id = binded_state_id.clone();
-                        add_transition.to_flow_state_id = binded_last_state_id.clone();
-                    }
-                }
+            if let Some(add_transitions) = bind_req.add_transitions.clone() {
                 FlowTransitionServ::add_transitions(flow_version_id, &binded_state_id, &add_transitions, funs, ctx).await?;
             }
             if let Some(modify_transitions) = &bind_req.modify_transitions {

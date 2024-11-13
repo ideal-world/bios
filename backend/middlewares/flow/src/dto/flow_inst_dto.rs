@@ -118,6 +118,8 @@ pub struct FlowInstDetailResp {
     pub rel_flow_model_name: String,
     /// 关联业务ID
     pub rel_business_obj_id: String,
+
+    pub tag: String,
     /// 当前状态ID
     /// Associated [flow_state](super::flow_state_dto::FlowStateDetailResp) id
     ///
@@ -272,6 +274,8 @@ pub struct FlowInstFindStateAndTransitionsResp {
     pub finish_time: Option<DateTime<Utc>>,
     /// 流转信息
     pub next_flow_transitions: Vec<FlowInstFindNextTransitionResp>,
+    /// 绑定其他工作流的动作
+    pub rel_flow_versions: HashMap<String, String>,
 }
 
 /// 流转请求
