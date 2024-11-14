@@ -578,29 +578,43 @@ impl IamRoleServ {
             ctx,
         )
         .await?;
-        for app_id in app_ids {
-            let app_ctx = IamCertServ::try_use_app_ctx(ctx.clone(), Some(app_id.clone()))?;
-            Self::add_role_agg(
-                &mut IamRoleAggAddReq {
-                    role: IamRoleAddReq {
-                        code: Some(TrimString::from(format!("{}:{}", app_id, app_role.code))),
-                        name: TrimString::from(app_role.name.clone()),
-                        icon: Some(app_role.icon.clone()),
-                        sort: Some(app_role.sort),
-                        kind: Some(app_role.kind.clone()),
-                        scope_level: Some(RbumScopeLevelKind::Private),
-                        in_embed: Some(app_role.in_embed),
-                        extend_role_id: Some(app_role_id.clone()),
-                        disabled: Some(app_role.disabled),
-                        in_base: Some(false),
-                    },
-                    res_ids: None,
-                },
-                funs,
-                &app_ctx,
-            )
-            .await?;
-        }
+        let ctx_clone = ctx.clone();
+        let app_ids_clone = app_ids.clone();
+        let app_role_clone = app_role.clone();
+        ctx.add_async_task(Box::new(move || {
+            Box::pin(async move {
+                let task_handle = tokio::spawn(async move {
+                    let funs = iam_constants::get_tardis_inst();
+                    for app_id in app_ids_clone {
+                        let app_ctx = IamCertServ::try_use_app_ctx(ctx_clone.clone(), Some(app_id.clone())).unwrap_or_default();
+                        let _ = Self::add_role_agg(
+                            &mut IamRoleAggAddReq {
+                                role: IamRoleAddReq {
+                                    code: Some(TrimString::from(format!("{}:{}", app_id, app_role_clone.code))),
+                                    name: TrimString::from(app_role.name.clone()),
+                                    icon: Some(app_role_clone.icon.clone()),
+                                    sort: Some(app_role_clone.sort),
+                                    kind: Some(app_role_clone.kind.clone()),
+                                    scope_level: Some(RbumScopeLevelKind::Private),
+                                    in_embed: Some(app_role_clone.in_embed),
+                                    extend_role_id: Some(app_role_clone.id.clone()),
+                                    disabled: Some(app_role_clone.disabled),
+                                    in_base: Some(false),
+                                },
+                                res_ids: None,
+                            },
+                            &funs,
+                            &app_ctx,
+                        )
+                        .await;
+                    }
+                });
+                task_handle.await.unwrap();
+                Ok(())
+            })
+        }))
+        .await?;
+
         Ok(app_role_id)
     }
 
@@ -615,7 +629,7 @@ impl IamRoleServ {
     }
 
     pub async fn copy_role_agg(copy_req: &mut IamRoleAggCopyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
-        let copy_role = Self::get_item(
+        let _ = Self::get_item(
             &copy_req.copy_role_id,
             &IamRoleFilterReq {
                 basic: RbumBasicFilterReq {
@@ -629,10 +643,23 @@ impl IamRoleServ {
         )
         .await?;
         let role_id = Self::add_item(&mut copy_req.role, funs, ctx).await?;
-        Self::copy_rel_res(&role_id, &copy_role.id, funs, ctx).await?;
-        if copy_req.sync_account.unwrap_or(false) {
-            Self::copy_rel_account(&role_id, &copy_role.id, None, funs, ctx).await?;
-        }
+        let ctx_clone = ctx.clone();
+        let role_id_clone = role_id.clone();
+        let copy_req_clone = copy_req.clone();
+        ctx.add_async_task(Box::new(move || {
+            Box::pin(async move {
+                let task_handle = tokio::spawn(async move {
+                    let funs = iam_constants::get_tardis_inst();
+                    let _ = Self::copy_rel_res(&role_id_clone.clone(), &copy_req_clone.copy_role_id, &funs, &ctx_clone).await;
+                    if copy_req_clone.sync_account.unwrap_or(false) {
+                        let _ = Self::copy_rel_account(&role_id_clone.clone(), &copy_req_clone.copy_role_id, None, &funs, &ctx_clone).await;
+                    }
+                });
+                task_handle.await.unwrap();
+                Ok(())
+            })
+        }))
+        .await?;
         Ok(role_id)
     }
 

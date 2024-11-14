@@ -55,7 +55,11 @@ impl IamCaRoleApi {
         let result = IamRoleServ::copy_role_agg(&mut copy_req.0, &funs, &ctx.0).await?;
         funs.commit().await?;
         ctx.0.execute_task().await?;
-        TardisResp::ok(result)
+        if let Some(task_id) = TaskProcessor::get_task_id_with_ctx(&ctx.0).await? {
+            TardisResp::accepted(task_id)
+        } else {
+            TardisResp::ok(result)
+        }
     }
 
     /// Modify Role By Role Id
