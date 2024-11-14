@@ -42,7 +42,7 @@ pub(crate) async fn add(add_req: &StatsConfFactAddReq, funs: &TardisFunsInst, ct
         ));
     }
     if let Some(sync_sql) = &add_req.sync_sql {
-        if !stats_pg_sync_serv::validate_fact_sql(sync_sql) {
+        if !stats_pg_sync_serv::validate_fact_sql(sync_sql)? {
             return Err(funs.err().conflict("fact_conf", "add", "The sync_sql is not a valid sql.", "409-spi-stats-fact-conf-sync-sql-not-valid"));
         }
     }
