@@ -110,7 +110,7 @@ async fn do_paginate(
     _inst: &SpiBsInst,
 ) -> TardisResult<TardisPage<StatsConfDimGroupInfoResp>> {
     let table_name = package_table_name("stats_conf_dim_group", ctx);
-    let sql_where = vec!["1 = 1".to_string()];
+    let sql_where = ["1 = 1".to_string()];
     let mut sql_order = vec![];
     let params: Vec<Value> = vec![Value::from(page_size), Value::from((page_number - 1) * page_size)];
 

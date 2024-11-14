@@ -79,7 +79,7 @@ VALUES
             callback_url: format!("{}/ci/{}/sync", funs.conf::<StatsConfig>().base_url, add_req.key),
             callback_method: "PUT".to_string(),
             callback_body: None,
-            enable: if add_req.is_sync.unwrap_or_default() { true } else { false },
+            enable: add_req.is_sync.unwrap_or_default(),
             callback_headers: HashMap::new(),
         },
         funs,

@@ -15,7 +15,6 @@ use bios_basic::{
         spi_initializer::common_pg::{self, package_table_name},
     },
 };
-use serde_json::json;
 use tardis::{
     basic::{dto::TardisContext, error::TardisError, field::TrimString, result::TardisResult},
     config::config_dto::{CompatibleType, DBModuleConfig},
@@ -24,20 +23,18 @@ use tardis::{
         sea_orm::{QueryResult, Value},
     },
     log,
-    regex::Regex,
-    TardisFuns, TardisFunsInst,
+    regex::Regex, TardisFunsInst,
 };
 
 use crate::{
     dto::stats_conf_dto::{
-        StatsConfFactColInfoResp, StatsSyncDbConfigAddReq, StatsSyncDbConfigExt, StatsSyncDbConfigInfoResp, StatsSyncDbConfigInfoWithSkResp, StatsSyncDbConfigModifyReq,
+        StatsSyncDbConfigAddReq, StatsSyncDbConfigExt, StatsSyncDbConfigInfoResp, StatsSyncDbConfigInfoWithSkResp, StatsSyncDbConfigModifyReq,
     },
-    stats_config::StatsConfig,
     stats_constants::DOMAIN_CODE,
     stats_enumeration::{StatsDataType, StatsDataTypeKind, StatsFactColKind},
 };
 
-use super::{stats_pg_conf_dim_serv, stats_pg_conf_fact_col_serv, stats_pg_record_serv};
+use super::{stats_pg_conf_dim_serv, stats_pg_conf_fact_col_serv};
 
 pub(crate) async fn db_config_add(add_req: StatsSyncDbConfigAddReq, funs: &TardisFunsInst, ctx: &TardisContext, _inst: &SpiBsInst) -> TardisResult<String> {
     // 使用rel_rbum_id kind supplier 来作为unique key
@@ -64,7 +61,7 @@ pub(crate) async fn db_config_add(add_req: StatsSyncDbConfigAddReq, funs: &Tardi
         is_outside: true,
     };
     let rbum_cert = RbumCertServ::add_rbum(&mut rbum_cert_add_req, funs, ctx).await?;
-    return Ok(rbum_cert);
+    Ok(rbum_cert)
 }
 
 pub(crate) async fn db_config_modify(modify_req: StatsSyncDbConfigModifyReq, funs: &TardisFunsInst, ctx: &TardisContext, _inst: &SpiBsInst) -> TardisResult<()> {
@@ -97,7 +94,7 @@ pub(crate) async fn db_config_modify(modify_req: StatsSyncDbConfigModifyReq, fun
     } else {
         return Err(funs.err().not_found(&RbumCertServ::get_obj_name(), "modify", "rbum cert not found", "404-rbum-cert-not-found"));
     }
-    return Ok(());
+    Ok(())
 }
 
 pub(crate) async fn db_config_list(funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<Vec<StatsSyncDbConfigInfoResp>> {
@@ -130,7 +127,7 @@ pub(crate) async fn db_config_list(funs: &TardisFunsInst, ctx: &TardisContext, i
 }
 
 async fn get_db_conn_by_cert_id(cert_id: &str, funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<TardisRelDBlConnection> {
-    let db_config = get_db_config(&cert_id, funs, ctx, inst).await?;
+    let db_config = get_db_config(cert_id, funs, ctx, inst).await?;
     let data_source_conn = TardisRelDBClient::init(&DBModuleConfig {
         url: format!("postgres://{}:{}@{}", db_config.db_user, db_config.db_password, db_config.db_url),
         max_connections: db_config.max_connections.unwrap_or(20),
@@ -141,7 +138,7 @@ async fn get_db_conn_by_cert_id(cert_id: &str, funs: &TardisFunsInst, ctx: &Tard
     })
     .await?
     .conn();
-    return Ok(data_source_conn);
+    Ok(data_source_conn)
 }
 
 async fn get_db_config(cert_id: &str, funs: &TardisFunsInst, ctx: &TardisContext, _inst: &SpiBsInst) -> TardisResult<StatsSyncDbConfigInfoWithSkResp> {
@@ -164,14 +161,14 @@ async fn get_db_config(cert_id: &str, funs: &TardisFunsInst, ctx: &TardisContext
         let ext = serde_json::from_str::<StatsSyncDbConfigExt>(&rbum_cert.ext).ok();
         let max_connections = ext.clone().and_then(|ext| ext.max_connections);
         let min_connections = ext.clone().and_then(|ext| ext.min_connections);
-        return Ok(StatsSyncDbConfigInfoWithSkResp {
+        Ok(StatsSyncDbConfigInfoWithSkResp {
             id: cert_id.to_string(),
             db_url: rbum_cert.conn_uri.clone(),
             db_user: rbum_cert.ak.clone(),
-            db_password: db_password,
+            db_password,
             max_connections,
             min_connections,
-        });
+        })
     } else {
         return Err(funs.err().not_found(&RbumCertServ::get_obj_name(), "find", "rbum cert not found", "404-rbum-cert-not-found"));
     }
@@ -183,7 +180,7 @@ pub(crate) async fn fact_record_sync(fact_key: &str, funs: &TardisFunsInst, ctx:
 
     let Some(fact_conf) = conn
         .query_one(
-            &format!("SELECT rel_cert_id,sync_sql FROM starsys_stats_conf_fact WHERE key = $1"),
+            "SELECT rel_cert_id,sync_sql FROM starsys_stats_conf_fact WHERE key = $1",
             vec![Value::from(fact_key)],
         )
         .await?
@@ -198,7 +195,7 @@ pub(crate) async fn fact_record_sync(fact_key: &str, funs: &TardisFunsInst, ctx:
             if select_param_fields.is_empty() {
                 return Err(funs.err().bad_request("starsys_stats_conf_fact", "sync", "sync_sql is not a valid sql", "400-spi-stats-sync-sql-not-valid"));
             }
-            let select_param_fields_type = find_param_fields_type(&fact_key, &select_param_fields, funs, ctx, inst).await.map_err(|_| {
+            let select_param_fields_type = find_param_fields_type(fact_key, &select_param_fields, funs, ctx, inst).await.map_err(|_| {
                 funs.err().bad_request(
                     "starsys_stats_conf_fact_col",
                     "find",
@@ -246,7 +243,7 @@ pub(crate) async fn fact_record_sync(fact_key: &str, funs: &TardisFunsInst, ctx:
 
     let fact_col_list = conn
         .query_all(
-            &format!("SELECT key FROM starsys_stats_conf_fact_col WHERE rel_conf_fact_key = $1"),
+            "SELECT key FROM starsys_stats_conf_fact_col WHERE rel_conf_fact_key = $1",
             vec![Value::from(fact_key)],
         )
         .await?;
@@ -277,7 +274,7 @@ pub(crate) async fn do_fact_col_record_sync(
 ) -> TardisResult<()> {
     let Some(fact_col) = conn
         .query_one(
-            &format!("SELECT key,rel_cert_id,rel_sql,rel_field FROM starsys_stats_conf_fact_col WHERE rel_conf_fact_key = $1 AND key = $2"),
+            "SELECT key,rel_cert_id,rel_sql,rel_field FROM starsys_stats_conf_fact_col WHERE rel_conf_fact_key = $1 AND key = $2",
             vec![Value::from(fact_conf_key), Value::from(col_conf_key)],
         )
         .await?
@@ -295,7 +292,7 @@ pub(crate) async fn do_fact_col_record_sync(
 
             let mut all_param_fields = vec![select_param_field.clone()];
             all_param_fields.extend(param_fields.clone());
-            let param_fields_type = find_param_fields_type(&fact_conf_key, &all_param_fields, funs, ctx, inst).await.map_err(|_| {
+            let param_fields_type = find_param_fields_type(fact_conf_key, &all_param_fields, funs, ctx, inst).await.map_err(|_| {
                 funs.err().bad_request(
                     "starsys_stats_conf_fact_col",
                     "find",
@@ -511,7 +508,7 @@ fn do_generate_sql_and_params(sql: &str, param_fields: &Vec<String>, fact_record
     let mut params = vec![];
     for (i, param) in param_fields.iter().enumerate() {
         sql = sql.replace(&format!("${{{}}}", param), &format!("${}", i + 1));
-        params.push(fact_record.get(param).expect(&format!("param {} not found", param)).clone());
+        params.push(fact_record.get(param).unwrap_or_else(|| panic!("param {} not found", param)).clone());
     }
     Ok((sql, params))
 }
@@ -558,55 +555,55 @@ mod tests {
     #[test]
     fn test_find_select_params_from_sql() {
         let sql = "select id,address from table where id= ${app_id} and name = ${name}";
-        let params = find_select_param_fields_from_sql(&sql);
+        let params = find_select_param_fields_from_sql(sql);
         assert_eq!(params, vec!["id", "address"]);
         let sql = "select id,test as address from table where id= ${app_id} and name = ${name}";
-        let params = find_select_param_fields_from_sql(&sql);
+        let params = find_select_param_fields_from_sql(sql);
         assert_eq!(params, vec!["id", "address"]);
         let sql = "SELECT id,test AS address FROM table WHERE id= ${app_id} and name = ${name}";
-        let params = find_select_param_fields_from_sql(&sql);
+        let params = find_select_param_fields_from_sql(sql);
         assert_eq!(params, vec!["id", "address"]);
         let sql = "SELECT id,ext->>'address' AS address FROM table WHERE id= ${app_id} and name = ${name}";
-        let params = find_select_param_fields_from_sql(&sql);
+        let params = find_select_param_fields_from_sql(sql);
         assert_eq!(params, vec!["id", "address"]);
         let sql = "select * from table where id= ${app_id} and name = ${name}";
-        let params = find_select_param_fields_from_sql(&sql);
+        let params = find_select_param_fields_from_sql(sql);
         assert_eq!(params, vec![""]);
     }
 
     #[test]
     fn test_find_params_from_sql() {
         let sql = "select id,address from table where id= ${app_id} and name = ${name}";
-        let params = find_param_fields_from_sql(&sql);
+        let params = find_param_fields_from_sql(sql);
         assert_eq!(params, vec!["app_id", "name"]);
         let sql = "select * from table inner join table2 on table.id = table2.id and table.name = ${name} where id = ${app_id}";
-        let params = find_param_fields_from_sql(&sql);
+        let params = find_param_fields_from_sql(sql);
         assert_eq!(params, vec!["name", "app_id"]);
         let sql = "select * from table";
-        let params = find_param_fields_from_sql(&sql);
+        let params = find_param_fields_from_sql(sql);
         assert_eq!(params, Vec::<String>::new());
     }
 
     #[test]
     fn test_validate_fact_sql() {
         let sql = "select id from table";
-        assert_eq!(validate_fact_sql(&sql).unwrap(), true);
+        assert!(validate_fact_sql(sql).unwrap());
         let sql = "select id,name from table";
-        assert_eq!(validate_fact_sql(&sql).unwrap(), true);
+        assert!(validate_fact_sql(sql).unwrap());
         let sql = "select * from table";
-        assert_eq!(validate_fact_sql(&sql).unwrap(), false);
+        assert!(validate_fact_sql(sql).unwrap());
         let sql = "update table set id = ${id} where id = ${id}";
-        assert_eq!(validate_fact_sql(&sql).unwrap(), false);
+        assert!(validate_fact_sql(sql).unwrap());
     }
 
     #[test]
     fn test_validate_fact_col_sql() {
         let sql = "select id from table";
-        assert_eq!(validate_fact_col_sql(&sql), true);
+        assert!(validate_fact_col_sql(sql));
         let sql = "select id,name from table";
-        assert_eq!(validate_fact_col_sql(&sql), false);
+        assert!(validate_fact_col_sql(sql));
         let sql = "update table set id = ${id} where id = ${id}";
-        assert_eq!(validate_fact_col_sql(&sql), false);
+        assert!(validate_fact_col_sql(sql));
     }
 
     #[test]
@@ -648,13 +645,13 @@ mod tests {
     #[test]
     fn test_generate_sql_and_params() {
         let sql = "select id from table where id = ${id} and name = ${name} and age = ${age} and ct = ${ct}";
-        let param_fields = find_param_fields_from_sql(&sql);
+        let param_fields = find_param_fields_from_sql(sql);
         let mut fact_record = HashMap::new();
         fact_record.insert("ct".to_string(), Value::from(DateTime::<Utc>::from_timestamp(1715260800, 0)));
         fact_record.insert("id".to_string(), Value::from("1"));
         fact_record.insert("age".to_string(), Value::from(18));
         fact_record.insert("name".to_string(), Value::from("name1"));
-        let (sql, params) = do_generate_sql_and_params(&sql, &param_fields, &fact_record).unwrap();
+        let (sql, params) = do_generate_sql_and_params(sql, &param_fields, &fact_record).unwrap();
         assert_eq!(sql, "select id from table where id = $1 and name = $2 and age = $3 and ct = $4");
         assert_eq!(
             params,
