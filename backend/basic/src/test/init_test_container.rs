@@ -18,9 +18,7 @@ pub struct LifeHold {
 }
 
 pub async fn postgres_custom(init_script_path: Option<&str>) -> TardisResult<ContainerAsync<Postgres>> {
-    let mut postgres = Postgres::default()
-    .with_tag("alpine")
-    .with_env_var("POSTGRES_PASSWORD", "123456").with_env_var("POSTGRES_DB", "test");
+    let mut postgres = Postgres::default().with_tag("alpine").with_env_var("POSTGRES_PASSWORD", "123456").with_env_var("POSTGRES_DB", "test");
     postgres = if let Some(init_script_path) = init_script_path {
         let path = env::current_dir()
             .expect("[Tardis.Test_Container] Current path get error")
