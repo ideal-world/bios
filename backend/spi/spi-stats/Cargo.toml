@@ -27,9 +27,14 @@ tardis = { workspace = true, features = ["reldb-postgres", "web-server"] }
 serde_json = { workspace = true, features = ["preserve_order"] }
 strum = { workspace = true, features = ["derive"] }
 bios-sdk-invoke = { version = "0.2.0", path = "../../../frontend/sdks/invoke", features = [
-  "event","spi_log"
+  "event",
+  "spi_log",
+  "schedule",
 ], default-features = false }
 
 [dev-dependencies]
 tardis = { workspace = true, features = ["test"] }
-bios-basic = { version = "0.2.0", path = "../../basic", features = ["default", "test"] }
+bios-basic = { version = "0.2.0", path = "../../basic", features = [
+  "default",
+  "test",
+] }

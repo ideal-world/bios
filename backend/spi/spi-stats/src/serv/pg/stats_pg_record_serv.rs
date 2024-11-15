@@ -185,7 +185,9 @@ pub(crate) async fn fact_record_load(
     // Existing fields are not stored in duplicate
     let mut exist_fields = HashSet::new();
     for (req_fact_col_key, req_fact_col_value) in req_data {
-        let fact_col_conf = fact_col_conf_set.iter().find(|c| &c.key == req_fact_col_key).ok_or_else(|| {
+        // 查找一下是否命中了rel_field字段
+        let fact_rel_filed_col_conf = fact_col_conf_set.iter().find(|c| c.rel_field.as_ref() == Some(req_fact_col_key));
+        let fact_col_conf = fact_col_conf_set.iter().find(|c| &c.key == req_fact_col_key).or(fact_rel_filed_col_conf).ok_or_else(|| {
             funs.err().not_found(
                 "fact_record",
                 "load",
@@ -210,7 +212,13 @@ pub(crate) async fn fact_record_load(
                 ));
             };
             // TODO check value enum when stable_ds = true
-            fields.push(req_fact_col_key.to_string());
+            if let Some(rel_field) = fact_rel_filed_col_conf {
+                if let Some(ref rel_field) = rel_field.rel_field {
+                    fields.push(rel_field.to_string());
+                }
+            } else {
+                fields.push(req_fact_col_key.to_string());
+            }
             if fact_col_conf.dim_multi_values.unwrap_or(false) {
                 values.push(dim_conf.data_type.json_to_sea_orm_value_array(req_fact_col_value, false)?);
             } else {
@@ -225,7 +233,13 @@ pub(crate) async fn fact_record_load(
                     "400-spi-stats-invalid-request",
                 ));
             };
-            fields.push(req_fact_col_key.to_string());
+            if let Some(rel_field) = fact_rel_filed_col_conf {
+                if let Some(ref rel_field) = rel_field.rel_field {
+                    fields.push(rel_field.to_string());
+                }
+            } else {
+                fields.push(req_fact_col_key.to_string());
+            }
             values.push(mes_data_type.json_to_sea_orm_value(req_fact_col_value, false)?);
         } else {
             let Some(req_fact_col_value) = req_fact_col_value.as_str() else {
@@ -236,7 +250,13 @@ pub(crate) async fn fact_record_load(
                     "400-spi-stats-invalid-request",
                 ));
             };
-            fields.push(req_fact_col_key.to_string());
+            if let Some(rel_field) = fact_rel_filed_col_conf {
+                if let Some(ref rel_field) = rel_field.rel_field {
+                    fields.push(rel_field.to_string());
+                }
+            } else {
+                fields.push(req_fact_col_key.to_string());
+            }
             values.push(req_fact_col_value.into());
         }
         // TODO check data type
@@ -514,7 +534,7 @@ async fn fact_records_modify(
                 ));
             };
             // TODO check value enum when stable_ds = true
-            sql_sets.push(format!("{} = ${}", req_fact_col_key.to_string(), params.len() + 1));
+            sql_sets.push(format!("{} = ${}", req_fact_col_key, params.len() + 1));
             if fact_col_conf.dim_multi_values.unwrap_or(false) {
                 params.push(dim_conf.data_type.json_to_sea_orm_value_array(&req_fact_col_value, false)?);
             } else {
@@ -529,7 +549,7 @@ async fn fact_records_modify(
                     "400-spi-stats-invalid-request",
                 ));
             };
-            sql_sets.push(format!("{} = ${}", req_fact_col_key.to_string(), params.len() + 1));
+            sql_sets.push(format!("{} = ${}", req_fact_col_key, params.len() + 1));
             params.push(mes_data_type.json_to_sea_orm_value(&req_fact_col_value, false)?);
         } else {
             let Some(req_fact_col_value) = req_fact_col_value.as_str() else {
@@ -540,12 +560,12 @@ async fn fact_records_modify(
                     "400-spi-stats-invalid-request",
                 ));
             };
-            sql_sets.push(format!("{} = ${}", req_fact_col_key.to_string(), params.len() + 1));
+            sql_sets.push(format!("{} = ${}", req_fact_col_key, params.len() + 1));
             params.push(req_fact_col_value.into());
         }
     }
     if sql_sets.is_empty() {
-        return Err(funs.err().bad_request("fact_record", "load", &format!("The fact column no data"), "400-spi-stats-invalid-request"));
+        return Err(funs.err().bad_request("fact_record", "load", "The fact column no data", "400-spi-stats-invalid-request"));
     }
     let table_name = package_table_name(&format!("stats_inst_fact_{fact_conf_key}"), ctx);
     conn.execute_one(
@@ -795,7 +815,7 @@ pub(crate) async fn dim_record_add(dim_conf_key: String, add_req: StatsDimRecord
         params.push(dim_record_key_value);
         sql_fields.push(format!("key{}", parent_hierarchy + 1));
         for i in 0..parent_hierarchy + 1 {
-            if let Some(record) = parent_record.get(&format!("key{i}")).and_then(serde_json::Value::as_str) {
+            if let Some(record) = parent_record.get(format!("key{i}")).and_then(serde_json::Value::as_str) {
                 params.push(record.into());
                 sql_fields.push(format!("key{i}"));
             }
