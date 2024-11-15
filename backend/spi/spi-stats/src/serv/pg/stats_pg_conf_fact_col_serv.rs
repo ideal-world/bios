@@ -380,6 +380,7 @@ async fn do_paginate(
     ctx: &TardisContext,
 ) -> TardisResult<TardisPage<StatsConfFactColInfoResp>> {
     let table_name = package_table_name("stats_conf_fact_col", ctx);
+    let dim_table_name = package_table_name("stats_conf_dim", ctx);
     let mut sql_where = vec![];
     let mut sql_order = vec![];
     let mut params: Vec<Value> = vec![Value::from(page_size), Value::from((page_number - 1) * page_size)];
@@ -417,14 +418,14 @@ async fn do_paginate(
 
     let result;
     if let Some(dim_group_key) = &dim_group_key {
-        sql_where.push(format!("starsys_stats_conf_dim.dim_group_key = ${}", params.len() + 1));
+        sql_where.push(format!("{dim_table_name}.dim_group_key = ${}", params.len() + 1));
         params.push(Value::from(dim_group_key));
 
         result = conn
       .query_all(
           &format!(
-              r#"SELECT {table_name}.key, {table_name}.show_name, {table_name}.kind, {table_name}.remark, {table_name}.dim_rel_conf_dim_key, {table_name}.rel_external_id, {table_name}.dim_multi_values, {table_name}.dim_exclusive_rec, {table_name}.dim_data_type, {table_name}.dim_dynamic_url, {table_name}.mes_data_distinct, {table_name}.mes_data_type, {table_name}.mes_frequency, {table_name}.mes_unit, {table_name}.mes_act_by_dim_conf_keys, {table_name}.rel_conf_fact_key, {table_name}.rel_conf_fact_and_col_key, {table_name}.create_time, {table_name}.update_time, {table_name}.rel_field, {table_name}.rel_cert_id, {table_name}.rel_sql, count(*) OVER() AS total
-FROM {table_name} inner join starsys_stats_conf_dim on {table_name}.dim_rel_conf_dim_key = starsys_stats_conf_dim.key
+              r#"SELECT fact_col.key, fact_col.show_name, fact_col.kind, fact_col.remark, fact_col.dim_rel_conf_dim_key, fact_col.rel_external_id, fact_col.dim_multi_values, fact_col.dim_exclusive_rec, fact_col.dim_data_type, fact_col.dim_dynamic_url, fact_col.mes_data_distinct, fact_col.mes_data_type, fact_col.mes_frequency, fact_col.mes_unit, fact_col.mes_act_by_dim_conf_keys, fact_col.rel_conf_fact_key, fact_col.rel_conf_fact_and_col_key, fact_col.create_time, fact_col.update_time, fact_col.rel_field, fact_col.rel_cert_id, fact_col.rel_sql, count(*) OVER() AS total
+FROM {table_name} AS fact_col inner join {dim_table_name} on fact_col.dim_rel_conf_dim_key = {dim_table_name}.key
 WHERE 
   {}
 {}"#,

@@ -23,13 +23,12 @@ use tardis::{
         sea_orm::{QueryResult, Value},
     },
     log,
-    regex::Regex, TardisFunsInst,
+    regex::Regex,
+    TardisFunsInst,
 };
 
 use crate::{
-    dto::stats_conf_dto::{
-        StatsSyncDbConfigAddReq, StatsSyncDbConfigExt, StatsSyncDbConfigInfoResp, StatsSyncDbConfigInfoWithSkResp, StatsSyncDbConfigModifyReq,
-    },
+    dto::stats_conf_dto::{StatsSyncDbConfigAddReq, StatsSyncDbConfigExt, StatsSyncDbConfigInfoResp, StatsSyncDbConfigInfoWithSkResp, StatsSyncDbConfigModifyReq},
     stats_constants::DOMAIN_CODE,
     stats_enumeration::{StatsDataType, StatsDataTypeKind, StatsFactColKind},
 };
@@ -178,13 +177,7 @@ pub(crate) async fn fact_record_sync(fact_key: &str, funs: &TardisFunsInst, ctx:
     let bs_inst = inst.inst::<TardisRelDBClient>();
     let (mut conn, _) = common_pg::init_conn(bs_inst).await?;
 
-    let Some(fact_conf) = conn
-        .query_one(
-            "SELECT rel_cert_id,sync_sql FROM starsys_stats_conf_fact WHERE key = $1",
-            vec![Value::from(fact_key)],
-        )
-        .await?
-    else {
+    let Some(fact_conf) = conn.query_one("SELECT rel_cert_id,sync_sql FROM starsys_stats_conf_fact WHERE key = $1", vec![Value::from(fact_key)]).await? else {
         return Err(funs.err().not_found("starsys_stats_conf_fact", "find", "fact conf not found", "404-fact-conf-not-found"));
     };
 
@@ -241,12 +234,7 @@ pub(crate) async fn fact_record_sync(fact_key: &str, funs: &TardisFunsInst, ctx:
         log::warn!("[spi-stats] cert_id not found for fact: {}", fact_key);
     }
 
-    let fact_col_list = conn
-        .query_all(
-            "SELECT key FROM starsys_stats_conf_fact_col WHERE rel_conf_fact_key = $1",
-            vec![Value::from(fact_key)],
-        )
-        .await?;
+    let fact_col_list = conn.query_all("SELECT key FROM starsys_stats_conf_fact_col WHERE rel_conf_fact_key = $1", vec![Value::from(fact_key)]).await?;
     for col in fact_col_list.iter() {
         let col_key = col.try_get::<String>("", "key")?;
         do_fact_col_record_sync(fact_key, &col_key, &mut conn, funs, ctx, inst).await?;
