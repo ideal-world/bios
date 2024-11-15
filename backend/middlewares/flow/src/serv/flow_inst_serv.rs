@@ -101,6 +101,9 @@ impl FlowInstServ {
         )
         .await?;
 
+        // 自动流转
+        Self::auto_transfer(&inst_id, loop_check_helper::InstancesTransition::default(), funs, ctx).await?;
+
         Ok(inst_id)
     }
 
@@ -201,6 +204,9 @@ impl FlowInstServ {
         }
         if let Some(current_state_id) = &filter.current_state_id {
             query.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::CurrentStateId)).eq(current_state_id));
+        }
+        if let Some(rel_business_obj_id) = &filter.rel_business_obj_id {
+            query.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::RelBusinessObjId)).eq(rel_business_obj_id));
         }
 
         Ok(())
@@ -401,6 +407,7 @@ impl FlowInstServ {
         tag: Option<String>,
         finish: Option<bool>,
         current_state_id: Option<String>,
+        rel_business_obj_id: Option<String>,
         with_sub: Option<bool>,
         page_number: u32,
         page_size: u32,
@@ -415,6 +422,7 @@ impl FlowInstServ {
                 tag,
                 finish,
                 current_state_id,
+                rel_business_obj_id,
                 with_sub,
             },
             funs,
@@ -571,6 +579,7 @@ impl FlowInstServ {
         }
         funs.begin().await?;
         let result = Self::do_transfer(flow_inst_id, transfer_req, skip_filter, callback_kind, &funs, ctx).await;
+        Self::auto_transfer(flow_inst_id, modified_instance_transations_cp.clone(), &funs, ctx).await?;
         funs.commit().await?;
         let flow_inst_id_cp = flow_inst_id.to_string();
         let flow_transition_id = transfer_req.flow_transition_id.clone();
@@ -1317,6 +1326,59 @@ impl FlowInstServ {
         .await
         .into_iter()
         .collect::<TardisResult<Vec<_>>>()?;
+        Ok(())
+    }
+
+    pub async fn auto_transfer(
+        flow_inst_id: &str,
+        modified_instance_transations: loop_check_helper::InstancesTransition,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<()> {
+        let inst = Self::get(flow_inst_id, funs, ctx).await?;
+        let model_version = FlowModelVersionServ::get_item(
+            &inst.rel_flow_version_id,
+            &FlowModelVersionFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    own_paths: Some("".to_string()),
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?;
+        let transition_ids = Self::do_find_next_transitions(&inst, &model_version, None, &None, HashMap::default(), false, funs, ctx)
+            .await?
+            .next_flow_transitions
+            .into_iter()
+            .map(|tran| tran.next_flow_transition_id)
+            .collect_vec();
+        let current_var = inst.current_vars.clone().unwrap_or_default();
+        let auto_transition = FlowTransitionServ::find_detail_items(transition_ids, None, None, funs, ctx).await?.into_iter().find(|transition| {
+            (transition.transfer_by_auto && transition.guard_by_other_conds().is_none())
+                || (transition.transfer_by_auto
+                    && transition.guard_by_other_conds().is_some()
+                    && BasicQueryCondInfo::check_or_and_conds(&transition.guard_by_other_conds().unwrap(), &current_var).unwrap())
+        });
+        if let Some(auto_transition) = auto_transition {
+            Self::transfer(
+                flow_inst_id,
+                &FlowInstTransferReq {
+                    flow_transition_id: auto_transition.id,
+                    message: None,
+                    vars: None,
+                },
+                false,
+                FlowExternalCallbackOp::Auto,
+                modified_instance_transations.clone(),
+                ctx,
+            )
+            .await;
+        }
+
         Ok(())
     }
 }

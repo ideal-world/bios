@@ -345,6 +345,8 @@ pub struct FlowInstModifyCurrentVarsReq {
 pub struct FlowInstFilterReq {
     /// 关联模型ID
     pub flow_model_id: Option<String>,
+    /// 业务ID
+    pub rel_business_obj_id: Option<String>,
     /// 标签
     pub tag: Option<String>,
 

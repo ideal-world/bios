@@ -96,6 +96,8 @@ pub enum FlowExternalCallbackOp {
     VerifyContent,
     /// 条件触发
     ConditionalTrigger,
+    /// 自动流转
+    Auto,
 }
 
 /// 扩展字段

@@ -93,6 +93,8 @@ pub struct FlowModelVersionModifyReq {
     pub modify_states: Option<Vec<FlowModelVersionModifyState>>,
     // 解绑状态
     pub unbind_states: Option<Vec<String>>,
+    // 删除状态
+    pub delete_states: Option<Vec<String>>,
     /// 定义每个模块的初始状态
     pub init_state_id: Option<String>,
     /// 版本状态
