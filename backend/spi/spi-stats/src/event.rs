@@ -12,7 +12,7 @@ use tardis::{
 async fn handle_add_event(req: StatsItemAddReq, ctx: TardisContext) -> TardisResult<()> {
     let funs = get_tardis_inst();
     if let Some(ref key) = req.key {
-        stats_record_serv::fact_record_load(&req.tag, &key.to_string(), req.clone().into(), &funs, &ctx).await?;
+        stats_record_serv::fact_record_load(&req.tag, key.as_ref(), req.clone().into(), &funs, &ctx).await?;
     }
     Ok(())
 }
@@ -20,7 +20,7 @@ async fn handle_add_event(req: StatsItemAddReq, ctx: TardisContext) -> TardisRes
 async fn handle_delete_event(req: StatsItemDeleteReq, ctx: TardisContext) -> TardisResult<()> {
     let funs = get_tardis_inst();
     if let Some(ref key) = req.key {
-        stats_record_serv::fact_record_delete(&req.tag, &key.to_string(), &funs, &ctx).await?;
+        stats_record_serv::fact_record_delete(&req.tag, key.as_ref(), &funs, &ctx).await?;
     }
     Ok(())
 }
