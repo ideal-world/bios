@@ -230,11 +230,9 @@ async fn do_paginate(
     if let Some(dim_group_key) = &dim_group_key {
         sql_where.push(format!("dim_group_key = ${}", params.len() + 1));
         params.push(Value::from(dim_group_key.to_string()));
-    } else {
-        if let Some(dim_group_is_empty) = &dim_group_is_empty {
-            if *dim_group_is_empty {
-                sql_where.push("dim_group_key = ''".to_string());
-            }
+    } else if let Some(dim_group_is_empty) = &dim_group_is_empty {
+        if *dim_group_is_empty {
+            sql_where.push("dim_group_key = ''".to_string());
         }
     }
 

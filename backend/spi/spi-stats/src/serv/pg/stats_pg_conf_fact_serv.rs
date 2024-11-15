@@ -1,8 +1,11 @@
+use std::collections::HashMap;
+
 use bios_basic::spi::{
     spi_funs::SpiBsInst,
     spi_initializer::common_pg::{self, package_table_name},
 };
 
+use bios_sdk_invoke::clients::schedule_client::{AddOrModifySyncTaskReq, ScheduleClient};
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
     db::{
@@ -15,10 +18,12 @@ use tardis::{
 
 use crate::{
     dto::stats_conf_dto::{StatsConfFactAddReq, StatsConfFactColInfoResp, StatsConfFactInfoResp, StatsConfFactModifyReq},
+    stats_config::StatsConfig,
+    stats_constants::SYNC_FACT_TASK_CODE,
     stats_enumeration::{StatsDataTypeKind, StatsFactColKind},
 };
 
-use super::{stats_pg_conf_dim_serv, stats_pg_conf_fact_col_serv, stats_pg_initializer};
+use super::{stats_pg_conf_dim_serv, stats_pg_conf_fact_col_serv, stats_pg_initializer, stats_pg_sync_serv};
 
 pub async fn online(fact_conf_key: &str, conn: &TardisRelDBlConnection, ctx: &TardisContext) -> TardisResult<bool> {
     common_pg::check_table_exit(&format!("stats_inst_fact_{fact_conf_key}"), conn, ctx).await
@@ -35,6 +40,11 @@ pub(crate) async fn add(add_req: &StatsConfFactAddReq, funs: &TardisFunsInst, ct
             "The fact config already exists, please delete it and then add it.",
             "409-spi-stats-fact-conf-exist",
         ));
+    }
+    if let Some(sync_sql) = &add_req.sync_sql {
+        if !stats_pg_sync_serv::validate_fact_sql(sync_sql)? {
+            return Err(funs.err().conflict("fact_conf", "add", "The sync_sql is not a valid sql.", "409-spi-stats-fact-conf-sync-sql-not-valid"));
+        }
     }
     let params = vec![
         Value::from(add_req.key.to_string()),
@@ -61,6 +71,22 @@ VALUES
     )
     .await?;
     conn.commit().await?;
+    //handle sync fact task
+    ScheduleClient::add_or_modify_sync_task(
+        AddOrModifySyncTaskReq {
+            code: format!("{}_{}", SYNC_FACT_TASK_CODE, add_req.key),
+            cron: add_req.sync_cron.clone().unwrap_or("".to_string()),
+            callback_url: format!("{}/ci/{}/sync", funs.conf::<StatsConfig>().base_url, add_req.key),
+            callback_method: "PUT".to_string(),
+            callback_body: None,
+            enable: add_req.is_sync.unwrap_or_default(),
+            callback_headers: HashMap::new(),
+        },
+        funs,
+        ctx,
+    )
+    .await?;
+
     Ok(())
 }
 
@@ -130,6 +156,21 @@ WHERE key = $1
     )
     .await?;
     conn.commit().await?;
+    //handle sync fact task
+    ScheduleClient::add_or_modify_sync_task(
+        AddOrModifySyncTaskReq {
+            code: format!("{}_{}", SYNC_FACT_TASK_CODE, fact_conf_key),
+            enable: modify_req.is_sync.unwrap_or_default(),
+            cron: modify_req.sync_cron.clone().unwrap_or("".to_string()),
+            callback_url: format!("{}/ci/{}/sync", funs.conf::<StatsConfig>().base_url, fact_conf_key),
+            callback_headers: HashMap::new(),
+            callback_method: "PUT".to_string(),
+            callback_body: None,
+        },
+        funs,
+        ctx,
+    )
+    .await?;
     Ok(())
 }
 
