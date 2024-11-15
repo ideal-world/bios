@@ -396,6 +396,7 @@ impl FlowInstServ {
                 current_state_color: inst.current_state_color,
                 current_state_kind: inst.current_state_kind,
                 current_state_ext: inst.current_state_ext.map(|ext| TardisFuns::json.str_to_obj::<FlowStateRelModelExt>(&ext).unwrap_or_default()),
+                current_state_conf: None, // @TODO
                 current_vars: inst.current_vars.map(|current_vars| TardisFuns::json.json_to_obj(current_vars).unwrap()),
                 rel_business_obj_id: inst.rel_business_obj_id,
             })
@@ -1376,7 +1377,7 @@ impl FlowInstServ {
                 modified_instance_transations.clone(),
                 ctx,
             )
-            .await;
+            .await?;
         }
 
         Ok(())

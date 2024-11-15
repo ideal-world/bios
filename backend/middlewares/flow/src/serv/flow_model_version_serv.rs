@@ -188,12 +188,6 @@ impl
             }
         }
 
-        // if let Some(delete_states) = &modify_req.delete_states {
-        //     for delete_state in delete_states {
-        //         Self::delete_state(id, delete_state, funs, ctx).await?;
-        //     }
-        // }
-
         Ok(())
     }
 
@@ -374,22 +368,6 @@ impl FlowModelVersionServ {
         }
         Ok(())
     }
-
-    // pub async fn delete_state(flow_version_id: &str, state_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-    //     // 获取指向删除节点的所有动作
-    //     let from_transition_ids = FlowTransitionServ::find_transitions_by_state_id(flow_version_id, None, Some(vec![state_id.to_string()]), funs, ctx)
-    //         .await?
-    //         .into_iter()
-    //         .map(|tran| FlowTransitionModifyReq {
-    //             id: tran.id,
-    //             to
-    //         })
-    //         .collect_vec();
-    //     for from_transition_id in from_transition_ids {
-    //         FlowTransitionServ::modify_transitions(flow_version_id, modify_req, funs, ctx)
-    //     }
-    //     Ok(())
-    // }
 
     pub async fn unbind_state(flow_version_id: &str, state_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         // Can only be deleted when not in use

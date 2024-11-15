@@ -10,7 +10,7 @@ use tardis::{
 };
 
 use super::{
-    flow_state_dto::{FlowStateRelModelExt, FlowSysStateKind},
+    flow_state_dto::{FLowStateKindConf, FlowStateRelModelExt, FlowSysStateKind},
     flow_transition_dto::FlowTransitionDoubleCheckInfo,
     flow_var_dto::FlowVarInfo,
 };
@@ -145,6 +145,10 @@ pub struct FlowInstDetailResp {
     ///
     /// 关联的[工作流状态](super::flow_state_dto::FlowStateRelModelExt)
     pub current_state_ext: Option<FlowStateRelModelExt>,
+    /// Associated [flow_state](super::flow_state_dto::FlowStateRelModelExt)
+    ///
+    /// 当前状态配置
+    pub current_state_conf: Option<FLowStateKindConf>,
     /// 当前参数列表
     pub current_vars: Option<HashMap<String, Value>>,
     /// 创建时的参数列表
