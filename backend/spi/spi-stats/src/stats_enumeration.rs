@@ -11,6 +11,20 @@ use tardis::{
     web::poem_openapi,
 };
 
+#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
+pub enum StatsDataType {
+    Single(StatsDataTypeKind),
+    Array(StatsDataTypeKind),
+}
+impl StatsDataType {
+    pub fn result_to_sea_orm_value(&self, query_result: &QueryResult, key: &str) -> TardisResult<sea_orm::Value> {
+        match self {
+            StatsDataType::Single(data_type) => data_type.result_to_sea_orm_value(query_result, key),
+            StatsDataType::Array(data_type) => data_type.result_to_sea_orm_value_array(query_result, key),
+        }
+    }
+}
+
 #[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, strum::EnumString)]
 pub enum StatsDataTypeKind {
     #[oai(rename = "string")]

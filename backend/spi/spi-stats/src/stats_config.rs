@@ -6,4 +6,5 @@ use std::fmt::Debug;
 #[serde(default)]
 pub struct StatsConfig {
     pub rbum: RbumConfig,
+    pub base_url: String,
 }

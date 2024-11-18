@@ -46,7 +46,7 @@ pub(crate) async fn add(add_req: &StatsConfDimGroupAddReq, funs: &TardisFunsInst
     Ok(())
 }
 
-pub(crate) async fn modify(dim_conf_key: &str, modify_req: &StatsConfDimGroupModifyReq, funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
+pub(crate) async fn modify(dim_conf_key: &str, modify_req: &StatsConfDimGroupModifyReq, _funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
     let bs_inst = inst.inst::<TardisRelDBClient>();
     let (mut conn, table_name) = stats_pg_initializer::init_conf_dim_group_table_and_conn(bs_inst, ctx, true).await?;
     conn.begin().await?;
@@ -110,7 +110,7 @@ async fn do_paginate(
     _inst: &SpiBsInst,
 ) -> TardisResult<TardisPage<StatsConfDimGroupInfoResp>> {
     let table_name = package_table_name("stats_conf_dim_group", ctx);
-    let sql_where = vec!["1 = 1".to_string()];
+    let sql_where = ["1 = 1".to_string()];
     let mut sql_order = vec![];
     let params: Vec<Value> = vec![Value::from(page_size), Value::from((page_number - 1) * page_size)];
 
