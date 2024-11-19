@@ -151,7 +151,7 @@ impl EventTopicServ {
             .set_auth(
                 TopicAuth {
                     topic: set_topic_auth.topic,
-                    ak: ctx.own_paths.clone(),
+                    ak: ctx.ak.clone(),
                     read: set_topic_auth.read,
                     write: set_topic_auth.write,
                 },
@@ -159,6 +159,11 @@ impl EventTopicServ {
             )
             .await?;
 
+        Ok(())
+    }
+    
+    pub async fn unregister_user(topic: TopicCode, ak: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        EventAuthServ::new().remove_auth(topic, ak, funs).await?;
         Ok(())
     }
 }

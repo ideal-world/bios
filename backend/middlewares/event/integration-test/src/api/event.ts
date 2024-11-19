@@ -32,7 +32,7 @@ export async function createTopic(code: string, blocking: boolean = false): Prom
         body: JSON.stringify({
             "topic_code": code,
             "overflow_policy": "RejectNew",
-            "overflow_size": 500,
+            "overflow_size": 999999,
             "check_auth": false,
             "blocking": blocking
         })

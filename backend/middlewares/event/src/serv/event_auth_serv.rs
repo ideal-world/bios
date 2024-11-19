@@ -1,7 +1,7 @@
 use asteroid_mq::prelude::TopicCode;
 use tardis::{
     basic::{error::TardisError, result::TardisResult},
-    db::sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, IntoActiveModel, QueryFilter},
+    db::sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, IntoActiveModel, ModelTrait, QueryFilter},
     TardisFunsInst,
 };
 
@@ -18,13 +18,27 @@ impl EventAuthServ {
     pub fn new() -> EventAuthServ {
         EventAuthServ {}
     }
-
-    pub async fn set_auth(&self, auth: TopicAuth, funs: &TardisFunsInst) -> TardisResult<()> {
-        let model: Model = Model::from_topic_auth(auth);
-        let model: ActiveModel = model.into_active_model();
+    pub async fn remove_auth(&self, topic: TopicCode, ak: &str, funs: &TardisFunsInst) -> TardisResult<()> {
+        let select = Entity::find().filter(Column::Topic.eq(topic.to_string())).filter(Column::Ak.eq(ak));
         let conn = funs.reldb().conn();
         let raw_conn = conn.raw_conn();
-        let _result = model.insert(raw_conn).await?;
+        let model = select.one(raw_conn).await?;
+        if let Some(model) = model {
+            model.delete(raw_conn).await?;
+        }
+        Ok(())
+    }
+    pub async fn set_auth(&self, auth: TopicAuth, funs: &TardisFunsInst) -> TardisResult<()> {
+        let select = Entity::find().filter(Column::Topic.eq(&auth.topic)).filter(Column::Ak.eq(&auth.ak));
+        let conn = funs.reldb().conn();
+        let raw_conn = conn.raw_conn();
+        let model = select.one(raw_conn).await?;
+        if model.is_none() {
+            let model: Model = Model::from_topic_auth(auth);
+            let model: ActiveModel = model.into_active_model();
+            model.insert(raw_conn).await?;
+        }
+
         Ok(())
     }
 
