@@ -27,8 +27,6 @@ impl EventAuthServ {
         if model.is_none() {
             let model: Model = Model::from_topic_auth(auth);
             let model: ActiveModel = model.into_active_model();
-            let conn = funs.reldb().conn();
-            let raw_conn = conn.raw_conn();
             model.insert(raw_conn).await?;
         }
 
