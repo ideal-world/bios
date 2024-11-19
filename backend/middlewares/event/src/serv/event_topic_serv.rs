@@ -151,7 +151,7 @@ impl EventTopicServ {
             .set_auth(
                 TopicAuth {
                     topic: set_topic_auth.topic,
-                    ak: ctx.own_paths.clone(),
+                    ak: ctx.ak.clone(),
                     read: set_topic_auth.read,
                     write: set_topic_auth.write,
                 },

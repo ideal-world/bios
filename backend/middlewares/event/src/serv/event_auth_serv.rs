@@ -20,11 +20,18 @@ impl EventAuthServ {
     }
 
     pub async fn set_auth(&self, auth: TopicAuth, funs: &TardisFunsInst) -> TardisResult<()> {
-        let model: Model = Model::from_topic_auth(auth);
-        let model: ActiveModel = model.into_active_model();
+        let select = Entity::find().filter(Column::Topic.eq(&auth.topic)).filter(Column::Ak.eq(&auth.ak));
         let conn = funs.reldb().conn();
         let raw_conn = conn.raw_conn();
-        let _result = model.insert(raw_conn).await?;
+        let model = select.one(raw_conn).await?;
+        if model.is_none() {
+            let model: Model = Model::from_topic_auth(auth);
+            let model: ActiveModel = model.into_active_model();
+            let conn = funs.reldb().conn();
+            let raw_conn = conn.raw_conn();
+            model.insert(raw_conn).await?;
+        }
+
         Ok(())
     }
 
