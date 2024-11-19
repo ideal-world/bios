@@ -15,7 +15,7 @@ pub struct Model {
     pub rel_flow_version_id: String,
 
     /// Business object Id / 关联的业务对象Id
-    #[index(unique = true)]
+    #[index]
     pub rel_business_obj_id: String,
 
     /// Whether master workflow / 是否主流程

@@ -61,19 +61,21 @@ use super::{
 pub struct FlowInstServ;
 
 impl FlowInstServ {
-    pub async fn start(start_req: &FlowInstStartReq, current_state_name: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
+    pub async fn start(start_req: &FlowInstStartReq, current_state_name: Option<String>, _funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
+        let mut funs = flow_constants::get_tardis_inst();
+        funs.begin().await?;
         // get model by own_paths
         let flow_model = if let Some(transition_id) = &start_req.transition_id {
-            FlowModelServ::get_model_id_by_own_paths_and_transition_id(&start_req.tag, transition_id, funs, ctx).await?
+            FlowModelServ::get_model_id_by_own_paths_and_transition_id(&start_req.tag, transition_id, &funs, ctx).await?
         } else {
-            FlowModelServ::get_model_id_by_own_paths_and_rel_template_id(&start_req.tag, None, funs, ctx).await?
+            FlowModelServ::get_model_id_by_own_paths_and_rel_template_id(&start_req.tag, None, &funs, ctx).await?
         };
         let inst_id = TardisFuns::field.nanoid();
         let current_state_id = if let Some(current_state_name) = &current_state_name {
             if current_state_name.is_empty() {
                 flow_model.init_state_id.clone()
             } else {
-                FlowStateServ::match_state_id_by_name(&flow_model.id, current_state_name, funs, ctx).await?
+                FlowStateServ::match_state_id_by_name(&flow_model.id, current_state_name, &funs, ctx).await?
             }
         } else {
             flow_model.init_state_id.clone()
@@ -100,9 +102,13 @@ impl FlowInstServ {
             flow_model.transitions().iter().filter(|model_transition| model_transition.to_flow_state_id == flow_model.init_state_id).collect_vec().pop(),
         )
         .await?;
-
+        funs.commit().await?;
+        let mut funs = flow_constants::get_tardis_inst();
+        funs.begin().await?;
         // 自动流转
-        Self::auto_transfer(&inst_id, loop_check_helper::InstancesTransition::default(), funs, ctx).await?;
+        Self::auto_transfer(&inst_id, loop_check_helper::InstancesTransition::default(), &funs, ctx).await?;
+        funs.commit().await?;
+
 
         Ok(inst_id)
     }
@@ -895,7 +901,7 @@ impl FlowInstServ {
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<FlowInstFindStateAndTransitionsResp> {
-        let flow_model_transitions = FlowTransitionServ::find_transitions(&flow_model_version.id, spec_flow_transition_id.clone().map(|id| vec![id]), funs, ctx).await?;
+        let flow_model_transitions = FlowTransitionServ::find_transitions(&flow_model_version.id, None, funs, ctx).await?;
 
         let next_transitions = flow_model_transitions
             .iter()

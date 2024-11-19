@@ -449,13 +449,14 @@ pub async fn test(flow_client: &mut TestHttpClient, search_client: &mut TestHttp
     let models: HashMap<String, FlowModelSummaryResp> = flow_client.put("/cc/model/find_rel_models?tag_ids=REQ,PROJ,ITER,TICKET&is_shared=false", &json!("")).await;
     info!("models: {:?}", models);
     sleep(Duration::from_millis(1000)).await;
+    let rel_business_obj_id = TardisFuns::field.nanoid();
     let req_inst_id1: String = flow_client
         .post(
             "/cc/inst",
             &FlowInstStartReq {
                 tag: "REQ".to_string(),
                 create_vars: None,
-                rel_business_obj_id: TardisFuns::field.nanoid(),
+                rel_business_obj_id: rel_business_obj_id.clone(),
                 transition_id: None,
             },
         )
@@ -579,6 +580,20 @@ pub async fn test(flow_client: &mut TestHttpClient, search_client: &mut TestHttp
         "state_and_next_transitions: {:?}",
         TardisFuns::json.obj_to_json(&state_and_next_transitions).unwrap().to_string()
     );
-    // 
+    // 启动审批流实例
+    let req_inst_id2: String = flow_client
+        .post(
+            "/cc/inst",
+            &FlowInstStartReq {
+                tag: "REQ".to_string(),
+                create_vars: None,
+                rel_business_obj_id: rel_business_obj_id.clone(),
+                transition_id: Some("__EDIT__".to_string()),
+            },
+        )
+        .await;
+    sleep(Duration::from_millis(5000)).await;
+    let req_inst2: FlowInstDetailResp = flow_client.get(&format!("/cc/inst/{}", req_inst_id2)).await;
+    info!("req_inst2: {:?}", req_inst2);
     Ok(())
 }

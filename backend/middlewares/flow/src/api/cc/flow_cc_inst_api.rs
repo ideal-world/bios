@@ -27,10 +27,8 @@ impl FlowCcInstApi {
     /// 启动实例(返回实例ID)
     #[oai(path = "/", method = "post")]
     async fn start(&self, add_req: Json<FlowInstStartReq>, ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<String> {
-        let mut funs = flow_constants::get_tardis_inst();
-        funs.begin().await?;
+        let funs = flow_constants::get_tardis_inst();
         let result = FlowInstServ::start(&add_req.0, None, &funs, &ctx.0).await?;
-        funs.commit().await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
