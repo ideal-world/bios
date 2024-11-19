@@ -161,4 +161,9 @@ impl EventTopicServ {
 
         Ok(())
     }
+    
+    pub async fn unregister_user(topic: TopicCode, ak: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        EventAuthServ::new().remove_auth(topic, ak, funs).await?;
+        Ok(())
+    }
 }

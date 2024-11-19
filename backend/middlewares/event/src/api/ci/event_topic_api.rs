@@ -1,3 +1,4 @@
+use asteroid_mq::prelude::TopicCode;
 use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use tardis::web::context_extractor::TardisContextExtractor;
@@ -101,6 +102,16 @@ impl EventTopicApi {
             &ctx.0,
         )
         .await?;
+        TardisResp::ok(Void {})
+    }
+
+    /// Register user to topic
+    ///
+    /// 注销用户
+    #[oai(path = "/:topic_code/unregister", method = "delete")]
+    async fn unregister(&self, topic_code: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+        let funs = get_tardis_inst();
+        EventTopicServ::unregister_user(TopicCode::new(topic_code.0), &ctx.0.ak, &funs, &ctx.0).await?;
         TardisResp::ok(Void {})
     }
 }
