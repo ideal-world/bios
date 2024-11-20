@@ -27,6 +27,7 @@ spi_dispatch_service! {
         addv2(add_req: &mut LogItemAddV2Req) -> TardisResult<String>;
         findv2(find_req: &mut LogItemFindReq) -> TardisResult<TardisPage<LogItemFindResp>>;
         modify_ext(tag: &str,key: &str, ext: &mut Value) -> TardisResult<()>;
+        modify_ext_v2(tag: &str,key: &str, ext: &mut Value) -> TardisResult<()>;
         add_config(config: &mut LogConfigReq) -> TardisResult<()>;
         delete_config(config: &mut LogConfigReq) -> TardisResult<()>;
     }

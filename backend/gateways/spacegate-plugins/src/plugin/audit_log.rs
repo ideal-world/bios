@@ -224,6 +224,7 @@ impl AuditLogPlugin {
                                 msg: None,
                                 owner_name: None,
                                 push: false,
+                                disable: None,
                             },
                             &funs,
                             &spi_ctx,
