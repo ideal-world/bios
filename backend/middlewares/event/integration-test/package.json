@@ -3,13 +3,15 @@
   "module": "src/index.ts",
   "type": "module",
   "devDependencies": {
-    "@types/bun": "latest"
+    "@types/bun": "latest",
+    "@types/progress": "^2.0.7"
   },
   "peerDependencies": {
     "typescript": "^5.6.3"
   },
   "dependencies": {
-    "asteroid-mq-sdk": "^0.1.0-alpha.9"
+    "asteroid-mq-sdk": "^0.1.0-alpha.9",
+    "progress": "^2.0.3"
   },
   "scripts": {
     "build": "bun build src/index.ts --outfile dist/index.mjs"

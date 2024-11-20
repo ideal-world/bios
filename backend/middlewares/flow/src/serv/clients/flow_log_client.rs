@@ -111,6 +111,7 @@ impl FlowLogClient {
             msg: None,
             owner_name,
             push: push,
+            disable: None,
         };
         SpiLogClient::addv2(req, funs, ctx).await?;
         Ok(())

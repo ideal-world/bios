@@ -32,6 +32,14 @@ impl LogCiItemApi {
         let resp = log_item_serv::find(&mut find_req.0, &funs, &ctx.0).await?;
         TardisResp::ok(resp)
     }
+
+    /// Modify Item ext by key
+    #[oai(path = "/modify/:tag/:key/ext", method = "post")]
+    async fn modify_ext(&self, tag: Path<String>, key: Path<String>, mut ext: Json<Value>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+        let funs = crate::get_tardis_inst();
+        log_item_serv::modify_ext(&tag.0, &key.0, &mut ext.0, &funs, &ctx.0).await?;
+        TardisResp::ok(Void {})
+    }
 }
 
 /// Interface Console Log API V2

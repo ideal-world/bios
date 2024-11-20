@@ -20,6 +20,5 @@ pub async fn handle_events() -> TardisResult<()> {
     if let Some(topic) = get_topic(&SPI_RPC_TOPIC) {
         topic.create_endpoint([Interest::new("log/*")]).await.map_err(mq_error)?.create_event_loop().with_handler(ContextHandler(handle_add_event)).spawn();
     }
-
     Ok(())
 }

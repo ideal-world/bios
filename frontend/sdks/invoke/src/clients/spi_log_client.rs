@@ -23,8 +23,6 @@ use tardis::futures::TryFutureExt as _;
 pub mod event {
     use asteroid_mq::prelude::*;
 
-    pub const LOG_AVATAR: &str = "spi-log";
-
     impl EventAttribute for super::LogItemAddV2Req {
         const SUBJECT: Subject = Subject::const_new("log/add");
     }
@@ -103,6 +101,7 @@ pub struct LogItemAddV2Req {
     pub owner: Option<String>,
     pub owner_name: Option<String>,
     pub own_paths: Option<String>,
+    pub disable: Option<bool>,
     pub push: bool,
     pub msg: Option<String>,
 }
@@ -191,6 +190,7 @@ impl SpiLogClient {
             msg: None,
             owner_name,
             push: false,
+            disable: None,
         };
         Self::addv2(req, funs, ctx).await?;
         Ok(())

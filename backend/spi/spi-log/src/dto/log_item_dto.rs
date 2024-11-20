@@ -71,6 +71,7 @@ pub struct LogItemAddV2Req {
     #[oai(validator(min_length = "1"))]
     pub owner_name: Option<String>,
     pub own_paths: Option<String>,
+    pub disable: Option<bool>,
     pub push: bool,
     pub msg: Option<String>,
 }
@@ -91,6 +92,7 @@ impl From<bios_sdk_invoke::clients::spi_log_client::LogItemAddV2Req> for LogItem
             msg: value.msg,
             owner_name: value.owner_name,
             push: value.push,
+            disable: value.disable,
         }
     }
 }
