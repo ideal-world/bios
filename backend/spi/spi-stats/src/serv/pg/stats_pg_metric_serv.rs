@@ -9,15 +9,19 @@ use itertools::Itertools;
 use tardis::{
     basic::{dto::TardisContext, error::TardisError, result::TardisResult},
     db::{
-        reldb_client::TardisRelDBClient,
+        reldb_client::{TardisRelDBClient, TardisRelDBlConnection},
         sea_orm::{self, FromQueryResult, Value},
     },
     serde_json::{self, json, Map},
+    web::web_resp::{TardisPage, Void},
     TardisFunsInst,
 };
 
 use crate::{
-    dto::stats_query_dto::{StatsQueryMetricsReq, StatsQueryMetricsResp},
+    dto::stats_query_dto::{
+        StatsQueryDimensionGroupOrderReq, StatsQueryDimensionGroupReq, StatsQueryDimensionOrderReq, StatsQueryMetricsHavingReq, StatsQueryMetricsOrderReq,
+        StatsQueryMetricsRecordReq, StatsQueryMetricsReq, StatsQueryMetricsResp, StatsQueryMetricsSelectReq, StatsQueryMetricsWhereReq,
+    },
     serv::stats_record_serv::dim_record_paginate,
     stats_enumeration::{StatsDataTypeKind, StatsFactColKind},
 };
@@ -101,190 +105,34 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
     let bs_inst = inst.inst::<TardisRelDBClient>();
     let (conn, _) = common_pg::init_conn(bs_inst).await?;
 
-    let fact_conf_table_name = package_table_name("stats_conf_fact", ctx);
-    let fact_col_conf_table_name = package_table_name("stats_conf_fact_col", ctx);
-    let dim_conf_table_name = package_table_name("stats_conf_dim", ctx);
     let fact_inst_table_name = package_table_name(&format!("stats_inst_fact_{}", query_req.from), ctx);
     let fact_inst_del_table_name = package_table_name(&format!("stats_inst_fact_{}_del", query_req.from), ctx);
-    let rel_external_ids = self::package_rel_external_id_agg(query_req);
-    let conf_params = if let Some(rel_external_ids) = &rel_external_ids {
-        vec![Value::from(&query_req.from), Value::from(StatsFactColKind::Ext.to_string())].into_iter().chain(rel_external_ids.iter().map(Value::from)).collect::<Vec<Value>>()
-    } else {
-        vec![Value::from(&query_req.from), Value::from(StatsFactColKind::Ext.to_string())]
-    };
-    // Fetch config
-    // TODO 是否需要在col加入一个dim_data_type字段，用于区分维度和度量
-    let conf_info = conn
-        .query_all(
-            &format!(
-                r#"SELECT
-    col.key as col_key,
-    col.show_name as show_name,
-    col.kind as col_kind,
-    col.rel_external_id as rel_external_id,
-    col.dim_rel_conf_dim_key as dim_rel_conf_dim_key,
-    col.dim_multi_values as dim_multi_values,
-    col.mes_data_distinct as mes_data_distinct,
-    col.mes_data_type as mes_data_type,
-    col.mes_unit as mes_unit,
-    COALESCE(dim.data_type,COALESCE(col.dim_data_type,'String')) as dim_data_type,
-    dim.hierarchy as dim_hierarchy,
-    fact.query_limit as query_limit
-  FROM
-    {fact_col_conf_table_name} col
-    LEFT JOIN {fact_conf_table_name} fact ON fact.key = col.rel_conf_fact_key
-    LEFT JOIN {dim_conf_table_name} dim ON dim.key = col.dim_rel_conf_dim_key
-  WHERE
-    fact.key = $1
-    AND col.kind != $2
-    {}
-    "#,
-                if let Some(rel_external_ids) = &rel_external_ids {
-                    format!(
-                        "AND col.rel_external_id IN ({})",
-                        (0..rel_external_ids.len()).map(|idx| format!("${}", idx + 3)).collect::<Vec<String>>().join(", ")
-                    )
-                } else {
-                    "AND col.rel_external_id  = ''".to_string()
-                }
-            ),
-            conf_params,
-        )
-        .await?;
-
-    let mut conf_info = conf_info
-        .into_iter()
-        .map(|item: sea_orm::prelude::QueryResult| {
-            Ok(StatsConfInfo {
-                col_key: item.try_get("", "col_key")?,
-                show_name: item.try_get("", "show_name")?,
-                col_kind: item.try_get("", "col_kind")?,
-                dim_multi_values: item.try_get("", "dim_multi_values")?,
-                mes_data_distinct: item.try_get("", "mes_data_distinct")?,
-                mes_data_type: if item.try_get::<Option<String>>("", "mes_data_type")?.is_none() {
-                    None
-                } else {
-                    Some(item.try_get("", "mes_data_type")?)
-                },
-                dim_data_type: if item.try_get::<Option<String>>("", "dim_data_type")?.is_none() {
-                    None
-                } else {
-                    Some(item.try_get("", "dim_data_type")?)
-                },
-                query_limit: item.try_get("", "query_limit")?,
-                dim_rel_conf_dim_key: if item.try_get::<Option<String>>("", "dim_rel_conf_dim_key")?.is_none() {
-                    None
-                } else {
-                    Some(item.try_get("", "dim_rel_conf_dim_key")?)
-                },
-                dim_hierarchy: if item.try_get::<Option<Vec<String>>>("", "dim_hierarchy")?.is_none() {
-                    None
-                } else {
-                    Some(item.try_get("", "dim_hierarchy")?)
-                },
-                rel_external_id: if item.try_get::<Option<String>>("", "rel_external_id")?.is_none() {
-                    None
-                } else {
-                    Some(item.try_get("", "rel_external_id")?)
-                },
-            })
-        })
-        .collect::<TardisResult<Vec<StatsConfInfo>>>()?;
-
-    let query_limit = match conf_info.as_slice() {
-        [] => {
-            return Err(funs.err().not_found(
-                "metric",
-                "query",
-                &format!("The query fact [{}] does not exist.", query_req.from),
-                "404-spi-stats-metric-fact-not-exist",
-            ));
-        }
-        [first, ..] => first.query_limit,
-    };
-    // Add default dimension
-    conf_info.push(StatsConfInfo {
-        col_key: "key".to_string(),
-        show_name: "主键".to_string(),
-        col_kind: StatsFactColKind::Measure,
-        dim_multi_values: Some(false),
-        mes_data_distinct: Some(true),
-        mes_data_type: Some(StatsDataTypeKind::String),
-        dim_rel_conf_dim_key: None,
-        dim_data_type: None,
-        dim_hierarchy: None,
-        rel_external_id: None,
-        query_limit,
-    });
-    conf_info.push(StatsConfInfo {
-        col_key: "ct".to_string(),
-        show_name: "创建时间".to_string(),
-        col_kind: StatsFactColKind::Dimension,
-        dim_multi_values: Some(false),
-        mes_data_distinct: Some(true),
-        mes_data_type: None,
-        dim_rel_conf_dim_key: None,
-        dim_data_type: Some(StatsDataTypeKind::DateTime),
-        dim_hierarchy: None,
-        rel_external_id: None,
-        query_limit,
-    });
-    conf_info.push(StatsConfInfo {
-        col_key: "_count".to_string(),
-        show_name: "虚构计算数".to_string(),
-        col_kind: StatsFactColKind::Measure,
-        dim_multi_values: Some(false),
-        mes_data_distinct: Some(true),
-        mes_data_type: Some(StatsDataTypeKind::Int),
-        dim_rel_conf_dim_key: None,
-        dim_data_type: None,
-        dim_hierarchy: None,
-        rel_external_id: None,
-        query_limit,
-    });
+    let rel_external_ids = self::package_rel_external_id_agg(
+        query_req.rel_external_id.clone(),
+        query_req.select.clone(),
+        query_req.group.clone(),
+        query_req._where.clone(),
+        query_req.having.clone(),
+        query_req.group_order.clone(),
+        query_req.metrics_order.clone(),
+    );
+    let (conf_info, query_limit) = fetch_conf_info(query_req.from.clone(), rel_external_ids.clone(), &conn, funs, ctx).await?;
     // todo 需要更改使用with
     let ct_agg = query_req.group.iter().any(|i| i.code == "ct");
     let conf_limit = query_limit;
-    // Dimension configuration, used for group and group_order
-    // 纬度配置,用于group以及group_order
-    let dim_conf_info =
-        conf_info.iter().filter(|i| i.col_kind == StatsFactColKind::Dimension).map(|v| (v.col_key.clone().to_string(), v.clone())).collect::<HashMap<String, StatsConfInfo>>();
-    // Measure configuration, used for select and metrics_order
-    // 度量配置,用于select以及metrics_order
-    let measure_conf_info =
-        conf_info.iter().filter(|i| i.col_kind == StatsFactColKind::Measure).map(|v| (v.col_key.clone().to_string(), v.clone())).collect::<HashMap<String, StatsConfInfo>>();
-    // Not distinguish between dimensions and measures, used for fields in where and having conditions
-    // 不区分维度和度量,用于where及having条件的字段
-    let conf_info = conf_info.into_iter().map(|v| (v.col_key.clone().to_string(), v)).collect::<HashMap<String, StatsConfInfo>>();
-    if query_req.select.iter().any(|i| !measure_conf_info.contains_key(&i.code.to_string()))
-        // should be equivalent: 
-        // original: || query_req.group.iter().any(|i| !dim_conf_info.contains_key(&i.code) || dim_conf_info.get(&i.code).unwrap().col_kind != StatsFactColKind::Dimension))
-        // (!contain || not_dim) => !(contain && is_dim)
-        || query_req.group.iter().any(|i| !dim_conf_info.get(&i.code.to_string()).is_some_and(|i|i.col_kind == StatsFactColKind::Dimension))
-        || query_req
-            .group_order
-            .as_ref()
-            .map(|orders| orders.iter().any(|order| !query_req.group.iter().any(|group| group.code == order.code && group.time_window == order.time_window)))
-            .unwrap_or(false)
-        || query_req
-            .metrics_order
-            .as_ref()
-            .map(|orders| orders.iter().any(|order| !query_req.select.iter().any(|select| order.code == select.code && order.fun == select.fun)))
-            .unwrap_or(false)
-        || query_req
-            .having
-            .as_ref()
-            .map(|havings| havings.iter().any(|having| !query_req.select.iter().any(|select| having.code == select.code && having.fun == select.fun)))
-            .unwrap_or(false)
-        || query_req._where.as_ref().map(|or_wheres| or_wheres.iter().any(|and_wheres| and_wheres.iter().any(|where_| !conf_info.contains_key(&where_.code.to_string())))).unwrap_or(false)
-    {
-        return Err(funs.err().not_found(
-            "metric",
-            "query",
-            "The query some dimension or measures does not exist.",
-            "404-spi-stats-metric-dim-mea-not-exist",
-        ));
-    }
+    let (conf_info, dim_conf_info, measure_conf_info) = package_dim_mea_conf_info(conf_info)?;
+    check_dim_mea(
+        conf_info.clone(),
+        measure_conf_info.clone(),
+        dim_conf_info.clone(),
+        query_req.select.clone(),
+        query_req.group.clone(),
+        query_req._where.clone(),
+        query_req.having.clone(),
+        query_req.group_order.clone(),
+        query_req.metrics_order.clone(),
+        funs,
+    )?;
     let mes_distinct = query_req.select.iter().any(|i| {
         if let Some(conf) = measure_conf_info.get(&i.code.to_string()) {
             return conf.mes_data_distinct.unwrap_or(true);
@@ -302,324 +150,30 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
     params.push(Value::from(query_req.end_time));
 
     // Package filter
-    let mut sql_part_wheres = vec![];
-    if let Some(wheres) = &query_req._where {
-        let mut sql_part_or_wheres = vec![];
-        for or_wheres in wheres {
-            let mut sql_part_and_wheres = vec![];
-            for and_where in or_wheres {
-                let col_conf = conf_info.get(&and_where.code.to_string()).ok_or_else(|| {
-                    funs.err().internal_error(
-                        "metric",
-                        "query",
-                        &format!("missing config with code [{code}]", code = and_where.code),
-                        "500-spi-stats-internal-error",
-                    )
-                })?;
-                let col_data_type = if col_conf.col_kind == StatsFactColKind::Dimension {
-                    col_conf.dim_data_type.as_ref().ok_or_else(|| {
-                        funs.err().internal_error(
-                            "metric",
-                            "query",
-                            &format!("config missing dim_data_type with code [{code}]", code = and_where.code),
-                            "500-spi-stats-internal-error",
-                        )
-                    })?
-                } else {
-                    col_conf.mes_data_type.as_ref().ok_or_else(|| {
-                        funs.err().internal_error(
-                            "metric",
-                            "query",
-                            &format!("config missing mes_data_type with code [{code}]", code = and_where.code),
-                            "500-spi-stats-internal-error",
-                        )
-                    })?
-                };
-                let column_name = if and_where.rel_external_id.clone().is_some_and(|i| !i.is_empty()) {
-                    if col_conf.dim_multi_values.unwrap_or(false) {
-                        format!(
-                            "ARRAY(SELECT jsonb_array_elements_text(COALESCE((fact.ext ->> '{}')::jsonb, '[]'::jsonb)))",
-                            &and_where.code
-                        )
-                    } else {
-                        format!("fact.ext ->> '{}'", &and_where.code)
-                    }
-                } else {
-                    format!("fact.{}", &and_where.code)
-                };
-                if let Some((sql_part, value)) = col_data_type.to_pg_where(
-                    col_conf.dim_multi_values.unwrap_or(false),
-                    &column_name,
-                    &and_where.op,
-                    params.len() + 1,
-                    &and_where.value,
-                    &and_where.time_window,
-                )? {
-                    value.iter().for_each(|v| params.push(v.clone()));
-                    sql_part_and_wheres.push(sql_part);
-                } else {
-                    return Err(funs.err().not_found(
-                        "metric",
-                        "query",
-                        &format!(
-                            "The query column=[{}] type=[{}] operation=[{}] time_window=[{}] multi_values=[{}] is not legal.",
-                            &and_where.code,
-                            col_data_type.to_string().to_lowercase(),
-                            &and_where.op.to_sql(),
-                            &and_where.time_window.is_some(),
-                            col_conf.dim_multi_values.unwrap_or_default()
-                        ),
-                        "404-spi-stats-metric-op-not-legal",
-                    ));
-                }
-            }
-            sql_part_or_wheres.push(sql_part_and_wheres.join(" AND "));
-        }
-        sql_part_wheres.push(format!("( {} )", sql_part_or_wheres.join(" OR ")));
-    }
-    let sql_part_wheres = if sql_part_wheres.is_empty() {
-        "".to_string()
-    } else {
-        format!(" AND {}", sql_part_wheres.join(" AND "))
-    };
+    let sql_part_wheres = sql_part_where(conf_info.clone(), query_req._where.clone(), &mut params, funs)?;
 
     // Package inner select
     // Add measures
-    let mut sql_part_inner_selects = vec![];
-    for select in &query_req.select {
-        let col_conf = measure_conf_info.get(&select.code).ok_or_else(|| {
-            funs.err().not_found(
-                "metric",
-                "query",
-                &format!("Missing config for select code [{code}] does not exist.", code = select.code),
-                "500-spi-stats-internal-error",
-            )
-        })?;
-        if col_conf.rel_external_id.clone().is_some_and(|i| !i.is_empty()) {
-            sql_part_inner_selects.push(format!("fact.ext ->> '{}' AS {}", &select.code, &select.code));
-        } else {
-            sql_part_inner_selects.push(format!("fact.{} AS {}", &select.code, &select.code));
-        }
-    }
-    for group in &query_req.group {
-        let col_conf = dim_conf_info.get(&group.code.to_string()).ok_or_else(|| {
-            funs.err().not_found(
-                "metric",
-                "query",
-                &format!("Missing config for group code [{code}] does not exist.", code = group.code),
-                "500-spi-stats-internal-error",
-            )
-        })?;
-        if col_conf.rel_external_id.clone().is_some_and(|i| !i.is_empty()) {
-            sql_part_inner_selects.push(format!("fact.ext ->> '{}' AS {}", &group.code, &group.code));
-        } else {
-            sql_part_inner_selects.push(format!("fact.{} AS {}", &group.code, &group.code));
-        }
-    }
-    let sql_part_inner_selects = sql_part_inner_selects.join(",");
+    let sql_part_inner_selects = sql_part_inner_selects(measure_conf_info.clone(), dim_conf_info.clone(), query_req.select.clone(), query_req.group.clone(), funs)?;
 
     // Package group
     // (column name with fun, alias name, show name)
-    let mut sql_part_group_infos = vec![];
-    for group in &query_req.group {
-        let col_conf = dim_conf_info.get(&group.code.to_string()).ok_or_else(|| {
-            funs.err().not_found(
-                "metric",
-                "query",
-                &format!("Missing config for group code [{code}] does not exist.", code = group.code),
-                "500-spi-stats-internal-error",
-            )
-        })?;
-        let col_data_type = col_conf.dim_data_type.as_ref().ok_or_else(|| {
-            funs.err().not_found(
-                "metric",
-                "query",
-                &format!("Missing col_data_type for group code [{code}] does not exist.", code = group.code),
-                "500-spi-stats-internal-error",
-            )
-        })?;
-        let column_name = if col_conf.rel_external_id.clone().is_some_and(|i| !i.is_empty()) && col_conf.dim_multi_values.unwrap_or(false) {
-            format!("ARRAY(SELECT jsonb_array_elements_text(COALESCE(_.{}::jsonb, '[]'::jsonb)))", &group.code.clone())
-        } else {
-            format!("_.{}", group.code.clone())
-        };
-        if let Some(column_name_with_fun) = col_data_type.to_pg_group(&column_name, col_conf.dim_multi_values.unwrap_or(false), &group.time_window) {
-            let alias_name = format!(
-                "{}{FUNCTION_SUFFIX_FLAG}{}",
-                group.code.clone(),
-                group.time_window.as_ref().map(|i| i.to_string().to_lowercase()).unwrap_or("".to_string())
-            );
-            sql_part_group_infos.push((column_name_with_fun, alias_name, col_conf.show_name.clone(), col_conf.col_key.clone()));
-        } else {
-            return Err(funs.err().not_found(
-                "metric",
-                "query",
-                &format!(
-                    "The group column=[{}] type=[{}] time_window=[{}] is not legal.",
-                    &group.code,
-                    col_data_type.to_string().to_lowercase(),
-                    &group.time_window.is_some(),
-                ),
-                "404-spi-stats-metric-op-not-legal",
-            ));
-        }
-    }
-    let mut sql_part_groups = sql_part_group_infos.iter().map(|group| group.1.clone()).collect::<Vec<String>>().join(",");
+    let (sql_part_groups, sql_part_group_infos) = sql_part_groups_infos(dim_conf_info.clone(), query_req.group.clone(), funs)?;
 
     // Package outer select
     // (column name with fun, alias name, show_name, is dimension)
-    let mut sql_part_outer_select_infos = vec![];
-    for (column_name_with_fun, alias_name, show_name, _) in sql_part_group_infos.clone() {
-        sql_part_outer_select_infos.push((column_name_with_fun, alias_name, show_name, true));
-    }
-    for select in &query_req.select {
-        let col_conf = measure_conf_info.get(&select.code.to_string()).ok_or_else(|| {
-            funs.err().not_found(
-                "metric",
-                "query",
-                &format!("Missing col_data_type for select code [{code}] does not exist.", code = select.code),
-                "500-spi-stats-internal-error",
-            )
-        })?;
-        let col_data_type = col_conf.mes_data_type.as_ref().ok_or_else(|| {
-            funs.err().not_found(
-                "metric",
-                "query",
-                &format!("Missing col_data_type for select code [{code}] does not exist.", code = select.code),
-                "500-spi-stats-internal-error",
-            )
-        })?;
-        let column_name_with_fun = if ct_agg {
-            if select.code != "_count" {
-                sql_part_groups = format!("{},_.{}", sql_part_groups, select.code.clone());
-            }
-            let mut partition_dim = vec![];
-            let mut order_dim = "".to_string();
-            for (column_name_with_fun, _, _, col_key) in sql_part_group_infos.clone() {
-                if col_key == "ct" {
-                    order_dim.clone_from(&column_name_with_fun);
-                } else {
-                    partition_dim.push(column_name_with_fun);
-                }
-            }
-            format!(
-                "{} OVER ({})",
-                col_data_type.to_pg_select(
-                    &format!("_.{}", if select.code == "_count" { "count".to_string() } else { select.code.clone() }),
-                    &select.fun
-                ),
-                if !partition_dim.is_empty() {
-                    format!("PARTITION BY {} ORDER BY {}", partition_dim.join(","), order_dim)
-                } else {
-                    format!("ORDER BY {}", order_dim)
-                }
-            )
-        } else {
-            col_data_type.to_pg_select(&format!("_.{}", select.code.clone()), &select.fun)
-        };
-        // let column_name_with_fun = col_data_type.to_pg_select(&format!("_.{}", select.code.clone()), &select.fun);
-        let alias_name = format!("{}{FUNCTION_SUFFIX_FLAG}{}", select.code.clone(), select.fun.to_string().to_lowercase());
-        sql_part_outer_select_infos.push((column_name_with_fun, alias_name, col_conf.show_name.clone(), false));
-    }
-    let sql_part_outer_selects =
-        sql_part_outer_select_infos.iter().map(|(column_name_with_fun, alias_name, _, _)| format!("{column_name_with_fun} AS {alias_name}")).collect::<Vec<String>>().join(",");
+    let (sql_part_groups, sql_part_outer_selects, sql_part_outer_select_infos) =
+        sql_part_outer_selects(sql_part_groups.clone(), sql_part_group_infos, ct_agg, measure_conf_info, query_req.select.clone(), funs)?;
 
     // Package having
-    let sql_part_havings = if let Some(havings) = &query_req.having {
-        let mut sql_part_havings = vec![];
-        for having in havings {
-            let col_conf = conf_info.get(&having.code.to_string()).ok_or_else(|| {
-                funs.err().not_found(
-                    "metric",
-                    "query",
-                    &format!("Missing config for having code [{code}] does not exist.", code = having.code),
-                    "500-spi-stats-internal-error",
-                )
-            })?;
-            if let Some((sql_part, value)) = col_conf
-                .mes_data_type
-                .as_ref()
-                .ok_or_else(|| {
-                    funs.err().not_found(
-                        "metric",
-                        "query",
-                        &format!("Missing mes_data_type for having code [{code}] does not exist.", code = having.code),
-                        "500-spi-stats-internal-error",
-                    )
-                })?
-                .to_pg_having(false, &format!("_.{}", having.code.clone()), &having.op, params.len() + 1, &having.value, Some(&having.fun))?
-            {
-                value.iter().for_each(|v| params.push(v.clone()));
-                sql_part_havings.push(sql_part);
-            } else {
-                return Err(funs.err().not_found(
-                    "metric",
-                    "query",
-                    &format!(
-                        "The query column=[{}] type=[{}] operation=[{}] fun=[{}] is not legal.",
-                        &having.code,
-                        col_conf.mes_data_type.as_ref().map(ToString::to_string).unwrap_or("None".into()).to_lowercase(),
-                        &having.op.to_sql(),
-                        &having.fun.to_string().to_lowercase()
-                    ),
-                    "404-spi-stats-metric-op-not-legal",
-                ));
-            }
-        }
-        format!("HAVING {}", sql_part_havings.join(","))
-    } else {
-        "".to_string()
-    };
+    let sql_part_havings = sql_part_havings(conf_info.clone(), query_req.having.clone(), &mut params, funs)?;
 
     // Package dimension order
-    let sql_dimension_orders = if let Some(orders) = &query_req.dimension_order {
-        let mut sql_part_orders = vec![];
-        for order in orders {
-            let col_conf = dim_conf_info.get(&order.code.to_string()).ok_or_else(|| {
-                funs.err().not_found(
-                    "metric",
-                    "query",
-                    &format!("Missing config for order code [{code}] does not exist.", code = order.code),
-                    "500-spi-stats-internal-error",
-                )
-            })?;
-            if col_conf.rel_external_id.clone().is_some_and(|i| !i.is_empty()) {
-                sql_part_orders.push(format!("fact.ext ->>{} {}", order.code, if order.asc { "ASC" } else { "DESC" }));
-            } else {
-                sql_part_orders.push(format!("fact.{} {}", order.code, if order.asc { "ASC" } else { "DESC" }));
-            }
-        }
-        format!("ORDER BY {}", sql_part_orders.join(","))
-    } else {
-        "".to_string()
-    };
+    let sql_dimension_orders = sql_dimension_orders(dim_conf_info.clone(), query_req.dimension_order.clone(), funs)?;
 
     // Package metrics or group order
-    let sql_orders = if query_req.group_order.is_some() || query_req.metrics_order.is_some() {
-        let mut sql_part_orders = Vec::new();
-        if let Some(orders) = &query_req.group_order {
-            let group_orders = orders
-                .iter()
-                .map(|order| {
-                    format!(
-                        "{}{FUNCTION_SUFFIX_FLAG}{} {}",
-                        order.code.clone(),
-                        order.time_window.as_ref().map(|i| i.to_string().to_lowercase()).unwrap_or("".to_string()),
-                        if order.asc { "ASC" } else { "DESC" }
-                    )
-                })
-                .collect::<Vec<String>>();
-            sql_part_orders.extend(group_orders);
-        }
-        if let Some(orders) = &query_req.metrics_order {
-            let metrics_orders =
-                orders.iter().map(|order| format!("{}{FUNCTION_SUFFIX_FLAG}{} {}", order.code.clone(), order.fun, if order.asc { "ASC" } else { "DESC" })).collect::<Vec<String>>();
-            sql_part_orders.extend(metrics_orders);
-        }
-        format!("ORDER BY {}", sql_part_orders.join(","))
-    } else {
-        "".to_string()
-    };
+    let sql_orders = sql_orders(query_req.group_order.clone(), query_req.metrics_order.clone())?;
+
     // package limit
     let query_limit = if let Some(limit) = &query_req.limit { format!("LIMIT {limit}") } else { "".to_string() };
     let ignore_group_agg = sql_part_groups.is_empty() || !query_req.group_agg.unwrap_or(false);
@@ -631,7 +185,6 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
     } else {
         "fact.own_paths LIKE $1".to_string()
     };
-    // todo 提供另一种with语法的实现,用于 ct 统计全表数据
     let final_sql = format!(
         r#"SELECT {sql_part_outer_selects}{}
     FROM (
@@ -723,6 +276,568 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
     })
 }
 
+async fn fetch_conf_info(
+    from: String,
+    rel_external_ids: Option<HashSet<String>>,
+    conn: &TardisRelDBlConnection,
+    funs: &TardisFunsInst,
+    ctx: &TardisContext,
+) -> TardisResult<(Vec<StatsConfInfo>, i32)> {
+    let fact_conf_table_name = package_table_name("stats_conf_fact", ctx);
+    let fact_col_conf_table_name = package_table_name("stats_conf_fact_col", ctx);
+    let dim_conf_table_name = package_table_name("stats_conf_dim", ctx);
+    let conf_params = if let Some(rel_external_ids) = &rel_external_ids {
+        vec![Value::from(&from), Value::from(StatsFactColKind::Ext.to_string())].into_iter().chain(rel_external_ids.iter().map(Value::from)).collect::<Vec<Value>>()
+    } else {
+        vec![Value::from(&from), Value::from(StatsFactColKind::Ext.to_string())]
+    };
+    // Fetch config
+    let conf_info = conn
+        .query_all(
+            &format!(
+                r#"SELECT
+    col.key as col_key,
+    col.show_name as show_name,
+    col.kind as col_kind,
+    col.rel_external_id as rel_external_id,
+    col.dim_rel_conf_dim_key as dim_rel_conf_dim_key,
+    col.dim_multi_values as dim_multi_values,
+    col.mes_data_distinct as mes_data_distinct,
+    col.mes_data_type as mes_data_type,
+    col.mes_unit as mes_unit,
+    COALESCE(dim.data_type,COALESCE(col.dim_data_type,'String')) as dim_data_type,
+    dim.hierarchy as dim_hierarchy,
+    fact.query_limit as query_limit
+  FROM
+    {fact_col_conf_table_name} col
+    LEFT JOIN {fact_conf_table_name} fact ON fact.key = col.rel_conf_fact_key
+    LEFT JOIN {dim_conf_table_name} dim ON dim.key = col.dim_rel_conf_dim_key
+  WHERE
+    fact.key = $1
+    AND col.kind != $2
+    {}
+    "#,
+                if let Some(rel_external_ids) = &rel_external_ids {
+                    format!(
+                        "AND col.rel_external_id IN ({})",
+                        (0..rel_external_ids.len()).map(|idx| format!("${}", idx + 3)).collect::<Vec<String>>().join(", ")
+                    )
+                } else {
+                    "AND col.rel_external_id  = ''".to_string()
+                }
+            ),
+            conf_params,
+        )
+        .await?;
+
+    let mut conf_info = conf_info
+        .into_iter()
+        .map(|item: sea_orm::prelude::QueryResult| {
+            Ok(StatsConfInfo {
+                col_key: item.try_get("", "col_key")?,
+                show_name: item.try_get("", "show_name")?,
+                col_kind: item.try_get("", "col_kind")?,
+                dim_multi_values: item.try_get("", "dim_multi_values")?,
+                mes_data_distinct: item.try_get("", "mes_data_distinct")?,
+                mes_data_type: if item.try_get::<Option<String>>("", "mes_data_type")?.is_none() {
+                    None
+                } else {
+                    Some(item.try_get("", "mes_data_type")?)
+                },
+                dim_data_type: if item.try_get::<Option<String>>("", "dim_data_type")?.is_none() {
+                    None
+                } else {
+                    Some(item.try_get("", "dim_data_type")?)
+                },
+                query_limit: item.try_get("", "query_limit")?,
+                dim_rel_conf_dim_key: if item.try_get::<Option<String>>("", "dim_rel_conf_dim_key")?.is_none() {
+                    None
+                } else {
+                    Some(item.try_get("", "dim_rel_conf_dim_key")?)
+                },
+                dim_hierarchy: if item.try_get::<Option<Vec<String>>>("", "dim_hierarchy")?.is_none() {
+                    None
+                } else {
+                    Some(item.try_get("", "dim_hierarchy")?)
+                },
+                rel_external_id: if item.try_get::<Option<String>>("", "rel_external_id")?.is_none() {
+                    None
+                } else {
+                    Some(item.try_get("", "rel_external_id")?)
+                },
+            })
+        })
+        .collect::<TardisResult<Vec<StatsConfInfo>>>()?;
+    let query_limit = match conf_info.as_slice() {
+        [] => {
+            return Err(funs.err().not_found(
+                "metric",
+                "query",
+                &format!("The query fact [{}] does not exist.", from),
+                "404-spi-stats-metric-fact-not-exist",
+            ));
+        }
+        [first, ..] => first.query_limit,
+    };
+    // Add default dimension
+    conf_info.push(StatsConfInfo {
+        col_key: "key".to_string(),
+        show_name: "主键".to_string(),
+        col_kind: StatsFactColKind::Dimension,
+        dim_multi_values: Some(false),
+        mes_data_distinct: Some(true),
+        mes_data_type: Some(StatsDataTypeKind::String),
+        dim_rel_conf_dim_key: None,
+        dim_data_type: Some(StatsDataTypeKind::String),
+        dim_hierarchy: None,
+        rel_external_id: None,
+        query_limit,
+    });
+    conf_info.push(StatsConfInfo {
+        col_key: "ct".to_string(),
+        show_name: "创建时间".to_string(),
+        col_kind: StatsFactColKind::Dimension,
+        dim_multi_values: Some(false),
+        mes_data_distinct: Some(true),
+        mes_data_type: None,
+        dim_rel_conf_dim_key: None,
+        dim_data_type: Some(StatsDataTypeKind::DateTime),
+        dim_hierarchy: None,
+        rel_external_id: None,
+        query_limit,
+    });
+    conf_info.push(StatsConfInfo {
+        col_key: "_count".to_string(),
+        show_name: "虚构计算数".to_string(),
+        col_kind: StatsFactColKind::Measure,
+        dim_multi_values: Some(false),
+        mes_data_distinct: Some(true),
+        mes_data_type: Some(StatsDataTypeKind::Int),
+        dim_rel_conf_dim_key: None,
+        dim_data_type: None,
+        dim_hierarchy: None,
+        rel_external_id: None,
+        query_limit,
+    });
+    Ok((conf_info, query_limit))
+}
+
+fn package_dim_mea_conf_info(conf_info: Vec<StatsConfInfo>) -> TardisResult<(HashMap<String, StatsConfInfo>, HashMap<String, StatsConfInfo>, HashMap<String, StatsConfInfo>)> {
+    // Dimension configuration, used for group and group_order
+    // 纬度配置,用于group以及group_order
+    let dim_conf_info =
+        conf_info.iter().filter(|i| i.col_kind == StatsFactColKind::Dimension).map(|v| (v.col_key.clone().to_string(), v.clone())).collect::<HashMap<String, StatsConfInfo>>();
+    // Measure configuration, used for select and metrics_order
+    // 度量配置,用于select以及metrics_order
+    let measure_conf_info =
+        conf_info.iter().filter(|i| i.col_kind == StatsFactColKind::Measure).map(|v| (v.col_key.clone().to_string(), v.clone())).collect::<HashMap<String, StatsConfInfo>>();
+    // Not distinguish between dimensions and measures, used for fields in where and having conditions
+    // 不区分维度和度量,用于where及having条件的字段
+    let conf_info = conf_info.into_iter().map(|v| (v.col_key.clone().to_string(), v)).collect::<HashMap<String, StatsConfInfo>>();
+    Ok((conf_info, dim_conf_info, measure_conf_info))
+}
+
+fn check_dim_mea(
+    conf_info: HashMap<String, StatsConfInfo>,
+    measure_conf_info: HashMap<String, StatsConfInfo>,
+    dim_conf_info: HashMap<String, StatsConfInfo>,
+    select: Vec<StatsQueryMetricsSelectReq>,
+    group: Vec<StatsQueryDimensionGroupReq>,
+    _where: Option<Vec<Vec<StatsQueryMetricsWhereReq>>>,
+    having: Option<Vec<StatsQueryMetricsHavingReq>>,
+    group_order: Option<Vec<StatsQueryDimensionGroupOrderReq>>,
+    metrics_order: Option<Vec<StatsQueryMetricsOrderReq>>,
+    funs: &TardisFunsInst,
+) -> TardisResult<()> {
+    if select.iter().any(|i| !measure_conf_info.contains_key(&i.code.to_string()))
+        // should be equivalent: 
+        // original: || query_req.group.iter().any(|i| !dim_conf_info.contains_key(&i.code) || dim_conf_info.get(&i.code).unwrap().col_kind != StatsFactColKind::Dimension))
+        // (!contain || not_dim) => !(contain && is_dim)
+        || group.iter().any(|i| !dim_conf_info.get(&i.code.to_string()).is_some_and(|i|i.col_kind == StatsFactColKind::Dimension))
+        || group_order
+            .as_ref()
+            .map(|orders| orders.iter().any(|order| !group.iter().any(|group| group.code == order.code && group.time_window == order.time_window)))
+            .unwrap_or(false)
+        || metrics_order
+            .as_ref()
+            .map(|orders| orders.iter().any(|order| !select.iter().any(|select| order.code == select.code && order.fun == select.fun)))
+            .unwrap_or(false)
+        ||  having
+            .as_ref()
+            .map(|havings| havings.iter().any(|having| !select.iter().any(|select| having.code == select.code && having.fun == select.fun)))
+            .unwrap_or(false)
+        || _where.as_ref().map(|or_wheres| or_wheres.iter().any(|and_wheres| and_wheres.iter().any(|where_| !conf_info.contains_key(&where_.code.to_string())))).unwrap_or(false)
+    {
+        return Err(funs.err().not_found(
+            "metric",
+            "query",
+            "The query some dimension or measures does not exist.",
+            "404-spi-stats-metric-dim-mea-not-exist",
+        ));
+    }
+    Ok(())
+}
+
+fn sql_part_where(
+    conf_info: HashMap<String, StatsConfInfo>,
+    _where: Option<Vec<Vec<StatsQueryMetricsWhereReq>>>,
+    params: &mut Vec<Value>,
+    funs: &TardisFunsInst,
+) -> TardisResult<String> {
+    let mut sql_part_wheres = vec![];
+    if let Some(wheres) = &_where {
+        let mut sql_part_or_wheres = vec![];
+        for or_wheres in wheres {
+            let mut sql_part_and_wheres = vec![];
+            for and_where in or_wheres {
+                let col_conf = conf_info.get(&and_where.code.to_string()).ok_or_else(|| {
+                    funs.err().internal_error(
+                        "metric",
+                        "query",
+                        &format!("missing config with code [{code}]", code = and_where.code),
+                        "500-spi-stats-internal-error",
+                    )
+                })?;
+                let col_data_type = if col_conf.col_kind == StatsFactColKind::Dimension {
+                    col_conf.dim_data_type.as_ref().ok_or_else(|| {
+                        funs.err().internal_error(
+                            "metric",
+                            "query",
+                            &format!("config missing dim_data_type with code [{code}]", code = and_where.code),
+                            "500-spi-stats-internal-error",
+                        )
+                    })?
+                } else {
+                    col_conf.mes_data_type.as_ref().ok_or_else(|| {
+                        funs.err().internal_error(
+                            "metric",
+                            "query",
+                            &format!("config missing mes_data_type with code [{code}]", code = and_where.code),
+                            "500-spi-stats-internal-error",
+                        )
+                    })?
+                };
+                let column_name = if col_conf.rel_external_id.is_some() || and_where.rel_external_id.clone().is_some_and(|i| !i.is_empty()) {
+                    if col_conf.dim_multi_values.unwrap_or(false) {
+                        format!(
+                            "ARRAY(SELECT jsonb_array_elements_text(COALESCE((fact.ext ->> '{}')::jsonb, '[]'::jsonb)))",
+                            &and_where.code
+                        )
+                    } else {
+                        format!("fact.ext ->> '{}'", &and_where.code)
+                    }
+                } else {
+                    format!("fact.{}", &and_where.code)
+                };
+                if let Some((sql_part, value)) = col_data_type.to_pg_where(
+                    col_conf.dim_multi_values.unwrap_or(false),
+                    &column_name,
+                    &and_where.op,
+                    params.len() + 1,
+                    &and_where.value,
+                    &and_where.time_window,
+                )? {
+                    value.iter().for_each(|v| params.push(v.clone()));
+                    sql_part_and_wheres.push(sql_part);
+                } else {
+                    return Err(funs.err().not_found(
+                        "metric",
+                        "query",
+                        &format!(
+                            "The query column=[{}] type=[{}] operation=[{}] time_window=[{}] multi_values=[{}] is not legal.",
+                            &and_where.code,
+                            col_data_type.to_string().to_lowercase(),
+                            &and_where.op.to_sql(),
+                            &and_where.time_window.is_some(),
+                            col_conf.dim_multi_values.unwrap_or_default()
+                        ),
+                        "404-spi-stats-metric-op-not-legal",
+                    ));
+                }
+            }
+            sql_part_or_wheres.push(sql_part_and_wheres.join(" AND "));
+        }
+        sql_part_wheres.push(format!("( {} )", sql_part_or_wheres.join(" OR ")));
+    }
+    let sql_part_wheres = if sql_part_wheres.is_empty() {
+        "".to_string()
+    } else {
+        format!(" AND {}", sql_part_wheres.join(" AND "))
+    };
+    Ok(sql_part_wheres)
+}
+
+fn sql_part_inner_selects(
+    measure_conf_info: HashMap<String, StatsConfInfo>,
+    dim_conf_info: HashMap<String, StatsConfInfo>,
+    select: Vec<StatsQueryMetricsSelectReq>,
+    group: Vec<StatsQueryDimensionGroupReq>,
+    funs: &TardisFunsInst,
+) -> TardisResult<String> {
+    // Package inner select
+    // Add measures
+    let mut sql_part_inner_selects = vec![];
+    for select in &select {
+        let col_conf = measure_conf_info.get(&select.code).ok_or_else(|| {
+            funs.err().not_found(
+                "metric",
+                "query",
+                &format!("Missing config for select code [{code}] does not exist.", code = select.code),
+                "500-spi-stats-internal-error",
+            )
+        })?;
+        if col_conf.rel_external_id.clone().is_some_and(|i| !i.is_empty()) {
+            sql_part_inner_selects.push(format!("fact.ext ->> '{}' AS {}", &select.code, &select.code));
+        } else {
+            sql_part_inner_selects.push(format!("fact.{} AS {}", &select.code, &select.code));
+        }
+    }
+    for group in &group {
+        let col_conf = dim_conf_info.get(&group.code.to_string()).ok_or_else(|| {
+            funs.err().not_found(
+                "metric",
+                "query",
+                &format!("Missing config for group code [{code}] does not exist.", code = group.code),
+                "500-spi-stats-internal-error",
+            )
+        })?;
+        if col_conf.rel_external_id.clone().is_some_and(|i| !i.is_empty()) {
+            sql_part_inner_selects.push(format!("fact.ext ->> '{}' AS {}", &group.code, &group.code));
+        } else {
+            sql_part_inner_selects.push(format!("fact.{} AS {}", &group.code, &group.code));
+        }
+    }
+    let sql_part_inner_selects = sql_part_inner_selects.join(",");
+    Ok(sql_part_inner_selects)
+}
+
+fn sql_part_groups_infos(
+    dim_conf_info: HashMap<String, StatsConfInfo>,
+    group: Vec<StatsQueryDimensionGroupReq>,
+    funs: &TardisFunsInst,
+) -> TardisResult<(String, Vec<(String, String, String, String)>)> {
+    let mut sql_part_group_infos = vec![];
+    for group in &group {
+        let col_conf = dim_conf_info.get(&group.code.to_string()).ok_or_else(|| {
+            funs.err().not_found(
+                "metric",
+                "query",
+                &format!("Missing config for group code [{code}] does not exist.", code = group.code),
+                "500-spi-stats-internal-error",
+            )
+        })?;
+        let col_data_type = col_conf.dim_data_type.as_ref().ok_or_else(|| {
+            funs.err().not_found(
+                "metric",
+                "query",
+                &format!("Missing col_data_type for group code [{code}] does not exist.", code = group.code),
+                "500-spi-stats-internal-error",
+            )
+        })?;
+        let column_name = if col_conf.rel_external_id.clone().is_some_and(|i| !i.is_empty()) && col_conf.dim_multi_values.unwrap_or(false) {
+            format!("ARRAY(SELECT jsonb_array_elements_text(COALESCE(_.{}::jsonb, '[]'::jsonb)))", &group.code.clone())
+        } else {
+            format!("_.{}", group.code.clone())
+        };
+        if let Some(column_name_with_fun) = col_data_type.to_pg_group(&column_name, col_conf.dim_multi_values.unwrap_or(false), &group.time_window) {
+            let alias_name = format!(
+                "{}{FUNCTION_SUFFIX_FLAG}{}",
+                group.code.clone(),
+                group.time_window.as_ref().map(|i| i.to_string().to_lowercase()).unwrap_or("".to_string())
+            );
+            sql_part_group_infos.push((column_name_with_fun, alias_name, col_conf.show_name.clone(), col_conf.col_key.clone()));
+        } else {
+            return Err(funs.err().not_found(
+                "metric",
+                "query",
+                &format!(
+                    "The group column=[{}] type=[{}] time_window=[{}] is not legal.",
+                    &group.code,
+                    col_data_type.to_string().to_lowercase(),
+                    &group.time_window.is_some(),
+                ),
+                "404-spi-stats-metric-op-not-legal",
+            ));
+        }
+    }
+    let sql_part_groups = sql_part_group_infos.iter().map(|group| group.1.clone()).collect::<Vec<String>>().join(",");
+    Ok((sql_part_groups, sql_part_group_infos))
+}
+
+fn sql_part_outer_selects(
+    mut sql_part_groups: String,
+    sql_part_group_infos: Vec<(String, String, String, String)>,
+    ct_agg: bool,
+    measure_conf_info: HashMap<String, StatsConfInfo>,
+    select: Vec<StatsQueryMetricsSelectReq>,
+    funs: &TardisFunsInst,
+) -> TardisResult<(String, String, Vec<(String, String, String, bool)>)> {
+    let mut sql_part_outer_select_infos = vec![];
+    for (column_name_with_fun, alias_name, show_name, _) in sql_part_group_infos.clone() {
+        sql_part_outer_select_infos.push((column_name_with_fun, alias_name, show_name, true));
+    }
+    for select in &select {
+        let col_conf = measure_conf_info.get(&select.code.to_string()).ok_or_else(|| {
+            funs.err().not_found(
+                "metric",
+                "query",
+                &format!("Missing col_data_type for select code [{code}] does not exist.", code = select.code),
+                "500-spi-stats-internal-error",
+            )
+        })?;
+        let col_data_type = col_conf.mes_data_type.as_ref().ok_or_else(|| {
+            funs.err().not_found(
+                "metric",
+                "query",
+                &format!("Missing col_data_type for select code [{code}] does not exist.", code = select.code),
+                "500-spi-stats-internal-error",
+            )
+        })?;
+        let column_name_with_fun = if ct_agg {
+            if select.code != "_count" {
+                sql_part_groups = format!("{},_.{}", sql_part_groups, select.code.clone());
+            }
+            let mut partition_dim = vec![];
+            let mut order_dim = "".to_string();
+            for (column_name_with_fun, _, _, col_key) in sql_part_group_infos.clone() {
+                if col_key == "ct" {
+                    order_dim.clone_from(&column_name_with_fun);
+                } else {
+                    partition_dim.push(column_name_with_fun);
+                }
+            }
+            format!(
+                "{} OVER ({})",
+                col_data_type.to_pg_select(
+                    &format!("_.{}", if select.code == "_count" { "count".to_string() } else { select.code.clone() }),
+                    &select.fun
+                ),
+                if !partition_dim.is_empty() {
+                    format!("PARTITION BY {} ORDER BY {}", partition_dim.join(","), order_dim)
+                } else {
+                    format!("ORDER BY {}", order_dim)
+                }
+            )
+        } else {
+            col_data_type.to_pg_select(&format!("_.{}", select.code.clone()), &select.fun)
+        };
+        // let column_name_with_fun = col_data_type.to_pg_select(&format!("_.{}", select.code.clone()), &select.fun);
+        let alias_name = format!("{}{FUNCTION_SUFFIX_FLAG}{}", select.code.clone(), select.fun.to_string().to_lowercase());
+        sql_part_outer_select_infos.push((column_name_with_fun, alias_name, col_conf.show_name.clone(), false));
+    }
+    let sql_part_outer_selects =
+        sql_part_outer_select_infos.iter().map(|(column_name_with_fun, alias_name, _, _)| format!("{column_name_with_fun} AS {alias_name}")).collect::<Vec<String>>().join(",");
+    Ok((sql_part_groups, sql_part_outer_selects, sql_part_outer_select_infos))
+}
+
+fn sql_part_havings(
+    conf_info: HashMap<String, StatsConfInfo>,
+    having: Option<Vec<StatsQueryMetricsHavingReq>>,
+    params: &mut Vec<Value>,
+    funs: &TardisFunsInst,
+) -> TardisResult<String> {
+    let sql_part_havings = if let Some(havings) = &having {
+        let mut sql_part_havings = vec![];
+        for having in havings {
+            let col_conf = conf_info.get(&having.code.to_string()).ok_or_else(|| {
+                funs.err().not_found(
+                    "metric",
+                    "query",
+                    &format!("Missing config for having code [{code}] does not exist.", code = having.code),
+                    "500-spi-stats-internal-error",
+                )
+            })?;
+            if let Some((sql_part, value)) = col_conf
+                .mes_data_type
+                .as_ref()
+                .ok_or_else(|| {
+                    funs.err().not_found(
+                        "metric",
+                        "query",
+                        &format!("Missing mes_data_type for having code [{code}] does not exist.", code = having.code),
+                        "500-spi-stats-internal-error",
+                    )
+                })?
+                .to_pg_having(false, &format!("_.{}", having.code.clone()), &having.op, params.len() + 1, &having.value, Some(&having.fun))?
+            {
+                value.iter().for_each(|v| params.push(v.clone()));
+                sql_part_havings.push(sql_part);
+            } else {
+                return Err(funs.err().not_found(
+                    "metric",
+                    "query",
+                    &format!(
+                        "The query column=[{}] type=[{}] operation=[{}] fun=[{}] is not legal.",
+                        &having.code,
+                        col_conf.mes_data_type.as_ref().map(ToString::to_string).unwrap_or("None".into()).to_lowercase(),
+                        &having.op.to_sql(),
+                        &having.fun.to_string().to_lowercase()
+                    ),
+                    "404-spi-stats-metric-op-not-legal",
+                ));
+            }
+        }
+        format!("HAVING {}", sql_part_havings.join(","))
+    } else {
+        "".to_string()
+    };
+    Ok(sql_part_havings)
+}
+
+fn sql_dimension_orders(dim_conf_info: HashMap<String, StatsConfInfo>, dimension_order: Option<Vec<StatsQueryDimensionOrderReq>>, funs: &TardisFunsInst) -> TardisResult<String> {
+    // Package dimension order
+    let sql_dimension_orders = if let Some(orders) = &dimension_order {
+        let mut sql_part_orders = vec![];
+        for order in orders {
+            let col_conf = dim_conf_info.get(&order.code.to_string()).ok_or_else(|| {
+                funs.err().not_found(
+                    "metric",
+                    "query",
+                    &format!("Missing config for order code [{code}] does not exist.", code = order.code),
+                    "500-spi-stats-internal-error",
+                )
+            })?;
+            if col_conf.rel_external_id.clone().is_some_and(|i| !i.is_empty()) {
+                sql_part_orders.push(format!("fact.ext ->>{} {}", order.code, if order.asc { "ASC" } else { "DESC" }));
+            } else {
+                sql_part_orders.push(format!("fact.{} {}", order.code, if order.asc { "ASC" } else { "DESC" }));
+            }
+        }
+        format!("ORDER BY {}", sql_part_orders.join(","))
+    } else {
+        "".to_string()
+    };
+    Ok(sql_dimension_orders)
+}
+
+fn sql_orders(group_order: Option<Vec<StatsQueryDimensionGroupOrderReq>>, metrics_order: Option<Vec<StatsQueryMetricsOrderReq>>) -> TardisResult<String> {
+    let sql_orders = if group_order.is_some() || metrics_order.is_some() {
+        let mut sql_part_orders = Vec::new();
+        if let Some(orders) = &group_order {
+            let group_orders = orders
+                .iter()
+                .map(|order| {
+                    format!(
+                        "{}{FUNCTION_SUFFIX_FLAG}{} {}",
+                        order.code.clone(),
+                        order.time_window.as_ref().map(|i| i.to_string().to_lowercase()).unwrap_or("".to_string()),
+                        if order.asc { "ASC" } else { "DESC" }
+                    )
+                })
+                .collect::<Vec<String>>();
+            sql_part_orders.extend(group_orders);
+        }
+        if let Some(orders) = &metrics_order {
+            let metrics_orders =
+                orders.iter().map(|order| format!("{}{FUNCTION_SUFFIX_FLAG}{} {}", order.code.clone(), order.fun, if order.asc { "ASC" } else { "DESC" })).collect::<Vec<String>>();
+            sql_part_orders.extend(metrics_orders);
+        }
+        format!("ORDER BY {}", sql_part_orders.join(","))
+    } else {
+        "".to_string()
+    };
+    Ok(sql_orders)
+}
 // TODO 下钻 上探
 async fn package_dim_record_agg(
     conf_info: HashMap<String, StatsConfInfo>,
@@ -877,44 +992,52 @@ fn package_groups_agg(record: serde_json::Value) -> Result<serde_json::Value, St
     }
 }
 
-fn package_rel_external_id_agg(query_req: &StatsQueryMetricsReq) -> Option<HashSet<String>> {
+fn package_rel_external_id_agg(
+    rel_external_id: Option<String>,
+    select: Vec<StatsQueryMetricsSelectReq>,
+    group: Vec<StatsQueryDimensionGroupReq>,
+    _where: Option<Vec<Vec<StatsQueryMetricsWhereReq>>>,
+    having: Option<Vec<StatsQueryMetricsHavingReq>>,
+    group_order: Option<Vec<StatsQueryDimensionGroupOrderReq>>,
+    metrics_order: Option<Vec<StatsQueryMetricsOrderReq>>,
+) -> Option<HashSet<String>> {
     let mut rel_external_ids = HashSet::new();
     rel_external_ids.insert("".to_string());
-    if let Some(rel_external_id) = &query_req.rel_external_id {
+    if let Some(rel_external_id) = &rel_external_id {
         rel_external_ids.insert(rel_external_id.clone());
     }
-    query_req.select.iter().for_each(|i| {
+    select.iter().for_each(|i| {
         if let Some(rel_external_id) = &i.rel_external_id {
             rel_external_ids.insert(rel_external_id.clone());
         }
     });
-    query_req.group.iter().for_each(|i| {
+    group.iter().for_each(|i| {
         if let Some(rel_external_id) = &i.rel_external_id {
             rel_external_ids.insert(rel_external_id.clone());
         }
     });
-    if let Some(orders) = query_req.group_order.as_ref() {
+    if let Some(orders) = group_order.as_ref() {
         orders.iter().for_each(|i| {
             if let Some(rel_external_id) = &i.rel_external_id {
                 rel_external_ids.insert(rel_external_id.clone());
             }
         })
     }
-    if let Some(metrics_order) = &query_req.metrics_order {
+    if let Some(metrics_order) = &metrics_order {
         metrics_order.iter().for_each(|i| {
             if let Some(rel_external_id) = &i.rel_external_id {
                 rel_external_ids.insert(rel_external_id.clone());
             }
         });
     }
-    if let Some(having) = &query_req.having {
+    if let Some(having) = &having {
         having.iter().for_each(|i| {
             if let Some(rel_external_id) = &i.rel_external_id {
                 rel_external_ids.insert(rel_external_id.clone());
             }
         });
     }
-    if let Some(or_wheres) = &query_req._where {
+    if let Some(or_wheres) = &_where {
         or_wheres.iter().for_each(|and_wheres| {
             and_wheres.iter().for_each(|i| {
                 if let Some(rel_external_id) = &i.rel_external_id {
@@ -929,6 +1052,142 @@ fn package_rel_external_id_agg(query_req: &StatsQueryMetricsReq) -> Option<HashS
     Some(rel_external_ids)
 }
 
+pub async fn query_metrics_record_paginated(
+    query_req: &StatsQueryMetricsRecordReq,
+    funs: &TardisFunsInst,
+    ctx: &TardisContext,
+    inst: &SpiBsInst,
+) -> TardisResult<TardisPage<serde_json::Value>> {
+    let bs_inst = inst.inst::<TardisRelDBClient>();
+    let (conn, _) = common_pg::init_conn(bs_inst).await?;
+    let fact_inst_table_name = package_table_name(&format!("stats_inst_fact_{}", query_req.from), ctx);
+    let fact_inst_del_table_name = package_table_name(&format!("stats_inst_fact_{}_del", query_req.from), ctx);
+    let rel_external_ids = self::package_rel_external_id_agg(query_req.rel_external_id.clone(), vec![], vec![], query_req._where.clone(), None, None, None);
+    let (conf_info, query_limit) = fetch_conf_info(query_req.from.clone(), rel_external_ids.clone(), &conn, funs, ctx).await?;
+    let (conf_info, dim_conf_info, measure_conf_info) = package_dim_mea_conf_info(conf_info)?;
+    let ct_agg = query_req.group.iter().any(|i| i.code == "ct");
+    let conf_limit = query_limit;
+    check_dim_mea(
+        conf_info.clone(),
+        measure_conf_info.clone(),
+        dim_conf_info.clone(),
+        query_req.select.clone(),
+        query_req.group.clone(),
+        query_req._where.clone(),
+        None,
+        None,
+        None,
+        funs,
+    )?;
+    let mes_distinct = query_req.select.iter().any(|i| {
+        if let Some(conf) = measure_conf_info.get(&i.code.to_string()) {
+            return conf.mes_data_distinct.unwrap_or(true);
+        }
+        false
+    });
+    let mut params = if let Some(own_paths) = &query_req.own_paths {
+        own_paths.iter().map(Value::from).collect_vec()
+    } else {
+        vec![Value::from(format!("{}%", ctx.own_paths))]
+    };
+    let own_paths_count = params.len();
+    params.push(Value::from(query_req.start_time));
+    params.push(Value::from(query_req.end_time));
+    params.push(Value::from(query_req.page_size));
+    params.push(Value::from((query_req.page_number - 1) * query_req.page_size));
+    // Package filter
+    let sql_part_wheres = sql_part_where(conf_info.clone(), query_req._where.clone(), &mut params, funs)?;
+
+    // Package inner select
+    // Add measures
+    let sql_part_inner_selects = sql_part_inner_selects(measure_conf_info.clone(), dim_conf_info.clone(), query_req.select.clone(), query_req.group.clone(), funs)?;
+
+    // Package group
+    // (column name with fun, alias name, show name)
+    let (sql_part_groups, sql_part_group_infos) = sql_part_groups_infos(dim_conf_info.clone(), query_req.group.clone(), funs)?;
+
+    // Package outer select
+    // (column name with fun, alias name, show_name, is dimension)
+    let (sql_part_groups, sql_part_outer_selects, _) =
+        sql_part_outer_selects(sql_part_groups.clone(), sql_part_group_infos, ct_agg, measure_conf_info, query_req.select.clone(), funs)?;
+
+    let own_paths_placeholder = (1..=own_paths_count).map(|idx| format!("${}", idx)).collect::<Vec<String>>().join(", ");
+    let create_time_placeholder = format!("${}", own_paths_count + 1);
+    let end_time_placeholder = format!("${}", own_paths_count + 2);
+    let page_size_placeholder = format!("${}", own_paths_count + 3);
+    let page_offset_placeholder = format!("${}", own_paths_count + 4);
+    let filter_own_paths = if query_req.own_paths.is_some() {
+        format!("fact.own_paths IN ({own_paths_placeholder})")
+    } else {
+        "fact.own_paths LIKE $1".to_string()
+    };
+    let final_sql = format!(
+        r#"
+        SELECT _._key,{sql_part_outer_selects}, count(*) OVER() AS total
+    FROM (
+        SELECT
+             {sql_part_inner_selects},fact.key as _key, fact.own_paths as _own_paths, fact.ct as _ct
+             FROM(
+                SELECT {}fact.*, 1 as _count
+                FROM {fact_inst_table_name} fact
+                LEFT JOIN {fact_inst_del_table_name} del ON del.key = fact.key AND del.ct >= {create_time_placeholder} AND del.ct <= {end_time_placeholder}
+                WHERE
+                    {filter_own_paths}
+                    AND del.key IS NULL
+                    AND fact.ct >= {create_time_placeholder} AND fact.ct <= {end_time_placeholder}
+                ORDER BY {}fact.ct DESC
+             ) fact 
+             where 1 = 1
+            {sql_part_wheres}
+            LIMIT {conf_limit}
+            ) _
+        {}
+        LIMIT {page_size_placeholder} OFFSET {page_offset_placeholder}
+        "#,
+        if query_req.ignore_distinct.unwrap_or(false) {
+            ""
+        } else if mes_distinct {
+            if ct_agg {
+                "DISTINCT ON (fact.key,date_part('day',fact.ct)) fact.key AS _key,"
+            } else {
+                "DISTINCT ON (fact.key) fact.key AS _key,"
+            }
+        } else {
+            ""
+        },
+        if query_req.ignore_distinct.unwrap_or(false) {
+            ""
+        } else if mes_distinct {
+            if ct_agg {
+                "_key,date_part('day',fact.ct),"
+            } else {
+                "_key,"
+            }
+        } else {
+            ""
+        },
+        if sql_part_groups.is_empty() {
+            "".to_string()
+        } else {
+            format!("GROUP BY _._key,{sql_part_groups}")
+        }
+    );
+    let result = conn.query_all(&final_sql, params).await?;
+    let mut total_size: i64 = 0;
+    if let Some(first) = result.first() {
+        total_size = first.try_get("", "total")?;
+    }
+    let records = result
+        .iter()
+        .map(|item| serde_json::Value::from_query_result_optional(item, "").map(|x| x.unwrap_or(serde_json::Value::Null)))
+        .collect::<Result<Vec<serde_json::Value>, _>>()?;
+    Ok(TardisPage {
+        page_size: query_req.page_size,
+        page_number: query_req.page_number,
+        total_size: total_size as u64,
+        records,
+    })
+}
 #[derive(sea_orm::FromQueryResult, Clone)]
 struct StatsConfInfo {
     pub col_key: String,

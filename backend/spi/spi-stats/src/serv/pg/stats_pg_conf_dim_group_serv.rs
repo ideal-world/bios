@@ -85,6 +85,7 @@ pub(crate) async fn modify(dim_conf_key: &str, modify_req: &StatsConfDimGroupMod
 }
 
 pub(crate) async fn paginate(
+    dim_group_key: Option<String>,
     page_number: u32,
     page_size: u32,
     desc_by_create: Option<bool>,
@@ -97,10 +98,11 @@ pub(crate) async fn paginate(
     let (mut conn, _) = stats_pg_initializer::init_conf_dim_group_table_and_conn(bs_inst, ctx, true).await?;
     conn.begin().await?;
 
-    do_paginate(page_number, page_size, desc_by_create, desc_by_update, &conn, ctx, inst).await
+    do_paginate(dim_group_key, page_number, page_size, desc_by_create, desc_by_update, &conn, ctx, inst).await
 }
 
 async fn do_paginate(
+    dim_group_key: Option<String>,
     page_number: u32,
     page_size: u32,
     desc_by_create: Option<bool>,
@@ -110,10 +112,13 @@ async fn do_paginate(
     _inst: &SpiBsInst,
 ) -> TardisResult<TardisPage<StatsConfDimGroupInfoResp>> {
     let table_name = package_table_name("stats_conf_dim_group", ctx);
-    let sql_where = ["1 = 1".to_string()];
+    let mut sql_where = vec!["1 = 1".to_string()];
     let mut sql_order = vec![];
-    let params: Vec<Value> = vec![Value::from(page_size), Value::from((page_number - 1) * page_size)];
-
+    let mut params: Vec<Value> = vec![Value::from(page_size), Value::from((page_number - 1) * page_size)];
+    if let Some(dim_group_key) = &dim_group_key {
+        sql_where.push(format!("key = ${}", params.len() + 1));
+        params.push(Value::from(dim_group_key.to_string()));
+    }
     if let Some(desc_by_create) = desc_by_create {
         sql_order.push(format!("create_time {}", if desc_by_create { "DESC" } else { "ASC" }));
     }

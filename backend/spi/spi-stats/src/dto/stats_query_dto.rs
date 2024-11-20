@@ -80,7 +80,50 @@ pub struct StatsQueryMetricsReq {
     pub limit: Option<u32>,
 }
 
+// Query Metrics Record Request
+///
+/// 查询指标记录请求
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct StatsQueryMetricsRecordReq {
+    /// Fact code
+    ///
+    /// 事实编码
+    pub from: String,
+    /// Associated external dynamic id, used for ext extended fields
+    ///
+    /// 关联外部动态id,用于ext扩展字段
+    pub rel_external_id: Option<String>,
+    pub own_paths: Option<Vec<String>>,
+    /// List of fields
+    ///
+    /// 字段列表
+    pub select: Vec<StatsQueryMetricsSelectReq>,
+    /// Ignore distinct key
+    /// If true or null, the distinct key will not be counted
+    /// If false, the distinct key will be counted
+    ///
+    /// 是否忽略distinct key
+    /// 如果为true或null，则不计算distinct key
+    /// 如果为false，则计算distinct key
+    pub ignore_distinct: Option<bool>,
+    /// List of grouped fields,
+    /// the order is related to the returned hierarchy and is handled internally using ROLLUP
+    ///
+    /// 维度列表
+    /// 顺序与返回的层级有关，内部使用ROLLUP处理
+    pub group: Vec<StatsQueryDimensionGroupReq>,
+    /// Filter conditions, two-dimensional array, OR between groups, AND within groups
+    ///
+    /// 过滤条件, 二维数组, 组内AND, 组间OR
+    #[oai(rename = "where")]
+    pub _where: Option<Vec<Vec<StatsQueryMetricsWhereReq>>>,
+    pub start_time: DateTime<Utc>,
+    pub end_time: DateTime<Utc>,
+    pub page_size: u64,
+    pub page_number: u64,
+}
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
 pub struct StatsQueryMetricsSelectReq {
     /// Associated external dynamic id, used for ext extended fields
     ///
@@ -96,7 +139,7 @@ pub struct StatsQueryMetricsSelectReq {
     pub fun: StatsQueryAggFunKind,
 }
 
-#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
 pub struct StatsQueryDimensionGroupReq {
     /// Associated external dynamic id, used for ext extended fields
     ///
@@ -112,7 +155,7 @@ pub struct StatsQueryDimensionGroupReq {
     pub time_window: Option<StatsQueryTimeWindowKind>,
 }
 
-#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
 pub struct StatsQueryMetricsWhereReq {
     /// Associated external dynamic id, used for ext extended fields
     ///
@@ -136,7 +179,7 @@ pub struct StatsQueryMetricsWhereReq {
     pub time_window: Option<StatsQueryTimeWindowKind>,
 }
 
-#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
 pub struct StatsQueryMetricsOrderReq {
     /// Associated external dynamic id, used for ext extended fields
     ///
@@ -153,7 +196,7 @@ pub struct StatsQueryMetricsOrderReq {
     pub asc: bool,
 }
 
-#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
 pub struct StatsQueryDimensionGroupOrderReq {
     /// Associated external dynamic id, used for ext extended fields
     ///
@@ -173,7 +216,7 @@ pub struct StatsQueryDimensionGroupOrderReq {
     pub asc: bool,
 }
 
-#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
 pub struct StatsQueryDimensionOrderReq {
     /// Associated external dynamic id, used for ext extended fields
     ///
@@ -189,7 +232,7 @@ pub struct StatsQueryDimensionOrderReq {
     pub asc: bool,
 }
 
-#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
 pub struct StatsQueryMetricsHavingReq {
     /// Associated external dynamic id, used for ext extended fields
     ///
