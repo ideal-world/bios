@@ -724,12 +724,11 @@ async fn push_to_eda(req: &LogItemAddV2Req, ref_fields: &Vec<String>, funs: &Tar
                 content.remove(ref_field);
             }
         }
-        if let Some(ref op) = req_clone.op {
-            if op.to_lowercase() == "delete" {
-                let stats_delete: StatsItemDeleteReq = req_clone.into();
-                topic.send_event(stats_delete.inject_context(funs, ctx).json()).map_err(mq_error).await?;
-                return Ok(());
-            }
+        // if the op is deleted or log disabled, send the delete event to stats
+        if (req_clone.op.as_ref().map_or(false, |op| op.to_lowercase() == "delete")) || req_clone.disable.unwrap_or(false) {
+            let stats_delete: StatsItemDeleteReq = req_clone.into();
+            topic.send_event(stats_delete.inject_context(funs, ctx).json()).map_err(mq_error).await?;
+            return Ok(());
         }
         let stats_add: StatsItemAddReq = req_clone.into();
         topic.send_event(stats_add.inject_context(funs, ctx).json()).map_err(mq_error).await?;
