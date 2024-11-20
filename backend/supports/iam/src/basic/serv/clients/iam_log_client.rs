@@ -150,6 +150,7 @@ impl IamLogClient {
             msg: None,
             owner_name: None,
             push: false,
+            disable: None,
         };
         SpiLogClient::addv2(add_req, funs, ctx).await?;
         Ok(())

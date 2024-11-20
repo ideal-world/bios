@@ -47,6 +47,7 @@ impl StatsCiConfApi {
     #[oai(path = "/dim/group", method = "get")]
     async fn dim_group_paginate(
         &self,
+        key: Query<Option<String>>,
         page_number: Query<u32>,
         page_size: Query<u32>,
         desc_by_create: Query<Option<bool>>,
@@ -54,7 +55,7 @@ impl StatsCiConfApi {
         ctx: TardisContextExtractor,
     ) -> TardisApiResult<TardisPage<StatsConfDimGroupInfoResp>> {
         let funs = crate::get_tardis_inst();
-        TardisResp::ok(stats_conf_dim_group_serv::paginate(page_number.0, page_size.0, desc_by_create.0, desc_by_update.0, &funs, &ctx.0).await?)
+        TardisResp::ok(stats_conf_dim_group_serv::paginate(key.0, page_number.0, page_size.0, desc_by_create.0, desc_by_update.0, &funs, &ctx.0).await?)
     }
 
     /// Add Dimension Configuration

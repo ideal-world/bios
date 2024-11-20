@@ -517,7 +517,19 @@ pub async fn findv2(find_req: &mut LogItemFindReq, funs: &TardisFunsInst, ctx: &
     Err(funs.err().bad_request("item", "find", "Find v2 is not supported", "400-spi-log-find-v2-not-supported"))
 }
 
-pub async fn modify_ext(_tag: &str, _key: &str, _ext: &mut JsonValue, funs: &TardisFunsInst, _ctx: &TardisContext, _inst: &SpiBsInst) -> TardisResult<()> {
+pub async fn modify_ext(tag: &str, key: &str, ext: &mut JsonValue, _funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
+    let bs_inst = inst.inst::<TardisRelDBClient>();
+    let (conn, table_name) = log_pg_initializer::init_table_and_conn(bs_inst, tag, ctx, false).await?;
+
+    conn.execute_one(
+        &format!("update {table_name} set ext=ext||$1 where key=$2"),
+        vec![Value::from(ext.clone()), Value::from(key)],
+    )
+    .await?;
+    Ok(())
+}
+
+pub async fn modify_ext_v2(_tag: &str, _key: &str, _ext: &mut JsonValue, funs: &TardisFunsInst, _ctx: &TardisContext, _inst: &SpiBsInst) -> TardisResult<()> {
     Err(funs.err().bad_request("item", "modify_ext", "Modify ext is not supported", "400-spi-log-modify-ext-not-supported"))
 }
 

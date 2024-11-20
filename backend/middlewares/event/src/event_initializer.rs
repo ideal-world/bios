@@ -66,9 +66,9 @@ async fn init_db(domain_code: String, kind_code: String, funs: &TardisFunsInst, 
         return Ok(());
     }
     // Initialize event component RBUM item table and indexs
-    let _ = funs.db().init(event_topic::ActiveModel::init(TardisFuns::reldb().backend(), None, TardisFuns::reldb().compatible_type())).await;
-    let _ = funs.db().init(event_message::ActiveModel::init(TardisFuns::reldb().backend(), None, TardisFuns::reldb().compatible_type())).await;
-    let _ = funs.db().init(event_auth::ActiveModel::init(TardisFuns::reldb().backend(), None, TardisFuns::reldb().compatible_type())).await;
+    funs.db().init(event_topic::ActiveModel::init(TardisFuns::reldb().backend(), None, TardisFuns::reldb().compatible_type())).await?;
+    funs.db().init(event_message::ActiveModel::init(TardisFuns::reldb().backend(), None, TardisFuns::reldb().compatible_type())).await?;
+    funs.db().init(event_auth::ActiveModel::init(TardisFuns::reldb().backend(), None, TardisFuns::reldb().compatible_type())).await?;
     // funs.db()
     //     .init(event_persistent::ActiveModel::init(
     //         TardisFuns::reldb().backend(),

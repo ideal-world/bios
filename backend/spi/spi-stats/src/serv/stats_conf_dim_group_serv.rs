@@ -19,6 +19,7 @@ spi_dispatch_service! {
         add(add_req: &StatsConfDimGroupAddReq) -> TardisResult<()>;
         modify(dim_conf_key: &str, modify_req: &StatsConfDimGroupModifyReq) -> TardisResult<()>;
         paginate(
+          dim_group_key: Option<String>,
           page_number: u32,
           page_size: u32,
           desc_by_create: Option<bool>,
