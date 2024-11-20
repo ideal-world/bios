@@ -16,7 +16,6 @@ use tardis::{
         sea_query::{Alias, Cond, Query, SelectStatement},
         EntityTrait, JoinType, Order, QueryFilter, Set,
     },
-    futures::future::join_all,
     serde_json::json,
     TardisFuns, TardisFunsInst,
 };

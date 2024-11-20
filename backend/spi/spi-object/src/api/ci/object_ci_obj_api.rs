@@ -1,8 +1,9 @@
 use std::collections::HashMap;
 
+use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use bios_basic::rbum::serv::rbum_kind_serv::RbumKindServ;
-use bios_basic::spi::dto::spi_bs_dto::SpiBsAddReq;
+use bios_basic::spi::dto::spi_bs_dto::{SpiBsAddReq, SpiBsFilterReq};
 use bios_basic::spi::serv::spi_bs_serv::SpiBsServ;
 use tardis::basic::field::TrimString;
 use tardis::web::context_extractor::TardisContextExtractor;
@@ -316,17 +317,28 @@ impl ObjectCiObjApi {
     async fn bs_add(&self, add_req: Json<ClientCreateReq>, ctx: TardisContextExtractor,) -> TardisApiResult<String> {
         let mut funs = crate::get_tardis_inst();
         funs.begin().await?;
-        let kind_id = RbumKindServ::get_rbum_kind_id_by_code(object_constants::SPI_S3_KIND_CODE, &funs).await?.expect("missing event kind");
-        let result = SpiBsServ::add_item(&mut SpiBsAddReq {
-            name: add_req.0.name,
-            kind_id: TrimString::from(kind_id),
-            conn_uri: add_req.0.conn_uri,
-            ak: add_req.0.ak,
-            sk: add_req.0.sk,
-            ext: add_req.0.ext,
-            private: true,
-            disabled: None,
-        }, &funs, &ctx.0).await?;
+        let kind_id = RbumKindServ::get_rbum_kind_id_by_code(&add_req.0.kind, &funs).await?.expect("missing event kind");
+        let result = if let Some(bs) = SpiBsServ::find_one_item(&SpiBsFilterReq {
+            basic:RbumBasicFilterReq {
+                name: Some(add_req.0.name.to_string()),
+                ..Default::default()
+            },
+            kind_id: Some(kind_id.clone()),
+            ..Default::default()
+        }, &funs, &ctx.0).await? {
+            bs.id
+        } else {
+            SpiBsServ::add_item(&mut SpiBsAddReq {
+                name: add_req.0.name,
+                kind_id: TrimString::from(kind_id),
+                conn_uri: add_req.0.conn_uri,
+                ak: add_req.0.ak,
+                sk: add_req.0.sk,
+                ext: add_req.0.ext,
+                private: true,
+                disabled: None,
+            }, &funs, &ctx.0).await?
+        };
         funs.commit().await?;
         TardisResp::ok(result)
     }

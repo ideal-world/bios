@@ -285,6 +285,7 @@ impl FlowInstServ {
             pub tag: String,
             pub rel_flow_version_id: String,
             pub rel_flow_model_name: String,
+            pub main: bool,
 
             pub current_state_id: String,
             pub current_state_name: Option<String>,
@@ -304,6 +305,7 @@ impl FlowInstServ {
             pub output_message: Option<String>,
 
             pub transitions: Option<Value>,
+            pub artifacts: Option<Value>,
 
             pub own_paths: String,
 
@@ -321,6 +323,7 @@ impl FlowInstServ {
                 (flow_inst::Entity, flow_inst::Column::RelFlowVersionId),
                 (flow_inst::Entity, flow_inst::Column::RelBusinessObjId),
                 (flow_inst::Entity, flow_inst::Column::CurrentStateId),
+                (flow_inst::Entity, flow_inst::Column::Main),
                 (flow_inst::Entity, flow_inst::Column::CurrentVars),
                 (flow_inst::Entity, flow_inst::Column::CreateVars),
                 (flow_inst::Entity, flow_inst::Column::CreateCtx),
@@ -388,6 +391,7 @@ impl FlowInstServ {
                 rel_flow_version_id: inst.rel_flow_version_id,
                 rel_flow_model_name: inst.rel_flow_model_name,
                 tag: inst.tag,
+                main: inst.main,
                 create_vars: inst.create_vars.map(|create_vars| TardisFuns::json.json_to_obj(create_vars).unwrap()),
                 create_ctx: inst.create_ctx,
                 create_time: inst.create_time,
@@ -397,6 +401,7 @@ impl FlowInstServ {
                 output_message: inst.output_message,
                 own_paths: inst.own_paths,
                 transitions: inst.transitions.map(|transitions| TardisFuns::json.json_to_obj(transitions).unwrap()),
+                artifacts: None,
                 current_state_id: inst.current_state_id,
                 current_state_name: inst.current_state_name,
                 current_state_color: inst.current_state_color,

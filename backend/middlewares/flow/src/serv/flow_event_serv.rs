@@ -49,6 +49,9 @@ impl FlowEventServ {
         funs: &TardisFunsInst,
     ) -> TardisResult<()> {
         let flow_inst_detail = FlowInstServ::get(flow_inst_id, funs, ctx).await?;
+        if !flow_inst_detail.main {
+            return  Ok(());
+        }
         let flow_version = FlowModelVersionServ::get_item(
             &flow_inst_detail.rel_flow_version_id,
             &FlowModelVersionFilterReq {
@@ -165,6 +168,9 @@ impl FlowEventServ {
         funs: &TardisFunsInst,
     ) -> TardisResult<()> {
         let flow_inst_detail = FlowInstServ::get(flow_inst_id, funs, ctx).await?;
+        if !flow_inst_detail.main {
+            return  Ok(());
+        }
         let global_ctx = TardisContext {
             own_paths: "".to_string(),
             ..ctx.clone()

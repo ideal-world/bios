@@ -1214,29 +1214,53 @@ impl FlowModelServ {
     }
 
     pub async fn get_model_id_by_own_paths_and_transition_id(tag: &str, transition_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<FlowModelDetailResp> {
-        let rel_model_id = FlowRelServ::find_to_simple_rels(&FlowRelKind::FlowModelTransition, transition_id, None, None, funs, ctx)
-            .await?
-            .pop()
-            .ok_or_else(|| {
-                funs.err().not_found(
-                    &Self::get_obj_name(),
-                    "get_model_id_by_own_paths_and_transition_id",
-                    "rel model not found",
-                    "404-flow-model-not-found",
-                )
-            })?
-            .rel_id;
-        let model_detail = FlowModelServ::get_item(&rel_model_id, &FlowModelFilterReq::default(), funs, ctx).await?;
-        if model_detail.tag != *tag {
-            return Err(funs.err().not_found(
-                &Self::get_obj_name(),
-                "get_model_id_by_own_paths_and_transition_id",
-                "rel model not found",
-                "404-flow-model-not-found",
-            ));
+        let app_id = Self::get_app_id_by_ctx(ctx)
+            .ok_or_else(|| funs.err().not_found(&Self::get_obj_name(), "get_model_id_by_own_paths_and_transition_id", "Only instances at the application layer are supported to use the approval flow", "404-flow-inst-rel-model-not-found"))?;
+        let model_detail = if let Ok(model_ids) = FlowRelServ::find_model_ids_by_app_id(&app_id, funs, ctx).await {
+            // 引用租户模板的审批流
+            Self::find_one_detail_item(&FlowModelFilterReq {
+                basic: RbumBasicFilterReq {
+                    ids: Some(model_ids),
+                    enabled: Some(true),
+                    ..Default::default()
+                },
+                tags: Some(vec![tag.to_string()]),
+                rel: Some(RbumItemRelFilterReq {
+                    optional: false,
+                    rel_by_from: true,
+                    tag: Some(FlowRelKind::FlowModelTransition.to_string()),
+                    from_rbum_kind: Some(RbumRelFromKind::Item),
+                    rel_item_id: Some(transition_id.to_string()),
+                    ..Default::default()
+                }),
+                status: Some(FlowModelStatus::Enabled),
+                ..Default::default()
+            }, funs, ctx).await?
+        } else {
+            // 当前项目内的审批流
+            Self::find_one_detail_item(&FlowModelFilterReq {
+                basic: RbumBasicFilterReq {
+                    enabled: Some(true),
+                    ..Default::default()
+                },
+                tags: Some(vec![tag.to_string()]),
+                rel: Some(RbumItemRelFilterReq {
+                    optional: false,
+                    rel_by_from: true,
+                    tag: Some(FlowRelKind::FlowModelTransition.to_string()),
+                    from_rbum_kind: Some(RbumRelFromKind::Item),
+                    rel_item_id: Some(transition_id.to_string()),
+                    own_paths: Some(ctx.own_paths.clone()),
+                    ..Default::default()
+                }),
+                status: Some(FlowModelStatus::Enabled),
+                ..Default::default()
+            }, funs, ctx).await?
+        };
+        match model_detail {
+            Some(result) => Ok(result),
+            None => Err(funs.err().not_found(&Self::get_obj_name(), "get_model_id_by_own_paths_and_transition_id","rel model not found","404-flow-model-not-found",))
         }
-
-        Ok(model_detail)
     }
     /// 根据own_paths和rel_template_id获取模型ID
     /// 规则1：如果rel_template_id不为空，优先通过rel_template_id查找rel表类型为FlowModelTemplate关联的模型ID，找不到则直接返回默认模板ID

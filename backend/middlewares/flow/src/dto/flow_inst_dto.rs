@@ -6,7 +6,7 @@ use tardis::{
     chrono::{DateTime, Utc},
     db::sea_orm,
     serde_json::Value,
-    web::poem_openapi,
+    web::poem_openapi, TardisFuns,
 };
 
 use super::{
@@ -120,6 +120,8 @@ pub struct FlowInstDetailResp {
     pub rel_business_obj_id: String,
 
     pub tag: String,
+
+    pub main: bool,
     /// 当前状态ID
     /// Associated [flow_state](super::flow_state_dto::FlowStateDetailResp) id
     ///
@@ -169,7 +171,20 @@ pub struct FlowInstDetailResp {
     /// 动作列表
     pub transitions: Option<Vec<FlowInstTransitionInfo>>,
 
+    pub artifacts: Option<Value>,
+
     pub own_paths: String,
+}
+
+impl FlowInstDetailResp {
+    pub fn artifacts(&self) -> FlowInstArtifacts {
+        TardisFuns::json.json_to_obj(self.artifacts.clone()).unwrap()
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug, poem_openapi::Object, sea_orm::FromJsonQueryResult)]
+pub struct FlowInstArtifacts {
+    pub current: String,
 }
 
 /// 实例的动作信息

@@ -51,7 +51,6 @@ pub struct FlowStateAddReq {
 pub struct FLowStateKindConf {
     pub form: Option<FlowStateForm>,
     pub approval: Option<FlowStateApproval>,
-    pub branch: Option<FlowStateBranch>,
 }
 
 /// 录入节点配置信息
@@ -121,13 +120,6 @@ pub struct FlowStateApproval {
     pub multi_approval_kind: FlowStatusMultiApprovalKind,
     /// 会签配置
     pub countersign_conf: FlowStateCountersignConf,
-}
-
-/// 分支节点配置信息
-#[derive(Serialize, Deserialize, Debug, poem_openapi::Object, Default, Clone)]
-pub struct FlowStateBranch {
-    /// 分支条件，key 分支名, value 分支条件
-    pub conditions: Vec<Vec<BasicQueryCondInfo>>,
 }
 
 /// 状态节点字段配置
