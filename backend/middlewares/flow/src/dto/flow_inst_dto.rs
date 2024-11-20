@@ -178,11 +178,15 @@ pub struct FlowInstDetailResp {
 
 impl FlowInstDetailResp {
     pub fn artifacts(&self) -> FlowInstArtifacts {
-        TardisFuns::json.json_to_obj(self.artifacts.clone()).unwrap()
+        if let Some(artifacts) = self.artifacts.clone() {
+            TardisFuns::json.json_to_obj(artifacts).unwrap()
+        } else {
+            FlowInstArtifacts::default()
+        }
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, Debug, poem_openapi::Object, sea_orm::FromJsonQueryResult)]
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug, Default, poem_openapi::Object, sea_orm::FromJsonQueryResult)]
 pub struct FlowInstArtifacts {
     pub current: String,
 }
