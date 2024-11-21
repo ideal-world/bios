@@ -51,11 +51,7 @@ use crate::{
 };
 
 use super::{
-    flow_event_serv::FlowEventServ,
-    flow_external_serv::FlowExternalServ,
-    flow_model_version_serv::FlowModelVersionServ,
-    flow_rel_serv::{FlowRelKind, FlowRelServ},
-    flow_transition_serv::FlowTransitionServ,
+    clients::search_client::FlowSearchClient, flow_event_serv::FlowEventServ, flow_external_serv::FlowExternalServ, flow_model_version_serv::FlowModelVersionServ, flow_rel_serv::{FlowRelKind, FlowRelServ}, flow_transition_serv::FlowTransitionServ
 };
 
 pub struct FlowInstServ;
@@ -83,10 +79,12 @@ impl FlowInstServ {
         if !Self::find_details(&FlowInstFilterReq {
             rel_business_obj_id: Some(start_req.rel_business_obj_id.to_string()),
             flow_version_id: Some(flow_model.current_version_id.to_string()),
+            finish: Some(false),
             ..Default::default()
         }, &funs, ctx).await?.is_empty() {
             return Err(funs.err().internal_error("flow_inst_serv", "start", "The same instance exist", "500-flow-inst-exist"));
         }
+        let main = start_req.transition_id.is_none();
         let flow_inst: flow_inst::ActiveModel = flow_inst::ActiveModel {
             id: Set(inst_id.clone()),
             tag: Set(Some(flow_model.tag.clone())),
@@ -99,11 +97,14 @@ impl FlowInstServ {
             create_ctx: Set(FlowOperationContext::from_ctx(ctx)),
 
             own_paths: Set(ctx.own_paths.to_string()),
-            main: Set(start_req.transition_id.is_none()),
+            main: Set(main),
             ..Default::default()
         };
         funs.db().insert_one(flow_inst, ctx).await?;
 
+        if !main {
+            FlowSearchClient::modify_business_obj_search(&start_req.rel_business_obj_id, &flow_model.tag, &funs, ctx).await?;
+        }
         Self::do_request_webhook(
             None,
             flow_model.transitions().iter().filter(|model_transition| model_transition.to_flow_state_id == flow_model.init_state_id).collect_vec().pop(),
@@ -115,7 +116,6 @@ impl FlowInstServ {
         // 自动流转
         Self::auto_transfer(&inst_id, loop_check_helper::InstancesTransition::default(), &funs, ctx).await?;
         funs.commit().await?;
-
 
         Ok(inst_id)
     }

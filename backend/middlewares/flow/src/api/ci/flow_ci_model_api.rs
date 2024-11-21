@@ -280,6 +280,7 @@ impl FlowCiModelApi {
                             with_sub_own_paths: true,
                             ..Default::default()
                         },
+                        main: Some(true),
                         ..Default::default()
                     },
                     None,

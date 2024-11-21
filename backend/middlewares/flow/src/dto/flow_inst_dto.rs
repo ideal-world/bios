@@ -10,7 +10,7 @@ use tardis::{
 };
 
 use super::{
-    flow_state_dto::{FLowStateKindConf, FlowGuardConf, FlowStateRelModelExt, FlowSysStateKind},
+    flow_state_dto::{FLowStateKindConf, FlowGuardConf, FlowStateRelModelExt, FlowStateVar, FlowSysStateKind},
     flow_transition_dto::FlowTransitionDoubleCheckInfo,
     flow_var_dto::FlowVarInfo,
 };
@@ -150,7 +150,7 @@ pub struct FlowInstDetailResp {
     /// Associated [flow_state](super::flow_state_dto::FlowStateRelModelExt)
     ///
     /// 当前状态配置
-    pub current_state_conf: Option<FLowStateKindConf>,
+    pub current_state_conf: Option<FLowInstStateConf>,
     /// 当前参数列表
     pub current_vars: Option<HashMap<String, Value>>,
     /// 创建时的参数列表
@@ -184,6 +184,27 @@ impl FlowInstDetailResp {
             FlowInstArtifacts::default()
         }
     }
+}
+
+// 状态配置
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
+pub struct FLowInstStateConf {
+    pub operators: HashMap<String, String>,
+    pub form_conf: Option<FLowInstStateFormConf>,
+    pub approval_conf: Option<FLowInstStateApprovalConf>,
+}
+
+// 状态录入配置
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
+pub struct FLowInstStateFormConf {
+    pub form_vars_collect_conf: HashMap<String, FlowStateVar>,
+}
+
+// 状态审批配置
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
+pub struct FLowInstStateApprovalConf {
+    pub approval_vars_collect_conf: Option<HashMap<String, FlowStateVar>>,
+    pub form_vars_collect: HashMap<String, Value>,
 }
 
 // 流程实例中对应的数据存储
