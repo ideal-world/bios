@@ -98,7 +98,7 @@ impl FlowEventServ {
     }
 
     fn check_front_conditions(flow_inst_detail: &FlowInstDetailResp, conditions: Vec<FlowTransitionFrontActionInfo>) -> TardisResult<bool> {
-        if flow_inst_detail.current_vars.is_none() {
+        if flow_inst_detail.current_vars.is_none() || conditions.is_empty() {
             return Ok(false);
         }
         let current_vars = flow_inst_detail.current_vars.clone().unwrap();
