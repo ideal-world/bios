@@ -80,6 +80,13 @@ impl FlowInstServ {
         } else {
             flow_model.init_state_id.clone()
         };
+        if !Self::find_details(&FlowInstFilterReq {
+            rel_business_obj_id: Some(start_req.rel_business_obj_id.to_string()),
+            flow_version_id: Some(flow_model.current_version_id.to_string()),
+            ..Default::default()
+        }, &funs, ctx).await?.is_empty() {
+            return Err(funs.err().internal_error("flow_inst_serv", "start", "The same instance exist", "500-flow-inst-exist"));
+        }
         let flow_inst: flow_inst::ActiveModel = flow_inst::ActiveModel {
             id: Set(inst_id.clone()),
             tag: Set(Some(flow_model.tag.clone())),
@@ -195,11 +202,14 @@ impl FlowInstServ {
         } else {
             query.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::OwnPaths)).eq(ctx.own_paths.as_str()));
         }
-        if let Some(flow_model_id) = &filter.flow_model_id {
-            query.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::RelFlowVersionId)).eq(flow_model_id));
+        if let Some(flow_version_id) = &filter.flow_version_id {
+            query.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::RelFlowVersionId)).eq(flow_version_id));
         }
         if let Some(tag) = &filter.tag {
             query.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::Tag)).eq(tag));
+        }
+        if let Some(main) = filter.main {
+            query.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::Main)).eq(main));
         }
         if let Some(finish) = filter.finish {
             if finish {
@@ -415,9 +425,10 @@ impl FlowInstServ {
     }
 
     pub async fn paginate(
-        flow_model_id: Option<String>,
+        flow_version_id: Option<String>,
         tag: Option<String>,
         finish: Option<bool>,
+        main: Option<bool>,
         current_state_id: Option<String>,
         rel_business_obj_id: Option<String>,
         with_sub: Option<bool>,
@@ -430,9 +441,10 @@ impl FlowInstServ {
         Self::package_ext_query(
             &mut query,
             &FlowInstFilterReq {
-                flow_model_id,
+                flow_version_id,
                 tag,
                 finish,
+                main,
                 current_state_id,
                 rel_business_obj_id,
                 with_sub,

@@ -120,6 +120,13 @@ pub struct FlowStateApproval {
     pub multi_approval_kind: FlowStatusMultiApprovalKind,
     /// 会签配置
     pub countersign_conf: FlowStateCountersignConf,
+
+    /// 拒绝动作名称
+    pub overrule_btn_name: String,
+    /// 退回动作名称
+    pub back_btn_name: String,
+    /// 通过动作名称
+    pub pass_btn_name: String,
 }
 
 /// 状态节点字段配置
@@ -413,7 +420,7 @@ pub struct FlowStateAggResp {
 
 impl FlowStateAggResp {
     pub fn kind_conf(&self) -> FLowStateKindConf {
-        TardisFuns::json.json_to_obj(self.kind_conf.clone()).unwrap()
+        TardisFuns::json.json_to_obj(self.kind_conf.clone()).unwrap_or_default()
     }
 }
 

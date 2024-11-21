@@ -10,7 +10,7 @@ use tardis::{
 };
 
 use super::{
-    flow_state_dto::{FLowStateKindConf, FlowStateRelModelExt, FlowSysStateKind},
+    flow_state_dto::{FLowStateKindConf, FlowGuardConf, FlowStateRelModelExt, FlowSysStateKind},
     flow_transition_dto::FlowTransitionDoubleCheckInfo,
     flow_var_dto::FlowVarInfo,
 };
@@ -186,9 +186,21 @@ impl FlowInstDetailResp {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, Debug, Default, poem_openapi::Object, sea_orm::FromJsonQueryResult)]
+// 流程实例中对应的数据存储
+#[derive(Serialize, Deserialize, PartialEq, Clone, Debug, Default, poem_openapi::Object, sea_orm::FromJsonQueryResult)]
 pub struct FlowInstArtifacts {
-    pub current: String,
+    pub form_account_ids: Vec<String>, // 当前录入人员ID
+    pub approval_account_ids: Vec<String>, // 当前审批人员ID
+    pub form_state_map: HashMap<String, HashMap<String, Value>>, // 录入节点映射 key为节点ID,对应的value为节点中的录入的参数
+    pub approval_state_map: HashMap<String, HashMap<String, Value>>, // 审批节点映射 key为节点ID，对应的value为节点实际审批结果
+    pub modify_field_var_content: Option<HashMap<String, Value>>, // 修改字段对应参数列表
+    pub delete_rel_business_obj_id: Option<String>, // 删除的关联业务数据ID
+}
+
+// 审批相关数据
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug, Default, poem_openapi::Object, sea_orm::FromJsonQueryResult)]
+pub struct FlowInstArtifactsApprovalValue {
+
 }
 
 /// 实例的动作信息
@@ -367,11 +379,14 @@ pub struct FlowInstModifyCurrentVarsReq {
 #[serde(default)]
 pub struct FlowInstFilterReq {
     /// 关联模型ID
-    pub flow_model_id: Option<String>,
+    pub flow_version_id: Option<String>,
     /// 业务ID
     pub rel_business_obj_id: Option<String>,
     /// 标签
     pub tag: Option<String>,
+
+    /// 是否主流程
+    pub main: Option<bool>,
 
     /// 是否结束
     pub finish: Option<bool>,

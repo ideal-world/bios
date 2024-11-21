@@ -1,4 +1,4 @@
-use crate::dto::flow_inst_dto::{FlowInstTransitionInfo, FlowOperationContext};
+use crate::dto::flow_inst_dto::{FlowInstArtifacts, FlowInstTransitionInfo, FlowOperationContext};
 use tardis::chrono::Utc;
 use tardis::db::sea_orm;
 use tardis::db::sea_orm::prelude::Json;
@@ -72,7 +72,7 @@ pub struct Model {
     ///
     /// Data objects to be used by nodes in the process
     /// 流程中节点所需要操作的数据对象
-    pub artifacts: Option<Json>,
+    pub artifacts: Option<FlowInstArtifacts>,
 
     pub own_paths: String,
 }
