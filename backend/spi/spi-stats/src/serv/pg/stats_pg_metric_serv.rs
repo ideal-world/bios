@@ -517,7 +517,7 @@ fn sql_part_where(
                         )
                     })?
                 };
-                let column_name = if col_conf.rel_external_id.is_some() || and_where.rel_external_id.clone().is_some_and(|i| !i.is_empty()) {
+                let column_name = if col_conf.rel_external_id.clone().is_some_and(|x| x.is_empty()) || and_where.rel_external_id.clone().is_some_and(|i| !i.is_empty()) {
                     if col_conf.dim_multi_values.unwrap_or(false) {
                         format!(
                             "ARRAY(SELECT jsonb_array_elements_text(COALESCE((fact.ext ->> '{}')::jsonb, '[]'::jsonb)))",
@@ -1167,7 +1167,7 @@ pub async fn query_metrics_record_paginated(
             ""
         },
         if sql_part_groups.is_empty() {
-            "".to_string()
+            "GROUP BY _._key".to_string()
         } else {
             format!("GROUP BY _._key,{sql_part_groups}")
         }
