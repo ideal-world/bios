@@ -26,7 +26,7 @@ use crate::{
             FlowModelVersionAddReq, FlowModelVersionBindState, FlowModelVersionDetailResp, FlowModelVersionFilterReq, FlowModelVersionModifyReq, FlowModelVersionSummaryResp,
             FlowModelVesionState,
         },
-        flow_state_dto::{FlowStateAggResp, FlowStateDetailResp, FlowStateFilterReq, FlowStateRelModelExt},
+        flow_state_dto::{FlowStateAggResp, FlowStateDetailResp, FlowStateFilterReq, FlowStateKind, FlowStateRelModelExt}, flow_transition_dto::{FlowTransitionDetailResp, FlowTransitionModifyReq},
     },
     flow_config::FlowBasicInfoManager,
 };
@@ -185,6 +185,11 @@ impl
         if let Some(unbind_states) = &modify_req.unbind_states {
             for delete_state in unbind_states {
                 Self::unbind_state(id, delete_state, funs, ctx).await?;
+            }
+        }
+        if let Some(delete_states) = &modify_req.delete_states {
+            for delete_state in delete_states {
+                Self::delete_state(id, delete_state, funs, ctx).await?;
             }
         }
 
@@ -394,6 +399,86 @@ impl FlowModelVersionServ {
         FlowTransitionServ::delete_transitions(flow_version_id, &trans_ids, funs, ctx).await?;
 
         FlowRelServ::delete_simple_rel(&FlowRelKind::FlowModelState, flow_version_id, state_id, funs, ctx).await
+    }
+
+    pub async fn delete_state(flow_version_id: &str, state_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let state = FlowStateServ::find_one_detail_item(
+            &FlowStateFilterReq {
+                basic: RbumBasicFilterReq {
+                    ids: Some(vec![state_id.to_string()]),
+                    with_sub_own_paths: true,
+                    own_paths: Some("".to_string()),
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?
+        .ok_or_else(|| funs.err().not_found(&Self::get_obj_name(), "delete_state", "flow state is not found", "404-flow-state-not-found"))?;
+        // 获取指向当前节点的动作
+        let to_trans = FlowTransitionServ::find_transitions_by_state_id(flow_version_id, Some(vec![state_id.to_string()]), None, funs, ctx).await?;
+        // 获取当前节点指向的动作
+        let from_trans = FlowTransitionServ::find_transitions_by_state_id(flow_version_id, None, Some(vec![state_id.to_string()]), funs, ctx).await?;
+        if state.state_kind == FlowStateKind::Branch {
+            // 假设多个节点指向当前分支节点，则禁止删除该节点
+            if to_trans.len() > 1 {
+                return Err(funs.err().internal_error(
+                    &Self::get_obj_name(),
+                    "delete_state",
+                    &format!("state {state_id} prohibit delete"),
+                    "500-flow-state-prohibit-delete",
+                ));
+            }
+            // 查询同级分支节点数量
+            let parent_state_id = to_trans.first().map(|tran| tran.to_flow_state_id.clone()).unwrap_or_default();
+            let peer_num = FlowTransitionServ::find_transitions_by_state_id(flow_version_id, Some(vec![parent_state_id.to_string()]), None, funs, ctx)
+            .await?.len();
+            if peer_num > 1 {
+                // 同级分支节点大于1，则删除当前分支下节点
+
+            } 
+        } else {
+            
+        }
+        Ok(())
+    }
+
+    async fn delete_single_state(flow_version_id: &str, state_id: &str, from_trans: &[FlowTransitionDetailResp], to_trans: &[FlowTransitionDetailResp], funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        // 如果当前删除的节点上下均为分支节点的合并节点，则禁止删除该节点
+        if from_trans.len() > 1 && to_trans.len() > 1 {
+            return Err(funs.err().internal_error(
+                &Self::get_obj_name(),
+                "delete_state",
+                &format!("state {state_id} prohibit delete"),
+                "500-flow-state-prohibit-delete",
+            ));
+        }
+        let mut from_modify_transitions = vec![];
+        let mut delete_flow_transition_ids = vec![];
+        
+        if from_trans.len() > 1 && to_trans.len() == 1 {
+            let to_state_id = to_trans.first().map(|tran| tran.to_flow_state_id.clone()).unwrap_or_default();
+            from_modify_transitions = from_trans.clone().into_iter().map(|tran| FlowTransitionModifyReq {
+                id: tran.id.clone().into(),
+                to_flow_state_id: Some(to_state_id.clone()),
+                ..Default::default()
+            }).collect_vec();
+            delete_flow_transition_ids = vec![to_trans.first().map(|tran|tran.id.clone()).unwrap_or_default()];
+        }
+        if from_trans.len() > 1 && to_trans.len() == 1 {
+            let to_state_id = to_trans.first().map(|tran| tran.to_flow_state_id.clone()).unwrap_or_default();
+            let to_modify_transitions = to_trans.clone().into_iter().map(|tran| FlowTransitionModifyReq {
+                id: tran.id.clone().into(),
+                to_flow_state_id: Some(to_state_id.clone()),
+                ..Default::default()
+            }).collect_vec();
+            FlowTransitionServ::modify_transitions(flow_version_id, &to_modify_transitions, funs, ctx).await?;
+        }
+        FlowTransitionServ::modify_transitions(flow_version_id, &from_modify_transitions, funs, ctx).await?;
+        FlowTransitionServ::delete_transitions(flow_version_id, &delete_flow_transition_ids, funs, ctx).await?;
+        Ok(())
     }
 
     pub async fn find_sorted_rel_states_by_version_id(flow_version_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<FlowStateDetailResp>> {
