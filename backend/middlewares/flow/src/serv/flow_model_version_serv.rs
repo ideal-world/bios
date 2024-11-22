@@ -437,7 +437,15 @@ impl FlowModelVersionServ {
             .await?.len();
             if peer_num > 1 {
                 // 同级分支节点大于1，则删除当前分支下节点
-
+                let mut delete_state_id = state_id.clone();
+                loop {
+                    Self::delete_single_state(flow_version_id, state_id, funs, ctx).await?;
+                    let child_trans = FlowTransitionServ::find_transitions_by_state_id(flow_version_id, Some(vec![state_id.to_string()]), None, funs, ctx).await?;
+                    if child_trans.len() == 1 {
+                        break;
+                    }
+                    // delete_state_id = child_trans
+                }
             } 
         } else {
             
@@ -445,7 +453,10 @@ impl FlowModelVersionServ {
         Ok(())
     }
 
-    async fn delete_single_state(flow_version_id: &str, state_id: &str, from_trans: &[FlowTransitionDetailResp], to_trans: &[FlowTransitionDetailResp], funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    async fn delete_single_state(flow_version_id: &str, state_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let to_trans = FlowTransitionServ::find_transitions_by_state_id(flow_version_id, Some(vec![state_id.to_string()]), None, funs, ctx).await?;
+        // 获取当前节点指向的动作
+        let from_trans = FlowTransitionServ::find_transitions_by_state_id(flow_version_id, None, Some(vec![state_id.to_string()]), funs, ctx).await?;
         // 如果当前删除的节点上下均为分支节点的合并节点，则禁止删除该节点
         if from_trans.len() > 1 && to_trans.len() > 1 {
             return Err(funs.err().internal_error(
@@ -455,29 +466,29 @@ impl FlowModelVersionServ {
                 "500-flow-state-prohibit-delete",
             ));
         }
-        let mut from_modify_transitions = vec![];
+        let mut modify_transitions = vec![];
         let mut delete_flow_transition_ids = vec![];
-        
+
         if from_trans.len() > 1 && to_trans.len() == 1 {
             let to_state_id = to_trans.first().map(|tran| tran.to_flow_state_id.clone()).unwrap_or_default();
-            from_modify_transitions = from_trans.clone().into_iter().map(|tran| FlowTransitionModifyReq {
+            modify_transitions = from_trans.clone().into_iter().map(|tran| FlowTransitionModifyReq {
                 id: tran.id.clone().into(),
                 to_flow_state_id: Some(to_state_id.clone()),
                 ..Default::default()
             }).collect_vec();
             delete_flow_transition_ids = vec![to_trans.first().map(|tran|tran.id.clone()).unwrap_or_default()];
-        }
-        if from_trans.len() > 1 && to_trans.len() == 1 {
-            let to_state_id = to_trans.first().map(|tran| tran.to_flow_state_id.clone()).unwrap_or_default();
-            let to_modify_transitions = to_trans.clone().into_iter().map(|tran| FlowTransitionModifyReq {
+        } else {
+            let from_state_id = from_trans.first().map(|tran| tran.to_flow_state_id.clone()).unwrap_or_default();
+            modify_transitions = to_trans.clone().into_iter().map(|tran| FlowTransitionModifyReq {
                 id: tran.id.clone().into(),
-                to_flow_state_id: Some(to_state_id.clone()),
+                from_flow_state_id: Some(from_state_id.clone()),
                 ..Default::default()
             }).collect_vec();
-            FlowTransitionServ::modify_transitions(flow_version_id, &to_modify_transitions, funs, ctx).await?;
         }
-        FlowTransitionServ::modify_transitions(flow_version_id, &from_modify_transitions, funs, ctx).await?;
+        FlowTransitionServ::modify_transitions(flow_version_id, &modify_transitions, funs, ctx).await?;
         FlowTransitionServ::delete_transitions(flow_version_id, &delete_flow_transition_ids, funs, ctx).await?;
+        FlowStateServ::delete_item(state_id, funs, ctx).await?;
+
         Ok(())
     }
 
