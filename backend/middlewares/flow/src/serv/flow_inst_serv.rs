@@ -41,7 +41,7 @@ use crate::{
         },
         flow_model_dto::FlowModelFilterReq,
         flow_model_version_dto::{FlowModelVersionDetailResp, FlowModelVersionFilterReq},
-        flow_state_dto::{FlowStateAggResp, FlowStateFilterReq, FlowStateRelModelExt, FlowSysStateKind},
+        flow_state_dto::{FlowStateAggResp, FlowStateFilterReq, FlowStateKind, FlowStateRelModelExt, FlowSysStateKind},
         flow_transition_dto::{FlowTransitionDetailResp, FlowTransitionFrontActionInfo},
         flow_var_dto::FillType,
     },
@@ -300,7 +300,8 @@ impl FlowInstServ {
             pub current_state_id: String,
             pub current_state_name: Option<String>,
             pub current_state_color: Option<String>,
-            pub current_state_kind: Option<FlowSysStateKind>,
+            pub current_state_sys_kind: Option<FlowSysStateKind>,
+            pub current_state_kind: Option<FlowStateKind>,
             pub current_state_ext: Option<String>,
 
             pub current_vars: Option<Value>,
@@ -349,6 +350,10 @@ impl FlowInstServ {
             .expr_as(Expr::col((flow_state_table.clone(), Alias::new("color"))).if_null(""), Alias::new("current_state_color"))
             .expr_as(
                 Expr::col((flow_state_table.clone(), Alias::new("sys_state"))).if_null(FlowSysStateKind::Start),
+                Alias::new("current_state_sys_kind"),
+            )
+            .expr_as(
+                Expr::col((flow_state_table.clone(), Alias::new("state_kind"))).if_null(FlowStateKind::Simple),
                 Alias::new("current_state_kind"),
             )
             .expr_as(Expr::col((rbum_rel_table.clone(), Alias::new("ext"))).if_null(""), Alias::new("current_state_ext"))
@@ -415,6 +420,7 @@ impl FlowInstServ {
                 current_state_id: inst.current_state_id,
                 current_state_name: inst.current_state_name,
                 current_state_color: inst.current_state_color,
+                current_state_sys_kind: inst.current_state_sys_kind,
                 current_state_kind: inst.current_state_kind,
                 current_state_ext: inst.current_state_ext.map(|ext| TardisFuns::json.str_to_obj::<FlowStateRelModelExt>(&ext).unwrap_or_default()),
                 current_state_conf: None, // @TODO
@@ -1061,7 +1067,7 @@ impl FlowInstServ {
             finish_time: flow_inst.finish_time,
             current_flow_state_name: flow_inst.current_state_name.as_ref().unwrap_or(&"".to_string()).to_string(),
             current_flow_state_color: flow_inst.current_state_color.as_ref().unwrap_or(&"".to_string()).to_string(),
-            current_flow_state_kind: flow_inst.current_state_kind.as_ref().unwrap_or(&FlowSysStateKind::Start).clone(),
+            current_flow_state_sys_kind: flow_inst.current_state_sys_kind.as_ref().unwrap_or(&FlowSysStateKind::Start).clone(),
             current_flow_state_ext: flow_inst.current_state_ext.clone().unwrap_or_default(),
             next_flow_transitions: next_transitions,
             rel_flow_versions,

@@ -10,7 +10,7 @@ use tardis::{
 };
 
 use super::{
-    flow_state_dto::{FLowStateKindConf, FlowGuardConf, FlowStateRelModelExt, FlowStateVar, FlowSysStateKind},
+    flow_state_dto::{FLowStateKindConf, FlowGuardConf, FlowStateKind, FlowStateRelModelExt, FlowStateVar, FlowSysStateKind},
     flow_transition_dto::FlowTransitionDoubleCheckInfo,
     flow_var_dto::FlowVarInfo,
 };
@@ -137,12 +137,18 @@ pub struct FlowInstDetailResp {
     ///
     /// 关联的[工作流状态](super::flow_state_dto::FlowStateDetailResp) color
     pub current_state_color: Option<String>,
-    /// 当前状态类型
-    /// Associated [flow_state](super::flow_state_dto::FlowStateDetailResp) name
+    /// 当前状态系统类型
+    /// Associated [flow_state](super::flow_state_dto::FlowStateDetailResp) sys_state
     ///
-    /// 关联的[工作流状态](super::flow_state_dto::FlowStateDetailResp) 名称
-    pub current_state_kind: Option<FlowSysStateKind>,
+    /// 关联的[工作流状态](super::flow_state_dto::FlowStateDetailResp) 系统类型
+    pub current_state_sys_kind: Option<FlowSysStateKind>,
+
     /// 当前状态类型
+    /// Associated [flow_state](super::flow_state_dto::FlowStateDetailResp) state_kind
+    ///
+    /// 关联的[工作流状态](super::flow_state_dto::FlowStateDetailResp) 状态类型
+    pub current_state_kind: Option<FlowStateKind>,
+    /// 当前状态关联扩展信息
     /// Associated [flow_state](super::flow_state_dto::FlowStateRelModelExt)
     ///
     /// 关联的[工作流状态](super::flow_state_dto::FlowStateRelModelExt)
@@ -211,17 +217,21 @@ pub struct FLowInstStateApprovalConf {
 #[derive(Serialize, Deserialize, PartialEq, Clone, Debug, Default, poem_openapi::Object, sea_orm::FromJsonQueryResult)]
 pub struct FlowInstArtifacts {
     pub form_account_ids: Vec<String>, // 当前录入人员ID
-    pub approval_account_ids: Vec<String>, // 当前审批人员ID
+    pub approval_account_ids: HashMap<String, FlowApprovalResultKind>, // 当前审批结果
     pub form_state_map: HashMap<String, HashMap<String, Value>>, // 录入节点映射 key为节点ID,对应的value为节点中的录入的参数
     pub approval_state_map: HashMap<String, HashMap<String, Value>>, // 审批节点映射 key为节点ID，对应的value为节点实际审批结果
     pub modify_field_var_content: Option<HashMap<String, Value>>, // 修改字段对应参数列表
     pub delete_rel_business_obj_id: Option<String>, // 删除的关联业务数据ID
 }
 
-// 审批相关数据
-#[derive(Serialize, Deserialize, Clone, PartialEq, Debug, Default, poem_openapi::Object, sea_orm::FromJsonQueryResult)]
-pub struct FlowInstArtifactsApprovalValue {
-
+/// 审批结果类型
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Enum, Default, PartialEq, Clone)]
+pub enum FlowApprovalResultKind {
+    /// 通过
+    #[default]
+    Pass,
+    /// 拒绝
+    Overrule,
 }
 
 /// 实例的动作信息
@@ -317,7 +327,7 @@ pub struct FlowInstFindStateAndTransitionsResp {
     /// Associated [flow_state](super::flow_state_dto::FlowStateDetailResp) sys_state
     ///
     /// 关联的[工作流状态](super::flow_state_dto::FlowStateDetailResp) sys_state
-    pub current_flow_state_kind: FlowSysStateKind,
+    pub current_flow_state_sys_kind: FlowSysStateKind,
     /// Associated [flow_state](super::flow_state_dto::FlowStateDetailResp) color
     ///
     /// 关联的[工作流状态](super::flow_state_dto::FlowStateDetailResp) color

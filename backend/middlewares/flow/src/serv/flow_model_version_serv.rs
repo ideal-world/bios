@@ -17,6 +17,7 @@ use tardis::{
     serde_json::json,
     TardisFuns, TardisFunsInst,
 };
+use async_recursion::async_recursion;
 
 use crate::{
     domain::flow_model_version,
@@ -421,6 +422,7 @@ impl FlowModelVersionServ {
         let to_trans = FlowTransitionServ::find_transitions_by_state_id(flow_version_id, Some(vec![state_id.to_string()]), None, funs, ctx).await?;
         // 获取当前节点指向的动作
         let from_trans = FlowTransitionServ::find_transitions_by_state_id(flow_version_id, None, Some(vec![state_id.to_string()]), funs, ctx).await?;
+        let mut delete_state_ids = vec![];
         if state.state_kind == FlowStateKind::Branch {
             // 假设多个节点指向当前分支节点，则禁止删除该节点
             if to_trans.len() > 1 {
@@ -437,20 +439,58 @@ impl FlowModelVersionServ {
             .await?.len();
             if peer_num > 1 {
                 // 同级分支节点大于1，则删除当前分支下节点
-                let mut delete_state_id = state_id.clone();
-                loop {
-                    Self::delete_single_state(flow_version_id, state_id, funs, ctx).await?;
-                    let child_trans = FlowTransitionServ::find_transitions_by_state_id(flow_version_id, Some(vec![state_id.to_string()]), None, funs, ctx).await?;
-                    if child_trans.len() == 1 {
-                        break;
-                    }
-                    // delete_state_id = child_trans
-                }
-            } 
+                let finish_state_id = Self::find_branch_finish_state_id(flow_version_id, state_id, funs, ctx).await?;
+                Self::find_state_ids_in_branch(flow_version_id, state_id, &finish_state_id, &mut delete_state_ids, funs, ctx).await?;
+            } else {
+                // 如分支节点等于1，只删除分支节点即可
+                delete_state_ids.push(state_id.to_string());
+            }
         } else {
-            
+            delete_state_ids.push(state_id.to_string());
+        }
+        for delete_state_id in delete_state_ids.iter().rev() {
+            Self::delete_single_state(flow_version_id, delete_state_id, funs, ctx).await?;
         }
         Ok(())
+    }
+
+    #[async_recursion]
+    async fn find_state_ids_in_branch(flow_version_id: &str, state_id: &str, finish_state_id: &str, state_ids: &mut Vec<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        state_ids.push(state_id.to_string());
+        let to_trans = FlowTransitionServ::find_transitions_by_state_id(flow_version_id, Some(vec![state_id.to_string()]), None, funs, ctx).await?;
+        if to_trans.len() == 1 && to_trans.first().map(|tran| tran.to_flow_state_id.clone()).unwrap() == finish_state_id.to_string() {
+            return Ok(());
+        }
+        for to_tran in to_trans {
+            Self::find_state_ids_in_branch(flow_version_id, &to_tran.to_flow_state_id, finish_state_id, state_ids, funs, ctx).await?;
+        }
+        Ok(())
+    }
+
+    async fn find_branch_finish_state_id(flow_version_id: &str, state_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
+        let mut target_state_id = state_id.to_string();
+        let mut branch_num = 0;
+        loop {
+            let mut to_states = FlowTransitionServ::find_transitions_by_state_id(flow_version_id, Some(vec![target_state_id.clone()]), None, funs, ctx).await?;
+            let to_state_num = to_states.len();
+            if to_state_num == 0 {
+                break;
+            }
+            if to_state_num > 1 {
+                branch_num += to_state_num - 1;
+            }
+            target_state_id = to_states.pop().map(|to_state| to_state.id).unwrap();
+            if to_state_num == 1 {
+                let from_state_num = FlowTransitionServ::find_transitions_by_state_id(flow_version_id, None, Some(vec![target_state_id.to_string()]), funs, ctx).await?.len();
+                if from_state_num > 1 {
+                    branch_num -= from_state_num - 1;
+                }
+            }
+            if branch_num == 0 {
+                break;
+            }
+        }
+        Ok(target_state_id)
     }
 
     async fn delete_single_state(flow_version_id: &str, state_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
