@@ -10,7 +10,7 @@ use tardis::{
 };
 
 use super::{
-    flow_state_dto::{FLowStateKindConf, FlowGuardConf, FlowStateKind, FlowStateRelModelExt, FlowStateVar, FlowSysStateKind},
+    flow_state_dto::{FLowStateKindConf, FlowGuardConf, FlowStateKind, FlowStateOperatorKind, FlowStateRelModelExt, FlowStateVar, FlowSysStateKind},
     flow_transition_dto::FlowTransitionDoubleCheckInfo,
     flow_var_dto::FlowVarInfo,
 };
@@ -195,7 +195,7 @@ impl FlowInstDetailResp {
 // 状态配置
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
 pub struct FLowInstStateConf {
-    pub operators: HashMap<String, String>,
+    pub operators: Vec<FlowStateOperatorKind>,
     pub form_conf: Option<FLowInstStateFormConf>,
     pub approval_conf: Option<FLowInstStateApprovalConf>,
 }

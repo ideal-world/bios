@@ -1805,7 +1805,7 @@ impl FlowModelServ {
                                         name: Some(state.name.clone().into()),
                                         sys_state: state.sys_state.clone(),
                                         state_kind: Some(state.state_kind.clone()),
-                                        kind_conf: Some(state.kind_conf()),
+                                        kind_conf: state.kind_conf,
                                         tags: Some(state.tags.clone().split(',').map(|id| id.to_string()).collect_vec()),
                                         scope_level: Some(state.scope_level.clone()),
                                         disabled: Some(state.disabled),

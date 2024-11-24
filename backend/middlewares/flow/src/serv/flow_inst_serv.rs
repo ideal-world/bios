@@ -15,6 +15,7 @@ use bios_basic::{
     },
 };
 use itertools::Itertools;
+use serde_json::json;
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
     chrono::{DateTime, Utc},
@@ -35,13 +36,11 @@ use crate::{
     dto::{
         flow_external_dto::{FlowExternalCallbackOp, FlowExternalParams},
         flow_inst_dto::{
-            FlowInstAbortReq, FlowInstBatchBindReq, FlowInstBatchBindResp, FlowInstDetailResp, FlowInstFilterReq, FlowInstFindNextTransitionResp, FlowInstFindNextTransitionsReq,
-            FlowInstFindStateAndTransitionsReq, FlowInstFindStateAndTransitionsResp, FlowInstStartReq, FlowInstSummaryResp, FlowInstSummaryResult, FlowInstTransferReq,
-            FlowInstTransferResp, FlowInstTransitionInfo, FlowOperationContext,
+            FLowInstStateApprovalConf, FLowInstStateConf, FLowInstStateFormConf, FlowInstAbortReq, FlowInstArtifacts, FlowInstBatchBindReq, FlowInstBatchBindResp, FlowInstDetailResp, FlowInstFilterReq, FlowInstFindNextTransitionResp, FlowInstFindNextTransitionsReq, FlowInstFindStateAndTransitionsReq, FlowInstFindStateAndTransitionsResp, FlowInstStartReq, FlowInstSummaryResp, FlowInstSummaryResult, FlowInstTransferReq, FlowInstTransferResp, FlowInstTransitionInfo, FlowOperationContext
         },
         flow_model_dto::FlowModelFilterReq,
         flow_model_version_dto::{FlowModelVersionDetailResp, FlowModelVersionFilterReq},
-        flow_state_dto::{FlowStateAggResp, FlowStateFilterReq, FlowStateKind, FlowStateRelModelExt, FlowSysStateKind},
+        flow_state_dto::{FLowStateKindConf, FlowStateAggResp, FlowStateFilterReq, FlowStateKind, FlowStateOperatorKind, FlowStateRelModelExt, FlowSysStateKind},
         flow_transition_dto::{FlowTransitionDetailResp, FlowTransitionFrontActionInfo},
         flow_var_dto::FillType,
     },
@@ -302,6 +301,7 @@ impl FlowInstServ {
             pub current_state_color: Option<String>,
             pub current_state_sys_kind: Option<FlowSysStateKind>,
             pub current_state_kind: Option<FlowStateKind>,
+            pub current_state_kind_conf: Option<Value>,
             pub current_state_ext: Option<String>,
 
             pub current_vars: Option<Value>,
@@ -345,6 +345,7 @@ impl FlowInstServ {
                 (flow_inst::Entity, flow_inst::Column::OutputMessage),
                 (flow_inst::Entity, flow_inst::Column::Transitions),
                 (flow_inst::Entity, flow_inst::Column::OwnPaths),
+                (flow_inst::Entity, flow_inst::Column::Artifacts),
             ])
             .expr_as(Expr::col((rel_state_table.clone(), NAME_FIELD.clone())).if_null(""), Alias::new("current_state_name"))
             .expr_as(Expr::col((flow_state_table.clone(), Alias::new("color"))).if_null(""), Alias::new("current_state_color"))
@@ -355,6 +356,10 @@ impl FlowInstServ {
             .expr_as(
                 Expr::col((flow_state_table.clone(), Alias::new("state_kind"))).if_null(FlowStateKind::Simple),
                 Alias::new("current_state_kind"),
+            )
+            .expr_as(
+                Expr::col((flow_state_table.clone(), Alias::new("kind_conf"))).if_null(json!({})),
+                Alias::new("current_state_kind_conf"),
             )
             .expr_as(Expr::col((rbum_rel_table.clone(), Alias::new("ext"))).if_null(""), Alias::new("current_state_ext"))
             .expr_as(
@@ -401,31 +406,35 @@ impl FlowInstServ {
         let flow_insts = funs.db().find_dtos::<FlowInstDetailResult>(&query).await?;
         Ok(flow_insts
             .into_iter()
-            .map(|inst| FlowInstDetailResp {
-                id: inst.id,
-                rel_flow_version_id: inst.rel_flow_version_id,
-                rel_flow_model_name: inst.rel_flow_model_name,
-                tag: inst.tag,
-                main: inst.main,
-                create_vars: inst.create_vars.map(|create_vars| TardisFuns::json.json_to_obj(create_vars).unwrap()),
-                create_ctx: inst.create_ctx,
-                create_time: inst.create_time,
-                finish_ctx: inst.finish_ctx,
-                finish_time: inst.finish_time,
-                finish_abort: inst.finish_abort,
-                output_message: inst.output_message,
-                own_paths: inst.own_paths,
-                transitions: inst.transitions.map(|transitions| TardisFuns::json.json_to_obj(transitions).unwrap()),
-                artifacts: None,
-                current_state_id: inst.current_state_id,
-                current_state_name: inst.current_state_name,
-                current_state_color: inst.current_state_color,
-                current_state_sys_kind: inst.current_state_sys_kind,
-                current_state_kind: inst.current_state_kind,
-                current_state_ext: inst.current_state_ext.map(|ext| TardisFuns::json.str_to_obj::<FlowStateRelModelExt>(&ext).unwrap_or_default()),
-                current_state_conf: None, // @TODO
-                current_vars: inst.current_vars.map(|current_vars| TardisFuns::json.json_to_obj(current_vars).unwrap()),
-                rel_business_obj_id: inst.rel_business_obj_id,
+            .map(|inst| {
+                let current_state_kind_conf = TardisFuns::json.json_to_obj::<FLowStateKindConf>(inst.current_state_kind_conf.unwrap_or_default()).unwrap_or_default();
+                let artifacts = TardisFuns::json.json_to_obj::<FlowInstArtifacts>(inst.artifacts.clone().unwrap_or_default()).unwrap_or_default();
+                FlowInstDetailResp {
+                    id: inst.id,
+                    rel_flow_version_id: inst.rel_flow_version_id,
+                    rel_flow_model_name: inst.rel_flow_model_name,
+                    tag: inst.tag,
+                    main: inst.main,
+                    create_vars: inst.create_vars.map(|create_vars| TardisFuns::json.json_to_obj(create_vars).unwrap()),
+                    create_ctx: inst.create_ctx,
+                    create_time: inst.create_time,
+                    finish_ctx: inst.finish_ctx,
+                    finish_time: inst.finish_time,
+                    finish_abort: inst.finish_abort,
+                    output_message: inst.output_message,
+                    own_paths: inst.own_paths,
+                    transitions: inst.transitions.map(|transitions| TardisFuns::json.json_to_obj(transitions).unwrap()),
+                    artifacts: inst.artifacts,
+                    current_state_id: inst.current_state_id,
+                    current_state_name: inst.current_state_name,
+                    current_state_color: inst.current_state_color,
+                    current_state_sys_kind: inst.current_state_sys_kind,
+                    current_state_kind: inst.current_state_kind.clone(),
+                    current_state_ext: inst.current_state_ext.map(|ext| TardisFuns::json.str_to_obj::<FlowStateRelModelExt>(&ext).unwrap_or_default()),
+                    current_state_conf: Self::get_state_conf(&inst.current_state_kind.unwrap_or_default(), &current_state_kind_conf, &artifacts),
+                    current_vars: inst.current_vars.map(|current_vars| TardisFuns::json.json_to_obj(current_vars).unwrap()),
+                    rel_business_obj_id: inst.rel_business_obj_id,
+                }
             })
             .collect_vec())
     }
@@ -1410,5 +1419,55 @@ impl FlowInstServ {
         }
 
         Ok(())
+    }
+
+    // 当进入该节点时
+    async fn when_enter_state() -> TardisResult<()> {
+        Ok(())
+    }
+    
+    // 当离开该节点时
+    async fn when_leave_state() -> TardisResult<()> {
+        Ok(())
+    }
+
+    // 修改实例的数据对象
+    async fn modify_inst_artifacts() -> TardisResult<()> {
+        Ok(())
+    }
+
+    fn get_state_conf(state_kind: &FlowStateKind, kind_conf: &FLowStateKindConf, artifacts: &FlowInstArtifacts) -> Option<FLowInstStateConf> {
+        match state_kind {
+            FlowStateKind::Form => {
+                if let Some(form) = &kind_conf.form {
+                    Some(FLowInstStateConf {
+                        operators: vec![FlowStateOperatorKind::Referral, FlowStateOperatorKind::Submit],
+                        form_conf: Some(FLowInstStateFormConf {
+                            form_vars_collect_conf: form.vars_collect.clone()
+                        }),
+                        approval_conf: None,
+                    })
+                } else {
+                    None
+                }
+            },
+            FlowStateKind::Approval => {
+                if let Some(approval) = &kind_conf.approval {
+                    Some(FLowInstStateConf {
+                        operators: vec![FlowStateOperatorKind::Referral, FlowStateOperatorKind::Revoke, FlowStateOperatorKind::Pass, FlowStateOperatorKind::Overrule, FlowStateOperatorKind::Back],
+                        form_conf: None,
+                        approval_conf: Some(FLowInstStateApprovalConf {
+                            approval_vars_collect_conf: Some(approval.vars_collect.clone()),
+                            form_vars_collect: artifacts.modify_field_var_content.clone().unwrap_or_default(),
+                        }),
+                    })
+                } else {
+                    None
+                }
+            }
+            _ => {
+                None
+            }
+        }
     }
 }

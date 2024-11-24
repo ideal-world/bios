@@ -72,6 +72,8 @@ pub struct Model {
     ///
     /// Data objects to be used by nodes in the process
     /// 流程中节点所需要操作的数据对象
+    #[sea_orm(column_type = "JsonBinary", nullable)]
+    #[tardis_entity(custom_type = "JsonBinary")]
     pub artifacts: Option<FlowInstArtifacts>,
 
     pub own_paths: String,
