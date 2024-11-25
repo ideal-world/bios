@@ -407,8 +407,8 @@ impl FlowInstServ {
         Ok(flow_insts
             .into_iter()
             .map(|inst| {
-                let current_state_kind_conf = TardisFuns::json.json_to_obj::<FLowStateKindConf>(inst.current_state_kind_conf.unwrap_or_default()).unwrap_or_default();
-                let artifacts = TardisFuns::json.json_to_obj::<FlowInstArtifacts>(inst.artifacts.clone().unwrap_or_default()).unwrap_or_default();
+                let current_state_kind_conf = inst.current_state_kind_conf.clone().map(|current_state_kind_conf| TardisFuns::json.json_to_obj::<FLowStateKindConf>(current_state_kind_conf).unwrap_or_default());
+                let artifacts = inst.artifacts.clone().map(|artifacts| TardisFuns::json.json_to_obj::<FlowInstArtifacts>(artifacts).unwrap_or_default());
                 FlowInstDetailResp {
                     id: inst.id,
                     rel_flow_version_id: inst.rel_flow_version_id,
@@ -431,7 +431,7 @@ impl FlowInstServ {
                     current_state_sys_kind: inst.current_state_sys_kind,
                     current_state_kind: inst.current_state_kind.clone(),
                     current_state_ext: inst.current_state_ext.map(|ext| TardisFuns::json.str_to_obj::<FlowStateRelModelExt>(&ext).unwrap_or_default()),
-                    current_state_conf: Self::get_state_conf(&inst.current_state_kind.unwrap_or_default(), &current_state_kind_conf, &artifacts),
+                    current_state_conf: Self::get_state_conf(&inst.current_state_kind.unwrap_or_default(), current_state_kind_conf, artifacts),
                     current_vars: inst.current_vars.map(|current_vars| TardisFuns::json.json_to_obj(current_vars).unwrap()),
                     rel_business_obj_id: inst.rel_business_obj_id,
                 }
@@ -1436,38 +1436,49 @@ impl FlowInstServ {
         Ok(())
     }
 
-    fn get_state_conf(state_kind: &FlowStateKind, kind_conf: &FLowStateKindConf, artifacts: &FlowInstArtifacts) -> Option<FLowInstStateConf> {
-        match state_kind {
-            FlowStateKind::Form => {
-                if let Some(form) = &kind_conf.form {
-                    Some(FLowInstStateConf {
-                        operators: vec![FlowStateOperatorKind::Referral, FlowStateOperatorKind::Submit],
-                        form_conf: Some(FLowInstStateFormConf {
+    fn get_state_conf(state_kind: &FlowStateKind, kind_conf: Option<FLowStateKindConf>, artifacts: Option<FlowInstArtifacts>) -> Option<FLowInstStateConf> {
+        if let Some(kind_conf) = kind_conf {
+            match state_kind {
+                FlowStateKind::Form => {
+                    kind_conf.form.as_ref().map(|form| {
+                        let operators = HashMap::from([
+                            (FlowStateOperatorKind::Referral, "".to_string()),
+                            (FlowStateOperatorKind::Submit, form.submit_btn_name.clone()),
+                        ]);
+                        FLowInstStateConf {
+                            operators,
+                            form_conf: Some(FLowInstStateFormConf {
                             form_vars_collect_conf: form.vars_collect.clone()
-                        }),
-                        approval_conf: None,
+                            }),
+                            approval_conf: None,
+                        }
                     })
-                } else {
-                    None
-                }
-            },
-            FlowStateKind::Approval => {
-                if let Some(approval) = &kind_conf.approval {
-                    Some(FLowInstStateConf {
-                        operators: vec![FlowStateOperatorKind::Referral, FlowStateOperatorKind::Revoke, FlowStateOperatorKind::Pass, FlowStateOperatorKind::Overrule, FlowStateOperatorKind::Back],
-                        form_conf: None,
-                        approval_conf: Some(FLowInstStateApprovalConf {
+                },
+                FlowStateKind::Approval => {
+                    kind_conf.approval.as_ref().map(|approval| {
+                        let operators = HashMap::from([
+                            (FlowStateOperatorKind::Referral, "".to_string()),
+                            (FlowStateOperatorKind::Revoke, "".to_string()),
+                            (FlowStateOperatorKind::Pass, approval.pass_btn_name.clone()),
+                            (FlowStateOperatorKind::Overrule, approval.overrule_btn_name.clone()),
+                            (FlowStateOperatorKind::Back, approval.back_btn_name.clone()),
+                        ]);
+                        FLowInstStateConf {
+                            operators,
+                            form_conf: None,
+                            approval_conf: Some(FLowInstStateApprovalConf {
                             approval_vars_collect_conf: Some(approval.vars_collect.clone()),
-                            form_vars_collect: artifacts.modify_field_var_content.clone().unwrap_or_default(),
-                        }),
+                            form_vars_collect: artifacts.unwrap_or_default().modify_field_var_content.unwrap_or_default(),
+                            }),
+                        }
                     })
-                } else {
+                }
+                _ => {
                     None
                 }
             }
-            _ => {
-                None
-            }
-        }
+        } else {
+            None
+        }        
     }
 }

@@ -13,8 +13,7 @@ use tardis::web::poem_openapi::payload::Json;
 use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 
 use crate::dto::flow_model_dto::{
-    FlowModelAddReq, FlowModelAggResp, FlowModelBindStateReq, FlowModelDetailResp, FlowModelFilterReq, FlowModelFindRelStateResp, FlowModelModifyReq, FlowModelSortStatesReq,
-    FlowModelSummaryResp, FlowModelUnbindStateReq,
+    FlowModelAddReq, FlowModelAggResp, FlowModelBindStateReq, FlowModelDetailResp, FlowModelFilterReq, FlowModelFindRelStateResp, FlowModelModifyReq, FlowModelSortStatesReq, FlowModelStatus, FlowModelSummaryResp, FlowModelUnbindStateReq
 };
 use crate::dto::flow_model_version_dto::{FlowModelVersionBindState, FlowModelVersionDetailResp, FlowModelVersionModifyReq, FlowModelVersionModifyState};
 use crate::dto::flow_state_dto::FlowStateRelModelModifyReq;
@@ -145,6 +144,7 @@ impl FlowCcModelApi {
         name: Query<Option<String>>,
         tag: Query<Option<String>>,
         enabled: Query<Option<bool>>,
+        status: Query<Option<FlowModelStatus>>,
         rel_template_id: Query<Option<String>>,
         main: Query<Option<bool>>,
         with_sub: Query<Option<bool>>,
@@ -168,6 +168,7 @@ impl FlowCcModelApi {
                 main: main.0,
                 rel_template_id: rel_template_id.0,
                 tags: tag.0.map(|tag| vec![tag]),
+                status: status.0,
                 ..Default::default()
             },
             page_number.0,

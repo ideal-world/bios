@@ -185,7 +185,7 @@ pub struct FlowInstDetailResp {
 impl FlowInstDetailResp {
     pub fn artifacts(&self) -> FlowInstArtifacts {
         if let Some(artifacts) = self.artifacts.clone() {
-            TardisFuns::json.json_to_obj(artifacts).unwrap()
+            TardisFuns::json.json_to_obj(artifacts).unwrap_or_default()
         } else {
             FlowInstArtifacts::default()
         }
@@ -195,7 +195,7 @@ impl FlowInstDetailResp {
 // 状态配置
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
 pub struct FLowInstStateConf {
-    pub operators: Vec<FlowStateOperatorKind>,
+    pub operators: HashMap<FlowStateOperatorKind, String>,
     pub form_conf: Option<FLowInstStateFormConf>,
     pub approval_conf: Option<FLowInstStateApprovalConf>,
 }
@@ -403,6 +403,18 @@ pub struct FlowInstModifyAssignedReq {
 pub struct FlowInstModifyCurrentVarsReq {
     /// 参数列表
     pub vars: HashMap<String, Value>,
+}
+
+/// 操作实例请求
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
+pub struct FlowInstOperateReq {
+    pub operate: FlowStateOperatorKind,
+    /// 参数列表
+    pub vars: Option<HashMap<String, Value>>,
+    /// 输出信息
+    pub output_message: Option<String>,
+    /// 操作人
+    pub operator: Option<String>,
 }
 
 /// 工作流实例过滤器

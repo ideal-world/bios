@@ -442,7 +442,7 @@ impl FlowStateServ {
         )
         .await?;
         let transitions = FlowTransitionServ::find_transitions(flow_version_id, Some(vec![state.id.clone()]), funs, ctx).await?;
-
+        let kind_conf = state.kind_conf();
         Ok(FlowStateAggResp {
             id: state.id.clone(),
             name: state.name,
@@ -453,7 +453,7 @@ impl FlowStateServ {
             disabled: state.disabled,
             ext: Self::get_rel_state_ext(flow_version_id, &state.id, funs, ctx).await?,
             state_kind: state.state_kind,
-            kind_conf: state.kind_conf,
+            kind_conf,
             transitions,
         })
     }

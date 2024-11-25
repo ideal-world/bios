@@ -1,4 +1,5 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, str::FromStr};
+use strum::Display;
 
 use bios_basic::{
     dto::BasicQueryCondInfo,
@@ -9,7 +10,7 @@ use bios_basic::{
 };
 use serde::{Deserialize, Serialize};
 use tardis::{
-    basic::field::TrimString,
+    basic::{error::TardisError, field::TrimString},
     chrono::{DateTime, Utc},
     db::sea_orm::{self, prelude::*, EnumIter},
     serde_json::Value,
@@ -79,6 +80,8 @@ pub struct FlowStateForm {
     pub referral_guard_custom_conf: Option<FlowGuardConf>,
     /// 字段配置
     pub vars_collect: HashMap<String, FlowStateVar>,
+    /// 提交动作名称
+    pub submit_btn_name: String,
 }
 
 /// 审批节点配置信息
@@ -276,7 +279,7 @@ pub struct FlowStateDetailResp {
     pub info: String,
 
     pub state_kind: FlowStateKind,
-    pub kind_conf: Option<FLowStateKindConf>,
+    pub kind_conf: Option<Value>,
 
     pub template: bool,
     pub rel_state_id: String,
@@ -290,6 +293,16 @@ pub struct FlowStateDetailResp {
 
     pub scope_level: RbumScopeLevelKind,
     pub disabled: bool,
+}
+
+impl FlowStateDetailResp {
+    pub fn kind_conf(&self) -> Option<FLowStateKindConf> {
+        self.kind_conf.clone().map(|kind_conf|TardisFuns::json.json_to_obj(kind_conf.clone()).unwrap_or_default())
+        // match &self.kind_conf {
+        //     Some(kind_conf) => TardisFuns::json.json_to_obj(kind_conf.clone()).unwrap(),
+        //     None => FLowStateKindConf::default(),
+        // }
+    }
 }
 
 /// Type of state
@@ -417,7 +430,7 @@ pub struct FLowStateIdAndName {
 }
 
 /// 可操作类型
-#[derive(Serialize, Deserialize, Debug, poem_openapi::Enum, Clone)]
+#[derive(Display, Serialize, Deserialize, Hash, Eq, PartialEq, Debug, poem_openapi::Enum, Clone)]
 pub enum FlowStateOperatorKind {
     /// 转办
     Referral,
@@ -431,4 +444,20 @@ pub enum FlowStateOperatorKind {
     Pass,
     /// 拒绝
     Overrule,
+}
+
+impl FromStr for FlowStateOperatorKind {
+    type Err = TardisError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_uppercase().as_str() {
+            "REFERRAL" => Ok(Self::Referral),
+            "REVOKE" => Ok(Self::Revoke),
+            "SUBMIT" => Ok(Self::Submit),
+            "BACK" => Ok(Self::Back),
+            "PASS" => Ok(Self::Pass),
+            "OVERRULE" => Ok(Self::Overrule),
+            _ => Err(TardisError::bad_request(&format!("invalid ReachChannelKind: {}", s), "400-reach-invalid-param")),
+        }
+    }
 }
