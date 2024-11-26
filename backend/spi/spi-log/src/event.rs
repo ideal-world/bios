@@ -8,8 +8,10 @@ use tardis::{
     {log as tracing, log::instrument},
 };
 
-#[instrument]
+#[instrument(name = "[SPI.Log.AddEvent]", level = "trace", skip_all)]
 async fn handle_add_event(req: LogItemAddV2Req, ctx: TardisContext) -> TardisResult<()> {
+    tracing::trace!("Received LogItemAddV2Req: {:?}", req);
+    tracing::trace!("Attempting to add log item with context: {:?}", ctx);
     let funs = get_tardis_inst();
     serv::log_item_serv::addv2(&mut req.into(), &funs, &ctx).await?;
     Ok(())
