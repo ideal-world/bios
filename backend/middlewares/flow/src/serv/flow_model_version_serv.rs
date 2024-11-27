@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use bios_basic::rbum::{
     dto::{
         rbum_filer_dto::RbumBasicFilterReq,
@@ -22,12 +24,12 @@ use async_recursion::async_recursion;
 use crate::{
     domain::flow_model_version,
     dto::{
-        flow_model_dto::{FlowModelBindStateReq, FlowModelFilterReq, FlowModelModifyReq},
+        flow_model_dto::{FlowModelBindNewStateReq, FlowModelBindStateReq, FlowModelFilterReq, FlowModelModifyReq},
         flow_model_version_dto::{
             FlowModelVersionAddReq, FlowModelVersionBindState, FlowModelVersionDetailResp, FlowModelVersionFilterReq, FlowModelVersionModifyReq, FlowModelVersionSummaryResp,
             FlowModelVesionState,
         },
-        flow_state_dto::{FlowStateAggResp, FlowStateDetailResp, FlowStateFilterReq, FlowStateKind, FlowStateRelModelExt}, flow_transition_dto::{FlowTransitionDetailResp, FlowTransitionModifyReq},
+        flow_state_dto::{FlowStateAddReq, FlowStateAggResp, FlowStateDetailResp, FlowStateFilterReq, FlowStateKind, FlowStateRelModelExt}, flow_transition_dto::{FlowTransitionAddReq, FlowTransitionDetailResp, FlowTransitionModifyReq},
     },
     flow_config::FlowBasicInfoManager,
 };
@@ -361,16 +363,18 @@ impl FlowModelVersionServ {
         .await?;
 
         for version in versions {
-            Self::modify_item(
-                &version.id,
-                &mut FlowModelVersionModifyReq {
-                    status: Some(FlowModelVesionState::Disabled),
-                    ..Default::default()
-                },
-                funs,
-                ctx,
-            )
-            .await?;
+            if flow_version_id != version.id {
+                Self::modify_item(
+                    &version.id,
+                    &mut FlowModelVersionModifyReq {
+                        status: Some(FlowModelVesionState::Disabled),
+                        ..Default::default()
+                    },
+                    funs,
+                    ctx,
+                )
+                .await?;
+            }
         }
         Ok(())
     }
@@ -385,19 +389,6 @@ impl FlowModelVersionServ {
                 "409-flow-state-already-used",
             ));
         }
-        //delete rel transitions
-        let trans_ids = FlowTransitionServ::find_transitions_by_state_id(flow_version_id, Some(vec![state_id.to_string()]), None, funs, ctx)
-            .await?
-            .into_iter()
-            .map(|trans| trans.id)
-            .collect_vec();
-        FlowTransitionServ::delete_transitions(flow_version_id, &trans_ids, funs, ctx).await?;
-        let trans_ids = FlowTransitionServ::find_transitions_by_state_id(flow_version_id, None, Some(vec![state_id.to_string()]), funs, ctx)
-            .await?
-            .into_iter()
-            .map(|trans| trans.id)
-            .collect_vec();
-        FlowTransitionServ::delete_transitions(flow_version_id, &trans_ids, funs, ctx).await?;
 
         FlowRelServ::delete_simple_rel(&FlowRelKind::FlowModelState, flow_version_id, state_id, funs, ctx).await
     }
@@ -422,6 +413,10 @@ impl FlowModelVersionServ {
         let to_trans = FlowTransitionServ::find_transitions_by_state_id(flow_version_id, Some(vec![state_id.to_string()]), None, funs, ctx).await?;
         // 获取当前节点指向的动作
         let from_trans = FlowTransitionServ::find_transitions_by_state_id(flow_version_id, None, Some(vec![state_id.to_string()]), funs, ctx).await?;
+        // 查询同级分支节点数量
+        let parent_state_id = from_trans.first().map(|tran| tran.from_flow_state_id.clone()).unwrap_or_default();
+        let peer_num = FlowTransitionServ::find_transitions_by_state_id(flow_version_id, Some(vec![parent_state_id.to_string()]), None, funs, ctx).await?.len();
+
         let mut delete_state_ids = vec![];
         if state.state_kind == FlowStateKind::Branch {
             // 假设多个节点指向当前分支节点，则禁止删除该节点
@@ -433,13 +428,9 @@ impl FlowModelVersionServ {
                     "500-flow-state-prohibit-delete",
                 ));
             }
-            // 查询同级分支节点数量
-            let parent_state_id = to_trans.first().map(|tran| tran.to_flow_state_id.clone()).unwrap_or_default();
-            let peer_num = FlowTransitionServ::find_transitions_by_state_id(flow_version_id, Some(vec![parent_state_id.to_string()]), None, funs, ctx)
-            .await?.len();
             if peer_num > 1 {
                 // 同级分支节点大于1，则删除当前分支下节点
-                let finish_state_id = Self::find_branch_finish_state_id(flow_version_id, state_id, funs, ctx).await?;
+                let finish_state_id = Self::find_branch_finish_state_id(flow_version_id, &parent_state_id, funs, ctx).await?;
                 Self::find_state_ids_in_branch(flow_version_id, state_id, &finish_state_id, &mut delete_state_ids, funs, ctx).await?;
             } else {
                 // 如分支节点等于1，只删除分支节点即可
@@ -449,7 +440,22 @@ impl FlowModelVersionServ {
             delete_state_ids.push(state_id.to_string());
         }
         for delete_state_id in delete_state_ids.iter().rev() {
-            Self::delete_single_state(flow_version_id, delete_state_id, funs, ctx).await?;
+            let delete_state = FlowStateServ::find_one_detail_item(
+                &FlowStateFilterReq {
+                    basic: RbumBasicFilterReq {
+                        ids: Some(vec![delete_state_id.to_string()]),
+                        with_sub_own_paths: true,
+                        own_paths: Some("".to_string()),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                funs,
+                ctx,
+            )
+            .await?
+            .ok_or_else(|| funs.err().not_found(&Self::get_obj_name(), "delete_state", "flow state is not found", "404-flow-state-not-found"))?;
+            Self::delete_single_state(flow_version_id, &delete_state, peer_num, funs, ctx).await?;
         }
         Ok(())
     }
@@ -458,7 +464,7 @@ impl FlowModelVersionServ {
     async fn find_state_ids_in_branch(flow_version_id: &str, state_id: &str, finish_state_id: &str, state_ids: &mut Vec<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         state_ids.push(state_id.to_string());
         let to_trans = FlowTransitionServ::find_transitions_by_state_id(flow_version_id, Some(vec![state_id.to_string()]), None, funs, ctx).await?;
-        if to_trans.len() == 1 && to_trans.first().map(|tran| tran.to_flow_state_id.clone()).unwrap() == finish_state_id.to_string() {
+        if to_trans.len() == 1 && to_trans.first().map(|tran| tran.to_flow_state_id.clone()).unwrap() == *finish_state_id {
             return Ok(());
         }
         for to_tran in to_trans {
@@ -471,16 +477,16 @@ impl FlowModelVersionServ {
         let mut target_state_id = state_id.to_string();
         let mut branch_num = 0;
         loop {
-            let mut to_states = FlowTransitionServ::find_transitions_by_state_id(flow_version_id, Some(vec![target_state_id.clone()]), None, funs, ctx).await?;
-            let to_state_num = to_states.len();
-            if to_state_num == 0 {
+            let mut to_trans = FlowTransitionServ::find_transitions_by_state_id(flow_version_id, Some(vec![target_state_id.clone()]), None, funs, ctx).await?;
+            let to_tran_num = to_trans.len();
+            if to_tran_num == 0 {
                 break;
             }
-            if to_state_num > 1 {
-                branch_num += to_state_num - 1;
+            if to_tran_num > 1 {
+                branch_num += to_tran_num - 1;
             }
-            target_state_id = to_states.pop().map(|to_state| to_state.id).unwrap();
-            if to_state_num == 1 {
+            target_state_id = to_trans.pop().map(|to_tran| to_tran.to_flow_state_id).unwrap();
+            if to_tran_num == 1 {
                 let from_state_num = FlowTransitionServ::find_transitions_by_state_id(flow_version_id, None, Some(vec![target_state_id.to_string()]), funs, ctx).await?.len();
                 if from_state_num > 1 {
                     branch_num -= from_state_num - 1;
@@ -493,7 +499,8 @@ impl FlowModelVersionServ {
         Ok(target_state_id)
     }
 
-    async fn delete_single_state(flow_version_id: &str, state_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    async fn delete_single_state(flow_version_id: &str, state: &FlowStateDetailResp, peer_num: usize, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let state_id = &state.id;
         let to_trans = FlowTransitionServ::find_transitions_by_state_id(flow_version_id, Some(vec![state_id.to_string()]), None, funs, ctx).await?;
         // 获取当前节点指向的动作
         let from_trans = FlowTransitionServ::find_transitions_by_state_id(flow_version_id, None, Some(vec![state_id.to_string()]), funs, ctx).await?;
@@ -506,29 +513,48 @@ impl FlowModelVersionServ {
                 "500-flow-state-prohibit-delete",
             ));
         }
-        let mut modify_transitions = vec![];
         let mut delete_flow_transition_ids = vec![];
-
-        if from_trans.len() > 1 && to_trans.len() == 1 {
-            let to_state_id = to_trans.first().map(|tran| tran.to_flow_state_id.clone()).unwrap_or_default();
-            modify_transitions = from_trans.clone().into_iter().map(|tran| FlowTransitionModifyReq {
-                id: tran.id.clone().into(),
-                to_flow_state_id: Some(to_state_id.clone()),
-                ..Default::default()
-            }).collect_vec();
-            delete_flow_transition_ids = vec![to_trans.first().map(|tran|tran.id.clone()).unwrap_or_default()];
-        } else {
-            let from_state_id = from_trans.first().map(|tran| tran.to_flow_state_id.clone()).unwrap_or_default();
-            modify_transitions = to_trans.clone().into_iter().map(|tran| FlowTransitionModifyReq {
-                id: tran.id.clone().into(),
-                from_flow_state_id: Some(from_state_id.clone()),
-                ..Default::default()
-            }).collect_vec();
+        for from_tran in &from_trans {
+            delete_flow_transition_ids.push(from_tran.id.clone());
         }
-        FlowTransitionServ::modify_transitions(flow_version_id, &modify_transitions, funs, ctx).await?;
-        FlowTransitionServ::delete_transitions(flow_version_id, &delete_flow_transition_ids, funs, ctx).await?;
-        FlowStateServ::delete_item(state_id, funs, ctx).await?;
+        for to_tran in &to_trans {
+            delete_flow_transition_ids.push(to_tran.id.clone());
+        }
 
+        // 若当前分支节点不止一个同级节点，则不需要新增连接动作
+        if !(state.state_kind == FlowStateKind::Branch && peer_num > 1) {
+            if to_trans.len() == 1 {
+                let to_state_id = to_trans.first().map(|tran| tran.to_flow_state_id.clone()).unwrap_or_default();
+                for from_tran in &from_trans {
+                    let guard_by_other_conds = from_tran.guard_by_other_conds();
+                    FlowTransitionServ::add_transitions(flow_version_id, &from_tran.from_flow_state_id, &[FlowTransitionAddReq {
+                        name: Some(from_tran.name.clone().into()),
+                        from_flow_state_id: from_tran.from_flow_state_id.clone(),
+                        to_flow_state_id: to_state_id.clone(),
+                        transfer_by_auto: Some(from_tran.transfer_by_auto),
+                        guard_by_other_conds,
+                       ..Default::default()
+                    }], funs, ctx).await?;
+                }
+            } else if from_trans.len() == 1 {
+                let from_tran = from_trans.first().unwrap();
+                let guard_by_other_conds = from_tran.guard_by_other_conds();
+                for to_tran in &to_trans {
+                    FlowTransitionServ::add_transitions(flow_version_id, &from_tran.from_flow_state_id, &[FlowTransitionAddReq {
+                        name: Some(from_tran.name.clone().into()),
+                        from_flow_state_id: from_tran.from_flow_state_id.clone(),
+                        to_flow_state_id: to_tran.to_flow_state_id.clone(),
+                        transfer_by_auto: Some(from_tran.transfer_by_auto),
+                        guard_by_other_conds: guard_by_other_conds.clone(),
+                       ..Default::default()
+                    }], funs, ctx).await?;
+                }
+            }
+        }
+
+        FlowTransitionServ::delete_transitions(flow_version_id, &delete_flow_transition_ids, funs, ctx).await?;
+        Self::unbind_state(flow_version_id, state_id, funs, ctx).await?;
+        FlowStateServ::delete_item(state_id, funs, ctx).await?;
         Ok(())
     }
 
@@ -559,5 +585,73 @@ impl FlowModelVersionServ {
                 .collect::<Vec<_>>(),
         )
         .await)
+    }
+
+    pub async fn create_editing_version(flow_version_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<FlowModelVersionDetailResp> {
+        let version = FlowModelVersionServ::get_item(flow_version_id, &FlowModelVersionFilterReq::default(), funs, ctx).await?;
+        // 将当前正在编辑的版本删除
+        let editing_version_ids = Self::find_id_items(&FlowModelVersionFilterReq {
+            basic: RbumBasicFilterReq {
+                with_sub_own_paths: true,
+                own_paths: Some("".to_string()),
+                ..Default::default()
+            },
+            rel_model_ids: Some(vec![version.rel_model_id.clone()]),
+            status: Some(vec![FlowModelVesionState::Editing]),
+            ..Default::default()
+        }, None, None, funs, ctx).await?;
+        for editing_version_id in editing_version_ids {
+            Self::delete_item(&editing_version_id, funs, ctx).await?;
+        }
+        let mut states = version.states();
+        let mut update_state_map = HashMap::new();
+        for state in states.iter_mut() {
+            let old_state_id = state.id.clone();
+            state.id = TardisFuns::field.nanoid();
+            update_state_map.insert(old_state_id, state.id.clone());
+        }
+        for state in states.iter_mut() {
+            for transition in state.transitions.iter_mut() {
+                transition.from_flow_state_id = update_state_map.get(&transition.from_flow_state_id).cloned().unwrap_or_default();
+                transition.to_flow_state_id = update_state_map.get(&transition.to_flow_state_id).cloned().unwrap_or_default();
+            }
+        }
+        let editind_version_id = FlowModelVersionServ::add_item(
+            &mut FlowModelVersionAddReq {
+                name: version.name.into(),
+                rel_model_id: Some(version.rel_model_id.clone()),
+                bind_states: Some(
+                    states
+                        .into_iter()
+                        .map(|state| FlowModelVersionBindState {
+                            bind_new_state: Some(FlowModelBindNewStateReq {
+                                new_state: FlowStateAddReq {
+                                    id: Some(state.id.clone().into()),
+                                    name: Some(state.name.clone().into()),
+                                    sys_state: state.sys_state.clone(),
+                                    state_kind: Some(state.state_kind.clone()),
+                                    kind_conf: state.kind_conf,
+                                    tags: Some(state.tags.clone().split(',').map(|id| id.to_string()).collect_vec()),
+                                    scope_level: Some(state.scope_level.clone()),
+                                    disabled: Some(state.disabled),
+                                    ..Default::default()
+                                },
+                                ext: state.ext,
+                            }),
+                            add_transitions: Some(state.transitions.into_iter().map(FlowTransitionAddReq::from).collect_vec()),
+                            is_init: state.state_kind == FlowStateKind::Start,
+                            ..Default::default()
+                        })
+                        .collect_vec(),
+                ),
+                status: FlowModelVesionState::Editing,
+                scope_level: Some(version.scope_level.clone()),
+                disabled: Some(version.disabled),
+            },
+            funs,
+            ctx,
+        )
+        .await?;
+        FlowModelVersionServ::get_item(&editind_version_id, &FlowModelVersionFilterReq::default(), funs, ctx).await
     }
 }

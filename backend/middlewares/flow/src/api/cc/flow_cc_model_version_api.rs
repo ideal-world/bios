@@ -91,7 +91,7 @@ impl FlowCcModelVersionApi {
                     ..Default::default()
                 },
                 rel_model_ids: rel_model_id.0.map(|rel_model_id| vec![rel_model_id]),
-                status: status.0.map(|status| vec![status]),
+                status: Some(status.0.map_or(vec![FlowModelVesionState::Enabled, FlowModelVesionState::Disabled], |status| vec![status])),
                 ..Default::default()
             },
             page_number.0,
@@ -102,6 +102,19 @@ impl FlowCcModelVersionApi {
             &ctx.0,
         )
         .await?;
+        ctx.0.execute_task().await?;
+        TardisResp::ok(result)
+    }
+
+    /// Creating the version being edited
+    ///
+    /// 创建正在编辑的版本
+    #[oai(path = "/:flow_version_id/create_editing_version", method = "post")]
+    async fn create_editing_version(&self, flow_version_id: Path<String>, ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<FlowModelVersionDetailResp> {
+        let mut funs = flow_constants::get_tardis_inst();
+        funs.begin().await?;
+        let result = FlowModelVersionServ::create_editing_version(&flow_version_id.0, &funs, &ctx.0).await?;
+        funs.commit().await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }

@@ -36,7 +36,7 @@ use crate::{
     dto::{
         flow_external_dto::{FlowExternalCallbackOp, FlowExternalParams},
         flow_inst_dto::{
-            FLowInstStateApprovalConf, FLowInstStateConf, FLowInstStateFormConf, FlowInstAbortReq, FlowInstArtifacts, FlowInstBatchBindReq, FlowInstBatchBindResp, FlowInstDetailResp, FlowInstFilterReq, FlowInstFindNextTransitionResp, FlowInstFindNextTransitionsReq, FlowInstFindStateAndTransitionsReq, FlowInstFindStateAndTransitionsResp, FlowInstStartReq, FlowInstSummaryResp, FlowInstSummaryResult, FlowInstTransferReq, FlowInstTransferResp, FlowInstTransitionInfo, FlowOperationContext
+            FLowInstStateApprovalConf, FLowInstStateConf, FLowInstStateFormConf, FlowApprovalResultKind, FlowInstAbortReq, FlowInstArtifacts, FlowInstArtifactsModifyReq, FlowInstBatchBindReq, FlowInstBatchBindResp, FlowInstDetailResp, FlowInstFilterReq, FlowInstFindNextTransitionResp, FlowInstFindNextTransitionsReq, FlowInstFindStateAndTransitionsReq, FlowInstFindStateAndTransitionsResp, FlowInstOperateReq, FlowInstStartReq, FlowInstSummaryResp, FlowInstSummaryResult, FlowInstTransferReq, FlowInstTransferResp, FlowInstTransitionInfo, FlowOperationContext
         },
         flow_model_dto::FlowModelFilterReq,
         flow_model_version_dto::{FlowModelVersionDetailResp, FlowModelVersionFilterReq},
@@ -77,7 +77,7 @@ impl FlowInstServ {
         };
         if !Self::find_details(&FlowInstFilterReq {
             rel_business_obj_id: Some(start_req.rel_business_obj_id.to_string()),
-            flow_version_id: Some(flow_model.current_version_id.to_string()),
+            flow_version_id: Some(flow_model.current_version_id.clone()),
             finish: Some(false),
             ..Default::default()
         }, &funs, ctx).await?.is_empty() {
@@ -87,10 +87,10 @@ impl FlowInstServ {
         let flow_inst: flow_inst::ActiveModel = flow_inst::ActiveModel {
             id: Set(inst_id.clone()),
             tag: Set(Some(flow_model.tag.clone())),
-            rel_flow_version_id: Set(flow_model.current_version_id.to_string()),
+            rel_flow_version_id: Set(flow_model.current_version_id.clone()),
             rel_business_obj_id: Set(start_req.rel_business_obj_id.to_string()),
 
-            current_state_id: Set(current_state_id),
+            current_state_id: Set(current_state_id.clone()),
 
             create_vars: Set(start_req.create_vars.as_ref().map(|vars| TardisFuns::json.obj_to_json(vars).unwrap())),
             create_ctx: Set(FlowOperationContext::from_ctx(ctx)),
@@ -101,6 +101,7 @@ impl FlowInstServ {
         };
         funs.db().insert_one(flow_inst, ctx).await?;
 
+        Self::when_enter_state(&inst_id, &current_state_id, &flow_model.id, &funs, ctx).await?;
         if !main {
             FlowSearchClient::modify_business_obj_search(&start_req.rel_business_obj_id, &flow_model.tag, &funs, ctx).await?;
         }
@@ -794,9 +795,10 @@ impl FlowInstServ {
 
         funs.db().update_one(flow_inst, ctx).await?;
 
+        Self::when_leave_state(&flow_inst_id, &prev_flow_state.id,&flow_model_version.rel_model_id, funs, ctx).await?;
+        Self::when_enter_state(&flow_inst_id, &next_flow_state.id, &flow_model_version.rel_model_id, &funs, ctx).await?;
         // get updated instance detail
         let flow_inst_detail = Self::get(flow_inst_id, funs, ctx).await?;
-
         Self::do_request_webhook(
             from_transition_id.and_then(|id: String| version_transition.iter().find(|model_transition| model_transition.id == id)),
             Some(&next_transition_detail),
@@ -1422,20 +1424,102 @@ impl FlowInstServ {
     }
 
     // 当进入该节点时
-    async fn when_enter_state() -> TardisResult<()> {
+    async fn when_enter_state(inst_id: &str, state_id: &str, flow_model_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let rel_transition = FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelTransition, flow_model_id, None, None, funs, ctx).await?.pop().map(|rel| rel.rel_id).unwrap_or_default();
+        let inst = Self::get(inst_id, funs, ctx).await?;
+        let state = FlowStateServ::get_item(
+            state_id,
+            &FlowStateFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    own_paths: Some("".to_string()),
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?;
+        match state.state_kind {
+            FlowStateKind::Start => {
+                if rel_transition == "__EDIT__" {
+                    Self::modify_inst_artifacts(inst_id, &FlowInstArtifactsModifyReq {
+                        add_form_account_id: Some(ctx.owner.clone()),
+                        ..Default::default()
+                    }, funs, ctx).await?;
+                }
+                if rel_transition == "__DELETE__" {
+                    Self::modify_inst_artifacts(inst_id, &FlowInstArtifactsModifyReq {
+                        delete_rel_business_obj_id: Some(inst.rel_business_obj_id.clone()),
+                        ..Default::default()
+                    }, funs, ctx).await?;
+                }
+            },
+            FlowStateKind::Form => {
+                
+            },
+            FlowStateKind::Approval => {
+
+            },
+            FlowStateKind::Branch => {
+
+            },
+            FlowStateKind::Finish => {
+                
+            },
+            _ => {},
+        }
         Ok(())
     }
     
     // 当离开该节点时
-    async fn when_leave_state() -> TardisResult<()> {
+    async fn when_leave_state(inst_id: &str, state_id: &str, flow_model_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         Ok(())
     }
 
     // 修改实例的数据对象
-    async fn modify_inst_artifacts() -> TardisResult<()> {
+    async fn modify_inst_artifacts(inst_id: &str, new_artifacts: &FlowInstArtifactsModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let inst = Self::get(inst_id, funs, ctx).await?;
+        let mut inst_artifacts = inst.artifacts();
+        if let Some(add_form_account_id) = &new_artifacts.add_form_account_id {
+            inst_artifacts.form_account_ids.push(add_form_account_id.clone());
+        }
+        if let Some(delete_form_account_id) = &new_artifacts.delete_form_account_id {
+            inst_artifacts.form_account_ids = inst_artifacts.form_account_ids.into_iter().filter(|form_account_id| form_account_id != delete_form_account_id).collect_vec();
+        }
+        if let Some((add_approval_account_id, add_approval_result)) = &new_artifacts.add_approval_result {
+            let current_state_result = inst_artifacts.approval_result.entry(inst.current_state_id.clone()).or_insert(HashMap::new());
+            current_state_result.insert(add_approval_account_id.clone(), add_approval_result.clone());
+        }
+        if let Some(delete_approval_account_id) = &new_artifacts.delete_approval_result {
+            let current_state_result = inst_artifacts.approval_result.entry(inst.current_state_id.clone()).or_insert(HashMap::new());
+            current_state_result.remove(delete_approval_account_id);
+        }
+        if let Some(form_state_vars) = new_artifacts.form_state_map.clone() {
+            inst_artifacts.form_state_map.insert(inst.current_state_id.clone(), form_state_vars);
+        }
+        if let Some(modify_field_vars) = new_artifacts.modify_field_vars.clone() {
+            let mut new_vars: HashMap<String, Value> = HashMap::new();
+            if let Some(modify_field_vars) = &inst_artifacts.modify_field_vars {
+                new_vars.extend(modify_field_vars.clone());
+            }
+            new_vars.extend(modify_field_vars);
+        }
+        if let Some(delete_rel_business_obj_id) = &new_artifacts.delete_rel_business_obj_id {
+            inst_artifacts.delete_rel_business_obj_id = Some(delete_rel_business_obj_id.clone());
+        }
+        let flow_inst = flow_inst::ActiveModel {
+            id: Set(inst_id.to_string()),
+            artifacts: Set(Some(inst_artifacts)),
+            ..Default::default()
+        };
+        funs.db().update_one(flow_inst, ctx).await?;
+        
         Ok(())
     }
 
+    // @TODO 需补充按钮的权限控制逻辑
     fn get_state_conf(state_kind: &FlowStateKind, kind_conf: Option<FLowStateKindConf>, artifacts: Option<FlowInstArtifacts>) -> Option<FLowInstStateConf> {
         if let Some(kind_conf) = kind_conf {
             match state_kind {
@@ -1468,7 +1552,7 @@ impl FlowInstServ {
                             form_conf: None,
                             approval_conf: Some(FLowInstStateApprovalConf {
                             approval_vars_collect_conf: Some(approval.vars_collect.clone()),
-                            form_vars_collect: artifacts.unwrap_or_default().modify_field_var_content.unwrap_or_default(),
+                            form_vars_collect: artifacts.unwrap_or_default().modify_field_vars.unwrap_or_default(),
                             }),
                         }
                     })
@@ -1480,5 +1564,58 @@ impl FlowInstServ {
         } else {
             None
         }        
+    }
+
+    pub async fn operate(inst_id: &str, operate_req: &FlowInstOperateReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        match operate_req.operate {
+            // 转办
+            FlowStateOperatorKind::Referral => {
+                Self::modify_inst_artifacts(inst_id, &FlowInstArtifactsModifyReq {
+                    add_form_account_id: operate_req.operator.clone(),
+                    delete_form_account_id: Some(ctx.owner.clone()),
+                    ..Default::default()
+                }, funs, ctx).await?;
+            },
+            // 撤销
+            FlowStateOperatorKind::Revoke => {
+
+            },
+            // 提交
+            FlowStateOperatorKind::Submit => {
+                Self::modify_inst_artifacts(inst_id, &FlowInstArtifactsModifyReq {
+                    form_state_map: Some(operate_req.vars.clone().unwrap_or_default()),
+                    modify_field_vars: Some(operate_req.vars.clone().unwrap_or_default()),
+                    ..Default::default()
+                }, funs, ctx).await?;
+                if let Some(next_transition) = FlowInstServ::find_next_transitions(inst_id, &FlowInstFindNextTransitionsReq {
+                    vars: None,
+                }, funs, ctx).await?.pop() {
+                    Self::transfer(inst_id, &FlowInstTransferReq {
+                        flow_transition_id: next_transition.next_flow_transition_id,
+                        message: None,
+                        vars: None,
+                    }, false, FlowExternalCallbackOp::Default, loop_check_helper::InstancesTransition::default(), ctx).await?;
+                }
+            },
+            // 退回
+            FlowStateOperatorKind::Back => {
+
+            },
+            // 通过
+            FlowStateOperatorKind::Pass => {
+                Self::modify_inst_artifacts(inst_id, &FlowInstArtifactsModifyReq {
+                    add_approval_result: Some((ctx.owner.clone(), FlowApprovalResultKind::Pass)),
+                    ..Default::default()
+                }, funs, ctx).await?;
+            },
+            // 拒绝
+            FlowStateOperatorKind::Overrule => {
+                Self::modify_inst_artifacts(inst_id, &FlowInstArtifactsModifyReq {
+                    add_approval_result: Some((ctx.owner.clone(), FlowApprovalResultKind::Overrule)),
+                    ..Default::default()
+                }, funs, ctx).await?;
+            },
+        }
+        Ok(())
     }
 }

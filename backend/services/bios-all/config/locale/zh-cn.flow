@@ -1,4 +1,5 @@
 400-flow-inst-vars-field-missing	缺少必填字段信息
+400-flow-model-duplicate	模型不能重复
 409-flow-state-already-used	状态已被使用
 404-external-data-url-not-exist	工作流对外接口未配置
 404-flow-state-add-not-legal	要添加的状态不合法（权限错误、已禁用等）

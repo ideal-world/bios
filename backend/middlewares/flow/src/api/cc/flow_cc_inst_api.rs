@@ -228,7 +228,12 @@ impl FlowCcInstApi {
     ///
     /// 执行实例的操作
     #[oai(path = "/:flow_inst_id/operate", method = "post")]
-    async fn operate(&self, flow_inst_id: Path<String>, req: Json<FlowInstOperateReq>, ctx: TardisContextExtractor, _request: &Request,) -> TardisApiResult<Void> {
+    async fn operate(&self, flow_inst_id: Path<String>, operate_req: Json<FlowInstOperateReq>, ctx: TardisContextExtractor, _request: &Request,) -> TardisApiResult<Void> {
+        let mut funs = flow_constants::get_tardis_inst();
+        funs.begin().await?;
+        FlowInstServ::operate(&flow_inst_id.0, &operate_req.0, &funs, &ctx.0).await?;
+        funs.commit().await?;
+        ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
     }
 }

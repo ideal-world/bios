@@ -217,10 +217,21 @@ pub struct FLowInstStateApprovalConf {
 #[derive(Serialize, Deserialize, PartialEq, Clone, Debug, Default, poem_openapi::Object, sea_orm::FromJsonQueryResult)]
 pub struct FlowInstArtifacts {
     pub form_account_ids: Vec<String>, // 当前录入人员ID
-    pub approval_account_ids: HashMap<String, FlowApprovalResultKind>, // 当前审批结果
+    pub approval_result: HashMap<String, HashMap<String, FlowApprovalResultKind>>, // 当前审批结果
     pub form_state_map: HashMap<String, HashMap<String, Value>>, // 录入节点映射 key为节点ID,对应的value为节点中的录入的参数
-    pub approval_state_map: HashMap<String, HashMap<String, Value>>, // 审批节点映射 key为节点ID，对应的value为节点实际审批结果
-    pub modify_field_var_content: Option<HashMap<String, Value>>, // 修改字段对应参数列表
+    pub modify_field_vars: Option<HashMap<String, Value>>, // 修改字段对应参数列表
+    pub delete_rel_business_obj_id: Option<String>, // 删除的关联业务数据ID
+}
+
+// 流程实例中数据存储更新
+#[derive(Serialize, Deserialize, PartialEq, Clone, Debug, Default, sea_orm::FromJsonQueryResult)]
+pub struct FlowInstArtifactsModifyReq {
+    pub add_form_account_id: Option<String>, // 增加录入人员ID
+    pub delete_form_account_id: Option<String>, // 删除录入人员ID
+    pub add_approval_result: Option<(String, FlowApprovalResultKind)>, // 增加审批结果
+    pub delete_approval_result: Option<String>, // 删除审批结果
+    pub form_state_map: Option<HashMap<String, Value>>, // 录入节点映射 key为节点ID,对应的value为节点中的录入的参数
+    pub modify_field_vars: Option<HashMap<String, Value>>, // 修改字段对应参数列表
     pub delete_rel_business_obj_id: Option<String>, // 删除的关联业务数据ID
 }
 
