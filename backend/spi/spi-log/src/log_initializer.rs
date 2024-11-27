@@ -1,4 +1,5 @@
 use bios_basic::spi::{api::spi_ci_bs_api, dto::spi_bs_dto::SpiBsCertResp, spi_constants, spi_funs::SpiBsInst, spi_initializer};
+use bios_sdk_invoke::invoke_initializer;
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
     log::info,
@@ -16,6 +17,7 @@ pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
     info!("[BIOS.Log] Module initializing");
     let mut funs = crate::get_tardis_inst();
     bios_basic::rbum::rbum_initializer::init(funs.module_code(), funs.conf::<LogConfig>().rbum.clone()).await?;
+    invoke_initializer::init(funs.module_code(), funs.conf::<LogConfig>().invoke.clone())?;
     funs.begin().await?;
     let ctx = spi_initializer::init(DOMAIN_CODE, &funs).await?;
     init_db(&funs, &ctx).await?;
