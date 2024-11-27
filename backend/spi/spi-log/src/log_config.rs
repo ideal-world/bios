@@ -1,4 +1,5 @@
 use bios_basic::rbum::rbum_config::RbumConfig;
+use bios_sdk_invoke::invoke_config::InvokeConfig;
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 
@@ -6,6 +7,7 @@ use std::fmt::Debug;
 #[serde(default)]
 pub struct LogConfig {
     pub rbum: RbumConfig,
+    pub invoke: InvokeConfig,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
