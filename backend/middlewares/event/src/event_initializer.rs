@@ -1,7 +1,7 @@
 use std::{sync::Arc, time::Duration, vec};
 
 use asteroid_mq::{
-    prelude::{DurableService, Node, NodeConfig, NodeId, TopicConfig},
+    prelude::{DurableService, Node, NodeConfig, NodeId, TopicConfig, TopicOverflowConfig},
     protocol::node::{
         edge::auth::EdgeAuthService,
         raft::cluster::{K8sClusterProvider, StaticClusterProvider},
@@ -140,7 +140,7 @@ async fn init_mq_cluster(config: &EventConfig, funs: TardisFunsInst, ctx: Tardis
         EventTopicServ::add_item(
             &mut EventTopicAddOrModifyReq::from_config(TopicConfig {
                 code: SPI_RPC_TOPIC,
-                overflow_config: None,
+                overflow_config: Some(TopicOverflowConfig::new_reject_new(1024)),
                 blocking: false,
             }),
             &funs,

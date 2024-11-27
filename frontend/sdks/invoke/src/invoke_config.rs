@@ -52,7 +52,7 @@ impl InvokeConfigManager {
         F: Fn(&InvokeConfig) -> T,
     {
         let conf = INVOKE_CONFIG.lock().unwrap_or_else(|e| panic!("invoke config lock error: {e:?}"));
-        let conf = conf.get(code).unwrap_or_else(|| panic!("not found rbum config code {code}"));
+        let conf = conf.get(code).unwrap_or_else(|| panic!("not found invoke config code {code}"));
         fun(conf)
     }
 }
