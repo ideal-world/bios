@@ -1,13 +1,10 @@
 use std::{collections::HashMap, str::FromStr};
 use strum::Display;
 
-use bios_basic::{
-    dto::BasicQueryCondInfo,
-    rbum::{
+use bios_basic::rbum::{
         dto::rbum_filer_dto::{RbumBasicFilterReq, RbumItemFilterFetcher, RbumItemRelFilterReq},
         rbum_enumeration::RbumScopeLevelKind,
-    },
-};
+    };
 use serde::{Deserialize, Serialize};
 use tardis::{
     basic::{error::TardisError, field::TrimString},
@@ -457,7 +454,7 @@ impl FromStr for FlowStateOperatorKind {
             "BACK" => Ok(Self::Back),
             "PASS" => Ok(Self::Pass),
             "OVERRULE" => Ok(Self::Overrule),
-            _ => Err(TardisError::bad_request(&format!("invalid ReachChannelKind: {}", s), "400-reach-invalid-param")),
+            _ => Err(TardisError::bad_request(&format!("invalid FlowStateOperatorKind: {}", s), "400-operator-invalid-param")),
         }
     }
 }

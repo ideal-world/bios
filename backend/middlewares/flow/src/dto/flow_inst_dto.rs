@@ -1,8 +1,8 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, fmt::Display, str::FromStr};
 
 use serde::{Deserialize, Serialize};
 use tardis::{
-    basic::dto::TardisContext,
+    basic::{dto::TardisContext, error::TardisError},
     chrono::{DateTime, Utc},
     db::sea_orm,
     serde_json::Value,
@@ -10,7 +10,7 @@ use tardis::{
 };
 
 use super::{
-    flow_state_dto::{FLowStateKindConf, FlowGuardConf, FlowStateKind, FlowStateOperatorKind, FlowStateRelModelExt, FlowStateVar, FlowSysStateKind},
+    flow_state_dto::{FlowStateKind, FlowStateOperatorKind, FlowStateRelModelExt, FlowStateVar, FlowSysStateKind},
     flow_transition_dto::FlowTransitionDoubleCheckInfo,
     flow_var_dto::FlowVarInfo,
 };
@@ -217,7 +217,7 @@ pub struct FLowInstStateApprovalConf {
 #[derive(Serialize, Deserialize, PartialEq, Clone, Debug, Default, poem_openapi::Object, sea_orm::FromJsonQueryResult)]
 pub struct FlowInstArtifacts {
     pub form_account_ids: Vec<String>, // 当前录入人员ID
-    pub approval_result: HashMap<String, HashMap<String, FlowApprovalResultKind>>, // 当前审批结果
+    pub approval_result: HashMap<String, HashMap<String, Vec<String>>>, // 当前审批结果
     pub form_state_map: HashMap<String, HashMap<String, Value>>, // 录入节点映射 key为节点ID,对应的value为节点中的录入的参数
     pub modify_field_vars: Option<HashMap<String, Value>>, // 修改字段对应参数列表
     pub delete_rel_business_obj_id: Option<String>, // 删除的关联业务数据ID
@@ -229,20 +229,40 @@ pub struct FlowInstArtifactsModifyReq {
     pub add_form_account_id: Option<String>, // 增加录入人员ID
     pub delete_form_account_id: Option<String>, // 删除录入人员ID
     pub add_approval_result: Option<(String, FlowApprovalResultKind)>, // 增加审批结果
-    pub delete_approval_result: Option<String>, // 删除审批结果
     pub form_state_map: Option<HashMap<String, Value>>, // 录入节点映射 key为节点ID,对应的value为节点中的录入的参数
     pub modify_field_vars: Option<HashMap<String, Value>>, // 修改字段对应参数列表
     pub delete_rel_business_obj_id: Option<String>, // 删除的关联业务数据ID
 }
 
 /// 审批结果类型
-#[derive(Serialize, Deserialize, Debug, poem_openapi::Enum, Default, PartialEq, Clone)]
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Enum, Default, Eq, Hash, PartialEq, Clone)]
 pub enum FlowApprovalResultKind {
     /// 通过
     #[default]
     Pass,
     /// 拒绝
     Overrule,
+}
+
+impl Display for FlowApprovalResultKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            FlowApprovalResultKind::Pass => write!(f, "PASS"),
+            FlowApprovalResultKind::Overrule => write!(f, "OVERRULE"),
+        }
+    }
+}
+
+impl FromStr for FlowApprovalResultKind {
+    type Err = TardisError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_uppercase().as_str() {
+            "PASS" => Ok(Self::Pass),
+            "OVERRULE" => Ok(Self::Overrule),
+            _ => Err(TardisError::bad_request(&format!("invalid FlowApprovalResultKind: {}", s), "400-operator-invalid-param")),
+        }
+    }
 }
 
 /// 实例的动作信息

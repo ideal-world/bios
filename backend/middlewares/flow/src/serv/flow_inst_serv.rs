@@ -1443,12 +1443,6 @@ impl FlowInstServ {
         .await?;
         match state.state_kind {
             FlowStateKind::Start => {
-                if rel_transition == "__EDIT__" {
-                    Self::modify_inst_artifacts(inst_id, &FlowInstArtifactsModifyReq {
-                        add_form_account_id: Some(ctx.owner.clone()),
-                        ..Default::default()
-                    }, funs, ctx).await?;
-                }
                 if rel_transition == "__DELETE__" {
                     Self::modify_inst_artifacts(inst_id, &FlowInstArtifactsModifyReq {
                         delete_rel_business_obj_id: Some(inst.rel_business_obj_id.clone()),
@@ -1457,7 +1451,12 @@ impl FlowInstServ {
                 }
             },
             FlowStateKind::Form => {
-                
+                if rel_transition == "__EDIT__" {
+                    Self::modify_inst_artifacts(inst_id, &FlowInstArtifactsModifyReq {
+                        add_form_account_id: Some(ctx.owner.clone()),
+                        ..Default::default()
+                    }, funs, ctx).await?;
+                }
             },
             FlowStateKind::Approval => {
 
@@ -1490,11 +1489,8 @@ impl FlowInstServ {
         }
         if let Some((add_approval_account_id, add_approval_result)) = &new_artifacts.add_approval_result {
             let current_state_result = inst_artifacts.approval_result.entry(inst.current_state_id.clone()).or_insert(HashMap::new());
-            current_state_result.insert(add_approval_account_id.clone(), add_approval_result.clone());
-        }
-        if let Some(delete_approval_account_id) = &new_artifacts.delete_approval_result {
-            let current_state_result = inst_artifacts.approval_result.entry(inst.current_state_id.clone()).or_insert(HashMap::new());
-            current_state_result.remove(delete_approval_account_id);
+            let current_account_ids = current_state_result.entry(add_approval_result.to_string()).or_insert(vec![]);
+            current_account_ids.push(add_approval_account_id.clone());
         }
         if let Some(form_state_vars) = new_artifacts.form_state_map.clone() {
             inst_artifacts.form_state_map.insert(inst.current_state_id.clone(), form_state_vars);
