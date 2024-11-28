@@ -25,6 +25,7 @@ spacegate-shell = { workspace = true, features = [
 tardis = { workspace = true }
 spacegate-plugins = { version = "0.2.0", path = "../../gateways/spacegate-plugins" }
 envy = "0.4"
+toml = "0.8"
 [dev-dependencies]
 pprof = { version = "0.13", features = ["flamegraph"] }
 
