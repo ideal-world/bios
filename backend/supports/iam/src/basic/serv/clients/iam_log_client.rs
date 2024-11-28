@@ -76,7 +76,7 @@ impl IamLogClient {
                     if let Ok(remote_ip) = get_real_ip_from_ctx(&ctx_clone).await {
                         ip = remote_ip.unwrap_or_default();
                     }
-                    IamLogClient::add_item(
+                    let _ = IamLogClient::add_item(
                         tag,
                         LogParamContent {
                             op: op_describe,
@@ -92,8 +92,7 @@ impl IamLogClient {
                         &funs,
                         &ctx_clone,
                     )
-                    .await
-                    .unwrap();
+                    .await;
                 });
                 task_handle.await.unwrap();
                 Ok(())
