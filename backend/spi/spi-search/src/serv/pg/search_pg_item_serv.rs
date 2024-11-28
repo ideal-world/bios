@@ -663,7 +663,7 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
                     } else if ext_item.op == BasicQueryOpKind::IsNotNull {
                         sql_and_where.push(format!("({} is not null)", ext_item.field));
                     } else if ext_item.op == BasicQueryOpKind::IsNullOrEmpty {
-                        sql_and_where.push(format!("({} is null or {} = '' )", ext_item.field, ext_item.field));
+                        sql_and_where.push(format!("({} is null or {}::text = '' )", ext_item.field, ext_item.field));
                     } else {
                         if value.len() > 1 {
                             return err_not_found(&ext_item.clone().into());
@@ -1209,7 +1209,7 @@ pub async fn query_metrics(query_req: &SearchQueryMetricsReq, funs: &TardisFunsI
                     } else if ext_item.op == BasicQueryOpKind::IsNotNull {
                         sql_and_where.push(format!("(fact.{} is not null)", ext_item.field));
                     } else if ext_item.op == BasicQueryOpKind::IsNullOrEmpty {
-                        sql_and_where.push(format!("(fact.{} is null or {} = '')", ext_item.field, ext_item.field));
+                        sql_and_where.push(format!("(fact.{} is null or fact.{}::text = '')", ext_item.field, ext_item.field));
                     } else {
                         if value.len() > 1 {
                             return err_not_found(ext_item);
