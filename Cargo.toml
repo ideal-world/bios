@@ -78,7 +78,7 @@ asteroid-mq-sdk = { git = "https://github.com/4t145/asteroid-mq.git", rev = "23c
 #   "k8s",
 #   "ext-axum",
 # ] }
-spacegate-shell = { git = "https://github.com/ideal-world/spacegate.git", rev="adb8356", features = [
+spacegate-shell = { git = "https://github.com/ideal-world/spacegate.git", rev="40bb693", features = [
   "cache",
   "k8s",
   "ext-axum",
