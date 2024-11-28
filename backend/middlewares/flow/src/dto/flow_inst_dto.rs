@@ -219,8 +219,7 @@ pub struct FlowInstArtifacts {
     pub form_account_ids: Vec<String>, // 当前录入人员ID
     pub approval_result: HashMap<String, HashMap<String, Vec<String>>>, // 当前审批结果
     pub form_state_map: HashMap<String, HashMap<String, Value>>, // 录入节点映射 key为节点ID,对应的value为节点中的录入的参数
-    pub modify_field_vars: Option<HashMap<String, Value>>, // 修改字段对应参数列表
-    pub delete_rel_business_obj_id: Option<String>, // 删除的关联业务数据ID
+    pub prev_non_auto_state_id: Option<String>, // 上一个非自动节点ID
 }
 
 // 流程实例中数据存储更新
@@ -230,8 +229,9 @@ pub struct FlowInstArtifactsModifyReq {
     pub delete_form_account_id: Option<String>, // 删除录入人员ID
     pub add_approval_result: Option<(String, FlowApprovalResultKind)>, // 增加审批结果
     pub form_state_map: Option<HashMap<String, Value>>, // 录入节点映射 key为节点ID,对应的value为节点中的录入的参数
-    pub modify_field_vars: Option<HashMap<String, Value>>, // 修改字段对应参数列表
-    pub delete_rel_business_obj_id: Option<String>, // 删除的关联业务数据ID
+    pub clear_form_result: Option<String>, // 清除节点录入信息
+    pub clear_approval_result: Option<String>, // 清除节点审批信息
+    pub prev_non_auto_state_id: Option<String>, // 上一个非自动节点ID
 }
 
 /// 审批结果类型
@@ -275,6 +275,8 @@ pub struct FlowInstTransitionInfo {
     pub op_ctx: FlowOperationContext,
     /// 输出信息
     pub output_message: Option<String>,
+    /// 目标状态节点 （若未通过transition流转状态，则传入该值）
+    pub target_state_id: Option<String>,
 }
 
 /// 操作上下文信息
