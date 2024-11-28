@@ -336,7 +336,6 @@ impl FlowStateServ {
                 basic: RbumBasicFilterReq {
                     ids,
                     own_paths: Some("".to_string()),
-                    ignore_scope: true,
                     with_sub_own_paths: true,
                     ..Default::default()
                 },

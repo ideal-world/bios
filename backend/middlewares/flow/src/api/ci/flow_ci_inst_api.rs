@@ -58,6 +58,7 @@ impl FlowCiInstApi {
                     start_time: Utc::now(),
                     op_ctx: FlowOperationContext::default(),
                     output_message: Some(tran.next_flow_transition_name),
+                    target_state_id: None,
                 })
                 .collect_vec(),
         );

@@ -1470,11 +1470,27 @@ impl FlowInstServ {
                 match rel_transition.as_str() {
                     "__EDIT__" => {
                         let transition = FlowTransitionServ::find_transitions(&inst.rel_flow_version_id, None, funs, ctx).await?;
-                        let params = vec![];
-                        for tran in inst.transitions.unwrap_or_default() {
-                            // transition
+                        let mut state_ids = vec![];
+                        let mut vars_collect = HashMap::new();
+                        let artifacts = inst.artifacts();
+                        for tran in inst.transitions.clone().unwrap_or_default() {
+                            if let Some(tran) = transition.iter().find(|version_tran| tran.id == version_tran.id) {
+                                let current_state_id = tran.to_flow_state_id.clone();
+                                if !state_ids.contains(&current_state_id) {
+                                    state_ids.push(current_state_id.clone());
+                                    if let Some(form_state_vars) = artifacts.form_state_map.get(&current_state_id).clone() {
+                                        for (key, value) in form_state_vars {
+                                            *vars_collect.entry(key.clone()).or_insert(json!({})) = value.clone();
+                                        }
+                                    }
+                                }
+                            }
                         }
-                        
+                        let params = vars_collect.into_iter().map(|(key, value)| FlowExternalParams {
+                            var_name: Some(key),
+                            value: Some(value),
+                            ..Default::default()
+                        }).collect_vec();
                         FlowExternalServ::do_modify_field(&inst.tag, None, &inst.rel_business_obj_id, inst_id, None, None, None, None, None, params, ctx, funs).await?;
                     },
                     "__DELETE__" => {
