@@ -29,7 +29,7 @@ use crate::{
             FlowModelVersionAddReq, FlowModelVersionBindState, FlowModelVersionDetailResp, FlowModelVersionFilterReq, FlowModelVersionModifyReq, FlowModelVersionSummaryResp,
             FlowModelVesionState,
         },
-        flow_state_dto::{FlowStateAddReq, FlowStateAggResp, FlowStateDetailResp, FlowStateFilterReq, FlowStateKind, FlowStateRelModelExt}, flow_transition_dto::{FlowTransitionAddReq, FlowTransitionDetailResp, FlowTransitionModifyReq},
+        flow_state_dto::{FlowStateAddReq, FlowStateAggResp, FlowStateDetailResp, FlowStateFilterReq, FlowStateKind, FlowStateRelModelExt}, flow_transition_dto::FlowTransitionAddReq,
     },
     flow_config::FlowBasicInfoManager,
 };
@@ -197,6 +197,21 @@ impl
         }
 
         Ok(())
+    }
+
+    async fn before_delete_item(id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<FlowModelVersionDetailResp>> {
+        let detail = Self::get_item(id, &FlowModelVersionFilterReq::default(), funs, ctx).await?;
+        join_all(
+            FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelState, id, None, None, funs, ctx)
+                .await?
+                .into_iter()
+                .map(|rel| async move { FlowRelServ::delete_simple_rel(&FlowRelKind::FlowModelState, id, &rel.rel_id, funs, ctx).await })
+                .collect_vec(),
+        )
+        .await
+        .into_iter()
+        .collect::<TardisResult<Vec<()>>>()?;
+        Ok(Some(detail))
     }
 
     async fn package_ext_query(query: &mut SelectStatement, _: bool, filter: &FlowModelVersionFilterReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<()> {

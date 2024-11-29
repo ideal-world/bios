@@ -271,7 +271,6 @@ impl FlowTransitionServ {
         let from_state_table = Alias::new("from_state");
         let to_state_rbum_table = Alias::new("to_state_rbum");
         let to_state_table = Alias::new("to_state");
-        let rbum_rel_table = Alias::new("to_state");
         query
             .columns([
                 (flow_transition::Entity, flow_transition::Column::Id),

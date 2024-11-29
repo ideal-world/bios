@@ -43,12 +43,11 @@ pub struct FlowEventServ;
 impl FlowEventServ {
     #[async_recursion]
     pub async fn do_front_change(
-        flow_inst_id: &str,
+        flow_inst_detail: &FlowInstDetailResp,
         modified_instance_transations: loop_check_helper::InstancesTransition,
         ctx: &TardisContext,
         funs: &TardisFunsInst,
     ) -> TardisResult<()> {
-        let flow_inst_detail = FlowInstServ::get(flow_inst_id, funs, ctx).await?;
         if !flow_inst_detail.main {
             return  Ok(());
         }
@@ -78,7 +77,7 @@ impl FlowEventServ {
         for flow_transition in flow_transitions {
             if Self::check_front_conditions(&flow_inst_detail, flow_transition.action_by_front_changes())? {
                 FlowInstServ::transfer(
-                    &flow_inst_detail.id,
+                    &flow_inst_detail,
                     &FlowInstTransferReq {
                         flow_transition_id: flow_transition.id.clone(),
                         message: None,
@@ -161,13 +160,12 @@ impl FlowEventServ {
     }
 
     pub async fn do_post_change(
-        flow_inst_id: &str,
+        flow_inst_detail: &FlowInstDetailResp,
         flow_transition_id: &str,
         modified_instance_transations: loop_check_helper::InstancesTransition,
         ctx: &TardisContext,
         funs: &TardisFunsInst,
     ) -> TardisResult<()> {
-        let flow_inst_detail = FlowInstServ::get(flow_inst_id, funs, ctx).await?;
         if !flow_inst_detail.main {
             return  Ok(());
         }
@@ -267,10 +265,10 @@ impl FlowEventServ {
                                         && change_info.changed_val.clone().unwrap().as_object().unwrap().get("op").is_some()
                                     {
                                         let original_value = if let Some(custom_value) =
-                                            FlowInstServ::find_var_by_inst_id(flow_inst_id, &format!("custom_{}", change_info.var_name), funs, ctx).await?
+                                            FlowInstServ::find_var_by_inst_id(&flow_inst_detail, &format!("custom_{}", change_info.var_name), funs, ctx).await?
                                         {
                                             Some(custom_value)
-                                        } else if let Some(original_value) = FlowInstServ::find_var_by_inst_id(flow_inst_id, &change_info.var_name, funs, ctx).await? {
+                                        } else if let Some(original_value) = FlowInstServ::find_var_by_inst_id(&flow_inst_detail, &change_info.var_name, funs, ctx).await? {
                                             Some(original_value)
                                         } else {
                                             Some(json!(""))
@@ -348,7 +346,8 @@ impl FlowEventServ {
                                         funs,
                                     )
                                     .await?;
-                                    FlowEventServ::do_front_change(&inst_id, modified_instance_transations.clone(), ctx, funs).await?;
+                                    let rel_flow_inst = FlowInstServ::get(&inst_id, funs, ctx).await?;
+                                    FlowEventServ::do_front_change(&rel_flow_inst, modified_instance_transations.clone(), ctx, funs).await?;
                                 }
                             }
                         } else {
@@ -399,7 +398,7 @@ impl FlowEventServ {
                 funs,
             )
             .await?;
-            FlowEventServ::do_front_change(&flow_inst_detail.id, modified_instance_transations.clone(), ctx, funs).await?;
+            FlowEventServ::do_front_change(&flow_inst_detail, modified_instance_transations.clone(), ctx, funs).await?;
         }
 
         Ok(())
@@ -537,7 +536,7 @@ impl FlowEventServ {
                 .pop();
             if let Some(transition) = transition_resp {
                 FlowInstServ::transfer(
-                    &rel_inst.id,
+                    &rel_inst,
                     &FlowInstTransferReq {
                         flow_transition_id: transition.next_flow_transition_id,
                         message: None,

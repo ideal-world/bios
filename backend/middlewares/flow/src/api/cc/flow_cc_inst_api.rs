@@ -105,7 +105,8 @@ impl FlowCcInstApi {
         _request: &Request,
     ) -> TardisApiResult<Vec<FlowInstFindNextTransitionResp>> {
         let funs = flow_constants::get_tardis_inst();
-        let result = FlowInstServ::find_next_transitions(&flow_inst_id.0, &next_req.0, &funs, &ctx.0).await?;
+        let inst = FlowInstServ::get(&flow_inst_id.0, &funs, &ctx.0).await?;
+        let result = FlowInstServ::find_next_transitions(&inst, &next_req.0, &funs, &ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
@@ -139,9 +140,10 @@ impl FlowCcInstApi {
     ) -> TardisApiResult<FlowInstTransferResp> {
         let funs = flow_constants::get_tardis_inst();
         let mut transfer = transfer_req.0;
-        FlowInstServ::check_transfer_vars(&flow_inst_id.0, &mut transfer, &funs, &ctx.0).await?;
+        let inst = FlowInstServ::get(&flow_inst_id.0, &funs, &ctx.0).await?;
+        FlowInstServ::check_transfer_vars(&inst, &mut transfer, &funs, &ctx.0).await?;
         let result = FlowInstServ::transfer(
-            &flow_inst_id.0,
+            &inst,
             &transfer,
             false,
             FlowExternalCallbackOp::Default,
@@ -168,16 +170,17 @@ impl FlowCcInstApi {
         let mut result = vec![];
         let flow_inst_ids: Vec<_> = flow_inst_ids.split(',').collect();
         let raw_transfer_req = transfer_req.0;
-        let mut flow_inst_id_transfer_map = HashMap::new();
+        let mut flow_inst_transfer = vec![];
         for flow_inst_id in &flow_inst_ids {
             let mut transfer_req = raw_transfer_req.clone();
-            FlowInstServ::check_transfer_vars(flow_inst_id, &mut transfer_req, &funs, &ctx.0).await?;
-            flow_inst_id_transfer_map.insert(flow_inst_id, transfer_req);
+            let inst = FlowInstServ::get(flow_inst_id, &funs, &ctx.0).await?;
+            FlowInstServ::check_transfer_vars(&inst, &mut transfer_req, &funs, &ctx.0).await?;
+            flow_inst_transfer.push((inst, transfer_req));
         }
-        for (flow_inst_id, transfer_req) in flow_inst_id_transfer_map {
+        for (inst, transfer_req) in flow_inst_transfer {
             result.push(
                 FlowInstServ::transfer(
-                    flow_inst_id,
+                    &inst,
                     &transfer_req,
                     false,
                     FlowExternalCallbackOp::Default,
@@ -202,8 +205,10 @@ impl FlowCcInstApi {
         ctx: TardisContextExtractor,
         _request: &Request,
     ) -> TardisApiResult<Void> {
+        let funs = flow_constants::get_tardis_inst();
         let vars = HashMap::from([("current_assigned".to_string(), Value::String(modify_req.0.current_assigned))]);
-        FlowInstServ::modify_current_vars(&flow_inst_id.0, &vars, loop_check_helper::InstancesTransition::default(), &ctx.0).await?;
+        let inst = FlowInstServ::get(&flow_inst_id.0, &funs, &ctx.0).await?;
+        FlowInstServ::modify_current_vars(&inst, &vars, loop_check_helper::InstancesTransition::default(), &ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
     }
@@ -219,7 +224,9 @@ impl FlowCcInstApi {
         ctx: TardisContextExtractor,
         _request: &Request,
     ) -> TardisApiResult<Void> {
-        FlowInstServ::modify_current_vars(&flow_inst_id.0, &modify_req.0.vars, loop_check_helper::InstancesTransition::default(), &ctx.0).await?;
+        let funs = flow_constants::get_tardis_inst();
+        let inst = FlowInstServ::get(&flow_inst_id.0, &funs, &ctx.0).await?;
+        FlowInstServ::modify_current_vars(&inst, &modify_req.0.vars, loop_check_helper::InstancesTransition::default(), &ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
     }
@@ -230,8 +237,9 @@ impl FlowCcInstApi {
     #[oai(path = "/:flow_inst_id/operate", method = "post")]
     async fn operate(&self, flow_inst_id: Path<String>, operate_req: Json<FlowInstOperateReq>, ctx: TardisContextExtractor, _request: &Request,) -> TardisApiResult<Void> {
         let mut funs = flow_constants::get_tardis_inst();
+        let inst = FlowInstServ::get(&flow_inst_id.0, &funs, &ctx.0).await?;
         funs.begin().await?;
-        FlowInstServ::operate(&flow_inst_id.0, &operate_req.0, &funs, &ctx.0).await?;
+        FlowInstServ::operate(&inst, &operate_req.0, &funs, &ctx.0).await?;
         funs.commit().await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void {})

@@ -1,4 +1,4 @@
-use std::{collections::HashMap, default};
+use std::collections::HashMap;
 
 use bios_basic::rbum::{
     dto::rbum_filer_dto::{RbumBasicFilterReq, RbumItemFilterFetcher, RbumItemRelFilterReq},
@@ -17,7 +17,7 @@ use tardis::{
 
 use super::{
     flow_model_version_dto::{FlowModelVersionAddReq, FlowModelVersionBindState, FlowModelVersionModifyReq, FlowModelVesionState},
-    flow_state_dto::{FLowStateIdAndName, FlowStateAddReq, FlowStateAggResp, FlowStateRelModelExt},
+    flow_state_dto::{FlowStateAddReq, FlowStateAggResp, FlowStateRelModelExt},
     flow_transition_dto::{FlowTransitionAddReq, FlowTransitionDetailResp},
 };
 

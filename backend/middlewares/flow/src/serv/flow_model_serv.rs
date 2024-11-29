@@ -462,16 +462,6 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
         .into_iter()
         .collect::<TardisResult<Vec<()>>>()?;
         join_all(
-            FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelState, flow_model_id, None, None, funs, ctx)
-                .await?
-                .into_iter()
-                .map(|rel| async move { FlowRelServ::delete_simple_rel(&FlowRelKind::FlowModelState, flow_model_id, &rel.rel_id, funs, ctx).await })
-                .collect_vec(),
-        )
-        .await
-        .into_iter()
-        .collect::<TardisResult<Vec<()>>>()?;
-        join_all(
             FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelTransition, flow_model_id, None, None, funs, ctx)
                 .await?
                 .into_iter()
