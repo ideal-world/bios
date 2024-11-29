@@ -5,7 +5,10 @@ use bios_basic::spi_dispatch_service;
 use tardis::basic::result::TardisResult;
 use tardis::web::web_resp::TardisPage;
 
-use crate::dto::search_item_dto::{SearchItemAddReq, SearchItemModifyReq, SearchItemSearchReq, SearchItemSearchResp, SearchQueryMetricsReq, SearchQueryMetricsResp};
+use crate::dto::search_item_dto::{
+    GroupSearchItemSearchReq, GroupSearchItemSearchResp, SearchItemAddReq, SearchItemModifyReq, SearchItemSearchReq, SearchItemSearchResp, SearchQueryMetricsReq,
+    SearchQueryMetricsResp,
+};
 use crate::search_initializer;
 
 #[cfg(feature = "spi-es")]
@@ -27,6 +30,7 @@ spi_dispatch_service! {
         delete(tag: &str, key: &str) -> TardisResult<()>;
         delete_by_ownership(tag: &str, own_paths: &str) -> TardisResult<()>;
         search(search_req: &mut SearchItemSearchReq) -> TardisResult<TardisPage<SearchItemSearchResp>>;
+        group_search(search_req: &mut GroupSearchItemSearchReq) -> TardisResult<Vec<GroupSearchItemSearchResp>>;
         query_metrics(query_req: &SearchQueryMetricsReq) -> TardisResult<SearchQueryMetricsResp>;
         refresh_tsv(tag: &str) -> TardisResult<()>;
     }

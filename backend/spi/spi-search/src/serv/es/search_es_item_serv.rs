@@ -14,8 +14,8 @@ use bios_basic::{
 };
 
 use crate::dto::search_item_dto::{
-    SearchItemAddReq, SearchItemModifyReq, SearchItemQueryReq, SearchItemSearchCtxReq, SearchItemSearchPageReq, SearchItemSearchQScopeKind, SearchItemSearchReq,
-    SearchItemSearchResp, SearchQueryMetricsReq, SearchQueryMetricsResp,
+    GroupSearchItemSearchReq, GroupSearchItemSearchResp, SearchItemAddReq, SearchItemModifyReq, SearchItemQueryReq, SearchItemSearchCtxReq, SearchItemSearchPageReq,
+    SearchItemSearchQScopeKind, SearchItemSearchReq, SearchItemSearchResp, SearchQueryMetricsReq, SearchQueryMetricsResp,
 };
 
 use super::search_es_initializer;
@@ -336,6 +336,10 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
         total_size: total_size as u64,
         records,
     })
+}
+
+pub async fn group_search(search_req: &mut GroupSearchItemSearchReq, funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<Vec<GroupSearchItemSearchResp>> {
+    Ok(vec![])
 }
 
 fn gen_query_dsl(search_req: &SearchItemSearchReq) -> TardisResult<String> {
