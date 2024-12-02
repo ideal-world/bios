@@ -49,7 +49,7 @@ impl FlowEventServ {
         funs: &TardisFunsInst,
     ) -> TardisResult<()> {
         if !flow_inst_detail.main {
-            return  Ok(());
+            return Ok(());
         }
         let flow_version = FlowModelVersionServ::get_item(
             &flow_inst_detail.rel_flow_version_id,
@@ -87,7 +87,7 @@ impl FlowEventServ {
                     FlowExternalCallbackOp::ConditionalTrigger,
                     modified_instance_transations.clone(),
                     ctx,
-                    funs
+                    funs,
                 )
                 .await?;
                 break;
@@ -168,7 +168,7 @@ impl FlowEventServ {
         funs: &TardisFunsInst,
     ) -> TardisResult<()> {
         if !flow_inst_detail.main {
-            return  Ok(());
+            return Ok(());
         }
         let global_ctx = TardisContext {
             own_paths: "".to_string(),
@@ -547,7 +547,7 @@ impl FlowEventServ {
                     FlowExternalCallbackOp::PostAction,
                     modified_instance_transations.clone(),
                     ctx,
-                    funs
+                    funs,
                 )
                 .await?;
             }

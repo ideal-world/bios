@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use async_recursion::async_recursion;
 use bios_basic::rbum::{
     dto::{
         rbum_filer_dto::RbumBasicFilterReq,
@@ -19,7 +20,6 @@ use tardis::{
     serde_json::json,
     TardisFuns, TardisFunsInst,
 };
-use async_recursion::async_recursion;
 
 use crate::{
     domain::flow_model_version,
@@ -29,7 +29,8 @@ use crate::{
             FlowModelVersionAddReq, FlowModelVersionBindState, FlowModelVersionDetailResp, FlowModelVersionFilterReq, FlowModelVersionModifyReq, FlowModelVersionSummaryResp,
             FlowModelVesionState,
         },
-        flow_state_dto::{FlowStateAddReq, FlowStateAggResp, FlowStateDetailResp, FlowStateFilterReq, FlowStateKind, FlowStateRelModelExt}, flow_transition_dto::FlowTransitionAddReq,
+        flow_state_dto::{FlowStateAddReq, FlowStateAggResp, FlowStateDetailResp, FlowStateFilterReq, FlowStateKind, FlowStateRelModelExt},
+        flow_transition_dto::FlowTransitionAddReq,
     },
     flow_config::FlowBasicInfoManager,
 };
@@ -476,7 +477,14 @@ impl FlowModelVersionServ {
     }
 
     #[async_recursion]
-    async fn find_state_ids_in_branch(flow_version_id: &str, state_id: &str, finish_state_id: &str, state_ids: &mut Vec<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    async fn find_state_ids_in_branch(
+        flow_version_id: &str,
+        state_id: &str,
+        finish_state_id: &str,
+        state_ids: &mut Vec<String>,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<()> {
         state_ids.push(state_id.to_string());
         let to_trans = FlowTransitionServ::find_transitions_by_state_id(flow_version_id, Some(vec![state_id.to_string()]), None, funs, ctx).await?;
         if to_trans.len() == 1 && to_trans.first().map(|tran| tran.to_flow_state_id.clone()).unwrap() == *finish_state_id {
@@ -542,27 +550,41 @@ impl FlowModelVersionServ {
                 let to_state_id = to_trans.first().map(|tran| tran.to_flow_state_id.clone()).unwrap_or_default();
                 for from_tran in &from_trans {
                     let guard_by_other_conds = from_tran.guard_by_other_conds();
-                    FlowTransitionServ::add_transitions(flow_version_id, &from_tran.from_flow_state_id, &[FlowTransitionAddReq {
-                        name: Some(from_tran.name.clone().into()),
-                        from_flow_state_id: from_tran.from_flow_state_id.clone(),
-                        to_flow_state_id: to_state_id.clone(),
-                        transfer_by_auto: Some(from_tran.transfer_by_auto),
-                        guard_by_other_conds,
-                       ..Default::default()
-                    }], funs, ctx).await?;
+                    FlowTransitionServ::add_transitions(
+                        flow_version_id,
+                        &from_tran.from_flow_state_id,
+                        &[FlowTransitionAddReq {
+                            name: Some(from_tran.name.clone().into()),
+                            from_flow_state_id: from_tran.from_flow_state_id.clone(),
+                            to_flow_state_id: to_state_id.clone(),
+                            transfer_by_auto: Some(from_tran.transfer_by_auto),
+                            guard_by_other_conds,
+                            ..Default::default()
+                        }],
+                        funs,
+                        ctx,
+                    )
+                    .await?;
                 }
             } else if from_trans.len() == 1 {
                 let from_tran = from_trans.first().unwrap();
                 let guard_by_other_conds = from_tran.guard_by_other_conds();
                 for to_tran in &to_trans {
-                    FlowTransitionServ::add_transitions(flow_version_id, &from_tran.from_flow_state_id, &[FlowTransitionAddReq {
-                        name: Some(from_tran.name.clone().into()),
-                        from_flow_state_id: from_tran.from_flow_state_id.clone(),
-                        to_flow_state_id: to_tran.to_flow_state_id.clone(),
-                        transfer_by_auto: Some(from_tran.transfer_by_auto),
-                        guard_by_other_conds: guard_by_other_conds.clone(),
-                       ..Default::default()
-                    }], funs, ctx).await?;
+                    FlowTransitionServ::add_transitions(
+                        flow_version_id,
+                        &from_tran.from_flow_state_id,
+                        &[FlowTransitionAddReq {
+                            name: Some(from_tran.name.clone().into()),
+                            from_flow_state_id: from_tran.from_flow_state_id.clone(),
+                            to_flow_state_id: to_tran.to_flow_state_id.clone(),
+                            transfer_by_auto: Some(from_tran.transfer_by_auto),
+                            guard_by_other_conds: guard_by_other_conds.clone(),
+                            ..Default::default()
+                        }],
+                        funs,
+                        ctx,
+                    )
+                    .await?;
                 }
             }
         }
@@ -605,16 +627,23 @@ impl FlowModelVersionServ {
     pub async fn create_editing_version(flow_version_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<FlowModelVersionDetailResp> {
         let version = FlowModelVersionServ::get_item(flow_version_id, &FlowModelVersionFilterReq::default(), funs, ctx).await?;
         // 将当前正在编辑的版本删除
-        let editing_version_ids = Self::find_id_items(&FlowModelVersionFilterReq {
-            basic: RbumBasicFilterReq {
-                with_sub_own_paths: true,
-                own_paths: Some("".to_string()),
+        let editing_version_ids = Self::find_id_items(
+            &FlowModelVersionFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    own_paths: Some("".to_string()),
+                    ..Default::default()
+                },
+                rel_model_ids: Some(vec![version.rel_model_id.clone()]),
+                status: Some(vec![FlowModelVesionState::Editing]),
                 ..Default::default()
             },
-            rel_model_ids: Some(vec![version.rel_model_id.clone()]),
-            status: Some(vec![FlowModelVesionState::Editing]),
-            ..Default::default()
-        }, None, None, funs, ctx).await?;
+            None,
+            None,
+            funs,
+            ctx,
+        )
+        .await?;
         for editing_version_id in editing_version_ids {
             Self::delete_item(&editing_version_id, funs, ctx).await?;
         }

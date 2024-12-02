@@ -97,7 +97,15 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
 
     async fn before_add_item(add_req: &mut FlowModelAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         if let Some(rel_transition_ids) = &add_req.rel_transition_ids {
-            if Self::get_model_id_by_own_paths_and_transition_id(&add_req.tag.clone().unwrap_or_default(), &rel_transition_ids.first().cloned().unwrap_or_default(), funs, ctx).await.is_ok() {
+            if Self::get_model_id_by_own_paths_and_transition_id(
+                &add_req.tag.clone().unwrap_or_default(),
+                &rel_transition_ids.first().cloned().unwrap_or_default(),
+                funs,
+                ctx,
+            )
+            .await
+            .is_ok()
+            {
                 return Err(funs.err().not_found(&Self::get_obj_name(), "before_add_item", "The model is not repeatable", "400-flow-model-duplicate"));
             }
         }
@@ -1210,52 +1218,73 @@ impl FlowModelServ {
     }
 
     pub async fn get_model_id_by_own_paths_and_transition_id(tag: &str, transition_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<FlowModelDetailResp> {
-        let app_id = Self::get_app_id_by_ctx(ctx)
-            .ok_or_else(|| funs.err().not_found(&Self::get_obj_name(), "get_model_id_by_own_paths_and_transition_id", "Only instances at the application layer are supported to use the approval flow", "404-flow-inst-rel-model-not-found"))?;
+        let app_id = Self::get_app_id_by_ctx(ctx).ok_or_else(|| {
+            funs.err().not_found(
+                &Self::get_obj_name(),
+                "get_model_id_by_own_paths_and_transition_id",
+                "Only instances at the application layer are supported to use the approval flow",
+                "404-flow-inst-rel-model-not-found",
+            )
+        })?;
         let model_detail = if let Ok(model_ids) = FlowRelServ::find_model_ids_by_app_id(&app_id, funs, ctx).await {
             // 引用租户模板的审批流
-            Self::find_one_detail_item(&FlowModelFilterReq {
-                basic: RbumBasicFilterReq {
-                    ids: Some(model_ids),
-                    enabled: Some(true),
+            Self::find_one_detail_item(
+                &FlowModelFilterReq {
+                    basic: RbumBasicFilterReq {
+                        ids: Some(model_ids),
+                        enabled: Some(true),
+                        ..Default::default()
+                    },
+                    tags: Some(vec![tag.to_string()]),
+                    rel: Some(RbumItemRelFilterReq {
+                        optional: false,
+                        rel_by_from: true,
+                        tag: Some(FlowRelKind::FlowModelTransition.to_string()),
+                        from_rbum_kind: Some(RbumRelFromKind::Item),
+                        rel_item_id: Some(transition_id.to_string()),
+                        ..Default::default()
+                    }),
+                    status: Some(FlowModelStatus::Enabled),
                     ..Default::default()
                 },
-                tags: Some(vec![tag.to_string()]),
-                rel: Some(RbumItemRelFilterReq {
-                    optional: false,
-                    rel_by_from: true,
-                    tag: Some(FlowRelKind::FlowModelTransition.to_string()),
-                    from_rbum_kind: Some(RbumRelFromKind::Item),
-                    rel_item_id: Some(transition_id.to_string()),
-                    ..Default::default()
-                }),
-                status: Some(FlowModelStatus::Enabled),
-                ..Default::default()
-            }, funs, ctx).await?
+                funs,
+                ctx,
+            )
+            .await?
         } else {
             // 当前项目内的审批流
-            Self::find_one_detail_item(&FlowModelFilterReq {
-                basic: RbumBasicFilterReq {
-                    enabled: Some(true),
+            Self::find_one_detail_item(
+                &FlowModelFilterReq {
+                    basic: RbumBasicFilterReq {
+                        enabled: Some(true),
+                        ..Default::default()
+                    },
+                    tags: Some(vec![tag.to_string()]),
+                    rel: Some(RbumItemRelFilterReq {
+                        optional: false,
+                        rel_by_from: true,
+                        tag: Some(FlowRelKind::FlowModelTransition.to_string()),
+                        from_rbum_kind: Some(RbumRelFromKind::Item),
+                        rel_item_id: Some(transition_id.to_string()),
+                        own_paths: Some(ctx.own_paths.clone()),
+                        ..Default::default()
+                    }),
+                    status: Some(FlowModelStatus::Enabled),
                     ..Default::default()
                 },
-                tags: Some(vec![tag.to_string()]),
-                rel: Some(RbumItemRelFilterReq {
-                    optional: false,
-                    rel_by_from: true,
-                    tag: Some(FlowRelKind::FlowModelTransition.to_string()),
-                    from_rbum_kind: Some(RbumRelFromKind::Item),
-                    rel_item_id: Some(transition_id.to_string()),
-                    own_paths: Some(ctx.own_paths.clone()),
-                    ..Default::default()
-                }),
-                status: Some(FlowModelStatus::Enabled),
-                ..Default::default()
-            }, funs, ctx).await?
+                funs,
+                ctx,
+            )
+            .await?
         };
         match model_detail {
             Some(result) => Ok(result),
-            None => Err(funs.err().not_found(&Self::get_obj_name(), "get_model_id_by_own_paths_and_transition_id","rel model not found","404-flow-model-not-found",))
+            None => Err(funs.err().not_found(
+                &Self::get_obj_name(),
+                "get_model_id_by_own_paths_and_transition_id",
+                "rel model not found",
+                "404-flow-model-not-found",
+            )),
         }
     }
     /// 根据own_paths和rel_template_id获取模型ID

@@ -160,6 +160,5 @@ pub struct FlowExternalQueryFieldResp {
     pub objs: Vec<Value>,
 }
 
-
 #[derive(Default, Serialize, Deserialize, Debug, poem_openapi::Object)]
 pub struct FlowExternalDeleteRelObjResp {}

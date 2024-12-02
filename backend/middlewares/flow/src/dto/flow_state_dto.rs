@@ -2,9 +2,9 @@ use std::{collections::HashMap, str::FromStr};
 use strum::Display;
 
 use bios_basic::rbum::{
-        dto::rbum_filer_dto::{RbumBasicFilterReq, RbumItemFilterFetcher, RbumItemRelFilterReq},
-        rbum_enumeration::RbumScopeLevelKind,
-    };
+    dto::rbum_filer_dto::{RbumBasicFilterReq, RbumItemFilterFetcher, RbumItemRelFilterReq},
+    rbum_enumeration::RbumScopeLevelKind,
+};
 use serde::{Deserialize, Serialize};
 use tardis::{
     basic::{dto::TardisContext, error::TardisError, field::TrimString},
@@ -309,7 +309,7 @@ pub struct FlowStateDetailResp {
 
 impl FlowStateDetailResp {
     pub fn kind_conf(&self) -> Option<FLowStateKindConf> {
-        self.kind_conf.clone().map(|kind_conf|TardisFuns::json.json_to_obj(kind_conf.clone()).unwrap_or_default())
+        self.kind_conf.clone().map(|kind_conf| TardisFuns::json.json_to_obj(kind_conf.clone()).unwrap_or_default())
     }
 }
 

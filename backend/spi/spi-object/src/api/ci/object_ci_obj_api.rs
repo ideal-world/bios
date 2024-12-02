@@ -14,7 +14,8 @@ use tardis::web::poem_openapi::param::Query;
 use tardis::web::web_resp::{TardisApiResult, TardisResp, Void};
 
 use crate::dto::object_dto::{
-    ClientCreateReq, ObjectBatchBuildCreatePresignUrlReq, ObjectBatchDeleteReq, ObjectCompleteMultipartUploadReq, ObjectCopyReq, ObjectInitiateMultipartUploadReq, ObjectObjPresignKind, ObjectPresignBatchViewReq
+    ClientCreateReq, ObjectBatchBuildCreatePresignUrlReq, ObjectBatchDeleteReq, ObjectCompleteMultipartUploadReq, ObjectCopyReq, ObjectInitiateMultipartUploadReq,
+    ObjectObjPresignKind, ObjectPresignBatchViewReq,
 };
 use crate::object_constants;
 use crate::serv::object_obj_serv;
@@ -192,7 +193,18 @@ impl ObjectCiObjApi {
     #[oai(path = "/presign/batch_view", method = "post")]
     async fn batch_presign_view_obj_url(&self, req: Json<ObjectPresignBatchViewReq>, ctx: TardisContextExtractor) -> TardisApiResult<HashMap<String, String>> {
         let funs = crate::get_tardis_inst();
-        let url = object_obj_serv::batch_get_presign_obj_url(req.0.object_path, req.0.expire_sec, req.0.private, req.0.special, req.0.obj_exp, req.0.bucket, req.0.bs_id, &funs, &ctx.0).await?;
+        let url = object_obj_serv::batch_get_presign_obj_url(
+            req.0.object_path,
+            req.0.expire_sec,
+            req.0.private,
+            req.0.special,
+            req.0.obj_exp,
+            req.0.bucket,
+            req.0.bs_id,
+            &funs,
+            &ctx.0,
+        )
+        .await?;
         TardisResp::ok(url)
     }
 
@@ -314,30 +326,41 @@ impl ObjectCiObjApi {
     ///
     /// 添加自定义服务实例
     #[oai(path = "/bs/add", method = "post")]
-    async fn bs_add(&self, add_req: Json<ClientCreateReq>, ctx: TardisContextExtractor,) -> TardisApiResult<String> {
+    async fn bs_add(&self, add_req: Json<ClientCreateReq>, ctx: TardisContextExtractor) -> TardisApiResult<String> {
         let mut funs = crate::get_tardis_inst();
         funs.begin().await?;
         let kind_id = RbumKindServ::get_rbum_kind_id_by_code(&add_req.0.kind, &funs).await?.expect("missing event kind");
-        let result = if let Some(bs) = SpiBsServ::find_one_item(&SpiBsFilterReq {
-            basic:RbumBasicFilterReq {
-                name: Some(add_req.0.name.to_string()),
+        let result = if let Some(bs) = SpiBsServ::find_one_item(
+            &SpiBsFilterReq {
+                basic: RbumBasicFilterReq {
+                    name: Some(add_req.0.name.to_string()),
+                    ..Default::default()
+                },
+                kind_id: Some(kind_id.clone()),
                 ..Default::default()
             },
-            kind_id: Some(kind_id.clone()),
-            ..Default::default()
-        }, &funs, &ctx.0).await? {
+            &funs,
+            &ctx.0,
+        )
+        .await?
+        {
             bs.id
         } else {
-            SpiBsServ::add_item(&mut SpiBsAddReq {
-                name: add_req.0.name,
-                kind_id: TrimString::from(kind_id),
-                conn_uri: add_req.0.conn_uri,
-                ak: add_req.0.ak,
-                sk: add_req.0.sk,
-                ext: add_req.0.ext,
-                private: true,
-                disabled: None,
-            }, &funs, &ctx.0).await?
+            SpiBsServ::add_item(
+                &mut SpiBsAddReq {
+                    name: add_req.0.name,
+                    kind_id: TrimString::from(kind_id),
+                    conn_uri: add_req.0.conn_uri,
+                    ak: add_req.0.ak,
+                    sk: add_req.0.sk,
+                    ext: add_req.0.ext,
+                    private: true,
+                    disabled: None,
+                },
+                &funs,
+                &ctx.0,
+            )
+            .await?
         };
         funs.commit().await?;
         TardisResp::ok(result)

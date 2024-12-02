@@ -9,7 +9,8 @@ use tardis::{
 use crate::{
     dto::{
         flow_external_dto::{
-            FlowExternalCallbackOp, FlowExternalDeleteRelObjResp, FlowExternalFetchRelObjResp, FlowExternalKind, FlowExternalModifyFieldResp, FlowExternalNotifyChangesResp, FlowExternalParams, FlowExternalQueryFieldResp, FlowExternalReq, FlowExternalResp
+            FlowExternalCallbackOp, FlowExternalDeleteRelObjResp, FlowExternalFetchRelObjResp, FlowExternalKind, FlowExternalModifyFieldResp, FlowExternalNotifyChangesResp,
+            FlowExternalParams, FlowExternalQueryFieldResp, FlowExternalReq, FlowExternalResp,
         },
         flow_state_dto::FlowSysStateKind,
         flow_transition_dto::{FlowTransitionActionByVarChangeInfoChangedKind, FlowTransitionDetailResp, TagRelKind},
@@ -82,7 +83,7 @@ impl FlowExternalServ {
         let tag = tag.to_string();
         let rel_business_obj_id = rel_business_obj_id.to_string();
         let inst_id = inst_id.to_string();
-        
+
         let ctx_clone = ctx.clone();
         tokio::spawn(async move {
             let funs = flow_constants::get_tardis_inst();
@@ -265,13 +266,7 @@ impl FlowExternalServ {
         }
     }
 
-    pub async fn do_delete_rel_obj(
-        tag: &str,
-        rel_business_obj_id: &str,
-        inst_id: &str,
-        ctx: &TardisContext,
-        funs: &TardisFunsInst,
-    ) -> TardisResult<FlowExternalDeleteRelObjResp> {
+    pub async fn do_delete_rel_obj(tag: &str, rel_business_obj_id: &str, inst_id: &str, ctx: &TardisContext, funs: &TardisFunsInst) -> TardisResult<FlowExternalDeleteRelObjResp> {
         let external_url = Self::get_external_url(tag, ctx, funs).await?;
         if external_url.is_empty() {
             return Ok(FlowExternalDeleteRelObjResp {});
