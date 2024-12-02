@@ -87,6 +87,7 @@ impl FlowEventServ {
                     FlowExternalCallbackOp::ConditionalTrigger,
                     modified_instance_transations.clone(),
                     ctx,
+                    funs
                 )
                 .await?;
                 break;
@@ -546,6 +547,7 @@ impl FlowEventServ {
                     FlowExternalCallbackOp::PostAction,
                     modified_instance_transations.clone(),
                     ctx,
+                    funs
                 )
                 .await?;
             }

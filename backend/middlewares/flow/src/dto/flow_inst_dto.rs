@@ -10,7 +10,7 @@ use tardis::{
 };
 
 use super::{
-    flow_state_dto::{FlowStateKind, FlowStateOperatorKind, FlowStateRelModelExt, FlowStateVar, FlowSysStateKind},
+    flow_state_dto::{FlowGuardConf, FlowStateKind, FlowStateOperatorKind, FlowStateRelModelExt, FlowStateVar, FlowSysStateKind},
     flow_transition_dto::FlowTransitionDoubleCheckInfo,
     flow_var_dto::FlowVarInfo,
 };
@@ -216,22 +216,25 @@ pub struct FLowInstStateApprovalConf {
 // 流程实例中对应的数据存储
 #[derive(Serialize, Deserialize, PartialEq, Clone, Debug, Default, poem_openapi::Object, sea_orm::FromJsonQueryResult)]
 pub struct FlowInstArtifacts {
-    pub form_account_ids: Vec<String>, // 当前录入人员ID
+    pub guard_conf: FlowGuardConf, // 当前操作人权限
     pub approval_result: HashMap<String, HashMap<String, Vec<String>>>, // 当前审批结果
     pub form_state_map: HashMap<String, HashMap<String, Value>>, // 录入节点映射 key为节点ID,对应的value为节点中的录入的参数
     pub prev_non_auto_state_id: Option<String>, // 上一个非自动节点ID
+    pub prev_non_auto_account_id: Option<String>, // 上一个节点操作人ID
 }
 
 // 流程实例中数据存储更新
 #[derive(Serialize, Deserialize, PartialEq, Clone, Debug, Default, sea_orm::FromJsonQueryResult)]
 pub struct FlowInstArtifactsModifyReq {
-    pub add_form_account_id: Option<String>, // 增加录入人员ID
-    pub delete_form_account_id: Option<String>, // 删除录入人员ID
+    pub guard_conf: Option<FlowGuardConf>, // 当前操作人权限
+    pub add_guard_conf_account_id: Option<String>, // 增加操作人ID
+    pub delete_guard_conf_account_id: Option<String>, // 删除操作人ID
     pub add_approval_result: Option<(String, FlowApprovalResultKind)>, // 增加审批结果
     pub form_state_map: Option<HashMap<String, Value>>, // 录入节点映射 key为节点ID,对应的value为节点中的录入的参数
     pub clear_form_result: Option<String>, // 清除节点录入信息
     pub clear_approval_result: Option<String>, // 清除节点审批信息
     pub prev_non_auto_state_id: Option<String>, // 上一个非自动节点ID
+    pub prev_non_auto_account_id: Option<String>, // 上一个节点操作人ID
 }
 
 /// 审批结果类型

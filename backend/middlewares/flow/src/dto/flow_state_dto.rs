@@ -7,7 +7,7 @@ use bios_basic::rbum::{
     };
 use serde::{Deserialize, Serialize};
 use tardis::{
-    basic::{error::TardisError, field::TrimString},
+    basic::{dto::TardisContext, error::TardisError, field::TrimString},
     chrono::{DateTime, Utc},
     db::sea_orm::{self, prelude::*, EnumIter},
     serde_json::Value,
@@ -206,6 +206,21 @@ pub struct FlowGuardConf {
     pub guard_by_spec_org_ids: Vec<String>,
 }
 
+impl FlowGuardConf {
+    pub fn check(&self, ctx: &TardisContext) -> bool {
+        if self.guard_by_spec_account_ids.contains(&ctx.owner) {
+            return true;
+        }
+        if self.guard_by_spec_role_ids.iter().any(|r| ctx.roles.contains(r)) {
+            return true;
+        }
+        if self.guard_by_spec_org_ids.iter().any(|o| ctx.groups.contains(o)) {
+            return true;
+        }
+        false
+    }
+}
+
 // 节点通知配置
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object, Default, PartialEq, Clone)]
 pub struct FlowNodifyConf {
@@ -295,10 +310,6 @@ pub struct FlowStateDetailResp {
 impl FlowStateDetailResp {
     pub fn kind_conf(&self) -> Option<FLowStateKindConf> {
         self.kind_conf.clone().map(|kind_conf|TardisFuns::json.json_to_obj(kind_conf.clone()).unwrap_or_default())
-        // match &self.kind_conf {
-        //     Some(kind_conf) => TardisFuns::json.json_to_obj(kind_conf.clone()).unwrap(),
-        //     None => FLowStateKindConf::default(),
-        // }
     }
 }
 

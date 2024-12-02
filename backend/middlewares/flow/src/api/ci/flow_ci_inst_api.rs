@@ -11,7 +11,6 @@ use tardis::web::poem::Request;
 use tardis::web::poem_openapi::payload::Json;
 use tardis::web::poem_openapi::{self, param::Query};
 use tardis::web::web_resp::{TardisApiResult, TardisResp, Void};
-use tardis::{log, tokio};
 
 use crate::dto::flow_external_dto::FlowExternalCallbackOp;
 use crate::dto::flow_inst_dto::{
@@ -120,6 +119,7 @@ impl FlowCiInstApi {
             FlowExternalCallbackOp::Default,
             loop_check_helper::InstancesTransition::default(),
             &ctx.0,
+            &funs,
         )
         .await?;
         ctx.0.execute_task().await?;
@@ -159,6 +159,7 @@ impl FlowCiInstApi {
                     FlowExternalCallbackOp::Default,
                     loop_check_helper::InstancesTransition::default(),
                     &ctx.0,
+                    &funs,
                 )
                 .await?,
             );
