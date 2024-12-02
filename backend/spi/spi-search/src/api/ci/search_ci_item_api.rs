@@ -9,7 +9,7 @@ use tardis::web::poem_openapi::param::Path;
 use tardis::web::poem_openapi::payload::Json;
 use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 
-use crate::dto::search_item_dto::{SearchItemAddReq, SearchItemModifyReq, SearchItemSearchReq, SearchItemSearchResp, SearchQueryMetricsReq, SearchQueryMetricsResp};
+use crate::dto::search_item_dto::{GroupSearchItemSearchReq, GroupSearchItemSearchResp, SearchItemAddReq, SearchItemModifyReq, SearchItemSearchReq, SearchItemSearchResp, SearchQueryMetricsReq, SearchQueryMetricsResp};
 use crate::serv::search_item_serv;
 
 #[derive(Clone)]
@@ -58,6 +58,15 @@ impl SearchCiItemApi {
     async fn search(&self, mut search_req: Json<SearchItemSearchReq>, ctx: TardisContextExtractor) -> TardisApiResult<TardisPage<SearchItemSearchResp>> {
         let funs = crate::get_tardis_inst();
         let resp = search_item_serv::search(&mut search_req.0, &funs, &ctx.0).await?;
+        TardisResp::ok(resp)
+    }
+
+
+    ///group Search Items
+    #[oai(path = "/group/search", method = "put")]
+    async fn group_search(&self, mut search_req: Json<GroupSearchItemSearchReq>, ctx: TardisContextExtractor) -> TardisApiResult<Vec<GroupSearchItemSearchResp>> {
+        let funs = crate::get_tardis_inst();
+        let resp = search_item_serv::group_search(&mut search_req.0, &funs, &ctx.0).await?;
         TardisResp::ok(resp)
     }
 
