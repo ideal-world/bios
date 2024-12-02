@@ -1463,7 +1463,7 @@ impl FlowInstServ {
                             ..Default::default()
                         })
                         .collect_vec();
-                    FlowExternalServ::do_modify_field(
+                    FlowExternalServ::do_async_modify_field(
                         &flow_inst_detail.tag,
                         None,
                         &flow_inst_detail.rel_business_obj_id,

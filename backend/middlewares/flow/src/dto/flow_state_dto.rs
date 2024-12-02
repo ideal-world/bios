@@ -230,9 +230,9 @@ pub struct FlowNodifyConf {
     pub guard_custom: bool,
     /// 权限配置：自定义配置
     pub guard_custom_conf: Option<FlowGuardConf>,
-    /// 通知方式：短信通知
+    /// 通知方式：短信
     pub send_sms: bool,
-    /// 通知方式：邮箱通知
+    /// 通知方式：邮箱
     pub send_mail: bool,
 }
 
