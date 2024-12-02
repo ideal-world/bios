@@ -191,7 +191,7 @@ pub struct FlowTransitionDetailResp {
     /// Associated [flow_state](super::flow_model_dto::FlowModelDetailResp) id
     ///
     /// 关联的[工作流状态](super::flow_model_dto::FlowModelDetailResp) id
-    pub rel_flow_model_id: String,
+    pub rel_flow_model_version_id: String,
     /// 排序
     pub sort: i64,
 }
@@ -284,7 +284,7 @@ pub struct FlowTransitionSortStatesReq {
     pub sort_states: Vec<FlowTransitionSortStateInfoReq>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Default, poem_openapi::Object)]
+#[derive(Serialize, Deserialize, Debug, Default, poem_openapi::Object, Clone)]
 pub struct FlowTransitionSortStateInfoReq {
     pub id: String,
     pub sort: i64,
@@ -666,4 +666,14 @@ pub enum FlowTransitionFrontActionRightValue {
     /// 当前时间
     #[oai(rename = "real_time")]
     RealTime,
+}
+
+/// 工作流模型过滤器
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone, Default)]
+#[serde(default)]
+pub struct FlowTransitionFilterReq {
+    pub ids: Option<Vec<String>>,
+    pub flow_version_id: Option<String>,
+    /// 指定状态ID(用于过滤动作)
+    pub specified_state_ids: Option<Vec<String>>,
 }

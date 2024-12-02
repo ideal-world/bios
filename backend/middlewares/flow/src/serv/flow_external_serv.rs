@@ -9,8 +9,8 @@ use tardis::{
 use crate::{
     dto::{
         flow_external_dto::{
-            FlowExternalCallbackOp, FlowExternalFetchRelObjResp, FlowExternalKind, FlowExternalModifyFieldResp, FlowExternalNotifyChangesResp, FlowExternalParams,
-            FlowExternalQueryFieldResp, FlowExternalReq, FlowExternalResp,
+            FlowExternalCallbackOp, FlowExternalDeleteRelObjResp, FlowExternalFetchRelObjResp, FlowExternalKind, FlowExternalModifyFieldResp, FlowExternalNotifyChangesResp,
+            FlowExternalParams, FlowExternalQueryFieldResp, FlowExternalReq, FlowExternalResp,
         },
         flow_state_dto::FlowSysStateKind,
         flow_transition_dto::{FlowTransitionActionByVarChangeInfoChangedKind, FlowTransitionDetailResp, TagRelKind},
@@ -68,30 +68,28 @@ impl FlowExternalServ {
 
     pub async fn do_async_modify_field(
         tag: &str,
-        transition_detail: &FlowTransitionDetailResp,
+        transition_detail: Option<FlowTransitionDetailResp>,
         rel_business_obj_id: &str,
         inst_id: &str,
-        callback_op: FlowExternalCallbackOp,
-        target_state: String,
-        target_sys_state: FlowSysStateKind,
-        original_state: String,
-        original_sys_state: FlowSysStateKind,
+        callback_op: Option<FlowExternalCallbackOp>,
+        target_state: Option<String>,
+        target_sys_state: Option<FlowSysStateKind>,
+        original_state: Option<String>,
+        original_sys_state: Option<FlowSysStateKind>,
         params: Vec<FlowExternalParams>,
         ctx: &TardisContext,
         _funs: &TardisFunsInst,
     ) -> TardisResult<()> {
         let tag = tag.to_string();
-        let transition_detail = transition_detail.clone();
         let rel_business_obj_id = rel_business_obj_id.to_string();
         let inst_id = inst_id.to_string();
-        let transition_detail = transition_detail.clone();
-        let transition_detail = transition_detail.clone();
+
         let ctx_clone = ctx.clone();
         tokio::spawn(async move {
             let funs = flow_constants::get_tardis_inst();
             let result = Self::do_modify_field(
                 &tag,
-                &transition_detail,
+                transition_detail,
                 &rel_business_obj_id,
                 &inst_id,
                 callback_op,
@@ -113,14 +111,14 @@ impl FlowExternalServ {
 
     pub async fn do_modify_field(
         tag: &str,
-        transition_detail: &FlowTransitionDetailResp,
+        transition_detail: Option<FlowTransitionDetailResp>,
         rel_business_obj_id: &str,
         inst_id: &str,
-        callback_op: FlowExternalCallbackOp,
-        target_state: String,
-        target_sys_state: FlowSysStateKind,
-        original_state: String,
-        original_sys_state: FlowSysStateKind,
+        callback_op: Option<FlowExternalCallbackOp>,
+        target_state: Option<String>,
+        target_sys_state: Option<FlowSysStateKind>,
+        original_state: Option<String>,
+        original_sys_state: Option<FlowSysStateKind>,
         params: Vec<FlowExternalParams>,
         ctx: &TardisContext,
         funs: &TardisFunsInst,
@@ -148,16 +146,16 @@ impl FlowExternalServ {
         let header = Self::headers(None, funs, ctx).await?;
         let body = FlowExternalReq {
             kind: FlowExternalKind::ModifyField,
-            callback_op: Some(callback_op),
+            callback_op,
             inst_id: inst_id.to_string(),
             curr_tag: tag.to_string(),
             curr_bus_obj_id: rel_business_obj_id.to_string(),
-            target_state: Some(target_state),
-            target_sys_state: Some(target_sys_state),
-            original_state: Some(original_state),
-            original_sys_state: Some(original_sys_state),
-            notify: Some(transition_detail.is_notify),
-            transition_name: Some(transition_detail.name.clone()),
+            target_state,
+            target_sys_state,
+            original_state,
+            original_sys_state,
+            notify: transition_detail.clone().map(|tran| tran.is_notify),
+            transition_name: transition_detail.map(|tran| tran.name),
             params,
             ..Default::default()
         };
@@ -265,6 +263,37 @@ impl FlowExternalServ {
             Ok(data)
         } else {
             Err(funs.err().internal_error("flow_external", "do_query_field", "illegal response", "500-external-illegal-response"))
+        }
+    }
+
+    pub async fn do_delete_rel_obj(tag: &str, rel_business_obj_id: &str, inst_id: &str, ctx: &TardisContext, funs: &TardisFunsInst) -> TardisResult<FlowExternalDeleteRelObjResp> {
+        let external_url = Self::get_external_url(tag, ctx, funs).await?;
+        if external_url.is_empty() {
+            return Ok(FlowExternalDeleteRelObjResp {});
+        }
+
+        let header = Self::headers(None, funs, ctx).await?;
+        let body = FlowExternalReq {
+            kind: FlowExternalKind::DeleteObj,
+            inst_id: inst_id.to_string(),
+            curr_tag: tag.to_string(),
+            curr_bus_obj_id: rel_business_obj_id.to_string(),
+            ..Default::default()
+        };
+        debug!("do_delete_rel_obj body: {:?}", body);
+        let resp: FlowExternalResp<FlowExternalDeleteRelObjResp> = funs
+            .web_client()
+            .post(&external_url, &body, header)
+            .await?
+            .body
+            .ok_or_else(|| funs.err().internal_error("flow_external", "do_delete_rel_obj", "illegal response", "500-external-illegal-response"))?;
+        if resp.code != *"200" {
+            return Err(funs.err().internal_error("flow_external", "do_delete_rel_obj", "illegal response", "500-external-illegal-response"));
+        }
+        if let Some(data) = resp.body {
+            Ok(data)
+        } else {
+            Err(funs.err().internal_error("flow_external", "do_delete_rel_obj", "illegal response", "500-external-illegal-response"))
         }
     }
 

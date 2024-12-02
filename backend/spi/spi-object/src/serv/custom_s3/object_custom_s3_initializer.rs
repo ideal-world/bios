@@ -1,7 +1,12 @@
 use std::collections::HashMap;
 
 use bios_basic::spi::{dto::spi_bs_dto::SpiBsCertResp, spi_funs::SpiBsInst};
-use tardis::{basic::{dto::TardisContext, error::TardisError, result::TardisResult}, config::config_dto::OSModuleConfig, os::os_client::TardisOSClient, TardisFuns};
+use tardis::{
+    basic::{dto::TardisContext, error::TardisError, result::TardisResult},
+    config::config_dto::OSModuleConfig,
+    os::os_client::TardisOSClient,
+    TardisFuns,
+};
 
 use tardis::serde_json::Value as JsonValue;
 
@@ -19,6 +24,8 @@ pub async fn init(bs_cert: &SpiBsCertResp, _ctx: &TardisContext, _mgr: bool) -> 
         .ok_or_else(|| TardisError::bad_request("Tardis context ext should have a `region` field with type string", "400-spi-invalid-tardis-ctx"))?;
     let tardis_os_config = OSModuleConfig::builder().kind("s3").endpoint(&bs_cert.conn_uri).ak(&bs_cert.ak).sk(&bs_cert.sk).region(region).default_bucket(default_bucket).build();
     let client = TardisOSClient::init(&tardis_os_config)?;
-    Ok(SpiBsInst { client: Box::new(client), ext: HashMap::new() })
+    Ok(SpiBsInst {
+        client: Box::new(client),
+        ext: HashMap::new(),
+    })
 }
-

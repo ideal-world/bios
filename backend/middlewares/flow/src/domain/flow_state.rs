@@ -3,7 +3,7 @@ use tardis::db::sea_orm::prelude::Json;
 use tardis::db::sea_orm::*;
 use tardis::{TardisCreateEntity, TardisEmptyBehavior, TardisEmptyRelation};
 
-use crate::dto::flow_state_dto::{FlowStateKind, FlowSysStateKind};
+use crate::dto::flow_state_dto::{FLowStateKindConf, FlowStateKind, FlowSysStateKind};
 
 /// State / 状态
 ///
@@ -53,7 +53,9 @@ pub struct Model {
     ///
     /// Different states can correspond to different configuration information
     /// 不同的状态可对应于不同的配置信息
-    pub kind_conf: Json,
+    #[sea_orm(column_type = "JsonBinary", nullable)]
+    #[tardis_entity(custom_type = "JsonBinary")]
+    pub kind_conf: Option<FLowStateKindConf>,
     /// Whether it is a template / 是否是模板
     ///
     /// Used as a template for the state to be reused in the process

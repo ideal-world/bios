@@ -1,4 +1,4 @@
-use crate::dto::flow_inst_dto::{FlowInstTransitionInfo, FlowOperationContext};
+use crate::dto::flow_inst_dto::{FlowInstArtifacts, FlowInstTransitionInfo, FlowOperationContext};
 use tardis::chrono::Utc;
 use tardis::db::sea_orm;
 use tardis::db::sea_orm::prelude::Json;
@@ -12,12 +12,15 @@ pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
     pub id: String,
     #[index]
-    pub rel_flow_model_id: String,
+    pub rel_flow_version_id: String,
 
     /// Business object Id / 关联的业务对象Id
-    #[index(unique = true)]
+    #[index]
     pub rel_business_obj_id: String,
 
+    /// Whether master workflow / 是否主流程
+    #[index]
+    pub main: bool,
     /// Tags / 标签
     ///
     /// Used for model classification
@@ -59,11 +62,19 @@ pub struct Model {
     /// Output message when finished / 完成时的输出信息
     pub output_message: Option<String>,
 
-    /// Transfer information list  / 流转信息列表
+    /// Transfer information list / 流转信息列表
     #[index(full_text)]
     #[sea_orm(column_type = "JsonBinary", nullable)]
     #[tardis_entity(custom_type = "JsonBinary")]
     pub transitions: Option<Vec<FlowInstTransitionInfo>>,
+
+    /// Data objects required for the process / 流程所需要的数据对象
+    ///
+    /// Data objects to be used by nodes in the process
+    /// 流程中节点所需要操作的数据对象
+    #[sea_orm(column_type = "JsonBinary", nullable)]
+    #[tardis_entity(custom_type = "JsonBinary")]
+    pub artifacts: Option<FlowInstArtifacts>,
 
     pub own_paths: String,
 }

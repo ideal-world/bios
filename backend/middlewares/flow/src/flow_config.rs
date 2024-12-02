@@ -62,6 +62,7 @@ impl FlowConfig {
 pub struct BasicInfo {
     pub kind_state_id: String,
     pub kind_model_id: String,
+    pub kind_model_version_id: String,
     pub domain_flow_id: String,
 }
 

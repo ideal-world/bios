@@ -105,7 +105,7 @@ pub struct Model {
     /// Switch for notification of status changes / 状态变化时的通知开关
     pub is_notify: bool,
 
-    pub rel_flow_model_id: String,
+    pub rel_flow_model_version_id: String,
 
     pub sort: i64,
 

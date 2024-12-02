@@ -81,6 +81,8 @@ pub enum FlowExternalKind {
     NotifyChanges,
     /// 查询字段值
     QueryField,
+    /// 删除业务对象
+    DeleteObj,
 }
 
 /// When kind is ModifyField, the field is modified in a specific way, for example: validate the content, post action, precondition trigger ...
@@ -96,6 +98,8 @@ pub enum FlowExternalCallbackOp {
     VerifyContent,
     /// 条件触发
     ConditionalTrigger,
+    /// 自动流转
+    Auto,
 }
 
 /// 扩展字段
@@ -155,3 +159,6 @@ pub struct FlowExternalNotifyChangesResp {}
 pub struct FlowExternalQueryFieldResp {
     pub objs: Vec<Value>,
 }
+
+#[derive(Default, Serialize, Deserialize, Debug, poem_openapi::Object)]
+pub struct FlowExternalDeleteRelObjResp {}

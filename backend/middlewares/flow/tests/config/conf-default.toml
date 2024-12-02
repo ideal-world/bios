@@ -9,6 +9,7 @@ spi_app_id = "u001"
 kv = "https://127.0.0.1:8080/spi-kv"
 search = "https://127.0.0.1:8080/spi-search"
 log = "https://127.0.0.1:8080/spi-log"
+iam = "https://127.0.0.1:8080/iam"
 
 [fw.web_server]
 port = 8080

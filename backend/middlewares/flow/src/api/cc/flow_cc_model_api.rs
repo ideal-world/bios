@@ -13,11 +13,12 @@ use tardis::web::poem_openapi::payload::Json;
 use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 
 use crate::dto::flow_model_dto::{
-    FlowModelAddCustomModelReq, FlowModelAddCustomModelResp, FlowModelAddReq, FlowModelAggResp, FlowModelBindStateReq, FlowModelFilterReq, FlowModelFindRelStateResp,
-    FlowModelModifyReq, FlowModelSortStatesReq, FlowModelSummaryResp, FlowModelUnbindStateReq,
+    FlowModelAddReq, FlowModelAggResp, FlowModelBindStateReq, FlowModelDetailResp, FlowModelFilterReq, FlowModelFindRelStateResp, FlowModelModifyReq, FlowModelSortStatesReq,
+    FlowModelStatus, FlowModelSummaryResp, FlowModelUnbindStateReq,
 };
+use crate::dto::flow_model_version_dto::{FlowModelVersionBindState, FlowModelVersionDetailResp, FlowModelVersionModifyReq, FlowModelVersionModifyState};
 use crate::dto::flow_state_dto::FlowStateRelModelModifyReq;
-use crate::dto::flow_transition_dto::{FlowTransitionModifyReq, FlowTransitionSortStatesReq};
+use crate::dto::flow_transition_dto::{FlowTransitionDetailResp, FlowTransitionSortStatesReq};
 use crate::flow_constants;
 use crate::serv::flow_model_serv::FlowModelServ;
 use crate::serv::flow_rel_serv::{FlowRelKind, FlowRelServ};
@@ -52,6 +53,17 @@ impl FlowCcModelApi {
         funs.commit().await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
+    }
+
+    /// GET Editing Model Version By Model Id
+    ///
+    /// 通过模型ID获取正在编辑的模型版本信息
+    #[oai(path = "/:flow_model_id/find_editing_verion", method = "get")]
+    async fn find_editing_verion(&self, flow_model_id: Path<String>, ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<FlowModelVersionDetailResp> {
+        let funs = flow_constants::get_tardis_inst();
+        let result = FlowModelServ::find_editing_verion(&flow_model_id.0, &funs, &ctx.0).await?;
+        ctx.0.execute_task().await?;
+        TardisResp::ok(result)
     }
 
     /// Copy Model By Model Id
@@ -133,6 +145,9 @@ impl FlowCcModelApi {
         name: Query<Option<String>>,
         tag: Query<Option<String>>,
         enabled: Query<Option<bool>>,
+        status: Query<Option<FlowModelStatus>>,
+        rel_template_id: Query<Option<String>>,
+        main: Query<Option<bool>>,
         with_sub: Query<Option<bool>>,
         page_number: Query<u32>,
         page_size: Query<u32>,
@@ -140,9 +155,9 @@ impl FlowCcModelApi {
         desc_by_update: Query<Option<bool>>,
         ctx: TardisContextExtractor,
         _request: &Request,
-    ) -> TardisApiResult<TardisPage<FlowModelSummaryResp>> {
+    ) -> TardisApiResult<TardisPage<FlowModelDetailResp>> {
         let funs = flow_constants::get_tardis_inst();
-        let result = FlowModelServ::paginate_items(
+        let result = FlowModelServ::paginate_detail_items(
             &FlowModelFilterReq {
                 basic: RbumBasicFilterReq {
                     ids: flow_model_ids.0.map(|ids| ids.split(',').map(|id| id.to_string()).collect::<Vec<String>>()),
@@ -151,7 +166,10 @@ impl FlowCcModelApi {
                     enabled: enabled.0,
                     ..Default::default()
                 },
+                main: main.0,
+                rel_template_id: rel_template_id.0,
                 tags: tag.0.map(|tag| vec![tag]),
+                status: status.0,
                 ..Default::default()
             },
             page_number.0,
@@ -166,50 +184,18 @@ impl FlowCcModelApi {
         TardisResp::ok(result)
     }
 
-    /// Find the specified models, or create it if it doesn't exist.
+    /// Find the specified main models, or create it if it doesn't exist.
     ///
-    /// 查找关联的model，如果不存在则创建。创建规则遵循add_custom_model接口逻辑。
-    ///
-    /// # Parameters
-    /// - `tag_ids` - list of tag_id
-    /// - `temp_id` - associated template_id
-    /// - `is_shared` - whether the associated template is shared
-    #[oai(path = "/find_or_add_models", method = "put")]
-    async fn find_or_add_models(
-        &self,
-        tag_ids: Query<String>,
-        temp_id: Query<Option<String>>,
-        is_shared: Query<Option<bool>>,
-        ctx: TardisContextExtractor,
-        _request: &Request,
-    ) -> TardisApiResult<HashMap<String, FlowModelSummaryResp>> {
-        let mut funs = flow_constants::get_tardis_inst();
-        funs.begin().await?;
-        let tag_ids = tag_ids.split(',').map(|tag_id| tag_id.to_string()).collect_vec();
-        let result = FlowModelServ::find_or_add_models(tag_ids, temp_id.0, is_shared.unwrap_or(false), &funs, &ctx.0).await?;
-        funs.commit().await?;
-        ctx.0.execute_task().await?;
-        TardisResp::ok(result)
-    }
-
-    /// Find the specified models, or create it if it doesn't exist.
-    ///
-    /// 查找关联的model。
+    /// 查找关联的主流程model。
     ///
     /// # Parameters
     /// - `temp_id` - associated template_id
     /// - `is_shared` - whether the associated template is shared
     #[oai(path = "/find_rel_models", method = "put")]
-    async fn find_rel_models(
-        &self,
-        temp_id: Query<Option<String>>,
-        is_shared: Query<Option<bool>>,
-        ctx: TardisContextExtractor,
-        _request: &Request,
-    ) -> TardisApiResult<HashMap<String, FlowModelSummaryResp>> {
+    async fn find_rel_models(&self, temp_id: Query<Option<String>>, ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<HashMap<String, FlowModelSummaryResp>> {
         let mut funs = flow_constants::get_tardis_inst();
         funs.begin().await?;
-        let result = FlowModelServ::find_rel_models(temp_id.0, is_shared.unwrap_or(false), &funs, &ctx.0).await?;
+        let result = FlowModelServ::find_rel_model_map(temp_id.0, true, &funs, &ctx.0).await?;
         funs.commit().await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
@@ -242,7 +228,13 @@ impl FlowCcModelApi {
         FlowModelServ::modify_model(
             &flow_model_id.0,
             &mut FlowModelModifyReq {
-                bind_states: Some(vec![req.0]),
+                modify_version: Some(FlowModelVersionModifyReq {
+                    bind_states: Some(vec![FlowModelVersionBindState {
+                        exist_state: Some(req.0),
+                        ..Default::default()
+                    }]),
+                    ..Default::default()
+                }),
                 ..Default::default()
             },
             &funs,
@@ -264,7 +256,10 @@ impl FlowCcModelApi {
         FlowModelServ::modify_model(
             &flow_model_id.0,
             &mut FlowModelModifyReq {
-                unbind_states: Some(vec![req.state_id.clone()]),
+                modify_version: Some(FlowModelVersionModifyReq {
+                    unbind_states: Some(vec![req.state_id.clone()]),
+                    ..Default::default()
+                }),
                 ..Default::default()
             },
             &funs,
@@ -286,17 +281,27 @@ impl FlowCcModelApi {
         FlowModelServ::modify_model(
             &flow_model_id.0,
             &mut FlowModelModifyReq {
-                modify_states: Some(
-                    req.0
-                        .sort_states
-                        .into_iter()
-                        .map(|state| FlowStateRelModelModifyReq {
-                            id: state.state_id,
-                            sort: Some(state.sort),
-                            show_btns: None,
-                        })
-                        .collect_vec(),
-                ),
+                modify_version: Some(FlowModelVersionModifyReq {
+                    modify_states: Some(
+                        req.0
+                            .sort_states
+                            .into_iter()
+                            .map(|state| FlowModelVersionModifyState {
+                                id: state.state_id.clone(),
+                                modify_rel: Some(FlowStateRelModelModifyReq {
+                                    id: state.state_id,
+                                    sort: Some(state.sort),
+                                    show_btns: None,
+                                }),
+                                modify_state: None,
+                                add_transitions: None,
+                                modify_transitions: None,
+                                delete_transitions: None,
+                            })
+                            .collect_vec(),
+                    ),
+                    ..Default::default()
+                }),
                 ..Default::default()
             },
             &funs,
@@ -321,46 +326,11 @@ impl FlowCcModelApi {
     ) -> TardisApiResult<Void> {
         let mut funs = flow_constants::get_tardis_inst();
         funs.begin().await?;
-        let modify_trans = req
-            .0
-            .sort_states
-            .into_iter()
-            .map(|sort_req| FlowTransitionModifyReq {
-                id: sort_req.id.clone().into(),
-                sort: Some(sort_req.sort),
-                ..Default::default()
-            })
-            .collect_vec();
-        FlowModelServ::modify_model(
-            &flow_model_id.0,
-            &mut FlowModelModifyReq {
-                modify_transitions: Some(modify_trans),
-                ..Default::default()
-            },
-            &funs,
-            &ctx.0,
-        )
-        .await?;
+        funs.begin().await?;
+        FlowModelServ::resort_transition(&flow_model_id.0, &req.0, &funs, &ctx.0).await?;
         funs.commit().await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
-    }
-
-    /// copy parent model to current own_paths
-    ///
-    /// 复制父级模型到当前 own_paths
-    /// 实际创建规则：按照 tags 创建模型，若传入proj_template_id，则优先寻找对应的父级模型，否则则获取默认模板模型生成对应的自定义模型。
-    #[oai(path = "/add_custom_model", method = "post")]
-    async fn add_custom_model(&self, req: Json<FlowModelAddCustomModelReq>, ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<Vec<FlowModelAddCustomModelResp>> {
-        let mut funs = flow_constants::get_tardis_inst();
-        funs.begin().await?;
-        let mut result = vec![];
-        for item in &req.0.bind_model_objs {
-            let model_id = FlowModelServ::add_custom_model(&item.tag, req.0.proj_template_id.clone(), req.0.rel_template_id.clone(), &funs, &ctx.0).await.ok();
-            result.push(FlowModelAddCustomModelResp { tag: item.tag.clone(), model_id });
-        }
-        funs.commit().await?;
-        TardisResp::ok(result)
     }
 
     /// find rel states by model_id
@@ -390,7 +360,17 @@ impl FlowCcModelApi {
         FlowModelServ::modify_model(
             &flow_model_id.0,
             &mut FlowModelModifyReq {
-                modify_states: Some(vec![req.0]),
+                modify_version: Some(FlowModelVersionModifyReq {
+                    modify_states: Some(vec![FlowModelVersionModifyState {
+                        id: req.0.id.clone(),
+                        modify_rel: Some(req.0),
+                        modify_state: None,
+                        add_transitions: None,
+                        modify_transitions: None,
+                        delete_transitions: None,
+                    }]),
+                    ..Default::default()
+                }),
                 ..Default::default()
             },
             &funs,
@@ -452,5 +432,15 @@ impl FlowCcModelApi {
         }
         funs.commit().await?;
         TardisResp::ok(Void)
+    }
+
+    /// Get the operations associated with the model
+    ///
+    /// 获取模型关联的操作
+    #[oai(path = "/:flow_model_id/get_transitions", method = "get")]
+    async fn get_rel_transitions(&self, flow_model_id: Path<String>, ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<Vec<FlowTransitionDetailResp>> {
+        let funs = flow_constants::get_tardis_inst();
+        let result = FlowModelServ::get_rel_transitions(&flow_model_id.0, &funs, &ctx.0).await?;
+        TardisResp::ok(result)
     }
 }

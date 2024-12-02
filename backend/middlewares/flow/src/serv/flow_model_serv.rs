@@ -4,22 +4,17 @@ use bios_basic::rbum::{
     dto::{
         rbum_filer_dto::{RbumBasicFilterReq, RbumItemRelFilterReq},
         rbum_item_dto::{RbumItemKernelAddReq, RbumItemKernelModifyReq},
-        rbum_rel_dto::RbumRelModifyReq,
     },
     helper::rbum_scope_helper,
     rbum_enumeration::{RbumRelFromKind, RbumScopeLevelKind},
-    serv::{
-        rbum_crud_serv::{ID_FIELD, NAME_FIELD, REL_DOMAIN_ID_FIELD, REL_KIND_ID_FIELD},
-        rbum_item_serv::{RbumItemCrudOperation, RBUM_ITEM_TABLE},
-    },
+    serv::rbum_item_serv::RbumItemCrudOperation,
 };
 use itertools::Itertools;
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
-    chrono::Utc,
     db::sea_orm::{
         sea_query::{Alias, Cond, Expr, Query, SelectStatement},
-        EntityName, EntityTrait, JoinType, Order, QueryFilter, Set,
+        EntityName, Set,
     },
     futures::future::join_all,
     serde_json::json,
@@ -29,20 +24,23 @@ use tardis::{
 };
 
 use crate::{
-    domain::{flow_model, flow_state, flow_transition},
+    domain::{flow_model, flow_transition},
     dto::{
         flow_model_dto::{
-            FlowModelAddReq, FlowModelAggResp, FlowModelAssociativeOperationKind, FlowModelBindStateReq, FlowModelDetailResp, FlowModelFilterReq, FlowModelFindRelStateResp,
-            FlowModelModifyReq, FlowModelSummaryResp,
+            FlowModelAddReq, FlowModelAggResp, FlowModelAssociativeOperationKind, FlowModelBindNewStateReq, FlowModelBindStateReq, FlowModelDetailResp, FlowModelFilterReq,
+            FlowModelFindRelStateResp, FlowModelKind, FlowModelModifyReq, FlowModelRelTransitionExt, FlowModelStatus, FlowModelSummaryResp,
         },
-        flow_state_dto::{FlowStateAggResp, FlowStateDetailResp, FlowStateFilterReq, FlowStateRelModelExt, FlowStateRelModelModifyReq},
+        flow_model_version_dto::{
+            FlowModelVersionAddReq, FlowModelVersionBindState, FlowModelVersionDetailResp, FlowModelVersionFilterReq, FlowModelVersionModifyReq, FlowModelVersionModifyState,
+            FlowModelVesionState,
+        },
+        flow_state_dto::{FLowStateIdAndName, FlowStateAddReq, FlowStateAggResp, FlowStateKind, FlowStateRelModelExt, FlowSysStateKind},
         flow_transition_dto::{
-            FlowTransitionActionChangeKind, FlowTransitionAddReq, FlowTransitionDetailResp, FlowTransitionInitInfo, FlowTransitionModifyReq, FlowTransitionPostActionInfo,
+            FlowTransitionAddReq, FlowTransitionDetailResp, FlowTransitionInitInfo, FlowTransitionModifyReq, FlowTransitionPostActionInfo, FlowTransitionSortStatesReq,
         },
     },
     flow_config::FlowBasicInfoManager,
     flow_constants,
-    serv::flow_state_serv::FlowStateServ,
 };
 use async_trait::async_trait;
 
@@ -51,8 +49,9 @@ use super::{
         flow_log_client::{FlowLogClient, LogParamContent, LogParamTag},
         search_client::FlowSearchClient,
     },
-    flow_inst_serv::FlowInstServ,
+    flow_model_version_serv::FlowModelVersionServ,
     flow_rel_serv::{FlowRelKind, FlowRelServ},
+    flow_transition_serv::FlowTransitionServ,
 };
 
 pub struct FlowModelServ;
@@ -83,27 +82,144 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
     async fn package_ext_add(id: &str, add_req: &FlowModelAddReq, _: &TardisFunsInst, _ctx: &TardisContext) -> TardisResult<flow_model::ActiveModel> {
         Ok(flow_model::ActiveModel {
             id: Set(id.to_string()),
-            icon: Set(add_req.icon.as_ref().unwrap_or(&"".to_string()).to_string()),
-            info: Set(add_req.info.as_ref().unwrap_or(&"".to_string()).to_string()),
-            init_state_id: Set(add_req.init_state_id.to_string()),
+            icon: Set(add_req.icon.clone().unwrap_or_default()),
+            info: Set(add_req.info.clone().unwrap_or_default()),
+            current_version_id: Set(add_req.current_version_id.clone().unwrap_or_default()),
+            kind: Set(add_req.kind.clone()),
+            status: Set(add_req.status.clone()),
             tag: Set(add_req.tag.clone()),
-            rel_model_id: Set(add_req.rel_model_id.as_ref().unwrap_or(&"".to_string()).to_string()),
+            rel_model_id: Set(add_req.rel_model_id.clone().unwrap_or_default()),
             template: Set(add_req.template),
+            main: Set(add_req.main),
             ..Default::default()
         })
     }
 
-    async fn before_add_item(_add_req: &mut FlowModelAddReq, _funs: &TardisFunsInst, _ctx: &TardisContext) -> TardisResult<()> {
+    async fn before_add_item(add_req: &mut FlowModelAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        if let Some(rel_transition_ids) = &add_req.rel_transition_ids {
+            if Self::get_model_id_by_own_paths_and_transition_id(
+                &add_req.tag.clone().unwrap_or_default(),
+                &rel_transition_ids.first().cloned().unwrap_or_default(),
+                funs,
+                ctx,
+            )
+            .await
+            .is_ok()
+            {
+                return Err(funs.err().not_found(&Self::get_obj_name(), "before_add_item", "The model is not repeatable", "400-flow-model-duplicate"));
+            }
+        }
+
         Ok(())
     }
 
     async fn after_add_item(flow_model_id: &str, add_req: &mut FlowModelAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        if let Some(states) = &add_req.states {
-            join_all(states.iter().map(|state| async { Self::bind_state(flow_model_id, state, funs, ctx).await }).collect_vec())
-                .await
-                .into_iter()
-                .collect::<TardisResult<Vec<()>>>()?;
+        if let Some(rel_transition_ids) = add_req.rel_transition_ids.clone() {
+            let transitions = FlowTransitionServ::find_detail_items(rel_transition_ids.clone(), None, None, funs, ctx).await?;
+            for rel_transition_id in rel_transition_ids {
+                let mut ext = FlowModelRelTransitionExt {
+                    id: rel_transition_id.clone(),
+                    ..Default::default()
+                };
+                if let Some(transition) = transitions.iter().find(|tran| tran.id == rel_transition_id) {
+                    ext.name = transition.name.clone();
+                    ext.from_flow_state_name = transition.from_flow_state_name.clone();
+                }
+                FlowRelServ::add_simple_rel(
+                    &FlowRelKind::FlowModelTransition,
+                    flow_model_id,
+                    &rel_transition_id,
+                    None,
+                    None,
+                    true,
+                    true,
+                    Some(json!(ext).to_string()),
+                    funs,
+                    ctx,
+                )
+                .await?;
+            }
         }
+
+        let mut add_version = if let Some(mut add_version) = add_req.add_version.clone() {
+            add_version.rel_model_id = Some(flow_model_id.to_string());
+            add_version
+        } else if add_req.main {
+            FlowModelVersionAddReq {
+                name: add_req.name.clone(),
+                rel_model_id: Some(flow_model_id.to_string()),
+                bind_states: None,
+                status: FlowModelVesionState::Enabled,
+                scope_level: add_req.scope_level.clone(),
+                disabled: add_req.disabled,
+            }
+        } else {
+            let start_state_id = TardisFuns::field.nanoid();
+            let finish_state_id = TardisFuns::field.nanoid();
+            FlowModelVersionAddReq {
+                name: add_req.name.clone(),
+                rel_model_id: Some(flow_model_id.to_string()),
+                // 初始化时增加开始结束两个节点
+                bind_states: Some(vec![
+                    FlowModelVersionBindState {
+                        bind_new_state: Some(FlowModelBindNewStateReq {
+                            new_state: FlowStateAddReq {
+                                id: Some(start_state_id.clone().into()),
+                                name: Some("开始".into()),
+                                sys_state: FlowSysStateKind::Start,
+                                state_kind: Some(FlowStateKind::Start),
+                                tags: Some(vec![add_req.tag.clone().unwrap_or_default()]),
+                                ..Default::default()
+                            },
+                            ext: FlowStateRelModelExt { sort: 0, show_btns: None },
+                        }),
+                        add_transitions: Some(vec![FlowTransitionAddReq {
+                            name: Some("开始".into()),
+                            from_flow_state_id: start_state_id.clone(),
+                            to_flow_state_id: finish_state_id.clone(),
+                            transfer_by_auto: Some(true),
+                            ..Default::default()
+                        }]),
+                        is_init: true,
+                        ..Default::default()
+                    },
+                    FlowModelVersionBindState {
+                        bind_new_state: Some(FlowModelBindNewStateReq {
+                            new_state: FlowStateAddReq {
+                                id: Some(finish_state_id.clone().into()),
+                                name: Some("结束".into()),
+                                sys_state: FlowSysStateKind::Finish,
+                                state_kind: Some(FlowStateKind::Finish),
+                                tags: Some(vec![add_req.tag.clone().unwrap_or_default()]),
+                                ..Default::default()
+                            },
+                            ext: FlowStateRelModelExt { sort: 1, show_btns: None },
+                        }),
+                        is_init: false,
+                        ..Default::default()
+                    },
+                ]),
+                status: FlowModelVesionState::Editing,
+                scope_level: add_req.scope_level.clone(),
+                disabled: add_req.disabled,
+            }
+        };
+
+        let version_id = FlowModelVersionServ::add_item(&mut add_version, funs, ctx).await?;
+        if add_version.status == FlowModelVesionState::Enabled {
+            FlowModelVersionServ::enable_version(&version_id, funs, ctx).await?;
+            Self::modify_item(
+                flow_model_id,
+                &mut FlowModelModifyReq {
+                    current_version_id: Some(version_id),
+                    ..Default::default()
+                },
+                funs,
+                ctx,
+            )
+            .await?;
+        }
+
         if let Some(rel_template_ids) = &add_req.rel_template_ids {
             join_all(
                 rel_template_ids
@@ -116,21 +232,6 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
             .await
             .into_iter()
             .collect::<TardisResult<Vec<()>>>()?;
-        }
-        if let Some(transitions) = &add_req.transitions {
-            if !transitions.is_empty() {
-                Self::add_transitions(flow_model_id, transitions, funs, ctx).await?;
-                // check transition post action endless loop
-                let model_desp = Self::get_item(flow_model_id, &FlowModelFilterReq::default(), funs, ctx).await?;
-                if Self::check_post_action_ring(&model_desp, funs, ctx).await? {
-                    return Err(funs.err().not_found(
-                        "flow_model_Serv",
-                        "after_add_item",
-                        "this post action exist endless loop",
-                        "500-flow-transition-endless-loop",
-                    ));
-                }
-            }
         }
         if add_req.template && add_req.rel_model_id.clone().map_or(true, |id| id.is_empty()) {
             FlowSearchClient::async_add_or_modify_model_search(flow_model_id, Box::new(false), funs, ctx).await?;
@@ -174,7 +275,13 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
     }
 
     async fn package_ext_modify(id: &str, modify_req: &FlowModelModifyReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<Option<flow_model::ActiveModel>> {
-        if modify_req.icon.is_none() && modify_req.info.is_none() && modify_req.init_state_id.is_none() && modify_req.tag.is_none() && modify_req.rel_model_id.is_none() {
+        if modify_req.icon.is_none()
+            && modify_req.info.is_none()
+            && modify_req.tag.is_none()
+            && modify_req.rel_model_id.is_none()
+            && modify_req.current_version_id.is_none()
+            && modify_req.status.is_none()
+        {
             return Ok(None);
         }
         let mut flow_model = flow_model::ActiveModel {
@@ -187,19 +294,22 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
         if let Some(info) = &modify_req.info {
             flow_model.info = Set(info.to_string());
         }
-        if let Some(init_state_id) = &modify_req.init_state_id {
-            flow_model.init_state_id = Set(init_state_id.to_string());
-        }
         if let Some(tag) = &modify_req.tag {
             flow_model.tag = Set(Some(tag.clone()));
+        }
+        if let Some(status) = &modify_req.status {
+            flow_model.status = Set(status.clone());
         }
         if let Some(rel_model_id) = &modify_req.rel_model_id {
             flow_model.rel_model_id = Set(rel_model_id.clone());
         }
+        if let Some(current_version_id) = &modify_req.current_version_id {
+            flow_model.current_version_id = Set(current_version_id.clone());
+        }
         Ok(Some(flow_model))
     }
 
-    async fn before_modify_item(flow_model_id: &str, _: &mut FlowModelModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    async fn before_modify_item(flow_model_id: &str, modify_req: &mut FlowModelModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let current_model = Self::get_item(
             flow_model_id,
             &FlowModelFilterReq {
@@ -214,6 +324,9 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
             ctx,
         )
         .await?;
+        if let Some(mut modify_version) = modify_req.modify_version.clone() {
+            FlowModelVersionServ::modify_item(&current_model.current_version_id, &mut modify_version, funs, ctx).await?;
+        }
         if current_model.own_paths != ctx.own_paths {
             return Err(funs.err().internal_error(
                 "flow_model_serv",
@@ -227,30 +340,6 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
 
     async fn after_modify_item(flow_model_id: &str, modify_req: &mut FlowModelModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let model_detail = Self::get_item(flow_model_id, &FlowModelFilterReq::default(), funs, ctx).await?;
-        if let Some(bind_states) = &modify_req.bind_states {
-            for bind_state in bind_states {
-                Self::bind_state(flow_model_id, bind_state, funs, ctx).await?;
-            }
-        }
-        if let Some(unbind_states) = &modify_req.unbind_states {
-            for unbind_state in unbind_states {
-                Self::unbind_state(flow_model_id, unbind_state, funs, ctx).await?;
-            }
-        }
-        if let Some(modify_states) = &modify_req.modify_states {
-            for modify_state in modify_states {
-                Self::modify_rel_state_ext(flow_model_id, modify_state, funs, ctx).await?;
-            }
-        }
-        if let Some(add_transitions) = &modify_req.add_transitions {
-            Self::add_transitions(flow_model_id, add_transitions, funs, ctx).await?;
-        }
-        if let Some(modify_transitions) = &modify_req.modify_transitions {
-            Self::modify_transitions(flow_model_id, modify_transitions, &model_detail, funs, ctx).await?;
-        }
-        if let Some(delete_transitions) = &modify_req.delete_transitions {
-            Self::delete_transitions(flow_model_id, delete_transitions, funs, ctx).await?;
-        }
         if let Some(rel_template_ids) = &modify_req.rel_template_ids {
             join_all(
                 FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelTemplate, flow_model_id, None, None, funs, ctx)
@@ -274,34 +363,22 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
             .into_iter()
             .collect::<TardisResult<Vec<()>>>()?;
         }
-        if modify_req.add_transitions.is_some() || modify_req.modify_transitions.is_some() {
-            // check transition post action endless loop
-            if Self::check_post_action_ring(&model_detail, funs, ctx).await? {
-                return Err(funs.err().not_found(
-                    "flow_model_Serv",
-                    "after_modify_item",
-                    "this post action exist endless loop",
-                    "500-flow-transition-endless-loop",
-                ));
-            }
-        }
-        let model = Self::get_item_detail_aggs(flow_model_id, false, funs, ctx).await?;
-        if model.template && model.rel_model_id.is_empty() {
+        if model_detail.template && model_detail.rel_model_id.is_empty() {
             FlowSearchClient::async_add_or_modify_model_search(flow_model_id, Box::new(true), funs, ctx).await?;
             FlowLogClient::add_ctx_task(
                 LogParamTag::DynamicLog,
                 Some(flow_model_id.to_string()),
                 LogParamContent {
                     subject: "工作流模板".to_string(),
-                    name: model.name.clone(),
+                    name: model_detail.name.clone(),
                     sub_kind: "flow_template".to_string(),
                 },
                 Some(json!({
-                    "name": model.name.to_string(),
-                    "info": model.info.clone(),
-                    "rel_template_ids":model.rel_template_ids.clone(),
-                    "scope_level": model.scope_level.clone(),
-                    "tag": model.tag.clone(),
+                    "name": model_detail.name.to_string(),
+                    "info": model_detail.info.clone(),
+                    "rel_template_ids":model_detail.rel_template_ids.clone(),
+                    "scope_level": model_detail.scope_level.clone(),
+                    "tag": model_detail.tag.clone(),
                 })),
                 Some("dynamic_log_tenant_config".to_string()),
                 Some("编辑".to_string()),
@@ -313,8 +390,7 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
         }
 
         // 同步修改所有引用的下级模型
-        if model.template {
-            let parent_model_transitions = model_detail.transitions();
+        if model_detail.template {
             let child_models = Self::find_detail_items(
                 &FlowModelFilterReq {
                     rel_model_ids: Some(vec![flow_model_id.to_string()]),
@@ -327,62 +403,33 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
             )
             .await?;
             for child_model in child_models {
-                let ctx_clone = TardisContext {
-                    own_paths: child_model.own_paths.clone(),
-                    ..ctx.clone()
-                };
-                let child_model_transitions = child_model.transitions();
-                let mut modify_req_clone = modify_req.clone();
-                if let Some(ref mut add_transitions) = &mut modify_req_clone.add_transitions {
-                    for add_transition in add_transitions.iter_mut() {
-                        if let Some(ref mut action_by_post_changes) = &mut add_transition.action_by_post_changes {
-                            for action_by_post_change in action_by_post_changes.iter_mut() {
-                                action_by_post_change.is_edit = Some(false); // 引用复制时，置为不可编辑
-                            }
-                        }
-                    }
-                }
-                if let Some(ref mut modify_transitions) = &mut modify_req_clone.modify_transitions {
-                    for modify_transition in modify_transitions.iter_mut() {
-                        let parent_model_transition = parent_model_transitions.iter().find(|trans| trans.id == modify_transition.id.to_string()).unwrap();
-                        modify_transition.id = child_model_transitions
-                            .iter()
-                            .find(|child_tran| {
-                                child_tran.from_flow_state_id == parent_model_transition.from_flow_state_id
-                                    && child_tran.to_flow_state_id == parent_model_transition.to_flow_state_id
-                            })
-                            .map(|trans| trans.id.clone())
-                            .unwrap_or_default()
-                            .into();
-                    }
-                }
-                if let Some(delete_transitions) = &mut modify_req_clone.delete_transitions {
-                    let mut child_delete_transitions = vec![];
-                    for delete_transition_id in delete_transitions.iter_mut() {
-                        let parent_model_transition = parent_model_transitions.iter().find(|trans| trans.id == delete_transition_id.clone()).unwrap();
-                        child_delete_transitions.push(
-                            child_model_transitions
-                                .iter()
-                                .find(|tran| {
-                                    tran.from_flow_state_id == parent_model_transition.from_flow_state_id && tran.to_flow_state_id == parent_model_transition.to_flow_state_id
-                                })
-                                .map(|trans| trans.id.clone())
-                                .unwrap_or_default(),
-                        );
-                    }
-                    modify_req_clone.delete_transitions = Some(child_delete_transitions);
-                }
-                ctx.add_async_task(Box::new(|| {
-                    Box::pin(async move {
-                        let task_handle = tokio::spawn(async move {
-                            let funs = flow_constants::get_tardis_inst();
-                            let _ = Self::modify_item(&child_model.id, &mut modify_req_clone, &funs, &ctx_clone).await;
-                        });
-                        task_handle.await.unwrap();
-                        Ok(())
-                    })
-                }))
-                .await?;
+                Self::sync_child_model(&child_model, &model_detail, modify_req, funs, ctx).await?;
+            }
+        }
+
+        // 同步scope_level和disabled字段到相关的version数据
+        if modify_req.scope_level.is_some() || modify_req.disabled.is_some() {
+            let mut version_modify_req = FlowModelVersionModifyReq::default();
+            if let Some(scope_level) = modify_req.scope_level.clone() {
+                version_modify_req.scope_level = Some(scope_level);
+            }
+            if let Some(disabled) = modify_req.disabled {
+                version_modify_req.disabled = Some(disabled);
+            }
+            let rel_version_ids = FlowModelVersionServ::find_id_items(
+                &FlowModelVersionFilterReq {
+                    rel_model_ids: Some(vec![flow_model_id.to_string()]),
+                    ..Default::default()
+                },
+                None,
+                None,
+                funs,
+                ctx,
+            )
+            .await?;
+            for rel_version_id in rel_version_ids {
+                let mut version_modify_req_clone = version_modify_req.clone();
+                FlowModelVersionServ::modify_item(&rel_version_id, &mut version_modify_req_clone, funs, ctx).await?;
             }
         }
 
@@ -423,10 +470,10 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
         .into_iter()
         .collect::<TardisResult<Vec<()>>>()?;
         join_all(
-            FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelState, flow_model_id, None, None, funs, ctx)
+            FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelTransition, flow_model_id, None, None, funs, ctx)
                 .await?
                 .into_iter()
-                .map(|rel| async move { FlowRelServ::delete_simple_rel(&FlowRelKind::FlowModelState, flow_model_id, &rel.rel_id, funs, ctx).await })
+                .map(|rel| async move { FlowRelServ::delete_simple_rel(&FlowRelKind::FlowModelTransition, flow_model_id, &rel.rel_id, funs, ctx).await })
                 .collect_vec(),
         )
         .await
@@ -465,16 +512,21 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
         Ok(())
     }
 
-    async fn package_ext_query(query: &mut SelectStatement, _: bool, filter: &FlowModelFilterReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<()> {
+    async fn package_ext_query(query: &mut SelectStatement, _: bool, filter: &FlowModelFilterReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         query
             .column((flow_model::Entity, flow_model::Column::Icon))
             .column((flow_model::Entity, flow_model::Column::Info))
-            .column((flow_model::Entity, flow_model::Column::InitStateId))
             .column((flow_model::Entity, flow_model::Column::Template))
+            .column((flow_model::Entity, flow_model::Column::Main))
             .column((flow_model::Entity, flow_model::Column::RelModelId))
             .column((flow_model::Entity, flow_model::Column::Tag))
+            .column((flow_model::Entity, flow_model::Column::Kind))
+            .column((flow_model::Entity, flow_model::Column::Status))
+            .column((flow_model::Entity, flow_model::Column::CurrentVersionId))
+            .expr_as(Expr::val("".to_string()), Alias::new("init_state_id"))
             .expr_as(Expr::val(json! {()}), Alias::new("transitions"))
             .expr_as(Expr::val(json! {()}), Alias::new("states"))
+            .expr_as(Expr::val(json! {()}), Alias::new("rel_transition"))
             .expr_as(Expr::val(vec!["".to_string()]), Alias::new("rel_template_ids"));
         if let Some(tags) = filter.tags.clone() {
             query.and_where(Expr::col(flow_model::Column::Tag).is_in(tags));
@@ -482,40 +534,100 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
         if let Some(template) = filter.template {
             query.and_where(Expr::col(flow_model::Column::Template).eq(template));
         }
+        if let Some(main) = filter.main {
+            query.and_where(Expr::col(flow_model::Column::Main).eq(main));
+        }
         if let Some(own_paths) = filter.own_paths.clone() {
             query.and_where(Expr::col((flow_model::Entity, flow_model::Column::OwnPaths)).is_in(own_paths));
         }
         if let Some(rel_model_ids) = filter.rel_model_ids.clone() {
             query.and_where(Expr::col(flow_model::Column::RelModelId).is_in(rel_model_ids));
         }
-
+        if let Some(kinds) = filter.kinds.clone() {
+            query.and_where(Expr::col(flow_model::Column::Kind).is_in(kinds));
+        }
+        if let Some(status) = filter.status.clone() {
+            query.and_where(Expr::col(flow_model::Column::Status).eq(status));
+        }
+        if let Some(rel_template_id) = filter.rel_template_id.clone() {
+            let rel_model_ids =
+                FlowRelServ::find_to_simple_rels(&FlowRelKind::FlowModelTemplate, &rel_template_id, None, None, funs, ctx).await?.into_iter().map(|rel| rel.rel_id).collect_vec();
+            query.and_where(Expr::col((flow_model::Entity, flow_model::Column::Id)).is_in(rel_model_ids));
+        }
         Ok(())
     }
 
     async fn get_item(flow_model_id: &str, filter: &FlowModelFilterReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<FlowModelDetailResp> {
         let mut flow_model = Self::do_get_item(flow_model_id, filter, funs, ctx).await?;
-        let flow_transitions = Self::find_transitions(flow_model_id, filter.specified_state_ids.as_deref(), funs, ctx).await?;
-        flow_model.transitions = Some(TardisFuns::json.obj_to_json(&flow_transitions)?);
 
-        let flow_states = FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelState, flow_model_id, None, None, funs, ctx)
-            .await?
-            .into_iter()
-            .sorted_by_key(|rel| TardisFuns::json.str_to_obj::<FlowStateRelModelExt>(&rel.ext).unwrap_or_default().sort)
-            .map(|rel| FlowStateAggResp {
-                id: rel.rel_id.clone(),
-                name: rel.rel_name.clone(),
-                is_init: flow_model.init_state_id == rel.rel_id,
-                ext: TardisFuns::json.str_to_obj::<FlowStateRelModelExt>(&rel.ext).unwrap_or_default(),
-                transitions: flow_transitions.clone().into_iter().filter(|tran| tran.from_flow_state_id == rel.rel_id).collect_vec(),
-            })
-            .collect_vec();
-        flow_model.states = Some(TardisFuns::json.obj_to_json(&flow_states)?);
+        if !flow_model.current_version_id.is_empty() {
+            let flow_transitions = FlowTransitionServ::find_transitions(&flow_model.current_version_id, filter.specified_state_ids.clone(), funs, ctx).await?;
+            flow_model.transitions = Some(TardisFuns::json.obj_to_json(&flow_transitions)?);
 
-        let rel_template_ids =
-            FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelTemplate, flow_model_id, None, None, funs, ctx).await?.into_iter().map(|rel| rel.rel_id).collect_vec();
-        flow_model.rel_template_ids = rel_template_ids;
+            let current_version = FlowModelVersionServ::get_item(
+                &flow_model.current_version_id,
+                &FlowModelVersionFilterReq {
+                    basic: filter.basic.clone(),
+                    ..Default::default()
+                },
+                funs,
+                ctx,
+            )
+            .await?;
+            flow_model.states = Some(current_version.states.unwrap_or_default());
+
+            let rel_template_ids =
+                FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelTemplate, flow_model_id, None, None, funs, ctx).await?.into_iter().map(|rel| rel.rel_id).collect_vec();
+            flow_model.rel_template_ids = rel_template_ids;
+
+            flow_model.init_state_id = current_version.init_state_id;
+        }
+        let rel_transition =
+            FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelTransition, flow_model_id, None, None, funs, ctx).await?.into_iter().map(|rel| rel.ext).collect_vec().pop();
+        flow_model.rel_transition = rel_transition.map(|rel_transition| TardisFuns::json.obj_to_json(&rel_transition).unwrap_or_default());
 
         Ok(flow_model)
+    }
+
+    async fn find_items(
+        filter: &FlowModelFilterReq,
+        desc_sort_by_create: Option<bool>,
+        desc_sort_by_update: Option<bool>,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<Vec<FlowModelSummaryResp>> {
+        let mut res = Self::do_find_items(filter, desc_sort_by_create, desc_sort_by_update, funs, ctx).await?;
+        for item in res.iter_mut() {
+            let version = FlowModelVersionServ::get_item(
+                &item.current_version_id,
+                &FlowModelVersionFilterReq {
+                    basic: RbumBasicFilterReq {
+                        ids: None,
+                        ..filter.basic.clone()
+                    },
+                    ..Default::default()
+                },
+                funs,
+                ctx,
+            )
+            .await?;
+            item.init_state_id = version.init_state_id;
+
+            let rel_transition =
+                FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelTransition, &item.id, None, None, funs, ctx).await?.into_iter().map(|rel| rel.ext).collect_vec().pop();
+            item.rel_transition = rel_transition.map(|rel_transition| TardisFuns::json.obj_to_json(&rel_transition).unwrap_or_default());
+
+            let states = FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelState, &item.current_version_id, None, None, funs, ctx)
+                .await?
+                .into_iter()
+                .map(|rel| FLowStateIdAndName {
+                    id: rel.rel_id,
+                    name: rel.rel_name,
+                })
+                .collect_vec();
+            item.states = TardisFuns::json.obj_to_json(&states).unwrap_or_default();
+        }
+        Ok(res)
     }
 
     async fn paginate_detail_items(
@@ -529,8 +641,17 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
     ) -> TardisResult<TardisPage<FlowModelDetailResp>> {
         let mut flow_models = Self::do_paginate_detail_items(filter, page_number, page_size, desc_sort_by_create, desc_sort_by_update, funs, ctx).await?;
         for flow_model in &mut flow_models.records {
-            let flow_transitions = Self::find_transitions(&flow_model.id, filter.specified_state_ids.as_deref(), funs, ctx).await?;
+            let flow_transitions = FlowTransitionServ::find_transitions(&flow_model.current_version_id, filter.specified_state_ids.clone(), funs, ctx).await?;
             flow_model.transitions = Some(TardisFuns::json.obj_to_json(&flow_transitions)?);
+            let rel_transition = FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelTransition, &flow_model.id, None, None, funs, ctx)
+                .await?
+                .into_iter()
+                .map(|rel| rel.ext)
+                .collect_vec()
+                .pop();
+            flow_model.rel_transition = rel_transition.map(|rel_transition| TardisFuns::json.str_to_json(&rel_transition).unwrap_or_default());
+            flow_model.rel_template_ids =
+                FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelTemplate, &flow_model.id, None, None, funs, ctx).await?.into_iter().map(|rel| rel.rel_id).collect_vec();
         }
         Ok(flow_models)
     }
@@ -544,9 +665,40 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
     ) -> TardisResult<Vec<FlowModelDetailResp>> {
         let mut flow_models = Self::do_find_detail_items(filter, desc_sort_by_create, desc_sort_by_update, funs, ctx).await?;
         for flow_model in &mut flow_models {
-            let flow_transitions = Self::find_transitions(&flow_model.id, filter.specified_state_ids.as_deref(), funs, ctx).await?;
-            flow_model.transitions = Some(TardisFuns::json.obj_to_json(&flow_transitions)?);
+            if !flow_model.current_version_id.is_empty() {
+                let flow_transitions = FlowTransitionServ::find_transitions(&flow_model.current_version_id, filter.specified_state_ids.clone(), funs, ctx).await?;
+                flow_model.transitions = Some(TardisFuns::json.obj_to_json(&flow_transitions)?);
+
+                let current_version = FlowModelVersionServ::get_item(
+                    &flow_model.current_version_id,
+                    &FlowModelVersionFilterReq {
+                        basic: filter.basic.clone(),
+                        ..Default::default()
+                    },
+                    funs,
+                    ctx,
+                )
+                .await?;
+                flow_model.states = Some(current_version.states.unwrap_or_default());
+
+                let rel_template_ids = FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelTemplate, &flow_model.id, None, None, funs, ctx)
+                    .await?
+                    .into_iter()
+                    .map(|rel| rel.rel_id)
+                    .collect_vec();
+                flow_model.rel_template_ids = rel_template_ids;
+
+                flow_model.init_state_id = current_version.init_state_id;
+            }
+            let rel_transition = FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelTransition, &flow_model.id, None, None, funs, ctx)
+                .await?
+                .into_iter()
+                .map(|rel| rel.ext)
+                .collect_vec()
+                .pop();
+            flow_model.rel_transition = rel_transition.map(|rel_transition| TardisFuns::json.str_to_json(&rel_transition).unwrap_or_default());
         }
+
         Ok(flow_models)
     }
 }
@@ -561,33 +713,49 @@ impl FlowModelServ {
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<String> {
-        let mut bind_states = vec![];
-        // states
-        for (i, state_id) in state_ids.into_iter().enumerate() {
-            bind_states.push(FlowModelBindStateReq {
-                state_id,
-                ext: FlowStateRelModelExt { sort: i as i64, show_btns: None },
-            });
-        }
         // transitions
         let mut add_transitions = vec![];
         for transition in transitions {
             add_transitions.push(FlowTransitionAddReq::try_from(transition)?);
         }
+        let mut bind_states = vec![];
+        // states FlowModelVersionBindState
+        for (i, state_id) in state_ids.into_iter().enumerate() {
+            bind_states.push(FlowModelVersionBindState {
+                exist_state: Some(FlowModelBindStateReq {
+                    state_id: state_id.clone(),
+                    ext: FlowStateRelModelExt { sort: i as i64, show_btns: None },
+                }),
+                add_transitions: Some(add_transitions.clone().into_iter().filter(|tran| tran.from_flow_state_id == state_id).collect_vec()),
+                is_init: state_id == init_state_id,
+                ..Default::default()
+            });
+        }
+
         // add model
         let model_id = Self::add_item(
             &mut FlowModelAddReq {
                 name: model_name.into(),
-                init_state_id: init_state_id.clone(),
+                kind: FlowModelKind::AsTemplateAndAsModel,
+                status: FlowModelStatus::Enabled,
+                add_version: Some(FlowModelVersionAddReq {
+                    name: model_name.into(),
+                    rel_model_id: None,
+                    bind_states: Some(bind_states),
+                    status: FlowModelVesionState::Enabled,
+                    scope_level: Some(RbumScopeLevelKind::Root),
+                    disabled: None,
+                }),
                 rel_template_ids: None,
+                rel_transition_ids: None,
+                current_version_id: None,
                 icon: None,
                 info: None,
-                transitions: Some(add_transitions),
-                states: Some(bind_states),
                 tag: Some(tag.to_string()),
                 scope_level: Some(RbumScopeLevelKind::Root),
                 disabled: None,
                 template: true,
+                main: true,
                 rel_model_id: None,
             },
             funs,
@@ -596,320 +764,6 @@ impl FlowModelServ {
         .await?;
 
         Ok(model_id)
-    }
-
-    pub async fn add_transitions(flow_model_id: &str, add_req: &[FlowTransitionAddReq], funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        let flow_state_ids =
-            FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelState, flow_model_id, None, None, funs, ctx).await?.iter().map(|rel| rel.rel_id.clone()).collect::<Vec<_>>();
-        if add_req.iter().any(|req| !flow_state_ids.contains(&req.from_flow_state_id) || !flow_state_ids.contains(&req.to_flow_state_id)) {
-            return Err(funs.err().not_found(
-                &Self::get_obj_name(),
-                "add_transitions",
-                "the states to be added is not legal",
-                "404-flow-state-add-not-legal",
-            ));
-        }
-        let flow_transitions = add_req
-            .iter()
-            .map(|req| flow_transition::ActiveModel {
-                id: Set(TardisFuns::field.nanoid()),
-                name: Set(req.name.as_ref().map(|name| name.to_string()).unwrap_or("".to_string())),
-
-                from_flow_state_id: Set(req.from_flow_state_id.to_string()),
-                to_flow_state_id: Set(req.to_flow_state_id.to_string()),
-
-                transfer_by_auto: Set(req.transfer_by_auto.unwrap_or(false)),
-                transfer_by_timer: Set(req.transfer_by_timer.as_ref().unwrap_or(&"".to_string()).to_string()),
-
-                guard_by_creator: Set(req.guard_by_creator.unwrap_or(false)),
-                guard_by_his_operators: Set(req.guard_by_his_operators.unwrap_or(false)),
-                guard_by_assigned: Set(req.guard_by_assigned.unwrap_or(false)),
-                guard_by_spec_account_ids: Set(req.guard_by_spec_account_ids.as_ref().unwrap_or(&vec![]).clone()),
-                guard_by_spec_role_ids: Set(req.guard_by_spec_role_ids.as_ref().unwrap_or(&vec![]).clone()),
-                guard_by_spec_org_ids: Set(req.guard_by_spec_org_ids.as_ref().unwrap_or(&vec![]).clone()),
-                guard_by_other_conds: Set(req.guard_by_other_conds.as_ref().map(|conds| TardisFuns::json.obj_to_json(conds).unwrap()).unwrap_or(json!([]))),
-
-                vars_collect: Set(req.vars_collect.clone().unwrap_or_default()),
-                double_check: Set(req.double_check.clone().unwrap_or_default()),
-                is_notify: Set(req.is_notify.unwrap_or(true)),
-
-                action_by_pre_callback: Set(req.action_by_pre_callback.as_ref().unwrap_or(&"".to_string()).to_string()),
-                action_by_post_callback: Set(req.action_by_post_callback.as_ref().unwrap_or(&"".to_string()).to_string()),
-                action_by_post_changes: Set(req.action_by_post_changes.clone().unwrap_or_default()),
-                action_by_front_changes: Set(req.action_by_front_changes.clone().unwrap_or_default()),
-
-                rel_flow_model_id: Set(flow_model_id.to_string()),
-                sort: Set(req.sort.unwrap_or(0)),
-                ..Default::default()
-            })
-            .collect_vec();
-        funs.db().insert_many(flow_transitions, ctx).await
-    }
-
-    pub async fn modify_transitions(
-        flow_model_id: &str,
-        modify_req: &[FlowTransitionModifyReq],
-        model_detail: &FlowModelDetailResp,
-        funs: &TardisFunsInst,
-        ctx: &TardisContext,
-    ) -> TardisResult<()> {
-        let flow_state_ids = modify_req
-            .iter()
-            .filter(|req| req.from_flow_state_id.is_some())
-            .map(|req| req.from_flow_state_id.as_ref().unwrap().to_string())
-            .chain(modify_req.iter().filter(|req| req.to_flow_state_id.is_some()).map(|req| req.to_flow_state_id.as_ref().unwrap().to_string()))
-            .unique()
-            .collect_vec();
-        if modify_req.iter().any(|req| {
-            if let Some(from_flow_state_id) = &req.from_flow_state_id {
-                if !flow_state_ids.contains(from_flow_state_id) {
-                    return true;
-                }
-            }
-            if let Some(to_flow_state_id) = &req.to_flow_state_id {
-                if !flow_state_ids.contains(to_flow_state_id) {
-                    return true;
-                }
-            }
-            false
-        }) {
-            return Err(funs.err().not_found(
-                &Self::get_obj_name(),
-                "modify_transitions",
-                "the states to be added is not legal",
-                "404-flow-state-add-not-legal",
-            ));
-        }
-
-        let flow_transition_ids = modify_req.iter().map(|req: &FlowTransitionModifyReq| req.id.to_string()).collect_vec();
-        let flow_transition_ids_lens = flow_transition_ids.len();
-        if funs
-            .db()
-            .count(
-                Query::select()
-                    .column((flow_transition::Entity, flow_transition::Column::Id))
-                    .from(flow_transition::Entity)
-                    .and_where(Expr::col((flow_transition::Entity, flow_transition::Column::RelFlowModelId)).eq(flow_model_id.to_string()))
-                    .and_where(Expr::col((flow_transition::Entity, flow_transition::Column::Id)).is_in(flow_transition_ids)),
-            )
-            .await? as usize
-            != flow_transition_ids_lens
-        {
-            return Err(funs.err().not_found(
-                &Self::get_obj_name(),
-                "modify_transitions",
-                "the transition of related models not legal",
-                "404-flow-transition-rel-model-not-legal",
-            ));
-        }
-        let model_transitions = model_detail.transitions();
-        for req in modify_req {
-            let transiton = model_transitions.iter().find(|trans| trans.id == req.id.to_string());
-            if transiton.is_none() {
-                continue;
-            }
-
-            let mut flow_transition = flow_transition::ActiveModel {
-                id: Set(req.id.to_string()),
-                ..Default::default()
-            };
-            if let Some(name) = &req.name {
-                flow_transition.name = Set(name.to_string());
-            }
-            if let Some(from_flow_state_id) = &req.from_flow_state_id {
-                flow_transition.from_flow_state_id = Set(from_flow_state_id.to_string());
-            }
-            if let Some(to_flow_state_id) = &req.to_flow_state_id {
-                flow_transition.to_flow_state_id = Set(to_flow_state_id.to_string());
-            }
-
-            if let Some(transfer_by_auto) = req.transfer_by_auto {
-                flow_transition.transfer_by_auto = Set(transfer_by_auto);
-            }
-            if let Some(transfer_by_timer) = &req.transfer_by_timer {
-                flow_transition.transfer_by_timer = Set(transfer_by_timer.to_string());
-            }
-
-            if let Some(guard_by_creator) = req.guard_by_creator {
-                flow_transition.guard_by_creator = Set(guard_by_creator);
-            }
-            if let Some(guard_by_his_operators) = req.guard_by_his_operators {
-                flow_transition.guard_by_his_operators = Set(guard_by_his_operators);
-            }
-            if let Some(guard_by_assigned) = req.guard_by_assigned {
-                flow_transition.guard_by_assigned = Set(guard_by_assigned);
-            }
-            if let Some(guard_by_spec_account_ids) = &req.guard_by_spec_account_ids {
-                flow_transition.guard_by_spec_account_ids = Set(guard_by_spec_account_ids.clone());
-            }
-            if let Some(guard_by_spec_role_ids) = &req.guard_by_spec_role_ids {
-                flow_transition.guard_by_spec_role_ids = Set(guard_by_spec_role_ids.clone());
-            }
-            if let Some(guard_by_spec_org_ids) = &req.guard_by_spec_org_ids {
-                flow_transition.guard_by_spec_org_ids = Set(guard_by_spec_org_ids.clone());
-            }
-            if let Some(guard_by_other_conds) = &req.guard_by_other_conds {
-                flow_transition.guard_by_other_conds = Set(TardisFuns::json.obj_to_json(guard_by_other_conds)?);
-            }
-
-            if let Some(vars_collect) = &req.vars_collect {
-                flow_transition.vars_collect = Set(vars_collect.clone());
-            }
-
-            if let Some(action_by_pre_callback) = &req.action_by_pre_callback {
-                flow_transition.action_by_pre_callback = Set(action_by_pre_callback.to_string());
-            }
-            if let Some(action_by_post_callback) = &req.action_by_post_callback {
-                flow_transition.action_by_post_callback = Set(action_by_post_callback.to_string());
-            }
-            if let Some(action_by_front_changes) = &req.action_by_front_changes {
-                flow_transition.action_by_front_changes = Set(action_by_front_changes.clone());
-            }
-            if let Some(action_by_post_changes) = &req.action_by_post_changes {
-                flow_transition.action_by_post_changes = Set(action_by_post_changes.clone());
-            }
-            if let Some(action_by_post_var_changes) = &req.action_by_post_var_changes {
-                let mut state_post_changes =
-                    transiton.unwrap().action_by_post_changes().into_iter().filter(|post| post.kind == FlowTransitionActionChangeKind::State).collect_vec();
-                let mut action_by_post_changes = action_by_post_var_changes.clone();
-                action_by_post_changes.append(&mut state_post_changes);
-                flow_transition.action_by_post_changes = Set(action_by_post_changes.clone());
-            }
-            if let Some(action_by_post_state_changes) = &req.action_by_post_state_changes {
-                let mut var_post_changes = transiton.unwrap().action_by_post_changes().into_iter().filter(|post| post.kind == FlowTransitionActionChangeKind::Var).collect_vec();
-                let mut action_by_post_changes = action_by_post_state_changes.clone();
-                action_by_post_changes.append(&mut var_post_changes);
-                flow_transition.action_by_post_changes = Set(action_by_post_changes.clone());
-            }
-            if let Some(double_check) = &req.double_check {
-                flow_transition.double_check = Set(double_check.clone());
-            }
-            if let Some(is_notify) = &req.is_notify {
-                flow_transition.is_notify = Set(*is_notify);
-            }
-            if let Some(sort) = &req.sort {
-                flow_transition.sort = Set(*sort);
-            }
-            flow_transition.update_time = Set(Utc::now());
-            funs.db().update_one(flow_transition, ctx).await?;
-        }
-        Ok(())
-    }
-
-    pub async fn delete_transitions(flow_model_id: &str, delete_flow_transition_ids: &Vec<String>, funs: &TardisFunsInst, _ctx: &TardisContext) -> TardisResult<()> {
-        let delete_flow_transition_ids_lens = delete_flow_transition_ids.len();
-        if funs
-            .db()
-            .count(
-                Query::select()
-                    .column((flow_transition::Entity, flow_transition::Column::Id))
-                    .from(flow_transition::Entity)
-                    .and_where(Expr::col((flow_transition::Entity, flow_transition::Column::RelFlowModelId)).eq(flow_model_id.to_string()))
-                    .and_where(Expr::col((flow_transition::Entity, flow_transition::Column::Id)).is_in(delete_flow_transition_ids)),
-            )
-            .await? as usize
-            != delete_flow_transition_ids_lens
-        {
-            return Err(funs.err().not_found(
-                &Self::get_obj_name(),
-                "delete_transitions",
-                "the transition of related models not legal",
-                "404-flow-transition-rel-model-not-legal",
-            ));
-        }
-        funs.db()
-            .soft_delete_custom(
-                flow_transition::Entity::find().filter(Expr::col(flow_transition::Column::Id).is_in(delete_flow_transition_ids)),
-                "id",
-            )
-            .await?;
-        Ok(())
-    }
-
-    async fn find_transitions(
-        flow_model_id: &str,
-        specified_state_ids: Option<&[String]>,
-        funs: &TardisFunsInst,
-        _ctx: &TardisContext,
-    ) -> TardisResult<Vec<FlowTransitionDetailResp>> {
-        let from_state_rbum_table = Alias::new("from_state_rbum");
-        let from_state_table = Alias::new("from_state");
-        let to_state_rbum_table = Alias::new("to_state_rbum");
-        let to_state_table = Alias::new("to_state");
-        let mut query = Query::select();
-        query
-            .columns([
-                (flow_transition::Entity, flow_transition::Column::Id),
-                (flow_transition::Entity, flow_transition::Column::Name),
-                (flow_transition::Entity, flow_transition::Column::FromFlowStateId),
-                (flow_transition::Entity, flow_transition::Column::ToFlowStateId),
-                (flow_transition::Entity, flow_transition::Column::TransferByAuto),
-                (flow_transition::Entity, flow_transition::Column::TransferByTimer),
-                (flow_transition::Entity, flow_transition::Column::GuardByCreator),
-                (flow_transition::Entity, flow_transition::Column::GuardByHisOperators),
-                (flow_transition::Entity, flow_transition::Column::GuardByAssigned),
-                (flow_transition::Entity, flow_transition::Column::GuardBySpecAccountIds),
-                (flow_transition::Entity, flow_transition::Column::GuardBySpecRoleIds),
-                (flow_transition::Entity, flow_transition::Column::GuardBySpecOrgIds),
-                (flow_transition::Entity, flow_transition::Column::GuardByOtherConds),
-                (flow_transition::Entity, flow_transition::Column::VarsCollect),
-                (flow_transition::Entity, flow_transition::Column::ActionByPreCallback),
-                (flow_transition::Entity, flow_transition::Column::ActionByPostCallback),
-                (flow_transition::Entity, flow_transition::Column::ActionByPostChanges),
-                (flow_transition::Entity, flow_transition::Column::ActionByFrontChanges),
-                (flow_transition::Entity, flow_transition::Column::DoubleCheck),
-                (flow_transition::Entity, flow_transition::Column::IsNotify),
-                (flow_transition::Entity, flow_transition::Column::RelFlowModelId),
-                (flow_transition::Entity, flow_transition::Column::Sort),
-            ])
-            .expr_as(
-                Expr::col((from_state_rbum_table.clone(), NAME_FIELD.clone())).if_null(""),
-                Alias::new("from_flow_state_name"),
-            )
-            .expr_as(Expr::col((from_state_table.clone(), Alias::new("color"))).if_null(""), Alias::new("from_flow_state_color"))
-            .expr_as(Expr::col((to_state_rbum_table.clone(), NAME_FIELD.clone())).if_null(""), Alias::new("to_flow_state_name"))
-            .expr_as(Expr::col((to_state_table.clone(), Alias::new("color"))).if_null(""), Alias::new("to_flow_state_color"))
-            .from(flow_transition::Entity)
-            .join_as(
-                JoinType::LeftJoin,
-                RBUM_ITEM_TABLE.clone(),
-                from_state_rbum_table.clone(),
-                Cond::all()
-                    .add(Expr::col((from_state_rbum_table.clone(), ID_FIELD.clone())).equals((flow_transition::Entity, flow_transition::Column::FromFlowStateId)))
-                    .add(Expr::col((from_state_rbum_table.clone(), REL_KIND_ID_FIELD.clone())).eq(FlowStateServ::get_rbum_kind_id().unwrap()))
-                    .add(Expr::col((from_state_rbum_table.clone(), REL_DOMAIN_ID_FIELD.clone())).eq(Self::get_rbum_domain_id().unwrap())),
-            )
-            .join_as(
-                JoinType::LeftJoin,
-                flow_state::Entity,
-                from_state_table.clone(),
-                Cond::all().add(Expr::col((from_state_table.clone(), ID_FIELD.clone())).equals((flow_transition::Entity, flow_transition::Column::FromFlowStateId))),
-            )
-            .join_as(
-                JoinType::LeftJoin,
-                RBUM_ITEM_TABLE.clone(),
-                to_state_rbum_table.clone(),
-                Cond::all()
-                    .add(Expr::col((to_state_rbum_table.clone(), ID_FIELD.clone())).equals((flow_transition::Entity, flow_transition::Column::ToFlowStateId)))
-                    .add(Expr::col((to_state_rbum_table.clone(), REL_KIND_ID_FIELD.clone())).eq(FlowStateServ::get_rbum_kind_id().unwrap()))
-                    .add(Expr::col((to_state_rbum_table.clone(), REL_DOMAIN_ID_FIELD.clone())).eq(Self::get_rbum_domain_id().unwrap())),
-            )
-            .join_as(
-                JoinType::LeftJoin,
-                flow_state::Entity,
-                to_state_table.clone(),
-                Cond::all().add(Expr::col((to_state_table.clone(), ID_FIELD.clone())).equals((flow_transition::Entity, flow_transition::Column::ToFlowStateId))),
-            )
-            .and_where(Expr::col((flow_transition::Entity, flow_transition::Column::RelFlowModelId)).eq(flow_model_id));
-        if let Some(specified_state_ids) = specified_state_ids {
-            query.and_where(Expr::col((flow_transition::Entity, flow_transition::Column::FromFlowStateId)).is_in(specified_state_ids));
-        }
-        query
-            .order_by((flow_transition::Entity, flow_transition::Column::Sort), Order::Asc)
-            .order_by((flow_transition::Entity, flow_transition::Column::CreateTime), Order::Asc)
-            .order_by((flow_transition::Entity, flow_transition::Column::Id), Order::Asc);
-        let flow_transitions: Vec<FlowTransitionDetailResp> = funs.db().find_dtos(&query).await?;
-        Ok(flow_transitions)
     }
 
     pub async fn state_is_used(flow_state_id: &str, funs: &TardisFunsInst, _ctx: &TardisContext) -> TardisResult<bool> {
@@ -952,28 +806,22 @@ impl FlowModelServ {
         let mut states = Vec::new();
         if is_state_detail {
             // find rel state
-            let state_ids = FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelState, flow_model_id, None, None, funs, ctx)
-                .await?
-                .iter()
-                .sorted_by_key(|rel| TardisFuns::json.str_to_obj::<FlowStateRelModelExt>(&rel.ext).unwrap_or_default().sort)
-                .map(|rel| {
-                    (
-                        rel.rel_id.clone(),
-                        rel.rel_name.clone(),
-                        TardisFuns::json.str_to_obj::<FlowStateRelModelExt>(&rel.ext).unwrap_or_default(),
-                    )
-                })
-                .collect::<Vec<_>>();
-            for (state_id, state_name, ext) in state_ids {
+            for state in model_detail.states() {
                 let state_detail = FlowStateAggResp {
-                    id: state_id.clone(),
-                    name: state_name,
-                    ext,
-                    is_init: model_detail.init_state_id == state_id,
+                    id: state.id.clone(),
+                    name: state.name.clone(),
+                    ext: state.ext.clone(),
+                    state_kind: state.state_kind,
+                    kind_conf: state.kind_conf,
+                    sys_state: state.sys_state,
+                    tags: state.tags,
+                    scope_level: state.scope_level,
+                    disabled: state.disabled,
+                    is_init: model_detail.init_state_id == state.id,
                     transitions: model_detail
                         .transitions()
                         .into_iter()
-                        .filter(|transition| transition.from_flow_state_id == state_id.clone())
+                        .filter(|transition| transition.from_flow_state_id == state.id.clone())
                         .map(|transition| {
                             let mut action_by_post_changes = vec![];
                             for action_by_post_change in transition.action_by_post_changes() {
@@ -1004,6 +852,19 @@ impl FlowModelServ {
             info: model_detail.info,
             init_state_id: model_detail.init_state_id,
             template: model_detail.template,
+            current_version_id: model_detail.current_version_id,
+            edit_version_id: FlowModelVersionServ::find_one_item(
+                &FlowModelVersionFilterReq {
+                    rel_model_ids: Some(vec![model_detail.id.clone()]),
+                    status: Some(vec![FlowModelVesionState::Editing]),
+                    ..Default::default()
+                },
+                funs,
+                ctx,
+            )
+            .await?
+            .map(|version| version.id)
+            .unwrap_or_default(),
             rel_model_id: model_detail.rel_model_id,
             rel_template_ids: FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelTemplate, &model_detail.id, None, None, funs, ctx)
                 .await?
@@ -1021,47 +882,18 @@ impl FlowModelServ {
         })
     }
 
-    // Find the specified models, or add it if it doesn't exist.
-    pub async fn find_or_add_models(
-        tags: Vec<String>,
+    // Find the rel models.
+    pub async fn find_rel_models(
         template_id: Option<String>,
-        is_shared: bool,
+        main: bool,
+        tags: Option<Vec<String>>,
         funs: &TardisFunsInst,
         ctx: &TardisContext,
-    ) -> TardisResult<HashMap<String, FlowModelSummaryResp>> {
-        let mut result = Self::find_rel_models(template_id.clone(), is_shared, funs, ctx).await?;
-        // Iterate over the tag based on the existing result and get the default model
-        for tag in tags {
-            if !result.contains_key(&tag) {
-                // copy custom model
-                let model_id = Self::add_custom_model(&tag, None, template_id.clone(), funs, ctx).await?;
-                let added_model = Self::find_one_item(
-                    &FlowModelFilterReq {
-                        basic: RbumBasicFilterReq {
-                            ids: Some(vec![model_id]),
-                            ..Default::default()
-                        },
-                        ..Default::default()
-                    },
-                    funs,
-                    ctx,
-                )
-                .await?
-                .unwrap_or_default();
-                result.insert(tag.to_string(), added_model);
-            }
-        }
-
-        Ok(result)
-    }
-
-    // Find the rel models.
-    pub async fn find_rel_models(template_id: Option<String>, _is_shared: bool, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<HashMap<String, FlowModelSummaryResp>> {
+    ) -> TardisResult<Vec<FlowModelSummaryResp>> {
         let global_ctx = TardisContext {
             own_paths: "".to_string(),
             ..ctx.clone()
         };
-        let mut result = HashMap::new();
 
         let filter_ids = if template_id.is_none() {
             if let Some(app_id) = Self::get_app_id_by_ctx(ctx) {
@@ -1077,8 +909,12 @@ impl FlowModelServ {
                 ids: filter_ids,
                 ignore_scope: true,
                 with_sub_own_paths: true,
+                enabled: Some(true),
                 ..Default::default()
             },
+            tags,
+            main: Some(main),
+            status: Some(FlowModelStatus::Enabled),
             rel: FlowRelServ::get_template_rel_filter(template_id.as_deref()),
             ..Default::default()
         };
@@ -1088,6 +924,14 @@ impl FlowModelServ {
             models = Self::find_items(&filter, None, None, funs, ctx).await?;
         }
 
+        Ok(models)
+    }
+
+    // Find the rel models.
+    pub async fn find_rel_model_map(template_id: Option<String>, main: bool, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<HashMap<String, FlowModelSummaryResp>> {
+        let models = Self::find_rel_models(template_id, main, None, funs, ctx).await?;
+
+        let mut result: HashMap<String, FlowModelSummaryResp> = HashMap::new();
         // First iterate over the models
         for model in models {
             result.insert(model.tag.clone(), model);
@@ -1097,25 +941,17 @@ impl FlowModelServ {
     }
 
     /// 创建或引用模型
-    /// params:
-    /// rel_model_id：关联模型ID
-    /// rel_template_id: 绑定模板ID,可选参数（仅在创建模型，即创建副本或op为复制时生效）
-    /// rel_own_paths: 绑定实例ID（仅在引用且不创建模型时生效）
-    /// （rel_model_id：关联模型ID, rel_template_id: 绑定模板ID,可选参数（仅在创建模型，即创建副本或op为复制时生效）, op：关联模型操作类型（复制或者引用），is_create_copy：是否创建副本（当op为复制时需指定，默认不需要））
+    /// 当op为复制时，表示按原有配置复制一套新的模型。
+    /// 当op为引用时，表示建立原有配置和当前own_paths的引用而不生成新的模型数据。
+    /// 当op为引用和复制时，表示按原有配置复制一套新的模型同时建立引用，此时允许用户修改新模型，同时新模型也会被旧模型修改影响到。
     pub async fn copy_or_reference_model(
         rel_model_id: &str,
-        rel_own_paths: Option<String>,
         op: &FlowModelAssociativeOperationKind,
-        is_create_copy: Option<bool>,
+        kind: FlowModelKind,
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<FlowModelAggResp> {
-        let mock_ctx = if let Some(own_paths) = rel_own_paths.clone() {
-            TardisContext { own_paths, ..ctx.clone() }
-        } else {
-            ctx.clone()
-        };
-        let rel_model = FlowModelServ::get_item(
+        let mut rel_model = FlowModelServ::get_item(
             rel_model_id,
             &FlowModelFilterReq {
                 basic: RbumBasicFilterReq {
@@ -1130,194 +966,216 @@ impl FlowModelServ {
             ctx,
         )
         .await?;
-        // .ok_or_else(|| funs.err().not_found(&Self::get_obj_name(), "copy_or_reference_model", "rel model not found", "404-flow-model-not-found"))?;
-        let result = match op {
-            FlowModelAssociativeOperationKind::Reference => {
-                if is_create_copy.unwrap_or(false) {
-                    let mut add_transitions = rel_model.transitions().into_iter().map(FlowTransitionAddReq::from).collect_vec();
-                    for add_transition in add_transitions.iter_mut() {
-                        if let Some(ref mut action_by_post_changes) = &mut add_transition.action_by_post_changes {
-                            for action_by_post_change in action_by_post_changes.iter_mut() {
-                                action_by_post_change.is_edit = Some(false); // 引用复制时，置为不可编辑
-                            }
-                        }
-                    }
-                    Self::add_item(
-                        &mut FlowModelAddReq {
-                            rel_model_id: Some(rel_model_id.to_string()),
-                            rel_template_ids: None,
-                            transitions: Some(add_transitions),
-                            ..rel_model.clone().into()
-                        },
-                        funs,
-                        &mock_ctx,
-                    )
-                    .await?
-                } else {
-                    if let Some(template_id) =
-                        FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelTemplate, rel_model_id, None, None, funs, ctx).await?.pop().map(|rel| rel.rel_id)
-                    {
-                        if !FlowRelServ::exist_rels(
-                            &FlowRelKind::FlowAppTemplate,
-                            &template_id,
-                            Self::get_app_id_by_ctx(ctx).unwrap_or_default().as_str(),
-                            funs,
-                            ctx,
-                        )
-                        .await?
-                        {
-                            FlowRelServ::add_simple_rel(
-                                &FlowRelKind::FlowAppTemplate,
-                                Self::get_app_id_by_ctx(&mock_ctx).unwrap_or_default().as_str(),
-                                &template_id,
-                                None,
-                                None,
-                                true,
-                                true,
-                                None,
-                                funs,
-                                ctx,
-                            )
-                            .await?;
-                        }
-                    }
-                    rel_model_id.to_string()
-                }
-            }
+        let target_model_id = match op {
             FlowModelAssociativeOperationKind::Copy => {
+                if kind == FlowModelKind::AsModel {
+                    rel_model.rel_model_id = "".to_string();
+                    rel_model.template = false;
+                    rel_model.scope_level = rbum_scope_helper::get_scope_level_by_context(ctx)?;
+                }
                 Self::add_item(
                     &mut FlowModelAddReq {
-                        rel_model_id: if rbum_scope_helper::get_scope_level_by_context(&mock_ctx)? != RbumScopeLevelKind::L2 {
-                            Some(rel_model_id.to_string())
-                        } else {
-                            None
-                        },
+                        kind,
                         rel_template_ids: None,
-                        template: rbum_scope_helper::get_scope_level_by_context(&mock_ctx)? != RbumScopeLevelKind::L2,
-                        scope_level: if rbum_scope_helper::get_scope_level_by_context(&mock_ctx)? != RbumScopeLevelKind::L2 {
-                            Some(rel_model.clone().scope_level)
-                        } else {
-                            None
-                        },
                         ..rel_model.clone().into()
                     },
                     funs,
-                    &mock_ctx,
+                    ctx,
+                )
+                .await?
+            }
+            FlowModelAssociativeOperationKind::Reference => {
+                if let Some(template_id) =
+                    FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelTemplate, rel_model_id, None, None, funs, ctx).await?.pop().map(|rel| rel.rel_id)
+                {
+                    if !FlowRelServ::exist_rels(
+                        &FlowRelKind::FlowAppTemplate,
+                        &template_id,
+                        Self::get_app_id_by_ctx(ctx).unwrap_or_default().as_str(),
+                        funs,
+                        ctx,
+                    )
+                    .await?
+                    {
+                        FlowRelServ::add_simple_rel(
+                            &FlowRelKind::FlowAppTemplate,
+                            Self::get_app_id_by_ctx(ctx).unwrap_or_default().as_str(),
+                            &template_id,
+                            None,
+                            None,
+                            true,
+                            true,
+                            None,
+                            funs,
+                            ctx,
+                        )
+                        .await?;
+                    }
+                }
+                rel_model_id.to_string()
+            }
+            FlowModelAssociativeOperationKind::ReferenceOrCopy => {
+                let mut add_transitions = rel_model.transitions().into_iter().map(FlowTransitionAddReq::from).collect_vec();
+                for add_transition in add_transitions.iter_mut() {
+                    if let Some(ref mut action_by_post_changes) = &mut add_transition.action_by_post_changes {
+                        for action_by_post_change in action_by_post_changes.iter_mut() {
+                            action_by_post_change.is_edit = Some(false); // 引用复制时，置为不可编辑
+                        }
+                    }
+                }
+                let states = rel_model
+                    .states()
+                    .into_iter()
+                    .map(|state| FlowModelVersionBindState {
+                        exist_state: Some(FlowModelBindStateReq {
+                            state_id: state.id.clone(),
+                            ext: state.ext,
+                        }),
+                        add_transitions: Some(add_transitions.clone().into_iter().filter(|tran| tran.from_flow_state_id == state.id).collect_vec()),
+                        is_init: state.id == rel_model.init_state_id,
+                        ..Default::default()
+                    })
+                    .collect_vec();
+                Self::add_item(
+                    &mut FlowModelAddReq {
+                        rel_model_id: Some(rel_model_id.to_string()),
+                        kind,
+                        rel_template_ids: None,
+                        add_version: Some(FlowModelVersionAddReq {
+                            name: rel_model.name.clone().into(),
+                            rel_model_id: None,
+                            bind_states: Some(states),
+                            status: FlowModelVesionState::Enabled,
+                            scope_level: Some(rel_model.scope_level.clone()),
+                            disabled: Some(rel_model.disabled),
+                        }),
+                        ..rel_model.clone().into()
+                    },
+                    funs,
+                    ctx,
                 )
                 .await?
             }
         };
-        let new_model = Self::get_item_detail_aggs(&result, true, funs, ctx).await?;
+        let new_model = Self::get_item_detail_aggs(&target_model_id, true, funs, ctx).await?;
 
         Ok(new_model)
     }
+    /// 创建或引用模型
+    /// params:
+    /// rel_model_id：关联模型ID
+    /// rel_template_id: 绑定模板ID,可选参数（仅在创建模型，即创建副本或op为复制时生效）
+    /// rel_own_paths: 绑定实例ID（仅在引用且不创建模型时生效）
+    /// （rel_model_id：关联模型ID, rel_template_id: 绑定模板ID,可选参数（仅在创建模型，即创建副本或op为复制时生效）, op：关联模型操作类型（复制或者引用），is_create_copy：是否创建副本（当op为复制时需指定，默认不需要））
+    // pub async fn copy_or_reference_model(
+    //     rel_model_id: &str,
+    //     rel_own_paths: Option<String>,
+    //     op: &FlowModelAssociativeOperationKind,
+    //     is_create_copy: Option<bool>,
+    //     funs: &TardisFunsInst,
+    //     ctx: &TardisContext,
+    // ) -> TardisResult<FlowModelAggResp> {
+    //     let mock_ctx = if let Some(own_paths) = rel_own_paths.clone() {
+    //         TardisContext { own_paths, ..ctx.clone() }
+    //     } else {
+    //         ctx.clone()
+    //     };
+    //     let rel_model = FlowModelServ::get_item(
+    //         rel_model_id,
+    //         &FlowModelFilterReq {
+    //             basic: RbumBasicFilterReq {
+    //                 own_paths: Some("".to_string()),
+    //                 with_sub_own_paths: true,
+    //                 ignore_scope: true,
+    //                 ..Default::default()
+    //             },
+    //             ..Default::default()
+    //         },
+    //         funs,
+    //         ctx,
+    //     )
+    //     .await?;
+    //     // .ok_or_else(|| funs.err().not_found(&Self::get_obj_name(), "copy_or_reference_model", "rel model not found", "404-flow-model-not-found"))?;
+    //     let result = match op {
+    //         FlowModelAssociativeOperationKind::Reference => {
+    //             if is_create_copy.unwrap_or(false) {
+    //                 let mut add_transitions = rel_model.transitions().into_iter().map(FlowTransitionAddReq::from).collect_vec();
+    //                 for add_transition in add_transitions.iter_mut() {
+    //                     if let Some(ref mut action_by_post_changes) = &mut add_transition.action_by_post_changes {
+    //                         for action_by_post_change in action_by_post_changes.iter_mut() {
+    //                             action_by_post_change.is_edit = Some(false); // 引用复制时，置为不可编辑
+    //                         }
+    //                     }
+    //                 }
+    //                 Self::add_item(
+    //                     &mut FlowModelAddReq {
+    //                         rel_model_id: Some(rel_model_id.to_string()),
+    //                         rel_template_ids: None,
+    //                         transitions: Some(add_transitions),
+    //                         ..rel_model.clone().into()
+    //                     },
+    //                     funs,
+    //                     &mock_ctx,
+    //                 )
+    //                 .await?
+    //             } else {
+    //                 if let Some(template_id) =
+    //                     FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelTemplate, rel_model_id, None, None, funs, ctx).await?.pop().map(|rel| rel.rel_id)
+    //                 {
+    //                     if !FlowRelServ::exist_rels(
+    //                         &FlowRelKind::FlowAppTemplate,
+    //                         &template_id,
+    //                         Self::get_app_id_by_ctx(ctx).unwrap_or_default().as_str(),
+    //                         funs,
+    //                         ctx,
+    //                     )
+    //                     .await?
+    //                     {
+    //                         FlowRelServ::add_simple_rel(
+    //                             &FlowRelKind::FlowAppTemplate,
+    //                             Self::get_app_id_by_ctx(&mock_ctx).unwrap_or_default().as_str(),
+    //                             &template_id,
+    //                             None,
+    //                             None,
+    //                             true,
+    //                             true,
+    //                             None,
+    //                             funs,
+    //                             ctx,
+    //                         )
+    //                         .await?;
+    //                     }
+    //                 }
+    //                 rel_model_id.to_string()
+    //             }
+    //         }
+    //         FlowModelAssociativeOperationKind::Copy => {
+    //             Self::add_item(
+    //                 &mut FlowModelAddReq {
+    //                     rel_model_id: if rbum_scope_helper::get_scope_level_by_context(&mock_ctx)? != RbumScopeLevelKind::L2 {
+    //                         Some(rel_model_id.to_string())
+    //                     } else {
+    //                         None
+    //                     },
+    //                     rel_template_ids: None,
+    //                     template: rbum_scope_helper::get_scope_level_by_context(&mock_ctx)? != RbumScopeLevelKind::L2,
+    //                     scope_level: if rbum_scope_helper::get_scope_level_by_context(&mock_ctx)? != RbumScopeLevelKind::L2 {
+    //                         Some(rel_model.clone().scope_level)
+    //                     } else {
+    //                         None
+    //                     },
+    //                     ..rel_model.clone().into()
+    //                 },
+    //                 funs,
+    //                 &mock_ctx,
+    //             )
+    //             .await?
+    //         }
+    //     };
+    //     let new_model = Self::get_item_detail_aggs(&result, true, funs, ctx).await?;
 
-    // copy model by template model
-    // rel_template_id: Associated parent template id
-    // current_template_id: Current template id
-    pub async fn add_custom_model(
-        tag: &str,
-        parent_template_id: Option<String>,
-        rel_template_id: Option<String>,
-        funs: &TardisFunsInst,
-        ctx: &TardisContext,
-    ) -> TardisResult<String> {
-        let current_model = Self::find_one_detail_item(
-            &FlowModelFilterReq {
-                basic: RbumBasicFilterReq {
-                    ignore_scope: true,
-                    ..Default::default()
-                },
-                tags: Some(vec![tag.to_string()]),
-                rel: FlowRelServ::get_template_rel_filter(rel_template_id.as_deref()),
-                ..Default::default()
-            },
-            funs,
-            ctx,
-        )
-        .await?;
-        if let Some(current_model) = current_model {
-            return Ok(current_model.id);
-        }
-
-        let global_ctx = TardisContext {
-            own_paths: "".to_string(),
-            ..ctx.clone()
-        };
-        // First, get the parent model, if the parent model does not exist, then get the default template
-        // 首先，获取父级model，若父级model不存在，则获取默认模板
-        let parent_model = if let Some(parent_model) = Self::find_one_detail_item(
-            // There are shared templates, so you need to ignore the permission judgment of own_path if the parent ID is passed in.
-            // 由于存在共享模板的情况，所以父级ID传入的情况下需要忽略 own_path 的权限判断
-            &FlowModelFilterReq {
-                basic: RbumBasicFilterReq {
-                    with_sub_own_paths: parent_template_id.is_some(),
-                    ignore_scope: parent_template_id.is_some(),
-                    ..Default::default()
-                },
-                tags: Some(vec![tag.to_string()]),
-                // When no parent ID is passed, indicating that the default template is directly obtained, parent_template_id is passed into the empty string
-                // 没有传入父级ID时，说明直接获取默认模板，则 parent_template_id 传入空字符串
-                rel: FlowRelServ::get_template_rel_filter(Some(&parent_template_id.unwrap_or_default())),
-                template: Some(true),
-                ..Default::default()
-            },
-            funs,
-            &global_ctx,
-        )
-        .await?
-        {
-            parent_model
-        } else {
-            Self::find_one_detail_item(
-                &FlowModelFilterReq {
-                    basic: RbumBasicFilterReq {
-                        ignore_scope: true,
-                        ..Default::default()
-                    },
-                    tags: Some(vec![tag.to_string()]),
-                    ..Default::default()
-                },
-                funs,
-                &global_ctx,
-            )
-            .await?
-            .ok_or_else(|| funs.err().internal_error("flow_model_serv", "add_custom_model", "default model is not exist", "404-flow-model-not-found"))?
-        };
-
-        // add model
-        let model_id = Self::add_item(
-            &mut FlowModelAddReq {
-                name: parent_model.name.clone().into(),
-                icon: Some(parent_model.icon.clone()),
-                info: Some(parent_model.info.clone()),
-                init_state_id: parent_model.init_state_id.clone(),
-                template: rel_template_id.is_some(),
-                rel_template_ids: rel_template_id.clone().map(|id| vec![id]),
-                transitions: Some(parent_model.transitions().into_iter().map(|trans| trans.into()).collect_vec()),
-                states: Some(
-                    FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelState, &parent_model.id, None, None, funs, &global_ctx)
-                        .await?
-                        .iter()
-                        .sorted_by_key(|rel| TardisFuns::json.str_to_obj::<FlowStateRelModelExt>(&rel.ext).unwrap_or_default().sort)
-                        .map(|rel| FlowModelBindStateReq {
-                            state_id: rel.rel_id.clone(),
-                            ext: TardisFuns::json.str_to_obj::<FlowStateRelModelExt>(&rel.ext).unwrap_or_default(),
-                        })
-                        .collect_vec(),
-                ),
-                rel_model_id: Some(parent_model.id.clone()),
-                tag: Some(parent_model.tag.clone()),
-                scope_level: if rel_template_id.is_some() { Some(RbumScopeLevelKind::Root) } else { None },
-                disabled: Some(parent_model.disabled),
-            },
-            funs,
-            ctx,
-        )
-        .await?;
-
-        Ok(model_id)
-    }
+    //     Ok(new_model)
+    // }
 
     // add or modify model by own_paths
     pub async fn modify_model(flow_model_id: &str, modify_req: &mut FlowModelModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
@@ -1340,169 +1198,12 @@ impl FlowModelServ {
         Ok(())
     }
 
-    async fn bind_state(flow_model_id: &str, req: &FlowModelBindStateReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        let global_ctx = TardisContext {
-            own_paths: "".to_string(),
-            ..ctx.clone()
-        };
-        if let Ok(state) = FlowStateServ::get_item(
-            &req.state_id,
-            &FlowStateFilterReq {
-                basic: RbumBasicFilterReq {
-                    with_sub_own_paths: true,
-                    ..Default::default()
-                },
-                ..Default::default()
-            },
-            funs,
-            &global_ctx,
-        )
-        .await
-        {
-            let model_detail = Self::get_item(flow_model_id, &FlowModelFilterReq::default(), funs, ctx).await?;
-            if !state.tags.is_empty() && !state.tags.split(',').collect_vec().contains(&model_detail.tag.as_str()) {
-                return Err(funs.err().internal_error("flow_model_serv", "bind_state", "The flow state is not found", "404-flow-state-not-found"));
-            }
-        } else {
-            return Err(funs.err().internal_error("flow_model_serv", "bind_state", "The flow state is not found", "404-flow-state-not-found"));
-        }
-        FlowRelServ::add_simple_rel(
-            &FlowRelKind::FlowModelState,
-            flow_model_id,
-            &req.state_id,
-            None,
-            None,
-            false,
-            true,
-            Some(json!(req.ext).to_string()),
-            funs,
-            ctx,
-        )
-        .await?;
-
-        Ok(())
-    }
-
-    pub async fn unbind_state(flow_model_id: &str, state_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        // Can only be deleted when not in use
-        if FlowInstServ::state_is_used(flow_model_id, state_id, funs, ctx).await? {
-            return Err(funs.err().conflict(
-                &Self::get_obj_name(),
-                "unbind_state",
-                &format!("state {state_id} already used"),
-                "409-flow-state-already-used",
-            ));
-        }
-        //delete rel transitions
-        let trans_ids = Self::find_transitions_by_state_id(flow_model_id, Some(vec![state_id.to_string()]), None, funs, ctx).await?.into_iter().map(|trans| trans.id).collect_vec();
-        Self::delete_transitions(flow_model_id, &trans_ids, funs, ctx).await?;
-        let trans_ids = Self::find_transitions_by_state_id(flow_model_id, None, Some(vec![state_id.to_string()]), funs, ctx).await?.into_iter().map(|trans| trans.id).collect_vec();
-        Self::delete_transitions(flow_model_id, &trans_ids, funs, ctx).await?;
-
-        FlowRelServ::delete_simple_rel(&FlowRelKind::FlowModelState, flow_model_id, state_id, funs, ctx).await?;
-
-        Ok(())
-    }
-
-    pub async fn modify_rel_state_ext(flow_model_id: &str, modify_req: &FlowStateRelModelModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        let mut ext = TardisFuns::json.str_to_obj::<FlowStateRelModelExt>(
-            &FlowRelServ::find_simple_rels(&FlowRelKind::FlowModelState, Some(flow_model_id), Some(modify_req.id.as_str()), true, None, None, funs, ctx)
-                .await?
-                .pop()
-                .ok_or_else(|| funs.err().internal_error("flow_model_serv", "modify_rel_state", "rel not found", "404-rel-not-found"))?
-                .ext,
-        )?;
-        if let Some(sort) = modify_req.sort {
-            ext.sort = sort;
-        }
-        if let Some(show_btns) = modify_req.show_btns.clone() {
-            ext.show_btns = Some(show_btns);
-        }
-        FlowRelServ::modify_simple_rel(
-            &FlowRelKind::FlowModelState,
-            flow_model_id,
-            &modify_req.id,
-            &mut RbumRelModifyReq {
-                tag: None,
-                note: None,
-                ext: Some(json!(ext).to_string()),
-            },
-            funs,
-            ctx,
-        )
-        .await?;
-
-        Ok(())
-    }
-
-    async fn find_transitions_by_state_id(
-        flow_model_id: &str,
-        current_state_id: Option<Vec<String>>,
-        target_state_id: Option<Vec<String>>,
-        funs: &TardisFunsInst,
-        ctx: &TardisContext,
-    ) -> TardisResult<Vec<FlowTransitionDetailResp>> {
-        Ok(Self::find_transitions(flow_model_id, None, funs, ctx)
-            .await?
-            .into_iter()
-            .filter(|tran_detail| {
-                if let Some(target_state_id) = target_state_id.as_ref() {
-                    target_state_id.contains(&tran_detail.to_flow_state_id)
-                } else {
-                    true
-                }
-            })
-            .filter(|tran_detail| {
-                if let Some(current_state_id) = current_state_id.as_ref() {
-                    current_state_id.contains(&tran_detail.from_flow_state_id)
-                } else {
-                    true
-                }
-            })
-            .collect_vec())
-    }
-
-    // 1、template_id为None，则根据own_paths批量获取关联模型
-    // 2、template_id为单元素数组，则表示
-    pub async fn check_post_action_ring(model_desp: &FlowModelDetailResp, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<bool> {
-        let mut model_details = HashMap::new();
-        if model_desp.template {
-            model_details.insert(model_desp.tag.clone(), model_desp.clone());
-        } else {
-            let template_ids = if model_desp.rel_template_ids.is_empty() {
-                None
-            } else {
-                model_desp.rel_template_ids.clone().pop()
-            };
-            let models = Self::find_rel_models(template_ids, false, funs, ctx).await?;
-
-            for (tag, model) in models {
-                let model_detail = Self::find_one_detail_item(
-                    &FlowModelFilterReq {
-                        basic: RbumBasicFilterReq {
-                            ids: Some(vec![model.id]),
-                            ..Default::default()
-                        },
-                        ..Default::default()
-                    },
-                    funs,
-                    ctx,
-                )
-                .await?
-                .unwrap();
-                model_details.insert(tag, model_detail);
-            }
-        }
-
-        // Ok(!loop_check_helper::check(&model_details))
-        Ok(false)
-    }
-
     pub async fn find_rel_states(tags: Vec<&str>, rel_template_id: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<FlowModelFindRelStateResp>> {
         let mut result = Vec::new();
         for tag in tags {
-            let flow_model_id = Self::get_model_id_by_own_paths_and_rel_template_id(tag, rel_template_id.clone(), funs, ctx).await?;
-            let mut states = Self::find_sorted_rel_states_by_model_id(&flow_model_id, funs, ctx)
+            let flow_model_id = Self::get_model_id_by_own_paths_and_rel_template_id(tag, rel_template_id.clone(), funs, ctx).await?.id;
+            let flow_model = Self::get_item(&flow_model_id, &FlowModelFilterReq::default(), funs, ctx).await?;
+            let mut states = FlowModelVersionServ::find_sorted_rel_states_by_version_id(&flow_model.current_version_id, funs, ctx)
                 .await?
                 .into_iter()
                 .map(|state_detail| FlowModelFindRelStateResp {
@@ -1516,110 +1217,258 @@ impl FlowModelServ {
         Ok(result)
     }
 
-    async fn find_sorted_rel_states_by_model_id(flow_model_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<FlowStateDetailResp>> {
-        Ok(join_all(
-            FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelState, flow_model_id, None, None, funs, ctx)
-                .await?
-                .into_iter()
-                .sorted_by_key(|rel| TardisFuns::json.str_to_obj::<FlowStateRelModelExt>(&rel.ext).unwrap_or_default().sort)
-                .map(|rel| async move {
-                    FlowStateServ::find_one_detail_item(
-                        &FlowStateFilterReq {
-                            basic: RbumBasicFilterReq {
-                                ids: Some(vec![rel.rel_id]),
-                                with_sub_own_paths: true,
-                                own_paths: Some("".to_string()),
-                                ..Default::default()
-                            },
-                            ..Default::default()
-                        },
-                        funs,
-                        ctx,
-                    )
-                    .await
-                    .unwrap_or_default()
-                    .unwrap()
-                })
-                .collect::<Vec<_>>(),
-        )
-        .await)
-    }
-
-    pub async fn get_model_id_by_own_paths_and_rel_template_id(tag: &str, rel_template_id: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
-        let mut own_paths = ctx.own_paths.clone();
-        let mut scope_level = rbum_scope_helper::get_scope_level_by_context(ctx)?.to_int();
-
-        let mut result = None;
-        // Prioritize confirming the existence of mods related to own_paths
-        if let Some(rel_model) = Self::find_items(
-            &FlowModelFilterReq {
-                basic: RbumBasicFilterReq {
-                    ids: Some(FlowRelServ::find_model_ids_by_app_id(Self::get_app_id_by_ctx(ctx).unwrap_or_default().as_str(), funs, ctx).await.unwrap_or_default()),
-                    ignore_scope: true,
-                    own_paths: Some("".to_string()),
-                    with_sub_own_paths: true,
-                    ..Default::default()
-                },
-                ..Default::default()
-            },
-            None,
-            None,
-            funs,
-            ctx,
-        )
-        .await?
-        .into_iter()
-        .find(|rel_model| rel_model.tag.as_str() == tag)
-        {
-            return Ok(rel_model.id);
-        }
-        // try get model in tenant path or app path
-        while !own_paths.is_empty() {
-            result = FlowModelServ::find_one_item(
+    pub async fn get_model_id_by_own_paths_and_transition_id(tag: &str, transition_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<FlowModelDetailResp> {
+        let app_id = Self::get_app_id_by_ctx(ctx).ok_or_else(|| {
+            funs.err().not_found(
+                &Self::get_obj_name(),
+                "get_model_id_by_own_paths_and_transition_id",
+                "Only instances at the application layer are supported to use the approval flow",
+                "404-flow-inst-rel-model-not-found",
+            )
+        })?;
+        let model_detail = if let Ok(model_ids) = FlowRelServ::find_model_ids_by_app_id(&app_id, funs, ctx).await {
+            // 引用租户模板的审批流
+            Self::find_one_detail_item(
                 &FlowModelFilterReq {
                     basic: RbumBasicFilterReq {
-                        own_paths: Some(own_paths.clone()),
-                        ignore_scope: true,
+                        ids: Some(model_ids),
+                        enabled: Some(true),
                         ..Default::default()
                     },
                     tags: Some(vec![tag.to_string()]),
-                    template: Some(rel_template_id.is_some()),
-                    rel: FlowRelServ::get_template_rel_filter(rel_template_id.as_deref()),
+                    rel: Some(RbumItemRelFilterReq {
+                        optional: false,
+                        rel_by_from: true,
+                        tag: Some(FlowRelKind::FlowModelTransition.to_string()),
+                        from_rbum_kind: Some(RbumRelFromKind::Item),
+                        rel_item_id: Some(transition_id.to_string()),
+                        ..Default::default()
+                    }),
+                    status: Some(FlowModelStatus::Enabled),
                     ..Default::default()
                 },
                 funs,
                 ctx,
             )
-            .await
-            .unwrap_or_default();
-            if result.is_some() {
-                break;
-            } else {
-                own_paths = rbum_scope_helper::get_path_item(scope_level, &ctx.own_paths).unwrap_or_default();
-                scope_level -= 1;
-            }
+            .await?
+        } else {
+            // 当前项目内的审批流
+            Self::find_one_detail_item(
+                &FlowModelFilterReq {
+                    basic: RbumBasicFilterReq {
+                        enabled: Some(true),
+                        ..Default::default()
+                    },
+                    tags: Some(vec![tag.to_string()]),
+                    rel: Some(RbumItemRelFilterReq {
+                        optional: false,
+                        rel_by_from: true,
+                        tag: Some(FlowRelKind::FlowModelTransition.to_string()),
+                        from_rbum_kind: Some(RbumRelFromKind::Item),
+                        rel_item_id: Some(transition_id.to_string()),
+                        own_paths: Some(ctx.own_paths.clone()),
+                        ..Default::default()
+                    }),
+                    status: Some(FlowModelStatus::Enabled),
+                    ..Default::default()
+                },
+                funs,
+                ctx,
+            )
+            .await?
+        };
+        match model_detail {
+            Some(result) => Ok(result),
+            None => Err(funs.err().not_found(
+                &Self::get_obj_name(),
+                "get_model_id_by_own_paths_and_transition_id",
+                "rel model not found",
+                "404-flow-model-not-found",
+            )),
         }
-        if result.is_none() {
-            result = FlowModelServ::find_one_item(
+    }
+    /// 根据own_paths和rel_template_id获取模型ID
+    /// 规则1：如果rel_template_id不为空，优先通过rel_template_id查找rel表类型为FlowModelTemplate关联的模型ID，找不到则直接返回默认模板ID
+    /// 规则2：如果rel_template_id为空，则通过own_paths获取rel表类型为FlowAppTemplate关联的模型ID
+    /// 规则3：如果按照规则2未找到关联的模型，则通过own_paths直接获取model表中存在的模型ID
+    /// 规则4：如果按照规则3未找到关联的模型，则直接返回默认的模板ID
+    pub async fn get_model_id_by_own_paths_and_rel_template_id(
+        tag: &str,
+        rel_template_id: Option<String>,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<FlowModelDetailResp> {
+        let mut result = None;
+        if let Some(rel_template_id) = rel_template_id {
+            // 规则1
+            result = FlowModelServ::find_detail_items(
                 &FlowModelFilterReq {
                     basic: RbumBasicFilterReq {
                         own_paths: Some("".to_string()),
                         ignore_scope: true,
                         ..Default::default()
                     },
+                    template: Some(true),
+                    main: Some(true),
+                    rel: FlowRelServ::get_template_rel_filter(Some(rel_template_id.as_str())),
                     tags: Some(vec![tag.to_string()]),
                     ..Default::default()
                 },
+                None,
+                None,
                 funs,
                 ctx,
             )
-            .await?;
+            .await?
+            .pop();
+        } else {
+            // 规则2
+            result = FlowModelServ::find_detail_items(
+                &FlowModelFilterReq {
+                    basic: RbumBasicFilterReq {
+                        ids: Some(FlowRelServ::find_model_ids_by_app_id(Self::get_app_id_by_ctx(ctx).unwrap_or_default().as_str(), funs, ctx).await.unwrap_or_default()),
+                        ignore_scope: true,
+                        own_paths: Some("".to_string()),
+                        with_sub_own_paths: true,
+                        ..Default::default()
+                    },
+                    main: Some(true),
+                    tags: Some(vec![tag.to_string()]),
+                    ..Default::default()
+                },
+                None,
+                None,
+                funs,
+                ctx,
+            )
+            .await?
+            .pop();
+            if result.is_none() {
+                // 规则3
+                result = FlowModelServ::find_detail_items(
+                    &FlowModelFilterReq {
+                        basic: RbumBasicFilterReq {
+                            own_paths: Some(ctx.own_paths.clone()),
+                            ignore_scope: true,
+                            ..Default::default()
+                        },
+                        tags: Some(vec![tag.to_string()]),
+                        template: Some(false),
+                        main: Some(true),
+                        ..Default::default()
+                    },
+                    None,
+                    None,
+                    funs,
+                    ctx,
+                )
+                .await?
+                .pop();
+            }
+        }
+        // 规则4
+        if result.is_none() {
+            result = FlowModelServ::find_detail_items(
+                &FlowModelFilterReq {
+                    basic: RbumBasicFilterReq {
+                        own_paths: Some("".to_string()),
+                        ignore_scope: true,
+                        ..Default::default()
+                    },
+                    main: Some(true),
+                    tags: Some(vec![tag.to_string()]),
+                    ..Default::default()
+                },
+                None,
+                None,
+                funs,
+                ctx,
+            )
+            .await?
+            .pop();
         }
         match result {
-            Some(model) => Ok(model.id),
-            None => Err(funs.err().not_found("flow_inst_serv", "get_model_id_by_own_paths", "model not found", "404-flow-model-not-found")),
+            Some(model) => Ok(model),
+            None => Err(funs.err().not_found("flow_model_serv", "get_model_id_by_own_paths", "model not found", "404-flow-model-not-found")),
         }
     }
+
+    /// 根据own_paths和rel_template_id获取
+    // pub async fn get_model_id_by_own_paths_and_rel_template_id(tag: &str, rel_template_id: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
+    //     let mut own_paths = ctx.own_paths.clone();
+    //     let mut scope_level = rbum_scope_helper::get_scope_level_by_context(ctx)?.to_int();
+
+    //     let mut result = None;
+    //     // Prioritize confirming the existence of mods related to own_paths
+    //     if let Some(rel_model) = Self::find_items(
+    //         &FlowModelFilterReq {
+    //             basic: RbumBasicFilterReq {
+    //                 ids: Some(FlowRelServ::find_model_ids_by_app_id(Self::get_app_id_by_ctx(ctx).unwrap_or_default().as_str(), funs, ctx).await.unwrap_or_default()),
+    //                 ignore_scope: true,
+    //                 own_paths: Some("".to_string()),
+    //                 with_sub_own_paths: true,
+    //                 ..Default::default()
+    //             },
+    //             ..Default::default()
+    //         },
+    //         None,
+    //         None,
+    //         funs,
+    //         ctx,
+    //     )
+    //     .await?
+    //     .into_iter()
+    //     .find(|rel_model| rel_model.tag.as_str() == tag)
+    //     {
+    //         return Ok(rel_model.id);
+    //     }
+    //     // try get model in tenant path or app path
+    //     while !own_paths.is_empty() {
+    //         result = FlowModelServ::find_one_item(
+    //             &FlowModelFilterReq {
+    //                 basic: RbumBasicFilterReq {
+    //                     own_paths: Some(own_paths.clone()),
+    //                     ignore_scope: true,
+    //                     ..Default::default()
+    //                 },
+    //                 tags: Some(vec![tag.to_string()]),
+    //                 template: Some(rel_template_id.is_some()),
+    //                 rel: FlowRelServ::get_template_rel_filter(rel_template_id.as_deref()),
+    //                 ..Default::default()
+    //             },
+    //             funs,
+    //             ctx,
+    //         )
+    //         .await
+    //         .unwrap_or_default();
+    //         if result.is_some() {
+    //             break;
+    //         } else {
+    //             own_paths = rbum_scope_helper::get_path_item(scope_level, &ctx.own_paths).unwrap_or_default();
+    //             scope_level -= 1;
+    //         }
+    //     }
+    //     if result.is_none() {
+    //         result = FlowModelServ::find_one_item(
+    //             &FlowModelFilterReq {
+    //                 basic: RbumBasicFilterReq {
+    //                     own_paths: Some("".to_string()),
+    //                     ignore_scope: true,
+    //                     ..Default::default()
+    //                 },
+    //                 tags: Some(vec![tag.to_string()]),
+    //                 ..Default::default()
+    //             },
+    //             funs,
+    //             ctx,
+    //         )
+    //         .await?;
+    //     }
+    //     match result {
+    //         Some(model) => Ok(model.id),
+    //         None => Err(funs.err().not_found("flow_model_serv", "get_model_id_by_own_paths", "model not found", "404-flow-model-not-found")),
+    //     }
+    // }
 
     pub async fn find_models_by_rel_template_id(
         tag: String,
@@ -1638,6 +1487,7 @@ impl FlowModelServ {
                     },
                     tags: Some(vec![tag.clone()]),
                     template,
+                    main: Some(true),
                     rel_model_ids: Some(vec!["".to_string()]), // rel_model_id is empty and template is true, which means it is a workflow template.
                     ..Default::default()
                 },
@@ -1672,6 +1522,7 @@ impl FlowModelServ {
                     },
                     tags: Some(vec![tag.clone()]),
                     template,
+                    main: Some(true),
                     rel_model_ids: Some(vec!["".to_string()]), // rel_model_id is empty and template is true, which means it is a workflow template.
                     rel: Some(RbumItemRelFilterReq {
                         optional: false,
@@ -1716,7 +1567,61 @@ impl FlowModelServ {
             own_paths: "".to_string(),
             ..ctx.clone()
         };
-        let models = Self::find_rel_models(rel_template_id.clone(), false, funs, ctx).await?;
+        let models = Self::find_rel_model_map(rel_template_id.clone(), true, funs, ctx).await?;
+        if let Some(rel_template_id) = rel_template_id.clone() {
+            let rel_model_ids = FlowRelServ::find_to_simple_rels(&FlowRelKind::FlowModelTemplate, &rel_template_id, None, None, funs, &global_ctx)
+                .await?
+                .into_iter()
+                .map(|rel| rel.rel_id)
+                .collect_vec();
+            let main_model_ids = Self::find_id_items(
+                &FlowModelFilterReq {
+                    basic: RbumBasicFilterReq {
+                        with_sub_own_paths: true,
+                        own_paths: Some("".to_string()),
+                        ids: Some(rel_model_ids),
+                        ..Default::default()
+                    },
+                    main: Some(true),
+                    ..Default::default()
+                },
+                None,
+                None,
+                funs,
+                ctx,
+            )
+            .await?;
+            for main_model_id in main_model_ids {
+                if let Some(orginal_model_ids) = orginal_model_ids.clone() {
+                    if orginal_model_ids.contains(&main_model_id) {
+                        continue;
+                    }
+                }
+                FlowRelServ::delete_simple_rel(&FlowRelKind::FlowModelTemplate, &main_model_id, &rel_template_id, funs, &global_ctx).await?;
+            }
+        } else {
+            // clean reference template rel
+            for rel in FlowRelServ::find_from_simple_rels(
+                &FlowRelKind::FlowAppTemplate,
+                Self::get_app_id_by_ctx(ctx).unwrap_or_default().as_str(),
+                None,
+                None,
+                funs,
+                &global_ctx,
+            )
+            .await?
+            .into_iter()
+            {
+                FlowRelServ::delete_simple_rel(
+                    &FlowRelKind::FlowAppTemplate,
+                    Self::get_app_id_by_ctx(ctx).unwrap_or_default().as_str(),
+                    &rel.rel_id,
+                    funs,
+                    &global_ctx,
+                )
+                .await?;
+            }
+        }
         for (tag, model) in models.iter() {
             if let Some(spec_tags) = spec_tags.clone() {
                 if !spec_tags.contains(tag) {
@@ -1728,41 +1633,180 @@ impl FlowModelServ {
                     continue;
                 }
             }
-            if rel_template_id.clone().is_some() {
-                for rel in FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelTemplate, &model.id, None, None, funs, &global_ctx).await? {
-                    FlowRelServ::delete_simple_rel(&FlowRelKind::FlowModelTemplate, &model.id, &rel.rel_id, funs, &global_ctx).await?;
-                }
-            } else {
-                // clean reference template rel
-                for rel in FlowRelServ::find_from_simple_rels(
-                    &FlowRelKind::FlowAppTemplate,
-                    Self::get_app_id_by_ctx(ctx).unwrap_or_default().as_str(),
-                    None,
-                    None,
-                    funs,
-                    &global_ctx,
-                )
-                .await?
-                .into_iter()
-                {
-                    FlowRelServ::delete_simple_rel(
-                        &FlowRelKind::FlowAppTemplate,
-                        Self::get_app_id_by_ctx(ctx).unwrap_or_default().as_str(),
-                        &rel.rel_id,
-                        funs,
-                        &global_ctx,
-                    )
-                    .await?;
-                }
-            }
             if ctx.own_paths == model.own_paths {
                 Self::delete_item(&model.id, funs, ctx).await?;
             }
         }
+
         Ok(models)
     }
 
-    fn get_app_id_by_ctx(ctx: &TardisContext) -> Option<String> {
-        rbum_scope_helper::get_max_level_id_by_context(ctx)
+    pub fn get_app_id_by_ctx(ctx: &TardisContext) -> Option<String> {
+        rbum_scope_helper::get_path_item(2, &ctx.own_paths)
+    }
+
+    async fn sync_child_model(
+        child_model: &FlowModelDetailResp,
+        parent_model: &FlowModelDetailResp,
+        modify_req: &FlowModelModifyReq,
+        _funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<()> {
+        let ctx_clone = TardisContext {
+            own_paths: child_model.own_paths.clone(),
+            ..ctx.clone()
+        };
+        let parent_model_transitions = parent_model.transitions();
+        let child_model_transitions = child_model.transitions();
+        let mut modify_req_clone = modify_req.clone();
+        if let Some(ref mut modify_version) = &mut modify_req_clone.modify_version {
+            if let Some(ref mut bind_states) = &mut modify_version.bind_states {
+                for bind_state in bind_states.iter_mut() {
+                    if let Some(ref mut add_transitions) = &mut bind_state.add_transitions {
+                        for add_transition in add_transitions.iter_mut() {
+                            if let Some(ref mut action_by_post_changes) = &mut add_transition.action_by_post_changes {
+                                for action_by_post_change in action_by_post_changes.iter_mut() {
+                                    action_by_post_change.is_edit = Some(false);
+                                    // 引用复制时，置为不可编辑
+                                }
+                            }
+                        }
+                    }
+                    if let Some(ref mut modify_transitions) = &mut bind_state.modify_transitions {
+                        for modify_transition in modify_transitions.iter_mut() {
+                            let parent_model_transition = parent_model_transitions.iter().find(|trans| trans.id == modify_transition.id.to_string()).unwrap();
+                            modify_transition.id = child_model_transitions
+                                .iter()
+                                .find(|child_tran| {
+                                    child_tran.from_flow_state_id == parent_model_transition.from_flow_state_id
+                                        && child_tran.to_flow_state_id == parent_model_transition.to_flow_state_id
+                                })
+                                .map(|trans| trans.id.clone())
+                                .unwrap_or_default()
+                                .into();
+                        }
+                    }
+                    if let Some(delete_transitions) = &mut bind_state.delete_transitions {
+                        let mut child_delete_transitions = vec![];
+                        for delete_transition_id in delete_transitions.iter_mut() {
+                            let parent_model_transition = parent_model_transitions.iter().find(|trans| trans.id == delete_transition_id.clone()).unwrap();
+                            child_delete_transitions.push(
+                                child_model_transitions
+                                    .iter()
+                                    .find(|tran| {
+                                        tran.from_flow_state_id == parent_model_transition.from_flow_state_id && tran.to_flow_state_id == parent_model_transition.to_flow_state_id
+                                    })
+                                    .map(|trans| trans.id.clone())
+                                    .unwrap_or_default(),
+                            );
+                        }
+                        bind_state.delete_transitions = Some(child_delete_transitions);
+                    }
+                }
+            }
+        }
+
+        let child_model_clone = child_model.clone();
+        ctx.add_async_task(Box::new(|| {
+            Box::pin(async move {
+                let task_handle = tokio::spawn(async move {
+                    let funs = flow_constants::get_tardis_inst();
+                    let _ = Self::modify_item(&child_model_clone.id, &mut modify_req_clone, &funs, &ctx_clone).await;
+                });
+                task_handle.await.unwrap();
+                Ok(())
+            })
+        }))
+        .await?;
+        Ok(())
+    }
+
+    pub async fn resort_transition(flow_model_id: &str, resort_req: &FlowTransitionSortStatesReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let model_detail = Self::get_item(flow_model_id, &FlowModelFilterReq::default(), funs, ctx).await?;
+        let modify_trans = resort_req
+            .sort_states
+            .clone()
+            .into_iter()
+            .map(|sort_req| FlowTransitionModifyReq {
+                id: sort_req.id.clone().into(),
+                sort: Some(sort_req.sort),
+                ..Default::default()
+            })
+            .collect_vec();
+        let mut modify_states = HashMap::new();
+        let transitions = FlowTransitionServ::find_transitions(&model_detail.current_version_id, None, funs, ctx).await?;
+        for modify_tran in modify_trans {
+            let tansition = transitions.iter().find(|tran| tran.id == modify_tran.id.to_string()).unwrap();
+            let modify_transitons = modify_states.entry(&tansition.from_flow_state_id).or_insert(vec![]);
+            modify_transitons.push(modify_tran);
+        }
+        FlowModelServ::modify_model(
+            flow_model_id,
+            &mut FlowModelModifyReq {
+                modify_version: Some(FlowModelVersionModifyReq {
+                    modify_states: Some(
+                        modify_states
+                            .into_iter()
+                            .map(|(id, modify_transitions)| FlowModelVersionModifyState {
+                                id: id.clone(),
+                                modify_state: None,
+                                modify_rel: None,
+                                add_transitions: None,
+                                modify_transitions: Some(modify_transitions),
+                                delete_transitions: None,
+                            })
+                            .collect_vec(),
+                    ),
+                    ..Default::default()
+                }),
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?;
+        Ok(())
+    }
+
+    pub async fn get_rel_transitions(flow_model_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<FlowTransitionDetailResp>> {
+        let model = Self::get_item(
+            flow_model_id,
+            &FlowModelFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    own_paths: Some("".to_string()),
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?;
+        FlowTransitionServ::find_transitions(&model.current_version_id, None, funs, ctx).await
+    }
+
+    pub async fn find_editing_verion(flow_model_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<FlowModelVersionDetailResp> {
+        let version = if let Some(version) = FlowModelVersionServ::find_one_detail_item(
+            &FlowModelVersionFilterReq {
+                rel_model_ids: Some(vec![flow_model_id.to_string()]),
+                status: Some(vec![FlowModelVesionState::Editing]),
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?
+        {
+            Some(version)
+        } else {
+            // 当不存在正在编辑的版本时，按照当前启用版本复制一套作为最新的编辑版本
+            let current_version_id = Self::get_item(flow_model_id, &FlowModelFilterReq::default(), funs, ctx).await?.current_version_id;
+            Some(FlowModelVersionServ::create_editing_version(&current_version_id, funs, ctx).await?)
+        };
+        match version {
+            Some(version) => Ok(version),
+            None => Err(funs.err().not_found("flow_model_serv", "find_editing_verion", "model not found", "404-flow-model-not-found")),
+        }
     }
 }
