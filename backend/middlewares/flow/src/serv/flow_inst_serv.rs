@@ -1418,7 +1418,7 @@ impl FlowInstServ {
                     });
                 }
                 modify_req.guard_conf = Some(guard_custom_conf);
-                Self::modify_inst_artifacts(flow_inst_detail, &modify_req, funs, ctx).await?;
+                Self::modify_inst_artifacts(&flow_inst_detail.id, &modify_req, funs, ctx).await?;
             }
             FlowStateKind::Approval => {
                 let mut modify_req = FlowInstArtifactsModifyReq { ..Default::default() };
@@ -1433,7 +1433,7 @@ impl FlowInstServ {
                     });
                 }
                 modify_req.guard_conf = Some(guard_custom_conf);
-                Self::modify_inst_artifacts(flow_inst_detail, &modify_req, funs, ctx).await?;
+                Self::modify_inst_artifacts(&flow_inst_detail.id, &modify_req, funs, ctx).await?;
             }
             FlowStateKind::Branch => {}
             FlowStateKind::Finish => match rel_transition.as_str() {
@@ -1514,7 +1514,7 @@ impl FlowInstServ {
                     prev_non_auto_account_id: Some(ctx.owner.clone()),
                     ..Default::default()
                 };
-                Self::modify_inst_artifacts(flow_inst_detail, &modify_req, funs, ctx).await?;
+                Self::modify_inst_artifacts(&flow_inst_detail.id, &modify_req, funs, ctx).await?;
             }
             FlowStateKind::Approval => {
                 let modify_req = FlowInstArtifactsModifyReq {
@@ -1522,7 +1522,7 @@ impl FlowInstServ {
                     prev_non_auto_account_id: Some(ctx.owner.clone()),
                     ..Default::default()
                 };
-                Self::modify_inst_artifacts(flow_inst_detail, &modify_req, funs, ctx).await?;
+                Self::modify_inst_artifacts(&flow_inst_detail.id, &modify_req, funs, ctx).await?;
             }
             FlowStateKind::Branch => {}
             FlowStateKind::Finish => {}
@@ -1532,7 +1532,8 @@ impl FlowInstServ {
     }
 
     // 修改实例的数据对象
-    async fn modify_inst_artifacts(inst: &FlowInstDetailResp, modify_artifacts: &FlowInstArtifactsModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    async fn modify_inst_artifacts(inst_id: &str, modify_artifacts: &FlowInstArtifactsModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let inst = Self::get(inst_id, funs, ctx).await?;
         let mut inst_artifacts = inst.artifacts();
         if let Some(guard_conf) = &modify_artifacts.guard_conf {
             inst_artifacts.guard_conf = guard_conf.clone();
@@ -1652,7 +1653,7 @@ impl FlowInstServ {
             // 转办
             FlowStateOperatorKind::Referral => {
                 Self::modify_inst_artifacts(
-                    inst,
+                    &inst.id,
                     &FlowInstArtifactsModifyReq {
                         add_guard_conf_account_id: operate_req.operator.clone(),
                         delete_guard_conf_account_id: Some(ctx.owner.clone()),
@@ -1675,7 +1676,7 @@ impl FlowInstServ {
             // 提交
             FlowStateOperatorKind::Submit => {
                 Self::modify_inst_artifacts(
-                    inst,
+                    &inst.id,
                     &FlowInstArtifactsModifyReq {
                         form_state_map: Some(operate_req.vars.clone().unwrap_or_default()),
                         ..Default::default()
@@ -1713,7 +1714,7 @@ impl FlowInstServ {
             // 通过
             FlowStateOperatorKind::Pass => {
                 Self::modify_inst_artifacts(
-                    inst,
+                    &inst.id,
                     &FlowInstArtifactsModifyReq {
                         add_approval_result: Some((ctx.owner.clone(), FlowApprovalResultKind::Pass)),
                         ..Default::default()
@@ -1742,7 +1743,7 @@ impl FlowInstServ {
             // 拒绝
             FlowStateOperatorKind::Overrule => {
                 Self::modify_inst_artifacts(
-                    inst,
+                    &inst.id,
                     &FlowInstArtifactsModifyReq {
                         add_approval_result: Some((ctx.owner.clone(), FlowApprovalResultKind::Overrule)),
                         ..Default::default()
@@ -1804,7 +1805,7 @@ impl FlowInstServ {
         funs.db().update_one(flow_inst, ctx).await?;
         // 删除目标节点的旧记录
         Self::modify_inst_artifacts(
-            flow_inst_detail,
+            &flow_inst_detail.id,
             &FlowInstArtifactsModifyReq {
                 clear_approval_result: Some(target_state_id.to_string()),
                 clear_form_result: Some(target_state_id.to_string()),
