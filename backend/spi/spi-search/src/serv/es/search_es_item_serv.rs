@@ -19,6 +19,7 @@ use crate::dto::search_item_dto::{
 };
 
 use super::search_es_initializer;
+const INNER_FIELD: [&str; 7] = ["key", "title", "content", "owner", "own_paths", "create_time", "update_time"];
 
 fn format_index(req_index: &str, ext: &HashMap<String, String>) -> String {
     if let Some(key_prefix) = common::get_isolation_flag_from_ext(ext) {
@@ -643,7 +644,7 @@ fn gen_query_dsl(search_req: &SearchItemSearchReq) -> TardisResult<String> {
         for group_query in adv_query {
             let mut group_query_q: Vec<Value> = vec![];
             for cond_info in group_query.ext.clone().unwrap_or_default() {
-                let field = if cond_info.in_ext.unwrap_or(true) {
+                let field = if !INNER_FIELD.contains(&cond_info.field.clone().as_str()) {
                     format!("ext.{}", cond_info.field)
                 } else {
                     cond_info.field.clone()
