@@ -99,6 +99,7 @@ pub struct ObjectPresignBatchViewReq {
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct ClientCreateReq {
+    pub kind: String,
     pub name: TrimString,
     pub conn_uri: String,
     pub ak: TrimString,

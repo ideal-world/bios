@@ -5,6 +5,9 @@ use bios_mw_schedule::{
     serv::schedule_job_serv_v2::{add_or_modify, delete},
 };
 use std::{collections::VecDeque, env, sync::atomic::Ordering, time::Duration};
+use tardis::testcontainers::ImageExt;
+use tardis::testcontainers::{core::Mount, runners::AsyncRunner};
+use testcontainers_modules::postgres::Postgres;
 
 use tardis::{
     basic::result::TardisResult,
@@ -23,7 +26,7 @@ fn funs() -> TardisFunsInst {
 async fn test_basic_schedual_service() -> TardisResult<()> {
     // std::env::set_current_dir("middlewares/schedule").unwrap();
     std::env::set_var("RUST_LOG", "info,sqlx=off,sea_orm=INFO");
-    let reldb_container = TardisTestContainer::postgres_custom(None).await?;
+    let reldb_container = Postgres::default().with_tag("latest").with_env_var("POSTGRES_PASSWORD", "123456").with_env_var("POSTGRES_DB", "test").start().await?;
     let port = reldb_container.get_host_port_ipv4(5432).await?;
     let url = format!("postgres://postgres:123456@127.0.0.1:{port}/test");
     env::set_var("TARDIS_FW.DB.URL", url);

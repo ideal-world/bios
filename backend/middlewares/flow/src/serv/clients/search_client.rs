@@ -1,4 +1,4 @@
-use std::vec;
+use std::{collections::HashMap, vec};
 
 use bios_basic::rbum::{dto::rbum_filer_dto::RbumBasicFilterReq, helper::rbum_scope_helper, rbum_enumeration::RbumScopeLevelKind, serv::rbum_item_serv::RbumItemCrudOperation};
 use bios_sdk_invoke::{
@@ -8,16 +8,26 @@ use bios_sdk_invoke::{
     },
     dto::search_item_dto::{SearchItemAddReq, SearchItemModifyReq, SearchItemVisitKeysReq},
 };
+use itertools::Itertools;
 use serde_json::json;
 use tardis::{
     basic::{dto::TardisContext, field::TrimString, result::TardisResult},
-    tokio, TardisFunsInst,
+    tokio, TardisFuns, TardisFunsInst,
 };
 
 use crate::{
-    dto::flow_model_dto::{FlowModelDetailResp, FlowModelFilterReq},
+    dto::{
+        flow_inst_dto::FlowInstFilterReq,
+        flow_model_dto::{FlowModelDetailResp, FlowModelFilterReq, FlowModelRelTransitionExt},
+        flow_model_version_dto::FlowModelVersionFilterReq,
+    },
     flow_constants,
-    serv::flow_model_serv::FlowModelServ,
+    serv::{
+        flow_inst_serv::FlowInstServ,
+        flow_model_serv::FlowModelServ,
+        flow_model_version_serv::FlowModelVersionServ,
+        flow_rel_serv::{FlowRelKind, FlowRelServ},
+    },
 };
 
 const SEARCH_TAG: &str = "flow_model";
@@ -25,6 +35,110 @@ const SEARCH_TAG: &str = "flow_model";
 pub struct FlowSearchClient;
 
 impl FlowSearchClient {
+    pub async fn async_modify_business_obj_search(inst_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let ctx_clone = ctx.clone();
+        let inst_detail = FlowInstServ::get(inst_id, funs, ctx).await?;
+        ctx.add_async_task(Box::new(|| {
+            Box::pin(async move {
+                let task_handle = tokio::spawn(async move {
+                    let funs = flow_constants::get_tardis_inst();
+                    let _ = Self::modify_business_obj_search(&inst_detail.rel_business_obj_id, &inst_detail.tag, &funs, &ctx_clone).await;
+                });
+                task_handle.await.unwrap();
+                Ok(())
+            })
+        }))
+        .await
+    }
+
+    pub async fn modify_business_obj_search(rel_business_obj_id: &str, tag: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let tag_search_map = HashMap::from([
+            ("CTS", "idp_test"),
+            ("ISSUE", "idp_test"),
+            ("ITER", "idp_project"),
+            ("MS", "idp_project"),
+            ("PROJ", "idp_project"),
+            ("REQ", "idp_project"),
+            ("TASK", "idp_project"),
+            ("TICKET", "ticket"),
+            ("TP", "idp_test"),
+            ("TS", "idp_test"),
+        ]);
+        let rel_version_ids = FlowInstServ::find_details(
+            &FlowInstFilterReq {
+                rel_business_obj_id: Some(rel_business_obj_id.to_string()),
+                main: Some(false),
+                finish: Some(false),
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?
+        .into_iter()
+        .map(|inst| inst.rel_flow_version_id)
+        .collect_vec();
+        let mut rel_transition_names = vec![];
+        for rel_version_id in rel_version_ids {
+            if let Some(rel_model_id) = FlowModelVersionServ::find_one_item(
+                &FlowModelVersionFilterReq {
+                    basic: RbumBasicFilterReq {
+                        ids: Some(vec![rel_version_id]),
+                        with_sub_own_paths: true,
+                        own_paths: Some("".to_string()),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                funs,
+                ctx,
+            )
+            .await?
+            .map(|version| version.rel_model_id)
+            {
+                let rel_transition_ext = FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelTransition, &rel_model_id, None, None, funs, ctx)
+                    .await?
+                    .pop()
+                    .map(|rel| TardisFuns::json.str_to_obj::<FlowModelRelTransitionExt>(&rel.ext).unwrap_or_default());
+                if let Some(ext) = rel_transition_ext {
+                    rel_transition_names.push(match ext.id.as_str() {
+                        "__EDIT__" => "编辑".to_string(),
+                        "__DELETE__" => "删除".to_string(),
+                        _ => format!("{}({})", ext.name, ext.from_flow_state_name),
+                    });
+                }
+            }
+        }
+        if let Some(table) = tag_search_map.get(tag) {
+            SpiSearchClient::modify_item_and_name(
+                table,
+                rel_business_obj_id,
+                &SearchItemModifyReq {
+                    kind: None,
+                    title: None,
+                    name: None,
+                    content: None,
+                    owner: None,
+                    own_paths: None,
+                    create_time: None,
+                    update_time: None,
+                    ext: Some(json!({
+                        "rel_transitions": rel_transition_names,
+                    })),
+                    ext_override: None,
+                    visit_keys: None,
+                    kv_disable: None,
+                },
+                funs,
+                ctx,
+            )
+            .await
+            .unwrap_or_default();
+        }
+
+        Ok(())
+    }
+
     pub async fn async_add_or_modify_model_search(model_id: &str, is_modify: Box<bool>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let ctx_clone = ctx.clone();
         let mock_ctx = TardisContext {

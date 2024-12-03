@@ -11,7 +11,6 @@ use tardis::web::poem::Request;
 use tardis::web::poem_openapi::payload::Json;
 use tardis::web::poem_openapi::{self, param::Query};
 use tardis::web::web_resp::{TardisApiResult, TardisResp, Void};
-use tardis::{log, tokio};
 
 use crate::dto::flow_external_dto::FlowExternalCallbackOp;
 use crate::dto::flow_inst_dto::{
@@ -33,11 +32,9 @@ impl FlowCiInstApi {
     /// 启动实例
     #[oai(path = "/", method = "post")]
     async fn start(&self, add_req: Json<FlowInstStartReq>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<String> {
-        let mut funs = flow_constants::get_tardis_inst();
+        let funs = flow_constants::get_tardis_inst();
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
-        funs.begin().await?;
         let result = FlowInstServ::start(&add_req.0, None, &funs, &ctx.0).await?;
-        funs.commit().await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
@@ -52,7 +49,7 @@ impl FlowCiInstApi {
         let mut result = FlowInstServ::get(&flow_inst_id.0, &funs, &ctx.0).await?;
         // @TODO 临时处理方式，后续需增加接口
         result.transitions = Some(
-            FlowInstServ::find_next_transitions(&flow_inst_id.0, &FlowInstFindNextTransitionsReq { vars: None }, &funs, &ctx.0)
+            FlowInstServ::find_next_transitions(&result, &FlowInstFindNextTransitionsReq { vars: None }, &funs, &ctx.0)
                 .await?
                 .into_iter()
                 .map(|tran| FlowInstTransitionInfo {
@@ -60,6 +57,7 @@ impl FlowCiInstApi {
                     start_time: Utc::now(),
                     op_ctx: FlowOperationContext::default(),
                     output_message: Some(tran.next_flow_transition_name),
+                    target_state_id: None,
                 })
                 .collect_vec(),
         );
@@ -112,14 +110,16 @@ impl FlowCiInstApi {
         let funs = flow_constants::get_tardis_inst();
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         let mut transfer = transfer_req.0;
-        FlowInstServ::check_transfer_vars(&flow_inst_id.0, &mut transfer, &funs, &ctx.0).await?;
+        let inst = FlowInstServ::get(&flow_inst_id.0, &funs, &ctx.0).await?;
+        FlowInstServ::check_transfer_vars(&inst, &mut transfer, &funs, &ctx.0).await?;
         let result = FlowInstServ::transfer(
-            &flow_inst_id.0,
+            &inst,
             &transfer,
             false,
             FlowExternalCallbackOp::Default,
             loop_check_helper::InstancesTransition::default(),
             &ctx.0,
+            &funs,
         )
         .await?;
         ctx.0.execute_task().await?;
@@ -143,21 +143,23 @@ impl FlowCiInstApi {
         let mut result = vec![];
         let flow_inst_ids: Vec<_> = flow_inst_ids.split(',').collect();
         let raw_transfer_req = transfer_req.0;
-        let mut flow_inst_id_transfer_map = HashMap::new();
+        let mut flow_inst_transfer = vec![];
         for flow_inst_id in &flow_inst_ids {
             let mut transfer_req = raw_transfer_req.clone();
-            FlowInstServ::check_transfer_vars(flow_inst_id, &mut transfer_req, &funs, &ctx.0).await?;
-            flow_inst_id_transfer_map.insert(flow_inst_id, transfer_req);
+            let inst = FlowInstServ::get(flow_inst_id, &funs, &ctx.0).await?;
+            FlowInstServ::check_transfer_vars(&inst, &mut transfer_req, &funs, &ctx.0).await?;
+            flow_inst_transfer.push((inst, transfer_req));
         }
-        for (flow_inst_id, transfer_req) in flow_inst_id_transfer_map {
+        for (inst, transfer_req) in flow_inst_transfer {
             result.push(
                 FlowInstServ::transfer(
-                    flow_inst_id,
+                    &inst,
                     &transfer_req,
                     false,
                     FlowExternalCallbackOp::Default,
                     loop_check_helper::InstancesTransition::default(),
                     &ctx.0,
+                    &funs,
                 )
                 .await?,
             );
@@ -180,7 +182,8 @@ impl FlowCiInstApi {
         let funs = flow_constants::get_tardis_inst();
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         let vars = HashMap::from([("assigned_to".to_string(), Value::String(modify_req.0.current_assigned))]);
-        FlowInstServ::modify_current_vars(&flow_inst_id.0, &vars, loop_check_helper::InstancesTransition::default(), &ctx.0).await?;
+        let inst = FlowInstServ::get(&flow_inst_id.0, &funs, &ctx.0).await?;
+        FlowInstServ::modify_current_vars(&inst, &vars, loop_check_helper::InstancesTransition::default(), &ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
     }
@@ -198,7 +201,8 @@ impl FlowCiInstApi {
     ) -> TardisApiResult<Void> {
         let funs = flow_constants::get_tardis_inst();
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
-        FlowInstServ::modify_current_vars(&flow_inst_id.0, &modify_req.0.vars, loop_check_helper::InstancesTransition::default(), &ctx.0).await?;
+        let inst = FlowInstServ::get(&flow_inst_id.0, &funs, &ctx.0).await?;
+        FlowInstServ::modify_current_vars(&inst, &modify_req.0.vars, loop_check_helper::InstancesTransition::default(), &ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
     }
@@ -220,6 +224,7 @@ impl FlowCiInstApi {
                     rel_business_obj_id: add_req.0.rel_business_obj_id.clone(),
                     tag: add_req.0.tag.clone(),
                     create_vars: add_req.0.create_vars.clone(),
+                    transition_id: None,
                 },
                 add_req.0.current_state_name.clone(),
                 &funs,
@@ -264,24 +269,5 @@ impl FlowCiInstApi {
         }
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
-    }
-
-    /// trigger instance front action
-    ///
-    /// 触发前置动作
-    #[oai(path = "/trigger_front_action", method = "get")]
-    async fn trigger_front_action(&self) -> TardisApiResult<Void> {
-        let funs = flow_constants::get_tardis_inst();
-        tokio::spawn(async move {
-            match FlowInstServ::trigger_front_action(&funs).await {
-                Ok(_) => {
-                    log::trace!("[Flow.Inst] add log success")
-                }
-                Err(e) => {
-                    log::warn!("[Flow.Inst] failed to add log:{e}")
-                }
-            }
-        });
-        TardisResp::ok(Void {})
     }
 }

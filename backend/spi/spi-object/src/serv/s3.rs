@@ -35,7 +35,7 @@ pub trait S3 {
     ) -> TardisResult<String> {
         let bs_inst = inst.inst::<TardisOSClient>();
         let client = bs_inst.0;
-        let bucket_name = Self::get_bucket_name(private, special, obj_exp.map(|_| true),bucket, bs_id, inst);
+        let bucket_name = Self::get_bucket_name(private, special, obj_exp.map(|_| true), bucket, bs_id, inst);
         let path = Self::rebuild_path(bucket_name.as_deref(), object_path, obj_exp, client).await?;
         match presign_kind {
             ObjectObjPresignKind::Upload => client.object_create_url(&path, exp_secs, bucket_name.as_deref()).await,
@@ -114,8 +114,17 @@ pub trait S3 {
         Ok(failed_object_paths.into_iter().filter(|object_path| !object_path.is_empty()).collect_vec())
     }
 
-    async fn object_copy(from: &str, to: &str, private: Option<bool>, special: Option<bool>, bs_id: Option<&str>,
-        bucket: Option<&str>, _funs: &TardisFunsInst, _ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
+    async fn object_copy(
+        from: &str,
+        to: &str,
+        private: Option<bool>,
+        special: Option<bool>,
+        bs_id: Option<&str>,
+        bucket: Option<&str>,
+        _funs: &TardisFunsInst,
+        _ctx: &TardisContext,
+        inst: &SpiBsInst,
+    ) -> TardisResult<()> {
         let bs_inst = inst.inst::<TardisOSClient>();
         let client = bs_inst.0;
         let bucket_name = Self::get_bucket_name(private, special, None, bucket, bs_id, inst);
@@ -156,7 +165,22 @@ pub trait S3 {
             object_paths
                 .into_iter()
                 .map(|object_path| async move {
-                    let result = Self::presign_obj_url(ObjectObjPresignKind::View, &object_path, None, None, exp_secs, private, special, obj_exp, bs_id, bucket, _funs, _ctx, inst).await;
+                    let result = Self::presign_obj_url(
+                        ObjectObjPresignKind::View,
+                        &object_path,
+                        None,
+                        None,
+                        exp_secs,
+                        private,
+                        special,
+                        obj_exp,
+                        bs_id,
+                        bucket,
+                        _funs,
+                        _ctx,
+                        inst,
+                    )
+                    .await;
                     if let Ok(presign_obj_url) = result {
                         (object_path.to_string(), presign_obj_url)
                     } else {

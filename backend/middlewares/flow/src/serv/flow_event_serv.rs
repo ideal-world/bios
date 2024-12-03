@@ -20,6 +20,7 @@ use crate::{
         flow_external_dto::{FlowExternalCallbackOp, FlowExternalParams},
         flow_inst_dto::{FlowInstDetailResp, FlowInstTransferReq},
         flow_model_dto::{FlowModelDetailResp, FlowModelFilterReq},
+        flow_model_version_dto::FlowModelVersionFilterReq,
         flow_state_dto::FlowStateFilterReq,
         flow_transition_dto::{
             FlowTransitionActionByStateChangeInfo, FlowTransitionActionByVarChangeInfoChangedKind, FlowTransitionActionChangeAgg, FlowTransitionActionChangeKind,
@@ -29,7 +30,10 @@ use crate::{
     helper::loop_check_helper,
 };
 
-use super::{flow_external_serv::FlowExternalServ, flow_inst_serv::FlowInstServ, flow_model_serv::FlowModelServ, flow_state_serv::FlowStateServ};
+use super::{
+    flow_external_serv::FlowExternalServ, flow_inst_serv::FlowInstServ, flow_model_serv::FlowModelServ, flow_model_version_serv::FlowModelVersionServ,
+    flow_state_serv::FlowStateServ, flow_transition_serv::FlowTransitionServ,
+};
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
 use itertools::Itertools;
@@ -39,15 +43,17 @@ pub struct FlowEventServ;
 impl FlowEventServ {
     #[async_recursion]
     pub async fn do_front_change(
-        flow_inst_id: &str,
+        flow_inst_detail: &FlowInstDetailResp,
         modified_instance_transations: loop_check_helper::InstancesTransition,
         ctx: &TardisContext,
         funs: &TardisFunsInst,
     ) -> TardisResult<()> {
-        let flow_inst_detail = FlowInstServ::get(flow_inst_id, funs, ctx).await?;
-        let flow_model = FlowModelServ::get_item(
-            &flow_inst_detail.rel_flow_model_id,
-            &FlowModelFilterReq {
+        if !flow_inst_detail.main {
+            return Ok(());
+        }
+        let flow_version = FlowModelVersionServ::get_item(
+            &flow_inst_detail.rel_flow_version_id,
+            &FlowModelVersionFilterReq {
                 basic: RbumBasicFilterReq {
                     with_sub_own_paths: true,
                     own_paths: Some("".to_string()),
@@ -59,19 +65,19 @@ impl FlowEventServ {
             ctx,
         )
         .await?;
-        let flow_transitions = flow_model
-            .transitions()
+        let flow_transitions = flow_version
+            .states()
             .into_iter()
-            .filter(|trans| trans.from_flow_state_id == flow_inst_detail.current_state_id && !trans.action_by_front_changes().is_empty())
-            .sorted_by_key(|trans| trans.sort)
-            .collect_vec();
+            .find(|state| state.id == flow_inst_detail.current_state_id)
+            .ok_or_else(|| funs.err().not_found("flow_event", "do_front_change", "illegal response", "404-flow-transition-not-found"))?
+            .transitions;
         if flow_transitions.is_empty() {
             return Ok(());
         }
         for flow_transition in flow_transitions {
             if Self::check_front_conditions(&flow_inst_detail, flow_transition.action_by_front_changes())? {
                 FlowInstServ::transfer(
-                    &flow_inst_detail.id,
+                    &flow_inst_detail,
                     &FlowInstTransferReq {
                         flow_transition_id: flow_transition.id.clone(),
                         message: None,
@@ -81,6 +87,7 @@ impl FlowEventServ {
                     FlowExternalCallbackOp::ConditionalTrigger,
                     modified_instance_transations.clone(),
                     ctx,
+                    funs,
                 )
                 .await?;
                 break;
@@ -91,7 +98,7 @@ impl FlowEventServ {
     }
 
     fn check_front_conditions(flow_inst_detail: &FlowInstDetailResp, conditions: Vec<FlowTransitionFrontActionInfo>) -> TardisResult<bool> {
-        if flow_inst_detail.current_vars.is_none() {
+        if flow_inst_detail.current_vars.is_none() || conditions.is_empty() {
             return Ok(false);
         }
         let current_vars = flow_inst_detail.current_vars.clone().unwrap();
@@ -154,19 +161,35 @@ impl FlowEventServ {
     }
 
     pub async fn do_post_change(
-        flow_inst_id: &str,
+        flow_inst_detail: &FlowInstDetailResp,
         flow_transition_id: &str,
         modified_instance_transations: loop_check_helper::InstancesTransition,
         ctx: &TardisContext,
         funs: &TardisFunsInst,
     ) -> TardisResult<()> {
-        let flow_inst_detail = FlowInstServ::get(flow_inst_id, funs, ctx).await?;
+        if !flow_inst_detail.main {
+            return Ok(());
+        }
         let global_ctx = TardisContext {
             own_paths: "".to_string(),
             ..ctx.clone()
         };
+        let flow_version = FlowModelVersionServ::get_item(
+            &flow_inst_detail.rel_flow_version_id,
+            &FlowModelVersionFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    own_paths: Some("".to_string()),
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?;
         let flow_model = FlowModelServ::get_item(
-            &flow_inst_detail.rel_flow_model_id,
+            &flow_version.rel_model_id,
             &FlowModelFilterReq {
                 basic: RbumBasicFilterReq {
                     with_sub_own_paths: true,
@@ -179,7 +202,12 @@ impl FlowEventServ {
             ctx,
         )
         .await?;
-        let model_transition = flow_model.transitions();
+        let model_transition = flow_version
+            .states()
+            .into_iter()
+            .find(|state| state.id == flow_inst_detail.current_state_id)
+            .ok_or_else(|| funs.err().not_found("flow_event", "do_front_change", "illegal response", "404-flow-transition-not-found"))?
+            .transitions;
         let next_flow_transition = model_transition.iter().find(|trans| trans.id == flow_transition_id);
         if next_flow_transition.is_none() {
             return Err(funs.err().not_found("flow_inst", "transfer", "no transferable state", "404-flow-inst-transfer-state-not-found"));
@@ -212,10 +240,6 @@ impl FlowEventServ {
         )
         .await?;
 
-        // if FlowModelServ::check_post_action_ring(&flow_model, funs, ctx).await? {
-        //     return Err(funs.err().not_found("flow_inst", "transfer", "this post action exist endless loop", "500-flow-transition-endless-loop"));
-        // }
-
         let post_changes = next_flow_transition.action_by_post_changes();
         if post_changes.is_empty() {
             return Ok(());
@@ -242,10 +266,10 @@ impl FlowEventServ {
                                         && change_info.changed_val.clone().unwrap().as_object().unwrap().get("op").is_some()
                                     {
                                         let original_value = if let Some(custom_value) =
-                                            FlowInstServ::find_var_by_inst_id(flow_inst_id, &format!("custom_{}", change_info.var_name), funs, ctx).await?
+                                            FlowInstServ::find_var_by_inst_id(&flow_inst_detail, &format!("custom_{}", change_info.var_name), funs, ctx).await?
                                         {
                                             Some(custom_value)
-                                        } else if let Some(original_value) = FlowInstServ::find_var_by_inst_id(flow_inst_id, &change_info.var_name, funs, ctx).await? {
+                                        } else if let Some(original_value) = FlowInstServ::find_var_by_inst_id(&flow_inst_detail, &change_info.var_name, funs, ctx).await? {
                                             Some(original_value)
                                         } else {
                                             Some(json!(""))
@@ -303,14 +327,14 @@ impl FlowEventServ {
                                     let inst_id = FlowInstServ::get_inst_ids_by_rel_business_obj_id(vec![rel_bus_obj_id.clone()], funs, ctx).await?.pop().unwrap_or_default();
                                     FlowExternalServ::do_modify_field(
                                         &rel_tag,
-                                        next_flow_transition,
+                                        Some(next_flow_transition.clone()),
                                         &rel_bus_obj_id,
                                         &inst_id,
-                                        FlowExternalCallbackOp::PostAction,
-                                        next_flow_state.name.clone(),
-                                        next_flow_state.sys_state.clone(),
-                                        prev_flow_state.name.clone(),
-                                        prev_flow_state.sys_state.clone(),
+                                        Some(FlowExternalCallbackOp::PostAction),
+                                        Some(next_flow_state.name.clone()),
+                                        Some(next_flow_state.sys_state.clone()),
+                                        Some(prev_flow_state.name.clone()),
+                                        Some(prev_flow_state.sys_state.clone()),
                                         vec![FlowExternalParams {
                                             rel_kind: None,
                                             rel_tag: None,
@@ -323,7 +347,8 @@ impl FlowEventServ {
                                         funs,
                                     )
                                     .await?;
-                                    FlowEventServ::do_front_change(&inst_id, modified_instance_transations.clone(), ctx, funs).await?;
+                                    let rel_flow_inst = FlowInstServ::get(&inst_id, funs, ctx).await?;
+                                    FlowEventServ::do_front_change(&rel_flow_inst, modified_instance_transations.clone(), ctx, funs).await?;
                                 }
                             }
                         } else {
@@ -361,20 +386,20 @@ impl FlowEventServ {
         if !modify_self_field_params.is_empty() {
             FlowExternalServ::do_modify_field(
                 &flow_model.tag,
-                next_flow_transition,
+                Some(next_flow_transition.clone()),
                 &flow_inst_detail.rel_business_obj_id,
                 &flow_inst_detail.id,
-                FlowExternalCallbackOp::PostAction,
-                next_flow_state.name.clone(),
-                next_flow_state.sys_state.clone(),
-                prev_flow_state.name.clone(),
-                prev_flow_state.sys_state.clone(),
+                Some(FlowExternalCallbackOp::PostAction),
+                Some(next_flow_state.name.clone()),
+                Some(next_flow_state.sys_state.clone()),
+                Some(prev_flow_state.name.clone()),
+                Some(prev_flow_state.sys_state.clone()),
                 modify_self_field_params,
                 ctx,
                 funs,
             )
             .await?;
-            FlowEventServ::do_front_change(&flow_inst_detail.id, modified_instance_transations.clone(), ctx, funs).await?;
+            FlowEventServ::do_front_change(&flow_inst_detail, modified_instance_transations.clone(), ctx, funs).await?;
         }
 
         Ok(())
@@ -488,9 +513,9 @@ impl FlowEventServ {
         let insts = FlowInstServ::find_detail(rel_inst_ids, funs, ctx).await?;
         for rel_inst in insts {
             // find transition
-            let flow_model = FlowModelServ::get_item(
-                &rel_inst.rel_flow_model_id,
-                &FlowModelFilterReq {
+            let flow_version = FlowModelVersionServ::get_item(
+                &rel_inst.rel_flow_version_id,
+                &FlowModelVersionFilterReq {
                     basic: RbumBasicFilterReq {
                         with_sub_own_paths: true,
                         own_paths: Some("".to_string()),
@@ -502,7 +527,8 @@ impl FlowEventServ {
                 ctx,
             )
             .await?;
-            let transition_resp = FlowInstServ::do_find_next_transitions(&rel_inst, &flow_model, None, &None, true, funs, ctx)
+            let rel_flow_versions = FlowTransitionServ::find_rel_model_map(&rel_inst.tag, funs, ctx).await?;
+            let transition_resp = FlowInstServ::do_find_next_transitions(&rel_inst, &flow_version, None, &None, rel_flow_versions, true, funs, ctx)
                 .await?
                 .next_flow_transitions
                 .into_iter()
@@ -511,7 +537,7 @@ impl FlowEventServ {
                 .pop();
             if let Some(transition) = transition_resp {
                 FlowInstServ::transfer(
-                    &rel_inst.id,
+                    &rel_inst,
                     &FlowInstTransferReq {
                         flow_transition_id: transition.next_flow_transition_id,
                         message: None,
@@ -521,6 +547,7 @@ impl FlowEventServ {
                     FlowExternalCallbackOp::PostAction,
                     modified_instance_transations.clone(),
                     ctx,
+                    funs,
                 )
                 .await?;
             }

@@ -29,6 +29,7 @@ pub enum FlowRelKind {
     FlowModelTemplate,
     FlowModelPath,
     FlowAppTemplate,
+    FlowModelTransition,
 }
 
 impl FlowRelServ {
@@ -109,7 +110,6 @@ impl FlowRelServ {
     }
 
     pub async fn exist_rels(flow_rel_kind: &FlowRelKind, from_rbum_id: &str, to_rbum_item_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<bool> {
-        // TODO In-depth inspection
         RbumRelServ::check_simple_rel(
             &RbumRelSimpleFindReq {
                 tag: Some(flow_rel_kind.to_string()),

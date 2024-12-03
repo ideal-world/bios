@@ -84,7 +84,7 @@ impl FlowCsConfigApi {
             .unwrap();
             let mut page = 1;
             loop {
-                let insts = FlowInstServ::paginate(None, None, None, None, Some(true), page, 200, &funs, &global_ctx).await.unwrap().records;
+                let insts = FlowInstServ::paginate(None, None, None, None, None, None, Some(true), page, 200, &funs, &global_ctx).await.unwrap().records;
                 if insts.is_empty() {
                     break;
                 }

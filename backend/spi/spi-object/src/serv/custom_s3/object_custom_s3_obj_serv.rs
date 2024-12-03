@@ -3,8 +3,8 @@ use bios_basic::spi::dto::spi_bs_dto::SpiBsDetailResp;
 use bios_basic::spi::spi_constants;
 use bios_basic::spi::spi_funs::SpiBsInst;
 use std::collections::HashMap;
-use std::sync::OnceLock;
 use std::sync::Arc;
+use std::sync::OnceLock;
 
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
@@ -31,14 +31,19 @@ impl CustomS3Service {
                 return Ok(inst);
             }
         }
-        let mut spi_bs_inst = crate::serv::custom_s3::object_custom_s3_initializer::init(&SpiBsCertResp {
-            kind_code: bs_cert.kind_code.clone(),
-            conn_uri: bs_cert.conn_uri.clone(),
-            ak: bs_cert.ak.clone(),
-            sk: bs_cert.sk.clone(),
-            ext: bs_cert.ext.clone(),
-            private: bs_cert.private,
-        }, ctx, true).await?;
+        let mut spi_bs_inst = crate::serv::custom_s3::object_custom_s3_initializer::init(
+            &SpiBsCertResp {
+                kind_code: bs_cert.kind_code.clone(),
+                conn_uri: bs_cert.conn_uri.clone(),
+                ak: bs_cert.ak.clone(),
+                sk: bs_cert.sk.clone(),
+                ext: bs_cert.ext.clone(),
+                private: bs_cert.private,
+            },
+            ctx,
+            true,
+        )
+        .await?;
         {
             let mut write = Self::get_custom_bs_caches().write().await;
             spi_bs_inst.ext.insert(spi_constants::SPI_KIND_CODE_FLAG.to_string(), bs_cert.kind_code.clone());
