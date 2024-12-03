@@ -7,4 +7,5 @@ use std::fmt::Debug;
 pub struct StatsConfig {
     pub rbum: RbumConfig,
     pub base_url: String,
+    pub invoke: InvokeConfig,
 }
