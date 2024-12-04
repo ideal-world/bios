@@ -191,6 +191,7 @@ pub(crate) async fn fact_record_load(
             continue;
         }
         let fact_col_conf = fact_col_conf.unwrap();
+        let req_fact_col_key = fact_col_conf.key.as_str();
         exist_fields.insert(req_fact_col_key.to_string());
         if fact_col_conf.kind == StatsFactColKind::Dimension {
             let Some(key) = fact_col_conf.dim_rel_conf_dim_key.as_ref() else {
