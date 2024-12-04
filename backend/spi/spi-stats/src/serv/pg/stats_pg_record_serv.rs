@@ -15,7 +15,7 @@ use tardis::{
     },
     log::info,
     serde_json,
-    web::web_resp::TardisPage,
+    web::{poem_openapi::types::Type, web_resp::TardisPage},
     TardisFuns, TardisFunsInst,
 };
 
@@ -187,7 +187,7 @@ pub(crate) async fn fact_record_load(
     for (req_fact_col_key, req_fact_col_value) in req_data {
         // 查找一下是否命中了rel_field字段
         let fact_col_conf = fact_col_conf_set.iter().find(|c| &c.key == req_fact_col_key || c.rel_field.as_ref() == Some(req_fact_col_key));
-        if fact_col_conf.is_none() || exist_fields.contains(req_fact_col_key) {
+        if fact_col_conf.is_none() || exist_fields.contains(req_fact_col_key) || req_fact_col_value.is_null() || req_fact_col_value.is_none() || req_fact_col_value.is_empty() {
             continue;
         }
         let fact_col_conf = fact_col_conf.unwrap();
