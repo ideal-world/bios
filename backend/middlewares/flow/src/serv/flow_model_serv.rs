@@ -324,9 +324,6 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
             ctx,
         )
         .await?;
-        if let Some(mut modify_version) = modify_req.modify_version.clone() {
-            FlowModelVersionServ::modify_item(&current_model.current_version_id, &mut modify_version, funs, ctx).await?;
-        }
         if current_model.own_paths != ctx.own_paths {
             return Err(funs.err().internal_error(
                 "flow_model_serv",
@@ -335,11 +332,22 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
                 "404-flow-model-not-found",
             ));
         }
+        if let Some(mut modify_version) = modify_req.modify_version.clone() {
+            FlowModelVersionServ::modify_item(&current_model.current_version_id, &mut modify_version, funs, ctx).await?;
+        }
         Ok(())
     }
 
     async fn after_modify_item(flow_model_id: &str, modify_req: &mut FlowModelModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let model_detail = Self::get_item(flow_model_id, &FlowModelFilterReq::default(), funs, ctx).await?;
+        if modify_req.status == Some(FlowModelStatus::Enabled) && model_detail.current_version_id.is_empty() {
+            return Err(funs.err().internal_error(
+                "flow_model_serv",
+                "after_modify_item",
+                "Current model is not enabled",
+                "500-flow_model-prohibit-enabled",
+            ));
+        }
         if let Some(rel_template_ids) = &modify_req.rel_template_ids {
             join_all(
                 FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelTemplate, flow_model_id, None, None, funs, ctx)
