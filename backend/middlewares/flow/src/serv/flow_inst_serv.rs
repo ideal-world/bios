@@ -85,7 +85,7 @@ impl FlowInstServ {
         };
         if !Self::find_details(
             &FlowInstFilterReq {
-                rel_business_obj_id: Some(start_req.rel_business_obj_id.to_string()),
+                rel_business_obj_ids: Some(vec![start_req.rel_business_obj_id.to_string()]),
                 flow_version_id: Some(flow_model.current_version_id.clone()),
                 finish: Some(false),
                 ..Default::default()
@@ -212,6 +212,9 @@ impl FlowInstServ {
                 flow_model::Entity,
                 Expr::col((flow_model::Entity, flow_model::Column::Id)).equals((flow_inst::Entity, flow_inst::Column::RelFlowVersionId)),
             );
+        if let Some(ids) = &filter.ids {
+            query.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::Id)).is_in(ids));
+        }
         if filter.with_sub.unwrap_or(false) {
             query.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::OwnPaths)).like(format!("{}%", ctx.own_paths)));
         } else {
@@ -236,8 +239,8 @@ impl FlowInstServ {
         if let Some(current_state_id) = &filter.current_state_id {
             query.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::CurrentStateId)).eq(current_state_id));
         }
-        if let Some(rel_business_obj_id) = &filter.rel_business_obj_id {
-            query.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::RelBusinessObjId)).eq(rel_business_obj_id));
+        if let Some(rel_business_obj_ids) = &filter.rel_business_obj_ids {
+            query.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::RelBusinessObjId)).is_in(rel_business_obj_ids));
         }
 
         Ok(())
@@ -486,8 +489,9 @@ impl FlowInstServ {
                 finish,
                 main,
                 current_state_id,
-                rel_business_obj_id,
+                rel_business_obj_ids: rel_business_obj_id.map(|id| vec![id]),
                 with_sub,
+                ..Default::default()
             },
             funs,
             ctx,
@@ -552,7 +556,7 @@ impl FlowInstServ {
                 rel_flow_version_map.insert(flow_inst.tag.clone(), rel_flow_versions);
             }
         }
-        let state_and_next_transitions = join_all(
+        let mut state_and_next_transitions = join_all(
             flow_insts
                 .iter()
                 .map(|flow_inst| async {
@@ -564,6 +568,18 @@ impl FlowInstServ {
                 .collect_vec(),
         )
         .await;
+        // 若当前数据项存在未结束的审批流，则清空其中的transitions
+        let unfinished_approve_flow_insts = Self::find_details(&FlowInstFilterReq {
+            rel_business_obj_ids: Some(flow_insts.iter().map(|flow_inst| flow_inst.rel_business_obj_id.clone()).collect_vec()),
+            main: Some(false),
+            finish: Some(false),
+            ..Default::default()
+        }, funs, ctx).await?.into_iter().map(|inst| inst.id.clone()).collect_vec();
+        state_and_next_transitions.iter_mut().map(|item| {
+            if unfinished_approve_flow_insts.contains(&item.flow_inst_id) {
+                item.next_flow_transitions.clear();
+            }
+        });
         Ok(state_and_next_transitions)
     }
 
@@ -1539,7 +1555,9 @@ impl FlowInstServ {
             inst_artifacts.guard_conf = guard_conf.clone();
         }
         if let Some(add_guard_conf_account_id) = &modify_artifacts.add_guard_conf_account_id {
-            inst_artifacts.guard_conf.guard_by_spec_account_ids.push(add_guard_conf_account_id.clone());
+            if !inst_artifacts.guard_conf.guard_by_spec_account_ids.contains(add_guard_conf_account_id) {
+                inst_artifacts.guard_conf.guard_by_spec_account_ids.push(add_guard_conf_account_id.clone());
+            }
         }
         if let Some(delete_guard_conf_account_id) = &modify_artifacts.delete_guard_conf_account_id {
             inst_artifacts.guard_conf.guard_by_spec_account_ids =

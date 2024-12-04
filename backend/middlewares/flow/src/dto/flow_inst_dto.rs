@@ -458,10 +458,11 @@ pub struct FlowInstOperateReq {
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone, Default)]
 #[serde(default)]
 pub struct FlowInstFilterReq {
+    pub ids: Option<Vec<String>>,
     /// 关联模型ID
     pub flow_version_id: Option<String>,
     /// 业务ID
-    pub rel_business_obj_id: Option<String>,
+    pub rel_business_obj_ids: Option<Vec<String>>,
     /// 标签
     pub tag: Option<String>,
 
