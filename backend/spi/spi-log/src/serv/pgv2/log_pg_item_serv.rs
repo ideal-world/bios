@@ -724,6 +724,11 @@ async fn push_to_eda(req: &LogItemAddV2Req, ref_fields: &Vec<String>, funs: &Tar
                 content.remove(ref_field);
             }
         }
+        if let Some(content) = req_clone.content.as_object_mut() {
+            if content.contains_key("owner") {
+                content.insert("owner".to_owned(), tardis::serde_json::Value::String(req.owner.clone().unwrap_or_default()));
+            }
+        }
         // if the op is deleted or log disabled, send the delete event to stats
         if (req_clone.op.as_ref().map_or(false, |op| op.to_lowercase() == "delete")) || req_clone.disable.unwrap_or(false) {
             let stats_delete: StatsItemDeleteReq = req_clone.into();
