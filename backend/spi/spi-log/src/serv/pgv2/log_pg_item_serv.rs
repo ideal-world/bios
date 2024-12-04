@@ -725,7 +725,7 @@ async fn push_to_eda(req: &LogItemAddV2Req, ref_fields: &Vec<String>, funs: &Tar
             }
         }
         if let Some(content) = req_clone.content.as_object_mut() {
-            if content.contains_key("owner") {
+            if !content.contains_key("owner") {
                 content.insert("owner".to_owned(), tardis::serde_json::Value::String(req.owner.clone().unwrap_or_default()));
             }
         }
