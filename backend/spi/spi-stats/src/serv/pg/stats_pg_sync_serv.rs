@@ -506,7 +506,7 @@ fn do_generate_sql_and_params(sql: &str, param_fields: &Vec<String>, fact_record
 pub(crate) fn validate_fact_sql(sql: &str) -> TardisResult<bool> {
     let re = Regex::new(r"^select\s+[^*][\w\s,]+\s+from").expect("should compile regex");
     if re.is_match(&sql.trim().to_lowercase()) {
-        let param_fields = find_param_fields_from_sql(sql);
+        let param_fields = find_select_param_fields_from_sql(sql);
         if param_fields.contains(&"idempotent_id".to_string()) {
             return Ok(true);
         } else {
@@ -522,8 +522,8 @@ pub(crate) fn validate_fact_sql(sql: &str) -> TardisResult<bool> {
 /// validate fact col sql
 /// validate sql is select statement and only select one field
 pub(crate) fn validate_fact_col_sql(sql: &str) -> bool {
-    let re = Regex::new(r"^select\s+\$([^,]+)\s+from").expect("should compile regex");
-    re.is_match(sql)
+    let re = Regex::new(r"^select\s+([^,]+)\s+from").expect("should compile regex");
+    re.is_match(&sql.trim().to_lowercase())
 }
 
 #[cfg(test)]
@@ -574,24 +574,24 @@ mod tests {
 
     #[test]
     fn test_validate_fact_sql() {
-        let sql = "select id from table";
-        assert!(validate_fact_sql(sql).unwrap());
-        let sql = "select id,name from table";
-        assert!(validate_fact_sql(sql).unwrap());
+        let sql = "select id as idempotent_id from table";
+        assert_eq!(validate_fact_sql(sql).unwrap(), true);
+        let sql = "select idempotent_id,name from table";
+        assert_eq!(validate_fact_sql(sql).unwrap(), true);
         let sql = "select * from table";
-        assert!(validate_fact_sql(sql).unwrap());
+        assert_eq!(validate_fact_sql(sql).unwrap(), false);
         let sql = "update table set id = ${id} where id = ${id}";
-        assert!(validate_fact_sql(sql).unwrap());
+        assert_eq!(validate_fact_sql(sql).unwrap(), false);
     }
 
     #[test]
     fn test_validate_fact_col_sql() {
-        let sql = "select id from table";
-        assert!(validate_fact_col_sql(sql));
-        let sql = "select id,name from table";
-        assert!(validate_fact_col_sql(sql));
+        let sql = "select idempotent_id from table";
+        assert_eq!(validate_fact_col_sql(sql), true);
+        let sql = "select idempotent_id,name from table";
+        assert_eq!(validate_fact_col_sql(sql), false);
         let sql = "update table set id = ${id} where id = ${id}";
-        assert!(validate_fact_col_sql(sql));
+        assert_eq!(validate_fact_col_sql(sql), false);
     }
 
     #[test]

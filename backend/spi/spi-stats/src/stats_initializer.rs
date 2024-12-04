@@ -1,4 +1,5 @@
 use bios_basic::spi::{api::spi_ci_bs_api, dto::spi_bs_dto::SpiBsCertResp, spi_constants, spi_funs::SpiBsInst, spi_initializer};
+use bios_sdk_invoke::invoke_initializer;
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
     log::info,
@@ -7,7 +8,7 @@ use tardis::{
 };
 
 use crate::{
-    api::ci::{stats_ci_conf_api, stats_ci_metric_api, stats_ci_record_api},
+    api::ci::{stats_ci_conf_api, stats_ci_metric_api, stats_ci_record_api, stats_ci_sync_api},
     stats_config::StatsConfig,
     stats_constants::DOMAIN_CODE,
 };
@@ -16,10 +17,12 @@ pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
     info!("[BIOS.Stats] Module initializing");
     let mut funs = crate::get_tardis_inst();
     bios_basic::rbum::rbum_initializer::init(funs.module_code(), funs.conf::<StatsConfig>().rbum.clone()).await?;
+    invoke_initializer::init(funs.module_code(), funs.conf::<StatsConfig>().invoke.clone())?;
     funs.begin().await?;
     let ctx = spi_initializer::init(DOMAIN_CODE, &funs).await?;
     init_db(&funs, &ctx).await?;
     funs.commit().await?;
+    crate::event::handle_events().await?;
     init_api(web_server).await?;
     info!("[BIOS.Stats] Module initialized");
     Ok(())
@@ -39,6 +42,7 @@ async fn init_api(web_server: &TardisWebServer) -> TardisResult<()> {
                 stats_ci_conf_api::StatsCiConfApi,
                 stats_ci_record_api::StatsCiRecordApi,
                 stats_ci_metric_api::StatsCiMetricApi,
+                stats_ci_sync_api::StatsCiSyncApi,
             ),
         )
         .await;

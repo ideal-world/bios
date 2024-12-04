@@ -203,27 +203,7 @@ pub struct AdvSearchItemQueryReq {
     pub group_by_or: Option<bool>,
     pub ext_by_or: Option<bool>,
     // Extended filtering conditions
-    pub ext: Option<Vec<AdvBasicQueryCondInfo>>,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-#[cfg_attr(feature = "default", derive(poem_openapi::Object))]
-pub struct AdvBasicQueryCondInfo {
-    pub in_ext: Option<bool>,
-    #[oai(validator(min_length = "1"))]
-    pub field: String,
-    pub op: BasicQueryOpKind,
-    pub value: Value,
-}
-
-impl From<AdvBasicQueryCondInfo> for BasicQueryCondInfo {
-    fn from(value: AdvBasicQueryCondInfo) -> Self {
-        Self {
-            field: value.field,
-            op: value.op,
-            value: value.value,
-        }
-    }
+    pub ext: Option<Vec<BasicQueryCondInfo>>,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Default, Clone)]
