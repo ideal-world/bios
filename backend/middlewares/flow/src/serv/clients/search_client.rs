@@ -66,7 +66,7 @@ impl FlowSearchClient {
         ]);
         let rel_version_ids = FlowInstServ::find_details(
             &FlowInstFilterReq {
-                rel_business_obj_id: Some(rel_business_obj_id.to_string()),
+                rel_business_obj_ids: Some(vec![rel_business_obj_id.to_string()]),
                 main: Some(false),
                 finish: Some(false),
                 ..Default::default()
