@@ -458,7 +458,6 @@ pub struct FlowInstOperateReq {
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone, Default)]
 #[serde(default)]
 pub struct FlowInstFilterReq {
-    pub kind: Option<FlowApprovalFilterKind>,
     pub ids: Option<Vec<String>>,
     /// 关联模型ID
     pub flow_version_id: Option<String>,
@@ -500,10 +499,20 @@ pub struct FlowInstSummaryResult {
     pub tag: String,
 }
 
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct FlowInstSearchReq {
+    // Search conditions
+    pub query: FlowInstFilterReq,
+    // Advanced search
+    pub query_kind: Option<FlowInstQueryKind>,
+    // Sort
+    // When the record set is very large, it will seriously affect the performance, it is not recommended to use.
+    pub sort: Option<Vec<FlowInstSearchSortReq>>,
+    pub page: FlowInstSearchPageReq,
+}
 
-/// 审批结果类型
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Enum, Eq, Hash, PartialEq, Clone)]
-pub enum FlowApprovalFilterKind {
+pub enum FlowInstQueryKind {
     /// 全部
     All,
     /// 待录入
@@ -512,4 +521,38 @@ pub enum FlowApprovalFilterKind {
     Approval,
     /// 我创建的
     Create,
+}
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
+pub struct FlowInstSearchPageReq {
+    pub number: u32,
+    pub size: u16,
+    // Get the total number of matching records.
+    // When the record set is very large, it will seriously affect the performance. It is not recommended to open it.
+    pub fetch_total: bool,
+}
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
+pub struct FlowInstSearchSortReq {
+    pub in_field: Option<String>,
+    #[oai(validator(min_length = "2"))]
+    pub field: String,
+    pub order: FlowInstSearchSortKind,
+}
+
+#[derive(poem_openapi::Enum, Serialize, Deserialize, Debug, Clone)]
+pub enum FlowInstSearchSortKind {
+    #[oai(rename = "asc")]
+    Asc,
+    #[oai(rename = "desc")]
+    Desc,
+}
+
+impl FlowInstSearchSortKind {
+    pub fn to_sql(&self) -> String {
+        match self {
+            FlowInstSearchSortKind::Asc => "ASC".to_string(),
+            FlowInstSearchSortKind::Desc => "DESC".to_string(),
+        }
+    }
 }

@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fmt::format, vec};
+use std::{collections::HashMap, vec};
 
 use itertools::Itertools;
 use pinyin::{to_pinyin_vec, Pinyin};
@@ -19,7 +19,7 @@ use bios_basic::{dto::BasicQueryCondInfo, enumeration::BasicQueryOpKind, helper:
 
 use crate::{
     dto::search_item_dto::{
-        AdvBasicQueryCondInfo, AdvSearchItemQueryReq, GroupSearchItemSearchReq, GroupSearchItemSearchResp, SearchItemAddReq, SearchItemModifyReq, SearchItemQueryReq,
+        AdvSearchItemQueryReq, GroupSearchItemSearchReq, GroupSearchItemSearchResp, SearchItemAddReq, SearchItemModifyReq, SearchItemQueryReq,
         SearchItemSearchCtxReq, SearchItemSearchPageReq, SearchItemSearchQScopeKind, SearchItemSearchReq, SearchItemSearchResp, SearchItemSearchSortReq, SearchQueryMetricsReq,
         SearchQueryMetricsResp,
     },

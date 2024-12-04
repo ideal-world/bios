@@ -10,7 +10,7 @@ use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 
 use crate::dto::flow_external_dto::FlowExternalCallbackOp;
 use crate::dto::flow_inst_dto::{
-    FlowApprovalFilterKind, FlowInstAbortReq, FlowInstDetailResp, FlowInstFindNextTransitionResp, FlowInstFindNextTransitionsReq, FlowInstFindStateAndTransitionsReq, FlowInstFindStateAndTransitionsResp, FlowInstModifyAssignedReq, FlowInstModifyCurrentVarsReq, FlowInstOperateReq, FlowInstStartReq, FlowInstSummaryResp, FlowInstTransferReq, FlowInstTransferResp
+    FlowInstAbortReq, FlowInstDetailResp, FlowInstFindNextTransitionResp, FlowInstFindNextTransitionsReq, FlowInstFindStateAndTransitionsReq, FlowInstFindStateAndTransitionsResp, FlowInstModifyAssignedReq, FlowInstModifyCurrentVarsReq, FlowInstOperateReq, FlowInstSearchReq, FlowInstStartReq, FlowInstSummaryResp, FlowInstTransferReq, FlowInstTransferResp
 };
 use crate::flow_constants;
 use crate::helper::loop_check_helper;
@@ -62,7 +62,6 @@ impl FlowCcInstApi {
     #[oai(path = "/", method = "get")]
     async fn paginate(
         &self,
-        kind: Query<Option<FlowApprovalFilterKind>>,
         flow_model_id: Query<Option<String>>,
         rel_business_obj_id: Query<Option<String>>,
         tag: Query<Option<String>>,
@@ -78,7 +77,6 @@ impl FlowCcInstApi {
         let funs = flow_constants::get_tardis_inst();
         let result = FlowInstServ::paginate(
             flow_model_id.0,
-            kind.0,
             tag.0,
             finish.0,
             main.0,
@@ -249,5 +247,13 @@ impl FlowCcInstApi {
         funs.commit().await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
+    }
+
+    /// Search Items
+    #[oai(path = "/search", method = "put")]
+    async fn search(&self, mut search_req: Json<FlowInstSearchReq>, ctx: TardisContextExtractor) -> TardisApiResult<TardisPage<FlowInstSummaryResp>> {
+        let funs = flow_constants::get_tardis_inst();
+        let resp = FlowInstServ::search(&mut search_req.0, &funs, &ctx.0).await?;
+        TardisResp::ok(resp)
     }
 }
