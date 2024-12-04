@@ -458,6 +458,7 @@ pub struct FlowInstOperateReq {
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone, Default)]
 #[serde(default)]
 pub struct FlowInstFilterReq {
+    pub kind: Option<FlowApprovalFilterKind>,
     pub ids: Option<Vec<String>>,
     /// 关联模型ID
     pub flow_version_id: Option<String>,
@@ -497,4 +498,18 @@ pub struct FlowInstSummaryResult {
     pub own_paths: String,
 
     pub tag: String,
+}
+
+
+/// 审批结果类型
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Enum, Eq, Hash, PartialEq, Clone)]
+pub enum FlowApprovalFilterKind {
+    /// 全部
+    All,
+    /// 待录入
+    Form,
+    /// 待审批
+    Approval,
+    /// 我创建的
+    Create,
 }

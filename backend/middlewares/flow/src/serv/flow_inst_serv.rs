@@ -36,10 +36,7 @@ use crate::{
     dto::{
         flow_external_dto::{FlowExternalCallbackOp, FlowExternalParams},
         flow_inst_dto::{
-            FLowInstStateApprovalConf, FLowInstStateConf, FLowInstStateFormConf, FlowApprovalResultKind, FlowInstAbortReq, FlowInstArtifacts, FlowInstArtifactsModifyReq,
-            FlowInstBatchBindReq, FlowInstBatchBindResp, FlowInstDetailResp, FlowInstFilterReq, FlowInstFindNextTransitionResp, FlowInstFindNextTransitionsReq,
-            FlowInstFindStateAndTransitionsReq, FlowInstFindStateAndTransitionsResp, FlowInstOperateReq, FlowInstStartReq, FlowInstSummaryResp, FlowInstSummaryResult,
-            FlowInstTransferReq, FlowInstTransferResp, FlowInstTransitionInfo, FlowOperationContext,
+            FLowInstStateApprovalConf, FLowInstStateConf, FLowInstStateFormConf, FlowApprovalFilterKind, FlowApprovalResultKind, FlowInstAbortReq, FlowInstArtifacts, FlowInstArtifactsModifyReq, FlowInstBatchBindReq, FlowInstBatchBindResp, FlowInstDetailResp, FlowInstFilterReq, FlowInstFindNextTransitionResp, FlowInstFindNextTransitionsReq, FlowInstFindStateAndTransitionsReq, FlowInstFindStateAndTransitionsResp, FlowInstOperateReq, FlowInstStartReq, FlowInstSummaryResp, FlowInstSummaryResult, FlowInstTransferReq, FlowInstTransferResp, FlowInstTransitionInfo, FlowOperationContext
         },
         flow_model_dto::FlowModelFilterReq,
         flow_model_version_dto::{FlowModelVersionDetailResp, FlowModelVersionFilterReq},
@@ -242,6 +239,22 @@ impl FlowInstServ {
         if let Some(rel_business_obj_ids) = &filter.rel_business_obj_ids {
             query.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::RelBusinessObjId)).is_in(rel_business_obj_ids));
         }
+        // if let Some(kind) = &filter.kind {
+        //     match *kind {
+        //         FlowApprovalFilterKind::Create => {
+        //             query.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::C)).eq(current_state_id));
+        //         },
+        //         FlowApprovalFilterKind::Form => {
+
+        //         },
+        //         FlowApprovalFilterKind::Approval => {
+
+        //         },
+        //         FlowApprovalFilterKind::All => {
+
+        //         },
+        //     }
+        // }
 
         Ok(())
     }
@@ -469,6 +482,7 @@ impl FlowInstServ {
 
     pub async fn paginate(
         flow_version_id: Option<String>,
+        kind: Option<FlowApprovalFilterKind>,
         tag: Option<String>,
         finish: Option<bool>,
         main: Option<bool>,
@@ -485,6 +499,7 @@ impl FlowInstServ {
             &mut query,
             &FlowInstFilterReq {
                 flow_version_id,
+                kind,
                 tag,
                 finish,
                 main,
@@ -575,7 +590,7 @@ impl FlowInstServ {
             finish: Some(false),
             ..Default::default()
         }, funs, ctx).await?.into_iter().map(|inst| inst.id.clone()).collect_vec();
-        state_and_next_transitions.iter_mut().map(|item| {
+        let _ = state_and_next_transitions.iter_mut().map(|item| {
             if unfinished_approve_flow_insts.contains(&item.flow_inst_id) {
                 item.next_flow_transitions.clear();
             }
