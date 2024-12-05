@@ -464,7 +464,7 @@ async fn do_paginate(
               fact_col.rel_external_id, 
               fact_col.dim_multi_values, 
               fact_col.dim_exclusive_rec, 
-              COALESCE(dim.data_type,COALESCE(col.dim_data_type,'String')) as dim_data_type, 
+              COALESCE(dim.data_type,COALESCE(fact_col.dim_data_type,'String')) as dim_data_type, 
               fact_col.dim_dynamic_url, 
               fact_col.mes_data_distinct, 
               fact_col.mes_data_type, 
