@@ -7,7 +7,6 @@ use tardis::{
     db::sea_orm,
     serde_json::Value,
     web::poem_openapi,
-    TardisFuns,
 };
 
 use super::{
@@ -178,19 +177,11 @@ pub struct FlowInstDetailResp {
     /// 动作列表
     pub transitions: Option<Vec<FlowInstTransitionInfo>>,
 
-    pub artifacts: Option<Value>,
+    pub artifacts: Option<FlowInstArtifacts>,
+
+    pub comments: Option<Vec<FlowInstCommentInfo>>,
 
     pub own_paths: String,
-}
-
-impl FlowInstDetailResp {
-    pub fn artifacts(&self) -> FlowInstArtifacts {
-        if let Some(artifacts) = self.artifacts.clone() {
-            TardisFuns::json.json_to_obj(artifacts).unwrap_or_default()
-        } else {
-            FlowInstArtifacts::default()
-        }
-    }
 }
 
 // 状态配置
@@ -279,8 +270,12 @@ pub struct FlowInstTransitionInfo {
     pub op_ctx: FlowOperationContext,
     /// 输出信息
     pub output_message: Option<String>,
-    /// 目标状态节点 （若未通过transition流转状态，则传入该值）
+    /// 目标状态节点
     pub target_state_id: Option<String>,
+    pub target_state_name: Option<String>,
+    /// 来源状态节点
+    pub from_state_id: Option<String>,
+    pub from_state_name: Option<String>,
 }
 
 /// 操作上下文信息
@@ -497,4 +492,26 @@ pub struct FlowInstSummaryResult {
     pub own_paths: String,
 
     pub tag: String,
+}
+
+/// 实例的评论信息
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug, poem_openapi::Object, sea_orm::FromJsonQueryResult)]
+pub struct FlowInstCommentInfo {
+    /// 输出信息
+    pub output_message: String,
+    /// 评价人上下文
+    pub from_ctx: FlowOperationContext,
+    /// 被评价人上下文
+    pub to_ctx: Option<FlowOperationContext>,
+    /// 评论时间
+    pub create_time: DateTime<Utc>,
+}
+
+/// 实例的评论信息
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug, poem_openapi::Object, sea_orm::FromJsonQueryResult)]
+pub struct FlowInstCommentReq {
+    /// 输出信息
+    pub output_message: String,
+    /// 被评价人上下文
+    pub to_ctx: Option<FlowOperationContext>
 }

@@ -1,5 +1,4 @@
 use tardis::db::sea_orm;
-use tardis::db::sea_orm::prelude::Json;
 use tardis::db::sea_orm::*;
 use tardis::{TardisCreateEntity, TardisEmptyBehavior, TardisEmptyRelation};
 

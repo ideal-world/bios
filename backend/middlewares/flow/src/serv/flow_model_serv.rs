@@ -575,7 +575,10 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
             let current_version = FlowModelVersionServ::get_item(
                 &flow_model.current_version_id,
                 &FlowModelVersionFilterReq {
-                    basic: filter.basic.clone(),
+                    basic: RbumBasicFilterReq {
+                        ids: None,
+                        ..filter.basic.clone()
+                    },
                     ..Default::default()
                 },
                 funs,
@@ -680,7 +683,10 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
                 let current_version = FlowModelVersionServ::get_item(
                     &flow_model.current_version_id,
                     &FlowModelVersionFilterReq {
-                        basic: filter.basic.clone(),
+                        basic: RbumBasicFilterReq {
+                            ids: None,
+                            ..filter.basic.clone()
+                        },
                         ..Default::default()
                     },
                     funs,
