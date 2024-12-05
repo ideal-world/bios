@@ -330,6 +330,37 @@ pub(crate) async fn find_by_fact_conf_key(fact_conf_key: &str, _funs: &TardisFun
     do_paginate(Some(fact_conf_key.to_string()), None, None, None, None, None, 1, u32::MAX, None, None, &conn, ctx).await.map(|page| page.records)
 }
 
+pub(crate) async fn find_by_fact_key_and_col_conf_key(
+    fact_conf_key: &str,
+    fact_col_conf_key: &str,
+    _funs: &TardisFunsInst,
+    ctx: &TardisContext,
+    inst: &SpiBsInst,
+) -> TardisResult<Option<StatsConfFactColInfoResp>> {
+    let bs_inst = inst.inst::<TardisRelDBClient>();
+    let (conn, _) = stats_pg_initializer::init_conf_fact_col_table_and_conn(bs_inst, ctx, true).await?;
+    if !common_pg::check_table_exit("stats_conf_fact_col", &conn, ctx).await? {
+        return Ok(None);
+    }
+    let result = do_paginate(
+        Some(fact_conf_key.to_string()),
+        Some(fact_col_conf_key.to_string()),
+        None,
+        None,
+        None,
+        None,
+        1,
+        1,
+        None,
+        None,
+        &conn,
+        ctx,
+    )
+    .await?
+    .records;
+    Ok(result.into_iter().next())
+}
+
 pub(crate) async fn paginate(
     fact_conf_key: Option<String>,
     fact_col_conf_key: Option<String>,
@@ -418,47 +449,49 @@ async fn do_paginate(
 
     let result;
     if let Some(dim_group_key) = &dim_group_key {
-        sql_where.push(format!("{dim_table_name}.dim_group_key = ${}", params.len() + 1));
+        sql_where.push(format!("dim.dim_group_key = ${}", params.len() + 1));
         params.push(Value::from(dim_group_key));
-
-        result = conn
-      .query_all(
-          &format!(
-              r#"SELECT fact_col.key, fact_col.show_name, fact_col.kind, fact_col.remark, fact_col.dim_rel_conf_dim_key, fact_col.rel_external_id, fact_col.dim_multi_values, fact_col.dim_exclusive_rec, fact_col.dim_data_type, fact_col.dim_dynamic_url, fact_col.mes_data_distinct, fact_col.mes_data_type, fact_col.mes_frequency, fact_col.mes_unit, fact_col.mes_act_by_dim_conf_keys, fact_col.rel_conf_fact_key, fact_col.rel_conf_fact_and_col_key, fact_col.create_time, fact_col.update_time, fact_col.rel_field, fact_col.rel_cert_id, fact_col.rel_sql, count(*) OVER() AS total
-FROM {table_name} AS fact_col inner join {dim_table_name} on fact_col.dim_rel_conf_dim_key = {dim_table_name}.key
-WHERE 
-  {}
-{}"#,
-              sql_where.join(" AND "),
-              if sql_order.is_empty() {
-                  "".to_string()
-              } else {
-                  format!("ORDER BY {}", sql_order.join(","))
-              }
-          ),
-          params,
-      )
-      .await?;
-    } else {
-        result = conn
-      .query_all(
-          &format!(
-              r#"SELECT key, show_name, kind, remark, dim_rel_conf_dim_key, rel_external_id, dim_multi_values, dim_exclusive_rec, dim_data_type, dim_dynamic_url, mes_data_distinct, mes_data_type, mes_frequency, mes_unit, mes_act_by_dim_conf_keys, rel_conf_fact_key, rel_conf_fact_and_col_key, create_time, update_time,rel_field,rel_cert_id,rel_sql, count(*) OVER() AS total
-FROM {table_name}
-WHERE 
-  {}
-{}"#,
-              sql_where.join(" AND "),
-              if sql_order.is_empty() {
-                  "".to_string()
-              } else {
-                  format!("ORDER BY {}", sql_order.join(","))
-              }
-          ),
-          params,
-      )
-      .await?;
     }
+    result = conn
+        .query_all(
+            &format!(
+                r#"SELECT 
+              fact_col.key, 
+              fact_col.show_name, 
+              fact_col.kind, 
+              fact_col.remark, 
+              fact_col.dim_rel_conf_dim_key, 
+              fact_col.rel_external_id, 
+              fact_col.dim_multi_values, 
+              fact_col.dim_exclusive_rec, 
+              COALESCE(dim.data_type,COALESCE(col.dim_data_type,'String')) as dim_data_type, 
+              fact_col.dim_dynamic_url, 
+              fact_col.mes_data_distinct, 
+              fact_col.mes_data_type, 
+              fact_col.mes_frequency, 
+              fact_col.mes_unit, 
+              fact_col.mes_act_by_dim_conf_keys, 
+              fact_col.rel_conf_fact_key, 
+              fact_col.rel_conf_fact_and_col_key, 
+              fact_col.create_time, fact_col.update_time, 
+              fact_col.rel_field, 
+              fact_col.rel_cert_id, 
+              fact_col.rel_sql,
+              count(*) OVER() AS total
+FROM {table_name} AS fact_col left join {dim_table_name} AS dim on fact_col.dim_rel_conf_dim_key = dim.key
+WHERE 
+  {}
+{}"#,
+                sql_where.join(" AND "),
+                if sql_order.is_empty() {
+                    "".to_string()
+                } else {
+                    format!("ORDER BY {}", sql_order.join(","))
+                }
+            ),
+            params,
+        )
+        .await?;
 
     let mut total_size: i64 = 0;
     let result = result

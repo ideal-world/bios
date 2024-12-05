@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 use bios_basic::spi::{
     spi_funs::SpiBsInst,
@@ -24,6 +24,7 @@ use crate::{
         stats_conf_dto::StatsConfFactColInfoResp,
         stats_record_dto::{StatsDimRecordAddReq, StatsFactRecordLoadReq, StatsFactRecordsLoadReq},
     },
+    serv::pg::stats_pg_sync_serv,
     stats_enumeration::StatsFactColKind,
 };
 
@@ -144,13 +145,11 @@ pub(crate) async fn fact_record_load(
 
     let fact_col_conf_set = stats_pg_conf_fact_col_serv::find_by_fact_conf_key(fact_conf_key, funs, ctx, inst).await?;
 
-    let mut fields = vec!["key".to_string(), "own_paths".to_string(), "ct".to_string(), "idempotent_id".to_string()];
-    let mut values = vec![
-        Value::from(fact_record_key),
-        Value::from(add_req.own_paths),
-        Value::from(add_req.ct),
-        Value::from(add_req.idempotent_id.clone().unwrap_or_default()),
-    ];
+    let mut fields_values = HashMap::<String, Value>::new();
+    fields_values.insert("key".to_string(), Value::from(fact_record_key));
+    fields_values.insert("own_paths".to_string(), Value::from(add_req.own_paths));
+    fields_values.insert("ct".to_string(), Value::from(add_req.ct));
+    fields_values.insert("idempotent_id".to_string(), Value::from(add_req.idempotent_id.clone().unwrap_or_default()));
     let req_data = add_req.data.as_object().ok_or_else(|| {
         funs.err().bad_request(
             "fact_record",
@@ -173,26 +172,24 @@ pub(crate) async fn fact_record_load(
         }
     }
     let latest_data_resp = fact_get_latest_record_raw(fact_conf_key, fact_record_key, &conn, ctx).await?;
-    fields.push("ext".to_string());
     if let Some(latest_data) = latest_data_resp.as_ref() {
         let mut storage_ext = latest_data.try_get("", "ext")?;
         merge(&mut storage_ext, add_req.ext.unwrap_or(TardisFuns::json.str_to_json("{}")?));
-        values.push(Value::from(storage_ext.clone()));
+        fields_values.insert("ext".to_string(), Value::from(storage_ext));
     } else {
-        values.push(add_req.ext.unwrap_or(TardisFuns::json.str_to_json("{}")?).into());
+        fields_values.insert("ext".to_string(), add_req.ext.unwrap_or(TardisFuns::json.str_to_json("{}")?).into());
     }
     // Because Dimension and Measure may share the same field
     // Existing fields are not stored in duplicate
-    let mut exist_fields = HashSet::new();
     for (req_fact_col_key, req_fact_col_value) in req_data {
         // 查找一下是否命中了rel_field字段
         let fact_col_conf = fact_col_conf_set.iter().find(|c| &c.key == req_fact_col_key || c.rel_field.as_ref() == Some(req_fact_col_key));
-        if fact_col_conf.is_none() || exist_fields.contains(req_fact_col_key) || req_fact_col_value.is_null() || req_fact_col_value.is_none() || req_fact_col_value.is_empty() {
+        if fact_col_conf.is_none() || fields_values.contains_key(req_fact_col_key) || req_fact_col_value.is_null() || req_fact_col_value.is_none() || req_fact_col_value.is_empty()
+        {
             continue;
         }
         let fact_col_conf = fact_col_conf.unwrap();
         let req_fact_col_key = fact_col_conf.key.as_str();
-        exist_fields.insert(req_fact_col_key.to_string());
         if fact_col_conf.kind == StatsFactColKind::Dimension {
             let Some(key) = fact_col_conf.dim_rel_conf_dim_key.as_ref() else {
                 return Err(funs.err().not_found("fact_record", "load", "Fail to get conf_dim_key", "400-spi-stats-fail-to-get-dim-config-key"));
@@ -205,11 +202,10 @@ pub(crate) async fn fact_record_load(
                     "400-spi˚-stats-fail-to-get-dim-config-key",
                 ));
             };
-            fields.push(req_fact_col_key.to_string());
             if fact_col_conf.dim_multi_values.unwrap_or(false) {
-                values.push(dim_conf.data_type.json_to_sea_orm_value_array(req_fact_col_value, false)?);
+                fields_values.insert(req_fact_col_key.to_string(), dim_conf.data_type.json_to_sea_orm_value_array(req_fact_col_value, false)?);
             } else {
-                values.push(dim_conf.data_type.json_to_sea_orm_value(req_fact_col_value, false)?);
+                fields_values.insert(req_fact_col_key.to_string(), dim_conf.data_type.json_to_sea_orm_value(req_fact_col_value, false)?);
             }
         } else if fact_col_conf.kind == StatsFactColKind::Measure {
             let Some(mes_data_type) = fact_col_conf.mes_data_type.as_ref() else {
@@ -220,8 +216,7 @@ pub(crate) async fn fact_record_load(
                     "400-spi-stats-invalid-request",
                 ));
             };
-            fields.push(req_fact_col_key.to_string());
-            values.push(mes_data_type.json_to_sea_orm_value(req_fact_col_value, false)?);
+            fields_values.insert(req_fact_col_key.to_string(), mes_data_type.json_to_sea_orm_value(req_fact_col_value, false)?);
         } else {
             let Some(req_fact_col_value) = req_fact_col_value.as_str() else {
                 return Err(funs.err().bad_request(
@@ -231,19 +226,20 @@ pub(crate) async fn fact_record_load(
                     "400-spi-stats-invalid-request",
                 ));
             };
-            fields.push(req_fact_col_key.to_string());
-            values.push(req_fact_col_value.into());
+            fields_values.insert(req_fact_col_key.to_string(), req_fact_col_value.into());
         }
-        // TODO check data type
     }
     info!("fact_col_conf_set={0},req_data={1}", fact_col_conf_set.len(), req_data.len());
     if let Some(latest_data) = latest_data_resp {
         for fact_col_conf in fact_col_conf_set {
-            if exist_fields.contains(&fact_col_conf.key) {
+            if fields_values.contains_key(&fact_col_conf.key) {
                 continue;
             }
-            exist_fields.insert(fact_col_conf.key.clone());
-            fields.push(fact_col_conf.key.to_string());
+            let fact_col_result = if fact_col_conf.rel_sql.is_some() {
+                stats_pg_sync_serv::fact_col_record_result(fact_col_conf.clone(), fields_values.clone(), funs, ctx, inst).await?
+            } else {
+                None
+            };
             if fact_col_conf.kind == StatsFactColKind::Dimension {
                 let Some(dim_rel_conf_dim_key) = &fact_col_conf.dim_rel_conf_dim_key else {
                     return Err(funs.err().internal_error("fact_record", "load", "dim_rel_conf_dim_key unexpectedly being empty", "500-spi-stats-internal-error"));
@@ -257,9 +253,15 @@ pub(crate) async fn fact_record_load(
                     ));
                 };
                 if fact_col_conf.dim_multi_values.unwrap_or(false) {
-                    values.push(dim_conf.data_type.result_to_sea_orm_value_array(&latest_data, &fact_col_conf.key)?);
+                    fields_values.insert(
+                        fact_col_conf.key.to_string(),
+                        fact_col_result.unwrap_or(dim_conf.data_type.result_to_sea_orm_value_array(&latest_data, &fact_col_conf.key)?),
+                    );
                 } else {
-                    values.push(dim_conf.data_type.result_to_sea_orm_value(&latest_data, &fact_col_conf.key)?);
+                    fields_values.insert(
+                        fact_col_conf.key.to_string(),
+                        fact_col_result.unwrap_or(dim_conf.data_type.result_to_sea_orm_value(&latest_data, &fact_col_conf.key)?),
+                    );
                 }
             } else if fact_col_conf.kind == StatsFactColKind::Measure {
                 let Some(mes_data_type) = fact_col_conf.mes_data_type.as_ref() else {
@@ -270,18 +272,27 @@ pub(crate) async fn fact_record_load(
                         "400-spi-stats-invalid-request",
                     ));
                 };
-                values.push(mes_data_type.result_to_sea_orm_value(&latest_data, &fact_col_conf.key)?);
+                fields_values.insert(
+                    fact_col_conf.key.to_string(),
+                    fact_col_result.unwrap_or(mes_data_type.result_to_sea_orm_value(&latest_data, &fact_col_conf.key)?),
+                );
             } else {
-                values.push(Value::from(latest_data.try_get::<String>("", &fact_col_conf.key)?));
+                fields_values.insert(
+                    fact_col_conf.key.to_string(),
+                    fact_col_result.unwrap_or(Value::from(latest_data.try_get::<String>("", &fact_col_conf.key)?)),
+                );
             }
         }
     } else {
         for fact_col_conf in fact_col_conf_set {
-            if exist_fields.contains(&fact_col_conf.key) {
+            if fields_values.contains_key(&fact_col_conf.key) {
                 continue;
             }
-            exist_fields.insert(fact_col_conf.key.clone());
-            fields.push(fact_col_conf.key.to_string());
+            let fact_col_result = if fact_col_conf.rel_sql.is_some() {
+                stats_pg_sync_serv::fact_col_record_result(fact_col_conf.clone(), fields_values.clone(), funs, ctx, inst).await?
+            } else {
+                None
+            };
             if fact_col_conf.kind == StatsFactColKind::Dimension {
                 let Some(dim_rel_conf_dim_key) = &fact_col_conf.dim_rel_conf_dim_key else {
                     return Err(funs.err().internal_error("fact_record", "load", "dim_rel_conf_dim_key unexpectedly being empty", "500-spi-stats-internal-error"));
@@ -295,9 +306,15 @@ pub(crate) async fn fact_record_load(
                     ));
                 };
                 if fact_col_conf.dim_multi_values.unwrap_or(false) {
-                    values.push(dim_conf.data_type.result_to_sea_orm_value_array_default()?);
+                    fields_values.insert(
+                        fact_col_conf.key.to_string(),
+                        fact_col_result.unwrap_or(dim_conf.data_type.result_to_sea_orm_value_array_default()?),
+                    );
                 } else {
-                    values.push(dim_conf.data_type.result_to_sea_orm_value_default()?);
+                    fields_values.insert(
+                        fact_col_conf.key.to_string(),
+                        fact_col_result.unwrap_or(dim_conf.data_type.result_to_sea_orm_value_default()?),
+                    );
                 }
             } else if fact_col_conf.kind == StatsFactColKind::Measure {
                 let Some(mes_data_type) = fact_col_conf.mes_data_type.as_ref() else {
@@ -308,11 +325,12 @@ pub(crate) async fn fact_record_load(
                         "400-spi-stats-invalid-request",
                     ));
                 };
-                values.push(mes_data_type.result_to_sea_orm_value_default()?);
+                fields_values.insert(fact_col_conf.key.to_string(), fact_col_result.unwrap_or(mes_data_type.result_to_sea_orm_value_default()?));
             }
         }
     }
-
+    let field_keys = fields_values.keys().collect::<Vec<&String>>();
+    let field_values = fields_values.values().collect::<Vec<&Value>>();
     let table_name = package_table_name(&format!("stats_inst_fact_{fact_conf_key}"), ctx);
     conn.execute_one(
         &format!(
@@ -321,10 +339,10 @@ pub(crate) async fn fact_record_load(
 VALUES
 ({})
 "#,
-            fields.join(","),
-            fields.iter().enumerate().map(|(i, _)| format!("${}", i + 1)).collect::<Vec<String>>().join(",")
+            field_keys.into_iter().join(","),
+            field_values.iter().enumerate().map(|(i, _)| format!("${}", i + 1)).collect::<Vec<String>>().join(",")
         ),
-        values,
+        field_values.into_iter().cloned().collect::<Vec<Value>>(),
     )
     .await?;
     conn.commit().await?;
