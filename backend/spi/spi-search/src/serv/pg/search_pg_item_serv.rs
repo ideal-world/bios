@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fmt::format, vec};
+use std::{collections::HashMap, vec};
 
 use itertools::Itertools;
 use pinyin::{to_pinyin_vec, Pinyin};
