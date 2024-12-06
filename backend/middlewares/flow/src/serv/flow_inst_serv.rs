@@ -153,7 +153,7 @@ impl FlowInstServ {
             };
 
             let current_state_id = FlowStateServ::match_state_id_by_name(&flow_model_id, &rel_business_obj.current_state_name.clone().unwrap_or_default(), funs, ctx).await?;
-            let mut inst_id = Self::get_inst_ids_by_rel_business_obj_id(vec![rel_business_obj.rel_business_obj_id.clone().unwrap_or_default()], funs, ctx).await?.pop();
+            let mut inst_id = Self::get_inst_ids_by_rel_business_obj_id(vec![rel_business_obj.rel_business_obj_id.clone().unwrap_or_default()], Some(true), funs, ctx).await?.pop();
             if inst_id.is_none() {
                 let id = TardisFuns::field.nanoid();
                 let flow_inst: flow_inst::ActiveModel = flow_inst::ActiveModel {
@@ -183,6 +183,7 @@ impl FlowInstServ {
     }
 
     async fn package_ext_query(query: &mut SelectStatement, filter: &FlowInstFilterReq, _: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let flow_model_version_table = Alias::new("flow_model_version");
         query
             .columns([
                 (flow_inst::Entity, flow_inst::Column::Id),
@@ -199,8 +200,13 @@ impl FlowInstServ {
                 (flow_inst::Entity, flow_inst::Column::OwnPaths),
                 (flow_inst::Entity, flow_inst::Column::Tag),
             ])
+            .expr_as(Expr::col((flow_model_version_table.clone(), Alias::new("rel_model_id"))).if_null(""), Alias::new("rel_flow_model_id"))
             .expr_as(Expr::col((RBUM_ITEM_TABLE.clone(), NAME_FIELD.clone())).if_null(""), Alias::new("rel_flow_model_name"))
             .from(flow_inst::Entity)
+            .left_join(
+                flow_model_version_table.clone(),
+                Expr::col((flow_model_version_table.clone(), ID_FIELD.clone())).equals((flow_inst::Entity, flow_inst::Column::RelFlowVersionId)),
+            )
             .left_join(
                 RBUM_ITEM_TABLE.clone(),
                 Expr::col((RBUM_ITEM_TABLE.clone(), ID_FIELD.clone())).equals((flow_inst::Entity, flow_inst::Column::RelFlowVersionId)),
@@ -245,7 +251,7 @@ impl FlowInstServ {
         funs.db().find_dtos::<FlowInstSummaryResult>(&query).await
     }
 
-    pub async fn get_inst_ids_by_rel_business_obj_id(rel_business_obj_ids: Vec<String>, funs: &TardisFunsInst, _ctx: &TardisContext) -> TardisResult<Vec<String>> {
+    pub async fn get_inst_ids_by_rel_business_obj_id(rel_business_obj_ids: Vec<String>, main: Option<bool>, funs: &TardisFunsInst, _ctx: &TardisContext) -> TardisResult<Vec<String>> {
         #[derive(sea_orm::FromQueryResult)]
         pub struct FlowInstIdsResult {
             id: String,
@@ -253,7 +259,10 @@ impl FlowInstServ {
         let result = funs
             .db()
             .find_dtos::<FlowInstIdsResult>(
-                Query::select().columns([flow_inst::Column::Id]).from(flow_inst::Entity).and_where(Expr::col(flow_inst::Column::RelBusinessObjId).is_in(&rel_business_obj_ids)),
+                Query::select().columns([flow_inst::Column::Id])
+                .from(flow_inst::Entity)
+                .and_where(Expr::col(flow_inst::Column::RelBusinessObjId).is_in(&rel_business_obj_ids))
+                .and_where(Expr::col(flow_inst::Column::Main).eq(main)),
             )
             .await?
             .iter()
@@ -502,6 +511,7 @@ impl FlowInstServ {
                 .map(|inst| FlowInstSummaryResp {
                     id: inst.id,
                     rel_flow_version_id: inst.rel_flow_version_id,
+                    rel_flow_model_id: inst.rel_flow_model_id,
                     rel_flow_model_name: inst.rel_flow_model_name,
                     create_ctx: TardisFuns::json.json_to_obj(inst.create_ctx).unwrap(),
                     create_time: inst.create_time,
@@ -1492,11 +1502,20 @@ impl FlowInstServ {
                         funs,
                     )
                     .await?;
-                }
+                },
                 "__DELETE__" => {
                     FlowExternalServ::do_delete_rel_obj(&flow_inst_detail.tag, &flow_inst_detail.rel_business_obj_id, &flow_inst_detail.id, ctx, funs).await?;
-                }
-                _ => {}
+                },
+                _ => {
+                    if let Some(inst_id) = Self::get_inst_ids_by_rel_business_obj_id(vec![flow_inst_detail.rel_business_obj_id.clone()], Some(true), funs, ctx).await?.pop() {
+                        let inst_detail = Self::get(&inst_id, funs, ctx).await?;
+                        Self::transfer(&inst_detail, &FlowInstTransferReq {
+                            flow_transition_id: rel_transition.clone(),
+                            message: None,
+                            vars: None,
+                        }, true, FlowExternalCallbackOp::Default, loop_check_helper::InstancesTransition::default(), ctx, funs).await?;
+                    }
+                },
             },
             _ => {}
         }
@@ -1591,7 +1610,6 @@ impl FlowInstServ {
         Ok(())
     }
 
-    // @TODO 需补充按钮的权限控制逻辑
     fn get_state_conf(
         state_id: &str,
         state_kind: &FlowStateKind,
@@ -1910,12 +1928,14 @@ impl FlowInstServ {
                 flow_inst.output_message,
                 flow_inst.own_paths,
                 flow_inst.tag,
-                model_version.name as rel_flow_model_name
+                model_version.name as rel_flow_model_name,
+                flow_model_version.rel_model_id as rel_flow_model_id
                 {}
             FROM
             flow_inst
             LEFT JOIN flow_state AS current_state ON flow_inst.current_state_id = current_state.id
             LEFT JOIN rbum_item AS model_version ON flow_inst.rel_flow_version_id = model_version.id
+            LEFT JOIN flow_model_version ON flow_inst.rel_flow_version_id = flow_model_version.id
             WHERE  
             {}
             {}
@@ -1943,6 +1963,7 @@ impl FlowInstServ {
             Ok(FlowInstSummaryResp {
                 id: item.try_get("", "id")?,
                 rel_flow_version_id: item.try_get("", "rel_flow_version_id")?,
+                rel_flow_model_id: item.try_get("", "rel_flow_model_id")?,
                 rel_flow_model_name: item.try_get("", "rel_flow_model_name")?,
                 rel_business_obj_id: item.try_get("", "rel_business_obj_id")?,
                 current_state_id: item.try_get("", "current_state_id")?,
