@@ -416,23 +416,23 @@ async fn do_paginate(
     let mut sql_order = vec![];
     let mut params: Vec<Value> = vec![Value::from(page_size), Value::from((page_number - 1) * page_size)];
     if let Some(fact_conf_key) = fact_conf_key {
-        sql_where.push(format!("rel_conf_fact_key = ${}", params.len() + 1));
+        sql_where.push(format!("fact_col.rel_conf_fact_key = ${}", params.len() + 1));
         params.push(Value::from(fact_conf_key));
     }
     if let Some(fact_col_conf_key) = &fact_col_conf_key {
-        sql_where.push(format!("key = ${}", params.len() + 1));
+        sql_where.push(format!("fact_col.key = ${}", params.len() + 1));
         params.push(Value::from(fact_col_conf_key));
     }
     if let Some(dim_key) = &dim_key {
-        sql_where.push(format!("dim_rel_conf_dim_key = ${}", params.len() + 1));
+        sql_where.push(format!("fact_col.dim_rel_conf_dim_key = ${}", params.len() + 1));
         params.push(Value::from(dim_key));
     }
     if let Some(show_name) = &show_name {
-        sql_where.push(format!("show_name LIKE ${}", params.len() + 1));
+        sql_where.push(format!("fact_col.show_name LIKE ${}", params.len() + 1));
         params.push(Value::from(format!("%{show_name}%")));
     }
     if let Some(rel_external_id) = &rel_external_id {
-        sql_where.push(format!("(rel_external_id = ${} OR rel_external_id = ${} )", params.len() + 1, params.len() + 2));
+        sql_where.push(format!("(fact_col.rel_external_id = ${} OR fact_col.rel_external_id = ${} )", params.len() + 1, params.len() + 2));
         params.push(Value::from("".to_string()));
         params.push(Value::from(rel_external_id));
     } else {
@@ -441,10 +441,10 @@ async fn do_paginate(
     }
 
     if let Some(desc_by_create) = desc_by_create {
-        sql_order.push(format!("create_time {}", if desc_by_create { "DESC" } else { "ASC" }));
+        sql_order.push(format!("fact_col.create_time {}", if desc_by_create { "DESC" } else { "ASC" }));
     }
     if let Some(desc_by_update) = desc_by_update {
-        sql_order.push(format!("update_time {}", if desc_by_update { "DESC" } else { "ASC" }));
+        sql_order.push(format!("fact_col.update_time {}", if desc_by_update { "DESC" } else { "ASC" }));
     }
 
     let result;
