@@ -57,7 +57,10 @@ impl FlowCiInstApi {
                     start_time: Utc::now(),
                     op_ctx: FlowOperationContext::default(),
                     output_message: Some(tran.next_flow_transition_name),
+                    from_state_id: None,
+                    from_state_name: None,
                     target_state_id: None,
+                    target_state_name: None,
                 })
                 .collect_vec(),
         );
@@ -214,7 +217,7 @@ impl FlowCiInstApi {
     async fn bind(&self, add_req: Json<FlowInstBindReq>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<String> {
         let mut funs = flow_constants::get_tardis_inst();
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
-        let inst_id = FlowInstServ::get_inst_ids_by_rel_business_obj_id(vec![add_req.0.rel_business_obj_id.clone()], &funs, &ctx.0).await?.pop();
+        let inst_id = FlowInstServ::get_inst_ids_by_rel_business_obj_id(vec![add_req.0.rel_business_obj_id.clone()], Some(true), &funs, &ctx.0).await?.pop();
         let result = if let Some(inst_id) = inst_id {
             inst_id
         } else {
@@ -260,7 +263,7 @@ impl FlowCiInstApi {
         let funs = flow_constants::get_tardis_inst();
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         let rel_business_obj_ids: Vec<_> = obj_ids.0.split(',').map(|id| id.to_string()).collect();
-        let inst_ids = FlowInstServ::get_inst_ids_by_rel_business_obj_id(rel_business_obj_ids, &funs, &ctx.0).await?;
+        let inst_ids = FlowInstServ::get_inst_ids_by_rel_business_obj_id(rel_business_obj_ids, Some(true), &funs, &ctx.0).await?;
         let mut result = vec![];
         for inst_id in inst_ids {
             if let Ok(inst_detail) = FlowInstServ::get(&inst_id, &funs, &ctx.0).await {

@@ -75,9 +75,9 @@ impl FlowEventServ {
             return Ok(());
         }
         for flow_transition in flow_transitions {
-            if Self::check_front_conditions(&flow_inst_detail, flow_transition.action_by_front_changes())? {
+            if Self::check_front_conditions(flow_inst_detail, flow_transition.action_by_front_changes())? {
                 FlowInstServ::transfer(
-                    &flow_inst_detail,
+                    flow_inst_detail,
                     &FlowInstTransferReq {
                         flow_transition_id: flow_transition.id.clone(),
                         message: None,
@@ -266,10 +266,10 @@ impl FlowEventServ {
                                         && change_info.changed_val.clone().unwrap().as_object().unwrap().get("op").is_some()
                                     {
                                         let original_value = if let Some(custom_value) =
-                                            FlowInstServ::find_var_by_inst_id(&flow_inst_detail, &format!("custom_{}", change_info.var_name), funs, ctx).await?
+                                            FlowInstServ::find_var_by_inst_id(flow_inst_detail, &format!("custom_{}", change_info.var_name), funs, ctx).await?
                                         {
                                             Some(custom_value)
-                                        } else if let Some(original_value) = FlowInstServ::find_var_by_inst_id(&flow_inst_detail, &change_info.var_name, funs, ctx).await? {
+                                        } else if let Some(original_value) = FlowInstServ::find_var_by_inst_id(flow_inst_detail, &change_info.var_name, funs, ctx).await? {
                                             Some(original_value)
                                         } else {
                                             Some(json!(""))
@@ -324,7 +324,8 @@ impl FlowEventServ {
                             .await?;
                             if !resp.rel_bus_objs.is_empty() {
                                 for rel_bus_obj_id in resp.rel_bus_objs.pop().unwrap().rel_bus_obj_ids {
-                                    let inst_id = FlowInstServ::get_inst_ids_by_rel_business_obj_id(vec![rel_bus_obj_id.clone()], funs, ctx).await?.pop().unwrap_or_default();
+                                    let inst_id =
+                                        FlowInstServ::get_inst_ids_by_rel_business_obj_id(vec![rel_bus_obj_id.clone()], Some(true), funs, ctx).await?.pop().unwrap_or_default();
                                     FlowExternalServ::do_modify_field(
                                         &rel_tag,
                                         Some(next_flow_transition.clone()),
@@ -399,7 +400,7 @@ impl FlowEventServ {
                 funs,
             )
             .await?;
-            FlowEventServ::do_front_change(&flow_inst_detail, modified_instance_transations.clone(), ctx, funs).await?;
+            FlowEventServ::do_front_change(flow_inst_detail, modified_instance_transations.clone(), ctx, funs).await?;
         }
 
         Ok(())
@@ -426,7 +427,7 @@ impl FlowEventServ {
                             rel_tags.push((condition_item.obj_tag.clone().unwrap(), condition_item.obj_tag_rel_kind.clone()));
                         }
                     }
-                    let inst_id = FlowInstServ::get_inst_ids_by_rel_business_obj_id(vec![rel_obj_id.clone()], funs, ctx).await?.pop().unwrap_or_default();
+                    let inst_id = FlowInstServ::get_inst_ids_by_rel_business_obj_id(vec![rel_obj_id.clone()], Some(true), funs, ctx).await?.pop().unwrap_or_default();
                     let tag = if change_info.obj_tag_rel_kind == Some(TagRelKind::ParentOrSub) {
                         &flow_model.tag
                     } else {
@@ -462,7 +463,7 @@ impl FlowEventServ {
             result_rel_obj_ids = result_rel_obj_ids.into_iter().filter(|result_rel_obj_id| !mismatch_rel_obj_ids.contains(result_rel_obj_id)).collect_vec();
         }
 
-        let result = FlowInstServ::get_inst_ids_by_rel_business_obj_id(result_rel_obj_ids, funs, ctx).await?;
+        let result = FlowInstServ::get_inst_ids_by_rel_business_obj_id(result_rel_obj_ids, Some(true), funs, ctx).await?;
         Ok(result)
     }
 

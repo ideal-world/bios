@@ -341,12 +341,7 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
     async fn after_modify_item(flow_model_id: &str, modify_req: &mut FlowModelModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let model_detail = Self::get_item(flow_model_id, &FlowModelFilterReq::default(), funs, ctx).await?;
         if modify_req.status == Some(FlowModelStatus::Enabled) && model_detail.current_version_id.is_empty() {
-            return Err(funs.err().internal_error(
-                "flow_model_serv",
-                "after_modify_item",
-                "Current model is not enabled",
-                "500-flow_model-prohibit-enabled",
-            ));
+            return Err(funs.err().internal_error("flow_model_serv", "after_modify_item", "Current model is not enabled", "500-flow_model-prohibit-enabled"));
         }
         if let Some(rel_template_ids) = &modify_req.rel_template_ids {
             join_all(
@@ -575,7 +570,10 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
             let current_version = FlowModelVersionServ::get_item(
                 &flow_model.current_version_id,
                 &FlowModelVersionFilterReq {
-                    basic: filter.basic.clone(),
+                    basic: RbumBasicFilterReq {
+                        ids: None,
+                        ..filter.basic.clone()
+                    },
                     ..Default::default()
                 },
                 funs,
@@ -680,7 +678,10 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
                 let current_version = FlowModelVersionServ::get_item(
                     &flow_model.current_version_id,
                     &FlowModelVersionFilterReq {
-                        basic: filter.basic.clone(),
+                        basic: RbumBasicFilterReq {
+                            ids: None,
+                            ..filter.basic.clone()
+                        },
                         ..Default::default()
                     },
                     funs,

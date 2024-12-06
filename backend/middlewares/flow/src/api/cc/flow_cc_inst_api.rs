@@ -10,7 +10,9 @@ use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 
 use crate::dto::flow_external_dto::FlowExternalCallbackOp;
 use crate::dto::flow_inst_dto::{
-    FlowInstAbortReq, FlowInstDetailResp, FlowInstFindNextTransitionResp, FlowInstFindNextTransitionsReq, FlowInstFindStateAndTransitionsReq, FlowInstFindStateAndTransitionsResp, FlowInstModifyAssignedReq, FlowInstModifyCurrentVarsReq, FlowInstOperateReq, FlowInstSearchReq, FlowInstStartReq, FlowInstSummaryResp, FlowInstTransferReq, FlowInstTransferResp
+    FlowInstAbortReq, FlowInstCommentReq, FlowInstDetailResp, FlowInstFindNextTransitionResp, FlowInstFindNextTransitionsReq, FlowInstFindStateAndTransitionsReq,
+    FlowInstFindStateAndTransitionsResp, FlowInstModifyAssignedReq, FlowInstModifyCurrentVarsReq, FlowInstOperateReq, FlowInstSearchReq, FlowInstStartReq, FlowInstSummaryResp,
+    FlowInstTransferReq, FlowInstTransferResp,
 };
 use crate::flow_constants;
 use crate::helper::loop_check_helper;
@@ -244,6 +246,20 @@ impl FlowCcInstApi {
         let inst = FlowInstServ::get(&flow_inst_id.0, &funs, &ctx.0).await?;
         funs.begin().await?;
         FlowInstServ::operate(&inst, &operate_req.0, &funs, &ctx.0).await?;
+        funs.commit().await?;
+        ctx.0.execute_task().await?;
+        TardisResp::ok(Void {})
+    }
+
+    /// add comment
+    ///
+    /// 添加评论
+    #[oai(path = "/:flow_inst_id/add_comment", method = "post")]
+    async fn add_comment(&self, flow_inst_id: Path<String>, comment_req: Json<FlowInstCommentReq>, ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<Void> {
+        let mut funs = flow_constants::get_tardis_inst();
+        let inst = FlowInstServ::get(&flow_inst_id.0, &funs, &ctx.0).await?;
+        funs.begin().await?;
+        FlowInstServ::add_comment(&inst, &comment_req.0, &funs, &ctx.0).await?;
         funs.commit().await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
