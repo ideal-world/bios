@@ -447,7 +447,7 @@ pub struct StatsConfFactColModifyReq {
 /// Fact Column Configuration Response Object
 ///
 /// 事实列配置响应对象
-#[derive(poem_openapi::Object, sea_orm::FromQueryResult, Serialize, Deserialize, Debug)]
+#[derive(poem_openapi::Object, sea_orm::FromQueryResult, Serialize, Deserialize, Debug, Clone)]
 pub struct StatsConfFactColInfoResp {
     /// The primary key or encoding passed in from the external system
     ///
