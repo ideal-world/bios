@@ -505,9 +505,9 @@ pub struct FlowInstCommentInfo {
     /// 输出信息
     pub output_message: String,
     /// 评价人上下文
-    pub from_ctx: FlowOperationContext,
-    /// 被评价人上下文
-    pub to_ctx: Option<FlowOperationContext>,
+    pub owner: String,
+    pub parent_comment_id: String,
+    pub parent_owner: String,
     /// 评论时间
     pub create_time: DateTime<Utc>,
 }
@@ -517,8 +517,8 @@ pub struct FlowInstCommentInfo {
 pub struct FlowInstCommentReq {
     /// 输出信息
     pub output_message: String,
-    /// 被评价人上下文
-    pub to_ctx: Option<FlowOperationContext>
+    pub parent_comment_id: String,
+    pub parent_owner: String,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]

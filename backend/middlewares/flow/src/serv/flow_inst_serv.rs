@@ -1891,8 +1891,9 @@ impl FlowInstServ {
         let mut comments = flow_inst_detail.comments.clone().unwrap_or_default();
         comments.push(FlowInstCommentInfo {
             output_message: add_comment.output_message.clone(),
-            from_ctx: FlowOperationContext::from_ctx(ctx),
-            to_ctx: add_comment.to_ctx.clone(),
+            owner: ctx.owner.clone(),
+            parent_comment_id: add_comment.parent_comment_id.clone(),
+            parent_owner: add_comment.parent_owner.clone(),
             create_time: Utc::now(),
         });
         let flow_inst = flow_inst::ActiveModel {
