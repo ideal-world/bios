@@ -481,7 +481,7 @@ pub struct FlowInstSummaryResult {
     pub rel_flow_version_id: String,
     pub rel_flow_model_id: String,
     pub rel_flow_model_name: String,
-    
+
     pub current_vars: Option<Value>,
     pub current_state_id: String,
     pub rel_business_obj_id: String,
