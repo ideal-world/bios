@@ -109,8 +109,8 @@ impl StatsDataTypeKind {
     pub fn result_to_sea_orm_value(&self, query_result: &QueryResult, key: &str) -> TardisResult<sea_orm::Value> {
         Ok(match self {
             StatsDataTypeKind::String => sea_orm::Value::from(query_result.try_get::<String>("", key)?),
-            StatsDataTypeKind::Int => sea_orm::Value::from(query_result.try_get::<i32>("", key)?),
-            StatsDataTypeKind::Float => sea_orm::Value::from(query_result.try_get::<f32>("", key)?),
+            StatsDataTypeKind::Int => sea_orm::Value::from(query_result.try_get::<i64>("", key)?),
+            StatsDataTypeKind::Float => sea_orm::Value::from(query_result.try_get::<f64>("", key)?),
             StatsDataTypeKind::Double => sea_orm::Value::from(query_result.try_get::<f64>("", key)?),
             StatsDataTypeKind::Boolean => sea_orm::Value::from(query_result.try_get::<bool>("", key)?),
             StatsDataTypeKind::Date => sea_orm::Value::from(query_result.try_get::<NaiveDate>("", key)?),
@@ -121,8 +121,8 @@ impl StatsDataTypeKind {
     pub fn result_to_sea_orm_value_array(&self, query_result: &QueryResult, key: &str) -> TardisResult<sea_orm::Value> {
         Ok(match self {
             StatsDataTypeKind::String => sea_orm::Value::from(query_result.try_get::<Vec<String>>("", key)?),
-            StatsDataTypeKind::Int => sea_orm::Value::from(query_result.try_get::<Vec<i32>>("", key)?),
-            StatsDataTypeKind::Float => sea_orm::Value::from(query_result.try_get::<Vec<f32>>("", key)?),
+            StatsDataTypeKind::Int => sea_orm::Value::from(query_result.try_get::<Vec<i64>>("", key)?),
+            StatsDataTypeKind::Float => sea_orm::Value::from(query_result.try_get::<Vec<f64>>("", key)?),
             StatsDataTypeKind::Double => sea_orm::Value::from(query_result.try_get::<Vec<f64>>("", key)?),
             StatsDataTypeKind::Boolean => sea_orm::Value::from(query_result.try_get::<Vec<bool>>("", key)?),
             StatsDataTypeKind::Date => sea_orm::Value::from(query_result.try_get::<Vec<NaiveDate>>("", key)?),
