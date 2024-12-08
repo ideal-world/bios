@@ -36,7 +36,11 @@ use crate::{
     dto::{
         flow_external_dto::{FlowExternalCallbackOp, FlowExternalParams},
         flow_inst_dto::{
-            FLowInstStateApprovalConf, FLowInstStateConf, FLowInstStateFormConf, FlowApprovalResultKind, FlowInstAbortReq, FlowInstArtifacts, FlowInstArtifactsModifyReq, FlowInstBatchBindReq, FlowInstBatchBindResp, FlowInstDetailResp, FlowInstFilterReq, FlowInstFindNextTransitionResp, FlowInstFindNextTransitionsReq, FlowInstFindStateAndTransitionsReq, FlowInstFindStateAndTransitionsResp, FlowInstOperateReq, FlowInstQueryKind, FlowInstSearchPageReq, FlowInstSearchReq, FlowInstSearchSortReq, FlowInstStartReq, FlowInstSummaryResp, FlowInstSummaryResult, FlowInstTransferReq, FlowInstTransferResp, FlowInstTransitionInfo, FlowOperationContext
+            FLowInstStateApprovalConf, FLowInstStateConf, FLowInstStateFormConf, FlowApprovalResultKind, FlowInstAbortReq, FlowInstArtifacts, FlowInstArtifactsModifyReq,
+            FlowInstBatchBindReq, FlowInstBatchBindResp, FlowInstCommentInfo, FlowInstCommentReq, FlowInstDetailResp, FlowInstFilterReq, FlowInstFindNextTransitionResp,
+            FlowInstFindNextTransitionsReq, FlowInstFindStateAndTransitionsReq, FlowInstFindStateAndTransitionsResp, FlowInstOperateReq, FlowInstQueryKind, FlowInstSearchPageReq,
+            FlowInstSearchReq, FlowInstSearchSortReq, FlowInstStartReq, FlowInstSummaryResp, FlowInstSummaryResult, FlowInstTransferReq, FlowInstTransferResp,
+            FlowInstTransitionInfo, FlowOperationContext,
         },
         flow_model_dto::FlowModelFilterReq,
         flow_model_version_dto::{FlowModelVersionDetailResp, FlowModelVersionFilterReq},
@@ -153,7 +157,7 @@ impl FlowInstServ {
             };
 
             let current_state_id = FlowStateServ::match_state_id_by_name(&flow_model_id, &rel_business_obj.current_state_name.clone().unwrap_or_default(), funs, ctx).await?;
-            let mut inst_id = Self::get_inst_ids_by_rel_business_obj_id(vec![rel_business_obj.rel_business_obj_id.clone().unwrap_or_default()], funs, ctx).await?.pop();
+            let mut inst_id = Self::get_inst_ids_by_rel_business_obj_id(vec![rel_business_obj.rel_business_obj_id.clone().unwrap_or_default()], Some(true), funs, ctx).await?.pop();
             if inst_id.is_none() {
                 let id = TardisFuns::field.nanoid();
                 let flow_inst: flow_inst::ActiveModel = flow_inst::ActiveModel {
@@ -183,6 +187,7 @@ impl FlowInstServ {
     }
 
     async fn package_ext_query(query: &mut SelectStatement, filter: &FlowInstFilterReq, _: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let flow_model_version_table = Alias::new("flow_model_version");
         query
             .columns([
                 (flow_inst::Entity, flow_inst::Column::Id),
@@ -199,8 +204,16 @@ impl FlowInstServ {
                 (flow_inst::Entity, flow_inst::Column::OwnPaths),
                 (flow_inst::Entity, flow_inst::Column::Tag),
             ])
+            .expr_as(
+                Expr::col((flow_model_version_table.clone(), Alias::new("rel_model_id"))).if_null(""),
+                Alias::new("rel_flow_model_id"),
+            )
             .expr_as(Expr::col((RBUM_ITEM_TABLE.clone(), NAME_FIELD.clone())).if_null(""), Alias::new("rel_flow_model_name"))
             .from(flow_inst::Entity)
+            .left_join(
+                flow_model_version_table.clone(),
+                Expr::col((flow_model_version_table.clone(), ID_FIELD.clone())).equals((flow_inst::Entity, flow_inst::Column::RelFlowVersionId)),
+            )
             .left_join(
                 RBUM_ITEM_TABLE.clone(),
                 Expr::col((RBUM_ITEM_TABLE.clone(), ID_FIELD.clone())).equals((flow_inst::Entity, flow_inst::Column::RelFlowVersionId)),
@@ -245,7 +258,12 @@ impl FlowInstServ {
         funs.db().find_dtos::<FlowInstSummaryResult>(&query).await
     }
 
-    pub async fn get_inst_ids_by_rel_business_obj_id(rel_business_obj_ids: Vec<String>, funs: &TardisFunsInst, _ctx: &TardisContext) -> TardisResult<Vec<String>> {
+    pub async fn get_inst_ids_by_rel_business_obj_id(
+        rel_business_obj_ids: Vec<String>,
+        main: Option<bool>,
+        funs: &TardisFunsInst,
+        _ctx: &TardisContext,
+    ) -> TardisResult<Vec<String>> {
         #[derive(sea_orm::FromQueryResult)]
         pub struct FlowInstIdsResult {
             id: String,
@@ -253,7 +271,11 @@ impl FlowInstServ {
         let result = funs
             .db()
             .find_dtos::<FlowInstIdsResult>(
-                Query::select().columns([flow_inst::Column::Id]).from(flow_inst::Entity).and_where(Expr::col(flow_inst::Column::RelBusinessObjId).is_in(&rel_business_obj_ids)),
+                Query::select()
+                    .columns([flow_inst::Column::Id])
+                    .from(flow_inst::Entity)
+                    .and_where(Expr::col(flow_inst::Column::RelBusinessObjId).is_in(&rel_business_obj_ids))
+                    .and_where(Expr::col(flow_inst::Column::Main).eq(main)),
             )
             .await?
             .iter()
@@ -329,6 +351,7 @@ impl FlowInstServ {
 
             pub transitions: Option<Value>,
             pub artifacts: Option<Value>,
+            pub comments: Option<Value>,
 
             pub own_paths: String,
 
@@ -439,7 +462,8 @@ impl FlowInstServ {
                     output_message: inst.output_message,
                     own_paths: inst.own_paths,
                     transitions: inst.transitions.map(|transitions| TardisFuns::json.json_to_obj(transitions).unwrap()),
-                    artifacts: inst.artifacts,
+                    artifacts: inst.artifacts.map(|artifacts| TardisFuns::json.json_to_obj(artifacts).unwrap()),
+                    comments: inst.comments.map(|comments| TardisFuns::json.json_to_obj(comments).unwrap()),
                     current_state_id: inst.current_state_id.clone(),
                     current_state_name: inst.current_state_name,
                     current_state_color: inst.current_state_color,
@@ -500,6 +524,7 @@ impl FlowInstServ {
                 .map(|inst| FlowInstSummaryResp {
                     id: inst.id,
                     rel_flow_version_id: inst.rel_flow_version_id,
+                    rel_flow_model_id: inst.rel_flow_model_id,
                     rel_flow_model_name: inst.rel_flow_model_name,
                     create_ctx: TardisFuns::json.json_to_obj(inst.create_ctx).unwrap(),
                     create_time: inst.create_time,
@@ -562,12 +587,20 @@ impl FlowInstServ {
         )
         .await;
         // 若当前数据项存在未结束的审批流，则清空其中的transitions
-        let unfinished_approve_flow_insts = Self::find_details(&FlowInstFilterReq {
-            rel_business_obj_ids: Some(flow_insts.iter().map(|flow_inst| flow_inst.rel_business_obj_id.clone()).collect_vec()),
-            main: Some(false),
-            finish: Some(false),
-            ..Default::default()
-        }, funs, ctx).await?.into_iter().map(|inst| inst.id.clone()).collect_vec();
+        let unfinished_approve_flow_insts = Self::find_details(
+            &FlowInstFilterReq {
+                rel_business_obj_ids: Some(flow_insts.iter().map(|flow_inst| flow_inst.rel_business_obj_id.clone()).collect_vec()),
+                main: Some(false),
+                finish: Some(false),
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?
+        .into_iter()
+        .map(|inst| inst.id.clone())
+        .collect_vec();
         let _ = state_and_next_transitions.iter_mut().map(|item| {
             if unfinished_approve_flow_insts.contains(&item.flow_inst_id) {
                 item.next_flow_transitions.clear();
@@ -810,7 +843,10 @@ impl FlowInstServ {
             start_time: Utc::now(),
             op_ctx: FlowOperationContext::from_ctx(ctx),
             output_message: transfer_req.message.clone(),
-            target_state_id: None,
+            from_state_id: Some(prev_flow_state.id.clone()),
+            from_state_name: Some(prev_flow_state.name.clone()),
+            target_state_id: Some(next_flow_state.id.clone()),
+            target_state_name: Some(next_flow_state.name.clone()),
         });
 
         let mut flow_inst = flow_inst::ActiveModel {
@@ -1450,7 +1486,7 @@ impl FlowInstServ {
                     let transition = FlowTransitionServ::find_transitions(&flow_inst_detail.rel_flow_version_id, None, funs, ctx).await?;
                     let mut state_ids = vec![];
                     let mut vars_collect = HashMap::new();
-                    let artifacts = flow_inst_detail.artifacts();
+                    let artifacts = flow_inst_detail.artifacts.clone().unwrap_or_default();
                     for tran in flow_inst_detail.transitions.clone().unwrap_or_default() {
                         if let Some(tran) = transition.iter().find(|version_tran| tran.id == version_tran.id) {
                             let current_state_id = tran.to_flow_state_id.clone();
@@ -1491,7 +1527,25 @@ impl FlowInstServ {
                 "__DELETE__" => {
                     FlowExternalServ::do_delete_rel_obj(&flow_inst_detail.tag, &flow_inst_detail.rel_business_obj_id, &flow_inst_detail.id, ctx, funs).await?;
                 }
-                _ => {}
+                _ => {
+                    if let Some(inst_id) = Self::get_inst_ids_by_rel_business_obj_id(vec![flow_inst_detail.rel_business_obj_id.clone()], Some(true), funs, ctx).await?.pop() {
+                        let inst_detail = Self::get(&inst_id, funs, ctx).await?;
+                        Self::transfer(
+                            &inst_detail,
+                            &FlowInstTransferReq {
+                                flow_transition_id: rel_transition.clone(),
+                                message: None,
+                                vars: None,
+                            },
+                            true,
+                            FlowExternalCallbackOp::Default,
+                            loop_check_helper::InstancesTransition::default(),
+                            ctx,
+                            funs,
+                        )
+                        .await?;
+                    }
+                }
             },
             _ => {}
         }
@@ -1543,7 +1597,7 @@ impl FlowInstServ {
     // 修改实例的数据对象
     async fn modify_inst_artifacts(inst_id: &str, modify_artifacts: &FlowInstArtifactsModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let inst = Self::get(inst_id, funs, ctx).await?;
-        let mut inst_artifacts = inst.artifacts();
+        let mut inst_artifacts = inst.artifacts.unwrap_or_default();
         if let Some(guard_conf) = &modify_artifacts.guard_conf {
             inst_artifacts.guard_conf = guard_conf.clone();
         }
@@ -1586,7 +1640,6 @@ impl FlowInstServ {
         Ok(())
     }
 
-    // @TODO 需补充按钮的权限控制逻辑
     fn get_state_conf(
         state_id: &str,
         state_kind: &FlowStateKind,
@@ -1677,7 +1730,7 @@ impl FlowInstServ {
             }
             // 撤销
             FlowStateOperatorKind::Revoke => {
-                let artifacts = inst.artifacts();
+                let artifacts = inst.artifacts.clone().unwrap_or_default();
                 if let Some(target_state_id) = artifacts.prev_non_auto_state_id {
                     Self::transfer_spec_state(inst, &target_state_id, funs, ctx).await?;
                 } else {
@@ -1715,7 +1768,7 @@ impl FlowInstServ {
             }
             // 退回
             FlowStateOperatorKind::Back => {
-                let artifacts = inst.artifacts();
+                let artifacts = inst.artifacts.clone().unwrap_or_default();
                 if let Some(target_state_id) = artifacts.prev_non_auto_state_id {
                     Self::transfer_spec_state(inst, &target_state_id, funs, ctx).await?;
                 } else {
@@ -1784,6 +1837,34 @@ impl FlowInstServ {
             ctx,
         )
         .await?;
+        let prev_flow_state = FlowStateServ::get_item(
+            &flow_inst_detail.current_state_id,
+            &FlowStateFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    own_paths: Some("".to_string()),
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?;
+        let next_flow_state = FlowStateServ::get_item(
+            target_state_id,
+            &FlowStateFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    own_paths: Some("".to_string()),
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?;
         if FlowRelServ::find_to_simple_rels(&FlowRelKind::FlowModelState, target_state_id, None, None, funs, ctx)
             .await?
             .into_iter()
@@ -1803,7 +1884,10 @@ impl FlowInstServ {
             start_time: Utc::now(),
             op_ctx: FlowOperationContext::from_ctx(ctx),
             output_message: None,
-            target_state_id: Some(target_state_id.to_string()),
+            from_state_id: Some(prev_flow_state.id.clone()),
+            from_state_name: Some(prev_flow_state.name.clone()),
+            target_state_id: Some(next_flow_state.id.clone()),
+            target_state_name: Some(next_flow_state.name.clone()),
         });
 
         let flow_inst = flow_inst::ActiveModel {
@@ -1833,18 +1917,46 @@ impl FlowInstServ {
         Ok(())
     }
 
+    pub async fn add_comment(flow_inst_detail: &FlowInstDetailResp, add_comment: &FlowInstCommentReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let mut comments = flow_inst_detail.comments.clone().unwrap_or_default();
+        comments.push(FlowInstCommentInfo {
+            output_message: add_comment.output_message.clone(),
+            owner: ctx.owner.clone(),
+            parent_comment_id: add_comment.parent_comment_id.clone(),
+            parent_owner: add_comment.parent_owner.clone(),
+            create_time: Utc::now(),
+        });
+        let flow_inst = flow_inst::ActiveModel {
+            id: Set(flow_inst_detail.id.clone()),
+
+            comments: Set(Some(comments.clone())),
+            ..Default::default()
+        };
+        funs.db().update_one(flow_inst, ctx).await?;
+        Ok(())
+    }
     // search
     pub async fn search(search_req: &mut FlowInstSearchReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<TardisPage<FlowInstSummaryResp>> {
         let mut where_fragments: Vec<String> = vec!["1=1".to_string()];
         let mut sql_vals: Vec<sea_orm::Value> = vec![];
         let table_alias_name = "flow_inst";
-        
+
         Self::package_query(table_alias_name, search_req.query.clone(), &mut sql_vals, &mut where_fragments, funs, ctx)?;
-        Self::package_query_kind(table_alias_name, search_req.query_kind.clone().unwrap_or(FlowInstQueryKind::All), &mut sql_vals, &mut where_fragments, funs, ctx)?;
+        Self::package_query_kind(
+            table_alias_name,
+            search_req.query_kind.clone().unwrap_or(FlowInstQueryKind::All),
+            &mut sql_vals,
+            &mut where_fragments,
+            funs,
+            ctx,
+        )?;
         let order_fragments = Self::package_order(table_alias_name, search_req.sort.clone())?;
         let page_fragments = Self::package_page(search_req.page.clone(), &mut sql_vals)?;
-        let result = funs.db().query_all(format!(
-            r#"SELECT
+        let result = funs
+            .db()
+            .query_all(
+                format!(
+                    r#"SELECT
                 flow_inst.id,
                 flow_inst.rel_flow_version_id,
                 flow_inst.rel_business_obj_id,
@@ -1857,53 +1969,57 @@ impl FlowInstServ {
                 flow_inst.output_message,
                 flow_inst.own_paths,
                 flow_inst.tag,
-                model_version.name as rel_flow_model_name
+                model_version.name as rel_flow_model_name,
+                flow_model_version.rel_model_id as rel_flow_model_id
                 {}
             FROM
             flow_inst
             LEFT JOIN flow_state AS current_state ON flow_inst.current_state_id = current_state.id
             LEFT JOIN rbum_item AS model_version ON flow_inst.rel_flow_version_id = model_version.id
+            LEFT JOIN flow_model_version ON flow_inst.rel_flow_version_id = flow_model_version.id
             WHERE  
             {}
             {}
             {};"#,
-            if search_req.page.fetch_total { ", count(*) OVER() AS total" } else { "" },
-            where_fragments.join(" AND "),
-            if order_fragments.is_empty() {
-                "".to_string()
-            } else {
-                format!("ORDER BY {}", order_fragments.join(", "))
-            },
-            page_fragments
-        )
-        .as_str(), 
-        sql_vals
-        ).await?;
+                    if search_req.page.fetch_total { ", count(*) OVER() AS total" } else { "" },
+                    where_fragments.join(" AND "),
+                    if order_fragments.is_empty() {
+                        "".to_string()
+                    } else {
+                        format!("ORDER BY {}", order_fragments.join(", "))
+                    },
+                    page_fragments
+                )
+                .as_str(),
+                sql_vals,
+            )
+            .await?;
 
         let mut total_size: i64 = 0;
         let result = result
-        .into_iter()
-        .map(|item| {
-            if search_req.page.fetch_total && total_size == 0 {
-                total_size = item.try_get("", "total")?;
-            }
-            Ok(FlowInstSummaryResp {
-                id: item.try_get("", "id")?,
-                rel_flow_version_id: item.try_get("", "rel_flow_version_id")?,
-                rel_flow_model_name: item.try_get("", "rel_flow_model_name")?,
-                rel_business_obj_id: item.try_get("", "rel_business_obj_id")?,
-                current_state_id: item.try_get("", "current_state_id")?,
-                create_ctx: item.try_get("", "create_ctx")?,
-                create_time: item.try_get("", "create_time")?,
-                finish_ctx: item.try_get("", "finish_ctx")?,
-                finish_time: item.try_get("", "finish_time")?,
-                finish_abort: item.try_get("", "finish_abort").unwrap_or_default(),
-                output_message: item.try_get("", "output_message")?,
-                own_paths: item.try_get("", "own_paths")?,
-                tag: item.try_get("", "tag")?,
+            .into_iter()
+            .map(|item| {
+                if search_req.page.fetch_total && total_size == 0 {
+                    total_size = item.try_get("", "total")?;
+                }
+                Ok(FlowInstSummaryResp {
+                    id: item.try_get("", "id")?,
+                    rel_flow_version_id: item.try_get("", "rel_flow_version_id")?,
+                    rel_flow_model_id: item.try_get("", "rel_flow_model_id")?,
+                    rel_flow_model_name: item.try_get("", "rel_flow_model_name")?,
+                    rel_business_obj_id: item.try_get("", "rel_business_obj_id")?,
+                    current_state_id: item.try_get("", "current_state_id")?,
+                    create_ctx: item.try_get("", "create_ctx")?,
+                    create_time: item.try_get("", "create_time")?,
+                    finish_ctx: item.try_get("", "finish_ctx")?,
+                    finish_time: item.try_get("", "finish_time")?,
+                    finish_abort: item.try_get("", "finish_abort").unwrap_or_default(),
+                    output_message: item.try_get("", "output_message")?,
+                    own_paths: item.try_get("", "own_paths")?,
+                    tag: item.try_get("", "tag")?,
+                })
             })
-        })
-        .collect::<TardisResult<Vec<FlowInstSummaryResp>>>()?;
+            .collect::<TardisResult<Vec<FlowInstSummaryResp>>>()?;
 
         Ok(TardisPage {
             page_size: search_req.page.size as u64,
@@ -1913,40 +2029,71 @@ impl FlowInstServ {
         })
     }
 
-    fn package_query_kind(table_alias_name: &str, query_kind: FlowInstQueryKind, sql_vals: &mut Vec<sea_orm::Value>, where_fragments: &mut Vec<String>, _funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    fn package_query_kind(
+        table_alias_name: &str,
+        query_kind: FlowInstQueryKind,
+        sql_vals: &mut Vec<sea_orm::Value>,
+        where_fragments: &mut Vec<String>,
+        _funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<()> {
         match query_kind {
             FlowInstQueryKind::Create => {
                 sql_vals.push(sea_orm::Value::from(ctx.owner.clone()));
                 where_fragments.push(format!("{}.create_ctx ->> 'owner' = ${}", table_alias_name, sql_vals.len()));
-            },
+            }
             FlowInstQueryKind::Form => {
                 let mut child_or_where_fragments = vec![];
                 sql_vals.push(sea_orm::Value::from(ctx.owner.clone()));
-                child_or_where_fragments.push(format!("EXISTS (SELECT 1 FROM jsonb_array_elements_text({}.artifacts->'guard_conf'->'guard_by_spec_account_ids') AS elem WHERE elem IN (${}))", table_alias_name, sql_vals.len()));
+                child_or_where_fragments.push(format!(
+                    "EXISTS (SELECT 1 FROM jsonb_array_elements_text({}.artifacts->'guard_conf'->'guard_by_spec_account_ids') AS elem WHERE elem IN (${}))",
+                    table_alias_name,
+                    sql_vals.len()
+                ));
                 if !ctx.roles.is_empty() {
                     sql_vals.push(sea_orm::Value::from(ctx.roles.clone().join(", ").to_string()));
-                    child_or_where_fragments.push(format!("EXISTS (SELECT 1 FROM jsonb_array_elements_text({}.artifacts->'guard_conf'->'guard_by_spec_role_ids') AS elem WHERE elem IN (${}))", table_alias_name, sql_vals.len()));
+                    child_or_where_fragments.push(format!(
+                        "EXISTS (SELECT 1 FROM jsonb_array_elements_text({}.artifacts->'guard_conf'->'guard_by_spec_role_ids') AS elem WHERE elem IN (${}))",
+                        table_alias_name,
+                        sql_vals.len()
+                    ));
                 }
                 if !ctx.groups.is_empty() {
                     sql_vals.push(sea_orm::Value::from(ctx.groups.clone().join(", ").to_string()));
-                    child_or_where_fragments.push(format!("EXISTS (SELECT 1 FROM jsonb_array_elements_text({}.artifacts->'guard_conf'->'guard_by_spec_org_ids') AS elem WHERE elem IN (${}))", table_alias_name, sql_vals.len()));
+                    child_or_where_fragments.push(format!(
+                        "EXISTS (SELECT 1 FROM jsonb_array_elements_text({}.artifacts->'guard_conf'->'guard_by_spec_org_ids') AS elem WHERE elem IN (${}))",
+                        table_alias_name,
+                        sql_vals.len()
+                    ));
                 }
                 where_fragments.push(format!("current_state.state_kind = 'form' AND ({})", child_or_where_fragments.join(" OR ")));
-            },
+            }
             FlowInstQueryKind::Approval => {
                 let mut child_or_where_fragments = vec![];
                 sql_vals.push(sea_orm::Value::from(ctx.owner.clone()));
-                child_or_where_fragments.push(format!("EXISTS (SELECT 1 FROM jsonb_array_elements_text({}.artifacts->'guard_conf'->'guard_by_spec_account_ids') AS elem WHERE elem IN (${}))", table_alias_name, sql_vals.len()));
+                child_or_where_fragments.push(format!(
+                    "EXISTS (SELECT 1 FROM jsonb_array_elements_text({}.artifacts->'guard_conf'->'guard_by_spec_account_ids') AS elem WHERE elem IN (${}))",
+                    table_alias_name,
+                    sql_vals.len()
+                ));
                 if !ctx.roles.is_empty() {
                     sql_vals.push(sea_orm::Value::from(ctx.roles.clone().join(", ").to_string()));
-                    child_or_where_fragments.push(format!("EXISTS (SELECT 1 FROM jsonb_array_elements_text({}.artifacts->'guard_conf'->'guard_by_spec_role_ids') AS elem WHERE elem IN (${}))", table_alias_name, sql_vals.len()));
+                    child_or_where_fragments.push(format!(
+                        "EXISTS (SELECT 1 FROM jsonb_array_elements_text({}.artifacts->'guard_conf'->'guard_by_spec_role_ids') AS elem WHERE elem IN (${}))",
+                        table_alias_name,
+                        sql_vals.len()
+                    ));
                 }
                 if !ctx.groups.is_empty() {
                     sql_vals.push(sea_orm::Value::from(ctx.groups.clone().join(", ").to_string()));
-                    child_or_where_fragments.push(format!("EXISTS (SELECT 1 FROM jsonb_array_elements_text({}.artifacts->'guard_conf'->'guard_by_spec_org_ids') AS elem WHERE elem IN (${}))", table_alias_name, sql_vals.len()));
+                    child_or_where_fragments.push(format!(
+                        "EXISTS (SELECT 1 FROM jsonb_array_elements_text({}.artifacts->'guard_conf'->'guard_by_spec_org_ids') AS elem WHERE elem IN (${}))",
+                        table_alias_name,
+                        sql_vals.len()
+                    ));
                 }
                 where_fragments.push(format!("current_state.state_kind = 'approval' AND ({})", child_or_where_fragments.join(" OR ")));
-            },
+            }
             FlowInstQueryKind::All => {
                 let mut or_where_fragments = vec![];
                 sql_vals.push(sea_orm::Value::from(ctx.owner.clone()));
@@ -1954,36 +2101,67 @@ impl FlowInstServ {
 
                 let mut form_or_where_fragments = vec![];
                 sql_vals.push(sea_orm::Value::from(ctx.owner.clone()));
-                form_or_where_fragments.push(format!("EXISTS (SELECT 1 FROM jsonb_array_elements_text({}.artifacts->'guard_conf'->'guard_by_spec_account_ids') AS elem WHERE elem IN (${}))", table_alias_name, sql_vals.len()));
+                form_or_where_fragments.push(format!(
+                    "EXISTS (SELECT 1 FROM jsonb_array_elements_text({}.artifacts->'guard_conf'->'guard_by_spec_account_ids') AS elem WHERE elem IN (${}))",
+                    table_alias_name,
+                    sql_vals.len()
+                ));
                 if !ctx.roles.is_empty() {
                     sql_vals.push(sea_orm::Value::from(ctx.roles.clone().join(", ").to_string()));
-                    form_or_where_fragments.push(format!("EXISTS (SELECT 1 FROM jsonb_array_elements_text({}.artifacts->'guard_conf'->'guard_by_spec_role_ids') AS elem WHERE elem IN (${}))", table_alias_name, sql_vals.len()));
+                    form_or_where_fragments.push(format!(
+                        "EXISTS (SELECT 1 FROM jsonb_array_elements_text({}.artifacts->'guard_conf'->'guard_by_spec_role_ids') AS elem WHERE elem IN (${}))",
+                        table_alias_name,
+                        sql_vals.len()
+                    ));
                 }
                 if !ctx.groups.is_empty() {
                     sql_vals.push(sea_orm::Value::from(ctx.groups.clone().join(", ").to_string()));
-                    form_or_where_fragments.push(format!("EXISTS (SELECT 1 FROM jsonb_array_elements_text({}.artifacts->'guard_conf'->'guard_by_spec_org_ids') AS elem WHERE elem IN (${}))", table_alias_name, sql_vals.len()));
+                    form_or_where_fragments.push(format!(
+                        "EXISTS (SELECT 1 FROM jsonb_array_elements_text({}.artifacts->'guard_conf'->'guard_by_spec_org_ids') AS elem WHERE elem IN (${}))",
+                        table_alias_name,
+                        sql_vals.len()
+                    ));
                 }
                 or_where_fragments.push(format!("(current_state.state_kind = 'form' AND ({}))", form_or_where_fragments.join(" OR ")));
 
                 let mut approval_or_where_fragments = vec![];
                 sql_vals.push(sea_orm::Value::from(ctx.owner.clone()));
-                approval_or_where_fragments.push(format!("EXISTS (SELECT 1 FROM jsonb_array_elements_text({}.artifacts->'guard_conf'->'guard_by_spec_account_ids') AS elem WHERE elem IN (${}))", table_alias_name, sql_vals.len()));
+                approval_or_where_fragments.push(format!(
+                    "EXISTS (SELECT 1 FROM jsonb_array_elements_text({}.artifacts->'guard_conf'->'guard_by_spec_account_ids') AS elem WHERE elem IN (${}))",
+                    table_alias_name,
+                    sql_vals.len()
+                ));
                 if !ctx.roles.is_empty() {
                     sql_vals.push(sea_orm::Value::from(ctx.roles.clone().join(", ").to_string()));
-                    approval_or_where_fragments.push(format!("EXISTS (SELECT 1 FROM jsonb_array_elements_text({}.artifacts->'guard_conf'->'guard_by_spec_role_ids') AS elem WHERE elem IN (${}))", table_alias_name, sql_vals.len()));
+                    approval_or_where_fragments.push(format!(
+                        "EXISTS (SELECT 1 FROM jsonb_array_elements_text({}.artifacts->'guard_conf'->'guard_by_spec_role_ids') AS elem WHERE elem IN (${}))",
+                        table_alias_name,
+                        sql_vals.len()
+                    ));
                 }
                 if !ctx.groups.is_empty() {
                     sql_vals.push(sea_orm::Value::from(ctx.groups.clone().join(", ").to_string()));
-                    approval_or_where_fragments.push(format!("EXISTS (SELECT 1 FROM jsonb_array_elements_text({}.artifacts->'guard_conf'->'guard_by_spec_org_ids') AS elem WHERE elem IN (${}))", table_alias_name, sql_vals.len()));
+                    approval_or_where_fragments.push(format!(
+                        "EXISTS (SELECT 1 FROM jsonb_array_elements_text({}.artifacts->'guard_conf'->'guard_by_spec_org_ids') AS elem WHERE elem IN (${}))",
+                        table_alias_name,
+                        sql_vals.len()
+                    ));
                 }
                 or_where_fragments.push(format!("(current_state.state_kind = 'approval' AND ({}))", approval_or_where_fragments.join(" OR ")));
                 where_fragments.push(format!("( {} )", or_where_fragments.join(" OR ")));
-            },
+            }
         }
         Ok(())
     }
 
-    fn package_query(table_alias_name: &str, query: FlowInstFilterReq, sql_vals: &mut Vec<sea_orm::Value>, where_fragments: &mut Vec<String>, _funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    fn package_query(
+        table_alias_name: &str,
+        query: FlowInstFilterReq,
+        sql_vals: &mut Vec<sea_orm::Value>,
+        where_fragments: &mut Vec<String>,
+        _funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<()> {
         if let Some(ids) = query.ids {
             if !ids.is_empty() {
                 where_fragments.push(format!(
@@ -2052,7 +2230,7 @@ impl FlowInstServ {
         if let Some(sort) = &sort {
             for sort_item in sort {
                 if let Some(in_field) = &sort_item.in_field {
-                    order_fragments.push(format!("{}.{} -> '{}' {}", table_alias_name, in_field,sort_item.field, sort_item.order.to_sql()));
+                    order_fragments.push(format!("{}.{} -> '{}' {}", table_alias_name, in_field, sort_item.field, sort_item.order.to_sql()));
                 } else {
                     order_fragments.push(format!("{}.{} {}", table_alias_name, sort_item.field, sort_item.order.to_sql()));
                 }

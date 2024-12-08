@@ -1,4 +1,4 @@
-use crate::dto::flow_inst_dto::{FlowInstArtifacts, FlowInstTransitionInfo, FlowOperationContext};
+use crate::dto::flow_inst_dto::{FlowInstArtifacts, FlowInstCommentInfo, FlowInstTransitionInfo, FlowOperationContext};
 use tardis::chrono::Utc;
 use tardis::db::sea_orm;
 use tardis::db::sea_orm::prelude::Json;
@@ -75,6 +75,12 @@ pub struct Model {
     #[sea_orm(column_type = "JsonBinary", nullable)]
     #[tardis_entity(custom_type = "JsonBinary")]
     pub artifacts: Option<FlowInstArtifacts>,
+
+    /// Comment information list / 评论信息列表
+    #[index(full_text)]
+    #[sea_orm(column_type = "JsonBinary", nullable)]
+    #[tardis_entity(custom_type = "JsonBinary")]
+    pub comments: Option<Vec<FlowInstCommentInfo>>,
 
     pub own_paths: String,
 }
