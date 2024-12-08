@@ -1,8 +1,7 @@
-use std::{collections::HashMap, hash::Hash, result};
+use std::collections::HashMap;
 
 use bios_basic::{
-    enumeration::BasicQueryOpKind,
-    helper::db_helper::{json_to_sea_orm_value, json_to_sea_orm_value_pure, sea_orm_value_to_json},
+    helper::db_helper::{json_to_sea_orm_value_pure, sea_orm_value_to_json},
     process::task_processor::TaskProcessor,
     rbum::{
         dto::{
@@ -29,7 +28,6 @@ use tardis::{
     },
     log,
     regex::{self, Regex},
-    web::poem_openapi::types::Type,
     TardisFunsInst,
 };
 
@@ -259,8 +257,7 @@ pub(crate) async fn fact_col_record_sync(fact_conf_key: &str, fact_col_conf_key:
                         if idempotent_id.is_null() || idempotent_id.as_str().unwrap_or_default().is_empty() {
                             continue;
                         }
-                        let fact_record_map =
-                            fact_record.as_object().unwrap().iter().filter_map(|(k, v)| json_to_sea_orm_value_pure(v.clone()).map(|val| (k.clone(), val))).collect();
+                        let fact_record_map = fact_record.as_object().unwrap().iter().filter_map(|(k, v)| json_to_sea_orm_value_pure(v).map(|val| (k.clone(), val))).collect();
                         if let Some(col_result) = fact_col_record_result(fact_col_conf.clone(), fact_record_map, &funs, &task_ctx, inst.as_ref()).await? {
                             let add_req = StatsFactRecordLoadReq {
                                 own_paths: fact_record.get("own_paths").and_then(|v| v.as_str()).unwrap_or_default().to_string(),
