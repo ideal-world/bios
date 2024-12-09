@@ -604,26 +604,23 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
     ) -> TardisResult<Vec<FlowModelSummaryResp>> {
         let mut res = Self::do_find_items(filter, desc_sort_by_create, desc_sort_by_update, funs, ctx).await?;
         for item in res.iter_mut() {
-            let version = FlowModelVersionServ::get_item(
-                &item.current_version_id,
-                &FlowModelVersionFilterReq {
-                    basic: RbumBasicFilterReq {
-                        ids: None,
-                        ..filter.basic.clone()
+            if !item.current_version_id.is_empty() {
+                let version = FlowModelVersionServ::get_item(
+                    &item.current_version_id,
+                    &FlowModelVersionFilterReq {
+                        basic: RbumBasicFilterReq {
+                            ids: None,
+                            ..filter.basic.clone()
+                        },
+                        ..Default::default()
                     },
-                    ..Default::default()
-                },
-                funs,
-                ctx,
-            )
-            .await?;
-            item.init_state_id = version.init_state_id;
+                    funs,
+                    ctx,
+                )
+                .await?;
+                item.init_state_id = version.init_state_id;
 
-            let rel_transition =
-                FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelTransition, &item.id, None, None, funs, ctx).await?.into_iter().map(|rel| rel.ext).collect_vec().pop();
-            item.rel_transition = rel_transition.map(|rel_transition| TardisFuns::json.obj_to_json(&rel_transition).unwrap_or_default());
-
-            let states = FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelState, &item.current_version_id, None, None, funs, ctx)
+                let states = FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelState, &item.current_version_id, None, None, funs, ctx)
                 .await?
                 .into_iter()
                 .map(|rel| FLowStateIdAndName {
@@ -632,6 +629,11 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
                 })
                 .collect_vec();
             item.states = TardisFuns::json.obj_to_json(&states).unwrap_or_default();
+            }
+
+            let rel_transition =
+                FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelTransition, &item.id, None, None, funs, ctx).await?.into_iter().map(|rel| rel.ext).collect_vec().pop();
+            item.rel_transition = rel_transition.map(|rel_transition| TardisFuns::json.obj_to_json(&rel_transition).unwrap_or_default());
         }
         Ok(res)
     }
