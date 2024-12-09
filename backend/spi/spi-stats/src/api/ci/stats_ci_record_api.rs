@@ -43,14 +43,14 @@ impl StatsCiRecordApi {
     async fn get_fact_record_paginated(
         &self,
         fact_key: Path<String>,
-        record_key: Path<String>,
+        record_key: Path<Option<String>>,
         page_number: Query<u32>,
         page_size: Query<u32>,
         desc_by_create: Query<Option<bool>>,
         ctx: TardisContextExtractor,
     ) -> TardisApiResult<TardisPage<serde_json::Value>> {
         let funs = crate::get_tardis_inst();
-        TardisResp::ok(stats_record_serv::get_fact_record_paginated(&fact_key.0, &record_key.0, page_number.0, page_size.0, desc_by_create.0, &funs, &ctx.0).await?)
+        TardisResp::ok(stats_record_serv::get_fact_record_paginated(&fact_key.0, record_key.0, page_number.0, page_size.0, desc_by_create.0, &funs, &ctx.0).await?)
     }
 
     /// Load Fact Record

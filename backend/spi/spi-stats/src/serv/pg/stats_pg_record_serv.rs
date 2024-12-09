@@ -78,7 +78,7 @@ pub(crate) async fn get_fact_record_latest(
 
 pub(crate) async fn get_fact_record_paginated(
     fact_conf_key: &str,
-    fact_record_key: &str,
+    fact_record_key: Option<String>,
     page_number: u32,
     page_size: u32,
     desc_by_create: Option<bool>,
@@ -96,21 +96,28 @@ pub(crate) async fn get_fact_record_paginated(
     if let Some(desc_by_create) = desc_by_create {
         sql_order = format!("ORDER BY ct {}", if desc_by_create { "DESC" } else { "ASC" });
     }
+    let mut params = vec![Value::from(page_size), Value::from((page_number - 1) * page_size)];
+    let mut where_fragments = vec!["1 = 1".to_string()];
+    if let Some(fact_record_key) = fact_record_key {
+        where_fragments.push(format!("key = ${}", params.len() + 1));
+        params.push(Value::from(fact_record_key));
+    }
     let result = conn
         .query_all(
             &format!(
                 r#"SELECT *, count(*) OVER() AS total
 FROM {table_name}
 WHERE 
-    key = $1
+    {}
 {sql_order}
-LIMIT $2 OFFSET $3
+LIMIT $1 OFFSET $2
 "#,
+                where_fragments.join(" AND ")
             ),
-            vec![Value::from(fact_record_key), Value::from(page_size), Value::from((page_number - 1) * page_size)],
+            params,
         )
         .await?;
-    let total;
+    let total: i64;
     if let Some(first) = result.first() {
         total = first.try_get("", "total")?;
     } else {
@@ -397,7 +404,7 @@ pub(crate) async fn fact_records_load(
                 TardisFuns::json.str_to_json("{}")?
             }),
             Value::from(add_req.ct),
-            Value::from(add_req.idempotent_id.unwrap_or_default()),
+            Value::from(add_req.idempotent_id.unwrap_or(TardisFuns::field.nanoid())),
         ];
         // Because Dimension and Measure may share the same field
         // Existing fields are not stored in duplicate

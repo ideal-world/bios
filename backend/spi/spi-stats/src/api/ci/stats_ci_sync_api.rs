@@ -1,3 +1,4 @@
+use bios_basic::process::task_processor::TaskProcessor;
 use tardis::web::{
     context_extractor::TardisContextExtractor,
     poem_openapi::{self, param::Path},
@@ -18,19 +19,27 @@ impl StatsCiSyncApi {
     ///
     /// 同步事实记录
     #[oai(path = "/fact/:fact_key/sync", method = "put")]
-    async fn fact_record_sync(&self, fact_key: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+    async fn fact_record_sync(&self, fact_key: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Option<String>> {
         let funs = crate::get_tardis_inst();
         stats_sync_serv::fact_record_sync(&fact_key.0, &funs, &ctx.0).await?;
-        TardisResp::ok(Void {})
+        if let Some(task_id) = TaskProcessor::get_task_id_with_ctx(&ctx.0).await? {
+            TardisResp::accepted(Some(task_id))
+        } else {
+            TardisResp::ok(None)
+        }
     }
 
     /// Sync Fact Column Record
     ///
     /// 同步事实列记录
     #[oai(path = "/fact/:fact_key/col/:col_key/sync", method = "put")]
-    async fn fact_col_record_sync(&self, fact_key: Path<String>, col_key: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+    async fn fact_col_record_sync(&self, fact_key: Path<String>, col_key: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Option<String>> {
         let funs = crate::get_tardis_inst();
         stats_sync_serv::fact_col_record_sync(&fact_key.0, &col_key.0, &funs, &ctx.0).await?;
-        TardisResp::ok(Void {})
+        if let Some(task_id) = TaskProcessor::get_task_id_with_ctx(&ctx.0).await? {
+            TardisResp::accepted(Some(task_id))
+        } else {
+            TardisResp::ok(None)
+        }
     }
 }
