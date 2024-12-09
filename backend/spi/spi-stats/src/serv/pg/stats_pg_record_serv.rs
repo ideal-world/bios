@@ -191,7 +191,11 @@ pub(crate) async fn fact_record_load(
     for (req_fact_col_key, req_fact_col_value) in req_data {
         // 查找一下是否命中了rel_field字段
         let fact_col_conf = fact_col_conf_set.iter().find(|c| &c.key == req_fact_col_key || c.rel_field.as_ref() == Some(req_fact_col_key));
-        if fact_col_conf.is_none() || fields_values.contains_key(req_fact_col_key) || req_fact_col_value.is_null() || req_fact_col_value.is_none() || req_fact_col_value.is_empty()
+        if fact_col_conf.is_none()
+            || fields_values.contains_key(&fact_col_conf.unwrap().key)
+            || req_fact_col_value.is_null()
+            || req_fact_col_value.is_none()
+            || req_fact_col_value.is_empty()
         {
             continue;
         }
@@ -506,15 +510,15 @@ async fn fact_records_modify(
 ) -> TardisResult<()> {
     let mut sql_sets = vec![];
     let mut params = vec![Value::from(idempotent_id.to_string())];
+    let mut fields = vec![];
     for (req_fact_col_key, req_fact_col_value) in req_data {
-        let fact_col_conf = fact_col_conf_set.iter().find(|c| c.key == req_fact_col_key).ok_or_else(|| {
-            funs.err().not_found(
-                "fact_record",
-                "load",
-                &format!("The fact column config [{req_fact_col_key}] not exists."),
-                "404-spi-stats-fact-col-conf-not-exist",
-            )
-        })?;
+        let fact_col_conf = fact_col_conf_set.iter().find(|c| c.key == req_fact_col_key || c.rel_field.as_ref() == Some(&req_fact_col_key));
+        if fact_col_conf.is_none() || fields.contains(&fact_col_conf.unwrap().key) || req_fact_col_value.is_null() || req_fact_col_value.is_none() || req_fact_col_value.is_empty()
+        {
+            continue;
+        }
+        let fact_col_conf = fact_col_conf.unwrap();
+        fields.push(fact_col_conf.key.clone());
         if fact_col_conf.kind == StatsFactColKind::Dimension {
             let Some(key) = fact_col_conf.dim_rel_conf_dim_key.as_ref() else {
                 return Err(funs.err().not_found("fact_record", "load", "Fail to get conf_dim_key", "400-spi-stats-fail-to-get-dim-config-key"));
