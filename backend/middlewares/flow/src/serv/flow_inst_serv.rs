@@ -79,7 +79,7 @@ impl FlowInstServ {
             if current_state_name.is_empty() {
                 flow_model.init_state_id.clone()
             } else {
-                FlowStateServ::match_state_id_by_name(&flow_model.id, current_state_name, &funs, ctx).await?
+                FlowStateServ::match_state_id_by_name(&flow_model.current_version_id, current_state_name, &funs, ctx).await?
             }
         } else {
             flow_model.init_state_id.clone()
@@ -150,19 +150,19 @@ impl FlowInstServ {
             }
             current_ctx.own_paths = rel_business_obj.own_paths.clone().unwrap_or_default();
             current_ctx.owner = rel_business_obj.owner.clone().unwrap_or_default();
-            let flow_model_id = if let Some(transition_id) = &batch_bind_req.transition_id {
-                FlowModelServ::get_model_id_by_own_paths_and_transition_id(&batch_bind_req.tag, transition_id, funs, ctx).await?.id
+            let flow_model = if let Some(transition_id) = &batch_bind_req.transition_id {
+                FlowModelServ::get_model_id_by_own_paths_and_transition_id(&batch_bind_req.tag, transition_id, funs, ctx).await?
             } else {
-                FlowModelServ::get_model_id_by_own_paths_and_rel_template_id(&batch_bind_req.tag, None, funs, ctx).await?.id
+                FlowModelServ::get_model_id_by_own_paths_and_rel_template_id(&batch_bind_req.tag, None, funs, ctx).await?
             };
 
-            let current_state_id = FlowStateServ::match_state_id_by_name(&flow_model_id, &rel_business_obj.current_state_name.clone().unwrap_or_default(), funs, ctx).await?;
+            let current_state_id = FlowStateServ::match_state_id_by_name(&flow_model.current_version_id, &rel_business_obj.current_state_name.clone().unwrap_or_default(), funs, ctx).await?;
             let mut inst_id = Self::get_inst_ids_by_rel_business_obj_id(vec![rel_business_obj.rel_business_obj_id.clone().unwrap_or_default()], Some(true), funs, ctx).await?.pop();
             if inst_id.is_none() {
                 let id = TardisFuns::field.nanoid();
                 let flow_inst: flow_inst::ActiveModel = flow_inst::ActiveModel {
                     id: Set(id.clone()),
-                    rel_flow_version_id: Set(flow_model_id.to_string()),
+                    rel_flow_version_id: Set(flow_model.current_version_id.to_string()),
                     rel_business_obj_id: Set(rel_business_obj.rel_business_obj_id.clone().unwrap_or_default()),
 
                     current_state_id: Set(current_state_id),
