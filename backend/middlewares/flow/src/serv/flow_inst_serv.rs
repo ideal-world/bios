@@ -381,6 +381,7 @@ impl FlowInstServ {
                 (flow_inst::Entity, flow_inst::Column::Transitions),
                 (flow_inst::Entity, flow_inst::Column::OwnPaths),
                 (flow_inst::Entity, flow_inst::Column::Artifacts),
+                (flow_inst::Entity, flow_inst::Column::Comments),
             ])
             .expr_as(Expr::col((rel_state_table.clone(), NAME_FIELD.clone())).if_null(""), Alias::new("current_state_name"))
             .expr_as(Expr::col((flow_state_table.clone(), Alias::new("color"))).if_null(""), Alias::new("current_state_color"))
@@ -1601,6 +1602,18 @@ impl FlowInstServ {
         if let Some(guard_conf) = &modify_artifacts.guard_conf {
             inst_artifacts.guard_conf = guard_conf.clone();
         }
+        if let Some(add_prohibit_guard_conf_account_id) = &modify_artifacts.add_prohibit_guard_conf_account_id {
+            let mut prohibit_guard_by_spec_account_ids = inst_artifacts.prohibit_guard_by_spec_account_ids.clone().unwrap_or_default();
+            if !prohibit_guard_by_spec_account_ids.contains(add_prohibit_guard_conf_account_id) {
+                prohibit_guard_by_spec_account_ids.push(add_prohibit_guard_conf_account_id.clone());
+            }
+            inst_artifacts.prohibit_guard_by_spec_account_ids = Some(prohibit_guard_by_spec_account_ids);
+        }
+        if let Some(delete_prohibit_guard_conf_account_id) = &modify_artifacts.delete_prohibit_guard_conf_account_id {
+            let mut prohibit_guard_by_spec_account_ids = inst_artifacts.prohibit_guard_by_spec_account_ids.clone().unwrap_or_default();
+            prohibit_guard_by_spec_account_ids = prohibit_guard_by_spec_account_ids.into_iter().filter(|account_id| account_id != delete_prohibit_guard_conf_account_id).collect_vec();
+            inst_artifacts.prohibit_guard_by_spec_account_ids = Some(prohibit_guard_by_spec_account_ids);
+        }
         if let Some(add_guard_conf_account_id) = &modify_artifacts.add_guard_conf_account_id {
             if !inst_artifacts.guard_conf.guard_by_spec_account_ids.contains(add_guard_conf_account_id) {
                 inst_artifacts.guard_conf.guard_by_spec_account_ids.push(add_guard_conf_account_id.clone());
@@ -1651,7 +1664,8 @@ impl FlowInstServ {
             match state_kind {
                 FlowStateKind::Form => kind_conf.form.as_ref().map(|form| {
                     let mut operators = HashMap::new();
-                    if artifacts.clone().unwrap_or_default().guard_conf.check(ctx) {
+                    let artifacts = artifacts.clone().unwrap_or_default();
+                    if artifacts.guard_conf.check(ctx) && artifacts.prohibit_guard_by_spec_account_ids.clone().unwrap_or_default().contains(&ctx.owner) {
                         operators.insert(FlowStateOperatorKind::Submit, form.submit_btn_name.clone());
                         if form.referral {
                             if let Some(referral_guard_custom_conf) = &form.referral_guard_custom_conf {
@@ -1673,8 +1687,8 @@ impl FlowInstServ {
                 }),
                 FlowStateKind::Approval => kind_conf.approval.as_ref().map(|approval| {
                     let mut operators = HashMap::new();
-                    let approval_conf = artifacts.clone().unwrap_or_default();
-                    if approval_conf.guard_conf.check(ctx) {
+                    let artifacts = artifacts.clone().unwrap_or_default();
+                    if artifacts.guard_conf.check(ctx) && artifacts.prohibit_guard_by_spec_account_ids.clone().unwrap_or_default().contains(&ctx.owner) {
                         operators.insert(FlowStateOperatorKind::Pass, approval.pass_btn_name.clone());
                         operators.insert(FlowStateOperatorKind::Overrule, approval.overrule_btn_name.clone());
                         operators.insert(FlowStateOperatorKind::Back, approval.back_btn_name.clone());
@@ -1686,22 +1700,15 @@ impl FlowInstServ {
                             operators.insert(FlowStateOperatorKind::Referral, "".to_string());
                         }
                     }
-                    if ctx.own_paths == approval_conf.prev_non_auto_account_id.unwrap_or_default() {
+                    if ctx.own_paths == artifacts.prev_non_auto_account_id.unwrap_or_default() {
                         operators.insert(FlowStateOperatorKind::Revoke, "".to_string());
                     }
-                    let operators = HashMap::from([
-                        (FlowStateOperatorKind::Referral, "".to_string()),
-                        (FlowStateOperatorKind::Revoke, "".to_string()),
-                        (FlowStateOperatorKind::Pass, approval.pass_btn_name.clone()),
-                        (FlowStateOperatorKind::Overrule, approval.overrule_btn_name.clone()),
-                        (FlowStateOperatorKind::Back, approval.back_btn_name.clone()),
-                    ]);
                     FLowInstStateConf {
                         operators,
                         form_conf: None,
                         approval_conf: Some(FLowInstStateApprovalConf {
                             approval_vars_collect_conf: Some(approval.vars_collect.clone()),
-                            form_vars_collect: artifacts.unwrap_or_default().form_state_map.get(state_id).cloned().unwrap_or_default(),
+                            form_vars_collect: artifacts.form_state_map.get(state_id).cloned().unwrap_or_default(),
                         }),
                     }
                 }),
@@ -1721,6 +1728,7 @@ impl FlowInstServ {
                     &FlowInstArtifactsModifyReq {
                         add_guard_conf_account_id: operate_req.operator.clone(),
                         delete_guard_conf_account_id: Some(ctx.owner.clone()),
+                        add_prohibit_guard_conf_account_id: Some(ctx.owner.clone()),
                         ..Default::default()
                     },
                     funs,
