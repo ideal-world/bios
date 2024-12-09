@@ -1,8 +1,8 @@
 import { Node, newMessage, MessageTargetKind, } from 'asteroid-mq-sdk';
 import { fetchConnectUrl } from '../api';
 import { NON_BLOCKING_TOPIC } from '../consts';
-import { sleep } from 'bun';
 import ProgressBar from 'progress';
+import { sleep } from '../utils';
 interface TestMessage {
     data: string;
 }
