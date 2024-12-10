@@ -590,7 +590,7 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
         }
         let rel_transition =
             FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelTransition, flow_model_id, None, None, funs, ctx).await?.into_iter().map(|rel| rel.ext).collect_vec().pop();
-        flow_model.rel_transition = rel_transition.map(|rel_transition| TardisFuns::json.obj_to_json(&rel_transition).unwrap_or_default());
+        flow_model.rel_transition = rel_transition.map(|rel_transition| TardisFuns::json.str_to_json(&rel_transition).unwrap_or_default());
 
         Ok(flow_model)
     }
@@ -633,7 +633,7 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
 
             let rel_transition =
                 FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelTransition, &item.id, None, None, funs, ctx).await?.into_iter().map(|rel| rel.ext).collect_vec().pop();
-            item.rel_transition = rel_transition.map(|rel_transition| TardisFuns::json.obj_to_json(&rel_transition).unwrap_or_default());
+            item.rel_transition = rel_transition.map(|rel_transition| TardisFuns::json.str_to_json(&rel_transition).unwrap_or_default());
         }
         Ok(res)
     }
@@ -1648,7 +1648,17 @@ impl FlowModelServ {
                 Self::delete_item(&model.id, funs, ctx).await?;
             }
         }
-
+        // clean non-main flow model
+        for model_id in Self::find_id_items(&FlowModelFilterReq {
+            basic: RbumBasicFilterReq {
+                enabled: Some(true),
+                ..Default::default()
+            },
+            main: Some(false),
+            ..Default::default()
+        }, None, None, funs, ctx).await? {
+            Self::delete_item(&model_id, funs, ctx).await?;
+        }
         Ok(models)
     }
 
@@ -1759,7 +1769,7 @@ impl FlowModelServ {
                         modify_states
                             .into_iter()
                             .map(|(id, modify_transitions)| FlowModelVersionModifyState {
-                                id: id.clone(),
+                                id: Some(id.clone()),
                                 modify_state: None,
                                 modify_rel: None,
                                 add_transitions: None,

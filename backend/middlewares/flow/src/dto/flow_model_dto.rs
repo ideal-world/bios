@@ -239,7 +239,7 @@ impl FlowModelDetailResp {
     }
 
     pub fn rel_transition(&self) -> Option<FlowModelRelTransitionExt> {
-        self.rel_transition.clone().map(|rel_transition| TardisFuns::json.json_to_obj(rel_transition.clone()).unwrap())
+        self.rel_transition.clone().map(|rel_transition| TardisFuns::json.json_to_obj(rel_transition).unwrap_or_default())
     }
 }
 
