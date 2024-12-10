@@ -71,7 +71,7 @@ pub struct FlowModelVersionBindState {
 #[derive(Clone, Serialize, Deserialize, Debug, Default, poem_openapi::Object)]
 pub struct FlowModelVersionModifyState {
     /// 若存在则表示，绑定已有状态节点
-    pub id: String,
+    pub id: Option<String>,
     pub modify_state: Option<FlowStateModifyReq>,
     pub modify_rel: Option<FlowStateRelModelModifyReq>,
     /// 添加动作

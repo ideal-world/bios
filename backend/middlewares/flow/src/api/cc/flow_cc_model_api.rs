@@ -287,7 +287,7 @@ impl FlowCcModelApi {
                             .sort_states
                             .into_iter()
                             .map(|state| FlowModelVersionModifyState {
-                                id: state.state_id.clone(),
+                                id: Some(state.state_id.clone()),
                                 modify_rel: Some(FlowStateRelModelModifyReq {
                                     id: state.state_id,
                                     sort: Some(state.sort),
@@ -362,7 +362,7 @@ impl FlowCcModelApi {
             &mut FlowModelModifyReq {
                 modify_version: Some(FlowModelVersionModifyReq {
                     modify_states: Some(vec![FlowModelVersionModifyState {
-                        id: req.0.id.clone(),
+                        id: Some(req.0.id.clone()),
                         modify_rel: Some(req.0),
                         modify_state: None,
                         add_transitions: None,

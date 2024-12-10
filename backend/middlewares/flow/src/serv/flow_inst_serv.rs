@@ -309,6 +309,11 @@ impl FlowInstServ {
             ..Default::default()
         };
         funs.db().update_one(flow_inst, ctx).await?;
+
+        let flow_inst_detail = Self::get(flow_inst_id, funs, ctx).await?;
+        if !flow_inst_detail.main {
+            FlowSearchClient::modify_business_obj_search(&flow_inst_detail.rel_business_obj_id, &flow_inst_detail.tag, funs, ctx).await?;
+        }
         Ok(())
     }
 
@@ -588,7 +593,7 @@ impl FlowInstServ {
         )
         .await;
         // 若当前数据项存在未结束的审批流，则清空其中的transitions
-        let unfinished_approve_flow_insts = Self::find_details(
+        let unfinished_approve_flow_inst_ids = Self::find_details(
             &FlowInstFilterReq {
                 rel_business_obj_ids: Some(flow_insts.iter().map(|flow_inst| flow_inst.rel_business_obj_id.clone()).collect_vec()),
                 main: Some(false),
@@ -600,13 +605,13 @@ impl FlowInstServ {
         )
         .await?
         .into_iter()
-        .map(|inst| inst.id.clone())
+        .map(|inst| flow_insts.iter().find(|flow_inst| flow_inst.rel_business_obj_id == inst.rel_business_obj_id).unwrap().id.clone())
         .collect_vec();
-        let _ = state_and_next_transitions.iter_mut().map(|item| {
-            if unfinished_approve_flow_insts.contains(&item.flow_inst_id) {
+        for item in state_and_next_transitions.iter_mut() {
+            if unfinished_approve_flow_inst_ids.contains(&item.flow_inst_id) {
                 item.next_flow_transitions.clear();
             }
-        });
+        }
         Ok(state_and_next_transitions)
     }
 
@@ -868,6 +873,10 @@ impl FlowInstServ {
         }
 
         funs.db().update_one(flow_inst, ctx).await?;
+
+        if next_flow_state.sys_state == FlowSysStateKind::Finish && !flow_inst_detail.main {
+            FlowSearchClient::modify_business_obj_search(&flow_inst_detail.rel_business_obj_id, &flow_inst_detail.tag, funs, ctx).await?;
+        }
 
         Self::when_leave_state(flow_inst_detail, &prev_flow_state.id, &flow_model_version.rel_model_id, funs, ctx).await?;
         Self::when_enter_state(flow_inst_detail, &next_flow_state.id, &flow_model_version.rel_model_id, funs, ctx).await?;
@@ -1665,7 +1674,7 @@ impl FlowInstServ {
                 FlowStateKind::Form => kind_conf.form.as_ref().map(|form| {
                     let mut operators = HashMap::new();
                     let artifacts = artifacts.clone().unwrap_or_default();
-                    if artifacts.guard_conf.check(ctx) && artifacts.prohibit_guard_by_spec_account_ids.clone().unwrap_or_default().contains(&ctx.owner) {
+                    if artifacts.guard_conf.check(ctx) && !artifacts.prohibit_guard_by_spec_account_ids.clone().unwrap_or_default().contains(&ctx.owner) {
                         operators.insert(FlowStateOperatorKind::Submit, form.submit_btn_name.clone());
                         if form.referral {
                             if let Some(referral_guard_custom_conf) = &form.referral_guard_custom_conf {
@@ -1688,7 +1697,7 @@ impl FlowInstServ {
                 FlowStateKind::Approval => kind_conf.approval.as_ref().map(|approval| {
                     let mut operators = HashMap::new();
                     let artifacts = artifacts.clone().unwrap_or_default();
-                    if artifacts.guard_conf.check(ctx) && artifacts.prohibit_guard_by_spec_account_ids.clone().unwrap_or_default().contains(&ctx.owner) {
+                    if artifacts.guard_conf.check(ctx) && !artifacts.prohibit_guard_by_spec_account_ids.clone().unwrap_or_default().contains(&ctx.owner) {
                         operators.insert(FlowStateOperatorKind::Pass, approval.pass_btn_name.clone());
                         operators.insert(FlowStateOperatorKind::Overrule, approval.overrule_btn_name.clone());
                         operators.insert(FlowStateOperatorKind::Back, approval.back_btn_name.clone());

@@ -168,15 +168,16 @@ impl
         }
         if let Some(modify_states) = &modify_req.modify_states {
             for modify_state in modify_states {
-                let state_id = &modify_state.id;
-                if let Some(mut modify_state) = modify_state.modify_state.clone() {
-                    FlowStateServ::modify_item(state_id, &mut modify_state, funs, ctx).await?;
+                if let Some(state_id) = &modify_state.id {
+                    if let Some(mut modify_state) = modify_state.modify_state.clone() {
+                        FlowStateServ::modify_item(state_id, &mut modify_state, funs, ctx).await?;
+                    }
+                    if let Some(add_transitions) = &modify_state.add_transitions {
+                        FlowTransitionServ::add_transitions(id, state_id, add_transitions, funs, ctx).await?;
+                    }
                 }
                 if let Some(modify_rel) = &modify_state.modify_rel {
                     FlowStateServ::modify_rel_state_ext(id, modify_rel, funs, ctx).await?;
-                }
-                if let Some(add_transitions) = &modify_state.add_transitions {
-                    FlowTransitionServ::add_transitions(id, &modify_state.id, add_transitions, funs, ctx).await?;
                 }
                 if let Some(modify_transitions) = &modify_state.modify_transitions {
                     FlowTransitionServ::modify_transitions(id, modify_transitions, funs, ctx).await?;

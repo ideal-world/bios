@@ -137,11 +137,12 @@ impl FlowCiModelApi {
             &FlowModelFilterReq {
                 basic: RbumBasicFilterReq {
                     ids: Some(rel_model_ids),
+                    enabled: Some(true),
                     own_paths: Some("".to_string()),
                     with_sub_own_paths: true,
                     ..Default::default()
                 },
-                main: Some(true),
+                // main: Some(true),
                 ..Default::default()
             },
             None,
