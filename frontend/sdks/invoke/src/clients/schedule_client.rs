@@ -55,8 +55,15 @@ impl ScheduleClient {
                 )
                 .await?;
         } else {
-            funs.web_client().delete_to_void(&format!("{schedule_url}/ci/schedule/jobs/{}", req.code), headers.clone()).await?;
+            Self::delete_sync_task(&req.code, funs, ctx).await?;
         }
+        Ok(())
+    }
+
+    pub async fn delete_sync_task(code: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let schedule_url: String = BaseSpiClient::module_url(InvokeModuleKind::Schedule, funs).await?;
+        let headers = BaseSpiClient::headers(None, funs, ctx).await?;
+        funs.web_client().delete_to_void(&format!("{schedule_url}/ci/schedule/jobs/{}", code), headers).await?;
         Ok(())
     }
 }

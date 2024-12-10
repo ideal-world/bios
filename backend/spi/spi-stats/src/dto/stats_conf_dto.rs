@@ -527,7 +527,7 @@ pub struct StatsConfFactColInfoResp {
     /// 关联外部系统传入的主键或编码
     /// 用于扩展ext字段的事实列
     pub rel_external_id: Option<String>,
-    pub dim_exclusive_rec: Option<String>,
+    pub dim_exclusive_rec: Option<bool>,
     pub remark: Option<String>,
     pub create_time: DateTime<Utc>,
     pub update_time: DateTime<Utc>,

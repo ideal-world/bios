@@ -96,49 +96,49 @@ pub(crate) async fn modify(fact_conf_key: &str, modify_req: &StatsConfFactModify
     conn.begin().await?;
     let mut sql_sets = vec![];
     let mut params = vec![Value::from(fact_conf_key.to_string())];
-    if online(fact_conf_key, &conn, ctx).await? {
-        if modify_req.is_online.is_none() {
-            return Err(funs.err().conflict(
-                "fact_conf",
-                "modify",
-                "The fact instance table already exists, please delete it and then modify it.",
-                "409-spi-stats-fact-inst-exist",
-            ));
-        }
-    } else {
-        if let Some(show_name) = &modify_req.show_name {
-            sql_sets.push(format!("show_name = ${}", params.len() + 1));
-            params.push(Value::from(show_name.to_string()));
-        }
-        if let Some(query_limit) = modify_req.query_limit {
-            sql_sets.push(format!("query_limit = ${}", params.len() + 1));
-            params.push(Value::from(query_limit));
-        }
-        if let Some(remark) = &modify_req.remark {
-            sql_sets.push(format!("remark = ${}", params.len() + 1));
-            params.push(Value::from(remark.to_string()));
-        }
-        if let Some(redirect_path) = &modify_req.redirect_path {
-            sql_sets.push(format!("redirect_path = ${}", params.len() + 1));
-            params.push(Value::from(redirect_path));
-        }
-        if let Some(rel_cert_id) = &modify_req.rel_cert_id {
-            sql_sets.push(format!("rel_cert_id = ${}", params.len() + 1));
-            params.push(Value::from(rel_cert_id.to_string()));
-        }
-        if let Some(sync_sql) = &modify_req.sync_sql {
-            sql_sets.push(format!("sync_sql = ${}", params.len() + 1));
-            params.push(Value::from(sync_sql.to_string()));
-        }
-        if let Some(sync_cron) = &modify_req.sync_cron {
-            sql_sets.push(format!("sync_cron = ${}", params.len() + 1));
-            params.push(Value::from(sync_cron.to_string()));
-        }
-        if let Some(is_sync) = &modify_req.is_sync {
-            sql_sets.push(format!("is_sync = ${}", params.len() + 1));
-            params.push(Value::from(*is_sync));
-        }
-    };
+    // todo cancel online check
+    // if online(fact_conf_key, &conn, ctx).await? {
+    //     if modify_req.is_online.is_none() {
+    //         return Err(funs.err().conflict(
+    //             "fact_conf",
+    //             "modify",
+    //             "The fact instance table already exists, please delete it and then modify it.",
+    //             "409-spi-stats-fact-inst-exist",
+    //         ));
+    //     }
+    // }
+    if let Some(show_name) = &modify_req.show_name {
+        sql_sets.push(format!("show_name = ${}", params.len() + 1));
+        params.push(Value::from(show_name.to_string()));
+    }
+    if let Some(query_limit) = modify_req.query_limit {
+        sql_sets.push(format!("query_limit = ${}", params.len() + 1));
+        params.push(Value::from(query_limit));
+    }
+    if let Some(remark) = &modify_req.remark {
+        sql_sets.push(format!("remark = ${}", params.len() + 1));
+        params.push(Value::from(remark.to_string()));
+    }
+    if let Some(redirect_path) = &modify_req.redirect_path {
+        sql_sets.push(format!("redirect_path = ${}", params.len() + 1));
+        params.push(Value::from(redirect_path));
+    }
+    if let Some(rel_cert_id) = &modify_req.rel_cert_id {
+        sql_sets.push(format!("rel_cert_id = ${}", params.len() + 1));
+        params.push(Value::from(rel_cert_id.to_string()));
+    }
+    if let Some(sync_sql) = &modify_req.sync_sql {
+        sql_sets.push(format!("sync_sql = ${}", params.len() + 1));
+        params.push(Value::from(sync_sql.to_string()));
+    }
+    if let Some(sync_cron) = &modify_req.sync_cron {
+        sql_sets.push(format!("sync_cron = ${}", params.len() + 1));
+        params.push(Value::from(sync_cron.to_string()));
+    }
+    if let Some(is_sync) = &modify_req.is_sync {
+        sql_sets.push(format!("is_sync = ${}", params.len() + 1));
+        params.push(Value::from(*is_sync));
+    }
 
     if let Some(is_online) = &modify_req.is_online {
         sql_sets.push(format!("is_online = ${}", params.len() + 1));
@@ -174,7 +174,7 @@ WHERE key = $1
     Ok(())
 }
 
-pub(crate) async fn delete(fact_conf_key: &str, _funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
+pub(crate) async fn delete(fact_conf_key: &str, funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
     let bs_inst = inst.inst::<TardisRelDBClient>();
     let (mut conn, table_name) = stats_pg_initializer::init_conf_fact_table_and_conn(bs_inst, ctx, true).await?;
     let (_, fact_col_table_name) = stats_pg_initializer::init_conf_fact_col_table_and_conn(bs_inst, ctx, true).await?;
@@ -194,6 +194,7 @@ pub(crate) async fn delete(fact_conf_key: &str, _funs: &TardisFunsInst, ctx: &Ta
         conn.execute_one(&format!("DROP TABLE {}{fact_conf_key}", package_table_name("stats_inst_fact_", ctx)), vec![]).await?;
         conn.execute_one(&format!("DROP TABLE {}{fact_conf_key}_del", package_table_name("stats_inst_fact_", ctx)), vec![]).await?;
     }
+    ScheduleClient::delete_sync_task(&format!("{}_{}", SYNC_FACT_TASK_CODE, fact_conf_key), funs, ctx).await?;
     conn.commit().await?;
     Ok(())
 }
@@ -423,61 +424,8 @@ async fn create_inst_table(
     sql.push("idempotent_id character varying NOT NULL".to_string());
     index.push(("own_paths".to_string(), "btree"));
     for fact_col_conf in fact_col_conf_set {
-        if fact_col_conf.kind == StatsFactColKind::Dimension {
-            let Some(dim_conf_key) = &fact_col_conf.dim_rel_conf_dim_key else {
-                return Err(funs.err().bad_request("fact_inst", "create", "Fail to get dimension config", "400-spi-stats-fail-to-get-dim-config-key"));
-            };
-            if !stats_pg_conf_dim_serv::online(dim_conf_key, conn, ctx).await? {
-                return Err(funs.err().conflict(
-                    "fact_inst",
-                    "create",
-                    &format!("The dimension config [{dim_conf_key}] not online."),
-                    "409-spi-stats-dim-conf-not-online",
-                ));
-            }
-            let Some(dim_conf) = stats_pg_conf_dim_serv::get(dim_conf_key, None, None, conn, ctx, inst).await? else {
-                return Err(funs.err().conflict(
-                    "fact_inst",
-                    "create",
-                    &format!("Fail to get dimension config by key [{dim_conf_key}]"),
-                    "409-spi-stats-fail-to-get-dim-config",
-                ));
-            };
-            if fact_col_conf.dim_multi_values.unwrap_or(false) {
-                sql.push(format!("{} {}[] NOT NULL", &fact_col_conf.key, dim_conf.data_type.to_pg_data_type()));
-                index.push((fact_col_conf.key.clone(), "gin"));
-            } else {
-                sql.push(format!("{} {} NOT NULL", &fact_col_conf.key, dim_conf.data_type.to_pg_data_type()));
-                index.push((fact_col_conf.key.clone(), "btree"));
-                match dim_conf.data_type {
-                    StatsDataTypeKind::DateTime => {
-                        index.push((format!("date(timezone('UTC', {}))", fact_col_conf.key), "btree"));
-                        index.push((format!("date_part('hour',timezone('UTC', {}))", fact_col_conf.key), "btree"));
-                        index.push((format!("date_part('day',timezone('UTC', {}))", fact_col_conf.key), "btree"));
-                        index.push((format!("date_part('month',timezone('UTC', {}))", fact_col_conf.key), "btree"));
-                        index.push((format!("date_part('year',timezone('UTC', {}))", fact_col_conf.key), "btree"));
-                    }
-                    StatsDataTypeKind::Date => {
-                        index.push((format!("date_part('day', {})", fact_col_conf.key), "btree"));
-                        index.push((format!("date_part('month', {})", fact_col_conf.key), "btree"));
-                        index.push((format!("date_part('year', {})", fact_col_conf.key), "btree"));
-                    }
-                    _ => {}
-                }
-            }
-        } else if fact_col_conf.kind == StatsFactColKind::Measure {
-            let Some(mes_data_type) = fact_col_conf.mes_data_type.as_ref() else {
-                return Err(funs.err().conflict(
-                    "fact_inst",
-                    "create",
-                    "Config of kind StatsFactColKind::Measure should have a mes_data_type",
-                    "409-spi-stats-miss-mes-data-type",
-                ));
-            };
-            sql.push(format!("{} {} NOT NULL", &fact_col_conf.key, mes_data_type.to_pg_data_type()));
-        } else {
-            sql.push(format!("{} character varying", &fact_col_conf.key));
-        }
+        let col_sql = stats_pg_conf_fact_col_serv::fact_col_column_sql(fact_col_conf.clone(), &mut index, true, conn, funs, ctx, inst).await?;
+        sql.push(col_sql)
     }
     sql.push("ct timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP".to_string());
     index.push(("ct".to_string(), "btree"));

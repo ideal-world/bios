@@ -436,43 +436,55 @@ EXECUTE PROCEDURE TARDIS_AUTO_UPDATE_TIME_{}();"###,
         Ok(())
     }
 
-    /// Modify table column
-    /// 修改表字段
-    pub async fn modify_table_column(
+    /// alter table column
+    /// 更改表字段
+    pub async fn alter_table_column(
         conn: &TardisRelDBlConnection,
         tag: Option<&str>,
         table_flag: &str,
-        modify_column_kind: &ModifyColumnKind,
+        alter_column_kind: &AlterColumnKind,
         field_name: &str,
-        field_type: &str,
+        field_content: &str,
         add_index: Vec<(&str, &str)>,
         ctx: &TardisContext,
     ) -> TardisResult<()> {
         let tag = tag.map(|t| format!("_{t}")).unwrap_or_default();
         let schema_name = get_schema_name_from_context(ctx);
-        do_modify_table_column(&schema_name, conn, &tag, table_flag, modify_column_kind, field_name, field_type, add_index).await
+        do_alter_table_column(&schema_name, conn, &tag, table_flag, alter_column_kind, field_name, field_content, add_index).await
     }
 
-    async fn do_modify_table_column(
+    async fn do_alter_table_column(
         schema_name: &str,
         conn: &TardisRelDBlConnection,
         tag: &str,
         table_flag: &str,
-        modify_column_kind: &ModifyColumnKind,
+        alter_column_kind: &AlterColumnKind,
         field_name: &str,
-        field_type: &str,
+        field_content: &str,
         add_index: Vec<(&str, &str)>,
     ) -> TardisResult<()> {
-        match modify_column_kind {
-            ModifyColumnKind::Add => {
+        match alter_column_kind {
+            AlterColumnKind::Add => {
                 conn.execute_one(
-                    &format!("ALTER TABLE {schema_name}.{GLOBAL_STORAGE_FLAG}_{table_flag}{tag} ADD COLUMN {field_name} {field_type}"),
+                    &format!("ALTER TABLE {schema_name}.{GLOBAL_STORAGE_FLAG}_{table_flag}{tag} ADD COLUMN {field_content}"),
                     vec![],
                 )
                 .await?;
-                // Add index
-                for (field_name_or_fun, index_type) in add_index.into_iter() {
-                    let index_name = format!("idx_{schema_name}{tag}_{table_flag}_{field_name_or_fun}",);
+                for (idx, (field_name_or_fun, index_type)) in add_index.into_iter().enumerate() {
+                    // index name shouldn't be longer than 63 characters
+                    // [4 ][     18    ][ 12 ][     26    ][ 3 ]
+                    // idx_{schema_name}{tag}_{table_flag}_{idx}
+                    #[inline]
+                    fn truncate_str(s: &str, max_size: usize) -> &str {
+                        &s[..max_size.min(s.len())]
+                    }
+                    let index_name = format!(
+                        "idx_{schema_name}{tag}_{table_flag}_{field_name_or_fun}_{idx}",
+                        schema_name = truncate_str(schema_name, 18),
+                        tag = truncate_str(tag, 11),
+                        table_flag = truncate_str(table_flag, 25),
+                        idx = truncate_str(idx.to_string().as_str(), 3),
+                    );
                     conn.execute_one(
                         &format!("CREATE INDEX {index_name} ON {schema_name}.{GLOBAL_STORAGE_FLAG}_{table_flag}{tag} USING {index_type}({field_name_or_fun})"),
                         vec![],
@@ -480,7 +492,7 @@ EXECUTE PROCEDURE TARDIS_AUTO_UPDATE_TIME_{}();"###,
                     .await?;
                 }
             }
-            ModifyColumnKind::Delete => {
+            AlterColumnKind::Delete => {
                 conn.execute_one(
                     &format!("ALTER TABLE {schema_name}.{GLOBAL_STORAGE_FLAG}_{table_flag}{tag} DROP COLUMN {field_name}"),
                     vec![],
@@ -491,7 +503,7 @@ EXECUTE PROCEDURE TARDIS_AUTO_UPDATE_TIME_{}();"###,
         Ok(())
     }
 
-    pub enum ModifyColumnKind {
+    pub enum AlterColumnKind {
         Add,
         Delete,
     }

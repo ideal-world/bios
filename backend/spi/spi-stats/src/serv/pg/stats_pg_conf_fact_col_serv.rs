@@ -2,11 +2,12 @@ use bios_basic::spi::{
     spi_funs::SpiBsInst,
     spi_initializer::{
         self,
-        common_pg::{self, package_table_name, ModifyColumnKind},
+        common_pg::{self, package_table_name, AlterColumnKind},
     },
 };
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
+    chrono::{DateTime, Utc},
     db::{
         reldb_client::{TardisRelDBClient, TardisRelDBlConnection},
         sea_orm::Value,
@@ -36,14 +37,15 @@ pub(crate) async fn add(fact_conf_key: &str, add_req: &StatsConfFactColAddReq, f
             return Err(funs.err().conflict("fact_col_conf", "add", "The rel_sql is not a valid sql.", "409-spi-stats-fact-col-conf-rel-sql-not-valid"));
         }
     }
-    if add_req.rel_external_id.is_none() && stats_pg_conf_fact_serv::online(fact_conf_key, &conn, ctx).await? {
-        return Err(funs.err().conflict(
-            "fact_col_conf",
-            "add",
-            "The fact instance table already exists, please delete it and then modify it.",
-            "409-spi-stats-fact-inst-exist",
-        ));
-    }
+    // todo cancel check if fact_conf_table online
+    // if add_req.rel_external_id.is_none() && stats_pg_conf_fact_serv::online(fact_conf_key, &conn, ctx).await? {
+    //     return Err(funs.err().conflict(
+    //         "fact_col_conf",
+    //         "add",
+    //         "The fact instance table already exists, please delete it and then modify it.",
+    //         "409-spi-stats-fact-inst-exist",
+    //     ));
+    // }
     let conf_params = if let Some(rel_external_ids) = add_req.rel_external_id.clone() {
         vec![
             Value::from(&add_req.key),
@@ -76,44 +78,6 @@ pub(crate) async fn add(fact_conf_key: &str, add_req: &StatsConfFactColAddReq, f
             "The fact column config already exists, please delete it and then add it.",
             "409-spi-stats-fact-conf-col-exist",
         ));
-    }
-    // check if conf_fact_table online
-    if stats_pg_conf_fact_serv::online(fact_conf_key, &conn, ctx).await? {
-        let mut filed_type = "VARCHAR".to_string();
-        let mut index_type = "gin".to_string();
-        if add_req.kind == StatsFactColKind::Dimension {
-            let Some(dim_conf_key) = &add_req.dim_rel_conf_dim_key else {
-                return Err(funs.err().bad_request("fact_inst", "create", "Fail to get dimension config", "400-spi-stats-fail-to-get-dim-config-key"));
-            };
-            let Some(dim_conf) = stats_pg_conf_dim_serv::get(dim_conf_key, None, None, &conn, ctx, inst).await? else {
-                return Err(funs.err().conflict(
-                    "fact_inst",
-                    "create",
-                    &format!("Fail to get dimension config by key [{dim_conf_key}]"),
-                    "409-spi-stats-fail-to-get-dim-config",
-                ));
-            };
-            if add_req.dim_multi_values.clone().unwrap_or(false) {
-                filed_type = format!("{}[]", dim_conf.data_type.to_pg_data_type());
-                index_type = "gin".to_string();
-            } else {
-                filed_type = dim_conf.data_type.to_pg_data_type().to_owned();
-                index_type = "btree".to_string();
-            }
-        } else if add_req.kind == StatsFactColKind::Measure {
-            filed_type = add_req.mes_data_type.as_ref().unwrap_or(&StatsDataTypeKind::String).to_pg_data_type().to_owned();
-        }
-        spi_initializer::common_pg::modify_table_column(
-            &conn,
-            None,
-            "stats_conf_fact",
-            &ModifyColumnKind::Add,
-            &add_req.key,
-            &filed_type,
-            vec![(&add_req.key, &index_type)],
-            ctx,
-        )
-        .await?;
     }
     if let Some(dim_rel_conf_dim_key) = &add_req.dim_rel_conf_dim_key {
         if add_req.rel_external_id.is_none() && !stats_pg_conf_dim_serv::online(dim_rel_conf_dim_key, &conn, ctx).await? {
@@ -202,6 +166,34 @@ VALUES
         params,
     )
     .await?;
+    // alter inst table column
+    if add_req.rel_external_id.is_none() {
+        let fact_col_conf = StatsConfFactColInfoResp {
+            key: add_req.key.to_string(),
+            show_name: add_req.show_name.clone(),
+            kind: add_req.kind.clone(),
+            dim_rel_conf_dim_key: add_req.dim_rel_conf_dim_key.clone(),
+            dim_multi_values: add_req.dim_multi_values,
+            dim_data_type: add_req.dim_data_type.clone(),
+            dim_dynamic_url: add_req.dim_dynamic_url.clone(),
+            mes_data_distinct: add_req.mes_data_distinct,
+            mes_data_type: add_req.mes_data_type.clone(),
+            mes_frequency: add_req.mes_frequency.clone(),
+            mes_unit: add_req.mes_unit.clone(),
+            mes_act_by_dim_conf_keys: add_req.mes_act_by_dim_conf_keys.clone(),
+            rel_conf_fact_key: Some(fact_conf_key.to_owned()),
+            rel_conf_fact_and_col_key: add_req.rel_conf_fact_and_col_key.clone(),
+            rel_external_id: add_req.rel_external_id.clone(),
+            dim_exclusive_rec: add_req.dim_exclusive_rec,
+            remark: add_req.remark.clone(),
+            create_time: Utc::now(),
+            update_time: Utc::now(),
+            rel_field: add_req.rel_field.clone(),
+            rel_sql: add_req.rel_sql.clone(),
+            rel_cert_id: add_req.rel_field.clone(),
+        };
+        alter_inst_table_column(fact_conf_key, fact_col_conf, &AlterColumnKind::Add, &conn, funs, ctx, inst).await?;
+    }
     conn.commit().await?;
     Ok(())
 }
@@ -217,14 +209,15 @@ pub(crate) async fn modify(
     let bs_inst = inst.inst::<TardisRelDBClient>();
     let (mut conn, table_name) = stats_pg_initializer::init_conf_fact_col_table_and_conn(bs_inst, ctx, true).await?;
     conn.begin().await?;
-    if stats_pg_conf_fact_serv::online(fact_conf_key, &conn, ctx).await? {
-        return Err(funs.err().conflict(
-            "fact_col_conf",
-            "modify",
-            "The fact instance table already exists, please delete it and then modify it.",
-            "409-spi-stats-fact-inst-exist",
-        ));
-    }
+    // todo cancel check if fact_conf_table online
+    // if stats_pg_conf_fact_serv::online(fact_conf_key, &conn, ctx).await? {
+    //     return Err(funs.err().conflict(
+    //         "fact_col_conf",
+    //         "modify",
+    //         "The fact instance table already exists, please delete it and then modify it.",
+    //         "409-spi-stats-fact-inst-exist",
+    //     ));
+    // }
     if let Some(rel_sql) = &modify_req.rel_sql {
         if !stats_pg_sync_serv::validate_fact_col_sql(rel_sql) {
             return Err(funs.err().conflict("fact_col_conf", "add", "The rel_sql is not a valid sql.", "409-spi-stats-fact-col-conf-rel-sql-not-valid"));
@@ -332,7 +325,7 @@ pub(crate) async fn delete(
     let bs_inst = inst.inst::<TardisRelDBClient>();
     let (mut conn, table_name) = stats_pg_initializer::init_conf_fact_col_table_and_conn(bs_inst, ctx, true).await?;
     conn.begin().await?;
-    if rel_external_id.is_none() && stats_pg_conf_fact_serv::online(fact_conf_key, &conn, ctx).await? {
+    if rel_external_id.is_none() {
         let fact_col_confs: Vec<StatsConfFactColInfoResp> = if let Some(fact_col_conf_key) = fact_col_conf_key {
             if let Some(fact_col_conf) = find_by_fact_key_and_col_conf_key(fact_conf_key, fact_col_conf_key, funs, ctx, inst).await? {
                 vec![fact_col_conf]
@@ -343,28 +336,7 @@ pub(crate) async fn delete(
             find_by_fact_conf_key(fact_conf_key, funs, ctx, inst).await?
         };
         for fact_col_conf in fact_col_confs {
-            let mut filed_type = "VARCHAR".to_string();
-            if fact_col_conf.kind == StatsFactColKind::Dimension {
-                let Some(dim_conf_key) = &fact_col_conf.dim_rel_conf_dim_key else {
-                    return Err(funs.err().bad_request("fact_col_conf", "delete", "Fail to get dimension config", "400-spi-stats-fail-to-get-dim-config-key"));
-                };
-                let Some(dim_conf) = stats_pg_conf_dim_serv::get(dim_conf_key, None, None, &conn, ctx, inst).await? else {
-                    return Err(funs.err().conflict(
-                        "fact_col_conf",
-                        "delete",
-                        &format!("Fail to get dimension config by key [{dim_conf_key}]"),
-                        "409-spi-stats-fail-to-get-dim-config",
-                    ));
-                };
-                if fact_col_conf.dim_multi_values.clone().unwrap_or(false) {
-                    filed_type = format!("{}[]", dim_conf.data_type.to_pg_data_type());
-                } else {
-                    filed_type = dim_conf.data_type.to_pg_data_type().to_owned();
-                }
-            } else if fact_col_conf.kind == StatsFactColKind::Measure {
-                filed_type = fact_col_conf.mes_data_type.as_ref().unwrap_or(&StatsDataTypeKind::String).to_pg_data_type().to_owned();
-            }
-            spi_initializer::common_pg::modify_table_column(&conn, None, "stats_conf_fact", &ModifyColumnKind::Delete, &fact_col_conf.key, &filed_type, vec![], ctx).await?;
+            alter_inst_table_column(fact_conf_key, fact_col_conf, &AlterColumnKind::Delete, &conn, funs, ctx, inst).await?;
         }
     }
     let mut where_clause = String::from("rel_conf_fact_key = $1");
@@ -612,4 +584,113 @@ WHERE
         total_size: total_size as u64,
         records: result,
     })
+}
+
+async fn alter_inst_table_column(
+    fact_conf_key: &str,
+    fact_col_conf: StatsConfFactColInfoResp,
+    alter_column_kind: &AlterColumnKind,
+    conn: &TardisRelDBlConnection,
+    funs: &TardisFunsInst,
+    ctx: &TardisContext,
+    inst: &SpiBsInst,
+) -> TardisResult<()> {
+    if stats_pg_conf_fact_serv::online(fact_conf_key, &conn, ctx).await? {
+        let mut indix: Vec<(String, &str)> = vec![];
+        let col_sql = fact_col_column_sql(fact_col_conf.clone(), &mut indix, false, conn, funs, ctx, inst).await?;
+        let mut swap_index = vec![];
+        for i in &indix {
+            swap_index.push((&i.0[..], i.1));
+        }
+        spi_initializer::common_pg::alter_table_column(
+            &conn,
+            Some(fact_conf_key),
+            "stats_inst_fact",
+            alter_column_kind,
+            fact_col_conf.key.as_str(),
+            &col_sql,
+            swap_index,
+            ctx,
+        )
+        .await?;
+    }
+    Ok(())
+}
+
+pub async fn fact_col_column_sql(
+    fact_col_conf: StatsConfFactColInfoResp,
+    index: &mut Vec<(String, &str)>,
+    is_not_null: bool,
+    conn: &TardisRelDBlConnection,
+    funs: &TardisFunsInst,
+    ctx: &TardisContext,
+    inst: &SpiBsInst,
+) -> TardisResult<String> {
+    let sql;
+    if fact_col_conf.kind == StatsFactColKind::Dimension {
+        let Some(dim_conf_key) = &fact_col_conf.dim_rel_conf_dim_key else {
+            return Err(funs.err().bad_request("fact_inst", "create", "Fail to get dimension config", "400-spi-stats-fail-to-get-dim-config-key"));
+        };
+        if !stats_pg_conf_dim_serv::online(dim_conf_key, conn, ctx).await? {
+            return Err(funs.err().conflict(
+                "fact_inst",
+                "create",
+                &format!("The dimension config [{dim_conf_key}] not online."),
+                "409-spi-stats-dim-conf-not-online",
+            ));
+        }
+        let Some(dim_conf) = stats_pg_conf_dim_serv::get(dim_conf_key, None, None, conn, ctx, inst).await? else {
+            return Err(funs.err().conflict(
+                "fact_inst",
+                "create",
+                &format!("Fail to get dimension config by key [{dim_conf_key}]"),
+                "409-spi-stats-fail-to-get-dim-config",
+            ));
+        };
+        if fact_col_conf.dim_multi_values.unwrap_or(false) {
+            sql = format!(
+                "{} {}[] {}",
+                &fact_col_conf.key,
+                dim_conf.data_type.to_pg_data_type(),
+                if is_not_null { "NOT NULL" } else { "" }
+            );
+            index.push((fact_col_conf.key.clone(), "gin"));
+        } else {
+            sql = format!(
+                "{} {} {}",
+                &fact_col_conf.key,
+                dim_conf.data_type.to_pg_data_type(),
+                if is_not_null { "NOT NULL" } else { "" }
+            );
+            index.push((fact_col_conf.key.clone(), "btree"));
+            match dim_conf.data_type {
+                StatsDataTypeKind::DateTime => {
+                    index.push((format!("date(timezone('UTC', {}))", fact_col_conf.key), "btree"));
+                    index.push((format!("date_part('hour',timezone('UTC', {}))", fact_col_conf.key), "btree"));
+                    index.push((format!("date_part('day',timezone('UTC', {}))", fact_col_conf.key), "btree"));
+                    index.push((format!("date_part('month',timezone('UTC', {}))", fact_col_conf.key), "btree"));
+                    index.push((format!("date_part('year',timezone('UTC', {}))", fact_col_conf.key), "btree"));
+                }
+                StatsDataTypeKind::Date => {
+                    index.push((format!("date_part('day', {})", fact_col_conf.key), "btree"));
+                    index.push((format!("date_part('month', {})", fact_col_conf.key), "btree"));
+                    index.push((format!("date_part('year', {})", fact_col_conf.key), "btree"));
+                }
+                _ => {}
+            }
+        }
+    } else if fact_col_conf.kind == StatsFactColKind::Measure {
+        let Some(mes_data_type) = fact_col_conf.mes_data_type.as_ref() else {
+            return Err(funs.err().conflict(
+                "fact_inst",
+                "create",
+                "Config of kind StatsFactColKind::Measure should have a mes_data_type",
+                "409-spi-stats-miss-mes-data-type",
+            ));
+        };
+        sql = format!("{} {} {}", &fact_col_conf.key, mes_data_type.to_pg_data_type(), if is_not_null { "NOT NULL" } else { "" });
+    } else {
+        sql = format!("{} character varying", &fact_col_conf.key);
+    }
+    Ok(sql)
 }
