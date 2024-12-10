@@ -213,6 +213,7 @@ pub struct FLowInstStateApprovalConf {
 #[derive(Serialize, Deserialize, PartialEq, Clone, Debug, Default, poem_openapi::Object, sea_orm::FromJsonQueryResult)]
 pub struct FlowInstArtifacts {
     pub guard_conf: FlowGuardConf,                                      // 当前操作人权限
+    pub prohibit_guard_by_spec_account_ids: Option<Vec<String>>,                // 禁止操作的指定用户ID
     pub approval_result: HashMap<String, HashMap<String, Vec<String>>>, // 当前审批结果
     pub form_state_map: HashMap<String, HashMap<String, Value>>,        // 录入节点映射 key为节点ID,对应的value为节点中的录入的参数
     pub prev_non_auto_state_id: Option<String>,                         // 上一个非自动节点ID
@@ -223,6 +224,8 @@ pub struct FlowInstArtifacts {
 #[derive(Serialize, Deserialize, PartialEq, Clone, Debug, Default, sea_orm::FromJsonQueryResult)]
 pub struct FlowInstArtifactsModifyReq {
     pub guard_conf: Option<FlowGuardConf>,                             // 当前操作人权限
+    pub add_prohibit_guard_conf_account_id: Option<String>,            // 增加禁止操作人ID
+    pub delete_prohibit_guard_conf_account_id: Option<String>,                  // 删除禁止操作人ID
     pub add_guard_conf_account_id: Option<String>,                     // 增加操作人ID
     pub delete_guard_conf_account_id: Option<String>,                  // 删除操作人ID
     pub add_approval_result: Option<(String, FlowApprovalResultKind)>, // 增加审批结果
