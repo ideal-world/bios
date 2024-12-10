@@ -435,4 +435,64 @@ EXECUTE PROCEDURE TARDIS_AUTO_UPDATE_TIME_{}();"###,
         }
         Ok(())
     }
+
+    /// Modify table column
+    /// 修改表字段
+    pub async fn modify_table_column(
+        conn: &TardisRelDBlConnection,
+        tag: Option<&str>,
+        table_flag: &str,
+        modify_column_kind: &ModifyColumnKind,
+        field_name: &str,
+        field_type: &str,
+        add_index: Vec<(&str, &str)>,
+        ctx: &TardisContext,
+    ) -> TardisResult<()> {
+        let tag = tag.map(|t| format!("_{t}")).unwrap_or_default();
+        let schema_name = get_schema_name_from_context(ctx);
+        do_modify_table_column(&schema_name, conn, &tag, table_flag, modify_column_kind, field_name, field_type, add_index).await
+    }
+
+    async fn do_modify_table_column(
+        schema_name: &str,
+        conn: &TardisRelDBlConnection,
+        tag: &str,
+        table_flag: &str,
+        modify_column_kind: &ModifyColumnKind,
+        field_name: &str,
+        field_type: &str,
+        add_index: Vec<(&str, &str)>,
+    ) -> TardisResult<()> {
+        match modify_column_kind {
+            ModifyColumnKind::Add => {
+                conn.execute_one(
+                    &format!("ALTER TABLE {schema_name}.{GLOBAL_STORAGE_FLAG}_{table_flag}{tag} ADD COLUMN {field_name} {field_type}"),
+                    vec![],
+                )
+                .await?;
+                // Add index
+                for (field_name_or_fun, index_type) in add_index.into_iter() {
+                    let index_name = format!("idx_{schema_name}{tag}_{table_flag}_{field_name_or_fun}",);
+                    conn.execute_one(
+                        &format!("CREATE INDEX {index_name} ON {schema_name}.{GLOBAL_STORAGE_FLAG}_{table_flag}{tag} USING {index_type}({field_name_or_fun})"),
+                        vec![],
+                    )
+                    .await?;
+                }
+            }
+            ModifyColumnKind::Delete => {
+                conn.execute_one(
+                    &format!("ALTER TABLE {schema_name}.{GLOBAL_STORAGE_FLAG}_{table_flag}{tag} DROP COLUMN {field_name}"),
+                    vec![],
+                )
+                .await?;
+            }
+        }
+        Ok(())
+    }
+
+    pub enum ModifyColumnKind {
+        Add,
+        Delete,
+    }
 }

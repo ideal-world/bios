@@ -1,6 +1,9 @@
 use bios_basic::spi::{
     spi_funs::SpiBsInst,
-    spi_initializer::common_pg::{self, package_table_name},
+    spi_initializer::{
+        self,
+        common_pg::{self, package_table_name, ModifyColumnKind},
+    },
 };
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
@@ -14,7 +17,7 @@ use tardis::{
 
 use crate::{
     dto::stats_conf_dto::{StatsConfFactColAddReq, StatsConfFactColInfoResp, StatsConfFactColModifyReq},
-    stats_enumeration::StatsFactColKind,
+    stats_enumeration::{StatsDataTypeKind, StatsFactColKind},
 };
 
 use super::{stats_pg_conf_dim_serv, stats_pg_conf_fact_serv, stats_pg_initializer, stats_pg_sync_serv};
@@ -73,6 +76,44 @@ pub(crate) async fn add(fact_conf_key: &str, add_req: &StatsConfFactColAddReq, f
             "The fact column config already exists, please delete it and then add it.",
             "409-spi-stats-fact-conf-col-exist",
         ));
+    }
+    // check if conf_fact_table online
+    if stats_pg_conf_fact_serv::online(fact_conf_key, &conn, ctx).await? {
+        let mut filed_type = "VARCHAR".to_string();
+        let mut index_type = "gin".to_string();
+        if add_req.kind == StatsFactColKind::Dimension {
+            let Some(dim_conf_key) = &add_req.dim_rel_conf_dim_key else {
+                return Err(funs.err().bad_request("fact_inst", "create", "Fail to get dimension config", "400-spi-stats-fail-to-get-dim-config-key"));
+            };
+            let Some(dim_conf) = stats_pg_conf_dim_serv::get(dim_conf_key, None, None, &conn, ctx, inst).await? else {
+                return Err(funs.err().conflict(
+                    "fact_inst",
+                    "create",
+                    &format!("Fail to get dimension config by key [{dim_conf_key}]"),
+                    "409-spi-stats-fail-to-get-dim-config",
+                ));
+            };
+            if add_req.dim_multi_values.clone().unwrap_or(false) {
+                filed_type = format!("{}[]", dim_conf.data_type.to_pg_data_type());
+                index_type = "gin".to_string();
+            } else {
+                filed_type = dim_conf.data_type.to_pg_data_type().to_owned();
+                index_type = "btree".to_string();
+            }
+        } else if add_req.kind == StatsFactColKind::Measure {
+            filed_type = add_req.mes_data_type.as_ref().unwrap_or(&StatsDataTypeKind::String).to_pg_data_type().to_owned();
+        }
+        spi_initializer::common_pg::modify_table_column(
+            &conn,
+            None,
+            "stats_conf_fact",
+            &ModifyColumnKind::Add,
+            &add_req.key,
+            &filed_type,
+            vec![(&add_req.key, &index_type)],
+            ctx,
+        )
+        .await?;
     }
     if let Some(dim_rel_conf_dim_key) = &add_req.dim_rel_conf_dim_key {
         if add_req.rel_external_id.is_none() && !stats_pg_conf_dim_serv::online(dim_rel_conf_dim_key, &conn, ctx).await? {
@@ -292,12 +333,39 @@ pub(crate) async fn delete(
     let (mut conn, table_name) = stats_pg_initializer::init_conf_fact_col_table_and_conn(bs_inst, ctx, true).await?;
     conn.begin().await?;
     if rel_external_id.is_none() && stats_pg_conf_fact_serv::online(fact_conf_key, &conn, ctx).await? {
-        return Err(funs.err().conflict(
-            "fact_col_conf",
-            "delete",
-            "The fact instance table already exists, please delete it and then modify it.",
-            "409-spi-stats-fact-inst-exist",
-        ));
+        let fact_col_confs: Vec<StatsConfFactColInfoResp> = if let Some(fact_col_conf_key) = fact_col_conf_key {
+            if let Some(fact_col_conf) = find_by_fact_key_and_col_conf_key(fact_conf_key, fact_col_conf_key, funs, ctx, inst).await? {
+                vec![fact_col_conf]
+            } else {
+                vec![]
+            }
+        } else {
+            find_by_fact_conf_key(fact_conf_key, funs, ctx, inst).await?
+        };
+        for fact_col_conf in fact_col_confs {
+            let mut filed_type = "VARCHAR".to_string();
+            if fact_col_conf.kind == StatsFactColKind::Dimension {
+                let Some(dim_conf_key) = &fact_col_conf.dim_rel_conf_dim_key else {
+                    return Err(funs.err().bad_request("fact_col_conf", "delete", "Fail to get dimension config", "400-spi-stats-fail-to-get-dim-config-key"));
+                };
+                let Some(dim_conf) = stats_pg_conf_dim_serv::get(dim_conf_key, None, None, &conn, ctx, inst).await? else {
+                    return Err(funs.err().conflict(
+                        "fact_col_conf",
+                        "delete",
+                        &format!("Fail to get dimension config by key [{dim_conf_key}]"),
+                        "409-spi-stats-fail-to-get-dim-config",
+                    ));
+                };
+                if fact_col_conf.dim_multi_values.clone().unwrap_or(false) {
+                    filed_type = format!("{}[]", dim_conf.data_type.to_pg_data_type());
+                } else {
+                    filed_type = dim_conf.data_type.to_pg_data_type().to_owned();
+                }
+            } else if fact_col_conf.kind == StatsFactColKind::Measure {
+                filed_type = fact_col_conf.mes_data_type.as_ref().unwrap_or(&StatsDataTypeKind::String).to_pg_data_type().to_owned();
+            }
+            spi_initializer::common_pg::modify_table_column(&conn, None, "stats_conf_fact", &ModifyColumnKind::Delete, &fact_col_conf.key, &filed_type, vec![], ctx).await?;
+        }
     }
     let mut where_clause = String::from("rel_conf_fact_key = $1");
     let mut params = vec![Value::from(fact_conf_key.to_string())];
@@ -432,7 +500,11 @@ async fn do_paginate(
         params.push(Value::from(format!("%{show_name}%")));
     }
     if let Some(rel_external_id) = &rel_external_id {
-        sql_where.push(format!("(fact_col.rel_external_id = ${} OR fact_col.rel_external_id = ${} )", params.len() + 1, params.len() + 2));
+        sql_where.push(format!(
+            "(fact_col.rel_external_id = ${} OR fact_col.rel_external_id = ${} )",
+            params.len() + 1,
+            params.len() + 2
+        ));
         params.push(Value::from("".to_string()));
         params.push(Value::from(rel_external_id));
     } else {
