@@ -75,13 +75,14 @@ impl From<FlowModelDetailResp> for FlowModelAddReq {
                 is_init: value.init_state_id == state.id,
             })
             .collect_vec();
+        let rel_transition_ids = value.rel_transition().clone().map(|rel_transition| vec![rel_transition.id]);
         Self {
             name: value.name.as_str().into(),
             icon: Some(value.icon.clone()),
             info: Some(value.info.clone()),
             kind: value.kind,
             status: value.status,
-            rel_transition_ids: None,
+            rel_transition_ids,
             rel_template_ids: Some(value.rel_template_ids.clone()),
             add_version: Some(FlowModelVersionAddReq {
                 name: value.name.as_str().into(),
