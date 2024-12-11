@@ -7,7 +7,7 @@ use bios_basic::spi::{
 };
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
-    chrono::{DateTime, Utc},
+    chrono::Utc,
     db::{
         reldb_client::{TardisRelDBClient, TardisRelDBlConnection},
         sea_orm::Value,
@@ -33,7 +33,7 @@ pub(crate) async fn add(fact_conf_key: &str, add_req: &StatsConfFactColAddReq, f
         return Err(funs.err().conflict("fact_col_conf", "add", "The fact config not exists.", "409-spi-stats-fact-conf-not-exist"));
     }
     if let Some(rel_sql) = &add_req.rel_sql {
-        if !stats_pg_sync_serv::validate_fact_col_sql(rel_sql) {
+        if !stats_pg_sync_serv::validate_select_sql(rel_sql) {
             return Err(funs.err().conflict("fact_col_conf", "add", "The rel_sql is not a valid sql.", "409-spi-stats-fact-col-conf-rel-sql-not-valid"));
         }
     }
@@ -219,7 +219,7 @@ pub(crate) async fn modify(
     //     ));
     // }
     if let Some(rel_sql) = &modify_req.rel_sql {
-        if !stats_pg_sync_serv::validate_fact_col_sql(rel_sql) {
+        if !stats_pg_sync_serv::validate_select_sql(rel_sql) {
             return Err(funs.err().conflict("fact_col_conf", "add", "The rel_sql is not a valid sql.", "409-spi-stats-fact-col-conf-rel-sql-not-valid"));
         }
     }

@@ -14,7 +14,7 @@ use bios_basic::{
     spi::{
         spi_constants::SPI_PG_KIND_CODE,
         spi_funs::{SpiBsInst, SpiBsInstExtractor},
-        spi_initializer::common_pg::{self, package_table_name},
+        spi_initializer::common_pg::{self},
     },
 };
 use serde_json::Map;
@@ -191,6 +191,15 @@ pub(crate) async fn fact_record_sync(fact_conf_key: &str, funs: &TardisFunsInst,
     let Some(fact_conf) = stats_pg_conf_fact_serv::get(fact_conf_key, &conn, ctx).await? else {
         return Err(funs.err().not_found("starsys_stats_conf_fact", "find", "fact conf not found", "404-fact-conf-not-found"));
     };
+    let Some(cert_id) = fact_conf.rel_cert_id else {
+        return Err(funs.err().bad_request("starsys_stats_conf_fact", "sync", "The rel_cert_id is required", "404-fact-conf-not-found"));
+    };
+    let Some(sync_sql) = fact_conf.sync_sql else {
+        return Err(funs.err().bad_request("starsys_stats_conf_fact", "sync", "The sync_sql is required", "404-fact-conf-not-found"));
+    };
+    if cert_id.is_empty() || sync_sql.is_empty() {
+        return Err(funs.err().bad_request("starsys_stats_conf_fact", "sync", "The rel_cert_id and sync_sql is required", "404-fact-conf-not-found"));
+    }
     let task_ctx = ctx.clone();
     let fact_conf_key = fact_conf_key.to_string();
     TaskProcessor::execute_task_with_ctx(
@@ -198,27 +207,19 @@ pub(crate) async fn fact_record_sync(fact_conf_key: &str, funs: &TardisFunsInst,
         move |_task_id| async move {
             let funs = stats_initializer::get_tardis_inst();
             let inst = funs.init(None, &task_ctx, true, stats_initializer::init_fun).await?;
-            if let Some(cert_id) = fact_conf.rel_cert_id {
-                if let Some(sync_sql) = fact_conf.sync_sql {
-                    let db_source_conn = get_db_conn_by_cert_id(&cert_id, &funs, &task_ctx, inst.as_ref()).await?;
-                    let db_source_list = db_source_conn.query_all(&sync_sql, vec![]).await?;
-                    for db_source_record in db_source_list {
-                        let fact_record_key = db_source_record.try_get::<String>("", "key")?;
-                        let add_req = StatsFactRecordLoadReq {
-                            own_paths: db_source_record.try_get::<Option<String>>("", "own_paths")?.unwrap_or_default(),
-                            ct: db_source_record.try_get::<Option<DateTime<Utc>>>("", "ct")?.unwrap_or_default(),
-                            idempotent_id: db_source_record.try_get::<Option<String>>("", "idempotent_id")?,
-                            ignore_updates: Some(false),
-                            data: serde_json::Value::from_query_result(&db_source_record, "")?,
-                            ext: None,
-                        };
-                        stats_pg_record_serv::fact_record_load(&fact_conf_key, &fact_record_key, add_req, &funs, &task_ctx, inst.as_ref()).await?;
-                    }
-                } else {
-                    log::warn!("[spi-stats] sync_sql not found for fact: {}", fact_conf_key);
-                }
-            } else {
-                log::warn!("[spi-stats] cert_id not found for fact: {}", fact_conf_key);
+            let db_source_conn = get_db_conn_by_cert_id(&cert_id, &funs, &task_ctx, inst.as_ref()).await?;
+            let db_source_list = db_source_conn.query_all(&sync_sql, vec![]).await?;
+            for db_source_record in db_source_list {
+                let fact_record_key = db_source_record.try_get::<String>("", "key")?;
+                let add_req = StatsFactRecordLoadReq {
+                    own_paths: db_source_record.try_get::<Option<String>>("", "own_paths")?.unwrap_or_default(),
+                    ct: db_source_record.try_get::<Option<DateTime<Utc>>>("", "ct")?.unwrap_or_default(),
+                    idempotent_id: db_source_record.try_get::<Option<String>>("", "idempotent_id")?,
+                    ignore_updates: Some(false),
+                    data: serde_json::Value::from_query_result(&db_source_record, "")?,
+                    ext: None,
+                };
+                stats_pg_record_serv::fact_record_load(&fact_conf_key, &fact_record_key, add_req, &funs, &task_ctx, inst.as_ref()).await?;
             }
             Ok(())
         },
@@ -298,32 +299,31 @@ pub(crate) async fn fact_col_record_result(
     ctx: &TardisContext,
     inst: &SpiBsInst,
 ) -> TardisResult<Option<Value>> {
-    if let Some(cert_id) = fact_col.rel_cert_id {
-        if let Some(sql) = fact_col.rel_sql {
-            let data_source_conn = get_db_conn_by_cert_id(&cert_id, funs, ctx, inst).await?;
-            let (sql, params) = process_sql(&sql, &fact_record)?;
-            if let Some(rel_record) = data_source_conn.query_one(&sql, params).await? {
-                if let Some(first_column) = rel_record.column_names().get(0) {
-                    let result = match fact_col.kind {
-                        StatsFactColKind::Dimension | StatsFactColKind::Ext => {
-                            if fact_col.dim_multi_values.unwrap_or(false) {
-                                fact_col.dim_data_type.clone().unwrap_or(StatsDataTypeKind::String).result_to_sea_orm_value(&rel_record, first_column)?
-                            } else {
-                                fact_col.dim_data_type.clone().unwrap_or(StatsDataTypeKind::String).result_to_sea_orm_value_array(&rel_record, first_column)?
-                            }
-                        }
-                        StatsFactColKind::Measure => fact_col.mes_data_type.clone().unwrap_or(StatsDataTypeKind::Int).result_to_sea_orm_value(&rel_record, first_column)?,
-                    };
-                    return Ok(Some(result));
-                } else {
-                    log::warn!("[spi-stats] rel_field not found for fact_col: {}", fact_col.key);
+    let Some(cert_id) = fact_col.rel_cert_id else {
+        return Ok(None);
+    };
+    let Some(sql) = fact_col.rel_sql else {
+        return Ok(None);
+    };
+    if cert_id.is_empty() || sql.is_empty() {
+        return Ok(None);
+    }
+    let data_source_conn = get_db_conn_by_cert_id(&cert_id, funs, ctx, inst).await?;
+    let (sql, params) = process_sql(&sql, &fact_record)?;
+    if let Some(rel_record) = data_source_conn.query_one(&sql, params).await? {
+        if let Some(first_column) = rel_record.column_names().get(0) {
+            let result = match fact_col.kind {
+                StatsFactColKind::Dimension | StatsFactColKind::Ext => {
+                    if fact_col.dim_multi_values.unwrap_or(false) {
+                        fact_col.dim_data_type.clone().unwrap_or(StatsDataTypeKind::String).result_to_sea_orm_value_array(&rel_record, first_column)?
+                    } else {
+                        fact_col.dim_data_type.clone().unwrap_or(StatsDataTypeKind::String).result_to_sea_orm_value(&rel_record, first_column)?
+                    }
                 }
-            }
-        } else {
-            log::warn!("[spi-stats] rel_sql not found for fact_col: {}", fact_col.key);
+                StatsFactColKind::Measure => fact_col.mes_data_type.clone().unwrap_or(StatsDataTypeKind::Int).result_to_sea_orm_value(&rel_record, first_column)?,
+            };
+            return Ok(Some(result));
         }
-    } else {
-        log::warn!("[spi-stats] cert_id not found for fact_col: {}", fact_col.key);
     }
     Ok(None)
 }
@@ -360,33 +360,13 @@ fn process_sql(sql: &str, fact_record: &HashMap<String, Value>) -> TardisResult<
     Ok((processed_sql.to_string(), values))
 }
 
-/// validate fact sql
-/// validate sql is select statement and not select *
-pub(crate) fn validate_fact_sql(sql: &str) -> TardisResult<bool> {
-    // todo
-    // let re = Regex::new(r"^select\s+[^*][\w\s,]+\s+from").expect("should compile regex");
-    // if re.is_match(&sql.trim().to_lowercase()) {
-    //     let param_fields = find_select_param_fields_from_sql(sql);
-    //     if param_fields.contains(&"idempotent_id".to_string()) {
-    //         return Ok(true);
-    //     } else {
-    //         return Err(TardisError::bad_request(
-    //             "[spi-stats] The sync_sql must contain idempotent_id",
-    //             "400-spi-stats-sync-sql-must-contain-idempotent-id",
-    //         ));
-    //     }
-    // }
-    // Ok(false)
-    Ok(true)
-}
-
-/// validate fact col sql
-/// validate sql is select statement and only select one field
-pub(crate) fn validate_fact_col_sql(sql: &str) -> bool {
-    // todo
-    // let re = Regex::new(r"^select\s+([^,]+)\s+from").expect("should compile regex");
-    // re.is_match(&sql.trim().to_lowercase())
-    true
+/// validate fact and fact col sql
+pub(crate) fn validate_select_sql(sql: &str) -> bool {
+    if sql.is_empty() {
+        return true;
+    }
+    let re = Regex::new(r"(?i)^\s*select\b").expect("should compile regex");
+    re.is_match(&sql)
 }
 
 #[cfg(test)]
@@ -398,28 +378,18 @@ mod tests {
         db::sea_orm::Value,
     };
 
-    use crate::serv::pg::stats_pg_sync_serv::{process_sql, validate_fact_col_sql, validate_fact_sql};
+    use crate::serv::pg::stats_pg_sync_serv::{process_sql, validate_select_sql};
 
     #[test]
-    fn test_validate_fact_sql() {
-        let sql = "select id as idempotent_id from table";
-        assert_eq!(validate_fact_sql(sql).unwrap(), true);
-        let sql = "select idempotent_id,name from table";
-        assert_eq!(validate_fact_sql(sql).unwrap(), true);
-        let sql = "select * from table";
-        assert_eq!(validate_fact_sql(sql).unwrap(), false);
-        let sql = "update table set id = ${id} where id = ${id}";
-        assert_eq!(validate_fact_sql(sql).unwrap(), false);
-    }
-
-    #[test]
-    fn test_validate_fact_col_sql() {
-        let sql = "select idempotent_id from table";
-        assert_eq!(validate_fact_col_sql(sql), true);
-        let sql = "select idempotent_id,name from table";
-        assert_eq!(validate_fact_col_sql(sql), false);
-        let sql = "update table set id = ${id} where id = ${id}";
-        assert_eq!(validate_fact_col_sql(sql), false);
+    fn test_validate_select_sql() {
+        let sql = "SELECT * FROM users";
+        assert_eq!(validate_select_sql(sql), true);
+        let sql = " select name FROM users";
+        assert_eq!(validate_select_sql(sql), true);
+        let sql = "INSERT INTO users (name) VALUES ('John')";
+        assert_eq!(validate_select_sql(sql), false);
+        let sql = "UPDATE users SET name = 'John'";
+        assert_eq!(validate_select_sql(sql), false);
     }
 
     #[test]
