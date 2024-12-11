@@ -307,9 +307,9 @@ pub(crate) async fn fact_col_record_result(
                     let result = match fact_col.kind {
                         StatsFactColKind::Dimension | StatsFactColKind::Ext => {
                             if fact_col.dim_multi_values.unwrap_or(false) {
-                                fact_col.dim_data_type.clone().unwrap_or(StatsDataTypeKind::String).result_to_sea_orm_value(&rel_record, first_column)?
-                            } else {
                                 fact_col.dim_data_type.clone().unwrap_or(StatsDataTypeKind::String).result_to_sea_orm_value_array(&rel_record, first_column)?
+                            } else {
+                                fact_col.dim_data_type.clone().unwrap_or(StatsDataTypeKind::String).result_to_sea_orm_value(&rel_record, first_column)?
                             }
                         }
                         StatsFactColKind::Measure => fact_col.mes_data_type.clone().unwrap_or(StatsDataTypeKind::Int).result_to_sea_orm_value(&rel_record, first_column)?,
