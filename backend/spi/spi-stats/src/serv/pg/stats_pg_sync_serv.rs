@@ -362,6 +362,9 @@ fn process_sql(sql: &str, fact_record: &HashMap<String, Value>) -> TardisResult<
 
 /// validate fact and fact col sql
 pub(crate) fn validate_select_sql(sql: &str) -> bool {
+    if sql.is_empty() {
+        return true;
+    }
     let re = Regex::new(r"(?i)^\s*select\b").expect("should compile regex");
     re.is_match(&sql)
 }
