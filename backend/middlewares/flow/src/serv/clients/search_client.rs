@@ -35,22 +35,6 @@ const SEARCH_TAG: &str = "flow_model";
 pub struct FlowSearchClient;
 
 impl FlowSearchClient {
-    pub async fn async_modify_business_obj_search(inst_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        let ctx_clone = ctx.clone();
-        let inst_detail = FlowInstServ::get(inst_id, funs, ctx).await?;
-        ctx.add_async_task(Box::new(|| {
-            Box::pin(async move {
-                let task_handle = tokio::spawn(async move {
-                    let funs = flow_constants::get_tardis_inst();
-                    let _ = Self::modify_business_obj_search(&inst_detail.rel_business_obj_id, &inst_detail.tag, &funs, &ctx_clone).await;
-                });
-                task_handle.await.unwrap();
-                Ok(())
-            })
-        }))
-        .await
-    }
-
     pub async fn modify_business_obj_search(rel_business_obj_id: &str, tag: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let tag_search_map = HashMap::from([
             ("CTS", "idp_test"),

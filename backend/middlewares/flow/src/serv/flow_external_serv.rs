@@ -1,9 +1,7 @@
 use bios_sdk_invoke::{clients::spi_kv_client::SpiKvClient, invoke_constants::TARDIS_CONTEXT};
 use itertools::Itertools;
 use tardis::{
-    basic::{dto::TardisContext, result::TardisResult},
-    log::debug,
-    tokio, TardisFuns, TardisFunsInst,
+    basic::{dto::TardisContext, result::TardisResult}, log::debug, tokio, web::web_resp::TardisResp, TardisFuns, TardisFunsInst
 };
 
 use crate::{
@@ -14,8 +12,7 @@ use crate::{
         },
         flow_state_dto::FlowSysStateKind,
         flow_transition_dto::{FlowTransitionActionByVarChangeInfoChangedKind, FlowTransitionDetailResp, TagRelKind},
-    },
-    flow_constants,
+    }, flow_config::FlowConfig, flow_constants
 };
 
 pub struct FlowExternalServ;
@@ -294,6 +291,26 @@ impl FlowExternalServ {
             Ok(data)
         } else {
             Err(funs.err().internal_error("flow_external", "do_delete_rel_obj", "illegal response", "500-external-illegal-response"))
+        }
+    }
+
+    pub async fn do_find_embed_subrole_id(role_id: &str, ctx: &TardisContext, funs: &TardisFunsInst) -> TardisResult<String> {
+        let iam_url = &funs.conf::<FlowConfig>().iam_url;
+
+        let header = Self::headers(None, funs, ctx).await?;
+        let resp = funs
+            .web_client()
+            .get::<TardisResp<String>>(&format!("{iam_url}/cc/role/get_embed_subrole_id?id={role_id}"), header)
+            .await?
+            .body
+            .ok_or_else(|| funs.err().internal_error("flow_external", "do_find_embed_subrole_id", "illegal response", "500-external-illegal-response"))?;
+        if resp.code != *"200" {
+            return Err(funs.err().internal_error("flow_external", "do_find_embed_subrole_id", "illegal response", "500-external-illegal-response"));
+        }
+        if let Some(data) = resp.data {
+            Ok(data)
+        } else {
+            Err(funs.err().internal_error("flow_external", "do_find_embed_subrole_id", "illegal response", "500-external-illegal-response"))
         }
     }
 

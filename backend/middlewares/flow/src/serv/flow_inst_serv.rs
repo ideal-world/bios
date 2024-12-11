@@ -27,7 +27,7 @@ use tardis::{
     futures_util::future::join_all,
     log::{debug, error},
     serde_json::Value,
-    web::web_resp::TardisPage,
+    web::{poem_openapi::types::Type, web_resp::TardisPage},
     TardisFuns, TardisFunsInst,
 };
 
@@ -42,9 +42,8 @@ use crate::{
             FlowInstSearchReq, FlowInstSearchSortReq, FlowInstStartReq, FlowInstSummaryResp, FlowInstSummaryResult, FlowInstTransferReq, FlowInstTransferResp,
             FlowInstTransitionInfo, FlowOperationContext,
         },
-        flow_model_dto::FlowModelFilterReq,
         flow_model_version_dto::{FlowModelVersionDetailResp, FlowModelVersionFilterReq},
-        flow_state_dto::{FLowStateKindConf, FlowStateAggResp, FlowStateFilterReq, FlowStateKind, FlowStateOperatorKind, FlowStateRelModelExt, FlowStatusAutoStrategyKind, FlowSysStateKind},
+        flow_state_dto::{FLowStateKindConf, FlowStateAggResp, FlowStateCountersignKind, FlowStateFilterReq, FlowStateKind, FlowStateOperatorKind, FlowStateRelModelExt, FlowStatusAutoStrategyKind, FlowStatusMultiApprovalKind, FlowSysStateKind},
         flow_transition_dto::FlowTransitionDetailResp,
         flow_var_dto::FillType,
     },
@@ -65,21 +64,19 @@ use super::{
 pub struct FlowInstServ;
 
 impl FlowInstServ {
-    pub async fn start(start_req: &FlowInstStartReq, current_state_name: Option<String>, _funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
-        let mut funs = flow_constants::get_tardis_inst();
-        funs.begin().await?;
+    pub async fn start(start_req: &FlowInstStartReq, current_state_name: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
         // get model by own_paths
         let flow_model = if let Some(transition_id) = &start_req.transition_id {
-            FlowModelServ::get_model_id_by_own_paths_and_transition_id(&start_req.tag, transition_id, &funs, ctx).await?
+            FlowModelServ::get_model_id_by_own_paths_and_transition_id(&start_req.tag, transition_id, funs, ctx).await?
         } else {
-            FlowModelServ::get_model_id_by_own_paths_and_rel_template_id(&start_req.tag, None, &funs, ctx).await?
+            FlowModelServ::get_model_id_by_own_paths_and_rel_template_id(&start_req.tag, None, funs, ctx).await?
         };
         let inst_id = TardisFuns::field.nanoid();
         let current_state_id = if let Some(current_state_name) = &current_state_name {
             if current_state_name.is_empty() {
                 flow_model.init_state_id.clone()
             } else {
-                FlowStateServ::match_state_id_by_name(&flow_model.current_version_id, current_state_name, &funs, ctx).await?
+                FlowStateServ::match_state_id_by_name(&flow_model.current_version_id, current_state_name, funs, ctx).await?
             }
         } else {
             flow_model.init_state_id.clone()
@@ -91,7 +88,7 @@ impl FlowInstServ {
                 finish: Some(false),
                 ..Default::default()
             },
-            &funs,
+            funs,
             ctx,
         )
         .await?
@@ -99,6 +96,11 @@ impl FlowInstServ {
         {
             return Err(funs.err().internal_error("flow_inst_serv", "start", "The same instance exist", "500-flow-inst-exist"));
         }
+        let create_vars = if let Some(create_vars) = start_req.create_vars.clone() {
+            create_vars
+        } else {
+            Self::get_new_vars(&flow_model.tag, vec![start_req.rel_business_obj_id.to_string()], &ctx.own_paths, funs, ctx).await?
+        };
         let main = start_req.transition_id.is_none();
         let mut flow_inst: flow_inst::ActiveModel = flow_inst::ActiveModel {
             id: Set(inst_id.clone()),
@@ -108,33 +110,35 @@ impl FlowInstServ {
 
             current_state_id: Set(current_state_id.clone()),
 
-            create_vars: Set(start_req.create_vars.as_ref().map(|vars| TardisFuns::json.obj_to_json(vars).unwrap())),
+            create_vars: Set(Some(TardisFuns::json.obj_to_json(&create_vars).unwrap_or(json!("")))),
             create_ctx: Set(FlowOperationContext::from_ctx(ctx)),
 
-            own_paths: Set(ctx.own_paths.to_string()),
+            own_paths: Set(ctx.own_paths.clone()),
             main: Set(main),
             ..Default::default()
         };
         if !main {
-            flow_inst.code = Set(Some(Self::gen_inst_code(&funs).await?));
+            flow_inst.code = Set(Some(Self::gen_inst_code(funs).await?));
+        } else {
+            flow_inst.code = Set(Some("".to_string()));
         }
         funs.db().insert_one(flow_inst, ctx).await?;
-        let inst = Self::get(&inst_id, &funs, ctx).await?;
-        Self::when_enter_state(&inst, &current_state_id, &flow_model.id, &funs, ctx).await?;
         if !main {
-            FlowSearchClient::modify_business_obj_search(&start_req.rel_business_obj_id, &flow_model.tag, &funs, ctx).await?;
+            Self::modify_inst_artifacts(&inst_id, &FlowInstArtifactsModifyReq {
+                form_state_map: Some(create_vars),
+                ..Default::default()
+            }, funs, ctx).await?;
+            FlowSearchClient::modify_business_obj_search(&start_req.rel_business_obj_id, &flow_model.tag, funs, ctx).await?;
         }
+        let inst = Self::get(&inst_id, funs, ctx).await?;
+        Self::when_enter_state(&inst, &current_state_id, &flow_model.id, funs, ctx).await?;
         Self::do_request_webhook(
             None,
             flow_model.transitions().iter().filter(|model_transition| model_transition.to_flow_state_id == flow_model.init_state_id).collect_vec().pop(),
         )
         .await?;
-        funs.commit().await?;
-        let mut funs = flow_constants::get_tardis_inst();
-        funs.begin().await?;
         // 自动流转
-        Self::auto_transfer(&inst, loop_check_helper::InstancesTransition::default(), &funs, ctx).await?;
-        funs.commit().await?;
+        Self::auto_transfer(&inst, loop_check_helper::InstancesTransition::default(), funs, ctx).await?;
 
         Ok(inst_id)
     }
@@ -194,6 +198,7 @@ impl FlowInstServ {
         query
             .columns([
                 (flow_inst::Entity, flow_inst::Column::Id),
+                (flow_inst::Entity, flow_inst::Column::Code),
                 (flow_inst::Entity, flow_inst::Column::RelFlowVersionId),
                 (flow_inst::Entity, flow_inst::Column::RelBusinessObjId),
                 (flow_inst::Entity, flow_inst::Column::CreateVars),
@@ -1226,52 +1231,23 @@ impl FlowInstServ {
         Ok(())
     }
 
-    async fn get_new_vars(flow_inst_detail: &FlowInstDetailResp, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Value> {
-        let flow_model_version = FlowModelVersionServ::get_item(
-            &flow_inst_detail.rel_flow_version_id,
-            &FlowModelVersionFilterReq {
-                basic: RbumBasicFilterReq {
-                    with_sub_own_paths: true,
-                    own_paths: Some("".to_string()),
-                    ..Default::default()
-                },
-                ..Default::default()
-            },
-            funs,
-            ctx,
-        )
-        .await?;
-        let flow_model = FlowModelServ::get_item(
-            &flow_model_version.rel_model_id,
-            &FlowModelFilterReq {
-                basic: RbumBasicFilterReq {
-                    with_sub_own_paths: true,
-                    own_paths: Some("".to_string()),
-                    ..Default::default()
-                },
-                ..Default::default()
-            },
-            funs,
-            ctx,
-        )
-        .await?;
-        Ok(
-            FlowExternalServ::do_query_field(&flow_model.tag, vec![flow_inst_detail.rel_business_obj_id.clone()], &flow_inst_detail.own_paths, ctx, funs)
-                .await?
-                .objs
-                .into_iter()
-                .next()
-                .unwrap_or_default(),
-        )
+    async fn get_new_vars(tag: &str, rel_business_obj_ids: Vec<String>, own_paths: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<HashMap<String, Value>> {
+        let new_vars = FlowExternalServ::do_query_field(tag, rel_business_obj_ids, own_paths, ctx, funs)
+        .await?
+        .objs
+        .into_iter()
+        .next()
+        .unwrap_or_default();
+        Ok(TardisFuns::json.json_to_obj(new_vars).unwrap_or_default())
     }
 
     pub async fn find_var_by_inst_id(flow_inst: &FlowInstDetailResp, key: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<Value>> {
         let mut current_vars = flow_inst.current_vars.clone();
         if current_vars.is_none() || !current_vars.clone().unwrap_or_default().contains_key(key) {
-            let new_vars = Self::get_new_vars(flow_inst, funs, ctx).await?;
+            let new_vars = Self::get_new_vars(&flow_inst.tag, vec![flow_inst.rel_business_obj_id.clone()], &flow_inst.own_paths, funs, ctx).await?;
             Self::modify_current_vars(
                 flow_inst,
-                &TardisFuns::json.json_to_obj::<HashMap<String, Value>>(new_vars).unwrap_or_default(),
+                &new_vars,
                 loop_check_helper::InstancesTransition::default(),
                 ctx,
             )
@@ -1553,6 +1529,12 @@ impl FlowInstServ {
                         .collect::<Vec<_>>();
                 }
                 modify_req.guard_conf = Some(guard_custom_conf);
+                // 若会签，则需要统计审批人数
+                if approval_conf.multi_approval_kind == FlowStatusMultiApprovalKind::Countersign {
+                    // @TODO 此处缺少获取人数的逻辑
+                    let total = 10;
+                    modify_req.curr_approval_total = Some(total);
+                }
                 Self::modify_inst_artifacts(&flow_inst_detail.id, &modify_req, funs, ctx).await?;
                 // 当操作人为空时的逻辑
                 let curr_guard_conf = Self::get(&flow_inst_detail.id, funs, ctx).await?.artifacts.unwrap_or_default().guard_conf;
@@ -1736,6 +1718,10 @@ impl FlowInstServ {
             let current_account_ids = current_state_result.entry(add_approval_result.to_string()).or_default();
             current_account_ids.push(add_approval_account_id.clone());
         }
+        if let Some(curr_approval_total) = modify_artifacts.curr_approval_total {
+            let approval_total = inst_artifacts.approval_total.entry(inst.current_state_id.clone()).or_default();
+            *approval_total = curr_approval_total;
+        }
         if let Some(form_state_vars) = modify_artifacts.form_state_map.clone() {
             inst_artifacts.form_state_map.insert(inst.current_state_id.clone(), form_state_vars.clone());
         }
@@ -1903,21 +1889,23 @@ impl FlowInstServ {
                     ctx,
                 )
                 .await?;
-                if let Some(next_transition) = FlowInstServ::find_next_transitions(inst, &FlowInstFindNextTransitionsReq { vars: None }, funs, ctx).await?.pop() {
-                    Self::transfer(
-                        inst,
-                        &FlowInstTransferReq {
-                            flow_transition_id: next_transition.next_flow_transition_id,
-                            message: None,
-                            vars: None,
-                        },
-                        false,
-                        FlowExternalCallbackOp::Default,
-                        loop_check_helper::InstancesTransition::default(),
-                        ctx,
-                        funs,
-                    )
-                    .await?;
+                if Self::check_approval_cond(inst, FlowApprovalResultKind::Pass, funs, ctx).await? {
+                    if let Some(next_transition) = FlowInstServ::find_next_transitions(inst, &FlowInstFindNextTransitionsReq { vars: None }, funs, ctx).await?.pop() {
+                        Self::transfer(
+                            inst,
+                            &FlowInstTransferReq {
+                                flow_transition_id: next_transition.next_flow_transition_id,
+                                message: None,
+                                vars: None,
+                            },
+                            false,
+                            FlowExternalCallbackOp::Default,
+                            loop_check_helper::InstancesTransition::default(),
+                            ctx,
+                            funs,
+                        )
+                        .await?;
+                    }
                 }
             }
             // 拒绝
@@ -1932,10 +1920,77 @@ impl FlowInstServ {
                     ctx,
                 )
                 .await?;
-                Self::abort(&inst.id, &FlowInstAbortReq { message: "".to_string() }, funs, ctx).await?;
+                if Self::check_approval_cond(inst, FlowApprovalResultKind::Overrule, funs, ctx).await? {
+                    Self::abort(&inst.id, &FlowInstAbortReq { message: "".to_string() }, funs, ctx).await?;
+                }
             }
         }
         Ok(())
+    }
+
+    // 判断审批条件是否满足
+    async fn check_approval_cond(inst: &FlowInstDetailResp , kind: FlowApprovalResultKind, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<bool> {
+        let current_state_kind_conf = FlowStateServ::get_item(
+            &inst.current_state_id,
+            &FlowStateFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    own_paths: Some("".to_string()),
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        ).await?.kind_conf().unwrap_or_default().approval;
+        let artifacts = inst.artifacts.clone().unwrap_or_default();
+        let approval_total = artifacts.approval_total.get(&inst.current_state_id).cloned().unwrap_or_default();
+        let approval_result = artifacts
+            .approval_result
+            .get(&inst.current_state_id)
+            .cloned()
+            .unwrap_or_default();
+        if let Some(current_state_kind_conf) = current_state_kind_conf {
+            let countersign_conf = current_state_kind_conf.countersign_conf;
+            // 指定人通过，则通过
+            if kind == FlowApprovalResultKind::Pass 
+                && countersign_conf.specified_pass_guard.unwrap_or(false) 
+                && countersign_conf.specified_pass_guard_conf.is_some() 
+                && countersign_conf.specified_pass_guard_conf.unwrap().check(ctx) {
+                return Ok(true);
+            }
+            // 指定人拒绝，则拒绝
+            if kind == FlowApprovalResultKind::Overrule 
+                && countersign_conf.specified_overrule_guard.unwrap_or(false) 
+                && countersign_conf.specified_overrule_guard_conf.is_some() 
+                && countersign_conf.specified_overrule_guard_conf.unwrap().check(ctx) {
+                return Ok(true);
+            }
+            match countersign_conf.kind {
+                FlowStateCountersignKind::All => {
+                    if kind == FlowApprovalResultKind::Overrule // 要求全数通过则出现一个拒绝，即拒绝
+                        || (
+                            kind == FlowApprovalResultKind::Pass 
+                            && approval_result.get(&FlowApprovalResultKind::Pass.to_string()).cloned().unwrap_or_default().len() + 1 >= approval_total
+                            && approval_result.get(&FlowApprovalResultKind::Overrule.to_string()).cloned().unwrap_or_default().len().is_empty() // 要求全数通过则通过人数达到审核人数同时没有一个拒绝
+                        ) {
+                        return Ok(true);
+                    }
+                },
+                FlowStateCountersignKind::Most => {
+                    if countersign_conf.most_percent.is_none() {
+                        return Ok(false);
+                    }
+                    let pass_total = approval_total * countersign_conf.most_percent.unwrap_or_default() / 100; // 需满足通过的人员数量
+                    let overrule_total = approval_total - pass_total;// 需满足拒绝的人员数量
+                    if (kind == FlowApprovalResultKind::Pass && approval_result.get(&FlowApprovalResultKind::Pass.to_string()).cloned().unwrap_or_default().len() + 1 >= pass_total) // 要求大多数通过则通过人数达到通过的比例
+                        || (kind == FlowApprovalResultKind::Overrule && approval_result.get(&FlowApprovalResultKind::Overrule.to_string()).cloned().unwrap_or_default().len() + 1 >= overrule_total) {// 要求大多数通过则拒绝人数达到拒绝的比例
+                        return Ok(true);
+                    }
+                },
+            }
+        }
+        Ok(false)
     }
 
     async fn transfer_spec_state(flow_inst_detail: &FlowInstDetailResp, target_state_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
@@ -2314,6 +2369,7 @@ impl FlowInstServ {
         )
     }
 
+    // 生成实例编码
     async fn gen_inst_code(funs: &TardisFunsInst) -> TardisResult<String> {
         let count = funs
             .db()
