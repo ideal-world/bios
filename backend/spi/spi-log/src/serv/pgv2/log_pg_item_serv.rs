@@ -42,6 +42,7 @@ pub async fn addv2(add_req: &mut LogItemAddV2Req, funs: &TardisFunsInst, ctx: &T
     let id = add_req.idempotent_id.clone().unwrap_or(TardisFuns::field.nanoid());
 
     let bs_inst = inst.inst::<TardisRelDBClient>();
+    // 初始化要保存的内容
     let mut insert_content = add_req.content.clone();
     let (mut conn, table_name) = log_pg_initializer::init_table_and_conn(bs_inst, &add_req.tag, ctx, true).await?;
     conn.begin().await?;
@@ -59,34 +60,38 @@ pub async fn addv2(add_req: &mut LogItemAddV2Req, funs: &TardisFunsInst, ctx: &T
             .await?;
 
         if let Some(last_record) = get_last_record {
-            let last_content: JsonValue = last_record.try_get("", "content")?;
+            let mut last_content: JsonValue = last_record.try_get("", "content")?;
             let last_ts: DateTime<Utc> = last_record.try_get("", "ts")?;
             let last_key: String = last_record.try_get("", "key")?;
 
-            insert_content = last_content;
+            //把上次的内容有ref字段的改为ref_key
             for ref_field in &ref_fields {
-                if let Some(field_value) = insert_content.get_mut(ref_field) {
+                if let Some(field_value) = last_content.get_mut(ref_field) {
+                  // 判断ref字段是否已经是ref_key了
                     if !is_log_ref(field_value) {
                         *field_value = JsonValue::String(get_ref_filed_value(&last_ts, &last_key));
                     }
                 }
             }
 
-            if let (Some(insert_content), Some(add_req_content)) = (insert_content.as_object_mut(), add_req.content.as_object()) {
+            // 把这次更新的字段加到上次的内容中，形成了新的这次的内容
+            if let (Some(last_content), Some(add_req_content)) = (last_content.as_object_mut(), add_req.content.as_object()) {
                 for (k, v) in add_req_content {
-                    insert_content.insert(k.to_string(), v.clone());
+                  last_content.insert(k.to_string(), v.clone());
                 }
             }
+            insert_content = last_content.clone();
         }
     }
 
+    add_req.content = insert_content;
     let mut params = vec![
         Value::from(id.clone()),
         Value::from(add_req.kind.as_ref().unwrap_or(&"".into()).to_string()),
         Value::from(add_req.key.as_ref().unwrap_or(&"".into()).to_string()),
         Value::from(add_req.tag.clone()),
         Value::from(add_req.op.as_ref().unwrap_or(&"".to_string()).as_str()),
-        Value::from(insert_content),
+        Value::from(add_req.content.clone()),
         Value::from(add_req.owner.as_ref().unwrap_or(&"".to_string()).as_str()),
         Value::from(add_req.owner_name.as_ref().unwrap_or(&"".to_string()).as_str()),
         Value::from(add_req.own_paths.as_ref().unwrap_or(&"".to_string()).as_str()),
