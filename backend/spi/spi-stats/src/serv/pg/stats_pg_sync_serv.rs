@@ -360,33 +360,10 @@ fn process_sql(sql: &str, fact_record: &HashMap<String, Value>) -> TardisResult<
     Ok((processed_sql.to_string(), values))
 }
 
-/// validate fact sql
-/// validate sql is select statement and not select *
-pub(crate) fn validate_fact_sql(sql: &str) -> TardisResult<bool> {
-    // todo
-    // let re = Regex::new(r"^select\s+[^*][\w\s,]+\s+from").expect("should compile regex");
-    // if re.is_match(&sql.trim().to_lowercase()) {
-    //     let param_fields = find_select_param_fields_from_sql(sql);
-    //     if param_fields.contains(&"idempotent_id".to_string()) {
-    //         return Ok(true);
-    //     } else {
-    //         return Err(TardisError::bad_request(
-    //             "[spi-stats] The sync_sql must contain idempotent_id",
-    //             "400-spi-stats-sync-sql-must-contain-idempotent-id",
-    //         ));
-    //     }
-    // }
-    // Ok(false)
-    Ok(true)
-}
-
-/// validate fact col sql
-/// validate sql is select statement and only select one field
-pub(crate) fn validate_fact_col_sql(sql: &str) -> bool {
-    // todo
-    // let re = Regex::new(r"^select\s+([^,]+)\s+from").expect("should compile regex");
-    // re.is_match(&sql.trim().to_lowercase())
-    true
+/// validate fact and fact col sql
+pub(crate) fn validate_select_sql(sql: &str) -> bool {
+    let re = Regex::new(r"(?i)^\s*select\b").expect("should compile regex");
+    re.is_match(&sql)
 }
 
 #[cfg(test)]
@@ -398,28 +375,18 @@ mod tests {
         db::sea_orm::Value,
     };
 
-    use crate::serv::pg::stats_pg_sync_serv::{process_sql, validate_fact_col_sql, validate_fact_sql};
+    use crate::serv::pg::stats_pg_sync_serv::{process_sql, validate_select_sql};
 
     #[test]
-    fn test_validate_fact_sql() {
-        let sql = "select id as idempotent_id from table";
-        assert_eq!(validate_fact_sql(sql).unwrap(), true);
-        let sql = "select idempotent_id,name from table";
-        assert_eq!(validate_fact_sql(sql).unwrap(), true);
-        let sql = "select * from table";
-        assert_eq!(validate_fact_sql(sql).unwrap(), false);
-        let sql = "update table set id = ${id} where id = ${id}";
-        assert_eq!(validate_fact_sql(sql).unwrap(), false);
-    }
-
-    #[test]
-    fn test_validate_fact_col_sql() {
-        let sql = "select idempotent_id from table";
-        assert_eq!(validate_fact_col_sql(sql), true);
-        let sql = "select idempotent_id,name from table";
-        assert_eq!(validate_fact_col_sql(sql), false);
-        let sql = "update table set id = ${id} where id = ${id}";
-        assert_eq!(validate_fact_col_sql(sql), false);
+    fn test_validate_select_sql() {
+        let sql = "SELECT * FROM users";
+        assert_eq!(validate_select_sql(sql), true);
+        let sql = " select name FROM users";
+        assert_eq!(validate_select_sql(sql), true);
+        let sql = "INSERT INTO users (name) VALUES ('John')";
+        assert_eq!(validate_select_sql(sql), false);
+        let sql = "UPDATE users SET name = 'John'";
+        assert_eq!(validate_select_sql(sql), false);
     }
 
     #[test]
