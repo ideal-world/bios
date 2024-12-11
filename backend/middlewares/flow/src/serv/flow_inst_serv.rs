@@ -18,7 +18,7 @@ use itertools::Itertools;
 use serde_json::json;
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
-    chrono::{DateTime, Utc},
+    chrono::{DateTime, Datelike, Utc},
     db::sea_orm::{
         self,
         sea_query::{Alias, Cond, Expr, Query, SelectStatement},
@@ -100,7 +100,7 @@ impl FlowInstServ {
             return Err(funs.err().internal_error("flow_inst_serv", "start", "The same instance exist", "500-flow-inst-exist"));
         }
         let main = start_req.transition_id.is_none();
-        let flow_inst: flow_inst::ActiveModel = flow_inst::ActiveModel {
+        let mut flow_inst: flow_inst::ActiveModel = flow_inst::ActiveModel {
             id: Set(inst_id.clone()),
             tag: Set(Some(flow_model.tag.clone())),
             rel_flow_version_id: Set(flow_model.current_version_id.clone()),
@@ -115,6 +115,9 @@ impl FlowInstServ {
             main: Set(main),
             ..Default::default()
         };
+        if !main {
+            flow_inst.code = Set(Some(Self::gen_inst_code(&funs).await?));
+        }
         funs.db().insert_one(flow_inst, ctx).await?;
         let inst = Self::get(&inst_id, &funs, ctx).await?;
         Self::when_enter_state(&inst, &current_state_id, &flow_model.id, &funs, ctx).await?;
@@ -330,6 +333,7 @@ impl FlowInstServ {
         #[derive(sea_orm::FromQueryResult)]
         pub struct FlowInstDetailResult {
             pub id: String,
+            pub code: String,
             pub tag: String,
             pub rel_flow_version_id: String,
             pub rel_flow_model_name: String,
@@ -370,6 +374,7 @@ impl FlowInstServ {
         query
             .columns([
                 (flow_inst::Entity, flow_inst::Column::Id),
+                (flow_inst::Entity, flow_inst::Column::Code),
                 (flow_inst::Entity, flow_inst::Column::Tag),
                 (flow_inst::Entity, flow_inst::Column::RelFlowVersionId),
                 (flow_inst::Entity, flow_inst::Column::RelBusinessObjId),
@@ -455,6 +460,7 @@ impl FlowInstServ {
                 let artifacts = inst.artifacts.clone().map(|artifacts| TardisFuns::json.json_to_obj::<FlowInstArtifacts>(artifacts).unwrap_or_default());
                 FlowInstDetailResp {
                     id: inst.id,
+                    code: inst.code,
                     rel_flow_version_id: inst.rel_flow_version_id,
                     rel_flow_model_name: inst.rel_flow_model_name,
                     tag: inst.tag,
@@ -529,6 +535,7 @@ impl FlowInstServ {
                 .into_iter()
                 .map(|inst| FlowInstSummaryResp {
                     id: inst.id,
+                    code: inst.code,
                     rel_flow_version_id: inst.rel_flow_version_id,
                     rel_flow_model_id: inst.rel_flow_model_id,
                     rel_flow_model_name: inst.rel_flow_model_name,
@@ -2053,7 +2060,7 @@ impl FlowInstServ {
         Self::package_query(table_alias_name, search_req.query.clone(), &mut sql_vals, &mut where_fragments, funs, ctx)?;
         Self::package_query_kind(
             table_alias_name,
-            search_req.query_kind.clone().unwrap_or(FlowInstQueryKind::All),
+            search_req.query_kind.clone().unwrap_or(vec![FlowInstQueryKind::Create, FlowInstQueryKind::Form, FlowInstQueryKind::Approval]),
             &mut sql_vals,
             &mut where_fragments,
             funs,
@@ -2067,6 +2074,7 @@ impl FlowInstServ {
                 format!(
                     r#"SELECT
                 flow_inst.id,
+                flow_inst.code,
                 flow_inst.rel_flow_version_id,
                 flow_inst.rel_business_obj_id,
                 flow_inst.current_state_id,
@@ -2113,6 +2121,7 @@ impl FlowInstServ {
                 }
                 Ok(FlowInstSummaryResp {
                     id: item.try_get("", "id")?,
+                    code: item.try_get("", "code")?,
                     rel_flow_version_id: item.try_get("", "rel_flow_version_id")?,
                     rel_flow_model_id: item.try_get("", "rel_flow_model_id")?,
                     rel_flow_model_name: item.try_get("", "rel_flow_model_name")?,
@@ -2140,126 +2149,70 @@ impl FlowInstServ {
 
     fn package_query_kind(
         table_alias_name: &str,
-        query_kind: FlowInstQueryKind,
+        query_kinds: Vec<FlowInstQueryKind>,
         sql_vals: &mut Vec<sea_orm::Value>,
         where_fragments: &mut Vec<String>,
         _funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<()> {
-        match query_kind {
-            FlowInstQueryKind::Create => {
-                sql_vals.push(sea_orm::Value::from(ctx.owner.clone()));
-                where_fragments.push(format!("{}.create_ctx ->> 'owner' = ${}", table_alias_name, sql_vals.len()));
-            }
-            FlowInstQueryKind::Form => {
-                let mut child_or_where_fragments = vec![];
-                sql_vals.push(sea_orm::Value::from(ctx.owner.clone()));
-                child_or_where_fragments.push(format!(
-                    "EXISTS (SELECT 1 FROM jsonb_array_elements_text({}.artifacts->'guard_conf'->'guard_by_spec_account_ids') AS elem WHERE elem IN (${}))",
-                    table_alias_name,
-                    sql_vals.len()
-                ));
-                if !ctx.roles.is_empty() {
-                    sql_vals.push(sea_orm::Value::from(ctx.roles.clone().join(", ").to_string()));
-                    child_or_where_fragments.push(format!(
-                        "EXISTS (SELECT 1 FROM jsonb_array_elements_text({}.artifacts->'guard_conf'->'guard_by_spec_role_ids') AS elem WHERE elem IN (${}))",
-                        table_alias_name,
-                        sql_vals.len()
-                    ));
-                }
-                if !ctx.groups.is_empty() {
-                    sql_vals.push(sea_orm::Value::from(ctx.groups.clone().join(", ").to_string()));
-                    child_or_where_fragments.push(format!(
-                        "EXISTS (SELECT 1 FROM jsonb_array_elements_text({}.artifacts->'guard_conf'->'guard_by_spec_org_ids') AS elem WHERE elem IN (${}))",
-                        table_alias_name,
-                        sql_vals.len()
-                    ));
-                }
-                where_fragments.push(format!("current_state.state_kind = 'form' AND ({})", child_or_where_fragments.join(" OR ")));
-            }
-            FlowInstQueryKind::Approval => {
-                let mut child_or_where_fragments = vec![];
-                sql_vals.push(sea_orm::Value::from(ctx.owner.clone()));
-                child_or_where_fragments.push(format!(
-                    "EXISTS (SELECT 1 FROM jsonb_array_elements_text({}.artifacts->'guard_conf'->'guard_by_spec_account_ids') AS elem WHERE elem IN (${}))",
-                    table_alias_name,
-                    sql_vals.len()
-                ));
-                if !ctx.roles.is_empty() {
-                    sql_vals.push(sea_orm::Value::from(ctx.roles.clone().join(", ").to_string()));
-                    child_or_where_fragments.push(format!(
-                        "EXISTS (SELECT 1 FROM jsonb_array_elements_text({}.artifacts->'guard_conf'->'guard_by_spec_role_ids') AS elem WHERE elem IN (${}))",
-                        table_alias_name,
-                        sql_vals.len()
-                    ));
-                }
-                if !ctx.groups.is_empty() {
-                    sql_vals.push(sea_orm::Value::from(ctx.groups.clone().join(", ").to_string()));
-                    child_or_where_fragments.push(format!(
-                        "EXISTS (SELECT 1 FROM jsonb_array_elements_text({}.artifacts->'guard_conf'->'guard_by_spec_org_ids') AS elem WHERE elem IN (${}))",
-                        table_alias_name,
-                        sql_vals.len()
-                    ));
-                }
-                where_fragments.push(format!("current_state.state_kind = 'approval' AND ({})", child_or_where_fragments.join(" OR ")));
-            }
-            FlowInstQueryKind::All => {
-                let mut or_where_fragments = vec![];
-                sql_vals.push(sea_orm::Value::from(ctx.owner.clone()));
-                or_where_fragments.push(format!("({}.create_ctx ->> 'owner' = ${})", table_alias_name, sql_vals.len()));
-
-                let mut form_or_where_fragments = vec![];
-                sql_vals.push(sea_orm::Value::from(ctx.owner.clone()));
-                form_or_where_fragments.push(format!(
-                    "EXISTS (SELECT 1 FROM jsonb_array_elements_text({}.artifacts->'guard_conf'->'guard_by_spec_account_ids') AS elem WHERE elem IN (${}))",
-                    table_alias_name,
-                    sql_vals.len()
-                ));
-                if !ctx.roles.is_empty() {
-                    sql_vals.push(sea_orm::Value::from(ctx.roles.clone().join(", ").to_string()));
-                    form_or_where_fragments.push(format!(
-                        "EXISTS (SELECT 1 FROM jsonb_array_elements_text({}.artifacts->'guard_conf'->'guard_by_spec_role_ids') AS elem WHERE elem IN (${}))",
-                        table_alias_name,
-                        sql_vals.len()
-                    ));
-                }
-                if !ctx.groups.is_empty() {
-                    sql_vals.push(sea_orm::Value::from(ctx.groups.clone().join(", ").to_string()));
-                    form_or_where_fragments.push(format!(
-                        "EXISTS (SELECT 1 FROM jsonb_array_elements_text({}.artifacts->'guard_conf'->'guard_by_spec_org_ids') AS elem WHERE elem IN (${}))",
-                        table_alias_name,
-                        sql_vals.len()
-                    ));
-                }
-                or_where_fragments.push(format!("(current_state.state_kind = 'form' AND ({}))", form_or_where_fragments.join(" OR ")));
-
-                let mut approval_or_where_fragments = vec![];
-                sql_vals.push(sea_orm::Value::from(ctx.owner.clone()));
-                approval_or_where_fragments.push(format!(
-                    "EXISTS (SELECT 1 FROM jsonb_array_elements_text({}.artifacts->'guard_conf'->'guard_by_spec_account_ids') AS elem WHERE elem IN (${}))",
-                    table_alias_name,
-                    sql_vals.len()
-                ));
-                if !ctx.roles.is_empty() {
-                    sql_vals.push(sea_orm::Value::from(ctx.roles.clone().join(", ").to_string()));
-                    approval_or_where_fragments.push(format!(
-                        "EXISTS (SELECT 1 FROM jsonb_array_elements_text({}.artifacts->'guard_conf'->'guard_by_spec_role_ids') AS elem WHERE elem IN (${}))",
-                        table_alias_name,
-                        sql_vals.len()
-                    ));
-                }
-                if !ctx.groups.is_empty() {
-                    sql_vals.push(sea_orm::Value::from(ctx.groups.clone().join(", ").to_string()));
-                    approval_or_where_fragments.push(format!(
-                        "EXISTS (SELECT 1 FROM jsonb_array_elements_text({}.artifacts->'guard_conf'->'guard_by_spec_org_ids') AS elem WHERE elem IN (${}))",
-                        table_alias_name,
-                        sql_vals.len()
-                    ));
-                }
-                or_where_fragments.push(format!("(current_state.state_kind = 'approval' AND ({}))", approval_or_where_fragments.join(" OR ")));
-                where_fragments.push(format!("( {} )", or_where_fragments.join(" OR ")));
-            }
+        let mut or_where_fragments = vec![];
+        if query_kinds.contains(&FlowInstQueryKind::Create) {
+            sql_vals.push(sea_orm::Value::from(ctx.owner.clone()));
+            or_where_fragments.push(format!("({}.create_ctx ->> 'owner' = ${})", table_alias_name, sql_vals.len()));
         }
+        if query_kinds.contains(&FlowInstQueryKind::Form) {
+            let mut child_or_where_fragments = vec![];
+            sql_vals.push(sea_orm::Value::from(ctx.owner.clone()));
+            child_or_where_fragments.push(format!(
+                "EXISTS (SELECT 1 FROM jsonb_array_elements_text({}.artifacts->'guard_conf'->'guard_by_spec_account_ids') AS elem WHERE elem IN (${}))",
+                table_alias_name,
+                sql_vals.len()
+            ));
+            if !ctx.roles.is_empty() {
+                sql_vals.push(sea_orm::Value::from(ctx.roles.clone().join(", ").to_string()));
+                child_or_where_fragments.push(format!(
+                    "EXISTS (SELECT 1 FROM jsonb_array_elements_text({}.artifacts->'guard_conf'->'guard_by_spec_role_ids') AS elem WHERE elem IN (${}))",
+                    table_alias_name,
+                    sql_vals.len()
+                ));
+            }
+            if !ctx.groups.is_empty() {
+                sql_vals.push(sea_orm::Value::from(ctx.groups.clone().join(", ").to_string()));
+                child_or_where_fragments.push(format!(
+                    "EXISTS (SELECT 1 FROM jsonb_array_elements_text({}.artifacts->'guard_conf'->'guard_by_spec_org_ids') AS elem WHERE elem IN (${}))",
+                    table_alias_name,
+                    sql_vals.len()
+                ));
+            }
+            or_where_fragments.push(format!("(current_state.state_kind = 'form' AND ({}))", child_or_where_fragments.join(" OR ")));
+        }
+        if query_kinds.contains(&FlowInstQueryKind::Approval) {
+            let mut child_or_where_fragments = vec![];
+                sql_vals.push(sea_orm::Value::from(ctx.owner.clone()));
+                child_or_where_fragments.push(format!(
+                    "EXISTS (SELECT 1 FROM jsonb_array_elements_text({}.artifacts->'guard_conf'->'guard_by_spec_account_ids') AS elem WHERE elem IN (${}))",
+                    table_alias_name,
+                    sql_vals.len()
+                ));
+                if !ctx.roles.is_empty() {
+                    sql_vals.push(sea_orm::Value::from(ctx.roles.clone().join(", ").to_string()));
+                    child_or_where_fragments.push(format!(
+                        "EXISTS (SELECT 1 FROM jsonb_array_elements_text({}.artifacts->'guard_conf'->'guard_by_spec_role_ids') AS elem WHERE elem IN (${}))",
+                        table_alias_name,
+                        sql_vals.len()
+                    ));
+                }
+                if !ctx.groups.is_empty() {
+                    sql_vals.push(sea_orm::Value::from(ctx.groups.clone().join(", ").to_string()));
+                    child_or_where_fragments.push(format!(
+                        "EXISTS (SELECT 1 FROM jsonb_array_elements_text({}.artifacts->'guard_conf'->'guard_by_spec_org_ids') AS elem WHERE elem IN (${}))",
+                        table_alias_name,
+                        sql_vals.len()
+                    ));
+                }
+                or_where_fragments.push(format!("(current_state.state_kind = 'approval' AND ({}))", child_or_where_fragments.join(" OR ")));
+        }
+        where_fragments.push(format!("( {} )", or_where_fragments.join(" OR ")));
         Ok(())
     }
 
@@ -2359,5 +2312,20 @@ impl FlowInstServ {
             .clone()
             .unwrap_or_default()
         )
+    }
+
+    async fn gen_inst_code(funs: &TardisFunsInst) -> TardisResult<String> {
+        let count = funs
+            .db()
+            .count(
+                Query::select()
+                    .columns([flow_inst::Column::Code])
+                    .from(flow_inst::Entity)
+                    .and_where(Expr::col(flow_inst::Column::CreateTime).gt(Utc::now().date_naive()))
+                    .and_where(Expr::col(flow_inst::Column::Main).eq(false)),
+            )
+            .await?;
+        let current_date = Utc::now();
+        Ok(format!("SP{}{}{}{:0>5}", current_date.year(), current_date.month(), current_date.day(), count + 1).to_string())
     }
 }

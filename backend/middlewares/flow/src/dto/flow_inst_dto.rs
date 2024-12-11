@@ -74,6 +74,8 @@ pub struct FlowInstAbortReq {
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
 pub struct FlowInstSummaryResp {
     pub id: String,
+    
+    pub code: String,
     /// Associated [flow_model](super::flow_model_version_dto::FlowModelVersionDetailResp) id
     ///
     /// 关联的[工作流模板](super::flow_model_version_dto::FlowModelVersionDetailResp) id
@@ -112,6 +114,9 @@ pub struct FlowInstSummaryResp {
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
 pub struct FlowInstDetailResp {
     pub id: String,
+
+    pub code: String,
+
     /// Associated [flow_model](super::flow_model_dto::FlowModelDetailResp) id
     ///
     /// 关联的[工作流模板](super::flow_model_dto::FlowModelDetailResp) id
@@ -481,6 +486,7 @@ pub struct FlowInstFilterReq {
 #[derive(sea_orm::FromQueryResult)]
 pub struct FlowInstSummaryResult {
     pub id: String,
+    pub code: String,
     pub rel_flow_version_id: String,
     pub rel_flow_model_id: String,
     pub rel_flow_model_name: String,
@@ -529,7 +535,7 @@ pub struct FlowInstSearchReq {
     // Search conditions
     pub query: FlowInstFilterReq,
     // Advanced search
-    pub query_kind: Option<FlowInstQueryKind>,
+    pub query_kind: Option<Vec<FlowInstQueryKind>>,
     // Sort
     // When the record set is very large, it will seriously affect the performance, it is not recommended to use.
     pub sort: Option<Vec<FlowInstSearchSortReq>>,
@@ -538,8 +544,6 @@ pub struct FlowInstSearchReq {
 
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Enum, Eq, Hash, PartialEq, Clone)]
 pub enum FlowInstQueryKind {
-    /// 全部
-    All,
     /// 待录入
     Form,
     /// 待审批
