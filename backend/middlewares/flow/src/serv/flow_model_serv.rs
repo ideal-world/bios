@@ -590,7 +590,7 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
         }
         let rel_transition =
             FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelTransition, flow_model_id, None, None, funs, ctx).await?.into_iter().map(|rel| rel.ext).collect_vec().pop();
-        flow_model.rel_transition = rel_transition.map(|rel_transition| TardisFuns::json.obj_to_json(&rel_transition).unwrap_or_default());
+        flow_model.rel_transition = rel_transition.map(|rel_transition| TardisFuns::json.str_to_json(&rel_transition).unwrap_or_default());
 
         Ok(flow_model)
     }
@@ -604,26 +604,23 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
     ) -> TardisResult<Vec<FlowModelSummaryResp>> {
         let mut res = Self::do_find_items(filter, desc_sort_by_create, desc_sort_by_update, funs, ctx).await?;
         for item in res.iter_mut() {
-            let version = FlowModelVersionServ::get_item(
-                &item.current_version_id,
-                &FlowModelVersionFilterReq {
-                    basic: RbumBasicFilterReq {
-                        ids: None,
-                        ..filter.basic.clone()
+            if !item.current_version_id.is_empty() {
+                let version = FlowModelVersionServ::get_item(
+                    &item.current_version_id,
+                    &FlowModelVersionFilterReq {
+                        basic: RbumBasicFilterReq {
+                            ids: None,
+                            ..filter.basic.clone()
+                        },
+                        ..Default::default()
                     },
-                    ..Default::default()
-                },
-                funs,
-                ctx,
-            )
-            .await?;
-            item.init_state_id = version.init_state_id;
+                    funs,
+                    ctx,
+                )
+                .await?;
+                item.init_state_id = version.init_state_id;
 
-            let rel_transition =
-                FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelTransition, &item.id, None, None, funs, ctx).await?.into_iter().map(|rel| rel.ext).collect_vec().pop();
-            item.rel_transition = rel_transition.map(|rel_transition| TardisFuns::json.obj_to_json(&rel_transition).unwrap_or_default());
-
-            let states = FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelState, &item.current_version_id, None, None, funs, ctx)
+                let states = FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelState, &item.current_version_id, None, None, funs, ctx)
                 .await?
                 .into_iter()
                 .map(|rel| FLowStateIdAndName {
@@ -632,6 +629,11 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
                 })
                 .collect_vec();
             item.states = TardisFuns::json.obj_to_json(&states).unwrap_or_default();
+            }
+
+            let rel_transition =
+                FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelTransition, &item.id, None, None, funs, ctx).await?.into_iter().map(|rel| rel.ext).collect_vec().pop();
+            item.rel_transition = rel_transition.map(|rel_transition| TardisFuns::json.str_to_json(&rel_transition).unwrap_or_default());
         }
         Ok(res)
     }
@@ -1646,7 +1648,17 @@ impl FlowModelServ {
                 Self::delete_item(&model.id, funs, ctx).await?;
             }
         }
-
+        // clean non-main flow model
+        for model_id in Self::find_id_items(&FlowModelFilterReq {
+            basic: RbumBasicFilterReq {
+                enabled: Some(true),
+                ..Default::default()
+            },
+            main: Some(false),
+            ..Default::default()
+        }, None, None, funs, ctx).await? {
+            Self::delete_item(&model_id, funs, ctx).await?;
+        }
         Ok(models)
     }
 
@@ -1757,7 +1769,7 @@ impl FlowModelServ {
                         modify_states
                             .into_iter()
                             .map(|(id, modify_transitions)| FlowModelVersionModifyState {
-                                id: id.clone(),
+                                id: Some(id.clone()),
                                 modify_state: None,
                                 modify_rel: None,
                                 add_transitions: None,

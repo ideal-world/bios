@@ -44,7 +44,7 @@ use crate::{
         },
         flow_model_dto::FlowModelFilterReq,
         flow_model_version_dto::{FlowModelVersionDetailResp, FlowModelVersionFilterReq},
-        flow_state_dto::{FLowStateKindConf, FlowStateAggResp, FlowStateFilterReq, FlowStateKind, FlowStateOperatorKind, FlowStateRelModelExt, FlowSysStateKind},
+        flow_state_dto::{FLowStateKindConf, FlowStateAggResp, FlowStateFilterReq, FlowStateKind, FlowStateOperatorKind, FlowStateRelModelExt, FlowStatusAutoStrategyKind, FlowSysStateKind},
         flow_transition_dto::FlowTransitionDetailResp,
         flow_var_dto::FillType,
     },
@@ -309,6 +309,11 @@ impl FlowInstServ {
             ..Default::default()
         };
         funs.db().update_one(flow_inst, ctx).await?;
+
+        let flow_inst_detail = Self::get(flow_inst_id, funs, ctx).await?;
+        if !flow_inst_detail.main {
+            FlowSearchClient::modify_business_obj_search(&flow_inst_detail.rel_business_obj_id, &flow_inst_detail.tag, funs, ctx).await?;
+        }
         Ok(())
     }
 
@@ -588,7 +593,7 @@ impl FlowInstServ {
         )
         .await;
         // 若当前数据项存在未结束的审批流，则清空其中的transitions
-        let unfinished_approve_flow_insts = Self::find_details(
+        let unfinished_approve_flow_inst_ids = Self::find_details(
             &FlowInstFilterReq {
                 rel_business_obj_ids: Some(flow_insts.iter().map(|flow_inst| flow_inst.rel_business_obj_id.clone()).collect_vec()),
                 main: Some(false),
@@ -600,13 +605,13 @@ impl FlowInstServ {
         )
         .await?
         .into_iter()
-        .map(|inst| inst.id.clone())
+        .map(|inst| flow_insts.iter().find(|flow_inst| flow_inst.rel_business_obj_id == inst.rel_business_obj_id).unwrap().id.clone())
         .collect_vec();
-        let _ = state_and_next_transitions.iter_mut().map(|item| {
-            if unfinished_approve_flow_insts.contains(&item.flow_inst_id) {
+        for item in state_and_next_transitions.iter_mut() {
+            if unfinished_approve_flow_inst_ids.contains(&item.flow_inst_id) {
                 item.next_flow_transitions.clear();
             }
-        });
+        }
         Ok(state_and_next_transitions)
     }
 
@@ -868,6 +873,10 @@ impl FlowInstServ {
         }
 
         funs.db().update_one(flow_inst, ctx).await?;
+
+        if next_flow_state.sys_state == FlowSysStateKind::Finish && !flow_inst_detail.main {
+            FlowSearchClient::modify_business_obj_search(&flow_inst_detail.rel_business_obj_id, &flow_inst_detail.tag, funs, ctx).await?;
+        }
 
         Self::when_leave_state(flow_inst_detail, &prev_flow_state.id, &flow_model_version.rel_model_id, funs, ctx).await?;
         Self::when_enter_state(flow_inst_detail, &next_flow_state.id, &flow_model_version.rel_model_id, funs, ctx).await?;
@@ -1463,8 +1472,54 @@ impl FlowInstServ {
                         transitions.iter().map(|transition| guard_custom_conf.guard_by_spec_account_ids.push(transition.op_ctx.owner.clone())).collect::<Vec<_>>()
                     });
                 }
+                if form_conf.guard_by_assigned {
+                    let _ = Self::get_main_inst_vars(flow_inst_detail, funs, ctx).await?
+                        .get("assigned_to")
+                        .unwrap_or(&json!(""))
+                        .as_str()
+                        .unwrap_or_default()
+                        .split(',')
+                        .collect_vec()
+                        .into_iter()
+                        .map(|str| guard_custom_conf.guard_by_spec_account_ids.push(str.to_string()))
+                        .collect::<Vec<_>>();
+                }
                 modify_req.guard_conf = Some(guard_custom_conf);
                 Self::modify_inst_artifacts(&flow_inst_detail.id, &modify_req, funs, ctx).await?;
+                // 当操作人为空时的逻辑
+                let curr_guard_conf = Self::get(&flow_inst_detail.id, funs, ctx).await?.artifacts.unwrap_or_default().guard_conf;
+                if curr_guard_conf.guard_by_spec_account_ids.is_empty() 
+                    && curr_guard_conf.guard_by_spec_org_ids.is_empty() 
+                    && curr_guard_conf.guard_by_spec_role_ids.is_empty()
+                    && form_conf.auto_transfer_when_empty_kind.is_some() {
+                    match form_conf.auto_transfer_when_empty_kind.unwrap_or_default() {
+                        FlowStatusAutoStrategyKind::Autoskip => {
+                            if let Some(next_transition) = FlowInstServ::find_next_transitions(flow_inst_detail, &FlowInstFindNextTransitionsReq { vars: None }, funs, ctx).await?.pop() {
+                                Self::transfer(
+                                    flow_inst_detail,
+                                    &FlowInstTransferReq {
+                                        flow_transition_id: next_transition.next_flow_transition_id,
+                                        message: None,
+                                        vars: None,
+                                    },
+                                    false,
+                                    FlowExternalCallbackOp::Auto,
+                                    loop_check_helper::InstancesTransition::default(),
+                                    ctx,
+                                    funs,
+                                )
+                                .await?;
+                            }
+                        },
+                        FlowStatusAutoStrategyKind::SpecifyAgent => {
+                            modify_req.guard_conf = Some(form_conf.auto_transfer_when_empty_guard_custom_conf.clone().unwrap_or_default());
+                            Self::modify_inst_artifacts(&flow_inst_detail.id, &modify_req, funs, ctx).await?;
+                        },
+                        FlowStatusAutoStrategyKind::TransferState => {
+                            // @TODO 当前版本不支持
+                        },
+                    }
+                }
             }
             FlowStateKind::Approval => {
                 let mut modify_req = FlowInstArtifactsModifyReq { ..Default::default() };
@@ -1478,8 +1533,54 @@ impl FlowInstServ {
                         transitions.iter().map(|transition| guard_custom_conf.guard_by_spec_account_ids.push(transition.op_ctx.owner.clone())).collect::<Vec<_>>()
                     });
                 }
+                if approval_conf.guard_by_assigned {
+                    let _ = Self::get_main_inst_vars(flow_inst_detail, funs, ctx).await?
+                        .get("assigned_to")
+                        .unwrap_or(&json!(""))
+                        .as_str()
+                        .unwrap_or_default()
+                        .split(',')
+                        .collect_vec()
+                        .into_iter()
+                        .map(|str| guard_custom_conf.guard_by_spec_account_ids.push(str.to_string()))
+                        .collect::<Vec<_>>();
+                }
                 modify_req.guard_conf = Some(guard_custom_conf);
                 Self::modify_inst_artifacts(&flow_inst_detail.id, &modify_req, funs, ctx).await?;
+                // 当操作人为空时的逻辑
+                let curr_guard_conf = Self::get(&flow_inst_detail.id, funs, ctx).await?.artifacts.unwrap_or_default().guard_conf;
+                if curr_guard_conf.guard_by_spec_account_ids.is_empty() 
+                    && curr_guard_conf.guard_by_spec_org_ids.is_empty() 
+                    && curr_guard_conf.guard_by_spec_role_ids.is_empty()
+                    && approval_conf.auto_transfer_when_empty_kind.is_some() {
+                    match approval_conf.auto_transfer_when_empty_kind.unwrap_or_default() {
+                        FlowStatusAutoStrategyKind::Autoskip => {
+                            if let Some(next_transition) = FlowInstServ::find_next_transitions(flow_inst_detail, &FlowInstFindNextTransitionsReq { vars: None }, funs, ctx).await?.pop() {
+                                Self::transfer(
+                                    flow_inst_detail,
+                                    &FlowInstTransferReq {
+                                        flow_transition_id: next_transition.next_flow_transition_id,
+                                        message: None,
+                                        vars: None,
+                                    },
+                                    false,
+                                    FlowExternalCallbackOp::Auto,
+                                    loop_check_helper::InstancesTransition::default(),
+                                    ctx,
+                                    funs,
+                                )
+                                .await?;
+                            }
+                        },
+                        FlowStatusAutoStrategyKind::SpecifyAgent => {
+                            modify_req.guard_conf = Some(approval_conf.auto_transfer_when_empty_guard_custom_conf.clone().unwrap_or_default());
+                            Self::modify_inst_artifacts(&flow_inst_detail.id, &modify_req, funs, ctx).await?;
+                        },
+                        FlowStatusAutoStrategyKind::TransferState => {
+                            // @TODO 当前版本不支持
+                        },
+                    }
+                }
             }
             FlowStateKind::Branch => {}
             FlowStateKind::Finish => match rel_transition.as_str() {
@@ -1665,7 +1766,7 @@ impl FlowInstServ {
                 FlowStateKind::Form => kind_conf.form.as_ref().map(|form| {
                     let mut operators = HashMap::new();
                     let artifacts = artifacts.clone().unwrap_or_default();
-                    if artifacts.guard_conf.check(ctx) && artifacts.prohibit_guard_by_spec_account_ids.clone().unwrap_or_default().contains(&ctx.owner) {
+                    if artifacts.guard_conf.check(ctx) && !artifacts.prohibit_guard_by_spec_account_ids.clone().unwrap_or_default().contains(&ctx.owner) {
                         operators.insert(FlowStateOperatorKind::Submit, form.submit_btn_name.clone());
                         if form.referral {
                             if let Some(referral_guard_custom_conf) = &form.referral_guard_custom_conf {
@@ -1688,7 +1789,7 @@ impl FlowInstServ {
                 FlowStateKind::Approval => kind_conf.approval.as_ref().map(|approval| {
                     let mut operators = HashMap::new();
                     let artifacts = artifacts.clone().unwrap_or_default();
-                    if artifacts.guard_conf.check(ctx) && artifacts.prohibit_guard_by_spec_account_ids.clone().unwrap_or_default().contains(&ctx.owner) {
+                    if artifacts.guard_conf.check(ctx) && !artifacts.prohibit_guard_by_spec_account_ids.clone().unwrap_or_default().contains(&ctx.owner) {
                         operators.insert(FlowStateOperatorKind::Pass, approval.pass_btn_name.clone());
                         operators.insert(FlowStateOperatorKind::Overrule, approval.overrule_btn_name.clone());
                         operators.insert(FlowStateOperatorKind::Back, approval.back_btn_name.clone());
@@ -2245,5 +2346,18 @@ impl FlowInstServ {
             }
         }
         Ok(order_fragments)
+    }
+
+    // 获取主实例的参数列表
+    async fn get_main_inst_vars(flow_inst: &FlowInstDetailResp, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<HashMap<String, Value>> {
+        let main_inst_id = Self::get_inst_ids_by_rel_business_obj_id(vec![flow_inst.rel_business_obj_id.clone()], Some(true), funs, ctx).await?
+        .pop()
+        .ok_or_else(|| funs.err().not_found("flow_inst", "get_guard_by_assigned", "illegal response", "404-flow-inst-not-found"))?;
+        let main_inst = Self::get(&main_inst_id, funs, ctx).await?;
+        Ok(main_inst
+            .current_vars
+            .clone()
+            .unwrap_or_default()
+        )
     }
 }

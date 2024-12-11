@@ -530,7 +530,7 @@ pub async fn test(flow_client: &mut TestHttpClient, search_client: &mut TestHttp
                 }]),
                 modify_states: Some(vec![
                     FlowModelVersionModifyState {
-                        id: start_state_id.clone(),
+                        id: Some(start_state_id.clone()),
                         modify_transitions: Some(vec![FlowTransitionModifyReq {
                             id: start_transition_id.into(),
                             to_flow_state_id: Some(form_state_id.clone()),
@@ -539,7 +539,7 @@ pub async fn test(flow_client: &mut TestHttpClient, search_client: &mut TestHttp
                         ..Default::default()
                     },
                     FlowModelVersionModifyState {
-                        id: finish_state_id.clone(),
+                        id: Some(finish_state_id.clone()),
                         modify_rel: Some(FlowStateRelModelModifyReq {
                             id: finish_state_id.clone(),
                             sort: Some(2),
