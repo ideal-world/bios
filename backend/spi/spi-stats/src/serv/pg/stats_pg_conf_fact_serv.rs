@@ -20,10 +20,9 @@ use crate::{
     dto::stats_conf_dto::{StatsConfFactAddReq, StatsConfFactColInfoResp, StatsConfFactInfoResp, StatsConfFactModifyReq},
     stats_config::StatsConfig,
     stats_constants::SYNC_FACT_TASK_CODE,
-    stats_enumeration::{StatsDataTypeKind, StatsFactColKind},
 };
 
-use super::{stats_pg_conf_dim_serv, stats_pg_conf_fact_col_serv, stats_pg_initializer, stats_pg_sync_serv};
+use super::{stats_pg_conf_fact_col_serv, stats_pg_initializer, stats_pg_sync_serv};
 
 pub async fn online(fact_conf_key: &str, conn: &TardisRelDBlConnection, ctx: &TardisContext) -> TardisResult<bool> {
     common_pg::check_table_exit(&format!("stats_inst_fact_{fact_conf_key}"), conn, ctx).await

@@ -13,7 +13,7 @@ use tardis::{
         sea_orm::{self, FromQueryResult, Value},
     },
     serde_json::{self, json, Map},
-    web::web_resp::{TardisPage, Void},
+    web::web_resp::TardisPage,
     TardisFunsInst,
 };
 

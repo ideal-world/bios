@@ -14,7 +14,7 @@ use bios_basic::{
     spi::{
         spi_constants::SPI_PG_KIND_CODE,
         spi_funs::{SpiBsInst, SpiBsInstExtractor},
-        spi_initializer::common_pg::{self, package_table_name},
+        spi_initializer::common_pg::{self},
     },
 };
 use serde_json::Map;

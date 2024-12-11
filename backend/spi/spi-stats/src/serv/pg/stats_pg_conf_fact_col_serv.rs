@@ -7,7 +7,7 @@ use bios_basic::spi::{
 };
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
-    chrono::{DateTime, Utc},
+    chrono::Utc,
     db::{
         reldb_client::{TardisRelDBClient, TardisRelDBlConnection},
         sea_orm::Value,
