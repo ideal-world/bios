@@ -13,7 +13,7 @@ use tardis::{
         sea_orm::Value,
     },
     web::web_resp::TardisPage,
-    TardisFunsInst,
+    TardisFuns, TardisFunsInst,
 };
 
 use crate::{
@@ -71,6 +71,8 @@ VALUES
     .await?;
     conn.commit().await?;
     //handle sync fact task
+    let mut callback_headers: HashMap<String, String> = HashMap::new();
+    callback_headers.insert("Tardis-Context".to_string(), TardisFuns::crypto.base64.encode(TardisFuns::json.obj_to_string(&ctx)?));
     ScheduleClient::add_or_modify_sync_task(
         AddOrModifySyncTaskReq {
             code: format!("{}_{}", SYNC_FACT_TASK_CODE, add_req.key),
@@ -79,7 +81,7 @@ VALUES
             callback_method: "PUT".to_string(),
             callback_body: None,
             enable: add_req.is_sync.unwrap_or_default(),
-            callback_headers: HashMap::new(),
+            callback_headers,
         },
         funs,
         ctx,
@@ -156,15 +158,17 @@ WHERE key = $1
     .await?;
     conn.commit().await?;
     //handle sync fact task
+    let mut callback_headers: HashMap<String, String> = HashMap::new();
+    callback_headers.insert("Tardis-Context".to_string(), TardisFuns::crypto.base64.encode(TardisFuns::json.obj_to_string(&ctx)?));
     ScheduleClient::add_or_modify_sync_task(
         AddOrModifySyncTaskReq {
             code: format!("{}_{}", SYNC_FACT_TASK_CODE, fact_conf_key),
             enable: modify_req.is_sync.unwrap_or_default(),
             cron: modify_req.sync_cron.clone().unwrap_or("".to_string()),
             callback_url: format!("{}/ci/{}/sync", funs.conf::<StatsConfig>().base_url, fact_conf_key),
-            callback_headers: HashMap::new(),
             callback_method: "PUT".to_string(),
             callback_body: None,
+            callback_headers,
         },
         funs,
         ctx,
