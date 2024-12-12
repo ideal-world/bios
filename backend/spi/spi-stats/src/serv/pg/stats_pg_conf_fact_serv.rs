@@ -77,7 +77,7 @@ VALUES
         AddOrModifySyncTaskReq {
             code: format!("{}_{}", SYNC_FACT_TASK_CODE, add_req.key),
             cron: add_req.sync_cron.clone().unwrap_or("".to_string()),
-            callback_url: format!("{}/ci/{}/sync", funs.conf::<StatsConfig>().base_url, add_req.key),
+            callback_url: format!("{}/ci/fact/{}/sync", funs.conf::<StatsConfig>().base_url, add_req.key),
             callback_method: "PUT".to_string(),
             callback_body: None,
             enable: add_req.is_sync.unwrap_or_default(),
@@ -165,7 +165,7 @@ WHERE key = $1
             code: format!("{}_{}", SYNC_FACT_TASK_CODE, fact_conf_key),
             enable: modify_req.is_sync.unwrap_or_default(),
             cron: modify_req.sync_cron.clone().unwrap_or("".to_string()),
-            callback_url: format!("{}/ci/{}/sync", funs.conf::<StatsConfig>().base_url, fact_conf_key),
+            callback_url: format!("{}/ci/fact/{}/sync", funs.conf::<StatsConfig>().base_url, fact_conf_key),
             callback_method: "PUT".to_string(),
             callback_body: None,
             callback_headers,
