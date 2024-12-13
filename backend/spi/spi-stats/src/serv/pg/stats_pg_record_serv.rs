@@ -532,7 +532,7 @@ async fn fact_records_modify(
                 ));
             };
             // TODO check value enum when stable_ds = true
-            sql_sets.push(format!("{} = ${}", req_fact_col_key, params.len() + 1));
+            sql_sets.push(format!("{} = ${}", fact_col_conf.key, params.len() + 1));
             if fact_col_conf.dim_multi_values.unwrap_or(false) {
                 params.push(dim_conf.data_type.json_to_sea_orm_value_array(&req_fact_col_value, false)?);
             } else {
@@ -547,7 +547,7 @@ async fn fact_records_modify(
                     "400-spi-stats-invalid-request",
                 ));
             };
-            sql_sets.push(format!("{} = ${}", req_fact_col_key, params.len() + 1));
+            sql_sets.push(format!("{} = ${}", fact_col_conf.key, params.len() + 1));
             params.push(mes_data_type.json_to_sea_orm_value(&req_fact_col_value, false)?);
         } else {
             let Some(req_fact_col_value) = req_fact_col_value.as_str() else {
@@ -558,7 +558,7 @@ async fn fact_records_modify(
                     "400-spi-stats-invalid-request",
                 ));
             };
-            sql_sets.push(format!("{} = ${}", req_fact_col_key, params.len() + 1));
+            sql_sets.push(format!("{} = ${}", fact_col_conf.key, params.len() + 1));
             params.push(req_fact_col_value.into());
         }
     }
