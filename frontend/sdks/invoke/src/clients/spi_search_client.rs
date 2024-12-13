@@ -8,7 +8,7 @@ use crate::invoke_enumeration::InvokeModuleKind;
 use super::base_spi_client::BaseSpiClient;
 #[cfg(feature = "event")]
 use super::event_client::{get_topic, mq_error, EventAttributeExt, EventCenterClient, SPI_RPC_TOPIC};
-use super::spi_kv_client::{KvItemAddOrModifyReq, KvItemDeleteReq, SpiKvClient};
+use super::spi_kv_client::SpiKvClient;
 
 pub struct SpiSearchClient;
 #[cfg(feature = "event")]
@@ -81,20 +81,8 @@ impl EventCenterClient {
         let topic = self.get_topic()?;
         use super::event_client::EventAttributeExt;
         topic.send_event(add_req.clone().inject_context(funs, ctx).json()).await.map_err(mq_error)?;
-        let name = if let Some(name) = name.clone() { name } else { add_req.title.clone() };
-        topic
-            .send_event(
-                KvItemAddOrModifyReq {
-                    key: format!("{}:{}", add_req.tag, add_req.key),
-                    value: tardis::serde_json::Value::String(name),
-                    ..Default::default()
-                }
-                .inject_context(funs, ctx)
-                .json(),
-            )
-            .await
-            .map_err(mq_error)?;
-
+        let name = name.unwrap_or_else(|| add_req.title.clone());
+        SpiKvClient::add_or_modify_key_name(&format!("{}:{}", add_req.tag, add_req.key), &name, add_req.kv_disable, funs, ctx).await?;
         Ok(())
     }
 
@@ -114,18 +102,7 @@ impl EventCenterClient {
             .map_err(mq_error)?;
         if modify_req.title.is_some() || modify_req.name.is_some() {
             let name = modify_req.name.clone().unwrap_or(modify_req.title.clone().unwrap_or("".to_string()));
-            topic
-                .send_event(
-                    KvItemAddOrModifyReq {
-                        key: format!("{}:{}", tag, key),
-                        value: tardis::serde_json::Value::String(name),
-                        ..Default::default()
-                    }
-                    .inject_context(funs, ctx)
-                    .json(),
-                )
-                .await
-                .map_err(mq_error)?;
+            SpiKvClient::add_or_modify_key_name(&format!("{}:{}", tag, key), &name, modify_req.kv_disable, funs, ctx).await?;
         }
         Ok(())
     }
@@ -143,16 +120,7 @@ impl EventCenterClient {
             )
             .await
             .map_err(mq_error)?;
-        topic
-            .send_event(
-                KvItemDeleteReq {
-                    key: format!("__k_n__:{}:{}", tag, key),
-                }
-                .inject_context(funs, ctx)
-                .json(),
-            )
-            .await
-            .map_err(mq_error)?;
+        SpiKvClient::delete_item(&format!("__k_n__:{tag}:{key}"), funs, ctx).await?;
         Ok(())
     }
 }
