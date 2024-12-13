@@ -68,7 +68,7 @@ pub(crate) async fn find_task(
     funs: &TardisFunsInst,
     ctx: &TardisContext,
 ) -> TardisResult<TardisPage<ScheduleTaskInfoResp>> {
-    let resp = SpiLogClient::find(
+    let resp = SpiLogClient::findv2(
         LogItemFindReq {
             tag: "schedule_task".to_string(),
             keys: Some(vec![job_code.into()]),
