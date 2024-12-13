@@ -10,9 +10,7 @@ use tardis::{
 };
 
 use super::{
-    flow_state_dto::{FlowGuardConf, FlowStateKind, FlowStateOperatorKind, FlowStateRelModelExt, FlowStateVar, FlowSysStateKind},
-    flow_transition_dto::FlowTransitionDoubleCheckInfo,
-    flow_var_dto::FlowVarInfo,
+    flow_model_dto::FlowModelRelTransitionExt, flow_state_dto::{FlowGuardConf, FlowStateKind, FlowStateOperatorKind, FlowStateRelModelExt, FlowStateVar, FlowSysStateKind}, flow_transition_dto::FlowTransitionDoubleCheckInfo, flow_var_dto::FlowVarInfo
 };
 
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
@@ -104,6 +102,8 @@ pub struct FlowInstSummaryResp {
     pub finish_abort: bool,
     /// 输出信息
     pub output_message: Option<String>,
+    /// 触发的动作
+    pub rel_transition: Option<FlowModelRelTransitionExt>,
 
     pub own_paths: String,
 
@@ -185,10 +185,12 @@ pub struct FlowInstDetailResp {
     pub output_message: Option<String>,
     /// 动作列表
     pub transitions: Option<Vec<FlowInstTransitionInfo>>,
-
+    /// 数据对象
     pub artifacts: Option<FlowInstArtifacts>,
-
+    /// 评论
     pub comments: Option<Vec<FlowInstCommentInfo>>,
+    /// 触发的动作
+    pub rel_transition: Option<FlowModelRelTransitionExt>,
 
     pub own_paths: String,
 }
@@ -220,7 +222,7 @@ pub struct FlowInstArtifacts {
     pub guard_conf: FlowGuardConf,                                      // 当前操作人权限
     pub prohibit_guard_by_spec_account_ids: Option<Vec<String>>,        // 禁止操作的指定用户ID
     pub approval_result: HashMap<String, HashMap<String, Vec<String>>>, // 当前审批结果
-    pub approval_total: HashMap<String, usize>,                           // 审批总数
+    pub approval_total: Option<HashMap<String, usize>>,                           // 审批总数
     pub form_state_map: HashMap<String, HashMap<String, Value>>,        // 录入节点映射 key为节点ID,对应的value为节点中的录入的参数
     pub prev_non_auto_state_id: Option<String>,                         // 上一个非自动节点ID
     pub prev_non_auto_account_id: Option<String>,                       // 上一个节点操作人ID
@@ -504,6 +506,8 @@ pub struct FlowInstSummaryResult {
     pub finish_time: Option<DateTime<Utc>>,
     pub finish_abort: Option<bool>,
     pub output_message: Option<String>,
+
+    pub rel_transition: Option<String>,
 
     pub own_paths: String,
 

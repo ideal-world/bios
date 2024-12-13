@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use bios_sdk_invoke::clients::{
     iam_client::IamClient,
     spi_log_client::{LogItemAddV2Req, SpiLogClient},
@@ -16,19 +18,69 @@ pub struct FlowLogClient;
 
 #[derive(Serialize, Default, Debug, Clone)]
 pub struct LogParamContent {
-    pub subject: String,
-    pub name: String,
-    pub sub_kind: String,
+    pub subject: Option<String>,
+    pub name: Option<String>,
+    pub sub_kind: Option<String>,
+    pub sub_id: Option<String>,
+    pub old_content: Option<String>,
+    pub new_content: Option<String>,
+    pub detail: Option<String>,
+    pub operand: Option<String>,
+    pub operand_id: Option<String>,
+    pub operand_kind: Option<String>,
+    pub operand_name: Option<String>,
+    pub output_message: Option<String>,
+    pub output_result: Option<String>,
+}
+
+#[derive(Serialize, Default, Debug, Clone)]
+pub struct LogParamExt {
+    pub scene_kind: Option<Vec<String>>,
+    pub sys_op: Option<String>,
+    pub project_id: Option<String>,
+    pub new_log: Option<bool>,
+    pub include_detail: Option<bool>,
+    pub delete: Option<bool>,
 }
 
 pub enum LogParamTag {
     DynamicLog,
+    ApprovalFlow,
 }
 
 impl From<LogParamTag> for String {
     fn from(val: LogParamTag) -> Self {
         match val {
             LogParamTag::DynamicLog => "dynamic_log".to_string(),
+            LogParamTag::ApprovalFlow => "approval_flow".to_string(),
+        }
+    }
+}
+
+pub enum LogParamOp {
+    // 发起
+    Start,
+    // 审批
+    Approval,
+    // 审批流转
+    ApprovalTransfer,
+    // 录入
+    Form,
+    // 录入流转
+    FormTransfer,
+    // 结束
+    Finish,
+}
+
+impl From<LogParamOp> for String {
+    fn from(val: LogParamOp) -> Self {
+        match val {
+            LogParamOp::Start => "FLOW_START".to_string(),
+            LogParamOp::Approval => "FLOW_APPROVAL".to_string(),
+            LogParamOp::ApprovalTransfer => "FLOW_APPROVAL_TRANSFER".to_string(),
+            LogParamOp::Form => "FLOW_FORM".to_string(),
+            LogParamOp::FormTransfer => "FLOW_FORM_TRANSFER".to_string(),
+            LogParamOp::Finish => "FLOW_FINISH".to_string(),
         }
     }
 }
@@ -98,7 +150,7 @@ impl FlowLogClient {
 
         let req = LogItemAddV2Req {
             tag: tag.to_string(),
-            content: TardisFuns::json.obj_to_json(&content).expect("req_msg not a valid json value"),
+            content: TardisFuns::json.obj_to_json(&content).expect("content not a valid json value"),
             kind,
             ext,
             key,
@@ -110,10 +162,26 @@ impl FlowLogClient {
             own_paths,
             msg: None,
             owner_name,
-            push: push,
+            push,
             disable: None,
         };
         SpiLogClient::addv2(req, funs, ctx).await?;
         Ok(())
+    }
+
+    pub fn get_flow_kind_text(tag: &str) -> String {
+        let flow_tag_map = HashMap::from([
+            ("PROJ", "项目"),
+            ("MS", "里程碑"),
+            ("ITER", "迭代"),
+            ("TICKET", "工单"),
+            ("REQ", "需求"),
+            ("TASK", "任务"),
+            ("ISSUE", "缺陷"),
+            ("CTS", "转测单"),
+            ("TP", "测试计划"),
+            ("TS", "测试阶段"),
+        ]);
+        flow_tag_map.get(tag).map_or("".to_string(), |val| val.to_string())
     }
 }

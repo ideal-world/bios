@@ -239,9 +239,10 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
                 LogParamTag::DynamicLog,
                 Some(flow_model_id.to_string()),
                 LogParamContent {
-                    subject: "工作流模板".to_string(),
-                    name: add_req.name.to_string(),
-                    sub_kind: "flow_template".to_string(),
+                    subject: Some("工作流模板".to_string()),
+                    name: Some(add_req.name.to_string()),
+                    sub_kind: Some("flow_template".to_string()),
+                    ..Default::default()
                 },
                 Some(json!({
                     "name": add_req.name.to_string(),
@@ -372,9 +373,10 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
                 LogParamTag::DynamicLog,
                 Some(flow_model_id.to_string()),
                 LogParamContent {
-                    subject: "工作流模板".to_string(),
-                    name: model_detail.name.clone(),
-                    sub_kind: "flow_template".to_string(),
+                    subject: Some("工作流模板".to_string()),
+                    name: Some(model_detail.name.clone()),
+                    sub_kind: Some("flow_template".to_string()),
+                    ..Default::default()
                 },
                 Some(json!({
                     "name": model_detail.name.to_string(),
@@ -493,9 +495,10 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
                 LogParamTag::DynamicLog,
                 Some(flow_model_id.to_string()),
                 LogParamContent {
-                    subject: "工作流模板".to_string(),
-                    name: detail.as_ref().unwrap().name.clone(),
-                    sub_kind: "flow_template".to_string(),
+                    subject: Some("工作流模板".to_string()),
+                    name: Some(detail.as_ref().unwrap().name.clone()),
+                    sub_kind: Some("flow_template".to_string()),
+                    ..Default::default()
                 },
                 Some(json!({
                     "name": detail.as_ref().unwrap().name.to_string(),
@@ -1244,6 +1247,8 @@ impl FlowModelServ {
                     basic: RbumBasicFilterReq {
                         ids: Some(model_ids),
                         enabled: Some(true),
+                        own_paths: Some("".to_string()),
+                        with_sub_own_paths: true,
                         ..Default::default()
                     },
                     tags: Some(vec![tag.to_string()]),
