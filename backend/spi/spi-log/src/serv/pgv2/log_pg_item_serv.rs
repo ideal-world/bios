@@ -95,7 +95,7 @@ pub async fn addv2(add_req: &mut LogItemAddV2Req, funs: &TardisFunsInst, ctx: &T
                             if let Some(ref_record) = ref_record {
                                 let ref_record_content: JsonValue = ref_record.try_get("", "content")?;
                                 if let Some(ref_old_value) = ref_record_content.get(ref_field) {
-                                  ref_origin_value = ref_old_value.clone();
+                                    ref_origin_value = ref_old_value.clone();
                                 }
                             }
                         }
@@ -362,6 +362,12 @@ pub async fn findv2(find_req: &mut LogItemFindReq, funs: &TardisFunsInst, ctx: &
                 for val in value {
                     sql_vals.push(val);
                 }
+            } else if ext_or_item.op == BasicQueryOpKind::IsNull {
+                where_fragments.push(format!("ext ->> '{}' is null", ext_or_item.field));
+            } else if ext_or_item.op == BasicQueryOpKind::IsNotNull {
+                where_fragments.push(format!("(ext ->> '{}' is not null or ext ->> '{}' != '')", ext_or_item.field, ext_or_item.field));
+            } else if ext_or_item.op == BasicQueryOpKind::IsNullOrEmpty {
+                where_fragments.push(format!("(ext ->> '{}' is null or ext ->> '{}' = '')", ext_or_item.field, ext_or_item.field));
             } else {
                 if value.len() > 1 {
                     return err_notfound(ext_or_item);
