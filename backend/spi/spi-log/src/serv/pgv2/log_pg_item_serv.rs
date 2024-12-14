@@ -42,6 +42,7 @@ pub async fn addv2(add_req: &mut LogItemAddV2Req, funs: &TardisFunsInst, ctx: &T
     let id = add_req.idempotent_id.clone().unwrap_or(TardisFuns::field.nanoid());
 
     let bs_inst = inst.inst::<TardisRelDBClient>();
+    // 初始化要保存的内容
     let mut insert_content = add_req.content.clone();
     let (mut conn, table_name) = log_pg_initializer::init_table_and_conn(bs_inst, &add_req.tag, ctx, true).await?;
     conn.begin().await?;
@@ -59,34 +60,64 @@ pub async fn addv2(add_req: &mut LogItemAddV2Req, funs: &TardisFunsInst, ctx: &T
             .await?;
 
         if let Some(last_record) = get_last_record {
-            let last_content: JsonValue = last_record.try_get("", "content")?;
+            let mut last_content: JsonValue = last_record.try_get("", "content")?;
             let last_ts: DateTime<Utc> = last_record.try_get("", "ts")?;
             let last_key: String = last_record.try_get("", "key")?;
 
-            insert_content = last_content;
-            for ref_field in &ref_fields {
-                if let Some(field_value) = insert_content.get_mut(ref_field) {
-                    if !is_log_ref(field_value) {
-                        *field_value = JsonValue::String(get_ref_filed_value(&last_ts, &last_key));
-                    }
-                }
-            }
+            insert_content = last_content.clone();
+            merge(&mut insert_content, add_req.content.clone());
 
-            if let (Some(insert_content), Some(add_req_content)) = (insert_content.as_object_mut(), add_req.content.as_object()) {
-                for (k, v) in add_req_content {
-                    insert_content.insert(k.to_string(), v.clone());
+            //把上次的内容有ref字段的改为ref_key
+            for ref_field in &ref_fields {
+                //如果上次和这次同时有这个ref字段
+                if let (Some(insert_field_value), Some(last_field_value)) = (insert_content.get_mut(ref_field), last_content.get_mut(ref_field)) {
+                    //上次ref_key默认指向为上一条
+                    let mut last_ref_key = JsonValue::String(get_ref_filed_value(&last_ts, &last_key));
+                    // ref字段的原始值 默认为上一条
+                    let mut ref_origin_value = last_field_value.clone();
+                    // 判断上次ref字段是否已经是ref_key了
+                    if is_log_ref(last_field_value) {
+                        if let Some(last_field_value_str) = last_field_value.as_str() {
+                            //是的话 把ref_key指回上一条所指的ref_key
+                            last_ref_key = last_field_value.clone();
+                            // 取出原始字段
+                            let (last_ts, last_key) = parse_ref_ts_key(last_field_value_str)?;
+                            let ref_record = conn
+                                .query_one(
+                                    &format!(
+                                        r#"
+  select ts,key,content from {table_name} where key = $1 and ts = $2 order by ts desc limit 1
+  "#
+                                    ),
+                                    vec![Value::from(last_key.to_string()), Value::from(last_ts)],
+                                )
+                                .await?;
+                            if let Some(ref_record) = ref_record {
+                                let ref_record_content: JsonValue = ref_record.try_get("", "content")?;
+                                if let Some(ref_old_value) = ref_record_content.get(ref_field) {
+                                    ref_origin_value = ref_old_value.clone();
+                                }
+                            }
+                        }
+                    }
+                    // 对比一下这个字段现在的值和ref字段的原始值
+                    if insert_field_value.to_string() == ref_origin_value.to_string() {
+                        // 如果一样，那么把这次ref字段改成ref_key
+                        *insert_field_value = last_ref_key;
+                    }
                 }
             }
         }
     }
 
+    add_req.content = insert_content;
     let mut params = vec![
         Value::from(id.clone()),
         Value::from(add_req.kind.as_ref().unwrap_or(&"".into()).to_string()),
         Value::from(add_req.key.as_ref().unwrap_or(&"".into()).to_string()),
         Value::from(add_req.tag.clone()),
         Value::from(add_req.op.as_ref().unwrap_or(&"".to_string()).as_str()),
-        Value::from(insert_content),
+        Value::from(add_req.content.clone()),
         Value::from(add_req.owner.as_ref().unwrap_or(&"".to_string()).as_str()),
         Value::from(add_req.owner_name.as_ref().unwrap_or(&"".to_string()).as_str()),
         Value::from(add_req.own_paths.as_ref().unwrap_or(&"".to_string()).as_str()),
@@ -331,6 +362,12 @@ pub async fn findv2(find_req: &mut LogItemFindReq, funs: &TardisFunsInst, ctx: &
                 for val in value {
                     sql_vals.push(val);
                 }
+            } else if ext_or_item.op == BasicQueryOpKind::IsNull {
+                where_fragments.push(format!("ext ->> '{}' is null", ext_or_item.field));
+            } else if ext_or_item.op == BasicQueryOpKind::IsNotNull {
+                where_fragments.push(format!("(ext ->> '{}' is not null or ext ->> '{}' != '')", ext_or_item.field, ext_or_item.field));
+            } else if ext_or_item.op == BasicQueryOpKind::IsNullOrEmpty {
+                where_fragments.push(format!("(ext ->> '{}' is null or ext ->> '{}' = '')", ext_or_item.field, ext_or_item.field));
             } else {
                 if value.len() > 1 {
                     return err_notfound(ext_or_item);
@@ -739,6 +776,19 @@ async fn push_to_eda(req: &LogItemAddV2Req, ref_fields: &Vec<String>, funs: &Tar
         topic.send_event(stats_add.inject_context(funs, ctx).json()).map_err(mq_error).await?;
     }
     Ok(())
+}
+
+fn merge(a: &mut serde_json::Value, b: serde_json::Value) {
+    match (a, b) {
+        (a @ &mut serde_json::Value::Object(_), serde_json::Value::Object(b)) => {
+            if let Some(a) = a.as_object_mut() {
+                for (k, v) in b {
+                    merge(a.entry(k).or_insert(serde_json::Value::Null), v);
+                }
+            }
+        }
+        (a, b) => *a = b,
+    }
 }
 
 #[cfg(test)]

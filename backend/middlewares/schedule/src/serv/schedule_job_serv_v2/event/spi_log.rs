@@ -1,6 +1,6 @@
 use std::{sync::Arc, task::ready, time::Duration};
 
-use bios_sdk_invoke::clients::spi_log_client::{LogItemAddReq, LogItemAddV2Req, LogItemFindReq, SpiLogClient};
+use bios_sdk_invoke::clients::spi_log_client::{LogItemAddV2Req, LogItemFindReq, SpiLogClient};
 use tardis::{
     basic::dto::TardisContext,
     chrono::Utc,
@@ -34,10 +34,10 @@ impl EventComponent for SpiLog {
         let ctx = self.ctx.clone();
         let code = code.to_string();
         let _handle = tokio::spawn(async move {
-            let result = SpiLogClient::add(
-                LogItemAddReq {
+            let result = SpiLogClient::addv2(
+                LogItemAddV2Req {
                     tag: JOB_TAG.to_string(),
-                    content: "add job".into(),
+                    content: tardis::serde_json::Value::Null,
                     key: Some(code.to_string()),
                     op: Some(OP_ADD.to_string()),
                     ts: Some(Utc::now()),
@@ -59,10 +59,10 @@ impl EventComponent for SpiLog {
         let ctx = self.ctx.clone();
         let code = code.to_string();
         let _handle = tokio::spawn(async move {
-            let result = SpiLogClient::add(
-                LogItemAddReq {
+            let result = SpiLogClient::addv2(
+                LogItemAddV2Req {
                     tag: JOB_TAG.to_string(),
-                    content: "delete job".into(),
+                    content: tardis::serde_json::Value::Null,
                     key: Some(code.to_string()),
                     op: Some(OP_DELETE.to_string()),
                     ts: Some(Utc::now()),
@@ -84,10 +84,10 @@ impl EventComponent for SpiLog {
         let ctx = self.ctx.clone();
         let code = code.to_string();
         let _handle = tokio::spawn(async move {
-            let result = SpiLogClient::add(
-                LogItemAddReq {
+            let result = SpiLogClient::addv2(
+                LogItemAddV2Req {
                     tag: TASK_TAG.to_string(),
-                    content: "start request".into(),
+                    content: tardis::serde_json::Value::Null,
                     key: Some(code.to_string()),
                     op: Some(OP_EXECUTE_START.to_string()),
                     ts: Some(Utc::now()),

@@ -17,7 +17,7 @@ use bios_basic::{
         spi_initializer::common_pg::{self},
     },
 };
-use serde_json::Map;
+use serde_json::{error, json, Map};
 use tardis::{
     basic::{dto::TardisContext, error::TardisError, field::TrimString, result::TardisResult},
     chrono::{DateTime, Utc},
@@ -26,7 +26,7 @@ use tardis::{
         reldb_client::{TardisRelDBClient, TardisRelDBlConnection},
         sea_orm::{FromQueryResult, Value},
     },
-    log,
+    log::{self, error_span},
     regex::{self, Regex},
     TardisFunsInst,
 };
@@ -204,11 +204,15 @@ pub(crate) async fn fact_record_sync(fact_conf_key: &str, funs: &TardisFunsInst,
     let fact_conf_key = fact_conf_key.to_string();
     TaskProcessor::execute_task_with_ctx(
         &funs.conf::<StatsConfig>().cache_key_async_task_status,
-        move |_task_id| async move {
+        move |task_id| async move {
             let funs = stats_initializer::get_tardis_inst();
             let inst = funs.init(None, &task_ctx, true, stats_initializer::init_fun).await?;
             let db_source_conn = get_db_conn_by_cert_id(&cert_id, &funs, &task_ctx, inst.as_ref()).await?;
             let db_source_list = db_source_conn.query_all(&sync_sql, vec![]).await?;
+            let mut success = 0;
+            let mut error = 0;
+            let mut error_list = vec![];
+            let total = db_source_list.len();
             for db_source_record in db_source_list {
                 let fact_record_key = db_source_record.try_get::<String>("", "key")?;
                 let add_req = StatsFactRecordLoadReq {
@@ -219,7 +223,20 @@ pub(crate) async fn fact_record_sync(fact_conf_key: &str, funs: &TardisFunsInst,
                     data: serde_json::Value::from_query_result(&db_source_record, "")?,
                     ext: None,
                 };
-                stats_pg_record_serv::fact_record_load(&fact_conf_key, &fact_record_key, add_req, &funs, &task_ctx, inst.as_ref()).await?;
+                let load_resp = stats_pg_record_serv::fact_record_load(&fact_conf_key, &fact_record_key, add_req, &funs, &task_ctx, inst.as_ref()).await;
+                if load_resp.is_ok() {
+                    success += 1;
+                } else {
+                    error += 1;
+                    error_list.push(json!({"key":fact_record_key,"error":load_resp.unwrap_err().to_string()}));
+                }
+                let _ = TaskProcessor::set_process_data(
+                    &funs.conf::<StatsConfig>().cache_key_async_task_status,
+                    task_id,
+                    json!({"success":success,"error":error,"total":total,"error_list":error_list}),
+                    &funs.cache(),
+                )
+                .await;
             }
             Ok(())
         },
@@ -244,11 +261,14 @@ pub(crate) async fn fact_col_record_sync(fact_conf_key: &str, fact_col_conf_key:
     let fact_col_conf_key = fact_col_conf_key.to_string();
     TaskProcessor::execute_task_with_ctx(
         &funs.conf::<StatsConfig>().cache_key_async_task_status,
-        move |_task_id| async move {
+        move |task_id| async move {
             let funs = stats_initializer::get_tardis_inst();
             let inst = funs.init(None, &task_ctx, true, stats_initializer::init_fun).await?;
             let mut page_number = 1;
             let page_size = 10;
+            let mut success = 0;
+            let mut error = 0;
+            let mut error_list = vec![];
             loop {
                 let fact_record_pages =
                     stats_pg_record_serv::get_fact_record_paginated(&fact_conf_key, None, page_number, page_size, Some(true), &funs, &task_ctx, inst.as_ref()).await?;
@@ -272,7 +292,20 @@ pub(crate) async fn fact_col_record_sync(fact_conf_key: &str, fact_col_conf_key:
                                 },
                                 ext: None,
                             };
-                            stats_pg_record_serv::fact_record_load(&fact_conf_key, fact_record_key, add_req, &funs, &task_ctx, inst.as_ref()).await?;
+                            let load_resp = stats_pg_record_serv::fact_record_load(&fact_conf_key, fact_record_key, add_req, &funs, &task_ctx, inst.as_ref()).await;
+                            if load_resp.is_ok() {
+                                success += 1;
+                            } else {
+                                error += 1;
+                                error_list.push(json!({"key":fact_record_key,"error":load_resp.unwrap_err().to_string()}));
+                            }
+                            let _ = TaskProcessor::set_process_data(
+                                &funs.conf::<StatsConfig>().cache_key_async_task_status,
+                                task_id,
+                                json!({"success":success,"error":error,"total":fact_record_pages.total_size,"error_list":error_list}),
+                                &funs.cache(),
+                            )
+                            .await;
                         }
                     }
                 }

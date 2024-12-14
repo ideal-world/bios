@@ -941,6 +941,7 @@ fn package_ext(
     }
     Ok(())
 }
+
 fn merge(a: &mut serde_json::Value, b: serde_json::Value) {
     match (a, b) {
         (a @ &mut serde_json::Value::Object(_), serde_json::Value::Object(b)) => {
