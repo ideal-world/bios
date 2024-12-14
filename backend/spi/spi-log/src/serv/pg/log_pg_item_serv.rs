@@ -231,11 +231,11 @@ pub async fn find(find_req: &mut LogItemFindReq, funs: &TardisFunsInst, ctx: &Ta
                     sql_vals.push(val);
                 }
             } else if ext_or_item.op == BasicQueryOpKind::IsNull {
-                where_fragments.push(format!("ext ->> '{}' is null", ext_or_item.field));
+                or_fragments.push(format!("ext ->> '{}' is null", ext_or_item.field));
             } else if ext_or_item.op == BasicQueryOpKind::IsNotNull {
-                where_fragments.push(format!("(ext ->> '{}' is not null or ext ->> '{}' != '')", ext_or_item.field, ext_or_item.field));
+                or_fragments.push(format!("(ext ->> '{}' is not null or ext ->> '{}' != '')", ext_or_item.field, ext_or_item.field));
             } else if ext_or_item.op == BasicQueryOpKind::IsNullOrEmpty {
-                where_fragments.push(format!("(ext ->> '{}' is null or ext ->> '{}' = '')", ext_or_item.field, ext_or_item.field));
+                or_fragments.push(format!("(ext ->> '{}' is null or ext ->> '{}' = '')", ext_or_item.field, ext_or_item.field));
             } else {
                 if value.len() > 1 {
                     return err_notfound(ext_or_item);
