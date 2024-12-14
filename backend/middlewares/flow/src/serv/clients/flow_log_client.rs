@@ -29,8 +29,8 @@ pub struct LogParamContent {
     pub operand_id: Option<String>,
     pub operand_kind: Option<String>,
     pub operand_name: Option<String>,
-    pub output_message: Option<String>,
-    pub output_result: Option<String>,
+    pub flow_message: Option<String>,
+    pub flow_result: Option<String>,
 }
 
 #[derive(Serialize, Default, Debug, Clone)]
@@ -181,6 +181,20 @@ impl FlowLogClient {
             ("CTS", "转测单"),
             ("TP", "测试计划"),
             ("TS", "测试阶段"),
+        ]);
+        flow_tag_map.get(tag).map_or("".to_string(), |val| val.to_string())
+    }
+
+    pub fn get_junp_kind(tag: &str) -> String {
+        let flow_tag_map = HashMap::from([
+            ("MS", "idp_feed_ms"),
+            ("ITER", "idp_feed_iter "),
+            ("REQ", "idp_feed_req"),
+            ("TASK", "idp_feed_task"),
+            ("ISSUE", "idp_test_issue"),
+            ("CTS", "idp_test_cts"),
+            ("TP", "idp_test_plan"),
+            ("TS", "idp_test_stage"),
         ]);
         flow_tag_map.get(tag).map_or("".to_string(), |val| val.to_string())
     }

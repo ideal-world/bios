@@ -6,13 +6,12 @@ use bios_sdk_invoke::{
         event_client::{get_topic, EventCenterClient, SPI_RPC_TOPIC},
         spi_search_client::SpiSearchClient,
     },
-    dto::search_item_dto::{SearchItemAddReq, SearchItemModifyReq, SearchItemVisitKeysReq},
+    dto::search_item_dto::{SearchItemAddReq, SearchItemModifyReq, SearchItemSearchReq, SearchItemSearchResp, SearchItemVisitKeysReq},
 };
 use itertools::Itertools;
 use serde_json::json;
 use tardis::{
-    basic::{dto::TardisContext, field::TrimString, result::TardisResult},
-    tokio, TardisFuns, TardisFunsInst,
+    basic::{dto::TardisContext, field::TrimString, result::TardisResult}, tokio, web::web_resp::TardisPage, TardisFuns, TardisFunsInst
 };
 
 use crate::{
@@ -36,18 +35,7 @@ pub struct FlowSearchClient;
 
 impl FlowSearchClient {
     pub async fn modify_business_obj_search(rel_business_obj_id: &str, tag: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        let tag_search_map = HashMap::from([
-            ("CTS", "idp_test"),
-            ("ISSUE", "idp_test"),
-            ("ITER", "idp_project"),
-            ("MS", "idp_project"),
-            ("PROJ", "idp_project"),
-            ("REQ", "idp_project"),
-            ("TASK", "idp_project"),
-            ("TICKET", "ticket"),
-            ("TP", "idp_test"),
-            ("TS", "idp_test"),
-        ]);
+        let tag_search_map = Self::get_tag_search_map();
         let rel_version_ids = FlowInstServ::find_details(
             &FlowInstFilterReq {
                 rel_business_obj_ids: Some(vec![rel_business_obj_id.to_string()]),
@@ -263,5 +251,24 @@ impl FlowSearchClient {
             SpiSearchClient::delete_item_and_name(SEARCH_TAG, model_id, funs, ctx).await?;
         }
         Ok(())
+    }
+
+    pub async fn search(search_req: &SearchItemSearchReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<TardisPage<SearchItemSearchResp>>> {
+        SpiSearchClient::search(search_req, funs, ctx).await
+    }
+
+    pub fn get_tag_search_map() -> HashMap<String, String> {
+        HashMap::from([
+            ("CTS".to_string(), "idp_test".to_string()),
+            ("ISSUE".to_string(), "idp_test".to_string()),
+            ("ITER".to_string(), "idp_project".to_string()),
+            ("MS".to_string(), "idp_project".to_string()),
+            ("PROJ".to_string(), "idp_project".to_string()),
+            ("REQ".to_string(), "idp_project".to_string()),
+            ("TASK".to_string(), "idp_project".to_string()),
+            ("TICKET".to_string(), "ticket".to_string()),
+            ("TP".to_string(), "idp_test".to_string()),
+            ("TS".to_string(), "idp_test".to_string()),
+        ])
     }
 }
