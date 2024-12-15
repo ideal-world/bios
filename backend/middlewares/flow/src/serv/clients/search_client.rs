@@ -6,7 +6,7 @@ use bios_sdk_invoke::{
         event_client::{get_topic, EventCenterClient, SPI_RPC_TOPIC},
         spi_search_client::SpiSearchClient,
     },
-    dto::search_item_dto::{SearchItemAddReq, SearchItemModifyReq, SearchItemSearchReq, SearchItemSearchResp, SearchItemVisitKeysReq},
+    dto::search_item_dto::{SearchItemAddReq, SearchItemModifyReq, SearchItemQueryReq, SearchItemSearchCtxReq, SearchItemSearchPageReq, SearchItemSearchReq, SearchItemSearchResp, SearchItemVisitKeysReq},
 };
 use itertools::Itertools;
 use serde_json::json;
@@ -18,7 +18,7 @@ use crate::{
     dto::{
         flow_inst_dto::FlowInstFilterReq,
         flow_model_dto::{FlowModelDetailResp, FlowModelFilterReq, FlowModelRelTransitionExt},
-        flow_model_version_dto::FlowModelVersionFilterReq,
+        flow_model_version_dto::FlowModelVersionFilterReq, flow_state_dto::FlowGuardConf,
     },
     flow_constants,
     serv::{
@@ -255,6 +255,41 @@ impl FlowSearchClient {
 
     pub async fn search(search_req: &SearchItemSearchReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<TardisPage<SearchItemSearchResp>>> {
         SpiSearchClient::search(search_req, funs, ctx).await
+    }
+
+    pub async fn search_guard_account_num(guard_conf: &FlowGuardConf, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<u64>> {
+        if guard_conf.guard_by_spec_account_ids.is_empty() 
+            && guard_conf.guard_by_spec_org_ids.is_empty() 
+            && guard_conf.guard_by_spec_role_ids.is_empty() 
+        {
+            return Ok(Some(0));
+        }
+        let mut search_ctx_req = SearchItemSearchCtxReq {
+            apps: Some(vec![rbum_scope_helper::get_path_item(RbumScopeLevelKind::L2.to_int(), &ctx.own_paths).unwrap_or_default()]),
+            ..Default::default()
+        };
+        let mut query = SearchItemQueryReq::default();
+        if !guard_conf.guard_by_spec_account_ids.is_empty() {
+            query.keys = Some(guard_conf.guard_by_spec_account_ids.clone().into_iter().map(|account_id| account_id.into()).collect_vec());
+        }
+        if !guard_conf.guard_by_spec_org_ids.is_empty() {
+            search_ctx_req.groups = Some(guard_conf.guard_by_spec_org_ids.clone());
+        }
+        if !guard_conf.guard_by_spec_role_ids.is_empty() {
+            search_ctx_req.roles = Some(guard_conf.guard_by_spec_role_ids.clone());
+        }
+        Ok(SpiSearchClient::search(&SearchItemSearchReq {
+            tag: "iam_account".to_string(),
+            ctx: search_ctx_req,
+            query: SearchItemQueryReq { ..Default::default() },
+            adv_query: None,
+            sort: None,
+            page:SearchItemSearchPageReq {
+                number: 1,
+                size: 1,
+                fetch_total: true,
+            },
+        }, funs, ctx).await?.map(|result| result.total_size))
     }
 
     pub fn get_tag_search_map() -> HashMap<String, String> {

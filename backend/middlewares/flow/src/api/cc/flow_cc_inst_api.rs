@@ -213,10 +213,12 @@ impl FlowCcInstApi {
         ctx: TardisContextExtractor,
         _request: &Request,
     ) -> TardisApiResult<Void> {
-        let funs = flow_constants::get_tardis_inst();
+        let mut funs = flow_constants::get_tardis_inst();
         let vars = HashMap::from([("current_assigned".to_string(), Value::String(modify_req.0.current_assigned))]);
         let inst = FlowInstServ::get(&flow_inst_id.0, &funs, &ctx.0).await?;
-        FlowInstServ::modify_current_vars(&inst, &vars, loop_check_helper::InstancesTransition::default(), &ctx.0).await?;
+        funs.begin().await?;
+        FlowInstServ::modify_current_vars(&inst, &vars, loop_check_helper::InstancesTransition::default(), &funs, &ctx.0).await?;
+        funs.commit().await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
     }
@@ -232,9 +234,11 @@ impl FlowCcInstApi {
         ctx: TardisContextExtractor,
         _request: &Request,
     ) -> TardisApiResult<Void> {
-        let funs = flow_constants::get_tardis_inst();
+        let mut funs = flow_constants::get_tardis_inst();
         let inst = FlowInstServ::get(&flow_inst_id.0, &funs, &ctx.0).await?;
-        FlowInstServ::modify_current_vars(&inst, &modify_req.0.vars, loop_check_helper::InstancesTransition::default(), &ctx.0).await?;
+        funs.begin().await?;
+        FlowInstServ::modify_current_vars(&inst, &modify_req.0.vars, loop_check_helper::InstancesTransition::default(), &funs, &ctx.0).await?;
+        funs.commit().await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
     }

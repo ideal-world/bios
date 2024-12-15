@@ -438,7 +438,7 @@ pub struct FLowStateIdAndName {
 }
 
 /// 可操作类型
-#[derive(Display, Serialize, Deserialize, Hash, Eq, PartialEq, Debug, poem_openapi::Enum, Clone)]
+#[derive(Display, Clone, Serialize, Deserialize, Hash, Eq, PartialEq, Debug, poem_openapi::Enum)]
 pub enum FlowStateOperatorKind {
     /// 转办
     Referral,

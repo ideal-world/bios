@@ -97,16 +97,32 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
 
     async fn before_add_item(add_req: &mut FlowModelAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         if let Some(rel_transition_ids) = &add_req.rel_transition_ids {
-            if Self::get_model_id_by_own_paths_and_transition_id(
-                &add_req.tag.clone().unwrap_or_default(),
-                &rel_transition_ids.first().cloned().unwrap_or_default(),
-                funs,
-                ctx,
-            )
-            .await
-            .is_ok()
-            {
-                return Err(funs.err().not_found(&Self::get_obj_name(), "before_add_item", "The model is not repeatable", "400-flow-model-duplicate"));
+            for rel_transition_id in rel_transition_ids {
+                if Self::find_one_detail_item(
+                    &FlowModelFilterReq {
+                        basic: RbumBasicFilterReq {
+                            enabled: Some(true),
+                            ..Default::default()
+                        },
+                        main: Some(false),
+                        rel_template_id: add_req.rel_template_ids.clone().unwrap_or_default().first().cloned(),
+                        tags: Some(vec![add_req.tag.clone().unwrap_or_default()]),
+                        rel: Some(RbumItemRelFilterReq {
+                            optional: false,
+                            rel_by_from: true,
+                            tag: Some(FlowRelKind::FlowModelTransition.to_string()),
+                            from_rbum_kind: Some(RbumRelFromKind::Item),
+                            rel_item_id: Some(rel_transition_id.clone()),
+                            ..Default::default()
+                        }),
+                        ..Default::default()
+                    },
+                    funs,
+                    ctx,
+                )
+                .await?.is_some() {
+                    return Err(funs.err().not_found(&Self::get_obj_name(), "before_add_item", "The model is not repeatable", "400-flow-model-duplicate"));
+                }   
             }
         }
 

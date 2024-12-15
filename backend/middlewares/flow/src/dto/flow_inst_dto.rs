@@ -111,7 +111,7 @@ pub struct FlowInstSummaryResp {
 }
 
 /// 工作流详细信息
-#[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
+#[derive(Serialize, Deserialize, Debug, Clone, poem_openapi::Object)]
 pub struct FlowInstDetailResp {
     pub id: String,
 
@@ -196,7 +196,7 @@ pub struct FlowInstDetailResp {
 }
 
 // 状态配置
-#[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
+#[derive(Serialize, Deserialize, Debug, Clone, poem_openapi::Object)]
 pub struct FLowInstStateConf {
     pub operators: HashMap<FlowStateOperatorKind, String>,
     pub form_conf: Option<FLowInstStateFormConf>,
@@ -204,13 +204,13 @@ pub struct FLowInstStateConf {
 }
 
 // 状态录入配置
-#[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
+#[derive(Serialize, Deserialize, Debug, Clone, poem_openapi::Object)]
 pub struct FLowInstStateFormConf {
     pub form_vars_collect_conf: HashMap<String, FlowStateVar>,
 }
 
 // 状态审批配置
-#[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
+#[derive(Serialize, Deserialize, Debug, Clone, poem_openapi::Object)]
 pub struct FLowInstStateApprovalConf {
     pub approval_vars_collect_conf: Option<HashMap<String, FlowStateVar>>,
     pub form_vars_collect: HashMap<String, Value>,
