@@ -1,8 +1,9 @@
 use tardis::basic::dto::TardisContext;
 use tardis::basic::result::TardisResult;
+use tardis::web::web_resp::{TardisPage, TardisResp};
 use tardis::TardisFunsInst;
 
-use crate::dto::search_item_dto::{SearchEventItemDeleteReq, SearchEventItemModifyReq, SearchItemAddReq, SearchItemModifyReq};
+use crate::dto::search_item_dto::{SearchEventItemDeleteReq, SearchEventItemModifyReq, SearchItemAddReq, SearchItemModifyReq, SearchItemSearchReq, SearchItemSearchResp};
 use crate::invoke_enumeration::InvokeModuleKind;
 
 use super::base_spi_client::BaseSpiClient;
@@ -73,6 +74,13 @@ impl SpiSearchClient {
         funs.web_client().delete_to_void(&format!("{search_url}/ci/item/{tag}/{key}"), headers.clone()).await?;
         SpiKvClient::delete_item(&format!("__k_n__:{tag}:{key}"), funs, ctx).await?;
         Ok(())
+    }
+
+    pub async fn search(search_req: &SearchItemSearchReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<TardisPage<SearchItemSearchResp>>> {
+        let search_url = BaseSpiClient::module_url(InvokeModuleKind::Search, funs).await?;
+        let headers = BaseSpiClient::headers(None, funs, ctx).await?;
+        let resp = funs.web_client().put::<SearchItemSearchReq, TardisResp<TardisPage<SearchItemSearchResp>>>(format!("{search_url}/ci/item/search"), search_req, headers.clone()).await?;
+        BaseSpiClient::package_resp(resp)
     }
 }
 #[cfg(feature = "event")]

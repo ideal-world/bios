@@ -182,11 +182,13 @@ impl FlowCiInstApi {
         mut ctx: TardisContextExtractor,
         request: &Request,
     ) -> TardisApiResult<Void> {
-        let funs = flow_constants::get_tardis_inst();
+        let mut funs = flow_constants::get_tardis_inst();
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         let vars = HashMap::from([("assigned_to".to_string(), Value::String(modify_req.0.current_assigned))]);
         let inst = FlowInstServ::get(&flow_inst_id.0, &funs, &ctx.0).await?;
-        FlowInstServ::modify_current_vars(&inst, &vars, loop_check_helper::InstancesTransition::default(), &ctx.0).await?;
+        funs.begin().await?;
+        FlowInstServ::modify_current_vars(&inst, &vars, loop_check_helper::InstancesTransition::default(), &funs, &ctx.0).await?;
+        funs.commit().await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
     }
@@ -202,10 +204,12 @@ impl FlowCiInstApi {
         mut ctx: TardisContextExtractor,
         request: &Request,
     ) -> TardisApiResult<Void> {
-        let funs = flow_constants::get_tardis_inst();
+        let mut funs = flow_constants::get_tardis_inst();
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         let inst = FlowInstServ::get(&flow_inst_id.0, &funs, &ctx.0).await?;
-        FlowInstServ::modify_current_vars(&inst, &modify_req.0.vars, loop_check_helper::InstancesTransition::default(), &ctx.0).await?;
+        funs.begin().await?;
+        FlowInstServ::modify_current_vars(&inst, &modify_req.0.vars, loop_check_helper::InstancesTransition::default(), &funs, &ctx.0).await?;
+        funs.commit().await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
     }

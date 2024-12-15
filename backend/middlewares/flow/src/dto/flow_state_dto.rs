@@ -171,7 +171,7 @@ pub struct FlowStateCountersignConf {
     /// 类型
     pub kind: FlowStateCountersignKind,
     /// 多数人通过比例
-    pub most_percent: Option<i8>,
+    pub most_percent: Option<usize>,
     /// 审批人权限配置
     pub guard_custom_conf: Option<FlowGuardConf>,
     /// 指定人通过即通过
@@ -438,7 +438,7 @@ pub struct FLowStateIdAndName {
 }
 
 /// 可操作类型
-#[derive(Display, Serialize, Deserialize, Hash, Eq, PartialEq, Debug, poem_openapi::Enum, Clone)]
+#[derive(Display, Clone, Serialize, Deserialize, Hash, Eq, PartialEq, Debug, poem_openapi::Enum)]
 pub enum FlowStateOperatorKind {
     /// 转办
     Referral,

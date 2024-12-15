@@ -613,11 +613,29 @@ pub enum FlowTransitionFrontActionInfoRelevanceRelation {
 }
 
 impl FlowTransitionFrontActionInfoRelevanceRelation {
-    pub fn check_conform(&self, left_value: String, right_value: String) -> bool {
+    pub fn check_conform(&self, mut left_value: String, right_value: String) -> bool {
         use itertools::Itertools;
 
         if left_value.is_empty() || left_value == "null" || right_value == "null" {
             return false;
+        }
+        // 单项判断（例如等于，不等于，大于，小于），如果参数是单元素数组，则取出数据，否则说明格式错误直接返回false
+        if *self == FlowTransitionFrontActionInfoRelevanceRelation::Eq
+            || *self == FlowTransitionFrontActionInfoRelevanceRelation::Ne
+            || *self == FlowTransitionFrontActionInfoRelevanceRelation::Gt
+            || *self == FlowTransitionFrontActionInfoRelevanceRelation::Ge
+            || *self == FlowTransitionFrontActionInfoRelevanceRelation::Lt
+            || *self == FlowTransitionFrontActionInfoRelevanceRelation::Le
+        {
+            let left_values = TardisFuns::json.str_to_obj::<Vec<Value>>(&left_value).unwrap_or_default();
+            if left_values.len() == 1 {
+                left_value = left_values
+                .first().cloned()
+                .unwrap_or_default().as_str()
+                .unwrap_or("").to_string();
+            } else {
+                return false;
+            }
         }
         match self {
             FlowTransitionFrontActionInfoRelevanceRelation::Eq => left_value == right_value,
