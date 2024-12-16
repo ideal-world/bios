@@ -43,7 +43,7 @@ impl NotificationContext {
     }
 }
 
-/// 用户触达消息发送请求
+
 #[derive(Debug, Serialize)]
 pub struct ReachMsgSendReq {
     pub scene_code: String,
