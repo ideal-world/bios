@@ -5,3 +5,4 @@ pub mod auth;
 pub mod ip_time;
 pub mod op_redis_publisher;
 pub mod rewrite_ns_b_ip;
+pub mod notify;
