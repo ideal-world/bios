@@ -151,7 +151,7 @@ impl IamCcAccountTaskServ {
     async fn task_modify_account_agg(account: IamAccountSummaryResp, configs: Vec<IamConfigSummaryResp>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let (account_temporary_expire, account_temporary_sleep_expire, account_temporary_sleep_logout_expire, account_inactivity_lock) = Self::config(configs);
         let tag: String = LogParamTag::Token.into();
-        let token_log_resp = SpiLogClient::find(
+        let token_log_resp = SpiLogClient::findv2(
             LogItemFindReq {
                 tag: tag.clone(),
                 page_number: 1,
