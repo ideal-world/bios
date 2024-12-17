@@ -161,7 +161,7 @@ impl LogScanBasedEventStream {
                     page_size: u16::MAX,
                     ..Default::default()
                 };
-                let result = SpiLogClient::find(find_req, &funs, &ctx).await;
+                let result = SpiLogClient::findv2(find_req, &funs, &ctx).await;
                 if let Ok(Some(page)) = result {
                     debug!("scan log page: {:?}", page);
                     for item in page.records {
