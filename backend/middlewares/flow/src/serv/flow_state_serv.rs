@@ -95,9 +95,10 @@ impl RbumItemCrudOperation<flow_state::ActiveModel, FlowStateAddReq, FlowStateMo
             LogParamTag::DynamicLog,
             Some(id.to_string()),
             LogParamContent {
-                subject: "工作流状态".to_string(),
-                name: add_req.name.clone().unwrap_or_default().to_string(),
-                sub_kind: "flow_state".to_string(),
+                subject: Some("工作流状态".to_string()),
+                name: Some(add_req.name.clone().unwrap_or_default().to_string()),
+                sub_kind: Some("flow_state".to_string()),
+                ..Default::default()
             },
             None,
             Some("dynamic_log_tenant_config".to_string()),
@@ -129,9 +130,10 @@ impl RbumItemCrudOperation<flow_state::ActiveModel, FlowStateAddReq, FlowStateMo
             LogParamTag::DynamicLog,
             Some(id.to_string()),
             LogParamContent {
-                subject: "工作流状态".to_string(),
-                name: Self::get_item(id, &FlowStateFilterReq::default(), funs, ctx).await?.name,
-                sub_kind: "flow_state".to_string(),
+                subject: Some("工作流状态".to_string()),
+                name: Some(Self::get_item(id, &FlowStateFilterReq::default(), funs, ctx).await?.name),
+                sub_kind: Some("flow_state".to_string()),
+                ..Default::default()
             },
             None,
             Some("dynamic_log_tenant_config".to_string()),
@@ -216,9 +218,10 @@ impl RbumItemCrudOperation<flow_state::ActiveModel, FlowStateAddReq, FlowStateMo
                 LogParamTag::DynamicLog,
                 Some(id.to_string()),
                 LogParamContent {
-                    subject: "工作流状态".to_string(),
-                    name: detail.name.clone(),
-                    sub_kind: "flow_state".to_string(),
+                    subject: Some("工作流状态".to_string()),
+                    name: Some(detail.name.clone()),
+                    sub_kind: Some("flow_state".to_string()),
+                    ..Default::default()
                 },
                 None,
                 Some("dynamic_log_tenant_config".to_string()),

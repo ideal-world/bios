@@ -10,9 +10,7 @@ use tardis::{
 };
 
 use super::{
-    flow_state_dto::{FlowGuardConf, FlowStateKind, FlowStateOperatorKind, FlowStateRelModelExt, FlowStateVar, FlowSysStateKind},
-    flow_transition_dto::FlowTransitionDoubleCheckInfo,
-    flow_var_dto::FlowVarInfo,
+    flow_model_dto::FlowModelRelTransitionExt, flow_state_dto::{FlowGuardConf, FlowStateKind, FlowStateOperatorKind, FlowStateRelModelExt, FlowStateVar, FlowSysStateKind}, flow_transition_dto::FlowTransitionDoubleCheckInfo, flow_var_dto::FlowVarInfo
 };
 
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
@@ -74,6 +72,8 @@ pub struct FlowInstAbortReq {
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
 pub struct FlowInstSummaryResp {
     pub id: String,
+
+    pub code: String,
     /// Associated [flow_model](super::flow_model_version_dto::FlowModelVersionDetailResp) id
     ///
     /// 关联的[工作流模板](super::flow_model_version_dto::FlowModelVersionDetailResp) id
@@ -102,6 +102,8 @@ pub struct FlowInstSummaryResp {
     pub finish_abort: bool,
     /// 输出信息
     pub output_message: Option<String>,
+    /// 触发的动作
+    pub rel_transition: Option<FlowModelRelTransitionExt>,
 
     pub own_paths: String,
 
@@ -109,9 +111,12 @@ pub struct FlowInstSummaryResp {
 }
 
 /// 工作流详细信息
-#[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
+#[derive(Serialize, Deserialize, Debug, Clone, poem_openapi::Object)]
 pub struct FlowInstDetailResp {
     pub id: String,
+
+    pub code: String,
+
     /// Associated [flow_model](super::flow_model_dto::FlowModelDetailResp) id
     ///
     /// 关联的[工作流模板](super::flow_model_dto::FlowModelDetailResp) id
@@ -180,16 +185,18 @@ pub struct FlowInstDetailResp {
     pub output_message: Option<String>,
     /// 动作列表
     pub transitions: Option<Vec<FlowInstTransitionInfo>>,
-
+    /// 数据对象
     pub artifacts: Option<FlowInstArtifacts>,
-
+    /// 评论
     pub comments: Option<Vec<FlowInstCommentInfo>>,
+    /// 触发的动作
+    pub rel_transition: Option<FlowModelRelTransitionExt>,
 
     pub own_paths: String,
 }
 
 // 状态配置
-#[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
+#[derive(Serialize, Deserialize, Debug, Clone, poem_openapi::Object)]
 pub struct FLowInstStateConf {
     pub operators: HashMap<FlowStateOperatorKind, String>,
     pub form_conf: Option<FLowInstStateFormConf>,
@@ -197,13 +204,13 @@ pub struct FLowInstStateConf {
 }
 
 // 状态录入配置
-#[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
+#[derive(Serialize, Deserialize, Debug, Clone, poem_openapi::Object)]
 pub struct FLowInstStateFormConf {
     pub form_vars_collect_conf: HashMap<String, FlowStateVar>,
 }
 
 // 状态审批配置
-#[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
+#[derive(Serialize, Deserialize, Debug, Clone, poem_openapi::Object)]
 pub struct FLowInstStateApprovalConf {
     pub approval_vars_collect_conf: Option<HashMap<String, FlowStateVar>>,
     pub form_vars_collect: HashMap<String, Value>,
@@ -213,9 +220,11 @@ pub struct FLowInstStateApprovalConf {
 #[derive(Serialize, Deserialize, PartialEq, Clone, Debug, Default, poem_openapi::Object, sea_orm::FromJsonQueryResult)]
 pub struct FlowInstArtifacts {
     pub guard_conf: FlowGuardConf,                                      // 当前操作人权限
-    pub prohibit_guard_by_spec_account_ids: Option<Vec<String>>,                // 禁止操作的指定用户ID
+    pub prohibit_guard_by_spec_account_ids: Option<Vec<String>>,        // 禁止操作的指定用户ID
     pub approval_result: HashMap<String, HashMap<String, Vec<String>>>, // 当前审批结果
+    pub approval_total: Option<HashMap<String, usize>>,                 // 审批总数
     pub form_state_map: HashMap<String, HashMap<String, Value>>,        // 录入节点映射 key为节点ID,对应的value为节点中的录入的参数
+    pub curr_vars: Option<HashMap<String, Value>>,                      // 当前参数列表
     pub prev_non_auto_state_id: Option<String>,                         // 上一个非自动节点ID
     pub prev_non_auto_account_id: Option<String>,                       // 上一个节点操作人ID
 }
@@ -225,7 +234,7 @@ pub struct FlowInstArtifacts {
 pub struct FlowInstArtifactsModifyReq {
     pub guard_conf: Option<FlowGuardConf>,                             // 当前操作人权限
     pub add_prohibit_guard_conf_account_id: Option<String>,            // 增加禁止操作人ID
-    pub delete_prohibit_guard_conf_account_id: Option<String>,                  // 删除禁止操作人ID
+    pub delete_prohibit_guard_conf_account_id: Option<String>,         // 删除禁止操作人ID
     pub add_guard_conf_account_id: Option<String>,                     // 增加操作人ID
     pub delete_guard_conf_account_id: Option<String>,                  // 删除操作人ID
     pub add_approval_result: Option<(String, FlowApprovalResultKind)>, // 增加审批结果
@@ -234,6 +243,8 @@ pub struct FlowInstArtifactsModifyReq {
     pub clear_approval_result: Option<String>,                         // 清除节点审批信息
     pub prev_non_auto_state_id: Option<String>,                        // 上一个非自动节点ID
     pub prev_non_auto_account_id: Option<String>,                      // 上一个节点操作人ID
+    pub curr_approval_total: Option<usize>,                            // 当前审批总数
+    pub curr_vars: Option<HashMap<String, Value>>,                     // 当前参数列表
 }
 
 /// 审批结果类型
@@ -448,8 +459,10 @@ pub struct FlowInstModifyCurrentVarsReq {
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
 pub struct FlowInstOperateReq {
     pub operate: FlowStateOperatorKind,
-    /// 参数列表
+    /// 修改参数列表
     pub vars: Option<HashMap<String, Value>>,
+    /// 全量参数列表
+    pub all_vars: Option<HashMap<String, Value>>,
     /// 输出信息
     pub output_message: Option<String>,
     /// 操作人
@@ -481,6 +494,7 @@ pub struct FlowInstFilterReq {
 #[derive(sea_orm::FromQueryResult)]
 pub struct FlowInstSummaryResult {
     pub id: String,
+    pub code: String,
     pub rel_flow_version_id: String,
     pub rel_flow_model_id: String,
     pub rel_flow_model_name: String,
@@ -496,6 +510,8 @@ pub struct FlowInstSummaryResult {
     pub finish_time: Option<DateTime<Utc>>,
     pub finish_abort: Option<bool>,
     pub output_message: Option<String>,
+
+    pub rel_transition: Option<String>,
 
     pub own_paths: String,
 
@@ -529,7 +545,7 @@ pub struct FlowInstSearchReq {
     // Search conditions
     pub query: FlowInstFilterReq,
     // Advanced search
-    pub query_kind: Option<FlowInstQueryKind>,
+    pub query_kind: Option<Vec<FlowInstQueryKind>>,
     // Sort
     // When the record set is very large, it will seriously affect the performance, it is not recommended to use.
     pub sort: Option<Vec<FlowInstSearchSortReq>>,
@@ -538,8 +554,6 @@ pub struct FlowInstSearchReq {
 
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Enum, Eq, Hash, PartialEq, Clone)]
 pub enum FlowInstQueryKind {
-    /// 全部
-    All,
     /// 待录入
     Form,
     /// 待审批

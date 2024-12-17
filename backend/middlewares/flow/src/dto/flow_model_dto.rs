@@ -178,7 +178,7 @@ pub struct FlowModelSummaryResp {
     pub rel_transition: Option<Value>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Default, Clone, poem_openapi::Object, sea_orm::FromQueryResult)]
+#[derive(Serialize, Deserialize, Clone, PartialEq, Default, Debug, poem_openapi::Object, sea_orm::FromJsonQueryResult)]
 pub struct FlowModelRelTransitionExt {
     pub id: String,
     pub name: String,

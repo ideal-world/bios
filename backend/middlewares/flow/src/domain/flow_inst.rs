@@ -14,6 +14,10 @@ pub struct Model {
     #[index]
     pub rel_flow_version_id: String,
 
+    /// Instance code / 实例编码
+    #[index(unique)]
+    pub code: Option<String>,
+
     /// Business object Id / 关联的业务对象Id
     #[index]
     pub rel_business_obj_id: String,

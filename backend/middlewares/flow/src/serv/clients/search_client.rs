@@ -6,20 +6,19 @@ use bios_sdk_invoke::{
         event_client::{get_topic, EventCenterClient, SPI_RPC_TOPIC},
         spi_search_client::SpiSearchClient,
     },
-    dto::search_item_dto::{SearchItemAddReq, SearchItemModifyReq, SearchItemVisitKeysReq},
+    dto::search_item_dto::{SearchItemAddReq, SearchItemModifyReq, SearchItemQueryReq, SearchItemSearchCtxReq, SearchItemSearchPageReq, SearchItemSearchReq, SearchItemSearchResp, SearchItemVisitKeysReq},
 };
 use itertools::Itertools;
 use serde_json::json;
 use tardis::{
-    basic::{dto::TardisContext, field::TrimString, result::TardisResult},
-    tokio, TardisFuns, TardisFunsInst,
+    basic::{dto::TardisContext, field::TrimString, result::TardisResult}, tokio, web::web_resp::TardisPage, TardisFuns, TardisFunsInst
 };
 
 use crate::{
     dto::{
         flow_inst_dto::FlowInstFilterReq,
         flow_model_dto::{FlowModelDetailResp, FlowModelFilterReq, FlowModelRelTransitionExt},
-        flow_model_version_dto::FlowModelVersionFilterReq,
+        flow_model_version_dto::FlowModelVersionFilterReq, flow_state_dto::FlowGuardConf,
     },
     flow_constants,
     serv::{
@@ -35,35 +34,8 @@ const SEARCH_TAG: &str = "flow_model";
 pub struct FlowSearchClient;
 
 impl FlowSearchClient {
-    pub async fn async_modify_business_obj_search(inst_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        let ctx_clone = ctx.clone();
-        let inst_detail = FlowInstServ::get(inst_id, funs, ctx).await?;
-        ctx.add_async_task(Box::new(|| {
-            Box::pin(async move {
-                let task_handle = tokio::spawn(async move {
-                    let funs = flow_constants::get_tardis_inst();
-                    let _ = Self::modify_business_obj_search(&inst_detail.rel_business_obj_id, &inst_detail.tag, &funs, &ctx_clone).await;
-                });
-                task_handle.await.unwrap();
-                Ok(())
-            })
-        }))
-        .await
-    }
-
     pub async fn modify_business_obj_search(rel_business_obj_id: &str, tag: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        let tag_search_map = HashMap::from([
-            ("CTS", "idp_test"),
-            ("ISSUE", "idp_test"),
-            ("ITER", "idp_project"),
-            ("MS", "idp_project"),
-            ("PROJ", "idp_project"),
-            ("REQ", "idp_project"),
-            ("TASK", "idp_project"),
-            ("TICKET", "ticket"),
-            ("TP", "idp_test"),
-            ("TS", "idp_test"),
-        ]);
+        let tag_search_map = Self::get_tag_search_map();
         let rel_version_ids = FlowInstServ::find_details(
             &FlowInstFilterReq {
                 rel_business_obj_ids: Some(vec![rel_business_obj_id.to_string()]),
@@ -279,5 +251,59 @@ impl FlowSearchClient {
             SpiSearchClient::delete_item_and_name(SEARCH_TAG, model_id, funs, ctx).await?;
         }
         Ok(())
+    }
+
+    pub async fn search(search_req: &SearchItemSearchReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<TardisPage<SearchItemSearchResp>>> {
+        SpiSearchClient::search(search_req, funs, ctx).await
+    }
+
+    pub async fn search_guard_account_num(guard_conf: &FlowGuardConf, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<u64>> {
+        if guard_conf.guard_by_spec_account_ids.is_empty() 
+            && guard_conf.guard_by_spec_org_ids.is_empty() 
+            && guard_conf.guard_by_spec_role_ids.is_empty() 
+        {
+            return Ok(Some(0));
+        }
+        let mut search_ctx_req = SearchItemSearchCtxReq {
+            apps: Some(vec![rbum_scope_helper::get_path_item(RbumScopeLevelKind::L2.to_int(), &ctx.own_paths).unwrap_or_default()]),
+            ..Default::default()
+        };
+        let mut query = SearchItemQueryReq::default();
+        if !guard_conf.guard_by_spec_account_ids.is_empty() {
+            query.keys = Some(guard_conf.guard_by_spec_account_ids.clone().into_iter().map(|account_id| account_id.into()).collect_vec());
+        }
+        if !guard_conf.guard_by_spec_org_ids.is_empty() {
+            search_ctx_req.groups = Some(guard_conf.guard_by_spec_org_ids.clone());
+        }
+        if !guard_conf.guard_by_spec_role_ids.is_empty() {
+            search_ctx_req.roles = Some(guard_conf.guard_by_spec_role_ids.clone());
+        }
+        Ok(SpiSearchClient::search(&SearchItemSearchReq {
+            tag: "iam_account".to_string(),
+            ctx: search_ctx_req,
+            query: SearchItemQueryReq { ..Default::default() },
+            adv_query: None,
+            sort: None,
+            page:SearchItemSearchPageReq {
+                number: 1,
+                size: 1,
+                fetch_total: true,
+            },
+        }, funs, ctx).await?.map(|result| result.total_size))
+    }
+
+    pub fn get_tag_search_map() -> HashMap<String, String> {
+        HashMap::from([
+            ("CTS".to_string(), "idp_test".to_string()),
+            ("ISSUE".to_string(), "idp_test".to_string()),
+            ("ITER".to_string(), "idp_project".to_string()),
+            ("MS".to_string(), "idp_project".to_string()),
+            ("PROJ".to_string(), "idp_project".to_string()),
+            ("REQ".to_string(), "idp_project".to_string()),
+            ("TASK".to_string(), "idp_project".to_string()),
+            ("TICKET".to_string(), "ticket".to_string()),
+            ("TP".to_string(), "idp_test".to_string()),
+            ("TS".to_string(), "idp_test".to_string()),
+        ])
     }
 }
