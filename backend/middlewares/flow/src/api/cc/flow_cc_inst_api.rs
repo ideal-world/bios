@@ -36,6 +36,20 @@ impl FlowCcInstApi {
         TardisResp::ok(result)
     }
 
+    /// Start Instance(Return Instance)
+    ///
+    /// 启动实例(返回实例)
+    #[oai(path = "/start_and_get", method = "post")]
+    async fn start_and_get(&self, add_req: Json<FlowInstStartReq>, ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<FlowInstDetailResp> {
+        let mut funs = flow_constants::get_tardis_inst();
+        funs.begin().await?;
+        let inst_id = FlowInstServ::start(&add_req.0, None, &funs, &ctx.0).await?;
+        let result = FlowInstServ::get(&inst_id, &funs, &ctx.0).await?;
+        funs.commit().await?;
+        ctx.0.execute_task().await?;
+        TardisResp::ok(result)
+    }
+
     /// Abort Instance
     ///
     /// 终止实例
@@ -261,14 +275,14 @@ impl FlowCcInstApi {
     ///
     /// 添加评论
     #[oai(path = "/:flow_inst_id/add_comment", method = "post")]
-    async fn add_comment(&self, flow_inst_id: Path<String>, comment_req: Json<FlowInstCommentReq>, ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<Void> {
+    async fn add_comment(&self, flow_inst_id: Path<String>, comment_req: Json<FlowInstCommentReq>, ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<String> {
         let mut funs = flow_constants::get_tardis_inst();
         let inst = FlowInstServ::get(&flow_inst_id.0, &funs, &ctx.0).await?;
         funs.begin().await?;
-        FlowInstServ::add_comment(&inst, &comment_req.0, &funs, &ctx.0).await?;
+        let result = FlowInstServ::add_comment(&inst, &comment_req.0, &funs, &ctx.0).await?;
         funs.commit().await?;
         ctx.0.execute_task().await?;
-        TardisResp::ok(Void {})
+        TardisResp::ok(result)
     }
 
     /// Search Items

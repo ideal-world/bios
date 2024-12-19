@@ -172,8 +172,6 @@ pub struct FlowStateCountersignConf {
     pub kind: FlowStateCountersignKind,
     /// 多数人通过比例
     pub most_percent: Option<usize>,
-    /// 审批人权限配置
-    pub guard_custom_conf: Option<FlowGuardConf>,
     /// 指定人通过即通过
     pub specified_pass_guard: Option<bool>,
     pub specified_pass_guard_conf: Option<FlowGuardConf>,
