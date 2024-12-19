@@ -90,6 +90,8 @@ pub struct FlowInstSummaryResp {
     pub rel_business_obj_id: String,
     /// 当前状态ID
     pub current_state_id: String,
+    /// 当前状态名
+    pub current_state_name: String,
     /// 创建上下文信息
     pub create_ctx: FlowOperationContext,
     /// 创建时间
@@ -225,26 +227,24 @@ pub struct FlowInstArtifacts {
     pub approval_total: Option<HashMap<String, usize>>,                 // 审批总数
     pub form_state_map: HashMap<String, HashMap<String, Value>>,        // 录入节点映射 key为节点ID,对应的value为节点中的录入的参数
     pub curr_vars: Option<HashMap<String, Value>>,                      // 当前参数列表
-    pub prev_non_auto_state_id: Option<String>,                         // 上一个非自动节点ID
+    pub prev_non_auto_state_id: Option<Vec<String>>,                    // 上一个非自动节点ID列表
     pub prev_non_auto_account_id: Option<String>,                       // 上一个节点操作人ID
 }
 
 // 流程实例中数据存储更新
 #[derive(Serialize, Deserialize, PartialEq, Clone, Debug, Default, sea_orm::FromJsonQueryResult)]
 pub struct FlowInstArtifactsModifyReq {
-    pub guard_conf: Option<FlowGuardConf>,                             // 当前操作人权限
-    pub add_prohibit_guard_conf_account_id: Option<String>,            // 增加禁止操作人ID
-    pub delete_prohibit_guard_conf_account_id: Option<String>,         // 删除禁止操作人ID
-    pub add_guard_conf_account_id: Option<String>,                     // 增加操作人ID
-    pub delete_guard_conf_account_id: Option<String>,                  // 删除操作人ID
-    pub add_approval_result: Option<(String, FlowApprovalResultKind)>, // 增加审批结果
-    pub form_state_map: Option<HashMap<String, Value>>,                // 录入节点映射 key为节点ID,对应的value为节点中的录入的参数
-    pub clear_form_result: Option<String>,                             // 清除节点录入信息
-    pub clear_approval_result: Option<String>,                         // 清除节点审批信息
-    pub prev_non_auto_state_id: Option<String>,                        // 上一个非自动节点ID
-    pub prev_non_auto_account_id: Option<String>,                      // 上一个节点操作人ID
-    pub curr_approval_total: Option<usize>,                            // 当前审批总数
-    pub curr_vars: Option<HashMap<String, Value>>,                     // 当前参数列表
+    pub guard_conf: Option<FlowGuardConf>,                              // 当前操作人权限
+    pub prohibit_guard_conf_account_ids: Option<Vec<String>>,           // 禁止操作人ID列表
+    pub guard_conf_account_ids: Option<Vec<String>>,                    // 更新操作人列表
+    pub add_approval_result: Option<(String, FlowApprovalResultKind)>,  // 增加审批结果
+    pub form_state_map: Option<HashMap<String, Value>>,                 // 录入节点映射 key为节点ID,对应的value为节点中的录入的参数
+    pub clear_form_result: Option<String>,                              // 清除节点录入信息
+    pub clear_approval_result: Option<String>,                          // 清除节点录入信息
+    pub prev_non_auto_state_id: Option<Vec<String>>,                    // 上一个非自动节点ID
+    pub prev_non_auto_account_id: Option<String>,                       // 上一个节点操作人ID
+    pub curr_approval_total: Option<usize>,                             // 当前审批总数
+    pub curr_vars: Option<HashMap<String, Value>>,                      // 当前参数列表
 }
 
 /// 审批结果类型
@@ -474,6 +474,7 @@ pub struct FlowInstOperateReq {
 #[serde(default)]
 pub struct FlowInstFilterReq {
     pub ids: Option<Vec<String>>,
+    pub code: Option<String>,
     /// 关联模型ID
     pub flow_version_id: Option<String>,
     /// 业务ID
@@ -501,6 +502,7 @@ pub struct FlowInstSummaryResult {
 
     pub current_vars: Option<Value>,
     pub current_state_id: String,
+    pub current_state_name: String,
     pub rel_business_obj_id: String,
 
     pub create_ctx: Value,
@@ -521,6 +523,7 @@ pub struct FlowInstSummaryResult {
 /// 实例的评论信息
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug, poem_openapi::Object, sea_orm::FromJsonQueryResult)]
 pub struct FlowInstCommentInfo {
+    pub id: Option<String>,
     /// 输出信息
     pub output_message: String,
     /// 评价人上下文

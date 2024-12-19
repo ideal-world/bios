@@ -195,6 +195,7 @@ impl FlowLogClient {
             ("CTS", "idp_test_cts"),
             ("TP", "idp_test_plan"),
             ("TS", "idp_test_stage"),
+            ("FLOW", "flow_approval_edit"),
         ]);
         flow_tag_map.get(tag).map_or("".to_string(), |val| val.to_string())
     }
