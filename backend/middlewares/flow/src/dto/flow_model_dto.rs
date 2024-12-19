@@ -468,3 +468,13 @@ pub struct FlowModelFindRelNameByTemplateIdsReq {
     /// 关联的模板ID
     pub rel_template_ids: Vec<String>,
 }
+
+/// 修改当前参数列表
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
+pub struct FlowModelSyncModifiedFieldReq {
+    pub rel_template_id: Option<String>,
+    pub tag: String,
+    /// 参数列表
+    pub add_fields: Vec<String>,
+    pub delete_fields: Vec<String>,
+}

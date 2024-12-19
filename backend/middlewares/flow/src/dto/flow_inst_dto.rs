@@ -467,6 +467,8 @@ pub struct FlowInstOperateReq {
     pub output_message: Option<String>,
     /// 操作人
     pub operator: Option<String>,
+    /// 日志文本
+    pub log_text: Option<String>,
 }
 
 /// 工作流实例过滤器
