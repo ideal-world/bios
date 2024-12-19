@@ -145,6 +145,7 @@ pub(crate) async fn fact_record_load(
 ) -> TardisResult<()> {
     let bs_inst = inst.inst::<TardisRelDBClient>();
     let (mut conn, _) = common_pg::init_conn(bs_inst).await?;
+    conn.execute_one("SET plan_cache_mode = 'force_generic_plan'", vec![]).await?;
     conn.begin().await?;
     if !stats_pg_conf_fact_serv::online(fact_conf_key, &conn, ctx).await? {
         return Err(funs.err().conflict("fact_record", "load", "The fact config not online.", "409-spi-stats-fact-conf-not-online"));
