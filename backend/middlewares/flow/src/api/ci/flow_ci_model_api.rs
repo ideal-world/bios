@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use crate::dto::flow_model_dto::{
     FlowModelAggResp, FlowModelAssociativeOperationKind, FlowModelCopyOrReferenceCiReq, FlowModelExistRelByTemplateIdsReq, FlowModelFilterReq, FlowModelFindRelStateResp,
-    FlowModelKind,
+    FlowModelKind, FlowModelSyncModifiedFieldReq,
 };
 use crate::flow_constants;
 use crate::serv::flow_inst_serv::FlowInstServ;
@@ -353,6 +353,20 @@ impl FlowCiModelApi {
             }
         }
         funs.commit().await?;
+        TardisResp::ok(Void)
+    }
+
+    /// Synchronize modified fields
+    ///
+    /// 同步修改的字段
+    #[oai(path = "/sync_modified_field", method = "post")]
+    async fn sync_modified_field(&self, modify_req: Json<FlowModelSyncModifiedFieldReq>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
+        let mut funs = flow_constants::get_tardis_inst();
+        check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
+        funs.begin().await?;
+        FlowModelServ::sync_modified_field(&modify_req.0, &funs, &ctx.0).await?;
+        funs.commit().await?;
+        ctx.0.execute_task().await?;
         TardisResp::ok(Void)
     }
 }

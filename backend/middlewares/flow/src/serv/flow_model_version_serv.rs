@@ -10,21 +10,17 @@ use bios_basic::rbum::{
 };
 use itertools::Itertools;
 use tardis::{
-    basic::{dto::TardisContext, result::TardisResult},
-    db::sea_orm::{
+    basic::{dto::TardisContext, result::TardisResult}, chrono::Utc, db::sea_orm::{
         prelude::Expr,
         sea_query::{Alias, SelectStatement},
         EntityName, Set,
-    },
-    futures::future::join_all,
-    serde_json::json,
-    TardisFuns, TardisFunsInst,
+    }, futures::future::join_all, serde_json::json, TardisFuns, TardisFunsInst
 };
 
 use crate::{
     domain::flow_model_version,
     dto::{
-        flow_model_dto::{FlowModelBindNewStateReq, FlowModelBindStateReq, FlowModelFilterReq, FlowModelModifyReq},
+        flow_model_dto::{FlowModelBindNewStateReq, FlowModelBindStateReq, FlowModelFilterReq, FlowModelModifyReq, FlowModelStatus},
         flow_model_version_dto::{
             FlowModelVersionAddReq, FlowModelVersionBindState, FlowModelVersionDetailResp, FlowModelVersionFilterReq, FlowModelVersionModifyReq, FlowModelVersionSummaryResp,
             FlowModelVesionState,
@@ -106,6 +102,7 @@ impl
                 &version_detail.rel_model_id,
                 &mut FlowModelModifyReq {
                     current_version_id: Some(flow_version_id.to_string()),
+                    status: Some(FlowModelStatus::Enabled),
                     ..Default::default()
                 },
                 funs,
@@ -135,6 +132,7 @@ impl
         }
         let mut flow_mode_version = flow_model_version::ActiveModel {
             id: Set(id.to_string()),
+            update_time: Set(Utc::now()),
             ..Default::default()
         };
         if let Some(status) = &modify_req.status {
@@ -155,6 +153,7 @@ impl
                     &version_detail.rel_model_id,
                     &mut FlowModelModifyReq {
                         current_version_id: Some(id.to_string()),
+                        status: Some(FlowModelStatus::Enabled),
                         ..Default::default()
                     },
                     funs,

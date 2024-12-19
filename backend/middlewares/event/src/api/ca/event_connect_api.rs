@@ -31,7 +31,7 @@ impl EventConnectApi {
         let config = EdgeConfig {
             peer_id,
             supported_codec_kinds: vec![CodecKind::JSON].into_iter().collect(),
-            peer_auth: Auth {},
+            peer_auth: Auth { ..Default::default() },
         };
         let Some(node) = TardisFuns::store().get_singleton::<Node>() else {
             return Err(tardis::web::poem::Error::from_string(
