@@ -28,13 +28,13 @@ use crate::{
     dto::{
         flow_model_dto::{
             FlowModelAddReq, FlowModelAggResp, FlowModelAssociativeOperationKind, FlowModelBindNewStateReq, FlowModelBindStateReq, FlowModelDetailResp, FlowModelFilterReq,
-            FlowModelFindRelStateResp, FlowModelKind, FlowModelModifyReq, FlowModelRelTransitionExt, FlowModelStatus, FlowModelSummaryResp,
+            FlowModelFindRelStateResp, FlowModelKind, FlowModelModifyReq, FlowModelRelTransitionExt, FlowModelStatus, FlowModelSummaryResp, FlowModelSyncModifiedFieldReq,
         },
         flow_model_version_dto::{
             FlowModelVersionAddReq, FlowModelVersionBindState, FlowModelVersionDetailResp, FlowModelVersionFilterReq, FlowModelVersionModifyReq, FlowModelVersionModifyState,
             FlowModelVesionState,
         },
-        flow_state_dto::{FLowStateIdAndName, FlowStateAddReq, FlowStateAggResp, FlowStateKind, FlowStateRelModelExt, FlowSysStateKind},
+        flow_state_dto::{FLowStateIdAndName, FlowStateAddReq, FlowStateAggResp, FlowStateKind, FlowStateModifyReq, FlowStateRelModelExt, FlowStateVar, FlowSysStateKind},
         flow_transition_dto::{
             FlowTransitionAddReq, FlowTransitionDetailResp, FlowTransitionInitInfo, FlowTransitionModifyReq, FlowTransitionPostActionInfo, FlowTransitionSortStatesReq,
         },
@@ -48,10 +48,7 @@ use super::{
     clients::{
         flow_log_client::{FlowLogClient, LogParamContent, LogParamTag},
         search_client::FlowSearchClient,
-    },
-    flow_model_version_serv::FlowModelVersionServ,
-    flow_rel_serv::{FlowRelKind, FlowRelServ},
-    flow_transition_serv::FlowTransitionServ,
+    }, flow_model_version_serv::FlowModelVersionServ, flow_rel_serv::{FlowRelKind, FlowRelServ}, flow_state_serv::FlowStateServ, flow_transition_serv::FlowTransitionServ
 };
 
 pub struct FlowModelServ;
@@ -1600,6 +1597,7 @@ impl FlowModelServ {
             ..ctx.clone()
         };
         let models = Self::find_rel_model_map(rel_template_id.clone(), true, funs, ctx).await?;
+        let mut non_main_model_ids = vec![];
         if let Some(rel_template_id) = rel_template_id.clone() {
             let rel_model_ids = FlowRelServ::find_to_simple_rels(&FlowRelKind::FlowModelTemplate, &rel_template_id, None, None, funs, &global_ctx)
                 .await?
@@ -1653,6 +1651,14 @@ impl FlowModelServ {
                 )
                 .await?;
             }
+            non_main_model_ids = Self::find_id_items(&FlowModelFilterReq {
+                basic: RbumBasicFilterReq {
+                    enabled: Some(true),
+                    ..Default::default()
+                },
+                main: Some(false),
+                ..Default::default()
+            }, None, None, funs, ctx).await?
         }
         for (tag, model) in models.iter() {
             if let Some(spec_tags) = spec_tags.clone() {
@@ -1670,14 +1676,7 @@ impl FlowModelServ {
             }
         }
         // clean non-main flow model
-        for model_id in Self::find_id_items(&FlowModelFilterReq {
-            basic: RbumBasicFilterReq {
-                enabled: Some(true),
-                ..Default::default()
-            },
-            main: Some(false),
-            ..Default::default()
-        }, None, None, funs, ctx).await? {
+        for model_id in non_main_model_ids {
             Self::delete_item(&model_id, funs, ctx).await?;
         }
         Ok(models)
@@ -1850,5 +1849,61 @@ impl FlowModelServ {
             Some(version) => Ok(version),
             None => Err(funs.err().not_found("flow_model_serv", "find_editing_verion", "model not found", "404-flow-model-not-found")),
         }
+    }
+
+    pub async fn sync_modified_field(req: &FlowModelSyncModifiedFieldReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let models = Self::find_detail_items(&FlowModelFilterReq {
+            basic: RbumBasicFilterReq {
+                enabled: Some(true),
+                ..Default::default()
+            },
+            main: Some(false),
+            rel_template_id: req.rel_template_id.clone(),
+            tags: Some(vec![req.tag.clone()]),
+            ..Default::default()
+        }, None, None, funs, ctx).await?;
+        for model in models {
+            let states = model.states();
+            for state in states {
+                let add_default_conf = match state.state_kind {
+                    FlowStateKind::Form => {
+                        state.kind_conf.clone().unwrap_or_default().form.unwrap_or_default().add_default_field.unwrap_or_default()
+                    },
+                    FlowStateKind::Approval => {
+                        state.kind_conf.clone().unwrap_or_default().approval.unwrap_or_default().add_default_field.unwrap_or_default()
+                    },
+                    _ => { FlowStateVar::default()},
+                };
+                let mut kind_conf = state.kind_conf.clone().unwrap_or_default();
+                for add_field in req.add_fields.clone() {
+                    match state.state_kind {
+                        FlowStateKind::Form => {
+                            kind_conf.form.as_mut().map(|form| form.vars_collect.insert(add_field, add_default_conf.clone()));
+                        },
+                        FlowStateKind::Approval => {
+                            kind_conf.approval.as_mut().map(|form| form.vars_collect.insert(add_field, add_default_conf.clone()));
+                        },
+                        _ => { },
+                    }
+                }
+                for delete_field in &req.delete_fields {
+                    match state.state_kind {
+                        FlowStateKind::Form => {
+                            kind_conf.form.as_mut().map(|form| form.vars_collect.remove(delete_field));
+                        },
+                        FlowStateKind::Approval => {
+                            kind_conf.approval.as_mut().map(|form| form.vars_collect.remove(delete_field));
+                        },
+                        _ => { },
+                    }
+                }
+                FlowStateServ::modify_item(&state.id, &mut FlowStateModifyReq {
+                    kind_conf: Some(kind_conf),
+                    ..Default::default()
+                }, funs, ctx).await?;
+            }
+        }
+        
+        Ok(())
     }
 }

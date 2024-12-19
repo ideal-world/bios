@@ -11,7 +11,7 @@ use bios_sdk_invoke::{
 use itertools::Itertools;
 use serde_json::json;
 use tardis::{
-    basic::{dto::TardisContext, field::TrimString, result::TardisResult}, tokio, web::web_resp::TardisPage, TardisFuns, TardisFunsInst
+    basic::{dto::TardisContext, field::TrimString, result::TardisResult}, log::debug, tokio, web::web_resp::TardisPage, TardisFuns, TardisFunsInst
 };
 
 use crate::{
@@ -262,6 +262,7 @@ impl FlowSearchClient {
             && guard_conf.guard_by_spec_org_ids.is_empty() 
             && guard_conf.guard_by_spec_role_ids.is_empty() 
         {
+            debug!("flow search_guard_account_num result : 0");
             return Ok(Some(0));
         }
         let mut search_ctx_req = SearchItemSearchCtxReq {
@@ -278,7 +279,7 @@ impl FlowSearchClient {
         if !guard_conf.guard_by_spec_role_ids.is_empty() {
             search_ctx_req.roles = Some(guard_conf.guard_by_spec_role_ids.clone());
         }
-        Ok(SpiSearchClient::search(&SearchItemSearchReq {
+        let result = SpiSearchClient::search(&SearchItemSearchReq {
             tag: "iam_account".to_string(),
             ctx: search_ctx_req,
             query: SearchItemQueryReq { ..Default::default() },
@@ -289,7 +290,9 @@ impl FlowSearchClient {
                 size: 1,
                 fetch_total: true,
             },
-        }, funs, ctx).await?.map(|result| result.total_size))
+        }, funs, ctx).await?.map(|result| result.total_size);
+        debug!("flow search_guard_account_num result : {:?}", result);
+        Ok(result)
     }
 
     pub fn get_tag_search_map() -> HashMap<String, String> {

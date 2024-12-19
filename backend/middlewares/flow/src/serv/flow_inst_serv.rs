@@ -2650,6 +2650,7 @@ impl FlowInstServ {
             sub_kind: Some(FlowLogClient::get_junp_kind(&flow_inst_detail.tag)),
             flow_message: operate_req.output_message.clone(),
             flow_result: Some(operate_req.operate.to_string().to_uppercase()),
+            detail: operate_req.log_text.clone(),
             ..Default::default()
         };
         if operate_req.vars.is_none() {
