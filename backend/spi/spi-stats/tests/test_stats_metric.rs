@@ -248,7 +248,7 @@ pub async fn test_metric_query(client: &mut TestHttpClient) -> TardisResult<()> 
             "/ci/metric",
             &json!({
                 "from":"req",
-                "select":[{"code":"key","fun":"count"},{"code":"plan_hours","fun":"sum"}],
+                "select":[{"code":"_count","fun":"count"},{"code":"plan_hours","fun":"sum"}],
                 "group":[{"code":"source"}],
                 "start_time":"2023-01-01T12:00:00.000Z",
                 "end_time":"2023-02-01T12:00:00.000Z"
@@ -258,9 +258,9 @@ pub async fn test_metric_query(client: &mut TestHttpClient) -> TardisResult<()> 
     assert_eq!(resp.from, "req");
     assert_eq!(resp.show_names.len(), 3);
     assert_eq!(resp.group.as_object().unwrap().len(), 4);
-    assert_eq!(resp.group.as_object().unwrap()["ROLLUP"]["key__count"], 10);
+    assert_eq!(resp.group.as_object().unwrap()["ROLLUP"]["_count__count"], 10);
     assert_eq!(resp.group.as_object().unwrap()["ROLLUP"]["plan_hours__sum"], "200");
-    assert_eq!(resp.group.as_object().unwrap()["hangzhou"]["key__count"], 8);
+    assert_eq!(resp.group.as_object().unwrap()["hangzhou"]["_count__count"], 8);
     assert_eq!(resp.group.as_object().unwrap()["hangzhou"]["plan_hours__sum"], "160");
 
     // todo The following test case is problematic
