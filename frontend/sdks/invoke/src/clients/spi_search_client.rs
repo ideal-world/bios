@@ -79,7 +79,8 @@ impl SpiSearchClient {
     pub async fn search(search_req: &SearchItemSearchReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<TardisPage<SearchItemSearchResp>>> {
         let search_url = BaseSpiClient::module_url(InvokeModuleKind::Search, funs).await?;
         let headers = BaseSpiClient::headers(None, funs, ctx).await?;
-        let resp = funs.web_client().put::<SearchItemSearchReq, TardisResp<TardisPage<SearchItemSearchResp>>>(format!("{search_url}/ci/item/search"), search_req, headers.clone()).await?;
+        let resp =
+            funs.web_client().put::<SearchItemSearchReq, TardisResp<TardisPage<SearchItemSearchResp>>>(format!("{search_url}/ci/item/search"), search_req, headers.clone()).await?;
         BaseSpiClient::package_resp(resp)
     }
 }
