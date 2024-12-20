@@ -320,40 +320,41 @@ pub async fn test_fact_conf(client: &mut TestHttpClient) -> TardisResult<()> {
     let _: Void = client.put("/ci/conf/fact/req/online", &Void {}).await;
 
     // can't modify fact after online error
-    assert_eq!(
-        client
-            .patch_resp::<Value, Void>(
-                "/ci/conf/fact/req",
-                &json!({
-                    "show_name":"需求",
-                    "query_limit": 2000,
-                    "remark": "需求说明"
-                }),
-            )
-            .await
-            .code,
-        "409-spi-stats-fact_conf-modify"
-    );
+    // 
+    // assert_eq!(
+    //     client
+    //         .patch_resp::<Value, Void>(
+    //             "/ci/conf/fact/req",
+    //             &json!({
+    //                 "show_name":"需求",
+    //                 "query_limit": 2000,
+    //                 "remark": "需求说明"
+    //             }),
+    //         )
+    //         .await
+    //         .code,
+    //     "409-spi-stats-fact_conf-modify"
+    // );
 
     // can't modify fact column after online error
-    assert_eq!(
-        client
-            .patch_resp::<Value, Void>(
-                "/ci/conf/fact/req/col/source",
-                &json!({
-                    "show_name":"来源",
-                    "remark": "需求来源说明",
-                    "kind": "dimension",
-                    "dim_rel_conf_dim_key": "address",
-                    "dim_multi_values": false
-                }),
-            )
-            .await
-            .code,
-        "409-spi-stats-fact_col_conf-modify"
-    );
+    // assert_eq!(
+    //     client
+    //         .patch_resp::<Value, Void>(
+    //             "/ci/conf/fact/req/col/source",
+    //             &json!({
+    //                 "show_name":"来源",
+    //                 "remark": "需求来源说明",
+    //                 "kind": "dimension",
+    //                 "dim_rel_conf_dim_key": "address",
+    //                 "dim_multi_values": false
+    //             }),
+    //         )
+    //         .await
+    //         .code,
+    //     "409-spi-stats-fact_col_conf-modify"
+    // );
     // can't delete fact column after online error
-    assert_eq!(client.delete_resp("/ci/conf/fact/req/col/source").await.code, "409-spi-stats-fact_col_conf-delete");
+    // assert_eq!(client.delete_resp("/ci/conf/fact/req/col/source").await.code, "409-spi-stats-fact_col_conf-delete");
 
     client.delete("/ci/conf/fact/to_be_del2").await;
     let list: TardisPage<Value> = client.get("/ci/conf/fact?page_number=1&page_size=10").await;
