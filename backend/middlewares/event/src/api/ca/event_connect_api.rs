@@ -1,3 +1,4 @@
+use asteroid_mq::bytes::Bytes;
 use asteroid_mq::prelude::{Node, NodeId};
 use asteroid_mq::protocol::node::edge::codec::CodecKind;
 use asteroid_mq::protocol::node::edge::packet::Auth;
@@ -31,7 +32,7 @@ impl EventConnectApi {
         let config = EdgeConfig {
             peer_id,
             supported_codec_kinds: vec![CodecKind::JSON].into_iter().collect(),
-            peer_auth: Auth {},
+            peer_auth: Auth { payload: Bytes::new() },
         };
         let Some(node) = TardisFuns::store().get_singleton::<Node>() else {
             return Err(tardis::web::poem::Error::from_string(

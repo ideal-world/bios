@@ -11,6 +11,7 @@ use bios_basic::rbum::{
 use itertools::Itertools;
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
+    chrono::Utc,
     db::sea_orm::{
         prelude::Expr,
         sea_query::{Alias, SelectStatement},
@@ -24,7 +25,7 @@ use tardis::{
 use crate::{
     domain::flow_model_version,
     dto::{
-        flow_model_dto::{FlowModelBindNewStateReq, FlowModelBindStateReq, FlowModelFilterReq, FlowModelModifyReq},
+        flow_model_dto::{FlowModelBindNewStateReq, FlowModelBindStateReq, FlowModelFilterReq, FlowModelModifyReq, FlowModelStatus},
         flow_model_version_dto::{
             FlowModelVersionAddReq, FlowModelVersionBindState, FlowModelVersionDetailResp, FlowModelVersionFilterReq, FlowModelVersionModifyReq, FlowModelVersionSummaryResp,
             FlowModelVesionState,
@@ -106,6 +107,7 @@ impl
                 &version_detail.rel_model_id,
                 &mut FlowModelModifyReq {
                     current_version_id: Some(flow_version_id.to_string()),
+                    status: Some(FlowModelStatus::Enabled),
                     ..Default::default()
                 },
                 funs,
@@ -139,6 +141,9 @@ impl
         };
         if let Some(status) = &modify_req.status {
             flow_mode_version.status = Set(status.clone());
+            if *status != FlowModelVesionState::Disabled {
+                flow_mode_version.update_time = Set(Utc::now());
+            }
         }
         if let Some(init_state_id) = &modify_req.init_state_id {
             flow_mode_version.init_state_id = Set(init_state_id.clone());
@@ -155,6 +160,7 @@ impl
                     &version_detail.rel_model_id,
                     &mut FlowModelModifyReq {
                         current_version_id: Some(id.to_string()),
+                        status: Some(FlowModelStatus::Enabled),
                         ..Default::default()
                     },
                     funs,

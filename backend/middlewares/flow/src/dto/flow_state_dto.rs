@@ -75,6 +75,8 @@ pub struct FlowStateForm {
     pub referral: bool,
     /// 转办自定义人员权限
     pub referral_guard_custom_conf: Option<FlowGuardConf>,
+    /// 新增默认字段配置
+    pub add_default_field: Option<FlowStateVar>,
     /// 字段配置
     pub vars_collect: HashMap<String, FlowStateVar>,
     /// 提交动作名称
@@ -113,6 +115,8 @@ pub struct FlowStateApproval {
     /// 转办自定义人员权限
     pub referral_guard_custom: bool,
     pub referral_guard_custom_conf: Option<FlowGuardConf>,
+    /// 新增默认字段配置
+    pub add_default_field: Option<FlowStateVar>,
     /// 字段配置
     pub vars_collect: HashMap<String, FlowStateVar>,
     /// 多人审批策略方式
@@ -172,8 +176,6 @@ pub struct FlowStateCountersignConf {
     pub kind: FlowStateCountersignKind,
     /// 多数人通过比例
     pub most_percent: Option<usize>,
-    /// 审批人权限配置
-    pub guard_custom_conf: Option<FlowGuardConf>,
     /// 指定人通过即通过
     pub specified_pass_guard: Option<bool>,
     pub specified_pass_guard_conf: Option<FlowGuardConf>,
