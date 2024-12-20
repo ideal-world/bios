@@ -48,7 +48,11 @@ use super::{
     clients::{
         flow_log_client::{FlowLogClient, LogParamContent, LogParamTag},
         search_client::FlowSearchClient,
-    }, flow_model_version_serv::FlowModelVersionServ, flow_rel_serv::{FlowRelKind, FlowRelServ}, flow_state_serv::FlowStateServ, flow_transition_serv::FlowTransitionServ
+    },
+    flow_model_version_serv::FlowModelVersionServ,
+    flow_rel_serv::{FlowRelKind, FlowRelServ},
+    flow_state_serv::FlowStateServ,
+    flow_transition_serv::FlowTransitionServ,
 };
 
 pub struct FlowModelServ;
@@ -117,9 +121,11 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
                     funs,
                     ctx,
                 )
-                .await?.is_some() {
+                .await?
+                .is_some()
+                {
                     return Err(funs.err().not_found(&Self::get_obj_name(), "before_add_item", "The model is not repeatable", "400-flow-model-duplicate"));
-                }   
+                }
             }
         }
 
@@ -354,6 +360,32 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
 
     async fn after_modify_item(flow_model_id: &str, modify_req: &mut FlowModelModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let model_detail = Self::get_item(flow_model_id, &FlowModelFilterReq::default(), funs, ctx).await?;
+        if modify_req.name.is_some() {
+            // 同步修改名称到版本
+            for model_id in FlowModelVersionServ::find_id_items(
+                &FlowModelVersionFilterReq {
+                    rel_model_ids: Some(vec![flow_model_id.to_string()]),
+                    ..Default::default()
+                },
+                None,
+                None,
+                funs,
+                ctx,
+            )
+            .await?
+            {
+                FlowModelVersionServ::modify_item(
+                    &model_id,
+                    &mut FlowModelVersionModifyReq {
+                        name: modify_req.name.clone(),
+                        ..Default::default()
+                    },
+                    funs,
+                    ctx,
+                )
+                .await?;
+            }
+        }
         if modify_req.status == Some(FlowModelStatus::Enabled) && model_detail.current_version_id.is_empty() {
             return Err(funs.err().internal_error("flow_model_serv", "after_modify_item", "Current model is not enabled", "500-flow_model-prohibit-enabled"));
         }
@@ -637,14 +669,14 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
                 item.init_state_id = version.init_state_id;
 
                 let states = FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelState, &item.current_version_id, None, None, funs, ctx)
-                .await?
-                .into_iter()
-                .map(|rel| FLowStateIdAndName {
-                    id: rel.rel_id,
-                    name: rel.rel_name,
-                })
-                .collect_vec();
-            item.states = TardisFuns::json.obj_to_json(&states).unwrap_or_default();
+                    .await?
+                    .into_iter()
+                    .map(|rel| FLowStateIdAndName {
+                        id: rel.rel_id,
+                        name: rel.rel_name,
+                    })
+                    .collect_vec();
+                item.states = TardisFuns::json.obj_to_json(&states).unwrap_or_default();
             }
 
             let rel_transition =
@@ -1651,14 +1683,21 @@ impl FlowModelServ {
                 )
                 .await?;
             }
-            non_main_model_ids = Self::find_id_items(&FlowModelFilterReq {
-                basic: RbumBasicFilterReq {
-                    enabled: Some(true),
+            non_main_model_ids = Self::find_id_items(
+                &FlowModelFilterReq {
+                    basic: RbumBasicFilterReq {
+                        enabled: Some(true),
+                        ..Default::default()
+                    },
+                    main: Some(false),
                     ..Default::default()
                 },
-                main: Some(false),
-                ..Default::default()
-            }, None, None, funs, ctx).await?
+                None,
+                None,
+                funs,
+                ctx,
+            )
+            .await?
         }
         for (tag, model) in models.iter() {
             if let Some(spec_tags) = spec_tags.clone() {
@@ -1852,58 +1891,67 @@ impl FlowModelServ {
     }
 
     pub async fn sync_modified_field(req: &FlowModelSyncModifiedFieldReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        let models = Self::find_detail_items(&FlowModelFilterReq {
-            basic: RbumBasicFilterReq {
-                enabled: Some(true),
+        let models = Self::find_detail_items(
+            &FlowModelFilterReq {
+                basic: RbumBasicFilterReq {
+                    enabled: Some(true),
+                    ..Default::default()
+                },
+                main: Some(false),
+                rel_template_id: req.rel_template_id.clone(),
+                tags: Some(vec![req.tag.clone()]),
                 ..Default::default()
             },
-            main: Some(false),
-            rel_template_id: req.rel_template_id.clone(),
-            tags: Some(vec![req.tag.clone()]),
-            ..Default::default()
-        }, None, None, funs, ctx).await?;
+            None,
+            None,
+            funs,
+            ctx,
+        )
+        .await?;
         for model in models {
             let states = model.states();
             for state in states {
                 let add_default_conf = match state.state_kind {
-                    FlowStateKind::Form => {
-                        state.kind_conf.clone().unwrap_or_default().form.unwrap_or_default().add_default_field.unwrap_or_default()
-                    },
-                    FlowStateKind::Approval => {
-                        state.kind_conf.clone().unwrap_or_default().approval.unwrap_or_default().add_default_field.unwrap_or_default()
-                    },
-                    _ => { FlowStateVar::default()},
+                    FlowStateKind::Form => state.kind_conf.clone().unwrap_or_default().form.unwrap_or_default().add_default_field.unwrap_or_default(),
+                    FlowStateKind::Approval => state.kind_conf.clone().unwrap_or_default().approval.unwrap_or_default().add_default_field.unwrap_or_default(),
+                    _ => FlowStateVar::default(),
                 };
                 let mut kind_conf = state.kind_conf.clone().unwrap_or_default();
                 for add_field in req.add_fields.clone() {
                     match state.state_kind {
                         FlowStateKind::Form => {
                             kind_conf.form.as_mut().map(|form| form.vars_collect.insert(add_field, add_default_conf.clone()));
-                        },
+                        }
                         FlowStateKind::Approval => {
                             kind_conf.approval.as_mut().map(|form| form.vars_collect.insert(add_field, add_default_conf.clone()));
-                        },
-                        _ => { },
+                        }
+                        _ => {}
                     }
                 }
                 for delete_field in &req.delete_fields {
                     match state.state_kind {
                         FlowStateKind::Form => {
                             kind_conf.form.as_mut().map(|form| form.vars_collect.remove(delete_field));
-                        },
+                        }
                         FlowStateKind::Approval => {
                             kind_conf.approval.as_mut().map(|form| form.vars_collect.remove(delete_field));
-                        },
-                        _ => { },
+                        }
+                        _ => {}
                     }
                 }
-                FlowStateServ::modify_item(&state.id, &mut FlowStateModifyReq {
-                    kind_conf: Some(kind_conf),
-                    ..Default::default()
-                }, funs, ctx).await?;
+                FlowStateServ::modify_item(
+                    &state.id,
+                    &mut FlowStateModifyReq {
+                        kind_conf: Some(kind_conf),
+                        ..Default::default()
+                    },
+                    funs,
+                    ctx,
+                )
+                .await?;
             }
         }
-        
+
         Ok(())
     }
 }

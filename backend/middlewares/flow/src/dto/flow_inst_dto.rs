@@ -10,7 +10,10 @@ use tardis::{
 };
 
 use super::{
-    flow_model_dto::FlowModelRelTransitionExt, flow_state_dto::{FlowGuardConf, FlowStateKind, FlowStateOperatorKind, FlowStateRelModelExt, FlowStateVar, FlowSysStateKind}, flow_transition_dto::FlowTransitionDoubleCheckInfo, flow_var_dto::FlowVarInfo
+    flow_model_dto::FlowModelRelTransitionExt,
+    flow_state_dto::{FlowGuardConf, FlowStateKind, FlowStateOperatorKind, FlowStateRelModelExt, FlowStateVar, FlowSysStateKind},
+    flow_transition_dto::FlowTransitionDoubleCheckInfo,
+    flow_var_dto::FlowVarInfo,
 };
 
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
@@ -234,17 +237,17 @@ pub struct FlowInstArtifacts {
 // 流程实例中数据存储更新
 #[derive(Serialize, Deserialize, PartialEq, Clone, Debug, Default, sea_orm::FromJsonQueryResult)]
 pub struct FlowInstArtifactsModifyReq {
-    pub guard_conf: Option<FlowGuardConf>,                              // 当前操作人权限
-    pub prohibit_guard_conf_account_ids: Option<Vec<String>>,           // 禁止操作人ID列表
-    pub guard_conf_account_ids: Option<Vec<String>>,                    // 更新操作人列表
-    pub add_approval_result: Option<(String, FlowApprovalResultKind)>,  // 增加审批结果
-    pub form_state_map: Option<HashMap<String, Value>>,                 // 录入节点映射 key为节点ID,对应的value为节点中的录入的参数
-    pub clear_form_result: Option<String>,                              // 清除节点录入信息
-    pub clear_approval_result: Option<String>,                          // 清除节点录入信息
-    pub prev_non_auto_state_id: Option<Vec<String>>,                    // 上一个非自动节点ID
-    pub prev_non_auto_account_id: Option<String>,                       // 上一个节点操作人ID
-    pub curr_approval_total: Option<usize>,                             // 当前审批总数
-    pub curr_vars: Option<HashMap<String, Value>>,                      // 当前参数列表
+    pub guard_conf: Option<FlowGuardConf>,                             // 当前操作人权限
+    pub prohibit_guard_conf_account_ids: Option<Vec<String>>,          // 禁止操作人ID列表
+    pub guard_conf_account_ids: Option<Vec<String>>,                   // 更新操作人列表
+    pub add_approval_result: Option<(String, FlowApprovalResultKind)>, // 增加审批结果
+    pub form_state_map: Option<HashMap<String, Value>>,                // 录入节点映射 key为节点ID,对应的value为节点中的录入的参数
+    pub clear_form_result: Option<String>,                             // 清除节点录入信息
+    pub clear_approval_result: Option<String>,                         // 清除节点录入信息
+    pub prev_non_auto_state_id: Option<Vec<String>>,                   // 上一个非自动节点ID
+    pub prev_non_auto_account_id: Option<String>,                      // 上一个节点操作人ID
+    pub curr_approval_total: Option<usize>,                            // 当前审批总数
+    pub curr_vars: Option<HashMap<String, Value>>,                     // 当前参数列表
 }
 
 /// 审批结果类型
@@ -478,6 +481,7 @@ pub struct FlowInstFilterReq {
     pub ids: Option<Vec<String>>,
     pub code: Option<String>,
     /// 关联模型ID
+    pub flow_model_id: Option<String>,
     pub flow_version_id: Option<String>,
     /// 业务ID
     pub rel_business_obj_ids: Option<Vec<String>>,

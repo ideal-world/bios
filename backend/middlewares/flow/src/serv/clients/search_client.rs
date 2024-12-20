@@ -6,19 +6,27 @@ use bios_sdk_invoke::{
         event_client::{get_topic, EventCenterClient, SPI_RPC_TOPIC},
         spi_search_client::SpiSearchClient,
     },
-    dto::search_item_dto::{SearchItemAddReq, SearchItemModifyReq, SearchItemQueryReq, SearchItemSearchCtxReq, SearchItemSearchPageReq, SearchItemSearchReq, SearchItemSearchResp, SearchItemVisitKeysReq},
+    dto::search_item_dto::{
+        SearchItemAddReq, SearchItemModifyReq, SearchItemQueryReq, SearchItemSearchCtxReq, SearchItemSearchPageReq, SearchItemSearchReq, SearchItemSearchResp,
+        SearchItemVisitKeysReq,
+    },
 };
 use itertools::Itertools;
 use serde_json::json;
 use tardis::{
-    basic::{dto::TardisContext, field::TrimString, result::TardisResult}, log::debug, tokio, web::web_resp::TardisPage, TardisFuns, TardisFunsInst
+    basic::{dto::TardisContext, field::TrimString, result::TardisResult},
+    log::debug,
+    tokio,
+    web::web_resp::TardisPage,
+    TardisFuns, TardisFunsInst,
 };
 
 use crate::{
     dto::{
         flow_inst_dto::FlowInstFilterReq,
         flow_model_dto::{FlowModelDetailResp, FlowModelFilterReq, FlowModelRelTransitionExt},
-        flow_model_version_dto::FlowModelVersionFilterReq, flow_state_dto::FlowGuardConf,
+        flow_model_version_dto::FlowModelVersionFilterReq,
+        flow_state_dto::FlowGuardConf,
     },
     flow_constants,
     serv::{
@@ -258,10 +266,7 @@ impl FlowSearchClient {
     }
 
     pub async fn search_guard_account_num(guard_conf: &FlowGuardConf, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<u64>> {
-        if guard_conf.guard_by_spec_account_ids.is_empty() 
-            && guard_conf.guard_by_spec_org_ids.is_empty() 
-            && guard_conf.guard_by_spec_role_ids.is_empty() 
-        {
+        if guard_conf.guard_by_spec_account_ids.is_empty() && guard_conf.guard_by_spec_org_ids.is_empty() && guard_conf.guard_by_spec_role_ids.is_empty() {
             debug!("flow search_guard_account_num result : 0");
             return Ok(Some(0));
         }
@@ -279,18 +284,24 @@ impl FlowSearchClient {
         if !guard_conf.guard_by_spec_role_ids.is_empty() {
             search_ctx_req.roles = Some(guard_conf.guard_by_spec_role_ids.clone());
         }
-        let result = SpiSearchClient::search(&SearchItemSearchReq {
-            tag: "iam_account".to_string(),
-            ctx: search_ctx_req,
-            query: SearchItemQueryReq { ..Default::default() },
-            adv_query: None,
-            sort: None,
-            page:SearchItemSearchPageReq {
-                number: 1,
-                size: 1,
-                fetch_total: true,
+        let result = SpiSearchClient::search(
+            &SearchItemSearchReq {
+                tag: "iam_account".to_string(),
+                ctx: search_ctx_req,
+                query: SearchItemQueryReq { ..Default::default() },
+                adv_query: None,
+                sort: None,
+                page: SearchItemSearchPageReq {
+                    number: 1,
+                    size: 1,
+                    fetch_total: true,
+                },
             },
-        }, funs, ctx).await?.map(|result| result.total_size);
+            funs,
+            ctx,
+        )
+        .await?
+        .map(|result| result.total_size);
         debug!("flow search_guard_account_num result : {:?}", result);
         Ok(result)
     }
