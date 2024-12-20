@@ -1599,7 +1599,7 @@ impl FlowInstServ {
                 let form_conf = state.kind_conf().unwrap_or_default().form.unwrap_or_default();
                 let mut guard_custom_conf = form_conf.guard_custom_conf.unwrap_or_default();
                 if form_conf.guard_by_creator {
-                    guard_custom_conf.guard_by_spec_account_ids.push(ctx.owner.clone());
+                    guard_custom_conf.guard_by_spec_account_ids.push(flow_inst_detail.create_ctx.owner.clone());
                 }
                 if form_conf.guard_by_his_operators {
                     flow_inst_detail.transitions.as_ref().map(|transitions| {
@@ -1666,7 +1666,7 @@ impl FlowInstServ {
                 let approval_conf = state.kind_conf().unwrap_or_default().approval.unwrap_or_default();
                 let mut guard_custom_conf = approval_conf.guard_custom_conf.unwrap_or_default();
                 if approval_conf.guard_by_creator {
-                    guard_custom_conf.guard_by_spec_account_ids.push(ctx.owner.clone());
+                    guard_custom_conf.guard_by_spec_account_ids.push(flow_inst_detail.create_ctx.owner.clone());
                 }
                 if approval_conf.guard_by_his_operators {
                     flow_inst_detail.transitions.as_ref().map(|transitions| {
@@ -1767,6 +1767,30 @@ impl FlowInstServ {
                     FlowExternalServ::do_delete_rel_obj(&flow_inst_detail.tag, &flow_inst_detail.rel_business_obj_id, &flow_inst_detail.id, ctx, funs).await?;
                 }
                 _ => {
+                    let vars_collect = Self::get_modify_vars(flow_inst_detail);
+                    let params = vars_collect
+                        .into_iter()
+                        .map(|(key, value)| FlowExternalParams {
+                            var_name: Some(key),
+                            value: Some(value),
+                            ..Default::default()
+                        })
+                        .collect_vec();
+                    FlowExternalServ::do_async_modify_field(
+                        &flow_inst_detail.tag,
+                        None,
+                        &flow_inst_detail.rel_business_obj_id,
+                        &flow_inst_detail.id,
+                        None,
+                        None,
+                        None,
+                        None,
+                        None,
+                        params,
+                        ctx,
+                        funs,
+                    )
+                    .await?;
                     if let Some(inst_id) = Self::get_inst_ids_by_rel_business_obj_id(vec![flow_inst_detail.rel_business_obj_id.clone()], Some(true), funs, ctx).await?.pop() {
                         let inst_detail = Self::get(&inst_id, funs, ctx).await?;
                         Self::transfer(
