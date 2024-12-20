@@ -10,11 +10,16 @@ use bios_basic::rbum::{
 };
 use itertools::Itertools;
 use tardis::{
-    basic::{dto::TardisContext, result::TardisResult}, chrono::Utc, db::sea_orm::{
+    basic::{dto::TardisContext, result::TardisResult},
+    chrono::Utc,
+    db::sea_orm::{
         prelude::Expr,
         sea_query::{Alias, SelectStatement},
         EntityName, Set,
-    }, futures::future::join_all, serde_json::json, TardisFuns, TardisFunsInst
+    },
+    futures::future::join_all,
+    serde_json::json,
+    TardisFuns, TardisFunsInst,
 };
 
 use crate::{
@@ -132,11 +137,13 @@ impl
         }
         let mut flow_mode_version = flow_model_version::ActiveModel {
             id: Set(id.to_string()),
-            update_time: Set(Utc::now()),
             ..Default::default()
         };
         if let Some(status) = &modify_req.status {
             flow_mode_version.status = Set(status.clone());
+            if *status != FlowModelVesionState::Disabled {
+                flow_mode_version.update_time = Set(Utc::now());
+            }
         }
         if let Some(init_state_id) = &modify_req.init_state_id {
             flow_mode_version.init_state_id = Set(init_state_id.clone());
