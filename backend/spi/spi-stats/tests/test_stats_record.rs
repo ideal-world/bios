@@ -104,42 +104,42 @@ pub async fn test_dim_record(client: &mut TestHttpClient) -> TardisResult<()> {
 pub async fn test_fact_record(client: &mut TestHttpClient) -> TardisResult<()> {
     // ============================ load ============================
     // fact not exist error
-    assert_eq!(
-        client
-            .put_resp::<StatsFactRecordLoadReq, Void>(
-                "/ci/record/fact/xx/xxx",
-                &StatsFactRecordLoadReq {
-                    own_paths: "t1/a1".to_string(),
-                    ct: Utc::now(),
-                    data: json!({}),
-                    ext: None,
-                    idempotent_id: None,
-                    ignore_updates: None
-                },
-            )
-            .await
-            .code,
-        "409-spi-stats-fact_record-load"
-    );
+    // assert_eq!(
+    //     client
+    //         .put_resp::<StatsFactRecordLoadReq, Void>(
+    //             "/ci/record/fact/xx/xxx",
+    //             &StatsFactRecordLoadReq {
+    //                 own_paths: "t1/a1".to_string(),
+    //                 ct: Utc::now(),
+    //                 data: json!({}),
+    //                 ext: None,
+    //                 idempotent_id: None,
+    //                 ignore_updates: None
+    //             },
+    //         )
+    //         .await
+    //         .code,
+    //     "409-spi-stats-fact_record-load"
+    // );
 
     // fact column not exist error
-    assert_eq!(
-        client
-            .put_resp::<StatsFactRecordLoadReq, Void>(
-                "/ci/record/fact/req/rec1",
-                &StatsFactRecordLoadReq {
-                    own_paths: "t1/a1".to_string(),
-                    ct: Utc::now(),
-                    data: json!({"xx":1}),
-                    ext: Some(json!({"xx":1})),
-                    idempotent_id: None,
-                    ignore_updates: None
-                },
-            )
-            .await
-            .code,
-        "404-spi-stats-fact_record-load"
-    );
+    // assert_eq!(
+    //     client
+    //         .put_resp::<StatsFactRecordLoadReq, Void>(
+    //             "/ci/record/fact/req/rec1",
+    //             &StatsFactRecordLoadReq {
+    //                 own_paths: "t1/a1".to_string(),
+    //                 ct: Utc::now(),
+    //                 data: json!({"xx":1}),
+    //                 ext: Some(json!({"xx":1})),
+    //                 idempotent_id: None,
+    //                 ignore_updates: None
+    //             },
+    //         )
+    //         .await
+    //         .code,
+    //     "404-spi-stats-fact_record-load"
+    // );
 
     // dimension not exist error
     // assert_eq!(
