@@ -1968,15 +1968,17 @@ impl FlowInstServ {
                         operators.insert(FlowStateOperatorKind::Pass, approval.pass_btn_name.clone());
                         operators.insert(FlowStateOperatorKind::Overrule, approval.overrule_btn_name.clone());
                         operators.insert(FlowStateOperatorKind::Back, approval.back_btn_name.clone());
-                        if let Some(referral_guard_custom_conf) = &approval.referral_guard_custom_conf {
-                            if referral_guard_custom_conf.check(ctx) {
+                        if approval.referral {
+                            if let Some(referral_guard_custom_conf) = &approval.referral_guard_custom_conf {
+                                if referral_guard_custom_conf.check(ctx) {
+                                    operators.insert(FlowStateOperatorKind::Referral, "".to_string());
+                                }
+                            } else {
                                 operators.insert(FlowStateOperatorKind::Referral, "".to_string());
                             }
-                        } else {
-                            operators.insert(FlowStateOperatorKind::Referral, "".to_string());
                         }
                     }
-                    if ctx.own_paths == artifacts.prev_non_auto_account_id.unwrap_or_default() {
+                    if approval.revoke && ctx.owner == artifacts.prev_non_auto_account_id.unwrap_or_default() {
                         operators.insert(FlowStateOperatorKind::Revoke, "".to_string());
                     }
                     FLowInstStateConf {
@@ -2236,7 +2238,7 @@ impl FlowInstServ {
                     if kind == FlowApprovalResultKind::Overrule // 要求全数通过则出现一个拒绝，即拒绝
                         || (
                             kind == FlowApprovalResultKind::Pass
-                            && approval_result.get(&FlowApprovalResultKind::Pass.to_string()).cloned().unwrap_or_default().len() + 1 >= approval_total
+                            && approval_result.get(&FlowApprovalResultKind::Pass.to_string()).cloned().unwrap_or_default().len() >= approval_total
                             && approval_result.get(&FlowApprovalResultKind::Overrule.to_string()).cloned().unwrap_or_default().len().is_empty() // 要求全数通过则通过人数达到审核人数同时没有一个拒绝
                         )
                     {
@@ -2249,8 +2251,8 @@ impl FlowInstServ {
                     }
                     let pass_total = approval_total * countersign_conf.most_percent.unwrap_or_default() / 100; // 需满足通过的人员数量
                     let overrule_total = approval_total - pass_total; // 需满足拒绝的人员数量
-                    if (kind == FlowApprovalResultKind::Pass && approval_result.get(&FlowApprovalResultKind::Pass.to_string()).cloned().unwrap_or_default().len() + 1 >= pass_total) // 要求大多数通过则通过人数达到通过的比例
-                        || (kind == FlowApprovalResultKind::Overrule && approval_result.get(&FlowApprovalResultKind::Overrule.to_string()).cloned().unwrap_or_default().len() + 1 >= overrule_total)
+                    if (kind == FlowApprovalResultKind::Pass && approval_result.get(&FlowApprovalResultKind::Pass.to_string()).cloned().unwrap_or_default().len() >= pass_total) // 要求大多数通过则通过人数达到通过的比例
+                        || (kind == FlowApprovalResultKind::Overrule && approval_result.get(&FlowApprovalResultKind::Overrule.to_string()).cloned().unwrap_or_default().len() >= overrule_total)
                     {
                         // 要求大多数通过则拒绝人数达到拒绝的比例
                         return Ok(true);
