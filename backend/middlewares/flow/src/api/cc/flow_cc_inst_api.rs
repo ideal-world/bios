@@ -10,9 +10,7 @@ use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 
 use crate::dto::flow_external_dto::FlowExternalCallbackOp;
 use crate::dto::flow_inst_dto::{
-    FlowInstAbortReq, FlowInstCommentReq, FlowInstDetailResp, FlowInstFindNextTransitionResp, FlowInstFindNextTransitionsReq, FlowInstFindStateAndTransitionsReq,
-    FlowInstFindStateAndTransitionsResp, FlowInstModifyAssignedReq, FlowInstModifyCurrentVarsReq, FlowInstOperateReq, FlowInstSearchReq, FlowInstStartReq, FlowInstSummaryResp,
-    FlowInstTransferReq, FlowInstTransferResp,
+    FlowInstAbortReq, FlowInstCommentReq, FlowInstDetailResp, FlowInstFilterReq, FlowInstFindNextTransitionResp, FlowInstFindNextTransitionsReq, FlowInstFindStateAndTransitionsReq, FlowInstFindStateAndTransitionsResp, FlowInstModifyAssignedReq, FlowInstModifyCurrentVarsReq, FlowInstOperateReq, FlowInstSearchReq, FlowInstStartReq, FlowInstSummaryResp, FlowInstTransferReq, FlowInstTransferResp
 };
 use crate::flow_constants;
 use crate::helper::loop_check_helper;
@@ -101,6 +99,46 @@ impl FlowCcInstApi {
             current_state_id.0,
             rel_business_obj_id.0,
             with_sub.0,
+            page_number.0,
+            page_size.0,
+            &funs,
+            &ctx.0,
+        )
+        .await?;
+        ctx.0.execute_task().await?;
+        TardisResp::ok(result)
+    }
+
+    /// Find Instances
+    ///
+    /// 获取实例列表
+    #[oai(path = "/details", method = "get")]
+    async fn paginate_detail_items(
+        &self,
+        flow_model_id: Query<Option<String>>,
+        rel_business_obj_id: Query<Option<String>>,
+        tag: Query<Option<String>>,
+        finish: Query<Option<bool>>,
+        main: Query<Option<bool>>,
+        current_state_id: Query<Option<String>>,
+        with_sub: Query<Option<bool>>,
+        page_number: Query<u32>,
+        page_size: Query<u32>,
+        ctx: TardisContextExtractor,
+        _request: &Request,
+    ) -> TardisApiResult<TardisPage<FlowInstDetailResp>> {
+        let funs = flow_constants::get_tardis_inst();
+        let result = FlowInstServ::paginate_detail_items(
+            &FlowInstFilterReq {
+                flow_version_id: flow_model_id.0,
+                tag: tag.0,
+                finish: finish.0,
+                main: main.0,
+                current_state_id: current_state_id.0,
+                rel_business_obj_ids: rel_business_obj_id.0.map(|id| vec![id]),
+                with_sub: with_sub.0,
+                ..Default::default()
+            },
             page_number.0,
             page_size.0,
             &funs,

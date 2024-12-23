@@ -82,7 +82,7 @@ impl FlowInstServ {
         }
     }
     async fn start_main_flow(start_req: &FlowInstStartReq, current_state_name: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
-        if !Self::find_details(
+        if !Self::find_ids(
             &FlowInstFilterReq {
                 rel_business_obj_ids: Some(vec![start_req.rel_business_obj_id.clone()]),
                 main: Some(true),
@@ -141,7 +141,7 @@ impl FlowInstServ {
         // get model by own_paths
         let flow_model = FlowModelServ::get_model_id_by_own_paths_and_transition_id(&start_req.tag, &start_req.transition_id.clone().unwrap_or_default(), funs, ctx).await?;
         let inst_id = TardisFuns::field.nanoid();
-        if !Self::find_details(
+        if !Self::find_ids(
             &FlowInstFilterReq {
                 rel_business_obj_ids: Some(vec![start_req.rel_business_obj_id.to_string()]),
                 flow_model_id: Some(flow_model.id.clone()),
@@ -347,10 +347,26 @@ impl FlowInstServ {
         Ok(())
     }
 
-    pub async fn find_details(filter: &FlowInstFilterReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<FlowInstSummaryResult>> {
+    pub async fn find_ids(filter: &FlowInstFilterReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<String>> {
         let mut query = Query::select();
         Self::package_ext_query(&mut query, filter, funs, ctx).await?;
-        funs.db().find_dtos::<FlowInstSummaryResult>(&query).await
+        Ok(funs.db().find_dtos::<FlowInstSummaryResult>(&query).await?.into_iter().map(|inst| inst.id).collect_vec())
+    }
+
+    pub async fn find_detail_items(filter: &FlowInstFilterReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<FlowInstDetailResp>> {
+        Self::find_detail(Self::find_ids(filter, funs, ctx).await?, funs, ctx).await
+    }
+
+    pub async fn paginate_detail_items(filter: &FlowInstFilterReq, page_number: u32, page_size: u32, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<TardisPage<FlowInstDetailResp>> {
+        let inst_ids = Self::find_ids(filter, funs, ctx).await?;
+
+        let records = Self::find_detail(inst_ids[((page_size -1) * page_number) as usize..(page_size * page_number) as usize].to_vec(), funs, ctx).await?;
+        Ok(TardisPage {
+            page_size: page_size as u64,
+            page_number: page_number as u64,
+            total_size: inst_ids.len() as u64,
+            records
+        })
     }
 
     pub async fn get_inst_ids_by_rel_business_obj_id(
@@ -737,7 +753,7 @@ impl FlowInstServ {
         )
         .await;
         // 若当前数据项存在未结束的审批流，则清空其中的transitions
-        let unfinished_approve_flow_inst_ids = Self::find_details(
+        let unfinished_approve_flow_inst_ids = Self::find_detail_items(
             &FlowInstFilterReq {
                 rel_business_obj_ids: Some(flow_insts.iter().map(|flow_inst| flow_inst.rel_business_obj_id.clone()).collect_vec()),
                 main: Some(false),
@@ -1452,7 +1468,7 @@ impl FlowInstServ {
     }
 
     pub async fn unsafe_modify_state(tag: &str, modify_model_states: Vec<FlowStateAggResp>, state_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        let insts = Self::find_details(
+        let insts = Self::find_detail_items(
             &FlowInstFilterReq {
                 main: Some(true),
                 tag: Some(tag.to_string()),

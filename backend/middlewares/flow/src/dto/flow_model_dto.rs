@@ -475,6 +475,6 @@ pub struct FlowModelSyncModifiedFieldReq {
     pub rel_template_id: Option<String>,
     pub tag: String,
     /// 参数列表
-    pub add_fields: Vec<String>,
-    pub delete_fields: Vec<String>,
+    pub add_fields: Option<Vec<String>>,
+    pub delete_fields: Option<Vec<String>>,
 }

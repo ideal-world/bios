@@ -1917,7 +1917,7 @@ impl FlowModelServ {
                     _ => FlowStateVar::default(),
                 };
                 let mut kind_conf = state.kind_conf.clone().unwrap_or_default();
-                for add_field in req.add_fields.clone() {
+                for add_field in req.add_fields.clone().unwrap_or_default() {
                     match state.state_kind {
                         FlowStateKind::Form => {
                             kind_conf.form.as_mut().map(|form| form.vars_collect.insert(add_field, add_default_conf.clone()));
@@ -1928,13 +1928,13 @@ impl FlowModelServ {
                         _ => {}
                     }
                 }
-                for delete_field in &req.delete_fields {
+                for delete_field in req.delete_fields.clone().unwrap_or_default() {
                     match state.state_kind {
                         FlowStateKind::Form => {
-                            kind_conf.form.as_mut().map(|form| form.vars_collect.remove(delete_field));
+                            kind_conf.form.as_mut().map(|form| form.vars_collect.remove(&delete_field));
                         }
                         FlowStateKind::Approval => {
-                            kind_conf.approval.as_mut().map(|form| form.vars_collect.remove(delete_field));
+                            kind_conf.approval.as_mut().map(|form| form.vars_collect.remove(&delete_field));
                         }
                         _ => {}
                     }

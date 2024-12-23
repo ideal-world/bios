@@ -44,7 +44,7 @@ pub struct FlowSearchClient;
 impl FlowSearchClient {
     pub async fn modify_business_obj_search(rel_business_obj_id: &str, tag: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let tag_search_map = Self::get_tag_search_map();
-        let rel_version_ids = FlowInstServ::find_details(
+        let rel_version_ids = FlowInstServ::find_detail_items(
             &FlowInstFilterReq {
                 rel_business_obj_ids: Some(vec![rel_business_obj_id.to_string()]),
                 main: Some(false),
