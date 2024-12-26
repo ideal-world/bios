@@ -1971,7 +1971,24 @@ impl FlowModelServ {
 
     pub async fn unbind_state(flow_model_id: &str, req: &FlowModelUnbindStateReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let flow_model = Self::get_item(flow_model_id, &FlowModelFilterReq::default(), funs, ctx).await?;
-        FlowInstServ::unsafe_modify_state(&flow_model.tag, Some(vec![req.state_id.clone()]), &req.new_state_id, funs, ctx).await?;
+
+        let mut own_paths_list = vec![];
+        if let Some(rel_template_id) = FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelTemplate, flow_model_id, None, None, funs, ctx).await?.pop().map(|rel| rel.rel_id) {
+            own_paths_list = FlowRelServ::find_to_simple_rels(&FlowRelKind::FlowAppTemplate, &rel_template_id, None, None, funs, ctx)
+                .await?
+                .into_iter()
+                .map(|rel| format!("{}/{}", rel.rel_own_paths, rel.rel_id))
+                .collect_vec();
+            if own_paths_list.contains(&ctx.own_paths) {
+                own_paths_list = vec![ctx.own_paths.clone()];
+            }
+        } else {
+            own_paths_list.push(ctx.own_paths.clone());
+        }
+        for own_paths in own_paths_list {
+            let mock_ctx = TardisContext { own_paths, ..ctx.clone() };
+            FlowInstServ::unsafe_modify_state(&flow_model.tag, Some(vec![req.state_id.clone()]), &req.new_state_id, funs, &mock_ctx).await?;
+        }
         Self::modify_model(
             flow_model_id,
             &mut FlowModelModifyReq {

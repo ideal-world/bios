@@ -162,6 +162,7 @@ pub struct FlowModelSummaryResp {
     pub icon: String,
     pub info: String,
     pub init_state_id: String,
+    pub rel_model_id: String,
     pub current_version_id: String,
     pub owner: String,
     pub own_paths: String,
@@ -236,7 +237,7 @@ pub struct FlowModelDetailResp {
 impl FlowModelDetailResp {
     pub fn transitions(&self) -> Vec<FlowTransitionDetailResp> {
         match &self.transitions {
-            Some(transitions) => TardisFuns::json.json_to_obj(transitions.clone()).unwrap(),
+            Some(transitions) => TardisFuns::json.json_to_obj(transitions.clone()).unwrap_or_default(),
             None => vec![],
         }
     }

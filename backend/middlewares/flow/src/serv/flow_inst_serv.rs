@@ -7,11 +7,10 @@ use async_recursion::async_recursion;
 use bios_basic::{
     dto::BasicQueryCondInfo,
     rbum::{
-        dto::rbum_filer_dto::RbumBasicFilterReq,
-        serv::{
+        dto::rbum_filer_dto::RbumBasicFilterReq, serv::{
             rbum_crud_serv::{ID_FIELD, NAME_FIELD, REL_DOMAIN_ID_FIELD, REL_KIND_ID_FIELD},
             rbum_item_serv::{RbumItemCrudOperation, RBUM_ITEM_TABLE},
-        },
+        }
     },
 };
 use bios_sdk_invoke::dto::search_item_dto::{SearchItemQueryReq, SearchItemSearchCtxReq, SearchItemSearchPageReq, SearchItemSearchReq};
@@ -406,6 +405,7 @@ impl FlowInstServ {
             id: Set(flow_inst_id.to_string()),
             finish_ctx: Set(Some(FlowOperationContext::from_ctx(ctx))),
             finish_time: Set(Some(Utc::now())),
+            update_time: Set(Some(Utc::now())),
             finish_abort: Set(Some(true)),
             output_message: Set(Some(abort_req.message.to_string())),
             ..Default::default()
@@ -617,7 +617,12 @@ impl FlowInstServ {
                     current_state_color: inst.current_state_color,
                     current_state_sys_kind: inst.current_state_sys_kind,
                     current_state_kind: inst.current_state_kind.clone(),
-                    current_state_ext: inst.current_state_ext.map(|ext| TardisFuns::json.str_to_obj::<FlowStateRelModelExt>(&ext).unwrap_or_default()),
+                    current_state_ext: inst.current_state_ext.map(|ext| {
+                        if ext.is_empty() {
+                            return FlowStateRelModelExt::default();
+                        }
+                        TardisFuns::json.str_to_obj::<FlowStateRelModelExt>(&ext).unwrap_or_default()
+                    }),
                     current_state_conf: Self::get_state_conf(
                         &inst.current_state_id,
                         &inst.current_state_kind.unwrap_or_default(),
@@ -1023,6 +1028,7 @@ impl FlowInstServ {
             current_state_id: Set(next_flow_state.id.to_string()),
             current_vars: Set(Some(TardisFuns::json.obj_to_json(&new_vars)?)),
             transitions: Set(Some(new_transitions.clone())),
+            update_time: Set(Some(Utc::now())),
             ..Default::default()
         };
         if next_flow_state.sys_state == FlowSysStateKind::Finish {
@@ -1372,6 +1378,7 @@ impl FlowInstServ {
         let flow_inst = flow_inst::ActiveModel {
             id: Set(flow_inst_detail.id.clone()),
             current_vars: Set(Some(TardisFuns::json.obj_to_json(&new_vars)?)),
+            update_time: Set(Some(Utc::now())),
             ..Default::default()
         };
         funs.db().update_one(flow_inst, ctx).await.unwrap();
@@ -1436,7 +1443,13 @@ impl FlowInstServ {
             own_paths_list = FlowRelServ::find_to_simple_rels(&FlowRelKind::FlowAppTemplate, &rel_template_id, None, None, funs, ctx)
                 .await?
                 .into_iter()
-                .map(|rel| format!("{}/{}", rel.rel_own_paths, rel.rel_id))
+                .map(|rel| {
+                    if FlowModelServ::get_app_id_by_ctx(ctx).is_some() {
+                        rel.rel_own_paths
+                    } else {
+                        format!("{}/{}", rel.rel_own_paths, rel.rel_id)
+                    }
+                })
                 .collect_vec();
             if own_paths_list.contains(&ctx.own_paths) {
                 own_paths_list = vec![ctx.own_paths.clone()];
@@ -1500,6 +1513,7 @@ impl FlowInstServ {
                         id: Set(inst.id.clone()),
                         current_state_id: Set(state_id.to_string()),
                         transitions: Set(Some(vec![])),
+                        update_time: Set(Some(Utc::now())),
                         ..Default::default()
                     };
                     funs.db().update_one(flow_inst, &mock_ctx).await.unwrap();
@@ -1933,6 +1947,7 @@ impl FlowInstServ {
         let flow_inst = flow_inst::ActiveModel {
             id: Set(inst.id.clone()),
             artifacts: Set(Some(inst_artifacts)),
+            update_time: Set(Some(Utc::now())),
             ..Default::default()
         };
         funs.db().update_one(flow_inst, ctx).await?;
@@ -2396,6 +2411,7 @@ impl FlowInstServ {
             id: Set(flow_inst_detail.id.clone()),
             current_state_id: Set(target_state_id.to_string()),
             transitions: Set(Some(new_transitions.clone())),
+            update_time: Set(Some(Utc::now())),
             ..Default::default()
         };
 
@@ -2433,7 +2449,6 @@ impl FlowInstServ {
         });
         let flow_inst = flow_inst::ActiveModel {
             id: Set(flow_inst_detail.id.clone()),
-
             comments: Set(Some(comments.clone())),
             ..Default::default()
         };
@@ -2518,8 +2533,8 @@ impl FlowInstServ {
                     state: item.try_get("", "state")?,
                     code: item.try_get("", "code")?,
                     rel_flow_version_id: item.try_get("", "rel_flow_version_id")?,
-                    rel_flow_model_id: item.try_get("", "rel_flow_model_id")?,
-                    rel_flow_model_name: item.try_get("", "rel_flow_model_name")?,
+                    rel_flow_model_id: item.try_get::<Option<String>>("", "rel_flow_model_id")?.unwrap_or_default(),
+                    rel_flow_model_name: item.try_get::<Option<String>>("", "rel_flow_model_name")?.unwrap_or_default(),
                     rel_business_obj_id: item.try_get("", "rel_business_obj_id")?,
                     rel_transition: item
                         .try_get::<Option<String>>("", "rel_transition")?
