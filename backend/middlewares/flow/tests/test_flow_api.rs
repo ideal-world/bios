@@ -18,7 +18,7 @@ use tardis::web::web_resp::Void;
 use tardis::{tokio, TardisFuns};
 
 mod mock_api;
-mod test_flow_scenes_fsm1;
+mod test_flow_scenes_fsm;
 
 #[tokio::test]
 async fn test_flow_api() -> TardisResult<()> {
@@ -44,7 +44,7 @@ async fn test_flow_api() -> TardisResult<()> {
     init_spi_kv().await?;
     init_spi_search().await?;
 
-    test_flow_scenes_fsm1::test(&mut flow_client, &mut search_client).await?;
+    test_flow_scenes_fsm::test(&mut flow_client, &mut search_client).await?;
     truncate_flow_data().await?;
 
     Ok(())

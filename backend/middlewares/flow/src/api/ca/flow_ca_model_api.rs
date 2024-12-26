@@ -36,11 +36,9 @@ impl FlowCaModelApi {
         for (_, rel_model_id) in req.0.rel_model_ids {
             let new_model = FlowModelServ::copy_or_reference_model(&rel_model_id, &req.0.op, FlowModelKind::AsModel, &funs, &ctx.0).await?;
             FlowInstServ::batch_update_when_switch_model(
+                &new_model,
                 None,
-                &new_model.tag,
-                &new_model.current_version_id,
-                new_model.states.clone(),
-                &new_model.init_state_id,
+                None,
                 &funs,
                 &ctx.0,
             )
@@ -69,11 +67,9 @@ impl FlowCaModelApi {
         let _orginal_models = FlowModelServ::clean_rel_models(None, None, Some(vec![req.0.tag.clone()]), &funs, &ctx.0).await?;
         let new_model = FlowModelServ::copy_or_reference_model(&req.0.rel_model_id, &req.0.op, FlowModelKind::AsModel, &funs, &ctx.0).await?;
         FlowInstServ::batch_update_when_switch_model(
+            &new_model,
             None,
-            &new_model.tag,
-            &new_model.current_version_id,
-            new_model.states.clone(),
-            &new_model.init_state_id,
+            None,
             &funs,
             &ctx.0,
         )

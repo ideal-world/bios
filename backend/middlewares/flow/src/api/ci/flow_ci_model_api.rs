@@ -8,11 +8,13 @@ use crate::flow_constants;
 use crate::serv::flow_inst_serv::FlowInstServ;
 use crate::serv::flow_model_serv::FlowModelServ;
 use crate::serv::flow_rel_serv::{FlowRelKind, FlowRelServ};
-use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumRelFilterReq};
+use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumItemRelFilterReq, RbumRelFilterReq};
 use bios_basic::rbum::helper::rbum_scope_helper::check_without_owner_and_unsafe_fill_ctx;
+use bios_basic::rbum::rbum_enumeration::RbumRelFromKind;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use bios_basic::rbum::serv::rbum_rel_serv::RbumRelServ;
 use itertools::Itertools;
+use tardis::futures::future::join_all;
 use std::iter::Iterator;
 use tardis::basic::dto::TardisContext;
 use tardis::log::warn;
@@ -119,29 +121,24 @@ impl FlowCiModelApi {
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         funs.begin().await?;
         warn!("ci copy_or_reference_model req: {:?}", req.0);
-        let _orginal_models = FlowModelServ::clean_rel_models(None, None, None, &funs, &ctx.0).await?;
+        let orginal_models = FlowModelServ::clean_rel_models(None, None, None, &funs, &ctx.0).await?;
         // find rel models
-        let rel_model_ids = FlowRelServ::find_to_simple_rels(
-            &FlowRelKind::FlowModelTemplate,
-            &req.0.rel_template_id.clone().unwrap_or_default(),
-            None,
-            None,
-            &funs,
-            &ctx.0,
-        )
-        .await?
-        .into_iter()
-        .map(|rel| rel.rel_id)
-        .collect_vec();
         let rel_models = FlowModelServ::find_items(
             &FlowModelFilterReq {
                 basic: RbumBasicFilterReq {
-                    ids: Some(rel_model_ids),
                     enabled: Some(true),
                     own_paths: Some("".to_string()),
                     with_sub_own_paths: true,
                     ..Default::default()
                 },
+                rel: Some(RbumItemRelFilterReq {
+                    optional: false,
+                    rel_by_from: true,
+                    tag: Some(FlowRelKind::FlowModelTemplate.to_string()),
+                    from_rbum_kind: Some(RbumRelFromKind::Item),
+                    rel_item_id: Some(req.0.rel_template_id.clone().unwrap_or_default()),
+                    ..Default::default()
+                }),
                 // main: Some(true),
                 ..Default::default()
             },
@@ -154,16 +151,16 @@ impl FlowCiModelApi {
         let mut result = HashMap::new();
         for rel_model in rel_models {
             let new_model = FlowModelServ::copy_or_reference_model(&rel_model.id, &req.0.op, FlowModelKind::AsModel, &funs, &ctx.0).await?;
-            FlowInstServ::batch_update_when_switch_model(
-                new_model.rel_template_ids.first().cloned(),
-                &new_model.tag,
-                &new_model.current_version_id,
-                new_model.states.clone(),
-                &new_model.init_state_id,
-                &funs,
-                &ctx.0,
-            )
-            .await?;
+            if new_model.main && orginal_models.contains_key(&new_model.tag) {
+                FlowInstServ::batch_update_when_switch_model(
+                    &new_model,
+                    new_model.rel_template_ids.first().cloned(),
+                    req.update_states.clone().map(|update_states| update_states.get(&new_model.tag).cloned().unwrap_or_default()),
+                    &funs,
+                    &ctx.0,
+                )
+                .await?;
+            }
             result.insert(rel_model.id.clone(), new_model.id.clone());
         }
         funs.commit().await?;
@@ -261,45 +258,56 @@ impl FlowCiModelApi {
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         warn!("ci exist_rel_by_template_ids req: {:?}", req.0);
         let support_tags = req.0.support_tags;
-        let mut result = vec![];
-        for (rel_template_id, current_tags) in req.0.rel_tag_by_template_ids {
-            // 当前模板tag和需要支持的tag取交集，得到当前模板tag中需要检查的tag列表
-            let tags = current_tags.into_iter().filter(|current_tag| support_tags.contains(current_tag)).collect_vec();
-            if !tags.is_empty() {
-                // 当前模板关联的模型所支持的tag
-                let rel_model_tags = FlowModelServ::find_items(
-                    &FlowModelFilterReq {
-                        basic: RbumBasicFilterReq {
-                            ids: Some(
-                                FlowRelServ::find_to_simple_rels(&FlowRelKind::FlowModelTemplate, &rel_template_id, None, None, &funs, &ctx.0)
-                                    .await?
-                                    .into_iter()
-                                    .map(|rel| rel.rel_id)
-                                    .collect_vec(),
-                            ),
-                            own_paths: Some("".to_string()),
-                            with_sub_own_paths: true,
-                            ..Default::default()
-                        },
-                        main: Some(true),
-                        ..Default::default()
-                    },
-                    None,
-                    None,
-                    &funs,
-                    &ctx.0,
-                )
-                .await?
-                .into_iter()
-                .map(|model| model.tag.clone())
-                .collect_vec();
-                // 如果出现了当前模板tag中需要检查的tag没有被当前模板关联，则说明当前关联模板不是可用状态
-                if !tags.into_iter().filter(|tag| !rel_model_tags.contains(tag)).collect_vec().is_empty() {
-                    continue;
-                }
-            }
-            result.push(rel_template_id.clone());
-        }
+        let result = join_all(
+            req.0.rel_tag_by_template_ids
+                .iter()
+                .map(|(rel_template_id, current_tags)| async {
+                    // 当前模板tag和需要支持的tag取交集，得到当前模板tag中需要检查的tag列表
+                    let tags = current_tags.iter().filter(|current_tag| support_tags.contains(current_tag)).collect_vec();
+                    if !tags.is_empty() {
+                        // 当前模板关联的模型所支持的tag
+                        let rel_model_tags = FlowModelServ::find_items(
+                            &FlowModelFilterReq {
+                                basic: RbumBasicFilterReq {
+                                    own_paths: Some("".to_string()),
+                                    with_sub_own_paths: true,
+                                    ..Default::default()
+                                },
+                                rel: Some(RbumItemRelFilterReq {
+                                    optional: false,
+                                    rel_by_from: true,
+                                    tag: Some(FlowRelKind::FlowModelTemplate.to_string()),
+                                    from_rbum_kind: Some(RbumRelFromKind::Item),
+                                    rel_item_id: Some(rel_template_id.clone()),
+                                    ..Default::default()
+                                }),
+                                main: Some(true),
+                                ..Default::default()
+                            },
+                            None,
+                            None,
+                            &funs,
+                            &ctx.0,
+                        )
+                        .await
+                        .unwrap()
+                        .into_iter()
+                        .map(|model| model.tag.clone())
+                        .collect_vec();
+                        // 如果出现了当前模板tag中需要检查的tag没有被当前模板关联，则说明当前关联模板不是可用状态
+                        if !tags.into_iter().filter(|tag| !rel_model_tags.contains(tag)).collect_vec().is_empty() {
+                            return None;
+                        }
+                    }
+                    Some(rel_template_id.clone())
+                })
+                .collect_vec(),
+        )
+        .await
+        .into_iter()
+        .filter(|r| r.is_some())
+        .map(|r| r.unwrap_or_default())
+        .collect_vec();
 
         TardisResp::ok(result)
     }

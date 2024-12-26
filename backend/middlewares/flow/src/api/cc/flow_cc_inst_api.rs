@@ -10,7 +10,7 @@ use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 
 use crate::dto::flow_external_dto::FlowExternalCallbackOp;
 use crate::dto::flow_inst_dto::{
-    FlowInstAbortReq, FlowInstCommentReq, FlowInstDetailResp, FlowInstFilterReq, FlowInstFindNextTransitionResp, FlowInstFindNextTransitionsReq, FlowInstFindStateAndTransitionsReq, FlowInstFindStateAndTransitionsResp, FlowInstModifyAssignedReq, FlowInstModifyCurrentVarsReq, FlowInstOperateReq, FlowInstSearchReq, FlowInstStartReq, FlowInstSummaryResp, FlowInstTransferReq, FlowInstTransferResp
+    FlowInstAbortReq, FlowInstCommentReq, FlowInstDetailResp, FlowInstFilterReq, FlowInstFindNextTransitionResp, FlowInstFindNextTransitionsReq, FlowInstFindStateAndTransitionsReq, FlowInstFindStateAndTransitionsResp, FlowInstModifyAssignedReq, FlowInstModifyCurrentVarsReq, FlowInstOperateReq, FlowInstSearchReq, FlowInstSearchResp, FlowInstStartReq, FlowInstSummaryResp, FlowInstTransferReq, FlowInstTransferResp
 };
 use crate::flow_constants;
 use crate::helper::loop_check_helper;
@@ -325,7 +325,7 @@ impl FlowCcInstApi {
 
     /// Search Items
     #[oai(path = "/search", method = "put")]
-    async fn search(&self, mut search_req: Json<FlowInstSearchReq>, ctx: TardisContextExtractor) -> TardisApiResult<TardisPage<FlowInstSummaryResp>> {
+    async fn search(&self, mut search_req: Json<FlowInstSearchReq>, ctx: TardisContextExtractor) -> TardisApiResult<TardisPage<FlowInstSearchResp>> {
         let funs = flow_constants::get_tardis_inst();
         let resp = FlowInstServ::search(&mut search_req.0, &funs, &ctx.0).await?;
         TardisResp::ok(resp)

@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, fmt};
 
 use bios_basic::rbum::{
     dto::rbum_filer_dto::{RbumBasicFilterReq, RbumItemFilterFetcher, RbumItemRelFilterReq},
@@ -185,6 +185,16 @@ pub struct FlowModelRelTransitionExt {
     pub from_flow_state_name: String,
 }
 
+impl fmt::Display for FlowModelRelTransitionExt {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self.id.as_str() {
+            "__EDIT__" => write!(f, "编辑"),
+            "__DELETE__" => write!(f, "删除"),
+            _ => write!(f, "{}({})", self.name, self.from_flow_state_name),
+        }
+    }
+}
+
 /// 工作流模型详细信息
 #[derive(Serialize, Deserialize, Debug, Clone, poem_openapi::Object, sea_orm::FromQueryResult)]
 pub struct FlowModelDetailResp {
@@ -310,6 +320,8 @@ pub struct FlowModelAggResp {
 
     pub scope_level: RbumScopeLevelKind,
     pub disabled: bool,
+    /// 是否作为主流程
+    pub main: bool,
 }
 
 /// 绑定状态
@@ -348,6 +360,8 @@ pub struct FlowModelUnbindStateReq {
     ///
     /// 关联的[工作流状态](super::flow_state_dto::FlowStateDetailResp) id
     pub state_id: String,
+    /// 新的状态ID
+    pub new_state_id: String,
 }
 
 /// 状态排序

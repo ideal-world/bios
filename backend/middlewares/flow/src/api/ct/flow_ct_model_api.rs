@@ -83,11 +83,9 @@ impl FlowCtModelApi {
                 .await?;
             }
             FlowInstServ::batch_update_when_switch_model(
+                &new_model,
                 req.0.rel_template_id.clone(),
-                &new_model.tag,
-                &new_model.current_version_id,
-                new_model.states.clone(),
-                &new_model.init_state_id,
+                None,
                 &funs,
                 &ctx.0,
             )
