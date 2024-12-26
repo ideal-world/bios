@@ -246,26 +246,14 @@ impl FlowCcModelApi {
         TardisResp::ok(Void {})
     }
 
-    /// Unbind State By Model Id [Deprecated]
+    /// Unbind State By Model Id
     ///
-    /// 解绑状态 [已废弃]
+    /// 解绑状态
     #[oai(path = "/:flow_model_id/unbind_state", method = "post")]
     async fn unbind_state(&self, flow_model_id: Path<String>, req: Json<FlowModelUnbindStateReq>, ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<Void> {
         let mut funs = flow_constants::get_tardis_inst();
         funs.begin().await?;
-        FlowModelServ::modify_model(
-            &flow_model_id.0,
-            &mut FlowModelModifyReq {
-                modify_version: Some(FlowModelVersionModifyReq {
-                    unbind_states: Some(vec![req.state_id.clone()]),
-                    ..Default::default()
-                }),
-                ..Default::default()
-            },
-            &funs,
-            &ctx.0,
-        )
-        .await?;
+        FlowModelServ::unbind_state(&flow_model_id.0, &req.0, &funs, &ctx.0).await?;
         funs.commit().await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void {})

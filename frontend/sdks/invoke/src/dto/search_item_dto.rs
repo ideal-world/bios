@@ -83,6 +83,7 @@ pub struct SearchItemSearchReq {
     // Search conditions
     pub query: SearchItemQueryReq,
     // Advanced search
+    pub adv_by_or: Option<bool>,
     pub adv_query: Option<Vec<AdvSearchItemQueryReq>>,
     // Sort
     // When the record set is very large, it will seriously affect the performance, it is not recommended to use.
@@ -176,6 +177,7 @@ pub struct BasicQueryCondInfo {
 ///
 /// 基础查询操作符
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum)]
+#[serde(rename_all = "snake_case")]
 pub enum BasicQueryOpKind {
     #[oai(rename = "=")]
     Eq,

@@ -32,7 +32,7 @@ use crate::{
 use async_trait::async_trait;
 
 use super::{
-    clients::flow_log_client::{FlowLogClient, LogParamContent, LogParamTag},
+    clients::log_client::{FlowLogClient, LogParamContent, LogParamTag},
     flow_inst_serv::FlowInstServ,
     flow_model_serv::FlowModelServ,
     flow_rel_serv::{FlowRelKind, FlowRelServ},
@@ -104,6 +104,7 @@ impl RbumItemCrudOperation<flow_state::ActiveModel, FlowStateAddReq, FlowStateMo
             Some("dynamic_log_tenant_config".to_string()),
             Some("新建".to_string()),
             rbum_scope_helper::get_path_item(RbumScopeLevelKind::L1.to_int(), &ctx.own_paths),
+            true,
             ctx,
             false,
         )
@@ -139,6 +140,7 @@ impl RbumItemCrudOperation<flow_state::ActiveModel, FlowStateAddReq, FlowStateMo
             Some("dynamic_log_tenant_config".to_string()),
             Some("编辑".to_string()),
             rbum_scope_helper::get_path_item(RbumScopeLevelKind::L1.to_int(), &ctx.own_paths),
+            true,
             ctx,
             false,
         )
@@ -227,6 +229,7 @@ impl RbumItemCrudOperation<flow_state::ActiveModel, FlowStateAddReq, FlowStateMo
                 Some("dynamic_log_tenant_config".to_string()),
                 Some("删除".to_string()),
                 rbum_scope_helper::get_path_item(RbumScopeLevelKind::L1.to_int(), &ctx.own_paths),
+                true,
                 ctx,
                 false,
             )

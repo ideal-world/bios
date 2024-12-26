@@ -52,6 +52,10 @@ pub struct Model {
     #[index]
     #[sea_orm(extra = "DEFAULT CURRENT_TIMESTAMP")]
     pub create_time: chrono::DateTime<Utc>,
+    /// Creation time / 创建时间
+    #[index]
+    #[sea_orm(extra = "DEFAULT CURRENT_TIMESTAMP")]
+    pub update_time: Option<chrono::DateTime<Utc>>,
 
     /// Finisher information / 完成者信息
     pub finish_ctx: Option<FlowOperationContext>,

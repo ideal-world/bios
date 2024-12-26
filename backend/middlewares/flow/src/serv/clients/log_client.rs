@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use bios_sdk_invoke::clients::{
     iam_client::IamClient,
-    spi_log_client::{LogItemAddV2Req, SpiLogClient},
+    spi_log_client::{LogItemAddReq, LogItemAddV2Req, SpiLogClient},
 };
 use serde::Serialize;
 
@@ -22,8 +22,8 @@ pub struct LogParamContent {
     pub name: Option<String>,
     pub sub_kind: Option<String>,
     pub sub_id: Option<String>,
-    pub old_content: Option<String>,
-    pub new_content: Option<String>,
+    pub old_content: String,
+    pub new_content: String,
     pub detail: Option<String>,
     pub operand: Option<String>,
     pub operand_id: Option<String>,
@@ -31,6 +31,7 @@ pub struct LogParamContent {
     pub operand_name: Option<String>,
     pub flow_message: Option<String>,
     pub flow_result: Option<String>,
+    pub flow_referral: Option<String>,
 }
 
 #[derive(Serialize, Default, Debug, Clone)]
@@ -41,6 +42,20 @@ pub struct LogParamExt {
     pub new_log: Option<bool>,
     pub include_detail: Option<bool>,
     pub delete: Option<bool>,
+}
+
+
+pub enum LogParamExtSceneKind {
+    ApprovalFlow,
+    Dynamic,
+}
+impl From<LogParamExtSceneKind> for String {
+    fn from(val: LogParamExtSceneKind) -> Self {
+        match val {
+            LogParamExtSceneKind::Dynamic => "dynamic".to_string(),
+            LogParamExtSceneKind::ApprovalFlow => "approval_flow".to_string(),
+        }
+    }
 }
 
 pub enum LogParamTag {
@@ -94,6 +109,7 @@ impl FlowLogClient {
         kind: Option<String>,
         op_kind: Option<String>,
         rel_key: Option<String>,
+        is_v2: bool,
         ctx: &TardisContext,
         push: bool,
     ) -> TardisResult<()> {
@@ -103,21 +119,40 @@ impl FlowLogClient {
             Box::pin(async move {
                 let task_handle = tokio::spawn(async move {
                     let funs = flow_constants::get_tardis_inst();
-                    Self::add_item(
-                        tag,
-                        content,
-                        ext,
-                        kind,
-                        key.clone(),
-                        op_kind,
-                        rel_key,
-                        Some(tardis::chrono::Utc::now().to_rfc3339()),
-                        &funs,
-                        &ctx_clone,
-                        push_clone, // 使用克隆的 push 变量
-                    )
-                    .await
-                    .unwrap();
+                    if is_v2 {
+                        Self::addv2_item(
+                            tag,
+                            content,
+                            ext,
+                            kind,
+                            key.clone(),
+                            op_kind,
+                            rel_key,
+                            Some(tardis::chrono::Utc::now().to_rfc3339()),
+                            &funs,
+                            &ctx_clone,
+                            push_clone, // 使用克隆的 push 变量
+                        )
+                        .await
+                        .unwrap();
+                    } else {
+                        Self::add_item(
+                            tag,
+                            content,
+                            ext,
+                            kind,
+                            key.clone(),
+                            op_kind,
+                            rel_key,
+                            Some(tardis::chrono::Utc::now().to_rfc3339()),
+                            &funs,
+                            &ctx_clone,
+                            push_clone, // 使用克隆的 push 变量
+                        )
+                        .await
+                        .unwrap();
+                    }
+                    
                 });
                 task_handle.await.unwrap();
                 Ok(())
@@ -127,6 +162,41 @@ impl FlowLogClient {
     }
 
     pub async fn add_item(
+        tag: LogParamTag,
+        content: LogParamContent,
+        ext: Option<Value>,
+        kind: Option<String>,
+        key: Option<String>,
+        op: Option<String>,
+        rel_key: Option<String>,
+        ts: Option<String>,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+        _push: bool,
+    ) -> TardisResult<()> {
+        // generate log item
+        let tag: String = tag.into();
+        let own_paths = if ctx.own_paths.len() < 2 { None } else { Some(ctx.own_paths.clone()) };
+        let owner = if ctx.owner.len() < 2 { None } else { Some(ctx.owner.clone()) };
+
+        let req = LogItemAddReq {
+            id: None,
+            tag: tag.to_string(),
+            content: TardisFuns::json.obj_to_string(&content).expect("content not a valid json value"),
+            kind,
+            ext,
+            key,
+            op,
+            rel_key,
+            ts: ts.map(|ts| DateTime::parse_from_rfc3339(&ts).unwrap_or_default().with_timezone(&Utc)),
+            owner,
+            own_paths,
+        };
+        SpiLogClient::add(req, funs, ctx).await?;
+        Ok(())
+    }
+
+    pub async fn addv2_item(
         tag: LogParamTag,
         content: LogParamContent,
         ext: Option<Value>,
