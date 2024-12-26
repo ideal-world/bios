@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, fmt};
 
 use bios_basic::rbum::{
     dto::rbum_filer_dto::{RbumBasicFilterReq, RbumItemFilterFetcher, RbumItemRelFilterReq},
@@ -162,6 +162,7 @@ pub struct FlowModelSummaryResp {
     pub icon: String,
     pub info: String,
     pub init_state_id: String,
+    pub rel_model_id: String,
     pub current_version_id: String,
     pub owner: String,
     pub own_paths: String,
@@ -183,6 +184,16 @@ pub struct FlowModelRelTransitionExt {
     pub id: String,
     pub name: String,
     pub from_flow_state_name: String,
+}
+
+impl fmt::Display for FlowModelRelTransitionExt {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self.id.as_str() {
+            "__EDIT__" => write!(f, "编辑"),
+            "__DELETE__" => write!(f, "删除"),
+            _ => write!(f, "{}({})", self.name, self.from_flow_state_name),
+        }
+    }
 }
 
 /// 工作流模型详细信息
@@ -226,7 +237,7 @@ pub struct FlowModelDetailResp {
 impl FlowModelDetailResp {
     pub fn transitions(&self) -> Vec<FlowTransitionDetailResp> {
         match &self.transitions {
-            Some(transitions) => TardisFuns::json.json_to_obj(transitions.clone()).unwrap(),
+            Some(transitions) => TardisFuns::json.json_to_obj(transitions.clone()).unwrap_or_default(),
             None => vec![],
         }
     }
@@ -310,6 +321,8 @@ pub struct FlowModelAggResp {
 
     pub scope_level: RbumScopeLevelKind,
     pub disabled: bool,
+    /// 是否作为主流程
+    pub main: bool,
 }
 
 /// 绑定状态
@@ -348,6 +361,8 @@ pub struct FlowModelUnbindStateReq {
     ///
     /// 关联的[工作流状态](super::flow_state_dto::FlowStateDetailResp) id
     pub state_id: String,
+    /// 新的状态ID
+    pub new_state_id: String,
 }
 
 /// 状态排序
@@ -475,6 +490,6 @@ pub struct FlowModelSyncModifiedFieldReq {
     pub rel_template_id: Option<String>,
     pub tag: String,
     /// 参数列表
-    pub add_fields: Vec<String>,
-    pub delete_fields: Vec<String>,
+    pub add_fields: Option<Vec<String>>,
+    pub delete_fields: Option<Vec<String>>,
 }

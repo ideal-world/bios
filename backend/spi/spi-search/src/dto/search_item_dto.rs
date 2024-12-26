@@ -146,6 +146,7 @@ pub struct SearchItemSearchReq {
     // Search conditions
     pub query: SearchItemQueryReq,
     // Advanced search
+    pub adv_by_or: Option<bool>,
     pub adv_query: Option<Vec<AdvSearchItemQueryReq>>,
     // Sort
     // When the record set is very large, it will seriously affect the performance, it is not recommended to use.

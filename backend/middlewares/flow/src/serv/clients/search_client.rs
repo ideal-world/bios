@@ -7,8 +7,7 @@ use bios_sdk_invoke::{
         spi_search_client::SpiSearchClient,
     },
     dto::search_item_dto::{
-        SearchItemAddReq, SearchItemModifyReq, SearchItemQueryReq, SearchItemSearchCtxReq, SearchItemSearchPageReq, SearchItemSearchReq, SearchItemSearchResp,
-        SearchItemVisitKeysReq,
+        AdvSearchItemQueryReq, BasicQueryCondInfo, BasicQueryOpKind, SearchItemAddReq, SearchItemModifyReq, SearchItemQueryReq, SearchItemSearchCtxReq, SearchItemSearchPageReq, SearchItemSearchReq, SearchItemSearchResp, SearchItemVisitKeysReq
     },
 };
 use itertools::Itertools;
@@ -17,13 +16,13 @@ use tardis::{
     basic::{dto::TardisContext, field::TrimString, result::TardisResult},
     log::debug,
     tokio,
-    web::web_resp::TardisPage,
+    web::{poem_openapi::types::ToJSON, web_resp::TardisPage},
     TardisFuns, TardisFunsInst,
 };
 
 use crate::{
     dto::{
-        flow_inst_dto::FlowInstFilterReq,
+        flow_inst_dto::{FlowInstDetailResp, FlowInstFilterReq},
         flow_model_dto::{FlowModelDetailResp, FlowModelFilterReq, FlowModelRelTransitionExt},
         flow_model_version_dto::FlowModelVersionFilterReq,
         flow_state_dto::FlowGuardConf,
@@ -37,14 +36,15 @@ use crate::{
     },
 };
 
-const SEARCH_TAG: &str = "flow_model";
+const SEARCH_MODEL_TAG: &str = "flow_model";
+const SEARCH_INSTANCE_TAG: &str = "flow_inst";
 
 pub struct FlowSearchClient;
 
 impl FlowSearchClient {
     pub async fn modify_business_obj_search(rel_business_obj_id: &str, tag: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let tag_search_map = Self::get_tag_search_map();
-        let rel_version_ids = FlowInstServ::find_details(
+        let rel_version_ids = FlowInstServ::find_detail_items(
             &FlowInstFilterReq {
                 rel_business_obj_ids: Some(vec![rel_business_obj_id.to_string()]),
                 main: Some(false),
@@ -81,11 +81,7 @@ impl FlowSearchClient {
                     .pop()
                     .map(|rel| TardisFuns::json.str_to_obj::<FlowModelRelTransitionExt>(&rel.ext).unwrap_or_default());
                 if let Some(ext) = rel_transition_ext {
-                    rel_transition_names.push(match ext.id.as_str() {
-                        "__EDIT__" => "编辑".to_string(),
-                        "__DELETE__" => "删除".to_string(),
-                        _ => format!("{}({})", ext.name, ext.from_flow_state_name),
-                    });
+                    rel_transition_names.push(ext.to_string());
                 }
             }
         }
@@ -183,7 +179,7 @@ impl FlowSearchClient {
         let key = model_id.clone();
         if *is_modify {
             let modify_req = SearchItemModifyReq {
-                kind: Some(SEARCH_TAG.to_string()),
+                kind: Some(SEARCH_MODEL_TAG.to_string()),
                 title: Some(model_resp.name.clone()),
                 name: Some(model_resp.name.clone()),
                 content: Some(model_resp.name.clone()),
@@ -210,14 +206,14 @@ impl FlowSearchClient {
                 kv_disable: None,
             };
             if let Some(_topic) = get_topic(&SPI_RPC_TOPIC) {
-                EventCenterClient { topic_code: SPI_RPC_TOPIC }.modify_item_and_name(SEARCH_TAG, &key, &modify_req, funs, ctx).await?;
+                EventCenterClient { topic_code: SPI_RPC_TOPIC }.modify_item_and_name(SEARCH_MODEL_TAG, &key, &modify_req, funs, ctx).await?;
             } else {
-                SpiSearchClient::modify_item_and_name(SEARCH_TAG, &key, &modify_req, funs, ctx).await?;
+                SpiSearchClient::modify_item_and_name(SEARCH_MODEL_TAG, &key, &modify_req, funs, ctx).await?;
             }
         } else {
             let add_req = SearchItemAddReq {
-                tag: SEARCH_TAG.to_string(),
-                kind: SEARCH_TAG.to_string(),
+                tag: SEARCH_MODEL_TAG.to_string(),
+                kind: SEARCH_MODEL_TAG.to_string(),
                 key: TrimString(key),
                 title: model_resp.name.clone(),
                 content: model_resp.name.clone(),
@@ -254,9 +250,125 @@ impl FlowSearchClient {
     // model 全局搜索删除埋点方法
     pub async fn delete_model_search(model_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         if let Some(_topic) = get_topic(&SPI_RPC_TOPIC) {
-            EventCenterClient { topic_code: SPI_RPC_TOPIC }.delete_item_and_name(SEARCH_TAG, model_id, funs, ctx).await?;
+            EventCenterClient { topic_code: SPI_RPC_TOPIC }.delete_item_and_name(SEARCH_MODEL_TAG, model_id, funs, ctx).await?;
         } else {
-            SpiSearchClient::delete_item_and_name(SEARCH_TAG, model_id, funs, ctx).await?;
+            SpiSearchClient::delete_item_and_name(SEARCH_MODEL_TAG, model_id, funs, ctx).await?;
+        }
+        Ok(())
+    }
+
+    pub async fn async_add_or_modify_instance_search(inst_id: &str, is_modify: Box<bool>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let ctx_clone = ctx.clone();
+        let mock_ctx = TardisContext {
+            own_paths: "".to_string(),
+            ..ctx.clone()
+        };
+        let inst_resp = FlowInstServ::get(
+            inst_id,
+            funs,
+            &mock_ctx,
+        )
+        .await?;
+        ctx.add_async_task(Box::new(|| {
+            Box::pin(async move {
+                let task_handle = tokio::spawn(async move {
+                    let funs = flow_constants::get_tardis_inst();
+                    let _ = Self::add_or_modify_instance_search(&inst_resp, is_modify, &funs, &ctx_clone).await;
+                });
+                task_handle.await.unwrap();
+                Ok(())
+            })
+        }))
+        .await
+    }
+
+    // flow inst 全局搜索埋点方法
+    pub async fn add_or_modify_instance_search(inst_resp: &FlowInstDetailResp, is_modify: Box<bool>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let inst_id = &inst_resp.id;
+        // 数据共享权限处理
+        let tenant = rbum_scope_helper::get_path_item(RbumScopeLevelKind::L1.to_int(), &inst_resp.own_paths).unwrap_or_default();
+        let app = rbum_scope_helper::get_path_item(RbumScopeLevelKind::L2.to_int(), &inst_resp.own_paths).unwrap_or_default();
+        let visit_tenants = vec![tenant.clone()];
+        let visit_apps = vec![app.clone()];
+        let own_paths = Some(inst_resp.own_paths.clone());
+        let name = inst_resp.create_vars.clone().unwrap_or_default().get("name").unwrap_or(&json!("")).as_str().unwrap_or("").to_string();
+        let key = inst_id.clone();
+        if *is_modify {
+            let modify_req = SearchItemModifyReq {
+                kind: Some(SEARCH_INSTANCE_TAG.to_string()),
+                title: Some(inst_resp.code.clone()),
+                name: Some(name.clone()),
+                content: Some(format!("{} {}", inst_resp.code, name)),
+                owner: Some(inst_resp.create_ctx.owner.clone()),
+                own_paths,
+                create_time: Some(inst_resp.create_time),
+                update_time: inst_resp.update_time,
+                ext: Some(json!({
+                    "tag": inst_resp.tag,
+                    "current_state_id": inst_resp.current_state_id,
+                    "current_state_name": inst_resp.current_state_name,
+                    "current_state_kind": inst_resp.current_state_kind,
+                    "rel_business_obj_id": inst_resp.rel_business_obj_id,
+                    "finish_time": inst_resp.finish_time,
+                    "rel_transition": inst_resp.rel_transition.clone().unwrap_or_default().to_string(),
+                    "his_operators": inst_resp.artifacts.as_ref().map(|artifacts| artifacts.his_operators.clone().unwrap_or_default()),
+                    "curr_operators": inst_resp.artifacts.as_ref().map(|artifacts| artifacts.curr_operators.clone().unwrap_or_default()),
+                    "tenant_id": tenant.clone(),
+                    "app_id": app.clone(),
+                })),
+                ext_override: Some(true),
+                visit_keys: Some(SearchItemVisitKeysReq {
+                    accounts: None,
+                    apps: Some(visit_apps),
+                    tenants: Some(visit_tenants),
+                    roles: None,
+                    groups: None,
+                }),
+                kv_disable: None,
+            };
+            if let Some(_topic) = get_topic(&SPI_RPC_TOPIC) {
+                EventCenterClient { topic_code: SPI_RPC_TOPIC }.modify_item_and_name(SEARCH_MODEL_TAG, &key, &modify_req, funs, ctx).await?;
+            } else {
+                SpiSearchClient::modify_item_and_name(SEARCH_MODEL_TAG, &key, &modify_req, funs, ctx).await?;
+            }
+        } else {
+            let add_req = SearchItemAddReq {
+                tag: SEARCH_INSTANCE_TAG.to_string(),
+                kind: SEARCH_INSTANCE_TAG.to_string(),
+                key: TrimString(key),
+                title: inst_resp.code.clone(),
+                content: format!("{} {}", inst_resp.code, name),
+                owner: Some(inst_resp.create_ctx.owner.clone()),
+                own_paths,
+                create_time: Some(inst_resp.create_time),
+                update_time: inst_resp.update_time,
+                ext: Some(json!({
+                    "tag": inst_resp.tag,
+                    "current_state_id": inst_resp.current_state_id,
+                    "current_state_name": inst_resp.current_state_name,
+                    "current_state_kind": inst_resp.current_state_kind,
+                    "rel_business_obj_id": inst_resp.rel_business_obj_id,
+                    "finish_time": inst_resp.finish_time,
+                    "rel_transition": inst_resp.rel_transition.clone().unwrap_or_default().to_string(),
+                    "his_operators": inst_resp.artifacts.as_ref().map(|artifacts| artifacts.his_operators.clone().unwrap_or_default()),
+                    "curr_operators": inst_resp.artifacts.as_ref().map(|artifacts| artifacts.curr_operators.clone().unwrap_or_default()),
+                    "tenant_id": tenant.clone(),
+                    "app_id": app.clone(),
+                })),
+                visit_keys: Some(SearchItemVisitKeysReq {
+                    accounts: None,
+                    apps: Some(visit_apps),
+                    tenants: Some(visit_tenants),
+                    roles: None,
+                    groups: None,
+                }),
+                kv_disable: None,
+            };
+            if let Some(_topic) = get_topic(&SPI_RPC_TOPIC) {
+                EventCenterClient { topic_code: SPI_RPC_TOPIC }.add_item_and_name(&add_req, Some(inst_resp.code.clone()), funs, ctx).await?;
+            } else {
+                SpiSearchClient::add_item_and_name(&add_req, Some(inst_resp.code.clone()), funs, ctx).await?;
+            }
         }
         Ok(())
     }
@@ -265,43 +377,62 @@ impl FlowSearchClient {
         SpiSearchClient::search(search_req, funs, ctx).await
     }
 
-    pub async fn search_guard_account_num(guard_conf: &FlowGuardConf, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<u64>> {
+    pub async fn search_guard_accounts(guard_conf: &FlowGuardConf, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<String>> {
         if guard_conf.guard_by_spec_account_ids.is_empty() && guard_conf.guard_by_spec_org_ids.is_empty() && guard_conf.guard_by_spec_role_ids.is_empty() {
             debug!("flow search_guard_account_num result : 0");
-            return Ok(Some(0));
+            return Ok(vec![]);
         }
-        let mut search_ctx_req = SearchItemSearchCtxReq {
-            apps: Some(vec![rbum_scope_helper::get_path_item(RbumScopeLevelKind::L2.to_int(), &ctx.own_paths).unwrap_or_default()]),
-            ..Default::default()
-        };
         let mut query = SearchItemQueryReq::default();
+        let mut adv_query = vec![];
+        
         if !guard_conf.guard_by_spec_account_ids.is_empty() {
             query.keys = Some(guard_conf.guard_by_spec_account_ids.clone().into_iter().map(|account_id| account_id.into()).collect_vec());
         }
+
         if !guard_conf.guard_by_spec_org_ids.is_empty() {
-            search_ctx_req.groups = Some(guard_conf.guard_by_spec_org_ids.clone());
+            adv_query.push(AdvSearchItemQueryReq {
+                group_by_or: Some(true),
+                ext_by_or: Some(true),
+                ext: Some(guard_conf.guard_by_spec_org_ids.clone().into_iter().map(|org_id| BasicQueryCondInfo {
+                    field: "dept_id".to_string(),
+                    op: BasicQueryOpKind::In,
+                    value: org_id.to_json().unwrap_or(json!("")),
+                }).collect_vec()),
+            });
         }
         if !guard_conf.guard_by_spec_role_ids.is_empty() {
-            search_ctx_req.roles = Some(guard_conf.guard_by_spec_role_ids.clone());
+            adv_query.push(AdvSearchItemQueryReq {
+                group_by_or: Some(true),
+                ext_by_or: Some(true),
+                ext: Some(guard_conf.guard_by_spec_role_ids.clone().into_iter().map(|role_id| BasicQueryCondInfo {
+                    field: "role_id".to_string(),
+                    op: BasicQueryOpKind::In,
+                    value: role_id.to_json().unwrap_or(json!("")),
+                }).collect_vec()),
+            });
+        }
+        if !adv_query.is_empty() {
+            adv_query[0].group_by_or = Some(false);
         }
         let result = SpiSearchClient::search(
             &SearchItemSearchReq {
                 tag: "iam_account".to_string(),
-                ctx: search_ctx_req,
-                query: SearchItemQueryReq { ..Default::default() },
-                adv_query: None,
+                ctx: SearchItemSearchCtxReq::default(),
+                query,
+                adv_by_or: Some(!guard_conf.guard_by_spec_account_ids.is_empty()),
+                adv_query: Some(adv_query),
                 sort: None,
                 page: SearchItemSearchPageReq {
                     number: 1,
-                    size: 1,
-                    fetch_total: true,
+                    size: 999,
+                    fetch_total: false,
                 },
             },
             funs,
             ctx,
         )
         .await?
-        .map(|result| result.total_size);
+        .map(|result| result.records.into_iter().map(|record| record.key).collect_vec()).unwrap_or_default();
         debug!("flow search_guard_account_num result : {:?}", result);
         Ok(result)
     }

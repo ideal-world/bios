@@ -11,7 +11,7 @@ use tardis::{
 
 use super::{
     flow_model_dto::FlowModelRelTransitionExt,
-    flow_state_dto::{FlowGuardConf, FlowStateKind, FlowStateOperatorKind, FlowStateRelModelExt, FlowStateVar, FlowSysStateKind},
+    flow_state_dto::{FlowStateKind, FlowStateOperatorKind, FlowStateRelModelExt, FlowStateVar, FlowSysStateKind},
     flow_transition_dto::FlowTransitionDoubleCheckInfo,
     flow_var_dto::FlowVarInfo,
 };
@@ -99,6 +99,7 @@ pub struct FlowInstSummaryResp {
     pub create_ctx: FlowOperationContext,
     /// 创建时间
     pub create_time: DateTime<Utc>,
+    pub update_time: Option<DateTime<Utc>>,
     /// 结束上下文信息
     pub finish_ctx: Option<FlowOperationContext>,
     /// 结束时间
@@ -126,6 +127,10 @@ pub struct FlowInstDetailResp {
     ///
     /// 关联的[工作流模板](super::flow_model_dto::FlowModelDetailResp) id
     pub rel_flow_version_id: String,
+    /// Associated [flow_model](super::flow_model_dto::FlowModelDetailResp) id
+    ///
+    /// 关联的[工作流模板](super::flow_model_dto::FlowModelDetailResp) ID
+    pub rel_flow_model_id: String,
     /// Associated [flow_model](super::flow_model_dto::FlowModelDetailResp) name
     ///
     /// 关联的[工作流模板](super::flow_model_dto::FlowModelDetailResp) 名称
@@ -179,6 +184,8 @@ pub struct FlowInstDetailResp {
     pub create_ctx: FlowOperationContext,
     /// 创建时间
     pub create_time: DateTime<Utc>,
+    /// 创建时间
+    pub update_time: Option<DateTime<Utc>>,
 
     /// 结束上下文
     pub finish_ctx: Option<FlowOperationContext>,
@@ -224,7 +231,8 @@ pub struct FLowInstStateApprovalConf {
 // 流程实例中对应的数据存储
 #[derive(Serialize, Deserialize, PartialEq, Clone, Debug, Default, poem_openapi::Object, sea_orm::FromJsonQueryResult)]
 pub struct FlowInstArtifacts {
-    pub guard_conf: FlowGuardConf,                                      // 当前操作人权限
+    pub his_operators: Option<Vec<String>>,                             // 历史操作人
+    pub curr_operators: Option<Vec<String>>,                            // 当前操作人
     pub prohibit_guard_by_spec_account_ids: Option<Vec<String>>,        // 禁止操作的指定用户ID
     pub approval_result: HashMap<String, HashMap<String, Vec<String>>>, // 当前审批结果
     pub approval_total: Option<HashMap<String, usize>>,                 // 审批总数
@@ -232,14 +240,16 @@ pub struct FlowInstArtifacts {
     pub curr_vars: Option<HashMap<String, Value>>,                      // 当前参数列表
     pub prev_non_auto_state_id: Option<Vec<String>>,                    // 上一个非自动节点ID列表
     pub prev_non_auto_account_id: Option<String>,                       // 上一个节点操作人ID
+    pub state: Option<FlowInstStateKind>,                                   // 状态
 }
 
 // 流程实例中数据存储更新
 #[derive(Serialize, Deserialize, PartialEq, Clone, Debug, Default, sea_orm::FromJsonQueryResult)]
 pub struct FlowInstArtifactsModifyReq {
-    pub guard_conf: Option<FlowGuardConf>,                             // 当前操作人权限
+    pub state: Option<FlowInstStateKind>,
     pub prohibit_guard_conf_account_ids: Option<Vec<String>>,          // 禁止操作人ID列表
-    pub guard_conf_account_ids: Option<Vec<String>>,                   // 更新操作人列表
+    pub add_his_operator: Option<String>,                              // 添加历史操作人
+    pub curr_operators: Option<Vec<String>>,                           // 更新操作人列表
     pub add_approval_result: Option<(String, FlowApprovalResultKind)>, // 增加审批结果
     pub form_state_map: Option<HashMap<String, Value>>,                // 录入节点映射 key为节点ID,对应的value为节点中的录入的参数
     pub clear_form_result: Option<String>,                             // 清除节点录入信息
@@ -513,6 +523,7 @@ pub struct FlowInstSummaryResult {
 
     pub create_ctx: Value,
     pub create_time: DateTime<Utc>,
+    pub update_time: Option<DateTime<Utc>>,
 
     pub finish_ctx: Option<Value>,
     pub finish_time: Option<DateTime<Utc>>,
@@ -569,6 +580,8 @@ pub enum FlowInstQueryKind {
     Approval,
     /// 我创建的
     Create,
+    /// 历史相关
+    History,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
@@ -603,4 +616,67 @@ impl FlowInstSearchSortKind {
             FlowInstSearchSortKind::Desc => "DESC".to_string(),
         }
     }
+}
+
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Enum, Default, Eq, Hash, PartialEq, Clone)]
+pub enum FlowInstStateKind {
+    /// 录入中
+    #[default]
+    Form,
+    /// 审批中
+    Approval,
+    /// 已退回
+    Back,
+    /// 已撤销
+    Revoke,
+    /// 审批通过
+    Pass,
+    /// 审批拒绝
+    Overrule,
+}
+
+/// 工作流实例的概要信息
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
+pub struct FlowInstSearchResp {
+    pub id: String,
+
+    pub state: Option<String>,
+
+    pub code: String,
+    /// Associated [flow_model](super::flow_model_version_dto::FlowModelVersionDetailResp) id
+    ///
+    /// 关联的[工作流模板](super::flow_model_version_dto::FlowModelVersionDetailResp) id
+    pub rel_flow_version_id: String,
+    /// Associated [flow_model](super::flow_model_dto::FlowModelDetailResp) id
+    ///
+    /// 关联的[工作流模板](super::flow_model_dto::FlowModelDetailResp) 名称
+    pub rel_flow_model_id: String,
+    /// Associated [flow_model](super::flow_model_dto::FlowModelDetailResp) name
+    ///
+    /// 关联的[工作流模板](super::flow_model_dto::FlowModelDetailResp) 名称
+    pub rel_flow_model_name: String,
+    /// 关联业务ID
+    pub rel_business_obj_id: String,
+    /// 当前状态ID
+    pub current_state_id: String,
+    /// 当前状态名
+    pub current_state_name: String,
+    /// 创建上下文信息
+    pub create_ctx: FlowOperationContext,
+    /// 创建时间
+    pub create_time: DateTime<Utc>,
+    /// 结束上下文信息
+    pub finish_ctx: Option<FlowOperationContext>,
+    /// 结束时间
+    pub finish_time: Option<DateTime<Utc>>,
+    /// 是否异常终止
+    pub finish_abort: bool,
+    /// 输出信息
+    pub output_message: Option<String>,
+    /// 触发的动作
+    pub rel_transition: Option<FlowModelRelTransitionExt>,
+
+    pub own_paths: String,
+
+    pub tag: String,
 }

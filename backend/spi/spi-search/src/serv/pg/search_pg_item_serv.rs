@@ -307,7 +307,7 @@ WHERE
                 if sql_adv_query.is_empty() {
                     "".to_string()
                 } else {
-                    format!(" AND ( 1=1 {})", sql_adv_query.join(" "))
+                    format!(" {} ( 1=1 {})", if search_req.adv_by_or.unwrap_or(false) { " OR " } else { " AND " }, sql_adv_query.join(" "))
                 },
                 if order_fragments.is_empty() {
                     "".to_string()
