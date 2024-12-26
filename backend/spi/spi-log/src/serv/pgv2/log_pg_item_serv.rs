@@ -769,11 +769,11 @@ async fn push_to_eda(req: &LogItemAddV2Req, ref_fields: &Vec<String>, funs: &Tar
         // if the op is deleted or log disabled, send the delete event to stats
         if (req_clone.op.as_ref().map_or(false, |op| op.to_lowercase() == "delete")) || req_clone.disable.unwrap_or(false) {
             let stats_delete: StatsItemDeleteReq = req_clone.into();
-            topic.send_event(stats_delete.inject_context(funs, ctx).json()).map_err(mq_error).await?;
+            topic.send_event_and_wait(stats_delete.inject_context(funs, ctx).json()).map_err(mq_error).await?;
             return Ok(());
         }
         let stats_add: StatsItemAddReq = req_clone.into();
-        topic.send_event(stats_add.inject_context(funs, ctx).json()).map_err(mq_error).await?;
+        topic.send_event_and_wait(stats_add.inject_context(funs, ctx).json()).map_err(mq_error).await?;
     }
     Ok(())
 }
