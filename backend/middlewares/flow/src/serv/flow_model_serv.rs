@@ -28,7 +28,7 @@ use crate::{
     dto::{
         flow_model_dto::{
             FlowModelAddReq, FlowModelAggResp, FlowModelAssociativeOperationKind, FlowModelBindNewStateReq, FlowModelBindStateReq, FlowModelDetailResp, FlowModelFilterReq,
-            FlowModelFindRelStateResp, FlowModelKind, FlowModelModifyReq, FlowModelRelTransitionExt, FlowModelStatus, FlowModelSummaryResp, FlowModelSyncModifiedFieldReq,
+            FlowModelFindRelStateResp, FlowModelKind, FlowModelModifyReq, FlowModelRelTransitionExt, FlowModelStatus, FlowModelSummaryResp, FlowModelSyncModifiedFieldReq, FlowModelUnbindStateReq,
         },
         flow_model_version_dto::{
             FlowModelVersionAddReq, FlowModelVersionBindState, FlowModelVersionDetailResp, FlowModelVersionFilterReq, FlowModelVersionModifyReq, FlowModelVersionModifyState,
@@ -46,13 +46,9 @@ use async_trait::async_trait;
 
 use super::{
     clients::{
-        flow_log_client::{FlowLogClient, LogParamContent, LogParamTag},
+        log_client::{FlowLogClient, LogParamContent, LogParamTag},
         search_client::FlowSearchClient,
-    },
-    flow_model_version_serv::FlowModelVersionServ,
-    flow_rel_serv::{FlowRelKind, FlowRelServ},
-    flow_state_serv::FlowStateServ,
-    flow_transition_serv::FlowTransitionServ,
+    }, flow_inst_serv::FlowInstServ, flow_model_version_serv::FlowModelVersionServ, flow_rel_serv::{FlowRelKind, FlowRelServ}, flow_state_serv::FlowStateServ, flow_transition_serv::FlowTransitionServ
 };
 
 pub struct FlowModelServ;
@@ -273,6 +269,7 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
                 Some("dynamic_log_tenant_config".to_string()),
                 Some("新建".to_string()),
                 rbum_scope_helper::get_path_item(RbumScopeLevelKind::L1.to_int(), &ctx.own_paths),
+                true,
                 ctx,
                 false,
             )
@@ -433,6 +430,7 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
                 Some("dynamic_log_tenant_config".to_string()),
                 Some("编辑".to_string()),
                 rbum_scope_helper::get_path_item(RbumScopeLevelKind::L1.to_int(), &ctx.own_paths),
+                true,
                 ctx,
                 false,
             )
@@ -529,6 +527,20 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
         .await
         .into_iter()
         .collect::<TardisResult<Vec<()>>>()?;
+        let rel_version_ids = FlowModelVersionServ::find_id_items(
+            &FlowModelVersionFilterReq {
+                rel_model_ids: Some(vec![flow_model_id.to_string()]),
+                ..Default::default()
+            },
+            None,
+            None,
+            funs,
+            ctx,
+        )
+        .await?;
+        for rel_version_id in rel_version_ids {
+            FlowModelVersionServ::delete_item(&rel_version_id, funs, ctx).await?;
+        }
 
         Ok(Some(detail))
     }
@@ -555,6 +567,7 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
                 Some("dynamic_log_tenant_config".to_string()),
                 Some("删除".to_string()),
                 rbum_scope_helper::get_path_item(RbumScopeLevelKind::L1.to_int(), &ctx.own_paths),
+                true,
                 ctx,
                 false,
             )
@@ -938,6 +951,7 @@ impl FlowModelServ {
             tag: model_detail.tag,
             scope_level: model_detail.scope_level,
             disabled: model_detail.disabled,
+            main: model_detail.main,
         })
     }
 
@@ -1917,7 +1931,7 @@ impl FlowModelServ {
                     _ => FlowStateVar::default(),
                 };
                 let mut kind_conf = state.kind_conf.clone().unwrap_or_default();
-                for add_field in req.add_fields.clone() {
+                for add_field in req.add_fields.clone().unwrap_or_default() {
                     match state.state_kind {
                         FlowStateKind::Form => {
                             kind_conf.form.as_mut().map(|form| form.vars_collect.insert(add_field, add_default_conf.clone()));
@@ -1928,13 +1942,13 @@ impl FlowModelServ {
                         _ => {}
                     }
                 }
-                for delete_field in &req.delete_fields {
+                for delete_field in req.delete_fields.clone().unwrap_or_default() {
                     match state.state_kind {
                         FlowStateKind::Form => {
-                            kind_conf.form.as_mut().map(|form| form.vars_collect.remove(delete_field));
+                            kind_conf.form.as_mut().map(|form| form.vars_collect.remove(&delete_field));
                         }
                         FlowStateKind::Approval => {
-                            kind_conf.approval.as_mut().map(|form| form.vars_collect.remove(delete_field));
+                            kind_conf.approval.as_mut().map(|form| form.vars_collect.remove(&delete_field));
                         }
                         _ => {}
                     }
@@ -1952,6 +1966,42 @@ impl FlowModelServ {
             }
         }
 
+        Ok(())
+    }
+
+    pub async fn unbind_state(flow_model_id: &str, req: &FlowModelUnbindStateReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let flow_model = Self::get_item(flow_model_id, &FlowModelFilterReq::default(), funs, ctx).await?;
+
+        let mut own_paths_list = vec![];
+        if let Some(rel_template_id) = FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelTemplate, flow_model_id, None, None, funs, ctx).await?.pop().map(|rel| rel.rel_id) {
+            own_paths_list = FlowRelServ::find_to_simple_rels(&FlowRelKind::FlowAppTemplate, &rel_template_id, None, None, funs, ctx)
+                .await?
+                .into_iter()
+                .map(|rel| format!("{}/{}", rel.rel_own_paths, rel.rel_id))
+                .collect_vec();
+            if own_paths_list.contains(&ctx.own_paths) {
+                own_paths_list = vec![ctx.own_paths.clone()];
+            }
+        } else {
+            own_paths_list.push(ctx.own_paths.clone());
+        }
+        for own_paths in own_paths_list {
+            let mock_ctx = TardisContext { own_paths, ..ctx.clone() };
+            FlowInstServ::unsafe_modify_state(&flow_model.tag, Some(vec![req.state_id.clone()]), &req.new_state_id, funs, &mock_ctx).await?;
+        }
+        Self::modify_model(
+            flow_model_id,
+            &mut FlowModelModifyReq {
+                modify_version: Some(FlowModelVersionModifyReq {
+                    unbind_states: Some(vec![req.state_id.clone()]),
+                    ..Default::default()
+                }),
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?;
         Ok(())
     }
 }

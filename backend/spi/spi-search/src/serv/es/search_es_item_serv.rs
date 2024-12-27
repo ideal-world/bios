@@ -106,6 +106,7 @@ pub async fn add(add_req: &mut SearchItemAddReq, funs: &TardisFunsInst, ctx: &Ta
                 size: 1,
                 fetch_total: false,
             },
+            adv_by_or: None,
             adv_query: None,
         },
         funs,
@@ -151,6 +152,7 @@ pub async fn modify(tag: &str, key: &str, modify_req: &mut SearchItemModifyReq, 
             size: 1,
             fetch_total: false,
         },
+        adv_by_or: None,
         adv_query: None,
     })?;
     let mut search_result = client.raw_search(&index, &q, Some(1), Some(0), None).await?;
@@ -239,6 +241,7 @@ pub async fn delete(tag: &str, key: &str, funs: &TardisFunsInst, _ctx: &TardisCo
             size: 1,
             fetch_total: false,
         },
+        adv_by_or: None,
         adv_query: None,
     })?;
     client.delete_by_query(&index, &q).await?;
@@ -272,6 +275,7 @@ pub async fn delete_by_ownership(tag: &str, onw_paths: &str, funs: &TardisFunsIn
             size: 1,
             fetch_total: false,
         },
+        adv_by_or: None,
         adv_query: None,
     })?;
     client.delete_by_query(&index, &q).await?;

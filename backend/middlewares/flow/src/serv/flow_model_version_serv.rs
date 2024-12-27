@@ -412,7 +412,12 @@ impl FlowModelVersionServ {
                 "409-flow-state-already-used",
             ));
         }
-
+        // 获取指向当前节点的动作
+        let to_trans = FlowTransitionServ::find_transitions_by_state_id(flow_version_id, Some(vec![state_id.to_string()]), None, funs, ctx).await?;
+        FlowTransitionServ::delete_transitions(flow_version_id, &to_trans.into_iter().map(|tran| tran.id).collect_vec(), funs, ctx).await?;
+        // 获取当前节点指向的动作
+        let from_trans = FlowTransitionServ::find_transitions_by_state_id(flow_version_id, None, Some(vec![state_id.to_string()]), funs, ctx).await?;
+        FlowTransitionServ::delete_transitions(flow_version_id, &from_trans.into_iter().map(|tran| tran.id).collect_vec(), funs, ctx).await?;
         FlowRelServ::delete_simple_rel(&FlowRelKind::FlowModelState, flow_version_id, state_id, funs, ctx).await
     }
 
