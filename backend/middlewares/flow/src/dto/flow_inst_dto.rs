@@ -25,6 +25,10 @@ pub struct FlowInstStartReq {
     pub create_vars: Option<HashMap<String, Value>>,
     /// 触发的动作ID
     pub transition_id: Option<String>,
+    /// 创建时修改的参数列表
+    pub vars: Option<HashMap<String, Value>>,
+    /// 日志文本
+    pub log_text: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]

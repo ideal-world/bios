@@ -232,6 +232,8 @@ impl FlowCiInstApi {
                     tag: add_req.0.tag.clone(),
                     create_vars: add_req.0.create_vars.clone(),
                     transition_id: None,
+                    vars: None,
+                    log_text: None,
                 },
                 add_req.0.current_state_name.clone(),
                 &funs,

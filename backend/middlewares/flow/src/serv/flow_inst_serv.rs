@@ -8,7 +8,7 @@ use bios_basic::{
     dto::BasicQueryCondInfo,
     rbum::{
         dto::rbum_filer_dto::RbumBasicFilterReq, serv::{
-            rbum_crud_serv::{ID_FIELD, NAME_FIELD, REL_DOMAIN_ID_FIELD, REL_KIND_ID_FIELD},
+            rbum_crud_serv::{CREATE_TIME_FIELD, ID_FIELD, NAME_FIELD, REL_DOMAIN_ID_FIELD, REL_KIND_ID_FIELD, UPDATE_TIME_FIELD},
             rbum_item_serv::{RbumItemCrudOperation, RBUM_ITEM_TABLE},
         }
     },
@@ -20,9 +20,7 @@ use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
     chrono::{DateTime, Datelike, Utc},
     db::sea_orm::{
-        self,
-        sea_query::{Alias, Cond, Expr, Query, SelectStatement},
-        JoinType, Set,
+        self, sea_query::{Alias, Cond, Expr, Query, SelectStatement}, JoinType, Order, Set
     },
     futures_util::future::join_all,
     log::{debug, error},
@@ -167,6 +165,7 @@ impl FlowInstServ {
             &inst_id,
             &FlowInstArtifactsModifyReq {
                 curr_vars: start_req.create_vars.clone(),
+                form_state_map: Some(start_req.vars.clone().unwrap_or_default()),
                 ..Default::default()
             },
             funs,
@@ -344,13 +343,13 @@ impl FlowInstServ {
     }
 
     pub async fn find_detail_items(filter: &FlowInstFilterReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<FlowInstDetailResp>> {
-        Self::find_detail(Self::find_ids(filter, funs, ctx).await?, funs, ctx).await
+        Self::find_detail(Self::find_ids(filter, funs, ctx).await?, None, None, funs, ctx).await
     }
 
-    pub async fn paginate_detail_items(filter: &FlowInstFilterReq, page_number: u32, page_size: u32, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<TardisPage<FlowInstDetailResp>> {
+    pub async fn paginate_detail_items(filter: &FlowInstFilterReq, page_number: u32, page_size: u32, desc_by_create: Option<bool>, desc_by_update: Option<bool>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<TardisPage<FlowInstDetailResp>> {
         let inst_ids = Self::find_ids(filter, funs, ctx).await?;
         let total_size = inst_ids.len() as usize;
-        let records = Self::find_detail(inst_ids[(((page_number -1) * page_size) as usize).min(total_size)..((page_number * page_size) as usize).min(total_size)].to_vec(), funs, ctx).await?;
+        let records = Self::find_detail(inst_ids[(((page_number -1) * page_size) as usize).min(total_size)..((page_number * page_size) as usize).min(total_size)].to_vec(), desc_by_create, desc_by_update, funs, ctx).await?;
         Ok(TardisPage {
             page_size: page_size as u64,
             page_number: page_number as u64,
@@ -422,7 +421,7 @@ impl FlowInstServ {
     }
 
     pub async fn get(flow_inst_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<FlowInstDetailResp> {
-        let mut flow_insts = Self::find_detail(vec![flow_inst_id.to_string()], funs, ctx).await?;
+        let mut flow_insts = Self::find_detail(vec![flow_inst_id.to_string()], None, None, funs, ctx).await?;
         if flow_insts.len() == 1 {
             Ok(flow_insts.pop().unwrap())
         } else {
@@ -430,7 +429,7 @@ impl FlowInstServ {
         }
     }
 
-    pub async fn find_detail(flow_inst_ids: Vec<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<FlowInstDetailResp>> {
+    pub async fn find_detail(flow_inst_ids: Vec<String>, desc_sort_by_create: Option<bool>, desc_sort_by_update:Option<bool>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<FlowInstDetailResp>> {
         #[derive(sea_orm::FromQueryResult)]
         pub struct FlowInstDetailResult {
             pub id: String,
@@ -575,7 +574,12 @@ impl FlowInstServ {
             )
             .and_where(Expr::col((flow_inst::Entity, flow_inst::Column::Id)).is_in(flow_inst_ids))
             .and_where(Expr::col((flow_inst::Entity, flow_inst::Column::OwnPaths)).like(format!("{}%", ctx.own_paths)));
-
+        if let Some(sort) = desc_sort_by_create {
+            query.order_by((flow_inst::Entity, CREATE_TIME_FIELD.clone()), if sort { Order::Desc } else { Order::Asc });
+        }
+        if let Some(sort) = desc_sort_by_update {
+            query.order_by((flow_inst::Entity, UPDATE_TIME_FIELD.clone()), if sort { Order::Desc } else { Order::Asc });
+        }
         let flow_insts = funs.db().find_dtos::<FlowInstDetailResult>(&query).await?;
         let result = flow_insts
             .into_iter()
@@ -717,7 +721,7 @@ impl FlowInstServ {
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<Vec<FlowInstFindStateAndTransitionsResp>> {
-        let flow_insts = Self::find_detail(find_req.iter().map(|req| req.flow_inst_id.to_string()).collect_vec(), funs, ctx).await?;
+        let flow_insts = Self::find_detail(find_req.iter().map(|req| req.flow_inst_id.to_string()).collect_vec(), None, None, funs, ctx).await?;
         if flow_insts.len() != find_req.len() {
             return Err(funs.err().not_found("flow_inst", "find_state_and_next_transitions", "some flow instances not found", "404-flow-inst-not-found"));
         }
@@ -1927,7 +1931,10 @@ impl FlowInstServ {
             inst_artifacts.approval_total = Some(approval_total);
         }
         if let Some(form_state_vars) = modify_artifacts.form_state_map.clone() {
-            inst_artifacts.form_state_map.insert(inst.current_state_id.clone(), form_state_vars.clone());
+            let vars_collect = inst_artifacts.form_state_map.entry(inst.current_state_id.clone()).or_default();
+            for (key, value) in form_state_vars {
+                *vars_collect.entry(key.clone()).or_insert(json!({})) = value.clone();
+            }
         }
         if let Some(state_id) = &modify_artifacts.clear_form_result {
             inst_artifacts.form_state_map.remove(state_id);
@@ -2167,6 +2174,7 @@ impl FlowInstServ {
                     &FlowInstArtifactsModifyReq {
                         curr_operators: Some(curr_operators.into_iter().filter(|account_id| *account_id != ctx.owner.clone()).collect_vec()),
                         add_approval_result: Some((ctx.owner.clone(), FlowApprovalResultKind::Pass)),
+                        form_state_map: Some(operate_req.vars.clone().unwrap_or_default()),
                         ..Default::default()
                     },
                     funs,
@@ -2711,16 +2719,11 @@ impl FlowInstServ {
     pub fn get_modify_vars(flow_inst_detail: &FlowInstDetailResp) -> HashMap<String, Value> {
         let mut vars_collect = HashMap::new();
         if let Some(artifacts) = &flow_inst_detail.artifacts {
-            vars_collect = artifacts.curr_vars.clone().unwrap_or_default();
-            let mut state_ids = vec![];
             for tran in flow_inst_detail.transitions.clone().unwrap_or_default() {
-                let current_state_id = tran.from_state_id.clone().unwrap_or_default();
-                if !state_ids.contains(&current_state_id) {
-                    state_ids.push(current_state_id.clone());
-                    if let Some(form_state_vars) = artifacts.form_state_map.get(&current_state_id) {
-                        for (key, value) in form_state_vars {
-                            *vars_collect.entry(key.clone()).or_insert(json!({})) = value.clone();
-                        }
+                let from_state_id = tran.from_state_id.clone().unwrap_or_default();
+                if let Some(form_state_vars) = artifacts.form_state_map.get(&from_state_id) {
+                    for (key, value) in form_state_vars {
+                        *vars_collect.entry(key.clone()).or_insert(json!({})) = value.clone();
                     }
                 }
             }

@@ -49,6 +49,7 @@ impl FlowLogServ{
         } else {
             log_content.old_content = create_vars.get("content").map_or("".to_string(), |val| val.as_str().unwrap_or("").to_string());
             log_content.new_content = start_req.create_vars.clone().unwrap_or_default().get("content").map(|content| content.as_str().unwrap_or("").to_string()).unwrap_or_default();
+            log_content.detail = start_req.log_text.clone();
             log_ext.include_detail = Some(true);
         }
         FlowLogClient::add_ctx_task(
@@ -105,6 +106,7 @@ impl FlowLogServ{
         } else {
             log_content.old_content = create_vars.get("content").map_or("".to_string(), |val| val.as_str().unwrap_or("").to_string());
             log_content.new_content = start_req.create_vars.clone().unwrap_or_default().get("content").map(|content| content.as_str().unwrap_or("").to_string()).unwrap_or_default();
+            log_content.detail = start_req.log_text.clone();
             log_ext.include_detail = Some(true);
         }
         FlowLogClient::add_ctx_task(

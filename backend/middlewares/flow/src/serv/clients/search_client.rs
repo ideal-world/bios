@@ -37,7 +37,7 @@ use crate::{
 };
 
 const SEARCH_MODEL_TAG: &str = "flow_model";
-const SEARCH_INSTANCE_TAG: &str = "flow_inst";
+const SEARCH_INSTANCE_TAG: &str = "flow_approve_inst";
 
 pub struct FlowSearchClient;
 

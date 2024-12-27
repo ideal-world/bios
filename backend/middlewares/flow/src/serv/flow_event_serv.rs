@@ -511,7 +511,7 @@ impl FlowEventServ {
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<()> {
-        let insts = FlowInstServ::find_detail(rel_inst_ids, funs, ctx).await?;
+        let insts = FlowInstServ::find_detail(rel_inst_ids, None, None, funs, ctx).await?;
         for rel_inst in insts {
             // find transition
             let flow_version = FlowModelVersionServ::get_item(

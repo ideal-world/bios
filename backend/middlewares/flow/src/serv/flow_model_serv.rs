@@ -184,6 +184,7 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
                                 sys_state: FlowSysStateKind::Start,
                                 state_kind: Some(FlowStateKind::Start),
                                 tags: Some(vec![add_req.tag.clone().unwrap_or_default()]),
+                                main: Some(false),
                                 ..Default::default()
                             },
                             ext: FlowStateRelModelExt { sort: 0, show_btns: None },
@@ -206,6 +207,7 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
                                 sys_state: FlowSysStateKind::Finish,
                                 state_kind: Some(FlowStateKind::Finish),
                                 tags: Some(vec![add_req.tag.clone().unwrap_or_default()]),
+                                main: Some(false),
                                 ..Default::default()
                             },
                             ext: FlowStateRelModelExt { sort: 1, show_btns: None },
@@ -890,6 +892,7 @@ impl FlowModelServ {
                     scope_level: state.scope_level,
                     disabled: state.disabled,
                     is_init: model_detail.init_state_id == state.id,
+                    main: state.main,
                     transitions: model_detail
                         .transitions()
                         .into_iter()
@@ -1905,25 +1908,48 @@ impl FlowModelServ {
     }
 
     pub async fn sync_modified_field(req: &FlowModelSyncModifiedFieldReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        let models = Self::find_detail_items(
-            &FlowModelFilterReq {
-                basic: RbumBasicFilterReq {
-                    enabled: Some(true),
+        let model_ids = if Self::get_app_id_by_ctx(ctx).is_some() {
+            Self::find_id_items(
+                &FlowModelFilterReq {
+                    basic: RbumBasicFilterReq {
+                        enabled: Some(true),
+                        ..Default::default()
+                    },
+                    main: Some(false),
+                    tags: Some(vec![req.tag.clone()]),
                     ..Default::default()
                 },
-                main: Some(false),
-                rel_template_id: req.rel_template_id.clone(),
-                tags: Some(vec![req.tag.clone()]),
-                ..Default::default()
-            },
-            None,
-            None,
-            funs,
-            ctx,
-        )
-        .await?;
-        for model in models {
-            let states = model.states();
+                None,
+                None,
+                funs,
+                ctx,
+            )
+            .await?
+        } else {
+            Self::find_id_items(
+                &FlowModelFilterReq {
+                    basic: RbumBasicFilterReq {
+                        enabled: Some(true),
+                        ..Default::default()
+                    },
+                    main: Some(false),
+                    rel_template_id: req.rel_template_id.clone(),
+                    tags: Some(vec![req.tag.clone()]),
+                    ..Default::default()
+                },
+                None,
+                None,
+                funs,
+                ctx,
+            )
+            .await?
+        };
+        let model_versions = FlowModelVersionServ::find_detail_items(&FlowModelVersionFilterReq {
+            rel_model_ids: Some(model_ids),
+            ..Default::default()
+        }, None, None, funs, ctx).await?;
+        for model_version in model_versions {
+            let states = model_version.states();
             for state in states {
                 let add_default_conf = match state.state_kind {
                     FlowStateKind::Form => state.kind_conf.clone().unwrap_or_default().form.unwrap_or_default().add_default_field.unwrap_or_default(),

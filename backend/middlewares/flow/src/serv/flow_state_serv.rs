@@ -248,6 +248,7 @@ impl RbumItemCrudOperation<flow_state::ActiveModel, FlowStateAddReq, FlowStateMo
         query.column((flow_state::Entity, flow_state::Column::Template));
         query.column((flow_state::Entity, flow_state::Column::RelStateId));
         query.column((flow_state::Entity, flow_state::Column::Tags));
+        query.column((flow_state::Entity, flow_state::Column::Main));
 
         if let Some(sys_state) = &filter.sys_state {
             query.and_where(Expr::col(flow_state::Column::SysState).eq(sys_state.clone()));
@@ -265,6 +266,9 @@ impl RbumItemCrudOperation<flow_state::ActiveModel, FlowStateAddReq, FlowStateMo
         }
         if let Some(state_kind) = &filter.state_kind {
             query.and_where(Expr::col(flow_state::Column::StateKind).eq(state_kind.clone()));
+        }
+        if let Some(main) = filter.main {
+            query.and_where(Expr::col(flow_state::Column::Main).eq(main));
         }
         if let Some(template) = filter.template {
             query.and_where(Expr::col(flow_state::Column::Template).eq(template));
@@ -305,6 +309,7 @@ impl FlowStateServ {
                 tags: Some(vec![tag.to_string()]),
                 scope_level: Some(RbumScopeLevelKind::Root),
                 disabled: None,
+                main: Some(true),
             },
             funs,
             ctx,
@@ -377,7 +382,7 @@ impl FlowStateServ {
     pub async fn count_group_by_state(req: &FlowStateCountGroupByStateReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<FlowStateCountGroupByStateResp>> {
         let states = FlowModelServ::find_rel_states(vec![&req.tag], None, funs, ctx).await?;
         let mut result = HashMap::new();
-        let insts = FlowInstServ::find_detail(req.inst_ids.clone(), funs, ctx).await?;
+        let insts = FlowInstServ::find_detail(req.inst_ids.clone(), None, None, funs, ctx).await?;
         for state in states {
             let mut inst_ids = insts.iter().filter(|inst| inst.current_state_id == state.id).map(|inst| inst.id.clone()).collect_vec();
             result
@@ -456,6 +461,7 @@ impl FlowStateServ {
             tags: state.tags,
             scope_level: state.scope_level,
             disabled: state.disabled,
+            main: state.main,
             ext: Self::get_rel_state_ext(flow_version_id, &state.id, funs, ctx).await?,
             state_kind: state.state_kind,
             kind_conf,
