@@ -307,7 +307,11 @@ WHERE
                 if sql_adv_query.is_empty() {
                     "".to_string()
                 } else {
-                    format!(" {} ( 1=1 {})", if search_req.adv_by_or.unwrap_or(false) { " OR " } else { " AND " }, sql_adv_query.join(" "))
+                    format!(
+                        " {} ( 1=1 {})",
+                        if search_req.adv_by_or.unwrap_or(false) { " OR " } else { " AND " },
+                        sql_adv_query.join(" ")
+                    )
                 },
                 if order_fragments.is_empty() {
                     "".to_string()
@@ -694,6 +698,13 @@ fn package_ext(
                         "({}.ext ->> '{}' is null or {}.ext ->> '{}' = '' or {}.ext ->> '{}' = '[]')",
                         table_alias_name, ext_item.field, table_alias_name, ext_item.field, table_alias_name, ext_item.field
                     ));
+                } else if ext_item.op == BasicQueryOpKind::Len {
+                    if let Some(first_value) = value.pop() {
+                      sql_and_where.push(format!("(length(ext->>'{}') = ${})", ext_item.field, sql_vals.len() + 1));
+                        sql_vals.push(first_value);
+                    } else {
+                        return err_not_found(ext_item);
+                    };
                 } else {
                     if value.len() > 1 {
                         return err_not_found(&ext_item.clone().into());
