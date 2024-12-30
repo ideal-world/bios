@@ -43,7 +43,7 @@ pub struct RbumRelAttrAggAddReq {
     /// Relationship attribute value
     ///
     /// 关联属性值
-    #[oai(validator(min_length = "0", max_length = "2000"))]
+    // #[oai(validator(min_length = "0", max_length = "2000"))]
     pub value: String,
     /// Relationship attribute name
     ///
