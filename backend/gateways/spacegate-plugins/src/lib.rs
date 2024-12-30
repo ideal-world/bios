@@ -8,7 +8,7 @@ mod marker;
 mod plugin;
 
 pub const PACKAGE_NAME: &str = "spacegate_lib";
-use plugin::op_redis_publisher;
+use plugin::{notify, op_redis_publisher};
 use spacegate_shell::plugin::PluginRepository;
 pub fn register_lib_plugins(repo: &PluginRepository) {
     repo.register::<ip_time::IpTimePlugin>();
@@ -18,4 +18,5 @@ pub fn register_lib_plugins(repo: &PluginRepository) {
     repo.register::<audit_log::AuditLogPlugin>();
     repo.register::<auth::AuthPlugin>();
     repo.register::<op_redis_publisher::RedisPublisherPlugin>();
+    repo.register::<notify::NotifyPlugin>();
 }
