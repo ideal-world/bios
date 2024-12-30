@@ -3,9 +3,7 @@ use asteroid_mq::{
     protocol::{node::raft::proposal::MessageStateUpdate, topic::durable_message::DurableMessageQuery},
 };
 use tardis::{
-    basic::{error::TardisError, result::TardisResult},
-    db::sea_orm::{ActiveModelTrait, ColumnTrait, DbErr, EntityTrait, IntoActiveModel, QueryFilter, QuerySelect, Set, Unchanged},
-    TardisFunsInst,
+    basic::{error::TardisError, result::TardisResult}, chrono::Utc, db::sea_orm::{ActiveModelTrait, ColumnTrait, DbErr, EntityTrait, IntoActiveModel, QueryFilter, QuerySelect, Set, Unchanged}, TardisFunsInst
 };
 
 use crate::domain::event_message::{ActiveModel, Column, Entity, Model};
@@ -39,14 +37,21 @@ impl EventMessageServ {
     }
     pub async fn batch_retrieve(&self, topic: TopicCode, query: DurableMessageQuery, funs: &TardisFunsInst) -> TardisResult<Vec<DurableMessage>> {
         let DurableMessageQuery { limit, offset, .. } = query;
-        let select = Entity::find().filter(Column::Archived.eq(false)).filter(Column::Topic.eq(topic.to_string())).limit(Some(limit as u64)).offset(Some(offset as u64));
+        let select = Entity::find()
+            .filter(Column::Archived.eq(false))
+            .filter(Column::Time.gte(Utc::now()))
+            .filter(Column::Topic.eq(topic.to_string()))
+            .limit(Some(limit as u64))
+            .offset(Some(offset as u64));
         let conn = funs.reldb().conn();
         let raw_conn = conn.raw_conn();
         let models = select.all(raw_conn).await?;
         models.into_iter().map(|model| model.try_into_durable_message()).collect::<TardisResult<Vec<DurableMessage>>>()
     }
     pub async fn retrieve(&self, topic: TopicCode, message_id: MessageId, funs: &TardisFunsInst) -> TardisResult<DurableMessage> {
-        let select = Entity::find().filter(Column::Archived.eq(false)).filter(Column::Topic.eq(topic.to_string())).filter(Column::MessageId.eq(message_id.to_base64()));
+        let select = Entity::find().filter(Column::Archived.eq(false))
+        .filter(Column::Time.gte(Utc::now()))
+        .filter(Column::Topic.eq(topic.to_string())).filter(Column::MessageId.eq(message_id.to_base64()));
         let conn = funs.reldb().conn();
         let raw_conn = conn.raw_conn();
         let model = select.one(raw_conn).await?;
