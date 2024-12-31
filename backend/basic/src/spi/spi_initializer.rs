@@ -479,7 +479,7 @@ EXECUTE PROCEDURE TARDIS_AUTO_UPDATE_TIME_{}();"###,
                         &s[..max_size.min(s.len())]
                     }
                     let index_name = format!(
-                        "idx_{schema_name}{tag}_{table_flag}_{field_name_or_fun}_{idx}",
+                        "idx_{schema_name}{tag}_{table_flag}_{field_name}_{idx}",
                         schema_name = truncate_str(schema_name, 18),
                         tag = truncate_str(tag, 11),
                         table_flag = truncate_str(table_flag, 25),
