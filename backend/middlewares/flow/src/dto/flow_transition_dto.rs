@@ -1,4 +1,3 @@
-use bios_basic::dto::BasicQueryCondInfo;
 use serde::{Deserialize, Serialize};
 use strum::Display;
 use tardis::{
@@ -9,7 +8,7 @@ use tardis::{
     TardisFuns,
 };
 
-use super::flow_var_dto::FlowVarInfo;
+use super::{flow_cond_dto::BasicQueryCondInfo, flow_var_dto::FlowVarInfo};
 
 /// 添加动作
 #[derive(Serialize, Deserialize, Debug, Default, Clone, poem_openapi::Object)]
@@ -666,10 +665,8 @@ impl FlowTransitionFrontActionInfoRelevanceRelation {
                     return false;
                 }
                 left_value >= interval[0] && left_value <= interval[1]
-            },
-            FlowTransitionFrontActionInfoRelevanceRelation::IsNotNull => {
-                !left_value.is_empty()
-            },
+            }
+            FlowTransitionFrontActionInfoRelevanceRelation::IsNotNull => !left_value.as_str().to_string().is_empty(),
         }
     }
 }
@@ -687,6 +684,9 @@ pub enum FlowTransitionFrontActionRightValue {
     /// 当前时间
     #[oai(rename = "real_time")]
     RealTime,
+    /// 无
+    #[oai(rename = "none")]
+    None,
 }
 
 /// 工作流模型过滤器

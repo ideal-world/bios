@@ -78,4 +78,9 @@ pub struct Model {
 
     #[fill_ctx(fill = "own_paths")]
     pub own_paths: String,
+
+    /// Whether it is a mainstream process / 是否是主流程
+    ///
+    #[index]
+    pub main: bool,
 }

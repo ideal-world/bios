@@ -84,6 +84,7 @@ impl FlowCcStateApi {
         state_kind: Query<Option<FlowStateKind>>,
         enabled: Query<Option<bool>>,
         template: Query<Option<bool>>,
+        main: Query<Option<bool>>,
         with_sub: Query<Option<bool>>,
         is_global: Query<Option<bool>>,
         page_number: Query<u32>,
@@ -119,6 +120,7 @@ impl FlowCcStateApi {
                     ..Default::default()
                 },
                 tag: tag.0,
+                main: main.0,
                 sys_state: sys_state.0,
                 state_kind: state_kind.0,
                 template: template.0,

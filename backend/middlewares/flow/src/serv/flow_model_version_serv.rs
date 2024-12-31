@@ -255,6 +255,22 @@ impl
 
         Ok(flow_version)
     }
+
+    async fn find_detail_items(
+        filter: &FlowModelVersionFilterReq,
+        desc_sort_by_create: Option<bool>,
+        desc_sort_by_update: Option<bool>,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<Vec<FlowModelVersionDetailResp>> {
+        let mut flow_model_versions = Self::do_find_detail_items(filter, desc_sort_by_create, desc_sort_by_update, funs, ctx).await?;
+        for flow_model_version in &mut flow_model_versions {
+            let current_version = Self::get_item(&flow_model_version.id, &FlowModelVersionFilterReq { ..Default::default() }, funs, ctx).await?;
+            flow_model_version.states = Some(current_version.states.unwrap_or_default());
+        }
+
+        Ok(flow_model_versions)
+    }
 }
 
 impl FlowModelVersionServ {
@@ -690,6 +706,7 @@ impl FlowModelVersionServ {
                                     tags: Some(state.tags.clone().split(',').map(|id| id.to_string()).collect_vec()),
                                     scope_level: Some(state.scope_level.clone()),
                                     disabled: Some(state.disabled),
+                                    main: Some(state.main),
                                     ..Default::default()
                                 },
                                 ext: state.ext,

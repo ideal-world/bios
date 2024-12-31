@@ -320,7 +320,7 @@ pub async fn test_fact_conf(client: &mut TestHttpClient) -> TardisResult<()> {
     let _: Void = client.put("/ci/conf/fact/req/online", &Void {}).await;
 
     // can't modify fact after online error
-    // 
+    //
     // assert_eq!(
     //     client
     //         .patch_resp::<Value, Void>(
