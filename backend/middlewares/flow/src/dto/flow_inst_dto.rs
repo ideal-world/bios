@@ -25,6 +25,10 @@ pub struct FlowInstStartReq {
     pub create_vars: Option<HashMap<String, Value>>,
     /// 触发的动作ID
     pub transition_id: Option<String>,
+    /// 创建时修改的参数列表
+    pub vars: Option<HashMap<String, Value>>,
+    /// 日志文本
+    pub log_text: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
@@ -240,7 +244,7 @@ pub struct FlowInstArtifacts {
     pub curr_vars: Option<HashMap<String, Value>>,                      // 当前参数列表
     pub prev_non_auto_state_id: Option<Vec<String>>,                    // 上一个非自动节点ID列表
     pub prev_non_auto_account_id: Option<String>,                       // 上一个节点操作人ID
-    pub state: Option<FlowInstStateKind>,                                   // 状态
+    pub state: Option<FlowInstStateKind>,                               // 状态
 }
 
 // 流程实例中数据存储更新

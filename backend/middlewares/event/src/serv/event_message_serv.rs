@@ -3,7 +3,10 @@ use asteroid_mq::{
     protocol::{node::raft::proposal::MessageStateUpdate, topic::durable_message::DurableMessageQuery},
 };
 use tardis::{
-    basic::{error::TardisError, result::TardisResult}, chrono::Utc, db::sea_orm::{ActiveModelTrait, ColumnTrait, DbErr, EntityTrait, IntoActiveModel, QueryFilter, QuerySelect, Set, Unchanged}, TardisFunsInst
+    basic::{error::TardisError, result::TardisResult},
+    chrono::Utc,
+    db::sea_orm::{ActiveModelTrait, ColumnTrait, DbErr, EntityTrait, IntoActiveModel, QueryFilter, QuerySelect, Set, Unchanged},
+    TardisFunsInst,
 };
 
 use crate::domain::event_message::{ActiveModel, Column, Entity, Model};
@@ -49,9 +52,11 @@ impl EventMessageServ {
         models.into_iter().map(|model| model.try_into_durable_message()).collect::<TardisResult<Vec<DurableMessage>>>()
     }
     pub async fn retrieve(&self, topic: TopicCode, message_id: MessageId, funs: &TardisFunsInst) -> TardisResult<DurableMessage> {
-        let select = Entity::find().filter(Column::Archived.eq(false))
-        .filter(Column::Time.gte(Utc::now()))
-        .filter(Column::Topic.eq(topic.to_string())).filter(Column::MessageId.eq(message_id.to_base64()));
+        let select = Entity::find()
+            .filter(Column::Archived.eq(false))
+            .filter(Column::Time.gte(Utc::now()))
+            .filter(Column::Topic.eq(topic.to_string()))
+            .filter(Column::MessageId.eq(message_id.to_base64()));
         let conn = funs.reldb().conn();
         let raw_conn = conn.raw_conn();
         let model = select.one(raw_conn).await?;

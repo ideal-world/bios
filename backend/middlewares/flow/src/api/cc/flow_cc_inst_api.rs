@@ -10,7 +10,9 @@ use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 
 use crate::dto::flow_external_dto::FlowExternalCallbackOp;
 use crate::dto::flow_inst_dto::{
-    FlowInstAbortReq, FlowInstCommentReq, FlowInstDetailResp, FlowInstFilterReq, FlowInstFindNextTransitionResp, FlowInstFindNextTransitionsReq, FlowInstFindStateAndTransitionsReq, FlowInstFindStateAndTransitionsResp, FlowInstModifyAssignedReq, FlowInstModifyCurrentVarsReq, FlowInstOperateReq, FlowInstSearchReq, FlowInstSearchResp, FlowInstStartReq, FlowInstSummaryResp, FlowInstTransferReq, FlowInstTransferResp
+    FlowInstAbortReq, FlowInstCommentReq, FlowInstDetailResp, FlowInstFilterReq, FlowInstFindNextTransitionResp, FlowInstFindNextTransitionsReq,
+    FlowInstFindStateAndTransitionsReq, FlowInstFindStateAndTransitionsResp, FlowInstModifyAssignedReq, FlowInstModifyCurrentVarsReq, FlowInstOperateReq, FlowInstSearchReq,
+    FlowInstSearchResp, FlowInstStartReq, FlowInstSummaryResp, FlowInstTransferReq, FlowInstTransferResp,
 };
 use crate::flow_constants;
 use crate::helper::loop_check_helper;
@@ -113,6 +115,7 @@ impl FlowCcInstApi {
     ///
     /// 获取实例列表
     #[oai(path = "/details", method = "get")]
+    #[allow(clippy::too_many_arguments)]
     async fn paginate_detail_items(
         &self,
         flow_model_id: Query<Option<String>>,
@@ -124,6 +127,8 @@ impl FlowCcInstApi {
         with_sub: Query<Option<bool>>,
         page_number: Query<u32>,
         page_size: Query<u32>,
+        desc_by_create: Query<Option<bool>>,
+        desc_by_update: Query<Option<bool>>,
         ctx: TardisContextExtractor,
         _request: &Request,
     ) -> TardisApiResult<TardisPage<FlowInstDetailResp>> {
@@ -141,6 +146,8 @@ impl FlowCcInstApi {
             },
             page_number.0,
             page_size.0,
+            desc_by_create.0,
+            desc_by_update.0,
             &funs,
             &ctx.0,
         )

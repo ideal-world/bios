@@ -161,6 +161,7 @@ impl FlowCcModelApi {
             &FlowModelFilterReq {
                 basic: RbumBasicFilterReq {
                     ids: flow_model_ids.0.map(|ids| ids.split(',').map(|id| id.to_string()).collect::<Vec<String>>()),
+                    own_paths: if rel_template_id.0.is_some() { Some("".to_string()) } else { None },
                     name: name.0,
                     with_sub_own_paths: with_sub.0.unwrap_or(false),
                     enabled: enabled.0,
