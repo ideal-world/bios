@@ -5,12 +5,12 @@ use std::{
 
 use async_recursion::async_recursion;
 use bios_basic::{
-    dto::BasicQueryCondInfo,
     rbum::{
-        dto::rbum_filer_dto::RbumBasicFilterReq, serv::{
+        dto::rbum_filer_dto::RbumBasicFilterReq,
+        serv::{
             rbum_crud_serv::{CREATE_TIME_FIELD, ID_FIELD, NAME_FIELD, REL_DOMAIN_ID_FIELD, REL_KIND_ID_FIELD, UPDATE_TIME_FIELD},
             rbum_item_serv::{RbumItemCrudOperation, RBUM_ITEM_TABLE},
-        }
+        },
     },
 };
 use bios_sdk_invoke::dto::search_item_dto::{SearchItemQueryReq, SearchItemSearchCtxReq, SearchItemSearchPageReq, SearchItemSearchReq};
@@ -20,7 +20,9 @@ use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
     chrono::{DateTime, Datelike, Utc},
     db::sea_orm::{
-        self, sea_query::{Alias, Cond, Expr, Query, SelectStatement}, JoinType, Order, Set
+        self,
+        sea_query::{Alias, Cond, Expr, Query, SelectStatement},
+        JoinType, Order, Set,
     },
     futures_util::future::join_all,
     log::error,
@@ -32,18 +34,16 @@ use tardis::{
 use crate::{
     domain::{flow_inst, flow_model_version},
     dto::{
-        flow_external_dto::{FlowExternalCallbackOp, FlowExternalParams},
-        flow_inst_dto::{
-            FLowInstStateApprovalConf, FLowInstStateConf, FLowInstStateFormConf, FlowApprovalResultKind, FlowInstAbortReq, FlowInstArtifacts, FlowInstArtifactsModifyReq, FlowInstBatchBindReq, FlowInstBatchBindResp, FlowInstCommentInfo, FlowInstCommentReq, FlowInstDetailResp, FlowInstFilterReq, FlowInstFindNextTransitionResp, FlowInstFindNextTransitionsReq, FlowInstFindStateAndTransitionsReq, FlowInstFindStateAndTransitionsResp, FlowInstOperateReq, FlowInstQueryKind, FlowInstSearchPageReq, FlowInstSearchReq, FlowInstSearchResp, FlowInstSearchSortReq, FlowInstStartReq, FlowInstStateKind, FlowInstSummaryResp, FlowInstSummaryResult, FlowInstTransferReq, FlowInstTransferResp, FlowInstTransitionInfo, FlowOperationContext
-        },
-        flow_model_dto::{FlowModelAggResp, FlowModelRelTransitionExt},
-        flow_model_version_dto::{FlowModelVersionDetailResp, FlowModelVersionFilterReq},
-        flow_state_dto::{
-            FLowStateKindConf, FlowStateCountersignKind, FlowStateFilterReq, FlowStateKind, FlowStateOperatorKind, FlowStateRelModelExt,
-            FlowStatusAutoStrategyKind, FlowStatusMultiApprovalKind, FlowSysStateKind,
-        },
-        flow_transition_dto::FlowTransitionDetailResp,
-        flow_var_dto::FillType,
+        flow_cond_dto::BasicQueryCondInfo, flow_external_dto::{FlowExternalCallbackOp, FlowExternalParams}, flow_inst_dto::{
+            FLowInstStateApprovalConf, FLowInstStateConf, FLowInstStateFormConf, FlowApprovalResultKind, FlowInstAbortReq, FlowInstArtifacts, FlowInstArtifactsModifyReq,
+            FlowInstBatchBindReq, FlowInstBatchBindResp, FlowInstCommentInfo, FlowInstCommentReq, FlowInstDetailResp, FlowInstFilterReq, FlowInstFindNextTransitionResp,
+            FlowInstFindNextTransitionsReq, FlowInstFindStateAndTransitionsReq, FlowInstFindStateAndTransitionsResp, FlowInstOperateReq, FlowInstQueryKind, FlowInstSearchPageReq,
+            FlowInstSearchReq, FlowInstSearchResp, FlowInstSearchSortReq, FlowInstStartReq, FlowInstStateKind, FlowInstSummaryResp, FlowInstSummaryResult, FlowInstTransferReq,
+            FlowInstTransferResp, FlowInstTransitionInfo, FlowOperationContext,
+        }, flow_model_dto::{FlowModelAggResp, FlowModelRelTransitionExt}, flow_model_version_dto::{FlowModelVersionDetailResp, FlowModelVersionFilterReq}, flow_state_dto::{
+            FLowStateKindConf, FlowStateCountersignKind, FlowStateFilterReq, FlowStateKind, FlowStateOperatorKind, FlowStateRelModelExt, FlowStatusAutoStrategyKind,
+            FlowStatusMultiApprovalKind, FlowSysStateKind,
+        }, flow_transition_dto::FlowTransitionDetailResp, flow_var_dto::FillType
     },
     flow_constants,
     helper::loop_check_helper,
@@ -51,9 +51,13 @@ use crate::{
 };
 
 use super::{
-    clients::{
-        log_client::LogParamOp, search_client::FlowSearchClient
-    }, flow_event_serv::FlowEventServ, flow_external_serv::FlowExternalServ, flow_log_serv::FlowLogServ, flow_model_version_serv::FlowModelVersionServ, flow_rel_serv::{FlowRelKind, FlowRelServ}, flow_transition_serv::FlowTransitionServ
+    clients::{log_client::LogParamOp, search_client::FlowSearchClient},
+    flow_event_serv::FlowEventServ,
+    flow_external_serv::FlowExternalServ,
+    flow_log_serv::FlowLogServ,
+    flow_model_version_serv::FlowModelVersionServ,
+    flow_rel_serv::{FlowRelKind, FlowRelServ},
+    flow_transition_serv::FlowTransitionServ,
 };
 
 pub struct FlowInstServ;
@@ -347,15 +351,30 @@ impl FlowInstServ {
         Self::find_detail(Self::find_ids(filter, funs, ctx).await?, None, None, funs, ctx).await
     }
 
-    pub async fn paginate_detail_items(filter: &FlowInstFilterReq, page_number: u32, page_size: u32, desc_by_create: Option<bool>, desc_by_update: Option<bool>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<TardisPage<FlowInstDetailResp>> {
+    pub async fn paginate_detail_items(
+        filter: &FlowInstFilterReq,
+        page_number: u32,
+        page_size: u32,
+        desc_by_create: Option<bool>,
+        desc_by_update: Option<bool>,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<TardisPage<FlowInstDetailResp>> {
         let inst_ids = Self::find_ids(filter, funs, ctx).await?;
         let total_size = inst_ids.len() as usize;
-        let records = Self::find_detail(inst_ids[(((page_number -1) * page_size) as usize).min(total_size)..((page_number * page_size) as usize).min(total_size)].to_vec(), desc_by_create, desc_by_update, funs, ctx).await?;
+        let records = Self::find_detail(
+            inst_ids[(((page_number - 1) * page_size) as usize).min(total_size)..((page_number * page_size) as usize).min(total_size)].to_vec(),
+            desc_by_create,
+            desc_by_update,
+            funs,
+            ctx,
+        )
+        .await?;
         Ok(TardisPage {
             page_size: page_size as u64,
             page_number: page_number as u64,
             total_size: total_size as u64,
-            records
+            records,
         })
     }
 
@@ -430,7 +449,13 @@ impl FlowInstServ {
         }
     }
 
-    pub async fn find_detail(flow_inst_ids: Vec<String>, desc_sort_by_create: Option<bool>, desc_sort_by_update:Option<bool>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<FlowInstDetailResp>> {
+    pub async fn find_detail(
+        flow_inst_ids: Vec<String>,
+        desc_sort_by_create: Option<bool>,
+        desc_sort_by_update: Option<bool>,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<Vec<FlowInstDetailResp>> {
         #[derive(sea_orm::FromQueryResult)]
         pub struct FlowInstDetailResult {
             pub id: String,
@@ -1398,7 +1423,6 @@ impl FlowInstServ {
                 funs.commit().await.unwrap();
             });
         }
-        
 
         Ok(())
     }
@@ -1678,9 +1702,16 @@ impl FlowInstServ {
                         .unwrap_or_default()
                         .get("assigned_to")
                         .unwrap_or(&json!(""))
-                        .as_str()
-                        .unwrap_or_default()
-                        .split(',')
+                        .as_array()
+                        .unwrap_or(&vec![flow_inst_detail
+                            .create_vars
+                            .clone()
+                            .unwrap_or_default()
+                            .get("assigned_to")
+                            .unwrap_or(&json!(""))
+                            .clone()])
+                        .iter()
+                        .map(|v| v.as_str().unwrap_or(""))
                         .collect_vec()
                         .into_iter()
                         .map(|str| {
@@ -1743,7 +1774,8 @@ impl FlowInstServ {
                             }
                         }
                         FlowStatusAutoStrategyKind::SpecifyAgent => {
-                            modify_req.curr_operators = Some(FlowSearchClient::search_guard_accounts(&form_conf.auto_transfer_when_empty_guard_custom_conf.clone().unwrap_or_default(), funs, ctx).await?);
+                            modify_req.curr_operators =
+                                Some(FlowSearchClient::search_guard_accounts(&form_conf.auto_transfer_when_empty_guard_custom_conf.clone().unwrap_or_default(), funs, ctx).await?);
                             modify_req.prohibit_guard_conf_account_ids = Some(vec![]);
                             Self::modify_inst_artifacts(&flow_inst_detail.id, &modify_req, funs, ctx).await?;
                         }
@@ -1766,12 +1798,22 @@ impl FlowInstServ {
                     });
                 }
                 if approval_conf.guard_by_assigned {
-                    
-                    let _ = flow_inst_detail.create_vars.clone().unwrap_or_default().get("assigned_to")
-                        .unwrap_or(&json!(""))
-                        .as_str()
+                    let _ = flow_inst_detail
+                        .create_vars
+                        .clone()
                         .unwrap_or_default()
-                        .split(',')
+                        .get("assigned_to")
+                        .unwrap_or(&json!(""))
+                        .as_array()
+                        .unwrap_or(&vec![flow_inst_detail
+                            .create_vars
+                            .clone()
+                            .unwrap_or_default()
+                            .get("assigned_to")
+                            .unwrap_or(&json!(""))
+                            .clone()])
+                        .iter()
+                        .map(|v| v.as_str().unwrap_or(""))
                         .collect_vec()
                         .into_iter()
                         .map(|str| {
@@ -1786,11 +1828,10 @@ impl FlowInstServ {
                 modify_req.curr_approval_total = Some(curr_approval_total);
                 modify_req.curr_operators = Some(guard_accounts);
                 modify_req.prohibit_guard_conf_account_ids = Some(vec![]);
-                
+
                 Self::modify_inst_artifacts(&flow_inst_detail.id, &modify_req, funs, ctx).await?;
                 // 当操作人为空时的逻辑
-                if curr_approval_total == 0 && approval_conf.auto_transfer_when_empty_kind.is_some()
-                {
+                if curr_approval_total == 0 && approval_conf.auto_transfer_when_empty_kind.is_some() {
                     match approval_conf.auto_transfer_when_empty_kind.unwrap_or_default() {
                         FlowStatusAutoStrategyKind::Autoskip => {
                             if let Some(next_transition) =
@@ -1868,7 +1909,7 @@ impl FlowInstServ {
                         None,
                         &flow_inst_detail.rel_business_obj_id,
                         &flow_inst_detail.id,
-                        None,
+                        Some(FlowExternalCallbackOp::Auto),
                         None,
                         None,
                         None,
@@ -2053,7 +2094,9 @@ impl FlowInstServ {
                 FlowStateKind::Form => kind_conf.form.as_ref().map(|form| {
                     let mut operators = HashMap::new();
                     let artifacts = artifacts.clone().unwrap_or_default();
-                    if artifacts.curr_operators.clone().unwrap_or_default().contains(&ctx.owner) && !artifacts.prohibit_guard_by_spec_account_ids.clone().unwrap_or_default().contains(&ctx.owner) {
+                    if artifacts.curr_operators.clone().unwrap_or_default().contains(&ctx.owner)
+                        && !artifacts.prohibit_guard_by_spec_account_ids.clone().unwrap_or_default().contains(&ctx.owner)
+                    {
                         operators.insert(FlowStateOperatorKind::Submit, form.submit_btn_name.clone());
                         if form.referral {
                             operators.insert(FlowStateOperatorKind::Referral, "".to_string());
@@ -2653,11 +2696,19 @@ impl FlowInstServ {
         }
         if query_kinds.contains(&FlowInstQueryKind::Form) {
             sql_vals.push(sea_orm::Value::from(ctx.owner.clone()));
-            or_where_fragments.push(format!("(current_state.state_kind = 'form' AND ({}.artifacts -> 'curr_operators' ? ${}))", table_alias_name, sql_vals.len()));
+            or_where_fragments.push(format!(
+                "(current_state.state_kind = 'form' AND ({}.artifacts -> 'curr_operators' ? ${}))",
+                table_alias_name,
+                sql_vals.len()
+            ));
         }
         if query_kinds.contains(&FlowInstQueryKind::Approval) {
             sql_vals.push(sea_orm::Value::from(ctx.owner.clone()));
-            or_where_fragments.push(format!("(current_state.state_kind = 'approval' AND ({}.artifacts -> 'curr_operators' ? ${}))", table_alias_name, sql_vals.len()));
+            or_where_fragments.push(format!(
+                "(current_state.state_kind = 'approval' AND ({}.artifacts -> 'curr_operators' ? ${}))",
+                table_alias_name,
+                sql_vals.len()
+            ));
         }
         if query_kinds.contains(&FlowInstQueryKind::History) {
             sql_vals.push(sea_orm::Value::from(ctx.owner.clone()));
@@ -2756,16 +2807,6 @@ impl FlowInstServ {
             }
         }
         Ok(order_fragments)
-    }
-
-    // 获取主实例的参数列表
-    async fn get_main_inst_vars(flow_inst: &FlowInstDetailResp, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<HashMap<String, Value>> {
-        let main_inst_id = Self::get_inst_ids_by_rel_business_obj_id(vec![flow_inst.rel_business_obj_id.clone()], Some(true), funs, ctx)
-            .await?
-            .pop()
-            .ok_or_else(|| funs.err().not_found("flow_inst", "get_guard_by_assigned", "illegal response", "404-flow-inst-not-found"))?;
-        let main_inst = Self::get(&main_inst_id, funs, ctx).await?;
-        Ok(main_inst.current_vars.clone().unwrap_or_default())
     }
 
     // 生成实例编码

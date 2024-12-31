@@ -28,7 +28,8 @@ use crate::{
     dto::{
         flow_model_dto::{
             FlowModelAddReq, FlowModelAggResp, FlowModelAssociativeOperationKind, FlowModelBindNewStateReq, FlowModelBindStateReq, FlowModelDetailResp, FlowModelFilterReq,
-            FlowModelFindRelStateResp, FlowModelKind, FlowModelModifyReq, FlowModelRelTransitionExt, FlowModelStatus, FlowModelSummaryResp, FlowModelSyncModifiedFieldReq, FlowModelUnbindStateReq,
+            FlowModelFindRelStateResp, FlowModelKind, FlowModelModifyReq, FlowModelRelTransitionExt, FlowModelStatus, FlowModelSummaryResp, FlowModelSyncModifiedFieldReq,
+            FlowModelUnbindStateReq,
         },
         flow_model_version_dto::{
             FlowModelVersionAddReq, FlowModelVersionBindState, FlowModelVersionDetailResp, FlowModelVersionFilterReq, FlowModelVersionModifyReq, FlowModelVersionModifyState,
@@ -48,7 +49,12 @@ use super::{
     clients::{
         log_client::{FlowLogClient, LogParamContent, LogParamTag},
         search_client::FlowSearchClient,
-    }, flow_inst_serv::FlowInstServ, flow_model_version_serv::FlowModelVersionServ, flow_rel_serv::{FlowRelKind, FlowRelServ}, flow_state_serv::FlowStateServ, flow_transition_serv::FlowTransitionServ
+    },
+    flow_inst_serv::FlowInstServ,
+    flow_model_version_serv::FlowModelVersionServ,
+    flow_rel_serv::{FlowRelKind, FlowRelServ},
+    flow_state_serv::FlowStateServ,
+    flow_transition_serv::FlowTransitionServ,
 };
 
 pub struct FlowModelServ;
@@ -1137,6 +1143,66 @@ impl FlowModelServ {
 
         Ok(new_model)
     }
+
+    pub async fn copy_models_by_template_id(
+        from_template_id: &str,
+        to_template_id: &str,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<HashMap<String, FlowModelAggResp>> {
+        let mut result = HashMap::new();
+        for from_model in Self::find_detail_items(
+            &FlowModelFilterReq {
+                basic: RbumBasicFilterReq {
+                    ids: Some(
+                        FlowRelServ::find_to_simple_rels(&FlowRelKind::FlowModelTemplate, from_template_id, None, None, funs, ctx)
+                            .await?
+                            .into_iter()
+                            .map(|rel| rel.rel_id)
+                            .collect_vec(),
+                    ),
+                    ignore_scope: true,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            None,
+            None,
+            funs,
+            ctx,
+        )
+        .await?
+        {
+            let added_model = Self::copy_or_reference_model(
+                &from_model.id,
+                &FlowModelAssociativeOperationKind::ReferenceOrCopy,
+                FlowModelKind::AsTemplateAndAsModel,
+                funs,
+                ctx,
+            )
+            .await?;
+            Self::modify_model(&added_model.id, &mut FlowModelModifyReq {
+                rel_model_id: Some(from_model.rel_model_id.clone()),
+                ..Default::default()
+            }, funs, ctx).await?;
+            FlowRelServ::add_simple_rel(
+                &FlowRelKind::FlowModelTemplate,
+                &added_model.id,
+                to_template_id,
+                None,
+                None,
+                false,
+                true,
+                None,
+                funs,
+                ctx,
+            )
+            .await?;
+            result.insert(from_model.rel_model_id.clone(), added_model);
+        }
+        Ok(result)
+    }
+
     /// 创建或引用模型
     /// params:
     /// rel_model_id：关联模型ID
@@ -1944,10 +2010,17 @@ impl FlowModelServ {
             )
             .await?
         };
-        let model_versions = FlowModelVersionServ::find_detail_items(&FlowModelVersionFilterReq {
-            rel_model_ids: Some(model_ids),
-            ..Default::default()
-        }, None, None, funs, ctx).await?;
+        let model_versions = FlowModelVersionServ::find_detail_items(
+            &FlowModelVersionFilterReq {
+                rel_model_ids: Some(model_ids),
+                ..Default::default()
+            },
+            None,
+            None,
+            funs,
+            ctx,
+        )
+        .await?;
         for model_version in model_versions {
             let states = model_version.states();
             for state in states {
@@ -1999,7 +2072,8 @@ impl FlowModelServ {
         let flow_model = Self::get_item(flow_model_id, &FlowModelFilterReq::default(), funs, ctx).await?;
 
         let mut own_paths_list = vec![];
-        if let Some(rel_template_id) = FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelTemplate, flow_model_id, None, None, funs, ctx).await?.pop().map(|rel| rel.rel_id) {
+        if let Some(rel_template_id) = FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelTemplate, flow_model_id, None, None, funs, ctx).await?.pop().map(|rel| rel.rel_id)
+        {
             own_paths_list = FlowRelServ::find_to_simple_rels(&FlowRelKind::FlowAppTemplate, &rel_template_id, None, None, funs, ctx)
                 .await?
                 .into_iter()

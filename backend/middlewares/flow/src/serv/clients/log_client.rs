@@ -22,6 +22,7 @@ pub struct LogParamContent {
     pub name: Option<String>,
     pub sub_kind: Option<String>,
     pub sub_id: Option<String>,
+    pub sub_op: Option<String>,
     pub old_content: String,
     pub new_content: String,
     pub detail: Option<String>,

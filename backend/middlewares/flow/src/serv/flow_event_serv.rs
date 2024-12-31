@@ -159,10 +159,7 @@ impl FlowEventServ {
             }
             FlowTransitionFrontActionRightValue::None => {
                 if let Some(left_value) = current_vars.get(&condition.left_value) {
-                    Ok(condition.relevance_relation.check_conform(
-                        left_value.as_str().unwrap_or(left_value.to_string().as_str()).to_string(),
-                        "".to_string(),
-                    ))
+                    Ok(condition.relevance_relation.check_conform(left_value.as_str().unwrap_or(left_value.to_string().as_str()).to_string(), "".to_string()))
                 } else {
                     Ok(false)
                 }
@@ -494,7 +491,8 @@ impl FlowEventServ {
                 Query::select()
                     .columns([flow_inst::Column::CurrentStateId, flow_inst::Column::RelBusinessObjId])
                     .from(flow_inst::Entity)
-                    .and_where(Expr::col(flow_inst::Column::RelBusinessObjId).is_in(rel_bus_obj_ids)),
+                    .and_where(Expr::col(flow_inst::Column::RelBusinessObjId).is_in(rel_bus_obj_ids))
+                    .and_where(Expr::col(flow_inst::Column::Main).eq(true)),
             )
             .await?;
         if rel_bus_obj_ids.len() != rel_insts.len() {

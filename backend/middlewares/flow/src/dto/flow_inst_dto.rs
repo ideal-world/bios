@@ -244,7 +244,7 @@ pub struct FlowInstArtifacts {
     pub curr_vars: Option<HashMap<String, Value>>,                      // 当前参数列表
     pub prev_non_auto_state_id: Option<Vec<String>>,                    // 上一个非自动节点ID列表
     pub prev_non_auto_account_id: Option<String>,                       // 上一个节点操作人ID
-    pub state: Option<FlowInstStateKind>,                                   // 状态
+    pub state: Option<FlowInstStateKind>,                               // 状态
 }
 
 // 流程实例中数据存储更新

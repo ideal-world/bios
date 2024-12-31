@@ -265,15 +265,7 @@ impl
     ) -> TardisResult<Vec<FlowModelVersionDetailResp>> {
         let mut flow_model_versions = Self::do_find_detail_items(filter, desc_sort_by_create, desc_sort_by_update, funs, ctx).await?;
         for flow_model_version in &mut flow_model_versions {
-            let current_version = Self::get_item(
-                &flow_model_version.id,
-                &FlowModelVersionFilterReq {
-                    ..Default::default()
-                },
-                funs,
-                ctx,
-            )
-            .await?;
+            let current_version = Self::get_item(&flow_model_version.id, &FlowModelVersionFilterReq { ..Default::default() }, funs, ctx).await?;
             flow_model_version.states = Some(current_version.states.unwrap_or_default());
         }
 
