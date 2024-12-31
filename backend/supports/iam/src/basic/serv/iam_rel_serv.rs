@@ -1,3 +1,5 @@
+use std::fmt::format;
+
 use bios_basic::helper::request_helper::get_real_ip_from_ctx;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::result::TardisResult;
@@ -13,7 +15,7 @@ use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use bios_basic::rbum::serv::rbum_rel_serv::RbumRelServ;
 
-use crate::basic::dto::iam_filer_dto::{IamAccountFilterReq, IamResFilterReq};
+use crate::basic::dto::iam_filer_dto::{IamAccountFilterReq, IamResFilterReq, IamRoleFilterReq};
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_key_cache_serv::{IamCacheResRelAddOrModifyReq, IamCacheResRelDeleteReq, IamIdentCacheServ, IamResCacheServ};
 use crate::basic::serv::iam_res_serv::IamResServ;
@@ -22,6 +24,7 @@ use crate::iam_enumeration::{IamRelKind, IamResKind};
 use super::clients::iam_log_client::{IamLogClient, LogParamTag};
 use super::clients::iam_search_client::IamSearchClient;
 use super::iam_account_serv::IamAccountServ;
+use super::iam_role_serv::IamRoleServ;
 
 pub struct IamRelServ;
 
@@ -79,14 +82,6 @@ impl IamRelServ {
 
         if rel_kind == &IamRelKind::IamAccountRole {
             IamIdentCacheServ::refresh_account_info_by_account_id(from_iam_item_id, funs).await?;
-            let _ = IamLogClient::add_ctx_task(
-                LogParamTag::IamAccount,
-                Some(from_iam_item_id.to_string()),
-                "增加账号租户角色为管理员".to_string(),
-                Some("AddTenantRoleAsAdmin".to_string()),
-                ctx,
-            )
-            .await;
             let account_name = IamAccountServ::get_item(
                 from_iam_item_id,
                 &IamAccountFilterReq {
@@ -103,6 +98,31 @@ impl IamRelServ {
             )
             .await?
             .name;
+            let role_name = IamRoleServ::get_item(
+                to_iam_item_id,
+                &IamRoleFilterReq {
+                    basic: RbumBasicFilterReq {
+                        ignore_scope: true,
+                        with_sub_own_paths: true,
+                        own_paths: Some("".to_string()),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                funs,
+                ctx,
+            )
+            .await?
+            .name;
+            let _ = IamLogClient::add_ctx_task(
+                LogParamTag::IamAccount,
+                Some(from_iam_item_id.to_string()),
+                format!("账号{}增加{}角色", account_name, role_name),
+                Some("AddTenantRoleAsAdmin".to_string()),
+                ctx,
+            )
+            .await;
+
             let _ = IamLogClient::add_ctx_task(
                 LogParamTag::IamRole,
                 Some(to_iam_item_id.to_string()),
@@ -494,14 +514,6 @@ impl IamRelServ {
             }
             IamRelKind::IamAccountRole => {
                 IamIdentCacheServ::refresh_account_info_by_account_id(from_iam_item_id, funs).await?;
-                let _ = IamLogClient::add_ctx_task(
-                    LogParamTag::IamAccount,
-                    Some(from_iam_item_id.to_string()),
-                    "移除账号租户角色为管理员".to_string(),
-                    Some("RemoveTenantRoleAsAdmin".to_string()),
-                    ctx,
-                )
-                .await;
                 let account_name = IamAccountServ::get_item(
                     from_iam_item_id,
                     &IamAccountFilterReq {
@@ -518,6 +530,30 @@ impl IamRelServ {
                 )
                 .await?
                 .name;
+                let role_name = IamRoleServ::get_item(
+                    to_iam_item_id,
+                    &IamRoleFilterReq {
+                        basic: RbumBasicFilterReq {
+                            ignore_scope: true,
+                            with_sub_own_paths: true,
+                            own_paths: Some("".to_string()),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                    funs,
+                    ctx,
+                )
+                .await?
+                .name;
+                let _ = IamLogClient::add_ctx_task(
+                    LogParamTag::IamAccount,
+                    Some(from_iam_item_id.to_string()),
+                    format!("账号{}被移除{}角色", account_name, role_name),
+                    Some("RemoveTenantRoleAsAdmin".to_string()),
+                    ctx,
+                )
+                .await;
                 let _ = IamLogClient::add_ctx_task(
                     LogParamTag::IamRole,
                     Some(to_iam_item_id.to_string()),

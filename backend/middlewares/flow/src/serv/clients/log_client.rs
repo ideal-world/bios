@@ -44,7 +44,6 @@ pub struct LogParamExt {
     pub delete: Option<bool>,
 }
 
-
 pub enum LogParamExtSceneKind {
     ApprovalFlow,
     Dynamic,
@@ -122,7 +121,7 @@ impl FlowLogClient {
                 let task_handle = tokio::spawn(async move {
                     let funs = flow_constants::get_tardis_inst();
                     if is_v2 {
-                        Self::addv2_item(
+                        let _ = Self::addv2_item(
                             tag,
                             content,
                             ext,
@@ -135,10 +134,9 @@ impl FlowLogClient {
                             &ctx_clone,
                             push_clone, // 使用克隆的 push 变量
                         )
-                        .await
-                        .unwrap();
+                        .await;
                     } else {
-                        Self::add_item(
+                        let _ = Self::add_item(
                             tag,
                             content,
                             ext,
@@ -151,10 +149,8 @@ impl FlowLogClient {
                             &ctx_clone,
                             push_clone, // 使用克隆的 push 变量
                         )
-                        .await
-                        .unwrap();
+                        .await;
                     }
-                    
                 });
                 task_handle.await.unwrap();
                 Ok(())

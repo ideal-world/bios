@@ -7,7 +7,7 @@ use bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind;
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct IamSetCateAddReq {
-    #[oai(validator(min_length = "2", max_length = "255"))]
+    // #[oai(validator(min_length = "1", max_length = "255"))]
     pub name: TrimString,
     pub scope_level: Option<RbumScopeLevelKind>,
     #[oai(validator(min_length = "2", max_length = "255"))]
@@ -23,7 +23,7 @@ pub struct IamSetCateAddReq {
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct IamSetCateModifyReq {
-    #[oai(validator(min_length = "2", max_length = "255"))]
+    // #[oai(validator(min_length = "2", max_length = "255"))]
     pub name: Option<TrimString>,
     pub scope_level: Option<RbumScopeLevelKind>,
     #[oai(validator(min_length = "2", max_length = "255"))]

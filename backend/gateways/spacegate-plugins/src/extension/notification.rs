@@ -1,7 +1,7 @@
 use std::{borrow::Cow, collections::HashMap, sync::Arc};
 
 use http::{header::CONTENT_TYPE, HeaderName, HeaderValue, Uri};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use spacegate_shell::{kernel::backend_service::http_client_service::HttpClient, SgBody, SgRequest};
 use tardis::{log as tracing, serde_json};
 
@@ -43,7 +43,7 @@ impl NotificationContext {
     }
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct ReachMsgSendReq {
     pub scene_code: String,
     pub receives: Vec<ReachMsgReceive>,
@@ -51,7 +51,7 @@ pub struct ReachMsgSendReq {
     pub replace: HashMap<String, String>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct ReachMsgReceive {
     pub receive_group_code: String,
     pub receive_kind: String,
