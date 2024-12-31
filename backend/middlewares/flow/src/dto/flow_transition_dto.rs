@@ -668,7 +668,7 @@ impl FlowTransitionFrontActionInfoRelevanceRelation {
                 left_value >= interval[0] && left_value <= interval[1]
             },
             FlowTransitionFrontActionInfoRelevanceRelation::IsNotNull => {
-                !left_value.is_empty()
+                !left_value.as_str().to_string().is_empty()
             },
         }
     }
@@ -687,6 +687,9 @@ pub enum FlowTransitionFrontActionRightValue {
     /// 当前时间
     #[oai(rename = "real_time")]
     RealTime,
+    /// 无
+    #[oai(rename = "none")]
+    None,
 }
 
 /// 工作流模型过滤器

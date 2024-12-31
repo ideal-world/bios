@@ -157,6 +157,16 @@ impl FlowEventServ {
                     Ok(false)
                 }
             }
+            FlowTransitionFrontActionRightValue::None => {
+                if let Some(left_value) = current_vars.get(&condition.left_value) {
+                    Ok(condition.relevance_relation.check_conform(
+                        left_value.as_str().unwrap_or(left_value.to_string().as_str()).to_string(),
+                        "".to_string(),
+                    ))
+                } else {
+                    Ok(false)
+                }
+            }
         }
     }
 

@@ -124,6 +124,60 @@ impl FlowLogServ{
         .await?;
         Ok(())
     }
+
+    // 添加审批流发起业务日志
+    pub async fn add_start_business_log(
+        start_req: &FlowInstStartReq,
+        flow_inst_detail: &FlowInstDetailResp,
+        create_vars: &HashMap<String, Value>,
+        flow_model: &FlowModelDetailResp,
+        ctx: &TardisContext,
+    ) -> TardisResult<()> {
+        let rel_transition = flow_model.rel_transition().unwrap_or_default();
+        let subject = match rel_transition.id.as_str() {
+            "__EDIT__" => "编辑审批".to_string(),
+            "__DELETE__" => "删除审批".to_string(),
+            _ => format!("{}({})", rel_transition.name, rel_transition.from_flow_state_name).to_string(),
+        };
+        let mut log_ext = LogParamExt {
+            scene_kind: Some(vec![String::from(LogParamExtSceneKind::Detail)]),
+            new_log: Some(true),
+            project_id: rbum_scope_helper::get_path_item(RbumScopeLevelKind::L2.to_int(), &ctx.own_paths),
+            ..Default::default()
+        };
+        let mut log_content = LogParamContent {
+            subject: Some(subject),
+            name: Some(format!("编号{}", flow_inst_detail.code)),
+            sub_id: Some(flow_inst_detail.id.clone()),
+            sub_kind: Some(FlowLogClient::get_junp_kind("FLOW")),
+            ..Default::default()
+        };
+        // if start_req.create_vars.is_none() {
+        //     log_ext.include_detail = Some(false);
+        //     log_content.old_content = "".to_string();
+        //     log_content.new_content = "".to_string();
+        // } else {
+        //     log_content.old_content = create_vars.get("content").map_or("".to_string(), |val| val.as_str().unwrap_or("").to_string());
+        //     log_content.new_content = start_req.create_vars.clone().unwrap_or_default().get("content").map(|content| content.as_str().unwrap_or("").to_string()).unwrap_or_default();
+        //     log_content.detail = start_req.log_text.clone();
+        //     log_ext.include_detail = Some(true);
+        // }
+        FlowLogClient::add_ctx_task(
+            LogParamTag::DynamicLog,
+            Some(flow_inst_detail.rel_business_obj_id.clone()),
+            log_content,
+            Some(TardisFuns::json.obj_to_json(&log_ext).expect("ext not a valid json value")),
+            Some("dynamic_log_approval_flow".to_string()),
+            Some(LogParamOp::Start.into()),
+            rbum_scope_helper::get_path_item(RbumScopeLevelKind::L1.to_int(), &ctx.own_paths),
+            false,
+            ctx,
+            false,
+        )
+        .await?;
+        Ok(())
+    }
+
     // 添加审批流操作日志
     pub async fn add_operate_log(
         operate_req: &FlowInstOperateReq,

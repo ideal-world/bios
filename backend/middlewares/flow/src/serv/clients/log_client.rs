@@ -48,12 +48,14 @@ pub struct LogParamExt {
 pub enum LogParamExtSceneKind {
     ApprovalFlow,
     Dynamic,
+    Detail,
 }
 impl From<LogParamExtSceneKind> for String {
     fn from(val: LogParamExtSceneKind) -> Self {
         match val {
             LogParamExtSceneKind::Dynamic => "dynamic".to_string(),
             LogParamExtSceneKind::ApprovalFlow => "approval_flow".to_string(),
+            LogParamExtSceneKind::Detail => "detail".to_string(),
         }
     }
 }
