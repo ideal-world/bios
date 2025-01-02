@@ -82,14 +82,7 @@ impl FlowCtModelApi {
                 )
                 .await?;
             }
-            FlowInstServ::batch_update_when_switch_model(
-                &new_model,
-                req.0.rel_template_id.clone(),
-                None,
-                &funs,
-                &ctx.0,
-            )
-            .await?;
+            FlowInstServ::batch_update_when_switch_model(&new_model, req.0.rel_template_id.clone(), None, &funs, &ctx.0).await?;
             result.insert(rel_model_id.clone(), new_model);
         }
         funs.commit().await?;

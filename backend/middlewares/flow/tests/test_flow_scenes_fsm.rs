@@ -462,6 +462,8 @@ pub async fn test(flow_client: &mut TestHttpClient, search_client: &mut TestHttp
                 create_vars: None,
                 rel_business_obj_id: rel_business_obj_id.clone(),
                 transition_id: None,
+                vars: None,
+                log_text: None,
             },
         )
         .await;
@@ -593,6 +595,8 @@ pub async fn test(flow_client: &mut TestHttpClient, search_client: &mut TestHttp
                 create_vars: None,
                 rel_business_obj_id: rel_business_obj_id.clone(),
                 transition_id: Some("__EDIT__".to_string()),
+                vars: None,
+                log_text: None,
             },
         )
         .await;

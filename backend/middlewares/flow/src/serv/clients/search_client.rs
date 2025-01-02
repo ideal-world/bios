@@ -7,7 +7,8 @@ use bios_sdk_invoke::{
         spi_search_client::SpiSearchClient,
     },
     dto::search_item_dto::{
-        AdvSearchItemQueryReq, BasicQueryCondInfo, BasicQueryOpKind, SearchItemAddReq, SearchItemModifyReq, SearchItemQueryReq, SearchItemSearchCtxReq, SearchItemSearchPageReq, SearchItemSearchReq, SearchItemSearchResp, SearchItemVisitKeysReq
+        AdvSearchItemQueryReq, BasicQueryCondInfo, BasicQueryOpKind, SearchItemAddReq, SearchItemModifyReq, SearchItemQueryReq, SearchItemSearchCtxReq, SearchItemSearchPageReq,
+        SearchItemSearchReq, SearchItemSearchResp, SearchItemVisitKeysReq,
     },
 };
 use itertools::Itertools;
@@ -37,7 +38,7 @@ use crate::{
 };
 
 const SEARCH_MODEL_TAG: &str = "flow_model";
-const SEARCH_INSTANCE_TAG: &str = "flow_inst";
+const SEARCH_INSTANCE_TAG: &str = "flow_approve_inst";
 
 pub struct FlowSearchClient;
 
@@ -263,12 +264,7 @@ impl FlowSearchClient {
             own_paths: "".to_string(),
             ..ctx.clone()
         };
-        let inst_resp = FlowInstServ::get(
-            inst_id,
-            funs,
-            &mock_ctx,
-        )
-        .await?;
+        let inst_resp = FlowInstServ::get(inst_id, funs, &mock_ctx).await?;
         ctx.add_async_task(Box::new(|| {
             Box::pin(async move {
                 let task_handle = tokio::spawn(async move {
@@ -310,6 +306,8 @@ impl FlowSearchClient {
                     "current_state_kind": inst_resp.current_state_kind,
                     "rel_business_obj_id": inst_resp.rel_business_obj_id,
                     "finish_time": inst_resp.finish_time,
+                    "op_time": inst_resp.update_time,
+                    "state": inst_resp.artifacts.as_ref().map(|artifacts| artifacts.state.clone().unwrap_or_default()),
                     "rel_transition": inst_resp.rel_transition.clone().unwrap_or_default().to_string(),
                     "his_operators": inst_resp.artifacts.as_ref().map(|artifacts| artifacts.his_operators.clone().unwrap_or_default()),
                     "curr_operators": inst_resp.artifacts.as_ref().map(|artifacts| artifacts.curr_operators.clone().unwrap_or_default()),
@@ -349,6 +347,8 @@ impl FlowSearchClient {
                     "current_state_kind": inst_resp.current_state_kind,
                     "rel_business_obj_id": inst_resp.rel_business_obj_id,
                     "finish_time": inst_resp.finish_time,
+                    "op_time": inst_resp.update_time,
+                    "state": inst_resp.artifacts.as_ref().map(|artifacts| artifacts.state.clone().unwrap_or_default()),
                     "rel_transition": inst_resp.rel_transition.clone().unwrap_or_default().to_string(),
                     "his_operators": inst_resp.artifacts.as_ref().map(|artifacts| artifacts.his_operators.clone().unwrap_or_default()),
                     "curr_operators": inst_resp.artifacts.as_ref().map(|artifacts| artifacts.curr_operators.clone().unwrap_or_default()),
@@ -384,7 +384,7 @@ impl FlowSearchClient {
         }
         let mut query = SearchItemQueryReq::default();
         let mut adv_query = vec![];
-        
+
         if !guard_conf.guard_by_spec_account_ids.is_empty() {
             query.keys = Some(guard_conf.guard_by_spec_account_ids.clone().into_iter().map(|account_id| account_id.into()).collect_vec());
         }
@@ -393,22 +393,36 @@ impl FlowSearchClient {
             adv_query.push(AdvSearchItemQueryReq {
                 group_by_or: Some(true),
                 ext_by_or: Some(true),
-                ext: Some(guard_conf.guard_by_spec_org_ids.clone().into_iter().map(|org_id| BasicQueryCondInfo {
-                    field: "dept_id".to_string(),
-                    op: BasicQueryOpKind::In,
-                    value: org_id.to_json().unwrap_or(json!("")),
-                }).collect_vec()),
+                ext: Some(
+                    guard_conf
+                        .guard_by_spec_org_ids
+                        .clone()
+                        .into_iter()
+                        .map(|org_id| BasicQueryCondInfo {
+                            field: "dept_id".to_string(),
+                            op: BasicQueryOpKind::In,
+                            value: org_id.to_json().unwrap_or(json!("")),
+                        })
+                        .collect_vec(),
+                ),
             });
         }
         if !guard_conf.guard_by_spec_role_ids.is_empty() {
             adv_query.push(AdvSearchItemQueryReq {
                 group_by_or: Some(true),
                 ext_by_or: Some(true),
-                ext: Some(guard_conf.guard_by_spec_role_ids.clone().into_iter().map(|role_id| BasicQueryCondInfo {
-                    field: "role_id".to_string(),
-                    op: BasicQueryOpKind::In,
-                    value: role_id.to_json().unwrap_or(json!("")),
-                }).collect_vec()),
+                ext: Some(
+                    guard_conf
+                        .guard_by_spec_role_ids
+                        .clone()
+                        .into_iter()
+                        .map(|role_id| BasicQueryCondInfo {
+                            field: "role_id".to_string(),
+                            op: BasicQueryOpKind::In,
+                            value: role_id.to_json().unwrap_or(json!("")),
+                        })
+                        .collect_vec(),
+                ),
             });
         }
         if !adv_query.is_empty() {
@@ -432,7 +446,8 @@ impl FlowSearchClient {
             ctx,
         )
         .await?
-        .map(|result| result.records.into_iter().map(|record| record.key).collect_vec()).unwrap_or_default();
+        .map(|result| result.records.into_iter().map(|record| record.key).collect_vec())
+        .unwrap_or_default();
         debug!("flow search_guard_account_num result : {:?}", result);
         Ok(result)
     }

@@ -23,8 +23,7 @@ use tardis::{
 use crate::{
     domain::{flow_state, flow_transition},
     dto::{
-        flow_model_dto::{FlowModelFilterReq, FlowModelStatus},
-        flow_transition_dto::{FlowTransitionActionChangeKind, FlowTransitionAddReq, FlowTransitionDetailResp, FlowTransitionFilterReq, FlowTransitionModifyReq},
+        flow_model_dto::{FlowModelFilterReq, FlowModelStatus}, flow_state_dto::{FlowStateFilterReq, FlowStateKind}, flow_transition_dto::{FlowTransitionActionChangeKind, FlowTransitionAddReq, FlowTransitionDetailResp, FlowTransitionFilterReq, FlowTransitionModifyReq}
     },
 };
 
@@ -55,6 +54,22 @@ impl FlowTransitionServ {
         if add_req.is_empty() {
             return Ok(());
         }
+        // @TODO 替前端处理
+        let from_state = FlowStateServ::get_item(
+            from_flow_state_id,
+            &FlowStateFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    own_paths: Some("".to_string()),
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?;
+
         let flow_transitions = add_req
             .iter()
             .map(|req| flow_transition::ActiveModel {
@@ -64,7 +79,8 @@ impl FlowTransitionServ {
                 from_flow_state_id: Set(from_flow_state_id.to_string()),
                 to_flow_state_id: Set(req.to_flow_state_id.to_string()),
 
-                transfer_by_auto: Set(req.transfer_by_auto.unwrap_or(false)),
+                // transfer_by_auto: Set(req.transfer_by_auto.unwrap_or(false)),
+                transfer_by_auto: Set(from_state.state_kind == FlowStateKind::Start || from_state.state_kind == FlowStateKind::Branch),
                 transfer_by_timer: Set(req.transfer_by_timer.as_ref().unwrap_or(&"".to_string()).to_string()),
 
                 guard_by_creator: Set(req.guard_by_creator.unwrap_or(false)),
@@ -157,7 +173,23 @@ impl FlowTransitionServ {
                 flow_transition.name = Set(name.to_string());
             }
             if let Some(from_flow_state_id) = &req.from_flow_state_id {
+                // @TODO 替前端处理
+                let from_state = FlowStateServ::get_item(
+                    from_flow_state_id,
+                    &FlowStateFilterReq {
+                        basic: RbumBasicFilterReq {
+                            with_sub_own_paths: true,
+                            own_paths: Some("".to_string()),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                    funs,
+                    ctx,
+                )
+                .await?;
                 flow_transition.from_flow_state_id = Set(from_flow_state_id.to_string());
+                flow_transition.transfer_by_auto = Set(from_state.state_kind == FlowStateKind::Start || from_state.state_kind == FlowStateKind::Branch);
             }
             if let Some(to_flow_state_id) = &req.to_flow_state_id {
                 flow_transition.to_flow_state_id = Set(to_flow_state_id.to_string());

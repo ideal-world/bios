@@ -35,6 +35,7 @@ pub struct FlowStateAddReq {
     pub kind_conf: Option<FLowStateKindConf>,
 
     pub template: Option<bool>,
+    pub main: Option<bool>,
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub rel_state_id: Option<String>,
 
@@ -299,6 +300,7 @@ pub struct FlowStateDetailResp {
     pub kind_conf: Option<Value>,
 
     pub template: bool,
+    pub main: bool,
     pub rel_state_id: String,
 
     pub tags: String,
@@ -374,6 +376,7 @@ pub struct FlowStateFilterReq {
     pub tag: Option<String>,
     pub state_kind: Option<FlowStateKind>,
     pub template: Option<bool>,
+    pub main: Option<bool>,
     pub flow_version_ids: Option<Vec<String>>,
 }
 
@@ -434,6 +437,7 @@ pub struct FlowStateAggResp {
     pub tags: String,
     pub scope_level: RbumScopeLevelKind,
     pub disabled: bool,
+    pub main: bool,
     pub transitions: Vec<FlowTransitionDetailResp>,
 }
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]

@@ -60,6 +60,30 @@ impl FlowCcModelVersionApi {
         TardisResp::ok(result)
     }
 
+    /// Get Model By Model Id
+    ///
+    /// 获取模型使用全局owner
+    #[oai(path = "/:flow_version_id/global", method = "get")]
+    async fn gloabl_get(&self, flow_version_id: Path<String>, ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<FlowModelVersionDetailResp> {
+        let funs = flow_constants::get_tardis_inst();
+        let result = FlowModelVersionServ::get_item(
+            &flow_version_id.0,
+            &FlowModelVersionFilterReq {
+                basic: RbumBasicFilterReq {
+                    own_paths: Some("".to_string()),
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            &funs,
+            &ctx.0,
+        )
+        .await?;
+        ctx.0.execute_task().await?;
+        TardisResp::ok(result)
+    }
+
     /// Find Models
     ///
     /// 获取模型列表
