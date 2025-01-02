@@ -1,4 +1,3 @@
-use asteroid_mq::openraft;
 use bios_basic::rbum::rbum_config::RbumConfig;
 
 use serde::{Deserialize, Serialize};
@@ -14,12 +13,29 @@ pub struct EventConfig {
     pub rbum: RbumConfig,
     pub enable: bool,
     pub svc: String,
-    pub raft: openraft::Config,
+    pub raft: Option<RaftConfig>,
     // default by 5000ms
     pub startup_timeout: u64,
     pub durable: bool,
     pub avatars: Vec<String>,
     pub cluster: Option<String>,
+}
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(default)]
+pub struct RaftConfig {
+    pub election_timeout_min: u64,
+    pub election_timeout_max: u64,
+    pub heartbeat_interval: u64,
+}
+
+impl Default for RaftConfig {
+    fn default() -> Self {
+        RaftConfig {
+            election_timeout_max: 1000,
+            election_timeout_min: 500,
+            heartbeat_interval: 100,
+        }
+    }
 }
 
 impl EventConfig {
@@ -37,13 +53,7 @@ impl Default for EventConfig {
             startup_timeout: 5000,
             durable: true,
             cluster: Some(Self::CLUSTER_K8S.to_string()),
-            raft: openraft::Config {
-                cluster_name: "bios".to_string(),
-                election_timeout_max: 1000,
-                election_timeout_min: 500,
-                heartbeat_interval: 100,
-                ..Default::default()
-            },
+            raft: None,
         }
     }
 }

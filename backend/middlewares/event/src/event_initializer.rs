@@ -4,7 +4,7 @@ use asteroid_mq::{
     prelude::{DurableService, Node, NodeConfig, NodeId, TopicConfig, TopicOverflowConfig},
     protocol::node::{
         edge::auth::EdgeAuthService,
-        raft::cluster::{K8sClusterProvider, StaticClusterProvider},
+        raft::cluster::{this_pod_id, K8sClusterProvider, StaticClusterProvider},
     },
 };
 use bios_basic::rbum::{
@@ -154,34 +154,39 @@ async fn init_mq_cluster(config: &EventConfig, funs: TardisFunsInst, ctx: Tardis
 
 pub async fn init_mq_node(config: &EventConfig, funs: Arc<TardisFunsInst>, ctx: &TardisContext) -> asteroid_mq::prelude::Node {
     let timeout = Duration::from_secs(config.startup_timeout);
-    const ENV_POD_UID: &str = "POD_UID";
     if let Some(node) = TardisFuns::store().get_singleton::<asteroid_mq::prelude::Node>() {
         node
     } else {
+        let raft_config = config.raft.clone().unwrap_or_default();
+        let raft_config = asteroid_mq::openraft::Config {
+            election_timeout_min: raft_config.election_timeout_min,
+            election_timeout_max: raft_config.election_timeout_max,
+            heartbeat_interval: raft_config.heartbeat_interval,
+            ..Default::default()
+        };
         let node = match config.cluster.as_deref() {
             Some(EventConfig::CLUSTER_K8S) => {
-                let uid = std::env::var(ENV_POD_UID).expect("POD_UID is required");
                 let node = Node::new(NodeConfig {
-                    id: NodeId::sha256(uid.as_bytes()),
-                    raft: config.raft.clone(),
+                    id: this_pod_id(),
+                    raft: raft_config,
                     durable: config.durable.then_some(DurableService::new(BiosDurableAdapter::new(funs.clone(), ctx.clone()))),
                     edge_auth: Some(EdgeAuthService::new(BiosEdgeAuthAdapter::new(funs.clone(), ctx.clone()))),
                     ..Default::default()
                 });
-                let cluster_provider = K8sClusterProvider::new(config.svc.clone(), asteroid_mq::DEFAULT_TCP_PORT).await;
+                let cluster_provider = K8sClusterProvider::new(asteroid_mq::DEFAULT_TCP_PORT).await;
                 node.start(cluster_provider).await.expect("fail to init raft");
                 node
             }
             Some(EventConfig::NO_CLUSTER) | None => {
                 let node = Node::new(NodeConfig {
                     id: NodeId::snowflake(),
-                    raft: config.raft.clone(),
+                    raft: raft_config,
                     durable: config.durable.then_some(DurableService::new(BiosDurableAdapter::new(funs.clone(), ctx.clone()))),
                     edge_auth: Some(EdgeAuthService::new(BiosEdgeAuthAdapter::new(funs.clone(), ctx.clone()))),
                     ..Default::default()
                 });
                 // singleton mode
-                let cluster_provider = StaticClusterProvider::singleton(node.id(), node.config().addr);
+                let cluster_provider = StaticClusterProvider::singleton(node.id(), node.config().addr.to_string());
                 node.start(cluster_provider).await.expect("fail to init raft");
                 node
             }
