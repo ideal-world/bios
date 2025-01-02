@@ -265,15 +265,29 @@ pub(crate) async fn fact_record_load(
                     ));
                 };
                 if fact_col_conf.dim_multi_values.unwrap_or(false) {
-                    fields_values.insert(
-                        fact_col_conf.key.to_string(),
-                        fact_col_result.unwrap_or(dim_conf.data_type.result_to_sea_orm_value_array(&latest_data, &fact_col_conf.key)?),
-                    );
+                    if dim_conf.data_type.result_to_sea_orm_value_array(&latest_data, &fact_col_conf.key).is_err() {
+                        fields_values.insert(
+                            fact_col_conf.key.to_string(),
+                            fact_col_result.unwrap_or(dim_conf.data_type.result_to_sea_orm_value_array_default()?),
+                        );
+                    } else {
+                        fields_values.insert(
+                            fact_col_conf.key.to_string(),
+                            fact_col_result.unwrap_or(dim_conf.data_type.result_to_sea_orm_value_array(&latest_data, &fact_col_conf.key)?),
+                        );
+                    }
                 } else {
-                    fields_values.insert(
-                        fact_col_conf.key.to_string(),
-                        fact_col_result.unwrap_or(dim_conf.data_type.result_to_sea_orm_value(&latest_data, &fact_col_conf.key)?),
-                    );
+                    if dim_conf.data_type.result_to_sea_orm_value(&latest_data, &fact_col_conf.key).is_err() {
+                        fields_values.insert(
+                            fact_col_conf.key.to_string(),
+                            fact_col_result.unwrap_or(dim_conf.data_type.result_to_sea_orm_value_default()?),
+                        );
+                    } else {
+                        fields_values.insert(
+                            fact_col_conf.key.to_string(),
+                            fact_col_result.unwrap_or(dim_conf.data_type.result_to_sea_orm_value(&latest_data, &fact_col_conf.key)?),
+                        );
+                    }
                 }
             } else if fact_col_conf.kind == StatsFactColKind::Measure {
                 let Some(mes_data_type) = fact_col_conf.mes_data_type.as_ref() else {
@@ -284,10 +298,14 @@ pub(crate) async fn fact_record_load(
                         "400-spi-stats-invalid-request",
                     ));
                 };
-                fields_values.insert(
-                    fact_col_conf.key.to_string(),
-                    fact_col_result.unwrap_or(mes_data_type.result_to_sea_orm_value(&latest_data, &fact_col_conf.key)?),
-                );
+                if mes_data_type.result_to_sea_orm_value(&latest_data, &fact_col_conf.key).is_err() {
+                    fields_values.insert(fact_col_conf.key.to_string(), fact_col_result.unwrap_or(mes_data_type.result_to_sea_orm_value_default()?));
+                } else {
+                    fields_values.insert(
+                        fact_col_conf.key.to_string(),
+                        fact_col_result.unwrap_or(mes_data_type.result_to_sea_orm_value(&latest_data, &fact_col_conf.key)?),
+                    );
+                }
             } else {
                 fields_values.insert(
                     fact_col_conf.key.to_string(),
