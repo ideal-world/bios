@@ -61,6 +61,15 @@ pub struct FlowExternalReq {
     ///
     /// 请求是否触发通知
     pub notify: Option<bool>,
+    /// Whether the request triggers a notification
+    ///
+    /// 是否人工操作
+    pub manual_op: Option<bool>,
+    /// Whether the request triggers a notification
+    ///
+    /// 操作人
+    pub operator: Option<String>,
+    pub sys_time: Option<i64>,
     /// 扩展字段
     ///
     /// Extended params

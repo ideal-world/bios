@@ -86,6 +86,7 @@ impl RbumItemCrudOperation<flow_state::ActiveModel, FlowStateAddReq, FlowStateMo
             template: Set(add_req.template.unwrap_or(false)),
             rel_state_id: Set(add_req.rel_state_id.as_ref().unwrap_or(&"".to_string()).to_string()),
             tags: Set(add_req.tags.as_ref().unwrap_or(&vec![]).to_vec().join(",")),
+            main: Set(add_req.main.unwrap_or_default()),
             ..Default::default()
         })
     }

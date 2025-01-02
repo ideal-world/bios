@@ -50,6 +50,21 @@ impl FlowCcInstApi {
         TardisResp::ok(result)
     }
 
+    /// Start Instance(Return Instance ID)
+    ///
+    /// 批量启动实例(返回实例ID)
+    #[oai(path = "/batch_start", method = "post")]
+    async fn batch_start(&self, add_batch_req: Json<Vec<FlowInstStartReq>>, ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<Void> {
+        let mut funs = flow_constants::get_tardis_inst();
+        funs.begin().await?;
+        for add_req in &add_batch_req.0 {
+            FlowInstServ::start(add_req, None, &funs, &ctx.0).await?;
+        }
+        funs.commit().await?;
+        ctx.0.execute_task().await?;
+        TardisResp::ok(Void {})
+    }
+
     /// Abort Instance
     ///
     /// 终止实例

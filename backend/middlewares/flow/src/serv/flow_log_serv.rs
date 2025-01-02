@@ -35,6 +35,7 @@ impl FlowLogServ {
         flow_model: &FlowModelDetailResp,
         ctx: &TardisContext,
     ) -> TardisResult<()> {
+        let artifacts = flow_inst_detail.artifacts.clone().unwrap_or_default();
         let rel_transition = flow_model.rel_transition().unwrap_or_default();
         let operand = match rel_transition.id.as_str() {
             "__EDIT__" => "编辑审批".to_string(),
@@ -58,6 +59,10 @@ impl FlowLogServ {
             operand_kind: Some(FlowLogClient::get_junp_kind("FLOW")),
             ..Default::default()
         };
+        if !artifacts.his_operators.as_ref().unwrap_or(&vec![]).contains(&ctx.owner) && !artifacts.curr_operators.as_ref().unwrap_or(&vec![]).contains(&ctx.owner) {
+            log_content.operand_id = None;
+            log_content.operand_kind = None;
+        }
         if start_req.create_vars.is_none() {
             log_ext.include_detail = Some(false);
             log_content.old_content = "".to_string();
@@ -93,6 +98,7 @@ impl FlowLogServ {
         flow_model: &FlowModelDetailResp,
         ctx: &TardisContext,
     ) -> TardisResult<()> {
+        let artifacts = flow_inst_detail.artifacts.clone().unwrap_or_default();
         let rel_transition = flow_model.rel_transition().unwrap_or_default();
         let operand = match rel_transition.id.as_str() {
             "__EDIT__" => "编辑审批".to_string(),
@@ -116,6 +122,10 @@ impl FlowLogServ {
             operand_kind: Some(FlowLogClient::get_junp_kind("FLOW")),
             ..Default::default()
         };
+        if !artifacts.his_operators.as_ref().unwrap_or(&vec![]).contains(&ctx.owner) && !artifacts.curr_operators.as_ref().unwrap_or(&vec![]).contains(&ctx.owner) {
+            log_content.operand_id = None;
+            log_content.operand_kind = None;
+        }
         if start_req.create_vars.is_none() {
             log_ext.include_detail = Some(false);
             log_content.old_content = "".to_string();
@@ -151,6 +161,7 @@ impl FlowLogServ {
         flow_model: &FlowModelDetailResp,
         ctx: &TardisContext,
     ) -> TardisResult<()> {
+        let artifacts = flow_inst_detail.artifacts.clone().unwrap_or_default();
         let rel_transition = flow_model.rel_transition().unwrap_or_default();
         let subject = match rel_transition.id.as_str() {
             "__EDIT__" => "编辑审批".to_string(),
@@ -170,6 +181,10 @@ impl FlowLogServ {
             sub_kind: Some(FlowLogClient::get_junp_kind(&flow_inst_detail.tag)),
             ..Default::default()
         };
+        if !artifacts.his_operators.as_ref().unwrap_or(&vec![]).contains(&ctx.owner) && !artifacts.curr_operators.as_ref().unwrap_or(&vec![]).contains(&ctx.owner) {
+            log_content.sub_id = None;
+            log_content.sub_kind = None;
+        }
         // if start_req.create_vars.is_none() {
         //     log_ext.include_detail = Some(false);
         //     log_content.old_content = "".to_string();
@@ -278,6 +293,7 @@ impl FlowLogServ {
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<()> {
+        let artifacts = flow_inst_detail.artifacts.clone().unwrap_or_default();
         let flow_model_version = FlowModelVersionServ::get_item(
             &flow_inst_detail.rel_flow_version_id,
             &FlowModelVersionFilterReq {
@@ -352,6 +368,10 @@ impl FlowLogServ {
             new_content: "".to_string(),
             ..Default::default()
         };
+        if !artifacts.his_operators.as_ref().unwrap_or(&vec![]).contains(&ctx.owner) && !artifacts.curr_operators.as_ref().unwrap_or(&vec![]).contains(&ctx.owner) {
+            log_content.sub_id = None;
+            log_content.sub_kind = None;
+        }
         if operate_req.operate == FlowStateOperatorKind::Referral {
             log_content.flow_referral = Some(FlowKvClient::get_account_name(&operate_req.operator.clone().unwrap_or_default(), funs, ctx).await?);
         }
@@ -383,6 +403,7 @@ impl FlowLogServ {
     }
 
     pub async fn add_finish_log(flow_inst_detail: &FlowInstDetailResp, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let artifacts = flow_inst_detail.artifacts.clone().unwrap_or_default();
         let flow_model_version = FlowModelVersionServ::get_item(
             &flow_inst_detail.rel_flow_version_id,
             &FlowModelVersionFilterReq {
@@ -423,7 +444,7 @@ impl FlowLogServ {
             project_id: rbum_scope_helper::get_path_item(RbumScopeLevelKind::L2.to_int(), &ctx.own_paths),
             ..Default::default()
         };
-        let log_content = LogParamContent {
+        let mut log_content = LogParamContent {
             subject: Some(subject_text),
             name: Some(flow_inst_detail.code.clone()),
             sub_id: Some(flow_inst_detail.id.clone()),
@@ -432,6 +453,10 @@ impl FlowLogServ {
             new_content: "".to_string(),
             ..Default::default()
         };
+        if !artifacts.his_operators.as_ref().unwrap_or(&vec![]).contains(&ctx.owner) && !artifacts.curr_operators.as_ref().unwrap_or(&vec![]).contains(&ctx.owner) {
+            log_content.sub_id = None;
+            log_content.sub_kind = None;
+        }
         FlowLogClient::add_ctx_task(
             LogParamTag::ApprovalFlow,
             Some(flow_inst_detail.id.clone()),
@@ -450,6 +475,7 @@ impl FlowLogServ {
 
     // 添加审批流结束业务日志
     pub async fn add_finish_business_log(flow_inst_detail: &FlowInstDetailResp, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let artifacts = flow_inst_detail.artifacts.clone().unwrap_or_default();
         let flow_model_version = FlowModelVersionServ::get_item(
             &flow_inst_detail.rel_flow_version_id,
             &FlowModelVersionFilterReq {
@@ -490,7 +516,7 @@ impl FlowLogServ {
             project_id: rbum_scope_helper::get_path_item(RbumScopeLevelKind::L2.to_int(), &ctx.own_paths),
             ..Default::default()
         };
-        let log_content = LogParamContent {
+        let mut log_content = LogParamContent {
             subject: Some(FlowLogClient::get_flow_kind_text(&flow_inst_detail.tag)),
             name: Some(format!("编号{}", flow_inst_detail.code)),
             sub_id: Some(flow_inst_detail.id.clone()),
@@ -498,6 +524,10 @@ impl FlowLogServ {
             sub_op: Some(sub_op),
             ..Default::default()
         };
+        if !artifacts.his_operators.as_ref().unwrap_or(&vec![]).contains(&ctx.owner) && !artifacts.curr_operators.as_ref().unwrap_or(&vec![]).contains(&ctx.owner) {
+            log_content.sub_id = None;
+            log_content.sub_kind = None;
+        }
         FlowLogClient::add_ctx_task(
             LogParamTag::DynamicLog,
             Some(flow_inst_detail.rel_business_obj_id.clone()),

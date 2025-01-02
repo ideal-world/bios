@@ -11,7 +11,7 @@ use tardis::{
 
 use super::{
     flow_model_dto::FlowModelRelTransitionExt,
-    flow_state_dto::{FlowStateKind, FlowStateOperatorKind, FlowStateRelModelExt, FlowStateVar, FlowSysStateKind},
+    flow_state_dto::{FlowGuardConf, FlowStateKind, FlowStateOperatorKind, FlowStateRelModelExt, FlowStateVar, FlowSysStateKind},
     flow_transition_dto::FlowTransitionDoubleCheckInfo,
     flow_var_dto::FlowVarInfo,
 };
@@ -223,6 +223,7 @@ pub struct FLowInstStateConf {
 #[derive(Serialize, Deserialize, Debug, Clone, poem_openapi::Object)]
 pub struct FLowInstStateFormConf {
     pub form_vars_collect_conf: HashMap<String, FlowStateVar>,
+    pub form_referral_guard_custom_conf: Option<FlowGuardConf>,
 }
 
 // 状态审批配置
@@ -230,6 +231,7 @@ pub struct FLowInstStateFormConf {
 pub struct FLowInstStateApprovalConf {
     pub approval_vars_collect_conf: Option<HashMap<String, FlowStateVar>>,
     pub form_vars_collect: HashMap<String, Value>,
+    pub approval_referral_guard_custom_conf: Option<FlowGuardConf>,
 }
 
 // 流程实例中对应的数据存储

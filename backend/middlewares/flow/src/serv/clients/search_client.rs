@@ -325,9 +325,9 @@ impl FlowSearchClient {
                 kv_disable: None,
             };
             if let Some(_topic) = get_topic(&SPI_RPC_TOPIC) {
-                EventCenterClient { topic_code: SPI_RPC_TOPIC }.modify_item_and_name(SEARCH_MODEL_TAG, &key, &modify_req, funs, ctx).await?;
+                EventCenterClient { topic_code: SPI_RPC_TOPIC }.modify_item_and_name(SEARCH_INSTANCE_TAG, &key, &modify_req, funs, ctx).await?;
             } else {
-                SpiSearchClient::modify_item_and_name(SEARCH_MODEL_TAG, &key, &modify_req, funs, ctx).await?;
+                SpiSearchClient::modify_item_and_name(SEARCH_INSTANCE_TAG, &key, &modify_req, funs, ctx).await?;
             }
         } else {
             let add_req = SearchItemAddReq {

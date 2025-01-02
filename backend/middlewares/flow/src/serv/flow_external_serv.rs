@@ -1,9 +1,7 @@
 use bios_sdk_invoke::{clients::spi_kv_client::SpiKvClient, invoke_constants::TARDIS_CONTEXT};
 use itertools::Itertools;
 use tardis::{
-    basic::{dto::TardisContext, result::TardisResult},
-    log::debug,
-    tokio, TardisFuns, TardisFunsInst,
+    basic::{dto::TardisContext, result::TardisResult}, chrono::Utc, log::debug, tokio, TardisFuns, TardisFunsInst
 };
 
 use crate::{
@@ -47,6 +45,7 @@ impl FlowExternalServ {
                     changed_kind: None,
                 })
                 .collect_vec(),
+            sys_time: Some(Utc::now().timestamp_millis()),
             ..Default::default()
         };
         debug!("do_fetch_rel_obj body: {:?}", body);
@@ -66,12 +65,15 @@ impl FlowExternalServ {
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub async fn do_async_modify_field(
         tag: &str,
         transition_detail: Option<FlowTransitionDetailResp>,
         rel_business_obj_id: &str,
         inst_id: &str,
         callback_op: Option<FlowExternalCallbackOp>,
+        manual_op: Option<bool>,
+        operator: Option<String>,
         target_state: Option<String>,
         target_sys_state: Option<FlowSysStateKind>,
         original_state: Option<String>,
@@ -93,6 +95,8 @@ impl FlowExternalServ {
                 &rel_business_obj_id,
                 &inst_id,
                 callback_op,
+                manual_op,
+                operator,
                 target_state,
                 target_sys_state,
                 original_state,
@@ -109,12 +113,15 @@ impl FlowExternalServ {
         Ok(())
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub async fn do_modify_field(
         tag: &str,
         transition_detail: Option<FlowTransitionDetailResp>,
         rel_business_obj_id: &str,
         inst_id: &str,
         callback_op: Option<FlowExternalCallbackOp>,
+        manual_op: Option<bool>,
+        operator: Option<String>,
         target_state: Option<String>,
         target_sys_state: Option<FlowSysStateKind>,
         original_state: Option<String>,
@@ -147,6 +154,8 @@ impl FlowExternalServ {
         let body = FlowExternalReq {
             kind: FlowExternalKind::ModifyField,
             callback_op,
+            manual_op,
+            operator,
             inst_id: inst_id.to_string(),
             curr_tag: tag.to_string(),
             curr_bus_obj_id: rel_business_obj_id.to_string(),
@@ -156,6 +165,7 @@ impl FlowExternalServ {
             original_sys_state,
             notify: transition_detail.clone().map(|tran| tran.is_notify),
             transition_name: transition_detail.map(|tran| tran.name),
+            sys_time: Some(Utc::now().timestamp_millis()),
             params,
             ..Default::default()
         };
@@ -208,6 +218,7 @@ impl FlowExternalServ {
             original_sys_state: Some(original_sys_state),
             transition_name: Some(transition_name),
             notify: Some(is_notify),
+            sys_time: Some(Utc::now().timestamp_millis()),
             ..Default::default()
         };
         debug!("do_notify_changes body: {:?}", body);
@@ -247,6 +258,7 @@ impl FlowExternalServ {
             curr_bus_obj_id: "".to_string(),
             owner_paths: own_paths.to_string(),
             obj_ids: rel_business_obj_ids,
+            sys_time: Some(Utc::now().timestamp_millis()),
             ..Default::default()
         };
         debug!("do_query_field body: {:?}", body);
@@ -278,6 +290,7 @@ impl FlowExternalServ {
             inst_id: inst_id.to_string(),
             curr_tag: tag.to_string(),
             curr_bus_obj_id: rel_business_obj_id.to_string(),
+            sys_time: Some(Utc::now().timestamp_millis()),
             ..Default::default()
         };
         debug!("do_delete_rel_obj body: {:?}", body);
