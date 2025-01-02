@@ -64,7 +64,7 @@ impl FlowCcModelVersionApi {
     ///
     /// 获取模型使用全局owner
     #[oai(path = "/:flow_version_id/global", method = "get")]
-    async fn gloabl_get(&self, flow_version_id: Path<String>, ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<FlowModelVersionDetailResp> {
+    async fn global_get(&self, flow_version_id: Path<String>, ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<FlowModelVersionDetailResp> {
         let funs = flow_constants::get_tardis_inst();
         let result = FlowModelVersionServ::get_item(
             &flow_version_id.0,
