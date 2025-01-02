@@ -208,7 +208,6 @@ pub(crate) async fn fact_record_sync(fact_conf_key: &str, funs: &TardisFunsInst,
             let funs = stats_initializer::get_tardis_inst();
             let inst = funs.init(None, &task_ctx, true, stats_initializer::init_fun).await?;
             let db_source_conn = get_db_conn_by_cert_id(&cert_id, &funs, &task_ctx, inst.as_ref()).await?;
-            db_source_conn.execute_one("SET plan_cache_mode = 'force_generic_plan'", vec![]).await?;
             let db_source_list = db_source_conn.query_all(&sync_sql, vec![]).await?;
             let mut success = 0;
             let mut error = 0;
@@ -343,7 +342,6 @@ pub(crate) async fn fact_col_record_result(
         return Ok(None);
     }
     let data_source_conn = get_db_conn_by_cert_id(&cert_id, funs, ctx, inst).await?;
-    data_source_conn.execute_one("SET plan_cache_mode = 'force_generic_plan'", vec![]).await?;
     let (sql, params) = process_sql(&sql, &fact_record)?;
     if let Some(rel_record) = data_source_conn.query_one(&sql, params).await? {
         if let Some(first_column) = rel_record.column_names().get(0) {
