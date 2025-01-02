@@ -1,5 +1,5 @@
 REPO=$TAG
-
+CURRENT_DATE=$(date +"%Y%m%d%H%M")
 ### Rust
 if [ -z "$TARGET" ]; then
     echo "Please choose a target:"
@@ -43,6 +43,9 @@ mv ../../../target/$TARGET_DIR/bios-serv-all ./
 if [ -z "$TAG" ]; then
     echo "Please enter a tag:"
     read TAG
+fi
+if [ -z "$TAG" ]; then
+    TAG="test-$CURRENT_DATE"
 fi
 docker build -t $TAG ./
 
