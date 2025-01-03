@@ -1,7 +1,7 @@
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
     db::{reldb_client::TardisRelDBClient, sea_orm::Value},
-    serde_json::Value as JsonValue,
+    serde_json::{json, Value as JsonValue},
     web::web_resp::TardisPage,
     TardisFuns, TardisFunsInst,
 };
@@ -489,7 +489,10 @@ ORDER BY ts DESC
                 total_size = item.try_get("", "total")?;
             }
             let content: String = item.try_get("", "content")?;
-            let content = TardisFuns::json.str_to_json(&content)?;
+            let content = match TardisFuns::json.str_to_json(&content) {
+                Ok(content) => content,
+                Err(_) => json!({"content": content}),
+            };
             Ok(LogItemFindResp {
                 ts: item.try_get("", "ts")?,
                 id: item.try_get("", "id")?,

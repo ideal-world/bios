@@ -1873,7 +1873,7 @@ impl FlowInstServ {
                         FlowStatusAutoStrategyKind::SpecifyAgent => {
                             let auto_transfer_when_empty_guard_custom_conf = approval_conf.auto_transfer_when_empty_guard_custom_conf.clone().unwrap_or_default();
                             if state.own_paths != flow_inst_detail.own_paths {
-                                guard_custom_conf.get_local_conf(funs, ctx).await?;
+                                auto_transfer_when_empty_guard_custom_conf.get_local_conf(funs, ctx).await?;
                             }
                             let guard_accounts = FlowSearchClient::search_guard_accounts(&auto_transfer_when_empty_guard_custom_conf, funs, ctx).await?;
                             modify_req.curr_approval_total = Some(guard_accounts.len());
