@@ -42,6 +42,8 @@ pub struct KvItemSummaryResp {
     pub value: Value,
     pub info: String,
     pub disable: bool,
+    pub owner: String,
+    pub own_paths: String,
     pub create_time: DateTime<Utc>,
     pub update_time: DateTime<Utc>,
 }

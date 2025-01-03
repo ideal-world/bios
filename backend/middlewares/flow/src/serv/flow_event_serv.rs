@@ -400,7 +400,7 @@ impl FlowEventServ {
                 &flow_inst_detail.rel_business_obj_id,
                 &flow_inst_detail.id,
                 Some(FlowExternalCallbackOp::PostAction),
-                Some(true),
+                Some(false),
                 None,
                 Some(next_flow_state.name.clone()),
                 Some(next_flow_state.sys_state.clone()),

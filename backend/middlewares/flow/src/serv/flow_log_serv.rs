@@ -357,7 +357,7 @@ impl FlowLogServ {
             subject: Some(subject_text),
             name: Some(flow_inst_detail.code.clone()),
             sub_id: Some(flow_inst_detail.id.clone()),
-            sub_kind: Some(FlowLogClient::get_junp_kind("FLOW")),
+            sub_kind: Some(FlowLogClient::get_junp_kind(&flow_inst_detail.tag)),
             operand: Some(operand),
             operand_name: Some(current_state.name),
             operand_id: Some(flow_inst_detail.rel_business_obj_id.clone()),
