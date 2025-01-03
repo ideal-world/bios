@@ -302,6 +302,7 @@ impl FlowSearchClient {
                 ext: Some(json!({
                     "tag": inst_resp.tag,
                     "current_state_id": inst_resp.current_state_id,
+                    "rel_business_obj_name": name.clone(),
                     "current_state_name": inst_resp.current_state_name,
                     "current_state_kind": inst_resp.current_state_kind,
                     "rel_business_obj_id": inst_resp.rel_business_obj_id,

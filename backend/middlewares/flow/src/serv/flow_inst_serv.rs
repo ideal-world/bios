@@ -656,6 +656,7 @@ impl FlowInstServ {
                         &inst.current_state_kind.unwrap_or_default(),
                         current_state_kind_conf,
                         artifacts,
+                        inst.finish_time.is_some(),
                         ctx,
                     ),
                     current_vars: inst.current_vars.map(|current_vars| TardisFuns::json.json_to_obj(current_vars).unwrap()),
@@ -1690,6 +1691,7 @@ impl FlowInstServ {
                 let mut modify_req = FlowInstArtifactsModifyReq { ..Default::default() };
                 let form_conf = state.kind_conf().unwrap_or_default().form.unwrap_or_default();
                 let mut guard_custom_conf = form_conf.guard_custom_conf.unwrap_or_default();
+                guard_custom_conf.get_local_conf(funs, ctx).await?;
                 if form_conf.guard_by_creator {
                     guard_custom_conf.guard_by_spec_account_ids.push(flow_inst_detail.create_ctx.owner.clone());
                 }
@@ -1783,6 +1785,7 @@ impl FlowInstServ {
                 let mut modify_req = FlowInstArtifactsModifyReq { ..Default::default() };
                 let approval_conf = state.kind_conf().unwrap_or_default().approval.unwrap_or_default();
                 let mut guard_custom_conf = approval_conf.guard_custom_conf.unwrap_or_default();
+                guard_custom_conf.get_local_conf(funs, ctx).await?;
                 if approval_conf.guard_by_creator {
                     guard_custom_conf.guard_by_spec_account_ids.push(flow_inst_detail.create_ctx.owner.clone());
                 }
@@ -1865,6 +1868,7 @@ impl FlowInstServ {
                         }
                         FlowStatusAutoStrategyKind::SpecifyAgent => {
                             let auto_transfer_when_empty_guard_custom_conf = approval_conf.auto_transfer_when_empty_guard_custom_conf.clone().unwrap_or_default();
+                            guard_custom_conf.get_local_conf(funs, ctx).await?;
                             let guard_accounts = FlowSearchClient::search_guard_accounts(&auto_transfer_when_empty_guard_custom_conf, funs, ctx).await?;
                             modify_req.curr_approval_total = Some(guard_accounts.len());
                             modify_req.curr_operators = Some(guard_accounts);
@@ -1895,7 +1899,7 @@ impl FlowInstServ {
                         &flow_inst_detail.rel_business_obj_id,
                         &flow_inst_detail.id,
                         Some(FlowExternalCallbackOp::Auto),
-                        Some(true),
+                        None,
                         Some("审批通过".to_string()),
                         None,
                         None,
@@ -1926,7 +1930,7 @@ impl FlowInstServ {
                         &flow_inst_detail.rel_business_obj_id,
                         &flow_inst_detail.id,
                         None,
-                        Some(true),
+                        None,
                         Some("审批通过".to_string()),
                         None,
                         None,
@@ -2057,6 +2061,7 @@ impl FlowInstServ {
         state_kind: &FlowStateKind,
         kind_conf: Option<FLowStateKindConf>,
         artifacts: Option<FlowInstArtifacts>,
+        finish: bool,
         ctx: &TardisContext,
     ) -> Option<FLowInstStateConf> {
         if let Some(kind_conf) = kind_conf {
@@ -2090,11 +2095,11 @@ impl FlowInstServ {
                         operators.insert(FlowStateOperatorKind::Pass, approval.pass_btn_name.clone());
                         operators.insert(FlowStateOperatorKind::Overrule, approval.overrule_btn_name.clone());
                         operators.insert(FlowStateOperatorKind::Back, approval.back_btn_name.clone());
-                        if approval.referral {
+                        if approval.referral && !finish {
                             operators.insert(FlowStateOperatorKind::Referral, "".to_string());
                         }
                     }
-                    if approval.revoke && ctx.owner == artifacts.prev_non_auto_account_id.unwrap_or_default() {
+                    if approval.revoke && ctx.owner == artifacts.prev_non_auto_account_id.unwrap_or_default() && !finish {
                         operators.insert(FlowStateOperatorKind::Revoke, "".to_string());
                     }
                     FLowInstStateConf {
@@ -2402,11 +2407,13 @@ impl FlowInstServ {
                 return Ok(true);
             }
             let countersign_conf = current_state_kind_conf.countersign_conf;
+            let mut specified_pass_guard_conf = countersign_conf.specified_pass_guard_conf.clone().unwrap_or_default();
+            specified_pass_guard_conf.get_local_conf(funs, ctx).await?;
             // 指定人通过，则通过
             if kind == FlowApprovalResultKind::Pass
                 && countersign_conf.specified_pass_guard.unwrap_or(false)
                 && countersign_conf.specified_pass_guard_conf.is_some()
-                && countersign_conf.specified_pass_guard_conf.unwrap().check(ctx)
+                && specified_pass_guard_conf.check(ctx)
             {
                 return Ok(true);
             }
@@ -2414,7 +2421,7 @@ impl FlowInstServ {
             if kind == FlowApprovalResultKind::Overrule
                 && countersign_conf.specified_overrule_guard.unwrap_or(false)
                 && countersign_conf.specified_overrule_guard_conf.is_some()
-                && countersign_conf.specified_overrule_guard_conf.unwrap().check(ctx)
+                && specified_pass_guard_conf.check(ctx)
             {
                 return Ok(true);
             }
