@@ -11,6 +11,12 @@ use tardis::TardisFunsInst;
 pub struct InvokeConfig {
     pub spi_app_id: String,
     pub module_urls: HashMap<String, String>,
+    pub module_configs: HashMap<String, InvokeModuleConfig>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct InvokeModuleConfig {
+    pub in_event: bool,
 }
 
 impl Default for InvokeConfig {
@@ -25,6 +31,13 @@ impl Default for InvokeConfig {
                 (InvokeModuleKind::Iam.to_string(), "http://127.0.0.1:8080/iam".to_string()),
                 (InvokeModuleKind::Stats.to_string(), "http://127.0.0.1:8080/spi-stats".to_string()),
                 (InvokeModuleKind::Event.to_string(), "http://127.0.0.1:8080/event".to_string()),
+            ]),
+            module_configs: HashMap::from([
+                (InvokeModuleKind::Kv.to_string(), InvokeModuleConfig { in_event: false }),
+                (InvokeModuleKind::Log.to_string(), InvokeModuleConfig { in_event: false }),
+                (InvokeModuleKind::Search.to_string(), InvokeModuleConfig { in_event: false }),
+                (InvokeModuleKind::Schedule.to_string(), InvokeModuleConfig { in_event: false }),
+                (InvokeModuleKind::Stats.to_string(), InvokeModuleConfig { in_event: false }),
             ]),
         }
     }
@@ -55,6 +68,12 @@ impl InvokeConfigManager {
         let conf = conf.get(code).unwrap_or_else(|| panic!("not found invoke config code {code}"));
         fun(conf)
     }
+
+    pub fn get_module_config(code: &str, module: InvokeModuleKind) -> Option<InvokeModuleConfig> {
+        let conf = INVOKE_CONFIG.lock().unwrap_or_else(|e| panic!("invoke config lock error: {e:?}"));
+        let conf = conf.get(code).unwrap_or_else(|| panic!("not found invoke config code {code}"));
+        conf.module_configs.get(&module.to_string()).cloned()
+    }
 }
 
 pub trait InvokeConfigApi {
@@ -62,6 +81,7 @@ pub trait InvokeConfigApi {
     fn invoke_conf_module_url(&self) -> HashMap<String, String>;
     fn invoke_conf_match_module_url(&self, module_url: &str) -> bool;
     fn invoke_conf_inject_context(&self, context: &TardisContext) -> TardisContext;
+    fn invoke_conf_in_event(&self, module: InvokeModuleKind) -> bool;
 }
 
 impl InvokeConfigApi for TardisFunsInst {
@@ -81,5 +101,9 @@ impl InvokeConfigApi for TardisFunsInst {
         let mut ctx = context.clone();
         ctx.ak = self.invoke_conf_spi_app_id();
         ctx
+    }
+
+    fn invoke_conf_in_event(&self, module: InvokeModuleKind) -> bool {
+        InvokeConfigManager::get_module_config(self.module_code(), module).map_or(false, |conf| conf.in_event)
     }
 }

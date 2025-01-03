@@ -156,6 +156,7 @@ impl AuditLogPlugin {
                 InvokeConfig {
                     spi_app_id: self.spi_app_id.clone(),
                     module_urls: HashMap::from([(InvokeModuleKind::Log.to_string(), self.log_url.clone())]),
+                    ..Default::default()
                 },
             )?;
         }

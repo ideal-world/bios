@@ -4,6 +4,8 @@ use tardis::web::web_resp::{TardisPage, TardisResp};
 use tardis::TardisFunsInst;
 
 use crate::dto::search_item_dto::{SearchEventItemDeleteReq, SearchEventItemModifyReq, SearchItemAddReq, SearchItemModifyReq, SearchItemSearchReq, SearchItemSearchResp};
+#[cfg(feature = "event")]
+use crate::invoke_config::InvokeConfigApi as _;
 use crate::invoke_enumeration::InvokeModuleKind;
 
 use super::base_spi_client::BaseSpiClient;
@@ -38,8 +40,10 @@ pub mod event {
 impl SpiSearchClient {
     pub async fn add_item_and_name(add_req: &SearchItemAddReq, name: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         #[cfg(feature = "event")]
-        if let Some(_topic) = get_topic(&SPI_RPC_TOPIC) {
-            return EventCenterClient { topic_code: SPI_RPC_TOPIC }.add_item_and_name(add_req, name, funs, ctx).await;
+        if funs.invoke_conf_in_event(InvokeModuleKind::Search) {
+            if let Some(_topic) = get_topic(&SPI_RPC_TOPIC) {
+                return EventCenterClient { topic_code: SPI_RPC_TOPIC }.add_item_and_name(add_req, name, funs, ctx).await;
+            }
         }
         let search_url: String = BaseSpiClient::module_url(InvokeModuleKind::Search, funs).await?;
         let headers = BaseSpiClient::headers(None, funs, ctx).await?;
@@ -51,8 +55,10 @@ impl SpiSearchClient {
 
     pub async fn modify_item_and_name(tag: &str, key: &str, modify_req: &SearchItemModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         #[cfg(feature = "event")]
-        if let Some(_topic) = get_topic(&SPI_RPC_TOPIC) {
-            return EventCenterClient { topic_code: SPI_RPC_TOPIC }.modify_item_and_name(tag, key, modify_req, funs, ctx).await;
+        if funs.invoke_conf_in_event(InvokeModuleKind::Search) {
+            if let Some(_topic) = get_topic(&SPI_RPC_TOPIC) {
+                return EventCenterClient { topic_code: SPI_RPC_TOPIC }.modify_item_and_name(tag, key, modify_req, funs, ctx).await;
+            }
         }
         let search_url: String = BaseSpiClient::module_url(InvokeModuleKind::Search, funs).await?;
         let headers = BaseSpiClient::headers(None, funs, ctx).await?;
@@ -66,8 +72,10 @@ impl SpiSearchClient {
 
     pub async fn delete_item_and_name(tag: &str, key: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         #[cfg(feature = "event")]
-        if let Some(_topic) = get_topic(&SPI_RPC_TOPIC) {
-            return EventCenterClient { topic_code: SPI_RPC_TOPIC }.delete_item_and_name(tag, key, funs, ctx).await;
+        if funs.invoke_conf_in_event(InvokeModuleKind::Search) {
+            if let Some(_topic) = get_topic(&SPI_RPC_TOPIC) {
+                return EventCenterClient { topic_code: SPI_RPC_TOPIC }.delete_item_and_name(tag, key, funs, ctx).await;
+            }
         }
         let search_url = BaseSpiClient::module_url(InvokeModuleKind::Search, funs).await?;
         let headers = BaseSpiClient::headers(None, funs, ctx).await?;

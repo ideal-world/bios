@@ -1,4 +1,4 @@
-use bios_sdk_invoke::clients::spi_log_client::StatsItemAddReq;
+use bios_sdk_invoke::clients::spi_stats_client::StatsItemAddReq;
 use serde::{Deserialize, Serialize};
 use tardis::{
     chrono::{DateTime, Utc},
@@ -40,14 +40,14 @@ pub struct StatsFactRecordLoadReq {
     pub ext: Option<Value>,
 }
 
-impl From<StatsItemAddReq> for StatsFactRecordLoadReq {
-    fn from(value: StatsItemAddReq) -> Self {
+impl From<bios_sdk_invoke::dto::stats_record_dto::StatsFactRecordLoadReq> for StatsFactRecordLoadReq {
+    fn from(value: bios_sdk_invoke::dto::stats_record_dto::StatsFactRecordLoadReq) -> Self {
         StatsFactRecordLoadReq {
-            own_paths: value.own_paths.unwrap_or_default(),
-            ct: value.ts.unwrap_or(Utc::now()),
+            own_paths: value.own_paths,
+            ct: value.ct,
             idempotent_id: value.idempotent_id,
-            ignore_updates: None,
-            data: value.content,
+            ignore_updates: value.ignore_updates,
+            data: value.data,
             ext: value.ext,
         }
     }
@@ -87,6 +87,20 @@ pub struct StatsFactRecordsLoadReq {
     ///
     /// 动态数据
     pub ext: Option<Value>,
+}
+
+impl From<bios_sdk_invoke::dto::stats_record_dto::StatsFactRecordsLoadReq> for StatsFactRecordsLoadReq {
+    fn from(value: bios_sdk_invoke::dto::stats_record_dto::StatsFactRecordsLoadReq) -> Self {
+        StatsFactRecordsLoadReq {
+            key: value.key,
+            own_paths: value.own_paths,
+            ct: value.ct,
+            idempotent_id: value.idempotent_id,
+            ignore_updates: value.ignore_updates,
+            data: value.data,
+            ext: value.ext,
+        }
+    }
 }
 
 /// Add Dimension Record Request Object
