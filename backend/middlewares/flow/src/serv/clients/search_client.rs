@@ -15,7 +15,7 @@ use itertools::Itertools;
 use serde_json::json;
 use tardis::{
     basic::{dto::TardisContext, field::TrimString, result::TardisResult},
-    log::debug,
+    log::{debug, error},
     tokio,
     web::{poem_openapi::types::ToJSON, web_resp::TardisPage},
     TardisFuns, TardisFunsInst,
@@ -267,11 +267,15 @@ impl FlowSearchClient {
         let inst_resp = FlowInstServ::get(inst_id, funs, &mock_ctx).await?;
         ctx.add_async_task(Box::new(|| {
             Box::pin(async move {
+                let inst_id_cp = inst_resp.id.clone();
                 let task_handle = tokio::spawn(async move {
                     let funs = flow_constants::get_tardis_inst();
                     let _ = Self::add_or_modify_instance_search(&inst_resp, is_modify, &funs, &ctx_clone).await;
                 });
-                task_handle.await.unwrap();
+                match task_handle.await {
+                    Ok(_) => {}
+                    Err(e) => error!("Flow search_client {} async_add_or_modify_instance_search error:{:?}", inst_id_cp, e),
+                }
                 Ok(())
             })
         }))
