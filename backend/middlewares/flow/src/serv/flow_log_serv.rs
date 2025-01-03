@@ -123,6 +123,8 @@ impl FlowLogServ {
             ..Default::default()
         };
         if !artifacts.his_operators.as_ref().unwrap_or(&vec![]).contains(&ctx.owner) && !artifacts.curr_operators.as_ref().unwrap_or(&vec![]).contains(&ctx.owner) {
+            log_content.sub_id = None;
+            log_content.sub_kind = None;
             log_content.operand_id = None;
             log_content.operand_kind = None;
         }
@@ -369,8 +371,7 @@ impl FlowLogServ {
             ..Default::default()
         };
         if !artifacts.his_operators.as_ref().unwrap_or(&vec![]).contains(&ctx.owner) && !artifacts.curr_operators.as_ref().unwrap_or(&vec![]).contains(&ctx.owner) {
-            log_content.sub_id = None;
-            log_content.sub_kind = None;
+            log_content.operand_id = None;
         }
         if operate_req.operate == FlowStateOperatorKind::Referral {
             log_content.flow_referral = Some(FlowKvClient::get_account_name(&operate_req.operator.clone().unwrap_or_default(), funs, ctx).await?);
@@ -448,14 +449,14 @@ impl FlowLogServ {
             subject: Some(subject_text),
             name: Some(flow_inst_detail.code.clone()),
             sub_id: Some(flow_inst_detail.id.clone()),
-            sub_kind: Some(FlowLogClient::get_junp_kind("FLOW")),
+            sub_kind: Some(FlowLogClient::get_junp_kind(&flow_inst_detail.tag)),
             old_content: "".to_string(),
             new_content: "".to_string(),
             ..Default::default()
         };
+        
         if !artifacts.his_operators.as_ref().unwrap_or(&vec![]).contains(&ctx.owner) && !artifacts.curr_operators.as_ref().unwrap_or(&vec![]).contains(&ctx.owner) {
             log_content.sub_id = None;
-            log_content.sub_kind = None;
         }
         FlowLogClient::add_ctx_task(
             LogParamTag::ApprovalFlow,
