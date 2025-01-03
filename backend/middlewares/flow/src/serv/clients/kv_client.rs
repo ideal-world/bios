@@ -26,13 +26,13 @@ impl FlowKvClient {
             })
             .map(|records| {
                 if let Some(item) = records.iter().find(|r| r.own_paths == ctx.own_paths) {
-                    return item.key.clone();
+                    return item.key.split("__k_n__:iam_role:").collect_vec().pop().map(|s| s.to_string()).unwrap_or_default();
                 }
                 if let Some(item) = records.iter().find(|r| r.own_paths == rbum_scope_helper::get_path_item(1, &ctx.own_paths).unwrap_or_default()) {
-                    return item.key.clone();
+                    return item.key.split("__k_n__:iam_role:").collect_vec().pop().map(|s| s.to_string()).unwrap_or_default();
                 }
                 if let Some(item) = records.iter().find(|r| r.own_paths.is_empty()) {
-                    return item.key.clone();
+                    return item.key.split("__k_n__:iam_role:").collect_vec().pop().map(|s| s.to_string()).unwrap_or_default();
                 }
                 "".to_string()
             })
