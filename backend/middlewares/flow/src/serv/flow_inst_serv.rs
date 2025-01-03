@@ -1871,7 +1871,7 @@ impl FlowInstServ {
                             }
                         }
                         FlowStatusAutoStrategyKind::SpecifyAgent => {
-                            let auto_transfer_when_empty_guard_custom_conf = approval_conf.auto_transfer_when_empty_guard_custom_conf.clone().unwrap_or_default();
+                            let mut auto_transfer_when_empty_guard_custom_conf = approval_conf.auto_transfer_when_empty_guard_custom_conf.clone().unwrap_or_default();
                             if state.own_paths != flow_inst_detail.own_paths {
                                 auto_transfer_when_empty_guard_custom_conf.get_local_conf(funs, ctx).await?;
                             }
