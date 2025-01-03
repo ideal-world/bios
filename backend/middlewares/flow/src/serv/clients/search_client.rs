@@ -350,6 +350,7 @@ impl FlowSearchClient {
                     "current_state_id": inst_resp.current_state_id,
                     "current_state_name": inst_resp.current_state_name,
                     "current_state_kind": inst_resp.current_state_kind,
+                    "rel_business_obj_name": name.clone(),
                     "rel_business_obj_id": inst_resp.rel_business_obj_id,
                     "finish_time": inst_resp.finish_time,
                     "op_time": inst_resp.update_time,

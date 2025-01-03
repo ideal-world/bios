@@ -431,7 +431,7 @@ impl FlowInstServ {
 
         let flow_inst_detail = Self::get(flow_inst_id, funs, ctx).await?;
         if !flow_inst_detail.main {
-            // FlowLogServ::add_finish_log(&flow_inst_detail, funs, ctx).await?;
+            FlowLogServ::add_finish_log(&flow_inst_detail, funs, ctx).await?;
             FlowSearchClient::modify_business_obj_search(&flow_inst_detail.rel_business_obj_id, &flow_inst_detail.tag, funs, ctx).await?;
             FlowSearchClient::async_add_or_modify_instance_search(&flow_inst_detail.id, Box::new(true), funs, ctx).await?;
         }
@@ -1078,7 +1078,7 @@ impl FlowInstServ {
         let curr_inst = Self::get(&flow_inst_detail.id, funs, ctx).await?;
 
         if next_flow_state.sys_state == FlowSysStateKind::Finish && !curr_inst.main {
-            // FlowLogServ::add_finish_log(&curr_inst, funs, ctx).await?;
+            FlowLogServ::add_finish_log(&curr_inst, funs, ctx).await?;
             FlowSearchClient::modify_business_obj_search(&curr_inst.rel_business_obj_id, &curr_inst.tag, funs, ctx).await?;
         }
 
