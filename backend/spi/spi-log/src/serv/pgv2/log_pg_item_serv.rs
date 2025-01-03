@@ -1,9 +1,6 @@
 use std::{collections::HashMap, str::FromStr, vec};
 
-use bios_sdk_invoke::clients::{
-    event_client::{get_topic, mq_error, EventAttributeExt as _, SPI_RPC_TOPIC},
-    spi_log_client::{StatsItemAddReq, StatsItemDeleteReq},
-};
+use bios_sdk_invoke::clients::{event_client::EventAttributeExt as _, spi_stats_client::SpiStatsClient};
 use tardis::{
     basic::{dto::TardisContext, error::TardisError, result::TardisResult},
     chrono::{DateTime, Utc},
@@ -101,7 +98,7 @@ pub async fn addv2(add_req: &mut LogItemAddV2Req, funs: &TardisFunsInst, ctx: &T
                         }
                     }
                     // 对比一下这个字段现在的值和ref字段的原始值
-                    if insert_field_value.to_string() == ref_origin_value.to_string() {
+                    if *insert_field_value == ref_origin_value {
                         // 如果一样，那么把这次ref字段改成ref_key
                         *insert_field_value = last_ref_key;
                     }
@@ -149,7 +146,7 @@ VALUES
     conn.commit().await?;
     //if push is true, then push to EDA
     if add_req.push {
-        push_to_eda(&add_req, &ref_fields, funs, ctx).await?;
+        push_to_eda(add_req, &ref_fields, funs, ctx).await?;
     }
     Ok(id)
 }
@@ -754,27 +751,25 @@ async fn get_ref_fields_by_table_name(conn: &TardisRelDBlConnection, schema_name
 }
 
 async fn push_to_eda(req: &LogItemAddV2Req, ref_fields: &Vec<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-    if let Some(topic) = get_topic(&SPI_RPC_TOPIC) {
-        let mut req_clone = req.clone();
-        for ref_field in ref_fields {
-            if let Some(content) = req_clone.content.as_object_mut() {
-                content.remove(ref_field);
-            }
-        }
+    let mut req_clone = req.clone();
+    for ref_field in ref_fields {
         if let Some(content) = req_clone.content.as_object_mut() {
-            if !content.contains_key("owner") {
-                content.insert("owner".to_owned(), tardis::serde_json::Value::String(req.owner.clone().unwrap_or_default()));
-            }
+            content.remove(ref_field);
         }
-        // if the op is deleted or log disabled, send the delete event to stats
-        if (req_clone.op.as_ref().map_or(false, |op| op.to_lowercase() == "delete")) || req_clone.disable.unwrap_or(false) {
-            let stats_delete: StatsItemDeleteReq = req_clone.into();
-            topic.send_event_and_wait(stats_delete.inject_context(funs, ctx).json()).map_err(mq_error).await?;
+    }
+    if let Some(content) = req_clone.content.as_object_mut() {
+        if !content.contains_key("owner") {
+            content.insert("owner".to_owned(), tardis::serde_json::Value::String(req.owner.clone().unwrap_or_default()));
+        }
+    }
+    // if the op is deleted or log disabled, send the delete event to stats
+    if (req_clone.op.as_ref().map_or(false, |op| op.to_lowercase() == "delete")) || req_clone.disable.unwrap_or(false) {
+        if let Some(key) = req_clone.key.clone() {
+            SpiStatsClient::fact_record_delete(&req_clone.tag, &key, funs, ctx).await?;
             return Ok(());
         }
-        let stats_add: StatsItemAddReq = req_clone.into();
-        topic.send_event_and_wait(stats_add.inject_context(funs, ctx).json()).map_err(mq_error).await?;
     }
+    SpiStatsClient::fact_record_load(&req_clone.tag.clone(), &req_clone.key.clone().unwrap_or_default(), req_clone.into(), funs, ctx).await?;
     Ok(())
 }
 

@@ -1,5 +1,10 @@
 use serde::{Deserialize, Serialize};
 
+#[cfg(feature = "event")]
+use crate::invoke_config::InvokeConfigApi as _;
+use crate::{clients::base_spi_client::BaseSpiClient, invoke_config::InvokeConfig, invoke_constants::DYNAMIC_LOG, invoke_enumeration::InvokeModuleKind};
+#[cfg(feature = "event")]
+use tardis::futures::TryFutureExt as _;
 use tardis::{
     basic::{dto::TardisContext, field::TrimString, result::TardisResult},
     chrono::{DateTime, Utc},
@@ -11,13 +16,9 @@ use tardis::{
     TardisFuns, TardisFunsInst,
 };
 
-use crate::{clients::base_spi_client::BaseSpiClient, invoke_config::InvokeConfig, invoke_constants::DYNAMIC_LOG, invoke_enumeration::InvokeModuleKind};
-
 #[cfg(feature = "event")]
 use super::event_client::{get_topic, mq_error, EventAttributeExt, SPI_RPC_TOPIC};
 use super::iam_client::IamClient;
-#[cfg(feature = "event")]
-use tardis::futures::TryFutureExt as _;
 
 #[cfg(feature = "event")]
 pub mod event {
@@ -25,12 +26,6 @@ pub mod event {
 
     impl EventAttribute for super::LogItemAddV2Req {
         const SUBJECT: Subject = Subject::const_new("log/add");
-    }
-    impl EventAttribute for super::StatsItemAddReq {
-        const SUBJECT: Subject = Subject::const_new("stats/add");
-    }
-    impl EventAttribute for super::StatsItemDeleteReq {
-        const SUBJECT: Subject = Subject::const_new("stats/delete");
     }
 }
 #[derive(Debug, Default, Clone)]
@@ -104,32 +99,6 @@ pub struct LogItemAddV2Req {
     pub disable: Option<bool>,
     pub push: bool,
     pub msg: Option<String>,
-}
-
-#[derive(poem_openapi::Object, Serialize, Deserialize, Clone, Debug)]
-pub struct StatsItemAddReq {
-    #[oai(validator(min_length = "2"))]
-    pub idempotent_id: Option<String>,
-    #[oai(validator(pattern = r"^[a-z0-9_]+$"))]
-    pub tag: String,
-    pub content: Value,
-    pub ext: Option<Value>,
-    #[oai(validator(min_length = "2"))]
-    pub key: Option<TrimString>,
-    pub ts: Option<DateTime<Utc>>,
-    #[oai(validator(min_length = "2"))]
-    pub owner: Option<String>,
-    pub own_paths: Option<String>,
-}
-
-#[derive(poem_openapi::Object, Serialize, Deserialize, Clone, Debug)]
-pub struct StatsItemDeleteReq {
-    #[oai(validator(min_length = "2"))]
-    pub idempotent_id: Option<String>,
-    #[oai(validator(pattern = r"^[a-z0-9_]+$"))]
-    pub tag: String,
-    #[oai(validator(min_length = "2"))]
-    pub key: Option<TrimString>,
 }
 
 impl SpiLogClient {
@@ -206,9 +175,11 @@ impl SpiLogClient {
 
     pub async fn addv2(req: LogItemAddV2Req, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         #[cfg(feature = "event")]
-        if let Some(topic) = get_topic(&SPI_RPC_TOPIC) {
-            topic.send_event(req.inject_context(funs, ctx).json()).map_err(mq_error).await?;
-            return Ok(());
+        if funs.invoke_conf_in_event(InvokeModuleKind::Log) {
+            if let Some(topic) = get_topic(&SPI_RPC_TOPIC) {
+                topic.send_event(req.inject_context(funs, ctx).json()).map_err(mq_error).await?;
+                return Ok(());
+            }
         }
         let log_url: String = BaseSpiClient::module_url(InvokeModuleKind::Log, funs).await?;
         let headers = BaseSpiClient::headers(None, funs, ctx).await?;

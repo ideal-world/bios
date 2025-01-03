@@ -111,6 +111,8 @@ impl IamStatsClient {
                 "account_num": account_id.len(),
             }),
             ext: None,
+            idempotent_id: None,
+            ignore_updates: None,
         };
         SpiStatsClient::fact_record_load(&funs.conf::<IamConfig>().spi.stats_orgs_prefix.clone(), &org_id, add_req, funs, ctx).await?;
         Ok(())
