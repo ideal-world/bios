@@ -145,7 +145,6 @@ pub(crate) async fn fact_record_load(
 ) -> TardisResult<()> {
     let bs_inst = inst.inst::<TardisRelDBClient>();
     let (mut conn, _) = common_pg::init_conn(bs_inst).await?;
-    conn.execute_one("SET plan_cache_mode = 'force_generic_plan'", vec![]).await?;
     conn.begin().await?;
     if !stats_pg_conf_fact_serv::online(fact_conf_key, &conn, ctx).await? {
         return Err(funs.err().conflict("fact_record", "load", "The fact config not online.", "409-spi-stats-fact-conf-not-online"));
@@ -179,7 +178,7 @@ pub(crate) async fn fact_record_load(
             return Ok(());
         }
     }
-    let latest_data_resp = fact_get_latest_record_raw(fact_conf_key, fact_record_key, &conn, ctx).await?;
+    let latest_data_resp = fact_get_latest_record_raw(fact_conf_key, fact_record_key, fact_col_conf_set.clone(), &conn, ctx).await?;
     if let Some(latest_data) = latest_data_resp.as_ref() {
         let mut storage_ext = latest_data.try_get("", "ext")?;
         merge(&mut storage_ext, add_req.ext.unwrap_or(TardisFuns::json.str_to_json("{}")?));
@@ -1030,11 +1029,22 @@ pub(crate) async fn dim_record_real_delete(
 async fn fact_get_latest_record_raw(
     fact_conf_key: &str,
     dim_record_key: &str,
+    fact_col_conf_set: Vec<StatsConfFactColInfoResp>,
     conn: &TardisRelDBlConnection,
     ctx: &TardisContext,
 ) -> TardisResult<Option<tardis::db::sea_orm::QueryResult>> {
     let table_name = package_table_name(&format!("stats_inst_fact_{fact_conf_key}"), ctx);
-    let result = conn.query_one(&format!("SELECT * FROM {table_name} WHERE key = $1 ORDER BY ct DESC"), vec![Value::from(dim_record_key)]).await?;
+    let mut field_keys = vec!["key".to_string(), "own_paths".to_string(), "ext".to_string(), "ct".to_string(), "idempotent_id".to_string()];
+    fact_col_conf_set.iter().for_each(|c| {
+        field_keys.push(c.key.clone());
+    });
+    // let result = conn.query_one(&format!("SELECT * FROM {table_name} WHERE key = $1 ORDER BY ct DESC"), vec![Value::from(dim_record_key)]).await?;
+    let result = conn
+        .query_one(
+            &format!("SELECT {} FROM {table_name} WHERE key = '{dim_record_key}' ORDER BY ct DESC", field_keys.join(",")),
+            vec![],
+        )
+        .await?;
     Ok(result)
 }
 
@@ -1047,7 +1057,7 @@ async fn fact_get_idempotent_record_raw(
     let table_name = package_table_name(&format!("stats_inst_fact_{fact_conf_key}"), ctx);
     let result = conn
         .query_one(
-            &format!("SELECT * FROM {table_name} WHERE idempotent_id = $1 ORDER BY ct DESC"),
+            &format!("SELECT idempotent_id FROM {table_name} WHERE idempotent_id = $1 ORDER BY ct DESC"),
             vec![Value::from(idempotent_id)],
         )
         .await?;
