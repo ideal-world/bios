@@ -57,7 +57,7 @@ impl SpiLogClient {
 
         body.insert("ts", ts);
 
-        TardisFuns::web_client().post_obj_to_str(&format!("{log_url}/ci/item"), &body, headers.clone()).await?;
+        // TardisFuns::web_client().post_obj_to_str(&format!("{log_url}/ci/item"), &body, headers.clone()).await?;
         Ok(())
     }
 }
