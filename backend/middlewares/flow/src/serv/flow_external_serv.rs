@@ -186,6 +186,7 @@ impl FlowExternalServ {
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub async fn do_notify_changes(
         tag: &str,
         inst_id: &str,
@@ -196,6 +197,7 @@ impl FlowExternalServ {
         original_sys_state: FlowSysStateKind,
         transition_name: String,
         is_notify: bool,
+        manual_op: Option<bool>,
         callback_op: Option<FlowExternalCallbackOp>,
         ctx: &TardisContext,
         funs: &TardisFunsInst,
@@ -218,6 +220,7 @@ impl FlowExternalServ {
             original_sys_state: Some(original_sys_state),
             transition_name: Some(transition_name),
             notify: Some(is_notify),
+            manual_op,
             sys_time: Some(Utc::now().timestamp_millis()),
             ..Default::default()
         };
