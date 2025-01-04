@@ -256,7 +256,7 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
             .into_iter()
             .collect::<TardisResult<Vec<()>>>()?;
         }
-        if add_req.template && add_req.rel_model_id.clone().map_or(true, |id| id.is_empty()) {
+        if add_req.template && add_req.main && add_req.rel_model_id.clone().map_or(true, |id| id.is_empty()) {
             FlowSearchClient::async_add_or_modify_model_search(flow_model_id, Box::new(false), funs, ctx).await?;
             FlowLogClient::add_ctx_task(
                 LogParamTag::DynamicLog,
@@ -417,7 +417,7 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
             .into_iter()
             .collect::<TardisResult<Vec<()>>>()?;
         }
-        if model_detail.template && model_detail.rel_model_id.is_empty() {
+        if model_detail.template && model_detail.main && model_detail.rel_model_id.is_empty() {
             FlowSearchClient::async_add_or_modify_model_search(flow_model_id, Box::new(true), funs, ctx).await?;
             FlowLogClient::add_ctx_task(
                 LogParamTag::DynamicLog,
