@@ -1103,7 +1103,7 @@ impl FlowInstServ {
                 prev_flow_state.sys_state.clone(),
                 next_transition_detail.name.clone(),
                 next_transition_detail.is_notify,
-                Some(callback_kind == FlowExternalCallbackOp::VerifyContent),
+                Some(!(callback_kind == FlowExternalCallbackOp::PostAction || callback_kind == FlowExternalCallbackOp::ConditionalTrigger)),
                 Some(callback_kind),
                 ctx,
                 funs,
@@ -2832,7 +2832,7 @@ impl FlowInstServ {
             )
             .await?;
         let current_date = Utc::now();
-        Ok(format!("SP{}{}{}{:0>5}", current_date.year(), current_date.month(), current_date.day(), count + 1).to_string())
+        Ok(format!("SP{}{:0>2}{:0>2}{:0>5}", current_date.year(), current_date.month(), current_date.day(), count + 1).to_string())
     }
 
     // 获取需要更新的参数列表
