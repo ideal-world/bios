@@ -1103,6 +1103,7 @@ impl FlowInstServ {
                 prev_flow_state.sys_state.clone(),
                 next_transition_detail.name.clone(),
                 next_transition_detail.is_notify,
+                Some(!(callback_kind == FlowExternalCallbackOp::PostAction || callback_kind == FlowExternalCallbackOp::ConditionalTrigger)),
                 Some(callback_kind),
                 ctx,
                 funs,
@@ -1599,6 +1600,7 @@ impl FlowInstServ {
                         original_flow_state.sys_state,
                         "UPDATE".to_string(),
                         false,
+                        Some(false),
                         Some(FlowExternalCallbackOp::Auto),
                         ctx,
                         funs,
@@ -2075,7 +2077,8 @@ impl FlowInstServ {
                 FlowStateKind::Form => kind_conf.form.as_ref().map(|form| {
                     let mut operators = HashMap::new();
                     let artifacts = artifacts.clone().unwrap_or_default();
-                    if artifacts.curr_operators.clone().unwrap_or_default().contains(&ctx.owner)
+                    if !finish 
+                        && artifacts.curr_operators.clone().unwrap_or_default().contains(&ctx.owner)
                         && !artifacts.prohibit_guard_by_spec_account_ids.clone().unwrap_or_default().contains(&ctx.owner)
                     {
                         operators.insert(FlowStateOperatorKind::Submit, form.submit_btn_name.clone());
@@ -2095,18 +2098,20 @@ impl FlowInstServ {
                 FlowStateKind::Approval => kind_conf.approval.as_ref().map(|approval| {
                     let mut operators = HashMap::new();
                     let artifacts = artifacts.clone().unwrap_or_default();
-                    if artifacts.curr_operators.clone().unwrap_or_default().contains(&ctx.owner)
-                        && !artifacts.prohibit_guard_by_spec_account_ids.clone().unwrap_or_default().contains(&ctx.owner)
-                    {
-                        operators.insert(FlowStateOperatorKind::Pass, approval.pass_btn_name.clone());
-                        operators.insert(FlowStateOperatorKind::Overrule, approval.overrule_btn_name.clone());
-                        operators.insert(FlowStateOperatorKind::Back, approval.back_btn_name.clone());
-                        if approval.referral && !finish {
-                            operators.insert(FlowStateOperatorKind::Referral, "".to_string());
+                    if !finish {
+                        if artifacts.curr_operators.clone().unwrap_or_default().contains(&ctx.owner)
+                            && !artifacts.prohibit_guard_by_spec_account_ids.clone().unwrap_or_default().contains(&ctx.owner)
+                        {
+                            operators.insert(FlowStateOperatorKind::Pass, approval.pass_btn_name.clone());
+                            operators.insert(FlowStateOperatorKind::Overrule, approval.overrule_btn_name.clone());
+                            operators.insert(FlowStateOperatorKind::Back, approval.back_btn_name.clone());
+                            if approval.referral {
+                                operators.insert(FlowStateOperatorKind::Referral, "".to_string());
+                            }
                         }
-                    }
-                    if approval.revoke && ctx.owner == artifacts.prev_non_auto_account_id.unwrap_or_default() && !finish {
-                        operators.insert(FlowStateOperatorKind::Revoke, "".to_string());
+                        if approval.revoke && ctx.owner == artifacts.prev_non_auto_account_id.unwrap_or_default() {
+                            operators.insert(FlowStateOperatorKind::Revoke, "".to_string());
+                        }
                     }
                     FLowInstStateConf {
                         operators,
@@ -2126,6 +2131,7 @@ impl FlowInstServ {
     }
 
     pub async fn operate(inst: &FlowInstDetailResp, operate_req: &FlowInstOperateReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let artifacts = inst.artifacts.clone().unwrap_or_default();
         let current_state = FlowStateServ::get_item(
             &inst.current_state_id,
             &FlowStateFilterReq {
@@ -2169,15 +2175,17 @@ impl FlowInstServ {
             ..Default::default()
         };
         if let Some(all_vars) = &operate_req.all_vars {
-            modify_artifacts.curr_vars = Some(all_vars.clone());
+            let mut curr_vars = artifacts.curr_vars.unwrap_or_default();
+            curr_vars.extend(all_vars.clone());
+            modify_artifacts.curr_vars = Some(curr_vars);
         }
         Self::modify_inst_artifacts(&inst.id, &modify_artifacts, funs, ctx).await?;
         match operate_req.operate {
             // 转办
             FlowStateOperatorKind::Referral => {
                 let mut modify_artifacts = FlowInstArtifactsModifyReq::default();
-                let mut curr_operators = inst.artifacts.clone().unwrap_or_default().curr_operators.unwrap_or_default();
-                let mut prohibit_guard_by_spec_account_ids = inst.artifacts.clone().unwrap_or_default().prohibit_guard_by_spec_account_ids.unwrap_or_default();
+                let mut curr_operators = artifacts.curr_operators.unwrap_or_default();
+                let mut prohibit_guard_by_spec_account_ids = artifacts.prohibit_guard_by_spec_account_ids.unwrap_or_default();
                 if let Some(operator) = operate_req.operator.clone() {
                     curr_operators = curr_operators.into_iter().filter(|account_id| *account_id != ctx.owner.clone()).collect_vec();
                     curr_operators.push(operator.clone());
@@ -2190,7 +2198,7 @@ impl FlowInstServ {
             }
             // 撤销
             FlowStateOperatorKind::Revoke => {
-                let mut prev_non_auto_state_id = inst.artifacts.clone().unwrap_or_default().prev_non_auto_state_id.unwrap_or_default();
+                let mut prev_non_auto_state_id = artifacts.prev_non_auto_state_id.unwrap_or_default();
                 let target_state_id = prev_non_auto_state_id.pop();
                 if let Some(target_state_id) = target_state_id {
                     Self::modify_inst_artifacts(
@@ -2211,7 +2219,7 @@ impl FlowInstServ {
             }
             // 提交
             FlowStateOperatorKind::Submit => {
-                let mut prev_non_auto_state_id = inst.artifacts.clone().unwrap_or_default().prev_non_auto_state_id.unwrap_or_default();
+                let mut prev_non_auto_state_id = artifacts.prev_non_auto_state_id.unwrap_or_default();
                 prev_non_auto_state_id.push(inst.current_state_id.clone());
                 Self::modify_inst_artifacts(
                     &inst.id,
@@ -2244,7 +2252,7 @@ impl FlowInstServ {
             }
             // 退回
             FlowStateOperatorKind::Back => {
-                let mut prev_non_auto_state_id = inst.artifacts.clone().unwrap_or_default().prev_non_auto_state_id.unwrap_or_default();
+                let mut prev_non_auto_state_id = artifacts.prev_non_auto_state_id.unwrap_or_default();
                 if let Some(target_state_id) = prev_non_auto_state_id.pop() {
                     Self::modify_inst_artifacts(
                         &inst.id,
@@ -2274,7 +2282,7 @@ impl FlowInstServ {
             }
             // 通过
             FlowStateOperatorKind::Pass => {
-                let curr_operators = inst.artifacts.clone().unwrap_or_default().curr_operators.unwrap_or_default();
+                let curr_operators = artifacts.curr_operators.unwrap_or_default();
                 Self::modify_inst_artifacts(
                     &inst.id,
                     &FlowInstArtifactsModifyReq {
@@ -2302,7 +2310,7 @@ impl FlowInstServ {
                             ctx,
                         )
                         .await?;
-                        let mut prev_non_auto_state_id = inst.artifacts.clone().unwrap_or_default().prev_non_auto_state_id.unwrap_or_default();
+                        let mut prev_non_auto_state_id = artifacts.prev_non_auto_state_id.unwrap_or_default();
                         prev_non_auto_state_id.push(inst.current_state_id.clone()); 
                         Self::modify_inst_artifacts(
                             &inst.id,
@@ -2336,7 +2344,7 @@ impl FlowInstServ {
             }
             // 拒绝
             FlowStateOperatorKind::Overrule => {
-                let curr_operators = inst.artifacts.clone().unwrap_or_default().curr_operators.unwrap_or_default();
+                let curr_operators = artifacts.curr_operators.unwrap_or_default();
                 Self::modify_inst_artifacts(
                     &inst.id,
                     &FlowInstArtifactsModifyReq {
@@ -2824,7 +2832,7 @@ impl FlowInstServ {
             )
             .await?;
         let current_date = Utc::now();
-        Ok(format!("SP{}{}{}{:0>5}", current_date.year(), current_date.month(), current_date.day(), count + 1).to_string())
+        Ok(format!("SP{}{:0>2}{:0>2}{:0>5}", current_date.year(), current_date.month(), current_date.day(), count + 1).to_string())
     }
 
     // 获取需要更新的参数列表
