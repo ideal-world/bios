@@ -2,10 +2,7 @@ use std::{collections::HashMap, vec};
 
 use bios_basic::rbum::{dto::rbum_filer_dto::RbumBasicFilterReq, helper::rbum_scope_helper, rbum_enumeration::RbumScopeLevelKind, serv::rbum_item_serv::RbumItemCrudOperation};
 use bios_sdk_invoke::{
-    clients::{
-        event_client::{get_topic, EventCenterClient, SPI_RPC_TOPIC},
-        spi_search_client::SpiSearchClient,
-    },
+    clients::spi_search_client::SpiSearchClient,
     dto::search_item_dto::{
         AdvSearchItemQueryReq, BasicQueryCondInfo, BasicQueryOpKind, SearchItemAddReq, SearchItemModifyReq, SearchItemQueryReq, SearchItemSearchCtxReq, SearchItemSearchPageReq,
         SearchItemSearchReq, SearchItemSearchResp, SearchItemVisitKeysReq,
@@ -206,11 +203,7 @@ impl FlowSearchClient {
                 }),
                 kv_disable: None,
             };
-            if let Some(_topic) = get_topic(&SPI_RPC_TOPIC) {
-                EventCenterClient { topic_code: SPI_RPC_TOPIC }.modify_item_and_name(SEARCH_MODEL_TAG, &key, &modify_req, funs, ctx).await?;
-            } else {
-                SpiSearchClient::modify_item_and_name(SEARCH_MODEL_TAG, &key, &modify_req, funs, ctx).await?;
-            }
+            SpiSearchClient::modify_item_and_name(SEARCH_MODEL_TAG, &key, &modify_req, funs, ctx).await?;
         } else {
             let add_req = SearchItemAddReq {
                 tag: SEARCH_MODEL_TAG.to_string(),
@@ -239,22 +232,14 @@ impl FlowSearchClient {
                 }),
                 kv_disable: None,
             };
-            if let Some(_topic) = get_topic(&SPI_RPC_TOPIC) {
-                EventCenterClient { topic_code: SPI_RPC_TOPIC }.add_item_and_name(&add_req, Some(model_resp.name.clone()), funs, ctx).await?;
-            } else {
-                SpiSearchClient::add_item_and_name(&add_req, Some(model_resp.name.clone()), funs, ctx).await?;
-            }
+            SpiSearchClient::add_item_and_name(&add_req, Some(model_resp.name.clone()), funs, ctx).await?;
         }
         Ok(())
     }
 
     // model 全局搜索删除埋点方法
     pub async fn delete_model_search(model_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        if let Some(_topic) = get_topic(&SPI_RPC_TOPIC) {
-            EventCenterClient { topic_code: SPI_RPC_TOPIC }.delete_item_and_name(SEARCH_MODEL_TAG, model_id, funs, ctx).await?;
-        } else {
-            SpiSearchClient::delete_item_and_name(SEARCH_MODEL_TAG, model_id, funs, ctx).await?;
-        }
+        SpiSearchClient::delete_item_and_name(SEARCH_MODEL_TAG, model_id, funs, ctx).await?;
         Ok(())
     }
 
@@ -329,11 +314,7 @@ impl FlowSearchClient {
                 }),
                 kv_disable: None,
             };
-            if let Some(_topic) = get_topic(&SPI_RPC_TOPIC) {
-                EventCenterClient { topic_code: SPI_RPC_TOPIC }.modify_item_and_name(SEARCH_INSTANCE_TAG, &key, &modify_req, funs, ctx).await?;
-            } else {
-                SpiSearchClient::modify_item_and_name(SEARCH_INSTANCE_TAG, &key, &modify_req, funs, ctx).await?;
-            }
+            SpiSearchClient::modify_item_and_name(SEARCH_INSTANCE_TAG, &key, &modify_req, funs, ctx).await?;
         } else {
             let add_req = SearchItemAddReq {
                 tag: SEARCH_INSTANCE_TAG.to_string(),
@@ -370,11 +351,7 @@ impl FlowSearchClient {
                 }),
                 kv_disable: None,
             };
-            if let Some(_topic) = get_topic(&SPI_RPC_TOPIC) {
-                EventCenterClient { topic_code: SPI_RPC_TOPIC }.add_item_and_name(&add_req, Some(inst_resp.code.clone()), funs, ctx).await?;
-            } else {
-                SpiSearchClient::add_item_and_name(&add_req, Some(inst_resp.code.clone()), funs, ctx).await?;
-            }
+            SpiSearchClient::add_item_and_name(&add_req, Some(inst_resp.code.clone()), funs, ctx).await?;
         }
         Ok(())
     }
